@@ -1,0 +1,887 @@
+name: NgelX APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/NgelX.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Flutter kur
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: NgelX uygulamasini olustur
+        run: |
+          rm -rf ngelx_app
+
+          flutter create \
+            --platforms=android \
+            --org com.nnentx \
+            --project-name ngelx \
+            ngelx_app
+
+          cd ngelx_app
+
+          flutter pub add video_player
+          flutter pub add image_picker
+
+          sed -i 's/android:label="ngelx"/android:label="NgelX"/g' android/app/src/main/AndroidManifest.xml
+          sed -i '/<manifest/a\    <uses-permission android:name="android.permission.INTERNET" />' android/app/src/main/AndroidManifest.xml
+
+          cat > lib/main.dart <<'DART'
+          import 'package:flutter/material.dart';
+          import 'package:image_picker/image_picker.dart';
+          import 'package:video_player/video_player.dart';
+
+          void main() {
+            runApp(const NgelXApp());
+          }
+
+          class NgelXApp extends StatelessWidget {
+            const NgelXApp({super.key});
+
+            @override
+            Widget build(BuildContext context) {
+              return MaterialApp(
+                debugShowCheckedModeBanner: false,
+                title: 'NgelX',
+                theme: ThemeData.dark().copyWith(
+                  scaffoldBackgroundColor: Colors.black,
+                ),
+                home: const NgelXHome(),
+              );
+            }
+          }
+
+          class NgelXHome extends StatefulWidget {
+            const NgelXHome({super.key});
+
+            @override
+            State<NgelXHome> createState() => _NgelXHomeState();
+          }
+
+          class _NgelXHomeState extends State<NgelXHome> {
+            int tab = 0;
+
+            final pages = const [
+              FeedPage(),
+              DiscoverPage(),
+              SizedBox(),
+              InboxPage(),
+              ProfilePage(),
+            ];
+
+            Future<void> pickVideo() async {
+              final picker = ImagePicker();
+
+              final file = await picker.pickVideo(
+                source: ImageSource.gallery,
+              );
+
+              if (!mounted || file == null) return;
+
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Video seçildi. Yükleme ekranına hazır.'),
+                ),
+              );
+            }
+
+            @override
+            Widget build(BuildContext context) {
+              return Scaffold(
+                body: IndexedStack(
+                  index: tab,
+                  children: pages,
+                ),
+                bottomNavigationBar: BottomNavigationBar(
+                  currentIndex: tab,
+                  type: BottomNavigationBarType.fixed,
+                  backgroundColor: Colors.black,
+                  selectedItemColor: Colors.white,
+                  unselectedItemColor: Colors.white54,
+                  onTap: (index) {
+                    if (index == 2) {
+                      pickVideo();
+                      return;
+                    }
+
+                    setState(() {
+                      tab = index;
+                    });
+                  },
+                  items: const [
+                    BottomNavigationBarItem(
+                      icon: Icon(Icons.home),
+                      label: 'Ana Sayfa',
+                    ),
+                    BottomNavigationBarItem(
+                      icon: Icon(Icons.search),
+                      label: 'Keşfet',
+                    ),
+                    BottomNavigationBarItem(
+                      icon: UploadIcon(),
+                      label: '',
+                    ),
+                    BottomNavigationBarItem(
+                      icon: Icon(Icons.chat_bubble_outline),
+                      label: 'Mesajlar',
+                    ),
+                    BottomNavigationBarItem(
+                      icon: Icon(Icons.person_outline),
+                      label: 'Profil',
+                    ),
+                  ],
+                ),
+              );
+            }
+          }
+
+          class UploadIcon extends StatelessWidget {
+            const UploadIcon({super.key});
+
+            @override
+            Widget build(BuildContext context) {
+              return Container(
+                width: 45,
+                height: 30,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: const Icon(
+                  Icons.add,
+                  color: Colors.black,
+                ),
+              );
+            }
+          }
+
+          class VideoInfo {
+            final String username;
+            final String caption;
+            final String video;
+            final String likes;
+            final String comments;
+
+            const VideoInfo({
+              required this.username,
+              required this.caption,
+              required this.video,
+              required this.likes,
+              required this.comments,
+            });
+          }
+
+          const videos = [
+            VideoInfo(
+              username: '@ngelx',
+              caption: 'NgelX dünyasına hoş geldin 🔥',
+              video:
+                  'https://flutter.github.io/assets-for-api-docs/assets/videos/bee.mp4',
+              likes: '18.4K',
+              comments: '642',
+            ),
+            VideoInfo(
+              username: '@kesfet',
+              caption: 'Yeni videolar için yukarı kaydır ✨',
+              video:
+                  'https://flutter.github.io/assets-for-api-docs/assets/videos/butterfly.mp4',
+              likes: '12.1K',
+              comments: '381',
+            ),
+            VideoInfo(
+              username: '@video',
+              caption: 'NgelX • İzle • Beğen • Paylaş 🚀',
+              video:
+                  'https://media.w3.org/2010/05/sintel/trailer.mp4',
+              likes: '9.8K',
+              comments: '217',
+            ),
+          ];
+
+          class FeedPage extends StatefulWidget {
+            const FeedPage({super.key});
+
+            @override
+            State<FeedPage> createState() => _FeedPageState();
+          }
+
+          class _FeedPageState extends State<FeedPage> {
+            int current = 0;
+
+            @override
+            Widget build(BuildContext context) {
+              return Stack(
+                children: [
+                  PageView.builder(
+                    scrollDirection: Axis.vertical,
+                    itemCount: videos.length,
+                    onPageChanged: (index) {
+                      setState(() {
+                        current = index;
+                      });
+                    },
+                    itemBuilder: (context, index) {
+                      return VideoCard(
+                        info: videos[index],
+                        active: current == index,
+                      );
+                    },
+                  ),
+                  const SafeArea(
+                    child: Align(
+                      alignment: Alignment.topCenter,
+                      child: Padding(
+                        padding: EdgeInsets.only(top: 14),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'Takip',
+                              style: TextStyle(
+                                color: Colors.white60,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            SizedBox(width: 24),
+                            Text(
+                              'Sana Özel',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 17,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SafeArea(
+                    child: Align(
+                      alignment: Alignment.topLeft,
+                      child: Padding(
+                        padding: EdgeInsets.all(15),
+                        child: Text(
+                          'NgelX',
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            }
+          }
+
+          class VideoCard extends StatefulWidget {
+            final VideoInfo info;
+            final bool active;
+
+            const VideoCard({
+              super.key,
+              required this.info,
+              required this.active,
+            });
+
+            @override
+            State<VideoCard> createState() => _VideoCardState();
+          }
+
+          class _VideoCardState extends State<VideoCard> {
+            late VideoPlayerController controller;
+
+            bool ready = false;
+            bool liked = false;
+            bool saved = false;
+
+            @override
+            void initState() {
+              super.initState();
+
+              controller = VideoPlayerController.networkUrl(
+                Uri.parse(widget.info.video),
+              );
+
+              controller.initialize().then((_) {
+                controller.setLooping(true);
+
+                if (widget.active) {
+                  controller.play();
+                }
+
+                if (mounted) {
+                  setState(() {
+                    ready = true;
+                  });
+                }
+              });
+            }
+
+            @override
+            void didUpdateWidget(covariant VideoCard oldWidget) {
+              super.didUpdateWidget(oldWidget);
+
+              if (!ready) return;
+
+              if (widget.active) {
+                controller.play();
+              } else {
+                controller.pause();
+              }
+            }
+
+            @override
+            void dispose() {
+              controller.dispose();
+              super.dispose();
+            }
+
+            @override
+            Widget build(BuildContext context) {
+              return GestureDetector(
+                onTap: () {
+                  if (!ready) return;
+
+                  setState(() {
+                    if (controller.value.isPlaying) {
+                      controller.pause();
+                    } else {
+                      controller.play();
+                    }
+                  });
+                },
+                onDoubleTap: () {
+                  setState(() {
+                    liked = true;
+                  });
+                },
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Container(color: Colors.black),
+                    if (ready)
+                      FittedBox(
+                        fit: BoxFit.cover,
+                        child: SizedBox(
+                          width: controller.value.size.width,
+                          height: controller.value.size.height,
+                          child: VideoPlayer(controller),
+                        ),
+                      )
+                    else
+                      const Center(
+                        child: CircularProgressIndicator(),
+                      ),
+                    const DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.black38,
+                            Colors.transparent,
+                            Colors.black87,
+                          ],
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      left: 15,
+                      right: 85,
+                      bottom: 28,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            widget.info.username,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 9),
+                          Text(
+                            widget.info.caption,
+                            style: const TextStyle(
+                              fontSize: 15,
+                            ),
+                          ),
+                          const SizedBox(height: 9),
+                          const Row(
+                            children: [
+                              Icon(
+                                Icons.music_note,
+                                size: 17,
+                              ),
+                              SizedBox(width: 5),
+                              Text('NgelX • Orijinal ses'),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    Positioned(
+                      right: 12,
+                      bottom: 25,
+                      child: Column(
+                        children: [
+                          const CircleAvatar(
+                            radius: 24,
+                            backgroundColor: Colors.white,
+                            child: CircleAvatar(
+                              radius: 21,
+                              backgroundColor: Colors.black,
+                              child: Text(
+                                'N',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 21,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 15),
+                          ActionButton(
+                            icon: liked
+                                ? Icons.favorite
+                                : Icons.favorite_border,
+                            text: widget.info.likes,
+                            color: liked
+                                ? Colors.redAccent
+                                : Colors.white,
+                            onTap: () {
+                              setState(() {
+                                liked = !liked;
+                              });
+                            },
+                          ),
+                          ActionButton(
+                            icon: Icons.chat_bubble_outline,
+                            text: widget.info.comments,
+                            onTap: () {
+                              showModalBottomSheet(
+                                context: context,
+                                backgroundColor:
+                                    const Color(0xFF181818),
+                                builder: (_) {
+                                  return const CommentSheet();
+                                },
+                              );
+                            },
+                          ),
+                          ActionButton(
+                            icon: saved
+                                ? Icons.bookmark
+                                : Icons.bookmark_border,
+                            text: 'Kaydet',
+                            onTap: () {
+                              setState(() {
+                                saved = !saved;
+                              });
+                            },
+                          ),
+                          ActionButton(
+                            icon: Icons.reply,
+                            text: 'Paylaş',
+                            onTap: () {
+                              ScaffoldMessenger.of(context)
+                                  .showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Paylaşım ekranı açıldı.',
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
+          }
+
+          class ActionButton extends StatelessWidget {
+            final IconData icon;
+            final String text;
+            final VoidCallback onTap;
+            final Color color;
+
+            const ActionButton({
+              super.key,
+              required this.icon,
+              required this.text,
+              required this.onTap,
+              this.color = Colors.white,
+            });
+
+            @override
+            Widget build(BuildContext context) {
+              return Padding(
+                padding: const EdgeInsets.only(top: 15),
+                child: GestureDetector(
+                  onTap: onTap,
+                  child: Column(
+                    children: [
+                      Icon(
+                        icon,
+                        color: color,
+                        size: 35,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        text,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
+          }
+
+          class CommentSheet extends StatelessWidget {
+            const CommentSheet({super.key});
+
+            @override
+            Widget build(BuildContext context) {
+              return SafeArea(
+                child: Column(
+                  children: [
+                    const Padding(
+                      padding: EdgeInsets.all(14),
+                      child: Text(
+                        'Yorumlar',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    const Expanded(
+                      child: ListView(
+                        children: [
+                          ListTile(
+                            leading: CircleAvatar(
+                              child: Text('A'),
+                            ),
+                            title: Text('@ali'),
+                            subtitle: Text('Çok iyi olmuş 🔥'),
+                          ),
+                          ListTile(
+                            leading: CircleAvatar(
+                              child: Text('M'),
+                            ),
+                            title: Text('@mert'),
+                            subtitle: Text('NgelX güzel olmuş 👏'),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: TextField(
+                        decoration: InputDecoration(
+                          hintText: 'Yorum yaz...',
+                          filled: true,
+                          fillColor: const Color(0xFF282828),
+                          border: OutlineInputBorder(
+                            borderRadius:
+                                BorderRadius.circular(25),
+                            borderSide: BorderSide.none,
+                          ),
+                          suffixIcon: const Icon(Icons.send),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
+          }
+
+          class DiscoverPage extends StatelessWidget {
+            const DiscoverPage({super.key});
+
+            @override
+            Widget build(BuildContext context) {
+              return SafeArea(
+                child: Column(
+                  children: [
+                    const Padding(
+                      padding: EdgeInsets.all(16),
+                      child: Row(
+                        children: [
+                          Text(
+                            'Keşfet',
+                            style: TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Spacer(),
+                          Icon(Icons.search),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      child: GridView.builder(
+                        padding: const EdgeInsets.all(3),
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 3,
+                          childAspectRatio: 0.68,
+                          crossAxisSpacing: 3,
+                          mainAxisSpacing: 3,
+                        ),
+                        itemCount: 18,
+                        itemBuilder: (_, index) {
+                          return Container(
+                            color: const Color(0xFF1A1A1A),
+                            child: const Center(
+                              child: Icon(
+                                Icons.play_circle_outline,
+                                size: 40,
+                                color: Colors.white38,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
+          }
+
+          class InboxPage extends StatelessWidget {
+            const InboxPage({super.key});
+
+            @override
+            Widget build(BuildContext context) {
+              return SafeArea(
+                child: Column(
+                  children: [
+                    const Padding(
+                      padding: EdgeInsets.all(16),
+                      child: Row(
+                        children: [
+                          Text(
+                            'Mesajlar',
+                            style: TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Spacer(),
+                          Icon(Icons.send_outlined),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      child: ListView(
+                        children: const [
+                          ListTile(
+                            leading: CircleAvatar(
+                              child: Text('A'),
+                            ),
+                            title: Text('Ali'),
+                            subtitle: Text('Yeni videoyu gördün mü?'),
+                          ),
+                          ListTile(
+                            leading: CircleAvatar(
+                              child: Text('M'),
+                            ),
+                            title: Text('Mert'),
+                            subtitle: Text('Harika olmuş 🔥'),
+                          ),
+                          ListTile(
+                            leading: CircleAvatar(
+                              child: Text('D'),
+                            ),
+                            title: Text('Deniz'),
+                            subtitle: Text('Görüşürüz 👋'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
+          }
+
+          class ProfilePage extends StatelessWidget {
+            const ProfilePage({super.key});
+
+            @override
+            Widget build(BuildContext context) {
+              return SafeArea(
+                child: Column(
+                  children: [
+                    const Padding(
+                      padding: EdgeInsets.all(16),
+                      child: Row(
+                        children: [
+                          Spacer(),
+                          Text(
+                            'NgelX',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Spacer(),
+                          Icon(Icons.menu),
+                        ],
+                      ),
+                    ),
+                    const CircleAvatar(
+                      radius: 45,
+                      backgroundColor: Color(0xFF202020),
+                      child: Text(
+                        'N',
+                        style: TextStyle(
+                          fontSize: 42,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    const Text(
+                      '@ngelx',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    const Row(
+                      mainAxisAlignment:
+                          MainAxisAlignment.center,
+                      children: [
+                        ProfileStat(
+                          number: '128',
+                          text: 'Takip',
+                        ),
+                        ProfileStat(
+                          number: '24.8K',
+                          text: 'Takipçi',
+                        ),
+                        ProfileStat(
+                          number: '182K',
+                          text: 'Beğeni',
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    OutlinedButton(
+                      onPressed: null,
+                      child: Text('Profili düzenle'),
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'NgelX • İzle, keşfet, paylaş ✨',
+                    ),
+                    const SizedBox(height: 15),
+                    const Divider(height: 1),
+                    Expanded(
+                      child: GridView.builder(
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 3,
+                          childAspectRatio: 0.72,
+                          crossAxisSpacing: 2,
+                          mainAxisSpacing: 2,
+                        ),
+                        itemCount: 15,
+                        itemBuilder: (_, index) {
+                          return Container(
+                            color: const Color(0xFF1A1A1A),
+                            child: const Icon(
+                              Icons.play_arrow,
+                              color: Colors.white30,
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
+          }
+
+          class ProfileStat extends StatelessWidget {
+            final String number;
+            final String text;
+
+            const ProfileStat({
+              super.key,
+              required this.number,
+              required this.text,
+            });
+
+            @override
+            Widget build(BuildContext context) {
+              return SizedBox(
+                width: 90,
+                child: Column(
+                  children: [
+                    Text(
+                      number,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      text,
+                      style: const TextStyle(
+                        color: Colors.white60,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
+          }
+          DART
+
+      - name: Paketleri hazirla
+        run: |
+          cd ngelx_app
+          flutter pub get
+
+      - name: APK olustur
+        run: |
+          cd ngelx_app
+          flutter build apk --debug
+
+      - name: APK yukle
+        uses: actions/upload-artifact@v4
+        with:
+          name: NgelX-APK
+          path: ngelx_app/build/app/outputs/flutter-apk/app-debug.apk
+          if-no-files-found: error
