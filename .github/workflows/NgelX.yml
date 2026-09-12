@@ -3,51 +3,31 @@ name: NgelX APK
 on:
   workflow_dispatch:
   push:
-    branches:
-      - main
-    paths:
-      - '.github/workflows/NgelX.yml'
+    branches: [main]
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
       - name: Flutter kur
         uses: subosito/flutter-action@v2
         with:
           channel: stable
-          cache: true
 
-      - name: NgelX uygulamasini olustur
+      - name: Uygulamayi hazirla
         run: |
-          rm -rf ngelx_app
-
-          flutter create \
-            --platforms=android \
-            --org com.nnentx \
-            --project-name ngelx \
-            ngelx_app
-
+          flutter create --platforms=android --org com.nnentx ngelx_app
           cd ngelx_app
-
-          flutter pub add video_player
-          flutter pub add image_picker
-
-          sed -i 's/android:label="ngelx"/android:label="NgelX"/g' android/app/src/main/AndroidManifest.xml
-          sed -i '/<manifest/a\    <uses-permission android:name="android.permission.INTERNET" />' android/app/src/main/AndroidManifest.xml
 
           cat > lib/main.dart <<'DART'
           import 'package:flutter/material.dart';
-          import 'package:image_picker/image_picker.dart';
-          import 'package:video_player/video_player.dart';
 
-          void main() {
-            runApp(const NgelXApp());
-          }
+          void main() => runApp(const NgelXApp());
+
+          const mor = Color(0xFF8B5CF6);
+          const mavi = Color(0xFF22D3EE);
+          const panel = Color(0xFF17171F);
 
           class NgelXApp extends StatelessWidget {
             const NgelXApp({super.key});
@@ -57,502 +37,215 @@ jobs:
               return MaterialApp(
                 debugShowCheckedModeBanner: false,
                 title: 'NgelX',
-                theme: ThemeData.dark().copyWith(
-                  scaffoldBackgroundColor: Colors.black,
+                theme: ThemeData(
+                  brightness: Brightness.dark,
+                  scaffoldBackgroundColor: const Color(0xFF08080D),
+                  colorScheme: const ColorScheme.dark(
+                    primary: mor,
+                    secondary: mavi,
+                  ),
+                  inputDecorationTheme: InputDecorationTheme(
+                    filled: true,
+                    fillColor: panel,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(18),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
                 ),
-                home: const NgelXHome(),
+                home: const LoginPage(),
               );
             }
           }
 
-          class NgelXHome extends StatefulWidget {
-            const NgelXHome({super.key});
+          class LoginPage extends StatefulWidget {
+            const LoginPage({super.key});
 
             @override
-            State<NgelXHome> createState() => _NgelXHomeState();
+            State<LoginPage> createState() => _LoginPageState();
           }
 
-          class _NgelXHomeState extends State<NgelXHome> {
-            int tab = 0;
+          class _LoginPageState extends State<LoginPage> {
+            final email = TextEditingController();
+            final password = TextEditingController();
+            bool gizli = true;
 
-            final pages = const [
-              FeedPage(),
-              DiscoverPage(),
-              SizedBox(),
-              InboxPage(),
-              ProfilePage(),
-            ];
+            void giris() {
+              if (!email.text.contains('@') || password.text.length < 4) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      'Geçerli e-posta ve en az 4 karakterli şifre gir.',
+                    ),
+                  ),
+                );
+                return;
+              }
 
-            Future<void> pickVideo() async {
-              final picker = ImagePicker();
-
-              final file = await picker.pickVideo(
-                source: ImageSource.gallery,
-              );
-
-              if (!mounted || file == null) return;
-
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Video seçildi. Yükleme ekranına hazır.'),
-                ),
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => const AnaEkran()),
               );
             }
 
             @override
             Widget build(BuildContext context) {
               return Scaffold(
-                body: IndexedStack(
-                  index: tab,
-                  children: pages,
-                ),
-                bottomNavigationBar: BottomNavigationBar(
-                  currentIndex: tab,
-                  type: BottomNavigationBarType.fixed,
-                  backgroundColor: Colors.black,
-                  selectedItemColor: Colors.white,
-                  unselectedItemColor: Colors.white54,
-                  onTap: (index) {
-                    if (index == 2) {
-                      pickVideo();
-                      return;
-                    }
-
-                    setState(() {
-                      tab = index;
-                    });
-                  },
-                  items: const [
-                    BottomNavigationBarItem(
-                      icon: Icon(Icons.home),
-                      label: 'Ana Sayfa',
-                    ),
-                    BottomNavigationBarItem(
-                      icon: Icon(Icons.search),
-                      label: 'Keşfet',
-                    ),
-                    BottomNavigationBarItem(
-                      icon: UploadIcon(),
-                      label: '',
-                    ),
-                    BottomNavigationBarItem(
-                      icon: Icon(Icons.chat_bubble_outline),
-                      label: 'Mesajlar',
-                    ),
-                    BottomNavigationBarItem(
-                      icon: Icon(Icons.person_outline),
-                      label: 'Profil',
-                    ),
-                  ],
-                ),
-              );
-            }
-          }
-
-          class UploadIcon extends StatelessWidget {
-            const UploadIcon({super.key});
-
-            @override
-            Widget build(BuildContext context) {
-              return Container(
-                width: 45,
-                height: 30,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(9),
-                ),
-                child: const Icon(
-                  Icons.add,
-                  color: Colors.black,
-                ),
-              );
-            }
-          }
-
-          class VideoInfo {
-            final String username;
-            final String caption;
-            final String video;
-            final String likes;
-            final String comments;
-
-            const VideoInfo({
-              required this.username,
-              required this.caption,
-              required this.video,
-              required this.likes,
-              required this.comments,
-            });
-          }
-
-          const videos = [
-            VideoInfo(
-              username: '@ngelx',
-              caption: 'NgelX dünyasına hoş geldin 🔥',
-              video:
-                  'https://flutter.github.io/assets-for-api-docs/assets/videos/bee.mp4',
-              likes: '18.4K',
-              comments: '642',
-            ),
-            VideoInfo(
-              username: '@kesfet',
-              caption: 'Yeni videolar için yukarı kaydır ✨',
-              video:
-                  'https://flutter.github.io/assets-for-api-docs/assets/videos/butterfly.mp4',
-              likes: '12.1K',
-              comments: '381',
-            ),
-            VideoInfo(
-              username: '@video',
-              caption: 'NgelX • İzle • Beğen • Paylaş 🚀',
-              video:
-                  'https://media.w3.org/2010/05/sintel/trailer.mp4',
-              likes: '9.8K',
-              comments: '217',
-            ),
-          ];
-
-          class FeedPage extends StatefulWidget {
-            const FeedPage({super.key});
-
-            @override
-            State<FeedPage> createState() => _FeedPageState();
-          }
-
-          class _FeedPageState extends State<FeedPage> {
-            int current = 0;
-
-            @override
-            Widget build(BuildContext context) {
-              return Stack(
-                children: [
-                  PageView.builder(
-                    scrollDirection: Axis.vertical,
-                    itemCount: videos.length,
-                    onPageChanged: (index) {
-                      setState(() {
-                        current = index;
-                      });
-                    },
-                    itemBuilder: (context, index) {
-                      return VideoCard(
-                        info: videos[index],
-                        active: current == index,
-                      );
-                    },
-                  ),
-                  const SafeArea(
-                    child: Align(
-                      alignment: Alignment.topCenter,
-                      child: Padding(
-                        padding: EdgeInsets.only(top: 14),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              'Takip',
-                              style: TextStyle(
-                                color: Colors.white60,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            SizedBox(width: 24),
-                            Text(
-                              'Sana Özel',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 17,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SafeArea(
-                    child: Align(
-                      alignment: Alignment.topLeft,
-                      child: Padding(
-                        padding: EdgeInsets.all(15),
-                        child: Text(
-                          'NgelX',
+                body: SafeArea(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const SizedBox(height: 45),
+                        const Logo(),
+                        const SizedBox(height: 60),
+                        const Text(
+                          'Tekrar hoş geldin',
                           style: TextStyle(
-                            fontSize: 22,
+                            fontSize: 31,
                             fontWeight: FontWeight.w900,
                           ),
                         ),
-                      ),
-                    ),
-                  ),
-                ],
-              );
-            }
-          }
-
-          class VideoCard extends StatefulWidget {
-            final VideoInfo info;
-            final bool active;
-
-            const VideoCard({
-              super.key,
-              required this.info,
-              required this.active,
-            });
-
-            @override
-            State<VideoCard> createState() => _VideoCardState();
-          }
-
-          class _VideoCardState extends State<VideoCard> {
-            late VideoPlayerController controller;
-
-            bool ready = false;
-            bool liked = false;
-            bool saved = false;
-
-            @override
-            void initState() {
-              super.initState();
-
-              controller = VideoPlayerController.networkUrl(
-                Uri.parse(widget.info.video),
-              );
-
-              controller.initialize().then((_) {
-                controller.setLooping(true);
-
-                if (widget.active) {
-                  controller.play();
-                }
-
-                if (mounted) {
-                  setState(() {
-                    ready = true;
-                  });
-                }
-              });
-            }
-
-            @override
-            void didUpdateWidget(covariant VideoCard oldWidget) {
-              super.didUpdateWidget(oldWidget);
-
-              if (!ready) return;
-
-              if (widget.active) {
-                controller.play();
-              } else {
-                controller.pause();
-              }
-            }
-
-            @override
-            void dispose() {
-              controller.dispose();
-              super.dispose();
-            }
-
-            @override
-            Widget build(BuildContext context) {
-              return GestureDetector(
-                onTap: () {
-                  if (!ready) return;
-
-                  setState(() {
-                    if (controller.value.isPlaying) {
-                      controller.pause();
-                    } else {
-                      controller.play();
-                    }
-                  });
-                },
-                onDoubleTap: () {
-                  setState(() {
-                    liked = true;
-                  });
-                },
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    Container(color: Colors.black),
-                    if (ready)
-                      FittedBox(
-                        fit: BoxFit.cover,
-                        child: SizedBox(
-                          width: controller.value.size.width,
-                          height: controller.value.size.height,
-                          child: VideoPlayer(controller),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'İzle, keşfet ve kendi dünyanı paylaş.',
+                          style: TextStyle(color: Colors.white60),
                         ),
-                      )
-                    else
-                      const Center(
-                        child: CircularProgressIndicator(),
-                      ),
-                    const DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Colors.black38,
-                            Colors.transparent,
-                            Colors.black87,
+                        const SizedBox(height: 35),
+                        TextField(
+                          controller: email,
+                          keyboardType: TextInputType.emailAddress,
+                          decoration: const InputDecoration(
+                            prefixIcon: Icon(Icons.alternate_email),
+                            hintText: 'E-posta adresi',
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        TextField(
+                          controller: password,
+                          obscureText: gizli,
+                          decoration: InputDecoration(
+                            prefixIcon: const Icon(Icons.lock_outline),
+                            hintText: 'Şifre',
+                            suffixIcon: IconButton(
+                              onPressed: () {
+                                setState(() => gizli = !gizli);
+                              },
+                              icon: Icon(
+                                gizli
+                                    ? Icons.visibility_off_outlined
+                                    : Icons.visibility_outlined,
+                              ),
+                            ),
+                          ),
+                        ),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton(
+                            onPressed: () {},
+                            child: const Text('Şifremi unuttum'),
+                          ),
+                        ),
+                        RenkliButon(
+                          yazi: 'Giriş Yap',
+                          tiklama: giris,
+                        ),
+                        const SizedBox(height: 18),
+                        OutlinedButton.icon(
+                          onPressed: () {
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const AnaEkran(),
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.person_outline),
+                          label: const Text('Misafir olarak keşfet'),
+                          style: OutlinedButton.styleFrom(
+                            minimumSize: const Size.fromHeight(54),
+                          ),
+                        ),
+                        const SizedBox(height: 22),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Text(
+                              'Hesabın yok mu?',
+                              style: TextStyle(color: Colors.white60),
+                            ),
+                            TextButton(
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const KayitPage(),
+                                  ),
+                                );
+                              },
+                              child: const Text('Hesap oluştur'),
+                            ),
                           ],
                         ),
-                      ),
+                      ],
                     ),
-                    Positioned(
-                      left: 15,
-                      right: 85,
-                      bottom: 28,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            widget.info.username,
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 9),
-                          Text(
-                            widget.info.caption,
-                            style: const TextStyle(
-                              fontSize: 15,
-                            ),
-                          ),
-                          const SizedBox(height: 9),
-                          const Row(
-                            children: [
-                              Icon(
-                                Icons.music_note,
-                                size: 17,
-                              ),
-                              SizedBox(width: 5),
-                              Text('NgelX • Orijinal ses'),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                    Positioned(
-                      right: 12,
-                      bottom: 25,
-                      child: Column(
-                        children: [
-                          const CircleAvatar(
-                            radius: 24,
-                            backgroundColor: Colors.white,
-                            child: CircleAvatar(
-                              radius: 21,
-                              backgroundColor: Colors.black,
-                              child: Text(
-                                'N',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w900,
-                                  fontSize: 21,
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 15),
-                          ActionButton(
-                            icon: liked
-                                ? Icons.favorite
-                                : Icons.favorite_border,
-                            text: widget.info.likes,
-                            color: liked
-                                ? Colors.redAccent
-                                : Colors.white,
-                            onTap: () {
-                              setState(() {
-                                liked = !liked;
-                              });
-                            },
-                          ),
-                          ActionButton(
-                            icon: Icons.chat_bubble_outline,
-                            text: widget.info.comments,
-                            onTap: () {
-                              showModalBottomSheet(
-                                context: context,
-                                backgroundColor:
-                                    const Color(0xFF181818),
-                                builder: (_) {
-                                  return const CommentSheet();
-                                },
-                              );
-                            },
-                          ),
-                          ActionButton(
-                            icon: saved
-                                ? Icons.bookmark
-                                : Icons.bookmark_border,
-                            text: 'Kaydet',
-                            onTap: () {
-                              setState(() {
-                                saved = !saved;
-                              });
-                            },
-                          ),
-                          ActionButton(
-                            icon: Icons.reply,
-                            text: 'Paylaş',
-                            onTap: () {
-                              ScaffoldMessenger.of(context)
-                                  .showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'Paylaşım ekranı açıldı.',
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               );
             }
           }
 
-          class ActionButton extends StatelessWidget {
-            final IconData icon;
-            final String text;
-            final VoidCallback onTap;
-            final Color color;
-
-            const ActionButton({
-              super.key,
-              required this.icon,
-              required this.text,
-              required this.onTap,
-              this.color = Colors.white,
-            });
+          class KayitPage extends StatelessWidget {
+            const KayitPage({super.key});
 
             @override
             Widget build(BuildContext context) {
-              return Padding(
-                padding: const EdgeInsets.only(top: 15),
-                child: GestureDetector(
-                  onTap: onTap,
+              return Scaffold(
+                appBar: AppBar(
+                  backgroundColor: Colors.transparent,
+                  title: const Text('Yeni hesap'),
+                ),
+                body: SingleChildScrollView(
+                  padding: const EdgeInsets.all(24),
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Icon(
-                        icon,
-                        color: color,
-                        size: 35,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        text,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
+                      const Logo(),
+                      const SizedBox(height: 35),
+                      const TextField(
+                        decoration: InputDecoration(
+                          prefixIcon: Icon(Icons.person_outline),
+                          hintText: 'Adın veya kullanıcı adın',
                         ),
+                      ),
+                      const SizedBox(height: 14),
+                      const TextField(
+                        decoration: InputDecoration(
+                          prefixIcon: Icon(Icons.alternate_email),
+                          hintText: 'E-posta adresi',
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      const TextField(
+                        obscureText: true,
+                        decoration: InputDecoration(
+                          prefixIcon: Icon(Icons.lock_outline),
+                          hintText: 'Şifre',
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      RenkliButon(
+                        yazi: 'Hesap Oluştur',
+                        tiklama: () {
+                          Navigator.pushAndRemoveUntil(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const AnaEkran(),
+                            ),
+                            (_) => false,
+                          );
+                        },
                       ),
                     ],
                   ),
@@ -561,8 +254,71 @@ jobs:
             }
           }
 
-          class CommentSheet extends StatelessWidget {
-            const CommentSheet({super.key});
+          class AnaEkran extends StatefulWidget {
+            const AnaEkran({super.key});
+
+            @override
+            State<AnaEkran> createState() => _AnaEkranState();
+          }
+
+          class _AnaEkranState extends State<AnaEkran> {
+            int sayfa = 0;
+
+            final ekranlar = const [
+              AkisPage(),
+              KesfetPage(),
+              YuklePage(),
+              MesajPage(),
+              ProfilPage(),
+            ];
+
+            @override
+            Widget build(BuildContext context) {
+              return Scaffold(
+                body: IndexedStack(
+                  index: sayfa,
+                  children: ekranlar,
+                ),
+                bottomNavigationBar: NavigationBar(
+                  selectedIndex: sayfa,
+                  onDestinationSelected: (i) {
+                    setState(() => sayfa = i);
+                  },
+                  backgroundColor: const Color(0xFF101016),
+                  destinations: const [
+                    NavigationDestination(
+                      icon: Icon(Icons.home_outlined),
+                      selectedIcon: Icon(Icons.home),
+                      label: 'Akış',
+                    ),
+                    NavigationDestination(
+                      icon: Icon(Icons.explore_outlined),
+                      selectedIcon: Icon(Icons.explore),
+                      label: 'Keşfet',
+                    ),
+                    NavigationDestination(
+                      icon: Icon(Icons.add_box_outlined),
+                      selectedIcon: Icon(Icons.add_box),
+                      label: 'Üret',
+                    ),
+                    NavigationDestination(
+                      icon: Icon(Icons.forum_outlined),
+                      selectedIcon: Icon(Icons.forum),
+                      label: 'Sohbet',
+                    ),
+                    NavigationDestination(
+                      icon: Icon(Icons.person_outline),
+                      selectedIcon: Icon(Icons.person),
+                      label: 'Ben',
+                    ),
+                  ],
+                ),
+              );
+            }
+          }
+
+          class AkisPage extends StatelessWidget {
+            const AkisPage({super.key});
 
             @override
             Widget build(BuildContext context) {
@@ -570,49 +326,92 @@ jobs:
                 child: Column(
                   children: [
                     const Padding(
-                      padding: EdgeInsets.all(14),
-                      child: Text(
-                        'Yorumlar',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                     Expanded(
-                      child: ListView(
+                      padding: EdgeInsets.all(17),
+                      child: Row(
                         children: [
-                          ListTile(
-                            leading: CircleAvatar(
-                              child: Text('A'),
-                            ),
-                            title: Text('@ali'),
-                            subtitle: Text('Çok iyi olmuş 🔥'),
-                          ),
-                          ListTile(
-                            leading: CircleAvatar(
-                              child: Text('M'),
-                            ),
-                            title: Text('@mert'),
-                            subtitle: Text('NgelX güzel olmuş 👏'),
-                          ),
+                          Logo(kucuk: true),
+                          Spacer(),
+                          Icon(Icons.notifications_none),
                         ],
                       ),
                     ),
-                    Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: TextField(
-                        decoration: InputDecoration(
-                          hintText: 'Yorum yaz...',
-                          filled: true,
-                          fillColor: const Color(0xFF282828),
-                          border: OutlineInputBorder(
-                            borderRadius:
-                                BorderRadius.circular(25),
-                            borderSide: BorderSide.none,
-                          ),
-                          suffixIcon: const Icon(Icons.send),
-                        ),
+                    Expanded(
+                      child: PageView.builder(
+                        scrollDirection: Axis.vertical,
+                        itemCount: 5,
+                        itemBuilder: (_, i) {
+                          return Container(
+                            margin: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(28),
+                              gradient: LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: i.isEven
+                                    ? const [
+                                        Color(0xFF312E81),
+                                        Color(0xFF111827),
+                                      ]
+                                    : const [
+                                        Color(0xFF155E75),
+                                        Color(0xFF18181B),
+                                      ],
+                              ),
+                            ),
+                            child: Stack(
+                              children: [
+                                const Center(
+                                  child: Icon(
+                                    Icons.play_circle_fill,
+                                    size: 75,
+                                    color: Colors.white30,
+                                  ),
+                                ),
+                                Positioned(
+                                  left: 20,
+                                  bottom: 25,
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        '@ngelx_${i + 1}',
+                                        style: const TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 7),
+                                      const Text(
+                                        'Yeni anları kendi tarzınla keşfet ✨',
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const Positioned(
+                                  right: 18,
+                                  bottom: 20,
+                                  child: Column(
+                                    children: [
+                                      YanButon(
+                                        ikon: Icons.favorite_border,
+                                        yazi: '18K',
+                                      ),
+                                      YanButon(
+                                        ikon: Icons.comment_outlined,
+                                        yazi: '642',
+                                      ),
+                                      YanButon(
+                                        ikon: Icons.send_outlined,
+                                        yazi: 'Paylaş',
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
                       ),
                     ),
                   ],
@@ -621,8 +420,8 @@ jobs:
             }
           }
 
-          class DiscoverPage extends StatelessWidget {
-            const DiscoverPage({super.key});
+          class KesfetPage extends StatelessWidget {
+            const KesfetPage({super.key});
 
             @override
             Widget build(BuildContext context) {
@@ -630,14 +429,14 @@ jobs:
                 child: Column(
                   children: [
                     const Padding(
-                      padding: EdgeInsets.all(16),
+                      padding: EdgeInsets.all(18),
                       child: Row(
                         children: [
                           Text(
                             'Keşfet',
                             style: TextStyle(
-                              fontSize: 28,
-                              fontWeight: FontWeight.bold,
+                              fontSize: 29,
+                              fontWeight: FontWeight.w900,
                             ),
                           ),
                           Spacer(),
@@ -647,24 +446,26 @@ jobs:
                     ),
                     Expanded(
                       child: GridView.builder(
-                        padding: const EdgeInsets.all(3),
+                        padding: const EdgeInsets.all(5),
+                        itemCount: 18,
                         gridDelegate:
                             const SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: 3,
-                          childAspectRatio: 0.68,
-                          crossAxisSpacing: 3,
-                          mainAxisSpacing: 3,
+                          childAspectRatio: 0.7,
+                          crossAxisSpacing: 5,
+                          mainAxisSpacing: 5,
                         ),
-                        itemCount: 18,
-                        itemBuilder: (_, index) {
+                        itemBuilder: (_, i) {
                           return Container(
-                            color: const Color(0xFF1A1A1A),
-                            child: const Center(
-                              child: Icon(
-                                Icons.play_circle_outline,
-                                size: 40,
-                                color: Colors.white38,
-                              ),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              color: i.isEven
+                                  ? const Color(0xFF292348)
+                                  : const Color(0xFF16343B),
+                            ),
+                            child: const Icon(
+                              Icons.play_arrow,
+                              color: Colors.white38,
                             ),
                           );
                         },
@@ -676,155 +477,202 @@ jobs:
             }
           }
 
-          class InboxPage extends StatelessWidget {
-            const InboxPage({super.key});
+          class ProfilPage extends StatefulWidget {
+            const ProfilPage({super.key});
 
             @override
-            Widget build(BuildContext context) {
-              return SafeArea(
-                child: Column(
-                  children: [
-                    const Padding(
-                      padding: EdgeInsets.all(16),
-                      child: Row(
-                        children: [
-                          Text(
-                            'Mesajlar',
-                            style: TextStyle(
-                              fontSize: 28,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          Spacer(),
-                          Icon(Icons.send_outlined),
-                        ],
-                      ),
-                    ),
-                    Expanded(
-                      child: ListView(
-                        children: const [
-                          ListTile(
-                            leading: CircleAvatar(
-                              child: Text('A'),
-                            ),
-                            title: Text('Ali'),
-                            subtitle: Text('Yeni videoyu gördün mü?'),
-                          ),
-                          ListTile(
-                            leading: CircleAvatar(
-                              child: Text('M'),
-                            ),
-                            title: Text('Mert'),
-                            subtitle: Text('Harika olmuş 🔥'),
-                          ),
-                          ListTile(
-                            leading: CircleAvatar(
-                              child: Text('D'),
-                            ),
-                            title: Text('Deniz'),
-                            subtitle: Text('Görüşürüz 👋'),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }
+            State<ProfilPage> createState() => _ProfilPageState();
           }
 
-          class ProfilePage extends StatelessWidget {
-            const ProfilePage({super.key});
+          class _ProfilPageState extends State<ProfilPage> {
+            String ad = 'NgelX Creator';
+            String kullanici = '@ngelx';
+            String bio = 'Kendi ritmim, kendi dünyam ✦';
 
-            @override
-            Widget build(BuildContext context) {
-              return SafeArea(
-                child: Column(
-                  children: [
-                    const Padding(
-                      padding: EdgeInsets.all(16),
-                      child: Row(
-                        children: [
-                          Spacer(),
-                          Text(
-                            'NgelX',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          Spacer(),
-                          Icon(Icons.menu),
-                        ],
-                      ),
+            void duzenle() {
+              final adKontrol = TextEditingController(text: ad);
+              final kullaniciKontrol = TextEditingController(
+                text: kullanici.replaceFirst('@', ''),
+              );
+              final bioKontrol = TextEditingController(text: bio);
+
+              showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                backgroundColor: panel,
+                builder: (ctx) {
+                  return Padding(
+                    padding: EdgeInsets.fromLTRB(
+                      20,
+                      25,
+                      20,
+                      MediaQuery.of(ctx).viewInsets.bottom + 25,
                     ),
-                    const CircleAvatar(
-                      radius: 45,
-                      backgroundColor: Color(0xFF202020),
-                      child: Text(
-                        'N',
-                        style: TextStyle(
-                          fontSize: 42,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    const Text(
-                      '@ngelx',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 18),
-                    const Row(
-                      mainAxisAlignment:
-                          MainAxisAlignment.center,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        ProfileStat(
-                          number: '128',
-                          text: 'Takip',
+                        const Text(
+                          'Profilini düzenle',
+                          style: TextStyle(
+                            fontSize: 23,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                        ProfileStat(
-                          number: '24.8K',
-                          text: 'Takipçi',
+                        const SizedBox(height: 20),
+                        TextField(
+                          controller: adKontrol,
+                          decoration: const InputDecoration(
+                            labelText: 'Görünen ad',
+                          ),
                         ),
-                        ProfileStat(
-                          number: '182K',
-                          text: 'Beğeni',
+                        const SizedBox(height: 12),
+                        TextField(
+                          controller: kullaniciKontrol,
+                          decoration: const InputDecoration(
+                            prefixText: '@',
+                            labelText: 'Kullanıcı adı',
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        TextField(
+                          controller: bioKontrol,
+                          decoration: const InputDecoration(
+                            labelText: 'Biyografi',
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        RenkliButon(
+                          yazi: 'Kaydet',
+                          tiklama: () {
+                            setState(() {
+                              ad = adKontrol.text;
+                              kullanici = '@${kullaniciKontrol.text}';
+                              bio = bioKontrol.text;
+                            });
+                            Navigator.pop(ctx);
+                          },
                         ),
                       ],
                     ),
-                    const SizedBox(height: 14),
-                    OutlinedButton(
-                      onPressed: null,
-                      child: Text('Profili düzenle'),
-                    ),
-                    const SizedBox(height: 12),
-                    const Text(
-                      'NgelX • İzle, keşfet, paylaş ✨',
-                    ),
-                    const SizedBox(height: 15),
-                    const Divider(height: 1),
-                    Expanded(
-                      child: GridView.builder(
-                        gridDelegate:
-                            const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 3,
-                          childAspectRatio: 0.72,
-                          crossAxisSpacing: 2,
-                          mainAxisSpacing: 2,
+                  );
+                },
+              );
+            }
+
+            @override
+            Widget build(BuildContext context) {
+              return SafeArea(
+                child: CustomScrollView(
+                  slivers: [
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          children: [
+                            const Row(
+                              children: [
+                                Logo(kucuk: true),
+                                Spacer(),
+                                Icon(Icons.settings_outlined),
+                              ],
+                            ),
+                            const SizedBox(height: 25),
+                            Container(
+                              width: 105,
+                              height: 105,
+                              padding: const EdgeInsets.all(4),
+                              decoration: const BoxDecoration(
+                                shape: BoxShape.circle,
+                                gradient: LinearGradient(
+                                  colors: [mavi, mor],
+                                ),
+                              ),
+                              child: const CircleAvatar(
+                                backgroundColor: Color(0xFF24222E),
+                                child: Text(
+                                  'N',
+                                  style: TextStyle(
+                                    fontSize: 45,
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+                            Text(
+                              ad,
+                              style: const TextStyle(
+                                fontSize: 23,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              kullanici,
+                              style: const TextStyle(color: Colors.white54),
+                            ),
+                            const SizedBox(height: 13),
+                            Text(bio),
+                            const SizedBox(height: 23),
+                            const Row(
+                              mainAxisAlignment:
+                                  MainAxisAlignment.spaceEvenly,
+                              children: [
+                                Istatistik('128', 'Takip'),
+                                Istatistik('24,8 B', 'Takipçi'),
+                                Istatistik('182 B', 'Etkileşim'),
+                              ],
+                            ),
+                            const SizedBox(height: 23),
+                            RenkliButon(
+                              yazi: 'Profili Düzenle',
+                              tiklama: duzenle,
+                            ),
+                            const SizedBox(height: 25),
+                            const Row(
+                              mainAxisAlignment:
+                                  MainAxisAlignment.spaceAround,
+                              children: [
+                                Icon(Icons.grid_view),
+                                Icon(
+                                  Icons.bookmark_border,
+                                  color: Colors.white38,
+                                ),
+                                Icon(
+                                  Icons.favorite_border,
+                                  color: Colors.white38,
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
-                        itemCount: 15,
-                        itemBuilder: (_, index) {
-                          return Container(
-                            color: const Color(0xFF1A1A1A),
+                      ),
+                    ),
+                    SliverPadding(
+                      padding: const EdgeInsets.all(5),
+                      sliver: SliverGrid(
+                        delegate: SliverChildBuilderDelegate(
+                          (_, i) => Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              color: i.isEven
+                                  ? const Color(0xFF28233F)
+                                  : const Color(0xFF173036),
+                            ),
                             child: const Icon(
                               Icons.play_arrow,
                               color: Colors.white30,
                             ),
-                          );
-                        },
+                          ),
+                          childCount: 15,
+                        ),
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 3,
+                          childAspectRatio: 0.72,
+                          crossAxisSpacing: 5,
+                          mainAxisSpacing: 5,
+                        ),
                       ),
                     ),
                   ],
@@ -833,55 +681,207 @@ jobs:
             }
           }
 
-          class ProfileStat extends StatelessWidget {
-            final String number;
-            final String text;
+          class YuklePage extends StatelessWidget {
+            const YuklePage({super.key});
 
-            const ProfileStat({
+            @override
+            Widget build(BuildContext context) {
+              return const BosEkran(
+                ikon: Icons.video_call_outlined,
+                baslik: 'Yeni içerik üret',
+                aciklama: 'Galerinden video seç veya kamerayı aç.',
+              );
+            }
+          }
+
+          class MesajPage extends StatelessWidget {
+            const MesajPage({super.key});
+
+            @override
+            Widget build(BuildContext context) {
+              return const BosEkran(
+                ikon: Icons.forum_outlined,
+                baslik: 'Sohbetlerin',
+                aciklama: 'Yeni bağlantıların burada görünecek.',
+              );
+            }
+          }
+
+          class Logo extends StatelessWidget {
+            final bool kucuk;
+
+            const Logo({super.key, this.kucuk = false});
+
+            @override
+            Widget build(BuildContext context) {
+              return Row(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: kucuk
+                    ? MainAxisAlignment.start
+                    : MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: kucuk ? 35 : 50,
+                    height: kucuk ? 35 : 50,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(14),
+                      gradient: const LinearGradient(
+                        colors: [mavi, mor],
+                      ),
+                    ),
+                    child: const Icon(Icons.bolt),
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    'NgelX',
+                    style: TextStyle(
+                      fontSize: kucuk ? 22 : 35,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ],
+              );
+            }
+          }
+
+          class RenkliButon extends StatelessWidget {
+            final String yazi;
+            final VoidCallback tiklama;
+
+            const RenkliButon({
               super.key,
-              required this.number,
-              required this.text,
+              required this.yazi,
+              required this.tiklama,
             });
 
             @override
             Widget build(BuildContext context) {
-              return SizedBox(
-                width: 90,
-                child: Column(
-                  children: [
-                    Text(
-                      number,
+              return InkWell(
+                onTap: tiklama,
+                child: Ink(
+                  height: 54,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(18),
+                    gradient: const LinearGradient(
+                      colors: [mavi, mor],
+                    ),
+                  ),
+                  child: Center(
+                    child: Text(
+                      yazi,
                       style: const TextStyle(
-                        fontSize: 18,
+                        fontSize: 16,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    Text(
-                      text,
-                      style: const TextStyle(
-                        color: Colors.white60,
-                      ),
-                    ),
+                  ),
+                ),
+              );
+            }
+          }
+
+          class YanButon extends StatelessWidget {
+            final IconData ikon;
+            final String yazi;
+
+            const YanButon({
+              super.key,
+              required this.ikon,
+              required this.yazi,
+            });
+
+            @override
+            Widget build(BuildContext context) {
+              return Padding(
+                padding: const EdgeInsets.only(top: 16),
+                child: Column(
+                  children: [
+                    Icon(ikon, size: 32),
+                    Text(yazi, style: const TextStyle(fontSize: 11)),
                   ],
+                ),
+              );
+            }
+          }
+
+          class Istatistik extends StatelessWidget {
+            final String sayi;
+            final String yazi;
+
+            const Istatistik(this.sayi, this.yazi, {super.key});
+
+            @override
+            Widget build(BuildContext context) {
+              return Column(
+                children: [
+                  Text(
+                    sayi,
+                    style: const TextStyle(
+                      fontSize: 19,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    yazi,
+                    style: const TextStyle(
+                      color: Colors.white54,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              );
+            }
+          }
+
+          class BosEkran extends StatelessWidget {
+            final IconData ikon;
+            final String baslik;
+            final String aciklama;
+
+            const BosEkran({
+              super.key,
+              required this.ikon,
+              required this.baslik,
+              required this.aciklama,
+            });
+
+            @override
+            Widget build(BuildContext context) {
+              return SafeArea(
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(ikon, size: 65, color: mavi),
+                      const SizedBox(height: 18),
+                      Text(
+                        baslik,
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 7),
+                      Text(
+                        aciklama,
+                        style: const TextStyle(color: Colors.white54),
+                      ),
+                    ],
+                  ),
                 ),
               );
             }
           }
           DART
 
-      - name: Paketleri hazirla
-        run: |
-          cd ngelx_app
-          flutter pub get
-
       - name: APK olustur
         run: |
           cd ngelx_app
+          flutter pub get
           flutter build apk --debug
 
       - name: APK yukle
         uses: actions/upload-artifact@v4
         with:
-          name: NgelX-APK
+          name: NgelX-APK-v2
           path: ngelx_app/build/app/outputs/flutter-apk/app-debug.apk
-          if-no-files-found: error
