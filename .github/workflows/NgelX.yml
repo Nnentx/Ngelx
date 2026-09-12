@@ -1,4 +1,4 @@
-name: NgelX APK v3
+name: NgelX APK v4 Firebase
 
 on:
   workflow_dispatch:
@@ -10,6 +10,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Kaynaklari al
+        uses: actions/checkout@v4
+
       - name: Flutter kur
         uses: subosito/flutter-action@v2
         with:
@@ -20,8 +23,14 @@ jobs:
           rm -rf ngelx_app
           flutter create --platforms=android --org com.nnentx ngelx_app
           cd ngelx_app
+          cp ../google-services.json android/app/google-services.json
+          flutter pub add firebase_core
+          flutter pub add firebase_auth
+          flutter pub add cloud_firestore
           flutter pub add video_player
           flutter pub add image_picker
+          sed -i '/id("com.android.application")/i\\    id("com.google.gms.google-services") version "4.4.4" apply false' android/settings.gradle.kts
+          sed -i '/id("com.android.application")/a\\    id("com.google.gms.google-services")' android/app/build.gradle.kts
 
           sed -i '/<manifest/a\
               <uses-permission android:name="android.permission.INTERNET" />' \
@@ -29,10 +38,17 @@ jobs:
 
           cat > lib/main.dart <<'DART'
           import 'package:flutter/material.dart';
+          import 'package:firebase_core/firebase_core.dart';
+          import 'package:firebase_auth/firebase_auth.dart';
+          import 'package:cloud_firestore/cloud_firestore.dart';
           import 'package:image_picker/image_picker.dart';
           import 'package:video_player/video_player.dart';
 
-          void main() => runApp(const NgelXApp());
+          Future<void> main() async {
+            WidgetsFlutterBinding.ensureInitialized();
+            await Firebase.initializeApp();
+            runApp(const NgelXApp());
+          }
 
           const mor = Color(0xFF8B5CF6);
           const mavi = Color(0xFF22D3EE);
@@ -79,20 +95,54 @@ jobs:
             final sifre = TextEditingController();
             bool gizli = true;
 
-            void girisYap() {
-              if (!email.text.contains('@') || sifre.text.length < 4) {
+            bool yukleniyor = false;
+
+            Future<void> girisYap() async {
+              if (!email.text.contains('@') || sifre.text.length < 6) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Geçerli e-posta ve şifre gir.'),
-                  ),
+                  const SnackBar(content: Text('Geçerli e-posta ve en az 6 karakterli şifre gir.')),
                 );
                 return;
               }
+              setState(() => yukleniyor = true);
+              try {
+                await FirebaseAuth.instance.signInWithEmailAndPassword(
+                  email: email.text.trim(),
+                  password: sifre.text,
+                );
+                if (!mounted) return;
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AnaEkran()),
+                );
+              } on FirebaseAuthException catch (e) {
+                if (!mounted) return;
+                final mesaj = e.code == 'invalid-credential'
+                    ? 'E-posta veya şifre yanlış.'
+                    : 'Giriş yapılamadı: ${e.message ?? e.code}';
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(mesaj)));
+              } finally {
+                if (mounted) setState(() => yukleniyor = false);
+              }
+            }
 
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (_) => const AnaEkran()),
-              );
+            Future<void> misafirGirisi() async {
+              setState(() => yukleniyor = true);
+              try {
+                await FirebaseAuth.instance.signInAnonymously();
+                if (!mounted) return;
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AnaEkran()),
+                );
+              } on FirebaseAuthException catch (e) {
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Misafir girişi başarısız: ${e.message ?? e.code}')),
+                );
+              } finally {
+                if (mounted) setState(() => yukleniyor = false);
+              }
             }
 
             @override
@@ -155,19 +205,12 @@ jobs:
                           ),
                         ),
                         RenkliButon(
-                          yazi: 'Giriş Yap',
-                          tiklama: girisYap,
+                          yazi: yukleniyor ? 'Bağlanıyor...' : 'Giriş Yap',
+                          tiklama: yukleniyor ? () {} : girisYap,
                         ),
                         const SizedBox(height: 18),
                         OutlinedButton.icon(
-                          onPressed: () {
-                            Navigator.pushReplacement(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const AnaEkran(),
-                              ),
-                            );
-                          },
+                          onPressed: yukleniyor ? null : misafirGirisi,
                           icon: const Icon(Icons.person_outline),
                           label: const Text('Misafir olarak keşfet'),
                           style: OutlinedButton.styleFrom(
@@ -203,8 +246,57 @@ jobs:
             }
           }
 
-          class KayitPage extends StatelessWidget {
+          class KayitPage extends StatefulWidget {
             const KayitPage({super.key});
+
+            @override
+            State<KayitPage> createState() => _KayitPageState();
+          }
+
+          class _KayitPageState extends State<KayitPage> {
+            final kullanici = TextEditingController();
+            final email = TextEditingController();
+            final sifre = TextEditingController();
+            bool yukleniyor = false;
+
+            Future<void> hesapOlustur() async {
+              if (kullanici.text.trim().length < 3 ||
+                  !email.text.contains('@') ||
+                  sifre.text.length < 6) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Kullanıcı adı, geçerli e-posta ve en az 6 karakterli şifre gir.')),
+                );
+                return;
+              }
+              setState(() => yukleniyor = true);
+              try {
+                final sonuc = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+                  email: email.text.trim(),
+                  password: sifre.text,
+                );
+                await sonuc.user!.updateDisplayName(kullanici.text.trim());
+                await FirebaseFirestore.instance.collection('users').doc(sonuc.user!.uid).set({
+                  'username': kullanici.text.trim(),
+                  'email': email.text.trim(),
+                  'bio': 'NgelX dünyasına yeni katıldı ✦',
+                  'createdAt': FieldValue.serverTimestamp(),
+                });
+                if (!mounted) return;
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AnaEkran()),
+                  (_) => false,
+                );
+              } on FirebaseAuthException catch (e) {
+                if (!mounted) return;
+                final mesaj = e.code == 'email-already-in-use'
+                    ? 'Bu e-posta zaten kullanılıyor.'
+                    : 'Kayıt başarısız: ${e.message ?? e.code}';
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(mesaj)));
+              } finally {
+                if (mounted) setState(() => yukleniyor = false);
+              }
+            }
 
             @override
             Widget build(BuildContext context) {
@@ -213,46 +305,42 @@ jobs:
                   backgroundColor: Colors.transparent,
                   title: const Text('Yeni hesap'),
                 ),
-                body: Padding(
+                body: SingleChildScrollView(
                   padding: const EdgeInsets.all(24),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       const Logo(),
                       const SizedBox(height: 35),
-                      const TextField(
-                        decoration: InputDecoration(
+                      TextField(
+                        controller: kullanici,
+                        decoration: const InputDecoration(
                           prefixIcon: Icon(Icons.person_outline),
                           hintText: 'Kullanıcı adı',
                         ),
                       ),
                       const SizedBox(height: 14),
-                      const TextField(
-                        decoration: InputDecoration(
+                      TextField(
+                        controller: email,
+                        keyboardType: TextInputType.emailAddress,
+                        decoration: const InputDecoration(
                           prefixIcon: Icon(Icons.alternate_email),
                           hintText: 'E-posta adresi',
                         ),
                       ),
                       const SizedBox(height: 14),
-                      const TextField(
+                      TextField(
+                        controller: sifre,
                         obscureText: true,
-                        decoration: InputDecoration(
+                        decoration: const InputDecoration(
                           prefixIcon: Icon(Icons.lock_outline),
-                          hintText: 'Şifre',
+                          hintText: 'Şifre (en az 6 karakter)',
                         ),
                       ),
                       const SizedBox(height: 24),
                       RenkliButon(
-                        yazi: 'Hesap Oluştur',
-                        tiklama: () {
-                          Navigator.pushAndRemoveUntil(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const AnaEkran(),
-                            ),
-                            (_) => false,
-                          );
-                        },
+                        yazi: yukleniyor ? 'Hesap oluşturuluyor...' : 'Hesap Oluştur',
+                        tiklama: yukleniyor ? () {} : hesapOlustur,
                       ),
                     ],
                   ),
@@ -1167,6 +1255,7 @@ jobs:
       - name: APK yukle
         uses: actions/upload-artifact@v4
         with:
-          name: NgelX-APK-v3
+          name: NgelX-APK-v4-Firebase
           path: ngelx_app/build/app/outputs/flutter-apk/app-debug.apk
           if-no-files-found: error
+
