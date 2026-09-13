@@ -17,7 +17,11 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: stable
-
+      - name: Java 17 kur
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
       - name: Uygulamayi hazirla
         run: |
           rm -rf ngelx_app
@@ -5197,7 +5201,10 @@ jobs:
       - name: APK olustur
         run: |
           cd ngelx_app
+          flutter clean
           flutter pub get
+          dart format lib/main.dart
+          flutter analyze --no-fatal-infos --no-fatal-warnings
           flutter build apk --release
 
       - name: APK yukle
