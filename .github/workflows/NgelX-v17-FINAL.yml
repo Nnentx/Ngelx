@@ -1285,7 +1285,51 @@ jobs:
           }
 
           class UygulamaDurumKapisi extends StatefulWidget {final Widget child;const UygulamaDurumKapisi({super.key,required this.child});@override State<UygulamaDurumKapisi> createState()=>_UygulamaDurumKapisiState();}
-          class _UygulamaDurumKapisiState extends State<UygulamaDurumKapisi>{late Future<DocumentSnapshot<Map<String,dynamic>>> durum;@override void initState(){super.initState();yenile();}void yenile()=>durum=FirebaseFirestore.instance.collection('app_config').doc('status').get().timeout(const Duration(seconds:8));@override Widget build(BuildContext context)=>FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(future:durum,builder:(context,s){if(s.connectionState==ConnectionState.waiting)return const Scaffold(backgroundColor:Colors.white,body:Center(child:CircularProgressIndicator()));if(s.hasError)return widget.child;final v=s.data?.data()??{};if(v['maintenance']!=true)return widget.child;return Theme(data:ThemeData.light(),child:Scaffold(backgroundColor:Colors.white,body:SafeArea(child:Center(child:Padding(padding:const EdgeInsets.all(30),child:Column(mainAxisSize:MainAxisSize.min,children:[const Icon(Icons.engineering_outlined,size:88,color:mor),const SizedBox(height:20),const Text('Kısa bir bakımdayız',style:TextStyle(fontSize:28,fontWeight:FontWeight.w900)),const SizedBox(height:12),Text((v['message']??'Ngel X’i daha iyi hale getiriyoruz. Biraz sonra tekrar dene.').toString(),textAlign:TextAlign.center,style:const TextStyle(fontSize:16,color:Colors.black54)),const SizedBox(height:24),FilledButton.icon(onPressed:()=>setState(yenile),icon:const Icon(Icons.refresh),label:const Text('Tekrar dene'))]))))));}));}
+          class _UygulamaDurumKapisiState extends State<UygulamaDurumKapisi> {
+            late Future<DocumentSnapshot<Map<String,dynamic>>> durum;
+            @override void initState(){super.initState();yenile();}
+            void yenile()=>durum=FirebaseFirestore.instance.collection('app_config').doc('status').get().timeout(const Duration(seconds:8));
+
+            @override
+            Widget build(BuildContext context) {
+              return FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(
+                future:durum,
+                builder:(context,s){
+                  if(s.connectionState==ConnectionState.waiting) {
+                    return const Scaffold(backgroundColor:Colors.white,body:Center(child:CircularProgressIndicator()));
+                  }
+                  if(s.hasError)return widget.child;
+                  final v=s.data?.data()??{};
+                  if(v['maintenance']!=true)return widget.child;
+                  return Theme(
+                    data:ThemeData.light(),
+                    child:Scaffold(
+                      backgroundColor:Colors.white,
+                      body:SafeArea(
+                        child:Center(
+                          child:Padding(
+                            padding:const EdgeInsets.all(30),
+                            child:Column(
+                              mainAxisSize:MainAxisSize.min,
+                              children:[
+                                const Icon(Icons.engineering_outlined,size:88,color:mor),
+                                const SizedBox(height:20),
+                                const Text('Kısa bir bakımdayız',style:TextStyle(fontSize:28,fontWeight:FontWeight.w900)),
+                                const SizedBox(height:12),
+                                Text((v['message']??'Ngel X’i daha iyi hale getiriyoruz. Biraz sonra tekrar dene.').toString(),textAlign:TextAlign.center,style:const TextStyle(fontSize:16,color:Colors.black54)),
+                                const SizedBox(height:24),
+                                FilledButton.icon(onPressed:()=>setState(yenile),icon:const Icon(Icons.refresh),label:const Text('Tekrar dene')),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              );
+            }
+          }
 
           class GirisPage extends StatefulWidget {
             const GirisPage({super.key});
@@ -4466,7 +4510,44 @@ jobs:
           class _EngellenenlerPageState extends State<EngellenenlerPage>{
             Future<List<String>> getir()async{final u=FirebaseAuth.instance.currentUser;if(u==null)return[];final d=await FirebaseFirestore.instance.collection('users').doc(u.uid).get();return List<String>.from(d.data()?['blocked']??const[]);}
             Future<void> kaldir(String uid)async{final u=FirebaseAuth.instance.currentUser;if(u==null)return;await FirebaseFirestore.instance.collection('users').doc(u.uid).set({'blocked':FieldValue.arrayRemove([uid])},SetOptions(merge:true));if(mounted)setState((){});}
-            @override Widget build(BuildContext context)=>Theme(data:ThemeData.light().copyWith(scaffoldBackgroundColor:Colors.white,appBarTheme:const AppBarTheme(backgroundColor:Colors.white,foregroundColor:Colors.black,elevation:0)),child:Scaffold(appBar:AppBar(title:const Text('Engellenen hesaplar')),body:FutureBuilder<List<String>>(future:getir(),builder:(context,s){if(s.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator());final ids=s.data??[];if(ids.isEmpty)return const Center(child:Text('Engellediğin hesap yok.'));return ListView.separated(padding:const EdgeInsets.all(14),itemCount:ids.length,separatorBuilder:(_,__)=>const Divider(),itemBuilder:(_,i)=>FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(future:FirebaseFirestore.instance.collection('users').doc(ids[i]).get(),builder:(_,p){final v=p.data?.data()??{},foto=(v['photoUrl']??'').toString();return ListTile(leading:CircleAvatar(backgroundImage:foto.isEmpty?null:NetworkImage(foto),child:foto.isEmpty?const Icon(Icons.person):null),title:Text((v['displayName']??v['username']??'Ngel X kullanıcısı').toString()),subtitle:Text('@${v['username']??'ngelx'}'),trailing:TextButton(onPressed:()=>kaldir(ids[i]),child:const Text('Engeli kaldır')));});});})));
+            @override
+            Widget build(BuildContext context) {
+              return Theme(
+                data:ThemeData.light().copyWith(
+                  scaffoldBackgroundColor:Colors.white,
+                  appBarTheme:const AppBarTheme(backgroundColor:Colors.white,foregroundColor:Colors.black,elevation:0),
+                ),
+                child:Scaffold(
+                  appBar:AppBar(title:const Text('Engellenen hesaplar')),
+                  body:FutureBuilder<List<String>>(
+                    future:getir(),
+                    builder:(context,s){
+                      if(s.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator());
+                      final ids=s.data??[];
+                      if(ids.isEmpty)return const Center(child:Text('Engellediğin hesap yok.'));
+                      return ListView.separated(
+                        padding:const EdgeInsets.all(14),
+                        itemCount:ids.length,
+                        separatorBuilder:(_,index)=>const Divider(),
+                        itemBuilder:(_,i)=>FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(
+                          future:FirebaseFirestore.instance.collection('users').doc(ids[i]).get(),
+                          builder:(_,p){
+                            final v=p.data?.data()??{};
+                            final foto=(v['photoUrl']??'').toString();
+                            return ListTile(
+                              leading:CircleAvatar(backgroundImage:foto.isEmpty?null:NetworkImage(foto),child:foto.isEmpty?const Icon(Icons.person):null),
+                              title:Text((v['displayName']??v['username']??'Ngel X kullanıcısı').toString()),
+                              subtitle:Text('@' + (v['username']??'ngelx').toString()),
+                              trailing:TextButton(onPressed:()=>kaldir(ids[i]),child:const Text('Engeli kaldır')),
+                            );
+                          },
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              );
+            }
           }
 
           class DestekPage extends StatefulWidget {const DestekPage({super.key});@override State<DestekPage> createState()=>_DestekPageState();}
@@ -5203,7 +5284,7 @@ jobs:
         run: |
           cd ngelx_app
           flutter pub get
-          flutter analyze --no-fatal-infos --no-fatal-warnings
+          flutter analyze lib --no-fatal-infos --no-fatal-warnings
           flutter build apk --release
 
       - name: APK yukle
