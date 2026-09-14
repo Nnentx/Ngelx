@@ -1,0 +1,71 @@
+name: Export NgelX v18 Source
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/export-v18-source.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  export-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Extract v18 build script from existing workflow
+        shell: bash
+        run: |
+          python3 -m pip install --quiet pyyaml
+          python3 - <<'PY'
+          import pathlib
+          import yaml
+
+          workflow = pathlib.Path('.github/workflows/NgelX-v17.yml')
+          data = yaml.safe_load(workflow.read_text(encoding='utf-8'))
+          steps = data['jobs']['build']['steps']
+          target = next((s for s in steps if s.get('name') == 'Uygulamayi hazirla'), None)
+          if not target or 'run' not in target:
+              raise SystemExit('Uygulamayi hazirla step not found')
+          pathlib.Path('/tmp/ngelx_prepare.sh').write_text(target['run'], encoding='utf-8')
+          PY
+
+      - name: Rebuild NgelX v18 source tree
+        shell: bash
+        env:
+          FIREBASE_FILE: google-services.json
+        run: |
+          bash /tmp/ngelx_prepare.sh
+
+      - name: Keep source files only
+        shell: bash
+        run: |
+          rm -rf app
+          mv ngelx_app app
+          rm -rf app/build app/.dart_tool app/android/.gradle app/.idea
+
+      - name: Commit restored Flutter source
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app
+          if git diff --cached --quiet; then
+            echo "No source changes to commit."
+            exit 0
+          fi
+          git commit -m "Restore NgelX v18 Flutter source"
+          git push origin HEAD:main
