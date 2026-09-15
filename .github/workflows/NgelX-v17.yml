@@ -1860,28 +1860,132 @@ jobs:
                   index: secili,
                   children: sayfalar,
                 ),
-                bottomNavigationBar: Container(
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF101016),
-                    border: Border(top: BorderSide(color: Color(0xFF292936))),
-                    boxShadow: [BoxShadow(color: Colors.black54, blurRadius: 18)],
+                                bottomNavigationBar: Container(
+                  margin: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF07111E),
+                    borderRadius: BorderRadius.circular(30),
+                    border: Border.all(
+                      color: const Color(0xFF126D9B),
+                      width: 1,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.45),
+                        blurRadius: 20,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
                   ),
                   child: NavigationBar(
-                    height: 76,
+                    height: 82,
                     selectedIndex: secili,
                     backgroundColor: Colors.transparent,
-                    indicatorColor: const Color(0xFF22D3EE),
-                    labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+                    indicatorColor: const Color(0xFF0B5F87),
+                    labelBehavior:
+                        NavigationDestinationLabelBehavior.alwaysShow,
                     onDestinationSelected: (i) async {
                       if (i != 0 && await misafirEngeli(context)) return;
                       if (mounted) setState(() => secili = i);
                     },
                     destinations: [
-                      NavigationDestination(icon: const Icon(Icons.play_circle_outline), selectedIcon: const Icon(Icons.play_circle_fill, color: Colors.black), label: t('flow')),
-                      NavigationDestination(icon: const Icon(Icons.explore_outlined), selectedIcon: const Icon(Icons.explore, color: Colors.black), label: t('explore')),
-                      NavigationDestination(icon: const Icon(Icons.add_box_outlined, size: 31), selectedIcon: const Icon(Icons.add_box, color: Colors.black, size: 34), label: t('create')),
-                      NavigationDestination(icon: const Badge(child: Icon(Icons.forum_outlined)), selectedIcon: const Icon(Icons.forum, color: Colors.black), label: t('chat')),
-                      NavigationDestination(icon: const Icon(Icons.person_outline), selectedIcon: const Icon(Icons.person, color: Colors.black), label: t('me')),
+                      const NavigationDestination(
+                        icon: Icon(
+                          Icons.home_outlined,
+                          color: Colors.white,
+                        ),
+                        selectedIcon: Icon(
+                          Icons.home_rounded,
+                          color: Color(0xFF18D8FF),
+                        ),
+                        label: 'Akış',
+                      ),
+                      const NavigationDestination(
+                        icon: Icon(
+                          Icons.search_rounded,
+                          color: Colors.white,
+                        ),
+                        selectedIcon: Icon(
+                          Icons.search_rounded,
+                          color: Color(0xFF18D8FF),
+                        ),
+                        label: 'Keşfet',
+                      ),
+                      NavigationDestination(
+                        icon: Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [
+                                Color(0xFF16DAED),
+                                Color(0xFF168BFF),
+                                Color(0xFF7C40FF),
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(17),
+                          ),
+                          child: const Icon(
+                            Icons.add_rounded,
+                            color: Colors.white,
+                            size: 34,
+                          ),
+                        ),
+                        selectedIcon: Container(
+                          width: 52,
+                          height: 52,
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [
+                                Color(0xFF16E0F1),
+                                Color(0xFF168BFF),
+                                Color(0xFF8240FF),
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(18),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Color(0x664F80FF),
+                                blurRadius: 14,
+                              ),
+                            ],
+                          ),
+                          child: const Icon(
+                            Icons.add_rounded,
+                            color: Colors.white,
+                            size: 37,
+                          ),
+                        ),
+                        label: 'Üret',
+                      ),
+                      const NavigationDestination(
+                        icon: Badge(
+                          backgroundColor: Color(0xFFFF416C),
+                          child: Icon(
+                            Icons.chat_bubble_outline,
+                            color: Colors.white,
+                          ),
+                        ),
+                        selectedIcon: Badge(
+                          backgroundColor: Color(0xFFFF416C),
+                          child: Icon(
+                            Icons.chat_bubble,
+                            color: Color(0xFF18D8FF),
+                          ),
+                        ),
+                        label: 'Mesaj',
+                      ),
+                      const NavigationDestination(
+                        icon: Icon(
+                          Icons.person_outline_rounded,
+                          color: Colors.white,
+                        ),
+                        selectedIcon: Icon(
+                          Icons.person_rounded,
+                          color: Color(0xFF18D8FF),
+                        ),
+                        label: 'Ben',
+                      ),
                     ],
                   ),
                 ),
