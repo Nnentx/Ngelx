@@ -1,0 +1,1046 @@
+name: NgelX v38 CALISAN + YENI LOGO
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/build-v38-calisan-logo.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Kaynaklari al
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Flutter kur
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Bugunku logoyu sakla ve calisan tabani geri al
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          source = Path('app/lib/main.dart').read_text(encoding='utf-8')
+
+          def matching_brace(text, open_pos):
+              depth = 0
+              quote = None
+              i = open_pos
+              while i < len(text):
+                  if quote is not None:
+                      if text[i] == '\\':
+                          i += 2
+                          continue
+                      if text[i] == quote:
+                          quote = None
+                  elif text[i] in ("'", '"'):
+                      quote = text[i]
+                  elif text[i] == '{':
+                      depth += 1
+                  elif text[i] == '}':
+                      depth -= 1
+                      if depth == 0:
+                          return i
+                  i += 1
+              raise SystemExit('Logo sinifi kapanisi bulunamadi')
+
+          def take_class(name):
+              start = source.index(f'class {name}')
+              end = matching_brace(source, source.index('{', start)) + 1
+              return source[start:end]
+
+          logo = take_class('Logo') + '\n\n' + take_class('_YorungeCizici')
+          logo = logo.replace(
+              'final bool kucuk;\n\n  const Logo({super.key, this.kucuk = false});',
+              'final bool kucuk;\n  final bool koyuZemin;\n\n  const Logo({super.key, this.kucuk = false, this.koyuZemin = false});',
+          )
+          Path('/tmp/ngelx_today_logo.dart').write_text(logo, encoding='utf-8')
+          PY
+          git checkout 8dc9a87be8ef98bab844d75bf9f45dc9adb8c73b -- app/lib/main.dart app/pubspec.yaml
+
+      - name: v34 tabanini uygula
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import subprocess
+
+          workflow = Path('.github/workflows/build-v34-akis-final-verified.yml').read_text()
+
+          def extract_run(step_name):
+              lines = workflow.splitlines()
+              target = f'      - name: {step_name}'
+              if target not in lines:
+                  raise SystemExit(f'v34 adimi bulunamadi: {step_name}')
+              i = lines.index(target) + 1
+              while i < len(lines) and lines[i].strip() != 'run: |':
+                  i += 1
+              if i >= len(lines):
+                  raise SystemExit(f'run blogu bulunamadi: {step_name}')
+              i += 1
+              script = []
+              while i < len(lines):
+                  line = lines[i]
+                  if line.startswith('      - name: '):
+                      break
+                  if line.startswith('          '):
+                      script.append(line[10:])
+                  elif line.strip() == '':
+                      script.append('')
+                  else:
+                      break
+                  i += 1
+              return '\n'.join(script) + '\n'
+
+          script = extract_run('v31 dogrulanmis adimlarini ve final duzeltmeyi uygula')
+          subprocess.run(['bash'], input=script, text=True, check=True)
+          PY
+
+      - name: Paylasim yorum silme profil beyaz menu FIX
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('app/lib/main.dart')
+          s = path.read_text(encoding='utf-8')
+
+          def matching_brace(text, open_pos):
+              depth = 0
+              i = open_pos
+              quote = None
+              line_comment = False
+              block_comment = 0
+              while i < len(text):
+                  if line_comment:
+                      if text[i] == '\n':
+                          line_comment = False
+                      i += 1
+                      continue
+                  if block_comment:
+                      if text.startswith('/*', i):
+                          block_comment += 1
+                          i += 2
+                          continue
+                      if text.startswith('*/', i):
+                          block_comment -= 1
+                          i += 2
+                          continue
+                      i += 1
+                      continue
+                  if quote is not None:
+                      if text[i] == '\\':
+                          i += 2
+                          continue
+                      if text[i] == quote:
+                          quote = None
+                      i += 1
+                      continue
+                  if text.startswith('//', i):
+                      line_comment = True
+                      i += 2
+                      continue
+                  if text.startswith('/*', i):
+                      block_comment = 1
+                      i += 2
+                      continue
+                  if text[i] in ("'", '"'):
+                      quote = text[i]
+                      i += 1
+                      continue
+                  if text[i] == '{':
+                      depth += 1
+                  elif text[i] == '}':
+                      depth -= 1
+                      if depth == 0:
+                          return i
+                  i += 1
+              return -1
+
+          def class_bounds(text, class_name):
+              start = text.find(f'class {class_name}')
+              if start < 0:
+                  raise SystemExit(f'class bulunamadi: {class_name}')
+              open_pos = text.find('{', start)
+              close_pos = matching_brace(text, open_pos)
+              if close_pos < 0:
+                  raise SystemExit(f'class kapanisi bulunamadi: {class_name}')
+              return start, close_pos + 1
+
+          def replace_method(class_name, marker, new_code):
+              global s
+              cs, ce = class_bounds(s, class_name)
+              region = s[cs:ce]
+              pos = region.find(marker)
+              if pos < 0:
+                  raise SystemExit(f'{class_name} icinde method bulunamadi: {marker}')
+              line_start = region.rfind('\n', 0, pos) + 1
+              open_pos = region.find('{', pos)
+              close_pos = matching_brace(region, open_pos)
+              if close_pos < 0:
+                  raise SystemExit(f'method kapanisi bulunamadi: {class_name}/{marker}')
+              region = region[:line_start] + new_code.rstrip() + region[close_pos + 1:]
+              s = s[:cs] + region + s[ce:]
+
+          def replace_global_method(marker, new_code):
+              global s
+              pos = s.find(marker)
+              if pos < 0:
+                  raise SystemExit(f'global method bulunamadi: {marker}')
+              line_start = s.rfind('\n', 0, pos) + 1
+              open_pos = s.find('{', pos)
+              close_pos = matching_brace(s, open_pos)
+              if close_pos < 0:
+                  raise SystemExit(f'global method kapanisi bulunamadi: {marker}')
+              s = s[:line_start] + new_code.rstrip() + s[close_pos + 1:]
+
+          if "package:flutter/services.dart" not in s:
+              anchor = "import 'package:flutter/material.dart';"
+              if anchor not in s:
+                  raise SystemExit('material import bulunamadi')
+              s = s.replace(anchor, anchor + "\nimport 'package:flutter/services.dart';", 1)
+
+          if "const ngelxWebAdresi =" not in s:
+              anchor = "const panel = Color(0xFF17171F);"
+              if anchor not in s:
+                  raise SystemExit('panel sabiti bulunamadi')
+              s = s.replace(anchor, anchor + "\nconst ngelxWebAdresi = 'https://ngelxsocial.com';", 1)
+
+          helpers = r'''
+          String ngelxIcerikLink(String id) => '$ngelxWebAdresi/p/$id';
+
+          Future<void> ngelxIcerikGizle(BuildContext context, String id, {bool ilgilenmiyorum = false}) async {
+            final u = FirebaseAuth.instance.currentUser;
+            if (u == null || id.isEmpty) return;
+            if (u.isAnonymous) {
+              await misafirEngeli(context);
+              return;
+            }
+            try {
+              final alan = ilgilenmiyorum ? 'notInterestedIds' : 'hiddenContent';
+              await FirebaseFirestore.instance.collection('users').doc(u.uid).set({
+                alan: FieldValue.arrayUnion([id]),
+              }, SetOptions(merge: true));
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                  content: Text(ilgilenmiyorum
+                      ? 'Benzer içerikler azaltılacak.'
+                      : 'İçerik akışından gizlendi.'),
+                ));
+              }
+            } catch (e) {
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('İşlem tamamlanamadı: $e')),
+                );
+              }
+            }
+          }
+
+          Future<void> ngelxOzeldenPaylas(
+            BuildContext context, {
+            required String icerikId,
+            required String aciklama,
+          }) async {
+            if (await misafirEngeli(context)) return;
+            final ben = FirebaseAuth.instance.currentUser;
+            if (ben == null) return;
+
+            final benim = await FirebaseFirestore.instance.collection('users').doc(ben.uid).get();
+            final engellenen = Set<String>.from(List<dynamic>.from(benim.data()?['blocked'] ?? const []));
+            if (!context.mounted) return;
+
+            String sorgu = '';
+            await showModalBottomSheet<void>(
+              context: context,
+              isScrollControlled: true,
+              backgroundColor: Colors.white,
+              shape: const RoundedRectangleBorder(
+                borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+              ),
+              builder: (sheetContext) => StatefulBuilder(
+                builder: (sheetContext, setSheet) => Theme(
+                  data: ThemeData.light(),
+                  child: SafeArea(
+                    child: SizedBox(
+                      height: MediaQuery.of(sheetContext).size.height * .72,
+                      child: Column(
+                        children: [
+                          Container(
+                            width: 42,
+                            height: 4,
+                            margin: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.black26,
+                              borderRadius: BorderRadius.circular(9),
+                            ),
+                          ),
+                          const Text(
+                            'NgelX içinde özele gönder',
+                            style: TextStyle(
+                              color: Colors.black,
+                              fontSize: 20,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.all(14),
+                            child: TextField(
+                              onChanged: (v) => setSheet(() => sorgu = v.trim().toLowerCase()),
+                              decoration: InputDecoration(
+                                hintText: 'Kişi ara',
+                                prefixIcon: const Icon(Icons.search),
+                                filled: true,
+                                fillColor: const Color(0xFFF3F4F6),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(22),
+                                  borderSide: BorderSide.none,
+                                ),
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                              stream: FirebaseFirestore.instance.collection('users').snapshots(),
+                              builder: (_, snap) {
+                                if (snap.connectionState == ConnectionState.waiting) {
+                                  return const Center(child: CircularProgressIndicator(color: mor));
+                                }
+                                final docs = (snap.data?.docs ?? []).where((d) {
+                                  if (d.id == ben.uid || engellenen.contains(d.id)) return false;
+                                  final v = d.data();
+                                  if (v['deactivated'] == true) return false;
+                                  if (List<String>.from(v['blocked'] ?? const []).contains(ben.uid)) return false;
+                                  final ad = '${v['displayName'] ?? ''} ${v['username'] ?? ''}'.toLowerCase();
+                                  return sorgu.isEmpty || ad.contains(sorgu);
+                                }).toList();
+
+                                if (docs.isEmpty) {
+                                  return const Center(
+                                    child: Text('Kişi bulunamadı.', style: TextStyle(color: Colors.black54)),
+                                  );
+                                }
+
+                                return ListView.builder(
+                                  itemCount: docs.length,
+                                  itemBuilder: (_, i) {
+                                    final d = docs[i];
+                                    final v = d.data();
+                                    final foto = (v['photoUrl'] ?? '').toString();
+                                    final ad = (v['displayName'] ?? v['username'] ?? 'Kullanıcı').toString();
+                                    return ListTile(
+                                      leading: CircleAvatar(
+                                        backgroundImage: foto.isEmpty ? null : NetworkImage(foto),
+                                        child: foto.isEmpty ? const Icon(Icons.person) : null,
+                                      ),
+                                      title: Text(ad, style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.w800)),
+                                      subtitle: Text('@${v['username'] ?? 'ngelx'}', style: const TextStyle(color: Colors.black54)),
+                                      trailing: const Icon(Icons.send_rounded, color: mor),
+                                      onTap: () async {
+                                        try {
+                                          final ids = <String>[ben.uid, d.id]..sort();
+                                          final chatId = ids.join('_');
+                                          final chat = FirebaseFirestore.instance.collection('chats').doc(chatId);
+                                          final metin = [
+                                            'NgelX paylaşımı ✨',
+                                            if (aciklama.trim().isNotEmpty) aciklama.trim(),
+                                            ngelxIcerikLink(icerikId),
+                                            'NgelX: $ngelxWebAdresi',
+                                          ].join('\n');
+
+                                          await chat.set({
+                                            'members': ids,
+                                            'updatedAt': FieldValue.serverTimestamp(),
+                                          }, SetOptions(merge: true));
+
+                                          await chat.collection('messages').add({
+                                            'senderId': ben.uid,
+                                            'text': metin,
+                                            'type': 'shared_content',
+                                            'contentId': icerikId,
+                                            'createdAt': FieldValue.serverTimestamp(),
+                                          });
+
+                                          await chat.set({
+                                            'lastMessage': '🔗 NgelX paylaşımı',
+                                            'updatedAt': FieldValue.serverTimestamp(),
+                                            'unread_${d.id}': FieldValue.increment(1),
+                                          }, SetOptions(merge: true));
+
+                                          if (!icerikId.startsWith('ornek_')) {
+                                            await FirebaseFirestore.instance
+                                                .collection('videos')
+                                                .doc(icerikId)
+                                                .set({'shareCount': FieldValue.increment(1)}, SetOptions(merge: true));
+                                          }
+
+                                          await uygulamaBildirimiGonder(
+                                            toUid: d.id,
+                                            fromUid: ben.uid,
+                                            tur: 'message',
+                                            metin: 'Sana bir NgelX paylaşımı gönderdi',
+                                            belgeId: chatId,
+                                          );
+
+                                          if (sheetContext.mounted) Navigator.pop(sheetContext);
+                                          if (context.mounted) {
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              SnackBar(content: Text('$ad kişisine gönderildi ✅')),
+                                            );
+                                          }
+                                        } catch (e) {
+                                          if (context.mounted) {
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              SnackBar(content: Text('Gönderilemedi: $e')),
+                                            );
+                                          }
+                                        }
+                                      },
+                                    );
+                                  },
+                                );
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }
+
+          Future<void> ngelxPaylasimMenusu(
+            BuildContext context, {
+            required String icerikId,
+            required String aciklama,
+          }) async {
+            final link = ngelxIcerikLink(icerikId);
+            final metin = [
+              'NgelX’te bunu gördüm ✨',
+              if (aciklama.trim().isNotEmpty) aciklama.trim(),
+              '',
+              'İçeriğe bak: $link',
+              'NgelX: $ngelxWebAdresi',
+            ].join('\n');
+
+            await showModalBottomSheet<void>(
+              context: context,
+              backgroundColor: Colors.white,
+              shape: const RoundedRectangleBorder(
+                borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+              ),
+              builder: (c) => Theme(
+                data: ThemeData.light(),
+                child: SafeArea(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 42,
+                        height: 4,
+                        margin: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.black26,
+                          borderRadius: BorderRadius.circular(9),
+                        ),
+                      ),
+                      const ListTile(
+                        title: Text(
+                          'Paylaş',
+                          style: TextStyle(color: Colors.black, fontSize: 20, fontWeight: FontWeight.w900),
+                        ),
+                      ),
+                      ListTile(
+                        leading: const Icon(Icons.forum_rounded, color: mor),
+                        title: const Text(
+                          'NgelX içinde özele gönder',
+                          style: TextStyle(color: Colors.black87, fontWeight: FontWeight.w800),
+                        ),
+                        onTap: () {
+                          Navigator.pop(c);
+                          ngelxOzeldenPaylas(context, icerikId: icerikId, aciklama: aciklama);
+                        },
+                      ),
+                      ListTile(
+                        leading: const Icon(Icons.share_rounded, color: Color(0xFF20B86A)),
+                        title: const Text(
+                          'WhatsApp / diğer uygulamalar',
+                          style: TextStyle(color: Colors.black87, fontWeight: FontWeight.w800),
+                        ),
+                        subtitle: const Text(ngelxWebAdresi, style: TextStyle(color: Colors.black54)),
+                        onTap: () async {
+                          Navigator.pop(c);
+                          await SharePlus.instance.share(
+                            ShareParams(text: metin, title: 'NgelX paylaşımı'),
+                          );
+                          if (!icerikId.startsWith('ornek_')) {
+                            await FirebaseFirestore.instance.collection('videos').doc(icerikId).set(
+                              {'shareCount': FieldValue.increment(1)},
+                              SetOptions(merge: true),
+                            );
+                          }
+                        },
+                      ),
+                      ListTile(
+                        leading: const Icon(Icons.link_rounded, color: Colors.blue),
+                        title: const Text(
+                          'Bağlantıyı kopyala',
+                          style: TextStyle(color: Colors.black87, fontWeight: FontWeight.w800),
+                        ),
+                        subtitle: Text(link, style: const TextStyle(color: Colors.black54)),
+                        onTap: () async {
+                          await Clipboard.setData(ClipboardData(text: link));
+                          if (c.mounted) Navigator.pop(c);
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('NgelX bağlantısı kopyalandı ✅')),
+                            );
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }
+          '''
+
+          if "Future<void> ngelxPaylasimMenusu(" not in s:
+              anchor = "class GorselYaziKarti extends StatefulWidget"
+              pos = s.find(anchor)
+              if pos < 0:
+                  raise SystemExit('helper ekleme noktasi bulunamadi')
+              s = s[:pos] + helpers + "\n" + s[pos:]
+
+          if "Set<String> gizlenenIcerikler" not in s:
+              cs, ce = class_bounds(s, "_VideoAkisiState")
+              region = s[cs:ce]
+              anchor = "Set<String> engellenenler = {};"
+              if anchor not in region:
+                  raise SystemExit('VideoAkisi engellenenler alani bulunamadi')
+              region = region.replace(anchor, anchor + "\n  Set<String> gizlenenIcerikler = {};", 1)
+              s = s[:cs] + region + s[ce:]
+
+          cs, ce = class_bounds(s, "_VideoAkisiState")
+          region = s[cs:ce]
+          if "gizlenenIcerikler = {" not in region:
+              anchor = "engellenenler = Set<String>.from(List<dynamic>.from(d.data()?['blocked'] ?? []));"
+              if anchor not in region:
+                  raise SystemExit('VideoAkisi engellenen yukleme bulunamadi')
+              region = region.replace(
+                  anchor,
+                  anchor + "\n      gizlenenIcerikler = {\n"
+                           "        ...List<String>.from(d.data()?['hiddenContent'] ?? const []),\n"
+                           "        ...List<String>.from(d.data()?['notInterestedIds'] ?? const []),\n"
+                           "      };",
+                  1,
+              )
+              s = s[:cs] + region + s[ce:]
+
+          if "!gizlenenIcerikler.contains(v['id'])" not in s:
+              target = ".where((v) => v['type'] != 'story' && !engellenenler.contains(v['ownerId'])).toList();"
+              if target not in s:
+                  raise SystemExit('Akis filtre satiri bulunamadi')
+              s = s.replace(
+                  target,
+                  ".where((v) => v['type'] != 'story' && "
+                  "!engellenenler.contains(v['ownerId']) && "
+                  "!gizlenenIcerikler.contains(v['id'])).toList();",
+                  1,
+              )
+
+          replace_method(
+              "_GorselYaziKartiState",
+              "Future<void> paylas()",
+              r'''  Future<void> paylas() async {
+              await ngelxPaylasimMenusu(
+                context,
+                icerikId: icerikId,
+                aciklama: (widget.veri['description'] ?? '').toString(),
+              );
+              await etkilesimleriGetir();
+            }''',
+          )
+
+          replace_method(
+              "_VideoKartiState",
+              "Future<void> videoyuPaylas()",
+              r'''  Future<void> videoyuPaylas() async {
+              await ngelxPaylasimMenusu(
+                context,
+                icerikId: videoId,
+                aciklama: 'NgelX videosu • @${widget.kullaniciAdi}',
+              );
+              await etkilesimleriGetir();
+            }''',
+          )
+
+          replace_method(
+              "_VideoKartiState",
+              "Future<void> paylasanProfiliAc()",
+              r'''  Future<void> paylasanProfiliAc() async {
+              if (widget.ownerId.isEmpty) return;
+              await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => KullaniciProfilPage(uid: widget.ownerId),
+                ),
+              );
+            }''',
+          )
+
+          replace_method(
+              "_GorselYaziKartiState",
+              "Future<void> uzunBasmaMenusu()",
+              r'''  Future<void> uzunBasmaMenusu() async {
+              final sahibi = FirebaseAuth.instance.currentUser?.uid == widget.veri['ownerId'];
+              await showModalBottomSheet(
+                context: context,
+                backgroundColor: Colors.white,
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+                ),
+                builder: (ctx) => Theme(
+                  data: ThemeData.light(),
+                  child: SafeArea(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(width: 42, height: 4, margin: const EdgeInsets.all(12), decoration: BoxDecoration(color: Colors.black26, borderRadius: BorderRadius.circular(9))),
+                        if (indirilebilir) ListTile(leading: const Icon(Icons.download_rounded, color: mavi), title: const Text('İndir'), onTap: () { Navigator.pop(ctx); fotografiKaydet(); }),
+                        ListTile(leading: const Icon(Icons.heart_broken_outlined, color: Colors.black87), title: const Text('İlgilenmiyorum'), subtitle: const Text('Benzer içerikleri azalt'), onTap: () { Navigator.pop(ctx); ngelxIcerikGizle(context, icerikId, ilgilenmiyorum: true); }),
+                        ListTile(leading: const Icon(Icons.visibility_off_outlined, color: Colors.black87), title: const Text('İçeriği gizle'), onTap: () { Navigator.pop(ctx); ngelxIcerikGizle(context, icerikId); }),
+                        ListTile(leading: const Icon(Icons.link_rounded, color: Colors.blue), title: const Text('Bağlantıyı kopyala'), onTap: () async { await Clipboard.setData(ClipboardData(text: ngelxIcerikLink(icerikId))); if (ctx.mounted) Navigator.pop(ctx); }),
+                        ListTile(leading: const Icon(Icons.flag_outlined, color: Colors.orange), title: const Text('Bildir / Şikâyet et'), onTap: () { Navigator.pop(ctx); sikayetEt(context, hedefTuru: 'paylasim', hedefId: icerikId, hedefUid: (widget.veri['ownerId'] ?? '').toString()); }),
+                        if (!sahibi) ListTile(leading: const Icon(Icons.block, color: Colors.red), title: const Text('Kullanıcıyı engelle', style: TextStyle(color: Colors.red)), onTap: () { Navigator.pop(ctx); kullaniciyiEngelle(context, (widget.veri['ownerId'] ?? '').toString()); }),
+                        if (sahibi) ListTile(leading: const Icon(Icons.delete_forever, color: Colors.red), title: const Text('PAYLAŞIMI SİL', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)), onTap: () { Navigator.pop(ctx); kendiPaylasiminiSil(context, icerikId, widget.veri); }),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }''',
+          )
+
+          replace_method(
+              "_VideoKartiState",
+              "Future<void> uzunBasmaMenusu()",
+              r'''  Future<void> uzunBasmaMenusu() async {
+              final sahibi = FirebaseAuth.instance.currentUser?.uid == widget.ownerId;
+              await showModalBottomSheet(
+                context: context,
+                backgroundColor: Colors.white,
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+                ),
+                builder: (ctx) => Theme(
+                  data: ThemeData.light(),
+                  child: SafeArea(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(14, 12, 14, 22),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(width: 42, height: 4, margin: const EdgeInsets.only(bottom: 12), decoration: BoxDecoration(color: Colors.black26, borderRadius: BorderRadius.circular(9))),
+                          if (widget.indirilebilir || sahibi) ListTile(leading: const Icon(Icons.download_rounded, color: mavi), title: const Text('İndir'), onTap: () { Navigator.pop(ctx); videoyuGaleriyeKaydet(); }),
+                          ListTile(leading: const Icon(Icons.heart_broken_outlined, color: Colors.black87), title: const Text('İlgilenmiyorum'), subtitle: const Text('Benzer içerikleri azalt'), onTap: () { Navigator.pop(ctx); ngelxIcerikGizle(context, videoId, ilgilenmiyorum: true); }),
+                          ListTile(leading: const Icon(Icons.visibility_off_outlined, color: Colors.black87), title: const Text('İçeriği gizle'), onTap: () { Navigator.pop(ctx); ngelxIcerikGizle(context, videoId); }),
+                          ListTile(leading: const Icon(Icons.link_rounded, color: Colors.blue), title: const Text('Bağlantıyı kopyala'), onTap: () async { await Clipboard.setData(ClipboardData(text: ngelxIcerikLink(videoId))); if (ctx.mounted) Navigator.pop(ctx); }),
+                          ListTile(leading: const Icon(Icons.flag_outlined, color: Colors.orange), title: const Text('Bildir / Şikâyet et'), onTap: () { Navigator.pop(ctx); sikayetEt(context, hedefTuru: 'video', hedefId: videoId, hedefUid: widget.ownerId); }),
+                          if (!sahibi) ListTile(leading: const Icon(Icons.block, color: Colors.red), title: const Text('Kullanıcıyı engelle', style: TextStyle(color: Colors.red)), onTap: () { Navigator.pop(ctx); kullaniciyiEngelle(context, widget.ownerId); }),
+                          if (sahibi) ListTile(leading: const Icon(Icons.delete_forever, color: Colors.red), title: const Text('PAYLAŞIMI SİL', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)), onTap: () { Navigator.pop(ctx); kendiPaylasiminiSil(context, videoId, {'ownerId': widget.ownerId, 'videoUrl': widget.adres}); }),
+                          const Divider(),
+                          const Align(alignment: Alignment.centerLeft, child: Padding(padding: EdgeInsets.all(10), child: Text('Video hızı', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)))),
+                          Wrap(spacing: 9, children: [.5, 1.0, 1.5, 2.0].map((hiz) => ActionChip(label: Text('${hiz}x'), onPressed: () { kontrol.setPlaybackSpeed(hiz); Navigator.pop(ctx); })).toList()),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }''',
+          )
+
+          replace_global_method(
+              "Future<void> kendiPaylasiminiSil(",
+              r'''Future<void> kendiPaylasiminiSil(
+            BuildContext context,
+            String id,
+            Map<String, dynamic> veri,
+          ) async {
+            final uid = FirebaseAuth.instance.currentUser?.uid;
+            if (uid == null || id.isEmpty || uid != (veri['ownerId'] ?? '').toString()) return;
+
+            final onay = await showDialog<bool>(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                title: const Text('Bu paylaşımı silmek istiyor musun?'),
+                content: const Text('Paylaşım profilinden, Akıştan ve Keşfetten tamamen kaldırılacak.'),
+                actions: [
+                  TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Vazgeç')),
+                  TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Sil', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold))),
+                ],
+              ),
+            );
+            if (onay != true) return;
+
+            final ref = FirebaseFirestore.instance.collection('videos').doc(id);
+            try {
+              await ref.delete();
+            } catch (e) {
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Paylaşım silinemedi: $e')));
+              }
+              return;
+            }
+
+            try {
+              final likes = await ref.collection('likes').get();
+              for (final x in likes.docs) {
+                try { await x.reference.delete(); } catch (_) {}
+              }
+            } catch (_) {}
+
+            try {
+              final comments = await ref.collection('comments').get();
+              for (final x in comments.docs) {
+                try { await x.reference.delete(); } catch (_) {}
+              }
+            } catch (_) {}
+
+            for (final raw in [
+              (veri['mediaUrl'] ?? '').toString(),
+              (veri['videoUrl'] ?? '').toString(),
+              (veri['audioUrl'] ?? '').toString(),
+            ]) {
+              if (raw.isEmpty) continue;
+              try {
+                final parts = Uri.parse(raw).pathSegments;
+                final i = parts.indexOf('ngelx-media');
+                if (i >= 0 && i + 1 < parts.length) {
+                  await supa.Supabase.instance.client.storage.from('ngelx-media').remove([parts.sublist(i + 1).join('/')]);
+                }
+              } catch (_) {}
+            }
+
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Paylaşım tamamen silindi ✅')));
+            }
+          }''',
+          )
+
+          replace_method(
+              "_YeniYorumlarState",
+              "Future<void> yorumBegen(",
+              r'''  Future<void> yorumBegen(String id, List<dynamic> _) async {
+              if (await misafirEngeli(context)) return;
+              final uid = FirebaseAuth.instance.currentUser?.uid;
+              if (uid == null) return;
+
+              final yorumRef = ref.doc(id);
+              final likeRef = yorumRef.collection('likes').doc(uid);
+
+              try {
+                final varMi = await likeRef.get();
+                if (varMi.exists) {
+                  await likeRef.delete();
+                } else {
+                  await likeRef.set({
+                    'uid': uid,
+                    'createdAt': FieldValue.serverTimestamp(),
+                  });
+
+                  final yorumBelgesi = await yorumRef.get();
+                  final yorumSahibi = (yorumBelgesi.data()?['userId'] ?? '').toString();
+                  if (yorumSahibi.isNotEmpty && yorumSahibi != uid) {
+                    await uygulamaBildirimiGonder(
+                      toUid: yorumSahibi,
+                      fromUid: uid,
+                      tur: 'like',
+                      metin: 'Yorumunu beğendi',
+                      belgeId: widget.videoId,
+                    );
+                  }
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Yorum beğenilemedi: $e')),
+                  );
+                }
+              }
+            }''',
+          )
+
+          ys, ye = class_bounds(s, "YorumKarti")
+          new_yorum_class = r'''class YorumKarti extends StatelessWidget {
+            final String videoId;
+            final String id;
+            final Map<String, dynamic> veri;
+            final String zaman;
+            final List<QueryDocumentSnapshot<Map<String, dynamic>>> yanitlar;
+            final bool acik;
+            final String Function(dynamic) zamanYaz;
+            final Future<void> Function(String, List<dynamic>) begen;
+            final VoidCallback yanitla;
+            final VoidCallback yanitlariAc;
+
+            const YorumKarti({
+              super.key,
+              required this.videoId,
+              required this.id,
+              required this.veri,
+              required this.zaman,
+              required this.yanitlar,
+              required this.acik,
+              required this.zamanYaz,
+              required this.begen,
+              required this.yanitla,
+              required this.yanitlariAc,
+            });
+
+            Widget satir(
+              BuildContext context,
+              String yorumId,
+              Map<String, dynamic> v,
+              String zaman, {
+              bool yanit = false,
+            }) {
+              final ad = (v['username'] ?? 'ngelx').toString();
+              final metin = (v['text'] ?? v['message'] ?? v['content'] ?? '').toString().trim();
+              final foto = (v['photoUrl'] ?? '').toString();
+              final profilUid = (v['userId'] ?? '').toString();
+              final aktifUid = FirebaseAuth.instance.currentUser?.uid;
+
+              void profilAc() {
+                if (profilUid.isEmpty) return;
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => KullaniciProfilPage(uid: profilUid)),
+                );
+              }
+
+              final likeStream = FirebaseFirestore.instance
+                  .collection('videos')
+                  .doc(videoId)
+                  .collection('comments')
+                  .doc(yorumId)
+                  .collection('likes')
+                  .snapshots();
+
+              return Padding(
+                padding: EdgeInsets.fromLTRB(yanit ? 52 : 0, 9, 0, 4),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    GestureDetector(
+                      onTap: profilAc,
+                      child: CircleAvatar(
+                        radius: yanit ? 16 : 21,
+                        backgroundImage: foto.isEmpty ? null : NetworkImage(foto),
+                        child: foto.isEmpty ? Text(ad.isEmpty ? 'N' : ad[0].toUpperCase()) : null,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          GestureDetector(
+                            onTap: profilAc,
+                            child: Text('@$ad', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black87)),
+                          ),
+                          if ((v['replyToUsername'] ?? '').toString().isNotEmpty)
+                            Text.rich(
+                              TextSpan(
+                                children: [
+                                  TextSpan(text: '@${v['replyToUsername']}  ', style: const TextStyle(color: mor, fontWeight: FontWeight.w700)),
+                                  TextSpan(text: metin.isEmpty ? 'Mesaj içeriği bulunamadı' : metin),
+                                ],
+                              ),
+                              style: const TextStyle(color: Colors.black87, fontSize: 15, height: 1.3),
+                            )
+                          else
+                            Text(
+                              metin.isEmpty ? 'Mesaj içeriği bulunamadı' : metin,
+                              maxLines: null,
+                              softWrap: true,
+                              style: const TextStyle(color: Colors.black87, fontSize: 15, height: 1.3),
+                            ),
+                          const SizedBox(height: 5),
+                          Row(
+                            children: [
+                              Text(zaman, style: const TextStyle(color: Colors.black45, fontSize: 12)),
+                              const SizedBox(width: 18),
+                              if (!yanit)
+                                GestureDetector(
+                                  onTap: yanitla,
+                                  child: const Text('Yanıtla', style: TextStyle(color: Colors.black54, fontWeight: FontWeight.bold, fontSize: 12)),
+                                ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                      stream: likeStream,
+                      builder: (_, snap) {
+                        final docs = snap.data?.docs ?? const [];
+                        final secili = aktifUid != null && docs.any((d) => d.id == aktifUid);
+                        final sayi = docs.length;
+                        return GestureDetector(
+                          onTap: () => begen(yorumId, const []),
+                          child: Column(
+                            children: [
+                              Icon(
+                                secili ? Icons.favorite : Icons.favorite_border,
+                                color: secili ? const Color(0xFFFF2D55) : Colors.black45,
+                                size: 22,
+                              ),
+                              if (sayi > 0)
+                                Text('$sayi', style: const TextStyle(fontSize: 11, color: Colors.black45)),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            @override
+            Widget build(BuildContext context) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  satir(context, id, veri, zaman),
+                  if (yanitlar.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 52),
+                      child: TextButton(
+                        onPressed: yanitlariAc,
+                        child: Text(acik ? 'Yanıtları gizle' : '${yanitlar.length} yanıtı görüntüle'),
+                      ),
+                    ),
+                  if (acik)
+                    ...yanitlar.map(
+                      (d) => satir(
+                        context,
+                        d.id,
+                        d.data(),
+                        zamanYaz(d.data()['createdAt']),
+                        yanit: true,
+                      ),
+                    ),
+                ],
+              );
+            }
+          }'''
+          s = s[:ys] + new_yorum_class + s[ye:]
+
+          call_anchor = "return YorumKarti(\n                                id: d.id,"
+          if call_anchor not in s:
+              raise SystemExit('YorumKarti cagrisi bulunamadi')
+          s = s.replace(
+              call_anchor,
+              "return YorumKarti(\n                                videoId: widget.videoId,\n                                id: d.id,",
+              1,
+          )
+
+          if "class KalpPatlama extends StatelessWidget" in s:
+              ks, ke = class_bounds(s, "KalpPatlama")
+              region = s[ks:ke]
+              if "color: Colors.white" in region:
+                  region = region.replace("color: Colors.white", "color: const Color(0xFFFF2D55)", 1)
+                  s = s[:ks] + region + s[ke:]
+
+          path.write_text(s, encoding='utf-8')
+          print('v36 saglam yama tamamlandi')
+          PY
+
+      - name: Bugunku yeni logoyu calisan surume uygula
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('app/lib/main.dart')
+          source = path.read_text(encoding='utf-8')
+
+          def matching_brace(text, open_pos):
+              depth = 0
+              quote = None
+              i = open_pos
+              while i < len(text):
+                  if quote is not None:
+                      if text[i] == '\\':
+                          i += 2
+                          continue
+                      if text[i] == quote:
+                          quote = None
+                  elif text[i] in ("'", '"'):
+                      quote = text[i]
+                  elif text[i] == '{':
+                      depth += 1
+                  elif text[i] == '}':
+                      depth -= 1
+                      if depth == 0:
+                          return i
+                  i += 1
+              raise SystemExit('Logo sinifi kapanisi bulunamadi')
+
+          start = source.index('class Logo')
+          end = matching_brace(source, source.index('{', start)) + 1
+          logo = Path('/tmp/ngelx_today_logo.dart').read_text(encoding='utf-8')
+          source = source[:start] + logo + source[end:]
+          path.write_text(source, encoding='utf-8')
+
+          pubspec = Path('app/pubspec.yaml')
+          pub = pubspec.read_text(encoding='utf-8')
+          pub = pub.replace('version: 1.0.19+194', 'version: 1.0.20+195')
+          pubspec.write_text(pub, encoding='utf-8')
+          print('Calisan v36 tabani + bugunku logo birlestirildi')
+          PY
+
+      - name: Kodu dogrula
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          dart format lib/main.dart
+          flutter pub get
+          flutter analyze --no-fatal-infos --no-fatal-warnings
+
+      - name: APK olustur
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter build apk --release
+          test -s build/app/outputs/flutter-apk/app-release.apk
+
+      - name: APK artifactini yukle
+        uses: actions/upload-artifact@v4
+        with:
+          name: NgelX-v38-CALISAN-YENI-LOGO
+          path: app/build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+          retention-days: 30
