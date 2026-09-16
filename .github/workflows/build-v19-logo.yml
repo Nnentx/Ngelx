@@ -1,0 +1,352 @@
+name: NgelX v19 Yeni Logo APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/build-v19-logo.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Kaynaklari al
+        uses: actions/checkout@v4
+
+      - name: Flutter kur
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Yeni logo ve cok dilli giris tasarimini uygula
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          p = Path('app/lib/main.dart')
+          text = p.read_text(encoding='utf-8')
+
+          heading_pattern = re.compile(
+              r"              const SizedBox\(height: 55\),\n.*?              const SizedBox\(height: 8\),",
+              re.S,
+          )
+          heading_replacement = """              const SizedBox(height: 55),
+              const _NgelXRenkliBaslik(),
+              const SizedBox(height: 8),"""
+          text, count = heading_pattern.subn(heading_replacement, text, count=1)
+          if count != 1:
+              raise SystemExit(f'Giris basligi degistirilemedi: {count}')
+
+          helper = r'''
+class _NgelXRenkliBaslik extends StatelessWidget {
+  const _NgelXRenkliBaslik();
+
+  @override
+  Widget build(BuildContext context) {
+    final dil = uygulamaDili.value.toLowerCase();
+    const parcalar = <String, List<String>>{
+      'tr': ['Tekrar', 'hoş geldin'],
+      'en': ['Welcome', 'back'],
+      'de': ['Willkommen', 'zurück'],
+      'ar': ['مرحباً', 'بعودتك'],
+      'ru': ['С', 'возвращением'],
+    };
+    final secili = parcalar[dil] ?? parcalar['tr']!;
+    final rtl = dil == 'ar';
+
+    return Align(
+      alignment: rtl ? Alignment.centerRight : Alignment.centerLeft,
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: rtl ? Alignment.centerRight : Alignment.centerLeft,
+        child: Directionality(
+          textDirection: rtl ? TextDirection.rtl : TextDirection.ltr,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                secili[0],
+                style: const TextStyle(
+                  fontSize: 34,
+                  fontWeight: FontWeight.w900,
+                  color: Color(0xFF07142E),
+                  height: 1.05,
+                  letterSpacing: -1.1,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ShaderMask(
+                    blendMode: BlendMode.srcIn,
+                    shaderCallback: (bounds) => const LinearGradient(
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                      colors: [
+                        Color(0xFF079BF6),
+                        Color(0xFF1767F7),
+                        Color(0xFF7A45F4),
+                      ],
+                    ).createShader(bounds),
+                    child: Text(
+                      secili[1],
+                      style: const TextStyle(
+                        fontSize: 34,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white,
+                        height: 1.05,
+                        letterSpacing: -1.1,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Container(
+                    width: 62,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(20),
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF5FE0EC), Color(0xFF9B72F7)],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+'''
+          marker = '\nclass SifreYenilePage extends StatefulWidget {'
+          if marker not in text:
+              raise SystemExit('SifreYenilePage isaretcisi bulunamadi')
+          text = text.replace(marker, helper + marker, 1)
+
+          logo_pattern = re.compile(
+              r"class Logo extends StatelessWidget \{.*?\nclass RenkliButon extends StatelessWidget \{",
+              re.S,
+          )
+          logo_replacement = r'''class Logo extends StatelessWidget {
+  final bool kucuk;
+
+  const Logo({super.key, this.kucuk = false});
+
+  @override
+  Widget build(BuildContext context) {
+    final isaretBoyutu = kucuk ? 34.0 : 112.0;
+    final yaziBoyutu = kucuk ? 20.0 : 42.0;
+
+    final isaret = SizedBox(
+      width: isaretBoyutu,
+      height: isaretBoyutu,
+      child: const CustomPaint(painter: _NgelXYeniIsaretCizici()),
+    );
+
+    final kelime = Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Text(
+          'Ngel',
+          style: TextStyle(
+            color: const Color(0xFF07142E),
+            fontSize: yaziBoyutu,
+            fontWeight: FontWeight.w900,
+            height: 0.95,
+            letterSpacing: -2,
+          ),
+        ),
+        ShaderMask(
+          blendMode: BlendMode.srcIn,
+          shaderCallback: (bounds) => const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFF02D9E8),
+              Color(0xFF078BFA),
+              Color(0xFF1C63F7),
+            ],
+          ).createShader(bounds),
+          child: Text(
+            'X',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: yaziBoyutu + (kucuk ? 1 : 3),
+              fontWeight: FontWeight.w900,
+              height: 0.95,
+              letterSpacing: -2,
+            ),
+          ),
+        ),
+      ],
+    );
+
+    if (kucuk) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.94),
+          borderRadius: BorderRadius.circular(15),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x22000000),
+              blurRadius: 10,
+              offset: Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            isaret,
+            const SizedBox(width: 6),
+            kelime,
+          ],
+        ),
+      );
+    }
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        isaret,
+        const SizedBox(height: 4),
+        kelime,
+      ],
+    );
+  }
+}
+
+class _NgelXYeniIsaretCizici extends CustomPainter {
+  const _NgelXYeniIsaretCizici();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
+
+    final sol = Path()
+      ..moveTo(size.width * .23, size.height * .78)
+      ..lineTo(size.width * .23, size.height * .25)
+      ..quadraticBezierTo(
+        size.width * .23,
+        size.height * .16,
+        size.width * .32,
+        size.height * .16,
+      )
+      ..lineTo(size.width * .62, size.height * .52);
+
+    final sag = Path()
+      ..moveTo(size.width * .45, size.height * .34)
+      ..lineTo(size.width * .70, size.height * .64)
+      ..quadraticBezierTo(
+        size.width * .78,
+        size.height * .74,
+        size.width * .78,
+        size.height * .61,
+      )
+      ..lineTo(size.width * .78, size.height * .22);
+
+    final solBoya = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = size.width * .22
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round
+      ..shader = const LinearGradient(
+        begin: Alignment.bottomLeft,
+        end: Alignment.topRight,
+        colors: [
+          Color(0xFF02E3DF),
+          Color(0xFF05A9F5),
+          Color(0xFF0A58F1),
+        ],
+      ).createShader(rect);
+
+    final sagBoya = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = size.width * .22
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round
+      ..shader = const LinearGradient(
+        begin: Alignment.topRight,
+        end: Alignment.bottomLeft,
+        colors: [
+          Color(0xFF03E2D5),
+          Color(0xFF0798F7),
+          Color(0xFF113BDE),
+        ],
+      ).createShader(rect);
+
+    canvas.drawPath(sol, solBoya);
+    canvas.drawPath(sag, sagBoya);
+
+    final parilti = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = size.width * .028
+      ..strokeCap = StrokeCap.round
+      ..color = Colors.white.withOpacity(.42);
+
+    canvas.drawLine(
+      Offset(size.width * .20, size.height * .30),
+      Offset(size.width * .20, size.height * .57),
+      parilti,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class RenkliButon extends StatelessWidget {'''
+
+          text, count = logo_pattern.subn(logo_replacement, text, count=1)
+          if count != 1:
+              raise SystemExit(f'Logo sinifi degistirilemedi: {count}')
+
+          p.write_text(text, encoding='utf-8')
+
+          pub = Path('app/pubspec.yaml')
+          pub_text = pub.read_text(encoding='utf-8')
+          pub_text = re.sub(
+              r'^version:\s*[^\n]+$',
+              'version: 1.0.7+182',
+              pub_text,
+              count=1,
+              flags=re.M,
+          )
+          pub.write_text(pub_text, encoding='utf-8')
+          PY
+
+      - name: Kodu dogrula
+        run: |
+          set -euo pipefail
+          cd app
+          dart format lib/main.dart
+          flutter pub get
+          flutter analyze --no-fatal-infos --no-fatal-warnings || true
+
+      - name: APK olustur
+        run: |
+          set -euo pipefail
+          cd app
+          flutter build apk --release
+          test -s build/app/outputs/flutter-apk/app-release.apk
+
+      - name: APK artifactini yukle
+        uses: actions/upload-artifact@v4
+        with:
+          name: NgelX-v19-YENI-LOGO
+          path: app/build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+          retention-days: 30
