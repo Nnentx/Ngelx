@@ -43,7 +43,7 @@ jobs:
           cd ngelx_app
           # Flutter'in MyApp sinifini arayan varsayilan ornek testini kaldir.
           rm -rf test
-          sed -i 's/version: 1.0.0+1/version: 1.0.5+180/' pubspec.yaml
+          sed -i 's/version: 1.0.0+1/version: 1.0.6+181/' pubspec.yaml
           cp "../${FIREBASE_FILE#./}" android/app/google-services.json
           flutter pub add firebase_core
           flutter pub add firebase_auth
