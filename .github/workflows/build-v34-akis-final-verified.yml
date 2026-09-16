@@ -1,0 +1,185 @@
+name: NgelX v34 AKIS FINAL VERIFIED
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/build-v34-akis-final-verified.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Kaynaklari al
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Flutter kur
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: v31 dogrulanmis adimlarini ve final duzeltmeyi uygula
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import subprocess
+
+          OLD_SHA = '068c92e1c401664fe54e002f79bf2676d43eecf5'
+          OLD_PATH = '.github/workflows/build-v31-akis-final-verified.yml'
+
+          subprocess.run(['git', 'fetch', '--depth=1', 'origin', OLD_SHA], check=True)
+          workflow = subprocess.check_output(
+              ['git', 'show', f'{OLD_SHA}:{OLD_PATH}'],
+              text=True,
+          )
+
+          def extract_run(step_name):
+              lines = workflow.splitlines()
+              target = f'      - name: {step_name}'
+              if target not in lines:
+                  raise SystemExit(f'Eski workflow adimi bulunamadi: {step_name}')
+              i = lines.index(target) + 1
+              while i < len(lines) and lines[i].strip() != 'run: |':
+                  i += 1
+              if i >= len(lines):
+                  raise SystemExit(f'run blogu bulunamadi: {step_name}')
+              i += 1
+              script = []
+              while i < len(lines):
+                  line = lines[i]
+                  if line.startswith('      - name: '):
+                      break
+                  if line.startswith('          '):
+                      script.append(line[10:])
+                  elif line.strip() == '':
+                      script.append('')
+                  else:
+                      break
+                  i += 1
+              return '\n'.join(script) + '\n'
+
+          for step_name in [
+              'Kaynak kodu birebir dogrula',
+              'v20 temel tasarimini uygula',
+              'Akis ve Uret gorunurluk duzeltmeleri',
+              'Yorum begeni dis gorunumlerini duzelt',
+              'Akis yorum begeni sayaclarini canli yap',
+          ]:
+              print(f'>>> {step_name}')
+              subprocess.run(['bash'], input=extract_run(step_name), text=True, check=True)
+
+          final_script = extract_run('Akis final ozelliklerini saglam uygula')
+
+          # extract_run YAML girintisini kaldirdigi icin bu iki satir soldan baslar.
+          start_marker = "# itemBuilder'ın sonundaki PageView kapanışını bul ve GestureDetector'ı kapat."
+          end_marker = "if \".orderBy('createdAt', descending: true)\" not in akis:"
+          start = final_script.find(start_marker)
+          end = final_script.find(end_marker, start)
+          if start < 0 or end < 0:
+              raise SystemExit(
+                  f'v31 final kapanis blogu bulunamadi: start={start}, end={end}'
+              )
+
+          new_fragment = r'''# PageView.builder kapanisini girintiye bagli kalmadan bul.
+          page_pos = akis.find('child: PageView.builder(')
+          if page_pos < 0:
+              raise SystemExit('Akis sarilmis PageView bulunamadi')
+          open_pos = akis.find('(', page_pos)
+          if open_pos < 0:
+              raise SystemExit('Akis PageView acilis parantezi bulunamadi')
+
+          def eslesen_parantez(metin, baslangic):
+              depth = 0
+              i = baslangic
+              quote = None
+              line_comment = False
+              block_comment = 0
+              while i < len(metin):
+                  if line_comment:
+                      if metin[i] == '\n':
+                          line_comment = False
+                      i += 1
+                      continue
+                  if block_comment:
+                      if metin.startswith('/*', i):
+                          block_comment += 1
+                          i += 2
+                          continue
+                      if metin.startswith('*/', i):
+                          block_comment -= 1
+                          i += 2
+                          continue
+                      i += 1
+                      continue
+                  if quote is not None:
+                      if metin[i] == '\\':
+                          i += 2
+                          continue
+                      if metin[i] == quote:
+                          quote = None
+                      i += 1
+                      continue
+                  if metin.startswith('//', i):
+                      line_comment = True
+                      i += 2
+                      continue
+                  if metin.startswith('/*', i):
+                      block_comment = 1
+                      i += 2
+                      continue
+                  if metin[i] in ("'", '"'):
+                      quote = metin[i]
+                      i += 1
+                      continue
+                  if metin[i] == '(':
+                      depth += 1
+                  elif metin[i] == ')':
+                      depth -= 1
+                      if depth == 0:
+                          return i
+                  i += 1
+              return -1
+
+          close_pos = eslesen_parantez(akis, open_pos)
+          if close_pos < 0:
+              raise SystemExit('Akis PageView dengeli kapanisi bulunamadi')
+          akis = akis[:close_pos] + '),\n          )' + akis[close_pos + 1:]
+
+          '''
+
+          final_script = final_script[:start] + new_fragment + final_script[end:]
+          print('>>> Akis final ozelliklerini saglam uygula (v33 R2)')
+          subprocess.run(['bash'], input=final_script, text=True, check=True)
+          PY
+
+      - name: Kodu dogrula
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          dart format lib/main.dart
+          flutter pub get
+          flutter analyze --no-fatal-infos --no-fatal-warnings
+
+      - name: APK olustur
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter build apk --release
+          test -s build/app/outputs/flutter-apk/app-release.apk
+
+      - name: APK artifactini yukle
+        uses: actions/upload-artifact@v4
+        with:
+          name: NgelX-v34-AKIS-FINAL-VERIFIED
+          path: app/build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+          retention-days: 30
