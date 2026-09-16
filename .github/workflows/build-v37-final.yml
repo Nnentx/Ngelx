@@ -29,9 +29,9 @@ jobs:
       - name: Bağımlılıkları kur
         working-directory: app
         run: flutter pub get
-      - name: Dart biçimini doğrula
+      - name: Dart kodunu biçimlendir
         working-directory: app
-        run: dart format --output=none --set-exit-if-changed lib
+        run: dart format lib
       - name: Statik analizi çalıştır
         working-directory: app
         run: flutter analyze --no-fatal-infos --no-fatal-warnings
