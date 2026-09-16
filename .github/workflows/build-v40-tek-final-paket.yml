@@ -25,7 +25,7 @@ jobs:
         run: |
           set -euo pipefail
           base64 -d > /tmp/ngelx-final.tar.gz <<'NGELX_PAYLOAD'
-          H4sIADftqmoC/+y9a3Mc13Uo6s/4FZtVKs7M9XAIgE8NNIQBvswrUeIRKOvIDIJqzDQw7enpnnT3gByAU2Vbdpw4Ocd1703lnNR1
+          H4sIALTvqmoC/+y9a3Mc13Uo6s/4FZtVKs7M9XAIgE8NNIQBvswrUeIRKOvIDIJqzDQw7enpnnT3gByAU2Vbdpw4Ocd1703lnNR1
           zOvkniPHlcRi4mfC2B8Afae+kV/9B+75CXettR+9d/funh4AVOQkoATMdO/3Xnvt9V6t863zX7rnPPqy6/Tc6Auv5GeR/xT9XVy8
           cDH9jM+XFpeXlr/AHn3hM/gZx4kTQfdf+Pf5s3yVDRNv6HaWrlx9/dLVy5evXGq9fvnK0tXXry584T9+/s3/OKPRed/bPj90vKDV
           c6LkFZ3/yxcvWs//0tLFC4uXFr+wdGkZ/l2+fOEylFtavgJ/2OJnef6jMCyd+6z3v6M/3nAURgmr4da3nXgSdGsrC8ZDL9SejJzu
@@ -2104,7 +2104,6 @@ jobs:
           cache: true
 
       - name: Kalıcı imzayı hazırla
-        if: ${{ secrets.NGELX_KEYSTORE_BASE64 != '' }}
         shell: bash
         env:
           KEYSTORE_BASE64: ${{ secrets.NGELX_KEYSTORE_BASE64 }}
@@ -2113,6 +2112,10 @@ jobs:
           KEY_ALIAS: ${{ secrets.NGELX_KEY_ALIAS }}
         run: |
           set -euo pipefail
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "Kalıcı imza secret'ı yok; bu deneme APK'sı debug anahtarıyla imzalanacak."
+            exit 0
+          fi
           echo "$KEYSTORE_BASE64" | base64 -d > app/android/app/ngelx-release.jks
           printf 'storePassword=%s\nkeyPassword=%s\nkeyAlias=%s\nstoreFile=ngelx-release.jks\n' "$STORE_PASSWORD" "$KEY_PASSWORD" "$KEY_ALIAS" > app/android/key.properties
 
@@ -2140,11 +2143,16 @@ jobs:
           sha256sum "$APK" | tee app/build/app/outputs/flutter-apk/app-release.apk.sha256
 
       - name: Firestore ve bağlantı sitesini yayınla
-        if: ${{ secrets.FIREBASE_TOKEN != '' }}
         shell: bash
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
-        run: npx --yes firebase-tools deploy --project ngelx-44eed --only firestore:rules,hosting --token "$FIREBASE_TOKEN" --non-interactive
+        run: |
+          set -euo pipefail
+          if [ -z "$FIREBASE_TOKEN" ]; then
+            echo "FIREBASE_TOKEN yok; kurallar ve hosting bu çalıştırmada yayınlanmadı."
+            exit 0
+          fi
+          npx --yes firebase-tools deploy --project ngelx-44eed --only firestore:rules,hosting --token "$FIREBASE_TOKEN" --non-interactive
 
       - name: APK'yı yükle
         uses: actions/upload-artifact@v4
