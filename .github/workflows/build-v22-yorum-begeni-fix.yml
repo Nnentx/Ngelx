@@ -1,0 +1,397 @@
+name: NgelX v22 YORUM BEGENI FIX
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/build-v22-yorum-begeni-fix.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Kaynaklari al
+        uses: actions/checkout@v4
+
+      - name: Flutter kur
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: v20 temel tasarimini uygula
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import subprocess
+
+          workflow = Path('.github/workflows/build-v20-final-ui.yml').read_text(encoding='utf-8')
+
+          def run_step(step_name):
+              lines = workflow.splitlines()
+              target = f'      - name: {step_name}'
+              if target not in lines:
+                  raise SystemExit(f'v20 adimi bulunamadi: {step_name}')
+              i = lines.index(target) + 1
+              while i < len(lines) and lines[i].strip() != 'run: |':
+                  i += 1
+              if i >= len(lines):
+                  raise SystemExit(f'run blogu bulunamadi: {step_name}')
+              i += 1
+              script = []
+              while i < len(lines):
+                  line = lines[i]
+                  if line.startswith('      - name: '):
+                      break
+                  if line.startswith('          '):
+                      script.append(line[10:])
+                  elif line.strip() == '':
+                      script.append('')
+                  else:
+                      break
+                  i += 1
+              code = '\n'.join(script) + '\n'
+              subprocess.run(['bash'], input=code, text=True, check=True)
+
+          run_step('Yeni logoyu ve cok dilli girisi uygula')
+          run_step('Akis Kesfet Uret final tasarimini uygula')
+          PY
+
+      - name: Akis ve Uret gorunurluk duzeltmeleri
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          import textwrap
+
+          main = Path('app/lib/main.dart')
+          text = main.read_text(encoding='utf-8')
+
+          logo_pattern = re.compile(
+              r"class Logo extends StatelessWidget \{.*?\nclass RenkliButon extends StatelessWidget \{",
+              re.S,
+          )
+          logo_replacement = textwrap.dedent(r'''class Logo extends StatelessWidget {
+            final bool kucuk;
+            final bool koyuZemin;
+          
+            const Logo({
+              super.key,
+              this.kucuk = false,
+              this.koyuZemin = false,
+            });
+          
+            @override
+            Widget build(BuildContext context) {
+              if (kucuk) {
+                final yaziRengi =
+          koyuZemin ? Colors.white : const Color(0xFF07142E);
+                return SizedBox(
+                  height: 30,
+                  child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ClipRect(
+              child: Align(
+                alignment: Alignment.centerLeft,
+                widthFactor: .47,
+                child: Image.asset(
+                  'assets/ngelx_logo_horizontal.png',
+                  height: 29,
+                  fit: BoxFit.contain,
+                ),
+              ),
+            ),
+            const SizedBox(width: 4),
+            Text.rich(
+              TextSpan(
+                children: [
+                  TextSpan(
+                    text: 'Ngel',
+                    style: TextStyle(
+                      color: yaziRengi,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -1,
+                    ),
+                  ),
+                  const TextSpan(
+                    text: 'X',
+                    style: TextStyle(
+                      color: Color(0xFF19C7F2),
+                      fontSize: 19,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -1,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+                  ),
+                );
+              }
+          
+              return Center(
+                child: Image.asset(
+                  'assets/ngelx_logo.png',
+                  width: 165,
+                  height: 165,
+                  fit: BoxFit.contain,
+                ),
+              );
+            }
+          }
+          
+          class RenkliButon extends StatelessWidget {''')
+
+          text, n = logo_pattern.subn(logo_replacement, text, count=1)
+          if n != 1:
+              raise SystemExit(f'Logo sinifi duzeltilemedi: {n}')
+
+          old = 'const Logo(kucuk: true)'
+          new = 'const Logo(kucuk: true, koyuZemin: true)'
+          if old not in text:
+              raise SystemExit('Akis ust logosu bulunamadi')
+          text = text.replace(old, new, 1)
+
+          replacements = {
+              "const Text('Yeni içerik üret', textAlign: TextAlign.center, style: TextStyle(fontSize: 27, fontWeight: FontWeight.w900))":
+                  "const Text('Yeni içerik üret', textAlign: TextAlign.center, style: TextStyle(color: Colors.black, fontSize: 27, fontWeight: FontWeight.w900))",
+              "Text(yazi, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold))":
+                  "Text(yazi, style: const TextStyle(color: Colors.black87, fontSize: 12, fontWeight: FontWeight.bold))",
+              "Text(yazi, style: const TextStyle(fontWeight: FontWeight.bold))":
+                  "Text(yazi, style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold))",
+              "Text(yazi, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900))":
+                  "Text(yazi, style: const TextStyle(color: Colors.black87, fontSize: 18, fontWeight: FontWeight.w900))",
+          }
+          for a, b in replacements.items():
+              text = text.replace(a, b)
+
+          main.write_text(text, encoding='utf-8')
+
+          pub = Path('app/pubspec.yaml')
+          pub_text = pub.read_text(encoding='utf-8')
+          pub_text = re.sub(
+              r'^version:\s*[^\n]+$',
+              'version: 1.0.10+185',
+              pub_text,
+              count=1,
+              flags=re.M,
+          )
+          pub.write_text(pub_text, encoding='utf-8')
+          PY
+
+
+      - name: Yorum begeni dis gorunumlerini duzelt
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          import textwrap
+
+          main = Path('app/lib/main.dart')
+          text = main.read_text(encoding='utf-8')
+
+          gorsel_eski = """              if ((widget.veri['audioUrl'] ?? '').isNotEmpty) ...[const SizedBox(height: 8), const Row(children: [Icon(Icons.music_note, size: 18), Text(' Fotoğraflı müzik')])],
+            ]),"""
+          gorsel_yeni = """              if ((widget.veri['audioUrl'] ?? '').isNotEmpty) ...[const SizedBox(height: 8), const Row(children: [Icon(Icons.music_note, size: 18), Text(' Fotoğraflı müzik')])],
+              const SizedBox(height: 8),
+              Row(children: [
+                const Icon(Icons.favorite_rounded, size: 16, color: Colors.white),
+                const SizedBox(width: 5),
+                Text('$begeniSayisi beğeni', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700)),
+                const SizedBox(width: 13),
+                const Icon(Icons.mode_comment_outlined, size: 16, color: Colors.white),
+                const SizedBox(width: 5),
+                GestureDetector(
+                  onTap: yorumlariAc,
+                  child: Text('$yorumSayisi yorum', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700)),
+                ),
+              ]),
+              if (yorumSayisi > 0) ...[
+                const SizedBox(height: 5),
+                GestureDetector(
+                  onTap: yorumlariAc,
+                  child: const Text('Yorumları gör', style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w700)),
+                ),
+              ],
+            ]),"""
+          if gorsel_eski not in text:
+              raise SystemExit('Gorsel/yazi akis etkileşim alani bulunamadi')
+          text = text.replace(gorsel_eski, gorsel_yeni, 1)
+
+          video_eski = """                const Row(
+                  children: [
+                    Icon(Icons.graphic_eq, size: 17),
+                    SizedBox(width: 6),
+                    Text('NgelX • Özgün ses'),
+                  ],
+                ),
+              ],"""
+          video_yeni = """                const Row(
+                  children: [
+                    Icon(Icons.graphic_eq, size: 17),
+                    SizedBox(width: 6),
+                    Text('NgelX • Özgün ses'),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(children: [
+                  const Icon(Icons.favorite_rounded, size: 16, color: Colors.white),
+                  const SizedBox(width: 5),
+                  Text('$begeniSayisi beğeni', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700)),
+                  const SizedBox(width: 13),
+                  const Icon(Icons.mode_comment_outlined, size: 16, color: Colors.white),
+                  const SizedBox(width: 5),
+                  GestureDetector(
+                    onTap: yorumlariAc,
+                    child: Text('$yorumSayisi yorum', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700)),
+                  ),
+                ]),
+                if (yorumSayisi > 0) ...[
+                  const SizedBox(height: 5),
+                  GestureDetector(
+                    onTap: yorumlariAc,
+                    child: const Text('Yorumları gör', style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w700)),
+                  ),
+                ],
+              ],"""
+          if video_eski not in text:
+              raise SystemExit('Video akis etkileşim alani bulunamadi')
+          text = text.replace(video_eski, video_yeni, 1)
+
+          profil_eski = """                    return GestureDetector(onTap:()=>icerigiAc(belge),onLongPress:()=>icerikMenusu(belge),child:MedyaOnizleme(
+                      tur: tur,
+                      url: url,
+                      yazi: (v['description'] ?? '').toString(),
+                      arkaPlan: i.isEven ? const Color(0xFF28233F) : const Color(0xFF173036),
+                    ));"""
+          profil_yeni = """                    return GestureDetector(
+                      onTap:()=>icerigiAc(belge),
+                      onLongPress:()=>icerikMenusu(belge),
+                      child:Stack(
+                        fit:StackFit.expand,
+                        children:[
+                          MedyaOnizleme(
+                            tur: tur,
+                            url: url,
+                            yazi: (v['description'] ?? '').toString(),
+                            arkaPlan: i.isEven ? const Color(0xFF28233F) : const Color(0xFF173036),
+                          ),
+                          Positioned(
+                            left:6,
+                            right:6,
+                            bottom:6,
+                            child:_ProfilEtkilesimRozeti(videoId:belge.id),
+                          ),
+                        ],
+                      ),
+                    );"""
+          if profil_eski not in text:
+              raise SystemExit('Profil gonderi izgara alani bulunamadi')
+          text = text.replace(profil_eski, profil_yeni, 1)
+
+          widget_code = textwrap.dedent(r"""
+          class _ProfilEtkilesimRozeti extends StatelessWidget {
+            final String videoId;
+            const _ProfilEtkilesimRozeti({required this.videoId});
+
+            @override
+            Widget build(BuildContext context) {
+              final ref = FirebaseFirestore.instance.collection('videos').doc(videoId);
+              return Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: .62),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                      stream: ref.collection('likes').snapshots(),
+                      builder: (_, s) => Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.favorite_rounded, color: Colors.white, size: 15),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${s.data?.docs.length ?? 0}',
+                            style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w800),
+                          ),
+                        ],
+                      ),
+                    ),
+                    StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                      stream: ref.collection('comments').snapshots(),
+                      builder: (_, s) => Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.mode_comment_rounded, color: Colors.white, size: 15),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${s.data?.docs.length ?? 0}',
+                            style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w800),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
+          }
+
+          """)
+
+          marker = '\nclass _ProfilSekme extends StatelessWidget'
+          if marker not in text:
+              raise SystemExit('Profil widget ekleme noktasi bulunamadi')
+          text = text.replace(marker, '\n' + widget_code + marker, 1)
+
+          main.write_text(text, encoding='utf-8')
+
+          pub = Path('app/pubspec.yaml')
+          pub_text = pub.read_text(encoding='utf-8')
+          pub_text = re.sub(
+              r'^version:\s*[^\n]+$',
+              'version: 1.0.10+185',
+              pub_text,
+              count=1,
+              flags=re.M,
+          )
+          pub.write_text(pub_text, encoding='utf-8')
+          PY
+
+      - name: Kodu dogrula
+        run: |
+          set -euo pipefail
+          cd app
+          dart format lib/main.dart
+          flutter pub get
+          flutter analyze --no-fatal-infos --no-fatal-warnings || true
+
+      - name: APK olustur
+        run: |
+          set -euo pipefail
+          cd app
+          flutter build apk --release
+          test -s build/app/outputs/flutter-apk/app-release.apk
+
+      - name: APK artifactini yukle
+        uses: actions/upload-artifact@v4
+        with:
+          name: NgelX-v22-YORUM-BEGENI-FIX
+          path: app/build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+          retention-days: 30
