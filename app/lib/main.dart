@@ -391,7 +391,7 @@ class _GirisPageState extends State<GirisPage> {
               const SizedBox(height: 45),
               const Logo(),
               const SizedBox(height: 55),
-              uygulamaDili.value == 'tr'
+              uygulamaDili.value.toLowerCase() == 'tr'
     ? Align(
         alignment: Alignment.centerLeft,
         child: Column(
