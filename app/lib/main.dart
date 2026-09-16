@@ -391,13 +391,66 @@ class _GirisPageState extends State<GirisPage> {
               const SizedBox(height: 45),
               const Logo(),
               const SizedBox(height: 55),
-              Text(
-                t('welcome'),
-                style: const TextStyle(
-                  fontSize: 31,
-                  fontWeight: FontWeight.w900,
+              uygulamaDili.value == 'tr'
+    ? Align(
+        alignment: Alignment.centerLeft,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Tekrar ',
+                  style: TextStyle(
+                    fontSize: 31,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFF101018),
+                  ),
+                ),
+                ShaderMask(
+                  shaderCallback: (bounds) => const LinearGradient(
+                    colors: [
+                      Color(0xFF0797F6),
+                      Color(0xFF1764F8),
+                      Color(0xFF8150F5),
+                    ],
+                  ).createShader(bounds),
+                  child: const Text(
+                    'hoş geldin',
+                    style: TextStyle(
+                      fontSize: 31,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            Container(
+              margin: const EdgeInsets.only(left: 258, top: 2),
+              width: 58,
+              height: 4,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                gradient: const LinearGradient(
+                  colors: [
+                    Color(0xFF5FDCEF),
+                    Color(0xFF9A75F7),
+                  ],
                 ),
               ),
+            ),
+          ],
+        ),
+      )
+    : Text(
+        t('welcome'),
+        style: const TextStyle(
+          fontSize: 31,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
               const SizedBox(height: 8),
               Text(
                 t('tagline'),
