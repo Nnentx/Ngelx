@@ -1,0 +1,54 @@
+name: NgelX v42 Development
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ngelx-v42-dev]
+    paths:
+      - 'app/**'
+      - 'firestore.rules'
+      - '.github/workflows/build-v42-dev.yml'
+
+jobs:
+  verify-and-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Kaynaklari al
+        uses: actions/checkout@v4
+
+      - name: Flutter kur
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Paketleri kur
+        working-directory: app
+        run: flutter pub get
+
+      - name: Kod analizi
+        working-directory: app
+        run: flutter analyze --no-fatal-infos
+
+      - name: Testleri calistir
+        working-directory: app
+        run: |
+          if [ -d test ]; then
+            flutter test
+          else
+            echo "Test klasoru yok; derleme kontrolune geciliyor."
+          fi
+
+      - name: Gelistirme APK olustur
+        working-directory: app
+        run: flutter build apk --debug
+
+      - name: APK dosyasini yukle
+        uses: actions/upload-artifact@v4
+        with:
+          name: NgelX-v42-development-apk
+          path: app/build/app/outputs/flutter-apk/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
