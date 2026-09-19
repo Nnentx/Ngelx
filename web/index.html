@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>NgelX paylaşımı</title>
+  <meta name="theme-color" content="#22d3ee">
+  <style>
+    body{margin:0;font-family:system-ui,sans-serif;background:#fff;color:#111;display:grid;min-height:100vh;place-items:center}
+    main{max-width:520px;padding:32px;text-align:center}.logo{font-size:46px;font-weight:900;background:linear-gradient(90deg,#22d3ee,#8b5cf6);color:transparent;background-clip:text}a{display:inline-block;margin-top:22px;padding:14px 24px;border-radius:16px;background:linear-gradient(90deg,#22d3ee,#8b5cf6);color:#111;text-decoration:none;font-weight:800}
+  </style>
+</head>
+<body><main>
+  <div class="logo">NgelX</div>
+  <h1>Bu içerik NgelX’te paylaşıldı</h1>
+  <p>NgelX uygulamasında açarak videoyu, yorumları ve profili görüntüleyebilirsin.</p>
+  <a id="open" href="https://ngelxsocial.com">NgelX’i aç</a>
+</main><script>
+  const id=location.pathname.split('/').filter(Boolean).pop()||'';
+  document.querySelector('#open').href='ngelx://p/'+encodeURIComponent(id);
+</script></body></html>
