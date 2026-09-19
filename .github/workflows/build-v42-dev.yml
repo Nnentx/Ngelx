@@ -1,4 +1,4 @@
-name: NgelX v42 Development
+name: NgelX V42 Tek Final Paket
 
 on:
   workflow_dispatch:
@@ -24,6 +24,22 @@ jobs:
           channel: stable
           cache: true
 
+      - name: Kalıcı imzayı hazırla
+        shell: bash
+        env:
+          KEYSTORE_BASE64: ${{ secrets.NGELX_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.NGELX_STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.NGELX_KEY_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.NGELX_KEY_ALIAS }}
+        run: |
+          set -euo pipefail
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "Kalıcı imza secret'ı yok; release APK debug anahtarıyla imzalanacak."
+            exit 0
+          fi
+          echo "$KEYSTORE_BASE64" | base64 -d > app/android/app/ngelx-release.jks
+          printf 'storePassword=%s\nkeyPassword=%s\nkeyAlias=%s\nstoreFile=ngelx-release.jks\n' "$STORE_PASSWORD" "$KEY_PASSWORD" "$KEY_ALIAS" > app/android/key.properties
+
       - name: Paketleri kur
         working-directory: app
         run: flutter pub get
@@ -41,14 +57,14 @@ jobs:
             echo "Test klasoru yok; derleme kontrolune geciliyor."
           fi
 
-      - name: Gelistirme APK olustur
+      - name: Release APK olustur
         working-directory: app
-        run: flutter build apk --debug
+        run: flutter build apk --release
 
       - name: APK dosyasini yukle
         uses: actions/upload-artifact@v4
         with:
-          name: NgelX-v42-development-apk
-          path: app/build/app/outputs/flutter-apk/app-debug.apk
+          name: NgelX-V42-TEK-FINAL-APK
+          path: app/build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
           retention-days: 14
