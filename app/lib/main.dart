@@ -6525,7 +6525,9 @@ class KullaniciProfilPage extends StatelessWidget {
           final profilIzni=(v['profileViewPermission']??'all').toString();
           final beniTakipEdiyor=me!=null&&List<String>.from(v['followers']??const[]).contains(me);
           final izinVar=profilIzni=='all'||(profilIzni=='followers'&&beniTakipEdiyor)||(profilIzni=='friends'&&arkadaslar.contains(uid));
-          final erisimVar = ziyaretciOnizleme ? (profilIzni=='all'&&!gizli) : (me == uid || (izinVar&&(!gizli||arkadaslar.contains(uid))));
+          final erisimVar = ziyaretciOnizleme
+              ? (profilIzni=='all'&&!gizli)
+              : (me==uid||(izinVar&&(!gizli||beniTakipEdiyor||arkadaslar.contains(uid))));
           return ListView(
             padding: const EdgeInsets.all(22),
             children: [
