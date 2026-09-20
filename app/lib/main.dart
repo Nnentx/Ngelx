@@ -4932,9 +4932,97 @@ class SohbetBilgiPage extends StatelessWidget{
   Future<void> engelle(BuildContext context)async{final ok=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(backgroundColor:Colors.white,title:Text('$ad engellensin mi?'),content:const Text('Bu kullanıcı sana mesaj gönderemez ve profilini göremez.'),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),FilledButton(style:FilledButton.styleFrom(backgroundColor:Colors.red),onPressed:()=>Navigator.pop(c,true),child:const Text('Engelle'))]))??false;if(ok&&context.mounted)await kullaniciyiEngelle(context,uid);}
   Future<void> sohbetiSil(BuildContext context)async{final me=FirebaseAuth.instance.currentUser?.uid;if(me==null)return;final ok=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(backgroundColor:Colors.white,title:const Text('Sohbet listeden kaldırılsın mı?'),content:const Text('Bu işlem yalnızca senin gelen kutunu etkiler.'),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),FilledButton(style:FilledButton.styleFrom(backgroundColor:Colors.red),onPressed:()=>Navigator.pop(c,true),child:const Text('Kaldır'))]))??false;if(!ok)return;await FirebaseFirestore.instance.collection('chats').doc(chatId).set({'hiddenFor':FieldValue.arrayUnion([me])},SetOptions(merge:true));if(context.mounted)Navigator.popUntil(context,(r)=>r.isFirst);}
 
-  @override Widget build(BuildContext context)=>Theme(data:ThemeData.light(),child:Scaffold(backgroundColor:Colors.white,appBar:AppBar(title:const Text('Sohbet bilgileri')),body:ListView(padding:const EdgeInsets.all(20),children:[CircleAvatar(radius:55,backgroundImage:foto.isEmpty?null:NetworkImage(foto),child:foto.isEmpty?const Icon(Icons.person,size:45):null),const SizedBox(height:12),StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(stream:FirebaseFirestore.instance.collection('chats').doc(chatId).snapshots(),builder:(_,s){final me=FirebaseAuth.instance.currentUser?.uid,ham=s.data?.data()?['nicknames'],nicks=ham is Map?Map<String,dynamic>.from(ham):<String,dynamic>{},takma=(me==null?'':(nicks[me]??'').toString()).trim();return Text(takma.isNotEmpty?takma:ad,textAlign:TextAlign.center,style:const TextStyle(fontSize:27,fontWeight:FontWeight.bold));}),const SizedBox(height:20),Wrap(alignment:WrapAlignment.spaceEvenly,runSpacing:15,children:[_kisa(Icons.person,'Profil',()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciProfilPage(uid:uid)))),_kisa(Icons.text_fields,'Takma ad',()=>takmaAd(context)),_kisa(Icons.search,'Arama',()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>SohbetMesajAramaPage(chatId:chatId)))),_kisa(Icons.palette,'Özelleştir',()=>ozellestir(context))]),const Divider(height:40),_satir(Icons.photo_library,'Medya ve bağlantılar',()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupMedyaPage(chatId:chatId)))),_satir(Icons.push_pin,'Sabitlenmiş mesajlar',()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>SabitlenenGrupMesajlariPage(chatId:chatId)))),const Divider(),_satir(Icons.notifications_off,'Sessize al',()=>sessizeAl(context)),_satir(Icons.do_not_disturb_alt,'Kısıtla',()=>kisitla(context)),_satir(Icons.block,'Engelle',()=>engelle(context),renk:Colors.red),_satir(Icons.delete_forever,'Sohbeti listemden kaldır',()=>sohbetiSil(context),renk:Colors.red),_satir(Icons.report,'Şikâyet et',()=>sikayetEt(context,hedefTuru:'kullanici',hedefId:uid,hedefUid:uid),renk:Colors.red)])));
-  Widget _kisa(IconData i,String t,VoidCallback f)=>InkWell(onTap:f,child:SizedBox(width:78,child:Column(children:[CircleAvatar(backgroundColor:Colors.blue.withValues(alpha:.15),child:Icon(i,color:Colors.blue)),const SizedBox(height:5),Text(t,textAlign:TextAlign.center)])));
-  Widget _satir(IconData i,String t,VoidCallback f,{Color? renk})=>ListTile(onTap:f,leading:Icon(i,color:renk),title:Text(t,style:TextStyle(color:renk)),trailing:const Icon(Icons.chevron_right));
+  Future<void> arkadasEkle(BuildContext context)async{
+    final me=FirebaseAuth.instance.currentUser?.uid;if(me==null||me==uid)return;
+    final benim=await FirebaseFirestore.instance.collection('users').doc(me).get();
+    final arkadaslar=List<String>.from(benim.data()?['friends']??const[]);
+    if(arkadaslar.contains(uid)){if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Zaten arkadaşsınız.')));return;}
+    final istekId='friend_request_${me}_$uid',istek=FirebaseFirestore.instance.collection('notifications').doc(istekId),onceki=await istek.get();
+    if(onceki.data()?['status']=='pending'){if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Arkadaşlık isteğin zaten bekliyor.')));return;}
+    await istek.set({'toUid':uid,'fromUid':me,'type':'follow_request','text':'Yeni arkadaşlık isteğin var','status':'pending','read':false,'createdAt':FieldValue.serverTimestamp()});
+    if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Arkadaşlık isteği gönderildi.')));
+  }
+  Future<void> kisiyiPaylas()async{
+    final link='$ngelxWebAdresi/u/$uid';
+    await SharePlus.instance.share(ShareParams(text:'$ad • $link',title:'NgelX profili'));
+  }
+
+  @override Widget build(BuildContext context)=>Theme(
+    data:ThemeData.light().copyWith(
+      scaffoldBackgroundColor:Colors.white,
+      appBarTheme:const AppBarTheme(backgroundColor:Colors.white,foregroundColor:Colors.black,elevation:0,surfaceTintColor:Colors.white),
+      dividerColor:const Color(0xFFECEDEF),
+    ),
+    child:Scaffold(
+      backgroundColor:Colors.white,
+      appBar:AppBar(
+        leading:const BackButton(),
+        title:const SizedBox.shrink(),
+        actions:[PopupMenuButton<String>(
+          icon:const Icon(Icons.more_vert_rounded),
+          onSelected:(v){if(v=='share')kisiyiPaylas();if(v=='report')sikayetEt(context,hedefTuru:'kullanici',hedefId:uid,hedefUid:uid);},
+          itemBuilder:(_)=>const [
+            PopupMenuItem(value:'share',child:Row(children:[Icon(Icons.share_outlined),SizedBox(width:10),Text('Kişiyi paylaş')])),
+            PopupMenuItem(value:'report',child:Row(children:[Icon(Icons.flag_outlined),SizedBox(width:10),Text('Şikâyet et')])),
+          ],
+        )],
+      ),
+      body:StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
+        stream:FirebaseFirestore.instance.collection('chats').doc(chatId).snapshots(),
+        builder:(_,s){
+          final me=FirebaseAuth.instance.currentUser?.uid,ham=s.data?.data()?['nicknames'],nicks=ham is Map?Map<String,dynamic>.from(ham):<String,dynamic>{},takma=(me==null?'':(nicks[me]??'').toString()).trim(),gorunenAd=takma.isNotEmpty?takma:ad;
+          return ListView(
+            padding:const EdgeInsets.fromLTRB(20,8,20,28),
+            children:[
+              Center(child:CircleAvatar(radius:58,backgroundImage:foto.isEmpty?null:NetworkImage(foto),child:foto.isEmpty?const Icon(Icons.person,size:48):null)),
+              const SizedBox(height:16),
+              Text(gorunenAd,textAlign:TextAlign.center,style:const TextStyle(fontSize:29,fontWeight:FontWeight.w900,color:Colors.black)),
+              const SizedBox(height:24),
+              FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(
+                future:me==null?null:FirebaseFirestore.instance.collection('users').doc(me).get(),
+                builder:(_,u){
+                  final arkadas=me!=null&&List<String>.from(u.data?.data()?['friends']??const[]).contains(uid);
+                  return Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[
+                    _kisa(arkadas?Icons.people_alt_rounded:Icons.person_add_alt_1_rounded,arkadas?'Arkadaş':'Arkadaş ekle',arkadas?(){}:()=>arkadasEkle(context)),
+                    _kisa(Icons.person_rounded,'Profil',()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciProfilPage(uid:uid)))),
+                    _kisa(Icons.text_fields_rounded,'Takma ad',()=>takmaAd(context)),
+                    _kisa(Icons.search_rounded,'Arama',()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>SohbetMesajAramaPage(chatId:chatId)))),
+                    _kisa(Icons.palette_rounded,'Özelleştir',()=>ozellestir(context)),
+                  ]);
+                },
+              ),
+              const SizedBox(height:30),
+              _bolum('Sohbet bilgisi'),
+              _satir(Icons.photo_library_outlined,'Medya, dosya ve bağlantılar',()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupMedyaPage(chatId:chatId)))),
+              _satir(Icons.push_pin_outlined,'Sabitlenmiş mesajlar',()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>SabitlenenGrupMesajlariPage(chatId:chatId)))),
+              const SizedBox(height:18),
+              _bolum('İşlemler'),
+              _satir(Icons.notifications_off_outlined,'Sessize al',()=>sessizeAl(context),alt:'Bu sohbetin bildirimlerini yönet'),
+              _satir(Icons.notifications_outlined,'Bildirimler ve sesler',()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const TercihlerPage(baslik:'Bildirimler'))),alt:'Mesaj bildirim ayarları'),
+              _satir(Icons.share_outlined,'Kişiyi paylaş',kisiyiPaylas),
+              const SizedBox(height:18),
+              _bolum('Gizlilik ve destek'),
+              _satir(Icons.shield_outlined,'Mesaj izinleri',()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const TercihlerPage(baslik:'Mesaj izinleri')))),
+              _satir(Icons.do_not_disturb_alt_rounded,'Kısıtla',()=>kisitla(context)),
+              _satir(Icons.block_rounded,'Engelle',()=>engelle(context),renk:Colors.black),
+              _satir(Icons.flag_outlined,'Şikâyet et',()=>sikayetEt(context,hedefTuru:'kullanici',hedefId:uid,hedefUid:uid),alt:'Görüş bildir veya hesabı şikâyet et'),
+              _satir(Icons.delete_outline_rounded,'Sohbeti sil',()=>sohbetiSil(context),alt:'Yalnızca senin sohbet listenden kaldırır',renk:Colors.red),
+            ],
+          );
+        },
+      ),
+    ),
+  );
+  Widget _bolum(String t)=>Padding(padding:const EdgeInsets.fromLTRB(8,4,8,8),child:Text(t,style:const TextStyle(color:Colors.black54,fontSize:16,fontWeight:FontWeight.w800)));
+  Widget _kisa(IconData i,String t,VoidCallback f)=>Expanded(child:InkWell(borderRadius:BorderRadius.circular(18),onTap:f,child:Padding(padding:const EdgeInsets.symmetric(horizontal:2,vertical:4),child:Column(children:[CircleAvatar(radius:25,backgroundColor:const Color(0xFFF0F1F3),child:Icon(i,color:Colors.black,size:25)),const SizedBox(height:7),Text(t,maxLines:2,textAlign:TextAlign.center,style:const TextStyle(color:Colors.black87,fontSize:12.5,height:1.1))]))));
+  Widget _satir(IconData i,String t,VoidCallback f,{String? alt,Color? renk})=>ListTile(
+    onTap:f,
+    contentPadding:const EdgeInsets.symmetric(horizontal:8,vertical:6),
+    leading:Icon(i,color:renk??Colors.black,size:29),
+    title:Text(t,style:TextStyle(color:renk??Colors.black87,fontSize:17,fontWeight:FontWeight.w500)),
+    subtitle:alt==null?null:Text(alt,style:const TextStyle(color:Colors.black45,fontSize:13)),
+    trailing:const Icon(Icons.chevron_right_rounded,color:Colors.black38),
+  );
 }
 
 class SohbetMesajAramaPage extends StatefulWidget{
