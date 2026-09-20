@@ -255,9 +255,15 @@ class NgelXApp extends StatelessWidget {
           ),
         ),
       ),
-      home: UygulamaDurumKapisi(child:FirebaseAuth.instance.currentUser == null
-          ? GirisPage(key: ValueKey('giris_$dil'))
-          : AnaEkran(key: ValueKey('ana_$dil'))),
+      home: StreamBuilder<User?>(
+        stream:FirebaseAuth.instance.authStateChanges(),
+        initialData:FirebaseAuth.instance.currentUser,
+        builder:(_,auth)=>UygulamaDurumKapisi(
+          child:auth.data==null
+            ? GirisPage(key:ValueKey('giris_$dil'))
+            : AnaEkran(key:ValueKey('ana_$dil')),
+        ),
+      ),
       onGenerateRoute:(settings){final uri=Uri.tryParse(settings.name??'');if(uri!=null){if(uri.pathSegments.length>=2&&uri.pathSegments.first=='p')return MaterialPageRoute(builder:(_)=>IcerikBaglantiPage(icerikId:uri.pathSegments[1]));if(uri.host=='p'&&uri.pathSegments.isNotEmpty)return MaterialPageRoute(builder:(_)=>IcerikBaglantiPage(icerikId:uri.pathSegments.first));}return null;},
       builder: (context, child) => Directionality(textDirection: dil=='ar' ? TextDirection.rtl : TextDirection.ltr, child: child!),
     ));
