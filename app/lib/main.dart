@@ -2185,6 +2185,111 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver {
     }
   }
 
+
+  Future<void> videoyuPaylas() async {
+    await ngelxPaylasimMenusu(
+      context,
+      icerikId: videoId,
+      aciklama: 'NgelX videosu • @${widget.kullaniciAdi}',
+    );
+    await etkilesimleriGetir();
+  }
+
+  Future<void> videoyuGaleriyeKaydet() async {
+    if (await misafirEngeli(context)) return;
+    if (indiriliyor) return;
+    setState(() => indiriliyor = true);
+    File? geciciDosya;
+    try {
+      if (!await Gal.hasAccess()) {
+        await Gal.requestAccess();
+      }
+      final klasor = await getTemporaryDirectory();
+      geciciDosya = File(
+        '${klasor.path}/ngelx_${DateTime.now().millisecondsSinceEpoch}.mp4',
+      );
+      await Dio().download(widget.adres, geciciDosya.path);
+      await Gal.putVideo(geciciDosya.path);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Video galeriye kaydedildi ✅')),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Video kaydedilemedi. Fotoğraf ve video iznini aç.')),
+      );
+    } finally {
+      if (geciciDosya != null && await geciciDosya.exists()) {
+        await geciciDosya.delete();
+      }
+      if (mounted) setState(() => indiriliyor = false);
+    }
+  }
+
+  Future<void> paylasanProfiliAc() async {
+    if (widget.ownerId.isEmpty) return;
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => KullaniciProfilPage(uid: widget.ownerId),
+      ),
+    );
+  }
+
+  Future<void> uzunBasmaMenusu() async {
+    final sahibi = FirebaseAuth.instance.currentUser?.uid == widget.ownerId;
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (ctx) => Theme(
+        data: ThemeData.light(),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 22),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(width: 42, height: 4, margin: const EdgeInsets.only(bottom: 12), decoration: BoxDecoration(color: Colors.black26, borderRadius: BorderRadius.circular(9))),
+                if (widget.indirilebilir || sahibi) ListTile(leading: const Icon(Icons.download_rounded, color: mavi), title: const Text('İndir'), onTap: () { Navigator.pop(ctx); videoyuGaleriyeKaydet(); }),
+                ListTile(leading: const Icon(Icons.heart_broken_outlined, color: Colors.black87), title: const Text('İlgilenmiyorum'), subtitle: const Text('Benzer içerikleri azalt'), onTap: () { Navigator.pop(ctx); ngelxIcerikGizle(context, videoId, ilgilenmiyorum: true); }),
+                ListTile(leading: const Icon(Icons.visibility_off_outlined, color: Colors.black87), title: const Text('İçeriği gizle'), onTap: () { Navigator.pop(ctx); ngelxIcerikGizle(context, videoId); }),
+                ListTile(leading: const Icon(Icons.link_rounded, color: Colors.blue), title: const Text('Bağlantıyı kopyala'), onTap: () async { await Clipboard.setData(ClipboardData(text: ngelxIcerikLink(videoId))); if (ctx.mounted) Navigator.pop(ctx); }),
+                ListTile(leading: const Icon(Icons.flag_outlined, color: Colors.orange), title: const Text('Bildir / Şikâyet et'), onTap: () { Navigator.pop(ctx); sikayetEt(context, hedefTuru: 'video', hedefId: videoId, hedefUid: widget.ownerId); }),
+                if (!sahibi) ListTile(leading: const Icon(Icons.block, color: Colors.red), title: const Text('Kullanıcıyı engelle', style: TextStyle(color: Colors.red)), onTap: () { Navigator.pop(ctx); kullaniciyiEngelle(context, widget.ownerId); }),
+                if (sahibi) ListTile(leading: const Icon(Icons.delete_forever, color: Colors.red), title: const Text('PAYLAŞIMI SİL', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)), onTap: () { Navigator.pop(ctx); kendiPaylasiminiSil(context, videoId, {'ownerId': widget.ownerId, 'videoUrl': widget.adres}); }),
+                const Divider(),
+                const Align(alignment: Alignment.centerLeft, child: Padding(padding: EdgeInsets.all(10), child: Text('Video hızı', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)))),
+                Wrap(spacing: 9, children: [.5, 1.0, 1.5, 2.0].map((hiz) => ActionChip(label: Text('${hiz}x'), onPressed: () { kontrol.setPlaybackSpeed(hiz); Navigator.pop(ctx); })).toList()),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  void didUpdateWidget(covariant VideoKarti oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!hazir) return;
+    if (widget.aktif) {
+      if (!duraklatildi) kontrol.play();
+    } else {
+      kontrol.pause();
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    kontrol.dispose();
+    super.dispose();
+  }
+
   void yorumlariAc() {
     showModalBottomSheet(
       context: context,
