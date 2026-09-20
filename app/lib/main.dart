@@ -166,16 +166,30 @@ Future<void> icerikAracMenusu(BuildContext context,String icerikId,{Future<void>
   ]))));
 }
 
+Future<String> cihazKurulumKimligi()async{
+  final hafiza=await SharedPreferences.getInstance();
+  var id=hafiza.getString('ngelx_device_install_id');
+  if(id==null||id.isEmpty){
+    id='d'+DateTime.now().microsecondsSinceEpoch.toString()+'_'+Object().hashCode.toString();
+    await hafiza.setString('ngelx_device_install_id',id);
+  }
+  return id;
+}
+
 Future<void> girisKaydiEkle(User user) async {
   try {
     final bilgi=await DeviceInfoPlugin().androidInfo;
     final cihaz='${bilgi.manufacturer} ${bilgi.model}'.trim();
+    final deviceId=await cihazKurulumKimligi();
     final onceki=await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
     final oncekiCihaz=(onceki.data()?['lastLoginDevice']??'').toString();
     await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
       'lastLoginAt':FieldValue.serverTimestamp(),
       'lastLoginDevice':cihaz,
+      'lastLoginDeviceId':deviceId,
+      'revokedDeviceIds':FieldValue.arrayRemove([deviceId]),
       'loginHistory':FieldValue.arrayUnion([{
+        'deviceId':deviceId,
         'device':cihaz,
         'platform':'Android ${bilgi.version.release}',
         'at':DateTime.now().toUtc().toIso8601String(),
@@ -259,15 +273,24 @@ class IcerikBaglantiPage extends StatelessWidget {
 class UygulamaDurumKapisi extends StatefulWidget {final Widget child;const UygulamaDurumKapisi({super.key,required this.child});@override State<UygulamaDurumKapisi> createState()=>_UygulamaDurumKapisiState();}
 class _UygulamaDurumKapisiState extends State<UygulamaDurumKapisi> with WidgetsBindingObserver{
   late Future<DocumentSnapshot<Map<String,dynamic>>> durum;
-  @override void initState(){super.initState();WidgetsBinding.instance.addObserver(this);yenile();unawaited(_presence(true));}
+  @override void initState(){super.initState();WidgetsBinding.instance.addObserver(this);yenile();unawaited(_presence(true));unawaited(_uzakCikisKontrol());}
   @override void dispose(){WidgetsBinding.instance.removeObserver(this);unawaited(_presence(false));super.dispose();}
   void yenile()=>durum=FirebaseFirestore.instance.collection('app_config').doc('status').get().timeout(const Duration(seconds:8));
+  Future<void> _uzakCikisKontrol()async{
+    final u=FirebaseAuth.instance.currentUser;if(u==null||u.isAnonymous)return;
+    try{
+      final id=await cihazKurulumKimligi();
+      final d=await FirebaseFirestore.instance.collection('users').doc(u.uid).get();
+      final iptal=List<String>.from(d.data()?['revokedDeviceIds']??const[]);
+      if(iptal.contains(id))await FirebaseAuth.instance.signOut();
+    }catch(_){}
+  }
   Future<void> _presence(bool online)async{
     final u=FirebaseAuth.instance.currentUser;if(u==null||u.isAnonymous)return;
     try{await FirebaseFirestore.instance.collection('users').doc(u.uid).set({'isOnline':online,'lastSeenAt':FieldValue.serverTimestamp()},SetOptions(merge:true));}catch(_){}
   }
   @override void didChangeAppLifecycleState(AppLifecycleState state){
-    if(state==AppLifecycleState.resumed)unawaited(_presence(true));
+    if(state==AppLifecycleState.resumed){unawaited(_presence(true));unawaited(_uzakCikisKontrol());}
     if(state==AppLifecycleState.inactive||state==AppLifecycleState.paused||state==AppLifecycleState.detached||state==AppLifecycleState.hidden)unawaited(_presence(false));
   }
   @override Widget build(BuildContext context)=>FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(
@@ -6413,17 +6436,85 @@ class _HesapGuvenligiPageState extends State<HesapGuvenligiPage>{
   ]))));
 }
 
-class GirisGecmisiPage extends StatelessWidget {
+class GirisGecmisiPage extends StatefulWidget{
   const GirisGecmisiPage({super.key});
+  @override State<GirisGecmisiPage> createState()=>_GirisGecmisiPageState();
+}
+class _GirisGecmisiPageState extends State<GirisGecmisiPage>{
+  String? mevcutId;
+  @override void initState(){super.initState();cihazKurulumKimligi().then((x){if(mounted)setState(()=>mevcutId=x);});}
+
+  Future<void> cihazdanCik(String deviceId,String ad)async{
+    final u=FirebaseAuth.instance.currentUser;if(u==null)return;
+    final ok=await showDialog<bool>(
+      context:context,
+      builder:(c)=>Theme(
+        data:ThemeData.light(),
+        child:AlertDialog(
+          backgroundColor:Colors.white,surfaceTintColor:Colors.white,
+          title:const Text('Bu cihazdaki oturum kapatılsın mı?',style:TextStyle(color:Colors.black87,fontWeight:FontWeight.w800)),
+          content:Text(ad+' cihazı NgelX yeniden açıldığında oturumdan çıkarılacak.',style:const TextStyle(color:Colors.black87)),
+          actions:[
+            TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),
+            FilledButton(style:FilledButton.styleFrom(backgroundColor:Colors.red,foregroundColor:Colors.white),onPressed:()=>Navigator.pop(c,true),child:const Text('Oturumu kapat')),
+          ],
+        ),
+      ),
+    )??false;
+    if(!ok)return;
+    await FirebaseFirestore.instance.collection('users').doc(u.uid).set({
+      'revokedDeviceIds':FieldValue.arrayUnion([deviceId]),
+    },SetOptions(merge:true));
+    if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Cihaza çıkış talimatı gönderildi.')));
+  }
+
   @override Widget build(BuildContext context){
     final uid=FirebaseAuth.instance.currentUser?.uid;
-    return Theme(data:ThemeData.light().copyWith(scaffoldBackgroundColor:Colors.white,appBarTheme:const AppBarTheme(backgroundColor:Colors.white,foregroundColor:Colors.black,elevation:0)),child:Scaffold(appBar:AppBar(title:const Text('Giriş yapılan cihazlar')),body:uid==null?const Center(child:Text('Oturum bulunamadı.')):FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(future:FirebaseFirestore.instance.collection('users').doc(uid).get(),builder:(context,s){
-      if(s.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator());
-      final ham=List<dynamic>.from(s.data?.data()?['loginHistory']??const []);
-      final kayitlar=ham.whereType<Map>().toList().reversed.take(10).toList();
-      if(kayitlar.isEmpty)return const Center(child:Text('Henüz cihaz kaydı yok.'));
-      return ListView.separated(padding:const EdgeInsets.all(16),itemCount:kayitlar.length,separatorBuilder:(_,__)=>const Divider(),itemBuilder:(_,i){final k=kayitlar[i],tarih=DateTime.tryParse((k['at']??'').toString())?.toLocal();return ListTile(leading:const CircleAvatar(child:Icon(Icons.phone_android)),title:Text((k['device']??'Android cihaz').toString()),subtitle:Text('${k['platform']??'Android'}${tarih==null?'':' • ${tarih.day.toString().padLeft(2,'0')}/${tarih.month.toString().padLeft(2,'0')}/${tarih.year} ${tarih.hour.toString().padLeft(2,'0')}:${tarih.minute.toString().padLeft(2,'0')}'}'));});
-    })));
+    return Theme(
+      data:ThemeData.light().copyWith(scaffoldBackgroundColor:Colors.white,appBarTheme:const AppBarTheme(backgroundColor:Colors.white,foregroundColor:Colors.black,elevation:0)),
+      child:Scaffold(
+        appBar:AppBar(title:const Text('Giriş yapılan cihazlar')),
+        body:uid==null?const Center(child:Text('Oturum bulunamadı.')):StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
+          stream:FirebaseFirestore.instance.collection('users').doc(uid).snapshots(),
+          builder:(context,s){
+            if(s.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator());
+            final ham=List<dynamic>.from(s.data?.data()?['loginHistory']??const[]);
+            final ters=ham.whereType<Map>().toList().reversed.toList();
+            final gorulen=<String>{},kayitlar=<Map>[];
+            for(final k in ters){
+              final id=(k['deviceId']??'').toString();
+              final anahtar=id.isEmpty?((k['device']??'').toString()+'|'+(k['platform']??'').toString()):id;
+              if(gorulen.add(anahtar))kayitlar.add(k);
+              if(kayitlar.length>=10)break;
+            }
+            final iptal=Set<String>.from(List<String>.from(s.data?.data()?['revokedDeviceIds']??const[]));
+            if(kayitlar.isEmpty)return const Center(child:Text('Henüz cihaz kaydı yok.'));
+            return ListView.separated(
+              padding:const EdgeInsets.all(16),
+              itemCount:kayitlar.length,
+              separatorBuilder:(_,__)=>const Divider(),
+              itemBuilder:(_,i){
+                final k=kayitlar[i];
+                final id=(k['deviceId']??'').toString();
+                final tarih=DateTime.tryParse((k['at']??'').toString())?.toLocal();
+                final buCihaz=id.isNotEmpty&&id==mevcutId;
+                final iptalEdildi=id.isNotEmpty&&iptal.contains(id);
+                final ad=(k['device']??'Android cihaz').toString();
+                final tarihYazi=tarih==null?'':' • '+tarih.day.toString().padLeft(2,'0')+'/'+tarih.month.toString().padLeft(2,'0')+'/'+tarih.year.toString()+' '+tarih.hour.toString().padLeft(2,'0')+':'+tarih.minute.toString().padLeft(2,'0');
+                return ListTile(
+                  leading:CircleAvatar(child:Icon(buCihaz?Icons.smartphone_rounded:Icons.phone_android)),
+                  title:Row(children:[Expanded(child:Text(ad)),if(buCihaz)const Chip(label:Text('Bu cihaz'),visualDensity:VisualDensity.compact)]),
+                  subtitle:Text((k['platform']??'Android').toString()+tarihYazi+(iptalEdildi?'\nÇıkış talimatı bekliyor':'')),
+                  trailing:(!buCihaz&&id.isNotEmpty&&!iptalEdildi)
+                    ? TextButton(onPressed:()=>cihazdanCik(id,ad),child:const Text('Çıkış yap',style:TextStyle(color:Colors.red)))
+                    : null,
+                );
+              },
+            );
+          },
+        ),
+      ),
+    );
   }
 }
 
