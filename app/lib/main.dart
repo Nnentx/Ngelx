@@ -18,6 +18,7 @@ import 'package:file_selector/file_selector.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:livekit_client/livekit_client.dart' as lk;
 import 'package:device_info_plus/device_info_plus.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -2748,6 +2749,10 @@ class YorumKarti extends StatelessWidget {
 
     Future<void> yorumMenusu() async {
       final benim = aktifUid == profilUid;
+      final videoBelgesi = await FirebaseFirestore.instance.collection('videos').doc(videoId).get();
+      final icerikSahibi = (videoBelgesi.data()?['ownerId'] ?? '').toString();
+      final silebilir = benim || (aktifUid != null && aktifUid == icerikSahibi);
+      if (!context.mounted) return;
       final secim = await showModalBottomSheet<String>(
         context: context,
         backgroundColor: Colors.white,
@@ -2755,7 +2760,7 @@ class YorumKarti extends StatelessWidget {
         builder: (c) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min, children: [
           Container(width:42,height:4,margin:const EdgeInsets.all(12),decoration:BoxDecoration(color:Colors.black26,borderRadius:BorderRadius.circular(8))),
           if (benim) ListTile(leading:const Icon(Icons.edit_outlined),title:const Text('Düzenle'),onTap:()=>Navigator.pop(c,'edit')),
-          if (benim) ListTile(leading:const Icon(Icons.delete_outline,color:Colors.red),title:const Text('Sil',style:TextStyle(color:Colors.red)),onTap:()=>Navigator.pop(c,'delete')),
+          if (silebilir) ListTile(leading:const Icon(Icons.delete_outline,color:Colors.red),title:Text(benim?'Yorumu sil':'Gönderimden kaldır',style:const TextStyle(color:Colors.red)),onTap:()=>Navigator.pop(c,'delete')),
           ListTile(leading:const Icon(Icons.copy_outlined),title:const Text('Kopyala'),onTap:()=>Navigator.pop(c,'copy')),
           if (!benim) ListTile(leading:const Icon(Icons.flag_outlined,color:Colors.orange),title:const Text('Şikâyet et'),onTap:()=>Navigator.pop(c,'report')),
           if (!benim) ListTile(leading:const Icon(Icons.block,color:Colors.red),title:const Text('Kullanıcıyı engelle',style:TextStyle(color:Colors.red)),onTap:()=>Navigator.pop(c,'block')),
@@ -2773,7 +2778,20 @@ class YorumKarti extends StatelessWidget {
       } else if (secim == 'delete') {
         final onay = await showDialog<bool>(context:context,builder:(c)=>AlertDialog(title:const Text('Yorum silinsin mi?'),content:const Text('Bu işlem geri alınamaz.'),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),TextButton(onPressed:()=>Navigator.pop(c,true),child:const Text('Sil',style:TextStyle(color:Colors.red))) ])) ?? false;
         if (onay) {
-          try { await yorumRef.delete(); } catch(e) { if(context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Yorum silinemedi: $e'))); }
+          try {
+            final yorumlarRef = FirebaseFirestore.instance.collection('videos').doc(videoId).collection('comments');
+            final altYanitlar = await yorumlarRef.where('parentId', isEqualTo: yorumId).get();
+            final hedefler = <DocumentReference<Map<String,dynamic>>>[yorumRef, ...altYanitlar.docs.map((e)=>e.reference)];
+            for (final hedef in hedefler) {
+              final begeniler = await hedef.collection('likes').get();
+              final batch = FirebaseFirestore.instance.batch();
+              for (final b in begeniler.docs) { batch.delete(b.reference); }
+              batch.delete(hedef);
+              await batch.commit();
+            }
+          } catch(e) {
+            if(context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Yorum silinemedi: $e')));
+          }
         }
       } else if (secim == 'edit') {
         final kontrol = TextEditingController(text:metin);
@@ -2878,6 +2896,13 @@ class YorumKarti extends StatelessWidget {
                 ),
               );
             },
+          ),
+          IconButton(
+            tooltip: 'Yorum seçenekleri',
+            onPressed: yorumMenusu,
+            icon: const Icon(Icons.more_vert_rounded, color: Colors.black45, size: 21),
+            padding: const EdgeInsets.only(left: 2),
+            constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
           ),
         ],
       )),
@@ -4403,15 +4428,195 @@ class NgelXAramaPage extends StatefulWidget{
   @override State<NgelXAramaPage> createState()=>_NgelXAramaPageState();
 }
 class _NgelXAramaPageState extends State<NgelXAramaPage>{
-  lk.Room? oda;bool baglaniyor=true,mikrofon=true,kamera=true,hoparlor=true,bitiyor=false;String? hata;
+  lk.Room? oda;
+  bool baglaniyor=true,mikrofon=true,kamera=true,hoparlor=true,bitiyor=false;
+  String? hata;
+
   @override void initState(){super.initState();baglan();}
-  Future<void> baglan()async{final u=FirebaseAuth.instance.currentUser;if(u==null)return;try{final kaynak=lk.DevelopmentTokenSource(id:liveKitTestSunucuId),cevap=await kaynak.fetch(lk.TokenRequestOptions(roomName:widget.roomName,participantIdentity:u.uid,participantName:u.displayName?.isNotEmpty==true?u.displayName!:'NgelX kullanıcısı'));final r=lk.Room(roomOptions:lk.RoomOptions(adaptiveStream:true,dynacast:true));await r.connect(cevap.serverUrl,cevap.participantToken);oda=r;final yerel=r.localParticipant;if(yerel==null)throw Exception('Arama katılımcısı hazırlanamadı.');await yerel.setMicrophoneEnabled(true);if(widget.goruntulu)await yerel.setCameraEnabled(true);await widget.aramaRef.set({'status':'active','participants':FieldValue.arrayUnion([u.uid])},SetOptions(merge:true));if(mounted)setState(()=>baglaniyor=false);}catch(e){if(mounted)setState((){baglaniyor=false;hata=e.toString();});}}
-  Future<void> mikrofonDegistir()async{mikrofon=!mikrofon;await oda?.localParticipant?.setMicrophoneEnabled(mikrofon);if(mounted)setState((){});}
-  Future<void> kameraDegistir()async{kamera=!kamera;await oda?.localParticipant?.setCameraEnabled(kamera);if(mounted)setState((){});}
-  Future<void> bitir({bool geriDon=true})async{if(bitiyor)return;bitiyor=true;await widget.aramaRef.set({'status':'ended','endedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));await oda?.disconnect();await oda?.dispose();oda=null;if(geriDon&&mounted)Navigator.pop(context);}
-  @override void dispose(){final r=oda;if(r!=null&&!bitiyor){r.disconnect();r.dispose();}super.dispose();}
-  @override Widget build(BuildContext context)=>PopScope(canPop:true,onPopInvokedWithResult:(didPop,__){if(didPop)bitir(geriDon:false);},child:Scaffold(backgroundColor:const Color(0xFF16121F),body:SafeArea(child:Column(children:[const Spacer(),CircleAvatar(radius:58,backgroundColor:const Color(0xFFE9DDFF),child:Icon(widget.goruntulu?Icons.videocam_rounded:Icons.call_rounded,color:mor,size:58)),const SizedBox(height:18),Text(widget.baslik,textAlign:TextAlign.center,style:const TextStyle(color:Colors.white,fontSize:27,fontWeight:FontWeight.w900)),const SizedBox(height:7),Text(hata!=null?'Bağlantı kurulamadı':baglaniyor?'Bağlanıyor…':widget.goruntulu?'Görüntülü arama':'Sesli arama',style:TextStyle(color:hata!=null?Colors.redAccent:Colors.white70,fontSize:16)),if(hata!=null)Padding(padding:const EdgeInsets.all(18),child:Text(hata!,maxLines:3,textAlign:TextAlign.center,style:const TextStyle(color:Colors.white54))),const Spacer(),Row(mainAxisAlignment:MainAxisAlignment.spaceEvenly,children:[_aramaTus(mikrofon?Icons.mic:Icons.mic_off,mikrofonDegistir,mikrofon),_aramaTus(hoparlor?Icons.volume_up:Icons.volume_off,()=>setState(()=>hoparlor=!hoparlor),hoparlor),if(widget.goruntulu)_aramaTus(kamera?Icons.videocam:Icons.videocam_off,kameraDegistir,kamera)]),const SizedBox(height:26),FloatingActionButton.large(heroTag:null,backgroundColor:Colors.red,onPressed:()=>bitir(),child:const Icon(Icons.call_end,color:Colors.white,size:34)),const SizedBox(height:35)]))));
-  Widget _aramaTus(IconData ikon,VoidCallback onTap,bool acik)=>IconButton.filled(style:IconButton.styleFrom(backgroundColor:acik?Colors.white24:Colors.white,foregroundColor:acik?Colors.white:Colors.black),onPressed:onTap,icon:Icon(ikon),iconSize:29,padding:const EdgeInsets.all(16));
+  void _odaDegisti(){if(mounted)setState((){});}
+
+  Future<void> _izinleriIste()async{
+    final mikrofonIzni=await Permission.microphone.request();
+    if(!mikrofonIzni.isGranted)throw Exception('Mikrofon izni verilmedi.');
+    if(widget.goruntulu){
+      final kameraIzni=await Permission.camera.request();
+      if(!kameraIzni.isGranted)throw Exception('Kamera izni verilmedi.');
+    }
+  }
+
+  Future<void> baglan()async{
+    final u=FirebaseAuth.instance.currentUser;
+    if(u==null){if(mounted)setState((){baglaniyor=false;hata='Arama için giriş yapman gerekiyor.';});return;}
+    lk.Room? r;
+    try{
+      await _izinleriIste();
+      final kaynak=lk.DevelopmentTokenSource(id:liveKitTestSunucuId);
+      final cevap=await kaynak.fetch(lk.TokenRequestOptions(
+        roomName:widget.roomName,
+        participantIdentity:u.uid,
+        participantName:u.displayName?.isNotEmpty==true?u.displayName!:'NgelX kullanıcısı',
+      )).timeout(const Duration(seconds:12));
+      r=lk.Room(roomOptions:lk.RoomOptions(adaptiveStream:true,dynacast:true));
+      r.addListener(_odaDegisti);
+      await r.connect(cevap.serverUrl,cevap.participantToken).timeout(const Duration(seconds:18));
+      oda=r;
+      final yerel=r.localParticipant;
+      if(yerel==null)throw Exception('Arama katılımcısı hazırlanamadı.');
+      await yerel.setMicrophoneEnabled(true);
+      if(widget.goruntulu)await yerel.setCameraEnabled(true);
+      await lk.AudioManager.instance.setSpeakerOutputPreferred(true,force:widget.goruntulu);
+      hoparlor=true;
+      await widget.aramaRef.set({
+        'status':'active',
+        'participants':FieldValue.arrayUnion([u.uid]),
+        'connectedAt':FieldValue.serverTimestamp(),
+      },SetOptions(merge:true));
+      if(mounted)setState(()=>baglaniyor=false);
+    }catch(e){
+      if(r!=null){
+        r.removeListener(_odaDegisti);
+        try{await r.disconnect();}catch(_){}
+        try{await r.dispose();}catch(_){}
+      }
+      oda=null;
+      if(mounted)setState((){baglaniyor=false;hata=e.toString().replaceFirst('Exception: ','');});
+    }
+  }
+
+  lk.VideoTrack? _katilimciVideosu(lk.Participant? p){
+    if(p==null)return null;
+    for(final pub in p.videoTracks.values){
+      final track=pub.track;
+      if(track is lk.VideoTrack&&!pub.muted)return track;
+    }
+    return null;
+  }
+  lk.VideoTrack? get _yerelVideo=>_katilimciVideosu(oda?.localParticipant);
+  lk.VideoTrack? get _uzakVideo{
+    final r=oda;if(r==null)return null;
+    for(final p in r.remoteParticipants.values){
+      final track=_katilimciVideosu(p);
+      if(track!=null)return track;
+    }
+    return null;
+  }
+
+  Future<void> mikrofonDegistir()async{
+    final yeni=!mikrofon;
+    try{await oda?.localParticipant?.setMicrophoneEnabled(yeni);if(mounted)setState(()=>mikrofon=yeni);}
+    catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Mikrofon değiştirilemedi: $e')));}
+  }
+  Future<void> kameraDegistir()async{
+    final yeni=!kamera;
+    try{await oda?.localParticipant?.setCameraEnabled(yeni);if(mounted)setState(()=>kamera=yeni);}
+    catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Kamera değiştirilemedi: $e')));}
+  }
+  Future<void> hoparlorDegistir()async{
+    final yeni=!hoparlor;
+    try{
+      await lk.AudioManager.instance.setSpeakerOutputPreferred(yeni,force:yeni&&widget.goruntulu);
+      if(mounted)setState(()=>hoparlor=yeni);
+    }catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Ses çıkışı değiştirilemedi: $e')));}
+  }
+
+  Future<void> bitir({bool geriDon=true})async{
+    if(bitiyor)return;bitiyor=true;
+    try{await widget.aramaRef.set({'status':'ended','endedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));}catch(_){}
+    final r=oda;oda=null;
+    if(r!=null){
+      r.removeListener(_odaDegisti);
+      try{await r.disconnect();}catch(_){}
+      try{await r.dispose();}catch(_){}
+    }
+    if(geriDon&&mounted)Navigator.pop(context);
+  }
+
+  @override void dispose(){
+    final r=oda;
+    if(r!=null){
+      r.removeListener(_odaDegisti);
+      if(!bitiyor){unawaited(r.disconnect());unawaited(r.dispose());}
+    }
+    super.dispose();
+  }
+
+  Widget _videoAlani(){
+    final uzak=_uzakVideo,yerel=_yerelVideo;
+    return Expanded(child:Stack(children:[
+      Positioned.fill(
+        child:uzak!=null
+          ? ClipRRect(borderRadius:BorderRadius.circular(22),child:lk.VideoTrackRenderer(uzak,fit:lk.VideoViewFit.cover))
+          : Container(
+              margin:const EdgeInsets.all(14),
+              decoration:BoxDecoration(color:Colors.white10,borderRadius:BorderRadius.circular(22)),
+              child:Center(child:Column(mainAxisSize:MainAxisSize.min,children:[
+                const Icon(Icons.person_rounded,color:Colors.white30,size:76),
+                const SizedBox(height:12),
+                Text(baglaniyor?'Bağlanıyor…':'Karşı tarafın görüntüsü bekleniyor…',style:const TextStyle(color:Colors.white70)),
+              ])),
+            ),
+      ),
+      if(yerel!=null)
+        Positioned(
+          right:22,top:22,width:112,height:158,
+          child:ClipRRect(
+            borderRadius:BorderRadius.circular(18),
+            child:DecoratedBox(
+              decoration:BoxDecoration(border:Border.all(color:Colors.white24),borderRadius:BorderRadius.circular(18)),
+              child:lk.VideoTrackRenderer(yerel,fit:lk.VideoViewFit.cover),
+            ),
+          ),
+        ),
+      Positioned(left:20,right:20,bottom:18,child:Text(widget.baslik,textAlign:TextAlign.center,style:const TextStyle(color:Colors.white,fontSize:22,fontWeight:FontWeight.w900,shadows:[Shadow(blurRadius:8,color:Colors.black54)]))),
+    ]));
+  }
+
+  Widget _sesliAlani()=>Expanded(child:Center(child:Column(mainAxisSize:MainAxisSize.min,children:[
+    const CircleAvatar(radius:62,backgroundColor:Color(0xFFE9DDFF),child:Icon(Icons.call_rounded,color:mor,size:62)),
+    const SizedBox(height:18),
+    Text(widget.baslik,textAlign:TextAlign.center,style:const TextStyle(color:Colors.white,fontSize:27,fontWeight:FontWeight.w900)),
+    const SizedBox(height:7),
+    Text(baglaniyor?'Bağlanıyor…':'Sesli arama',style:const TextStyle(color:Colors.white70,fontSize:16)),
+  ])));
+
+  @override Widget build(BuildContext context)=>PopScope(
+    canPop:true,
+    onPopInvokedWithResult:(didPop,__){if(didPop)bitir(geriDon:false);},
+    child:Scaffold(
+      backgroundColor:const Color(0xFF16121F),
+      body:SafeArea(child:Column(children:[
+        if(hata!=null)
+          Expanded(child:Center(child:Padding(padding:const EdgeInsets.all(28),child:Column(mainAxisSize:MainAxisSize.min,children:[
+            const Icon(Icons.call_end_rounded,color:Colors.redAccent,size:66),
+            const SizedBox(height:16),
+            const Text('Arama bağlantısı kurulamadı',style:TextStyle(color:Colors.white,fontSize:21,fontWeight:FontWeight.w900)),
+            const SizedBox(height:10),
+            SelectableText(hata!,textAlign:TextAlign.center,style:const TextStyle(color:Colors.white70)),
+            const SizedBox(height:18),
+            FilledButton.icon(onPressed:(){setState((){hata=null;baglaniyor=true;});baglan();},icon:const Icon(Icons.refresh),label:const Text('Tekrar dene')),
+            TextButton(onPressed:openAppSettings,child:const Text('Kamera / mikrofon izinlerini aç')),
+          ]))))
+        else if(widget.goruntulu)_videoAlani()
+        else _sesliAlani(),
+        if(hata==null)Padding(
+          padding:const EdgeInsets.fromLTRB(12,18,12,8),
+          child:Row(mainAxisAlignment:MainAxisAlignment.spaceEvenly,children:[
+            _aramaTus(mikrofon?Icons.mic:Icons.mic_off,mikrofonDegistir,mikrofon),
+            _aramaTus(hoparlor?Icons.volume_up:Icons.volume_off,hoparlorDegistir,hoparlor),
+            if(widget.goruntulu)_aramaTus(kamera?Icons.videocam:Icons.videocam_off,kameraDegistir,kamera),
+          ]),
+        ),
+        FloatingActionButton.large(heroTag:null,backgroundColor:Colors.red,onPressed:()=>bitir(),child:const Icon(Icons.call_end,color:Colors.white,size:34)),
+        const SizedBox(height:26),
+      ])),
+    ),
+  );
+
+  Widget _aramaTus(IconData ikon,Future<void> Function() onTap,bool acik)=>IconButton.filled(
+    style:IconButton.styleFrom(backgroundColor:acik?Colors.white24:Colors.white,foregroundColor:acik?Colors.white:Colors.black),
+    onPressed:()=>onTap(),
+    icon:Icon(ikon),iconSize:29,padding:const EdgeInsets.all(16),
+  );
 }
 
 class GrupBilgiPage extends StatefulWidget{final String chatId;const GrupBilgiPage({super.key,required this.chatId});@override State<GrupBilgiPage> createState()=>_GrupBilgiPageState();}
