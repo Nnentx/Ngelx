@@ -3,7 +3,7 @@ name: NgelX V44 Test ve Hiz Duzeltmeleri
 on:
   workflow_dispatch:
   push:
-    branches: [ngelx-v44-test-fixes]
+    branches: [ngelx-v44-test-fixes, ngelx-v45-work]
     paths:
       - 'app/**'
       - 'firestore.rules'
