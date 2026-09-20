@@ -6333,13 +6333,13 @@ class SohbetBilgiPage extends StatelessWidget{
     final mevcutBelge=await FirebaseFirestore.instance.collection('chats').doc(chatId).get();
     final mevcut=mevcutBelge.data()??<String,dynamic>{};
     final seciliRenk=(mevcut['theme_$me'] is int)?mevcut['theme_$me'] as int:Colors.white.toARGB32();
-    final seciliOpaklik=(mevcut['backgroundOpacity_$me'] is num)?(mevcut['backgroundOpacity_$me'] as num).toDouble():.30;
-    final seciliYazi=(mevcut['messageFontSize_$me'] is num)?(mevcut['messageFontSize_$me'] as num).toDouble():16.0;
+    var seciliOpaklik=(mevcut['backgroundOpacity_$me'] is num)?(mevcut['backgroundOpacity_$me'] as num).toDouble():.30;
+    var seciliYazi=(mevcut['messageFontSize_$me'] is num)?(mevcut['messageFontSize_$me'] as num).toDouble():16.0;
     final seciliEmoji=(mevcut['quickEmoji_$me']??'👍').toString();
     if(!context.mounted)return;
     final secim=await showModalBottomSheet<Object>(
       context:context,backgroundColor:Colors.white,showDragHandle:true,isScrollControlled:true,
-      builder:(c)=>Theme(data:ThemeData.light(),child:SafeArea(child:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
+      builder:(c)=>StatefulBuilder(builder:(c,setSheet)=>Theme(data:ThemeData.light(),child:SafeArea(child:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
         const ListTile(title:Text('Sohbeti özelleştir',style:TextStyle(fontWeight:FontWeight.w900)),subtitle:Text('Bu görünüm yalnızca sende görünür.')),
         const ListTile(title:Text('Arka plan rengi',style:TextStyle(fontWeight:FontWeight.w700))),
         Wrap(spacing:16,runSpacing:16,children:[
@@ -6352,17 +6352,17 @@ class SohbetBilgiPage extends StatelessWidget{
         const Divider(height:28),
         const ListTile(leading:Icon(Icons.opacity_rounded,color:mor),title:Text('Arka plan görünürlüğü',style:TextStyle(fontWeight:FontWeight.w800)),subtitle:Text('Fotoğrafın sohbetin arkasında ne kadar belirgin olacağını seç.')),
         Wrap(spacing:8,children:[
-          ChoiceChip(label:const Text('Hafif'),selected:(seciliOpaklik-.15).abs()<.01,onSelected:(_)=>Navigator.pop(c,'opacity:15')),
-          ChoiceChip(label:const Text('Normal'),selected:(seciliOpaklik-.30).abs()<.01,onSelected:(_)=>Navigator.pop(c,'opacity:30')),
-          ChoiceChip(label:const Text('Belirgin'),selected:(seciliOpaklik-.50).abs()<.01,onSelected:(_)=>Navigator.pop(c,'opacity:50')),
-          ChoiceChip(label:const Text('Güçlü'),selected:(seciliOpaklik-.70).abs()<.01,onSelected:(_)=>Navigator.pop(c,'opacity:70')),
+          ChoiceChip(label:const Text('Hafif'),selected:(seciliOpaklik-.15).abs()<.01,onSelected:(_){setSheet(()=>seciliOpaklik=.15);unawaited(FirebaseFirestore.instance.collection('chats').doc(chatId).set({'backgroundOpacity_$me':.15},SetOptions(merge:true)));}),
+          ChoiceChip(label:const Text('Normal'),selected:(seciliOpaklik-.30).abs()<.01,onSelected:(_){setSheet(()=>seciliOpaklik=.30);unawaited(FirebaseFirestore.instance.collection('chats').doc(chatId).set({'backgroundOpacity_$me':.30},SetOptions(merge:true)));}),
+          ChoiceChip(label:const Text('Belirgin'),selected:(seciliOpaklik-.50).abs()<.01,onSelected:(_){setSheet(()=>seciliOpaklik=.50);unawaited(FirebaseFirestore.instance.collection('chats').doc(chatId).set({'backgroundOpacity_$me':.50},SetOptions(merge:true)));}),
+          ChoiceChip(label:const Text('Güçlü'),selected:(seciliOpaklik-.70).abs()<.01,onSelected:(_){setSheet(()=>seciliOpaklik=.70);unawaited(FirebaseFirestore.instance.collection('chats').doc(chatId).set({'backgroundOpacity_$me':.70},SetOptions(merge:true)));}),
         ]),
         const Divider(height:28),
         const ListTile(leading:Icon(Icons.text_fields_rounded,color:mor),title:Text('Mesaj yazı boyutu',style:TextStyle(fontWeight:FontWeight.w800))),
         Wrap(spacing:8,children:[
-          ChoiceChip(label:const Text('Küçük'),selected:(seciliYazi-14).abs()<.1,onSelected:(_)=>Navigator.pop(c,'font:14')),
-          ChoiceChip(label:const Text('Normal'),selected:(seciliYazi-16).abs()<.1,onSelected:(_)=>Navigator.pop(c,'font:16')),
-          ChoiceChip(label:const Text('Büyük'),selected:(seciliYazi-18).abs()<.1,onSelected:(_)=>Navigator.pop(c,'font:18')),
+          ChoiceChip(label:const Text('Küçük'),selected:(seciliYazi-14).abs()<.1,onSelected:(_){setSheet(()=>seciliYazi=14);unawaited(FirebaseFirestore.instance.collection('chats').doc(chatId).set({'messageFontSize_$me':14.0},SetOptions(merge:true)));}),
+          ChoiceChip(label:const Text('Normal'),selected:(seciliYazi-16).abs()<.1,onSelected:(_){setSheet(()=>seciliYazi=16);unawaited(FirebaseFirestore.instance.collection('chats').doc(chatId).set({'messageFontSize_$me':16.0},SetOptions(merge:true)));}),
+          ChoiceChip(label:const Text('Büyük'),selected:(seciliYazi-18).abs()<.1,onSelected:(_){setSheet(()=>seciliYazi=18);unawaited(FirebaseFirestore.instance.collection('chats').doc(chatId).set({'messageFontSize_$me':18.0},SetOptions(merge:true)));}),
         ]),
         const Divider(height:28),
         const ListTile(leading:Icon(Icons.emoji_emotions_outlined,color:mor),title:Text('Hızlı gönderme emojisi',style:TextStyle(fontWeight:FontWeight.w800)),subtitle:Text('Mesaj kutusu boşken sağdaki tek dokunuş emojisini seç.')),
@@ -6376,7 +6376,7 @@ class SohbetBilgiPage extends StatelessWidget{
         const Divider(height:24),
         ListTile(leading:const Icon(Icons.restart_alt_rounded,color:Colors.red),title:const Text('Özelleştirmeyi sıfırla',style:TextStyle(color:Colors.red,fontWeight:FontWeight.w800)),subtitle:const Text('Arka plan, yazı boyutu ve hızlı emojiyi varsayılana döndür.'),onTap:()=>Navigator.pop(c,'reset')),
         const SizedBox(height:10),
-      ])))),
+      ]))))),
     );
     if(secim==null)return;
     final ref=FirebaseFirestore.instance.collection('chats').doc(chatId);
