@@ -88,6 +88,7 @@ Future<void> uygulamaBildirimiGonder({required String toUid,required String from
   if(toUid==fromUid)return;
   final hedef=await FirebaseFirestore.instance.collection('users').doc(toUid).get();
   final ayar=hedef.data()??{};
+  if(List<String>.from(ayar['restrictedUsers']??const[]).contains(fromUid))return;
   if(ayar['notificationsEnabled']==false)return;
   if(tur=='message'&&ayar['messageNotifications']==false)return;
   if(tur=='interaction'&&ayar['interactionNotifications']==false)return;
@@ -4524,6 +4525,7 @@ class _YeniSohbetPageState extends State<YeniSohbetPage>{
 class SohbetPage extends StatefulWidget {final String chatId,digerUid,ad,foto;const SohbetPage({super.key,required this.chatId,required this.digerUid,required this.ad,this.foto=''});@override State<SohbetPage> createState()=>_SohbetPageState();}
 class _SohbetPageState extends State<SohbetPage> {
   final mesaj=TextEditingController(),liste=ScrollController();
+  final List<Map<String,String>> mentionOnerileri=[];
   bool gonderiliyor=false;
   String? get uid=>FirebaseAuth.instance.currentUser?.uid;
 
@@ -4621,6 +4623,20 @@ class _SohbetPageState extends State<SohbetPage> {
 
   Future<void> emojiSec()async{final e=await showModalBottomSheet<String>(context:context,backgroundColor:Colors.white,showDragHandle:true,builder:(c)=>SafeArea(child:Padding(padding:const EdgeInsets.all(18),child:Wrap(spacing:14,runSpacing:14,children:['😀','😊','😂','😍','🥰','😎','😭','😡','👍','👏','🙏','❤️','🔥','🎉','✨','💯','🤔','😴','🙌','🤝'].map((x)=>InkWell(onTap:()=>Navigator.pop(c,x),child:Text(x,style:const TextStyle(fontSize:30)))).toList()))));if(e!=null){mesaj.text='${mesaj.text}$e';mesaj.selection=TextSelection.collapsed(offset:mesaj.text.length);}}
 
+  Future<void> mentionAra(String deger)async{
+    final parca=deger.split(RegExp(r'\s+')).last;
+    if(!parca.startsWith('@')){if(mentionOnerileri.isNotEmpty&&mounted)setState(()=>mentionOnerileri.clear());return;}
+    final ara=parca.substring(1).toLowerCase(),sonuc=<Map<String,String>>[];
+    if('herkes'.contains(ara))sonuc.add({'uid':'all','username':'herkes','name':'Herkes'});
+    try{
+      final d=await FirebaseFirestore.instance.collection('users').doc(widget.digerUid).get(),v=d.data()??<String,dynamic>{};
+      final kullanici=(v['username']??'').toString().trim(),ad=(v['displayName']??kullanici).toString().trim(),aranan='$kullanici $ad'.toLowerCase();
+      if(kullanici.isNotEmpty&&(ara.isEmpty||aranan.contains(ara)))sonuc.add({'uid':widget.digerUid,'username':kullanici,'name':ad.isEmpty?kullanici:ad});
+    }catch(_){}
+    if(mounted)setState((){mentionOnerileri..clear()..addAll(sonuc.take(5));});
+  }
+  void mentionEkle(String kullanici){final metin=mesaj.text,sonBosluk=metin.lastIndexOf(RegExp(r'\s'));mesaj.text='${sonBosluk<0?'':metin.substring(0,sonBosluk+1)}@$kullanici ';mesaj.selection=TextSelection.collapsed(offset:mesaj.text.length);setState(()=>mentionOnerileri.clear());}
+
   Future<void> aramaBaslat(bool goruntulu)async{final ben=uid;if(ben==null)return;final odaAdi='chat_${widget.chatId}_${DateTime.now().millisecondsSinceEpoch}',ref=FirebaseFirestore.instance.collection('calls').doc();await ref.set({'chatId':widget.chatId,'roomName':odaAdi,'members':[ben,widget.digerUid],'startedBy':ben,'video':goruntulu,'status':'ringing','createdAt':FieldValue.serverTimestamp()});await uygulamaBildirimiGonder(toUid:widget.digerUid,fromUid:ben,tur:'call',metin:goruntulu?'Görüntülü arama':'Sesli arama',belgeId:ref.id);if(mounted)await Navigator.push(context,MaterialPageRoute(builder:(_)=>NgelXAramaPage(roomName:odaAdi,baslik:widget.ad,goruntulu:goruntulu,aramaRef:ref)));}
 
   void bilgi()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>SohbetBilgiPage(uid:widget.digerUid,ad:widget.ad,foto:widget.foto,chatId:widget.chatId)));
@@ -4651,12 +4667,13 @@ class _SohbetPageState extends State<SohbetPage> {
         stream:FirebaseFirestore.instance.collection('chats').doc(widget.chatId).collection('messages').orderBy('createdAt').snapshots(),
         builder:(_,s){if(uid!=null&&s.hasData)FirebaseFirestore.instance.collection('chats').doc(widget.chatId).set({'unread_$uid':0},SetOptions(merge:true));if(s.hasData)sonaGit();return ListView(controller:liste,padding:const EdgeInsets.all(12),children:(s.data?.docs??[]).map(ozelMesajKarti).toList());},
       )),
+      if(mentionOnerileri.isNotEmpty)Container(color:Colors.white.withValues(alpha:.96),child:Column(mainAxisSize:MainAxisSize.min,children:mentionOnerileri.map((u)=>ListTile(dense:true,leading:CircleAvatar(radius:15,child:Icon(u['uid']=='all'?Icons.groups:Icons.person,size:17)),title:Text(u['name']??'Kullanıcı'),subtitle:Text('@${u['username']??''}'),onTap:()=>mentionEkle(u['username']??''))).toList())),
       SafeArea(top:false,child:Padding(
         padding:const EdgeInsets.fromLTRB(4,7,4,8),
         child:Row(children:[
           IconButton(onPressed:()=>medyaGonder(ImageSource.camera),icon:const Icon(Icons.camera_alt,color:Colors.blue)),
           IconButton(onPressed:()=>medyaGonder(ImageSource.gallery),icon:const Icon(Icons.photo_library,color:Colors.blue)),
-          Expanded(child:TextField(controller:mesaj,onSubmitted:(_)=>gonder(),decoration:const InputDecoration(hintText:'Mesaj'))),
+          Expanded(child:TextField(controller:mesaj,onChanged:mentionAra,onSubmitted:(_)=>gonder(),decoration:const InputDecoration(hintText:'Mesaj'))),
           IconButton(tooltip:'Emoji seç',onPressed:emojiSec,icon:const Icon(Icons.emoji_emotions,color:Colors.blue)),
           IconButton(onPressed:gonderiliyor?null:gonder,icon:gonderiliyor?const SizedBox(width:20,height:20,child:CircularProgressIndicator(strokeWidth:2)):const Icon(Icons.send,color:Colors.blue)),
         ]),
@@ -4671,8 +4688,42 @@ class SohbetBilgiPage extends StatelessWidget{
 
   Future<void> takmaAd(BuildContext context)async{final me=FirebaseAuth.instance.currentUser?.uid;if(me==null)return;final chat=await FirebaseFirestore.instance.collection('chats').doc(chatId).get(),c=TextEditingController(text:(chat.data()?['nicknames']?[me]??'').toString());if(!context.mounted)return;final sonuc=await showDialog<String>(context:context,builder:(x)=>AlertDialog(backgroundColor:Colors.white,title:const Text('Takma ad'),content:TextField(controller:c,maxLength:30,decoration:const InputDecoration(hintText:'Bu sohbette görünecek ad')),actions:[TextButton(onPressed:()=>Navigator.pop(x),child:const Text('Vazgeç')),FilledButton(onPressed:()=>Navigator.pop(x,c.text.trim()),child:const Text('Kaydet'))]));c.dispose();if(sonuc!=null)await FirebaseFirestore.instance.collection('chats').doc(chatId).update({'nicknames.$me':sonuc});}
   Future<void> ozellestir(BuildContext context)async{final me=FirebaseAuth.instance.currentUser?.uid;if(me==null)return;final secim=await showModalBottomSheet<Object>(context:context,backgroundColor:Colors.white,showDragHandle:true,builder:(c)=>SafeArea(child:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[const ListTile(title:Text('Sohbet arka planı',style:TextStyle(fontWeight:FontWeight.w900)),subtitle:Text('Bu görünüm yalnızca sende görünür.')),Wrap(spacing:16,runSpacing:16,children:[Colors.white,const Color(0xFFFFF4F7),const Color(0xFFF4F0FF),const Color(0xFFEFF8FF),const Color(0xFFF1FFF5)].map((x)=>InkWell(onTap:()=>Navigator.pop(c,x.toARGB32()),child:CircleAvatar(radius:25,backgroundColor:x,child:const Icon(Icons.check,color:Colors.black26)))).toList()),const SizedBox(height:12),ListTile(leading:const Icon(Icons.photo_library_outlined,color:mor),title:const Text('Galeriden özel fotoğraf / logo seç'),onTap:()=>Navigator.pop(c,'gallery')),ListTile(leading:const Icon(Icons.camera_alt_outlined,color:mor),title:const Text('Kameradan arka plan çek'),onTap:()=>Navigator.pop(c,'camera')),ListTile(leading:const Icon(Icons.hide_image_outlined,color:Colors.red),title:const Text('Özel fotoğrafı kaldır',style:TextStyle(color:Colors.red)),onTap:()=>Navigator.pop(c,'removeImage')),const SizedBox(height:8)]))));if(secim==null)return;final ref=FirebaseFirestore.instance.collection('chats').doc(chatId);if(secim is int){await ref.set({'theme_$me':secim},SetOptions(merge:true));return;}if(secim=='removeImage'){await ref.set({'backgroundUrl_$me':''},SetOptions(merge:true));return;}final kaynak=secim=='camera'?ImageSource.camera:ImageSource.gallery;final x=await ImagePicker().pickImage(source:kaynak,imageQuality:88);if(x==null)return;try{final yol='chat-backgrounds/$me/${chatId}_${DateTime.now().millisecondsSinceEpoch}.jpg';await supa.Supabase.instance.client.storage.from('ngelx-media').upload(yol,File(x.path));final url=supa.Supabase.instance.client.storage.from('ngelx-media').getPublicUrl(yol);await ref.set({'backgroundUrl_$me':url},SetOptions(merge:true));if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Özel sohbet arka planın kaydedildi.')));}catch(e){if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Arka plan yüklenemedi: $e')));}}
-  Future<void> sessizeAl(BuildContext context)async{final me=FirebaseAuth.instance.currentUser?.uid;if(me==null)return;await FirebaseFirestore.instance.collection('users').doc(me).set({'mutedChats':FieldValue.arrayUnion([chatId])},SetOptions(merge:true));if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Sohbet sessize alındı. Süreyi gelen kutusundan değiştirebilirsin.')));}
-  Future<void> kisitla(BuildContext context)async{final me=FirebaseAuth.instance.currentUser?.uid;if(me==null)return;await FirebaseFirestore.instance.collection('users').doc(me).set({'restrictedUsers':FieldValue.arrayUnion([uid])},SetOptions(merge:true));if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Kullanıcı kısıtlandı.')));}
+  Future<void> sessizeAl(BuildContext context)async{
+    final me=FirebaseAuth.instance.currentUser?.uid;if(me==null)return;
+    final ref=FirebaseFirestore.instance.collection('users').doc(me),d=await ref.get(),v=d.data()??<String,dynamic>{},sessiz=List<String>.from(v['mutedChats']??const[]).contains(chatId);
+    if(!context.mounted)return;
+    final secim=await showModalBottomSheet<String>(context:context,backgroundColor:Colors.white,showDragHandle:true,builder:(c)=>SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
+      const ListTile(leading:Icon(Icons.notifications_off_outlined,color:mor),title:Text('Sohbet bildirimlerini sessize al',style:TextStyle(fontWeight:FontWeight.w900)),subtitle:Text('Mesajlar gelmeye devam eder; yalnızca bu sohbetin bildirimi kapanır.')),
+      if(sessiz)ListTile(leading:const Icon(Icons.notifications_active_outlined,color:Colors.green),title:const Text('Sessizi kaldır'),onTap:()=>Navigator.pop(c,'unmute')),
+      if(!sessiz)...[
+        for(final e in const [('1 saat','1h'),('8 saat','8h'),('1 hafta','7d'),('Süresiz','forever')])ListTile(title:Text(e.$1),onTap:()=>Navigator.pop(c,e.$2)),
+      ],
+      TextButton(onPressed:()=>Navigator.pop(c),child:const Text('Vazgeç')),
+    ])));
+    if(secim==null)return;
+    if(secim=='unmute'){
+      await ref.set({'mutedChats':FieldValue.arrayRemove([chatId]),'mutedChatUntil':{chatId:FieldValue.delete()}},SetOptions(merge:true));
+      if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Sohbet bildirimlerinin sesi açıldı.')));
+      return;
+    }
+    final g=<String,dynamic>{'mutedChats':FieldValue.arrayUnion([chatId])};
+    if(secim=='forever')g['mutedChatUntil.$chatId']=FieldValue.delete();
+    else{
+      final sure=secim=='1h'?const Duration(hours:1):secim=='8h'?const Duration(hours:8):const Duration(days:7);
+      g['mutedChatUntil.$chatId']=DateTime.now().add(sure).toUtc().toIso8601String();
+    }
+    await ref.set(g,SetOptions(merge:true));
+    if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(secim=='forever'?'Sohbet süresiz sessize alındı.':'Sohbet seçilen süre boyunca sessize alındı.')));
+  }
+  Future<void> kisitla(BuildContext context)async{
+    final me=FirebaseAuth.instance.currentUser?.uid;if(me==null)return;
+    final ref=FirebaseFirestore.instance.collection('users').doc(me),d=await ref.get(),v=d.data()??<String,dynamic>{},kisitli=List<String>.from(v['restrictedUsers']??const[]).contains(uid);
+    if(!context.mounted)return;
+    final onay=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(backgroundColor:Colors.white,title:Text(kisitli?'Kısıtlamayı kaldır':'$ad kısıtlansın mı?'),content:Text(kisitli?'Bu kişinin bildirimleri tekrar normal şekilde gelebilir.':'Bu kişiden gelen etkileşim ve mesaj bildirimleri sessizce kısıtlanır. Engelleme değildir; sohbet tamamen kapanmaz.'),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),FilledButton(onPressed:()=>Navigator.pop(c,true),child:Text(kisitli?'Kısıtlamayı kaldır':'Kısıtla'))]))??false;
+    if(!onay)return;
+    await ref.set({'restrictedUsers':kisitli?FieldValue.arrayRemove([uid]):FieldValue.arrayUnion([uid])},SetOptions(merge:true));
+    if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(kisitli?'Kısıtlama kaldırıldı.':'Kullanıcı kısıtlandı. Bildirimleri sessizce filtrelenecek.')));
+  }
   Future<void> engelle(BuildContext context)async{final ok=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(backgroundColor:Colors.white,title:Text('$ad engellensin mi?'),content:const Text('Bu kullanıcı sana mesaj gönderemez ve profilini göremez.'),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),FilledButton(style:FilledButton.styleFrom(backgroundColor:Colors.red),onPressed:()=>Navigator.pop(c,true),child:const Text('Engelle'))]))??false;if(ok&&context.mounted)await kullaniciyiEngelle(context,uid);}
   Future<void> sohbetiSil(BuildContext context)async{final me=FirebaseAuth.instance.currentUser?.uid;if(me==null)return;final ok=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(backgroundColor:Colors.white,title:const Text('Sohbet listeden kaldırılsın mı?'),content:const Text('Bu işlem yalnızca senin gelen kutunu etkiler.'),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),FilledButton(style:FilledButton.styleFrom(backgroundColor:Colors.red),onPressed:()=>Navigator.pop(c,true),child:const Text('Kaldır'))]))??false;if(!ok)return;await FirebaseFirestore.instance.collection('chats').doc(chatId).set({'hiddenFor':FieldValue.arrayUnion([me])},SetOptions(merge:true));if(context.mounted)Navigator.popUntil(context,(r)=>r.isFirst);}
 
