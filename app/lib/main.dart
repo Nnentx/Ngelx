@@ -983,6 +983,7 @@ class _AnaEkranState extends State<AnaEkran> {
                           await Navigator.push(context,MaterialPageRoute(builder:(_)=>NgelXAramaPage(
                             roomName:(v['roomName']??'').toString(),
                             baslik:baslik,
+                            foto:foto,
                             goruntulu:goruntulu,
                             aramaRef:d.reference,
                           )));
@@ -4829,7 +4830,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
       if(!mounted)return;
       setState(()=>aramaBaslatiliyor=false);
       await Navigator.push(context,MaterialPageRoute(builder:(_)=>NgelXAramaPage(
-        roomName:odaAdi,baslik:grupAdi,goruntulu:goruntulu,aramaRef:ref,
+        roomName:odaAdi,baslik:grupAdi,foto:widget.foto,goruntulu:goruntulu,aramaRef:ref,
       )));
     }catch(e){
       if(!mounted)return;
@@ -4863,8 +4864,8 @@ class SabitlenenGrupMesajlariPage extends StatelessWidget{
 }
 
 class NgelXAramaPage extends StatefulWidget{
-  final String roomName,baslik;final bool goruntulu;final DocumentReference<Map<String,dynamic>> aramaRef;
-  const NgelXAramaPage({super.key,required this.roomName,required this.baslik,required this.goruntulu,required this.aramaRef});
+  final String roomName,baslik,foto;final bool goruntulu;final DocumentReference<Map<String,dynamic>> aramaRef;
+  const NgelXAramaPage({super.key,required this.roomName,required this.baslik,this.foto='',required this.goruntulu,required this.aramaRef});
   @override State<NgelXAramaPage> createState()=>_NgelXAramaPageState();
 }
 class _NgelXAramaPageState extends State<NgelXAramaPage>{
@@ -5115,7 +5116,7 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
       Positioned(
         left:18,right:18,bottom:16,
         child:Column(children:[
-          CircleAvatar(radius:38,backgroundColor:Colors.black26,child:const Icon(Icons.person,color:Colors.white,size:36)),
+          CircleAvatar(radius:38,backgroundColor:Colors.black26,backgroundImage:widget.foto.isEmpty?null:NetworkImage(widget.foto),child:widget.foto.isEmpty?const Icon(Icons.person,color:Colors.white,size:36):null),
           const SizedBox(height:8),
           Text(widget.baslik,textAlign:TextAlign.center,style:const TextStyle(color:Colors.white,fontSize:26,fontWeight:FontWeight.w900,shadows:[Shadow(blurRadius:8,color:Colors.black54)])),
           Text(baglaniyor?'Aranıyor…':'Görüntülü arama',style:const TextStyle(color:Colors.white70,fontSize:16)),
@@ -5125,7 +5126,7 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
   }
 
   Widget _sesliAlani()=>Expanded(child:Center(child:Column(mainAxisSize:MainAxisSize.min,children:[
-    const CircleAvatar(radius:62,backgroundColor:Color(0xFFE9DDFF),child:Icon(Icons.call_rounded,color:mor,size:62)),
+    CircleAvatar(radius:62,backgroundColor:const Color(0xFFE9DDFF),backgroundImage:widget.foto.isEmpty?null:NetworkImage(widget.foto),child:widget.foto.isEmpty?const Icon(Icons.call_rounded,color:mor,size:62):null),
     const SizedBox(height:18),
     Text(widget.baslik,textAlign:TextAlign.center,style:const TextStyle(color:Colors.white,fontSize:27,fontWeight:FontWeight.w900)),
     const SizedBox(height:7),
@@ -5734,6 +5735,7 @@ class _SohbetPageState extends State<SohbetPage> {
         MaterialPageRoute(builder:(_)=>NgelXAramaPage(
           roomName:odaAdi,
           baslik:widget.ad,
+          foto:widget.foto,
           goruntulu:goruntulu,
           aramaRef:ref,
         )),
@@ -6264,7 +6266,7 @@ class AktivitePage extends StatelessWidget {
     final kaynak=(v['sourceId']??v['belgeId']??'').toString();
     if(kaynak.isNotEmpty&&(tur=='interaction'||tur=='like'||tur=='comment')){Navigator.push(context,MaterialPageRoute(builder:(_)=>IcerikBaglantiPage(icerikId:kaynak)));return;}
     if(from.isNotEmpty&&(tur=='friend'||tur=='follow_request'||tur=='friend_request'||tur=='friend_accepted'||tur=='follow_accepted')){Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciProfilPage(uid:from)));return;}
-    if(tur=='call'&&kaynak.isNotEmpty){final ref=FirebaseFirestore.instance.collection('calls').doc(kaynak),arama=await ref.get(),a=arama.data();if(!context.mounted)return;if(a==null||a['status']=='ended'){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bu arama sona ermiş.')));return;}final p=await FirebaseFirestore.instance.collection('users').doc(from).get();if(!context.mounted)return;final baslik=a['group']==true?(a['title']??'Grup araması').toString():(p.data()?['displayName']??p.data()?['username']??'NgelX araması').toString();Navigator.push(context,MaterialPageRoute(builder:(_)=>NgelXAramaPage(roomName:(a['roomName']??'').toString(),baslik:baslik,goruntulu:a['video']==true,aramaRef:ref)));return;}
+    if(tur=='call'&&kaynak.isNotEmpty){final ref=FirebaseFirestore.instance.collection('calls').doc(kaynak),arama=await ref.get(),a=arama.data();if(!context.mounted)return;if(a==null||a['status']=='ended'){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bu arama sona ermiş.')));return;}final p=await FirebaseFirestore.instance.collection('users').doc(from).get();if(!context.mounted)return;final baslik=a['group']==true?(a['title']??'Grup araması').toString():(p.data()?['displayName']??p.data()?['username']??'NgelX araması').toString();final foto=a['group']==true?'':(p.data()?['photoUrl']??'').toString();Navigator.push(context,MaterialPageRoute(builder:(_)=>NgelXAramaPage(roomName:(a['roomName']??'').toString(),baslik:baslik,foto:foto,goruntulu:a['video']==true,aramaRef:ref)));return;}
     if(tur=='message'&&from.isNotEmpty){final p=await FirebaseFirestore.instance.collection('users').doc(from).get();if(!context.mounted)return;final ids=[FirebaseAuth.instance.currentUser!.uid,from]..sort();Navigator.push(context,MaterialPageRoute(builder:(_)=>SohbetPage(chatId:(v['sourceId']??v['chatId']??v['belgeId']??ids.join('_')).toString(),digerUid:from,ad:(p.data()?['displayName']??p.data()?['username']??'Kullanıcı').toString(),foto:(p.data()?['photoUrl']??'').toString())));}
   }
 
