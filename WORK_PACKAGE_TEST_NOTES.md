@@ -65,3 +65,56 @@
 - Yeni sohbet, grup yönetimi, anket oyu, tepki, sabitleme ve arama kayıtları için Firestore kuralları güncellendi.
 - Uygulama koduyla birlikte `firestore.rules` dosyası da yayınlanmalıdır.
 - APK üretmeden önce Flutter analizinin hatasız geçmesi ve iki farklı hesapla arama/mesaj isteği testinin yapılması gerekir.
+
+
+## 2026-09-20 Konsolide test durumu
+
+### Telefonda test edildi ve çalışan davranışlar
+- Özel sohbetten fotoğraf/logo arka planı seçme çalıştı.
+- Takma ad kaydetme çalıştı.
+- Kişiyi paylaş Android paylaşım ekranını açtı.
+- Sohbeti listeden kaldırma işlemi çalıştı.
+- Sohbet bilgi ekranı beyaz ve bölümlü tasarıma geçti.
+- Medya / sabitlenmiş mesajlar / sessize alma / bildirimler / mesaj izinleri / kısıtla / engelle / sohbeti sil satırları görünür durumda.
+- Alttaki yinelenen ikinci “Şikâyet et” satırı kaldırıldı; sağ üst üç nokta menüsündeki şikâyet kaldı.
+- Özel arka planı kaldırma artık onay istemeden silmeyecek şekilde değiştirildi.
+- Kısıtla / Engelle / Sohbeti sil onay pencerelerindeki beyaz üstüne beyaz yazı sorunu düzeltildi.
+
+### Kodlandı, yeni APK’da yeniden test edilecek
+- Mesaj / fotoğraf / paylaşılan içerikte çift dokununca ❤️ bırakma.
+- Uzun basma tepkileri ve “Daha fazla” menüsü.
+- Sesli ve görüntülü arama ekranının bildirim işleminden bağımsız açılması.
+- Kamera / mikrofon çalışma zamanı izinleri ve LiveKit video render akışı.
+- Görüntülü aramada yerel görüntü, uzak görüntü, efektler, rötuş ve bulanıklaştırma.
+- Özelleştir içinden hızlı gönderme emojisi seçme.
+- Özelleştir içinden arka plan görünürlüğü seçme, mesaj yazı boyutu seçme ve tüm özelleştirmeyi sıfırlama.
+- Mesaj yanıtını “↪ metin” yerine gerçek alıntı kartı olarak gösterme.
+- Profilde Takip et / Takiptesin durumunu canlı güncelleme ve takipten çıkarken onay isteme.
+- Kişiyi paylaş metnini kısa ve temiz NgelX profil bağlantısına dönüştürme.
+- Yorumlarda uzun basma tepki satırı, çift dokunma kalbi ve yorum silme / gönderimden kaldırma.
+
+### Bilinen açık hata — özellikle sonraya bırakıldı
+- Grup sohbetine girildiğinde “Mesajlar sunucudan alınıyor…” ekranında kalma / donma. Kullanıcıyla birlikte bu alanı daha sonra ayrı ele alma kararı verildi. Bu nedenle yeni sohbet/profil paketlerinde grup mesaj yükleme koduna dokunulmuyor.
+- Grup tarafındaki arama ve medya davranışları, grup mesaj yükleme sorunu çözülmeden “tamamlandı” sayılmayacak.
+
+### Proje kapsamındaki kalan kabul edilmiş işler — tek tek doğrulanacak
+- Ortak gruplar.
+- Profil tanıtım videosu.
+- Profil ziyaretçisine özel önizleme görünümü.
+- Profil paylaşım gizliliği.
+- Takip isteği geçmişi.
+- Arkadaşlık yıldönümü.
+- Takipçi arama / filtreleme ve takipçiyi kaldırma.
+- Profil ziyaret izinleri ve içerik gizleme kitle seçenekleri.
+- Hikâye arşivi / öne çıkanlar.
+- Profilde en fazla 3 sabitlenmiş gönderi kuralının uçtan uca doğrulanması.
+- Gizli kelimeler için yalnızca aç/kapat değil, kullanıcıya özel kelime listesi yönetimi.
+- Hesap kurtarma seçeneklerinin e-posta/telefon akışlarıyla uçtan uca tamamlanması.
+- Profil ziyaret eğilimleri ve en çok etkileşim alan gönderiler gibi sahip analitiklerinin doğrulanması.
+- Giriş yapılan cihazlardan uzaktan çıkış işlevinin doğrulanması.
+- Akışta yeni içeriklerin üstte sıralanması, tüm gönderi tiplerinde tarih/saat gösterimi ve geri tuşu kullanmadan sonraki/önceki içeriğe geçişin her içerik tipinde test edilmesi.
+
+### Paket yayınlama kuralı
+- Son APK “hazır” sayılmadan önce son commit için Flutter analiz, test, release APK ve imza doğrulama adımlarının tamamı yeşil olmalı.
+- Sesli/görüntülü arama ve mesaj tepkileri en az iki ayrı gerçek hesapla telefonda tekrar denenmeli.
+- Grup mesaj yükleme sorunu çözülmedikçe grup bölümü için “tamamlandı” ifadesi kullanılmamalı.
