@@ -4497,7 +4497,7 @@ class _MesajPageState extends State<MesajPage> {
   @override Widget build(BuildContext context){
     final ben=uid;
     return Theme(data:ThemeData.light().copyWith(scaffoldBackgroundColor:Colors.white),child:ColoredBox(color:Colors.white,child:SafeArea(child:Column(children:[
-      Padding(padding:const EdgeInsets.fromLTRB(18,14,10,8),child:Row(children:[const Text('Gelen Kutusu',style:TextStyle(color:Colors.black,fontSize:29,fontWeight:FontWeight.w900)),const SizedBox(width:4),IconButton(tooltip:'Tümünü okundu yap',onPressed:ben==null?null:tumunuOkunduYap,icon:const Icon(Icons.done_all_rounded,color:Color(0xFF27C66F))),const Spacer(),IconButton(tooltip:'Arşiv',onPressed:ben==null?null:()async{await Navigator.push(context,MaterialPageRoute(builder:(_)=>ArsivSohbetlerPage(uid:ben)));await tercihleriGetir();},icon:const Icon(Icons.archive_outlined,color:Colors.black54)),IconButton(tooltip:'Grup oluştur',onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const GrupOlusturPage())),icon:const Icon(Icons.group_add_rounded,color:mor,size:29)),IconButton(tooltip:'Yeni sohbet',onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const YeniSohbetPage())),icon:const Icon(Icons.person_add_alt_1,color:mavi,size:29))])),
+      Padding(padding:const EdgeInsets.fromLTRB(18,14,10,8),child:Row(children:[const Text('Gelen Kutusu',style:TextStyle(color:Colors.black,fontSize:29,fontWeight:FontWeight.w900)),const SizedBox(width:4),IconButton(constraints:const BoxConstraints.tightFor(width:40),tooltip:'Tümünü okundu yap',onPressed:ben==null?null:tumunuOkunduYap,icon:const Icon(Icons.done_all_rounded,color:Color(0xFF27C66F))),const Spacer(),IconButton(constraints:const BoxConstraints.tightFor(width:40),tooltip:'Arşiv',onPressed:ben==null?null:()async{await Navigator.push(context,MaterialPageRoute(builder:(_)=>ArsivSohbetlerPage(uid:ben)));await tercihleriGetir();},icon:const Icon(Icons.archive_outlined,color:Colors.black54)),IconButton(constraints:const BoxConstraints.tightFor(width:40),tooltip:'Grup oluştur',onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const GrupOlusturPage())),icon:const Icon(Icons.group_add_rounded,color:mor,size:29)),IconButton(constraints:const BoxConstraints.tightFor(width:40),tooltip:'Yeni sohbet',onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const YeniSohbetPage())),icon:const Icon(Icons.person_add_alt_1,color:mavi,size:29))])),
       Padding(padding:const EdgeInsets.fromLTRB(16,4,16,10),child:TextField(controller:sohbetAra,onChanged:(v)=>setState(()=>sohbetSorgu=v.trim().toLowerCase()),style:const TextStyle(color:Colors.black87),decoration:InputDecoration(hintText:'Sohbetlerde ara',hintStyle:const TextStyle(color:Colors.black45),prefixIcon:const Icon(Icons.search,color:Colors.black45),filled:true,fillColor:const Color(0xFFF3F4F7),border:OutlineInputBorder(borderRadius:BorderRadius.circular(24),borderSide:BorderSide.none)))),
       Padding(padding:const EdgeInsets.symmetric(horizontal:8),child:Row(children:['Tümü','Okunmamış','Arkadaşlar','Gruplar'].map((f)=>Expanded(child:Padding(padding:const EdgeInsets.symmetric(horizontal:2),child:ChoiceChip(labelPadding:const EdgeInsets.symmetric(horizontal:2),label:Center(child:FittedBox(fit:BoxFit.scaleDown,child:Text(f,maxLines:1))),selected:filtre==f,selectedColor:mor,labelStyle:TextStyle(color:filtre==f?Colors.white:Colors.black87,fontWeight:FontWeight.w700),backgroundColor:const Color(0xFFF1F2F5),side:BorderSide.none,onSelected:(_)=>setState(()=>filtre=f))))).toList())),
       StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(stream:ben==null?null:FirebaseFirestore.instance.collection('notifications').where('toUid',isEqualTo:ben).limit(200).snapshots(),builder:(_,s){final okunmamis=(s.data?.docs??[]).where((d)=>d.data()['read']!=true).length;return Container(margin:const EdgeInsets.fromLTRB(16,8,16,5),decoration:BoxDecoration(color:const Color(0xFFF5EFFF),borderRadius:BorderRadius.circular(20)),child:ListTile(leading:const CircleAvatar(backgroundColor:Color(0xFFE5D5FF),child:Icon(Icons.favorite,color:mor)),title:const Text('Aktivite',style:TextStyle(color:Colors.black,fontWeight:FontWeight.w900)),subtitle:const Text('Beğeniler, yorumlar ve güvenlik bildirimleri',style:TextStyle(color:Colors.black54)),trailing:okunmamis==0?const Icon(Icons.chevron_right,color:Colors.black45):Badge(label:Text('$okunmamis'),child:const Icon(Icons.chevron_right,color:Colors.black45)),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const AktivitePage()))));}),
@@ -5830,7 +5830,7 @@ class _SohbetPageState extends State<SohbetPage> {
     try{
       // Sunucu yazmayı kabul etmeden alanı temizleme. Böylece başarısız bir
       // mesaj gönderilmiş gibi görünmez ve art arda dokunma kopya üretmez.
-      await batch.commit();
+      await batch.commit().timeout(const Duration(seconds:12));
       mesaj.clear();
       yaziyorZamanlayici?.cancel();
       yaziyorGonderildi=false;
@@ -5973,12 +5973,12 @@ class _SohbetPageState extends State<SohbetPage> {
         child:Column(mainAxisSize:MainAxisSize.min,children:[
           Container(
             margin:const EdgeInsets.fromLTRB(6,2,6,12),
-            padding:const EdgeInsets.symmetric(horizontal:8,vertical:7),
+            padding:const EdgeInsets.symmetric(horizontal:4,vertical:7),
             decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(28),boxShadow:const [BoxShadow(color:Color(0x22000000),blurRadius:18,offset:Offset(0,5))]),
-            child:Row(mainAxisSize:MainAxisSize.min,children:[
+            child:Row(mainAxisAlignment:MainAxisAlignment.spaceEvenly,children:[
               for(final e in const ['❤️','😂','😮','😢','😡','👍'])
-                InkWell(onTap:()=>Navigator.pop(c,'reaction:'+e),child:Padding(padding:const EdgeInsets.symmetric(horizontal:8,vertical:5),child:Text(e,style:const TextStyle(fontSize:27)))),
-              InkWell(onTap:()=>Navigator.pop(c,'reaction_more'),child:const CircleAvatar(radius:18,backgroundColor:Color(0xFFF1F2F4),child:Icon(Icons.add,color:Colors.black87))),
+                InkWell(onTap:()=>Navigator.pop(c,'reaction:'+e),child:Padding(padding:const EdgeInsets.symmetric(horizontal:4,vertical:5),child:Text(e,style:const TextStyle(fontSize:25)))),
+              InkWell(onTap:()=>Navigator.pop(c,'reaction_more'),child:const CircleAvatar(radius:16,backgroundColor:Color(0xFFF1F2F4),child:Icon(Icons.add,color:Colors.black87))),
             ]),
           ),
           Row(mainAxisAlignment:MainAxisAlignment.spaceAround,children:[
@@ -6174,12 +6174,14 @@ class _SohbetPageState extends State<SohbetPage> {
           aramaRef:ref,
         )),
       );
-    }catch(e){
+    }on TimeoutException{
       if(!mounted)return;
       setState(()=>aramaBaslatiliyor=false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content:Text('Arama başlatılamadı: ${e.toString().replaceFirst('Exception: ','')}'),
-      ));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Arama bağlantısı kurulamadı. İnternetini kontrol edip tekrar dene.')));
+    }catch(_){
+      if(!mounted)return;
+      setState(()=>aramaBaslatiliyor=false);
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Arama başlatılamadı. Lütfen tekrar dene.')));
     }
   }
 
@@ -6713,8 +6715,8 @@ class AktivitePage extends StatelessWidget {
 
   Future<void> _aktiviteAc(BuildContext context, QueryDocumentSnapshot<Map<String,dynamic>> d)async{
     final v=d.data();await d.reference.set({'read':true},SetOptions(merge:true));if(!context.mounted)return;
-    final from=(v['fromUid']??'').toString(),tur=(v['type']??'').toString();
-    final kaynak=(v['sourceId']??v['belgeId']??'').toString();
+    final from=(v['fromUid']??v['senderId']??v['senderUid']??v['userId']??'').toString(),tur=(v['type']??'').toString();
+    final kaynak=(v['sourceId']??v['chatId']??v['belgeId']??v['postId']??v['contentId']??'').toString();
     if(kaynak.isNotEmpty&&(tur=='interaction'||tur=='like'||tur=='comment')){Navigator.push(context,MaterialPageRoute(builder:(_)=>IcerikBaglantiPage(icerikId:kaynak)));return;}
     if(from.isNotEmpty&&(tur=='friend'||tur=='follow_request'||tur=='friend_request'||tur=='friend_accepted'||tur=='follow_accepted')){Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciProfilPage(uid:from)));return;}
     if(tur=='call'&&kaynak.isNotEmpty){final ref=FirebaseFirestore.instance.collection('calls').doc(kaynak),arama=await ref.get(),a=arama.data();if(!context.mounted)return;if(a==null||a['status']=='ended'){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bu arama sona ermiş.')));return;}final p=await FirebaseFirestore.instance.collection('users').doc(from).get();if(!context.mounted)return;final baslik=a['group']==true?(a['title']??'Grup araması').toString():(p.data()?['displayName']??p.data()?['username']??'NgelX araması').toString();final foto=a['group']==true?'':(p.data()?['photoUrl']??'').toString();Navigator.push(context,MaterialPageRoute(builder:(_)=>NgelXAramaPage(roomName:(a['roomName']??'').toString(),baslik:baslik,foto:foto,goruntulu:a['video']==true,aramaRef:ref)));return;}
