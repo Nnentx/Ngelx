@@ -1002,7 +1002,7 @@ class _VideoAkisiState extends State<VideoAkisi> {
               .limit(20)
               .snapshots(),
           builder: (context, snapshot) {
-            final yuklenenler = (snapshot.data?.docs ?? []).map((belge) {
+            final yuklenenler = (snapshot.data?.docs ?? []).map<Map<String,dynamic>>((belge) {
               final veri = belge.data();
               return {
                 'id': belge.id,
@@ -1029,7 +1029,7 @@ class _VideoAkisiState extends State<VideoAkisi> {
               return true;
             }).toList();
             final filtreli = takipSekmesi ? yuklenenler.where((v) => takipEdilenler.contains(v['ownerId'])).toList() : yuklenenler;
-            final videolar = takipSekmesi ? filtreli : [...filtreli, ...ornekVideolar];
+            final videolar = takipSekmesi ? filtreli : <Map<String,dynamic>>[...filtreli, ...ornekVideolar.map((e)=>Map<String,dynamic>.from(e))];
             if (videolar.isEmpty) return const Center(child: Padding(padding: EdgeInsets.all(30), child: Text('Takip ettiğin kişilerin paylaşımları burada görünecek.', textAlign: TextAlign.center)));
             return GestureDetector(
     behavior: HitTestBehavior.translucent,
@@ -4888,7 +4888,6 @@ class _YeniSohbetPageState extends State<YeniSohbetPage>{
   @override
   Widget build(BuildContext context) {
     final me = FirebaseAuth.instance.currentUser?.uid;
-    if(!ziyaretciOnizleme)unawaited(profilZiyaretKaydet(uid));
     final beyazTema = ThemeData.light().copyWith(
       scaffoldBackgroundColor: Colors.white,
       appBarTheme: const AppBarTheme(backgroundColor: Colors.white, foregroundColor: Colors.black, elevation: 0),
@@ -5995,6 +5994,7 @@ class KullaniciProfilPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final me = FirebaseAuth.instance.currentUser?.uid;
+    if(!ziyaretciOnizleme)unawaited(profilZiyaretKaydet(uid));
     final hedef = FirebaseFirestore.instance.collection('users').doc(uid).get();
     final benim = me == null ? Future.value(null) : FirebaseFirestore.instance.collection('users').doc(me).get();
     return Theme(data:ThemeData.light().copyWith(scaffoldBackgroundColor:Colors.white,appBarTheme:const AppBarTheme(backgroundColor:Colors.white,foregroundColor:Colors.black,elevation:0)),child:Scaffold(
