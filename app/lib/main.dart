@@ -5825,7 +5825,7 @@ class _SohbetPageState extends State<SohbetPage> {
     unawaited(ref.set({'typing_$ben':false},SetOptions(merge:true)).catchError((_){ }));
     unawaited(uygulamaBildirimiGonder(toUid:widget.digerUid,fromUid:ben,tur:'message',metin:'Yeni bir mesajın var',belgeId:widget.chatId).catchError((_){ }));
 
-    unawaited(batch.commit().timeout(const Duration(seconds:12)).catchError((e){
+    unawaited(batch.commit().catchError((e){
       if(!mounted)return;
       if(mesaj.text.isEmpty)mesaj.text=t;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Mesaj gönderilemedi, tekrar dene: $e')));
@@ -5869,7 +5869,7 @@ class _SohbetPageState extends State<SohbetPage> {
       });
       _mesajHazirlikSohbetMevcut=true;
       _mesajHazirlikSohbet={...hazirlik.sohbet,'lastMessage':'📷 Fotoğraf','updatedAt':clientCreatedAt};
-      unawaited(batch.commit().timeout(const Duration(seconds:12)).catchError((e){
+      unawaited(batch.commit().catchError((e){
         if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Fotoğraf gönderilemedi. Tekrar dene.')));
       }));
       unawaited(uygulamaBildirimiGonder(toUid:widget.digerUid,fromUid:ben,tur:'message',metin:'Yeni bir fotoğraf mesajın var',belgeId:widget.chatId).catchError((_){ }));
@@ -6958,6 +6958,29 @@ class KullaniciProfilPage extends StatelessWidget {
     await SharePlus.instance.share(ShareParams(title:'NgelX profili',subject:'NgelX • $ad',text:'NgelX’te $ad profilini görüntüle\n$link'));
   }
 
+  Future<int> _etkilesimToplami() async {
+    final snap=await FirebaseFirestore.instance.collection('videos').where('ownerId',isEqualTo:uid).get();
+    final toplamlar=await Future.wait(snap.docs.where((d)=>d.data()['type']!='story').map((d)async{
+      final v=d.data();
+      var begeni=(v['likeCount'] as num?)?.toInt();
+      var yorum=(v['commentCount'] as num?)?.toInt();
+      final paylasim=(v['shareCount'] as num?)?.toInt()??0;
+      final guncelle=<String,dynamic>{};
+      final sayimlar=<Future<AggregateQuerySnapshot>>[];
+      if(begeni==null)sayimlar.add(d.reference.collection('likes').count().get());
+      if(yorum==null)sayimlar.add(d.reference.collection('comments').count().get());
+      if(sayimlar.isNotEmpty){
+        final sonuc=await Future.wait(sayimlar);
+        var i=0;
+        if(begeni==null){begeni=sonuc[i++].count??0;guncelle['likeCount']=begeni;}
+        if(yorum==null){yorum=sonuc[i++].count??0;guncelle['commentCount']=yorum;}
+        if(guncelle.isNotEmpty)unawaited(d.reference.set(guncelle,SetOptions(merge:true)));
+      }
+      return (begeni??0)+(yorum??0)+paylasim;
+    }));
+    return toplamlar.fold<int>(0,(a,b)=>a+b);
+  }
+
   @override
   Widget build(BuildContext context) {
     final me = FirebaseAuth.instance.currentUser?.uid;
@@ -7007,17 +7030,10 @@ class KullaniciProfilPage extends StatelessWidget {
                 ProfilTanitimVideoKarti(url:(v['introVideoUrl']??'').toString()),
               ],
               const SizedBox(height: 14),
-              FutureBuilder<QuerySnapshot<Map<String,dynamic>>>(
-                future:FirebaseFirestore.instance.collection('videos').where('ownerId',isEqualTo:uid).get(),
+              FutureBuilder<int>(
+                future:_etkilesimToplami(),
                 builder:(_,etk){
-                  final paylasimlar=(etk.data?.docs??[]).where((d)=>d.data()['type']!='story');
-                  final toplam=paylasimlar.fold<int>(0,(n,d){
-                    final x=d.data();
-                    return n+
-                      ((x['likeCount'] as num?)?.toInt()??0)+
-                      ((x['commentCount'] as num?)?.toInt()??0)+
-                      ((x['shareCount'] as num?)?.toInt()??0);
-                  });
+                  final toplam=etk.data??0;
                   return Row(mainAxisAlignment:MainAxisAlignment.spaceEvenly,children:[
                     _profilSayac(context,'${List<dynamic>.from(v['following']??const[]).length}','Takip',()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciListesiPage(uid:uid,alan:'following',baslik:'Takip')))),
                     _profilSayac(context,'${List<dynamic>.from(v['followers']??const[]).length}','Takipçi',()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciListesiPage(uid:uid,alan:'followers',baslik:'Takipçiler')))),
