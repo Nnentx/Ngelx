@@ -5,6 +5,19 @@ service cloud.firestore {
     function isMe(uid) { return signedIn() && request.auth.uid == uid; }
     function chatMember() { return signedIn() && request.auth.uid in resource.data.members; }
     function incomingChatMember() { return signedIn() && request.auth.uid in request.resource.data.members; }
+    function chatAdmin() {
+      return signedIn() && request.auth.uid in resource.data.get('admins', []);
+    }
+    function groupMetadataUnchanged() {
+      return request.resource.data.get('groupName', '') == resource.data.get('groupName', '')
+        && request.resource.data.get('groupPhotoUrl', '') == resource.data.get('groupPhotoUrl', '')
+        && request.resource.data.get('admins', []) == resource.data.get('admins', [])
+        && request.resource.data.get('moderators', []) == resource.data.get('moderators', [])
+        && request.resource.data.get('onlyAdminsCanPost', false) == resource.data.get('onlyAdminsCanPost', false)
+        && request.resource.data.get('onlyAdminsCanEdit', false) == resource.data.get('onlyAdminsCanEdit', false)
+        && request.resource.data.get('newMembersSeeHistory', true) == resource.data.get('newMembersSeeHistory', true)
+        && request.resource.data.get('joinApproval', false) == resource.data.get('joinApproval', false);
+    }
     function onlyChanges(fields) {
       return request.resource.data.diff(resource.data).affectedKeys().hasOnly(fields);
     }
@@ -62,16 +75,81 @@ service cloud.firestore {
     }
 
     match /chats/{chatId} {
-      allow create: if incomingChatMember();
-      allow read, update: if chatMember();
-      allow delete: if chatMember();
+      allow create: if incomingChatMember()
+        && (
+          request.resource.data.get('isGroup', false) != true
+          || (
+            request.resource.data.members.size() <= 60
+            && request.auth.uid in request.resource.data.get('admins', [])
+          )
+        );
+      allow read: if chatMember();
+      allow update: if chatMember() && (
+        (
+          resource.data.get('isGroup', false) != true
+          && request.resource.data.members == resource.data.members
+        )
+        || (chatAdmin() && request.resource.data.members.size() <= 60)
+        || (
+          groupMetadataUnchanged()
+          && (
+            request.resource.data.members == resource.data.members
+            || request.resource.data.members == resource.data.members.removeAll([request.auth.uid])
+          )
+        )
+      );
+      allow delete: if false;
       match /messages/{messageId} {
         allow read: if signedIn() && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.members;
         allow create: if signedIn()
-          && request.resource.data.senderId == request.auth.uid
-          && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.members;
-        allow update, delete: if signedIn() && resource.data.senderId == request.auth.uid;
+          && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.members
+          && (
+            request.resource.data.senderId == request.auth.uid
+            || (
+              request.resource.data.senderId == 'system'
+              && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.get('admins', [])
+            )
+          );
+        allow update: if signedIn()
+          && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.members
+          && (
+            resource.data.senderId == request.auth.uid
+            || onlyChanges(['reactions'])
+            || onlyChanges(['pollVotes'])
+            || (
+              get(/databases/$(database)/documents/chats/$(chatId)).data.get('isGroup', false) != true
+              && onlyChanges(['pinned', 'pinnedAt', 'pinnedBy'])
+            )
+            || (
+              request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.get('admins', [])
+              && onlyChanges(['pinned', 'pinnedAt', 'pinnedBy'])
+            )
+          );
+        allow delete: if signedIn() && (
+          resource.data.senderId == request.auth.uid
+          || request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.get('admins', [])
+        );
       }
+    }
+
+    match /calls/{callId} {
+      allow create: if signedIn()
+        && request.auth.uid in request.resource.data.members
+        && request.resource.data.startedBy == request.auth.uid;
+      allow read: if signedIn() && request.auth.uid in resource.data.members;
+      allow update: if signedIn()
+        && request.auth.uid in resource.data.members
+        && request.resource.data.members == resource.data.members;
+      allow delete: if false;
+    }
+
+    match /group_calls/{callId} {
+      allow create: if signedIn()
+        && request.resource.data.startedBy == request.auth.uid
+        && request.auth.uid in get(/databases/$(database)/documents/chats/$(request.resource.data.chatId)).data.members;
+      allow read, update: if signedIn()
+        && request.auth.uid in get(/databases/$(database)/documents/chats/$(resource.data.chatId)).data.members;
+      allow delete: if false;
     }
 
     match /notifications/{notificationId} {
