@@ -5090,7 +5090,7 @@ class _SohbetPageState extends State<SohbetPage> {
   }
 
 
-  Widget ozelMesajKarti(QueryDocumentSnapshot<Map<String,dynamic>> d){
+  Widget ozelMesajKarti(QueryDocumentSnapshot<Map<String,dynamic>> d,{double fontSize=16}){
     final v=d.data(),ben=v['senderId']==uid,photo=v['type']=='photo',shared=v['type']=='shared_content';
     final metin=(v['text']??v['message']??v['content']??'').toString().trim(),saat=mesajSaati(v['createdAt']);
     final tepkiler=Map<String,dynamic>.from(v['reactions']??{});
@@ -5132,7 +5132,7 @@ class _SohbetPageState extends State<SohbetPage> {
                 Row(children:[Icon(Icons.play_circle_fill_rounded,color:ben?Colors.white:mavi),const SizedBox(width:7),Text('NgelX paylaşımı',style:TextStyle(color:ben?Colors.white:Colors.black87,fontWeight:FontWeight.w900))]),
                 const SizedBox(height:8),Text(metin,maxLines:4,overflow:TextOverflow.ellipsis,style:TextStyle(color:ben?Colors.white70:Colors.black54)),
               ]))
-            else Text(metin.isEmpty?'Mesaj içeriği bulunamadı':metin,softWrap:true,style:TextStyle(color:ben?Colors.white:Colors.black87,fontSize:16,height:1.3)),
+            else Text(metin.isEmpty?'Mesaj içeriği bulunamadı':metin,softWrap:true,style:TextStyle(color:ben?Colors.white:Colors.black87,fontSize:fontSize,height:1.3)),
             if(v['editedAt']!=null)Text('düzenlendi',style:TextStyle(fontSize:9,color:ben?Colors.white60:Colors.black38)),
             if(sayilar.isNotEmpty)Padding(
               padding:const EdgeInsets.only(top:7),
@@ -5259,10 +5259,10 @@ class _SohbetPageState extends State<SohbetPage> {
         IconButton(onPressed:bilgi,icon:const Icon(Icons.info,color:Colors.blue)),
       ],
     ),
-    body:StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(stream:FirebaseFirestore.instance.collection('chats').doc(widget.chatId).snapshots(),builder:(_,tema){final veri=tema.data?.data()??<String,dynamic>{},ham=veri['theme_$uid'];final arkaPlan=ham is int?Color(ham):Colors.white,arkaPlanUrl=(veri['backgroundUrl_$uid']??'').toString(),hizliEmoji=(veri['quickEmoji_$uid']??'👍').toString();return Container(decoration:BoxDecoration(color:arkaPlan,image:arkaPlanUrl.isEmpty?null:DecorationImage(image:NetworkImage(arkaPlanUrl),fit:BoxFit.cover,opacity:.30)),child:Column(children:[
+    body:StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(stream:FirebaseFirestore.instance.collection('chats').doc(widget.chatId).snapshots(),builder:(_,tema){final veri=tema.data?.data()??<String,dynamic>{},ham=veri['theme_$uid'];final arkaPlan=ham is int?Color(ham):Colors.white,arkaPlanUrl=(veri['backgroundUrl_$uid']??'').toString(),hizliEmoji=(veri['quickEmoji_$uid']??'👍').toString(),arkaPlanOpaklik=(veri['backgroundOpacity_$uid'] is num?(veri['backgroundOpacity_$uid'] as num).toDouble():.30).clamp(.05,.85),mesajYaziBoyutu=(veri['messageFontSize_$uid'] is num?(veri['messageFontSize_$uid'] as num).toDouble():16.0).clamp(12.0,22.0);return Container(decoration:BoxDecoration(color:arkaPlan,image:arkaPlanUrl.isEmpty?null:DecorationImage(image:NetworkImage(arkaPlanUrl),fit:BoxFit.cover,opacity:arkaPlanOpaklik)),child:Column(children:[
       Expanded(child:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
         stream:FirebaseFirestore.instance.collection('chats').doc(widget.chatId).collection('messages').orderBy('createdAt').snapshots(),
-        builder:(_,s){if(uid!=null&&s.hasData)FirebaseFirestore.instance.collection('chats').doc(widget.chatId).set({'unread_$uid':0},SetOptions(merge:true));if(s.hasData)sonaGit();return ListView(controller:liste,padding:const EdgeInsets.all(12),children:[sohbetUstBilgi(),...(s.data?.docs??[]).map(ozelMesajKarti)]);},
+        builder:(_,s){if(uid!=null&&s.hasData)FirebaseFirestore.instance.collection('chats').doc(widget.chatId).set({'unread_$uid':0},SetOptions(merge:true));if(s.hasData)sonaGit();return ListView(controller:liste,padding:const EdgeInsets.all(12),children:[sohbetUstBilgi(),...(s.data?.docs??[]).map((d)=>ozelMesajKarti(d,fontSize:mesajYaziBoyutu))]);},
       )),
       if(mentionOnerileri.isNotEmpty)Container(color:Colors.white.withValues(alpha:.96),child:Column(mainAxisSize:MainAxisSize.min,children:mentionOnerileri.map((u)=>ListTile(dense:true,leading:CircleAvatar(radius:15,child:Icon(u['uid']=='all'?Icons.groups:Icons.person,size:17)),title:Text(u['name']??'Kullanıcı'),subtitle:Text('@${u['username']??''}'),onTap:()=>mentionEkle(u['username']??''))).toList())),
       if(yanitMetin!=null)Container(
@@ -5325,64 +5325,115 @@ class SohbetBilgiPage extends StatelessWidget{
   const SohbetBilgiPage({super.key,required this.uid,required this.ad,required this.foto,required this.chatId});
 
   Future<void> takmaAd(BuildContext context)async{final me=FirebaseAuth.instance.currentUser?.uid;if(me==null)return;final chat=await FirebaseFirestore.instance.collection('chats').doc(chatId).get(),c=TextEditingController(text:(chat.data()?['nicknames']?[me]??'').toString());if(!context.mounted)return;final sonuc=await showDialog<String>(context:context,builder:(x)=>AlertDialog(backgroundColor:Colors.white,title:const Text('Takma ad'),content:TextField(controller:c,maxLength:30,decoration:const InputDecoration(hintText:'Bu sohbette görünecek ad')),actions:[TextButton(onPressed:()=>Navigator.pop(x),child:const Text('Vazgeç')),FilledButton(onPressed:()=>Navigator.pop(x,c.text.trim()),child:const Text('Kaydet'))]));c.dispose();if(sonuc!=null)await FirebaseFirestore.instance.collection('chats').doc(chatId).update({'nicknames.$me':sonuc});}
-  Future<void> ozellestir(BuildContext context)async{final me=FirebaseAuth.instance.currentUser?.uid;if(me==null)return;final secim=await showModalBottomSheet<Object>(context:context,backgroundColor:Colors.white,showDragHandle:true,builder:(c)=>SafeArea(child:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[const ListTile(title:Text('Sohbet arka planı',style:TextStyle(fontWeight:FontWeight.w900)),subtitle:Text('Bu görünüm yalnızca sende görünür.')),Wrap(spacing:16,runSpacing:16,children:[Colors.white,const Color(0xFFFFF4F7),const Color(0xFFF4F0FF),const Color(0xFFEFF8FF),const Color(0xFFF1FFF5)].map((x)=>InkWell(onTap:()=>Navigator.pop(c,x.toARGB32()),child:CircleAvatar(radius:25,backgroundColor:x,child:const Icon(Icons.check,color:Colors.black26)))).toList()),const SizedBox(height:12),ListTile(leading:const Icon(Icons.photo_library_outlined,color:mor),title:const Text('Galeriden özel fotoğraf / logo seç'),onTap:()=>Navigator.pop(c,'gallery')),ListTile(leading:const Icon(Icons.camera_alt_outlined,color:mor),title:const Text('Kameradan arka plan çek'),onTap:()=>Navigator.pop(c,'camera')),ListTile(leading:const Icon(Icons.hide_image_outlined,color:Colors.red),title:const Text('Özel fotoğrafı kaldır',style:TextStyle(color:Colors.red)),onTap:()=>Navigator.pop(c,'removeImage')),
-const Divider(height:24),
-const ListTile(
-  leading:Icon(Icons.emoji_emotions_outlined,color:mor),
-  title:Text('Hızlı gönderme emojisi',style:TextStyle(fontWeight:FontWeight.w800)),
-  subtitle:Text('Mesaj kutusu boşken sağdaki tek dokunuş emojisini seç.'),
-),
-Padding(
-  padding:const EdgeInsets.fromLTRB(16,0,16,8),
-  child:Wrap(
-    spacing:12,runSpacing:12,
-    children:['👍','❤️','😂','😍','🔥','👏','🙏','🎉','😮','😢','😡','💯']
-      .map((e)=>InkWell(
-        onTap:()=>Navigator.pop(c,'quickEmoji:$e'),
-        borderRadius:BorderRadius.circular(28),
-        child:Container(
-          width:48,height:48,
-          alignment:Alignment.center,
-          decoration:BoxDecoration(color:const Color(0xFFF4F4F6),borderRadius:BorderRadius.circular(24)),
-          child:Text(e,style:const TextStyle(fontSize:25)),
+  Future<void> ozellestir(BuildContext context)async{
+    final me=FirebaseAuth.instance.currentUser?.uid;if(me==null)return;
+    final secim=await showModalBottomSheet<Object>(
+      context:context,backgroundColor:Colors.white,showDragHandle:true,isScrollControlled:true,
+      builder:(c)=>SafeArea(child:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
+        const ListTile(title:Text('Sohbeti özelleştir',style:TextStyle(fontWeight:FontWeight.w900)),subtitle:Text('Bu görünüm yalnızca sende görünür.')),
+        const ListTile(title:Text('Arka plan rengi',style:TextStyle(fontWeight:FontWeight.w700))),
+        Wrap(spacing:16,runSpacing:16,children:[
+          Colors.white,const Color(0xFFFFF4F7),const Color(0xFFF4F0FF),const Color(0xFFEFF8FF),const Color(0xFFF1FFF5)
+        ].map((x)=>InkWell(onTap:()=>Navigator.pop(c,x.toARGB32()),child:CircleAvatar(radius:25,backgroundColor:x,child:const Icon(Icons.check,color:Colors.black26)))).toList()),
+        const SizedBox(height:12),
+        ListTile(leading:const Icon(Icons.photo_library_outlined,color:mor),title:const Text('Galeriden özel fotoğraf / logo seç'),onTap:()=>Navigator.pop(c,'gallery')),
+        ListTile(leading:const Icon(Icons.camera_alt_outlined,color:mor),title:const Text('Kameradan arka plan çek'),onTap:()=>Navigator.pop(c,'camera')),
+        ListTile(leading:const Icon(Icons.hide_image_outlined,color:Colors.red),title:const Text('Özel fotoğrafı kaldır',style:TextStyle(color:Colors.red)),onTap:()=>Navigator.pop(c,'removeImage')),
+        const Divider(height:28),
+        const ListTile(leading:Icon(Icons.opacity_rounded,color:mor),title:Text('Arka plan görünürlüğü',style:TextStyle(fontWeight:FontWeight.w800)),subtitle:Text('Fotoğrafın sohbetin arkasında ne kadar belirgin olacağını seç.')),
+        Wrap(spacing:8,children:[
+          ActionChip(label:const Text('Hafif'),onPressed:()=>Navigator.pop(c,'opacity:15')),
+          ActionChip(label:const Text('Normal'),onPressed:()=>Navigator.pop(c,'opacity:30')),
+          ActionChip(label:const Text('Belirgin'),onPressed:()=>Navigator.pop(c,'opacity:50')),
+          ActionChip(label:const Text('Güçlü'),onPressed:()=>Navigator.pop(c,'opacity:70')),
+        ]),
+        const Divider(height:28),
+        const ListTile(leading:Icon(Icons.text_fields_rounded,color:mor),title:Text('Mesaj yazı boyutu',style:TextStyle(fontWeight:FontWeight.w800))),
+        Wrap(spacing:8,children:[
+          ActionChip(label:const Text('Küçük'),onPressed:()=>Navigator.pop(c,'font:14')),
+          ActionChip(label:const Text('Normal'),onPressed:()=>Navigator.pop(c,'font:16')),
+          ActionChip(label:const Text('Büyük'),onPressed:()=>Navigator.pop(c,'font:18')),
+        ]),
+        const Divider(height:28),
+        const ListTile(leading:Icon(Icons.emoji_emotions_outlined,color:mor),title:Text('Hızlı gönderme emojisi',style:TextStyle(fontWeight:FontWeight.w800)),subtitle:Text('Mesaj kutusu boşken sağdaki tek dokunuş emojisini seç.')),
+        Padding(padding:const EdgeInsets.fromLTRB(16,0,16,8),child:Wrap(spacing:12,runSpacing:12,children:
+          ['👍','❤️','😂','😍','🔥','👏','🙏','🎉','😮','😢','😡','💯'].map((e)=>InkWell(
+            onTap:()=>Navigator.pop(c,'quickEmoji:'+e),
+            borderRadius:BorderRadius.circular(28),
+            child:Container(width:48,height:48,alignment:Alignment.center,decoration:BoxDecoration(color:const Color(0xFFF4F4F6),borderRadius:BorderRadius.circular(24)),child:Text(e,style:const TextStyle(fontSize:25))),
+          )).toList(),
+        )),
+        const Divider(height:24),
+        ListTile(leading:const Icon(Icons.restart_alt_rounded,color:Colors.red),title:const Text('Özelleştirmeyi sıfırla',style:TextStyle(color:Colors.red,fontWeight:FontWeight.w800)),subtitle:const Text('Arka plan, yazı boyutu ve hızlı emojiyi varsayılana döndür.'),onTap:()=>Navigator.pop(c,'reset')),
+        const SizedBox(height:10),
+      ]))),
+    );
+    if(secim==null)return;
+    final ref=FirebaseFirestore.instance.collection('chats').doc(chatId);
+
+    if(secim is String&&secim.startsWith('quickEmoji:')){
+      final emoji=secim.substring('quickEmoji:'.length);
+      await ref.set({'quickEmoji_$me':emoji},SetOptions(merge:true));
+      if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Hızlı emoji '+emoji+' olarak ayarlandı.')));
+      return;
+    }
+    if(secim is String&&secim.startsWith('opacity:')){
+      final oran=(double.tryParse(secim.substring(8))??30)/100;
+      await ref.set({'backgroundOpacity_$me':oran},SetOptions(merge:true));
+      return;
+    }
+    if(secim is String&&secim.startsWith('font:')){
+      final boyut=double.tryParse(secim.substring(5))??16;
+      await ref.set({'messageFontSize_$me':boyut},SetOptions(merge:true));
+      return;
+    }
+    if(secim=='reset'){
+      await ref.set({
+        'theme_$me':Colors.white.toARGB32(),
+        'backgroundUrl_$me':'',
+        'backgroundOpacity_$me':.30,
+        'messageFontSize_$me':16.0,
+        'quickEmoji_$me':'👍',
+      },SetOptions(merge:true));
+      if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Sohbet özelleştirmeleri sıfırlandı.')));
+      return;
+    }
+    if(secim is int){
+      await ref.set({'theme_$me':secim},SetOptions(merge:true));
+      return;
+    }
+    if(secim=='removeImage'){
+      if(!context.mounted)return;
+      final onay=await showDialog<bool>(context:context,builder:(d)=>Theme(
+        data:ThemeData.light().copyWith(dialogTheme:const DialogThemeData(backgroundColor:Colors.white)),
+        child:AlertDialog(
+          backgroundColor:Colors.white,surfaceTintColor:Colors.white,
+          title:const Text('Özel fotoğraf kaldırılsın mı?',style:TextStyle(color:Colors.black87,fontWeight:FontWeight.w800)),
+          content:const Text('Sohbet arka planındaki özel fotoğraf kaldırılacak. İstersen daha sonra yeniden seçebilirsin.',style:TextStyle(color:Colors.black87,height:1.35)),
+          actions:[
+            TextButton(onPressed:()=>Navigator.pop(d,false),child:const Text('Vazgeç',style:TextStyle(color:mor))),
+            FilledButton(style:FilledButton.styleFrom(backgroundColor:Colors.red,foregroundColor:Colors.white),onPressed:()=>Navigator.pop(d,true),child:const Text('Kaldır')),
+          ],
         ),
-      )).toList(),
-  ),
-),
-const SizedBox(height:8)]))));if(secim==null)return;final ref=FirebaseFirestore.instance.collection('chats').doc(chatId);
-if(secim is String&&secim.startsWith('quickEmoji:')){
-  final emoji=secim.substring('quickEmoji:'.length);
-  await ref.set({'quickEmoji_$me':emoji},SetOptions(merge:true));
-  if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Hızlı gönderme emojisi $emoji olarak ayarlandı.')));
-  return;
-}
-if(secim is int){await ref.set({'theme_$me':secim},SetOptions(merge:true));return;}if(secim=='removeImage'){
-  if(!context.mounted)return;
-  final onay=await showDialog<bool>(
-    context:context,
-    builder:(d)=>Theme(
-      data:ThemeData.light().copyWith(dialogTheme:const DialogThemeData(backgroundColor:Colors.white)),
-      child:AlertDialog(
-        backgroundColor:Colors.white,
-        surfaceTintColor:Colors.white,
-        title:const Text('Özel fotoğraf kaldırılsın mı?',style:TextStyle(color:Colors.black87,fontWeight:FontWeight.w800)),
-        content:const Text('Sohbet arka planındaki özel fotoğraf kaldırılacak. İstersen daha sonra yeniden seçebilirsin.',style:TextStyle(color:Colors.black87,height:1.35)),
-        actions:[
-          TextButton(onPressed:()=>Navigator.pop(d,false),child:const Text('Vazgeç',style:TextStyle(color:mor))),
-          FilledButton(
-            style:FilledButton.styleFrom(backgroundColor:Colors.red,foregroundColor:Colors.white),
-            onPressed:()=>Navigator.pop(d,true),
-            child:const Text('Kaldır'),
-          ),
-        ],
-      ),
-    ),
-  )??false;
-  if(!onay)return;
-  await ref.set({'backgroundUrl_$me':''},SetOptions(merge:true));
-  if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Özel sohbet arka planı kaldırıldı.')));
-  return;
-}final kaynak=secim=='camera'?ImageSource.camera:ImageSource.gallery;final x=await ImagePicker().pickImage(source:kaynak,imageQuality:88);if(x==null)return;try{final yol='chat-backgrounds/$me/${chatId}_${DateTime.now().millisecondsSinceEpoch}.jpg';await supa.Supabase.instance.client.storage.from('ngelx-media').upload(yol,File(x.path));final url=supa.Supabase.instance.client.storage.from('ngelx-media').getPublicUrl(yol);await ref.set({'backgroundUrl_$me':url},SetOptions(merge:true));if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Özel sohbet arka planın kaydedildi.')));}catch(e){if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Arka plan yüklenemedi: $e')));}}
+      ))??false;
+      if(!onay)return;
+      await ref.set({'backgroundUrl_$me':''},SetOptions(merge:true));
+      if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Özel sohbet arka planı kaldırıldı.')));
+      return;
+    }
+
+    final kaynak=secim=='camera'?ImageSource.camera:ImageSource.gallery;
+    final x=await ImagePicker().pickImage(source:kaynak,imageQuality:88);if(x==null)return;
+    try{
+      final yol='chat-backgrounds/'+me+'/'+chatId+'_'+DateTime.now().millisecondsSinceEpoch.toString()+'.jpg';
+      await supa.Supabase.instance.client.storage.from('ngelx-media').upload(yol,File(x.path));
+      final url=supa.Supabase.instance.client.storage.from('ngelx-media').getPublicUrl(yol);
+      await ref.set({'backgroundUrl_$me':url},SetOptions(merge:true));
+      if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Özel sohbet arka planın kaydedildi.')));
+    }catch(e){
+      if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Arka plan yüklenemedi: '+e.toString())));
+    }
+  }
   Future<void> sessizeAl(BuildContext context)async{
     final me=FirebaseAuth.instance.currentUser?.uid;if(me==null)return;
     final ref=FirebaseFirestore.instance.collection('users').doc(me),d=await ref.get(),v=d.data()??<String,dynamic>{},sessiz=List<String>.from(v['mutedChats']??const[]).contains(chatId);
