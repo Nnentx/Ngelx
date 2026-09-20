@@ -96,7 +96,7 @@ jobs:
           "$APKSIGNER" verify --verbose --print-certs "$APK"
           if [ -z "$KEYSTORE_BASE64" ]; then
             EXPECTED="$(keytool -exportcert -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey 2>/dev/null | sha256sum | awk '{print $1}')"
-            ACTUAL="$("$APKSIGNER" verify --print-certs "$APK" | awk -F': ' '/Signer #1 certificate SHA-256 digest/ {print $2; exit}' | tr '[:upper:]' '[:lower:]' | tr -d ': ')"
+            ACTUAL="$("$APKSIGNER" verify --print-certs "$APK" | sed -n 's/.*certificate SHA-256 digest: //p' | head -1 | tr '[:upper:]' '[:lower:]' | tr -d ': ')"
             echo "Beklenen test sertifikası: $EXPECTED"
             echo "APK sertifikası:          $ACTUAL"
             test "$EXPECTED" = "$ACTUAL"
