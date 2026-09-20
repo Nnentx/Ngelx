@@ -5787,6 +5787,11 @@ class AktivitePage extends StatelessWidget {
         'friends': FieldValue.arrayUnion([ben]),
         'following': FieldValue.arrayUnion([ben]),
       }, SetOptions(merge: true));
+      final arkadaslikIds=[ben,gonderen]..sort();
+      toplu.set(FirebaseFirestore.instance.collection('friendships').doc(arkadaslikIds.join('_')),{
+        'members':arkadaslikIds,
+        'since':FieldValue.serverTimestamp(),
+      },SetOptions(merge:true));
       if(kabulBildirimiAcik) {
         toplu.set(FirebaseFirestore.instance.collection('notifications').doc('friend_accepted_' + ben + '_' + gonderen), {
           'toUid': gonderen,
@@ -6096,6 +6101,25 @@ class KullaniciProfilPage extends StatelessWidget {
                   icon:const Icon(Icons.groups_2_outlined),
                   label:const Text('Ortak gruplar'),
                 )),
+                if(arkadaslar.contains(uid))FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(
+                  future:() { final ids=[me!,uid]..sort(); return FirebaseFirestore.instance.collection('friendships').doc(ids.join('_')).get(); }(),
+                  builder:(_,fs){
+                    final since=fs.data?.data()?['since'];
+                    if(since is! Timestamp)return const SizedBox.shrink();
+                    final gun=DateTime.now().difference(since.toDate()).inDays;
+                    return Padding(
+                      padding:const EdgeInsets.only(top:10),
+                      child:Container(
+                        width:double.infinity,padding:const EdgeInsets.all(12),
+                        decoration:BoxDecoration(color:const Color(0xFFF7F4FF),borderRadius:BorderRadius.circular(14)),
+                        child:Row(mainAxisAlignment:MainAxisAlignment.center,children:[
+                          const Icon(Icons.favorite_outline_rounded,color:mor,size:19),const SizedBox(width:7),
+                          Text(gun<1?'Arkadaşlığınız bugün başladı':'$gun gündür arkadaşsınız',style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w700)),
+                        ]),
+                      ),
+                    );
+                  },
+                ),
               ],
               const SizedBox(height: 20),
               if (!erisimVar)
