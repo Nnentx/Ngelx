@@ -1003,18 +1003,22 @@ class _AnaEkranState extends State<AnaEkran> {
     );
   }
 
+  Widget _aktifSayfa() {
+    switch (secili) {
+      case 0: return const VideoAkisi(gorunur: true);
+      case 1: return const KesfetPage(gorunur: true);
+      case 2: return const YuklePage();
+      case 3: return const MesajPage();
+      case 4: return const ProfilPage();
+      default: return const VideoAkisi(gorunur: true);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final sayfalar = [
-      VideoAkisi(gorunur: secili == 0),
-      KesfetPage(gorunur: secili == 1),
-      const YuklePage(),
-      const MesajPage(),
-      const ProfilPage(),
-    ];
     return Scaffold(
       body:Stack(children:[
-        Positioned.fill(child:IndexedStack(index:secili,children:sayfalar)),
+        Positioned.fill(child:KeyedSubtree(key:ValueKey('ngelx_tab_$secili'),child:_aktifSayfa())),
         Positioned.fill(child:IgnorePointer(
           ignoring:false,
           child:gelenAramaKatmani(),
@@ -4698,38 +4702,74 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
   final mesaj=TextEditingController(),liste=ScrollController();
   final List<Map<String,String>> mentionOnerileri=[];
   final Set<String> etiketlenenUidler={};
-  bool aramaBaslatiliyor=false;
+  final Map<String,Future<DocumentSnapshot<Map<String,dynamic>>>> _uyeProfilCache={};
+  Timer? mentionZamanlayici;
+  List<Map<String,String>>? _mentionUyeleri;
+  late final Stream<QuerySnapshot<Map<String,dynamic>>> _mesajAkisi;
+  late final Stream<DocumentSnapshot<Map<String,dynamic>>> _grupAkisi;
+  bool aramaBaslatiliyor=false,_okunduYaziliyor=false,_ilkMesajKaydirma=true;
+  DateTime? _sonOkunduKontrolu;
   String? get uid=>FirebaseAuth.instance.currentUser?.uid;
   DocumentReference<Map<String,dynamic>> get chatRef=>FirebaseFirestore.instance.collection('chats').doc(widget.chatId);
-  @override void initState(){super.initState();unawaited(_okunduIsaretle());}
-  @override void dispose(){mesaj.dispose();liste.dispose();super.dispose();}
-  Future<void> _okunduIsaretle()async{final ben=uid;if(ben==null)return;try{await chatRef.set({'unread_$ben':0},SetOptions(merge:true)).timeout(const Duration(seconds:5));}catch(_){}}
-  void sonaGit(){WidgetsBinding.instance.addPostFrameCallback((_){if(!mounted||!liste.hasClients)return;final hedef=liste.position.maxScrollExtent;if((liste.position.pixels-hedef).abs()<2)return;liste.animateTo(hedef,duration:const Duration(milliseconds:240),curve:Curves.easeOut);});}
-
-  Stream<QuerySnapshot<Map<String,dynamic>>> mesajAkisi() async*{
-    final q=chatRef.collection('messages');
-    Object? sunucuHatasi;
-    try{
-      final ilk=await q.get(const GetOptions(source:Source.server)).timeout(const Duration(seconds:8));
-      yield ilk;
-    }catch(e){
-      sunucuHatasi=e;
-      try{
-        final cache=await q.get(const GetOptions(source:Source.cache)).timeout(const Duration(seconds:2));
-        yield cache;
-      }catch(_){
-        throw StateError('Grup mesajları alınamadı: $sunucuHatasi');
-      }
-    }
-    yield* q.snapshots(includeMetadataChanges:true);
+  Future<DocumentSnapshot<Map<String,dynamic>>> _uyeGetir(String id)=>_uyeProfilCache.putIfAbsent(id,()=>FirebaseFirestore.instance.collection('users').doc(id).get());
+  @override void initState(){
+    super.initState();
+    _grupAkisi=chatRef.snapshots();
+    _mesajAkisi=chatRef.collection('messages').orderBy('createdAt').snapshots();
+    unawaited(_okunduIsaretle());
   }
+  @override void dispose(){mentionZamanlayici?.cancel();mesaj.dispose();liste.dispose();super.dispose();}
+  Future<void> _okunduIsaretle()async{
+    final ben=uid;
+    if(ben==null||_okunduYaziliyor)return;
+    final simdi=DateTime.now();
+    if(_sonOkunduKontrolu!=null&&simdi.difference(_sonOkunduKontrolu!).inMilliseconds<1200)return;
+    _sonOkunduKontrolu=simdi;
+    _okunduYaziliyor=true;
+    try{
+      final d=await chatRef.get().timeout(const Duration(seconds:5));
+      final okunmamis=(d.data()?['unread_$ben'] as num?)?.toInt()??0;
+      if(okunmamis>0)await chatRef.set({'unread_$ben':0},SetOptions(merge:true)).timeout(const Duration(seconds:5));
+    }catch(_){
+    }finally{
+      _okunduYaziliyor=false;
+    }
+  }
+  void sonaGit(){WidgetsBinding.instance.addPostFrameCallback((_){
+    if(!mounted||!liste.hasClients)return;
+    final hedef=liste.position.maxScrollExtent;
+    if(_ilkMesajKaydirma){
+      _ilkMesajKaydirma=false;
+      if(hedef>0)liste.jumpTo(hedef);
+      return;
+    }
+    if(hedef-liste.position.pixels>320)return;
+    if((liste.position.pixels-hedef).abs()<2)return;
+    liste.animateTo(hedef,duration:const Duration(milliseconds:180),curve:Curves.easeOut);
+  });}
 
-  Future<bool> mesajGonderilebilir()async{final ben=uid;if(ben==null)return false;final d=await chatRef.get(),v=d.data()??{};final uyeler=List<String>.from(v['members']??const[]),yoneticiler=List<String>.from(v['admins']??const[]);if(!uyeler.contains(ben)){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Artık bu grubun üyesi değilsin.')));return false;}if(v['onlyAdminsCanPost']==true&&!yoneticiler.contains(ben)){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bu grupta yalnızca yöneticiler mesaj gönderebilir.')));return false;}return true;}
-  Future<void> payloadGonder(Map<String,dynamic> veri,String sonMesaj)async{
-    final ben=uid;if(ben==null||!await mesajGonderilebilir())return;
+  Future<Map<String,dynamic>?> mesajGonderimVerisi()async{
+    final ben=uid;if(ben==null)return null;
     final d=await chatRef.get();
-    final uyeler=List<String>.from(d.data()?['members']??const[]);
-    final ref=await chatRef.collection('messages').add({'senderId':ben,'createdAt':FieldValue.serverTimestamp(),...veri});
+    final v=d.data()??<String,dynamic>{};
+    final uyeler=List<String>.from(v['members']??const[]);
+    final yoneticiler=List<String>.from(v['admins']??const[]);
+    if(!uyeler.contains(ben)){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Artık bu grubun üyesi değilsin.')));
+      return null;
+    }
+    if(v['onlyAdminsCanPost']==true&&!yoneticiler.contains(ben)){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bu grupta yalnızca yöneticiler mesaj gönderebilir.')));
+      return null;
+    }
+    return v;
+  }
+  Future<void> payloadGonder(Map<String,dynamic> veri,String sonMesaj)async{
+    final ben=uid;if(ben==null)return;
+    final grupVerisi=await mesajGonderimVerisi();
+    if(grupVerisi==null)return;
+    final uyeler=List<String>.from(grupVerisi['members']??const[]);
+    await chatRef.collection('messages').add({'senderId':ben,'createdAt':FieldValue.serverTimestamp(),...veri});
     final g=<String,dynamic>{'lastMessage':sonMesaj,'updatedAt':FieldValue.serverTimestamp(),'hiddenFor':FieldValue.arrayRemove(uyeler)};
     for(final x in uyeler){if(x!=ben)g['unread_$x']=FieldValue.increment(1);}
     await chatRef.set(g,SetOptions(merge:true));
@@ -4764,20 +4804,40 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
   Future<void> emojiSec()async{final e=await showModalBottomSheet<String>(context:context,backgroundColor:Colors.white,showDragHandle:true,builder:(c)=>SafeArea(child:Padding(padding:const EdgeInsets.all(18),child:Wrap(spacing:14,runSpacing:14,children:['😀','😊','😂','😍','🥰','😎','😭','😡','👍','👏','🙏','❤️','🔥','🎉','✨','💯','🤔','😴','🙌','🤝'].map((x)=>InkWell(onTap:()=>Navigator.pop(c,x),child:Text(x,style:const TextStyle(fontSize:30)))).toList()))));if(e!=null){final t=mesaj.text;mesaj.text='$t$e';mesaj.selection=TextSelection.collapsed(offset:mesaj.text.length);}}
 
   Future<void> mentionAra(String deger)async{
+    mentionZamanlayici?.cancel();
     final parca=deger.split(RegExp(r'\s+')).last;
-    if(!parca.startsWith('@')){if(mentionOnerileri.isNotEmpty&&mounted)setState(()=>mentionOnerileri.clear());return;}
-    final ara=parca.substring(1).toLowerCase();
-    final grup=await chatRef.get();
-    final uyeler=List<String>.from(grup.data()?['members']??const[]);
-    final sonuc=<Map<String,String>>[];
-    if('herkes'.contains(ara))sonuc.add({'uid':'all','username':'herkes','name':'Herkes'});
-    for(final id in uyeler.take(60)){
-      if(sonuc.length>=6)break;
-      final d=await FirebaseFirestore.instance.collection('users').doc(id).get();
-      final v=d.data()??<String,dynamic>{},kullanici=(v['username']??'').toString(),ad=(v['displayName']??kullanici).toString();
-      if(ara.isEmpty||kullanici.toLowerCase().contains(ara)||ad.toLowerCase().contains(ara))sonuc.add({'uid':id,'username':kullanici,'name':ad});
+    if(!parca.startsWith('@')){
+      if(mentionOnerileri.isNotEmpty&&mounted)setState(()=>mentionOnerileri.clear());
+      return;
     }
-    if(mounted)setState((){mentionOnerileri..clear()..addAll(sonuc);});
+    final ara=parca.substring(1).toLowerCase();
+    mentionZamanlayici=Timer(const Duration(milliseconds:260),()async{
+      try{
+        var uyeler=_mentionUyeleri;
+        if(uyeler==null){
+          final grup=await chatRef.get();
+          final ids=List<String>.from(grup.data()?['members']??const[]).take(60).toList();
+          final belgeler=await Future.wait(ids.map(_uyeGetir));
+          uyeler=<Map<String,String>>[];
+          for(int i=0;i<belgeler.length;i++){
+            final v=belgeler[i].data()??<String,dynamic>{};
+            final kullanici=(v['username']??'').toString().trim();
+            final ad=(v['displayName']??kullanici).toString().trim();
+            if(kullanici.isNotEmpty)uyeler.add({'uid':ids[i],'username':kullanici,'name':ad.isEmpty?kullanici:ad});
+          }
+          _mentionUyeleri=uyeler;
+        }
+        if(!mounted)return;
+        final sonuc=<Map<String,String>>[];
+        if('herkes'.contains(ara))sonuc.add({'uid':'all','username':'herkes','name':'Herkes'});
+        for(final u in uyeler){
+          if(sonuc.length>=6)break;
+          final kullanici=(u['username']??'').toLowerCase(),ad=(u['name']??'').toLowerCase();
+          if(ara.isEmpty||kullanici.contains(ara)||ad.contains(ara))sonuc.add(u);
+        }
+        if(mounted)setState((){mentionOnerileri..clear()..addAll(sonuc);});
+      }catch(_){}
+    });
   }
   Future<void> mentionEkle(String kullanici,String? hedefUid)async{
     final metin=mesaj.text,sonBosluk=metin.lastIndexOf(RegExp(r'\s'));
@@ -4841,14 +4901,14 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
 
   Widget anketKarti(QueryDocumentSnapshot<Map<String,dynamic>> d,bool benim){final v=d.data(),q=(v['pollQuestion']??'Anket').toString(),hamSecenekler=v['pollOptions'],opts=hamSecenekler is Iterable?hamSecenekler.map((e)=>e.toString()).where((e)=>e.trim().isNotEmpty).toList():<String>[],hamOylar=v['pollVotes'],votes=hamOylar is Map?Map<String,dynamic>.from(hamOylar):<String,dynamic>{},toplam=votes.values.fold<int>(0,(a,b)=>a+(b is Iterable?b.length:0));return Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(q,style:TextStyle(color:benim?Colors.white:Colors.black87,fontWeight:FontWeight.w900,fontSize:16)),const SizedBox(height:8),for(int i=0;i<opts.length;i)Padding(padding:const EdgeInsets.only(bottom:6),child:InkWell(onTap:()=>oyVer(d.reference,i),child:Container(padding:const EdgeInsets.symmetric(horizontal:10,vertical:9),decoration:BoxDecoration(color:benim?Colors.white.withValues(alpha:.18):Colors.white,borderRadius:BorderRadius.circular(12),border:Border.all(color:benim?Colors.white38:mor.withValues(alpha:.35))),child:Row(children:[Expanded(child:Text(opts[i],style:TextStyle(color:benim?Colors.white:Colors.black87))),Text('${votes['$i'] is Iterable?(votes['$i'] as Iterable).length:0}',style:TextStyle(color:benim?Colors.white:mor,fontWeight:FontWeight.bold))])))),Text('$toplam oy',style:TextStyle(fontSize:11,color:benim?Colors.white70:Colors.black45))]);}
 
-  Widget mesajKarti(QueryDocumentSnapshot<Map<String,dynamic>> d){final v=d.data(),gonderen=(v['senderId']??v['fromUid']??v['uid']??'').toString(),ben=gonderen==uid,metin=(v['text']??v['message']??v['content']??'').toString(),tur=(v['type']??'text').toString(),media=(v['mediaUrl']??'').toString(),saat=mesajSaati(v['createdAt']),hamTepkiler=v['reactions'],tepkiler=hamTepkiler is Map?Map<String,dynamic>.from(hamTepkiler):<String,dynamic>{};if(tur=='system')return Center(child:Container(margin:const EdgeInsets.symmetric(vertical:8),padding:const EdgeInsets.symmetric(horizontal:12,vertical:6),decoration:BoxDecoration(color:const Color(0xFFF0F1F4),borderRadius:BorderRadius.circular(14)),child:Text(metin,style:const TextStyle(color:Colors.black54,fontSize:12))));final gonderenBasligi=!ben?(gonderen.isEmpty?const Padding(padding:EdgeInsets.only(bottom:5),child:Text('Üye',style:TextStyle(color:mor,fontSize:12,fontWeight:FontWeight.w800))):FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(future:FirebaseFirestore.instance.collection('users').doc(gonderen).get(),builder:(_,u){final p=u.data?.data()??{},pf=(p['photoUrl']??'').toString();return Padding(padding:const EdgeInsets.only(bottom:5),child:Row(mainAxisSize:MainAxisSize.min,children:[CircleAvatar(radius:10,backgroundImage:pf.isEmpty?null:NetworkImage(pf),child:pf.isEmpty?const Icon(Icons.person,size:12):null),const SizedBox(width:5),Flexible(child:Text((p['displayName']??p['username']??'Üye').toString(),style:const TextStyle(color:mor,fontSize:12,fontWeight:FontWeight.w800),overflow:TextOverflow.ellipsis))]));})):null;final kutu=GestureDetector(
+  Widget mesajKarti(QueryDocumentSnapshot<Map<String,dynamic>> d){final v=d.data(),gonderen=(v['senderId']??v['fromUid']??v['uid']??'').toString(),ben=gonderen==uid,metin=(v['text']??v['message']??v['content']??'').toString(),tur=(v['type']??'text').toString(),media=(v['mediaUrl']??'').toString(),saat=mesajSaati(v['createdAt']),hamTepkiler=v['reactions'],tepkiler=hamTepkiler is Map?Map<String,dynamic>.from(hamTepkiler):<String,dynamic>{};if(tur=='system')return Center(child:Container(margin:const EdgeInsets.symmetric(vertical:8),padding:const EdgeInsets.symmetric(horizontal:12,vertical:6),decoration:BoxDecoration(color:const Color(0xFFF0F1F4),borderRadius:BorderRadius.circular(14)),child:Text(metin,style:const TextStyle(color:Colors.black54,fontSize:12))));final gonderenBasligi=!ben?(gonderen.isEmpty?const Padding(padding:EdgeInsets.only(bottom:5),child:Text('Üye',style:TextStyle(color:mor,fontSize:12,fontWeight:FontWeight.w800))):FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(future:_uyeGetir(gonderen),builder:(_,u){final p=u.data?.data()??{},pf=(p['photoUrl']??'').toString();return Padding(padding:const EdgeInsets.only(bottom:5),child:Row(mainAxisSize:MainAxisSize.min,children:[CircleAvatar(radius:10,backgroundImage:pf.isEmpty?null:NetworkImage(pf),child:pf.isEmpty?const Icon(Icons.person,size:12):null),const SizedBox(width:5),Flexible(child:Text((p['displayName']??p['username']??'Üye').toString(),style:const TextStyle(color:mor,fontSize:12,fontWeight:FontWeight.w800),overflow:TextOverflow.ellipsis))]));})):null;final kutu=GestureDetector(
     behavior:HitTestBehavior.opaque,
     onLongPress:()=>mesajMenusu(d),
     onDoubleTap:()=>grupKalpBirak(d),
     onTap:(tur=='photo'||tur=='gif')&&media.isNotEmpty?()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>TamEkranMedyaPage(url:media))):null,
     child:Container(constraints:const BoxConstraints(maxWidth:300),margin:const EdgeInsets.symmetric(vertical:4),padding:EdgeInsets.all((tur=='photo'||tur=='gif')?4:12),decoration:BoxDecoration(color:ben?const Color(0xFF7C3AED):const Color(0xFFF0F1F4),borderRadius:BorderRadius.circular(18)),child:Column(crossAxisAlignment:CrossAxisAlignment.end,children:[if(gonderenBasligi!=null)gonderenBasligi,if((tur=='photo'||tur=='gif')&&media.isNotEmpty)IgnorePointer(child:ClipRRect(borderRadius:BorderRadius.circular(15),child:Image.network(media,width:240,fit:BoxFit.cover,errorBuilder:(_,__,___)=>const SizedBox(width:240,height:120,child:Center(child:Icon(Icons.broken_image_outlined))))))else if(tur=='poll')anketKarti(d,ben)else Text(metin.isEmpty?(tur=='photo'||tur=='gif'?'Medya yüklenemedi':'Mesaj içeriği bulunamadı'):metin,style:TextStyle(color:ben?Colors.white:Colors.black87,fontSize:16)),if(v['editedAt']!=null)Text('düzenlendi',style:TextStyle(fontSize:9,color:ben?Colors.white60:Colors.black38)),if(tepkiler.isNotEmpty)Wrap(children:tepkiler.values.map((e)=>Text(e.toString())).toList()),if(saat.isNotEmpty)Padding(padding:const EdgeInsets.only(top:4),child:Text(saat,style:TextStyle(fontSize:10,color:ben?Colors.white70:Colors.black45))) ])));return Align(alignment:ben?Alignment.centerRight:Alignment.centerLeft,child:kutu);}
 
-  @override Widget build(BuildContext context)=>Theme(data:ThemeData.light().copyWith(scaffoldBackgroundColor:Colors.white,appBarTheme:const AppBarTheme(backgroundColor:Colors.white,foregroundColor:Colors.black,elevation:0)),child:Scaffold(appBar:AppBar(titleSpacing:0,title:StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(stream:chatRef.snapshots(),builder:(_,s){final v=s.data?.data()??{},ad=(v['groupName']??widget.ad).toString(),foto=(v['groupPhotoUrl']??widget.foto).toString();return Row(children:[CircleAvatar(radius:17,backgroundColor:const Color(0xFFE9DDFF),backgroundImage:foto.isEmpty?null:NetworkImage(foto),child:foto.isEmpty?const Icon(Icons.groups,color:mor,size:20):null),const SizedBox(width:7),Expanded(child:Tooltip(message:ad,child:Text(ad,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:17,fontWeight:FontWeight.w800))))]);}),actions:[IconButton(constraints:const BoxConstraints.tightFor(width:40),tooltip:'Sesli grup araması',onPressed:aramaBaslatiliyor?null:()=>aramaBaslat(false),icon:aramaBaslatiliyor?const SizedBox(width:18,height:18,child:CircularProgressIndicator(strokeWidth:2)):const Icon(Icons.call_outlined,color:mor)),IconButton(constraints:const BoxConstraints.tightFor(width:40),tooltip:'Görüntülü grup araması',onPressed:aramaBaslatiliyor?null:()=>aramaBaslat(true),icon:const Icon(Icons.videocam_outlined,color:mor)),IconButton(constraints:const BoxConstraints.tightFor(width:40),tooltip:'Grup bilgileri',onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupBilgiPage(chatId:widget.chatId))),icon:const Icon(Icons.info_outline,color:mor))]),body:Column(children:[Expanded(child:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(stream:mesajAkisi(),builder:(_,s){if(s.hasError)return Center(child:Padding(padding:const EdgeInsets.all(24),child:Column(mainAxisSize:MainAxisSize.min,children:[const Icon(Icons.error_outline,color:Colors.redAccent,size:34),const SizedBox(height:10),const Text('Grup mesajları yüklenemedi.',style:TextStyle(color:Colors.redAccent,fontWeight:FontWeight.w800)),const SizedBox(height:8),SelectableText('${s.error}',textAlign:TextAlign.center,style:const TextStyle(color:Colors.black54,fontSize:12)),const SizedBox(height:12),OutlinedButton.icon(onPressed:()=>setState((){}),icon:const Icon(Icons.refresh),label:const Text('Yeniden dene'))])));final docs=<QueryDocumentSnapshot<Map<String,dynamic>>>[...?s.data?.docs]..sort((a,b){final av=a.data()['createdAt'],bv=b.data()['createdAt'];final ams=av is Timestamp?av.millisecondsSinceEpoch:0,bms=bv is Timestamp?bv.millisecondsSinceEpoch:0;return ams.compareTo(bms);});if(s.hasData){unawaited(_okunduIsaretle());sonaGit();}if(docs.isEmpty){return Center(child:Text(s.connectionState==ConnectionState.waiting?'Mesajlar sunucudan alınıyor…':'Henüz mesaj yok.',style:const TextStyle(color:Colors.black54)));}return ListView.builder(controller:liste,padding:const EdgeInsets.all(12),itemCount:docs.length,itemBuilder:(_,i)=>mesajKarti(docs[i]));})),if(mentionOnerileri.isNotEmpty)Container(color:Colors.white,child:Column(mainAxisSize:MainAxisSize.min,children:mentionOnerileri.map((u)=>ListTile(dense:true,leading:const CircleAvatar(radius:15,child:Icon(Icons.person,size:17)),title:Text(u['name']??'Üye'),subtitle:Text('@${u['username']??''}'),onTap:()=>mentionEkle(u['username']??'',u['uid']))).toList())),SafeArea(top:false,child:Padding(padding:const EdgeInsets.fromLTRB(8,7,8,8),child:Row(children:[IconButton(tooltip:'Dosya ve medya ekle',onPressed:ekMenusu,icon:const Icon(Icons.add_circle_outline,color:mor)),Expanded(child:TextField(controller:mesaj,onChanged:mentionAra,onSubmitted:(_)=>gonder(),maxLength:2000,buildCounter:(_, {required currentLength,required isFocused,maxLength})=>null,decoration:const InputDecoration(hintText:'Gruba mesaj yaz...'))),IconButton(tooltip:'Emoji seç',onPressed:emojiSec,icon:const Icon(Icons.emoji_emotions_outlined,color:mor)),IconButton(tooltip:'Gönder',onPressed:gonder,icon:const Icon(Icons.send_rounded,color:mor))])))])));
+  @override Widget build(BuildContext context)=>Theme(data:ThemeData.light().copyWith(scaffoldBackgroundColor:Colors.white,appBarTheme:const AppBarTheme(backgroundColor:Colors.white,foregroundColor:Colors.black,elevation:0)),child:Scaffold(appBar:AppBar(titleSpacing:0,title:StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(stream:_grupAkisi,builder:(_,s){final v=s.data?.data()??{},ad=(v['groupName']??widget.ad).toString(),foto=(v['groupPhotoUrl']??widget.foto).toString();return Row(children:[CircleAvatar(radius:17,backgroundColor:const Color(0xFFE9DDFF),backgroundImage:foto.isEmpty?null:NetworkImage(foto),child:foto.isEmpty?const Icon(Icons.groups,color:mor,size:20):null),const SizedBox(width:7),Expanded(child:Tooltip(message:ad,child:Text(ad,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:17,fontWeight:FontWeight.w800))))]);}),actions:[IconButton(constraints:const BoxConstraints.tightFor(width:40),tooltip:'Sesli grup araması',onPressed:aramaBaslatiliyor?null:()=>aramaBaslat(false),icon:aramaBaslatiliyor?const SizedBox(width:18,height:18,child:CircularProgressIndicator(strokeWidth:2)):const Icon(Icons.call_outlined,color:mor)),IconButton(constraints:const BoxConstraints.tightFor(width:40),tooltip:'Görüntülü grup araması',onPressed:aramaBaslatiliyor?null:()=>aramaBaslat(true),icon:const Icon(Icons.videocam_outlined,color:mor)),IconButton(constraints:const BoxConstraints.tightFor(width:40),tooltip:'Grup bilgileri',onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupBilgiPage(chatId:widget.chatId))),icon:const Icon(Icons.info_outline,color:mor))]),body:Column(children:[Expanded(child:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(stream:_mesajAkisi,builder:(_,s){if(s.hasError)return Center(child:Padding(padding:const EdgeInsets.all(24),child:Column(mainAxisSize:MainAxisSize.min,children:[const Icon(Icons.error_outline,color:Colors.redAccent,size:34),const SizedBox(height:10),const Text('Grup mesajları yüklenemedi.',style:TextStyle(color:Colors.redAccent,fontWeight:FontWeight.w800)),const SizedBox(height:8),SelectableText('${s.error}',textAlign:TextAlign.center,style:const TextStyle(color:Colors.black54,fontSize:12)),const SizedBox(height:12),OutlinedButton.icon(onPressed:()=>setState((){}),icon:const Icon(Icons.refresh),label:const Text('Yeniden dene'))])));final docs=<QueryDocumentSnapshot<Map<String,dynamic>>>[...?s.data?.docs]..sort((a,b){final av=a.data()['createdAt'],bv=b.data()['createdAt'];final ams=av is Timestamp?av.millisecondsSinceEpoch:0,bms=bv is Timestamp?bv.millisecondsSinceEpoch:0;return ams.compareTo(bms);});if(s.hasData){if(docs.isNotEmpty&&docs.last.data()['senderId']!=uid)unawaited(_okunduIsaretle());sonaGit();}if(docs.isEmpty){return Center(child:Text(s.connectionState==ConnectionState.waiting?'Mesajlar sunucudan alınıyor…':'Henüz mesaj yok.',style:const TextStyle(color:Colors.black54)));}return ListView.builder(controller:liste,padding:const EdgeInsets.all(12),itemCount:docs.length,itemBuilder:(_,i)=>mesajKarti(docs[i]));})),if(mentionOnerileri.isNotEmpty)Container(color:Colors.white,child:Column(mainAxisSize:MainAxisSize.min,children:mentionOnerileri.map((u)=>ListTile(dense:true,leading:const CircleAvatar(radius:15,child:Icon(Icons.person,size:17)),title:Text(u['name']??'Üye'),subtitle:Text('@${u['username']??''}'),onTap:()=>mentionEkle(u['username']??'',u['uid']))).toList())),SafeArea(top:false,child:Padding(padding:const EdgeInsets.fromLTRB(8,7,8,8),child:Row(children:[IconButton(tooltip:'Dosya ve medya ekle',onPressed:ekMenusu,icon:const Icon(Icons.add_circle_outline,color:mor)),Expanded(child:TextField(controller:mesaj,onChanged:mentionAra,onSubmitted:(_)=>gonder(),maxLength:2000,buildCounter:(_, {required currentLength,required isFocused,maxLength})=>null,decoration:const InputDecoration(hintText:'Gruba mesaj yaz...'))),IconButton(tooltip:'Emoji seç',onPressed:emojiSec,icon:const Icon(Icons.emoji_emotions_outlined,color:mor)),IconButton(tooltip:'Gönder',onPressed:gonder,icon:const Icon(Icons.send_rounded,color:mor))])))])));
 }
 
 class TamEkranMedyaPage extends StatelessWidget{final String url;const TamEkranMedyaPage({super.key,required this.url});@override Widget build(BuildContext context)=>Scaffold(backgroundColor:Colors.black,appBar:AppBar(backgroundColor:Colors.black,foregroundColor:Colors.white),body:Center(child:InteractiveViewer(minScale:.5,maxScale:5,child:Image.network(url,fit:BoxFit.contain,errorBuilder:(_,__,___)=>const Text('Medya açılamadı.',style:TextStyle(color:Colors.white))))));}
@@ -5348,6 +5408,10 @@ class SohbetPage extends StatefulWidget {final String chatId,digerUid,ad,foto;co
 class _SohbetPageState extends State<SohbetPage> {
   final mesaj=TextEditingController(),liste=ScrollController();
   final List<Map<String,String>> mentionOnerileri=[];
+  late final Stream<DocumentSnapshot<Map<String,dynamic>>> _chatAkisi;
+  late final Stream<QuerySnapshot<Map<String,dynamic>>> _mesajAkisi;
+  bool _okunduYaziliyor=false;
+  bool _ilkMesajKaydirma=true;
   bool gonderiliyor=false,aramaBaslatiliyor=false,yaziyorGonderildi=false;
   Timer? yaziyorZamanlayici,sureliMesajZamanlayici;
   bool gizliKelimeFiltresi=true;
@@ -5402,17 +5466,25 @@ class _SohbetPageState extends State<SohbetPage> {
   }
 
   Future<void> _okunduGuncelle()async{
-    final ben=uid;if(ben==null)return;
+    final ben=uid;
+    if(ben==null||_okunduYaziliyor)return;
+    _okunduYaziliyor=true;
     try{
       final ref=FirebaseFirestore.instance.collection('chats').doc(widget.chatId);
       final d=await ref.get();
       if(!d.exists)return;
-      final izin=d.data()?['readReceipts_$ben']!=false;
+      final veri=d.data()??<String,dynamic>{};
+      final okunmamis=(veri['unread_$ben'] as num?)?.toInt()??0;
+      if(okunmamis<=0)return;
+      final izin=veri['readReceipts_$ben']!=false;
       await ref.set({
         'unread_$ben':0,
         if(izin)'lastReadAt_$ben':FieldValue.serverTimestamp(),
       },SetOptions(merge:true));
-    }catch(_){}
+    }catch(_){
+    }finally{
+      _okunduYaziliyor=false;
+    }
   }
 
   void mesajDegisti(String deger){
@@ -5790,6 +5862,9 @@ class _SohbetPageState extends State<SohbetPage> {
   @override
   void initState(){
     super.initState();
+    final sohbetRef=FirebaseFirestore.instance.collection('chats').doc(widget.chatId);
+    _chatAkisi=sohbetRef.snapshots();
+    _mesajAkisi=sohbetRef.collection('messages').orderBy('createdAt').snapshots();
     if(uid!=null){
       unawaited(_okunduGuncelle());
       FirebaseFirestore.instance.collection('users').doc(uid).get().then((d){
@@ -5810,13 +5885,24 @@ class _SohbetPageState extends State<SohbetPage> {
     if(ben!=null)unawaited(FirebaseFirestore.instance.collection('chats').doc(widget.chatId).set({'typing_$ben':false},SetOptions(merge:true)));
     mesaj.dispose();liste.dispose();super.dispose();
   }
-  void sonaGit(){WidgetsBinding.instance.addPostFrameCallback((_){if(liste.hasClients)liste.animateTo(liste.position.maxScrollExtent,duration:const Duration(milliseconds:240),curve:Curves.easeOut);});}
+  void sonaGit(){WidgetsBinding.instance.addPostFrameCallback((_){
+    if(!mounted||!liste.hasClients)return;
+    final hedef=liste.position.maxScrollExtent;
+    if(_ilkMesajKaydirma){
+      _ilkMesajKaydirma=false;
+      if(hedef>0)liste.jumpTo(hedef);
+      return;
+    }
+    if(hedef-liste.position.pixels>320)return;
+    if((liste.position.pixels-hedef).abs()<2)return;
+    liste.animateTo(hedef,duration:const Duration(milliseconds:180),curve:Curves.easeOut);
+  });}
 
   @override
   Widget build(BuildContext context)=>Theme(data:ThemeData.light().copyWith(scaffoldBackgroundColor:Colors.white,appBarTheme:const AppBarTheme(backgroundColor:Colors.white,foregroundColor:Colors.black,elevation:0)),child:Scaffold(
     appBar:AppBar(
       leading:const BackButton(color:Colors.blue),
-      title:StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(stream:FirebaseFirestore.instance.collection('chats').doc(widget.chatId).snapshots(),builder:(_,s){final ham=s.data?.data()?['nicknames'],nicks=ham is Map?Map<String,dynamic>.from(ham):<String,dynamic>{},takma=(uid==null?'':(nicks[uid]??'').toString()).trim(),gorunenAd=takma.isNotEmpty?takma:widget.ad;return InkWell(onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciProfilPage(uid:widget.digerUid))),child:Row(children:[CircleAvatar(radius:18,backgroundImage:widget.foto.isEmpty?null:NetworkImage(widget.foto)),const SizedBox(width:9),Expanded(child:Text(gorunenAd))]));}),
+      title:StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(stream:_chatAkisi,builder:(_,s){final ham=s.data?.data()?['nicknames'],nicks=ham is Map?Map<String,dynamic>.from(ham):<String,dynamic>{},takma=(uid==null?'':(nicks[uid]??'').toString()).trim(),gorunenAd=takma.isNotEmpty?takma:widget.ad;return InkWell(onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciProfilPage(uid:widget.digerUid))),child:Row(children:[CircleAvatar(radius:18,backgroundImage:widget.foto.isEmpty?null:NetworkImage(widget.foto)),const SizedBox(width:9),Expanded(child:Text(gorunenAd))]));}),
       actions:[
         IconButton(
           tooltip:'Sesli arama',
@@ -5833,9 +5919,9 @@ class _SohbetPageState extends State<SohbetPage> {
         IconButton(onPressed:bilgi,icon:const Icon(Icons.info,color:Colors.blue)),
       ],
     ),
-    body:StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(stream:FirebaseFirestore.instance.collection('chats').doc(widget.chatId).snapshots(),builder:(_,tema){final veri=tema.data?.data()??<String,dynamic>{},ham=veri['theme_$uid'];final arkaPlan=ham is int?Color(ham):Colors.white,arkaPlanUrl=(veri['backgroundUrl_$uid']??'').toString(),hizliEmoji=(veri['quickEmoji_$uid']??'👍').toString(),arkaPlanOpaklik=(veri['backgroundOpacity_$uid'] is num?(veri['backgroundOpacity_$uid'] as num).toDouble():.30).clamp(.05,.85).toDouble(),mesajYaziBoyutu=(veri['messageFontSize_$uid'] is num?(veri['messageFontSize_$uid'] as num).toDouble():16.0).clamp(12.0,22.0).toDouble();return Container(decoration:BoxDecoration(color:arkaPlan,image:arkaPlanUrl.isEmpty?null:DecorationImage(image:NetworkImage(arkaPlanUrl),fit:BoxFit.cover,opacity:arkaPlanOpaklik)),child:Column(children:[
+    body:StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(stream:_chatAkisi,builder:(_,tema){final veri=tema.data?.data()??<String,dynamic>{},ham=veri['theme_$uid'];final arkaPlan=ham is int?Color(ham):Colors.white,arkaPlanUrl=(veri['backgroundUrl_$uid']??'').toString(),hizliEmoji=(veri['quickEmoji_$uid']??'👍').toString(),arkaPlanOpaklik=(veri['backgroundOpacity_$uid'] is num?(veri['backgroundOpacity_$uid'] as num).toDouble():.30).clamp(.05,.85).toDouble(),mesajYaziBoyutu=(veri['messageFontSize_$uid'] is num?(veri['messageFontSize_$uid'] as num).toDouble():16.0).clamp(12.0,22.0).toDouble();return Container(decoration:BoxDecoration(color:arkaPlan,image:arkaPlanUrl.isEmpty?null:DecorationImage(image:NetworkImage(arkaPlanUrl),fit:BoxFit.cover,opacity:arkaPlanOpaklik)),child:Column(children:[
       Expanded(child:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
-        stream:FirebaseFirestore.instance.collection('chats').doc(widget.chatId).collection('messages').orderBy('createdAt').snapshots(),
+        stream:_mesajAkisi,
         builder:(_,s){
           final tumDocs=s.data?.docs??<QueryDocumentSnapshot<Map<String,dynamic>>>[];
           final simdi=DateTime.now();
@@ -5844,23 +5930,25 @@ class _SohbetPageState extends State<SohbetPage> {
             return x is! Timestamp||x.toDate().isAfter(simdi);
           }).toList();
           sureliMesajTakvimi(docs);
-          if(uid!=null&&s.hasData)unawaited(_okunduGuncelle());
+          final okunmamis=(veri['unread_$uid'] as num?)?.toInt()??0;
+          if(uid!=null&&s.hasData&&okunmamis>0)unawaited(_okunduGuncelle());
           if(s.hasData)sonaGit();
           QueryDocumentSnapshot<Map<String,dynamic>>? sonBenim;
           for(final d in docs){if(d.data()['senderId']==uid)sonBenim=d;}
           final digerOkuma=veri['readReceipts_${widget.digerUid}']!=false?veri['lastReadAt_${widget.digerUid}']:null;
-          return ListView(
-            controller:liste,padding:const EdgeInsets.all(12),
-            children:[
-              sohbetUstBilgi(),
-              ...docs.map((d){
-                bool goruldu=false;
-                if(sonBenim?.id==d.id&&digerOkuma is Timestamp&&d.data()['createdAt'] is Timestamp){
-                  goruldu=digerOkuma.millisecondsSinceEpoch>=(d.data()['createdAt'] as Timestamp).millisecondsSinceEpoch;
-                }
-                return ozelMesajKarti(d,fontSize:mesajYaziBoyutu,goruldu:goruldu);
-              }),
-            ],
+          return ListView.builder(
+            controller:liste,
+            padding:const EdgeInsets.all(12),
+            itemCount:docs.length+1,
+            itemBuilder:(_,i){
+              if(i==0)return sohbetUstBilgi();
+              final d=docs[i-1];
+              bool goruldu=false;
+              if(sonBenim?.id==d.id&&digerOkuma is Timestamp&&d.data()['createdAt'] is Timestamp){
+                goruldu=digerOkuma.millisecondsSinceEpoch>=(d.data()['createdAt'] as Timestamp).millisecondsSinceEpoch;
+              }
+              return ozelMesajKarti(d,fontSize:mesajYaziBoyutu,goruldu:goruldu);
+            },
           );
         },
       )),
