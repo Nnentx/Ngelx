@@ -7347,7 +7347,7 @@ class TakipIstegiGecmisiPage extends StatelessWidget{
               final am=at is Timestamp?at.millisecondsSinceEpoch:0,bm=bt is Timestamp?bt.millisecondsSinceEpoch:0;
               return bm.compareTo(am);
             });
-          if(docs.isEmpty)return const Center(child:Text('Gönderilmiş arkadaşlık isteğin yok.',style:TextStyle(color:Colors.black54)));
+          if(docs.isEmpty)return const Center(child:Text('Gönderilmiş takip isteğin yok.',style:TextStyle(color:Colors.black54)));
           return ListView.separated(
             padding:const EdgeInsets.all(12),itemCount:docs.length,separatorBuilder:(_,__)=>const Divider(),
             itemBuilder:(_,i){
