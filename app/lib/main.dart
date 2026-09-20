@@ -1054,19 +1054,30 @@ class _VideoAkisiState extends State<VideoAkisi> {
               onPageChanged: (i) => setState(() => aktif = i),
               itemBuilder: (_, i) {
                 final item = videolar[i];
-                final tur = item['type'] ?? 'video';
+                final tur = (item['type'] ?? 'video').toString();
                 if (tur == 'video') {
                   return VideoKarti(
-                    adres: item['videoUrl'] ?? item['mediaUrl'] ?? '',
-                    videoId: item['id']!,
-                    kullaniciAdi: item['username']!,
-                    ownerId: item['ownerId']!,
-                    indirilebilir: item['allowDownload'] != 'false',
+                    adres: (item['videoUrl'] ?? item['mediaUrl'] ?? '').toString(),
+                    videoId: (item['id'] ?? '').toString(),
+                    kullaniciAdi: (item['username'] ?? 'ngelx').toString(),
+                    ownerId: (item['ownerId'] ?? '').toString(),
+                    indirilebilir: item['allowDownload']?.toString() != 'false',
                     aktif: widget.gorunur && aktif == i,
                   );
                 }
+                final kartVeri=<String,String>{
+                  'id':(item['id']??'').toString(),
+                  'type':tur,
+                  'videoUrl':(item['videoUrl']??'').toString(),
+                  'mediaUrl':(item['mediaUrl']??item['videoUrl']??'').toString(),
+                  'audioUrl':(item['audioUrl']??'').toString(),
+                  'description':(item['description']??'').toString(),
+                  'username':(item['username']??'ngelx').toString(),
+                  'ownerId':(item['ownerId']??'').toString(),
+                  'allowDownload':(item['allowDownload']??true).toString(),
+                };
                 return GorselYaziKarti(
-                  veri: item,
+                  veri: kartVeri,
                   aktif: widget.gorunur && aktif == i,
                 );
               },
