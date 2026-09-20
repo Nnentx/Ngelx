@@ -4485,7 +4485,7 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
 
   lk.VideoTrack? _katilimciVideosu(lk.Participant? p){
     if(p==null)return null;
-    for(final pub in p.videoTracks.values){
+    for(final pub in p.videoTrackPublications){
       final track=pub.track;
       if(track is lk.VideoTrack&&!pub.muted)return track;
     }
