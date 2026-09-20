@@ -5232,7 +5232,7 @@ class _SohbetPageState extends State<SohbetPage> {
         IconButton(onPressed:bilgi,icon:const Icon(Icons.info,color:Colors.blue)),
       ],
     ),
-    body:StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(stream:FirebaseFirestore.instance.collection('chats').doc(widget.chatId).snapshots(),builder:(_,tema){final veri=tema.data?.data()??<String,dynamic>{},ham=veri['theme_$uid'];final arkaPlan=ham is int?Color(ham):Colors.white,arkaPlanUrl=(veri['backgroundUrl_$uid']??'').toString();return Container(decoration:BoxDecoration(color:arkaPlan,image:arkaPlanUrl.isEmpty?null:DecorationImage(image:NetworkImage(arkaPlanUrl),fit:BoxFit.cover,opacity:.30)),child:Column(children:[
+    body:StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(stream:FirebaseFirestore.instance.collection('chats').doc(widget.chatId).snapshots(),builder:(_,tema){final veri=tema.data?.data()??<String,dynamic>{},ham=veri['theme_$uid'];final arkaPlan=ham is int?Color(ham):Colors.white,arkaPlanUrl=(veri['backgroundUrl_$uid']??'').toString(),hizliEmoji=(veri['quickEmoji_$uid']??'👍').toString();return Container(decoration:BoxDecoration(color:arkaPlan,image:arkaPlanUrl.isEmpty?null:DecorationImage(image:NetworkImage(arkaPlanUrl),fit:BoxFit.cover,opacity:.30)),child:Column(children:[
       Expanded(child:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
         stream:FirebaseFirestore.instance.collection('chats').doc(widget.chatId).collection('messages').orderBy('createdAt').snapshots(),
         builder:(_,s){if(uid!=null&&s.hasData)FirebaseFirestore.instance.collection('chats').doc(widget.chatId).set({'unread_$uid':0},SetOptions(merge:true));if(s.hasData)sonaGit();return ListView(controller:liste,padding:const EdgeInsets.all(12),children:[sohbetUstBilgi(),...(s.data?.docs??[]).map(ozelMesajKarti)]);},
@@ -5267,9 +5267,9 @@ class _SohbetPageState extends State<SohbetPage> {
             valueListenable:mesaj,
             builder:(_,v,__){
               if(v.text.trim().isEmpty)return IconButton(
-                tooltip:'Hızlı beğeni',
-                onPressed:(){mesaj.text='👍';gonder();},
-                icon:const Icon(Icons.thumb_up_alt_rounded,color:Color(0xFF1836D8),size:29),
+                tooltip:'Hızlı emoji gönder',
+                onPressed:(){mesaj.text=hizliEmoji;gonder();},
+                icon:Text(hizliEmoji,style:const TextStyle(fontSize:27)),
               );
               return IconButton(
                 onPressed:gonderiliyor?null:gonder,
@@ -5288,7 +5288,38 @@ class SohbetBilgiPage extends StatelessWidget{
   const SohbetBilgiPage({super.key,required this.uid,required this.ad,required this.foto,required this.chatId});
 
   Future<void> takmaAd(BuildContext context)async{final me=FirebaseAuth.instance.currentUser?.uid;if(me==null)return;final chat=await FirebaseFirestore.instance.collection('chats').doc(chatId).get(),c=TextEditingController(text:(chat.data()?['nicknames']?[me]??'').toString());if(!context.mounted)return;final sonuc=await showDialog<String>(context:context,builder:(x)=>AlertDialog(backgroundColor:Colors.white,title:const Text('Takma ad'),content:TextField(controller:c,maxLength:30,decoration:const InputDecoration(hintText:'Bu sohbette görünecek ad')),actions:[TextButton(onPressed:()=>Navigator.pop(x),child:const Text('Vazgeç')),FilledButton(onPressed:()=>Navigator.pop(x,c.text.trim()),child:const Text('Kaydet'))]));c.dispose();if(sonuc!=null)await FirebaseFirestore.instance.collection('chats').doc(chatId).update({'nicknames.$me':sonuc});}
-  Future<void> ozellestir(BuildContext context)async{final me=FirebaseAuth.instance.currentUser?.uid;if(me==null)return;final secim=await showModalBottomSheet<Object>(context:context,backgroundColor:Colors.white,showDragHandle:true,builder:(c)=>SafeArea(child:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[const ListTile(title:Text('Sohbet arka planı',style:TextStyle(fontWeight:FontWeight.w900)),subtitle:Text('Bu görünüm yalnızca sende görünür.')),Wrap(spacing:16,runSpacing:16,children:[Colors.white,const Color(0xFFFFF4F7),const Color(0xFFF4F0FF),const Color(0xFFEFF8FF),const Color(0xFFF1FFF5)].map((x)=>InkWell(onTap:()=>Navigator.pop(c,x.toARGB32()),child:CircleAvatar(radius:25,backgroundColor:x,child:const Icon(Icons.check,color:Colors.black26)))).toList()),const SizedBox(height:12),ListTile(leading:const Icon(Icons.photo_library_outlined,color:mor),title:const Text('Galeriden özel fotoğraf / logo seç'),onTap:()=>Navigator.pop(c,'gallery')),ListTile(leading:const Icon(Icons.camera_alt_outlined,color:mor),title:const Text('Kameradan arka plan çek'),onTap:()=>Navigator.pop(c,'camera')),ListTile(leading:const Icon(Icons.hide_image_outlined,color:Colors.red),title:const Text('Özel fotoğrafı kaldır',style:TextStyle(color:Colors.red)),onTap:()=>Navigator.pop(c,'removeImage')),const SizedBox(height:8)]))));if(secim==null)return;final ref=FirebaseFirestore.instance.collection('chats').doc(chatId);if(secim is int){await ref.set({'theme_$me':secim},SetOptions(merge:true));return;}if(secim=='removeImage'){
+  Future<void> ozellestir(BuildContext context)async{final me=FirebaseAuth.instance.currentUser?.uid;if(me==null)return;final secim=await showModalBottomSheet<Object>(context:context,backgroundColor:Colors.white,showDragHandle:true,builder:(c)=>SafeArea(child:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[const ListTile(title:Text('Sohbet arka planı',style:TextStyle(fontWeight:FontWeight.w900)),subtitle:Text('Bu görünüm yalnızca sende görünür.')),Wrap(spacing:16,runSpacing:16,children:[Colors.white,const Color(0xFFFFF4F7),const Color(0xFFF4F0FF),const Color(0xFFEFF8FF),const Color(0xFFF1FFF5)].map((x)=>InkWell(onTap:()=>Navigator.pop(c,x.toARGB32()),child:CircleAvatar(radius:25,backgroundColor:x,child:const Icon(Icons.check,color:Colors.black26)))).toList()),const SizedBox(height:12),ListTile(leading:const Icon(Icons.photo_library_outlined,color:mor),title:const Text('Galeriden özel fotoğraf / logo seç'),onTap:()=>Navigator.pop(c,'gallery')),ListTile(leading:const Icon(Icons.camera_alt_outlined,color:mor),title:const Text('Kameradan arka plan çek'),onTap:()=>Navigator.pop(c,'camera')),ListTile(leading:const Icon(Icons.hide_image_outlined,color:Colors.red),title:const Text('Özel fotoğrafı kaldır',style:TextStyle(color:Colors.red)),onTap:()=>Navigator.pop(c,'removeImage')),
+const Divider(height:24),
+const ListTile(
+  leading:Icon(Icons.emoji_emotions_outlined,color:mor),
+  title:Text('Hızlı gönderme emojisi',style:TextStyle(fontWeight:FontWeight.w800)),
+  subtitle:Text('Mesaj kutusu boşken sağdaki tek dokunuş emojisini seç.'),
+),
+Padding(
+  padding:const EdgeInsets.fromLTRB(16,0,16,8),
+  child:Wrap(
+    spacing:12,runSpacing:12,
+    children:['👍','❤️','😂','😍','🔥','👏','🙏','🎉','😮','😢','😡','💯']
+      .map((e)=>InkWell(
+        onTap:()=>Navigator.pop(c,'quickEmoji:$e'),
+        borderRadius:BorderRadius.circular(28),
+        child:Container(
+          width:48,height:48,
+          alignment:Alignment.center,
+          decoration:BoxDecoration(color:const Color(0xFFF4F4F6),borderRadius:BorderRadius.circular(24)),
+          child:Text(e,style:const TextStyle(fontSize:25)),
+        ),
+      )).toList(),
+  ),
+),
+const SizedBox(height:8)]))));if(secim==null)return;final ref=FirebaseFirestore.instance.collection('chats').doc(chatId);
+if(secim is String&&secim.startsWith('quickEmoji:')){
+  final emoji=secim.substring('quickEmoji:'.length);
+  await ref.set({'quickEmoji_$me':emoji},SetOptions(merge:true));
+  if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Hızlı gönderme emojisi $emoji olarak ayarlandı.')));
+  return;
+}
+if(secim is int){await ref.set({'theme_$me':secim},SetOptions(merge:true));return;}if(secim=='removeImage'){
   if(!context.mounted)return;
   final onay=await showDialog<bool>(
     context:context,
