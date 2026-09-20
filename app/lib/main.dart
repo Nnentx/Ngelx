@@ -939,6 +939,7 @@ class _VideoAkisiState extends State<VideoAkisi> {
   int aktif = 0;
   bool takipSekmesi = false;
   Set<String> takipEdilenler = {};
+  Set<String> arkadaslar = {};
   Set<String> engellenenler = {};
   Set<String> gizlenenIcerikler = {};
 
@@ -961,6 +962,7 @@ class _VideoAkisiState extends State<VideoAkisi> {
     if (!mounted) return;
     setState(() {
       takipEdilenler = Set<String>.from(List<dynamic>.from(d.data()?['following'] ?? []));
+      arkadaslar = Set<String>.from(List<dynamic>.from(d.data()?['friends'] ?? []));
       engellenenler = Set<String>.from(List<dynamic>.from(d.data()?['blocked'] ?? []));
     });
   }
@@ -1012,8 +1014,20 @@ class _VideoAkisiState extends State<VideoAkisi> {
                 'audioUrl': (veri['audioUrl'] ?? '').toString(),
                 'description': (veri['description'] ?? '').toString(),
                 'allowDownload': (veri['allowDownload'] ?? true).toString(),
+                'privacy':(veri['privacy']??'Herkes').toString(),
+                'visibleTo':List<String>.from(veri['visibleTo']??const[]),
+                'hiddenFor':List<String>.from(veri['hiddenFor']??const[]),
               };
-            }).where((v) => v['type'] != 'story' && !engellenenler.contains(v['ownerId']) && !gizlenenIcerikler.contains(v['id'])).toList();
+            }).where((v){
+              final me=FirebaseAuth.instance.currentUser?.uid,owner=v['ownerId']?.toString()??'',privacy=v['privacy']?.toString()??'Herkes';
+              if(v['type']=='story'||engellenenler.contains(owner)||gizlenenIcerikler.contains(v['id']))return false;
+              if(me!=null&&(v['hiddenFor'] as List<String>).contains(me))return false;
+              if(me==owner)return true;
+              if(privacy=='Yalnızca ben')return false;
+              if(privacy=='Arkadaşlar')return me!=null&&arkadaslar.contains(owner);
+              if(privacy=='Yakın arkadaşlar')return me!=null&&(v['visibleTo'] as List<String>).contains(me);
+              return true;
+            }).toList();
             final filtreli = takipSekmesi ? yuklenenler.where((v) => takipEdilenler.contains(v['ownerId'])).toList() : yuklenenler;
             final videolar = takipSekmesi ? filtreli : [...filtreli, ...ornekVideolar];
             if (videolar.isEmpty) return const Center(child: Padding(padding: EdgeInsets.all(30), child: Text('Takip ettiğin kişilerin paylaşımları burada görünecek.', textAlign: TextAlign.center)));
@@ -2564,6 +2578,27 @@ class _YeniYorumlarState extends State<Yorumlar> {
     final metin = yorum.text.trim();
     final user = FirebaseAuth.instance.currentUser;
     if (metin.isEmpty || user == null || gonderiliyor) return;
+    try{
+      final video=await FirebaseFirestore.instance.collection('videos').doc(widget.videoId).get();
+      final vv=video.data()??<String,dynamic>{},sahip=(vv['ownerId']??'').toString(),izin=(vv['commentAudience']??'Herkes').toString();
+      if(user.uid!=sahip){
+        if(vv['allowComments']==false||izin=='Kimse'){
+          if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bu gönderide yorumlar kapalı.')));
+          return;
+        }
+        if(izin!='Herkes'){
+          final sahipBelgesi=await FirebaseFirestore.instance.collection('users').doc(sahip).get(),sv=sahipBelgesi.data()??<String,dynamic>{};
+          if(izin=='Arkadaşlar'&&!List<String>.from(sv['friends']??const[]).contains(user.uid)){
+            if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bu gönderiye yalnızca arkadaşlar yorum yapabilir.')));
+            return;
+          }
+          if(izin=='Takip ettiklerim'&&!List<String>.from(sv['following']??const[]).contains(user.uid)){
+            if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bu gönderiye yalnızca içerik sahibinin takip ettiği kişiler yorum yapabilir.')));
+            return;
+          }
+        }
+      }
+    }catch(_){}
     setState(() => gonderiliyor = true);
     try {
       final profil = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
@@ -3710,6 +3745,7 @@ class _YeniYuklePageState extends State<YuklePage> {
   bool otomatikAltyazi = false;
   bool ortakGonderi = false;
   String gizlilik = 'Herkes';
+  String yorumKitlesi = 'Herkes';
   String kalite = 'HD';
   XFile? medya;
   XFile? muzik;
@@ -3779,6 +3815,7 @@ class _YeniYuklePageState extends State<YuklePage> {
       'location': konum.text.trim(),
       'tags': etiketler.text.trim(),
       'privacy': gizlilik,
+      'commentAudience': yorumKitlesi,
       'quality': kalite,
       'createdAt': FieldValue.serverTimestamp(),
     });
@@ -3839,10 +3876,13 @@ class _YeniYuklePageState extends State<YuklePage> {
         'description': aciklama.text.trim().isEmpty ? 'NgelX ile paylaşıldı ✨' : aciklama.text.trim(),
         'allowDownload': indirmeyeIzin,
         'allowComments': yorumlaraIzin,
+        'commentAudience': yorumKitlesi,
         'allowReshare': yenidenPaylasimaIzin,
         'autoCaptions': otomatikAltyazi,
         'collab': ortakGonderi,
         'privacy': gizlilik,
+        'visibleTo':gizlilik=='Yakın arkadaşlar'?List<String>.from(profil.data()?['closeFriends']??const[]):<String>[],
+        'hiddenFor':<String>[],
         'quality': kalite,
         'location': konum.text.trim(),
         'tags': etiketler.text.trim(),
@@ -3955,6 +3995,13 @@ class _YeniYuklePageState extends State<YuklePage> {
             onChanged: (v) => setState(() => indirmeyeIzin = v),
           ),
           SwitchListTile(contentPadding: EdgeInsets.zero, title: const Text('Yorumlara izin ver'), value: yorumlaraIzin, onChanged: (v) => setState(() => yorumlaraIzin = v)),
+          if(yorumlaraIzin)DropdownButtonFormField<String>(
+            initialValue:yorumKitlesi,
+            decoration:const InputDecoration(labelText:'Kimler yorum yapabilir?',prefixIcon:Icon(Icons.mode_comment_outlined)),
+            items:const ['Herkes','Arkadaşlar','Takip ettiklerim','Kimse'].map((e)=>DropdownMenuItem(value:e,child:Text(e))).toList(),
+            onChanged:(v)=>setState(()=>yorumKitlesi=v??'Herkes'),
+          ),
+          if(yorumlaraIzin)const SizedBox(height:10),
           SwitchListTile(contentPadding: EdgeInsets.zero, title: const Text('Yeniden paylaşıma izin ver'), value: yenidenPaylasimaIzin, onChanged: (v) => setState(() => yenidenPaylasimaIzin = v)),
           SwitchListTile(contentPadding: EdgeInsets.zero, title: const Text('Otomatik altyazı'), value: otomatikAltyazi, onChanged: (v) => setState(() => otomatikAltyazi = v)),
           SwitchListTile(contentPadding: EdgeInsets.zero, title: const Text('Ortak gönderi'), value: ortakGonderi, onChanged: (v) => setState(() => ortakGonderi = v)),
