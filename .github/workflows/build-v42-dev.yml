@@ -42,15 +42,8 @@ jobs:
           fi
           mkdir -p "$HOME/.android"
           if [ ! -f "$HOME/.android/debug.keystore" ]; then
-            keytool -genkeypair -v \
-              -keystore "$HOME/.android/debug.keystore" \
-              -storepass android \
-              -alias androiddebugkey \
-              -keypass android \
-              -dname "CN=Android Debug,O=Android,C=US" \
-              -keyalg RSA \
-              -keysize 2048 \
-              -validity 10000
+            echo "Sabit test imza anahtarı bulunamadı. Yeni anahtar üretmek paket güncellemelerini bozacağı için derleme durduruldu."
+            exit 1
           fi
           keytool -list -v -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey | grep -E "SHA256:|Owner:|Valid from:" || true
 
@@ -90,6 +83,24 @@ jobs:
       - name: Release APK olustur
         working-directory: app
         run: flutter build apk --release
+
+      - name: APK imzasını doğrula
+        shell: bash
+        env:
+          KEYSTORE_BASE64: ${{ secrets.NGELX_KEYSTORE_BASE64 }}
+        run: |
+          set -euo pipefail
+          APK="app/build/app/outputs/flutter-apk/app-release.apk"
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -1)"
+          test -x "$APKSIGNER"
+          "$APKSIGNER" verify --verbose --print-certs "$APK"
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            EXPECTED="$(keytool -exportcert -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey 2>/dev/null | sha256sum | awk '{print $1}')"
+            ACTUAL="$("$APKSIGNER" verify --print-certs "$APK" | awk -F': ' '/Signer #1 certificate SHA-256 digest/ {print $2; exit}' | tr '[:upper:]' '[:lower:]' | tr -d ': ')"
+            echo "Beklenen test sertifikası: $EXPECTED"
+            echo "APK sertifikası:          $ACTUAL"
+            test "$EXPECTED" = "$ACTUAL"
+          fi
 
       - name: APK dosyasini yukle
         uses: actions/upload-artifact@v4
