@@ -143,7 +143,7 @@ Future<void> icerikAracMenusu(BuildContext context,String icerikId,{Future<void>
   await showModalBottomSheet(context:context,backgroundColor:Colors.white,shape:const RoundedRectangleBorder(borderRadius:BorderRadius.vertical(top:Radius.circular(28))),builder:(c)=>StatefulBuilder(builder:(c,setPencere)=>SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
     Container(width:42,height:4,margin:const EdgeInsets.all(12),decoration:BoxDecoration(color:Colors.black26,borderRadius:BorderRadius.circular(8))),
     const Text('İçerik araçları',style:TextStyle(color:Colors.black,fontSize:20,fontWeight:FontWeight.w900)),
-    ListTile(leading:const Icon(Icons.translate_rounded,color:mor),title:const Text('Dil ve çeviri',style:TextStyle(color:Colors.black87,fontWeight:FontWeight.w700)),subtitle:Text('Bu içerik için: ${dilAdlari[icerikDili]}',style:const TextStyle(color:Colors.black54)),onTap:()async{final sec=await showDialog<String>(context:c,builder:(d)=>SimpleDialog(backgroundColor:Colors.white,title:const Text('İçerik dili'),children:dilAdlari.entries.map((e)=>SimpleDialogOption(onPressed:()=>Navigator.pop(d,e.key),child:Row(children:[if(e.key==icerikDili)const Icon(Icons.check,color:mor),if(e.key==icerikDili)const SizedBox(width:8),Text(e.value)]))).toList()));if(sec!=null){await hafiza.setString('content_language_$icerikId',sec);setPencere(()=>icerikDili=sec);}}),
+    ListTile(leading:const Icon(Icons.translate_rounded,color:mor),title:const Text('Dil ve çeviri',style:TextStyle(color:Colors.black87,fontWeight:FontWeight.w700)),subtitle:Text('Bu içerik için: ${dilAdlari[icerikDili]}',style:const TextStyle(color:Colors.black54)),onTap:()async{final sec=await showDialog<String>(context:c,builder:(d)=>Theme(data:ThemeData.light(),child:SimpleDialog(backgroundColor:Colors.white,title:const Text('İçerik dili',style:TextStyle(color:Colors.black87)),children:dilAdlari.entries.map((e)=>SimpleDialogOption(onPressed:()=>Navigator.pop(d,e.key),child:Row(children:[if(e.key==icerikDili)const Icon(Icons.check,color:mor),if(e.key==icerikDili)const SizedBox(width:8),Text(e.value,style:const TextStyle(color:Colors.black87))]))).toList())));if(sec!=null){await hafiza.setString('content_language_$icerikId',sec);setPencere(()=>icerikDili=sec);}}),
     SwitchListTile(secondary:const Icon(Icons.closed_caption_rounded,color:Colors.blue),title:const Text('Altyazı',style:TextStyle(color:Colors.black87,fontWeight:FontWeight.w700)),subtitle:Text(altyaziVar?'Konuşmaları yazı olarak göster':'Bu içerik için altyazı henüz yok',style:const TextStyle(color:Colors.black54)),value:altyazi&&altyaziVar,onChanged:altyaziVar?(v)async{await hafiza.setBool('content_caption_$icerikId',v);setPencere(()=>altyazi=v);}:null),
     if(hizDegistir!=null)ListTile(
       leading:const Icon(Icons.speed_rounded,color:Colors.orange),
@@ -5478,7 +5478,7 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
     _uyeProfilCache.clear();
     await sistemMesaji('${secilen.length} yeni üye gruba eklendi.');
   }
-  Future<void> ayril(List<String> uyeler,List<String> admins)async{final me=ben;if(me==null)return;if(admins.length==1&&admins.contains(me)&&uyeler.length>1){await showDialog<void>(context:context,builder:(c)=>AlertDialog(backgroundColor:Colors.white,title:const Text('Önce yönetici belirle'),content:const Text('Gruptan ayrılmadan önce başka bir üyeyi yönetici yapmalısın.'),actions:[FilledButton(onPressed:()=>Navigator.pop(c),child:const Text('Tamam'))]));return;}final sonKisi=uyeler.length==1;final ok=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(backgroundColor:Colors.white,title:Text(sonKisi?'Grup silinsin mi?':'Gruptan ayrılmak istiyor musun?'),content:Text(sonKisi?'Grupta yalnızca sen kaldın. Grup sohbeti listenden kaldırılacak.':'Mesaj geçmişine erişimin sona erecek.'),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),FilledButton(style:FilledButton.styleFrom(backgroundColor:Colors.red),onPressed:()=>Navigator.pop(c,true),child:Text(sonKisi?'Grubu sil':'Ayrıl'))]))??false;if(!ok)return;if(sonKisi)await ref.set({'members':FieldValue.arrayRemove([me]),'admins':FieldValue.arrayRemove([me]),'groupDeleted':true,'deletedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));else{await sistemMesaji('Bir üye gruptan ayrıldı.');await ref.update({'members':FieldValue.arrayRemove([me]),'admins':FieldValue.arrayRemove([me])});}if(mounted)Navigator.popUntil(context,(r)=>r.isFirst);}
+  Future<void> ayril(List<String> uyeler,List<String> admins)async{final me=ben;if(me==null)return;if(admins.length==1&&admins.contains(me)&&uyeler.length>1){await showDialog<void>(context:context,builder:(c)=>Theme(data:ThemeData.light(),child:AlertDialog(backgroundColor:Colors.white,title:const Text('Önce yönetici belirle',style:TextStyle(color:Colors.black87)),content:const Text('Gruptan ayrılmadan önce başka bir üyeyi yönetici yapmalısın.',style:TextStyle(color:Colors.black87)),actions:[FilledButton(onPressed:()=>Navigator.pop(c),child:const Text('Tamam'))])));return;}final sonKisi=uyeler.length==1;final ok=await showDialog<bool>(context:context,builder:(c)=>Theme(data:ThemeData.light(),child:AlertDialog(backgroundColor:Colors.white,title:Text(sonKisi?'Grup silinsin mi?':'Gruptan ayrılmak istiyor musun?',style:const TextStyle(color:Colors.black87)),content:Text(sonKisi?'Grupta yalnızca sen kaldın. Grup sohbeti listenden kaldırılacak.':'Mesaj geçmişine erişimin sona erecek.',style:const TextStyle(color:Colors.black87)),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),FilledButton(style:FilledButton.styleFrom(backgroundColor:Colors.red),onPressed:()=>Navigator.pop(c,true),child:Text(sonKisi?'Grubu sil':'Ayrıl'))])))??false;if(!ok)return;if(sonKisi)await ref.set({'members':FieldValue.arrayRemove([me]),'admins':FieldValue.arrayRemove([me]),'groupDeleted':true,'deletedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));else{await sistemMesaji('Bir üye gruptan ayrıldı.');await ref.update({'members':FieldValue.arrayRemove([me]),'admins':FieldValue.arrayRemove([me])});}if(mounted)Navigator.popUntil(context,(r)=>r.isFirst);}
   Future<void> ayarDegistir(String alan,bool deger)async{await ref.set({alan:deger},SetOptions(merge:true));}
   @override Widget build(BuildContext context)=>Theme(data:ThemeData.light(),child:Scaffold(backgroundColor:Colors.white,appBar:AppBar(title:const Text('Grup bilgileri')),body:StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(stream:ref.snapshots(),builder:(_,s){if(!s.hasData)return const Center(child:CircularProgressIndicator(color:mor));final v=s.data?.data()??{},uyeler=List<String>.from(v['members']??const[]),yoneticiler=List<String>.from(v['admins']??const[]),yonetici=yoneticiler.contains(ben),foto=(v['groupPhotoUrl']??'').toString(),ad=(v['groupName']??'Grup').toString();return ListView(padding:EdgeInsets.fromLTRB(18,18,18,30+MediaQuery.paddingOf(context).bottom),children:[GestureDetector(onTap:yonetici?fotografDuzenle:null,child:Stack(alignment:Alignment.bottomRight,children:[Center(child:CircleAvatar(radius:50,backgroundColor:const Color(0xFFE9DDFF),backgroundImage:foto.isEmpty?null:NetworkImage(foto),child:foto.isEmpty?const Icon(Icons.groups,color:mor,size:48):null)),if(yonetici)Positioned(right:MediaQuery.sizeOf(context).width/2-62,child:const CircleAvatar(radius:15,backgroundColor:mor,child:Icon(Icons.camera_alt,color:Colors.white,size:17))) ])),const SizedBox(height:10),Text(ad,textAlign:TextAlign.center,style:const TextStyle(color:Colors.black,fontSize:25,fontWeight:FontWeight.w900)),Text('${uyeler.length}/60 üye',textAlign:TextAlign.center,style:const TextStyle(color:Colors.black54)),if(yonetici)...[ListTile(leading:const Icon(Icons.edit,color:mor),title:const Text('Grup adını düzenle'),onTap:()=>adiDuzenle(ad)),ListTile(leading:const Icon(Icons.add_a_photo,color:mor),title:const Text('Grup fotoğrafını değiştir'),onTap:fotografDuzenle)],const Divider(),ListTile(leading:const Icon(Icons.photo_library_outlined,color:mor),title:const Text('Medya, dosyalar ve bağlantılar'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupMedyaPage(chatId:widget.chatId)))),ListTile(leading:const Icon(Icons.push_pin_outlined,color:mor),title:const Text('Sabitlenmiş mesajlar'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>SabitlenenGrupMesajlariPage(chatId:widget.chatId)))),if(yonetici)...[const Divider(),const Text('Grup izinleri',style:TextStyle(fontSize:18,fontWeight:FontWeight.w900)),SwitchListTile(title:const Text('Yalnızca yöneticiler mesaj gönderebilir'),value:v['onlyAdminsCanPost']==true,onChanged:(x)=>ayarDegistir('onlyAdminsCanPost',x)),SwitchListTile(title:const Text('Yeni üyeler eski mesajları görebilir'),value:v['newMembersSeeHistory']!=false,onChanged:(x)=>ayarDegistir('newMembersSeeHistory',x)),SwitchListTile(title:const Text('Katılma istekleri yönetici onayından geçsin'),value:v['joinApproval']==true,onChanged:(x)=>ayarDegistir('joinApproval',x))],const Divider(),Row(children:[const Expanded(child:Text('Üyeler',style:TextStyle(color:Colors.black,fontSize:18,fontWeight:FontWeight.w900))),if(yonetici)TextButton.icon(onPressed:uyeler.length>=60?null:()=>uyeEkle(uyeler),icon:const Icon(Icons.person_add_alt_1),label:const Text('Üye ekle'))]),...uyeler.map((id)=>FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(future:_uyeGetir(id),builder:(_,u){final p=u.data?.data()??{},isim=(p['displayName']??p['username']??'Kullanıcı').toString(),pf=(p['photoUrl']??'').toString(),admin=yoneticiler.contains(id);return ListTile(onTap:yonetici&&id!=ben?()=>uyeIslemi(id,isim,admin):null,leading:CircleAvatar(backgroundImage:pf.isEmpty?null:NetworkImage(pf),child:pf.isEmpty?const Icon(Icons.person):null),title:Text(isim),subtitle:Text(admin?'Yönetici':'Üye'),trailing:yonetici&&id!=ben?const Icon(Icons.more_vert):null);})),const Divider(),ListTile(leading:const Icon(Icons.exit_to_app,color:Colors.red),title:Text(uyeler.length==1?'Grubu sil':'Gruptan ayrıl',style:const TextStyle(color:Colors.red)),onTap:()=>ayril(uyeler,yoneticiler))]);})));
 }
@@ -7475,10 +7475,10 @@ class _TercihlerPageState extends State<TercihlerPage> {
     final kontrol=TextEditingController();
     await showModalBottomSheet<void>(
       context:context,backgroundColor:Colors.white,showDragHandle:true,isScrollControlled:true,
-      builder:(c)=>StatefulBuilder(builder:(c,setP)=>SafeArea(child:Padding(
+      builder:(c)=>Theme(data:ThemeData.light(),child:StatefulBuilder(builder:(c,setP)=>SafeArea(child:Padding(
         padding:EdgeInsets.fromLTRB(18,6,18,MediaQuery.of(c).viewInsets.bottom+18),
         child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
-          const Text('Gizli kelimeler',style:TextStyle(fontSize:20,fontWeight:FontWeight.w900)),
+          const Text('Gizli kelimeler',style:TextStyle(color:Colors.black87,fontSize:20,fontWeight:FontWeight.w900)),
           const SizedBox(height:6),
           const Text('Bu kelimeleri içeren yorum ve özel mesajlar sende gizlenir.',style:TextStyle(color:Colors.black54)),
           const SizedBox(height:14),
@@ -7502,7 +7502,7 @@ class _TercihlerPageState extends State<TercihlerPage> {
             },child:const Text('Ekle')),
           ]),
         ]),
-      ))),
+      )))),
     );
     kontrol.dispose();
   }
@@ -8070,10 +8070,10 @@ class _ProfilPageState extends State<ProfilPage> {
     final user=aktifKullanici;if(user==null||user.isAnonymous)return;
     final secim=await showModalBottomSheet<String>(
       context:context,backgroundColor:Colors.white,showDragHandle:true,
-      builder:(c)=>SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
-        ListTile(leading:const Icon(Icons.video_library_outlined,color:mor),title:Text(tanitimVideoUrl.isEmpty?'Tanıtım videosu seç':'Tanıtım videosunu değiştir'),onTap:()=>Navigator.pop(c,'pick')),
+      builder:(c)=>Theme(data:ThemeData.light(),child:SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
+        ListTile(leading:const Icon(Icons.video_library_outlined,color:mor),title:Text(tanitimVideoUrl.isEmpty?'Tanıtım videosu seç':'Tanıtım videosunu değiştir',style:const TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(c,'pick')),
         if(tanitimVideoUrl.isNotEmpty)ListTile(leading:const Icon(Icons.delete_outline,color:Colors.red),title:const Text('Tanıtım videosunu kaldır',style:TextStyle(color:Colors.red)),onTap:()=>Navigator.pop(c,'remove')),
-      ])),
+      ]))),
     );
     if(secim==null)return;
     if(secim=='remove'){
@@ -8170,7 +8170,9 @@ class _ProfilPageState extends State<ProfilPage> {
       builder: (ctx) {
         bool kaydediliyor = false;
 
-        return StatefulBuilder(
+        return Theme(
+          data:ThemeData.light(),
+          child:StatefulBuilder(
           builder: (ctx, pencereState) {
             return SafeArea(
               top:false,
@@ -8273,7 +8275,7 @@ class _ProfilPageState extends State<ProfilPage> {
             )),
             );
           },
-        );
+        ));
       },
     );
   }
