@@ -911,6 +911,96 @@ class AnaEkran extends StatefulWidget {
 
 class _AnaEkranState extends State<AnaEkran> {
   int secili = 0;
+  String? acilanAramaId;
+
+  Widget gelenAramaKatmani(){
+    final ben=FirebaseAuth.instance.currentUser?.uid;
+    if(ben==null||FirebaseAuth.instance.currentUser?.isAnonymous==true)return const SizedBox.shrink();
+    return StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
+      stream:FirebaseFirestore.instance.collection('calls').where('members',arrayContains:ben).snapshots(),
+      builder:(context,s){
+        final adaylar=(s.data?.docs??[]).where((d){
+          final v=d.data();
+          if(v['startedBy']==ben||v['status']!='ringing')return false;
+          final t=v['createdAt'];
+          if(t is Timestamp&&DateTime.now().difference(t.toDate()).inMinutes>3)return false;
+          return true;
+        }).toList()
+          ..sort((a,b){
+            final at=a.data()['createdAt'],bt=b.data()['createdAt'];
+            final am=at is Timestamp?at.millisecondsSinceEpoch:0,bm=bt is Timestamp?bt.millisecondsSinceEpoch:0;
+            return bm.compareTo(am);
+          });
+        if(adaylar.isEmpty)return const SizedBox.shrink();
+        final d=adaylar.first,v=d.data(),from=(v['startedBy']??'').toString(),grup=v['group']==true,goruntulu=v['video']==true;
+        return FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(
+          future:grup||from.isEmpty?null:FirebaseFirestore.instance.collection('users').doc(from).get(),
+          builder:(_,u){
+            final p=u.data?.data()??<String,dynamic>{};
+            final baslik=grup?(v['title']??'Grup araması').toString():(p['displayName']??p['username']??'NgelX kullanıcısı').toString();
+            final foto=grup?'':(p['photoUrl']??'').toString();
+            return SafeArea(
+              child:Align(
+                alignment:Alignment.topCenter,
+                child:Container(
+                  margin:const EdgeInsets.fromLTRB(12,10,12,0),
+                  padding:const EdgeInsets.all(12),
+                  decoration:BoxDecoration(
+                    color:Colors.white,
+                    borderRadius:BorderRadius.circular(22),
+                    boxShadow:const [BoxShadow(color:Color(0x33000000),blurRadius:24,offset:Offset(0,8))],
+                  ),
+                  child:Row(children:[
+                    CircleAvatar(
+                      radius:24,
+                      backgroundColor:const Color(0xFFE9DDFF),
+                      backgroundImage:foto.isEmpty?null:NetworkImage(foto),
+                      child:foto.isEmpty?Icon(grup?Icons.groups:Icons.person,color:mor):null,
+                    ),
+                    const SizedBox(width:11),
+                    Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisSize:MainAxisSize.min,children:[
+                      Text(baslik,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black,fontWeight:FontWeight.w900,fontSize:16)),
+                      Text(goruntulu?'Gelen görüntülü arama':'Gelen sesli arama',style:const TextStyle(color:Colors.black54,fontSize:12)),
+                    ])),
+                    IconButton.filled(
+                      style:IconButton.styleFrom(backgroundColor:Colors.red,foregroundColor:Colors.white),
+                      tooltip:'Reddet',
+                      onPressed:()async{
+                        await d.reference.set({'status':'ended','endedBy':ben,'endedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
+                      },
+                      icon:const Icon(Icons.call_end_rounded),
+                    ),
+                    const SizedBox(width:8),
+                    IconButton.filled(
+                      style:IconButton.styleFrom(backgroundColor:Colors.green,foregroundColor:Colors.white),
+                      tooltip:'Cevapla',
+                      onPressed:()async{
+                        if(acilanAramaId==d.id)return;
+                        setState(()=>acilanAramaId=d.id);
+                        try{
+                          await d.reference.set({'status':'active','participants':FieldValue.arrayUnion([ben]),'answeredAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
+                          if(!context.mounted)return;
+                          await Navigator.push(context,MaterialPageRoute(builder:(_)=>NgelXAramaPage(
+                            roomName:(v['roomName']??'').toString(),
+                            baslik:baslik,
+                            goruntulu:goruntulu,
+                            aramaRef:d.reference,
+                          )));
+                        }finally{
+                          if(mounted)setState(()=>acilanAramaId=null);
+                        }
+                      },
+                      icon:Icon(goruntulu?Icons.videocam_rounded:Icons.call_rounded),
+                    ),
+                  ]),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -922,10 +1012,13 @@ class _AnaEkranState extends State<AnaEkran> {
       const ProfilPage(),
     ];
     return Scaffold(
-      body: IndexedStack(
-        index: secili,
-        children: sayfalar,
-      ),
+      body:Stack(children:[
+        Positioned.fill(child:IndexedStack(index:secili,children:sayfalar)),
+        Positioned.fill(child:IgnorePointer(
+          ignoring:false,
+          child:gelenAramaKatmani(),
+        )),
+      ]),
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(
           color: Colors.white,
