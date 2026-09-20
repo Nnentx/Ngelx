@@ -4924,7 +4924,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
     if(ben==null||aramaBaslatiliyor)return;
     setState(()=>aramaBaslatiliyor=true);
     try{
-      final grup=await chatRef.get().timeout(const Duration(seconds:8));
+      final grup=await chatRef.get().timeout(const Duration(seconds:15));
       final uyeler=List<String>.from(grup.data()?['members']??const[]);
       if(!uyeler.contains(ben))throw Exception('Bu grubun üyesi değilsin.');
       final grupAdi=(grup.data()?['groupName']??widget.ad).toString();
@@ -4937,7 +4937,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
         'callTitle':grupAdi,
         'callParticipants':<String>[ben],
         'callCreatedAt':FieldValue.serverTimestamp(),
-      },SetOptions(merge:true)).timeout(const Duration(seconds:8));
+      },SetOptions(merge:true)).timeout(const Duration(seconds:15));
       for(final uye in uyeler){
         if(uye==ben)continue;
         unawaited(uygulamaBildirimiGonder(
@@ -4954,7 +4954,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
     }catch(e){
       if(!mounted)return;
       setState(()=>aramaBaslatiliyor=false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Grup araması başlatılamadı: '+e.toString().replaceFirst('Exception: ',''))));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Grup araması başlatılamadı. Bağlantını kontrol edip tekrar dene.')));
     }
   }
 
@@ -5828,7 +5828,7 @@ class _SohbetPageState extends State<SohbetPage> {
     unawaited(batch.commit().catchError((e){
       if(!mounted)return;
       if(mesaj.text.isEmpty)mesaj.text=t;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Mesaj gönderilemedi, tekrar dene: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Mesaj gönderilemedi. Bağlantını kontrol edip tekrar dene.')));
     }));
   }
 
@@ -6121,7 +6121,7 @@ class _SohbetPageState extends State<SohbetPage> {
     final odaAdi='chat_${widget.chatId}_${DateTime.now().millisecondsSinceEpoch}';
     final ref=FirebaseFirestore.instance.collection('chats').doc(widget.chatId);
     try{
-      final mevcut=await ref.get().timeout(const Duration(seconds:8));
+      final mevcut=await ref.get().timeout(const Duration(seconds:15));
       final aramaVerisi=<String,dynamic>{
         'callStatus':'ringing',
         'callRoomName':odaAdi,
@@ -6132,7 +6132,7 @@ class _SohbetPageState extends State<SohbetPage> {
         'callCreatedAt':FieldValue.serverTimestamp(),
       };
       if(!mevcut.exists)aramaVerisi['members']=<String>[ben,widget.digerUid];
-      await ref.set(aramaVerisi,SetOptions(merge:true)).timeout(const Duration(seconds:8));
+      await ref.set(aramaVerisi,SetOptions(merge:true)).timeout(const Duration(seconds:15));
       if(!mounted)return;
       unawaited(uygulamaBildirimiGonder(
         toUid:widget.digerUid,
@@ -6156,7 +6156,7 @@ class _SohbetPageState extends State<SohbetPage> {
       if(!mounted)return;
       setState(()=>aramaBaslatiliyor=false);
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content:Text('Arama başlatılamadı: ${e.toString().replaceFirst('Exception: ','')}'),
+        content:const Text('Arama başlatılamadı. Bağlantını kontrol edip tekrar dene.'),
       ));
     }
   }
