@@ -41,6 +41,18 @@ jobs:
             echo "Test klasoru yok; derleme kontrolune geciliyor."
           fi
 
+      - name: Firestore kurallarini yayinla
+        shell: bash
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "$FIREBASE_TOKEN" ]; then
+            echo "FIREBASE_TOKEN yok; Firestore kurallari bu calistirmada yayinlanmadi."
+            exit 0
+          fi
+          npx --yes firebase-tools deploy --project ngelx-44eed --only firestore:rules --token "$FIREBASE_TOKEN" --non-interactive
+
       - name: Test imza anahtarını sabitle
         uses: actions/cache@v4
         with:
@@ -101,18 +113,6 @@ jobs:
             echo "APK sertifikası:          $ACTUAL"
             test "$EXPECTED" = "$ACTUAL"
           fi
-
-      - name: Firestore kurallarini yayinla
-        shell: bash
-        env:
-          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
-        run: |
-          set -euo pipefail
-          if [ -z "$FIREBASE_TOKEN" ]; then
-            echo "FIREBASE_TOKEN yok; Firestore kurallari bu calistirmada yayinlanmadi."
-            exit 0
-          fi
-          npx --yes firebase-tools deploy --project ngelx-44eed --only firestore:rules --token "$FIREBASE_TOKEN" --non-interactive
 
       - name: APK dosyasini yukle
         uses: actions/upload-artifact@v4
