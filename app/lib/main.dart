@@ -6114,7 +6114,25 @@ class KullaniciProfilPage extends StatelessWidget {
                 Column(children:[const Padding(padding:EdgeInsets.only(bottom:12),child:Row(mainAxisAlignment:MainAxisAlignment.spaceAround,children:[_ProfilSekme('Gönderiler',true),_ProfilSekme('Reels',false),_ProfilSekme('Etiketlenenler',false)])),StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                   stream: FirebaseFirestore.instance.collection('videos').where('ownerId', isEqualTo: uid).snapshots(),
                   builder: (_, p) {
-                    final docs = (p.data?.docs ?? []).where((d) => d.data()['type'] != 'story').toList();
+                    final docs = (p.data?.docs ?? []).where((d){
+                      final x=d.data();
+                      if(x['type']=='story')return false;
+                      if(me==uid)return true;
+                      final hidden=List<String>.from(x['hiddenFor']??const[]);
+                      if(me!=null&&hidden.contains(me))return false;
+                      final privacy=(x['privacy']??'Herkes').toString();
+                      if(privacy=='Yalnızca ben')return false;
+                      if(privacy=='Arkadaşlar')return arkadaslar.contains(uid);
+                      if(privacy=='Yakın arkadaşlar')return me!=null&&List<String>.from(x['visibleTo']??const[]).contains(me);
+                      return true;
+                    }).toList()
+                      ..sort((a,b){
+                        final ap=a.data()['pinned']==true,bp=b.data()['pinned']==true;
+                        if(ap!=bp)return ap?-1:1;
+                        final at=a.data()['createdAt'],bt=b.data()['createdAt'];
+                        final am=at is Timestamp?at.millisecondsSinceEpoch:0,bm=bt is Timestamp?bt.millisecondsSinceEpoch:0;
+                        return bm.compareTo(am);
+                      });
                     return GridView.builder(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
@@ -6764,6 +6782,50 @@ class HikayeArsiviPage extends StatelessWidget{
 
 class ProfilBolumuPage extends StatelessWidget{final String baslik,aciklama;final IconData ikon;const ProfilBolumuPage({super.key,required this.baslik,required this.aciklama,required this.ikon});@override Widget build(BuildContext context)=>Theme(data:ThemeData.light(),child:Scaffold(backgroundColor:Colors.white,appBar:AppBar(title:Text(baslik,style:const TextStyle(fontWeight:FontWeight.w900))),body:Center(child:Padding(padding:const EdgeInsets.all(28),child:Column(mainAxisSize:MainAxisSize.min,children:[CircleAvatar(radius:38,backgroundColor:const Color(0xFFF1E9FF),child:Icon(ikon,color:mor,size:38)),const SizedBox(height:14),Text(aciklama,textAlign:TextAlign.center,style:const TextStyle(color:Colors.black54,fontSize:16))])))));}
 
+class IcerikGizlemePage extends StatelessWidget{
+  final String videoId;
+  const IcerikGizlemePage({super.key,required this.videoId});
+  @override Widget build(BuildContext context){
+    final me=FirebaseAuth.instance.currentUser?.uid;
+    if(me==null)return const Scaffold(body:Center(child:Text('Oturum bulunamadı.')));
+    final videoRef=FirebaseFirestore.instance.collection('videos').doc(videoId);
+    return Theme(data:ThemeData.light(),child:Scaffold(
+      backgroundColor:Colors.white,
+      appBar:AppBar(title:const Text('İçeriği kimlerden gizle?',style:TextStyle(fontWeight:FontWeight.w900))),
+      body:StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
+        stream:videoRef.snapshots(),
+        builder:(_,videoSnap){
+          final hidden=Set<String>.from(List<String>.from(videoSnap.data?.data()?['hiddenFor']??const[]));
+          return StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
+            stream:FirebaseFirestore.instance.collection('users').doc(me).snapshots(),
+            builder:(_,userSnap){
+              final uv=userSnap.data?.data()??<String,dynamic>{};
+              final ids=<String>{...List<String>.from(uv['friends']??const[]),...List<String>.from(uv['followers']??const[])}.toList();
+              if(ids.isEmpty)return const Center(child:Text('Gizleyebileceğin arkadaş veya takipçi yok.',style:TextStyle(color:Colors.black54)));
+              return ListView.builder(
+                padding:const EdgeInsets.all(12),itemCount:ids.length,
+                itemBuilder:(_,i)=>FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(
+                  future:FirebaseFirestore.instance.collection('users').doc(ids[i]).get(),
+                  builder:(_,p){
+                    final v=p.data?.data()??<String,dynamic>{},foto=(v['photoUrl']??'').toString(),ad=(v['displayName']??v['username']??'NgelX').toString(),secili=hidden.contains(ids[i]);
+                    return CheckboxListTile(
+                      value:secili,
+                      onChanged:(x)=>videoRef.set({'hiddenFor':x==true?FieldValue.arrayUnion([ids[i]]):FieldValue.arrayRemove([ids[i]])},SetOptions(merge:true)),
+                      secondary:CircleAvatar(backgroundImage:foto.isEmpty?null:NetworkImage(foto),child:foto.isEmpty?const Icon(Icons.person):null),
+                      title:Text(ad,style:const TextStyle(fontWeight:FontWeight.w700)),
+                      subtitle:Text('@'+(v['username']??'ngelx').toString()),
+                    );
+                  },
+                ),
+              );
+            },
+          );
+        },
+      ),
+    ));
+  }
+}
+
 class ProfilPage extends StatefulWidget {
   const ProfilPage({super.key});
 
@@ -7140,6 +7202,11 @@ class _ProfilPageState extends State<ProfilPage> {
       shape:const RoundedRectangleBorder(borderRadius:BorderRadius.vertical(top:Radius.circular(26))),
       builder:(ctx)=>Theme(data:ThemeData.light(),child:SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
         ListTile(leading:const Icon(Icons.edit,color:mavi),title:const Text('Açıklamayı düzenle'),onTap:(){Navigator.pop(ctx);icerikDuzenle(d);}),
+        ListTile(
+          leading:const Icon(Icons.visibility_off_outlined,color:Colors.orange),
+          title:const Text('Belirli kişilerden gizle'),
+          onTap:(){Navigator.pop(ctx);Navigator.push(context,MaterialPageRoute(builder:(_)=>IcerikGizlemePage(videoId:d.id)));},
+        ),
         ListTile(
           leading:Icon(sabit?Icons.push_pin:Icons.push_pin_outlined,color:mor),
           title:Text(sabit?'Sabitlemeyi kaldır':'Profilde sabitle'),
