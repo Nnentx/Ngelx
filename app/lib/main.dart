@@ -6330,6 +6330,13 @@ class SohbetBilgiPage extends StatelessWidget{
   Future<void> takmaAd(BuildContext context)async{final me=FirebaseAuth.instance.currentUser?.uid;if(me==null)return;final chat=await FirebaseFirestore.instance.collection('chats').doc(chatId).get(),c=TextEditingController(text:(chat.data()?['nicknames']?[me]??'').toString());if(!context.mounted)return;final sonuc=await showDialog<String>(context:context,builder:(x)=>AlertDialog(backgroundColor:Colors.white,title:const Text('Takma ad'),content:TextField(controller:c,maxLength:30,decoration:const InputDecoration(hintText:'Bu sohbette görünecek ad')),actions:[TextButton(onPressed:()=>Navigator.pop(x),child:const Text('Vazgeç')),FilledButton(onPressed:()=>Navigator.pop(x,c.text.trim()),child:const Text('Kaydet'))]));c.dispose();if(sonuc!=null)await FirebaseFirestore.instance.collection('chats').doc(chatId).update({'nicknames.$me':sonuc});}
   Future<void> ozellestir(BuildContext context)async{
     final me=FirebaseAuth.instance.currentUser?.uid;if(me==null)return;
+    final mevcutBelge=await FirebaseFirestore.instance.collection('chats').doc(chatId).get();
+    final mevcut=mevcutBelge.data()??<String,dynamic>{};
+    final seciliRenk=(mevcut['theme_$me'] is int)?mevcut['theme_$me'] as int:Colors.white.toARGB32();
+    final seciliOpaklik=(mevcut['backgroundOpacity_$me'] is num)?(mevcut['backgroundOpacity_$me'] as num).toDouble():.30;
+    final seciliYazi=(mevcut['messageFontSize_$me'] is num)?(mevcut['messageFontSize_$me'] as num).toDouble():16.0;
+    final seciliEmoji=(mevcut['quickEmoji_$me']??'👍').toString();
+    if(!context.mounted)return;
     final secim=await showModalBottomSheet<Object>(
       context:context,backgroundColor:Colors.white,showDragHandle:true,isScrollControlled:true,
       builder:(c)=>Theme(data:ThemeData.light(),child:SafeArea(child:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
@@ -6337,7 +6344,7 @@ class SohbetBilgiPage extends StatelessWidget{
         const ListTile(title:Text('Arka plan rengi',style:TextStyle(fontWeight:FontWeight.w700))),
         Wrap(spacing:16,runSpacing:16,children:[
           Colors.white,const Color(0xFFFFF4F7),const Color(0xFFF4F0FF),const Color(0xFFEFF8FF),const Color(0xFFF1FFF5)
-        ].map((x)=>InkWell(onTap:()=>Navigator.pop(c,x.toARGB32()),child:CircleAvatar(radius:25,backgroundColor:x,child:const Icon(Icons.check,color:Colors.black26)))).toList()),
+        ].map((x){final secili=x.toARGB32()==seciliRenk;return InkWell(onTap:()=>Navigator.pop(c,x.toARGB32()),child:Container(width:50,height:50,decoration:BoxDecoration(color:x,shape:BoxShape.circle,border:Border.all(color:secili?mor:Colors.black12,width:secili?3:1)),child:secili?const Icon(Icons.check,color:mor):null));}).toList()),
         const SizedBox(height:12),
         ListTile(leading:const Icon(Icons.photo_library_outlined,color:mor),title:const Text('Galeriden özel fotoğraf / logo seç'),onTap:()=>Navigator.pop(c,'gallery')),
         ListTile(leading:const Icon(Icons.camera_alt_outlined,color:mor),title:const Text('Kameradan arka plan çek'),onTap:()=>Navigator.pop(c,'camera')),
@@ -6345,17 +6352,17 @@ class SohbetBilgiPage extends StatelessWidget{
         const Divider(height:28),
         const ListTile(leading:Icon(Icons.opacity_rounded,color:mor),title:Text('Arka plan görünürlüğü',style:TextStyle(fontWeight:FontWeight.w800)),subtitle:Text('Fotoğrafın sohbetin arkasında ne kadar belirgin olacağını seç.')),
         Wrap(spacing:8,children:[
-          ActionChip(label:const Text('Hafif'),onPressed:()=>Navigator.pop(c,'opacity:15')),
-          ActionChip(label:const Text('Normal'),onPressed:()=>Navigator.pop(c,'opacity:30')),
-          ActionChip(label:const Text('Belirgin'),onPressed:()=>Navigator.pop(c,'opacity:50')),
-          ActionChip(label:const Text('Güçlü'),onPressed:()=>Navigator.pop(c,'opacity:70')),
+          ChoiceChip(label:const Text('Hafif'),selected:(seciliOpaklik-.15).abs()<.01,onSelected:(_)=>Navigator.pop(c,'opacity:15')),
+          ChoiceChip(label:const Text('Normal'),selected:(seciliOpaklik-.30).abs()<.01,onSelected:(_)=>Navigator.pop(c,'opacity:30')),
+          ChoiceChip(label:const Text('Belirgin'),selected:(seciliOpaklik-.50).abs()<.01,onSelected:(_)=>Navigator.pop(c,'opacity:50')),
+          ChoiceChip(label:const Text('Güçlü'),selected:(seciliOpaklik-.70).abs()<.01,onSelected:(_)=>Navigator.pop(c,'opacity:70')),
         ]),
         const Divider(height:28),
         const ListTile(leading:Icon(Icons.text_fields_rounded,color:mor),title:Text('Mesaj yazı boyutu',style:TextStyle(fontWeight:FontWeight.w800))),
         Wrap(spacing:8,children:[
-          ActionChip(label:const Text('Küçük'),onPressed:()=>Navigator.pop(c,'font:14')),
-          ActionChip(label:const Text('Normal'),onPressed:()=>Navigator.pop(c,'font:16')),
-          ActionChip(label:const Text('Büyük'),onPressed:()=>Navigator.pop(c,'font:18')),
+          ChoiceChip(label:const Text('Küçük'),selected:(seciliYazi-14).abs()<.1,onSelected:(_)=>Navigator.pop(c,'font:14')),
+          ChoiceChip(label:const Text('Normal'),selected:(seciliYazi-16).abs()<.1,onSelected:(_)=>Navigator.pop(c,'font:16')),
+          ChoiceChip(label:const Text('Büyük'),selected:(seciliYazi-18).abs()<.1,onSelected:(_)=>Navigator.pop(c,'font:18')),
         ]),
         const Divider(height:28),
         const ListTile(leading:Icon(Icons.emoji_emotions_outlined,color:mor),title:Text('Hızlı gönderme emojisi',style:TextStyle(fontWeight:FontWeight.w800)),subtitle:Text('Mesaj kutusu boşken sağdaki tek dokunuş emojisini seç.')),
@@ -6363,7 +6370,7 @@ class SohbetBilgiPage extends StatelessWidget{
           ['👍','❤️','😂','😍','🔥','👏','🙏','🎉','😮','😢','😡','💯'].map((e)=>InkWell(
             onTap:()=>Navigator.pop(c,'quickEmoji:'+e),
             borderRadius:BorderRadius.circular(28),
-            child:Container(width:48,height:48,alignment:Alignment.center,decoration:BoxDecoration(color:const Color(0xFFF4F4F6),borderRadius:BorderRadius.circular(24)),child:Text(e,style:const TextStyle(fontSize:25))),
+            child:Container(width:48,height:48,alignment:Alignment.center,decoration:BoxDecoration(color:seciliEmoji==e?const Color(0xFFEADFFF):const Color(0xFFF4F4F6),borderRadius:BorderRadius.circular(24),border:Border.all(color:seciliEmoji==e?mor:Colors.transparent,width:2)),child:Text(e,style:const TextStyle(fontSize:25))),
           )).toList(),
         )),
         const Divider(height:24),
