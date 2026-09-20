@@ -5749,7 +5749,7 @@ class SohbetBilgiPage extends StatelessWidget{
     if(arkadaslar.contains(uid)){if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Zaten arkadaşsınız.')));return;}
     final istekId='friend_request_${me}_$uid',istek=FirebaseFirestore.instance.collection('notifications').doc(istekId),onceki=await istek.get();
     if(onceki.data()?['status']=='pending'){if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Arkadaşlık isteğin zaten bekliyor.')));return;}
-    await istek.set({'toUid':uid,'fromUid':me,'type':'follow_request','text':'Yeni arkadaşlık isteğin var','status':'pending','read':false,'createdAt':FieldValue.serverTimestamp()});
+    await istek.set({'toUid':uid,'fromUid':me,'type':'friend_request','text':'Yeni arkadaşlık isteğin var','status':'pending','read':false,'createdAt':FieldValue.serverTimestamp()});
     if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Arkadaşlık isteği gönderildi.')));
   }
   Future<void> kisiyiPaylas()async{
