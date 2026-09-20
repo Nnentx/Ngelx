@@ -4753,9 +4753,9 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
   final List<Map<String,String>> mentionOnerileri=[];
   final Set<String> etiketlenenUidler={};
   final Map<String,Future<DocumentSnapshot<Map<String,dynamic>>>> _uyeProfilCache={};
-  Timer? mentionZamanlayici;
+  Timer? mentionZamanlayici,_mesajBeklemeZamanlayici;
   List<Map<String,String>>? _mentionUyeleri;
-  late final Stream<QuerySnapshot<Map<String,dynamic>>> _mesajAkisi;
+  late Stream<QuerySnapshot<Map<String,dynamic>>> _mesajAkisi;
   late final Stream<DocumentSnapshot<Map<String,dynamic>>> _grupAkisi;
   bool aramaBaslatiliyor=false,mesajGonderiliyor=false,_okunduYaziliyor=false,_ilkMesajKaydirma=true;
   DateTime? _sonOkunduKontrolu;
@@ -4768,10 +4768,17 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
     // Bütün grup geçmişini her açılışta indirmek uygulamayı kilitliyordu.
     // En yeni 100 mesaj ilk ekran için yeterli; eski içerikler medya ve arama
     // sayfalarından ayrıca alınır.
-    _mesajAkisi=chatRef.collection('messages').orderBy('createdAt').limitToLast(100).snapshots();
+    _mesajAkisiniYenile();
     unawaited(_okunduIsaretle());
   }
-  @override void dispose(){mentionZamanlayici?.cancel();mesaj.dispose();liste.dispose();super.dispose();}
+  void _mesajAkisiniYenile(){
+    _mesajBeklemeZamanlayici?.cancel();
+    _mesajAkisi=chatRef.collection('messages').orderBy('createdAt').limitToLast(100).snapshots();
+    _mesajBeklemeZamanlayici=Timer(const Duration(seconds:8),(){
+      if(mounted)setState(()=>_mesajAkisi=const Stream<QuerySnapshot<Map<String,dynamic>>>.empty());
+    });
+  }
+  @override void dispose(){mentionZamanlayici?.cancel();_mesajBeklemeZamanlayici?.cancel();mesaj.dispose();liste.dispose();super.dispose();}
   Future<void> _okunduIsaretle()async{
     final ben=uid;
     if(ben==null||_okunduYaziliyor)return;
