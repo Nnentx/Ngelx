@@ -3,7 +3,7 @@ name: NgelX V44 Release Paket
 on:
   workflow_dispatch:
   push:
-    branches: [ngelx-v44-test-fixes]
+    branches: [ngelx-v44-test-fixes, ngelx-v45-work]
     paths:
       - 'app/**'
       - 'firestore.rules'
@@ -17,6 +17,8 @@ jobs:
     steps:
       - name: Kaynaklari al
         uses: actions/checkout@v4
+        with:
+          ref: ngelx-v45-work
 
       - name: Flutter kur
         uses: subosito/flutter-action@v2
@@ -37,7 +39,7 @@ jobs:
         run: |
           set -euo pipefail
           if [ -n "$KEYSTORE_BASE64" ]; then
-            echo "Kalıcı release imzası mevcut; test debug anahtarı kullanılmayacak."
+            echo "Kalıcı release imzası mevcut; test debuY anahtarı kullanılmayacak."
             exit 0
           fi
           mkdir -p "$HOME/.android"
@@ -84,7 +86,7 @@ jobs:
         working-directory: app
         run: flutter build apk --release
 
-      - name: APK imzasını doğrula
+       - name: APK imzasını doğrula
         shell: bash
         env:
           KEYSTORE_BASE64: ${{ secrets.NGELX_KEYSTORE_BASE64 }}
