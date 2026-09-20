@@ -1346,7 +1346,7 @@ Future<void> ngelxOzeldenPaylas(
 
   String sorgu = '';
   final secilenler=<String>{};
-  bool gonderiliyor=false,aramaBaslatiliyor=false;
+  bool gonderiliyor=false;
   await showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
@@ -4874,7 +4874,7 @@ class SohbetPage extends StatefulWidget {final String chatId,digerUid,ad,foto;co
 class _SohbetPageState extends State<SohbetPage> {
   final mesaj=TextEditingController(),liste=ScrollController();
   final List<Map<String,String>> mentionOnerileri=[];
-  bool gonderiliyor=false;
+  bool gonderiliyor=false,aramaBaslatiliyor=false;
   String? get uid=>FirebaseAuth.instance.currentUser?.uid;
 
   Future<String?> mesajEngeli() async {
