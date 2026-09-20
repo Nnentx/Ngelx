@@ -4510,16 +4510,83 @@ class MesajIstegiOnizlemePage extends StatelessWidget{
 
 class GrupOlusturPage extends StatefulWidget{const GrupOlusturPage({super.key});@override State<GrupOlusturPage> createState()=>_GrupOlusturPageState();}
 class _GrupOlusturPageState extends State<GrupOlusturPage>{
-  final ad=TextEditingController(),arama=TextEditingController();final Set<String> secilen={};final Set<String> izinliKisiler={};String sorgu='';XFile? foto;bool kaydediliyor=false,izinlerYukleniyor=true;
+  final ad=TextEditingController(),arama=TextEditingController();
+  final Set<String> secilen={};
+  final List<QueryDocumentSnapshot<Map<String,dynamic>>> adaylar=[];
+  String sorgu='';
+  String? yuklemeHatasi;
+  XFile? foto;
+  bool kaydediliyor=false,izinlerYukleniyor=true;
+
   @override void initState(){super.initState();izinliKisileriGetir();}
   @override void dispose(){ad.dispose();arama.dispose();super.dispose();}
-  Future<void> izinliKisileriGetir()async{final u=FirebaseAuth.instance.currentUser;if(u==null)return;final d=await FirebaseFirestore.instance.collection('users').doc(u.uid).get(),v=d.data()??{};izinliKisiler.addAll(List<String>.from(v['following']??const[]));izinliKisiler.addAll(List<String>.from(v['friends']??const[]));if(mounted)setState(()=>izinlerYukleniyor=false);}
+
+  Future<void> izinliKisileriGetir()async{
+    final u=FirebaseAuth.instance.currentUser;
+    if(u==null){if(mounted)setState(()=>izinlerYukleniyor=false);return;}
+    try{
+      final d=await FirebaseFirestore.instance.collection('users').doc(u.uid).get().timeout(const Duration(seconds:8));
+      final v=d.data()??<String,dynamic>{};
+      final ids=<String>{...List<String>.from(v['following']??const[]),...List<String>.from(v['friends']??const[])}..remove(u.uid);
+      final liste=ids.toList();
+      final bulunan=<QueryDocumentSnapshot<Map<String,dynamic>>>[];
+      for(int i=0;i<liste.length;i+=30){
+        final son=(i+30<liste.length)?i+30:liste.length;
+        final parca=liste.sublist(i,son);
+        if(parca.isEmpty)continue;
+        final q=await FirebaseFirestore.instance.collection('users')
+          .where(FieldPath.documentId,whereIn:parca)
+          .get()
+          .timeout(const Duration(seconds:8));
+        bulunan.addAll(q.docs.where((x)=>x.data()['deactivated']!=true));
+      }
+      if(mounted)setState((){adaylar..clear()..addAll(bulunan);izinlerYukleniyor=false;yuklemeHatasi=null;});
+    }catch(e){
+      if(mounted)setState((){izinlerYukleniyor=false;yuklemeHatasi='Kişiler yüklenemedi. İnternet bağlantını kontrol edip tekrar dene.';});
+    }
+  }
   Future<void> olustur()async{final u=FirebaseAuth.instance.currentUser;if(u==null||kaydediliyor)return;final grupAdi=ad.text.trim(),kelime=grupAdi.isEmpty?0:grupAdi.split(RegExp(r'\s+')).length;if(grupAdi.length<2){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Grup adı en az 2 karakter olmalı.')));return;}if(kelime>16){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Grup adı en fazla 16 kelime olabilir.')));return;}if(secilen.isEmpty){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Grup için en az 1 kişi seç.')));return;}if(secilen.length>59){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Yönetici dahil grupta en fazla 60 üye olabilir.')));return;}setState(()=>kaydediliyor=true);try{String fotoUrl='';if(foto!=null){final yol='groups/${u.uid}/${DateTime.now().millisecondsSinceEpoch}.jpg';await supa.Supabase.instance.client.storage.from('ngelx-media').uploadBinary(yol,await foto!.readAsBytes());fotoUrl=supa.Supabase.instance.client.storage.from('ngelx-media').getPublicUrl(yol);}final ref=FirebaseFirestore.instance.collection('chats').doc();await ref.set({'isGroup':true,'groupName':grupAdi,'groupPhotoUrl':fotoUrl,'members':[u.uid,...secilen],'admins':[u.uid],'moderators':<String>[],'createdBy':u.uid,'createdAt':FieldValue.serverTimestamp(),'updatedAt':FieldValue.serverTimestamp(),'lastMessage':'Grup oluşturuldu','hiddenFor':<String>[],'maxMembers':60,'onlyAdminsCanEdit':true});if(mounted)Navigator.pushReplacement(context,MaterialPageRoute(builder:(_)=>GrupSohbetPage(chatId:ref.id,ad:grupAdi,foto:fotoUrl)));}catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Grup oluşturulamadı: $e')));}finally{if(mounted)setState(()=>kaydediliyor=false);}}
-  @override Widget build(BuildContext context){final me=FirebaseAuth.instance.currentUser?.uid;return Theme(data:ThemeData.light().copyWith(scaffoldBackgroundColor:Colors.white,appBarTheme:const AppBarTheme(backgroundColor:Colors.white,foregroundColor:Colors.black,elevation:0)),child:Scaffold(appBar:AppBar(title:const Text('Yeni grup',style:TextStyle(fontWeight:FontWeight.w900)),actions:[TextButton(onPressed:kaydediliyor?null:olustur,child:const Text('Oluştur',style:TextStyle(fontWeight:FontWeight.w900)))]),body:Column(children:[
+  @override Widget build(BuildContext context){return Theme(data:ThemeData.light().copyWith(scaffoldBackgroundColor:Colors.white,appBarTheme:const AppBarTheme(backgroundColor:Colors.white,foregroundColor:Colors.black,elevation:0)),child:Scaffold(appBar:AppBar(title:const Text('Yeni grup',style:TextStyle(fontWeight:FontWeight.w900)),actions:[TextButton(onPressed:kaydediliyor?null:olustur,child:const Text('Oluştur',style:TextStyle(fontWeight:FontWeight.w900)))]),body:Column(children:[
   Padding(padding:const EdgeInsets.all(18),child:Row(children:[GestureDetector(onTap:()async{final x=await ImagePicker().pickImage(source:ImageSource.gallery,imageQuality:85);if(x!=null&&mounted)setState(()=>foto=x);},child:CircleAvatar(radius:34,backgroundColor:const Color(0xFFE9DDFF),backgroundImage:foto==null?null:FileImage(File(foto!.path)),child:foto==null?const Icon(Icons.add_a_photo,color:mor):null)),const SizedBox(width:14),Expanded(child:TextField(controller:ad,maxLength:160,onChanged:(_)=>setState((){}),style:const TextStyle(color:Colors.black87),decoration:InputDecoration(labelText:'Grup adı',hintText:'Grubuna bir ad ver',counterText:'${ad.text.trim().isEmpty?0:ad.text.trim().split(RegExp(r'\s+')).length}/16 kelime')))])),
     Padding(padding:const EdgeInsets.symmetric(horizontal:18),child:TextField(controller:arama,onChanged:(v)=>setState(()=>sorgu=v.toLowerCase()),style:const TextStyle(color:Colors.black87),decoration:const InputDecoration(prefixIcon:Icon(Icons.search),hintText:'Gruba kişi ekle'))),
     Padding(padding:const EdgeInsets.fromLTRB(18,12,18,5),child:Align(alignment:Alignment.centerLeft,child:Text('${secilen.length} kişi seçildi • ${secilen.length+1}/60 üye',style:const TextStyle(color:mor,fontWeight:FontWeight.bold)))),
-    Expanded(child:izinlerYukleniyor?const Center(child:CircularProgressIndicator(color:mor)):StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(stream:FirebaseFirestore.instance.collection('users').snapshots(),builder:(_,s){final docs=(s.data?.docs??[]).where((d){final v=d.data();final isim='${v['displayName']??''} ${v['username']??''}'.toLowerCase();return d.id!=me&&izinliKisiler.contains(d.id)&&v['deactivated']!=true&&(sorgu.isEmpty||isim.contains(sorgu));}).toList();if(docs.isEmpty)return const Center(child:Padding(padding:EdgeInsets.all(24),child:Text('Gruba yalnızca takip ettiğin veya arkadaş olduğun kişileri ekleyebilirsin.',textAlign:TextAlign.center,style:TextStyle(color:Colors.black54))));return ListView.builder(itemCount:docs.length,itemBuilder:(_,i){final d=docs[i],v=d.data(),isim=(v['displayName']??v['username']??'Kullanıcı').toString(),pf=(v['photoUrl']??'').toString(),secili=secilen.contains(d.id);return CheckboxListTile(value:secili,onChanged:(x){if(x==true&&!secili&&secilen.length>=59){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Yönetici dahil en fazla 60 üye eklenebilir.')));return;}setState(()=>x==true?secilen.add(d.id):secilen.remove(d.id));},secondary:CircleAvatar(backgroundImage:pf.isEmpty?null:NetworkImage(pf),child:pf.isEmpty?const Icon(Icons.person):null),title:Text(isim,style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w700)),subtitle:Text('@${v['username']??'ngelx'}',style:const TextStyle(color:Colors.black54)),activeColor:mor);});})),
+    Expanded(
+      child:izinlerYukleniyor
+        ? const Center(child:CircularProgressIndicator(color:mor))
+        : yuklemeHatasi!=null
+          ? Center(child:Padding(padding:const EdgeInsets.all(24),child:Column(mainAxisSize:MainAxisSize.min,children:[
+              const Icon(Icons.cloud_off_rounded,color:Colors.redAccent,size:42),
+              const SizedBox(height:10),
+              Text(yuklemeHatasi!,textAlign:TextAlign.center,style:const TextStyle(color:Colors.black54)),
+              const SizedBox(height:12),
+              OutlinedButton.icon(onPressed:(){setState(()=>izinlerYukleniyor=true);izinliKisileriGetir();},icon:const Icon(Icons.refresh),label:const Text('Yeniden dene')),
+            ])))
+          : Builder(builder:(_){
+              final docs=adaylar.where((d){
+                final v=d.data();
+                final isim='${v['displayName']??''} ${v['username']??''}'.toLowerCase();
+                return sorgu.isEmpty||isim.contains(sorgu);
+              }).toList();
+              if(docs.isEmpty)return const Center(child:Padding(padding:EdgeInsets.all(24),child:Text('Gruba ekleyebileceğin takip veya arkadaş bulunamadı.',textAlign:TextAlign.center,style:TextStyle(color:Colors.black54))));
+              return ListView.builder(
+                itemCount:docs.length,
+                itemBuilder:(_,i){
+                  final d=docs[i],v=d.data(),isim=(v['displayName']??v['username']??'Kullanıcı').toString(),pf=(v['photoUrl']??'').toString(),secili=secilen.contains(d.id);
+                  return CheckboxListTile(
+                    value:secili,
+                    onChanged:(x){
+                      if(x==true&&!secili&&secilen.length>=59){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Yönetici dahil en fazla 60 üye eklenebilir.')));return;}
+                      setState(()=>x==true?secilen.add(d.id):secilen.remove(d.id));
+                    },
+                    secondary:CircleAvatar(backgroundImage:pf.isEmpty?null:NetworkImage(pf),child:pf.isEmpty?const Icon(Icons.person):null),
+                    title:Text(isim,style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w700)),
+                    subtitle:Text('@${v['username']??'ngelx'}',style:const TextStyle(color:Colors.black54)),
+                    activeColor:mor,
+                  );
+                },
+              );
+            }),
+    ),
   ])));}
 }
 
