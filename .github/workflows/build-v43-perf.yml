@@ -24,6 +24,23 @@ jobs:
           channel: stable
           cache: true
 
+      - name: Paketleri kur
+        working-directory: app
+        run: flutter pub get
+
+      - name: Kod analizi
+        working-directory: app
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
+
+      - name: Testleri calistir
+        working-directory: app
+        run: |
+          if [ -d test ]; then
+            flutter test
+          else
+            echo "Test klasoru yok; derleme kontrolune geciliyor."
+          fi
+
       - name: Test imza anahtarını sabitle
         uses: actions/cache@v4
         with:
@@ -62,23 +79,6 @@ jobs:
           fi
           echo "$KEYSTORE_BASE64" | base64 -d > app/android/app/ngelx-release.jks
           printf 'storePassword=%s\nkeyPassword=%s\nkeyAlias=%s\nstoreFile=ngelx-release.jks\n' "$STORE_PASSWORD" "$KEY_PASSWORD" "$KEY_ALIAS" > app/android/key.properties
-
-      - name: Paketleri kur
-        working-directory: app
-        run: flutter pub get
-
-      - name: Kod analizi
-        working-directory: app
-        run: flutter analyze --no-fatal-infos --no-fatal-warnings
-
-      - name: Testleri calistir
-        working-directory: app
-        run: |
-          if [ -d test ]; then
-            flutter test
-          else
-            echo "Test klasoru yok; derleme kontrolune geciliyor."
-          fi
 
       - name: Release APK olustur
         working-directory: app
