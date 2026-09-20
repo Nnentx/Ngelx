@@ -6283,6 +6283,119 @@ class AyarlarPage extends StatelessWidget {
   Widget _ayar(BuildContext c,IconData i,String t,String s)=>Card(child:ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:10,vertical:7),onTap:()=>Navigator.push(c,MaterialPageRoute(builder:(_)=>TercihlerPage(baslik:t))),leading:Icon(i,color:mor),title:Text(t,style:const TextStyle(fontWeight:FontWeight.bold,color:Colors.black87)),subtitle:Text(s,style:const TextStyle(color:Colors.black54)),trailing:const Icon(Icons.chevron_right,color:Colors.black87)));
 }
 
+class HesapKurtarmaPage extends StatefulWidget{
+  const HesapKurtarmaPage({super.key});
+  @override State<HesapKurtarmaPage> createState()=>_HesapKurtarmaPageState();
+}
+
+class _HesapKurtarmaPageState extends State<HesapKurtarmaPage>{
+  final email=TextEditingController(),telefon=TextEditingController();
+  bool yukleniyor=true,kaydediliyor=false;
+
+  @override void initState(){super.initState();_yukle();}
+  @override void dispose(){email.dispose();telefon.dispose();super.dispose();}
+
+  Future<void> _yukle()async{
+    final u=FirebaseAuth.instance.currentUser;
+    if(u==null){if(mounted)setState(()=>yukleniyor=false);return;}
+    final d=await FirebaseFirestore.instance.collection('users').doc(u.uid).get();
+    final v=d.data()??<String,dynamic>{};
+    email.text=(v['recoveryEmail']??'').toString();
+    telefon.text=(v['recoveryPhone']??v['phone']??'').toString();
+    if(mounted)setState(()=>yukleniyor=false);
+  }
+
+  Future<String?> _sifreSor()async{
+    final kontrol=TextEditingController();
+    final x=await showDialog<String>(
+      context:context,
+      builder:(d)=>Theme(
+        data:ThemeData.light(),
+        child:AlertDialog(
+          backgroundColor:Colors.white,
+          surfaceTintColor:Colors.white,
+          title:const Text('Kimliğini doğrula',style:TextStyle(color:Colors.black87,fontWeight:FontWeight.w800)),
+          content:TextField(controller:kontrol,obscureText:true,decoration:const InputDecoration(labelText:'Mevcut şifre')),
+          actions:[
+            TextButton(onPressed:()=>Navigator.pop(d),child:const Text('Vazgeç')),
+            FilledButton(onPressed:()=>Navigator.pop(d,kontrol.text),child:const Text('Doğrula')),
+          ],
+        ),
+      ),
+    );
+    kontrol.dispose();
+    return x;
+  }
+
+  Future<void> kaydet()async{
+    final u=FirebaseAuth.instance.currentUser;
+    if(u==null||kaydediliyor)return;
+    final re=email.text.trim().toLowerCase();
+    final tel=telefon.text.trim();
+    if(re.isNotEmpty&&(!re.contains('@')||!re.contains('.'))){
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Geçerli bir kurtarma e-postası yaz.')));
+      return;
+    }
+    final sifre=await _sifreSor();
+    if(sifre==null||sifre.isEmpty)return;
+    setState(()=>kaydediliyor=true);
+    try{
+      final hesapEmail=u.email;
+      if(hesapEmail==null||hesapEmail.isEmpty)throw Exception('Bu hesapta doğrulanabilir e-posta bulunamadı.');
+      await u.reauthenticateWithCredential(EmailAuthProvider.credential(email:hesapEmail,password:sifre));
+      await FirebaseFirestore.instance.collection('users').doc(u.uid).set({
+        'recoveryEmail':re,
+        'recoveryPhone':tel,
+        'recoveryUpdatedAt':FieldValue.serverTimestamp(),
+      },SetOptions(merge:true));
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Kurtarma seçenekleri kaydedildi.')));
+    }on FirebaseAuthException catch(e){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(
+        e.code=='wrong-password'||e.code=='invalid-credential'?'Şifre doğrulanamadı.':'Doğrulama başarısız: '+(e.message??e.code)
+      )));
+    }catch(e){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Kaydedilemedi: '+e.toString())));
+    }finally{
+      if(mounted)setState(()=>kaydediliyor=false);
+    }
+  }
+
+  Future<void> sifreBaglantisi()async{
+    final u=FirebaseAuth.instance.currentUser;
+    if(u?.email==null)return;
+    try{
+      await FirebaseAuth.instance.sendPasswordResetEmail(email:u!.email!);
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Şifre yenileme bağlantısı hesap e-postana gönderildi.')));
+    }catch(e){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Bağlantı gönderilemedi: '+e.toString())));
+    }
+  }
+
+  @override Widget build(BuildContext context)=>Theme(
+    data:ThemeData.light().copyWith(
+      scaffoldBackgroundColor:Colors.white,
+      appBarTheme:const AppBarTheme(backgroundColor:Colors.white,foregroundColor:Colors.black,elevation:0),
+    ),
+    child:Scaffold(
+      backgroundColor:Colors.white,
+      appBar:AppBar(title:const Text('Hesap kurtarma')),
+      body:yukleniyor
+        ? const Center(child:CircularProgressIndicator(color:mor))
+        : ListView(padding:const EdgeInsets.all(20),children:[
+            ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.alternate_email_rounded,color:mor),title:const Text('Hesap e-postası'),subtitle:Text(FirebaseAuth.instance.currentUser?.email??'E-posta yok')),
+            const SizedBox(height:12),
+            TextField(controller:email,keyboardType:TextInputType.emailAddress,decoration:const InputDecoration(labelText:'Kurtarma e-postası')),
+            const SizedBox(height:14),
+            TextField(controller:telefon,keyboardType:TextInputType.phone,decoration:const InputDecoration(labelText:'Kurtarma telefonu')),
+            const SizedBox(height:20),
+            FilledButton.icon(onPressed:kaydediliyor?null:kaydet,icon:const Icon(Icons.shield_outlined),label:Text(kaydediliyor?'Doğrulanıyor...':'Kurtarma bilgilerini kaydet')),
+            const SizedBox(height:10),
+            OutlinedButton.icon(onPressed:sifreBaglantisi,icon:const Icon(Icons.lock_reset_rounded),label:const Text('Şifre yenileme bağlantısı gönder')),
+          ]),
+    ),
+  );
+}
+
 class HesapGuvenligiPage extends StatefulWidget {const HesapGuvenligiPage({super.key});@override State<HesapGuvenligiPage> createState()=>_HesapGuvenligiPageState();}
 class _HesapGuvenligiPageState extends State<HesapGuvenligiPage>{
   bool yukleniyor=false;
@@ -6290,7 +6403,14 @@ class _HesapGuvenligiPageState extends State<HesapGuvenligiPage>{
   Future<void> dondur()async{if(!await onay('Hesap dondurulsun mu?','Hesabın geçici olarak kapatılacak. Giriş yaparak hesabını yeniden açabilirsin.','Hesabı dondur'))return;await isle({'deactivated':true,'deactivatedAt':FieldValue.serverTimestamp()});}
   Future<void> silmeTalebi()async{if(!await onay('Hesap silme talebi oluşturulsun mu?','Hesabın hemen kapanacak ve 30 gün sonra kalıcı silinmek üzere işaretlenecek. Bu sürede giriş yaparak talebi iptal edebilirsin.','Silme talebi oluştur'))return;await isle({'deactivated':true,'deletionRequestedAt':FieldValue.serverTimestamp(),'deletionScheduledFor':Timestamp.fromDate(DateTime.now().add(const Duration(days:30)))});}
   Future<void> isle(Map<String,dynamic> veri)async{final u=FirebaseAuth.instance.currentUser;if(u==null)return;setState(()=>yukleniyor=true);try{await FirebaseFirestore.instance.collection('users').doc(u.uid).set(veri,SetOptions(merge:true));await FirebaseAuth.instance.signOut();if(mounted)Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder:(_)=>const GirisPage()),(_)=>false);}catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('İşlem tamamlanamadı: $e')));}finally{if(mounted)setState(()=>yukleniyor=false);}}
-  @override Widget build(BuildContext context)=>Theme(data:ThemeData.light().copyWith(scaffoldBackgroundColor:Colors.white,appBarTheme:const AppBarTheme(backgroundColor:Colors.white,foregroundColor:Colors.black,elevation:0)),child:Scaffold(appBar:AppBar(title:const Text('Hesap güvenliği')),body:SafeArea(child:ListView(padding:const EdgeInsets.all(18),children:[const ListTile(leading:Icon(Icons.verified_user_outlined,color:Colors.green),title:Text('E-posta doğrulaması'),subtitle:Text('Hesabın doğrulanmış e-posta ile korunur.')),const Divider(),ListTile(enabled:!yukleniyor,leading:const Icon(Icons.pause_circle_outline,color:Colors.orange),title:const Text('Hesabı dondur'),subtitle:const Text('Geri dönene kadar profilini geçici olarak gizle'),onTap:dondur),ListTile(enabled:!yukleniyor,leading:const Icon(Icons.delete_forever_outlined,color:Colors.red),title:const Text('Hesap silme talebi',style:TextStyle(color:Colors.red)),subtitle:const Text('30 günlük geri alma süresiyle kapat'),onTap:silmeTalebi),if(yukleniyor)const Padding(padding:EdgeInsets.all(20),child:Center(child:CircularProgressIndicator()))]))));
+  @override Widget build(BuildContext context)=>Theme(data:ThemeData.light().copyWith(scaffoldBackgroundColor:Colors.white,appBarTheme:const AppBarTheme(backgroundColor:Colors.white,foregroundColor:Colors.black,elevation:0)),child:Scaffold(appBar:AppBar(title:const Text('Hesap güvenliği')),body:SafeArea(child:ListView(padding:const EdgeInsets.all(18),children:[
+    const ListTile(leading:Icon(Icons.verified_user_outlined,color:Colors.green),title:Text('E-posta doğrulaması'),subtitle:Text('Hesabın doğrulanmış e-posta ile korunur.')),
+    ListTile(leading:const Icon(Icons.health_and_safety_outlined,color:mor),title:const Text('Hesap kurtarma seçenekleri'),subtitle:const Text('Kurtarma e-postası, telefon ve şifre yenileme'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const HesapKurtarmaPage()))),
+    const Divider(),
+    ListTile(enabled:!yukleniyor,leading:const Icon(Icons.pause_circle_outline,color:Colors.orange),title:const Text('Hesabı dondur'),subtitle:const Text('Geri dönene kadar profilini geçici olarak gizle'),onTap:dondur),
+    ListTile(enabled:!yukleniyor,leading:const Icon(Icons.delete_forever_outlined,color:Colors.red),title:const Text('Hesap silme talebi',style:TextStyle(color:Colors.red)),subtitle:const Text('30 günlük geri alma süresiyle kapat'),onTap:silmeTalebi),
+    if(yukleniyor)const Padding(padding:EdgeInsets.all(20),child:Center(child:CircularProgressIndicator())),
+  ]))));
 }
 
 class GirisGecmisiPage extends StatelessWidget {
