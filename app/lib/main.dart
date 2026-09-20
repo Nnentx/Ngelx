@@ -1833,36 +1833,45 @@ class _GorselYaziKartiState extends State<GorselYaziKarti> {
   }
 
   Future<void> begeniyiDegistir() async {
-    if (begeniIsleniyor) return;
-    if (await misafirEngeli(context)) return;
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null || icerikId.isEmpty) return;
-    final ref = FirebaseFirestore.instance.collection('videos').doc(icerikId).collection('likes').doc(user.uid);
-    begeniIsleniyor = true;
-    final yeni = !begenildi;
-    setState(() {
-      begenildi = yeni;
-      begeniSayisi += yeni ? 1 : -1;
-      if (begeniSayisi < 0) begeniSayisi = 0;
+    if(begeniIsleniyor)return;
+    if(await misafirEngeli(context))return;
+    final user=FirebaseAuth.instance.currentUser;
+    if(user==null||icerikId.isEmpty)return;
+    final video=FirebaseFirestore.instance.collection('videos').doc(icerikId);
+    final ref=video.collection('likes').doc(user.uid);
+    begeniIsleniyor=true;
+    final yeni=!begenildi;
+    setState((){
+      begenildi=yeni;
+      begeniSayisi+=yeni?1:-1;
+      if(begeniSayisi<0)begeniSayisi=0;
     });
-    try { if (yeni) {
-      await ref.set({'userId': user.uid, 'createdAt': FieldValue.serverTimestamp()});
-      final hedefUid = (widget.veri['ownerId'] ?? '').toString();
-      if (hedefUid.isNotEmpty) {
-        await uygulamaBildirimiGonder(
-toUid: hedefUid,
-fromUid: user.uid,
-tur: 'interaction',
-metin: 'Gönderini beğendi',
-belgeId: icerikId,
-        );
+    try{
+      final batch=FirebaseFirestore.instance.batch();
+      if(yeni){
+        batch.set(ref,{'userId':user.uid,'createdAt':FieldValue.serverTimestamp()});
+        batch.set(video,{'likeCount':FieldValue.increment(1)},SetOptions(merge:true));
+      }else{
+        batch.delete(ref);
+        batch.set(video,{'likeCount':FieldValue.increment(-1)},SetOptions(merge:true));
       }
-    } else {
-      await ref.delete();
-    }} catch(e) {
-      if(mounted)setState(() { begenildi=!yeni; begeniSayisi += yeni ? -1 : 1; });
+      await batch.commit();
+      final hedefUid=(widget.veri['ownerId']??'').toString();
+      if(yeni&&hedefUid.isNotEmpty&&hedefUid!=user.uid){
+        unawaited(uygulamaBildirimiGonder(
+          toUid:hedefUid,fromUid:user.uid,tur:'interaction',
+          metin:'Gönderini beğendi',belgeId:icerikId,
+        ).catchError((_){ }));
+      }
+    }catch(e){
+      if(mounted)setState((){
+        begenildi=!yeni;
+        begeniSayisi+=yeni?-1:1;
+      });
       if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Beğeni kaydedilemedi: $e')));
-    } finally { begeniIsleniyor=false; }
+    }finally{
+      begeniIsleniyor=false;
+    }
   }
 
   void yorumlariAc() {
@@ -2138,145 +2147,42 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver {
   Future<void> begeniyiDegistir() async {
     if (begeniIsleniyor) return;
     if (await misafirEngeli(context)) return;
-    final kullanici = FirebaseAuth.instance.currentUser;
-    if (kullanici == null) return;
-    final video = FirebaseFirestore.instance.collection('videos').doc(videoId);
-    final begeni = video.collection('likes').doc(kullanici.uid);
-    final yeniDurum = !begenildi;
-    begeniIsleniyor = true;
-    setState(() {
-      begenildi = yeniDurum;
-      begeniSayisi += yeniDurum ? 1 : -1;
-      if (begeniSayisi < 0) begeniSayisi = 0;
+    final kullanici=FirebaseAuth.instance.currentUser;
+    if(kullanici==null)return;
+    final video=FirebaseFirestore.instance.collection('videos').doc(videoId);
+    final begeni=video.collection('likes').doc(kullanici.uid);
+    final yeniDurum=!begenildi;
+    begeniIsleniyor=true;
+    setState((){
+      begenildi=yeniDurum;
+      begeniSayisi+=yeniDurum?1:-1;
+      if(begeniSayisi<0)begeniSayisi=0;
     });
-    try { if (yeniDurum) {
-      await begeni.set({
-        'userId': kullanici.uid,
-        'createdAt': FieldValue.serverTimestamp(),
+    try{
+      final batch=FirebaseFirestore.instance.batch();
+      if(yeniDurum){
+        batch.set(begeni,{'userId':kullanici.uid,'createdAt':FieldValue.serverTimestamp()});
+        batch.set(video,{'likeCount':FieldValue.increment(1)},SetOptions(merge:true));
+      }else{
+        batch.delete(begeni);
+        batch.set(video,{'likeCount':FieldValue.increment(-1)},SetOptions(merge:true));
+      }
+      await batch.commit();
+      if(yeniDurum&&widget.ownerId.isNotEmpty&&widget.ownerId!=kullanici.uid){
+        unawaited(uygulamaBildirimiGonder(
+          toUid:widget.ownerId,fromUid:kullanici.uid,tur:'interaction',
+          metin:'Videonu beğendi',belgeId:videoId,
+        ).catchError((_){ }));
+      }
+    }catch(e){
+      if(mounted)setState((){
+        begenildi=!yeniDurum;
+        begeniSayisi+=yeniDurum?-1:1;
       });
-      if (widget.ownerId.isNotEmpty) {
-        await uygulamaBildirimiGonder(
-          toUid: widget.ownerId,
-          fromUid: kullanici.uid,
-          tur: 'interaction',
-          metin: 'Videonu beğendi',
-          belgeId: videoId,
-        );
-      }
-    } else {
-      await begeni.delete();
-    }} catch(e) {
-      if(mounted)setState(() { begenildi=!yeniDurum; begeniSayisi += yeniDurum ? -1 : 1; });
       if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Beğeni kaydedilemedi: $e')));
-    } finally { begeniIsleniyor=false; }
-  }
-
-  Future<void> videoyuPaylas() async {
-    await ngelxPaylasimMenusu(
-      context,
-      icerikId: videoId,
-      aciklama: 'NgelX videosu • @${widget.kullaniciAdi}',
-    );
-    await etkilesimleriGetir();
-  }
-
-  Future<void> videoyuGaleriyeKaydet() async {
-    if (await misafirEngeli(context)) return;
-    if (indiriliyor) return;
-    setState(() => indiriliyor = true);
-    File? geciciDosya;
-    try {
-      if (!await Gal.hasAccess()) {
-        await Gal.requestAccess();
-      }
-      final klasor = await getTemporaryDirectory();
-      geciciDosya = File(
-        '${klasor.path}/ngelx_${DateTime.now().millisecondsSinceEpoch}.mp4',
-      );
-      await Dio().download(widget.adres, geciciDosya.path);
-      await Gal.putVideo(geciciDosya.path);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Video galeriye kaydedildi ✅')),
-      );
-    } catch (_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Video kaydedilemedi. Fotoğraf ve video iznini aç.'),
-        ),
-      );
-    } finally {
-      if (geciciDosya != null && await geciciDosya.exists()) {
-        await geciciDosya.delete();
-      }
-      if (mounted) setState(() => indiriliyor = false);
+    }finally{
+      begeniIsleniyor=false;
     }
-  }
-
-  Future<void> paylasanProfiliAc() async {
-    if (widget.ownerId.isEmpty) return;
-    await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => KullaniciProfilPage(uid: widget.ownerId),
-      ),
-    );
-  }
-
-  Future<void> uzunBasmaMenusu() async {
-    final sahibi = FirebaseAuth.instance.currentUser?.uid == widget.ownerId;
-    await showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      builder: (ctx) => Theme(
-        data: ThemeData.light(),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(14, 12, 14, 22),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(width: 42, height: 4, margin: const EdgeInsets.only(bottom: 12), decoration: BoxDecoration(color: Colors.black26, borderRadius: BorderRadius.circular(9))),
-                if (widget.indirilebilir || sahibi) ListTile(leading: const Icon(Icons.download_rounded, color: mavi), title: const Text('İndir'), onTap: () { Navigator.pop(ctx); videoyuGaleriyeKaydet(); }),
-                ListTile(leading: const Icon(Icons.heart_broken_outlined, color: Colors.black87), title: const Text('İlgilenmiyorum'), subtitle: const Text('Benzer içerikleri azalt'), onTap: () { Navigator.pop(ctx); ngelxIcerikGizle(context, videoId, ilgilenmiyorum: true); }),
-                ListTile(leading: const Icon(Icons.visibility_off_outlined, color: Colors.black87), title: const Text('İçeriği gizle'), onTap: () { Navigator.pop(ctx); ngelxIcerikGizle(context, videoId); }),
-                ListTile(leading: const Icon(Icons.link_rounded, color: Colors.blue), title: const Text('Bağlantıyı kopyala'), onTap: () async { await Clipboard.setData(ClipboardData(text: ngelxIcerikLink(videoId))); if (ctx.mounted) Navigator.pop(ctx); }),
-                ListTile(leading: const Icon(Icons.flag_outlined, color: Colors.orange), title: const Text('Bildir / Şikâyet et'), onTap: () { Navigator.pop(ctx); sikayetEt(context, hedefTuru: 'video', hedefId: videoId, hedefUid: widget.ownerId); }),
-                if (!sahibi) ListTile(leading: const Icon(Icons.block, color: Colors.red), title: const Text('Kullanıcıyı engelle', style: TextStyle(color: Colors.red)), onTap: () { Navigator.pop(ctx); kullaniciyiEngelle(context, widget.ownerId); }),
-                if (sahibi) ListTile(leading: const Icon(Icons.delete_forever, color: Colors.red), title: const Text('PAYLAŞIMI SİL', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)), onTap: () { Navigator.pop(ctx); kendiPaylasiminiSil(context, videoId, {'ownerId': widget.ownerId, 'videoUrl': widget.adres}); }),
-                const Divider(),
-                const Align(alignment: Alignment.centerLeft, child: Padding(padding: EdgeInsets.all(10), child: Text('Video hızı', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)))),
-                Wrap(spacing: 9, children: [.5, 1.0, 1.5, 2.0].map((hiz) => ActionChip(label: Text('${hiz}x'), onPressed: () { kontrol.setPlaybackSpeed(hiz); Navigator.pop(ctx); })).toList()),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  @override
-  void didUpdateWidget(covariant VideoKarti oldWidget) {
-    super.didUpdateWidget(oldWidget);
-
-    if (!hazir) return;
-
-    if (widget.aktif) {
-      if (!duraklatildi) kontrol.play();
-    } else {
-      kontrol.pause();
-    }
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    kontrol.dispose();
-    super.dispose();
   }
 
   void yorumlariAc() {
@@ -2785,7 +2691,10 @@ class _YeniYorumlarState extends State<Yorumlar> {
     try{
       final profil=await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
       final p=profil.data()??<String,dynamic>{};
-      await ref.add({
+      final yorumRef=ref.doc();
+      final videoRef=FirebaseFirestore.instance.collection('videos').doc(widget.videoId);
+      final batch=FirebaseFirestore.instance.batch();
+      batch.set(yorumRef,{
         'userId':user.uid,
         'username':(p['username']??user.displayName??'ngelx').toString(),
         'photoUrl':(p['photoUrl']??'').toString(),
@@ -2795,6 +2704,8 @@ class _YeniYorumlarState extends State<Yorumlar> {
         'likedBy':<String>[],
         'createdAt':FieldValue.serverTimestamp(),
       });
+      batch.set(videoRef,{'commentCount':FieldValue.increment(1)},SetOptions(merge:true));
+      await batch.commit();
 
       yorum.clear();
       if(mounted)setState((){
@@ -3056,16 +2967,18 @@ class YorumKarti extends StatelessWidget {
         final onay = await showDialog<bool>(context:context,builder:(c)=>AlertDialog(title:const Text('Yorum silinsin mi?'),content:const Text('Bu işlem geri alınamaz.'),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),TextButton(onPressed:()=>Navigator.pop(c,true),child:const Text('Sil',style:TextStyle(color:Colors.red))) ])) ?? false;
         if (onay) {
           try {
-            final yorumlarRef = FirebaseFirestore.instance.collection('videos').doc(videoId).collection('comments');
-            final altYanitlar = await yorumlarRef.where('parentId', isEqualTo: yorumId).get();
-            final hedefler = <DocumentReference<Map<String,dynamic>>>[yorumRef, ...altYanitlar.docs.map((e)=>e.reference)];
-            for (final hedef in hedefler) {
-              final begeniler = await hedef.collection('likes').get();
-              final batch = FirebaseFirestore.instance.batch();
-              for (final b in begeniler.docs) { batch.delete(b.reference); }
+            final videoRef=FirebaseFirestore.instance.collection('videos').doc(videoId);
+            final yorumlarRef=videoRef.collection('comments');
+            final altYanitlar=await yorumlarRef.where('parentId',isEqualTo:yorumId).get();
+            final hedefler=<DocumentReference<Map<String,dynamic>>>[yorumRef,...altYanitlar.docs.map((e)=>e.reference)];
+            for(final hedef in hedefler){
+              final begeniler=await hedef.collection('likes').get();
+              final batch=FirebaseFirestore.instance.batch();
+              for(final b in begeniler.docs){batch.delete(b.reference);}
               batch.delete(hedef);
               await batch.commit();
             }
+            await videoRef.set({'commentCount':FieldValue.increment(-hedefler.length)},SetOptions(merge:true));
           } catch(e) {
             if(context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Yorum silinemedi: $e')));
           }
@@ -5999,7 +5912,7 @@ class _SohbetPageState extends State<SohbetPage> {
 
   Widget ozelMesajKarti(QueryDocumentSnapshot<Map<String,dynamic>> d,{double fontSize=16,bool goruldu=false,String quickReaction='❤️'}){
     final v=d.data(),ben=v['senderId']==uid,photo=v['type']=='photo',shared=v['type']=='shared_content';
-    final metin=(v['text']??v['message']??v['content']??'').toString().trim(),saat=mesajSaati(v['createdAt']);
+    final metin=(v['text']??v['message']??v['content']??'').toString().trim(),saat=mesajSaati(v['createdAt']??v['clientCreatedAt']);
     final gizlenecek=gizliKelimeFiltresi&&metin.isNotEmpty&&gizliKelimeListesi.any((x)=>x.trim().isNotEmpty&&metin.toLowerCase().contains(x.toLowerCase()));
     final gosterilecekMetin=gizlenecek?'Gizli kelime filtresi nedeniyle gizlendi.':metin;
     final tepkiler=Map<String,dynamic>.from(v['reactions']??{});
@@ -6151,6 +6064,7 @@ class _SohbetPageState extends State<SohbetPage> {
     final sohbetRef=FirebaseFirestore.instance.collection('chats').doc(widget.chatId);
     _chatAkisi=sohbetRef.snapshots();
     _mesajAkisi=sohbetRef.collection('messages').orderBy('createdAt').snapshots();
+    unawaited(mesajGonderimHazirligi());
     if(uid!=null){
       unawaited(_okunduGuncelle());
       FirebaseFirestore.instance.collection('users').doc(uid).get().then((d){
@@ -7891,6 +7805,27 @@ class EtkilesimOzetiPage extends StatelessWidget{
         stream:FirebaseFirestore.instance.collection('videos').where('ownerId',isEqualTo:uid).snapshots(),
         builder:(_,s){
           final d=(s.data?.docs??[]).where((x)=>x.data()['type']!='story').toList();
+          final eksik=d.where((x)=>x.data()['likeCount']==null||x.data()['commentCount']==null).toList();
+          if(eksik.isNotEmpty){
+            return FutureBuilder<void>(
+              future:Future.wait(eksik.map((x)async{
+                final v=x.data();
+                final sonuc=await Future.wait([
+                  if(v['likeCount']==null)x.reference.collection('likes').count().get(),
+                  if(v['commentCount']==null)x.reference.collection('comments').count().get(),
+                ]);
+                int i=0;
+                final guncelle=<String,dynamic>{};
+                if(v['likeCount']==null)guncelle['likeCount']=(sonuc[i++] as AggregateQuerySnapshot).count??0;
+                if(v['commentCount']==null)guncelle['commentCount']=(sonuc[i++] as AggregateQuerySnapshot).count??0;
+                if(guncelle.isNotEmpty)await x.reference.set(guncelle,SetOptions(merge:true));
+              })),
+              builder:(_,geri){
+                if(geri.connectionState!=ConnectionState.done)return const Center(child:CircularProgressIndicator(color:mor));
+                return const SizedBox.shrink();
+              },
+            );
+          }
           int begeni=0,yorum=0,paylasim=0;
           for(final x in d){final v=x.data();begeni+=((v['likeCount'] as num?)?.toInt()??0);yorum+=((v['commentCount'] as num?)?.toInt()??0);paylasim+=((v['shareCount'] as num?)?.toInt()??0);}
           final benim=FirebaseAuth.instance.currentUser?.uid==uid;
