@@ -1,4 +1,4 @@
-name: NgelX V44 Release Paket
+    branches: [ngelx-v44-test-fixes, ngelx-v45-work]
 
 on:
   workflow_dispatch:
