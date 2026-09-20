@@ -5205,7 +5205,43 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
   DocumentReference<Map<String,dynamic>> get ref=>FirebaseFirestore.instance.collection('chats').doc(widget.chatId);
   String? get ben=>FirebaseAuth.instance.currentUser?.uid;
   Future<void> sistemMesaji(String text)async{await ref.collection('messages').add({'senderId':'system','type':'system','text':text,'createdAt':FieldValue.serverTimestamp()});await ref.set({'lastMessage':text,'updatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));}
-  Future<void> adiDuzenle(String mevcut)async{final c=TextEditingController(text:mevcut);final yeni=await showDialog<String>(context:context,builder:(x)=>Theme(data:ThemeData.light(),child:AlertDialog(backgroundColor:Colors.white,title:const Text('Grup adını düzenle'),content:TextField(controller:c,maxLength:160,decoration:const InputDecoration(helperText:'En fazla 16 kelime')),actions:[TextButton(onPressed:()=>Navigator.pop(x),child:const Text('Vazgeç')),FilledButton(onPressed:()=>Navigator.pop(x,c.text.trim()),child:const Text('Kaydet'))])));c.dispose();if(yeni==null)return;final kelime=yeni.isEmpty?0:yeni.split(RegExp(r'\s+')).length;if(yeni.length<2||kelime>16){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Grup adı 2 karakterden uzun ve en fazla 16 kelime olmalı.')));return;}await ref.update({'groupName':yeni});await sistemMesaji('Grup adı “$yeni” olarak değiştirildi.');}
+  Future<void> adiDuzenle(String mevcut)async{
+    final c=TextEditingController(text:mevcut.length>16?mevcut.substring(0,16):mevcut);
+    final yeni=await showDialog<String>(
+      context:context,
+      builder:(x)=>Theme(
+        data:ThemeData.light(),
+        child:AlertDialog(
+          backgroundColor:Colors.white,
+          surfaceTintColor:Colors.white,
+          title:const Text('Grup adını düzenle',style:TextStyle(color:Colors.black87)),
+          content:TextField(
+            controller:c,
+            maxLength:16,
+            style:const TextStyle(color:Colors.black87),
+            decoration:const InputDecoration(
+              helperText:'En fazla 16 karakter',
+              helperStyle:TextStyle(color:Colors.black54),
+              counterStyle:TextStyle(color:Colors.black54),
+            ),
+          ),
+          actions:[
+            TextButton(onPressed:()=>Navigator.pop(x),child:const Text('Vazgeç')),
+            FilledButton(onPressed:()=>Navigator.pop(x,c.text.trim()),child:const Text('Kaydet')),
+          ],
+        ),
+      ),
+    );
+    c.dispose();
+    if(yeni==null)return;
+    final temiz=yeni.trim();
+    if(temiz.length<2||temiz.length>16){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Grup adı 2–16 karakter arasında olmalı.')));
+      return;
+    }
+    await ref.update({'groupName':temiz});
+    await sistemMesaji('Grup adı “$temiz” olarak değiştirildi.');
+  }
   Future<void> fotografDuzenle()async{final secim=await showModalBottomSheet<String>(context:context,backgroundColor:Colors.white,showDragHandle:true,builder:(c)=>SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[const ListTile(title:Text('Grup fotoğrafını değiştir',style:TextStyle(fontWeight:FontWeight.w900))),ListTile(leading:const Icon(Icons.camera_alt,color:mor),title:const Text('Kamera'),onTap:()=>Navigator.pop(c,'camera')),ListTile(leading:const Icon(Icons.photo_library,color:mor),title:const Text('Galeri'),onTap:()=>Navigator.pop(c,'gallery')),ListTile(leading:const Icon(Icons.delete_outline,color:Colors.red),title:const Text('Mevcut fotoğrafı kaldır',style:TextStyle(color:Colors.red)),onTap:()=>Navigator.pop(c,'remove'))])));if(secim==null)return;if(secim=='remove'){await ref.update({'groupPhotoUrl':''});await sistemMesaji('Yönetici grup fotoğrafını kaldırdı.');return;}final x=await ImagePicker().pickImage(source:secim=='camera'?ImageSource.camera:ImageSource.gallery,imageQuality:85);if(x==null)return;final yol='groups/${widget.chatId}/avatar_${DateTime.now().millisecondsSinceEpoch}.jpg';await supa.Supabase.instance.client.storage.from('ngelx-media').upload(yol,File(x.path));final url=supa.Supabase.instance.client.storage.from('ngelx-media').getPublicUrl(yol);await ref.update({'groupPhotoUrl':url});await sistemMesaji('Yönetici grup fotoğrafını değiştirdi.');}
   Future<void> uyeIslemi(String id,String isim,bool admin)async{final sec=await showModalBottomSheet<String>(context:context,backgroundColor:Colors.white,showDragHandle:true,builder:(c)=>SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[ListTile(title:Text(isim,style:const TextStyle(fontWeight:FontWeight.w900))),ListTile(leading:Icon(admin?Icons.person_remove_alt_1:Icons.admin_panel_settings,color:mor),title:Text(admin?'Yöneticilikten çıkar':'Yönetici yap'),onTap:()=>Navigator.pop(c,admin?'demote':'promote')),ListTile(leading:const Icon(Icons.person_remove,color:Colors.red),title:const Text('Gruptan çıkar',style:TextStyle(color:Colors.red)),onTap:()=>Navigator.pop(c,'remove'))])));if(sec==null)return;if(sec=='promote'){await ref.update({'admins':FieldValue.arrayUnion([id])});await sistemMesaji('$isim yönetici yapıldı.');}else if(sec=='demote'){await ref.update({'admins':FieldValue.arrayRemove([id])});await sistemMesaji('$isim artık yönetici değil.');}else{final ok=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(backgroundColor:Colors.white,title:Text('$isim gruptan çıkarılsın mı?'),content:const Text('Bu işlemden sonra kullanıcı gruba mesaj gönderemez.'),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),FilledButton(style:FilledButton.styleFrom(backgroundColor:Colors.red),onPressed:()=>Navigator.pop(c,true),child:const Text('Çıkar'))]))??false;if(ok){await ref.update({'members':FieldValue.arrayRemove([id]),'admins':FieldValue.arrayRemove([id])});await sistemMesaji('$isim gruptan çıkarıldı.');}}}
   Future<void> uyeEkle(List<String> mevcut)async{final me=ben;if(me==null)return;if(mevcut.length>=60){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bu grup 60 üyelik üst sınıra ulaştı.')));return;}final p=await FirebaseFirestore.instance.collection('users').doc(me).get(),izinli=<String>{...List<String>.from(p.data()?['friends']??const[]),...List<String>.from(p.data()?['following']??const[])}..removeAll(mevcut);if(izinli.isEmpty){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Eklenebilecek arkadaş veya takip edilen kişi bulunamadı.')));return;}final secilen=<String>{};if(!mounted)return;final onay=await showModalBottomSheet<bool>(context:context,isScrollControlled:true,backgroundColor:Colors.white,showDragHandle:true,builder:(c)=>StatefulBuilder(builder:(c,setP)=>SafeArea(child:SizedBox(height:MediaQuery.sizeOf(c).height*.72,child:Column(children:[ListTile(title:const Text('Gruba üye ekle',style:TextStyle(fontWeight:FontWeight.w900)),subtitle:Text('${mevcut.length+secilen.length}/60 üye')),Expanded(child:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(stream:FirebaseFirestore.instance.collection('users').snapshots(),builder:(_,s){final docs=(s.data?.docs??[]).where((d)=>izinli.contains(d.id)&&d.data()['deactivated']!=true).toList();return ListView(children:docs.map((d){final v=d.data(),ad=(v['displayName']??v['username']??'Kullanıcı').toString(),foto=(v['photoUrl']??'').toString();return CheckboxListTile(value:secilen.contains(d.id),onChanged:(x){if(x==true&&mevcut.length+secilen.length>=60){ScaffoldMessenger.of(c).showSnackBar(const SnackBar(content:Text('Grupta en fazla 60 üye olabilir.')));return;}setP(()=>x==true?secilen.add(d.id):secilen.remove(d.id));},secondary:CircleAvatar(backgroundImage:foto.isEmpty?null:NetworkImage(foto)),title:Text(ad),subtitle:Text('@${v['username']??'ngelx'}'));}).toList());})),Padding(padding:const EdgeInsets.all(12),child:SizedBox(width:double.infinity,child:FilledButton(onPressed:secilen.isEmpty?null:()=>Navigator.pop(c,true),child:Text('${secilen.length} kişiyi ekle'))))])))))??false;if(!onay||secilen.isEmpty)return;await ref.update({'members':FieldValue.arrayUnion(secilen.toList()),'hiddenFor':FieldValue.arrayRemove(secilen.toList())});await sistemMesaji('${secilen.length} yeni üye gruba eklendi.');}
