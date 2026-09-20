@@ -2527,12 +2527,26 @@ class Yorumlar extends StatefulWidget {
 class _YeniYorumlarState extends State<Yorumlar> {
   final yorum = TextEditingController();
   bool gonderiliyor = false;
+  bool gizliKelimeFiltresi=true;
+  List<String> gizliKelimeListesi=[];
   String? yanitlananId;
   String? yanitlananKullanici;
   final Set<String> acikYanitlar = {};
   bool enCokBegenilen = false;
 
   CollectionReference<Map<String, dynamic>> get ref => FirebaseFirestore.instance.collection('videos').doc(widget.videoId).collection('comments');
+
+  @override void initState(){
+    super.initState();
+    final uid=FirebaseAuth.instance.currentUser?.uid;
+    if(uid!=null)FirebaseFirestore.instance.collection('users').doc(uid).get().then((d){
+      final v=d.data()??<String,dynamic>{};
+      if(mounted)setState((){
+        gizliKelimeFiltresi=v['hiddenWordsFilter']!=false;
+        gizliKelimeListesi=List<String>.from(v['hiddenWords']??const[]);
+      });
+    });
+  }
 
   String zamanYaz(dynamic ham) {
     if (ham is! Timestamp) return 'Şimdi';
@@ -2714,6 +2728,8 @@ belgeId: widget.videoId,
                                 begen: yorumBegen,
                                 yanitla: () => setState(() { yanitlananId = d.id; yanitlananKullanici = (v['username'] ?? 'ngelx').toString(); }),
                                 yanitlariAc: () => setState(() { acikYanitlar.contains(d.id) ? acikYanitlar.remove(d.id) : acikYanitlar.add(d.id); }),
+                                gizliKelimeFiltresi:gizliKelimeFiltresi,
+                                gizliKelimeListesi:gizliKelimeListesi,
                               );
                             },
                           ),
@@ -2748,6 +2764,8 @@ class YorumKarti extends StatelessWidget {
   final Future<void> Function(String, List<dynamic>) begen;
   final VoidCallback yanitla;
   final VoidCallback yanitlariAc;
+  final bool gizliKelimeFiltresi;
+  final List<String> gizliKelimeListesi;
 
   const YorumKarti({
     super.key,
@@ -2761,6 +2779,8 @@ class YorumKarti extends StatelessWidget {
     required this.begen,
     required this.yanitla,
     required this.yanitlariAc,
+    this.gizliKelimeFiltresi=true,
+    this.gizliKelimeListesi=const[],
   });
 
   Widget satir(
@@ -2772,6 +2792,8 @@ class YorumKarti extends StatelessWidget {
   }) {
     final ad = (v['username'] ?? 'ngelx').toString();
     final metin = (v['text'] ?? v['message'] ?? v['content'] ?? '').toString().trim();
+    final gizlenecek=gizliKelimeFiltresi&&metin.isNotEmpty&&gizliKelimeListesi.any((x)=>x.trim().isNotEmpty&&metin.toLowerCase().contains(x.toLowerCase()));
+    final gosterilecekMetin=gizlenecek?'Gizli kelime filtresi nedeniyle gizlendi.':metin;
     final foto = (v['photoUrl'] ?? '').toString();
     final profilUid = (v['userId'] ?? '').toString();
     final aktifUid = FirebaseAuth.instance.currentUser?.uid;
@@ -2893,14 +2915,14 @@ class YorumKarti extends StatelessWidget {
                     TextSpan(
                       children: [
                         TextSpan(text: '@${v['replyToUsername']}  ', style: const TextStyle(color: mor, fontWeight: FontWeight.w700)),
-                        TextSpan(text: metin.isEmpty ? 'Mesaj içeriği bulunamadı' : metin),
+                        TextSpan(text: gosterilecekMetin.isEmpty ? 'Mesaj içeriği bulunamadı' : gosterilecekMetin),
                       ],
                     ),
                     style: const TextStyle(color: Colors.black87, fontSize: 15, height: 1.3),
                   )
                 else
                   Text(
-                    metin.isEmpty ? 'Mesaj içeriği bulunamadı' : metin,
+                    gosterilecekMetin.isEmpty ? 'Mesaj içeriği bulunamadı' : gosterilecekMetin,
                     maxLines: null,
                     softWrap: true,
                     style: const TextStyle(color: Colors.black87, fontSize: 15, height: 1.3),
@@ -4904,6 +4926,8 @@ class _SohbetPageState extends State<SohbetPage> {
   final mesaj=TextEditingController(),liste=ScrollController();
   final List<Map<String,String>> mentionOnerileri=[];
   bool gonderiliyor=false,aramaBaslatiliyor=false;
+  bool gizliKelimeFiltresi=true;
+  List<String> gizliKelimeListesi=[];
   String? yanitMesajId,yanitMetin,yanitGonderenUid;
   String? get uid=>FirebaseAuth.instance.currentUser?.uid;
 
@@ -4924,8 +4948,14 @@ class _SohbetPageState extends State<SohbetPage> {
       if(benimEngellediklerim.contains(widget.digerUid)||onunEngelledikleri.contains(ben))return 'Engellenen hesaplar arasında mesaj gönderilemez.';
       if(diger['deactivated']==true)return 'Bu hesap şu anda kullanılamıyor.';
       final arkadaslar=List<String>.from(diger['friends']??const[]);
+      final takipEttikleri=List<String>.from(diger['following']??const[]);
       final kabulEdildi=sohbet['requestAccepted_$ben']==true||sohbet['requestAccepted_${widget.digerUid}']==true;
-      if(diger['friendsOnlyMessages']!=false&&!arkadaslar.contains(ben)&&!kabulEdildi)return 'Bu kullanıcı yalnızca arkadaşlarından mesaj kabul ediyor.';
+      final izin=(diger['messagePermission']??(diger['friendsOnlyMessages']!=false?'friends':'all')).toString();
+      if(!kabulEdildi){
+        if(izin=='none')return 'Bu kullanıcı yeni özel mesaj kabul etmiyor.';
+        if(izin=='friends'&&!arkadaslar.contains(ben))return 'Bu kullanıcı yalnızca arkadaşlarından mesaj kabul ediyor.';
+        if(izin=='following'&&!takipEttikleri.contains(ben))return 'Bu kullanıcı yalnızca takip ettiği hesaplardan mesaj kabul ediyor.';
+      }
       return null;
     } catch (_) {
       return 'Mesaj izni kontrol edilemedi. İnternet bağlantını kontrol et.';
@@ -5122,6 +5152,8 @@ class _SohbetPageState extends State<SohbetPage> {
   Widget ozelMesajKarti(QueryDocumentSnapshot<Map<String,dynamic>> d,{double fontSize=16}){
     final v=d.data(),ben=v['senderId']==uid,photo=v['type']=='photo',shared=v['type']=='shared_content';
     final metin=(v['text']??v['message']??v['content']??'').toString().trim(),saat=mesajSaati(v['createdAt']);
+    final gizlenecek=gizliKelimeFiltresi&&metin.isNotEmpty&&gizliKelimeListesi.any((x)=>x.trim().isNotEmpty&&metin.toLowerCase().contains(x.toLowerCase()));
+    final gosterilecekMetin=gizlenecek?'Gizli kelime filtresi nedeniyle gizlendi.':metin;
     final tepkiler=Map<String,dynamic>.from(v['reactions']??{});
     final sayilar=<String,int>{};
     for(final x in tepkiler.values){final e=x.toString();sayilar[e]=(sayilar[e]??0)+1;}
@@ -5161,7 +5193,7 @@ class _SohbetPageState extends State<SohbetPage> {
                 Row(children:[Icon(Icons.play_circle_fill_rounded,color:ben?Colors.white:mavi),const SizedBox(width:7),Text('NgelX paylaşımı',style:TextStyle(color:ben?Colors.white:Colors.black87,fontWeight:FontWeight.w900))]),
                 const SizedBox(height:8),Text(metin,maxLines:4,overflow:TextOverflow.ellipsis,style:TextStyle(color:ben?Colors.white70:Colors.black54)),
               ]))
-            else Text(metin.isEmpty?'Mesaj içeriği bulunamadı':metin,softWrap:true,style:TextStyle(color:ben?Colors.white:Colors.black87,fontSize:fontSize,height:1.3)),
+            else Text(gosterilecekMetin.isEmpty?'Mesaj içeriği bulunamadı':gosterilecekMetin,softWrap:true,style:TextStyle(color:ben?Colors.white:Colors.black87,fontSize:fontSize,height:1.3,fontStyle:gizlenecek?FontStyle.italic:FontStyle.normal)),
             if(v['editedAt']!=null)Text('düzenlendi',style:TextStyle(fontSize:9,color:ben?Colors.white60:Colors.black38)),
             if(sayilar.isNotEmpty)Padding(
               padding:const EdgeInsets.only(top:7),
@@ -5260,7 +5292,17 @@ class _SohbetPageState extends State<SohbetPage> {
   @override
   void initState(){
     super.initState();
-    if(uid!=null){final ref=FirebaseFirestore.instance.collection('chats').doc(widget.chatId);ref.get().then((d){if(d.exists)ref.set({'unread_$uid':0},SetOptions(merge:true));});}
+    if(uid!=null){
+      final ref=FirebaseFirestore.instance.collection('chats').doc(widget.chatId);
+      ref.get().then((d){if(d.exists)ref.set({'unread_$uid':0},SetOptions(merge:true));});
+      FirebaseFirestore.instance.collection('users').doc(uid).get().then((d){
+        final v=d.data()??<String,dynamic>{};
+        if(mounted)setState((){
+          gizliKelimeFiltresi=v['hiddenWordsFilter']!=false;
+          gizliKelimeListesi=List<String>.from(v['hiddenWords']??const[]);
+        });
+      });
+    }
   }
 
   @override
@@ -6217,6 +6259,8 @@ class _DestekPageState extends State<DestekPage>{
 class TercihlerPage extends StatefulWidget {final String baslik;const TercihlerPage({super.key,required this.baslik});@override State<TercihlerPage> createState()=>_TercihlerPageState();}
 class _TercihlerPageState extends State<TercihlerPage> {
   bool hesapGizli=false, profilArama=true, aktiflik=true, profilPaylasArkadas=false, yorumArkadas=false, gizliKelimeler=true, mesajArkadas=true, hikayeArkadas=true, ekranGoruntusu=false, bildirim=true, mesajBildirimi=true, arkadasBildirimi=true, etkilesimBildirimi=true, indirme=true;
+  String mesajIzni='friends';
+  List<String> gizliKelimeListesi=[];
   String? get uid => FirebaseAuth.instance.currentUser?.uid;
 
   @override
@@ -6232,7 +6276,9 @@ class _TercihlerPageState extends State<TercihlerPage> {
       profilPaylasArkadas=v['profileShareFriendsOnly']==true;
       yorumArkadas=v['friendsOnlyComments']==true;
       gizliKelimeler=v['hiddenWordsFilter']!=false;
+      gizliKelimeListesi=List<String>.from(v['hiddenWords']??const[]);
       mesajArkadas=v['friendsOnlyMessages']!=false;
+      mesajIzni=(v['messagePermission']??(mesajArkadas?'friends':'all')).toString();
       hikayeArkadas=v['friendsOnlyStory']!=false;
       ekranGoruntusu=v['allowStoryScreenshot']==true;
       bildirim=v['notificationsEnabled']!=false;
@@ -6245,6 +6291,44 @@ class _TercihlerPageState extends State<TercihlerPage> {
 
   Future<void> kaydet(String k,bool v) async {
     if(uid!=null)await FirebaseFirestore.instance.collection('users').doc(uid).set({k:v},SetOptions(merge:true));
+  }
+  Future<void> kaydetMetin(String k,String v)async{
+    if(uid!=null)await FirebaseFirestore.instance.collection('users').doc(uid).set({k:v},SetOptions(merge:true));
+  }
+  Future<void> gizliKelimeYonet()async{
+    final kontrol=TextEditingController();
+    await showModalBottomSheet<void>(
+      context:context,backgroundColor:Colors.white,showDragHandle:true,isScrollControlled:true,
+      builder:(c)=>StatefulBuilder(builder:(c,setP)=>SafeArea(child:Padding(
+        padding:EdgeInsets.fromLTRB(18,6,18,MediaQuery.of(c).viewInsets.bottom+18),
+        child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
+          const Text('Gizli kelimeler',style:TextStyle(fontSize:20,fontWeight:FontWeight.w900)),
+          const SizedBox(height:6),
+          const Text('Bu kelimeleri içeren yorum ve özel mesajlar sende gizlenir.',style:TextStyle(color:Colors.black54)),
+          const SizedBox(height:14),
+          if(gizliKelimeListesi.isNotEmpty)Wrap(spacing:7,runSpacing:7,children:gizliKelimeListesi.map((x)=>InputChip(
+            label:Text(x),onDeleted:()async{
+              gizliKelimeListesi.remove(x);
+              await FirebaseFirestore.instance.collection('users').doc(uid!).set({'hiddenWords':gizliKelimeListesi},SetOptions(merge:true));
+              if(mounted)setState((){});setP((){});
+            },
+          )).toList()),
+          const SizedBox(height:12),
+          Row(children:[
+            Expanded(child:TextField(controller:kontrol,maxLength:30,decoration:const InputDecoration(hintText:'Kelime veya ifade ekle'))),
+            const SizedBox(width:8),
+            FilledButton(onPressed:()async{
+              final x=kontrol.text.trim().toLowerCase();
+              if(x.isEmpty||gizliKelimeListesi.contains(x))return;
+              gizliKelimeListesi.add(x);kontrol.clear();
+              await FirebaseFirestore.instance.collection('users').doc(uid!).set({'hiddenWords':gizliKelimeListesi,'hiddenWordsFilter':true},SetOptions(merge:true));
+              if(mounted)setState(()=>gizliKelimeler=true);setP((){});
+            },child:const Text('Ekle')),
+          ]),
+        ]),
+      ))),
+    );
+    kontrol.dispose();
   }
 
   Widget satir(String t,String s,bool v,ValueChanged<bool> f,{bool etkin=true})=>SwitchListTile(
@@ -6263,13 +6347,35 @@ class _TercihlerPageState extends State<TercihlerPage> {
           satir('Aktiflik durumunu göster','Arkadaşların son görülme bilgini görebilsin',aktiflik,(v){setState(()=>aktiflik=v);kaydet('showActivityStatus',v);}),
           satir('Profil paylaşımını arkadaşlarla sınırla','Profil bağlantını yalnızca arkadaşların paylaşabilsin',profilPaylasArkadas,(v){setState(()=>profilPaylasArkadas=v);kaydet('profileShareFriendsOnly',v);}),
           satir('Yorumları arkadaşlarla sınırla','Yalnızca arkadaşların yorum yapabilsin',yorumArkadas,(v){setState(()=>yorumArkadas=v);kaydet('friendsOnlyComments',v);}),
-          satir('Gizli kelime filtresi','Rahatsız edici yorumları otomatik gizle',gizliKelimeler,(v){setState(()=>gizliKelimeler=v);kaydet('hiddenWordsFilter',v);}),
+          satir('Gizli kelime filtresi','Seçtiğin kelimeleri içeren yorum ve mesajları gizle',gizliKelimeler,(v){setState(()=>gizliKelimeler=v);kaydet('hiddenWordsFilter',v);}),
+          ListTile(
+            contentPadding:const EdgeInsets.symmetric(horizontal:22,vertical:6),
+            leading:const Icon(Icons.visibility_off_outlined,color:mor),
+            title:const Text('Gizli kelimeleri yönet',style:TextStyle(fontWeight:FontWeight.w700)),
+            subtitle:Text(gizliKelimeListesi.isEmpty?'Henüz kelime eklenmedi':gizliKelimeListesi.length.toString()+' kelime / ifade'),
+            trailing:const Icon(Icons.chevron_right),
+            onTap:gizliKelimeYonet,
+          ),
           const Divider(),
           ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:22,vertical:6),leading:const Icon(Icons.block_outlined,color:mor),title:const Text('Engellenen hesaplar',style:TextStyle(fontWeight:FontWeight.w700)),subtitle:const Text('Engellediğin hesapları yönet'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const EngellenenlerPage()))),
           ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:22,vertical:6),leading:const Icon(Icons.history_toggle_off_rounded,color:mor),title:const Text('Takip isteği geçmişi',style:TextStyle(fontWeight:FontWeight.w700)),subtitle:const Text('Gönderdiğin bekleyen, kabul edilen ve reddedilen istekler'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const TakipIstegiGecmisiPage()))),
         ];
       case 'Mesaj izinleri':
-        return [satir('Yalnızca arkadaşlardan mesaj','Yabancılardan gelen mesajları engelle',mesajArkadas,(v){setState(()=>mesajArkadas=v);kaydet('friendsOnlyMessages',v);})];
+        return [
+          const Padding(padding:EdgeInsets.fromLTRB(22,16,22,8),child:Text('Kim mesaj atabilir?',style:TextStyle(fontSize:18,fontWeight:FontWeight.w900))),
+          for(final e in const [('all','Herkes','Mesaj istekleri dahil herkes yazabilir'),('following','Takip ettiklerim','Yalnızca senin takip ettiğin hesaplar'),('friends','Arkadaşlar','Yalnızca arkadaşların'),('none','Kimse','Yeni özel mesaj kabul etme')])
+            RadioListTile<String>(
+              value:e.$1,groupValue:mesajIzni,
+              title:Text(e.$2,style:const TextStyle(fontWeight:FontWeight.w700)),
+              subtitle:Text(e.$3),
+              onChanged:(v)async{
+                if(v==null)return;
+                setState(()=>mesajIzni=v);
+                await kaydetMetin('messagePermission',v);
+                await kaydet('friendsOnlyMessages',v=='friends');
+              },
+            ),
+        ];
       case 'Hikâye gizliliği':
         return [
           satir('Hikâyeyi arkadaşlar görsün','Hikâyeni yalnızca arkadaşlarına göster',hikayeArkadas,(v){setState(()=>hikayeArkadas=v);kaydet('friendsOnlyStory',v);}),
