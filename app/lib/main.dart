@@ -4819,6 +4819,7 @@ class _YeniSohbetPageState extends State<YeniSohbetPage>{
   @override
   Widget build(BuildContext context) {
     final me = FirebaseAuth.instance.currentUser?.uid;
+    if(!ziyaretciOnizleme)unawaited(profilZiyaretKaydet(uid));
     final beyazTema = ThemeData.light().copyWith(
       scaffoldBackgroundColor: Colors.white,
       appBarTheme: const AppBarTheme(backgroundColor: Colors.white, foregroundColor: Colors.black, elevation: 0),
@@ -5755,6 +5756,55 @@ class AktivitePage extends StatelessWidget {
 String zamanKisa(dynamic t){if(t is! Timestamp)return 'Şimdi';final f=DateTime.now().difference(t.toDate());if(f.inMinutes<1)return 'Şimdi';if(f.inHours<1)return '${f.inMinutes} dk önce';if(f.inDays<1)return '${f.inHours} sa önce';return '${f.inDays} gün önce';}
 String mesajSaati(dynamic t){if(t is! Timestamp)return '';final d=t.toDate().toLocal();final s=d.minute.toString().padLeft(2,'0');return '${d.hour}:$s';}
 
+Future<void> profilZiyaretKaydet(String hedefUid)async{
+  final me=FirebaseAuth.instance.currentUser?.uid;
+  if(me==null||me==hedefUid)return;
+  try{
+    final simdi=DateTime.now().toLocal();
+    final gun=simdi.year.toString().padLeft(4,'0')+simdi.month.toString().padLeft(2,'0')+simdi.day.toString().padLeft(2,'0');
+    final hafiza=await SharedPreferences.getInstance();
+    final anahtar='profile_view_'+hedefUid+'_'+gun;
+    if(hafiza.getBool(anahtar)==true)return;
+    await FirebaseFirestore.instance.collection('profile_view_stats').doc(hedefUid).collection('days').doc(gun).set({
+      'count':FieldValue.increment(1),
+      'day':gun,
+      'updatedAt':FieldValue.serverTimestamp(),
+    },SetOptions(merge:true));
+    await hafiza.setBool(anahtar,true);
+  }catch(_){}
+}
+
+class ProfilZiyaretTrendPage extends StatelessWidget{
+  const ProfilZiyaretTrendPage({super.key});
+  @override Widget build(BuildContext context){
+    final uid=FirebaseAuth.instance.currentUser?.uid;
+    return Theme(data:ThemeData.light(),child:Scaffold(
+      backgroundColor:Colors.white,
+      appBar:AppBar(title:const Text('Profil ziyaret eğilimleri',style:TextStyle(fontWeight:FontWeight.w900))),
+      body:uid==null?const Center(child:Text('Oturum bulunamadı.')):StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
+        stream:FirebaseFirestore.instance.collection('profile_view_stats').doc(uid).collection('days').orderBy(FieldPath.documentId,descending:true).limit(30).snapshots(),
+        builder:(_,s){
+          if(s.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator(color:mor));
+          final docs=s.data?.docs??[];
+          if(docs.isEmpty)return const Center(child:Text('Henüz profil ziyaret verisi yok.',style:TextStyle(color:Colors.black54)));
+          final max=docs.fold<int>(1,(m,d){final n=((d.data()['count'] as num?)?.toInt()??0);return n>m?n:m;});
+          return ListView.separated(
+            padding:const EdgeInsets.all(18),itemCount:docs.length,separatorBuilder:(_,__)=>const SizedBox(height:10),
+            itemBuilder:(_,i){
+              final v=docs[i].data(),n=((v['count'] as num?)?.toInt()??0),gun=(v['day']??docs[i].id).toString();
+              return Row(children:[
+                SizedBox(width:82,child:Text(gun,style:const TextStyle(color:Colors.black54,fontSize:12))),
+                Expanded(child:ClipRRect(borderRadius:BorderRadius.circular(8),child:LinearProgressIndicator(value:n/max,minHeight:14,backgroundColor:const Color(0xFFF0F1F4),color:mor))),
+                const SizedBox(width:10),SizedBox(width:38,child:Text(n.toString(),textAlign:TextAlign.right,style:const TextStyle(fontWeight:FontWeight.w900))),
+              ]);
+            },
+          );
+        },
+      ),
+    ));
+  }
+}
+
 class ProfilTanitimVideoKarti extends StatefulWidget{
   final String url;
   const ProfilTanitimVideoKarti({super.key,required this.url});
@@ -6432,6 +6482,7 @@ class _KullaniciListesiPageState extends State<KullaniciListesiPage>{
 class EtkilesimOzetiPage extends StatelessWidget{
   final String uid;
   const EtkilesimOzetiPage({super.key,required this.uid});
+  int puan(Map<String,dynamic> v)=>((v['likeCount'] as num?)?.toInt()??0)+((v['commentCount'] as num?)?.toInt()??0)+((v['shareCount'] as num?)?.toInt()??0);
   @override Widget build(BuildContext context)=>Theme(
     data:ThemeData.light(),
     child:Scaffold(
@@ -6443,18 +6494,46 @@ class EtkilesimOzetiPage extends StatelessWidget{
           final d=(s.data?.docs??[]).where((x)=>x.data()['type']!='story').toList();
           int begeni=0,yorum=0,paylasim=0;
           for(final x in d){final v=x.data();begeni+=((v['likeCount'] as num?)?.toInt()??0);yorum+=((v['commentCount'] as num?)?.toInt()??0);paylasim+=((v['shareCount'] as num?)?.toInt()??0);}
+          final benim=FirebaseAuth.instance.currentUser?.uid==uid;
+          final top=[...d]..sort((a,b)=>puan(b.data()).compareTo(puan(a.data())));
           return ListView(padding:const EdgeInsets.all(20),children:[
             const Text('İçerik istatistikleri',style:TextStyle(fontSize:22,fontWeight:FontWeight.w900)),
             const SizedBox(height:18),
             Row(children:[_kart(Icons.favorite_rounded,'Beğeni',begeni,Colors.red),_kart(Icons.comment_rounded,'Yorum',yorum,Colors.blue)]),
             const SizedBox(height:12),
             Row(children:[_kart(Icons.send_rounded,'Paylaşım',paylasim,mor),_kart(Icons.grid_view_rounded,'Gönderi',d.length,Colors.orange)]),
+            if(benim)...[
+              const SizedBox(height:24),
+              ListTile(
+                contentPadding:EdgeInsets.zero,
+                leading:const CircleAvatar(backgroundColor:Color(0xFFF1E9FF),child:Icon(Icons.query_stats_rounded,color:mor)),
+                title:const Text('Profil ziyaret eğilimleri',style:TextStyle(fontWeight:FontWeight.w800)),
+                subtitle:const Text('Günlük ziyaret sayılarındaki değişimi gör'),
+                trailing:const Icon(Icons.chevron_right),
+                onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const ProfilZiyaretTrendPage())),
+              ),
+              const SizedBox(height:16),
+              const Text('En çok etkileşim alan gönderiler',style:TextStyle(fontSize:18,fontWeight:FontWeight.w900)),
+              const SizedBox(height:8),
+              if(top.isEmpty)const Text('Henüz gönderi yok.',style:TextStyle(color:Colors.black54)),
+              ...top.take(5).map((x){
+                final v=x.data(),aciklama=(v['description']??'Gönderi').toString();
+                return ListTile(
+                  contentPadding:EdgeInsets.zero,
+                  leading:CircleAvatar(backgroundColor:const Color(0xFFF1F2F4),child:Text((puan(v)).toString(),style:const TextStyle(fontWeight:FontWeight.w900))),
+                  title:Text(aciklama.isEmpty?'Gönderi':aciklama,maxLines:1,overflow:TextOverflow.ellipsis),
+                  subtitle:Text('Toplam etkileşim: '+puan(v).toString()),
+                  trailing:const Icon(Icons.chevron_right),
+                  onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>IcerikBaglantiPage(icerikId:x.id))),
+                );
+              }),
+            ],
           ]);
         },
       ),
     ),
   );
-  Widget _kart(IconData i,String t,int n,Color c)=>Expanded(child:Container(margin:const EdgeInsets.all(5),padding:const EdgeInsets.all(18),decoration:BoxDecoration(color:c.withValues(alpha:.10),borderRadius:BorderRadius.circular(20)),child:Column(children:[Icon(i,color:c),const SizedBox(height:8),Text('$n',style:const TextStyle(fontSize:24,fontWeight:FontWeight.w900)),Text(t,style:const TextStyle(color:Colors.black54))])));
+  Widget _kart(IconData i,String t,int n,Color c)=>Expanded(child:Container(margin:const EdgeInsets.all(5),padding:const EdgeInsets.all(18),decoration:BoxDecoration(color:c.withValues(alpha:.10),borderRadius:BorderRadius.circular(20)),child:Column(children:[Icon(i,color:c),const SizedBox(height:8),Text(n.toString(),style:const TextStyle(fontSize:24,fontWeight:FontWeight.w900)),Text(t,style:const TextStyle(color:Colors.black54))])));
 }
 
 class ProfilAramaPage extends StatefulWidget{
