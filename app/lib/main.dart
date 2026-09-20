@@ -6318,6 +6318,49 @@ class _ProfilAramaPageState extends State<ProfilAramaPage>{
   );
 }
 
+class HikayeArsiviPage extends StatelessWidget{
+  const HikayeArsiviPage({super.key});
+  @override Widget build(BuildContext context){
+    final uid=FirebaseAuth.instance.currentUser?.uid;
+    return Theme(data:ThemeData.light(),child:Scaffold(
+      backgroundColor:Colors.white,
+      appBar:AppBar(title:const Text('Hikâye arşivi',style:TextStyle(fontWeight:FontWeight.w900))),
+      body:uid==null?const Center(child:Text('Oturum bulunamadı.')):StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
+        stream:FirebaseFirestore.instance.collection('videos').where('ownerId',isEqualTo:uid).snapshots(),
+        builder:(_,s){
+          if(s.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator(color:mor));
+          final docs=(s.data?.docs??[]).where((d)=>d.data()['type']=='story').toList()
+            ..sort((a,b){
+              final at=a.data()['createdAt'],bt=b.data()['createdAt'];
+              final am=at is Timestamp?at.millisecondsSinceEpoch:0,bm=bt is Timestamp?bt.millisecondsSinceEpoch:0;
+              return bm.compareTo(am);
+            });
+          if(docs.isEmpty)return const Center(child:Text('Henüz arşivlenmiş hikâyen yok.',style:TextStyle(color:Colors.black54)));
+          return ListView.separated(
+            padding:const EdgeInsets.all(12),itemCount:docs.length,separatorBuilder:(_,__)=>const Divider(),
+            itemBuilder:(_,i){
+              final d=docs[i],v=d.data(),url=(v['mediaUrl']??'').toString(),oneCikan=v['highlighted']==true;
+              return ListTile(
+                leading:ClipRRect(borderRadius:BorderRadius.circular(10),child:url.isEmpty?const SizedBox(width:54,height:54,child:Icon(Icons.image_not_supported_outlined)):Image.network(url,width:54,height:54,fit:BoxFit.cover)),
+                title:Text(zamanKisa(v['createdAt']),style:const TextStyle(fontWeight:FontWeight.w800)),
+                subtitle:Text(oneCikan?'Öne çıkanlarda gösteriliyor':'Arşivde'),
+                trailing:IconButton(
+                  tooltip:oneCikan?'Öne çıkandan kaldır':'Öne çıkar',
+                  onPressed:()=>d.reference.set({'highlighted':!oneCikan},SetOptions(merge:true)),
+                  icon:Icon(oneCikan?Icons.star_rounded:Icons.star_border_rounded,color:oneCikan?Colors.amber:mor),
+                ),
+                onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>HikayeGosterPage(
+                  url:url,kullanici:'Hikâyem',createdAt:v['createdAt'],expiresAt:v['expiresAt'],
+                ))),
+              );
+            },
+          );
+        },
+      ),
+    ));
+  }
+}
+
 class ProfilBolumuPage extends StatelessWidget{final String baslik,aciklama;final IconData ikon;const ProfilBolumuPage({super.key,required this.baslik,required this.aciklama,required this.ikon});@override Widget build(BuildContext context)=>Theme(data:ThemeData.light(),child:Scaffold(backgroundColor:Colors.white,appBar:AppBar(title:Text(baslik,style:const TextStyle(fontWeight:FontWeight.w900))),body:Center(child:Padding(padding:const EdgeInsets.all(28),child:Column(mainAxisSize:MainAxisSize.min,children:[CircleAvatar(radius:38,backgroundColor:const Color(0xFFF1E9FF),child:Icon(ikon,color:mor,size:38)),const SizedBox(height:14),Text(aciklama,textAlign:TextAlign.center,style:const TextStyle(color:Colors.black54,fontSize:16))])))));}
 
 class ProfilPage extends StatefulWidget {
@@ -6658,7 +6701,35 @@ class _ProfilPageState extends State<ProfilPage> {
 
   void icerigiAc(QueryDocumentSnapshot<Map<String,dynamic>> d){final item=icerikHaritasi(d),tur=item['type'];Navigator.push(context,MaterialPageRoute(builder:(_)=>Scaffold(body:SafeArea(child:tur=='video'?VideoKarti(adres:item['videoUrl']!,videoId:item['id']!,kullaniciAdi:item['username']!,ownerId:item['ownerId']!,indirilebilir:item['allowDownload']!='false',aktif:true):GorselYaziKarti(veri:item,aktif:true)))));}
 
-  Future<void> icerikMenusu(QueryDocumentSnapshot<Map<String,dynamic>> d) async {await showModalBottomSheet(context:context,backgroundColor:Colors.white,showDragHandle:true,shape:const RoundedRectangleBorder(borderRadius:BorderRadius.vertical(top:Radius.circular(26))),builder:(ctx)=>Theme(data:ThemeData.light(),child:SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[ListTile(leading:const Icon(Icons.edit,color:mavi),title:const Text('Açıklamayı düzenle'),onTap:(){Navigator.pop(ctx);icerikDuzenle(d);}),ListTile(leading:const Icon(Icons.push_pin_outlined,color:mor),title:const Text('Profilde sabitle'),onTap:(){d.reference.set({'pinned':true},SetOptions(merge:true));Navigator.pop(ctx);}),ListTile(leading:const Icon(Icons.delete_forever,color:Colors.red),title:const Text('PAYLAŞIMI SİL',style:TextStyle(color:Colors.red,fontWeight:FontWeight.bold)),onTap:(){Navigator.pop(ctx);icerikSil(d);})]))));}
+  Future<void> icerikMenusu(QueryDocumentSnapshot<Map<String,dynamic>> d) async {
+    final sabit=d.data()['pinned']==true;
+    await showModalBottomSheet(
+      context:context,backgroundColor:Colors.white,showDragHandle:true,
+      shape:const RoundedRectangleBorder(borderRadius:BorderRadius.vertical(top:Radius.circular(26))),
+      builder:(ctx)=>Theme(data:ThemeData.light(),child:SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
+        ListTile(leading:const Icon(Icons.edit,color:mavi),title:const Text('Açıklamayı düzenle'),onTap:(){Navigator.pop(ctx);icerikDuzenle(d);}),
+        ListTile(
+          leading:Icon(sabit?Icons.push_pin:Icons.push_pin_outlined,color:mor),
+          title:Text(sabit?'Sabitlemeyi kaldır':'Profilde sabitle'),
+          onTap:()async{
+            if(!sabit){
+              final u=aktifKullanici;if(u==null)return;
+              final q=await FirebaseFirestore.instance.collection('videos').where('ownerId',isEqualTo:u.uid).get();
+              final sayi=q.docs.where((x)=>x.data()['type']!='story'&&x.data()['pinned']==true).length;
+              if(sayi>=3){
+                if(ctx.mounted)Navigator.pop(ctx);
+                if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Profilde en fazla 3 gönderi sabitleyebilirsin.')));
+                return;
+              }
+            }
+            await d.reference.set({'pinned':!sabit,'pinnedAt':!sabit?FieldValue.serverTimestamp():null},SetOptions(merge:true));
+            if(ctx.mounted)Navigator.pop(ctx);
+          },
+        ),
+        ListTile(leading:const Icon(Icons.delete_forever,color:Colors.red),title:const Text('PAYLAŞIMI SİL',style:TextStyle(color:Colors.red,fontWeight:FontWeight.bold)),onTap:(){Navigator.pop(ctx);icerikSil(d);}),
+      ]))),
+    );
+  }
 
   Future<void> icerikDuzenle(QueryDocumentSnapshot<Map<String,dynamic>> d) async {final c=TextEditingController(text:(d.data()['description']??'').toString());final ok=await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(title:const Text('Paylaşımı düzenle'),content:TextField(controller:c,maxLength:500,maxLines:4),actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('Vazgeç')),FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('Kaydet'))]));if(ok==true)await d.reference.update({'description':c.text.trim(),'updatedAt':FieldValue.serverTimestamp()});c.dispose();}
 
@@ -6781,9 +6852,36 @@ class _ProfilPageState extends State<ProfilPage> {
                   const SizedBox(height: 17),
                   Row(mainAxisAlignment:MainAxisAlignment.center,children:[SizedBox(width:235,height:50,child:FilledButton.icon(style:FilledButton.styleFrom(backgroundColor:const Color(0xFFF1F2F6),foregroundColor:Colors.black,shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(17))),onPressed:aktifKullanici?.isAnonymous==true?()async{await FirebaseAuth.instance.signOut();if(context.mounted)Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder:(_)=>const KayitPage()),(_)=>false);}:duzenle,icon:const Icon(Icons.edit_outlined),label:Text(aktifKullanici?.isAnonymous==true?'Hesap Oluştur':'Profili Düzenle',style:const TextStyle(fontWeight:FontWeight.w800)))),const SizedBox(width:10),SizedBox(width:52,height:50,child:FilledButton(style:FilledButton.styleFrom(backgroundColor:const Color(0xFFF1ECFF),foregroundColor:Colors.black,padding:EdgeInsets.zero,shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(17))),onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const ArkadaslarPage())),child:const Icon(Icons.person_add_alt_1)))]),
                   const SizedBox(height: 22),
-                  Row(mainAxisAlignment:MainAxisAlignment.spaceAround,children:[_profilKisayol(Icons.bookmark_border_rounded,'Kaydedilenler',tiklama:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const KaydedilenlerPage()))),_profilKisayol(Icons.history_rounded,'Arşiv',tiklama:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const ProfilBolumuPage(baslik:'Arşiv',aciklama:'Arşivlediğin paylaşımlar burada görünecek.',ikon:Icons.history_rounded)))),_profilKisayol(Icons.add_circle_outline_rounded,'Hikâyeler',tiklama:hikayeyiAc),_profilKisayol(Icons.event_outlined,'Etkinlikler',tiklama:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const ProfilBolumuPage(baslik:'Etkinlikler',aciklama:'Yaklaşan ve katıldığın etkinlikler burada görünecek.',ikon:Icons.event_outlined)))),_profilKisayol(Icons.lock_outline_rounded,'Gizlilik',tiklama:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const TercihlerPage(baslik:'Gizlilik')))),_profilKisayol(Icons.settings_outlined,'Ayarlar',tiklama:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const AyarlarPage())))]),
+                  Row(mainAxisAlignment:MainAxisAlignment.spaceAround,children:[_profilKisayol(Icons.bookmark_border_rounded,'Kaydedilenler',tiklama:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const KaydedilenlerPage()))),_profilKisayol(Icons.history_rounded,'Arşiv',tiklama:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const HikayeArsiviPage()))),_profilKisayol(Icons.add_circle_outline_rounded,'Hikâyeler',tiklama:hikayeyiAc),_profilKisayol(Icons.event_outlined,'Etkinlikler',tiklama:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const ProfilBolumuPage(baslik:'Etkinlikler',aciklama:'Yaklaşan ve katıldığın etkinlikler burada görünecek.',ikon:Icons.event_outlined)))),_profilKisayol(Icons.lock_outline_rounded,'Gizlilik',tiklama:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const TercihlerPage(baslik:'Gizlilik')))),_profilKisayol(Icons.settings_outlined,'Ayarlar',tiklama:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const AyarlarPage())))]),
                   const SizedBox(height: 20),
-                  SizedBox(height:92,child:ListView(scrollDirection:Axis.horizontal,children:[_oneCikan(Icons.add,'Yeni',hikayeYukle),_oneCikan(Icons.person,'Ben',hikayeyiAc),_oneCikan(Icons.wb_sunny_outlined,'Günlük',hikayeyiAc),_oneCikan(Icons.people_outline,'Dostlar',hikayeyiAc),_oneCikan(Icons.flight_takeoff,'Seyahat',hikayeyiAc),_oneCikan(Icons.restaurant_outlined,'Yemek',hikayeyiAc),_oneCikan(Icons.favorite_border,'Anılar',hikayeyiAc)])),
+                  SizedBox(height:92,child:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
+                    stream:aktifKullanici==null?null:FirebaseFirestore.instance.collection('videos').where('ownerId',isEqualTo:aktifKullanici!.uid).snapshots(),
+                    builder:(_,hs){
+                      final h=(hs.data?.docs??[]).where((d)=>d.data()['type']=='story'&&d.data()['highlighted']==true).toList()
+                        ..sort((a,b){
+                          final at=a.data()['createdAt'],bt=b.data()['createdAt'];
+                          final am=at is Timestamp?at.millisecondsSinceEpoch:0,bm=bt is Timestamp?bt.millisecondsSinceEpoch:0;
+                          return bm.compareTo(am);
+                        });
+                      return ListView(scrollDirection:Axis.horizontal,children:[
+                        _oneCikan(Icons.add,'Yeni',hikayeYukle),
+                        ...h.take(8).map((d){
+                          final v=d.data(),url=(v['mediaUrl']??'').toString();
+                          return Padding(
+                            padding:const EdgeInsets.only(right:10),
+                            child:InkWell(
+                              onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>HikayeGosterPage(url:url,kullanici:kullanici,fotoUrl:fotoUrl,createdAt:v['createdAt'],expiresAt:v['expiresAt']))),
+                              child:SizedBox(width:70,child:Column(children:[
+                                CircleAvatar(radius:28,backgroundColor:const Color(0xFFF1E9FF),backgroundImage:url.isEmpty?null:NetworkImage(url),child:url.isEmpty?const Icon(Icons.auto_stories_rounded,color:mor):null),
+                                const SizedBox(height:5),
+                                const Text('Öne çıkan',maxLines:1,overflow:TextOverflow.ellipsis,style:TextStyle(color:Colors.black54,fontSize:11)),
+                              ])),
+                            ),
+                          );
+                        }),
+                      ]);
+                    },
+                  )),
                   const SizedBox(height: 14),
                   const Row(mainAxisAlignment:MainAxisAlignment.spaceAround,children:[_ProfilSekme('Gönderiler',true),_ProfilSekme('Reels',false),_ProfilSekme('Etiketlenenler',false),_ProfilSekme('Beğenilenler',false)]),
                 ],
@@ -6794,7 +6892,14 @@ class _ProfilPageState extends State<ProfilPage> {
             child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
               stream: aktifKullanici == null ? null : FirebaseFirestore.instance.collection('videos').where('ownerId', isEqualTo: aktifKullanici!.uid).snapshots(),
               builder: (_, snap) {
-                final paylasimlar = (snap.data?.docs ?? []).where((d) => d.data()['type'] != 'story').toList();
+                final paylasimlar = (snap.data?.docs ?? []).where((d) => d.data()['type'] != 'story').toList()
+                  ..sort((a,b){
+                    final ap=a.data()['pinned']==true,bp=b.data()['pinned']==true;
+                    if(ap!=bp)return ap?-1:1;
+                    final at=a.data()['createdAt'],bt=b.data()['createdAt'];
+                    final am=at is Timestamp?at.millisecondsSinceEpoch:0,bm=bt is Timestamp?bt.millisecondsSinceEpoch:0;
+                    return bm.compareTo(am);
+                  });
                 if (paylasimlar.isEmpty) return const Padding(padding: EdgeInsets.all(35), child: Center(child: Text('Henüz paylaşımın yok. Üret bölümünden ilk içeriğini yayınla ✨', textAlign: TextAlign.center, style: TextStyle(color: Colors.black54))));
                 return GridView.builder(
                   shrinkWrap: true,
