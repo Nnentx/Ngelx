@@ -6042,6 +6042,9 @@ class AktivitePage extends StatelessWidget {
     final veri=belge.data();
     final gonderen=(veri['fromUid']??'').toString();
     final tur=(veri['type']??'').toString();
+    final eskiArkadaslik=belge.id.startsWith('friend_request_')||(veri['text']??'').toString().toLowerCase().contains('arkadaşlık');
+    final arkadaslikIstegi=tur=='friend_request'||eskiArkadaslik;
+    final takipIstegi=tur=='follow_request'&&!arkadaslikIstegi;
     if(ben==null||gonderen.isEmpty||veri['status']!='pending')return;
 
     final toplu=FirebaseFirestore.instance.batch();
@@ -6051,7 +6054,7 @@ class AktivitePage extends StatelessWidget {
       'answeredAt':FieldValue.serverTimestamp(),
     });
 
-    if(kabul&&tur=='follow_request'){
+    if(kabul&&takipIstegi){
       toplu.set(
         FirebaseFirestore.instance.collection('users').doc(ben),
         {'followers':FieldValue.arrayUnion([gonderen])},
@@ -6073,7 +6076,7 @@ class AktivitePage extends StatelessWidget {
       );
     }
 
-    if(kabul&&tur=='friend_request'){
+    if(kabul&&arkadaslikIstegi){
       toplu.set(
         FirebaseFirestore.instance.collection('users').doc(ben),
         {'friends':FieldValue.arrayUnion([gonderen])},
@@ -6103,7 +6106,7 @@ class AktivitePage extends StatelessWidget {
 
     await toplu.commit();
     if(context.mounted){
-      final ad=tur=='follow_request'?'Takip isteği':'Arkadaşlık isteği';
+      final ad=takipIstegi?'Takip isteği':'Arkadaşlık isteği';
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(kabul?'$ad kabul edildi.':'$ad reddedildi.')));
     }
   }
