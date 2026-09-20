@@ -5618,6 +5618,11 @@ class _SohbetPageState extends State<SohbetPage> {
   bool _okunduYaziliyor=false;
   bool _ilkMesajKaydirma=true;
   DateTime? _sonYaziyorGonderim;
+  DateTime? _mesajHazirlikZamani;
+  String? _mesajHazirlikEngeli;
+  Map<String,dynamic> _mesajHazirlikSohbet=<String,dynamic>{};
+  Map<String,dynamic> _mesajHazirlikDiger=<String,dynamic>{};
+  bool _mesajHazirlikSohbetMevcut=false;
   bool gonderiliyor=false,aramaBaslatiliyor=false,yaziyorGonderildi=false;
   Timer? yaziyorZamanlayici,sureliMesajZamanlayici;
   bool gizliKelimeFiltresi=true;
@@ -5625,36 +5630,50 @@ class _SohbetPageState extends State<SohbetPage> {
   String? yanitMesajId,yanitMetin,yanitGonderenUid;
   String? get uid=>FirebaseAuth.instance.currentUser?.uid;
 
-  Future<String?> mesajEngeli() async {
+  Future<({String? engel,Map<String,dynamic> sohbet,Map<String,dynamic> diger,bool sohbetMevcut})> mesajGonderimHazirligi({bool zorla=false}) async {
     final ben=uid;
-    if(ben==null)return 'Mesaj göndermek için giriş yap.';
-    try {
+    if(ben==null)return (engel:'Mesaj göndermek için giriş yap.',sohbet:<String,dynamic>{},diger:<String,dynamic>{},sohbetMevcut:false);
+    final simdi=DateTime.now();
+    if(!zorla&&_mesajHazirlikZamani!=null&&simdi.difference(_mesajHazirlikZamani!).inSeconds<15){
+      return (engel:_mesajHazirlikEngeli,sohbet:_mesajHazirlikSohbet,diger:_mesajHazirlikDiger,sohbetMevcut:_mesajHazirlikSohbetMevcut);
+    }
+    try{
       final sonuc=await Future.wait([
         FirebaseFirestore.instance.collection('users').doc(ben).get(),
         FirebaseFirestore.instance.collection('users').doc(widget.digerUid).get(),
         FirebaseFirestore.instance.collection('chats').doc(widget.chatId).get(),
       ]);
-      final benim=sonuc[0].data()??{};
-      final diger=sonuc[1].data()??{};
-      final sohbet=sonuc[2].data()??{};
+      final benim=sonuc[0].data()??<String,dynamic>{};
+      final diger=sonuc[1].data()??<String,dynamic>{};
+      final sohbet=sonuc[2].data()??<String,dynamic>{};
+      String? engel;
       final benimEngellediklerim=List<String>.from(benim['blocked']??const[]);
       final onunEngelledikleri=List<String>.from(diger['blocked']??const[]);
-      if(benimEngellediklerim.contains(widget.digerUid)||onunEngelledikleri.contains(ben))return 'Engellenen hesaplar arasında mesaj gönderilemez.';
-      if(diger['deactivated']==true)return 'Bu hesap şu anda kullanılamıyor.';
-      final arkadaslar=List<String>.from(diger['friends']??const[]);
-      final takipEttikleri=List<String>.from(diger['following']??const[]);
-      final kabulEdildi=sohbet['requestAccepted_$ben']==true||sohbet['requestAccepted_${widget.digerUid}']==true;
-      final izin=(diger['messagePermission']??(diger['friendsOnlyMessages']!=false?'friends':'all')).toString();
-      if(!kabulEdildi){
-        if(izin=='none')return 'Bu kullanıcı yeni özel mesaj kabul etmiyor.';
-        if(izin=='friends'&&!arkadaslar.contains(ben))return 'Bu kullanıcı yalnızca arkadaşlarından mesaj kabul ediyor.';
-        if(izin=='following'&&!takipEttikleri.contains(ben))return 'Bu kullanıcı yalnızca takip ettiği hesaplardan mesaj kabul ediyor.';
+      if(benimEngellediklerim.contains(widget.digerUid)||onunEngelledikleri.contains(ben))engel='Engellenen hesaplar arasında mesaj gönderilemez.';
+      else if(diger['deactivated']==true)engel='Bu hesap şu anda kullanılamıyor.';
+      else{
+        final arkadaslar=List<String>.from(diger['friends']??const[]);
+        final takipEttikleri=List<String>.from(diger['following']??const[]);
+        final kabulEdildi=sohbet['requestAccepted_$ben']==true||sohbet['requestAccepted_${widget.digerUid}']==true;
+        final izin=(diger['messagePermission']??(diger['friendsOnlyMessages']!=false?'friends':'all')).toString();
+        if(!kabulEdildi){
+          if(izin=='none')engel='Bu kullanıcı yeni özel mesaj kabul etmiyor.';
+          else if(izin=='friends'&&!arkadaslar.contains(ben))engel='Bu kullanıcı yalnızca arkadaşlarından mesaj kabul ediyor.';
+          else if(izin=='following'&&!takipEttikleri.contains(ben))engel='Bu kullanıcı yalnızca takip ettiği hesaplardan mesaj kabul ediyor.';
+        }
       }
-      return null;
-    } catch (_) {
-      return 'Mesaj izni kontrol edilemedi. İnternet bağlantını kontrol et.';
+      _mesajHazirlikZamani=simdi;
+      _mesajHazirlikEngeli=engel;
+      _mesajHazirlikSohbet=sohbet;
+      _mesajHazirlikDiger=diger;
+      _mesajHazirlikSohbetMevcut=sonuc[2].exists;
+      return (engel:engel,sohbet:sohbet,diger:diger,sohbetMevcut:sonuc[2].exists);
+    }catch(_){
+      return (engel:'Mesaj izni kontrol edilemedi. İnternet bağlantını kontrol et.',sohbet:<String,dynamic>{},diger:<String,dynamic>{},sohbetMevcut:false);
     }
   }
+
+  Future<String?> mesajEngeli()async=>(await mesajGonderimHazirligi()).engel;
 
   void sureliMesajTakvimi(Iterable<QueryDocumentSnapshot<Map<String,dynamic>>> docs){
     sureliMesajZamanlayici?.cancel();
@@ -5726,60 +5745,117 @@ class _SohbetPageState extends State<SohbetPage> {
 
   Future<void> gonder() async {
     final t=mesaj.text.trim();
-    if(t.isEmpty||uid==null||gonderiliyor)return;
+    final ben=uid;
+    if(t.isEmpty||ben==null||gonderiliyor)return;
     setState(()=>gonderiliyor=true);
-    final engel=await mesajEngeli();
-    if(engel!=null){if(mounted){setState(()=>gonderiliyor=false);ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(engel)));}return;}
+
+    final hazirlik=await mesajGonderimHazirligi();
+    if(hazirlik.engel!=null){
+      if(mounted){
+        setState(()=>gonderiliyor=false);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(hazirlik.engel!)));
+      }
+      return;
+    }
+
     final ref=FirebaseFirestore.instance.collection('chats').doc(widget.chatId);
-    try {
-      final onceki=await ref.get();
-      final sureHam=onceki.data()?['disappearingSeconds'];
-      final sure=sureHam is num?sureHam.toInt():0;
-      final bitis=sure>0?Timestamp.fromDate(DateTime.now().add(Duration(seconds:sure))):null;
-      final diger=await FirebaseFirestore.instance.collection('users').doc(widget.digerUid).get();
-      final arkadas=List<String>.from(diger.data()?['friends']??const[]).contains(uid);
-      await ref.set({'members':[uid,widget.digerUid],'updatedAt':FieldValue.serverTimestamp(),if(!onceki.exists&&!arkadas)'requestSenderUid':uid,if(!onceki.exists&&!arkadas)'requestRecipientUid':widget.digerUid},SetOptions(merge:true));
-      await ref.collection('messages').add({
-        'senderId':uid,'text':t,'type':'text','createdAt':FieldValue.serverTimestamp(),
-        if(bitis!=null)'expiresAt':bitis,
-        if(yanitMesajId!=null)'replyToId':yanitMesajId,
-        if(yanitMetin!=null)'replyText':yanitMetin,
-        if(yanitGonderenUid!=null)'replySenderId':yanitGonderenUid,
-      });
-      await ref.set({'lastMessage':t,'updatedAt':FieldValue.serverTimestamp(),'unread_${widget.digerUid}':FieldValue.increment(1)},SetOptions(merge:true));
-      unawaited(uygulamaBildirimiGonder(toUid:widget.digerUid,fromUid:uid!,tur:'message',metin:'Yeni bir mesajın var',belgeId:widget.chatId).catchError((_){ }));
-      mesaj.clear();
-      yaziyorZamanlayici?.cancel();
-      yaziyorGonderildi=false;
-      unawaited(ref.set({'typing_$uid':false},SetOptions(merge:true)));
-      if(mounted)setState((){yanitMesajId=null;yanitMetin=null;yanitGonderenUid=null;});
-    } catch(e) {
-      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Mesaj gönderilemedi, tekrar dene: $e')));
-    } finally {if(mounted)setState(()=>gonderiliyor=false);}
+    final sureHam=hazirlik.sohbet['disappearingSeconds'];
+    final sure=sureHam is num?sureHam.toInt():0;
+    final simdi=DateTime.now();
+    final clientCreatedAt=Timestamp.fromDate(simdi);
+    final bitis=sure>0?Timestamp.fromDate(simdi.add(Duration(seconds:sure))):null;
+    final arkadas=List<String>.from(hazirlik.diger['friends']??const[]).contains(ben);
+    final cevapId=yanitMesajId,cevapMetin=yanitMetin,cevapUid=yanitGonderenUid;
+    final mesajRef=ref.collection('messages').doc();
+    final batch=FirebaseFirestore.instance.batch();
+
+    batch.set(ref,{
+      'members':[ben,widget.digerUid],
+      'lastMessage':t,
+      'updatedAt':FieldValue.serverTimestamp(),
+      'unread_${widget.digerUid}':FieldValue.increment(1),
+      if(!hazirlik.sohbetMevcut&&!arkadas)'requestSenderUid':ben,
+      if(!hazirlik.sohbetMevcut&&!arkadas)'requestRecipientUid':widget.digerUid,
+    },SetOptions(merge:true));
+    batch.set(mesajRef,{
+      'senderId':ben,
+      'text':t,
+      'type':'text',
+      'createdAt':FieldValue.serverTimestamp(),
+      'clientCreatedAt':clientCreatedAt,
+      if(bitis!=null)'expiresAt':bitis,
+      if(cevapId!=null)'replyToId':cevapId,
+      if(cevapMetin!=null)'replyText':cevapMetin,
+      if(cevapUid!=null)'replySenderId':cevapUid,
+    });
+
+    mesaj.clear();
+    yaziyorZamanlayici?.cancel();
+    yaziyorGonderildi=false;
+    _mesajHazirlikSohbetMevcut=true;
+    _mesajHazirlikSohbet={
+      ...hazirlik.sohbet,
+      'lastMessage':t,
+      'updatedAt':clientCreatedAt,
+    };
+    if(mounted)setState((){
+      gonderiliyor=false;
+      yanitMesajId=null;
+      yanitMetin=null;
+      yanitGonderenUid=null;
+    });
+    unawaited(ref.set({'typing_$ben':false},SetOptions(merge:true)).catchError((_){ }));
+    unawaited(uygulamaBildirimiGonder(toUid:widget.digerUid,fromUid:ben,tur:'message',metin:'Yeni bir mesajın var',belgeId:widget.chatId).catchError((_){ }));
+
+    unawaited(batch.commit().timeout(const Duration(seconds:12)).catchError((e){
+      if(!mounted)return;
+      if(mesaj.text.isEmpty)mesaj.text=t;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Mesaj gönderilemedi, tekrar dene: $e')));
+    }));
   }
 
   Future<void> medyaGonder(ImageSource kaynak) async {
-    if(uid==null)return;
-    final engel=await mesajEngeli();
-    if(engel!=null){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(engel)));return;}
-    final x=await ImagePicker().pickImage(source:kaynak,imageQuality:82);
+    final ben=uid;
+    if(ben==null)return;
+    final hazirlik=await mesajGonderimHazirligi();
+    if(hazirlik.engel!=null){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(hazirlik.engel!)));
+      return;
+    }
+    final x=await ImagePicker().pickImage(source:kaynak,imageQuality:78);
     if(x==null)return;
-    try {
+    try{
       final yol='chats/${widget.chatId}/${DateTime.now().millisecondsSinceEpoch}.jpg';
       await supa.Supabase.instance.client.storage.from('ngelx-media').upload(yol,File(x.path));
       final url=supa.Supabase.instance.client.storage.from('ngelx-media').getPublicUrl(yol);
       final ref=FirebaseFirestore.instance.collection('chats').doc(widget.chatId);
-      final onceki=await ref.get();
-      final sureHam=onceki.data()?['disappearingSeconds'];
+      final sureHam=hazirlik.sohbet['disappearingSeconds'];
       final sure=sureHam is num?sureHam.toInt():0;
-      final bitis=sure>0?Timestamp.fromDate(DateTime.now().add(Duration(seconds:sure))):null;
-      final diger=await FirebaseFirestore.instance.collection('users').doc(widget.digerUid).get();
-      final arkadas=List<String>.from(diger.data()?['friends']??const[]).contains(uid);
-      await ref.set({'members':[uid,widget.digerUid],if(!onceki.exists&&!arkadas)'requestSenderUid':uid,if(!onceki.exists&&!arkadas)'requestRecipientUid':widget.digerUid},SetOptions(merge:true));
-      await ref.collection('messages').add({'senderId':uid,'text':'','type':'photo','mediaUrl':url,'createdAt':FieldValue.serverTimestamp(),if(bitis!=null)'expiresAt':bitis});
-      await ref.set({'lastMessage':'📷 Fotoğraf','updatedAt':FieldValue.serverTimestamp(),'unread_${widget.digerUid}':FieldValue.increment(1)},SetOptions(merge:true));
-      unawaited(uygulamaBildirimiGonder(toUid:widget.digerUid,fromUid:uid!,tur:'message',metin:'Yeni bir fotoğraf mesajın var',belgeId:widget.chatId).catchError((_){ }));
-    } catch(e) {
+      final simdi=DateTime.now(),clientCreatedAt=Timestamp.fromDate(simdi);
+      final bitis=sure>0?Timestamp.fromDate(simdi.add(Duration(seconds:sure))):null;
+      final arkadas=List<String>.from(hazirlik.diger['friends']??const[]).contains(ben);
+      final mesajRef=ref.collection('messages').doc();
+      final batch=FirebaseFirestore.instance.batch();
+      batch.set(ref,{
+        'members':[ben,widget.digerUid],
+        'lastMessage':'📷 Fotoğraf',
+        'updatedAt':FieldValue.serverTimestamp(),
+        'unread_${widget.digerUid}':FieldValue.increment(1),
+        if(!hazirlik.sohbetMevcut&&!arkadas)'requestSenderUid':ben,
+        if(!hazirlik.sohbetMevcut&&!arkadas)'requestRecipientUid':widget.digerUid,
+      },SetOptions(merge:true));
+      batch.set(mesajRef,{
+        'senderId':ben,'text':'','type':'photo','mediaUrl':url,
+        'createdAt':FieldValue.serverTimestamp(),'clientCreatedAt':clientCreatedAt,
+        if(bitis!=null)'expiresAt':bitis,
+      });
+      _mesajHazirlikSohbetMevcut=true;
+      _mesajHazirlikSohbet={...hazirlik.sohbet,'lastMessage':'📷 Fotoğraf','updatedAt':clientCreatedAt};
+      unawaited(batch.commit().timeout(const Duration(seconds:12)).catchError((e){
+        if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Fotoğraf gönderilemedi. Tekrar dene.')));
+      }));
+      unawaited(uygulamaBildirimiGonder(toUid:widget.digerUid,fromUid:ben,tur:'message',metin:'Yeni bir fotoğraf mesajın var',belgeId:widget.chatId).catchError((_){ }));
+    }catch(e){
       if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Medya gönderilemedi.')));
     }
   }
