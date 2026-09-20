@@ -4105,9 +4105,21 @@ class _MesajPageState extends State<MesajPage> {
   }
 
   Future<void> sohbetiAc(String chatId,Widget sayfa) async {
+    // Ekran geçişini Firestore yazısına bağlama. Okundu bilgisinin ağ/kural
+    // nedeniyle gecikmesi veya reddedilmesi sohbet ekranını kilitlememeli.
+    if(!mounted)return;
     final ben=uid;
-    if(ben!=null)await FirebaseFirestore.instance.collection('chats').doc(chatId).set({'unread_$ben':0},SetOptions(merge:true));
-    if(mounted)await Navigator.push(context,MaterialPageRoute(builder:(_)=>sayfa));
+    await Navigator.push(context,MaterialPageRoute(builder:(_)=>sayfa));
+    if(ben!=null){
+      try{
+        await FirebaseFirestore.instance.collection('chats').doc(chatId).set(
+          {'unread_$ben':0},
+          SetOptions(merge:true),
+        ).timeout(const Duration(seconds:5));
+      }catch(_){
+        // Okundu sayacı bir sonraki snapshot/sohbet açılışında tekrar sıfırlanır.
+      }
+    }
   }
 
   Future<void> sohbetTercihi(String alan,String chatId,bool ekle) async {
