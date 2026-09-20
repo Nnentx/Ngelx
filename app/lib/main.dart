@@ -5581,6 +5581,7 @@ class _SohbetPageState extends State<SohbetPage> {
   late final Stream<QuerySnapshot<Map<String,dynamic>>> _mesajAkisi;
   bool _okunduYaziliyor=false;
   bool _ilkMesajKaydirma=true;
+  DateTime? _sonYaziyorGonderim;
   bool gonderiliyor=false,aramaBaslatiliyor=false,yaziyorGonderildi=false;
   Timer? yaziyorZamanlayici,sureliMesajZamanlayici;
   bool gizliKelimeFiltresi=true;
@@ -5668,15 +5669,18 @@ class _SohbetPageState extends State<SohbetPage> {
       }
       return;
     }
+    final simdi=DateTime.now();
     if(!yaziyorGonderildi){
       yaziyorGonderildi=true;
+      _sonYaziyorGonderim=simdi;
       unawaited(ref.get().then((d){
         if(d.data()?['typingIndicator_$ben']!=false){
           return ref.set({'typing_$ben':true,'typingAt_$ben':FieldValue.serverTimestamp()},SetOptions(merge:true));
         }
-      }));
-    }else{
-      unawaited(ref.set({'typingAt_$ben':FieldValue.serverTimestamp()},SetOptions(merge:true)));
+      }).catchError((_){ }));
+    }else if(_sonYaziyorGonderim==null||simdi.difference(_sonYaziyorGonderim!).inSeconds>=4){
+      _sonYaziyorGonderim=simdi;
+      unawaited(ref.set({'typingAt_$ben':FieldValue.serverTimestamp()},SetOptions(merge:true)).catchError((_){ }));
     }
     yaziyorZamanlayici=Timer(const Duration(seconds:2),(){
       yaziyorGonderildi=false;
@@ -5707,7 +5711,7 @@ class _SohbetPageState extends State<SohbetPage> {
         if(yanitGonderenUid!=null)'replySenderId':yanitGonderenUid,
       });
       await ref.set({'lastMessage':t,'updatedAt':FieldValue.serverTimestamp(),'unread_${widget.digerUid}':FieldValue.increment(1)},SetOptions(merge:true));
-      await uygulamaBildirimiGonder(toUid:widget.digerUid,fromUid:uid!,tur:'message',metin:'Yeni bir mesajın var',belgeId:widget.chatId);
+      unawaited(uygulamaBildirimiGonder(toUid:widget.digerUid,fromUid:uid!,tur:'message',metin:'Yeni bir mesajın var',belgeId:widget.chatId).catchError((_){ }));
       mesaj.clear();
       yaziyorZamanlayici?.cancel();
       yaziyorGonderildi=false;
@@ -5738,7 +5742,7 @@ class _SohbetPageState extends State<SohbetPage> {
       await ref.set({'members':[uid,widget.digerUid],if(!onceki.exists&&!arkadas)'requestSenderUid':uid,if(!onceki.exists&&!arkadas)'requestRecipientUid':widget.digerUid},SetOptions(merge:true));
       await ref.collection('messages').add({'senderId':uid,'text':'','type':'photo','mediaUrl':url,'createdAt':FieldValue.serverTimestamp(),if(bitis!=null)'expiresAt':bitis});
       await ref.set({'lastMessage':'📷 Fotoğraf','updatedAt':FieldValue.serverTimestamp(),'unread_${widget.digerUid}':FieldValue.increment(1)},SetOptions(merge:true));
-      await uygulamaBildirimiGonder(toUid:widget.digerUid,fromUid:uid!,tur:'message',metin:'Yeni bir fotoğraf mesajın var',belgeId:widget.chatId);
+      unawaited(uygulamaBildirimiGonder(toUid:widget.digerUid,fromUid:uid!,tur:'message',metin:'Yeni bir fotoğraf mesajın var',belgeId:widget.chatId).catchError((_){ }));
     } catch(e) {
       if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Medya gönderilemedi.')));
     }
