@@ -5442,7 +5442,11 @@ if(secim is int){await ref.set({'theme_$me':secim},SetOptions(merge:true));retur
   }
   Future<void> kisiyiPaylas()async{
     final link='$ngelxWebAdresi/u/$uid';
-    await SharePlus.instance.share(ShareParams(text:'$ad • $link',title:'NgelX profili'));
+    await SharePlus.instance.share(ShareParams(
+      title:'NgelX profili',
+      subject:'NgelX • $ad',
+      text:'NgelX’te $ad profilini görüntüle\n$link',
+    ));
   }
 
   @override Widget build(BuildContext context)=>Theme(
@@ -5675,7 +5679,38 @@ class KullaniciProfilPage extends StatelessWidget {
               const SizedBox(height: 22),
               if (me != uid) ...[
                 Row(children:[
-                  Expanded(child:OutlinedButton.icon(onPressed:()async{if(me==null)return;try{await takipDurumuDegistir(uid,takip.contains(uid));if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(takip.contains(uid)?'Takipten çıkarıldı.':'Takip ediliyor ✅')));}catch(e){if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Takip işlemi tamamlanamadı: $e')));}},icon:Icon(takip.contains(uid)?Icons.person_remove_outlined:Icons.person_add_alt_1),label:Text(takip.contains(uid)?'Takipten çık':'Takip et'))),
+                  Expanded(child:StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
+                    stream:me==null?null:FirebaseFirestore.instance.collection('users').doc(me).snapshots(),
+                    builder:(_,benSnap){
+                      final takipte=List<String>.from(benSnap.data?.data()?['following']??const[]).contains(uid);
+                      return OutlinedButton.icon(
+                        onPressed:()async{
+                          if(me==null)return;
+                          if(takipte){
+                            final gorunenAd=(v['displayName']??v['username']??'Bu kişi').toString();
+                            final onay=await showDialog<bool>(context:context,builder:(d)=>AlertDialog(
+                              backgroundColor:Colors.white,surfaceTintColor:Colors.white,
+                              title:const Text('Takipten çıkılsın mı?',style:TextStyle(color:Colors.black87,fontWeight:FontWeight.w800)),
+                              content:Text('$gorunenAd artık takip ettiklerin arasında görünmeyecek.',style:const TextStyle(color:Colors.black87)),
+                              actions:[
+                                TextButton(onPressed:()=>Navigator.pop(d,false),child:const Text('Vazgeç')),
+                                FilledButton(style:FilledButton.styleFrom(backgroundColor:Colors.red,foregroundColor:Colors.white),onPressed:()=>Navigator.pop(d,true),child:const Text('Takipten çık')),
+                              ],
+                            ))??false;
+                            if(!onay)return;
+                          }
+                          try{
+                            await takipDurumuDegistir(uid,takipte);
+                            if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(takipte?'Takipten çıktın.':'Artık bu hesabı takip ediyorsun.')));
+                          }catch(e){
+                            if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Takip işlemi tamamlanamadı: $e')));
+                          }
+                        },
+                        icon:Icon(takipte?Icons.person_remove_outlined:Icons.person_add_alt_1),
+                        label:Text(takipte?'Takiptesin':'Takip et'),
+                      );
+                    },
+                  )),
                   const SizedBox(width:10),
                   Expanded(child:OutlinedButton.icon(onPressed:()async{if(me==null)return;final ids=[me,uid]..sort();final id=ids.join('_');Navigator.push(context,MaterialPageRoute(builder:(_)=>SohbetPage(chatId:id,digerUid:uid,ad:(v['displayName']??v['username']??'NgelX').toString(),foto:foto)));},icon:const Icon(Icons.message_outlined),label:const Text('Mesaj'))),
                 ]),
