@@ -264,7 +264,16 @@ class NgelXApp extends StatelessWidget {
             : AnaEkran(key:ValueKey('ana_$dil')),
         ),
       ),
-      onGenerateRoute:(settings){final uri=Uri.tryParse(settings.name??'');if(uri!=null){if(uri.pathSegments.length>=2&&uri.pathSegments.first=='p')return MaterialPageRoute(builder:(_)=>IcerikBaglantiPage(icerikId:uri.pathSegments[1]));if(uri.host=='p'&&uri.pathSegments.isNotEmpty)return MaterialPageRoute(builder:(_)=>IcerikBaglantiPage(icerikId:uri.pathSegments.first));}return null;},
+      onGenerateRoute:(settings){
+        final uri=Uri.tryParse(settings.name??'');
+        if(uri!=null){
+          if(uri.pathSegments.length>=2&&uri.pathSegments.first=='p')return MaterialPageRoute(builder:(_)=>IcerikBaglantiPage(icerikId:uri.pathSegments[1]));
+          if(uri.pathSegments.length>=2&&uri.pathSegments.first=='u')return MaterialPageRoute(builder:(_)=>KullaniciProfilPage(uid:uri.pathSegments[1]));
+          if(uri.host=='p'&&uri.pathSegments.isNotEmpty)return MaterialPageRoute(builder:(_)=>IcerikBaglantiPage(icerikId:uri.pathSegments.first));
+          if(uri.host=='u'&&uri.pathSegments.isNotEmpty)return MaterialPageRoute(builder:(_)=>KullaniciProfilPage(uid:uri.pathSegments.first));
+        }
+        return null;
+      },
       builder: (context, child) => Directionality(textDirection: dil=='ar' ? TextDirection.rtl : TextDirection.ltr, child: child!),
     ));
   }
