@@ -5404,7 +5404,6 @@ class SohbetBilgiPage extends StatelessWidget{
               _satir(Icons.shield_outlined,'Mesaj izinleri',()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const TercihlerPage(baslik:'Mesaj izinleri')))),
               _satir(Icons.do_not_disturb_alt_rounded,'Kısıtla',()=>kisitla(context)),
               _satir(Icons.block_rounded,'Engelle',()=>engelle(context),renk:Colors.black),
-              _satir(Icons.flag_outlined,'Şikâyet et',()=>sikayetEt(context,hedefTuru:'kullanici',hedefId:uid,hedefUid:uid),alt:'Görüş bildir veya hesabı şikâyet et'),
               _satir(Icons.delete_outline_rounded,'Sohbeti sil',()=>sohbetiSil(context),alt:'Yalnızca senin sohbet listenden kaldırır',renk:Colors.red),
             ],
           );
