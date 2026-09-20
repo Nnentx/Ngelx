@@ -46,6 +46,15 @@ android {
                 storeFile = file(keystoreProperties["storeFile"] as String)
                 storePassword = keystoreProperties["storePassword"] as String
             }
+        } else {
+            create("ngelxStableTest") {
+                // CI test APK'ları aynı anahtarla imzalansın; rastgele runner
+                // debug anahtarı paket güncellemelerini bozmasın.
+                keyAlias = "androiddebugkey"
+                keyPassword = "android"
+                storeFile = file("${System.getProperty("user.home")}/.android/debug.keystore")
+                storePassword = "android"
+            }
         }
     }
 
@@ -54,7 +63,7 @@ android {
             signingConfig = if (keystorePropertiesFile.exists()) {
                 signingConfigs.getByName("ngelxRelease")
             } else {
-                signingConfigs.getByName("debug")
+                signingConfigs.getByName("ngelxStableTest")
             }
         }
     }
