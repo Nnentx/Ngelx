@@ -4869,12 +4869,38 @@ class NgelXAramaPage extends StatefulWidget{
 }
 class _NgelXAramaPageState extends State<NgelXAramaPage>{
   lk.Room? oda;
+  StreamSubscription<DocumentSnapshot<Map<String,dynamic>>>? aramaDurumAboneligi;
   bool baglaniyor=true,mikrofon=true,kamera=true,hoparlor=true,bitiyor=false,bulanik=false,rotus=false;
   int efekt=0;
   String? hata;
 
-  @override void initState(){super.initState();baglan();}
+  @override void initState(){
+    super.initState();
+    aramaDurumAboneligi=widget.aramaRef.snapshots().listen((d){
+      final durum=(d.data()?['status']??'').toString();
+      if((durum=='ended'||durum=='rejected'||durum=='missed')&&!bitiyor){
+        unawaited(_uzaktanBitirildi(durum));
+      }
+    });
+    baglan();
+  }
   void _odaDegisti(){if(mounted)setState((){});}
+
+  Future<void> _uzaktanBitirildi(String durum)async{
+    if(bitiyor)return;
+    bitiyor=true;
+    final r=oda;oda=null;
+    if(r!=null){
+      r.removeListener(_odaDegisti);
+      try{await r.disconnect();}catch(_){}
+      try{await r.dispose();}catch(_){}
+    }
+    if(!mounted)return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content:Text(durum=='rejected'?'Arama reddedildi.':durum=='missed'?'Arama cevaplanmadı.':'Arama sona erdi.'),
+    ));
+    Navigator.maybePop(context);
+  }
 
   Future<void> _izinleriIste()async{
     final mikrofonIzni=await Permission.microphone.request();
@@ -4973,6 +4999,7 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
   }
 
   @override void dispose(){
+    aramaDurumAboneligi?.cancel();
     final r=oda;
     if(r!=null){
       r.removeListener(_odaDegisti);
