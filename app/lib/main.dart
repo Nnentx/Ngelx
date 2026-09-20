@@ -5829,11 +5829,11 @@ class SohbetBilgiPage extends StatelessWidget{
       child:AlertDialog(
         backgroundColor:Colors.white,
         surfaceTintColor:Colors.white,
-        title:const Text('Sohbet listeden kaldırılsın mı?',style:TextStyle(color:Colors.black87,fontWeight:FontWeight.w800)),
-        content:const Text('Bu işlem yalnızca senin gelen kutunu etkiler. Karşı tarafın sohbeti silinmez.',style:TextStyle(color:Colors.black87,height:1.35)),
+        title:const Text('Sohbet silinsin mi?',style:TextStyle(color:Colors.black87,fontWeight:FontWeight.w800)),
+        content:const Text('Bu sohbet yalnızca senin sohbet listenden kaldırılacak. Karşı tarafın sohbeti silinmeyecek.',style:TextStyle(color:Colors.black87,height:1.35)),
         actions:[
           TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç',style:TextStyle(color:mor))),
-          FilledButton(style:FilledButton.styleFrom(backgroundColor:Colors.red,foregroundColor:Colors.white),onPressed:()=>Navigator.pop(c,true),child:const Text('Kaldır')),
+          FilledButton(style:FilledButton.styleFrom(backgroundColor:Colors.red,foregroundColor:Colors.white),onPressed:()=>Navigator.pop(c,true),child:const Text('Sohbeti sil')),
         ],
       ),
     ))??false;
