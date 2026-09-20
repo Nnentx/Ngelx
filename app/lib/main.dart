@@ -5557,12 +5557,14 @@ class SohbetBilgiPage extends StatelessWidget{
     if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Arkadaşlık isteği gönderildi.')));
   }
   Future<void> kisiyiPaylas()async{
+    final me=FirebaseAuth.instance.currentUser?.uid;
+    final hedef=await FirebaseFirestore.instance.collection('users').doc(uid).get(),hv=hedef.data()??<String,dynamic>{};
+    if(hv['profileShareFriendsOnly']==true&&me!=uid){
+      final benim=me==null?null:await FirebaseFirestore.instance.collection('users').doc(me).get();
+      if(!List<String>.from(benim?.data()?['friends']??const[]).contains(uid))return;
+    }
     final link='$ngelxWebAdresi/u/$uid';
-    await SharePlus.instance.share(ShareParams(
-      title:'NgelX profili',
-      subject:'NgelX • $ad',
-      text:'NgelX’te $ad profilini görüntüle\n$link',
-    ));
+    await SharePlus.instance.share(ShareParams(title:'NgelX profili',subject:'NgelX • $ad',text:'NgelX’te $ad profilini görüntüle\n$link'));
   }
 
   @override Widget build(BuildContext context)=>Theme(
@@ -5753,6 +5755,41 @@ class AktivitePage extends StatelessWidget {
 String zamanKisa(dynamic t){if(t is! Timestamp)return 'Şimdi';final f=DateTime.now().difference(t.toDate());if(f.inMinutes<1)return 'Şimdi';if(f.inHours<1)return '${f.inMinutes} dk önce';if(f.inDays<1)return '${f.inHours} sa önce';return '${f.inDays} gün önce';}
 String mesajSaati(dynamic t){if(t is! Timestamp)return '';final d=t.toDate().toLocal();final s=d.minute.toString().padLeft(2,'0');return '${d.hour}:$s';}
 
+class ProfilTanitimVideoKarti extends StatefulWidget{
+  final String url;
+  const ProfilTanitimVideoKarti({super.key,required this.url});
+  @override State<ProfilTanitimVideoKarti> createState()=>_ProfilTanitimVideoKartiState();
+}
+class _ProfilTanitimVideoKartiState extends State<ProfilTanitimVideoKarti>{
+  VideoPlayerController? c;
+  bool hazir=false;
+  @override void initState(){super.initState();_hazirla();}
+  Future<void> _hazirla()async{
+    if(widget.url.isEmpty)return;
+    final x=VideoPlayerController.networkUrl(Uri.parse(widget.url));
+    c=x;
+    try{await x.initialize();if(mounted)setState(()=>hazir=true);}catch(_){}
+  }
+  @override void dispose(){c?.dispose();super.dispose();}
+  @override Widget build(BuildContext context){
+    final x=c;
+    if(!hazir||x==null)return Container(height:180,decoration:BoxDecoration(color:const Color(0xFFF1F2F4),borderRadius:BorderRadius.circular(18)),child:const Center(child:CircularProgressIndicator(color:mor)));
+    return ClipRRect(
+      borderRadius:BorderRadius.circular(18),
+      child:AspectRatio(
+        aspectRatio:x.value.aspectRatio==0?16/9:x.value.aspectRatio,
+        child:Stack(fit:StackFit.expand,children:[
+          VideoPlayer(x),
+          Center(child:IconButton.filledTonal(
+            onPressed:(){setState((){x.value.isPlaying?x.pause():x.play();});},
+            icon:Icon(x.value.isPlaying?Icons.pause_rounded:Icons.play_arrow_rounded,size:36),
+          )),
+        ]),
+      ),
+    );
+  }
+}
+
 class OrtakGruplarPage extends StatelessWidget{
   final String digerUid;
   const OrtakGruplarPage({super.key,required this.digerUid});
@@ -5791,7 +5828,25 @@ class OrtakGruplarPage extends StatelessWidget{
 
 class KullaniciProfilPage extends StatelessWidget {
   final String uid;
-  const KullaniciProfilPage({super.key, required this.uid});
+  final bool ziyaretciOnizleme;
+  const KullaniciProfilPage({super.key, required this.uid,this.ziyaretciOnizleme=false});
+
+  Future<void> profiliPaylas(BuildContext context)async{
+    final me=FirebaseAuth.instance.currentUser?.uid;
+    final hedef=await FirebaseFirestore.instance.collection('users').doc(uid).get();
+    final hv=hedef.data()??<String,dynamic>{};
+    if(hv['profileShareFriendsOnly']==true&&me!=uid){
+      final benim=me==null?null:await FirebaseFirestore.instance.collection('users').doc(me).get();
+      final arkadaslar=List<String>.from(benim?.data()?['friends']??const[]);
+      if(!arkadaslar.contains(uid)){
+        if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bu kullanıcı profilinin yalnızca arkadaşları tarafından paylaşılmasına izin veriyor.')));
+        return;
+      }
+    }
+    final ad=(hv['displayName']??hv['username']??'NgelX kullanıcısı').toString();
+    final link='$ngelxWebAdresi/u/$uid';
+    await SharePlus.instance.share(ShareParams(title:'NgelX profili',subject:'NgelX • $ad',text:'NgelX’te $ad profilini görüntüle\n$link'));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -5800,7 +5855,10 @@ class KullaniciProfilPage extends StatelessWidget {
     final benim = me == null ? Future.value(null) : FirebaseFirestore.instance.collection('users').doc(me).get();
     return Theme(data:ThemeData.light().copyWith(scaffoldBackgroundColor:Colors.white,appBarTheme:const AppBarTheme(backgroundColor:Colors.white,foregroundColor:Colors.black,elevation:0)),child:Scaffold(
       backgroundColor:Colors.white,
-      appBar: AppBar(title: const Text('Profil',style:TextStyle(fontWeight:FontWeight.w900))),
+      appBar: AppBar(
+        title:Text(ziyaretciOnizleme?'Profil önizleme':'Profil',style:const TextStyle(fontWeight:FontWeight.w900)),
+        actions:[IconButton(tooltip:'Profili paylaş',onPressed:()=>profiliPaylas(context),icon:const Icon(Icons.share_outlined))],
+      ),
       body: FutureBuilder<List<DocumentSnapshot<Map<String, dynamic>>?>>(
         future: Future.wait([hedef, benim]),
         builder: (_, s) {
@@ -5811,7 +5869,7 @@ class KullaniciProfilPage extends StatelessWidget {
           final arkadaslar = Set<String>.from(List<dynamic>.from(benimVerim['friends'] ?? []));
           final takip = Set<String>.from(List<dynamic>.from(benimVerim['following'] ?? []));
           final gizli = v['privateAccount'] == true;
-          final erisimVar = me == uid || !gizli || arkadaslar.contains(uid);
+          final erisimVar = ziyaretciOnizleme ? !gizli : (me == uid || !gizli || arkadaslar.contains(uid));
           return ListView(
             padding: const EdgeInsets.all(22),
             children: [
@@ -5828,6 +5886,10 @@ class KullaniciProfilPage extends StatelessWidget {
                 if(v['showActivityStatus']!=false)
                   Text(v['isOnline']==true?'● Çevrimiçi':(v['lastSeenAt'] is Timestamp?'Son görülme: '+zamanKisa(v['lastSeenAt']):'Çevrimdışı'),style:TextStyle(color:v['isOnline']==true?Colors.green:Colors.black54,fontSize:12,fontWeight:v['isOnline']==true?FontWeight.w700:FontWeight.w400)),
               ]),
+              if((v['introVideoUrl']??'').toString().isNotEmpty) ...[
+                const SizedBox(height:14),
+                ProfilTanitimVideoKarti(url:(v['introVideoUrl']??'').toString()),
+              ],
               const SizedBox(height: 14),
               Row(mainAxisAlignment:MainAxisAlignment.spaceEvenly,children:[
                 _profilSayac(context,'${List<dynamic>.from(v['following']??const[]).length}','Takip',()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciListesiPage(uid:uid,alan:'following',baslik:'Takip')))),
@@ -5836,7 +5898,7 @@ class KullaniciProfilPage extends StatelessWidget {
                 _profilSayac(context,'${List<dynamic>.from(v['friends']??const[]).length}','Arkadaşlar',()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciListesiPage(uid:uid,alan:'friends',baslik:'Arkadaşlar')))),
               ]),
               const SizedBox(height: 22),
-              if (me != uid) ...[
+              if (me != uid && !ziyaretciOnizleme) ...[
                 Row(children:[
                   Expanded(child:StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
                     stream:me==null?null:FirebaseFirestore.instance.collection('users').doc(me).snapshots(),
@@ -6104,7 +6166,7 @@ class _DestekPageState extends State<DestekPage>{
 
 class TercihlerPage extends StatefulWidget {final String baslik;const TercihlerPage({super.key,required this.baslik});@override State<TercihlerPage> createState()=>_TercihlerPageState();}
 class _TercihlerPageState extends State<TercihlerPage> {
-  bool hesapGizli=false, profilArama=true, aktiflik=true, yorumArkadas=false, gizliKelimeler=true, mesajArkadas=true, hikayeArkadas=true, ekranGoruntusu=false, bildirim=true, mesajBildirimi=true, arkadasBildirimi=true, etkilesimBildirimi=true, indirme=true;
+  bool hesapGizli=false, profilArama=true, aktiflik=true, profilPaylasArkadas=false, yorumArkadas=false, gizliKelimeler=true, mesajArkadas=true, hikayeArkadas=true, ekranGoruntusu=false, bildirim=true, mesajBildirimi=true, arkadasBildirimi=true, etkilesimBildirimi=true, indirme=true;
   String? get uid => FirebaseAuth.instance.currentUser?.uid;
 
   @override
@@ -6117,6 +6179,7 @@ class _TercihlerPageState extends State<TercihlerPage> {
       hesapGizli=v['privateAccount']==true;
       profilArama=v['discoverableProfile']!=false;
       aktiflik=v['showActivityStatus']!=false;
+      profilPaylasArkadas=v['profileShareFriendsOnly']==true;
       yorumArkadas=v['friendsOnlyComments']==true;
       gizliKelimeler=v['hiddenWordsFilter']!=false;
       mesajArkadas=v['friendsOnlyMessages']!=false;
@@ -6148,6 +6211,7 @@ class _TercihlerPageState extends State<TercihlerPage> {
           satir('Gizli hesap','Yeni takipçiler onay bekler',hesapGizli,(v){setState(()=>hesapGizli=v);kaydet('privateAccount',v);}),
           satir('Profil aramalarında görün','Kullanıcılar seni adınla bulabilsin',profilArama,(v){setState(()=>profilArama=v);kaydet('discoverableProfile',v);}),
           satir('Aktiflik durumunu göster','Arkadaşların son görülme bilgini görebilsin',aktiflik,(v){setState(()=>aktiflik=v);kaydet('showActivityStatus',v);}),
+          satir('Profil paylaşımını arkadaşlarla sınırla','Profil bağlantını yalnızca arkadaşların paylaşabilsin',profilPaylasArkadas,(v){setState(()=>profilPaylasArkadas=v);kaydet('profileShareFriendsOnly',v);}),
           satir('Yorumları arkadaşlarla sınırla','Yalnızca arkadaşların yorum yapabilsin',yorumArkadas,(v){setState(()=>yorumArkadas=v);kaydet('friendsOnlyComments',v);}),
           satir('Gizli kelime filtresi','Rahatsız edici yorumları otomatik gizle',gizliKelimeler,(v){setState(()=>gizliKelimeler=v);kaydet('hiddenWordsFilter',v);}),
           const Divider(),
@@ -6480,6 +6544,7 @@ class _ProfilPageState extends State<ProfilPage> {
   String kullanici = '@ngelx';
   String bio = 'NgelX dünyasına hoş geldin ✦';
   String fotoUrl = '';
+  String tanitimVideoUrl = '';
   String konum = 'Konum eklenmedi';
   String katilim = 'Yeni katıldı';
   bool yukleniyor = true;
@@ -6520,6 +6585,7 @@ class _ProfilPageState extends State<ProfilPage> {
           kullanici = '@${hamKullanici.isEmpty ? 'ngelx' : hamKullanici}';
           bio = (veri['bio'] ?? 'NgelX dünyasına hoş geldin ✦').toString();
           fotoUrl = (veri['photoUrl'] ?? '').toString();
+          tanitimVideoUrl = (veri['introVideoUrl'] ?? '').toString();
           konum = (veri['location'] ?? 'Konum eklenmedi').toString();
           if (tarih is Timestamp) {
             const aylar = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
@@ -6586,6 +6652,35 @@ class _ProfilPageState extends State<ProfilPage> {
     } finally {
       if (mounted) setState(() => fotoYukleniyor = false);
     }
+  }
+
+  Future<void> tanitimVideosuYukle()async{
+    final user=aktifKullanici;if(user==null||user.isAnonymous)return;
+    final secim=await showModalBottomSheet<String>(
+      context:context,backgroundColor:Colors.white,showDragHandle:true,
+      builder:(c)=>SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
+        ListTile(leading:const Icon(Icons.video_library_outlined,color:mor),title:Text(tanitimVideoUrl.isEmpty?'Tanıtım videosu seç':'Tanıtım videosunu değiştir'),onTap:()=>Navigator.pop(c,'pick')),
+        if(tanitimVideoUrl.isNotEmpty)ListTile(leading:const Icon(Icons.delete_outline,color:Colors.red),title:const Text('Tanıtım videosunu kaldır',style:TextStyle(color:Colors.red)),onTap:()=>Navigator.pop(c,'remove')),
+      ])),
+    );
+    if(secim==null)return;
+    if(secim=='remove'){
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).set({'introVideoUrl':''},SetOptions(merge:true));
+      if(mounted)setState(()=>tanitimVideoUrl='');
+      return;
+    }
+    final dosya=await ImagePicker().pickVideo(source:ImageSource.gallery,maxDuration:const Duration(seconds:30));
+    if(dosya==null)return;
+    if(mounted)setState(()=>fotoYukleniyor=true);
+    try{
+      final yol='profile-intros/'+user.uid+'/'+DateTime.now().millisecondsSinceEpoch.toString()+'.mp4';
+      await supa.Supabase.instance.client.storage.from('ngelx-media').upload(yol,File(dosya.path));
+      final url=supa.Supabase.instance.client.storage.from('ngelx-media').getPublicUrl(yol);
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).set({'introVideoUrl':url,'updatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
+      if(mounted){setState(()=>tanitimVideoUrl=url);ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Profil tanıtım videosu kaydedildi.')));}
+    }catch(e){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Tanıtım videosu yüklenemedi: '+e.toString())));
+    }finally{if(mounted)setState(()=>fotoYukleniyor=false);}
   }
 
   Future<void> hikayeYukle() async {
@@ -6871,6 +6966,7 @@ class _ProfilPageState extends State<ProfilPage> {
                   Row(
                     children: [
                       const Spacer(),
+                      IconButton(tooltip:'Profil önizleme',onPressed:aktifKullanici==null?null:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciProfilPage(uid:aktifKullanici!.uid,ziyaretciOnizleme:true))),icon:const Icon(Icons.visibility_outlined,color:Colors.black,size:27)),
                       IconButton(onPressed:aktifKullanici==null?null:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>ProfilAramaPage(uid:aktifKullanici!.uid))),icon:const Icon(Icons.search_rounded,color:Colors.black,size:28)),
                       StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(stream:aktifKullanici==null?null:FirebaseFirestore.instance.collection('notifications').where('toUid',isEqualTo:aktifKullanici!.uid).snapshots(),builder:(_,s){final sayi=(s.data?.docs??[]).where((d)=>d.data()['read']!=true).length;return IconButton(onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const AktivitePage())),icon:sayi==0?const Icon(Icons.notifications_none_rounded,color:Colors.black,size:28):Badge(label:Text(sayi>99?'99+':'$sayi'),child:const Icon(Icons.notifications_none_rounded,color:Colors.black,size:28)));}),
                       IconButton(tooltip: 'Ayarlar ve gizlilik',onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const AyarlarPage())),icon:const Icon(Icons.settings_outlined,color:Colors.black,size:28)),
@@ -6956,6 +7052,16 @@ class _ProfilPageState extends State<ProfilPage> {
                   ),
                   const SizedBox(height: 17),
                   Row(mainAxisAlignment:MainAxisAlignment.center,children:[SizedBox(width:235,height:50,child:FilledButton.icon(style:FilledButton.styleFrom(backgroundColor:const Color(0xFFF1F2F6),foregroundColor:Colors.black,shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(17))),onPressed:aktifKullanici?.isAnonymous==true?()async{await FirebaseAuth.instance.signOut();if(context.mounted)Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder:(_)=>const KayitPage()),(_)=>false);}:duzenle,icon:const Icon(Icons.edit_outlined),label:Text(aktifKullanici?.isAnonymous==true?'Hesap Oluştur':'Profili Düzenle',style:const TextStyle(fontWeight:FontWeight.w800)))),const SizedBox(width:10),SizedBox(width:52,height:50,child:FilledButton(style:FilledButton.styleFrom(backgroundColor:const Color(0xFFF1ECFF),foregroundColor:Colors.black,padding:EdgeInsets.zero,shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(17))),onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const ArkadaslarPage())),child:const Icon(Icons.person_add_alt_1)))]),
+                  const SizedBox(height: 12),
+                  SizedBox(width:double.infinity,child:OutlinedButton.icon(
+                    onPressed:tanitimVideosuYukle,
+                    icon:const Icon(Icons.video_camera_front_outlined),
+                    label:Text(tanitimVideoUrl.isEmpty?'Profil tanıtım videosu ekle':'Tanıtım videosunu değiştir'),
+                  )),
+                  if(tanitimVideoUrl.isNotEmpty) ...[
+                    const SizedBox(height:12),
+                    ProfilTanitimVideoKarti(url:tanitimVideoUrl),
+                  ],
                   const SizedBox(height: 22),
                   Row(mainAxisAlignment:MainAxisAlignment.spaceAround,children:[_profilKisayol(Icons.bookmark_border_rounded,'Kaydedilenler',tiklama:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const KaydedilenlerPage()))),_profilKisayol(Icons.history_rounded,'Arşiv',tiklama:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const HikayeArsiviPage()))),_profilKisayol(Icons.add_circle_outline_rounded,'Hikâyeler',tiklama:hikayeyiAc),_profilKisayol(Icons.event_outlined,'Etkinlikler',tiklama:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const ProfilBolumuPage(baslik:'Etkinlikler',aciklama:'Yaklaşan ve katıldığın etkinlikler burada görünecek.',ikon:Icons.event_outlined)))),_profilKisayol(Icons.lock_outline_rounded,'Gizlilik',tiklama:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const TercihlerPage(baslik:'Gizlilik')))),_profilKisayol(Icons.settings_outlined,'Ayarlar',tiklama:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const AyarlarPage())))]),
                   const SizedBox(height: 20),
