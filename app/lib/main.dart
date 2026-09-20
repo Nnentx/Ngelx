@@ -5285,7 +5285,7 @@ class _SohbetPageState extends State<SohbetPage> {
   final mesaj=TextEditingController(),liste=ScrollController();
   final List<Map<String,String>> mentionOnerileri=[];
   bool gonderiliyor=false,aramaBaslatiliyor=false,yaziyorGonderildi=false;
-  Timer? yaziyorZamanlayici;
+  Timer? yaziyorZamanlayici,sureliMesajZamanlayici;
   bool gizliKelimeFiltresi=true;
   List<String> gizliKelimeListesi=[];
   String? yanitMesajId,yanitMetin,yanitGonderenUid;
@@ -5320,6 +5320,21 @@ class _SohbetPageState extends State<SohbetPage> {
     } catch (_) {
       return 'Mesaj izni kontrol edilemedi. İnternet bağlantını kontrol et.';
     }
+  }
+
+  void sureliMesajTakvimi(Iterable<QueryDocumentSnapshot<Map<String,dynamic>>> docs){
+    sureliMesajZamanlayici?.cancel();
+    DateTime? enYakin;
+    final simdi=DateTime.now();
+    for(final d in docs){
+      final x=d.data()['expiresAt'];
+      if(x is! Timestamp)continue;
+      final tarih=x.toDate();
+      if(tarih.isAfter(simdi)&&(enYakin==null||tarih.isBefore(enYakin)))enYakin=tarih;
+    }
+    if(enYakin==null)return;
+    final bekleme=enYakin.difference(simdi)+const Duration(milliseconds:150);
+    sureliMesajZamanlayici=Timer(bekleme,(){if(mounted)setState((){});});
   }
 
   Future<void> _okunduGuncelle()async{
@@ -5373,11 +5388,15 @@ class _SohbetPageState extends State<SohbetPage> {
     final ref=FirebaseFirestore.instance.collection('chats').doc(widget.chatId);
     try {
       final onceki=await ref.get();
+      final sureHam=onceki.data()?['disappearingSeconds'];
+      final sure=sureHam is num?sureHam.toInt():0;
+      final bitis=sure>0?Timestamp.fromDate(DateTime.now().add(Duration(seconds:sure))):null;
       final diger=await FirebaseFirestore.instance.collection('users').doc(widget.digerUid).get();
       final arkadas=List<String>.from(diger.data()?['friends']??const[]).contains(uid);
       await ref.set({'members':[uid,widget.digerUid],'updatedAt':FieldValue.serverTimestamp(),if(!onceki.exists&&!arkadas)'requestSenderUid':uid,if(!onceki.exists&&!arkadas)'requestRecipientUid':widget.digerUid},SetOptions(merge:true));
       await ref.collection('messages').add({
         'senderId':uid,'text':t,'type':'text','createdAt':FieldValue.serverTimestamp(),
+        if(bitis!=null)'expiresAt':bitis,
         if(yanitMesajId!=null)'replyToId':yanitMesajId,
         if(yanitMetin!=null)'replyText':yanitMetin,
         if(yanitGonderenUid!=null)'replySenderId':yanitGonderenUid,
@@ -5406,10 +5425,13 @@ class _SohbetPageState extends State<SohbetPage> {
       final url=supa.Supabase.instance.client.storage.from('ngelx-media').getPublicUrl(yol);
       final ref=FirebaseFirestore.instance.collection('chats').doc(widget.chatId);
       final onceki=await ref.get();
+      final sureHam=onceki.data()?['disappearingSeconds'];
+      final sure=sureHam is num?sureHam.toInt():0;
+      final bitis=sure>0?Timestamp.fromDate(DateTime.now().add(Duration(seconds:sure))):null;
       final diger=await FirebaseFirestore.instance.collection('users').doc(widget.digerUid).get();
       final arkadas=List<String>.from(diger.data()?['friends']??const[]).contains(uid);
       await ref.set({'members':[uid,widget.digerUid],if(!onceki.exists&&!arkadas)'requestSenderUid':uid,if(!onceki.exists&&!arkadas)'requestRecipientUid':widget.digerUid},SetOptions(merge:true));
-      await ref.collection('messages').add({'senderId':uid,'text':'','type':'photo','mediaUrl':url,'createdAt':FieldValue.serverTimestamp()});
+      await ref.collection('messages').add({'senderId':uid,'text':'','type':'photo','mediaUrl':url,'createdAt':FieldValue.serverTimestamp(),if(bitis!=null)'expiresAt':bitis});
       await ref.set({'lastMessage':'📷 Fotoğraf','updatedAt':FieldValue.serverTimestamp(),'unread_${widget.digerUid}':FieldValue.increment(1)},SetOptions(merge:true));
       await uygulamaBildirimiGonder(toUid:widget.digerUid,fromUid:uid!,tur:'message',metin:'Yeni bir fotoğraf mesajın var',belgeId:widget.chatId);
     } catch(e) {
@@ -5718,6 +5740,7 @@ class _SohbetPageState extends State<SohbetPage> {
   @override
   void dispose(){
     yaziyorZamanlayici?.cancel();
+    sureliMesajZamanlayici?.cancel();
     final ben=uid;
     if(ben!=null)unawaited(FirebaseFirestore.instance.collection('chats').doc(widget.chatId).set({'typing_$ben':false},SetOptions(merge:true)));
     mesaj.dispose();liste.dispose();super.dispose();
@@ -5749,7 +5772,13 @@ class _SohbetPageState extends State<SohbetPage> {
       Expanded(child:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
         stream:FirebaseFirestore.instance.collection('chats').doc(widget.chatId).collection('messages').orderBy('createdAt').snapshots(),
         builder:(_,s){
-          final docs=s.data?.docs??<QueryDocumentSnapshot<Map<String,dynamic>>>[];
+          final tumDocs=s.data?.docs??<QueryDocumentSnapshot<Map<String,dynamic>>>[];
+          final simdi=DateTime.now();
+          final docs=tumDocs.where((d){
+            final x=d.data()['expiresAt'];
+            return x is! Timestamp||x.toDate().isAfter(simdi);
+          }).toList();
+          sureliMesajTakvimi(docs);
           if(uid!=null&&s.hasData)unawaited(_okunduGuncelle());
           if(s.hasData)sonaGit();
           QueryDocumentSnapshot<Map<String,dynamic>>? sonBenim;
@@ -5950,6 +5979,28 @@ class SohbetBilgiPage extends StatelessWidget{
       if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Arka plan yüklenemedi: '+e.toString())));
     }
   }
+  Future<void> sureliMesajlar(BuildContext context,int mevcut)async{
+    final secim=await showModalBottomSheet<int>(
+      context:context,backgroundColor:Colors.white,showDragHandle:true,
+      builder:(c)=>SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
+        const ListTile(
+          leading:Icon(Icons.timer_outlined,color:mor),
+          title:Text('Süreli mesajlar',style:TextStyle(fontWeight:FontWeight.w900)),
+          subtitle:Text('Yeni mesajlar seçilen sürenin sonunda sohbet görünümünden kaybolur.'),
+        ),
+        for(final e in const [('Kapalı',0),('24 saat',86400),('7 gün',604800),('30 gün',2592000)])
+          ListTile(
+            leading:Icon(mevcut==e.$2?Icons.radio_button_checked:Icons.radio_button_off,color:mevcut==e.$2?mor:Colors.black38),
+            title:Text(e.$1),
+            onTap:()=>Navigator.pop(c,e.$2),
+          ),
+      ])),
+    );
+    if(secim==null)return;
+    await FirebaseFirestore.instance.collection('chats').doc(chatId).set({'disappearingSeconds':secim},SetOptions(merge:true));
+    if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(secim==0?'Süreli mesajlar kapatıldı.':'Süreli mesajlar ayarlandı.')));
+  }
+
   Future<void> sessizeAl(BuildContext context)async{
     final me=FirebaseAuth.instance.currentUser?.uid;if(me==null)return;
     final ref=FirebaseFirestore.instance.collection('users').doc(me),d=await ref.get(),v=d.data()??<String,dynamic>{},sessiz=List<String>.from(v['mutedChats']??const[]).contains(chatId);
@@ -6103,6 +6154,12 @@ class SohbetBilgiPage extends StatelessWidget{
               _bolum('Sohbet bilgisi'),
               _satir(Icons.photo_library_outlined,'Medya, dosya ve bağlantılar',()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupMedyaPage(chatId:chatId)))),
               _satir(Icons.push_pin_outlined,'Sabitlenmiş mesajlar',()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>SabitlenenGrupMesajlariPage(chatId:chatId)))),
+              _satir(
+                Icons.timer_outlined,
+                'Süreli mesajlar',
+                ()=>sureliMesajlar(context,(s.data?.data()?['disappearingSeconds'] is num?(s.data!.data()!['disappearingSeconds'] as num).toInt():0)),
+                alt:(s.data?.data()?['disappearingSeconds']??0)==0?'Kapalı':'Yeni mesajlar otomatik kaybolur',
+              ),
               if(me!=null)SwitchListTile(
                 contentPadding:const EdgeInsets.symmetric(horizontal:8),
                 secondary:const Icon(Icons.done_all_rounded,color:Colors.black),
