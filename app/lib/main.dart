@@ -2759,6 +2759,13 @@ class YorumKarti extends StatelessWidget {
         shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(26))),
         builder: (c) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min, children: [
           Container(width:42,height:4,margin:const EdgeInsets.all(12),decoration:BoxDecoration(color:Colors.black26,borderRadius:BorderRadius.circular(8))),
+          Padding(
+            padding:const EdgeInsets.symmetric(horizontal:10,vertical:4),
+            child:Row(mainAxisAlignment:MainAxisAlignment.spaceEvenly,children:[
+              for(final e in const ['❤️','😂','😮','😢','😡','👍'])
+                InkWell(onTap:()=>Navigator.pop(c,'reaction:'+e),child:Text(e,style:const TextStyle(fontSize:27))),
+            ]),
+          ),
           if (benim) ListTile(leading:const Icon(Icons.edit_outlined),title:const Text('Düzenle'),onTap:()=>Navigator.pop(c,'edit')),
           if (silebilir) ListTile(leading:const Icon(Icons.delete_outline,color:Colors.red),title:Text(benim?'Yorumu sil':'Gönderimden kaldır',style:const TextStyle(color:Colors.red)),onTap:()=>Navigator.pop(c,'delete')),
           ListTile(leading:const Icon(Icons.copy_outlined),title:const Text('Kopyala'),onTap:()=>Navigator.pop(c,'copy')),
@@ -2768,7 +2775,15 @@ class YorumKarti extends StatelessWidget {
       );
       if (secim == null || !context.mounted) return;
       final yorumRef = FirebaseFirestore.instance.collection('videos').doc(videoId).collection('comments').doc(yorumId);
-      if (secim == 'copy') {
+      if (secim.startsWith('reaction:')) {
+        final emoji=secim.substring(9);
+        final alan=aktifUid==null?'':'reactions.'+aktifUid;
+        if(aktifUid!=null){
+          final mevcut=Map<String,dynamic>.from(v['reactions']??const{});
+          if((mevcut[aktifUid]??'').toString()==emoji)await yorumRef.update({alan:FieldValue.delete()});
+          else await yorumRef.set({alan:emoji},SetOptions(merge:true));
+        }
+      } else if (secim == 'copy') {
         await Clipboard.setData(ClipboardData(text: metin));
         if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Yorum kopyalandı.')));
       } else if (secim == 'report') {
@@ -2821,6 +2836,7 @@ class YorumKarti extends StatelessWidget {
 
     return GestureDetector(
       onLongPress: yorumMenusu,
+      onDoubleTap: ()=>begen(yorumId,const []),
       child: Padding(
       padding: EdgeInsets.fromLTRB(yanit ? 52 : 0, 9, 0, 4),
       child: Row(
@@ -2860,6 +2876,19 @@ class YorumKarti extends StatelessWidget {
                     softWrap: true,
                     style: const TextStyle(color: Colors.black87, fontSize: 15, height: 1.3),
                   ),
+                if (v['reactions'] is Map && (v['reactions'] as Map).isNotEmpty) ...[
+                  const SizedBox(height:6),
+                  Wrap(spacing:5,runSpacing:5,children:(){
+                    final m=Map<String,dynamic>.from(v['reactions'] as Map);
+                    final say=<String,int>{};
+                    for(final x in m.values){final e=x.toString();say[e]=(say[e]??0)+1;}
+                    return say.entries.map((e)=>Container(
+                      padding:const EdgeInsets.symmetric(horizontal:7,vertical:3),
+                      decoration:BoxDecoration(color:const Color(0xFFF3F4F6),borderRadius:BorderRadius.circular(12)),
+                      child:Text(e.value>1?e.key+' '+e.value.toString():e.key),
+                    )).toList();
+                  }()),
+                ],
                 const SizedBox(height: 5),
                 Row(
                   children: [
@@ -4398,433 +4427,257 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
   Future<void> mentionAra(String deger)async{final parca=deger.split(RegExp(r'\s+')).last;if(!parca.startsWith('@')){if(mentionOnerileri.isNotEmpty&&mounted)setState(()=>mentionOnerileri.clear());return;}final ara=parca.substring(1).toLowerCase(),grup=await chatRef.get(),uyeler=List<String>.from(grup.data()?['members']??const[]),sonuc=<Map<String,String>>[];for(final id in uyeler.take(60)){final d=await FirebaseFirestore.instance.collection('users').doc(id).get(),v=d.data()??{},kullanici=(v['username']??'').toString(),ad=(v['displayName']??kullanici).toString();if(ara.isEmpty||kullanici.toLowerCase().contains(ara)||ad.toLowerCase().contains(ara))sonuc.add({'uid':id,'username':kullanici,'name':ad});if(sonuc.length==5)break;}if(mounted)setState((){mentionOnerileri..clear()..addAll(sonuc);});}
   void mentionEkle(String kullanici){final metin=mesaj.text,sonBosluk=metin.lastIndexOf(RegExp(r'\s'));mesaj.text='${sonBosluk<0?'':metin.substring(0,sonBosluk+1)}@$kullanici ';mesaj.selection=TextSelection.collapsed(offset:mesaj.text.length);setState(()=>mentionOnerileri.clear());}
 
-  Future<void> mesajMenusu(QueryDocumentSnapshot<Map<String,dynamic>> d)async{final v=d.data(),ben=v['senderId']==uid,metin=(v['text']??'').toString();final grup=await chatRef.get(),yonetici=List<String>.from(grup.data()?['admins']??const[]).contains(uid);final sec=await showModalBottomSheet<String>(context:context,backgroundColor:Colors.white,showDragHandle:true,builder:(c)=>SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[Wrap(spacing:12,children:['❤️','👍','😂','😮','😢','😡'].map((e)=>TextButton(onPressed:()=>Navigator.pop(c,'reaction:$e'),child:Text(e,style:const TextStyle(fontSize:24)))).toList()),ListTile(leading:const Icon(Icons.reply),title:const Text('Yanıtla'),onTap:()=>Navigator.pop(c,'reply')),if(metin.isNotEmpty)ListTile(leading:const Icon(Icons.copy),title:const Text('Kopyala'),onTap:()=>Navigator.pop(c,'copy')),if(ben&&metin.isNotEmpty)ListTile(leading:const Icon(Icons.edit),title:const Text('Düzenle'),onTap:()=>Navigator.pop(c,'edit')),if(yonetici)ListTile(leading:Icon(v['pinned']==true?Icons.push_pin:Icons.push_pin_outlined,color:mor),title:Text(v['pinned']==true?'Sabitlemeyi kaldır':'Mesajı sabitle'),onTap:()=>Navigator.pop(c,'pin')),if(ben||yonetici)ListTile(leading:const Icon(Icons.delete,color:Colors.red),title:const Text('Herkesten sil',style:TextStyle(color:Colors.red)),onTap:()=>Navigator.pop(c,'delete')),if(!ben)ListTile(leading:const Icon(Icons.flag_outlined),title:const Text('Şikâyet et'),onTap:()=>Navigator.pop(c,'report'))])));if(sec==null)return;if(sec.startsWith('reaction:')){await d.reference.set({'reactions.${uid!}':sec.substring(9)},SetOptions(merge:true));}else if(sec=='copy'){await Clipboard.setData(ClipboardData(text:metin));}else if(sec=='reply'){mesaj.text='↪ $metin\n';mesaj.selection=TextSelection.collapsed(offset:mesaj.text.length);}else if(sec=='pin'){await d.reference.set({'pinned':v['pinned']!=true,'pinnedAt':FieldValue.serverTimestamp(),'pinnedBy':uid},SetOptions(merge:true));}else if(sec=='delete'){final ok=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(backgroundColor:Colors.white,title:const Text('Mesaj silinsin mi?'),content:const Text('Mesaj gruptan kalıcı olarak kaldırılacak.'),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),FilledButton(style:FilledButton.styleFrom(backgroundColor:Colors.red),onPressed:()=>Navigator.pop(c,true),child:const Text('Sil'))]))??false;if(ok)await d.reference.delete();}else if(sec=='report'){if(mounted)await sikayetEt(context,hedefTuru:'grup_mesaji',hedefId:'${widget.chatId}/${d.id}',hedefUid:v['senderId']?.toString());}else if(sec=='edit'){final c=TextEditingController(text:metin);final ok=await showDialog<bool>(context:context,builder:(x)=>AlertDialog(backgroundColor:Colors.white,title:const Text('Mesajı düzenle'),content:TextField(controller:c,maxLines:5,maxLength:2000),actions:[TextButton(onPressed:()=>Navigator.pop(x,false),child:const Text('Vazgeç')),FilledButton(onPressed:()=>Navigator.pop(x,true),child:const Text('Kaydet'))]))??false;if(ok&&c.text.trim().isNotEmpty)await d.reference.update({'text':c.text.trim(),'editedAt':FieldValue.serverTimestamp()});c.dispose();}}
 
-  Future<void> ekMenusu()async{await showModalBottomSheet(context:context,backgroundColor:Colors.white,showDragHandle:true,builder:(c)=>SafeArea(child:Wrap(children:[ListTile(leading:const Icon(Icons.camera_alt,color:mor),title:const Text('Kamera'),onTap:(){Navigator.pop(c);medyaGonder(ImageSource.camera);}),ListTile(leading:const Icon(Icons.photo_library,color:mor),title:const Text('Galeri'),onTap:(){Navigator.pop(c);medyaGonder(ImageSource.gallery);}),ListTile(leading:const Icon(Icons.gif_box_outlined,color:mor),title:const Text('GIF'),subtitle:const Text('Telefondan GIF seç'),onTap:(){Navigator.pop(c);gifGonder();}),ListTile(leading:const Icon(Icons.poll_outlined,color:mor),title:const Text('Anket'),subtitle:const Text('Gerçek zamanlı oylama oluştur'),onTap:(){Navigator.pop(c);anketOlustur();})])));}
-  Future<void> aramaBaslat(bool goruntulu)async{final ben=uid;if(ben==null)return;final grup=await chatRef.get(),uyeler=List<String>.from(grup.data()?['members']??const[]),grupAdi=(grup.data()?['groupName']??widget.ad).toString(),odaAdi='group_${widget.chatId}_${DateTime.now().millisecondsSinceEpoch}',ref=FirebaseFirestore.instance.collection('calls').doc();await ref.set({'chatId':widget.chatId,'group':true,'title':grupAdi,'roomName':odaAdi,'members':uyeler,'startedBy':ben,'video':goruntulu,'status':'ringing','participants':<String>[ben],'createdAt':FieldValue.serverTimestamp()});for(final uye in uyeler){if(uye!=ben)await uygulamaBildirimiGonder(toUid:uye,fromUid:ben,tur:'call',metin:goruntulu?'$grupAdi grubunda görüntülü arama başlattı':'$grupAdi grubunda sesli arama başlattı',belgeId:ref.id);}if(!mounted)return;await Navigator.push(context,MaterialPageRoute(builder:(_)=>NgelXAramaPage(roomName:odaAdi,baslik:grupAdi,goruntulu:goruntulu,aramaRef:ref)));}
-
-  Widget anketKarti(QueryDocumentSnapshot<Map<String,dynamic>> d,bool benim){final v=d.data(),q=(v['pollQuestion']??'Anket').toString(),hamSecenekler=v['pollOptions'],opts=hamSecenekler is Iterable?hamSecenekler.map((e)=>e.toString()).where((e)=>e.trim().isNotEmpty).toList():<String>[],hamOylar=v['pollVotes'],votes=hamOylar is Map?Map<String,dynamic>.from(hamOylar):<String,dynamic>{},toplam=votes.values.fold<int>(0,(a,b)=>a+(b is Iterable?b.length:0));return Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(q,style:TextStyle(color:benim?Colors.white:Colors.black87,fontWeight:FontWeight.w900,fontSize:16)),const SizedBox(height:8),for(int i=0;i<opts.length;i)Padding(padding:const EdgeInsets.only(bottom:6),child:InkWell(onTap:()=>oyVer(d.reference,i),child:Container(padding:const EdgeInsets.symmetric(horizontal:10,vertical:9),decoration:BoxDecoration(color:benim?Colors.white.withValues(alpha:.18):Colors.white,borderRadius:BorderRadius.circular(12),border:Border.all(color:benim?Colors.white38:mor.withValues(alpha:.35))),child:Row(children:[Expanded(child:Text(opts[i],style:TextStyle(color:benim?Colors.white:Colors.black87))),Text('${votes['$i'] is Iterable?(votes['$i'] as Iterable).length:0}',style:TextStyle(color:benim?Colors.white:mor,fontWeight:FontWeight.bold))])))),Text('$toplam oy',style:TextStyle(fontSize:11,color:benim?Colors.white70:Colors.black45))]);}
-
-  Widget mesajKarti(QueryDocumentSnapshot<Map<String,dynamic>> d){final v=d.data(),gonderen=(v['senderId']??v['fromUid']??v['uid']??'').toString(),ben=gonderen==uid,metin=(v['text']??v['message']??v['content']??'').toString(),tur=(v['type']??'text').toString(),media=(v['mediaUrl']??'').toString(),saat=mesajSaati(v['createdAt']),hamTepkiler=v['reactions'],tepkiler=hamTepkiler is Map?Map<String,dynamic>.from(hamTepkiler):<String,dynamic>{};if(tur=='system')return Center(child:Container(margin:const EdgeInsets.symmetric(vertical:8),padding:const EdgeInsets.symmetric(horizontal:12,vertical:6),decoration:BoxDecoration(color:const Color(0xFFF0F1F4),borderRadius:BorderRadius.circular(14)),child:Text(metin,style:const TextStyle(color:Colors.black54,fontSize:12))));final gonderenBasligi=!ben?(gonderen.isEmpty?const Padding(padding:EdgeInsets.only(bottom:5),child:Text('Üye',style:TextStyle(color:mor,fontSize:12,fontWeight:FontWeight.w800))):FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(future:FirebaseFirestore.instance.collection('users').doc(gonderen).get(),builder:(_,u){final p=u.data?.data()??{},pf=(p['photoUrl']??'').toString();return Padding(padding:const EdgeInsets.only(bottom:5),child:Row(mainAxisSize:MainAxisSize.min,children:[CircleAvatar(radius:10,backgroundImage:pf.isEmpty?null:NetworkImage(pf),child:pf.isEmpty?const Icon(Icons.person,size:12):null),const SizedBox(width:5),Flexible(child:Text((p['displayName']??p['username']??'Üye').toString(),style:const TextStyle(color:mor,fontSize:12,fontWeight:FontWeight.w800),overflow:TextOverflow.ellipsis))]));})):null;final kutu=GestureDetector(onLongPress:()=>mesajMenusu(d),child:Container(constraints:const BoxConstraints(maxWidth:300),margin:const EdgeInsets.symmetric(vertical:4),padding:EdgeInsets.all((tur=='photo'||tur=='gif')?4:12),decoration:BoxDecoration(color:ben?const Color(0xFF7C3AED):const Color(0xFFF0F1F4),borderRadius:BorderRadius.circular(18)),child:Column(crossAxisAlignment:CrossAxisAlignment.end,children:[if(gonderenBasligi!=null)gonderenBasligi,if((tur=='photo'||tur=='gif')&&media.isNotEmpty)InkWell(onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>TamEkranMedyaPage(url:media))),child:ClipRRect(borderRadius:BorderRadius.circular(15),child:Image.network(media,width:240,fit:BoxFit.cover,errorBuilder:(_,__,___)=>const SizedBox(width:240,height:120,child:Center(child:Icon(Icons.broken_image_outlined))))))else if(tur=='poll')anketKarti(d,ben)else Text(metin.isEmpty?(tur=='photo'||tur=='gif'?'Medya yüklenemedi':'Mesaj içeriği bulunamadı'):metin,style:TextStyle(color:ben?Colors.white:Colors.black87,fontSize:16)),if(v['editedAt']!=null)Text('düzenlendi',style:TextStyle(fontSize:9,color:ben?Colors.white60:Colors.black38)),if(tepkiler.isNotEmpty)Wrap(children:tepkiler.values.map((e)=>Text(e.toString())).toList()),if(saat.isNotEmpty)Padding(padding:const EdgeInsets.only(top:4),child:Text(saat,style:TextStyle(fontSize:10,color:ben?Colors.white70:Colors.black45))) ])));return Align(alignment:ben?Alignment.centerRight:Alignment.centerLeft,child:kutu);}
-
-  @override Widget build(BuildContext context)=>Theme(data:ThemeData.light().copyWith(scaffoldBackgroundColor:Colors.white,appBarTheme:const AppBarTheme(backgroundColor:Colors.white,foregroundColor:Colors.black,elevation:0)),child:Scaffold(appBar:AppBar(titleSpacing:0,title:StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(stream:chatRef.snapshots(),builder:(_,s){final v=s.data?.data()??{},ad=(v['groupName']??widget.ad).toString(),foto=(v['groupPhotoUrl']??widget.foto).toString();return Row(children:[CircleAvatar(radius:17,backgroundColor:const Color(0xFFE9DDFF),backgroundImage:foto.isEmpty?null:NetworkImage(foto),child:foto.isEmpty?const Icon(Icons.groups,color:mor,size:20):null),const SizedBox(width:7),Expanded(child:Tooltip(message:ad,child:Text(ad,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:17,fontWeight:FontWeight.w800))))]);}),actions:[IconButton(constraints:const BoxConstraints.tightFor(width:40),tooltip:'Sesli grup araması',onPressed:()=>aramaBaslat(false),icon:const Icon(Icons.call_outlined,color:mor)),IconButton(constraints:const BoxConstraints.tightFor(width:40),tooltip:'Görüntülü grup araması',onPressed:()=>aramaBaslat(true),icon:const Icon(Icons.videocam_outlined,color:mor)),IconButton(constraints:const BoxConstraints.tightFor(width:40),tooltip:'Grup bilgileri',onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupBilgiPage(chatId:widget.chatId))),icon:const Icon(Icons.info_outline,color:mor))]),body:Column(children:[Expanded(child:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(stream:mesajAkisi(),builder:(_,s){if(s.hasError)return Center(child:Padding(padding:const EdgeInsets.all(24),child:Column(mainAxisSize:MainAxisSize.min,children:[const Icon(Icons.error_outline,color:Colors.redAccent,size:34),const SizedBox(height:10),const Text('Grup mesajları yüklenemedi.',style:TextStyle(color:Colors.redAccent,fontWeight:FontWeight.w800)),const SizedBox(height:8),SelectableText('${s.error}',textAlign:TextAlign.center,style:const TextStyle(color:Colors.black54,fontSize:12)),const SizedBox(height:12),OutlinedButton.icon(onPressed:()=>setState((){}),icon:const Icon(Icons.refresh),label:const Text('Yeniden dene'))])));final docs=<QueryDocumentSnapshot<Map<String,dynamic>>>[...?s.data?.docs]..sort((a,b){final av=a.data()['createdAt'],bv=b.data()['createdAt'];final ams=av is Timestamp?av.millisecondsSinceEpoch:0,bms=bv is Timestamp?bv.millisecondsSinceEpoch:0;return ams.compareTo(bms);});if(s.hasData){unawaited(_okunduIsaretle());sonaGit();}if(docs.isEmpty){return Center(child:Text(s.connectionState==ConnectionState.waiting?'Mesajlar sunucudan alınıyor…':'Henüz mesaj yok.',style:const TextStyle(color:Colors.black54)));}return ListView.builder(controller:liste,padding:const EdgeInsets.all(12),itemCount:docs.length,itemBuilder:(_,i)=>mesajKarti(docs[i]));})),if(mentionOnerileri.isNotEmpty)Container(color:Colors.white,child:Column(mainAxisSize:MainAxisSize.min,children:mentionOnerileri.map((u)=>ListTile(dense:true,leading:const CircleAvatar(radius:15,child:Icon(Icons.person,size:17)),title:Text(u['name']??'Üye'),subtitle:Text('@${u['username']??''}'),onTap:()=>mentionEkle(u['username']??''))).toList())),SafeArea(top:false,child:Padding(padding:const EdgeInsets.fromLTRB(8,7,8,8),child:Row(children:[IconButton(tooltip:'Dosya ve medya ekle',onPressed:ekMenusu,icon:const Icon(Icons.add_circle_outline,color:mor)),Expanded(child:TextField(controller:mesaj,onChanged:mentionAra,onSubmitted:(_)=>gonder(),maxLength:2000,buildCounter:(_, {required currentLength,required isFocused,maxLength})=>null,decoration:const InputDecoration(hintText:'Gruba mesaj yaz...'))),IconButton(tooltip:'Emoji seç',onPressed:emojiSec,icon:const Icon(Icons.emoji_emotions_outlined,color:mor)),IconButton(tooltip:'Gönder',onPressed:gonder,icon:const Icon(Icons.send_rounded,color:mor))])))])));
-}
-
-class TamEkranMedyaPage extends StatelessWidget{final String url;const TamEkranMedyaPage({super.key,required this.url});@override Widget build(BuildContext context)=>Scaffold(backgroundColor:Colors.black,appBar:AppBar(backgroundColor:Colors.black,foregroundColor:Colors.white),body:Center(child:InteractiveViewer(minScale:.5,maxScale:5,child:Image.network(url,fit:BoxFit.contain,errorBuilder:(_,__,___)=>const Text('Medya açılamadı.',style:TextStyle(color:Colors.white))))));}
-
-class GrupMedyaPage extends StatelessWidget{
-  final String chatId;const GrupMedyaPage({super.key,required this.chatId});
-  @override Widget build(BuildContext context)=>Theme(data:ThemeData.light(),child:Scaffold(backgroundColor:Colors.white,appBar:AppBar(title:const Text('Medya ve bağlantılar')),body:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(stream:FirebaseFirestore.instance.collection('chats').doc(chatId).collection('messages').orderBy('createdAt',descending:true).snapshots(),builder:(_,s){if(s.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator(color:mor));final docs=(s.data?.docs??[]).where((d){final t=(d.data()['type']??'').toString();return t=='photo'||t=='gif'||t=='shared_content';}).toList();if(docs.isEmpty)return const Center(child:Text('Henüz medya veya bağlantı paylaşılmadı.',style:TextStyle(color:Colors.black54)));return GridView.builder(padding:const EdgeInsets.all(8),itemCount:docs.length,gridDelegate:const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount:3,crossAxisSpacing:6,mainAxisSpacing:6),itemBuilder:(_,i){final v=docs[i].data(),t=(v['type']??'').toString(),url=(v['mediaUrl']??'').toString();if(t=='shared_content')return InkWell(onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>IcerikBaglantiPage(icerikId:(v['contentId']??'').toString()))),child:Container(color:const Color(0xFFF0E8FF),child:const Icon(Icons.link_rounded,color:mor,size:38)));return InkWell(onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>TamEkranMedyaPage(url:url))),child:ClipRRect(borderRadius:BorderRadius.circular(10),child:Image.network(url,fit:BoxFit.cover,errorBuilder:(_,__,___)=>const ColoredBox(color:Color(0xFFF0F1F4),child:Icon(Icons.broken_image_outlined)))));});})));
-}
-
-class SabitlenenGrupMesajlariPage extends StatelessWidget{
-  final String chatId;const SabitlenenGrupMesajlariPage({super.key,required this.chatId});
-  @override Widget build(BuildContext context)=>Theme(data:ThemeData.light(),child:Scaffold(backgroundColor:Colors.white,appBar:AppBar(title:const Text('Sabitlenmiş mesajlar')),body:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(stream:FirebaseFirestore.instance.collection('chats').doc(chatId).collection('messages').where('pinned',isEqualTo:true).snapshots(),builder:(_,s){if(s.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator(color:mor));final docs=s.data?.docs??[];if(docs.isEmpty)return const Center(child:Text('Sabitlenmiş mesaj yok.',style:TextStyle(color:Colors.black54)));return ListView.separated(padding:const EdgeInsets.all(12),itemCount:docs.length,separatorBuilder:(_,__)=>const Divider(),itemBuilder:(_,i){final v=docs[i].data(),tur=(v['type']??'text').toString(),metin=(v['text']??v['pollQuestion']??'').toString(),url=(v['mediaUrl']??'').toString();return ListTile(leading:Icon(tur=='photo'||tur=='gif'?Icons.photo:tur=='poll'?Icons.poll:Icons.push_pin,color:mor),title:Text(metin.isEmpty?tur=='gif'?'GIF':'Fotoğraf':metin,maxLines:3,overflow:TextOverflow.ellipsis),subtitle:Text(mesajSaati(v['createdAt'])),onTap:url.isEmpty?null:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>TamEkranMedyaPage(url:url))));});})));
-}
-
-class NgelXAramaPage extends StatefulWidget{
-  final String roomName,baslik;final bool goruntulu;final DocumentReference<Map<String,dynamic>> aramaRef;
-  const NgelXAramaPage({super.key,required this.roomName,required this.baslik,required this.goruntulu,required this.aramaRef});
-  @override State<NgelXAramaPage> createState()=>_NgelXAramaPageState();
-}
-class _NgelXAramaPageState extends State<NgelXAramaPage>{
-  lk.Room? oda;
-  bool baglaniyor=true,mikrofon=true,kamera=true,hoparlor=true,bitiyor=false;
-  String? hata;
-
-  @override void initState(){super.initState();baglan();}
-  void _odaDegisti(){if(mounted)setState((){});}
-
-  Future<void> _izinleriIste()async{
-    final mikrofonIzni=await Permission.microphone.request();
-    if(!mikrofonIzni.isGranted)throw Exception('Mikrofon izni verilmedi.');
-    if(widget.goruntulu){
-      final kameraIzni=await Permission.camera.request();
-      if(!kameraIzni.isGranted)throw Exception('Kamera izni verilmedi.');
+  Future<void> mesajTepkiDegistir(QueryDocumentSnapshot<Map<String,dynamic>> d,String emoji)async{
+    final ben=uid;if(ben==null)return;
+    final mevcut=Map<String,dynamic>.from(d.data()['reactions']??const{});
+    final alan='reactions.'+ben;
+    if((mevcut[ben]??'').toString()==emoji){
+      await d.reference.update({alan:FieldValue.delete()});
+    }else{
+      await d.reference.set({alan:emoji},SetOptions(merge:true));
     }
   }
 
-  Future<void> baglan()async{
-    final u=FirebaseAuth.instance.currentUser;
-    if(u==null){if(mounted)setState((){baglaniyor=false;hata='Arama için giriş yapman gerekiyor.';});return;}
-    lk.Room? r;
-    try{
-      await _izinleriIste();
-      final kaynak=lk.DevelopmentTokenSource(id:liveKitTestSunucuId);
-      final cevap=await kaynak.fetch(lk.TokenRequestOptions(
-        roomName:widget.roomName,
-        participantIdentity:u.uid,
-        participantName:u.displayName?.isNotEmpty==true?u.displayName!:'NgelX kullanıcısı',
-      )).timeout(const Duration(seconds:12));
-      r=lk.Room(roomOptions:lk.RoomOptions(adaptiveStream:true,dynacast:true));
-      r.addListener(_odaDegisti);
-      await r.connect(cevap.serverUrl,cevap.participantToken).timeout(const Duration(seconds:18));
-      oda=r;
-      final yerel=r.localParticipant;
-      if(yerel==null)throw Exception('Arama katılımcısı hazırlanamadı.');
-      await yerel.setMicrophoneEnabled(true);
-      if(widget.goruntulu)await yerel.setCameraEnabled(true);
-      await lk.AudioManager.instance.setSpeakerOutputPreferred(true,force:widget.goruntulu);
-      hoparlor=true;
-      await widget.aramaRef.set({
-        'status':'active',
-        'participants':FieldValue.arrayUnion([u.uid]),
-        'connectedAt':FieldValue.serverTimestamp(),
-      },SetOptions(merge:true));
-      if(mounted)setState(()=>baglaniyor=false);
-    }catch(e){
-      if(r!=null){
-        r.removeListener(_odaDegisti);
-        try{await r.disconnect();}catch(_){}
-        try{await r.dispose();}catch(_){}
-      }
-      oda=null;
-      if(mounted)setState((){baglaniyor=false;hata=e.toString().replaceFirst('Exception: ','');});
-    }
-  }
-
-  lk.VideoTrack? _katilimciVideosu(lk.Participant? p){
-    if(p==null)return null;
-    for(final pub in p.videoTrackPublications){
-      final track=pub.track;
-      if(track is lk.VideoTrack&&!pub.muted)return track;
-    }
-    return null;
-  }
-  lk.VideoTrack? get _yerelVideo=>_katilimciVideosu(oda?.localParticipant);
-  lk.VideoTrack? get _uzakVideo{
-    final r=oda;if(r==null)return null;
-    for(final p in r.remoteParticipants.values){
-      final track=_katilimciVideosu(p);
-      if(track!=null)return track;
-    }
-    return null;
-  }
-
-  Future<void> mikrofonDegistir()async{
-    final yeni=!mikrofon;
-    try{await oda?.localParticipant?.setMicrophoneEnabled(yeni);if(mounted)setState(()=>mikrofon=yeni);}
-    catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Mikrofon değiştirilemedi: $e')));}
-  }
-  Future<void> kameraDegistir()async{
-    final yeni=!kamera;
-    try{await oda?.localParticipant?.setCameraEnabled(yeni);if(mounted)setState(()=>kamera=yeni);}
-    catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Kamera değiştirilemedi: $e')));}
-  }
-  Future<void> hoparlorDegistir()async{
-    final yeni=!hoparlor;
-    try{
-      await lk.AudioManager.instance.setSpeakerOutputPreferred(yeni,force:yeni&&widget.goruntulu);
-      if(mounted)setState(()=>hoparlor=yeni);
-    }catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Ses çıkışı değiştirilemedi: $e')));}
-  }
-
-  Future<void> bitir({bool geriDon=true})async{
-    if(bitiyor)return;bitiyor=true;
-    try{await widget.aramaRef.set({'status':'ended','endedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));}catch(_){}
-    final r=oda;oda=null;
-    if(r!=null){
-      r.removeListener(_odaDegisti);
-      try{await r.disconnect();}catch(_){}
-      try{await r.dispose();}catch(_){}
-    }
-    if(geriDon&&mounted)Navigator.pop(context);
-  }
-
-  @override void dispose(){
-    final r=oda;
-    if(r!=null){
-      r.removeListener(_odaDegisti);
-      if(!bitiyor){unawaited(r.disconnect());unawaited(r.dispose());}
-    }
-    super.dispose();
-  }
-
-  Widget _videoAlani(){
-    final uzak=_uzakVideo,yerel=_yerelVideo;
-    return Expanded(child:Stack(children:[
-      Positioned.fill(
-        child:uzak!=null
-          ? ClipRRect(borderRadius:BorderRadius.circular(22),child:lk.VideoTrackRenderer(uzak,fit:lk.VideoViewFit.cover))
-          : Container(
-              margin:const EdgeInsets.all(14),
-              decoration:BoxDecoration(color:Colors.white10,borderRadius:BorderRadius.circular(22)),
-              child:Center(child:Column(mainAxisSize:MainAxisSize.min,children:[
-                const Icon(Icons.person_rounded,color:Colors.white30,size:76),
-                const SizedBox(height:12),
-                Text(baglaniyor?'Bağlanıyor…':'Karşı tarafın görüntüsü bekleniyor…',style:const TextStyle(color:Colors.white70)),
-              ])),
-            ),
-      ),
-      if(yerel!=null)
-        Positioned(
-          right:22,top:22,width:112,height:158,
-          child:ClipRRect(
+  Future<String?> mesajTepkisiSec()async=>showModalBottomSheet<String>(
+    context:context,backgroundColor:Colors.white,showDragHandle:true,
+    shape:const RoundedRectangleBorder(borderRadius:BorderRadius.vertical(top:Radius.circular(28))),
+    builder:(c)=>SafeArea(child:Padding(
+      padding:const EdgeInsets.all(18),
+      child:Wrap(spacing:14,runSpacing:14,children:
+        ['❤️','😂','😮','😢','😡','👍','👏','🔥','🎉','🙏','😍','🤔']
+          .map((e)=>InkWell(
+            onTap:()=>Navigator.pop(c,e),
             borderRadius:BorderRadius.circular(18),
-            child:DecoratedBox(
-              decoration:BoxDecoration(border:Border.all(color:Colors.white24),borderRadius:BorderRadius.circular(18)),
-              child:lk.VideoTrackRenderer(yerel,fit:lk.VideoViewFit.cover),
-            ),
-          ),
-        ),
-      Positioned(left:20,right:20,bottom:18,child:Text(widget.baslik,textAlign:TextAlign.center,style:const TextStyle(color:Colors.white,fontSize:22,fontWeight:FontWeight.w900,shadows:[Shadow(blurRadius:8,color:Colors.black54)]))),
-    ]));
+            child:Padding(padding:const EdgeInsets.all(8),child:Text(e,style:const TextStyle(fontSize:30))),
+          )).toList(),
+      ),
+    )),
+  );
+
+  Future<void> mesajHatirlat(QueryDocumentSnapshot<Map<String,dynamic>> d,String metin)async{
+    final ben=uid;if(ben==null)return;
+    final sec=await showModalBottomSheet<Duration>(
+      context:context,backgroundColor:Colors.white,showDragHandle:true,
+      builder:(c)=>SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
+        const ListTile(title:Text('Hatırlatma ayarla',style:TextStyle(fontWeight:FontWeight.w900))),
+        for(final e in const [('1 saat',Duration(hours:1)),('4 saat',Duration(hours:4)),('Yarın',Duration(days:1)),('1 hafta',Duration(days:7))])
+          ListTile(title:Text(e.$1),onTap:()=>Navigator.pop(c,e.$2)),
+        TextButton(onPressed:()=>Navigator.pop(c),child:const Text('Vazgeç')),
+      ])),
+    );
+    if(sec==null)return;
+    await FirebaseFirestore.instance.collection('users').doc(ben).collection('messageReminders').add({
+      'chatId':widget.chatId,
+      'messageId':d.id,
+      'text':metin,
+      'remindAt':Timestamp.fromDate(DateTime.now().add(sec)),
+      'createdAt':FieldValue.serverTimestamp(),
+    });
+    if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Hatırlatma kaydedildi.')));
   }
 
-  Widget _sesliAlani()=>Expanded(child:Center(child:Column(mainAxisSize:MainAxisSize.min,children:[
-    const CircleAvatar(radius:62,backgroundColor:Color(0xFFE9DDFF),child:Icon(Icons.call_rounded,color:mor,size:62)),
-    const SizedBox(height:18),
-    Text(widget.baslik,textAlign:TextAlign.center,style:const TextStyle(color:Colors.white,fontSize:27,fontWeight:FontWeight.w900)),
-    const SizedBox(height:7),
-    Text(baglaniyor?'Bağlanıyor…':'Sesli arama',style:const TextStyle(color:Colors.white70,fontSize:16)),
-  ])));
-
-  @override Widget build(BuildContext context)=>PopScope(
-    canPop:true,
-    onPopInvokedWithResult:(didPop,__){if(didPop)bitir(geriDon:false);},
-    child:Scaffold(
-      backgroundColor:const Color(0xFF16121F),
-      body:SafeArea(child:Column(children:[
-        if(hata!=null)
-          Expanded(child:Center(child:Padding(padding:const EdgeInsets.all(28),child:Column(mainAxisSize:MainAxisSize.min,children:[
-            const Icon(Icons.call_end_rounded,color:Colors.redAccent,size:66),
-            const SizedBox(height:16),
-            const Text('Arama bağlantısı kurulamadı',style:TextStyle(color:Colors.white,fontSize:21,fontWeight:FontWeight.w900)),
-            const SizedBox(height:10),
-            SelectableText(hata!,textAlign:TextAlign.center,style:const TextStyle(color:Colors.white70)),
-            const SizedBox(height:18),
-            FilledButton.icon(onPressed:(){setState((){hata=null;baglaniyor=true;});baglan();},icon:const Icon(Icons.refresh),label:const Text('Tekrar dene')),
-            TextButton(onPressed:openAppSettings,child:const Text('Kamera / mikrofon izinlerini aç')),
-          ]))))
-        else if(widget.goruntulu)_videoAlani()
-        else _sesliAlani(),
-        if(hata==null)Padding(
-          padding:const EdgeInsets.fromLTRB(12,18,12,8),
-          child:Row(mainAxisAlignment:MainAxisAlignment.spaceEvenly,children:[
-            _aramaTus(mikrofon?Icons.mic:Icons.mic_off,mikrofonDegistir,mikrofon),
-            _aramaTus(hoparlor?Icons.volume_up:Icons.volume_off,hoparlorDegistir,hoparlor),
-            if(widget.goruntulu)_aramaTus(kamera?Icons.videocam:Icons.videocam_off,kameraDegistir,kamera),
-          ]),
-        ),
-        FloatingActionButton.large(heroTag:null,backgroundColor:Colors.red,onPressed:()=>bitir(),child:const Icon(Icons.call_end,color:Colors.white,size:34)),
-        const SizedBox(height:26),
-      ])),
+  Widget _mesajAksiyon(IconData i,String t,VoidCallback f,{bool etkin=true})=>Opacity(
+    opacity:etkin?1:.35,
+    child:InkWell(
+      onTap:etkin?f:null,
+      borderRadius:BorderRadius.circular(16),
+      child:SizedBox(width:78,child:Padding(
+        padding:const EdgeInsets.symmetric(vertical:8),
+        child:Column(children:[
+          Icon(i,color:const Color(0xFF1836D8),size:29),
+          const SizedBox(height:6),
+          Text(t,maxLines:2,textAlign:TextAlign.center,style:const TextStyle(fontSize:12,color:Colors.black87)),
+        ]),
+      )),
     ),
   );
 
-  Widget _aramaTus(IconData ikon,Future<void> Function() onTap,bool acik)=>IconButton.filled(
-    style:IconButton.styleFrom(backgroundColor:acik?Colors.white24:Colors.white,foregroundColor:acik?Colors.white:Colors.black),
-    onPressed:()=>onTap(),
-    icon:Icon(ikon),iconSize:29,padding:const EdgeInsets.all(16),
-  );
-}
-
-class GrupBilgiPage extends StatefulWidget{final String chatId;const GrupBilgiPage({super.key,required this.chatId});@override State<GrupBilgiPage> createState()=>_GrupBilgiPageState();}
-class _GrupBilgiPageState extends State<GrupBilgiPage>{
-  DocumentReference<Map<String,dynamic>> get ref=>FirebaseFirestore.instance.collection('chats').doc(widget.chatId);
-  String? get ben=>FirebaseAuth.instance.currentUser?.uid;
-  Future<void> sistemMesaji(String text)async{await ref.collection('messages').add({'senderId':'system','type':'system','text':text,'createdAt':FieldValue.serverTimestamp()});await ref.set({'lastMessage':text,'updatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));}
-  Future<void> adiDuzenle(String mevcut)async{final c=TextEditingController(text:mevcut);final yeni=await showDialog<String>(context:context,builder:(x)=>Theme(data:ThemeData.light(),child:AlertDialog(backgroundColor:Colors.white,title:const Text('Grup adını düzenle'),content:TextField(controller:c,maxLength:160,decoration:const InputDecoration(helperText:'En fazla 16 kelime')),actions:[TextButton(onPressed:()=>Navigator.pop(x),child:const Text('Vazgeç')),FilledButton(onPressed:()=>Navigator.pop(x,c.text.trim()),child:const Text('Kaydet'))])));c.dispose();if(yeni==null)return;final kelime=yeni.isEmpty?0:yeni.split(RegExp(r'\s+')).length;if(yeni.length<2||kelime>16){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Grup adı 2 karakterden uzun ve en fazla 16 kelime olmalı.')));return;}await ref.update({'groupName':yeni});await sistemMesaji('Grup adı “$yeni” olarak değiştirildi.');}
-  Future<void> fotografDuzenle()async{final secim=await showModalBottomSheet<String>(context:context,backgroundColor:Colors.white,showDragHandle:true,builder:(c)=>SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[const ListTile(title:Text('Grup fotoğrafını değiştir',style:TextStyle(fontWeight:FontWeight.w900))),ListTile(leading:const Icon(Icons.camera_alt,color:mor),title:const Text('Kamera'),onTap:()=>Navigator.pop(c,'camera')),ListTile(leading:const Icon(Icons.photo_library,color:mor),title:const Text('Galeri'),onTap:()=>Navigator.pop(c,'gallery')),ListTile(leading:const Icon(Icons.delete_outline,color:Colors.red),title:const Text('Mevcut fotoğrafı kaldır',style:TextStyle(color:Colors.red)),onTap:()=>Navigator.pop(c,'remove'))])));if(secim==null)return;if(secim=='remove'){await ref.update({'groupPhotoUrl':''});await sistemMesaji('Yönetici grup fotoğrafını kaldırdı.');return;}final x=await ImagePicker().pickImage(source:secim=='camera'?ImageSource.camera:ImageSource.gallery,imageQuality:85);if(x==null)return;final yol='groups/${widget.chatId}/avatar_${DateTime.now().millisecondsSinceEpoch}.jpg';await supa.Supabase.instance.client.storage.from('ngelx-media').upload(yol,File(x.path));final url=supa.Supabase.instance.client.storage.from('ngelx-media').getPublicUrl(yol);await ref.update({'groupPhotoUrl':url});await sistemMesaji('Yönetici grup fotoğrafını değiştirdi.');}
-  Future<void> uyeIslemi(String id,String isim,bool admin)async{final sec=await showModalBottomSheet<String>(context:context,backgroundColor:Colors.white,showDragHandle:true,builder:(c)=>SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[ListTile(title:Text(isim,style:const TextStyle(fontWeight:FontWeight.w900))),ListTile(leading:Icon(admin?Icons.person_remove_alt_1:Icons.admin_panel_settings,color:mor),title:Text(admin?'Yöneticilikten çıkar':'Yönetici yap'),onTap:()=>Navigator.pop(c,admin?'demote':'promote')),ListTile(leading:const Icon(Icons.person_remove,color:Colors.red),title:const Text('Gruptan çıkar',style:TextStyle(color:Colors.red)),onTap:()=>Navigator.pop(c,'remove'))])));if(sec==null)return;if(sec=='promote'){await ref.update({'admins':FieldValue.arrayUnion([id])});await sistemMesaji('$isim yönetici yapıldı.');}else if(sec=='demote'){await ref.update({'admins':FieldValue.arrayRemove([id])});await sistemMesaji('$isim artık yönetici değil.');}else{final ok=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(backgroundColor:Colors.white,title:Text('$isim gruptan çıkarılsın mı?'),content:const Text('Bu işlemden sonra kullanıcı gruba mesaj gönderemez.'),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),FilledButton(style:FilledButton.styleFrom(backgroundColor:Colors.red),onPressed:()=>Navigator.pop(c,true),child:const Text('Çıkar'))]))??false;if(ok){await ref.update({'members':FieldValue.arrayRemove([id]),'admins':FieldValue.arrayRemove([id])});await sistemMesaji('$isim gruptan çıkarıldı.');}}}
-  Future<void> uyeEkle(List<String> mevcut)async{final me=ben;if(me==null)return;if(mevcut.length>=60){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bu grup 60 üyelik üst sınıra ulaştı.')));return;}final p=await FirebaseFirestore.instance.collection('users').doc(me).get(),izinli=<String>{...List<String>.from(p.data()?['friends']??const[]),...List<String>.from(p.data()?['following']??const[])}..removeAll(mevcut);if(izinli.isEmpty){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Eklenebilecek arkadaş veya takip edilen kişi bulunamadı.')));return;}final secilen=<String>{};if(!mounted)return;final onay=await showModalBottomSheet<bool>(context:context,isScrollControlled:true,backgroundColor:Colors.white,showDragHandle:true,builder:(c)=>StatefulBuilder(builder:(c,setP)=>SafeArea(child:SizedBox(height:MediaQuery.sizeOf(c).height*.72,child:Column(children:[ListTile(title:const Text('Gruba üye ekle',style:TextStyle(fontWeight:FontWeight.w900)),subtitle:Text('${mevcut.length+secilen.length}/60 üye')),Expanded(child:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(stream:FirebaseFirestore.instance.collection('users').snapshots(),builder:(_,s){final docs=(s.data?.docs??[]).where((d)=>izinli.contains(d.id)&&d.data()['deactivated']!=true).toList();return ListView(children:docs.map((d){final v=d.data(),ad=(v['displayName']??v['username']??'Kullanıcı').toString(),foto=(v['photoUrl']??'').toString();return CheckboxListTile(value:secilen.contains(d.id),onChanged:(x){if(x==true&&mevcut.length+secilen.length>=60){ScaffoldMessenger.of(c).showSnackBar(const SnackBar(content:Text('Grupta en fazla 60 üye olabilir.')));return;}setP(()=>x==true?secilen.add(d.id):secilen.remove(d.id));},secondary:CircleAvatar(backgroundImage:foto.isEmpty?null:NetworkImage(foto)),title:Text(ad),subtitle:Text('@${v['username']??'ngelx'}'));}).toList());})),Padding(padding:const EdgeInsets.all(12),child:SizedBox(width:double.infinity,child:FilledButton(onPressed:secilen.isEmpty?null:()=>Navigator.pop(c,true),child:Text('${secilen.length} kişiyi ekle'))))])))))??false;if(!onay||secilen.isEmpty)return;await ref.update({'members':FieldValue.arrayUnion(secilen.toList()),'hiddenFor':FieldValue.arrayRemove(secilen.toList())});await sistemMesaji('${secilen.length} yeni üye gruba eklendi.');}
-  Future<void> ayril(List<String> uyeler,List<String> admins)async{final me=ben;if(me==null)return;if(admins.length==1&&admins.contains(me)&&uyeler.length>1){await showDialog<void>(context:context,builder:(c)=>AlertDialog(backgroundColor:Colors.white,title:const Text('Önce yönetici belirle'),content:const Text('Gruptan ayrılmadan önce başka bir üyeyi yönetici yapmalısın.'),actions:[FilledButton(onPressed:()=>Navigator.pop(c),child:const Text('Tamam'))]));return;}final sonKisi=uyeler.length==1;final ok=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(backgroundColor:Colors.white,title:Text(sonKisi?'Grup silinsin mi?':'Gruptan ayrılmak istiyor musun?'),content:Text(sonKisi?'Grupta yalnızca sen kaldın. Grup sohbeti listenden kaldırılacak.':'Mesaj geçmişine erişimin sona erecek.'),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),FilledButton(style:FilledButton.styleFrom(backgroundColor:Colors.red),onPressed:()=>Navigator.pop(c,true),child:Text(sonKisi?'Grubu sil':'Ayrıl'))]))??false;if(!ok)return;if(sonKisi)await ref.set({'members':FieldValue.arrayRemove([me]),'admins':FieldValue.arrayRemove([me]),'groupDeleted':true,'deletedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));else{await sistemMesaji('Bir üye gruptan ayrıldı.');await ref.update({'members':FieldValue.arrayRemove([me]),'admins':FieldValue.arrayRemove([me])});}if(mounted)Navigator.popUntil(context,(r)=>r.isFirst);}
-  Future<void> ayarDegistir(String alan,bool deger)async{await ref.set({alan:deger},SetOptions(merge:true));}
-  @override Widget build(BuildContext context)=>Theme(data:ThemeData.light(),child:Scaffold(backgroundColor:Colors.white,appBar:AppBar(title:const Text('Grup bilgileri')),body:StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(stream:ref.snapshots(),builder:(_,s){if(!s.hasData)return const Center(child:CircularProgressIndicator(color:mor));final v=s.data?.data()??{},uyeler=List<String>.from(v['members']??const[]),yoneticiler=List<String>.from(v['admins']??const[]),yonetici=yoneticiler.contains(ben),foto=(v['groupPhotoUrl']??'').toString(),ad=(v['groupName']??'Grup').toString();return ListView(padding:const EdgeInsets.all(18),children:[GestureDetector(onTap:yonetici?fotografDuzenle:null,child:Stack(alignment:Alignment.bottomRight,children:[Center(child:CircleAvatar(radius:50,backgroundColor:const Color(0xFFE9DDFF),backgroundImage:foto.isEmpty?null:NetworkImage(foto),child:foto.isEmpty?const Icon(Icons.groups,color:mor,size:48):null)),if(yonetici)Positioned(right:MediaQuery.sizeOf(context).width/2-62,child:const CircleAvatar(radius:15,backgroundColor:mor,child:Icon(Icons.camera_alt,color:Colors.white,size:17))) ])),const SizedBox(height:10),Text(ad,textAlign:TextAlign.center,style:const TextStyle(color:Colors.black,fontSize:25,fontWeight:FontWeight.w900)),Text('${uyeler.length}/60 üye',textAlign:TextAlign.center,style:const TextStyle(color:Colors.black54)),if(yonetici)...[ListTile(leading:const Icon(Icons.edit,color:mor),title:const Text('Grup adını düzenle'),onTap:()=>adiDuzenle(ad)),ListTile(leading:const Icon(Icons.add_a_photo,color:mor),title:const Text('Grup fotoğrafını değiştir'),onTap:fotografDuzenle)],const Divider(),ListTile(leading:const Icon(Icons.photo_library_outlined,color:mor),title:const Text('Medya, dosyalar ve bağlantılar'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupMedyaPage(chatId:widget.chatId)))),ListTile(leading:const Icon(Icons.push_pin_outlined,color:mor),title:const Text('Sabitlenmiş mesajlar'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>SabitlenenGrupMesajlariPage(chatId:widget.chatId)))),if(yonetici)...[const Divider(),const Text('Grup izinleri',style:TextStyle(fontSize:18,fontWeight:FontWeight.w900)),SwitchListTile(title:const Text('Yalnızca yöneticiler mesaj gönderebilir'),value:v['onlyAdminsCanPost']==true,onChanged:(x)=>ayarDegistir('onlyAdminsCanPost',x)),SwitchListTile(title:const Text('Yeni üyeler eski mesajları görebilir'),value:v['newMembersSeeHistory']!=false,onChanged:(x)=>ayarDegistir('newMembersSeeHistory',x)),SwitchListTile(title:const Text('Katılma istekleri yönetici onayından geçsin'),value:v['joinApproval']==true,onChanged:(x)=>ayarDegistir('joinApproval',x))],const Divider(),Row(children:[const Expanded(child:Text('Üyeler',style:TextStyle(color:Colors.black,fontSize:18,fontWeight:FontWeight.w900))),if(yonetici)TextButton.icon(onPressed:uyeler.length>=60?null:()=>uyeEkle(uyeler),icon:const Icon(Icons.person_add_alt_1),label:const Text('Üye ekle'))]),...uyeler.map((id)=>FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(future:FirebaseFirestore.instance.collection('users').doc(id).get(),builder:(_,u){final p=u.data?.data()??{},isim=(p['displayName']??p['username']??'Kullanıcı').toString(),pf=(p['photoUrl']??'').toString(),admin=yoneticiler.contains(id);return ListTile(onTap:yonetici&&id!=ben?()=>uyeIslemi(id,isim,admin):null,leading:CircleAvatar(backgroundImage:pf.isEmpty?null:NetworkImage(pf),child:pf.isEmpty?const Icon(Icons.person):null),title:Text(isim),subtitle:Text(admin?'Yönetici':'Üye'),trailing:yonetici&&id!=ben?const Icon(Icons.more_vert):null);})),const Divider(),ListTile(leading:const Icon(Icons.exit_to_app,color:Colors.red),title:Text(uyeler.length==1?'Grubu sil':'Gruptan ayrıl',style:const TextStyle(color:Colors.red)),onTap:()=>ayril(uyeler,yoneticiler))]);})));
-}
-
-class YeniSohbetPage extends StatefulWidget {
-  const YeniSohbetPage({super.key});
-  @override State<YeniSohbetPage> createState()=>_YeniSohbetPageState();
-}
-class _YeniSohbetPageState extends State<YeniSohbetPage>{
-  final arama=TextEditingController();
-  String sorgu='';
-  Set<String> engellenenler={};
-  @override void initState(){super.initState();engellenenleriGetir();}
-  Future<void> engellenenleriGetir()async{final u=FirebaseAuth.instance.currentUser;if(u==null)return;final d=await FirebaseFirestore.instance.collection('users').doc(u.uid).get();if(mounted)setState(()=>engellenenler=Set<String>.from(List<dynamic>.from(d.data()?['blocked']??const[])));}
-  @override void dispose(){arama.dispose();super.dispose();}
-  TextSpan vurgula(String metin){final q=sorgu.toLowerCase(),m=metin.toLowerCase(),i=q.isEmpty?-1:m.indexOf(q);if(i<0)return TextSpan(text:metin,style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w600));return TextSpan(children:[TextSpan(text:metin.substring(0,i),style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w600)),TextSpan(text:metin.substring(i,i+q.length),style:const TextStyle(color:Colors.blue,fontWeight:FontWeight.w900)),TextSpan(text:metin.substring(i+q.length),style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w600))]);}
-  @override
-  Widget build(BuildContext context) {
-    final me = FirebaseAuth.instance.currentUser?.uid;
-    final beyazTema = ThemeData.light().copyWith(
-      scaffoldBackgroundColor: Colors.white,
-      appBarTheme: const AppBarTheme(backgroundColor: Colors.white, foregroundColor: Colors.black, elevation: 0),
-      inputDecorationTheme: InputDecorationTheme(
-        filled: true,
-        fillColor: const Color(0xFFF1F3F5),
-        prefixIconColor: Colors.black54,
-        hintStyle: const TextStyle(color: Colors.black45),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide.none),
-      ),
-    );
-    return Theme(
-      data: beyazTema,
-      child: Scaffold(
-        appBar: AppBar(title: const Text('Yeni sohbet', style: TextStyle(fontWeight: FontWeight.bold))),
-        body: Column(children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(18, 8, 18, 14),
-            child: TextField(
-              controller: arama,
-              onChanged: (v) => setState(() => sorgu = v.trim().toLowerCase()),
-              style: const TextStyle(color: Colors.black87),
-              decoration: const InputDecoration(prefixIcon: Icon(Icons.search), hintText: 'Kişi veya kullanıcı adı ara'),
-            ),
-          ),
-          Expanded(
-            child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-              stream: FirebaseFirestore.instance.collection('users').snapshots(),
-              builder: (_, s) {
-                final docs = (s.data?.docs ?? []).where((d) {
-                  if (d.id == me || engellenenler.contains(d.id)) return false;
-                  final v = d.data();
-                  if(v['deactivated']==true||List<String>.from(v['blocked']??const[]).contains(me))return false;
-                  return true;
-                }).toList();
-                if (s.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator(color: mavi));
-                }
-                if (docs.isEmpty) {
-                  return const Center(child: Text('Aramana uygun kişi bulunamadı.', style: TextStyle(color: Colors.black54)));
-                }
-                return ListView.separated(
-                  itemCount: docs.length,
-                  separatorBuilder: (_, __) => const Divider(height: 1, indent: 82, color: Color(0xFFE5E7EB)),
-                  itemBuilder: (_, i) {
-                    final d = docs[i], v = d.data();
-                    final foto = (v['photoUrl'] ?? '').toString();
-                    final ad = (v['displayName'] ?? v['username'] ?? 'NgelX').toString();
-                    final ids = me==null?<String>[d.id]:<String>[me,d.id]..sort();
-                    final chatId=ids.join('_');
-                    return FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(future:FirebaseFirestore.instance.collection('chats').doc(chatId).get(),builder:(_,chat){final last=(chat.data?.data()?['lastMessage']??'').toString();final adEslesir=ad.toLowerCase().contains(sorgu)||(v['username']??'').toString().toLowerCase().contains(sorgu);final mesajEslesir=last.toLowerCase().contains(sorgu);if(sorgu.isNotEmpty&&!adEslesir&&!mesajEslesir)return const SizedBox.shrink();return InkWell(
-                      onTap: () {
-                        if (me == null) return;
-                        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => SohbetPage(chatId: chatId, digerUid: d.id, ad: ad, foto: foto)));
-                      },
-                      child: ListTile(
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 22, vertical: 8),
-                        leading: CircleAvatar(
-                          radius: 27,
-                          backgroundColor: const Color(0xFFE5E7EB),
-                          backgroundImage: foto.isEmpty ? null : NetworkImage(foto),
-                          child: foto.isEmpty ? const Icon(Icons.person, color: Colors.black45) : null,
-                        ),
-                        title: RichText(text:vurgula(ad)),
-                        subtitle: Text(last.isNotEmpty?last:'@${v['username'] ?? 'ngelx'}',maxLines:1,overflow:TextOverflow.ellipsis,style:TextStyle(color:mesajEslesir&&sorgu.isNotEmpty?Colors.blue:Colors.black54,fontWeight:mesajEslesir&&sorgu.isNotEmpty?FontWeight.bold:FontWeight.normal)),
-                        trailing: const Icon(Icons.chevron_right, color: Colors.blue),
-                      ),
-                    );});
-                  },
-                );
-              },
-            ),
-          ),
-        ]),
-      ),
-    );
-  }
-}
-
-class SohbetPage extends StatefulWidget {final String chatId,digerUid,ad,foto;const SohbetPage({super.key,required this.chatId,required this.digerUid,required this.ad,this.foto=''});@override State<SohbetPage> createState()=>_SohbetPageState();}
-class _SohbetPageState extends State<SohbetPage> {
-  final mesaj=TextEditingController(),liste=ScrollController();
-  final List<Map<String,String>> mentionOnerileri=[];
-  bool gonderiliyor=false;
-  String? get uid=>FirebaseAuth.instance.currentUser?.uid;
-
-  Future<String?> mesajEngeli() async {
-    final ben=uid;
-    if(ben==null)return 'Mesaj göndermek için giriş yap.';
-    try {
-      final sonuc=await Future.wait([
-        FirebaseFirestore.instance.collection('users').doc(ben).get(),
-        FirebaseFirestore.instance.collection('users').doc(widget.digerUid).get(),
-        FirebaseFirestore.instance.collection('chats').doc(widget.chatId).get(),
-      ]);
-      final benim=sonuc[0].data()??{};
-      final diger=sonuc[1].data()??{};
-      final sohbet=sonuc[2].data()??{};
-      final benimEngellediklerim=List<String>.from(benim['blocked']??const[]);
-      final onunEngelledikleri=List<String>.from(diger['blocked']??const[]);
-      if(benimEngellediklerim.contains(widget.digerUid)||onunEngelledikleri.contains(ben))return 'Engellenen hesaplar arasında mesaj gönderilemez.';
-      if(diger['deactivated']==true)return 'Bu hesap şu anda kullanılamıyor.';
-      final arkadaslar=List<String>.from(diger['friends']??const[]);
-      final kabulEdildi=sohbet['requestAccepted_$ben']==true||sohbet['requestAccepted_${widget.digerUid}']==true;
-      if(diger['friendsOnlyMessages']!=false&&!arkadaslar.contains(ben)&&!kabulEdildi)return 'Bu kullanıcı yalnızca arkadaşlarından mesaj kabul ediyor.';
-      return null;
-    } catch (_) {
-      return 'Mesaj izni kontrol edilemedi. İnternet bağlantını kontrol et.';
-    }
-  }
-
-  Future<void> gonder() async {
-    final t=mesaj.text.trim();
-    if(t.isEmpty||uid==null||gonderiliyor)return;
-    setState(()=>gonderiliyor=true);
-    final engel=await mesajEngeli();
-    if(engel!=null){if(mounted){setState(()=>gonderiliyor=false);ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(engel)));}return;}
-    final ref=FirebaseFirestore.instance.collection('chats').doc(widget.chatId);
-    try {
-      final onceki=await ref.get();
-      final diger=await FirebaseFirestore.instance.collection('users').doc(widget.digerUid).get();
-      final arkadas=List<String>.from(diger.data()?['friends']??const[]).contains(uid);
-      await ref.set({'members':[uid,widget.digerUid],'updatedAt':FieldValue.serverTimestamp(),if(!onceki.exists&&!arkadas)'requestSenderUid':uid,if(!onceki.exists&&!arkadas)'requestRecipientUid':widget.digerUid},SetOptions(merge:true));
-      await ref.collection('messages').add({'senderId':uid,'text':t,'type':'text','createdAt':FieldValue.serverTimestamp()});
-      await ref.set({'lastMessage':t,'updatedAt':FieldValue.serverTimestamp(),'unread_${widget.digerUid}':FieldValue.increment(1)},SetOptions(merge:true));
-      await uygulamaBildirimiGonder(toUid:widget.digerUid,fromUid:uid!,tur:'message',metin:'Yeni bir mesajın var',belgeId:widget.chatId);
-      mesaj.clear();
-    } catch(e) {
-      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Mesaj gönderilemedi, tekrar dene: $e')));
-    } finally {if(mounted)setState(()=>gonderiliyor=false);}
-  }
-
-  Future<void> medyaGonder(ImageSource kaynak) async {
-    if(uid==null)return;
-    final engel=await mesajEngeli();
-    if(engel!=null){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(engel)));return;}
-    final x=await ImagePicker().pickImage(source:kaynak,imageQuality:82);
-    if(x==null)return;
-    try {
-      final yol='chats/${widget.chatId}/${DateTime.now().millisecondsSinceEpoch}.jpg';
-      await supa.Supabase.instance.client.storage.from('ngelx-media').upload(yol,File(x.path));
-      final url=supa.Supabase.instance.client.storage.from('ngelx-media').getPublicUrl(yol);
-      final ref=FirebaseFirestore.instance.collection('chats').doc(widget.chatId);
-      final onceki=await ref.get();
-      final diger=await FirebaseFirestore.instance.collection('users').doc(widget.digerUid).get();
-      final arkadas=List<String>.from(diger.data()?['friends']??const[]).contains(uid);
-      await ref.set({'members':[uid,widget.digerUid],if(!onceki.exists&&!arkadas)'requestSenderUid':uid,if(!onceki.exists&&!arkadas)'requestRecipientUid':widget.digerUid},SetOptions(merge:true));
-      await ref.collection('messages').add({'senderId':uid,'text':'','type':'photo','mediaUrl':url,'createdAt':FieldValue.serverTimestamp()});
-      await ref.set({'lastMessage':'📷 Fotoğraf','updatedAt':FieldValue.serverTimestamp(),'unread_${widget.digerUid}':FieldValue.increment(1)},SetOptions(merge:true));
-      await uygulamaBildirimiGonder(toUid:widget.digerUid,fromUid:uid!,tur:'message',metin:'Yeni bir fotoğraf mesajın var',belgeId:widget.chatId);
-    } catch(e) {
-      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Medya gönderilemedi.')));
-    }
-  }
-
   Future<void> mesajMenusu(QueryDocumentSnapshot<Map<String,dynamic>> d)async{
     final v=d.data(),benim=v['senderId']==uid,metin=(v['text']??v['message']??v['content']??'').toString();
-    final sec=await showModalBottomSheet<String>(context:context,backgroundColor:Colors.white,showDragHandle:true,builder:(c)=>SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
-      Wrap(spacing:10,children:['❤️','👍','😂','😮','😢','😡'].map((e)=>TextButton(onPressed:()=>Navigator.pop(c,'reaction:$e'),child:Text(e,style:const TextStyle(fontSize:24)))).toList()),
-      ListTile(leading:const Icon(Icons.reply),title:const Text('Yanıtla'),onTap:()=>Navigator.pop(c,'reply')),
-      if(metin.isNotEmpty)ListTile(leading:const Icon(Icons.copy),title:const Text('Kopyala'),onTap:()=>Navigator.pop(c,'copy')),
-      if(benim&&metin.isNotEmpty)ListTile(leading:const Icon(Icons.edit),title:const Text('Düzenle'),onTap:()=>Navigator.pop(c,'edit')),
-      ListTile(leading:Icon(v['pinned']==true?Icons.push_pin:Icons.push_pin_outlined,color:Colors.blue),title:Text(v['pinned']==true?'Sabitlemeyi kaldır':'Mesajı sabitle'),onTap:()=>Navigator.pop(c,'pin')),
-      if(benim)ListTile(leading:const Icon(Icons.delete_outline,color:Colors.red),title:const Text('Herkesten sil',style:TextStyle(color:Colors.red)),onTap:()=>Navigator.pop(c,'delete')),
-      if(!benim)ListTile(leading:const Icon(Icons.flag_outlined),title:const Text('Şikâyet et'),onTap:()=>Navigator.pop(c,'report')),
-    ])));
+    final sec=await showModalBottomSheet<String>(
+      context:context,
+      backgroundColor:Colors.white,
+      isScrollControlled:true,
+      showDragHandle:true,
+      shape:const RoundedRectangleBorder(borderRadius:BorderRadius.vertical(top:Radius.circular(28))),
+      builder:(c)=>SafeArea(child:Padding(
+        padding:const EdgeInsets.fromLTRB(12,0,12,14),
+        child:Column(mainAxisSize:MainAxisSize.min,children:[
+          Container(
+            margin:const EdgeInsets.fromLTRB(6,2,6,12),
+            padding:const EdgeInsets.symmetric(horizontal:8,vertical:7),
+            decoration:BoxDecoration(
+              color:Colors.white,
+              borderRadius:BorderRadius.circular(28),
+              boxShadow:const [BoxShadow(color:Color(0x22000000),blurRadius:18,offset:Offset(0,5))],
+            ),
+            child:Row(mainAxisSize:MainAxisSize.min,children:[
+              for(final e in const ['❤️','😂','😮','😢','😡','👍'])
+                InkWell(
+                  onTap:()=>Navigator.pop(c,'reaction:'+e),
+                  borderRadius:BorderRadius.circular(22),
+                  child:Padding(padding:const EdgeInsets.symmetric(horizontal:8,vertical:5),child:Text(e,style:const TextStyle(fontSize:27))),
+                ),
+              InkWell(
+                onTap:()=>Navigator.pop(c,'reaction_more'),
+                borderRadius:BorderRadius.circular(22),
+                child:const CircleAvatar(radius:18,backgroundColor:Color(0xFFF1F2F4),child:Icon(Icons.add,color:Colors.black87)),
+              ),
+            ]),
+          ),
+          Row(mainAxisAlignment:MainAxisAlignment.spaceAround,children:[
+            _mesajAksiyon(Icons.reply_rounded,'Yanıtla',()=>Navigator.pop(c,'reply')),
+            _mesajAksiyon(Icons.copy_rounded,'Kopyala',()=>Navigator.pop(c,'copy'),etkin:metin.isNotEmpty),
+            _mesajAksiyon(Icons.schedule_rounded,'Hatırlatma ayarla',()=>Navigator.pop(c,'remind')),
+            _mesajAksiyon(Icons.more_horiz_rounded,'Daha fazla',()=>Navigator.pop(c,'more')),
+          ]),
+        ]),
+      )),
+    );
     if(sec==null)return;
-    if(sec.startsWith('reaction:'))await d.reference.set({'reactions.${uid!}':sec.substring(9)},SetOptions(merge:true));
-    else if(sec=='copy')await Clipboard.setData(ClipboardData(text:metin));
-    else if(sec=='reply'){mesaj.text='↪ $metin\n';mesaj.selection=TextSelection.collapsed(offset:mesaj.text.length);}
-    else if(sec=='pin')await d.reference.set({'pinned':v['pinned']!=true,'pinnedAt':FieldValue.serverTimestamp(),'pinnedBy':uid},SetOptions(merge:true));
-    else if(sec=='delete'){final ok=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(backgroundColor:Colors.white,title:const Text('Mesaj silinsin mi?'),content:const Text('Mesaj sohbetten kalıcı olarak kaldırılacak.'),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),FilledButton(style:FilledButton.styleFrom(backgroundColor:Colors.red),onPressed:()=>Navigator.pop(c,true),child:const Text('Sil'))]))??false;if(ok)await d.reference.delete();}
-    else if(sec=='report'){if(mounted)await sikayetEt(context,hedefTuru:'mesaj',hedefId:'${widget.chatId}/${d.id}',hedefUid:widget.digerUid);}
-    else if(sec=='edit'){final c=TextEditingController(text:metin);final ok=await showDialog<bool>(context:context,builder:(x)=>AlertDialog(backgroundColor:Colors.white,title:const Text('Mesajı düzenle'),content:TextField(controller:c,maxLength:2000,maxLines:5),actions:[TextButton(onPressed:()=>Navigator.pop(x,false),child:const Text('Vazgeç')),FilledButton(onPressed:()=>Navigator.pop(x,true),child:const Text('Kaydet'))]))??false;if(ok&&c.text.trim().isNotEmpty)await d.reference.update({'text':c.text.trim(),'editedAt':FieldValue.serverTimestamp()});c.dispose();}
+    if(sec.startsWith('reaction:')){
+      await mesajTepkiDegistir(d,sec.substring(9));
+      return;
+    }
+    if(sec=='reaction_more'){
+      final e=await mesajTepkisiSec();
+      if(e!=null)await mesajTepkiDegistir(d,e);
+      return;
+    }
+    if(sec=='copy'&&metin.isNotEmpty){
+      await Clipboard.setData(ClipboardData(text:metin));
+      return;
+    }
+    if(sec=='reply'){
+      mesaj.text='↪ '+metin+'\n';
+      mesaj.selection=TextSelection.collapsed(offset:mesaj.text.length);
+      return;
+    }
+    if(sec=='remind'){
+      await mesajHatirlat(d,metin);
+      return;
+    }
+    if(sec!='more')return;
+
+    final fazla=await showModalBottomSheet<String>(
+      context:context,backgroundColor:Colors.white,showDragHandle:true,
+      builder:(c)=>SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
+        if(benim&&metin.isNotEmpty)ListTile(leading:const Icon(Icons.edit_outlined),title:const Text('Düzenle'),onTap:()=>Navigator.pop(c,'edit')),
+        ListTile(
+          leading:Icon(v['pinned']==true?Icons.push_pin:Icons.push_pin_outlined,color:Colors.blue),
+          title:Text(v['pinned']==true?'Sabitlemeyi kaldır':'Mesajı sabitle'),
+          onTap:()=>Navigator.pop(c,'pin'),
+        ),
+        if(benim)ListTile(leading:const Icon(Icons.delete_outline,color:Colors.red),title:const Text('Herkesten sil',style:TextStyle(color:Colors.red)),onTap:()=>Navigator.pop(c,'delete')),
+        if(!benim)ListTile(leading:const Icon(Icons.flag_outlined),title:const Text('Şikâyet et'),onTap:()=>Navigator.pop(c,'report')),
+      ])),
+    );
+    if(fazla==null)return;
+    if(fazla=='pin'){
+      await d.reference.set({'pinned':v['pinned']!=true,'pinnedAt':FieldValue.serverTimestamp(),'pinnedBy':uid},SetOptions(merge:true));
+    }else if(fazla=='delete'){
+      final ok=await showDialog<bool>(
+        context:context,
+        builder:(c)=>AlertDialog(
+          backgroundColor:Colors.white,
+          title:const Text('Mesaj silinsin mi?'),
+          content:const Text('Mesaj sohbetten kalıcı olarak kaldırılacak.'),
+          actions:[
+            TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),
+            FilledButton(style:FilledButton.styleFrom(backgroundColor:Colors.red),onPressed:()=>Navigator.pop(c,true),child:const Text('Sil')),
+          ],
+        ),
+      )??false;
+      if(ok)await d.reference.delete();
+    }else if(fazla=='report'){
+      if(mounted)await sikayetEt(context,hedefTuru:'mesaj',hedefId:widget.chatId+'/'+d.id,hedefUid:widget.digerUid);
+    }else if(fazla=='edit'){
+      final x=TextEditingController(text:metin);
+      final ok=await showDialog<bool>(
+        context:context,
+        builder:(c)=>AlertDialog(
+          backgroundColor:Colors.white,
+          title:const Text('Mesajı düzenle'),
+          content:TextField(controller:x,maxLength:2000,maxLines:5),
+          actions:[
+            TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),
+            FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('Kaydet')),
+          ],
+        ),
+      )??false;
+      if(ok&&x.text.trim().isNotEmpty)await d.reference.update({'text':x.text.trim(),'editedAt':FieldValue.serverTimestamp()});
+      x.dispose();
+    }
   }
 
-  Widget ozelMesajKarti(QueryDocumentSnapshot<Map<String,dynamic>> d){final v=d.data(),ben=v['senderId']==uid,photo=v['type']=='photo',shared=v['type']=='shared_content',metin=(v['text']??v['message']??v['content']??'').toString().trim(),saat=mesajSaati(v['createdAt']),tepkiler=Map<String,dynamic>.from(v['reactions']??{});return Align(alignment:ben?Alignment.centerRight:Alignment.centerLeft,child:GestureDetector(onLongPress:()=>mesajMenusu(d),child:Container(constraints:const BoxConstraints(maxWidth:280),margin:const EdgeInsets.all(4),padding:EdgeInsets.all(photo?4:12),decoration:BoxDecoration(color:ben?const Color(0xFF1687FF):const Color(0xFFF0F1F4),borderRadius:BorderRadius.circular(18)),child:Column(crossAxisAlignment:CrossAxisAlignment.end,mainAxisSize:MainAxisSize.min,children:[if(photo)InkWell(onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>TamEkranMedyaPage(url:(v['mediaUrl']??'').toString()))),child:ClipRRect(borderRadius:BorderRadius.circular(15),child:Image.network((v['mediaUrl']??'').toString(),width:220,fit:BoxFit.cover)))else if(shared)InkWell(onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>IcerikBaglantiPage(icerikId:(v['contentId']??'').toString()))),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Row(children:[Icon(Icons.play_circle_fill_rounded,color:ben?Colors.white:mavi),const SizedBox(width:7),Text('NgelX paylaşımı',style:TextStyle(color:ben?Colors.white:Colors.black87,fontWeight:FontWeight.w900))]),const SizedBox(height:8),Text(metin,maxLines:4,overflow:TextOverflow.ellipsis,style:TextStyle(color:ben?Colors.white70:Colors.black54))]))else Text(metin.isEmpty?'Mesaj içeriği bulunamadı':metin,softWrap:true,style:TextStyle(color:ben?Colors.white:Colors.black87,fontSize:16,height:1.3)),if(v['editedAt']!=null)Text('düzenlendi',style:TextStyle(fontSize:9,color:ben?Colors.white60:Colors.black38)),if(tepkiler.isNotEmpty)Wrap(children:tepkiler.values.map((e)=>Text(e.toString())).toList()),if(saat.isNotEmpty)Padding(padding:const EdgeInsets.only(top:4),child:Text(saat,style:TextStyle(fontSize:10,color:ben?Colors.white70:Colors.black45))) ]))));}
+
+  Widget ozelMesajKarti(QueryDocumentSnapshot<Map<String,dynamic>> d){
+    final v=d.data();
+    final ben=v['senderId']==uid;
+    final photo=v['type']=='photo';
+    final shared=v['type']=='shared_content';
+    final metin=(v['text']??v['message']??v['content']??'').toString().trim();
+    final saat=mesajSaati(v['createdAt']);
+    final tepkiler=Map<String,dynamic>.from(v['reactions']??{});
+    final sayilar=<String,int>{};
+    for(final e in tepkiler.values){
+      final x=e.toString();
+      sayilar[x]=(sayilar[x]??0)+1;
+    }
+    return Align(
+      alignment:ben?Alignment.centerRight:Alignment.centerLeft,
+      child:GestureDetector(
+        onLongPress:()=>mesajMenusu(d),
+        onDoubleTap:()=>mesajTepkiDegistir(d,'❤️'),
+        child:Container(
+          constraints:const BoxConstraints(maxWidth:290),
+          margin:const EdgeInsets.symmetric(horizontal:4,vertical:5),
+          padding:EdgeInsets.all(photo?4:12),
+          decoration:BoxDecoration(
+            color:ben?const Color(0xFF1687FF):const Color(0xFFF0F1F4),
+            borderRadius:BorderRadius.circular(20),
+          ),
+          child:Column(crossAxisAlignment:CrossAxisAlignment.end,mainAxisSize:MainAxisSize.min,children:[
+            if(photo)
+              InkWell(
+                onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>TamEkranMedyaPage(url:(v['mediaUrl']??'').toString()))),
+                child:ClipRRect(borderRadius:BorderRadius.circular(16),child:Image.network((v['mediaUrl']??'').toString(),width:230,fit:BoxFit.cover)),
+              )
+            else if(shared)
+              InkWell(
+                onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>IcerikBaglantiPage(icerikId:(v['contentId']??'').toString()))),
+                child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+                  Row(children:[
+                    Icon(Icons.play_circle_fill_rounded,color:ben?Colors.white:mavi),
+                    const SizedBox(width:7),
+                    Text('NgelX paylaşımı',style:TextStyle(color:ben?Colors.white:Colors.black87,fontWeight:FontWeight.w900)),
+                  ]),
+                  const SizedBox(height:8),
+                  Text(metin,maxLines:4,overflow:TextOverflow.ellipsis,style:TextStyle(color:ben?Colors.white70:Colors.black54)),
+                ]),
+              )
+            else
+              Text(metin.isEmpty?'Mesaj içeriği bulunamadı':metin,softWrap:true,style:TextStyle(color:ben?Colors.white:Colors.black87,fontSize:16,height:1.3)),
+            if(v['editedAt']!=null)Text('düzenlendi',style:TextStyle(fontSize:9,color:ben?Colors.white60:Colors.black38)),
+            if(sayilar.isNotEmpty)Padding(
+              padding:const EdgeInsets.only(top:7),
+              child:Wrap(
+                spacing:5,runSpacing:5,
+                children:sayilar.entries.map((e)=>Container(
+                  padding:const EdgeInsets.symmetric(horizontal:7,vertical:3),
+                  decoration:BoxDecoration(color:ben?Colors.white.withValues(alpha:.18):Colors.white,borderRadius:BorderRadius.circular(14)),
+                  child:Text(e.value>1?e.key+' '+e.value.toString():e.key,style:const TextStyle(fontSize:15)),
+                )).toList(),
+              ),
+            ),
+            if(saat.isNotEmpty)Padding(padding:const EdgeInsets.only(top:4),child:Text(saat,style:TextStyle(fontSize:10,color:ben?Colors.white70:Colors.black45))),
+          ]),
+        ),
+      ),
+    );
+  }
+
 
   Future<void> emojiSec()async{final e=await showModalBottomSheet<String>(context:context,backgroundColor:Colors.white,showDragHandle:true,builder:(c)=>SafeArea(child:Padding(padding:const EdgeInsets.all(18),child:Wrap(spacing:14,runSpacing:14,children:['😀','😊','😂','😍','🥰','😎','😭','😡','👍','👏','🙏','❤️','🔥','🎉','✨','💯','🤔','😴','🙌','🤝'].map((x)=>InkWell(onTap:()=>Navigator.pop(c,x),child:Text(x,style:const TextStyle(fontSize:30)))).toList()))));if(e!=null){mesaj.text='${mesaj.text}$e';mesaj.selection=TextSelection.collapsed(offset:mesaj.text.length);}}
 
