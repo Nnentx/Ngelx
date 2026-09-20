@@ -6152,6 +6152,7 @@ class _TercihlerPageState extends State<TercihlerPage> {
           satir('Gizli kelime filtresi','Rahatsız edici yorumları otomatik gizle',gizliKelimeler,(v){setState(()=>gizliKelimeler=v);kaydet('hiddenWordsFilter',v);}),
           const Divider(),
           ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:22,vertical:6),leading:const Icon(Icons.block_outlined,color:mor),title:const Text('Engellenen hesaplar',style:TextStyle(fontWeight:FontWeight.w700)),subtitle:const Text('Engellediğin hesapları yönet'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const EngellenenlerPage()))),
+          ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:22,vertical:6),leading:const Icon(Icons.history_toggle_off_rounded,color:mor),title:const Text('Takip isteği geçmişi',style:TextStyle(fontWeight:FontWeight.w700)),subtitle:const Text('Gönderdiğin bekleyen, kabul edilen ve reddedilen istekler'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const TakipIstegiGecmisiPage()))),
         ];
       case 'Mesaj izinleri':
         return [satir('Yalnızca arkadaşlardan mesaj','Yabancılardan gelen mesajları engelle',mesajArkadas,(v){setState(()=>mesajArkadas=v);kaydet('friendsOnlyMessages',v);})];
@@ -6225,40 +6226,144 @@ class ArkadaslarPage extends StatelessWidget {
   }
 }
 
-class KullaniciListesiPage extends StatelessWidget{
+class TakipIstegiGecmisiPage extends StatelessWidget{
+  const TakipIstegiGecmisiPage({super.key});
+  String durum(Map<String,dynamic> v){
+    switch((v['status']??'pending').toString()){
+      case 'accepted':return 'Kabul edildi';
+      case 'rejected':return 'Reddedildi';
+      default:return 'Bekliyor';
+    }
+  }
+  Color durumRengi(Map<String,dynamic> v){
+    switch((v['status']??'pending').toString()){
+      case 'accepted':return Colors.green;
+      case 'rejected':return Colors.red;
+      default:return Colors.orange;
+    }
+  }
+  @override Widget build(BuildContext context){
+    final uid=FirebaseAuth.instance.currentUser?.uid;
+    return Theme(data:ThemeData.light(),child:Scaffold(
+      backgroundColor:Colors.white,
+      appBar:AppBar(title:const Text('Takip isteği geçmişi',style:TextStyle(fontWeight:FontWeight.w900))),
+      body:uid==null?const Center(child:Text('Oturum bulunamadı.')):StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
+        stream:FirebaseFirestore.instance.collection('notifications').where('fromUid',isEqualTo:uid).snapshots(),
+        builder:(_,s){
+          if(s.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator(color:mor));
+          final docs=(s.data?.docs??[]).where((d)=>d.data()['type']=='follow_request').toList()
+            ..sort((a,b){
+              final at=a.data()['createdAt'],bt=b.data()['createdAt'];
+              final am=at is Timestamp?at.millisecondsSinceEpoch:0,bm=bt is Timestamp?bt.millisecondsSinceEpoch:0;
+              return bm.compareTo(am);
+            });
+          if(docs.isEmpty)return const Center(child:Text('Gönderilmiş arkadaşlık isteğin yok.',style:TextStyle(color:Colors.black54)));
+          return ListView.separated(
+            padding:const EdgeInsets.all(12),itemCount:docs.length,separatorBuilder:(_,__)=>const Divider(),
+            itemBuilder:(_,i){
+              final v=docs[i].data(),hedef=(v['toUid']??'').toString();
+              return FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(
+                future:FirebaseFirestore.instance.collection('users').doc(hedef).get(),
+                builder:(_,u){
+                  final p=u.data?.data()??<String,dynamic>{},foto=(p['photoUrl']??'').toString(),ad=(p['displayName']??p['username']??'NgelX kullanıcısı').toString();
+                  return ListTile(
+                    onTap:hedef.isEmpty?null:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciProfilPage(uid:hedef))),
+                    leading:CircleAvatar(backgroundImage:foto.isEmpty?null:NetworkImage(foto),child:foto.isEmpty?const Icon(Icons.person):null),
+                    title:Text(ad,style:const TextStyle(fontWeight:FontWeight.w800)),
+                    subtitle:Text(zamanKisa(v['createdAt'])),
+                    trailing:Text(durum(v),style:TextStyle(color:durumRengi(v),fontWeight:FontWeight.w800)),
+                  );
+                },
+              );
+            },
+          );
+        },
+      ),
+    ));
+  }
+}
+
+class KullaniciListesiPage extends StatefulWidget{
   final String uid,alan,baslik;
   const KullaniciListesiPage({super.key,required this.uid,required this.alan,required this.baslik});
+  @override State<KullaniciListesiPage> createState()=>_KullaniciListesiPageState();
+}
+class _KullaniciListesiPageState extends State<KullaniciListesiPage>{
+  String arama='';
+  String? get me=>FirebaseAuth.instance.currentUser?.uid;
+
+  Future<void> takipciyiKaldir(String hedefUid,String ad)async{
+    final benim=me;if(benim==null||widget.uid!=benim||widget.alan!='followers')return;
+    final ok=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(
+      backgroundColor:Colors.white,surfaceTintColor:Colors.white,
+      title:const Text('Takipçi kaldırılsın mı?',style:TextStyle(color:Colors.black87,fontWeight:FontWeight.w800)),
+      content:Text(ad+' seni artık takip etmeyecek. Bu kişiye bildirim gönderilmez.',style:const TextStyle(color:Colors.black87)),
+      actions:[
+        TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),
+        FilledButton(style:FilledButton.styleFrom(backgroundColor:Colors.red,foregroundColor:Colors.white),onPressed:()=>Navigator.pop(c,true),child:const Text('Takipçiyi kaldır')),
+      ],
+    ))??false;
+    if(!ok)return;
+    final batch=FirebaseFirestore.instance.batch();
+    batch.set(FirebaseFirestore.instance.collection('users').doc(benim),{'followers':FieldValue.arrayRemove([hedefUid])},SetOptions(merge:true));
+    batch.set(FirebaseFirestore.instance.collection('users').doc(hedefUid),{'following':FieldValue.arrayRemove([benim])},SetOptions(merge:true));
+    await batch.commit();
+    if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Takipçi kaldırıldı.')));
+  }
+
   @override Widget build(BuildContext context)=>Theme(
     data:ThemeData.light(),
     child:Scaffold(
       backgroundColor:Colors.white,
-      appBar:AppBar(title:Text(baslik,style:const TextStyle(fontWeight:FontWeight.w900))),
-      body:FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(
-        future:FirebaseFirestore.instance.collection('users').doc(uid).get(),
+      appBar:AppBar(title:Text(widget.baslik,style:const TextStyle(fontWeight:FontWeight.w900))),
+      body:StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
+        stream:FirebaseFirestore.instance.collection('users').doc(widget.uid).snapshots(),
         builder:(_,s){
           if(s.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator(color:mor));
-          final ids=List<String>.from(s.data?.data()?[alan]??const[]);
-          if(ids.isEmpty)return Center(child:Column(mainAxisSize:MainAxisSize.min,children:[const Icon(Icons.people_outline,size:54,color:mor),const SizedBox(height:12),Text('$baslik listesi boş.',style:const TextStyle(color:Colors.black54))]));
-          return ListView.builder(
-            padding:const EdgeInsets.all(12),itemCount:ids.length,
-            itemBuilder:(_,i)=>FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(
-              future:FirebaseFirestore.instance.collection('users').doc(ids[i]).get(),
-              builder:(_,u){
-                final v=u.data?.data()??<String,dynamic>{},foto=(v['photoUrl']??'').toString();
-                return ListTile(
-                  onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciProfilPage(uid:ids[i]))),
-                  leading:CircleAvatar(backgroundImage:foto.isEmpty?null:NetworkImage(foto),child:foto.isEmpty?const Icon(Icons.person):null),
-                  title:Text((v['displayName']??v['username']??'NgelX').toString(),style:const TextStyle(fontWeight:FontWeight.w800)),
-                  subtitle:Text('@${v['username']??'ngelx'}'),trailing:const Icon(Icons.chevron_right),
-                );
-              },
+          final ids=List<String>.from(s.data?.data()?[widget.alan]??const[]);
+          if(ids.isEmpty)return Center(child:Column(mainAxisSize:MainAxisSize.min,children:[const Icon(Icons.people_outline,size:54,color:mor),const SizedBox(height:12),Text(widget.baslik+' listesi boş.',style:const TextStyle(color:Colors.black54))]));
+          return Column(children:[
+            Padding(
+              padding:const EdgeInsets.fromLTRB(12,10,12,6),
+              child:TextField(
+                onChanged:(v)=>setState(()=>arama=v.trim().toLowerCase()),
+                decoration:InputDecoration(
+                  hintText:'Kişi ara',
+                  prefixIcon:const Icon(Icons.search_rounded),
+                  filled:true,fillColor:const Color(0xFFF3F4F6),
+                  border:OutlineInputBorder(borderRadius:BorderRadius.circular(16),borderSide:BorderSide.none),
+                ),
+              ),
             ),
-          );
+            Expanded(child:ListView.builder(
+              padding:const EdgeInsets.all(12),itemCount:ids.length,
+              itemBuilder:(_,i)=>FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(
+                future:FirebaseFirestore.instance.collection('users').doc(ids[i]).get(),
+                builder:(_,u){
+                  final v=u.data?.data()??<String,dynamic>{},foto=(v['photoUrl']??'').toString(),ad=(v['displayName']??v['username']??'NgelX').toString(),kullanici=(v['username']??'ngelx').toString();
+                  final metin=(ad+' '+kullanici).toLowerCase();
+                  if(arama.isNotEmpty&&!metin.contains(arama))return const SizedBox.shrink();
+                  final kaldirabilir=me==widget.uid&&widget.alan=='followers'&&ids[i]!=me;
+                  return ListTile(
+                    onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciProfilPage(uid:ids[i]))),
+                    leading:CircleAvatar(backgroundImage:foto.isEmpty?null:NetworkImage(foto),child:foto.isEmpty?const Icon(Icons.person):null),
+                    title:Text(ad,style:const TextStyle(fontWeight:FontWeight.w800)),
+                    subtitle:Text('@'+kullanici),
+                    trailing:kaldirabilir?PopupMenuButton<String>(
+                      onSelected:(x){if(x=='remove')takipciyiKaldir(ids[i],ad);},
+                      itemBuilder:(_)=>const [PopupMenuItem(value:'remove',child:Text('Takipçiyi kaldır',style:TextStyle(color:Colors.red)))],
+                    ):const Icon(Icons.chevron_right),
+                  );
+                },
+              ),
+            )),
+          ]);
         },
       ),
     ),
   );
 }
+
 
 class EtkilesimOzetiPage extends StatelessWidget{
   final String uid;
