@@ -6767,7 +6767,22 @@ class _HikayeGosterPageState extends State<HikayeGosterPage> with SingleTickerPr
   late final AnimationController sure;
   @override void initState(){super.initState();sure=AnimationController(vsync:this,duration:const Duration(seconds:5))..addStatusListener((s){if(s==AnimationStatus.completed&&mounted)Navigator.pop(context);})..forward();}
   @override void dispose(){sure.dispose();super.dispose();}
-  String get zamanBilgisi{final olusma=widget.createdAt is Timestamp?(widget.createdAt as Timestamp).toDate():null,bitis=widget.expiresAt is Timestamp?(widget.expiresAt as Timestamp).toDate():null;if(olusma!=null){final fark=DateTime.now().difference(olusma);if(fark.inMinutes<60)return '${fark.inMinutes.clamp(1,59)} dk önce';if(fark.inHours<24)return '${fark.inHours} sa önce';}if(bitis!=null){final kalan=bitis.difference(DateTime.now()).inHours;return kalan>0?'$kalan sa kaldı':'Süresi doldu';}return 'Az önce';}
+  String get zamanBilgisi{
+    final olusma=widget.createdAt is Timestamp?(widget.createdAt as Timestamp).toDate():null;
+    final bitis=widget.expiresAt is Timestamp?(widget.expiresAt as Timestamp).toDate():null;
+    String baslangic='Az önce';
+    if(olusma!=null){
+      final fark=DateTime.now().difference(olusma);
+      if(fark.inMinutes<60)baslangic='${fark.inMinutes.clamp(1,59)} dk önce';
+      else if(fark.inHours<24)baslangic='${fark.inHours} sa önce';
+      else baslangic='${fark.inDays} gün önce';
+    }
+    if(bitis==null)return baslangic;
+    final kalan=bitis.difference(DateTime.now());
+    if(kalan.isNegative)return '$baslangic • Süresi doldu';
+    if(kalan.inHours>=1)return '$baslangic • ${kalan.inHours} sa kaldı';
+    return '$baslangic • ${kalan.inMinutes.clamp(1,59)} dk kaldı';
+  }
   @override Widget build(BuildContext context){return Scaffold(
     backgroundColor:Colors.black,
     body:GestureDetector(
