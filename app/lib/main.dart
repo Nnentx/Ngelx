@@ -4875,6 +4875,7 @@ class _SohbetPageState extends State<SohbetPage> {
   final mesaj=TextEditingController(),liste=ScrollController();
   final List<Map<String,String>> mentionOnerileri=[];
   bool gonderiliyor=false,aramaBaslatiliyor=false;
+  String? yanitMesajId,yanitMetin,yanitGonderenUid;
   String? get uid=>FirebaseAuth.instance.currentUser?.uid;
 
   Future<String?> mesajEngeli() async {
@@ -4914,10 +4915,16 @@ class _SohbetPageState extends State<SohbetPage> {
       final diger=await FirebaseFirestore.instance.collection('users').doc(widget.digerUid).get();
       final arkadas=List<String>.from(diger.data()?['friends']??const[]).contains(uid);
       await ref.set({'members':[uid,widget.digerUid],'updatedAt':FieldValue.serverTimestamp(),if(!onceki.exists&&!arkadas)'requestSenderUid':uid,if(!onceki.exists&&!arkadas)'requestRecipientUid':widget.digerUid},SetOptions(merge:true));
-      await ref.collection('messages').add({'senderId':uid,'text':t,'type':'text','createdAt':FieldValue.serverTimestamp()});
+      await ref.collection('messages').add({
+        'senderId':uid,'text':t,'type':'text','createdAt':FieldValue.serverTimestamp(),
+        if(yanitMesajId!=null)'replyToId':yanitMesajId,
+        if(yanitMetin!=null)'replyText':yanitMetin,
+        if(yanitGonderenUid!=null)'replySenderId':yanitGonderenUid,
+      });
       await ref.set({'lastMessage':t,'updatedAt':FieldValue.serverTimestamp(),'unread_${widget.digerUid}':FieldValue.increment(1)},SetOptions(merge:true));
       await uygulamaBildirimiGonder(toUid:widget.digerUid,fromUid:uid!,tur:'message',metin:'Yeni bir mesajın var',belgeId:widget.chatId);
       mesaj.clear();
+      if(mounted)setState((){yanitMesajId=null;yanitMetin=null;yanitGonderenUid=null;});
     } catch(e) {
       if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Mesaj gönderilemedi, tekrar dene: $e')));
     } finally {if(mounted)setState(()=>gonderiliyor=false);}
@@ -5040,7 +5047,15 @@ class _SohbetPageState extends State<SohbetPage> {
     if(sec.startsWith('reaction:')){await mesajTepkiDegistir(d,sec.substring(9));return;}
     if(sec=='reaction_more'){final e=await mesajTepkisiSec();if(e!=null)await mesajTepkiDegistir(d,e);return;}
     if(sec=='copy'&&metin.isNotEmpty){await Clipboard.setData(ClipboardData(text:metin));return;}
-    if(sec=='reply'){mesaj.text='↪ '+metin+'\n';mesaj.selection=TextSelection.collapsed(offset:mesaj.text.length);return;}
+    if(sec=='reply'){
+      final tur=(v['type']??'text').toString();
+      setState((){
+        yanitMesajId=d.id;
+        yanitMetin=metin.trim().isNotEmpty?metin.trim():(tur=='photo'?'📷 Fotoğraf':tur=='shared_content'?'NgelX paylaşımı':'Mesaj');
+        yanitGonderenUid=(v['senderId']??'').toString();
+      });
+      return;
+    }
     if(sec=='remind'){await mesajHatirlat(d,metin);return;}
     if(sec!='more')return;
 
@@ -5098,6 +5113,18 @@ class _SohbetPageState extends State<SohbetPage> {
           padding:EdgeInsets.all(photo?4:12),
           decoration:BoxDecoration(color:ben?const Color(0xFF1687FF):const Color(0xFFF0F1F4),borderRadius:BorderRadius.circular(20)),
           child:Column(crossAxisAlignment:CrossAxisAlignment.end,mainAxisSize:MainAxisSize.min,children:[
+            if((v['replyText']??'').toString().trim().isNotEmpty)
+              Container(
+                width:double.infinity,
+                margin:const EdgeInsets.only(bottom:8),
+                padding:const EdgeInsets.symmetric(horizontal:10,vertical:8),
+                decoration:BoxDecoration(
+                  color:ben?Colors.white.withValues(alpha:.16):Colors.white,
+                  borderRadius:BorderRadius.circular(12),
+                  border:Border(left:BorderSide(color:ben?Colors.white:const Color(0xFF1836D8),width:3)),
+                ),
+                child:Text((v['replyText']??'').toString(),maxLines:2,overflow:TextOverflow.ellipsis,style:TextStyle(color:ben?Colors.white:Colors.black87,fontSize:12.5,fontWeight:FontWeight.w600)),
+              ),
             if(photo)
               IgnorePointer(child:ClipRRect(borderRadius:BorderRadius.circular(16),child:Image.network((v['mediaUrl']??'').toString(),width:230,fit:BoxFit.cover)))
             else if(shared)
@@ -5238,6 +5265,16 @@ class _SohbetPageState extends State<SohbetPage> {
         builder:(_,s){if(uid!=null&&s.hasData)FirebaseFirestore.instance.collection('chats').doc(widget.chatId).set({'unread_$uid':0},SetOptions(merge:true));if(s.hasData)sonaGit();return ListView(controller:liste,padding:const EdgeInsets.all(12),children:[sohbetUstBilgi(),...(s.data?.docs??[]).map(ozelMesajKarti)]);},
       )),
       if(mentionOnerileri.isNotEmpty)Container(color:Colors.white.withValues(alpha:.96),child:Column(mainAxisSize:MainAxisSize.min,children:mentionOnerileri.map((u)=>ListTile(dense:true,leading:CircleAvatar(radius:15,child:Icon(u['uid']=='all'?Icons.groups:Icons.person,size:17)),title:Text(u['name']??'Kullanıcı'),subtitle:Text('@${u['username']??''}'),onTap:()=>mentionEkle(u['username']??''))).toList())),
+      if(yanitMetin!=null)Container(
+        margin:const EdgeInsets.fromLTRB(10,4,10,2),
+        padding:const EdgeInsets.fromLTRB(12,8,4,8),
+        decoration:BoxDecoration(color:Colors.white.withValues(alpha:.94),borderRadius:BorderRadius.circular(14),border:const Border(left:BorderSide(color:Color(0xFF1836D8),width:3))),
+        child:Row(children:[
+          const Icon(Icons.reply_rounded,color:Color(0xFF1836D8),size:20),const SizedBox(width:8),
+          Expanded(child:Text(yanitMetin!,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w600))),
+          IconButton(onPressed:()=>setState((){yanitMesajId=null;yanitMetin=null;yanitGonderenUid=null;}),icon:const Icon(Icons.close_rounded,color:Colors.black54)),
+        ]),
+      ),
       SafeArea(top:false,child:Padding(
         padding:const EdgeInsets.fromLTRB(4,7,4,8),
         child:Row(children:[
