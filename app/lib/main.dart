@@ -390,6 +390,33 @@ class _GirisPageState extends State<GirisPage> {
     }
   }
 
+  Future<void> _girisArkaPlanIsleri({
+    required User user,
+    required SharedPreferences hafiza,
+    required String denemeAnahtari,
+    required String kilitAnahtari,
+    required String adres,
+    required String parola,
+    required bool hatirla,
+  }) async {
+    try{
+      await hafiza.remove(denemeAnahtari);
+      await hafiza.remove(kilitAnahtari);
+      if(hatirla){
+        kayitliEpostalar.removeWhere((e)=>e.toLowerCase()==adres.toLowerCase());
+        kayitliEpostalar.insert(0,adres);
+        if(kayitliEpostalar.length>8)kayitliEpostalar=kayitliEpostalar.take(8).toList();
+        await hafiza.setString('hatirlanan_eposta',adres);
+        await hafiza.setStringList('hatirlanan_epostalar',kayitliEpostalar);
+        await guvenliHafiza.write(key:sifreAnahtari(adres),value:parola);
+      }else{
+        await hafiza.remove('hatirlanan_eposta');
+        await guvenliHafiza.delete(key:'hatirlanan_sifre');
+      }
+    }catch(_){}
+    unawaited(girisKaydiEkle(user));
+  }
+
   Future<void> girisYap() async {
     if (!email.text.contains('@') || sifre.text.length < 6) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -413,6 +440,7 @@ class _GirisPageState extends State<GirisPage> {
         email: email.text.trim(),
         password: sifre.text,
       );
+      final profilGelecek=FirebaseFirestore.instance.collection('users').doc(sonuc.user!.uid).get();
       await sonuc.user?.reload();
       if (FirebaseAuth.instance.currentUser?.emailVerified != true) {
         await FirebaseAuth.instance.currentUser?.sendEmailVerification();
@@ -421,7 +449,7 @@ class _GirisPageState extends State<GirisPage> {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('E-posta adresin henüz doğrulanmamış. Yeni doğrulama bağlantısı gönderildi; gelen kutunu kontrol et.')));
         return;
       }
-      final profilBelgesi=await FirebaseFirestore.instance.collection('users').doc(sonuc.user!.uid).get();
+      final profilBelgesi=await profilGelecek;
       final profilVerisi=profilBelgesi.data()??{};
       if(profilVerisi['deactivated']==true&&mounted){
         final silmeTalebi=profilVerisi['deletionRequestedAt']!=null;
@@ -429,22 +457,21 @@ class _GirisPageState extends State<GirisPage> {
         if(yenidenAc!=true){await FirebaseAuth.instance.signOut();return;}
         await FirebaseFirestore.instance.collection('users').doc(sonuc.user!.uid).set({'deactivated':false,'deletionRequestedAt':FieldValue.delete(),'deletionScheduledFor':FieldValue.delete()},SetOptions(merge:true));
       }
-      await girisKaydiEkle(FirebaseAuth.instance.currentUser!);
-      await hafiza.remove(denemeAnahtari);
-      await hafiza.remove(kilitAnahtari);
-      if (beniHatirla) {
-        final adres=email.text.trim();
-        kayitliEpostalar.removeWhere((e)=>e.toLowerCase()==adres.toLowerCase());
-        kayitliEpostalar.insert(0,adres);
-        if(kayitliEpostalar.length>8)kayitliEpostalar=kayitliEpostalar.take(8).toList();
-        await hafiza.setString('hatirlanan_eposta',adres);
-        await hafiza.setStringList('hatirlanan_epostalar',kayitliEpostalar);
-        await guvenliHafiza.write(key:sifreAnahtari(adres),value:sifre.text);
-      } else {
-        await hafiza.remove('hatirlanan_eposta');
-        await guvenliHafiza.delete(key:'hatirlanan_sifre');
-      }
+      final aktifKullanici=FirebaseAuth.instance.currentUser!;
+      final adres=email.text.trim();
+      final parola=sifre.text;
+      final hatirla=beniHatirla;
+      unawaited(_girisArkaPlanIsleri(
+        user:aktifKullanici,
+        hafiza:hafiza,
+        denemeAnahtari:denemeAnahtari,
+        kilitAnahtari:kilitAnahtari,
+        adres:adres,
+        parola:parola,
+        hatirla:hatirla,
+      ));
       if (!mounted) return;
+      setState(()=>yukleniyor=false);
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const AnaEkran()),
