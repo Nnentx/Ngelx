@@ -686,48 +686,6 @@ class _SifreYenilePageState extends State<SifreYenilePage> {
   bool yukleniyor=false;
   @override void initState(){super.initState();email=TextEditingController(text:widget.baslangicEposta);}
   @override void dispose(){email.dispose();super.dispose();}
-  Future<void> _okunduGuncelle()async{
-    final ben=uid;if(ben==null)return;
-    try{
-      final ref=FirebaseFirestore.instance.collection('chats').doc(widget.chatId);
-      final d=await ref.get();
-      if(!d.exists)return;
-      final izin=d.data()?['readReceipts_$ben']!=false;
-      await ref.set({
-        'unread_$ben':0,
-        if(izin)'lastReadAt_$ben':FieldValue.serverTimestamp(),
-      },SetOptions(merge:true));
-    }catch(_){}
-  }
-
-  void mesajDegisti(String deger){
-    mentionAra(deger);
-    final ben=uid;if(ben==null)return;
-    final ref=FirebaseFirestore.instance.collection('chats').doc(widget.chatId);
-    yaziyorZamanlayici?.cancel();
-    if(deger.trim().isEmpty){
-      if(yaziyorGonderildi){
-        yaziyorGonderildi=false;
-        unawaited(ref.set({'typing_$ben':false},SetOptions(merge:true)));
-      }
-      return;
-    }
-    if(!yaziyorGonderildi){
-      yaziyorGonderildi=true;
-      unawaited(ref.get().then((d){
-        if(d.data()?['typingIndicator_$ben']!=false){
-          return ref.set({'typing_$ben':true,'typingAt_$ben':FieldValue.serverTimestamp()},SetOptions(merge:true));
-        }
-      }));
-    }else{
-      unawaited(ref.set({'typingAt_$ben':FieldValue.serverTimestamp()},SetOptions(merge:true)));
-    }
-    yaziyorZamanlayici=Timer(const Duration(seconds:2),(){
-      yaziyorGonderildi=false;
-      unawaited(ref.set({'typing_$ben':false},SetOptions(merge:true)));
-    });
-  }
-
   Future<void> gonder() async {
     final adres=email.text.trim();
     if(!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(adres)){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Geçerli bir e-posta adresi yaz.')));return;}
@@ -5170,6 +5128,48 @@ class _SohbetPageState extends State<SohbetPage> {
     } catch (_) {
       return 'Mesaj izni kontrol edilemedi. İnternet bağlantını kontrol et.';
     }
+  }
+
+  Future<void> _okunduGuncelle()async{
+    final ben=uid;if(ben==null)return;
+    try{
+      final ref=FirebaseFirestore.instance.collection('chats').doc(widget.chatId);
+      final d=await ref.get();
+      if(!d.exists)return;
+      final izin=d.data()?['readReceipts_$ben']!=false;
+      await ref.set({
+        'unread_$ben':0,
+        if(izin)'lastReadAt_$ben':FieldValue.serverTimestamp(),
+      },SetOptions(merge:true));
+    }catch(_){}
+  }
+
+  void mesajDegisti(String deger){
+    mentionAra(deger);
+    final ben=uid;if(ben==null)return;
+    final ref=FirebaseFirestore.instance.collection('chats').doc(widget.chatId);
+    yaziyorZamanlayici?.cancel();
+    if(deger.trim().isEmpty){
+      if(yaziyorGonderildi){
+        yaziyorGonderildi=false;
+        unawaited(ref.set({'typing_$ben':false},SetOptions(merge:true)));
+      }
+      return;
+    }
+    if(!yaziyorGonderildi){
+      yaziyorGonderildi=true;
+      unawaited(ref.get().then((d){
+        if(d.data()?['typingIndicator_$ben']!=false){
+          return ref.set({'typing_$ben':true,'typingAt_$ben':FieldValue.serverTimestamp()},SetOptions(merge:true));
+        }
+      }));
+    }else{
+      unawaited(ref.set({'typingAt_$ben':FieldValue.serverTimestamp()},SetOptions(merge:true)));
+    }
+    yaziyorZamanlayici=Timer(const Duration(seconds:2),(){
+      yaziyorGonderildi=false;
+      unawaited(ref.set({'typing_$ben':false},SetOptions(merge:true)));
+    });
   }
 
   Future<void> gonder() async {
