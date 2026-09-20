@@ -4500,10 +4500,10 @@ class _MesajPageState extends State<MesajPage> {
       Padding(padding:const EdgeInsets.fromLTRB(18,14,10,8),child:Row(children:[const Text('Gelen Kutusu',style:TextStyle(color:Colors.black,fontSize:29,fontWeight:FontWeight.w900)),const SizedBox(width:4),IconButton(tooltip:'Tümünü okundu yap',onPressed:ben==null?null:tumunuOkunduYap,icon:const Icon(Icons.done_all_rounded,color:Color(0xFF27C66F))),const Spacer(),IconButton(tooltip:'Arşiv',onPressed:ben==null?null:()async{await Navigator.push(context,MaterialPageRoute(builder:(_)=>ArsivSohbetlerPage(uid:ben)));await tercihleriGetir();},icon:const Icon(Icons.archive_outlined,color:Colors.black54)),IconButton(tooltip:'Grup oluştur',onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const GrupOlusturPage())),icon:const Icon(Icons.group_add_rounded,color:mor,size:29)),IconButton(tooltip:'Yeni sohbet',onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const YeniSohbetPage())),icon:const Icon(Icons.person_add_alt_1,color:mavi,size:29))])),
       Padding(padding:const EdgeInsets.fromLTRB(16,4,16,10),child:TextField(controller:sohbetAra,onChanged:(v)=>setState(()=>sohbetSorgu=v.trim().toLowerCase()),style:const TextStyle(color:Colors.black87),decoration:InputDecoration(hintText:'Sohbetlerde ara',hintStyle:const TextStyle(color:Colors.black45),prefixIcon:const Icon(Icons.search,color:Colors.black45),filled:true,fillColor:const Color(0xFFF3F4F7),border:OutlineInputBorder(borderRadius:BorderRadius.circular(24),borderSide:BorderSide.none)))),
       Padding(padding:const EdgeInsets.symmetric(horizontal:8),child:Row(children:['Tümü','Okunmamış','Arkadaşlar','Gruplar'].map((f)=>Expanded(child:Padding(padding:const EdgeInsets.symmetric(horizontal:2),child:ChoiceChip(labelPadding:const EdgeInsets.symmetric(horizontal:2),label:Center(child:FittedBox(fit:BoxFit.scaleDown,child:Text(f,maxLines:1))),selected:filtre==f,selectedColor:mor,labelStyle:TextStyle(color:filtre==f?Colors.white:Colors.black87,fontWeight:FontWeight.w700),backgroundColor:const Color(0xFFF1F2F5),side:BorderSide.none,onSelected:(_)=>setState(()=>filtre=f))))).toList())),
-      StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(stream:ben==null?null:FirebaseFirestore.instance.collection('notifications').where('toUid',isEqualTo:ben).snapshots(),builder:(_,s){final okunmamis=(s.data?.docs??[]).where((d)=>d.data()['read']!=true).length;return Container(margin:const EdgeInsets.fromLTRB(16,8,16,5),decoration:BoxDecoration(color:const Color(0xFFF5EFFF),borderRadius:BorderRadius.circular(20)),child:ListTile(leading:const CircleAvatar(backgroundColor:Color(0xFFE5D5FF),child:Icon(Icons.favorite,color:mor)),title:const Text('Aktivite',style:TextStyle(color:Colors.black,fontWeight:FontWeight.w900)),subtitle:const Text('Beğeniler, yorumlar ve güvenlik bildirimleri',style:TextStyle(color:Colors.black54)),trailing:okunmamis==0?const Icon(Icons.chevron_right,color:Colors.black45):Badge(label:Text('$okunmamis'),child:const Icon(Icons.chevron_right,color:Colors.black45)),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const AktivitePage()))));}),
+      StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(stream:ben==null?null:FirebaseFirestore.instance.collection('notifications').where('toUid',isEqualTo:ben).limit(200).snapshots(),builder:(_,s){final okunmamis=(s.data?.docs??[]).where((d)=>d.data()['read']!=true).length;return Container(margin:const EdgeInsets.fromLTRB(16,8,16,5),decoration:BoxDecoration(color:const Color(0xFFF5EFFF),borderRadius:BorderRadius.circular(20)),child:ListTile(leading:const CircleAvatar(backgroundColor:Color(0xFFE5D5FF),child:Icon(Icons.favorite,color:mor)),title:const Text('Aktivite',style:TextStyle(color:Colors.black,fontWeight:FontWeight.w900)),subtitle:const Text('Beğeniler, yorumlar ve güvenlik bildirimleri',style:TextStyle(color:Colors.black54)),trailing:okunmamis==0?const Icon(Icons.chevron_right,color:Colors.black45):Badge(label:Text('$okunmamis'),child:const Icon(Icons.chevron_right,color:Colors.black45)),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const AktivitePage()))));}),
       Container(margin:const EdgeInsets.fromLTRB(16,5,16,8),decoration:BoxDecoration(color:const Color(0xFFEDF7FF),borderRadius:BorderRadius.circular(20)),child:ListTile(leading:const CircleAvatar(backgroundColor:Color(0xFFD8ECFF),child:Icon(Icons.chat_bubble_rounded,color:Colors.blue)),title:const Text('Mesaj İstekleri',style:TextStyle(color:Colors.black,fontWeight:FontWeight.w900)),subtitle:const Text('Seni takip etmeyenlerden gelen mesajlar',style:TextStyle(color:Colors.black54)),trailing:const Icon(Icons.chevron_right,color:Colors.black45),onTap:ben==null?null:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>MesajIstekleriPage(uid:ben))))),
       Expanded(child:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
-        stream:ben==null?null:FirebaseFirestore.instance.collection('chats').where('members',arrayContains:ben).snapshots(),
+        stream:ben==null?null:FirebaseFirestore.instance.collection('chats').where('members',arrayContains:ben).limit(200).snapshots(),
         builder:(_,s){
           final docs=(s.data?.docs??[]).where((d){final v=d.data();if(List<String>.from(v['hiddenFor']??const[]).contains(ben)||arsivSohbetler.contains(d.id))return false;final members=List<String>.from(v['members']??const[]),grup=v['isGroup']==true||members.length>2;final unread=(v['unread_$ben']??0) as int;if(filtre=='Okunmamış'&&unread==0)return false;if(filtre=='Gruplar'&&!grup)return false;if(!grup){final other=members.firstWhere((x)=>x!=ben,orElse:()=>ben??'');final gelenIstek=v['requestRecipientUid']==ben&&v['requestAccepted_$ben']!=true&&!arkadaslar.contains(other);if(gelenIstek)return false;if(filtre=='Arkadaşlar'&&!arkadaslar.contains(other))return false;}else if(filtre=='Arkadaşlar')return false;final son='${v['groupName']??''} ${v['lastMessage']??''}'.toLowerCase();return sohbetSorgu.isEmpty||son.contains(sohbetSorgu);}).toList()..sort((a,b){final ap=sabitSohbetler.contains(a.id),bp=sabitSohbetler.contains(b.id);if(ap!=bp)return ap?-1:1;final at=a.data()['updatedAt'] as Timestamp?,bt=b.data()['updatedAt'] as Timestamp?;return (bt?.millisecondsSinceEpoch??0).compareTo(at?.millisecondsSinceEpoch??0);});
           if(docs.isEmpty)return const Center(child:Text('Bu bölümde henüz sohbet yok.',textAlign:TextAlign.center,style:TextStyle(color:Colors.black54)));
@@ -4702,9 +4702,9 @@ class _GrupOlusturPageState extends State<GrupOlusturPage>{
       if(mounted)setState((){izinlerYukleniyor=false;yuklemeHatasi='Kişiler yüklenemedi. İnternet bağlantını kontrol edip tekrar dene.';});
     }
   }
-  Future<void> olustur()async{final u=FirebaseAuth.instance.currentUser;if(u==null||kaydediliyor)return;final grupAdi=ad.text.trim(),kelime=grupAdi.isEmpty?0:grupAdi.split(RegExp(r'\s+')).length;if(grupAdi.length<2){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Grup adı en az 2 karakter olmalı.')));return;}if(kelime>16){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Grup adı en fazla 16 kelime olabilir.')));return;}if(secilen.isEmpty){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Grup için en az 1 kişi seç.')));return;}if(secilen.length>59){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Yönetici dahil grupta en fazla 60 üye olabilir.')));return;}setState(()=>kaydediliyor=true);try{String fotoUrl='';if(foto!=null){final yol='groups/${u.uid}/${DateTime.now().millisecondsSinceEpoch}.jpg';await supa.Supabase.instance.client.storage.from('ngelx-media').uploadBinary(yol,await foto!.readAsBytes());fotoUrl=supa.Supabase.instance.client.storage.from('ngelx-media').getPublicUrl(yol);}final ref=FirebaseFirestore.instance.collection('chats').doc();await ref.set({'isGroup':true,'groupName':grupAdi,'groupPhotoUrl':fotoUrl,'members':[u.uid,...secilen],'admins':[u.uid],'moderators':<String>[],'createdBy':u.uid,'createdAt':FieldValue.serverTimestamp(),'updatedAt':FieldValue.serverTimestamp(),'lastMessage':'Grup oluşturuldu','hiddenFor':<String>[],'maxMembers':60,'onlyAdminsCanEdit':true});if(mounted)Navigator.pushReplacement(context,MaterialPageRoute(builder:(_)=>GrupSohbetPage(chatId:ref.id,ad:grupAdi,foto:fotoUrl)));}catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Grup oluşturulamadı: $e')));}finally{if(mounted)setState(()=>kaydediliyor=false);}}
+  Future<void> olustur()async{final u=FirebaseAuth.instance.currentUser;if(u==null||kaydediliyor)return;final grupAdi=ad.text.trim();if(grupAdi.length<2){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Grup adı en az 2 karakter olmalı.')));return;}if(grupAdi.length>16){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Grup adı en fazla 16 karakter olabilir.')));return;}if(secilen.isEmpty){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Grup için en az 1 kişi seç.')));return;}if(secilen.length>59){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Yönetici dahil grupta en fazla 60 üye olabilir.')));return;}setState(()=>kaydediliyor=true);try{String fotoUrl='';if(foto!=null){final yol='groups/${u.uid}/${DateTime.now().millisecondsSinceEpoch}.jpg';await supa.Supabase.instance.client.storage.from('ngelx-media').uploadBinary(yol,await foto!.readAsBytes());fotoUrl=supa.Supabase.instance.client.storage.from('ngelx-media').getPublicUrl(yol);}final ref=FirebaseFirestore.instance.collection('chats').doc();await ref.set({'isGroup':true,'groupName':grupAdi,'groupPhotoUrl':fotoUrl,'members':[u.uid,...secilen],'admins':[u.uid],'moderators':<String>[],'createdBy':u.uid,'createdAt':FieldValue.serverTimestamp(),'updatedAt':FieldValue.serverTimestamp(),'lastMessage':'Grup oluşturuldu','hiddenFor':<String>[],'maxMembers':60,'onlyAdminsCanEdit':true}).timeout(const Duration(seconds:15));if(mounted)Navigator.pushReplacement(context,MaterialPageRoute(builder:(_)=>GrupSohbetPage(chatId:ref.id,ad:grupAdi,foto:fotoUrl)));}on TimeoutException{if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Grup oluşturma gecikti. İnternet bağlantını kontrol edip tekrar dene.')));}catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Grup oluşturulamadı. Lütfen tekrar dene.')));}finally{if(mounted)setState(()=>kaydediliyor=false);}}
   @override Widget build(BuildContext context){return Theme(data:ThemeData.light().copyWith(scaffoldBackgroundColor:Colors.white,appBarTheme:const AppBarTheme(backgroundColor:Colors.white,foregroundColor:Colors.black,elevation:0)),child:Scaffold(appBar:AppBar(title:const Text('Yeni grup',style:TextStyle(fontWeight:FontWeight.w900)),actions:[TextButton(onPressed:kaydediliyor?null:olustur,child:const Text('Oluştur',style:TextStyle(fontWeight:FontWeight.w900)))]),body:Column(children:[
-  Padding(padding:const EdgeInsets.all(18),child:Row(children:[GestureDetector(onTap:()async{final x=await ImagePicker().pickImage(source:ImageSource.gallery,imageQuality:85);if(x!=null&&mounted)setState(()=>foto=x);},child:CircleAvatar(radius:34,backgroundColor:const Color(0xFFE9DDFF),backgroundImage:foto==null?null:FileImage(File(foto!.path)),child:foto==null?const Icon(Icons.add_a_photo,color:mor):null)),const SizedBox(width:14),Expanded(child:TextField(controller:ad,maxLength:160,onChanged:(_)=>setState((){}),style:const TextStyle(color:Colors.black87),decoration:InputDecoration(labelText:'Grup adı',hintText:'Grubuna bir ad ver',counterText:'${ad.text.trim().isEmpty?0:ad.text.trim().split(RegExp(r'\s+')).length}/16 kelime')))])),
+  Padding(padding:const EdgeInsets.all(18),child:Row(children:[GestureDetector(onTap:()async{final x=await ImagePicker().pickImage(source:ImageSource.gallery,imageQuality:85);if(x!=null&&mounted)setState(()=>foto=x);},child:CircleAvatar(radius:34,backgroundColor:const Color(0xFFE9DDFF),backgroundImage:foto==null?null:FileImage(File(foto!.path)),child:foto==null?const Icon(Icons.add_a_photo,color:mor):null)),const SizedBox(width:14),Expanded(child:TextField(controller:ad,maxLength:16,onChanged:(_)=>setState((){}),style:const TextStyle(color:Colors.black87),decoration:InputDecoration(labelText:'Grup adı',hintText:'Grubuna bir ad ver',counterText:'${ad.text.characters.length}/16 karakter')))])),
     Padding(padding:const EdgeInsets.symmetric(horizontal:18),child:TextField(controller:arama,onChanged:(v)=>setState(()=>sorgu=v.toLowerCase()),style:const TextStyle(color:Colors.black87),decoration:const InputDecoration(prefixIcon:Icon(Icons.search),hintText:'Gruba kişi ekle'))),
     Padding(padding:const EdgeInsets.fromLTRB(18,12,18,5),child:Align(alignment:Alignment.centerLeft,child:Text('${secilen.length} kişi seçildi • ${secilen.length+1}/60 üye',style:const TextStyle(color:mor,fontWeight:FontWeight.bold)))),
     Expanded(
@@ -4757,7 +4757,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
   List<Map<String,String>>? _mentionUyeleri;
   late final Stream<QuerySnapshot<Map<String,dynamic>>> _mesajAkisi;
   late final Stream<DocumentSnapshot<Map<String,dynamic>>> _grupAkisi;
-  bool aramaBaslatiliyor=false,_okunduYaziliyor=false,_ilkMesajKaydirma=true;
+  bool aramaBaslatiliyor=false,mesajGonderiliyor=false,_okunduYaziliyor=false,_ilkMesajKaydirma=true;
   DateTime? _sonOkunduKontrolu;
   String? get uid=>FirebaseAuth.instance.currentUser?.uid;
   DocumentReference<Map<String,dynamic>> get chatRef=>FirebaseFirestore.instance.collection('chats').doc(widget.chatId);
@@ -4765,7 +4765,10 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
   @override void initState(){
     super.initState();
     _grupAkisi=chatRef.snapshots();
-    _mesajAkisi=chatRef.collection('messages').orderBy('createdAt').snapshots();
+    // Bütün grup geçmişini her açılışta indirmek uygulamayı kilitliyordu.
+    // En yeni 100 mesaj ilk ekran için yeterli; eski içerikler medya ve arama
+    // sayfalarından ayrıca alınır.
+    _mesajAkisi=chatRef.collection('messages').orderBy('createdAt').limitToLast(100).snapshots();
     unawaited(_okunduIsaretle());
   }
   @override void dispose(){mentionZamanlayici?.cancel();mesaj.dispose();liste.dispose();super.dispose();}
@@ -4814,40 +4817,50 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
     }
     return v;
   }
-  Future<void> payloadGonder(Map<String,dynamic> veri,String sonMesaj)async{
-    final ben=uid;if(ben==null)return;
-    final grupVerisi=await mesajGonderimVerisi();
-    if(grupVerisi==null)return;
-    final uyeler=List<String>.from(grupVerisi['members']??const[]);
-    await chatRef.collection('messages').add({
-      'senderId':ben,
-      'createdAt':FieldValue.serverTimestamp(),
-      'clientCreatedAt':Timestamp.now(),
-      ...veri,
-    });
-    final g=<String,dynamic>{'lastMessage':sonMesaj,'updatedAt':FieldValue.serverTimestamp(),'hiddenFor':FieldValue.arrayRemove(uyeler)};
-    for(final x in uyeler){if(x!=ben)g['unread_$x']=FieldValue.increment(1);}
-    await chatRef.set(g,SetOptions(merge:true));
-    final etiketler=List<String>.from(veri['mentions']??const[]);
-    if(etiketler.isNotEmpty){
-      final profil=await FirebaseFirestore.instance.collection('users').doc(ben).get();
-      final ad=(profil.data()?['displayName']??profil.data()?['username']??'Bir kullanıcı').toString();
-      for(final hedef in etiketler.toSet()){
-        if(hedef==ben||!uyeler.contains(hedef))continue;
-        unawaited(uygulamaBildirimiGonder(
-          toUid:hedef,fromUid:ben,tur:'message',
-          metin:'$ad grupta senden bahsetti',
-          belgeId:widget.chatId,
-        ).catchError((_){ }));
+  Future<bool> payloadGonder(Map<String,dynamic> veri,String sonMesaj)async{
+    final ben=uid;if(ben==null)return false;
+    try{
+      final grupVerisi=await mesajGonderimVerisi();
+      if(grupVerisi==null)return false;
+      final uyeler=List<String>.from(grupVerisi['members']??const[]);
+      final mesajRef=chatRef.collection('messages').doc();
+      final batch=FirebaseFirestore.instance.batch();
+      batch.set(mesajRef,{
+        'senderId':ben,
+        'createdAt':FieldValue.serverTimestamp(),
+        'clientCreatedAt':Timestamp.now(),
+        ...veri,
+      });
+      final g=<String,dynamic>{'lastMessage':sonMesaj,'updatedAt':FieldValue.serverTimestamp(),'hiddenFor':FieldValue.arrayRemove(uyeler)};
+      for(final x in uyeler){if(x!=ben)g['unread_$x']=FieldValue.increment(1);}
+      batch.set(chatRef,g,SetOptions(merge:true));
+      await batch.commit();
+      final etiketler=List<String>.from(veri['mentions']??const[]);
+      if(etiketler.isNotEmpty){
+        final profil=await FirebaseFirestore.instance.collection('users').doc(ben).get();
+        final ad=(profil.data()?['displayName']??profil.data()?['username']??'Bir kullanıcı').toString();
+        for(final hedef in etiketler.toSet()){
+          if(hedef==ben||!uyeler.contains(hedef))continue;
+          unawaited(uygulamaBildirimiGonder(
+            toUid:hedef,fromUid:ben,tur:'message',
+            metin:'$ad grupta senden bahsetti',
+            belgeId:widget.chatId,
+          ).catchError((_){ }));
+        }
       }
+      return true;
+    }catch(_){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Mesaj gönderilemedi. Bağlantını kontrol edip tekrar dene.')));
+      return false;
     }
   }
   Future<void> gonder()async{
-    final t=mesaj.text.trim();if(t.isEmpty)return;
+    final t=mesaj.text.trim();if(t.isEmpty||mesajGonderiliyor)return;
     final etiketler=etiketlenenUidler.toList();
-    mesaj.clear();
-    etiketlenenUidler.clear();
-    await payloadGonder({'text':t,'type':'text',if(etiketler.isNotEmpty)'mentions':etiketler},t);
+    setState(()=>mesajGonderiliyor=true);
+    final tamam=await payloadGonder({'text':t,'type':'text',if(etiketler.isNotEmpty)'mentions':etiketler},t);
+    if(tamam){mesaj.clear();etiketlenenUidler.clear();}
+    if(mounted)setState(()=>mesajGonderiliyor=false);
   }
   Future<void> medyaGonder(ImageSource kaynak)async{final x=await ImagePicker().pickImage(source:kaynak,imageQuality:82);if(x==null)return;try{final yol='groups/${widget.chatId}/${DateTime.now().millisecondsSinceEpoch}.jpg';await supa.Supabase.instance.client.storage.from('ngelx-media').upload(yol,File(x.path));final url=supa.Supabase.instance.client.storage.from('ngelx-media').getPublicUrl(yol);await payloadGonder({'type':'photo','mediaUrl':url},'📷 Fotoğraf');}catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Fotoğraf gönderilemedi.')));}}
   Future<void> gifGonder()async{const tur=XTypeGroup(label:'GIF',extensions:['gif']);final x=await openFile(acceptedTypeGroups:[tur]);if(x==null)return;try{final yol='groups/${widget.chatId}/${DateTime.now().millisecondsSinceEpoch}.gif';await supa.Supabase.instance.client.storage.from('ngelx-media').uploadBinary(yol,await x.readAsBytes(),fileOptions:const supa.FileOptions(contentType:'image/gif'));final url=supa.Supabase.instance.client.storage.from('ngelx-media').getPublicUrl(yol);await payloadGonder({'type':'gif','mediaUrl':url},'GIF');}catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('GIF gönderilemedi: $e')));}}
@@ -5657,9 +5670,9 @@ class _SohbetPageState extends State<SohbetPage> {
     }
     try{
       final sonuc=await Future.wait([
-        FirebaseFirestore.instance.collection('users').doc(ben).get(),
-        FirebaseFirestore.instance.collection('users').doc(widget.digerUid).get(),
-        FirebaseFirestore.instance.collection('chats').doc(widget.chatId).get(),
+        FirebaseFirestore.instance.collection('users').doc(ben).get().timeout(const Duration(seconds:8)),
+        FirebaseFirestore.instance.collection('users').doc(widget.digerUid).get().timeout(const Duration(seconds:8)),
+        FirebaseFirestore.instance.collection('chats').doc(widget.chatId).get().timeout(const Duration(seconds:8)),
       ]);
       final benim=sonuc[0].data()??<String,dynamic>{};
       final diger=sonuc[1].data()??<String,dynamic>{};
@@ -5807,29 +5820,31 @@ class _SohbetPageState extends State<SohbetPage> {
       if(cevapUid!=null)'replySenderId':cevapUid,
     });
 
-    mesaj.clear();
-    yaziyorZamanlayici?.cancel();
-    yaziyorGonderildi=false;
-    _mesajHazirlikSohbetMevcut=true;
-    _mesajHazirlikSohbet={
-      ...hazirlik.sohbet,
-      'lastMessage':t,
-      'updatedAt':clientCreatedAt,
-    };
-    if(mounted)setState((){
-      gonderiliyor=false;
-      yanitMesajId=null;
-      yanitMetin=null;
-      yanitGonderenUid=null;
-    });
-    unawaited(ref.set({'typing_$ben':false},SetOptions(merge:true)).catchError((_){ }));
-    unawaited(uygulamaBildirimiGonder(toUid:widget.digerUid,fromUid:ben,tur:'message',metin:'Yeni bir mesajın var',belgeId:widget.chatId).catchError((_){ }));
-
-    unawaited(batch.commit().timeout(const Duration(seconds:12)).catchError((e){
-      if(!mounted)return;
-      if(mesaj.text.isEmpty)mesaj.text=t;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Mesaj gönderilemedi, tekrar dene: $e')));
-    }));
+    try{
+      // Sunucu yazmayı kabul etmeden alanı temizleme. Böylece başarısız bir
+      // mesaj gönderilmiş gibi görünmez ve art arda dokunma kopya üretmez.
+      await batch.commit();
+      mesaj.clear();
+      yaziyorZamanlayici?.cancel();
+      yaziyorGonderildi=false;
+      _mesajHazirlikSohbetMevcut=true;
+      _mesajHazirlikSohbet={
+        ...hazirlik.sohbet,
+        'lastMessage':t,
+        'updatedAt':clientCreatedAt,
+      };
+      if(mounted)setState((){
+        yanitMesajId=null;
+        yanitMetin=null;
+        yanitGonderenUid=null;
+      });
+      unawaited(ref.set({'typing_$ben':false},SetOptions(merge:true)).catchError((_){ }));
+      unawaited(uygulamaBildirimiGonder(toUid:widget.digerUid,fromUid:ben,tur:'message',metin:'Yeni bir mesajın var',belgeId:widget.chatId).catchError((_){ }));
+    }catch(_){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Mesaj gönderilemedi. Bağlantını kontrol edip tekrar dene.')));
+    }finally{
+      if(mounted)setState(()=>gonderiliyor=false);
+    }
   }
 
   Future<void> medyaGonder(ImageSource kaynak) async {
