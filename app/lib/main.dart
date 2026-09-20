@@ -917,28 +917,28 @@ class _AnaEkranState extends State<AnaEkran> {
     final ben=FirebaseAuth.instance.currentUser?.uid;
     if(ben==null||FirebaseAuth.instance.currentUser?.isAnonymous==true)return const SizedBox.shrink();
     return StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
-      stream:FirebaseFirestore.instance.collection('calls').where('members',arrayContains:ben).snapshots(),
+      stream:FirebaseFirestore.instance.collection('chats').where('members',arrayContains:ben).snapshots(),
       builder:(context,s){
         final adaylar=(s.data?.docs??[]).where((d){
           final v=d.data();
-          if(v['startedBy']==ben||v['status']!='ringing')return false;
-          final t=v['createdAt'];
+          if((v['callStartedBy']??'').toString()==ben||v['callStatus']!='ringing')return false;
+          final t=v['callCreatedAt'];
           if(t is Timestamp&&DateTime.now().difference(t.toDate()).inMinutes>3)return false;
-          return true;
+          return (v['callRoomName']??'').toString().isNotEmpty;
         }).toList()
           ..sort((a,b){
-            final at=a.data()['createdAt'],bt=b.data()['createdAt'];
+            final at=a.data()['callCreatedAt'],bt=b.data()['callCreatedAt'];
             final am=at is Timestamp?at.millisecondsSinceEpoch:0,bm=bt is Timestamp?bt.millisecondsSinceEpoch:0;
             return bm.compareTo(am);
           });
         if(adaylar.isEmpty)return const SizedBox.shrink();
-        final d=adaylar.first,v=d.data(),from=(v['startedBy']??'').toString(),grup=v['group']==true,goruntulu=v['video']==true;
+        final d=adaylar.first,v=d.data(),from=(v['callStartedBy']??'').toString(),grup=v['isGroup']==true,goruntulu=v['callVideo']==true;
         return FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(
           future:grup||from.isEmpty?null:FirebaseFirestore.instance.collection('users').doc(from).get(),
           builder:(_,u){
             final p=u.data?.data()??<String,dynamic>{};
-            final baslik=grup?(v['title']??'Grup araması').toString():(p['displayName']??p['username']??'NgelX kullanıcısı').toString();
-            final foto=grup?'':(p['photoUrl']??'').toString();
+            final baslik=grup?(v['callTitle']??v['groupName']??'Grup araması').toString():(p['displayName']??p['username']??'NgelX kullanıcısı').toString();
+            final foto=grup?(v['groupPhotoUrl']??'').toString():(p['photoUrl']??'').toString();
             return SafeArea(
               child:Align(
                 alignment:Alignment.topCenter,
@@ -966,7 +966,7 @@ class _AnaEkranState extends State<AnaEkran> {
                       style:IconButton.styleFrom(backgroundColor:Colors.red,foregroundColor:Colors.white),
                       tooltip:'Reddet',
                       onPressed:()async{
-                        await d.reference.set({'status':'ended','endedBy':ben,'endedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
+                        await d.reference.set({'callStatus':'rejected','callEndedBy':ben,'callEndedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
                       },
                       icon:const Icon(Icons.call_end_rounded),
                     ),
@@ -978,10 +978,10 @@ class _AnaEkranState extends State<AnaEkran> {
                         if(acilanAramaId==d.id)return;
                         setState(()=>acilanAramaId=d.id);
                         try{
-                          await d.reference.set({'status':'active','participants':FieldValue.arrayUnion([ben]),'answeredAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
+                          await d.reference.set({'callStatus':'active','callParticipants':FieldValue.arrayUnion([ben]),'callAnsweredAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
                           if(!context.mounted)return;
                           await Navigator.push(context,MaterialPageRoute(builder:(_)=>NgelXAramaPage(
-                            roomName:(v['roomName']??'').toString(),
+                            roomName:(v['callRoomName']??'').toString(),
                             baslik:baslik,
                             foto:foto,
                             goruntulu:goruntulu,
@@ -4876,31 +4876,35 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
     try{
       final grup=await chatRef.get().timeout(const Duration(seconds:8));
       final uyeler=List<String>.from(grup.data()?['members']??const[]);
+      if(!uyeler.contains(ben))throw Exception('Bu grubun üyesi değilsin.');
       final grupAdi=(grup.data()?['groupName']??widget.ad).toString();
       final odaAdi='group_${widget.chatId}_${DateTime.now().millisecondsSinceEpoch}';
-      final ref=FirebaseFirestore.instance.collection('calls').doc();
-      await ref.set({
-        'chatId':widget.chatId,'group':true,'title':grupAdi,'roomName':odaAdi,
-        'members':uyeler,'startedBy':ben,'video':goruntulu,'status':'ringing',
-        'participants':<String>[ben],'createdAt':FieldValue.serverTimestamp(),
-      }).timeout(const Duration(seconds:8));
+      await chatRef.set({
+        'callStatus':'ringing',
+        'callRoomName':odaAdi,
+        'callStartedBy':ben,
+        'callVideo':goruntulu,
+        'callTitle':grupAdi,
+        'callParticipants':<String>[ben],
+        'callCreatedAt':FieldValue.serverTimestamp(),
+      },SetOptions(merge:true)).timeout(const Duration(seconds:8));
       for(final uye in uyeler){
         if(uye==ben)continue;
         unawaited(uygulamaBildirimiGonder(
           toUid:uye,fromUid:ben,tur:'call',
           metin:goruntulu?'$grupAdi grubunda görüntülü arama başlattı':'$grupAdi grubunda sesli arama başlattı',
-          belgeId:ref.id,
+          belgeId:widget.chatId,
         ).catchError((_){ }));
       }
       if(!mounted)return;
       setState(()=>aramaBaslatiliyor=false);
       await Navigator.push(context,MaterialPageRoute(builder:(_)=>NgelXAramaPage(
-        roomName:odaAdi,baslik:grupAdi,foto:widget.foto,goruntulu:goruntulu,aramaRef:ref,
+        roomName:odaAdi,baslik:grupAdi,foto:widget.foto,goruntulu:goruntulu,aramaRef:chatRef,
       )));
     }catch(e){
       if(!mounted)return;
       setState(()=>aramaBaslatiliyor=false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Grup araması başlatılamadı: '+e.toString())));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Grup araması başlatılamadı: '+e.toString().replaceFirst('Exception: ',''))));
     }
   }
 
@@ -4943,7 +4947,7 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
   @override void initState(){
     super.initState();
     aramaDurumAboneligi=widget.aramaRef.snapshots().listen((d){
-      final durum=(d.data()?['status']??'').toString();
+      final durum=(d.data()?['callStatus']??'').toString();
       if((durum=='ended'||durum=='rejected'||durum=='missed')&&!bitiyor){
         unawaited(_uzaktanBitirildi(durum));
       }
@@ -5000,9 +5004,9 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
       await lk.AudioManager.instance.setSpeakerOutputPreferred(true,force:widget.goruntulu);
       hoparlor=true;
       await widget.aramaRef.set({
-        'status':'active',
-        'participants':FieldValue.arrayUnion([u.uid]),
-        'connectedAt':FieldValue.serverTimestamp(),
+        'callStatus':'active',
+        'callParticipants':FieldValue.arrayUnion([u.uid]),
+        'callConnectedAt':FieldValue.serverTimestamp(),
       },SetOptions(merge:true));
       if(mounted)setState(()=>baglaniyor=false);
     }catch(e){
@@ -5054,7 +5058,7 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
 
   Future<void> bitir({bool geriDon=true})async{
     if(bitiyor)return;bitiyor=true;
-    try{await widget.aramaRef.set({'status':'ended','endedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));}catch(_){}
+    try{await widget.aramaRef.set({'callStatus':'ended','callEndedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));}catch(_){}
     final r=oda;oda=null;
     if(r!=null){
       r.removeListener(_odaDegisti);
@@ -5989,27 +5993,26 @@ class _SohbetPageState extends State<SohbetPage> {
     if(ben==null||aramaBaslatiliyor)return;
     setState(()=>aramaBaslatiliyor=true);
     final odaAdi='chat_${widget.chatId}_${DateTime.now().millisecondsSinceEpoch}';
-    final ref=FirebaseFirestore.instance.collection('calls').doc();
+    final ref=FirebaseFirestore.instance.collection('chats').doc(widget.chatId);
     try{
       await ref.set({
-        'chatId':widget.chatId,
-        'roomName':odaAdi,
-        'members':[ben,widget.digerUid],
-        'startedBy':ben,
-        'video':goruntulu,
-        'status':'ringing',
-        'createdAt':FieldValue.serverTimestamp(),
-      }).timeout(const Duration(seconds:8));
+        'members':<String>[ben,widget.digerUid],
+        'callStatus':'ringing',
+        'callRoomName':odaAdi,
+        'callStartedBy':ben,
+        'callVideo':goruntulu,
+        'callTitle':widget.ad,
+        'callParticipants':<String>[ben],
+        'callCreatedAt':FieldValue.serverTimestamp(),
+      },SetOptions(merge:true)).timeout(const Duration(seconds:8));
       if(!mounted)return;
-      unawaited(
-        uygulamaBildirimiGonder(
-          toUid:widget.digerUid,
-          fromUid:ben,
-          tur:'call',
-          metin:goruntulu?'Görüntülü arama':'Sesli arama',
-          belgeId:ref.id,
-        ).catchError((_){ }),
-      );
+      unawaited(uygulamaBildirimiGonder(
+        toUid:widget.digerUid,
+        fromUid:ben,
+        tur:'call',
+        metin:goruntulu?'Görüntülü arama':'Sesli arama',
+        belgeId:widget.chatId,
+      ).catchError((_){ }));
       setState(()=>aramaBaslatiliyor=false);
       await Navigator.push(
         context,
