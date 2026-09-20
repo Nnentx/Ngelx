@@ -1346,7 +1346,7 @@ Future<void> ngelxOzeldenPaylas(
 
   String sorgu = '';
   final secilenler=<String>{};
-  bool gonderiliyor=false;
+  bool gonderiliyor=false,aramaBaslatiliyor=false;
   await showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
@@ -4954,6 +4954,15 @@ class _SohbetPageState extends State<SohbetPage> {
     else await d.reference.set({alan:emoji},SetOptions(merge:true));
   }
 
+  Future<void> mesajKalpBirak(QueryDocumentSnapshot<Map<String,dynamic>> d)async{
+    final ben=uid;if(ben==null)return;
+    try{
+      await d.reference.set({'reactions.$ben':'❤️'},SetOptions(merge:true));
+    }catch(e){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Tepki eklenemedi.')));
+    }
+  }
+
   Future<String?> mesajTepkisiSec()async=>showModalBottomSheet<String>(
     context:context,backgroundColor:Colors.white,showDragHandle:true,
     builder:(c)=>SafeArea(child:Padding(
@@ -5075,8 +5084,14 @@ class _SohbetPageState extends State<SohbetPage> {
     return Align(
       alignment:ben?Alignment.centerRight:Alignment.centerLeft,
       child:GestureDetector(
+        behavior:HitTestBehavior.opaque,
         onLongPress:()=>mesajMenusu(d),
-        onDoubleTap:()=>mesajTepkiDegistir(d,'❤️'),
+        onDoubleTap:()=>mesajKalpBirak(d),
+        onTap:photo
+          ? ()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>TamEkranMedyaPage(url:(v['mediaUrl']??'').toString())))
+          : shared
+            ? ()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>IcerikBaglantiPage(icerikId:(v['contentId']??'').toString())))
+            : null,
         child:Container(
           constraints:const BoxConstraints(maxWidth:290),
           margin:const EdgeInsets.symmetric(horizontal:4,vertical:5),
@@ -5084,9 +5099,9 @@ class _SohbetPageState extends State<SohbetPage> {
           decoration:BoxDecoration(color:ben?const Color(0xFF1687FF):const Color(0xFFF0F1F4),borderRadius:BorderRadius.circular(20)),
           child:Column(crossAxisAlignment:CrossAxisAlignment.end,mainAxisSize:MainAxisSize.min,children:[
             if(photo)
-              InkWell(onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>TamEkranMedyaPage(url:(v['mediaUrl']??'').toString()))),child:ClipRRect(borderRadius:BorderRadius.circular(16),child:Image.network((v['mediaUrl']??'').toString(),width:230,fit:BoxFit.cover)))
+              IgnorePointer(child:ClipRRect(borderRadius:BorderRadius.circular(16),child:Image.network((v['mediaUrl']??'').toString(),width:230,fit:BoxFit.cover)))
             else if(shared)
-              InkWell(onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>IcerikBaglantiPage(icerikId:(v['contentId']??'').toString()))),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+              IgnorePointer(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
                 Row(children:[Icon(Icons.play_circle_fill_rounded,color:ben?Colors.white:mavi),const SizedBox(width:7),Text('NgelX paylaşımı',style:TextStyle(color:ben?Colors.white:Colors.black87,fontWeight:FontWeight.w900))]),
                 const SizedBox(height:8),Text(metin,maxLines:4,overflow:TextOverflow.ellipsis,style:TextStyle(color:ben?Colors.white70:Colors.black54)),
               ]))
@@ -5139,7 +5154,50 @@ class _SohbetPageState extends State<SohbetPage> {
   }
   void mentionEkle(String kullanici){final metin=mesaj.text,sonBosluk=metin.lastIndexOf(RegExp(r'\s'));mesaj.text='${sonBosluk<0?'':metin.substring(0,sonBosluk+1)}@$kullanici ';mesaj.selection=TextSelection.collapsed(offset:mesaj.text.length);setState(()=>mentionOnerileri.clear());}
 
-  Future<void> aramaBaslat(bool goruntulu)async{final ben=uid;if(ben==null)return;final odaAdi='chat_${widget.chatId}_${DateTime.now().millisecondsSinceEpoch}',ref=FirebaseFirestore.instance.collection('calls').doc();await ref.set({'chatId':widget.chatId,'roomName':odaAdi,'members':[ben,widget.digerUid],'startedBy':ben,'video':goruntulu,'status':'ringing','createdAt':FieldValue.serverTimestamp()});await uygulamaBildirimiGonder(toUid:widget.digerUid,fromUid:ben,tur:'call',metin:goruntulu?'Görüntülü arama':'Sesli arama',belgeId:ref.id);if(mounted)await Navigator.push(context,MaterialPageRoute(builder:(_)=>NgelXAramaPage(roomName:odaAdi,baslik:widget.ad,goruntulu:goruntulu,aramaRef:ref)));}
+  Future<void> aramaBaslat(bool goruntulu)async{
+    final ben=uid;
+    if(ben==null||aramaBaslatiliyor)return;
+    setState(()=>aramaBaslatiliyor=true);
+    final odaAdi='chat_${widget.chatId}_${DateTime.now().millisecondsSinceEpoch}';
+    final ref=FirebaseFirestore.instance.collection('calls').doc();
+    try{
+      await ref.set({
+        'chatId':widget.chatId,
+        'roomName':odaAdi,
+        'members':[ben,widget.digerUid],
+        'startedBy':ben,
+        'video':goruntulu,
+        'status':'ringing',
+        'createdAt':FieldValue.serverTimestamp(),
+      }).timeout(const Duration(seconds:8));
+      if(!mounted)return;
+      unawaited(
+        uygulamaBildirimiGonder(
+          toUid:widget.digerUid,
+          fromUid:ben,
+          tur:'call',
+          metin:goruntulu?'Görüntülü arama':'Sesli arama',
+          belgeId:ref.id,
+        ).catchError((_){ }),
+      );
+      setState(()=>aramaBaslatiliyor=false);
+      await Navigator.push(
+        context,
+        MaterialPageRoute(builder:(_)=>NgelXAramaPage(
+          roomName:odaAdi,
+          baslik:widget.ad,
+          goruntulu:goruntulu,
+          aramaRef:ref,
+        )),
+      );
+    }catch(e){
+      if(!mounted)return;
+      setState(()=>aramaBaslatiliyor=false);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content:Text('Arama başlatılamadı: ${e.toString().replaceFirst('Exception: ','')}'),
+      ));
+    }
+  }
 
   void bilgi()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>SohbetBilgiPage(uid:widget.digerUid,ad:widget.ad,foto:widget.foto,chatId:widget.chatId)));
 
@@ -5159,8 +5217,18 @@ class _SohbetPageState extends State<SohbetPage> {
       leading:const BackButton(color:Colors.blue),
       title:StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(stream:FirebaseFirestore.instance.collection('chats').doc(widget.chatId).snapshots(),builder:(_,s){final ham=s.data?.data()?['nicknames'],nicks=ham is Map?Map<String,dynamic>.from(ham):<String,dynamic>{},takma=(uid==null?'':(nicks[uid]??'').toString()).trim(),gorunenAd=takma.isNotEmpty?takma:widget.ad;return InkWell(onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciProfilPage(uid:widget.digerUid))),child:Row(children:[CircleAvatar(radius:18,backgroundImage:widget.foto.isEmpty?null:NetworkImage(widget.foto)),const SizedBox(width:9),Expanded(child:Text(gorunenAd))]));}),
       actions:[
-        IconButton(tooltip:'Sesli arama',onPressed:()=>aramaBaslat(false),icon:const Icon(Icons.call,color:Colors.blue)),
-        IconButton(tooltip:'Görüntülü arama',onPressed:()=>aramaBaslat(true),icon:const Icon(Icons.videocam,color:Colors.blue)),
+        IconButton(
+          tooltip:'Sesli arama',
+          onPressed:aramaBaslatiliyor?null:()=>aramaBaslat(false),
+          icon:aramaBaslatiliyor
+            ? const SizedBox(width:20,height:20,child:CircularProgressIndicator(strokeWidth:2))
+            : const Icon(Icons.call,color:Colors.blue),
+        ),
+        IconButton(
+          tooltip:'Görüntülü arama',
+          onPressed:aramaBaslatiliyor?null:()=>aramaBaslat(true),
+          icon:const Icon(Icons.videocam,color:Colors.blue),
+        ),
         IconButton(onPressed:bilgi,icon:const Icon(Icons.info,color:Colors.blue)),
       ],
     ),
