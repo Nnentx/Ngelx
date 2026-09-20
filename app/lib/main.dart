@@ -5852,8 +5852,8 @@ class _SohbetMesajAramaPageState extends State<SohbetMesajAramaPage>{
 class AktivitePage extends StatelessWidget {
   const AktivitePage({super.key});
 
-  IconData _ikon(String tur){switch(tur){case 'like':case 'interaction':return Icons.favorite_rounded;case 'comment':return Icons.mode_comment_rounded;case 'message':return Icons.chat_bubble_rounded;case 'security':return Icons.shield_rounded;case 'friend':case 'follow_request':return Icons.person_add_alt_1_rounded;case 'friend_accepted':return Icons.people_rounded;default:return Icons.notifications_rounded;}}
-  Color _renk(String tur){switch(tur){case 'like':case 'interaction':return const Color(0xFFFF3B73);case 'comment':return Colors.blue;case 'security':return Colors.orange;case 'friend':case 'follow_request':return mor;default:return const Color(0xFF20B86A);}}
+  IconData _ikon(String tur){switch(tur){case 'like':case 'interaction':return Icons.favorite_rounded;case 'comment':return Icons.mode_comment_rounded;case 'message':return Icons.chat_bubble_rounded;case 'security':return Icons.shield_rounded;case 'friend':case 'follow_request':case 'friend_request':return Icons.person_add_alt_1_rounded;case 'friend_accepted':return Icons.people_rounded;case 'follow_accepted':return Icons.person_rounded;default:return Icons.notifications_rounded;}}
+  Color _renk(String tur){switch(tur){case 'like':case 'interaction':return const Color(0xFFFF3B73);case 'comment':return Colors.blue;case 'security':return Colors.orange;case 'friend':case 'follow_request':case 'friend_request':return mor;default:return const Color(0xFF20B86A);}}
 
   Widget _bildirimBasligi(Map<String,dynamic> v,bool okundu){
     final tam=(v['text']??v['message']??v['content']??'Yeni bildirim').toString();
@@ -5871,46 +5871,80 @@ class AktivitePage extends StatelessWidget {
     final from=(v['fromUid']??'').toString(),tur=(v['type']??'').toString();
     final kaynak=(v['sourceId']??v['belgeId']??'').toString();
     if(kaynak.isNotEmpty&&(tur=='interaction'||tur=='like'||tur=='comment')){Navigator.push(context,MaterialPageRoute(builder:(_)=>IcerikBaglantiPage(icerikId:kaynak)));return;}
-    if(from.isNotEmpty&&(tur=='friend'||tur=='follow_request'||tur=='friend_accepted')){Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciProfilPage(uid:from)));return;}
+    if(from.isNotEmpty&&(tur=='friend'||tur=='follow_request'||tur=='friend_request'||tur=='friend_accepted'||tur=='follow_accepted')){Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciProfilPage(uid:from)));return;}
     if(tur=='call'&&kaynak.isNotEmpty){final ref=FirebaseFirestore.instance.collection('calls').doc(kaynak),arama=await ref.get(),a=arama.data();if(!context.mounted)return;if(a==null||a['status']=='ended'){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bu arama sona ermiş.')));return;}final p=await FirebaseFirestore.instance.collection('users').doc(from).get();if(!context.mounted)return;final baslik=a['group']==true?(a['title']??'Grup araması').toString():(p.data()?['displayName']??p.data()?['username']??'NgelX araması').toString();Navigator.push(context,MaterialPageRoute(builder:(_)=>NgelXAramaPage(roomName:(a['roomName']??'').toString(),baslik:baslik,goruntulu:a['video']==true,aramaRef:ref)));return;}
     if(tur=='message'&&from.isNotEmpty){final p=await FirebaseFirestore.instance.collection('users').doc(from).get();if(!context.mounted)return;final ids=[FirebaseAuth.instance.currentUser!.uid,from]..sort();Navigator.push(context,MaterialPageRoute(builder:(_)=>SohbetPage(chatId:(v['sourceId']??v['chatId']??v['belgeId']??ids.join('_')).toString(),digerUid:from,ad:(p.data()?['displayName']??p.data()?['username']??'Kullanıcı').toString(),foto:(p.data()?['photoUrl']??'').toString())));}
   }
 
   Future<void> istegiSonuclandir(BuildContext context, QueryDocumentSnapshot<Map<String, dynamic>> belge, bool kabul) async {
-    final ben = FirebaseAuth.instance.currentUser?.uid;
-    final gonderen = (belge.data()['fromUid'] ?? '').toString();
-    if (ben == null || gonderen.isEmpty || belge.data()['status'] != 'pending') return;
-    final toplu = FirebaseFirestore.instance.batch();
-    toplu.update(belge.reference, {'status': kabul ? 'accepted' : 'rejected', 'read': true, 'answeredAt': FieldValue.serverTimestamp()});
-    if (kabul) {
-      final gonderenBelgesi = await FirebaseFirestore.instance.collection('users').doc(gonderen).get();
-      final kabulBildirimiAcik = gonderenBelgesi.data()?['notificationsEnabled'] != false && gonderenBelgesi.data()?['friendNotifications'] != false;
-      toplu.set(FirebaseFirestore.instance.collection('users').doc(ben), {
-        'friends': FieldValue.arrayUnion([gonderen]),
-        'followers': FieldValue.arrayUnion([gonderen]),
-      }, SetOptions(merge: true));
-      toplu.set(FirebaseFirestore.instance.collection('users').doc(gonderen), {
-        'friends': FieldValue.arrayUnion([ben]),
-        'following': FieldValue.arrayUnion([ben]),
-      }, SetOptions(merge: true));
-      final arkadaslikIds=[ben,gonderen]..sort();
-      toplu.set(FirebaseFirestore.instance.collection('friendships').doc(arkadaslikIds.join('_')),{
-        'members':arkadaslikIds,
-        'since':FieldValue.serverTimestamp(),
-      },SetOptions(merge:true));
-      if(kabulBildirimiAcik) {
-        toplu.set(FirebaseFirestore.instance.collection('notifications').doc('friend_accepted_' + ben + '_' + gonderen), {
-          'toUid': gonderen,
-          'fromUid': ben,
-          'type': 'friend_accepted',
-          'text': 'Arkadaşlık isteğin kabul edildi',
-          'read': false,
-          'createdAt': FieldValue.serverTimestamp(),
-        }, SetOptions(merge: true));
-      }
+    final ben=FirebaseAuth.instance.currentUser?.uid;
+    final veri=belge.data();
+    final gonderen=(veri['fromUid']??'').toString();
+    final tur=(veri['type']??'').toString();
+    if(ben==null||gonderen.isEmpty||veri['status']!='pending')return;
+
+    final toplu=FirebaseFirestore.instance.batch();
+    toplu.update(belge.reference,{
+      'status':kabul?'accepted':'rejected',
+      'read':true,
+      'answeredAt':FieldValue.serverTimestamp(),
+    });
+
+    if(kabul&&tur=='follow_request'){
+      toplu.set(
+        FirebaseFirestore.instance.collection('users').doc(ben),
+        {'followers':FieldValue.arrayUnion([gonderen])},
+        SetOptions(merge:true),
+      );
+      toplu.set(
+        FirebaseFirestore.instance.collection('users').doc(gonderen),
+        {'following':FieldValue.arrayUnion([ben])},
+        SetOptions(merge:true),
+      );
+      toplu.set(
+        FirebaseFirestore.instance.collection('notifications').doc('follow_accepted_'+ben+'_'+gonderen),
+        {
+          'toUid':gonderen,'fromUid':ben,'type':'follow_accepted',
+          'text':'Takip isteğin kabul edildi','read':false,
+          'createdAt':FieldValue.serverTimestamp(),
+        },
+        SetOptions(merge:true),
+      );
     }
+
+    if(kabul&&tur=='friend_request'){
+      toplu.set(
+        FirebaseFirestore.instance.collection('users').doc(ben),
+        {'friends':FieldValue.arrayUnion([gonderen])},
+        SetOptions(merge:true),
+      );
+      toplu.set(
+        FirebaseFirestore.instance.collection('users').doc(gonderen),
+        {'friends':FieldValue.arrayUnion([ben])},
+        SetOptions(merge:true),
+      );
+      final ids=[ben,gonderen]..sort();
+      toplu.set(
+        FirebaseFirestore.instance.collection('friendships').doc(ids.join('_')),
+        {'members':ids,'since':FieldValue.serverTimestamp()},
+        SetOptions(merge:true),
+      );
+      toplu.set(
+        FirebaseFirestore.instance.collection('notifications').doc('friend_accepted_'+ben+'_'+gonderen),
+        {
+          'toUid':gonderen,'fromUid':ben,'type':'friend_accepted',
+          'text':'Arkadaşlık isteğin kabul edildi','read':false,
+          'createdAt':FieldValue.serverTimestamp(),
+        },
+        SetOptions(merge:true),
+      );
+    }
+
     await toplu.commit();
-    if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(kabul ? 'Arkadaşlık isteği kabul edildi ✅' : 'İstek reddedildi.')));
+    if(context.mounted){
+      final ad=tur=='follow_request'?'Takip isteği':'Arkadaşlık isteği';
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(kabul?'$ad kabul edildi.':'$ad reddedildi.')));
+    }
   }
 
   @override
@@ -5936,7 +5970,7 @@ class AktivitePage extends StatelessWidget {
           return ListView.separated(padding:const EdgeInsets.fromLTRB(12,8,12,24),separatorBuilder:(_,__)=>const Divider(height:1,indent:72),itemCount:docs.length,itemBuilder:(_,i){final d=docs[i];
             final v = d.data();
             final tur=(v['type']??'').toString(),okundu=v['read']==true,foto=(v['photoUrl']??'').toString();
-            final bekliyor = v['type'] == 'follow_request' && v['status'] == 'pending';
+            final bekliyor = (v['type'] == 'follow_request' || v['type'] == 'friend_request') && v['status'] == 'pending';
             return Container(decoration:BoxDecoration(color:okundu?Colors.white:const Color(0xFFF8F4FF),borderRadius:BorderRadius.circular(17)),child:ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:12,vertical:7),
               leading: Stack(children:[CircleAvatar(radius:26,backgroundColor:_renk(tur).withOpacity(.13),backgroundImage:foto.isEmpty?null:NetworkImage(foto),child:foto.isEmpty?Icon(_ikon(tur),color:_renk(tur)):null),if(!okundu)const Positioned(right:0,top:0,child:CircleAvatar(radius:5,backgroundColor:Color(0xFF7C3AED)))]),
               title: _bildirimBasligi(v,okundu),
@@ -6158,31 +6192,53 @@ class KullaniciProfilPage extends StatelessWidget {
                     stream:me==null?null:FirebaseFirestore.instance.collection('users').doc(me).snapshots(),
                     builder:(_,benSnap){
                       final takipte=List<String>.from(benSnap.data?.data()?['following']??const[]).contains(uid);
-                      return OutlinedButton.icon(
-                        onPressed:()async{
-                          if(me==null)return;
-                          if(takipte){
-                            final gorunenAd=(v['displayName']??v['username']??'Bu kişi').toString();
-                            final onay=await showDialog<bool>(context:context,builder:(d)=>AlertDialog(
-                              backgroundColor:Colors.white,surfaceTintColor:Colors.white,
-                              title:const Text('Takipten çıkılsın mı?',style:TextStyle(color:Colors.black87,fontWeight:FontWeight.w800)),
-                              content:Text('$gorunenAd artık takip ettiklerin arasında görünmeyecek.',style:const TextStyle(color:Colors.black87)),
-                              actions:[
-                                TextButton(onPressed:()=>Navigator.pop(d,false),child:const Text('Vazgeç')),
-                                FilledButton(style:FilledButton.styleFrom(backgroundColor:Colors.red,foregroundColor:Colors.white),onPressed:()=>Navigator.pop(d,true),child:const Text('Takipten çık')),
-                              ],
-                            ))??false;
-                            if(!onay)return;
-                          }
-                          try{
-                            await takipDurumuDegistir(uid,takipte);
-                            if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(takipte?'Takipten çıktın.':'Artık bu hesabı takip ediyorsun.')));
-                          }catch(e){
-                            if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Takip işlemi tamamlanamadı: $e')));
-                          }
+                      final istekRef=me==null?null:FirebaseFirestore.instance.collection('notifications').doc('follow_request_'+me+'_'+uid);
+                      return StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
+                        stream:istekRef?.snapshots(),
+                        builder:(_,istekSnap){
+                          final bekliyor=istekSnap.data?.data()?['status']=='pending';
+                          final etiket=takipte?'Takiptesin':(gizli?(bekliyor?'İstek gönderildi':'Takip isteği gönder'):'Takip et');
+                          return OutlinedButton.icon(
+                            onPressed:(bekliyor&&!takipte)?null:()async{
+                              if(me==null)return;
+                              if(takipte){
+                                final gorunenAd=(v['displayName']??v['username']??'Bu kişi').toString();
+                                final onay=await showDialog<bool>(context:context,builder:(d)=>AlertDialog(
+                                  backgroundColor:Colors.white,surfaceTintColor:Colors.white,
+                                  title:const Text('Takipten çıkılsın mı?',style:TextStyle(color:Colors.black87,fontWeight:FontWeight.w800)),
+                                  content:Text('$gorunenAd artık takip ettiklerin arasında görünmeyecek.',style:const TextStyle(color:Colors.black87)),
+                                  actions:[
+                                    TextButton(onPressed:()=>Navigator.pop(d,false),child:const Text('Vazgeç')),
+                                    FilledButton(style:FilledButton.styleFrom(backgroundColor:Colors.red,foregroundColor:Colors.white),onPressed:()=>Navigator.pop(d,true),child:const Text('Takipten çık')),
+                                  ],
+                                ))??false;
+                                if(!onay)return;
+                                await takipDurumuDegistir(uid,true);
+                                if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Takipten çıktın.')));
+                                return;
+                              }
+
+                              if(gizli){
+                                await istekRef!.set({
+                                  'toUid':uid,'fromUid':me,'type':'follow_request',
+                                  'text':'Yeni takip isteğin var','status':'pending',
+                                  'read':false,'createdAt':FieldValue.serverTimestamp(),
+                                },SetOptions(merge:true));
+                                if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Takip isteği gönderildi.')));
+                                return;
+                              }
+
+                              try{
+                                await takipDurumuDegistir(uid,false);
+                                if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Artık bu hesabı takip ediyorsun.')));
+                              }catch(e){
+                                if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Takip işlemi tamamlanamadı: $e')));
+                              }
+                            },
+                            icon:Icon(takipte?Icons.person_remove_outlined:(bekliyor?Icons.schedule_rounded:Icons.person_add_alt_1)),
+                            label:Text(etiket),
+                          );
                         },
-                        icon:Icon(takipte?Icons.person_remove_outlined:Icons.person_add_alt_1),
-                        label:Text(takipte?'Takiptesin':'Takip et'),
                       );
                     },
                   )),
@@ -6190,21 +6246,25 @@ class KullaniciProfilPage extends StatelessWidget {
                   Expanded(child:OutlinedButton.icon(onPressed:()async{if(me==null)return;final ids=[me,uid]..sort();final id=ids.join('_');Navigator.push(context,MaterialPageRoute(builder:(_)=>SohbetPage(chatId:id,digerUid:uid,ad:(v['displayName']??v['username']??'NgelX').toString(),foto:foto)));},icon:const Icon(Icons.message_outlined),label:const Text('Mesaj'))),
                 ]),
                 const SizedBox(height:10),
-                SizedBox(width:double.infinity,child: FilledButton(
-                  onPressed: arkadaslar.contains(uid) ? null : () async {
-                    if (me == null) return;
-                    final istekId = 'friend_request_' + me + '_' + uid;
-                    final istek = FirebaseFirestore.instance.collection('notifications').doc(istekId);
-                    final onceki = await istek.get();
-                    if (onceki.data()?['status'] == 'pending') {
-                      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Arkadaşlık isteğin zaten bekliyor.')));
-                      return;
-                    }
-                    await istek.set({'toUid': uid, 'fromUid': me, 'type': 'follow_request', 'text': 'Yeni arkadaşlık isteğin var', 'status': 'pending', 'read': false, 'createdAt': FieldValue.serverTimestamp()});
-                    if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Arkadaşlık isteği gönderildi ✅')));
+                StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
+                  stream:me==null?null:FirebaseFirestore.instance.collection('notifications').doc('friend_request_'+me+'_'+uid).snapshots(),
+                  builder:(_,istekSnap){
+                    final bekliyor=istekSnap.data?.data()?['status']=='pending';
+                    return SizedBox(width:double.infinity,child:FilledButton(
+                      onPressed:(arkadaslar.contains(uid)||bekliyor)?null:()async{
+                        if(me==null)return;
+                        final ref=FirebaseFirestore.instance.collection('notifications').doc('friend_request_'+me+'_'+uid);
+                        await ref.set({
+                          'toUid':uid,'fromUid':me,'type':'friend_request',
+                          'text':'Yeni arkadaşlık isteğin var','status':'pending',
+                          'read':false,'createdAt':FieldValue.serverTimestamp(),
+                        },SetOptions(merge:true));
+                        if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Arkadaşlık isteği gönderildi.')));
+                      },
+                      child:Text(arkadaslar.contains(uid)?'Arkadaşsınız':(bekliyor?'Arkadaşlık isteği gönderildi':'Arkadaşlık isteği gönder')),
+                    ));
                   },
-                  child: Text(arkadaslar.contains(uid) ? 'Arkadaşsınız' : 'Arkadaşlık isteği gönder'),
-                )),
+                ),
                 const SizedBox(height:10),
                 SizedBox(width:double.infinity,child:OutlinedButton.icon(
                   onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>OrtakGruplarPage(digerUid:uid))),
