@@ -3940,10 +3940,10 @@ class _YeniYuklePageState extends State<YuklePage> {
       context: context,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
-      builder: (c) => SafeArea(child: Padding(
+      builder: (c) => Theme(data:ThemeData.light(),child:SafeArea(child: Padding(
         padding: const EdgeInsets.all(22),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          const Text('Kamerayla oluştur', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900)),
+          const Text('Kamerayla oluştur', style: TextStyle(color:Colors.black87,fontSize: 21, fontWeight: FontWeight.w900)),
           const SizedBox(height: 18),
           Row(children: [
             Expanded(child: _buyukSecenek(Icons.photo_camera_rounded, 'Fotoğraf çek', () { Navigator.pop(c); kamerayiAc(video: false); })),
@@ -3951,7 +3951,7 @@ class _YeniYuklePageState extends State<YuklePage> {
             Expanded(child: _buyukSecenek(Icons.videocam_rounded, 'Video çek', () { Navigator.pop(c); kamerayiAc(video: true); })),
           ]),
         ]),
-      )),
+      ))),
     );
   }
 
