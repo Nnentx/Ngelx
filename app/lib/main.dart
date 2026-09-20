@@ -6013,7 +6013,10 @@ class KullaniciProfilPage extends StatelessWidget {
           final arkadaslar = Set<String>.from(List<dynamic>.from(benimVerim['friends'] ?? []));
           final takip = Set<String>.from(List<dynamic>.from(benimVerim['following'] ?? []));
           final gizli = v['privateAccount'] == true;
-          final erisimVar = ziyaretciOnizleme ? !gizli : (me == uid || !gizli || arkadaslar.contains(uid));
+          final profilIzni=(v['profileViewPermission']??'all').toString();
+          final beniTakipEdiyor=me!=null&&List<String>.from(v['followers']??const[]).contains(me);
+          final izinVar=profilIzni=='all'||(profilIzni=='followers'&&beniTakipEdiyor)||(profilIzni=='friends'&&arkadaslar.contains(uid));
+          final erisimVar = ziyaretciOnizleme ? (profilIzni=='all'&&!gizli) : (me == uid || (izinVar&&(!gizli||arkadaslar.contains(uid))));
           return ListView(
             padding: const EdgeInsets.all(22),
             children: [
@@ -6129,9 +6132,9 @@ class KullaniciProfilPage extends StatelessWidget {
                   child: const Column(children: [
                     Icon(Icons.lock_outline, size: 48, color: mor),
                     SizedBox(height: 12),
-                    Text('Bu hesap gizli', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                    Text('Bu profil sınırlı', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                     SizedBox(height: 7),
-                    Text('Paylaşımları görmek için arkadaşlık isteğinin kabul edilmesi gerekiyor.', textAlign: TextAlign.center, style: TextStyle(color: Colors.black54)),
+                    Text('Bu kullanıcının profil görüntüleme veya gizlilik ayarları nedeniyle paylaşımlar görünmüyor.', textAlign: TextAlign.center, style: TextStyle(color: Colors.black54)),
                   ]),
                 )
               else
@@ -6349,6 +6352,7 @@ class TercihlerPage extends StatefulWidget {final String baslik;const TercihlerP
 class _TercihlerPageState extends State<TercihlerPage> {
   bool hesapGizli=false, profilArama=true, aktiflik=true, profilPaylasArkadas=false, yorumArkadas=false, gizliKelimeler=true, mesajArkadas=true, hikayeArkadas=true, ekranGoruntusu=false, bildirim=true, mesajBildirimi=true, arkadasBildirimi=true, etkilesimBildirimi=true, indirme=true;
   String mesajIzni='friends';
+  String profilGoruntuleme='all';
   List<String> gizliKelimeListesi=[];
   String? get uid => FirebaseAuth.instance.currentUser?.uid;
 
@@ -6360,6 +6364,7 @@ class _TercihlerPageState extends State<TercihlerPage> {
     final d=await FirebaseFirestore.instance.collection('users').doc(uid).get(),v=d.data()??{};
     if(mounted)setState((){
       hesapGizli=v['privateAccount']==true;
+      profilGoruntuleme=(v['profileViewPermission']??'all').toString();
       profilArama=v['discoverableProfile']!=false;
       aktiflik=v['showActivityStatus']!=false;
       profilPaylasArkadas=v['profileShareFriendsOnly']==true;
@@ -6432,6 +6437,13 @@ class _TercihlerPageState extends State<TercihlerPage> {
       case 'Gizlilik':
         return [
           satir('Gizli hesap','Yeni takipçiler onay bekler',hesapGizli,(v){setState(()=>hesapGizli=v);kaydet('privateAccount',v);}),
+          const Padding(padding:EdgeInsets.fromLTRB(22,14,22,4),child:Text('Profili kimler görüntüleyebilir?',style:TextStyle(fontWeight:FontWeight.w900))),
+          for(final e in const [('all','Herkes'),('followers','Takipçilerim'),('friends','Arkadaşlarım')])
+            RadioListTile<String>(
+              value:e.$1,groupValue:profilGoruntuleme,
+              title:Text(e.$2),
+              onChanged:(v)async{if(v==null)return;setState(()=>profilGoruntuleme=v);await kaydetMetin('profileViewPermission',v);},
+            ),
           satir('Profil aramalarında görün','Kullanıcılar seni adınla bulabilsin',profilArama,(v){setState(()=>profilArama=v);kaydet('discoverableProfile',v);}),
           satir('Aktiflik durumunu göster','Arkadaşların son görülme bilgini görebilsin',aktiflik,(v){setState(()=>aktiflik=v);kaydet('showActivityStatus',v);}),
           satir('Profil paylaşımını arkadaşlarla sınırla','Profil bağlantını yalnızca arkadaşların paylaşabilsin',profilPaylasArkadas,(v){setState(()=>profilPaylasArkadas=v);kaydet('profileShareFriendsOnly',v);}),
