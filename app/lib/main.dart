@@ -5252,13 +5252,58 @@ class SohbetBilgiPage extends StatelessWidget{
     final me=FirebaseAuth.instance.currentUser?.uid;if(me==null)return;
     final ref=FirebaseFirestore.instance.collection('users').doc(me),d=await ref.get(),v=d.data()??<String,dynamic>{},kisitli=List<String>.from(v['restrictedUsers']??const[]).contains(uid);
     if(!context.mounted)return;
-    final onay=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(backgroundColor:Colors.white,title:Text(kisitli?'Kısıtlamayı kaldır':'$ad kısıtlansın mı?'),content:Text(kisitli?'Bu kişinin bildirimleri tekrar normal şekilde gelebilir.':'Bu kişiden gelen etkileşim ve mesaj bildirimleri sessizce kısıtlanır. Engelleme değildir; sohbet tamamen kapanmaz.'),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),FilledButton(onPressed:()=>Navigator.pop(c,true),child:Text(kisitli?'Kısıtlamayı kaldır':'Kısıtla'))]))??false;
+    final onay=await showDialog<bool>(context:context,builder:(c)=>Theme(
+      data:ThemeData.light().copyWith(dialogTheme:const DialogThemeData(backgroundColor:Colors.white)),
+      child:AlertDialog(
+        backgroundColor:Colors.white,
+        surfaceTintColor:Colors.white,
+        title:Text(kisitli?'Kısıtlamayı kaldır':'$ad kısıtlansın mı?',style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w800)),
+        content:Text(kisitli?'Bu kişinin bildirimleri tekrar normal şekilde gelebilir.':'Bu kişiden gelen etkileşim ve mesaj bildirimleri sessizce kısıtlanır. Engelleme değildir; sohbet tamamen kapanmaz.',style:const TextStyle(color:Colors.black87,height:1.35)),
+        actions:[
+          TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç',style:TextStyle(color:mor))),
+          FilledButton(onPressed:()=>Navigator.pop(c,true),child:Text(kisitli?'Kısıtlamayı kaldır':'Kısıtla',style:const TextStyle(color:Colors.white))),
+        ],
+      ),
+    ))??false;
     if(!onay)return;
     await ref.set({'restrictedUsers':kisitli?FieldValue.arrayRemove([uid]):FieldValue.arrayUnion([uid])},SetOptions(merge:true));
     if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(kisitli?'Kısıtlama kaldırıldı.':'Kullanıcı kısıtlandı. Bildirimleri sessizce filtrelenecek.')));
   }
-  Future<void> engelle(BuildContext context)async{final ok=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(backgroundColor:Colors.white,title:Text('$ad engellensin mi?'),content:const Text('Bu kullanıcı sana mesaj gönderemez ve profilini göremez.'),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),FilledButton(style:FilledButton.styleFrom(backgroundColor:Colors.red),onPressed:()=>Navigator.pop(c,true),child:const Text('Engelle'))]))??false;if(ok&&context.mounted)await kullaniciyiEngelle(context,uid);}
-  Future<void> sohbetiSil(BuildContext context)async{final me=FirebaseAuth.instance.currentUser?.uid;if(me==null)return;final ok=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(backgroundColor:Colors.white,title:const Text('Sohbet listeden kaldırılsın mı?'),content:const Text('Bu işlem yalnızca senin gelen kutunu etkiler.'),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),FilledButton(style:FilledButton.styleFrom(backgroundColor:Colors.red),onPressed:()=>Navigator.pop(c,true),child:const Text('Kaldır'))]))??false;if(!ok)return;await FirebaseFirestore.instance.collection('chats').doc(chatId).set({'hiddenFor':FieldValue.arrayUnion([me])},SetOptions(merge:true));if(context.mounted)Navigator.popUntil(context,(r)=>r.isFirst);}
+  Future<void> engelle(BuildContext context)async{
+    final ok=await showDialog<bool>(context:context,builder:(c)=>Theme(
+      data:ThemeData.light().copyWith(dialogTheme:const DialogThemeData(backgroundColor:Colors.white)),
+      child:AlertDialog(
+        backgroundColor:Colors.white,
+        surfaceTintColor:Colors.white,
+        title:Text('$ad engellensin mi?',style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w800)),
+        content:const Text('Bu kullanıcı sana mesaj gönderemez ve profilini göremez.',style:TextStyle(color:Colors.black87,height:1.35)),
+        actions:[
+          TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç',style:TextStyle(color:mor))),
+          FilledButton(style:FilledButton.styleFrom(backgroundColor:Colors.red,foregroundColor:Colors.white),onPressed:()=>Navigator.pop(c,true),child:const Text('Engelle')),
+        ],
+      ),
+    ))??false;
+    if(ok&&context.mounted)await kullaniciyiEngelle(context,uid);
+  }
+  Future<void> sohbetiSil(BuildContext context)async{
+    final me=FirebaseAuth.instance.currentUser?.uid;if(me==null)return;
+    final ok=await showDialog<bool>(context:context,builder:(c)=>Theme(
+      data:ThemeData.light().copyWith(dialogTheme:const DialogThemeData(backgroundColor:Colors.white)),
+      child:AlertDialog(
+        backgroundColor:Colors.white,
+        surfaceTintColor:Colors.white,
+        title:const Text('Sohbet listeden kaldırılsın mı?',style:TextStyle(color:Colors.black87,fontWeight:FontWeight.w800)),
+        content:const Text('Bu işlem yalnızca senin gelen kutunu etkiler. Karşı tarafın sohbeti silinmez.',style:TextStyle(color:Colors.black87,height:1.35)),
+        actions:[
+          TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç',style:TextStyle(color:mor))),
+          FilledButton(style:FilledButton.styleFrom(backgroundColor:Colors.red,foregroundColor:Colors.white),onPressed:()=>Navigator.pop(c,true),child:const Text('Kaldır')),
+        ],
+      ),
+    ))??false;
+    if(!ok)return;
+    await FirebaseFirestore.instance.collection('chats').doc(chatId).set({'hiddenFor':FieldValue.arrayUnion([me])},SetOptions(merge:true));
+    if(context.mounted)Navigator.popUntil(context,(r)=>r.isFirst);
+  }
 
   Future<void> arkadasEkle(BuildContext context)async{
     final me=FirebaseAuth.instance.currentUser?.uid;if(me==null||me==uid)return;
