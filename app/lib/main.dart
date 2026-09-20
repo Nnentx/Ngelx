@@ -686,6 +686,48 @@ class _SifreYenilePageState extends State<SifreYenilePage> {
   bool yukleniyor=false;
   @override void initState(){super.initState();email=TextEditingController(text:widget.baslangicEposta);}
   @override void dispose(){email.dispose();super.dispose();}
+  Future<void> _okunduGuncelle()async{
+    final ben=uid;if(ben==null)return;
+    try{
+      final ref=FirebaseFirestore.instance.collection('chats').doc(widget.chatId);
+      final d=await ref.get();
+      if(!d.exists)return;
+      final izin=d.data()?['readReceipts_$ben']!=false;
+      await ref.set({
+        'unread_$ben':0,
+        if(izin)'lastReadAt_$ben':FieldValue.serverTimestamp(),
+      },SetOptions(merge:true));
+    }catch(_){}
+  }
+
+  void mesajDegisti(String deger){
+    mentionAra(deger);
+    final ben=uid;if(ben==null)return;
+    final ref=FirebaseFirestore.instance.collection('chats').doc(widget.chatId);
+    yaziyorZamanlayici?.cancel();
+    if(deger.trim().isEmpty){
+      if(yaziyorGonderildi){
+        yaziyorGonderildi=false;
+        unawaited(ref.set({'typing_$ben':false},SetOptions(merge:true)));
+      }
+      return;
+    }
+    if(!yaziyorGonderildi){
+      yaziyorGonderildi=true;
+      unawaited(ref.get().then((d){
+        if(d.data()?['typingIndicator_$ben']!=false){
+          return ref.set({'typing_$ben':true,'typingAt_$ben':FieldValue.serverTimestamp()},SetOptions(merge:true));
+        }
+      }));
+    }else{
+      unawaited(ref.set({'typingAt_$ben':FieldValue.serverTimestamp()},SetOptions(merge:true)));
+    }
+    yaziyorZamanlayici=Timer(const Duration(seconds:2),(){
+      yaziyorGonderildi=false;
+      unawaited(ref.set({'typing_$ben':false},SetOptions(merge:true)));
+    });
+  }
+
   Future<void> gonder() async {
     final adres=email.text.trim();
     if(!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(adres)){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Geçerli bir e-posta adresi yaz.')));return;}
@@ -5078,7 +5120,8 @@ class SohbetPage extends StatefulWidget {final String chatId,digerUid,ad,foto;co
 class _SohbetPageState extends State<SohbetPage> {
   final mesaj=TextEditingController(),liste=ScrollController();
   final List<Map<String,String>> mentionOnerileri=[];
-  bool gonderiliyor=false,aramaBaslatiliyor=false;
+  bool gonderiliyor=false,aramaBaslatiliyor=false,yaziyorGonderildi=false;
+  Timer? yaziyorZamanlayici;
   bool gizliKelimeFiltresi=true;
   List<String> gizliKelimeListesi=[];
   String? yanitMesajId,yanitMetin,yanitGonderenUid;
@@ -5136,6 +5179,9 @@ class _SohbetPageState extends State<SohbetPage> {
       await ref.set({'lastMessage':t,'updatedAt':FieldValue.serverTimestamp(),'unread_${widget.digerUid}':FieldValue.increment(1)},SetOptions(merge:true));
       await uygulamaBildirimiGonder(toUid:widget.digerUid,fromUid:uid!,tur:'message',metin:'Yeni bir mesajın var',belgeId:widget.chatId);
       mesaj.clear();
+      yaziyorZamanlayici?.cancel();
+      yaziyorGonderildi=false;
+      unawaited(ref.set({'typing_$uid':false},SetOptions(merge:true)));
       if(mounted)setState((){yanitMesajId=null;yanitMetin=null;yanitGonderenUid=null;});
     } catch(e) {
       if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Mesaj gönderilemedi, tekrar dene: $e')));
@@ -5302,7 +5348,7 @@ class _SohbetPageState extends State<SohbetPage> {
   }
 
 
-  Widget ozelMesajKarti(QueryDocumentSnapshot<Map<String,dynamic>> d,{double fontSize=16}){
+  Widget ozelMesajKarti(QueryDocumentSnapshot<Map<String,dynamic>> d,{double fontSize=16,bool goruldu=false}){
     final v=d.data(),ben=v['senderId']==uid,photo=v['type']=='photo',shared=v['type']=='shared_content';
     final metin=(v['text']??v['message']??v['content']??'').toString().trim(),saat=mesajSaati(v['createdAt']);
     final gizlenecek=gizliKelimeFiltresi&&metin.isNotEmpty&&gizliKelimeListesi.any((x)=>x.trim().isNotEmpty&&metin.toLowerCase().contains(x.toLowerCase()));
@@ -5356,7 +5402,13 @@ class _SohbetPageState extends State<SohbetPage> {
                 child:Text(e.value>1?e.key+' '+e.value.toString():e.key,style:const TextStyle(fontSize:15)),
               )).toList()),
             ),
-            if(saat.isNotEmpty)Padding(padding:const EdgeInsets.only(top:4),child:Text(saat,style:TextStyle(fontSize:10,color:ben?Colors.white70:Colors.black45))),
+            if(saat.isNotEmpty)Padding(padding:const EdgeInsets.only(top:4),child:Row(mainAxisSize:MainAxisSize.min,children:[
+              Text(saat,style:TextStyle(fontSize:10,color:ben?Colors.white70:Colors.black45)),
+              if(goruldu)...[
+                const SizedBox(width:5),
+                Text('Görüldü',style:TextStyle(fontSize:10,color:ben?Colors.white70:Colors.blueGrey)),
+              ],
+            ])),
           ]),
         ),
       ),
@@ -5446,8 +5498,7 @@ class _SohbetPageState extends State<SohbetPage> {
   void initState(){
     super.initState();
     if(uid!=null){
-      final ref=FirebaseFirestore.instance.collection('chats').doc(widget.chatId);
-      ref.get().then((d){if(d.exists)ref.set({'unread_$uid':0},SetOptions(merge:true));});
+      unawaited(_okunduGuncelle());
       FirebaseFirestore.instance.collection('users').doc(uid).get().then((d){
         final v=d.data()??<String,dynamic>{};
         if(mounted)setState((){
@@ -5459,7 +5510,12 @@ class _SohbetPageState extends State<SohbetPage> {
   }
 
   @override
-  void dispose(){mesaj.dispose();liste.dispose();super.dispose();}
+  void dispose(){
+    yaziyorZamanlayici?.cancel();
+    final ben=uid;
+    if(ben!=null)unawaited(FirebaseFirestore.instance.collection('chats').doc(widget.chatId).set({'typing_$ben':false},SetOptions(merge:true)));
+    mesaj.dispose();liste.dispose();super.dispose();
+  }
   void sonaGit(){WidgetsBinding.instance.addPostFrameCallback((_){if(liste.hasClients)liste.animateTo(liste.position.maxScrollExtent,duration:const Duration(milliseconds:240),curve:Curves.easeOut);});}
 
   @override
@@ -5486,8 +5542,38 @@ class _SohbetPageState extends State<SohbetPage> {
     body:StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(stream:FirebaseFirestore.instance.collection('chats').doc(widget.chatId).snapshots(),builder:(_,tema){final veri=tema.data?.data()??<String,dynamic>{},ham=veri['theme_$uid'];final arkaPlan=ham is int?Color(ham):Colors.white,arkaPlanUrl=(veri['backgroundUrl_$uid']??'').toString(),hizliEmoji=(veri['quickEmoji_$uid']??'👍').toString(),arkaPlanOpaklik=(veri['backgroundOpacity_$uid'] is num?(veri['backgroundOpacity_$uid'] as num).toDouble():.30).clamp(.05,.85).toDouble(),mesajYaziBoyutu=(veri['messageFontSize_$uid'] is num?(veri['messageFontSize_$uid'] as num).toDouble():16.0).clamp(12.0,22.0).toDouble();return Container(decoration:BoxDecoration(color:arkaPlan,image:arkaPlanUrl.isEmpty?null:DecorationImage(image:NetworkImage(arkaPlanUrl),fit:BoxFit.cover,opacity:arkaPlanOpaklik)),child:Column(children:[
       Expanded(child:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
         stream:FirebaseFirestore.instance.collection('chats').doc(widget.chatId).collection('messages').orderBy('createdAt').snapshots(),
-        builder:(_,s){if(uid!=null&&s.hasData)FirebaseFirestore.instance.collection('chats').doc(widget.chatId).set({'unread_$uid':0},SetOptions(merge:true));if(s.hasData)sonaGit();return ListView(controller:liste,padding:const EdgeInsets.all(12),children:[sohbetUstBilgi(),...(s.data?.docs??[]).map((d)=>ozelMesajKarti(d,fontSize:mesajYaziBoyutu))]);},
+        builder:(_,s){
+          final docs=s.data?.docs??<QueryDocumentSnapshot<Map<String,dynamic>>>[];
+          if(uid!=null&&s.hasData)unawaited(_okunduGuncelle());
+          if(s.hasData)sonaGit();
+          QueryDocumentSnapshot<Map<String,dynamic>>? sonBenim;
+          for(final d in docs){if(d.data()['senderId']==uid)sonBenim=d;}
+          final digerOkuma=veri['readReceipts_${widget.digerUid}']!=false?veri['lastReadAt_${widget.digerUid}']:null;
+          return ListView(
+            controller:liste,padding:const EdgeInsets.all(12),
+            children:[
+              sohbetUstBilgi(),
+              ...docs.map((d){
+                bool goruldu=false;
+                if(sonBenim?.id==d.id&&digerOkuma is Timestamp&&d.data()['createdAt'] is Timestamp){
+                  goruldu=digerOkuma.millisecondsSinceEpoch>=(d.data()['createdAt'] as Timestamp).millisecondsSinceEpoch;
+                }
+                return ozelMesajKarti(d,fontSize:mesajYaziBoyutu,goruldu:goruldu);
+              }),
+            ],
+          );
+        },
       )),
+      Builder(builder:(_){
+        final yaziyor=veri['typing_${widget.digerUid}']==true;
+        final at=veri['typingAt_${widget.digerUid}'];
+        final taze=at is Timestamp&&DateTime.now().difference(at.toDate()).inSeconds<6;
+        if(!yaziyor||!taze)return const SizedBox.shrink();
+        return Padding(
+          padding:const EdgeInsets.fromLTRB(18,4,18,2),
+          child:Align(alignment:Alignment.centerLeft,child:Text('${widget.ad} yazıyor…',style:const TextStyle(color:Colors.black54,fontSize:12,fontStyle:FontStyle.italic))),
+        );
+      }),
       if(mentionOnerileri.isNotEmpty)Container(color:Colors.white.withValues(alpha:.96),child:Column(mainAxisSize:MainAxisSize.min,children:mentionOnerileri.map((u)=>ListTile(dense:true,leading:CircleAvatar(radius:15,child:Icon(u['uid']=='all'?Icons.groups:Icons.person,size:17)),title:Text(u['name']??'Kullanıcı'),subtitle:Text('@${u['username']??''}'),onTap:()=>mentionEkle(u['username']??''))).toList())),
       if(yanitMetin!=null)Container(
         margin:const EdgeInsets.fromLTRB(10,4,10,2),
@@ -5516,7 +5602,7 @@ class _SohbetPageState extends State<SohbetPage> {
           IconButton(onPressed:()=>medyaGonder(ImageSource.camera),icon:const Icon(Icons.camera_alt,color:Color(0xFF1836D8))),
           IconButton(onPressed:()=>medyaGonder(ImageSource.gallery),icon:const Icon(Icons.photo_library,color:Color(0xFF1836D8))),
           Expanded(child:TextField(
-            controller:mesaj,onChanged:mentionAra,onSubmitted:(_)=>gonder(),
+            controller:mesaj,onChanged:mesajDegisti,onSubmitted:(_)=>gonder(),
             decoration:InputDecoration(
               hintText:'Mesaj',filled:true,fillColor:const Color(0xFFF3F4F6),
               contentPadding:const EdgeInsets.symmetric(horizontal:16,vertical:10),
@@ -5811,6 +5897,22 @@ class SohbetBilgiPage extends StatelessWidget{
               _bolum('Sohbet bilgisi'),
               _satir(Icons.photo_library_outlined,'Medya, dosya ve bağlantılar',()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupMedyaPage(chatId:chatId)))),
               _satir(Icons.push_pin_outlined,'Sabitlenmiş mesajlar',()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>SabitlenenGrupMesajlariPage(chatId:chatId)))),
+              if(me!=null)SwitchListTile(
+                contentPadding:const EdgeInsets.symmetric(horizontal:8),
+                secondary:const Icon(Icons.done_all_rounded,color:Colors.black),
+                title:const Text('Okundu bilgisi',style:TextStyle(color:Colors.black87,fontSize:17)),
+                subtitle:const Text('Mesajları okuduğunda karşı tarafa Görüldü bilgisi gösterilir.',style:TextStyle(color:Colors.black45,fontSize:13)),
+                value:s.data?.data()?['readReceipts_$me']!=false,
+                onChanged:(x)=>FirebaseFirestore.instance.collection('chats').doc(chatId).set({'readReceipts_$me':x},SetOptions(merge:true)),
+              ),
+              if(me!=null)SwitchListTile(
+                contentPadding:const EdgeInsets.symmetric(horizontal:8),
+                secondary:const Icon(Icons.more_horiz_rounded,color:Colors.black),
+                title:const Text('Yazma göstergesi',style:TextStyle(color:Colors.black87,fontSize:17)),
+                subtitle:const Text('Mesaj yazarken karşı taraf “yazıyor” bilgisini görebilir.',style:TextStyle(color:Colors.black45,fontSize:13)),
+                value:s.data?.data()?['typingIndicator_$me']!=false,
+                onChanged:(x)=>FirebaseFirestore.instance.collection('chats').doc(chatId).set({'typingIndicator_$me':x,if(!x)'typing_$me':false},SetOptions(merge:true)),
+              ),
               const SizedBox(height:18),
               _bolum('İşlemler'),
               _satir(Icons.notifications_off_outlined,'Sessize al',()=>sessizeAl(context),alt:'Bu sohbetin bildirimlerini yönet'),
