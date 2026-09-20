@@ -2777,10 +2777,10 @@ class _YeniYorumlarState extends State<Yorumlar> {
       });
 
       if(yanitId!=null&&yanitId.isNotEmpty){
-        unawaited(ref.doc(yanitId).get().then((anaYorum){
+        unawaited(ref.doc(yanitId).get().then((anaYorum)async{
           final hedefUid=(anaYorum.data()?['userId']??'').toString();
           if(hedefUid.isEmpty||hedefUid==user.uid)return;
-          return uygulamaBildirimiGonder(
+          await uygulamaBildirimiGonder(
             toUid:hedefUid,
             fromUid:user.uid,
             tur:'interaction',
