@@ -257,7 +257,35 @@ class IcerikBaglantiPage extends StatelessWidget {
 }
 
 class UygulamaDurumKapisi extends StatefulWidget {final Widget child;const UygulamaDurumKapisi({super.key,required this.child});@override State<UygulamaDurumKapisi> createState()=>_UygulamaDurumKapisiState();}
-class _UygulamaDurumKapisiState extends State<UygulamaDurumKapisi>{late Future<DocumentSnapshot<Map<String,dynamic>>> durum;@override void initState(){super.initState();yenile();}void yenile()=>durum=FirebaseFirestore.instance.collection('app_config').doc('status').get().timeout(const Duration(seconds:8));@override Widget build(BuildContext context)=>FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(future:durum,builder:(context,s){if(s.connectionState==ConnectionState.waiting)return const Scaffold(backgroundColor:Colors.white,body:Center(child:CircularProgressIndicator()));if(s.hasError)return widget.child;final v=s.data?.data()??{};if(v['maintenance']!=true)return widget.child;return Theme(data:ThemeData.light(),child:Scaffold(backgroundColor:Colors.white,body:SafeArea(child:Center(child:Padding(padding:const EdgeInsets.all(30),child:Column(mainAxisSize:MainAxisSize.min,children:[const Icon(Icons.engineering_outlined,size:88,color:mor),const SizedBox(height:20),const Text('Kısa bir bakımdayız',style:TextStyle(fontSize:28,fontWeight:FontWeight.w900)),const SizedBox(height:12),Text((v['message']??'Ngel X’i daha iyi hale getiriyoruz. Biraz sonra tekrar dene.').toString(),textAlign:TextAlign.center,style:const TextStyle(fontSize:16,color:Colors.black54)),const SizedBox(height:24),FilledButton.icon(onPressed:()=>setState(yenile),icon:const Icon(Icons.refresh),label:const Text('Tekrar dene'))]))))));});}
+class _UygulamaDurumKapisiState extends State<UygulamaDurumKapisi> with WidgetsBindingObserver{
+  late Future<DocumentSnapshot<Map<String,dynamic>>> durum;
+  @override void initState(){super.initState();WidgetsBinding.instance.addObserver(this);yenile();unawaited(_presence(true));}
+  @override void dispose(){WidgetsBinding.instance.removeObserver(this);unawaited(_presence(false));super.dispose();}
+  void yenile()=>durum=FirebaseFirestore.instance.collection('app_config').doc('status').get().timeout(const Duration(seconds:8));
+  Future<void> _presence(bool online)async{
+    final u=FirebaseAuth.instance.currentUser;if(u==null||u.isAnonymous)return;
+    try{await FirebaseFirestore.instance.collection('users').doc(u.uid).set({'isOnline':online,'lastSeenAt':FieldValue.serverTimestamp()},SetOptions(merge:true));}catch(_){}
+  }
+  @override void didChangeAppLifecycleState(AppLifecycleState state){
+    if(state==AppLifecycleState.resumed)unawaited(_presence(true));
+    if(state==AppLifecycleState.inactive||state==AppLifecycleState.paused||state==AppLifecycleState.detached||state==AppLifecycleState.hidden)unawaited(_presence(false));
+  }
+  @override Widget build(BuildContext context)=>FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(
+    future:durum,
+    builder:(context,s){
+      if(s.connectionState==ConnectionState.waiting)return const Scaffold(backgroundColor:Colors.white,body:Center(child:CircularProgressIndicator()));
+      if(s.hasError)return widget.child;
+      final v=s.data?.data()??{};
+      if(v['maintenance']!=true)return widget.child;
+      return Theme(data:ThemeData.light(),child:Scaffold(backgroundColor:Colors.white,body:SafeArea(child:Center(child:Padding(padding:const EdgeInsets.all(30),child:Column(mainAxisSize:MainAxisSize.min,children:[
+        const Icon(Icons.engineering_outlined,size:88,color:mor),const SizedBox(height:20),
+        const Text('Kısa bir bakımdayız',style:TextStyle(fontSize:28,fontWeight:FontWeight.w900)),const SizedBox(height:12),
+        Text((v['message']??'Ngel X’i daha iyi hale getiriyoruz. Biraz sonra tekrar dene.').toString(),textAlign:TextAlign.center,style:const TextStyle(fontSize:16,color:Colors.black54)),const SizedBox(height:24),
+        FilledButton.icon(onPressed:()=>setState(yenile),icon:const Icon(Icons.refresh),label:const Text('Tekrar dene')),
+      ]))))));
+    },
+  );
+}
 
 class GirisPage extends StatefulWidget {
   const GirisPage({super.key});
@@ -5725,6 +5753,42 @@ class AktivitePage extends StatelessWidget {
 String zamanKisa(dynamic t){if(t is! Timestamp)return 'Şimdi';final f=DateTime.now().difference(t.toDate());if(f.inMinutes<1)return 'Şimdi';if(f.inHours<1)return '${f.inMinutes} dk önce';if(f.inDays<1)return '${f.inHours} sa önce';return '${f.inDays} gün önce';}
 String mesajSaati(dynamic t){if(t is! Timestamp)return '';final d=t.toDate().toLocal();final s=d.minute.toString().padLeft(2,'0');return '${d.hour}:$s';}
 
+class OrtakGruplarPage extends StatelessWidget{
+  final String digerUid;
+  const OrtakGruplarPage({super.key,required this.digerUid});
+  @override Widget build(BuildContext context){
+    final me=FirebaseAuth.instance.currentUser?.uid;
+    return Theme(data:ThemeData.light(),child:Scaffold(
+      backgroundColor:Colors.white,
+      appBar:AppBar(title:const Text('Ortak gruplar',style:TextStyle(fontWeight:FontWeight.w900))),
+      body:me==null?const Center(child:Text('Oturum bulunamadı.')):StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
+        stream:FirebaseFirestore.instance.collection('chats').where('members',arrayContains:me).snapshots(),
+        builder:(_,s){
+          if(s.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator(color:mor));
+          final docs=(s.data?.docs??[]).where((d){
+            final v=d.data(),uyeler=List<String>.from(v['members']??const[]);
+            return v['isGroup']==true&&uyeler.contains(digerUid);
+          }).toList();
+          if(docs.isEmpty)return const Center(child:Text('Ortak grubunuz yok.',style:TextStyle(color:Colors.black54)));
+          return ListView.separated(
+            padding:const EdgeInsets.all(12),itemCount:docs.length,separatorBuilder:(_,__)=>const Divider(),
+            itemBuilder:(_,i){
+              final d=docs[i],v=d.data(),foto=(v['groupPhotoUrl']??'').toString(),ad=(v['groupName']??'Grup').toString();
+              return ListTile(
+                leading:CircleAvatar(backgroundImage:foto.isEmpty?null:NetworkImage(foto),child:foto.isEmpty?const Icon(Icons.groups):null),
+                title:Text(ad,style:const TextStyle(fontWeight:FontWeight.w800)),
+                subtitle:Text(List<String>.from(v['members']??const[]).length.toString()+' üye'),
+                trailing:const Icon(Icons.chevron_right),
+                onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupSohbetPage(chatId:d.id,ad:ad,foto:foto))),
+              );
+            },
+          );
+        },
+      ),
+    ));
+  }
+}
+
 class KullaniciProfilPage extends StatelessWidget {
   final String uid;
   const KullaniciProfilPage({super.key, required this.uid});
@@ -5757,6 +5821,13 @@ class KullaniciProfilPage extends StatelessWidget {
               Text('@' + (v['username'] ?? 'ngelx').toString(), textAlign: TextAlign.center, style: const TextStyle(color: Colors.black54)),
               const SizedBox(height: 16),
               Text((v['bio'] ?? '').toString(), textAlign: TextAlign.center),
+              const SizedBox(height: 10),
+              Wrap(alignment:WrapAlignment.center,spacing:12,runSpacing:6,children:[
+                if((v['createdAt']??v['joinedAt']) is Timestamp)
+                  Text('NgelX’e katıldı: '+((v['createdAt']??v['joinedAt']) as Timestamp).toDate().year.toString(),style:const TextStyle(color:Colors.black54,fontSize:12)),
+                if(v['showActivityStatus']!=false)
+                  Text(v['isOnline']==true?'● Çevrimiçi':(v['lastSeenAt'] is Timestamp?'Son görülme: '+zamanKisa(v['lastSeenAt']):'Çevrimdışı'),style:TextStyle(color:v['isOnline']==true?Colors.green:Colors.black54,fontSize:12,fontWeight:v['isOnline']==true?FontWeight.w700:FontWeight.w400)),
+              ]),
               const SizedBox(height: 14),
               Row(mainAxisAlignment:MainAxisAlignment.spaceEvenly,children:[
                 _profilSayac(context,'${List<dynamic>.from(v['following']??const[]).length}','Takip',()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciListesiPage(uid:uid,alan:'following',baslik:'Takip')))),
@@ -5817,6 +5888,12 @@ class KullaniciProfilPage extends StatelessWidget {
                     if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Arkadaşlık isteği gönderildi ✅')));
                   },
                   child: Text(arkadaslar.contains(uid) ? 'Arkadaşsınız' : 'Arkadaşlık isteği gönder'),
+                )),
+                const SizedBox(height:10),
+                SizedBox(width:double.infinity,child:OutlinedButton.icon(
+                  onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>OrtakGruplarPage(digerUid:uid))),
+                  icon:const Icon(Icons.groups_2_outlined),
+                  label:const Text('Ortak gruplar'),
                 )),
               ],
               const SizedBox(height: 20),
