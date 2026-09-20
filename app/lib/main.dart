@@ -5995,8 +5995,8 @@ class _SohbetPageState extends State<SohbetPage> {
     final odaAdi='chat_${widget.chatId}_${DateTime.now().millisecondsSinceEpoch}';
     final ref=FirebaseFirestore.instance.collection('chats').doc(widget.chatId);
     try{
-      await ref.set({
-        'members':<String>[ben,widget.digerUid],
+      final mevcut=await ref.get().timeout(const Duration(seconds:8));
+      final aramaVerisi=<String,dynamic>{
         'callStatus':'ringing',
         'callRoomName':odaAdi,
         'callStartedBy':ben,
@@ -6004,7 +6004,9 @@ class _SohbetPageState extends State<SohbetPage> {
         'callTitle':widget.ad,
         'callParticipants':<String>[ben],
         'callCreatedAt':FieldValue.serverTimestamp(),
-      },SetOptions(merge:true)).timeout(const Duration(seconds:8));
+      };
+      if(!mevcut.exists)aramaVerisi['members']=<String>[ben,widget.digerUid];
+      await ref.set(aramaVerisi,SetOptions(merge:true)).timeout(const Duration(seconds:8));
       if(!mounted)return;
       unawaited(uygulamaBildirimiGonder(
         toUid:widget.digerUid,
