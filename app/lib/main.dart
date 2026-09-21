@@ -5000,8 +5000,8 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
     if(tamam){mesaj.clear();etiketlenenUidler.clear();}
     if(mounted)setState(()=>mesajGonderiliyor=false);
   }
-  Future<void> medyaGonder(ImageSource kaynak)async{final x=await ImagePicker().pickImage(source:kaynak,imageQuality:76,maxWidth:1280);if(x==null)return;try{final yol='groups/${widget.chatId}/${DateTime.now().millisecondsSinceEpoch}.jpg';await supa.Supabase.instance.client.storage.from('ngelx-media').upload(yol,File(x.path)).timeout(const Duration(seconds:12));final url=supa.Supabase.instance.client.storage.from('ngelx-media').getPublicUrl(yol);await payloadGonder({'type':'photo','mediaUrl':url},'📷 Fotoğraf');}catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Medya hizmeti şu anda kullanılamıyor. Yazılı mesaj göndermeye devam edebilirsin.')));}}
-  Future<void> gifGonder()async{const tur=XTypeGroup(label:'GIF',extensions:['gif']);final x=await openFile(acceptedTypeGroups:[tur]);if(x==null)return;try{final yol='groups/${widget.chatId}/${DateTime.now().millisecondsSinceEpoch}.gif';final bytes=await x.readAsBytes().timeout(const Duration(seconds:8));await supa.Supabase.instance.client.storage.from('ngelx-media').uploadBinary(yol,bytes,fileOptions:const supa.FileOptions(contentType:'image/gif')).timeout(const Duration(seconds:12));final url=supa.Supabase.instance.client.storage.from('ngelx-media').getPublicUrl(yol);await payloadGonder({'type':'gif','mediaUrl':url},'GIF');}catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Medya hizmeti şu anda kullanılamıyor. GIF gönderilemedi.')));}}
+  Future<void> medyaGonder(ImageSource kaynak)async{final ben=uid;if(ben==null)return;final x=await ImagePicker().pickImage(source:kaynak,imageQuality:76,maxWidth:1280);if(x==null)return;try{final yol='groups/$ben/${widget.chatId}/${DateTime.now().millisecondsSinceEpoch}.jpg';final url=await ngelxMedyaDosyaYukle(yol,File(x.path),contentType:'image/jpeg');await payloadGonder({'type':'photo','mediaUrl':url},'📷 Fotoğraf');}catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Medya hizmeti şu anda kullanılamıyor. Yazılı mesaj göndermeye devam edebilirsin.')));}}
+  Future<void> gifGonder()async{final ben=uid;if(ben==null)return;const tur=XTypeGroup(label:'GIF',extensions:['gif']);final x=await openFile(acceptedTypeGroups:[tur]);if(x==null)return;try{final yol='groups/$ben/${widget.chatId}/${DateTime.now().millisecondsSinceEpoch}.gif';final bytes=await x.readAsBytes().timeout(const Duration(seconds:8));final url=await ngelxMedyaBaytYukle(yol,bytes,contentType:'image/gif');await payloadGonder({'type':'gif','mediaUrl':url},'GIF');}catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Medya hizmeti şu anda kullanılamıyor. GIF gönderilemedi.')));}}
 
   Future<void> anketOlustur()async{final soru=TextEditingController(),secenekler=[TextEditingController(),TextEditingController()];final sonuc=await showDialog<Map<String,dynamic>>(context:context,builder:(c)=>StatefulBuilder(builder:(c,setP)=>AlertDialog(backgroundColor:Colors.white,title:const Text('Anket oluştur'),content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[TextField(controller:soru,maxLength:180,decoration:const InputDecoration(labelText:'Soru')),for(int i=0;i<secenekler.length;i++)TextField(controller:secenekler[i],maxLength:80,decoration:InputDecoration(labelText:'${i+1}. seçenek',suffixIcon:secenekler.length>2?IconButton(onPressed:(){secenekler[i].dispose();setP(()=>secenekler.removeAt(i));},icon:const Icon(Icons.close)):null)),if(secenekler.length<6)TextButton.icon(onPressed:()=>setP(()=>secenekler.add(TextEditingController())),icon:const Icon(Icons.add),label:const Text('Seçenek ekle'))])),actions:[TextButton(onPressed:()=>Navigator.pop(c),child:const Text('Vazgeç')),FilledButton(onPressed:(){final q=soru.text.trim(),opts=secenekler.map((e)=>e.text.trim()).where((e)=>e.isNotEmpty).toList();if(q.isNotEmpty&&opts.length>=2)Navigator.pop(c,{'question':q,'options':opts});},child:const Text('Gönder'))])));if(sonuc!=null)await payloadGonder({'type':'poll','pollQuestion':sonuc['question'],'pollOptions':sonuc['options'],'pollVotes':<String,dynamic>{}},'📊 Anket: ${sonuc['question']}');soru.dispose();for(final c in secenekler)c.dispose();}
 
@@ -5534,9 +5534,9 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
     }
     final x=await ImagePicker().pickImage(source:secim=='camera'?ImageSource.camera:ImageSource.gallery,imageQuality:85);
     if(x==null)return;
-    final yol='groups/${widget.chatId}/avatar_${DateTime.now().millisecondsSinceEpoch}.jpg';
-    await supa.Supabase.instance.client.storage.from('ngelx-media').upload(yol,File(x.path));
-    final url=supa.Supabase.instance.client.storage.from('ngelx-media').getPublicUrl(yol);
+    final yukleyen=FirebaseAuth.instance.currentUser?.uid;if(yukleyen==null)return;
+    final yol='groups/$yukleyen/${widget.chatId}/avatar_${DateTime.now().millisecondsSinceEpoch}.jpg';
+    final url=await ngelxMedyaDosyaYukle(yol,File(x.path),contentType:'image/jpeg');
     await ref.update({'groupPhotoUrl':url});
     await sistemMesaji('Yönetici grup fotoğrafını değiştirdi.');
   }
@@ -5989,12 +5989,11 @@ class _SohbetPageState extends State<SohbetPage> {
       if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(hazirlik.engel!)));
       return;
     }
-    final x=await ImagePicker().pickImage(source:kaynak,imageQuality:78);
+    final x=await ImagePicker().pickImage(source:kaynak,imageQuality:76,maxWidth:1280);
     if(x==null)return;
     try{
-      final yol='chats/${widget.chatId}/${DateTime.now().millisecondsSinceEpoch}.jpg';
-      await supa.Supabase.instance.client.storage.from('ngelx-media').upload(yol,File(x.path)).timeout(const Duration(seconds:12));
-      final url=supa.Supabase.instance.client.storage.from('ngelx-media').getPublicUrl(yol);
+      final yol='chats/$ben/${widget.chatId}/${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final url=await ngelxMedyaDosyaYukle(yol,File(x.path),contentType:'image/jpeg');
       final ref=FirebaseFirestore.instance.collection('chats').doc(widget.chatId);
       final sureHam=hazirlik.sohbet['disappearingSeconds'];
       final sure=sureHam is num?sureHam.toInt():0;
@@ -6579,8 +6578,7 @@ class SohbetBilgiPage extends StatelessWidget{
     final x=await ImagePicker().pickImage(source:kaynak,imageQuality:76,maxWidth:1280);if(x==null)return;
     try{
       final yol='chat-backgrounds/'+me+'/'+chatId+'_'+DateTime.now().millisecondsSinceEpoch.toString()+'.jpg';
-      await supa.Supabase.instance.client.storage.from('ngelx-media').upload(yol,File(x.path));
-      final url=supa.Supabase.instance.client.storage.from('ngelx-media').getPublicUrl(yol);
+      final url=await ngelxMedyaDosyaYukle(yol,File(x.path),contentType:'image/jpeg');
       await ref.set({'backgroundUrl_$me':url},SetOptions(merge:true));
       if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Özel sohbet arka planın kaydedildi.')));
     }catch(e){
@@ -7744,7 +7742,7 @@ class _DestekPageState extends State<DestekPage>{
   final aciklama=TextEditingController();String kategori='Uygulama hatası';XFile? ekran;bool gonderiliyor=false;
   @override void dispose(){aciklama.dispose();super.dispose();}
   Future<void> ekranSec()async{final x=await ImagePicker().pickImage(source:ImageSource.gallery,imageQuality:75,maxWidth:1440);if(x!=null&&mounted)setState(()=>ekran=x);}
-  Future<void> gonder()async{final u=FirebaseAuth.instance.currentUser;if(u==null)return;if(aciklama.text.trim().length<10){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Sorunu en az 10 karakterle açıkla.')));return;}setState(()=>gonderiliyor=true);try{String ekranUrl='';if(ekran!=null){final yol='support/${u.uid}/${DateTime.now().millisecondsSinceEpoch}.jpg';await supa.Supabase.instance.client.storage.from('ngelx-media').upload(yol,File(ekran!.path));ekranUrl=supa.Supabase.instance.client.storage.from('ngelx-media').getPublicUrl(yol);}await FirebaseFirestore.instance.collection('support_requests').add({'uid':u.uid,'email':u.email,'category':kategori,'description':aciklama.text.trim(),'screenshotUrl':ekranUrl,'status':'open','createdAt':FieldValue.serverTimestamp()});if(!mounted)return;aciklama.clear();setState(()=>ekran=null);ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Destek talebin gönderildi.')));}catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Talep gönderilemedi: $e')));}finally{if(mounted)setState(()=>gonderiliyor=false);}}
+  Future<void> gonder()async{final u=FirebaseAuth.instance.currentUser;if(u==null)return;if(aciklama.text.trim().length<10){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Sorunu en az 10 karakterle açıkla.')));return;}setState(()=>gonderiliyor=true);try{String ekranUrl='';if(ekran!=null){final yol='support/${u.uid}/${DateTime.now().millisecondsSinceEpoch}.jpg';ekranUrl=await ngelxMedyaDosyaYukle(yol,File(ekran!.path),contentType:'image/jpeg');}await FirebaseFirestore.instance.collection('support_requests').add({'uid':u.uid,'email':u.email,'category':kategori,'description':aciklama.text.trim(),'screenshotUrl':ekranUrl,'status':'open','createdAt':FieldValue.serverTimestamp()});if(!mounted)return;aciklama.clear();setState(()=>ekran=null);ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Destek talebin gönderildi.')));}catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Talep gönderilemedi: $e')));}finally{if(mounted)setState(()=>gonderiliyor=false);}}
   @override Widget build(BuildContext context)=>Theme(data:ThemeData.light().copyWith(scaffoldBackgroundColor:Colors.white,appBarTheme:const AppBarTheme(backgroundColor:Colors.white,foregroundColor:Colors.black,elevation:0),inputDecorationTheme:InputDecorationTheme(filled:true,fillColor:const Color(0xFFF3F4F6),border:OutlineInputBorder(borderRadius:BorderRadius.circular(16),borderSide:BorderSide.none))),child:Scaffold(appBar:AppBar(title:const Text('Destek ve hata bildir')),body:SafeArea(child:ListView(padding:const EdgeInsets.all(20),children:[DropdownButtonFormField<String>(initialValue:kategori,items:['Uygulama hatası','Hesap ve giriş','Güvenlik','Ödeme ve kazanç','Öneri','Diğer'].map((x)=>DropdownMenuItem(value:x,child:Text(x))).toList(),onChanged:(v)=>setState(()=>kategori=v??kategori),decoration:const InputDecoration(labelText:'Konu')),const SizedBox(height:14),TextField(controller:aciklama,minLines:5,maxLines:10,maxLength:1000,decoration:const InputDecoration(labelText:'Sorunu veya isteğini anlat')),const SizedBox(height:12),OutlinedButton.icon(onPressed:gonderiliyor?null:ekranSec,icon:const Icon(Icons.add_photo_alternate_outlined),label:Text(ekran==null?'Ekran görüntüsü ekle':'Ekran görüntüsü seçildi')),const SizedBox(height:20),RenkliButon(yazi:gonderiliyor?'Gönderiliyor...':'Destek talebini gönder',tiklama:gonderiliyor?(){}:gonder)]))));
 }
 
