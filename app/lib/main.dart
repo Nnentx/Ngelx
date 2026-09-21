@@ -1634,7 +1634,7 @@ class HikayeSeridi extends StatelessWidget {
     return SizedBox(
       height: 88,
       child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-        stream: FirebaseFirestore.instance.collection('videos').limit(30).snapshots(),
+        stream: FirebaseFirestore.instance.collection('videos').limit(20).snapshots(),
         builder: (_, snap) {
           if (!snap.hasData) return const SizedBox.shrink();
           return FutureBuilder<List<Map<String, dynamic>>>(
@@ -5675,7 +5675,7 @@ class TamEkranMedyaPage extends StatelessWidget{final String url;const TamEkranM
 
 class GrupMedyaPage extends StatelessWidget{
   final String chatId;const GrupMedyaPage({super.key,required this.chatId});
-  @override Widget build(BuildContext context)=>Theme(data:ThemeData.light(),child:Scaffold(backgroundColor:Colors.white,appBar:AppBar(title:const Text('Medya ve bağlantılar')),body:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(stream:FirebaseFirestore.instance.collection('chats').doc(chatId).collection('messages').orderBy('createdAt',descending:true).snapshots(),builder:(_,s){if(s.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator(color:mor));final docs=(s.data?.docs??[]).where((d){final t=(d.data()['type']??'').toString();return t=='photo'||t=='gif'||t=='shared_content';}).toList();if(docs.isEmpty)return const Center(child:Text('Henüz medya veya bağlantı paylaşılmadı.',style:TextStyle(color:Colors.black54)));return GridView.builder(padding:const EdgeInsets.all(8),itemCount:docs.length,gridDelegate:const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount:3,crossAxisSpacing:6,mainAxisSpacing:6),itemBuilder:(_,i){final v=docs[i].data(),t=(v['type']??'').toString(),url=(v['mediaUrl']??'').toString();if(t=='shared_content')return InkWell(onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>IcerikBaglantiPage(icerikId:(v['contentId']??'').toString()))),child:Container(color:const Color(0xFFF0E8FF),child:const Icon(Icons.link_rounded,color:mor,size:38)));return InkWell(onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>TamEkranMedyaPage(url:url))),child:ClipRRect(borderRadius:BorderRadius.circular(10),child:Image.network(url,fit:BoxFit.cover,errorBuilder:(_,__,___)=>const ColoredBox(color:Color(0xFFF0F1F4),child:Icon(Icons.broken_image_outlined)))));});})));
+  @override Widget build(BuildContext context)=>Theme(data:ThemeData.light(),child:Scaffold(backgroundColor:Colors.white,appBar:AppBar(title:const Text('Medya ve bağlantılar')),body:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(stream:FirebaseFirestore.instance.collection('chats').doc(chatId).collection('messages').orderBy('createdAt',descending:true).limit(240).snapshots(),builder:(_,s){if(s.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator(color:mor));final docs=(s.data?.docs??[]).where((d){final t=(d.data()['type']??'').toString();return t=='photo'||t=='gif'||t=='shared_content';}).toList();if(docs.isEmpty)return const Center(child:Text('Henüz medya veya bağlantı paylaşılmadı.',style:TextStyle(color:Colors.black54)));return GridView.builder(padding:const EdgeInsets.all(8),itemCount:docs.length,gridDelegate:const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount:3,crossAxisSpacing:6,mainAxisSpacing:6),itemBuilder:(_,i){final v=docs[i].data(),t=(v['type']??'').toString(),url=(v['mediaUrl']??'').toString();if(t=='shared_content')return InkWell(onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>IcerikBaglantiPage(icerikId:(v['contentId']??'').toString()))),child:Container(color:const Color(0xFFF0E8FF),child:const Icon(Icons.link_rounded,color:mor,size:38)));return InkWell(onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>TamEkranMedyaPage(url:url))),child:ClipRRect(borderRadius:BorderRadius.circular(10),child:Image.network(url,fit:BoxFit.cover,errorBuilder:(_,__,___)=>const ColoredBox(color:Color(0xFFF0F1F4),child:Icon(Icons.broken_image_outlined)))));});})));
 }
 
 class SabitlenenGrupMesajlariPage extends StatelessWidget{
@@ -6604,8 +6604,8 @@ class SesMesajiBalonu extends StatefulWidget{
   @override State<SesMesajiBalonu> createState()=>_SesMesajiBalonuState();
 }
 class _SesMesajiBalonuState extends State<SesMesajiBalonu>{
-  final AudioPlayer oynatici=AudioPlayer();
-  bool hazir=false,oynuyor=false;
+  AudioPlayer? oynatici;
+  bool hazir=false,oynuyor=false,yukleniyor=false;
   Duration konum=Duration.zero,toplam=Duration.zero;
   StreamSubscription<PlayerState>? durumAboneligi;
   StreamSubscription<Duration>? konumAboneligi;
@@ -6614,17 +6614,38 @@ class _SesMesajiBalonuState extends State<SesMesajiBalonu>{
   @override void initState(){
     super.initState();
     toplam=Duration(milliseconds:widget.sureMs);
-    durumAboneligi=oynatici.playerStateStream.listen((s){
-      if(!mounted)return;
-      setState(()=>oynuyor=s.playing);
-      if(s.processingState==ProcessingState.completed){
-        unawaited(oynatici.seek(Duration.zero));
-        unawaited(oynatici.pause());
+  }
+
+  Future<void> _hazirlaVeOynat() async {
+    if(yukleniyor)return;
+    if(oynatici==null){
+      setState(()=>yukleniyor=true);
+      try{
+        final p=AudioPlayer();
+        oynatici=p;
+        durumAboneligi=p.playerStateStream.listen((s){
+          if(!mounted)return;
+          setState(()=>oynuyor=s.playing);
+          if(s.processingState==ProcessingState.completed){
+            unawaited(p.seek(Duration.zero));
+            unawaited(p.pause());
+          }
+        });
+        konumAboneligi=p.positionStream.listen((v){if(mounted)setState(()=>konum=v);});
+        sureAboneligi=p.durationStream.listen((v){if(v!=null&&mounted)setState(()=>toplam=v);});
+        await p.setUrl(widget.url);
+        if(mounted)setState(()=>hazir=true);
+      }catch(_){
+        final p=oynatici;oynatici=null;
+        if(p!=null)unawaited(p.dispose());
+        if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Sesli mesaj açılamadı.')));
+      }finally{
+        if(mounted)setState(()=>yukleniyor=false);
       }
-    });
-    konumAboneligi=oynatici.positionStream.listen((v){if(mounted)setState(()=>konum=v);});
-    sureAboneligi=oynatici.durationStream.listen((v){if(v!=null&&mounted)setState(()=>toplam=v);});
-    oynatici.setUrl(widget.url).then((_){if(mounted)setState(()=>hazir=true);}).catchError((_){});
+    }
+    final p=oynatici;
+    if(p==null||!hazir)return;
+    if(oynuyor)await p.pause();else await p.play();
   }
 
   String _sure(Duration d){
@@ -6634,7 +6655,7 @@ class _SesMesajiBalonuState extends State<SesMesajiBalonu>{
 
   @override void dispose(){
     durumAboneligi?.cancel();konumAboneligi?.cancel();sureAboneligi?.cancel();
-    unawaited(oynatici.dispose());
+    final p=oynatici;if(p!=null)unawaited(p.dispose());
     super.dispose();
   }
 
@@ -6649,14 +6670,16 @@ class _SesMesajiBalonuState extends State<SesMesajiBalonu>{
             backgroundColor:widget.benim?Colors.white24:const Color(0xFF1836D8),
             foregroundColor:Colors.white,
           ),
-          onPressed:!hazir?null:()async{if(oynuyor)await oynatici.pause();else await oynatici.play();},
-          icon:Icon(oynuyor?Icons.pause_rounded:Icons.play_arrow_rounded),
+          onPressed:_hazirlaVeOynat,
+          icon:yukleniyor
+            ?const SizedBox(width:18,height:18,child:CircularProgressIndicator(strokeWidth:2,color:Colors.white))
+            :Icon(oynuyor?Icons.pause_rounded:Icons.play_arrow_rounded),
         ),
         const SizedBox(width:6),
         Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
           Slider(
             min:0,max:max.toDouble(),value:value,
-            onChanged:!hazir?null:(v)=>oynatici.seek(Duration(milliseconds:v.round())),
+            onChanged:!hazir||oynatici==null?null:(v)=>oynatici!.seek(Duration(milliseconds:v.round())),
             activeColor:widget.benim?Colors.white:const Color(0xFF1836D8),
             inactiveColor:widget.benim?Colors.white30:Colors.black12,
           ),
@@ -8157,7 +8180,7 @@ class SohbetMesajAramaPage extends StatefulWidget{
 }
 class _SohbetMesajAramaPageState extends State<SohbetMesajAramaPage>{
   String sorgu='';
-  @override Widget build(BuildContext context)=>Theme(data:ThemeData.light(),child:Scaffold(backgroundColor:Colors.white,appBar:AppBar(title:const Text('Sohbette ara')),body:Column(children:[Padding(padding:const EdgeInsets.all(12),child:TextField(autofocus:true,onChanged:(v)=>setState(()=>sorgu=v.trim().toLowerCase()),decoration:const InputDecoration(prefixIcon:Icon(Icons.search),hintText:'Mesaj yazısı ara'))),Expanded(child:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(stream:FirebaseFirestore.instance.collection('chats').doc(widget.chatId).collection('messages').orderBy('createdAt',descending:true).snapshots(),builder:(_,s){final docs=(s.data?.docs??[]).where((d)=>(d.data()['text']??'').toString().toLowerCase().contains(sorgu)&&sorgu.isNotEmpty).toList();if(sorgu.isEmpty)return const Center(child:Text('Aramak istediğin kelimeyi yaz.',style:TextStyle(color:Colors.black54)));if(docs.isEmpty)return const Center(child:Text('Eşleşen mesaj bulunamadı.',style:TextStyle(color:Colors.black54)));return ListView.separated(padding:const EdgeInsets.all(12),itemCount:docs.length,separatorBuilder:(_,__)=>const Divider(),itemBuilder:(_,i)=>ListTile(leading:const Icon(Icons.chat_bubble_outline,color:Colors.blue),title:Text((docs[i].data()['text']??'').toString()),subtitle:Text(mesajSaati(docs[i].data()['createdAt']))));}))])));
+  @override Widget build(BuildContext context)=>Theme(data:ThemeData.light(),child:Scaffold(backgroundColor:Colors.white,appBar:AppBar(title:const Text('Sohbette ara')),body:Column(children:[Padding(padding:const EdgeInsets.all(12),child:TextField(autofocus:true,onChanged:(v)=>setState(()=>sorgu=v.trim().toLowerCase()),decoration:const InputDecoration(prefixIcon:Icon(Icons.search),hintText:'Mesaj yazısı ara'))),Expanded(child:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(stream:FirebaseFirestore.instance.collection('chats').doc(widget.chatId).collection('messages').orderBy('createdAt',descending:true).limit(300).snapshots(),builder:(_,s){final docs=(s.data?.docs??[]).where((d)=>(d.data()['text']??'').toString().toLowerCase().contains(sorgu)&&sorgu.isNotEmpty).toList();if(sorgu.isEmpty)return const Center(child:Text('Aramak istediğin kelimeyi yaz.',style:TextStyle(color:Colors.black54)));if(docs.isEmpty)return const Center(child:Text('Eşleşen mesaj bulunamadı.',style:TextStyle(color:Colors.black54)));return ListView.separated(padding:const EdgeInsets.all(12),itemCount:docs.length,separatorBuilder:(_,__)=>const Divider(),itemBuilder:(_,i)=>ListTile(leading:const Icon(Icons.chat_bubble_outline,color:Colors.blue),title:Text((docs[i].data()['text']??'').toString()),subtitle:Text(mesajSaati(docs[i].data()['createdAt']))));}))])));
 }
 
 class AktivitePage extends StatelessWidget {
