@@ -5833,7 +5833,7 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
   Future<void> hoparlorDegistir()async{
     final yeni=!hoparlor;
     try{
-      await lk.AudioManager.instance.setSpeakerOutputPreferred(yeni,force:yeni&&widget.goruntulu);
+      await lk.AudioManager.instance.setSpeakerOutputPreferred(yeni,force:yeni&&goruntuluAktif);
       if(mounted)setState(()=>hoparlor=yeni);
     }catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Ses çıkışı değiştirilemedi: $e')));}
   }
