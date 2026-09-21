@@ -5155,7 +5155,34 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
 
   Future<void> mesajMenusu(QueryDocumentSnapshot<Map<String,dynamic>> d)async{final v=d.data(),ben=v['senderId']==uid,metin=(v['text']??'').toString();final grup=await chatRef.get(),yonetici=List<String>.from(grup.data()?['admins']??const[]).contains(uid);final sec=await showModalBottomSheet<String>(context:context,backgroundColor:Colors.white,showDragHandle:true,builder:(c)=>Theme(data:ThemeData.light(),child:SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[Wrap(spacing:12,children:['❤️','👍','😂','😮','😢','😡'].map((e)=>TextButton(onPressed:()=>Navigator.pop(c,'reaction:$e'),child:Text(e,style:const TextStyle(fontSize:24)))).toList()),ListTile(leading:const Icon(Icons.reply),title:const Text('Yanıtla',style:TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(c,'reply')),if(metin.isNotEmpty)ListTile(leading:const Icon(Icons.copy),title:const Text('Kopyala',style:TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(c,'copy')),if(ben&&metin.isNotEmpty)ListTile(leading:const Icon(Icons.edit),title:const Text('Düzenle',style:TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(c,'edit')),if(yonetici)ListTile(leading:Icon(v['pinned']==true?Icons.push_pin:Icons.push_pin_outlined,color:mor),title:Text(v['pinned']==true?'Sabitlemeyi kaldır':'Mesajı sabitle',style:const TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(c,'pin')),if(ben||yonetici)ListTile(leading:const Icon(Icons.delete,color:Colors.red),title:const Text('Herkesten sil',style:TextStyle(color:Colors.red)),onTap:()=>Navigator.pop(c,'delete')),if(!ben)ListTile(leading:const Icon(Icons.flag_outlined),title:const Text('Şikâyet et',style:TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(c,'report'))]))));if(sec==null)return;if(sec.startsWith('reaction:')){await d.reference.set({'reactions.${uid!}':sec.substring(9)},SetOptions(merge:true));}else if(sec=='copy'){await Clipboard.setData(ClipboardData(text:metin));}else if(sec=='reply'){mesaj.text='↪ $metin\n';mesaj.selection=TextSelection.collapsed(offset:mesaj.text.length);}else if(sec=='pin'){await d.reference.set({'pinned':v['pinned']!=true,'pinnedAt':FieldValue.serverTimestamp(),'pinnedBy':uid},SetOptions(merge:true));}else if(sec=='delete'){final ok=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(backgroundColor:Colors.white,title:const Text('Mesaj silinsin mi?'),content:const Text('Mesaj gruptan kalıcı olarak kaldırılacak.'),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),FilledButton(style:FilledButton.styleFrom(backgroundColor:Colors.red),onPressed:()=>Navigator.pop(c,true),child:const Text('Sil'))]))??false;if(ok)await d.reference.delete();}else if(sec=='report'){if(mounted)await sikayetEt(context,hedefTuru:'grup_mesaji',hedefId:'${widget.chatId}/${d.id}',hedefUid:v['senderId']?.toString());}else if(sec=='edit'){final c=TextEditingController(text:metin);final ok=await showDialog<bool>(context:context,builder:(x)=>AlertDialog(backgroundColor:Colors.white,title:const Text('Mesajı düzenle'),content:TextField(controller:c,maxLines:5,maxLength:2000),actions:[TextButton(onPressed:()=>Navigator.pop(x,false),child:const Text('Vazgeç')),FilledButton(onPressed:()=>Navigator.pop(x,true),child:const Text('Kaydet'))]))??false;if(ok&&c.text.trim().isNotEmpty)await d.reference.update({'text':c.text.trim(),'editedAt':FieldValue.serverTimestamp()});c.dispose();}}
 
-  Future<void> ekMenusu()async{await showModalBottomSheet(context:context,backgroundColor:Colors.white,showDragHandle:true,builder:(c)=>Theme(data:ThemeData.light(),child:SafeArea(child:Wrap(children:[ListTile(leading:const Icon(Icons.camera_alt,color:mor),title:const Text('Kamera',style:TextStyle(color:Colors.black87)),onTap:(){Navigator.pop(c);medyaGonder(ImageSource.camera);}),ListTile(leading:const Icon(Icons.photo_library,color:mor),title:const Text('Galeri',style:TextStyle(color:Colors.black87)),onTap:(){Navigator.pop(c);medyaGonder(ImageSource.gallery);}),ListTile(leading:const Icon(Icons.gif_box_outlined,color:mor),title:const Text('GIF',style:TextStyle(color:Colors.black87)),subtitle:const Text('Telefondan GIF seç',style:TextStyle(color:Colors.black54)),onTap:(){Navigator.pop(c);gifGonder();}),ListTile(leading:const Icon(Icons.poll_outlined,color:mor),title:const Text('Anket',style:TextStyle(color:Colors.black87)),subtitle:const Text('Gerçek zamanlı oylama oluştur',style:TextStyle(color:Colors.black54)),onTap:(){Navigator.pop(c);anketOlustur();})]))));}
+  Future<void> ekMenusu()async{
+    final secim=await showModalBottomSheet<String>(
+      context:context,
+      backgroundColor:Colors.white,
+      showDragHandle:true,
+      builder:(c)=>Theme(
+        data:ThemeData.light(),
+        child:SafeArea(
+          child:Wrap(children:[
+            ListTile(leading:const Icon(Icons.camera_alt,color:mor),title:const Text('Kamera',style:TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(c,'camera')),
+            ListTile(leading:const Icon(Icons.photo_library,color:mor),title:const Text('Galeri',style:TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(c,'gallery')),
+            ListTile(leading:const Icon(Icons.gif_box_outlined,color:mor),title:const Text('GIF',style:TextStyle(color:Colors.black87)),subtitle:const Text('Telefondan GIF seç',style:TextStyle(color:Colors.black54)),onTap:()=>Navigator.pop(c,'gif')),
+            ListTile(leading:const Icon(Icons.poll_outlined,color:mor),title:const Text('Anket',style:TextStyle(color:Colors.black87)),subtitle:const Text('Gerçek zamanlı oylama oluştur',style:TextStyle(color:Colors.black54)),onTap:()=>Navigator.pop(c,'poll')),
+          ]),
+        ),
+      ),
+    );
+    if(!mounted||secim==null)return;
+    // Alt sayfa tamamen kapanmadan kamera/galeri Activity'sini başlatmak,
+    // Android'de Flutter route ağacının sökülmesiyle çakışıp _dependents.isEmpty
+    // assertion'ına neden olabiliyor. Kapanış animasyonundan sonra başlat.
+    await Future<void>.delayed(const Duration(milliseconds:320));
+    if(!mounted)return;
+    if(secim=='camera')await medyaGonder(ImageSource.camera);
+    else if(secim=='gallery')await medyaGonder(ImageSource.gallery);
+    else if(secim=='gif')await gifGonder();
+    else if(secim=='poll')await anketOlustur();
+  }
   Future<void> aramaBaslat(bool goruntulu)async{
     final ben=uid;
     if(ben==null||aramaBaslatiliyor)return;
@@ -6537,13 +6564,19 @@ class _SohbetPageState extends State<SohbetPage> {
         child:Row(children:[
           IconButton(
             tooltip:'Ekle',
-            onPressed:()=>showModalBottomSheet<void>(
-              context:context,backgroundColor:Colors.white,showDragHandle:true,
-              builder:(c)=>Theme(data:ThemeData.light(),child:SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
-                ListTile(leading:const Icon(Icons.camera_alt_outlined,color:Colors.blue),title:const Text('Kamera',style:TextStyle(color:Colors.black87)),onTap:(){Navigator.pop(c);medyaGonder(ImageSource.camera);}),
-                ListTile(leading:const Icon(Icons.photo_library_outlined,color:Colors.blue),title:const Text('Fotoğraf',style:TextStyle(color:Colors.black87)),onTap:(){Navigator.pop(c);medyaGonder(ImageSource.gallery);}),
-              ]))),
-            ),
+            onPressed:()async{
+              final secim=await showModalBottomSheet<String>(
+                context:context,backgroundColor:Colors.white,showDragHandle:true,
+                builder:(c)=>Theme(data:ThemeData.light(),child:SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
+                  ListTile(leading:const Icon(Icons.camera_alt_outlined,color:Colors.blue),title:const Text('Kamera',style:TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(c,'camera')),
+                  ListTile(leading:const Icon(Icons.photo_library_outlined,color:Colors.blue),title:const Text('Fotoğraf',style:TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(c,'gallery')),
+                ]))),
+              );
+              if(!mounted||secim==null)return;
+              await Future<void>.delayed(const Duration(milliseconds:320));
+              if(!mounted)return;
+              await medyaGonder(secim=='camera'?ImageSource.camera:ImageSource.gallery);
+            },
             icon:const Icon(Icons.add_circle,color:Color(0xFF1836D8),size:29),
           ),
           IconButton(onPressed:()=>medyaGonder(ImageSource.camera),icon:const Icon(Icons.camera_alt,color:Color(0xFF1836D8))),
