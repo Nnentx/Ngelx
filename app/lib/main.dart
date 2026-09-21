@@ -4124,8 +4124,7 @@ class _YeniYuklePageState extends State<YuklePage> {
     if (boyut > 50 * 1024 * 1024) throw Exception('Dosya 50 MB’den küçük olmalı');
     final uzanti = dosya.name.contains('.') ? dosya.name.split('.').last.toLowerCase() : (tur == 'video' ? 'mp4' : 'jpg');
     final yol = '$klasor/${user.uid}/${DateTime.now().microsecondsSinceEpoch}.$uzanti';
-    await supa.Supabase.instance.client.storage.from('ngelx-media').uploadBinary(yol, await dosya.readAsBytes());
-    return supa.Supabase.instance.client.storage.from('ngelx-media').getPublicUrl(yol);
+    return ngelxMedyaBaytYukle(yol, await dosya.readAsBytes());
   }
 
   Future<void> yayinla() async {
@@ -4151,8 +4150,7 @@ class _YeniYuklePageState extends State<YuklePage> {
         if (await muzik!.length() > 15 * 1024 * 1024) throw Exception('Müzik 15 MB’den küçük olmalı');
         final uzanti = muzik!.name.contains('.') ? muzik!.name.split('.').last.toLowerCase() : 'mp3';
         final yol = 'music/${user.uid}/${DateTime.now().microsecondsSinceEpoch}.$uzanti';
-        await supa.Supabase.instance.client.storage.from('ngelx-media').uploadBinary(yol, await muzik!.readAsBytes());
-        sesUrl = supa.Supabase.instance.client.storage.from('ngelx-media').getPublicUrl(yol);
+        sesUrl = await ngelxMedyaBaytYukle(yol, await muzik!.readAsBytes());
       }
       final profil = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
       final adi = (profil.data()?['username'] ?? 'ngelx').toString();
@@ -4398,12 +4396,7 @@ class _YuklePageState extends State<EskiYuklePage> {
           : 'mp4';
       final yol = 'videos/${user.uid}/$zaman.$uzanti';
       final baytlar = await dosya.readAsBytes();
-      await supa.Supabase.instance.client.storage
-          .from('ngelx-media')
-          .uploadBinary(yol, baytlar);
-      final url = supa.Supabase.instance.client.storage
-          .from('ngelx-media')
-          .getPublicUrl(yol);
+      final url = await ngelxMedyaBaytYukle(yol, baytlar);
       final profil = await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
@@ -4819,8 +4812,7 @@ class _GrupOlusturPageState extends State<GrupOlusturPage>{
         try{
           final bytes=await foto!.readAsBytes().timeout(const Duration(seconds:8));
           final yol='groups/${u.uid}/${DateTime.now().millisecondsSinceEpoch}.jpg';
-          await supa.Supabase.instance.client.storage.from('ngelx-media').uploadBinary(yol,bytes).timeout(const Duration(seconds:12));
-          fotoUrl=supa.Supabase.instance.client.storage.from('ngelx-media').getPublicUrl(yol);
+          fotoUrl=await ngelxMedyaBaytYukle(yol,bytes,contentType:'image/jpeg');
         }catch(_){
           fotoAtlandi=true;
           fotoUrl='';
@@ -8384,12 +8376,7 @@ class _ProfilPageState extends State<ProfilPage> {
           ? dosya.name.split('.').last.toLowerCase()
           : 'jpg';
       final yol = 'profiles/${user.uid}/${DateTime.now().millisecondsSinceEpoch}.$uzanti';
-      await supa.Supabase.instance.client.storage
-          .from('ngelx-media')
-          .uploadBinary(yol, await dosya.readAsBytes());
-      final url = supa.Supabase.instance.client.storage
-          .from('ngelx-media')
-          .getPublicUrl(yol);
+      final url = await ngelxMedyaBaytYukle(yol, await dosya.readAsBytes());
       await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
@@ -8433,8 +8420,7 @@ class _ProfilPageState extends State<ProfilPage> {
     if(mounted)setState(()=>fotoYukleniyor=true);
     try{
       final yol='profile-intros/'+user.uid+'/'+DateTime.now().millisecondsSinceEpoch.toString()+'.mp4';
-      await supa.Supabase.instance.client.storage.from('ngelx-media').upload(yol,File(dosya.path));
-      final url=supa.Supabase.instance.client.storage.from('ngelx-media').getPublicUrl(yol);
+      final url=await ngelxMedyaDosyaYukle(yol,File(dosya.path),contentType:'video/mp4');
       await FirebaseFirestore.instance.collection('users').doc(user.uid).set({'introVideoUrl':url,'updatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
       if(mounted){setState(()=>tanitimVideoUrl=url);ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Profil tanıtım videosu kaydedildi.')));}
     }catch(e){
@@ -8451,8 +8437,7 @@ class _ProfilPageState extends State<ProfilPage> {
     try {
       final uzanti = dosya.name.contains('.') ? dosya.name.split('.').last.toLowerCase() : 'jpg';
       final yol = 'stories/${user.uid}/${DateTime.now().millisecondsSinceEpoch}.$uzanti';
-      await supa.Supabase.instance.client.storage.from('ngelx-media').uploadBinary(yol, await dosya.readAsBytes());
-      final url = supa.Supabase.instance.client.storage.from('ngelx-media').getPublicUrl(yol);
+      final url = await ngelxMedyaBaytYukle(yol, await dosya.readAsBytes());
       await FirebaseFirestore.instance.collection('videos').add({
         'ownerId': user.uid,
         'username': kullanici.replaceFirst('@', ''),
