@@ -9099,7 +9099,6 @@ class _ProfilPageState extends State<ProfilPage> {
   }
 
   @override
-  Widget build(BuildContext context) {  @override
   Widget build(BuildContext context) {
     if (yukleniyor) {
       return const Center(
