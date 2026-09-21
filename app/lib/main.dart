@@ -1151,7 +1151,8 @@ class _AnaEkranState extends State<AnaEkran> {
           final durum=(v['callStatus']??'').toString();
           final grup=v['isGroup']==true;
           final katilanlar=List<String>.from(v['callParticipants']??const[]);
-          if(baslatan==ben||katilanlar.contains(ben))return false;
+          final reddedenler=List<String>.from(v['callDismissedBy']??const[]);
+          if(baslatan==ben||katilanlar.contains(ben)||reddedenler.contains(ben))return false;
           if(durum!='ringing'&&!(grup&&durum=='active'))return false;
           final t=v['callCreatedAt'];
           if(t is Timestamp){
@@ -1206,10 +1207,14 @@ class _AnaEkranState extends State<AnaEkran> {
                       style:IconButton.styleFrom(backgroundColor:Colors.red,foregroundColor:Colors.white),
                       tooltip:'Reddet',
                       onPressed:()async{
-                        await d.reference.set({'callStatus':'rejected','callEndedBy':ben,'callEndedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
-                        final olay=(v['callEventId']??'').toString();
-                        if(olay.isNotEmpty){
-                          unawaited(d.reference.collection('messages').doc(olay).set({'callStatus':'rejected','updatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true)));
+                        if(grup){
+                          await d.reference.set({'callDismissedBy':FieldValue.arrayUnion([ben])},SetOptions(merge:true));
+                        }else{
+                          await d.reference.set({'callStatus':'rejected','callEndedBy':ben,'callEndedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
+                          final olay=(v['callEventId']??'').toString();
+                          if(olay.isNotEmpty){
+                            unawaited(d.reference.collection('messages').doc(olay).set({'callStatus':'rejected','updatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true)));
+                          }
                         }
                       },
                       icon:const Icon(Icons.call_end_rounded),
@@ -1222,7 +1227,12 @@ class _AnaEkranState extends State<AnaEkran> {
                         if(acilanAramaId==d.id)return;
                         setState(()=>acilanAramaId=d.id);
                         try{
-                          await d.reference.set({'callStatus':'active','callParticipants':FieldValue.arrayUnion([ben]),'callAnsweredAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
+                          await d.reference.set({
+                            'callStatus':'active',
+                            'callParticipants':FieldValue.arrayUnion([ben]),
+                            'callDismissedBy':FieldValue.arrayRemove([ben]),
+                            'callAnsweredAt':FieldValue.serverTimestamp(),
+                          },SetOptions(merge:true));
                           final olay=(v['callEventId']??'').toString();
                           if(olay.isNotEmpty){
                             unawaited(d.reference.collection('messages').doc(olay).set({'callStatus':'active','updatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true)));
@@ -5858,8 +5868,20 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
     if(bitiyor)return;bitiyor=true;
     zilZamanlayici?.cancel();
     try{
-      await widget.aramaRef.set({'callStatus':'ended','callEndedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
-      await _aramaMesajiniGuncelle('ended');
+      final belge=await widget.aramaRef.get();
+      final veri=belge.data()??<String,dynamic>{};
+      final ben=FirebaseAuth.instance.currentUser?.uid;
+      final grup=veri['isGroup']==true;
+      final baslatan=(veri['callStartedBy']??'').toString();
+      if(grup&&ben!=null&&baslatan.isNotEmpty&&ben!=baslatan){
+        await widget.aramaRef.set({
+          'callParticipants':FieldValue.arrayRemove([ben]),
+          'callLeftAt_$ben':FieldValue.serverTimestamp(),
+        },SetOptions(merge:true));
+      }else{
+        await widget.aramaRef.set({'callStatus':'ended','callEndedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
+        await _aramaMesajiniGuncelle('ended');
+      }
     }catch(_){}
     final r=oda;oda=null;
     if(r!=null){
