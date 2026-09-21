@@ -1616,13 +1616,7 @@ Future<void> kendiPaylasiminiSil(
     (veri['audioUrl'] ?? '').toString(),
   ]) {
     if (raw.isEmpty) continue;
-    try {
-      final parts = Uri.parse(raw).pathSegments;
-      final i = parts.indexOf('ngelx-media');
-      if (i >= 0 && i + 1 < parts.length) {
-        await supa.Supabase.instance.client.storage.from('ngelx-media').remove([parts.sublist(i + 1).join('/')]);
-      }
-    } catch (_) {}
+    await ngelxMedyaSil(raw);
   }
 
   if (context.mounted) {
@@ -4164,8 +4158,12 @@ class _YeniYuklePageState extends State<YuklePage> {
     if (boyut > 50 * 1024 * 1024) throw Exception('Dosya 50 MB’den küçük olmalı');
     final uzanti = dosya.name.contains('.') ? dosya.name.split('.').last.toLowerCase() : (tur == 'video' ? 'mp4' : 'jpg');
     final yol = '$klasor/${user.uid}/${DateTime.now().microsecondsSinceEpoch}.$uzanti';
-    await supa.Supabase.instance.client.storage.from('ngelx-media').uploadBinary(yol, await dosya.readAsBytes());
-    return supa.Supabase.instance.client.storage.from('ngelx-media').getPublicUrl(yol);
+    return ngelxMedyaYukleBytes(
+      bytes: await dosya.readAsBytes(),
+      kind: klasor == 'videos' ? 'videos' : 'photos',
+      ext: uzanti,
+      legacyPath: yol,
+    );
   }
 
   Future<void> yayinla() async {
@@ -4191,8 +4189,12 @@ class _YeniYuklePageState extends State<YuklePage> {
         if (await muzik!.length() > 15 * 1024 * 1024) throw Exception('Müzik 15 MB’den küçük olmalı');
         final uzanti = muzik!.name.contains('.') ? muzik!.name.split('.').last.toLowerCase() : 'mp3';
         final yol = 'music/${user.uid}/${DateTime.now().microsecondsSinceEpoch}.$uzanti';
-        await supa.Supabase.instance.client.storage.from('ngelx-media').uploadBinary(yol, await muzik!.readAsBytes());
-        sesUrl = supa.Supabase.instance.client.storage.from('ngelx-media').getPublicUrl(yol);
+        sesUrl = await ngelxMedyaYukleBytes(
+          bytes: await muzik!.readAsBytes(),
+          kind: 'music',
+          ext: uzanti,
+          legacyPath: yol,
+        );
       }
       final profil = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
       final adi = (profil.data()?['username'] ?? 'ngelx').toString();
@@ -4438,12 +4440,12 @@ class _YuklePageState extends State<EskiYuklePage> {
           : 'mp4';
       final yol = 'videos/${user.uid}/$zaman.$uzanti';
       final baytlar = await dosya.readAsBytes();
-      await supa.Supabase.instance.client.storage
-          .from('ngelx-media')
-          .uploadBinary(yol, baytlar);
-      final url = supa.Supabase.instance.client.storage
-          .from('ngelx-media')
-          .getPublicUrl(yol);
+      final url = await ngelxMedyaYukleBytes(
+        bytes: baytlar,
+        kind: 'videos',
+        ext: uzanti,
+        legacyPath: yol,
+      );
       final profil = await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
@@ -4859,8 +4861,12 @@ class _GrupOlusturPageState extends State<GrupOlusturPage>{
         try{
           final bytes=await foto!.readAsBytes().timeout(const Duration(seconds:8));
           final yol='groups/${u.uid}/${DateTime.now().millisecondsSinceEpoch}.jpg';
-          await supa.Supabase.instance.client.storage.from('ngelx-media').uploadBinary(yol,bytes).timeout(const Duration(seconds:12));
-          fotoUrl=supa.Supabase.instance.client.storage.from('ngelx-media').getPublicUrl(yol);
+          fotoUrl=await ngelxMedyaYukleBytes(
+            bytes: bytes,
+            kind: 'groups',
+            ext: 'jpg',
+            legacyPath: yol,
+          ).timeout(const Duration(seconds:12));
         }catch(_){
           fotoAtlandi=true;
           fotoUrl='';
@@ -5048,8 +5054,8 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
     if(tamam){mesaj.clear();etiketlenenUidler.clear();}
     if(mounted)setState(()=>mesajGonderiliyor=false);
   }
-  Future<void> medyaGonder(ImageSource kaynak)async{final x=await ImagePicker().pickImage(source:kaynak,imageQuality:76,maxWidth:1280);if(x==null)return;try{final yol='groups/${widget.chatId}/${DateTime.now().millisecondsSinceEpoch}.jpg';await supa.Supabase.instance.client.storage.from('ngelx-media').upload(yol,File(x.path)).timeout(const Duration(seconds:12));final url=supa.Supabase.instance.client.storage.from('ngelx-media').getPublicUrl(yol);await payloadGonder({'type':'photo','mediaUrl':url},'📷 Fotoğraf');}catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Medya hizmeti şu anda kullanılamıyor. Yazılı mesaj göndermeye devam edebilirsin.')));}}
-  Future<void> gifGonder()async{const tur=XTypeGroup(label:'GIF',extensions:['gif']);final x=await openFile(acceptedTypeGroups:[tur]);if(x==null)return;try{final yol='groups/${widget.chatId}/${DateTime.now().millisecondsSinceEpoch}.gif';final bytes=await x.readAsBytes().timeout(const Duration(seconds:8));await supa.Supabase.instance.client.storage.from('ngelx-media').uploadBinary(yol,bytes,fileOptions:const supa.FileOptions(contentType:'image/gif')).timeout(const Duration(seconds:12));final url=supa.Supabase.instance.client.storage.from('ngelx-media').getPublicUrl(yol);await payloadGonder({'type':'gif','mediaUrl':url},'GIF');}catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Medya hizmeti şu anda kullanılamıyor. GIF gönderilemedi.')));}}
+  Future<void> medyaGonder(ImageSource kaynak)async{final x=await ImagePicker().pickImage(source:kaynak,imageQuality:76,maxWidth:1280);if(x==null)return;try{final yol='groups/${widget.chatId}/${DateTime.now().millisecondsSinceEpoch}.jpg';final url=await ngelxMedyaYukleBytes(bytes:await x.readAsBytes(),kind:'groups',ext:'jpg',legacyPath:yol).timeout(const Duration(seconds:12));await payloadGonder({'type':'photo','mediaUrl':url},'📷 Fotoğraf');}catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Medya hizmeti şu anda kullanılamıyor. Yazılı mesaj göndermeye devam edebilirsin.')));}}
+  Future<void> gifGonder()async{const tur=XTypeGroup(label:'GIF',extensions:['gif']);final x=await openFile(acceptedTypeGroups:[tur]);if(x==null)return;try{final yol='groups/${widget.chatId}/${DateTime.now().millisecondsSinceEpoch}.gif';final bytes=await x.readAsBytes().timeout(const Duration(seconds:8));final url=await ngelxMedyaYukleBytes(bytes:bytes,kind:'gifs',ext:'gif',legacyPath:yol,contentType:'image/gif').timeout(const Duration(seconds:12));await payloadGonder({'type':'gif','mediaUrl':url},'GIF');}catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Medya hizmeti şu anda kullanılamıyor. GIF gönderilemedi.')));}}
 
   Future<void> anketOlustur()async{final soru=TextEditingController(),secenekler=[TextEditingController(),TextEditingController()];final sonuc=await showDialog<Map<String,dynamic>>(context:context,builder:(c)=>StatefulBuilder(builder:(c,setP)=>AlertDialog(backgroundColor:Colors.white,title:const Text('Anket oluştur'),content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[TextField(controller:soru,maxLength:180,decoration:const InputDecoration(labelText:'Soru')),for(int i=0;i<secenekler.length;i++)TextField(controller:secenekler[i],maxLength:80,decoration:InputDecoration(labelText:'${i+1}. seçenek',suffixIcon:secenekler.length>2?IconButton(onPressed:(){secenekler[i].dispose();setP(()=>secenekler.removeAt(i));},icon:const Icon(Icons.close)):null)),if(secenekler.length<6)TextButton.icon(onPressed:()=>setP(()=>secenekler.add(TextEditingController())),icon:const Icon(Icons.add),label:const Text('Seçenek ekle'))])),actions:[TextButton(onPressed:()=>Navigator.pop(c),child:const Text('Vazgeç')),FilledButton(onPressed:(){final q=soru.text.trim(),opts=secenekler.map((e)=>e.text.trim()).where((e)=>e.isNotEmpty).toList();if(q.isNotEmpty&&opts.length>=2)Navigator.pop(c,{'question':q,'options':opts});},child:const Text('Gönder'))])));if(sonuc!=null)await payloadGonder({'type':'poll','pollQuestion':sonuc['question'],'pollOptions':sonuc['options'],'pollVotes':<String,dynamic>{}},'📊 Anket: ${sonuc['question']}');soru.dispose();for(final c in secenekler)c.dispose();}
 
@@ -5583,8 +5589,12 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
     final x=await ImagePicker().pickImage(source:secim=='camera'?ImageSource.camera:ImageSource.gallery,imageQuality:85);
     if(x==null)return;
     final yol='groups/${widget.chatId}/avatar_${DateTime.now().millisecondsSinceEpoch}.jpg';
-    await supa.Supabase.instance.client.storage.from('ngelx-media').upload(yol,File(x.path));
-    final url=supa.Supabase.instance.client.storage.from('ngelx-media').getPublicUrl(yol);
+    final url=await ngelxMedyaYukleBytes(
+      bytes: await x.readAsBytes(),
+      kind: 'groups',
+      ext: 'jpg',
+      legacyPath: yol,
+    );
     await ref.update({'groupPhotoUrl':url});
     await sistemMesaji('Yönetici grup fotoğrafını değiştirdi.');
   }
@@ -6041,8 +6051,12 @@ class _SohbetPageState extends State<SohbetPage> {
     if(x==null)return;
     try{
       final yol='chats/${widget.chatId}/${DateTime.now().millisecondsSinceEpoch}.jpg';
-      await supa.Supabase.instance.client.storage.from('ngelx-media').upload(yol,File(x.path)).timeout(const Duration(seconds:12));
-      final url=supa.Supabase.instance.client.storage.from('ngelx-media').getPublicUrl(yol);
+      final url=await ngelxMedyaYukleBytes(
+        bytes: await x.readAsBytes(),
+        kind: 'chats',
+        ext: 'jpg',
+        legacyPath: yol,
+      ).timeout(const Duration(seconds:12));
       final ref=FirebaseFirestore.instance.collection('chats').doc(widget.chatId);
       final sureHam=hazirlik.sohbet['disappearingSeconds'];
       final sure=sureHam is num?sureHam.toInt():0;
@@ -6627,8 +6641,12 @@ class SohbetBilgiPage extends StatelessWidget{
     final x=await ImagePicker().pickImage(source:kaynak,imageQuality:76,maxWidth:1280);if(x==null)return;
     try{
       final yol='chat-backgrounds/'+me+'/'+chatId+'_'+DateTime.now().millisecondsSinceEpoch.toString()+'.jpg';
-      await supa.Supabase.instance.client.storage.from('ngelx-media').upload(yol,File(x.path));
-      final url=supa.Supabase.instance.client.storage.from('ngelx-media').getPublicUrl(yol);
+      final url=await ngelxMedyaYukleBytes(
+        bytes: await x.readAsBytes(),
+        kind: 'chat-backgrounds',
+        ext: 'jpg',
+        legacyPath: yol,
+      );
       await ref.set({'backgroundUrl_$me':url},SetOptions(merge:true));
       if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Özel sohbet arka planın kaydedildi.')));
     }catch(e){
@@ -7792,7 +7810,7 @@ class _DestekPageState extends State<DestekPage>{
   final aciklama=TextEditingController();String kategori='Uygulama hatası';XFile? ekran;bool gonderiliyor=false;
   @override void dispose(){aciklama.dispose();super.dispose();}
   Future<void> ekranSec()async{final x=await ImagePicker().pickImage(source:ImageSource.gallery,imageQuality:75,maxWidth:1440);if(x!=null&&mounted)setState(()=>ekran=x);}
-  Future<void> gonder()async{final u=FirebaseAuth.instance.currentUser;if(u==null)return;if(aciklama.text.trim().length<10){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Sorunu en az 10 karakterle açıkla.')));return;}setState(()=>gonderiliyor=true);try{String ekranUrl='';if(ekran!=null){final yol='support/${u.uid}/${DateTime.now().millisecondsSinceEpoch}.jpg';await supa.Supabase.instance.client.storage.from('ngelx-media').upload(yol,File(ekran!.path));ekranUrl=supa.Supabase.instance.client.storage.from('ngelx-media').getPublicUrl(yol);}await FirebaseFirestore.instance.collection('support_requests').add({'uid':u.uid,'email':u.email,'category':kategori,'description':aciklama.text.trim(),'screenshotUrl':ekranUrl,'status':'open','createdAt':FieldValue.serverTimestamp()});if(!mounted)return;aciklama.clear();setState(()=>ekran=null);ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Destek talebin gönderildi.')));}catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Talep gönderilemedi: $e')));}finally{if(mounted)setState(()=>gonderiliyor=false);}}
+  Future<void> gonder()async{final u=FirebaseAuth.instance.currentUser;if(u==null)return;if(aciklama.text.trim().length<10){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Sorunu en az 10 karakterle açıkla.')));return;}setState(()=>gonderiliyor=true);try{String ekranUrl='';if(ekran!=null){final yol='support/${u.uid}/${DateTime.now().millisecondsSinceEpoch}.jpg';ekranUrl=await ngelxMedyaYukleBytes(bytes:await ekran!.readAsBytes(),kind:'support',ext:'jpg',legacyPath:yol);}await FirebaseFirestore.instance.collection('support_requests').add({'uid':u.uid,'email':u.email,'category':kategori,'description':aciklama.text.trim(),'screenshotUrl':ekranUrl,'status':'open','createdAt':FieldValue.serverTimestamp()});if(!mounted)return;aciklama.clear();setState(()=>ekran=null);ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Destek talebin gönderildi.')));}catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Talep gönderilemedi: $e')));}finally{if(mounted)setState(()=>gonderiliyor=false);}}
   @override Widget build(BuildContext context)=>Theme(data:ThemeData.light().copyWith(scaffoldBackgroundColor:Colors.white,appBarTheme:const AppBarTheme(backgroundColor:Colors.white,foregroundColor:Colors.black,elevation:0),inputDecorationTheme:InputDecorationTheme(filled:true,fillColor:const Color(0xFFF3F4F6),border:OutlineInputBorder(borderRadius:BorderRadius.circular(16),borderSide:BorderSide.none))),child:Scaffold(appBar:AppBar(title:const Text('Destek ve hata bildir')),body:SafeArea(child:ListView(padding:const EdgeInsets.all(20),children:[DropdownButtonFormField<String>(initialValue:kategori,items:['Uygulama hatası','Hesap ve giriş','Güvenlik','Ödeme ve kazanç','Öneri','Diğer'].map((x)=>DropdownMenuItem(value:x,child:Text(x))).toList(),onChanged:(v)=>setState(()=>kategori=v??kategori),decoration:const InputDecoration(labelText:'Konu')),const SizedBox(height:14),TextField(controller:aciklama,minLines:5,maxLines:10,maxLength:1000,decoration:const InputDecoration(labelText:'Sorunu veya isteğini anlat')),const SizedBox(height:12),OutlinedButton.icon(onPressed:gonderiliyor?null:ekranSec,icon:const Icon(Icons.add_photo_alternate_outlined),label:Text(ekran==null?'Ekran görüntüsü ekle':'Ekran görüntüsü seçildi')),const SizedBox(height:20),RenkliButon(yazi:gonderiliyor?'Gönderiliyor...':'Destek talebini gönder',tiklama:gonderiliyor?(){}:gonder)]))));
 }
 
@@ -8424,12 +8442,12 @@ class _ProfilPageState extends State<ProfilPage> {
           ? dosya.name.split('.').last.toLowerCase()
           : 'jpg';
       final yol = 'profiles/${user.uid}/${DateTime.now().millisecondsSinceEpoch}.$uzanti';
-      await supa.Supabase.instance.client.storage
-          .from('ngelx-media')
-          .uploadBinary(yol, await dosya.readAsBytes());
-      final url = supa.Supabase.instance.client.storage
-          .from('ngelx-media')
-          .getPublicUrl(yol);
+      final url = await ngelxMedyaYukleBytes(
+        bytes: await dosya.readAsBytes(),
+        kind: 'profiles',
+        ext: uzanti,
+        legacyPath: yol,
+      );
       await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
@@ -8473,8 +8491,12 @@ class _ProfilPageState extends State<ProfilPage> {
     if(mounted)setState(()=>fotoYukleniyor=true);
     try{
       final yol='profile-intros/'+user.uid+'/'+DateTime.now().millisecondsSinceEpoch.toString()+'.mp4';
-      await supa.Supabase.instance.client.storage.from('ngelx-media').upload(yol,File(dosya.path));
-      final url=supa.Supabase.instance.client.storage.from('ngelx-media').getPublicUrl(yol);
+      final url=await ngelxMedyaYukleBytes(
+        bytes: await dosya.readAsBytes(),
+        kind: 'profile-intros',
+        ext: 'mp4',
+        legacyPath: yol,
+      );
       await FirebaseFirestore.instance.collection('users').doc(user.uid).set({'introVideoUrl':url,'updatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
       if(mounted){setState(()=>tanitimVideoUrl=url);ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Profil tanıtım videosu kaydedildi.')));}
     }catch(e){
@@ -8491,8 +8513,12 @@ class _ProfilPageState extends State<ProfilPage> {
     try {
       final uzanti = dosya.name.contains('.') ? dosya.name.split('.').last.toLowerCase() : 'jpg';
       final yol = 'stories/${user.uid}/${DateTime.now().millisecondsSinceEpoch}.$uzanti';
-      await supa.Supabase.instance.client.storage.from('ngelx-media').uploadBinary(yol, await dosya.readAsBytes());
-      final url = supa.Supabase.instance.client.storage.from('ngelx-media').getPublicUrl(yol);
+      final url = await ngelxMedyaYukleBytes(
+        bytes: await dosya.readAsBytes(),
+        kind: 'stories',
+        ext: uzanti,
+        legacyPath: yol,
+      );
       await FirebaseFirestore.instance.collection('videos').add({
         'ownerId': user.uid,
         'username': kullanici.replaceFirst('@', ''),
@@ -8747,7 +8773,7 @@ class _ProfilPageState extends State<ProfilPage> {
     final batch=FirebaseFirestore.instance.batch();
     for(final x in likes.docs){batch.delete(x.reference);}for(final x in comments.docs){batch.delete(x.reference);}batch.delete(d.reference);await batch.commit();
     final v=d.data();
-    for(final raw in [(v['mediaUrl']??'').toString(),(v['videoUrl']??'').toString(),(v['audioUrl']??'').toString()]){if(raw.isEmpty)continue;try{final parts=Uri.parse(raw).pathSegments;final i=parts.indexOf('ngelx-media');if(i>=0&&i+1<parts.length)await supa.Supabase.instance.client.storage.from('ngelx-media').remove([parts.sublist(i+1).join('/')]);}catch(_){}}
+    for(final raw in [(v['mediaUrl']??'').toString(),(v['videoUrl']??'').toString(),(v['audioUrl']??'').toString()]){if(raw.isEmpty)continue;await ngelxMedyaSil(raw);}
     if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Paylaşım profilinden ve akıştan silindi.')));
   }
 
