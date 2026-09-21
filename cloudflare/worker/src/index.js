@@ -157,7 +157,12 @@ export default {
     const url = new URL(request.url);
 
     if (request.method === 'GET' && url.pathname === '/health') {
-      return json({ok: true, service: 'ngelx-r2-media'});
+      try {
+        await env.MEDIA.head('__ngelx_healthcheck__');
+        return json({ok: true, service: 'ngelx-r2-media', r2: true});
+      } catch (e) {
+        return json({ok: false, service: 'ngelx-r2-media', r2: false, message: String(e?.message || e)}, 503);
+      }
     }
 
     if (request.method === 'GET' && url.pathname.startsWith('/media/')) {
@@ -189,25 +194,43 @@ export default {
       const announced = Number(request.headers.get('content-length') || 0);
       if (announced > maxBytes) return json({error: 'file_too_large', maxBytes}, 413);
 
-      const bytes = await request.arrayBuffer();
-      if (!bytes.byteLength) return json({error: 'empty_file'}, 400);
-      if (bytes.byteLength > maxBytes) return json({error: 'file_too_large', maxBytes}, 413);
+      if (!request.body) return json({error: 'empty_file'}, 400);
 
       const uid = claims.sub;
       const key = kind + '/' + uid + '/' + Date.now() + '_' + crypto.randomUUID() + '.' + ext;
       const contentType = contentTypeFor(ext, request.headers.get('content-type'));
 
-      await env.MEDIA.put(key, bytes, {
-        httpMetadata: {contentType, cacheControl: 'public, max-age=31536000, immutable'},
-        customMetadata: {uid, kind},
-      });
+      try {
+        let saved;
+        if (announced > 0) {
+          // Stream mobile uploads directly into R2 instead of buffering the whole
+          // image/video inside the Worker. This keeps memory flat and prevents
+          // connection resets on slower mobile networks.
+          saved = await env.MEDIA.put(key, request.body, {
+            httpMetadata: {contentType, cacheControl: 'public, max-age=31536000, immutable'},
+            customMetadata: {uid, kind},
+          });
+        } else {
+          // Chunked/unknown length fallback: buffer only when size cannot be
+          // validated from Content-Length.
+          const bytes = await request.arrayBuffer();
+          if (!bytes.byteLength) return json({error: 'empty_file'}, 400);
+          if (bytes.byteLength > maxBytes) return json({error: 'file_too_large', maxBytes}, 413);
+          saved = await env.MEDIA.put(key, bytes, {
+            httpMetadata: {contentType, cacheControl: 'public, max-age=31536000, immutable'},
+            customMetadata: {uid, kind},
+          });
+        }
 
-      return json({
-        ok: true,
-        key,
-        url: url.origin + '/media/' + encodeKeyForUrl(key),
-        size: bytes.byteLength,
-      }, 201);
+        return json({
+          ok: true,
+          key,
+          url: url.origin + '/media/' + encodeKeyForUrl(key),
+          size: saved?.size || announced || 0,
+        }, 201);
+      } catch (e) {
+        return json({error: 'upload_failed', message: String(e?.message || e)}, 503);
+      }
     }
 
     if (request.method === 'DELETE' && url.pathname === '/object') {
