@@ -53,6 +53,8 @@ service cloud.firestore {
       allow update: if signedIn() && (
         resource.data.ownerId == request.auth.uid
         || onlyChanges(['shareCount', 'viewCount', 'captionsEnabled'])
+        || onlyChanges(['likeCount'])
+        || onlyChanges(['commentCount'])
       );
       allow delete: if signedIn() && resource.data.ownerId == request.auth.uid;
       match /likes/{uid} {
