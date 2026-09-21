@@ -1,0 +1,12 @@
+name = "ngelx-media-r2"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+
+[[r2_buckets]]
+binding = "MEDIA"
+bucket_name = "ngelx-media"
+
+[vars]
+FIREBASE_WEB_API_KEY = "BURAYA_FIREBASE_WEB_API_KEY"
+PUBLIC_BASE_URL = ""
+MAX_OBJECT_BYTES = "52428800"
