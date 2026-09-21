@@ -52,6 +52,11 @@ const _ngelxMediaApiBuild = String.fromEnvironment('NGELX_MEDIA_API', defaultVal
 String? _ngelxMediaApiCache;
 DateTime? _ngelxMediaApiCacheZamani;
 
+Future<void> ngelxOverlayKapanisiniBekle() async {
+  await Future<void>.delayed(const Duration(milliseconds: 360));
+}
+
+
 String _ngelxUzantiTemizle(String value) {
   final v = value.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
   return v.isEmpty ? 'bin' : (v.length > 8 ? v.substring(0, 8) : v);
@@ -5624,8 +5629,10 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
         ),
       ),
     );
+    await ngelxOverlayKapanisiniBekle();
     c.dispose();
     if(yeni==null)return;
+    if(!mounted)return;
     final temiz=yeni.trim();
     if(temiz.length<2||temiz.length>16){
       if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Grup adı 2–16 karakter arasında olmalı.')));
@@ -5650,6 +5657,8 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
       ),
     );
     if(secim==null)return;
+    await ngelxOverlayKapanisiniBekle();
+    if(!mounted)return;
     if(secim=='remove'){
       await ref.update({'groupPhotoUrl':''});
       await sistemMesaji('Yönetici grup fotoğrafını kaldırdı.');
