@@ -1633,6 +1633,8 @@ Future<void> kendiPaylasiminiSil(
   String id,
   Map<String, dynamic> veri,
 ) async {
+  await ngelxOverlayKapanisiniBekle();
+  if (!context.mounted) return;
   final uid = FirebaseAuth.instance.currentUser?.uid;
   if (uid == null || id.isEmpty || uid != (veri['ownerId'] ?? '').toString()) return;
 
@@ -1648,6 +1650,8 @@ Future<void> kendiPaylasiminiSil(
     ),
   );
   if (onay != true) return;
+  await ngelxOverlayKapanisiniBekle();
+  if (!context.mounted) return;
 
   final ref = FirebaseFirestore.instance.collection('videos').doc(id);
   try {
@@ -3307,17 +3311,37 @@ class YorumKarti extends StatelessWidget {
       );
     }
 
-    final likeStream = FirebaseFirestore.instance
+    final yorumBelgeRef = FirebaseFirestore.instance
         .collection('videos')
         .doc(videoId)
         .collection('comments')
-        .doc(yorumId)
-        .collection('likes')
-        .snapshots();
+        .doc(yorumId);
+
+    Future<void> hizliKalp() async {
+      final uid=FirebaseAuth.instance.currentUser?.uid;
+      if(uid==null)return;
+      try{
+        await yorumBelgeRef.set({'reactions.$uid':'❤️'},SetOptions(merge:true));
+        final likeRef=yorumBelgeRef.collection('likes').doc(uid);
+        final mevcut=await likeRef.get();
+        if(!mevcut.exists){
+          final batch=FirebaseFirestore.instance.batch();
+          batch.set(likeRef,{'uid':uid,'createdAt':FieldValue.serverTimestamp()});
+          batch.set(yorumBelgeRef,{'likeCount':FieldValue.increment(1)},SetOptions(merge:true));
+          await batch.commit();
+        }
+      }catch(_){
+        if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content:Text('❤️ tepki eklenemedi.')),
+        );
+      }
+    }
+
+    final likeStream = yorumBelgeRef.collection('likes').snapshots();
 
     return GestureDetector(
       onLongPress: yorumMenusu,
-      onDoubleTap: ()=>begen(yorumId,const []),
+      onDoubleTap: hizliKalp,
       child: Padding(
       padding: EdgeInsets.fromLTRB(yanit ? 52 : 0, 9, 0, 4),
       child: Row(
@@ -4344,7 +4368,6 @@ class _YeniYuklePageState extends State<YuklePage> {
             _hizliUret(Icons.auto_stories_rounded, 'Hikâye', () => setState(() => tur = 'photo')),
             _hizliUret(Icons.movie_creation_rounded, 'Reels', () => setState(() => tur = 'video')),
             _hizliUret(Icons.wifi_tethering_rounded, 'Canlı', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CanliHazirlikPage()))),
-            _hizliUret(Icons.poll_rounded, 'Anket', () => setState(() => tur = 'text')),
           ])),
           const SizedBox(height: 25),
           if (tur != 'text')
@@ -5223,7 +5246,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
     try{
       await d.reference.set({'reactions.$ben':'❤️'},SetOptions(merge:true));
     }catch(_){
-      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Tepki eklenemedi.')));
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('❤️ tepki eklenemedi.')));
     }
   }
 
@@ -5241,7 +5264,6 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
             ListTile(leading:const Icon(Icons.camera_alt,color:mor),title:const Text('Kamera',style:TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(c,'camera')),
             ListTile(leading:const Icon(Icons.photo_library,color:mor),title:const Text('Galeri',style:TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(c,'gallery')),
             ListTile(leading:const Icon(Icons.gif_box_outlined,color:mor),title:const Text('GIF',style:TextStyle(color:Colors.black87)),subtitle:const Text('Telefondan GIF seç',style:TextStyle(color:Colors.black54)),onTap:()=>Navigator.pop(c,'gif')),
-            ListTile(leading:const Icon(Icons.poll_outlined,color:mor),title:const Text('Anket',style:TextStyle(color:Colors.black87)),subtitle:const Text('Gerçek zamanlı oylama oluştur',style:TextStyle(color:Colors.black54)),onTap:()=>Navigator.pop(c,'poll')),
           ]),
         ),
       ),
@@ -5255,7 +5277,6 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
     if(secim=='camera')await medyaGonder(ImageSource.camera);
     else if(secim=='gallery')await medyaGonder(ImageSource.gallery);
     else if(secim=='gif')await gifGonder();
-    else if(secim=='poll')await anketOlustur();
   }
   Future<void> aramaBaslat(bool goruntulu)async{
     final ben=uid;
@@ -5719,8 +5740,8 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
         data:ThemeData.light(),
         child:SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
           const ListTile(title:Text('Grup fotoğrafını değiştir',style:TextStyle(color:Colors.black87,fontWeight:FontWeight.w900))),
-          ListTile(leading:const Icon(Icons.camera_alt,color:mor),title:const Text('Kamera',style:TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(c,'camera')),
-          ListTile(leading:const Icon(Icons.photo_library,color:mor),title:const Text('Galeri',style:TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(c,'gallery')),
+          ListTile(leading:const Icon(Icons.camera_alt_rounded,color:mor),title:const Text('Fotoğraf çek',style:TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(c,'camera')),
+          ListTile(leading:const Icon(Icons.photo_library_rounded,color:mor),title:const Text('Galeriden seç',style:TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(c,'gallery')),
           ListTile(leading:const Icon(Icons.delete_outline,color:Colors.red),title:const Text('Mevcut fotoğrafı kaldır',style:TextStyle(color:Colors.red)),onTap:()=>Navigator.pop(c,'remove')),
         ])),
       ),
@@ -5728,24 +5749,44 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
     if(secim==null)return;
     await ngelxOverlayKapanisiniBekle();
     if(!mounted)return;
-    if(secim=='remove'){
-      await ref.update({'groupPhotoUrl':''});
-      await sistemMesaji('Yönetici grup fotoğrafını kaldırdı.');
-      return;
+
+    try{
+      final mevcut=await ref.get();
+      final eski=(mevcut.data()?['groupPhotoUrl']??'').toString();
+
+      if(secim=='remove'){
+        await ref.update({'groupPhotoUrl':'','updatedAt':FieldValue.serverTimestamp()});
+        if(eski.isNotEmpty)unawaited(ngelxMedyaSil(eski).catchError((_){ }));
+        await sistemMesaji('Yönetici grup fotoğrafını kaldırdı.');
+        if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Grup fotoğrafı kaldırıldı.')));
+        return;
+      }
+
+      final x=await ImagePicker().pickImage(
+        source:secim=='camera'?ImageSource.camera:ImageSource.gallery,
+        imageQuality:82,
+        maxWidth:1280,
+      );
+      if(x==null)return;
+
+      final uzanti=x.name.contains('.')?x.name.split('.').last.toLowerCase():'jpg';
+      final yol='groups/${widget.chatId}/avatar_${DateTime.now().millisecondsSinceEpoch}.$uzanti';
+      final url=await ngelxMedyaYukleBytes(
+        bytes:await x.readAsBytes(),
+        kind:'groups',
+        ext:uzanti,
+        legacyPath:yol,
+      );
+      await ref.update({'groupPhotoUrl':url,'updatedAt':FieldValue.serverTimestamp()});
+      if(eski.isNotEmpty&&eski!=url)unawaited(ngelxMedyaSil(eski).catchError((_){ }));
+      await sistemMesaji('Yönetici grup fotoğrafını değiştirdi.');
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Grup fotoğrafı kaydedildi.')));
+    }catch(e){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Grup fotoğrafı değiştirilemedi: $e')));
     }
-    final x=await ImagePicker().pickImage(source:secim=='camera'?ImageSource.camera:ImageSource.gallery,imageQuality:85);
-    if(x==null)return;
-    final yol='groups/${widget.chatId}/avatar_${DateTime.now().millisecondsSinceEpoch}.jpg';
-    final url=await ngelxMedyaYukleBytes(
-      bytes: await x.readAsBytes(),
-      kind: 'groups',
-      ext: 'jpg',
-      legacyPath: yol,
-    );
-    await ref.update({'groupPhotoUrl':url});
-    await sistemMesaji('Yönetici grup fotoğrafını değiştirdi.');
   }
-  Future<void> uyeIslemi(String id,String isim,bool admin)async{
+
+  Future<void> uyeIslemi(  Future<void> uyeIslemi(String id,String isim,bool admin)async{
     final sec=await showModalBottomSheet<String>(
       context:context,
       backgroundColor:Colors.white,
@@ -8583,40 +8624,116 @@ class _ProfilPageState extends State<ProfilPage> {
   Future<void> fotografYukle() async {
     final user = aktifKullanici;
     if (user == null || user.isAnonymous || fotoYukleniyor) return;
-    final dosya = await ImagePicker().pickImage(
-      source: ImageSource.gallery,
-      imageQuality: 82,
-      maxWidth: 1080,
+
+    final secim = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: Colors.white,
+      showDragHandle: true,
+      builder: (c) => Theme(
+        data: ThemeData.light(),
+        child: SafeArea(
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            const ListTile(
+              title: Text('Profil fotoğrafı', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.w900)),
+            ),
+            ListTile(
+              leading: const Icon(Icons.camera_alt_rounded, color: mor),
+              title: const Text('Fotoğraf çek', style: TextStyle(color: Colors.black87)),
+              onTap: () => Navigator.pop(c, 'camera'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_rounded, color: mor),
+              title: const Text('Galeriden seç', style: TextStyle(color: Colors.black87)),
+              onTap: () => Navigator.pop(c, 'gallery'),
+            ),
+            if (fotoUrl.isNotEmpty)
+              ListTile(
+                leading: const Icon(Icons.delete_outline_rounded, color: Colors.red),
+                title: const Text('Profil fotoğrafını kaldır', style: TextStyle(color: Colors.red)),
+                onTap: () => Navigator.pop(c, 'remove'),
+              ),
+          ]),
+        ),
+      ),
     );
+    if (secim == null) return;
+    await ngelxOverlayKapanisiniBekle();
+    if (!mounted) return;
+
+    if (secim == 'remove') {
+      final eski = fotoUrl;
+      setState(() => fotoYukleniyor = true);
+      try {
+        await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+          'photoUrl': '',
+          'updatedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+        if (!mounted) return;
+        setState(() => fotoUrl = '');
+        if (eski.isNotEmpty) {
+          unawaited(ngelxMedyaSil(eski).catchError((_){ }));
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Profil fotoğrafı kaldırıldı.')),
+        );
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Profil fotoğrafı kaldırılamadı: $e')),
+          );
+        }
+      } finally {
+        if (mounted) setState(() => fotoYukleniyor = false);
+      }
+      return;
+    }
+
+    XFile? dosya;
+    try {
+      dosya = await ImagePicker().pickImage(
+        source: secim == 'camera' ? ImageSource.camera : ImageSource.gallery,
+        imageQuality: 82,
+        maxWidth: 1080,
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Kamera/Galeri açılamadı: $e')),
+        );
+      }
+      return;
+    }
     if (dosya == null || !mounted) return;
+
     setState(() => fotoYukleniyor = true);
     try {
       final uzanti = dosya.name.contains('.')
           ? dosya.name.split('.').last.toLowerCase()
           : 'jpg';
       final yol = 'profiles/${user.uid}/${DateTime.now().millisecondsSinceEpoch}.$uzanti';
+      final eski = fotoUrl;
       final url = await ngelxMedyaYukleBytes(
         bytes: await dosya.readAsBytes(),
         kind: 'profiles',
         ext: uzanti,
         legacyPath: yol,
       );
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .set({
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
         'photoUrl': url,
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
       if (!mounted) return;
       setState(() => fotoUrl = url);
+      if (eski.isNotEmpty && eski != url) {
+        unawaited(ngelxMedyaSil(eski).catchError((_){ }));
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Profil fotoğrafı kaydedildi.')),
       );
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Fotoğraf yüklenemedi: $e')),
+          SnackBar(content: Text('Profil fotoğrafı yüklenemedi: $e')),
         );
       }
     } finally {
@@ -8919,18 +9036,64 @@ class _ProfilPageState extends State<ProfilPage> {
   Future<void> icerikDuzenle(QueryDocumentSnapshot<Map<String,dynamic>> d) async {final c=TextEditingController(text:(d.data()['description']??'').toString());final ok=await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(title:const Text('Paylaşımı düzenle'),content:TextField(controller:c,maxLength:500,maxLines:4),actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('Vazgeç')),FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('Kaydet'))]));if(ok==true)await d.reference.update({'description':c.text.trim(),'updatedAt':FieldValue.serverTimestamp()});c.dispose();}
 
   Future<void> icerikSil(QueryDocumentSnapshot<Map<String,dynamic>> d) async {
-    final ok=await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(title:const Text('Bu paylaşımı silmek istiyor musun?'),content:const Text('Paylaşım profilinden ve akıştan tamamen kaldırılacak.'),actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('Vazgeç')),TextButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('Sil',style:TextStyle(color:Colors.red,fontWeight:FontWeight.bold)))]));
-    if(ok!=true)return;
-    final likes=await d.reference.collection('likes').get();
-    final comments=await d.reference.collection('comments').get();
-    final batch=FirebaseFirestore.instance.batch();
-    for(final x in likes.docs){batch.delete(x.reference);}for(final x in comments.docs){batch.delete(x.reference);}batch.delete(d.reference);await batch.commit();
-    final v=d.data();
-    for(final raw in [(v['mediaUrl']??'').toString(),(v['videoUrl']??'').toString(),(v['audioUrl']??'').toString()]){if(raw.isEmpty)continue;await ngelxMedyaSil(raw);}
-    if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Paylaşım profilinden ve akıştan silindi.')));
+    await ngelxOverlayKapanisiniBekle();
+    if(!mounted)return;
+
+    final ok=await showDialog<bool>(
+      context:context,
+      builder:(ctx)=>AlertDialog(
+        backgroundColor:Colors.white,
+        surfaceTintColor:Colors.white,
+        title:const Text('Bu paylaşımı silmek istiyor musun?'),
+        content:const Text('Paylaşım profilinden ve akıştan tamamen kaldırılacak.'),
+        actions:[
+          TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('Vazgeç')),
+          FilledButton(
+            style:FilledButton.styleFrom(backgroundColor:Colors.red),
+            onPressed:()=>Navigator.pop(ctx,true),
+            child:const Text('Sil'),
+          ),
+        ],
+      ),
+    )??false;
+    if(!ok)return;
+    await ngelxOverlayKapanisiniBekle();
+    if(!mounted)return;
+
+    try{
+      final v=d.data();
+      final likes=await d.reference.collection('likes').get();
+      final comments=await d.reference.collection('comments').get();
+      final batch=FirebaseFirestore.instance.batch();
+      for(final x in likes.docs){batch.delete(x.reference);}
+      for(final x in comments.docs){
+        final altLikes=await x.reference.collection('likes').get();
+        for(final l in altLikes.docs){batch.delete(l.reference);}
+        batch.delete(x.reference);
+      }
+      batch.delete(d.reference);
+      await batch.commit();
+
+      for(final raw in <String>[
+        (v['mediaUrl']??'').toString(),
+        (v['videoUrl']??'').toString(),
+        (v['audioUrl']??'').toString(),
+      ]){
+        if(raw.isEmpty)continue;
+        unawaited(ngelxMedyaSil(raw).catchError((_){ }));
+      }
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content:Text('Paylaşım silindi.')),
+      );
+    }catch(e){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content:Text('Paylaşım silinemedi: $e')),
+      );
+    }
   }
 
   @override
+  Widget build(BuildContext context) {  @override
   Widget build(BuildContext context) {
     if (yukleniyor) {
       return const Center(
