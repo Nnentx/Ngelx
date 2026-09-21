@@ -4674,6 +4674,7 @@ class _GrupOlusturPageState extends State<GrupOlusturPage>{
   String? yuklemeHatasi;
   XFile? foto;
   bool kaydediliyor=false,izinlerYukleniyor=true;
+  String? _olusturulanGrupId;
 
   @override void initState(){super.initState();izinliKisileriGetir();}
   @override void dispose(){ad.dispose();arama.dispose();super.dispose();}
@@ -4686,23 +4687,54 @@ class _GrupOlusturPageState extends State<GrupOlusturPage>{
       final v=d.data()??<String,dynamic>{};
       final ids=<String>{...List<String>.from(v['following']??const[]),...List<String>.from(v['friends']??const[])}..remove(u.uid);
       final liste=ids.toList();
-      final bulunan=<QueryDocumentSnapshot<Map<String,dynamic>>>[];
+      final sorgular=<Future<QuerySnapshot<Map<String,dynamic>>>>[];
       for(int i=0;i<liste.length;i+=30){
         final son=(i+30<liste.length)?i+30:liste.length;
         final parca=liste.sublist(i,son);
         if(parca.isEmpty)continue;
-        final q=await FirebaseFirestore.instance.collection('users')
+        sorgular.add(FirebaseFirestore.instance.collection('users')
           .where(FieldPath.documentId,whereIn:parca)
           .get()
-          .timeout(const Duration(seconds:8));
-        bulunan.addAll(q.docs.where((x)=>x.data()['deactivated']!=true));
+          .timeout(const Duration(seconds:8)));
       }
+      final sonuclar=await Future.wait(sorgular).timeout(const Duration(seconds:12));
+      final bulunan=<QueryDocumentSnapshot<Map<String,dynamic>>>[
+        for(final q in sonuclar)...q.docs.where((x)=>x.data()['deactivated']!=true),
+      ];
       if(mounted)setState((){adaylar..clear()..addAll(bulunan);izinlerYukleniyor=false;yuklemeHatasi=null;});
     }catch(e){
       if(mounted)setState((){izinlerYukleniyor=false;yuklemeHatasi='Kişiler yüklenemedi. İnternet bağlantını kontrol edip tekrar dene.';});
     }
   }
-  Future<void> olustur()async{final u=FirebaseAuth.instance.currentUser;if(u==null||kaydediliyor)return;final grupAdi=ad.text.trim();if(grupAdi.length<2){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Grup adı en az 2 karakter olmalı.')));return;}if(grupAdi.length>16){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Grup adı en fazla 16 karakter olabilir.')));return;}if(secilen.isEmpty){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Grup için en az 1 kişi seç.')));return;}if(secilen.length>59){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Yönetici dahil grupta en fazla 60 üye olabilir.')));return;}setState(()=>kaydediliyor=true);try{String fotoUrl='';if(foto!=null){final yol='groups/${u.uid}/${DateTime.now().millisecondsSinceEpoch}.jpg';await supa.Supabase.instance.client.storage.from('ngelx-media').uploadBinary(yol,await foto!.readAsBytes());fotoUrl=supa.Supabase.instance.client.storage.from('ngelx-media').getPublicUrl(yol);}final ref=FirebaseFirestore.instance.collection('chats').doc();await ref.set({'isGroup':true,'groupName':grupAdi,'groupPhotoUrl':fotoUrl,'members':[u.uid,...secilen],'admins':[u.uid],'moderators':<String>[],'createdBy':u.uid,'createdAt':FieldValue.serverTimestamp(),'updatedAt':FieldValue.serverTimestamp(),'lastMessage':'Grup oluşturuldu','hiddenFor':<String>[],'maxMembers':60,'onlyAdminsCanEdit':true}).timeout(const Duration(seconds:15));if(mounted)Navigator.pushReplacement(context,MaterialPageRoute(builder:(_)=>GrupSohbetPage(chatId:ref.id,ad:grupAdi,foto:fotoUrl)));}on TimeoutException{if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Grup oluşturma gecikti. İnternet bağlantını kontrol edip tekrar dene.')));}catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Grup oluşturulamadı. Lütfen tekrar dene.')));}finally{if(mounted)setState(()=>kaydediliyor=false);}}
+  Future<void> olustur()async{
+    final u=FirebaseAuth.instance.currentUser;
+    if(u==null||kaydediliyor)return;
+    final grupAdi=ad.text.trim();
+    if(grupAdi.length<2){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Grup adı en az 2 karakter olmalı.')));return;}
+    if(grupAdi.length>16){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Grup adı en fazla 16 karakter olabilir.')));return;}
+    if(secilen.isEmpty){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Grup için en az 1 kişi seç.')));return;}
+    if(secilen.length>59){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Yönetici dahil grupta en fazla 60 üye olabilir.')));return;}
+    setState(()=>kaydediliyor=true);
+    try{
+      String fotoUrl='';
+      if(foto!=null){
+        final bytes=await foto!.readAsBytes().timeout(const Duration(seconds:8));
+        final yol='groups/${u.uid}/${DateTime.now().millisecondsSinceEpoch}.jpg';
+        await supa.Supabase.instance.client.storage.from('ngelx-media').uploadBinary(yol,bytes).timeout(const Duration(seconds:15));
+        fotoUrl=supa.Supabase.instance.client.storage.from('ngelx-media').getPublicUrl(yol);
+      }
+      _olusturulanGrupId??=FirebaseFirestore.instance.collection('chats').doc().id;
+      final ref=FirebaseFirestore.instance.collection('chats').doc(_olusturulanGrupId);
+      await ref.set({'isGroup':true,'groupName':grupAdi,'groupPhotoUrl':fotoUrl,'members':[u.uid,...secilen],'admins':[u.uid],'moderators':<String>[],'createdBy':u.uid,'createdAt':FieldValue.serverTimestamp(),'updatedAt':FieldValue.serverTimestamp(),'lastMessage':'Grup oluşturuldu','hiddenFor':<String>[],'maxMembers':60,'onlyAdminsCanEdit':true}).timeout(const Duration(seconds:12));
+      if(mounted)Navigator.pushReplacement(context,MaterialPageRoute(builder:(_)=>GrupSohbetPage(chatId:ref.id,ad:grupAdi,foto:fotoUrl)));
+    }on TimeoutException{
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Grup oluşturma gecikti. Aynı grup çoğaltılmadan tekrar deneyebilirsin.')));
+    }catch(_){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Grup oluşturulamadı. Lütfen tekrar dene.')));
+    }finally{
+      if(mounted)setState(()=>kaydediliyor=false);
+    }
+  }
   @override Widget build(BuildContext context){return Theme(data:ThemeData.light().copyWith(scaffoldBackgroundColor:Colors.white,appBarTheme:const AppBarTheme(backgroundColor:Colors.white,foregroundColor:Colors.black,elevation:0)),child:Scaffold(appBar:AppBar(title:const Text('Yeni grup',style:TextStyle(fontWeight:FontWeight.w900)),actions:[TextButton(onPressed:kaydediliyor?null:olustur,child:const Text('Oluştur',style:TextStyle(fontWeight:FontWeight.w900)))]),body:Column(children:[
   Padding(padding:const EdgeInsets.all(18),child:Row(children:[GestureDetector(onTap:()async{final x=await ImagePicker().pickImage(source:ImageSource.gallery,imageQuality:85);if(x!=null&&mounted)setState(()=>foto=x);},child:CircleAvatar(radius:34,backgroundColor:const Color(0xFFE9DDFF),backgroundImage:foto==null?null:FileImage(File(foto!.path)),child:foto==null?const Icon(Icons.add_a_photo,color:mor):null)),const SizedBox(width:14),Expanded(child:TextField(controller:ad,maxLength:16,onChanged:(_)=>setState((){}),style:const TextStyle(color:Colors.black87),decoration:InputDecoration(labelText:'Grup adı',hintText:'Grubuna bir ad ver',counterText:'${ad.text.characters.length}/16 karakter')))])),
     Padding(padding:const EdgeInsets.symmetric(horizontal:18),child:TextField(controller:arama,onChanged:(v)=>setState(()=>sorgu=v.toLowerCase()),style:const TextStyle(color:Colors.black87),decoration:const InputDecoration(prefixIcon:Icon(Icons.search),hintText:'Gruba kişi ekle'))),
@@ -4943,13 +4975,10 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
     final ben=uid;
     if(ben==null||aramaBaslatiliyor)return;
     setState(()=>aramaBaslatiliyor=true);
+    final grupAdi=widget.ad;
+    final odaAdi='group_${widget.chatId}_${DateTime.now().millisecondsSinceEpoch}';
     try{
-      final grup=await chatRef.get().timeout(const Duration(seconds:8));
-      final uyeler=List<String>.from(grup.data()?['members']??const[]);
-      if(!uyeler.contains(ben))throw Exception('Bu grubun üyesi değilsin.');
-      final grupAdi=(grup.data()?['groupName']??widget.ad).toString();
-      final odaAdi='group_${widget.chatId}_${DateTime.now().millisecondsSinceEpoch}';
-      await chatRef.set({
+      unawaited(chatRef.set({
         'callStatus':'ringing',
         'callRoomName':odaAdi,
         'callStartedBy':ben,
@@ -4957,24 +4986,23 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
         'callTitle':grupAdi,
         'callParticipants':<String>[ben],
         'callCreatedAt':FieldValue.serverTimestamp(),
-      },SetOptions(merge:true)).timeout(const Duration(seconds:8));
-      for(final uye in uyeler){
-        if(uye==ben)continue;
-        unawaited(uygulamaBildirimiGonder(
-          toUid:uye,fromUid:ben,tur:'call',
-          metin:goruntulu?'$grupAdi grubunda görüntülü arama başlattı':'$grupAdi grubunda sesli arama başlattı',
-          belgeId:widget.chatId,
-        ).catchError((_){ }));
-      }
+      },SetOptions(merge:true)).timeout(const Duration(seconds:10)).catchError((_){ }));
+      unawaited(chatRef.get().timeout(const Duration(seconds:10)).then((grup){
+        final uyeler=List<String>.from(grup.data()?['members']??const[]);
+        for(final uye in uyeler){
+          if(uye==ben)continue;
+          unawaited(uygulamaBildirimiGonder(toUid:uye,fromUid:ben,tur:'call',metin:goruntulu?'$grupAdi grubunda görüntülü arama başlattı':'$grupAdi grubunda sesli arama başlattı',belgeId:widget.chatId).catchError((_){ }));
+        }
+      }).catchError((_){ }));
       if(!mounted)return;
       setState(()=>aramaBaslatiliyor=false);
       await Navigator.push(context,MaterialPageRoute(builder:(_)=>NgelXAramaPage(
         roomName:odaAdi,baslik:grupAdi,foto:widget.foto,goruntulu:goruntulu,aramaRef:chatRef,
       )));
-    }catch(e){
+    }catch(_){
       if(!mounted)return;
       setState(()=>aramaBaslatiliyor=false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Grup araması başlatılamadı: '+e.toString().replaceFirst('Exception: ',''))));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Grup araması açılamadı. Lütfen tekrar dene.')));
     }
   }
 
@@ -5073,11 +5101,11 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
       if(widget.goruntulu)await yerel.setCameraEnabled(true);
       await lk.AudioManager.instance.setSpeakerOutputPreferred(true,force:widget.goruntulu);
       hoparlor=true;
-      await widget.aramaRef.set({
+      unawaited(widget.aramaRef.set({
         'callStatus':'active',
         'callParticipants':FieldValue.arrayUnion([u.uid]),
         'callConnectedAt':FieldValue.serverTimestamp(),
-      },SetOptions(merge:true));
+      },SetOptions(merge:true)).timeout(const Duration(seconds:10)).catchError((_){ }));
       if(mounted)setState(()=>baglaniyor=false);
     }catch(e){
       if(r!=null){
@@ -6143,7 +6171,6 @@ class _SohbetPageState extends State<SohbetPage> {
     final odaAdi='chat_${widget.chatId}_${DateTime.now().millisecondsSinceEpoch}';
     final ref=FirebaseFirestore.instance.collection('chats').doc(widget.chatId);
     try{
-      final mevcut=await ref.get().timeout(const Duration(seconds:8));
       final aramaVerisi=<String,dynamic>{
         'callStatus':'ringing',
         'callRoomName':odaAdi,
@@ -6152,9 +6179,9 @@ class _SohbetPageState extends State<SohbetPage> {
         'callTitle':widget.ad,
         'callParticipants':<String>[ben],
         'callCreatedAt':FieldValue.serverTimestamp(),
+        'members':<String>[ben,widget.digerUid],
       };
-      if(!mevcut.exists)aramaVerisi['members']=<String>[ben,widget.digerUid];
-      await ref.set(aramaVerisi,SetOptions(merge:true)).timeout(const Duration(seconds:8));
+      unawaited(ref.set(aramaVerisi,SetOptions(merge:true)).timeout(const Duration(seconds:10)).catchError((_){ }));
       if(!mounted)return;
       unawaited(uygulamaBildirimiGonder(
         toUid:widget.digerUid,
