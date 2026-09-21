@@ -5775,11 +5775,19 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
     lk.Room? r;
     try{
       await _izinleriIste();
+      String katilimciAdi=u.displayName?.trim()??'';
+      try{
+        final profil=await FirebaseFirestore.instance.collection('users').doc(u.uid).get().timeout(const Duration(seconds:5));
+        final p=profil.data()??<String,dynamic>{};
+        final firestoreAdi=(p['displayName']??p['username']??'').toString().trim();
+        if(firestoreAdi.isNotEmpty)katilimciAdi=firestoreAdi;
+      }catch(_){}
+      if(katilimciAdi.isEmpty)katilimciAdi='NgelX kullanıcısı';
       final kaynak=lk.DevelopmentTokenSource(id:liveKitTestSunucuId);
       final cevap=await kaynak.fetch(lk.TokenRequestOptions(
         roomName:widget.roomName,
         participantIdentity:u.uid,
-        participantName:u.displayName?.isNotEmpty==true?u.displayName!:'NgelX kullanıcısı',
+        participantName:katilimciAdi,
       )).timeout(const Duration(seconds:12));
       r=lk.Room(roomOptions:lk.RoomOptions(adaptiveStream:true,dynacast:true));
       r.addListener(_odaDegisti);
