@@ -48,7 +48,7 @@ const mor = Color(0xFF8B5CF6);
 const mavi = Color(0xFF22D3EE);
 const panel = Color(0xFF17171F);
 const ngelxWebAdresi = 'https://ngelxsocial.com';
-const _ngelxMediaApiBuild = String.fromEnvironment('NGELX_MEDIA_API', defaultValue: '');
+const _ngelxMediaApiBuild = String.fromEnvironment('NGELX_MEDIA_API', defaultValue: 'https://ngelx-media.alihancaglar76.workers.dev');
 String? _ngelxMediaApiCache;
 DateTime? _ngelxMediaApiCacheZamani;
 
