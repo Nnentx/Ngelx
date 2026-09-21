@@ -1,7 +1,7 @@
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'Authorization, Content-Type, Content-Length',
-  'Access-Control-Allow-Methods': 'GET, PUT, DELETE, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, HEAD, PUT, DELETE, OPTIONS',
 };
 
 function json(data, status = 200) {
@@ -65,16 +65,41 @@ export default {
 
     const u = new URL(request.url);
 
-    if (request.method === 'GET' && u.pathname.startsWith('/media/')) {
+    if ((request.method === 'GET' || request.method === 'HEAD') && u.pathname.startsWith('/media/')) {
       const key = cleanKey(u.pathname.slice('/media/'.length));
       if (!key) return json({ error: 'bad_path' }, 400);
-      const object = await env.MEDIA.get(key);
+
+      if (request.method === 'HEAD') {
+        const object = await env.MEDIA.head(key);
+        if (!object) return json({ error: 'not_found' }, 404);
+        const headers = new Headers(corsHeaders);
+        object.writeHttpMetadata(headers);
+        headers.set('etag', object.httpEtag);
+        headers.set('cache-control', 'public, max-age=31536000, immutable');
+        headers.set('accept-ranges', 'bytes');
+        headers.set('content-length', String(object.size));
+        return new Response(null, { status: 200, headers });
+      }
+
+      const object = await env.MEDIA.get(key, { range: request.headers });
       if (!object) return json({ error: 'not_found' }, 404);
       const headers = new Headers(corsHeaders);
       object.writeHttpMetadata(headers);
       headers.set('etag', object.httpEtag);
       headers.set('cache-control', 'public, max-age=31536000, immutable');
-      return new Response(object.body, { status: 200, headers });
+      headers.set('accept-ranges', 'bytes');
+
+      let status = 200;
+      if (object.range && request.headers.has('range')) {
+        const start = object.range.offset;
+        const end = start + object.range.length - 1;
+        headers.set('content-range', `bytes ${start}-${end}/${object.size}`);
+        headers.set('content-length', String(object.range.length));
+        status = 206;
+      } else {
+        headers.set('content-length', String(object.size));
+      }
+      return new Response(object.body, { status, headers });
     }
 
     if (u.pathname !== '/upload' && u.pathname !== '/object') {
