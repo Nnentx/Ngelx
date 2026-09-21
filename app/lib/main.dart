@@ -1145,9 +1145,18 @@ class _AnaEkranState extends State<AnaEkran> {
       builder:(context,s){
         final adaylar=(s.data?.docs??[]).where((d){
           final v=d.data();
-          if((v['callStartedBy']??'').toString()==ben||v['callStatus']!='ringing')return false;
+          final baslatan=(v['callStartedBy']??'').toString();
+          final durum=(v['callStatus']??'').toString();
+          final grup=v['isGroup']==true;
+          final katilanlar=List<String>.from(v['callParticipants']??const[]);
+          if(baslatan==ben||katilanlar.contains(ben))return false;
+          if(durum!='ringing'&&!(grup&&durum=='active'))return false;
           final t=v['callCreatedAt'];
-          if(t is Timestamp&&DateTime.now().difference(t.toDate()).inMinutes>3)return false;
+          if(t is Timestamp){
+            final dakika=DateTime.now().difference(t.toDate()).inMinutes;
+            if(durum=='ringing'&&dakika>3)return false;
+            if(durum=='active'&&dakika>120)return false;
+          }
           return (v['callRoomName']??'').toString().isNotEmpty;
         }).toList()
           ..sort((a,b){
@@ -1184,7 +1193,12 @@ class _AnaEkranState extends State<AnaEkran> {
                     const SizedBox(width:11),
                     Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisSize:MainAxisSize.min,children:[
                       Text(baslik,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black,fontWeight:FontWeight.w900,fontSize:16)),
-                      Text(goruntulu?'Gelen görüntülü arama':'Gelen sesli arama',style:const TextStyle(color:Colors.black54,fontSize:12)),
+                      Text(
+                        grup&&v['callStatus']=='active'
+                          ?(goruntulu?'Devam eden grup görüntülü araması':'Devam eden grup sesli araması')
+                          :(goruntulu?'Gelen görüntülü arama':'Gelen sesli arama'),
+                        style:const TextStyle(color:Colors.black54,fontSize:12),
+                      ),
                     ])),
                     IconButton.filled(
                       style:IconButton.styleFrom(backgroundColor:Colors.red,foregroundColor:Colors.white),
