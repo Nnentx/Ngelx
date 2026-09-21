@@ -1683,7 +1683,7 @@ Future<void> kendiPaylasiminiSil(
     (veri['audioUrl'] ?? '').toString(),
   ]) {
     if (raw.isEmpty) continue;
-    await ngelxMedyaSil(raw);
+    unawaited(ngelxMedyaSil(raw).catchError((_){ }));
   }
 
   if (context.mounted) {
@@ -3257,6 +3257,8 @@ class YorumKarti extends StatelessWidget {
         ]))),
       );
       if (secim == null || !context.mounted) return;
+      await ngelxOverlayKapanisiniBekle();
+      if (!context.mounted) return;
       final yorumRef = FirebaseFirestore.instance.collection('videos').doc(videoId).collection('comments').doc(yorumId);
       if (secim.startsWith('reaction:')) {
         final emoji=secim.substring(9);
@@ -3274,7 +3276,7 @@ class YorumKarti extends StatelessWidget {
       } else if (secim == 'block') {
         await kullaniciyiEngelle(context, profilUid);
       } else if (secim == 'delete') {
-        final onay = await showDialog<bool>(context:context,builder:(c)=>AlertDialog(title:const Text('Yorum silinsin mi?'),content:const Text('Bu işlem geri alınamaz.'),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),TextButton(onPressed:()=>Navigator.pop(c,true),child:const Text('Sil',style:TextStyle(color:Colors.red))) ])) ?? false;
+        final onay = await showDialog<bool>(context:context,builder:(c)=>Theme(data:ThemeData.light(),child:AlertDialog(backgroundColor:Colors.white,surfaceTintColor:Colors.white,title:const Text('Yorum silinsin mi?',style:TextStyle(color:Colors.black87)),content:const Text('Bu işlem geri alınamaz.',style:TextStyle(color:Colors.black54)),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),FilledButton(style:FilledButton.styleFrom(backgroundColor:Colors.red),onPressed:()=>Navigator.pop(c,true),child:const Text('Sil'))]))) ?? false;
         if (onay) {
           try {
             final videoRef=FirebaseFirestore.instance.collection('videos').doc(videoId);
@@ -5250,7 +5252,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
     }
   }
 
-  Future<void> mesajMenusu(QueryDocumentSnapshot<Map<String,dynamic>> d)async{final v=d.data(),ben=v['senderId']==uid,metin=(v['text']??'').toString();final grup=await chatRef.get(),yonetici=List<String>.from(grup.data()?['admins']??const[]).contains(uid);final sec=await showModalBottomSheet<String>(context:context,backgroundColor:Colors.white,showDragHandle:true,builder:(c)=>Theme(data:ThemeData.light(),child:SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[Wrap(spacing:12,children:['❤️','👍','😂','😮','😢','😡'].map((e)=>TextButton(onPressed:()=>Navigator.pop(c,'reaction:$e'),child:Text(e,style:const TextStyle(fontSize:24)))).toList()),ListTile(leading:const Icon(Icons.reply),title:const Text('Yanıtla',style:TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(c,'reply')),if(metin.isNotEmpty)ListTile(leading:const Icon(Icons.copy),title:const Text('Kopyala',style:TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(c,'copy')),if(ben&&metin.isNotEmpty)ListTile(leading:const Icon(Icons.edit),title:const Text('Düzenle',style:TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(c,'edit')),if(yonetici)ListTile(leading:Icon(v['pinned']==true?Icons.push_pin:Icons.push_pin_outlined,color:mor),title:Text(v['pinned']==true?'Sabitlemeyi kaldır':'Mesajı sabitle',style:const TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(c,'pin')),if(ben||yonetici)ListTile(leading:const Icon(Icons.delete,color:Colors.red),title:const Text('Herkesten sil',style:TextStyle(color:Colors.red)),onTap:()=>Navigator.pop(c,'delete')),if(!ben)ListTile(leading:const Icon(Icons.flag_outlined),title:const Text('Şikâyet et',style:TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(c,'report'))]))));if(sec==null)return;if(sec.startsWith('reaction:')){await d.reference.set({'reactions.${uid!}':sec.substring(9)},SetOptions(merge:true));}else if(sec=='copy'){await Clipboard.setData(ClipboardData(text:metin));}else if(sec=='reply'){mesaj.text='↪ $metin\n';mesaj.selection=TextSelection.collapsed(offset:mesaj.text.length);}else if(sec=='pin'){await d.reference.set({'pinned':v['pinned']!=true,'pinnedAt':FieldValue.serverTimestamp(),'pinnedBy':uid},SetOptions(merge:true));}else if(sec=='delete'){final ok=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(backgroundColor:Colors.white,title:const Text('Mesaj silinsin mi?'),content:const Text('Mesaj gruptan kalıcı olarak kaldırılacak.'),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),FilledButton(style:FilledButton.styleFrom(backgroundColor:Colors.red),onPressed:()=>Navigator.pop(c,true),child:const Text('Sil'))]))??false;if(ok)await d.reference.delete();}else if(sec=='report'){if(mounted)await sikayetEt(context,hedefTuru:'grup_mesaji',hedefId:'${widget.chatId}/${d.id}',hedefUid:v['senderId']?.toString());}else if(sec=='edit'){final c=TextEditingController(text:metin);final ok=await showDialog<bool>(context:context,builder:(x)=>AlertDialog(backgroundColor:Colors.white,title:const Text('Mesajı düzenle'),content:TextField(controller:c,maxLines:5,maxLength:2000),actions:[TextButton(onPressed:()=>Navigator.pop(x,false),child:const Text('Vazgeç')),FilledButton(onPressed:()=>Navigator.pop(x,true),child:const Text('Kaydet'))]))??false;if(ok&&c.text.trim().isNotEmpty)await d.reference.update({'text':c.text.trim(),'editedAt':FieldValue.serverTimestamp()});c.dispose();}}
+  Future<void> mesajMenusu(QueryDocumentSnapshot<Map<String,dynamic>> d)async{final v=d.data(),ben=v['senderId']==uid,metin=(v['text']??'').toString();final grup=await chatRef.get(),yonetici=List<String>.from(grup.data()?['admins']??const[]).contains(uid);final sec=await showModalBottomSheet<String>(context:context,backgroundColor:Colors.white,showDragHandle:true,builder:(c)=>Theme(data:ThemeData.light(),child:SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[Wrap(spacing:12,children:['❤️','👍','😂','😮','😢','😡'].map((e)=>TextButton(onPressed:()=>Navigator.pop(c,'reaction:$e'),child:Text(e,style:const TextStyle(fontSize:24)))).toList()),ListTile(leading:const Icon(Icons.reply),title:const Text('Yanıtla',style:TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(c,'reply')),if(metin.isNotEmpty)ListTile(leading:const Icon(Icons.copy),title:const Text('Kopyala',style:TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(c,'copy')),if(ben&&metin.isNotEmpty)ListTile(leading:const Icon(Icons.edit),title:const Text('Düzenle',style:TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(c,'edit')),if(yonetici)ListTile(leading:Icon(v['pinned']==true?Icons.push_pin:Icons.push_pin_outlined,color:mor),title:Text(v['pinned']==true?'Sabitlemeyi kaldır':'Mesajı sabitle',style:const TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(c,'pin')),if(ben||yonetici)ListTile(leading:const Icon(Icons.delete,color:Colors.red),title:const Text('Herkesten sil',style:TextStyle(color:Colors.red)),onTap:()=>Navigator.pop(c,'delete')),if(!ben)ListTile(leading:const Icon(Icons.flag_outlined),title:const Text('Şikâyet et',style:TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(c,'report'))]))));if(sec==null)return;await ngelxOverlayKapanisiniBekle();if(!mounted)return;if(sec.startsWith('reaction:')){await d.reference.set({'reactions.${uid!}':sec.substring(9)},SetOptions(merge:true));}else if(sec=='copy'){await Clipboard.setData(ClipboardData(text:metin));}else if(sec=='reply'){mesaj.text='↪ $metin\n';mesaj.selection=TextSelection.collapsed(offset:mesaj.text.length);}else if(sec=='pin'){await d.reference.set({'pinned':v['pinned']!=true,'pinnedAt':FieldValue.serverTimestamp(),'pinnedBy':uid},SetOptions(merge:true));}else if(sec=='delete'){final ok=await showDialog<bool>(context:context,builder:(c)=>Theme(data:ThemeData.light(),child:AlertDialog(backgroundColor:Colors.white,surfaceTintColor:Colors.white,title:const Text('Mesaj silinsin mi?',style:TextStyle(color:Colors.black87)),content:const Text('Mesaj gruptan kalıcı olarak kaldırılacak.',style:TextStyle(color:Colors.black54)),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),FilledButton(style:FilledButton.styleFrom(backgroundColor:Colors.red),onPressed:()=>Navigator.pop(c,true),child:const Text('Sil'))])))??false;if(ok)await d.reference.delete();}else if(sec=='report'){if(mounted)await sikayetEt(context,hedefTuru:'grup_mesaji',hedefId:'${widget.chatId}/${d.id}',hedefUid:v['senderId']?.toString());}else if(sec=='edit'){final c=TextEditingController(text:metin);final ok=await showDialog<bool>(context:context,builder:(x)=>AlertDialog(backgroundColor:Colors.white,title:const Text('Mesajı düzenle'),content:TextField(controller:c,maxLines:5,maxLength:2000),actions:[TextButton(onPressed:()=>Navigator.pop(x,false),child:const Text('Vazgeç')),FilledButton(onPressed:()=>Navigator.pop(x,true),child:const Text('Kaydet'))]))??false;if(ok&&c.text.trim().isNotEmpty)await d.reference.update({'text':c.text.trim(),'editedAt':FieldValue.serverTimestamp()});c.dispose();}}
 
   Future<void> ekMenusu()async{
     final secim=await showModalBottomSheet<String>(
@@ -6368,6 +6370,8 @@ class _SohbetPageState extends State<SohbetPage> {
       )),
     );
     if(sec==null)return;
+    await ngelxOverlayKapanisiniBekle();
+    if(!mounted)return;
     if(sec.startsWith('reaction:')){await mesajTepkiDegistir(d,sec.substring(9));return;}
     if(sec=='reaction_more'){final e=await mesajTepkisiSec();if(e!=null)await mesajTepkiDegistir(d,e);return;}
     if(sec=='copy'&&metin.isNotEmpty){await Clipboard.setData(ClipboardData(text:metin));return;}
@@ -6393,6 +6397,8 @@ class _SohbetPageState extends State<SohbetPage> {
       ]))),
     );
     if(fazla==null)return;
+    await ngelxOverlayKapanisiniBekle();
+    if(!mounted)return;
     if(fazla=='pin')await d.reference.set({'pinned':v['pinned']!=true,'pinnedAt':FieldValue.serverTimestamp(),'pinnedBy':uid},SetOptions(merge:true));
     else if(fazla=='delete'){
       final ok=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(
