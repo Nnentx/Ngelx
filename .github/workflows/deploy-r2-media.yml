@@ -1,0 +1,22 @@
+name: Deploy NgelX R2 Media Worker
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: NgelX V48 kaynaklarini al
+        uses: actions/checkout@v4
+        with:
+          ref: ngelx-v48-r2-free-media
+
+      - name: Cloudflare R2 Worker deploy
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: cloudflare/worker
+          command: deploy
