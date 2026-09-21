@@ -57,6 +57,37 @@ Future<void> ngelxOverlayKapanisiniBekle() async {
   await Future<void>.delayed(const Duration(milliseconds: 360));
 }
 
+bool ngelxEskiSupabaseMedya(String url) =>
+    url.contains('.supabase.co/storage/v1/object/');
+
+Widget ngelxMedyaHataGorunumu(String url) => Container(
+  color: const Color(0xFF09090F),
+  alignment: Alignment.center,
+  padding: const EdgeInsets.all(28),
+  child: Column(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      const Icon(Icons.cloud_off_rounded, color: Colors.white54, size: 54),
+      const SizedBox(height: 12),
+      Text(
+        ngelxEskiSupabaseMedya(url)
+            ? 'Bu eski medya Supabase kotası nedeniyle geçici olarak açılamıyor.'
+            : 'Medya şu anda yüklenemedi.',
+        textAlign: TextAlign.center,
+        style: const TextStyle(color: Colors.white70, fontSize: 15, fontWeight: FontWeight.w700),
+      ),
+      if (ngelxEskiSupabaseMedya(url)) ...[
+        const SizedBox(height: 7),
+        const Text(
+          'Yeni yüklemeler Cloudflare R2 üzerinden devam ediyor.',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: Colors.white38, fontSize: 12),
+        ),
+      ],
+    ],
+  ),
+);
+
 
 String _ngelxUzantiTemizle(String value) {
   final v = value.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
@@ -2136,7 +2167,11 @@ class _GorselYaziKartiState extends State<GorselYaziKarti> {
         fit: StackFit.expand,
         children: [
           if (foto.isNotEmpty)
-            CachedNetworkImage(imageUrl: foto, fit: BoxFit.contain)
+            CachedNetworkImage(
+              imageUrl: foto,
+              fit: BoxFit.contain,
+              errorWidget: (_, __, ___) => ngelxMedyaHataGorunumu(foto),
+            )
           else
             Container(
               alignment: Alignment.center,
@@ -2217,6 +2252,7 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver {
   bool sessiz = false;
   bool kalpAnimasyonu = false;
   bool begeniIsleniyor = false;
+  String? medyaHatasi;
   String profilFoto = '';
 
   String get videoId => widget.videoId;
@@ -2242,6 +2278,10 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver {
 
       if (mounted) {
         setState(() => hazir = true);
+      }
+    }).catchError((e) {
+      if (mounted) {
+        setState(() => medyaHatasi = e.toString());
       }
     });
   }
@@ -2484,7 +2524,9 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver {
         fit: StackFit.expand,
         children: [
           Container(color: Colors.black),
-          if (hazir)
+          if (medyaHatasi != null)
+            ngelxMedyaHataGorunumu(widget.adres)
+          else if (hazir)
             FittedBox(
               fit: BoxFit.cover,
               child: SizedBox(
