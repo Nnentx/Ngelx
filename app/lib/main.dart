@@ -4071,7 +4071,7 @@ class _YeniYuklePageState extends State<YuklePage> {
         'type': tur,
         'videoUrl': tur == 'video' ? medyaUrl : '',
         'mediaUrl': medyaUrl,
-        'thumbnailUrl': kapakUrl,
+        'thumbnailUrl': '',
         'audioUrl': sesUrl,
         'description': aciklama.text.trim().isEmpty ? 'NgelX ile paylaşıldı ✨' : aciklama.text.trim(),
         'allowDownload': indirmeyeIzin,
