@@ -1574,15 +1574,10 @@ Future<void> kendiPaylasiminiSil(
     (veri['mediaUrl'] ?? '').toString(),
     (veri['videoUrl'] ?? '').toString(),
     (veri['audioUrl'] ?? '').toString(),
+    (veri['thumbnailUrl'] ?? '').toString(),
   ]) {
     if (raw.isEmpty) continue;
-    try {
-      final parts = Uri.parse(raw).pathSegments;
-      final i = parts.indexOf('ngelx-media');
-      if (i >= 0 && i + 1 < parts.length) {
-        await supa.Supabase.instance.client.storage.from('ngelx-media').remove([parts.sublist(i + 1).join('/')]);
-      }
-    } catch (_) {}
+    await ngelxMedyaSilUrl(raw);
   }
 
   if (context.mounted) {
@@ -8690,7 +8685,7 @@ class _ProfilPageState extends State<ProfilPage> {
     final batch=FirebaseFirestore.instance.batch();
     for(final x in likes.docs){batch.delete(x.reference);}for(final x in comments.docs){batch.delete(x.reference);}batch.delete(d.reference);await batch.commit();
     final v=d.data();
-    for(final raw in [(v['mediaUrl']??'').toString(),(v['videoUrl']??'').toString(),(v['audioUrl']??'').toString()]){if(raw.isEmpty)continue;try{final parts=Uri.parse(raw).pathSegments;final i=parts.indexOf('ngelx-media');if(i>=0&&i+1<parts.length)await supa.Supabase.instance.client.storage.from('ngelx-media').remove([parts.sublist(i+1).join('/')]);}catch(_){}}
+    for(final raw in [(v['mediaUrl']??'').toString(),(v['videoUrl']??'').toString(),(v['audioUrl']??'').toString(),(v['thumbnailUrl']??'').toString()]){if(raw.isEmpty)continue;await ngelxMedyaSilUrl(raw);}
     if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Paylaşım profilinden ve akıştan silindi.')));
   }
 
