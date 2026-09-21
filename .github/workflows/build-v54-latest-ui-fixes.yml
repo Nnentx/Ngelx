@@ -1,0 +1,84 @@
+name: NgelX V54 Latest UI Fixes
+
+on:
+  push:
+    branches: [ngelx-v54-latest-ui-fixes]
+    paths:
+      - 'app/**'
+      - '.github/workflows/build-v54-latest-ui-fixes.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'app/**'
+      - '.github/workflows/build-v54-latest-ui-fixes.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ngelx-v54-latest-ui-fixes
+  cancel-in-progress: true
+
+jobs:
+  verify-and-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Kaynaklari al
+        uses: actions/checkout@v4
+
+      - name: R2 Worker saglik kontrolu
+        run: curl --fail --silent --show-error https://ngelx-media.alihancaglar76.workers.dev/health
+
+      - name: Flutter kur
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Paketleri kur
+        working-directory: app
+        run: flutter pub get
+
+      - name: Kod analizi
+        working-directory: app
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
+
+      - name: Testleri calistir
+        working-directory: app
+        run: |
+          if [ -d test ]; then
+            flutter test
+          else
+            echo "Test klasoru yok; derleme kontrolune geciliyor."
+          fi
+
+      - name: Debug APK derle
+        working-directory: app
+        run: flutter build apk --debug
+
+      - name: APK dosyasini yukle
+        uses: actions/upload-artifact@v4
+        with:
+          name: NgelX-V54-LATEST-UI-FIXES-APK
+          path: app/build/app/outputs/flutter-apk/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Build durumunu dala yaz
+        if: ${{ always() && github.event_name == 'push' }}
+        run: |
+          mkdir -p .github
+          {
+            echo "workflow=NgelX V54 Latest UI Fixes"
+            echo "status=${{ job.status }}"
+            echo "source_sha=${{ github.sha }}"
+            echo "run_id=${{ github.run_id }}"
+            echo "updated_at=$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          } > .github/v54-build-status.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/v54-build-status.txt
+          git commit -m "ci: record V54 build status [skip ci]" || exit 0
+          git push origin HEAD:ngelx-v54-latest-ui-fixes
