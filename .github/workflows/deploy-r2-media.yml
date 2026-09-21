@@ -1,6 +1,10 @@
 name: Deploy NgelX R2 Media Worker
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/deploy-r2-media.yml'
   workflow_dispatch:
 
 jobs:
