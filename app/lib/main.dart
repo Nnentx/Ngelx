@@ -12,7 +12,6 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:video_player/video_player.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:video_thumbnail/video_thumbnail.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:gal/gal.dart';
 import 'package:dio/dio.dart';
@@ -49,26 +48,6 @@ const mavi = Color(0xFF22D3EE);
 const panel = Color(0xFF17171F);
 const ngelxWebAdresi = 'https://ngelxsocial.com';
 final uygulamaDili = ValueNotifier<String>('tr');
-
-Future<String> ngelxVideoKapagiYukle(XFile dosya, String uid) async {
-  final baytlar = await VideoThumbnail.thumbnailData(
-    video: dosya.path,
-    imageFormat: ImageFormat.JPEG,
-    maxWidth: 480,
-    quality: 55,
-  );
-  if (baytlar == null || baytlar.isEmpty) return '';
-  final yol = 'thumbnails/$uid/${DateTime.now().microsecondsSinceEpoch}.jpg';
-  await supa.Supabase.instance.client.storage
-      .from('ngelx-media')
-      .uploadBinary(
-        yol,
-        baytlar,
-        fileOptions: const supa.FileOptions(contentType: 'image/jpeg'),
-      )
-      .timeout(const Duration(seconds: 12));
-  return supa.Supabase.instance.client.storage.from('ngelx-media').getPublicUrl(yol);
-}
 
 const dilAdlari = {'tr':'Türkçe','en':'English','de':'Deutsch','ar':'العربية','ru':'Русский'};
 const ceviriler = <String, Map<String,String>>{
@@ -4073,16 +4052,9 @@ class _YeniYuklePageState extends State<YuklePage> {
     try {
       String medyaUrl = '';
       String sesUrl = '';
-      String kapakUrl = '';
+      const kapakUrl = '';
       if (medya != null) {
         medyaUrl = await xDosyasiYukle(medya!, tur == 'video' ? 'videos' : 'photos');
-        if (tur == 'video') {
-          try {
-            kapakUrl = await ngelxVideoKapagiYukle(medya!, user.uid);
-          } catch (_) {
-            kapakUrl = '';
-          }
-        }
       }
       if (tur == 'photo' && muzik != null) {
         if (await muzik!.length() > 15 * 1024 * 1024) throw Exception('Müzik 15 MB’den küçük olmalı');
