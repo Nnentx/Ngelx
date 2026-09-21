@@ -1,0 +1,234 @@
+const ALLOWED_KINDS = new Set([
+  'photos',
+  'videos',
+  'music',
+  'profiles',
+  'stories',
+  'chats',
+  'groups',
+  'support',
+  'chat-backgrounds',
+  'profile-intros',
+  'thumbnails',
+  'gifs',
+]);
+
+const MAX_BYTES = {
+  videos: 50 * 1024 * 1024,
+  'profile-intros': 35 * 1024 * 1024,
+  music: 15 * 1024 * 1024,
+  gifs: 12 * 1024 * 1024,
+  default: 10 * 1024 * 1024,
+};
+
+let jwksCache = null;
+let jwksExpiresAt = 0;
+
+function cors() {
+  return {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'Authorization, Content-Type, X-NgelX-Filename',
+    'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
+  };
+}
+
+function json(data, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: {'content-type': 'application/json; charset=utf-8', ...cors()},
+  });
+}
+
+function decodeBase64Url(value) {
+  const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
+  const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=');
+  const raw = atob(padded);
+  const out = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+  return out;
+}
+
+function decodeJwtPart(value) {
+  return JSON.parse(new TextDecoder().decode(decodeBase64Url(value)));
+}
+
+async function getFirebaseJwks() {
+  const now = Date.now();
+  if (jwksCache && now < jwksExpiresAt) return jwksCache;
+
+  const response = await fetch(
+    'https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com',
+    {cf: {cacheTtl: 3600, cacheEverything: true}},
+  );
+  if (!response.ok) throw new Error('Firebase public keys could not be loaded');
+
+  const body = await response.json();
+  const maxAge = Number(
+    (response.headers.get('cache-control') || '').match(/max-age=(\d+)/)?.[1] || 3600,
+  );
+  jwksCache = body.keys || [];
+  jwksExpiresAt = now + Math.max(300, maxAge - 60) * 1000;
+  return jwksCache;
+}
+
+async function verifyFirebaseIdToken(request, env) {
+  const auth = request.headers.get('authorization') || '';
+  if (!auth.startsWith('Bearer ')) throw new Error('Missing Firebase token');
+
+  const token = auth.slice(7).trim();
+  const parts = token.split('.');
+  if (parts.length !== 3) throw new Error('Invalid Firebase token');
+
+  const header = decodeJwtPart(parts[0]);
+  const payload = decodeJwtPart(parts[1]);
+  if (header.alg !== 'RS256' || !header.kid) throw new Error('Invalid token algorithm');
+
+  const keys = await getFirebaseJwks();
+  const jwk = keys.find((x) => x.kid === header.kid);
+  if (!jwk) throw new Error('Firebase signing key not found');
+
+  const key = await crypto.subtle.importKey(
+    'jwk',
+    jwk,
+    {name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256'},
+    false,
+    ['verify'],
+  );
+
+  const verified = await crypto.subtle.verify(
+    {name: 'RSASSA-PKCS1-v1_5'},
+    key,
+    decodeBase64Url(parts[2]),
+    new TextEncoder().encode(parts[0] + '.' + parts[1]),
+  );
+  if (!verified) throw new Error('Invalid Firebase signature');
+
+  const now = Math.floor(Date.now() / 1000);
+  const projectId = env.FIREBASE_PROJECT_ID;
+  if (payload.aud !== projectId) throw new Error('Invalid Firebase audience');
+  if (payload.iss !== 'https://securetoken.google.com/' + projectId) throw new Error('Invalid Firebase issuer');
+  if (typeof payload.sub !== 'string' || payload.sub.length === 0 || payload.sub.length > 128) {
+    throw new Error('Invalid Firebase subject');
+  }
+  if (typeof payload.exp !== 'number' || payload.exp <= now) throw new Error('Firebase token expired');
+  if (typeof payload.iat !== 'number' || payload.iat > now + 300) throw new Error('Invalid Firebase issue time');
+
+  return payload;
+}
+
+function cleanExt(raw) {
+  const value = (raw || 'bin').toLowerCase().replace(/[^a-z0-9]/g, '');
+  return value.slice(0, 8) || 'bin';
+}
+
+function cleanKind(raw) {
+  return ALLOWED_KINDS.has(raw) ? raw : null;
+}
+
+function encodeKeyForUrl(key) {
+  return key.split('/').map(encodeURIComponent).join('/');
+}
+
+function contentTypeFor(ext, supplied) {
+  if (supplied && supplied !== 'application/octet-stream') return supplied;
+  const map = {
+    jpg: 'image/jpeg',
+    jpeg: 'image/jpeg',
+    png: 'image/png',
+    webp: 'image/webp',
+    gif: 'image/gif',
+    mp4: 'video/mp4',
+    mov: 'video/quicktime',
+    mp3: 'audio/mpeg',
+    m4a: 'audio/mp4',
+    aac: 'audio/aac',
+    wav: 'audio/wav',
+    ogg: 'audio/ogg',
+  };
+  return map[ext] || 'application/octet-stream';
+}
+
+export default {
+  async fetch(request, env) {
+    if (request.method === 'OPTIONS') {
+      return new Response(null, {status: 204, headers: cors()});
+    }
+
+    const url = new URL(request.url);
+
+    if (request.method === 'GET' && url.pathname === '/health') {
+      return json({ok: true, service: 'ngelx-r2-media'});
+    }
+
+    if (request.method === 'GET' && url.pathname.startsWith('/media/')) {
+      const key = decodeURIComponent(url.pathname.slice('/media/'.length));
+      if (!key || key.includes('..')) return json({error: 'invalid_key'}, 400);
+      const object = await env.MEDIA.get(key);
+      if (!object) return json({error: 'not_found'}, 404);
+
+      const headers = new Headers(cors());
+      object.writeHttpMetadata(headers);
+      headers.set('etag', object.httpEtag);
+      headers.set('cache-control', 'public, max-age=31536000, immutable');
+      return new Response(object.body, {headers});
+    }
+
+    if (request.method === 'POST' && url.pathname === '/upload') {
+      let claims;
+      try {
+        claims = await verifyFirebaseIdToken(request, env);
+      } catch (e) {
+        return json({error: 'unauthorized', message: String(e.message || e)}, 401);
+      }
+
+      const kind = cleanKind(url.searchParams.get('kind'));
+      if (!kind) return json({error: 'invalid_kind'}, 400);
+
+      const ext = cleanExt(url.searchParams.get('ext'));
+      const maxBytes = MAX_BYTES[kind] || MAX_BYTES.default;
+      const announced = Number(request.headers.get('content-length') || 0);
+      if (announced > maxBytes) return json({error: 'file_too_large', maxBytes}, 413);
+
+      const bytes = await request.arrayBuffer();
+      if (!bytes.byteLength) return json({error: 'empty_file'}, 400);
+      if (bytes.byteLength > maxBytes) return json({error: 'file_too_large', maxBytes}, 413);
+
+      const uid = claims.sub;
+      const key = kind + '/' + uid + '/' + Date.now() + '_' + crypto.randomUUID() + '.' + ext;
+      const contentType = contentTypeFor(ext, request.headers.get('content-type'));
+
+      await env.MEDIA.put(key, bytes, {
+        httpMetadata: {contentType, cacheControl: 'public, max-age=31536000, immutable'},
+        customMetadata: {uid, kind},
+      });
+
+      return json({
+        ok: true,
+        key,
+        url: url.origin + '/media/' + encodeKeyForUrl(key),
+        size: bytes.byteLength,
+      }, 201);
+    }
+
+    if (request.method === 'DELETE' && url.pathname === '/object') {
+      let claims;
+      try {
+        claims = await verifyFirebaseIdToken(request, env);
+      } catch (e) {
+        return json({error: 'unauthorized', message: String(e.message || e)}, 401);
+      }
+
+      const key = url.searchParams.get('key') || '';
+      if (!key || key.includes('..')) return json({error: 'invalid_key'}, 400);
+
+      const object = await env.MEDIA.head(key);
+      if (!object) return json({ok: true, deleted: false});
+      if (object.customMetadata?.uid !== claims.sub) return json({error: 'forbidden'}, 403);
+
+      await env.MEDIA.delete(key);
+      return json({ok: true, deleted: true});
+    }
+
+    return json({error: 'not_found'}, 404);
+  },
+};
