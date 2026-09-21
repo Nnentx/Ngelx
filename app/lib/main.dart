@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -48,6 +49,96 @@ const mavi = Color(0xFF22D3EE);
 const panel = Color(0xFF17171F);
 const ngelxWebAdresi = 'https://ngelxsocial.com';
 final uygulamaDili = ValueNotifier<String>('tr');
+
+
+// V47: Yeni medya yuklemeleri NGELX_MEDIA_API_BASE tanimliysa Cloudflare R2'ye gider.
+// Tanimli degilse gecis sirasinda Supabase Storage fallback olarak calismaya devam eder.
+const ngelxMediaApiBase = String.fromEnvironment('NGELX_MEDIA_API_BASE', defaultValue: '');
+final Dio _ngelxMediaDio = Dio(BaseOptions(
+  connectTimeout: const Duration(seconds: 15),
+  sendTimeout: const Duration(seconds: 75),
+  receiveTimeout: const Duration(seconds: 25),
+));
+
+String ngelxMedyaMime(String yol) {
+  final p = yol.toLowerCase();
+  if (p.endsWith('.jpg') || p.endsWith('.jpeg')) return 'image/jpeg';
+  if (p.endsWith('.png')) return 'image/png';
+  if (p.endsWith('.webp')) return 'image/webp';
+  if (p.endsWith('.gif')) return 'image/gif';
+  if (p.endsWith('.mp4')) return 'video/mp4';
+  if (p.endsWith('.mov')) return 'video/quicktime';
+  if (p.endsWith('.mp3')) return 'audio/mpeg';
+  if (p.endsWith('.m4a')) return 'audio/mp4';
+  if (p.endsWith('.aac')) return 'audio/aac';
+  if (p.endsWith('.wav')) return 'audio/wav';
+  if (p.endsWith('.ogg')) return 'audio/ogg';
+  return 'application/octet-stream';
+}
+
+Future<String> ngelxMedyaBaytYukle(String yol, Uint8List baytlar, {String? contentType}) async {
+  final api = ngelxMediaApiBase.trim().replaceAll(RegExp(r'/+$'), '');
+  if (api.isNotEmpty) {
+    final token = await FirebaseAuth.instance.currentUser?.getIdToken();
+    if (token == null || token.isEmpty) throw Exception('Medya yuklemek icin giris yapmalisin.');
+    final cevap = await _ngelxMediaDio.put(
+      '$api/upload',
+      queryParameters: {'path': yol},
+      data: baytlar,
+      options: Options(
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': contentType ?? ngelxMedyaMime(yol),
+          'Content-Length': baytlar.length.toString(),
+        },
+        responseType: ResponseType.json,
+      ),
+    );
+    final veri = cevap.data;
+    if (veri is Map && (veri['url'] ?? '').toString().isNotEmpty) return veri['url'].toString();
+    throw Exception('Medya servisi URL dondurmedi.');
+  }
+  await supa.Supabase.instance.client.storage
+      .from('ngelx-media')
+      .uploadBinary(yol, baytlar, fileOptions: supa.FileOptions(contentType: contentType ?? ngelxMedyaMime(yol)))
+      .timeout(const Duration(seconds: 20));
+  return supa.Supabase.instance.client.storage.from('ngelx-media').getPublicUrl(yol);
+}
+
+Future<String> ngelxMedyaDosyaYukle(String yol, File dosya, {String? contentType}) async =>
+    ngelxMedyaBaytYukle(yol, await dosya.readAsBytes(), contentType: contentType);
+
+String? ngelxMedyaYoluUrlDen(String raw) {
+  try {
+    final parcalar = Uri.parse(raw).pathSegments.map(Uri.decodeComponent).toList();
+    const kokler = <String>{'videos','photos','music','profiles','stories','profile-intros','thumbnails','groups','chats','chat-backgrounds','support'};
+    final i = parcalar.indexWhere((x) => kokler.contains(x));
+    if (i >= 0) return parcalar.sublist(i).join('/');
+  } catch (_) {}
+  return null;
+}
+
+Future<void> ngelxMedyaSilUrl(String raw) async {
+  if (raw.isEmpty) return;
+  try {
+    final parcalar = Uri.parse(raw).pathSegments;
+    final bucket = parcalar.indexOf('ngelx-media');
+    if (bucket >= 0 && bucket + 1 < parcalar.length) {
+      await supa.Supabase.instance.client.storage.from('ngelx-media').remove([parcalar.sublist(bucket + 1).join('/')]);
+      return;
+    }
+    final api = ngelxMediaApiBase.trim().replaceAll(RegExp(r'/+$'), '');
+    final yol = ngelxMedyaYoluUrlDen(raw);
+    if (api.isEmpty || yol == null) return;
+    final token = await FirebaseAuth.instance.currentUser?.getIdToken();
+    if (token == null || token.isEmpty) return;
+    await _ngelxMediaDio.delete(
+      '$api/object',
+      queryParameters: {'path': yol},
+      options: Options(headers: {'Authorization': 'Bearer $token'}),
+    );
+  } catch (_) {}
+}
 
 const dilAdlari = {'tr':'Türkçe','en':'English','de':'Deutsch','ar':'العربية','ru':'Русский'};
 const ceviriler = <String, Map<String,String>>{
