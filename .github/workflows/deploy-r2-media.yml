@@ -11,6 +11,15 @@ jobs:
       - name: Kaynaklari al
         uses: actions/checkout@v4
 
+      - name: R2 bucket olustur
+        continue-on-error: true
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: cloudflare/worker
+          command: r2 bucket create ngelx-media
+
       - name: Cloudflare R2 Worker deploy
         uses: cloudflare/wrangler-action@v3
         with:
