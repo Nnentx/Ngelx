@@ -946,7 +946,7 @@ class _AnaEkranState extends State<AnaEkran> {
     final ben=FirebaseAuth.instance.currentUser?.uid;
     if(ben==null||FirebaseAuth.instance.currentUser?.isAnonymous==true)return const SizedBox.shrink();
     return StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
-      stream:FirebaseFirestore.instance.collection('chats').where('members',arrayContains:ben).snapshots(),
+      stream:FirebaseFirestore.instance.collection('chats').where('members',arrayContains:ben).limit(60).snapshots(),
       builder:(context,s){
         final adaylar=(s.data?.docs??[]).where((d){
           final v=d.data();
@@ -1393,7 +1393,7 @@ class HikayeSeridi extends StatelessWidget {
     return SizedBox(
       height: 82,
       child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-        stream: FirebaseFirestore.instance.collection('videos').limit(80).snapshots(),
+        stream: FirebaseFirestore.instance.collection('videos').limit(30).snapshots(),
         builder: (_, snap) {
           if (!snap.hasData) return const SizedBox.shrink();
           return FutureBuilder<List<Map<String, dynamic>>>(
@@ -1615,7 +1615,7 @@ Future<void> ngelxOzeldenPaylas(
                 ),
                 Expanded(
                   child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                    stream: FirebaseFirestore.instance.collection('users').snapshots(),
+                    stream: FirebaseFirestore.instance.collection('users').limit(100).snapshots(),
                     builder: (_, snap) {
                       if (snap.connectionState == ConnectionState.waiting) {
                         return const Center(child: CircularProgressIndicator(color: mor));
@@ -3436,7 +3436,7 @@ class KesfetPage extends StatelessWidget {
           SliverToBoxAdapter(child: SizedBox(
             height: 205,
             child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-              stream: FirebaseFirestore.instance.collection('live_streams').where('active', isEqualTo: true).snapshots(),
+              stream: FirebaseFirestore.instance.collection('live_streams').where('active', isEqualTo: true).limit(20).snapshots(),
               builder: (_, snap) {
                 final yayinlar = snap.data?.docs ?? [];
                 if (yayinlar.isEmpty) {
@@ -3494,7 +3494,7 @@ class KesfetPage extends StatelessWidget {
           ]))),
           const SliverToBoxAdapter(child: Padding(padding: EdgeInsets.fromLTRB(16, 20, 16, 8), child: Row(children: [Text('Trend içerikler', style: TextStyle(color: Colors.black, fontSize: 21, fontWeight: FontWeight.w900)), Spacer(), Text('Tümünü gör ›', style: TextStyle(color: Colors.black45))]))),
           SliverPadding(padding: const EdgeInsets.all(6), sliver: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-              stream: FirebaseFirestore.instance.collection('videos').orderBy('createdAt', descending: true).limit(60).snapshots(),
+              stream: FirebaseFirestore.instance.collection('videos').orderBy('createdAt', descending: true).limit(30).snapshots(),
               builder: (_, snap) {
                 final belgeler = (snap.data?.docs ?? []).where((d) {
                   final v = d.data();
@@ -4506,10 +4506,10 @@ class _MesajPageState extends State<MesajPage> {
       Padding(padding:const EdgeInsets.fromLTRB(18,14,10,8),child:Row(children:[const Text('Gelen Kutusu',style:TextStyle(color:Colors.black,fontSize:29,fontWeight:FontWeight.w900)),const SizedBox(width:4),IconButton(constraints:const BoxConstraints.tightFor(width:40),tooltip:'Tümünü okundu yap',onPressed:ben==null?null:tumunuOkunduYap,icon:const Icon(Icons.done_all_rounded,color:Color(0xFF27C66F))),const Spacer(),IconButton(constraints:const BoxConstraints.tightFor(width:40),tooltip:'Arşiv',onPressed:ben==null?null:()async{await Navigator.push(context,MaterialPageRoute(builder:(_)=>ArsivSohbetlerPage(uid:ben)));await tercihleriGetir();},icon:const Icon(Icons.archive_outlined,color:Colors.black54)),IconButton(constraints:const BoxConstraints.tightFor(width:40),tooltip:'Grup oluştur',onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const GrupOlusturPage())),icon:const Icon(Icons.group_add_rounded,color:mor,size:29)),IconButton(constraints:const BoxConstraints.tightFor(width:40),tooltip:'Yeni sohbet',onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const YeniSohbetPage())),icon:const Icon(Icons.person_add_alt_1,color:mavi,size:29))])),
       Padding(padding:const EdgeInsets.fromLTRB(16,4,16,10),child:TextField(controller:sohbetAra,onChanged:(v)=>setState(()=>sohbetSorgu=v.trim().toLowerCase()),style:const TextStyle(color:Colors.black87),decoration:InputDecoration(hintText:'Sohbetlerde ara',hintStyle:const TextStyle(color:Colors.black45),prefixIcon:const Icon(Icons.search,color:Colors.black45),filled:true,fillColor:const Color(0xFFF3F4F7),border:OutlineInputBorder(borderRadius:BorderRadius.circular(24),borderSide:BorderSide.none)))),
       Padding(padding:const EdgeInsets.symmetric(horizontal:8),child:Row(children:['Tümü','Okunmamış','Arkadaşlar','Gruplar'].map((f)=>Expanded(child:Padding(padding:const EdgeInsets.symmetric(horizontal:2),child:ChoiceChip(labelPadding:const EdgeInsets.symmetric(horizontal:2),label:Center(child:FittedBox(fit:BoxFit.scaleDown,child:Text(f,maxLines:1))),selected:filtre==f,selectedColor:mor,labelStyle:TextStyle(color:filtre==f?Colors.white:Colors.black87,fontWeight:FontWeight.w700),backgroundColor:const Color(0xFFF1F2F5),side:BorderSide.none,onSelected:(_)=>setState(()=>filtre=f))))).toList())),
-      StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(stream:ben==null?null:FirebaseFirestore.instance.collection('notifications').where('toUid',isEqualTo:ben).limit(200).snapshots(),builder:(_,s){final okunmamis=(s.data?.docs??[]).where((d)=>d.data()['read']!=true).length;return Container(margin:const EdgeInsets.fromLTRB(16,8,16,5),decoration:BoxDecoration(color:const Color(0xFFF5EFFF),borderRadius:BorderRadius.circular(20)),child:ListTile(leading:const CircleAvatar(backgroundColor:Color(0xFFE5D5FF),child:Icon(Icons.favorite,color:mor)),title:const Text('Aktivite',style:TextStyle(color:Colors.black,fontWeight:FontWeight.w900)),subtitle:const Text('Beğeniler, yorumlar ve güvenlik bildirimleri',style:TextStyle(color:Colors.black54)),trailing:okunmamis==0?const Icon(Icons.chevron_right,color:Colors.black45):Badge(label:Text('$okunmamis'),child:const Icon(Icons.chevron_right,color:Colors.black45)),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const AktivitePage()))));}),
+      StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(stream:ben==null?null:FirebaseFirestore.instance.collection('notifications').where('toUid',isEqualTo:ben).limit(60).snapshots(),builder:(_,s){final okunmamis=(s.data?.docs??[]).where((d)=>d.data()['read']!=true).length;return Container(margin:const EdgeInsets.fromLTRB(16,8,16,5),decoration:BoxDecoration(color:const Color(0xFFF5EFFF),borderRadius:BorderRadius.circular(20)),child:ListTile(leading:const CircleAvatar(backgroundColor:Color(0xFFE5D5FF),child:Icon(Icons.favorite,color:mor)),title:const Text('Aktivite',style:TextStyle(color:Colors.black,fontWeight:FontWeight.w900)),subtitle:const Text('Beğeniler, yorumlar ve güvenlik bildirimleri',style:TextStyle(color:Colors.black54)),trailing:okunmamis==0?const Icon(Icons.chevron_right,color:Colors.black45):Badge(label:Text('$okunmamis'),child:const Icon(Icons.chevron_right,color:Colors.black45)),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const AktivitePage()))));}),
       Container(margin:const EdgeInsets.fromLTRB(16,5,16,8),decoration:BoxDecoration(color:const Color(0xFFEDF7FF),borderRadius:BorderRadius.circular(20)),child:ListTile(leading:const CircleAvatar(backgroundColor:Color(0xFFD8ECFF),child:Icon(Icons.chat_bubble_rounded,color:Colors.blue)),title:const Text('Mesaj İstekleri',style:TextStyle(color:Colors.black,fontWeight:FontWeight.w900)),subtitle:const Text('Seni takip etmeyenlerden gelen mesajlar',style:TextStyle(color:Colors.black54)),trailing:const Icon(Icons.chevron_right,color:Colors.black45),onTap:ben==null?null:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>MesajIstekleriPage(uid:ben))))),
       Expanded(child:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
-        stream:ben==null?null:FirebaseFirestore.instance.collection('chats').where('members',arrayContains:ben).limit(200).snapshots(),
+        stream:ben==null?null:FirebaseFirestore.instance.collection('chats').where('members',arrayContains:ben).limit(60).snapshots(),
         builder:(_,s){
           final docs=(s.data?.docs??[]).where((d){final v=d.data();if(List<String>.from(v['hiddenFor']??const[]).contains(ben)||arsivSohbetler.contains(d.id))return false;final members=List<String>.from(v['members']??const[]),grup=v['isGroup']==true||members.length>2;final unread=(v['unread_$ben']??0) as int;if(filtre=='Okunmamış'&&unread==0)return false;if(filtre=='Gruplar'&&!grup)return false;if(!grup){final other=members.firstWhere((x)=>x!=ben,orElse:()=>ben??'');final gelenIstek=v['requestRecipientUid']==ben&&v['requestAccepted_$ben']!=true&&!arkadaslar.contains(other);if(gelenIstek)return false;if(filtre=='Arkadaşlar'&&!arkadaslar.contains(other))return false;}else if(filtre=='Arkadaşlar')return false;final son='${v['groupName']??''} ${v['lastMessage']??''}'.toLowerCase();return sohbetSorgu.isEmpty||son.contains(sohbetSorgu);}).toList()..sort((a,b){final ap=sabitSohbetler.contains(a.id),bp=sabitSohbetler.contains(b.id);if(ap!=bp)return ap?-1:1;final at=a.data()['updatedAt'] as Timestamp?,bt=b.data()['updatedAt'] as Timestamp?;return (bt?.millisecondsSinceEpoch??0).compareTo(at?.millisecondsSinceEpoch??0);});
           if(docs.isEmpty)return const Center(child:Text('Bu bölümde henüz sohbet yok.',textAlign:TextAlign.center,style:TextStyle(color:Colors.black54)));
@@ -4622,7 +4622,7 @@ class MesajIstekleriPage extends StatelessWidget {
         builder: (_, me) {
           final arkadaslar = Set<String>.from(List<dynamic>.from(me.data?.data()?['friends'] ?? const []));
           return StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
-            stream: FirebaseFirestore.instance.collection('chats').where('members', arrayContains: uid).snapshots(),
+            stream: FirebaseFirestore.instance.collection('chats').where('members', arrayContains: uid).limit(60).snapshots(),
             builder: (_, s) {
               final docs = (s.data?.docs ?? []).where((d) {
                 final v=d.data(), m=List<String>.from(v['members'] ?? const []);
@@ -4666,7 +4666,7 @@ class MesajIstegiOnizlemePage extends StatelessWidget{
   final String chatId,digerUid,ad,foto,uid;
   const MesajIstegiOnizlemePage({super.key,required this.chatId,required this.digerUid,required this.ad,required this.foto,required this.uid});
   @override Widget build(BuildContext context)=>Theme(data:ThemeData.light(),child:Scaffold(backgroundColor:Colors.white,appBar:AppBar(title:Text(ad)),body:Column(children:[
-    Expanded(child:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(stream:FirebaseFirestore.instance.collection('chats').doc(chatId).collection('messages').orderBy('createdAt').snapshots(),builder:(_,s)=>ListView(padding:const EdgeInsets.all(16),children:(s.data?.docs??[]).map((d){final v=d.data(),metin=(v['text']??'').toString(),photo=v['type']=='photo';return Align(alignment:v['senderId']==uid?Alignment.centerRight:Alignment.centerLeft,child:Container(margin:const EdgeInsets.symmetric(vertical:4),padding:EdgeInsets.all(photo?4:12),constraints:const BoxConstraints(maxWidth:280),decoration:BoxDecoration(color:const Color(0xFFF0F1F4),borderRadius:BorderRadius.circular(18)),child:photo?ClipRRect(borderRadius:BorderRadius.circular(15),child:Image.network((v['mediaUrl']??'').toString())):Text(metin)));}).toList()))),
+    Expanded(child:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(stream:FirebaseFirestore.instance.collection('chats').doc(chatId).collection('messages').orderBy('createdAt').limitToLast(100).snapshots(),builder:(_,s)=>ListView(padding:const EdgeInsets.all(16),children:(s.data?.docs??[]).map((d){final v=d.data(),metin=(v['text']??'').toString(),photo=v['type']=='photo';return Align(alignment:v['senderId']==uid?Alignment.centerRight:Alignment.centerLeft,child:Container(margin:const EdgeInsets.symmetric(vertical:4),padding:EdgeInsets.all(photo?4:12),constraints:const BoxConstraints(maxWidth:280),decoration:BoxDecoration(color:const Color(0xFFF0F1F4),borderRadius:BorderRadius.circular(18)),child:photo?ClipRRect(borderRadius:BorderRadius.circular(15),child:Image.network((v['mediaUrl']??'').toString())):Text(metin)));}).toList()))),
     SafeArea(top:false,child:Padding(padding:const EdgeInsets.all(12),child:Row(children:[Expanded(child:OutlinedButton(onPressed:()async{await FirebaseFirestore.instance.collection('chats').doc(chatId).set({'requestRejected_$uid':true,'hiddenFor':FieldValue.arrayUnion([uid])},SetOptions(merge:true));if(context.mounted)Navigator.pop(context);},child:const Text('Reddet'))),const SizedBox(width:8),Expanded(child:OutlinedButton(style:OutlinedButton.styleFrom(foregroundColor:Colors.red),onPressed:()async{await kullaniciyiEngelle(context,digerUid);await FirebaseFirestore.instance.collection('chats').doc(chatId).set({'requestRejected_$uid':true,'hiddenFor':FieldValue.arrayUnion([uid])},SetOptions(merge:true));if(context.mounted)Navigator.pop(context);},child:const Text('Engelle'))),const SizedBox(width:8),Expanded(child:FilledButton(onPressed:()async{await FirebaseFirestore.instance.collection('chats').doc(chatId).set({'requestAccepted_$uid':true},SetOptions(merge:true));if(context.mounted)Navigator.pushReplacement(context,MaterialPageRoute(builder:(_)=>SohbetPage(chatId:chatId,digerUid:digerUid,ad:ad,foto:foto)));},child:const Text('Kabul et')))]))),
   ])));
 }
@@ -5639,7 +5639,7 @@ class _YeniSohbetPageState extends State<YeniSohbetPage>{
           ),
           Expanded(
             child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-              stream: FirebaseFirestore.instance.collection('users').snapshots(),
+              stream: FirebaseFirestore.instance.collection('users').limit(100).snapshots(),
               builder: (_, s) {
                 final docs = (s.data?.docs ?? []).where((d) {
                   if (d.id == me || engellenenler.contains(d.id)) return false;
@@ -6235,7 +6235,7 @@ class _SohbetPageState extends State<SohbetPage> {
     super.initState();
     final sohbetRef=FirebaseFirestore.instance.collection('chats').doc(widget.chatId);
     _chatAkisi=sohbetRef.snapshots();
-    _mesajAkisi=sohbetRef.collection('messages').orderBy('createdAt').snapshots();
+    _mesajAkisi=sohbetRef.collection('messages').orderBy('createdAt').limitToLast(100).snapshots();
     unawaited(mesajGonderimHazirligi());
     if(uid!=null){
       unawaited(_okunduGuncelle());
@@ -6847,7 +6847,7 @@ class AktivitePage extends StatelessWidget {
       backgroundColor:Colors.white,
       appBar: AppBar(title: const Text('Aktivite',style:TextStyle(fontWeight:FontWeight.w900)),actions:[IconButton(tooltip:'Tümünü okundu yap',onPressed:()async{if(uid==null)return;final q=await FirebaseFirestore.instance.collection('notifications').where('toUid',isEqualTo:uid).get();final b=FirebaseFirestore.instance.batch();for(final d in q.docs){b.set(d.reference,{'read':true},SetOptions(merge:true));}await b.commit();},icon:const Icon(Icons.done_all_rounded,color:Color(0xFF20B86A)))]),
       body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-        stream: uid == null ? null : FirebaseFirestore.instance.collection('notifications').where('toUid', isEqualTo: uid).snapshots(),
+        stream: uid == null ? null : FirebaseFirestore.instance.collection('notifications').where('toUid', isEqualTo: uid).limit(100).snapshots(),
         builder: (_, s) {
           if(s.hasError)return const Center(child:Column(mainAxisSize:MainAxisSize.min,children:[Icon(Icons.cloud_off_rounded,color:Colors.redAccent,size:52),SizedBox(height:10),Text('Aktiviteler yüklenemedi',style:TextStyle(color:Colors.black,fontWeight:FontWeight.w800)),Text('İnternet bağlantını kontrol edip tekrar dene.',style:TextStyle(color:Colors.black54))]));
           if(s.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator(color:mor));
@@ -6976,7 +6976,7 @@ class OrtakGruplarPage extends StatelessWidget{
       backgroundColor:Colors.white,
       appBar:AppBar(title:const Text('Ortak gruplar',style:TextStyle(fontWeight:FontWeight.w900))),
       body:me==null?const Center(child:Text('Oturum bulunamadı.')):StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
-        stream:FirebaseFirestore.instance.collection('chats').where('members',arrayContains:me).snapshots(),
+        stream:FirebaseFirestore.instance.collection('chats').where('members',arrayContains:me).limit(60).snapshots(),
         builder:(_,s){
           if(s.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator(color:mor));
           final docs=(s.data?.docs??[]).where((d){
@@ -7214,7 +7214,7 @@ class KullaniciProfilPage extends StatelessWidget {
                 )
               else
                 Column(children:[const Padding(padding:EdgeInsets.only(bottom:12),child:Row(mainAxisAlignment:MainAxisAlignment.spaceAround,children:[_ProfilSekme('Gönderiler',true),_ProfilSekme('Reels',false),_ProfilSekme('Etiketlenenler',false)])),StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                  stream: FirebaseFirestore.instance.collection('videos').where('ownerId', isEqualTo: uid).snapshots(),
+                  stream: FirebaseFirestore.instance.collection('videos').where('ownerId', isEqualTo: uid).limit(100).snapshots(),
                   builder: (_, p) {
                     final docs = (p.data?.docs ?? []).where((d){
                       final x=d.data();
@@ -7886,7 +7886,7 @@ class TakipIstegiGecmisiPage extends StatelessWidget{
       backgroundColor:Colors.white,
       appBar:AppBar(title:const Text('Takip isteği geçmişi',style:TextStyle(fontWeight:FontWeight.w900))),
       body:uid==null?const Center(child:Text('Oturum bulunamadı.')):StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
-        stream:FirebaseFirestore.instance.collection('notifications').where('fromUid',isEqualTo:uid).snapshots(),
+        stream:FirebaseFirestore.instance.collection('notifications').where('fromUid',isEqualTo:uid).limit(100).snapshots(),
         builder:(_,s){
           if(s.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator(color:mor));
           final docs=(s.data?.docs??[]).where((d)=>d.data()['type']=='follow_request').toList()
@@ -8013,7 +8013,7 @@ class EtkilesimOzetiPage extends StatelessWidget{
       backgroundColor:Colors.white,
       appBar:AppBar(title:const Text('Etkileşim',style:TextStyle(fontWeight:FontWeight.w900))),
       body:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
-        stream:FirebaseFirestore.instance.collection('videos').where('ownerId',isEqualTo:uid).snapshots(),
+        stream:FirebaseFirestore.instance.collection('videos').where('ownerId',isEqualTo:uid).limit(100).snapshots(),
         builder:(_,s){
           final d=(s.data?.docs??[]).where((x)=>x.data()['type']!='story').toList();
           final eksik=d.where((x)=>x.data()['likeCount']==null||x.data()['commentCount']==null).toList();
@@ -8094,7 +8094,7 @@ class _ProfilAramaPageState extends State<ProfilAramaPage>{
       backgroundColor:Colors.white,
       appBar:AppBar(title:TextField(autofocus:true,onChanged:(v)=>setState(()=>q=v.trim().toLowerCase()),decoration:const InputDecoration(hintText:'Profilde ara',prefixIcon:Icon(Icons.search)))),
       body:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
-        stream:FirebaseFirestore.instance.collection('videos').where('ownerId',isEqualTo:widget.uid).snapshots(),
+        stream:FirebaseFirestore.instance.collection('videos').where('ownerId',isEqualTo:widget.uid).limit(100).snapshots(),
         builder:(_,s){
           final docs=(s.data?.docs??[]).where((d){final v=d.data();return v['type']!='story'&&(q.isEmpty||(v['description']??'').toString().toLowerCase().contains(q));}).toList();
           if(docs.isEmpty)return const Center(child:Text('Eşleşen paylaşım bulunamadı.',style:TextStyle(color:Colors.black54)));
@@ -8119,7 +8119,7 @@ class HikayeArsiviPage extends StatelessWidget{
       backgroundColor:Colors.white,
       appBar:AppBar(title:const Text('Hikâye arşivi',style:TextStyle(fontWeight:FontWeight.w900))),
       body:uid==null?const Center(child:Text('Oturum bulunamadı.')):StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
-        stream:FirebaseFirestore.instance.collection('videos').where('ownerId',isEqualTo:uid).snapshots(),
+        stream:FirebaseFirestore.instance.collection('videos').where('ownerId',isEqualTo:uid).limit(100).snapshots(),
         builder:(_,s){
           if(s.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator(color:mor));
           final docs=(s.data?.docs??[]).where((d)=>d.data()['type']=='story').toList()
@@ -8643,7 +8643,7 @@ class _ProfilPageState extends State<ProfilPage> {
                       const Spacer(),
                       IconButton(tooltip:'Profil önizleme',onPressed:aktifKullanici==null?null:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciProfilPage(uid:aktifKullanici!.uid,ziyaretciOnizleme:true))),icon:const Icon(Icons.visibility_outlined,color:Colors.black,size:27)),
                       IconButton(onPressed:aktifKullanici==null?null:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>ProfilAramaPage(uid:aktifKullanici!.uid))),icon:const Icon(Icons.search_rounded,color:Colors.black,size:28)),
-                      StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(stream:aktifKullanici==null?null:FirebaseFirestore.instance.collection('notifications').where('toUid',isEqualTo:aktifKullanici!.uid).snapshots(),builder:(_,s){final sayi=(s.data?.docs??[]).where((d)=>d.data()['read']!=true).length;return IconButton(onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const AktivitePage())),icon:sayi==0?const Icon(Icons.notifications_none_rounded,color:Colors.black,size:28):Badge(label:Text(sayi>99?'99+':'$sayi'),child:const Icon(Icons.notifications_none_rounded,color:Colors.black,size:28)));}),
+                      StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(stream:aktifKullanici==null?null:FirebaseFirestore.instance.collection('notifications').where('toUid',isEqualTo:aktifKullanici!.uid).limit(100).snapshots(),builder:(_,s){final sayi=(s.data?.docs??[]).where((d)=>d.data()['read']!=true).length;return IconButton(onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const AktivitePage())),icon:sayi==0?const Icon(Icons.notifications_none_rounded,color:Colors.black,size:28):Badge(label:Text(sayi>99?'99+':'$sayi'),child:const Icon(Icons.notifications_none_rounded,color:Colors.black,size:28)));}),
                       IconButton(tooltip: 'Ayarlar ve gizlilik',onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const AyarlarPage())),icon:const Icon(Icons.settings_outlined,color:Colors.black,size:28)),
                     ],
                   ),
@@ -8713,7 +8713,7 @@ class _ProfilPageState extends State<ProfilPage> {
                   Row(mainAxisAlignment:MainAxisAlignment.center,children:[const Icon(Icons.location_on_outlined,color:Colors.black54,size:18),const SizedBox(width:4),Flexible(child:Text(konum,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black54))),const SizedBox(width:13),const Icon(Icons.calendar_month_outlined,color:Colors.black54,size:18),const SizedBox(width:4),Flexible(child:Text(katilim,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black54)))]),
                   const SizedBox(height: 18),
                   StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
-                    stream:aktifKullanici==null?null:FirebaseFirestore.instance.collection('videos').where('ownerId',isEqualTo:aktifKullanici!.uid).snapshots(),
+                    stream:aktifKullanici==null?null:FirebaseFirestore.instance.collection('videos').where('ownerId',isEqualTo:aktifKullanici!.uid).limit(100).snapshots(),
                     builder:(_,s){
                       final paylasimlar=(s.data?.docs??[]).where((d)=>d.data()['type']!='story');
                       final etkilesim=paylasimlar.fold<int>(0,(toplam,d){final v=d.data();return toplam+((v['likeCount'] as num?)?.toInt()??0)+((v['commentCount'] as num?)?.toInt()??0)+((v['shareCount'] as num?)?.toInt()??0);});
@@ -8741,7 +8741,7 @@ class _ProfilPageState extends State<ProfilPage> {
                   Row(mainAxisAlignment:MainAxisAlignment.spaceAround,children:[_profilKisayol(Icons.bookmark_border_rounded,'Kaydedilenler',tiklama:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const KaydedilenlerPage()))),_profilKisayol(Icons.history_rounded,'Arşiv',tiklama:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const HikayeArsiviPage()))),_profilKisayol(Icons.add_circle_outline_rounded,'Hikâyeler',tiklama:hikayeyiAc),_profilKisayol(Icons.event_outlined,'Etkinlikler',tiklama:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const ProfilBolumuPage(baslik:'Etkinlikler',aciklama:'Yaklaşan ve katıldığın etkinlikler burada görünecek.',ikon:Icons.event_outlined)))),_profilKisayol(Icons.lock_outline_rounded,'Gizlilik',tiklama:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const TercihlerPage(baslik:'Gizlilik')))),_profilKisayol(Icons.settings_outlined,'Ayarlar',tiklama:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const AyarlarPage())))]),
                   const SizedBox(height: 20),
                   SizedBox(height:92,child:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
-                    stream:aktifKullanici==null?null:FirebaseFirestore.instance.collection('videos').where('ownerId',isEqualTo:aktifKullanici!.uid).snapshots(),
+                    stream:aktifKullanici==null?null:FirebaseFirestore.instance.collection('videos').where('ownerId',isEqualTo:aktifKullanici!.uid).limit(100).snapshots(),
                     builder:(_,hs){
                       final h=(hs.data?.docs??[]).where((d)=>d.data()['type']=='story'&&d.data()['highlighted']==true).toList()
                         ..sort((a,b){
@@ -8776,7 +8776,7 @@ class _ProfilPageState extends State<ProfilPage> {
           ),
           SliverToBoxAdapter(
             child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-              stream: aktifKullanici == null ? null : FirebaseFirestore.instance.collection('videos').where('ownerId', isEqualTo: aktifKullanici!.uid).snapshots(),
+              stream: aktifKullanici == null ? null : FirebaseFirestore.instance.collection('videos').where('ownerId', isEqualTo: aktifKullanici!.uid).limit(100).snapshots(),
               builder: (_, snap) {
                 final paylasimlar = (snap.data?.docs ?? []).where((d) => d.data()['type'] != 'story').toList()
                   ..sort((a,b){
@@ -8815,7 +8815,7 @@ class _ProfilPageState extends State<ProfilPage> {
                   left:6,
                   right:6,
                   bottom:6,
-                  child:_ProfilEtkilesimRozeti(videoId:belge.id),
+                  child:_ProfilEtkilesimRozeti(likeCount:(v['likeCount'] as num?)?.toInt()??0,commentCount:(v['commentCount'] as num?)?.toInt()??0),
                 ),
               ],
             ),
@@ -8838,55 +8838,39 @@ class _ProfilPageState extends State<ProfilPage> {
 
 
 class _ProfilEtkilesimRozeti extends StatelessWidget {
-  final String videoId;
-  const _ProfilEtkilesimRozeti({required this.videoId});
+  final int likeCount, commentCount;
+  const _ProfilEtkilesimRozeti({required this.likeCount, required this.commentCount});
 
   @override
-  Widget build(BuildContext context) {
-    final ref = FirebaseFirestore.instance.collection('videos').doc(videoId);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: .62),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-            stream: ref.collection('likes').snapshots(),
-            builder: (_, s) => Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.favorite_rounded, color: Colors.white, size: 15),
-                const SizedBox(width: 4),
-                Text(
-                  '${s.data?.docs.length ?? 0}',
-                  style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w800),
-                ),
-              ],
-            ),
-          ),
-          StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-            stream: ref.collection('comments').snapshots(),
-            builder: (_, s) => Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.mode_comment_rounded, color: Colors.white, size: 15),
-                const SizedBox(width: 4),
-                Text(
-                  '${s.data?.docs.length ?? 0}',
-                  style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w800),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+    decoration: BoxDecoration(
+      color: Colors.black.withValues(alpha: .62),
+      borderRadius: BorderRadius.circular(12),
+    ),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.spaceAround,
+      children: [
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.favorite_rounded, color: Colors.white, size: 15),
+            const SizedBox(width: 4),
+            Text('$likeCount', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w800)),
+          ],
+        ),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.mode_comment_rounded, color: Colors.white, size: 15),
+            const SizedBox(width: 4),
+            Text('$commentCount', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w800)),
+          ],
+        ),
+      ],
+    ),
+  );
 }
-
 
 class _ProfilSekme extends StatelessWidget{final String yazi;final bool secili;const _ProfilSekme(this.yazi,this.secili);@override Widget build(BuildContext context)=>Container(padding:const EdgeInsets.only(bottom:10),decoration:BoxDecoration(border:Border(bottom:BorderSide(color:secili?mavi:Colors.transparent,width:3))),child:Text(yazi,style:TextStyle(color:secili?Colors.black:Colors.black45,fontWeight:FontWeight.w800)));}
 
@@ -8903,7 +8887,7 @@ class KaydedilenlerPage extends StatelessWidget {
         body: uid == null
             ? const Center(child: Text('Kaydedilenleri görmek için giriş yap.'))
             : StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                stream: FirebaseFirestore.instance.collection('users').doc(uid).collection('saved').orderBy('savedAt', descending: true).snapshots(),
+                stream: FirebaseFirestore.instance.collection('users').doc(uid).collection('saved').orderBy('savedAt', descending: true).limit(100).snapshots(),
                 builder: (_, s) {
                   if (s.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator(color: mor));
                   final docs = s.data?.docs ?? [];
