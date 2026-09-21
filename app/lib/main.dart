@@ -1527,56 +1527,68 @@ class _AramaPageState extends State<AramaPage> {
 class HikayeSeridi extends StatelessWidget {
   const HikayeSeridi({super.key});
 
-  Future<List<Map<String, dynamic>>> gorunebilirHikayeler(List<QueryDocumentSnapshot<Map<String, dynamic>>> belgeler) async {
+  Future<List<Map<String, dynamic>>> gorunebilirHikayeler(
+    List<QueryDocumentSnapshot<Map<String, dynamic>>> belgeler,
+  ) async {
     final ben = FirebaseAuth.instance.currentUser?.uid;
-    if (ben == null) return [];
+    if (ben == null) return const [];
     final benimBelgem = await FirebaseFirestore.instance.collection('users').doc(ben).get();
-    final arkadaslar = Set<String>.from(List<dynamic>.from(benimBelgem.data()?['friends'] ?? []));
+    final arkadaslar = Set<String>.from(List<dynamic>.from(benimBelgem.data()?['friends'] ?? const []));
     final simdi = DateTime.now();
-    final adaylar = belgeler.map((d) => d.data()).where((v) {
+
+    final adaylar = belgeler.where((d) {
+      final v = d.data();
       final bitis = v['expiresAt'];
       return v['type'] == 'story' && bitis is Timestamp && bitis.toDate().isAfter(simdi);
     }).toList();
+
+    final sahipler = adaylar
+        .map((d) => (d.data()['ownerId'] ?? '').toString())
+        .where((id) => id.isNotEmpty && id != ben)
+        .toSet()
+        .toList();
+
+    final profilBelgeleri = await Future.wait(
+      sahipler.map((id) => FirebaseFirestore.instance.collection('users').doc(id).get()),
+    );
+    final profiller = <String, Map<String, dynamic>>{
+      for (final d in profilBelgeleri) d.id: d.data() ?? <String, dynamic>{},
+    };
+
     final sonuc = <Map<String, dynamic>>[];
-    for (final h in adaylar) {
+    for (final d in adaylar) {
+      final h = <String, dynamic>{'id': d.id, ...d.data()};
       final sahibi = (h['ownerId'] ?? '').toString();
-      if (sahibi.isEmpty || sahibi == ben) { sonuc.add(h); continue; }
-      final sahipBelgesi = await FirebaseFirestore.instance.collection('users').doc(sahibi).get();
-      final profil = sahipBelgesi.data() ?? {};
+      final profil = sahibi == ben ? (benimBelgem.data() ?? <String, dynamic>{}) : (profiller[sahibi] ?? <String, dynamic>{});
+      if (sahibi.isEmpty) continue;
       if (profil['deactivated'] == true) continue;
-      if (profil['friendsOnlyStory'] != false && !arkadaslar.contains(sahibi)) continue;
+      if (sahibi != ben && profil['friendsOnlyStory'] != false && !arkadaslar.contains(sahibi)) continue;
+      h['ownerPhotoUrl'] = (profil['photoUrl'] ?? '').toString();
+      h['ownerDisplayName'] = (profil['displayName'] ?? profil['username'] ?? h['username'] ?? 'NgelX').toString();
       sonuc.add(h);
     }
+
+    sonuc.sort((a, b) {
+      final at = a['createdAt'], bt = b['createdAt'];
+      final am = at is Timestamp ? at.millisecondsSinceEpoch : 0;
+      final bm = bt is Timestamp ? bt.millisecondsSinceEpoch : 0;
+      return bm.compareTo(am);
+    });
     return sonuc;
   }
 
   void ac(BuildContext context, Map<String, dynamic> veri) {
-    showDialog(
-      context: context,
-      barrierColor: Colors.black,
-      builder: (_) => Dialog.fullscreen(
-        backgroundColor: Colors.black,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            CachedNetworkImage(imageUrl: (veri['mediaUrl'] ?? '').toString(), fit: BoxFit.contain),
-            const Positioned(
-              top: 45,
-              left: 18,
-              right: 18,
-              child: LinearProgressIndicator(value: 1, color: mavi),
-            ),
-            Positioned(
-              top: 62,
-              left: 20,
-              child: Text('@${veri['username'] ?? 'ngelx'}', style: const TextStyle(fontWeight: FontWeight.bold)),
-            ),
-            Positioned(
-              top: 48,
-              right: 14,
-              child: IconButton(icon: const Icon(Icons.close, size: 30), onPressed: () => Navigator.pop(context)),
-            ),
-          ],
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => HikayeGosterPage(
+          url: (veri['mediaUrl'] ?? veri['videoUrl'] ?? '').toString(),
+          kullanici: '@${veri['username'] ?? 'ngelx'}',
+          fotoUrl: (veri['ownerPhotoUrl'] ?? '').toString(),
+          ownerId: (veri['ownerId'] ?? '').toString(),
+          storyId: (veri['id'] ?? '').toString(),
+          createdAt: veri['createdAt'],
+          expiresAt: veri['expiresAt'],
         ),
       ),
     );
@@ -1585,7 +1597,7 @@ class HikayeSeridi extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 82,
+      height: 88,
       child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
         stream: FirebaseFirestore.instance.collection('videos').limit(30).snapshots(),
         builder: (_, snap) {
@@ -1593,32 +1605,49 @@ class HikayeSeridi extends StatelessWidget {
           return FutureBuilder<List<Map<String, dynamic>>>(
             future: gorunebilirHikayeler(snap.data!.docs),
             builder: (_, gorunur) {
-              final hikayeler = gorunur.data ?? [];
+              final hikayeler = gorunur.data ?? const <Map<String, dynamic>>[];
               if (hikayeler.isEmpty) return const SizedBox.shrink();
               return ListView.separated(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            scrollDirection: Axis.horizontal,
-            itemCount: hikayeler.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 10),
-            itemBuilder: (_, i) {
-              final h = hikayeler[i];
-              return GestureDetector(
-                onTap: () => ac(context, h),
-                child: Container(
-                  width: 70,
-                  padding: const EdgeInsets.all(3),
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(colors: [mavi, mor, Colors.pinkAccent]),
-                    boxShadow: [BoxShadow(color: mor, blurRadius: 12)],
-                  ),
-                  child: CircleAvatar(
-                    backgroundColor: panel,
-                    backgroundImage: CachedNetworkImageProvider((h['mediaUrl'] ?? '').toString()),
-                  ),
-                ),
-              );
-            },
+                cacheExtent: 700,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                scrollDirection: Axis.horizontal,
+                itemCount: hikayeler.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 10),
+                itemBuilder: (_, i) {
+                  final h = hikayeler[i];
+                  final foto = (h['ownerPhotoUrl'] ?? h['mediaUrl'] ?? '').toString();
+                  return GestureDetector(
+                    onTap: () => ac(context, h),
+                    child: SizedBox(
+                      width: 72,
+                      child: Column(
+                        children: [
+                          Container(
+                            width: 66,
+                            height: 66,
+                            padding: const EdgeInsets.all(3),
+                            decoration: const BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: LinearGradient(colors: [mavi, mor, Colors.pinkAccent]),
+                            ),
+                            child: CircleAvatar(
+                              backgroundColor: const Color(0xFFF0F1F4),
+                              backgroundImage: foto.isEmpty ? null : CachedNetworkImageProvider(foto),
+                              child: foto.isEmpty ? const Icon(Icons.person, color: mor) : null,
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            (h['username'] ?? 'ngelx').toString(),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(color: Colors.black87, fontSize: 10.5, fontWeight: FontWeight.w700),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
               );
             },
           );
@@ -7641,42 +7670,260 @@ class VideoIlkKare extends StatelessWidget {
   );
 }
 
-class HikayeGosterPage extends StatefulWidget {final String url,kullanici,fotoUrl;final dynamic createdAt,expiresAt;const HikayeGosterPage({super.key,required this.url,required this.kullanici,this.fotoUrl='',this.createdAt,this.expiresAt});@override State<HikayeGosterPage> createState()=>_HikayeGosterPageState();}
+class HikayeGosterPage extends StatefulWidget {
+  final String url, kullanici, fotoUrl, ownerId, storyId;
+  final dynamic createdAt, expiresAt;
+  const HikayeGosterPage({
+    super.key,
+    required this.url,
+    required this.kullanici,
+    this.fotoUrl = '',
+    this.ownerId = '',
+    this.storyId = '',
+    this.createdAt,
+    this.expiresAt,
+  });
+  @override
+  State<HikayeGosterPage> createState() => _HikayeGosterPageState();
+}
+
 class _HikayeGosterPageState extends State<HikayeGosterPage> with SingleTickerProviderStateMixin {
   late final AnimationController sure;
-  @override void initState(){super.initState();sure=AnimationController(vsync:this,duration:const Duration(seconds:5))..addStatusListener((s){if(s==AnimationStatus.completed&&mounted)Navigator.pop(context);})..forward();}
-  @override void dispose(){sure.dispose();super.dispose();}
-  String get zamanBilgisi{
-    final olusma=widget.createdAt is Timestamp?(widget.createdAt as Timestamp).toDate():null;
-    final bitis=widget.expiresAt is Timestamp?(widget.expiresAt as Timestamp).toDate():null;
-    String baslangic='Az önce';
-    if(olusma!=null){
-      final fark=DateTime.now().difference(olusma);
-      if(fark.inMinutes<60)baslangic='${fark.inMinutes.clamp(1,59)} dk önce';
-      else if(fark.inHours<24)baslangic='${fark.inHours} sa önce';
-      else baslangic='${fark.inDays} gün önce';
-    }
-    if(bitis==null)return baslangic;
-    final kalan=bitis.difference(DateTime.now());
-    if(kalan.isNegative)return '$baslangic • Süresi doldu';
-    if(kalan.inHours>=1)return '$baslangic • ${kalan.inHours} sa kaldı';
-    return '$baslangic • ${kalan.inMinutes.clamp(1,59)} dk kaldı';
+  final yanit = TextEditingController();
+  final yanitFocus = FocusNode();
+  bool gonderiliyor = false;
+
+  @override
+  void initState() {
+    super.initState();
+    sure = AnimationController(vsync: this, duration: const Duration(seconds: 15))
+      ..addStatusListener((s) {
+        if (s == AnimationStatus.completed && mounted && !yanitFocus.hasFocus) Navigator.maybePop(context);
+      })
+      ..forward();
+    yanitFocus.addListener(() {
+      if (yanitFocus.hasFocus) {
+        sure.stop();
+      } else if (mounted && sure.value < 1) {
+        sure.forward();
+      }
+    });
   }
-  @override Widget build(BuildContext context){return Scaffold(
-    backgroundColor:Colors.black,
-    body:GestureDetector(
-      onLongPressStart:(_)=>sure.stop(),
-      onLongPressEnd:(_)=>sure.forward(),
-      child:Stack(fit:StackFit.expand,children:[
-        CachedNetworkImage(imageUrl:widget.url,fit:BoxFit.contain),
-        SafeArea(child:Padding(padding:const EdgeInsets.all(14),child:Column(children:[
-          AnimatedBuilder(animation:sure,builder:(_,__)=>LinearProgressIndicator(value:sure.value,color:mavi,backgroundColor:Colors.white24)),
-          const SizedBox(height:10),
-          Row(children:[CircleAvatar(radius:19,backgroundColor:mor,backgroundImage:widget.fotoUrl.isEmpty?null:CachedNetworkImageProvider(widget.fotoUrl),child:widget.fotoUrl.isEmpty?Text(widget.kullanici.replaceFirst('@','').isEmpty?'N':widget.kullanici.replaceFirst('@','')[0].toUpperCase()):null),const SizedBox(width:9),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(widget.kullanici,style:const TextStyle(fontWeight:FontWeight.bold)),Text(zamanBilgisi,style:const TextStyle(color:Colors.white70,fontSize:12))])),IconButton(onPressed:()=>Navigator.pop(context),icon:const Icon(Icons.close,size:31))]),
-        ]))),
-      ]),
-    ),
-  );}
+
+  @override
+  void dispose() {
+    sure.dispose();
+    yanit.dispose();
+    yanitFocus.dispose();
+    super.dispose();
+  }
+
+  String get zamanBilgisi {
+    final olusma = widget.createdAt is Timestamp ? (widget.createdAt as Timestamp).toDate() : null;
+    final bitis = widget.expiresAt is Timestamp ? (widget.expiresAt as Timestamp).toDate() : null;
+    String baslangic = 'Az önce';
+    if (olusma != null) {
+      final fark = DateTime.now().difference(olusma);
+      if (fark.inMinutes < 60) baslangic = '${fark.inMinutes.clamp(1, 59)} dk önce';
+      else if (fark.inHours < 24) baslangic = '${fark.inHours} sa önce';
+      else baslangic = '${fark.inDays} gün önce';
+    }
+    if (bitis == null) return baslangic;
+    final kalan = bitis.difference(DateTime.now());
+    if (kalan.isNegative) return '$baslangic • Süresi doldu';
+    if (kalan.inHours >= 1) return '$baslangic • ${kalan.inHours} sa kaldı';
+    return '$baslangic • ${kalan.inMinutes.clamp(1, 59)} dk kaldı';
+  }
+
+  Future<void> yanitGonder([String? emoji]) async {
+    final ben = FirebaseAuth.instance.currentUser;
+    if (ben == null || ben.isAnonymous || widget.ownerId.isEmpty || widget.ownerId == ben.uid || gonderiliyor) return;
+    final metin = (emoji ?? yanit.text).trim();
+    if (metin.isEmpty) return;
+    setState(() => gonderiliyor = true);
+    try {
+      final ids = <String>[ben.uid, widget.ownerId]..sort();
+      final chatId = ids.join('_');
+      final ref = FirebaseFirestore.instance.collection('chats').doc(chatId);
+      final mesajRef = ref.collection('messages').doc();
+      final batch = FirebaseFirestore.instance.batch();
+      batch.set(ref, {
+        'members': ids,
+        'lastMessage': emoji != null ? '$emoji Hikâyene tepki verdi' : 'Hikâyene yanıt verdi',
+        'updatedAt': FieldValue.serverTimestamp(),
+        'unread_${widget.ownerId}': FieldValue.increment(1),
+      }, SetOptions(merge: true));
+      batch.set(mesajRef, {
+        'senderId': ben.uid,
+        'text': metin,
+        'type': 'story_reply',
+        'storyId': widget.storyId,
+        'storyMediaUrl': widget.url,
+        'createdAt': FieldValue.serverTimestamp(),
+        'clientCreatedAt': Timestamp.now(),
+      });
+      await batch.commit().timeout(const Duration(seconds: 12));
+      unawaited(uygulamaBildirimiGonder(
+        toUid: widget.ownerId,
+        fromUid: ben.uid,
+        tur: 'message',
+        metin: emoji != null ? 'Hikâyene $emoji tepkisi verdi' : 'Hikâyene yanıt verdi',
+        belgeId: chatId,
+      ).catchError((_) {}));
+      yanit.clear();
+      if (mounted) {
+        FocusScope.of(context).unfocus();
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Hikâye yanıtın gönderildi.')));
+      }
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Yanıt gönderilemedi. Tekrar dene.')));
+    } finally {
+      if (mounted) setState(() => gonderiliyor = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ben = FirebaseAuth.instance.currentUser?.uid;
+    final yanitAcik = widget.ownerId.isNotEmpty && ben != widget.ownerId;
+    return Scaffold(
+      resizeToAvoidBottomInset: true,
+      backgroundColor: Colors.black,
+      body: SafeArea(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 8, 8, 6),
+              child: Column(
+                children: [
+                  AnimatedBuilder(
+                    animation: sure,
+                    builder: (_, __) => LinearProgressIndicator(
+                      value: sure.value,
+                      minHeight: 3,
+                      color: Colors.white,
+                      backgroundColor: Colors.white24,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 20,
+                        backgroundColor: mor,
+                        backgroundImage: widget.fotoUrl.isEmpty ? null : CachedNetworkImageProvider(widget.fotoUrl),
+                        child: widget.fotoUrl.isEmpty
+                            ? Text(widget.kullanici.replaceFirst('@', '').isEmpty ? 'N' : widget.kullanici.replaceFirst('@', '')[0].toUpperCase())
+                            : null,
+                      ),
+                      const SizedBox(width: 9),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(widget.kullanici, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900)),
+                            Text(zamanBilgisi, style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: 'Ses',
+                        onPressed: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Hikâye sesi açık.'))),
+                        icon: const Icon(Icons.volume_up_rounded, color: Colors.white),
+                      ),
+                      IconButton(
+                        tooltip: 'Daha fazla',
+                        onPressed: () => showModalBottomSheet<void>(
+                          context: context,
+                          backgroundColor: Colors.white,
+                          showDragHandle: true,
+                          builder: (c) => SafeArea(
+                            child: ListTile(
+                              leading: const Icon(Icons.flag_outlined),
+                              title: const Text('Hikâyeyi bildir'),
+                              onTap: () {
+                                Navigator.pop(c);
+                                if (widget.ownerId.isNotEmpty) {
+                                  sikayetEt(context, hedefTuru: 'hikaye', hedefId: widget.storyId, hedefUid: widget.ownerId);
+                                }
+                              },
+                            ),
+                          ),
+                        ),
+                        icon: const Icon(Icons.more_horiz_rounded, color: Colors.white),
+                      ),
+                      IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close_rounded, color: Colors.white, size: 30)),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: GestureDetector(
+                onLongPressStart: (_) => sure.stop(),
+                onLongPressEnd: (_) { if (!yanitFocus.hasFocus) sure.forward(); },
+                child: Center(
+                  child: CachedNetworkImage(
+                    imageUrl: widget.url,
+                    fit: BoxFit.contain,
+                    placeholder: (_, __) => const CircularProgressIndicator(color: Colors.white),
+                    errorWidget: (_, __, ___) => const Icon(Icons.broken_image_outlined, color: Colors.white54, size: 72),
+                  ),
+                ),
+              ),
+            ),
+            if (yanitAcik)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: yanit,
+                        focusNode: yanitFocus,
+                        style: const TextStyle(color: Colors.white),
+                        textInputAction: TextInputAction.send,
+                        onSubmitted: (_) => yanitGonder(),
+                        decoration: InputDecoration(
+                          hintText: 'Mesaj gönder',
+                          hintStyle: const TextStyle(color: Colors.white60),
+                          filled: true,
+                          fillColor: Colors.white12,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(28),
+                            borderSide: const BorderSide(color: Colors.white38),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(28),
+                            borderSide: const BorderSide(color: Colors.white38),
+                          ),
+                        ),
+                      ),
+                    ),
+                    for (final e in const ['❤️', '😂', '😮'])
+                      InkWell(
+                        onTap: gonderiliyor ? null : () => yanitGonder(e),
+                        borderRadius: BorderRadius.circular(22),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 8),
+                          child: Text(e, style: const TextStyle(fontSize: 26)),
+                        ),
+                      ),
+                    IconButton(
+                      onPressed: gonderiliyor ? null : () => yanitGonder(),
+                      icon: gonderiliyor
+                          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                          : const Icon(Icons.send_rounded, color: Colors.white),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class AyarlarPage extends StatelessWidget {
