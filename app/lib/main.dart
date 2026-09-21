@@ -170,7 +170,7 @@ Future<String> ngelxMedyaYukleBytes({
         istek.persistentConnection = false;
         istek.headers.set(HttpHeaders.authorizationHeader, 'Bearer $token');
         istek.headers.set(HttpHeaders.contentTypeHeader, tur);
-        istek.headers.set('X-NgelX-Client', 'android-v53');
+        istek.headers.set('X-NgelX-Client', 'android-v54');
         istek.contentLength = bytes.length;
         istek.add(bytes);
         final cevap = await istek.close().timeout(const Duration(seconds: 35));
