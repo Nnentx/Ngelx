@@ -1,0 +1,57 @@
+name: NgelX V49 Sohbet UI Duzeltmeleri
+
+on:
+  push:
+    branches: [ngelx-v49-chat-ui-fixes]
+    paths:
+      - 'app/**'
+      - 'firestore.rules'
+      - '.github/workflows/build-v49-chat-ui.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: ngelx-v49-chat-ui
+  cancel-in-progress: true
+
+jobs:
+  verify-and-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Kaynaklari al
+        uses: actions/checkout@v4
+
+      - name: Flutter kur
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Paketleri kur
+        working-directory: app
+        run: flutter pub get
+
+      - name: Kod analizi
+        working-directory: app
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
+
+      - name: Testleri calistir
+        working-directory: app
+        run: |
+          if [ -d test ]; then
+            flutter test
+          else
+            echo "Test klasoru yok; derleme kontrolune geciliyor."
+          fi
+
+      - name: Debug APK derle
+        working-directory: app
+        run: flutter build apk --debug
+
+      - name: APK dosyasini yukle
+        uses: actions/upload-artifact@v4
+        with:
+          name: NgelX-V49-SOHBET-UI-DUZELTMELERI-APK
+          path: app/build/app/outputs/flutter-apk/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
