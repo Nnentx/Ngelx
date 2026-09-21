@@ -5617,15 +5617,19 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
     final grupAdi=widget.ad;
     final odaAdi='group_${widget.chatId}_${DateTime.now().millisecondsSinceEpoch}';
     try{
-      unawaited(chatRef.set({
+      await chatRef.set({
         'callStatus':'ringing',
         'callRoomName':odaAdi,
         'callStartedBy':ben,
         'callVideo':goruntulu,
         'callTitle':grupAdi,
         'callParticipants':<String>[ben],
+        'callDismissedBy':<String>[],
         'callCreatedAt':FieldValue.serverTimestamp(),
-      },SetOptions(merge:true)).timeout(const Duration(seconds:10)).catchError((_){ }));
+        'callEndedAt':FieldValue.delete(),
+        'updatedAt':FieldValue.serverTimestamp(),
+        'lastMessage':goruntulu?'🎥 Grup görüntülü araması':'📞 Grup sesli araması',
+      },SetOptions(merge:true)).timeout(const Duration(seconds:10));
       unawaited(chatRef.get().timeout(const Duration(seconds:10)).then((grup){
         final uyeler=List<String>.from(grup.data()?['members']??const[]);
         for(final uye in uyeler){
