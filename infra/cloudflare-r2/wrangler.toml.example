@@ -1,0 +1,16 @@
+name = "ngelx-media-r2"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+
+[[r2_buckets]]
+binding = "MEDIA"
+bucket_name = "ngelx-media"
+
+[vars]
+# Firebase projesinin Web API key degeri. Gizli degildir ancak uygulamaya gore sinirlandirilmalidir.
+FIREBASE_WEB_API_KEY = "BURAYA_FIREBASE_WEB_API_KEY"
+# Bos birakilirsa Worker /media/... adresi ile dosyalari kendisi sunar.
+# Uretimde R2 custom domain kullanildiginda ornek: https://media.ngelxsocial.com
+PUBLIC_BASE_URL = ""
+# 50 MiB. Ucretsiz kota korumasi icin uygulamadaki dosya limitleriyle ayni tutulur.
+MAX_OBJECT_BYTES = "52428800"
