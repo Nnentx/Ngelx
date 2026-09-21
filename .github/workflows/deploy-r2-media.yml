@@ -8,10 +8,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - name: NgelX V48 kaynaklarini al
+      - name: NgelX R2 prod kaynaklarini al
         uses: actions/checkout@v4
         with:
-          ref: ngelx-v48-r2-free-media
+          ref: ngelx-v53-r2-reliability
 
       - name: Cloudflare R2 Worker deploy
         uses: cloudflare/wrangler-action@v3
