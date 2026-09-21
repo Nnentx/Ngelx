@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
@@ -124,23 +125,49 @@ Future<String> ngelxMedyaYukleBytes({
   final tur = contentType ?? _ngelxContentType(temizExt);
 
   if (api.isNotEmpty) {
-    final token = await user.getIdToken();
-    if (token == null || token.isEmpty) throw Exception('Güvenli medya oturumu oluşturulamadı.');
-    final cevap = await Dio().post(
-      '$api/upload',
-      queryParameters: {'kind': kind, 'ext': temizExt},
-      data: bytes,
-      options: Options(
-        headers: {'Authorization': 'Bearer $token', 'Content-Type': tur},
-        responseType: ResponseType.json,
-        sendTimeout: const Duration(seconds: 25),
-        receiveTimeout: const Duration(seconds: 25),
-      ),
-    );
-    final veri = cevap.data;
-    final url = veri is Map ? (veri['url'] ?? '').toString() : '';
-    if (url.isEmpty) throw Exception('Medya sunucusu geçerli URL döndürmedi.');
-    return url;
+    final uri = Uri.parse('$api/upload').replace(queryParameters: {'kind': kind, 'ext': temizExt});
+    Object? sonHata;
+    for (var deneme = 0; deneme < 3; deneme++) {
+      final istemci = HttpClient()..connectionTimeout = const Duration(seconds: 12);
+      try {
+        final token = await user.getIdToken(deneme > 0);
+        if (token == null || token.isEmpty) throw Exception('Güvenli medya oturumu oluşturulamadı.');
+        final istek = await istemci.postUrl(uri).timeout(const Duration(seconds: 15));
+        istek.persistentConnection = false;
+        istek.headers.set(HttpHeaders.authorizationHeader, 'Bearer $token');
+        istek.headers.set(HttpHeaders.contentTypeHeader, tur);
+        istek.headers.set('X-NgelX-Client', 'android-v53');
+        istek.contentLength = bytes.length;
+        istek.add(bytes);
+        final cevap = await istek.close().timeout(const Duration(seconds: 35));
+        final govde = await utf8.decoder.bind(cevap).join().timeout(const Duration(seconds: 15));
+        if (cevap.statusCode >= 200 && cevap.statusCode < 300) {
+          final veri = govde.isEmpty ? const <String,dynamic>{} : jsonDecode(govde);
+          final url = veri is Map ? (veri['url'] ?? '').toString() : '';
+          if (url.isEmpty) throw Exception('Medya sunucusu geçerli URL döndürmedi.');
+          return url;
+        }
+        sonHata = HttpException('Medya sunucusu HTTP ${cevap.statusCode}: $govde', uri: uri);
+        if (cevap.statusCode < 500 && cevap.statusCode != 408 && cevap.statusCode != 429 && cevap.statusCode != 401) {
+          throw sonHata;
+        }
+      } on SocketException catch (e) {
+        sonHata = e;
+      } on TimeoutException catch (e) {
+        sonHata = e;
+      } on HttpException catch (e) {
+        sonHata = e;
+      } catch (e) {
+        sonHata = e;
+        if (deneme >= 2) rethrow;
+      } finally {
+        istemci.close(force: true);
+      }
+      if (deneme < 2) {
+        await Future<void>.delayed(Duration(milliseconds: deneme == 0 ? 700 : 1600));
+      }
+    }
+    throw Exception('Medya sunucusuna bağlanılamadı. Bağlantı otomatik olarak 3 kez denendi. ${sonHata ?? ''}');
   }
 
   await supa.Supabase.instance.client.storage
