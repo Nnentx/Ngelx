@@ -1,5 +1,5 @@
 workflow=NgelX V54 Install Test
-status=failure
-source_sha=773cf760d1d41f35a14d953935c93b3baee19454
-run_id=35755951650
-updated_at=2026-09-22T16:44:46Z
+status=success
+source_sha=9ee7b861ef0830e96e84cdded53d964300311ebd
+run_id=35758289333
+updated_at=2026-09-22T17:13:34Z
