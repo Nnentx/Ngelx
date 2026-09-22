@@ -1674,13 +1674,15 @@ class _AramaPageState extends State<AramaPage> {
                   if(gruplar.isNotEmpty)const Padding(padding:EdgeInsets.fromLTRB(18,20,18,8),child:Text('Gruplar',style:TextStyle(fontSize:18,fontWeight:FontWeight.w900,color:mor))),
                   ...gruplar.map((d){
                     final v=d.data(),ad=(v['name']??'Topluluk').toString(),aciklama=(v['description']??'').toString();
+                    final me=FirebaseAuth.instance.currentUser?.uid;
+                    final uyeMi=me!=null&&List<String>.from(v['members']??const[]).contains(me);
                     return ListTile(
                       leading:const CircleAvatar(backgroundColor:Color(0xFFE9DDFF),child:Icon(Icons.groups_rounded,color:mor)),
                       title:Text(ad,style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w800)),
                       subtitle:Text(aciklama.isEmpty?'${v['memberCount']??0} üye':aciklama,maxLines:1,overflow:TextOverflow.ellipsis),
                       trailing:FilledButton(
                         style:FilledButton.styleFrom(backgroundColor:mor),
-                        onPressed:()async{
+                        onPressed:uyeMi?null:()async{
                           final uid=FirebaseAuth.instance.currentUser?.uid;if(uid==null)return;
                           final ref=FirebaseFirestore.instance.collection('groups').doc(d.id);
                           try{
@@ -1690,12 +1692,13 @@ class _AramaPageState extends State<AramaPage> {
                               if(uyeler.contains(uid)){zaten=true;return;}
                               tx.set(ref,{'members':FieldValue.arrayUnion([uid]),'memberCount':FieldValue.increment(1)},SetOptions(merge:true));
                             }).timeout(const Duration(seconds:8));
+                            if(!zaten&&mounted)setState(()=>aramaVerisiniYukle());
                             if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(zaten?'Bu gruba zaten katıldın.':'Gruba katıldın ✅')));
                           }catch(_){
                             if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Gruba katılınamadı.')));
                           }
                         },
-                        child:const Text('Katıl'),
+                        child:Text(uyeMi?'Katıldın':'Katıl'),
                       ),
                     );
                   }),
@@ -4258,6 +4261,8 @@ class _KesfetPageState extends State<KesfetPage> {
     final sayi=(v['memberCount']??(v['members'] is List?(v['members'] as List).length:0)).toString();
     final aciklama=(v['description']??'').toString().trim();
     final foto=(v['groupPhotoUrl']??v['photoUrl']??v['imageUrl']??'').toString().trim();
+    final me=FirebaseAuth.instance.currentUser?.uid;
+    final uyeMi=me!=null&&List<String>.from(v['members']??const[]).contains(me);
     return Container(
       width:270,
       padding:const EdgeInsets.all(12),
@@ -4287,7 +4292,7 @@ class _KesfetPageState extends State<KesfetPage> {
             const SizedBox(height:7),
             SizedBox(height:31,child:FilledButton.icon(
               style:FilledButton.styleFrom(backgroundColor:mor,padding:const EdgeInsets.symmetric(horizontal:10)),
-              onPressed:()async{
+              onPressed:uyeMi?null:()async{
                 final uid=FirebaseAuth.instance.currentUser?.uid;
                 if(uid==null)return;
                 final ref=FirebaseFirestore.instance.collection('groups').doc(id);
@@ -4305,8 +4310,8 @@ class _KesfetPageState extends State<KesfetPage> {
                   if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Gruba katılma işlemi tamamlanamadı.')));
                 }
               },
-              icon:const Icon(Icons.group_add_rounded,size:16),
-              label:const Text('Katıl',style:TextStyle(fontSize:12)),
+              icon:Icon(uyeMi?Icons.check_circle_rounded:Icons.group_add_rounded,size:16),
+              label:Text(uyeMi?'Katıldın':'Katıl',style:const TextStyle(fontSize:12)),
             )),
           ],
         )),
@@ -10177,7 +10182,7 @@ class AyarlarPage extends StatelessWidget {
       _ayar(context,Icons.download_outlined,'İndirme izinleri','Varsayılan paylaşım indirme ayarı'),
     ],
     const Divider(),
-    ListTile(leading:const Icon(Icons.system_update,color:mor),title:const Text('Uygulama güncellemeleri'),subtitle:const Text('V54 • Test build 227'),trailing:const Icon(Icons.build_circle,color:Colors.orange)),
+    ListTile(leading:const Icon(Icons.system_update,color:mor),title:const Text('Uygulama güncellemeleri'),subtitle:const Text('V54 • Test build 228'),trailing:const Icon(Icons.build_circle,color:Colors.orange)),
     ListTile(leading:const Icon(Icons.share,color:mavi),title:const Text('Ngel X’i paylaş'),subtitle:const Text('Uygulama bağlantısını paylaş veya kopyala'),onTap:()async=>SharePlus.instance.share(ShareParams(text:'Ngel X ile dünyanı paylaş ✨\nhttps://ngelx.app'))),
     const Divider(),
     ListTile(leading:const Icon(Icons.logout,color:Colors.red),title:const Text('Çıkış yap',style:TextStyle(color:Colors.red)),onTap:()async{final onay=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(title:const Text('Çıkış yapılsın mı?'),content:const Text('Tekrar giriş yapman gerekecek.'),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('Çıkış yap'))]));if(onay==true){await FirebaseAuth.instance.signOut();if(context.mounted)Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder:(_)=>const GirisPage()),(_)=>false);}})
