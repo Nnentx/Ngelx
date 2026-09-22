@@ -66,6 +66,19 @@ required_group_tokens = [
     "typing_",
     "mutedFor",
     "groupPhotoUrl",
+    "GrupTakmaAdlarPage",
+    "GrupOzellestirPage",
+    "GrupAyarlarPage",
+    "Sohbet üyelerini gör",
+    "Davetler ve istekler",
+    "Sohbet bilgileri",
+    "Sohbet balonu aç",
+    "Okundu bilgisi",
+    "Yazma göstergesi",
+    "Bir üyeyi engelle",
+    "Şikayet et",
+    "Sohbetten ayrıl",
+    "Sohbeti sil",
 ]
 for token in required_group_tokens:
     if token not in app:
@@ -76,6 +89,9 @@ if "80*1024*1024" in app and "videos: 80 * 1024 * 1024" not in worker:
     errors.append("Grup video boyutu app/worker arasında uyuşmuyor.")
 if "30*1024*1024" in app and "'chat-files': 30 * 1024 * 1024" not in worker:
     errors.append("Grup dosya boyutu app/worker arasında uyuşmuyor.")
+
+if "heic: 'image/heic'" not in worker or "heif: 'image/heif'" not in worker:
+    errors.append("R2 worker HEIC/HEIF fotoğraf türlerini desteklemiyor.")
 
 if errors:
     print("NgelX contract doğrulaması BAŞARISIZ:")
