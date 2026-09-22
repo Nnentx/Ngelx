@@ -666,12 +666,16 @@ class _GirisPageState extends State<GirisPage> {
     }
     setState(() => yukleniyor = true);
     try {
+      final mevcut=FirebaseAuth.instance.currentUser;
+      if(mevcut!=null&&mevcut.email?.toLowerCase()!=email.text.trim().toLowerCase()){
+        await FirebaseAuth.instance.signOut().timeout(const Duration(seconds:8));
+      }
       final sonuc = await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: email.text.trim(),
         password: sifre.text,
-      );
-      final profilGelecek=FirebaseFirestore.instance.collection('users').doc(sonuc.user!.uid).get();
-      await sonuc.user?.reload();
+      ).timeout(const Duration(seconds:20));
+      final profilGelecek=FirebaseFirestore.instance.collection('users').doc(sonuc.user!.uid).get().timeout(const Duration(seconds:10));
+      await sonuc.user?.reload().timeout(const Duration(seconds:10));
       if (FirebaseAuth.instance.currentUser?.emailVerified != true) {
         await FirebaseAuth.instance.currentUser?.sendEmailVerification();
         await FirebaseAuth.instance.signOut();
@@ -679,8 +683,9 @@ class _GirisPageState extends State<GirisPage> {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('E-posta adresin henüz doğrulanmamış. Yeni doğrulama bağlantısı gönderildi; gelen kutunu kontrol et.')));
         return;
       }
-      final profilBelgesi=await profilGelecek;
-      final profilVerisi=profilBelgesi.data()??{};
+      DocumentSnapshot<Map<String,dynamic>>? profilBelgesi;
+      try{profilBelgesi=await profilGelecek;}catch(_){}
+      final profilVerisi=profilBelgesi?.data()??<String,dynamic>{};
       if(profilVerisi['deactivated']==true&&mounted){
         final silmeTalebi=profilVerisi['deletionRequestedAt']!=null;
         final yenidenAc=await showDialog<bool>(context:context,barrierDismissible:false,builder:(c)=>AlertDialog(title:Text(silmeTalebi?'Hesap silme talebi var':'Hesap dondurulmuş'),content:Text(silmeTalebi?'Hesabın 30 günlük silme sürecinde. Şimdi geri açmak ister misin?':'Hesabını yeniden etkinleştirmek ister misin?'),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('Hesabı geri aç'))]));
@@ -706,7 +711,10 @@ class _GirisPageState extends State<GirisPage> {
         context,
         MaterialPageRoute(builder: (_) => const AnaEkran()),
       );
-    } on FirebaseAuthException catch (e) {
+    } on TimeoutException {
+      if(!mounted)return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Giriş işlemi zaman aşımına uğradı. İnternet bağlantını kontrol edip tekrar dene.')));
+on FirebaseAuthException catch (e) {
       if (!mounted) return;
       var mesaj='Giriş yapılamadı: ${e.message ?? e.code}';
       if(e.code=='invalid-credential'||e.code=='wrong-password'||e.code=='user-not-found'){
