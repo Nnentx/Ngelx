@@ -201,35 +201,32 @@ export default {
       const contentType = contentTypeFor(ext, request.headers.get('content-type'));
 
       try {
-        let saved;
-        if (announced > 0) {
-          // Stream mobile uploads directly into R2 instead of buffering the whole
-          // image/video inside the Worker. This keeps memory flat and prevents
-          // connection resets on slower mobile networks.
-          saved = await env.MEDIA.put(key, request.body, {
-            httpMetadata: {contentType, cacheControl: 'public, max-age=31536000, immutable'},
-            customMetadata: {uid, kind},
-          });
-        } else {
-          // Chunked/unknown length fallback: buffer only when size cannot be
-          // validated from Content-Length.
-          const bytes = await request.arrayBuffer();
-          if (!bytes.byteLength) return json({error: 'empty_file'}, 400);
-          if (bytes.byteLength > maxBytes) return json({error: 'file_too_large', maxBytes}, 413);
-          saved = await env.MEDIA.put(key, bytes, {
-            httpMetadata: {contentType, cacheControl: 'public, max-age=31536000, immutable'},
-            customMetadata: {uid, kind},
-          });
-        }
+        // Android HttpClient/Cloudflare kombinasyonunda request.body stream'ini
+        // doğrudan R2'ye aktarmak bazı cihazlarda "unknown length" / reset ile
+        // sonuçlanabiliyor. NgelX limiti en fazla 50 MB olduğu için önce gövdeyi
+        // doğrulayıp sonra sabit byte uzunluğuyla R2'ye yazmak daha güvenilir.
+        const bytes = await request.arrayBuffer();
+        if (!bytes.byteLength) return json({error: 'empty_file'}, 400);
+        if (bytes.byteLength > maxBytes) return json({error: 'file_too_large', maxBytes}, 413);
+
+        const saved = await env.MEDIA.put(key, bytes, {
+          httpMetadata: {contentType, cacheControl: 'public, max-age=31536000, immutable'},
+          customMetadata: {uid, kind},
+        });
 
         return json({
           ok: true,
           key,
           url: url.origin + '/media/' + encodeKeyForUrl(key),
-          size: saved?.size || announced || 0,
+          size: saved?.size || bytes.byteLength,
         }, 201);
       } catch (e) {
-        return json({error: 'upload_failed', message: String(e?.message || e)}, 503);
+        return json({
+          error: 'upload_failed',
+          message: String(e?.message || e),
+          kind,
+          announced,
+        }, 503);
       }
     }
 
