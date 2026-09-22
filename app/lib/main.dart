@@ -5600,7 +5600,26 @@ class _MesajPageState extends State<MesajPage> {
       Expanded(child:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
         stream:ben==null?null:FirebaseFirestore.instance.collection('chats').where('members',arrayContains:ben).limit(60).snapshots(),
         builder:(_,s){
-          final docs=(s.data?.docs??[]).where((d){final v=d.data();if(List<String>.from(v['hiddenFor']??const[]).contains(ben)||arsivSohbetler.contains(d.id))return false;final members=List<String>.from(v['members']??const[]),grup=v['isGroup']==true||members.length>2;final unread=(v['unread_$ben']??0) as int;if(filtre=='Okunmamış'&&unread==0)return false;if(filtre=='Gruplar'&&!grup)return false;if(!grup){final other=members.firstWhere((x)=>x!=ben,orElse:()=>ben??'');final gelenIstek=v['requestRecipientUid']==ben&&v['requestAccepted_$ben']!=true&&!arkadaslar.contains(other);if(gelenIstek)return false;if(filtre=='Arkadaşlar'&&!arkadaslar.contains(other))return false;}else if(filtre=='Arkadaşlar')return false;final son='${v['groupName']??''} ${v['lastMessage']??''}'.toLowerCase();return sohbetSorgu.isEmpty||son.contains(sohbetSorgu);}).toList()..sort((a,b){final ap=sabitSohbetler.contains(a.id),bp=sabitSohbetler.contains(b.id);if(ap!=bp)return ap?-1:1;final at=a.data()['updatedAt'] as Timestamp?,bt=b.data()['updatedAt'] as Timestamp?;return (bt?.millisecondsSinceEpoch??0).compareTo(at?.millisecondsSinceEpoch??0);});
+          final docs=(s.data?.docs??[]).where((d){
+            final v=d.data();
+            if(List<String>.from(v['hiddenFor']??const[]).contains(ben)||arsivSohbetler.contains(d.id))return false;
+            final members=List<String>.from(v['members']??const[]),grup=v['isGroup']==true||members.length>2;
+            final unread=(v['unread_$ben'] as num?)?.toInt()??0;
+            if(filtre=='Okunmamış'&&unread==0)return false;
+            if(filtre=='Gruplar'&&!grup)return false;
+            if(!grup){
+              final other=members.firstWhere((x)=>x!=ben,orElse:()=>ben??'');
+              final gelenIstek=v['requestRecipientUid']==ben&&v['requestAccepted_$ben']!=true&&!arkadaslar.contains(other);
+              if(gelenIstek)return false;
+              if(filtre=='Arkadaşlar'&&!arkadaslar.contains(other))return false;
+              // Kişi adı/username asıl kullanıcı belgesi yüklendikten sonra filtrelenir.
+              // Burada yalnızca son mesaja bakmak kişi adına göre aramayı yanlışlıkla eliyordu.
+              return true;
+            }
+            if(filtre=='Arkadaşlar')return false;
+            final son='${v['groupName']??''} ${v['lastMessage']??''}'.toLowerCase();
+            return sohbetSorgu.isEmpty||son.contains(sohbetSorgu);
+          }).toList()..sort((a,b){final ap=sabitSohbetler.contains(a.id),bp=sabitSohbetler.contains(b.id);if(ap!=bp)return ap?-1:1;final at=a.data()['updatedAt'] as Timestamp?,bt=b.data()['updatedAt'] as Timestamp?;return (bt?.millisecondsSinceEpoch??0).compareTo(at?.millisecondsSinceEpoch??0);});
           if(docs.isEmpty)return const Center(child:Text('Bu bölümde henüz sohbet yok.',textAlign:TextAlign.center,style:TextStyle(color:Colors.black54)));
           return ListView.builder(itemCount:docs.length,itemBuilder:(_,i){
             final d=docs[i],v=d.data(),members=List<String>.from(v['members']??[]);
@@ -10162,7 +10181,7 @@ class AyarlarPage extends StatelessWidget {
       _ayar(context,Icons.download_outlined,'İndirme izinleri','Varsayılan paylaşım indirme ayarı'),
     ],
     const Divider(),
-    ListTile(leading:const Icon(Icons.system_update,color:mor),title:const Text('Uygulama güncellemeleri'),subtitle:const Text('V54 • Test build 225'),trailing:const Icon(Icons.build_circle,color:Colors.orange)),
+    ListTile(leading:const Icon(Icons.system_update,color:mor),title:const Text('Uygulama güncellemeleri'),subtitle:const Text('V54 • Test build 226'),trailing:const Icon(Icons.build_circle,color:Colors.orange)),
     ListTile(leading:const Icon(Icons.share,color:mavi),title:const Text('Ngel X’i paylaş'),subtitle:const Text('Uygulama bağlantısını paylaş veya kopyala'),onTap:()async=>SharePlus.instance.share(ShareParams(text:'Ngel X ile dünyanı paylaş ✨\nhttps://ngelx.app'))),
     const Divider(),
     ListTile(leading:const Icon(Icons.logout,color:Colors.red),title:const Text('Çıkış yap',style:TextStyle(color:Colors.red)),onTap:()async{final onay=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(title:const Text('Çıkış yapılsın mı?'),content:const Text('Tekrar giriş yapman gerekecek.'),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('Çıkış yap'))]));if(onay==true){await FirebaseAuth.instance.signOut();if(context.mounted)Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder:(_)=>const GirisPage()),(_)=>false);}})
