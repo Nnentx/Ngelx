@@ -8925,7 +8925,24 @@ class GrupAyarlarPage extends StatelessWidget{
     data:ThemeData.light().copyWith(colorScheme:ColorScheme.fromSeed(seedColor:ngelxGroupGreen)),
     child:Scaffold(
       backgroundColor:Colors.white,
-      appBar:AppBar(backgroundColor:Colors.white,surfaceTintColor:Colors.white,elevation:0,title:null,actions:[IconButton(onPressed:(){},icon:const Icon(Icons.more_vert_rounded,color:Colors.black87))]),
+      appBar:AppBar(
+        backgroundColor:Colors.white,surfaceTintColor:Colors.white,elevation:0,title:null,
+        actions:[
+          PopupMenuButton<String>(
+            color:Colors.white,
+            surfaceTintColor:Colors.white,
+            icon:const Icon(Icons.more_vert_rounded,color:Colors.black87),
+            onSelected:(x){
+              if(x=='info')Navigator.pop(context);
+              if(x=='invite')Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupDavetPage(chatId:chatId)));
+            },
+            itemBuilder:(_)=>const [
+              PopupMenuItem(value:'info',child:Text('Grup bilgileri')),
+              PopupMenuItem(value:'invite',child:Text('Davet bağlantısı')),
+            ],
+          ),
+        ],
+      ),
       body:me==null?const Center(child:Text('Oturum bulunamadı.')):StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
         stream:ref.snapshots(),
         builder:(_,snap){
