@@ -21,6 +21,19 @@ service cloud.firestore {
     function onlyChanges(fields) {
       return request.resource.data.diff(resource.data).affectedKeys().hasOnly(fields);
     }
+    function publicGroupJoin(chatId) {
+      return signedIn()
+        && resource.data.get('isGroup', false) == true
+        && onlyChanges(['members', 'updatedAt'])
+        && !(request.auth.uid in resource.data.get('members', []))
+        && request.auth.uid in request.resource.data.get('members', [])
+        && request.resource.data.get('members', []).size() == resource.data.get('members', []).size() + 1
+        && request.resource.data.get('members', []).size() <= 60
+        && getAfter(/databases/$(database)/documents/groups/$(chatId)).data.get('discoverable', false) == true
+        && getAfter(/databases/$(database)/documents/groups/$(chatId)).data.get('joinApproval', false) == false
+        && request.auth.uid in getAfter(/databases/$(database)/documents/groups/$(chatId)).data.get('members', []);
+    }
+
     function relationshipUpdate() {
       return signedIn()
         && onlyChanges(['followers', 'following', 'friends'])
@@ -47,24 +60,41 @@ service cloud.firestore {
 
     match /groups/{groupId} {
       allow read: if signedIn();
-      allow create, delete: if false;
-      allow update: if signedIn()
-        && onlyChanges(['members', 'memberCount'])
-        && (
-          (
-            !(request.auth.uid in resource.data.get('members', []))
-            && request.auth.uid in request.resource.data.get('members', [])
-            && request.resource.data.get('members', []).size() == resource.data.get('members', []).size() + 1
-            && request.resource.data.get('memberCount', 0) == resource.data.get('memberCount', 0) + 1
-          )
-          ||
-          (
-            request.auth.uid in resource.data.get('members', [])
-            && !(request.auth.uid in request.resource.data.get('members', []))
-            && request.resource.data.get('members', []).size() == resource.data.get('members', []).size() - 1
-            && request.resource.data.get('memberCount', 0) == resource.data.get('memberCount', 0) - 1
-          )
-        );
+      allow create: if signedIn()
+        && request.resource.data.get('chatId', '') == groupId
+        && request.resource.data.get('ownerId', '') == request.auth.uid
+        && request.auth.uid in request.resource.data.get('members', [])
+        && request.resource.data.get('memberCount', 0) == request.resource.data.get('members', []).size()
+        && request.resource.data.get('memberCount', 0) <= 60;
+      allow update: if signedIn() && (
+        (
+          request.auth.uid in get(/databases/$(database)/documents/chats/$(groupId)).data.get('admins', [])
+          && onlyChanges(['name', 'description', 'groupPhotoUrl', 'joinApproval', 'discoverable', 'members', 'memberCount', 'updatedAt'])
+          && request.resource.data.get('memberCount', 0) == request.resource.data.get('members', []).size()
+          && request.resource.data.get('memberCount', 0) <= 60
+        )
+        ||
+        (
+          onlyChanges(['members', 'memberCount', 'updatedAt'])
+          && resource.data.get('discoverable', false) == true
+          && resource.data.get('joinApproval', false) == false
+          && !(request.auth.uid in resource.data.get('members', []))
+          && request.auth.uid in request.resource.data.get('members', [])
+          && request.resource.data.get('members', []).size() == resource.data.get('members', []).size() + 1
+          && request.resource.data.get('memberCount', 0) == resource.data.get('memberCount', 0) + 1
+          && request.resource.data.get('memberCount', 0) <= 60
+        )
+        ||
+        (
+          onlyChanges(['members', 'memberCount', 'updatedAt'])
+          && request.auth.uid in resource.data.get('members', [])
+          && !(request.auth.uid in request.resource.data.get('members', []))
+          && request.resource.data.get('members', []).size() == resource.data.get('members', []).size() - 1
+          && request.resource.data.get('memberCount', 0) == resource.data.get('memberCount', 0) - 1
+        )
+      );
+      allow delete: if signedIn()
+        && request.auth.uid in get(/databases/$(database)/documents/chats/$(groupId)).data.get('admins', []);
     }
 
     match /users/{uid} {
@@ -119,20 +149,22 @@ service cloud.firestore {
           )
         );
       allow read: if chatMember();
-      allow update: if chatMember() && (
-        (
-          resource.data.get('isGroup', false) != true
-          && request.resource.data.members == resource.data.members
-        )
-        || (chatAdmin() && request.resource.data.members.size() <= 60)
-        || (
-          groupMetadataUnchanged()
-          && (
-            request.resource.data.members == resource.data.members
-            || request.resource.data.members == resource.data.members.removeAll([request.auth.uid])
+      allow update: if (
+        chatMember() && (
+          (
+            resource.data.get('isGroup', false) != true
+            && request.resource.data.members == resource.data.members
+          )
+          || (chatAdmin() && request.resource.data.members.size() <= 60)
+          || (
+            groupMetadataUnchanged()
+            && (
+              request.resource.data.members == resource.data.members
+              || request.resource.data.members == resource.data.members.removeAll([request.auth.uid])
+            )
           )
         )
-      );
+      ) || publicGroupJoin(chatId);
       allow delete: if false;
       match /messages/{messageId} {
         allow read: if signedIn() && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.members;

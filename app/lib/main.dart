@@ -1682,23 +1682,37 @@ class _AramaPageState extends State<AramaPage> {
                       subtitle:Text(aciklama.isEmpty?'${v['memberCount']??0} üye':aciklama,maxLines:1,overflow:TextOverflow.ellipsis),
                       trailing:FilledButton(
                         style:FilledButton.styleFrom(backgroundColor:mor),
-                        onPressed:uyeMi?null:()async{
+                        onPressed:(uyeMi||v['joinApproval']==true)?null:()async{
                           final uid=FirebaseAuth.instance.currentUser?.uid;if(uid==null)return;
                           final ref=FirebaseFirestore.instance.collection('groups').doc(d.id);
+                          final chatId=(v['chatId']??d.id).toString();
+                          final chatRef=FirebaseFirestore.instance.collection('chats').doc(chatId);
                           try{
-                            bool zaten=false;
-                            await FirebaseFirestore.instance.runTransaction((tx)async{
-                              final g=await tx.get(ref),uyeler=List<String>.from(g.data()?['members']??const[]);
-                              if(uyeler.contains(uid)){zaten=true;return;}
-                              tx.set(ref,{'members':FieldValue.arrayUnion([uid]),'memberCount':FieldValue.increment(1)},SetOptions(merge:true));
-                            }).timeout(const Duration(seconds:8));
-                            if(!zaten&&mounted)setState(()=>aramaVerisiniYukle());
-                            if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(zaten?'Bu gruba zaten katıldın.':'Gruba katıldın ✅')));
-                          }catch(_){
-                            if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Gruba katılınamadı.')));
+                            final batch=FirebaseFirestore.instance.batch();
+                            batch.set(ref,{
+                              'members':FieldValue.arrayUnion([uid]),
+                              'memberCount':FieldValue.increment(1),
+                              'updatedAt':FieldValue.serverTimestamp(),
+                            },SetOptions(merge:true));
+                            batch.set(chatRef,{
+                              'members':FieldValue.arrayUnion([uid]),
+                              'updatedAt':FieldValue.serverTimestamp(),
+                            },SetOptions(merge:true));
+                            await batch.commit().timeout(const Duration(seconds:10));
+                            if(mounted)setState(()=>aramaVerisiniYukle());
+                            if(context.mounted){
+                              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Gruba katıldın ✅')));
+                              Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupSohbetPage(
+                                chatId:chatId,
+                                ad:ad,
+                                foto:(v['groupPhotoUrl']??'').toString(),
+                              )));
+                            }
+                          }catch(e){
+                            if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Gruba katılınamadı: ${ngelxKisaHata(e)}')));
                           }
                         },
-                        child:Text(uyeMi?'Katıldın':'Katıl'),
+                        child:Text(uyeMi?'Katıldın':v['joinApproval']==true?'Onay gerekli':'Katıl'),
                       ),
                     );
                   }),
@@ -4292,26 +4306,38 @@ class _KesfetPageState extends State<KesfetPage> {
             const SizedBox(height:7),
             SizedBox(height:31,child:FilledButton.icon(
               style:FilledButton.styleFrom(backgroundColor:mor,padding:const EdgeInsets.symmetric(horizontal:10)),
-              onPressed:uyeMi?null:()async{
+              onPressed:(uyeMi||v['joinApproval']==true)?null:()async{
                 final uid=FirebaseAuth.instance.currentUser?.uid;
                 if(uid==null)return;
                 final ref=FirebaseFirestore.instance.collection('groups').doc(id);
+                final chatId=(v['chatId']??id).toString();
+                final chatRef=FirebaseFirestore.instance.collection('chats').doc(chatId);
                 try{
-                  bool zaten=false;
-                  await FirebaseFirestore.instance.runTransaction((tx)async{
-                    final d=await tx.get(ref);
-                    final veri=d.data()??<String,dynamic>{};
-                    final uyeler=List<String>.from(veri['members']??const[]);
-                    if(uyeler.contains(uid)){zaten=true;return;}
-                    tx.set(ref,{'members':FieldValue.arrayUnion([uid]),'memberCount':FieldValue.increment(1)},SetOptions(merge:true));
-                  }).timeout(const Duration(seconds:8));
-                  if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(zaten?'Bu gruba zaten katıldın.':'Gruba katıldın ✅')));
-                }catch(_){
-                  if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Gruba katılma işlemi tamamlanamadı.')));
+                  final batch=FirebaseFirestore.instance.batch();
+                  batch.set(ref,{
+                    'members':FieldValue.arrayUnion([uid]),
+                    'memberCount':FieldValue.increment(1),
+                    'updatedAt':FieldValue.serverTimestamp(),
+                  },SetOptions(merge:true));
+                  batch.set(chatRef,{
+                    'members':FieldValue.arrayUnion([uid]),
+                    'updatedAt':FieldValue.serverTimestamp(),
+                  },SetOptions(merge:true));
+                  await batch.commit().timeout(const Duration(seconds:10));
+                  if(context.mounted){
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Gruba katıldın ✅')));
+                    Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupSohbetPage(
+                      chatId:chatId,
+                      ad:ad,
+                      foto:foto,
+                    )));
+                  }
+                }catch(e){
+                  if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Gruba katılma işlemi tamamlanamadı: ${ngelxKisaHata(e)}')));
                 }
               },
               icon:Icon(uyeMi?Icons.check_circle_rounded:Icons.group_add_rounded,size:16),
-              label:Text(uyeMi?'Katıldın':'Katıl',style:const TextStyle(fontSize:12)),
+              label:Text(uyeMi?'Katıldın':v['joinApproval']==true?'Onay gerekli':'Katıl',style:const TextStyle(fontSize:12)),
             )),
           ],
         )),
@@ -5908,11 +5934,14 @@ class _GrupOlusturPageState extends State<GrupOlusturPage>{
       }
       _olusturulanGrupId??=FirebaseFirestore.instance.collection('chats').doc().id;
       final ref=FirebaseFirestore.instance.collection('chats').doc(_olusturulanGrupId);
-      await ref.set({
+      final dizinRef=FirebaseFirestore.instance.collection('groups').doc(ref.id);
+      final uyeler=<String>[u.uid,...secilen];
+      final batch=FirebaseFirestore.instance.batch();
+      batch.set(ref,{
         'isGroup':true,
         'groupName':grupAdi,
         'groupPhotoUrl':fotoUrl,
-        'members':[u.uid,...secilen],
+        'members':uyeler,
         'admins':[u.uid],
         'moderators':<String>[],
         'createdBy':u.uid,
@@ -5922,7 +5951,23 @@ class _GrupOlusturPageState extends State<GrupOlusturPage>{
         'hiddenFor':<String>[],
         'maxMembers':60,
         'onlyAdminsCanEdit':true,
-      }).timeout(const Duration(seconds:12));
+        'newMembersSeeHistory':true,
+        'joinApproval':false,
+      });
+      batch.set(dizinRef,{
+        'chatId':ref.id,
+        'name':grupAdi,
+        'description':'',
+        'groupPhotoUrl':fotoUrl,
+        'members':uyeler,
+        'memberCount':uyeler.length,
+        'ownerId':u.uid,
+        'discoverable':true,
+        'joinApproval':false,
+        'createdAt':FieldValue.serverTimestamp(),
+        'updatedAt':FieldValue.serverTimestamp(),
+      });
+      await batch.commit().timeout(const Duration(seconds:12));
       // Sohbet ekranını, grup belgesi Firestore'a kesin olarak yazıldıktan sonra aç.
       // Böylece messages alt koleksiyonu için üyelik kuralı ilk açılışta yarış durumuna girmez.
       if(mounted){
@@ -7003,7 +7048,13 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
       if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Grup adı 2–16 karakter arasında olmalı.')));
       return;
     }
-    await ref.update({'groupName':temiz});
+    final batch=FirebaseFirestore.instance.batch();
+    batch.update(ref,{'groupName':temiz,'updatedAt':FieldValue.serverTimestamp()});
+    batch.set(FirebaseFirestore.instance.collection('groups').doc(widget.chatId),{
+      'name':temiz,
+      'updatedAt':FieldValue.serverTimestamp(),
+    },SetOptions(merge:true));
+    await batch.commit();
     await sistemMesaji('Grup adı “$temiz” olarak değiştirildi.');
   }
   Future<void> fotografDuzenle()async{
@@ -7028,7 +7079,13 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
 
     if(secim=='remove'){
       try{
-        await ref.set({'groupPhotoUrl':'','updatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
+        final batch=FirebaseFirestore.instance.batch();
+        batch.set(ref,{'groupPhotoUrl':'','updatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
+        batch.set(FirebaseFirestore.instance.collection('groups').doc(widget.chatId),{
+          'groupPhotoUrl':'',
+          'updatedAt':FieldValue.serverTimestamp(),
+        },SetOptions(merge:true));
+        await batch.commit();
         try{await sistemMesaji('Yönetici grup fotoğrafını kaldırdı.');}catch(_){}
         if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Grup fotoğrafı kaldırıldı.')));
       }catch(e){
@@ -7103,10 +7160,16 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
         }
       }
 
-      await ref.set({
+      final batch=FirebaseFirestore.instance.batch();
+      batch.set(ref,{
         'groupPhotoUrl':url,
         'updatedAt':FieldValue.serverTimestamp(),
       },SetOptions(merge:true));
+      batch.set(FirebaseFirestore.instance.collection('groups').doc(widget.chatId),{
+        'groupPhotoUrl':url,
+        'updatedAt':FieldValue.serverTimestamp(),
+      },SetOptions(merge:true));
+      await batch.commit();
 
       try{await sistemMesaji('Yönetici grup fotoğrafını değiştirdi.');}catch(_){}
 
@@ -7265,7 +7328,17 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
     await sistemMesaji('${secilen.length} yeni üye gruba eklendi.');
   }
   Future<void> ayril(List<String> uyeler,List<String> admins)async{final me=ben;if(me==null)return;if(admins.length==1&&admins.contains(me)&&uyeler.length>1){await showDialog<void>(context:context,builder:(c)=>Theme(data:ThemeData.light(),child:AlertDialog(backgroundColor:Colors.white,title:const Text('Önce yönetici belirle',style:TextStyle(color:Colors.black87)),content:const Text('Gruptan ayrılmadan önce başka bir üyeyi yönetici yapmalısın.',style:TextStyle(color:Colors.black87)),actions:[FilledButton(onPressed:()=>Navigator.pop(c),child:const Text('Tamam'))])));return;}final sonKisi=uyeler.length==1;final ok=await showDialog<bool>(context:context,builder:(c)=>Theme(data:ThemeData.light(),child:AlertDialog(backgroundColor:Colors.white,title:Text(sonKisi?'Grup silinsin mi?':'Gruptan ayrılmak istiyor musun?',style:const TextStyle(color:Colors.black87)),content:Text(sonKisi?'Grupta yalnızca sen kaldın. Grup sohbeti listenden kaldırılacak.':'Mesaj geçmişine erişimin sona erecek.',style:const TextStyle(color:Colors.black87)),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),FilledButton(style:FilledButton.styleFrom(backgroundColor:Colors.red),onPressed:()=>Navigator.pop(c,true),child:Text(sonKisi?'Grubu sil':'Ayrıl'))])))??false;if(!ok)return;if(sonKisi)await ref.set({'members':FieldValue.arrayRemove([me]),'admins':FieldValue.arrayRemove([me]),'groupDeleted':true,'deletedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));else{await sistemMesaji('Bir üye gruptan ayrıldı.');await ref.update({'members':FieldValue.arrayRemove([me]),'admins':FieldValue.arrayRemove([me])});}if(mounted)Navigator.popUntil(context,(r)=>r.isFirst);}
-  Future<void> ayarDegistir(String alan,bool deger)async{await ref.set({alan:deger},SetOptions(merge:true));}
+  Future<void> ayarDegistir(String alan,bool deger)async{
+    final batch=FirebaseFirestore.instance.batch();
+    batch.set(ref,{alan:deger,'updatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
+    if(alan=='joinApproval'){
+      batch.set(FirebaseFirestore.instance.collection('groups').doc(widget.chatId),{
+        'joinApproval':deger,
+        'updatedAt':FieldValue.serverTimestamp(),
+      },SetOptions(merge:true));
+    }
+    await batch.commit();
+  }
   @override Widget build(BuildContext context)=>Theme(data:ThemeData.light(),child:Scaffold(backgroundColor:Colors.white,appBar:AppBar(title:const Text('Grup bilgileri')),body:StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(stream:ref.snapshots(),builder:(_,s){if(!s.hasData)return const Center(child:CircularProgressIndicator(color:mor));final v=s.data?.data()??{},uyeler=List<String>.from(v['members']??const[]),yoneticiler=List<String>.from(v['admins']??const[]),yonetici=yoneticiler.contains(ben),foto=(v['groupPhotoUrl']??'').toString(),ad=(v['groupName']??'Grup').toString();return ListView(padding:EdgeInsets.fromLTRB(18,18,18,30+MediaQuery.paddingOf(context).bottom),children:[GestureDetector(onTap:yonetici?fotografDuzenle:null,child:Stack(alignment:Alignment.bottomRight,children:[Center(child:CircleAvatar(radius:50,backgroundColor:const Color(0xFFE9DDFF),backgroundImage:foto.isEmpty?null:CachedNetworkImageProvider(foto),child:foto.isEmpty?const Icon(Icons.groups,color:mor,size:48):null)),if(yonetici)Positioned(right:MediaQuery.sizeOf(context).width/2-62,child:const CircleAvatar(radius:15,backgroundColor:mor,child:Icon(Icons.camera_alt,color:Colors.white,size:17))) ])),const SizedBox(height:10),Text(ad,textAlign:TextAlign.center,style:const TextStyle(color:Colors.black,fontSize:25,fontWeight:FontWeight.w900)),Text('${uyeler.length}/60 üye',textAlign:TextAlign.center,style:const TextStyle(color:Colors.black54)),if(yonetici)...[ListTile(leading:const Icon(Icons.edit,color:mor),title:const Text('Grup adını düzenle'),onTap:()=>adiDuzenle(ad)),ListTile(leading:const Icon(Icons.add_a_photo,color:mor),title:const Text('Grup fotoğrafını değiştir'),onTap:fotografDuzenle)],const Divider(),ListTile(leading:const Icon(Icons.photo_library_outlined,color:mor),title:const Text('Medya, dosyalar ve bağlantılar'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupMedyaPage(chatId:widget.chatId)))),ListTile(leading:const Icon(Icons.push_pin_outlined,color:mor),title:const Text('Sabitlenmiş mesajlar'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>SabitlenenGrupMesajlariPage(chatId:widget.chatId)))),if(yonetici)...[const Divider(),const Text('Grup izinleri',style:TextStyle(fontSize:18,fontWeight:FontWeight.w900)),SwitchListTile(title:const Text('Yalnızca yöneticiler mesaj gönderebilir'),value:v['onlyAdminsCanPost']==true,onChanged:(x)=>ayarDegistir('onlyAdminsCanPost',x)),SwitchListTile(title:const Text('Yeni üyeler eski mesajları görebilir'),value:v['newMembersSeeHistory']!=false,onChanged:(x)=>ayarDegistir('newMembersSeeHistory',x)),SwitchListTile(title:const Text('Katılma istekleri yönetici onayından geçsin'),value:v['joinApproval']==true,onChanged:(x)=>ayarDegistir('joinApproval',x))],const Divider(),Row(children:[const Expanded(child:Text('Üyeler',style:TextStyle(color:Colors.black,fontSize:18,fontWeight:FontWeight.w900))),if(yonetici)TextButton.icon(onPressed:uyeler.length>=60?null:()=>uyeEkle(uyeler),icon:const Icon(Icons.person_add_alt_1),label:const Text('Üye ekle'))]),SizedBox(height:(uyeler.length*68.0).clamp(68.0,408.0),child:ListView.builder(primary:false,cacheExtent:160,itemCount:uyeler.length,itemBuilder:(_,i){final id=uyeler[i];return FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(future:_uyeGetir(id),builder:(_,u){final p=u.data?.data()??{},isim=(p['displayName']??p['username']??'Kullanıcı').toString(),pf=(p['photoUrl']??'').toString(),admin=yoneticiler.contains(id);return ListTile(onTap:yonetici&&id!=ben?()=>uyeIslemi(id,isim,admin):null,leading:CircleAvatar(backgroundImage:pf.isEmpty?null:CachedNetworkImageProvider(pf,maxWidth:128,maxHeight:128),child:pf.isEmpty?const Icon(Icons.person):null),title:Text(isim),subtitle:Text(admin?'Yönetici':'Üye'),trailing:yonetici&&id!=ben?const Icon(Icons.more_vert):null);});})),const Divider(),ListTile(leading:const Icon(Icons.exit_to_app,color:Colors.red),title:Text(uyeler.length==1?'Grubu sil':'Gruptan ayrıl',style:const TextStyle(color:Colors.red)),onTap:()=>ayril(uyeler,yoneticiler))]);})));
 }
 
@@ -10234,7 +10307,7 @@ class AyarlarPage extends StatelessWidget {
       _ayar(context,Icons.download_outlined,'İndirme izinleri','Varsayılan paylaşım indirme ayarı'),
     ],
     const Divider(),
-    ListTile(leading:const Icon(Icons.system_update,color:mor),title:const Text('Uygulama güncellemeleri'),subtitle:const Text('V54 • Test build 229'),trailing:const Icon(Icons.build_circle,color:Colors.orange)),
+    ListTile(leading:const Icon(Icons.system_update,color:mor),title:const Text('Uygulama güncellemeleri'),subtitle:const Text('V54 • Test build 230'),trailing:const Icon(Icons.build_circle,color:Colors.orange)),
     ListTile(leading:const Icon(Icons.share,color:mavi),title:const Text('Ngel X’i paylaş'),subtitle:const Text('Uygulama bağlantısını paylaş veya kopyala'),onTap:()async=>SharePlus.instance.share(ShareParams(text:'Ngel X ile dünyanı paylaş ✨\nhttps://ngelx.app'))),
     const Divider(),
     ListTile(leading:const Icon(Icons.logout,color:Colors.red),title:const Text('Çıkış yap',style:TextStyle(color:Colors.red)),onTap:()async{final onay=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(title:const Text('Çıkış yapılsın mı?'),content:const Text('Tekrar giriş yapman gerekecek.'),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('Çıkış yap'))]));if(onay==true){await FirebaseAuth.instance.signOut();if(context.mounted)Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder:(_)=>const GirisPage()),(_)=>false);}})
