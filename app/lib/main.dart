@@ -4856,6 +4856,7 @@ class _MesajPageState extends State<MesajPage> {
           ),
           IconButton(constraints:const BoxConstraints.tightFor(width:38),padding:EdgeInsets.zero,tooltip:'Arşiv',onPressed:ben==null?null:()async{await Navigator.push(context,MaterialPageRoute(builder:(_)=>ArsivSohbetlerPage(uid:ben)));await tercihleriGetir();},icon:const Icon(Icons.archive_outlined,color:Colors.black54)),
           IconButton(constraints:const BoxConstraints.tightFor(width:38),padding:EdgeInsets.zero,tooltip:'Grup oluştur',onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const GrupOlusturPage())),icon:const Icon(Icons.group_add_rounded,color:mor,size:27)),
+          IconButton(constraints:const BoxConstraints.tightFor(width:38),padding:EdgeInsets.zero,tooltip:'Gruba katıl',onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const GrubaKatilPage())),icon:const Icon(Icons.link_rounded,color:mor,size:25)),
           IconButton(constraints:const BoxConstraints.tightFor(width:38),padding:EdgeInsets.zero,tooltip:'Yeni sohbet',onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const YeniSohbetPage())),icon:const Icon(Icons.person_add_alt_1,color:mavi,size:27)),
         ]),
       ),
@@ -5024,6 +5025,184 @@ class MesajIstegiOnizlemePage extends StatelessWidget{
     Expanded(child:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(stream:FirebaseFirestore.instance.collection('chats').doc(chatId).collection('messages').orderBy('createdAt').limitToLast(100).snapshots(),builder:(_,s)=>ListView(padding:const EdgeInsets.all(16),children:(s.data?.docs??[]).map((d){final v=d.data(),metin=(v['text']??'').toString(),photo=v['type']=='photo';return Align(alignment:v['senderId']==uid?Alignment.centerRight:Alignment.centerLeft,child:Container(margin:const EdgeInsets.symmetric(vertical:4),padding:EdgeInsets.all(photo?4:12),constraints:const BoxConstraints(maxWidth:280),decoration:BoxDecoration(color:const Color(0xFFF0F1F4),borderRadius:BorderRadius.circular(18)),child:photo?ClipRRect(borderRadius:BorderRadius.circular(15),child:Image.network((v['mediaUrl']??'').toString())):Text(metin)));}).toList()))),
     SafeArea(top:false,child:Padding(padding:const EdgeInsets.all(12),child:Row(children:[Expanded(child:OutlinedButton(onPressed:()async{await FirebaseFirestore.instance.collection('chats').doc(chatId).set({'requestRejected_$uid':true,'hiddenFor':FieldValue.arrayUnion([uid])},SetOptions(merge:true));if(context.mounted)Navigator.pop(context);},child:const Text('Reddet'))),const SizedBox(width:8),Expanded(child:OutlinedButton(style:OutlinedButton.styleFrom(foregroundColor:Colors.red),onPressed:()async{await kullaniciyiEngelle(context,digerUid);await FirebaseFirestore.instance.collection('chats').doc(chatId).set({'requestRejected_$uid':true,'hiddenFor':FieldValue.arrayUnion([uid])},SetOptions(merge:true));if(context.mounted)Navigator.pop(context);},child:const Text('Engelle'))),const SizedBox(width:8),Expanded(child:FilledButton(onPressed:()async{await FirebaseFirestore.instance.collection('chats').doc(chatId).set({'requestAccepted_$uid':true},SetOptions(merge:true));if(context.mounted)Navigator.pushReplacement(context,MaterialPageRoute(builder:(_)=>SohbetPage(chatId:chatId,digerUid:digerUid,ad:ad,foto:foto)));},child:const Text('Kabul et')))]))),
   ])));
+}
+
+
+class GrubaKatilPage extends StatefulWidget{
+  const GrubaKatilPage({super.key});
+  @override State<GrubaKatilPage> createState()=>_GrubaKatilPageState();
+}
+class _GrubaKatilPageState extends State<GrubaKatilPage>{
+  final kod=TextEditingController();
+  bool yukleniyor=false;
+
+  @override void dispose(){kod.dispose();super.dispose();}
+
+  String _koduAyikla(String ham){
+    var t=ham.trim();
+    if(t.isEmpty)return '';
+    final uri=Uri.tryParse(t);
+    if(uri!=null&&uri.pathSegments.isNotEmpty&&uri.pathSegments.contains('join')){
+      final i=uri.pathSegments.indexOf('join');
+      if(i>=0&&i+1<uri.pathSegments.length)return uri.pathSegments[i+1].trim();
+    }
+    if(t.contains('/join/'))t=t.split('/join/').last;
+    if(t.contains('?'))t=t.split('?').first;
+    return t.trim();
+  }
+
+  Future<void> katil()async{
+    final me=FirebaseAuth.instance.currentUser?.uid;
+    if(me==null||yukleniyor)return;
+    final invite=_koduAyikla(kod.text);
+    if(invite.isEmpty){
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Davet bağlantısı veya kodunu gir.')));
+      return;
+    }
+    setState(()=>yukleniyor=true);
+    try{
+      final q=await FirebaseFirestore.instance.collection('chats').where('inviteCode',isEqualTo:invite).limit(1).get().timeout(const Duration(seconds:10));
+      if(q.docs.isEmpty){
+        if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Davet bağlantısı geçersiz veya süresi dolmuş.')));
+        return;
+      }
+      final d=q.docs.first,v=d.data();
+      if(v['groupDeleted']==true||v['isGroup']!=true){
+        if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bu grup artık kullanılamıyor.')));
+        return;
+      }
+      final members=List<String>.from(v['members']??const[]);
+      final admins=List<String>.from(v['admins']??const[]);
+      final ad=(v['groupName']??'Grup').toString(),foto=(v['groupPhotoUrl']??'').toString();
+      if(members.contains(me)){
+        if(mounted)Navigator.pushReplacement(context,MaterialPageRoute(builder:(_)=>GrupSohbetPage(chatId:d.id,ad:ad,foto:foto)));
+        return;
+      }
+      if(members.length>=60){
+        if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bu grup üye sınırına ulaştı.')));
+        return;
+      }
+      if(v['joinApproval']==true){
+        final req=d.reference.collection('joinRequests').doc(me);
+        await req.set({
+          'uid':me,
+          'status':'pending',
+          'createdAt':FieldValue.serverTimestamp(),
+        },SetOptions(merge:true));
+        for(final admin in admins){
+          if(admin==me)continue;
+          unawaited(uygulamaBildirimiGonder(
+            toUid:admin,fromUid:me,tur:'group',
+            metin:'gruba katılma isteği gönderdi',
+            belgeId:d.id,
+          ).catchError((_){ }));
+        }
+        if(mounted){
+          await showDialog<void>(
+            context:context,
+            builder:(c)=>AlertDialog(
+              icon:const Icon(Icons.hourglass_top_rounded,color:ngelxPremiumPurple,size:34),
+              title:const Text('İstek gönderildi'),
+              content:Text(ad+' grubunun yöneticileri isteğini inceleyecek.'),
+              actions:[FilledButton(onPressed:()=>Navigator.pop(c),child:const Text('Tamam'))],
+            ),
+          );
+          if(mounted)Navigator.pop(context);
+        }
+        return;
+      }
+      await d.reference.update({
+        'members':FieldValue.arrayUnion([me]),
+        'hiddenFor':FieldValue.arrayRemove([me]),
+        'updatedAt':FieldValue.serverTimestamp(),
+      });
+      await d.reference.collection('messages').add({
+        'senderId':'system',
+        'type':'system',
+        'text':'Yeni bir üye gruba katıldı.',
+        'createdAt':FieldValue.serverTimestamp(),
+      });
+      if(mounted)Navigator.pushReplacement(context,MaterialPageRoute(builder:(_)=>GrupSohbetPage(chatId:d.id,ad:ad,foto:foto)));
+    }catch(_){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Gruba katılma işlemi tamamlanamadı.')));
+    }finally{
+      if(mounted)setState(()=>yukleniyor=false);
+    }
+  }
+
+  @override Widget build(BuildContext context)=>Theme(
+    data:ThemeData.light().copyWith(colorScheme:ColorScheme.fromSeed(seedColor:ngelxPremiumPurple)),
+    child:Scaffold(
+      backgroundColor:const Color(0xFFFBF9FF),
+      appBar:AppBar(
+        backgroundColor:Colors.transparent,surfaceTintColor:Colors.transparent,elevation:0,
+        title:const Text('Gruba katıl',style:TextStyle(fontWeight:FontWeight.w900,color:ngelxPremiumInk)),
+        flexibleSpace:Container(decoration:const BoxDecoration(gradient:LinearGradient(colors:[Color(0xFFFFFFFF),Color(0xFFF5EFFF)]),borderRadius:BorderRadius.vertical(bottom:Radius.circular(24)))),
+      ),
+      body:ListView(
+        padding:const EdgeInsets.fromLTRB(16,22,16,30),
+        children:[
+          NgelXPremiumCard(
+            padding:const EdgeInsets.fromLTRB(18,24,18,22),
+            child:Column(children:[
+              Container(width:78,height:78,decoration:BoxDecoration(color:const Color(0xFFF0E8FF),borderRadius:BorderRadius.circular(26)),child:const Icon(Icons.group_add_rounded,color:ngelxPremiumPurple,size:40)),
+              const SizedBox(height:15),
+              const Text('Davetle gruba katıl',textAlign:TextAlign.center,style:TextStyle(color:ngelxPremiumInk,fontSize:21,fontWeight:FontWeight.w900)),
+              const SizedBox(height:6),
+              const Text('Sana gönderilen NgelX grup bağlantısını veya davet kodunu aşağıya yapıştır.',textAlign:TextAlign.center,style:TextStyle(color:ngelxPremiumMuted,fontSize:12,height:1.4,fontWeight:FontWeight.w600)),
+            ]),
+          ),
+          const SizedBox(height:14),
+          NgelXPremiumCard(
+            padding:const EdgeInsets.all(14),
+            child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+              const Text('Davet bağlantısı / kodu',style:TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w900)),
+              const SizedBox(height:10),
+              TextField(
+                controller:kod,
+                textInputAction:TextInputAction.done,
+                onSubmitted:(_)=>katil(),
+                decoration:InputDecoration(
+                  hintText:'ngelxsocial.com/join/...',
+                  prefixIcon:const Icon(Icons.link_rounded,color:ngelxPremiumPurple),
+                  suffixIcon:IconButton(
+                    tooltip:'Yapıştır',
+                    onPressed:()async{
+                      final d=await Clipboard.getData(Clipboard.kTextPlain);
+                      if(d?.text!=null)kod.text=d!.text!;
+                    },
+                    icon:const Icon(Icons.content_paste_rounded,color:ngelxPremiumPurple),
+                  ),
+                  filled:true,fillColor:const Color(0xFFF7F4F9),
+                  border:OutlineInputBorder(borderRadius:BorderRadius.circular(18),borderSide:BorderSide.none),
+                  enabledBorder:OutlineInputBorder(borderRadius:BorderRadius.circular(18),borderSide:const BorderSide(color:ngelxPremiumBorder)),
+                ),
+              ),
+              const SizedBox(height:13),
+              SizedBox(
+                width:double.infinity,
+                child:FilledButton.icon(
+                  style:FilledButton.styleFrom(backgroundColor:ngelxPremiumPurple,padding:const EdgeInsets.symmetric(vertical:14),shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(17))),
+                  onPressed:yukleniyor?null:katil,
+                  icon:yukleniyor?const SizedBox(width:18,height:18,child:CircularProgressIndicator(strokeWidth:2,color:Colors.white)):const Icon(Icons.login_rounded),
+                  label:Text(yukleniyor?'Kontrol ediliyor...':'Gruba katıl',style:const TextStyle(fontWeight:FontWeight.w800)),
+                ),
+              ),
+            ]),
+          ),
+          const SizedBox(height:14),
+          const NgelXPremiumCard(
+            padding:EdgeInsets.all(14),
+            child:Row(crossAxisAlignment:CrossAxisAlignment.start,children:[
+              Icon(Icons.verified_user_outlined,color:ngelxPremiumPurple),
+              SizedBox(width:10),
+              Expanded(child:Text('Grup yöneticisi onay istiyorsa önce katılma isteğin gönderilir. Onaylandığında bildirim alırsın.',style:TextStyle(color:ngelxPremiumMuted,fontSize:11.5,height:1.4,fontWeight:FontWeight.w600))),
+            ]),
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 class GrupOlusturPage extends StatefulWidget{const GrupOlusturPage({super.key});@override State<GrupOlusturPage> createState()=>_GrupOlusturPageState();}
