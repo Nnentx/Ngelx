@@ -11304,6 +11304,8 @@ class _ProfilPageState extends State<ProfilPage> {
   int takipSayisi = 0;
   int takipciSayisi = 0;
   int arkadasSayisi = 0;
+  String profilSekmesi='Gönderiler';
+  Set<String> begenilenIcerikIdleri=<String>{};
 
   User? get aktifKullanici => FirebaseAuth.instance.currentUser;
 
@@ -11346,6 +11348,7 @@ class _ProfilPageState extends State<ProfilPage> {
           takipSayisi = following.length;
           takipciSayisi = followers.length;
           arkadasSayisi = friends.length;
+          begenilenIcerikIdleri=Set<String>.from(List<dynamic>.from(veri['likedContentIds']??const[]).map((e)=>e.toString()));
           yukleniyor = false;
         });
       } else if (mounted) {
@@ -11928,57 +11931,131 @@ class _ProfilPageState extends State<ProfilPage> {
                     },
                   )),
                   const SizedBox(height: 14),
-                  const Row(mainAxisAlignment:MainAxisAlignment.spaceAround,children:[_ProfilSekme('Gönderiler',true),_ProfilSekme('Reels',false),_ProfilSekme('Etiketlenenler',false),_ProfilSekme('Beğenilenler',false)]),
+                  Row(mainAxisAlignment:MainAxisAlignment.spaceAround,children:[
+                    _ProfilSekme('Gönderiler',profilSekmesi=='Gönderiler',tiklama:()=>setState(()=>profilSekmesi='Gönderiler')),
+                    _ProfilSekme('Reels',profilSekmesi=='Reels',tiklama:()=>setState(()=>profilSekmesi='Reels')),
+                    _ProfilSekme('Etiketlenenler',profilSekmesi=='Etiketlenenler',tiklama:()=>setState(()=>profilSekmesi='Etiketlenenler')),
+                    _ProfilSekme('Beğenilenler',profilSekmesi=='Beğenilenler',tiklama:()=>setState(()=>profilSekmesi='Beğenilenler')),
+                  ]),
                 ],
               ),
             ),
           ),
           SliverToBoxAdapter(
             child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-              stream: aktifKullanici == null ? null : FirebaseFirestore.instance.collection('videos').where('ownerId', isEqualTo: aktifKullanici!.uid).limit(100).snapshots(),
-              builder: (_, snap) {
-                final paylasimlar = (snap.data?.docs ?? []).where((d) => d.data()['type'] != 'story').toList()
+              stream:aktifKullanici==null
+                ?null
+                :(profilSekmesi=='Gönderiler'||profilSekmesi=='Reels'
+                  ?FirebaseFirestore.instance.collection('videos').where('ownerId',isEqualTo:aktifKullanici!.uid).limit(100).snapshots()
+                  :FirebaseFirestore.instance.collection('videos').limit(150).snapshots()),
+              builder:(_,snap){
+                if(snap.hasError){
+                  return Padding(
+                    padding:const EdgeInsets.all(35),
+                    child:Center(child:Column(mainAxisSize:MainAxisSize.min,children:[
+                      const Icon(Icons.cloud_off_rounded,color:Colors.redAccent,size:42),
+                      const SizedBox(height:8),
+                      Text('$profilSekmesi yüklenemedi.',style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w800)),
+                    ])),
+                  );
+                }
+                if(snap.connectionState==ConnectionState.waiting&&!snap.hasData){
+                  return const Padding(
+                    padding:EdgeInsets.all(35),
+                    child:Center(child:CircularProgressIndicator(color:mor)),
+                  );
+                }
+                final benimUid=aktifKullanici?.uid??'';
+                final benimKullaniciAdim=kullanici.replaceFirst('@','').trim().toLowerCase();
+                final paylasimlar=(snap.data?.docs??[]).where((d){
+                  final v=d.data();
+                  if(v['type']=='story')return false;
+                  switch(profilSekmesi){
+                    case 'Reels':
+                      return (v['ownerId']??'').toString()==benimUid&&v['isReel']==true;
+                    case 'Etiketlenenler':
+                      final uidler=List<String>.from(v['taggedUserIds']??const[]);
+                      final etiket=(v['tags']??'').toString().toLowerCase();
+                      final adEslesmesi=benimKullaniciAdim.isNotEmpty&&(etiket.contains('@$benimKullaniciAdim')||etiket.split(RegExp(r'[^a-z0-9_ığüşöç@]+')).contains(benimKullaniciAdim));
+                      return uidler.contains(benimUid)||adEslesmesi;
+                    case 'Beğenilenler':
+                      return begenilenIcerikIdleri.contains(d.id);
+                    default:
+                      return (v['ownerId']??'').toString()==benimUid&&v['isReel']!=true;
+                  }
+                }).toList()
                   ..sort((a,b){
-                    final ap=a.data()['pinned']==true,bp=b.data()['pinned']==true;
-                    if(ap!=bp)return ap?-1:1;
+                    if(profilSekmesi=='Gönderiler'){
+                      final ap=a.data()['pinned']==true,bp=b.data()['pinned']==true;
+                      if(ap!=bp)return ap?-1:1;
+                    }
                     final at=a.data()['createdAt'],bt=b.data()['createdAt'];
                     final am=at is Timestamp?at.millisecondsSinceEpoch:0,bm=bt is Timestamp?bt.millisecondsSinceEpoch:0;
                     return bm.compareTo(am);
                   });
-                if (paylasimlar.isEmpty) return const Padding(padding: EdgeInsets.all(35), child: Center(child: Text('Henüz paylaşımın yok. Üret bölümünden ilk içeriğini yayınla ✨', textAlign: TextAlign.center, style: TextStyle(color: Colors.black54))));
+
+                if(paylasimlar.isEmpty){
+                  final metin=profilSekmesi=='Gönderiler'
+                    ?'Henüz paylaşımın yok. Üret bölümünden ilk içeriğini yayınla ✨'
+                    :profilSekmesi=='Reels'
+                      ?'Henüz Reels paylaşımın yok.'
+                      :profilSekmesi=='Etiketlenenler'
+                        ?'Henüz etiketlendiğin bir paylaşım yok.'
+                        :'Henüz beğendiğin bir paylaşım burada görünmüyor.';
+                  return Padding(
+                    padding:const EdgeInsets.all(35),
+                    child:Center(child:Text(metin,textAlign:TextAlign.center,style:const TextStyle(color:Colors.black54))),
+                  );
+                }
+
                 return GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  padding: const EdgeInsets.all(6),
-                  itemCount: paylasimlar.length,
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 3, childAspectRatio: .72, crossAxisSpacing: 6, mainAxisSpacing: 6),
-                  itemBuilder: (_, i) {
-                    final belge = paylasimlar[i];
-                    final v = belge.data();
-                    final tur = (v['type'] ?? 'video').toString();
-                    final url = (v['mediaUrl'] ?? v['videoUrl'] ?? '').toString();
+                  shrinkWrap:true,
+                  physics:const NeverScrollableScrollPhysics(),
+                  padding:const EdgeInsets.all(6),
+                  itemCount:paylasimlar.length,
+                  gridDelegate:const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount:3,
+                    childAspectRatio:.72,
+                    crossAxisSpacing:6,
+                    mainAxisSpacing:6,
+                  ),
+                  itemBuilder:(_,i){
+                    final belge=paylasimlar[i];
+                    final v=belge.data();
+                    final tur=(v['type']??'video').toString();
+                    final url=(v['mediaUrl']??v['videoUrl']??'').toString();
+                    final benim=(v['ownerId']??'').toString()==benimUid;
                     return GestureDetector(
-            onTap:()=>icerigiAc(belge,paylasimlar),
-            onLongPress:()=>icerikMenusu(belge),
-            child:Stack(
-              fit:StackFit.expand,
-              children:[
-                MedyaOnizleme(
-                  tur: tur,
-                  url: url,
-                  thumbnailUrl: (v['thumbnailUrl'] ?? '').toString(),
-                  yazi: (v['description'] ?? '').toString(),
-                  arkaPlan: i.isEven ? const Color(0xFF28233F) : const Color(0xFF173036),
-                ),
-                Positioned(
-                  left:6,
-                  right:6,
-                  bottom:6,
-                  child:_ProfilEtkilesimRozeti(likeCount:(v['likeCount'] as num?)?.toInt()??0,commentCount:(v['commentCount'] as num?)?.toInt()??0),
-                ),
-              ],
-            ),
-          );
+                      onTap:()=>icerigiAc(belge,paylasimlar),
+                      onLongPress:benim?()=>icerikMenusu(belge):null,
+                      child:Stack(
+                        fit:StackFit.expand,
+                        children:[
+                          MedyaOnizleme(
+                            tur:tur,
+                            url:url,
+                            thumbnailUrl:(v['thumbnailUrl']??'').toString(),
+                            yazi:(v['description']??'').toString(),
+                            arkaPlan:i.isEven?const Color(0xFF28233F):const Color(0xFF173036),
+                          ),
+                          if(v['isReel']==true)const Positioned(
+                            left:7,top:7,
+                            child:CircleAvatar(radius:13,backgroundColor:Colors.black54,child:Icon(Icons.movie_rounded,color:Colors.white,size:15)),
+                          ),
+                          if(benim&&v['pinned']==true)const Positioned(
+                            right:7,top:7,
+                            child:CircleAvatar(radius:13,backgroundColor:Colors.black54,child:Icon(Icons.push_pin_rounded,color:Colors.white,size:14)),
+                          ),
+                          Positioned(
+                            left:6,right:6,bottom:6,
+                            child:_ProfilEtkilesimRozeti(
+                              likeCount:(v['likeCount'] as num?)?.toInt()??0,
+                              commentCount:(v['commentCount'] as num?)?.toInt()??0,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
                   },
                 );
               },
@@ -12031,7 +12108,21 @@ class _ProfilEtkilesimRozeti extends StatelessWidget {
   );
 }
 
-class _ProfilSekme extends StatelessWidget{final String yazi;final bool secili;const _ProfilSekme(this.yazi,this.secili);@override Widget build(BuildContext context)=>Container(padding:const EdgeInsets.only(bottom:10),decoration:BoxDecoration(border:Border(bottom:BorderSide(color:secili?mavi:Colors.transparent,width:3))),child:Text(yazi,style:TextStyle(color:secili?Colors.black:Colors.black45,fontWeight:FontWeight.w800)));}
+class _ProfilSekme extends StatelessWidget{
+  final String yazi;
+  final bool secili;
+  final VoidCallback? tiklama;
+  const _ProfilSekme(this.yazi,this.secili,{this.tiklama});
+  @override Widget build(BuildContext context)=>InkWell(
+    onTap:tiklama,
+    borderRadius:BorderRadius.circular(10),
+    child:Container(
+      padding:const EdgeInsets.fromLTRB(7,8,7,10),
+      decoration:BoxDecoration(border:Border(bottom:BorderSide(color:secili?mavi:Colors.transparent,width:3))),
+      child:Text(yazi,style:TextStyle(color:secili?Colors.black:Colors.black45,fontWeight:FontWeight.w800,fontSize:12)),
+    ),
+  );
+}
 
 class KaydedilenlerPage extends StatelessWidget {
   const KaydedilenlerPage({super.key});
