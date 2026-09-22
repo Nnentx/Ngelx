@@ -7535,10 +7535,30 @@ class _YeniSohbetPageState extends State<YeniSohbetPage>{
   final arama=TextEditingController();
   String sorgu='';
   Set<String> engellenenler={};
+
   @override void initState(){super.initState();engellenenleriGetir();}
-  Future<void> engellenenleriGetir()async{final u=FirebaseAuth.instance.currentUser;if(u==null)return;final d=await FirebaseFirestore.instance.collection('users').doc(u.uid).get();if(mounted)setState(()=>engellenenler=Set<String>.from(List<dynamic>.from(d.data()?['blocked']??const[])));}
+
+  Future<void> engellenenleriGetir()async{
+    final u=FirebaseAuth.instance.currentUser;
+    if(u==null)return;
+    try{
+      final d=await FirebaseFirestore.instance.collection('users').doc(u.uid).get().timeout(const Duration(seconds:6));
+      if(mounted)setState(()=>engellenenler=Set<String>.from(List<dynamic>.from(d.data()?['blocked']??const[])));
+    }catch(_){}
+  }
+
   @override void dispose(){arama.dispose();super.dispose();}
-  TextSpan vurgula(String metin){final q=sorgu.toLowerCase(),m=metin.toLowerCase(),i=q.isEmpty?-1:m.indexOf(q);if(i<0)return TextSpan(text:metin,style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w600));return TextSpan(children:[TextSpan(text:metin.substring(0,i),style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w600)),TextSpan(text:metin.substring(i,i+q.length),style:const TextStyle(color:Colors.blue,fontWeight:FontWeight.w900)),TextSpan(text:metin.substring(i+q.length),style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w600))]);}
+
+  TextSpan vurgula(String metin){
+    final q=sorgu.toLowerCase(),m=metin.toLowerCase(),i=q.isEmpty?-1:m.indexOf(q);
+    if(i<0)return TextSpan(text:metin,style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w600));
+    return TextSpan(children:[
+      TextSpan(text:metin.substring(0,i),style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w600)),
+      TextSpan(text:metin.substring(i,i+q.length),style:const TextStyle(color:Colors.blue,fontWeight:FontWeight.w900)),
+      TextSpan(text:metin.substring(i+q.length),style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w600)),
+    ]);
+  }
+
   @override
   Widget build(BuildContext context) {
     final me = FirebaseAuth.instance.currentUser?.uid;
@@ -7554,62 +7574,82 @@ class _YeniSohbetPageState extends State<YeniSohbetPage>{
       ),
     );
     return Theme(
-      data: beyazTema,
-      child: Scaffold(
-        appBar: AppBar(title: const Text('Yeni sohbet', style: TextStyle(fontWeight: FontWeight.bold))),
-        body: Column(children: [
+      data:beyazTema,
+      child:Scaffold(
+        appBar:AppBar(title:const Text('Yeni sohbet',style:TextStyle(fontWeight:FontWeight.bold))),
+        body:Column(children:[
           Padding(
-            padding: const EdgeInsets.fromLTRB(18, 8, 18, 14),
-            child: TextField(
-              controller: arama,
-              onChanged: (v) => setState(() => sorgu = v.trim().toLowerCase()),
-              style: const TextStyle(color: Colors.black87),
-              decoration: const InputDecoration(prefixIcon: Icon(Icons.search), hintText: 'Kişi veya kullanıcı adı ara'),
+            padding:const EdgeInsets.fromLTRB(18,8,18,14),
+            child:TextField(
+              controller:arama,
+              onChanged:(v)=>setState(()=>sorgu=v.trim().toLowerCase()),
+              style:const TextStyle(color:Colors.black87),
+              decoration:const InputDecoration(prefixIcon:Icon(Icons.search),hintText:'Kişi veya kullanıcı adı ara'),
             ),
           ),
           Expanded(
-            child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-              stream: FirebaseFirestore.instance.collection('users').limit(100).snapshots(),
-              builder: (_, s) {
-                final docs = (s.data?.docs ?? []).where((d) {
-                  if (d.id == me || engellenenler.contains(d.id)) return false;
-                  final v = d.data();
-                  if(v['deactivated']==true||List<String>.from(v['blocked']??const[]).contains(me))return false;
-                  return true;
-                }).toList();
-                if (s.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator(color: mavi));
+            child:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
+              stream:FirebaseFirestore.instance.collection('users').limit(100).snapshots(),
+              builder:(_,s){
+                if(s.connectionState==ConnectionState.waiting&&!s.hasData){
+                  return const Center(child:CircularProgressIndicator(color:mavi));
                 }
-                if (docs.isEmpty) {
-                  return const Center(child: Text('Aramana uygun kişi bulunamadı.', style: TextStyle(color: Colors.black54)));
+                if(s.hasError){
+                  return const Center(child:Padding(
+                    padding:EdgeInsets.all(24),
+                    child:Text('Kişiler yüklenemedi. Bağlantını kontrol edip tekrar dene.',textAlign:TextAlign.center,style:TextStyle(color:Colors.black54)),
+                  ));
+                }
+                final docs=(s.data?.docs??[]).where((d){
+                  if(d.id==me||engellenenler.contains(d.id))return false;
+                  final v=d.data();
+                  if(v['deactivated']==true||List<String>.from(v['blocked']??const[]).contains(me))return false;
+                  if(sorgu.isEmpty)return true;
+                  final metin='${v['displayName']??''} ${v['username']??''}'.toLowerCase();
+                  return metin.contains(sorgu);
+                }).toList()
+                  ..sort((a,b){
+                    final av=a.data(),bv=b.data();
+                    final aa=(av['displayName']??av['username']??'').toString().toLowerCase();
+                    final ba=(bv['displayName']??bv['username']??'').toString().toLowerCase();
+                    return aa.compareTo(ba);
+                  });
+                if(docs.isEmpty){
+                  return const Center(child:Text('Aramana uygun kişi bulunamadı.',style:TextStyle(color:Colors.black54)));
                 }
                 return ListView.separated(
-                  itemCount: docs.length,
-                  separatorBuilder: (_, __) => const Divider(height: 1, indent: 82, color: Color(0xFFE5E7EB)),
-                  itemBuilder: (_, i) {
-                    final d = docs[i], v = d.data();
-                    final foto = (v['photoUrl'] ?? '').toString();
-                    final ad = (v['displayName'] ?? v['username'] ?? 'NgelX').toString();
-                    final ids = me==null?<String>[d.id]:<String>[me,d.id]..sort();
+                  itemCount:docs.length,
+                  separatorBuilder:(_,__)=>const Divider(height:1,indent:82,color:Color(0xFFE5E7EB)),
+                  itemBuilder:(_,i){
+                    final d=docs[i],v=d.data();
+                    final foto=(v['photoUrl']??'').toString();
+                    final ad=(v['displayName']??v['username']??'NgelX').toString();
+                    final kullanici=(v['username']??'ngelx').toString();
+                    final ids=me==null?<String>[d.id]:<String>[me,d.id]..sort();
                     final chatId=ids.join('_');
-                    return FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(future:FirebaseFirestore.instance.collection('chats').doc(chatId).get(),builder:(_,chat){final last=(chat.data?.data()?['lastMessage']??'').toString();final adEslesir=ad.toLowerCase().contains(sorgu)||(v['username']??'').toString().toLowerCase().contains(sorgu);final mesajEslesir=last.toLowerCase().contains(sorgu);if(sorgu.isNotEmpty&&!adEslesir&&!mesajEslesir)return const SizedBox.shrink();return InkWell(
-                      onTap: () {
-                        if (me == null) return;
-                        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => SohbetPage(chatId: chatId, digerUid: d.id, ad: ad, foto: foto)));
+                    return InkWell(
+                      onTap:(){
+                        if(me==null)return;
+                        Navigator.pushReplacement(context,MaterialPageRoute(builder:(_)=>SohbetPage(
+                          chatId:chatId,
+                          digerUid:d.id,
+                          ad:ad,
+                          foto:foto,
+                        )));
                       },
-                      child: ListTile(
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 22, vertical: 8),
-                        leading: CircleAvatar(
-                          radius: 27,
-                          backgroundColor: const Color(0xFFE5E7EB),
-                          backgroundImage: foto.isEmpty ? null : CachedNetworkImageProvider(foto),
-                          child: foto.isEmpty ? const Icon(Icons.person, color: Colors.black45) : null,
+                      child:ListTile(
+                        contentPadding:const EdgeInsets.symmetric(horizontal:22,vertical:8),
+                        leading:CircleAvatar(
+                          radius:27,
+                          backgroundColor:const Color(0xFFE5E7EB),
+                          backgroundImage:foto.isEmpty?null:CachedNetworkImageProvider(foto),
+                          child:foto.isEmpty?const Icon(Icons.person,color:Colors.black45):null,
                         ),
-                        title: RichText(text:vurgula(ad)),
-                        subtitle: Text(last.isNotEmpty?last:'@${v['username'] ?? 'ngelx'}',maxLines:1,overflow:TextOverflow.ellipsis,style:TextStyle(color:mesajEslesir&&sorgu.isNotEmpty?Colors.blue:Colors.black54,fontWeight:mesajEslesir&&sorgu.isNotEmpty?FontWeight.bold:FontWeight.normal)),
-                        trailing: const Icon(Icons.chevron_right, color: Colors.blue),
+                        title:RichText(text:vurgula(ad)),
+                        subtitle:Text('@$kullanici',maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black54)),
+                        trailing:const Icon(Icons.chevron_right,color:Colors.blue),
                       ),
-                    );});
+                    );
                   },
                 );
               },
@@ -7620,7 +7660,6 @@ class _YeniSohbetPageState extends State<YeniSohbetPage>{
     );
   }
 }
-
 
 
 class SohbetXoxPage extends StatelessWidget{
@@ -10553,7 +10592,7 @@ class AyarlarPage extends StatelessWidget {
       _ayar(context,Icons.download_outlined,'İndirme izinleri','Varsayılan paylaşım indirme ayarı'),
     ],
     const Divider(),
-    ListTile(leading:const Icon(Icons.system_update,color:mor),title:const Text('Uygulama güncellemeleri'),subtitle:const Text('V54 • Test build 235'),trailing:const Icon(Icons.build_circle,color:Colors.orange)),
+    ListTile(leading:const Icon(Icons.system_update,color:mor),title:const Text('Uygulama güncellemeleri'),subtitle:const Text('V54 • Test build 236'),trailing:const Icon(Icons.build_circle,color:Colors.orange)),
     ListTile(leading:const Icon(Icons.share,color:mavi),title:const Text('Ngel X’i paylaş'),subtitle:const Text('Uygulama bağlantısını paylaş veya kopyala'),onTap:()async=>SharePlus.instance.share(ShareParams(text:'Ngel X ile dünyanı paylaş ✨\nhttps://ngelx.app'))),
     const Divider(),
     ListTile(leading:const Icon(Icons.logout,color:Colors.red),title:const Text('Çıkış yap',style:TextStyle(color:Colors.red)),onTap:()async{final onay=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(title:const Text('Çıkış yapılsın mı?'),content:const Text('Tekrar giriş yapman gerekecek.'),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('Çıkış yap'))]));if(onay==true&&context.mounted){await ngelxOturumuKapat(context);}})
