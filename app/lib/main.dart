@@ -9756,13 +9756,122 @@ class SohbetBilgiPage extends StatelessWidget{
 }
 
 class SohbetMesajAramaPage extends StatefulWidget{
-  final String chatId;const SohbetMesajAramaPage({super.key,required this.chatId});
+  final String chatId;
+  const SohbetMesajAramaPage({super.key,required this.chatId});
   @override State<SohbetMesajAramaPage> createState()=>_SohbetMesajAramaPageState();
 }
 class _SohbetMesajAramaPageState extends State<SohbetMesajAramaPage>{
+  final ara=TextEditingController();
+  final Map<String,Future<DocumentSnapshot<Map<String,dynamic>>>> _profilCache={};
   String sorgu='';
-  @override Widget build(BuildContext context)=>Theme(data:ThemeData.light(),child:Scaffold(backgroundColor:Colors.white,appBar:AppBar(title:const Text('Sohbette ara')),body:Column(children:[Padding(padding:const EdgeInsets.all(12),child:TextField(autofocus:true,onChanged:(v)=>setState(()=>sorgu=v.trim().toLowerCase()),decoration:const InputDecoration(prefixIcon:Icon(Icons.search),hintText:'Mesaj yazısı ara'))),Expanded(child:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(stream:FirebaseFirestore.instance.collection('chats').doc(widget.chatId).collection('messages').orderBy('createdAt',descending:true).snapshots(),builder:(_,s){final docs=(s.data?.docs??[]).where((d)=>(d.data()['text']??'').toString().toLowerCase().contains(sorgu)&&sorgu.isNotEmpty).toList();if(sorgu.isEmpty)return const Center(child:Text('Aramak istediğin kelimeyi yaz.',style:TextStyle(color:Colors.black54)));if(docs.isEmpty)return const Center(child:Text('Eşleşen mesaj bulunamadı.',style:TextStyle(color:Colors.black54)));return ListView.separated(padding:const EdgeInsets.all(12),itemCount:docs.length,separatorBuilder:(_,__)=>const Divider(),itemBuilder:(_,i)=>ListTile(leading:const Icon(Icons.chat_bubble_outline,color:Colors.blue),title:Text((docs[i].data()['text']??'').toString()),subtitle:Text(mesajSaati(docs[i].data()['createdAt']))));}))])));
+
+  @override void dispose(){ara.dispose();super.dispose();}
+  Future<DocumentSnapshot<Map<String,dynamic>>> _profil(String id)=>_profilCache.putIfAbsent(id,()=>FirebaseFirestore.instance.collection('users').doc(id).get());
+
+  Widget _vurguluMetin(String metin){
+    final q=sorgu.trim();
+    if(q.isEmpty)return Text(metin,maxLines:3,overflow:TextOverflow.ellipsis,style:const TextStyle(color:ngelxPremiumInk,fontSize:13,height:1.35,fontWeight:FontWeight.w600));
+    final lower=metin.toLowerCase(),index=lower.indexOf(q.toLowerCase());
+    if(index<0)return Text(metin,maxLines:3,overflow:TextOverflow.ellipsis,style:const TextStyle(color:ngelxPremiumInk,fontSize:13,height:1.35,fontWeight:FontWeight.w600));
+    return RichText(
+      maxLines:3,
+      overflow:TextOverflow.ellipsis,
+      text:TextSpan(style:const TextStyle(color:ngelxPremiumInk,fontSize:13,height:1.35,fontWeight:FontWeight.w600),children:[
+        TextSpan(text:metin.substring(0,index)),
+        TextSpan(text:metin.substring(index,index+q.length),style:const TextStyle(color:ngelxPremiumPurple,fontWeight:FontWeight.w900,backgroundColor:Color(0xFFF0E8FF))),
+        TextSpan(text:metin.substring(index+q.length)),
+      ]),
+    );
+  }
+
+  @override Widget build(BuildContext context)=>Theme(
+    data:ThemeData.light().copyWith(colorScheme:ColorScheme.fromSeed(seedColor:ngelxPremiumPurple)),
+    child:Scaffold(
+      backgroundColor:const Color(0xFFFBF9FF),
+      appBar:AppBar(
+        toolbarHeight:64,
+        backgroundColor:Colors.transparent,
+        surfaceTintColor:Colors.transparent,
+        elevation:0,
+        title:const Text('Sohbette ara',style:TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w900)),
+        flexibleSpace:Container(decoration:const BoxDecoration(gradient:LinearGradient(colors:[Color(0xFFFFFFFF),Color(0xFFF5EFFF)]),borderRadius:BorderRadius.vertical(bottom:Radius.circular(24)))),
+      ),
+      body:Column(children:[
+        Padding(
+          padding:const EdgeInsets.fromLTRB(14,14,14,8),
+          child:TextField(
+            controller:ara,
+            autofocus:true,
+            textInputAction:TextInputAction.search,
+            onChanged:(v)=>setState(()=>sorgu=v.trim().toLowerCase()),
+            decoration:InputDecoration(
+              hintText:'Mesajlarda ara',
+              hintStyle:const TextStyle(color:Color(0xFF9A93A2)),
+              prefixIcon:const Icon(Icons.search_rounded,color:ngelxPremiumPurple),
+              suffixIcon:sorgu.isEmpty?null:IconButton(onPressed:(){ara.clear();setState(()=>sorgu='');},icon:const Icon(Icons.close_rounded,color:ngelxPremiumMuted)),
+              filled:true,fillColor:Colors.white,
+              border:OutlineInputBorder(borderRadius:BorderRadius.circular(20),borderSide:BorderSide.none),
+              enabledBorder:OutlineInputBorder(borderRadius:BorderRadius.circular(20),borderSide:const BorderSide(color:ngelxPremiumBorder)),
+              focusedBorder:OutlineInputBorder(borderRadius:BorderRadius.circular(20),borderSide:const BorderSide(color:ngelxPremiumPurple,width:1.4)),
+            ),
+          ),
+        ),
+        Expanded(child:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
+          stream:FirebaseFirestore.instance.collection('chats').doc(widget.chatId).collection('messages').orderBy('createdAt',descending:true).limit(300).snapshots(),
+          builder:(_,snap){
+            if(snap.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator(color:ngelxPremiumPurple));
+            if(sorgu.isEmpty)return const Center(child:Column(mainAxisSize:MainAxisSize.min,children:[
+              Icon(Icons.manage_search_rounded,color:Color(0xFFC7B8E7),size:62),
+              SizedBox(height:11),
+              Text('Aramak istediğin kelimeyi yaz.',style:TextStyle(color:ngelxPremiumMuted,fontWeight:FontWeight.w700)),
+            ]));
+            final docs=(snap.data?.docs??[]).where((d){
+              final v=d.data(),tur=(v['type']??'text').toString(),metin=(v['text']??'').toString();
+              return tur!='system'&&metin.toLowerCase().contains(sorgu);
+            }).toList();
+            if(docs.isEmpty)return const Center(child:Column(mainAxisSize:MainAxisSize.min,children:[
+              Icon(Icons.search_off_rounded,color:Color(0xFFC7B8E7),size:58),
+              SizedBox(height:10),
+              Text('Eşleşen mesaj bulunamadı.',style:TextStyle(color:ngelxPremiumMuted,fontWeight:FontWeight.w700)),
+            ]));
+            return ListView.builder(
+              padding:const EdgeInsets.fromLTRB(14,6,14,28),
+              itemCount:docs.length,
+              itemBuilder:(_,i){
+                final d=docs[i],v=d.data(),metin=(v['text']??'').toString(),sender=(v['senderId']??'').toString();
+                return FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(
+                  future:sender.isEmpty||sender=='system'?null:_profil(sender),
+                  builder:(_,u){
+                    final p=u.data?.data()??<String,dynamic>{};
+                    final isim=(p['displayName']??p['username']??'Grup üyesi').toString();
+                    final foto=(p['photoUrl']??'').toString();
+                    return NgelXPremiumCard(
+                      margin:const EdgeInsets.only(bottom:9),
+                      padding:const EdgeInsets.fromLTRB(11,10,11,10),
+                      child:Row(crossAxisAlignment:CrossAxisAlignment.start,children:[
+                        CircleAvatar(radius:21,backgroundColor:const Color(0xFFECE4F5),backgroundImage:foto.isEmpty?null:CachedNetworkImageProvider(foto),child:foto.isEmpty?const Icon(Icons.person_rounded,color:ngelxPremiumPurple,size:20):null),
+                        const SizedBox(width:10),
+                        Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+                          Row(children:[
+                            Expanded(child:Text(isim,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:ngelxPremiumPurple,fontSize:11.5,fontWeight:FontWeight.w900))),
+                            Text(mesajSaati(v['createdAt']),style:const TextStyle(color:ngelxPremiumMuted,fontSize:9.5,fontWeight:FontWeight.w600)),
+                          ]),
+                          const SizedBox(height:5),
+                          _vurguluMetin(metin),
+                        ])),
+                      ]),
+                    );
+                  },
+                );
+              },
+            );
+          },
+        )),
+      ]),
+    ),
+  );
 }
+
 
 class AktivitePage extends StatelessWidget {
   const AktivitePage({super.key});
