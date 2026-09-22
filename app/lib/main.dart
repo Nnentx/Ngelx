@@ -6307,6 +6307,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
   bool sesKaydi=false,sesYukleniyor=false;
   DateTime? sesKaydiBasladi;
   final AudioRecorder sesKaydedici=AudioRecorder();
+  String? _sohbetArkaPlanYolu;
   DateTime? _sonOkunduKontrolu;
   String? get uid=>FirebaseAuth.instance.currentUser?.uid;
   DocumentReference<Map<String,dynamic>> get chatRef=>FirebaseFirestore.instance.collection('chats').doc(widget.chatId);
@@ -6323,8 +6324,19 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
     _mesajAkisiniYenile();
     unawaited(_okunduIsaretle());
     unawaited(_grupDizininiEsitle());
+    unawaited(_arkaPlaniYukle());
   }
 
+  Future<void> _arkaPlaniYukle()async{
+    try{
+      final h=await SharedPreferences.getInstance();
+      final p=h.getString('group_bg_${widget.chatId}');
+      final gecerli=p!=null&&p.isNotEmpty&&await File(p).exists();
+      if(mounted)setState(()=>_sohbetArkaPlanYolu=gecerli?p:null);
+    }catch(_){
+      if(mounted)setState(()=>_sohbetArkaPlanYolu=null);
+    }
+  }
   Future<void> _grupDizininiEsitle()async{
     final ben=uid;
     if(ben==null)return;
@@ -6815,7 +6827,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
             final online=(v['onlineCount'] as num?)?.toInt()??0;
             return InkWell(
               borderRadius:BorderRadius.circular(12),
-              onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupBilgiPage(chatId:widget.chatId))),
+              onTap:()async{await Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupBilgiPage(chatId:widget.chatId)));await _arkaPlaniYukle();},
               child:Row(children:[
                 CircleAvatar(radius:20,backgroundColor:const Color(0xFFE9DDFF),backgroundImage:foto.isEmpty?null:CachedNetworkImageProvider(foto),child:foto.isEmpty?const Icon(Icons.groups,color:mor,size:22):null),
                 const SizedBox(width:9),
@@ -6830,10 +6842,19 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
         actions:[
           IconButton(tooltip:'Sesli ara',onPressed:aramaBaslatiliyor?null:()=>aramaBaslat(false),icon:aramaBaslatiliyor?const SizedBox(width:18,height:18,child:CircularProgressIndicator(strokeWidth:2)):const Icon(Icons.call_rounded,color:mor)),
           IconButton(tooltip:'Görüntülü ara',onPressed:aramaBaslatiliyor?null:()=>aramaBaslat(true),icon:const Icon(Icons.videocam_rounded,color:mor)),
-          IconButton(tooltip:'Grup bilgileri',onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupBilgiPage(chatId:widget.chatId))),icon:const Icon(Icons.more_vert_rounded,color:Colors.black87)),
+          IconButton(tooltip:'Grup bilgileri',onPressed:()async{await Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupBilgiPage(chatId:widget.chatId)));await _arkaPlaniYukle();},icon:const Icon(Icons.more_vert_rounded,color:Colors.black87)),
         ],
       ),
-      body:Column(children:[
+      body:Container(
+        decoration:BoxDecoration(
+          color:Colors.white,
+          image:_sohbetArkaPlanYolu==null?null:DecorationImage(
+            image:FileImage(File(_sohbetArkaPlanYolu!)),
+            fit:BoxFit.cover,
+            opacity:.78,
+          ),
+        ),
+        child:Column(children:[
         _sabitMesajBandi(),
         Expanded(child:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
           stream:_mesajAkisi,
@@ -6869,6 +6890,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
           IconButton(tooltip:'Gönder',onPressed:gonder,icon:const Icon(Icons.send_rounded,color:mor)),
         ]))),
       ]),
+      ),
     ),
   );
 }
@@ -6897,7 +6919,8 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
   bool goruntuluAktif=false;
   int efekt=0;
   String? hata;
-  Timer? zilZamanlayici,odaUiZamanlayici;
+  Timer? zilZamanlayici,odaUiZamanlayici,aramaSureZamanlayici;
+  int aramaSaniye=0;
   final Map<String,Future<DocumentSnapshot<Map<String,dynamic>>>> _aramaProfilCache={};
 
   Future<DocumentSnapshot<Map<String,dynamic>>> _aramaProfili(String uid)=>
@@ -7022,6 +7045,10 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
         if(!arayanBenim||mevcutDurum=='active')'callAnsweredAt':FieldValue.serverTimestamp(),
       },SetOptions(merge:true)).timeout(const Duration(seconds:10));
       if(arayanBenim&&mevcutDurum=='ringing')_cevapsizZamanlayiciBaslat(arayanUid);
+      aramaSureZamanlayici?.cancel();
+      aramaSureZamanlayici=Timer.periodic(const Duration(seconds:1),(_){
+        if(mounted)setState(()=>aramaSaniye++);
+      });
       if(mounted)setState(()=>baglaniyor=false);
     }catch(e){
       if(r!=null){
@@ -7118,6 +7145,7 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
   @override void dispose(){
     zilZamanlayici?.cancel();
     odaUiZamanlayici?.cancel();
+    aramaSureZamanlayici?.cancel();
     aramaDurumAboneligi?.cancel();
     final r=oda;
     if(r!=null){
@@ -7402,37 +7430,45 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
     ]));
   }
 
+  String get _aramaSuresi{
+    final dk=aramaSaniye~/60,sn=aramaSaniye%60;
+    return '${dk.toString().padLeft(2,'0')}:${sn.toString().padLeft(2,'0')}';
+  }
+
   Widget _sesliAlani(){
     final r=oda;
     final kisiler=<({lk.Participant kisi,bool yerel})>[
       if(r?.localParticipant!=null)(kisi:r!.localParticipant!,yerel:true),
       if(r!=null)...r.remoteParticipants.values.map((p)=>(kisi:p,yerel:false)),
     ];
-    if(kisiler.length>2){
-      return Expanded(child:GridView.builder(
-        padding:const EdgeInsets.all(18),
-        gridDelegate:const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount:2,crossAxisSpacing:12,mainAxisSpacing:12,childAspectRatio:1),
-        itemCount:kisiler.length,
-        itemBuilder:(_,i)=>Container(
-          decoration:BoxDecoration(
-            color:Colors.white10,
-            borderRadius:BorderRadius.circular(22),
-            border:kisiler[i].kisi.isSpeaking?Border.all(color:const Color(0xFF35E07A),width:2):null,
-          ),
-          padding:const EdgeInsets.all(12),
-          child:Center(child:_katilimciProfilBilgisi(kisiler[i].kisi,yerel:kisiler[i].yerel,buyuk:true)),
-        ),
-      ));
-    }
-    return Expanded(child:Center(child:Column(mainAxisSize:MainAxisSize.min,children:[
-      CircleAvatar(radius:62,backgroundColor:const Color(0xFFE9DDFF),backgroundImage:widget.foto.isEmpty?null:CachedNetworkImageProvider(widget.foto),child:widget.foto.isEmpty?const Icon(Icons.call_rounded,color:mor,size:62):null),
+    final gorunen=kisiler.take(6).toList(),kalan=kisiler.length-gorunen.length;
+    return Expanded(child:Column(children:[
       const SizedBox(height:18),
-      Text(widget.baslik,textAlign:TextAlign.center,style:const TextStyle(color:Colors.white,fontSize:27,fontWeight:FontWeight.w900)),
-      const SizedBox(height:7),
-      Text(baglaniyor?'Bağlanıyor…':'Sesli arama',style:const TextStyle(color:Colors.white70,fontSize:16)),
-    ])));
+      CircleAvatar(radius:52,backgroundColor:const Color(0xFFE9DDFF),backgroundImage:widget.foto.isEmpty?null:CachedNetworkImageProvider(widget.foto),child:widget.foto.isEmpty?const Icon(Icons.groups_rounded,color:mor,size:48):null),
+      const SizedBox(height:12),
+      Text(widget.baslik,textAlign:TextAlign.center,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.white,fontSize:26,fontWeight:FontWeight.w900)),
+      const SizedBox(height:5),
+      Text(baglaniyor?'Bağlanıyor…':'Sesli arama',style:const TextStyle(color:Colors.white70,fontSize:15)),
+      const SizedBox(height:4),
+      Text(baglaniyor?'--:--':_aramaSuresi,style:const TextStyle(color:Colors.white54,fontSize:14,fontWeight:FontWeight.w700)),
+      const SizedBox(height:22),
+      Expanded(child:GridView.builder(
+        padding:const EdgeInsets.symmetric(horizontal:18,vertical:4),
+        gridDelegate:const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount:3,crossAxisSpacing:10,mainAxisSpacing:18,childAspectRatio:.78),
+        itemCount:gorunen.length+(kalan>0?1:0),
+        itemBuilder:(_,i){
+          if(i>=gorunen.length){
+            return Column(mainAxisSize:MainAxisSize.min,children:[
+              CircleAvatar(radius:38,backgroundColor:Colors.white12,child:Text('+$kalan',style:const TextStyle(color:Colors.white,fontSize:21,fontWeight:FontWeight.w900))),
+              const SizedBox(height:8),
+              const Text('Diğerleri',style:TextStyle(color:Colors.white70,fontWeight:FontWeight.w700)),
+            ]);
+          }
+          return Center(child:_katilimciProfilBilgisi(gorunen[i].kisi,yerel:gorunen[i].yerel,buyuk:true));
+        },
+      )),
+    ]));
   }
-
   @override Widget build(BuildContext context)=>PopScope(
     canPop:true,
     onPopInvokedWithResult:(didPop,__){if(didPop)bitir(geriDon:false);},
@@ -7453,54 +7489,110 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
         else if(goruntuluAktif)_videoAlani()
         else _sesliAlani(),
         if(hata==null&&goruntuluAktif)Padding(
-          padding:const EdgeInsets.fromLTRB(10,10,10,2),
+          padding:const EdgeInsets.fromLTRB(10,8,10,2),
           child:Wrap(spacing:8,runSpacing:8,alignment:WrapAlignment.center,children:[
-            FilterChip(
-              label:const Text('✨ Rötuş'),
-              selected:rotus,
-              onSelected:(v)=>setState(()=>rotus=v),
-              selectedColor:Colors.white,
-              backgroundColor:Colors.white24,
-              labelStyle:TextStyle(color:rotus?Colors.black:Colors.white),
-            ),
-            FilterChip(
-              label:const Text('◌ Bulanıklaştır'),
-              selected:bulanik,
-              onSelected:(v)=>setState(()=>bulanik=v),
-              selectedColor:Colors.white,
-              backgroundColor:Colors.white24,
-              labelStyle:TextStyle(color:bulanik?Colors.black:Colors.white),
-            ),
-            ActionChip(
-              label:const Text('☺ Efektler'),
-              onPressed:efektSec,
-              backgroundColor:Colors.white24,
-              labelStyle:const TextStyle(color:Colors.white),
-            ),
+            FilterChip(label:const Text('✨ Rötuş'),selected:rotus,onSelected:(v)=>setState(()=>rotus=v),selectedColor:Colors.white,backgroundColor:Colors.white24,labelStyle:TextStyle(color:rotus?Colors.black:Colors.white)),
+            FilterChip(label:const Text('◌ Bulanıklaştır'),selected:bulanik,onSelected:(v)=>setState(()=>bulanik=v),selectedColor:Colors.white,backgroundColor:Colors.white24,labelStyle:TextStyle(color:bulanik?Colors.black:Colors.white)),
+            ActionChip(label:const Text('☺ Efektler'),onPressed:efektSec,backgroundColor:Colors.white24,labelStyle:const TextStyle(color:Colors.white)),
           ]),
         ),
-        if(hata==null)Padding(
-          padding:const EdgeInsets.fromLTRB(12,18,12,8),
-          child:Row(mainAxisAlignment:MainAxisAlignment.spaceEvenly,children:[
-            _aramaTus(mikrofon?Icons.mic:Icons.mic_off,mikrofonDegistir,mikrofon),
-            _aramaTus(hoparlor?Icons.volume_up:Icons.volume_off,hoparlorDegistir,hoparlor),
-            if(goruntuluAktif)_aramaTus(kamera?Icons.videocam:Icons.videocam_off,kameraDegistir,kamera)
-            else _aramaTus(Icons.videocam_rounded,goruntuluyaGec,false),
+        if(hata==null)Container(
+          margin:const EdgeInsets.fromLTRB(10,10,10,8),
+          padding:const EdgeInsets.symmetric(horizontal:8,vertical:12),
+          decoration:BoxDecoration(color:const Color(0xFF211D28),borderRadius:BorderRadius.circular(28),boxShadow:const [BoxShadow(color:Colors.black26,blurRadius:16,offset:Offset(0,6))]),
+          child:Row(mainAxisAlignment:MainAxisAlignment.spaceAround,children:[
+            _aramaTusEtiketli(hoparlor?Icons.volume_up_rounded:Icons.volume_off_rounded,'Hoparlör',hoparlorDegistir,hoparlor),
+            _aramaTusEtiketli(mikrofon?Icons.mic_off_rounded:Icons.mic_rounded,mikrofon?'Sessize al':'Sesi aç',mikrofonDegistir,!mikrofon),
+            _aramaBitirTus(),
+            _aramaTusEtiketli(goruntuluAktif?(kamera?Icons.videocam_rounded:Icons.videocam_off_rounded):Icons.videocam_rounded,goruntuluAktif?(kamera?'Video açık':'Video kapalı'):'Video aç',goruntuluAktif?kameraDegistir:goruntuluyaGec,goruntuluAktif&&kamera),
+            _aramaTusEtiketli(Icons.groups_rounded,'Katılımcılar',aramaAyarlari,false),
           ]),
-        ),
-        FloatingActionButton.large(heroTag:null,backgroundColor:Colors.red,onPressed:()=>bitir(),child:const Icon(Icons.call_end,color:Colors.white,size:34)),
-        const SizedBox(height:26),
+        ),        const SizedBox(height:26),
       ])),
     ),
   );
 
-  Widget _aramaTus(IconData ikon,Future<void> Function() onTap,bool acik)=>IconButton.filled(
-    style:IconButton.styleFrom(backgroundColor:acik?Colors.white24:Colors.white,foregroundColor:acik?Colors.white:Colors.black),
-    onPressed:()=>onTap(),
-    icon:Icon(ikon),iconSize:29,padding:const EdgeInsets.all(16),
-  );
+  Widget _aramaTusEtiketli(IconData ikon,String yazi,Future<void> Function() onTap,bool acik)=>Expanded(child:InkWell(
+    borderRadius:BorderRadius.circular(18),
+    onTap:()=>onTap(),
+    child:Column(mainAxisSize:MainAxisSize.min,children:[
+      Container(width:48,height:48,decoration:BoxDecoration(color:acik?Colors.white24:Colors.white10,shape:BoxShape.circle),child:Icon(ikon,color:Colors.white,size:24)),
+      const SizedBox(height:5),
+      Text(yazi,maxLines:1,overflow:TextOverflow.ellipsis,textAlign:TextAlign.center,style:const TextStyle(color:Colors.white70,fontSize:9.5,fontWeight:FontWeight.w700)),
+    ]),
+  ));
+
+  Widget _aramaBitirTus()=>Expanded(child:InkWell(
+    borderRadius:BorderRadius.circular(30),
+    onTap:()=>bitir(),
+    child:Column(mainAxisSize:MainAxisSize.min,children:[
+      Container(width:58,height:58,decoration:const BoxDecoration(color:Color(0xFFFF2638),shape:BoxShape.circle,boxShadow:[BoxShadow(color:Color(0x55FF2638),blurRadius:14)]),child:const Icon(Icons.call_end_rounded,color:Colors.white,size:30)),
+      const SizedBox(height:5),
+      const Text('Bitir',style:TextStyle(color:Colors.white70,fontSize:9.5,fontWeight:FontWeight.w700)),
+    ]),
+  ));
 }
 
+class GrupOzellestirPage extends StatefulWidget{
+  final String chatId;
+  const GrupOzellestirPage({super.key,required this.chatId});
+  @override State<GrupOzellestirPage> createState()=>_GrupOzellestirPageState();
+}
+class _GrupOzellestirPageState extends State<GrupOzellestirPage>{
+  String? yol;
+  bool kaydediliyor=false;
+  String get anahtar=>'group_bg_${widget.chatId}';
+
+  @override void initState(){super.initState();unawaited(_yukle());}
+  Future<void> _yukle()async{
+    final h=await SharedPreferences.getInstance();
+    final p=h.getString(anahtar);
+    if(mounted)setState(()=>yol=p!=null&&File(p).existsSync()?p:null);
+  }
+  Future<void> _sec()async{
+    if(kaydediliyor)return;
+    final x=await ImagePicker().pickImage(source:ImageSource.gallery,imageQuality:82,maxWidth:1800);
+    if(x==null)return;
+    setState(()=>kaydediliyor=true);
+    try{
+      final dir=await getApplicationDocumentsDirectory();
+      final hedef=File('${dir.path}/ngelx_group_bg_${widget.chatId}.jpg');
+      await hedef.writeAsBytes(await x.readAsBytes(),flush:true);
+      final h=await SharedPreferences.getInstance();
+      await h.setString(anahtar,hedef.path);
+      if(mounted)setState(()=>yol=hedef.path);
+    }finally{if(mounted)setState(()=>kaydediliyor=false);}
+  }
+  Future<void> _sifirla()async{
+    final h=await SharedPreferences.getInstance();
+    final eski=h.getString(anahtar);
+    await h.remove(anahtar);
+    if(eski!=null){try{await File(eski).delete();}catch(_){}}
+    if(mounted)setState(()=>yol=null);
+  }
+  @override Widget build(BuildContext context)=>Theme(
+    data:ThemeData.light(),
+    child:Scaffold(
+      backgroundColor:Colors.white,
+      appBar:AppBar(title:const Text('Sohbeti özelleştir',style:TextStyle(fontWeight:FontWeight.w900))),
+      body:ListView(padding:const EdgeInsets.all(18),children:[
+        const Text('Sohbet arka planı',style:TextStyle(fontSize:19,fontWeight:FontWeight.w900)),
+        const SizedBox(height:6),
+        const Text('Başlangıç görünümü beyazdır. İstersen yalnızca kendi cihazında özel bir görsel kullanabilirsin.',style:TextStyle(color:Colors.black54,height:1.35)),
+        const SizedBox(height:18),
+        Container(
+          height:330,
+          decoration:BoxDecoration(color:Colors.white,image:yol==null?null:DecorationImage(image:FileImage(File(yol!)),fit:BoxFit.cover,opacity:.78),borderRadius:BorderRadius.circular(24),border:Border.all(color:const Color(0xFFE5E7EB))),
+          child:Center(child:Container(padding:const EdgeInsets.symmetric(horizontal:16,vertical:10),decoration:BoxDecoration(color:Colors.white.withValues(alpha:.90),borderRadius:BorderRadius.circular(18)),child:Text(yol==null?'Varsayılan beyaz':'Özel arka plan',style:const TextStyle(fontWeight:FontWeight.w900)))),
+        ),
+        const SizedBox(height:18),
+        FilledButton.icon(onPressed:kaydediliyor?null:_sec,icon:const Icon(Icons.photo_library_rounded),label:Text(kaydediliyor?'Hazırlanıyor…':'Galeriden arka plan seç'),style:FilledButton.styleFrom(backgroundColor:mor,minimumSize:const Size.fromHeight(50))),
+        const SizedBox(height:10),
+        OutlinedButton.icon(onPressed:yol==null?null:_sifirla,icon:const Icon(Icons.restart_alt_rounded),label:const Text('Varsayılan beyaza dön'),style:OutlinedButton.styleFrom(minimumSize:const Size.fromHeight(48))),
+      ]),
+    ),
+  );
+}
 class GrupBilgiPage extends StatefulWidget{final String chatId;const GrupBilgiPage({super.key,required this.chatId});@override State<GrupBilgiPage> createState()=>_GrupBilgiPageState();}
 class _GrupBilgiPageState extends State<GrupBilgiPage>{
   final Map<String,Future<DocumentSnapshot<Map<String,dynamic>>>> _uyeProfilCache={};
@@ -7997,6 +8089,7 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
               ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.poll_rounded,color:mor),title:const Text('Anketler',style:TextStyle(fontWeight:FontWeight.w700)),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupAnketlerPage(chatId:widget.chatId)))),
               ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.event_rounded,color:mor),title:const Text('Etkinlikler',style:TextStyle(fontWeight:FontWeight.w700)),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupEtkinliklerPage(chatId:widget.chatId)))),
               ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.settings_rounded,color:mor),title:const Text('Grup ayarları',style:TextStyle(fontWeight:FontWeight.w700)),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupAyarlariPage(chatId:widget.chatId)))),
+              ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.palette_rounded,color:mor),title:const Text('Sohbeti özelleştir',style:TextStyle(fontWeight:FontWeight.w700)),subtitle:const Text('Arka planı değiştir veya beyaza döndür'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupOzellestirPage(chatId:widget.chatId)))),
               const Divider(height:26),
               Row(children:[const Expanded(child:Text('Üyeler',style:TextStyle(fontSize:18,fontWeight:FontWeight.w900))),Text('${uyeler.length}',style:const TextStyle(color:Colors.black45,fontWeight:FontWeight.w800))]),
               const SizedBox(height:8),
