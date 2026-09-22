@@ -9084,7 +9084,39 @@ class AktivitePage extends StatelessWidget {
     final kaynak=(v['sourceId']??v['chatId']??v['belgeId']??v['postId']??v['contentId']??'').toString();
     if(kaynak.isNotEmpty&&(tur=='interaction'||tur=='like'||tur=='comment')){Navigator.push(context,MaterialPageRoute(builder:(_)=>IcerikBaglantiPage(icerikId:kaynak)));return;}
     if(from.isNotEmpty&&(tur=='friend'||tur=='follow_request'||tur=='friend_request'||tur=='friend_accepted'||tur=='follow_accepted')){Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciProfilPage(uid:from)));return;}
-    if(tur=='call'&&kaynak.isNotEmpty){final ref=FirebaseFirestore.instance.collection('calls').doc(kaynak),arama=await ref.get(),a=arama.data();if(!context.mounted)return;if(a==null||a['status']=='ended'){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bu arama sona ermiş.')));return;}final p=await FirebaseFirestore.instance.collection('users').doc(from).get();if(!context.mounted)return;final baslik=a['group']==true?(a['title']??'Grup araması').toString():(p.data()?['displayName']??p.data()?['username']??'NgelX araması').toString();final foto=a['group']==true?'':(p.data()?['photoUrl']??'').toString();Navigator.push(context,MaterialPageRoute(builder:(_)=>NgelXAramaPage(roomName:(a['roomName']??'').toString(),baslik:baslik,foto:foto,goruntulu:a['video']==true,aramaRef:ref)));return;}
+    if(tur=='call'&&kaynak.isNotEmpty){
+      final ref=FirebaseFirestore.instance.collection('chats').doc(kaynak);
+      final arama=await ref.get().timeout(const Duration(seconds:8));
+      final a=arama.data();
+      if(!context.mounted)return;
+      final durum=(a?['callStatus']??'').toString();
+      final oda=(a?['callRoomName']??'').toString();
+      if(a==null||oda.isEmpty||durum=='ended'||durum=='rejected'||durum=='missed'){
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bu arama sona ermiş.')));
+        return;
+      }
+      final grup=a['isGroup']==true;
+      Map<String,dynamic> p=<String,dynamic>{};
+      if(!grup&&from.isNotEmpty){
+        try{
+          final profil=await FirebaseFirestore.instance.collection('users').doc(from).get().timeout(const Duration(seconds:6));
+          p=profil.data()??<String,dynamic>{};
+        }catch(_){}
+      }
+      if(!context.mounted)return;
+      final baslik=grup
+          ?(a['callTitle']??a['groupName']??'Grup araması').toString()
+          :(p['displayName']??p['username']??a['callTitle']??'NgelX araması').toString();
+      final foto=grup?(a['groupPhotoUrl']??'').toString():(p['photoUrl']??'').toString();
+      Navigator.push(context,MaterialPageRoute(builder:(_)=>NgelXAramaPage(
+        roomName:oda,
+        baslik:baslik,
+        foto:foto,
+        goruntulu:a['callVideo']==true,
+        aramaRef:ref,
+      )));
+      return;
+    }
     if(tur=='message'&&from.isNotEmpty){final p=await FirebaseFirestore.instance.collection('users').doc(from).get();if(!context.mounted)return;final ids=[FirebaseAuth.instance.currentUser!.uid,from]..sort();Navigator.push(context,MaterialPageRoute(builder:(_)=>SohbetPage(chatId:(v['sourceId']??v['chatId']??v['belgeId']??ids.join('_')).toString(),digerUid:from,ad:(p.data()?['displayName']??p.data()?['username']??'Kullanıcı').toString(),foto:(p.data()?['photoUrl']??'').toString())));}
   }
 
@@ -10130,7 +10162,7 @@ class AyarlarPage extends StatelessWidget {
       _ayar(context,Icons.download_outlined,'İndirme izinleri','Varsayılan paylaşım indirme ayarı'),
     ],
     const Divider(),
-    ListTile(leading:const Icon(Icons.system_update,color:mor),title:const Text('Uygulama güncellemeleri'),subtitle:const Text('V54 • Test build 224'),trailing:const Icon(Icons.build_circle,color:Colors.orange)),
+    ListTile(leading:const Icon(Icons.system_update,color:mor),title:const Text('Uygulama güncellemeleri'),subtitle:const Text('V54 • Test build 225'),trailing:const Icon(Icons.build_circle,color:Colors.orange)),
     ListTile(leading:const Icon(Icons.share,color:mavi),title:const Text('Ngel X’i paylaş'),subtitle:const Text('Uygulama bağlantısını paylaş veya kopyala'),onTap:()async=>SharePlus.instance.share(ShareParams(text:'Ngel X ile dünyanı paylaş ✨\nhttps://ngelx.app'))),
     const Divider(),
     ListTile(leading:const Icon(Icons.logout,color:Colors.red),title:const Text('Çıkış yap',style:TextStyle(color:Colors.red)),onTap:()async{final onay=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(title:const Text('Çıkış yapılsın mı?'),content:const Text('Tekrar giriş yapman gerekecek.'),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('Çıkış yap'))]));if(onay==true){await FirebaseAuth.instance.signOut();if(context.mounted)Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder:(_)=>const GirisPage()),(_)=>false);}})
