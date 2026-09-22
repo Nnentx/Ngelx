@@ -5468,7 +5468,10 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
   DateTime? _sonOkunduKontrolu;
   String? get uid=>FirebaseAuth.instance.currentUser?.uid;
   DocumentReference<Map<String,dynamic>> get chatRef=>FirebaseFirestore.instance.collection('chats').doc(widget.chatId);
-  Future<DocumentSnapshot<Map<String,dynamic>>> _uyeGetir(String id)=>_uyeProfilCache.putIfAbsent(id,()=>FirebaseFirestore.instance.collection('users').doc(id).get());
+  Future<DocumentSnapshot<Map<String,dynamic>>> _uyeGetir(String id)=>_uyeProfilCache.putIfAbsent(
+    id,
+    ()=>FirebaseFirestore.instance.collection('users').doc(id).get().timeout(const Duration(seconds:6)),
+  );
   @override void initState(){
     super.initState();
     _grupAkisi=chatRef.snapshots();
@@ -5522,7 +5525,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
 
   Future<Map<String,dynamic>?> mesajGonderimVerisi()async{
     final ben=uid;if(ben==null)return null;
-    final d=await chatRef.get();
+    final d=await chatRef.get().timeout(const Duration(seconds:6));
     final v=d.data()??<String,dynamic>{};
     final uyeler=List<String>.from(v['members']??const[]);
     final yoneticiler=List<String>.from(v['admins']??const[]);
@@ -5553,7 +5556,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
       final g=<String,dynamic>{'lastMessage':sonMesaj,'updatedAt':FieldValue.serverTimestamp(),'hiddenFor':FieldValue.arrayRemove(uyeler)};
       for(final x in uyeler){if(x!=ben)g['unread_$x']=FieldValue.increment(1);}
       batch.set(chatRef,g,SetOptions(merge:true));
-      await batch.commit();
+      await batch.commit().timeout(const Duration(seconds:10));
       final etiketler=List<String>.from(veri['mentions']??const[]);
       if(etiketler.isNotEmpty){
         final profil=await FirebaseFirestore.instance.collection('users').doc(ben).get();
@@ -5602,7 +5605,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
       try{
         var uyeler=_mentionUyeleri;
         if(uyeler==null){
-          final grup=await chatRef.get();
+          final grup=await chatRef.get().timeout(const Duration(seconds:6));
           final ids=List<String>.from(grup.data()?['members']??const[]).take(60).toList();
           final belgeler=await Future.wait(ids.map(_uyeGetir));
           uyeler=<Map<String,String>>[];
@@ -5631,7 +5634,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
     mesaj.text='${sonBosluk<0?'':metin.substring(0,sonBosluk+1)}@$kullanici ';
     mesaj.selection=TextSelection.collapsed(offset:mesaj.text.length);
     if(hedefUid=='all'){
-      final grup=await chatRef.get();
+      final grup=await chatRef.get().timeout(const Duration(seconds:6));
       etiketlenenUidler.addAll(List<String>.from(grup.data()?['members']??const[]));
     }else if(hedefUid!=null&&hedefUid.isNotEmpty){
       etiketlenenUidler.add(hedefUid);
