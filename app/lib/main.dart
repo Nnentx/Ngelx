@@ -7905,7 +7905,8 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Grup adı 2–16 karakter arasında olmalı.')));
       return;
     }
-    await ref.update({'groupName':temiz});
+    await ref.update({'groupName':temiz,'updatedAt':FieldValue.serverTimestamp()});
+    await ngelxGrupDavetMetaSenkronla(ref);
     await sistemMesaji('Grup adı “$temiz” olarak değiştirildi.');
   }
   Future<void> aciklamaDuzenle(String mevcut)async{
@@ -7940,6 +7941,7 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
     c.dispose();
     if(yeni==null||!mounted)return;
     await ref.set({'groupDescription':yeni,'updatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
+    await ngelxGrupDavetMetaSenkronla(ref);
     await sistemMesaji(yeni.isEmpty?'Grup açıklaması kaldırıldı.':'Grup açıklaması güncellendi.');
   }
 
@@ -7997,6 +7999,7 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
           await CachedNetworkImage.evictFromCache(eski);
           unawaited(ngelxMedyaSil(eski).catchError((_){ }));
         }
+        await ngelxGrupDavetMetaSenkronla(ref);
         await sistemMesaji('Yönetici grup fotoğrafını kaldırdı.');
         if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Grup fotoğrafı kaldırıldı.')));
         return;
@@ -8011,6 +8014,7 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
         await CachedNetworkImage.evictFromCache(eski);
         unawaited(ngelxMedyaSil(eski).catchError((_){ }));
       }
+      await ngelxGrupDavetMetaSenkronla(ref);
       await sistemMesaji('Yönetici grup fotoğrafını değiştirdi.');
       if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Grup fotoğrafı kaydedildi.')));
     }catch(e){
@@ -8076,10 +8080,12 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
     );
     if(sec==null)return;
     if(sec=='promote'){
-      await ref.update({'admins':FieldValue.arrayUnion([id])});
+      await ref.update({'admins':FieldValue.arrayUnion([id]),'updatedAt':FieldValue.serverTimestamp()});
+      await ngelxGrupDavetMetaSenkronla(ref);
       await sistemMesaji('$isim yönetici yapıldı.');
     }else if(sec=='demote'){
-      await ref.update({'admins':FieldValue.arrayRemove([id])});
+      await ref.update({'admins':FieldValue.arrayRemove([id]),'updatedAt':FieldValue.serverTimestamp()});
+      await ngelxGrupDavetMetaSenkronla(ref);
       await sistemMesaji('$isim artık yönetici değil.');
     }else{
       final ok=await showDialog<bool>(
@@ -8097,7 +8103,8 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
         ),
       )??false;
       if(ok){
-        await ref.update({'members':FieldValue.arrayRemove([id]),'admins':FieldValue.arrayRemove([id])});
+        await ref.update({'members':FieldValue.arrayRemove([id]),'admins':FieldValue.arrayRemove([id]),'updatedAt':FieldValue.serverTimestamp()});
+        await ngelxGrupDavetMetaSenkronla(ref);
         await sistemMesaji('$isim gruptan çıkarıldı.');
       }
     }
@@ -8207,8 +8214,9 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
       ),
     )??false;
     if(!onay||secilen.isEmpty)return;
-    await ref.update({'members':FieldValue.arrayUnion(secilen.toList()),'hiddenFor':FieldValue.arrayRemove(secilen.toList())});
+    await ref.update({'members':FieldValue.arrayUnion(secilen.toList()),'hiddenFor':FieldValue.arrayRemove(secilen.toList()),'updatedAt':FieldValue.serverTimestamp()});
     _uyeProfilCache.clear();
+    await ngelxGrupDavetMetaSenkronla(ref);
     await sistemMesaji(secilen.length.toString()+' yeni üye gruba eklendi.');
   }
   Future<void> ayril(List<String> uyeler,List<String> admins)async{
@@ -8247,12 +8255,20 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
     if(sonKisi){
       await ref.set({'members':FieldValue.arrayRemove([me]),'admins':FieldValue.arrayRemove([me]),'groupDeleted':true,'deletedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
     }else{
-      await sistemMesaji('Bir üye gruptan ayrıldı.');
-      await ref.update({'members':FieldValue.arrayRemove([me]),'admins':FieldValue.arrayRemove([me])});
+      await ref.collection('messages').add({
+        'senderId':me,
+        'type':'system',
+        'text':'Bir üye gruptan ayrıldı.',
+        'createdAt':FieldValue.serverTimestamp(),
+      });
+      await ref.update({'members':FieldValue.arrayRemove([me]),'admins':FieldValue.arrayRemove([me]),'updatedAt':FieldValue.serverTimestamp()});
     }
     if(mounted)Navigator.popUntil(context,(r)=>r.isFirst);
   }
-  Future<void> ayarDegistir(String alan,bool deger)async{await ref.set({alan:deger},SetOptions(merge:true));}
+  Future<void> ayarDegistir(String alan,bool deger)async{
+    await ref.set({alan:deger,'updatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
+    if(alan=='joinApproval')await ngelxGrupDavetMetaSenkronla(ref);
+  }
   Future<void> bildirimSessiz(bool sessiz)async{
     final me=ben;if(me==null)return;
     await ref.set({'mutedFor':sessiz?FieldValue.arrayUnion([me]):FieldValue.arrayRemove([me])},SetOptions(merge:true));
@@ -8869,8 +8885,8 @@ class GrupAyarlarPage extends StatelessWidget{
       ],
     ))??false;
     if(!ok)return;
+    await ref.collection('messages').add({'senderId':uid,'type':'system','text':'Bir üye gruptan ayrıldı.','createdAt':FieldValue.serverTimestamp()});
     await ref.set({'members':FieldValue.arrayRemove([uid]),'admins':FieldValue.arrayRemove([uid]),'updatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
-    await ref.collection('messages').add({'senderId':'system','type':'system','text':'Bir üye gruptan ayrıldı.','createdAt':FieldValue.serverTimestamp()});
     if(context.mounted)Navigator.popUntil(context,(route)=>route.isFirst);
   }
 
@@ -9233,7 +9249,10 @@ class GrupKatilmaIstekleriPage extends StatelessWidget{
     batch.set(d.reference,{'status':onay?'accepted':'rejected','decidedAt':FieldValue.serverTimestamp(),'decidedBy':me},SetOptions(merge:true));
     if(onay)batch.update(chat,{'members':FieldValue.arrayUnion([uid]),'hiddenFor':FieldValue.arrayRemove([uid])});
     await batch.commit();
-    if(onay)unawaited(uygulamaBildirimiGonder(toUid:uid,fromUid:me,tur:'group',metin:'grup katılma isteğini onayladı',belgeId:chatId).catchError((_){ }));
+    if(onay){
+      await ngelxGrupDavetMetaSenkronla(chat);
+      unawaited(uygulamaBildirimiGonder(toUid:uid,fromUid:me,tur:'group',metin:'grup katılma isteğini onayladı',belgeId:chatId).catchError((_){ }));
+    }
     if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(onay?'İstek onaylandı.':'İstek reddedildi.')));
   }
 
