@@ -9184,6 +9184,30 @@ class _HikayeGosterPageState extends State<HikayeGosterPage> with SingleTickerPr
     return '$baslangic • ${kalan.inMinutes.clamp(1, 59)} dk kaldı';
   }
 
+  String _hikayeSaat(DateTime d){
+    final s=d.toLocal();
+    return '${s.hour.toString().padLeft(2,'0')}:${s.minute.toString().padLeft(2,'0')}';
+  }
+
+  String _hikayeGun(DateTime d){
+    final x=d.toLocal(),bugun=DateTime.now();
+    final b=DateTime(bugun.year,bugun.month,bugun.day),g=DateTime(x.year,x.month,x.day);
+    final fark=g.difference(b).inDays;
+    if(fark==0)return 'bugün';
+    if(fark==1)return 'yarın';
+    if(fark==-1)return 'dün';
+    return '${x.day.toString().padLeft(2,'0')}.${x.month.toString().padLeft(2,'0')}';
+  }
+
+  String get hikayeSaatleri {
+    final olusma=widget.createdAt is Timestamp?(widget.createdAt as Timestamp).toDate():null;
+    final bitis=widget.expiresAt is Timestamp?(widget.expiresAt as Timestamp).toDate():null;
+    final parcalar=<String>[];
+    if(olusma!=null)parcalar.add('Başlangıç: ${_hikayeGun(olusma)} ${_hikayeSaat(olusma)}');
+    if(bitis!=null)parcalar.add('Bitiş: ${_hikayeGun(bitis)} ${_hikayeSaat(bitis)}');
+    return parcalar.join(' • ');
+  }
+
   Future<void> yanitGonder([String? emoji]) async {
     final ben = FirebaseAuth.instance.currentUser;
     if (ben == null || ben.isAnonymous || widget.ownerId.isEmpty || widget.ownerId == ben.uid || gonderiliyor) return;
@@ -9193,6 +9217,28 @@ class _HikayeGosterPageState extends State<HikayeGosterPage> with SingleTickerPr
     try {
       final ids = <String>[ben.uid, widget.ownerId]..sort();
       final chatId = ids.join('_');
+      final sonuc=await Future.wait([
+        FirebaseFirestore.instance.collection('users').doc(ben.uid).get().timeout(const Duration(seconds:8)),
+        FirebaseFirestore.instance.collection('users').doc(widget.ownerId).get().timeout(const Duration(seconds:8)),
+        FirebaseFirestore.instance.collection('chats').doc(chatId).get().timeout(const Duration(seconds:8)),
+      ]);
+      final benim=sonuc[0].data()??<String,dynamic>{};
+      final hedef=sonuc[1].data()??<String,dynamic>{};
+      final sohbet=sonuc[2].data()??<String,dynamic>{};
+      if(List<String>.from(benim['blocked']??const[]).contains(widget.ownerId)||List<String>.from(hedef['blocked']??const[]).contains(ben.uid)){
+        if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bu hesaba hikâye yanıtı gönderemezsin.')));
+        return;
+      }
+      final kabul=sohbet['requestAccepted_${ben.uid}']==true||sohbet['requestAccepted_${widget.ownerId}']==true;
+      if(!kabul){
+        final izin=(hedef['messagePermission']??(hedef['friendsOnlyMessages']!=false?'friends':'all')).toString();
+        final arkadas=List<String>.from(hedef['friends']??const[]).contains(ben.uid);
+        final takip=List<String>.from(hedef['following']??const[]).contains(ben.uid);
+        if(izin=='none'||(izin=='friends'&&!arkadas)||(izin=='following'&&!takip)){
+          if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bu kullanıcı hikâye yanıtı olarak yeni özel mesaj kabul etmiyor.')));
+          return;
+        }
+      }
       final ref = FirebaseFirestore.instance.collection('chats').doc(chatId);
       final mesajRef = ref.collection('messages').doc();
       final batch = FirebaseFirestore.instance.batch();
@@ -9272,6 +9318,8 @@ class _HikayeGosterPageState extends State<HikayeGosterPage> with SingleTickerPr
                           children: [
                             Text(widget.kullanici, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900)),
                             Text(zamanBilgisi, style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                            if(hikayeSaatleri.isNotEmpty)
+                              Text(hikayeSaatleri,maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.white54,fontSize:10.5,fontWeight:FontWeight.w600)),
                           ],
                         ),
                       ),
