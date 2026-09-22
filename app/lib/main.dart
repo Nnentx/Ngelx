@@ -5774,6 +5774,10 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
   int efekt=0;
   String? hata;
   Timer? zilZamanlayici,odaUiZamanlayici;
+  final Map<String,Future<DocumentSnapshot<Map<String,dynamic>>>> _aramaProfilCache={};
+
+  Future<DocumentSnapshot<Map<String,dynamic>>> _aramaProfili(String uid)=>
+      _aramaProfilCache.putIfAbsent(uid,()=>FirebaseFirestore.instance.collection('users').doc(uid).get().timeout(const Duration(seconds:8)));
 
   @override void initState(){
     super.initState();
@@ -6082,11 +6086,81 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
   }
 
   String _katilimciAdi(lk.Participant p,{bool yerel=false}){
-    if(yerel)return 'Sen';
     final ad=p.name.trim();
+    if(yerel)return ad.isEmpty?'Sen':'Sen • $ad';
     if(ad.isNotEmpty)return ad;
     final kimlik=p.identity.trim();
     return kimlik.isEmpty?'NgelX kullanıcısı':kimlik;
+  }
+
+  Widget _katilimciProfilBilgisi(lk.Participant p,{bool yerel=false,bool buyuk=false}){
+    final kimlik=p.identity.trim();
+    if(kimlik.isEmpty){
+      return _katilimciProfilGorunumu(
+        ad:_katilimciAdi(p,yerel:yerel),
+        kullanici:'',
+        foto:'',
+        yerel:yerel,
+        buyuk:buyuk,
+        konusuyor:p.isSpeaking,
+      );
+    }
+    return FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(
+      future:_aramaProfili(kimlik),
+      builder:(_,s){
+        final v=s.data?.data()??<String,dynamic>{};
+        final ad=(v['displayName']??v['username']??p.name).toString().trim();
+        final kullanici=(v['username']??'').toString().trim();
+        final foto=(v['photoUrl']??'').toString().trim();
+        return _katilimciProfilGorunumu(
+          ad:yerel?(ad.isEmpty?'Sen':'Sen • $ad'):(ad.isEmpty?_katilimciAdi(p):ad),
+          kullanici:kullanici,
+          foto:foto,
+          yerel:yerel,
+          buyuk:buyuk,
+          konusuyor:p.isSpeaking,
+        );
+      },
+    );
+  }
+
+  Widget _katilimciProfilGorunumu({
+    required String ad,
+    required String kullanici,
+    required String foto,
+    required bool yerel,
+    required bool buyuk,
+    required bool konusuyor,
+  }){
+    final yaricap=buyuk?38.0:32.0;
+    return Column(mainAxisSize:MainAxisSize.min,children:[
+      Stack(children:[
+        Container(
+          padding:EdgeInsets.all(konusuyor?3:1.5),
+          decoration:BoxDecoration(
+            shape:BoxShape.circle,
+            color:konusuyor?const Color(0xFF35E07A):Colors.white24,
+          ),
+          child:CircleAvatar(
+            radius:yaricap,
+            backgroundColor:const Color(0xFFE9DDFF),
+            backgroundImage:foto.isEmpty?null:CachedNetworkImageProvider(foto),
+            child:foto.isEmpty?Icon(yerel?Icons.person:Icons.person_rounded,color:mor,size:buyuk?38:32):null,
+          ),
+        ),
+        if(konusuyor)Positioned(
+          right:0,bottom:0,
+          child:Container(
+            padding:const EdgeInsets.all(4),
+            decoration:const BoxDecoration(color:Color(0xFF35E07A),shape:BoxShape.circle),
+            child:const Icon(Icons.graphic_eq_rounded,color:Colors.black,size:14),
+          ),
+        ),
+      ]),
+      const SizedBox(height:8),
+      Text(ad,maxLines:1,overflow:TextOverflow.ellipsis,textAlign:TextAlign.center,style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w900)),
+      if(kullanici.isNotEmpty)Text('@$kullanici',maxLines:1,overflow:TextOverflow.ellipsis,textAlign:TextAlign.center,style:const TextStyle(color:Colors.white60,fontSize:11,fontWeight:FontWeight.w600)),
+    ]);
   }
 
   Widget _katilimciKutusu(lk.Participant p,{bool yerel=false}){
@@ -6098,18 +6172,33 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
         else Container(
           color:const Color(0xFF27212F),
           alignment:Alignment.center,
-          child:Column(mainAxisSize:MainAxisSize.min,children:[
-            const CircleAvatar(radius:34,backgroundColor:Color(0xFFE9DDFF),child:Icon(Icons.person_rounded,color:mor,size:38)),
-            const SizedBox(height:8),
-            Text(_katilimciAdi(p,yerel:yerel),maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w800)),
-          ]),
+          padding:const EdgeInsets.symmetric(horizontal:10),
+          child:_katilimciProfilBilgisi(p,yerel:yerel,buyuk:true),
         ),
-        Positioned(
+        if(track!=null)Positioned(
           left:8,right:8,bottom:8,
           child:Container(
-            padding:const EdgeInsets.symmetric(horizontal:9,vertical:5),
+            padding:const EdgeInsets.symmetric(horizontal:9,vertical:6),
             decoration:BoxDecoration(color:Colors.black54,borderRadius:BorderRadius.circular(12)),
-            child:Text(_katilimciAdi(p,yerel:yerel),maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.white,fontSize:12,fontWeight:FontWeight.w800)),
+            child:FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(
+              future:p.identity.trim().isEmpty?null:_aramaProfili(p.identity.trim()),
+              builder:(_,s){
+                final v=s.data?.data()??<String,dynamic>{};
+                final ad=(v['displayName']??v['username']??p.name).toString().trim();
+                final kullanici=(v['username']??'').toString().trim();
+                final baslik=yerel?(ad.isEmpty?'Sen':'Sen • $ad'):(ad.isEmpty?_katilimciAdi(p):ad);
+                return Row(children:[
+                  if(p.isSpeaking)...[
+                    const Icon(Icons.graphic_eq_rounded,color:Color(0xFF35E07A),size:17),
+                    const SizedBox(width:5),
+                  ],
+                  Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisSize:MainAxisSize.min,children:[
+                    Text(baslik,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.white,fontSize:12,fontWeight:FontWeight.w900)),
+                    if(kullanici.isNotEmpty)Text('@$kullanici',maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.white60,fontSize:10)),
+                  ])),
+                ]);
+              },
+            ),
           ),
         ),
       ]),
@@ -6201,13 +6290,13 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
         gridDelegate:const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount:2,crossAxisSpacing:12,mainAxisSpacing:12,childAspectRatio:1),
         itemCount:kisiler.length,
         itemBuilder:(_,i)=>Container(
-          decoration:BoxDecoration(color:Colors.white10,borderRadius:BorderRadius.circular(22)),
+          decoration:BoxDecoration(
+            color:Colors.white10,
+            borderRadius:BorderRadius.circular(22),
+            border:kisiler[i].kisi.isSpeaking?Border.all(color:const Color(0xFF35E07A),width:2):null,
+          ),
           padding:const EdgeInsets.all(12),
-          child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[
-            CircleAvatar(radius:38,backgroundColor:const Color(0xFFE9DDFF),child:Icon(kisiler[i].yerel?Icons.person:Icons.call_rounded,color:mor,size:38)),
-            const SizedBox(height:10),
-            Text(_katilimciAdi(kisiler[i].kisi,yerel:kisiler[i].yerel),maxLines:1,overflow:TextOverflow.ellipsis,textAlign:TextAlign.center,style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w900)),
-          ]),
+          child:Center(child:_katilimciProfilBilgisi(kisiler[i].kisi,yerel:kisiler[i].yerel,buyuk:true)),
         ),
       ));
     }
