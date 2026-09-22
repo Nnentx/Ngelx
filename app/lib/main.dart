@@ -7832,11 +7832,11 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
     final yeni=await showDialog<String>(
       context:context,
       builder:(x)=>Theme(
-        data:ThemeData.light().copyWith(colorScheme:ColorScheme.fromSeed(seedColor:ngelxPremiumPurple)),
+        data:ThemeData.light().copyWith(colorScheme:ColorScheme.fromSeed(seedColor:ngelxGroupGreen)),
         child:AlertDialog(
           shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(28)),
           backgroundColor:Colors.white,surfaceTintColor:Colors.white,
-          icon:Container(width:54,height:54,decoration:BoxDecoration(color:const Color(0xFFF0E8FF),borderRadius:BorderRadius.circular(18)),child:const Icon(Icons.edit_rounded,color:ngelxPremiumPurple)),
+          icon:Container(width:54,height:54,decoration:BoxDecoration(color:ngelxGroupGreenSoft,borderRadius:BorderRadius.circular(18)),child:const Icon(Icons.edit_rounded,color:ngelxGroupGreen)),
           title:const Text('Grup adını düzenle',textAlign:TextAlign.center,style:TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w900)),
           content:TextField(
             controller:c,maxLength:16,textAlign:TextAlign.center,
@@ -7846,12 +7846,12 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
               filled:true,fillColor:const Color(0xFFF7F4F9),
               border:OutlineInputBorder(borderRadius:BorderRadius.circular(18),borderSide:BorderSide.none),
               enabledBorder:OutlineInputBorder(borderRadius:BorderRadius.circular(18),borderSide:const BorderSide(color:ngelxPremiumBorder)),
-              focusedBorder:OutlineInputBorder(borderRadius:BorderRadius.circular(18),borderSide:const BorderSide(color:ngelxPremiumPurple,width:1.5)),
+              focusedBorder:OutlineInputBorder(borderRadius:BorderRadius.circular(18),borderSide:const BorderSide(color:ngelxGroupGreen,width:1.5)),
             ),
           ),
           actions:[
             TextButton(onPressed:()=>Navigator.pop(x),child:const Text('Vazgeç')),
-            FilledButton(style:FilledButton.styleFrom(backgroundColor:ngelxPremiumPurple),onPressed:()=>Navigator.pop(x,c.text.trim()),child:const Text('Kaydet')),
+            FilledButton(style:FilledButton.styleFrom(backgroundColor:ngelxGroupGreen),onPressed:()=>Navigator.pop(x,c.text.trim()),child:const Text('Kaydet')),
           ],
         ),
       ),
@@ -7872,11 +7872,11 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
     final yeni=await showDialog<String>(
       context:context,
       builder:(x)=>Theme(
-        data:ThemeData.light().copyWith(colorScheme:ColorScheme.fromSeed(seedColor:ngelxPremiumPurple)),
+        data:ThemeData.light().copyWith(colorScheme:ColorScheme.fromSeed(seedColor:ngelxGroupGreen)),
         child:AlertDialog(
           shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(28)),
           backgroundColor:Colors.white,surfaceTintColor:Colors.white,
-          icon:Container(width:54,height:54,decoration:BoxDecoration(color:const Color(0xFFF0E8FF),borderRadius:BorderRadius.circular(18)),child:const Icon(Icons.notes_rounded,color:ngelxPremiumPurple)),
+          icon:Container(width:54,height:54,decoration:BoxDecoration(color:ngelxGroupGreenSoft,borderRadius:BorderRadius.circular(18)),child:const Icon(Icons.notes_rounded,color:ngelxGroupGreen)),
           title:const Text('Grup açıklaması',textAlign:TextAlign.center,style:TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w900)),
           content:TextField(
             controller:c,maxLength:160,maxLines:4,
@@ -7886,12 +7886,12 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
               filled:true,fillColor:const Color(0xFFF7F4F9),
               border:OutlineInputBorder(borderRadius:BorderRadius.circular(18),borderSide:BorderSide.none),
               enabledBorder:OutlineInputBorder(borderRadius:BorderRadius.circular(18),borderSide:const BorderSide(color:ngelxPremiumBorder)),
-              focusedBorder:OutlineInputBorder(borderRadius:BorderRadius.circular(18),borderSide:const BorderSide(color:ngelxPremiumPurple,width:1.5)),
+              focusedBorder:OutlineInputBorder(borderRadius:BorderRadius.circular(18),borderSide:const BorderSide(color:ngelxGroupGreen,width:1.5)),
             ),
           ),
           actions:[
             TextButton(onPressed:()=>Navigator.pop(x),child:const Text('Vazgeç')),
-            FilledButton(style:FilledButton.styleFrom(backgroundColor:ngelxPremiumPurple),onPressed:()=>Navigator.pop(x,c.text.trim()),child:const Text('Kaydet')),
+            FilledButton(style:FilledButton.styleFrom(backgroundColor:ngelxGroupGreen),onPressed:()=>Navigator.pop(x,c.text.trim()),child:const Text('Kaydet')),
           ],
         ),
       ),
@@ -7905,11 +7905,11 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
   Future<void> fotografDuzenle()async{
     final secim=await showModalBottomSheet<String>(
       context:context,
-      backgroundColor:const Color(0xFFFBF9FF),
+      backgroundColor:Colors.white,
       showDragHandle:true,
       shape:const RoundedRectangleBorder(borderRadius:BorderRadius.vertical(top:Radius.circular(30))),
       builder:(c)=>Theme(
-        data:ThemeData.light().copyWith(colorScheme:ColorScheme.fromSeed(seedColor:ngelxPremiumPurple)),
+        data:ThemeData.light().copyWith(colorScheme:ColorScheme.fromSeed(seedColor:ngelxGroupGreen)),
         child:SafeArea(child:Padding(
           padding:const EdgeInsets.fromLTRB(14,0,14,18),
           child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
@@ -7976,7 +7976,7 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
 
   Widget _fotoSecenek(BuildContext c,IconData icon,String title,String subtitle,String value)=>ListTile(
     contentPadding:const EdgeInsets.symmetric(horizontal:10,vertical:3),
-    leading:Container(width:42,height:42,decoration:BoxDecoration(color:const Color(0xFFF0E8FF),borderRadius:BorderRadius.circular(14)),child:Icon(icon,color:ngelxPremiumPurple)),
+    leading:Container(width:42,height:42,decoration:BoxDecoration(color:ngelxGroupGreenSoft,borderRadius:BorderRadius.circular(14)),child:Icon(icon,color:ngelxGroupGreen)),
     title:Text(title,style:const TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w800)),
     subtitle:Text(subtitle,style:const TextStyle(color:ngelxPremiumMuted,fontSize:10.5)),
     trailing:const Icon(Icons.chevron_right_rounded,color:Color(0xFFA49BAC)),
@@ -7986,11 +7986,11 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
   Future<void> uyeIslemi(String id,String isim,bool admin)async{
     final sec=await showModalBottomSheet<String>(
       context:context,
-      backgroundColor:const Color(0xFFFBF9FF),
+      backgroundColor:Colors.white,
       showDragHandle:true,
       shape:const RoundedRectangleBorder(borderRadius:BorderRadius.vertical(top:Radius.circular(30))),
       builder:(c)=>Theme(
-        data:ThemeData.light().copyWith(colorScheme:ColorScheme.fromSeed(seedColor:ngelxPremiumPurple)),
+        data:ThemeData.light().copyWith(colorScheme:ColorScheme.fromSeed(seedColor:ngelxGroupGreen)),
         child:SafeArea(child:Padding(
           padding:const EdgeInsets.fromLTRB(14,0,14,18),
           child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
@@ -8003,7 +8003,7 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
               child:Column(children:[
                 ListTile(
                   contentPadding:const EdgeInsets.symmetric(horizontal:10,vertical:3),
-                  leading:Container(width:42,height:42,decoration:BoxDecoration(color:const Color(0xFFF0E8FF),borderRadius:BorderRadius.circular(14)),child:Icon(admin?Icons.person_off_outlined:Icons.admin_panel_settings_rounded,color:ngelxPremiumPurple)),
+                  leading:Container(width:42,height:42,decoration:BoxDecoration(color:ngelxGroupGreenSoft,borderRadius:BorderRadius.circular(14)),child:Icon(admin?Icons.person_off_outlined:Icons.admin_panel_settings_rounded,color:ngelxGroupGreen)),
                   title:Text(admin?'Yöneticilikten çıkar':'Yönetici yap',style:const TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w800)),
                   subtitle:Text(admin?'Yönetici yetkilerini kaldır':'Bu üyeye yönetici yetkisi ver',style:const TextStyle(color:ngelxPremiumMuted,fontSize:10.5)),
                   trailing:const Icon(Icons.chevron_right_rounded,color:Color(0xFFA49BAC)),
@@ -8084,11 +8084,11 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
     final onay=await showModalBottomSheet<bool>(
       context:context,
       isScrollControlled:true,
-      backgroundColor:const Color(0xFFFBF9FF),
+      backgroundColor:Colors.white,
       showDragHandle:true,
       shape:const RoundedRectangleBorder(borderRadius:BorderRadius.vertical(top:Radius.circular(30))),
       builder:(c)=>Theme(
-        data:ThemeData.light().copyWith(colorScheme:ColorScheme.fromSeed(seedColor:ngelxPremiumPurple)),
+        data:ThemeData.light().copyWith(colorScheme:ColorScheme.fromSeed(seedColor:ngelxGroupGreen)),
         child:StatefulBuilder(builder:(c,setP)=>SafeArea(child:SizedBox(
           height:MediaQuery.sizeOf(c).height*.78,
           child:Column(children:[
@@ -8102,8 +8102,8 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
                 ])),
                 Container(
                   padding:const EdgeInsets.symmetric(horizontal:10,vertical:7),
-                  decoration:BoxDecoration(color:const Color(0xFFF0E8FF),borderRadius:BorderRadius.circular(14)),
-                  child:Text((mevcut.length+secilen.length).toString()+'/60',style:const TextStyle(color:ngelxPremiumPurple,fontWeight:FontWeight.w900,fontSize:11)),
+                  decoration:BoxDecoration(color:ngelxGroupGreenSoft,borderRadius:BorderRadius.circular(14)),
+                  child:Text((mevcut.length+secilen.length).toString()+'/60',style:const TextStyle(color:ngelxGroupGreen,fontWeight:FontWeight.w900,fontSize:11)),
                 ),
               ]),
             ),
@@ -8130,7 +8130,7 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
                           setP(()=>secili?secilen.remove(d.id):secilen.add(d.id));
                         },
                         leading:Stack(children:[
-                          CircleAvatar(radius:23,backgroundColor:const Color(0xFFECE4F5),backgroundImage:foto.isEmpty?null:CachedNetworkImageProvider(foto),child:foto.isEmpty?const Icon(Icons.person_rounded,color:ngelxPremiumPurple):null),
+                          CircleAvatar(radius:23,backgroundColor:const Color(0xFFECE4F5),backgroundImage:foto.isEmpty?null:CachedNetworkImageProvider(foto),child:foto.isEmpty?const Icon(Icons.person_rounded,color:ngelxGroupGreen):null),
                           if(online)const Positioned(right:0,bottom:0,child:CircleAvatar(radius:5.5,backgroundColor:Colors.white,child:CircleAvatar(radius:3.5,backgroundColor:Color(0xFF21C76A)))),
                         ]),
                         title:Text(ad,style:const TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w800)),
@@ -8138,7 +8138,7 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
                         trailing:AnimatedContainer(
                           duration:const Duration(milliseconds:160),
                           width:29,height:29,
-                          decoration:BoxDecoration(color:secili?ngelxPremiumPurple:Colors.white,shape:BoxShape.circle,border:Border.all(color:secili?ngelxPremiumPurple:const Color(0xFFD6CFDC),width:1.4)),
+                          decoration:BoxDecoration(color:secili?ngelxGroupGreen:Colors.white,shape:BoxShape.circle,border:Border.all(color:secili?ngelxGroupGreen:const Color(0xFFD6CFDC),width:1.4)),
                           child:secili?const Icon(Icons.check_rounded,color:Colors.white,size:18):null,
                         ),
                       ),
@@ -8151,7 +8151,7 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
               child:SizedBox(
                 width:double.infinity,
                 child:FilledButton.icon(
-                  style:FilledButton.styleFrom(backgroundColor:ngelxPremiumPurple,padding:const EdgeInsets.symmetric(vertical:14),shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(17))),
+                  style:FilledButton.styleFrom(backgroundColor:ngelxGroupGreen,padding:const EdgeInsets.symmetric(vertical:14),shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(17))),
                   onPressed:secilen.isEmpty?null:()=>Navigator.pop(c,true),
                   icon:const Icon(Icons.person_add_alt_1_rounded),
                   label:Text(secilen.isEmpty?'Kişi seç':secilen.length.toString()+' kişiyi ekle',style:const TextStyle(fontWeight:FontWeight.w900)),
@@ -8176,7 +8176,7 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
         builder:(c)=>AlertDialog(
           shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(28)),
           backgroundColor:Colors.white,surfaceTintColor:Colors.white,
-          icon:const Icon(Icons.admin_panel_settings_rounded,color:ngelxPremiumPurple,size:36),
+          icon:const Icon(Icons.admin_panel_settings_rounded,color:ngelxGroupGreen,size:36),
           title:const Text('Önce yönetici belirle',textAlign:TextAlign.center,style:TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w900)),
           content:const Text('Gruptan ayrılmadan önce başka bir üyeyi yönetici yapmalısın.',textAlign:TextAlign.center,style:TextStyle(color:ngelxPremiumMuted)),
           actions:[FilledButton(onPressed:()=>Navigator.pop(c),child:const Text('Tamam'))],
@@ -8215,23 +8215,31 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
   }
   @override Widget build(BuildContext context)=>Theme(
     data:ThemeData.light().copyWith(
-      scaffoldBackgroundColor:const Color(0xFFFBF9FF),
-      colorScheme:ColorScheme.fromSeed(seedColor:ngelxPremiumPurple,brightness:Brightness.light),
+      scaffoldBackgroundColor:Colors.white,
+      colorScheme:ColorScheme.fromSeed(seedColor:ngelxGroupGreen,brightness:Brightness.light),
     ),
     child:Scaffold(
-      backgroundColor:const Color(0xFFFBF9FF),
+      backgroundColor:Colors.white,
       appBar:AppBar(
         toolbarHeight:64,
         backgroundColor:Colors.transparent,
         surfaceTintColor:Colors.transparent,
         elevation:0,
         title:const Text('Grup bilgileri',style:TextStyle(fontWeight:FontWeight.w900,color:ngelxPremiumInk)),
-        flexibleSpace:Container(decoration:const BoxDecoration(gradient:LinearGradient(colors:[Color(0xFFFFFFFF),Color(0xFFF5EFFF)]),borderRadius:BorderRadius.vertical(bottom:Radius.circular(24)))),
+        actions:[
+          IconButton(
+            tooltip:'Grup ayarları',
+            onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupAyarlarPage(chatId:widget.chatId))),
+            icon:const Icon(Icons.more_vert_rounded,color:Colors.black87),
+          ),
+          const SizedBox(width:4),
+        ],
+        flexibleSpace:Container(decoration:const BoxDecoration(gradient:LinearGradient(colors:[Color(0xFFFFFFFF),ngelxGroupGreenSoft]),borderRadius:BorderRadius.vertical(bottom:Radius.circular(24)))),
       ),
       body:StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
         stream:ref.snapshots(),
         builder:(_,snap){
-          if(!snap.hasData)return const Center(child:CircularProgressIndicator(color:ngelxPremiumPurple));
+          if(!snap.hasData)return const Center(child:CircularProgressIndicator(color:ngelxGroupGreen));
           final v=snap.data?.data()??<String,dynamic>{};
           final uyeler=List<String>.from(v['members']??const[]);
           final yoneticiler=List<String>.from(v['admins']??const[]);
@@ -8255,9 +8263,9 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
                           border:Border.all(color:Colors.white,width:4),
                           boxShadow:const [BoxShadow(color:Color(0x26704DE3),blurRadius:24,offset:Offset(0,9))],
                         ),
-                        child:ClipOval(child:foto.isEmpty?const Icon(Icons.groups_rounded,color:ngelxPremiumPurple,size:46):CachedNetworkImage(imageUrl:foto,fit:BoxFit.cover)),
+                        child:ClipOval(child:foto.isEmpty?const Icon(Icons.groups_rounded,color:ngelxGroupGreen,size:46):CachedNetworkImage(imageUrl:foto,fit:BoxFit.cover)),
                       ),
-                      if(yonetici)const Positioned(right:-3,bottom:2,child:CircleAvatar(radius:17,backgroundColor:ngelxPremiumPurple,child:Icon(Icons.camera_alt_rounded,color:Colors.white,size:17))),
+                      if(yonetici)const Positioned(right:-3,bottom:2,child:CircleAvatar(radius:17,backgroundColor:ngelxGroupGreen,child:Icon(Icons.camera_alt_rounded,color:Colors.white,size:17))),
                     ]),
                   ),
                   const SizedBox(height:12),
@@ -8268,31 +8276,29 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
                       InkWell(
                         onTap:()=>adiDuzenle(ad),
                         borderRadius:BorderRadius.circular(12),
-                        child:const Padding(padding:EdgeInsets.all(6),child:Icon(Icons.edit_rounded,color:ngelxPremiumPurple,size:18)),
+                        child:const Padding(padding:EdgeInsets.all(6),child:Icon(Icons.edit_rounded,color:ngelxGroupGreen,size:18)),
                       ),
                     ],
                   ]),
                   const SizedBox(height:3),
                   Text(uyeler.length.toString()+' üye',style:const TextStyle(color:ngelxPremiumMuted,fontSize:13,fontWeight:FontWeight.w700)),
-                  if(yonetici)...[
-                    const SizedBox(height:16),
-                    Row(children:[
-                      Expanded(child:_grupKisayol(Icons.call_rounded,'Sesli ara',aramaBaslatiliyor?null:()=>grupAramasiBaslat(false,ad,foto))),
-                      const SizedBox(width:7),
-                      Expanded(child:_grupKisayol(Icons.videocam_rounded,'Görüntülü',aramaBaslatiliyor?null:()=>grupAramasiBaslat(true,ad,foto))),
-                      const SizedBox(width:7),
-                      Expanded(child:_grupKisayol(Icons.person_add_alt_1_rounded,'Üye ekle',uyeler.length>=60?null:()=>uyeEkle(uyeler))),
-                      const SizedBox(width:7),
-                      Expanded(child:_grupKisayol(Icons.link_rounded,'Davet',()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupDavetPage(chatId:widget.chatId))))),
-                    ]),
-                  ],
+                  const SizedBox(height:16),
+                  Row(children:[
+                    Expanded(child:_grupKisayol(Icons.person_add_alt_1_rounded,'Ekle',uyeler.length>=60?null:()=>yonetici?uyeEkle(uyeler):Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupDavetPage(chatId:widget.chatId))))),
+                    const SizedBox(width:7),
+                    Expanded(child:_grupKisayol(Icons.text_fields_rounded,'Takma Adlar',()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupTakmaAdlarPage(chatId:widget.chatId))))),
+                    const SizedBox(width:7),
+                    Expanded(child:_grupKisayol(Icons.search_rounded,'Arama',()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>SohbetMesajAramaPage(chatId:widget.chatId))))),
+                    const SizedBox(width:7),
+                    Expanded(child:_grupKisayol(Icons.palette_rounded,'Özelleştir',()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupOzellestirPage(chatId:widget.chatId))))),
+                  ]),
                 ]),
               ),
               const SizedBox(height:14),
               NgelXPremiumCard(
                 padding:const EdgeInsets.fromLTRB(14,13,10,13),
                 child:Row(crossAxisAlignment:CrossAxisAlignment.start,children:[
-                  Container(width:42,height:42,decoration:BoxDecoration(color:const Color(0xFFF0E8FF),borderRadius:BorderRadius.circular(14)),child:const Icon(Icons.notes_rounded,color:ngelxPremiumPurple)),
+                  Container(width:42,height:42,decoration:BoxDecoration(color:ngelxGroupGreenSoft,borderRadius:BorderRadius.circular(14)),child:const Icon(Icons.notes_rounded,color:ngelxGroupGreen)),
                   const SizedBox(width:11),
                   Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
                     const Text('Grup açıklaması',style:TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w900)),
@@ -8305,45 +8311,100 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
                   if(yonetici)IconButton(
                     tooltip:'Açıklamayı düzenle',
                     onPressed:()=>aciklamaDuzenle((v['groupDescription']??'').toString()),
-                    icon:const Icon(Icons.edit_rounded,color:ngelxPremiumPurple,size:20),
+                    icon:const Icon(Icons.edit_rounded,color:ngelxGroupGreen,size:20),
                   ),
                 ]),
               ),
               const SizedBox(height:14),
               NgelXPremiumCard(
-                padding:const EdgeInsets.fromLTRB(14,14,14,8),
-                child:Column(children:[
-                  Row(children:[
-                    const Expanded(child:Text('Sohbet üyeleri',style:TextStyle(color:ngelxPremiumInk,fontSize:18,fontWeight:FontWeight.w900))),
-                    Text(uyeler.length.toString()+' üye',style:const TextStyle(color:ngelxPremiumMuted,fontWeight:FontWeight.w700)),
-                  ]),
-                  const SizedBox(height:7),
-                  ...uyeler.map((id)=>FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(
-                    future:_uyeGetir(id),
-                    builder:(_,u){
-                      final p=u.data?.data()??<String,dynamic>{};
-                      final isim=(p['displayName']??p['username']??'Kullanıcı').toString();
-                      final pf=(p['photoUrl']??'').toString();
-                      final admin=yoneticiler.contains(id);
-                      final cevrimici=p['online']==true;
-                      return Container(
-                        margin:const EdgeInsets.only(bottom:4),
-                        decoration:BoxDecoration(color:const Color(0xFFFCFBFE),borderRadius:BorderRadius.circular(17)),
-                        child:ListTile(
-                          dense:true,
-                          contentPadding:const EdgeInsets.symmetric(horizontal:8,vertical:2),
-                          onTap:yonetici&&id!=ben?()=>uyeIslemi(id,isim,admin):null,
-                          leading:Stack(children:[
-                            CircleAvatar(radius:22,backgroundColor:const Color(0xFFEDE7F5),backgroundImage:pf.isEmpty?null:CachedNetworkImageProvider(pf),child:pf.isEmpty?const Icon(Icons.person_rounded,color:ngelxPremiumPurple):null),
-                            if(cevrimici)const Positioned(right:0,bottom:0,child:CircleAvatar(radius:5.5,backgroundColor:Colors.white,child:CircleAvatar(radius:3.5,backgroundColor:Color(0xFF21C76A)))),
-                          ]),
-                          title:Text(isim,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w800)),
-                          subtitle:Text(admin?'Yönetici':(cevrimici?'Çevrimiçi':'Grup üyesi'),style:TextStyle(color:admin?ngelxPremiumPurple:ngelxPremiumMuted,fontSize:11.5,fontWeight:FontWeight.w600)),
-                          trailing:yonetici&&id!=ben?const Icon(Icons.more_horiz_rounded,color:ngelxPremiumMuted):const Icon(Icons.chevron_right_rounded,color:Color(0xFFAAA3B3)),
-                        ),
+                padding:const EdgeInsets.fromLTRB(12,12,12,8),
+                child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+                  Padding(
+                    padding:const EdgeInsets.fromLTRB(6,2,6,8),
+                    child:Text(uyeler.length.toString()+' üye',style:const TextStyle(color:ngelxPremiumMuted,fontSize:15,fontWeight:FontWeight.w800)),
+                  ),
+                  _grupSatir(Icons.groups_rounded,'Sohbet üyelerini gör','Tüm üyeleri ve yöneticileri gör',()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupUyeleriPage(chatId:widget.chatId)))),
+                  _grupAyirici(),
+                  StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
+                    stream:ref.collection('joinRequests').snapshots(),
+                    builder:(_,istekSnap){
+                      final bekleyen=(istekSnap.data?.docs??const[]).where((d)=>(d.data()['status']??'pending').toString()=='pending').length;
+                      return ListTile(
+                        onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupKatilmaIstekleriPage(chatId:widget.chatId))),
+                        contentPadding:const EdgeInsets.symmetric(horizontal:6,vertical:4),
+                        leading:Container(width:42,height:42,decoration:BoxDecoration(color:ngelxGroupGreenSoft,borderRadius:BorderRadius.circular(14)),child:const Icon(Icons.how_to_reg_rounded,color:ngelxGroupGreen)),
+                        title:const Text('Davetler ve istekler',style:TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w900)),
+                        subtitle:Text(bekleyen==0?'Bekleyen istek yok':bekleyen.toString()+' katılma isteği bekliyor',style:const TextStyle(color:ngelxPremiumMuted,fontSize:11.5)),
+                        trailing:Row(mainAxisSize:MainAxisSize.min,children:[
+                          if(bekleyen>0)Container(
+                            margin:const EdgeInsets.only(right:7),
+                            padding:const EdgeInsets.symmetric(horizontal:8,vertical:4),
+                            decoration:BoxDecoration(color:const Color(0xFFE92E46),borderRadius:BorderRadius.circular(18)),
+                            child:Text(bekleyen.toString(),style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w900,fontSize:11)),
+                          ),
+                          const Icon(Icons.chevron_right_rounded,color:Color(0xFFA59DAF)),
+                        ]),
                       );
                     },
-                  )),
+                  ),
+                ]),
+              ),
+              const SizedBox(height:14),
+              NgelXPremiumCard(
+                padding:const EdgeInsets.fromLTRB(12,13,12,12),
+                onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupMedyaPage(chatId:widget.chatId))),
+                child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+                  const Text('Sohbet bilgileri',style:TextStyle(color:ngelxPremiumMuted,fontSize:16,fontWeight:FontWeight.w900)),
+                  const SizedBox(height:10),
+                  StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
+                    stream:ref.collection('messages').orderBy('createdAt',descending:true).limit(30).snapshots(),
+                    builder:(_,medyaSnap){
+                      final medya=(medyaSnap.data?.docs??const[]).where((d){
+                        final v=d.data(),t=(v['type']??'').toString(),url=(v['mediaUrl']??'').toString();
+                        return (t=='photo'||t=='gif')&&url.isNotEmpty;
+                      }).take(5).toList();
+                      if(medya.isEmpty)return Container(
+                        height:94,width:double.infinity,alignment:Alignment.center,
+                        decoration:BoxDecoration(color:const Color(0xFFF5F6F7),borderRadius:BorderRadius.circular(18)),
+                        child:const Text('Henüz paylaşılan fotoğraf yok.',style:TextStyle(color:ngelxPremiumMuted,fontWeight:FontWeight.w700)),
+                      );
+                      return SizedBox(
+                        height:150,
+                        child:Row(children:[
+                          Expanded(
+                            flex:3,
+                            child:ClipRRect(
+                              borderRadius:BorderRadius.circular(18),
+                              child:CachedNetworkImage(
+                                imageUrl:(medya.first.data()['mediaUrl']??'').toString(),
+                                width:double.infinity,height:150,fit:BoxFit.cover,
+                                errorWidget:(_,__,___)=>Container(color:const Color(0xFFF1F3F4),child:const Icon(Icons.broken_image_outlined)),
+                              ),
+                            ),
+                          ),
+                          if(medya.length>1)...[
+                            const SizedBox(width:7),
+                            Expanded(
+                              flex:2,
+                              child:GridView.builder(
+                                physics:const NeverScrollableScrollPhysics(),
+                                gridDelegate:const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount:2,crossAxisSpacing:5,mainAxisSpacing:5),
+                                itemCount:(medya.length-1).clamp(0,4),
+                                itemBuilder:(_,i)=>ClipRRect(
+                                  borderRadius:BorderRadius.circular(10),
+                                  child:CachedNetworkImage(
+                                    imageUrl:(medya[i+1].data()['mediaUrl']??'').toString(),
+                                    fit:BoxFit.cover,
+                                    errorWidget:(_,__,___)=>Container(color:const Color(0xFFF1F3F4),child:const Icon(Icons.broken_image_outlined,size:18)),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ]),
+                      );
+                    },
+                  ),
                 ]),
               ),
               const SizedBox(height:14),
@@ -8373,7 +8434,7 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
               NgelXPremiumCard(
                 padding:const EdgeInsets.fromLTRB(12,13,12,7),
                 child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-                  const Padding(padding:EdgeInsets.symmetric(horizontal:6),child:Text('Bildirimler',style:TextStyle(color:ngelxPremiumPurple,fontSize:17,fontWeight:FontWeight.w900))),
+                  const Padding(padding:EdgeInsets.symmetric(horizontal:6),child:Text('Bildirimler',style:TextStyle(color:ngelxGroupGreen,fontSize:17,fontWeight:FontWeight.w900))),
                   const SizedBox(height:6),
                   _grupSwitch(Icons.notifications_off_outlined,'Bildirimleri sessize al','Bu gruptan yeni mesaj bildirimi alma',List<String>.from(v['mutedFor']??const[]).contains(ben),bildirimSessiz),
                 ]),
@@ -8383,7 +8444,7 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
                 NgelXPremiumCard(
                   padding:const EdgeInsets.fromLTRB(12,13,12,7),
                   child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-                    const Padding(padding:EdgeInsets.symmetric(horizontal:6),child:Text('Grup ayarları',style:TextStyle(color:ngelxPremiumPurple,fontSize:17,fontWeight:FontWeight.w900))),
+                    const Padding(padding:EdgeInsets.symmetric(horizontal:6),child:Text('Grup ayarları',style:TextStyle(color:ngelxGroupGreen,fontSize:17,fontWeight:FontWeight.w900))),
                     const SizedBox(height:6),
                     _grupSwitch(Icons.chat_bubble_outline_rounded,'Sadece yöneticiler yazsın','Yalnızca yöneticiler mesaj gönderebilir',v['onlyAdminsCanPost']==true,(x)=>ayarDegistir('onlyAdminsCanPost',x)),
                     _grupSwitch(Icons.history_rounded,'Yeni üyeler geçmişi görsün','Yeni üyeler eski mesajları görebilir',v['newMembersSeeHistory']!=false,(x)=>ayarDegistir('newMembersSeeHistory',x)),
@@ -8419,9 +8480,9 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
     child:Container(
       height:68,
       padding:const EdgeInsets.symmetric(horizontal:6),
-      decoration:BoxDecoration(color:const Color(0xFFF5EFFF),borderRadius:BorderRadius.circular(18)),
+      decoration:BoxDecoration(color:ngelxGroupGreenSoft,borderRadius:BorderRadius.circular(18)),
       child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[
-        Icon(icon,color:ngelxPremiumPurple,size:23),
+        Icon(icon,color:ngelxGroupGreen,size:23),
         const SizedBox(height:5),
         Text(label,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:ngelxPremiumInk,fontSize:11.5,fontWeight:FontWeight.w800)),
       ]),
@@ -8433,7 +8494,7 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
   Widget _grupSatir(IconData icon,String title,String subtitle,VoidCallback onTap)=>ListTile(
     onTap:onTap,
     contentPadding:const EdgeInsets.symmetric(horizontal:6,vertical:4),
-    leading:Container(width:42,height:42,decoration:BoxDecoration(color:const Color(0xFFF0E8FF),borderRadius:BorderRadius.circular(14)),child:Icon(icon,color:ngelxPremiumPurple)),
+    leading:Container(width:42,height:42,decoration:BoxDecoration(color:ngelxGroupGreenSoft,borderRadius:BorderRadius.circular(14)),child:Icon(icon,color:ngelxGroupGreen)),
     title:Text(title,style:const TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w900)),
     subtitle:Text(subtitle,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:ngelxPremiumMuted,fontSize:11.5)),
     trailing:const Icon(Icons.chevron_right_rounded,color:Color(0xFFA59DAF)),
@@ -8442,11 +8503,11 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
   Widget _grupSwitch(IconData icon,String title,String subtitle,bool value,ValueChanged<bool> onChanged)=>SwitchListTile(
     dense:true,
     contentPadding:const EdgeInsets.symmetric(horizontal:5),
-    secondary:Container(width:40,height:40,decoration:BoxDecoration(color:const Color(0xFFF0E8FF),borderRadius:BorderRadius.circular(13)),child:Icon(icon,color:ngelxPremiumPurple,size:21)),
+    secondary:Container(width:40,height:40,decoration:BoxDecoration(color:ngelxGroupGreenSoft,borderRadius:BorderRadius.circular(13)),child:Icon(icon,color:ngelxGroupGreen,size:21)),
     title:Text(title,style:const TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w800,fontSize:13)),
     subtitle:Text(subtitle,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:ngelxPremiumMuted,fontSize:10.5)),
     value:value,
-    activeColor:ngelxPremiumPurple,
+    activeColor:ngelxGroupGreen,
     onChanged:onChanged,
   );
 }
