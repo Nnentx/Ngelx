@@ -6758,34 +6758,43 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
   Future<void> efektSec()async{
     final x=await showModalBottomSheet<int>(
       context:context,
-      backgroundColor:const Color(0xFF191919),
+      backgroundColor:ngelxCallBg,
       showDragHandle:true,
+      shape:const RoundedRectangleBorder(borderRadius:BorderRadius.vertical(top:Radius.circular(30))),
       builder:(c)=>SafeArea(child:Padding(
-        padding:const EdgeInsets.all(18),
-        child:Column(mainAxisSize:MainAxisSize.min,children:[
-          const Text('Efektler',style:TextStyle(color:Colors.white,fontSize:19,fontWeight:FontWeight.w900)),
+        padding:const EdgeInsets.fromLTRB(16,2,16,22),
+        child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
+          const Text('Kamera efektleri',style:TextStyle(color:Colors.white,fontSize:20,fontWeight:FontWeight.w900)),
+          const SizedBox(height:4),
+          const Text('Görüntüne uygulanacak görünümü seç.',style:TextStyle(color:Colors.white54,fontSize:11.5,fontWeight:FontWeight.w600)),
           const SizedBox(height:16),
-          Row(mainAxisAlignment:MainAxisAlignment.spaceEvenly,children:[
-            for(final e in const [('Hiçbiri',0),('Sıcak',1),('Soğuk',2),('S/B',3)])
-              InkWell(
+          Row(children:[
+            for(final e in const [('Hiçbiri',0),('Sıcak',1),('Soğuk',2),('S/B',3)])...[
+              Expanded(child:InkWell(
                 onTap:()=>Navigator.pop(c,e.$2),
-                child:Column(children:[
-                  CircleAvatar(
-                    radius:30,
-                    backgroundColor:e.$2==efekt?mor:Colors.white24,
-                    child:Icon(e.$2==0?Icons.block:e.$2==3?Icons.filter_b_and_w:Icons.auto_awesome,color:Colors.white),
+                borderRadius:BorderRadius.circular(20),
+                child:Container(
+                  height:106,
+                  decoration:BoxDecoration(
+                    color:e.$2==efekt?const Color(0xFF352154):const Color(0xFF211837),
+                    borderRadius:BorderRadius.circular(20),
+                    border:Border.all(color:e.$2==efekt?const Color(0xFF9C73FF):Colors.white10,width:e.$2==efekt?1.5:1),
                   ),
-                  const SizedBox(height:6),
-                  Text(e.$1,style:const TextStyle(color:Colors.white)),
-                ]),
-              ),
+                  child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[
+                    Container(width:48,height:48,decoration:BoxDecoration(shape:BoxShape.circle,color:e.$2==efekt?const Color(0xFF7048E8):Colors.white10),child:Icon(e.$2==0?Icons.block_rounded:e.$2==3?Icons.filter_b_and_w_rounded:Icons.auto_awesome_rounded,color:Colors.white)),
+                    const SizedBox(height:8),
+                    Text(e.$1,style:TextStyle(color:e.$2==efekt?const Color(0xFFCDB9FF):Colors.white70,fontSize:10,fontWeight:FontWeight.w800)),
+                  ]),
+                ),
+              )),
+              if(e.$2!=3)const SizedBox(width:8),
+            ],
           ]),
         ]),
       )),
     );
     if(x!=null&&mounted)setState(()=>efekt=x);
   }
-
 
   Future<void> aramaAyarlari()async{
     await showModalBottomSheet<void>(
@@ -7146,35 +7155,36 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
     final yeni=await showDialog<String>(
       context:context,
       builder:(x)=>Theme(
-        data:ThemeData.light(),
+        data:ThemeData.light().copyWith(colorScheme:ColorScheme.fromSeed(seedColor:ngelxPremiumPurple)),
         child:AlertDialog(
-          backgroundColor:Colors.white,
-          surfaceTintColor:Colors.white,
-          title:const Text('Grup adını düzenle',style:TextStyle(color:Colors.black87)),
+          shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(28)),
+          backgroundColor:Colors.white,surfaceTintColor:Colors.white,
+          icon:Container(width:54,height:54,decoration:BoxDecoration(color:const Color(0xFFF0E8FF),borderRadius:BorderRadius.circular(18)),child:const Icon(Icons.edit_rounded,color:ngelxPremiumPurple)),
+          title:const Text('Grup adını düzenle',textAlign:TextAlign.center,style:TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w900)),
           content:TextField(
-            controller:c,
-            maxLength:16,
-            style:const TextStyle(color:Colors.black87),
-            decoration:const InputDecoration(
-              helperText:'En fazla 16 karakter',
-              helperStyle:TextStyle(color:Colors.black54),
-              counterStyle:TextStyle(color:Colors.black54),
+            controller:c,maxLength:16,textAlign:TextAlign.center,
+            style:const TextStyle(color:ngelxPremiumInk,fontSize:16,fontWeight:FontWeight.w800),
+            decoration:InputDecoration(
+              hintText:'Grup adı',helperText:'2–16 karakter',
+              filled:true,fillColor:const Color(0xFFF7F4F9),
+              border:OutlineInputBorder(borderRadius:BorderRadius.circular(18),borderSide:BorderSide.none),
+              enabledBorder:OutlineInputBorder(borderRadius:BorderRadius.circular(18),borderSide:const BorderSide(color:ngelxPremiumBorder)),
+              focusedBorder:OutlineInputBorder(borderRadius:BorderRadius.circular(18),borderSide:const BorderSide(color:ngelxPremiumPurple,width:1.5)),
             ),
           ),
           actions:[
             TextButton(onPressed:()=>Navigator.pop(x),child:const Text('Vazgeç')),
-            FilledButton(onPressed:()=>Navigator.pop(x,c.text.trim()),child:const Text('Kaydet')),
+            FilledButton(style:FilledButton.styleFrom(backgroundColor:ngelxPremiumPurple),onPressed:()=>Navigator.pop(x,c.text.trim()),child:const Text('Kaydet')),
           ],
         ),
       ),
     );
     await ngelxOverlayKapanisiniBekle();
     c.dispose();
-    if(yeni==null)return;
-    if(!mounted)return;
+    if(yeni==null||!mounted)return;
     final temiz=yeni.trim();
     if(temiz.length<2||temiz.length>16){
-      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Grup adı 2–16 karakter arasında olmalı.')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Grup adı 2–16 karakter arasında olmalı.')));
       return;
     }
     await ref.update({'groupName':temiz});
@@ -7183,16 +7193,42 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
   Future<void> fotografDuzenle()async{
     final secim=await showModalBottomSheet<String>(
       context:context,
-      backgroundColor:Colors.white,
+      backgroundColor:const Color(0xFFFBF9FF),
       showDragHandle:true,
+      shape:const RoundedRectangleBorder(borderRadius:BorderRadius.vertical(top:Radius.circular(30))),
       builder:(c)=>Theme(
-        data:ThemeData.light(),
-        child:SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
-          const ListTile(title:Text('Grup fotoğrafını değiştir',style:TextStyle(color:Colors.black87,fontWeight:FontWeight.w900))),
-          ListTile(leading:const Icon(Icons.camera_alt_rounded,color:mor),title:const Text('Fotoğraf çek',style:TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(c,'camera')),
-          ListTile(leading:const Icon(Icons.photo_library_rounded,color:mor),title:const Text('Galeriden seç',style:TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(c,'gallery')),
-          ListTile(leading:const Icon(Icons.delete_outline,color:Colors.red),title:const Text('Mevcut fotoğrafı kaldır',style:TextStyle(color:Colors.red)),onTap:()=>Navigator.pop(c,'remove')),
-        ])),
+        data:ThemeData.light().copyWith(colorScheme:ColorScheme.fromSeed(seedColor:ngelxPremiumPurple)),
+        child:SafeArea(child:Padding(
+          padding:const EdgeInsets.fromLTRB(14,0,14,18),
+          child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
+            const Text('Grup fotoğrafı',style:TextStyle(color:ngelxPremiumInk,fontSize:20,fontWeight:FontWeight.w900)),
+            const SizedBox(height:4),
+            const Text('Grubun profil görselini değiştir.',style:TextStyle(color:ngelxPremiumMuted,fontSize:11.5,fontWeight:FontWeight.w600)),
+            const SizedBox(height:14),
+            NgelXPremiumCard(
+              padding:EdgeInsets.zero,
+              child:Column(children:[
+                _fotoSecenek(c,Icons.camera_alt_rounded,'Fotoğraf çek','Kamerayı aç','camera'),
+                const Divider(height:1,indent:62,color:Color(0xFFF0EBF5)),
+                _fotoSecenek(c,Icons.photo_library_rounded,'Galeriden seç','Telefondan görsel seç','gallery'),
+              ]),
+            ),
+            const SizedBox(height:10),
+            InkWell(
+              onTap:()=>Navigator.pop(c,'remove'),
+              borderRadius:BorderRadius.circular(18),
+              child:Container(
+                width:double.infinity,padding:const EdgeInsets.symmetric(horizontal:14,vertical:14),
+                decoration:BoxDecoration(color:const Color(0xFFFFEFF1),borderRadius:BorderRadius.circular(18),border:Border.all(color:const Color(0xFFFFD9DE))),
+                child:const Row(children:[
+                  Icon(Icons.delete_outline_rounded,color:Color(0xFFE13F51)),
+                  SizedBox(width:12),
+                  Text('Mevcut fotoğrafı kaldır',style:TextStyle(color:Color(0xFFE13F51),fontWeight:FontWeight.w900)),
+                ]),
+              ),
+            ),
+          ]),
+        )),
       ),
     );
     if(secim==null)return;
@@ -7202,7 +7238,6 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
     try{
       final mevcut=await ref.get();
       final eski=(mevcut.data()?['groupPhotoUrl']??'').toString();
-
       if(secim=='remove'){
         await ref.update({'groupPhotoUrl':'','updatedAt':FieldValue.serverTimestamp()});
         if(eski.isNotEmpty)unawaited(ngelxMedyaSil(eski).catchError((_){ }));
@@ -7210,22 +7245,11 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
         if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Grup fotoğrafı kaldırıldı.')));
         return;
       }
-
-      final x=await ImagePicker().pickImage(
-        source:secim=='camera'?ImageSource.camera:ImageSource.gallery,
-        imageQuality:82,
-        maxWidth:1280,
-      );
+      final x=await ImagePicker().pickImage(source:secim=='camera'?ImageSource.camera:ImageSource.gallery,imageQuality:82,maxWidth:1280);
       if(x==null)return;
-
       final uzanti=x.name.contains('.')?x.name.split('.').last.toLowerCase():'jpg';
       final yol='groups/${widget.chatId}/avatar_${DateTime.now().millisecondsSinceEpoch}.$uzanti';
-      final url=await ngelxMedyaYukleBytes(
-        bytes:await x.readAsBytes(),
-        kind:'groups',
-        ext:uzanti,
-        legacyPath:yol,
-      );
+      final url=await ngelxMedyaYukleBytes(bytes:await x.readAsBytes(),kind:'groups',ext:uzanti,legacyPath:yol);
       await ref.update({'groupPhotoUrl':url,'updatedAt':FieldValue.serverTimestamp()});
       if(eski.isNotEmpty&&eski!=url)unawaited(ngelxMedyaSil(eski).catchError((_){ }));
       await sistemMesaji('Yönetici grup fotoğrafını değiştirdi.');
@@ -7234,6 +7258,15 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
       if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Grup fotoğrafı değiştirilemedi: $e')));
     }
   }
+
+  Widget _fotoSecenek(BuildContext c,IconData icon,String title,String subtitle,String value)=>ListTile(
+    contentPadding:const EdgeInsets.symmetric(horizontal:10,vertical:3),
+    leading:Container(width:42,height:42,decoration:BoxDecoration(color:const Color(0xFFF0E8FF),borderRadius:BorderRadius.circular(14)),child:Icon(icon,color:ngelxPremiumPurple)),
+    title:Text(title,style:const TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w800)),
+    subtitle:Text(subtitle,style:const TextStyle(color:ngelxPremiumMuted,fontSize:10.5)),
+    trailing:const Icon(Icons.chevron_right_rounded,color:Color(0xFFA49BAC)),
+    onTap:()=>Navigator.pop(c,value),
+  );
 
   Future<void> uyeIslemi(String id,String isim,bool admin)async{
     final sec=await showModalBottomSheet<String>(
