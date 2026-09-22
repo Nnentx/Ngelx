@@ -6110,7 +6110,59 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
     if(tamam){mesaj.clear();etiketlenenUidler.clear();}
     if(mounted)setState(()=>mesajGonderiliyor=false);
   }
-  Future<void> medyaGonder(ImageSource kaynak)async{final x=await ImagePicker().pickImage(source:kaynak,imageQuality:76,maxWidth:1280);if(x==null)return;try{final yol='groups/${widget.chatId}/${DateTime.now().millisecondsSinceEpoch}.jpg';final url=await ngelxMedyaYukleBytes(bytes:await x.readAsBytes(),kind:'groups',ext:'jpg',legacyPath:yol).timeout(const Duration(seconds:12));await payloadGonder({'type':'photo','mediaUrl':url},'📷 Fotoğraf');}catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Medya hizmeti şu anda kullanılamıyor. Yazılı mesaj göndermeye devam edebilirsin.')));}}
+  Future<void> medyaGonder(ImageSource kaynak)async{
+    if(kaynak==ImageSource.camera){
+      final izin=await Permission.camera.request();
+      if(!izin.isGranted){
+        if(mounted)ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content:const Text('Fotoğraf çekmek için kamera izni gerekli.'),
+            action:SnackBarAction(label:'Ayarlar',onPressed:openAppSettings),
+          ),
+        );
+        return;
+      }
+    }
+    XFile? x;
+    try{
+      x=await ImagePicker().pickImage(source:kaynak,imageQuality:82,maxWidth:1600);
+    }catch(e){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Fotoğraf seçilemedi: ${ngelxKisaHata(e)}')));
+      return;
+    }
+    if(x==null)return;
+    try{
+      var uzanti=x.name.contains('.')?x.name.split('.').last.toLowerCase():'jpg';
+      if(!const ['jpg','jpeg','png','webp'].contains(uzanti))uzanti='jpg';
+      final yol='groups/${widget.chatId}/${DateTime.now().millisecondsSinceEpoch}.$uzanti';
+      final bytes=await x.readAsBytes().timeout(const Duration(seconds:10));
+      String url;
+      try{
+        url=await ngelxMedyaYukleBytes(
+          bytes:bytes,
+          kind:'groups',
+          ext:uzanti,
+          legacyPath:yol,
+        ).timeout(const Duration(seconds:25));
+      }catch(e){
+        if(e.toString().contains('(400)')){
+          url=await ngelxMedyaYukleBytes(
+            bytes:bytes,
+            kind:'photos',
+            ext:uzanti,
+            legacyPath:yol,
+          ).timeout(const Duration(seconds:25));
+        }else{
+          rethrow;
+        }
+      }
+      await payloadGonder({'type':'photo','mediaUrl':url},'📷 Fotoğraf');
+    }catch(e){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content:Text('Grup fotoğrafı gönderilemedi: ${ngelxKisaHata(e)}')),
+      );
+    }
+  }
   Future<void> gifGonder()async{const tur=XTypeGroup(label:'GIF',extensions:['gif']);final x=await openFile(acceptedTypeGroups:[tur]);if(x==null)return;try{final yol='groups/${widget.chatId}/${DateTime.now().millisecondsSinceEpoch}.gif';final bytes=await x.readAsBytes().timeout(const Duration(seconds:8));final url=await ngelxMedyaYukleBytes(bytes:bytes,kind:'gifs',ext:'gif',legacyPath:yol,contentType:'image/gif').timeout(const Duration(seconds:12));await payloadGonder({'type':'gif','mediaUrl':url},'GIF');}catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Medya hizmeti şu anda kullanılamıyor. GIF gönderilemedi.')));}}
 
   Future<void> anketOlustur()async{final soru=TextEditingController(),secenekler=[TextEditingController(),TextEditingController()];final sonuc=await showDialog<Map<String,dynamic>>(context:context,builder:(c)=>StatefulBuilder(builder:(c,setP)=>AlertDialog(backgroundColor:Colors.white,title:const Text('Anket oluştur'),content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[TextField(controller:soru,maxLength:180,decoration:const InputDecoration(labelText:'Soru')),for(int i=0;i<secenekler.length;i++)TextField(controller:secenekler[i],maxLength:80,decoration:InputDecoration(labelText:'${i+1}. seçenek',suffixIcon:secenekler.length>2?IconButton(onPressed:(){secenekler[i].dispose();setP(()=>secenekler.removeAt(i));},icon:const Icon(Icons.close)):null)),if(secenekler.length<6)TextButton.icon(onPressed:()=>setP(()=>secenekler.add(TextEditingController())),icon:const Icon(Icons.add),label:const Text('Seçenek ekle'))])),actions:[TextButton(onPressed:()=>Navigator.pop(c),child:const Text('Vazgeç')),FilledButton(onPressed:(){final q=soru.text.trim(),opts=secenekler.map((e)=>e.text.trim()).where((e)=>e.isNotEmpty).toList();if(q.isNotEmpty&&opts.length>=2)Navigator.pop(c,{'question':q,'options':opts});},child:const Text('Gönder'))])));if(sonuc!=null)await payloadGonder({'type':'poll','pollQuestion':sonuc['question'],'pollOptions':sonuc['options'],'pollVotes':<String,dynamic>{}},'📊 Anket: ${sonuc['question']}');soru.dispose();for(final c in secenekler)c.dispose();}
@@ -10182,7 +10234,7 @@ class AyarlarPage extends StatelessWidget {
       _ayar(context,Icons.download_outlined,'İndirme izinleri','Varsayılan paylaşım indirme ayarı'),
     ],
     const Divider(),
-    ListTile(leading:const Icon(Icons.system_update,color:mor),title:const Text('Uygulama güncellemeleri'),subtitle:const Text('V54 • Test build 228'),trailing:const Icon(Icons.build_circle,color:Colors.orange)),
+    ListTile(leading:const Icon(Icons.system_update,color:mor),title:const Text('Uygulama güncellemeleri'),subtitle:const Text('V54 • Test build 229'),trailing:const Icon(Icons.build_circle,color:Colors.orange)),
     ListTile(leading:const Icon(Icons.share,color:mavi),title:const Text('Ngel X’i paylaş'),subtitle:const Text('Uygulama bağlantısını paylaş veya kopyala'),onTap:()async=>SharePlus.instance.share(ShareParams(text:'Ngel X ile dünyanı paylaş ✨\nhttps://ngelx.app'))),
     const Divider(),
     ListTile(leading:const Icon(Icons.logout,color:Colors.red),title:const Text('Çıkış yap',style:TextStyle(color:Colors.red)),onTap:()async{final onay=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(title:const Text('Çıkış yapılsın mı?'),content:const Text('Tekrar giriş yapman gerekecek.'),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('Çıkış yap'))]));if(onay==true){await FirebaseAuth.instance.signOut();if(context.mounted)Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder:(_)=>const GirisPage()),(_)=>false);}})
