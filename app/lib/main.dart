@@ -7320,25 +7320,17 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
       return;
     }
     final p=await FirebaseFirestore.instance.collection('users').doc(me).get();
-    final izinli=<String>{
-      ...List<String>.from(p.data()?['friends']??const[]),
-      ...List<String>.from(p.data()?['following']??const[]),
-    }..removeAll(mevcut);
+    final izinli=<String>{...List<String>.from(p.data()?['friends']??const[]),...List<String>.from(p.data()?['following']??const[])}..removeAll(mevcut);
     if(izinli.isEmpty){
       if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Eklenebilecek arkadaş veya takip edilen kişi bulunamadı.')));
       return;
     }
-
     final belgeler=await Future.wait(izinli.map(_uyeGetir));
     final adaylar=<DocumentSnapshot<Map<String,dynamic>>>[];
-    for(final d in belgeler){
-      if(d.exists&&d.data()?['deactivated']!=true)adaylar.add(d);
-    }
+    for(final d in belgeler){if(d.exists&&d.data()?['deactivated']!=true)adaylar.add(d);}
     adaylar.sort((a,b){
       final av=a.data()??<String,dynamic>{},bv=b.data()??<String,dynamic>{};
-      final aa=(av['displayName']??av['username']??'').toString().toLowerCase();
-      final ba=(bv['displayName']??bv['username']??'').toString().toLowerCase();
-      return aa.compareTo(ba);
+      return (av['displayName']??av['username']??'').toString().toLowerCase().compareTo((bv['displayName']??bv['username']??'').toString().toLowerCase());
     });
     if(!mounted)return;
 
@@ -7346,48 +7338,77 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
     final onay=await showModalBottomSheet<bool>(
       context:context,
       isScrollControlled:true,
-      backgroundColor:Colors.white,
+      backgroundColor:const Color(0xFFFBF9FF),
       showDragHandle:true,
+      shape:const RoundedRectangleBorder(borderRadius:BorderRadius.vertical(top:Radius.circular(30))),
       builder:(c)=>Theme(
-        data:ThemeData.light(),
+        data:ThemeData.light().copyWith(colorScheme:ColorScheme.fromSeed(seedColor:ngelxPremiumPurple)),
         child:StatefulBuilder(builder:(c,setP)=>SafeArea(child:SizedBox(
-          height:MediaQuery.sizeOf(c).height*.72,
+          height:MediaQuery.sizeOf(c).height*.78,
           child:Column(children:[
-            ListTile(
-              title:const Text('Gruba üye ekle',style:TextStyle(color:Colors.black87,fontWeight:FontWeight.w900)),
-              subtitle:Text('${mevcut.length+secilen.length}/60 üye',style:const TextStyle(color:Colors.black54)),
+            Padding(
+              padding:const EdgeInsets.fromLTRB(16,0,16,10),
+              child:Row(children:[
+                const Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+                  Text('Gruba üye ekle',style:TextStyle(color:ngelxPremiumInk,fontSize:20,fontWeight:FontWeight.w900)),
+                  SizedBox(height:3),
+                  Text('Eklemek istediğin kişileri seç.',style:TextStyle(color:ngelxPremiumMuted,fontSize:11.5,fontWeight:FontWeight.w600)),
+                ])),
+                Container(
+                  padding:const EdgeInsets.symmetric(horizontal:10,vertical:7),
+                  decoration:BoxDecoration(color:const Color(0xFFF0E8FF),borderRadius:BorderRadius.circular(14)),
+                  child:Text((mevcut.length+secilen.length).toString()+'/60',style:const TextStyle(color:ngelxPremiumPurple,fontWeight:FontWeight.w900,fontSize:11)),
+                ),
+              ]),
             ),
             Expanded(child:adaylar.isEmpty
-              ? const Center(child:Text('Eklenebilecek kişi bulunamadı.',style:TextStyle(color:Colors.black54)))
+              ? const Center(child:Text('Eklenebilecek kişi bulunamadı.',style:TextStyle(color:ngelxPremiumMuted,fontWeight:FontWeight.w700)))
               : ListView.builder(
+                  padding:const EdgeInsets.fromLTRB(14,4,14,10),
                   itemCount:adaylar.length,
                   itemBuilder:(_,i){
                     final d=adaylar[i],v=d.data()??<String,dynamic>{};
                     final ad=(v['displayName']??v['username']??'Kullanıcı').toString();
                     final foto=(v['photoUrl']??'').toString();
-                    return CheckboxListTile(
-                      value:secilen.contains(d.id),
-                      onChanged:(x){
-                        if(x==true&&mevcut.length+secilen.length>=60){
-                          ScaffoldMessenger.of(c).showSnackBar(const SnackBar(content:Text('Grupta en fazla 60 üye olabilir.')));
-                          return;
-                        }
-                        setP(()=>x==true?secilen.add(d.id):secilen.remove(d.id));
-                      },
-                      secondary:CircleAvatar(backgroundImage:foto.isEmpty?null:CachedNetworkImageProvider(foto)),
-                      title:Text(ad,style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w700)),
-                      subtitle:Text('@${v['username']??'ngelx'}',style:const TextStyle(color:Colors.black54)),
+                    final secili=secilen.contains(d.id),online=v['online']==true;
+                    return NgelXPremiumCard(
+                      margin:const EdgeInsets.only(bottom:8),
+                      padding:const EdgeInsets.symmetric(horizontal:10,vertical:6),
+                      child:ListTile(
+                        dense:true,contentPadding:EdgeInsets.zero,
+                        onTap:(){
+                          if(!secili&&mevcut.length+secilen.length>=60){
+                            ScaffoldMessenger.of(c).showSnackBar(const SnackBar(content:Text('Grupta en fazla 60 üye olabilir.')));
+                            return;
+                          }
+                          setP(()=>secili?secilen.remove(d.id):secilen.add(d.id));
+                        },
+                        leading:Stack(children:[
+                          CircleAvatar(radius:23,backgroundColor:const Color(0xFFECE4F5),backgroundImage:foto.isEmpty?null:CachedNetworkImageProvider(foto),child:foto.isEmpty?const Icon(Icons.person_rounded,color:ngelxPremiumPurple):null),
+                          if(online)const Positioned(right:0,bottom:0,child:CircleAvatar(radius:5.5,backgroundColor:Colors.white,child:CircleAvatar(radius:3.5,backgroundColor:Color(0xFF21C76A)))),
+                        ]),
+                        title:Text(ad,style:const TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w800)),
+                        subtitle:Text('@'+(v['username']??'ngelx').toString(),style:const TextStyle(color:ngelxPremiumMuted,fontSize:11)),
+                        trailing:AnimatedContainer(
+                          duration:const Duration(milliseconds:160),
+                          width:29,height:29,
+                          decoration:BoxDecoration(color:secili?ngelxPremiumPurple:Colors.white,shape:BoxShape.circle,border:Border.all(color:secili?ngelxPremiumPurple:const Color(0xFFD6CFDC),width:1.4)),
+                          child:secili?const Icon(Icons.check_rounded,color:Colors.white,size:18):null,
+                        ),
+                      ),
                     );
                   },
-                ),
-            ),
-            Padding(
-              padding:EdgeInsets.fromLTRB(12,12,12,12+MediaQuery.paddingOf(c).bottom),
+                )),
+            Container(
+              padding:EdgeInsets.fromLTRB(14,10,14,10+MediaQuery.paddingOf(c).bottom),
+              decoration:const BoxDecoration(color:Colors.white,border:Border(top:BorderSide(color:Color(0xFFF0EBF5)))),
               child:SizedBox(
                 width:double.infinity,
-                child:FilledButton(
+                child:FilledButton.icon(
+                  style:FilledButton.styleFrom(backgroundColor:ngelxPremiumPurple,padding:const EdgeInsets.symmetric(vertical:14),shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(17))),
                   onPressed:secilen.isEmpty?null:()=>Navigator.pop(c,true),
-                  child:Text('${secilen.length} kişiyi ekle'),
+                  icon:const Icon(Icons.person_add_alt_1_rounded),
+                  label:Text(secilen.isEmpty?'Kişi seç':secilen.length.toString()+' kişiyi ekle',style:const TextStyle(fontWeight:FontWeight.w900)),
                 ),
               ),
             ),
@@ -7396,12 +7417,9 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
       ),
     )??false;
     if(!onay||secilen.isEmpty)return;
-    await ref.update({
-      'members':FieldValue.arrayUnion(secilen.toList()),
-      'hiddenFor':FieldValue.arrayRemove(secilen.toList()),
-    });
+    await ref.update({'members':FieldValue.arrayUnion(secilen.toList()),'hiddenFor':FieldValue.arrayRemove(secilen.toList())});
     _uyeProfilCache.clear();
-    await sistemMesaji('${secilen.length} yeni üye gruba eklendi.');
+    await sistemMesaji(secilen.length.toString()+' yeni üye gruba eklendi.');
   }
   Future<void> ayril(List<String> uyeler,List<String> admins)async{final me=ben;if(me==null)return;if(admins.length==1&&admins.contains(me)&&uyeler.length>1){await showDialog<void>(context:context,builder:(c)=>Theme(data:ThemeData.light(),child:AlertDialog(backgroundColor:Colors.white,title:const Text('Önce yönetici belirle',style:TextStyle(color:Colors.black87)),content:const Text('Gruptan ayrılmadan önce başka bir üyeyi yönetici yapmalısın.',style:TextStyle(color:Colors.black87)),actions:[FilledButton(onPressed:()=>Navigator.pop(c),child:const Text('Tamam'))])));return;}final sonKisi=uyeler.length==1;final ok=await showDialog<bool>(context:context,builder:(c)=>Theme(data:ThemeData.light(),child:AlertDialog(backgroundColor:Colors.white,title:Text(sonKisi?'Grup silinsin mi?':'Gruptan ayrılmak istiyor musun?',style:const TextStyle(color:Colors.black87)),content:Text(sonKisi?'Grupta yalnızca sen kaldın. Grup sohbeti listenden kaldırılacak.':'Mesaj geçmişine erişimin sona erecek.',style:const TextStyle(color:Colors.black87)),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),FilledButton(style:FilledButton.styleFrom(backgroundColor:Colors.red),onPressed:()=>Navigator.pop(c,true),child:Text(sonKisi?'Grubu sil':'Ayrıl'))])))??false;if(!ok)return;if(sonKisi)await ref.set({'members':FieldValue.arrayRemove([me]),'admins':FieldValue.arrayRemove([me]),'groupDeleted':true,'deletedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));else{await sistemMesaji('Bir üye gruptan ayrıldı.');await ref.update({'members':FieldValue.arrayRemove([me]),'admins':FieldValue.arrayRemove([me])});}if(mounted)Navigator.popUntil(context,(r)=>r.isFirst);}
   Future<void> ayarDegistir(String alan,bool deger)async{await ref.set({alan:deger},SetOptions(merge:true));}
