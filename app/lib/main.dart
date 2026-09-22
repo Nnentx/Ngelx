@@ -4021,6 +4021,65 @@ class _KesfetPageState extends State<KesfetPage> {
   final aramaKontrol=TextEditingController();
   final aramaFocus=FocusNode();
 
+  @override
+  void initState(){
+    super.initState();
+    unawaited(_aktifTestGruplariniKesfeteEsitle());
+  }
+
+  Future<void> _aktifTestGruplariniKesfeteEsitle() async {
+    final ben=FirebaseAuth.instance.currentUser?.uid;
+    if(ben==null)return;
+    try{
+      final sohbetler=await FirebaseFirestore.instance
+        .collection('chats')
+        .where('members',arrayContains:ben)
+        .where('isGroup',isEqualTo:true)
+        .limit(100)
+        .get()
+        .timeout(const Duration(seconds:10));
+      for(final d in sohbetler.docs){
+        final v=d.data();
+        final adminler=List<String>.from(v['admins']??const[]);
+        if(!adminler.contains(ben))continue;
+        final uyeler=List<String>.from(v['members']??const[]);
+        final grupAdi=(v['groupName']??'Grup').toString();
+        final dizinRef=FirebaseFirestore.instance.collection('groups').doc(d.id);
+        final mevcut=await dizinRef.get().timeout(const Duration(seconds:6));
+        final eski=mevcut.data()??<String,dynamic>{};
+        if(mevcut.exists){
+          await dizinRef.set({
+            'name':grupAdi,
+            'description':(eski['description']??'').toString(),
+            'groupPhotoUrl':(v['groupPhotoUrl']??'').toString(),
+            'members':uyeler,
+            'memberCount':uyeler.length,
+            'discoverable':eski['discoverable']!=false,
+            'joinApproval':v['joinApproval']==true,
+            'updatedAt':v['updatedAt']??FieldValue.serverTimestamp(),
+          },SetOptions(merge:true)).timeout(const Duration(seconds:8));
+        }else{
+          await dizinRef.set({
+            'chatId':d.id,
+            'name':grupAdi,
+            'description':'',
+            'groupPhotoUrl':(v['groupPhotoUrl']??'').toString(),
+            'members':uyeler,
+            'memberCount':uyeler.length,
+            'ownerId':(v['createdBy']??ben).toString(),
+            'discoverable':true,
+            'joinApproval':v['joinApproval']==true,
+            'createdAt':v['createdAt']??FieldValue.serverTimestamp(),
+            'updatedAt':v['updatedAt']??FieldValue.serverTimestamp(),
+          }).timeout(const Duration(seconds:8));
+        }
+      }
+      if(mounted)setState((){});
+    }catch(_){
+      // Geriye dönük test grubu eşitlemesi başarısız olsa bile Keşfet çalışmaya devam eder.
+    }
+  }
+
   @override void dispose(){aramaKontrol.dispose();aramaFocus.dispose();super.dispose();}
 
   bool get globalArama=>arama.isNotEmpty;
@@ -4213,7 +4272,7 @@ class _KesfetPageState extends State<KesfetPage> {
           ))),
           if(bolumAcik('Trend')) const SliverToBoxAdapter(child: Padding(padding: EdgeInsets.fromLTRB(16, 20, 16, 8), child: Row(children: [Text('Trend içerikler', style: TextStyle(color: Colors.black, fontSize: 21, fontWeight: FontWeight.w900)), Spacer()]))),
           if(bolumAcik('Trend')) SliverPadding(padding: const EdgeInsets.all(6), sliver: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-              stream: FirebaseFirestore.instance.collection('videos').orderBy('createdAt', descending: true).limit(30).snapshots(),
+              stream: FirebaseFirestore.instance.collection('videos').orderBy('createdAt', descending: true).limit(100).snapshots(),
               builder: (_, snap) {
                 final belgeler = (snap.data?.docs ?? []).where((d) {
                   final v = d.data();
@@ -4251,6 +4310,66 @@ class _KesfetPageState extends State<KesfetPage> {
                 );
               },
             )),
+          if(bolumAcik('Trend')) SliverToBoxAdapter(child:Padding(
+            padding:const EdgeInsets.fromLTRB(16,18,16,8),
+            child:Row(children:[
+              const Text('Trend gruplar',style:TextStyle(color:Colors.black,fontSize:21,fontWeight:FontWeight.w900)),
+              const Spacer(),
+              TextButton.icon(
+                onPressed:()=>_aktifTestGruplariniKesfeteEsitle(),
+                icon:const Icon(Icons.refresh_rounded,size:18),
+                label:const Text('Yenile'),
+              ),
+            ]),
+          )),
+          if(bolumAcik('Trend')) SliverToBoxAdapter(child:SizedBox(
+            height:166,
+            child:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
+              stream:FirebaseFirestore.instance.collection('groups').limit(100).snapshots(),
+              builder:(_,snap){
+                if(snap.hasError){
+                  return Center(child:TextButton.icon(
+                    onPressed:()=>_aktifTestGruplariniKesfeteEsitle(),
+                    icon:const Icon(Icons.refresh_rounded),
+                    label:const Text('Trend gruplar yüklenemedi · Yeniden dene'),
+                  ));
+                }
+                final gruplar=(snap.data?.docs??[]).where((d){
+                  final v=d.data();
+                  if(v['discoverable']==false)return false;
+                  final ad=(v['name']??'').toString().toLowerCase();
+                  if(ad.contains('oyun')||ad.contains('game'))return false;
+                  if(arama.isEmpty)return true;
+                  final metin=((v['name']??'').toString()+' '+(v['description']??'').toString()).toLowerCase();
+                  return metin.contains(arama);
+                }).toList();
+                gruplar.sort((a,b){
+                  final av=a.data(),bv=b.data();
+                  final at=(av['updatedAt'] is Timestamp)?(av['updatedAt'] as Timestamp).millisecondsSinceEpoch:0;
+                  final bt=(bv['updatedAt'] is Timestamp)?(bv['updatedAt'] as Timestamp).millisecondsSinceEpoch:0;
+                  if(bt!=at)return bt.compareTo(at);
+                  final am=(av['memberCount'] as num?)?.toInt()??(av['members'] is List?(av['members'] as List).length:0);
+                  final bm=(bv['memberCount'] as num?)?.toInt()??(bv['members'] is List?(bv['members'] as List).length:0);
+                  return bm.compareTo(am);
+                });
+                final goster=gruplar.take(100).toList();
+                if(goster.isEmpty){
+                  return Center(child:Column(mainAxisSize:MainAxisSize.min,children:[
+                    const Text('Aktif test grupları burada görünecek.',style:TextStyle(color:Colors.black54)),
+                    const SizedBox(height:4),
+                    TextButton(onPressed:()=>_aktifTestGruplariniKesfeteEsitle(),child:const Text('Grupları şimdi eşitle')),
+                  ]));
+                }
+                return ListView.separated(
+                  padding:const EdgeInsets.symmetric(horizontal:16),
+                  scrollDirection:Axis.horizontal,
+                  itemCount:goster.length,
+                  separatorBuilder:(_,__)=>const SizedBox(width:12),
+                  itemBuilder:(_,i)=>_grupKarti(context,goster[i].id,goster[i].data()),
+                );
+              },
+            ),
+          )),
           if(bolumAcik('Kişiler')) const SliverToBoxAdapter(child: Padding(padding: EdgeInsets.fromLTRB(16, 20, 16, 8), child: Row(children: [Text('Kişileri keşfet', style: TextStyle(color: Colors.black, fontSize: 21, fontWeight: FontWeight.w900)), Spacer()]))),
           if(bolumAcik('Kişiler')) SliverToBoxAdapter(child: SizedBox(height: 188, child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
             stream: FirebaseFirestore.instance.collection('users').limit(30).snapshots(),
