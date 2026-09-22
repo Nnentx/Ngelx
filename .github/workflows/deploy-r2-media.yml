@@ -1,6 +1,10 @@
 name: Deploy NgelX R2 Media Worker
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/deploy-r2-media.yml'
   workflow_dispatch:
 
 jobs:
@@ -8,17 +12,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - name: Kaynaklari al
+      - name: NgelX R2 prod kaynaklarini al
         uses: actions/checkout@v4
-
-      - name: R2 bucket olustur
-        continue-on-error: true
-        uses: cloudflare/wrangler-action@v3
         with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          workingDirectory: cloudflare/worker
-          command: r2 bucket create ngelx-media
+          ref: ngelx-v53-r2-reliability
 
       - name: Cloudflare R2 Worker deploy
         uses: cloudflare/wrangler-action@v3
