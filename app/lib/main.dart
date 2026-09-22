@@ -2349,7 +2349,27 @@ class _GorselYaziKartiState extends State<GorselYaziKarti> {
     final user=FirebaseAuth.instance.currentUser;if(user==null||icerikId.isEmpty)return;
     final ref=FirebaseFirestore.instance.collection('users').doc(user.uid).collection('saved').doc(icerikId);
     final yeni=!kaydedildi;setState(()=>kaydedildi=yeni);
-    try{if(yeni){await ref.set({'contentId':icerikId,'type':widget.veri['type']??'photo','savedAt':FieldValue.serverTimestamp()});}else{await ref.delete();}if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(yeni?'Kaydedilenlere eklendi ✅':'Kaydedilenlerden kaldırıldı.')));}catch(e){if(mounted)setState(()=>kaydedildi=!yeni);}
+    try{
+      if(yeni){
+        await ref.set({
+          'contentId':icerikId,
+          'type':widget.veri['type']??'photo',
+          'mediaUrl':widget.veri['mediaUrl']??'',
+          'videoUrl':widget.veri['videoUrl']??'',
+          'thumbnailUrl':widget.veri['thumbnailUrl']??'',
+          'description':widget.veri['description']??'',
+          'username':widget.veri['username']??'ngelx',
+          'ownerId':widget.veri['ownerId']??'',
+          'snapshotVersion':1,
+          'savedAt':FieldValue.serverTimestamp(),
+        });
+      }else{
+        await ref.delete();
+      }
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(yeni?'Kaydedilenlere eklendi ✅':'Kaydedilenlerden kaldırıldı.')));
+    }catch(e){
+      if(mounted)setState(()=>kaydedildi=!yeni);
+    }
   }
 
   Future<void> ciftTikBegen() async {
@@ -2702,7 +2722,27 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver {
   Future<void> videoyuKaydet() async {
     if(await misafirEngeli(context))return;final u=FirebaseAuth.instance.currentUser;if(u==null||videoId.isEmpty)return;
     final ref=FirebaseFirestore.instance.collection('users').doc(u.uid).collection('saved').doc(videoId),yeni=!kaydedildi;setState(()=>kaydedildi=yeni);
-    try{if(yeni){await ref.set({'contentId':videoId,'type':'video','savedAt':FieldValue.serverTimestamp()});}else{await ref.delete();}if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(yeni?'Kaydedilenlere eklendi ✅':'Kaydedilenlerden kaldırıldı.')));}catch(e){if(mounted)setState(()=>kaydedildi=!yeni);}
+    try{
+      if(yeni){
+        await ref.set({
+          'contentId':videoId,
+          'type':'video',
+          'mediaUrl':widget.adres,
+          'videoUrl':widget.adres,
+          'thumbnailUrl':'',
+          'description':'NgelX videosu • @${widget.kullaniciAdi}',
+          'username':widget.kullaniciAdi,
+          'ownerId':widget.ownerId,
+          'snapshotVersion':1,
+          'savedAt':FieldValue.serverTimestamp(),
+        });
+      }else{
+        await ref.delete();
+      }
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(yeni?'Kaydedilenlere eklendi ✅':'Kaydedilenlerden kaldırıldı.')));
+    }catch(e){
+      if(mounted)setState(()=>kaydedildi=!yeni);
+    }
   }
 
   Future<void> ciftTikBegenVideo() async {
@@ -10611,7 +10651,7 @@ class AyarlarPage extends StatelessWidget {
       _ayar(context,Icons.download_outlined,'İndirme izinleri','Varsayılan paylaşım indirme ayarı'),
     ],
     const Divider(),
-    ListTile(leading:const Icon(Icons.system_update,color:mor),title:const Text('Uygulama güncellemeleri'),subtitle:const Text('V54 • Test build 238'),trailing:const Icon(Icons.build_circle,color:Colors.orange)),
+    ListTile(leading:const Icon(Icons.system_update,color:mor),title:const Text('Uygulama güncellemeleri'),subtitle:const Text('V54 • Test build 239'),trailing:const Icon(Icons.build_circle,color:Colors.orange)),
     ListTile(leading:const Icon(Icons.share,color:mavi),title:const Text('Ngel X’i paylaş'),subtitle:const Text('Uygulama bağlantısını paylaş veya kopyala'),onTap:()async=>SharePlus.instance.share(ShareParams(text:'Ngel X ile dünyanı paylaş ✨\nhttps://ngelx.app'))),
     const Divider(),
     ListTile(leading:const Icon(Icons.logout,color:Colors.red),title:const Text('Çıkış yap',style:TextStyle(color:Colors.red)),onTap:()async{final onay=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(title:const Text('Çıkış yapılsın mı?'),content:const Text('Tekrar giriş yapman gerekecek.'),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('Çıkış yap'))]));if(onay==true&&context.mounted){await ngelxOturumuKapat(context);}})
@@ -12712,45 +12752,110 @@ class _ProfilSekme extends StatelessWidget{
   );
 }
 
-class KaydedilenlerPage extends StatelessWidget {
+class KaydedilenlerPage extends StatefulWidget {
   const KaydedilenlerPage({super.key});
+  @override State<KaydedilenlerPage> createState()=>_KaydedilenlerPageState();
+}
+
+class _KaydedilenlerPageState extends State<KaydedilenlerPage>{
+  final Map<String,Future<Map<String,dynamic>?>> _eskiKayitCache={};
+
+  Future<Map<String,dynamic>?> _eskiKaydiYukle(QueryDocumentSnapshot<Map<String,dynamic>> kayit)async{
+    final k=kayit.data();
+    final id=(k['contentId']??kayit.id).toString();
+    try{
+      final v=await FirebaseFirestore.instance.collection('videos').doc(id).get().timeout(const Duration(seconds:8));
+      if(!v.exists){
+        await kayit.reference.delete();
+        return null;
+      }
+      final x=v.data()??<String,dynamic>{};
+      final snapshot=<String,dynamic>{
+        'contentId':id,
+        'type':(x['type']??'text').toString(),
+        'mediaUrl':(x['mediaUrl']??x['videoUrl']??'').toString(),
+        'videoUrl':(x['videoUrl']??'').toString(),
+        'thumbnailUrl':(x['thumbnailUrl']??'').toString(),
+        'description':(x['description']??'').toString(),
+        'username':(x['username']??'ngelx').toString(),
+        'ownerId':(x['ownerId']??'').toString(),
+        'snapshotVersion':1,
+      };
+      unawaited(kayit.reference.set(snapshot,SetOptions(merge:true)).catchError((_){ }));
+      return {...k,...snapshot};
+    }catch(_){
+      return k;
+    }
+  }
+
+  Widget _kart(BuildContext context,QueryDocumentSnapshot<Map<String,dynamic>> kayit,Map<String,dynamic> veri){
+    final id=(veri['contentId']??kayit.id).toString();
+    final tur=(veri['type']??'text').toString();
+    final url=(veri['mediaUrl']??veri['videoUrl']??'').toString();
+    return GestureDetector(
+      onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>IcerikBaglantiPage(icerikId:id))),
+      onLongPress:()=>kayit.reference.delete(),
+      child:MedyaOnizleme(
+        tur:tur,
+        url:url,
+        thumbnailUrl:(veri['thumbnailUrl']??'').toString(),
+        yazi:(veri['description']??'').toString(),
+        arkaPlan:const Color(0xFFF0F1F4),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final uid=FirebaseAuth.instance.currentUser?.uid;
     return Theme(
-      data: ThemeData.light(),
-      child: Scaffold(
-        backgroundColor: Colors.white,
-        appBar: AppBar(title: const Text('Kaydedilenler', style: TextStyle(fontWeight: FontWeight.w900))),
-        body: uid == null
-            ? const Center(child: Text('Kaydedilenleri görmek için giriş yap.'))
-            : StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                stream: FirebaseFirestore.instance.collection('users').doc(uid).collection('saved').orderBy('savedAt', descending: true).limit(100).snapshots(),
-                builder: (_, s) {
-                  if (s.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator(color: mor));
-                  final docs = s.data?.docs ?? [];
-                  if (docs.isEmpty) return const Center(child: Text('Henüz kaydedilen içerik yok'));
-                  return GridView.builder(
-                    padding: const EdgeInsets.all(8),
-                    itemCount: docs.length,
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 3, childAspectRatio: .72, crossAxisSpacing: 6, mainAxisSpacing: 6),
-                    itemBuilder: (_, i) => FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-                      future: FirebaseFirestore.instance.collection('videos').doc((docs[i].data()['contentId'] ?? docs[i].id).toString()).get(),
-                      builder: (_, v) {
-                        if(v.connectionState==ConnectionState.done&&v.data?.exists==false){Future.microtask(()=>docs[i].reference.delete());return const SizedBox.shrink();}
-                        final veri = v.data?.data() ?? {};
-                        final tur = (veri['type'] ?? 'text').toString();
-                        final url = (veri['mediaUrl'] ?? veri['videoUrl'] ?? '').toString();
-                        return GestureDetector(
-                          onTap: () { final id=(docs[i].data()['contentId']??docs[i].id).toString(); Navigator.push(context,MaterialPageRoute(builder:(_)=>IcerikBaglantiPage(icerikId:id))); },
-                          onLongPress: () => docs[i].reference.delete(),
-                          child: MedyaOnizleme(tur: tur, url: url, thumbnailUrl: (veri['thumbnailUrl'] ?? '').toString(), yazi: (veri['description'] ?? '').toString(), arkaPlan: const Color(0xFFF0F1F4)),
+      data:ThemeData.light(),
+      child:Scaffold(
+        backgroundColor:Colors.white,
+        appBar:AppBar(title:const Text('Kaydedilenler',style:TextStyle(fontWeight:FontWeight.w900))),
+        body:uid==null
+          ?const Center(child:Text('Kaydedilenleri görmek için giriş yap.'))
+          :StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
+            stream:FirebaseFirestore.instance.collection('users').doc(uid).collection('saved').orderBy('savedAt',descending:true).limit(100).snapshots(),
+            builder:(_,s){
+              if(s.connectionState==ConnectionState.waiting&&!s.hasData)return const Center(child:CircularProgressIndicator(color:mor));
+              if(s.hasError)return const Center(child:Padding(
+                padding:EdgeInsets.all(24),
+                child:Text('Kaydedilenler yüklenemedi. Bağlantını kontrol edip tekrar dene.',textAlign:TextAlign.center,style:TextStyle(color:Colors.black54)),
+              ));
+              final docs=s.data?.docs??[];
+              if(docs.isEmpty)return const Center(child:Text('Henüz kaydedilen içerik yok'));
+              return GridView.builder(
+                padding:const EdgeInsets.all(8),
+                itemCount:docs.length,
+                gridDelegate:const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount:3,
+                  childAspectRatio:.72,
+                  crossAxisSpacing:6,
+                  mainAxisSpacing:6,
+                ),
+                itemBuilder:(context,i){
+                  final d=docs[i],v=d.data();
+                  if(v['snapshotVersion']==1)return _kart(context,d,v);
+                  final gelecek=_eskiKayitCache.putIfAbsent(d.id,()=>_eskiKaydiYukle(d));
+                  return FutureBuilder<Map<String,dynamic>?>(
+                    future:gelecek,
+                    builder:(_,snap){
+                      if(snap.connectionState==ConnectionState.waiting){
+                        return const DecoratedBox(
+                          decoration:BoxDecoration(color:Color(0xFFF0F1F4),borderRadius:BorderRadius.all(Radius.circular(13))),
+                          child:Center(child:CircularProgressIndicator(strokeWidth:2,color:mor)),
                         );
-                      },
-                    ),
+                      }
+                      final veri=snap.data;
+                      if(veri==null)return const SizedBox.shrink();
+                      return _kart(context,d,veri);
+                    },
                   );
                 },
-              ),
+              );
+            },
+          ),
       ),
     );
   }
