@@ -8637,7 +8637,10 @@ class KullaniciProfilPage extends StatelessWidget {
       backgroundColor:Colors.white,
       appBar: AppBar(
         title:Text(ziyaretciOnizleme?'Profil önizleme':'Profil',style:const TextStyle(fontWeight:FontWeight.w900)),
-        actions:[IconButton(tooltip:'Profili paylaş',onPressed:()=>profiliPaylas(context),icon:const Icon(Icons.share_outlined))],
+        actions:[
+          IconButton(tooltip:'Profilde ara',onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>ProfilAramaPage(uid:uid))),icon:const Icon(Icons.search_rounded)),
+          IconButton(tooltip:'Profili paylaş',onPressed:()=>profiliPaylas(context),icon:const Icon(Icons.share_outlined)),
+        ],
       ),
       body: FutureBuilder<List<DocumentSnapshot<Map<String, dynamic>>?>>(
         future: Future.wait([hedef, benim]),
@@ -9982,21 +9985,111 @@ class ProfilAramaPage extends StatefulWidget{
 }
 class _ProfilAramaPageState extends State<ProfilAramaPage>{
   String q='';
+
+  Future<({Map<String,dynamic> hedef,Map<String,dynamic> ben})> _izinVerisi()async{
+    final me=FirebaseAuth.instance.currentUser?.uid;
+    final hedefGelecek=FirebaseFirestore.instance.collection('users').doc(widget.uid).get();
+    final benGelecek=me==null?Future<DocumentSnapshot<Map<String,dynamic>>?>.value(null):FirebaseFirestore.instance.collection('users').doc(me).get();
+    final sonuc=await Future.wait([hedefGelecek,benGelecek]);
+    return (
+      hedef:(sonuc[0] as DocumentSnapshot<Map<String,dynamic>>).data()??<String,dynamic>{},
+      ben:(sonuc[1] as DocumentSnapshot<Map<String,dynamic>>?)?.data()??<String,dynamic>{},
+    );
+  }
+
+  bool _profilErisimi(Map<String,dynamic> hedef,Map<String,dynamic> ben){
+    final me=FirebaseAuth.instance.currentUser?.uid;
+    if(me==widget.uid)return true;
+    final arkadaslar=Set<String>.from(List<dynamic>.from(ben['friends']??const[]));
+    final gizli=hedef['privateAccount']==true;
+    final izin=(hedef['profileViewPermission']??'all').toString();
+    final beniTakipEdiyor=me!=null&&List<String>.from(hedef['followers']??const[]).contains(me);
+    final izinVar=izin=='all'||(izin=='followers'&&beniTakipEdiyor)||(izin=='friends'&&arkadaslar.contains(widget.uid));
+    return izinVar&&(!gizli||beniTakipEdiyor||arkadaslar.contains(widget.uid));
+  }
+
+  bool _icerikGorunur(Map<String,dynamic> v,Map<String,dynamic> ben){
+    final me=FirebaseAuth.instance.currentUser?.uid;
+    if(v['type']=='story')return false;
+    if(me==widget.uid)return true;
+    if(me!=null&&List<String>.from(v['hiddenFor']??const[]).contains(me))return false;
+    final privacy=(v['privacy']??'Herkes').toString();
+    if(privacy=='Yalnızca ben')return false;
+    if(privacy=='Arkadaşlar'){
+      final arkadaslar=List<String>.from(ben['friends']??const[]);
+      return arkadaslar.contains(widget.uid);
+    }
+    if(privacy=='Yakın arkadaşlar'){
+      return me!=null&&List<String>.from(v['visibleTo']??const[]).contains(me);
+    }
+    return true;
+  }
+
   @override Widget build(BuildContext context)=>Theme(
     data:ThemeData.light(),
     child:Scaffold(
       backgroundColor:Colors.white,
-      appBar:AppBar(title:TextField(autofocus:true,onChanged:(v)=>setState(()=>q=v.trim().toLowerCase()),decoration:const InputDecoration(hintText:'Profilde ara',prefixIcon:Icon(Icons.search)))),
-      body:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
-        stream:FirebaseFirestore.instance.collection('videos').where('ownerId',isEqualTo:widget.uid).limit(100).snapshots(),
-        builder:(_,s){
-          final docs=(s.data?.docs??[]).where((d){final v=d.data();return v['type']!='story'&&(q.isEmpty||(v['description']??'').toString().toLowerCase().contains(q));}).toList();
-          if(docs.isEmpty)return const Center(child:Text('Eşleşen paylaşım bulunamadı.',style:TextStyle(color:Colors.black54)));
-          return ListView.separated(
-            padding:const EdgeInsets.all(14),itemCount:docs.length,separatorBuilder:(_,__)=>const Divider(),
-            itemBuilder:(_,i){
-              final v=docs[i].data();
-              return ListTile(onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>IcerikBaglantiPage(icerikId:docs[i].id))),leading:const CircleAvatar(backgroundColor:Color(0xFFF1E9FF),child:Icon(Icons.grid_view,color:mor)),title:Text((v['description']??'Adsız paylaşım').toString(),maxLines:2,overflow:TextOverflow.ellipsis),trailing:const Icon(Icons.chevron_right));
+      appBar:AppBar(
+        title:TextField(
+          autofocus:true,
+          onChanged:(v)=>setState(()=>q=v.trim().toLowerCase()),
+          decoration:const InputDecoration(hintText:'Profilde ara',prefixIcon:Icon(Icons.search)),
+        ),
+      ),
+      body:FutureBuilder<({Map<String,dynamic> hedef,Map<String,dynamic> ben})>(
+        future:_izinVerisi(),
+        builder:(_,izinSnap){
+          if(izinSnap.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator(color:mor));
+          final izinVeri=izinSnap.data;
+          if(izinVeri==null||!_profilErisimi(izinVeri.hedef,izinVeri.ben)){
+            return const Center(child:Padding(
+              padding:EdgeInsets.all(28),
+              child:Column(mainAxisSize:MainAxisSize.min,children:[
+                Icon(Icons.lock_outline_rounded,color:mor,size:54),
+                SizedBox(height:12),
+                Text('Bu profilde arama yapılamıyor',style:TextStyle(fontSize:19,fontWeight:FontWeight.w900)),
+                SizedBox(height:6),
+                Text('Profil veya gönderi gizlilik ayarları aramayı sınırlandırıyor.',textAlign:TextAlign.center,style:TextStyle(color:Colors.black54)),
+              ]),
+            ));
+          }
+          return StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
+            stream:FirebaseFirestore.instance.collection('videos').where('ownerId',isEqualTo:widget.uid).limit(100).snapshots(),
+            builder:(_,s){
+              if(s.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator(color:mor));
+              final docs=(s.data?.docs??[]).where((d){
+                final v=d.data();
+                if(!_icerikGorunur(v,izinVeri.ben))return false;
+                if(q.isEmpty)return true;
+                final aranan='${v['description']??''} ${v['tags']??''} ${v['location']??''}'.toLowerCase();
+                return aranan.contains(q);
+              }).toList()
+                ..sort((a,b){
+                  final at=a.data()['createdAt'],bt=b.data()['createdAt'];
+                  final am=at is Timestamp?at.millisecondsSinceEpoch:0,bm=bt is Timestamp?bt.millisecondsSinceEpoch:0;
+                  return bm.compareTo(am);
+                });
+              if(docs.isEmpty)return Center(child:Text(q.isEmpty?'Bu profilde görünür paylaşım yok.':'Eşleşen paylaşım bulunamadı.',style:const TextStyle(color:Colors.black54)));
+              return ListView.separated(
+                padding:const EdgeInsets.all(14),itemCount:docs.length,separatorBuilder:(_,__)=>const Divider(),
+                itemBuilder:(_,i){
+                  final v=docs[i].data();
+                  final tur=(v['type']??'text').toString();
+                  return ListTile(
+                    onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>IcerikBaglantiPage(icerikId:docs[i].id))),
+                    leading:CircleAvatar(
+                      backgroundColor:const Color(0xFFF1E9FF),
+                      child:Icon(tur=='video'?Icons.play_arrow_rounded:tur=='photo'?Icons.image_outlined:Icons.notes_rounded,color:mor),
+                    ),
+                    title:Text((v['description']??'Adsız paylaşım').toString(),maxLines:2,overflow:TextOverflow.ellipsis),
+                    subtitle:Text([
+                      if((v['location']??'').toString().trim().isNotEmpty)(v['location']??'').toString(),
+                      if((v['tags']??'').toString().trim().isNotEmpty)(v['tags']??'').toString(),
+                    ].join(' • '),maxLines:1,overflow:TextOverflow.ellipsis),
+                    trailing:const Icon(Icons.chevron_right),
+                  );
+                },
+              );
             },
           );
         },
