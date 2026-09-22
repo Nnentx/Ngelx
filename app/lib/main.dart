@@ -7340,11 +7340,57 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
 class GrupBilgiPage extends StatefulWidget{final String chatId;const GrupBilgiPage({super.key,required this.chatId});@override State<GrupBilgiPage> createState()=>_GrupBilgiPageState();}
 class _GrupBilgiPageState extends State<GrupBilgiPage>{
   final Map<String,Future<DocumentSnapshot<Map<String,dynamic>>>> _uyeProfilCache={};
+  bool aramaBaslatiliyor=false;
   DocumentReference<Map<String,dynamic>> get ref=>FirebaseFirestore.instance.collection('chats').doc(widget.chatId);
   String? get ben=>FirebaseAuth.instance.currentUser?.uid;
   Future<DocumentSnapshot<Map<String,dynamic>>> _uyeGetir(String id)=>
       _uyeProfilCache.putIfAbsent(id,()=>FirebaseFirestore.instance.collection('users').doc(id).get());
   Future<void> sistemMesaji(String text)async{await ref.collection('messages').add({'senderId':'system','type':'system','text':text,'createdAt':FieldValue.serverTimestamp()});await ref.set({'lastMessage':text,'updatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));}
+  Future<void> grupAramasiBaslat(bool goruntulu,String grupAdi,String foto)async{
+    final me=ben;
+    if(me==null||aramaBaslatiliyor)return;
+    setState(()=>aramaBaslatiliyor=true);
+    final odaAdi='group_'+widget.chatId+'_'+DateTime.now().millisecondsSinceEpoch.toString();
+    try{
+      await ref.set({
+        'callStatus':'ringing',
+        'callRoomName':odaAdi,
+        'callStartedBy':me,
+        'callVideo':goruntulu,
+        'callTitle':grupAdi,
+        'callGroup':true,
+        'callParticipants':<String>[me],
+        'callCreatedAt':FieldValue.serverTimestamp(),
+      },SetOptions(merge:true));
+      await ref.collection('messages').doc('call_start_'+odaAdi).set({
+        'senderId':'system',
+        'type':'system',
+        'text':goruntulu?'Görüntülü arama başladı.':'Sesli arama başladı.',
+        'createdAt':FieldValue.serverTimestamp(),
+      },SetOptions(merge:true));
+      final d=await ref.get();
+      final uyeler=List<String>.from(d.data()?['members']??const[]);
+      for(final uye in uyeler){
+        if(uye==me)continue;
+        unawaited(uygulamaBildirimiGonder(
+          toUid:uye,fromUid:me,tur:'call',
+          metin:goruntulu?grupAdi+' grubunda görüntülü arama başlattı':grupAdi+' grubunda sesli arama başlattı',
+          belgeId:widget.chatId,
+        ).catchError((_){ }));
+      }
+      if(!mounted)return;
+      setState(()=>aramaBaslatiliyor=false);
+      await Navigator.push(context,MaterialPageRoute(builder:(_)=>NgelXAramaPage(
+        roomName:odaAdi,baslik:grupAdi,foto:foto,goruntulu:goruntulu,aramaRef:ref,
+      )));
+    }catch(_){
+      if(mounted){
+        setState(()=>aramaBaslatiliyor=false);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Arama başlatılamadı.')));
+      }
+    }
+  }
+
   Future<void> adiDuzenle(String mevcut)async{
     final c=TextEditingController(text:mevcut.length>16?mevcut.substring(0,16):mevcut);
     final yeni=await showDialog<String>(
@@ -7772,15 +7818,25 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
                     ]),
                   ),
                   const SizedBox(height:12),
-                  Text(ad,textAlign:TextAlign.center,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:ngelxPremiumInk,fontSize:24,fontWeight:FontWeight.w900,letterSpacing:-.3)),
+                  Row(mainAxisAlignment:MainAxisAlignment.center,children:[
+                    Flexible(child:Text(ad,textAlign:TextAlign.center,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:ngelxPremiumInk,fontSize:24,fontWeight:FontWeight.w900,letterSpacing:-.3))),
+                    if(yonetici)...[
+                      const SizedBox(width:4),
+                      InkWell(
+                        onTap:()=>adiDuzenle(ad),
+                        borderRadius:BorderRadius.circular(12),
+                        child:const Padding(padding:EdgeInsets.all(6),child:Icon(Icons.edit_rounded,color:ngelxPremiumPurple,size:18)),
+                      ),
+                    ],
+                  ]),
                   const SizedBox(height:3),
                   Text(uyeler.length.toString()+' üye',style:const TextStyle(color:ngelxPremiumMuted,fontSize:13,fontWeight:FontWeight.w700)),
                   if(yonetici)...[
                     const SizedBox(height:16),
                     Row(children:[
-                      Expanded(child:_grupKisayol(Icons.edit_rounded,'Ad',()=>adiDuzenle(ad))),
+                      Expanded(child:_grupKisayol(Icons.call_rounded,'Sesli ara',aramaBaslatiliyor?null:()=>grupAramasiBaslat(false,ad,foto))),
                       const SizedBox(width:7),
-                      Expanded(child:_grupKisayol(Icons.photo_camera_rounded,'Fotoğraf',fotografDuzenle)),
+                      Expanded(child:_grupKisayol(Icons.videocam_rounded,'Görüntülü',aramaBaslatiliyor?null:()=>grupAramasiBaslat(true,ad,foto))),
                       const SizedBox(width:7),
                       Expanded(child:_grupKisayol(Icons.person_add_alt_1_rounded,'Üye ekle',uyeler.length>=60?null:()=>uyeEkle(uyeler))),
                       const SizedBox(width:7),
@@ -7851,6 +7907,12 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
               NgelXPremiumCard(
                 padding:const EdgeInsets.symmetric(horizontal:8,vertical:7),
                 child:Column(children:[
+                  if(yonetici)...[
+                    _grupSatir(Icons.photo_camera_rounded,'Grup fotoğrafını değiştir','Kamera veya galeriden yeni görsel seç',fotografDuzenle),
+                    _grupAyirici(),
+                    _grupSatir(Icons.notes_rounded,'Grup açıklamasını düzenle','Grubun amacını ve bilgisini güncelle',()=>aciklamaDuzenle((v['groupDescription']??'').toString())),
+                    _grupAyirici(),
+                  ],
                   _grupSatir(Icons.groups_rounded,'Üyeleri yönet','Ara, rol ver veya gruptan çıkar',()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupUyeleriPage(chatId:widget.chatId)))),
                   _grupAyirici(),
                   _grupSatir(Icons.link_rounded,'Davet bağlantısı','Bağlantıyı paylaş veya yenile',()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupDavetPage(chatId:widget.chatId)))),
