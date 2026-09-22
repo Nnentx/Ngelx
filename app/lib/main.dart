@@ -5314,7 +5314,11 @@ class _GrupOlusturPageState extends State<GrupOlusturPage>{
         'lastMessage':'Grup oluşturuldu',
         'hiddenFor':<String>[],
         'maxMembers':60,
+        'groupDescription':'',
         'onlyAdminsCanEdit':true,
+        'onlyAdminsCanPost':false,
+        'newMembersSeeHistory':true,
+        'joinApproval':false,
       }).timeout(const Duration(seconds:12));
       // Sohbet ekranını, grup belgesi Firestore'a kesin olarak yazıldıktan sonra aç.
       // Böylece messages alt koleksiyonu için üyelik kuralı ilk açılışta yarış durumuna girmez.
@@ -6120,6 +6124,31 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
     }
   }
 
+  Future<void> aktifGrupAramasinaKatil(Map<String,dynamic> v)async{
+    final ben=uid;
+    final oda=(v['callRoomName']??'').toString();
+    if(ben==null||oda.isEmpty)return;
+    final durum=(v['callStatus']??'').toString();
+    if(durum!='ringing'&&durum!='active')return;
+    try{
+      await chatRef.set({
+        'callStatus':'active',
+        'callParticipants':FieldValue.arrayUnion([ben]),
+        'callAnsweredAt':FieldValue.serverTimestamp(),
+      },SetOptions(merge:true));
+      if(!mounted)return;
+      await Navigator.push(context,MaterialPageRoute(builder:(_)=>NgelXAramaPage(
+        roomName:oda,
+        baslik:(v['callTitle']??v['groupName']??widget.ad).toString(),
+        foto:(v['groupPhotoUrl']??widget.foto).toString(),
+        goruntulu:v['callVideo']==true,
+        aramaRef:chatRef,
+      )));
+    }catch(_){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Aktif aramaya katılınamadı.')));
+    }
+  }
+
   Future<void> aramaBaslat(bool goruntulu)async{
     final ben=uid;
     if(ben==null||aramaBaslatiliyor)return;
@@ -6329,6 +6358,38 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
               image:arkaPlanUrl.isEmpty?null:DecorationImage(image:CachedNetworkImageProvider(arkaPlanUrl),fit:BoxFit.cover,opacity:opaklik),
             ),
             child:Column(children:[
+              if(((tv['callStatus']??'').toString()=='ringing'||(tv['callStatus']??'').toString()=='active')&&(tv['callRoomName']??'').toString().isNotEmpty)
+                InkWell(
+                  onTap:()=>aktifGrupAramasinaKatil(tv),
+                  child:Container(
+                    margin:const EdgeInsets.fromLTRB(10,9,10,1),
+                    padding:const EdgeInsets.symmetric(horizontal:11,vertical:9),
+                    decoration:BoxDecoration(
+                      gradient:const LinearGradient(colors:[Color(0xFF211837),Color(0xFF342052)]),
+                      borderRadius:BorderRadius.circular(18),
+                      border:Border.all(color:Colors.white10),
+                      boxShadow:const [BoxShadow(color:Color(0x20000000),blurRadius:14,offset:Offset(0,5))],
+                    ),
+                    child:Row(children:[
+                      Container(
+                        width:38,height:38,
+                        decoration:const BoxDecoration(shape:BoxShape.circle,gradient:LinearGradient(colors:[Color(0xFF9A6AFF),Color(0xFF7048E8)])),
+                        child:Icon(tv['callVideo']==true?Icons.videocam_rounded:Icons.call_rounded,color:Colors.white,size:20),
+                      ),
+                      const SizedBox(width:10),
+                      Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+                        Text(tv['callVideo']==true?'Görüntülü grup araması':'Sesli grup araması',style:const TextStyle(color:Colors.white,fontSize:11.5,fontWeight:FontWeight.w900)),
+                        const SizedBox(height:2),
+                        const Text('Arama devam ediyor • Katılmak için dokun',style:TextStyle(color:Color(0xFFCFC2DC),fontSize:10.5,fontWeight:FontWeight.w600)),
+                      ])),
+                      Container(
+                        padding:const EdgeInsets.symmetric(horizontal:10,vertical:7),
+                        decoration:BoxDecoration(color:const Color(0xFF2FC879),borderRadius:BorderRadius.circular(14)),
+                        child:const Text('Katıl',style:TextStyle(color:Colors.white,fontSize:10,fontWeight:FontWeight.w900)),
+                      ),
+                    ]),
+                  ),
+                ),
               StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
                 stream:chatRef.collection('messages').where('pinned',isEqualTo:true).limit(1).snapshots(),
                 builder:(_,pinSnap){
@@ -6802,21 +6863,56 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
   }
 
   Future<void> bitir({bool geriDon=true})async{
-    if(bitiyor)return;bitiyor=true;
+    if(bitiyor)return;
+    bitiyor=true;
     try{
-      await widget.aramaRef.set({'callStatus':'ended','callEndedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
-      if(widget.roomName.startsWith('group_')){
-        await widget.aramaRef.collection('messages').doc('call_end_'+widget.roomName).set({
-          'senderId':'system',
-          'type':'system',
-          'text':'Arama sona erdi.',
-          'createdAt':FieldValue.serverTimestamp(),
+      final d=await widget.aramaRef.get();
+      final data=d.data()??<String,dynamic>{};
+      final me=FirebaseAuth.instance.currentUser?.uid;
+      final grup=widget.roomName.startsWith('group_');
+      if(grup&&me!=null){
+        final participants=List<String>.from(data['callParticipants']??const[]);
+        final baslatan=(data['callStartedBy']??'').toString();
+        final kalan=participants.where((x)=>x!=me).toList();
+        final aramayiBitir=baslatan==me||kalan.isEmpty;
+        if(aramayiBitir){
+          await widget.aramaRef.set({
+            'callStatus':'ended',
+            'callParticipants':FieldValue.arrayRemove([me]),
+            'callEndedAt':FieldValue.serverTimestamp(),
+          },SetOptions(merge:true));
+          await widget.aramaRef.collection('messages').doc('call_end_'+widget.roomName).set({
+            'senderId':'system',
+            'type':'system',
+            'text':'Arama sona erdi.',
+            'createdAt':FieldValue.serverTimestamp(),
+          },SetOptions(merge:true));
+        }else{
+          await widget.aramaRef.set({
+            'callStatus':'active',
+            'callParticipants':FieldValue.arrayRemove([me]),
+          },SetOptions(merge:true));
+          final ad=FirebaseAuth.instance.currentUser?.displayName?.trim();
+          await widget.aramaRef.collection('messages').doc('call_leave_'+widget.roomName+'_'+me).set({
+            'senderId':'system',
+            'type':'system',
+            'text':(ad!=null&&ad.isNotEmpty?ad:'Bir üye')+' aramadan ayrıldı.',
+            'createdAt':FieldValue.serverTimestamp(),
+          },SetOptions(merge:true));
+        }
+      }else{
+        await widget.aramaRef.set({'callStatus':'ended','callEndedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
+      }
+
+      final mesajId=(data['callMessageId']??'').toString();
+      if(mesajId.isNotEmpty&&!grup){
+        await widget.aramaRef.collection('messages').doc(mesajId).set({
+          'callStatus':'ended',
+          'callEndedAt':FieldValue.serverTimestamp(),
         },SetOptions(merge:true));
       }
-      final d=await widget.aramaRef.get();
-      final mesajId=(d.data()?['callMessageId']??'').toString();
-      if(mesajId.isNotEmpty)await widget.aramaRef.collection('messages').doc(mesajId).set({'callStatus':'ended','callEndedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
     }catch(_){}
+
     final r=oda;oda=null;
     if(r!=null){
       r.removeListener(_odaDegisti);
