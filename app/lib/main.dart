@@ -8756,7 +8756,37 @@ class KullaniciProfilPage extends StatelessWidget {
                     },
                   )),
                   const SizedBox(width:10),
-                  Expanded(child:OutlinedButton.icon(onPressed:()async{if(me==null)return;final ids=[me,uid]..sort();final id=ids.join('_');Navigator.push(context,MaterialPageRoute(builder:(_)=>SohbetPage(chatId:id,digerUid:uid,ad:(v['displayName']??v['username']??'NgelX').toString(),foto:foto)));},icon:const Icon(Icons.message_outlined),label:const Text('Mesaj'))),
+                  Expanded(child:OutlinedButton.icon(
+                    onPressed:()async{
+                      if(me==null)return;
+                      final ids=[me,uid]..sort();
+                      final id=ids.join('_');
+                      try{
+                        final chat=await FirebaseFirestore.instance.collection('chats').doc(id).get().timeout(const Duration(seconds:8));
+                        final sohbet=chat.data()??<String,dynamic>{};
+                        final hedefArkadaslar=List<String>.from(v['friends']??const[]);
+                        final hedefTakip=List<String>.from(v['following']??const[]);
+                        final kabulEdildi=sohbet['requestAccepted_$me']==true||sohbet['requestAccepted_$uid']==true;
+                        final izin=(v['messagePermission']??(v['friendsOnlyMessages']!=false?'friends':'all')).toString();
+                        String? engel;
+                        if(!kabulEdildi){
+                          if(izin=='none')engel='Bu kullanıcı yeni özel mesaj kabul etmiyor.';
+                          else if(izin=='friends'&&!hedefArkadaslar.contains(me))engel='Bu kullanıcı yalnızca arkadaşlarından mesaj kabul ediyor.';
+                          else if(izin=='following'&&!hedefTakip.contains(me))engel='Bu kullanıcı yalnızca takip ettiği hesaplardan mesaj kabul ediyor.';
+                        }
+                        if(engel!=null){
+                          if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(engel)));
+                          return;
+                        }
+                      }catch(_){
+                        if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Mesaj izni kontrol edilemedi. İnternet bağlantını kontrol et.')));
+                        return;
+                      }
+                      if(context.mounted)Navigator.push(context,MaterialPageRoute(builder:(_)=>SohbetPage(chatId:id,digerUid:uid,ad:(v['displayName']??v['username']??'NgelX').toString(),foto:foto)));
+                    },
+                    icon:const Icon(Icons.message_outlined),
+                    label:const Text('Mesaj'),
+                  )),
                 ]),
                 const SizedBox(height:10),
                 StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
