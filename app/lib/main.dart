@@ -714,7 +714,7 @@ class _GirisPageState extends State<GirisPage> {
     } on TimeoutException {
       if(!mounted)return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Giriş işlemi zaman aşımına uğradı. İnternet bağlantını kontrol edip tekrar dene.')));
-on FirebaseAuthException catch (e) {
+    } on FirebaseAuthException catch (e) {
       if (!mounted) return;
       var mesaj='Giriş yapılamadı: ${e.message ?? e.code}';
       if(e.code=='invalid-credential'||e.code=='wrong-password'||e.code=='user-not-found'){
