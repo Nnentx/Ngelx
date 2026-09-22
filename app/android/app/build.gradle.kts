@@ -59,6 +59,11 @@ android {
     }
 
     buildTypes {
+        debug {
+            // V54 yan yana test paketi: telefondaki mevcut Ngel X silinmeden kurulur.
+            applicationIdSuffix = ".v54test"
+            versionNameSuffix = "-test"
+        }
         release {
             signingConfig = if (keystorePropertiesFile.exists()) {
                 signingConfigs.getByName("ngelxRelease")
