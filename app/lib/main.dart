@@ -6192,11 +6192,14 @@ class _GrupOlusturPageState extends State<GrupOlusturPage>{
       final ref=FirebaseFirestore.instance.collection('chats').doc(_olusturulanGrupId);
       final dizinRef=FirebaseFirestore.instance.collection('groups').doc(ref.id);
       final uyeler=<String>[u.uid,...secilen];
-      final batch=FirebaseFirestore.instance.batch();
-      batch.set(ref,{
+
+      // Önce gerçek sohbet belgesini oluştur. Keşfet dizini ayrı tutulur;
+      // dizin yazımı başarısız olursa grubun kendisi kaybolmamalı.
+      await ref.set({
         'isGroup':true,
         'groupName':grupAdi,
         'groupPhotoUrl':fotoUrl,
+        'groupDescription':'',
         'members':uyeler,
         'admins':[u.uid],
         'moderators':<String>[],
@@ -6207,31 +6210,40 @@ class _GrupOlusturPageState extends State<GrupOlusturPage>{
         'hiddenFor':<String>[],
         'maxMembers':60,
         'onlyAdminsCanEdit':true,
+        'onlyAdminsCanPost':false,
         'newMembersSeeHistory':true,
         'joinApproval':false,
-      });
-      batch.set(dizinRef,{
-        'chatId':ref.id,
-        'name':grupAdi,
-        'description':'',
-        'groupPhotoUrl':fotoUrl,
-        'members':uyeler,
-        'memberCount':uyeler.length,
-        'ownerId':u.uid,
         'discoverable':true,
-        'joinApproval':false,
-        'createdAt':FieldValue.serverTimestamp(),
-        'updatedAt':FieldValue.serverTimestamp(),
-      });
-      await batch.commit().timeout(const Duration(seconds:12));
+      }).timeout(const Duration(seconds:12));
+
+      // Keşfet/Trend dizinini ikinci adımda yaz. Eski Firestore kuralı olan
+      // test ortamlarında bu yazı reddedilse bile grup sohbeti oluşturulmuş olur.
+      try{
+        await dizinRef.set({
+          'chatId':ref.id,
+          'name':grupAdi,
+          'description':'',
+          'groupPhotoUrl':fotoUrl,
+          'members':uyeler,
+          'memberCount':uyeler.length,
+          'ownerId':u.uid,
+          'discoverable':true,
+          'joinApproval':false,
+          'createdAt':FieldValue.serverTimestamp(),
+          'updatedAt':FieldValue.serverTimestamp(),
+        }).timeout(const Duration(seconds:8));
+      }catch(_){
+        // Grup ekranı açılınca _grupDizininiEsitle tekrar dener.
+      }
       // Sohbet ekranını, grup belgesi Firestore'a kesin olarak yazıldıktan sonra aç.
       // Böylece messages alt koleksiyonu için üyelik kuralı ilk açılışta yarış durumuna girmez.
       if(mounted){
         if(fotoAtlandi)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Medya hizmeti kullanılamıyor. Grup fotoğrafsız oluşturuldu.')));
         Navigator.pushReplacement(context,MaterialPageRoute(builder:(_)=>GrupSohbetPage(chatId:ref.id,ad:grupAdi,foto:fotoUrl)));
       }
-    }catch(_){
-      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Grup oluşturulamadı. Lütfen tekrar dene.')));
+    }catch(e){
+      _olusturulanGrupId=null;
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Grup oluşturulamadı: ${ngelxKisaHata(e)}')));
     }finally{
       if(mounted)setState(()=>kaydediliyor=false);
     }
