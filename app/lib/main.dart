@@ -1508,6 +1508,11 @@ class _VideoAkisiState extends State<VideoAkisi> {
                   'username':(item['username']??'ngelx').toString(),
                   'ownerId':(item['ownerId']??'').toString(),
                   'allowDownload':(item['allowDownload']??true).toString(),
+                  'cropRatio':(item['cropRatio']??'Orijinal').toString(),
+                  'filter':(item['filter']??'Yok').toString(),
+                  'effect':(item['effect']??'Yok').toString(),
+                  'overlayText':(item['overlayText']??'').toString(),
+                  'sticker':(item['sticker']??'').toString(),
                 };
                 return GorselYaziKarti(
                   veri: kartVeri,
@@ -1590,7 +1595,7 @@ class _AramaPageState extends State<AramaPage> {
                   if (kullanicilar.isNotEmpty) const Padding(padding: EdgeInsets.fromLTRB(18, 20, 18, 8), child: Text('Kullanıcılar', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: mavi))),
                   ...kullanicilar.map((d) { final v=d.data(); final foto=(v['photoUrl'] ?? '').toString(); return ListTile(onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => KullaniciProfilPage(uid: d.id))), leading: CircleAvatar(backgroundImage: foto.isEmpty ? null : CachedNetworkImageProvider(foto), child: foto.isEmpty ? const Text('N') : null), title: Text((v['displayName'] ?? v['username'] ?? 'NgelX').toString()), subtitle: Text('@${v['username'] ?? 'ngelx'}'), trailing: const Icon(Icons.chevron_right)); }),
                   if (icerikler.isNotEmpty) const Padding(padding: EdgeInsets.fromLTRB(18, 20, 18, 8), child: Text('Paylaşımlar', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: mor))),
-                  ...icerikler.map((d) { final v=d.data(); final tur=(v['type'] ?? 'video').toString(); final item=<String,String>{'id':d.id,'type':tur,'videoUrl':(v['videoUrl']??'').toString(),'mediaUrl':(v['mediaUrl']??'').toString(),'audioUrl':(v['audioUrl']??'').toString(),'description':(v['description']??'').toString(),'username':(v['username']??'ngelx').toString(),'ownerId':(v['ownerId']??'').toString(),'allowDownload':(v['allowDownload']??true).toString()}; return ListTile(onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => Scaffold(body: SafeArea(child: tur=='video' ? VideoKarti(adres:item['videoUrl']!,videoId:item['id']!,kullaniciAdi:item['username']!,ownerId:item['ownerId']!,indirilebilir:item['allowDownload']!='false',aktif:true) : GorselYaziKarti(veri:item,aktif:true))))), leading: Icon(tur == 'video' ? Icons.videocam : tur == 'photo' ? Icons.photo : Icons.text_fields, color: mor), title: Text((v['description'] ?? 'NgelX paylaşımı').toString(), maxLines: 2, overflow: TextOverflow.ellipsis), subtitle: Text('@${v['username'] ?? 'ngelx'}')); }),
+                  ...icerikler.map((d) { final v=d.data(); final tur=(v['type'] ?? 'video').toString(); final item=<String,String>{'id':d.id,'type':tur,'videoUrl':(v['videoUrl']??'').toString(),'mediaUrl':(v['mediaUrl']??'').toString(),'audioUrl':(v['audioUrl']??'').toString(),'description':(v['description']??'').toString(),'username':(v['username']??'ngelx').toString(),'ownerId':(v['ownerId']??'').toString(),'allowDownload':(v['allowDownload']??true).toString(),'cropRatio':(v['cropRatio']??'Orijinal').toString(),'filter':(v['filter']??'Yok').toString(),'effect':(v['effect']??'Yok').toString(),'overlayText':(v['overlayText']??'').toString(),'sticker':(v['sticker']??'').toString()}; return ListTile(onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => Scaffold(body: SafeArea(child: tur=='video' ? VideoKarti(adres:item['videoUrl']!,videoId:item['id']!,kullaniciAdi:item['username']!,ownerId:item['ownerId']!,indirilebilir:item['allowDownload']!='false',aktif:true) : GorselYaziKarti(veri:item,aktif:true))))), leading: Icon(tur == 'video' ? Icons.videocam : tur == 'photo' ? Icons.photo : Icons.text_fields, color: mor), title: Text((v['description'] ?? 'NgelX paylaşımı').toString(), maxLines: 2, overflow: TextOverflow.ellipsis), subtitle: Text('@${v['username'] ?? 'ngelx'}')); }),
                 ]);
               },
             ),
@@ -2257,10 +2262,28 @@ class _GorselYaziKartiState extends State<GorselYaziKarti> {
     super.dispose();
   }
 
+  Widget _yayindakiFiltreyiUygula(Widget child){
+    Widget sonuc=child;
+    final filtre=widget.veri['filter']??'Yok';
+    final efekt=widget.veri['effect']??'Yok';
+    if(filtre=='Sıcak')sonuc=ColorFiltered(colorFilter:const ColorFilter.mode(Color(0x22FF8A00),BlendMode.softLight),child:sonuc);
+    if(filtre=='Soğuk')sonuc=ColorFiltered(colorFilter:const ColorFilter.mode(Color(0x222C7BFF),BlendMode.softLight),child:sonuc);
+    if(filtre=='Siyah-beyaz')sonuc=ColorFiltered(colorFilter:const ColorFilter.matrix(<double>[
+      .2126,.7152,.0722,0,0,.2126,.7152,.0722,0,0,.2126,.7152,.0722,0,0,0,0,0,1,0,
+    ]),child:sonuc);
+    if(efekt=='Parlak')sonuc=ColorFiltered(colorFilter:const ColorFilter.mode(Color(0x22FFFFFF),BlendMode.screen),child:sonuc);
+    if(efekt=='Sinema')sonuc=ColorFiltered(colorFilter:const ColorFilter.mode(Color(0x221A0E3D),BlendMode.overlay),child:sonuc);
+    return sonuc;
+  }
+
   @override
   Widget build(BuildContext context) {
     final foto = widget.veri['mediaUrl'] ?? '';
     final yazi = widget.veri['description'] ?? '';
+    final oranAdi=widget.veri['cropRatio']??'Orijinal';
+    final oran=oranAdi=='1:1'?1.0:oranAdi=='4:5'?4/5:oranAdi=='16:9'?16/9:null;
+    final bindirme=(widget.veri['overlayText']??'').trim();
+    final cikartma=(widget.veri['sticker']??'').trim();
     return GestureDetector(
       onLongPress: uzunBasmaMenusu,
       onDoubleTap: ciftTikBegen,
@@ -2270,10 +2293,21 @@ class _GorselYaziKartiState extends State<GorselYaziKarti> {
         fit: StackFit.expand,
         children: [
           if (foto.isNotEmpty)
-            CachedNetworkImage(
-              imageUrl: foto,
-              fit: BoxFit.contain,
-              errorWidget: (_, __, ___) => ngelxMedyaHataGorunumu(foto),
+            _yayindakiFiltreyiUygula(
+              oran==null
+                ? CachedNetworkImage(
+                    imageUrl:foto,
+                    fit:BoxFit.contain,
+                    errorWidget:(_,__,___)=>ngelxMedyaHataGorunumu(foto),
+                  )
+                : Center(child:AspectRatio(
+                    aspectRatio:oran,
+                    child:CachedNetworkImage(
+                      imageUrl:foto,
+                      fit:BoxFit.cover,
+                      errorWidget:(_,__,___)=>ngelxMedyaHataGorunumu(foto),
+                    ),
+                  )),
             )
           else
             Container(
@@ -2289,6 +2323,13 @@ class _GorselYaziKartiState extends State<GorselYaziKarti> {
               gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.black54, Colors.transparent, Colors.black87]),
             ),
           ),
+          if(bindirme.isNotEmpty)
+            Center(child:Padding(
+              padding:const EdgeInsets.all(22),
+              child:Text(bindirme,textAlign:TextAlign.center,style:const TextStyle(color:Colors.white,fontSize:26,fontWeight:FontWeight.w900,shadows:[Shadow(color:Colors.black,blurRadius:8)])),
+            )),
+          if(cikartma.isNotEmpty)
+            Positioned(right:24,bottom:150,child:Text(cikartma,style:const TextStyle(fontSize:48))),
           if (kalpAnimasyonu)
             const Center(child: KalpPatlama()),
           Positioned(
@@ -3892,6 +3933,8 @@ class _KesfetPageState extends State<KesfetPage> {
                           'mediaUrl': url, 'audioUrl': (v['audioUrl'] ?? '').toString(),
                           'description': (v['description'] ?? '').toString(), 'username': (v['username'] ?? 'ngelx').toString(),
                           'ownerId': (v['ownerId'] ?? '').toString(), 'allowDownload': (v['allowDownload'] ?? true).toString(),
+                          'cropRatio':(v['cropRatio']??'Orijinal').toString(),'filter':(v['filter']??'Yok').toString(),
+                          'effect':(v['effect']??'Yok').toString(),'overlayText':(v['overlayText']??'').toString(),'sticker':(v['sticker']??'').toString(),
                         };
                         Navigator.push(context, MaterialPageRoute(builder: (_) => Scaffold(body: SafeArea(child: tur == 'video' ? VideoKarti(adres: item['videoUrl']!, videoId: item['id']!, kullaniciAdi: item['username']!, ownerId: item['ownerId']!, indirilebilir: item['allowDownload'] != 'false', aktif: true) : GorselYaziKarti(veri: item, aktif: true)))));
                       },
@@ -9250,6 +9293,11 @@ class KullaniciProfilPage extends StatelessWidget {
                                 'username':(v['username']??'ngelx').toString(),
                                 'ownerId':(v['ownerId']??'').toString(),
                                 'allowDownload':(v['allowDownload']??true).toString(),
+                                'cropRatio':(v['cropRatio']??'Orijinal').toString(),
+                                'filter':(v['filter']??'Yok').toString(),
+                                'effect':(v['effect']??'Yok').toString(),
+                                'overlayText':(v['overlayText']??'').toString(),
+                                'sticker':(v['sticker']??'').toString(),
                               };
                             }).toList(),
                             baslangic:i,
@@ -11257,7 +11305,7 @@ class _ProfilPageState extends State<ProfilPage> {
     );
   }
 
-  Map<String,String> icerikHaritasi(QueryDocumentSnapshot<Map<String,dynamic>> d){final v=d.data();return {'id':d.id,'type':(v['type']??'video').toString(),'videoUrl':(v['videoUrl']??'').toString(),'mediaUrl':(v['mediaUrl']??v['videoUrl']??'').toString(),'audioUrl':(v['audioUrl']??'').toString(),'description':(v['description']??'').toString(),'username':(v['username']??'ngelx').toString(),'ownerId':(v['ownerId']??'').toString(),'allowDownload':(v['allowDownload']??true).toString()};}
+  Map<String,String> icerikHaritasi(QueryDocumentSnapshot<Map<String,dynamic>> d){final v=d.data();return {'id':d.id,'type':(v['type']??'video').toString(),'videoUrl':(v['videoUrl']??'').toString(),'mediaUrl':(v['mediaUrl']??v['videoUrl']??'').toString(),'audioUrl':(v['audioUrl']??'').toString(),'description':(v['description']??'').toString(),'username':(v['username']??'ngelx').toString(),'ownerId':(v['ownerId']??'').toString(),'allowDownload':(v['allowDownload']??true).toString(),'cropRatio':(v['cropRatio']??'Orijinal').toString(),'filter':(v['filter']??'Yok').toString(),'effect':(v['effect']??'Yok').toString(),'overlayText':(v['overlayText']??'').toString(),'sticker':(v['sticker']??'').toString()};}
 
   void icerigiAc(QueryDocumentSnapshot<Map<String,dynamic>> d,List<QueryDocumentSnapshot<Map<String,dynamic>>> liste){
     final icerikler=liste.map(icerikHaritasi).toList();
