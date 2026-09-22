@@ -393,9 +393,15 @@ Future<void> girisKaydiEkle(User user) async {
     final bilgi=await DeviceInfoPlugin().androidInfo;
     final cihaz='${bilgi.manufacturer} ${bilgi.model}'.trim();
     final deviceId=await cihazKurulumKimligi();
-    final onceki=await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
-    final oncekiCihaz=(onceki.data()?['lastLoginDevice']??'').toString();
-    await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+    final kullaniciRef=FirebaseFirestore.instance.collection('users').doc(user.uid);
+    final onceki=await kullaniciRef.get();
+    final oncekiVeri=onceki.data()??<String,dynamic>{};
+    final gecmis=List<dynamic>.from(oncekiVeri['loginHistory']??const[]);
+    final bilinenKurulum=gecmis.whereType<Map>().any((x)=>(x['deviceId']??'').toString()==deviceId);
+    final yeniKurulum=gecmis.isNotEmpty&&!bilinenKurulum;
+    final platform='Android ${bilgi.version.release}';
+
+    await kullaniciRef.set({
       'lastLoginAt':FieldValue.serverTimestamp(),
       'lastLoginDevice':cihaz,
       'lastLoginDeviceId':deviceId,
@@ -403,12 +409,24 @@ Future<void> girisKaydiEkle(User user) async {
       'loginHistory':FieldValue.arrayUnion([{
         'deviceId':deviceId,
         'device':cihaz,
-        'platform':'Android ${bilgi.version.release}',
+        'platform':platform,
         'at':DateTime.now().toUtc().toIso8601String(),
       }]),
     },SetOptions(merge:true));
-    if(oncekiCihaz.isNotEmpty&&oncekiCihaz!=cihaz&&(onceki.data()?['notificationsEnabled']!=false)){
-      await FirebaseFirestore.instance.collection('notifications').add({'toUid':user.uid,'type':'security','text':'Yeni cihazdan giriş yapıldı: $cihaz','device':cihaz,'read':false,'createdAt':FieldValue.serverTimestamp()});
+
+    if(yeniKurulum&&oncekiVeri['notificationsEnabled']!=false){
+      await FirebaseFirestore.instance.collection('notifications').add({
+        'toUid':user.uid,
+        'fromUid':user.uid,
+        'type':'security',
+        'securityType':'new_device',
+        'text':'Yeni bir cihaz/kurulum üzerinden giriş yapıldı: $cihaz',
+        'device':cihaz,
+        'deviceId':deviceId,
+        'platform':platform,
+        'read':false,
+        'createdAt':FieldValue.serverTimestamp(),
+      });
     }
   } catch (_) {}
 }
@@ -9190,7 +9208,7 @@ class AyarlarPage extends StatelessWidget {
       _ayar(context,Icons.auto_stories_outlined,'Hikâye gizliliği','Görüntüleme ve ekran görüntüsü izinleri'),
       _ayar(context,Icons.notifications_outlined,'Bildirimler','Aktivite ve mesaj bildirimleri'),
       ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:10,vertical:7),leading:const Icon(Icons.security_outlined,color:mor),title:const Text('Hesap güvenliği',style:TextStyle(fontWeight:FontWeight.bold,color:Colors.black87)),subtitle:const Text('Hesabı dondur, silme talebi oluştur',style:TextStyle(color:Colors.black54)),trailing:const Icon(Icons.chevron_right,color:Colors.black87),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const HesapGuvenligiPage()))),
-      ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:10,vertical:7),leading:const Icon(Icons.devices_outlined,color:mor),title:const Text('Giriş yapılan cihazlar',style:TextStyle(fontWeight:FontWeight.bold,color:Colors.black87)),subtitle:const Text('Son girişleri ve cihaz bilgilerini gör',style:TextStyle(color:Colors.black54)),trailing:const Icon(Icons.chevron_right,color:Colors.black87),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const GirisGecmisiPage()))),
+      ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:10,vertical:7),leading:const Icon(Icons.devices_outlined,color:mor),title:const Text('Hesap cihazları',style:TextStyle(fontWeight:FontWeight.bold,color:Colors.black87)),subtitle:const Text('Giriş yaptığın cihazları gör ve uzaktan çıkış yap',style:TextStyle(color:Colors.black54)),trailing:const Icon(Icons.chevron_right,color:Colors.black87),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const GirisGecmisiPage()))),
       ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:10,vertical:7),leading:const Icon(Icons.support_agent,color:mor),title:const Text('Destek ve hata bildir',style:TextStyle(fontWeight:FontWeight.bold,color:Colors.black87)),subtitle:const Text('Açıklama ve ekran görüntüsü gönder',style:TextStyle(color:Colors.black54)),trailing:const Icon(Icons.chevron_right,color:Colors.black87),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const DestekPage()))),
       _ayar(context,Icons.download_outlined,'İndirme izinleri','Varsayılan paylaşım indirme ayarı'),
     ],
@@ -9326,6 +9344,7 @@ class _HesapGuvenligiPageState extends State<HesapGuvenligiPage>{
   @override Widget build(BuildContext context)=>Theme(data:ThemeData.light().copyWith(scaffoldBackgroundColor:Colors.white,appBarTheme:const AppBarTheme(backgroundColor:Colors.white,foregroundColor:Colors.black,elevation:0)),child:Scaffold(appBar:AppBar(title:const Text('Hesap güvenliği')),body:SafeArea(child:ListView(padding:const EdgeInsets.all(18),children:[
     const ListTile(leading:Icon(Icons.verified_user_outlined,color:Colors.green),title:Text('E-posta doğrulaması'),subtitle:Text('Hesabın doğrulanmış e-posta ile korunur.')),
     ListTile(leading:const Icon(Icons.health_and_safety_outlined,color:mor),title:const Text('Hesap kurtarma seçenekleri'),subtitle:const Text('Kurtarma e-postası, telefon ve şifre yenileme'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const HesapKurtarmaPage()))),
+    ListTile(leading:const Icon(Icons.gpp_maybe_outlined,color:Colors.orange),title:const Text('Şüpheli giriş uyarıları'),subtitle:const Text('Yeni cihaz ve güvenlik girişlerini incele'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const GuvenlikUyarilariPage()))),
     const Divider(),
     ListTile(enabled:!yukleniyor,leading:const Icon(Icons.pause_circle_outline,color:Colors.orange),title:const Text('Hesabı dondur'),subtitle:const Text('Geri dönene kadar profilini geçici olarak gizle'),onTap:dondur),
     ListTile(enabled:!yukleniyor,leading:const Icon(Icons.delete_forever_outlined,color:Colors.red),title:const Text('Hesap silme talebi',style:TextStyle(color:Colors.red)),subtitle:const Text('30 günlük geri alma süresiyle kapat'),onTap:silmeTalebi),
@@ -9410,6 +9429,79 @@ class _GirisGecmisiPageState extends State<GirisGecmisiPage>{
             );
           },
         ),
+      ),
+    );
+  }
+}
+
+
+class GuvenlikUyarilariPage extends StatelessWidget{
+  const GuvenlikUyarilariPage({super.key});
+
+  Future<void> tumunuOkunduYap()async{
+    final uid=FirebaseAuth.instance.currentUser?.uid;
+    if(uid==null)return;
+    final q=await FirebaseFirestore.instance.collection('notifications').where('toUid',isEqualTo:uid).limit(100).get();
+    final hedef=q.docs.where((d)=>d.data()['type']=='security'&&d.data()['read']!=true).toList();
+    if(hedef.isEmpty)return;
+    final batch=FirebaseFirestore.instance.batch();
+    for(final d in hedef)batch.update(d.reference,{'read':true});
+    await batch.commit();
+  }
+
+  @override Widget build(BuildContext context){
+    final uid=FirebaseAuth.instance.currentUser?.uid;
+    return Theme(
+      data:ThemeData.light().copyWith(scaffoldBackgroundColor:Colors.white,appBarTheme:const AppBarTheme(backgroundColor:Colors.white,foregroundColor:Colors.black,elevation:0)),
+      child:Scaffold(
+        backgroundColor:Colors.white,
+        appBar:AppBar(
+          title:const Text('Şüpheli giriş uyarıları',style:TextStyle(fontWeight:FontWeight.w900)),
+          actions:[IconButton(tooltip:'Tümünü okundu yap',onPressed:tumunuOkunduYap,icon:const Icon(Icons.done_all_rounded))],
+        ),
+        body:uid==null
+          ?const Center(child:Text('Oturum bulunamadı.'))
+          :StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
+            stream:FirebaseFirestore.instance.collection('notifications').where('toUid',isEqualTo:uid).limit(100).snapshots(),
+            builder:(_,s){
+              if(s.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator(color:mor));
+              final docs=(s.data?.docs??[]).where((d)=>d.data()['type']=='security').toList()
+                ..sort((a,b){
+                  final at=a.data()['createdAt'],bt=b.data()['createdAt'];
+                  final am=at is Timestamp?at.millisecondsSinceEpoch:0,bm=bt is Timestamp?bt.millisecondsSinceEpoch:0;
+                  return bm.compareTo(am);
+                });
+              if(docs.isEmpty)return const Center(child:Padding(
+                padding:EdgeInsets.all(28),
+                child:Column(mainAxisSize:MainAxisSize.min,children:[
+                  Icon(Icons.verified_user_rounded,color:Colors.green,size:58),
+                  SizedBox(height:12),
+                  Text('Şüpheli giriş görünmüyor',style:TextStyle(fontSize:19,fontWeight:FontWeight.w900)),
+                  SizedBox(height:6),
+                  Text('Yeni bir cihaz veya kurulum algılanırsa burada gösterilecek.',textAlign:TextAlign.center,style:TextStyle(color:Colors.black54)),
+                ]),
+              ));
+              return ListView.separated(
+                padding:const EdgeInsets.all(14),
+                itemCount:docs.length,
+                separatorBuilder:(_,__)=>const Divider(height:1),
+                itemBuilder:(_,i){
+                  final d=docs[i],v=d.data();
+                  final cihaz=(v['device']??'Bilinmeyen cihaz').toString();
+                  final platform=(v['platform']??'Android').toString();
+                  final tarih=v['createdAt'] is Timestamp?(v['createdAt'] as Timestamp).toDate().toLocal():null;
+                  final tarihYazi=tarih==null?'':'${tarih.day.toString().padLeft(2,'0')}.${tarih.month.toString().padLeft(2,'0')}.${tarih.year}  ${tarih.hour.toString().padLeft(2,'0')}:${tarih.minute.toString().padLeft(2,'0')}';
+                  return ListTile(
+                    onTap:()async{if(v['read']!=true)await d.reference.update({'read':true});},
+                    leading:CircleAvatar(backgroundColor:v['read']==true?const Color(0xFFF1F2F4):const Color(0xFFFFE8D6),child:Icon(Icons.phonelink_lock_rounded,color:v['read']==true?Colors.black54:Colors.orange)),
+                    title:Text((v['text']??'Yeni cihaz girişi algılandı').toString(),style:TextStyle(fontWeight:v['read']==true?FontWeight.w600:FontWeight.w900)),
+                    subtitle:Text('$cihaz • $platform'+(tarihYazi.isEmpty?'':'\n$tarihYazi')),
+                    trailing:v['read']==true?null:const Badge(label:Text('Yeni')),
+                  );
+                },
+              );
+            },
+          ),
       ),
     );
   }
