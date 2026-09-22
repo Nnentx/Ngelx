@@ -7392,7 +7392,9 @@ class _SohbetPageState extends State<SohbetPage> {
   final mesaj=TextEditingController(),liste=ScrollController();
   final List<Map<String,String>> mentionOnerileri=[];
   late final Stream<DocumentSnapshot<Map<String,dynamic>>> _chatAkisi;
-  late final Stream<QuerySnapshot<Map<String,dynamic>>> _mesajAkisi;
+  late Stream<QuerySnapshot<Map<String,dynamic>>> _mesajAkisi;
+  Timer? _mesajBeklemeZamanlayici;
+  bool _mesajBeklemeBitti=false;
   bool _okunduYaziliyor=false;
   bool _ilkMesajKaydirma=true;
   DateTime? _sonYaziyorGonderim;
@@ -7477,7 +7479,7 @@ class _SohbetPageState extends State<SohbetPage> {
     _okunduYaziliyor=true;
     try{
       final ref=FirebaseFirestore.instance.collection('chats').doc(widget.chatId);
-      final d=await ref.get();
+      final d=await ref.get().timeout(const Duration(seconds:6));
       if(!d.exists)return;
       final veri=d.data()??<String,dynamic>{};
       final okunmamis=(veri['unread_$ben'] as num?)?.toInt()??0;
@@ -7486,7 +7488,7 @@ class _SohbetPageState extends State<SohbetPage> {
       await ref.set({
         'unread_$ben':0,
         if(izin)'lastReadAt_$ben':FieldValue.serverTimestamp(),
-      },SetOptions(merge:true));
+      },SetOptions(merge:true)).timeout(const Duration(seconds:6));
     }catch(_){
     }finally{
       _okunduYaziliyor=false;
@@ -7695,22 +7697,38 @@ class _SohbetPageState extends State<SohbetPage> {
 
   Future<void> medyaGonder(ImageSource kaynak) async {
     final ben=uid;
-    if(ben==null)return;
+    if(ben==null||gonderiliyor)return;
     final hazirlik=await mesajGonderimHazirligi();
     if(hazirlik.engel!=null){
       if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(hazirlik.engel!)));
       return;
     }
-    final x=await ImagePicker().pickImage(source:kaynak,imageQuality:78);
-    if(x==null)return;
+    if(kaynak==ImageSource.camera){
+      final izin=await Permission.camera.request();
+      if(!izin.isGranted){
+        if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Fotoğraf çekmek için kamera izni gerekli.')));
+        return;
+      }
+    }
+    XFile? x;
     try{
-      final yol='chats/${widget.chatId}/${DateTime.now().millisecondsSinceEpoch}.jpg';
+      x=await ImagePicker().pickImage(source:kaynak,imageQuality:82,maxWidth:1600);
+    }catch(e){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Fotoğraf seçilemedi: $e')));
+      return;
+    }
+    if(x==null)return;
+    if(mounted)setState(()=>gonderiliyor=true);
+    try{
+      var uzanti=x.name.contains('.')?x.name.split('.').last.toLowerCase():'jpg';
+      if(!const ['jpg','jpeg','png','webp'].contains(uzanti))uzanti='jpg';
+      final yol='chats/${widget.chatId}/${DateTime.now().millisecondsSinceEpoch}.$uzanti';
       final url=await ngelxMedyaYukleBytes(
-        bytes: await x.readAsBytes(),
-        kind: 'chats',
-        ext: 'jpg',
-        legacyPath: yol,
-      ).timeout(const Duration(seconds:12));
+        bytes:await x.readAsBytes(),
+        kind:'chats',
+        ext:uzanti,
+        legacyPath:yol,
+      ).timeout(const Duration(seconds:25));
       final ref=FirebaseFirestore.instance.collection('chats').doc(widget.chatId);
       final sureHam=hazirlik.sohbet['disappearingSeconds'];
       final sure=sureHam is num?sureHam.toInt():0;
@@ -7732,14 +7750,20 @@ class _SohbetPageState extends State<SohbetPage> {
         'createdAt':FieldValue.serverTimestamp(),'clientCreatedAt':clientCreatedAt,
         if(bitis!=null)'expiresAt':bitis,
       });
+      await batch.commit().timeout(const Duration(seconds:12));
       _mesajHazirlikSohbetMevcut=true;
       _mesajHazirlikSohbet={...hazirlik.sohbet,'lastMessage':'📷 Fotoğraf','updatedAt':clientCreatedAt};
-      unawaited(batch.commit().timeout(const Duration(seconds:12)).catchError((e){
-        if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Fotoğraf gönderilemedi. Tekrar dene.')));
-      }));
-      unawaited(uygulamaBildirimiGonder(toUid:widget.digerUid,fromUid:ben,tur:'message',metin:'Yeni bir fotoğraf mesajın var',belgeId:widget.chatId).catchError((_){ }));
-    }catch(_){
-      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Medya hizmeti şu anda kullanılamıyor. Yazılı mesaj göndermeye devam edebilirsin.')));
+      unawaited(uygulamaBildirimiGonder(
+        toUid:widget.digerUid,fromUid:ben,tur:'message',
+        metin:'Yeni bir fotoğraf mesajın var',belgeId:widget.chatId,
+      ).catchError((_){ }));
+      sonaGit();
+    }on TimeoutException{
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Fotoğraf gönderimi zaman aşımına uğradı. Bağlantını kontrol edip tekrar dene.')));
+    }catch(e){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Fotoğraf gönderilemedi: $e')));
+    }finally{
+      if(mounted)setState(()=>gonderiliyor=false);
     }
   }
 
@@ -8090,7 +8114,7 @@ class _SohbetPageState extends State<SohbetPage> {
     final ara=parca.substring(1).toLowerCase(),sonuc=<Map<String,String>>[];
     if('herkes'.contains(ara))sonuc.add({'uid':'all','username':'herkes','name':'Herkes'});
     try{
-      final d=await FirebaseFirestore.instance.collection('users').doc(widget.digerUid).get(),v=d.data()??<String,dynamic>{};
+      final d=await FirebaseFirestore.instance.collection('users').doc(widget.digerUid).get().timeout(const Duration(seconds:6)),v=d.data()??<String,dynamic>{};
       final kullanici=(v['username']??'').toString().trim(),ad=(v['displayName']??kullanici).toString().trim(),aranan='$kullanici $ad'.toLowerCase();
       if(kullanici.isNotEmpty&&(ara.isEmpty||aranan.contains(ara)))sonuc.add({'uid':widget.digerUid,'username':kullanici,'name':ad.isEmpty?kullanici:ad});
     }catch(_){}
@@ -8299,12 +8323,22 @@ class _SohbetPageState extends State<SohbetPage> {
 
   void bilgi()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>SohbetBilgiPage(uid:widget.digerUid,ad:widget.ad,foto:widget.foto,chatId:widget.chatId)));
 
+  void _mesajAkisiniYenile(){
+    _mesajBeklemeZamanlayici?.cancel();
+    _mesajBeklemeBitti=false;
+    final ref=FirebaseFirestore.instance.collection('chats').doc(widget.chatId);
+    _mesajAkisi=ref.collection('messages').orderBy('createdAt').limitToLast(80).snapshots();
+    _mesajBeklemeZamanlayici=Timer(const Duration(seconds:3),(){
+      if(mounted)setState(()=>_mesajBeklemeBitti=true);
+    });
+  }
+
   @override
   void initState(){
     super.initState();
     final sohbetRef=FirebaseFirestore.instance.collection('chats').doc(widget.chatId);
     _chatAkisi=sohbetRef.snapshots();
-    _mesajAkisi=sohbetRef.collection('messages').orderBy('createdAt').limitToLast(100).snapshots();
+    _mesajAkisiniYenile();
     unawaited(mesajGonderimHazirligi());
     if(uid!=null){
       unawaited(_okunduGuncelle());
@@ -8322,6 +8356,7 @@ class _SohbetPageState extends State<SohbetPage> {
   void dispose(){
     yaziyorZamanlayici?.cancel();
     sureliMesajZamanlayici?.cancel();
+    _mesajBeklemeZamanlayici?.cancel();
     final ben=uid;
     if(ben!=null)unawaited(FirebaseFirestore.instance.collection('chats').doc(widget.chatId).set({'typing_$ben':false},SetOptions(merge:true)));
     if(sesKaydi)unawaited(sesKaydedici.stop());
@@ -8393,6 +8428,31 @@ class _SohbetPageState extends State<SohbetPage> {
       Expanded(child:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
         stream:_mesajAkisi,
         builder:(_,s){
+          if(s.hasError){
+            return Center(child:Padding(
+              padding:const EdgeInsets.all(24),
+              child:Column(mainAxisSize:MainAxisSize.min,children:[
+                const Icon(Icons.cloud_off_rounded,color:Colors.redAccent,size:46),
+                const SizedBox(height:10),
+                const Text('Mesajlar yüklenemedi.',style:TextStyle(color:Colors.black87,fontWeight:FontWeight.w900,fontSize:17)),
+                const SizedBox(height:5),
+                const Text('Bağlantını kontrol edip yeniden deneyebilirsin.',textAlign:TextAlign.center,style:TextStyle(color:Colors.black54)),
+                const SizedBox(height:12),
+                OutlinedButton.icon(
+                  onPressed:()=>setState(()=>_mesajAkisiniYenile()),
+                  icon:const Icon(Icons.refresh_rounded),
+                  label:const Text('Yeniden dene'),
+                ),
+              ]),
+            ));
+          }
+          if(s.connectionState==ConnectionState.waiting&&!s.hasData&&!_mesajBeklemeBitti){
+            return const Center(child:Column(mainAxisSize:MainAxisSize.min,children:[
+              CircularProgressIndicator(color:mor),
+              SizedBox(height:12),
+              Text('Mesajlar hazırlanıyor…',style:TextStyle(color:Colors.black54)),
+            ]));
+          }
           final tumDocs=s.data?.docs??<QueryDocumentSnapshot<Map<String,dynamic>>>[];
           final simdi=DateTime.now();
           final docs=tumDocs.where((d){
@@ -8406,8 +8466,29 @@ class _SohbetPageState extends State<SohbetPage> {
           QueryDocumentSnapshot<Map<String,dynamic>>? sonBenim;
           for(final d in docs){if(d.data()['senderId']==uid)sonBenim=d;}
           final digerOkuma=veri['readReceipts_${widget.digerUid}']!=false?veri['lastReadAt_${widget.digerUid}']:null;
+          if(docs.isEmpty){
+            return ListView(
+              controller:liste,
+              padding:const EdgeInsets.all(12),
+              children:[
+                sohbetUstBilgi(),
+                const SizedBox(height:20),
+                const Center(child:Text('Henüz mesaj yok. İlk mesajı yazabilirsin.',style:TextStyle(color:Colors.black54))),
+                if(s.connectionState==ConnectionState.waiting)...[
+                  const SizedBox(height:8),
+                  Center(child:TextButton.icon(
+                    onPressed:()=>setState(()=>_mesajAkisiniYenile()),
+                    icon:const Icon(Icons.refresh_rounded,size:18),
+                    label:const Text('Yenile'),
+                  )),
+                ],
+              ],
+            );
+          }
           return ListView.builder(
             controller:liste,
+            cacheExtent:420,
+            keyboardDismissBehavior:ScrollViewKeyboardDismissBehavior.onDrag,
             padding:const EdgeInsets.all(12),
             itemCount:docs.length+1,
             itemBuilder:(_,i){
@@ -8443,8 +8524,14 @@ class _SohbetPageState extends State<SohbetPage> {
           IconButton(onPressed:()=>setState((){yanitMesajId=null;yanitMetin=null;yanitGonderenUid=null;}),icon:const Icon(Icons.close_rounded,color:Colors.black54)),
         ]),
       ),
-      SafeArea(top:false,child:Padding(
-        padding:const EdgeInsets.fromLTRB(4,7,4,8),
+      Container(
+        decoration:const BoxDecoration(
+          color:Colors.white,
+          border:Border(top:BorderSide(color:Color(0xFFE6E8ED))),
+          boxShadow:[BoxShadow(color:Color(0x12000000),blurRadius:14,offset:Offset(0,-4))],
+        ),
+        child:SafeArea(top:false,minimum:const EdgeInsets.only(bottom:4),child:Padding(
+        padding:const EdgeInsets.fromLTRB(6,9,6,10),
         child:Row(children:[
           IconButton(
             tooltip:'Ekle',
@@ -8523,7 +8610,7 @@ class _SohbetPageState extends State<SohbetPage> {
             },
           ),
         ]),
-      )),
+      ))),
     ]));}),
   ));
 }
