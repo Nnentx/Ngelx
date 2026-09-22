@@ -5046,6 +5046,25 @@ class MesajIstegiOnizlemePage extends StatelessWidget{
 }
 
 
+
+Future<void> ngelxGrupDavetMetaSenkronla(DocumentReference<Map<String,dynamic>> chatRef)async{
+  try{
+    final d=await chatRef.get();
+    final v=d.data()??<String,dynamic>{};
+    final code=(v['inviteCode']??'').toString().trim();
+    if(code.isEmpty||v['isGroup']!=true||v['groupDeleted']==true)return;
+    await FirebaseFirestore.instance.collection('group_invites').doc(code).set({
+      'chatId':chatRef.id,
+      'groupName':(v['groupName']??'Grup').toString(),
+      'groupPhotoUrl':(v['groupPhotoUrl']??'').toString(),
+      'joinApproval':v['joinApproval']==true,
+      'admins':List<String>.from(v['admins']??const[]),
+      'memberCount':List<String>.from(v['members']??const[]).length,
+      'updatedAt':FieldValue.serverTimestamp(),
+    },SetOptions(merge:true));
+  }catch(_){}
+}
+
 class GrubaKatilPage extends StatefulWidget{
   const GrubaKatilPage({super.key});
   @override State<GrubaKatilPage> createState()=>_GrubaKatilPageState();
@@ -5079,68 +5098,90 @@ class _GrubaKatilPageState extends State<GrubaKatilPage>{
     }
     setState(()=>yukleniyor=true);
     try{
-      final q=await FirebaseFirestore.instance.collection('chats').where('inviteCode',isEqualTo:invite).limit(1).get().timeout(const Duration(seconds:10));
-      if(q.docs.isEmpty){
+      final inviteRef=FirebaseFirestore.instance.collection('group_invites').doc(invite);
+      final inviteSnap=await inviteRef.get().timeout(const Duration(seconds:10));
+      if(!inviteSnap.exists){
         if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Davet bağlantısı geçersiz veya süresi dolmuş.')));
         return;
       }
-      final d=q.docs.first,v=d.data();
-      if(v['groupDeleted']==true||v['isGroup']!=true){
-        if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bu grup artık kullanılamıyor.')));
+      final iv=inviteSnap.data()??<String,dynamic>{};
+      final chatId=(iv['chatId']??'').toString();
+      if(chatId.isEmpty){
+        if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Davet bağlantısı kullanılamıyor.')));
         return;
       }
-      final members=List<String>.from(v['members']??const[]);
-      final admins=List<String>.from(v['admins']??const[]);
-      final ad=(v['groupName']??'Grup').toString(),foto=(v['groupPhotoUrl']??'').toString();
-      if(members.contains(me)){
-        if(mounted)Navigator.pushReplacement(context,MaterialPageRoute(builder:(_)=>GrupSohbetPage(chatId:d.id,ad:ad,foto:foto)));
-        return;
+      final chat=FirebaseFirestore.instance.collection('chats').doc(chatId);
+      final ad=(iv['groupName']??'Grup').toString();
+      final foto=(iv['groupPhotoUrl']??'').toString();
+
+      // Zaten üyeyse Firestore bu belgeyi okumaya izin verir; değilse permission-denied
+      // beklenen durumdur ve güvenli davet akışına devam edilir.
+      try{
+        final mevcut=await chat.get().timeout(const Duration(seconds:6));
+        final members=List<String>.from(mevcut.data()?['members']??const[]);
+        if(members.contains(me)){
+          if(mounted)Navigator.pushReplacement(context,MaterialPageRoute(builder:(_)=>GrupSohbetPage(chatId:chatId,ad:ad,foto:foto)));
+          return;
+        }
+      }on FirebaseException catch(e){
+        if(e.code!='permission-denied')rethrow;
       }
-      if(members.length>=60){
-        if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bu grup üye sınırına ulaştı.')));
-        return;
-      }
-      if(v['joinApproval']==true){
-        final req=d.reference.collection('joinRequests').doc(me);
-        await req.set({
-          'uid':me,
-          'status':'pending',
-          'createdAt':FieldValue.serverTimestamp(),
-        },SetOptions(merge:true));
+
+      final req=chat.collection('joinRequests').doc(me);
+      final onayGerekli=iv['joinApproval']==true;
+      await req.set({
+        'uid':me,
+        'status':onayGerekli?'pending':'autojoin',
+        'inviteCode':invite,
+        'createdAt':FieldValue.serverTimestamp(),
+        'updatedAt':FieldValue.serverTimestamp(),
+      },SetOptions(merge:true));
+
+      if(onayGerekli){
+        final admins=List<String>.from(iv['admins']??const[]);
         for(final admin in admins){
           if(admin==me)continue;
           unawaited(uygulamaBildirimiGonder(
             toUid:admin,fromUid:me,tur:'group',
             metin:'gruba katılma isteği gönderdi',
-            belgeId:d.id,
+            belgeId:chatId,
           ).catchError((_){ }));
         }
         if(mounted){
           await showDialog<void>(
             context:context,
             builder:(c)=>AlertDialog(
-              icon:const Icon(Icons.hourglass_top_rounded,color:ngelxPremiumPurple,size:34),
+              icon:const Icon(Icons.hourglass_top_rounded,color:ngelxGroupGreen,size:34),
               title:const Text('İstek gönderildi'),
               content:Text(ad+' grubunun yöneticileri isteğini inceleyecek.'),
-              actions:[FilledButton(onPressed:()=>Navigator.pop(c),child:const Text('Tamam'))],
+              actions:[FilledButton(style:FilledButton.styleFrom(backgroundColor:ngelxGroupGreen),onPressed:()=>Navigator.pop(c),child:const Text('Tamam'))],
             ),
           );
           if(mounted)Navigator.pop(context);
         }
         return;
       }
-      await d.reference.update({
+
+      await chat.update({
         'members':FieldValue.arrayUnion([me]),
         'hiddenFor':FieldValue.arrayRemove([me]),
         'updatedAt':FieldValue.serverTimestamp(),
       });
-      await d.reference.collection('messages').add({
-        'senderId':'system',
+      await chat.collection('messages').add({
+        'senderId':me,
         'type':'system',
         'text':'Yeni bir üye gruba katıldı.',
         'createdAt':FieldValue.serverTimestamp(),
       });
-      if(mounted)Navigator.pushReplacement(context,MaterialPageRoute(builder:(_)=>GrupSohbetPage(chatId:d.id,ad:ad,foto:foto)));
+      await ngelxGrupDavetMetaSenkronla(chat);
+      if(mounted)Navigator.pushReplacement(context,MaterialPageRoute(builder:(_)=>GrupSohbetPage(chatId:chatId,ad:ad,foto:foto)));
+    }on FirebaseException catch(e){
+      if(mounted){
+        final mesaj=e.code=='permission-denied'
+          ?'Bu davet artık geçerli değil veya grup ayarları değişti.'
+          :'Gruba katılma işlemi tamamlanamadı: '+e.code;
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(mesaj)));
+      }
     }catch(_){
       if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Gruba katılma işlemi tamamlanamadı.')));
     }finally{
@@ -9047,7 +9088,7 @@ class _GrupDavetPageState extends State<GrupDavetPage>{
   DocumentReference<Map<String,dynamic>> get ref=>FirebaseFirestore.instance.collection('chats').doc(widget.chatId);
   String kod='';
   String ad='Grup';
-  bool yukleniyor=true;
+  bool yukleniyor=true,yonetici=false;
   @override void initState(){super.initState();_hazirla();}
 
   String _yeniKod(){
@@ -9057,35 +9098,53 @@ class _GrupDavetPageState extends State<GrupDavetPage>{
   String get link=>ngelxWebAdresi+'/join/'+kod;
 
   Future<void> _hazirla()async{
-    final d=await ref.get(),v=d.data()??<String,dynamic>{};
-    ad=(v['groupName']??'Grup').toString();
-    kod=(v['inviteCode']??'').toString();
-    if(kod.isEmpty){
-      kod=_yeniKod();
-      await ref.set({'inviteCode':kod,'inviteUpdatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
+    try{
+      var d=await ref.get(),v=d.data()??<String,dynamic>{};
+      final me=FirebaseAuth.instance.currentUser?.uid;
+      ad=(v['groupName']??'Grup').toString();
+      yonetici=List<String>.from(v['admins']??const[]).contains(me);
+      kod=(v['inviteCode']??'').toString();
+      if(kod.isEmpty){
+        if(!yonetici){
+          if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Davet bağlantısını önce bir grup yöneticisi oluşturmalı.')));
+          return;
+        }
+        kod=_yeniKod();
+        await ref.set({'inviteCode':kod,'inviteUpdatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
+        d=await ref.get();
+        v=d.data()??<String,dynamic>{};
+      }
+      await ngelxGrupDavetMetaSenkronla(ref);
+    }finally{
+      if(mounted)setState(()=>yukleniyor=false);
     }
-    if(mounted)setState(()=>yukleniyor=false);
   }
 
   Future<void> _yenile()async{
+    if(!yonetici)return;
     final ok=await showDialog<bool>(
       context:context,
       builder:(c)=>AlertDialog(
         shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(28)),
         backgroundColor:Colors.white,surfaceTintColor:Colors.white,
-        icon:Container(width:56,height:56,decoration:BoxDecoration(color:const Color(0xFFF0E8FF),borderRadius:BorderRadius.circular(18)),child:const Icon(Icons.refresh_rounded,color:ngelxPremiumPurple,size:29)),
+        icon:Container(width:56,height:56,decoration:BoxDecoration(color:ngelxGroupGreenSoft,borderRadius:BorderRadius.circular(18)),child:const Icon(Icons.refresh_rounded,color:ngelxGroupGreen,size:29)),
         title:const Text('Davet bağlantısı yenilensin mi?',textAlign:TextAlign.center,style:TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w900)),
         content:const Text('Eski bağlantı artık kullanılamayacak. Yeni bağlantıyı tekrar paylaşman gerekir.',textAlign:TextAlign.center,style:TextStyle(color:ngelxPremiumMuted,height:1.4)),
         actions:[
           TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),
-          FilledButton(style:FilledButton.styleFrom(backgroundColor:ngelxPremiumPurple),onPressed:()=>Navigator.pop(c,true),child:const Text('Yenile')),
+          FilledButton(style:FilledButton.styleFrom(backgroundColor:ngelxGroupGreen),onPressed:()=>Navigator.pop(c,true),child:const Text('Yenile')),
         ],
       ),
     )??false;
     if(!ok)return;
+    final eski=kod;
     final yeni=_yeniKod();
     await ref.set({'inviteCode':yeni,'inviteUpdatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
     if(mounted)setState(()=>kod=yeni);
+    await ngelxGrupDavetMetaSenkronla(ref);
+    if(eski.isNotEmpty&&eski!=yeni){
+      try{await FirebaseFirestore.instance.collection('group_invites').doc(eski).delete();}catch(_){}
+    }
   }
 
   @override Widget build(BuildContext context)=>Theme(
@@ -9141,7 +9200,7 @@ class _GrupDavetPageState extends State<GrupDavetPage>{
                 const SizedBox(width:9),
                 Expanded(child:OutlinedButton.icon(
                   style:OutlinedButton.styleFrom(padding:const EdgeInsets.symmetric(vertical:13)),
-                  onPressed:_yenile,icon:const Icon(Icons.refresh_rounded),label:const Text('Yenile'),
+                  onPressed:yonetici?_yenile:null,icon:const Icon(Icons.refresh_rounded),label:const Text('Yenile'),
                 )),
               ]),
             ]),
