@@ -7098,6 +7098,8 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
   lk.Room? oda;
   final Map<String,Future<DocumentSnapshot<Map<String,dynamic>>>> _aramaProfilCache={};
   StreamSubscription<DocumentSnapshot<Map<String,dynamic>>>? aramaDurumAboneligi;
+  Timer? aramaSureZamanlayici;
+  DateTime? aramaBaslangic;
   bool baglaniyor=true,mikrofon=true,kamera=true,hoparlor=true,bitiyor=false,bulanik=false,rotus=false;
   int efekt=0;
   String? hata;
@@ -7117,6 +7119,7 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
   Future<void> _uzaktanBitirildi(String durum)async{
     if(bitiyor)return;
     bitiyor=true;
+    aramaSureZamanlayici?.cancel();
     final r=oda;oda=null;
     if(r!=null){
       r.removeListener(_odaDegisti);
@@ -7134,6 +7137,25 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
       content:Text(durum=='rejected'?'Arama reddedildi.':durum=='missed'?'Arama cevaplanmadı.':'Arama sona erdi.'),
     ));
     Navigator.maybePop(context);
+  }
+
+  String _aramaSureYazi(){
+    final bas=aramaBaslangic;
+    if(bas==null)return '00:00';
+    final saniye=DateTime.now().difference(bas).inSeconds.clamp(0,359999);
+    final saat=saniye~/3600;
+    final dk=(saniye%3600)~/60;
+    final sn=saniye%60;
+    if(saat>0)return saat.toString().padLeft(2,'0')+':'+dk.toString().padLeft(2,'0')+':'+sn.toString().padLeft(2,'0');
+    return dk.toString().padLeft(2,'0')+':'+sn.toString().padLeft(2,'0');
+  }
+
+  void _aramaSureBaslat(DateTime baslangic){
+    aramaBaslangic=baslangic;
+    aramaSureZamanlayici?.cancel();
+    aramaSureZamanlayici=Timer.periodic(const Duration(seconds:1),(_){
+      if(mounted)setState((){});
+    });
   }
 
   Future<void> _izinleriIste()async{
@@ -7167,11 +7189,16 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
       if(widget.goruntulu)await yerel.setCameraEnabled(true);
       await lk.AudioManager.instance.setSpeakerOutputPreferred(true,force:widget.goruntulu);
       hoparlor=true;
-      unawaited(widget.aramaRef.set({
+      final oncekiArama=await widget.aramaRef.get();
+      final oncekiBaglanti=oncekiArama.data()?['callConnectedAt'];
+      final baslangic=oncekiBaglanti is Timestamp?oncekiBaglanti.toDate().toLocal():DateTime.now();
+      _aramaSureBaslat(baslangic);
+      final durumGuncelleme=<String,dynamic>{
         'callStatus':'active',
         'callParticipants':FieldValue.arrayUnion([u.uid]),
-        'callConnectedAt':FieldValue.serverTimestamp(),
-      },SetOptions(merge:true)).timeout(const Duration(seconds:10)).catchError((_){ }));
+        if(oncekiBaglanti is! Timestamp)'callConnectedAt':FieldValue.serverTimestamp(),
+      };
+      unawaited(widget.aramaRef.set(durumGuncelleme,SetOptions(merge:true)).timeout(const Duration(seconds:10)).catchError((_){ }));
       if(widget.roomName.startsWith('group_')){
         unawaited(widget.aramaRef.get().then((d)async{
           final baslatan=(d.data()?['callStartedBy']??'').toString();
@@ -7240,6 +7267,7 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
   Future<void> bitir({bool geriDon=true})async{
     if(bitiyor)return;
     bitiyor=true;
+    aramaSureZamanlayici?.cancel();
     try{
       final d=await widget.aramaRef.get();
       final data=d.data()??<String,dynamic>{};
@@ -7298,6 +7326,7 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
   }
 
   @override void dispose(){
+    aramaSureZamanlayici?.cancel();
     aramaDurumAboneligi?.cancel();
     final r=oda;
     if(r!=null){
@@ -7556,7 +7585,7 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
             Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
               Text(widget.baslik,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.white,fontSize:29,fontWeight:FontWeight.w900,letterSpacing:-.5)),
               const SizedBox(height:5),
-              Row(children:[const Icon(Icons.graphic_eq_rounded,color:Color(0xFFB88BFF),size:20),const SizedBox(width:7),Text(baglaniyor?'Bağlanıyor…':'Sesli arama',style:const TextStyle(color:Colors.white70,fontSize:13,fontWeight:FontWeight.w700))]),
+              Row(children:[const Icon(Icons.graphic_eq_rounded,color:Color(0xFFB88BFF),size:20),const SizedBox(width:7),Text(baglaniyor?'Bağlanıyor…':'Sesli arama • '+_aramaSureYazi(),style:const TextStyle(color:Colors.white70,fontSize:13,fontWeight:FontWeight.w700))]),
             ])),
             Container(padding:const EdgeInsets.symmetric(horizontal:13,vertical:9),decoration:BoxDecoration(color:Colors.white10,borderRadius:BorderRadius.circular(18),border:Border.all(color:Colors.white10)),child:Text(katilimcilar.length.toString()+' kişi',style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w800))),
           ]),
@@ -7574,7 +7603,7 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
         child:Row(children:[
           Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
             Text(widget.baslik,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.white,fontSize:22,fontWeight:FontWeight.w900)),
-            const Text('Görüntülü görüşme',style:TextStyle(color:Colors.white60,fontSize:12,fontWeight:FontWeight.w700)),
+            Text(baglaniyor?'Görüntülü görüşme':'Görüntülü görüşme • '+_aramaSureYazi(),style:const TextStyle(color:Colors.white60,fontSize:12,fontWeight:FontWeight.w700)),
           ])),
           Container(padding:const EdgeInsets.symmetric(horizontal:12,vertical:8),decoration:BoxDecoration(color:Colors.white10,borderRadius:BorderRadius.circular(16)),child:Text(katilimcilar.length.toString()+' kişi',style:const TextStyle(color:Colors.white70,fontWeight:FontWeight.w800))),
         ]),
@@ -7608,7 +7637,7 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
         decoration:BoxDecoration(color:Colors.black.withValues(alpha:.45),borderRadius:BorderRadius.circular(18),border:Border.all(color:Colors.white10)),
         child:Column(children:[
           Text(widget.baslik,textAlign:TextAlign.center,style:const TextStyle(color:Colors.white,fontSize:22,fontWeight:FontWeight.w900)),
-          Text(baglaniyor?'Aranıyor…':'Görüntülü arama',style:const TextStyle(color:Colors.white70,fontSize:12,fontWeight:FontWeight.w600)),
+          Text(baglaniyor?'Aranıyor…':'Görüntülü arama • '+_aramaSureYazi(),style:const TextStyle(color:Colors.white70,fontSize:12,fontWeight:FontWeight.w600)),
         ]),
       )),
     ]));
@@ -7623,7 +7652,7 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
     const SizedBox(height:22),
     Text(widget.baslik,textAlign:TextAlign.center,style:const TextStyle(color:Colors.white,fontSize:29,fontWeight:FontWeight.w900)),
     const SizedBox(height:7),
-    Text(baglaniyor?'Bağlanıyor…':'Sesli arama',style:const TextStyle(color:Colors.white70,fontSize:15,fontWeight:FontWeight.w600)),
+    Text(baglaniyor?'Bağlanıyor…':'Sesli arama • '+_aramaSureYazi(),style:const TextStyle(color:Colors.white70,fontSize:15,fontWeight:FontWeight.w600)),
   ])));
 
   @override Widget build(BuildContext context)=>PopScope(
