@@ -39,6 +39,15 @@ android {
     }
 
     signingConfigs {
+        // Public test-only key for the side-by-side V54 test package.
+        // Never use this key for production/release signing.
+        create("ngelxV54Test") {
+            keyAlias = "ngelxv54test"
+            keyPassword = "ngelxv54test"
+            storeFile = file("ngelx-v54-test.jks")
+            storePassword = "ngelxv54test"
+        }
+
         if (keystorePropertiesFile.exists()) {
             create("ngelxRelease") {
                 keyAlias = keystoreProperties["keyAlias"] as String
@@ -63,6 +72,9 @@ android {
             // V54 yan yana test paketi: telefondaki mevcut Ngel X silinmeden kurulur.
             applicationIdSuffix = ".v54test"
             versionNameSuffix = "-test"
+            // GitHub Actions runner'ının her derlemede yeni debug anahtarı üretmesi
+            // Android'de "uygulama çakışması"na neden oluyordu. Sabit test anahtarını kullan.
+            signingConfig = signingConfigs.getByName("ngelxV54Test")
         }
         release {
             signingConfig = if (keystorePropertiesFile.exists()) {
