@@ -3677,8 +3677,9 @@ class _KesfetPageState extends State<KesfetPage> {
   String sekme='Canlı';
   String arama='';
   final aramaKontrol=TextEditingController();
+  final aramaFocus=FocusNode();
 
-  @override void dispose(){aramaKontrol.dispose();super.dispose();}
+  @override void dispose(){aramaKontrol.dispose();aramaFocus.dispose();super.dispose();}
 
   bool get globalArama=>arama.isNotEmpty;
   bool bolumAcik(String ad)=>globalArama||sekme==ad;
@@ -3721,14 +3722,50 @@ class _KesfetPageState extends State<KesfetPage> {
       backgroundColor: Colors.white,
       body: SafeArea(
         child: CustomScrollView(slivers: [
-          const SliverToBoxAdapter(child: Padding(
-            padding: EdgeInsets.fromLTRB(18, 14, 18, 8),
-            child: Row(children: [const Logo(kucuk: true), const Spacer(), const Icon(Icons.search_rounded, color: Colors.black, size: 27), const SizedBox(width: 14), const Icon(Icons.tune_rounded, color: Colors.black, size: 25)]),
+          SliverToBoxAdapter(child: Padding(
+            padding: const EdgeInsets.fromLTRB(18, 14, 10, 8),
+            child: Row(children: [
+              const Logo(kucuk: true),
+              const Spacer(),
+              IconButton(
+                tooltip:'Ara',
+                onPressed:()=>aramaFocus.requestFocus(),
+                icon:const Icon(Icons.search_rounded,color:Colors.black,size:27),
+              ),
+              IconButton(
+                tooltip:'Keşfet filtresi',
+                onPressed:()async{
+                  final secim=await showModalBottomSheet<String>(
+                    context:context,
+                    backgroundColor:Colors.white,
+                    showDragHandle:true,
+                    builder:(c)=>SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
+                      const ListTile(title:Text('Keşfet filtresi',style:TextStyle(fontSize:20,fontWeight:FontWeight.w900))),
+                      for(final e in const [('Canlı',Icons.live_tv_rounded),('Trend',Icons.local_fire_department_rounded),('Kişiler',Icons.person_rounded),('Gruplar',Icons.groups_rounded)])
+                        ListTile(
+                          leading:Icon(e.$2,color:e.$1==sekme?mor:Colors.black54),
+                          title:Text(e.$1,style:TextStyle(fontWeight:e.$1==sekme?FontWeight.w900:FontWeight.w600)),
+                          trailing:e.$1==sekme?const Icon(Icons.check_rounded,color:mor):null,
+                          onTap:()=>Navigator.pop(c,e.$1),
+                        ),
+                    ])),
+                  );
+                  if(secim!=null&&mounted){
+                    aramaKontrol.clear();
+                    FocusScope.of(context).unfocus();
+                    setState((){arama='';sekme=secim;});
+                  }
+                },
+                icon:const Icon(Icons.tune_rounded,color:Colors.black,size:25),
+              ),
+            ]),
           )),
           SliverToBoxAdapter(child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
             child: TextField(
               controller:aramaKontrol,
+              focusNode:aramaFocus,
+              textInputAction:TextInputAction.search,
               onChanged:(v)=>setState(()=>arama=v.trim().toLowerCase()),
               style: const TextStyle(color: Colors.black87),
               decoration: InputDecoration(
@@ -3944,10 +3981,38 @@ class _KesfetPageState extends State<KesfetPage> {
   Widget _kisiKarti(BuildContext context, String uid, Map<String, dynamic> v) {
     final foto = (v['photoUrl'] ?? '').toString();
     final ad = (v['displayName'] ?? v['username'] ?? 'Kullanıcı').toString();
-    return SizedBox(width: 105, child: Column(children: [
-      Stack(children: [CircleAvatar(radius: 38, backgroundColor: const Color(0xFFF0E8FF), backgroundImage: foto.isEmpty ? null : CachedNetworkImageProvider(foto), child: foto.isEmpty ? Text(ad.substring(0, 1).toUpperCase(), style: const TextStyle(color: mor, fontSize: 24, fontWeight: FontWeight.bold)) : null), const Positioned(right: 2, bottom: 2, child: CircleAvatar(radius: 7, backgroundColor: Color(0xFF23D160)))]),
-      const SizedBox(height: 5), Text(ad, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w800)),
-      const SizedBox(height: 4), SizedBox(height: 30, child: FilledButton(style: FilledButton.styleFrom(backgroundColor: mor, padding: const EdgeInsets.symmetric(horizontal: 12)), onPressed: () async {await takipDurumuDegistir(uid,false);if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Takip edildi ✅')));}, child: const Text('Takip et', style: TextStyle(fontSize: 11)))),
+    final aktif=v['online']==true;
+    return SizedBox(width: 112, child: Column(children: [
+      InkWell(
+        borderRadius:BorderRadius.circular(50),
+        onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciProfilPage(uid:uid))),
+        child:Stack(children: [
+          CircleAvatar(radius: 38, backgroundColor: const Color(0xFFF0E8FF), backgroundImage: foto.isEmpty ? null : CachedNetworkImageProvider(foto), child: foto.isEmpty ? Text(ad.isEmpty?'N':ad.substring(0, 1).toUpperCase(), style: const TextStyle(color: mor, fontSize: 24, fontWeight: FontWeight.bold)) : null),
+          if(aktif)const Positioned(right: 2, bottom: 2, child: CircleAvatar(radius: 7, backgroundColor: Color(0xFF23D160))),
+        ]),
+      ),
+      const SizedBox(height: 5),
+      InkWell(
+        onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciProfilPage(uid:uid))),
+        child:Text(ad, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w800)),
+      ),
+      const SizedBox(height: 4),
+      SizedBox(height: 30, child: FilledButton(
+        style: FilledButton.styleFrom(backgroundColor: mor, padding: const EdgeInsets.symmetric(horizontal: 12)),
+        onPressed: () async {
+          final ben=FirebaseAuth.instance.currentUser?.uid;
+          if(ben==null||ben==uid)return;
+          try{
+            final d=await FirebaseFirestore.instance.collection('users').doc(ben).get().timeout(const Duration(seconds:6));
+            final takipte=List<String>.from(d.data()?['following']??const[]).contains(uid);
+            await takipDurumuDegistir(uid,takipte).timeout(const Duration(seconds:8));
+            if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(takipte?'Takipten çıkıldı.':'Takip edildi ✅')));
+          }catch(_){
+            if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Takip işlemi tamamlanamadı.')));
+          }
+        },
+        child: const Text('Takip', style: TextStyle(fontSize: 11)),
+      )),
     ]));
   }
 
@@ -3956,7 +4021,33 @@ class _KesfetPageState extends State<KesfetPage> {
     final sayi = (v['memberCount'] ?? 0).toString();
     return Container(width: 245, padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: const Color(0xFFF6F3FF), borderRadius: BorderRadius.circular(18)), child: Row(children: [
       Container(width: 65, height: 65, decoration: BoxDecoration(color: const Color(0xFFE9DDFF), borderRadius: BorderRadius.circular(14)), child: const Icon(Icons.groups_rounded, color: mor, size: 34)),
-      const SizedBox(width: 10), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [Text(ad, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w900)), Text('$sayi üye', style: const TextStyle(color: Colors.black45, fontSize: 12)), const SizedBox(height: 6), SizedBox(height: 30, child: FilledButton(style: FilledButton.styleFrom(backgroundColor: mor), onPressed: () async { final uid = FirebaseAuth.instance.currentUser?.uid; if (uid != null) await FirebaseFirestore.instance.collection('groups').doc(id).set({'members': FieldValue.arrayUnion([uid]), 'memberCount': FieldValue.increment(1)}, SetOptions(merge: true)); }, child: const Text('Katıl', style: TextStyle(fontSize: 12))))]))
+      const SizedBox(width: 10), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
+        Text(ad, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w900)),
+        Text('$sayi üye', style: const TextStyle(color: Colors.black45, fontSize: 12)),
+        const SizedBox(height: 6),
+        SizedBox(height: 30, child: FilledButton(
+          style: FilledButton.styleFrom(backgroundColor: mor),
+          onPressed: () async {
+            final uid = FirebaseAuth.instance.currentUser?.uid;
+            if(uid==null)return;
+            final ref=FirebaseFirestore.instance.collection('groups').doc(id);
+            try{
+              bool zaten=false;
+              await FirebaseFirestore.instance.runTransaction((tx)async{
+                final d=await tx.get(ref);
+                final veri=d.data()??<String,dynamic>{};
+                final uyeler=List<String>.from(veri['members']??const[]);
+                if(uyeler.contains(uid)){zaten=true;return;}
+                tx.set(ref,{'members':FieldValue.arrayUnion([uid]),'memberCount':FieldValue.increment(1)},SetOptions(merge:true));
+              }).timeout(const Duration(seconds:8));
+              if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(zaten?'Bu gruba zaten katıldın.':'Gruba katıldın ✅')));
+            }catch(_){
+              if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Gruba katılma işlemi tamamlanamadı.')));
+            }
+          },
+          child: const Text('Katıl', style: TextStyle(fontSize: 12)),
+        )),
+      ]))
     ]));
   }
 }
