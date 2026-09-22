@@ -2,7 +2,7 @@ name: NgelX V55 Group Final Polish
 
 on:
   push:
-    branches: [ngelx-v55-group-final-polish]
+    branches: [main]
     paths:
       - 'app/**'
       - '.github/workflows/build-v55-group-final-polish.yml'
@@ -12,7 +12,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: ngelx-v55-group-final-polish
+  group: ngelx-v55-main-final
   cancel-in-progress: true
 
 jobs:
