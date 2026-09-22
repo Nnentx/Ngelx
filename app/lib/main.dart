@@ -6167,36 +6167,91 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
     if(x!=null&&mounted)setState(()=>efekt=x);
   }
 
+
   Future<void> aramaAyarlari()async{
     await showModalBottomSheet<void>(
       context:context,
-      backgroundColor:const Color(0xFF1F1F1F),
+      isScrollControlled:true,
+      backgroundColor:ngelxCallBg,
       showDragHandle:true,
-      builder:(c)=>SafeArea(child:Padding(
-        padding:const EdgeInsets.fromLTRB(18,4,18,22),
-        child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
-          const Center(child:Chip(label:Text('🔒 Güvenli bağlantı'))),
-          const SizedBox(height:12),
-          const Text('Kişiler',style:TextStyle(color:Colors.white54,fontSize:16,fontWeight:FontWeight.w800)),
-          const ListTile(contentPadding:EdgeInsets.zero,leading:CircleAvatar(child:Icon(Icons.person)),title:Text('Sen',style:TextStyle(color:Colors.white,fontWeight:FontWeight.w800))),
-          ListTile(contentPadding:EdgeInsets.zero,leading:const CircleAvatar(child:Icon(Icons.person_outline)),title:Text(widget.baslik,style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w800))),
-          const SizedBox(height:8),
-          const Text('Arama ayarları',style:TextStyle(color:Colors.white54,fontSize:16,fontWeight:FontWeight.w800)),
-          ListTile(
-            contentPadding:EdgeInsets.zero,
-            leading:const Icon(Icons.volume_up,color:Colors.white),
-            title:const Text('Ses çıkışı',style:TextStyle(color:Colors.white)),
-            subtitle:Text(hoparlor?'Hoparlör':'Ahize',style:const TextStyle(color:Colors.white54)),
-            onTap:hoparlorDegistir,
-          ),
-          ListTile(
-            contentPadding:EdgeInsets.zero,
-            leading:const Icon(Icons.warning_amber_rounded,color:Colors.white),
-            title:const Text('Teknik sorun',style:TextStyle(color:Colors.white)),
-            onTap:()=>Navigator.pop(c),
-          ),
-        ]),
-      )),
+      shape:const RoundedRectangleBorder(borderRadius:BorderRadius.vertical(top:Radius.circular(30))),
+      builder:(c){
+        final r=oda;
+        final katilimcilar=<({lk.Participant p,bool yerel})>[
+          if(r?.localParticipant!=null)(p:r!.localParticipant!,yerel:true),
+          ...?r?.remoteParticipants.values.map((p)=>(p:p,yerel:false)),
+        ];
+        return SafeArea(child:Padding(
+          padding:const EdgeInsets.fromLTRB(16,4,16,24),
+          child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
+            Row(children:[
+              const Expanded(child:Text('Katılımcılar',style:TextStyle(color:Colors.white,fontSize:20,fontWeight:FontWeight.w900))),
+              Container(
+                padding:const EdgeInsets.symmetric(horizontal:10,vertical:7),
+                decoration:BoxDecoration(color:Colors.white10,borderRadius:BorderRadius.circular(14)),
+                child:Text(katilimcilar.length.toString()+' kişi',style:const TextStyle(color:Colors.white70,fontSize:11,fontWeight:FontWeight.w800)),
+              ),
+            ]),
+            const SizedBox(height:8),
+            Container(
+              padding:const EdgeInsets.symmetric(horizontal:11,vertical:9),
+              decoration:BoxDecoration(color:const Color(0xFF251A37),borderRadius:BorderRadius.circular(16),border:Border.all(color:Colors.white10)),
+              child:const Row(children:[
+                Icon(Icons.lock_rounded,color:Color(0xFFCDB9FF),size:17),
+                SizedBox(width:7),
+                Text('Güvenli grup bağlantısı',style:TextStyle(color:Color(0xFFD9CDEE),fontSize:11,fontWeight:FontWeight.w700)),
+              ]),
+            ),
+            const SizedBox(height:12),
+            ConstrainedBox(
+              constraints:BoxConstraints(maxHeight:MediaQuery.sizeOf(c).height*.42),
+              child:ListView.builder(
+                shrinkWrap:true,
+                itemCount:katilimcilar.length,
+                itemBuilder:(_,i){
+                  final x=katilimcilar[i],ad=_katilimciAdi(x.p,yerel:x.yerel);
+                  return Container(
+                    margin:const EdgeInsets.only(bottom:7),
+                    padding:const EdgeInsets.symmetric(horizontal:10,vertical:8),
+                    decoration:BoxDecoration(color:const Color(0xFF211837),borderRadius:BorderRadius.circular(18),border:Border.all(color:Colors.white10)),
+                    child:Row(children:[
+                      _katilimciAvatar(x.p,yerel:x.yerel,radius:21),
+                      const SizedBox(width:10),
+                      Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+                        Text(ad,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w800)),
+                        Text(x.yerel&&mikrofon?'Bağlı • mikrofon açık':'Bağlı',style:const TextStyle(color:Colors.white54,fontSize:10.5,fontWeight:FontWeight.w600)),
+                      ])),
+                      Icon(x.yerel&&mikrofon?Icons.graphic_eq_rounded:Icons.mic_none_rounded,color:x.yerel&&mikrofon?const Color(0xFFB88BFF):Colors.white38,size:20),
+                    ]),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height:10),
+            const Text('Arama ayarları',style:TextStyle(color:Colors.white70,fontSize:14,fontWeight:FontWeight.w900)),
+            const SizedBox(height:6),
+            Container(
+              decoration:BoxDecoration(color:const Color(0xFF211837),borderRadius:BorderRadius.circular(20),border:Border.all(color:Colors.white10)),
+              child:Column(children:[
+                ListTile(
+                  leading:const Icon(Icons.volume_up_rounded,color:Color(0xFFCDB9FF)),
+                  title:const Text('Ses çıkışı',style:TextStyle(color:Colors.white,fontWeight:FontWeight.w800)),
+                  subtitle:Text(hoparlor?'Hoparlör':'Ahize',style:const TextStyle(color:Colors.white54)),
+                  trailing:const Icon(Icons.chevron_right_rounded,color:Colors.white38),
+                  onTap:hoparlorDegistir,
+                ),
+                const Divider(height:1,color:Colors.white10,indent:56),
+                ListTile(
+                  leading:const Icon(Icons.report_problem_outlined,color:Color(0xFFCDB9FF)),
+                  title:const Text('Teknik sorun bildir',style:TextStyle(color:Colors.white,fontWeight:FontWeight.w800)),
+                  trailing:const Icon(Icons.chevron_right_rounded,color:Colors.white38),
+                  onTap:()=>Navigator.pop(c),
+                ),
+              ]),
+            ),
+          ]),
+        ));
+      },
     );
   }
 
