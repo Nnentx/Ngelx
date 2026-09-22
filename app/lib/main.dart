@@ -2997,7 +2997,9 @@ class AkisMetaSatiri extends StatelessWidget {
     return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
       stream: ref.snapshots(),
       builder: (_, belge) {
-        final zaman = akisKisaZaman(belge.data?.data()?['createdAt']);
+        final veri=belge.data?.data()??<String,dynamic>{};
+        final zaman = akisKisaZaman(veri['createdAt']);
+        final sayi=(veri['commentCount'] as num?)?.toInt()??0;
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -3009,21 +3011,16 @@ class AkisMetaSatiri extends StatelessWidget {
                 fontWeight: FontWeight.w700,
               ),
             ),
-            const SizedBox(height: 4),
-            StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-              stream: ref.collection('comments').snapshots(),
-              builder: (_, snap) {
-                final sayi=snap.data?.docs.length??0;
-                if(sayi==0)return const SizedBox.shrink();
-                return GestureDetector(
-                  onTap: yorumlariAc,
-                  child: Text(
-                    sayi==1?'Yorumu gör':'$sayi yorumun tümünü gör',
-                    style:const TextStyle(color:Colors.white70,fontSize:11,fontWeight:FontWeight.w700),
-                  ),
-                );
-              },
-            ),
+            if(sayi>0)...[
+              const SizedBox(height:4),
+              GestureDetector(
+                onTap:yorumlariAc,
+                child:Text(
+                  sayi==1?'Yorumu gör':'$sayi yorumun tümünü gör',
+                  style:const TextStyle(color:Colors.white70,fontSize:11,fontWeight:FontWeight.w700),
+                ),
+              ),
+            ],
           ],
         );
       },
@@ -3050,15 +3047,29 @@ class CanliSayacButonu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-      stream: ref.snapshots(),
-      builder: (_, snap) => IslemButonu(
-        ikon: ikon,
-        yazi: '${snap.data?.docs.length ?? 0}',
-        renk: renk,
-        tiklama: tiklama,
-        uzunBasma: uzunBasma,
-      ),
+    final parent=ref.parent;
+    final alan=ref.id=='likes'?'likeCount':ref.id=='comments'?'commentCount':'';
+    if(parent==null||alan.isEmpty){
+      return IslemButonu(
+        ikon:ikon,
+        yazi:'0',
+        renk:renk,
+        tiklama:tiklama,
+        uzunBasma:uzunBasma,
+      );
+    }
+    return StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
+      stream:parent.snapshots(),
+      builder:(_,snap){
+        final sayi=(snap.data?.data()?[alan] as num?)?.toInt()??0;
+        return IslemButonu(
+          ikon:ikon,
+          yazi:'$sayi',
+          renk:renk,
+          tiklama:tiklama,
+          uzunBasma:uzunBasma,
+        );
+      },
     );
   }
 }
@@ -3076,71 +3087,55 @@ class CanliEtkilesimOzet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ref = FirebaseFirestore.instance.collection('videos').doc(icerikId);
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-          stream: ref.collection('likes').snapshots(),
-          builder: (_, snap) => Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.favorite_rounded, size: 16, color: Colors.white),
-              const SizedBox(width: 5),
-              Text(
-                '${snap.data?.docs.length ?? 0} beğeni',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
+    return StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
+      stream:ref.snapshots(),
+      builder:(_,snap){
+        final v=snap.data?.data()??<String,dynamic>{};
+        final begeni=(v['likeCount'] as num?)?.toInt()??0;
+        final yorum=(v['commentCount'] as num?)?.toInt()??0;
+        return Row(
+          crossAxisAlignment:CrossAxisAlignment.end,
+          children:[
+            Row(
+              mainAxisSize:MainAxisSize.min,
+              children:[
+                const Icon(Icons.favorite_rounded,size:16,color:Colors.white),
+                const SizedBox(width:5),
+                Text(
+                  '$begeni beğeni',
+                  style:const TextStyle(color:Colors.white,fontSize:12,fontWeight:FontWeight.w700),
                 ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(width: 13),
-        Expanded(
-          child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-            stream: ref.collection('comments').snapshots(),
-            builder: (_, snap) {
-              final sayi = snap.data?.docs.length ?? 0;
-              return GestureDetector(
-                onTap: yorumlariAc,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+              ],
+            ),
+            const SizedBox(width:13),
+            Expanded(
+              child:GestureDetector(
+                onTap:yorumlariAc,
+                child:Column(
+                  crossAxisAlignment:CrossAxisAlignment.start,
+                  children:[
                     Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.mode_comment_outlined, size: 16, color: Colors.white),
-                        const SizedBox(width: 5),
+                      mainAxisSize:MainAxisSize.min,
+                      children:[
+                        const Icon(Icons.mode_comment_outlined,size:16,color:Colors.white),
+                        const SizedBox(width:5),
                         Text(
-                          '$sayi yorum',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                          ),
+                          '$yorum yorum',
+                          style:const TextStyle(color:Colors.white,fontSize:12,fontWeight:FontWeight.w700),
                         ),
                       ],
                     ),
-                    if (sayi > 0) ...[
-                      const SizedBox(height: 4),
-                      const Text(
-                        'Yorumları gör',
-                        style: TextStyle(
-                          color: Colors.white70,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
+                    if(yorum>0)...[
+                      const SizedBox(height:4),
+                      const Text('Yorumları gör',style:TextStyle(color:Colors.white70,fontSize:12,fontWeight:FontWeight.w700)),
                     ],
                   ],
                 ),
-              );
-            },
-          ),
-        ),
-      ],
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
@@ -3578,13 +3573,16 @@ class YorumKarti extends StatelessWidget {
       );
     }
 
-    final likeStream = FirebaseFirestore.instance
-        .collection('videos')
-        .doc(videoId)
-        .collection('comments')
-        .doc(yorumId)
-        .collection('likes')
-        .snapshots();
+    final likeStream = aktifUid==null
+        ? null
+        : FirebaseFirestore.instance
+            .collection('videos')
+            .doc(videoId)
+            .collection('comments')
+            .doc(yorumId)
+            .collection('likes')
+            .doc(aktifUid)
+            .snapshots();
 
     return GestureDetector(
       onLongPress: yorumMenusu,
@@ -3656,23 +3654,21 @@ class YorumKarti extends StatelessWidget {
               ],
             ),
           ),
-          StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-            stream: likeStream,
-            builder: (_, snap) {
-              final docs = snap.data?.docs ?? const [];
-              final secili = aktifUid != null && docs.any((d) => d.id == aktifUid);
-              final sayi = docs.length;
+          StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
+            stream:likeStream,
+            builder:(_,snap){
+              final secili=snap.data?.exists==true;
+              final sayi=(v['likeCount'] as num?)?.toInt()??0;
               return GestureDetector(
-                onTap: () => begen(yorumId, const []),
-                child: Column(
-                  children: [
+                onTap:()=>begen(yorumId,const []),
+                child:Column(
+                  children:[
                     Icon(
-                      secili ? Icons.favorite : Icons.favorite_border,
-                      color: secili ? const Color(0xFFFF2D55) : Colors.black45,
-                      size: 22,
+                      secili?Icons.favorite:Icons.favorite_border,
+                      color:secili?const Color(0xFFFF2D55):Colors.black45,
+                      size:22,
                     ),
-                    if (sayi > 0)
-                      Text('$sayi', style: const TextStyle(fontSize: 11, color: Colors.black45)),
+                    if(sayi>0)Text('$sayi',style:const TextStyle(fontSize:11,color:Colors.black45)),
                   ],
                 ),
               );
@@ -3787,7 +3783,7 @@ class _YorumlarState extends State<EskiYorumlar> {
             ),
             Expanded(
               child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                stream: yorumlar.orderBy('createdAt', descending: true).snapshots(),
+                stream: yorumlar.orderBy('createdAt', descending: true).limit(120).snapshots(),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(child: CircularProgressIndicator());
@@ -10181,7 +10177,7 @@ class AyarlarPage extends StatelessWidget {
       _ayar(context,Icons.download_outlined,'İndirme izinleri','Varsayılan paylaşım indirme ayarı'),
     ],
     const Divider(),
-    ListTile(leading:const Icon(Icons.system_update,color:mor),title:const Text('Uygulama güncellemeleri'),subtitle:const Text('V54 • Test build 226'),trailing:const Icon(Icons.build_circle,color:Colors.orange)),
+    ListTile(leading:const Icon(Icons.system_update,color:mor),title:const Text('Uygulama güncellemeleri'),subtitle:const Text('V54 • Test build 227'),trailing:const Icon(Icons.build_circle,color:Colors.orange)),
     ListTile(leading:const Icon(Icons.share,color:mavi),title:const Text('Ngel X’i paylaş'),subtitle:const Text('Uygulama bağlantısını paylaş veya kopyala'),onTap:()async=>SharePlus.instance.share(ShareParams(text:'Ngel X ile dünyanı paylaş ✨\nhttps://ngelx.app'))),
     const Divider(),
     ListTile(leading:const Icon(Icons.logout,color:Colors.red),title:const Text('Çıkış yap',style:TextStyle(color:Colors.red)),onTap:()async{final onay=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(title:const Text('Çıkış yapılsın mı?'),content:const Text('Tekrar giriş yapman gerekecek.'),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('Çıkış yap'))]));if(onay==true){await FirebaseAuth.instance.signOut();if(context.mounted)Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder:(_)=>const GirisPage()),(_)=>false);}})
