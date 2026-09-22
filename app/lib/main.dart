@@ -5249,7 +5249,7 @@ class _YeniYuklePageState extends State<YuklePage> {
         duration: const Duration(milliseconds: 220),
         padding: const EdgeInsets.symmetric(vertical: 14),
         decoration: BoxDecoration(gradient: secili ? const LinearGradient(colors: [mavi, mor]) : null, color: secili ? null : const Color(0xFFF3F5F8), borderRadius: BorderRadius.circular(17)),
-        child: Column(children: [Icon(ikon, color: secili ? Colors.black : Colors.black54), const SizedBox(height: 5), Text(yazi, style: TextStyle(color: secili ? Colors.black : Colors.black54, fontWeight: FontWeight.bold))]),
+        child: Column(children: [Icon(ikon, color: secili ? Colors.white : Colors.black54), const SizedBox(height: 5), Text(yazi, style: TextStyle(color: secili ? Colors.white : Colors.black54, fontWeight: FontWeight.bold))]),
       ),
     ));
   }
