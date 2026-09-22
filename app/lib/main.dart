@@ -10114,7 +10114,7 @@ class AyarlarPage extends StatelessWidget {
       _ayar(context,Icons.download_outlined,'İndirme izinleri','Varsayılan paylaşım indirme ayarı'),
     ],
     const Divider(),
-    ListTile(leading:const Icon(Icons.system_update,color:mor),title:const Text('Uygulama güncellemeleri'),subtitle:const Text('V42 • Geliştiriliyor'),trailing:const Icon(Icons.build_circle,color:Colors.orange)),
+    ListTile(leading:const Icon(Icons.system_update,color:mor),title:const Text('Uygulama güncellemeleri'),subtitle:const Text('V54 • Test build 221'),trailing:const Icon(Icons.build_circle,color:Colors.orange)),
     ListTile(leading:const Icon(Icons.share,color:mavi),title:const Text('Ngel X’i paylaş'),subtitle:const Text('Uygulama bağlantısını paylaş veya kopyala'),onTap:()async=>SharePlus.instance.share(ShareParams(text:'Ngel X ile dünyanı paylaş ✨\nhttps://ngelx.app'))),
     const Divider(),
     ListTile(leading:const Icon(Icons.logout,color:Colors.red),title:const Text('Çıkış yap',style:TextStyle(color:Colors.red)),onTap:()async{final onay=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(title:const Text('Çıkış yapılsın mı?'),content:const Text('Tekrar giriş yapman gerekecek.'),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('Çıkış yap'))]));if(onay==true){await FirebaseAuth.instance.signOut();if(context.mounted)Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder:(_)=>const GirisPage()),(_)=>false);}})
@@ -11494,12 +11494,26 @@ class _ProfilPageState extends State<ProfilPage> {
           : 'jpg';
       final yol = 'profiles/${user.uid}/${DateTime.now().millisecondsSinceEpoch}.$uzanti';
       final bytes=await dosya.readAsBytes().timeout(const Duration(seconds:8));
-      final url = await ngelxMedyaYukleBytes(
-        bytes:bytes,
-        kind:'profiles',
-        ext:uzanti,
-        legacyPath:yol,
-      ).timeout(const Duration(seconds:18));
+      String url;
+      try{
+        url=await ngelxMedyaYukleBytes(
+          bytes:bytes,
+          kind:'profiles',
+          ext:uzanti,
+          legacyPath:yol,
+        ).timeout(const Duration(seconds:18));
+      }catch(e){
+        if(e.toString().contains('(400)')){
+          url=await ngelxMedyaYukleBytes(
+            bytes:bytes,
+            kind:'photos',
+            ext:uzanti,
+            legacyPath:yol,
+          ).timeout(const Duration(seconds:18));
+        }else{
+          rethrow;
+        }
+      }
       await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
@@ -11543,12 +11557,27 @@ class _ProfilPageState extends State<ProfilPage> {
     if(mounted)setState(()=>fotoYukleniyor=true);
     try{
       final yol='profile-intros/'+user.uid+'/'+DateTime.now().millisecondsSinceEpoch.toString()+'.mp4';
-      final url=await ngelxMedyaYukleBytes(
-        bytes: await dosya.readAsBytes(),
-        kind: 'profile-intros',
-        ext: 'mp4',
-        legacyPath: yol,
-      );
+      final bytes=await dosya.readAsBytes().timeout(const Duration(seconds:10));
+      String url;
+      try{
+        url=await ngelxMedyaYukleBytes(
+          bytes:bytes,
+          kind:'profile-intros',
+          ext:'mp4',
+          legacyPath:yol,
+        ).timeout(const Duration(seconds:20));
+      }catch(e){
+        if(e.toString().contains('(400)')){
+          url=await ngelxMedyaYukleBytes(
+            bytes:bytes,
+            kind:'videos',
+            ext:'mp4',
+            legacyPath:yol,
+          ).timeout(const Duration(seconds:20));
+        }else{
+          rethrow;
+        }
+      }
       await FirebaseFirestore.instance.collection('users').doc(user.uid).set({'introVideoUrl':url,'updatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
       if(mounted){setState(()=>tanitimVideoUrl=url);ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Profil tanıtım videosu kaydedildi.')));}
     }catch(e){
@@ -11565,12 +11594,27 @@ class _ProfilPageState extends State<ProfilPage> {
     try {
       final uzanti = dosya.name.contains('.') ? dosya.name.split('.').last.toLowerCase() : 'jpg';
       final yol = 'stories/${user.uid}/${DateTime.now().millisecondsSinceEpoch}.$uzanti';
-      final url = await ngelxMedyaYukleBytes(
-        bytes: await dosya.readAsBytes(),
-        kind: 'stories',
-        ext: uzanti,
-        legacyPath: yol,
-      );
+      final bytes=await dosya.readAsBytes().timeout(const Duration(seconds:10));
+      String url;
+      try{
+        url=await ngelxMedyaYukleBytes(
+          bytes:bytes,
+          kind:'stories',
+          ext:uzanti,
+          legacyPath:yol,
+        ).timeout(const Duration(seconds:18));
+      }catch(e){
+        if(e.toString().contains('(400)')){
+          url=await ngelxMedyaYukleBytes(
+            bytes:bytes,
+            kind:'photos',
+            ext:uzanti,
+            legacyPath:yol,
+          ).timeout(const Duration(seconds:18));
+        }else{
+          rethrow;
+        }
+      }
       await FirebaseFirestore.instance.collection('videos').add({
         'ownerId': user.uid,
         'username': kullanici.replaceFirst('@', ''),
