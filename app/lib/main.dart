@@ -8116,7 +8116,7 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
                     final d=adaylar[i],v=d.data()??<String,dynamic>{};
                     final ad=(v['displayName']??v['username']??'Kullanıcı').toString();
                     final foto=(v['photoUrl']??'').toString();
-                    final secili=secilen.contains(d.id),online=v['online']==true;
+                    final secili=secilen.contains(d.id),online=v['isOnline']==true||v['online']==true;
                     return NgelXPremiumCard(
                       margin:const EdgeInsets.only(bottom:8),
                       padding:const EdgeInsets.symmetric(horizontal:10,vertical:6),
@@ -8389,7 +8389,7 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
                               child:GridView.builder(
                                 physics:const NeverScrollableScrollPhysics(),
                                 gridDelegate:const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount:2,crossAxisSpacing:5,mainAxisSpacing:5),
-                                itemCount:(medya.length-1).clamp(0,4),
+                                itemCount:(medya.length-1).clamp(0,4).toInt(),
                                 itemBuilder:(_,i)=>ClipRRect(
                                   borderRadius:BorderRadius.circular(10),
                                   child:CachedNetworkImage(
