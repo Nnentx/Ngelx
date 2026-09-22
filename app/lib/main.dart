@@ -3867,10 +3867,9 @@ class _KesfetPageState extends State<KesfetPage> {
                   final begeni = (v['likeCount'] as num?)?.toInt() ?? 0;
                   final izlenme = (v['viewCount'] as num?)?.toInt() ?? 0;
                   final trend=v['isTrending'] == true || begeni >= 50 || izlenme >= 500;
-                  if(!trend)return false;
-                  if(arama.isEmpty)return true;
                   final metin='${v['description']??''} ${v['tags']??''} ${v['username']??''}'.toLowerCase();
-                  return metin.contains(arama);
+                  if(arama.isNotEmpty)return metin.contains(arama);
+                  return trend;
                 }).toList();
                 if (belgeler.isEmpty) return const SliverToBoxAdapter(child: Padding(padding: EdgeInsets.all(28), child: Center(child: Text('Trend içerikler burada görünecek ✨', style: TextStyle(color: Colors.black54)))));
                 return SliverGrid(
@@ -3897,7 +3896,7 @@ class _KesfetPageState extends State<KesfetPage> {
               },
             )),
           if(bolumAcik('Kişiler')) const SliverToBoxAdapter(child: Padding(padding: EdgeInsets.fromLTRB(16, 20, 16, 8), child: Row(children: [Text('Kişileri keşfet', style: TextStyle(color: Colors.black, fontSize: 21, fontWeight: FontWeight.w900)), Spacer()]))),
-          if(bolumAcik('Kişiler')) SliverToBoxAdapter(child: SizedBox(height: 145, child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+          if(bolumAcik('Kişiler')) SliverToBoxAdapter(child: SizedBox(height: 188, child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
             stream: FirebaseFirestore.instance.collection('users').limit(30).snapshots(),
             builder: (_, snap) {
               final ben=FirebaseAuth.instance.currentUser?.uid;
@@ -3982,7 +3981,7 @@ class _KesfetPageState extends State<KesfetPage> {
     final foto = (v['photoUrl'] ?? '').toString();
     final ad = (v['displayName'] ?? v['username'] ?? 'Kullanıcı').toString();
     final aktif=v['showActivityStatus']!=false&&v['isOnline']==true;
-    return SizedBox(width: 112, child: Column(children: [
+    return SizedBox(width: 132, child: Column(children: [
       InkWell(
         borderRadius:BorderRadius.circular(50),
         onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciProfilPage(uid:uid))),
@@ -3996,22 +3995,74 @@ class _KesfetPageState extends State<KesfetPage> {
         onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciProfilPage(uid:uid))),
         child:Text(ad, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w800)),
       ),
-      const SizedBox(height: 4),
-      SizedBox(height: 30, child: FilledButton(
-        style: FilledButton.styleFrom(backgroundColor: mor, padding: const EdgeInsets.symmetric(horizontal: 12)),
+      Text('@${v['username']??'ngelx'}',maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black45,fontSize:11)),
+      const SizedBox(height: 5),
+      SizedBox(width:132,height:30,child:FilledButton(
+        style: FilledButton.styleFrom(backgroundColor: mor, padding: const EdgeInsets.symmetric(horizontal: 8)),
         onPressed: () async {
           final ben=FirebaseAuth.instance.currentUser?.uid;
           if(ben==null||ben==uid)return;
           try{
-            final d=await FirebaseFirestore.instance.collection('users').doc(ben).get().timeout(const Duration(seconds:6));
-            final takipte=List<String>.from(d.data()?['following']??const[]).contains(uid);
-            await takipDurumuDegistir(uid,takipte).timeout(const Duration(seconds:8));
-            if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(takipte?'Takipten çıkıldı.':'Takip edildi ✅')));
+            final benimRef=FirebaseFirestore.instance.collection('users').doc(ben);
+            final benim=await benimRef.get().timeout(const Duration(seconds:6));
+            final takipte=List<String>.from(benim.data()?['following']??const[]).contains(uid);
+            if(takipte){
+              await takipDurumuDegistir(uid,true).timeout(const Duration(seconds:8));
+              if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Takipten çıkıldı.')));
+              return;
+            }
+            if(v['privateAccount']==true){
+              final gonderen=(benim.data()?['displayName']??benim.data()?['username']??'NgelX kullanıcısı').toString();
+              final ref=FirebaseFirestore.instance.collection('notifications').doc('follow_request_'+ben+'_'+uid);
+              await ref.set({
+                'toUid':uid,'fromUid':ben,'type':'follow_request',
+                'senderName':gonderen,'photoUrl':(benim.data()?['photoUrl']??'').toString(),
+                'text':'$gonderen sana takip isteği gönderdi',
+                'status':'pending','read':false,'createdAt':FieldValue.serverTimestamp(),
+              },SetOptions(merge:true)).timeout(const Duration(seconds:8));
+              if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Takip isteği gönderildi.')));
+            }else{
+              await takipDurumuDegistir(uid,false).timeout(const Duration(seconds:8));
+              if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Takip edildi ✅')));
+            }
           }catch(_){
             if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Takip işlemi tamamlanamadı.')));
           }
         },
-        child: const Text('Takip', style: TextStyle(fontSize: 11)),
+        child: const Text('Takip et', style: TextStyle(fontSize: 11)),
+      )),
+      const SizedBox(height:4),
+      SizedBox(width:132,height:30,child:OutlinedButton.icon(
+        style:OutlinedButton.styleFrom(padding:const EdgeInsets.symmetric(horizontal:7),side:const BorderSide(color:Color(0xFFBDA5F6))),
+        onPressed:()async{
+          final ben=FirebaseAuth.instance.currentUser?.uid;
+          if(ben==null||ben==uid)return;
+          try{
+            final benim=await FirebaseFirestore.instance.collection('users').doc(ben).get().timeout(const Duration(seconds:6));
+            if(List<String>.from(benim.data()?['friends']??const[]).contains(uid)){
+              if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Zaten arkadaşsınız.')));
+              return;
+            }
+            final gonderen=(benim.data()?['displayName']??benim.data()?['username']??'NgelX kullanıcısı').toString();
+            final ref=FirebaseFirestore.instance.collection('notifications').doc('friend_request_'+ben+'_'+uid);
+            final mevcut=await ref.get().timeout(const Duration(seconds:6));
+            if(mevcut.data()?['status']=='pending'){
+              if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Arkadaşlık isteği zaten gönderildi.')));
+              return;
+            }
+            await ref.set({
+              'toUid':uid,'fromUid':ben,'type':'friend_request',
+              'senderName':gonderen,'photoUrl':(benim.data()?['photoUrl']??'').toString(),
+              'text':'$gonderen sana arkadaşlık isteği gönderdi',
+              'status':'pending','read':false,'createdAt':FieldValue.serverTimestamp(),
+            },SetOptions(merge:true)).timeout(const Duration(seconds:8));
+            if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Arkadaşlık isteği gönderildi.')));
+          }catch(_){
+            if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Arkadaşlık isteği gönderilemedi.')));
+          }
+        },
+        icon:const Icon(Icons.person_add_alt_1_rounded,size:15),
+        label:const Text('Arkadaş ekle',style:TextStyle(fontSize:10)),
       )),
     ]));
   }
