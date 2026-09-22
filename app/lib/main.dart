@@ -6144,7 +6144,159 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
   }
   Future<void> ayril(List<String> uyeler,List<String> admins)async{final me=ben;if(me==null)return;if(admins.length==1&&admins.contains(me)&&uyeler.length>1){await showDialog<void>(context:context,builder:(c)=>Theme(data:ThemeData.light(),child:AlertDialog(backgroundColor:Colors.white,title:const Text('Önce yönetici belirle',style:TextStyle(color:Colors.black87)),content:const Text('Gruptan ayrılmadan önce başka bir üyeyi yönetici yapmalısın.',style:TextStyle(color:Colors.black87)),actions:[FilledButton(onPressed:()=>Navigator.pop(c),child:const Text('Tamam'))])));return;}final sonKisi=uyeler.length==1;final ok=await showDialog<bool>(context:context,builder:(c)=>Theme(data:ThemeData.light(),child:AlertDialog(backgroundColor:Colors.white,title:Text(sonKisi?'Grup silinsin mi?':'Gruptan ayrılmak istiyor musun?',style:const TextStyle(color:Colors.black87)),content:Text(sonKisi?'Grupta yalnızca sen kaldın. Grup sohbeti listenden kaldırılacak.':'Mesaj geçmişine erişimin sona erecek.',style:const TextStyle(color:Colors.black87)),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),FilledButton(style:FilledButton.styleFrom(backgroundColor:Colors.red),onPressed:()=>Navigator.pop(c,true),child:Text(sonKisi?'Grubu sil':'Ayrıl'))])))??false;if(!ok)return;if(sonKisi)await ref.set({'members':FieldValue.arrayRemove([me]),'admins':FieldValue.arrayRemove([me]),'groupDeleted':true,'deletedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));else{await sistemMesaji('Bir üye gruptan ayrıldı.');await ref.update({'members':FieldValue.arrayRemove([me]),'admins':FieldValue.arrayRemove([me])});}if(mounted)Navigator.popUntil(context,(r)=>r.isFirst);}
   Future<void> ayarDegistir(String alan,bool deger)async{await ref.set({alan:deger},SetOptions(merge:true));}
-  @override Widget build(BuildContext context)=>Theme(data:ThemeData.light(),child:Scaffold(backgroundColor:Colors.white,appBar:AppBar(title:const Text('Grup bilgileri')),body:StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(stream:ref.snapshots(),builder:(_,s){if(!s.hasData)return const Center(child:CircularProgressIndicator(color:mor));final v=s.data?.data()??{},uyeler=List<String>.from(v['members']??const[]),yoneticiler=List<String>.from(v['admins']??const[]),yonetici=yoneticiler.contains(ben),foto=(v['groupPhotoUrl']??'').toString(),ad=(v['groupName']??'Grup').toString();return ListView(padding:EdgeInsets.fromLTRB(18,18,18,30+MediaQuery.paddingOf(context).bottom),children:[GestureDetector(onTap:yonetici?fotografDuzenle:null,child:Stack(alignment:Alignment.bottomRight,children:[Center(child:CircleAvatar(radius:50,backgroundColor:const Color(0xFFE9DDFF),backgroundImage:foto.isEmpty?null:CachedNetworkImageProvider(foto),child:foto.isEmpty?const Icon(Icons.groups,color:mor,size:48):null)),if(yonetici)Positioned(right:MediaQuery.sizeOf(context).width/2-62,child:const CircleAvatar(radius:15,backgroundColor:mor,child:Icon(Icons.camera_alt,color:Colors.white,size:17))) ])),const SizedBox(height:10),Text(ad,textAlign:TextAlign.center,style:const TextStyle(color:Colors.black,fontSize:25,fontWeight:FontWeight.w900)),Text('${uyeler.length}/60 üye',textAlign:TextAlign.center,style:const TextStyle(color:Colors.black54)),if(yonetici)...[ListTile(leading:const Icon(Icons.edit,color:mor),title:const Text('Grup adını düzenle'),onTap:()=>adiDuzenle(ad)),ListTile(leading:const Icon(Icons.add_a_photo,color:mor),title:const Text('Grup fotoğrafını değiştir'),onTap:fotografDuzenle)],const Divider(),ListTile(leading:const Icon(Icons.photo_library_outlined,color:mor),title:const Text('Medya, dosyalar ve bağlantılar'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupMedyaPage(chatId:widget.chatId)))),ListTile(leading:const Icon(Icons.push_pin_outlined,color:mor),title:const Text('Sabitlenmiş mesajlar'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>SabitlenenGrupMesajlariPage(chatId:widget.chatId)))),if(yonetici)...[const Divider(),const Text('Grup izinleri',style:TextStyle(fontSize:18,fontWeight:FontWeight.w900)),SwitchListTile(title:const Text('Yalnızca yöneticiler mesaj gönderebilir'),value:v['onlyAdminsCanPost']==true,onChanged:(x)=>ayarDegistir('onlyAdminsCanPost',x)),SwitchListTile(title:const Text('Yeni üyeler eski mesajları görebilir'),value:v['newMembersSeeHistory']!=false,onChanged:(x)=>ayarDegistir('newMembersSeeHistory',x)),SwitchListTile(title:const Text('Katılma istekleri yönetici onayından geçsin'),value:v['joinApproval']==true,onChanged:(x)=>ayarDegistir('joinApproval',x))],const Divider(),Row(children:[const Expanded(child:Text('Üyeler',style:TextStyle(color:Colors.black,fontSize:18,fontWeight:FontWeight.w900))),if(yonetici)TextButton.icon(onPressed:uyeler.length>=60?null:()=>uyeEkle(uyeler),icon:const Icon(Icons.person_add_alt_1),label:const Text('Üye ekle'))]),...uyeler.map((id)=>FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(future:_uyeGetir(id),builder:(_,u){final p=u.data?.data()??{},isim=(p['displayName']??p['username']??'Kullanıcı').toString(),pf=(p['photoUrl']??'').toString(),admin=yoneticiler.contains(id);return ListTile(onTap:yonetici&&id!=ben?()=>uyeIslemi(id,isim,admin):null,leading:CircleAvatar(backgroundImage:pf.isEmpty?null:CachedNetworkImageProvider(pf),child:pf.isEmpty?const Icon(Icons.person):null),title:Text(isim),subtitle:Text(admin?'Yönetici':'Üye'),trailing:yonetici&&id!=ben?const Icon(Icons.more_vert):null);})),const Divider(),ListTile(leading:const Icon(Icons.exit_to_app,color:Colors.red),title:Text(uyeler.length==1?'Grubu sil':'Gruptan ayrıl',style:const TextStyle(color:Colors.red)),onTap:()=>ayril(uyeler,yoneticiler))]);})));
+  @override Widget build(BuildContext context)=>Theme(
+    data:ThemeData.light(),
+    child:Scaffold(
+      backgroundColor:Colors.white,
+      appBar:AppBar(
+        backgroundColor:Colors.white,
+        surfaceTintColor:Colors.transparent,
+        elevation:0,
+        title:const Text('Grup bilgileri',style:TextStyle(fontWeight:FontWeight.w900)),
+      ),
+      body:StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
+        stream:ref.snapshots(),
+        builder:(_,s){
+          if(!s.hasData)return const Center(child:CircularProgressIndicator(color:mor));
+          final v=s.data?.data()??<String,dynamic>{};
+          final uyeler=List<String>.from(v['members']??const[]);
+          final yoneticiler=List<String>.from(v['admins']??const[]);
+          final yonetici=yoneticiler.contains(ben);
+          final foto=(v['groupPhotoUrl']??'').toString();
+          final ad=(v['groupName']??'Grup').toString();
+
+          return ListView(
+            padding:EdgeInsets.fromLTRB(16,14,16,28+MediaQuery.paddingOf(context).bottom),
+            children:[
+              GestureDetector(
+                onTap:yonetici?fotografDuzenle:null,
+                child:Center(
+                  child:Stack(
+                    clipBehavior:Clip.none,
+                    children:[
+                      CircleAvatar(
+                        radius:48,
+                        backgroundColor:const Color(0xFFE9DDFF),
+                        backgroundImage:foto.isEmpty?null:CachedNetworkImageProvider(foto),
+                        child:foto.isEmpty?const Icon(Icons.groups,color:mor,size:44):null,
+                      ),
+                      if(yonetici)
+                        const Positioned(
+                          right:-2,bottom:-2,
+                          child:CircleAvatar(
+                            radius:15,
+                            backgroundColor:mor,
+                            child:Icon(Icons.camera_alt_rounded,color:Colors.white,size:16),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height:9),
+              Text(ad,textAlign:TextAlign.center,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black87,fontSize:23,fontWeight:FontWeight.w900)),
+              Text(uyeler.length.toString()+' üye',textAlign:TextAlign.center,style:const TextStyle(color:Colors.black54,fontSize:13,fontWeight:FontWeight.w600)),
+
+              if(yonetici)...[
+                const SizedBox(height:13),
+                Row(
+                  children:[
+                    Expanded(child:OutlinedButton.icon(onPressed:()=>adiDuzenle(ad),icon:const Icon(Icons.edit_rounded,size:18),label:const Text('Ad'))),
+                    const SizedBox(width:7),
+                    Expanded(child:OutlinedButton.icon(onPressed:fotografDuzenle,icon:const Icon(Icons.photo_camera_rounded,size:18),label:const Text('Fotoğraf'))),
+                    const SizedBox(width:7),
+                    Expanded(child:OutlinedButton.icon(onPressed:uyeler.length>=60?null:()=>uyeEkle(uyeler),icon:const Icon(Icons.person_add_alt_1_rounded,size:18),label:const Text('Ekle'))),
+                  ],
+                ),
+              ],
+
+              const SizedBox(height:18),
+              Row(
+                children:[
+                  const Expanded(child:Text('Sohbet üyeleri',style:TextStyle(color:Colors.black87,fontSize:18,fontWeight:FontWeight.w900))),
+                  Text(uyeler.length.toString()+'/60',style:const TextStyle(color:Colors.black45,fontWeight:FontWeight.w700)),
+                ],
+              ),
+              const SizedBox(height:3),
+              ...uyeler.map((id)=>FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(
+                future:_uyeGetir(id),
+                builder:(_,u){
+                  final p=u.data?.data()??<String,dynamic>{};
+                  final isim=(p['displayName']??p['username']??'Kullanıcı').toString();
+                  final pf=(p['photoUrl']??'').toString();
+                  final admin=yoneticiler.contains(id);
+                  return ListTile(
+                    dense:true,
+                    visualDensity:VisualDensity.compact,
+                    contentPadding:EdgeInsets.zero,
+                    onTap:yonetici&&id!=ben?()=>uyeIslemi(id,isim,admin):null,
+                    leading:CircleAvatar(
+                      radius:20,
+                      backgroundImage:pf.isEmpty?null:CachedNetworkImageProvider(pf),
+                      child:pf.isEmpty?const Icon(Icons.person,size:19):null,
+                    ),
+                    title:Text(isim,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontWeight:FontWeight.w700)),
+                    subtitle:admin?const Text('Yönetici',style:TextStyle(color:mor,fontSize:11.5,fontWeight:FontWeight.w700)):null,
+                    trailing:yonetici&&id!=ben?const Icon(Icons.more_horiz_rounded,size:20):null,
+                  );
+                },
+              )),
+
+              const Divider(height:24),
+              ListTile(
+                dense:true,
+                contentPadding:EdgeInsets.zero,
+                leading:const Icon(Icons.photo_library_outlined,color:mor),
+                title:const Text('Medya ve bağlantılar',style:TextStyle(fontWeight:FontWeight.w700)),
+                trailing:const Icon(Icons.chevron_right),
+                onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupMedyaPage(chatId:widget.chatId))),
+              ),
+              ListTile(
+                dense:true,
+                contentPadding:EdgeInsets.zero,
+                leading:const Icon(Icons.push_pin_outlined,color:mor),
+                title:const Text('Sabitlenen mesajlar',style:TextStyle(fontWeight:FontWeight.w700)),
+                trailing:const Icon(Icons.chevron_right),
+                onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>SabitlenenGrupMesajlariPage(chatId:widget.chatId))),
+              ),
+
+              if(yonetici)...[
+                const Divider(height:24),
+                const Text('İzinler',style:TextStyle(color:Colors.black87,fontSize:17,fontWeight:FontWeight.w900)),
+                SwitchListTile(
+                  dense:true,contentPadding:EdgeInsets.zero,
+                  title:const Text('Sadece yöneticiler yazsın'),
+                  value:v['onlyAdminsCanPost']==true,
+                  onChanged:(x)=>ayarDegistir('onlyAdminsCanPost',x),
+                ),
+                SwitchListTile(
+                  dense:true,contentPadding:EdgeInsets.zero,
+                  title:const Text('Yeni üyeler geçmişi görsün'),
+                  value:v['newMembersSeeHistory']!=false,
+                  onChanged:(x)=>ayarDegistir('newMembersSeeHistory',x),
+                ),
+                SwitchListTile(
+                  dense:true,contentPadding:EdgeInsets.zero,
+                  title:const Text('Katılma isteğini onayla'),
+                  value:v['joinApproval']==true,
+                  onChanged:(x)=>ayarDegistir('joinApproval',x),
+                ),
+              ],
+
+              const Divider(height:24),
+              ListTile(
+                dense:true,
+                contentPadding:EdgeInsets.zero,
+                leading:const Icon(Icons.exit_to_app_rounded,color:Colors.red),
+                title:Text(uyeler.length==1?'Grubu sil':'Gruptan ayrıl',style:const TextStyle(color:Colors.red,fontWeight:FontWeight.w700)),
+                onTap:()=>ayril(uyeler,yoneticiler),
+              ),
+            ],
+          );
+        },
+      ),
+    ),
+  );
 }
 
 class YeniSohbetPage extends StatefulWidget {
