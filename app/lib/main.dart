@@ -5319,6 +5319,7 @@ class _GrupOlusturPageState extends State<GrupOlusturPage>{
         'onlyAdminsCanPost':false,
         'newMembersSeeHistory':true,
         'joinApproval':false,
+        'mutedFor':<String>[],
       }).timeout(const Duration(seconds:12));
       // Sohbet ekranını, grup belgesi Firestore'a kesin olarak yazıldıktan sonra aç.
       // Böylece messages alt koleksiyonu için üyelik kuralı ilk açılışta yarış durumuna girmez.
@@ -5551,7 +5552,8 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
   final List<Map<String,String>> mentionOnerileri=[];
   final Set<String> etiketlenenUidler={};
   final Map<String,Future<DocumentSnapshot<Map<String,dynamic>>>> _uyeProfilCache={};
-  Timer? mentionZamanlayici,_mesajBeklemeZamanlayici;
+  Timer? mentionZamanlayici,_mesajBeklemeZamanlayici,_typingZamanlayici;
+  bool _typingYazildi=false;
   List<Map<String,String>>? _mentionUyeleri;
   late Stream<QuerySnapshot<Map<String,dynamic>>> _mesajAkisi;
   late final Stream<DocumentSnapshot<Map<String,dynamic>>> _grupAkisi;
@@ -5578,7 +5580,13 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
       if(mounted)setState(()=>_mesajBeklemeBitti=true);
     });
   }
-  @override void dispose(){mentionZamanlayici?.cancel();_mesajBeklemeZamanlayici?.cancel();if(sesKaydediliyor)unawaited(_grupSesKaydedici.cancel());unawaited(_grupSesKaydedici.dispose());mesaj.dispose();liste.dispose();super.dispose();}
+  @override void dispose(){
+    mentionZamanlayici?.cancel();_mesajBeklemeZamanlayici?.cancel();_typingZamanlayici?.cancel();
+    if(_typingYazildi)unawaited(_typingTemizle());
+    if(sesKaydediliyor)unawaited(_grupSesKaydedici.cancel());
+    unawaited(_grupSesKaydedici.dispose());
+    mesaj.dispose();liste.dispose();super.dispose();
+  }
   Future<void> _okunduIsaretle()async{
     final ben=uid;
     if(ben==null||_okunduYaziliyor)return;
@@ -5643,9 +5651,19 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
       batch.set(chatRef,g,SetOptions(merge:true));
       await batch.commit();
       final etiketler=List<String>.from(veri['mentions']??const[]);
+      final sessizde=List<String>.from(grupVerisi['mutedFor']??const[]);
+      final profil=await FirebaseFirestore.instance.collection('users').doc(ben).get();
+      final ad=(profil.data()?['displayName']??profil.data()?['username']??'Bir kullanıcı').toString();
+      final onizleme=sonMesaj.length>80?sonMesaj.substring(0,80)+'…':sonMesaj;
+      for(final hedef in uyeler){
+        if(hedef==ben||sessizde.contains(hedef)||etiketler.contains(hedef))continue;
+        unawaited(uygulamaBildirimiGonder(
+          toUid:hedef,fromUid:ben,tur:'message',
+          metin:ad+': '+onizleme,
+          belgeId:widget.chatId,
+        ).catchError((_){ }));
+      }
       if(etiketler.isNotEmpty){
-        final profil=await FirebaseFirestore.instance.collection('users').doc(ben).get();
-        final ad=(profil.data()?['displayName']??profil.data()?['username']??'Bir kullanıcı').toString();
         for(final hedef in etiketler.toSet()){
           if(hedef==ben||!uyeler.contains(hedef))continue;
           unawaited(uygulamaBildirimiGonder(
@@ -5673,6 +5691,8 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
     },t);
     if(tamam){
       mesaj.clear();etiketlenenUidler.clear();
+      _typingZamanlayici?.cancel();
+      if(_typingYazildi)unawaited(_typingTemizle());
       if(mounted)setState((){yanitlananMesajId=null;yanitlananMetin=null;});
     }
     if(mounted)setState(()=>mesajGonderiliyor=false);
@@ -5766,6 +5786,35 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
       mesaj.text=t+e;
       mesaj.selection=TextSelection.collapsed(offset:mesaj.text.length);
     }
+  }
+
+  Future<void> _typingTemizle()async{
+    final me=uid;
+    if(me==null)return;
+    _typingYazildi=false;
+    try{await chatRef.set({'typing_'+me:FieldValue.delete()},SetOptions(merge:true));}catch(_){}
+  }
+
+  void _typingGuncelle(String deger){
+    final me=uid;
+    if(me==null)return;
+    _typingZamanlayici?.cancel();
+    if(deger.trim().isEmpty){
+      if(_typingYazildi)unawaited(_typingTemizle());
+      return;
+    }
+    if(!_typingYazildi){
+      _typingYazildi=true;
+      unawaited(chatRef.set({'typing_'+me:FieldValue.serverTimestamp()},SetOptions(merge:true)).catchError((_){ }));
+    }
+    _typingZamanlayici=Timer(const Duration(milliseconds:2400),(){
+      if(_typingYazildi)unawaited(_typingTemizle());
+    });
+  }
+
+  void _mesajAlanDegisti(String deger){
+    mentionAra(deger);
+    _typingGuncelle(deger);
   }
 
   Future<void> mentionAra(String deger)async{
@@ -6542,6 +6591,34 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
                   onTap:()=>mentionEkle(u['username']??'',u['uid']),
                 )).toList()),
               ),
+              Builder(builder:(_){
+                final yazan=<String>[];
+                final simdi=DateTime.now();
+                tv.forEach((k,val){
+                  if(!k.startsWith('typing_')||val is! Timestamp)return;
+                  final id=k.substring(7);
+                  if(id==uid)return;
+                  if(simdi.difference(val.toDate()).inSeconds<=5)yazan.add(id);
+                });
+                if(yazan.isEmpty)return const SizedBox.shrink();
+                final ilk=yazan.first;
+                return FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(
+                  future:_uyeGetir(ilk),
+                  builder:(_,p){
+                    final ad=(p.data?.data()?['displayName']??p.data?.data()?['username']??'Bir üye').toString();
+                    final yazi=yazan.length==1?ad+' yazıyor…':yazan.length.toString()+' kişi yazıyor…';
+                    return Padding(
+                      padding:const EdgeInsets.fromLTRB(16,3,16,0),
+                      child:Row(children:[
+                        const SizedBox(width:3),
+                        const Icon(Icons.more_horiz_rounded,color:ngelxPremiumPurple,size:18),
+                        const SizedBox(width:6),
+                        Text(yazi,style:const TextStyle(color:ngelxPremiumMuted,fontSize:10.5,fontWeight:FontWeight.w700,fontStyle:FontStyle.italic)),
+                      ]),
+                    );
+                  },
+                );
+              }),
               if(yanitlananMetin!=null)Container(
                 margin:const EdgeInsets.fromLTRB(12,4,12,2),
                 padding:const EdgeInsets.fromLTRB(12,8,5,8),
@@ -6571,7 +6648,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
                     InkWell(onTap:ekMenusu,borderRadius:BorderRadius.circular(20),child:Container(width:40,height:40,decoration:const BoxDecoration(shape:BoxShape.circle,gradient:LinearGradient(colors:[ngelxPremiumPurple2,ngelxPremiumPurple])),child:const Icon(Icons.add_rounded,color:Colors.white,size:25))),
                     const SizedBox(width:7),
                     Expanded(child:TextField(
-                      controller:mesaj,onChanged:mentionAra,onSubmitted:(_)=>gonder(),maxLength:2000,
+                      controller:mesaj,onChanged:_mesajAlanDegisti,onSubmitted:(_)=>gonder(),maxLength:2000,
                       buildCounter:(_, {required currentLength,required isFocused,maxLength})=>null,
                       decoration:InputDecoration(
                         hintText:sesKaydediliyor?'Kayıt alınıyor…':'Mesaj yaz...',
@@ -7854,6 +7931,10 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
     if(mounted)Navigator.popUntil(context,(r)=>r.isFirst);
   }
   Future<void> ayarDegistir(String alan,bool deger)async{await ref.set({alan:deger},SetOptions(merge:true));}
+  Future<void> bildirimSessiz(bool sessiz)async{
+    final me=ben;if(me==null)return;
+    await ref.set({'mutedFor':sessiz?FieldValue.arrayUnion([me]):FieldValue.arrayRemove([me])},SetOptions(merge:true));
+  }
   @override Widget build(BuildContext context)=>Theme(
     data:ThemeData.light().copyWith(
       scaffoldBackgroundColor:const Color(0xFFFBF9FF),
@@ -8008,6 +8089,15 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
                   _grupSatir(Icons.photo_library_outlined,'Medya ve bağlantılar','Paylaşılan fotoğraf, video ve bağlantılar',()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupMedyaPage(chatId:widget.chatId)))),
                   _grupAyirici(),
                   _grupSatir(Icons.push_pin_outlined,'Sabitlenen mesajlar','Önemli mesajlara hızlı ulaş',()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>SabitlenenGrupMesajlariPage(chatId:widget.chatId)))),
+                ]),
+              ),
+              const SizedBox(height:14),
+              NgelXPremiumCard(
+                padding:const EdgeInsets.fromLTRB(12,13,12,7),
+                child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+                  const Padding(padding:EdgeInsets.symmetric(horizontal:6),child:Text('Bildirimler',style:TextStyle(color:ngelxPremiumPurple,fontSize:17,fontWeight:FontWeight.w900))),
+                  const SizedBox(height:6),
+                  _grupSwitch(Icons.notifications_off_outlined,'Bildirimleri sessize al','Bu gruptan yeni mesaj bildirimi alma',List<String>.from(v['mutedFor']??const[]).contains(ben),bildirimSessiz),
                 ]),
               ),
               if(yonetici)...[
