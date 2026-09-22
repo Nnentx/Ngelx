@@ -3827,6 +3827,14 @@ class _KesfetPageState extends State<KesfetPage> {
   bool get globalArama=>arama.isNotEmpty;
   bool bolumAcik(String ad)=>globalArama||sekme==ad;
 
+  void trendAra(String etiket){
+    final q=etiket.replaceFirst('#','').trim().toLowerCase();
+    aramaKontrol.text=q;
+    aramaKontrol.selection=TextSelection.collapsed(offset:q.length);
+    FocusScope.of(context).unfocus();
+    setState((){sekme='Trend';arama=q;});
+  }
+
   Future<void> _yayinIzle(BuildContext context, Map<String, dynamic> veri, String belgeId) async {
     if (await misafirEngeli(context)) return;
     final user = FirebaseAuth.instance.currentUser;
@@ -3994,12 +4002,16 @@ class _KesfetPageState extends State<KesfetPage> {
             ),
           )),
           if(bolumAcik('Trend')) const SliverToBoxAdapter(child: Padding(padding: EdgeInsets.fromLTRB(16, 20, 16, 10), child: Text('Trendler', style: TextStyle(color: Colors.black, fontSize: 21, fontWeight: FontWeight.w900)))),
-          if(bolumAcik('Trend')) SliverToBoxAdapter(child: SizedBox(height: 48, child: ListView(padding: const EdgeInsets.symmetric(horizontal: 16), scrollDirection: Axis.horizontal, children: const [
-            _TrendEtiketi(Icons.directions_run_rounded, '#spor', Color(0xFFFFEEF1), Colors.red),
-            _TrendEtiketi(Icons.music_note_rounded, '#müzik', Color(0xFFF1EAFE), mor),
-            _TrendEtiketi(Icons.computer_rounded, '#teknoloji', Color(0xFFE7FAFA), Color(0xFF00AFC1)),
-            _TrendEtiketi(Icons.flight_takeoff_rounded, '#seyahat', Color(0xFFEAF2FF), Colors.blue),
-          ]))),
+          if(bolumAcik('Trend')) SliverToBoxAdapter(child: SizedBox(height: 48, child: ListView(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            scrollDirection: Axis.horizontal,
+            children: [
+              _TrendEtiketi(Icons.directions_run_rounded,'#spor',const Color(0xFFFFEEF1),Colors.red,tiklama:()=>trendAra('#spor')),
+              _TrendEtiketi(Icons.music_note_rounded,'#müzik',const Color(0xFFF1EAFE),mor,tiklama:()=>trendAra('#müzik')),
+              _TrendEtiketi(Icons.computer_rounded,'#teknoloji',const Color(0xFFE7FAFA),const Color(0xFF00AFC1),tiklama:()=>trendAra('#teknoloji')),
+              _TrendEtiketi(Icons.flight_takeoff_rounded,'#seyahat',const Color(0xFFEAF2FF),Colors.blue,tiklama:()=>trendAra('#seyahat')),
+            ],
+          ))),
           if(bolumAcik('Trend')) const SliverToBoxAdapter(child: Padding(padding: EdgeInsets.fromLTRB(16, 20, 16, 8), child: Row(children: [Text('Trend içerikler', style: TextStyle(color: Colors.black, fontSize: 21, fontWeight: FontWeight.w900)), Spacer()]))),
           if(bolumAcik('Trend')) SliverPadding(padding: const EdgeInsets.all(6), sliver: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
               stream: FirebaseFirestore.instance.collection('videos').orderBy('createdAt', descending: true).limit(30).snapshots(),
@@ -4062,7 +4074,7 @@ class _KesfetPageState extends State<KesfetPage> {
             },
           ))),
           if(bolumAcik('Gruplar')) const SliverToBoxAdapter(child: Padding(padding: EdgeInsets.fromLTRB(16, 16, 16, 8), child: Row(children: [Text('Grupları keşfet', style: TextStyle(color: Colors.black, fontSize: 21, fontWeight: FontWeight.w900)), Spacer()]))),
-          if(bolumAcik('Gruplar')) SliverToBoxAdapter(child: SizedBox(height: 130, child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+          if(bolumAcik('Gruplar')) SliverToBoxAdapter(child: SizedBox(height: 158, child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
             stream: FirebaseFirestore.instance.collection('groups').limit(30).snapshots(),
             builder: (_, snap) { final gruplar = (snap.data?.docs ?? []).where((d) {
               final v=d.data();
@@ -4213,48 +4225,88 @@ class _KesfetPageState extends State<KesfetPage> {
   }
 
   Widget _grupKarti(BuildContext context, String id, Map<String, dynamic> v) {
-    final ad = (v['name'] ?? 'Topluluk').toString();
-    final sayi = (v['memberCount'] ?? 0).toString();
-    return Container(width: 245, padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: const Color(0xFFF6F3FF), borderRadius: BorderRadius.circular(18)), child: Row(children: [
-      Container(width: 65, height: 65, decoration: BoxDecoration(color: const Color(0xFFE9DDFF), borderRadius: BorderRadius.circular(14)), child: const Icon(Icons.groups_rounded, color: mor, size: 34)),
-      const SizedBox(width: 10), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
-        Text(ad, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w900)),
-        Text('$sayi üye', style: const TextStyle(color: Colors.black45, fontSize: 12)),
-        const SizedBox(height: 6),
-        SizedBox(height: 30, child: FilledButton(
-          style: FilledButton.styleFrom(backgroundColor: mor),
-          onPressed: () async {
-            final uid = FirebaseAuth.instance.currentUser?.uid;
-            if(uid==null)return;
-            final ref=FirebaseFirestore.instance.collection('groups').doc(id);
-            try{
-              bool zaten=false;
-              await FirebaseFirestore.instance.runTransaction((tx)async{
-                final d=await tx.get(ref);
-                final veri=d.data()??<String,dynamic>{};
-                final uyeler=List<String>.from(veri['members']??const[]);
-                if(uyeler.contains(uid)){zaten=true;return;}
-                tx.set(ref,{'members':FieldValue.arrayUnion([uid]),'memberCount':FieldValue.increment(1)},SetOptions(merge:true));
-              }).timeout(const Duration(seconds:8));
-              if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(zaten?'Bu gruba zaten katıldın.':'Gruba katıldın ✅')));
-            }catch(_){
-              if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Gruba katılma işlemi tamamlanamadı.')));
-            }
-          },
-          child: const Text('Katıl', style: TextStyle(fontSize: 12)),
+    final ad=(v['name']??'Topluluk').toString();
+    final sayi=(v['memberCount']??(v['members'] is List?(v['members'] as List).length:0)).toString();
+    final aciklama=(v['description']??'').toString().trim();
+    final foto=(v['groupPhotoUrl']??v['photoUrl']??v['imageUrl']??'').toString().trim();
+    return Container(
+      width:270,
+      padding:const EdgeInsets.all(12),
+      decoration:BoxDecoration(color:const Color(0xFFF6F3FF),borderRadius:BorderRadius.circular(18)),
+      child:Row(children:[
+        ClipRRect(
+          borderRadius:BorderRadius.circular(15),
+          child:foto.isEmpty
+            ? Container(width:72,height:88,color:const Color(0xFFE9DDFF),child:const Icon(Icons.groups_rounded,color:mor,size:36))
+            : CachedNetworkImage(
+                imageUrl:foto,width:72,height:88,fit:BoxFit.cover,
+                placeholder:(_,__)=>const SizedBox(width:72,height:88,child:Center(child:CircularProgressIndicator(strokeWidth:2,color:mor))),
+                errorWidget:(_,__,___)=>const SizedBox(width:72,height:88,child:ColoredBox(color:Color(0xFFE9DDFF),child:Icon(Icons.groups_rounded,color:mor,size:36))),
+              ),
+        ),
+        const SizedBox(width:11),
+        Expanded(child:Column(
+          crossAxisAlignment:CrossAxisAlignment.start,
+          mainAxisAlignment:MainAxisAlignment.center,
+          children:[
+            Text(ad,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black,fontWeight:FontWeight.w900)),
+            Text('$sayi üye',style:const TextStyle(color:Colors.black45,fontSize:12)),
+            if(aciklama.isNotEmpty)...[
+              const SizedBox(height:3),
+              Text(aciklama,maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black54,fontSize:11,height:1.15)),
+            ],
+            const SizedBox(height:7),
+            SizedBox(height:31,child:FilledButton.icon(
+              style:FilledButton.styleFrom(backgroundColor:mor,padding:const EdgeInsets.symmetric(horizontal:10)),
+              onPressed:()async{
+                final uid=FirebaseAuth.instance.currentUser?.uid;
+                if(uid==null)return;
+                final ref=FirebaseFirestore.instance.collection('groups').doc(id);
+                try{
+                  bool zaten=false;
+                  await FirebaseFirestore.instance.runTransaction((tx)async{
+                    final d=await tx.get(ref);
+                    final veri=d.data()??<String,dynamic>{};
+                    final uyeler=List<String>.from(veri['members']??const[]);
+                    if(uyeler.contains(uid)){zaten=true;return;}
+                    tx.set(ref,{'members':FieldValue.arrayUnion([uid]),'memberCount':FieldValue.increment(1)},SetOptions(merge:true));
+                  }).timeout(const Duration(seconds:8));
+                  if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(zaten?'Bu gruba zaten katıldın.':'Gruba katıldın ✅')));
+                }catch(_){
+                  if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Gruba katılma işlemi tamamlanamadı.')));
+                }
+              },
+              icon:const Icon(Icons.group_add_rounded,size:16),
+              label:const Text('Katıl',style:TextStyle(fontSize:12)),
+            )),
+          ],
         )),
-      ]))
-    ]));
+      ]),
+    );
   }
 }
 
 class _TrendEtiketi extends StatelessWidget {
-  final IconData ikon; final String yazi; final Color arkaPlan; final Color renk;
-  const _TrendEtiketi(this.ikon, this.yazi, this.arkaPlan, this.renk);
-  @override Widget build(BuildContext context) => Container(
-    margin: const EdgeInsets.only(right: 10), padding: const EdgeInsets.symmetric(horizontal: 16),
-    decoration: BoxDecoration(color: arkaPlan, borderRadius: BorderRadius.circular(18)),
-    child: Row(children: [Icon(ikon, color: renk, size: 20), const SizedBox(width: 7), Text(yazi, style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.w700))]),
+  final IconData ikon;
+  final String yazi;
+  final Color arkaPlan,renk;
+  final VoidCallback? tiklama;
+  const _TrendEtiketi(this.ikon,this.yazi,this.arkaPlan,this.renk,{this.tiklama});
+  @override Widget build(BuildContext context)=>Padding(
+    padding:const EdgeInsets.only(right:10),
+    child:InkWell(
+      borderRadius:BorderRadius.circular(18),
+      onTap:tiklama,
+      child:Container(
+        padding:const EdgeInsets.symmetric(horizontal:16),
+        decoration:BoxDecoration(color:arkaPlan,borderRadius:BorderRadius.circular(18)),
+        child:Row(children:[
+          Icon(ikon,color:renk,size:20),
+          const SizedBox(width:7),
+          Text(yazi,style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w700)),
+        ]),
+      ),
+    ),
   );
 }
 
