@@ -8017,8 +8017,78 @@ class GrupEtkinliklerPage extends StatelessWidget{
 }
 
 class GrupAyarlariPage extends StatelessWidget{
-  final String chatId;const GrupAyarlariPage({super.key,required this.chatId});
-  @override Widget build(BuildContext context){final ref=FirebaseFirestore.instance.collection('chats').doc(chatId);return Theme(data:ThemeData.light(),child:Scaffold(backgroundColor:Colors.white,appBar:AppBar(title:const Text('Grup ayarları',style:TextStyle(fontWeight:FontWeight.w900))),body:StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(stream:ref.snapshots(),builder:(_,s){if(!s.hasData)return const Center(child:CircularProgressIndicator(color:mor));final v=s.data?.data()??<String,dynamic>{};Future<void> setA(String alan,bool x)=>ref.set({alan:x,'updatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));return ListView(padding:const EdgeInsets.all(16),children:[const Text('İzinler',style:TextStyle(fontSize:18,fontWeight:FontWeight.w900)),SwitchListTile(contentPadding:EdgeInsets.zero,title:const Text('Yalnızca yöneticiler mesaj gönderebilir'),value:v['onlyAdminsCanPost']==true,onChanged:(x)=>setA('onlyAdminsCanPost',x),activeColor:mor),SwitchListTile(contentPadding:EdgeInsets.zero,title:const Text('Yeni üyeler eski mesajları görebilir'),value:v['newMembersSeeHistory']!=false,onChanged:(x)=>setA('newMembersSeeHistory',x),activeColor:mor),SwitchListTile(contentPadding:EdgeInsets.zero,title:const Text('Katılma istekleri yönetici onayından geçsin'),value:v['joinApproval']==true,onChanged:(x)=>setA('joinApproval',x),activeColor:mor),SwitchListTile(contentPadding:EdgeInsets.zero,title:const Text('Grup keşfette görünsün'),value:v['discoverable']!=false,onChanged:(x)=>setA('discoverable',x),activeColor:mor)]);}))));}
+  final String chatId;
+  const GrupAyarlariPage({super.key,required this.chatId});
+
+  @override
+  Widget build(BuildContext context){
+    final ref=FirebaseFirestore.instance.collection('chats').doc(chatId);
+    return Theme(
+      data:ThemeData.light(),
+      child:Scaffold(
+        backgroundColor:Colors.white,
+        appBar:AppBar(title:const Text('Grup ayarları',style:TextStyle(fontWeight:FontWeight.w900))),
+        body:StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
+          stream:ref.snapshots(),
+          builder:(_,s){
+            if(!s.hasData)return const Center(child:CircularProgressIndicator(color:mor));
+            final v=s.data?.data()??<String,dynamic>{};
+
+            Future<void> setA(String alan,bool x)async{
+              final batch=FirebaseFirestore.instance.batch();
+              batch.set(ref,{alan:x,'updatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
+              if(alan=='discoverable'||alan=='joinApproval'){
+                batch.set(
+                  FirebaseFirestore.instance.collection('groups').doc(chatId),
+                  {alan:x,'updatedAt':FieldValue.serverTimestamp()},
+                  SetOptions(merge:true),
+                );
+              }
+              await batch.commit();
+            }
+
+            return ListView(
+              padding:const EdgeInsets.all(16),
+              children:[
+                const Text('İzinler',style:TextStyle(fontSize:18,fontWeight:FontWeight.w900)),
+                SwitchListTile(
+                  contentPadding:EdgeInsets.zero,
+                  title:const Text('Yalnızca yöneticiler mesaj gönderebilir'),
+                  value:v['onlyAdminsCanPost']==true,
+                  onChanged:(x)=>setA('onlyAdminsCanPost',x),
+                  activeColor:mor,
+                ),
+                SwitchListTile(
+                  contentPadding:EdgeInsets.zero,
+                  title:const Text('Yeni üyeler eski mesajları görebilir'),
+                  value:v['newMembersSeeHistory']!=false,
+                  onChanged:(x)=>setA('newMembersSeeHistory',x),
+                  activeColor:mor,
+                ),
+                SwitchListTile(
+                  contentPadding:EdgeInsets.zero,
+                  title:const Text('Katılma istekleri yönetici onayından geçsin'),
+                  value:v['joinApproval']==true,
+                  onChanged:(x)=>setA('joinApproval',x),
+                  activeColor:mor,
+                ),
+                const Divider(height:28),
+                const Text('Keşfet',style:TextStyle(fontSize:18,fontWeight:FontWeight.w900)),
+                SwitchListTile(
+                  contentPadding:EdgeInsets.zero,
+                  title:const Text('Grup Keşfet ve Trend gruplarda görünsün'),
+                  subtitle:const Text('Kapatırsan yalnızca mevcut üyeler erişebilir.'),
+                  value:v['discoverable']!=false,
+                  onChanged:(x)=>setA('discoverable',x),
+                  activeColor:mor,
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
 }
 class YeniSohbetPage extends StatefulWidget {
   const YeniSohbetPage({super.key});
