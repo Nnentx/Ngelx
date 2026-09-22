@@ -1,10 +1,12 @@
-name: NgelX V55 Group Final Polish
+name: NgelX V56 Group Parity
 
 on:
   push:
     branches: [main]
     paths:
       - 'app/**'
+      - 'cloudflare/worker/**'
+      - 'tools/**'
       - '.github/workflows/build-v55-group-final-polish.yml'
   workflow_dispatch:
 
@@ -12,7 +14,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: ngelx-v55-main-final
+  group: ngelx-v56-main-group-parity
   cancel-in-progress: true
 
 jobs:
@@ -32,6 +34,12 @@ jobs:
       - name: Paketleri kur
         working-directory: app
         run: flutter pub get
+
+      - name: NgelX sozlesmesini dogrula
+        run: python3 tools/verify_ngelx_contract.py
+
+      - name: R2 Worker JavaScript kontrolu
+        run: node --check cloudflare/worker/src/index.js
 
       - name: Kod analizi
         working-directory: app
@@ -53,7 +61,7 @@ jobs:
       - name: APK yukle
         uses: actions/upload-artifact@v4
         with:
-          name: NgelX-V55-GROUP-FINAL-POLISH-APK
+          name: NgelX-V56-GROUP-PARITY-APK
           path: app/build/app/outputs/flutter-apk/app-debug.apk
           if-no-files-found: error
           retention-days: 14
