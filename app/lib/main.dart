@@ -8885,7 +8885,26 @@ class KullaniciProfilPage extends StatelessWidget {
                         final x = docs[i].data();
                         final tur = (x['type'] ?? 'video').toString();
                         final url = (x['mediaUrl'] ?? x['videoUrl'] ?? '').toString();
-                        return GestureDetector(onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>IcerikBaglantiPage(icerikId:docs[i].id))),child:MedyaOnizleme(tur: tur, url: url, thumbnailUrl: (x['thumbnailUrl'] ?? '').toString(), yazi: (x['description'] ?? '').toString(), arkaPlan: const Color(0xFFF0F1F4)));
+                        return GestureDetector(
+                          onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>ProfilIcerikGezginPage(
+                            icerikler:docs.map((d){
+                              final v=d.data();
+                              return <String,String>{
+                                'id':d.id,
+                                'type':(v['type']??'video').toString(),
+                                'videoUrl':(v['videoUrl']??'').toString(),
+                                'mediaUrl':(v['mediaUrl']??v['videoUrl']??'').toString(),
+                                'audioUrl':(v['audioUrl']??'').toString(),
+                                'description':(v['description']??'').toString(),
+                                'username':(v['username']??'ngelx').toString(),
+                                'ownerId':(v['ownerId']??'').toString(),
+                                'allowDownload':(v['allowDownload']??true).toString(),
+                              };
+                            }).toList(),
+                            baslangic:i,
+                          ))),
+                          child:MedyaOnizleme(tur: tur, url: url, thumbnailUrl: (x['thumbnailUrl'] ?? '').toString(), yazi: (x['description'] ?? '').toString(), arkaPlan: const Color(0xFFF0F1F4)),
+                        );
                       },
                     );
                   },
@@ -8898,6 +8917,92 @@ class KullaniciProfilPage extends StatelessWidget {
   }
 
   Widget _profilSayac(BuildContext context,String sayi,String baslik,VoidCallback tiklama)=>InkWell(onTap:tiklama,borderRadius:BorderRadius.circular(12),child:Padding(padding:const EdgeInsets.symmetric(horizontal:6,vertical:8),child:Column(children:[Text(sayi,style:const TextStyle(fontSize:20,fontWeight:FontWeight.w900)),Text(baslik,style:const TextStyle(color:Colors.black54,fontSize:12))])));
+}
+
+class ProfilIcerikGezginPage extends StatefulWidget{
+  final List<Map<String,String>> icerikler;
+  final int baslangic;
+  const ProfilIcerikGezginPage({super.key,required this.icerikler,this.baslangic=0});
+  @override State<ProfilIcerikGezginPage> createState()=>_ProfilIcerikGezginPageState();
+}
+
+class _ProfilIcerikGezginPageState extends State<ProfilIcerikGezginPage>{
+  late final PageController sayfa;
+  late int aktif;
+
+  @override void initState(){
+    super.initState();
+    aktif=widget.icerikler.isEmpty?0:widget.baslangic.clamp(0,widget.icerikler.length-1);
+    sayfa=PageController(initialPage:aktif);
+  }
+
+  @override void dispose(){sayfa.dispose();super.dispose();}
+
+  @override Widget build(BuildContext context){
+    if(widget.icerikler.isEmpty)return const Scaffold(body:Center(child:Text('Gösterilecek paylaşım yok.')));
+    return Scaffold(
+      backgroundColor:const Color(0xFF09090F),
+      body:Stack(children:[
+        Positioned.fill(
+          child:PageView.builder(
+            controller:sayfa,
+            scrollDirection:Axis.vertical,
+            itemCount:widget.icerikler.length,
+            onPageChanged:(i)=>setState(()=>aktif=i),
+            itemBuilder:(_,i){
+              final item=widget.icerikler[i];
+              final tur=(item['type']??'video').toString();
+              if(tur=='video'){
+                return VideoKarti(
+                  adres:(item['videoUrl']??item['mediaUrl']??'').toString(),
+                  videoId:(item['id']??'').toString(),
+                  kullaniciAdi:(item['username']??'ngelx').toString(),
+                  ownerId:(item['ownerId']??'').toString(),
+                  indirilebilir:item['allowDownload']!='false',
+                  aktif:aktif==i,
+                );
+              }
+              return GorselYaziKarti(veri:item,aktif:aktif==i);
+            },
+          ),
+        ),
+        SafeArea(
+          child:Padding(
+            padding:const EdgeInsets.fromLTRB(8,6,10,0),
+            child:Row(children:[
+              IconButton.filledTonal(
+                tooltip:'Geri',
+                onPressed:()=>Navigator.pop(context),
+                icon:const Icon(Icons.arrow_back_rounded),
+              ),
+              const Spacer(),
+              Container(
+                padding:const EdgeInsets.symmetric(horizontal:12,vertical:7),
+                decoration:BoxDecoration(color:Colors.black54,borderRadius:BorderRadius.circular(18)),
+                child:Text('${aktif+1} / ${widget.icerikler.length}',style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w800)),
+              ),
+            ]),
+          ),
+        ),
+        if(widget.icerikler.length>1)
+          const Positioned(
+            left:0,right:0,bottom:18,
+            child:SafeArea(
+              top:false,
+              child:Center(
+                child:DecoratedBox(
+                  decoration:BoxDecoration(color:Colors.black45,borderRadius:BorderRadius.all(Radius.circular(18))),
+                  child:Padding(
+                    padding:EdgeInsets.symmetric(horizontal:12,vertical:7),
+                    child:Text('Diğer paylaşım için yukarı/aşağı kaydır',style:TextStyle(color:Colors.white70,fontSize:11,fontWeight:FontWeight.w700)),
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ]),
+    );
+  }
 }
 
 class MedyaOnizleme extends StatelessWidget {
@@ -10600,7 +10705,14 @@ class _ProfilPageState extends State<ProfilPage> {
 
   Map<String,String> icerikHaritasi(QueryDocumentSnapshot<Map<String,dynamic>> d){final v=d.data();return {'id':d.id,'type':(v['type']??'video').toString(),'videoUrl':(v['videoUrl']??'').toString(),'mediaUrl':(v['mediaUrl']??v['videoUrl']??'').toString(),'audioUrl':(v['audioUrl']??'').toString(),'description':(v['description']??'').toString(),'username':(v['username']??'ngelx').toString(),'ownerId':(v['ownerId']??'').toString(),'allowDownload':(v['allowDownload']??true).toString()};}
 
-  void icerigiAc(QueryDocumentSnapshot<Map<String,dynamic>> d){final item=icerikHaritasi(d),tur=item['type'];Navigator.push(context,MaterialPageRoute(builder:(_)=>Scaffold(body:SafeArea(child:tur=='video'?VideoKarti(adres:item['videoUrl']!,videoId:item['id']!,kullaniciAdi:item['username']!,ownerId:item['ownerId']!,indirilebilir:item['allowDownload']!='false',aktif:true):GorselYaziKarti(veri:item,aktif:true)))));}
+  void icerigiAc(QueryDocumentSnapshot<Map<String,dynamic>> d,List<QueryDocumentSnapshot<Map<String,dynamic>>> liste){
+    final icerikler=liste.map(icerikHaritasi).toList();
+    final baslangic=liste.indexWhere((x)=>x.id==d.id);
+    Navigator.push(context,MaterialPageRoute(builder:(_)=>ProfilIcerikGezginPage(
+      icerikler:icerikler,
+      baslangic:baslangic<0?0:baslangic,
+    )));
+  }
 
   Future<void> icerikMenusu(QueryDocumentSnapshot<Map<String,dynamic>> d) async {
     final sabit=d.data()['pinned']==true;
@@ -10830,7 +10942,7 @@ class _ProfilPageState extends State<ProfilPage> {
                     final tur = (v['type'] ?? 'video').toString();
                     final url = (v['mediaUrl'] ?? v['videoUrl'] ?? '').toString();
                     return GestureDetector(
-            onTap:()=>icerigiAc(belge),
+            onTap:()=>icerigiAc(belge,paylasimlar),
             onLongPress:()=>icerikMenusu(belge),
             child:Stack(
               fit:StackFit.expand,
