@@ -8966,7 +8966,7 @@ class _ProfilIcerikGezginPageState extends State<ProfilIcerikGezginPage>{
 
   @override void initState(){
     super.initState();
-    aktif=widget.icerikler.isEmpty?0:widget.baslangic.clamp(0,widget.icerikler.length-1);
+    aktif=widget.icerikler.isEmpty?0:widget.baslangic.clamp(0,widget.icerikler.length-1).toInt();
     sayfa=PageController(initialPage:aktif);
   }
 
