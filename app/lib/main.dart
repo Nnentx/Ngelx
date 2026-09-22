@@ -8,7 +8,6 @@ import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:supabase_flutter/supabase_flutter.dart' as supa;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:image_picker/image_picker.dart';
@@ -29,10 +28,6 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   try {
     await Firebase.initializeApp();
-    await supa.Supabase.initialize(
-      url: 'https://ptteuuwktcvzuhrkacuv.supabase.co',
-      anonKey: 'sb_publishable_kcV2-0Y3irQoWpbNwEtj1w_WGkGESZZ',
-    );
     final hafiza = await SharedPreferences.getInstance();
     uygulamaDili.value = hafiza.getString('uygulama_dili') ?? 'tr';
     runApp(const NgelXApp());
@@ -172,6 +167,10 @@ String _ngelxContentType(String ext) {
       return 'image/webp';
     case 'gif':
       return 'image/gif';
+    case 'heic':
+      return 'image/heic';
+    case 'heif':
+      return 'image/heif';
     case 'mp4':
       return 'video/mp4';
     case 'mov':
@@ -234,7 +233,8 @@ Future<String> ngelxMedyaYukleBytes({
         istek.persistentConnection = false;
         istek.headers.set(HttpHeaders.authorizationHeader, 'Bearer $token');
         istek.headers.set(HttpHeaders.contentTypeHeader, tur);
-        istek.headers.set('X-NgelX-Client', 'android-v53');
+        istek.headers.set('X-NgelX-Client', 'android-v56');
+        istek.headers.set('X-NgelX-Filename', legacyPath);
         istek.contentLength = bytes.length;
         istek.add(bytes);
         final cevap = await istek.close().timeout(const Duration(seconds: 35));
@@ -268,15 +268,7 @@ Future<String> ngelxMedyaYukleBytes({
     throw Exception('Medya sunucusuna bağlanılamadı. Bağlantı otomatik olarak 3 kez denendi. ${sonHata ?? ''}');
   }
 
-  await supa.Supabase.instance.client.storage
-      .from('ngelx-media')
-      .uploadBinary(
-        legacyPath,
-        bytes,
-        fileOptions: supa.FileOptions(contentType: tur),
-      )
-      .timeout(const Duration(seconds: 25));
-  return supa.Supabase.instance.client.storage.from('ngelx-media').getPublicUrl(legacyPath);
+  throw Exception('NgelX medya servisi yapılandırılmamış.');
 }
 
 Future<void> ngelxMedyaSil(String rawUrl) async {
@@ -299,13 +291,8 @@ Future<void> ngelxMedyaSil(String rawUrl) async {
       return;
     }
   }
-  try {
-    final parts = Uri.parse(rawUrl).pathSegments;
-    final i = parts.indexOf('ngelx-media');
-    if (i >= 0 && i + 1 < parts.length) {
-      await supa.Supabase.instance.client.storage.from('ngelx-media').remove([parts.sublist(i + 1).join('/')]);
-    }
-  } catch (_) {}
+  // Eski Supabase bağlantıları yalnızca geçmiş içerikleri göstermek için tutulur.
+  // Yeni medya R2'ye yazıldığı için eski depoya artık silme/yazma isteği gönderilmez.
 }
 
 final uygulamaDili = ValueNotifier<String>('tr');
@@ -7931,7 +7918,10 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
       final yol='groups/${widget.chatId}/avatar_${DateTime.now().millisecondsSinceEpoch}.$uzanti';
       final url=await ngelxMedyaYukleBytes(bytes:await x.readAsBytes(),kind:'groups',ext:uzanti,legacyPath:yol);
       await ref.update({'groupPhotoUrl':url,'updatedAt':FieldValue.serverTimestamp()});
-      if(eski.isNotEmpty&&eski!=url)unawaited(ngelxMedyaSil(eski).catchError((_){ }));
+      if(eski.isNotEmpty&&eski!=url){
+        await CachedNetworkImage.evictFromCache(eski);
+        unawaited(ngelxMedyaSil(eski).catchError((_){ }));
+      }
       await sistemMesaji('Yönetici grup fotoğrafını değiştirdi.');
       if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Grup fotoğrafı kaydedildi.')));
     }catch(e){
@@ -12047,7 +12037,7 @@ class _ProfilPageState extends State<ProfilPage> {
           ad = (veri['displayName'] ?? user.displayName ?? hamKullanici).toString();
           kullanici = '@${hamKullanici.isEmpty ? 'ngelx' : hamKullanici}';
           bio = (veri['bio'] ?? 'NgelX dünyasına hoş geldin ✦').toString();
-          fotoUrl = (veri['photoUrl'] ?? '').toString();
+          fotoUrl = (veri['photoUrl'] ?? user.photoURL ?? '').toString();
           tanitimVideoUrl = (veri['introVideoUrl'] ?? '').toString();
           konum = (veri['location'] ?? 'Konum eklenmedi').toString();
           if (tarih is Timestamp) {
@@ -12075,7 +12065,15 @@ class _ProfilPageState extends State<ProfilPage> {
 
   Future<void> fotografYukle() async {
     final user = aktifKullanici;
-    if (user == null || user.isAnonymous || fotoYukleniyor) return;
+    if (user == null || fotoYukleniyor) return;
+    if (user.isAnonymous) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Profil fotoğrafını değiştirmek için hesabınla giriş yapmalısın.')),
+        );
+      }
+      return;
+    }
 
     final secim = await showModalBottomSheet<String>(
       context: context,
@@ -12120,9 +12118,11 @@ class _ProfilPageState extends State<ProfilPage> {
           'photoUrl': '',
           'updatedAt': FieldValue.serverTimestamp(),
         }, SetOptions(merge: true));
+        try { await user.updatePhotoURL(null); } catch (_) {}
         if (!mounted) return;
         setState(() => fotoUrl = '');
         if (eski.isNotEmpty) {
+          await CachedNetworkImage.evictFromCache(eski);
           unawaited(ngelxMedyaSil(eski).catchError((_){ }));
         }
         ScaffoldMessenger.of(context).showSnackBar(
@@ -12174,9 +12174,12 @@ class _ProfilPageState extends State<ProfilPage> {
         'photoUrl': url,
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
+      try { await user.updatePhotoURL(url); } catch (_) {}
       if (!mounted) return;
       setState(() => fotoUrl = url);
+      try { await precacheImage(CachedNetworkImageProvider(url), context); } catch (_) {}
       if (eski.isNotEmpty && eski != url) {
+        await CachedNetworkImage.evictFromCache(eski);
         unawaited(ngelxMedyaSil(eski).catchError((_){ }));
       }
       ScaffoldMessenger.of(context).showSnackBar(
@@ -12574,7 +12577,7 @@ class _ProfilPageState extends State<ProfilPage> {
                   ),
                   const SizedBox(height: 18),
                   GestureDetector(
-                    onTap: hikayeyiAc,
+                    onTap: fotografYukle,
                     onLongPress: fotografYukle,
                     child: Stack(
                       alignment: Alignment.center,
