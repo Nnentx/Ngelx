@@ -11,12 +11,16 @@ const ALLOWED_KINDS = new Set([
   'profile-intros',
   'thumbnails',
   'gifs',
+  'chat-files',
+  'chat-audio',
 ]);
 
 const MAX_BYTES = {
-  videos: 50 * 1024 * 1024,
+  videos: 80 * 1024 * 1024,
   'profile-intros': 35 * 1024 * 1024,
   music: 15 * 1024 * 1024,
+  'chat-files': 30 * 1024 * 1024,
+  'chat-audio': 15 * 1024 * 1024,
   gifs: 12 * 1024 * 1024,
   default: 10 * 1024 * 1024,
 };
@@ -27,7 +31,7 @@ let jwksExpiresAt = 0;
 function cors() {
   return {
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Authorization, Content-Type, X-NgelX-Filename',
+    'Access-Control-Allow-Headers': 'Authorization, Content-Type, X-NgelX-Filename, X-NgelX-Client',
     'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
   };
 }
