@@ -1,8 +1,8 @@
-name: NgelX V54 Latest UI Fixes
+name: NgelX V54 Install Test
 
 on:
   push:
-    branches: [ngelx-v54-latest-ui-fixes]
+    branches: [ngelx-v54-install-test]
     paths:
       - 'app/**'
       - '.github/workflows/build-v54-latest-ui-fixes.yml'
@@ -61,7 +61,7 @@ jobs:
       - name: APK dosyasini yukle
         uses: actions/upload-artifact@v4
         with:
-          name: NgelX-V54-LATEST-UI-FIXES-APK
+          name: NgelX-V54-INSTALL-TEST-APK
           path: app/build/app/outputs/flutter-apk/app-debug.apk
           if-no-files-found: error
           retention-days: 14
@@ -71,14 +71,14 @@ jobs:
         run: |
           mkdir -p .github
           {
-            echo "workflow=NgelX V54 Latest UI Fixes"
+            echo "workflow=NgelX V54 Install Test"
             echo "status=${{ job.status }}"
             echo "source_sha=${{ github.sha }}"
             echo "run_id=${{ github.run_id }}"
             echo "updated_at=$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
-          } > .github/v54-build-status.txt
+          } > .github/v54-install-test-build-status.txt
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add .github/v54-build-status.txt
           git commit -m "ci: record V54 build status [skip ci]" || exit 0
-          git push origin HEAD:ngelx-v54-latest-ui-fixes
+          git push origin HEAD:ngelx-v54-install-test
