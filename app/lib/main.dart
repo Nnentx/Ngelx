@@ -1730,7 +1730,13 @@ Future<bool> grupKatilVeyaIstek(
   if(uid==null)return false;
   final chatId=(grup['chatId']??groupId).toString();
   if(grup['joinApproval']==true){
-    final hedef=(grup['ownerId']??'').toString();
+    String hedef='';
+    try{
+      final chat=await FirebaseFirestore.instance.collection('chats').doc(chatId).get().timeout(const Duration(seconds:6));
+      final admins=List<String>.from(chat.data()?['admins']??const[]);
+      if(admins.isNotEmpty)hedef=admins.first;
+    }catch(_){}
+    if(hedef.isEmpty)hedef=(grup['ownerId']??'').toString();
     if(hedef.isEmpty){
       if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content:Text('Bu grup için yönetici bilgisi bulunamadı.')),
@@ -7317,7 +7323,26 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
         )),
       )??false;
       if(ok){
-        await ref.update({'members':FieldValue.arrayRemove([id]),'admins':FieldValue.arrayRemove([id])});
+        final grup=await ref.get().timeout(const Duration(seconds:6));
+        final gv=grup.data()??<String,dynamic>{};
+        final yeniUyeler=List<String>.from(gv['members']??const[])..remove(id);
+        final yeniAdminler=List<String>.from(gv['admins']??const[])..remove(id);
+        final dizinRef=FirebaseFirestore.instance.collection('groups').doc(widget.chatId);
+        final dizin=await dizinRef.get().timeout(const Duration(seconds:6));
+        final batch=FirebaseFirestore.instance.batch();
+        batch.set(ref,{
+          'members':yeniUyeler,
+          'admins':yeniAdminler,
+          'updatedAt':FieldValue.serverTimestamp(),
+        },SetOptions(merge:true));
+        if(dizin.exists){
+          batch.set(dizinRef,{
+            'members':yeniUyeler,
+            'memberCount':yeniUyeler.length,
+            'updatedAt':FieldValue.serverTimestamp(),
+          },SetOptions(merge:true));
+        }
+        await batch.commit().timeout(const Duration(seconds:10));
         await sistemMesaji('$isim gruptan çıkarıldı.');
       }
     }
@@ -7412,14 +7437,82 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
       ),
     )??false;
     if(!onay||secilen.isEmpty)return;
-    await ref.update({
-      'members':FieldValue.arrayUnion(secilen.toList()),
+    final yeniUyeler=<String>{...mevcut,...secilen}.toList();
+    final dizinRef=FirebaseFirestore.instance.collection('groups').doc(widget.chatId);
+    final dizin=await dizinRef.get().timeout(const Duration(seconds:6));
+    final batch=FirebaseFirestore.instance.batch();
+    batch.set(ref,{
+      'members':yeniUyeler,
       'hiddenFor':FieldValue.arrayRemove(secilen.toList()),
-    });
+      'updatedAt':FieldValue.serverTimestamp(),
+    },SetOptions(merge:true));
+    if(dizin.exists){
+      batch.set(dizinRef,{
+        'members':yeniUyeler,
+        'memberCount':yeniUyeler.length,
+        'updatedAt':FieldValue.serverTimestamp(),
+      },SetOptions(merge:true));
+    }
+    await batch.commit().timeout(const Duration(seconds:10));
     _uyeProfilCache.clear();
     await sistemMesaji('${secilen.length} yeni üye gruba eklendi.');
   }
-  Future<void> ayril(List<String> uyeler,List<String> admins)async{final me=ben;if(me==null)return;if(admins.length==1&&admins.contains(me)&&uyeler.length>1){await showDialog<void>(context:context,builder:(c)=>Theme(data:ThemeData.light(),child:AlertDialog(backgroundColor:Colors.white,title:const Text('Önce yönetici belirle',style:TextStyle(color:Colors.black87)),content:const Text('Gruptan ayrılmadan önce başka bir üyeyi yönetici yapmalısın.',style:TextStyle(color:Colors.black87)),actions:[FilledButton(onPressed:()=>Navigator.pop(c),child:const Text('Tamam'))])));return;}final sonKisi=uyeler.length==1;final ok=await showDialog<bool>(context:context,builder:(c)=>Theme(data:ThemeData.light(),child:AlertDialog(backgroundColor:Colors.white,title:Text(sonKisi?'Grup silinsin mi?':'Gruptan ayrılmak istiyor musun?',style:const TextStyle(color:Colors.black87)),content:Text(sonKisi?'Grupta yalnızca sen kaldın. Grup sohbeti listenden kaldırılacak.':'Mesaj geçmişine erişimin sona erecek.',style:const TextStyle(color:Colors.black87)),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),FilledButton(style:FilledButton.styleFrom(backgroundColor:Colors.red),onPressed:()=>Navigator.pop(c,true),child:Text(sonKisi?'Grubu sil':'Ayrıl'))])))??false;if(!ok)return;if(sonKisi)await ref.set({'members':FieldValue.arrayRemove([me]),'admins':FieldValue.arrayRemove([me]),'groupDeleted':true,'deletedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));else{await sistemMesaji('Bir üye gruptan ayrıldı.');await ref.update({'members':FieldValue.arrayRemove([me]),'admins':FieldValue.arrayRemove([me])});}if(mounted)Navigator.popUntil(context,(r)=>r.isFirst);}
+  Future<void> ayril(List<String> uyeler,List<String> admins)async{
+    final me=ben;
+    if(me==null)return;
+    if(admins.length==1&&admins.contains(me)&&uyeler.length>1){
+      await showDialog<void>(context:context,builder:(c)=>Theme(data:ThemeData.light(),child:AlertDialog(
+        backgroundColor:Colors.white,
+        title:const Text('Önce yönetici belirle',style:TextStyle(color:Colors.black87)),
+        content:const Text('Gruptan ayrılmadan önce başka bir üyeyi yönetici yapmalısın.',style:TextStyle(color:Colors.black87)),
+        actions:[FilledButton(onPressed:()=>Navigator.pop(c),child:const Text('Tamam'))],
+      )));
+      return;
+    }
+    final sonKisi=uyeler.length==1;
+    final ok=await showDialog<bool>(
+      context:context,
+      builder:(c)=>Theme(data:ThemeData.light(),child:AlertDialog(
+        backgroundColor:Colors.white,
+        title:Text(sonKisi?'Grup silinsin mi?':'Gruptan ayrılmak istiyor musun?',style:const TextStyle(color:Colors.black87)),
+        content:Text(sonKisi?'Grupta yalnızca sen kaldın. Grup sohbeti listenden kaldırılacak.':'Mesaj geçmişine erişimin sona erecek.',style:const TextStyle(color:Colors.black87)),
+        actions:[
+          TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),
+          FilledButton(style:FilledButton.styleFrom(backgroundColor:Colors.red),onPressed:()=>Navigator.pop(c,true),child:Text(sonKisi?'Grubu sil':'Ayrıl')),
+        ],
+      )),
+    )??false;
+    if(!ok)return;
+
+    final yeniUyeler=uyeler.where((x)=>x!=me).toList();
+    final yeniAdminler=admins.where((x)=>x!=me).toList();
+    final dizinRef=FirebaseFirestore.instance.collection('groups').doc(widget.chatId);
+    final dizin=await dizinRef.get().timeout(const Duration(seconds:6));
+
+    if(!sonKisi)await sistemMesaji('Bir üye gruptan ayrıldı.');
+
+    final batch=FirebaseFirestore.instance.batch();
+    batch.set(ref,{
+      'members':yeniUyeler,
+      'admins':yeniAdminler,
+      if(sonKisi)'groupDeleted':true,
+      if(sonKisi)'deletedAt':FieldValue.serverTimestamp(),
+      'updatedAt':FieldValue.serverTimestamp(),
+    },SetOptions(merge:true));
+    if(dizin.exists){
+      if(sonKisi){
+        batch.delete(dizinRef);
+      }else{
+        batch.set(dizinRef,{
+          'members':yeniUyeler,
+          'memberCount':yeniUyeler.length,
+          'updatedAt':FieldValue.serverTimestamp(),
+        },SetOptions(merge:true));
+      }
+    }
+    await batch.commit().timeout(const Duration(seconds:10));
+    if(mounted)Navigator.popUntil(context,(r)=>r.isFirst);
+  }
   Future<void> ayarDegistir(String alan,bool deger)async{
     final batch=FirebaseFirestore.instance.batch();
     batch.set(ref,{alan:deger,'updatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
@@ -10460,7 +10553,7 @@ class AyarlarPage extends StatelessWidget {
       _ayar(context,Icons.download_outlined,'İndirme izinleri','Varsayılan paylaşım indirme ayarı'),
     ],
     const Divider(),
-    ListTile(leading:const Icon(Icons.system_update,color:mor),title:const Text('Uygulama güncellemeleri'),subtitle:const Text('V54 • Test build 234'),trailing:const Icon(Icons.build_circle,color:Colors.orange)),
+    ListTile(leading:const Icon(Icons.system_update,color:mor),title:const Text('Uygulama güncellemeleri'),subtitle:const Text('V54 • Test build 235'),trailing:const Icon(Icons.build_circle,color:Colors.orange)),
     ListTile(leading:const Icon(Icons.share,color:mavi),title:const Text('Ngel X’i paylaş'),subtitle:const Text('Uygulama bağlantısını paylaş veya kopyala'),onTap:()async=>SharePlus.instance.share(ShareParams(text:'Ngel X ile dünyanı paylaş ✨\nhttps://ngelx.app'))),
     const Divider(),
     ListTile(leading:const Icon(Icons.logout,color:Colors.red),title:const Text('Çıkış yap',style:TextStyle(color:Colors.red)),onTap:()async{final onay=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(title:const Text('Çıkış yapılsın mı?'),content:const Text('Tekrar giriş yapman gerekecek.'),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('Çıkış yap'))]));if(onay==true&&context.mounted){await ngelxOturumuKapat(context);}})
