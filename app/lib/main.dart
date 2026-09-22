@@ -7271,19 +7271,48 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
   Future<void> uyeIslemi(String id,String isim,bool admin)async{
     final sec=await showModalBottomSheet<String>(
       context:context,
-      backgroundColor:Colors.white,
+      backgroundColor:const Color(0xFFFBF9FF),
       showDragHandle:true,
+      shape:const RoundedRectangleBorder(borderRadius:BorderRadius.vertical(top:Radius.circular(30))),
       builder:(c)=>Theme(
-        data:ThemeData.light(),
-        child:SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
-          ListTile(title:Text(isim,style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w900))),
-          ListTile(
-            leading:Icon(admin?Icons.person_remove_alt_1:Icons.admin_panel_settings,color:mor),
-            title:Text(admin?'Yöneticilikten çıkar':'Yönetici yap',style:const TextStyle(color:Colors.black87)),
-            onTap:()=>Navigator.pop(c,admin?'demote':'promote'),
-          ),
-          ListTile(leading:const Icon(Icons.person_remove,color:Colors.red),title:const Text('Gruptan çıkar',style:TextStyle(color:Colors.red)),onTap:()=>Navigator.pop(c,'remove')),
-        ])),
+        data:ThemeData.light().copyWith(colorScheme:ColorScheme.fromSeed(seedColor:ngelxPremiumPurple)),
+        child:SafeArea(child:Padding(
+          padding:const EdgeInsets.fromLTRB(14,0,14,18),
+          child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
+            Text(isim,style:const TextStyle(color:ngelxPremiumInk,fontSize:20,fontWeight:FontWeight.w900)),
+            const SizedBox(height:4),
+            const Text('Üye yönetimi',style:TextStyle(color:ngelxPremiumMuted,fontSize:11.5,fontWeight:FontWeight.w600)),
+            const SizedBox(height:14),
+            NgelXPremiumCard(
+              padding:EdgeInsets.zero,
+              child:Column(children:[
+                ListTile(
+                  contentPadding:const EdgeInsets.symmetric(horizontal:10,vertical:3),
+                  leading:Container(width:42,height:42,decoration:BoxDecoration(color:const Color(0xFFF0E8FF),borderRadius:BorderRadius.circular(14)),child:Icon(admin?Icons.person_off_outlined:Icons.admin_panel_settings_rounded,color:ngelxPremiumPurple)),
+                  title:Text(admin?'Yöneticilikten çıkar':'Yönetici yap',style:const TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w800)),
+                  subtitle:Text(admin?'Yönetici yetkilerini kaldır':'Bu üyeye yönetici yetkisi ver',style:const TextStyle(color:ngelxPremiumMuted,fontSize:10.5)),
+                  trailing:const Icon(Icons.chevron_right_rounded,color:Color(0xFFA49BAC)),
+                  onTap:()=>Navigator.pop(c,admin?'demote':'promote'),
+                ),
+              ]),
+            ),
+            const SizedBox(height:10),
+            InkWell(
+              onTap:()=>Navigator.pop(c,'remove'),
+              borderRadius:BorderRadius.circular(18),
+              child:Container(
+                width:double.infinity,padding:const EdgeInsets.symmetric(horizontal:14,vertical:14),
+                decoration:BoxDecoration(color:const Color(0xFFFFEFF1),borderRadius:BorderRadius.circular(18),border:Border.all(color:const Color(0xFFFFD9DE))),
+                child:const Row(children:[
+                  Icon(Icons.person_remove_rounded,color:Color(0xFFE13F51)),
+                  SizedBox(width:12),
+                  Expanded(child:Text('Gruptan çıkar',style:TextStyle(color:Color(0xFFE13F51),fontWeight:FontWeight.w900))),
+                  Icon(Icons.chevron_right_rounded,color:Color(0xFFE13F51)),
+                ]),
+              ),
+            ),
+          ]),
+        )),
       ),
     );
     if(sec==null)return;
@@ -7296,15 +7325,17 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
     }else{
       final ok=await showDialog<bool>(
         context:context,
-        builder:(c)=>Theme(data:ThemeData.light(),child:AlertDialog(
-          backgroundColor:Colors.white,
-          title:Text('$isim gruptan çıkarılsın mı?',style:const TextStyle(color:Colors.black87)),
-          content:const Text('Bu işlemden sonra kullanıcı gruba mesaj gönderemez.',style:TextStyle(color:Colors.black87)),
+        builder:(c)=>AlertDialog(
+          shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(28)),
+          backgroundColor:Colors.white,surfaceTintColor:Colors.white,
+          icon:const Icon(Icons.person_remove_rounded,color:Color(0xFFE13F51),size:34),
+          title:Text('$isim gruptan çıkarılsın mı?',textAlign:TextAlign.center,style:const TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w900)),
+          content:const Text('Bu işlemden sonra kullanıcı gruba mesaj gönderemez.',textAlign:TextAlign.center,style:TextStyle(color:ngelxPremiumMuted)),
           actions:[
             TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),
-            FilledButton(style:FilledButton.styleFrom(backgroundColor:Colors.red),onPressed:()=>Navigator.pop(c,true),child:const Text('Çıkar')),
+            FilledButton(style:FilledButton.styleFrom(backgroundColor:const Color(0xFFE13F51)),onPressed:()=>Navigator.pop(c,true),child:const Text('Çıkar')),
           ],
-        )),
+        ),
       )??false;
       if(ok){
         await ref.update({'members':FieldValue.arrayRemove([id]),'admins':FieldValue.arrayRemove([id])});
@@ -7421,7 +7452,47 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
     _uyeProfilCache.clear();
     await sistemMesaji(secilen.length.toString()+' yeni üye gruba eklendi.');
   }
-  Future<void> ayril(List<String> uyeler,List<String> admins)async{final me=ben;if(me==null)return;if(admins.length==1&&admins.contains(me)&&uyeler.length>1){await showDialog<void>(context:context,builder:(c)=>Theme(data:ThemeData.light(),child:AlertDialog(backgroundColor:Colors.white,title:const Text('Önce yönetici belirle',style:TextStyle(color:Colors.black87)),content:const Text('Gruptan ayrılmadan önce başka bir üyeyi yönetici yapmalısın.',style:TextStyle(color:Colors.black87)),actions:[FilledButton(onPressed:()=>Navigator.pop(c),child:const Text('Tamam'))])));return;}final sonKisi=uyeler.length==1;final ok=await showDialog<bool>(context:context,builder:(c)=>Theme(data:ThemeData.light(),child:AlertDialog(backgroundColor:Colors.white,title:Text(sonKisi?'Grup silinsin mi?':'Gruptan ayrılmak istiyor musun?',style:const TextStyle(color:Colors.black87)),content:Text(sonKisi?'Grupta yalnızca sen kaldın. Grup sohbeti listenden kaldırılacak.':'Mesaj geçmişine erişimin sona erecek.',style:const TextStyle(color:Colors.black87)),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),FilledButton(style:FilledButton.styleFrom(backgroundColor:Colors.red),onPressed:()=>Navigator.pop(c,true),child:Text(sonKisi?'Grubu sil':'Ayrıl'))])))??false;if(!ok)return;if(sonKisi)await ref.set({'members':FieldValue.arrayRemove([me]),'admins':FieldValue.arrayRemove([me]),'groupDeleted':true,'deletedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));else{await sistemMesaji('Bir üye gruptan ayrıldı.');await ref.update({'members':FieldValue.arrayRemove([me]),'admins':FieldValue.arrayRemove([me])});}if(mounted)Navigator.popUntil(context,(r)=>r.isFirst);}
+  Future<void> ayril(List<String> uyeler,List<String> admins)async{
+    final me=ben;
+    if(me==null)return;
+    if(admins.length==1&&admins.contains(me)&&uyeler.length>1){
+      await showDialog<void>(
+        context:context,
+        builder:(c)=>AlertDialog(
+          shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(28)),
+          backgroundColor:Colors.white,surfaceTintColor:Colors.white,
+          icon:const Icon(Icons.admin_panel_settings_rounded,color:ngelxPremiumPurple,size:36),
+          title:const Text('Önce yönetici belirle',textAlign:TextAlign.center,style:TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w900)),
+          content:const Text('Gruptan ayrılmadan önce başka bir üyeyi yönetici yapmalısın.',textAlign:TextAlign.center,style:TextStyle(color:ngelxPremiumMuted)),
+          actions:[FilledButton(onPressed:()=>Navigator.pop(c),child:const Text('Tamam'))],
+        ),
+      );
+      return;
+    }
+    final sonKisi=uyeler.length==1;
+    final ok=await showDialog<bool>(
+      context:context,
+      builder:(c)=>AlertDialog(
+        shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(28)),
+        backgroundColor:Colors.white,surfaceTintColor:Colors.white,
+        icon:Icon(sonKisi?Icons.delete_forever_rounded:Icons.exit_to_app_rounded,color:const Color(0xFFE13F51),size:36),
+        title:Text(sonKisi?'Grup silinsin mi?':'Gruptan ayrılmak istiyor musun?',textAlign:TextAlign.center,style:const TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w900)),
+        content:Text(sonKisi?'Grupta yalnızca sen kaldın. Grup sohbeti listenden kaldırılacak.':'Mesaj geçmişine erişimin sona erecek.',textAlign:TextAlign.center,style:const TextStyle(color:ngelxPremiumMuted)),
+        actions:[
+          TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),
+          FilledButton(style:FilledButton.styleFrom(backgroundColor:const Color(0xFFE13F51)),onPressed:()=>Navigator.pop(c,true),child:Text(sonKisi?'Grubu sil':'Ayrıl')),
+        ],
+      ),
+    )??false;
+    if(!ok)return;
+    if(sonKisi){
+      await ref.set({'members':FieldValue.arrayRemove([me]),'admins':FieldValue.arrayRemove([me]),'groupDeleted':true,'deletedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
+    }else{
+      await sistemMesaji('Bir üye gruptan ayrıldı.');
+      await ref.update({'members':FieldValue.arrayRemove([me]),'admins':FieldValue.arrayRemove([me])});
+    }
+    if(mounted)Navigator.popUntil(context,(r)=>r.isFirst);
+  }
   Future<void> ayarDegistir(String alan,bool deger)async{await ref.set({alan:deger},SetOptions(merge:true));}
   @override Widget build(BuildContext context)=>Theme(
     data:ThemeData.light().copyWith(
