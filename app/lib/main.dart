@@ -442,6 +442,19 @@ Future<void> girisKaydiEkle(User user) async {
   } catch (_) {}
 }
 
+Future<void> ngelxOturumuKapat(BuildContext context,{bool kaydaGit=false}) async {
+  final navigator=Navigator.of(context);
+  await FirebaseAuth.instance.signOut();
+  if(!navigator.mounted)return;
+  navigator.popUntil((route)=>route.isFirst);
+  if(kaydaGit){
+    await Future<void>.delayed(Duration.zero);
+    if(navigator.mounted){
+      navigator.push(MaterialPageRoute(builder:(_)=>const KayitPage()));
+    }
+  }
+}
+
 Future<bool> misafirEngeli(BuildContext context) async {
   if (FirebaseAuth.instance.currentUser?.isAnonymous != true) return false;
   await showDialog<void>(context: context, builder: (ctx) => AlertDialog(
@@ -449,8 +462,8 @@ Future<bool> misafirEngeli(BuildContext context) async {
     content: const Text('Bu özelliği kullanabilmek için ücretsiz hesap oluşturman gerekiyor.'),
     actions: [
       TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Gezmeye devam et')),
-      TextButton(onPressed: () async { await FirebaseAuth.instance.signOut(); if (ctx.mounted) Navigator.of(ctx).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const GirisPage()), (_) => false); }, child: const Text('Giriş yap')),
-      FilledButton(onPressed: () async { await FirebaseAuth.instance.signOut(); if (ctx.mounted) Navigator.of(ctx).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const KayitPage()), (_) => false); }, child: const Text('Şimdi kayıt ol')),
+      TextButton(onPressed: () async { await ngelxOturumuKapat(ctx); }, child: const Text('Giriş yap')),
+      FilledButton(onPressed: () async { await ngelxOturumuKapat(ctx,kaydaGit:true); }, child: const Text('Şimdi kayıt ol')),
     ],
   ));
   return true;
@@ -538,7 +551,14 @@ class _UygulamaDurumKapisiState extends State<UygulamaDurumKapisi> with WidgetsB
       final id=await cihazKurulumKimligi();
       final d=await FirebaseFirestore.instance.collection('users').doc(u.uid).get();
       final iptal=List<String>.from(d.data()?['revokedDeviceIds']??const[]);
-      if(iptal.contains(id))await FirebaseAuth.instance.signOut();
+      if(iptal.contains(id)){
+        await FirebaseAuth.instance.signOut();
+        if(mounted){
+          WidgetsBinding.instance.addPostFrameCallback((_){
+            if(mounted)Navigator.of(context).popUntil((route)=>route.isFirst);
+          });
+        }
+      }
     }catch(_){}
   }
   Future<void> _presence(bool online)async{
@@ -1055,14 +1075,12 @@ class _KayitPageState extends State<KayitPage> {
         'createdAt': FieldValue.serverTimestamp(),
       });
       await yeni.sendEmailVerification();
-      await FirebaseAuth.instance.signOut();
-      if (!mounted) return;
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (_) => const GirisPage()),
-        (_) => false,
-      );
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Doğrulama bağlantısı e-posta adresine gönderildi. E-postanı doğruladıktan sonra giriş yapabilirsin.')));
+      if(!mounted)return;
+      final messenger=ScaffoldMessenger.of(context);
+      await ngelxOturumuKapat(context);
+      if(messenger.mounted){
+        messenger.showSnackBar(const SnackBar(content:Text('Doğrulama bağlantısı e-posta adresine gönderildi. E-postanı doğruladıktan sonra giriş yapabilirsin.')));
+      }
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
       final mesaj = e.code == 'email-already-in-use'
@@ -10442,10 +10460,10 @@ class AyarlarPage extends StatelessWidget {
       _ayar(context,Icons.download_outlined,'İndirme izinleri','Varsayılan paylaşım indirme ayarı'),
     ],
     const Divider(),
-    ListTile(leading:const Icon(Icons.system_update,color:mor),title:const Text('Uygulama güncellemeleri'),subtitle:const Text('V54 • Test build 233'),trailing:const Icon(Icons.build_circle,color:Colors.orange)),
+    ListTile(leading:const Icon(Icons.system_update,color:mor),title:const Text('Uygulama güncellemeleri'),subtitle:const Text('V54 • Test build 234'),trailing:const Icon(Icons.build_circle,color:Colors.orange)),
     ListTile(leading:const Icon(Icons.share,color:mavi),title:const Text('Ngel X’i paylaş'),subtitle:const Text('Uygulama bağlantısını paylaş veya kopyala'),onTap:()async=>SharePlus.instance.share(ShareParams(text:'Ngel X ile dünyanı paylaş ✨\nhttps://ngelx.app'))),
     const Divider(),
-    ListTile(leading:const Icon(Icons.logout,color:Colors.red),title:const Text('Çıkış yap',style:TextStyle(color:Colors.red)),onTap:()async{final onay=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(title:const Text('Çıkış yapılsın mı?'),content:const Text('Tekrar giriş yapman gerekecek.'),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('Çıkış yap'))]));if(onay==true){await FirebaseAuth.instance.signOut();if(context.mounted)Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder:(_)=>const GirisPage()),(_)=>false);}})
+    ListTile(leading:const Icon(Icons.logout,color:Colors.red),title:const Text('Çıkış yap',style:TextStyle(color:Colors.red)),onTap:()async{final onay=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(title:const Text('Çıkış yapılsın mı?'),content:const Text('Tekrar giriş yapman gerekecek.'),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('Çıkış yap'))]));if(onay==true&&context.mounted){await ngelxOturumuKapat(context);}})
   ]))));}
   Widget _ayar(BuildContext c,IconData i,String t,String s)=>Card(child:ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:10,vertical:7),onTap:()=>Navigator.push(c,MaterialPageRoute(builder:(_)=>TercihlerPage(baslik:t))),leading:Icon(i,color:mor),title:Text(t,style:const TextStyle(fontWeight:FontWeight.bold,color:Colors.black87)),subtitle:Text(s,style:const TextStyle(color:Colors.black54)),trailing:const Icon(Icons.chevron_right,color:Colors.black87)));
 }
@@ -10569,7 +10587,7 @@ class _HesapGuvenligiPageState extends State<HesapGuvenligiPage>{
   Future<bool> onay(String baslik,String aciklama,String dugme)async=>await showDialog<bool>(context:context,builder:(c)=>AlertDialog(title:Text(baslik),content:Text(aciklama),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),FilledButton(onPressed:()=>Navigator.pop(c,true),style:FilledButton.styleFrom(backgroundColor:Colors.red),child:Text(dugme))]))??false;
   Future<void> dondur()async{if(!await onay('Hesap dondurulsun mu?','Hesabın geçici olarak kapatılacak. Giriş yaparak hesabını yeniden açabilirsin.','Hesabı dondur'))return;await isle({'deactivated':true,'deactivatedAt':FieldValue.serverTimestamp()});}
   Future<void> silmeTalebi()async{if(!await onay('Hesap silme talebi oluşturulsun mu?','Hesabın hemen kapanacak ve 30 gün sonra kalıcı silinmek üzere işaretlenecek. Bu sürede giriş yaparak talebi iptal edebilirsin.','Silme talebi oluştur'))return;await isle({'deactivated':true,'deletionRequestedAt':FieldValue.serverTimestamp(),'deletionScheduledFor':Timestamp.fromDate(DateTime.now().add(const Duration(days:30)))});}
-  Future<void> isle(Map<String,dynamic> veri)async{final u=FirebaseAuth.instance.currentUser;if(u==null)return;setState(()=>yukleniyor=true);try{await FirebaseFirestore.instance.collection('users').doc(u.uid).set(veri,SetOptions(merge:true));await FirebaseAuth.instance.signOut();if(mounted)Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder:(_)=>const GirisPage()),(_)=>false);}catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('İşlem tamamlanamadı: $e')));}finally{if(mounted)setState(()=>yukleniyor=false);}}
+  Future<void> isle(Map<String,dynamic> veri)async{final u=FirebaseAuth.instance.currentUser;if(u==null)return;setState(()=>yukleniyor=true);try{await FirebaseFirestore.instance.collection('users').doc(u.uid).set(veri,SetOptions(merge:true));if(mounted)await ngelxOturumuKapat(context);}catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('İşlem tamamlanamadı: $e')));}finally{if(mounted)setState(()=>yukleniyor=false);}}
   @override Widget build(BuildContext context)=>Theme(data:ThemeData.light().copyWith(scaffoldBackgroundColor:Colors.white,appBarTheme:const AppBarTheme(backgroundColor:Colors.white,foregroundColor:Colors.black,elevation:0)),child:Scaffold(appBar:AppBar(title:const Text('Hesap güvenliği')),body:SafeArea(child:ListView(padding:const EdgeInsets.all(18),children:[
     const ListTile(leading:Icon(Icons.verified_user_outlined,color:Colors.green),title:Text('E-posta doğrulaması'),subtitle:Text('Hesabın doğrulanmış e-posta ile korunur.')),
     ListTile(leading:const Icon(Icons.health_and_safety_outlined,color:mor),title:const Text('Hesap kurtarma seçenekleri'),subtitle:const Text('Kurtarma e-postası, telefon ve şifre yenileme'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const HesapKurtarmaPage()))),
@@ -10746,13 +10764,7 @@ class GuvenlikUyarilariPage extends StatelessWidget{
 
       final mevcutId=await cihazKurulumKimligi();
       if(deviceId.isNotEmpty&&deviceId==mevcutId){
-        await FirebaseAuth.instance.signOut();
-        if(context.mounted){
-          Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder:(_)=>const GirisPage()),
-            (_)=>false,
-          );
-        }
+        if(context.mounted)await ngelxOturumuKapat(context);
         return;
       }
 
@@ -12138,14 +12150,7 @@ class _ProfilPageState extends State<ProfilPage> {
 
     if (onay != true || !mounted) return;
 
-    await FirebaseAuth.instance.signOut();
-
-    if (!mounted) return;
-
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const GirisPage()),
-      (_) => false,
-    );
+    await ngelxOturumuKapat(context);
   }
 
   Map<String,String> icerikHaritasi(QueryDocumentSnapshot<Map<String,dynamic>> d){final v=d.data();return {'id':d.id,'type':(v['type']??'video').toString(),'videoUrl':(v['videoUrl']??'').toString(),'mediaUrl':(v['mediaUrl']??v['videoUrl']??'').toString(),'audioUrl':(v['audioUrl']??'').toString(),'description':(v['description']??'').toString(),'username':(v['username']??'ngelx').toString(),'ownerId':(v['ownerId']??'').toString(),'allowDownload':(v['allowDownload']??true).toString(),'cropRatio':(v['cropRatio']??'Orijinal').toString(),'filter':(v['filter']??'Yok').toString(),'effect':(v['effect']??'Yok').toString(),'overlayText':(v['overlayText']??'').toString(),'sticker':(v['sticker']??'').toString()};}
@@ -12314,7 +12319,7 @@ class _ProfilPageState extends State<ProfilPage> {
                     },
                   ),
                   const SizedBox(height: 17),
-                  Row(mainAxisAlignment:MainAxisAlignment.center,children:[SizedBox(width:235,height:50,child:FilledButton.icon(style:FilledButton.styleFrom(backgroundColor:const Color(0xFFF1F2F6),foregroundColor:Colors.black,shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(17))),onPressed:aktifKullanici?.isAnonymous==true?()async{await FirebaseAuth.instance.signOut();if(context.mounted)Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder:(_)=>const KayitPage()),(_)=>false);}:duzenle,icon:const Icon(Icons.edit_outlined),label:Text(aktifKullanici?.isAnonymous==true?'Hesap Oluştur':'Profili Düzenle',style:const TextStyle(fontWeight:FontWeight.w800)))),const SizedBox(width:10),SizedBox(width:52,height:50,child:FilledButton(style:FilledButton.styleFrom(backgroundColor:const Color(0xFFF1ECFF),foregroundColor:Colors.black,padding:EdgeInsets.zero,shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(17))),onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const ArkadaslarPage())),child:const Icon(Icons.person_add_alt_1)))]),
+                  Row(mainAxisAlignment:MainAxisAlignment.center,children:[SizedBox(width:235,height:50,child:FilledButton.icon(style:FilledButton.styleFrom(backgroundColor:const Color(0xFFF1F2F6),foregroundColor:Colors.black,shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(17))),onPressed:aktifKullanici?.isAnonymous==true?()async{if(context.mounted)await ngelxOturumuKapat(context,kaydaGit:true);}:duzenle,icon:const Icon(Icons.edit_outlined),label:Text(aktifKullanici?.isAnonymous==true?'Hesap Oluştur':'Profili Düzenle',style:const TextStyle(fontWeight:FontWeight.w800)))),const SizedBox(width:10),SizedBox(width:52,height:50,child:FilledButton(style:FilledButton.styleFrom(backgroundColor:const Color(0xFFF1ECFF),foregroundColor:Colors.black,padding:EdgeInsets.zero,shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(17))),onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const ArkadaslarPage())),child:const Icon(Icons.person_add_alt_1)))]),
                   const SizedBox(height: 12),
                   SizedBox(width:double.infinity,child:OutlinedButton.icon(
                     onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const TaslaklarPage())),
