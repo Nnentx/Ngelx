@@ -13,7 +13,7 @@
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
     <uses-permission android:name="android.permission.INTERNET" />
     <application
-        android:label="Ngel X"
+        android:label="Ngel X V54 Test"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
