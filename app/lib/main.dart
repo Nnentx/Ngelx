@@ -1708,15 +1708,28 @@ class _AramaPageState extends State<AramaPage> {
   }
 }
 
-class HikayeSeridi extends StatelessWidget {
+class HikayeSeridi extends StatefulWidget {
   const HikayeSeridi({super.key});
+
+  @override
+  State<HikayeSeridi> createState()=>_HikayeSeridiState();
+}
+
+class _HikayeSeridiState extends State<HikayeSeridi> {
+  final Map<String,Future<DocumentSnapshot<Map<String,dynamic>>>> _profilCache={};
+
+  Future<DocumentSnapshot<Map<String,dynamic>>> _profilBelgesi(String uid)=>
+      _profilCache.putIfAbsent(
+        uid,
+        ()=>FirebaseFirestore.instance.collection('users').doc(uid).get().timeout(const Duration(seconds:6)),
+      );
 
   Future<List<Map<String, dynamic>>> gorunebilirHikayeler(
     List<QueryDocumentSnapshot<Map<String, dynamic>>> belgeler,
   ) async {
     final ben = FirebaseAuth.instance.currentUser?.uid;
     if (ben == null) return const [];
-    final benimBelgem = await FirebaseFirestore.instance.collection('users').doc(ben).get();
+    final benimBelgem = await _profilBelgesi(ben);
     final arkadaslar = Set<String>.from(List<dynamic>.from(benimBelgem.data()?['friends'] ?? const []));
     final simdi = DateTime.now();
 
@@ -1732,9 +1745,7 @@ class HikayeSeridi extends StatelessWidget {
         .toSet()
         .toList();
 
-    final profilBelgeleri = await Future.wait(
-      sahipler.map((id) => FirebaseFirestore.instance.collection('users').doc(id).get()),
-    );
+    final profilBelgeleri = await Future.wait(sahipler.map(_profilBelgesi));
     final profiller = <String, Map<String, dynamic>>{
       for (final d in profilBelgeleri) d.id: d.data() ?? <String, dynamic>{},
     };
@@ -1783,7 +1794,11 @@ class HikayeSeridi extends StatelessWidget {
     return SizedBox(
       height: 88,
       child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-        stream: FirebaseFirestore.instance.collection('videos').limit(20).snapshots(),
+        stream: FirebaseFirestore.instance
+            .collection('videos')
+            .orderBy('createdAt',descending:true)
+            .limit(40)
+            .snapshots(),
         builder: (_, snap) {
           if (!snap.hasData) return const SizedBox.shrink();
           return FutureBuilder<List<Map<String, dynamic>>>(
@@ -1792,7 +1807,7 @@ class HikayeSeridi extends StatelessWidget {
               final hikayeler = gorunur.data ?? const <Map<String, dynamic>>[];
               if (hikayeler.isEmpty) return const SizedBox.shrink();
               return ListView.separated(
-                cacheExtent: 700,
+                cacheExtent: 500,
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 scrollDirection: Axis.horizontal,
                 itemCount: hikayeler.length,
@@ -1800,6 +1815,7 @@ class HikayeSeridi extends StatelessWidget {
                 itemBuilder: (_, i) {
                   final h = hikayeler[i];
                   final foto = (h['ownerPhotoUrl'] ?? h['mediaUrl'] ?? '').toString();
+                  final ad=(h['ownerDisplayName']??h['username']??'ngelx').toString();
                   return GestureDetector(
                     onTap: () => ac(context, h),
                     child: SizedBox(
@@ -1816,13 +1832,13 @@ class HikayeSeridi extends StatelessWidget {
                             ),
                             child: CircleAvatar(
                               backgroundColor: const Color(0xFFF0F1F4),
-                              backgroundImage: foto.isEmpty ? null : CachedNetworkImageProvider(foto),
+                              backgroundImage: foto.isEmpty ? null : CachedNetworkImageProvider(foto,maxWidth:160,maxHeight:160),
                               child: foto.isEmpty ? const Icon(Icons.person, color: mor) : null,
                             ),
                           ),
                           const SizedBox(height: 3),
                           Text(
-                            (h['username'] ?? 'ngelx').toString(),
+                            ad,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(color: Colors.black87, fontSize: 10.5, fontWeight: FontWeight.w700),
@@ -10114,7 +10130,7 @@ class AyarlarPage extends StatelessWidget {
       _ayar(context,Icons.download_outlined,'İndirme izinleri','Varsayılan paylaşım indirme ayarı'),
     ],
     const Divider(),
-    ListTile(leading:const Icon(Icons.system_update,color:mor),title:const Text('Uygulama güncellemeleri'),subtitle:const Text('V54 • Test build 223'),trailing:const Icon(Icons.build_circle,color:Colors.orange)),
+    ListTile(leading:const Icon(Icons.system_update,color:mor),title:const Text('Uygulama güncellemeleri'),subtitle:const Text('V54 • Test build 224'),trailing:const Icon(Icons.build_circle,color:Colors.orange)),
     ListTile(leading:const Icon(Icons.share,color:mavi),title:const Text('Ngel X’i paylaş'),subtitle:const Text('Uygulama bağlantısını paylaş veya kopyala'),onTap:()async=>SharePlus.instance.share(ShareParams(text:'Ngel X ile dünyanı paylaş ✨\nhttps://ngelx.app'))),
     const Divider(),
     ListTile(leading:const Icon(Icons.logout,color:Colors.red),title:const Text('Çıkış yap',style:TextStyle(color:Colors.red)),onTap:()async{final onay=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(title:const Text('Çıkış yapılsın mı?'),content:const Text('Tekrar giriş yapman gerekecek.'),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('Çıkış yap'))]));if(onay==true){await FirebaseAuth.instance.signOut();if(context.mounted)Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder:(_)=>const GirisPage()),(_)=>false);}})
