@@ -340,7 +340,18 @@ Future<void> tepkiMenusu(BuildContext context,String icerikId) async {
   final tepki=await showModalBottomSheet<String>(context:context,backgroundColor:Colors.white,shape:const RoundedRectangleBorder(borderRadius:BorderRadius.vertical(top:Radius.circular(28))),builder:(c)=>SafeArea(child:Padding(padding:const EdgeInsets.symmetric(horizontal:16,vertical:22),child:Row(mainAxisAlignment:MainAxisAlignment.spaceAround,children:['❤️','👍','😂','😮','😢','😡'].map((e)=>InkWell(onTap:()=>Navigator.pop(c,e),borderRadius:BorderRadius.circular(30),child:Padding(padding:const EdgeInsets.all(7),child:Text(e,style:const TextStyle(fontSize:29))))).toList()))));
   if(tepki==null)return;
   try{
-    await FirebaseFirestore.instance.collection('videos').doc(icerikId).collection('likes').doc(user.uid).set({'userId':user.uid,'reaction':tepki,'createdAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
+    final video=FirebaseFirestore.instance.collection('videos').doc(icerikId);
+    final likeRef=video.collection('likes').doc(user.uid);
+    final onceki=await likeRef.get().timeout(const Duration(seconds:6));
+    final batch=FirebaseFirestore.instance.batch();
+    batch.set(likeRef,{'userId':user.uid,'reaction':tepki,'createdAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
+    if(!onceki.exists)batch.set(video,{'likeCount':FieldValue.increment(1)},SetOptions(merge:true));
+    batch.set(
+      FirebaseFirestore.instance.collection('users').doc(user.uid),
+      {'likedContentIds':FieldValue.arrayUnion([icerikId])},
+      SetOptions(merge:true),
+    );
+    await batch.commit().timeout(const Duration(seconds:10));
     if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('$tepki tepkin kaydedildi.')));
   }catch(e){if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Tepki kaydedilemedi: $e')));}
 }
@@ -2240,14 +2251,17 @@ class _GorselYaziKartiState extends State<GorselYaziKarti> {
     });
     try{
       final batch=FirebaseFirestore.instance.batch();
+      final userRef=FirebaseFirestore.instance.collection('users').doc(user.uid);
       if(yeni){
         batch.set(ref,{'userId':user.uid,'createdAt':FieldValue.serverTimestamp()});
         batch.set(video,{'likeCount':FieldValue.increment(1)},SetOptions(merge:true));
+        batch.set(userRef,{'likedContentIds':FieldValue.arrayUnion([icerikId])},SetOptions(merge:true));
       }else{
         batch.delete(ref);
         batch.set(video,{'likeCount':FieldValue.increment(-1)},SetOptions(merge:true));
+        batch.set(userRef,{'likedContentIds':FieldValue.arrayRemove([icerikId])},SetOptions(merge:true));
       }
-      await batch.commit();
+      await batch.commit().timeout(const Duration(seconds:10));
       final hedefUid=(widget.veri['ownerId']??'').toString();
       if(yeni&&hedefUid.isNotEmpty&&hedefUid!=user.uid){
         unawaited(uygulamaBildirimiGonder(
@@ -2597,14 +2611,17 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver {
     });
     try{
       final batch=FirebaseFirestore.instance.batch();
+      final userRef=FirebaseFirestore.instance.collection('users').doc(kullanici.uid);
       if(yeniDurum){
         batch.set(begeni,{'userId':kullanici.uid,'createdAt':FieldValue.serverTimestamp()});
         batch.set(video,{'likeCount':FieldValue.increment(1)},SetOptions(merge:true));
+        batch.set(userRef,{'likedContentIds':FieldValue.arrayUnion([videoId])},SetOptions(merge:true));
       }else{
         batch.delete(begeni);
         batch.set(video,{'likeCount':FieldValue.increment(-1)},SetOptions(merge:true));
+        batch.set(userRef,{'likedContentIds':FieldValue.arrayRemove([videoId])},SetOptions(merge:true));
       }
-      await batch.commit();
+      await batch.commit().timeout(const Duration(seconds:10));
       if(yeniDurum&&widget.ownerId.isNotEmpty&&widget.ownerId!=kullanici.uid){
         unawaited(uygulamaBildirimiGonder(
           toUid:widget.ownerId,fromUid:kullanici.uid,tur:'interaction',
