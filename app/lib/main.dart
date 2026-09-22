@@ -5363,7 +5363,7 @@ class _GrupOlusturPageState extends State<GrupOlusturPage>{
                       width:92,height:92,
                       decoration:BoxDecoration(
                         shape:BoxShape.circle,
-                        gradient:const LinearGradient(colors:[Color(0xFFEFE6FF),Color(0xFFD9C6FF)]),
+                        gradient:const LinearGradient(colors:[ngelxGroupGreenSoft,ngelxGroupGreenHeader]),
                         border:Border.all(color:Colors.white,width:4),
                         boxShadow:const [BoxShadow(color:Color(0x24704DE3),blurRadius:24,offset:Offset(0,9))],
                       ),
@@ -5588,11 +5588,11 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
     _okunduYaziliyor=true;
     try{
       final d=await chatRef.get().timeout(const Duration(seconds:5));
-      if(d.data()?['readReceipts_$ben']==false)return;
       final okunmamis=(d.data()?['unread_$ben'] as num?)?.toInt()??0;
+      final okunduPaylas=d.data()?['readReceipts_$ben']!=false;
       await chatRef.set({
         if(okunmamis>0)'unread_$ben':0,
-        'lastReadAt_$ben':FieldValue.serverTimestamp(),
+        if(okunduPaylas)'lastReadAt_$ben':FieldValue.serverTimestamp(),
       },SetOptions(merge:true)).timeout(const Duration(seconds:5));
     }catch(_){
     }finally{
@@ -7952,7 +7952,10 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
       final eski=(mevcut.data()?['groupPhotoUrl']??'').toString();
       if(secim=='remove'){
         await ref.update({'groupPhotoUrl':'','updatedAt':FieldValue.serverTimestamp()});
-        if(eski.isNotEmpty)unawaited(ngelxMedyaSil(eski).catchError((_){ }));
+        if(eski.isNotEmpty){
+          await CachedNetworkImage.evictFromCache(eski);
+          unawaited(ngelxMedyaSil(eski).catchError((_){ }));
+        }
         await sistemMesaji('Yönetici grup fotoğrafını kaldırdı.');
         if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Grup fotoğrafı kaldırıldı.')));
         return;
@@ -8261,7 +8264,7 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
                           shape:BoxShape.circle,
                           gradient:const LinearGradient(colors:[Color(0xFFEFE6FF),Color(0xFFD9C6FF)]),
                           border:Border.all(color:Colors.white,width:4),
-                          boxShadow:const [BoxShadow(color:Color(0x26704DE3),blurRadius:24,offset:Offset(0,9))],
+                          boxShadow:const [BoxShadow(color:Color(0x220A9F45),blurRadius:24,offset:Offset(0,9))],
                         ),
                         child:ClipOval(child:foto.isEmpty?const Icon(Icons.groups_rounded,color:ngelxGroupGreen,size:46):CachedNetworkImage(imageUrl:foto,fit:BoxFit.cover)),
                       ),
@@ -8768,7 +8771,10 @@ class GrupAyarlarPage extends StatelessWidget{
 
   Future<void> _bool(String alan,bool deger)async{
     final uid=me;if(uid==null)return;
-    await ref.set({alan+'_'+uid:deger},SetOptions(merge:true));
+    await ref.set({
+      alan+'_'+uid:deger,
+      if(alan=='typingIndicator'&&!deger)'typing_'+uid:FieldValue.delete(),
+    },SetOptions(merge:true));
   }
 
   Future<void> _sessiz(bool sessiz)async{
