@@ -8732,9 +8732,12 @@ class KullaniciProfilPage extends StatelessWidget {
                               }
 
                               if(gizli){
+                                final gonderenAdi=(benimVerim['displayName']??benimVerim['username']??'NgelX kullanıcısı').toString();
+                                final gonderenFoto=(benimVerim['photoUrl']??'').toString();
                                 await istekRef!.set({
                                   'toUid':uid,'fromUid':me,'type':'follow_request',
-                                  'text':'Yeni takip isteğin var','status':'pending',
+                                  'senderName':gonderenAdi,'photoUrl':gonderenFoto,
+                                  'text':'$gonderenAdi sana takip isteği gönderdi','status':'pending',
                                   'read':false,'createdAt':FieldValue.serverTimestamp(),
                                 },SetOptions(merge:true));
                                 if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Takip isteği gönderildi.')));
@@ -8797,9 +8800,12 @@ class KullaniciProfilPage extends StatelessWidget {
                       onPressed:(arkadaslar.contains(uid)||bekliyor)?null:()async{
                         if(me==null)return;
                         final ref=FirebaseFirestore.instance.collection('notifications').doc('friend_request_'+me+'_'+uid);
+                        final gonderenAdi=(benimVerim['displayName']??benimVerim['username']??'NgelX kullanıcısı').toString();
+                        final gonderenFoto=(benimVerim['photoUrl']??'').toString();
                         await ref.set({
                           'toUid':uid,'fromUid':me,'type':'friend_request',
-                          'text':'Yeni arkadaşlık isteğin var','status':'pending',
+                          'senderName':gonderenAdi,'photoUrl':gonderenFoto,
+                          'text':'$gonderenAdi sana arkadaşlık isteği gönderdi','status':'pending',
                           'read':false,'createdAt':FieldValue.serverTimestamp(),
                         },SetOptions(merge:true));
                         if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Arkadaşlık isteği gönderildi.')));
