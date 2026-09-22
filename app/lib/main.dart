@@ -5783,6 +5783,50 @@ class _GrupOlusturPageState extends State<GrupOlusturPage>{
       if(mounted)setState((){izinlerYukleniyor=false;yuklemeHatasi='Kişiler yüklenemedi. İnternet bağlantını kontrol edip tekrar dene.';});
     }
   }
+  Future<void> grupFotografiSec()async{
+    if(kaydediliyor)return;
+    final secim=await showModalBottomSheet<String>(
+      context:context,
+      backgroundColor:Colors.white,
+      showDragHandle:true,
+      builder:(c)=>Theme(
+        data:ThemeData.light(),
+        child:SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
+          const ListTile(title:Text('Grup fotoğrafı',style:TextStyle(color:Colors.black87,fontWeight:FontWeight.w900))),
+          ListTile(leading:const Icon(Icons.camera_alt_rounded,color:mor),title:const Text('Kamera'),onTap:()=>Navigator.pop(c,'camera')),
+          ListTile(leading:const Icon(Icons.photo_library_rounded,color:mor),title:const Text('Galeri'),onTap:()=>Navigator.pop(c,'gallery')),
+          if(foto!=null)ListTile(leading:const Icon(Icons.delete_outline_rounded,color:Colors.red),title:const Text('Seçilen fotoğrafı kaldır',style:TextStyle(color:Colors.red)),onTap:()=>Navigator.pop(c,'remove')),
+        ])),
+      ),
+    );
+    if(secim==null)return;
+    await ngelxOverlayKapanisiniBekle();
+    if(!mounted)return;
+    if(secim=='remove'){
+      setState(()=>foto=null);
+      return;
+    }
+    if(secim=='camera'){
+      final izin=await Permission.camera.request();
+      if(!izin.isGranted){
+        if(mounted)ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content:const Text('Grup fotoğrafı çekmek için kamera izni gerekli.'),action:SnackBarAction(label:'Ayarlar',onPressed:openAppSettings)),
+        );
+        return;
+      }
+    }
+    try{
+      final x=await ImagePicker().pickImage(
+        source:secim=='camera'?ImageSource.camera:ImageSource.gallery,
+        imageQuality:82,
+        maxWidth:1280,
+      );
+      if(x!=null&&mounted)setState(()=>foto=x);
+    }catch(e){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Grup fotoğrafı seçilemedi: ${ngelxKisaHata(e)}')));
+    }
+  }
+
   Future<void> olustur()async{
     final u=FirebaseAuth.instance.currentUser;
     if(u==null||kaydediliyor)return;
@@ -5797,14 +5841,30 @@ class _GrupOlusturPageState extends State<GrupOlusturPage>{
       bool fotoAtlandi=false;
       if(foto!=null){
         try{
-          final bytes=await foto!.readAsBytes().timeout(const Duration(seconds:8));
-          final yol='groups/${u.uid}/${DateTime.now().millisecondsSinceEpoch}.jpg';
-          fotoUrl=await ngelxMedyaYukleBytes(
-            bytes: bytes,
-            kind: 'groups',
-            ext: 'jpg',
-            legacyPath: yol,
-          ).timeout(const Duration(seconds:12));
+          final secilenFoto=foto!;
+          final bytes=await secilenFoto.readAsBytes().timeout(const Duration(seconds:8));
+          final uzanti=secilenFoto.name.contains('.')?secilenFoto.name.split('.').last.toLowerCase():'jpg';
+          final temizUzanti=['jpg','jpeg','png','webp'].contains(uzanti)?uzanti:'jpg';
+          final yol='groups/${u.uid}/${DateTime.now().millisecondsSinceEpoch}.$temizUzanti';
+          try{
+            fotoUrl=await ngelxMedyaYukleBytes(
+              bytes:bytes,
+              kind:'groups',
+              ext:temizUzanti,
+              legacyPath:yol,
+            ).timeout(const Duration(seconds:12));
+          }catch(e){
+            if(e.toString().contains('(400)')){
+              fotoUrl=await ngelxMedyaYukleBytes(
+                bytes:bytes,
+                kind:'photos',
+                ext:temizUzanti,
+                legacyPath:yol,
+              ).timeout(const Duration(seconds:12));
+            }else{
+              rethrow;
+            }
+          }
         }catch(_){
           fotoAtlandi=true;
           fotoUrl='';
@@ -5840,7 +5900,7 @@ class _GrupOlusturPageState extends State<GrupOlusturPage>{
     }
   }
   @override Widget build(BuildContext context){return Theme(data:ThemeData.light().copyWith(scaffoldBackgroundColor:Colors.white,appBarTheme:const AppBarTheme(backgroundColor:Colors.white,foregroundColor:Colors.black,elevation:0)),child:Scaffold(appBar:AppBar(title:const Text('Yeni grup',style:TextStyle(fontWeight:FontWeight.w900)),actions:[TextButton(onPressed:kaydediliyor?null:olustur,child:const Text('Oluştur',style:TextStyle(fontWeight:FontWeight.w900)))]),body:Column(children:[
-  Padding(padding:const EdgeInsets.all(18),child:Row(children:[GestureDetector(onTap:()async{final x=await ImagePicker().pickImage(source:ImageSource.gallery,imageQuality:78,maxWidth:1024);if(x!=null&&mounted)setState(()=>foto=x);},child:CircleAvatar(radius:34,backgroundColor:const Color(0xFFE9DDFF),backgroundImage:foto==null?null:FileImage(File(foto!.path)),child:foto==null?const Icon(Icons.add_a_photo,color:mor):null)),const SizedBox(width:14),Expanded(child:TextField(controller:ad,maxLength:16,onChanged:(_)=>setState((){}),style:const TextStyle(color:Colors.black87),decoration:InputDecoration(labelText:'Grup adı',hintText:'Grubuna bir ad ver',counterText:'${ad.text.characters.length}/16 karakter')))])),
+  Padding(padding:const EdgeInsets.all(18),child:Row(children:[GestureDetector(onTap:kaydediliyor?null:grupFotografiSec,child:CircleAvatar(radius:34,backgroundColor:const Color(0xFFE9DDFF),backgroundImage:foto==null?null:FileImage(File(foto!.path)),child:foto==null?const Icon(Icons.add_a_photo,color:mor):null)),const SizedBox(width:14),Expanded(child:TextField(controller:ad,maxLength:16,onChanged:(_)=>setState((){}),style:const TextStyle(color:Colors.black87),decoration:InputDecoration(labelText:'Grup adı',hintText:'Grubuna bir ad ver',counterText:'${ad.text.characters.length}/16 karakter')))])),
     Padding(padding:const EdgeInsets.symmetric(horizontal:18),child:TextField(controller:arama,onChanged:(v)=>setState(()=>sorgu=v.toLowerCase()),style:const TextStyle(color:Colors.black87),decoration:const InputDecoration(prefixIcon:Icon(Icons.search),hintText:'Gruba kişi ekle'))),
     Padding(padding:const EdgeInsets.fromLTRB(18,12,18,5),child:Align(alignment:Alignment.centerLeft,child:Text('${secilen.length} kişi seçildi • ${secilen.length+1}/60 üye',style:const TextStyle(color:mor,fontWeight:FontWeight.bold)))),
     Expanded(
