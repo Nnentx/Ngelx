@@ -6,9 +6,11 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 APP = ROOT / "app" / "lib" / "main.dart"
 WORKER = ROOT / "cloudflare" / "worker" / "src" / "index.js"
+RULES = ROOT / "firestore.rules"
 
 app = APP.read_text(encoding="utf-8")
 worker = WORKER.read_text(encoding="utf-8")
+rules = RULES.read_text(encoding="utf-8")
 
 errors = []
 
@@ -92,6 +94,23 @@ if "30*1024*1024" in app and "'chat-files': 30 * 1024 * 1024" not in worker:
 
 if "heic: 'image/heic'" not in worker or "heif: 'image/heif'" not in worker:
     errors.append("R2 worker HEIC/HEIF fotoğraf türlerini desteklemiyor.")
+
+# Secure group invitation/join contract.
+for token in (
+    "match /joinRequests/{requestUid}",
+    "match /group_invites/{code}",
+    "validSelfJoin(chatId)",
+    "validInvite(code, chatId)",
+):
+    if token not in rules:
+        errors.append("Firestore grup davet kuralı eksik: " + token)
+
+if ".collection('chats').where('inviteCode'" in app:
+    errors.append("Uygulama hâlâ üye olmayan kullanıcı için yasak chats inviteCode sorgusunu kullanıyor.")
+if ".collection('group_invites').doc(invite)" not in app:
+    errors.append("Güvenli doğrudan grup davet belgesi akışı bulunamadı.")
+if "status':onayGerekli?'pending':'autojoin'" not in app:
+    errors.append("Grup davet onay/autojoin ayrımı bulunamadı.")
 
 if errors:
     print("NgelX contract doğrulaması BAŞARISIZ:")
