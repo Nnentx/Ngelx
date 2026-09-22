@@ -10544,31 +10544,85 @@ class _ProfilPageState extends State<ProfilPage> {
   Future<void> fotografYukle() async {
     final user = aktifKullanici;
     if (user == null || user.isAnonymous || fotoYukleniyor) return;
-    final dosya = await ImagePicker().pickImage(
-      source: ImageSource.gallery,
-      imageQuality: 82,
-      maxWidth: 1080,
+
+    final kaynak=await showModalBottomSheet<ImageSource>(
+      context:context,
+      backgroundColor:Colors.white,
+      showDragHandle:true,
+      shape:const RoundedRectangleBorder(borderRadius:BorderRadius.vertical(top:Radius.circular(28))),
+      builder:(c)=>Theme(
+        data:ThemeData.light(),
+        child:SafeArea(child:Padding(
+          padding:const EdgeInsets.fromLTRB(18,4,18,20),
+          child:Column(mainAxisSize:MainAxisSize.min,children:[
+            const Text('Profil fotoğrafını değiştir',style:TextStyle(color:Colors.black87,fontSize:20,fontWeight:FontWeight.w900)),
+            const SizedBox(height:14),
+            ListTile(
+              leading:const CircleAvatar(backgroundColor:Color(0xFFF1E9FF),child:Icon(Icons.photo_camera_rounded,color:mor)),
+              title:const Text('Kamerayla çek',style:TextStyle(fontWeight:FontWeight.w800)),
+              subtitle:const Text('Yeni bir profil fotoğrafı çek'),
+              onTap:()=>Navigator.pop(c,ImageSource.camera),
+            ),
+            ListTile(
+              leading:const CircleAvatar(backgroundColor:Color(0xFFEAF4FF),child:Icon(Icons.photo_library_rounded,color:mavi)),
+              title:const Text('Galeriden seç',style:TextStyle(fontWeight:FontWeight.w800)),
+              subtitle:const Text('Telefondaki bir fotoğrafı kullan'),
+              onTap:()=>Navigator.pop(c,ImageSource.gallery),
+            ),
+          ]),
+        )),
+      ),
     );
-    if (dosya == null || !mounted) return;
+    if(kaynak==null||!mounted)return;
+
+    if(kaynak==ImageSource.camera){
+      final izin=await Permission.camera.request();
+      if(!izin.isGranted){
+        if(mounted)ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content:const Text('Profil fotoğrafı çekmek için kamera izni gerekli.'),
+            action:SnackBarAction(label:'Ayarlar',onPressed:openAppSettings),
+          ),
+        );
+        return;
+      }
+    }
+
+    XFile? dosya;
+    try{
+      dosya=await ImagePicker().pickImage(
+        source:kaynak,
+        imageQuality:82,
+        maxWidth:1080,
+      );
+    }catch(e){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content:Text('Fotoğraf seçilemedi: ${ngelxKisaHata(e)}')),
+      );
+      return;
+    }
+    if(dosya==null||!mounted)return;
+
     setState(() => fotoYukleniyor = true);
     try {
       final uzanti = dosya.name.contains('.')
           ? dosya.name.split('.').last.toLowerCase()
           : 'jpg';
       final yol = 'profiles/${user.uid}/${DateTime.now().millisecondsSinceEpoch}.$uzanti';
+      final bytes=await dosya.readAsBytes().timeout(const Duration(seconds:8));
       final url = await ngelxMedyaYukleBytes(
-        bytes: await dosya.readAsBytes(),
-        kind: 'profiles',
-        ext: uzanti,
-        legacyPath: yol,
-      );
+        bytes:bytes,
+        kind:'profiles',
+        ext:uzanti,
+        legacyPath:yol,
+      ).timeout(const Duration(seconds:18));
       await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
           .set({
         'photoUrl': url,
         'updatedAt': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
+      }, SetOptions(merge: true)).timeout(const Duration(seconds:10));
       if (!mounted) return;
       setState(() => fotoUrl = url);
       ScaffoldMessenger.of(context).showSnackBar(
