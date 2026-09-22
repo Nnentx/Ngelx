@@ -4220,7 +4220,8 @@ class EskiKesfetPage extends StatelessWidget {
 }
 
 class YuklePage extends StatefulWidget {
-  const YuklePage({super.key});
+  final Map<String,dynamic>? taslak;
+  const YuklePage({super.key,this.taslak});
 
   @override
   State<YuklePage> createState() => _YeniYuklePageState();
@@ -4251,6 +4252,7 @@ class _YeniYuklePageState extends State<YuklePage> {
   double oynatmaHizi=1.0;
   String bindirmeMetni='';
   String cikartma='';
+  String? taslakId;
   final aciklama = TextEditingController();
   final konum = TextEditingController();
   final etiketler = TextEditingController();
@@ -4258,10 +4260,30 @@ class _YeniYuklePageState extends State<YuklePage> {
   @override
   void initState() {
     super.initState();
+    final d=widget.taslak;
+    if(d!=null){
+      taslakId=(d['_draftId']??'').toString().trim();
+      if(taslakId?.isEmpty==true)taslakId=null;
+      tur=(d['type']??tur).toString();
+      aciklama.text=(d['description']??'').toString();
+      konum.text=(d['location']??'').toString();
+      etiketler.text=(d['tags']??'').toString();
+      gizlilik=(d['privacy']??gizlilik).toString();
+      yorumKitlesi=(d['commentAudience']??yorumKitlesi).toString();
+      kalite=(d['quality']??kalite).toString();
+      hikayeModu=d['storyMode']==true;
+      reelsModu=d['reelsMode']==true;
+      kirpma=(d['cropRatio']??kirpma).toString();
+      filtre=(d['filter']??filtre).toString();
+      efekt=(d['effect']??efekt).toString();
+      oynatmaHizi=(d['playbackSpeed'] as num?)?.toDouble()??oynatmaHizi;
+      bindirmeMetni=(d['overlayText']??'').toString();
+      cikartma=(d['sticker']??'').toString();
+    }
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid != null) {
-      FirebaseFirestore.instance.collection('users').doc(uid).get().then((d) {
-        if (mounted) setState(() => indirmeyeIzin = d.data()?['defaultAllowDownload'] != false);
+      FirebaseFirestore.instance.collection('users').doc(uid).get().then((u) {
+        if (mounted) setState(() => indirmeyeIzin = u.data()?['defaultAllowDownload'] != false);
       });
     }
   }
@@ -4469,7 +4491,7 @@ class _YeniYuklePageState extends State<YuklePage> {
   Future<void> taslakKaydet() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
-    await FirebaseFirestore.instance.collection('users').doc(user.uid).collection('drafts').add({
+    final veri=<String,dynamic>{
       'type': tur,
       'description': aciklama.text.trim(),
       'location': konum.text.trim(),
@@ -4485,8 +4507,16 @@ class _YeniYuklePageState extends State<YuklePage> {
       'playbackSpeed':oynatmaHizi,
       'overlayText':bindirmeMetni,
       'sticker':cikartma,
-      'createdAt': FieldValue.serverTimestamp(),
-    });
+      'updatedAt':FieldValue.serverTimestamp(),
+    };
+    final koleksiyon=FirebaseFirestore.instance.collection('users').doc(user.uid).collection('drafts');
+    if(taslakId==null){
+      veri['createdAt']=FieldValue.serverTimestamp();
+      final yeni=await koleksiyon.add(veri);
+      taslakId=yeni.id;
+    }else{
+      await koleksiyon.doc(taslakId).set(veri,SetOptions(merge:true));
+    }
     if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Taslak kaydedildi ✓')));
   }
 
@@ -4604,6 +4634,10 @@ class _YeniYuklePageState extends State<YuklePage> {
         'sticker':cikartma,
         'createdAt': FieldValue.serverTimestamp(),
       });
+      if(taslakId!=null){
+        unawaited(FirebaseFirestore.instance.collection('users').doc(user.uid).collection('drafts').doc(taslakId).delete().catchError((_){ }));
+        taslakId=null;
+      }
       if (!mounted) return;
       final hikayeydi=hikayeModu;
       setState(() {
@@ -10041,6 +10075,107 @@ class _KullaniciListesiPageState extends State<KullaniciListesiPage>{
 }
 
 
+class TaslaklarPage extends StatelessWidget{
+  const TaslaklarPage({super.key});
+
+  String turAdi(String tur){
+    switch(tur){
+      case 'video':return 'Video';
+      case 'photo':return 'Fotoğraf';
+      case 'text':return 'Yazı';
+      default:return 'İçerik';
+    }
+  }
+
+  IconData turIkonu(String tur){
+    switch(tur){
+      case 'video':return Icons.videocam_rounded;
+      case 'photo':return Icons.photo_rounded;
+      case 'text':return Icons.text_fields_rounded;
+      default:return Icons.edit_note_rounded;
+    }
+  }
+
+  @override Widget build(BuildContext context){
+    final uid=FirebaseAuth.instance.currentUser?.uid;
+    return Theme(
+      data:ThemeData.light().copyWith(scaffoldBackgroundColor:Colors.white,appBarTheme:const AppBarTheme(backgroundColor:Colors.white,foregroundColor:Colors.black,elevation:0)),
+      child:Scaffold(
+        backgroundColor:Colors.white,
+        appBar:AppBar(title:const Text('Taslaklarım',style:TextStyle(fontWeight:FontWeight.w900))),
+        body:uid==null
+          ?const Center(child:Text('Oturum bulunamadı.'))
+          :StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
+            stream:FirebaseFirestore.instance.collection('users').doc(uid).collection('drafts').limit(100).snapshots(),
+            builder:(_,s){
+              if(s.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator(color:mor));
+              final docs=(s.data?.docs??[]).toList()
+                ..sort((a,b){
+                  final at=a.data()['updatedAt']??a.data()['createdAt'];
+                  final bt=b.data()['updatedAt']??b.data()['createdAt'];
+                  final am=at is Timestamp?at.millisecondsSinceEpoch:0;
+                  final bm=bt is Timestamp?bt.millisecondsSinceEpoch:0;
+                  return bm.compareTo(am);
+                });
+              if(docs.isEmpty)return const Center(child:Padding(
+                padding:EdgeInsets.all(28),
+                child:Column(mainAxisSize:MainAxisSize.min,children:[
+                  Icon(Icons.edit_note_rounded,color:mor,size:58),
+                  SizedBox(height:12),
+                  Text('Henüz taslağın yok',style:TextStyle(fontSize:19,fontWeight:FontWeight.w900)),
+                  SizedBox(height:6),
+                  Text('Üret bölümünde hazırladığın içeriği Taslak kaydet ile burada saklayabilirsin.',textAlign:TextAlign.center,style:TextStyle(color:Colors.black54)),
+                ]),
+              ));
+              return ListView.separated(
+                padding:const EdgeInsets.all(14),
+                itemCount:docs.length,
+                separatorBuilder:(_,__)=>const Divider(height:1),
+                itemBuilder:(_,i){
+                  final d=docs[i],v=d.data(),tur=(v['type']??'text').toString();
+                  final aciklama=(v['description']??'').toString().trim();
+                  final zaman=v['updatedAt']??v['createdAt'];
+                  return Dismissible(
+                    key:ValueKey('draft_'+d.id),
+                    direction:DismissDirection.endToStart,
+                    background:Container(
+                      alignment:Alignment.centerRight,
+                      padding:const EdgeInsets.only(right:22),
+                      color:Colors.red,
+                      child:const Icon(Icons.delete_outline_rounded,color:Colors.white),
+                    ),
+                    confirmDismiss:(_)async=>await showDialog<bool>(
+                      context:context,
+                      builder:(c)=>AlertDialog(
+                        title:const Text('Taslak silinsin mi?'),
+                        content:const Text('Bu işlem geri alınamaz.'),
+                        actions:[
+                          TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),
+                          FilledButton(style:FilledButton.styleFrom(backgroundColor:Colors.red),onPressed:()=>Navigator.pop(c,true),child:const Text('Sil')),
+                        ],
+                      ),
+                    )??false,
+                    onDismissed:(_)=>d.reference.delete(),
+                    child:ListTile(
+                      onTap:(){
+                        final veri=<String,dynamic>{...v,'_draftId':d.id};
+                        Navigator.push(context,MaterialPageRoute(builder:(_)=>YuklePage(taslak:veri)));
+                      },
+                      leading:CircleAvatar(backgroundColor:const Color(0xFFF1E9FF),child:Icon(turIkonu(tur),color:mor)),
+                      title:Text(aciklama.isEmpty?'${turAdi(tur)} taslağı':aciklama,maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(fontWeight:FontWeight.w800)),
+                      subtitle:Text('${turAdi(tur)} • ${(v['privacy']??'Herkes')} • ${zamanKisa(zaman)}'),
+                      trailing:const Icon(Icons.chevron_right),
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+      ),
+    );
+  }
+}
+
 class EtkilesimOzetiPage extends StatelessWidget{
   final String uid;
   const EtkilesimOzetiPage({super.key,required this.uid});
@@ -10871,6 +11006,12 @@ class _ProfilPageState extends State<ProfilPage> {
                   const SizedBox(height: 17),
                   Row(mainAxisAlignment:MainAxisAlignment.center,children:[SizedBox(width:235,height:50,child:FilledButton.icon(style:FilledButton.styleFrom(backgroundColor:const Color(0xFFF1F2F6),foregroundColor:Colors.black,shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(17))),onPressed:aktifKullanici?.isAnonymous==true?()async{await FirebaseAuth.instance.signOut();if(context.mounted)Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder:(_)=>const KayitPage()),(_)=>false);}:duzenle,icon:const Icon(Icons.edit_outlined),label:Text(aktifKullanici?.isAnonymous==true?'Hesap Oluştur':'Profili Düzenle',style:const TextStyle(fontWeight:FontWeight.w800)))),const SizedBox(width:10),SizedBox(width:52,height:50,child:FilledButton(style:FilledButton.styleFrom(backgroundColor:const Color(0xFFF1ECFF),foregroundColor:Colors.black,padding:EdgeInsets.zero,shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(17))),onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const ArkadaslarPage())),child:const Icon(Icons.person_add_alt_1)))]),
                   const SizedBox(height: 12),
+                  SizedBox(width:double.infinity,child:OutlinedButton.icon(
+                    onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const TaslaklarPage())),
+                    icon:const Icon(Icons.edit_note_rounded),
+                    label:const Text('Taslaklarım'),
+                  )),
+                  const SizedBox(height: 10),
                   SizedBox(width:double.infinity,child:OutlinedButton.icon(
                     onPressed:tanitimVideosuYukle,
                     icon:const Icon(Icons.video_camera_front_outlined),
