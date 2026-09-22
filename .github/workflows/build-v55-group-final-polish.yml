@@ -45,11 +45,11 @@ jobs:
       - name: R2 Worker JavaScript kontrolu
         run: node --check cloudflare/worker/src/index.js
 
-      - name: Java 17 kur
+      - name: Java 21 kur
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: '21'
 
       - name: Firestore grup kurallarini emulator ile test et
         run: |
