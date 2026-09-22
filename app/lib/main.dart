@@ -53,6 +53,11 @@ const ngelxPremiumMuted = Color(0xFF746F82);
 const ngelxPremiumBorder = Color(0xFFEAE3F5);
 const ngelxCallBg = Color(0xFF120C22);
 const ngelxCallCard = Color(0xFF211837);
+const ngelxGroupGreen = Color(0xFF0A9F45);
+const ngelxGroupGreen2 = Color(0xFF16B957);
+const ngelxGroupGreenSoft = Color(0xFFEAF8EF);
+const ngelxGroupGreenHeader = Color(0xFFB9F2C8);
+const ngelxGroupBorder = Color(0xFFD9EEE0);
 
 class NgelXPremiumCard extends StatelessWidget {
   final Widget child;
