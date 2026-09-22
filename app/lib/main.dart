@@ -5597,7 +5597,10 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
     try{
       final d=await chatRef.get().timeout(const Duration(seconds:5));
       final okunmamis=(d.data()?['unread_$ben'] as num?)?.toInt()??0;
-      if(okunmamis>0)await chatRef.set({'unread_$ben':0},SetOptions(merge:true)).timeout(const Duration(seconds:5));
+      await chatRef.set({
+        if(okunmamis>0)'unread_$ben':0,
+        'lastReadAt_$ben':FieldValue.serverTimestamp(),
+      },SetOptions(merge:true)).timeout(const Duration(seconds:5));
     }catch(_){
     }finally{
       _okunduYaziliyor=false;
@@ -5698,6 +5701,26 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
     if(mounted)setState(()=>mesajGonderiliyor=false);
   }
   Future<void> medyaGonder(ImageSource kaynak)async{final x=await ImagePicker().pickImage(source:kaynak,imageQuality:76,maxWidth:1280);if(x==null)return;try{final yol='groups/${widget.chatId}/${DateTime.now().millisecondsSinceEpoch}.jpg';final url=await ngelxMedyaYukleBytes(bytes:await x.readAsBytes(),kind:'groups',ext:'jpg',legacyPath:yol).timeout(const Duration(seconds:12));await payloadGonder({'type':'photo','mediaUrl':url},'📷 Fotoğraf');}catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Fotoğraf gönderilemedi.')));}}
+  Future<void> grupVideoGonder()async{
+    final x=await ImagePicker().pickVideo(source:ImageSource.gallery,maxDuration:const Duration(minutes:3));
+    if(x==null)return;
+    try{
+      final bytes=await x.readAsBytes();
+      if(bytes.length>80*1024*1024)throw Exception('Video 80 MB’den küçük olmalı.');
+      final uzanti=x.name.contains('.')?x.name.split('.').last.toLowerCase():'mp4';
+      final url=await ngelxMedyaYukleBytes(
+        bytes:bytes,
+        kind:'groups',
+        ext:uzanti,
+        legacyPath:'groups/'+widget.chatId+'/'+DateTime.now().millisecondsSinceEpoch.toString()+'.'+uzanti,
+        contentType:uzanti=='mov'?'video/quicktime':'video/mp4',
+      ).timeout(const Duration(seconds:45));
+      await payloadGonder({'type':'video','mediaUrl':url},'🎥 Video');
+    }catch(e){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Video gönderilemedi: $e')));
+    }
+  }
+
   Future<void> gifGonder()async{const tur=XTypeGroup(label:'GIF',extensions:['gif']);final x=await openFile(acceptedTypeGroups:[tur]);if(x==null)return;try{final yol='groups/${widget.chatId}/${DateTime.now().millisecondsSinceEpoch}.gif';final bytes=await x.readAsBytes().timeout(const Duration(seconds:8));final url=await ngelxMedyaYukleBytes(bytes:bytes,kind:'gifs',ext:'gif',legacyPath:yol,contentType:'image/gif').timeout(const Duration(seconds:12));await payloadGonder({'type':'gif','mediaUrl':url},'GIF');}catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('GIF gönderilemedi.')));}}
   Future<void> grupDosyaGonder()async{
     final x=await openFile();
@@ -6099,11 +6122,11 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
             ]),
             const SizedBox(height:10),
             Row(children:[
+              Expanded(child:_ekSecenek(c,Icons.video_library_rounded,'Video','video')),
+              const SizedBox(width:10),
               Expanded(child:_ekSecenek(c,Icons.insert_drive_file_rounded,'Dosya','file')),
               const SizedBox(width:10),
               Expanded(child:_ekSecenek(c,Icons.location_on_rounded,'Konum','location')),
-              const SizedBox(width:10),
-              const Expanded(child:SizedBox()),
             ]),
           ]),
         )),
@@ -6115,6 +6138,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
     if(secim=='camera')await medyaGonder(ImageSource.camera);
     else if(secim=='gallery')await medyaGonder(ImageSource.gallery);
     else if(secim=='gif')await gifGonder();
+    else if(secim=='video')await grupVideoGonder();
     else if(secim=='file')await grupDosyaGonder();
     else if(secim=='location')await grupKonumGonder();
   }
@@ -6344,7 +6368,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
     return t.difference(pt).inMinutes.abs()>=5;
   }
 
-  Widget mesajKarti(QueryDocumentSnapshot<Map<String,dynamic>> d,{QueryDocumentSnapshot<Map<String,dynamic>>? onceki}){
+  Widget mesajKarti(QueryDocumentSnapshot<Map<String,dynamic>> d,{QueryDocumentSnapshot<Map<String,dynamic>>? onceki,Map<String,dynamic>? grupVerisi,bool sonMesaj=false}){
     final v=d.data(),gonderen=(v['senderId']??v['fromUid']??v['uid']??'').toString(),ben=gonderen==uid;
     final metin=(v['text']??v['message']??v['content']??'').toString(),tur=(v['type']??'text').toString(),media=(v['mediaUrl']??'').toString(),audio=(v['audioUrl']??'').toString();
     final fileUrl=(v['fileUrl']??'').toString(),fileName=(v['fileName']??'Dosya').toString(),locationText=(v['locationText']??metin).toString();
@@ -6397,6 +6421,8 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
             onDoubleTap:()=>grupKalpBirak(d),
             onTap:(tur=='photo'||tur=='gif')&&media.isNotEmpty
               ? ()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>TamEkranMedyaPage(url:media)))
+              : tur=='video'&&media.isNotEmpty
+                ? ()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>TamEkranVideoPage(url:media)))
               : tur=='file'&&fileUrl.isNotEmpty
                 ? ()=>grupDosyayiPaylas(v)
                 : tur=='location'
@@ -6436,6 +6462,8 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
                     imageUrl:media,width:246,fit:BoxFit.cover,
                     errorWidget:(_,__,___)=>const SizedBox(width:246,height:116,child:Center(child:Icon(Icons.broken_image_outlined))),
                   )))
+                else if(tur=='video'&&media.isNotEmpty)
+                  IgnorePointer(child:NgelXGrupVideoMesaj(url:media))
                 else if(tur=='audio'&&audio.isNotEmpty)
                   SizedBox(width:228,child:NgelXSesliMesaj(url:audio,benim:ben,durationSeconds:(v['durationSeconds'] as num?)?.toInt()??0))
                 else if(tur=='file')
@@ -6492,6 +6520,21 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
               )).toList()),
             ),
           ),
+          if(ben&&sonMesaj&&grupVerisi!=null)Builder(builder:(_){
+            final t=_mesajTarihi(d);
+            if(t==null)return const SizedBox.shrink();
+            final uyeler=List<String>.from(grupVerisi!['members']??const[]);
+            var gorulen=0;
+            for(final id in uyeler){
+              if(id==uid)continue;
+              final r=grupVerisi!['lastReadAt_'+id];
+              if(r is Timestamp&&!r.toDate().isBefore(t))gorulen++;
+            }
+            return Padding(
+              padding:const EdgeInsets.only(top:1,right:7,bottom:2),
+              child:Text(gorulen>0?gorulen.toString()+' kişi gördü':'Gönderildi',style:const TextStyle(color:ngelxPremiumMuted,fontSize:9.5,fontWeight:FontWeight.w700)),
+            );
+          }),
         ],
       ),
     );
@@ -6675,7 +6718,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
                               child:Text(_mesajGunEtiketi(gun),style:const TextStyle(color:ngelxPremiumMuted,fontSize:10,fontWeight:FontWeight.w800)),
                             ),
                           ),
-                          mesajKarti(d,onceki:onceki),
+                          mesajKarti(d,onceki:onceki,grupVerisi:tv,sonMesaj:i==docs.length-1),
                         ]),
                       );
                     },
@@ -6781,6 +6824,72 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
 
 class TamEkranMedyaPage extends StatelessWidget{final String url;const TamEkranMedyaPage({super.key,required this.url});@override Widget build(BuildContext context)=>Scaffold(backgroundColor:Colors.black,appBar:AppBar(backgroundColor:Colors.black,foregroundColor:Colors.white),body:Center(child:InteractiveViewer(minScale:.5,maxScale:5,child:Image.network(url,fit:BoxFit.contain,errorBuilder:(_,__,___)=>const Text('Medya açılamadı.',style:TextStyle(color:Colors.white))))));}
 
+class NgelXGrupVideoMesaj extends StatefulWidget{
+  final String url;
+  final bool compact;
+  const NgelXGrupVideoMesaj({super.key,required this.url,this.compact=true});
+  @override State<NgelXGrupVideoMesaj> createState()=>_NgelXGrupVideoMesajState();
+}
+class _NgelXGrupVideoMesajState extends State<NgelXGrupVideoMesaj>{
+  late final VideoPlayerController kontrol;
+  bool hazir=false,hata=false;
+  @override void initState(){
+    super.initState();
+    kontrol=VideoPlayerController.networkUrl(Uri.parse(widget.url));
+    kontrol.initialize().then((_){
+      kontrol.setLooping(true);
+      if(mounted)setState(()=>hazir=true);
+    }).catchError((_){if(mounted)setState(()=>hata=true);});
+  }
+  @override void dispose(){kontrol.dispose();super.dispose();}
+  void oynat(){
+    if(!hazir)return;
+    setState(()=>kontrol.value.isPlaying?kontrol.pause():kontrol.play());
+  }
+  @override Widget build(BuildContext context){
+    final yukseklik=widget.compact?178.0:MediaQuery.sizeOf(context).height*.68;
+    if(hata)return Container(width:246,height:150,alignment:Alignment.center,decoration:BoxDecoration(color:const Color(0xFF211837),borderRadius:BorderRadius.circular(14)),child:const Icon(Icons.videocam_off_rounded,color:Colors.white54,size:38));
+    if(!hazir)return Container(width:246,height:150,alignment:Alignment.center,decoration:BoxDecoration(color:const Color(0xFF211837),borderRadius:BorderRadius.circular(14)),child:const CircularProgressIndicator(color:Color(0xFFCDB9FF),strokeWidth:2));
+    return GestureDetector(
+      onTap:oynat,
+      child:ClipRRect(
+        borderRadius:BorderRadius.circular(widget.compact?14:0),
+        child:Stack(alignment:Alignment.center,children:[
+          Container(
+            width:widget.compact?246:double.infinity,
+            height:yukseklik,
+            color:Colors.black,
+            child:FittedBox(
+              fit:BoxFit.contain,
+              child:SizedBox(width:kontrol.value.size.width,height:kontrol.value.size.height,child:VideoPlayer(kontrol)),
+            ),
+          ),
+          AnimatedOpacity(
+            opacity:kontrol.value.isPlaying?0:1,
+            duration:const Duration(milliseconds:160),
+            child:Container(
+              width:54,height:54,
+              decoration:BoxDecoration(color:Colors.black.withValues(alpha:.56),shape:BoxShape.circle,border:Border.all(color:Colors.white24)),
+              child:const Icon(Icons.play_arrow_rounded,color:Colors.white,size:34),
+            ),
+          ),
+        ]),
+      ),
+    );
+  }
+}
+
+class TamEkranVideoPage extends StatelessWidget{
+  final String url;
+  const TamEkranVideoPage({super.key,required this.url});
+  @override Widget build(BuildContext context)=>Scaffold(
+    backgroundColor:Colors.black,
+    appBar:AppBar(backgroundColor:Colors.black,foregroundColor:Colors.white,elevation:0),
+    body:Center(child:NgelXGrupVideoMesaj(url:url,compact:false)),
+  );
+}
+
+
 class GrupMedyaPage extends StatefulWidget{
   final String chatId;
   const GrupMedyaPage({super.key,required this.chatId});
@@ -6821,7 +6930,7 @@ class _GrupMedyaPageState extends State<GrupMedyaPage>{
             final tum=snap.data?.docs??[];
             final docs=tum.where((d){
               final t=(d.data()['type']??'').toString();
-              if(sekme==0)return t=='photo'||t=='gif';
+              if(sekme==0)return t=='photo'||t=='gif'||t=='video';
               if(sekme==1)return t=='file'||t=='document'||t=='audio';
               return t=='shared_content'||(d.data()['url']??'').toString().isNotEmpty;
             }).toList();
@@ -6838,12 +6947,13 @@ class _GrupMedyaPageState extends State<GrupMedyaPage>{
                 itemBuilder:(_,i){
                   final v=docs[i].data(),url=(v['mediaUrl']??'').toString(),t=(v['type']??'').toString();
                   return InkWell(
-                    onTap:url.isEmpty?null:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>TamEkranMedyaPage(url:url))),
+                    onTap:url.isEmpty?null:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>t=='video'?TamEkranVideoPage(url:url):TamEkranMedyaPage(url:url))),
                     borderRadius:BorderRadius.circular(16),
                     child:ClipRRect(
                       borderRadius:BorderRadius.circular(16),
                       child:Stack(fit:StackFit.expand,children:[
-                        if(url.isNotEmpty)CachedNetworkImage(imageUrl:url,fit:BoxFit.cover,errorWidget:(_,__,___)=>const ColoredBox(color:Color(0xFFF0EDF4),child:Icon(Icons.broken_image_outlined)))
+                        if(t=='video')const ColoredBox(color:Color(0xFF211837),child:Center(child:Icon(Icons.play_circle_fill_rounded,color:Colors.white,size:42)))
+                        else if(url.isNotEmpty)CachedNetworkImage(imageUrl:url,fit:BoxFit.cover,errorWidget:(_,__,___)=>const ColoredBox(color:Color(0xFFF0EDF4),child:Icon(Icons.broken_image_outlined)))
                         else const ColoredBox(color:Color(0xFFF0EDF4),child:Icon(Icons.image_outlined)),
                         if(t=='gif')Positioned(left:7,bottom:7,child:Container(padding:const EdgeInsets.symmetric(horizontal:7,vertical:4),decoration:BoxDecoration(color:Colors.black54,borderRadius:BorderRadius.circular(10)),child:const Text('GIF',style:TextStyle(color:Colors.white,fontSize:9,fontWeight:FontWeight.w900)))),
                       ]),
