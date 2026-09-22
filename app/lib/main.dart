@@ -1557,9 +1557,33 @@ class _AramaPageState extends State<AramaPage> {
   final ara = TextEditingController();
   String sorgu = '';
   Set<String> engellenenler={};
+  Set<String> arkadaslar={};
+  late Future<List<QuerySnapshot<Map<String,dynamic>>>> aramaVerisi;
 
-  @override void initState(){super.initState();engellenenleriGetir();}
-  Future<void> engellenenleriGetir()async{final u=FirebaseAuth.instance.currentUser;if(u==null)return;final d=await FirebaseFirestore.instance.collection('users').doc(u.uid).get();if(mounted)setState(()=>engellenenler=Set<String>.from(List<dynamic>.from(d.data()?['blocked']??const[])));}
+  @override void initState(){
+    super.initState();
+    engellenenleriGetir();
+    aramaVerisiniYukle();
+  }
+
+  void aramaVerisiniYukle(){
+    aramaVerisi=Future.wait([
+      FirebaseFirestore.instance.collection('users').limit(60).get().timeout(const Duration(seconds:10)),
+      FirebaseFirestore.instance.collection('videos').orderBy('createdAt',descending:true).limit(100).get().timeout(const Duration(seconds:10)),
+      FirebaseFirestore.instance.collection('groups').limit(60).get().timeout(const Duration(seconds:10)),
+    ]);
+  }
+
+  Future<void> engellenenleriGetir()async{
+    final u=FirebaseAuth.instance.currentUser;if(u==null)return;
+    try{
+      final d=await FirebaseFirestore.instance.collection('users').doc(u.uid).get().timeout(const Duration(seconds:8));
+      if(mounted)setState((){
+        engellenenler=Set<String>.from(List<dynamic>.from(d.data()?['blocked']??const[]));
+        arkadaslar=Set<String>.from(List<dynamic>.from(d.data()?['friends']??const[]));
+      });
+    }catch(_){}
+  }
 
   @override
   void dispose() { ara.dispose(); super.dispose(); }
@@ -1567,33 +1591,103 @@ class _AramaPageState extends State<AramaPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor:Colors.white,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0D0D14),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
         titleSpacing: 0,
         title: TextField(
           controller: ara,
           autofocus: true,
           onChanged: (v) => setState(() => sorgu = v.trim().toLowerCase()),
-          decoration: InputDecoration(hintText: 'Kullanıcı, video, etiket ara', prefixIcon: const Icon(Icons.search), suffixIcon: sorgu.isEmpty ? null : IconButton(onPressed: () { ara.clear(); setState(() => sorgu = ''); }, icon: const Icon(Icons.cancel))),
+          style:const TextStyle(color:Colors.black87),
+          decoration: InputDecoration(
+            hintText:'Kişi, grup, içerik veya etiket ara',
+            hintStyle:const TextStyle(color:Colors.black45),
+            prefixIcon:const Icon(Icons.search,color:Colors.black54),
+            filled:true,fillColor:const Color(0xFFF3F4F7),
+            border:OutlineInputBorder(borderRadius:BorderRadius.circular(22),borderSide:BorderSide.none),
+            suffixIcon:sorgu.isEmpty?null:IconButton(onPressed:(){ara.clear();setState(()=>sorgu='');},icon:const Icon(Icons.cancel,color:Colors.black45)),
+          ),
         ),
         actions: [TextButton(onPressed: () => FocusScope.of(context).unfocus(), child: const Text('Ara', style: TextStyle(color: mavi, fontWeight: FontWeight.bold)))],
       ),
       body: sorgu.isEmpty
-          ? const Center(child: Column(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.manage_search_rounded, size: 75, color: mavi), SizedBox(height: 12), Text('NgelX’te istediğini ara', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)), SizedBox(height: 6), Text('Kullanıcılar, açıklamalar ve etiketler', style: TextStyle(color: Colors.white38))]))
+          ? const Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+              CircleAvatar(radius:42,backgroundColor:Color(0xFFF1E9FF),child:Icon(Icons.manage_search_rounded,size:46,color:mor)),
+              SizedBox(height:14),
+              Text('NgelX’te istediğini ara',style:TextStyle(color:Colors.black87,fontSize:20,fontWeight:FontWeight.w900)),
+              SizedBox(height:6),
+              Text('Kişiler, gruplar, paylaşımlar ve etiketler',style:TextStyle(color:Colors.black45)),
+            ]))
           : FutureBuilder<List<QuerySnapshot<Map<String, dynamic>>>>(
-              future: Future.wait([
-                FirebaseFirestore.instance.collection('users').limit(60).get(),
-                FirebaseFirestore.instance.collection('videos').limit(100).get(),
-              ]),
+              future: aramaVerisi,
               builder: (_, snap) {
-                if (!snap.hasData) return const Center(child: CircularProgressIndicator(color: mavi));
-                bool eslesir(String metin) => metin.toLowerCase().split(RegExp(r'[^a-z0-9ığüşöç]+')).any((kelime) => kelime.startsWith(sorgu));
-                final kullanicilar = snap.data![0].docs.where((d) { final v=d.data(); return !engellenenler.contains(d.id)&&v['deactivated']!=true&&eslesir('${v['username'] ?? ''} ${v['displayName'] ?? ''}'); }).toList();
-                final icerikler = snap.data![1].docs.where((d) { final v=d.data(); return !engellenenler.contains((v['ownerId']??'').toString())&&v['type'] != 'story' && '${v['description'] ?? ''} ${v['username'] ?? ''}'.toLowerCase().contains(sorgu); }).toList();
-                if (kullanicilar.isEmpty && icerikler.isEmpty) return const Center(child: Text('Sonuç bulunamadı.'));
-                return ListView(children: [
+                if(snap.hasError)return Center(child:Column(mainAxisSize:MainAxisSize.min,children:[
+                  const Icon(Icons.cloud_off_rounded,color:Colors.redAccent,size:50),
+                  const SizedBox(height:10),
+                  const Text('Arama verileri yüklenemedi.',style:TextStyle(color:Colors.black87,fontWeight:FontWeight.w800)),
+                  TextButton.icon(onPressed:(){setState(()=>aramaVerisiniYukle());},icon:const Icon(Icons.refresh),label:const Text('Tekrar dene')),
+                ]));
+                if (!snap.hasData) return const Center(child: CircularProgressIndicator(color: mor));
+                bool eslesir(String metin){
+                  final k=metin.toLowerCase();
+                  return k.contains(sorgu)||k.split(RegExp(r'[^a-z0-9ığüşöç]+')).any((kelime)=>kelime.startsWith(sorgu));
+                }
+                final ben=FirebaseAuth.instance.currentUser?.uid;
+                final kullanicilar = snap.data![0].docs.where((d) {
+                  final v=d.data();
+                  return d.id!=ben&&!engellenenler.contains(d.id)&&v['deactivated']!=true&&v['discoverableProfile']!=false&&eslesir('${v['username'] ?? ''} ${v['displayName'] ?? ''}');
+                }).toList();
+                final icerikler = snap.data![1].docs.where((d) {
+                  final v=d.data(),owner=(v['ownerId']??'').toString();
+                  if(engellenenler.contains(owner)||v['type']=='story')return false;
+                  if(ben!=owner){
+                    if(List<String>.from(v['hiddenFor']??const[]).contains(ben))return false;
+                    final privacy=(v['privacy']??'Herkes').toString();
+                    if(privacy=='Yalnızca ben')return false;
+                    if(privacy=='Arkadaşlar'&&!arkadaslar.contains(owner))return false;
+                    if(privacy=='Yakın arkadaşlar'&&!List<String>.from(v['visibleTo']??const[]).contains(ben))return false;
+                  }
+                  return eslesir('${v['description'] ?? ''} ${v['tags']??''} ${v['username'] ?? ''}');
+                }).toList();
+                final gruplar=snap.data![2].docs.where((d){
+                  final v=d.data(),ad=(v['name']??'').toString().toLowerCase();
+                  if(ad.contains('oyun')||ad.contains('game'))return false;
+                  return eslesir('${v['name']??''} ${v['description']??''}');
+                }).toList();
+                if (kullanicilar.isEmpty && icerikler.isEmpty&&gruplar.isEmpty) return const Center(child:Text('Sonuç bulunamadı.',style:TextStyle(color:Colors.black54)));
+                return ListView(keyboardDismissBehavior:ScrollViewKeyboardDismissBehavior.onDrag,children: [
                   if (kullanicilar.isNotEmpty) const Padding(padding: EdgeInsets.fromLTRB(18, 20, 18, 8), child: Text('Kullanıcılar', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: mavi))),
                   ...kullanicilar.map((d) { final v=d.data(); final foto=(v['photoUrl'] ?? '').toString(); return ListTile(onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => KullaniciProfilPage(uid: d.id))), leading: CircleAvatar(backgroundImage: foto.isEmpty ? null : CachedNetworkImageProvider(foto), child: foto.isEmpty ? const Text('N') : null), title: Text((v['displayName'] ?? v['username'] ?? 'NgelX').toString()), subtitle: Text('@${v['username'] ?? 'ngelx'}'), trailing: const Icon(Icons.chevron_right)); }),
+                  if(gruplar.isNotEmpty)const Padding(padding:EdgeInsets.fromLTRB(18,20,18,8),child:Text('Gruplar',style:TextStyle(fontSize:18,fontWeight:FontWeight.w900,color:mor))),
+                  ...gruplar.map((d){
+                    final v=d.data(),ad=(v['name']??'Topluluk').toString(),aciklama=(v['description']??'').toString();
+                    return ListTile(
+                      leading:const CircleAvatar(backgroundColor:Color(0xFFE9DDFF),child:Icon(Icons.groups_rounded,color:mor)),
+                      title:Text(ad,style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w800)),
+                      subtitle:Text(aciklama.isEmpty?'${v['memberCount']??0} üye':aciklama,maxLines:1,overflow:TextOverflow.ellipsis),
+                      trailing:FilledButton(
+                        style:FilledButton.styleFrom(backgroundColor:mor),
+                        onPressed:()async{
+                          final uid=FirebaseAuth.instance.currentUser?.uid;if(uid==null)return;
+                          final ref=FirebaseFirestore.instance.collection('groups').doc(d.id);
+                          try{
+                            bool zaten=false;
+                            await FirebaseFirestore.instance.runTransaction((tx)async{
+                              final g=await tx.get(ref),uyeler=List<String>.from(g.data()?['members']??const[]);
+                              if(uyeler.contains(uid)){zaten=true;return;}
+                              tx.set(ref,{'members':FieldValue.arrayUnion([uid]),'memberCount':FieldValue.increment(1)},SetOptions(merge:true));
+                            }).timeout(const Duration(seconds:8));
+                            if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(zaten?'Bu gruba zaten katıldın.':'Gruba katıldın ✅')));
+                          }catch(_){
+                            if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Gruba katılınamadı.')));
+                          }
+                        },
+                        child:const Text('Katıl'),
+                      ),
+                    );
+                  }),
                   if (icerikler.isNotEmpty) const Padding(padding: EdgeInsets.fromLTRB(18, 20, 18, 8), child: Text('Paylaşımlar', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: mor))),
                   ...icerikler.map((d) { final v=d.data(); final tur=(v['type'] ?? 'video').toString(); final item=<String,String>{'id':d.id,'type':tur,'videoUrl':(v['videoUrl']??'').toString(),'mediaUrl':(v['mediaUrl']??'').toString(),'audioUrl':(v['audioUrl']??'').toString(),'description':(v['description']??'').toString(),'username':(v['username']??'ngelx').toString(),'ownerId':(v['ownerId']??'').toString(),'allowDownload':(v['allowDownload']??true).toString(),'cropRatio':(v['cropRatio']??'Orijinal').toString(),'filter':(v['filter']??'Yok').toString(),'effect':(v['effect']??'Yok').toString(),'overlayText':(v['overlayText']??'').toString(),'sticker':(v['sticker']??'').toString()}; return ListTile(onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => Scaffold(body: SafeArea(child: tur=='video' ? VideoKarti(adres:item['videoUrl']!,videoId:item['id']!,kullaniciAdi:item['username']!,ownerId:item['ownerId']!,indirilebilir:item['allowDownload']!='false',aktif:true) : GorselYaziKarti(veri:item,aktif:true))))), leading: Icon(tur == 'video' ? Icons.videocam : tur == 'photo' ? Icons.photo : Icons.text_fields, color: mor), title: Text((v['description'] ?? 'NgelX paylaşımı').toString(), maxLines: 2, overflow: TextOverflow.ellipsis), subtitle: Text('@${v['username'] ?? 'ngelx'}')); }),
                 ]);
