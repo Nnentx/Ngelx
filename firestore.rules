@@ -50,6 +50,8 @@ service cloud.firestore {
       allow create, delete: if isMe(uid);
       allow update: if isMe(uid) || relationshipUpdate();
       match /saved/{contentId} { allow read, write: if isMe(uid); }
+      match /drafts/{draftId} { allow read, write: if isMe(uid); }
+      match /messageReminders/{reminderId} { allow read, write: if isMe(uid); }
     }
 
     match /videos/{videoId} {
