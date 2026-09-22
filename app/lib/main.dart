@@ -3356,9 +3356,26 @@ class _YeniYorumlarState extends State<Yorumlar> {
   String? yanitlananId;
   String? yanitlananKullanici;
   final Set<String> acikYanitlar = {};
+  final Map<String,Future<bool>> _yorumBegeniCache={};
   bool enCokBegenilen = false;
 
   CollectionReference<Map<String, dynamic>> get ref => FirebaseFirestore.instance.collection('videos').doc(widget.videoId).collection('comments');
+
+  Future<bool> _yorumBegeniKontrol(String id)async{
+    final uid=FirebaseAuth.instance.currentUser?.uid;
+    if(uid==null)return false;
+    try{
+      final d=await ref.doc(id).collection('likes').doc(uid).get().timeout(const Duration(seconds:6));
+      return d.exists;
+    }catch(_){
+      return false;
+    }
+  }
+
+  Future<bool>? yorumBegeniDurumu(String id){
+    if(FirebaseAuth.instance.currentUser?.uid==null)return null;
+    return _yorumBegeniCache.putIfAbsent(id,()=>_yorumBegeniKontrol(id));
+  }
 
   @override void initState(){
     super.initState();
@@ -3505,6 +3522,7 @@ class _YeniYorumlarState extends State<Yorumlar> {
           );
         }
       }
+      if(mounted)setState(()=>_yorumBegeniCache[id]=Future<bool>.value(!varMi.exists));
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -3515,7 +3533,7 @@ class _YeniYorumlarState extends State<Yorumlar> {
   }
 
   @override
-  void dispose() { yorum.dispose(); super.dispose(); }
+  void dispose() { yorum.dispose(); _yorumBegeniCache.clear(); super.dispose(); }
 
   @override
   Widget build(BuildContext context) {
@@ -3533,7 +3551,7 @@ class _YeniYorumlarState extends State<Yorumlar> {
       child: SizedBox(
         height: MediaQuery.of(context).size.height * .72,
         child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-          stream: ref.snapshots(),
+          stream: ref.orderBy('createdAt',descending:true).limit(120).snapshots(),
           builder: (_, snap) {
             final List<QueryDocumentSnapshot<Map<String, dynamic>>> tumu =
                 snap.data?.docs.toList() ??
@@ -3555,7 +3573,7 @@ class _YeniYorumlarState extends State<Yorumlar> {
               Container(width: 42, height: 4, margin: const EdgeInsets.only(top: 9), decoration: BoxDecoration(color: Colors.black26, borderRadius: BorderRadius.circular(9))),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 12),
-                child: Row(children: [const Spacer(), Text('${tumu.length} yorum', style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w900)), const Spacer(), PopupMenuButton<bool>(tooltip:'Yorum sıralaması',initialValue:enCokBegenilen,onSelected:(v)=>setState(()=>enCokBegenilen=v),itemBuilder:(_)=>const [PopupMenuItem(value:false,child:Text('En yeni')),PopupMenuItem(value:true,child:Text('En çok beğenilen'))],icon:const Icon(Icons.sort_rounded)), IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close))]),
+                child: Row(children: [const Spacer(), Text(tumu.length>=120?'Son 120 yorum':'${tumu.length} yorum', style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w900)), const Spacer(), PopupMenuButton<bool>(tooltip:'Yorum sıralaması',initialValue:enCokBegenilen,onSelected:(v)=>setState(()=>enCokBegenilen=v),itemBuilder:(_)=>const [PopupMenuItem(value:false,child:Text('En yeni')),PopupMenuItem(value:true,child:Text('En çok beğenilen'))],icon:const Icon(Icons.sort_rounded)), IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close))]),
               ),
               const Divider(height: 1),
               Expanded(
@@ -3578,6 +3596,7 @@ class _YeniYorumlarState extends State<Yorumlar> {
                                 acik: acikYanitlar.contains(d.id),
                                 zamanYaz: zamanYaz,
                                 begen: yorumBegen,
+                                begeniDurumuGetir:yorumBegeniDurumu,
                                 yanitla: () => setState(() { yanitlananId = d.id; yanitlananKullanici = (v['username'] ?? 'ngelx').toString(); }),
                                 yanitlariAc: () => setState(() { acikYanitlar.contains(d.id) ? acikYanitlar.remove(d.id) : acikYanitlar.add(d.id); }),
                                 gizliKelimeFiltresi:gizliKelimeFiltresi,
@@ -3614,6 +3633,7 @@ class YorumKarti extends StatelessWidget {
   final bool acik;
   final String Function(dynamic) zamanYaz;
   final Future<void> Function(String, List<dynamic>) begen;
+  final Future<bool>? Function(String) begeniDurumuGetir;
   final VoidCallback yanitla;
   final VoidCallback yanitlariAc;
   final bool gizliKelimeFiltresi;
@@ -3629,6 +3649,7 @@ class YorumKarti extends StatelessWidget {
     required this.acik,
     required this.zamanYaz,
     required this.begen,
+    required this.begeniDurumuGetir,
     required this.yanitla,
     required this.yanitlariAc,
     this.gizliKelimeFiltresi=true,
@@ -3731,16 +3752,7 @@ class YorumKarti extends StatelessWidget {
       );
     }
 
-    final likeStream = aktifUid==null
-        ? null
-        : FirebaseFirestore.instance
-            .collection('videos')
-            .doc(videoId)
-            .collection('comments')
-            .doc(yorumId)
-            .collection('likes')
-            .doc(aktifUid)
-            .snapshots();
+    final begeniDurumu=aktifUid==null?null:begeniDurumuGetir(yorumId);
 
     return GestureDetector(
       onLongPress: yorumMenusu,
@@ -3812,10 +3824,10 @@ class YorumKarti extends StatelessWidget {
               ],
             ),
           ),
-          StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
-            stream:likeStream,
+          FutureBuilder<bool>(
+            future:begeniDurumu,
             builder:(_,snap){
-              final secili=snap.data?.exists==true;
+              final secili=snap.data==true;
               final sayi=(v['likeCount'] as num?)?.toInt()??0;
               return GestureDetector(
                 onTap:()=>begen(yorumId,const []),
@@ -10651,7 +10663,7 @@ class AyarlarPage extends StatelessWidget {
       _ayar(context,Icons.download_outlined,'İndirme izinleri','Varsayılan paylaşım indirme ayarı'),
     ],
     const Divider(),
-    ListTile(leading:const Icon(Icons.system_update,color:mor),title:const Text('Uygulama güncellemeleri'),subtitle:const Text('V54 • Test build 239'),trailing:const Icon(Icons.build_circle,color:Colors.orange)),
+    ListTile(leading:const Icon(Icons.system_update,color:mor),title:const Text('Uygulama güncellemeleri'),subtitle:const Text('V54 • Test build 240'),trailing:const Icon(Icons.build_circle,color:Colors.orange)),
     ListTile(leading:const Icon(Icons.share,color:mavi),title:const Text('Ngel X’i paylaş'),subtitle:const Text('Uygulama bağlantısını paylaş veya kopyala'),onTap:()async=>SharePlus.instance.share(ShareParams(text:'Ngel X ile dünyanı paylaş ✨\nhttps://ngelx.app'))),
     const Divider(),
     ListTile(leading:const Icon(Icons.logout,color:Colors.red),title:const Text('Çıkış yap',style:TextStyle(color:Colors.red)),onTap:()async{final onay=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(title:const Text('Çıkış yapılsın mı?'),content:const Text('Tekrar giriş yapman gerekecek.'),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('Çıkış yap'))]));if(onay==true&&context.mounted){await ngelxOturumuKapat(context);}})
