@@ -1471,6 +1471,10 @@ class _VideoAkisiState extends State<VideoAkisi> {
                 'audioUrl': (veri['audioUrl'] ?? '').toString(),
                 'description': (veri['description'] ?? '').toString(),
                 'allowDownload': (veri['allowDownload'] ?? true).toString(),
+                'photoUrl':(veri['photoUrl']??'').toString(),
+                'likeCount':(veri['likeCount'] as num?)?.toInt()??0,
+                'commentCount':(veri['commentCount'] as num?)?.toInt()??0,
+                'createdAtMillis':veri['createdAt'] is Timestamp?(veri['createdAt'] as Timestamp).millisecondsSinceEpoch:null,
                 'privacy':(veri['privacy']??'Herkes').toString(),
                 'visibleTo':List<String>.from(veri['visibleTo']??const[]),
                 'hiddenFor':List<String>.from(veri['hiddenFor']??const[]),
@@ -1519,6 +1523,10 @@ class _VideoAkisiState extends State<VideoAkisi> {
                     kullaniciAdi: (item['username'] ?? 'ngelx').toString(),
                     ownerId: (item['ownerId'] ?? '').toString(),
                     indirilebilir: item['allowDownload']?.toString() != 'false',
+                    likeCount:(item['likeCount'] as num?)?.toInt(),
+                    commentCount:(item['commentCount'] as num?)?.toInt(),
+                    createdAtMillis:(item['createdAtMillis'] as num?)?.toInt(),
+                    profilFotoBaslangic:(item['photoUrl']??'').toString(),
                     aktif: widget.gorunur && aktif == i,
                   );
                 }
@@ -1532,6 +1540,9 @@ class _VideoAkisiState extends State<VideoAkisi> {
                   'username':(item['username']??'ngelx').toString(),
                   'ownerId':(item['ownerId']??'').toString(),
                   'allowDownload':(item['allowDownload']??true).toString(),
+                  'likeCount':(item['likeCount']??'').toString(),
+                  'commentCount':(item['commentCount']??'').toString(),
+                  'createdAtMillis':(item['createdAtMillis']??'').toString(),
                   'cropRatio':(item['cropRatio']??'Orijinal').toString(),
                   'filter':(item['filter']??'Yok').toString(),
                   'effect':(item['effect']??'Yok').toString(),
@@ -2499,6 +2510,9 @@ class _GorselYaziKartiState extends State<GorselYaziKarti> {
     final oran=oranAdi=='1:1'?1.0:oranAdi=='4:5'?4/5:oranAdi=='16:9'?16/9:null;
     final bindirme=(widget.veri['overlayText']??'').trim();
     final cikartma=(widget.veri['sticker']??'').trim();
+    final likeCount=int.tryParse(widget.veri['likeCount']??'');
+    final commentCount=int.tryParse(widget.veri['commentCount']??'');
+    final createdAtMillis=int.tryParse(widget.veri['createdAtMillis']??'');
     return GestureDetector(
       onLongPress: uzunBasmaMenusu,
       onDoubleTap: ciftTikBegen,
@@ -2556,15 +2570,15 @@ class _GorselYaziKartiState extends State<GorselYaziKarti> {
               if (foto.isNotEmpty && yazi.isNotEmpty) ...[const SizedBox(height: 8), Text(yazi)],
               if ((widget.veri['audioUrl'] ?? '').isNotEmpty) ...[const SizedBox(height: 8), const Row(children: [Icon(Icons.music_note, size: 18), Text(' Fotoğraflı müzik')])],
     const SizedBox(height: 8),
-    AkisMetaSatiri(icerikId: icerikId, yorumlariAc: yorumlariAc),
+    AkisMetaSatiri(icerikId: icerikId, yorumlariAc: yorumlariAc, createdAtMillis:createdAtMillis, commentCount:commentCount),
             ]),
           ),
           Positioned(
             right: 15,
             bottom: 25,
             child: Column(children: [
-              CanliSayacButonu(ref: FirebaseFirestore.instance.collection('videos').doc(icerikId).collection('likes'), ikon: begenildi ? Icons.favorite : Icons.favorite_border, renk: begenildi ? const Color(0xFFE6003C) : Colors.white, tiklama: begeniyiDegistir, uzunBasma:()async{await tepkiMenusu(context,icerikId);if(mounted)setState(()=>begenildi=true);}),
-              CanliSayacButonu(ref: FirebaseFirestore.instance.collection('videos').doc(icerikId).collection('comments'), ikon: Icons.mode_comment_outlined, tiklama: yorumlariAc),
+              CanliSayacButonu(ref: FirebaseFirestore.instance.collection('videos').doc(icerikId).collection('likes'), sayi:likeCount, ikon: begenildi ? Icons.favorite : Icons.favorite_border, renk: begenildi ? const Color(0xFFE6003C) : Colors.white, tiklama: begeniyiDegistir, uzunBasma:()async{await tepkiMenusu(context,icerikId);if(mounted)setState(()=>begenildi=true);}),
+              CanliSayacButonu(ref: FirebaseFirestore.instance.collection('videos').doc(icerikId).collection('comments'), sayi:commentCount, ikon: Icons.mode_comment_outlined, tiklama: yorumlariAc),
               IslemButonu(ikon: kaydedildi ? Icons.bookmark : Icons.bookmark_border, yazi: kaydedildi ? 'Kaydedildi' : 'Kaydet', renk: kaydedildi ? mavi : Colors.white, tiklama: icerigiKaydet),
               IslemButonu(ikon: Icons.menu_rounded, yazi: 'Araçlar', tiklama: () => icerikAracMenusu(context,icerikId)),
               IslemButonu(ikon: Icons.send_outlined, yazi: 'Paylaş', tiklama: paylas),
@@ -2584,6 +2598,8 @@ class VideoKarti extends StatefulWidget {
   final String ownerId;
   final bool aktif;
   final bool indirilebilir;
+  final int? likeCount,commentCount,createdAtMillis;
+  final String profilFotoBaslangic;
 
   const VideoKarti({
     super.key,
@@ -2593,6 +2609,10 @@ class VideoKarti extends StatefulWidget {
     required this.ownerId,
     required this.aktif,
     this.indirilebilir = true,
+    this.likeCount,
+    this.commentCount,
+    this.createdAtMillis,
+    this.profilFotoBaslangic='',
   });
 
   @override
@@ -2626,7 +2646,8 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver {
     );
 
     etkilesimleriGetir();
-    profilFotosunuGetir();
+    profilFoto=widget.profilFotoBaslangic;
+    if(profilFoto.isEmpty)profilFotosunuGetir();
 
     kontrol.initialize().then((_) {
       kontrol.setLooping(true);
@@ -2825,6 +2846,9 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver {
   @override
   void didUpdateWidget(covariant VideoKarti oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if(widget.profilFotoBaslangic.isNotEmpty&&widget.profilFotoBaslangic!=oldWidget.profilFotoBaslangic){
+      profilFoto=widget.profilFotoBaslangic;
+    }
     if (!hazir) return;
     if (widget.aktif) {
       if (!duraklatildi) kontrol.play();
@@ -2956,7 +2980,7 @@ Positioned(
                   ],
                 ),
       const SizedBox(height: 8),
-      AkisMetaSatiri(icerikId: videoId, yorumlariAc: yorumlariAc),
+      AkisMetaSatiri(icerikId: videoId, yorumlariAc: yorumlariAc, createdAtMillis:widget.createdAtMillis, commentCount:widget.commentCount),
               ],
             ),
           ),
@@ -2985,6 +3009,7 @@ Positioned(
                 ),
                 CanliSayacButonu(
         ref: FirebaseFirestore.instance.collection('videos').doc(videoId).collection('likes'),
+        sayi:widget.likeCount,
         ikon: begenildi ? Icons.favorite : Icons.favorite_border,
         renk: begenildi ? const Color(0xFFE6003C) : Colors.white,
         tiklama: begeniyiDegistir,
@@ -2992,6 +3017,7 @@ Positioned(
       ),
                 CanliSayacButonu(
         ref: FirebaseFirestore.instance.collection('videos').doc(videoId).collection('comments'),
+        sayi:widget.commentCount,
         ikon: Icons.mode_comment_outlined,
         tiklama: yorumlariAc,
       ),
@@ -3062,52 +3088,53 @@ class KalpPatlama extends StatelessWidget {
 class AkisMetaSatiri extends StatelessWidget {
   final String icerikId;
   final VoidCallback yorumlariAc;
+  final int? createdAtMillis,commentCount;
   const AkisMetaSatiri({
     super.key,
     required this.icerikId,
     required this.yorumlariAc,
+    this.createdAtMillis,
+    this.commentCount,
   });
+
+  Widget _icerik(dynamic createdAt,int sayi){
+    final zaman=akisKisaZaman(createdAt);
+    return Column(
+      crossAxisAlignment:CrossAxisAlignment.start,
+      children:[
+        Text(zaman,style:const TextStyle(color:Colors.white60,fontSize:11,fontWeight:FontWeight.w700)),
+        if(sayi>0)...[
+          const SizedBox(height:4),
+          GestureDetector(
+            onTap:yorumlariAc,
+            child:Text(
+              sayi==1?'Yorumu gör':'$sayi yorumun tümünü gör',
+              style:const TextStyle(color:Colors.white70,fontSize:11,fontWeight:FontWeight.w700),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     if (icerikId.isEmpty || icerikId.startsWith('ornek_')) {
       return const SizedBox.shrink();
     }
+    if(createdAtMillis!=null&&commentCount!=null){
+      return _icerik(Timestamp.fromDate(DateTime.fromMillisecondsSinceEpoch(createdAtMillis!)),commentCount!);
+    }
     final ref = FirebaseFirestore.instance.collection('videos').doc(icerikId);
     return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
       stream: ref.snapshots(),
       builder: (_, belge) {
         final veri=belge.data?.data()??<String,dynamic>{};
-        final zaman = akisKisaZaman(veri['createdAt']);
-        final sayi=(veri['commentCount'] as num?)?.toInt()??0;
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              zaman,
-              style: const TextStyle(
-                color: Colors.white60,
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            if(sayi>0)...[
-              const SizedBox(height:4),
-              GestureDetector(
-                onTap:yorumlariAc,
-                child:Text(
-                  sayi==1?'Yorumu gör':'$sayi yorumun tümünü gör',
-                  style:const TextStyle(color:Colors.white70,fontSize:11,fontWeight:FontWeight.w700),
-                ),
-              ),
-            ],
-          ],
-        );
+        return _icerik(veri['createdAt'],(veri['commentCount'] as num?)?.toInt()??0);
       },
     );
   }
 }
-
 
 class CanliSayacButonu extends StatelessWidget {
   final CollectionReference<Map<String, dynamic>> ref;
@@ -3115,6 +3142,7 @@ class CanliSayacButonu extends StatelessWidget {
   final VoidCallback tiklama;
   final Color renk;
   final VoidCallback? uzunBasma;
+  final int? sayi;
 
   const CanliSayacButonu({
     super.key,
@@ -3123,10 +3151,20 @@ class CanliSayacButonu extends StatelessWidget {
     required this.tiklama,
     this.uzunBasma,
     this.renk = Colors.white,
+    this.sayi,
   });
 
   @override
   Widget build(BuildContext context) {
+    if(sayi!=null){
+      return IslemButonu(
+        ikon:ikon,
+        yazi:'$sayi',
+        renk:renk,
+        tiklama:tiklama,
+        uzunBasma:uzunBasma,
+      );
+    }
     final parent=ref.parent;
     final alan=ref.id=='likes'?'likeCount':ref.id=='comments'?'commentCount':'';
     if(parent==null||alan.isEmpty){
@@ -5117,6 +5155,11 @@ class _YeniYuklePageState extends State<YuklePage> {
       await FirebaseFirestore.instance.collection('videos').add({
         'ownerId': user.uid,
         'username': adi,
+        'photoUrl':(profil.data()?['photoUrl']??'').toString(),
+        'likeCount':0,
+        'commentCount':0,
+        'shareCount':0,
+        'viewCount':0,
         'type': hikayeModu ? 'story' : tur,
         'videoUrl': tur == 'video' ? medyaUrl : '',
         'mediaUrl': medyaUrl,
@@ -10568,7 +10611,7 @@ class AyarlarPage extends StatelessWidget {
       _ayar(context,Icons.download_outlined,'İndirme izinleri','Varsayılan paylaşım indirme ayarı'),
     ],
     const Divider(),
-    ListTile(leading:const Icon(Icons.system_update,color:mor),title:const Text('Uygulama güncellemeleri'),subtitle:const Text('V54 • Test build 237'),trailing:const Icon(Icons.build_circle,color:Colors.orange)),
+    ListTile(leading:const Icon(Icons.system_update,color:mor),title:const Text('Uygulama güncellemeleri'),subtitle:const Text('V54 • Test build 238'),trailing:const Icon(Icons.build_circle,color:Colors.orange)),
     ListTile(leading:const Icon(Icons.share,color:mavi),title:const Text('Ngel X’i paylaş'),subtitle:const Text('Uygulama bağlantısını paylaş veya kopyala'),onTap:()async=>SharePlus.instance.share(ShareParams(text:'Ngel X ile dünyanı paylaş ✨\nhttps://ngelx.app'))),
     const Divider(),
     ListTile(leading:const Icon(Icons.logout,color:Colors.red),title:const Text('Çıkış yap',style:TextStyle(color:Colors.red)),onTap:()async{final onay=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(title:const Text('Çıkış yapılsın mı?'),content:const Text('Tekrar giriş yapman gerekecek.'),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('Çıkış yap'))]));if(onay==true&&context.mounted){await ngelxOturumuKapat(context);}})
