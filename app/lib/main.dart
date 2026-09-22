@@ -6583,7 +6583,32 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
   }
 
 
-  @override Widget build(BuildContext context)=>Theme(
+    Widget _aktifGrupUyeYazisi(List<String> uyeler){
+    if(uyeler.isEmpty)return const Text('0 kişi şu an aktif',style:TextStyle(fontSize:11.5,color:ngelxPremiumMuted,fontWeight:FontWeight.w700));
+    final ilk=uyeler.take(30).toList();
+    final ikinci=uyeler.skip(30).take(30).toList();
+    int say(QuerySnapshot<Map<String,dynamic>>? q)=>q?.docs.where((d){
+      final v=d.data();
+      return v['isOnline']==true&&v['showActivityStatus']!=false;
+    }).length??0;
+    final q1=FirebaseFirestore.instance.collection('users').where(FieldPath.documentId,whereIn:ilk).snapshots();
+    if(ikinci.isEmpty){
+      return StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
+        stream:q1,
+        builder:(_,a)=>Text(say(a.data).toString()+' kişi şu an aktif',style:const TextStyle(fontSize:11.5,color:ngelxPremiumMuted,fontWeight:FontWeight.w700)),
+      );
+    }
+    final q2=FirebaseFirestore.instance.collection('users').where(FieldPath.documentId,whereIn:ikinci).snapshots();
+    return StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
+      stream:q1,
+      builder:(_,a)=>StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
+        stream:q2,
+        builder:(_,b)=>Text((say(a.data)+say(b.data)).toString()+' kişi şu an aktif',style:const TextStyle(fontSize:11.5,color:ngelxPremiumMuted,fontWeight:FontWeight.w700)),
+      ),
+    );
+  }
+
+@override Widget build(BuildContext context)=>Theme(
     data:ThemeData.light().copyWith(
       scaffoldBackgroundColor:Colors.white,
       colorScheme:ColorScheme.fromSeed(seedColor:ngelxGroupGreen,brightness:Brightness.light),
@@ -6605,7 +6630,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
         title:StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
           stream:_grupAkisi,
           builder:(_,snap){
-            final v=snap.data?.data()??<String,dynamic>{},ad=(v['groupName']??widget.ad).toString(),foto=(v['groupPhotoUrl']??widget.foto).toString(),uyeSayisi=List<String>.from(v['members']??const[]).length;
+            final v=snap.data?.data()??<String,dynamic>{},ad=(v['groupName']??widget.ad).toString(),foto=(v['groupPhotoUrl']??widget.foto).toString(),uyeler=List<String>.from(v['members']??const[]);
             return InkWell(
               onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupBilgiPage(chatId:widget.chatId))),
               borderRadius:BorderRadius.circular(18),
@@ -6620,7 +6645,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
                   Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisSize:MainAxisSize.min,children:[
                     Text(ad,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:18,fontWeight:FontWeight.w900,color:ngelxPremiumInk,letterSpacing:-.2)),
                     const SizedBox(height:2),
-                    Text(uyeSayisi.toString()+' üye',style:const TextStyle(fontSize:11.5,color:ngelxPremiumMuted,fontWeight:FontWeight.w700)),
+                    _aktifGrupUyeYazisi(uyeler),
                   ])),
                 ]),
               ),
@@ -8285,7 +8310,7 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
         backgroundColor:Colors.transparent,
         surfaceTintColor:Colors.transparent,
         elevation:0,
-        title:const Text('Grup bilgileri',style:TextStyle(fontWeight:FontWeight.w900,color:ngelxPremiumInk)),
+        title:null,
         actions:[
           IconButton(
             tooltip:'Grup ayarları',
@@ -8316,14 +8341,14 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
                     onTap:yonetici?fotografDuzenle:null,
                     child:Stack(clipBehavior:Clip.none,children:[
                       Container(
-                        width:96,height:96,
+                        width:116,height:116,
                         decoration:BoxDecoration(
                           shape:BoxShape.circle,
                           gradient:const LinearGradient(colors:[Color(0xFFEFE6FF),Color(0xFFD9C6FF)]),
                           border:Border.all(color:Colors.white,width:4),
                           boxShadow:const [BoxShadow(color:Color(0x220A9F45),blurRadius:24,offset:Offset(0,9))],
                         ),
-                        child:ClipOval(child:foto.isEmpty?const Icon(Icons.groups_rounded,color:ngelxGroupGreen,size:46):CachedNetworkImage(imageUrl:foto,fit:BoxFit.cover)),
+                        child:ClipOval(child:foto.isEmpty?const Icon(Icons.groups_rounded,color:ngelxGroupGreen,size:54):CachedNetworkImage(imageUrl:foto,fit:BoxFit.cover)),
                       ),
                       if(yonetici)const Positioned(right:-3,bottom:2,child:CircleAvatar(radius:17,backgroundColor:ngelxGroupGreen,child:Icon(Icons.camera_alt_rounded,color:Colors.white,size:17))),
                     ]),
@@ -8352,27 +8377,6 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
                     const SizedBox(width:7),
                     Expanded(child:_grupKisayol(Icons.palette_rounded,'Özelleştir',()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupOzellestirPage(chatId:widget.chatId))))),
                   ]),
-                ]),
-              ),
-              const SizedBox(height:14),
-              NgelXPremiumCard(
-                padding:const EdgeInsets.fromLTRB(14,13,10,13),
-                child:Row(crossAxisAlignment:CrossAxisAlignment.start,children:[
-                  Container(width:42,height:42,decoration:BoxDecoration(color:ngelxGroupGreenSoft,borderRadius:BorderRadius.circular(14)),child:const Icon(Icons.notes_rounded,color:ngelxGroupGreen)),
-                  const SizedBox(width:11),
-                  Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-                    const Text('Grup açıklaması',style:TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w900)),
-                    const SizedBox(height:4),
-                    Text(
-                      (v['groupDescription']??'').toString().trim().isEmpty?'Henüz açıklama eklenmedi.':(v['groupDescription']??'').toString(),
-                      style:TextStyle(color:(v['groupDescription']??'').toString().trim().isEmpty?ngelxPremiumMuted:const Color(0xFF51495A),fontSize:11.5,height:1.35,fontWeight:FontWeight.w600),
-                    ),
-                  ])),
-                  if(yonetici)IconButton(
-                    tooltip:'Açıklamayı düzenle',
-                    onPressed:()=>aciklamaDuzenle((v['groupDescription']??'').toString()),
-                    icon:const Icon(Icons.edit_rounded,color:ngelxGroupGreen,size:20),
-                  ),
                 ]),
               ),
               const SizedBox(height:14),
@@ -8536,15 +8540,17 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
 
   Widget _grupKisayol(IconData icon,String label,VoidCallback? onTap)=>InkWell(
     onTap:onTap,
-    borderRadius:BorderRadius.circular(18),
-    child:Container(
-      height:68,
-      padding:const EdgeInsets.symmetric(horizontal:6),
-      decoration:BoxDecoration(color:ngelxGroupGreenSoft,borderRadius:BorderRadius.circular(18)),
+    borderRadius:BorderRadius.circular(22),
+    child:SizedBox(
+      height:84,
       child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[
-        Icon(icon,color:ngelxGroupGreen,size:23),
-        const SizedBox(height:5),
-        Text(label,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:ngelxPremiumInk,fontSize:11.5,fontWeight:FontWeight.w800)),
+        Container(
+          width:52,height:52,
+          decoration:const BoxDecoration(color:ngelxGroupGreenSoft,shape:BoxShape.circle),
+          child:Icon(icon,color:ngelxGroupGreen,size:25),
+        ),
+        const SizedBox(height:7),
+        Text(label,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:ngelxPremiumInk,fontSize:11.5,fontWeight:FontWeight.w700)),
       ]),
     ),
   );
@@ -8919,7 +8925,7 @@ class GrupAyarlarPage extends StatelessWidget{
     data:ThemeData.light().copyWith(colorScheme:ColorScheme.fromSeed(seedColor:ngelxGroupGreen)),
     child:Scaffold(
       backgroundColor:Colors.white,
-      appBar:AppBar(backgroundColor:Colors.white,surfaceTintColor:Colors.white,elevation:0,title:const Text('Grup ayarları',style:TextStyle(fontWeight:FontWeight.w900))),
+      appBar:AppBar(backgroundColor:Colors.white,surfaceTintColor:Colors.white,elevation:0,title:null,actions:[IconButton(onPressed:(){},icon:const Icon(Icons.more_vert_rounded,color:Colors.black87))]),
       body:me==null?const Center(child:Text('Oturum bulunamadı.')):StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
         stream:ref.snapshots(),
         builder:(_,snap){
@@ -8937,18 +8943,18 @@ class GrupAyarlarPage extends StatelessWidget{
               const SizedBox(height:8),
               _satir(sessiz?Icons.notifications_off_rounded:Icons.notifications_active_rounded,sessiz?ad+"'in sesini aç":ad+"'in sesini kapat",onTap:()=>_sessiz(!sessiz)),
               _satir(Icons.volume_up_rounded,'Bildirimler ve sesler',subtitle:sessiz?'Sessize alındı':'Açık',onTap:()=>_sessiz(!sessiz)),
-              _satir(Icons.bubble_chart_rounded,'Sohbet balonu aç',subtitle:bubble?'Açık':'Kapalı',trailing:Switch(value:bubble,onChanged:(x)=>_bool('chatBubble',x))),
-              _satir(Icons.auto_awesome_motion_rounded,'Anı ayarları',subtitle:memories?'Açık':'Kapalı',trailing:Switch(value:memories,onChanged:(x)=>_bool('memoriesEnabled',x))),
+              _satir(Icons.bubble_chart_rounded,'Sohbet balonu aç',subtitle:bubble?'Açık':'Kapalı',onTap:()=>_bool('chatBubble',!bubble)),
+              _satir(Icons.auto_awesome_motion_rounded,'Anı ayarları',subtitle:memories?'Açık':'Kapalı',onTap:()=>_bool('memoriesEnabled',!memories)),
               const SizedBox(height:22),
               const Text('Gizlilik ve destek',style:TextStyle(color:Colors.black54,fontSize:17,fontWeight:FontWeight.w800)),
               const SizedBox(height:8),
-              _satir(Icons.visibility_outlined,'Okundu bilgisi',subtitle:read?'Açık':'Kapalı',trailing:Switch(value:read,onChanged:(x)=>_bool('readReceipts',x))),
-              _satir(Icons.more_horiz_rounded,'Yazma göstergesi',subtitle:typing?'Açık':'Kapalı',trailing:Switch(value:typing,onChanged:(x)=>_bool('typingIndicator',x))),
+              _satir(Icons.visibility_outlined,'Okundu bilgisi',subtitle:read?'Açık':'Kapalı',onTap:()=>_bool('readReceipts',!read)),
+              _satir(Icons.more_horiz_rounded,'Yazma göstergesi',subtitle:typing?'Açık':'Kapalı',onTap:()=>_bool('typingIndicator',!typing)),
               _satir(Icons.shield_outlined,'Mesaj izinleri',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const TercihlerPage(baslik:'Mesaj izinleri')))),
               _satir(Icons.block_rounded,'Bir üyeyi engelle',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupUyeEngellePage(chatId:chatId)))),
               _satir(Icons.warning_amber_rounded,'Şikayet et',subtitle:'Görüş bildir ve konuşmayı şikayet et',onTap:()=>_sikayet(context)),
               _satir(Icons.logout_rounded,'Sohbetten ayrıl',color:Colors.red,onTap:()=>_ayril(context,v)),
-              _satir(Icons.delete_outline_rounded,'Sohbeti sil',color:Colors.red,onTap:()=>_sil(context)),
+              _satir(Icons.delete_outline_rounded,'Sohbeti sil',onTap:()=>_sil(context)),
             ],
           );
         },
