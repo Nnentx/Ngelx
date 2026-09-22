@@ -55,6 +55,7 @@ const ngelxWebAdresi = 'https://ngelxsocial.com';
 const _ngelxMediaApiBuild = String.fromEnvironment('NGELX_MEDIA_API', defaultValue: 'https://ngelx-media.alihancaglar76.workers.dev');
 String? _ngelxMediaApiCache;
 DateTime? _ngelxMediaApiCacheZamani;
+DateTime? _ngelxR2DevreDisiUntil;
 
 Future<void> ngelxOverlayKapanisiniBekle() async {
   await Future<void>.delayed(const Duration(milliseconds: 360));
@@ -158,61 +159,73 @@ Future<String> ngelxMedyaYukleBytes({
   final temizExt = _ngelxUzantiTemizle(ext);
   final tur = contentType ?? _ngelxContentType(temizExt);
 
-  if (api.isNotEmpty) {
+  final r2Kullanilabilir = api.isNotEmpty &&
+      (_ngelxR2DevreDisiUntil == null || DateTime.now().isAfter(_ngelxR2DevreDisiUntil!));
+
+  if (r2Kullanilabilir) {
     final uri = Uri.parse('$api/upload').replace(queryParameters: {'kind': kind, 'ext': temizExt});
-    Object? sonHata;
-    for (var deneme = 0; deneme < 3; deneme++) {
-      final istemci = HttpClient()..connectionTimeout = const Duration(seconds: 12);
-      try {
-        final token = await user.getIdToken(deneme > 0);
-        if (token == null || token.isEmpty) throw Exception('Güvenli medya oturumu oluşturulamadı.');
-        final istek = await istemci.postUrl(uri).timeout(const Duration(seconds: 15));
-        istek.persistentConnection = false;
-        istek.headers.set(HttpHeaders.authorizationHeader, 'Bearer $token');
-        istek.headers.set(HttpHeaders.contentTypeHeader, tur);
-        istek.headers.set('X-NgelX-Client', 'android-v54');
-        istek.contentLength = bytes.length;
-        istek.add(bytes);
-        final cevap = await istek.close().timeout(const Duration(seconds: 35));
-        final govde = await utf8.decoder.bind(cevap).join().timeout(const Duration(seconds: 15));
-        if (cevap.statusCode >= 200 && cevap.statusCode < 300) {
-          final veri = govde.isEmpty ? const <String,dynamic>{} : jsonDecode(govde);
-          final url = veri is Map ? (veri['url'] ?? '').toString() : '';
-          if (url.isEmpty) throw Exception('Medya sunucusu geçerli URL döndürmedi.');
+    final istemci = HttpClient()..connectionTimeout = const Duration(seconds: 7);
+    try {
+      final token = await user.getIdToken(false).timeout(const Duration(seconds: 6));
+      if (token == null || token.isEmpty) throw Exception('Güvenli medya oturumu oluşturulamadı.');
+      final istek = await istemci.postUrl(uri).timeout(const Duration(seconds: 8));
+      istek.persistentConnection = false;
+      istek.headers.set(HttpHeaders.authorizationHeader, 'Bearer $token');
+      istek.headers.set(HttpHeaders.contentTypeHeader, tur);
+      istek.headers.set('X-NgelX-Client', 'android-v54-hotfix');
+      istek.contentLength = bytes.length;
+      istek.add(bytes);
+      final cevap = await istek.close().timeout(const Duration(seconds: 18));
+      final govde = await utf8.decoder.bind(cevap).join().timeout(const Duration(seconds: 5));
+      if (cevap.statusCode >= 200 && cevap.statusCode < 300) {
+        final veri = govde.isEmpty ? const <String,dynamic>{} : jsonDecode(govde);
+        final url = veri is Map ? (veri['url'] ?? '').toString() : '';
+        if (url.isNotEmpty) {
+          _ngelxR2DevreDisiUntil = null;
           return url;
         }
-        sonHata = HttpException('Medya sunucusu HTTP ${cevap.statusCode}: $govde', uri: uri);
-        if (cevap.statusCode < 500 && cevap.statusCode != 408 && cevap.statusCode != 429 && cevap.statusCode != 401) {
-          throw sonHata;
-        }
-      } on SocketException catch (e) {
-        sonHata = e;
-      } on TimeoutException catch (e) {
-        sonHata = e;
-      } on HttpException catch (e) {
-        sonHata = e;
-      } catch (e) {
-        sonHata = e;
-        if (deneme >= 2) rethrow;
-      } finally {
-        istemci.close(force: true);
       }
-      if (deneme < 2) {
-        await Future<void>.delayed(Duration(milliseconds: deneme == 0 ? 700 : 1600));
+      if (cevap.statusCode == 413) {
+        throw Exception('Dosya medya sunucusunun boyut sınırını aşıyor.');
       }
+      if (cevap.statusCode >= 400 && cevap.statusCode < 500 && cevap.statusCode != 408 && cevap.statusCode != 429) {
+        throw Exception('Medya yükleme isteği reddedildi (${cevap.statusCode}).');
+      }
+      _ngelxR2DevreDisiUntil = DateTime.now().add(const Duration(minutes: 2));
+    } on SocketException {
+      _ngelxR2DevreDisiUntil = DateTime.now().add(const Duration(minutes: 2));
+    } on TimeoutException {
+      _ngelxR2DevreDisiUntil = DateTime.now().add(const Duration(minutes: 2));
+    } on HttpException {
+      _ngelxR2DevreDisiUntil = DateTime.now().add(const Duration(minutes: 2));
+    } finally {
+      istemci.close(force: true);
     }
-    throw Exception('Medya sunucusuna bağlanılamadı. Bağlantı otomatik olarak 3 kez denendi. ${sonHata ?? ''}');
   }
 
-  await supa.Supabase.instance.client.storage
-      .from('ngelx-media')
-      .uploadBinary(
-        legacyPath,
-        bytes,
-        fileOptions: supa.FileOptions(contentType: tur),
-      )
-      .timeout(const Duration(seconds: 25));
-  return supa.Supabase.instance.client.storage.from('ngelx-media').getPublicUrl(legacyPath);
+  try {
+    await supa.Supabase.instance.client.storage
+        .from('ngelx-media')
+        .uploadBinary(
+          legacyPath,
+          bytes,
+          fileOptions: supa.FileOptions(contentType: tur, upsert: true),
+        )
+        .timeout(const Duration(seconds: 18));
+    return supa.Supabase.instance.client.storage.from('ngelx-media').getPublicUrl(legacyPath);
+  } on TimeoutException {
+    throw Exception('Medya yükleme zaman aşımına uğradı. İnternet bağlantını kontrol edip tekrar dene.');
+  } catch (_) {
+    throw Exception('Medya yüklenemedi. Bağlantını kontrol edip tekrar dene.');
+  }
+}
+
+String ngelxKisaHata(Object hata) {
+  final t = hata.toString().replaceFirst('Exception: ', '');
+  if (t.contains('SocketException') || t.contains('Connection reset') || t.contains('TimeoutException')) {
+    return 'Bağlantı kesildi. Tekrar dene.';
+  }
+  return t.length > 140 ? 'İşlem tamamlanamadı. Bağlantını kontrol edip tekrar dene.' : t;
 }
 
 Future<void> ngelxMedyaSil(String rawUrl) async {
@@ -4582,7 +4595,7 @@ class _YeniYuklePageState extends State<YuklePage> {
       });
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(hikayeydi?'Hikâyen 24 saat boyunca yayında ✨':'Paylaşım yayınlandı ✅ Akışta ve profilinde görünecek.')));
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Yüklenemedi: $e')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Yüklenemedi: ${ngelxKisaHata(e)}')));
     } finally {
       if (mounted) setState(() => yukleniyor = false);
     }
@@ -9976,7 +9989,7 @@ class _ProfilPageState extends State<ProfilPage> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Fotoğraf yüklenemedi: $e')),
+          SnackBar(content: Text('Fotoğraf yüklenemedi: ${ngelxKisaHata(e)}')),
         );
       }
     } finally {
