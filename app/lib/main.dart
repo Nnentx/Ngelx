@@ -5696,7 +5696,47 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
     }
   }
 
-  Future<void> emojiSec()async{final e=await showModalBottomSheet<String>(context:context,backgroundColor:Colors.white,showDragHandle:true,builder:(c)=>SafeArea(child:Padding(padding:const EdgeInsets.all(18),child:Wrap(spacing:14,runSpacing:14,children:['😀','😊','😂','😍','🥰','😎','😭','😡','👍','👏','🙏','❤️','🔥','🎉','✨','💯','🤔','😴','🙌','🤝'].map((x)=>InkWell(onTap:()=>Navigator.pop(c,x),child:Text(x,style:const TextStyle(fontSize:30)))).toList()))));if(e!=null){final t=mesaj.text;mesaj.text='$t$e';mesaj.selection=TextSelection.collapsed(offset:mesaj.text.length);}}
+  Future<void> emojiSec()async{
+    final e=await showModalBottomSheet<String>(
+      context:context,
+      backgroundColor:const Color(0xFFFBF9FF),
+      showDragHandle:true,
+      shape:const RoundedRectangleBorder(borderRadius:BorderRadius.vertical(top:Radius.circular(30))),
+      builder:(c)=>Theme(
+        data:ThemeData.light().copyWith(colorScheme:ColorScheme.fromSeed(seedColor:ngelxPremiumPurple)),
+        child:SafeArea(child:Padding(
+          padding:const EdgeInsets.fromLTRB(16,0,16,20),
+          child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
+            const Text('Emoji seç',style:TextStyle(color:ngelxPremiumInk,fontSize:20,fontWeight:FontWeight.w900)),
+            const SizedBox(height:4),
+            const Text('Mesajına hızlıca emoji ekle.',style:TextStyle(color:ngelxPremiumMuted,fontSize:11.5,fontWeight:FontWeight.w600)),
+            const SizedBox(height:14),
+            NgelXPremiumCard(
+              padding:const EdgeInsets.all(10),
+              child:Wrap(
+                spacing:8,runSpacing:8,
+                children:['😀','😊','😂','😍','🥰','😎','😭','😡','👍','👏','🙏','❤️','🔥','🎉','✨','💯','🤔','😴','🙌','🤝'].map((x)=>InkWell(
+                  onTap:()=>Navigator.pop(c,x),
+                  borderRadius:BorderRadius.circular(14),
+                  child:Container(
+                    width:46,height:46,
+                    alignment:Alignment.center,
+                    decoration:BoxDecoration(color:const Color(0xFFF8F5FB),borderRadius:BorderRadius.circular(14)),
+                    child:Text(x,style:const TextStyle(fontSize:26)),
+                  ),
+                )).toList(),
+              ),
+            ),
+          ]),
+        )),
+      ),
+    );
+    if(e!=null){
+      final t=mesaj.text;
+      mesaj.text=t+e;
+      mesaj.selection=TextSelection.collapsed(offset:mesaj.text.length);
+    }
+  }
 
   Future<void> mentionAra(String deger)async{
     mentionZamanlayici?.cancel();
@@ -7737,11 +7777,14 @@ class _GrupUyeleriPageState extends State<GrupUyeleriPage>{
       final ok=await showDialog<bool>(
         context:context,
         builder:(c)=>AlertDialog(
-          title:Text(isim+' gruptan çıkarılsın mı?'),
-          content:const Text('Kullanıcı artık bu grupta mesaj gönderemez.'),
+          shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(28)),
+          backgroundColor:Colors.white,surfaceTintColor:Colors.white,
+          icon:const Icon(Icons.person_remove_rounded,color:Color(0xFFE13F51),size:34),
+          title:Text(isim+' gruptan çıkarılsın mı?',textAlign:TextAlign.center,style:const TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w900)),
+          content:const Text('Kullanıcı artık bu grupta mesaj gönderemez.',textAlign:TextAlign.center,style:TextStyle(color:ngelxPremiumMuted)),
           actions:[
             TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),
-            FilledButton(style:FilledButton.styleFrom(backgroundColor:Colors.red),onPressed:()=>Navigator.pop(c,true),child:const Text('Çıkar')),
+            FilledButton(style:FilledButton.styleFrom(backgroundColor:const Color(0xFFE13F51)),onPressed:()=>Navigator.pop(c,true),child:const Text('Çıkar')),
           ],
         ),
       )??false;
@@ -7855,11 +7898,14 @@ class _GrupDavetPageState extends State<GrupDavetPage>{
     final ok=await showDialog<bool>(
       context:context,
       builder:(c)=>AlertDialog(
-        title:const Text('Davet bağlantısı yenilensin mi?'),
-        content:const Text('Eski bağlantı artık kullanılmayacak.'),
+        shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(28)),
+        backgroundColor:Colors.white,surfaceTintColor:Colors.white,
+        icon:Container(width:56,height:56,decoration:BoxDecoration(color:const Color(0xFFF0E8FF),borderRadius:BorderRadius.circular(18)),child:const Icon(Icons.refresh_rounded,color:ngelxPremiumPurple,size:29)),
+        title:const Text('Davet bağlantısı yenilensin mi?',textAlign:TextAlign.center,style:TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w900)),
+        content:const Text('Eski bağlantı artık kullanılamayacak. Yeni bağlantıyı tekrar paylaşman gerekir.',textAlign:TextAlign.center,style:TextStyle(color:ngelxPremiumMuted,height:1.4)),
         actions:[
           TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),
-          FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('Yenile')),
+          FilledButton(style:FilledButton.styleFrom(backgroundColor:ngelxPremiumPurple),onPressed:()=>Navigator.pop(c,true),child:const Text('Yenile')),
         ],
       ),
     )??false;
