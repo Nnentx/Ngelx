@@ -16,10 +16,41 @@ service cloud.firestore {
         && request.resource.data.get('onlyAdminsCanPost', false) == resource.data.get('onlyAdminsCanPost', false)
         && request.resource.data.get('onlyAdminsCanEdit', false) == resource.data.get('onlyAdminsCanEdit', false)
         && request.resource.data.get('newMembersSeeHistory', true) == resource.data.get('newMembersSeeHistory', true)
-        && request.resource.data.get('joinApproval', false) == resource.data.get('joinApproval', false);
+        && request.resource.data.get('joinApproval', false) == resource.data.get('joinApproval', false)
+        && request.resource.data.get('groupDescription', '') == resource.data.get('groupDescription', '')
+        && request.resource.data.get('inviteCode', '') == resource.data.get('inviteCode', '')
+        && request.resource.data.get('inviteUpdatedAt', null) == resource.data.get('inviteUpdatedAt', null)
+        && request.resource.data.get('groupDeleted', false) == resource.data.get('groupDeleted', false);
     }
     function onlyChanges(fields) {
       return request.resource.data.diff(resource.data).affectedKeys().hasOnly(fields);
+    }
+    function groupDoc(chatId) {
+      return get(/databases/$(database)/documents/chats/$(chatId));
+    }
+    function isGroupAdmin(chatId) {
+      return signedIn() && request.auth.uid in groupDoc(chatId).data.get('admins', []);
+    }
+    function validInvite(code, chatId) {
+      return code is string
+        && code.size() > 0
+        && exists(/databases/$(database)/documents/group_invites/$(code))
+        && get(/databases/$(database)/documents/group_invites/$(code)).data.get('chatId', '') == chatId
+        && groupDoc(chatId).data.get('inviteCode', '') == code
+        && groupDoc(chatId).data.get('groupDeleted', false) != true;
+    }
+    function validSelfJoin(chatId) {
+      let joinReq = get(/databases/$(database)/documents/chats/$(chatId)/joinRequests/$(request.auth.uid));
+      let code = joinReq.data.get('inviteCode', '');
+      return signedIn()
+        && resource.data.get('isGroup', false) == true
+        && resource.data.get('joinApproval', false) != true
+        && request.resource.data.members.size() <= 60
+        && request.resource.data.members == resource.data.members.concat([request.auth.uid])
+        && onlyChanges(['members', 'hiddenFor', 'updatedAt'])
+        && joinReq.data.get('uid', '') == request.auth.uid
+        && joinReq.data.get('status', '') == 'autojoin'
+        && validInvite(code, chatId);
     }
     function relationshipUpdate() {
       return signedIn()
@@ -95,20 +126,22 @@ service cloud.firestore {
           )
         );
       allow read: if chatMember();
-      allow update: if chatMember() && (
-        (
-          resource.data.get('isGroup', false) != true
-          && request.resource.data.members == resource.data.members
-        )
-        || (chatAdmin() && request.resource.data.members.size() <= 60)
-        || (
-          groupMetadataUnchanged()
-          && (
-            request.resource.data.members == resource.data.members
-            || request.resource.data.members == resource.data.members.removeAll([request.auth.uid])
+      allow update: if (
+        chatMember() && (
+          (
+            resource.data.get('isGroup', false) != true
+            && request.resource.data.members == resource.data.members
+          )
+          || (chatAdmin() && request.resource.data.members.size() <= 60)
+          || (
+            groupMetadataUnchanged()
+            && (
+              request.resource.data.members == resource.data.members
+              || request.resource.data.members == resource.data.members.removeAll([request.auth.uid])
+            )
           )
         )
-      );
+      ) || validSelfJoin(chatId);
       allow delete: if false;
       match /messages/{messageId} {
         allow read: if signedIn() && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.members;
@@ -141,6 +174,52 @@ service cloud.firestore {
           || request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.get('admins', [])
         );
       }
+
+      match /joinRequests/{requestUid} {
+        allow create: if signedIn()
+          && request.auth.uid == requestUid
+          && request.resource.data.get('uid', '') == request.auth.uid
+          && request.resource.data.get('status', '') in ['pending', 'autojoin']
+          && validInvite(request.resource.data.get('inviteCode', ''), chatId);
+        allow get: if signedIn() && (
+          request.auth.uid == requestUid || isGroupAdmin(chatId)
+        );
+        allow list: if isGroupAdmin(chatId);
+        allow update: if isGroupAdmin(chatId) || (
+          signedIn()
+          && request.auth.uid == requestUid
+          && onlyChanges(['status', 'updatedAt'])
+          && request.resource.data.get('status', '') == 'cancelled'
+        );
+        allow delete: if signedIn() && (
+          request.auth.uid == requestUid || isGroupAdmin(chatId)
+        );
+      }
+    }
+
+    match /group_invites/{code} {
+      allow get: if signedIn();
+      allow list: if false;
+      allow create: if signedIn()
+        && request.resource.data.get('chatId', '') is string
+        && request.resource.data.get('chatId', '').size() > 0
+        && request.auth.uid in groupDoc(request.resource.data.chatId).data.get('members', [])
+        && groupDoc(request.resource.data.chatId).data.get('inviteCode', '') == code
+        && request.resource.data.get('groupName', '') == groupDoc(request.resource.data.chatId).data.get('groupName', '')
+        && request.resource.data.get('groupPhotoUrl', '') == groupDoc(request.resource.data.chatId).data.get('groupPhotoUrl', '')
+        && request.resource.data.get('joinApproval', false) == groupDoc(request.resource.data.chatId).data.get('joinApproval', false)
+        && request.resource.data.get('admins', []) == groupDoc(request.resource.data.chatId).data.get('admins', [])
+        && request.resource.data.get('memberCount', 0) == groupDoc(request.resource.data.chatId).data.get('members', []).size();
+      allow update: if signedIn()
+        && request.resource.data.get('chatId', '') == resource.data.get('chatId', '')
+        && request.auth.uid in groupDoc(resource.data.chatId).data.get('members', [])
+        && groupDoc(resource.data.chatId).data.get('inviteCode', '') == code
+        && request.resource.data.get('groupName', '') == groupDoc(resource.data.chatId).data.get('groupName', '')
+        && request.resource.data.get('groupPhotoUrl', '') == groupDoc(resource.data.chatId).data.get('groupPhotoUrl', '')
+        && request.resource.data.get('joinApproval', false) == groupDoc(resource.data.chatId).data.get('joinApproval', false)
+        && request.resource.data.get('admins', []) == groupDoc(resource.data.chatId).data.get('admins', [])
+        && request.resource.data.get('memberCount', 0) == groupDoc(resource.data.chatId).data.get('members', []).size();
+      allow delete: if signedIn() && isGroupAdmin(resource.data.chatId);
     }
 
     match /calls/{callId} {
