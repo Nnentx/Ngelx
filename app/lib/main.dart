@@ -10273,6 +10273,103 @@ class GuvenlikUyarilariPage extends StatelessWidget{
     await batch.commit();
   }
 
+  Future<void> girisiOnayla(
+    BuildContext context,
+    QueryDocumentSnapshot<Map<String,dynamic>> belge,
+  )async{
+    try{
+      await belge.reference.set({
+        'read':true,
+        'securityStatus':'trusted',
+        'resolvedAt':FieldValue.serverTimestamp(),
+      },SetOptions(merge:true)).timeout(const Duration(seconds:8));
+      if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content:Text('Bu giriş güvenilir olarak işaretlendi.')),
+      );
+    }catch(_){
+      if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content:Text('Giriş doğrulanamadı. Tekrar dene.')),
+      );
+    }
+  }
+
+  Future<void> girisiTanimiyorum(
+    BuildContext context,
+    QueryDocumentSnapshot<Map<String,dynamic>> belge,
+  )async{
+    final u=FirebaseAuth.instance.currentUser;
+    if(u==null)return;
+    final v=belge.data();
+    final cihaz=(v['device']??'Bilinmeyen cihaz').toString();
+    final deviceId=(v['deviceId']??'').toString();
+    final onay=await showDialog<bool>(
+      context:context,
+      builder:(c)=>AlertDialog(
+        backgroundColor:Colors.white,
+        title:const Text('Bu giriş sana ait değil mi?',style:TextStyle(fontWeight:FontWeight.w900)),
+        content:Text(
+          deviceId.isEmpty
+            ?'$cihaz girişini şüpheli olarak işaretleyeceğiz.'
+            :'$cihaz cihazının NgelX oturumu kapatılacak. Ardından şifreni değiştirmen önerilir.',
+        ),
+        actions:[
+          TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),
+          FilledButton(
+            style:FilledButton.styleFrom(backgroundColor:Colors.red,foregroundColor:Colors.white),
+            onPressed:()=>Navigator.pop(c,true),
+            child:const Text('Bu ben değilim'),
+          ),
+        ],
+      ),
+    )??false;
+    if(!onay)return;
+
+    try{
+      final kullaniciRef=FirebaseFirestore.instance.collection('users').doc(u.uid);
+      final batch=FirebaseFirestore.instance.batch();
+      if(deviceId.isNotEmpty){
+        batch.set(kullaniciRef,{
+          'revokedDeviceIds':FieldValue.arrayUnion([deviceId]),
+        },SetOptions(merge:true));
+      }
+      batch.set(belge.reference,{
+        'read':true,
+        'securityStatus':'revoked',
+        'resolvedAt':FieldValue.serverTimestamp(),
+      },SetOptions(merge:true));
+      await batch.commit().timeout(const Duration(seconds:10));
+
+      final mevcutId=await cihazKurulumKimligi();
+      if(deviceId.isNotEmpty&&deviceId==mevcutId){
+        await FirebaseAuth.instance.signOut();
+        if(context.mounted){
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder:(_)=>const GirisPage()),
+            (_)=>false,
+          );
+        }
+        return;
+      }
+
+      if(context.mounted){
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content:const Text('Şüpheli cihaz için çıkış talimatı verildi.'),
+          action:u.email==null?null:SnackBarAction(
+            label:'Şifreyi değiştir',
+            onPressed:(){
+              final e=u.email;
+              if(e!=null)unawaited(FirebaseAuth.instance.sendPasswordResetEmail(email:e).catchError((_){ }));
+            },
+          ),
+        ));
+      }
+    }catch(_){
+      if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content:Text('Güvenlik işlemi tamamlanamadı. Tekrar dene.')),
+      );
+    }
+  }
+
   @override Widget build(BuildContext context){
     final uid=FirebaseAuth.instance.currentUser?.uid;
     return Theme(
@@ -10288,6 +10385,16 @@ class GuvenlikUyarilariPage extends StatelessWidget{
           :StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
             stream:FirebaseFirestore.instance.collection('notifications').where('toUid',isEqualTo:uid).limit(100).snapshots(),
             builder:(_,s){
+              if(s.hasError)return const Center(child:Padding(
+                padding:EdgeInsets.all(28),
+                child:Column(mainAxisSize:MainAxisSize.min,children:[
+                  Icon(Icons.cloud_off_rounded,color:Colors.redAccent,size:50),
+                  SizedBox(height:10),
+                  Text('Güvenlik uyarıları yüklenemedi.',style:TextStyle(fontWeight:FontWeight.w900)),
+                  SizedBox(height:5),
+                  Text('İnternet bağlantını kontrol edip tekrar açabilirsin.',textAlign:TextAlign.center,style:TextStyle(color:Colors.black54)),
+                ]),
+              ));
               if(s.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator(color:mor));
               final docs=(s.data?.docs??[]).where((d)=>d.data()['type']=='security').toList()
                 ..sort((a,b){
@@ -10315,12 +10422,63 @@ class GuvenlikUyarilariPage extends StatelessWidget{
                   final platform=(v['platform']??'Android').toString();
                   final tarih=v['createdAt'] is Timestamp?(v['createdAt'] as Timestamp).toDate().toLocal():null;
                   final tarihYazi=tarih==null?'':'${tarih.day.toString().padLeft(2,'0')}.${tarih.month.toString().padLeft(2,'0')}.${tarih.year}  ${tarih.hour.toString().padLeft(2,'0')}:${tarih.minute.toString().padLeft(2,'0')}';
-                  return ListTile(
-                    onTap:()async{if(v['read']!=true)await d.reference.update({'read':true});},
-                    leading:CircleAvatar(backgroundColor:v['read']==true?const Color(0xFFF1F2F4):const Color(0xFFFFE8D6),child:Icon(Icons.phonelink_lock_rounded,color:v['read']==true?Colors.black54:Colors.orange)),
-                    title:Text((v['text']??'Yeni cihaz girişi algılandı').toString(),style:TextStyle(fontWeight:v['read']==true?FontWeight.w600:FontWeight.w900)),
-                    subtitle:Text('$cihaz • $platform'+(tarihYazi.isEmpty?'':'\n$tarihYazi')),
-                    trailing:v['read']==true?null:const Badge(label:Text('Yeni')),
+                  final durum=(v['securityStatus']??'pending').toString();
+                  final cozuldu=durum=='trusted'||durum=='revoked';
+                  return Container(
+                    padding:const EdgeInsets.symmetric(vertical:4),
+                    decoration:BoxDecoration(
+                      color:v['read']==true?Colors.white:const Color(0xFFFFFBF5),
+                      borderRadius:BorderRadius.circular(16),
+                    ),
+                    child:ListTile(
+                      onTap:()async{if(v['read']!=true)await d.reference.update({'read':true});},
+                      leading:CircleAvatar(
+                        backgroundColor:durum=='revoked'
+                          ?const Color(0xFFFFE5E5)
+                          :durum=='trusted'
+                            ?const Color(0xFFE7F7EA)
+                            :(v['read']==true?const Color(0xFFF1F2F4):const Color(0xFFFFE8D6)),
+                        child:Icon(
+                          durum=='revoked'?Icons.gpp_bad_rounded:durum=='trusted'?Icons.verified_user_rounded:Icons.phonelink_lock_rounded,
+                          color:durum=='revoked'?Colors.red:durum=='trusted'?Colors.green:(v['read']==true?Colors.black54:Colors.orange),
+                        ),
+                      ),
+                      title:Text(
+                        (v['text']??'Yeni cihaz girişi algılandı').toString(),
+                        style:TextStyle(fontWeight:v['read']==true?FontWeight.w600:FontWeight.w900),
+                      ),
+                      subtitle:Column(
+                        crossAxisAlignment:CrossAxisAlignment.start,
+                        children:[
+                          Text('$cihaz • $platform'+(tarihYazi.isEmpty?'':'\n$tarihYazi')),
+                          if(durum=='trusted')const Padding(
+                            padding:EdgeInsets.only(top:5),
+                            child:Text('Bu giriş senin olarak doğrulandı.',style:TextStyle(color:Colors.green,fontWeight:FontWeight.w700)),
+                          ),
+                          if(durum=='revoked')const Padding(
+                            padding:EdgeInsets.only(top:5),
+                            child:Text('Şüpheli cihaz için çıkış talimatı verildi.',style:TextStyle(color:Colors.red,fontWeight:FontWeight.w700)),
+                          ),
+                          if(!cozuldu)...[
+                            const SizedBox(height:8),
+                            Wrap(spacing:8,runSpacing:6,children:[
+                              OutlinedButton.icon(
+                                onPressed:()=>girisiOnayla(context,d),
+                                icon:const Icon(Icons.check_circle_outline_rounded,size:18),
+                                label:const Text('Bu bendim'),
+                              ),
+                              OutlinedButton.icon(
+                                style:OutlinedButton.styleFrom(foregroundColor:Colors.red),
+                                onPressed:()=>girisiTanimiyorum(context,d),
+                                icon:const Icon(Icons.warning_amber_rounded,size:18),
+                                label:const Text('Tanımıyorum'),
+                              ),
+                            ]),
+                          ],
+                        ],
+                      ),
+                      trailing:!cozuldu&&v['read']!=true?const Badge(label:Text('Yeni')):null,
+                    ),
                   );
                 },
               );
