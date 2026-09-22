@@ -3981,7 +3981,7 @@ class _KesfetPageState extends State<KesfetPage> {
   Widget _kisiKarti(BuildContext context, String uid, Map<String, dynamic> v) {
     final foto = (v['photoUrl'] ?? '').toString();
     final ad = (v['displayName'] ?? v['username'] ?? 'Kullanıcı').toString();
-    final aktif=v['online']==true;
+    final aktif=v['showActivityStatus']!=false&&v['isOnline']==true;
     return SizedBox(width: 112, child: Column(children: [
       InkWell(
         borderRadius:BorderRadius.circular(50),
@@ -8104,8 +8104,9 @@ class _SohbetPageState extends State<SohbetPage> {
           stream:FirebaseFirestore.instance.collection('users').doc(widget.digerUid).snapshots(),
           builder:(_,u){
             final profil=u.data?.data()??<String,dynamic>{};
-            final cevrimici=profil['online']==true;
-            final alt=cevrimici?'Çevrimiçi':sonGorulmeMetni(profil['lastSeen']);
+            final aktiflikGoster=profil['showActivityStatus']!=false;
+            final cevrimici=aktiflikGoster&&profil['isOnline']==true;
+            final alt=!aktiflikGoster?'Aktiflik durumu gizli':cevrimici?'Çevrimiçi':sonGorulmeMetni(profil['lastSeenAt']);
             final foto=(profil['photoUrl']??widget.foto).toString();
             return InkWell(
               onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciProfilPage(uid:widget.digerUid))),
