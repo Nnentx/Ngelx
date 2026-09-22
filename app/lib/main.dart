@@ -6192,14 +6192,41 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
   }
 
 
-  Widget mesajKarti(QueryDocumentSnapshot<Map<String,dynamic>> d){
+  DateTime? _mesajTarihi(QueryDocumentSnapshot<Map<String,dynamic>> d){
+    final v=d.data()['createdAt']??d.data()['clientCreatedAt'];
+    return v is Timestamp?v.toDate().toLocal():null;
+  }
+
+  String _mesajGunEtiketi(DateTime d){
+    final simdi=DateTime.now();
+    final bugun=DateTime(simdi.year,simdi.month,simdi.day);
+    final gun=DateTime(d.year,d.month,d.day);
+    final fark=bugun.difference(gun).inDays;
+    if(fark==0)return 'Bugün';
+    if(fark==1)return 'Dün';
+    const aylar=['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'];
+    return d.year==simdi.year?'${d.day} ${aylar[d.month-1]}':'${d.day} ${aylar[d.month-1]} ${d.year}';
+  }
+
+  bool _mesajYeniBlok(QueryDocumentSnapshot<Map<String,dynamic>> d,QueryDocumentSnapshot<Map<String,dynamic>>? onceki){
+    if(onceki==null)return true;
+    final v=d.data(),p=onceki.data();
+    final sender=(v['senderId']??v['fromUid']??v['uid']??'').toString();
+    final prev=(p['senderId']??p['fromUid']??p['uid']??'').toString();
+    if(sender!=prev)return true;
+    final t=_mesajTarihi(d),pt=_mesajTarihi(onceki);
+    if(t==null||pt==null)return false;
+    return t.difference(pt).inMinutes.abs()>=5;
+  }
+
+  Widget mesajKarti(QueryDocumentSnapshot<Map<String,dynamic>> d,{QueryDocumentSnapshot<Map<String,dynamic>>? onceki}){
     final v=d.data(),gonderen=(v['senderId']??v['fromUid']??v['uid']??'').toString(),ben=gonderen==uid;
     final metin=(v['text']??v['message']??v['content']??'').toString(),tur=(v['type']??'text').toString(),media=(v['mediaUrl']??'').toString(),audio=(v['audioUrl']??'').toString();
     final saat=mesajSaati(v['createdAt']??v['clientCreatedAt']),yanit=(v['replyToText']??'').toString();
     final hamTepkiler=v['reactions'],tepkiler=hamTepkiler is Map?Map<String,dynamic>.from(hamTepkiler):<String,dynamic>{};
     if(tur=='poll')return const SizedBox.shrink();
     if(tur=='system')return Center(child:Container(
-      margin:const EdgeInsets.symmetric(vertical:6),
+      margin:const EdgeInsets.symmetric(vertical:7),
       padding:const EdgeInsets.symmetric(horizontal:12,vertical:6),
       decoration:BoxDecoration(
         color:const Color(0xFFF1EAFF).withValues(alpha:.94),
@@ -6208,78 +6235,117 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
       ),
       child:Text(metin,maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Color(0xFF6D5A86),fontSize:11,fontWeight:FontWeight.w700)),
     ));
-    final gonderenBasligi=!ben?(gonderen.isEmpty?null:FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(
+
+    final yeniBlok=_mesajYeniBlok(d,onceki);
+    final gonderenBasligi=!ben&&yeniBlok?(gonderen.isEmpty?null:FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(
       future:_uyeGetir(gonderen),
       builder:(_,u){
         final p=u.data?.data()??<String,dynamic>{},pf=(p['photoUrl']??'').toString(),isim=(p['displayName']??p['username']??'Üye').toString();
         return Padding(
-          padding:const EdgeInsets.only(bottom:6),
+          padding:const EdgeInsets.only(left:2,bottom:5),
           child:Row(mainAxisSize:MainAxisSize.min,children:[
             CircleAvatar(radius:10,backgroundColor:const Color(0xFFEDE4FF),backgroundImage:pf.isEmpty?null:CachedNetworkImageProvider(pf),child:pf.isEmpty?const Icon(Icons.person,size:11,color:ngelxPremiumPurple):null),
             const SizedBox(width:6),
-            Flexible(child:Text(isim,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Color(0xFF6541C8),fontSize:11.5,fontWeight:FontWeight.w900))),
+            Flexible(child:Text(isim,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Color(0xFF6541C8),fontSize:11.3,fontWeight:FontWeight.w900))),
           ]),
         );
       },
     )):null;
+
     final yaziRengi=ben?Colors.white:const Color(0xFF211B2C);
+    final tepkiSayilari=<String,int>{};
+    for(final e in tepkiler.values){
+      final k=e.toString();
+      if(k.isNotEmpty)tepkiSayilari[k]=(tepkiSayilari[k]??0)+1;
+    }
+
     return Align(
       alignment:ben?Alignment.centerRight:Alignment.centerLeft,
-      child:GestureDetector(
-        behavior:HitTestBehavior.opaque,
-        onLongPress:()=>mesajMenusu(d),
-        onDoubleTap:()=>grupKalpBirak(d),
-        onTap:(tur=='photo'||tur=='gif')&&media.isNotEmpty?()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>TamEkranMedyaPage(url:media))):null,
-        child:Container(
-          constraints:const BoxConstraints(maxWidth:304),
-          margin:const EdgeInsets.symmetric(vertical:4,horizontal:2),
-          padding:EdgeInsets.all((tur=='photo'||tur=='gif')?4:9),
-          decoration:BoxDecoration(
-            gradient:ben?const LinearGradient(colors:[Color(0xFF7A50E8),Color(0xFF6540C9)],begin:Alignment.topLeft,end:Alignment.bottomRight):null,
-            color:ben?null:const Color(0xFFF6F5F8).withValues(alpha:.97),
-            borderRadius:BorderRadius.only(
-              topLeft:const Radius.circular(18),topRight:const Radius.circular(18),
-              bottomLeft:Radius.circular(ben?18:6),bottomRight:Radius.circular(ben?6:18),
-            ),
-            border:ben?null:Border.all(color:const Color(0xFFECE9F0)),
-            boxShadow:const [BoxShadow(color:Color(0x0D000000),blurRadius:10,offset:Offset(0,4))],
-          ),
-          child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-            if(gonderenBasligi!=null)gonderenBasligi,
-            if(yanit.isNotEmpty)Container(
-              width:double.infinity,margin:const EdgeInsets.only(bottom:7),padding:const EdgeInsets.symmetric(horizontal:9,vertical:7),
-              decoration:BoxDecoration(color:ben?Colors.white.withValues(alpha:.14):Colors.white,borderRadius:BorderRadius.circular(12)),
-              child:Row(children:[
-                Container(width:3,height:30,decoration:BoxDecoration(color:ben?Colors.white70:ngelxPremiumPurple,borderRadius:BorderRadius.circular(4))),
-                const SizedBox(width:8),
-                Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-                  Text('Yanıt',style:TextStyle(color:ben?Colors.white70:ngelxPremiumPurple,fontSize:10.5,fontWeight:FontWeight.w900)),
-                  Text(yanit,maxLines:1,overflow:TextOverflow.ellipsis,style:TextStyle(color:ben?Colors.white:const Color(0xFF2C2634),fontSize:12.2,fontWeight:FontWeight.w600)),
-                ])),
+      child:Column(
+        crossAxisAlignment:ben?CrossAxisAlignment.end:CrossAxisAlignment.start,
+        children:[
+          if(gonderenBasligi!=null)gonderenBasligi,
+          GestureDetector(
+            behavior:HitTestBehavior.opaque,
+            onLongPress:()=>mesajMenusu(d),
+            onDoubleTap:()=>grupKalpBirak(d),
+            onTap:(tur=='photo'||tur=='gif')&&media.isNotEmpty?()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>TamEkranMedyaPage(url:media))):null,
+            child:Container(
+              constraints:BoxConstraints(maxWidth:MediaQuery.sizeOf(context).width*.76),
+              margin:EdgeInsets.only(top:yeniBlok?3:1,bottom:tepkiSayilari.isEmpty?2:0,left:2,right:2),
+              padding:EdgeInsets.all((tur=='photo'||tur=='gif')?4:9),
+              decoration:BoxDecoration(
+                gradient:ben?const LinearGradient(colors:[Color(0xFF7A50E8),Color(0xFF6540C9)],begin:Alignment.topLeft,end:Alignment.bottomRight):null,
+                color:ben?null:const Color(0xFFF6F5F8).withValues(alpha:.98),
+                borderRadius:BorderRadius.only(
+                  topLeft:Radius.circular(yeniBlok?18:12),
+                  topRight:Radius.circular(yeniBlok?18:12),
+                  bottomLeft:Radius.circular(ben?18:6),
+                  bottomRight:Radius.circular(ben?6:18),
+                ),
+                border:ben?null:Border.all(color:const Color(0xFFECE9F0)),
+                boxShadow:yeniBlok?const [BoxShadow(color:Color(0x0C000000),blurRadius:8,offset:Offset(0,3))]:null,
+              ),
+              child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+                if(yanit.isNotEmpty)Container(
+                  width:double.infinity,margin:const EdgeInsets.only(bottom:7),padding:const EdgeInsets.symmetric(horizontal:9,vertical:7),
+                  decoration:BoxDecoration(color:ben?Colors.white.withValues(alpha:.14):Colors.white,borderRadius:BorderRadius.circular(12)),
+                  child:Row(children:[
+                    Container(width:3,height:30,decoration:BoxDecoration(color:ben?Colors.white70:ngelxPremiumPurple,borderRadius:BorderRadius.circular(4))),
+                    const SizedBox(width:8),
+                    Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+                      Text('Yanıt',style:TextStyle(color:ben?Colors.white70:ngelxPremiumPurple,fontSize:10.5,fontWeight:FontWeight.w900)),
+                      Text(yanit,maxLines:1,overflow:TextOverflow.ellipsis,style:TextStyle(color:ben?Colors.white:const Color(0xFF2C2634),fontSize:12.1,fontWeight:FontWeight.w600)),
+                    ])),
+                  ]),
+                ),
+                if((tur=='photo'||tur=='gif')&&media.isNotEmpty)
+                  IgnorePointer(child:ClipRRect(borderRadius:BorderRadius.circular(14),child:CachedNetworkImage(
+                    imageUrl:media,width:246,fit:BoxFit.cover,
+                    errorWidget:(_,__,___)=>const SizedBox(width:246,height:116,child:Center(child:Icon(Icons.broken_image_outlined))),
+                  )))
+                else if(tur=='audio'&&audio.isNotEmpty)
+                  SizedBox(width:228,child:NgelXSesliMesaj(url:audio,benim:ben,durationSeconds:(v['durationSeconds'] as num?)?.toInt()??0))
+                else
+                  Text(metin.isEmpty?(tur=='gif'?'GIF':'Mesaj'):metin,style:TextStyle(color:yaziRengi,fontSize:14.6,height:1.24,fontWeight:FontWeight.w500)),
+                if(v['editedAt']!=null||saat.isNotEmpty)Align(
+                  alignment:Alignment.centerRight,
+                  child:Padding(padding:const EdgeInsets.only(top:4),child:Text(
+                    [if(v['editedAt']!=null)'düzenlendi',if(saat.isNotEmpty)saat].join(' · '),
+                    style:TextStyle(fontSize:9.2,color:ben?Colors.white70:const Color(0xFF8D8795),fontWeight:FontWeight.w600),
+                  )),
+                ),
               ]),
             ),
-            if((tur=='photo'||tur=='gif')&&media.isNotEmpty)
-              IgnorePointer(child:ClipRRect(borderRadius:BorderRadius.circular(14),child:CachedNetworkImage(
-                imageUrl:media,width:246,fit:BoxFit.cover,
-                errorWidget:(_,__,___)=>const SizedBox(width:246,height:116,child:Center(child:Icon(Icons.broken_image_outlined))),
-              )))
-            else if(tur=='audio'&&audio.isNotEmpty)
-              SizedBox(width:228,child:NgelXSesliMesaj(url:audio,benim:ben,durationSeconds:(v['durationSeconds'] as num?)?.toInt()??0))
-            else
-              Text(metin.isEmpty?(tur=='gif'?'GIF':'Mesaj'):metin,style:TextStyle(color:yaziRengi,fontSize:14.6,height:1.24,fontWeight:FontWeight.w500)),
-            if(tepkiler.isNotEmpty)Padding(padding:const EdgeInsets.only(top:4),child:Wrap(spacing:3,children:tepkiler.values.map((e)=>Text(e.toString(),style:const TextStyle(fontSize:15))).toList())),
-            if(v['editedAt']!=null||saat.isNotEmpty)Align(
-              alignment:Alignment.centerRight,
-              child:Padding(padding:const EdgeInsets.only(top:4),child:Text(
-                [if(v['editedAt']!=null)'düzenlendi',if(saat.isNotEmpty)saat].join(' · '),
-                style:TextStyle(fontSize:9.3,color:ben?Colors.white70:const Color(0xFF8D8795),fontWeight:FontWeight.w600),
-              )),
+          ),
+          if(tepkiSayilari.isNotEmpty)Transform.translate(
+            offset:const Offset(0,-3),
+            child:Container(
+              margin:EdgeInsets.only(left:ben?0:8,right:ben?8:0),
+              padding:const EdgeInsets.symmetric(horizontal:7,vertical:3),
+              decoration:BoxDecoration(
+                color:Colors.white,
+                borderRadius:BorderRadius.circular(14),
+                border:Border.all(color:const Color(0xFFE7E1EB)),
+                boxShadow:const [BoxShadow(color:Color(0x12000000),blurRadius:8,offset:Offset(0,3))],
+              ),
+              child:Row(mainAxisSize:MainAxisSize.min,children:tepkiSayilari.entries.map((e)=>Padding(
+                padding:const EdgeInsets.symmetric(horizontal:2),
+                child:Row(mainAxisSize:MainAxisSize.min,children:[
+                  Text(e.key,style:const TextStyle(fontSize:14)),
+                  if(e.value>1)...[
+                    const SizedBox(width:2),
+                    Text(e.value.toString(),style:const TextStyle(color:ngelxPremiumMuted,fontSize:9.5,fontWeight:FontWeight.w800)),
+                  ],
+                ]),
+              )).toList()),
             ),
-          ]),
-        ),
+          ),
+        ],
       ),
     );
   }
+
 
   @override Widget build(BuildContext context)=>Theme(
     data:ThemeData.light().copyWith(
@@ -6441,9 +6507,27 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
                   return ListView.builder(
                     controller:liste,
                     keyboardDismissBehavior:ScrollViewKeyboardDismissBehavior.onDrag,
-                    padding:const EdgeInsets.fromLTRB(12,14,12,10),
+                    padding:const EdgeInsets.fromLTRB(12,12,12,10),
                     itemCount:docs.length,
-                    itemBuilder:(_,i)=>RepaintBoundary(key:ValueKey(docs[i].id),child:mesajKarti(docs[i])),
+                    itemBuilder:(_,i){
+                      final d=docs[i],onceki=i>0?docs[i-1]:null;
+                      final gun=_mesajTarihi(d),oncekiGun=onceki==null?null:_mesajTarihi(onceki);
+                      final gunAyir=gun!=null&&(oncekiGun==null||gun.year!=oncekiGun.year||gun.month!=oncekiGun.month||gun.day!=oncekiGun.day);
+                      return RepaintBoundary(
+                        key:ValueKey(d.id),
+                        child:Column(children:[
+                          if(gunAyir)Padding(
+                            padding:EdgeInsets.only(top:i==0?2:10,bottom:8),
+                            child:Container(
+                              padding:const EdgeInsets.symmetric(horizontal:11,vertical:5),
+                              decoration:BoxDecoration(color:Colors.white.withValues(alpha:.9),borderRadius:BorderRadius.circular(14),border:Border.all(color:const Color(0xFFE9E3ED))),
+                              child:Text(_mesajGunEtiketi(gun),style:const TextStyle(color:ngelxPremiumMuted,fontSize:10,fontWeight:FontWeight.w800)),
+                            ),
+                          ),
+                          mesajKarti(d,onceki:onceki),
+                        ]),
+                      );
+                    },
                   );
                 },
               )),
