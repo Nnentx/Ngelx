@@ -6239,6 +6239,7 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
 class GrupBilgiPage extends StatefulWidget{final String chatId;const GrupBilgiPage({super.key,required this.chatId});@override State<GrupBilgiPage> createState()=>_GrupBilgiPageState();}
 class _GrupBilgiPageState extends State<GrupBilgiPage>{
   final Map<String,Future<DocumentSnapshot<Map<String,dynamic>>>> _uyeProfilCache={};
+  bool _grupFotoYukleniyor=false;
   DocumentReference<Map<String,dynamic>> get ref=>FirebaseFirestore.instance.collection('chats').doc(widget.chatId);
   String? get ben=>FirebaseAuth.instance.currentUser?.uid;
   Future<DocumentSnapshot<Map<String,dynamic>>> _uyeGetir(String id)=>
@@ -6284,6 +6285,7 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
     await sistemMesaji('Grup adı “$temiz” olarak değiştirildi.');
   }
   Future<void> fotografDuzenle()async{
+    if(_grupFotoYukleniyor)return;
     final secim=await showModalBottomSheet<String>(
       context:context,
       backgroundColor:Colors.white,
@@ -6301,22 +6303,103 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
     if(secim==null)return;
     await ngelxOverlayKapanisiniBekle();
     if(!mounted)return;
+
     if(secim=='remove'){
-      await ref.update({'groupPhotoUrl':''});
-      await sistemMesaji('Yönetici grup fotoğrafını kaldırdı.');
+      try{
+        await ref.set({'groupPhotoUrl':'','updatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
+        try{await sistemMesaji('Yönetici grup fotoğrafını kaldırdı.');}catch(_){}
+        if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Grup fotoğrafı kaldırıldı.')));
+      }catch(e){
+        if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Grup fotoğrafı kaldırılamadı: ${ngelxKisaHata(e)}')));
+      }
       return;
     }
-    final x=await ImagePicker().pickImage(source:secim=='camera'?ImageSource.camera:ImageSource.gallery,imageQuality:85);
+
+    if(secim=='camera'){
+      final izin=await Permission.camera.request();
+      if(!izin.isGranted){
+        if(mounted)ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content:const Text('Grup fotoğrafı çekmek için kamera izni gerekli.'),
+            action:SnackBarAction(label:'Ayarlar',onPressed:openAppSettings),
+          ),
+        );
+        return;
+      }
+    }
+
+    XFile? x;
+    try{
+      x=await ImagePicker().pickImage(
+        source:secim=='camera'?ImageSource.camera:ImageSource.gallery,
+        imageQuality:82,
+        maxWidth:1280,
+      );
+    }catch(e){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Fotoğraf seçilemedi: ${ngelxKisaHata(e)}')));
+      return;
+    }
     if(x==null)return;
-    final yol='groups/${widget.chatId}/avatar_${DateTime.now().millisecondsSinceEpoch}.jpg';
-    final url=await ngelxMedyaYukleBytes(
-      bytes: await x.readAsBytes(),
-      kind: 'groups',
-      ext: 'jpg',
-      legacyPath: yol,
-    );
-    await ref.update({'groupPhotoUrl':url});
-    await sistemMesaji('Yönetici grup fotoğrafını değiştirdi.');
+
+    if(mounted)setState(()=>_grupFotoYukleniyor=true);
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+      duration:Duration(seconds:30),
+      content:Row(children:[
+        SizedBox(width:18,height:18,child:CircularProgressIndicator(strokeWidth:2,color:Colors.white)),
+        SizedBox(width:12),
+        Expanded(child:Text('Grup fotoğrafı yükleniyor...')),
+      ]),
+    ));
+
+    try{
+      final uzanti=x.name.contains('.')?x.name.split('.').last.toLowerCase():'jpg';
+      final temizUzanti=['jpg','jpeg','png','webp'].contains(uzanti)?uzanti:'jpg';
+      final yol='groups/${widget.chatId}/avatar_${DateTime.now().millisecondsSinceEpoch}.$temizUzanti';
+      final bytes=await x.readAsBytes();
+
+      String url;
+      try{
+        url=await ngelxMedyaYukleBytes(
+          bytes:bytes,
+          kind:'groups',
+          ext:temizUzanti,
+          legacyPath:yol,
+        );
+      }catch(e){
+        // Eski R2 Worker sürümlerinde "groups" türü tanınmıyorsa,
+        // fotoğraf türüyle geriye uyumlu yükleme yap.
+        if(e.toString().contains('(400)')){
+          url=await ngelxMedyaYukleBytes(
+            bytes:bytes,
+            kind:'photos',
+            ext:temizUzanti,
+            legacyPath:yol,
+          );
+        }else{
+          rethrow;
+        }
+      }
+
+      await ref.set({
+        'groupPhotoUrl':url,
+        'updatedAt':FieldValue.serverTimestamp(),
+      },SetOptions(merge:true));
+
+      try{await sistemMesaji('Yönetici grup fotoğrafını değiştirdi.');}catch(_){}
+
+      if(mounted){
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Grup fotoğrafı güncellendi ✓')));
+      }
+    }catch(e){
+      if(mounted){
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Grup fotoğrafı yüklenemedi: ${ngelxKisaHata(e)}')));
+      }
+    }finally{
+      if(mounted)setState(()=>_grupFotoYukleniyor=false);
+    }
   }
   Future<void> uyeIslemi(String id,String isim,bool admin)async{
     final sec=await showModalBottomSheet<String>(
