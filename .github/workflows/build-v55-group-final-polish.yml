@@ -7,6 +7,7 @@ on:
       - 'app/**'
       - 'cloudflare/worker/**'
       - 'tools/**'
+      - 'firestore.rules'
       - '.github/workflows/build-v55-group-final-polish.yml'
   workflow_dispatch:
 
@@ -40,6 +41,17 @@ jobs:
 
       - name: R2 Worker JavaScript kontrolu
         run: node --check cloudflare/worker/src/index.js
+
+      - name: Java 17 kur
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Firestore grup kurallarini emulator ile test et
+        run: |
+          npm install --no-save firebase @firebase/rules-unit-testing firebase-tools
+          npx firebase emulators:exec --only firestore --project demo-ngelx "node tools/firestore_rules_test.mjs"
 
       - name: Kod analizi
         working-directory: app
