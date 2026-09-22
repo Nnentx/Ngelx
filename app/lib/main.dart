@@ -1234,27 +1234,41 @@ class _AnaEkranState extends State<AnaEkran> {
                 alignment:Alignment.topCenter,
                 child:Container(
                   margin:const EdgeInsets.fromLTRB(12,10,12,0),
-                  padding:const EdgeInsets.all(12),
+                  padding:const EdgeInsets.fromLTRB(12,11,10,11),
                   decoration:BoxDecoration(
-                    color:Colors.white,
-                    borderRadius:BorderRadius.circular(22),
-                    boxShadow:const [BoxShadow(color:Color(0x33000000),blurRadius:24,offset:Offset(0,8))],
+                    gradient:const LinearGradient(colors:[Color(0xFF211837),Color(0xFF2D1D48)],begin:Alignment.topLeft,end:Alignment.bottomRight),
+                    borderRadius:BorderRadius.circular(24),
+                    border:Border.all(color:Colors.white10),
+                    boxShadow:const [BoxShadow(color:Color(0x55000000),blurRadius:28,offset:Offset(0,10))],
                   ),
                   child:Row(children:[
-                    CircleAvatar(
-                      radius:24,
-                      backgroundColor:const Color(0xFFE9DDFF),
-                      backgroundImage:foto.isEmpty?null:CachedNetworkImageProvider(foto),
-                      child:foto.isEmpty?Icon(grup?Icons.groups:Icons.person,color:mor):null,
-                    ),
+                    Stack(clipBehavior:Clip.none,children:[
+                      Container(
+                        padding:const EdgeInsets.all(2),
+                        decoration:const BoxDecoration(shape:BoxShape.circle,gradient:LinearGradient(colors:[Color(0xFFB47BFF),Color(0xFF7048E8)])),
+                        child:CircleAvatar(
+                          radius:25,
+                          backgroundColor:const Color(0xFFE9DDFF),
+                          backgroundImage:foto.isEmpty?null:CachedNetworkImageProvider(foto),
+                          child:foto.isEmpty?Icon(grup?Icons.groups_rounded:Icons.person_rounded,color:ngelxPremiumPurple):null,
+                        ),
+                      ),
+                      const Positioned(right:-1,bottom:0,child:CircleAvatar(radius:7,backgroundColor:Color(0xFF211837),child:CircleAvatar(radius:4,backgroundColor:Color(0xFF22C66D)))),
+                    ]),
                     const SizedBox(width:11),
                     Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisSize:MainAxisSize.min,children:[
-                      Text(baslik,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black,fontWeight:FontWeight.w900,fontSize:16)),
-                      Text(goruntulu?'Gelen görüntülü arama':'Gelen sesli arama',style:const TextStyle(color:Colors.black54,fontSize:12)),
+                      Text(baslik,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w900,fontSize:15.5)),
+                      const SizedBox(height:3),
+                      Row(children:[
+                        Icon(goruntulu?Icons.videocam_rounded:Icons.call_rounded,color:const Color(0xFFCDB9FF),size:15),
+                        const SizedBox(width:5),
+                        Text(goruntulu?'Gelen görüntülü arama':'Gelen sesli arama',style:const TextStyle(color:Color(0xFFC8BDD4),fontSize:10.8,fontWeight:FontWeight.w700)),
+                      ]),
                     ])),
-                    IconButton.filled(
-                      style:IconButton.styleFrom(backgroundColor:Colors.red,foregroundColor:Colors.white),
+                    _gelenAramaButon(
                       tooltip:'Reddet',
+                      icon:Icons.call_end_rounded,
+                      color:const Color(0xFFFF4949),
                       onPressed:()async{
                         await d.reference.set({'callStatus':'rejected','callEndedBy':ben,'callEndedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
                         final mesajId=(v['callMessageId']??'').toString();
@@ -1262,12 +1276,12 @@ class _AnaEkranState extends State<AnaEkran> {
                           unawaited(d.reference.collection('messages').doc(mesajId).set({'callStatus':'rejected','callEndedAt':FieldValue.serverTimestamp()},SetOptions(merge:true)).catchError((_){ }));
                         }
                       },
-                      icon:const Icon(Icons.call_end_rounded),
                     ),
-                    const SizedBox(width:8),
-                    IconButton.filled(
-                      style:IconButton.styleFrom(backgroundColor:Colors.green,foregroundColor:Colors.white),
+                    const SizedBox(width:7),
+                    _gelenAramaButon(
                       tooltip:'Cevapla',
+                      icon:goruntulu?Icons.videocam_rounded:Icons.call_rounded,
+                      color:const Color(0xFF29C76F),
                       onPressed:()async{
                         if(acilanAramaId==d.id)return;
                         setState(()=>acilanAramaId=d.id);
@@ -1289,7 +1303,6 @@ class _AnaEkranState extends State<AnaEkran> {
                           if(mounted)setState(()=>acilanAramaId=null);
                         }
                       },
-                      icon:Icon(goruntulu?Icons.videocam_rounded:Icons.call_rounded),
                     ),
                   ]),
                 ),
@@ -1300,6 +1313,19 @@ class _AnaEkranState extends State<AnaEkran> {
       },
     );
   }
+
+  Widget _gelenAramaButon({required String tooltip,required IconData icon,required Color color,required Future<void> Function() onPressed})=>Tooltip(
+    message:tooltip,
+    child:InkWell(
+      onTap:()=>onPressed(),
+      borderRadius:BorderRadius.circular(18),
+      child:Container(
+        width:43,height:43,
+        decoration:BoxDecoration(color:color,shape:BoxShape.circle,boxShadow:[BoxShadow(color:color.withValues(alpha:.28),blurRadius:12,offset:const Offset(0,5))]),
+        child:Icon(icon,color:Colors.white,size:21),
+      ),
+    ),
+  );
 
   Widget _aktifSayfa() {
     switch (secili) {
@@ -6303,6 +6329,39 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
               image:arkaPlanUrl.isEmpty?null:DecorationImage(image:CachedNetworkImageProvider(arkaPlanUrl),fit:BoxFit.cover,opacity:opaklik),
             ),
             child:Column(children:[
+              StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
+                stream:chatRef.collection('messages').where('pinned',isEqualTo:true).limit(1).snapshots(),
+                builder:(_,pinSnap){
+                  final pins=pinSnap.data?.docs??[];
+                  if(pins.isEmpty)return const SizedBox.shrink();
+                  final v=pins.first.data(),tur=(v['type']??'text').toString();
+                  final metin=(v['text']??'').toString().trim();
+                  final ozet=metin.isNotEmpty?metin:(tur=='photo'?'Fotoğraf':tur=='gif'?'GIF':tur=='audio'?'Sesli mesaj':'Sabitlenen mesaj');
+                  return InkWell(
+                    onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>SabitlenenGrupMesajlariPage(chatId:widget.chatId))),
+                    child:Container(
+                      margin:const EdgeInsets.fromLTRB(10,9,10,1),
+                      padding:const EdgeInsets.symmetric(horizontal:11,vertical:9),
+                      decoration:BoxDecoration(
+                        color:Colors.white.withValues(alpha:.96),
+                        borderRadius:BorderRadius.circular(17),
+                        border:Border.all(color:const Color(0xFFE5D9F8)),
+                        boxShadow:const [BoxShadow(color:Color(0x0E000000),blurRadius:12,offset:Offset(0,4))],
+                      ),
+                      child:Row(children:[
+                        Container(width:34,height:34,decoration:BoxDecoration(color:const Color(0xFFF0E8FF),borderRadius:BorderRadius.circular(12)),child:const Icon(Icons.push_pin_rounded,color:ngelxPremiumPurple,size:18)),
+                        const SizedBox(width:9),
+                        Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+                          const Text('Sabitlenen mesaj',style:TextStyle(color:ngelxPremiumPurple,fontSize:10.5,fontWeight:FontWeight.w900)),
+                          const SizedBox(height:2),
+                          Text(ozet,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:ngelxPremiumInk,fontSize:11.5,fontWeight:FontWeight.w700)),
+                        ])),
+                        const Icon(Icons.chevron_right_rounded,color:Color(0xFFA39AAB),size:20),
+                      ]),
+                    ),
+                  );
+                },
+              ),
               Expanded(child:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
                 stream:_mesajAkisi,
                 builder:(_,snap){
@@ -7230,6 +7289,41 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
     await ref.update({'groupName':temiz});
     await sistemMesaji('Grup adı “$temiz” olarak değiştirildi.');
   }
+  Future<void> aciklamaDuzenle(String mevcut)async{
+    final c=TextEditingController(text:mevcut);
+    final yeni=await showDialog<String>(
+      context:context,
+      builder:(x)=>Theme(
+        data:ThemeData.light().copyWith(colorScheme:ColorScheme.fromSeed(seedColor:ngelxPremiumPurple)),
+        child:AlertDialog(
+          shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(28)),
+          backgroundColor:Colors.white,surfaceTintColor:Colors.white,
+          icon:Container(width:54,height:54,decoration:BoxDecoration(color:const Color(0xFFF0E8FF),borderRadius:BorderRadius.circular(18)),child:const Icon(Icons.notes_rounded,color:ngelxPremiumPurple)),
+          title:const Text('Grup açıklaması',textAlign:TextAlign.center,style:TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w900)),
+          content:TextField(
+            controller:c,maxLength:160,maxLines:4,
+            style:const TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w600),
+            decoration:InputDecoration(
+              hintText:'Grubun amacını kısaca anlat...',
+              filled:true,fillColor:const Color(0xFFF7F4F9),
+              border:OutlineInputBorder(borderRadius:BorderRadius.circular(18),borderSide:BorderSide.none),
+              enabledBorder:OutlineInputBorder(borderRadius:BorderRadius.circular(18),borderSide:const BorderSide(color:ngelxPremiumBorder)),
+              focusedBorder:OutlineInputBorder(borderRadius:BorderRadius.circular(18),borderSide:const BorderSide(color:ngelxPremiumPurple,width:1.5)),
+            ),
+          ),
+          actions:[
+            TextButton(onPressed:()=>Navigator.pop(x),child:const Text('Vazgeç')),
+            FilledButton(style:FilledButton.styleFrom(backgroundColor:ngelxPremiumPurple),onPressed:()=>Navigator.pop(x,c.text.trim()),child:const Text('Kaydet')),
+          ],
+        ),
+      ),
+    );
+    c.dispose();
+    if(yeni==null||!mounted)return;
+    await ref.set({'groupDescription':yeni,'updatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
+    await sistemMesaji(yeni.isEmpty?'Grup açıklaması kaldırıldı.':'Grup açıklaması güncellendi.');
+  }
+
   Future<void> fotografDuzenle()async{
     final secim=await showModalBottomSheet<String>(
       context:context,
@@ -7597,6 +7691,27 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
                       Expanded(child:_grupKisayol(Icons.link_rounded,'Davet',()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupDavetPage(chatId:widget.chatId))))),
                     ]),
                   ],
+                ]),
+              ),
+              const SizedBox(height:14),
+              NgelXPremiumCard(
+                padding:const EdgeInsets.fromLTRB(14,13,10,13),
+                child:Row(crossAxisAlignment:CrossAxisAlignment.start,children:[
+                  Container(width:42,height:42,decoration:BoxDecoration(color:const Color(0xFFF0E8FF),borderRadius:BorderRadius.circular(14)),child:const Icon(Icons.notes_rounded,color:ngelxPremiumPurple)),
+                  const SizedBox(width:11),
+                  Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+                    const Text('Grup açıklaması',style:TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w900)),
+                    const SizedBox(height:4),
+                    Text(
+                      (v['groupDescription']??'').toString().trim().isEmpty?'Henüz açıklama eklenmedi.':(v['groupDescription']??'').toString(),
+                      style:TextStyle(color:(v['groupDescription']??'').toString().trim().isEmpty?ngelxPremiumMuted:const Color(0xFF51495A),fontSize:11.5,height:1.35,fontWeight:FontWeight.w600),
+                    ),
+                  ])),
+                  if(yonetici)IconButton(
+                    tooltip:'Açıklamayı düzenle',
+                    onPressed:()=>aciklamaDuzenle((v['groupDescription']??'').toString()),
+                    icon:const Icon(Icons.edit_rounded,color:ngelxPremiumPurple,size:20),
+                  ),
                 ]),
               ),
               const SizedBox(height:14),
