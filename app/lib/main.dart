@@ -716,12 +716,10 @@ class _GirisPageState extends State<GirisPage> {
         parola:parola,
         hatirla:hatirla,
       ));
-      if (!mounted) return;
-      setState(()=>yukleniyor=false);
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const AnaEkran()),
-      );
+      // Ana ekran geçişini authStateChanges yönetir. Burada ayrıca route
+      // değiştirmek bazı cihazlarda iki eşzamanlı geçişe ve boş ekranda
+      // takılmaya neden olabiliyordu.
+      if(mounted)setState(()=>yukleniyor=false);
     } on TimeoutException {
       if(!mounted)return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Giriş işlemi zaman aşımına uğradı. İnternet bağlantını kontrol edip tekrar dene.')));
@@ -748,12 +746,9 @@ class _GirisPageState extends State<GirisPage> {
   Future<void> misafirGirisi() async {
     setState(() => yukleniyor = true);
     try {
-      await FirebaseAuth.instance.signInAnonymously();
-      if (!mounted) return;
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const AnaEkran()),
-      );
+      await FirebaseAuth.instance.signInAnonymously().timeout(const Duration(seconds:20));
+      // Ana ekran authStateChanges ile açılır; ikinci bir push yapma.
+      if(mounted)setState(()=>yukleniyor=false);
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -10447,7 +10442,7 @@ class AyarlarPage extends StatelessWidget {
       _ayar(context,Icons.download_outlined,'İndirme izinleri','Varsayılan paylaşım indirme ayarı'),
     ],
     const Divider(),
-    ListTile(leading:const Icon(Icons.system_update,color:mor),title:const Text('Uygulama güncellemeleri'),subtitle:const Text('V54 • Test build 232'),trailing:const Icon(Icons.build_circle,color:Colors.orange)),
+    ListTile(leading:const Icon(Icons.system_update,color:mor),title:const Text('Uygulama güncellemeleri'),subtitle:const Text('V54 • Test build 233'),trailing:const Icon(Icons.build_circle,color:Colors.orange)),
     ListTile(leading:const Icon(Icons.share,color:mavi),title:const Text('Ngel X’i paylaş'),subtitle:const Text('Uygulama bağlantısını paylaş veya kopyala'),onTap:()async=>SharePlus.instance.share(ShareParams(text:'Ngel X ile dünyanı paylaş ✨\nhttps://ngelx.app'))),
     const Divider(),
     ListTile(leading:const Icon(Icons.logout,color:Colors.red),title:const Text('Çıkış yap',style:TextStyle(color:Colors.red)),onTap:()async{final onay=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(title:const Text('Çıkış yapılsın mı?'),content:const Text('Tekrar giriş yapman gerekecek.'),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('Çıkış yap'))]));if(onay==true){await FirebaseAuth.instance.signOut();if(context.mounted)Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder:(_)=>const GirisPage()),(_)=>false);}})
