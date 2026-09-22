@@ -5699,6 +5699,72 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
   }
   Future<void> medyaGonder(ImageSource kaynak)async{final x=await ImagePicker().pickImage(source:kaynak,imageQuality:76,maxWidth:1280);if(x==null)return;try{final yol='groups/${widget.chatId}/${DateTime.now().millisecondsSinceEpoch}.jpg';final url=await ngelxMedyaYukleBytes(bytes:await x.readAsBytes(),kind:'groups',ext:'jpg',legacyPath:yol).timeout(const Duration(seconds:12));await payloadGonder({'type':'photo','mediaUrl':url},'📷 Fotoğraf');}catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Fotoğraf gönderilemedi.')));}}
   Future<void> gifGonder()async{const tur=XTypeGroup(label:'GIF',extensions:['gif']);final x=await openFile(acceptedTypeGroups:[tur]);if(x==null)return;try{final yol='groups/${widget.chatId}/${DateTime.now().millisecondsSinceEpoch}.gif';final bytes=await x.readAsBytes().timeout(const Duration(seconds:8));final url=await ngelxMedyaYukleBytes(bytes:bytes,kind:'gifs',ext:'gif',legacyPath:yol,contentType:'image/gif').timeout(const Duration(seconds:12));await payloadGonder({'type':'gif','mediaUrl':url},'GIF');}catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('GIF gönderilemedi.')));}}
+  Future<void> grupDosyaGonder()async{
+    final x=await openFile();
+    if(x==null)return;
+    try{
+      final boyut=await x.length();
+      if(boyut>30*1024*1024)throw Exception('Dosya 30 MB’den küçük olmalı.');
+      final ad=x.name.isEmpty?'dosya':x.name;
+      final uzanti=ad.contains('.')?ad.split('.').last.toLowerCase():'bin';
+      final url=await ngelxMedyaYukleBytes(
+        bytes:await x.readAsBytes(),
+        kind:'chat-files',
+        ext:uzanti,
+        legacyPath:'chat-files/'+widget.chatId+'/'+DateTime.now().millisecondsSinceEpoch.toString()+'_'+ad,
+      ).timeout(const Duration(seconds:30));
+      await payloadGonder({'type':'file','fileUrl':url,'fileName':ad,'fileSize':boyut},'📎 '+ad);
+    }catch(e){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Dosya gönderilemedi: $e')));
+    }
+  }
+
+  Future<void> grupDosyayiPaylas(Map<String,dynamic> v)async{
+    final url=(v['fileUrl']??'').toString();
+    if(url.isEmpty)return;
+    try{
+      final dir=await getTemporaryDirectory();
+      final ad=(v['fileName']??'NgelX_dosya').toString().replaceAll(RegExp(r'[\\/:*?"<>|]'),'_');
+      final yol=dir.path+'/'+ad;
+      await Dio().download(url,yol);
+      await SharePlus.instance.share(ShareParams(files:[XFile(yol)],text:'NgelX grup dosyası: '+ad));
+    }catch(_){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Dosya açılamadı.')));
+    }
+  }
+
+  Future<void> grupKonumGonder()async{
+    final c=TextEditingController();
+    final sonuc=await showDialog<String>(
+      context:context,
+      builder:(x)=>Theme(
+        data:ThemeData.light().copyWith(colorScheme:ColorScheme.fromSeed(seedColor:ngelxPremiumPurple)),
+        child:AlertDialog(
+          shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(28)),
+          backgroundColor:Colors.white,surfaceTintColor:Colors.white,
+          icon:Container(width:54,height:54,decoration:BoxDecoration(color:const Color(0xFFF0E8FF),borderRadius:BorderRadius.circular(18)),child:const Icon(Icons.location_on_rounded,color:ngelxPremiumPurple)),
+          title:const Text('Konum paylaş',textAlign:TextAlign.center,style:TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w900)),
+          content:TextField(
+            controller:c,autofocus:true,maxLength:160,maxLines:3,
+            decoration:InputDecoration(
+              hintText:'Konum veya adres yaz',
+              filled:true,fillColor:const Color(0xFFF7F4F9),
+              border:OutlineInputBorder(borderRadius:BorderRadius.circular(18),borderSide:BorderSide.none),
+            ),
+          ),
+          actions:[
+            TextButton(onPressed:()=>Navigator.pop(x),child:const Text('Vazgeç')),
+            FilledButton(style:FilledButton.styleFrom(backgroundColor:ngelxPremiumPurple),onPressed:()=>Navigator.pop(x,c.text.trim()),child:const Text('Gönder')),
+          ],
+        ),
+      ),
+    );
+    final metin=sonuc?.trim()??'';
+    c.dispose();
+    if(metin.isEmpty)return;
+    await payloadGonder({'type':'location','text':metin,'locationText':metin},'📍 '+metin);
+  }
+
 
   Future<void> grupSesKaydiDegistir()async{
     if(sesKaydediliyor){
@@ -6031,6 +6097,14 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
               const SizedBox(width:10),
               Expanded(child:_ekSecenek(c,Icons.gif_box_rounded,'GIF','gif')),
             ]),
+            const SizedBox(height:10),
+            Row(children:[
+              Expanded(child:_ekSecenek(c,Icons.insert_drive_file_rounded,'Dosya','file')),
+              const SizedBox(width:10),
+              Expanded(child:_ekSecenek(c,Icons.location_on_rounded,'Konum','location')),
+              const SizedBox(width:10),
+              const Expanded(child:SizedBox()),
+            ]),
           ]),
         )),
       ),
@@ -6041,6 +6115,8 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
     if(secim=='camera')await medyaGonder(ImageSource.camera);
     else if(secim=='gallery')await medyaGonder(ImageSource.gallery);
     else if(secim=='gif')await gifGonder();
+    else if(secim=='file')await grupDosyaGonder();
+    else if(secim=='location')await grupKonumGonder();
   }
 
   Widget _ekSecenek(BuildContext c,IconData icon,String label,String value)=>InkWell(
@@ -6271,6 +6347,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
   Widget mesajKarti(QueryDocumentSnapshot<Map<String,dynamic>> d,{QueryDocumentSnapshot<Map<String,dynamic>>? onceki}){
     final v=d.data(),gonderen=(v['senderId']??v['fromUid']??v['uid']??'').toString(),ben=gonderen==uid;
     final metin=(v['text']??v['message']??v['content']??'').toString(),tur=(v['type']??'text').toString(),media=(v['mediaUrl']??'').toString(),audio=(v['audioUrl']??'').toString();
+    final fileUrl=(v['fileUrl']??'').toString(),fileName=(v['fileName']??'Dosya').toString(),locationText=(v['locationText']??metin).toString();
     final saat=mesajSaati(v['createdAt']??v['clientCreatedAt']),yanit=(v['replyToText']??'').toString();
     final hamTepkiler=v['reactions'],tepkiler=hamTepkiler is Map?Map<String,dynamic>.from(hamTepkiler):<String,dynamic>{};
     if(tur=='poll')return const SizedBox.shrink();
@@ -6318,7 +6395,13 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
             behavior:HitTestBehavior.opaque,
             onLongPress:()=>mesajMenusu(d),
             onDoubleTap:()=>grupKalpBirak(d),
-            onTap:(tur=='photo'||tur=='gif')&&media.isNotEmpty?()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>TamEkranMedyaPage(url:media))):null,
+            onTap:(tur=='photo'||tur=='gif')&&media.isNotEmpty
+              ? ()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>TamEkranMedyaPage(url:media)))
+              : tur=='file'&&fileUrl.isNotEmpty
+                ? ()=>grupDosyayiPaylas(v)
+                : tur=='location'
+                  ? ()async{await Clipboard.setData(ClipboardData(text:locationText));if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Konum metni kopyalandı.')));}
+                  : null,
             child:Container(
               constraints:BoxConstraints(maxWidth:MediaQuery.sizeOf(context).width*.76),
               margin:EdgeInsets.only(top:yeniBlok?3:1,bottom:tepkiSayilari.isEmpty?2:0,left:2,right:2),
@@ -6355,6 +6438,25 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
                   )))
                 else if(tur=='audio'&&audio.isNotEmpty)
                   SizedBox(width:228,child:NgelXSesliMesaj(url:audio,benim:ben,durationSeconds:(v['durationSeconds'] as num?)?.toInt()??0))
+                else if(tur=='file')
+                  Row(mainAxisSize:MainAxisSize.min,children:[
+                    Container(width:38,height:38,decoration:BoxDecoration(color:ben?Colors.white.withValues(alpha:.16):Colors.white,borderRadius:BorderRadius.circular(12)),child:Icon(Icons.insert_drive_file_rounded,color:ben?Colors.white:ngelxPremiumPurple,size:21)),
+                    const SizedBox(width:9),
+                    Flexible(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+                      Text(fileName,maxLines:2,overflow:TextOverflow.ellipsis,style:TextStyle(color:yaziRengi,fontSize:12.5,fontWeight:FontWeight.w800)),
+                      const SizedBox(height:2),
+                      Text('Dokun: aç / paylaş',style:TextStyle(color:ben?Colors.white70:ngelxPremiumMuted,fontSize:9.8,fontWeight:FontWeight.w600)),
+                    ])),
+                  ])
+                else if(tur=='location')
+                  Row(mainAxisSize:MainAxisSize.min,children:[
+                    Container(width:38,height:38,decoration:BoxDecoration(color:ben?Colors.white.withValues(alpha:.16):Colors.white,borderRadius:BorderRadius.circular(12)),child:Icon(Icons.location_on_rounded,color:ben?Colors.white:const Color(0xFFE5485A),size:21)),
+                    const SizedBox(width:9),
+                    Flexible(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+                      Text('Konum',style:TextStyle(color:ben?Colors.white70:ngelxPremiumMuted,fontSize:9.8,fontWeight:FontWeight.w700)),
+                      Text(locationText,maxLines:2,overflow:TextOverflow.ellipsis,style:TextStyle(color:yaziRengi,fontSize:12.5,fontWeight:FontWeight.w800)),
+                    ])),
+                  ])
                 else
                   Text(metin.isEmpty?(tur=='gif'?'GIF':'Mesaj'):metin,style:TextStyle(color:yaziRengi,fontSize:14.6,height:1.24,fontWeight:FontWeight.w500)),
                 if(v['editedAt']!=null||saat.isNotEmpty)Align(
@@ -6756,8 +6858,8 @@ class _GrupMedyaPageState extends State<GrupMedyaPage>{
               separatorBuilder:(_,__)=>const SizedBox(height:8),
               itemBuilder:(_,i){
                 final v=docs[i].data(),t=(v['type']??'').toString();
-                final url=(v['mediaUrl']??v['url']??'').toString();
-                final metin=(v['text']??v['fileName']??(sekme==1?'Dosya':'Bağlantı')).toString();
+                final url=(v['mediaUrl']??v['fileUrl']??v['url']??'').toString();
+                final metin=(v['fileName']??v['text']??(sekme==1?'Dosya':'Bağlantı')).toString();
                 final alt=mesajSaati(v['createdAt']);
                 return NgelXPremiumCard(
                   padding:const EdgeInsets.symmetric(horizontal:12,vertical:10),
@@ -6768,9 +6870,11 @@ class _GrupMedyaPageState extends State<GrupMedyaPage>{
                     title:Text(metin,maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w800)),
                     subtitle:Text(alt,style:const TextStyle(color:ngelxPremiumMuted,fontSize:11)),
                     trailing:const Icon(Icons.chevron_right_rounded,color:Color(0xFFA79EAF)),
-                    onTap:url.isEmpty?null:(){
+                    onTap:url.isEmpty?null:()async{
                       if(t=='shared_content'&&(v['contentId']??'').toString().isNotEmpty){
                         Navigator.push(context,MaterialPageRoute(builder:(_)=>IcerikBaglantiPage(icerikId:(v['contentId']??'').toString())));
+                      }else if(t=='file'||t=='document'){
+                        await SharePlus.instance.share(ShareParams(text:url));
                       }else{
                         Navigator.push(context,MaterialPageRoute(builder:(_)=>TamEkranMedyaPage(url:url)));
                       }
