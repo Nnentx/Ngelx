@@ -5302,48 +5302,216 @@ class _GrupOlusturPageState extends State<GrupOlusturPage>{
       if(mounted)setState(()=>kaydediliyor=false);
     }
   }
-  @override Widget build(BuildContext context){return Theme(data:ThemeData.light().copyWith(scaffoldBackgroundColor:Colors.white,appBarTheme:const AppBarTheme(backgroundColor:Colors.white,foregroundColor:Colors.black,elevation:0)),child:Scaffold(appBar:AppBar(title:const Text('Yeni grup',style:TextStyle(fontWeight:FontWeight.w900)),actions:[TextButton(onPressed:kaydediliyor?null:olustur,child:const Text('Oluştur',style:TextStyle(fontWeight:FontWeight.w900)))]),body:Column(children:[
-  Padding(padding:const EdgeInsets.all(18),child:Row(children:[GestureDetector(onTap:()async{final x=await ImagePicker().pickImage(source:ImageSource.gallery,imageQuality:78,maxWidth:1024);if(x!=null&&mounted)setState(()=>foto=x);},child:CircleAvatar(radius:34,backgroundColor:const Color(0xFFE9DDFF),backgroundImage:foto==null?null:FileImage(File(foto!.path)),child:foto==null?const Icon(Icons.add_a_photo,color:mor):null)),const SizedBox(width:14),Expanded(child:TextField(controller:ad,maxLength:16,onChanged:(_)=>setState((){}),style:const TextStyle(color:Colors.black87),decoration:InputDecoration(labelText:'Grup adı',hintText:'Grubuna bir ad ver',counterText:'${ad.text.characters.length}/16 karakter')))])),
-    Padding(padding:const EdgeInsets.symmetric(horizontal:18),child:TextField(controller:arama,onChanged:(v)=>setState(()=>sorgu=v.toLowerCase()),style:const TextStyle(color:Colors.black87),decoration:const InputDecoration(prefixIcon:Icon(Icons.search),hintText:'Gruba kişi ekle'))),
-    Padding(padding:const EdgeInsets.fromLTRB(18,12,18,5),child:Align(alignment:Alignment.centerLeft,child:Text('${secilen.length} kişi seçildi • ${secilen.length+1}/60 üye',style:const TextStyle(color:mor,fontWeight:FontWeight.bold)))),
-    Expanded(
-      child:izinlerYukleniyor
-        ? const Center(child:CircularProgressIndicator(color:mor))
-        : yuklemeHatasi!=null
-          ? Center(child:Padding(padding:const EdgeInsets.all(24),child:Column(mainAxisSize:MainAxisSize.min,children:[
-              const Icon(Icons.cloud_off_rounded,color:Colors.redAccent,size:42),
-              const SizedBox(height:10),
-              Text(yuklemeHatasi!,textAlign:TextAlign.center,style:const TextStyle(color:Colors.black54)),
-              const SizedBox(height:12),
-              OutlinedButton.icon(onPressed:(){setState(()=>izinlerYukleniyor=true);izinliKisileriGetir();},icon:const Icon(Icons.refresh),label:const Text('Yeniden dene')),
-            ])))
-          : Builder(builder:(_){
-              final docs=adaylar.where((d){
-                final v=d.data();
-                final isim='${v['displayName']??''} ${v['username']??''}'.toLowerCase();
-                return sorgu.isEmpty||isim.contains(sorgu);
-              }).toList();
-              if(docs.isEmpty)return const Center(child:Padding(padding:EdgeInsets.all(24),child:Text('Gruba ekleyebileceğin takip veya arkadaş bulunamadı.',textAlign:TextAlign.center,style:TextStyle(color:Colors.black54))));
-              return ListView.builder(
-                itemCount:docs.length,
-                itemBuilder:(_,i){
-                  final d=docs[i],v=d.data(),isim=(v['displayName']??v['username']??'Kullanıcı').toString(),pf=(v['photoUrl']??'').toString(),secili=secilen.contains(d.id);
-                  return CheckboxListTile(
-                    value:secili,
-                    onChanged:(x){
-                      if(x==true&&!secili&&secilen.length>=59){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Yönetici dahil en fazla 60 üye eklenebilir.')));return;}
-                      setState(()=>x==true?secilen.add(d.id):secilen.remove(d.id));
-                    },
-                    secondary:CircleAvatar(backgroundImage:pf.isEmpty?null:CachedNetworkImageProvider(pf),child:pf.isEmpty?const Icon(Icons.person):null),
-                    title:Text(isim,style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w700)),
-                    subtitle:Text('@${v['username']??'ngelx'}',style:const TextStyle(color:Colors.black54)),
-                    activeColor:mor,
-                  );
-                },
-              );
-            }),
+  @override Widget build(BuildContext context)=>Theme(
+    data:ThemeData.light().copyWith(
+      scaffoldBackgroundColor:const Color(0xFFFBF9FF),
+      colorScheme:ColorScheme.fromSeed(seedColor:ngelxPremiumPurple),
     ),
-  ])));}
+    child:Scaffold(
+      backgroundColor:const Color(0xFFFBF9FF),
+      appBar:AppBar(
+        toolbarHeight:64,
+        backgroundColor:Colors.transparent,
+        surfaceTintColor:Colors.transparent,
+        elevation:0,
+        title:const Text('Yeni grup',style:TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w900)),
+        flexibleSpace:Container(
+          decoration:const BoxDecoration(
+            gradient:LinearGradient(colors:[Color(0xFFFFFFFF),Color(0xFFF5EFFF)]),
+            borderRadius:BorderRadius.vertical(bottom:Radius.circular(24)),
+          ),
+        ),
+      ),
+      body:Column(children:[
+        Expanded(child:ListView(
+          keyboardDismissBehavior:ScrollViewKeyboardDismissBehavior.onDrag,
+          padding:const EdgeInsets.fromLTRB(14,16,14,18),
+          children:[
+            NgelXPremiumCard(
+              padding:const EdgeInsets.fromLTRB(14,18,14,16),
+              child:Column(children:[
+                GestureDetector(
+                  onTap:()async{
+                    final x=await ImagePicker().pickImage(source:ImageSource.gallery,imageQuality:80,maxWidth:1280);
+                    if(x!=null&&mounted)setState(()=>foto=x);
+                  },
+                  child:Stack(clipBehavior:Clip.none,children:[
+                    Container(
+                      width:92,height:92,
+                      decoration:BoxDecoration(
+                        shape:BoxShape.circle,
+                        gradient:const LinearGradient(colors:[Color(0xFFEFE6FF),Color(0xFFD9C6FF)]),
+                        border:Border.all(color:Colors.white,width:4),
+                        boxShadow:const [BoxShadow(color:Color(0x24704DE3),blurRadius:24,offset:Offset(0,9))],
+                      ),
+                      child:ClipOval(
+                        child:foto==null
+                          ? const Icon(Icons.groups_rounded,color:ngelxPremiumPurple,size:44)
+                          : Image.file(File(foto!.path),fit:BoxFit.cover),
+                      ),
+                    ),
+                    const Positioned(right:-2,bottom:2,child:CircleAvatar(radius:17,backgroundColor:ngelxPremiumPurple,child:Icon(Icons.camera_alt_rounded,color:Colors.white,size:17))),
+                  ]),
+                ),
+                const SizedBox(height:15),
+                TextField(
+                  controller:ad,
+                  maxLength:16,
+                  textAlign:TextAlign.center,
+                  onChanged:(_)=>setState((){}),
+                  style:const TextStyle(color:ngelxPremiumInk,fontSize:19,fontWeight:FontWeight.w900),
+                  decoration:InputDecoration(
+                    hintText:'Grubuna bir ad ver',
+                    hintStyle:const TextStyle(color:Color(0xFFA39BAA),fontWeight:FontWeight.w600),
+                    counterText:ad.text.characters.length.toString()+'/16',
+                    counterStyle:const TextStyle(color:ngelxPremiumMuted,fontSize:10.5),
+                    filled:true,
+                    fillColor:const Color(0xFFF8F6FA),
+                    contentPadding:const EdgeInsets.symmetric(horizontal:14,vertical:12),
+                    border:OutlineInputBorder(borderRadius:BorderRadius.circular(18),borderSide:BorderSide.none),
+                    enabledBorder:OutlineInputBorder(borderRadius:BorderRadius.circular(18),borderSide:const BorderSide(color:ngelxPremiumBorder)),
+                    focusedBorder:OutlineInputBorder(borderRadius:BorderRadius.circular(18),borderSide:const BorderSide(color:ngelxPremiumPurple,width:1.5)),
+                  ),
+                ),
+              ]),
+            ),
+            const SizedBox(height:14),
+            Row(children:[
+              const Expanded(child:Text('Üyeleri seç',style:TextStyle(color:ngelxPremiumInk,fontSize:18,fontWeight:FontWeight.w900))),
+              Container(
+                padding:const EdgeInsets.symmetric(horizontal:10,vertical:6),
+                decoration:BoxDecoration(color:const Color(0xFFF0E8FF),borderRadius:BorderRadius.circular(14)),
+                child:Text((secilen.length+1).toString()+'/60',style:const TextStyle(color:ngelxPremiumPurple,fontSize:11,fontWeight:FontWeight.w900)),
+              ),
+            ]),
+            const SizedBox(height:9),
+            TextField(
+              controller:arama,
+              onChanged:(v)=>setState(()=>sorgu=v.trim().toLowerCase()),
+              style:const TextStyle(color:ngelxPremiumInk),
+              decoration:InputDecoration(
+                hintText:'Kişi ara',
+                hintStyle:const TextStyle(color:Color(0xFF9B94A1)),
+                prefixIcon:const Icon(Icons.search_rounded,color:ngelxPremiumPurple),
+                filled:true,
+                fillColor:Colors.white,
+                border:OutlineInputBorder(borderRadius:BorderRadius.circular(20),borderSide:BorderSide.none),
+                enabledBorder:OutlineInputBorder(borderRadius:BorderRadius.circular(20),borderSide:const BorderSide(color:ngelxPremiumBorder)),
+              ),
+            ),
+            if(secilen.isNotEmpty)...[
+              const SizedBox(height:12),
+              SizedBox(
+                height:78,
+                child:ListView(
+                  scrollDirection:Axis.horizontal,
+                  children:secilen.map((id){
+                    final d=adaylar.cast<QueryDocumentSnapshot<Map<String,dynamic>>?>().firstWhere((x)=>x?.id==id,orElse:()=>null);
+                    final v=d?.data()??<String,dynamic>{};
+                    final isim=(v['displayName']??v['username']??'Üye').toString();
+                    final pf=(v['photoUrl']??'').toString();
+                    return Container(
+                      width:68,
+                      margin:const EdgeInsets.only(right:8),
+                      child:Column(children:[
+                        Stack(clipBehavior:Clip.none,children:[
+                          CircleAvatar(radius:24,backgroundColor:const Color(0xFFEDE5F6),backgroundImage:pf.isEmpty?null:CachedNetworkImageProvider(pf),child:pf.isEmpty?const Icon(Icons.person_rounded,color:ngelxPremiumPurple):null),
+                          Positioned(right:-5,top:-4,child:InkWell(
+                            onTap:()=>setState(()=>secilen.remove(id)),
+                            child:const CircleAvatar(radius:9,backgroundColor:Color(0xFF2A2231),child:Icon(Icons.close_rounded,color:Colors.white,size:11)),
+                          )),
+                        ]),
+                        const SizedBox(height:5),
+                        Text(isim,maxLines:1,overflow:TextOverflow.ellipsis,textAlign:TextAlign.center,style:const TextStyle(color:ngelxPremiumInk,fontSize:9.5,fontWeight:FontWeight.w700)),
+                      ]),
+                    );
+                  }).toList(),
+                ),
+              ),
+            ],
+            const SizedBox(height:8),
+            if(izinlerYukleniyor)
+              const Padding(padding:EdgeInsets.all(34),child:Center(child:CircularProgressIndicator(color:ngelxPremiumPurple)))
+            else if(yuklemeHatasi!=null)
+              NgelXPremiumCard(
+                padding:const EdgeInsets.all(18),
+                child:Column(children:[
+                  const Icon(Icons.cloud_off_rounded,color:Colors.redAccent,size:42),
+                  const SizedBox(height:10),
+                  Text(yuklemeHatasi!,textAlign:TextAlign.center,style:const TextStyle(color:ngelxPremiumMuted)),
+                  const SizedBox(height:12),
+                  OutlinedButton.icon(onPressed:(){setState(()=>izinlerYukleniyor=true);izinliKisileriGetir();},icon:const Icon(Icons.refresh_rounded),label:const Text('Yeniden dene')),
+                ]),
+              )
+            else
+              Builder(builder:(_){
+                final docs=adaylar.where((d){
+                  final v=d.data();
+                  final isim=((v['displayName']??'').toString()+' '+(v['username']??'').toString()).toLowerCase();
+                  return sorgu.isEmpty||isim.contains(sorgu);
+                }).toList();
+                if(docs.isEmpty)return const Padding(
+                  padding:EdgeInsets.all(28),
+                  child:Center(child:Text('Ekleyebileceğin kişi bulunamadı.',style:TextStyle(color:ngelxPremiumMuted,fontWeight:FontWeight.w700))),
+                );
+                return Column(children:docs.map((d){
+                  final v=d.data(),isim=(v['displayName']??v['username']??'Kullanıcı').toString(),pf=(v['photoUrl']??'').toString(),secili=secilen.contains(d.id),online=v['online']==true;
+                  return NgelXPremiumCard(
+                    margin:const EdgeInsets.only(bottom:8),
+                    padding:const EdgeInsets.symmetric(horizontal:10,vertical:6),
+                    child:ListTile(
+                      dense:true,
+                      contentPadding:EdgeInsets.zero,
+                      onTap:(){
+                        if(!secili&&secilen.length>=59){
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Yönetici dahil en fazla 60 üye eklenebilir.')));
+                          return;
+                        }
+                        setState(()=>secili?secilen.remove(d.id):secilen.add(d.id));
+                      },
+                      leading:Stack(children:[
+                        CircleAvatar(radius:23,backgroundColor:const Color(0xFFECE4F5),backgroundImage:pf.isEmpty?null:CachedNetworkImageProvider(pf),child:pf.isEmpty?const Icon(Icons.person_rounded,color:ngelxPremiumPurple):null),
+                        if(online)const Positioned(right:0,bottom:0,child:CircleAvatar(radius:5.5,backgroundColor:Colors.white,child:CircleAvatar(radius:3.5,backgroundColor:Color(0xFF21C76A)))),
+                      ]),
+                      title:Text(isim,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w800)),
+                      subtitle:Text('@'+(v['username']??'ngelx').toString(),style:const TextStyle(color:ngelxPremiumMuted,fontSize:11)),
+                      trailing:AnimatedContainer(
+                        duration:const Duration(milliseconds:160),
+                        width:29,height:29,
+                        decoration:BoxDecoration(color:secili?ngelxPremiumPurple:Colors.white,shape:BoxShape.circle,border:Border.all(color:secili?ngelxPremiumPurple:const Color(0xFFD6CFDC),width:1.4)),
+                        child:secili?const Icon(Icons.check_rounded,color:Colors.white,size:18):null,
+                      ),
+                    ),
+                  );
+                }).toList());
+              }),
+          ],
+        )),
+        SafeArea(
+          top:false,
+          child:Container(
+            padding:const EdgeInsets.fromLTRB(14,10,14,10),
+            decoration:const BoxDecoration(color:Colors.white,border:Border(top:BorderSide(color:Color(0xFFF0EBF5)))),
+            child:SizedBox(
+              width:double.infinity,
+              child:FilledButton.icon(
+                style:FilledButton.styleFrom(
+                  backgroundColor:ngelxPremiumPurple,
+                  disabledBackgroundColor:const Color(0xFFD8CFEB),
+                  padding:const EdgeInsets.symmetric(vertical:15),
+                  shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(18)),
+                ),
+                onPressed:kaydediliyor?null:olustur,
+                icon:kaydediliyor?const SizedBox(width:18,height:18,child:CircularProgressIndicator(color:Colors.white,strokeWidth:2)):const Icon(Icons.groups_rounded),
+                label:Text(kaydediliyor?'Grup oluşturuluyor...':'Grubu oluştur',style:const TextStyle(fontWeight:FontWeight.w900)),
+              ),
+            ),
+          ),
+        ),
+      ]),
+    ),
+  );
+
 }
 
 class GrupSohbetPage extends StatefulWidget{final String chatId,ad,foto;const GrupSohbetPage({super.key,required this.chatId,required this.ad,this.foto=''});@override State<GrupSohbetPage> createState()=>_GrupSohbetPageState();}
@@ -5618,27 +5786,118 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
   }
   Future<void> grupArkaPlanMenusu()async{
     final me=uid;if(me==null)return;
+    final d=await chatRef.get();
+    final v=d.data()??<String,dynamic>{};
+    final mevcutUrl=(v['backgroundUrl_$me']??'').toString();
+    final mevcutOpacity=(v['backgroundOpacity_$me'] is num?(v['backgroundOpacity_$me'] as num).toDouble():.35).clamp(.10,.55).toDouble();
+
     final secim=await showModalBottomSheet<String>(
-      context:context,backgroundColor:Colors.white,showDragHandle:true,
-      builder:(c)=>Theme(data:ThemeData.light(),child:SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
-        ListTile(leading:const Icon(Icons.photo_library_outlined,color:mor),title:const Text('Arka plan seç',style:TextStyle(fontWeight:FontWeight.w700)),onTap:()=>Navigator.pop(c,'gallery')),
-        ListTile(leading:const Icon(Icons.opacity_rounded,color:mor),title:const Text('Görünürlük'),trailing:Wrap(spacing:4,children:[
-          TextButton(onPressed:()=>Navigator.pop(c,'opacity:20'),child:const Text('Az')),
-          TextButton(onPressed:()=>Navigator.pop(c,'opacity:35'),child:const Text('Orta')),
-          TextButton(onPressed:()=>Navigator.pop(c,'opacity:50'),child:const Text('Çok')),
-        ])),
-        ListTile(leading:const Icon(Icons.hide_image_outlined,color:Colors.red),title:const Text('Arka planı kaldır',style:TextStyle(color:Colors.red)),onTap:()=>Navigator.pop(c,'remove')),
-      ]))),
+      context:context,
+      isScrollControlled:true,
+      backgroundColor:const Color(0xFFFBF9FF),
+      showDragHandle:true,
+      shape:const RoundedRectangleBorder(borderRadius:BorderRadius.vertical(top:Radius.circular(30))),
+      builder:(c)=>Theme(
+        data:ThemeData.light().copyWith(colorScheme:ColorScheme.fromSeed(seedColor:ngelxPremiumPurple)),
+        child:SafeArea(child:Padding(
+          padding:const EdgeInsets.fromLTRB(14,0,14,18),
+          child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
+            const Text('Sohbet görünümü',style:TextStyle(color:ngelxPremiumInk,fontSize:20,fontWeight:FontWeight.w900)),
+            const SizedBox(height:4),
+            const Text('Arka planı ve görünürlüğü sana özel ayarla.',style:TextStyle(color:ngelxPremiumMuted,fontSize:11.5,fontWeight:FontWeight.w600)),
+            const SizedBox(height:14),
+            Container(
+              height:156,
+              width:double.infinity,
+              padding:const EdgeInsets.all(12),
+              decoration:BoxDecoration(
+                color:const Color(0xFFF4EEFF),
+                image:mevcutUrl.isEmpty?null:DecorationImage(image:CachedNetworkImageProvider(mevcutUrl),fit:BoxFit.cover,opacity:mevcutOpacity),
+                borderRadius:BorderRadius.circular(22),
+                border:Border.all(color:const Color(0xFFE4D8F5)),
+              ),
+              child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+                Align(alignment:Alignment.centerLeft,child:Container(
+                  padding:const EdgeInsets.symmetric(horizontal:10,vertical:7),
+                  decoration:BoxDecoration(color:Colors.white.withValues(alpha:.94),borderRadius:BorderRadius.circular(14)),
+                  child:const Text('Yarın kamp için hazır mıyız?',style:TextStyle(color:ngelxPremiumInk,fontSize:11.5,fontWeight:FontWeight.w600)),
+                )),
+                const Spacer(),
+                Align(alignment:Alignment.centerRight,child:Container(
+                  padding:const EdgeInsets.symmetric(horizontal:10,vertical:7),
+                  decoration:BoxDecoration(gradient:const LinearGradient(colors:[ngelxPremiumPurple2,ngelxPremiumPurple]),borderRadius:BorderRadius.circular(14)),
+                  child:const Text('Hazırım 🙌',style:TextStyle(color:Colors.white,fontSize:11.5,fontWeight:FontWeight.w700)),
+                )),
+              ]),
+            ),
+            const SizedBox(height:14),
+            NgelXPremiumCard(
+              padding:const EdgeInsets.fromLTRB(12,12,12,10),
+              child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+                const Text('Arka plan görünürlüğü',style:TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w900)),
+                const SizedBox(height:10),
+                Row(children:[
+                  for(final e in const [('Az',20),('Orta',35),('Çok',50)])...[
+                    Expanded(child:InkWell(
+                      onTap:()=>Navigator.pop(c,'opacity:'+e.$2.toString()),
+                      borderRadius:BorderRadius.circular(14),
+                      child:Container(
+                        height:40,
+                        alignment:Alignment.center,
+                        decoration:BoxDecoration(
+                          color:(mevcutOpacity*100-e.$2).abs()<3?ngelxPremiumPurple:const Color(0xFFF3F0F6),
+                          borderRadius:BorderRadius.circular(14),
+                        ),
+                        child:Text(e.$1,style:TextStyle(color:(mevcutOpacity*100-e.$2).abs()<3?Colors.white:ngelxPremiumMuted,fontSize:11,fontWeight:FontWeight.w800)),
+                      ),
+                    )),
+                    if(e.$2!=50)const SizedBox(width:7),
+                  ],
+                ]),
+              ]),
+            ),
+            const SizedBox(height:10),
+            NgelXPremiumCard(
+              padding:EdgeInsets.zero,
+              child:Column(children:[
+                ListTile(
+                  leading:Container(width:42,height:42,decoration:BoxDecoration(color:const Color(0xFFF0E8FF),borderRadius:BorderRadius.circular(14)),child:const Icon(Icons.photo_library_rounded,color:ngelxPremiumPurple)),
+                  title:const Text('Galeriden arka plan seç',style:TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w800)),
+                  subtitle:const Text('Kendi görselini sohbet arka planı yap',style:TextStyle(color:ngelxPremiumMuted,fontSize:10.5)),
+                  trailing:const Icon(Icons.chevron_right_rounded,color:Color(0xFFA49BAC)),
+                  onTap:()=>Navigator.pop(c,'gallery'),
+                ),
+                const Divider(height:1,indent:64,color:Color(0xFFF0EBF5)),
+                ListTile(
+                  leading:Container(width:42,height:42,decoration:BoxDecoration(color:const Color(0xFFFFEFF1),borderRadius:BorderRadius.circular(14)),child:const Icon(Icons.hide_image_outlined,color:Color(0xFFE23E50))),
+                  title:const Text('Arka planı kaldır',style:TextStyle(color:Color(0xFFE23E50),fontWeight:FontWeight.w800)),
+                  onTap:()=>Navigator.pop(c,'remove'),
+                ),
+              ]),
+            ),
+          ]),
+        )),
+      ),
     );
     if(secim==null||!mounted)return;
-    if(secim.startsWith('opacity:')){final oran=(int.tryParse(secim.substring(8))??35)/100;await chatRef.set({'backgroundOpacity_$me':oran},SetOptions(merge:true));return;}
-    if(secim=='remove'){await chatRef.set({'backgroundUrl_$me':''},SetOptions(merge:true));return;}
-    final x=await ImagePicker().pickImage(source:ImageSource.gallery,imageQuality:78,maxWidth:1440);if(x==null)return;
+    if(secim.startsWith('opacity:')){
+      final oran=(int.tryParse(secim.substring(8))??35)/100;
+      await chatRef.set({'backgroundOpacity_$me':oran},SetOptions(merge:true));
+      return;
+    }
+    if(secim=='remove'){
+      await chatRef.set({'backgroundUrl_$me':''},SetOptions(merge:true));
+      return;
+    }
+    final x=await ImagePicker().pickImage(source:ImageSource.gallery,imageQuality:80,maxWidth:1440);
+    if(x==null)return;
     try{
       final yol='chat-backgrounds/'+me+'/'+widget.chatId+'_'+DateTime.now().millisecondsSinceEpoch.toString()+'.jpg';
       final url=await ngelxMedyaYukleBytes(bytes:await x.readAsBytes(),kind:'chat-backgrounds',ext:'jpg',legacyPath:yol);
       await chatRef.set({'backgroundUrl_$me':url,'backgroundOpacity_$me':.35},SetOptions(merge:true));
-    }catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Arka plan yüklenemedi.')));}
+    }catch(_){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Arka plan yüklenemedi.')));
+    }
   }
 
   Future<void> aramaBaslat(bool goruntulu)async{
@@ -5658,6 +5917,12 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
         'callParticipants':<String>[ben],
         'callCreatedAt':FieldValue.serverTimestamp(),
       },SetOptions(merge:true)).timeout(const Duration(seconds:10)).catchError((_){ }));
+      unawaited(chatRef.collection('messages').doc('call_start_'+odaAdi).set({
+        'senderId':'system',
+        'type':'system',
+        'text':goruntulu?'Görüntülü arama başladı.':'Sesli arama başladı.',
+        'createdAt':FieldValue.serverTimestamp(),
+      },SetOptions(merge:true)).catchError((_){ }));
       unawaited(chatRef.get().timeout(const Duration(seconds:10)).then((grup){
         final uyeler=List<String>.from(grup.data()?['members']??const[]);
         for(final uye in uyeler){
@@ -6218,6 +6483,19 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
         'callParticipants':FieldValue.arrayUnion([u.uid]),
         'callConnectedAt':FieldValue.serverTimestamp(),
       },SetOptions(merge:true)).timeout(const Duration(seconds:10)).catchError((_){ }));
+      if(widget.roomName.startsWith('group_')){
+        unawaited(widget.aramaRef.get().then((d)async{
+          final baslatan=(d.data()?['callStartedBy']??'').toString();
+          if(baslatan==u.uid)return;
+          final ad=u.displayName?.trim().isNotEmpty==true?u.displayName!.trim():'Bir üye';
+          await widget.aramaRef.collection('messages').doc('call_join_'+widget.roomName+'_'+u.uid).set({
+            'senderId':'system',
+            'type':'system',
+            'text':ad+' aramaya katıldı.',
+            'createdAt':FieldValue.serverTimestamp(),
+          },SetOptions(merge:true));
+        }).catchError((_){ }));
+      }
       unawaited(widget.aramaRef.get().then((d){
         final mesajId=(d.data()?['callMessageId']??'').toString();
         if(mesajId.isNotEmpty)return widget.aramaRef.collection('messages').doc(mesajId).set({'callStatus':'active','callConnectedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
@@ -6274,6 +6552,14 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
     if(bitiyor)return;bitiyor=true;
     try{
       await widget.aramaRef.set({'callStatus':'ended','callEndedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
+      if(widget.roomName.startsWith('group_')){
+        await widget.aramaRef.collection('messages').doc('call_end_'+widget.roomName).set({
+          'senderId':'system',
+          'type':'system',
+          'text':'Arama sona erdi.',
+          'createdAt':FieldValue.serverTimestamp(),
+        },SetOptions(merge:true));
+      }
       final d=await widget.aramaRef.get();
       final mesajId=(d.data()?['callMessageId']??'').toString();
       if(mesajId.isNotEmpty)await widget.aramaRef.collection('messages').doc(mesajId).set({'callStatus':'ended','callEndedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
