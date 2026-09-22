@@ -202,17 +202,25 @@ export default {
 
       try {
         let saved;
-        if (announced > 0) {
-          // Stream mobile uploads directly into R2 instead of buffering the whole
-          // image/video inside the Worker. This keeps memory flat and prevents
-          // connection resets on slower mobile networks.
+        const smallUploadLimit = 12 * 1024 * 1024;
+        if (announced > 0 && announced <= smallUploadLimit) {
+          // Small mobile uploads are buffered first. Directly piping some Android
+          // request streams into R2 caused intermittent connection resets on
+          // profile photos and ordinary feed images.
+          const bytes = await request.arrayBuffer();
+          if (!bytes.byteLength) return json({error: 'empty_file'}, 400);
+          saved = await env.MEDIA.put(key, bytes, {
+            httpMetadata: {contentType, cacheControl: 'public, max-age=31536000, immutable'},
+            customMetadata: {uid, kind},
+          });
+        } else if (announced > 0) {
+          // Keep large video/audio payloads streaming to avoid excessive Worker memory.
           saved = await env.MEDIA.put(key, request.body, {
             httpMetadata: {contentType, cacheControl: 'public, max-age=31536000, immutable'},
             customMetadata: {uid, kind},
           });
         } else {
-          // Chunked/unknown length fallback: buffer only when size cannot be
-          // validated from Content-Length.
+          // Chunked/unknown length fallback.
           const bytes = await request.arrayBuffer();
           if (!bytes.byteLength) return json({error: 'empty_file'}, 400);
           if (bytes.byteLength > maxBytes) return json({error: 'file_too_large', maxBytes}, 413);
