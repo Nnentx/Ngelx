@@ -6051,7 +6051,39 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
     // sayfalarından ayrıca alınır.
     _mesajAkisiniYenile();
     unawaited(_okunduIsaretle());
+    unawaited(_grupDizininiEsitle());
   }
+
+  Future<void> _grupDizininiEsitle()async{
+    final ben=uid;
+    if(ben==null)return;
+    try{
+      final d=await chatRef.get().timeout(const Duration(seconds:6));
+      final v=d.data()??<String,dynamic>{};
+      if(v['isGroup']!=true)return;
+      final admins=List<String>.from(v['admins']??const[]);
+      if(!admins.contains(ben))return;
+      final uyeler=List<String>.from(v['members']??const[]);
+      final owner=(v['createdBy']??(admins.isNotEmpty?admins.first:ben)).toString();
+      final dizin=FirebaseFirestore.instance.collection('groups').doc(widget.chatId);
+      final mevcut=await dizin.get().timeout(const Duration(seconds:6));
+      final eski=mevcut.data()??<String,dynamic>{};
+      await dizin.set({
+        'chatId':widget.chatId,
+        'name':(v['groupName']??widget.ad).toString(),
+        'description':(eski['description']??'').toString(),
+        'groupPhotoUrl':(v['groupPhotoUrl']??widget.foto).toString(),
+        'members':uyeler,
+        'memberCount':uyeler.length,
+        'ownerId':(eski['ownerId']??owner).toString(),
+        'discoverable':eski['discoverable']!=false,
+        'joinApproval':v['joinApproval']==true,
+        if(!mevcut.exists)'createdAt':FieldValue.serverTimestamp(),
+        'updatedAt':FieldValue.serverTimestamp(),
+      },SetOptions(merge:true)).timeout(const Duration(seconds:8));
+    }catch(_){}
+  }
+
   void _mesajAkisiniYenile(){
     _mesajBeklemeZamanlayici?.cancel();
     _mesajBeklemeBitti=false;
@@ -10307,7 +10339,7 @@ class AyarlarPage extends StatelessWidget {
       _ayar(context,Icons.download_outlined,'İndirme izinleri','Varsayılan paylaşım indirme ayarı'),
     ],
     const Divider(),
-    ListTile(leading:const Icon(Icons.system_update,color:mor),title:const Text('Uygulama güncellemeleri'),subtitle:const Text('V54 • Test build 230'),trailing:const Icon(Icons.build_circle,color:Colors.orange)),
+    ListTile(leading:const Icon(Icons.system_update,color:mor),title:const Text('Uygulama güncellemeleri'),subtitle:const Text('V54 • Test build 231'),trailing:const Icon(Icons.build_circle,color:Colors.orange)),
     ListTile(leading:const Icon(Icons.share,color:mavi),title:const Text('Ngel X’i paylaş'),subtitle:const Text('Uygulama bağlantısını paylaş veya kopyala'),onTap:()async=>SharePlus.instance.share(ShareParams(text:'Ngel X ile dünyanı paylaş ✨\nhttps://ngelx.app'))),
     const Divider(),
     ListTile(leading:const Icon(Icons.logout,color:Colors.red),title:const Text('Çıkış yap',style:TextStyle(color:Colors.red)),onTap:()async{final onay=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(title:const Text('Çıkış yapılsın mı?'),content:const Text('Tekrar giriş yapman gerekecek.'),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('Çıkış yap'))]));if(onay==true){await FirebaseAuth.instance.signOut();if(context.mounted)Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder:(_)=>const GirisPage()),(_)=>false);}})
