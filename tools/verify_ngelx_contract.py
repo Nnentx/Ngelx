@@ -113,6 +113,8 @@ required_group_tokens = [
     "Kimse aramaya katılmadı. İstersen tekrar arayabilirsin.",
     "Sohbete dön",
     "bitisDurumu",
+    "biriKabulEtti",
+    "kimseKatilMadi",
     "Sohbeti sil",
 ]
 for token in required_group_tokens:
