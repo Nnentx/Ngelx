@@ -6010,12 +6010,16 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
       context:context,
       backgroundColor:const Color(0xFFFBF9FF),
       showDragHandle:true,
+      isScrollControlled:true,
       shape:const RoundedRectangleBorder(borderRadius:BorderRadius.vertical(top:Radius.circular(30))),
       builder:(c)=>Theme(
         data:ThemeData.light().copyWith(colorScheme:ColorScheme.fromSeed(seedColor:ngelxGroupGreen)),
-        child:SafeArea(child:Padding(
-          padding:const EdgeInsets.fromLTRB(14,0,14,18),
-          child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
+        child:SafeArea(
+          child:ConstrainedBox(
+            constraints:BoxConstraints(maxHeight:MediaQuery.sizeOf(c).height*.78),
+            child:SingleChildScrollView(
+              padding:const EdgeInsets.fromLTRB(14,0,14,18),
+              child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
             const Text('Mesaj işlemleri',style:TextStyle(color:ngelxPremiumInk,fontSize:19,fontWeight:FontWeight.w900)),
             const SizedBox(height:4),
             const Text('Tepki ver veya mesaj üzerinde işlem yap.',style:TextStyle(color:ngelxPremiumMuted,fontSize:11.5,fontWeight:FontWeight.w600)),
@@ -6071,8 +6075,10 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
                 ),
               ),
             ],
-          ]),
-        )),
+              ]),
+            ),
+          ),
+        ),
       ),
     );
     if(sec==null)return;
@@ -6470,7 +6476,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
                   ? ()async{await Clipboard.setData(ClipboardData(text:locationText));if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Konum metni kopyalandı.')));}
                   : null,
             child:Container(
-              constraints:BoxConstraints(maxWidth:MediaQuery.sizeOf(context).width*.76),
+              constraints:BoxConstraints(maxWidth:MediaQuery.sizeOf(context).width*.72),
               margin:EdgeInsets.only(top:yeniBlok?3:1,bottom:tepkiSayilari.isEmpty?2:0,left:2,right:2),
               padding:EdgeInsets.all((tur=='photo'||tur=='gif')?4:9),
               decoration:BoxDecoration(
@@ -6485,7 +6491,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
                 border:ben?null:Border.all(color:const Color(0xFFECE9F0)),
                 boxShadow:yeniBlok?const [BoxShadow(color:Color(0x0C000000),blurRadius:8,offset:Offset(0,3))]:null,
               ),
-              child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+              child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
                 if(yanit.isNotEmpty)Container(
                   width:double.infinity,margin:const EdgeInsets.only(bottom:7),padding:const EdgeInsets.symmetric(horizontal:9,vertical:7),
                   decoration:BoxDecoration(color:ben?Colors.white.withValues(alpha:.14):Colors.white,borderRadius:BorderRadius.circular(12)),
@@ -6530,6 +6536,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
                   Text(metin.isEmpty?(tur=='gif'?'GIF':'Mesaj'):metin,style:TextStyle(color:yaziRengi,fontSize:14.6,height:1.24,fontWeight:FontWeight.w500)),
                 if(v['editedAt']!=null||saat.isNotEmpty)Align(
                   alignment:Alignment.centerRight,
+                  widthFactor:1,
                   child:Padding(padding:const EdgeInsets.only(top:4),child:Text(
                     [if(v['editedAt']!=null)'düzenlendi',if(saat.isNotEmpty)saat].join(' · '),
                     style:TextStyle(fontSize:9.2,color:ben?Colors.white70:const Color(0xFF8D8795),fontWeight:FontWeight.w600),
