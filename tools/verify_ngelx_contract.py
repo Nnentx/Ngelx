@@ -195,6 +195,8 @@ for token in (
     "'call_join'",
     "'call_leave'",
     "'call_end'",
+    "resource.data.get('formerMembers', []).removeAll([request.auth.uid])",
+    "onlyChanges(['members', 'formerMembers', 'hiddenFor', 'updatedAt'])",
 ):
     if token not in rules:
         errors.append("Firestore grup koruması eksik: " + token)
