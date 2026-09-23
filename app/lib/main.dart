@@ -4935,6 +4935,8 @@ class _MesajPageState extends State<MesajPage> {
       await ref.collection('messages').add({
         'senderId':ben,
         'type':'system',
+        'systemAction':'member_left',
+        'actorUid':ben,
         'text':'Bir üye gruptan ayrıldı.',
         'createdAt':FieldValue.serverTimestamp(),
       });
@@ -5289,6 +5291,8 @@ class _GrubaKatilPageState extends State<GrubaKatilPage>{
       await chat.collection('messages').add({
         'senderId':me,
         'type':'system',
+        'systemAction':'member_joined',
+        'actorUid':me,
         'text':'Yeni bir üye gruba katıldı.',
         'createdAt':FieldValue.serverTimestamp(),
       });
@@ -8568,8 +8572,11 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
           if(baslatan==u.uid)return;
           final ad=u.displayName?.trim().isNotEmpty==true?u.displayName!.trim():'Bir üye';
           await widget.aramaRef.collection('messages').doc('call_join_'+widget.roomName+'_'+u.uid).set({
-            'senderId':'system',
+            'senderId':u.uid,
             'type':'system',
+            'systemAction':'call_join',
+            'actorUid':u.uid,
+            'callVideo':widget.goruntulu,
             'text':ad+(widget.goruntulu?' görüntülü aramaya katıldı.':' sesli aramaya katıldı.'),
             'createdAt':FieldValue.serverTimestamp(),
           },SetOptions(merge:true));
@@ -8683,8 +8690,11 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
             },SetOptions(merge:true));
           }
           await widget.aramaRef.collection('messages').doc('call_end_'+widget.roomName).set({
-            'senderId':'system',
+            'senderId':me,
             'type':'system',
+            'systemAction':'call_end',
+            'actorUid':me,
+            'callVideo':widget.goruntulu,
             'text':kimseKatilMadi?'Arama cevaplanmadı.':'Arama sona erdi.',
             'createdAt':FieldValue.serverTimestamp(),
           },SetOptions(merge:true));
@@ -8695,8 +8705,11 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
           },SetOptions(merge:true));
           final ad=FirebaseAuth.instance.currentUser?.displayName?.trim();
           await widget.aramaRef.collection('messages').doc('call_leave_'+widget.roomName+'_'+me).set({
-            'senderId':'system',
+            'senderId':me,
             'type':'system',
+            'systemAction':'call_leave',
+            'actorUid':me,
+            'callVideo':widget.goruntulu,
             'text':(ad!=null&&ad.isNotEmpty?ad:'Bir üye')+(widget.goruntulu?' görüntülü aramadan ayrıldı.':' sesli aramadan ayrıldı.'),
             'createdAt':FieldValue.serverTimestamp(),
           },SetOptions(merge:true));
@@ -9844,6 +9857,8 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
         await ref.collection('messages').add({
           'senderId':me,
           'type':'system',
+          'systemAction':'member_left',
+          'actorUid':me,
           'text':ad+' gruptan ayrıldı.',
           'createdAt':FieldValue.serverTimestamp(),
         });
@@ -10596,8 +10611,17 @@ class GrupAyarlarPage extends StatelessWidget{
       ],
     ))??false;
     if(!ok)return;
-    await ref.collection('messages').add({'senderId':uid,'type':'system','text':'Bir üye gruptan ayrıldı.','createdAt':FieldValue.serverTimestamp()});
-    await ref.set({'members':FieldValue.arrayRemove([uid]),'admins':FieldValue.arrayRemove([uid]),'updatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
+    try{
+      await ref.collection('messages').add({
+        'senderId':uid,
+        'type':'system',
+        'systemAction':'member_left',
+        'actorUid':uid,
+        'text':'Bir üye gruptan ayrıldı.',
+        'createdAt':FieldValue.serverTimestamp(),
+      });
+    }catch(_){}
+    await ref.set({'members':FieldValue.arrayRemove([uid]),'admins':FieldValue.arrayRemove([uid]),'formerMembers':FieldValue.arrayUnion([uid]),'removedAt_$uid':FieldValue.serverTimestamp(),'updatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
     if(context.mounted)Navigator.popUntil(context,(route)=>route.isFirst);
   }
 
