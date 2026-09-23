@@ -9246,28 +9246,42 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
   ])));
 
   Future<void> _aramaEkraniniKucult()async{
-    if(!grupAramasi||kucultuluyor||!mounted)return;
+    if(kucultuluyor||!mounted)return;
     kucultuluyor=true;
     try{
-      await Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupSohbetPage(
+      if(grupAramasi){
+        await Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupSohbetPage(
+          chatId:widget.aramaRef.id,
+          ad:widget.baslik,
+          foto:widget.foto,
+          aktifAramadanAcildi:true,
+        )));
+        return;
+      }
+      final me=FirebaseAuth.instance.currentUser?.uid;
+      if(me==null)return;
+      final d=await widget.aramaRef.get().timeout(const Duration(seconds:6));
+      final members=List<String>.from(d.data()?['members']??const[]);
+      final diger=members.firstWhere((x)=>x!=me,orElse:()=>'');
+      if(diger.isEmpty||!mounted)return;
+      await Navigator.push(context,MaterialPageRoute(builder:(_)=>SohbetPage(
         chatId:widget.aramaRef.id,
+        digerUid:diger,
         ad:widget.baslik,
         foto:widget.foto,
         aktifAramadanAcildi:true,
       )));
+    }catch(_){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Arama küçültülemedi. Arama devam ediyor.')));
     }finally{
       kucultuluyor=false;
     }
   }
 
   @override Widget build(BuildContext context)=>PopScope(
-    canPop:!grupAramasi,
+    canPop:bitisDurumu!=null,
     onPopInvokedWithResult:(didPop,__){
-      if(grupAramasi){
-        if(!didPop)unawaited(_aramaEkraniniKucult());
-      }else if(didPop){
-        unawaited(bitir(geriDon:false));
-      }
+      if(!didPop&&bitisDurumu==null)unawaited(_aramaEkraniniKucult());
     },
     child:Scaffold(
       backgroundColor:widget.goruntulu?Colors.black:ngelxCallBg,
@@ -11358,7 +11372,7 @@ class _YeniSohbetPageState extends State<YeniSohbetPage>{
   }
 }
 
-class SohbetPage extends StatefulWidget {final String chatId,digerUid,ad,foto;const SohbetPage({super.key,required this.chatId,required this.digerUid,required this.ad,this.foto=''});@override State<SohbetPage> createState()=>_SohbetPageState();}
+class SohbetPage extends StatefulWidget {final String chatId,digerUid,ad,foto;final bool aktifAramadanAcildi;const SohbetPage({super.key,required this.chatId,required this.digerUid,required this.ad,this.foto='',this.aktifAramadanAcildi=false});@override State<SohbetPage> createState()=>_SohbetPageState();}
 class _SohbetPageState extends State<SohbetPage> {
   final mesaj=TextEditingController(),liste=ScrollController();
   final List<Map<String,String>> mentionOnerileri=[];
@@ -12283,6 +12297,48 @@ class _SohbetPageState extends State<SohbetPage> {
       ],
     ),
     body:StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(stream:_chatAkisi,builder:(_,tema){final veri=tema.data?.data()??<String,dynamic>{},ham=veri['theme_$uid'];final arkaPlan=ham is int?Color(ham):Colors.white,arkaPlanUrl=(veri['backgroundUrl_$uid']??'').toString(),hizliEmoji=(veri['quickEmoji_$uid']??'👍').toString(),arkaPlanOpaklik=(veri['backgroundOpacity_$uid'] is num?(veri['backgroundOpacity_$uid'] as num).toDouble():.30).clamp(.05,.85).toDouble(),mesajYaziBoyutu=(veri['messageFontSize_$uid'] is num?(veri['messageFontSize_$uid'] as num).toDouble():16.0).clamp(12.0,22.0).toDouble();return Container(decoration:BoxDecoration(color:arkaPlan,image:arkaPlanUrl.isEmpty?null:DecorationImage(image:CachedNetworkImageProvider(arkaPlanUrl),fit:BoxFit.cover,opacity:arkaPlanOpaklik)),child:Column(children:[
+      if(((veri['callStatus']??'').toString()=='ringing'||(veri['callStatus']??'').toString()=='active')&&(veri['callRoomName']??'').toString().isNotEmpty)
+        InkWell(
+          onTap:()async{
+            if(widget.aktifAramadanAcildi){
+              Navigator.pop(context);
+              return;
+            }
+            final room=(veri['callRoomName']??'').toString();
+            if(room.isEmpty)return;
+            await Navigator.push(context,MaterialPageRoute(builder:(_)=>NgelXAramaPage(
+              roomName:room,
+              baslik:widget.ad,
+              foto:widget.foto,
+              goruntulu:veri['callVideo']==true,
+              aramaRef:FirebaseFirestore.instance.collection('chats').doc(widget.chatId),
+            )));
+          },
+          child:Container(
+            margin:const EdgeInsets.fromLTRB(10,9,10,1),
+            padding:const EdgeInsets.symmetric(horizontal:11,vertical:9),
+            decoration:BoxDecoration(
+              gradient:const LinearGradient(colors:[Color(0xFF211837),Color(0xFF342052)]),
+              borderRadius:BorderRadius.circular(18),
+              border:Border.all(color:Colors.white10),
+              boxShadow:const [BoxShadow(color:Color(0x20000000),blurRadius:14,offset:Offset(0,5))],
+            ),
+            child:Row(children:[
+              Container(
+                width:38,height:38,
+                decoration:const BoxDecoration(shape:BoxShape.circle,gradient:LinearGradient(colors:[Color(0xFF9A6AFF),Color(0xFF7048E8)])),
+                child:Icon(veri['callVideo']==true?Icons.videocam_rounded:Icons.call_rounded,color:Colors.white,size:20),
+              ),
+              const SizedBox(width:10),
+              Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+                Text(veri['callVideo']==true?'Görüntülü arama devam ediyor':'Sesli arama devam ediyor',style:const TextStyle(color:Colors.white,fontSize:11.5,fontWeight:FontWeight.w900)),
+                const SizedBox(height:2),
+                Text(widget.aktifAramadanAcildi?'Aramaya dönmek için dokun':'Aramaya katılmak için dokun',style:const TextStyle(color:Color(0xFFCFC2DC),fontSize:10.5,fontWeight:FontWeight.w600)),
+              ])),
+              const Icon(Icons.open_in_full_rounded,color:Colors.white70,size:19),
+            ]),
+          ),
+        ),
       Expanded(child:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
         stream:_mesajAkisi,
         builder:(_,s){
