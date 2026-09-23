@@ -6804,7 +6804,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
       final tekrar=await Navigator.push<bool>(context,MaterialPageRoute(builder:(_)=>NgelXAramaPage(
         roomName:odaAdi,baslik:grupAdi,foto:widget.foto,goruntulu:goruntulu,aramaRef:chatRef,
       )));
-      if(tekrar==true&&mounted)await grupAramasiBaslat(goruntulu,grupAdi,foto);
+      if(tekrar==true&&mounted)await aramaBaslat(goruntulu);
     }catch(_){
       if(!mounted)return;
       setState(()=>aramaBaslatiliyor=false);
@@ -8986,7 +8986,7 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
       final tekrar=await Navigator.push<bool>(context,MaterialPageRoute(builder:(_)=>NgelXAramaPage(
         roomName:odaAdi,baslik:grupAdi,foto:foto,goruntulu:goruntulu,aramaRef:ref,
       )));
-      if(tekrar==true&&mounted)await aramaBaslat(goruntulu);
+      if(tekrar==true&&mounted)await grupAramasiBaslat(goruntulu,grupAdi,foto);
     }catch(_){
       if(mounted){
         setState(()=>aramaBaslatiliyor=false);
