@@ -208,3 +208,9 @@
 - Mevcut paket için ekranda **v1.0.57 • Yapı 211** görünmesi bekleniyor; sonraki sürümlerde aynı alan CI tarafından otomatik güncellenecek.
 - Yeni grup oluştururken seçilen grup fotoğrafının yüklenmesi için dış 12 saniyelik erken zaman aşımı kaldırılıp 75 saniyeye çıkarıldı; R2 medya servisinin gerçek bağlantı/yükleme süresine izin veriliyor.
 - Grup fotoğrafı yüklemesi yine de başarısız olursa grup oluşturma akışı çökmeyecek ve kullanıcıya fotoğrafın atlandığı açıkça bildirilecek.
+
+### 2026-09-23 grup medya bellek/çökme koruması
+- Grup sohbetinde video gönderimi artık 80 MB'a kadar dosyanın tamamını RAM'e almıyor; dosya medya servisine stream olarak yükleniyor.
+- Grup dosya gönderimi de 30 MB dosyayı `readAsBytes()` ile belleğe kopyalamak yerine diskten stream ediyor.
+- Bu değişiklik düşük/orta RAM'li Android cihazlarda büyük grup videosu veya dosyası gönderirken uygulamanın ağırlaşma/çökme riskini azaltıyor.
+- CI sözleşmesine grup video/dosya akışının tekrar `readAsBytes()` kullanımına dönmesini engelleyen kontrol eklendi.
