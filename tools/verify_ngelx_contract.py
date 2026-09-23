@@ -165,6 +165,11 @@ for token in (
     "Kuruculuğu devret",
     "Önce kuruculuğu devret",
     "Tepki eklenemedi. Tekrar dene.",
+    "onDoubleTap:()=>grupKalpBirak(d)",
+    "action:'member_added'",
+    "Bu seçim gruptaki herkeste aynıdır.",
+    "['👍','❤️','😘','🥰','😂','🔥','👏','🐥']",
+    "'senderId':actor",
 ):
     if token not in app:
         errors.append("Konsolide grup düzeltmesi eksik: " + token)
