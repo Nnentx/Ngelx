@@ -298,15 +298,70 @@ Future<void> showGroupMessageInfo({
   final members = List<String>.from(data['members'] ?? const <String>[]);
   final deliveredIds = <String>[];
   final seenIds = <String>[];
+
   if (created != null) {
     for (final id in members) {
       if (id == currentUid) continue;
       final delivered = data['lastDeliveredAt_' + id];
-      if (delivered is Timestamp && !delivered.toDate().isBefore(created)) deliveredIds.add(id);
+      if (delivered is Timestamp && !delivered.toDate().isBefore(created)) {
+        deliveredIds.add(id);
+      }
       if (data['readReceipts_' + id] == false) continue;
       final read = data['lastReadAt_' + id];
-      if (read is Timestamp && !read.toDate().isBefore(created)) seenIds.add(id);
+      if (read is Timestamp && !read.toDate().isBefore(created)) {
+        seenIds.add(id);
+      }
     }
+  }
+
+  final deliveredOnlyIds = deliveredIds.where((id) => !seenIds.contains(id)).toList();
+
+  String timeText(Object? raw) {
+    if (raw is! Timestamp) return '';
+    final local = raw.toDate().toLocal();
+    final today = DateTime.now();
+    final sameDay = local.year == today.year && local.month == today.month && local.day == today.day;
+    final hh = local.hour.toString().padLeft(2, '0');
+    final mm = local.minute.toString().padLeft(2, '0');
+    if (sameDay) return 'Bugün ' + hh + ':' + mm;
+    final dd = local.day.toString().padLeft(2, '0');
+    final mo = local.month.toString().padLeft(2, '0');
+    return dd + '.' + mo + '.' + local.year.toString() + ' ' + hh + ':' + mm;
+  }
+
+  Widget personRow(String id, {required bool seen}) {
+    final rawTime = data[(seen ? 'lastReadAt_' : 'lastDeliveredAt_') + id];
+    final statusTime = timeText(rawTime);
+    return FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      future: FirebaseFirestore.instance.collection('users').doc(id).get(),
+      builder: (_, snap) {
+        final user = snap.data?.data() ?? <String, dynamic>{};
+        final name = (user['displayName'] ?? user['username'] ?? 'Grup üyesi').toString();
+        final username = (user['username'] ?? '').toString().trim();
+        final photo = (user['photoUrl'] ?? '').toString();
+        return ListTile(
+          dense: true,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+          leading: CircleAvatar(
+            radius: 20,
+            backgroundColor: _groupGreenSoft,
+            backgroundImage: photo.isEmpty ? null : CachedNetworkImageProvider(photo),
+            child: photo.isEmpty ? const Icon(Icons.person_rounded, color: _groupGreen) : null,
+          ),
+          title: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: _ink, fontWeight: FontWeight.w800)),
+          subtitle: Text(
+            [
+              if (username.isNotEmpty) '@' + username,
+              if (statusTime.isNotEmpty) statusTime,
+            ].join(' • '),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: _muted, fontSize: 11),
+          ),
+          trailing: Icon(seen ? Icons.visibility_rounded : Icons.done_all_rounded, color: _groupGreen, size: 21),
+        );
+      },
+    );
   }
 
   if (!context.mounted) return;
@@ -317,62 +372,71 @@ Future<void> showGroupMessageInfo({
     showDragHandle: true,
     shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
     builder: (sheet) => SafeArea(
-      child: ConstrainedBox(
-        constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(sheet).height * .72),
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          const ListTile(
-            leading: CircleAvatar(backgroundColor: _groupGreenSoft, child: Icon(Icons.info_outline_rounded, color: _groupGreen)),
-            title: Text('Mesaj bilgisi', style: TextStyle(fontWeight: FontWeight.w900)),
-            subtitle: Text('Gönderim ve görülme ayrıntıları'),
-          ),
-          const Divider(height: 1),
-          ListTile(
-            leading: const Icon(Icons.check_circle_outline_rounded, color: _groupGreen),
-            title: const Text('Gönderildi', style: TextStyle(fontWeight: FontWeight.w800)),
-            subtitle: Text(created == null
-                ? 'Gönderim zamanı hazırlanıyor'
-                : created.toLocal().toString().substring(0, 16)),
-          ),
-          ListTile(
-            leading: const Icon(Icons.done_all_rounded, color: _groupGreen),
-            title: Text(
-              deliveredIds.isEmpty ? 'Teslim bilgisi bekleniyor' : deliveredIds.length.toString() + ' kişiye teslim edildi',
-              style: const TextStyle(fontWeight: FontWeight.w800),
+      child: SizedBox(
+        height: MediaQuery.sizeOf(sheet).height * .80,
+        child: ListView(
+          padding: const EdgeInsets.only(bottom: 18),
+          children: [
+            const ListTile(
+              leading: CircleAvatar(backgroundColor: _groupGreenSoft, child: Icon(Icons.info_outline_rounded, color: _groupGreen)),
+              title: Text('Mesaj bilgisi', style: TextStyle(color: _ink, fontWeight: FontWeight.w900)),
+              subtitle: Text('Kim gördü, kime teslim edildi', style: TextStyle(color: _muted)),
             ),
-          ),
-          ListTile(
-            leading: const Icon(Icons.visibility_outlined, color: _groupGreen),
-            title: Text(
-              seenIds.isEmpty ? 'Henüz görülmedi' : seenIds.length.toString() + ' kişi gördü',
-              style: const TextStyle(fontWeight: FontWeight.w800),
-            ),
-          ),
-          if (seenIds.isNotEmpty)
-            Flexible(
-              child: ListView.builder(
-                shrinkWrap: true,
-                itemCount: seenIds.length,
-                itemBuilder: (_, i) => FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-                  future: FirebaseFirestore.instance.collection('users').doc(seenIds[i]).get(),
-                  builder: (_, snap) {
-                    final user = snap.data?.data() ?? <String, dynamic>{};
-                    final name = (user['displayName'] ?? user['username'] ?? 'Grup üyesi').toString();
-                    final photo = (user['photoUrl'] ?? '').toString();
-                    return ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: _groupGreenSoft,
-                        backgroundImage: photo.isEmpty ? null : CachedNetworkImageProvider(photo),
-                        child: photo.isEmpty ? const Icon(Icons.person_rounded, color: _groupGreen) : null,
-                      ),
-                      title: Text(name, style: const TextStyle(fontWeight: FontWeight.w700)),
-                      trailing: const Icon(Icons.done_all_rounded, color: _groupGreen),
-                    );
-                  },
-                ),
+            const Divider(height: 1),
+            ListTile(
+              leading: const Icon(Icons.check_circle_outline_rounded, color: _groupGreen),
+              title: const Text('Gönderildi', style: TextStyle(color: _ink, fontWeight: FontWeight.w800)),
+              subtitle: Text(
+                created == null ? 'Gönderim zamanı hazırlanıyor' : timeText(Timestamp.fromDate(created)),
+                style: const TextStyle(color: _muted),
               ),
             ),
-          const SizedBox(height: 10),
-        ]),
+            Container(
+              margin: const EdgeInsets.fromLTRB(14, 4, 14, 10),
+              padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
+              decoration: BoxDecoration(color: _groupGreenSoft, borderRadius: BorderRadius.circular(16)),
+              child: Row(children: [
+                const Icon(Icons.visibility_outlined, color: _groupGreen, size: 20),
+                const SizedBox(width: 8),
+                Expanded(child: Text(
+                  seenIds.isEmpty ? 'Henüz kimse görmedi' : seenIds.length.toString() + ' kişi gördü',
+                  style: const TextStyle(color: _ink, fontWeight: FontWeight.w900),
+                )),
+                const SizedBox(width: 8),
+                const Icon(Icons.done_all_rounded, color: _groupGreen, size: 20),
+                const SizedBox(width: 6),
+                Text(
+                  deliveredOnlyIds.isEmpty ? '0 teslim' : deliveredOnlyIds.length.toString() + ' teslim',
+                  style: const TextStyle(color: _muted, fontSize: 12, fontWeight: FontWeight.w800),
+                ),
+              ]),
+            ),
+            if (seenIds.isNotEmpty) ...[
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 3),
+                child: Text('Görüldü • ' + seenIds.length.toString(), style: const TextStyle(color: _groupGreen, fontSize: 13, fontWeight: FontWeight.w900)),
+              ),
+              ...seenIds.map((id) => personRow(id, seen: true)),
+            ],
+            if (deliveredOnlyIds.isNotEmpty) ...[
+              const Divider(height: 24, indent: 16, endIndent: 16),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 2, 16, 3),
+                child: Text('Teslim edildi • ' + deliveredOnlyIds.length.toString(), style: const TextStyle(color: _groupGreen, fontSize: 13, fontWeight: FontWeight.w900)),
+              ),
+              ...deliveredOnlyIds.map((id) => personRow(id, seen: false)),
+            ],
+            if (seenIds.isEmpty && deliveredOnlyIds.isEmpty)
+              const Padding(
+                padding: EdgeInsets.fromLTRB(18, 18, 18, 6),
+                child: Text(
+                  'Teslim ve görülme bilgileri geldikçe burada kişi bazında görünecek.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: _muted, fontSize: 12, height: 1.35),
+                ),
+              ),
+          ],
+        ),
       ),
     ),
   );
