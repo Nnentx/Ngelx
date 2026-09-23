@@ -6877,7 +6877,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
       shape:const RoundedRectangleBorder(borderRadius:BorderRadius.vertical(top:Radius.circular(28))),
       builder:(sheet)=>SafeArea(
         child:SizedBox(
-          height:(MediaQuery.sizeOf(sheet).height*.62).clamp(280.0,560.0),
+          height:(MediaQuery.sizeOf(sheet).height*.62).clamp(280.0,560.0).toDouble(),
           child:Column(children:[
             Padding(
               padding:const EdgeInsets.fromLTRB(18,2,12,10),
