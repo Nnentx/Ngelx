@@ -6337,7 +6337,26 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
           ],
         ),
       )??false;
-      if(ok)await d.reference.delete();
+      if(ok){
+        final eskiMedia=(v['mediaUrl']??'').toString();
+        final eskiAudio=(v['audioUrl']??'').toString();
+        await d.reference.set({
+          'deletedForEveryone':true,
+          'deletedAt':FieldValue.serverTimestamp(),
+          'deletedBy':uid,
+          'text':'',
+          'mediaUrl':'',
+          'audioUrl':'',
+          'fileUrl':'',
+          'fileName':'',
+          'reactions':<String,dynamic>{},
+          'pinned':false,
+          'pinnedAt':null,
+          'pinnedBy':null,
+        },SetOptions(merge:true));
+        if(eskiMedia.isNotEmpty)unawaited(ngelxMedyaSil(eskiMedia).catchError((_){ }));
+        if(eskiAudio.isNotEmpty)unawaited(ngelxMedyaSil(eskiAudio).catchError((_){ }));
+      }
     }else if(sec=='report'){
       await sikayetEt(context,hedefTuru:'grup_mesaji',hedefId:'${widget.chatId}/${d.id}',hedefUid:v['senderId']?.toString());
     }else if(sec=='edit'){
@@ -6659,13 +6678,58 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
     return t.difference(pt).inMinutes.abs()>=5;
   }
 
+  bool _sadeceEmojiMesaj(String metin){
+    final t=metin.trim();
+    if(t.isEmpty||t.runes.length>10)return false;
+    if(t.contains('@'))return false;
+    return !RegExp(r'[A-Za-z0-9ÇĞİÖŞÜçğıöşü]').hasMatch(t);
+  }
+
+  Widget _grupMetinWidget(String metin,{required bool benim,required bool sadeceEmoji}){
+    if(sadeceEmoji)return Text(metin,style:const TextStyle(fontSize:36,height:1.12));
+    final re=RegExp(r'(@[^\s]+)');
+    final eslesmeler=re.allMatches(metin).toList();
+    if(eslesmeler.isEmpty)return Text(metin,style:TextStyle(color:benim?Colors.white:const Color(0xFF211B2C),fontSize:14.6,height:1.24,fontWeight:FontWeight.w500));
+    final spans=<TextSpan>[];
+    var son=0;
+    for(final m in eslesmeler){
+      if(m.start>son)spans.add(TextSpan(text:metin.substring(son,m.start)));
+      spans.add(TextSpan(
+        text:metin.substring(m.start,m.end),
+        style:TextStyle(color:benim?const Color(0xFFE0FFE9):ngelxGroupGreen,fontWeight:FontWeight.w900),
+      ));
+      son=m.end;
+    }
+    if(son<metin.length)spans.add(TextSpan(text:metin.substring(son)));
+    return RichText(text:TextSpan(style:TextStyle(color:benim?Colors.white:const Color(0xFF211B2C),fontSize:14.6,height:1.24,fontWeight:FontWeight.w500),children:spans));
+  }
+
   Widget mesajKarti(QueryDocumentSnapshot<Map<String,dynamic>> d,{QueryDocumentSnapshot<Map<String,dynamic>>? onceki,Map<String,dynamic>? grupVerisi,bool sonMesaj=false}){
     final v=d.data(),gonderen=(v['senderId']??v['fromUid']??v['uid']??'').toString(),ben=gonderen==uid;
     final metin=(v['text']??v['message']??v['content']??'').toString(),tur=(v['type']??'text').toString(),media=(v['mediaUrl']??'').toString(),audio=(v['audioUrl']??'').toString();
+    final silinmis=v['deletedForEveryone']==true;
+    final sadeceEmoji=tur=='text'&&!silinmis&&_sadeceEmojiMesaj(metin);
     final fileUrl=(v['fileUrl']??'').toString(),fileName=(v['fileName']??'Dosya').toString(),locationText=(v['locationText']??metin).toString();
     final saat=mesajSaati(v['createdAt']??v['clientCreatedAt']),yanit=(v['replyToText']??'').toString();
     final hamTepkiler=v['reactions'],tepkiler=hamTepkiler is Map?Map<String,dynamic>.from(hamTepkiler):<String,dynamic>{};
     if(tur=='poll')return const SizedBox.shrink();
+    if(silinmis)return Align(
+      alignment:ben?Alignment.centerRight:Alignment.centerLeft,
+      child:Container(
+        margin:const EdgeInsets.symmetric(vertical:3,horizontal:2),
+        padding:const EdgeInsets.symmetric(horizontal:12,vertical:8),
+        decoration:BoxDecoration(
+          color:const Color(0xFFF2F3F4),
+          borderRadius:BorderRadius.circular(18),
+          border:Border.all(color:const Color(0xFFE5E7E9)),
+        ),
+        child:const Row(mainAxisSize:MainAxisSize.min,children:[
+          Icon(Icons.block_rounded,color:Color(0xFF8A8D91),size:15),
+          SizedBox(width:6),
+          Text('Bu mesaj silindi',style:TextStyle(color:Color(0xFF777B80),fontSize:12,fontStyle:FontStyle.italic,fontWeight:FontWeight.w600)),
+        ]),
+      ),
+    );
     if(tur=='system')return Center(child:Container(
       margin:const EdgeInsets.symmetric(vertical:7),
       padding:const EdgeInsets.symmetric(horizontal:12,vertical:6),
@@ -6785,18 +6849,18 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
             child:Container(
               constraints:BoxConstraints(maxWidth:MediaQuery.sizeOf(context).width*.72),
               margin:EdgeInsets.only(top:yeniBlok?3:1,bottom:tepkiSayilari.isEmpty?2:0,left:2,right:2),
-              padding:EdgeInsets.all((tur=='photo'||tur=='gif')?4:9),
+              padding:sadeceEmoji?const EdgeInsets.symmetric(horizontal:3,vertical:2):EdgeInsets.all((tur=='photo'||tur=='gif')?4:9),
               decoration:BoxDecoration(
-                gradient:ben?const LinearGradient(colors:[Color(0xFF14AE52),Color(0xFF078B3B)],begin:Alignment.topLeft,end:Alignment.bottomRight):null,
-                color:ben?null:const Color(0xFFDDF3E4).withValues(alpha:.98),
+                gradient:sadeceEmoji?null:(ben?const LinearGradient(colors:[Color(0xFF14AE52),Color(0xFF078B3B)],begin:Alignment.topLeft,end:Alignment.bottomRight):null),
+                color:sadeceEmoji?Colors.transparent:(ben?null:const Color(0xFFDDF3E4).withValues(alpha:.98)),
                 borderRadius:BorderRadius.only(
                   topLeft:Radius.circular(yeniBlok?18:12),
                   topRight:Radius.circular(yeniBlok?18:12),
                   bottomLeft:Radius.circular(ben?18:6),
                   bottomRight:Radius.circular(ben?6:18),
                 ),
-                border:ben?null:Border.all(color:const Color(0xFFCBE7D4)),
-                boxShadow:yeniBlok?const [BoxShadow(color:Color(0x0C000000),blurRadius:8,offset:Offset(0,3))]:null,
+                border:sadeceEmoji?null:(ben?null:Border.all(color:const Color(0xFFCBE7D4))),
+                boxShadow:sadeceEmoji?null:(yeniBlok?const [BoxShadow(color:Color(0x0C000000),blurRadius:8,offset:Offset(0,3))]:null),
               ),
               child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
                 if(yanit.isNotEmpty)Container(
@@ -6840,8 +6904,8 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
                     ])),
                   ])
                 else
-                  Text(metin.isEmpty?(tur=='gif'?'GIF':'Mesaj'):metin,style:TextStyle(color:yaziRengi,fontSize:14.6,height:1.24,fontWeight:FontWeight.w500)),
-                if(v['editedAt']!=null||saat.isNotEmpty)Align(
+                  _grupMetinWidget(metin.isEmpty?(tur=='gif'?'GIF':'Mesaj'):metin,benim:ben,sadeceEmoji:sadeceEmoji),
+                if(!sadeceEmoji&&(v['editedAt']!=null||saat.isNotEmpty))Align(
                   alignment:Alignment.centerRight,
                   widthFactor:1,
                   child:Padding(padding:const EdgeInsets.only(top:4),child:Text(
