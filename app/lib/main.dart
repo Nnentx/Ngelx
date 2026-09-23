@@ -14499,15 +14499,15 @@ class _HikayeGosterPageState extends State<HikayeGosterPage> with SingleTickerPr
     String baslangic='Az önce';
     if(olusma!=null){
       final fark=DateTime.now().difference(olusma);
-      if(fark.inMinutes<60)baslangic='${{fark.inMinutes.clamp(1,59)} dk önce';
-      else if(fark.inHours<24)baslangic='${{fark.inHours} sa önce';
-      else baslangic='${{fark.inDays} gün önce';
+      if(fark.inMinutes<60)baslangic='${fark.inMinutes.clamp(1,59)} dk önce';
+      else if(fark.inHours<24)baslangic='${fark.inHours} sa önce';
+      else baslangic='${fark.inDays} gün önce';
     }
     if(bitis==null)return baslangic;
     final kalan=bitis.difference(DateTime.now());
     if(kalan.isNegative)return '$baslangic • Süresi doldu';
-    if(kalan.inHours>=1)return '$baslangic • ${{kalan.inHours} sa kaldı';
-    return '$baslangic • ${{kalan.inMinutes.clamp(1,59)} dk kaldı';
+    if(kalan.inHours>=1)return '$baslangic • ${kalan.inHours} sa kaldı';
+    return '$baslangic • ${kalan.inMinutes.clamp(1,59)} dk kaldı';
   }
 
   Future<void> _yanitGonder(String ham,{bool tepki=false})async{
