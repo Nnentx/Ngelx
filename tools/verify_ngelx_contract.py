@@ -107,6 +107,8 @@ required_group_tokens = [
     "@herkes",
     "@sessiz",
     "Mesaj seçenekleri",
+    "Daha fazla tepki",
+    "reactionMore",
     "Sohbeti sil",
 ]
 for token in required_group_tokens:
