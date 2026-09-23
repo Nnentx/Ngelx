@@ -9441,6 +9441,9 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
   }
 
   Future<void> fotografDuzenle()async{
+    final fotoBelgesi=await ref.get();
+    final mevcutFoto=(fotoBelgesi.data()?['groupPhotoUrl']??'').toString();
+    if(!mounted)return;
     final secim=await showModalBottomSheet<String>(
       context:context,
       backgroundColor:Colors.white,
@@ -9463,20 +9466,22 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
                 _fotoSecenek(c,Icons.photo_library_rounded,'Galeriden seç','Telefondan görsel seç','gallery'),
               ]),
             ),
-            const SizedBox(height:10),
-            InkWell(
-              onTap:()=>Navigator.pop(c,'remove'),
-              borderRadius:BorderRadius.circular(18),
-              child:Container(
-                width:double.infinity,padding:const EdgeInsets.symmetric(horizontal:14,vertical:14),
-                decoration:BoxDecoration(color:const Color(0xFFFFEFF1),borderRadius:BorderRadius.circular(18),border:Border.all(color:const Color(0xFFFFD9DE))),
-                child:const Row(children:[
-                  Icon(Icons.delete_outline_rounded,color:Color(0xFFE13F51)),
-                  SizedBox(width:12),
-                  Text('Mevcut fotoğrafı kaldır',style:TextStyle(color:Color(0xFFE13F51),fontWeight:FontWeight.w900)),
-                ]),
+            if(mevcutFoto.isNotEmpty)...[
+              const SizedBox(height:10),
+              InkWell(
+                onTap:()=>Navigator.pop(c,'remove'),
+                borderRadius:BorderRadius.circular(18),
+                child:Container(
+                  width:double.infinity,padding:const EdgeInsets.symmetric(horizontal:14,vertical:14),
+                  decoration:BoxDecoration(color:const Color(0xFFFFEFF1),borderRadius:BorderRadius.circular(18),border:Border.all(color:const Color(0xFFFFD9DE))),
+                  child:const Row(children:[
+                    Icon(Icons.delete_outline_rounded,color:Color(0xFFE13F51)),
+                    SizedBox(width:12),
+                    Text('Mevcut fotoğrafı kaldır',style:TextStyle(color:Color(0xFFE13F51),fontWeight:FontWeight.w900)),
+                  ]),
+                ),
               ),
-            ),
+            ],
           ]),
         )),
       ),
@@ -9486,8 +9491,7 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
     if(!mounted)return;
 
     try{
-      final mevcut=await ref.get();
-      final eski=(mevcut.data()?['groupPhotoUrl']??'').toString();
+      final eski=mevcutFoto;
       if(secim=='remove'){
         await ref.update({'groupPhotoUrl':'','updatedAt':FieldValue.serverTimestamp()});
         if(eski.isNotEmpty){
@@ -9527,6 +9531,11 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
   );
 
   Future<void> uyeIslemi(String id,String isim,bool admin)async{
+    final grup=await ref.get();
+    if((grup.data()?['createdBy']??'').toString()==id){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Grup kurucusu gruptan çıkarılamaz veya yöneticilikten düşürülemez.')));
+      return;
+    }
     final sec=await showModalBottomSheet<String>(
       context:context,
       backgroundColor:Colors.white,
@@ -9716,14 +9725,55 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
       ),
     )??false;
     if(!onay||secilen.isEmpty)return;
-    await ref.update({'members':FieldValue.arrayUnion(secilen.toList()),'hiddenFor':FieldValue.arrayRemove(secilen.toList()),'updatedAt':FieldValue.serverTimestamp()});
+    final eklenenAdlar=adaylar.where((d)=>secilen.contains(d.id)).map((d){
+      final v=d.data()??<String,dynamic>{};
+      return (v['displayName']??v['username']??'Bir üye').toString();
+    }).toList();
+    final pv=p.data()??<String,dynamic>{};
+    final ekleyen=(pv['displayName']??pv['username']??'Bir yönetici').toString();
+    await ref.update({
+      'members':FieldValue.arrayUnion(secilen.toList()),
+      'formerMembers':FieldValue.arrayRemove(secilen.toList()),
+      'hiddenFor':FieldValue.arrayRemove(secilen.toList()),
+      'updatedAt':FieldValue.serverTimestamp(),
+    });
     _uyeProfilCache.clear();
     await ngelxGrupDavetMetaSenkronla(ref);
-    await sistemMesaji(secilen.length.toString()+' yeni üye gruba eklendi.');
+    final olay=eklenenAdlar.length==1
+      ?ekleyen+', '+eklenenAdlar.first+' adlı üyeyi gruba ekledi.'
+      :eklenenAdlar.length<=4
+        ?ekleyen+', '+eklenenAdlar.join(', ')+' adlı üyeleri gruba ekledi.'
+        :ekleyen+' '+eklenenAdlar.length.toString()+' kişiyi gruba ekledi.';
+    await sistemMesaji(olay);
+    final grupAdi=(gv['groupName']??'gruba').toString();
+    for(final id in secilen){
+      unawaited(uygulamaBildirimiGonder(toUid:id,fromUid:me,tur:'message',metin:ekleyen+' seni '+grupAdi+' grubuna ekledi',belgeId:widget.chatId).catchError((_){ }));
+    }
   }
   Future<void> ayril(List<String> uyeler,List<String> admins)async{
     final me=ben;
     if(me==null)return;
+    final grupBelgesi=await ref.get();
+    final grupVerisi=grupBelgesi.data()??<String,dynamic>{};
+    final kurucu=(grupVerisi['createdBy']??'').toString();
+    if(kurucu==me&&uyeler.length>1){
+      final git=await showDialog<bool>(
+        context:context,
+        builder:(c)=>AlertDialog(
+          shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(28)),
+          backgroundColor:Colors.white,surfaceTintColor:Colors.white,
+          icon:const Icon(Icons.workspace_premium_rounded,color:ngelxGroupGreen,size:38),
+          title:const Text('Önce kuruculuğu devret',textAlign:TextAlign.center,style:TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w900)),
+          content:const Text('Grup sahipsiz kalmasın. Ayrılmadan önce kuruculuğu başka bir üyeye devretmelisin.',textAlign:TextAlign.center,style:TextStyle(color:ngelxPremiumMuted,height:1.35)),
+          actions:[
+            TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),
+            FilledButton(style:FilledButton.styleFrom(backgroundColor:ngelxGroupGreen),onPressed:()=>Navigator.pop(c,true),child:const Text('Üyelere git')),
+          ],
+        ),
+      )??false;
+      if(git&&mounted)await Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupUyeleriPage(chatId:widget.chatId)));
+      return;
+    }
     if(admins.length==1&&admins.contains(me)&&uyeler.length>1){
       await showDialog<void>(
         context:context,
@@ -9757,13 +9807,22 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
     if(sonKisi){
       await ref.set({'members':FieldValue.arrayRemove([me]),'admins':FieldValue.arrayRemove([me]),'groupDeleted':true,'deletedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
     }else{
+      final p=await FirebaseFirestore.instance.collection('users').doc(me).get();
+      final pv=p.data()??<String,dynamic>{};
+      final ad=(pv['displayName']??pv['username']??'Bir üye').toString();
       await ref.collection('messages').add({
-        'senderId':me,
+        'senderId':'system',
         'type':'system',
-        'text':'Bir üye gruptan ayrıldı.',
+        'text':ad+' gruptan ayrıldı.',
         'createdAt':FieldValue.serverTimestamp(),
       });
-      await ref.update({'members':FieldValue.arrayRemove([me]),'admins':FieldValue.arrayRemove([me]),'updatedAt':FieldValue.serverTimestamp()});
+      await ref.update({
+        'members':FieldValue.arrayRemove([me]),
+        'admins':FieldValue.arrayRemove([me]),
+        'formerMembers':FieldValue.arrayUnion([me]),
+        'removedAt_$me':FieldValue.serverTimestamp(),
+        'updatedAt':FieldValue.serverTimestamp(),
+      });
     }
     if(mounted)Navigator.popUntil(context,(r)=>r.isFirst);
   }
@@ -10008,8 +10067,6 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
                     _grupSatir(Icons.notes_rounded,'Grup açıklamasını düzenle','Grubun amacını ve bilgisini güncelle',()=>aciklamaDuzenle((v['groupDescription']??'').toString())),
                     _grupAyirici(),
                   ],
-                  _grupSatir(Icons.groups_rounded,'Üyeleri yönet','Ara, rol ver veya gruptan çıkar',()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupUyeleriPage(chatId:widget.chatId)))),
-                  _grupAyirici(),
                   _grupSatir(Icons.link_rounded,'Davet bağlantısı','Bağlantıyı paylaş veya yenile',()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupDavetPage(chatId:widget.chatId)))),
                   if(yonetici)...[
                     _grupAyirici(),
