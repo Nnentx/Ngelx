@@ -235,3 +235,9 @@
 - `Herkes`, `Takip ettiklerim`, `Arkadaşlar`, `Kimse` seçenekleri profil üzerinden yeni sohbet açarken uygulanıyor; izin yoksa boş/donmuş ekran yerine açıklayıcı uyarı gösteriliyor.
 - `Takip ettiklerim` seçeneğinde hedef hesabın gerçekten mesaj gönderen kullanıcıyı takip edip etmediği, `Arkadaşlar` seçeneğinde karşılıklı arkadaş kaydı kontrol ediliyor.
 - Bu davranışın yanlışlıkla tekrar kaldırılmaması için CI sözleşmesine mesaj gizliliği kontrolü eklendi.
+
+### 2026-09-23 yeni sohbet — mesaj gizliliği
+- Gelen Kutusu > Yeni sohbet kişi seçicisinde de hedef hesabın `messagePermission` ayarı uygulanıyor.
+- Hedef yalnızca arkadaşlarından veya kendi takip ettiği hesaplardan mesaj kabul ediyorsa yeni sohbet açılmadan önce ilişki kontrol ediliyor.
+- Daha önce zaten var olan bir sohbet varsa kullanıcı mevcut konuşmasına erişebiliyor; gizlilik kontrolü yeni konuşma oluşturmayı sınırlandırıyor.
+- Yeni sohbet ekranının başlık, arama ve boş durum metinleri de uygulama diline bağlandı.
