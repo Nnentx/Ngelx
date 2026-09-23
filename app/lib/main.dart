@@ -5461,6 +5461,8 @@ class _GrupOlusturPageState extends State<GrupOlusturPage>{
         'admins':[u.uid],
         'moderators':<String>[],
         'createdBy':u.uid,
+        'formerMembers':<String>[],
+        'quickEmoji':'👍',
         'createdAt':FieldValue.serverTimestamp(),
         'updatedAt':FieldValue.serverTimestamp(),
         'lastMessage':'Grup oluşturuldu',
@@ -5700,7 +5702,12 @@ class _GrupOlusturPageState extends State<GrupOlusturPage>{
 
 }
 
-class GrupSohbetPage extends StatefulWidget{final String chatId,ad,foto;const GrupSohbetPage({super.key,required this.chatId,required this.ad,this.foto=''});@override State<GrupSohbetPage> createState()=>_GrupSohbetPageState();}
+class GrupSohbetPage extends StatefulWidget{
+  final String chatId,ad,foto;
+  final bool aktifAramadanAcildi;
+  const GrupSohbetPage({super.key,required this.chatId,required this.ad,this.foto='',this.aktifAramadanAcildi=false});
+  @override State<GrupSohbetPage> createState()=>_GrupSohbetPageState();
+}
 class _GrupSohbetPageState extends State<GrupSohbetPage>{
   final mesaj=TextEditingController(),liste=ScrollController();
   final rec.AudioRecorder _grupSesKaydedici=rec.AudioRecorder();
@@ -5970,8 +5977,8 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
         onProgress:(sent,total)=>_medyaIlerlemeGuncelle('Video yükleniyor',sent,total),
       ).timeout(const Duration(seconds:120));
       await payloadGonder({'type':'video','mediaUrl':url},'🎥 Video');
-    }catch(e){
-      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Video gönderilemedi: $e')));
+    }catch(_){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Video gönderilemedi. Tekrar dene.')));
     }finally{
       _medyaIlerlemeBitir();
     }
@@ -5995,8 +6002,8 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
         onProgress:(sent,total)=>_medyaIlerlemeGuncelle('Dosya yükleniyor',sent,total),
       ).timeout(const Duration(seconds:90));
       await payloadGonder({'type':'file','fileUrl':url,'fileName':ad,'fileSize':boyut},'📎 '+ad);
-    }catch(e){
-      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Dosya gönderilemedi: $e')));
+    }catch(_){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Dosya gönderilemedi. Tekrar dene.')));
     }finally{
       _medyaIlerlemeBitir();
     }
@@ -6043,8 +6050,9 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
       ),
     );
     final metin=sonuc?.trim()??'';
+    await ngelxOverlayKapanisiniBekle();
     c.dispose();
-    if(metin.isEmpty)return;
+    if(metin.isEmpty||!mounted)return;
     await payloadGonder({'type':'location','text':metin,'locationText':metin},'📍 '+metin);
   }
 
@@ -6305,9 +6313,19 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
   Future<void> grupKalpBirak(QueryDocumentSnapshot<Map<String,dynamic>> d)async{
     final ben=uid;if(ben==null)return;
     try{
-      await d.reference.set({'reactions.$ben':'❤️'},SetOptions(merge:true));
+      final grup=await chatRef.get();
+      final gv=grup.data()??<String,dynamic>{};
+      if(!List<String>.from(gv['members']??const[]).contains(ben))return;
+      final emoji=(gv['quickEmoji']??gv['quickEmoji_$ben']??'👍').toString();
+      final ham=d.data()['reactions'];
+      final mevcut=ham is Map?(ham[ben]??'').toString():'';
+      await d.reference.update({'reactions.$ben':mevcut==emoji?FieldValue.delete():emoji});
+      HapticFeedback.selectionClick();
     }catch(_){
-      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('❤️ tepki eklenemedi.')));
+      if(mounted){
+        ScaffoldMessenger.of(context).removeCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Tepki eklenemedi. Tekrar dene.')));
+      }
     }
   }
 
@@ -6446,7 +6464,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
     await ngelxOverlayKapanisiniBekle();
     if(!mounted)return;
     if(sec.startsWith('reaction:')){
-      await d.reference.set({'reactions.${uid!}':sec.substring(9)},SetOptions(merge:true));
+      await d.reference.update({'reactions.${uid!}':sec.substring(9)});
     }else if(sec=='reactionMore'){
       final tepki=await showModalBottomSheet<String>(
         context:context,
@@ -6477,7 +6495,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
           ),
         ),
       );
-      if(tepki!=null&&tepki.isNotEmpty)await d.reference.set({'reactions.${uid!}':tepki},SetOptions(merge:true));
+      if(tepki!=null&&tepki.isNotEmpty)await d.reference.update({'reactions.${uid!}':tepki});
     }else if(sec=='copy'){
       await Clipboard.setData(ClipboardData(text:metin));
     }else if(sec=='reply'){
@@ -6566,12 +6584,13 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
   Future<void> ekMenusu()async{
     final secim=await showModalBottomSheet<String>(
       context:context,
+      isScrollControlled:true,
       backgroundColor:const Color(0xFFFBF9FF),
       showDragHandle:true,
       shape:const RoundedRectangleBorder(borderRadius:BorderRadius.vertical(top:Radius.circular(30))),
       builder:(c)=>Theme(
         data:ThemeData.light().copyWith(colorScheme:ColorScheme.fromSeed(seedColor:ngelxGroupGreen)),
-        child:SafeArea(child:Padding(
+        child:SafeArea(child:SingleChildScrollView(child:Padding(
           padding:const EdgeInsets.fromLTRB(16,0,16,22),
           child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
             const Text('Gönder',style:TextStyle(color:ngelxPremiumInk,fontSize:20,fontWeight:FontWeight.w900)),
@@ -6602,7 +6621,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
               const Expanded(child:SizedBox()),
             ]),
           ]),
-        )),
+        ))),
       ),
     );
     if(!mounted||secim==null)return;
@@ -6867,23 +6886,51 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
     return !RegExp(r'[A-Za-z0-9ÇĞİÖŞÜçğıöşü]').hasMatch(t);
   }
 
+  Future<void> _mentionProfiliAc(String etiket)async{
+    final temiz=etiket.replaceFirst('@','').replaceAll(RegExp(r'[^A-Za-z0-9_ÇĞİÖŞÜçğıöşü.]'), '');
+    if(temiz.isEmpty||temiz.toLowerCase()=='herkes'||temiz.toLowerCase()=='sessiz')return;
+    try{
+      final q=await FirebaseFirestore.instance.collection('users').where('username',isEqualTo:temiz).limit(1).get();
+      if(!mounted)return;
+      if(q.docs.isEmpty){
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Kullanıcı bulunamadı.')));
+        return;
+      }
+      await Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciProfilPage(uid:q.docs.first.id)));
+    }catch(_){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Profil açılamadı.')));
+    }
+  }
+
   Widget _grupMetinWidget(String metin,{required bool benim,required bool sadeceEmoji}){
     if(sadeceEmoji)return Text(metin,style:const TextStyle(fontSize:36,height:1.12));
     final re=RegExp(r'(@[^\s]+)');
     final eslesmeler=re.allMatches(metin).toList();
-    if(eslesmeler.isEmpty)return Text(metin,style:TextStyle(color:benim?Colors.white:const Color(0xFF211B2C),fontSize:14.6,height:1.24,fontWeight:FontWeight.w500));
-    final spans=<TextSpan>[];
+    final temel=TextStyle(color:benim?Colors.white:const Color(0xFF211B2C),fontSize:14.6,height:1.24,fontWeight:FontWeight.w500);
+    if(eslesmeler.isEmpty)return Text(metin,style:temel);
+    final spans=<InlineSpan>[];
     var son=0;
     for(final m in eslesmeler){
-      if(m.start>son)spans.add(TextSpan(text:metin.substring(son,m.start)));
-      spans.add(TextSpan(
-        text:metin.substring(m.start,m.end),
-        style:TextStyle(color:benim?const Color(0xFFE0FFE9):ngelxGroupGreen,fontWeight:FontWeight.w900),
+      if(m.start>son)spans.add(TextSpan(text:metin.substring(son,m.start),style:temel));
+      final etiket=metin.substring(m.start,m.end);
+      final ozel=etiket.toLowerCase().startsWith('@herkes')||etiket.toLowerCase().startsWith('@sessiz');
+      spans.add(WidgetSpan(
+        alignment:PlaceholderAlignment.middle,
+        child:GestureDetector(
+          behavior:HitTestBehavior.opaque,
+          onTap:ozel?null:()=>_mentionProfiliAc(etiket),
+          child:Text(etiket,style:temel.copyWith(
+            color:benim?const Color(0xFFE0FFE9):const Color(0xFF087D37),
+            fontWeight:FontWeight.w900,
+            decoration:ozel?TextDecoration.none:TextDecoration.underline,
+            decorationColor:benim?const Color(0xFFE0FFE9):const Color(0xFF087D37),
+          )),
+        ),
       ));
       son=m.end;
     }
-    if(son<metin.length)spans.add(TextSpan(text:metin.substring(son)));
-    return RichText(text:TextSpan(style:TextStyle(color:benim?Colors.white:const Color(0xFF211B2C),fontSize:14.6,height:1.24,fontWeight:FontWeight.w500),children:spans));
+    if(son<metin.length)spans.add(TextSpan(text:metin.substring(son),style:temel));
+    return RichText(text:TextSpan(children:spans));
   }
 
   Future<void> grupTepkiDetayi(Map<String,dynamic> tepkiler)async{
@@ -7403,7 +7450,12 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
         builder:(_,tema){
           final tv=tema.data?.data()??<String,dynamic>{},
               arkaPlanUrl=(tv['backgroundUrl_$uid']??'').toString(),
-              hizliEmoji=(tv['quickEmoji_$uid']??'👍').toString();
+              hizliEmoji=(tv['quickEmoji']??tv['quickEmoji_$uid']??'👍').toString();
+          final uyeMi=List<String>.from(tv['members']??const[]).contains(uid);
+          final cikisZamani=tv['removedAt_$uid'];
+          final mesajAkisi=(!uyeMi&&cikisZamani is Timestamp)
+            ?chatRef.collection('messages').where('createdAt',isLessThanOrEqualTo:cikisZamani).orderBy('createdAt').limitToLast(100).snapshots()
+            :_mesajAkisi;
           _typingGostergesiAcik=tv['typingIndicator_$uid']!=false;
           final opaklik=(tv['backgroundOpacity_$uid'] is num?(tv['backgroundOpacity_$uid'] as num).toDouble():.26).clamp(.10,.55).toDouble();
           return Container(
@@ -7412,9 +7464,9 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
               image:arkaPlanUrl.isEmpty?null:DecorationImage(image:CachedNetworkImageProvider(arkaPlanUrl),fit:BoxFit.cover,opacity:opaklik),
             ),
             child:Column(children:[
-              if(((tv['callStatus']??'').toString()=='ringing'||(tv['callStatus']??'').toString()=='active')&&(tv['callRoomName']??'').toString().isNotEmpty)
+              if(uyeMi&&((tv['callStatus']??'').toString()=='ringing'||(tv['callStatus']??'').toString()=='active')&&(tv['callRoomName']??'').toString().isNotEmpty)
                 InkWell(
-                  onTap:()=>aktifGrupAramasinaKatil(tv),
+                  onTap:()=>widget.aktifAramadanAcildi?Navigator.pop(context):aktifGrupAramasinaKatil(tv),
                   child:Container(
                     margin:const EdgeInsets.fromLTRB(10,9,10,1),
                     padding:const EdgeInsets.symmetric(horizontal:11,vertical:9),
@@ -7508,7 +7560,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
                 },
               ),
               Expanded(child:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
-                stream:_mesajAkisi,
+                stream:mesajAkisi,
                 builder:(_,snap){
                   if(snap.hasError)return Center(child:OutlinedButton.icon(onPressed:(){setState(()=>_mesajAkisiniYenile());},icon:const Icon(Icons.refresh),label:const Text('Yeniden dene')));
                   final docs=<QueryDocumentSnapshot<Map<String,dynamic>>>[...?snap.data?.docs].where((d)=>(d.data()['type']??'').toString()!='poll').toList()
@@ -7589,7 +7641,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
               ),
               if(mentionOnerileri.isNotEmpty)Container(
                 margin:const EdgeInsets.fromLTRB(8,0,8,6),
-                constraints:BoxConstraints(maxHeight:MediaQuery.sizeOf(context).height*.46),
+                constraints:BoxConstraints(maxHeight:(MediaQuery.sizeOf(context).height-MediaQuery.viewInsetsOf(context).bottom-190).clamp(150.0,360.0).toDouble()),
                 decoration:BoxDecoration(
                   color:Colors.white,
                   borderRadius:BorderRadius.circular(22),
@@ -7619,11 +7671,11 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
                               backgroundImage:foto.isEmpty?null:CachedNetworkImageProvider(foto),
                               child:foto.isEmpty?const Icon(Icons.person_rounded,color:ngelxGroupGreen):null,
                             ),
-                        title:Text(baslik,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Color(0xFF202124),fontSize:15.5,fontWeight:FontWeight.w800)),
+                        title:Text(baslik,maxLines:1,overflow:TextOverflow.ellipsis,style:TextStyle(color:ozel?const Color(0xFF111512):const Color(0xFF202124),fontSize:15.5,fontWeight:ozel?FontWeight.w900:FontWeight.w800)),
                         subtitle:Text(
                           ozel?(u['subtitle']??''):'@'+(u['username']??''),
                           maxLines:1,overflow:TextOverflow.ellipsis,
-                          style:const TextStyle(color:Color(0xFF777B80),fontSize:11.5,fontWeight:FontWeight.w500),
+                          style:TextStyle(color:ozel?const Color(0xFF4B514D):const Color(0xFF6D7270),fontSize:11.5,fontWeight:ozel?FontWeight.w700:FontWeight.w600),
                         ),
                         trailing:ozel?null:const Icon(Icons.chevron_right_rounded,color:Color(0xFFB1B4B8),size:19),
                         onTap:()=>mentionEkle(u['username']??'',id),
@@ -9333,6 +9385,7 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
         ),
       ),
     );
+    await ngelxOverlayKapanisiniBekle();
     c.dispose();
     if(yeni==null||!mounted)return;
     await ref.set({'groupDescription':yeni,'updatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
@@ -9412,8 +9465,8 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
       await ngelxGrupDavetMetaSenkronla(ref);
       await sistemMesaji('Yönetici grup fotoğrafını değiştirdi.');
       if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Grup fotoğrafı kaydedildi.')));
-    }catch(e){
-      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Grup fotoğrafı değiştirilemedi: $e')));
+    }catch(_){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Grup fotoğrafı değiştirilemedi. Tekrar dene.')));
     }
   }
 
@@ -10253,14 +10306,14 @@ class _GrupOzellestirPageState extends State<GrupOzellestirPage>{
                 runSpacing:10,
                 children:['👍','❤️','😂','🔥','👏','🐥'].map((emoji)=>InkWell(
                   borderRadius:BorderRadius.circular(18),
-                  onTap:()=>ref.set({'quickEmoji_'+uid:emoji},SetOptions(merge:true)),
+                  onTap:()=>ref.set({'quickEmoji':emoji},SetOptions(merge:true)),
                   child:Container(
                     width:52,height:52,
                     alignment:Alignment.center,
                     decoration:BoxDecoration(
-                      color:(v['quickEmoji_'+uid]??'👍').toString()==emoji?ngelxGroupGreenSoft:const Color(0xFFF5F5F5),
+                      color:(v['quickEmoji']??'👍').toString()==emoji?ngelxGroupGreenSoft:const Color(0xFFF5F5F5),
                       borderRadius:BorderRadius.circular(18),
-                      border:Border.all(color:(v['quickEmoji_'+uid]??'👍').toString()==emoji?ngelxGroupGreen:const Color(0xFFE5E5E5)),
+                      border:Border.all(color:(v['quickEmoji']??'👍').toString()==emoji?ngelxGroupGreen:const Color(0xFFE5E5E5)),
                     ),
                     child:Text(emoji,style:const TextStyle(fontSize:25)),
                   ),
@@ -11295,8 +11348,9 @@ class _SohbetPageState extends State<SohbetPage> {
       )),
     );
     final metin=sonuc?.trim()??'';
+    await ngelxOverlayKapanisiniBekle();
     c.dispose();
-    if(metin.isEmpty)return;
+    if(metin.isEmpty||!mounted)return;
     await ekMesajGonder({'type':'location','text':metin,'locationText':metin},'📍 $metin',bildirim:'Sana bir konum gönderdi');
   }
 
