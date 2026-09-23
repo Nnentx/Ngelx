@@ -79,7 +79,7 @@ for forbidden in (
 for token in (
     "NGELX_VERSION_NAME",
     "NGELX_BUILD_NUMBER",
-    "v$ngelxVersionName • Yapı $ngelxBuildNumber",
+    "v$ngelxVersionName • ${t(\"build\")} $ngelxBuildNumber",
 ):
     if token not in app:
         errors.append("Uygulama sürüm etiketi otomatik değil: " + token)
@@ -97,6 +97,25 @@ for token in (
 ):
     if token not in app:
         errors.append("Hesap değişiminde UI state izolasyonu eksik: " + token)
+
+# Primary screens must use the shared language system instead of fixed Turkish labels.
+for token in (
+    "t('settingsTitle')",
+    "t('editProfile')",
+    "t('searchExplore')",
+    "t('createNew')",
+    "t('publishOnNgelx')",
+    "kitleEtiketi(e)",
+):
+    if token not in app:
+        errors.append("Uygulama dili ana ekranlara bağlanmamış: " + token)
+for forbidden in (
+    "title:const Text('Ayarlar ve gizlilik')",
+    "hintText: 'Kişi, grup veya içerik ara'",
+    "const Text('Yeni içerik üret'",
+):
+    if forbidden in app:
+        errors.append("Ana ekranda sabit Türkçe metin kaldı: " + forbidden)
 
 # Main feed must show real content only and keep user filters/live behavior intact.
 for token in (
