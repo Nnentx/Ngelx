@@ -125,6 +125,24 @@ for token in (
     if token not in app:
         errors.append("Keşfet kişi kartı kapsam/aktiflik koruması eksik: " + token)
 
+# Inbox filters keep stable internal codes while visible labels follow the selected app language.
+for token in (
+    "t('inbox')",
+    "t('messageRequests')",
+    "sohbetFiltreEtiketi(f)",
+    "case 'Okunmamış': return t('unread')",
+    "case 'Gruplar': return t('groups')",
+):
+    if token not in app:
+        errors.append("Gelen Kutusu dil sözleşmesi eksik: " + token)
+for forbidden in (
+    "const Text('Gelen Kutusu'",
+    "hintText:'Sohbetlerde ara'",
+    "child:Text(f,maxLines:1)",
+):
+    if forbidden in app:
+        errors.append("Gelen Kutusu ana görünümünde sabit dil metni kaldı: " + forbidden)
+
 # Main feed must show real content only and keep user filters/live behavior intact.
 for token in (
     "class _VideoAkisiState",
