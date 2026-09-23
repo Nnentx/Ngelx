@@ -319,6 +319,21 @@ for token in (
 if len(app) > 1_000_000:
     errors.append("main.dart beklenmedik şekilde büyüdü; tekrarlı kod eklenmiş olabilir.")
 
+# Large group uploads must stream from disk instead of loading the whole file into RAM.
+for token in (
+    "grupVideoGonder",
+    "grupDosyaGonder",
+    "ngelxMedyaYukleDosya",
+):
+    if token not in app:
+        errors.append("Grup medya streaming sözleşmesi eksik: " + token)
+video_block = re.search(r"Future<void> grupVideoGonder\(\)async\{(.*?)\n  \}", app, re.S)
+if video_block and "readAsBytes()" in video_block.group(1):
+    errors.append("Grup videosu hâlâ tamamını RAM'e alıyor.")
+file_block = re.search(r"Future<void> grupDosyaGonder\(\)async\{(.*?)\n  \}", app, re.S)
+if file_block and "readAsBytes()" in file_block.group(1):
+    errors.append("Grup dosyası hâlâ tamamını RAM'e alıyor.")
+
 # App/worker size contract for group videos and attachments.
 if "80*1024*1024" in app and "videos: 80 * 1024 * 1024" not in worker:
     errors.append("Grup video boyutu app/worker arasında uyuşmuyor.")
