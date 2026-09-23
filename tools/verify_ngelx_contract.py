@@ -111,6 +111,8 @@ required_group_tokens = [
     "Mesaj seçenekleri",
     "Daha fazla tepki",
     "reactionMore",
+    "grupTepkiDetayi",
+    "Bu mesaja tepki veren kişiler",
     "Arama cevaplanmadı",
     "Kimse aramaya katılmadı. İstersen tekrar arayabilirsin.",
     "Sohbete dön",
