@@ -2414,7 +2414,7 @@ class _GorselYaziKartiState extends State<GorselYaziKarti> {
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(25))),
       builder: (_) => Yorumlar(videoId: icerikId),
-    ).whenComplete(etkilesimleriGetir);
+    );
   }
 
   Future<void> fotografiKaydet() async {
@@ -2452,10 +2452,9 @@ class _GorselYaziKartiState extends State<GorselYaziKarti> {
   Future<void> paylas() async {
     await ngelxPaylasimMenusu(
       context,
-      icerikId: icerikId,
-      aciklama: (widget.veri['description'] ?? '').toString(),
+      icerikId:icerikId,
+      aciklama:(widget.veri['description']??'').toString(),
     );
-    await etkilesimleriGetir();
   }
 
   Future<void> uzunBasmaMenusu() async {
@@ -2734,10 +2733,9 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver {
   Future<void> videoyuPaylas() async {
     await ngelxPaylasimMenusu(
       context,
-      icerikId: videoId,
-      aciklama: 'NgelX videosu • @${widget.kullaniciAdi}',
+      icerikId:videoId,
+      aciklama:widget.aciklama.trim().isEmpty?'NgelX videosu • @${widget.kullaniciAdi}':widget.aciklama.trim(),
     );
-    await etkilesimleriGetir();
   }
 
   Future<void> videoyuGaleriyeKaydet() async {
@@ -2845,7 +2843,7 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver {
         ),
       ),
       builder: (_) => Yorumlar(videoId: videoId),
-    ).whenComplete(etkilesimleriGetir);
+    );
   }
 
   @override
@@ -3131,89 +3129,6 @@ class CanliSayacButonu extends StatelessWidget {
     );
   }
 }
-
-class CanliEtkilesimOzet extends StatelessWidget {
-  final String icerikId;
-  final VoidCallback yorumlariAc;
-
-  const CanliEtkilesimOzet({
-    super.key,
-    required this.icerikId,
-    required this.yorumlariAc,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final ref = FirebaseFirestore.instance.collection('videos').doc(icerikId);
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-          stream: ref.collection('likes').snapshots(),
-          builder: (_, snap) => Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.favorite_rounded, size: 16, color: Colors.white),
-              const SizedBox(width: 5),
-              Text(
-                '${snap.data?.docs.length ?? 0} beğeni',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(width: 13),
-        Expanded(
-          child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-            stream: ref.collection('comments').snapshots(),
-            builder: (_, snap) {
-              final sayi = snap.data?.docs.length ?? 0;
-              return GestureDetector(
-                onTap: yorumlariAc,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.mode_comment_outlined, size: 16, color: Colors.white),
-                        const SizedBox(width: 5),
-                        Text(
-                          '$sayi yorum',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ],
-                    ),
-                    if (sayi > 0) ...[
-                      const SizedBox(height: 4),
-                      const Text(
-                        'Yorumları gör',
-                        style: TextStyle(
-                          color: Colors.white70,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 
 class IslemButonu extends StatelessWidget {
   final IconData ikon;
