@@ -11992,7 +11992,7 @@ class _SohbetPageState extends State<SohbetPage> {
         kind: 'chats',
         ext: 'jpg',
         legacyPath: yol,
-      ).timeout(const Duration(seconds:12));
+      ).timeout(const Duration(seconds:60));
       final ref=FirebaseFirestore.instance.collection('chats').doc(widget.chatId);
       final sureHam=hazirlik.sohbet['disappearingSeconds'];
       final sure=sureHam is num?sureHam.toInt():0;
@@ -12072,12 +12072,12 @@ class _SohbetPageState extends State<SohbetPage> {
       if(boyut>30*1024*1024)throw Exception('Dosya 30 MB’den küçük olmalı.');
       final ad=x.name.isEmpty?'dosya':x.name;
       final uzanti=ad.contains('.')?ad.split('.').last.toLowerCase():'bin';
-      final url=await ngelxMedyaYukleBytes(
-        bytes:await x.readAsBytes(),
+      final url=await ngelxMedyaYukleDosya(
+        dosya:x,
         kind:'chat-files',
         ext:uzanti,
         legacyPath:'chat-files/${widget.chatId}/${DateTime.now().millisecondsSinceEpoch}_$ad',
-      ).timeout(const Duration(seconds:30));
+      ).timeout(const Duration(minutes:3));
       await ekMesajGonder({'type':'file','fileUrl':url,'fileName':ad,'fileSize':boyut},'📎 $ad',bildirim:'Sana bir dosya gönderdi');
     }catch(e){
       if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Dosya gönderilemedi: $e')));
