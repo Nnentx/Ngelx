@@ -7983,20 +7983,6 @@ class _GrupMedyaPageState extends State<GrupMedyaPage>{
             ]),
           ),
         ),
-        SizedBox(
-          height:44,
-          child:ListView(
-            scrollDirection:Axis.horizontal,
-            padding:const EdgeInsets.fromLTRB(14,0,14,6),
-            children:[
-              _aramaFiltreChip('Tümü',0),
-              _aramaFiltreChip('Mesajlar',1),
-              _aramaFiltreChip('Medya',2),
-              _aramaFiltreChip('Dosyalar',3),
-              _aramaFiltreChip('Bağlantılar',4),
-            ],
-          ),
-        ),
         Expanded(child:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
           stream:_mesajlar.snapshots(),
           builder:(_,snap){
@@ -12425,6 +12411,7 @@ class _SohbetMesajAramaPageState extends State<SohbetMesajAramaPage>{
   final ara=TextEditingController();
   final Map<String,Future<DocumentSnapshot<Map<String,dynamic>>>> _profilCache={};
   String sorgu='';
+  int filtre=0;
 
   @override void dispose(){ara.dispose();super.dispose();}
   Future<DocumentSnapshot<Map<String,dynamic>>> _profil(String id)=>_profilCache.putIfAbsent(id,()=>FirebaseFirestore.instance.collection('users').doc(id).get());
@@ -12605,6 +12592,20 @@ class _SohbetMesajAramaPageState extends State<SohbetMesajAramaPage>{
               enabledBorder:OutlineInputBorder(borderRadius:BorderRadius.circular(20),borderSide:const BorderSide(color:ngelxPremiumBorder)),
               focusedBorder:OutlineInputBorder(borderRadius:BorderRadius.circular(20),borderSide:BorderSide(color:widget.groupMode?ngelxGroupGreen:ngelxPremiumPurple,width:1.4)),
             ),
+          ),
+        ),
+        SizedBox(
+          height:44,
+          child:ListView(
+            scrollDirection:Axis.horizontal,
+            padding:const EdgeInsets.fromLTRB(14,0,14,6),
+            children:[
+              _aramaFiltreChip('Tümü',0),
+              _aramaFiltreChip('Mesajlar',1),
+              _aramaFiltreChip('Medya',2),
+              _aramaFiltreChip('Dosyalar',3),
+              _aramaFiltreChip('Bağlantılar',4),
+            ],
           ),
         ),
         Expanded(child:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
