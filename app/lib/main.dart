@@ -8002,10 +8002,11 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
   lk.Room? oda;
   final Map<String,Future<DocumentSnapshot<Map<String,dynamic>>>> _aramaProfilCache={};
   StreamSubscription<DocumentSnapshot<Map<String,dynamic>>>? aramaDurumAboneligi;
-  Timer? aramaSureZamanlayici;
+  lk.EventsListener<lk.RoomEvent>? odaOlaylari;
+  Timer? aramaSureZamanlayici,cevapsizZamanlayici,yenidenBaglanmaZamanlayici;
   DateTime? aramaBaslangic;
-  bool baglaniyor=true,mikrofon=true,kamera=true,hoparlor=true,bitiyor=false,bulanik=false,rotus=false;
-  int efekt=0;
+  bool baglaniyor=true,mikrofon=true,kamera=true,hoparlor=true,bitiyor=false,bulanik=false,rotus=false,yenidenBaglaniyor=false;
+  int efekt=0,yenidenBaglanmaDenemesi=0;
   String? hata;
 
   @override void initState(){
@@ -8018,12 +8019,89 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
     });
     baglan();
   }
-  void _odaDegisti(){if(mounted)setState((){});}
+  void _odaDegisti(){
+    final r=oda;
+    if(r?.remoteParticipants.isNotEmpty==true){
+      cevapsizZamanlayici?.cancel();
+      if(aramaBaslangic==null){
+        _aramaSureBaslat(DateTime.now());
+        unawaited(widget.aramaRef.set({
+          'callStatus':'active',
+          'callConnectedAt':FieldValue.serverTimestamp(),
+        },SetOptions(merge:true)).catchError((_){ }));
+        unawaited(widget.aramaRef.get().then((d){
+          final id=(d.data()?['callMessageId']??'').toString();
+          if(id.isNotEmpty)return widget.aramaRef.collection('messages').doc(id).set({
+            'callStatus':'active',
+            'callConnectedAt':FieldValue.serverTimestamp(),
+          },SetOptions(merge:true));
+        }).catchError((_){ }));
+      }
+    }
+    if(mounted)setState((){});
+  }
+
+  void _aramaOlaylariniBagla(lk.Room r){
+    odaOlaylari?.dispose();
+    final l=r.createListener();
+    l
+      ..on<lk.RoomReconnectingEvent>((_){
+        if(mounted)setState(()=>yenidenBaglaniyor=true);
+      })
+      ..on<lk.RoomReconnectedEvent>((_){
+        yenidenBaglanmaDenemesi=0;
+        if(mounted)setState(()=>yenidenBaglaniyor=false);
+      })
+      ..on<lk.RoomDisconnectedEvent>((_){
+        if(!bitiyor)unawaited(_yenidenBaglanmayiPlanla());
+      });
+    odaOlaylari=l;
+  }
+
+  Future<void> _yenidenBaglanmayiPlanla()async{
+    if(bitiyor||yenidenBaglanmaDenemesi>=3)return;
+    yenidenBaglanmaDenemesi++;
+    yenidenBaglanmaZamanlayici?.cancel();
+    if(mounted)setState(()=>yenidenBaglaniyor=true);
+    final gecikme=Duration(seconds:1+yenidenBaglanmaDenemesi*2);
+    yenidenBaglanmaZamanlayici=Timer(gecikme,(){
+      if(!bitiyor)unawaited(baglan(yeniden:true));
+    });
+  }
+
+  void _cevapsizSayaciniBaslat(){
+    cevapsizZamanlayici?.cancel();
+    cevapsizZamanlayici=Timer(const Duration(seconds:45),()async{
+      if(bitiyor)return;
+      try{
+        final d=await widget.aramaRef.get();
+        final v=d.data()??<String,dynamic>{};
+        if((v['callRoomName']??'').toString()!=widget.roomName)return;
+        if((v['callStatus']??'').toString()!='ringing')return;
+        final katilimcilar=List<String>.from(v['callParticipants']??const[]);
+        if(katilimcilar.length>1||oda?.remoteParticipants.isNotEmpty==true)return;
+        await widget.aramaRef.set({
+          'callStatus':'missed',
+          'callEndedAt':FieldValue.serverTimestamp(),
+        },SetOptions(merge:true));
+        final id=(v['callMessageId']??'').toString();
+        if(id.isNotEmpty){
+          await widget.aramaRef.collection('messages').doc(id).set({
+            'callStatus':'missed',
+            'callEndedAt':FieldValue.serverTimestamp(),
+            'durationSeconds':0,
+          },SetOptions(merge:true));
+        }
+      }catch(_){}
+    });
+  }
 
   Future<void> _uzaktanBitirildi(String durum)async{
     if(bitiyor)return;
     bitiyor=true;
     aramaSureZamanlayici?.cancel();
+    cevapsizZamanlayici?.cancel();
+    yenidenBaglanmaZamanlayici?.cancel();
     final r=oda;oda=null;
     if(r!=null){
       r.removeListener(_odaDegisti);
@@ -8071,11 +8149,20 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
     }
   }
 
-  Future<void> baglan()async{
+  Future<void> baglan({bool yeniden=false})async{
     final u=FirebaseAuth.instance.currentUser;
     if(u==null){if(mounted)setState((){baglaniyor=false;hata='Arama için giriş yapman gerekiyor.';});return;}
     lk.Room? r;
     try{
+      if(yeniden){
+        final eski=oda;oda=null;
+        odaOlaylari?.dispose();odaOlaylari=null;
+        if(eski!=null){
+          eski.removeListener(_odaDegisti);
+          try{await eski.disconnect();}catch(_){}
+          try{await eski.dispose();}catch(_){}
+        }
+      }
       await _izinleriIste();
       final kaynak=lk.DevelopmentTokenSource(id:liveKitTestSunucuId);
       final cevap=await kaynak.fetch(lk.TokenRequestOptions(
@@ -8085,6 +8172,7 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
       )).timeout(const Duration(seconds:12));
       r=lk.Room(roomOptions:lk.RoomOptions(adaptiveStream:true,dynacast:true));
       r.addListener(_odaDegisti);
+      _aramaOlaylariniBagla(r);
       await r.connect(cevap.serverUrl,cevap.participantToken).timeout(const Duration(seconds:18));
       oda=r;
       final yerel=r.localParticipant;
@@ -8098,12 +8186,23 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
       final kayitliOda=(aramaVerisi['callRoomName']??'').toString();
       final hamBaglanti=(kayitliOda.isEmpty||kayitliOda==widget.roomName)?aramaVerisi['callConnectedAt']:null;
       final oncekiBaglanti=hamBaglanti;
-      final baslangic=oncekiBaglanti is Timestamp?oncekiBaglanti.toDate().toLocal():DateTime.now();
-      _aramaSureBaslat(baslangic);
+      final grup=widget.roomName.startsWith('group_');
+      final baslatan=(aramaVerisi['callStartedBy']??'').toString();
+      final benBaslatan=grup&&baslatan==u.uid;
+      final uzaktaBiriVar=r.remoteParticipants.isNotEmpty;
+      final aktif=!grup||!benBaslatan||uzaktaBiriVar;
+      if(aktif){
+        final baslangic=oncekiBaglanti is Timestamp?oncekiBaglanti.toDate().toLocal():DateTime.now();
+        _aramaSureBaslat(baslangic);
+      }else{
+        aramaSureZamanlayici?.cancel();
+        aramaBaslangic=null;
+        _cevapsizSayaciniBaslat();
+      }
       final durumGuncelleme=<String,dynamic>{
-        'callStatus':'active',
+        'callStatus':aktif?'active':'ringing',
         'callParticipants':FieldValue.arrayUnion([u.uid]),
-        if(oncekiBaglanti is! Timestamp)'callConnectedAt':FieldValue.serverTimestamp(),
+        if(aktif&&oncekiBaglanti is! Timestamp)'callConnectedAt':FieldValue.serverTimestamp(),
       };
       unawaited(widget.aramaRef.set(durumGuncelleme,SetOptions(merge:true)).timeout(const Duration(seconds:10)).catchError((_){ }));
       if(widget.roomName.startsWith('group_')){
@@ -8119,11 +8218,14 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
           },SetOptions(merge:true));
         }).catchError((_){ }));
       }
-      unawaited(widget.aramaRef.get().then((d){
-        final mesajId=(d.data()?['callMessageId']??'').toString();
-        if(mesajId.isNotEmpty)return widget.aramaRef.collection('messages').doc(mesajId).set({'callStatus':'active','callConnectedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
-      }).catchError((_){ }));
-      if(mounted)setState(()=>baglaniyor=false);
+      if(aktif){
+        unawaited(widget.aramaRef.get().then((d){
+          final mesajId=(d.data()?['callMessageId']??'').toString();
+          if(mesajId.isNotEmpty)return widget.aramaRef.collection('messages').doc(mesajId).set({'callStatus':'active','callConnectedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
+        }).catchError((_){ }));
+      }
+      yenidenBaglanmaDenemesi=0;
+      if(mounted)setState((){baglaniyor=false;yenidenBaglaniyor=false;hata=null;});
     }catch(e){
       if(r!=null){
         r.removeListener(_odaDegisti);
@@ -8131,7 +8233,12 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
         try{await r.dispose();}catch(_){}
       }
       oda=null;
-      if(mounted)setState((){baglaniyor=false;hata=e.toString().replaceFirst('Exception: ','');});
+      if(yeniden&&yenidenBaglanmaDenemesi<3){
+        if(mounted)setState(()=>yenidenBaglaniyor=true);
+        await _yenidenBaglanmayiPlanla();
+      }else if(mounted){
+        setState((){baglaniyor=false;yenidenBaglaniyor=false;hata=e.toString().replaceFirst('Exception: ','');});
+      }
     }
   }
 
@@ -8175,6 +8282,8 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
     if(bitiyor)return;
     bitiyor=true;
     aramaSureZamanlayici?.cancel();
+    cevapsizZamanlayici?.cancel();
+    yenidenBaglanmaZamanlayici?.cancel();
     try{
       final d=await widget.aramaRef.get();
       final data=d.data()??<String,dynamic>{};
@@ -8249,6 +8358,9 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
 
   @override void dispose(){
     aramaSureZamanlayici?.cancel();
+    cevapsizZamanlayici?.cancel();
+    yenidenBaglanmaZamanlayici?.cancel();
+    odaOlaylari?.dispose();
     aramaDurumAboneligi?.cancel();
     final r=oda;
     if(r!=null){
@@ -8507,7 +8619,7 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
             Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
               Text(widget.baslik,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.white,fontSize:29,fontWeight:FontWeight.w900,letterSpacing:-.5)),
               const SizedBox(height:5),
-              Row(children:[const Icon(Icons.graphic_eq_rounded,color:Color(0xFFB88BFF),size:20),const SizedBox(width:7),Text(baglaniyor?'Bağlanıyor…':'Sesli arama • '+_aramaSureYazi(),style:const TextStyle(color:Colors.white70,fontSize:13,fontWeight:FontWeight.w700))]),
+              Row(children:[const Icon(Icons.graphic_eq_rounded,color:Color(0xFFB88BFF),size:20),const SizedBox(width:7),Text(yenidenBaglaniyor?'Yeniden bağlanıyor…':baglaniyor?'Bağlanıyor…':'Sesli arama • '+_aramaSureYazi(),style:const TextStyle(color:Colors.white70,fontSize:13,fontWeight:FontWeight.w700))]),
             ])),
             Container(padding:const EdgeInsets.symmetric(horizontal:13,vertical:9),decoration:BoxDecoration(color:Colors.white10,borderRadius:BorderRadius.circular(18),border:Border.all(color:Colors.white10)),child:Text(katilimcilar.length.toString()+' kişi',style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w800))),
           ]),
@@ -8552,7 +8664,7 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
         child:Row(children:[
           Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
             Text(widget.baslik,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.white,fontSize:22,fontWeight:FontWeight.w900)),
-            Text(baglaniyor?'Görüntülü görüşme':'Görüntülü görüşme • '+_aramaSureYazi(),style:const TextStyle(color:Colors.white60,fontSize:12,fontWeight:FontWeight.w700)),
+            Text(yenidenBaglaniyor?'Yeniden bağlanıyor…':baglaniyor?'Görüntülü görüşme':'Görüntülü görüşme • '+_aramaSureYazi(),style:const TextStyle(color:Colors.white60,fontSize:12,fontWeight:FontWeight.w700)),
           ])),
           Container(padding:const EdgeInsets.symmetric(horizontal:12,vertical:8),decoration:BoxDecoration(color:Colors.white10,borderRadius:BorderRadius.circular(16)),child:Text(katilimcilar.length.toString()+' kişi',style:const TextStyle(color:Colors.white70,fontWeight:FontWeight.w800))),
         ]),
@@ -8586,7 +8698,7 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
         decoration:BoxDecoration(color:Colors.black.withValues(alpha:.45),borderRadius:BorderRadius.circular(18),border:Border.all(color:Colors.white10)),
         child:Column(children:[
           Text(widget.baslik,textAlign:TextAlign.center,style:const TextStyle(color:Colors.white,fontSize:22,fontWeight:FontWeight.w900)),
-          Text(baglaniyor?'Aranıyor…':'Görüntülü arama • '+_aramaSureYazi(),style:const TextStyle(color:Colors.white70,fontSize:12,fontWeight:FontWeight.w600)),
+          Text(yenidenBaglaniyor?'Yeniden bağlanıyor…':baglaniyor?'Aranıyor…':'Görüntülü arama • '+_aramaSureYazi(),style:const TextStyle(color:Colors.white70,fontSize:12,fontWeight:FontWeight.w600)),
         ]),
       )),
     ]));
@@ -8601,7 +8713,7 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
     const SizedBox(height:22),
     Text(widget.baslik,textAlign:TextAlign.center,style:const TextStyle(color:Colors.white,fontSize:29,fontWeight:FontWeight.w900)),
     const SizedBox(height:7),
-    Text(baglaniyor?'Bağlanıyor…':'Sesli arama • '+_aramaSureYazi(),style:const TextStyle(color:Colors.white70,fontSize:15,fontWeight:FontWeight.w600)),
+    Text(yenidenBaglaniyor?'Yeniden bağlanıyor…':baglaniyor?'Bağlanıyor…':'Sesli arama • '+_aramaSureYazi(),style:const TextStyle(color:Colors.white70,fontSize:15,fontWeight:FontWeight.w600)),
   ])));
 
   @override Widget build(BuildContext context)=>PopScope(
