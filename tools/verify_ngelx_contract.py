@@ -174,6 +174,16 @@ for token in (
     if token not in rules:
         errors.append("Firestore özel mesaj gizliliği eksik: " + token)
 
+# Large private-chat files must stream from disk and private photos need a realistic upload window.
+private_file_block = re.search(r"Future<void> dosyaGonder\(\)async\{(.*?)\n  \}", app, re.S)
+if private_file_block:
+    if "ngelxMedyaYukleDosya" not in private_file_block.group(1):
+        errors.append("Özel sohbet dosyası streaming yüklemeyi kullanmıyor.")
+    if "readAsBytes()" in private_file_block.group(1):
+        errors.append("Özel sohbet dosyası hâlâ tamamını RAM'e alıyor.")
+if "kind: 'chats'" in app and ").timeout(const Duration(seconds:60));" not in app:
+    errors.append("Özel sohbet fotoğrafı yükleme zaman aşımı güvenli aralıkta değil.")
+
 # Main feed must show real content only and keep user filters/live behavior intact.
 for token in (
     "class _VideoAkisiState",
