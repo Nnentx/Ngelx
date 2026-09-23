@@ -103,6 +103,10 @@ required_group_tokens = [
     "Kaydı iptal et",
     "Kaydı gönder",
     "oynatici.positionStream",
+    "Kişiler",
+    "@herkes",
+    "@sessiz",
+    "Mesaj seçenekleri",
     "Sohbeti sil",
 ]
 for token in required_group_tokens:
