@@ -2262,7 +2262,7 @@ Future<void> ngelxOzeldenPaylas(
                           final d = docs[i];
                           final v = d.data();
                           final foto = (v['photoUrl'] ?? '').toString();
-                          final ad = (v['displayName'] ?? v['username'] ?? 'Kullanıcı').toString();
+                          final ad = (v['displayName'] ?? v['username'] ?? t('user')).toString();
                           return ListTile(
                             leading: CircleAvatar(
                               backgroundImage: foto.isEmpty ? null : CachedNetworkImageProvider(foto),
@@ -3980,17 +3980,17 @@ class KesfetPage extends StatelessWidget {
           )),
           SliverToBoxAdapter(child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
-            child: TextField(style: const TextStyle(color: Colors.black87), decoration: InputDecoration(hintText: 'Kişi, grup veya içerik ara', hintStyle: const TextStyle(color: Colors.black45), prefixIcon: const Icon(Icons.search, color: Colors.black45), filled: true, fillColor: const Color(0xFFF4F5F8), border: OutlineInputBorder(borderRadius: BorderRadius.circular(22), borderSide: BorderSide.none))),
+            child: TextField(style: const TextStyle(color: Colors.black87), decoration: InputDecoration(hintText: t('searchExplore'), hintStyle: const TextStyle(color: Colors.black45), prefixIcon: const Icon(Icons.search, color: Colors.black45), filled: true, fillColor: const Color(0xFFF4F5F8), border: OutlineInputBorder(borderRadius: BorderRadius.circular(22), borderSide: BorderSide.none))),
           )),
           SliverToBoxAdapter(child: SizedBox(height: 52, child: ListView(padding: const EdgeInsets.symmetric(horizontal: 16), scrollDirection: Axis.horizontal, children: [
-            _kesfetSekmesi(Icons.live_tv_rounded, 'Canlı', true),
-            _kesfetSekmesi(Icons.local_fire_department_rounded, 'Trend', false),
-            _kesfetSekmesi(Icons.person_rounded, 'Kişiler', false),
-            _kesfetSekmesi(Icons.groups_rounded, 'Gruplar', false),
+            _kesfetSekmesi(Icons.live_tv_rounded, t('live'), true),
+            _kesfetSekmesi(Icons.local_fire_department_rounded, t('trend'), false),
+            _kesfetSekmesi(Icons.person_rounded, t('people'), false),
+            _kesfetSekmesi(Icons.groups_rounded, t('groups'), false),
           ]))),
-          const SliverToBoxAdapter(child: Padding(
-            padding: EdgeInsets.fromLTRB(16, 14, 16, 10),
-            child: Row(children: [Text('Canlı yayınlar', style: TextStyle(color: Colors.black, fontSize: 21, fontWeight: FontWeight.w900)), Spacer(), Text('Tümünü gör ›', style: TextStyle(color: Colors.black45, fontWeight: FontWeight.w700))]),
+          SliverToBoxAdapter(child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+            child: Row(children: [Text(t('liveStreams'), style: const TextStyle(color: Colors.black, fontSize: 21, fontWeight: FontWeight.w900)), const Spacer(), Text(t('seeAll'), style: const TextStyle(color: Colors.black45, fontWeight: FontWeight.w700))]),
           )),
           SliverToBoxAdapter(child: SizedBox(
             height: 205,
@@ -4002,7 +4002,7 @@ class KesfetPage extends StatelessWidget {
                   return Container(
                     margin: const EdgeInsets.symmetric(horizontal: 16),
                     decoration: BoxDecoration(color: const Color(0xFFFFF0F2), borderRadius: BorderRadius.circular(20), border: Border.all(color: const Color(0xFFFF1744).withOpacity(.25))),
-                    child: const Center(child: Text('Şu anda canlı yayın yok. İlk yayını sen başlat ✨', style: TextStyle(color: Colors.black54))),
+                    child: Center(child: Text(t('noLive'), style: const TextStyle(color: Colors.black54))),
                   );
                 }
                 return ListView.separated(
@@ -4028,7 +4028,7 @@ class KesfetPage extends StatelessWidget {
                           decoration: BoxDecoration(borderRadius: BorderRadius.circular(18), gradient: const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.transparent, Color(0xDD000000)])),
                           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                           Row(children: [
-                            Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6), decoration: BoxDecoration(color: const Color(0xFFFF1744), borderRadius: BorderRadius.circular(9)), child: const Text('● CANLI', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900))),
+                            Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6), decoration: BoxDecoration(color: const Color(0xFFFF1744), borderRadius: BorderRadius.circular(9)), child: Text(t('liveLabel'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900))),
                             Spacer(),
                             Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5), decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(9)), child: Row(children: [const Icon(Icons.visibility, size: 16, color: Colors.white), const SizedBox(width: 4), Text('${y['viewerCount'] ?? 0}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))])),
                           ]),
@@ -4044,14 +4044,14 @@ class KesfetPage extends StatelessWidget {
               },
             ),
           )),
-          const SliverToBoxAdapter(child: Padding(padding: EdgeInsets.fromLTRB(16, 20, 16, 10), child: Text('Trendler', style: TextStyle(color: Colors.black, fontSize: 21, fontWeight: FontWeight.w900)))),
+          SliverToBoxAdapter(child: Padding(padding: const EdgeInsets.fromLTRB(16, 20, 16, 10), child: Text(t('trends'), style: const TextStyle(color: Colors.black, fontSize: 21, fontWeight: FontWeight.w900)))),
           SliverToBoxAdapter(child: SizedBox(height: 48, child: ListView(padding: const EdgeInsets.symmetric(horizontal: 16), scrollDirection: Axis.horizontal, children: const [
             _TrendEtiketi(Icons.directions_run_rounded, '#spor', Color(0xFFFFEEF1), Colors.red),
             _TrendEtiketi(Icons.music_note_rounded, '#müzik', Color(0xFFF1EAFE), mor),
             _TrendEtiketi(Icons.computer_rounded, '#teknoloji', Color(0xFFE7FAFA), Color(0xFF00AFC1)),
             _TrendEtiketi(Icons.flight_takeoff_rounded, '#seyahat', Color(0xFFEAF2FF), Colors.blue),
           ]))),
-          const SliverToBoxAdapter(child: Padding(padding: EdgeInsets.fromLTRB(16, 20, 16, 8), child: Row(children: [Text('Trend içerikler', style: TextStyle(color: Colors.black, fontSize: 21, fontWeight: FontWeight.w900)), Spacer(), Text('Tümünü gör ›', style: TextStyle(color: Colors.black45))]))),
+          SliverToBoxAdapter(child: Padding(padding: const EdgeInsets.fromLTRB(16, 20, 16, 8), child: Row(children: [Text(t('trendContent'), style: const TextStyle(color: Colors.black, fontSize: 21, fontWeight: FontWeight.w900)), const Spacer(), Text(t('seeAll'), style: const TextStyle(color: Colors.black45))]))),
           SliverPadding(padding: const EdgeInsets.all(6), sliver: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
               stream: FirebaseFirestore.instance.collection('videos').orderBy('createdAt', descending: true).limit(30).snapshots(),
               builder: (_, snap) {
@@ -4062,7 +4062,7 @@ class KesfetPage extends StatelessWidget {
                   final izlenme = (v['viewCount'] as num?)?.toInt() ?? 0;
                   return v['isTrending'] == true || begeni >= 50 || izlenme >= 500;
                 }).toList();
-                if (belgeler.isEmpty) return const SliverToBoxAdapter(child: Padding(padding: EdgeInsets.all(28), child: Center(child: Text('Trend içerikler burada görünecek ✨', style: TextStyle(color: Colors.black54)))));
+                if (belgeler.isEmpty) return SliverToBoxAdapter(child: Padding(padding: const EdgeInsets.all(28), child: Center(child: Text(t('trendingEmpty'), style: const TextStyle(color: Colors.black54)))));
                 return SliverGrid(
                   delegate: SliverChildBuilderDelegate((_, i) {
                     final v = belgeler[i].data();
@@ -4086,7 +4086,7 @@ class KesfetPage extends StatelessWidget {
                 );
               },
             )),
-          const SliverToBoxAdapter(child: Padding(padding: EdgeInsets.fromLTRB(16, 20, 16, 8), child: Row(children: [Text('Kişileri keşfet', style: TextStyle(color: Colors.black, fontSize: 21, fontWeight: FontWeight.w900)), Spacer(), Text('Tümünü gör ›', style: TextStyle(color: Colors.black45))]))),
+          SliverToBoxAdapter(child: Padding(padding: const EdgeInsets.fromLTRB(16, 20, 16, 8), child: Row(children: [Text(t('discoverPeople'), style: const TextStyle(color: Colors.black, fontSize: 21, fontWeight: FontWeight.w900)), const Spacer(), Text(t('seeAll'), style: const TextStyle(color: Colors.black45))]))),
           SliverToBoxAdapter(child: SizedBox(height: 145, child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
             stream: FirebaseFirestore.instance.collection('users').limit(12).snapshots(),
             builder: (_, snap) => ListView.separated(
@@ -4095,7 +4095,7 @@ class KesfetPage extends StatelessWidget {
               itemBuilder: (_, i) { final d = snap.data!.docs[i]; return _kisiKarti(context, d.id, d.data()); },
             ),
           ))),
-          const SliverToBoxAdapter(child: Padding(padding: EdgeInsets.fromLTRB(16, 16, 16, 8), child: Row(children: [Text('Grupları keşfet', style: TextStyle(color: Colors.black, fontSize: 21, fontWeight: FontWeight.w900)), Spacer(), Text('Tümünü gör ›', style: TextStyle(color: Colors.black45))]))),
+          SliverToBoxAdapter(child: Padding(padding: const EdgeInsets.fromLTRB(16, 16, 16, 8), child: Row(children: [Text(t('discoverGroups'), style: const TextStyle(color: Colors.black, fontSize: 21, fontWeight: FontWeight.w900)), const Spacer(), Text(t('seeAll'), style: const TextStyle(color: Colors.black45))]))),
           SliverToBoxAdapter(child: SizedBox(height: 130, child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
             stream: FirebaseFirestore.instance.collection('groups').limit(12).snapshots(),
             builder: (_, snap) { final gruplar = (snap.data?.docs ?? []).where((d) { final ad = (d.data()['name'] ?? '').toString().toLowerCase(); return !ad.contains('oyun') && !ad.contains('game'); }).toList(); return ListView.separated(
@@ -4120,7 +4120,7 @@ class KesfetPage extends StatelessWidget {
           if (context.mounted) Navigator.push(context, MaterialPageRoute(builder: (_) => const CanliHazirlikPage()));
         },
         icon: const Icon(Icons.videocam_rounded),
-        label: const Text('Canlı yayın başlat', style: TextStyle(fontWeight: FontWeight.w800)),
+        label: Text(t('startLive'), style: const TextStyle(fontWeight: FontWeight.w800)),
       ),
     );
   }
@@ -4138,16 +4138,16 @@ class KesfetPage extends StatelessWidget {
     return SizedBox(width: 105, child: Column(children: [
       Stack(children: [CircleAvatar(radius: 38, backgroundColor: const Color(0xFFF0E8FF), backgroundImage: foto.isEmpty ? null : CachedNetworkImageProvider(foto), child: foto.isEmpty ? Text(ad.substring(0, 1).toUpperCase(), style: const TextStyle(color: mor, fontSize: 24, fontWeight: FontWeight.bold)) : null), const Positioned(right: 2, bottom: 2, child: CircleAvatar(radius: 7, backgroundColor: Color(0xFF23D160)))]),
       const SizedBox(height: 5), Text(ad, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w800)),
-      const SizedBox(height: 4), SizedBox(height: 30, child: FilledButton(style: FilledButton.styleFrom(backgroundColor: mor, padding: const EdgeInsets.symmetric(horizontal: 12)), onPressed: () async {await takipDurumuDegistir(uid,false);if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Takip edildi ✅')));}, child: const Text('Takip et', style: TextStyle(fontSize: 11)))),
+      const SizedBox(height: 4), SizedBox(height: 30, child: FilledButton(style: FilledButton.styleFrom(backgroundColor: mor, padding: const EdgeInsets.symmetric(horizontal: 12)), onPressed: () async {await takipDurumuDegistir(uid,false);if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Takip edildi ✅')));}, child: Text(t('follow'), style: const TextStyle(fontSize: 11)))),
     ]));
   }
 
   Widget _grupKarti(BuildContext context, String id, Map<String, dynamic> v) {
-    final ad = (v['name'] ?? 'Topluluk').toString();
+    final ad = (v['name'] ?? t('community')).toString();
     final sayi = (v['memberCount'] ?? 0).toString();
     return Container(width: 245, padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: const Color(0xFFF6F3FF), borderRadius: BorderRadius.circular(18)), child: Row(children: [
       Container(width: 65, height: 65, decoration: BoxDecoration(color: const Color(0xFFE9DDFF), borderRadius: BorderRadius.circular(14)), child: const Icon(Icons.groups_rounded, color: mor, size: 34)),
-      const SizedBox(width: 10), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [Text(ad, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w900)), Text('$sayi üye', style: const TextStyle(color: Colors.black45, fontSize: 12)), const SizedBox(height: 6), SizedBox(height: 30, child: FilledButton(style: FilledButton.styleFrom(backgroundColor: mor), onPressed: () async { final uid = FirebaseAuth.instance.currentUser?.uid; if (uid != null) await FirebaseFirestore.instance.collection('groups').doc(id).set({'members': FieldValue.arrayUnion([uid]), 'memberCount': FieldValue.increment(1)}, SetOptions(merge: true)); }, child: const Text('Katıl', style: TextStyle(fontSize: 12))))]))
+      const SizedBox(width: 10), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [Text(ad, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w900)), Text('$sayi ${t('member')}', style: const TextStyle(color: Colors.black45, fontSize: 12)), const SizedBox(height: 6), SizedBox(height: 30, child: FilledButton(style: FilledButton.styleFrom(backgroundColor: mor), onPressed: () async { final uid = FirebaseAuth.instance.currentUser?.uid; if (uid != null) await FirebaseFirestore.instance.collection('groups').doc(id).set({'members': FieldValue.arrayUnion([uid]), 'memberCount': FieldValue.increment(1)}, SetOptions(merge: true)); }, child: Text(t('join'), style: const TextStyle(fontSize: 12))))]))
     ]));
   }
 }
