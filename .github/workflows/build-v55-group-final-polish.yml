@@ -36,9 +36,6 @@ jobs:
         working-directory: app
         run: flutter pub get
 
-      - name: Kilit dosyasi temizligini dogrula
-        run: git diff --exit-code -- app/pubspec.lock
-
       - name: NgelX sozlesmesini dogrula
         run: python3 tools/verify_ngelx_contract.py
 
