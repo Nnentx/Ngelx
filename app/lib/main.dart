@@ -8282,9 +8282,12 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
       final oncekiBaglanti=hamBaglanti;
       final grup=widget.roomName.startsWith('group_');
       final baslatan=(aramaVerisi['callStartedBy']??'').toString();
-      final benBaslatan=grup&&baslatan==u.uid;
+      final benBaslatan=baslatan==u.uid;
       final uzaktaBiriVar=r.remoteParticipants.isNotEmpty;
-      final aktif=!grup||!benBaslatan||uzaktaBiriVar;
+      final kayitliDurum=(aramaVerisi['callStatus']??'ringing').toString();
+      final kayitliKatilimcilar=List<String>.from(aramaVerisi['callParticipants']??const[]);
+      final biriKabulEtti=kayitliDurum=='active'||kayitliKatilimcilar.any((x)=>x!=u.uid)||uzaktaBiriVar;
+      final aktif=!benBaslatan||biriKabulEtti;
       if(aktif){
         final baslangic=oncekiBaglanti is Timestamp?oncekiBaglanti.toDate().toLocal():DateTime.now();
         _aramaSureBaslat(baslangic);
@@ -8428,16 +8431,23 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
           },SetOptions(merge:true));
         }
       }else{
-        await widget.aramaRef.set({'callStatus':'ended','callEndedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
-      }
-
-      final mesajId=(data['callMessageId']??'').toString();
-      if(mesajId.isNotEmpty&&!grup){
-        await widget.aramaRef.collection('messages').doc(mesajId).set({
-          'callStatus':'ended',
+        final participants=List<String>.from(data['callParticipants']??const[]);
+        final baslatan=(data['callStartedBy']??'').toString();
+        final kimseKatilMadi=me!=null&&baslatan==me&&participants.where((x)=>x!=me).isEmpty&&baslangicHam is! Timestamp;
+        final finalDurum=kimseKatilMadi?'missed':'ended';
+        await widget.aramaRef.set({
+          'callStatus':finalDurum,
           'callEndedAt':FieldValue.serverTimestamp(),
-          'durationSeconds':sureSaniye,
+          if(me!=null)'callParticipants':FieldValue.arrayRemove([me]),
         },SetOptions(merge:true));
+        final mesajId=(data['callMessageId']??'').toString();
+        if(mesajId.isNotEmpty){
+          await widget.aramaRef.collection('messages').doc(mesajId).set({
+            'callStatus':finalDurum,
+            'callEndedAt':FieldValue.serverTimestamp(),
+            'durationSeconds':sureSaniye,
+          },SetOptions(merge:true));
+        }
       }
     }catch(_){}
 
