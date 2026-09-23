@@ -143,6 +143,7 @@ try {
   await seed();
 
   const bob = env.authenticatedContext('bob').firestore();
+  const outsider = env.authenticatedContext('outsider').firestore();
   const admin = env.authenticatedContext('admin').firestore();
   const carol = env.authenticatedContext('carol').firestore();
   const solo = env.authenticatedContext('solo').firestore();
@@ -152,8 +153,8 @@ try {
   await assertSucceeds(getDoc(doc(bob, 'group_invites/CODE123')));
   await assertFails(getDocs(collection(bob, 'group_invites')));
 
-  // Üye olmayan kişi grup belgesini doğrudan okuyamaz.
-  await assertFails(getDoc(doc(bob, 'chats/group_open')));
+  // Üye veya eski üye olmayan kişi grup belgesini doğrudan okuyamaz.
+  await assertFails(getDoc(doc(outsider, 'chats/group_open')));
 
   // Geçerli davet kodu ile autojoin talebi oluşturulabilir.
   await assertSucceeds(setDoc(doc(bob, 'chats/group_open/joinRequests/bob'), {
