@@ -214,3 +214,12 @@
 - Grup dosya gönderimi de 30 MB dosyayı `readAsBytes()` ile belleğe kopyalamak yerine diskten stream ediyor.
 - Bu değişiklik düşük/orta RAM'li Android cihazlarda büyük grup videosu veya dosyası gönderirken uygulamanın ağırlaşma/çökme riskini azaltıyor.
 - CI sözleşmesine grup video/dosya akışının tekrar `readAsBytes()` kullanımına dönmesini engelleyen kontrol eklendi.
+
+### 2026-09-23 hesap izolasyonu + uygulama dili + Keşfet kişi kartları
+- Oturumdaki Firebase kullanıcı kimliği değiştiğinde `UygulamaDurumKapisi` ve `AnaEkran` artık UID ile yeniden anahtarlanıyor. Böylece önceki hesaptan kalan profil, gelen arama/oda katmanı, mesaj önbelleği veya sekme state'i yeni hesaba taşınmıyor.
+- Bu koruma özellikle hesap değiştirme akışı için eklendi; farklı hesaba ait aktivite/profil bilgisinin aynı ekranda kalma riski azaltıldı.
+- Ayarlar, Profil, Keşfet ve Üret ekranlarının ana görünür başlık/aksiyonları mevcut ortak dil sistemine bağlandı. Türkçe/İngilizce yanında mevcut Almanca/Arapça/Rusça sözlük karşılıkları da eklendi.
+- Üret ekranında gizlilik ve yorum hedefi Firestore'da mevcut sabit kodlarla tutulmaya devam ediyor; kullanıcıya gösterilen etiket seçilen uygulama diline göre çevriliyor. Böylece veri sözleşmesi bozulmadan arayüz dili değişiyor.
+- Keşfet > Kişiler artık aktif hesabın kendisini öneri kartı olarak göstermiyor ve `deactivated` hesapları ayıklıyor.
+- Keşfet kişi kartındaki yeşil çevrimiçi noktası artık herkese sabit gösterilmiyor; yalnızca gerçekten `isOnline=true` olan ve aktiflik görünürlüğünü kapatmamış hesaplarda çıkıyor.
+- Dil dönüşümü henüz tüm ikincil dialog/hata metinlerinde tamamlanmış sayılmıyor; sonraki temizlik turunda Sohbet, grup ayrıntıları ve kalan yardımcı ekranlardaki sabit metinler ortak dil sistemine taşınacak.
