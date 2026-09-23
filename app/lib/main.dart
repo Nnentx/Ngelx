@@ -7666,15 +7666,35 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
                 return FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(
                   future:_uyeGetir(ilk),
                   builder:(_,p){
-                    final ad=(p.data?.data()?['displayName']??p.data?.data()?['username']??'Bir üye').toString();
-                    final yazi=yazan.length==1?ad+' yazıyor…':yazan.length.toString()+' kişi yazıyor…';
+                    final veri=p.data?.data()??<String,dynamic>{};
+                    final ad=(veri['displayName']??veri['username']??'Bir üye').toString();
+                    final foto=(veri['photoUrl']??'').toString();
+                    final yazi=yazan.length==1?ad+' yazıyor':yazan.length.toString()+' kişi yazıyor';
                     return Padding(
-                      padding:const EdgeInsets.fromLTRB(16,3,16,0),
-                      child:Row(children:[
-                        const SizedBox(width:3),
-                        const Icon(Icons.more_horiz_rounded,color:ngelxGroupGreen,size:18),
+                      padding:const EdgeInsets.fromLTRB(12,4,12,2),
+                      child:Row(crossAxisAlignment:CrossAxisAlignment.end,children:[
+                        CircleAvatar(
+                          radius:13,
+                          backgroundColor:ngelxGroupGreenSoft,
+                          backgroundImage:yazan.length==1&&foto.isNotEmpty?CachedNetworkImageProvider(foto):null,
+                          child:yazan.length>1
+                            ?const Icon(Icons.groups_rounded,color:ngelxGroupGreen,size:14)
+                            :foto.isEmpty?const Icon(Icons.person_rounded,color:ngelxGroupGreen,size:14):null,
+                        ),
                         const SizedBox(width:6),
-                        Text(yazi,style:const TextStyle(color:ngelxPremiumMuted,fontSize:10.5,fontWeight:FontWeight.w700,fontStyle:FontStyle.italic)),
+                        Container(
+                          padding:const EdgeInsets.fromLTRB(10,6,10,6),
+                          decoration:BoxDecoration(
+                            color:const Color(0xFFF0F2F3),
+                            borderRadius:const BorderRadius.only(topLeft:Radius.circular(15),topRight:Radius.circular(15),bottomRight:Radius.circular(15),bottomLeft:Radius.circular(5)),
+                            border:Border.all(color:const Color(0xFFE2E6E4)),
+                          ),
+                          child:Row(mainAxisSize:MainAxisSize.min,children:[
+                            Text(yazi,style:const TextStyle(color:Color(0xFF686D70),fontSize:10.5,fontWeight:FontWeight.w700)),
+                            const SizedBox(width:7),
+                            const Text('•••',style:TextStyle(color:ngelxGroupGreen,fontSize:11,fontWeight:FontWeight.w900,letterSpacing:1.2)),
+                          ]),
+                        ),
                       ]),
                     );
                   },
