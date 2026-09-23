@@ -222,6 +222,18 @@ service cloud.firestore {
               && (
                 get(/databases/$(database)/documents/chats/$(chatId)).data.get('onlyAdminsCanPost', false) != true
                 || request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.get('admins', [])
+                || (
+                  request.resource.data.get('type', '') == 'system'
+                  && request.resource.data.get('actorUid', '') == request.auth.uid
+                  && request.resource.data.get('systemAction', '') in [
+                    'member_added',
+                    'member_joined',
+                    'member_left',
+                    'call_join',
+                    'call_leave',
+                    'call_end'
+                  ]
+                )
               )
             )
             || (
