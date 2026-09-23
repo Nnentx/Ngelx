@@ -109,6 +109,10 @@ required_group_tokens = [
     "Mesaj seçenekleri",
     "Daha fazla tepki",
     "reactionMore",
+    "Arama cevaplanmadı",
+    "Kimse aramaya katılmadı. İstersen tekrar arayabilirsin.",
+    "Sohbete dön",
+    "bitisDurumu",
     "Sohbeti sil",
 ]
 for token in required_group_tokens:
