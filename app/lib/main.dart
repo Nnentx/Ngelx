@@ -228,9 +228,10 @@ Future<String> ngelxMedyaYukleBytes({
   if (api.isEmpty) throw Exception('NgelX medya servisi yapılandırılmamış.');
 
   final uri = Uri.parse('$api/upload').replace(queryParameters: {'kind': kind, 'ext': temizExt});
+  const jsonKinds={'photos','profiles','stories','groups','support','chat-backgrounds','thumbnails','gifs'};
   Object? sonHata;
 
-  Future<String> cevabiCoz(Response<dynamic> cevap) async {
+  String cevapUrl(Response<dynamic> cevap,Uri hedef) {
     final status=cevap.statusCode??0;
     final veri=cevap.data;
     if(status>=200&&status<300){
@@ -238,54 +239,26 @@ Future<String> ngelxMedyaYukleBytes({
       if(url.isEmpty)throw Exception('Medya sunucusu geçerli URL döndürmedi.');
       return url;
     }
-    throw HttpException('Medya sunucusu HTTP '+status.toString()+': '+cevap.data.toString(),uri:uri);
+    throw HttpException('Medya sunucusu HTTP '+status.toString()+': '+cevap.data.toString(),uri:hedef);
   }
 
-  for(var deneme=0;deneme<2;deneme++){
-    try{
-      final token=await user.getIdToken(deneme>0);
-      if(token==null||token.isEmpty)throw Exception('Güvenli medya oturumu oluşturulamadı.');
-      final dio=Dio(BaseOptions(
-        connectTimeout:const Duration(seconds:15),
-        sendTimeout:const Duration(seconds:40),
-        receiveTimeout:const Duration(seconds:40),
-        validateStatus:(s)=>s!=null,
-      ));
-      final cevap=await dio.postUri(
-        uri,
-        data:bytes,
-        options:Options(
-          contentType:tur,
-          responseType:ResponseType.json,
-          headers:{
-            HttpHeaders.authorizationHeader:'Bearer $token',
-            'X-NgelX-Client':'android-v57',
-            'X-NgelX-Filename':legacyPath,
-          },
-        ),
-      );
-      return await cevabiCoz(cevap);
-    }catch(e){
-      sonHata=e;
-      if(deneme==0)await Future<void>.delayed(const Duration(milliseconds:700));
-    }
-  }
-
-  const jsonFallbackKinds={'photos','profiles','stories','groups','support','chat-backgrounds','thumbnails','gifs'};
-  if(jsonFallbackKinds.contains(kind)&&bytes.length<=10*1024*1024){
+  // Küçük resimler için önce JSON/base64 taşıma kullanılır. Test telefonunda
+  // workers.dev'e binary POST gövdesi "Connection reset by peer" üretirken
+  // JSON taşıma aynı medya sunucusuna stabil biçimde ulaşabiliyor.
+  if(jsonKinds.contains(kind)&&bytes.length<=10*1024*1024){
     try{
       final token=await user.getIdToken(true);
       if(token==null||token.isEmpty)throw Exception('Güvenli medya oturumu oluşturulamadı.');
-      final fallbackUri=Uri.parse('$api/upload').replace(queryParameters:{
+      final hedef=Uri.parse('$api/upload').replace(queryParameters:{
         'kind':kind,'ext':temizExt,'encoding':'base64',
       });
       final cevap=await Dio(BaseOptions(
-        connectTimeout:const Duration(seconds:15),
-        sendTimeout:const Duration(seconds:45),
-        receiveTimeout:const Duration(seconds:45),
+        connectTimeout:const Duration(seconds:18),
+        sendTimeout:const Duration(seconds:50),
+        receiveTimeout:const Duration(seconds:50),
         validateStatus:(s)=>s!=null,
       )).postUri(
-        fallbackUri,
+        hedef,
         data:{'data':base64Encode(bytes),'contentType':tur},
         options:Options(
           contentType:Headers.jsonContentType,
@@ -297,13 +270,43 @@ Future<String> ngelxMedyaYukleBytes({
           },
         ),
       );
-      return await cevabiCoz(cevap);
+      return cevapUrl(cevap,hedef);
     }catch(e){
       sonHata=e;
     }
   }
 
-  throw Exception('Medya sunucusuna bağlanılamadı. Bağlantı otomatik olarak farklı yöntemlerle denendi. '+(sonHata?.toString()??''));
+  // Büyük dosyalar ve JSON yolunun başarısız olduğu durumlar için raw byte yolu.
+  for(var deneme=0;deneme<2;deneme++){
+    try{
+      final token=await user.getIdToken(deneme>0);
+      if(token==null||token.isEmpty)throw Exception('Güvenli medya oturumu oluşturulamadı.');
+      final cevap=await Dio(BaseOptions(
+        connectTimeout:const Duration(seconds:18),
+        sendTimeout:const Duration(seconds:45),
+        receiveTimeout:const Duration(seconds:45),
+        validateStatus:(s)=>s!=null,
+      )).postUri(
+        uri,
+        data:bytes,
+        options:Options(
+          contentType:tur,
+          responseType:ResponseType.json,
+          headers:{
+            HttpHeaders.authorizationHeader:'Bearer $token',
+            'X-NgelX-Client':'android-v57-raw',
+            'X-NgelX-Filename':legacyPath,
+          },
+        ),
+      );
+      return cevapUrl(cevap,uri);
+    }catch(e){
+      sonHata=e;
+      if(deneme==0)await Future<void>.delayed(const Duration(milliseconds:650));
+    }
+  }
+
+  throw Exception('Medya yüklenemedi. JSON ve ham dosya yolları denendi. '+(sonHata?.toString()??''));
 }
 
 Future<void> ngelxMedyaSil(String rawUrl) async {
@@ -9194,12 +9197,14 @@ class _GrupUyeleriPageState extends State<GrupUyeleriPage>{
                     final isim=(p['displayName']??p['username']??'Kullanıcı').toString();
                     final username=(p['username']??'').toString();
                     if(sorgu.isNotEmpty&&!isim.toLowerCase().contains(sorgu)&&!username.toLowerCase().contains(sorgu))return const SizedBox.shrink();
-                    final foto=(p['photoUrl']??'').toString(),admin=admins.contains(id),online=p['online']==true;
+                    final foto=(p['photoUrl']??'').toString(),admin=admins.contains(id),online=p['isOnline']==true||p['online']==true;
                     return NgelXPremiumCard(
                       margin:const EdgeInsets.only(bottom:8),
                       padding:const EdgeInsets.symmetric(horizontal:10,vertical:7),
                       child:ListTile(
                         dense:true,contentPadding:EdgeInsets.zero,
+                        onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciProfilPage(uid:id))),
+                        onLongPress:yonetici&&id!=me?()=>_uyeIslemi(id,isim,admin,yonetici):null,
                         leading:Stack(children:[
                           CircleAvatar(radius:23,backgroundColor:const Color(0xFFECE4F5),backgroundImage:foto.isEmpty?null:CachedNetworkImageProvider(foto),child:foto.isEmpty?const Icon(Icons.person_rounded,color:ngelxPremiumPurple):null),
                           if(online)const Positioned(right:0,bottom:0,child:CircleAvatar(radius:5.5,backgroundColor:Colors.white,child:CircleAvatar(radius:3.5,backgroundColor:Color(0xFF21C76A)))),
