@@ -5863,7 +5863,27 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
     }
     if(mounted)setState(()=>mesajGonderiliyor=false);
   }
-  Future<void> medyaGonder(ImageSource kaynak)async{final x=await ImagePicker().pickImage(source:kaynak,imageQuality:76,maxWidth:1280);if(x==null)return;try{final yol='groups/${widget.chatId}/${DateTime.now().millisecondsSinceEpoch}.jpg';final url=await ngelxMedyaYukleBytes(bytes:await x.readAsBytes(),kind:'groups',ext:'jpg',legacyPath:yol).timeout(const Duration(seconds:12));await payloadGonder({'type':'photo','mediaUrl':url},'📷 Fotoğraf');}catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Fotoğraf gönderilemedi.')));}}
+  Future<void> medyaGonder(ImageSource kaynak)async{
+    final x=await ImagePicker().pickImage(source:kaynak,imageQuality:76,maxWidth:1280);
+    if(x==null)return;
+    await _grupFotografiniGonder(x,kaynak);
+  }
+  Future<void> _grupFotografiniGonder(XFile x,ImageSource kaynak)async{
+    try{
+      final bytes=await x.readAsBytes();
+      final uzanti=x.name.contains('.')?x.name.split('.').last.toLowerCase():'jpg';
+      final yol='groups/${widget.chatId}/${DateTime.now().millisecondsSinceEpoch}.$uzanti';
+      final url=await ngelxMedyaYukleBytes(bytes:bytes,kind:'groups',ext:uzanti,legacyPath:yol).timeout(const Duration(seconds:50));
+      final tamam=await payloadGonder({'type':'photo','mediaUrl':url},'📷 Fotoğraf');
+      if(!tamam)throw Exception('Mesaj kaydedilemedi');
+    }catch(_){
+      if(!mounted)return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content:const Text('Fotoğraf gönderilemedi.'),
+        action:SnackBarAction(label:'Tekrar dene',onPressed:()=>unawaited(_grupFotografiniGonder(x,kaynak))),
+      ));
+    }
+  }
   Future<void> grupVideoGonder()async{
     final x=await ImagePicker().pickVideo(source:ImageSource.gallery,maxDuration:const Duration(minutes:3));
     if(x==null)return;
@@ -7356,64 +7376,101 @@ class _GrupMedyaPageState extends State<GrupMedyaPage>{
   Query<Map<String,dynamic>> get _mesajlar=>FirebaseFirestore.instance.collection('chats').doc(widget.chatId).collection('messages').orderBy('createdAt',descending:true);
 
   @override Widget build(BuildContext context)=>Theme(
-    data:ThemeData.light().copyWith(colorScheme:ColorScheme.fromSeed(seedColor:ngelxPremiumPurple)),
+    data:ThemeData.light().copyWith(colorScheme:ColorScheme.fromSeed(seedColor:ngelxGroupGreen)),
     child:Scaffold(
-      backgroundColor:const Color(0xFFFBF9FF),
+      backgroundColor:Colors.white,
       appBar:AppBar(
-        backgroundColor:Colors.transparent,
-        surfaceTintColor:Colors.transparent,
+        backgroundColor:Colors.white,
+        surfaceTintColor:Colors.white,
         elevation:0,
         title:const Text('Medya ve dosyalar',style:TextStyle(fontWeight:FontWeight.w900,color:ngelxPremiumInk)),
-        flexibleSpace:Container(decoration:const BoxDecoration(gradient:LinearGradient(colors:[Color(0xFFFFFFFF),Color(0xFFF5EFFF)]),borderRadius:BorderRadius.vertical(bottom:Radius.circular(24)))),
       ),
       body:Column(children:[
         Padding(
-          padding:const EdgeInsets.fromLTRB(14,14,14,8),
+          padding:const EdgeInsets.fromLTRB(12,12,12,8),
           child:Container(
             padding:const EdgeInsets.all(4),
-            decoration:BoxDecoration(color:const Color(0xFFF0ECF5),borderRadius:BorderRadius.circular(18)),
+            decoration:BoxDecoration(color:ngelxGroupGreenSoft,borderRadius:BorderRadius.circular(18)),
             child:Row(children:[
               _sekme('Medya',0),
               _sekme('Dosyalar',1),
               _sekme('Bağlantılar',2),
+              _sekme('Ses',3),
             ]),
           ),
         ),
         Expanded(child:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
           stream:_mesajlar.snapshots(),
           builder:(_,snap){
-            if(snap.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator(color:ngelxPremiumPurple));
+            if(snap.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator(color:ngelxGroupGreen));
             final tum=snap.data?.docs??[];
             final docs=tum.where((d){
               final t=(d.data()['type']??'').toString();
               if(sekme==0)return t=='photo'||t=='gif'||t=='video';
-              if(sekme==1)return t=='file'||t=='document'||t=='audio';
-              return t=='shared_content'||(d.data()['url']??'').toString().isNotEmpty;
+              if(sekme==1)return t=='file'||t=='document';
+              if(sekme==2)return t=='shared_content'||(d.data()['url']??'').toString().isNotEmpty;
+              return t=='audio';
             }).toList();
             if(docs.isEmpty)return Center(child:Column(mainAxisSize:MainAxisSize.min,children:[
-              Icon(sekme==0?Icons.photo_library_outlined:sekme==1?Icons.folder_open_rounded:Icons.link_rounded,color:const Color(0xFFC7B8E7),size:54),
+              Icon(
+                sekme==0?Icons.photo_library_outlined:sekme==1?Icons.folder_open_rounded:sekme==2?Icons.link_rounded:Icons.graphic_eq_rounded,
+                color:const Color(0xFFADDDBD),size:54,
+              ),
               const SizedBox(height:10),
-              Text(sekme==0?'Henüz medya yok.':sekme==1?'Henüz dosya yok.':'Henüz bağlantı yok.',style:const TextStyle(color:ngelxPremiumMuted,fontWeight:FontWeight.w700)),
+              Text(
+                sekme==0?'Henüz medya yok.':sekme==1?'Henüz dosya yok.':sekme==2?'Henüz bağlantı yok.':'Henüz ses kaydı yok.',
+                style:const TextStyle(color:ngelxPremiumMuted,fontWeight:FontWeight.w700),
+              ),
             ]));
             if(sekme==0){
+              final imageUrls=<String>[
+                for(final d in docs)
+                  if((d.data()['type']??'').toString()!='video'&&(d.data()['mediaUrl']??'').toString().isNotEmpty)
+                    (d.data()['mediaUrl']??'').toString(),
+              ];
               return GridView.builder(
                 padding:const EdgeInsets.fromLTRB(12,8,12,24),
                 itemCount:docs.length,
                 gridDelegate:const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount:3,crossAxisSpacing:8,mainAxisSpacing:8),
                 itemBuilder:(_,i){
-                  final v=docs[i].data(),url=(v['mediaUrl']??'').toString(),t=(v['type']??'').toString();
+                  final data=docs[i].data(),url=(data['mediaUrl']??'').toString(),t=(data['type']??'').toString();
+                  final imageIndex=t=='video'?-1:imageUrls.indexOf(url);
                   return InkWell(
-                    onTap:url.isEmpty?null:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>t=='video'?TamEkranVideoPage(url:url):TamEkranMedyaPage(url:url))),
+                    onTap:url.isEmpty?null:()=>Navigator.push(context,MaterialPageRoute(
+                      builder:(_)=>t=='video'
+                        ?TamEkranVideoPage(url:url)
+                        :NgelXMedyaGaleriPage(urls:imageUrls,initialIndex:imageIndex<0?0:imageIndex),
+                    )),
                     borderRadius:BorderRadius.circular(16),
                     child:ClipRRect(
                       borderRadius:BorderRadius.circular(16),
                       child:Stack(fit:StackFit.expand,children:[
-                        if(t=='video')const ColoredBox(color:Color(0xFF211837),child:Center(child:Icon(Icons.play_circle_fill_rounded,color:Colors.white,size:42)))
-                        else if(url.isNotEmpty)CachedNetworkImage(imageUrl:url,fit:BoxFit.cover,errorWidget:(_,__,___)=>const ColoredBox(color:Color(0xFFF0EDF4),child:Icon(Icons.broken_image_outlined)))
-                        else const ColoredBox(color:Color(0xFFF0EDF4),child:Icon(Icons.image_outlined)),
+                        if(t=='video')const ColoredBox(color:Color(0xFF15231A),child:Center(child:Icon(Icons.play_circle_fill_rounded,color:Colors.white,size:42)))
+                        else if(url.isNotEmpty)CachedNetworkImage(imageUrl:url,fit:BoxFit.cover,errorWidget:(_,__,___)=>const ColoredBox(color:Color(0xFFF0F5F2),child:Icon(Icons.broken_image_outlined)))
+                        else const ColoredBox(color:Color(0xFFF0F5F2),child:Icon(Icons.image_outlined)),
                         if(t=='gif')Positioned(left:7,bottom:7,child:Container(padding:const EdgeInsets.symmetric(horizontal:7,vertical:4),decoration:BoxDecoration(color:Colors.black54,borderRadius:BorderRadius.circular(10)),child:const Text('GIF',style:TextStyle(color:Colors.white,fontSize:9,fontWeight:FontWeight.w900)))),
                       ]),
                     ),
+                  );
+                },
+              );
+            }
+            if(sekme==3){
+              return ListView.separated(
+                padding:const EdgeInsets.fromLTRB(14,8,14,24),
+                itemCount:docs.length,
+                separatorBuilder:(_,__)=>const SizedBox(height:8),
+                itemBuilder:(_,i){
+                  final data=docs[i].data();
+                  final url=(data['audioUrl']??'').toString();
+                  return NgelXPremiumCard(
+                    color:const Color(0xFFF8FCF9),
+                    padding:const EdgeInsets.symmetric(horizontal:12,vertical:11),
+                    child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+                      Text('Ses kaydı • '+mesajSaati(data['createdAt']),style:const TextStyle(color:ngelxPremiumMuted,fontSize:11,fontWeight:FontWeight.w700)),
+                      const SizedBox(height:8),
+                      NgelXSesliMesaj(url:url,benim:false,durationSeconds:(data['durationSeconds'] as num?)?.toInt()??0),
+                    ]),
                   );
                 },
               );
@@ -7423,26 +7480,25 @@ class _GrupMedyaPageState extends State<GrupMedyaPage>{
               itemCount:docs.length,
               separatorBuilder:(_,__)=>const SizedBox(height:8),
               itemBuilder:(_,i){
-                final v=docs[i].data(),t=(v['type']??'').toString();
-                final url=(v['mediaUrl']??v['fileUrl']??v['url']??'').toString();
-                final metin=(v['fileName']??v['text']??(sekme==1?'Dosya':'Bağlantı')).toString();
-                final alt=mesajSaati(v['createdAt']);
+                final data=docs[i].data(),t=(data['type']??'').toString();
+                final url=(data['mediaUrl']??data['fileUrl']??data['url']??'').toString();
+                final metin=(data['fileName']??data['text']??(sekme==1?'Dosya':'Bağlantı')).toString();
+                final alt=mesajSaati(data['createdAt']);
                 return NgelXPremiumCard(
+                  color:const Color(0xFFF8FCF9),
                   padding:const EdgeInsets.symmetric(horizontal:12,vertical:10),
                   child:ListTile(
                     dense:true,
                     contentPadding:EdgeInsets.zero,
-                    leading:Container(width:44,height:44,decoration:BoxDecoration(color:const Color(0xFFF0E8FF),borderRadius:BorderRadius.circular(14)),child:Icon(sekme==1?(t=='audio'?Icons.graphic_eq_rounded:Icons.insert_drive_file_outlined):Icons.link_rounded,color:ngelxPremiumPurple)),
+                    leading:Container(width:44,height:44,decoration:BoxDecoration(color:ngelxGroupGreenSoft,borderRadius:BorderRadius.circular(14)),child:Icon(sekme==1?Icons.insert_drive_file_outlined:Icons.link_rounded,color:ngelxGroupGreen)),
                     title:Text(metin,maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w800)),
                     subtitle:Text(alt,style:const TextStyle(color:ngelxPremiumMuted,fontSize:11)),
-                    trailing:const Icon(Icons.chevron_right_rounded,color:Color(0xFFA79EAF)),
+                    trailing:const Icon(Icons.chevron_right_rounded,color:Color(0xFF99A69E)),
                     onTap:url.isEmpty?null:()async{
-                      if(t=='shared_content'&&(v['contentId']??'').toString().isNotEmpty){
-                        Navigator.push(context,MaterialPageRoute(builder:(_)=>IcerikBaglantiPage(icerikId:(v['contentId']??'').toString())));
+                      if(t=='shared_content'&&(data['contentId']??'').toString().isNotEmpty){
+                        Navigator.push(context,MaterialPageRoute(builder:(_)=>IcerikBaglantiPage(icerikId:(data['contentId']??'').toString())));
                       }else if(t=='file'||t=='document'){
                         await SharePlus.instance.share(ShareParams(text:url));
-                      }else{
-                        Navigator.push(context,MaterialPageRoute(builder:(_)=>TamEkranMedyaPage(url:url)));
                       }
                     },
                   ),
@@ -7463,10 +7519,56 @@ class _GrupMedyaPageState extends State<GrupMedyaPage>{
         duration:const Duration(milliseconds:180),
         height:40,
         alignment:Alignment.center,
-        decoration:BoxDecoration(color:sekme==index?ngelxPremiumPurple:Colors.transparent,borderRadius:BorderRadius.circular(14)),
-        child:Text(label,style:TextStyle(color:sekme==index?Colors.white:ngelxPremiumMuted,fontSize:12,fontWeight:FontWeight.w800)),
+        decoration:BoxDecoration(color:sekme==index?ngelxGroupGreen:Colors.transparent,borderRadius:BorderRadius.circular(14)),
+        child:FittedBox(
+          fit:BoxFit.scaleDown,
+          child:Text(label,style:TextStyle(color:sekme==index?Colors.white:ngelxPremiumMuted,fontSize:11.2,fontWeight:FontWeight.w800)),
+        ),
       ),
     ),
+  );
+}
+
+class NgelXMedyaGaleriPage extends StatefulWidget{
+  final List<String> urls;
+  final int initialIndex;
+  const NgelXMedyaGaleriPage({super.key,required this.urls,required this.initialIndex});
+  @override State<NgelXMedyaGaleriPage> createState()=>_NgelXMedyaGaleriPageState();
+}
+class _NgelXMedyaGaleriPageState extends State<NgelXMedyaGaleriPage>{
+  late final PageController controller;
+  late int index;
+  @override void initState(){
+    super.initState();
+    index=widget.initialIndex.clamp(0,widget.urls.isEmpty?0:widget.urls.length-1);
+    controller=PageController(initialPage:index);
+  }
+  @override void dispose(){controller.dispose();super.dispose();}
+  @override Widget build(BuildContext context)=>Scaffold(
+    backgroundColor:Colors.black,
+    appBar:AppBar(
+      backgroundColor:Colors.black,
+      foregroundColor:Colors.white,
+      elevation:0,
+      title:Text(widget.urls.isEmpty?'Medya':(index+1).toString()+' / '+widget.urls.length.toString(),style:const TextStyle(fontWeight:FontWeight.w800)),
+    ),
+    body:widget.urls.isEmpty
+      ?const Center(child:Icon(Icons.broken_image_outlined,color:Colors.white54,size:58))
+      :PageView.builder(
+        controller:controller,
+        itemCount:widget.urls.length,
+        onPageChanged:(i)=>setState(()=>index=i),
+        itemBuilder:(_,i)=>InteractiveViewer(
+          minScale:1,
+          maxScale:4,
+          child:Center(child:CachedNetworkImage(
+            imageUrl:widget.urls[i],
+            fit:BoxFit.contain,
+            placeholder:(_,__)=>const CircularProgressIndicator(color:Colors.white),
+            errorWidget:(_,__,___)=>const Icon(Icons.broken_image_outlined,color:Colors.white54,size:58),
+          )),
+        ),
+      ),
   );
 }
 
