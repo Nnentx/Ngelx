@@ -75,6 +75,21 @@ for forbidden in (
     if forbidden in app:
         errors.append("Üret ekranında eski/sahte kontrol kaldı: " + forbidden)
 
+# Settings must show the real build version instead of a stale hard-coded UI label.
+for token in (
+    "NGELX_VERSION_NAME",
+    "NGELX_BUILD_NUMBER",
+    "v$ngelxVersionName • Yapı $ngelxBuildNumber",
+):
+    if token not in app:
+        errors.append("Uygulama sürüm etiketi otomatik değil: " + token)
+if "V42 • Geliştiriliyor" in app:
+    errors.append("Eski sabit V42 sürüm etiketi kaldı.")
+
+# Group creation must give the media service enough time to upload the selected avatar.
+if "kind: 'groups'" in app and ").timeout(const Duration(seconds:75));" not in app:
+    errors.append("Grup fotoğrafı yükleme zaman aşımı güvenli aralığa çıkarılmadı.")
+
 # Main feed must show real content only and keep user filters/live behavior intact.
 for token in (
     "class _VideoAkisiState",
