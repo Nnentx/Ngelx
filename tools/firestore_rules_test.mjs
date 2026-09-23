@@ -43,7 +43,10 @@ async function seed() {
       moderators: [],
       hiddenFor: ['bob'],
       onlyAdminsCanPost: false,
-      onlyAdminsCanEdit: false,
+      onlyAdminsCanAddMembers: false,
+      onlyAdminsCanEditGroup: true,
+      onlyAdminsCanPin: true,
+      onlyAdminsCanMentionAll: false,
       newMembersSeeHistory: true,
       joinApproval: false,
       inviteCode: 'CODE123',
@@ -68,7 +71,10 @@ async function seed() {
       moderators: [],
       hiddenFor: ['carol'],
       onlyAdminsCanPost: false,
-      onlyAdminsCanEdit: false,
+      onlyAdminsCanAddMembers: false,
+      onlyAdminsCanEditGroup: true,
+      onlyAdminsCanPin: true,
+      onlyAdminsCanMentionAll: false,
       newMembersSeeHistory: true,
       joinApproval: true,
       inviteCode: 'CODE999',
@@ -138,6 +144,90 @@ try {
     backgroundOpacity_bob: 0.35,
     readReceipts_bob: false,
     typingIndicator_bob: false,
+  }));
+
+  // Granüler grup izinleri: açık grupta üye ekleme serbestken normal üye yeni üye ekleyebilir.
+  await assertSucceeds(updateDoc(doc(bob, 'chats/group_open'), {
+    members: arrayUnion('eve'),
+    hiddenFor: arrayRemove('eve'),
+    updatedAt: serverTimestamp(),
+  }));
+
+  // Yönetici üye eklemeyi yalnızca yöneticilere kapatınca normal üye artık ekleyemez.
+  await assertSucceeds(updateDoc(doc(admin, 'chats/group_open'), {
+    onlyAdminsCanAddMembers: true,
+    updatedAt: serverTimestamp(),
+  }));
+  await assertFails(updateDoc(doc(bob, 'chats/group_open'), {
+    members: arrayUnion('mallory'),
+    hiddenFor: arrayRemove('mallory'),
+    updatedAt: serverTimestamp(),
+  }));
+
+  // Grup bilgisi varsayılan olarak yöneticiye özel; açılırsa normal üye açıklamayı değiştirebilir.
+  await assertFails(updateDoc(doc(bob, 'chats/group_open'), {
+    groupDescription: 'Yetkisiz değişiklik',
+    updatedAt: serverTimestamp(),
+  }));
+  await assertSucceeds(updateDoc(doc(admin, 'chats/group_open'), {
+    onlyAdminsCanEditGroup: false,
+    updatedAt: serverTimestamp(),
+  }));
+  await assertSucceeds(updateDoc(doc(bob, 'chats/group_open'), {
+    groupDescription: 'Üye tarafından izinli değişiklik',
+    updatedAt: serverTimestamp(),
+  }));
+
+  // Mesaj sabitleme yöneticilere özelken üye sabitleyemez, yönetici sabitleyebilir.
+  await assertSucceeds(setDoc(doc(bob, 'chats/group_open/messages/msg1'), {
+    senderId: 'bob',
+    type: 'text',
+    text: 'Merhaba',
+    createdAt: serverTimestamp(),
+  }));
+  await assertFails(updateDoc(doc(bob, 'chats/group_open/messages/msg1'), {
+    pinned: true,
+    pinnedAt: serverTimestamp(),
+    pinnedBy: 'bob',
+  }));
+  await assertSucceeds(updateDoc(doc(admin, 'chats/group_open/messages/msg1'), {
+    pinned: true,
+    pinnedAt: serverTimestamp(),
+    pinnedBy: 'admin',
+  }));
+
+  // Yönetici herkesten sil işleminde belgeyi yok etmek yerine tombstone bırakabilir.
+  await assertSucceeds(updateDoc(doc(admin, 'chats/group_open/messages/msg1'), {
+    deletedForEveryone: true,
+    deletedAt: serverTimestamp(),
+    deletedBy: 'admin',
+    text: '',
+    mediaUrl: '',
+    audioUrl: '',
+    fileUrl: '',
+    fileName: '',
+    reactions: {},
+    pinned: false,
+    pinnedAt: null,
+    pinnedBy: null,
+  }));
+
+  // Sadece yöneticiler yazsın açıldığında normal üye mesaj oluşturamaz.
+  await assertSucceeds(updateDoc(doc(admin, 'chats/group_open'), {
+    onlyAdminsCanPost: true,
+    updatedAt: serverTimestamp(),
+  }));
+  await assertFails(setDoc(doc(bob, 'chats/group_open/messages/blocked_msg'), {
+    senderId: 'bob',
+    type: 'text',
+    text: 'Gönderilememeli',
+    createdAt: serverTimestamp(),
+  }));
+  await assertSucceeds(setDoc(doc(admin, 'chats/group_open/messages/admin_msg'), {
+    senderId: 'admin',
+    type: 'text',
+    text: 'Yönetici mesajı',
+    createdAt: serverTimestamp(),
   }));
 
   // Yönetici onaylı grupta katılma isteği oluşturulabilir ama kullanıcı kendini ekleyemez.
