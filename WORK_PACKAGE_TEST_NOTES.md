@@ -35,6 +35,10 @@
 ## Grup sohbeti
 
 - Anket özelliği grup sohbetinden tamamen kaldırıldı ve geri eklenmemesi sözleşme testiyle korunuyor.
+- @ menüsü “Kişiler” ve “Mesaj seçenekleri” olarak ayrıldı; @herkes ve @sessiz seçenekleri görsel olarak belirginleştirildi.
+- Mesaj tepkilerine genişletilmiş emoji seçici eklendi.
+- Sesli mesaj oynatıcıya oynat/duraklat, ilerleme çubuğu, ileri-geri sarma ve süre göstergesi eklendi.
+- Cevapsız aramalarda tam ekran “Arama cevaplanmadı” görünümü, “Tekrar Ara” ve “Sohbete dön” seçenekleri eklendi; bire bir aramalarda da karşı taraf katılmadıysa cevapsız durumuna düşer.
 - Mesajlarda gönderen adı ve profil fotoğrafı görünür.
 - Metin, fotoğraf, video, ses, dosya, konum, çıkartma, GIF ve bağlantı gönderilebilir.
 - Kamera, galeri, video, dosya, konum, çıkartma ve GIF menülerinin metin etiketleri vardır.
