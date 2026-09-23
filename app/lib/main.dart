@@ -511,8 +511,9 @@ Future<void> sikayetEt(BuildContext context,{required String hedefTuru,required 
   final bildiren=FirebaseAuth.instance.currentUser;
   if(bildiren==null||bildiren.isAnonymous){await misafirEngeli(context);return;}
   final neden=await showModalBottomSheet<String>(context:context,backgroundColor:Colors.white,showDragHandle:true,shape:const RoundedRectangleBorder(borderRadius:BorderRadius.vertical(top:Radius.circular(28))),builder:(c)=>Theme(data:ThemeData.light(),child:SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[const ListTile(title:Text('Şikâyet nedenini seç',style:TextStyle(color:Colors.black,fontWeight:FontWeight.bold))),for(final n in ['Spam veya yanıltıcı','Taciz veya zorbalık','Nefret söylemi','Çıplaklık veya cinsel içerik','Şiddet veya tehlikeli davranış','Başkasını taklit ediyor'])ListTile(title:Text(n,style:const TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(c,n)),const SizedBox(height:12)]))));
+  await ngelxOverlayKapanisiniBekle();
   if(neden==null||!context.mounted)return;
-  try{await FirebaseFirestore.instance.collection('reports').add({'reporterUid':bildiren.uid,'targetType':hedefTuru,'targetId':hedefId,'targetUid':hedefUid,'reason':neden,'status':'pending','createdAt':FieldValue.serverTimestamp()});if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Şikâyetin incelemeye gönderildi.')));}catch(e){if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Şikâyet gönderilemedi: $e')));}
+  try{await FirebaseFirestore.instance.collection('reports').add({'reporterUid':bildiren.uid,'targetType':hedefTuru,'targetId':hedefId,'targetUid':hedefUid,'reason':neden,'status':'pending','createdAt':FieldValue.serverTimestamp()});if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Şikâyetin incelemeye gönderildi.')));}catch(_){if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Şikâyet gönderilemedi. Tekrar dene.')));}
 }
 
 Future<void> kullaniciyiEngelle(BuildContext context,String hedefUid) async {
@@ -6770,6 +6771,11 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
     final ben=uid;
     final oda=(v['callRoomName']??'').toString();
     if(ben==null||oda.isEmpty)return;
+    final grupBelgesi=await chatRef.get();
+    if(!List<String>.from(grupBelgesi.data()?['members']??const[]).contains(ben)){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Artık bu grubun üyesi değilsin.')));
+      return;
+    }
     final durum=(v['callStatus']??'').toString();
     if(durum!='ringing'&&durum!='active')return;
     try{
@@ -6802,6 +6808,11 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
   Future<void> aramaBaslat(bool goruntulu)async{
     final ben=uid;
     if(ben==null||aramaBaslatiliyor)return;
+    final grupBelgesi=await chatRef.get();
+    if(!List<String>.from(grupBelgesi.data()?['members']??const[]).contains(ben)){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Artık bu grubun üyesi değilsin.')));
+      return;
+    }
     setState(()=>aramaBaslatiliyor=true);
     final grupAdi=widget.ad;
     final odaAdi='group_${widget.chatId}_${DateTime.now().millisecondsSinceEpoch}';
@@ -7357,6 +7368,35 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
   }
 
 
+  Future<void> _cikarilmisSohbetiGizle()async{
+    final ben=uid;if(ben==null)return;
+    try{
+      await chatRef.set({'hiddenFor':FieldValue.arrayUnion([ben])},SetOptions(merge:true));
+      if(mounted)Navigator.maybePop(context);
+    }catch(_){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Konuşma kaldırılamadı. Tekrar dene.')));
+    }
+  }
+
+  Widget _gruptanCikarildiPaneli()=>SafeArea(
+    top:false,
+    child:Container(
+      color:ngelxGroupGreenHeader,
+      padding:const EdgeInsets.fromLTRB(14,13,14,14),
+      child:Column(mainAxisSize:MainAxisSize.min,children:[
+        const Text('Bu gruba mesaj gönderemezsin',textAlign:TextAlign.center,style:TextStyle(color:Color(0xFF5D555F),fontSize:16,fontWeight:FontWeight.w900)),
+        const SizedBox(height:4),
+        const Text('Artık bu grupta değilsin. Tekrar ekleninceye kadar arama veya mesaj gönderemez ve alamazsın.',textAlign:TextAlign.center,style:TextStyle(color:Color(0xFF746F78),fontSize:12.5,height:1.3,fontWeight:FontWeight.w600)),
+        const SizedBox(height:12),
+        SizedBox(width:double.infinity,child:FilledButton.icon(
+          style:FilledButton.styleFrom(backgroundColor:const Color(0xFFE52335),foregroundColor:Colors.white,padding:const EdgeInsets.symmetric(vertical:13),shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(18))),
+          onPressed:_cikarilmisSohbetiGizle,
+          icon:const Icon(Icons.delete_outline_rounded),
+          label:const Text('Konuşmayı sil',style:TextStyle(fontWeight:FontWeight.w900)),
+        )),
+      ]),
+    ),
+  );
     Widget _aktifGrupUyeYazisi(List<String> uyeler){
     if(uyeler.isEmpty)return const Text('0 kişi şu an aktif',style:TextStyle(fontSize:11.5,color:ngelxPremiumMuted,fontWeight:FontWeight.w700));
     final ilk=uyeler.take(30).toList();
@@ -7639,7 +7679,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
                   ),
                 ),
               ),
-              if(mentionOnerileri.isNotEmpty)Container(
+              if(uyeMi&&mentionOnerileri.isNotEmpty)Container(
                 margin:const EdgeInsets.fromLTRB(8,0,8,6),
                 constraints:BoxConstraints(maxHeight:(MediaQuery.sizeOf(context).height-MediaQuery.viewInsetsOf(context).bottom-190).clamp(150.0,360.0).toDouble()),
                 decoration:BoxDecoration(
@@ -7705,7 +7745,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
                   }),
                 ),
               ),
-              Builder(builder:(_){
+              if(uyeMi)Builder(builder:(_){
                 final yazan=<String>[];
                 final simdi=DateTime.now();
                 tv.forEach((k,val){
@@ -7814,7 +7854,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
                   IconButton(onPressed:()=>setState((){yanitlananMesajId=null;yanitlananMetin=null;yanitlananGonderen=null;}),icon:const Icon(Icons.close_rounded,size:19),visualDensity:VisualDensity.compact),
                 ]),
               ),
-              SafeArea(
+              if(uyeMi)SafeArea(
                 top:false,
                 child:Container(
                   color:ngelxGroupGreenHeader,
@@ -7925,7 +7965,8 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
                     ),
                   ]),
                 ),
-              ),
+              )
+              else _gruptanCikarildiPaneli(),
             ]),
           );
         },
