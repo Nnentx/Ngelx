@@ -189,7 +189,14 @@ service cloud.firestore {
         allow update: if signedIn()
           && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.members
           && (
-            resource.data.senderId == request.auth.uid
+            (
+              resource.data.senderId == request.auth.uid
+              && onlyChanges(['text', 'editedAt'])
+            )
+            || (
+              resource.data.senderId == request.auth.uid
+              && onlyChanges(['callStatus', 'callAnsweredAt', 'callConnectedAt', 'callEndedAt', 'durationSeconds'])
+            )
             || onlyChanges(['reactions'])
             || onlyChanges(['pollVotes'])
             || (
@@ -204,7 +211,8 @@ service cloud.firestore {
               && onlyChanges(['pinned', 'pinnedAt', 'pinnedBy'])
             )
             || (
-              request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.get('admins', [])
+              (resource.data.senderId == request.auth.uid
+                || request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.get('admins', []))
               && request.resource.data.get('deletedForEveryone', false) == true
               && onlyChanges([
                 'deletedForEveryone', 'deletedAt', 'deletedBy',
