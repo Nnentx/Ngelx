@@ -5713,6 +5713,8 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
   late final Stream<DocumentSnapshot<Map<String,dynamic>>> _grupAkisi;
   bool aramaBaslatiliyor=false,mesajGonderiliyor=false,sesKaydediliyor=false,_okunduYaziliyor=false,_ilkMesajKaydirma=true,_mesajBeklemeBitti=false,_enAltta=true,sessizGonder=false;
   int sesKaydiSaniye=0,_acilisOkunmamis=0;
+  double? medyaIlerleme;
+  String? medyaIlerlemeEtiket;
   DateTime? _sonOkunduKontrolu,sesKaydiBaslangic;
   String? yanitlananMesajId,yanitlananMetin,yanitlananGonderen;
   String? get uid=>FirebaseAuth.instance.currentUser?.uid;
@@ -5904,6 +5906,15 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
     }
     if(mounted)setState(()=>mesajGonderiliyor=false);
   }
+  void _medyaIlerlemeGuncelle(String etiket,int sent,int total){
+    if(!mounted)return;
+    final oran=total>0?(sent/total).clamp(0.0,1.0):null;
+    setState((){medyaIlerlemeEtiket=etiket;medyaIlerleme=oran;});
+  }
+  void _medyaIlerlemeBitir(){
+    if(mounted)setState((){medyaIlerleme=null;medyaIlerlemeEtiket=null;});
+  }
+
   Future<void> medyaGonder(ImageSource kaynak)async{
     final x=await ImagePicker().pickImage(source:kaynak,imageQuality:76,maxWidth:1280);
     if(x==null)return;
@@ -5914,7 +5925,10 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
       final bytes=await x.readAsBytes();
       final uzanti=x.name.contains('.')?x.name.split('.').last.toLowerCase():'jpg';
       final yol='groups/${widget.chatId}/${DateTime.now().millisecondsSinceEpoch}.$uzanti';
-      final url=await ngelxMedyaYukleBytes(bytes:bytes,kind:'groups',ext:uzanti,legacyPath:yol).timeout(const Duration(seconds:50));
+      final url=await ngelxMedyaYukleBytes(
+        bytes:bytes,kind:'groups',ext:uzanti,legacyPath:yol,
+        onProgress:(sent,total)=>_medyaIlerlemeGuncelle('Fotoğraf yükleniyor',sent,total),
+      ).timeout(const Duration(seconds:60));
       final tamam=await payloadGonder({'type':'photo','mediaUrl':url},'📷 Fotoğraf');
       if(!tamam)throw Exception('Mesaj kaydedilemedi');
     }catch(_){
@@ -5923,6 +5937,8 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
         content:const Text('Fotoğraf gönderilemedi.'),
         action:SnackBarAction(label:'Tekrar dene',onPressed:()=>unawaited(_grupFotografiniGonder(x,kaynak))),
       ));
+    }finally{
+      _medyaIlerlemeBitir();
     }
   }
   Future<void> grupVideoGonder()async{
@@ -5934,14 +5950,17 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
       final uzanti=x.name.contains('.')?x.name.split('.').last.toLowerCase():'mp4';
       final url=await ngelxMedyaYukleBytes(
         bytes:bytes,
-        kind:'groups',
+        kind:'videos',
         ext:uzanti,
         legacyPath:'groups/'+widget.chatId+'/'+DateTime.now().millisecondsSinceEpoch.toString()+'.'+uzanti,
         contentType:uzanti=='mov'?'video/quicktime':'video/mp4',
-      ).timeout(const Duration(seconds:45));
+        onProgress:(sent,total)=>_medyaIlerlemeGuncelle('Video yükleniyor',sent,total),
+      ).timeout(const Duration(seconds:120));
       await payloadGonder({'type':'video','mediaUrl':url},'🎥 Video');
     }catch(e){
       if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Video gönderilemedi: $e')));
+    }finally{
+      _medyaIlerlemeBitir();
     }
   }
 
@@ -5954,15 +5973,19 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
       if(boyut>30*1024*1024)throw Exception('Dosya 30 MB’den küçük olmalı.');
       final ad=x.name.isEmpty?'dosya':x.name;
       final uzanti=ad.contains('.')?ad.split('.').last.toLowerCase():'bin';
+      final bytes=await x.readAsBytes();
       final url=await ngelxMedyaYukleBytes(
-        bytes:await x.readAsBytes(),
+        bytes:bytes,
         kind:'chat-files',
         ext:uzanti,
         legacyPath:'chat-files/'+widget.chatId+'/'+DateTime.now().millisecondsSinceEpoch.toString()+'_'+ad,
-      ).timeout(const Duration(seconds:30));
+        onProgress:(sent,total)=>_medyaIlerlemeGuncelle('Dosya yükleniyor',sent,total),
+      ).timeout(const Duration(seconds:90));
       await payloadGonder({'type':'file','fileUrl':url,'fileName':ad,'fileSize':boyut},'📎 '+ad);
     }catch(e){
       if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Dosya gönderilemedi: $e')));
+    }finally{
+      _medyaIlerlemeBitir();
     }
   }
 
@@ -7469,6 +7492,21 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
                     Text('Bu mesaj için bildirim gönderilmeyecek.',style:TextStyle(color:Color(0xFF777B80),fontSize:10.5,fontWeight:FontWeight.w500)),
                   ])),
                   IconButton(onPressed:()=>setState(()=>sessizGonder=false),icon:const Icon(Icons.close_rounded,size:19),visualDensity:VisualDensity.compact),
+                ]),
+              ),
+              if(medyaIlerlemeEtiket!=null)Container(
+                margin:const EdgeInsets.fromLTRB(12,5,12,3),
+                padding:const EdgeInsets.fromLTRB(12,9,12,10),
+                decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(16),border:Border.all(color:ngelxGroupBorder)),
+                child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+                  Row(children:[
+                    const Icon(Icons.cloud_upload_outlined,color:ngelxGroupGreen,size:18),
+                    const SizedBox(width:7),
+                    Expanded(child:Text(medyaIlerlemeEtiket!,style:const TextStyle(color:ngelxPremiumInk,fontSize:11.5,fontWeight:FontWeight.w800))),
+                    if(medyaIlerleme!=null)Text((medyaIlerleme!*100).round().toString()+'%',style:const TextStyle(color:ngelxGroupGreen,fontSize:11,fontWeight:FontWeight.w900)),
+                  ]),
+                  const SizedBox(height:7),
+                  ClipRRect(borderRadius:BorderRadius.circular(6),child:LinearProgressIndicator(value:medyaIlerleme,minHeight:5,color:ngelxGroupGreen,backgroundColor:ngelxGroupGreenSoft)),
                 ]),
               ),
               if(yanitlananMetin!=null)Container(
