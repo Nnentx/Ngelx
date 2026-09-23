@@ -176,6 +176,11 @@ for token in (
     "systemAction':'call_end'",
     "Önce kuruculuğu devret",
     "groupDeleted':true",
+    "this.aktifAramadanAcildi=false",
+    "canPop:bitisDurumu!=null",
+    "Arama küçültülemedi. Arama devam ediyor.",
+    "MediaQuery.viewInsetsOf(context).bottom",
+    "_yerelVideo",
 ):
     if token not in app:
         errors.append("Konsolide grup düzeltmesi eksik: " + token)
