@@ -134,3 +134,11 @@
 - Giriş ekranındaki **“Misafir olarak keşfet”** bölümü gereksiz bulundu ve kaldırılacak.
 - Giriş ekranında yalnızca normal giriş, şifremi unuttum ve hesap oluşturma akışları kalacak.
 - Misafir/anonim girişe bağlı buton, yönlendirme ve gereksiz kodlar final Work paketinde temizlenecek; mevcut çalışan giriş/kayıt akışları korunacak.
+
+### 2026-09-23 giriş/kayıt UX — sade iyileştirmeler
+- Kullanıcı adı yazılırken anlık uygunluk kontrolü gösterilecek: “Kullanılabilir” / “Bu kullanıcı adı alınmış”.
+- E-posta alanında yazım hataları mümkün olduğunca anında gösterilecek; uygun yerlerde `@gmail.com` benzeri alan adı önerisi verilecek.
+- Kayıttan sonra ayrı ve sade bir e-posta doğrulama ekranı olacak: **Doğrulama e-postasını tekrar gönder** ve **Doğruladım, devam et** seçenekleri bulunacak.
+- Form hataları yalnızca SnackBar ile değil, ilgili giriş alanının hemen altında küçük ve anlaşılır hata metniyle gösterilecek.
+- Giriş butonuna basıldığında işlem tamamlanana kadar buton kilitlenecek ve yükleme göstergesi çıkacak; böylece üst üste istek ve donmuş hissi azaltılacak.
+- Bu paket sade tutulacak; şimdilik Google/Apple/QR/biyometrik giriş gibi ek akışlar eklenmeyecek.
