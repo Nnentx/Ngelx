@@ -9762,14 +9762,14 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
     });
     _uyeProfilCache.clear();
     await ngelxGrupDavetMetaSenkronla(ref);
-    String adlariBirleştir(List<String> adlar){
+    String adlariBirlestir(List<String> adlar){
       if(adlar.isEmpty)return '';
       if(adlar.length==1)return adlar.first;
       if(adlar.length==2)return adlar.first+' ve '+adlar.last;
       return adlar.sublist(0,adlar.length-1).join(', ')+' ve '+adlar.last;
     }
     final gorunenAdlar=eklenenAdlar.length<=4?eklenenAdlar:eklenenAdlar.take(4).toList();
-    final hedefler=adlariBirleştir(gorunenAdlar);
+    final hedefler=adlariBirlestir(gorunenAdlar);
     final devam=eklenenAdlar.length>4?' ve '+(eklenenAdlar.length-4).toString()+' kişi daha':'';
     final olay=eklenenAdlar.length==1
       ?ekleyen+', '+hedefler+' adlı üyeyi gruba ekledi.'
