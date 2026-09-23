@@ -174,6 +174,8 @@ for token in (
     "systemAction':'call_join'",
     "systemAction':'call_leave'",
     "systemAction':'call_end'",
+    "Önce kuruculuğu devret",
+    "groupDeleted':true",
 ):
     if token not in app:
         errors.append("Konsolide grup düzeltmesi eksik: " + token)
@@ -182,6 +184,7 @@ for token in (
     "founderProtected()",
     "validFounderTransfer()",
     "validFormerHide()",
+    "validFounderClose()",
     "formerChatMember()",
     "formerMembers",
     "removedAt_",
