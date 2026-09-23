@@ -650,6 +650,8 @@ const ceviriler = <String, Map<String,String>>{
   'reject': {'tr':'Reddet','en':'Reject','de':'Ablehnen','ar':'رفض','ru':'Отклонить'},
   'noBlockedAccounts': {'tr':'Engellediğin hesap yok.','en':'You have no blocked accounts.','de':'Du hast keine blockierten Konten.','ar':'لا توجد حسابات محظورة.','ru':'У вас нет заблокированных аккаунтов.'},
   'message': {'tr':'Mesaj','en':'Message','de':'Nachricht','ar':'رسالة','ru':'Сообщение'},
+  'searchPeople': {'tr':'Kişi veya kullanıcı adı ara','en':'Search people or username','de':'Person oder Benutzername suchen','ar':'البحث عن شخص أو اسم مستخدم','ru':'Поиск по имени или имени пользователя'},
+  'noPeopleFound': {'tr':'Aramana uygun kişi bulunamadı.','en':'No people matched your search.','de':'Keine passende Person gefunden.','ar':'لم يتم العثور على أشخاص مطابقين للبحث.','ru':'Подходящие пользователи не найдены.'},
   'messageNotAllowed': {'tr':'Bu hesap gizlilik ayarları nedeniyle senden yeni mesaj kabul etmiyor.','en':'This account is not accepting new messages from you because of its privacy settings.','de':'Dieses Konto akzeptiert aufgrund seiner Datenschutzeinstellungen keine neuen Nachrichten von dir.','ar':'هذا الحساب لا يقبل رسائل جديدة منك بسبب إعدادات الخصوصية.','ru':'Этот аккаунт не принимает от вас новые сообщения из-за настроек конфиденциальности.'},
   'unblock': {'tr':'Engeli kaldır','en':'Unblock','de':'Entsperren','ar':'إلغاء الحظر','ru':'Разблокировать'},
   'block': {'tr':'Engelle','en':'Block','de':'Blockieren','ar':'حظر','ru':'Заблокировать'},
@@ -11659,8 +11661,16 @@ class _YeniSohbetPageState extends State<YeniSohbetPage>{
   final arama=TextEditingController();
   String sorgu='';
   Set<String> engellenenler={};
+  Set<String> arkadaslar={};
   @override void initState(){super.initState();engellenenleriGetir();}
-  Future<void> engellenenleriGetir()async{final u=FirebaseAuth.instance.currentUser;if(u==null)return;final d=await FirebaseFirestore.instance.collection('users').doc(u.uid).get();if(mounted)setState(()=>engellenenler=Set<String>.from(List<dynamic>.from(d.data()?['blocked']??const[])));}
+  Future<void> engellenenleriGetir()async{
+    final u=FirebaseAuth.instance.currentUser;if(u==null)return;
+    final d=await FirebaseFirestore.instance.collection('users').doc(u.uid).get();
+    if(mounted)setState((){
+      engellenenler=Set<String>.from(List<dynamic>.from(d.data()?['blocked']??const[]));
+      arkadaslar=Set<String>.from(List<dynamic>.from(d.data()?['friends']??const[]));
+    });
+  }
   @override void dispose(){arama.dispose();super.dispose();}
   TextSpan vurgula(String metin){final q=sorgu.toLowerCase(),m=metin.toLowerCase(),i=q.isEmpty?-1:m.indexOf(q);if(i<0)return TextSpan(text:metin,style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w600));return TextSpan(children:[TextSpan(text:metin.substring(0,i),style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w600)),TextSpan(text:metin.substring(i,i+q.length),style:const TextStyle(color:Colors.blue,fontWeight:FontWeight.w900)),TextSpan(text:metin.substring(i+q.length),style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w600))]);}
   @override
@@ -11680,7 +11690,7 @@ class _YeniSohbetPageState extends State<YeniSohbetPage>{
     return Theme(
       data: beyazTema,
       child: Scaffold(
-        appBar: AppBar(title: const Text('Yeni sohbet', style: TextStyle(fontWeight: FontWeight.bold))),
+        appBar: AppBar(title: Text(t('newChat'), style: const TextStyle(fontWeight: FontWeight.bold))),
         body: Column(children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(18, 8, 18, 14),
@@ -11688,7 +11698,7 @@ class _YeniSohbetPageState extends State<YeniSohbetPage>{
               controller: arama,
               onChanged: (v) => setState(() => sorgu = v.trim().toLowerCase()),
               style: const TextStyle(color: Colors.black87),
-              decoration: const InputDecoration(prefixIcon: Icon(Icons.search), hintText: 'Kişi veya kullanıcı adı ara'),
+              decoration: InputDecoration(prefixIcon: const Icon(Icons.search), hintText: t('searchPeople')),
             ),
           ),
           Expanded(
@@ -11705,7 +11715,7 @@ class _YeniSohbetPageState extends State<YeniSohbetPage>{
                   return const Center(child: CircularProgressIndicator(color: mavi));
                 }
                 if (docs.isEmpty) {
-                  return const Center(child: Text('Aramana uygun kişi bulunamadı.', style: TextStyle(color: Colors.black54)));
+                  return Center(child: Text(t('noPeopleFound'), style: const TextStyle(color: Colors.black54)));
                 }
                 return ListView.separated(
                   itemCount: docs.length,
@@ -11719,6 +11729,15 @@ class _YeniSohbetPageState extends State<YeniSohbetPage>{
                     return FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(future:FirebaseFirestore.instance.collection('chats').doc(chatId).get(),builder:(_,chat){final last=(chat.data?.data()?['lastMessage']??'').toString();final adEslesir=ad.toLowerCase().contains(sorgu)||(v['username']??'').toString().toLowerCase().contains(sorgu);final mesajEslesir=last.toLowerCase().contains(sorgu);if(sorgu.isNotEmpty&&!adEslesir&&!mesajEslesir)return const SizedBox.shrink();return InkWell(
                       onTap: () {
                         if (me == null) return;
+                        final izin=(v['messagePermission']??(v['friendsOnlyMessages']!=false?'friends':'all')).toString();
+                        final hedefinTakipEttikleri=Set<String>.from(List<dynamic>.from(v['following']??const[]));
+                        final izinli=izin=='all'||
+                          (izin=='friends'&&arkadaslar.contains(d.id))||
+                          (izin=='following'&&hedefinTakipEttikleri.contains(me));
+                        if(!izinli&&chat.data?.exists!=true){
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(t('messageNotAllowed'))));
+                          return;
+                        }
                         Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => SohbetPage(chatId: chatId, digerUid: d.id, ad: ad, foto: foto)));
                       },
                       child: ListTile(
