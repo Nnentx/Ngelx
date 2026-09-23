@@ -111,6 +111,22 @@ if "'type':'poll'" in app or '"type":"poll"' in app:
 if "request.resource.data.get('type', 'text') != 'poll'" not in rules:
     errors.append("Firestore anket mesajlarını engellemiyor.")
 
+# Guard against accidental duplicate/replayed Dart blocks. This caught a real
+# regression while the group polish work was being consolidated.
+for token in (
+    "class GrupSohbetPage",
+    "class _GrupSohbetPageState",
+    "class NgelXAramaPage",
+    "class GrupBilgiPage",
+    "class GrupMedyaPage",
+    "class SohbetPage",
+):
+    count = app.count(token)
+    if count != 1:
+        errors.append(f"Tekrarlı/eksik Dart sınıfı: {token} ({count} adet)")
+if len(app) > 1_000_000:
+    errors.append("main.dart beklenmedik şekilde büyüdü; tekrarlı kod eklenmiş olabilir.")
+
 # App/worker size contract for group videos and attachments.
 if "80*1024*1024" in app and "videos: 80 * 1024 * 1024" not in worker:
     errors.append("Grup video boyutu app/worker arasında uyuşmuyor.")
