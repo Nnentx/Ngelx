@@ -186,3 +186,18 @@
 - “Yeniden paylaşıma izin ver” ayarı artık gerçek paylaşım menüsünde uygulanıyor; kapalı içerik sahibi dışındaki kullanıcılar yeniden paylaşamıyor.
 - Eski/tekrarlı `EskiYuklePage` tamamen kaldırıldı.
 - Son doğrulama: fotoğraf, video ve yazı paylaşımı iki gerçek hesapla cihazda yeniden test edilecek; yayınlanan içerik hem Akış'ta hem Profil'de görünmeli.
+
+### 2026-09-23 Akış ekranı — gerçek içerik / performans temizliği
+- Akıştaki demo/örnek videolar tamamen kaldırıldı; artık yalnızca Firestore'daki gerçek NgelX paylaşımları gösterilecek.
+- Akış en yeni `createdAt` içeriği üstte olacak şekilde kalacak; sorgu limiti 20'den 50'ye çıkarıldı.
+- Takip, arkadaş, engellenen hesaplar, `hiddenContent` ve `notInterestedIds` kullanıcı belgesinden canlı takip ediliyor; gizlenen/ilgilenilmeyen içerik akıştan anında düşecek.
+- Bozuk/eksik medya kaydı (videosuz video, fotosuz fotoğraf, boş yazı) akışta boş kart üretmeyecek.
+- `viewCount` akışta gerçek görüntülemede, aynı oturumda içerik başına bir kez artırılıyor; kendi içeriği için artırılmıyor.
+- Video kartındaki sabit “Anı yakala...” / sahte “Özgün ses” metni kaldırıldı; gerçek gönderi açıklaması gösterilecek.
+- Fotoğraf/yazı kartında kullanıcı adına dokununca paylaşan kişinin profili açılacak; fotoğraf yüklenirken görünür loading durumu eklendi.
+- Fotoğraf/yazı ve video kartlarındaki kullanılmayan aggregate beğeni/yorum sorguları kaldırıldı; aynı etkileşim için tekrar tekrar Firestore okuması azaltıldı.
+- Kullanılmayan `CanliEtkilesimOzet` widget'ı ve eski `ornek_` koşulları temizlendi.
+- Yazı gönderilerinde anlamsız “İndir” seçeneği gösterilmeyecek.
+- Video uzun basma menüsündeki, zaten “Araçlar > Oynatma hızı” içinde bulunan ikinci hız seçimi kaldırıldı.
+- Eski verilerde `allowDownload` string olarak tutulmuş olsa bile indirme gizliliği korunacak.
+- Şu an “Sana Özel” gerçek öneri algoritması değil; izin verilen gerçek içerikleri kronolojik gösteriyor. Kullanıcı tabanı büyüyünce ayrı sıralama/pagination çalışması yapılmalı.
