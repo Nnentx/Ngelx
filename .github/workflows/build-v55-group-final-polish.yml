@@ -26,12 +26,6 @@ jobs:
       - name: Kaynaklari al
         uses: actions/checkout@v4
 
-      - name: Sabit test imzasini kur
-        run: |
-          mkdir -p "$HOME/.android"
-          base64 -d .github/test-signing/ngelx-debug.keystore.b64 > "$HOME/.android/debug.keystore"
-          keytool -list -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey >/dev/null
-
       - name: Flutter kur
         uses: subosito/flutter-action@v2
         with:
