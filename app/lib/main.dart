@@ -578,6 +578,42 @@ const ceviriler = <String, Map<String,String>>{
   'liveLabel': {'tr':'● CANLI','en':'● LIVE','de':'● LIVE','ar':'● مباشر','ru':'● LIVE'},
   'trendingEmpty': {'tr':'Trend içerikler burada görünecek ✨','en':'Trending content will appear here ✨','de':'Trend-Inhalte erscheinen hier ✨','ar':'سيظهر المحتوى الرائج هنا ✨','ru':'Популярный контент появится здесь ✨'},
   'user': {'tr':'Kullanıcı','en':'User','de':'Nutzer','ar':'مستخدم','ru':'Пользователь'},
+  'createNew': {'tr':'Yeni içerik üret','en':'Create new content','de':'Neue Inhalte erstellen','ar':'إنشاء محتوى جديد','ru':'Создать новый контент'},
+  'createSubtitle': {'tr':'Fotoğraf, video veya yazını seç ve paylaş.','en':'Choose a photo, video or text and share it.','de':'Wähle Foto, Video oder Text und teile es.','ar':'اختر صورة أو فيديو أو نصاً وشاركه.','ru':'Выберите фото, видео или текст и поделитесь.'},
+  'video': {'tr':'Video','en':'Video','de':'Video','ar':'فيديو','ru':'Видео'},
+  'photo': {'tr':'Fotoğraf','en':'Photo','de':'Foto','ar':'صورة','ru':'Фото'},
+  'text': {'tr':'Yazı','en':'Text','de':'Text','ar':'نص','ru':'Текст'},
+  'camera': {'tr':'Kamera','en':'Camera','de':'Kamera','ar':'الكاميرا','ru':'Камера'},
+  'story': {'tr':'Hikâye','en':'Story','de':'Story','ar':'قصة','ru':'История'},
+  'selectGallery': {'tr':'Galeriden seç','en':'Choose from gallery','de':'Aus Galerie wählen','ar':'اختيار من المعرض','ru':'Выбрать из галереи'},
+  'selectAnother': {'tr':'Başka dosya seç','en':'Choose another file','de':'Andere Datei wählen','ar':'اختيار ملف آخر','ru':'Выбрать другой файл'},
+  'takeVideo': {'tr':'Video çek','en':'Record video','de':'Video aufnehmen','ar':'تسجيل فيديو','ru':'Снять видео'},
+  'takePhoto': {'tr':'Fotoğraf çek','en':'Take photo','de':'Foto aufnehmen','ar':'التقاط صورة','ru':'Сделать фото'},
+  'thought': {'tr':'Ne düşünüyorsun?','en':'What are you thinking?','de':'Was denkst du?','ar':'بماذا تفكر؟','ru':'О чём вы думаете?'},
+  'descriptionOptional': {'tr':'Açıklama (isteğe bağlı)','en':'Description (optional)','de':'Beschreibung (optional)','ar':'الوصف (اختياري)','ru':'Описание (необязательно)'},
+  'location': {'tr':'Konum','en':'Location','de':'Standort','ar':'الموقع','ru':'Местоположение'},
+  'tagPerson': {'tr':'#Etiket / kişi','en':'#Tag / person','de':'#Tag / Person','ar':'#وسم / شخص','ru':'#Тег / человек'},
+  'publishSettings': {'tr':'Yayın ayarları','en':'Publishing settings','de':'Veröffentlichungseinstellungen','ar':'إعدادات النشر','ru':'Настройки публикации'},
+  'whoCanSee': {'tr':'Kimler görebilir?','en':'Who can see this?','de':'Wer kann das sehen?','ar':'من يمكنه رؤية هذا؟','ru':'Кто может это видеть?'},
+  'everyone': {'tr':'Herkes','en':'Everyone','de':'Alle','ar':'الجميع','ru':'Все'},
+  'closeFriends': {'tr':'Yakın arkadaşlar','en':'Close friends','de':'Enge Freunde','ar':'الأصدقاء المقرّبون','ru':'Близкие друзья'},
+  'onlyMe': {'tr':'Yalnızca ben','en':'Only me','de':'Nur ich','ar':'أنا فقط','ru':'Только я'},
+  'allowDownload': {'tr':'İndirmeye izin ver','en':'Allow downloads','de':'Downloads erlauben','ar':'السماح بالتنزيل','ru':'Разрешить скачивание'},
+  'allowDownloadSub': {'tr':'Kapalıysa diğer kişiler medyayı cihazına indiremez.','en':'If off, other people cannot download the media to their device.','de':'Wenn deaktiviert, können andere die Medien nicht herunterladen.','ar':'عند إيقافه لن يتمكن الآخرون من تنزيل الوسائط.','ru':'Если выключено, другие не смогут скачать медиа на устройство.'},
+  'allowComments': {'tr':'Yorumlara izin ver','en':'Allow comments','de':'Kommentare erlauben','ar':'السماح بالتعليقات','ru':'Разрешить комментарии'},
+  'whoCanComment': {'tr':'Kimler yorum yapabilir?','en':'Who can comment?','de':'Wer kann kommentieren?','ar':'من يمكنه التعليق؟','ru':'Кто может комментировать?'},
+  'followingPeople': {'tr':'Takip ettiklerim','en':'People I follow','de':'Personen, denen ich folge','ar':'الأشخاص الذين أتابعهم','ru':'Те, на кого я подписан'},
+  'nobody': {'tr':'Kimse','en':'Nobody','de':'Niemand','ar':'لا أحد','ru':'Никто'},
+  'allowReshare': {'tr':'Yeniden paylaşıma izin ver','en':'Allow resharing','de':'Erneutes Teilen erlauben','ar':'السماح بإعادة المشاركة','ru':'Разрешить репосты'},
+  'publishOnNgelx': {'tr':'NgelX’te Yayınla','en':'Publish on NgelX','de':'Auf NgelX veröffentlichen','ar':'النشر على NgelX','ru':'Опубликовать в NgelX'},
+  'mediaLimits': {'tr':'Fotoğraf en fazla 10 MB • Video en fazla 50 MB','en':'Photo up to 10 MB • Video up to 50 MB','de':'Foto bis 10 MB • Video bis 50 MB','ar':'الصورة حتى 10 MB • الفيديو حتى 50 MB','ru':'Фото до 10 МБ • Видео до 50 МБ'},
+  'videoSelected': {'tr':'Video seçildi','en':'Video selected','de':'Video ausgewählt','ar':'تم اختيار الفيديو','ru':'Видео выбрано'},
+  'removeSelection': {'tr':'Seçimi kaldır','en':'Remove selection','de':'Auswahl entfernen','ar':'إزالة الاختيار','ru':'Убрать выбор'},
+  'createWithCamera': {'tr':'Kamerayla oluştur','en':'Create with camera','de':'Mit Kamera erstellen','ar':'إنشاء بالكاميرا','ru':'Создать с камерой'},
+  'createStory': {'tr':'Hikâye oluştur','en':'Create story','de':'Story erstellen','ar':'إنشاء قصة','ru':'Создать историю'},
+  'story24h': {'tr':'Fotoğraf hikâyen 24 saat görünür.','en':'Your photo story is visible for 24 hours.','de':'Deine Foto-Story ist 24 Stunden sichtbar.','ar':'ستظهر قصة الصورة لمدة 24 ساعة.','ru':'Фотоистория будет видна 24 часа.'},
+  'galleryPhoto': {'tr':'Galeriden fotoğraf seç','en':'Choose photo from gallery','de':'Foto aus Galerie wählen','ar':'اختيار صورة من المعرض','ru':'Выбрать фото из галереи'},
+  'cameraPhoto': {'tr':'Kamerayla fotoğraf çek','en':'Take photo with camera','de':'Foto mit Kamera aufnehmen','ar':'التقاط صورة بالكاميرا','ru':'Сделать фото камерой'},
   'community': {'tr':'Topluluk','en':'Community','de':'Community','ar':'مجتمع','ru':'Сообщество'},
   'member': {'tr':'üye','en':'members','de':'Mitglieder','ar':'أعضاء','ru':'участников'},
 };
@@ -589,6 +625,17 @@ String tercihBasligi(String kod){
     case 'Hikâye gizliliği': return t('storyPrivacy');
     case 'Bildirimler': return t('notifications');
     case 'İndirme izinleri': return t('downloadPermissions');
+    default: return kod;
+  }
+}
+String kitleEtiketi(String kod){
+  switch(kod){
+    case 'Herkes': return t('everyone');
+    case 'Arkadaşlar': return t('friends');
+    case 'Yakın arkadaşlar': return t('closeFriends');
+    case 'Yalnızca ben': return t('onlyMe');
+    case 'Takip ettiklerim': return t('followingPeople');
+    case 'Kimse': return t('nobody');
     default: return kod;
   }
 }
@@ -4628,12 +4675,12 @@ class _YeniYuklePageState extends State<YuklePage> {
       builder:(c)=>Theme(data:ThemeData.light(),child:SafeArea(child:Padding(
         padding:const EdgeInsets.all(22),
         child:Column(mainAxisSize:MainAxisSize.min,children:[
-          const Text('Kamerayla oluştur',style:TextStyle(color:Colors.black87,fontSize:21,fontWeight:FontWeight.w900)),
+          Text(t('createWithCamera'),style:const TextStyle(color:Colors.black87,fontSize:21,fontWeight:FontWeight.w900)),
           const SizedBox(height:18),
           Row(children:[
-            Expanded(child:_buyukSecenek(Icons.photo_camera_rounded,'Fotoğraf çek',(){Navigator.pop(c);unawaited(kamerayiAc(video:false));})),
+            Expanded(child:_buyukSecenek(Icons.photo_camera_rounded,t('takePhoto'),(){Navigator.pop(c);unawaited(kamerayiAc(video:false));})),
             const SizedBox(width:12),
-            Expanded(child:_buyukSecenek(Icons.videocam_rounded,'Video çek',(){Navigator.pop(c);unawaited(kamerayiAc(video:true));})),
+            Expanded(child:_buyukSecenek(Icons.videocam_rounded,t('takeVideo'),(){Navigator.pop(c);unawaited(kamerayiAc(video:true));})),
           ]),
         ]),
       ))),
@@ -4648,9 +4695,9 @@ class _YeniYuklePageState extends State<YuklePage> {
       showDragHandle:true,
       shape:const RoundedRectangleBorder(borderRadius:BorderRadius.vertical(top:Radius.circular(28))),
       builder:(c)=>Theme(data:ThemeData.light(),child:SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
-        const ListTile(title:Text('Hikâye oluştur',style:TextStyle(fontSize:20,fontWeight:FontWeight.w900)),subtitle:Text('Fotoğraf hikâyen 24 saat görünür.')),
-        ListTile(leading:const Icon(Icons.photo_library_outlined,color:mor),title:const Text('Galeriden fotoğraf seç'),onTap:(){Navigator.pop(c);unawaited(_hikayePaylas(ImageSource.gallery));}),
-        ListTile(leading:const Icon(Icons.photo_camera_outlined,color:mavi),title:const Text('Kamerayla fotoğraf çek'),onTap:(){Navigator.pop(c);unawaited(_hikayePaylas(ImageSource.camera));}),
+        ListTile(title:Text(t('createStory'),style:const TextStyle(fontSize:20,fontWeight:FontWeight.w900)),subtitle:Text(t('story24h'))),
+        ListTile(leading:const Icon(Icons.photo_library_outlined,color:mor),title:Text(t('galleryPhoto')),onTap:(){Navigator.pop(c);unawaited(_hikayePaylas(ImageSource.gallery));}),
+        ListTile(leading:const Icon(Icons.photo_camera_outlined,color:mavi),title:Text(t('cameraPhoto')),onTap:(){Navigator.pop(c);unawaited(_hikayePaylas(ImageSource.camera));}),
       ]))),
     );
   }
@@ -4852,7 +4899,7 @@ class _YeniYuklePageState extends State<YuklePage> {
             child:const Column(mainAxisSize:MainAxisSize.min,children:[
               Icon(Icons.play_circle_fill_rounded,color:Colors.white,size:62),
               SizedBox(height:8),
-              Text('Video seçildi',style:TextStyle(color:Colors.white,fontWeight:FontWeight.w900)),
+              Text(t('videoSelected'),style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w900)),
             ]),
           ),
         Padding(
@@ -4862,7 +4909,7 @@ class _YeniYuklePageState extends State<YuklePage> {
             const SizedBox(width:9),
             Expanded(child:Text(secilen.name,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontWeight:FontWeight.w700))),
             IconButton(
-              tooltip:'Seçimi kaldır',
+              tooltip:t('removeSelection'),
               onPressed:yukleniyor?null:()=>setState(()=>medya=null),
               icon:const Icon(Icons.close_rounded,color:Colors.redAccent),
             ),
@@ -4888,25 +4935,25 @@ class _YeniYuklePageState extends State<YuklePage> {
         child:SafeArea(child:ListView(
           padding:const EdgeInsets.fromLTRB(22,22,22,110),
           children:[
-            const Text('Yeni içerik üret',textAlign:TextAlign.center,style:TextStyle(color:Colors.black,fontSize:27,fontWeight:FontWeight.w900)),
+            Text(t('createNew'),textAlign:TextAlign.center,style:const TextStyle(color:Colors.black,fontSize:27,fontWeight:FontWeight.w900)),
             const SizedBox(height:8),
-            const Text('Fotoğraf, video veya yazını seç ve paylaş.',textAlign:TextAlign.center,style:TextStyle(color:Colors.black54)),
+            Text(t('createSubtitle'),textAlign:TextAlign.center,style:const TextStyle(color:Colors.black54)),
             const SizedBox(height:24),
             Container(
               padding:const EdgeInsets.all(6),
               decoration:BoxDecoration(color:const Color(0xFFF3F5F8),borderRadius:BorderRadius.circular(22)),
               child:Row(children:[
-                _turButonu('video',Icons.videocam_rounded,'Video'),
-                _turButonu('photo',Icons.photo_rounded,'Fotoğraf'),
-                _turButonu('text',Icons.text_fields_rounded,'Yazı'),
+                _turButonu('video',Icons.videocam_rounded,t('video')),
+                _turButonu('photo',Icons.photo_rounded,t('photo')),
+                _turButonu('text',Icons.text_fields_rounded,t('text')),
               ]),
             ),
             const SizedBox(height:14),
             SizedBox(height:92,child:ListView(scrollDirection:Axis.horizontal,children:[
-              _hizliUret(Icons.camera_alt_rounded,'Kamera',()=>unawaited(kameraSecimi())),
-              _hizliUret(Icons.auto_stories_rounded,'Hikâye',()=>unawaited(hikayeSecimi())),
-              _hizliUret(Icons.movie_creation_rounded,'Reels',_reelsSec),
-              _hizliUret(Icons.wifi_tethering_rounded,'Canlı',()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const CanliHazirlikPage()))),
+              _hizliUret(Icons.camera_alt_rounded,t('camera'),()=>unawaited(kameraSecimi())),
+              _hizliUret(Icons.auto_stories_rounded,t('story'),()=>unawaited(hikayeSecimi())),
+              _hizliUret(Icons.movie_creation_rounded,t('reels'),_reelsSec),
+              _hizliUret(Icons.wifi_tethering_rounded,t('live'),()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const CanliHazirlikPage()))),
             ])),
             const SizedBox(height:20),
             if(tur!='text')
@@ -4915,14 +4962,14 @@ class _YeniYuklePageState extends State<YuklePage> {
                   style:OutlinedButton.styleFrom(minimumSize:const Size.fromHeight(64),side:const BorderSide(color:mavi),shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(20))),
                   onPressed:yukleniyor?null:medyaSec,
                   icon:Icon(tur=='video'?Icons.video_library_rounded:Icons.photo_library_rounded,size:27),
-                  label:Text(medya==null?'Galeriden seç':'Başka dosya seç',maxLines:1),
+                  label:Text(medya==null?t('selectGallery'):t('selectAnother'),maxLines:1),
                 )),
                 const SizedBox(width:10),
                 Expanded(child:OutlinedButton.icon(
                   style:OutlinedButton.styleFrom(minimumSize:const Size.fromHeight(64),side:const BorderSide(color:mor),shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(20))),
                   onPressed:yukleniyor?null:()=>kamerayiAc(video:tur=='video'),
                   icon:Icon(tur=='video'?Icons.videocam_rounded:Icons.photo_camera_rounded,size:27),
-                  label:Text(tur=='video'?'Video çek':'Fotoğraf çek'),
+                  label:Text(tur=='video'?t('takeVideo'):t('takePhoto')),
                 )),
               ]),
             _medyaOnizleme(),
@@ -4933,50 +4980,50 @@ class _YeniYuklePageState extends State<YuklePage> {
               maxLines:tur=='text'?8:3,
               maxLength:tur=='text'?500:220,
               decoration:InputDecoration(
-                labelText:tur=='text'?'Ne düşünüyorsun?':'Açıklama (isteğe bağlı)',
+                labelText:tur=='text'?t('thought'):t('descriptionOptional'),
                 prefixIcon:const Icon(Icons.edit_note_rounded),
               ),
             ),
             Row(children:[
-              Expanded(child:TextField(controller:konum,enabled:!yukleniyor,decoration:const InputDecoration(labelText:'Konum',prefixIcon:Icon(Icons.location_on_outlined)))),
+              Expanded(child:TextField(controller:konum,enabled:!yukleniyor,decoration:InputDecoration(labelText:t('location'),prefixIcon:const Icon(Icons.location_on_outlined)))),
               const SizedBox(width:10),
-              Expanded(child:TextField(controller:etiketler,enabled:!yukleniyor,decoration:const InputDecoration(labelText:'#Etiket / kişi',prefixIcon:Icon(Icons.alternate_email)))),
+              Expanded(child:TextField(controller:etiketler,enabled:!yukleniyor,decoration:InputDecoration(labelText:t('tagPerson'),prefixIcon:const Icon(Icons.alternate_email)))),
             ]),
             const SizedBox(height:20),
-            _bolumBasligi('Yayın ayarları'),
+            _bolumBasligi(t('publishSettings')),
             DropdownButtonFormField<String>(
               initialValue:gizlilik,
-              decoration:const InputDecoration(labelText:'Kimler görebilir?',prefixIcon:Icon(Icons.visibility_outlined)),
-              items:const ['Herkes','Arkadaşlar','Yakın arkadaşlar','Yalnızca ben'].map((e)=>DropdownMenuItem(value:e,child:Text(e))).toList(),
+              decoration:InputDecoration(labelText:t('whoCanSee'),prefixIcon:const Icon(Icons.visibility_outlined)),
+              items:const ['Herkes','Arkadaşlar','Yakın arkadaşlar','Yalnızca ben'].map((e)=>DropdownMenuItem(value:e,child:Text(kitleEtiketi(e)))).toList(),
               onChanged:yukleniyor?null:(v)=>setState(()=>gizlilik=v??'Herkes'),
             ),
             const SizedBox(height:8),
             SwitchListTile(
               contentPadding:EdgeInsets.zero,
               activeThumbColor:mavi,
-              title:const Text('İndirmeye izin ver',style:TextStyle(fontWeight:FontWeight.w700)),
-              subtitle:const Text('Kapalıysa diğer kişiler medyayı cihazına indiremez.',style:TextStyle(color:Colors.black54)),
+              title:Text(t('allowDownload'),style:const TextStyle(fontWeight:FontWeight.w700)),
+              subtitle:Text(t('allowDownloadSub'),style:const TextStyle(color:Colors.black54)),
               value:indirmeyeIzin,
               onChanged:yukleniyor?null:(v)=>setState(()=>indirmeyeIzin=v),
             ),
             SwitchListTile(
               contentPadding:EdgeInsets.zero,
-              title:const Text('Yorumlara izin ver'),
+              title:Text(t('allowComments')),
               value:yorumlaraIzin,
               onChanged:yukleniyor?null:(v)=>setState(()=>yorumlaraIzin=v),
             ),
             if(yorumlaraIzin)...[
               DropdownButtonFormField<String>(
                 initialValue:yorumKitlesi,
-                decoration:const InputDecoration(labelText:'Kimler yorum yapabilir?',prefixIcon:Icon(Icons.mode_comment_outlined)),
-                items:const ['Herkes','Arkadaşlar','Takip ettiklerim','Kimse'].map((e)=>DropdownMenuItem(value:e,child:Text(e))).toList(),
+                decoration:InputDecoration(labelText:t('whoCanComment'),prefixIcon:const Icon(Icons.mode_comment_outlined)),
+                items:const ['Herkes','Arkadaşlar','Takip ettiklerim','Kimse'].map((e)=>DropdownMenuItem(value:e,child:Text(kitleEtiketi(e)))).toList(),
                 onChanged:yukleniyor?null:(v)=>setState(()=>yorumKitlesi=v??'Herkes'),
               ),
               const SizedBox(height:8),
             ],
             SwitchListTile(
               contentPadding:EdgeInsets.zero,
-              title:const Text('Yeniden paylaşıma izin ver'),
+              title:Text(t('allowReshare')),
               value:yenidenPaylasimaIzin,
               onChanged:yukleniyor?null:(v)=>setState(()=>yenidenPaylasimaIzin=v),
             ),
@@ -5014,11 +5061,11 @@ class _YeniYuklePageState extends State<YuklePage> {
                   ),
                   onPressed:yayinla,
                   icon:const Icon(Icons.publish_rounded,color:Colors.white),
-                  label:const Text('NgelX’te Yayınla',style:TextStyle(color:Colors.white,fontSize:17,fontWeight:FontWeight.w900)),
+                  label:Text(t('publishOnNgelx'),style:const TextStyle(color:Colors.white,fontSize:17,fontWeight:FontWeight.w900)),
                 ),
               ),
             const SizedBox(height:12),
-            const Text('Fotoğraf en fazla 10 MB • Video en fazla 50 MB',textAlign:TextAlign.center,style:TextStyle(color:Colors.black45,fontSize:12)),
+            Text(t('mediaLimits'),textAlign:TextAlign.center,style:const TextStyle(color:Colors.black45,fontSize:12)),
           ],
         )),
       ),
