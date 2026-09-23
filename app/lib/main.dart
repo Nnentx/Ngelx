@@ -4900,9 +4900,9 @@ class _YeniYuklePageState extends State<YuklePage> {
             height:150,
             alignment:Alignment.center,
             decoration:const BoxDecoration(gradient:LinearGradient(colors:[Color(0xFF171A24),Color(0xFF32234F)])),
-            child:const Column(mainAxisSize:MainAxisSize.min,children:[
-              Icon(Icons.play_circle_fill_rounded,color:Colors.white,size:62),
-              SizedBox(height:8),
+            child:Column(mainAxisSize:MainAxisSize.min,children:[
+              const Icon(Icons.play_circle_fill_rounded,color:Colors.white,size:62),
+              const SizedBox(height:8),
               Text(t('videoSelected'),style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w900)),
             ]),
           ),
