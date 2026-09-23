@@ -5,10 +5,12 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 APP = ROOT / "app" / "lib" / "main.dart"
+GROUP_QUALITY = ROOT / "app" / "lib" / "group_quality.dart"
 WORKER = ROOT / "cloudflare" / "worker" / "src" / "index.js"
 RULES = ROOT / "firestore.rules"
 
 app = APP.read_text(encoding="utf-8")
+group_quality = GROUP_QUALITY.read_text(encoding="utf-8")
 worker = WORKER.read_text(encoding="utf-8")
 rules = RULES.read_text(encoding="utf-8")
 
@@ -120,6 +122,18 @@ required_group_tokens = [
 for token in required_group_tokens:
     if token not in app:
         errors.append("Grup özelliği sözleşmesi eksik: " + token)
+
+# Group helper file contracts cover delivery/read details and offline resilience.
+for token in (
+    "showGroupMessageInfo",
+    "deliveredOnlyIds",
+    "Kim gördü, kime teslim edildi",
+    "lastDeliveredAt_",
+    "lastReadAt_",
+    "GroupOfflineQueue",
+):
+    if token not in group_quality:
+        errors.append("Grup kalite yardımcısı eksik: " + token)
 
 # Polls are intentionally removed from NgelX group chat.
 if "'type':'poll'" in app or '"type":"poll"' in app:
