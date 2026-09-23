@@ -4136,11 +4136,15 @@ class KesfetPage extends StatelessWidget {
           SliverToBoxAdapter(child: Padding(padding: const EdgeInsets.fromLTRB(16, 20, 16, 8), child: Row(children: [Text(t('discoverPeople'), style: const TextStyle(color: Colors.black, fontSize: 21, fontWeight: FontWeight.w900)), const Spacer(), Text(t('seeAll'), style: const TextStyle(color: Colors.black45))]))),
           SliverToBoxAdapter(child: SizedBox(height: 145, child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
             stream: FirebaseFirestore.instance.collection('users').limit(12).snapshots(),
-            builder: (_, snap) => ListView.separated(
-              padding: const EdgeInsets.symmetric(horizontal: 16), scrollDirection: Axis.horizontal,
-              itemCount: snap.data?.docs.length ?? 0, separatorBuilder: (_, __) => const SizedBox(width: 14),
-              itemBuilder: (_, i) { final d = snap.data!.docs[i]; return _kisiKarti(context, d.id, d.data()); },
-            ),
+            builder: (_, snap) {
+              final ben=FirebaseAuth.instance.currentUser?.uid;
+              final kisiler=(snap.data?.docs??[]).where((d)=>d.id!=ben&&d.data()['deactivated']!=true).toList();
+              return ListView.separated(
+                padding: const EdgeInsets.symmetric(horizontal: 16), scrollDirection: Axis.horizontal,
+                itemCount: kisiler.length, separatorBuilder: (_, __) => const SizedBox(width: 14),
+                itemBuilder: (_, i) { final d = kisiler[i]; return _kisiKarti(context, d.id, d.data()); },
+              );
+            },
           ))),
           SliverToBoxAdapter(child: Padding(padding: const EdgeInsets.fromLTRB(16, 16, 16, 8), child: Row(children: [Text(t('discoverGroups'), style: const TextStyle(color: Colors.black, fontSize: 21, fontWeight: FontWeight.w900)), const Spacer(), Text(t('seeAll'), style: const TextStyle(color: Colors.black45))]))),
           SliverToBoxAdapter(child: SizedBox(height: 130, child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
@@ -4183,7 +4187,7 @@ class KesfetPage extends StatelessWidget {
     final foto = (v['photoUrl'] ?? '').toString();
     final ad = (v['displayName'] ?? v['username'] ?? 'Kullanıcı').toString();
     return SizedBox(width: 105, child: Column(children: [
-      Stack(children: [CircleAvatar(radius: 38, backgroundColor: const Color(0xFFF0E8FF), backgroundImage: foto.isEmpty ? null : CachedNetworkImageProvider(foto), child: foto.isEmpty ? Text(ad.substring(0, 1).toUpperCase(), style: const TextStyle(color: mor, fontSize: 24, fontWeight: FontWeight.bold)) : null), const Positioned(right: 2, bottom: 2, child: CircleAvatar(radius: 7, backgroundColor: Color(0xFF23D160)))]),
+      Stack(children: [CircleAvatar(radius: 38, backgroundColor: const Color(0xFFF0E8FF), backgroundImage: foto.isEmpty ? null : CachedNetworkImageProvider(foto), child: foto.isEmpty ? Text(ad.substring(0, 1).toUpperCase(), style: const TextStyle(color: mor, fontSize: 24, fontWeight: FontWeight.bold)) : null), if(v['isOnline']==true&&v['showActivityStatus']!=false) const Positioned(right: 2, bottom: 2, child: CircleAvatar(radius: 7, backgroundColor: Color(0xFF23D160)))]),
       const SizedBox(height: 5), Text(ad, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w800)),
       const SizedBox(height: 4), SizedBox(height: 30, child: FilledButton(style: FilledButton.styleFrom(backgroundColor: mor, padding: const EdgeInsets.symmetric(horizontal: 12)), onPressed: () async {await takipDurumuDegistir(uid,false);if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Takip edildi ✅')));}, child: Text(t('follow'), style: const TextStyle(fontSize: 11)))),
     ]));
