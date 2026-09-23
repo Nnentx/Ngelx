@@ -212,6 +212,14 @@ try {
     pinnedBy: null,
   }));
 
+  // Anket özelliği kaldırıldı: eski/yanlış istemciler poll mesajı oluşturamaz.
+  await assertFails(setDoc(doc(bob, 'chats/group_open/messages/poll_removed'), {
+    senderId: 'bob',
+    type: 'poll',
+    text: 'Bu oluşturulmamalı',
+    createdAt: serverTimestamp(),
+  }));
+
   // Sadece yöneticiler yazsın açıldığında normal üye mesaj oluşturamaz.
   await assertSucceeds(updateDoc(doc(admin, 'chats/group_open'), {
     onlyAdminsCanPost: true,
