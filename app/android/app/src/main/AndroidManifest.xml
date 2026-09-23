@@ -11,9 +11,9 @@
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
     <uses-permission android:name="android.permission.INTERNET" />
     <application
-        android:label="Ngel X"
+        android:label="NgelX"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@drawable/ngelx_launcher">
         <activity
             android:name=".MainActivity"
             android:exported="true"

@@ -1906,6 +1906,65 @@ class AnaEkran extends StatefulWidget {
 class _AnaEkranState extends State<AnaEkran> {
   int secili = 0;
   String? acilanAramaId;
+  bool _ngelxGecisLogoGoster=true;
+  int _ngelxGecisAnimasyon=0;
+
+  @override
+  void initState(){
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_){
+      Future<void>.delayed(const Duration(milliseconds:520),(){
+        if(mounted)setState(()=>_ngelxGecisLogoGoster=false);
+      });
+    });
+  }
+
+  Future<void> _ngelxSekmeGecisi(int i)async{
+    if(i==secili)return;
+    if(i!=0&&await misafirEngeli(context))return;
+    if(!mounted)return;
+    setState((){
+      _ngelxGecisLogoGoster=true;
+      _ngelxGecisAnimasyon++;
+    });
+    await Future<void>.delayed(const Duration(milliseconds:390));
+    if(!mounted)return;
+    setState(()=>secili=i);
+    await Future<void>.delayed(const Duration(milliseconds:70));
+    if(mounted)setState(()=>_ngelxGecisLogoGoster=false);
+  }
+
+  Widget _ngelxGecisLogoKatmani(){
+    if(!_ngelxGecisLogoGoster)return const SizedBox.shrink();
+    return Positioned.fill(
+      child:IgnorePointer(
+        child:Container(
+          color:Colors.white,
+          alignment:Alignment.center,
+          child:TweenAnimationBuilder<double>(
+            key:ValueKey(_ngelxGecisAnimasyon),
+            tween:Tween<double>(begin:.72,end:1.14),
+            duration:const Duration(milliseconds:430),
+            curve:Curves.easeOutBack,
+            builder:(context,olcek,child)=>Transform.scale(scale:olcek,child:child),
+            child:ClipRect(
+              child:Align(
+                alignment:Alignment.topCenter,
+                heightFactor:.70,
+                child:Image.asset(
+                  'assets/ngelx_logo.png',
+                  width:150,
+                  height:150,
+                  fit:BoxFit.contain,
+                  alignment:Alignment.topCenter,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 
   Widget gelenAramaKatmani(){
     final ben=FirebaseAuth.instance.currentUser?.uid;
@@ -2051,6 +2110,7 @@ class _AnaEkranState extends State<AnaEkran> {
           ignoring:false,
           child:gelenAramaKatmani(),
         )),
+        _ngelxGecisLogoKatmani(),
       ]),
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(
@@ -2072,10 +2132,7 @@ class _AnaEkranState extends State<AnaEkran> {
           selectedIndex: secili,
           backgroundColor: Colors.transparent,
           labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-          onDestinationSelected: (i) async {
-            if (i != 0 && await misafirEngeli(context)) return;
-            if (mounted) setState(() => secili = i);
-          },
+          onDestinationSelected: _ngelxSekmeGecisi,
           destinations: [
             NavigationDestination(icon: const Icon(Icons.play_circle_outline), selectedIcon: const Icon(Icons.play_circle_fill), label: t('flow')),
             NavigationDestination(icon: const Icon(Icons.explore_outlined), selectedIcon: const Icon(Icons.explore), label: t('explore')),
