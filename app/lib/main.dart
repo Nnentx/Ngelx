@@ -1764,7 +1764,7 @@ class _VideoAkisiState extends State<VideoAkisi> {
                     kullaniciAdi:(item['username']??'ngelx').toString(),
                     ownerId:(item['ownerId']??'').toString(),
                     aciklama:(item['description']??'').toString(),
-                    indirilebilir:item['allowDownload']!=false,
+                    indirilebilir:item['allowDownload']!=false&&item['allowDownload'].toString()!='false',
                     aktif:widget.gorunur&&aktif==i,
                   );
                 }
@@ -2804,9 +2804,7 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver {
                 ListTile(leading: const Icon(Icons.flag_outlined, color: Colors.orange), title: const Text('Bildir / Şikâyet et'), onTap: () { Navigator.pop(ctx); sikayetEt(context, hedefTuru: 'video', hedefId: videoId, hedefUid: widget.ownerId); }),
                 if (!sahibi) ListTile(leading: const Icon(Icons.block, color: Colors.red), title: const Text('Kullanıcıyı engelle', style: TextStyle(color: Colors.red)), onTap: () { Navigator.pop(ctx); kullaniciyiEngelle(context, widget.ownerId); }),
                 if (sahibi) ListTile(leading: const Icon(Icons.delete_forever, color: Colors.red), title: const Text('PAYLAŞIMI SİL', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)), onTap: () { Navigator.pop(ctx); kendiPaylasiminiSil(context, videoId, {'ownerId': widget.ownerId, 'videoUrl': widget.adres}); }),
-                const Divider(),
-                const Align(alignment: Alignment.centerLeft, child: Padding(padding: EdgeInsets.all(10), child: Text('Video hızı', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)))),
-                Wrap(spacing: 9, children: [.5, 1.0, 1.5, 2.0].map((hiz) => ActionChip(label: Text('${hiz}x'), onPressed: () { kontrol.setPlaybackSpeed(hiz); Navigator.pop(ctx); })).toList()),
+
               ],
             ),
           ),
