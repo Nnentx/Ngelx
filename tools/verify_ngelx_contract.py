@@ -90,6 +90,14 @@ if "V42 • Geliştiriliyor" in app:
 if "kind: 'groups'" in app and ").timeout(const Duration(seconds:75));" not in app:
     errors.append("Grup fotoğrafı yükleme zaman aşımı güvenli aralığa çıkarılmadı.")
 
+# Authenticated account changes must rebuild account-scoped UI state.
+for token in (
+    "durum_${kullanici?.uid??'guest'}_$dil",
+    "ana_${kullanici.uid}_$dil",
+):
+    if token not in app:
+        errors.append("Hesap değişiminde UI state izolasyonu eksik: " + token)
+
 # Main feed must show real content only and keep user filters/live behavior intact.
 for token in (
     "class _VideoAkisiState",
