@@ -23,7 +23,6 @@ import 'package:livekit_client/livekit_client.dart' as lk;
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:record/record.dart' as rec;
-import 'package:url_launcher/url_launcher.dart';
 import 'group_quality.dart';
 
 Future<void> main() async {
@@ -6989,13 +6988,8 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
                   ? ()async{await Clipboard.setData(ClipboardData(text:locationText));if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Konum metni kopyalandı.')));}
                   : linkUrl.isNotEmpty
                     ? ()async{
-                        final uri=Uri.tryParse(linkUrl);
-                        if(uri==null)return;
-                        final acildi=await launchUrl(uri,mode:LaunchMode.externalApplication);
-                        if(!acildi&&mounted){
-                          await Clipboard.setData(ClipboardData(text:linkUrl));
-                          if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bağlantı kopyalandı.')));
-                        }
+                        await Clipboard.setData(ClipboardData(text:linkUrl));
+                        if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bağlantı kopyalandı.')));
                       }
                     : null,
             child:Container(
