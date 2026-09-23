@@ -203,6 +203,15 @@ service cloud.firestore {
               )
               && onlyChanges(['pinned', 'pinnedAt', 'pinnedBy'])
             )
+            || (
+              request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.get('admins', [])
+              && request.resource.data.get('deletedForEveryone', false) == true
+              && onlyChanges([
+                'deletedForEveryone', 'deletedAt', 'deletedBy',
+                'text', 'mediaUrl', 'audioUrl', 'fileUrl', 'fileName',
+                'reactions', 'pinned', 'pinnedAt', 'pinnedBy'
+              ])
+            )
           );
         allow delete: if signedIn() && (
           resource.data.senderId == request.auth.uid
