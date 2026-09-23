@@ -5741,7 +5741,11 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
   }
   Future<void> _bekleyenleriGonder()async{
     final me=uid;if(me==null)return;
-    final sent=await GroupOfflineQueue.flush(chatId:widget.chatId,senderUid:me);
+    final sent=await GroupOfflineQueue.flush(
+      chatId:widget.chatId,
+      senderUid:me,
+      sender:(id,payload,last)=>payloadGonder(payload,last,docId:id,sessizHata:true),
+    );
     if(sent>0&&mounted){
       setState((){});
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(sent.toString()+' bekleyen mesaj gönderildi.')));
