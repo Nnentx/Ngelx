@@ -10665,8 +10665,14 @@ class _GrupUyeleriPageState extends State<GrupUyeleriPage>{
   String? get me=>FirebaseAuth.instance.currentUser?.uid;
   @override void dispose(){arama.dispose();super.dispose();}
 
-  Future<void> _uyeIslemi(String uid,String isim,bool admin,bool yonetici)async{
-    if(!yonetici||uid==me)return;
+  Future<void> _sistemMesaji(String text)async{
+    await ref.collection('messages').add({'senderId':'system','type':'system','text':text,'createdAt':FieldValue.serverTimestamp()});
+    await ref.set({'lastMessage':text,'updatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
+  }
+
+  Future<void> _uyeIslemi(String uid,String isim,bool admin,bool yonetici,String kurucu)async{
+    final benKurucu=me!=null&&me==kurucu;
+    final hedefKurucu=uid==kurucu;
     final sec=await showModalBottomSheet<String>(
       context:context,
       backgroundColor:const Color(0xFFFBF9FF),
@@ -10675,30 +10681,88 @@ class _GrupUyeleriPageState extends State<GrupUyeleriPage>{
       builder:(c)=>SafeArea(child:Padding(
         padding:const EdgeInsets.fromLTRB(14,2,14,16),
         child:Column(mainAxisSize:MainAxisSize.min,children:[
-          ListTile(title:Text(isim,style:const TextStyle(fontWeight:FontWeight.w900,color:ngelxPremiumInk))),
           ListTile(
-            shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(16)),
-            tileColor:Colors.white,
-            leading:Icon(admin?Icons.person_off_outlined:Icons.admin_panel_settings_rounded,color:ngelxPremiumPurple),
-            title:Text(admin?'Yöneticilikten çıkar':'Yönetici yap',style:const TextStyle(fontWeight:FontWeight.w700)),
-            onTap:()=>Navigator.pop(c,admin?'demote':'promote'),
+            leading:const Icon(Icons.person_rounded,color:ngelxPremiumPurple),
+            title:Text(isim,style:const TextStyle(fontWeight:FontWeight.w900,color:ngelxPremiumInk)),
+            subtitle:Text(hedefKurucu?'KURUCU • Yönetici':admin?'Yönetici':'Grup üyesi',style:TextStyle(color:hedefKurucu?ngelxGroupGreen:ngelxPremiumMuted,fontWeight:FontWeight.w800)),
+            trailing:const Icon(Icons.chevron_right_rounded),
+            onTap:()=>Navigator.pop(c,'profile'),
           ),
-          const SizedBox(height:8),
-          ListTile(
-            shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(16)),
-            tileColor:const Color(0xFFFFEFF1),
-            leading:const Icon(Icons.person_remove_rounded,color:Color(0xFFE43F52)),
-            title:const Text('Gruptan çıkar',style:TextStyle(color:Color(0xFFE43F52),fontWeight:FontWeight.w800)),
-            onTap:()=>Navigator.pop(c,'remove'),
+          if(hedefKurucu)Container(
+            margin:const EdgeInsets.only(top:6),
+            decoration:BoxDecoration(color:ngelxGroupGreenSoft,borderRadius:BorderRadius.circular(16),border:Border.all(color:ngelxGroupBorder)),
+            child:const ListTile(
+              leading:Icon(Icons.workspace_premium_rounded,color:ngelxGroupGreen),
+              title:Text('Grup kurucusu',style:TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w900)),
+              subtitle:Text('Kurucu gruptan çıkarılamaz ve yöneticilikten düşürülemez.',style:TextStyle(color:ngelxPremiumMuted,fontSize:11.5)),
+            ),
           ),
+          if(yonetici&&!hedefKurucu&&uid!=me)...[
+            const SizedBox(height:8),
+            ListTile(
+              shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(16)),
+              tileColor:Colors.white,
+              leading:Icon(admin?Icons.person_off_outlined:Icons.admin_panel_settings_rounded,color:ngelxPremiumPurple),
+              title:Text(admin?'Yöneticilikten çıkar':'Yönetici yap',style:const TextStyle(fontWeight:FontWeight.w700)),
+              onTap:()=>Navigator.pop(c,admin?'demote':'promote'),
+            ),
+            if(benKurucu)...[
+              const SizedBox(height:8),
+              ListTile(
+                shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(16)),
+                tileColor:ngelxGroupGreenSoft,
+                leading:const Icon(Icons.workspace_premium_rounded,color:ngelxGroupGreen),
+                title:const Text('Kuruculuğu devret',style:TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w900)),
+                subtitle:const Text('Bu üyeyi grubun yeni kurucusu yap.',style:TextStyle(color:ngelxPremiumMuted,fontSize:11.5)),
+                onTap:()=>Navigator.pop(c,'transfer'),
+              ),
+            ],
+            const SizedBox(height:8),
+            ListTile(
+              shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(16)),
+              tileColor:const Color(0xFFFFEFF1),
+              leading:const Icon(Icons.person_remove_rounded,color:Color(0xFFE43F52)),
+              title:const Text('Gruptan çıkar',style:TextStyle(color:Color(0xFFE43F52),fontWeight:FontWeight.w800)),
+              onTap:()=>Navigator.pop(c,'remove'),
+            ),
+          ],
         ]),
       )),
     );
     if(sec==null)return;
+    if(sec=='profile'){
+      if(mounted)await Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciProfilPage(uid:uid)));
+      return;
+    }
+    if(hedefKurucu)return;
+    if(sec=='transfer'){
+      if(!benKurucu)return;
+      final ok=await showDialog<bool>(
+        context:context,
+        builder:(c)=>AlertDialog(
+          backgroundColor:Colors.white,surfaceTintColor:Colors.white,
+          shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(28)),
+          icon:const Icon(Icons.workspace_premium_rounded,color:ngelxGroupGreen,size:38),
+          title:Text('Kuruculuk '+isim+' adlı üyeye devredilsin mi?',textAlign:TextAlign.center,style:const TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w900)),
+          content:const Text('Bu işlemden sonra yeni kurucu korunur. Sen yönetici olarak kalırsın.',textAlign:TextAlign.center,style:TextStyle(color:ngelxPremiumMuted)),
+          actions:[
+            TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),
+            FilledButton(style:FilledButton.styleFrom(backgroundColor:ngelxGroupGreen),onPressed:()=>Navigator.pop(c,true),child:const Text('Devret')),
+          ],
+        ),
+      )??false;
+      if(!ok)return;
+      await ref.update({'createdBy':uid,'admins':FieldValue.arrayUnion([uid]),'updatedAt':FieldValue.serverTimestamp()});
+      await _sistemMesaji('Grup kuruculuğu '+isim+' adlı üyeye devredildi.');
+      return;
+    }
+    if(!yonetici||uid==me)return;
     if(sec=='promote'){
-      await ref.update({'admins':FieldValue.arrayUnion([uid])});
+      await ref.update({'admins':FieldValue.arrayUnion([uid]),'updatedAt':FieldValue.serverTimestamp()});
+      await _sistemMesaji(isim+' yönetici yapıldı.');
     }else if(sec=='demote'){
-      await ref.update({'admins':FieldValue.arrayRemove([uid])});
+      await ref.update({'admins':FieldValue.arrayRemove([uid]),'updatedAt':FieldValue.serverTimestamp()});
+      await _sistemMesaji(isim+' artık yönetici değil.');
     }else if(sec=='remove'){
       final ok=await showDialog<bool>(
         context:context,
@@ -10707,14 +10771,27 @@ class _GrupUyeleriPageState extends State<GrupUyeleriPage>{
           backgroundColor:Colors.white,surfaceTintColor:Colors.white,
           icon:const Icon(Icons.person_remove_rounded,color:Color(0xFFE13F51),size:34),
           title:Text(isim+' gruptan çıkarılsın mı?',textAlign:TextAlign.center,style:const TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w900)),
-          content:const Text('Kullanıcı artık bu grupta mesaj gönderemez.',textAlign:TextAlign.center,style:TextStyle(color:ngelxPremiumMuted)),
+          content:const Text('Kullanıcı artık bu grupta mesaj gönderemez veya arama yapamaz.',textAlign:TextAlign.center,style:TextStyle(color:ngelxPremiumMuted)),
           actions:[
             TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),
             FilledButton(style:FilledButton.styleFrom(backgroundColor:const Color(0xFFE13F51)),onPressed:()=>Navigator.pop(c,true),child:const Text('Çıkar')),
           ],
         ),
       )??false;
-      if(ok)await ref.update({'members':FieldValue.arrayRemove([uid]),'admins':FieldValue.arrayRemove([uid])});
+      if(!ok)return;
+      final son=await ref.get();
+      if((son.data()?['createdBy']??'').toString()==uid){
+        if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Grup kurucusu gruptan çıkarılamaz.')));
+        return;
+      }
+      await ref.update({
+        'members':FieldValue.arrayRemove([uid]),
+        'admins':FieldValue.arrayRemove([uid]),
+        'formerMembers':FieldValue.arrayUnion([uid]),
+        'removedAt_$uid':FieldValue.serverTimestamp(),
+        'updatedAt':FieldValue.serverTimestamp(),
+      });
+      await _sistemMesaji(isim+' gruptan çıkarıldı.');
     }
   }
 
@@ -10734,6 +10811,7 @@ class _GrupUyeleriPageState extends State<GrupUyeleriPage>{
           final v=snap.data?.data()??<String,dynamic>{};
           final ids=List<String>.from(v['members']??const[]);
           final admins=List<String>.from(v['admins']??const[]);
+          final kurucu=(v['createdBy']??'').toString();
           final yonetici=admins.contains(me);
           return Column(children:[
             Padding(
@@ -10765,21 +10843,22 @@ class _GrupUyeleriPageState extends State<GrupUyeleriPage>{
                     final isim=(p['displayName']??p['username']??'Kullanıcı').toString();
                     final username=(p['username']??'').toString();
                     if(sorgu.isNotEmpty&&!isim.toLowerCase().contains(sorgu)&&!username.toLowerCase().contains(sorgu))return const SizedBox.shrink();
-                    final foto=(p['photoUrl']??'').toString(),admin=admins.contains(id),online=p['isOnline']==true||p['online']==true;
+                    final foto=(p['photoUrl']??'').toString(),admin=admins.contains(id),online=p['isOnline']==true||p['online']==true,hedefKurucu=id==kurucu;
+                    final menuVar=hedefKurucu||yonetici;
                     return NgelXPremiumCard(
                       margin:const EdgeInsets.only(bottom:8),
                       padding:const EdgeInsets.symmetric(horizontal:10,vertical:7),
                       child:ListTile(
                         dense:true,contentPadding:EdgeInsets.zero,
                         onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciProfilPage(uid:id))),
-                        onLongPress:yonetici&&id!=me?()=>_uyeIslemi(id,isim,admin,yonetici):null,
+                        onLongPress:menuVar?()=>_uyeIslemi(id,isim,admin,yonetici,kurucu):null,
                         leading:Stack(children:[
                           CircleAvatar(radius:23,backgroundColor:ngelxGroupGreenSoft,backgroundImage:foto.isEmpty?null:CachedNetworkImageProvider(foto),child:foto.isEmpty?const Icon(Icons.person_rounded,color:ngelxGroupGreen):null),
                           if(online)const Positioned(right:0,bottom:0,child:CircleAvatar(radius:5.5,backgroundColor:Colors.white,child:CircleAvatar(radius:3.5,backgroundColor:Color(0xFF21C76A)))),
                         ]),
                         title:Text(isim,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w800)),
-                        subtitle:Text(admin?'Yönetici':online?'Çevrimiçi':'Grup üyesi',style:TextStyle(color:admin?ngelxGroupGreen:ngelxPremiumMuted,fontSize:11.5,fontWeight:FontWeight.w600)),
-                        trailing:yonetici&&id!=me?IconButton(onPressed:()=>_uyeIslemi(id,isim,admin,yonetici),icon:const Icon(Icons.more_horiz_rounded,color:ngelxPremiumMuted)):null,
+                        subtitle:Text(hedefKurucu?'KURUCU • Yönetici':admin?'Yönetici':online?'Çevrimiçi':'Grup üyesi',style:TextStyle(color:(hedefKurucu||admin)?ngelxGroupGreen:ngelxPremiumMuted,fontSize:11.5,fontWeight:(hedefKurucu||admin)?FontWeight.w800:FontWeight.w600)),
+                        trailing:menuVar?IconButton(onPressed:()=>_uyeIslemi(id,isim,admin,yonetici,kurucu),icon:const Icon(Icons.more_horiz_rounded,color:ngelxPremiumMuted)):null,
                       ),
                     );
                   },
@@ -10792,7 +10871,6 @@ class _GrupUyeleriPageState extends State<GrupUyeleriPage>{
     ),
   );
 }
-
 class GrupDavetPage extends StatefulWidget{
   final String chatId;
   const GrupDavetPage({super.key,required this.chatId});
