@@ -7421,7 +7421,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
               ),
               if(mentionOnerileri.isNotEmpty)Container(
                 margin:const EdgeInsets.fromLTRB(8,0,8,6),
-                constraints:BoxConstraints(maxHeight:MediaQuery.sizeOf(context).height*.42),
+                constraints:BoxConstraints(maxHeight:MediaQuery.sizeOf(context).height*.46),
                 decoration:BoxDecoration(
                   color:Colors.white,
                   borderRadius:BorderRadius.circular(22),
@@ -7430,13 +7430,12 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
                 ),
                 child:ClipRRect(
                   borderRadius:BorderRadius.circular(22),
-                  child:ListView.builder(
-                    shrinkWrap:true,
-                    padding:const EdgeInsets.symmetric(vertical:7),
-                    itemCount:mentionOnerileri.length,
-                    itemBuilder:(_,i){
-                      final u=mentionOnerileri[i],id=u['uid']??'',ozel=id=='all'||id=='silent';
-                      final foto=u['photo']??'';
+                  child:Builder(builder:(_){
+                    final kisiler=mentionOnerileri.where((u)=>u['kind']=='person').toList();
+                    final secenekler=mentionOnerileri.where((u)=>u['kind']!='person').toList();
+                    Widget satir(Map<String,String> u){
+                      final id=u['uid']??'',ozel=id=='all'||id=='silent',foto=u['photo']??'';
+                      final baslik=id=='all'?'@herkes':id=='silent'?'@sessiz':(u['name']??'Üye');
                       return ListTile(
                         dense:true,
                         contentPadding:const EdgeInsets.symmetric(horizontal:12,vertical:2),
@@ -7452,11 +7451,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
                               backgroundImage:foto.isEmpty?null:CachedNetworkImageProvider(foto),
                               child:foto.isEmpty?const Icon(Icons.person_rounded,color:ngelxGroupGreen):null,
                             ),
-                        title:Text(
-                          ozel?(u['name']??''):(u['name']??'Üye'),
-                          maxLines:1,overflow:TextOverflow.ellipsis,
-                          style:const TextStyle(color:Color(0xFF202124),fontSize:15.5,fontWeight:FontWeight.w800),
-                        ),
+                        title:Text(baslik,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Color(0xFF202124),fontSize:15.5,fontWeight:FontWeight.w800)),
                         subtitle:Text(
                           ozel?(u['subtitle']??''):'@'+(u['username']??''),
                           maxLines:1,overflow:TextOverflow.ellipsis,
@@ -7465,8 +7460,29 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
                         trailing:ozel?null:const Icon(Icons.chevron_right_rounded,color:Color(0xFFB1B4B8),size:19),
                         onTap:()=>mentionEkle(u['username']??'',id),
                       );
-                    },
-                  ),
+                    }
+                    return ListView(
+                      shrinkWrap:true,
+                      padding:const EdgeInsets.fromLTRB(0,7,0,8),
+                      children:[
+                        if(kisiler.isNotEmpty)...[
+                          const Padding(
+                            padding:EdgeInsets.fromLTRB(14,5,14,4),
+                            child:Text('Kişiler',style:TextStyle(color:Color(0xFF777B80),fontSize:12,fontWeight:FontWeight.w900,letterSpacing:.2)),
+                          ),
+                          ...kisiler.map(satir),
+                        ],
+                        if(secenekler.isNotEmpty)...[
+                          if(kisiler.isNotEmpty)const Divider(height:10,indent:14,endIndent:14,color:Color(0xFFEDEDEF)),
+                          const Padding(
+                            padding:EdgeInsets.fromLTRB(14,5,14,4),
+                            child:Text('Mesaj seçenekleri',style:TextStyle(color:Color(0xFF777B80),fontSize:12,fontWeight:FontWeight.w900,letterSpacing:.2)),
+                          ),
+                          ...secenekler.map(satir),
+                        ],
+                      ],
+                    );
+                  }),
                 ),
               ),
               Builder(builder:(_){
