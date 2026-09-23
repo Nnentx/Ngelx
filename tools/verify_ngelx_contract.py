@@ -192,6 +192,18 @@ for token in (
     if token not in app:
         errors.append("Kabul edilmiş sohbet erişimi gizlilikle uyumlu değil: " + token)
 
+# Message-permission detail UI keeps stable permission codes while localizing visible labels.
+for token in (
+    "t('whoCanMessage')",
+    "mesajIzinEtiketi(kod)",
+    "mesajIzinAciklama(kod)",
+    "for(final kod in const ['all','following','friends','none'])",
+    "t('activityLoadFailed')",
+    "t('noActivity')",
+):
+    if token not in app:
+        errors.append("Mesaj izinleri/Aktivite dil sözleşmesi eksik: " + token)
+
 # Main feed must show real content only and keep user filters/live behavior intact.
 for token in (
     "class _VideoAkisiState",
