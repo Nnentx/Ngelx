@@ -6801,9 +6801,10 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
       }).catchError((_){ }));
       if(!mounted)return;
       setState(()=>aramaBaslatiliyor=false);
-      await Navigator.push(context,MaterialPageRoute(builder:(_)=>NgelXAramaPage(
+      final tekrar=await Navigator.push<bool>(context,MaterialPageRoute(builder:(_)=>NgelXAramaPage(
         roomName:odaAdi,baslik:grupAdi,foto:widget.foto,goruntulu:goruntulu,aramaRef:chatRef,
       )));
+      if(tekrar==true&&mounted)await aramaBaslat(goruntulu);
     }catch(_){
       if(!mounted)return;
       setState(()=>aramaBaslatiliyor=false);
@@ -8098,7 +8099,7 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
   DateTime? aramaBaslangic;
   bool baglaniyor=true,mikrofon=true,kamera=true,hoparlor=true,bitiyor=false,bulanik=false,rotus=false,yenidenBaglaniyor=false;
   int efekt=0,yenidenBaglanmaDenemesi=0;
-  String? hata;
+  String? hata,bitisDurumu;
 
   @override void initState(){
     super.initState();
@@ -8206,9 +8207,11 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
       unawaited(widget.aramaRef.collection('messages').doc(mesajId).set({'callStatus':durum,'callEndedAt':FieldValue.serverTimestamp()},SetOptions(merge:true)).catchError((_){ }));
     }
     if(!mounted)return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content:Text(durum=='rejected'?'Arama reddedildi.':durum=='missed'?'Arama cevaplanmadı.':'Arama sona erdi.'),
-    ));
+    if(durum=='missed'||durum=='rejected'){
+      setState((){bitisDurumu=durum;baglaniyor=false;yenidenBaglaniyor=false;hata=null;});
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Arama sona erdi.')));
     Navigator.maybePop(context);
   }
 
@@ -8817,7 +8820,31 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
           ?const BoxDecoration(color:Colors.black)
           :const BoxDecoration(gradient:RadialGradient(center:Alignment(0,-.35),radius:1.25,colors:[Color(0xFF2A1550),ngelxCallBg])),
         child:SafeArea(child:Column(children:[
-          if(hata!=null)
+          if(bitisDurumu!=null)
+            Expanded(child:Center(child:Padding(
+              padding:const EdgeInsets.all(28),
+              child:Column(mainAxisSize:MainAxisSize.min,children:[
+                Container(
+                  width:112,height:112,
+                  decoration:BoxDecoration(shape:BoxShape.circle,color:Colors.white.withValues(alpha:.08),border:Border.all(color:Colors.white12,width:1.5)),
+                  child:Icon(bitisDurumu=='missed'?Icons.phone_missed_rounded:Icons.call_end_rounded,color:const Color(0xFFFF5A55),size:56),
+                ),
+                const SizedBox(height:22),
+                Text(bitisDurumu=='missed'?'Arama cevaplanmadı':'Arama reddedildi',textAlign:TextAlign.center,style:const TextStyle(color:Colors.white,fontSize:25,fontWeight:FontWeight.w900)),
+                const SizedBox(height:8),
+                Text(bitisDurumu=='missed'?'Kimse aramaya katılmadı. İstersen tekrar arayabilirsin.':'Karşı taraf aramayı reddetti.',textAlign:TextAlign.center,style:const TextStyle(color:Colors.white70,fontSize:14,height:1.35,fontWeight:FontWeight.w600)),
+                const SizedBox(height:24),
+                SizedBox(width:220,height:50,child:FilledButton.icon(
+                  style:FilledButton.styleFrom(backgroundColor:const Color(0xFF7A50E8),foregroundColor:Colors.white,shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(18))),
+                  onPressed:()=>Navigator.pop(context,true),
+                  icon:const Icon(Icons.call_rounded),
+                  label:const Text('Tekrar Ara',style:TextStyle(fontWeight:FontWeight.w900)),
+                )),
+                const SizedBox(height:8),
+                TextButton(onPressed:()=>Navigator.pop(context,false),child:const Text('Sohbete dön',style:TextStyle(color:Colors.white70,fontWeight:FontWeight.w700))),
+              ]),
+            )))
+          else if(hata!=null)
             Expanded(child:Center(child:Padding(padding:const EdgeInsets.all(28),child:Column(mainAxisSize:MainAxisSize.min,children:[
               const Icon(Icons.call_end_rounded,color:Color(0xFFFF5252),size:66),
               const SizedBox(height:16),
@@ -8831,7 +8858,7 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
           else if(grupAramasi)_grupAramaAlani()
           else if(widget.goruntulu)_videoAlani()
           else _sesliAlani(),
-          if(hata==null&&widget.goruntulu)Padding(
+          if(bitisDurumu==null&&hata==null&&widget.goruntulu)Padding(
             padding:const EdgeInsets.fromLTRB(12,9,12,4),
             child:Wrap(spacing:8,runSpacing:8,alignment:WrapAlignment.center,children:[
               _efektChip('✨ Rötuş',rotus,(v)=>setState(()=>rotus=v)),
@@ -8839,7 +8866,7 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
               ActionChip(label:const Text('☺ Efektler'),onPressed:efektSec,backgroundColor:Colors.white10,side:BorderSide(color:Colors.white.withValues(alpha:.10)),labelStyle:const TextStyle(color:Colors.white,fontWeight:FontWeight.w700)),
             ]),
           ),
-          if(hata==null)Padding(
+          if(bitisDurumu==null&&hata==null)Padding(
             padding:const EdgeInsets.fromLTRB(14,15,14,7),
             child:Row(mainAxisAlignment:MainAxisAlignment.spaceEvenly,children:[
               if(widget.goruntulu)_aramaKontrol(kamera?Icons.videocam_rounded:Icons.videocam_off_rounded,'Kamera',kameraDegistir,kamera),
@@ -8849,7 +8876,7 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
               if(widget.goruntulu)_aramaKontrol(hoparlor?Icons.volume_up_rounded:Icons.volume_off_rounded,'Ses',hoparlorDegistir,hoparlor),
             ]),
           ),
-          if(hata==null)Padding(
+          if(bitisDurumu==null&&hata==null)Padding(
             padding:const EdgeInsets.only(top:6),
             child:InkWell(
               onTap:()=>bitir(),
@@ -8946,9 +8973,10 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
       }
       if(!mounted)return;
       setState(()=>aramaBaslatiliyor=false);
-      await Navigator.push(context,MaterialPageRoute(builder:(_)=>NgelXAramaPage(
+      final tekrar=await Navigator.push<bool>(context,MaterialPageRoute(builder:(_)=>NgelXAramaPage(
         roomName:odaAdi,baslik:grupAdi,foto:foto,goruntulu:goruntulu,aramaRef:ref,
       )));
+      if(tekrar==true&&mounted)await aramaBaslat(goruntulu);
     }catch(_){
       if(mounted){
         setState(()=>aramaBaslatiliyor=false);
@@ -11272,7 +11300,7 @@ class _SohbetPageState extends State<SohbetPage> {
         belgeId:widget.chatId,
       ).catchError((_){ }));
       setState(()=>aramaBaslatiliyor=false);
-      await Navigator.push(
+      final tekrar=await Navigator.push<bool>(
         context,
         MaterialPageRoute(builder:(_)=>NgelXAramaPage(
           roomName:odaAdi,
@@ -11282,6 +11310,7 @@ class _SohbetPageState extends State<SohbetPage> {
           aramaRef:ref,
         )),
       );
+      if(tekrar==true&&mounted)await aramaBaslat(goruntulu);
     }on TimeoutException{
       if(!mounted)return;
       setState(()=>aramaBaslatiliyor=false);
