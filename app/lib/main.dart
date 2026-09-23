@@ -8031,23 +8031,23 @@ class SabitlenenGrupMesajlariPage extends StatelessWidget{
   const SabitlenenGrupMesajlariPage({super.key,required this.chatId});
 
   @override Widget build(BuildContext context)=>Theme(
-    data:ThemeData.light().copyWith(colorScheme:ColorScheme.fromSeed(seedColor:ngelxPremiumPurple)),
+    data:ThemeData.light().copyWith(colorScheme:ColorScheme.fromSeed(seedColor:ngelxGroupGreen)),
     child:Scaffold(
-      backgroundColor:const Color(0xFFFBF9FF),
+      backgroundColor:Colors.white,
       appBar:AppBar(
         backgroundColor:Colors.transparent,
         surfaceTintColor:Colors.transparent,
         elevation:0,
         title:const Text('Sabitlenen mesajlar',style:TextStyle(fontWeight:FontWeight.w900,color:ngelxPremiumInk)),
-        flexibleSpace:Container(decoration:const BoxDecoration(gradient:LinearGradient(colors:[Color(0xFFFFFFFF),Color(0xFFF5EFFF)]),borderRadius:BorderRadius.vertical(bottom:Radius.circular(24)))),
+        flexibleSpace:Container(decoration:const BoxDecoration(gradient:LinearGradient(colors:[Color(0xFFFFFFFF),ngelxGroupGreenSoft]),borderRadius:BorderRadius.vertical(bottom:Radius.circular(24)))),
       ),
       body:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
         stream:FirebaseFirestore.instance.collection('chats').doc(chatId).collection('messages').where('pinned',isEqualTo:true).snapshots(),
         builder:(_,snap){
-          if(snap.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator(color:ngelxPremiumPurple));
+          if(snap.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator(color:ngelxGroupGreen));
           final docs=snap.data?.docs??[];
           if(docs.isEmpty)return const Center(child:Column(mainAxisSize:MainAxisSize.min,children:[
-            Icon(Icons.push_pin_outlined,color:Color(0xFFC7B8E7),size:56),
+            Icon(Icons.push_pin_outlined,color:ngelxGroupGreen,size:56),
             SizedBox(height:10),
             Text('Henüz sabitlenen mesaj yok.',style:TextStyle(color:ngelxPremiumMuted,fontWeight:FontWeight.w700)),
           ]));
@@ -8057,23 +8057,24 @@ class SabitlenenGrupMesajlariPage extends StatelessWidget{
               Container(
                 margin:const EdgeInsets.only(bottom:12),
                 padding:const EdgeInsets.symmetric(horizontal:14,vertical:12),
-                decoration:BoxDecoration(color:const Color(0xFFF1EAFF),borderRadius:BorderRadius.circular(18),border:Border.all(color:const Color(0xFFE5D9F8))),
+                decoration:BoxDecoration(color:ngelxGroupGreenSoft,borderRadius:BorderRadius.circular(18),border:Border.all(color:ngelxGroupBorder)),
                 child:const Row(children:[
-                  Icon(Icons.push_pin_rounded,color:ngelxPremiumPurple,size:20),
+                  Icon(Icons.push_pin_rounded,color:ngelxGroupGreen,size:20),
                   SizedBox(width:10),
-                  Expanded(child:Text('Önemli mesajlara buradan hızlıca ulaşabilirsin.',style:TextStyle(color:Color(0xFF5D4A7A),fontSize:12,fontWeight:FontWeight.w700))),
+                  Expanded(child:Text('Önemli mesajlara buradan hızlıca ulaşabilirsin.',style:TextStyle(color:ngelxPremiumInk,fontSize:12,fontWeight:FontWeight.w700))),
                 ]),
               ),
               ...docs.map((d){
                 final v=d.data(),tur=(v['type']??'text').toString(),metin=(v['text']??'').toString(),url=(v['mediaUrl']??'').toString();
                 final saat=mesajSaati(v['createdAt']);
-                final baslik=metin.isNotEmpty?metin:(tur=='gif'?'GIF':tur=='photo'?'Fotoğraf':'Sabitlenen mesaj');
+                final turBasligi=tur=='gif'?'GIF':tur=='photo'?'Fotoğraf':tur=='video'?'Video':tur=='audio'?'Sesli mesaj':tur=='file'?'Dosya':tur=='location'?'Konum':'Sabitlenen mesaj';
+                final baslik=metin.isNotEmpty?metin:turBasligi;
                 return NgelXPremiumCard(
                   margin:const EdgeInsets.only(bottom:10),
                   padding:const EdgeInsets.fromLTRB(13,12,13,10),
                   child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
                     Row(children:[
-                      Container(width:38,height:38,decoration:BoxDecoration(color:const Color(0xFFF0E8FF),borderRadius:BorderRadius.circular(13)),child:Icon(tur=='photo'||tur=='gif'?Icons.photo_outlined:Icons.push_pin_rounded,color:ngelxPremiumPurple,size:20)),
+                      Container(width:38,height:38,decoration:BoxDecoration(color:ngelxGroupGreenSoft,borderRadius:BorderRadius.circular(13)),child:Icon(tur=='photo'||tur=='gif'?Icons.photo_outlined:Icons.push_pin_rounded,color:ngelxGroupGreen,size:20)),
                       const SizedBox(width:10),
                       Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
                         Text(baslik,maxLines:3,overflow:TextOverflow.ellipsis,style:const TextStyle(color:ngelxPremiumInk,fontSize:13,fontWeight:FontWeight.w800)),
