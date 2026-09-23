@@ -6257,17 +6257,17 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
     final x=await ImagePicker().pickVideo(source:ImageSource.gallery,maxDuration:const Duration(minutes:3));
     if(x==null)return;
     try{
-      final bytes=await x.readAsBytes();
-      if(bytes.length>80*1024*1024)throw Exception('Video 80 MB’den küçük olmalı.');
+      final boyut=await x.length();
+      if(boyut>80*1024*1024)throw Exception('Video 80 MB’den küçük olmalı.');
       final uzanti=x.name.contains('.')?x.name.split('.').last.toLowerCase():'mp4';
-      final url=await ngelxMedyaYukleBytes(
-        bytes:bytes,
+      final url=await ngelxMedyaYukleDosya(
+        dosya:x,
         kind:'videos',
         ext:uzanti,
         legacyPath:'groups/'+widget.chatId+'/'+DateTime.now().millisecondsSinceEpoch.toString()+'.'+uzanti,
         contentType:uzanti=='mov'?'video/quicktime':'video/mp4',
         onProgress:(sent,total)=>_medyaIlerlemeGuncelle('Video yükleniyor',sent,total),
-      ).timeout(const Duration(seconds:120));
+      ).timeout(const Duration(minutes:3));
       await payloadGonder({'type':'video','mediaUrl':url},'🎥 Video');
     }catch(_){
       if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Video gönderilemedi. Tekrar dene.')));
@@ -6285,14 +6285,13 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
       if(boyut>30*1024*1024)throw Exception('Dosya 30 MB’den küçük olmalı.');
       final ad=x.name.isEmpty?'dosya':x.name;
       final uzanti=ad.contains('.')?ad.split('.').last.toLowerCase():'bin';
-      final bytes=await x.readAsBytes();
-      final url=await ngelxMedyaYukleBytes(
-        bytes:bytes,
+      final url=await ngelxMedyaYukleDosya(
+        dosya:x,
         kind:'chat-files',
         ext:uzanti,
         legacyPath:'chat-files/'+widget.chatId+'/'+DateTime.now().millisecondsSinceEpoch.toString()+'_'+ad,
         onProgress:(sent,total)=>_medyaIlerlemeGuncelle('Dosya yükleniyor',sent,total),
-      ).timeout(const Duration(seconds:90));
+      ).timeout(const Duration(minutes:3));
       await payloadGonder({'type':'file','fileUrl':url,'fileName':ad,'fileSize':boyut},'📎 '+ad);
     }catch(_){
       if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Dosya gönderilemedi. Tekrar dene.')));
