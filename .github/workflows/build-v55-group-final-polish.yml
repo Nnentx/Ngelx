@@ -1,4 +1,4 @@
-name: NgelX V56 Group Parity
+name: NgelX V57 Group Polish
 
 on:
   push:
@@ -15,7 +15,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: ngelx-v56-main-group-parity
+  group: ngelx-v57-main-group-polish
   cancel-in-progress: true
 
 jobs:
@@ -25,6 +25,12 @@ jobs:
     steps:
       - name: Kaynaklari al
         uses: actions/checkout@v4
+
+      - name: Sabit test imzasini kur
+        run: |
+          mkdir -p "$HOME/.android"
+          base64 -d .github/test-signing/ngelx-debug.keystore.b64 > "$HOME/.android/debug.keystore"
+          keytool -list -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey >/dev/null
 
       - name: Flutter kur
         uses: subosito/flutter-action@v2
@@ -76,7 +82,7 @@ jobs:
       - name: APK yukle
         uses: actions/upload-artifact@v4
         with:
-          name: NgelX-V56-GROUP-PARITY-APK
+          name: NgelX-V57-GROUP-MESSENGER-POLISH-APK
           path: app/build/app/outputs/flutter-apk/app-debug.apk
           if-no-files-found: error
           retention-days: 14
