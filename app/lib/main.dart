@@ -58,6 +58,9 @@ const ngelxGroupGreen = Color(0xFF0A9F45);
 const ngelxGroupGreen2 = Color(0xFF16B957);
 const ngelxGroupGreenSoft = Color(0xFFEAF8EF);
 const ngelxGroupGreenHeader = Color(0xFFB9F2C8);
+
+const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.57');
+const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '211');
 const ngelxGroupBorder = Color(0xFFD9EEE0);
 
 class NgelXBirthDateFormatter extends TextInputFormatter {
@@ -5702,7 +5705,7 @@ class _GrupOlusturPageState extends State<GrupOlusturPage>{
             kind: 'groups',
             ext: 'jpg',
             legacyPath: yol,
-          ).timeout(const Duration(seconds:12));
+          ).timeout(const Duration(seconds:75));
         }catch(_){
           fotoAtlandi=true;
           fotoUrl='';
@@ -14290,7 +14293,7 @@ class AyarlarPage extends StatelessWidget {
       _ayar(context,Icons.download_outlined,'İndirme izinleri','Varsayılan paylaşım indirme ayarı'),
     ],
     const Divider(),
-    ListTile(leading:const Icon(Icons.system_update,color:mor),title:const Text('Uygulama güncellemeleri'),subtitle:const Text('V42 • Geliştiriliyor'),trailing:const Icon(Icons.build_circle,color:Colors.orange)),
+    ListTile(leading:const Icon(Icons.system_update,color:mor),title:const Text('Uygulama güncellemeleri'),subtitle:Text('v$ngelxVersionName • Yapı $ngelxBuildNumber'),trailing:const Icon(Icons.system_update_alt_rounded,color:Colors.green)),
     ListTile(leading:const Icon(Icons.share,color:mavi),title:const Text('Ngel X’i paylaş'),subtitle:const Text('Uygulama bağlantısını paylaş veya kopyala'),onTap:()async=>SharePlus.instance.share(ShareParams(text:'Ngel X ile dünyanı paylaş ✨\nhttps://ngelx.app'))),
     const Divider(),
     ListTile(leading:const Icon(Icons.logout,color:Colors.red),title:const Text('Çıkış yap',style:TextStyle(color:Colors.red)),onTap:()async{final onay=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(title:const Text('Çıkış yapılsın mı?'),content:const Text('Tekrar giriş yapman gerekecek.'),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('Çıkış yap'))]));if(onay==true){await FirebaseAuth.instance.signOut();if(context.mounted)Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder:(_)=>const GirisPage()),(_)=>false);}})
