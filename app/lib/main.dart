@@ -648,6 +648,8 @@ const ceviriler = <String, Map<String,String>>{
   'messageRequest': {'tr':'Mesaj isteği','en':'Message request','de':'Nachrichtenanfrage','ar':'طلب رسالة','ru':'Запрос сообщения'},
   'accept': {'tr':'Kabul et','en':'Accept','de':'Annehmen','ar':'قبول','ru':'Принять'},
   'reject': {'tr':'Reddet','en':'Reject','de':'Ablehnen','ar':'رفض','ru':'Отклонить'},
+  'noBlockedAccounts': {'tr':'Engellediğin hesap yok.','en':'You have no blocked accounts.','de':'Du hast keine blockierten Konten.','ar':'لا توجد حسابات محظورة.','ru':'У вас нет заблокированных аккаунтов.'},
+  'unblock': {'tr':'Engeli kaldır','en':'Unblock','de':'Entsperren','ar':'إلغاء الحظر','ru':'Разблокировать'},
   'block': {'tr':'Engelle','en':'Block','de':'Blockieren','ar':'حظر','ru':'Заблокировать'},
   'member': {'tr':'üye','en':'members','de':'Mitglieder','ar':'أعضاء','ru':'участников'},
 };
@@ -14692,21 +14694,19 @@ class EngellenenlerPage extends StatefulWidget {const EngellenenlerPage({super.k
 class _EngellenenlerPageState extends State<EngellenenlerPage>{
   Future<List<String>> getir()async{final u=FirebaseAuth.instance.currentUser;if(u==null)return[];final d=await FirebaseFirestore.instance.collection('users').doc(u.uid).get();return List<String>.from(d.data()?['blocked']??const[]);}
   Future<void> kaldir(String uid)async{final u=FirebaseAuth.instance.currentUser;if(u==null)return;await FirebaseFirestore.instance.collection('users').doc(u.uid).set({'blocked':FieldValue.arrayRemove([uid])},SetOptions(merge:true));if(mounted)setState((){});}
-/* Eski sıkıştırılmış görünüm devre dışı.
-  @override Widget build(BuildContext context)=>Theme(data:ThemeData.light().copyWith(scaffoldBackgroundColor:Colors.white,appBarTheme:const AppBarTheme(backgroundColor:Colors.white,foregroundColor:Colors.black,elevation:0)),child:Scaffold(appBar:AppBar(title:const Text('Engellenen hesaplar')),body:FutureBuilder<List<String>>(future:getir(),builder:(context,s){if(s.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator());final ids=s.data??[];if(ids.isEmpty)return const Center(child:Text('Engellediğin hesap yok.'));return ListView.separated(padding:const EdgeInsets.all(14),itemCount:ids.length,separatorBuilder:(_,__)=>const Divider(),itemBuilder:(_,i)=>FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(future:FirebaseFirestore.instance.collection('users').doc(ids[i]).get(),builder:(_,p){final v=p.data?.data()??{},foto=(v['photoUrl']??'').toString();return ListTile(leading:CircleAvatar(backgroundImage:foto.isEmpty?null:CachedNetworkImageProvider(foto),child:foto.isEmpty?const Icon(Icons.person):null),title:Text((v['displayName']??v['username']??'Ngel X kullanıcısı').toString()),subtitle:Text('@${v['username']??'ngelx'}'),trailing:TextButton(onPressed:()=>kaldir(ids[i]),child:const Text('Engeli kaldır')));});});}));
-*/
+
   @override
   Widget build(BuildContext context) => Theme(
     data: ThemeData.light(),
     child: Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(title: const Text('Engellenen hesaplar')),
+      appBar: AppBar(title: Text(t('blockedAccounts'))),
       body: FutureBuilder<List<String>>(
         future: getir(),
         builder: (context, s) {
           if (s.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
           final ids = s.data ?? [];
-          if (ids.isEmpty) return const Center(child: Text('Engellediğin hesap yok.'));
+          if (ids.isEmpty) return Center(child: Text(t('noBlockedAccounts')));
           return ListView.separated(
             padding: const EdgeInsets.all(14),
             itemCount: ids.length,
@@ -14720,7 +14720,7 @@ class _EngellenenlerPageState extends State<EngellenenlerPage>{
                   leading: CircleAvatar(backgroundImage: foto.isEmpty ? null : CachedNetworkImageProvider(foto), child: foto.isEmpty ? const Icon(Icons.person) : null),
                   title: Text((v['displayName'] ?? v['username'] ?? 'Ngel X kullanıcısı').toString()),
                   subtitle: Text('@${v['username'] ?? 'ngelx'}'),
-                  trailing: TextButton(onPressed: () => kaldir(ids[i]), child: const Text('Engeli kaldır')),
+                  trailing: TextButton(onPressed: () => kaldir(ids[i]), child: Text(t('unblock'))),
                 );
               },
             ),
