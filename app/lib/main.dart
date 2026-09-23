@@ -5489,7 +5489,7 @@ class _GrupOlusturPageState extends State<GrupOlusturPage>{
               decoration:InputDecoration(
                 hintText:'Kişi ara',
                 hintStyle:const TextStyle(color:Color(0xFF9B94A1)),
-                prefixIcon:Icon(Icons.search_rounded,color:widget.groupMode?ngelxGroupGreen:ngelxPremiumPurple),
+                prefixIcon:const Icon(Icons.search_rounded,color:ngelxPremiumPurple),
                 filled:true,
                 fillColor:Colors.white,
                 border:OutlineInputBorder(borderRadius:BorderRadius.circular(20),borderSide:BorderSide.none),
@@ -7078,9 +7078,9 @@ class _GrupMedyaPageState extends State<GrupMedyaPage>{
   Query<Map<String,dynamic>> get _mesajlar=>FirebaseFirestore.instance.collection('chats').doc(widget.chatId).collection('messages').orderBy('createdAt',descending:true);
 
   @override Widget build(BuildContext context)=>Theme(
-    data:ThemeData.light().copyWith(colorScheme:ColorScheme.fromSeed(seedColor:widget.groupMode?ngelxGroupGreen:ngelxPremiumPurple)),
+    data:ThemeData.light().copyWith(colorScheme:ColorScheme.fromSeed(seedColor:ngelxPremiumPurple)),
     child:Scaffold(
-      backgroundColor:widget.groupMode?Colors.white:const Color(0xFFFBF9FF),
+      backgroundColor:const Color(0xFFFBF9FF),
       appBar:AppBar(
         backgroundColor:Colors.transparent,
         surfaceTintColor:Colors.transparent,
@@ -7104,7 +7104,7 @@ class _GrupMedyaPageState extends State<GrupMedyaPage>{
         Expanded(child:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
           stream:_mesajlar.snapshots(),
           builder:(_,snap){
-            if(snap.connectionState==ConnectionState.waiting)return Center(child:CircularProgressIndicator(color:widget.groupMode?ngelxGroupGreen:ngelxPremiumPurple));
+            if(snap.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator(color:ngelxPremiumPurple));
             final tum=snap.data?.docs??[];
             final docs=tum.where((d){
               final t=(d.data()['type']??'').toString();
@@ -10962,16 +10962,16 @@ class _SohbetMesajAramaPageState extends State<SohbetMesajAramaPage>{
   }
 
   @override Widget build(BuildContext context)=>Theme(
-    data:ThemeData.light().copyWith(colorScheme:ColorScheme.fromSeed(seedColor:ngelxPremiumPurple)),
+    data:ThemeData.light().copyWith(colorScheme:ColorScheme.fromSeed(seedColor:widget.groupMode?ngelxGroupGreen:ngelxPremiumPurple)),
     child:Scaffold(
-      backgroundColor:const Color(0xFFFBF9FF),
+      backgroundColor:widget.groupMode?Colors.white:const Color(0xFFFBF9FF),
       appBar:AppBar(
         toolbarHeight:64,
         backgroundColor:Colors.transparent,
         surfaceTintColor:Colors.transparent,
         elevation:0,
         title:const Text('Sohbette ara',style:TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w900)),
-        flexibleSpace:Container(decoration:const BoxDecoration(gradient:LinearGradient(colors:[Color(0xFFFFFFFF),Color(0xFFF5EFFF)]),borderRadius:BorderRadius.vertical(bottom:Radius.circular(24)))),
+        flexibleSpace:Container(decoration:BoxDecoration(gradient:LinearGradient(colors:[const Color(0xFFFFFFFF),widget.groupMode?ngelxGroupGreenSoft:const Color(0xFFF5EFFF)]),borderRadius:const BorderRadius.vertical(bottom:Radius.circular(24)))),
       ),
       body:Column(children:[
         Padding(
@@ -10984,7 +10984,7 @@ class _SohbetMesajAramaPageState extends State<SohbetMesajAramaPage>{
             decoration:InputDecoration(
               hintText:'Mesajlarda ara',
               hintStyle:const TextStyle(color:Color(0xFF9A93A2)),
-              prefixIcon:const Icon(Icons.search_rounded,color:ngelxPremiumPurple),
+              prefixIcon:Icon(Icons.search_rounded,color:widget.groupMode?ngelxGroupGreen:ngelxPremiumPurple),
               suffixIcon:sorgu.isEmpty?null:IconButton(onPressed:(){ara.clear();setState(()=>sorgu='');},icon:const Icon(Icons.close_rounded,color:ngelxPremiumMuted)),
               filled:true,fillColor:Colors.white,
               border:OutlineInputBorder(borderRadius:BorderRadius.circular(20),borderSide:BorderSide.none),
@@ -10996,7 +10996,7 @@ class _SohbetMesajAramaPageState extends State<SohbetMesajAramaPage>{
         Expanded(child:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
           stream:FirebaseFirestore.instance.collection('chats').doc(widget.chatId).collection('messages').orderBy('createdAt',descending:true).limit(300).snapshots(),
           builder:(_,snap){
-            if(snap.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator(color:ngelxPremiumPurple));
+            if(snap.connectionState==ConnectionState.waiting)return Center(child:CircularProgressIndicator(color:widget.groupMode?ngelxGroupGreen:ngelxPremiumPurple));
             if(sorgu.isEmpty)return const Center(child:Column(mainAxisSize:MainAxisSize.min,children:[
               Icon(Icons.manage_search_rounded,color:Color(0xFFC7B8E7),size:62),
               SizedBox(height:11),
