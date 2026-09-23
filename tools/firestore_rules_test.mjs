@@ -41,6 +41,8 @@ async function seed() {
       members: ['admin'],
       admins: ['admin'],
       moderators: [],
+      createdBy: 'admin',
+      formerMembers: ['bob'],
       hiddenFor: ['bob'],
       onlyAdminsCanPost: false,
       onlyAdminsCanAddMembers: false,
@@ -69,6 +71,8 @@ async function seed() {
       members: ['admin'],
       admins: ['admin'],
       moderators: [],
+      createdBy: 'admin',
+      formerMembers: ['carol'],
       hiddenFor: ['carol'],
       onlyAdminsCanPost: false,
       onlyAdminsCanAddMembers: false,
@@ -88,6 +92,50 @@ async function seed() {
       admins: ['admin'],
       memberCount: 1,
     });
+
+    await setDoc(doc(db, 'chats/group_solo'), {
+      isGroup: true,
+      groupName: 'Tek Kişilik Grup',
+      groupPhotoUrl: '',
+      groupDescription: '',
+      members: ['solo'],
+      admins: ['solo'],
+      moderators: [],
+      createdBy: 'solo',
+      formerMembers: [],
+      hiddenFor: [],
+      onlyAdminsCanPost: false,
+      onlyAdminsCanAddMembers: false,
+      onlyAdminsCanEditGroup: true,
+      onlyAdminsCanPin: true,
+      onlyAdminsCanMentionAll: false,
+      newMembersSeeHistory: true,
+      joinApproval: false,
+      inviteCode: '',
+      groupDeleted: false,
+    });
+
+    await setDoc(doc(db, 'chats/group_founder_multi'), {
+      isGroup: true,
+      groupName: 'Kuruculu Grup',
+      groupPhotoUrl: '',
+      groupDescription: '',
+      members: ['founder', 'bob'],
+      admins: ['founder', 'bob'],
+      moderators: [],
+      createdBy: 'founder',
+      formerMembers: [],
+      hiddenFor: [],
+      onlyAdminsCanPost: false,
+      onlyAdminsCanAddMembers: false,
+      onlyAdminsCanEditGroup: true,
+      onlyAdminsCanPin: true,
+      onlyAdminsCanMentionAll: false,
+      newMembersSeeHistory: true,
+      joinApproval: false,
+      inviteCode: '',
+      groupDeleted: false,
+    });
   });
 }
 
@@ -97,6 +145,8 @@ try {
   const bob = env.authenticatedContext('bob').firestore();
   const admin = env.authenticatedContext('admin').firestore();
   const carol = env.authenticatedContext('carol').firestore();
+  const solo = env.authenticatedContext('solo').firestore();
+  const founder = env.authenticatedContext('founder').firestore();
 
   // Davet kodu sadece doğrudan belge olarak okunabilir; tüm davetler listelenemez.
   await assertSucceeds(getDoc(doc(bob, 'group_invites/CODE123')));
@@ -125,12 +175,14 @@ try {
   // Autojoin isteği olan kullanıcı kendisini gruba ekleyebilir.
   await assertSucceeds(updateDoc(doc(bob, 'chats/group_open'), {
     members: arrayUnion('bob'),
+    formerMembers: arrayRemove('bob'),
     hiddenFor: arrayRemove('bob'),
     updatedAt: serverTimestamp(),
   }));
 
   const joined = await assertSucceeds(getDoc(doc(bob, 'chats/group_open')));
   assert.equal(joined.exists(), true);
+  assert.equal(joined.data().formerMembers.includes('bob'), false);
 
   // Normal üye grup yönetim metadatasını değiştiremez.
   await assertFails(updateDoc(doc(bob, 'chats/group_open'), {
@@ -238,6 +290,33 @@ try {
     createdAt: serverTimestamp(),
   }));
 
+  // Normal mesaj kapalı olsa bile üyelik/arama sistem olayları aktörün kendi kimliğiyle yazılabilir.
+  await assertSucceeds(setDoc(doc(bob, 'chats/group_open/messages/member_event'), {
+    senderId: 'bob',
+    type: 'system',
+    systemAction: 'call_join',
+    actorUid: 'bob',
+    callVideo: true,
+    text: 'Bobby görüntülü aramaya katıldı.',
+    createdAt: serverTimestamp(),
+  }));
+  await assertFails(setDoc(doc(bob, 'chats/group_open/messages/forged_event'), {
+    senderId: 'bob',
+    type: 'system',
+    systemAction: 'call_join',
+    actorUid: 'admin',
+    text: 'Sahte olay',
+    createdAt: serverTimestamp(),
+  }));
+  await assertFails(setDoc(doc(bob, 'chats/group_open/messages/unknown_event'), {
+    senderId: 'bob',
+    type: 'system',
+    systemAction: 'owner_override',
+    actorUid: 'bob',
+    text: 'Bilinmeyen olay',
+    createdAt: serverTimestamp(),
+  }));
+
   // Yönetici onaylı grupta katılma isteği oluşturulabilir ama kullanıcı kendini ekleyemez.
   await assertSucceeds(setDoc(doc(carol, 'chats/group_approval/joinRequests/carol'), {
     uid: 'carol',
@@ -257,6 +336,7 @@ try {
   assert.equal(pending.size, 1);
   await assertSucceeds(updateDoc(doc(admin, 'chats/group_approval'), {
     members: arrayUnion('carol'),
+    formerMembers: arrayRemove('carol'),
     hiddenFor: arrayRemove('carol'),
     updatedAt: serverTimestamp(),
   }));
@@ -269,6 +349,24 @@ try {
   // Kullanıcı artık grup üyesi olarak grubu okuyabilir.
   const approved = await assertSucceeds(getDoc(doc(carol, 'chats/group_approval')));
   assert.equal(approved.exists(), true);
+  assert.equal(approved.data().formerMembers.includes('carol'), false);
+
+  // Kurucu tek üyeyse grubu güvenli biçimde kapatabilir.
+  await assertSucceeds(updateDoc(doc(solo, 'chats/group_solo'), {
+    members: arrayRemove('solo'),
+    admins: arrayRemove('solo'),
+    groupDeleted: true,
+    deletedAt: serverTimestamp(),
+  }));
+
+  // Kurucu, başka üyeler varken kuruculuğu devretmeden kendisini çıkaramaz.
+  await assertFails(updateDoc(doc(founder, 'chats/group_founder_multi'), {
+    members: arrayRemove('founder'),
+    admins: arrayRemove('founder'),
+    formerMembers: arrayUnion('founder'),
+    removedAt_founder: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  }));
 
   console.log('Firestore rules testleri başarılı.');
 } finally {
