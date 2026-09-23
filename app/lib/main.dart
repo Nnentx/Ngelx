@@ -245,6 +245,42 @@ Future<String> ngelxMediaApiAdresi() async {
   _ngelxMediaApiCacheZamani=simdi;
   return _ngelxMediaApiCache??'';
 }
+List<String> _ngelxMediaApiAdaylari(String tercih) {
+  final build=_ngelxMediaApiBuild.trim().replaceAll(RegExp(r'/+$'), '');
+  final sonuc=<String>[];
+  for(final x in [tercih.trim().replaceAll(RegExp(r'/+$'), ''),build]){
+    if(x.isNotEmpty&&!sonuc.contains(x))sonuc.add(x);
+  }
+  return sonuc;
+}
+
+String _ngelxYuklemeCevapUrl(Response<dynamic> cevap,Uri hedef) {
+  final status=cevap.statusCode??0;
+  final veri=cevap.data;
+  if(status>=200&&status<300){
+    final url=veri is Map?(veri['url']??'').toString():'';
+    if(url.isEmpty)throw Exception('Medya sunucusu geçerli URL döndürmedi.');
+    return url;
+  }
+  final detay=veri is Map
+    ?(veri['message']??veri['error']??veri).toString()
+    :veri.toString();
+  throw HttpException('Medya sunucusu HTTP $status: $detay',uri:hedef);
+}
+
+String _ngelxYuklemeHataMesaji(Object? hata) {
+  if(hata is DioException){
+    final kod=hata.response?.statusCode;
+    if(kod==401)return 'Medya oturumu doğrulanamadı. Tekrar giriş yapmayı dene.';
+    if(kod==413)return 'Dosya medya servisinin boyut sınırını aşıyor.';
+    if(kod!=null)return 'Medya servisi HTTP $kod hatası verdi.';
+    return 'Medya servisine bağlanılamadı. İnternet bağlantını kontrol et.';
+  }
+  final yazi=(hata??'').toString().replaceFirst('Exception: ','');
+  if(yazi.isEmpty)return 'Medya yüklenemedi.';
+  return yazi.length>180?yazi.substring(0,180):yazi;
+}
+
 Future<String> ngelxMedyaYukleBytes({
   required Uint8List bytes,
   required String kind,
@@ -253,90 +289,163 @@ Future<String> ngelxMedyaYukleBytes({
   String? contentType,
   void Function(int sent,int total)? onProgress,
 }) async {
-  final user = FirebaseAuth.instance.currentUser;
-  if (user == null) throw Exception('Medya yüklemek için giriş yapmalısın.');
-  final api = await ngelxMediaApiAdresi();
-  final temizExt = _ngelxUzantiTemizle(ext);
-  final tur = contentType ?? _ngelxContentType(temizExt);
-  if (api.isEmpty) throw Exception('NgelX medya servisi yapılandırılmamış.');
+  final user=FirebaseAuth.instance.currentUser;
+  if(user==null)throw Exception('Medya yüklemek için giriş yapmalısın.');
+  final tercih=await ngelxMediaApiAdresi();
+  final apiler=_ngelxMediaApiAdaylari(tercih);
+  if(apiler.isEmpty)throw Exception('NgelX medya servisi yapılandırılmamış.');
 
-  final uri = Uri.parse('$api/upload').replace(queryParameters: {'kind': kind, 'ext': temizExt});
+  final temizExt=_ngelxUzantiTemizle(ext);
+  final tur=contentType??_ngelxContentType(temizExt);
   const jsonKinds={'photos','profiles','stories','groups','support','chat-backgrounds','thumbnails','gifs'};
-  String cevapUrl(Response<dynamic> cevap,Uri hedef) {
-    final status=cevap.statusCode??0;
-    final veri=cevap.data;
-    if(status>=200&&status<300){
-      final url=veri is Map?(veri['url']??'').toString():'';
-      if(url.isEmpty)throw Exception('Medya sunucusu geçerli URL döndürmedi.');
-      return url;
+  Object? sonHata;
+
+  for(final api in apiler){
+    if(jsonKinds.contains(kind)&&bytes.length<=10*1024*1024){
+      try{
+        final token=await user.getIdToken(true);
+        if(token==null||token.isEmpty)throw Exception('Güvenli medya oturumu oluşturulamadı.');
+        final hedef=Uri.parse('$api/upload').replace(queryParameters:{
+          'kind':kind,'ext':temizExt,'encoding':'base64',
+        });
+        final cevap=await Dio(BaseOptions(
+          connectTimeout:const Duration(seconds:18),
+          sendTimeout:const Duration(seconds:60),
+          receiveTimeout:const Duration(seconds:60),
+          validateStatus:(s)=>s!=null,
+        )).postUri(
+          hedef,
+          data:{'data':base64Encode(bytes),'contentType':tur},
+          onSendProgress:onProgress,
+          options:Options(
+            contentType:Headers.jsonContentType,
+            responseType:ResponseType.json,
+            headers:{
+              HttpHeaders.authorizationHeader:'Bearer $token',
+              'X-NgelX-Client':'android-v57-json',
+              'X-NgelX-Filename':legacyPath,
+            },
+          ),
+        );
+        final url=_ngelxYuklemeCevapUrl(cevap,hedef);
+        _ngelxMediaApiCache=api;
+        _ngelxMediaApiCacheZamani=DateTime.now();
+        return url;
+      }catch(e){
+        sonHata=e;
+      }
     }
-    throw HttpException('Medya sunucusu HTTP '+status.toString()+': '+cevap.data.toString(),uri:hedef);
-  }
 
-  // Küçük resimler için önce JSON/base64 taşıma kullanılır. Test telefonunda
-  // workers.dev'e binary POST gövdesi "Connection reset by peer" üretirken
-  // JSON taşıma aynı medya sunucusuna stabil biçimde ulaşabiliyor.
-  if(jsonKinds.contains(kind)&&bytes.length<=10*1024*1024){
-    try{
-      final token=await user.getIdToken(true);
-      if(token==null||token.isEmpty)throw Exception('Güvenli medya oturumu oluşturulamadı.');
-      final hedef=Uri.parse('$api/upload').replace(queryParameters:{
-        'kind':kind,'ext':temizExt,'encoding':'base64',
-      });
-      final cevap=await Dio(BaseOptions(
-        connectTimeout:const Duration(seconds:18),
-        sendTimeout:const Duration(seconds:50),
-        receiveTimeout:const Duration(seconds:50),
-        validateStatus:(s)=>s!=null,
-      )).postUri(
-        hedef,
-        data:{'data':base64Encode(bytes),'contentType':tur},
-        onSendProgress:onProgress,
-        options:Options(
-          contentType:Headers.jsonContentType,
-          responseType:ResponseType.json,
-          headers:{
-            HttpHeaders.authorizationHeader:'Bearer $token',
-            'X-NgelX-Client':'android-v57-json',
-            'X-NgelX-Filename':legacyPath,
-          },
-        ),
-      );
-      return cevapUrl(cevap,hedef);
-    }catch(_){ }
-  }
-
-  // Büyük dosyalar ve JSON yolunun başarısız olduğu durumlar için raw byte yolu.
-  for(var deneme=0;deneme<2;deneme++){
-    try{
-      final token=await user.getIdToken(deneme>0);
-      if(token==null||token.isEmpty)throw Exception('Güvenli medya oturumu oluşturulamadı.');
-      final cevap=await Dio(BaseOptions(
-        connectTimeout:const Duration(seconds:18),
-        sendTimeout:const Duration(seconds:45),
-        receiveTimeout:const Duration(seconds:45),
-        validateStatus:(s)=>s!=null,
-      )).postUri(
-        uri,
-        data:bytes,
-        onSendProgress:onProgress,
-        options:Options(
-          contentType:tur,
-          responseType:ResponseType.json,
-          headers:{
-            HttpHeaders.authorizationHeader:'Bearer $token',
-            'X-NgelX-Client':'android-v57-raw',
-            'X-NgelX-Filename':legacyPath,
-          },
-        ),
-      );
-      return cevapUrl(cevap,uri);
-    }catch(_){
-      if(deneme==0)await Future<void>.delayed(const Duration(milliseconds:650));
+    final hedef=Uri.parse('$api/upload').replace(queryParameters:{'kind':kind,'ext':temizExt});
+    for(var deneme=0;deneme<2;deneme++){
+      try{
+        final token=await user.getIdToken(deneme>0);
+        if(token==null||token.isEmpty)throw Exception('Güvenli medya oturumu oluşturulamadı.');
+        final cevap=await Dio(BaseOptions(
+          connectTimeout:const Duration(seconds:18),
+          sendTimeout:const Duration(seconds:90),
+          receiveTimeout:const Duration(seconds:60),
+          validateStatus:(s)=>s!=null,
+        )).postUri(
+          hedef,
+          data:bytes,
+          onSendProgress:onProgress,
+          options:Options(
+            contentType:tur,
+            responseType:ResponseType.json,
+            headers:{
+              HttpHeaders.authorizationHeader:'Bearer $token',
+              HttpHeaders.contentLengthHeader:bytes.length,
+              'X-NgelX-Client':'android-v57-raw',
+              'X-NgelX-Filename':legacyPath,
+            },
+          ),
+        );
+        final url=_ngelxYuklemeCevapUrl(cevap,hedef);
+        _ngelxMediaApiCache=api;
+        _ngelxMediaApiCacheZamani=DateTime.now();
+        return url;
+      }catch(e){
+        sonHata=e;
+        if(deneme==0)await Future<void>.delayed(const Duration(milliseconds:650));
+      }
     }
   }
 
-  throw Exception('Medya yüklenemedi. Lütfen bağlantını kontrol edip tekrar dene.');
+  throw Exception('Medya yüklenemedi. ${_ngelxYuklemeHataMesaji(sonHata)}');
+}
+
+Future<String> ngelxMedyaYukleDosya({
+  required XFile dosya,
+  required String kind,
+  required String ext,
+  required String legacyPath,
+  String? contentType,
+  void Function(int sent,int total)? onProgress,
+}) async {
+  final user=FirebaseAuth.instance.currentUser;
+  if(user==null)throw Exception('Medya yüklemek için giriş yapmalısın.');
+  final boyut=await dosya.length();
+  if(boyut<=0)throw Exception('Seçilen dosya boş görünüyor.');
+
+  final yerel=File(dosya.path);
+  if(!await yerel.exists()){
+    return ngelxMedyaYukleBytes(
+      bytes:await dosya.readAsBytes(),
+      kind:kind,
+      ext:ext,
+      legacyPath:legacyPath,
+      contentType:contentType,
+      onProgress:onProgress,
+    );
+  }
+
+  final tercih=await ngelxMediaApiAdresi();
+  final apiler=_ngelxMediaApiAdaylari(tercih);
+  if(apiler.isEmpty)throw Exception('NgelX medya servisi yapılandırılmamış.');
+
+  final temizExt=_ngelxUzantiTemizle(ext);
+  final tur=contentType??_ngelxContentType(temizExt);
+  Object? sonHata;
+
+  for(final api in apiler){
+    final hedef=Uri.parse('$api/upload').replace(queryParameters:{'kind':kind,'ext':temizExt});
+    for(var deneme=0;deneme<2;deneme++){
+      try{
+        final token=await user.getIdToken(deneme>0);
+        if(token==null||token.isEmpty)throw Exception('Güvenli medya oturumu oluşturulamadı.');
+        final cevap=await Dio(BaseOptions(
+          connectTimeout:const Duration(seconds:18),
+          sendTimeout:const Duration(minutes:3),
+          receiveTimeout:const Duration(seconds:75),
+          validateStatus:(s)=>s!=null,
+        )).postUri(
+          hedef,
+          data:yerel.openRead(),
+          onSendProgress:onProgress,
+          options:Options(
+            contentType:tur,
+            responseType:ResponseType.json,
+            headers:{
+              HttpHeaders.authorizationHeader:'Bearer $token',
+              HttpHeaders.contentLengthHeader:boyut,
+              'X-NgelX-Client':'android-v57-stream',
+              'X-NgelX-Filename':legacyPath,
+            },
+          ),
+        );
+        final url=_ngelxYuklemeCevapUrl(cevap,hedef);
+        _ngelxMediaApiCache=api;
+        _ngelxMediaApiCacheZamani=DateTime.now();
+        return url;
+      }catch(e){
+        sonHata=e;
+        if(deneme==0)await Future<void>.delayed(const Duration(milliseconds:700));
+      }
+    }
+  }
+
+  throw Exception('Medya yüklenemedi. ${_ngelxYuklemeHataMesaji(sonHata)}');
 }
 
 Future<void> ngelxMedyaSil(String rawUrl) async {
