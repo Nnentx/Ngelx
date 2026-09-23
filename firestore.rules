@@ -52,6 +52,15 @@ service cloud.firestore {
         && joinReq.data.get('status', '') == 'autojoin'
         && validInvite(code, chatId);
     }
+    function validMemberAddition() {
+      return signedIn()
+        && resource.data.get('isGroup', false) == true
+        && request.auth.uid in resource.data.members
+        && request.resource.data.members.size() > resource.data.members.size()
+        && request.resource.data.members.size() <= 60
+        && request.resource.data.members.hasAll(resource.data.members)
+        && onlyChanges(['members', 'hiddenFor', 'updatedAt']);
+    }
     function relationshipUpdate() {
       return signedIn()
         && onlyChanges(['followers', 'following', 'friends'])
@@ -134,6 +143,7 @@ service cloud.firestore {
             && request.resource.data.members == resource.data.members
           )
           || (chatAdmin() && request.resource.data.members.size() <= 60)
+          || validMemberAddition()
           || (
             groupMetadataUnchanged()
             && (
