@@ -153,6 +153,16 @@ for token in (
     if token not in app:
         errors.append("Profil mesaj gizliliği sözleşmesi eksik: " + token)
 
+# New-chat picker must apply the same target message permission before creating a conversation.
+for token in (
+    "final izin=(v['messagePermission']",
+    "izin=='friends'&&arkadaslar.contains(d.id)",
+    "izin=='following'&&hedefinTakipEttikleri.contains(me)",
+    "if(!izinli&&chat.data?.exists!=true)",
+):
+    if token not in app:
+        errors.append("Yeni sohbet mesaj gizliliği sözleşmesi eksik: " + token)
+
 # Main feed must show real content only and keep user filters/live behavior intact.
 for token in (
     "class _VideoAkisiState",
