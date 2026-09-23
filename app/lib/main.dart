@@ -7050,7 +7050,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
         borderRadius:BorderRadius.circular(18),
         border:Border.all(color:ngelxGroupBorder),
       ),
-      child:Text(metin,maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Color(0xFF6D5A86),fontSize:11,fontWeight:FontWeight.w700)),
+      child:Text(metin,maxLines:3,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Color(0xFF554361),fontSize:11.2,fontWeight:FontWeight.w800)),
     ));
     if(tur=='call'){
       final goruntulu=v['callVideo']==true;
@@ -9310,7 +9310,26 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
   String? get ben=>FirebaseAuth.instance.currentUser?.uid;
   Future<DocumentSnapshot<Map<String,dynamic>>> _uyeGetir(String id)=>
       _uyeProfilCache.putIfAbsent(id,()=>FirebaseFirestore.instance.collection('users').doc(id).get());
-  Future<void> sistemMesaji(String text)async{await ref.collection('messages').add({'senderId':'system','type':'system','text':text,'createdAt':FieldValue.serverTimestamp()});await ref.set({'lastMessage':text,'updatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));}
+  Future<void> sistemMesaji(String text,{String action='',List<String> targetUids=const[]})async{
+    final actor=ben;
+    if(actor==null)return;
+    // Sistem kaydı ikincil bir işlemdir: mesaj kaydı izin/ağ nedeniyle aksasa bile
+    // grup üyeliği veya yönetim işlemini geri düşürüp ekranı bozmasın.
+    try{
+      await ref.collection('messages').add({
+        'senderId':actor,
+        'type':'system',
+        'text':text,
+        'actorUid':actor,
+        if(action.isNotEmpty)'systemAction':action,
+        if(targetUids.isNotEmpty)'targetUids':targetUids,
+        'createdAt':FieldValue.serverTimestamp(),
+      });
+    }catch(_){}
+    try{
+      await ref.set({'lastMessage':text,'updatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
+    }catch(_){}
+  }
   Future<void> grupAramasiBaslat(bool goruntulu,String grupAdi,String foto)async{
     final me=ben;
     if(me==null||aramaBaslatiliyor)return;
@@ -9743,12 +9762,19 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
     });
     _uyeProfilCache.clear();
     await ngelxGrupDavetMetaSenkronla(ref);
+    String adlariBirleştir(List<String> adlar){
+      if(adlar.isEmpty)return '';
+      if(adlar.length==1)return adlar.first;
+      if(adlar.length==2)return adlar.first+' ve '+adlar.last;
+      return adlar.sublist(0,adlar.length-1).join(', ')+' ve '+adlar.last;
+    }
+    final gorunenAdlar=eklenenAdlar.length<=4?eklenenAdlar:eklenenAdlar.take(4).toList();
+    final hedefler=adlariBirleştir(gorunenAdlar);
+    final devam=eklenenAdlar.length>4?' ve '+(eklenenAdlar.length-4).toString()+' kişi daha':'';
     final olay=eklenenAdlar.length==1
-      ?ekleyen+', '+eklenenAdlar.first+' adlı üyeyi gruba ekledi.'
-      :eklenenAdlar.length<=4
-        ?ekleyen+', '+eklenenAdlar.join(', ')+' adlı üyeleri gruba ekledi.'
-        :ekleyen+' '+eklenenAdlar.length.toString()+' kişiyi gruba ekledi.';
-    await sistemMesaji(olay);
+      ?ekleyen+', '+hedefler+' adlı üyeyi gruba ekledi.'
+      :ekleyen+', '+hedefler+devam+' adlı üyeleri gruba ekledi.';
+    await sistemMesaji(olay,action:'member_added',targetUids:secilen.toList());
     final grupAdi=(gv['groupName']??'gruba').toString();
     for(final id in secilen){
       unawaited(uygulamaBildirimiGonder(toUid:id,fromUid:me,tur:'message',metin:ekleyen+' seni '+grupAdi+' grubuna ekledi',belgeId:widget.chatId).catchError((_){ }));
@@ -9863,8 +9889,8 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
                   value:false,
                   groupValue:sadeceYoneticiler,
                   activeColor:ngelxGroupGreen,
-                  title:const Text('Herkes',style:TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w800)),
-                  subtitle:const Text('Gruptaki tüm üyeler kullanabilir.',style:TextStyle(color:ngelxPremiumMuted,fontSize:11)),
+                  title:const Text('Herkes',style:TextStyle(color:Colors.black87,fontWeight:FontWeight.w900)),
+                  subtitle:const Text('Gruptaki tüm üyeler kullanabilir.',style:TextStyle(color:Color(0xFF5F5965),fontSize:11,fontWeight:FontWeight.w600)),
                   onChanged:(v)=>Navigator.pop(c,v),
                 ),
                 const Divider(height:1,indent:58,color:Color(0xFFF0EBF5)),
@@ -9872,8 +9898,8 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
                   value:true,
                   groupValue:sadeceYoneticiler,
                   activeColor:ngelxGroupGreen,
-                  title:const Text('Yalnızca yöneticiler',style:TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w800)),
-                  subtitle:const Text('Bu işlem yönetici yetkisi gerektirir.',style:TextStyle(color:ngelxPremiumMuted,fontSize:11)),
+                  title:const Text('Yalnızca yöneticiler',style:TextStyle(color:Colors.black87,fontWeight:FontWeight.w900)),
+                  subtitle:const Text('Bu işlem yönetici yetkisi gerektirir.',style:TextStyle(color:Color(0xFF5F5965),fontSize:11,fontWeight:FontWeight.w600)),
                   onChanged:(v)=>Navigator.pop(c,v),
                 ),
               ]),
@@ -10210,7 +10236,7 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
     contentPadding:const EdgeInsets.symmetric(horizontal:6,vertical:4),
     leading:Container(width:42,height:42,decoration:BoxDecoration(color:ngelxGroupGreenSoft,borderRadius:BorderRadius.circular(14)),child:Icon(icon,color:ngelxGroupGreen)),
     title:Text(title,style:const TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w900)),
-    subtitle:Text(subtitle,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:ngelxPremiumMuted,fontSize:11.5)),
+    subtitle:Text(subtitle,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Color(0xFF4F4855),fontSize:11.8,fontWeight:FontWeight.w700)),
     trailing:const Icon(Icons.chevron_right_rounded,color:Color(0xFFA59DAF)),
   );
 
@@ -10409,12 +10435,12 @@ class _GrupOzellestirPageState extends State<GrupOzellestirPage>{
               const SizedBox(height:22),
               const Text('Hızlı gönderme emojisi',style:TextStyle(fontSize:18,fontWeight:FontWeight.w900)),
               const SizedBox(height:5),
-              const Text('Mesaj kutusu boşken sağ tarafta görünecek emojiyi seç.',style:TextStyle(color:Colors.black54)),
+              const Text('Mesaj kutusu boşken ve bir mesaja çift dokununca kullanılacak ortak emojiyi seç. Bu seçim gruptaki herkeste aynıdır.',style:TextStyle(color:Color(0xFF5B5560),fontWeight:FontWeight.w600,height:1.35)),
               const SizedBox(height:12),
               Wrap(
                 spacing:10,
                 runSpacing:10,
-                children:['👍','❤️','😂','🔥','👏','🐥'].map((emoji)=>InkWell(
+                children:['👍','❤️','😘','🥰','😂','🔥','👏','🐥'].map((emoji)=>InkWell(
                   borderRadius:BorderRadius.circular(18),
                   onTap:()=>ref.set({'quickEmoji':emoji},SetOptions(merge:true)),
                   child:Container(
