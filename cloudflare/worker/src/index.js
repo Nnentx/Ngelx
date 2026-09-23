@@ -28,11 +28,18 @@ const MAX_BYTES = {
 let jwksCache = null;
 let jwksExpiresAt = 0;
 
+const MEDIA_PROTOCOL = 'upload-237';
+
+function uploadLog(event, data = {}) {
+  console.log(JSON.stringify({service: 'ngelx-r2-media', protocol: MEDIA_PROTOCOL, event, ...data}));
+}
+
 function cors() {
   return {
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Authorization, Content-Type, X-NgelX-Filename, X-NgelX-Client',
-    'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Authorization, Content-Type, X-NgelX-Filename, X-NgelX-Client, X-NgelX-Content-Type',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'X-NgelX-Worker': MEDIA_PROTOCOL,
   };
 }
 
@@ -171,9 +178,9 @@ export default {
     if (request.method === 'GET' && url.pathname === '/health') {
       try {
         await env.MEDIA.head('__ngelx_healthcheck__');
-        return json({ok: true, service: 'ngelx-r2-media', r2: true});
+        return json({ok: true, service: 'ngelx-r2-media', r2: true, protocol: MEDIA_PROTOCOL});
       } catch (e) {
-        return json({ok: false, service: 'ngelx-r2-media', r2: false, message: String(e?.message || e)}, 503);
+        return json({ok: false, service: 'ngelx-r2-media', r2: false, protocol: MEDIA_PROTOCOL, message: String(e?.message || e)}, 503);
       }
     }
 
@@ -188,6 +195,155 @@ export default {
       headers.set('etag', object.httpEtag);
       headers.set('cache-control', 'public, max-age=31536000, immutable');
       return new Response(object.body, {headers});
+    }
+
+    if (request.method === 'POST' && url.pathname === '/upload/multipart/create') {
+      let claims;
+      try {
+        claims = await verifyFirebaseIdToken(request, env);
+      } catch (e) {
+        uploadLog('multipart_create_auth_failed', {message: String(e?.message || e)});
+        return json({error: 'unauthorized', stage: 'multipart_create_auth', protocol: MEDIA_PROTOCOL, message: String(e.message || e)}, 401);
+      }
+
+      const kind = cleanKind(url.searchParams.get('kind'));
+      if (!kind) return json({error: 'invalid_kind', stage: 'multipart_create', protocol: MEDIA_PROTOCOL}, 400);
+      const ext = cleanExt(url.searchParams.get('ext'));
+      const maxBytes = MAX_BYTES[kind] || MAX_BYTES.default;
+      const size = Number(url.searchParams.get('size') || 0);
+      if (!Number.isFinite(size) || size <= 0) return json({error: 'invalid_size', stage: 'multipart_create', protocol: MEDIA_PROTOCOL}, 400);
+      if (size > maxBytes) return json({error: 'file_too_large', stage: 'multipart_create', protocol: MEDIA_PROTOCOL, maxBytes}, 413);
+
+      const uid = claims.sub;
+      const key = kind + '/' + uid + '/' + Date.now() + '_' + crypto.randomUUID() + '.' + ext;
+      const contentType = contentTypeFor(ext, url.searchParams.get('contentType'));
+      try {
+        const upload = await env.MEDIA.createMultipartUpload(key, {
+          httpMetadata: {contentType, cacheControl: 'public, max-age=31536000, immutable'},
+          customMetadata: {uid, kind, transport: 'multipart', protocol: MEDIA_PROTOCOL},
+        });
+        uploadLog('multipart_created', {kind, size, uid: uid.slice(0, 8)});
+        return json({
+          ok: true,
+          protocol: MEDIA_PROTOCOL,
+          key,
+          uploadId: upload.uploadId,
+          url: url.origin + '/media/' + encodeKeyForUrl(key),
+        }, 201);
+      } catch (e) {
+        uploadLog('multipart_create_failed', {kind, size, message: String(e?.message || e)});
+        return json({error: 'multipart_create_failed', stage: 'multipart_create', protocol: MEDIA_PROTOCOL, message: String(e?.message || e)}, 503);
+      }
+    }
+
+    if (request.method === 'POST' && url.pathname === '/upload/multipart/part') {
+      let claims;
+      try {
+        claims = await verifyFirebaseIdToken(request, env);
+      } catch (e) {
+        uploadLog('multipart_part_auth_failed', {message: String(e?.message || e)});
+        return json({error: 'unauthorized', stage: 'multipart_part_auth', protocol: MEDIA_PROTOCOL, message: String(e.message || e)}, 401);
+      }
+
+      const kind = cleanKind(url.searchParams.get('kind'));
+      const key = url.searchParams.get('key') || '';
+      const uploadId = url.searchParams.get('uploadId') || '';
+      const partNumber = Number(url.searchParams.get('partNumber'));
+      if (!kind || !key.startsWith(kind + '/' + claims.sub + '/') || !uploadId ||
+          !Number.isInteger(partNumber) || partNumber < 1 || partNumber > 10000) {
+        return json({error: 'invalid_multipart_part', stage: 'multipart_part', protocol: MEDIA_PROTOCOL}, 400);
+      }
+      if (!request.body) return json({error: 'empty_part', stage: 'multipart_part', protocol: MEDIA_PROTOCOL}, 400);
+      const announced = Number(request.headers.get('content-length') || 0);
+      if (announced <= 0 || announced > 5 * 1024 * 1024) {
+        return json({error: 'invalid_part_size', stage: 'multipart_part', protocol: MEDIA_PROTOCOL, announced}, 413);
+      }
+
+      try {
+        const upload = env.MEDIA.resumeMultipartUpload(key, uploadId);
+        const part = await upload.uploadPart(partNumber, request.body);
+        uploadLog('multipart_part_saved', {kind, partNumber, announced, uid: claims.sub.slice(0, 8)});
+        return json({ok: true, protocol: MEDIA_PROTOCOL, partNumber: part.partNumber, etag: part.etag}, 201);
+      } catch (e) {
+        uploadLog('multipart_part_failed', {kind, partNumber, announced, message: String(e?.message || e)});
+        return json({error: 'multipart_part_failed', stage: 'multipart_part', protocol: MEDIA_PROTOCOL, partNumber, message: String(e?.message || e)}, 503);
+      }
+    }
+
+    if (request.method === 'POST' && url.pathname === '/upload/multipart/complete') {
+      let claims;
+      try {
+        claims = await verifyFirebaseIdToken(request, env);
+      } catch (e) {
+        uploadLog('multipart_complete_auth_failed', {message: String(e?.message || e)});
+        return json({error: 'unauthorized', stage: 'multipart_complete_auth', protocol: MEDIA_PROTOCOL, message: String(e.message || e)}, 401);
+      }
+
+      const kind = cleanKind(url.searchParams.get('kind'));
+      let payload;
+      try {
+        payload = await request.json();
+      } catch (_) {
+        return json({error: 'invalid_json', stage: 'multipart_complete', protocol: MEDIA_PROTOCOL}, 400);
+      }
+      const key = typeof payload?.key === 'string' ? payload.key : '';
+      const uploadId = typeof payload?.uploadId === 'string' ? payload.uploadId : '';
+      const parts = Array.isArray(payload?.parts) ? payload.parts : [];
+      if (!kind || !key.startsWith(kind + '/' + claims.sub + '/') || !uploadId || !parts.length || parts.length > 10000) {
+        return json({error: 'invalid_multipart_complete', stage: 'multipart_complete', protocol: MEDIA_PROTOCOL}, 400);
+      }
+      const normalizedParts = [];
+      for (const raw of parts) {
+        const partNumber = Number(raw?.partNumber);
+        const etag = typeof raw?.etag === 'string' ? raw.etag : '';
+        if (!Number.isInteger(partNumber) || partNumber < 1 || !etag) {
+          return json({error: 'invalid_part_manifest', stage: 'multipart_complete', protocol: MEDIA_PROTOCOL}, 400);
+        }
+        normalizedParts.push({partNumber, etag});
+      }
+      normalizedParts.sort((a, b) => a.partNumber - b.partNumber);
+
+      try {
+        const upload = env.MEDIA.resumeMultipartUpload(key, uploadId);
+        const object = await upload.complete(normalizedParts);
+        uploadLog('multipart_completed', {kind, size: object.size, parts: normalizedParts.length, uid: claims.sub.slice(0, 8)});
+        return json({
+          ok: true,
+          protocol: MEDIA_PROTOCOL,
+          key,
+          url: url.origin + '/media/' + encodeKeyForUrl(key),
+          size: object.size,
+        }, 201);
+      } catch (e) {
+        uploadLog('multipart_complete_failed', {kind, parts: normalizedParts.length, message: String(e?.message || e)});
+        return json({error: 'multipart_complete_failed', stage: 'multipart_complete', protocol: MEDIA_PROTOCOL, message: String(e?.message || e)}, 503);
+      }
+    }
+
+    if (request.method === 'POST' && url.pathname === '/upload/multipart/abort') {
+      let claims;
+      try {
+        claims = await verifyFirebaseIdToken(request, env);
+      } catch (e) {
+        return json({error: 'unauthorized', stage: 'multipart_abort_auth', protocol: MEDIA_PROTOCOL, message: String(e.message || e)}, 401);
+      }
+      let payload;
+      try {
+        payload = await request.json();
+      } catch (_) {
+        return json({error: 'invalid_json', stage: 'multipart_abort', protocol: MEDIA_PROTOCOL}, 400);
+      }
+      const kind = cleanKind(url.searchParams.get('kind'));
+      const key = typeof payload?.key === 'string' ? payload.key : '';
+      const uploadId = typeof payload?.uploadId === 'string' ? payload.uploadId : '';
+      if (!kind || !key.startsWith(kind + '/' + claims.sub + '/') || !uploadId) {
+        return json({error: 'invalid_multipart_abort', stage: 'multipart_abort', protocol: MEDIA_PROTOCOL}, 400);
+      }
+      try {
+        await env.MEDIA.resumeMultipartUpload(key, uploadId).abort();
+      } catch (_) {}
+      uploadLog('multipart_aborted', {kind, uid: claims.sub.slice(0, 8)});
+      return json({ok: true, protocol: MEDIA_PROTOCOL});
     }
 
     if (request.method === 'POST' && url.pathname === '/upload/chunk') {
@@ -221,7 +377,8 @@ export default {
         httpMetadata: {contentType: 'application/octet-stream'},
         customMetadata: {uid: claims.sub, kind, ext, uploadId, index: String(index), total: String(total)},
       });
-      return json({ok: true, index, total}, 201);
+      uploadLog('chunk_saved', {kind, index, total, bytes: bytes.byteLength, uid: claims.sub.slice(0, 8)});
+      return json({ok: true, protocol: MEDIA_PROTOCOL, index, total}, 201);
     }
 
     if (request.method === 'POST' && url.pathname === '/upload/complete') {
@@ -272,8 +429,10 @@ export default {
         env.MEDIA.delete('__ngelx_chunks/' + uid + '/' + uploadId + '/' + i)
       ));
 
+      uploadLog('chunk_completed', {kind, size, total, uid: claims.sub.slice(0, 8)});
       return json({
         ok: true,
+        protocol: MEDIA_PROTOCOL,
         key,
         url: url.origin + '/media/' + encodeKeyForUrl(key),
         size,

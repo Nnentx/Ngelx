@@ -151,8 +151,11 @@ Widget ngelxPremiumIconButton({
 );
 
 const ngelxWebAdresi = 'https://ngelxsocial.com';
-const _ngelxMediaApiBuild = String.fromEnvironment('NGELX_MEDIA_API', defaultValue: 'https://ngelx-media.alihancaglar76.workers.dev');
-const _ngelxMediaApiYedek='https://ngelx-upload.alihancaglar76.workers.dev';
+const _ngelxMediaApiBuild = String.fromEnvironment(
+  'NGELX_MEDIA_API',
+  defaultValue: 'https://ngelx-media.alihancaglar76.workers.dev',
+);
+const _ngelxMediaProtocolVersion='upload-237';
 String? _ngelxMediaApiCache;
 DateTime? _ngelxMediaApiCacheZamani;
 
@@ -190,7 +193,6 @@ Widget ngelxMedyaHataGorunumu(String url) => Container(
     ],
   ),
 );
-
 
 String _ngelxUzantiTemizle(String value) {
   final v = value.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
@@ -231,99 +233,286 @@ String _ngelxContentType(String ext) {
   }
 }
 
-Future<String> ngelxMediaApiAdresi() async {
-  final simdi = DateTime.now();
-  if (_ngelxMediaApiCache != null &&
-      _ngelxMediaApiCacheZamani != null &&
-      simdi.difference(_ngelxMediaApiCacheZamani!).inMinutes < 10) {
-    return _ngelxMediaApiCache!;
+int _ngelxMaksimumMedyaBoyutu(String kind) {
+  switch (kind) {
+    case 'videos':
+      return 80 * 1024 * 1024;
+    case 'profile-intros':
+      return 35 * 1024 * 1024;
+    case 'chat-files':
+      return 30 * 1024 * 1024;
+    case 'music':
+    case 'chat-audio':
+      return 15 * 1024 * 1024;
+    case 'gifs':
+      return 12 * 1024 * 1024;
+    default:
+      return 10 * 1024 * 1024;
   }
-  // Firestore ayarı APK güncellemeden medya uç noktasını değiştirebilsin.
-  var uzaktaki='';
-  try {
-    final d = await FirebaseFirestore.instance.collection('app_config').doc('media').get().timeout(const Duration(seconds: 5));
-    uzaktaki=(d.data()?['uploadApi']??'').toString().trim().replaceAll(RegExp(r'/+$'), '');
-  } catch (_) {}
-  final build=_ngelxMediaApiBuild.trim().replaceAll(RegExp(r'/+$'), '');
-  _ngelxMediaApiCache=uzaktaki.isNotEmpty?uzaktaki:build;
-  _ngelxMediaApiCacheZamani=simdi;
-  return _ngelxMediaApiCache??'';
 }
-List<String> _ngelxMediaApiAdaylari(String tercih) {
+
+Future<String> ngelxMediaApiAdresi() async {
+  // Test 237: Firestore override ve yedek endpoint bilinçli olarak devre dışı.
+  // Böylece ilk gerçek hata başka fallback'ler tarafından gizlenmiyor.
   final build=_ngelxMediaApiBuild.trim().replaceAll(RegExp(r'/+$'), '');
-  final yedek=_ngelxMediaApiYedek.trim().replaceAll(RegExp(r'/+$'), '');
-  final sonuc=<String>[];
-  for(final x in [tercih.trim().replaceAll(RegExp(r'/+$'), ''),build,yedek]){
-    if(x.isNotEmpty&&!sonuc.contains(x))sonuc.add(x);
-  }
-  return sonuc;
+  if(build.isEmpty)throw Exception('NgelX medya servisi yapılandırılmamış.');
+  _ngelxMediaApiCache=build;
+  _ngelxMediaApiCacheZamani=DateTime.now();
+  return build;
 }
 
 const MethodChannel _ngelxMedyaNativeKanal=MethodChannel('com.nnentx.ngelx_app/media');
 
-Future<String> _ngelxAndroidNativeYukle({
+String _ngelxKisaHata(Object hata) {
+  final raw=hata.toString().replaceFirst('Exception: ','').replaceAll('\n',' ').trim();
+  return raw.length>320?raw.substring(0,320):raw;
+}
+
+Future<Map<String,dynamic>> _ngelxAndroidNativePost({
   required Uri hedef,
   required Uint8List bytes,
   required String token,
   required String contentType,
   required String legacyPath,
+  required String asama,
+}) async {
+  if(!Platform.isAndroid)throw UnsupportedError('Android yerel medya isteği yalnızca Android için kullanılıyor.');
+  try{
+    final cevap=await _ngelxMedyaNativeKanal.invokeMapMethod<String,dynamic>('upload',{
+      'url':hedef.toString(),
+      'token':token,
+      'contentType':contentType,
+      'legacyPath':legacyPath,
+      'bytes':bytes,
+    }).timeout(const Duration(minutes:3));
+    final status=(cevap?['status'] as num?)?.toInt()??0;
+    final body=(cevap?['body']??'').toString();
+    dynamic veri;
+    try{veri=jsonDecode(body);}catch(_){veri=<String,dynamic>{'raw':body};}
+    final map=veri is Map<String,dynamic>
+        ?veri
+        :veri is Map
+            ?Map<String,dynamic>.from(veri)
+            :<String,dynamic>{'raw':veri.toString()};
+    if(status<200||status>=300){
+      final detay=(map['message']??map['error']??map['raw']??'yanıt yok').toString();
+      throw Exception('$asama | ${hedef.host}${hedef.path} | HTTP $status | $detay');
+    }
+    return map;
+  }on PlatformException catch(e){
+    throw Exception('$asama | ${hedef.host}${hedef.path} | ${e.code}: ${e.message??'bağlantı hatası'}');
+  }on TimeoutException{
+    throw Exception('$asama | ${hedef.host}${hedef.path} | zaman aşımı');
+  }catch(e){
+    final yazi=_ngelxKisaHata(e);
+    if(yazi.startsWith(asama))rethrow;
+    throw Exception('$asama | ${hedef.host}${hedef.path} | $yazi');
+  }
+}
+
+Future<Map<String,dynamic>> _ngelxNativePostTekrarli({
+  required Uri hedef,
+  required Uint8List bytes,
+  required String token,
+  required String contentType,
+  required String legacyPath,
+  required String asama,
+  int denemeSayisi=2,
+}) async {
+  Object? sonHata;
+  for(var deneme=1;deneme<=denemeSayisi;deneme++){
+    try{
+      return await _ngelxAndroidNativePost(
+        hedef:hedef,
+        bytes:bytes,
+        token:token,
+        contentType:contentType,
+        legacyPath:legacyPath,
+        asama:'$asama deneme $deneme/$denemeSayisi',
+      );
+    }catch(e){
+      sonHata=e;
+      if(deneme<denemeSayisi)await Future<void>.delayed(const Duration(milliseconds:450));
+    }
+  }
+  throw Exception(_ngelxKisaHata(sonHata??Exception('$asama başarısız')));
+}
+
+Future<String> _ngelxKucukMedyaYukleAndroid({
+  required String api,
+  required Uint8List bytes,
+  required String kind,
+  required String ext,
+  required String contentType,
+  required String legacyPath,
   void Function(int sent,int total)? onProgress,
 }) async {
-  if(!Platform.isAndroid)throw UnsupportedError('Android yerel medya yükleyicisi yalnızca Android için kullanılıyor.');
+  if(bytes.isEmpty)throw Exception('Seçilen medya boş.');
+  if(bytes.length>10*1024*1024)throw Exception('Küçük medya yolu 10 MB ile sınırlı.');
+  final user=FirebaseAuth.instance.currentUser;
+  if(user==null)throw Exception('Medya yüklemek için giriş yapmalısın.');
+  final token=await user.getIdToken(true);
+  if(token==null||token.isEmpty)throw Exception('Güvenli medya oturumu oluşturulamadı.');
+
+  const parcaBoyutu=256*1024;
+  final toplam=(bytes.length+parcaBoyutu-1)~/parcaBoyutu;
+  final yuklemeId=DateTime.now().microsecondsSinceEpoch.toString()+'-'+bytes.length.toString();
   onProgress?.call(0,bytes.length);
-  final cevap=await _ngelxMedyaNativeKanal.invokeMapMethod<String,dynamic>('upload',{
-    'url':hedef.toString(),
-    'token':token,
+
+  for(var i=0;i<toplam;i++){
+    final bas=i*parcaBoyutu;
+    final son=(bas+parcaBoyutu)<bytes.length?(bas+parcaBoyutu):bytes.length;
+    final parca=Uint8List.sublistView(bytes,bas,son);
+    final hedef=Uri.parse(api+'/upload/chunk').replace(queryParameters:{
+      'kind':kind,
+      'ext':ext,
+      'uploadId':yuklemeId,
+      'index':i.toString(),
+      'total':toplam.toString(),
+      'protocol':_ngelxMediaProtocolVersion,
+    });
+    await _ngelxNativePostTekrarli(
+      hedef:hedef,
+      bytes:parca,
+      token:token,
+      contentType:'application/octet-stream',
+      legacyPath:legacyPath,
+      asama:'chunk ${i+1}/$toplam',
+    );
+    onProgress?.call(son,bytes.length);
+  }
+
+  final tamamla=Uri.parse(api+'/upload/complete').replace(queryParameters:{
+    'kind':kind,
+    'ext':ext,
+    'uploadId':yuklemeId,
+    'total':toplam.toString(),
     'contentType':contentType,
-    'legacyPath':legacyPath,
-    'bytes':bytes,
-  }).timeout(const Duration(minutes:3));
-  final status=(cevap?['status'] as num?)?.toInt()??0;
-  final body=(cevap?['body']??'').toString();
-  dynamic veri;
-  try{veri=jsonDecode(body);}catch(_){veri=body;}
-  if(status>=200&&status<300){
-    final url=veri is Map?(veri['url']??'').toString():'';
-    if(url.isEmpty)throw Exception('Medya sunucusu geçerli URL döndürmedi.');
-    onProgress?.call(bytes.length,bytes.length);
-    return url;
-  }
-  final detay=veri is Map?(veri['message']??veri['error']??veri).toString():veri.toString();
-  throw HttpException('Medya sunucusu HTTP '+status.toString()+': '+detay,uri:hedef);
+    'protocol':_ngelxMediaProtocolVersion,
+  });
+  final cevap=await _ngelxNativePostTekrarli(
+    hedef:tamamla,
+    bytes:Uint8List.fromList(utf8.encode('{}')),
+    token:token,
+    contentType:Headers.jsonContentType,
+    legacyPath:legacyPath,
+    asama:'chunk complete',
+  );
+  final url=(cevap['url']??'').toString();
+  if(url.isEmpty)throw Exception('chunk complete | sunucu medya URL döndürmedi.');
+  return url;
 }
 
-String _ngelxYuklemeCevapUrl(Response<dynamic> cevap,Uri hedef) {
-  final status=cevap.statusCode??0;
-  final veri=cevap.data;
-  if(status>=200&&status<300){
-    final url=veri is Map?(veri['url']??'').toString():'';
-    if(url.isEmpty)throw Exception('Medya sunucusu geçerli URL döndürmedi.');
-    return url;
-  }
-  final detay=veri is Map
-    ?(veri['message']??veri['error']??veri).toString()
-    :veri.toString();
-  throw HttpException('Medya sunucusu HTTP $status: $detay',uri:hedef);
+Future<Map<String,dynamic>> _ngelxMultipartBaslatAndroid({
+  required String api,
+  required String kind,
+  required String ext,
+  required String contentType,
+  required int size,
+  required String legacyPath,
+  required String token,
+}) {
+  final hedef=Uri.parse(api+'/upload/multipart/create').replace(queryParameters:{
+    'kind':kind,
+    'ext':ext,
+    'contentType':contentType,
+    'size':size.toString(),
+    'protocol':_ngelxMediaProtocolVersion,
+  });
+  return _ngelxNativePostTekrarli(
+    hedef:hedef,
+    bytes:Uint8List.fromList(utf8.encode('{}')),
+    token:token,
+    contentType:Headers.jsonContentType,
+    legacyPath:legacyPath,
+    asama:'multipart create',
+  );
 }
 
-String _ngelxYuklemeHataMesaji(Object? hata) {
-  if(hata is DioException){
-    final kod=hata.response?.statusCode;
-    if(kod==401)return 'Medya oturumu doğrulanamadı. Tekrar giriş yapmayı dene.';
-    if(kod==413)return 'Dosya medya servisinin boyut sınırını aşıyor.';
-    if(kod!=null)return 'Medya servisi HTTP $kod hatası verdi.';
-    final tip=hata.type.name;
-    final temel=(hata.error??hata.message??'').toString().trim();
-    final kisa=temel.length>120?temel.substring(0,120):temel;
-    if(kisa.isNotEmpty)return 'Medya sunucusuna bağlanılamadı ($tip: $kisa). Ana ve yedek sunucu denendi.';
-    return 'Medya sunucusuna bağlanılamadı ($tip). Ana ve yedek sunucu denendi.';
-  }
-  final yazi=(hata??'').toString().replaceFirst('Exception: ','');
-  if(yazi.isEmpty)return 'Medya yüklenemedi.';
-  return yazi.length>180?yazi.substring(0,180):yazi;
+Future<Map<String,dynamic>> _ngelxMultipartParcaAndroid({
+  required String api,
+  required String kind,
+  required String key,
+  required String uploadId,
+  required int partNumber,
+  required Uint8List bytes,
+  required String legacyPath,
+  required String token,
+}) {
+  final hedef=Uri.parse(api+'/upload/multipart/part').replace(queryParameters:{
+    'kind':kind,
+    'key':key,
+    'uploadId':uploadId,
+    'partNumber':partNumber.toString(),
+    'protocol':_ngelxMediaProtocolVersion,
+  });
+  return _ngelxNativePostTekrarli(
+    hedef:hedef,
+    bytes:bytes,
+    token:token,
+    contentType:'application/octet-stream',
+    legacyPath:legacyPath,
+    asama:'multipart part $partNumber',
+    denemeSayisi:3,
+  );
 }
 
-Future<String> _ngelxParcaliMedyaYukle({
+Future<String> _ngelxMultipartTamamlaAndroid({
+  required String api,
+  required String kind,
+  required String key,
+  required String uploadId,
+  required List<Map<String,dynamic>> parts,
+  required String legacyPath,
+  required String token,
+}) async {
+  final hedef=Uri.parse(api+'/upload/multipart/complete').replace(queryParameters:{
+    'kind':kind,
+    'protocol':_ngelxMediaProtocolVersion,
+  });
+  final body=Uint8List.fromList(utf8.encode(jsonEncode({
+    'key':key,
+    'uploadId':uploadId,
+    'parts':parts,
+  })));
+  final cevap=await _ngelxNativePostTekrarli(
+    hedef:hedef,
+    bytes:body,
+    token:token,
+    contentType:Headers.jsonContentType,
+    legacyPath:legacyPath,
+    asama:'multipart complete',
+  );
+  final url=(cevap['url']??'').toString();
+  if(url.isEmpty)throw Exception('multipart complete | sunucu medya URL döndürmedi.');
+  return url;
+}
+
+Future<void> _ngelxMultipartIptalAndroid({
+  required String api,
+  required String kind,
+  required String key,
+  required String uploadId,
+  required String legacyPath,
+  required String token,
+}) async {
+  try{
+    final hedef=Uri.parse(api+'/upload/multipart/abort').replace(queryParameters:{
+      'kind':kind,
+      'protocol':_ngelxMediaProtocolVersion,
+    });
+    await _ngelxAndroidNativePost(
+      hedef:hedef,
+      bytes:Uint8List.fromList(utf8.encode(jsonEncode({'key':key,'uploadId':uploadId}))),
+      token:token,
+      contentType:Headers.jsonContentType,
+      legacyPath:legacyPath,
+      asama:'multipart abort',
+    );
+  }catch(_){}
+}
+
+Future<String> _ngelxMultipartBytesYukleAndroid({
   required String api,
   required Uint8List bytes,
   required String kind,
@@ -334,73 +523,154 @@ Future<String> _ngelxParcaliMedyaYukle({
 }) async {
   final user=FirebaseAuth.instance.currentUser;
   if(user==null)throw Exception('Medya yüklemek için giriş yapmalısın.');
-  const parcaBoyutu=256*1024;
-  final toplam=(bytes.length+parcaBoyutu-1)~/parcaBoyutu;
-  if(toplam<=0||toplam>64)throw Exception('Dosya parçalı yükleme sınırını aşıyor.');
-  final yuklemeId='${DateTime.now().microsecondsSinceEpoch}-${bytes.length}';
   final token=await user.getIdToken(true);
   if(token==null||token.isEmpty)throw Exception('Güvenli medya oturumu oluşturulamadı.');
-  final dio=Dio(BaseOptions(
-    connectTimeout:const Duration(seconds:12),
-    sendTimeout:const Duration(seconds:30),
-    receiveTimeout:const Duration(seconds:30),
-    validateStatus:(s)=>s!=null,
-  ));
+  final baslangic=await _ngelxMultipartBaslatAndroid(
+    api:api,kind:kind,ext:ext,contentType:contentType,size:bytes.length,
+    legacyPath:legacyPath,token:token,
+  );
+  final uploadId=(baslangic['uploadId']??'').toString();
+  final key=(baslangic['key']??'').toString();
+  if(uploadId.isEmpty||key.isEmpty)throw Exception('multipart create | uploadId/key eksik.');
 
-  for(var i=0;i<toplam;i++){
-    final bas=i*parcaBoyutu;
-    final son=(bas+parcaBoyutu)<bytes.length?(bas+parcaBoyutu):bytes.length;
-    final parca=Uint8List.sublistView(bytes,bas,son);
-    final hedef=Uri.parse('$api/upload/chunk').replace(queryParameters:{
-      'kind':kind,
-      'ext':ext,
-      'uploadId':yuklemeId,
-      'index':i.toString(),
-      'total':toplam.toString(),
-    });
-    final cevap=await dio.postUri(
-      hedef,
-      data:parca,
-      options:Options(
-        contentType:'application/octet-stream',
-        responseType:ResponseType.json,
-        headers:{
-          HttpHeaders.authorizationHeader:'Bearer $token',
-          HttpHeaders.contentLengthHeader:parca.length,
-          'X-NgelX-Client':'android-v57-chunk',
-          'X-NgelX-Filename':legacyPath,
-          'X-NgelX-Content-Type':contentType,
-        },
-      ),
-    );
-    final status=cevap.statusCode??0;
-    if(status<200||status>=300){
-      throw HttpException('Parçalı medya yükleme HTTP $status',uri:hedef);
+  const parcaBoyutu=5*1024*1024;
+  final toplam=(bytes.length+parcaBoyutu-1)~/parcaBoyutu;
+  final parts=<Map<String,dynamic>>[];
+  onProgress?.call(0,bytes.length);
+  try{
+    for(var i=0;i<toplam;i++){
+      final bas=i*parcaBoyutu;
+      final son=(bas+parcaBoyutu)<bytes.length?(bas+parcaBoyutu):bytes.length;
+      final parca=Uint8List.sublistView(bytes,bas,son);
+      final cevap=await _ngelxMultipartParcaAndroid(
+        api:api,kind:kind,key:key,uploadId:uploadId,partNumber:i+1,bytes:parca,
+        legacyPath:legacyPath,token:token,
+      );
+      final etag=(cevap['etag']??'').toString();
+      final partNumber=(cevap['partNumber'] as num?)?.toInt()??i+1;
+      if(etag.isEmpty)throw Exception('multipart part ${i+1} | etag eksik.');
+      parts.add({'partNumber':partNumber,'etag':etag});
+      onProgress?.call(son,bytes.length);
     }
-    onProgress?.call(son,bytes.length);
+    return await _ngelxMultipartTamamlaAndroid(
+      api:api,kind:kind,key:key,uploadId:uploadId,parts:parts,
+      legacyPath:legacyPath,token:token,
+    );
+  }catch(e){
+    await _ngelxMultipartIptalAndroid(
+      api:api,kind:kind,key:key,uploadId:uploadId,legacyPath:legacyPath,token:token,
+    );
+    rethrow;
   }
+}
 
-  final tamamla=Uri.parse('$api/upload/complete').replace(queryParameters:{
-    'kind':kind,
-    'ext':ext,
-    'uploadId':yuklemeId,
-    'total':toplam.toString(),
-    'contentType':contentType,
-  });
-  final cevap=await dio.postUri(
-    tamamla,
-    data:const <String,dynamic>{},
+Future<String> _ngelxMultipartDosyaYukleAndroid({
+  required String api,
+  required File file,
+  required int size,
+  required String kind,
+  required String ext,
+  required String contentType,
+  required String legacyPath,
+  void Function(int sent,int total)? onProgress,
+}) async {
+  final user=FirebaseAuth.instance.currentUser;
+  if(user==null)throw Exception('Medya yüklemek için giriş yapmalısın.');
+  final token=await user.getIdToken(true);
+  if(token==null||token.isEmpty)throw Exception('Güvenli medya oturumu oluşturulamadı.');
+  final baslangic=await _ngelxMultipartBaslatAndroid(
+    api:api,kind:kind,ext:ext,contentType:contentType,size:size,
+    legacyPath:legacyPath,token:token,
+  );
+  final uploadId=(baslangic['uploadId']??'').toString();
+  final key=(baslangic['key']??'').toString();
+  if(uploadId.isEmpty||key.isEmpty)throw Exception('multipart create | uploadId/key eksik.');
+
+  const parcaBoyutu=5*1024*1024;
+  final toplam=(size+parcaBoyutu-1)~/parcaBoyutu;
+  final parts=<Map<String,dynamic>>[];
+  RandomAccessFile? raf;
+  onProgress?.call(0,size);
+  try{
+    raf=await file.open(mode:FileMode.read);
+    var gonderilen=0;
+    for(var i=0;i<toplam;i++){
+      final kalan=size-gonderilen;
+      final okunacak=kalan<parcaBoyutu?kalan:parcaBoyutu;
+      final parca=await raf.read(okunacak);
+      if(parca.length!=okunacak)throw Exception('multipart part ${i+1} | dosya okuma eksik.');
+      final cevap=await _ngelxMultipartParcaAndroid(
+        api:api,kind:kind,key:key,uploadId:uploadId,partNumber:i+1,bytes:parca,
+        legacyPath:legacyPath,token:token,
+      );
+      final etag=(cevap['etag']??'').toString();
+      final partNumber=(cevap['partNumber'] as num?)?.toInt()??i+1;
+      if(etag.isEmpty)throw Exception('multipart part ${i+1} | etag eksik.');
+      parts.add({'partNumber':partNumber,'etag':etag});
+      gonderilen+=parca.length;
+      onProgress?.call(gonderilen,size);
+    }
+    return await _ngelxMultipartTamamlaAndroid(
+      api:api,kind:kind,key:key,uploadId:uploadId,parts:parts,
+      legacyPath:legacyPath,token:token,
+    );
+  }catch(e){
+    await _ngelxMultipartIptalAndroid(
+      api:api,kind:kind,key:key,uploadId:uploadId,legacyPath:legacyPath,token:token,
+    );
+    rethrow;
+  }finally{
+    await raf?.close();
+  }
+}
+
+String _ngelxYuklemeCevapUrl(Response<dynamic> cevap,Uri hedef) {
+  final status=cevap.statusCode??0;
+  final veri=cevap.data;
+  if(status>=200&&status<300){
+    final url=veri is Map?(veri['url']??'').toString():'';
+    if(url.isEmpty)throw Exception('Medya sunucusu geçerli URL döndürmedi.');
+    return url;
+  }
+  final detay=veri is Map?(veri['message']??veri['error']??veri).toString():veri.toString();
+  throw HttpException('Medya sunucusu HTTP $status: $detay',uri:hedef);
+}
+
+Future<String> _ngelxStandartBytesYukle({
+  required String api,
+  required Uint8List bytes,
+  required String kind,
+  required String ext,
+  required String contentType,
+  required String legacyPath,
+  void Function(int sent,int total)? onProgress,
+}) async {
+  final user=FirebaseAuth.instance.currentUser;
+  if(user==null)throw Exception('Medya yüklemek için giriş yapmalısın.');
+  final token=await user.getIdToken(true);
+  if(token==null||token.isEmpty)throw Exception('Güvenli medya oturumu oluşturulamadı.');
+  final hedef=Uri.parse(api+'/upload').replace(queryParameters:{'kind':kind,'ext':ext});
+  final cevap=await Dio(BaseOptions(
+    connectTimeout:const Duration(seconds:12),
+    sendTimeout:const Duration(minutes:3),
+    receiveTimeout:const Duration(seconds:90),
+    validateStatus:(s)=>s!=null,
+  )).postUri(
+    hedef,
+    data:bytes,
+    onSendProgress:onProgress,
     options:Options(
-      contentType:Headers.jsonContentType,
+      contentType:contentType,
       responseType:ResponseType.json,
       headers:{
         HttpHeaders.authorizationHeader:'Bearer $token',
-        'X-NgelX-Client':'android-v57-chunk-complete',
+        HttpHeaders.contentLengthHeader:bytes.length,
+        'X-NgelX-Client':'standard-$_ngelxMediaProtocolVersion',
         'X-NgelX-Filename':legacyPath,
       },
     ),
   );
-  return _ngelxYuklemeCevapUrl(cevap,tamamla);
+  return _ngelxYuklemeCevapUrl(cevap,hedef);
 }
 
 Future<String> ngelxMedyaYukleBytes({
@@ -411,132 +681,34 @@ Future<String> ngelxMedyaYukleBytes({
   String? contentType,
   void Function(int sent,int total)? onProgress,
 }) async {
-  final user=FirebaseAuth.instance.currentUser;
-  if(user==null)throw Exception('Medya yüklemek için giriş yapmalısın.');
-  final tercih=await ngelxMediaApiAdresi();
-  final apiler=_ngelxMediaApiAdaylari(tercih);
-  if(apiler.isEmpty)throw Exception('NgelX medya servisi yapılandırılmamış.');
-
+  if(bytes.isEmpty)throw Exception('Seçilen medya boş.');
+  final max=_ngelxMaksimumMedyaBoyutu(kind);
+  if(bytes.length>max)throw Exception('Dosya boyutu bu medya türü için sınırı aşıyor.');
+  final api=await ngelxMediaApiAdresi();
   final temizExt=_ngelxUzantiTemizle(ext);
   final tur=contentType??_ngelxContentType(temizExt);
-  const jsonKinds={'photos','profiles','stories','groups','support','chat-backgrounds','thumbnails','gifs'};
-  Object? sonHata;
 
-  if(Platform.isAndroid&&!(jsonKinds.contains(kind)&&bytes.length<=10*1024*1024)){
-    for(final api in apiler){
-      try{
-        final token=await user.getIdToken(true);
-        if(token==null||token.isEmpty)throw Exception('Güvenli medya oturumu oluşturulamadı.');
-        final hedef=Uri.parse(api+'/upload').replace(queryParameters:{'kind':kind,'ext':temizExt});
-        final url=await _ngelxAndroidNativeYukle(
-          hedef:hedef,
-          bytes:bytes,
-          token:token,
-          contentType:tur,
-          legacyPath:legacyPath,
-          onProgress:onProgress,
+  if(Platform.isAndroid){
+    try{
+      if(bytes.length<=10*1024*1024){
+        return await _ngelxKucukMedyaYukleAndroid(
+          api:api,bytes:bytes,kind:kind,ext:temizExt,contentType:tur,
+          legacyPath:legacyPath,onProgress:onProgress,
         );
-        _ngelxMediaApiCache=api;
-        _ngelxMediaApiCacheZamani=DateTime.now();
-        return url;
-      }catch(e){
-        sonHata=e;
       }
+      return await _ngelxMultipartBytesYukleAndroid(
+        api:api,bytes:bytes,kind:kind,ext:temizExt,contentType:tur,
+        legacyPath:legacyPath,onProgress:onProgress,
+      );
+    }catch(e){
+      throw Exception('UPLOAD $_ngelxMediaProtocolVersion | kind=$kind | host=${Uri.parse(api).host} | ${_ngelxKisaHata(e)}');
     }
   }
 
-  for(final api in apiler){
-    if(Platform.isAndroid&&jsonKinds.contains(kind)&&bytes.length<=10*1024*1024){
-      try{
-        final url=await _ngelxParcaliMedyaYukle(
-          api:api,
-          bytes:bytes,
-          kind:kind,
-          ext:temizExt,
-          contentType:tur,
-          legacyPath:legacyPath,
-          onProgress:onProgress,
-        );
-        _ngelxMediaApiCache=api;
-        _ngelxMediaApiCacheZamani=DateTime.now();
-        return url;
-      }catch(e){
-        sonHata=e;
-      }
-    }
-
-    if(jsonKinds.contains(kind)&&bytes.length<=10*1024*1024){
-      try{
-        final token=await user.getIdToken(true);
-        if(token==null||token.isEmpty)throw Exception('Güvenli medya oturumu oluşturulamadı.');
-        final hedef=Uri.parse('$api/upload').replace(queryParameters:{
-          'kind':kind,'ext':temizExt,'encoding':'base64',
-        });
-        final cevap=await Dio(BaseOptions(
-          connectTimeout:const Duration(seconds:8),
-          sendTimeout:const Duration(seconds:60),
-          receiveTimeout:const Duration(seconds:60),
-          validateStatus:(s)=>s!=null,
-        )).postUri(
-          hedef,
-          data:{'data':base64Encode(bytes),'contentType':tur},
-          onSendProgress:onProgress,
-          options:Options(
-            contentType:Headers.jsonContentType,
-            responseType:ResponseType.json,
-            headers:{
-              HttpHeaders.authorizationHeader:'Bearer $token',
-              'X-NgelX-Client':'android-v57-json',
-              'X-NgelX-Filename':legacyPath,
-            },
-          ),
-        );
-        final url=_ngelxYuklemeCevapUrl(cevap,hedef);
-        _ngelxMediaApiCache=api;
-        _ngelxMediaApiCacheZamani=DateTime.now();
-        return url;
-      }catch(e){
-        sonHata=e;
-      }
-    }
-
-    final hedef=Uri.parse('$api/upload').replace(queryParameters:{'kind':kind,'ext':temizExt});
-    for(var deneme=0;deneme<2;deneme++){
-      try{
-        final token=await user.getIdToken(deneme>0);
-        if(token==null||token.isEmpty)throw Exception('Güvenli medya oturumu oluşturulamadı.');
-        final cevap=await Dio(BaseOptions(
-          connectTimeout:const Duration(seconds:8),
-          sendTimeout:const Duration(seconds:90),
-          receiveTimeout:const Duration(seconds:60),
-          validateStatus:(s)=>s!=null,
-        )).postUri(
-          hedef,
-          data:bytes,
-          onSendProgress:onProgress,
-          options:Options(
-            contentType:tur,
-            responseType:ResponseType.json,
-            headers:{
-              HttpHeaders.authorizationHeader:'Bearer $token',
-              HttpHeaders.contentLengthHeader:bytes.length,
-              'X-NgelX-Client':'android-v57-raw',
-              'X-NgelX-Filename':legacyPath,
-            },
-          ),
-        );
-        final url=_ngelxYuklemeCevapUrl(cevap,hedef);
-        _ngelxMediaApiCache=api;
-        _ngelxMediaApiCacheZamani=DateTime.now();
-        return url;
-      }catch(e){
-        sonHata=e;
-        if(deneme==0)await Future<void>.delayed(const Duration(milliseconds:650));
-      }
-    }
-  }
-
-  throw Exception('Medya yüklenemedi. Android yerel bağlantısı ve standart bağlantı denendi. ${_ngelxYuklemeHataMesaji(sonHata)}');
+  return _ngelxStandartBytesYukle(
+    api:api,bytes:bytes,kind:kind,ext:temizExt,contentType:tur,
+    legacyPath:legacyPath,onProgress:onProgress,
+  );
 }
 
 Future<String> ngelxMedyaYukleDosya({
@@ -547,156 +719,65 @@ Future<String> ngelxMedyaYukleDosya({
   String? contentType,
   void Function(int sent,int total)? onProgress,
 }) async {
-  final user=FirebaseAuth.instance.currentUser;
-  if(user==null)throw Exception('Medya yüklemek için giriş yapmalısın.');
   final boyut=await dosya.length();
   if(boyut<=0)throw Exception('Seçilen dosya boş görünüyor.');
-
-  final yerel=File(dosya.path);
-  if(!await yerel.exists()){
-    return ngelxMedyaYukleBytes(
-      bytes:await dosya.readAsBytes(),
-      kind:kind,
-      ext:ext,
-      legacyPath:legacyPath,
-      contentType:contentType,
-      onProgress:onProgress,
-    );
-  }
-
-  final tercih=await ngelxMediaApiAdresi();
-  final apiler=_ngelxMediaApiAdaylari(tercih);
-  if(apiler.isEmpty)throw Exception('NgelX medya servisi yapılandırılmamış.');
-
+  final max=_ngelxMaksimumMedyaBoyutu(kind);
+  if(boyut>max)throw Exception('Dosya boyutu bu medya türü için sınırı aşıyor.');
+  final api=await ngelxMediaApiAdresi();
   final temizExt=_ngelxUzantiTemizle(ext);
   final tur=contentType??_ngelxContentType(temizExt);
-  const jsonKinds={'photos','profiles','stories','groups','support','chat-backgrounds','thumbnails','gifs'};
-  Object? sonHata;
-  Uint8List? androidBytes;
+  final yerel=File(dosya.path);
 
   if(Platform.isAndroid){
     try{
-      final bytes=await dosya.readAsBytes();
-      androidBytes=bytes;
-      if(!(jsonKinds.contains(kind)&&bytes.length<=10*1024*1024)){
-      for(final api in apiler){
-        try{
-          final token=await user.getIdToken(true);
-          if(token==null||token.isEmpty)throw Exception('Güvenli medya oturumu oluşturulamadı.');
-          final hedef=Uri.parse(api+'/upload').replace(queryParameters:{'kind':kind,'ext':temizExt});
-          final url=await _ngelxAndroidNativeYukle(
-            hedef:hedef,
-            bytes:bytes,
-            token:token,
-            contentType:tur,
-            legacyPath:legacyPath,
-            onProgress:onProgress,
-          );
-          _ngelxMediaApiCache=api;
-          _ngelxMediaApiCacheZamani=DateTime.now();
-          return url;
-        }catch(e){
-          sonHata=e;
-        }
+      if(boyut<=10*1024*1024||!await yerel.exists()){
+        return await _ngelxKucukMedyaYukleAndroid(
+          api:api,bytes:await dosya.readAsBytes(),kind:kind,ext:temizExt,
+          contentType:tur,legacyPath:legacyPath,onProgress:onProgress,
+        );
       }
-      }
+      return await _ngelxMultipartDosyaYukleAndroid(
+        api:api,file:yerel,size:boyut,kind:kind,ext:temizExt,contentType:tur,
+        legacyPath:legacyPath,onProgress:onProgress,
+      );
     }catch(e){
-      sonHata=e;
+      throw Exception('UPLOAD $_ngelxMediaProtocolVersion | kind=$kind | size=$boyut | host=${Uri.parse(api).host} | ${_ngelxKisaHata(e)}');
     }
   }
 
-  for(final api in apiler){
-    if(androidBytes!=null&&Platform.isAndroid&&jsonKinds.contains(kind)&&androidBytes.length<=10*1024*1024){
-      try{
-        final url=await _ngelxParcaliMedyaYukle(
-          api:api,
-          bytes:androidBytes,
-          kind:kind,
-          ext:temizExt,
-          contentType:tur,
-          legacyPath:legacyPath,
-          onProgress:onProgress,
-        );
-        _ngelxMediaApiCache=api;
-        _ngelxMediaApiCacheZamani=DateTime.now();
-        return url;
-      }catch(e){
-        sonHata=e;
-      }
-    }
-
-    if(androidBytes!=null&&jsonKinds.contains(kind)&&androidBytes.length<=10*1024*1024){
-      try{
-        final token=await user.getIdToken(true);
-        if(token==null||token.isEmpty)throw Exception('Güvenli medya oturumu oluşturulamadı.');
-        final hedef=Uri.parse('$api/upload').replace(queryParameters:{
-          'kind':kind,'ext':temizExt,'encoding':'base64',
-        });
-        final cevap=await Dio(BaseOptions(
-          connectTimeout:const Duration(seconds:12),
-          sendTimeout:const Duration(seconds:90),
-          receiveTimeout:const Duration(seconds:75),
-          validateStatus:(s)=>s!=null,
-        )).postUri(
-          hedef,
-          data:{'data':base64Encode(androidBytes),'contentType':tur},
-          onSendProgress:onProgress,
-          options:Options(
-            contentType:Headers.jsonContentType,
-            responseType:ResponseType.json,
-            headers:{
-              HttpHeaders.authorizationHeader:'Bearer $token',
-              'X-NgelX-Client':'android-v57-json-file',
-              'X-NgelX-Filename':legacyPath,
-            },
-          ),
-        );
-        final url=_ngelxYuklemeCevapUrl(cevap,hedef);
-        _ngelxMediaApiCache=api;
-        _ngelxMediaApiCacheZamani=DateTime.now();
-        return url;
-      }catch(e){
-        sonHata=e;
-      }
-    }
-
-    final hedef=Uri.parse('$api/upload').replace(queryParameters:{'kind':kind,'ext':temizExt});
-    for(var deneme=0;deneme<2;deneme++){
-      try{
-        final token=await user.getIdToken(deneme>0);
-        if(token==null||token.isEmpty)throw Exception('Güvenli medya oturumu oluşturulamadı.');
-        final cevap=await Dio(BaseOptions(
-          connectTimeout:const Duration(seconds:8),
-          sendTimeout:const Duration(minutes:3),
-          receiveTimeout:const Duration(seconds:75),
-          validateStatus:(s)=>s!=null,
-        )).postUri(
-          hedef,
-          data:yerel.openRead(),
-          onSendProgress:onProgress,
-          options:Options(
-            contentType:tur,
-            responseType:ResponseType.json,
-            headers:{
-              HttpHeaders.authorizationHeader:'Bearer $token',
-              HttpHeaders.contentLengthHeader:boyut,
-              'X-NgelX-Client':'android-v57-stream',
-              'X-NgelX-Filename':legacyPath,
-            },
-          ),
-        );
-        final url=_ngelxYuklemeCevapUrl(cevap,hedef);
-        _ngelxMediaApiCache=api;
-        _ngelxMediaApiCacheZamani=DateTime.now();
-        return url;
-      }catch(e){
-        sonHata=e;
-        if(deneme==0)await Future<void>.delayed(const Duration(milliseconds:700));
-      }
-    }
+  if(!await yerel.exists()){
+    return _ngelxStandartBytesYukle(
+      api:api,bytes:await dosya.readAsBytes(),kind:kind,ext:temizExt,
+      contentType:tur,legacyPath:legacyPath,onProgress:onProgress,
+    );
   }
 
-  throw Exception('Medya yüklenemedi. Android yerel bağlantısı ve standart bağlantı denendi. ${_ngelxYuklemeHataMesaji(sonHata)}');
+  final user=FirebaseAuth.instance.currentUser;
+  if(user==null)throw Exception('Medya yüklemek için giriş yapmalısın.');
+  final token=await user.getIdToken(true);
+  if(token==null||token.isEmpty)throw Exception('Güvenli medya oturumu oluşturulamadı.');
+  final hedef=Uri.parse(api+'/upload').replace(queryParameters:{'kind':kind,'ext':temizExt});
+  final cevap=await Dio(BaseOptions(
+    connectTimeout:const Duration(seconds:12),
+    sendTimeout:const Duration(minutes:4),
+    receiveTimeout:const Duration(seconds:90),
+    validateStatus:(s)=>s!=null,
+  )).postUri(
+    hedef,
+    data:yerel.openRead(),
+    onSendProgress:onProgress,
+    options:Options(
+      contentType:tur,
+      responseType:ResponseType.json,
+      headers:{
+        HttpHeaders.authorizationHeader:'Bearer $token',
+        HttpHeaders.contentLengthHeader:boyut,
+        'X-NgelX-Client':'standard-file-$_ngelxMediaProtocolVersion',
+        'X-NgelX-Filename':legacyPath,
+      },
+    ),
+  );
+  return _ngelxYuklemeCevapUrl(cevap,hedef);
 }
 
 Future<void> ngelxMedyaSil(String rawUrl) async {
