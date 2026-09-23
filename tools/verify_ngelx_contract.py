@@ -117,6 +117,8 @@ required_group_tokens = [
     "bitisDurumu",
     "biriKabulEtti",
     "kimseKatilMadi",
+    "Bağlantıyı kopyala",
+    "linkUrl",
     "Sohbeti sil",
 ]
 for token in required_group_tokens:
