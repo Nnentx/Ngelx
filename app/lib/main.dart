@@ -323,6 +323,86 @@ String _ngelxYuklemeHataMesaji(Object? hata) {
   return yazi.length>180?yazi.substring(0,180):yazi;
 }
 
+Future<String> _ngelxParcaliMedyaYukle({
+  required String api,
+  required Uint8List bytes,
+  required String kind,
+  required String ext,
+  required String contentType,
+  required String legacyPath,
+  void Function(int sent,int total)? onProgress,
+}) async {
+  final user=FirebaseAuth.instance.currentUser;
+  if(user==null)throw Exception('Medya yüklemek için giriş yapmalısın.');
+  const parcaBoyutu=256*1024;
+  final toplam=(bytes.length+parcaBoyutu-1)~/parcaBoyutu;
+  if(toplam<=0||toplam>64)throw Exception('Dosya parçalı yükleme sınırını aşıyor.');
+  final yuklemeId='${DateTime.now().microsecondsSinceEpoch}-${bytes.length}';
+  final token=await user.getIdToken(true);
+  if(token==null||token.isEmpty)throw Exception('Güvenli medya oturumu oluşturulamadı.');
+  final dio=Dio(BaseOptions(
+    connectTimeout:const Duration(seconds:12),
+    sendTimeout:const Duration(seconds:30),
+    receiveTimeout:const Duration(seconds:30),
+    validateStatus:(s)=>s!=null,
+  ));
+
+  for(var i=0;i<toplam;i++){
+    final bas=i*parcaBoyutu;
+    final son=(bas+parcaBoyutu)<bytes.length?(bas+parcaBoyutu):bytes.length;
+    final parca=Uint8List.sublistView(bytes,bas,son);
+    final hedef=Uri.parse('$api/upload/chunk').replace(queryParameters:{
+      'kind':kind,
+      'ext':ext,
+      'uploadId':yuklemeId,
+      'index':i.toString(),
+      'total':toplam.toString(),
+    });
+    final cevap=await dio.postUri(
+      hedef,
+      data:parca,
+      options:Options(
+        contentType:'application/octet-stream',
+        responseType:ResponseType.json,
+        headers:{
+          HttpHeaders.authorizationHeader:'Bearer $token',
+          HttpHeaders.contentLengthHeader:parca.length,
+          'X-NgelX-Client':'android-v57-chunk',
+          'X-NgelX-Filename':legacyPath,
+          'X-NgelX-Content-Type':contentType,
+        },
+      ),
+    );
+    final status=cevap.statusCode??0;
+    if(status<200||status>=300){
+      throw HttpException('Parçalı medya yükleme HTTP $status',uri:hedef);
+    }
+    onProgress?.call(son,bytes.length);
+  }
+
+  final tamamla=Uri.parse('$api/upload/complete').replace(queryParameters:{
+    'kind':kind,
+    'ext':ext,
+    'uploadId':yuklemeId,
+    'total':toplam.toString(),
+    'contentType':contentType,
+  });
+  final cevap=await dio.postUri(
+    tamamla,
+    data:const <String,dynamic>{},
+    options:Options(
+      contentType:Headers.jsonContentType,
+      responseType:ResponseType.json,
+      headers:{
+        HttpHeaders.authorizationHeader:'Bearer $token',
+        'X-NgelX-Client':'android-v57-chunk-complete',
+        'X-NgelX-Filename':legacyPath,
+      },
+    ),
+  );
+  return _ngelxYuklemeCevapUrl(cevap,tamamla);
+}
+
 Future<String> ngelxMedyaYukleBytes({
   required Uint8List bytes,
   required String kind,
@@ -342,7 +422,7 @@ Future<String> ngelxMedyaYukleBytes({
   const jsonKinds={'photos','profiles','stories','groups','support','chat-backgrounds','thumbnails','gifs'};
   Object? sonHata;
 
-  if(Platform.isAndroid){
+  if(Platform.isAndroid&&!(jsonKinds.contains(kind)&&bytes.length<=10*1024*1024)){
     for(final api in apiler){
       try{
         final token=await user.getIdToken(true);
@@ -366,6 +446,25 @@ Future<String> ngelxMedyaYukleBytes({
   }
 
   for(final api in apiler){
+    if(Platform.isAndroid&&jsonKinds.contains(kind)&&bytes.length<=10*1024*1024){
+      try{
+        final url=await _ngelxParcaliMedyaYukle(
+          api:api,
+          bytes:bytes,
+          kind:kind,
+          ext:temizExt,
+          contentType:tur,
+          legacyPath:legacyPath,
+          onProgress:onProgress,
+        );
+        _ngelxMediaApiCache=api;
+        _ngelxMediaApiCacheZamani=DateTime.now();
+        return url;
+      }catch(e){
+        sonHata=e;
+      }
+    }
+
     if(jsonKinds.contains(kind)&&bytes.length<=10*1024*1024){
       try{
         final token=await user.getIdToken(true);
@@ -479,6 +578,7 @@ Future<String> ngelxMedyaYukleDosya({
     try{
       final bytes=await dosya.readAsBytes();
       androidBytes=bytes;
+      if(!(jsonKinds.contains(kind)&&bytes.length<=10*1024*1024)){
       for(final api in apiler){
         try{
           final token=await user.getIdToken(true);
@@ -499,12 +599,32 @@ Future<String> ngelxMedyaYukleDosya({
           sonHata=e;
         }
       }
+      }
     }catch(e){
       sonHata=e;
     }
   }
 
   for(final api in apiler){
+    if(androidBytes!=null&&Platform.isAndroid&&jsonKinds.contains(kind)&&androidBytes.length<=10*1024*1024){
+      try{
+        final url=await _ngelxParcaliMedyaYukle(
+          api:api,
+          bytes:androidBytes,
+          kind:kind,
+          ext:temizExt,
+          contentType:tur,
+          legacyPath:legacyPath,
+          onProgress:onProgress,
+        );
+        _ngelxMediaApiCache=api;
+        _ngelxMediaApiCacheZamani=DateTime.now();
+        return url;
+      }catch(e){
+        sonHata=e;
+      }
+    }
+
     if(androidBytes!=null&&jsonKinds.contains(kind)&&androidBytes.length<=10*1024*1024){
       try{
         final token=await user.getIdToken(true);

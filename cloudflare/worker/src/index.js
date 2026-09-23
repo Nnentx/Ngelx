@@ -129,6 +129,12 @@ function cleanKind(raw) {
   return ALLOWED_KINDS.has(raw) ? raw : null;
 }
 
+function cleanUploadId(raw) {
+  const value = String(raw || '');
+  return /^[A-Za-z0-9_-]{8,80}$/.test(value) ? value : null;
+}
+
+
 function encodeKeyForUrl(key) {
   return key.split('/').map(encodeURIComponent).join('/');
 }
@@ -182,6 +188,96 @@ export default {
       headers.set('etag', object.httpEtag);
       headers.set('cache-control', 'public, max-age=31536000, immutable');
       return new Response(object.body, {headers});
+    }
+
+    if (request.method === 'POST' && url.pathname === '/upload/chunk') {
+      let claims;
+      try {
+        claims = await verifyFirebaseIdToken(request, env);
+      } catch (e) {
+        return json({error: 'unauthorized', message: String(e.message || e)}, 401);
+      }
+
+      const kind = cleanKind(url.searchParams.get('kind'));
+      const ext = cleanExt(url.searchParams.get('ext'));
+      const uploadId = cleanUploadId(url.searchParams.get('uploadId'));
+      const index = Number(url.searchParams.get('index'));
+      const total = Number(url.searchParams.get('total'));
+      if (!kind || !uploadId || !Number.isInteger(index) || !Number.isInteger(total) ||
+          index < 0 || total < 1 || total > 64 || index >= total) {
+        return json({error: 'invalid_chunk_request'}, 400);
+      }
+
+      const announced = Number(request.headers.get('content-length') || 0);
+      if (announced <= 0 || announced > 300 * 1024) {
+        return json({error: 'invalid_chunk_size'}, 413);
+      }
+      const bytes = await request.arrayBuffer();
+      if (!bytes.byteLength || bytes.byteLength > 300 * 1024) {
+        return json({error: 'invalid_chunk_size'}, 413);
+      }
+      const chunkKey = '__ngelx_chunks/' + claims.sub + '/' + uploadId + '/' + index;
+      await env.MEDIA.put(chunkKey, bytes, {
+        httpMetadata: {contentType: 'application/octet-stream'},
+        customMetadata: {uid: claims.sub, kind, ext, uploadId, index: String(index), total: String(total)},
+      });
+      return json({ok: true, index, total}, 201);
+    }
+
+    if (request.method === 'POST' && url.pathname === '/upload/complete') {
+      let claims;
+      try {
+        claims = await verifyFirebaseIdToken(request, env);
+      } catch (e) {
+        return json({error: 'unauthorized', message: String(e.message || e)}, 401);
+      }
+
+      const kind = cleanKind(url.searchParams.get('kind'));
+      const ext = cleanExt(url.searchParams.get('ext'));
+      const uploadId = cleanUploadId(url.searchParams.get('uploadId'));
+      const total = Number(url.searchParams.get('total'));
+      if (!kind || !uploadId || !Number.isInteger(total) || total < 1 || total > 64) {
+        return json({error: 'invalid_complete_request'}, 400);
+      }
+
+      const maxBytes = MAX_BYTES[kind] || MAX_BYTES.default;
+      const chunks = [];
+      let size = 0;
+      for (let i = 0; i < total; i++) {
+        const chunkKey = '__ngelx_chunks/' + claims.sub + '/' + uploadId + '/' + i;
+        const object = await env.MEDIA.get(chunkKey);
+        if (!object) return json({error: 'missing_chunk', index: i}, 409);
+        const part = new Uint8Array(await object.arrayBuffer());
+        size += part.byteLength;
+        if (size > maxBytes) return json({error: 'file_too_large', maxBytes}, 413);
+        chunks.push(part);
+      }
+
+      const merged = new Uint8Array(size);
+      let offset = 0;
+      for (const part of chunks) {
+        merged.set(part, offset);
+        offset += part.byteLength;
+      }
+
+      const uid = claims.sub;
+      const key = kind + '/' + uid + '/' + Date.now() + '_' + crypto.randomUUID() + '.' + ext;
+      const contentType = contentTypeFor(ext, url.searchParams.get('contentType'));
+      await env.MEDIA.put(key, merged, {
+        httpMetadata: {contentType, cacheControl: 'public, max-age=31536000, immutable'},
+        customMetadata: {uid, kind, transport: 'chunked'},
+      });
+
+      await Promise.all(Array.from({length: total}, (_, i) =>
+        env.MEDIA.delete('__ngelx_chunks/' + uid + '/' + uploadId + '/' + i)
+      ));
+
+      return json({
+        ok: true,
+        key,
+        url: url.origin + '/media/' + encodeKeyForUrl(key),
+        size,
+      }, 201);
     }
 
     if (request.method === 'POST' && url.pathname === '/upload') {
