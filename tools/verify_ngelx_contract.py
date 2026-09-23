@@ -120,6 +120,8 @@ required_group_tokens = [
     "grupAramasinaKisiDavetEt",
     "Grup aramasına davet et",
     "Davet gönderildi",
+    "gorulenIds",
+    "kişi gördü",
     "Arama cevaplanmadı",
     "Kimse aramaya katılmadı. İstersen tekrar arayabilirsin.",
     "Sohbete dön",
