@@ -2327,8 +2327,6 @@ class _GorselYaziKartiState extends State<GorselYaziKarti> {
   bool indiriliyor = false;
   bool kalpAnimasyonu = false;
   bool begeniIsleniyor = false;
-  int begeniSayisi = 0;
-  int yorumSayisi = 0;
 
   String get icerikId => widget.veri['id'] ?? '';
   bool get indirilebilir => widget.veri['allowDownload'] != 'false' || FirebaseAuth.instance.currentUser?.uid == widget.veri['ownerId'];
@@ -2353,16 +2351,12 @@ class _GorselYaziKartiState extends State<GorselYaziKarti> {
     final ref = FirebaseFirestore.instance.collection('videos').doc(icerikId);
     final sonuclar = await Future.wait([
       ref.collection('likes').doc(user.uid).get(),
-      ref.collection('likes').count().get(),
-      ref.collection('comments').count().get(),
       FirebaseFirestore.instance.collection('users').doc(user.uid).collection('saved').doc(icerikId).get(),
     ]);
     if (!mounted) return;
     setState(() {
       begenildi = (sonuclar[0] as DocumentSnapshot).exists;
-      begeniSayisi = (sonuclar[1] as AggregateQuerySnapshot).count ?? 0;
-      yorumSayisi = (sonuclar[2] as AggregateQuerySnapshot).count ?? 0;
-      kaydedildi = (sonuclar[3] as DocumentSnapshot).exists;
+      kaydedildi = (sonuclar[1] as DocumentSnapshot).exists;
     });
   }
 
@@ -2391,11 +2385,7 @@ class _GorselYaziKartiState extends State<GorselYaziKarti> {
     final ref=video.collection('likes').doc(user.uid);
     begeniIsleniyor=true;
     final yeni=!begenildi;
-    setState((){
-      begenildi=yeni;
-      begeniSayisi+=yeni?1:-1;
-      if(begeniSayisi<0)begeniSayisi=0;
-    });
+    setState(()=>begenildi=yeni);
     try{
       final batch=FirebaseFirestore.instance.batch();
       if(yeni){
@@ -2414,10 +2404,7 @@ class _GorselYaziKartiState extends State<GorselYaziKarti> {
         ).catchError((_){ }));
       }
     }catch(e){
-      if(mounted)setState((){
-        begenildi=!yeni;
-        begeniSayisi+=yeni?-1:1;
-      });
+      if(mounted)setState(()=>begenildi=!yeni);
       if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Beğeni kaydedilemedi: $e')));
     }finally{
       begeniIsleniyor=false;
@@ -2484,7 +2471,7 @@ class _GorselYaziKartiState extends State<GorselYaziKarti> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(width: 42, height: 4, margin: const EdgeInsets.all(12), decoration: BoxDecoration(color: Colors.black26, borderRadius: BorderRadius.circular(9))),
-              if (indirilebilir) ListTile(leading: const Icon(Icons.download_rounded, color: mavi), title: const Text('İndir'), onTap: () { Navigator.pop(ctx); fotografiKaydet(); }),
+              if (indirilebilir && (widget.veri['mediaUrl']??'').isNotEmpty) ListTile(leading: const Icon(Icons.download_rounded, color: mavi), title: const Text('İndir'), onTap: () { Navigator.pop(ctx); fotografiKaydet(); }),
               ListTile(leading: const Icon(Icons.heart_broken_outlined, color: Colors.black87), title: const Text('İlgilenmiyorum'), subtitle: const Text('Benzer içerikleri azalt'), onTap: () { Navigator.pop(ctx); ngelxIcerikGizle(context, icerikId, ilgilenmiyorum: true); }),
               ListTile(leading: const Icon(Icons.visibility_off_outlined, color: Colors.black87), title: const Text('İçeriği gizle'), onTap: () { Navigator.pop(ctx); ngelxIcerikGizle(context, icerikId); }),
               ListTile(leading: const Icon(Icons.link_rounded, color: Colors.blue), title: const Text('Bağlantıyı kopyala'), onTap: () async { await Clipboard.setData(ClipboardData(text: ngelxIcerikLink(icerikId))); if (ctx.mounted) Navigator.pop(ctx); }),
@@ -2583,6 +2570,7 @@ class VideoKarti extends StatefulWidget {
   final String videoId;
   final String kullaniciAdi;
   final String ownerId;
+  final String aciklama;
   final bool aktif;
   final bool indirilebilir;
 
@@ -2593,6 +2581,7 @@ class VideoKarti extends StatefulWidget {
     required this.kullaniciAdi,
     required this.ownerId,
     required this.aktif,
+    this.aciklama = '',
     this.indirilebilir = true,
   });
 
@@ -2605,8 +2594,6 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver {
   bool hazir = false;
   bool begenildi = false;
   bool kaydedildi = false;
-  int begeniSayisi = 0;
-  int yorumSayisi = 0;
   bool duraklatildi = false;
   bool indiriliyor = false;
   bool sessiz = false;
@@ -2670,16 +2657,12 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver {
     final video = FirebaseFirestore.instance.collection('videos').doc(videoId);
     final sonuclar = await Future.wait([
       video.collection('likes').doc(kullanici.uid).get(),
-      video.collection('likes').count().get(),
-      video.collection('comments').count().get(),
       FirebaseFirestore.instance.collection('users').doc(kullanici.uid).collection('saved').doc(videoId).get(),
     ]);
     if (!mounted) return;
     setState(() {
       begenildi = (sonuclar[0] as DocumentSnapshot).exists;
-      begeniSayisi = (sonuclar[1] as AggregateQuerySnapshot).count ?? 0;
-      yorumSayisi = (sonuclar[2] as AggregateQuerySnapshot).count ?? 0;
-      kaydedildi = (sonuclar[3] as DocumentSnapshot).exists;
+      kaydedildi = (sonuclar[1] as DocumentSnapshot).exists;
     });
   }
 
@@ -2712,11 +2695,7 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver {
     final begeni=video.collection('likes').doc(kullanici.uid);
     final yeniDurum=!begenildi;
     begeniIsleniyor=true;
-    setState((){
-      begenildi=yeniDurum;
-      begeniSayisi+=yeniDurum?1:-1;
-      if(begeniSayisi<0)begeniSayisi=0;
-    });
+    setState(()=>begenildi=yeniDurum);
     try{
       final batch=FirebaseFirestore.instance.batch();
       if(yeniDurum){
@@ -2734,10 +2713,7 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver {
         ).catchError((_){ }));
       }
     }catch(e){
-      if(mounted)setState((){
-        begenildi=!yeniDurum;
-        begeniSayisi+=yeniDurum?-1:1;
-      });
+      if(mounted)setState(()=>begenildi=!yeniDurum);
       if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Beğeni kaydedilemedi: $e')));
     }finally{
       begeniIsleniyor=false;
@@ -2952,20 +2928,16 @@ Positioned(
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Anı yakala, kendi hikâyeni paylaş ✨',
-                ),
-                const SizedBox(height: 8),
-                const Row(
-                  children: [
-                    Icon(Icons.graphic_eq, size: 17),
-                    SizedBox(width: 6),
-                    Text('NgelX • Özgün ses'),
-                  ],
-                ),
-      const SizedBox(height: 8),
-      AkisMetaSatiri(icerikId: videoId, yorumlariAc: yorumlariAc),
+                if(widget.aciklama.trim().isNotEmpty) ...[
+                  const SizedBox(height:8),
+                  Text(
+                    widget.aciklama.trim(),
+                    maxLines:3,
+                    overflow:TextOverflow.ellipsis,
+                  ),
+                ],
+                const SizedBox(height:8),
+                AkisMetaSatiri(icerikId:videoId,yorumlariAc:yorumlariAc),
               ],
             ),
           ),
