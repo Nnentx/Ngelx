@@ -49,9 +49,12 @@ class MainActivity : FlutterActivity() {
                         connection.instanceFollowRedirects = true
                         connection.setRequestProperty("Authorization", "Bearer $token")
                         connection.setRequestProperty("Content-Type", contentType)
-                        connection.setRequestProperty("Content-Length", bytes.size.toString())
-                        connection.setRequestProperty("X-NgelX-Client", "android-native-httpurlconnection")
+                        connection.setRequestProperty("Accept", "application/json")
+                        connection.setRequestProperty("Connection", "close")
+                        connection.setRequestProperty("X-NgelX-Client", "android-native-httpurlconnection-fixed")
                         connection.setRequestProperty("X-NgelX-Filename", legacyPath)
+                        connection.setFixedLengthStreamingMode(bytes.size)
+                        connection.connect()
 
                         connection.outputStream.use { output ->
                             output.write(bytes)
@@ -73,7 +76,7 @@ class MainActivity : FlutterActivity() {
                         mainHandler.post {
                             result.error(
                                 "NATIVE_UPLOAD",
-                                e.javaClass.simpleName + ": " + (e.message ?: "bağlantı hatası"),
+                                e.javaClass.simpleName + ": " + (e.message ?: "bağlantı hatası") + " [" + target + "]",
                                 null
                             )
                         }

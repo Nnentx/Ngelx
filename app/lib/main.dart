@@ -313,9 +313,10 @@ String _ngelxYuklemeHataMesaji(Object? hata) {
     if(kod==413)return 'Dosya medya servisinin boyut sınırını aşıyor.';
     if(kod!=null)return 'Medya servisi HTTP $kod hatası verdi.';
     final tip=hata.type.name;
-    final detay=(hata.message??'').trim();
-    if(detay.isNotEmpty)return 'Medya sunucusuna bağlanılamadı ($tip). Ana ve yedek sunucu denendi.';
-    return 'Medya sunucusuna bağlanılamadı. Ana ve yedek sunucu denendi.';
+    final temel=(hata.error??hata.message??'').toString().trim();
+    final kisa=temel.length>120?temel.substring(0,120):temel;
+    if(kisa.isNotEmpty)return 'Medya sunucusuna bağlanılamadı ($tip: $kisa). Ana ve yedek sunucu denendi.';
+    return 'Medya sunucusuna bağlanılamadı ($tip). Ana ve yedek sunucu denendi.';
   }
   final yazi=(hata??'').toString().replaceFirst('Exception: ','');
   if(yazi.isEmpty)return 'Medya yüklenemedi.';
@@ -470,11 +471,14 @@ Future<String> ngelxMedyaYukleDosya({
 
   final temizExt=_ngelxUzantiTemizle(ext);
   final tur=contentType??_ngelxContentType(temizExt);
+  const jsonKinds={'photos','profiles','stories','groups','support','chat-backgrounds','thumbnails','gifs'};
   Object? sonHata;
+  Uint8List? androidBytes;
 
   if(Platform.isAndroid){
     try{
       final bytes=await dosya.readAsBytes();
+      androidBytes=bytes;
       for(final api in apiler){
         try{
           final token=await user.getIdToken(true);
@@ -501,6 +505,41 @@ Future<String> ngelxMedyaYukleDosya({
   }
 
   for(final api in apiler){
+    if(androidBytes!=null&&jsonKinds.contains(kind)&&androidBytes.length<=10*1024*1024){
+      try{
+        final token=await user.getIdToken(true);
+        if(token==null||token.isEmpty)throw Exception('Güvenli medya oturumu oluşturulamadı.');
+        final hedef=Uri.parse('$api/upload').replace(queryParameters:{
+          'kind':kind,'ext':temizExt,'encoding':'base64',
+        });
+        final cevap=await Dio(BaseOptions(
+          connectTimeout:const Duration(seconds:12),
+          sendTimeout:const Duration(seconds:90),
+          receiveTimeout:const Duration(seconds:75),
+          validateStatus:(s)=>s!=null,
+        )).postUri(
+          hedef,
+          data:{'data':base64Encode(androidBytes),'contentType':tur},
+          onSendProgress:onProgress,
+          options:Options(
+            contentType:Headers.jsonContentType,
+            responseType:ResponseType.json,
+            headers:{
+              HttpHeaders.authorizationHeader:'Bearer $token',
+              'X-NgelX-Client':'android-v57-json-file',
+              'X-NgelX-Filename':legacyPath,
+            },
+          ),
+        );
+        final url=_ngelxYuklemeCevapUrl(cevap,hedef);
+        _ngelxMediaApiCache=api;
+        _ngelxMediaApiCacheZamani=DateTime.now();
+        return url;
+      }catch(e){
+        sonHata=e;
+      }
+    }
+
     final hedef=Uri.parse('$api/upload').replace(queryParameters:{'kind':kind,'ext':temizExt});
     for(var deneme=0;deneme<2;deneme++){
       try{
