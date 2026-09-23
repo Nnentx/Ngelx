@@ -5866,31 +5866,35 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
       for(final x in uyeler){if(x!=ben)g['unread_$x']=FieldValue.increment(1);}
       batch.set(chatRef,g,SetOptions(merge:true));
       await batch.commit();
-      final etiketler=List<String>.from(veri['mentions']??const[]);
-      final sessizMesaj=veri['silent']==true;
-      final sessizde=List<String>.from(grupVerisi['mutedFor']??const[]);
-      final profil=await FirebaseFirestore.instance.collection('users').doc(ben).get();
-      final ad=(profil.data()?['displayName']??profil.data()?['username']??'Bir kullanıcı').toString();
-      final onizleme=sonMesaj.length>80?sonMesaj.substring(0,80)+'…':sonMesaj;
-      for(final hedef in uyeler){
-        if(sessizMesaj)break;
-        if(hedef==ben||sessizde.contains(hedef)||etiketler.contains(hedef))continue;
-        unawaited(uygulamaBildirimiGonder(
-          toUid:hedef,fromUid:ben,tur:'message',
-          metin:ad+': '+onizleme,
-          belgeId:widget.chatId,
-        ).catchError((_){ }));
-      }
-      if(!sessizMesaj&&etiketler.isNotEmpty){
-        for(final hedef in etiketler.toSet()){
-          if(hedef==ben||!uyeler.contains(hedef))continue;
+      // Mesaj Firestore'a ulaştıysa gönderim başarılıdır. Bildirim/profil gibi
+      // ikincil işler hata verse bile mesajı tekrar kuyruğa sokup çoğaltmayız.
+      try{
+        final etiketler=List<String>.from(veri['mentions']??const[]);
+        final sessizMesaj=veri['silent']==true;
+        final sessizde=List<String>.from(grupVerisi['mutedFor']??const[]);
+        final profil=await FirebaseFirestore.instance.collection('users').doc(ben).get();
+        final ad=(profil.data()?['displayName']??profil.data()?['username']??'Bir kullanıcı').toString();
+        final onizleme=sonMesaj.length>80?sonMesaj.substring(0,80)+'…':sonMesaj;
+        for(final hedef in uyeler){
+          if(sessizMesaj)break;
+          if(hedef==ben||sessizde.contains(hedef)||etiketler.contains(hedef))continue;
           unawaited(uygulamaBildirimiGonder(
             toUid:hedef,fromUid:ben,tur:'message',
-            metin:'$ad grupta senden bahsetti',
+            metin:ad+': '+onizleme,
             belgeId:widget.chatId,
           ).catchError((_){ }));
         }
-      }
+        if(!sessizMesaj&&etiketler.isNotEmpty){
+          for(final hedef in etiketler.toSet()){
+            if(hedef==ben||!uyeler.contains(hedef))continue;
+            unawaited(uygulamaBildirimiGonder(
+              toUid:hedef,fromUid:ben,tur:'message',
+              metin:'$ad grupta senden bahsetti',
+              belgeId:widget.chatId,
+            ).catchError((_){ }));
+          }
+        }
+      }catch(_){}
       return true;
     }catch(_){
       if(!sessizHata&&mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Mesaj gönderilemedi.')));
