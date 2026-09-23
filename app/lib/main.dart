@@ -262,8 +262,6 @@ Future<String> ngelxMedyaYukleBytes({
 
   final uri = Uri.parse('$api/upload').replace(queryParameters: {'kind': kind, 'ext': temizExt});
   const jsonKinds={'photos','profiles','stories','groups','support','chat-backgrounds','thumbnails','gifs'};
-  Object? sonHata;
-
   String cevapUrl(Response<dynamic> cevap,Uri hedef) {
     final status=cevap.statusCode??0;
     final veri=cevap.data;
@@ -305,9 +303,7 @@ Future<String> ngelxMedyaYukleBytes({
         ),
       );
       return cevapUrl(cevap,hedef);
-    }catch(e){
-      sonHata=e;
-    }
+    }catch(_){ }
   }
 
   // Büyük dosyalar ve JSON yolunun başarısız olduğu durumlar için raw byte yolu.
@@ -335,8 +331,7 @@ Future<String> ngelxMedyaYukleBytes({
         ),
       );
       return cevapUrl(cevap,uri);
-    }catch(e){
-      sonHata=e;
+    }catch(_){
       if(deneme==0)await Future<void>.delayed(const Duration(milliseconds:650));
     }
   }
@@ -4444,7 +4439,6 @@ class _YeniYuklePageState extends State<YuklePage> {
     try {
       String medyaUrl = '';
       String sesUrl = '';
-      const kapakUrl = '';
       if (medya != null) {
         medyaUrl = await xDosyasiYukle(medya!, tur == 'video' ? 'videos' : 'photos');
       }
@@ -7500,31 +7494,6 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
       ]),
     ),
   );
-    Widget _aktifGrupUyeYazisi(List<String> uyeler){
-    if(uyeler.isEmpty)return const Text('0 kişi şu an aktif',style:TextStyle(fontSize:11.5,color:ngelxPremiumMuted,fontWeight:FontWeight.w700));
-    final ilk=uyeler.take(30).toList();
-    final ikinci=uyeler.skip(30).take(30).toList();
-    int say(QuerySnapshot<Map<String,dynamic>>? q)=>q?.docs.where((d){
-      final v=d.data();
-      return v['isOnline']==true&&v['showActivityStatus']!=false;
-    }).length??0;
-    final q1=FirebaseFirestore.instance.collection('users').where(FieldPath.documentId,whereIn:ilk).snapshots();
-    if(ikinci.isEmpty){
-      return StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
-        stream:q1,
-        builder:(_,a)=>Text(say(a.data).toString()+' kişi şu an aktif',style:const TextStyle(fontSize:11.5,color:ngelxPremiumMuted,fontWeight:FontWeight.w700)),
-      );
-    }
-    final q2=FirebaseFirestore.instance.collection('users').where(FieldPath.documentId,whereIn:ikinci).snapshots();
-    return StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
-      stream:q1,
-      builder:(_,a)=>StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
-        stream:q2,
-        builder:(_,b)=>Text((say(a.data)+say(b.data)).toString()+' kişi şu an aktif',style:const TextStyle(fontSize:11.5,color:ngelxPremiumMuted,fontWeight:FontWeight.w700)),
-      ),
-    );
-  }
-
 @override Widget build(BuildContext context)=>Theme(
     data:ThemeData.light().copyWith(
       scaffoldBackgroundColor:Colors.white,
@@ -8639,7 +8608,6 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
       final kayitliOda=(aramaVerisi['callRoomName']??'').toString();
       final hamBaglanti=(kayitliOda.isEmpty||kayitliOda==widget.roomName)?aramaVerisi['callConnectedAt']:null;
       final oncekiBaglanti=hamBaglanti;
-      final grup=widget.roomName.startsWith('group_');
       final baslatan=(aramaVerisi['callStartedBy']??'').toString();
       final benBaslatan=baslatan==u.uid;
       final uzaktaBiriVar=r.remoteParticipants.isNotEmpty;
@@ -13602,7 +13570,6 @@ class KullaniciProfilPage extends StatelessWidget {
           final benimVerim = s.data![1]?.data() ?? <String, dynamic>{};
           final foto = (v['photoUrl'] ?? '').toString();
           final arkadaslar = Set<String>.from(List<dynamic>.from(benimVerim['friends'] ?? []));
-          final takip = Set<String>.from(List<dynamic>.from(benimVerim['following'] ?? []));
           final gizli = v['privateAccount'] == true;
           final profilIzni=(v['profileViewPermission']??'all').toString();
           final beniTakipEdiyor=me!=null&&List<String>.from(v['followers']??const[]).contains(me);
