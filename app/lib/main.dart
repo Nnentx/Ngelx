@@ -5791,6 +5791,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
       final okunduPaylas=d.data()?['readReceipts_$ben']!=false;
       await chatRef.set({
         if(okunmamis>0)'unread_$ben':0,
+        'lastDeliveredAt_$ben':FieldValue.serverTimestamp(),
         if(okunduPaylas)'lastReadAt_$ben':FieldValue.serverTimestamp(),
       },SetOptions(merge:true)).timeout(const Duration(seconds:5));
     }catch(_){
