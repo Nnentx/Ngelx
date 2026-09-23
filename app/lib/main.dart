@@ -4425,495 +4425,575 @@ class YuklePage extends StatefulWidget {
 }
 
 class _YeniYuklePageState extends State<YuklePage> {
-  String tur = 'video';
-  bool yukleniyor = false;
-  bool indirmeyeIzin = true;
-  bool yorumlaraIzin = true;
-  bool yenidenPaylasimaIzin = true;
-  bool otomatikAltyazi = false;
-  bool ortakGonderi = false;
-  String gizlilik = 'Herkes';
-  String yorumKitlesi = 'Herkes';
-  String kalite = 'HD';
+  String tur='video';
+  bool yukleniyor=false;
+  bool indirmeyeIzin=true;
+  bool yorumlaraIzin=true;
+  bool yenidenPaylasimaIzin=true;
+  String gizlilik='Herkes';
+  String yorumKitlesi='Herkes';
   XFile? medya;
-  XFile? muzik;
-  final aciklama = TextEditingController();
-  final konum = TextEditingController();
-  final etiketler = TextEditingController();
+  double yuklemeIlerlemesi=0;
+  String yuklemeDurumu='';
+  final aciklama=TextEditingController();
+  final konum=TextEditingController();
+  final etiketler=TextEditingController();
 
   @override
-  void initState() {
+  void initState(){
     super.initState();
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid != null) {
-      FirebaseFirestore.instance.collection('users').doc(uid).get().then((d) {
-        if (mounted) setState(() => indirmeyeIzin = d.data()?['defaultAllowDownload'] != false);
+    final uid=FirebaseAuth.instance.currentUser?.uid;
+    if(uid!=null){
+      FirebaseFirestore.instance.collection('users').doc(uid).get().then((d){
+        if(mounted)setState(()=>indirmeyeIzin=d.data()?['defaultAllowDownload']!=false);
+      }).catchError((_){ });
+    }
+  }
+
+  @override
+  void dispose(){
+    aciklama.dispose();
+    konum.dispose();
+    etiketler.dispose();
+    super.dispose();
+  }
+
+  void _turDegistir(String yeni){
+    if(yukleniyor)return;
+    setState((){
+      tur=yeni;
+      medya=null;
+      yuklemeIlerlemesi=0;
+      yuklemeDurumu='';
+    });
+  }
+
+  String _dosyaHataMetni(Object e){
+    if(e is PlatformException){
+      if(e.code.contains('camera_access_denied'))return 'Kamera izni verilmedi.';
+      if(e.code.contains('photo_access_denied'))return 'Galeri izni verilmedi.';
+      return 'Dosya seçilemedi. Tekrar dene.';
+    }
+    if(e is FirebaseException&&e.code=='permission-denied'){
+      return 'Paylaşım kaydedilemedi. Uygulama veri izinlerini kontrol et.';
+    }
+    return e.toString().replaceFirst('Exception: ','');
+  }
+
+  Future<bool> _medyaBoyutuUygun(XFile dosya,String secilenTur)async{
+    final boyut=await dosya.length();
+    final limit=secilenTur=='video'?50*1024*1024:10*1024*1024;
+    if(boyut<=0){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Seçilen dosya boş görünüyor.')));
+      return false;
+    }
+    if(boyut>limit){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(secilenTur=='video'?'Video en fazla 50 MB olabilir.':'Fotoğraf en fazla 10 MB olabilir.')));
+      return false;
+    }
+    return true;
+  }
+
+  Future<void> medyaSec()async{
+    if(yukleniyor||tur=='text')return;
+    try{
+      final secilen=tur=='video'
+        ?await ImagePicker().pickVideo(source:ImageSource.gallery)
+        :await ImagePicker().pickImage(source:ImageSource.gallery,imageQuality:84,maxWidth:1600);
+      if(secilen==null||!mounted)return;
+      if(!await _medyaBoyutuUygun(secilen,tur))return;
+      if(mounted)setState(()=>medya=secilen);
+    }catch(e){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(_dosyaHataMetni(e))));
+    }
+  }
+
+  Future<void> kamerayiAc({required bool video})async{
+    if(yukleniyor)return;
+    try{
+      final kameraIzni=await Permission.camera.request();
+      if(!kameraIzni.isGranted){
+        if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Kamerayı kullanmak için kamera izni vermelisin.')));
+        return;
+      }
+      if(video)await Permission.microphone.request();
+      final secilen=video
+        ?await ImagePicker().pickVideo(source:ImageSource.camera,maxDuration:const Duration(minutes:10))
+        :await ImagePicker().pickImage(source:ImageSource.camera,imageQuality:86,maxWidth:1600);
+      if(secilen==null||!mounted)return;
+      final secilenTur=video?'video':'photo';
+      if(!await _medyaBoyutuUygun(secilen,secilenTur))return;
+      if(mounted)setState((){
+        tur=secilenTur;
+        medya=secilen;
       });
+    }catch(e){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(_dosyaHataMetni(e))));
     }
   }
 
-  Future<void> medyaSec() async {
-    XFile? secilen;
-    if (tur == 'video') {
-      secilen = await ImagePicker().pickVideo(source: ImageSource.gallery);
-    } else if (tur == 'photo') {
-      secilen = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 78, maxWidth: 1280);
-    }
-    if (secilen != null && mounted) setState(() => medya = secilen);
-  }
-
-  Future<void> kamerayiAc({required bool video}) async {
-    final secilen = video
-        ? await ImagePicker().pickVideo(source: ImageSource.camera, maxDuration: const Duration(minutes: 10))
-        : await ImagePicker().pickImage(source: ImageSource.camera, imageQuality: 82, maxWidth: 1440);
-    if (secilen != null && mounted) {
-      setState(() {
-        tur = video ? 'video' : 'photo';
-        medya = secilen;
-      });
-    }
-  }
-
-  Future<void> kameraSecimi() async {
+  Future<void> kameraSecimi()async{
+    if(yukleniyor)return;
     await showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
-      builder: (c) => Theme(data:ThemeData.light(),child:SafeArea(child: Padding(
-        padding: const EdgeInsets.all(22),
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          const Text('Kamerayla oluştur', style: TextStyle(color:Colors.black87,fontSize: 21, fontWeight: FontWeight.w900)),
-          const SizedBox(height: 18),
-          Row(children: [
-            Expanded(child: _buyukSecenek(Icons.photo_camera_rounded, 'Fotoğraf çek', () { Navigator.pop(c); kamerayiAc(video: false); })),
-            const SizedBox(width: 12),
-            Expanded(child: _buyukSecenek(Icons.videocam_rounded, 'Video çek', () { Navigator.pop(c); kamerayiAc(video: true); })),
+      context:context,
+      backgroundColor:Colors.white,
+      shape:const RoundedRectangleBorder(borderRadius:BorderRadius.vertical(top:Radius.circular(28))),
+      builder:(c)=>Theme(data:ThemeData.light(),child:SafeArea(child:Padding(
+        padding:const EdgeInsets.all(22),
+        child:Column(mainAxisSize:MainAxisSize.min,children:[
+          const Text('Kamerayla oluştur',style:TextStyle(color:Colors.black87,fontSize:21,fontWeight:FontWeight.w900)),
+          const SizedBox(height:18),
+          Row(children:[
+            Expanded(child:_buyukSecenek(Icons.photo_camera_rounded,'Fotoğraf çek',(){Navigator.pop(c);unawaited(kamerayiAc(video:false));})),
+            const SizedBox(width:12),
+            Expanded(child:_buyukSecenek(Icons.videocam_rounded,'Video çek',(){Navigator.pop(c);unawaited(kamerayiAc(video:true));})),
           ]),
         ]),
       ))),
     );
   }
 
-  Future<void> taslakKaydet() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
-    await FirebaseFirestore.instance.collection('users').doc(user.uid).collection('drafts').add({
-      'type': tur,
-      'description': aciklama.text.trim(),
-      'location': konum.text.trim(),
-      'tags': etiketler.text.trim(),
-      'privacy': gizlilik,
-      'commentAudience': yorumKitlesi,
-      'quality': kalite,
-      'createdAt': FieldValue.serverTimestamp(),
-    });
-    if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Taslak kaydedildi ✓')));
-  }
-
-  Future<void> muzikSec() async {
-    const sesTurleri = XTypeGroup(
-      label: 'Müzik',
-      extensions: ['mp3', 'm4a', 'aac', 'wav', 'ogg'],
-    );
-    final sonuc = await openFile(acceptedTypeGroups: [sesTurleri]);
-    if (sonuc != null && mounted) setState(() => muzik = sonuc);
-  }
-
-  Future<String> xDosyasiYukle(XFile dosya, String klasor) async {
-    final user = FirebaseAuth.instance.currentUser!;
-    final boyut = await dosya.length();
-    if (boyut > 50 * 1024 * 1024) throw Exception('Dosya 50 MB’den küçük olmalı');
-    final uzanti = dosya.name.contains('.') ? dosya.name.split('.').last.toLowerCase() : (tur == 'video' ? 'mp4' : 'jpg');
-    final yol = '$klasor/${user.uid}/${DateTime.now().microsecondsSinceEpoch}.$uzanti';
-    return ngelxMedyaYukleBytes(
-      bytes: await dosya.readAsBytes(),
-      kind: klasor == 'videos' ? 'videos' : 'photos',
-      ext: uzanti,
-      legacyPath: yol,
+  Future<void> hikayeSecimi()async{
+    if(yukleniyor)return;
+    await showModalBottomSheet<void>(
+      context:context,
+      backgroundColor:Colors.white,
+      showDragHandle:true,
+      shape:const RoundedRectangleBorder(borderRadius:BorderRadius.vertical(top:Radius.circular(28))),
+      builder:(c)=>Theme(data:ThemeData.light(),child:SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
+        const ListTile(title:Text('Hikâye oluştur',style:TextStyle(fontSize:20,fontWeight:FontWeight.w900)),subtitle:Text('Fotoğraf hikâyen 24 saat görünür.')),
+        ListTile(leading:const Icon(Icons.photo_library_outlined,color:mor),title:const Text('Galeriden fotoğraf seç'),onTap:(){Navigator.pop(c);unawaited(_hikayePaylas(ImageSource.gallery));}),
+        ListTile(leading:const Icon(Icons.photo_camera_outlined,color:mavi),title:const Text('Kamerayla fotoğraf çek'),onTap:(){Navigator.pop(c);unawaited(_hikayePaylas(ImageSource.camera));}),
+      ]))),
     );
   }
 
-  Future<void> yayinla() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null || yukleniyor) return;
-    if (tur != 'text' && medya == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Önce galeriden bir dosya seç.')));
-      return;
-    }
-    if (tur == 'text' && aciklama.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Paylaşmak istediğin yazıyı gir.')));
-      return;
-    }
-    setState(() => yukleniyor = true);
-    try {
-      String medyaUrl = '';
-      String sesUrl = '';
-      if (medya != null) {
-        medyaUrl = await xDosyasiYukle(medya!, tur == 'video' ? 'videos' : 'photos');
+  Future<void> _hikayePaylas(ImageSource kaynak)async{
+    final user=FirebaseAuth.instance.currentUser;
+    if(user==null||yukleniyor)return;
+    try{
+      if(kaynak==ImageSource.camera){
+        final izin=await Permission.camera.request();
+        if(!izin.isGranted){
+          if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Hikâye çekmek için kamera izni vermelisin.')));
+          return;
+        }
       }
-      if (tur == 'photo' && muzik != null) {
-        if (await muzik!.length() > 15 * 1024 * 1024) throw Exception('Müzik 15 MB’den küçük olmalı');
-        final uzanti = muzik!.name.contains('.') ? muzik!.name.split('.').last.toLowerCase() : 'mp3';
-        final yol = 'music/${user.uid}/${DateTime.now().microsecondsSinceEpoch}.$uzanti';
-        sesUrl = await ngelxMedyaYukleBytes(
-          bytes: await muzik!.readAsBytes(),
-          kind: 'music',
-          ext: uzanti,
-          legacyPath: yol,
-        );
-      }
-      final profil = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
-      final adi = (profil.data()?['username'] ?? 'ngelx').toString();
-      await FirebaseFirestore.instance.collection('videos').add({
-        'ownerId': user.uid,
-        'username': adi,
-        'type': tur,
-        'videoUrl': tur == 'video' ? medyaUrl : '',
-        'mediaUrl': medyaUrl,
-        'thumbnailUrl': '',
-        'audioUrl': sesUrl,
-        'description': aciklama.text.trim().isEmpty ? 'NgelX ile paylaşıldı ✨' : aciklama.text.trim(),
-        'allowDownload': indirmeyeIzin,
-        'allowComments': yorumlaraIzin,
-        'commentAudience': yorumKitlesi,
-        'allowReshare': yenidenPaylasimaIzin,
-        'autoCaptions': otomatikAltyazi,
-        'collab': ortakGonderi,
-        'privacy': gizlilik,
-        'visibleTo':gizlilik=='Yakın arkadaşlar'?List<String>.from(profil.data()?['closeFriends']??const[]):<String>[],
-        'hiddenFor':<String>[],
-        'quality': kalite,
-        'location': konum.text.trim(),
-        'tags': etiketler.text.trim(),
-        'createdAt': FieldValue.serverTimestamp(),
+      final dosya=await ImagePicker().pickImage(source:kaynak,imageQuality:84,maxWidth:1600);
+      if(dosya==null||!mounted)return;
+      if(!await _medyaBoyutuUygun(dosya,'photo'))return;
+      setState((){
+        yukleniyor=true;
+        yuklemeDurumu='Hikâye yükleniyor...';
+        yuklemeIlerlemesi=0;
       });
-      if (!mounted) return;
-      setState(() { medya = null; muzik = null; aciklama.clear(); });
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Paylaşım yayınlandı ✅ Akışta ve profilinde görünecek.')));
-    } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Yüklenemedi: $e')));
-    } finally {
-      if (mounted) setState(() => yukleniyor = false);
+      final uzanti=dosya.name.contains('.')?dosya.name.split('.').last.toLowerCase():'jpg';
+      final yol='stories/${user.uid}/${DateTime.now().millisecondsSinceEpoch}.$uzanti';
+      final url=await ngelxMedyaYukleBytes(
+        bytes:await dosya.readAsBytes(),
+        kind:'stories',
+        ext:uzanti,
+        legacyPath:yol,
+        onProgress:(sent,total){
+          if(mounted&&total>0)setState(()=>yuklemeIlerlemesi=(sent/total).clamp(0.0,1.0));
+        },
+      );
+      final profil=await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      final adi=(profil.data()?['username']??'ngelx').toString();
+      await FirebaseFirestore.instance.collection('videos').add({
+        'ownerId':user.uid,
+        'username':adi,
+        'type':'story',
+        'mediaUrl':url,
+        'createdAt':FieldValue.serverTimestamp(),
+        'clientCreatedAt':Timestamp.now(),
+        'expiresAt':Timestamp.fromDate(DateTime.now().add(const Duration(hours:24))),
+      });
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Hikâye yayınlandı • 24 saat görünür.')));
+    }catch(e){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Hikâye yayınlanamadı: ${_dosyaHataMetni(e)}')));
+    }finally{
+      if(mounted)setState((){
+        yukleniyor=false;
+        yuklemeDurumu='';
+        yuklemeIlerlemesi=0;
+      });
     }
+  }
+
+  Future<String> xDosyasiYukle(XFile dosya,String klasor)async{
+    final user=FirebaseAuth.instance.currentUser;
+    if(user==null)throw Exception('Paylaşmak için giriş yapmalısın.');
+    final secilenTur=klasor=='videos'?'video':'photo';
+    if(!await _medyaBoyutuUygun(dosya,secilenTur))throw Exception('Dosya boyutu uygun değil.');
+    final uzanti=dosya.name.contains('.')?dosya.name.split('.').last.toLowerCase():(secilenTur=='video'?'mp4':'jpg');
+    final yol='$klasor/${user.uid}/${DateTime.now().microsecondsSinceEpoch}.$uzanti';
+    void ilerleme(int sent,int total){
+      if(!mounted||total<=0)return;
+      setState(()=>yuklemeIlerlemesi=(sent/total).clamp(0.0,1.0));
+    }
+    if(secilenTur=='video'){
+      return ngelxMedyaYukleDosya(
+        dosya:dosya,
+        kind:'videos',
+        ext:uzanti,
+        legacyPath:yol,
+        onProgress:ilerleme,
+      );
+    }
+    return ngelxMedyaYukleBytes(
+      bytes:await dosya.readAsBytes(),
+      kind:'photos',
+      ext:uzanti,
+      legacyPath:yol,
+      onProgress:ilerleme,
+    );
+  }
+
+  Future<void> yayinla()async{
+    final user=FirebaseAuth.instance.currentUser;
+    if(user==null||yukleniyor)return;
+    final metin=aciklama.text.trim();
+    if(tur!='text'&&medya==null){
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Önce galeriden bir dosya seç veya kamerayı kullan.')));
+      return;
+    }
+    if(tur=='text'&&metin.isEmpty){
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Paylaşmak istediğin yazıyı gir.')));
+      return;
+    }
+
+    FocusScope.of(context).unfocus();
+    setState((){
+      yukleniyor=true;
+      yuklemeIlerlemesi=0;
+      yuklemeDurumu=tur=='text'?'Gönderi yayınlanıyor...':'Medya yükleniyor...';
+    });
+
+    try{
+      String medyaUrl='';
+      if(medya!=null){
+        medyaUrl=await xDosyasiYukle(medya!,tur=='video'?'videos':'photos');
+      }
+      if(mounted)setState(()=>yuklemeDurumu='Gönderi kaydediliyor...');
+
+      final profil=await FirebaseFirestore.instance.collection('users').doc(user.uid).get().timeout(const Duration(seconds:10));
+      final pv=profil.data()??<String,dynamic>{};
+      final adi=(pv['username']??'ngelx').toString();
+      await FirebaseFirestore.instance.collection('videos').add({
+        'ownerId':user.uid,
+        'username':adi,
+        'type':tur,
+        'videoUrl':tur=='video'?medyaUrl:'',
+        'mediaUrl':medyaUrl,
+        'thumbnailUrl':'',
+        'description':metin,
+        'allowDownload':indirmeyeIzin,
+        'allowComments':yorumlaraIzin,
+        'commentAudience':yorumlaraIzin?yorumKitlesi:'Kimse',
+        'allowReshare':yenidenPaylasimaIzin,
+        'privacy':gizlilik,
+        'visibleTo':gizlilik=='Yakın arkadaşlar'?List<String>.from(pv['closeFriends']??const[]):<String>[],
+        'hiddenFor':<String>[],
+        'location':konum.text.trim(),
+        'tags':etiketler.text.trim(),
+        'likeCount':0,
+        'commentCount':0,
+        'shareCount':0,
+        'viewCount':0,
+        'createdAt':FieldValue.serverTimestamp(),
+        'clientCreatedAt':Timestamp.now(),
+      }).timeout(const Duration(seconds:12));
+
+      if(!mounted)return;
+      setState((){
+        medya=null;
+        aciklama.clear();
+        konum.clear();
+        etiketler.clear();
+        yuklemeIlerlemesi=0;
+        yuklemeDurumu='';
+      });
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Paylaşım yayınlandı ✅ Akışta ve profilinde görünecek.')));
+    }catch(e){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Yayınlanamadı: ${_dosyaHataMetni(e)}')));
+    }finally{
+      if(mounted)setState((){
+        yukleniyor=false;
+        yuklemeDurumu='';
+        yuklemeIlerlemesi=0;
+      });
+    }
+  }
+
+  void _reelsSec(){
+    if(yukleniyor)return;
+    setState((){
+      tur='video';
+      medya=null;
+    });
+    unawaited(medyaSec());
+  }
+
+  Widget _medyaOnizleme(){
+    final secilen=medya;
+    if(secilen==null||tur=='text')return const SizedBox.shrink();
+    final foto=tur=='photo';
+    return Container(
+      margin:const EdgeInsets.only(top:14),
+      decoration:BoxDecoration(
+        color:const Color(0xFFF7F8FA),
+        borderRadius:BorderRadius.circular(22),
+        border:Border.all(color:const Color(0xFFE1E5EB)),
+      ),
+      clipBehavior:Clip.antiAlias,
+      child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+        if(foto)
+          SizedBox(
+            height:220,
+            child:Image.file(
+              File(secilen.path),
+              fit:BoxFit.cover,
+              errorBuilder:(_,__,___)=>const Center(child:Icon(Icons.broken_image_outlined,size:48,color:Colors.black38)),
+            ),
+          )
+        else
+          Container(
+            height:150,
+            alignment:Alignment.center,
+            decoration:const BoxDecoration(gradient:LinearGradient(colors:[Color(0xFF171A24),Color(0xFF32234F)])),
+            child:const Column(mainAxisSize:MainAxisSize.min,children:[
+              Icon(Icons.play_circle_fill_rounded,color:Colors.white,size:62),
+              SizedBox(height:8),
+              Text('Video seçildi',style:TextStyle(color:Colors.white,fontWeight:FontWeight.w900)),
+            ]),
+          ),
+        Padding(
+          padding:const EdgeInsets.fromLTRB(14,10,8,10),
+          child:Row(children:[
+            Icon(foto?Icons.photo_rounded:Icons.videocam_rounded,color:foto?mavi:mor),
+            const SizedBox(width:9),
+            Expanded(child:Text(secilen.name,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontWeight:FontWeight.w700))),
+            IconButton(
+              tooltip:'Seçimi kaldır',
+              onPressed:yukleniyor?null:()=>setState(()=>medya=null),
+              icon:const Icon(Icons.close_rounded,color:Colors.redAccent),
+            ),
+          ]),
+        ),
+      ]),
+    );
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context){
     return Theme(
-      data: ThemeData.light().copyWith(
-        scaffoldBackgroundColor: Colors.white,
-        inputDecorationTheme: InputDecorationTheme(
-          filled: true,
-          fillColor: const Color(0xFFF3F5F8),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(18),
-            borderSide: BorderSide.none,
-          ),
+      data:ThemeData.light().copyWith(
+        scaffoldBackgroundColor:Colors.white,
+        inputDecorationTheme:InputDecorationTheme(
+          filled:true,
+          fillColor:const Color(0xFFF3F5F8),
+          border:OutlineInputBorder(borderRadius:BorderRadius.circular(18),borderSide:BorderSide.none),
         ),
       ),
-      child: ColoredBox(
-        color: Colors.white,
-        child: SafeArea(
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(22,22,22,110),
-        children: [
-          const Text('Yeni içerik üret', textAlign: TextAlign.center, style: TextStyle(color: Colors.black, fontSize: 27, fontWeight: FontWeight.w900)),
-          const SizedBox(height: 8),
-          const Text('Fikrini seç, düzenle ve paylaş', textAlign: TextAlign.center, style: TextStyle(color: Colors.black54)),
-          const SizedBox(height: 24),
-          Container(
-            padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(color: const Color(0xFFF3F5F8), borderRadius: BorderRadius.circular(22)),
-            child: Row(children: [
-              _turButonu('video', Icons.videocam_rounded, 'Video'),
-              _turButonu('photo', Icons.photo_rounded, 'Fotoğraf'),
-              _turButonu('text', Icons.text_fields_rounded, 'Yazı'),
-            ]),
-          ),
-          const SizedBox(height: 14),
-          SizedBox(height: 92, child: ListView(scrollDirection: Axis.horizontal, children: [
-            _hizliUret(Icons.camera_alt_rounded, 'Kamera', kameraSecimi),
-            _hizliUret(Icons.auto_stories_rounded, 'Hikâye', () => setState(() => tur = 'photo')),
-            _hizliUret(Icons.movie_creation_rounded, 'Reels', () => setState(() => tur = 'video')),
-            _hizliUret(Icons.wifi_tethering_rounded, 'Canlı', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CanliHazirlikPage()))),
-          ])),
-          const SizedBox(height: 25),
-          if (tur != 'text')
-            Row(children:[
-              Expanded(child:OutlinedButton.icon(
-                style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(70), side: const BorderSide(color: mavi), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))),
-                onPressed: medyaSec,
-                icon: Icon(tur == 'video' ? Icons.video_library : Icons.photo_library, size: 28),
-                label: Text(medya == null ? 'Galeriden seç' : 'Seçildi: ${medya!.name}', maxLines:2, overflow: TextOverflow.ellipsis),
-              )),
-              const SizedBox(width:10),
-              Expanded(child:OutlinedButton.icon(
-                style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(70), side: const BorderSide(color: mor), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))),
-                onPressed:()=>kamerayiAc(video:tur=='video'),
-                icon:Icon(tur=='video'?Icons.videocam_rounded:Icons.photo_camera_rounded,size:28),
-                label:Text(tur=='video'?'Video çek':'Fotoğraf çek'),
-              )),
-            ]),
-          if (tur == 'photo') ...[
-            const SizedBox(height: 14),
-            OutlinedButton.icon(onPressed: muzikSec, icon: const Icon(Icons.music_note), label: Text(muzik == null ? 'Müzik ekle (isteğe bağlı)' : 'Müzik: ${muzik!.name}', overflow: TextOverflow.ellipsis)),
-          ],
-          const SizedBox(height: 18),
-          TextField(
-            controller: aciklama,
-            maxLines: tur == 'text' ? 8 : 3,
-            maxLength: tur == 'text' ? 500 : 180,
-            decoration: InputDecoration(labelText: tur == 'text' ? 'Ne düşünüyorsun?' : 'Açıklama yaz', prefixIcon: const Icon(Icons.edit_note_rounded)),
-          ),
-          Row(children: [
-            Expanded(child: TextField(controller: konum, decoration: const InputDecoration(labelText: 'Konum ekle', prefixIcon: Icon(Icons.location_on_outlined)))),
-            const SizedBox(width: 10),
-            Expanded(child: TextField(controller: etiketler, decoration: const InputDecoration(labelText: 'Kişi / #etiket', prefixIcon: Icon(Icons.alternate_email)))),
-          ]),
-          const SizedBox(height: 18),
-          _bolumBasligi('Düzenle'),
-          Wrap(spacing: 8, runSpacing: 8, children: [
-            _arac(Icons.crop_rounded, 'Kırp'), _arac(Icons.tune_rounded, 'Filtre'),
-            _arac(Icons.auto_fix_high_rounded, 'Efekt'), _arac(Icons.speed_rounded, 'Hız'),
-            _arac(Icons.text_fields_rounded, 'Metin'), _arac(Icons.emoji_emotions_outlined, 'GIF / çıkartma'),
-            _arac(Icons.grid_view_rounded, 'Kolaj'), _arac(Icons.image_rounded, 'Kapak'),
-            _arac(Icons.record_voice_over_rounded, 'Seslendirme'), _arac(Icons.compare_rounded, 'Önce / sonra'),
-          ]),
-          const SizedBox(height: 20),
-          _bolumBasligi('Yayın ayarları'),
-          DropdownButtonFormField<String>(
-            value: gizlilik,
-            decoration: const InputDecoration(labelText: 'Kimler görebilir?', prefixIcon: Icon(Icons.visibility_outlined)),
-            items: const ['Herkes', 'Arkadaşlar', 'Yakın arkadaşlar', 'Yalnızca ben'].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
-            onChanged: (v) => setState(() => gizlilik = v ?? 'Herkes'),
-          ),
-          const SizedBox(height: 10),
-          SegmentedButton<String>(
-            segments: const [ButtonSegment(value: 'Veri tasarrufu', label: Text('Veri tasarrufu')), ButtonSegment(value: 'HD', label: Text('HD'))],
-            selected: {kalite},
-            onSelectionChanged: (v) => setState(() => kalite = v.first),
-          ),
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            activeThumbColor: mavi,
-            title: const Text('İçeriğimin indirilmesine izin ver', style: TextStyle(fontWeight: FontWeight.bold)),
-            subtitle: const Text('Kapalıysa yalnızca sen indirebilirsin.', style: TextStyle(color: Colors.black54)),
-            value: indirmeyeIzin,
-            onChanged: (v) => setState(() => indirmeyeIzin = v),
-          ),
-          SwitchListTile(contentPadding: EdgeInsets.zero, title: const Text('Yorumlara izin ver'), value: yorumlaraIzin, onChanged: (v) => setState(() => yorumlaraIzin = v)),
-          if(yorumlaraIzin)DropdownButtonFormField<String>(
-            initialValue:yorumKitlesi,
-            decoration:const InputDecoration(labelText:'Kimler yorum yapabilir?',prefixIcon:Icon(Icons.mode_comment_outlined)),
-            items:const ['Herkes','Arkadaşlar','Takip ettiklerim','Kimse'].map((e)=>DropdownMenuItem(value:e,child:Text(e))).toList(),
-            onChanged:(v)=>setState(()=>yorumKitlesi=v??'Herkes'),
-          ),
-          if(yorumlaraIzin)const SizedBox(height:10),
-          SwitchListTile(contentPadding: EdgeInsets.zero, title: const Text('Yeniden paylaşıma izin ver'), value: yenidenPaylasimaIzin, onChanged: (v) => setState(() => yenidenPaylasimaIzin = v)),
-          SwitchListTile(contentPadding: EdgeInsets.zero, title: const Text('Otomatik altyazı'), value: otomatikAltyazi, onChanged: (v) => setState(() => otomatikAltyazi = v)),
-          SwitchListTile(contentPadding: EdgeInsets.zero, title: const Text('Ortak gönderi'), value: ortakGonderi, onChanged: (v) => setState(() => ortakGonderi = v)),
-          const SizedBox(height: 16),
-          Row(children: [
-            Expanded(child: OutlinedButton.icon(onPressed: taslakKaydet, icon: const Icon(Icons.bookmark_add_outlined), label: const Text('Taslak kaydet'))),
-            const SizedBox(width: 10),
-            Expanded(child: OutlinedButton.icon(onPressed: () {}, icon: const Icon(Icons.schedule_rounded), label: const Text('Zamanla'))),
-          ]),
-          const SizedBox(height: 12),
-          if (yukleniyor)
-            const Center(child:Column(children:[CircularProgressIndicator(color:mor),SizedBox(height:10),Text('İçerik yayınlanıyor...',style:TextStyle(color:Colors.black87,fontWeight:FontWeight.w700))]))
-          else
+      child:ColoredBox(
+        color:Colors.white,
+        child:SafeArea(child:ListView(
+          padding:const EdgeInsets.fromLTRB(22,22,22,110),
+          children:[
+            const Text('Yeni içerik üret',textAlign:TextAlign.center,style:TextStyle(color:Colors.black,fontSize:27,fontWeight:FontWeight.w900)),
+            const SizedBox(height:8),
+            const Text('Fotoğraf, video veya yazını seç ve paylaş.',textAlign:TextAlign.center,style:TextStyle(color:Colors.black54)),
+            const SizedBox(height:24),
             Container(
-              decoration:BoxDecoration(
-                gradient:const LinearGradient(colors:[Color(0xFF22D3EE),Color(0xFF7C3AED)]),
-                borderRadius:BorderRadius.circular(18),
-                boxShadow:const [BoxShadow(color:Color(0x33000000),blurRadius:12,offset:Offset(0,5))],
-              ),
-              child:FilledButton.icon(
-                style:FilledButton.styleFrom(
-                  minimumSize:const Size.fromHeight(58),
-                  backgroundColor:Colors.transparent,
-                  shadowColor:Colors.transparent,
-                  foregroundColor:Colors.white,
-                  shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(18)),
-                ),
-                onPressed:yayinla,
-                icon:const Icon(Icons.publish_rounded,color:Colors.white),
-                label:const Text('NgelX’te Yayınla',style:TextStyle(color:Colors.white,fontSize:17,fontWeight:FontWeight.w900)),
+              padding:const EdgeInsets.all(6),
+              decoration:BoxDecoration(color:const Color(0xFFF3F5F8),borderRadius:BorderRadius.circular(22)),
+              child:Row(children:[
+                _turButonu('video',Icons.videocam_rounded,'Video'),
+                _turButonu('photo',Icons.photo_rounded,'Fotoğraf'),
+                _turButonu('text',Icons.text_fields_rounded,'Yazı'),
+              ]),
+            ),
+            const SizedBox(height:14),
+            SizedBox(height:92,child:ListView(scrollDirection:Axis.horizontal,children:[
+              _hizliUret(Icons.camera_alt_rounded,'Kamera',()=>unawaited(kameraSecimi())),
+              _hizliUret(Icons.auto_stories_rounded,'Hikâye',()=>unawaited(hikayeSecimi())),
+              _hizliUret(Icons.movie_creation_rounded,'Reels',_reelsSec),
+              _hizliUret(Icons.wifi_tethering_rounded,'Canlı',()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const CanliHazirlikPage()))),
+            ])),
+            const SizedBox(height:20),
+            if(tur!='text')
+              Row(children:[
+                Expanded(child:OutlinedButton.icon(
+                  style:OutlinedButton.styleFrom(minimumSize:const Size.fromHeight(64),side:const BorderSide(color:mavi),shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(20))),
+                  onPressed:yukleniyor?null:medyaSec,
+                  icon:Icon(tur=='video'?Icons.video_library_rounded:Icons.photo_library_rounded,size:27),
+                  label:Text(medya==null?'Galeriden seç':'Başka dosya seç',maxLines:1),
+                )),
+                const SizedBox(width:10),
+                Expanded(child:OutlinedButton.icon(
+                  style:OutlinedButton.styleFrom(minimumSize:const Size.fromHeight(64),side:const BorderSide(color:mor),shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(20))),
+                  onPressed:yukleniyor?null:()=>kamerayiAc(video:tur=='video'),
+                  icon:Icon(tur=='video'?Icons.videocam_rounded:Icons.photo_camera_rounded,size:27),
+                  label:Text(tur=='video'?'Video çek':'Fotoğraf çek'),
+                )),
+              ]),
+            _medyaOnizleme(),
+            const SizedBox(height:18),
+            TextField(
+              controller:aciklama,
+              enabled:!yukleniyor,
+              maxLines:tur=='text'?8:3,
+              maxLength:tur=='text'?500:220,
+              decoration:InputDecoration(
+                labelText:tur=='text'?'Ne düşünüyorsun?':'Açıklama (isteğe bağlı)',
+                prefixIcon:const Icon(Icons.edit_note_rounded),
               ),
             ),
-          const SizedBox(height: 12),
-          const Text('Video ve fotoğraf en fazla 50 MB, müzik en fazla 15 MB.', textAlign: TextAlign.center, style: TextStyle(color: Colors.black45, fontSize: 12)),
-        ],
+            Row(children:[
+              Expanded(child:TextField(controller:konum,enabled:!yukleniyor,decoration:const InputDecoration(labelText:'Konum',prefixIcon:Icon(Icons.location_on_outlined)))),
+              const SizedBox(width:10),
+              Expanded(child:TextField(controller:etiketler,enabled:!yukleniyor,decoration:const InputDecoration(labelText:'#Etiket / kişi',prefixIcon:Icon(Icons.alternate_email)))),
+            ]),
+            const SizedBox(height:20),
+            _bolumBasligi('Yayın ayarları'),
+            DropdownButtonFormField<String>(
+              initialValue:gizlilik,
+              decoration:const InputDecoration(labelText:'Kimler görebilir?',prefixIcon:Icon(Icons.visibility_outlined)),
+              items:const ['Herkes','Arkadaşlar','Yakın arkadaşlar','Yalnızca ben'].map((e)=>DropdownMenuItem(value:e,child:Text(e))).toList(),
+              onChanged:yukleniyor?null:(v)=>setState(()=>gizlilik=v??'Herkes'),
+            ),
+            const SizedBox(height:8),
+            SwitchListTile(
+              contentPadding:EdgeInsets.zero,
+              activeThumbColor:mavi,
+              title:const Text('İndirmeye izin ver',style:TextStyle(fontWeight:FontWeight.w700)),
+              subtitle:const Text('Kapalıysa diğer kişiler medyayı cihazına indiremez.',style:TextStyle(color:Colors.black54)),
+              value:indirmeyeIzin,
+              onChanged:yukleniyor?null:(v)=>setState(()=>indirmeyeIzin=v),
+            ),
+            SwitchListTile(
+              contentPadding:EdgeInsets.zero,
+              title:const Text('Yorumlara izin ver'),
+              value:yorumlaraIzin,
+              onChanged:yukleniyor?null:(v)=>setState(()=>yorumlaraIzin=v),
+            ),
+            if(yorumlaraIzin)...[
+              DropdownButtonFormField<String>(
+                initialValue:yorumKitlesi,
+                decoration:const InputDecoration(labelText:'Kimler yorum yapabilir?',prefixIcon:Icon(Icons.mode_comment_outlined)),
+                items:const ['Herkes','Arkadaşlar','Takip ettiklerim','Kimse'].map((e)=>DropdownMenuItem(value:e,child:Text(e))).toList(),
+                onChanged:yukleniyor?null:(v)=>setState(()=>yorumKitlesi=v??'Herkes'),
+              ),
+              const SizedBox(height:8),
+            ],
+            SwitchListTile(
+              contentPadding:EdgeInsets.zero,
+              title:const Text('Yeniden paylaşıma izin ver'),
+              value:yenidenPaylasimaIzin,
+              onChanged:yukleniyor?null:(v)=>setState(()=>yenidenPaylasimaIzin=v),
+            ),
+            const SizedBox(height:12),
+            if(yukleniyor)...[
+              LinearProgressIndicator(
+                value:yuklemeIlerlemesi>0&&yuklemeIlerlemesi<1?yuklemeIlerlemesi:null,
+                minHeight:7,
+                borderRadius:BorderRadius.circular(12),
+                color:mor,
+                backgroundColor:const Color(0xFFE9E3F5),
+              ),
+              const SizedBox(height:10),
+              Text(
+                yuklemeDurumu.isEmpty?'İşlem devam ediyor...':yuklemeDurumu,
+                textAlign:TextAlign.center,
+                style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w800),
+              ),
+              if(yuklemeIlerlemesi>0&&yuklemeIlerlemesi<1)
+                Text('%${(yuklemeIlerlemesi*100).round()}',textAlign:TextAlign.center,style:const TextStyle(color:Colors.black54,fontWeight:FontWeight.w700)),
+            ]else
+              Container(
+                decoration:BoxDecoration(
+                  gradient:const LinearGradient(colors:[Color(0xFF22D3EE),Color(0xFF7C3AED)]),
+                  borderRadius:BorderRadius.circular(18),
+                  boxShadow:const [BoxShadow(color:Color(0x33000000),blurRadius:12,offset:Offset(0,5))],
+                ),
+                child:FilledButton.icon(
+                  style:FilledButton.styleFrom(
+                    minimumSize:const Size.fromHeight(58),
+                    backgroundColor:Colors.transparent,
+                    shadowColor:Colors.transparent,
+                    foregroundColor:Colors.white,
+                    shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(18)),
+                  ),
+                  onPressed:yayinla,
+                  icon:const Icon(Icons.publish_rounded,color:Colors.white),
+                  label:const Text('NgelX’te Yayınla',style:TextStyle(color:Colors.white,fontSize:17,fontWeight:FontWeight.w900)),
+                ),
+              ),
+            const SizedBox(height:12),
+            const Text('Fotoğraf en fazla 10 MB • Video en fazla 50 MB',textAlign:TextAlign.center,style:TextStyle(color:Colors.black45,fontSize:12)),
+          ],
+        )),
       ),
-    )));
+    );
   }
 
-  Widget _bolumBasligi(String yazi) => Padding(
-    padding: const EdgeInsets.only(bottom: 10),
-    child: Text(yazi, style: const TextStyle(color: Colors.black87, fontSize: 18, fontWeight: FontWeight.w900)),
+  Widget _bolumBasligi(String yazi)=>Padding(
+    padding:const EdgeInsets.only(bottom:10),
+    child:Text(yazi,style:const TextStyle(color:Colors.black87,fontSize:18,fontWeight:FontWeight.w900)),
   );
 
-  Widget _arac(IconData ikon, String yazi) => ActionChip(
-    avatar: Icon(ikon, size: 18, color: mavi),
-    label: Text(yazi),
-    onPressed: () => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$yazi aracı açıldı'))),
-  );
-
-  Widget _hizliUret(IconData ikon, String yazi, VoidCallback tiklama) => Padding(
-    padding: const EdgeInsets.only(right: 10),
-    child: InkWell(
-      borderRadius: BorderRadius.circular(18),
-      onTap: tiklama,
-      child: Container(
-        width: 82,
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        decoration: BoxDecoration(color: const Color(0xFFF3F5F8), borderRadius: BorderRadius.circular(18)),
-        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(ikon, color: mavi), const SizedBox(height: 6), Text(yazi, style: const TextStyle(color: Colors.black87, fontSize: 12, fontWeight: FontWeight.bold))]),
+  Widget _hizliUret(IconData ikon,String yazi,VoidCallback tiklama)=>Padding(
+    padding:const EdgeInsets.only(right:10),
+    child:InkWell(
+      borderRadius:BorderRadius.circular(18),
+      onTap:yukleniyor?null:tiklama,
+      child:Container(
+        width:82,
+        padding:const EdgeInsets.symmetric(vertical:12),
+        decoration:BoxDecoration(color:const Color(0xFFF3F5F8),borderRadius:BorderRadius.circular(18)),
+        child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[
+          Icon(ikon,color:mavi),
+          const SizedBox(height:6),
+          Text(yazi,style:const TextStyle(color:Colors.black87,fontSize:12,fontWeight:FontWeight.bold)),
+        ]),
       ),
     ),
   );
 
-  Widget _buyukSecenek(IconData ikon, String yazi, VoidCallback tiklama) => InkWell(
-    borderRadius: BorderRadius.circular(20),
-    onTap: tiklama,
-    child: Container(
-      padding: const EdgeInsets.symmetric(vertical: 24),
-      decoration: BoxDecoration(color: const Color(0xFFF3F5F8), borderRadius: BorderRadius.circular(20)),
-      child: Column(children: [Icon(ikon, color: mavi, size: 34), const SizedBox(height: 8), Text(yazi, style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold))]),
+  Widget _buyukSecenek(IconData ikon,String yazi,VoidCallback tiklama)=>InkWell(
+    borderRadius:BorderRadius.circular(20),
+    onTap:tiklama,
+    child:Container(
+      padding:const EdgeInsets.symmetric(vertical:24),
+      decoration:BoxDecoration(color:const Color(0xFFF3F5F8),borderRadius:BorderRadius.circular(20)),
+      child:Column(children:[
+        Icon(ikon,color:mavi,size:34),
+        const SizedBox(height:8),
+        Text(yazi,style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.bold)),
+      ]),
     ),
   );
 
-  Widget _turButonu(String deger, IconData ikon, String yazi) {
-    final secili = tur == deger;
-    return Expanded(child: GestureDetector(
-      onTap: () => setState(() { tur = deger; medya = null; muzik = null; }),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 220),
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        decoration: BoxDecoration(gradient: secili ? const LinearGradient(colors: [mavi, mor]) : null, color: secili ? null : const Color(0xFFF3F5F8), borderRadius: BorderRadius.circular(17)),
-        child: Column(children: [Icon(ikon, color: secili ? Colors.black : Colors.black54), const SizedBox(height: 5), Text(yazi, style: TextStyle(color: secili ? Colors.black : Colors.black54, fontWeight: FontWeight.bold))]),
+  Widget _turButonu(String deger,IconData ikon,String yazi){
+    final secili=tur==deger;
+    return Expanded(child:GestureDetector(
+      onTap:yukleniyor?null:()=>_turDegistir(deger),
+      child:AnimatedContainer(
+        duration:const Duration(milliseconds:220),
+        padding:const EdgeInsets.symmetric(vertical:14),
+        decoration:BoxDecoration(
+          gradient:secili?const LinearGradient(colors:[mavi,mor]):null,
+          color:secili?null:const Color(0xFFF3F5F8),
+          borderRadius:BorderRadius.circular(17),
+        ),
+        child:Column(children:[
+          Icon(ikon,color:secili?Colors.black:Colors.black54),
+          const SizedBox(height:5),
+          Text(yazi,style:TextStyle(color:secili?Colors.black:Colors.black54,fontWeight:FontWeight.bold)),
+        ]),
       ),
     ));
-  }
-}
-
-class EskiYuklePage extends StatefulWidget {
-  const EskiYuklePage({super.key});
-
-  @override
-  State<EskiYuklePage> createState() => _YuklePageState();
-}
-
-class _YuklePageState extends State<EskiYuklePage> {
-  bool yukleniyor = false;
-  String durum = '';
-
-  Future<void> videoSec() async {
-    final dosya = await ImagePicker().pickVideo(
-      source: ImageSource.gallery,
-    );
-
-    if (dosya == null || !mounted) return;
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
-    final boyut = await dosya.length();
-    if (boyut > 50 * 1024 * 1024) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Video 50 MB’den küçük olmalı.')),
-      );
-      return;
-    }
-
-    setState(() {
-      yukleniyor = true;
-      durum = 'Video yükleniyor...';
-    });
-    try {
-      final zaman = DateTime.now().millisecondsSinceEpoch;
-      final uzanti = dosya.name.contains('.')
-          ? dosya.name.split('.').last.toLowerCase()
-          : 'mp4';
-      final yol = 'videos/${user.uid}/$zaman.$uzanti';
-      final baytlar = await dosya.readAsBytes();
-      final url = await ngelxMedyaYukleBytes(
-        bytes: baytlar,
-        kind: 'videos',
-        ext: uzanti,
-        legacyPath: yol,
-      );
-      final profil = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .get();
-      final kullaniciAdi = (profil.data()?['username'] ?? 'ngelx').toString();
-      await FirebaseFirestore.instance.collection('videos').add({
-        'ownerId': user.uid,
-        'username': kullaniciAdi,
-        'videoUrl': url,
-        'storagePath': yol,
-        'description': 'NgelX ile paylaşıldı ✨',
-        'createdAt': FieldValue.serverTimestamp(),
-      });
-      if (!mounted) return;
-      setState(() => durum = 'Video yayınlandı! Akışta görebilirsin.');
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Video başarıyla yayınlandı.')),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => durum = 'Yükleme başarısız. Tekrar dene.');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Hata: $e')),
-      );
-    } finally {
-      if (mounted) setState(() => yukleniyor = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(28),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(
-                Icons.video_call_outlined,
-                size: 75,
-                color: mavi,
-              ),
-              const SizedBox(height: 20),
-              const Text(
-                'Yeni içerik üret',
-                style: TextStyle(
-                  fontSize: 25,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Galerinden 50 MB’den küçük bir video seç.',
-                style: TextStyle(color: Colors.white54),
-              ),
-              const SizedBox(height: 25),
-              if (yukleniyor)
-                const CircularProgressIndicator(color: mavi)
-              else
-                RenkliButon(
-                  yazi: 'Videoyu Seç ve Yayınla',
-                  tiklama: videoSec,
-                ),
-              if (durum.isNotEmpty) ...[
-                const SizedBox(height: 18),
-                Text(durum, textAlign: TextAlign.center),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
   }
 }
 
