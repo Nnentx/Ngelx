@@ -158,7 +158,7 @@ for token in (
     "final izin=(v['messagePermission']",
     "izin=='friends'&&arkadaslar.contains(d.id)",
     "izin=='following'&&hedefinTakipEttikleri.contains(me)",
-    "if(!izinli&&chat.data?.exists!=true)",
+    "final kabulEdildi=cv['requestAccepted_$me']==true",
 ):
     if token not in app:
         errors.append("Yeni sohbet mesaj gizliliği sözleşmesi eksik: " + token)
@@ -183,6 +183,14 @@ if private_file_block:
         errors.append("Özel sohbet dosyası hâlâ tamamını RAM'e alıyor.")
 if "kind: 'chats'" in app and ").timeout(const Duration(seconds:60));" not in app:
     errors.append("Özel sohbet fotoğrafı yükleme zaman aşımı güvenli aralıkta değil.")
+
+# Accepted private conversations remain reachable even if new-message privacy later becomes stricter.
+for token in (
+    "cv['requestAccepted_$me']==true||cv['requestAccepted_$uid']==true",
+    "final kabulEdildi=cv['requestAccepted_$me']==true",
+):
+    if token not in app:
+        errors.append("Kabul edilmiş sohbet erişimi gizlilikle uyumlu değil: " + token)
 
 # Main feed must show real content only and keep user filters/live behavior intact.
 for token in (
