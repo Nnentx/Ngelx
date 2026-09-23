@@ -4454,12 +4454,32 @@ class _YeniYuklePageState extends State<YuklePage> {
   @override
   void initState(){
     super.initState();
+    unawaited(_kayipMedyaKurtar());
     final uid=FirebaseAuth.instance.currentUser?.uid;
     if(uid!=null){
       FirebaseFirestore.instance.collection('users').doc(uid).get().then((d){
         if(mounted)setState(()=>indirmeyeIzin=d.data()?['defaultAllowDownload']!=false);
       }).catchError((_){ });
     }
+  }
+
+  Future<void> _kayipMedyaKurtar()async{
+    try{
+      final sonuc=await ImagePicker().retrieveLostData();
+      if(sonuc.isEmpty||!mounted)return;
+      final dosyalar=sonuc.files;
+      if(dosyalar==null||dosyalar.isEmpty)return;
+      final dosya=dosyalar.first;
+      final ad=dosya.name.toLowerCase();
+      final video=ad.endsWith('.mp4')||ad.endsWith('.mov')||ad.endsWith('.m4v')||ad.endsWith('.webm');
+      final secilenTur=video?'video':'photo';
+      if(!await _medyaBoyutuUygun(dosya,secilenTur))return;
+      if(mounted)setState((){
+        tur=secilenTur;
+        medya=dosya;
+      });
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Seçtiğin medya geri yüklendi.')));
+    }catch(_){}
   }
 
   @override
