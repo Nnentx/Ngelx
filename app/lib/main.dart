@@ -5462,8 +5462,11 @@ class _GrupOlusturPageState extends State<GrupOlusturPage>{
         'hiddenFor':<String>[],
         'maxMembers':60,
         'groupDescription':'',
-        'onlyAdminsCanEdit':true,
         'onlyAdminsCanPost':false,
+        'onlyAdminsCanAddMembers':false,
+        'onlyAdminsCanEditGroup':true,
+        'onlyAdminsCanPin':true,
+        'onlyAdminsCanMentionAll':false,
         'newMembersSeeHistory':true,
         'joinApproval':false,
         'mutedFor':<String>[],
@@ -5705,7 +5708,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
   late Stream<QuerySnapshot<Map<String,dynamic>>> _mesajAkisi;
   late final Stream<DocumentSnapshot<Map<String,dynamic>>> _grupAkisi;
   bool aramaBaslatiliyor=false,mesajGonderiliyor=false,sesKaydediliyor=false,_okunduYaziliyor=false,_ilkMesajKaydirma=true,_mesajBeklemeBitti=false;
-  int sesKaydiSaniye=0;
+  int sesKaydiSaniye=0,_acilisOkunmamis=0;
   DateTime? _sonOkunduKontrolu,sesKaydiBaslangic;
   String? yanitlananMesajId,yanitlananMetin;
   String? get uid=>FirebaseAuth.instance.currentUser?.uid;
@@ -5718,7 +5721,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
     // En yeni 100 mesaj ilk ekran için yeterli; eski içerikler medya ve arama
     // sayfalarından ayrıca alınır.
     _mesajAkisiniYenile();
-    unawaited(_okunduIsaretle());
+    unawaited(_acilisOkunmamisYukle());
   }
   void _mesajAkisiniYenile(){
     _mesajBeklemeZamanlayici?.cancel();
@@ -5735,6 +5738,17 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
     unawaited(_grupSesKaydedici.dispose());
     mesaj.dispose();liste.dispose();super.dispose();
   }
+  Future<void> _acilisOkunmamisYukle()async{
+    final ben=uid;
+    if(ben==null)return;
+    try{
+      final d=await chatRef.get().timeout(const Duration(seconds:5));
+      final sayi=(d.data()?['unread_$ben'] as num?)?.toInt()??0;
+      if(mounted&&sayi>0)setState(()=>_acilisOkunmamis=sayi);
+    }catch(_){}
+    await _okunduIsaretle();
+  }
+
   Future<void> _okunduIsaretle()async{
     final ben=uid;
     if(ben==null||_okunduYaziliyor)return;
@@ -6116,10 +6130,13 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
     final ara=parca.substring(1).toLowerCase();
     mentionZamanlayici=Timer(const Duration(milliseconds:260),()async{
       try{
+        final grup=await chatRef.get();
+        final grupData=grup.data()??<String,dynamic>{};
+        final yonetici=List<String>.from(grupData['admins']??const[]).contains(uid);
+        final herkesYetkisi=yonetici||grupData['onlyAdminsCanMentionAll']!=true;
         var uyeler=_mentionUyeleri;
         if(uyeler==null){
-          final grup=await chatRef.get();
-          final ids=List<String>.from(grup.data()?['members']??const[]).take(60).toList();
+          final ids=List<String>.from(grupData['members']??const[]).take(60).toList();
           final belgeler=await Future.wait(ids.map(_uyeGetir));
           uyeler=<Map<String,String>>[];
           for(int i=0;i<belgeler.length;i++){
@@ -6132,7 +6149,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
         }
         if(!mounted)return;
         final sonuc=<Map<String,String>>[];
-        if('herkes'.contains(ara))sonuc.add({'uid':'all','username':'herkes','name':'Herkes'});
+        if(herkesYetkisi&&'herkes'.contains(ara))sonuc.add({'uid':'all','username':'herkes','name':'Herkes'});
         for(final u in uyeler){
           if(sonuc.length>=6)break;
           final kullanici=(u['username']??'').toLowerCase(),ad=(u['name']??'').toLowerCase();
@@ -6148,7 +6165,13 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
     mesaj.selection=TextSelection.collapsed(offset:mesaj.text.length);
     if(hedefUid=='all'){
       final grup=await chatRef.get();
-      etiketlenenUidler.addAll(List<String>.from(grup.data()?['members']??const[]));
+      final veri=grup.data()??<String,dynamic>{};
+      final yonetici=List<String>.from(veri['admins']??const[]).contains(uid);
+      if(veri['onlyAdminsCanMentionAll']==true&&!yonetici){
+        if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('@herkes yalnızca yöneticiler tarafından kullanılabilir.')));
+        return;
+      }
+      etiketlenenUidler.addAll(List<String>.from(veri['members']??const[]));
     }else if(hedefUid!=null&&hedefUid.isNotEmpty){
       etiketlenenUidler.add(hedefUid);
     }
@@ -6167,7 +6190,9 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
   Future<void> mesajMenusu(QueryDocumentSnapshot<Map<String,dynamic>> d)async{
     final v=d.data(),ben=v['senderId']==uid,metin=(v['text']??'').toString();
     final grup=await chatRef.get();
-    final yonetici=List<String>.from(grup.data()?['admins']??const[]).contains(uid);
+    final grupData=grup.data()??<String,dynamic>{};
+    final yonetici=List<String>.from(grupData['admins']??const[]).contains(uid);
+    final sabitleyebilir=yonetici||grupData['onlyAdminsCanPin']!=true;
     final sec=await showModalBottomSheet<String>(
       context:context,
       backgroundColor:const Color(0xFFFBF9FF),
@@ -6210,7 +6235,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
                   const Divider(height:1,indent:62,color:Color(0xFFF0EBF5)),
                   _mesajMenuSatir(c,Icons.edit_rounded,'Düzenle','Mesaj metnini değiştir','edit'),
                 ],
-                if(yonetici)...[
+                if(sabitleyebilir)...[
                   const Divider(height:1,indent:62,color:Color(0xFFF0EBF5)),
                   _mesajMenuSatir(c,v['pinned']==true?Icons.push_pin:Icons.push_pin_outlined,v['pinned']==true?'Sabitlemeyi kaldır':'Mesajı sabitle','Grup için öne çıkar','pin'),
                 ],
@@ -6984,6 +7009,18 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
                               child:Text(_mesajGunEtiketi(gun),style:const TextStyle(color:ngelxPremiumMuted,fontSize:10,fontWeight:FontWeight.w800)),
                             ),
                           ),
+                          if(_acilisOkunmamis>0&&i==(docs.length-_acilisOkunmamis).clamp(0,docs.length-1))
+                            Padding(
+                              padding:const EdgeInsets.symmetric(vertical:10),
+                              child:Row(children:[
+                                const Expanded(child:Divider(color:Color(0xFFB9E7C8))),
+                                Padding(
+                                  padding:const EdgeInsets.symmetric(horizontal:10),
+                                  child:Text(_acilisOkunmamis.toString()+' yeni mesaj',style:const TextStyle(color:ngelxGroupGreen,fontSize:11,fontWeight:FontWeight.w900)),
+                                ),
+                                const Expanded(child:Divider(color:Color(0xFFB9E7C8))),
+                              ]),
+                            ),
                           mesajKarti(d,onceki:onceki,grupVerisi:tv,sonMesaj:i==docs.length-1),
                         ]),
                       );
@@ -8381,6 +8418,13 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
   Future<void> uyeEkle(List<String> mevcut)async{
     final me=ben;
     if(me==null)return;
+    final grup=await ref.get();
+    final gv=grup.data()??<String,dynamic>{};
+    final yonetici=List<String>.from(gv['admins']??const[]).contains(me);
+    if(gv['onlyAdminsCanAddMembers']==true&&!yonetici){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bu grupta yalnızca yöneticiler üye ekleyebilir.')));
+      return;
+    }
     if(mevcut.length>=60){
       if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bu grup 60 üyelik üst sınıra ulaştı.')));
       return;
@@ -8573,6 +8617,7 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
           final uyeler=List<String>.from(v['members']??const[]);
           final yoneticiler=List<String>.from(v['admins']??const[]);
           final yonetici=yoneticiler.contains(ben);
+          final duzenleyebilir=yonetici||v['onlyAdminsCanEditGroup']!=true;
           final foto=(v['groupPhotoUrl']??'').toString();
           final ad=(v['groupName']??'Grup').toString();
           return ListView(
@@ -8582,7 +8627,7 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
                 padding:const EdgeInsets.fromLTRB(14,18,14,16),
                 child:Column(children:[
                   GestureDetector(
-                    onTap:yonetici?fotografDuzenle:null,
+                    onTap:duzenleyebilir?fotografDuzenle:null,
                     child:Stack(clipBehavior:Clip.none,children:[
                       Container(
                         width:116,height:116,
@@ -8594,13 +8639,13 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
                         ),
                         child:ClipOval(child:foto.isEmpty?const Icon(Icons.groups_rounded,color:ngelxGroupGreen,size:54):CachedNetworkImage(imageUrl:foto,fit:BoxFit.cover)),
                       ),
-                      if(yonetici)const Positioned(right:-3,bottom:2,child:CircleAvatar(radius:17,backgroundColor:ngelxGroupGreen,child:Icon(Icons.camera_alt_rounded,color:Colors.white,size:17))),
+                      if(duzenleyebilir)const Positioned(right:-3,bottom:2,child:CircleAvatar(radius:17,backgroundColor:ngelxGroupGreen,child:Icon(Icons.camera_alt_rounded,color:Colors.white,size:17))),
                     ]),
                   ),
                   const SizedBox(height:12),
                   Row(mainAxisAlignment:MainAxisAlignment.center,children:[
                     Flexible(child:Text(ad,textAlign:TextAlign.center,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:ngelxPremiumInk,fontSize:24,fontWeight:FontWeight.w900,letterSpacing:-.3))),
-                    if(yonetici)...[
+                    if(duzenleyebilir)...[
                       const SizedBox(width:4),
                       InkWell(
                         onTap:()=>adiDuzenle(ad),
@@ -8719,7 +8764,7 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
               NgelXPremiumCard(
                 padding:const EdgeInsets.symmetric(horizontal:8,vertical:7),
                 child:Column(children:[
-                  if(yonetici)...[
+                  if(duzenleyebilir)...[
                     _grupSatir(Icons.photo_camera_rounded,'Grup fotoğrafını değiştir','Kamera veya galeriden yeni görsel seç',fotografDuzenle),
                     _grupAyirici(),
                     _grupSatir(Icons.notes_rounded,'Grup açıklamasını düzenle','Grubun amacını ve bilgisini güncelle',()=>aciklamaDuzenle((v['groupDescription']??'').toString())),
@@ -8755,6 +8800,10 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
                     const Padding(padding:EdgeInsets.symmetric(horizontal:6),child:Text('Grup ayarları',style:TextStyle(color:ngelxGroupGreen,fontSize:17,fontWeight:FontWeight.w900))),
                     const SizedBox(height:6),
                     _grupSwitch(Icons.chat_bubble_outline_rounded,'Sadece yöneticiler yazsın','Yalnızca yöneticiler mesaj gönderebilir',v['onlyAdminsCanPost']==true,(x)=>ayarDegistir('onlyAdminsCanPost',x)),
+                    _grupSwitch(Icons.person_add_alt_1_rounded,'Sadece yöneticiler üye eklesin','Üye ekleme yetkisini yöneticilerle sınırla',v['onlyAdminsCanAddMembers']==true,(x)=>ayarDegistir('onlyAdminsCanAddMembers',x)),
+                    _grupSwitch(Icons.edit_outlined,'Sadece yöneticiler grup bilgisini düzenlesin','Grup adı, fotoğrafı ve açıklamasını yöneticiler değiştirsin',v['onlyAdminsCanEditGroup']!=false,(x)=>ayarDegistir('onlyAdminsCanEditGroup',x)),
+                    _grupSwitch(Icons.push_pin_outlined,'Sadece yöneticiler mesaj sabitlesin','Mesaj sabitleme yetkisini yöneticilerle sınırla',v['onlyAdminsCanPin']!=false,(x)=>ayarDegistir('onlyAdminsCanPin',x)),
+                    _grupSwitch(Icons.alternate_email_rounded,'Sadece yöneticiler @herkes kullansın','@herkes bildirimi yöneticilerle sınırlı olsun',v['onlyAdminsCanMentionAll']==true,(x)=>ayarDegistir('onlyAdminsCanMentionAll',x)),
                     _grupSwitch(Icons.history_rounded,'Yeni üyeler geçmişi görsün','Yeni üyeler eski mesajları görebilir',v['newMembersSeeHistory']!=false,(x)=>ayarDegistir('newMembersSeeHistory',x)),
                     _grupSwitch(Icons.verified_user_outlined,'Katılma isteğini onayla','Yeni katılım istekleri yönetici onayından geçer',v['joinApproval']==true,(x)=>ayarDegistir('joinApproval',x)),
                   ]),
