@@ -60,6 +60,37 @@ const ngelxGroupGreenSoft = Color(0xFFEAF8EF);
 const ngelxGroupGreenHeader = Color(0xFFB9F2C8);
 const ngelxGroupBorder = Color(0xFFD9EEE0);
 
+class NgelXBirthDateFormatter extends TextInputFormatter {
+  const NgelXBirthDateFormatter();
+
+  @override
+  TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
+    final siliniyor = newValue.text.length < oldValue.text.length;
+    var rakamlar = newValue.text.replaceAll(RegExp(r'\D'), '');
+    if (rakamlar.length > 8) rakamlar = rakamlar.substring(0, 8);
+
+    String metin;
+    if (rakamlar.length <= 2) {
+      metin = rakamlar;
+    } else if (rakamlar.length <= 4) {
+      metin = '${rakamlar.substring(0, 2)}/${rakamlar.substring(2)}';
+    } else {
+      metin = '${rakamlar.substring(0, 2)}/${rakamlar.substring(2, 4)}/${rakamlar.substring(4)}';
+    }
+
+    if (!siliniyor && rakamlar.length == 2) {
+      metin = '$rakamlar/';
+    } else if (!siliniyor && rakamlar.length == 4) {
+      metin = '${rakamlar.substring(0, 2)}/${rakamlar.substring(2)}/';
+    }
+
+    return TextEditingValue(
+      text: metin,
+      selection: TextSelection.collapsed(offset: metin.length),
+    );
+  }
+}
+
 class NgelXPremiumCard extends StatelessWidget {
   final Widget child;
   final EdgeInsetsGeometry padding;
@@ -1198,7 +1229,8 @@ class _KayitPageState extends State<KayitPage> {
             const SizedBox(height: 14),
             TextField(
               controller: dogumTarihi,
-              keyboardType: TextInputType.datetime,
+              keyboardType: TextInputType.number,
+              inputFormatters: const [NgelXBirthDateFormatter()],
               maxLength: 10,
               decoration: InputDecoration(prefixIcon: const Icon(Icons.cake_outlined), hintText: t('birthDate'), counterText: ''),
             ),
