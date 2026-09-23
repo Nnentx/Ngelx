@@ -6866,6 +6866,74 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
     return RichText(text:TextSpan(style:TextStyle(color:benim?Colors.white:const Color(0xFF211B2C),fontSize:14.6,height:1.24,fontWeight:FontWeight.w500),children:spans));
   }
 
+  Future<void> grupTepkiDetayi(Map<String,dynamic> tepkiler)async{
+    if(tepkiler.isEmpty)return;
+    final entries=tepkiler.entries.toList();
+    await showModalBottomSheet<void>(
+      context:context,
+      isScrollControlled:true,
+      backgroundColor:Colors.white,
+      showDragHandle:true,
+      shape:const RoundedRectangleBorder(borderRadius:BorderRadius.vertical(top:Radius.circular(28))),
+      builder:(sheet)=>SafeArea(
+        child:SizedBox(
+          height:(MediaQuery.sizeOf(sheet).height*.62).clamp(280.0,560.0),
+          child:Column(children:[
+            Padding(
+              padding:const EdgeInsets.fromLTRB(18,2,12,10),
+              child:Row(children:[
+                const Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+                  Text('Tepkiler',style:TextStyle(color:ngelxPremiumInk,fontSize:20,fontWeight:FontWeight.w900)),
+                  SizedBox(height:2),
+                  Text('Bu mesaja tepki veren kişiler',style:TextStyle(color:ngelxPremiumMuted,fontSize:11.5)),
+                ])),
+                Container(
+                  padding:const EdgeInsets.symmetric(horizontal:10,vertical:6),
+                  decoration:BoxDecoration(color:ngelxGroupGreenSoft,borderRadius:BorderRadius.circular(14)),
+                  child:Text(entries.length.toString(),style:const TextStyle(color:ngelxGroupGreen,fontWeight:FontWeight.w900)),
+                ),
+              ]),
+            ),
+            const Divider(height:1),
+            Expanded(child:ListView.builder(
+              padding:const EdgeInsets.fromLTRB(8,6,8,16),
+              itemCount:entries.length,
+              itemBuilder:(_,i){
+                final e=entries[i],id=e.key,emoji=e.value.toString();
+                return FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(
+                  future:_uyeGetir(id),
+                  builder:(_,snap){
+                    final p=snap.data?.data()??<String,dynamic>{};
+                    final ad=(p['displayName']??p['username']??(id==uid?'Sen':'Grup üyesi')).toString();
+                    final kullanici=(p['username']??'').toString().trim();
+                    final foto=(p['photoUrl']??'').toString();
+                    return ListTile(
+                      dense:true,
+                      contentPadding:const EdgeInsets.symmetric(horizontal:10,vertical:2),
+                      leading:CircleAvatar(
+                        radius:21,
+                        backgroundColor:ngelxGroupGreenSoft,
+                        backgroundImage:foto.isEmpty?null:CachedNetworkImageProvider(foto),
+                        child:foto.isEmpty?const Icon(Icons.person_rounded,color:ngelxGroupGreen):null,
+                      ),
+                      title:Text(id==uid?'Sen':ad,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w800)),
+                      subtitle:kullanici.isEmpty?null:Text('@'+kullanici,style:const TextStyle(color:ngelxPremiumMuted,fontSize:11)),
+                      trailing:Container(
+                        width:40,height:40,alignment:Alignment.center,
+                        decoration:BoxDecoration(color:const Color(0xFFF5F6F7),borderRadius:BorderRadius.circular(20)),
+                        child:Text(emoji,style:const TextStyle(fontSize:22)),
+                      ),
+                    );
+                  },
+                );
+              },
+            )),
+          ]),
+        ),
+      ),
+    );
+  }
+
   Widget mesajKarti(QueryDocumentSnapshot<Map<String,dynamic>> d,{QueryDocumentSnapshot<Map<String,dynamic>>? onceki,Map<String,dynamic>? grupVerisi,bool sonMesaj=false}){
     final v=d.data(),gonderen=(v['senderId']??v['fromUid']??v['uid']??'').toString(),ben=gonderen==uid;
     final metin=(v['text']??v['message']??v['content']??'').toString(),tur=(v['type']??'text').toString(),media=(v['mediaUrl']??'').toString(),audio=(v['audioUrl']??'').toString();
@@ -7141,25 +7209,29 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
           ),
           if(tepkiSayilari.isNotEmpty)Transform.translate(
             offset:const Offset(0,-3),
-            child:Container(
-              margin:EdgeInsets.only(left:ben?0:8,right:ben?8:0),
-              padding:const EdgeInsets.symmetric(horizontal:7,vertical:3),
-              decoration:BoxDecoration(
-                color:Colors.white,
-                borderRadius:BorderRadius.circular(14),
-                border:Border.all(color:const Color(0xFFE7E1EB)),
-                boxShadow:const [BoxShadow(color:Color(0x12000000),blurRadius:8,offset:Offset(0,3))],
+            child:InkWell(
+              onTap:()=>grupTepkiDetayi(tepkiler),
+              borderRadius:BorderRadius.circular(14),
+              child:Container(
+                margin:EdgeInsets.only(left:ben?0:8,right:ben?8:0),
+                padding:const EdgeInsets.symmetric(horizontal:7,vertical:3),
+                decoration:BoxDecoration(
+                  color:Colors.white,
+                  borderRadius:BorderRadius.circular(14),
+                  border:Border.all(color:const Color(0xFFE7E1EB)),
+                  boxShadow:const [BoxShadow(color:Color(0x12000000),blurRadius:8,offset:Offset(0,3))],
+                ),
+                child:Row(mainAxisSize:MainAxisSize.min,children:tepkiSayilari.entries.map((e)=>Padding(
+                  padding:const EdgeInsets.symmetric(horizontal:2),
+                  child:Row(mainAxisSize:MainAxisSize.min,children:[
+                    Text(e.key,style:const TextStyle(fontSize:14)),
+                    if(e.value>1)...[
+                      const SizedBox(width:2),
+                      Text(e.value.toString(),style:const TextStyle(color:ngelxPremiumMuted,fontSize:9.5,fontWeight:FontWeight.w800)),
+                    ],
+                  ]),
+                )).toList()),
               ),
-              child:Row(mainAxisSize:MainAxisSize.min,children:tepkiSayilari.entries.map((e)=>Padding(
-                padding:const EdgeInsets.symmetric(horizontal:2),
-                child:Row(mainAxisSize:MainAxisSize.min,children:[
-                  Text(e.key,style:const TextStyle(fontSize:14)),
-                  if(e.value>1)...[
-                    const SizedBox(width:2),
-                    Text(e.value.toString(),style:const TextStyle(color:ngelxPremiumMuted,fontSize:9.5,fontWeight:FontWeight.w800)),
-                  ],
-                ]),
-              )).toList()),
             ),
           ),
           if(ben&&sonMesaj&&grupVerisi!=null)Builder(builder:(_){
