@@ -62,6 +62,16 @@ required_group_tokens = [
     "GrupMedyaPage",
     "GrupKatilmaIstekleriPage",
     "onlyAdminsCanPost",
+    "onlyAdminsCanAddMembers",
+    "onlyAdminsCanEditGroup",
+    "onlyAdminsCanPin",
+    "onlyAdminsCanMentionAll",
+    "deletedForEveryone",
+    "NgelXMedyaGaleriPage",
+    "_grupSesliMesajiYukle",
+    "_acilisOkunmamis",
+    "Cevapsız görüntülü grup araması",
+    "Tekrar Ara",
     "newMembersSeeHistory",
     "joinApproval",
     "lastReadAt_",
@@ -101,6 +111,11 @@ for token in (
     "match /group_invites/{code}",
     "validSelfJoin(chatId)",
     "validInvite(code, chatId)",
+    "validMemberAddition()",
+    "validMemberGroupEdit()",
+    "onlyAdminsCanAddMembers",
+    "onlyAdminsCanEditGroup",
+    "onlyAdminsCanPin",
 ):
     if token not in rules:
         errors.append("Firestore grup davet kuralı eksik: " + token)
