@@ -6748,7 +6748,13 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
       final baslik=cevapsiz
         ? (goruntulu?'Cevapsız görüntülü grup araması':'Cevapsız sesli grup araması')
         : (goruntulu?'Görüntülü Grup Araması':'Sesli grup araması');
-      final alt=aktif?'Katılmak için dokun':cevapsiz?'Geri aramak için dokun':'Arama sona erdi';
+      final sure=(v['durationSeconds'] as num?)?.toInt()??0;
+      final sureYazi=sure<=0?'':((sure~/60).toString().padLeft(2,'0')+':'+(sure%60).toString().padLeft(2,'0'));
+      final alt=aktif
+        ?'Katılmak için dokun'
+        :cevapsiz
+          ?'Geri aramak için dokun'
+          :(sureYazi.isEmpty?'Arama sona erdi':'Arama sona erdi • '+sureYazi);
       return Align(
         alignment:Alignment.centerRight,
         child:Container(
@@ -7861,7 +7867,10 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
       await lk.AudioManager.instance.setSpeakerOutputPreferred(true,force:widget.goruntulu);
       hoparlor=true;
       final oncekiArama=await widget.aramaRef.get();
-      final oncekiBaglanti=oncekiArama.data()?['callConnectedAt'];
+      final aramaVerisi=oncekiArama.data()??<String,dynamic>{};
+      final kayitliOda=(aramaVerisi['callRoomName']??'').toString();
+      final hamBaglanti=(kayitliOda.isEmpty||kayitliOda==widget.roomName)?aramaVerisi['callConnectedAt']:null;
+      final oncekiBaglanti=hamBaglanti;
       final baslangic=oncekiBaglanti is Timestamp?oncekiBaglanti.toDate().toLocal():DateTime.now();
       _aramaSureBaslat(baslangic);
       final durumGuncelleme=<String,dynamic>{
@@ -7944,6 +7953,10 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
       final data=d.data()??<String,dynamic>{};
       final me=FirebaseAuth.instance.currentUser?.uid;
       final grup=widget.roomName.startsWith('group_');
+      final baslangicHam=data['callConnectedAt'];
+      final sureSaniye=baslangicHam is Timestamp
+        ?DateTime.now().difference(baslangicHam.toDate()).inSeconds.clamp(0,24*60*60)
+        :0;
       if(grup&&me!=null){
         final participants=List<String>.from(data['callParticipants']??const[]);
         final baslatan=(data['callStartedBy']??'').toString();
@@ -7962,6 +7975,7 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
             await widget.aramaRef.collection('messages').doc(mesajId).set({
               'callStatus':finalDurum,
               'callEndedAt':FieldValue.serverTimestamp(),
+              'durationSeconds':sureSaniye,
             },SetOptions(merge:true));
           }
           await widget.aramaRef.collection('messages').doc('call_end_'+widget.roomName).set({
@@ -7992,6 +8006,7 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
         await widget.aramaRef.collection('messages').doc(mesajId).set({
           'callStatus':'ended',
           'callEndedAt':FieldValue.serverTimestamp(),
+          'durationSeconds':sureSaniye,
         },SetOptions(merge:true));
       }
     }catch(_){}
