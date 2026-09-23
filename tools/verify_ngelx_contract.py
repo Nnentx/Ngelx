@@ -161,6 +161,19 @@ for token in (
     if token not in group_quality:
         errors.append("Grup kalite yardımcısı eksik: " + token)
 
+# Private-chat voice recording must reset cleanly and use the polished recorder composer.
+for token in (
+    "sesKaydiniIptal",
+    "_ozelSesKaydiSureYazisi",
+    "_ozelSesKaydiSayaciniBaslat",
+    "_ozelSesKaydiDurumunuTemizle",
+    "_ozelSesliMesajiYukle",
+    "Ses kaydı iptal edildi.",
+    "tooltip:'Kaydı gönder'",
+):
+    if token not in app:
+        errors.append("Özel sohbet ses kaydı sözleşmesi eksik: " + token)
+
 # Polls are intentionally removed from NgelX group chat.
 if "'type':'poll'" in app or '"type":"poll"' in app:
     errors.append("Anket özelliği kaldırıldığı halde uygulamada poll oluşturma kodu bulundu.")
