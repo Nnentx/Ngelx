@@ -75,6 +75,33 @@ for forbidden in (
     if forbidden in app:
         errors.append("Üret ekranında eski/sahte kontrol kaldı: " + forbidden)
 
+# Main feed must show real content only and keep user filters/live behavior intact.
+for token in (
+    "class _VideoAkisiState",
+    "_profilAboneligi",
+    "'hiddenContent'",
+    "'notInterestedIds'",
+    "_goruntulemeKaydet",
+    "FieldValue.increment(1)",
+    ".orderBy('createdAt',descending:true)",
+    ".limit(50)",
+    "aciklama:(item['description']??'').toString()",
+    "widget.aciklama.trim()",
+    "paylasanProfiliAc",
+):
+    if token not in app:
+        errors.append("Akış sözleşmesi eksik: " + token)
+
+for forbidden in (
+    "ornekVideolar",
+    "flutter.github.io/assets-for-api-docs/assets/videos/bee.mp4",
+    "media.w3.org/2010/05/sintel/trailer.mp4",
+    "Anı yakala, kendi hikâyeni paylaş ✨",
+    "class CanliEtkilesimOzet",
+):
+    if forbidden in app:
+        errors.append("Akışta eski/sahte/gereksiz kod kaldı: " + forbidden)
+
 # Contract tokens for the group experience. These guard accidental regressions.
 required_group_tokens = [
     "class _GrupSohbetPageState",
