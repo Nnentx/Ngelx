@@ -1561,134 +1561,211 @@ class VideoAkisi extends StatefulWidget {
 }
 
 class _VideoAkisiState extends State<VideoAkisi> {
-  final PageController akisKontrol = PageController();
-  int aktif = 0;
-  bool takipSekmesi = false;
-  Set<String> takipEdilenler = {};
-  Set<String> arkadaslar = {};
-  Set<String> engellenenler = {};
-  Set<String> gizlenenIcerikler = {};
+  final PageController akisKontrol=PageController();
+  StreamSubscription<DocumentSnapshot<Map<String,dynamic>>>? _profilAboneligi;
+  int aktif=0;
+  bool takipSekmesi=false;
+  bool profilHazir=false;
+  Set<String> takipEdilenler={};
+  Set<String> arkadaslar={};
+  Set<String> engellenenler={};
+  Set<String> gizlenenIcerikler={};
+  final Set<String> _buOturumdaGorulenler={};
 
   @override
-  void initState() {
+  void initState(){
     super.initState();
-    takipListesiniGetir();
+    _profilTakibiniBaslat();
   }
 
   @override
-  void dispose() {
+  void dispose(){
+    _profilAboneligi?.cancel();
     akisKontrol.dispose();
     super.dispose();
   }
 
-  Future<void> takipListesiniGetir() async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null) return;
-    final d = await FirebaseFirestore.instance.collection('users').doc(uid).get();
-    if (!mounted) return;
-    setState(() {
-      takipEdilenler = Set<String>.from(List<dynamic>.from(d.data()?['following'] ?? []));
-      arkadaslar = Set<String>.from(List<dynamic>.from(d.data()?['friends'] ?? []));
-      engellenenler = Set<String>.from(List<dynamic>.from(d.data()?['blocked'] ?? []));
+  void _profilTakibiniBaslat(){
+    final uid=FirebaseAuth.instance.currentUser?.uid;
+    if(uid==null){
+      profilHazir=true;
+      return;
+    }
+    _profilAboneligi=FirebaseFirestore.instance.collection('users').doc(uid).snapshots().listen((d){
+      if(!mounted)return;
+      final v=d.data()??<String,dynamic>{};
+      final gizli=<String>{
+        ...List<String>.from(v['hiddenContent']??const[]),
+        ...List<String>.from(v['notInterestedIds']??const[]),
+      };
+      setState((){
+        takipEdilenler=Set<String>.from(List<dynamic>.from(v['following']??const[]));
+        arkadaslar=Set<String>.from(List<dynamic>.from(v['friends']??const[]));
+        engellenenler=Set<String>.from(List<dynamic>.from(v['blocked']??const[]));
+        gizlenenIcerikler=gizli;
+        profilHazir=true;
+      });
+    },onError:(_){
+      if(mounted)setState(()=>profilHazir=true);
     });
   }
 
-  static const ornekVideolar = [
-    {
-      'id': 'ornek_1',
-      'videoUrl': 'https://flutter.github.io/assets-for-api-docs/assets/videos/bee.mp4',
-      'username': 'ngelx_1',
-      'ownerId': '',
-      'type': 'video',
-    },
-    {
-      'id': 'ornek_2',
-      'videoUrl': 'https://flutter.github.io/assets-for-api-docs/assets/videos/butterfly.mp4',
-      'username': 'ngelx_2',
-      'ownerId': '',
-      'type': 'video',
-    },
-    {
-      'id': 'ornek_3',
-      'videoUrl': 'https://media.w3.org/2010/05/sintel/trailer.mp4',
-      'username': 'ngelx_3',
-      'ownerId': '',
-      'type': 'video',
-    },
-  ];
+  Future<void> _goruntulemeKaydet(Map<String,dynamic> item)async{
+    final id=(item['id']??'').toString();
+    final owner=(item['ownerId']??'').toString();
+    final me=FirebaseAuth.instance.currentUser?.uid;
+    if(id.isEmpty||me==null||owner==me||_buOturumdaGorulenler.contains(id))return;
+    _buOturumdaGorulenler.add(id);
+    try{
+      await FirebaseFirestore.instance.collection('videos').doc(id).set({
+        'viewCount':FieldValue.increment(1),
+      },SetOptions(merge:true));
+    }catch(_){
+      _buOturumdaGorulenler.remove(id);
+    }
+  }
+
+  void _sekmeDegistir(bool takip){
+    if(takipSekmesi==takip&&aktif==0)return;
+    setState((){
+      takipSekmesi=takip;
+      aktif=0;
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_){
+      if(akisKontrol.hasClients)akisKontrol.jumpToPage(0);
+    });
+  }
+
+  bool _icerikGecerli(Map<String,dynamic> v){
+    final tur=(v['type']??'video').toString();
+    if(tur=='story')return false;
+    if(tur=='video')return (v['videoUrl']??v['mediaUrl']??'').toString().trim().isNotEmpty;
+    if(tur=='photo')return (v['mediaUrl']??'').toString().trim().isNotEmpty;
+    if(tur=='text')return (v['description']??'').toString().trim().isNotEmpty;
+    return false;
+  }
 
   @override
-  Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-          stream: FirebaseFirestore.instance
-              .collection('videos')
-              .orderBy('createdAt', descending: true)
-              .limit(20)
-              .snapshots(),
-          builder: (context, snapshot) {
-            final yuklenenler = (snapshot.data?.docs ?? []).map<Map<String,dynamic>>((belge) {
-              final veri = belge.data();
-              return {
-                'id': belge.id,
-                'videoUrl': (veri['videoUrl'] ?? '').toString(),
-                'username': (veri['username'] ?? 'ngelx').toString(),
-                'ownerId': (veri['ownerId'] ?? '').toString(),
-                'type': (veri['type'] ?? 'video').toString(),
-                'mediaUrl': (veri['mediaUrl'] ?? veri['videoUrl'] ?? '').toString(),
-                'audioUrl': (veri['audioUrl'] ?? '').toString(),
-                'description': (veri['description'] ?? '').toString(),
-                'allowDownload': (veri['allowDownload'] ?? true).toString(),
-                'privacy':(veri['privacy']??'Herkes').toString(),
-                'visibleTo':List<String>.from(veri['visibleTo']??const[]),
-                'hiddenFor':List<String>.from(veri['hiddenFor']??const[]),
-              };
-            }).where((v){
-              final me=FirebaseAuth.instance.currentUser?.uid,owner=v['ownerId']?.toString()??'',privacy=v['privacy']?.toString()??'Herkes';
-              if(v['type']=='story'||engellenenler.contains(owner)||gizlenenIcerikler.contains(v['id']))return false;
-              if(me!=null&&(v['hiddenFor'] as List<String>).contains(me))return false;
-              if(me==owner)return true;
-              if(privacy=='Yalnızca ben')return false;
-              if(privacy=='Arkadaşlar')return me!=null&&arkadaslar.contains(owner);
-              if(privacy=='Yakın arkadaşlar')return me!=null&&(v['visibleTo'] as List<String>).contains(me);
-              return true;
-            }).toList();
-            final filtreli = takipSekmesi ? yuklenenler.where((v) => takipEdilenler.contains(v['ownerId'])).toList() : yuklenenler;
-            final videolar = takipSekmesi ? filtreli : <Map<String,dynamic>>[...filtreli, ...ornekVideolar.map((e)=>Map<String,dynamic>.from(e))];
-            if (videolar.isEmpty) return const Center(child: Padding(padding: EdgeInsets.all(30), child: Text('Takip ettiğin kişilerin paylaşımları burada görünecek.', textAlign: TextAlign.center)));
-            return GestureDetector(
-    behavior: HitTestBehavior.translucent,
-    onHorizontalDragEnd: (detay) {
-      final hiz = detay.primaryVelocity ?? 0;
-      if (hiz < -250 && aktif < videolar.length - 1) {
-        akisKontrol.nextPage(
-          duration: const Duration(milliseconds: 260),
-          curve: Curves.easeOut,
-        );
-      } else if (hiz > 250 && aktif > 0) {
-        akisKontrol.previousPage(
-          duration: const Duration(milliseconds: 260),
-          curve: Curves.easeOut,
-        );
-      }
-    },
-    child: PageView.builder(
-              controller: akisKontrol,
-              scrollDirection: Axis.vertical,
-              itemCount: videolar.length,
-              onPageChanged: (i) => setState(() => aktif = i),
-              itemBuilder: (_, i) {
-                final item = videolar[i];
-                final tur = (item['type'] ?? 'video').toString();
-                if (tur == 'video') {
+  Widget build(BuildContext context){
+    return Stack(children:[
+      StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
+        stream:FirebaseFirestore.instance
+          .collection('videos')
+          .orderBy('createdAt',descending:true)
+          .limit(50)
+          .snapshots(),
+        builder:(context,snapshot){
+          if((snapshot.connectionState==ConnectionState.waiting&&!snapshot.hasData)||!profilHazir){
+            return const Center(child:CircularProgressIndicator(color:mavi));
+          }
+          if(snapshot.hasError){
+            return const Center(child:Padding(
+              padding:EdgeInsets.all(28),
+              child:Column(mainAxisSize:MainAxisSize.min,children:[
+                Icon(Icons.cloud_off_rounded,color:Colors.white54,size:52),
+                SizedBox(height:12),
+                Text('Akış yüklenemedi. İnternet bağlantını kontrol et.',textAlign:TextAlign.center,style:TextStyle(color:Colors.white70,fontWeight:FontWeight.w700)),
+              ]),
+            ));
+          }
+
+          final yuklenenler=(snapshot.data?.docs??[]).map<Map<String,dynamic>>((belge){
+            final veri=belge.data();
+            return {
+              'id':belge.id,
+              'videoUrl':(veri['videoUrl']??'').toString(),
+              'username':(veri['username']??'ngelx').toString(),
+              'ownerId':(veri['ownerId']??'').toString(),
+              'type':(veri['type']??'video').toString(),
+              'mediaUrl':(veri['mediaUrl']??veri['videoUrl']??'').toString(),
+              'audioUrl':(veri['audioUrl']??'').toString(),
+              'description':(veri['description']??'').toString(),
+              'allowDownload':veri['allowDownload']??true,
+              'privacy':(veri['privacy']??'Herkes').toString(),
+              'visibleTo':List<String>.from(veri['visibleTo']??const[]),
+              'hiddenFor':List<String>.from(veri['hiddenFor']??const[]),
+              'likeCount':(veri['likeCount'] as num?)?.toInt()??0,
+              'commentCount':(veri['commentCount'] as num?)?.toInt()??0,
+              'createdAt':veri['createdAt']??veri['clientCreatedAt'],
+            };
+          }).where((v){
+            if(!_icerikGecerli(v))return false;
+            final me=FirebaseAuth.instance.currentUser?.uid;
+            final owner=(v['ownerId']??'').toString();
+            final privacy=(v['privacy']??'Herkes').toString();
+            if(owner.isEmpty||engellenenler.contains(owner)||gizlenenIcerikler.contains(v['id']))return false;
+            if(me!=null&&(v['hiddenFor'] as List<String>).contains(me))return false;
+            if(me==owner)return true;
+            if(privacy=='Yalnızca ben')return false;
+            if(privacy=='Arkadaşlar')return me!=null&&arkadaslar.contains(owner);
+            if(privacy=='Yakın arkadaşlar')return me!=null&&(v['visibleTo'] as List<String>).contains(me);
+            return true;
+          }).toList();
+
+          final videolar=takipSekmesi
+            ?yuklenenler.where((v)=>takipEdilenler.contains(v['ownerId'])).toList()
+            :yuklenenler;
+
+          if(videolar.isEmpty){
+            return Center(child:Padding(
+              padding:const EdgeInsets.symmetric(horizontal:34),
+              child:Column(mainAxisSize:MainAxisSize.min,children:[
+                Icon(takipSekmesi?Icons.person_add_alt_1_rounded:Icons.movie_filter_outlined,color:Colors.white54,size:58),
+                const SizedBox(height:14),
+                Text(
+                  takipSekmesi
+                    ?'Takip ettiğin hesapların yeni paylaşımları burada görünecek.'
+                    :'Henüz akışta gösterilecek paylaşım yok.',
+                  textAlign:TextAlign.center,
+                  style:const TextStyle(color:Colors.white70,fontSize:15,fontWeight:FontWeight.w700),
+                ),
+              ]),
+            ));
+          }
+
+          if(aktif>=videolar.length){
+            WidgetsBinding.instance.addPostFrameCallback((_){
+              if(!mounted)return;
+              final hedef=videolar.length-1;
+              setState(()=>aktif=hedef);
+              if(akisKontrol.hasClients)akisKontrol.jumpToPage(hedef);
+            });
+          }else{
+            WidgetsBinding.instance.addPostFrameCallback((_){
+              if(mounted&&aktif<videolar.length)unawaited(_goruntulemeKaydet(videolar[aktif]));
+            });
+          }
+
+          return GestureDetector(
+            behavior:HitTestBehavior.translucent,
+            onHorizontalDragEnd:(detay){
+              final hiz=detay.primaryVelocity??0;
+              if(hiz<-250&&aktif<videolar.length-1){
+                akisKontrol.nextPage(duration:const Duration(milliseconds:260),curve:Curves.easeOut);
+              }else if(hiz>250&&aktif>0){
+                akisKontrol.previousPage(duration:const Duration(milliseconds:260),curve:Curves.easeOut);
+              }
+            },
+            child:PageView.builder(
+              controller:akisKontrol,
+              scrollDirection:Axis.vertical,
+              itemCount:videolar.length,
+              onPageChanged:(i){
+                setState(()=>aktif=i);
+                unawaited(_goruntulemeKaydet(videolar[i]));
+              },
+              itemBuilder:(_,i){
+                final item=videolar[i];
+                final tur=(item['type']??'video').toString();
+                if(tur=='video'){
                   return VideoKarti(
-                    adres: (item['videoUrl'] ?? item['mediaUrl'] ?? '').toString(),
-                    videoId: (item['id'] ?? '').toString(),
-                    kullaniciAdi: (item['username'] ?? 'ngelx').toString(),
-                    ownerId: (item['ownerId'] ?? '').toString(),
-                    indirilebilir: item['allowDownload']?.toString() != 'false',
-                    aktif: widget.gorunur && aktif == i,
+                    adres:(item['videoUrl']??item['mediaUrl']??'').toString(),
+                    videoId:(item['id']??'').toString(),
+                    kullaniciAdi:(item['username']??'ngelx').toString(),
+                    ownerId:(item['ownerId']??'').toString(),
+                    aciklama:(item['description']??'').toString(),
+                    indirilebilir:item['allowDownload']!=false,
+                    aktif:widget.gorunur&&aktif==i,
                   );
                 }
                 final kartVeri=<String,String>{
@@ -1702,36 +1779,36 @@ class _VideoAkisiState extends State<VideoAkisi> {
                   'ownerId':(item['ownerId']??'').toString(),
                   'allowDownload':(item['allowDownload']??true).toString(),
                 };
-                return GorselYaziKarti(
-                  veri: kartVeri,
-                  aktif: widget.gorunur && aktif == i,
-                );
+                return GorselYaziKarti(veri:kartVeri,aktif:widget.gorunur&&aktif==i);
               },
             ),
           );
-          },
-        ),
-        SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(17),
-            child: Row(
-              children: [
-                const Logo(kucuk: true, koyuZemin: true),
-                const Spacer(),
-                GestureDetector(onTap: () => setState(() { takipSekmesi = true; aktif = 0; }), child: Text('Takip', style: TextStyle(color: takipSekmesi ? Colors.white : Colors.white60, fontWeight: takipSekmesi ? FontWeight.bold : FontWeight.normal, decoration: takipSekmesi ? TextDecoration.underline : null, decorationColor: mavi, decorationThickness: 3))),
-                const SizedBox(width: 17),
-                GestureDetector(onTap: () => setState(() { takipSekmesi = false; aktif = 0; }), child: Text('Sana Özel', style: TextStyle(color: takipSekmesi ? Colors.white60 : Colors.white, fontWeight: takipSekmesi ? FontWeight.normal : FontWeight.bold, decoration: takipSekmesi ? null : TextDecoration.underline, decorationColor: mor, decorationThickness: 3))),
-                const SizedBox(width: 8),
-                IconButton(
-                  onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AramaPage())),
-                  icon: const Icon(Icons.search_rounded, size: 31),
-                ),
-              ],
+        },
+      ),
+      SafeArea(
+        child:Padding(
+          padding:const EdgeInsets.all(17),
+          child:Row(children:[
+            const Logo(kucuk:true,koyuZemin:true),
+            const Spacer(),
+            GestureDetector(
+              onTap:()=>_sekmeDegistir(true),
+              child:Text('Takip',style:TextStyle(color:takipSekmesi?Colors.white:Colors.white60,fontWeight:takipSekmesi?FontWeight.bold:FontWeight.normal,decoration:takipSekmesi?TextDecoration.underline:null,decorationColor:mavi,decorationThickness:3)),
             ),
-          ),
+            const SizedBox(width:17),
+            GestureDetector(
+              onTap:()=>_sekmeDegistir(false),
+              child:Text('Sana Özel',style:TextStyle(color:takipSekmesi?Colors.white60:Colors.white,fontWeight:takipSekmesi?FontWeight.normal:FontWeight.bold,decoration:takipSekmesi?null:TextDecoration.underline,decorationColor:mor,decorationThickness:3)),
+            ),
+            const SizedBox(width:8),
+            IconButton(
+              onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const AramaPage())),
+              icon:const Icon(Icons.search_rounded,size:31),
+            ),
+          ]),
         ),
-      ],
-    );
+      ),
+    ]);
   }
 }
 
