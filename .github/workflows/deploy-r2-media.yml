@@ -32,3 +32,23 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: cloudflare/worker
           command: deploy
+
+      - name: Yedek R2 Worker deploy
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: cloudflare/worker
+          command: deploy --name ngelx-upload
+
+      - name: Medya servislerini dogrula
+        shell: bash
+        run: |
+          set -e
+          for url in \
+            "https://ngelx-media.alihancaglar76.workers.dev/health" \
+            "https://ngelx-upload.alihancaglar76.workers.dev/health"; do
+            echo "Kontrol: $url"
+            curl --fail --silent --show-error --retry 4 --retry-delay 2 --connect-timeout 10 "$url"
+            echo
+          done
