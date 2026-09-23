@@ -117,6 +117,14 @@ for forbidden in (
     if forbidden in app:
         errors.append("Ana ekranda sabit Türkçe metin kaldı: " + forbidden)
 
+# Explore must not suggest the signed-in account and must not fake online presence.
+for token in (
+    "d.id!=ben&&d.data()['deactivated']!=true",
+    "v['isOnline']==true&&v['showActivityStatus']!=false",
+):
+    if token not in app:
+        errors.append("Keşfet kişi kartı kapsam/aktiflik koruması eksik: " + token)
+
 # Main feed must show real content only and keep user filters/live behavior intact.
 for token in (
     "class _VideoAkisiState",
