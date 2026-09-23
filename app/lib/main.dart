@@ -8622,6 +8622,111 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
     if(x!=null&&mounted)setState(()=>efekt=x);
   }
 
+  Future<void> grupAramasinaKisiDavetEt()async{
+    if(!grupAramasi)return;
+    final me=FirebaseAuth.instance.currentUser?.uid;
+    if(me==null)return;
+    try{
+      final d=await widget.aramaRef.get();
+      final veri=d.data()??<String,dynamic>{};
+      final uyeler=List<String>.from(veri['members']??const[]);
+      final katilan=<String>{
+        ...List<String>.from(veri['callParticipants']??const[]),
+        me,
+        ...?oda?.remoteParticipants.values.map((p)=>p.identity.toString()),
+      };
+      final adaylar=uyeler.where((id)=>id.isNotEmpty&&!katilan.contains(id)).take(60).toList();
+      final profiller=await Future.wait(adaylar.map(_aramaProfil));
+      if(!mounted)return;
+      final davetEdilen=<String>{};
+      await showModalBottomSheet<void>(
+        context:context,
+        isScrollControlled:true,
+        backgroundColor:ngelxCallBg,
+        showDragHandle:true,
+        shape:const RoundedRectangleBorder(borderRadius:BorderRadius.vertical(top:Radius.circular(30))),
+        builder:(sheet)=>StatefulBuilder(builder:(sheet,setSheet)=>SafeArea(
+          child:SizedBox(
+            height:MediaQuery.sizeOf(sheet).height*.72,
+            child:Column(children:[
+              Padding(
+                padding:const EdgeInsets.fromLTRB(18,2,18,12),
+                child:Row(children:[
+                  const Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+                    Text('Grup aramasına davet et',style:TextStyle(color:Colors.white,fontSize:20,fontWeight:FontWeight.w900)),
+                    SizedBox(height:3),
+                    Text('Henüz aramaya katılmayan grup üyeleri',style:TextStyle(color:Colors.white54,fontSize:11.5,fontWeight:FontWeight.w600)),
+                  ])),
+                  Container(
+                    padding:const EdgeInsets.symmetric(horizontal:10,vertical:6),
+                    decoration:BoxDecoration(color:Colors.white10,borderRadius:BorderRadius.circular(14)),
+                    child:Text(adaylar.length.toString()+' kişi',style:const TextStyle(color:Colors.white70,fontSize:11,fontWeight:FontWeight.w800)),
+                  ),
+                ]),
+              ),
+              const Divider(height:1,color:Colors.white10),
+              Expanded(
+                child:adaylar.isEmpty
+                  ?const Center(child:Column(mainAxisSize:MainAxisSize.min,children:[
+                      Icon(Icons.groups_rounded,color:Color(0xFFB88BFF),size:52),
+                      SizedBox(height:12),
+                      Text('Davet edilecek başka üye yok.',style:TextStyle(color:Colors.white70,fontWeight:FontWeight.w700)),
+                    ]))
+                  :ListView.builder(
+                      padding:const EdgeInsets.fromLTRB(12,8,12,20),
+                      itemCount:adaylar.length,
+                      itemBuilder:(_,i){
+                        final id=adaylar[i],p=profiller[i].data()??<String,dynamic>{};
+                        final ad=(p['displayName']??p['username']??'Grup üyesi').toString();
+                        final foto=(p['photoUrl']??'').toString();
+                        final gonderildi=davetEdilen.contains(id);
+                        return Container(
+                          margin:const EdgeInsets.only(bottom:7),
+                          decoration:BoxDecoration(color:const Color(0xFF211837),borderRadius:BorderRadius.circular(18),border:Border.all(color:Colors.white10)),
+                          child:ListTile(
+                            leading:CircleAvatar(
+                              backgroundColor:const Color(0xFF352154),
+                              backgroundImage:foto.isEmpty?null:CachedNetworkImageProvider(foto),
+                              child:foto.isEmpty?const Icon(Icons.person_rounded,color:Color(0xFFCDB9FF)):null,
+                            ),
+                            title:Text(ad,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w800)),
+                            subtitle:Text(gonderildi?'Davet gönderildi':'Aramaya davet et',style:TextStyle(color:gonderildi?const Color(0xFF79D99D):Colors.white54,fontSize:11)),
+                            trailing:FilledButton(
+                              style:FilledButton.styleFrom(
+                                backgroundColor:gonderildi?const Color(0xFF315D43):const Color(0xFF7A50E8),
+                                foregroundColor:Colors.white,
+                                padding:const EdgeInsets.symmetric(horizontal:14),
+                              ),
+                              onPressed:gonderildi?null:()async{
+                                try{
+                                  await uygulamaBildirimiGonder(
+                                    toUid:id,
+                                    fromUid:me,
+                                    tur:'call',
+                                    metin:widget.baslik+' grup aramasına katıl',
+                                    belgeId:widget.aramaRef.id,
+                                  );
+                                  if(sheet.mounted)setSheet(()=>davetEdilen.add(id));
+                                }catch(_){
+                                  if(sheet.mounted)ScaffoldMessenger.of(sheet).showSnackBar(const SnackBar(content:Text('Davet gönderilemedi.')));
+                                }
+                              },
+                              child:Text(gonderildi?'Gönderildi':'Davet et',style:const TextStyle(fontWeight:FontWeight.w800)),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+              ),
+            ]),
+          ),
+        )),
+      );
+    }catch(_){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Grup üyeleri yüklenemedi.')));
+    }
+  }
+
   Future<void> aramaAyarlari()async{
     await showModalBottomSheet<void>(
       context:context,
@@ -8971,7 +9076,7 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
               if(widget.goruntulu)_aramaKontrol(kamera?Icons.videocam_rounded:Icons.videocam_off_rounded,'Kamera',kameraDegistir,kamera),
               _aramaKontrol(mikrofon?Icons.mic_rounded:Icons.mic_off_rounded,'Mikrofon',mikrofonDegistir,mikrofon),
               if(!widget.goruntulu)_aramaKontrol(hoparlor?Icons.volume_up_rounded:Icons.volume_off_rounded,'Hoparlör',hoparlorDegistir,hoparlor),
-              if(grupAramasi)_aramaKontrol(Icons.person_add_alt_1_rounded,'Katılımcı',aramaAyarlari,true),
+              if(grupAramasi)_aramaKontrol(Icons.person_add_alt_1_rounded,'Davet et',grupAramasinaKisiDavetEt,true),
               if(widget.goruntulu)_aramaKontrol(hoparlor?Icons.volume_up_rounded:Icons.volume_off_rounded,'Ses',hoparlorDegistir,hoparlor),
             ]),
           ),
