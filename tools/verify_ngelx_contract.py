@@ -149,6 +149,36 @@ for token in required_group_tokens:
     if token not in app:
         errors.append("Grup özelliği sözleşmesi eksik: " + token)
 
+# Consolidated group hardening must stay intact.
+for token in (
+    "KURUCU • Yönetici",
+    "formerMembers",
+    "removedAt_",
+    "quickEmoji':'👍'",
+    "_gruptanCikarildiPaneli",
+    "_mentionProfiliAc",
+    "aktifAramadanAcildi",
+    "_aramaEkraniniKucult",
+    "kameraCevir",
+    "görüntülü aramaya katıldı.",
+    "sesli aramaya katıldı.",
+    "Kuruculuğu devret",
+    "Önce kuruculuğu devret",
+    "Tepki eklenemedi. Tekrar dene.",
+):
+    if token not in app:
+        errors.append("Konsolide grup düzeltmesi eksik: " + token)
+
+for token in (
+    "founderProtected()",
+    "validFounderTransfer()",
+    "validFormerHide()",
+    "formerChatMember()",
+    "formerMembers",
+    "removedAt_",
+):
+    if token not in rules:
+        errors.append("Firestore grup koruması eksik: " + token)
 # Group helper file contracts cover delivery/read details and offline resilience.
 for token in (
     "showGroupMessageInfo",
