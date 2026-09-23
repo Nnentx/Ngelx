@@ -229,3 +229,9 @@
 - `Tümü / Okunmamış / Arkadaşlar / Gruplar` filtrelerinin Firestore/UI iç mantık kodları değiştirilmedi; yalnızca kullanıcıya gösterilen etiketler seçili dile çevriliyor. Böylece filtre davranışı dil değişiminden etkilenmiyor.
 - Arşivlenen sohbetler ve mesaj isteği ekranlarının temel başlık/boş durum/kabul-red-engelle metinleri de seçili dili takip ediyor.
 - CI sözleşmesine Gelen Kutusu filtrelerinin sabit iç kodlarını korurken çevrilmiş etiket göstermesini kontrol eden koruma eklendi.
+
+### 2026-09-23 profil > mesaj gizliliği bağlantısı
+- Başka kullanıcının profilindeki **Mesaj** butonu artık hedef hesabın `messagePermission` ayarını kontrol ediyor.
+- `Herkes`, `Takip ettiklerim`, `Arkadaşlar`, `Kimse` seçenekleri profil üzerinden yeni sohbet açarken uygulanıyor; izin yoksa boş/donmuş ekran yerine açıklayıcı uyarı gösteriliyor.
+- `Takip ettiklerim` seçeneğinde hedef hesabın gerçekten mesaj gönderen kullanıcıyı takip edip etmediği, `Arkadaşlar` seçeneğinde karşılıklı arkadaş kaydı kontrol ediliyor.
+- Bu davranışın yanlışlıkla tekrar kaldırılmaması için CI sözleşmesine mesaj gizliliği kontrolü eklendi.
