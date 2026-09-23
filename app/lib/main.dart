@@ -9960,8 +9960,30 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
                       ),
                     ),
                     _grupAyirici(),
-                    _grupSwitch(Icons.edit_outlined,'Sadece yöneticiler grup bilgisini düzenlesin','Grup adı, fotoğrafı ve açıklamasını yöneticiler değiştirsin',v['onlyAdminsCanEditGroup']!=false,(x)=>ayarDegistir('onlyAdminsCanEditGroup',x)),
-                    _grupSwitch(Icons.push_pin_outlined,'Sadece yöneticiler mesaj sabitlesin','Mesaj sabitleme yetkisini yöneticilerle sınırla',v['onlyAdminsCanPin']!=false,(x)=>ayarDegistir('onlyAdminsCanPin',x)),
+                    _grupSatir(
+                      Icons.edit_outlined,
+                      'Kimler grup bilgisini düzenleyebilir?',
+                      v['onlyAdminsCanEditGroup']!=false?'Yalnızca yöneticiler':'Herkes',
+                      ()=>grupIzinSec(
+                        alan:'onlyAdminsCanEditGroup',
+                        baslik:'Kimler grup bilgisini düzenleyebilir?',
+                        aciklama:'Grup adı, fotoğrafı ve açıklamasını kimlerin değiştirebileceğini seç.',
+                        sadeceYoneticiler:v['onlyAdminsCanEditGroup']!=false,
+                      ),
+                    ),
+                    _grupAyirici(),
+                    _grupSatir(
+                      Icons.push_pin_outlined,
+                      'Kimler mesaj sabitleyebilir?',
+                      v['onlyAdminsCanPin']!=false?'Yalnızca yöneticiler':'Herkes',
+                      ()=>grupIzinSec(
+                        alan:'onlyAdminsCanPin',
+                        baslik:'Kimler mesaj sabitleyebilir?',
+                        aciklama:'Önemli mesajları grubun üst kısmına kimlerin sabitleyebileceğini seç.',
+                        sadeceYoneticiler:v['onlyAdminsCanPin']!=false,
+                      ),
+                    ),
+                    _grupAyirici(),
                     _grupSatir(
                       Icons.alternate_email_rounded,
                       'Kimler @herkes kullanabilir?',
