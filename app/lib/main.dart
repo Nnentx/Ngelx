@@ -4871,7 +4871,7 @@ class _YeniYuklePageState extends State<YuklePage> {
       if(!mounted)return;
       final olusturma=Timestamp.now();
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content:Text(video?'Video hikâyen yayınlandı • 24 saat görünür.':'Hikâyen yayınlandı • 24 saat görünür.'),
+        content:Text(video?'Video hikâyen yayınlandı • 24 saat görünür.':'Hikâye yayınlandı • 24 saat görünür.'),
         action:SnackBarAction(
           label:'Görüntüle',
           onPressed:(){
@@ -14671,6 +14671,1200 @@ class _HikayeGosterPageState extends State<HikayeGosterPage> with SingleTickerPr
       ),
     );
   }
+}
+
+class HesapDegistirPage extends StatefulWidget {
+  const HesapDegistirPage({super.key});
+  @override State<HesapDegistirPage> createState()=>_HesapDegistirPageState();
+}
+
+class _HesapDegistirPageState extends State<HesapDegistirPage> {
+  final guvenliHafiza=const FlutterSecureStorage();
+  List<String> hesaplar=<String>[];
+  bool yukleniyor=true;
+  bool islem=false;
+
+  String sifreAnahtari(String adres)=>'ngelx_sifre_'+adres.trim().toLowerCase();
+  String uidAnahtari(String adres)=>'hatirlanan_uid_'+adres.trim().toLowerCase();
+
+  @override void initState(){super.initState();_yukle();}
+
+  Future<void> _yukle()async{
+    final h=await SharedPreferences.getInstance();
+    final ham=h.getStringList('hatirlanan_epostalar')??<String>[];
+    final tek=<String>[];
+    for(final e in ham){
+      final temiz=e.trim();
+      if(temiz.isNotEmpty&&!tek.any((x)=>x.toLowerCase()==temiz.toLowerCase()))tek.add(temiz);
+    }
+    final aktif=FirebaseAuth.instance.currentUser;
+    final aktifEmail=aktif?.email?.trim()??'';
+    if(aktifEmail.isNotEmpty){
+      tek.removeWhere((x)=>x.toLowerCase()==aktifEmail.toLowerCase());
+      tek.insert(0,aktifEmail);
+      await h.setString(uidAnahtari(aktifEmail),aktif!.uid);
+    }
+    if(tek.length>5)tek.removeRange(5,tek.length);
+    await h.setStringList('hatirlanan_epostalar',tek);
+    if(aktifEmail.isNotEmpty)await h.setString('hatirlanan_eposta',aktifEmail);
+    if(mounted)setState((){hesaplar=tek;yukleniyor=false;});
+  }
+
+  Future<Map<String,dynamic>> _profil(String email)async{
+    final h=await SharedPreferences.getInstance();
+    final uid=h.getString(uidAnahtari(email))??'';
+    if(uid.isEmpty)return <String,dynamic>{'email':email};
+    try{
+      final d=await FirebaseFirestore.instance.collection('users').doc(uid).get().timeout(const Duration(seconds:6));
+      final veri=d.data()??<String,dynamic>{};
+      return <String,dynamic>{'email':email,'uid':uid,...veri};
+    }catch(_){
+      return <String,dynamic>{'email':email,'uid':uid};
+    }
+  }
+
+  Future<String?> _sifreSor(String email)async{
+    final c=TextEditingController();
+    bool gizli=true;
+    final sonuc=await showModalBottomSheet<String>(
+      context:context,isScrollControlled:true,backgroundColor:Colors.white,
+      shape:const RoundedRectangleBorder(borderRadius:BorderRadius.vertical(top:Radius.circular(28))),
+      builder:(ctx)=>Theme(data:ThemeData.light(),child:StatefulBuilder(builder:(ctx,setP)=>Padding(
+        padding:EdgeInsets.fromLTRB(20,22,20,MediaQuery.of(ctx).viewInsets.bottom+24),
+        child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+          const Text('Hesaba geç',style:TextStyle(fontSize:22,fontWeight:FontWeight.w900)),
+          const SizedBox(height:5),
+          Text(email,style:const TextStyle(color:Colors.black54)),
+          const SizedBox(height:16),
+          TextField(
+            controller:c,obscureText:gizli,autofocus:true,
+            decoration:InputDecoration(
+              labelText:'Şifre',prefixIcon:const Icon(Icons.lock_outline_rounded),
+              suffixIcon:IconButton(onPressed:()=>setP(()=>gizli=!gizli),icon:Icon(gizli?Icons.visibility_off_outlined:Icons.visibility_outlined)),
+            ),
+          ),
+          const SizedBox(height:16),
+          FilledButton(
+            style:FilledButton.styleFrom(backgroundColor:ngelxPremiumPurple,padding:const EdgeInsets.symmetric(vertical:14)),
+            onPressed:()=>Navigator.pop(ctx,c.text),
+            child:const Text('Devam et',style:TextStyle(fontWeight:FontWeight.w800)),
+          ),
+        ]),
+      ))),
+    );
+    c.dispose();
+    return sonuc;
+  }
+
+  Future<void> _giris(String email,{String? parola})async{
+    if(islem)return;
+    final mevcut=FirebaseAuth.instance.currentUser?.email?.toLowerCase();
+    if(mevcut==email.toLowerCase()){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bu hesap zaten açık.')));
+      return;
+    }
+    var sifre=parola??await guvenliHafiza.read(key:sifreAnahtari(email));
+    sifre=sifre?.trim();
+    if(sifre==null||sifre.isEmpty)sifre=await _sifreSor(email);
+    if(sifre==null||sifre.length<6)return;
+    setState(()=>islem=true);
+    try{
+      final sonuc=await FirebaseAuth.instance.signInWithEmailAndPassword(email:email.trim(),password:sifre);
+      await sonuc.user?.reload();
+      final user=FirebaseAuth.instance.currentUser;
+      if(user==null)throw Exception('Oturum açılamadı.');
+      if(user.emailVerified!=true){
+        await user.sendEmailVerification();
+        throw Exception('Bu hesabın e-postası henüz doğrulanmamış. Doğrulama bağlantısı gönderildi.');
+      }
+      final h=await SharedPreferences.getInstance();
+      hesaplar.removeWhere((x)=>x.toLowerCase()==email.toLowerCase());
+      hesaplar.insert(0,email.trim());
+      if(hesaplar.length>5)hesaplar=hesaplar.take(5).toList();
+      await h.setStringList('hatirlanan_epostalar',hesaplar);
+      await h.setString('hatirlanan_eposta',email.trim());
+      await h.setString(uidAnahtari(email),user.uid);
+      await guvenliHafiza.write(key:sifreAnahtari(email),value:sifre);
+      unawaited(girisKaydiEkle(user));
+      if(!mounted)return;
+      Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder:(_)=>const AnaEkran()),(_)=>false);
+    }on FirebaseAuthException catch(e){
+      String mesaj;
+      if(e.code=='wrong-password'||e.code=='invalid-credential'){
+        mesaj='E-posta veya şifre hatalı.';
+      }else if(e.code=='user-not-found'){
+        mesaj='Bu e-postayla kayıtlı hesap bulunamadı.';
+      }else if(e.code=='too-many-requests'){
+        mesaj='Çok fazla deneme yapıldı. Biraz sonra tekrar dene.';
+      }else{
+        mesaj='Hesaba geçilemedi: '+(e.message??e.code);
+      }
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(mesaj)));
+    }catch(e){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(e.toString().replaceFirst('Exception: ',''))));
+    }finally{
+      if(mounted)setState(()=>islem=false);
+    }
+  }
+
+  Future<void> _hesapEkle()async{
+    if(hesaplar.length>=5){
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('En fazla 5 hesap ekleyebilirsin.')));
+      return;
+    }
+    final e=TextEditingController(),p=TextEditingController();
+    bool gizli=true;
+    final sonuc=await showModalBottomSheet<Map<String,String>>(
+      context:context,isScrollControlled:true,backgroundColor:Colors.white,
+      shape:const RoundedRectangleBorder(borderRadius:BorderRadius.vertical(top:Radius.circular(28))),
+      builder:(ctx)=>Theme(data:ThemeData.light(),child:StatefulBuilder(builder:(ctx,setP)=>Padding(
+        padding:EdgeInsets.fromLTRB(20,22,20,MediaQuery.of(ctx).viewInsets.bottom+24),
+        child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+          const Text('Hesap ekle',style:TextStyle(fontSize:22,fontWeight:FontWeight.w900)),
+          const SizedBox(height:5),
+          Text(hesaplar.length.toString()+'/5 hesap kullanılıyor',style:const TextStyle(color:Colors.black54)),
+          const SizedBox(height:16),
+          TextField(controller:e,keyboardType:TextInputType.emailAddress,autocorrect:false,decoration:const InputDecoration(labelText:'E-posta adresi',prefixIcon:Icon(Icons.alternate_email_rounded))),
+          const SizedBox(height:10),
+          TextField(controller:p,obscureText:gizli,decoration:InputDecoration(labelText:'Şifre',prefixIcon:const Icon(Icons.lock_outline_rounded),suffixIcon:IconButton(onPressed:()=>setP(()=>gizli=!gizli),icon:Icon(gizli?Icons.visibility_off_outlined:Icons.visibility_outlined)))),
+          const SizedBox(height:16),
+          FilledButton(
+            style:FilledButton.styleFrom(backgroundColor:ngelxPremiumPurple,padding:const EdgeInsets.symmetric(vertical:14)),
+            onPressed:(){
+              final email=e.text.trim(),sifre=p.text;
+              if(!email.contains('@')||sifre.length<6){
+                ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content:Text('Geçerli e-posta ve şifre gir.')));
+                return;
+              }
+              Navigator.pop(ctx,{'email':email,'password':sifre});
+            },
+            child:const Text('Hesabı ekle ve geç',style:TextStyle(fontWeight:FontWeight.w800)),
+          ),
+        ]),
+      ))),
+    );
+    e.dispose();p.dispose();
+    if(sonuc==null||!mounted)return;
+    await _giris(sonuc['email']??'',parola:sonuc['password']??'');
+  }
+
+  Future<void> _kaldir(String email)async{
+    final aktif=FirebaseAuth.instance.currentUser?.email?.toLowerCase()??'';
+    if(aktif==email.toLowerCase()){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Açık olan hesabı cihazdan kaldıramazsın. Önce başka hesaba geç.')));
+      return;
+    }
+    final ok=await showDialog<bool>(context:context,builder:(ctx)=>Theme(data:ThemeData.light(),child:AlertDialog(
+      backgroundColor:Colors.white,
+      title:const Text('Bu hesabı cihazdan kaldır?'),
+      content:Text(email+' için kaydedilen hızlı giriş bilgileri silinecek. Hesabın NgelX’ten silinmez.'),
+      actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('Vazgeç')),FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('Cihazdan kaldır'))],
+    )))??false;
+    if(!ok)return;
+    final h=await SharedPreferences.getInstance();
+    hesaplar.removeWhere((x)=>x.toLowerCase()==email.toLowerCase());
+    await h.setStringList('hatirlanan_epostalar',hesaplar);
+    await h.remove(uidAnahtari(email));
+    await guvenliHafiza.delete(key:sifreAnahtari(email));
+    if((h.getString('hatirlanan_eposta')??'').toLowerCase()==email.toLowerCase()){
+      if(hesaplar.isEmpty){await h.remove('hatirlanan_eposta');}else{await h.setString('hatirlanan_eposta',hesaplar.first);}
+    }
+    if(mounted)setState((){});
+  }
+
+  @override Widget build(BuildContext context){
+    final aktif=FirebaseAuth.instance.currentUser?.email?.toLowerCase()??'';
+    return Theme(data:ThemeData.light(),child:Scaffold(
+      backgroundColor:Colors.white,
+      appBar:AppBar(backgroundColor:Colors.white,surfaceTintColor:Colors.white,elevation:0,title:const Text('Hesap değiştir',style:TextStyle(fontWeight:FontWeight.w900))),
+      body:yukleniyor?const Center(child:CircularProgressIndicator(color:mor)):ListView(
+        padding:const EdgeInsets.fromLTRB(16,10,16,30),
+        children:[
+          NgelXPremiumCard(
+            color:const Color(0xFFF8F5FF),
+            child:Row(children:[
+              const Icon(Icons.switch_account_rounded,color:ngelxPremiumPurple,size:30),
+              const SizedBox(width:12),
+              const Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+                Text('NgelX hesapların',style:TextStyle(fontWeight:FontWeight.w900,fontSize:17)),
+                SizedBox(height:3),
+                Text('Bu cihazda en fazla 5 hesap arasında hızlı geçiş yapabilirsin.',style:TextStyle(color:ngelxPremiumMuted,fontSize:12,height:1.3)),
+              ])),
+              Text(hesaplar.length.toString()+'/5',style:const TextStyle(color:ngelxPremiumPurple,fontWeight:FontWeight.w900)),
+            ]),
+          ),
+          const SizedBox(height:14),
+          ...hesaplar.map((email)=>FutureBuilder<Map<String,dynamic>>(
+            future:_profil(email),
+            builder:(_,s){
+              final v=s.data??<String,dynamic>{};
+              final foto=(v['photoUrl']??'').toString();
+              final ad=(v['displayName']??v['username']??email).toString();
+              final bu=aktif==email.toLowerCase();
+              return NgelXPremiumCard(
+                margin:const EdgeInsets.only(bottom:10),
+                padding:const EdgeInsets.symmetric(horizontal:12,vertical:10),
+                child:Row(children:[
+                  CircleAvatar(
+                    radius:23,backgroundColor:const Color(0xFFF0E8FF),
+                    backgroundImage:foto.isEmpty?null:CachedNetworkImageProvider(foto),
+                    child:foto.isEmpty?Text(ad.isEmpty?'N':ad[0].toUpperCase(),style:const TextStyle(color:ngelxPremiumPurple,fontWeight:FontWeight.w900)):null,
+                  ),
+                  const SizedBox(width:11),
+                  Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+                    Row(children:[
+                      Flexible(child:Text(ad,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontWeight:FontWeight.w900))),
+                      if(v['verified']==true)...[const SizedBox(width:4),const Icon(Icons.verified_rounded,color:Color(0xFF1687FF),size:17)],
+                    ]),
+                    Text(email,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:ngelxPremiumMuted,fontSize:11.5)),
+                  ])),
+                  if(bu)
+                    Container(padding:const EdgeInsets.symmetric(horizontal:9,vertical:5),decoration:BoxDecoration(color:const Color(0xFFE7F9EF),borderRadius:BorderRadius.circular(12)),child:const Text('Bu hesap',style:TextStyle(color:Color(0xFF0A8F48),fontSize:10,fontWeight:FontWeight.w900)))
+                  else
+                    TextButton(onPressed:islem?null:()=>_giris(email),child:const Text('Geç')),
+                  PopupMenuButton<String>(
+                    enabled:!islem,
+                    onSelected:(x){if(x=='remove')_kaldir(email);},
+                    itemBuilder:(_)=>const [PopupMenuItem(value:'remove',child:Text('Bu cihazdan kaldır'))],
+                  ),
+                ]),
+              );
+            },
+          )),
+          const SizedBox(height:4),
+          OutlinedButton.icon(
+            onPressed:islem?null:_hesapEkle,
+            style:OutlinedButton.styleFrom(padding:const EdgeInsets.symmetric(vertical:14),shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(18))),
+            icon:const Icon(Icons.add_circle_outline_rounded),
+            label:Text(hesaplar.length>=5?'5 hesap sınırına ulaştın':'Hesap ekle',style:const TextStyle(fontWeight:FontWeight.w800)),
+          ),
+          if(islem)...[
+            const SizedBox(height:18),
+            const Center(child:CircularProgressIndicator(color:ngelxPremiumPurple)),
+          ],
+        ],
+      ),
+    ));
+  }
+}
+
+
+class NgelXPremiumPage extends StatelessWidget{
+  const NgelXPremiumPage({super.key});
+
+  void _magazaHazirDegil(BuildContext context,String urun){
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(urun+' satın alımı Google Play ödeme entegrasyonu bağlandığında aktif olacak.')));
+  }
+
+  @override Widget build(BuildContext context){
+    final uid=FirebaseAuth.instance.currentUser?.uid;
+    return Theme(data:ThemeData.light(),child:Scaffold(
+      backgroundColor:Colors.white,
+      appBar:AppBar(
+        backgroundColor:Colors.white,surfaceTintColor:Colors.white,elevation:0,
+        title:const Text('NgelX Premium',style:TextStyle(fontWeight:FontWeight.w900)),
+        actions:[
+          IconButton(
+            tooltip:'Hesap değiştir',
+            onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const HesapDegistirPage())),
+            icon:const Icon(Icons.switch_account_rounded),
+          ),
+        ],
+      ),
+      body:uid==null?const Center(child:Text('Oturum bulunamadı.')):StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
+        stream:FirebaseFirestore.instance.collection('users').doc(uid).snapshots(),
+        builder:(_,s){
+          final v=s.data?.data()??<String,dynamic>{};
+          final premium=v['premiumActive']==true;
+          final verified=v['verified']==true;
+          final coin=(v['coinBalance'] as num?)?.toInt()??0;
+          return ListView(padding:const EdgeInsets.fromLTRB(16,8,16,32),children:[
+            Container(
+              padding:const EdgeInsets.all(20),
+              decoration:BoxDecoration(
+                borderRadius:BorderRadius.circular(28),
+                gradient:const LinearGradient(colors:[Color(0xFF062B8F),Color(0xFF174BD8),Color(0xFF7539ED)],begin:Alignment.topLeft,end:Alignment.bottomRight),
+                boxShadow:const [BoxShadow(color:Color(0x332E4DCE),blurRadius:28,offset:Offset(0,12))],
+              ),
+              child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+                Row(children:[
+                  Container(width:44,height:44,decoration:const BoxDecoration(shape:BoxShape.circle,gradient:LinearGradient(colors:[Color(0xFF22D3EE),Color(0xFF8B5CF6)])),child:const Icon(Icons.workspace_premium_rounded,color:Colors.white)),
+                  const SizedBox(width:10),
+                  const Text('NgelX',style:TextStyle(color:Colors.white,fontSize:19,fontWeight:FontWeight.w900)),
+                  const SizedBox(width:7),
+                  Container(padding:const EdgeInsets.symmetric(horizontal:9,vertical:4),decoration:BoxDecoration(color:Colors.white.withValues(alpha:.16),borderRadius:BorderRadius.circular(12)),child:Text(premium?'PREMIUM AKTİF':'PREMIUM',style:const TextStyle(color:Colors.white,fontSize:9,fontWeight:FontWeight.w900))),
+                  const Spacer(),
+                  Container(padding:const EdgeInsets.symmetric(horizontal:9,vertical:6),decoration:BoxDecoration(color:Colors.black.withValues(alpha:.17),borderRadius:BorderRadius.circular(15),border:Border.all(color:Colors.white24)),child:Row(children:[const Icon(Icons.monetization_on_rounded,color:Color(0xFFFFC928),size:18),const SizedBox(width:4),Text(coin.toString(),style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w900))])),
+                ]),
+                const SizedBox(height:22),
+                Text(premium?'Premium ayrıcalıkların açık':'Premium ile öne çık',style:const TextStyle(color:Colors.white,fontSize:27,fontWeight:FontWeight.w900)),
+                const SizedBox(height:6),
+                Text('Özel ayrıcalıklar, jetonlar ve daha fazla görünürlük.',style:TextStyle(color:Colors.white.withValues(alpha:.80),fontSize:14,height:1.35)),
+                const SizedBox(height:18),
+                FilledButton.icon(
+                  style:FilledButton.styleFrom(backgroundColor:Colors.white,foregroundColor:ngelxPremiumPurple,padding:const EdgeInsets.symmetric(horizontal:18,vertical:13),shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(17))),
+                  onPressed:premium?null:()=>_magazaHazirDegil(context,'NgelX Premium'),
+                  icon:const Icon(Icons.workspace_premium_rounded),
+                  label:Text(premium?'Premium aktif':'Premium’a Geç',style:const TextStyle(fontWeight:FontWeight.w900)),
+                ),
+              ]),
+            ),
+            const SizedBox(height:22),
+            const Text('Premium Ayrıcalıkları',style:TextStyle(fontSize:20,fontWeight:FontWeight.w900)),
+            const SizedBox(height:10),
+            GridView.count(
+              shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),crossAxisCount:2,crossAxisSpacing:10,mainAxisSpacing:10,childAspectRatio:1.75,
+              children:const [
+                _PremiumOzellik(icon:Icons.block_rounded,title:'Reklamsız kullanım',subtitle:'Kesintisiz deneyim',color:Color(0xFFFFEEF1)),
+                _PremiumOzellik(icon:Icons.palette_outlined,title:'Profil temaları',subtitle:'Tarzını yansıt',color:Color(0xFFF3EDFF)),
+                _PremiumOzellik(icon:Icons.workspace_premium_outlined,title:'Özel rozet',subtitle:'Profilinde fark yarat',color:Color(0xFFEAF5FF)),
+                _PremiumOzellik(icon:Icons.query_stats_rounded,title:'Gelişmiş istatistikler',subtitle:'Daha iyi analiz et',color:Color(0xFFE9FAF4)),
+              ],
+            ),
+            const SizedBox(height:16),
+            NgelXPremiumCard(
+              color:const Color(0xFFF0F7FF),
+              child:Row(children:[
+                const Icon(Icons.verified_rounded,color:Color(0xFF1687FF),size:40),
+                const SizedBox(width:12),
+                Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+                  const Text('Doğrulanmış Mavi Tik',style:TextStyle(fontSize:16,fontWeight:FontWeight.w900)),
+                  const SizedBox(height:3),
+                  Text(verified?'Hesabın doğrulanmış.':'Kimlik veya marka doğrulaması için başvur.',style:const TextStyle(color:ngelxPremiumMuted,fontSize:11.5)),
+                  const SizedBox(height:3),
+                  const Text('Premium’dan ayrı doğrulama sistemidir.',style:TextStyle(color:Color(0xFF1687FF),fontSize:10,fontWeight:FontWeight.w800)),
+                ])),
+                OutlinedButton(
+                  onPressed:verified?null:()=>ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Mavi tik başvuru formu sonraki ödeme/doğrulama paketinde aktif olacak.'))),
+                  child:Text(verified?'Doğrulandı':'Başvur'),
+                ),
+              ]),
+            ),
+            const SizedBox(height:14),
+            NgelXPremiumCard(
+              child:Column(children:[
+                Row(children:[
+                  const Icon(Icons.account_balance_wallet_outlined,color:ngelxPremiumPurple,size:29),
+                  const SizedBox(width:10),
+                  const Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+                    Text('Jeton Cüzdanı',style:TextStyle(fontSize:17,fontWeight:FontWeight.w900)),
+                    Text('Hediyeler, öne çıkarma ve topluluk özellikleri',style:TextStyle(color:ngelxPremiumMuted,fontSize:11)),
+                  ])),
+                  const Icon(Icons.monetization_on_rounded,color:Color(0xFFFFB800)),
+                  const SizedBox(width:4),
+                  Text(coin.toString()+' Jeton',style:const TextStyle(fontWeight:FontWeight.w900)),
+                ]),
+                const SizedBox(height:12),
+                SizedBox(width:double.infinity,child:FilledButton.icon(
+                  style:FilledButton.styleFrom(backgroundColor:ngelxPremiumPurple,padding:const EdgeInsets.symmetric(vertical:13),shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(16))),
+                  onPressed:()=>_magazaHazirDegil(context,'Jeton'),
+                  icon:const Icon(Icons.add_card_rounded),
+                  label:const Text('Jeton Satın Al',style:TextStyle(fontWeight:FontWeight.w900)),
+                )),
+              ]),
+            ),
+            const SizedBox(height:12),
+            Row(children:[
+              Expanded(child:_JetonPaketi(adet:'100',fiyat:'₺29',onTap:()=>_magazaHazirDegil(context,'100 Jeton'))),
+              const SizedBox(width:8),
+              Expanded(child:_JetonPaketi(adet:'500',fiyat:'₺99',etiket:'POPÜLER',onTap:()=>_magazaHazirDegil(context,'500 Jeton'))),
+              const SizedBox(width:8),
+              Expanded(child:_JetonPaketi(adet:'1.200',fiyat:'₺179',onTap:()=>_magazaHazirDegil(context,'1.200 Jeton'))),
+            ]),
+            const SizedBox(height:18),
+            const Text('Jetonlarla Neler Yapabilirsin?',style:TextStyle(fontSize:18,fontWeight:FontWeight.w900)),
+            const SizedBox(height:9),
+            const NgelXPremiumCard(child:Column(children:[
+              ListTile(contentPadding:EdgeInsets.zero,leading:Icon(Icons.card_giftcard_rounded,color:Color(0xFFE63D79)),title:Text('Canlı yayında hediye gönder',style:TextStyle(fontWeight:FontWeight.w800)),subtitle:Text('Favori içerik üreticilerini destekle')),
+              Divider(height:1),
+              ListTile(contentPadding:EdgeInsets.zero,leading:Icon(Icons.rocket_launch_rounded,color:Color(0xFF1687FF)),title:Text('Gönderini öne çıkar',style:TextStyle(fontWeight:FontWeight.w800)),subtitle:Text('Daha fazla kişiye ulaş')),
+              Divider(height:1),
+              ListTile(contentPadding:EdgeInsets.zero,leading:Icon(Icons.groups_rounded,color:ngelxPremiumPurple),title:Text('Grubunu veya profilini öne çıkar',style:TextStyle(fontWeight:FontWeight.w800)),subtitle:Text('Topluluğunu büyüt')),
+            ])),
+            const SizedBox(height:12),
+            NgelXPremiumCard(
+              onTap:()=>ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Satın alma geçmişi mağaza entegrasyonuyla burada listelenecek.'))),
+              child:const Row(children:[
+                Icon(Icons.receipt_long_outlined,color:ngelxPremiumMuted),
+                SizedBox(width:10),
+                Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+                  Text('Satın Alma Geçmişi',style:TextStyle(fontWeight:FontWeight.w900)),
+                  Text('Premium ve jeton alımlarını görüntüle',style:TextStyle(color:ngelxPremiumMuted,fontSize:11)),
+                ])),
+                Icon(Icons.chevron_right_rounded,color:ngelxPremiumMuted),
+              ]),
+            ),
+          ]);
+        },
+      ),
+    ));
+  }
+}
+
+class _PremiumOzellik extends StatelessWidget{
+  final IconData icon;final String title,subtitle;final Color color;
+  const _PremiumOzellik({required this.icon,required this.title,required this.subtitle,required this.color});
+  @override Widget build(BuildContext context)=>Container(
+    padding:const EdgeInsets.all(12),
+    decoration:BoxDecoration(color:color,borderRadius:BorderRadius.circular(19),border:Border.all(color:ngelxPremiumBorder)),
+    child:Row(children:[Icon(icon,color:ngelxPremiumPurple,size:25),const SizedBox(width:8),Expanded(child:Column(mainAxisAlignment:MainAxisAlignment.center,crossAxisAlignment:CrossAxisAlignment.start,children:[Text(title,maxLines:2,style:const TextStyle(fontSize:12,fontWeight:FontWeight.w900)),const SizedBox(height:2),Text(subtitle,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:ngelxPremiumMuted,fontSize:9.5))]))]),
+  );
+}
+
+class _JetonPaketi extends StatelessWidget{
+  final String adet,fiyat;final String? etiket;final VoidCallback onTap;
+  const _JetonPaketi({required this.adet,required this.fiyat,required this.onTap,this.etiket});
+  @override Widget build(BuildContext context)=>InkWell(
+    onTap:onTap,borderRadius:BorderRadius.circular(18),
+    child:Container(
+      padding:const EdgeInsets.symmetric(horizontal:7,vertical:11),
+      decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(18),border:Border.all(color:etiket==null?ngelxPremiumBorder:ngelxPremiumPurple,width:etiket==null?1:1.4)),
+      child:Column(children:[
+        if(etiket!=null)Container(padding:const EdgeInsets.symmetric(horizontal:6,vertical:2),decoration:BoxDecoration(color:ngelxPremiumPurple,borderRadius:BorderRadius.circular(8)),child:Text(etiket!,style:const TextStyle(color:Colors.white,fontSize:7.5,fontWeight:FontWeight.w900))),
+        if(etiket!=null)const SizedBox(height:4),
+        const Icon(Icons.monetization_on_rounded,color:Color(0xFFFFB800),size:27),
+        const SizedBox(height:3),
+        Text(adet,style:const TextStyle(fontSize:15,fontWeight:FontWeight.w900)),
+        const Text('Jeton',style:TextStyle(color:ngelxPremiumMuted,fontSize:10)),
+        const SizedBox(height:6),
+        Text(fiyat,style:const TextStyle(fontWeight:FontWeight.w900)),
+      ]),
+    ),
+  );
+}
+
+class AyarlarPage extends StatelessWidget {
+  const AyarlarPage({super.key});
+  @override Widget build(BuildContext context){final misafir=FirebaseAuth.instance.currentUser?.isAnonymous==true;return Theme(data:ThemeData.light().copyWith(scaffoldBackgroundColor:Colors.white,appBarTheme:const AppBarTheme(backgroundColor:Colors.white,foregroundColor:Colors.black,elevation:0),cardTheme:const CardThemeData(color:Colors.white,elevation:0,margin:EdgeInsets.symmetric(vertical:4)),dividerColor:Color(0xFFE5E7EB)),child:Scaffold(appBar:AppBar(title:Text(t('settingsTitle'))),body:SafeArea(child:ListView(padding:const EdgeInsets.fromLTRB(14,8,14,24),children:[
+    if(!misafir)...[
+      ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:10,vertical:7),leading:const Icon(Icons.workspace_premium_rounded,color:ngelxPremiumPurple),title:const Text('Premium ve Cüzdan',style:TextStyle(fontWeight:FontWeight.bold,color:Colors.black87)),subtitle:const Text('Premium, jetonlar, mavi tik ve satın almalar',style:TextStyle(color:Colors.black54)),trailing:const Icon(Icons.chevron_right,color:Colors.black87),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const NgelXPremiumPage()))),
+      ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:10,vertical:7),leading:const Icon(Icons.switch_account_rounded,color:mor),title:const Text('Hesap değiştir',style:TextStyle(fontWeight:FontWeight.bold,color:Colors.black87)),subtitle:const Text('Bu cihazda en fazla 5 hesap kullan',style:TextStyle(color:Colors.black54)),trailing:const Icon(Icons.chevron_right,color:Colors.black87),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const HesapDegistirPage()))),
+      _ayar(context,Icons.lock_outline,'Gizlilik',t('privacy'),t('privacySub')),
+      ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:10,vertical:7),leading:const Icon(Icons.people_outline,color:mor),title:Text(t('followFriends'),style:const TextStyle(fontWeight:FontWeight.bold,color:Colors.black87)),subtitle:Text(t('followFriendsSub'),style:const TextStyle(color:Colors.black54)),trailing:const Icon(Icons.chevron_right,color:Colors.black87),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const ArkadaslarPage()))),
+      ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:10,vertical:7),leading:const Icon(Icons.block_outlined,color:mor),title:Text(t('blockedAccounts'),style:const TextStyle(fontWeight:FontWeight.bold,color:Colors.black87)),subtitle:Text(t('blockedAccountsSub'),style:const TextStyle(color:Colors.black54)),trailing:const Icon(Icons.chevron_right,color:Colors.black87),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const EngellenenlerPage()))),
+      _ayar(context,Icons.chat_bubble_outline,'Mesaj izinleri',t('messagePermissions'),t('messagePermissionsSub')),
+      _ayar(context,Icons.auto_stories_outlined,'Hikâye gizliliği',t('storyPrivacy'),t('storyPrivacySub')),
+      _ayar(context,Icons.notifications_outlined,'Bildirimler',t('notifications'),t('notificationsSub')),
+      ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:10,vertical:7),leading:const Icon(Icons.security_outlined,color:mor),title:Text(t('accountSecurity'),style:const TextStyle(fontWeight:FontWeight.bold,color:Colors.black87)),subtitle:Text(t('accountSecuritySub'),style:const TextStyle(color:Colors.black54)),trailing:const Icon(Icons.chevron_right,color:Colors.black87),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const HesapGuvenligiPage()))),
+      ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:10,vertical:7),leading:const Icon(Icons.devices_outlined,color:mor),title:Text(t('devices'),style:const TextStyle(fontWeight:FontWeight.bold,color:Colors.black87)),subtitle:Text(t('devicesSub'),style:const TextStyle(color:Colors.black54)),trailing:const Icon(Icons.chevron_right,color:Colors.black87),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const GirisGecmisiPage()))),
+      ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:10,vertical:7),leading:const Icon(Icons.support_agent,color:mor),title:Text(t('support'),style:const TextStyle(fontWeight:FontWeight.bold,color:Colors.black87)),subtitle:Text(t('supportSub'),style:const TextStyle(color:Colors.black54)),trailing:const Icon(Icons.chevron_right,color:Colors.black87),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const DestekPage()))),
+      _ayar(context,Icons.download_outlined,'İndirme izinleri',t('downloadPermissions'),t('downloadPermissionsSub')),
+    ],
+    const Divider(),
+    ListTile(leading:const Icon(Icons.system_update,color:mor),title:Text(t('appUpdates')),subtitle:Text('v$ngelxVersionName • ${t("build")} $ngelxBuildNumber'),trailing:const Icon(Icons.system_update_alt_rounded,color:Colors.green)),
+    ListTile(leading:const Icon(Icons.share,color:mavi),title:Text(t('shareNgelx')),subtitle:Text(t('shareNgelxSub')),onTap:()async=>SharePlus.instance.share(ShareParams(text:'Ngel X ile dünyanı paylaş ✨\nhttps://ngelx.app'))),
+    const Divider(),
+    ListTile(leading:const Icon(Icons.logout,color:Colors.red),title:Text(t('logout'),style:const TextStyle(color:Colors.red)),onTap:()async{final onay=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(title:Text(t('logoutQuestion')),content:Text(t('logoutInfo')),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:Text(t('cancel'))),FilledButton(onPressed:()=>Navigator.pop(c,true),child:Text(t('logout')))]));if(onay==true){await FirebaseAuth.instance.signOut();if(context.mounted)Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder:(_)=>const GirisPage()),(_)=>false);}})
+  ]))));}
+  Widget _ayar(BuildContext c,IconData i,String kod,String baslik,String alt)=>Card(child:ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:10,vertical:7),onTap:()=>Navigator.push(c,MaterialPageRoute(builder:(_)=>TercihlerPage(baslik:kod))),leading:Icon(i,color:mor),title:Text(baslik,style:const TextStyle(fontWeight:FontWeight.bold,color:Colors.black87)),subtitle:Text(alt,style:const TextStyle(color:Colors.black54)),trailing:const Icon(Icons.chevron_right,color:Colors.black87)));
+}
+
+class HesapKurtarmaPage extends StatefulWidget{
+  const HesapKurtarmaPage({super.key});
+  @override State<HesapKurtarmaPage> createState()=>_HesapKurtarmaPageState();
+}
+
+class _HesapKurtarmaPageState extends State<HesapKurtarmaPage>{
+  final email=TextEditingController(),telefon=TextEditingController();
+  bool yukleniyor=true,kaydediliyor=false;
+
+  @override void initState(){super.initState();_yukle();}
+  @override void dispose(){email.dispose();telefon.dispose();super.dispose();}
+
+  Future<void> _yukle()async{
+    final u=FirebaseAuth.instance.currentUser;
+    if(u==null){if(mounted)setState(()=>yukleniyor=false);return;}
+    final d=await FirebaseFirestore.instance.collection('users').doc(u.uid).get();
+    final v=d.data()??<String,dynamic>{};
+    email.text=(v['recoveryEmail']??'').toString();
+    telefon.text=(v['recoveryPhone']??v['phone']??'').toString();
+    if(mounted)setState(()=>yukleniyor=false);
+  }
+
+  Future<String?> _sifreSor()async{
+    final kontrol=TextEditingController();
+    final x=await showDialog<String>(
+      context:context,
+      builder:(d)=>Theme(
+        data:ThemeData.light(),
+        child:AlertDialog(
+          backgroundColor:Colors.white,
+          surfaceTintColor:Colors.white,
+          title:const Text('Kimliğini doğrula',style:TextStyle(color:Colors.black87,fontWeight:FontWeight.w800)),
+          content:TextField(controller:kontrol,obscureText:true,decoration:const InputDecoration(labelText:'Mevcut şifre')),
+          actions:[
+            TextButton(onPressed:()=>Navigator.pop(d),child:const Text('Vazgeç')),
+            FilledButton(onPressed:()=>Navigator.pop(d,kontrol.text),child:const Text('Doğrula')),
+          ],
+        ),
+      ),
+    );
+    kontrol.dispose();
+    return x;
+  }
+
+  Future<void> kaydet()async{
+    final u=FirebaseAuth.instance.currentUser;
+    if(u==null||kaydediliyor)return;
+    final re=email.text.trim().toLowerCase();
+    final tel=telefon.text.trim();
+    if(re.isNotEmpty&&(!re.contains('@')||!re.contains('.'))){
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Geçerli bir kurtarma e-postası yaz.')));
+      return;
+    }
+    final sifre=await _sifreSor();
+    if(sifre==null||sifre.isEmpty)return;
+    setState(()=>kaydediliyor=true);
+    try{
+      final hesapEmail=u.email;
+      if(hesapEmail==null||hesapEmail.isEmpty)throw Exception('Bu hesapta doğrulanabilir e-posta bulunamadı.');
+      await u.reauthenticateWithCredential(EmailAuthProvider.credential(email:hesapEmail,password:sifre));
+      await FirebaseFirestore.instance.collection('users').doc(u.uid).set({
+        'recoveryEmail':re,
+        'recoveryPhone':tel,
+        'recoveryUpdatedAt':FieldValue.serverTimestamp(),
+      },SetOptions(merge:true));
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Kurtarma seçenekleri kaydedildi.')));
+    }on FirebaseAuthException catch(e){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(
+        e.code=='wrong-password'||e.code=='invalid-credential'?'Şifre doğrulanamadı.':'Doğrulama başarısız: '+(e.message??e.code)
+      )));
+    }catch(e){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Kaydedilemedi: '+e.toString())));
+    }finally{
+      if(mounted)setState(()=>kaydediliyor=false);
+    }
+  }
+
+  Future<void> sifreBaglantisi()async{
+    final u=FirebaseAuth.instance.currentUser;
+    if(u?.email==null)return;
+    try{
+      await FirebaseAuth.instance.sendPasswordResetEmail(email:u!.email!);
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Şifre yenileme bağlantısı hesap e-postana gönderildi.')));
+    }catch(e){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Bağlantı gönderilemedi: '+e.toString())));
+    }
+  }
+
+  @override Widget build(BuildContext context)=>Theme(
+    data:ThemeData.light().copyWith(
+      scaffoldBackgroundColor:Colors.white,
+      appBarTheme:const AppBarTheme(backgroundColor:Colors.white,foregroundColor:Colors.black,elevation:0),
+    ),
+    child:Scaffold(
+      backgroundColor:Colors.white,
+      appBar:AppBar(title:const Text('Hesap kurtarma')),
+      body:yukleniyor
+        ? const Center(child:CircularProgressIndicator(color:mor))
+        : ListView(padding:const EdgeInsets.all(20),children:[
+            ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.alternate_email_rounded,color:mor),title:const Text('Hesap e-postası'),subtitle:Text(FirebaseAuth.instance.currentUser?.email??'E-posta yok')),
+            const SizedBox(height:12),
+            TextField(controller:email,keyboardType:TextInputType.emailAddress,decoration:const InputDecoration(labelText:'Kurtarma e-postası')),
+            const SizedBox(height:14),
+            TextField(controller:telefon,keyboardType:TextInputType.phone,decoration:const InputDecoration(labelText:'Kurtarma telefonu')),
+            const SizedBox(height:20),
+            FilledButton.icon(onPressed:kaydediliyor?null:kaydet,icon:const Icon(Icons.shield_outlined),label:Text(kaydediliyor?'Doğrulanıyor...':'Kurtarma bilgilerini kaydet')),
+            const SizedBox(height:10),
+            OutlinedButton.icon(onPressed:sifreBaglantisi,icon:const Icon(Icons.lock_reset_rounded),label:const Text('Şifre yenileme bağlantısı gönder')),
+          ]),
+    ),
+  );
+}
+
+class HesapGuvenligiPage extends StatefulWidget {const HesapGuvenligiPage({super.key});@override State<HesapGuvenligiPage> createState()=>_HesapGuvenligiPageState();}
+class _HesapGuvenligiPageState extends State<HesapGuvenligiPage>{
+  bool yukleniyor=false;
+  Future<bool> onay(String baslik,String aciklama,String dugme)async=>await showDialog<bool>(context:context,builder:(c)=>AlertDialog(title:Text(baslik),content:Text(aciklama),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),FilledButton(onPressed:()=>Navigator.pop(c,true),style:FilledButton.styleFrom(backgroundColor:Colors.red),child:Text(dugme))]))??false;
+  Future<void> dondur()async{if(!await onay('Hesap dondurulsun mu?','Hesabın geçici olarak kapatılacak. Giriş yaparak hesabını yeniden açabilirsin.','Hesabı dondur'))return;await isle({'deactivated':true,'deactivatedAt':FieldValue.serverTimestamp()});}
+  Future<void> silmeTalebi()async{if(!await onay('Hesap silme talebi oluşturulsun mu?','Hesabın hemen kapanacak ve 30 gün sonra kalıcı silinmek üzere işaretlenecek. Bu sürede giriş yaparak talebi iptal edebilirsin.','Silme talebi oluştur'))return;await isle({'deactivated':true,'deletionRequestedAt':FieldValue.serverTimestamp(),'deletionScheduledFor':Timestamp.fromDate(DateTime.now().add(const Duration(days:30)))});}
+  Future<void> isle(Map<String,dynamic> veri)async{final u=FirebaseAuth.instance.currentUser;if(u==null)return;setState(()=>yukleniyor=true);try{await FirebaseFirestore.instance.collection('users').doc(u.uid).set(veri,SetOptions(merge:true));await FirebaseAuth.instance.signOut();if(mounted)Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder:(_)=>const GirisPage()),(_)=>false);}catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('İşlem tamamlanamadı: $e')));}finally{if(mounted)setState(()=>yukleniyor=false);}}
+  @override Widget build(BuildContext context)=>Theme(data:ThemeData.light().copyWith(scaffoldBackgroundColor:Colors.white,appBarTheme:const AppBarTheme(backgroundColor:Colors.white,foregroundColor:Colors.black,elevation:0)),child:Scaffold(appBar:AppBar(title:const Text('Hesap güvenliği')),body:SafeArea(child:ListView(padding:const EdgeInsets.all(18),children:[
+    const ListTile(leading:Icon(Icons.verified_user_outlined,color:Colors.green),title:Text('E-posta doğrulaması'),subtitle:Text('Hesabın doğrulanmış e-posta ile korunur.')),
+    ListTile(leading:const Icon(Icons.health_and_safety_outlined,color:mor),title:const Text('Hesap kurtarma seçenekleri'),subtitle:const Text('Kurtarma e-postası, telefon ve şifre yenileme'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const HesapKurtarmaPage()))),
+    const Divider(),
+    ListTile(enabled:!yukleniyor,leading:const Icon(Icons.pause_circle_outline,color:Colors.orange),title:const Text('Hesabı dondur'),subtitle:const Text('Geri dönene kadar profilini geçici olarak gizle'),onTap:dondur),
+    ListTile(enabled:!yukleniyor,leading:const Icon(Icons.delete_forever_outlined,color:Colors.red),title:const Text('Hesap silme talebi',style:TextStyle(color:Colors.red)),subtitle:const Text('30 günlük geri alma süresiyle kapat'),onTap:silmeTalebi),
+    if(yukleniyor)const Padding(padding:EdgeInsets.all(20),child:Center(child:CircularProgressIndicator())),
+  ]))));
+}
+
+class GirisGecmisiPage extends StatefulWidget{
+  const GirisGecmisiPage({super.key});
+  @override State<GirisGecmisiPage> createState()=>_GirisGecmisiPageState();
+}
+class _GirisGecmisiPageState extends State<GirisGecmisiPage>{
+  String? mevcutId;
+  @override void initState(){super.initState();cihazKurulumKimligi().then((x){if(mounted)setState(()=>mevcutId=x);});}
+
+  Future<void> cihazdanCik(String deviceId,String ad)async{
+    final u=FirebaseAuth.instance.currentUser;if(u==null)return;
+    final ok=await showDialog<bool>(
+      context:context,
+      builder:(c)=>Theme(
+        data:ThemeData.light(),
+        child:AlertDialog(
+          backgroundColor:Colors.white,surfaceTintColor:Colors.white,
+          title:const Text('Bu cihazdaki oturum kapatılsın mı?',style:TextStyle(color:Colors.black87,fontWeight:FontWeight.w800)),
+          content:Text(ad+' cihazı NgelX yeniden açıldığında oturumdan çıkarılacak.',style:const TextStyle(color:Colors.black87)),
+          actions:[
+            TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),
+            FilledButton(style:FilledButton.styleFrom(backgroundColor:Colors.red,foregroundColor:Colors.white),onPressed:()=>Navigator.pop(c,true),child:const Text('Oturumu kapat')),
+          ],
+        ),
+      ),
+    )??false;
+    if(!ok)return;
+    await FirebaseFirestore.instance.collection('users').doc(u.uid).set({
+      'revokedDeviceIds':FieldValue.arrayUnion([deviceId]),
+    },SetOptions(merge:true));
+    if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Cihaza çıkış talimatı gönderildi.')));
+  }
+
+  @override Widget build(BuildContext context){
+    final uid=FirebaseAuth.instance.currentUser?.uid;
+    return Theme(
+      data:ThemeData.light().copyWith(scaffoldBackgroundColor:Colors.white,appBarTheme:const AppBarTheme(backgroundColor:Colors.white,foregroundColor:Colors.black,elevation:0)),
+      child:Scaffold(
+        appBar:AppBar(title:const Text('Giriş yapılan cihazlar')),
+        body:uid==null?const Center(child:Text('Oturum bulunamadı.')):StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
+          stream:FirebaseFirestore.instance.collection('users').doc(uid).snapshots(),
+          builder:(context,s){
+            if(s.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator());
+            final ham=List<dynamic>.from(s.data?.data()?['loginHistory']??const[]);
+            final ters=ham.whereType<Map>().toList().reversed.toList();
+            final gorulen=<String>{},kayitlar=<Map>[];
+            for(final k in ters){
+              final id=(k['deviceId']??'').toString();
+              final anahtar=id.isEmpty?((k['device']??'').toString()+'|'+(k['platform']??'').toString()):id;
+              if(gorulen.add(anahtar))kayitlar.add(k);
+              if(kayitlar.length>=10)break;
+            }
+            final iptal=Set<String>.from(List<String>.from(s.data?.data()?['revokedDeviceIds']??const[]));
+            if(kayitlar.isEmpty)return const Center(child:Text('Henüz cihaz kaydı yok.'));
+            return ListView.separated(
+              padding:const EdgeInsets.all(16),
+              itemCount:kayitlar.length,
+              separatorBuilder:(_,__)=>const Divider(),
+              itemBuilder:(_,i){
+                final k=kayitlar[i];
+                final id=(k['deviceId']??'').toString();
+                final tarih=DateTime.tryParse((k['at']??'').toString())?.toLocal();
+                final buCihaz=id.isNotEmpty&&id==mevcutId;
+                final iptalEdildi=id.isNotEmpty&&iptal.contains(id);
+                final ad=(k['device']??'Android cihaz').toString();
+                final tarihYazi=tarih==null?'':' • '+tarih.day.toString().padLeft(2,'0')+'/'+tarih.month.toString().padLeft(2,'0')+'/'+tarih.year.toString()+' '+tarih.hour.toString().padLeft(2,'0')+':'+tarih.minute.toString().padLeft(2,'0');
+                return ListTile(
+                  leading:CircleAvatar(child:Icon(buCihaz?Icons.smartphone_rounded:Icons.phone_android)),
+                  title:Row(children:[Expanded(child:Text(ad)),if(buCihaz)const Chip(label:Text('Bu cihaz'),visualDensity:VisualDensity.compact)]),
+                  subtitle:Text((k['platform']??'Android').toString()+tarihYazi+(iptalEdildi?'\nÇıkış talimatı bekliyor':'')),
+                  trailing:(!buCihaz&&id.isNotEmpty&&!iptalEdildi)
+                    ? TextButton(onPressed:()=>cihazdanCik(id,ad),child:const Text('Çıkış yap',style:TextStyle(color:Colors.red)))
+                    : null,
+                );
+              },
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class EngellenenlerPage extends StatefulWidget {const EngellenenlerPage({super.key});@override State<EngellenenlerPage> createState()=>_EngellenenlerPageState();}
+class _EngellenenlerPageState extends State<EngellenenlerPage>{
+  Future<List<String>> getir()async{final u=FirebaseAuth.instance.currentUser;if(u==null)return[];final d=await FirebaseFirestore.instance.collection('users').doc(u.uid).get();return List<String>.from(d.data()?['blocked']??const[]);}
+  Future<void> kaldir(String uid)async{final u=FirebaseAuth.instance.currentUser;if(u==null)return;await FirebaseFirestore.instance.collection('users').doc(u.uid).set({'blocked':FieldValue.arrayRemove([uid])},SetOptions(merge:true));if(mounted)setState((){});}
+
+  @override
+  Widget build(BuildContext context) => Theme(
+    data: ThemeData.light(),
+    child: Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(title: Text(t('blockedAccounts'))),
+      body: FutureBuilder<List<String>>(
+        future: getir(),
+        builder: (context, s) {
+          if (s.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+          final ids = s.data ?? [];
+          if (ids.isEmpty) return Center(child: Text(t('noBlockedAccounts')));
+          return ListView.separated(
+            padding: const EdgeInsets.all(14),
+            itemCount: ids.length,
+            separatorBuilder: (_, __) => const Divider(),
+            itemBuilder: (_, i) => FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+              future: FirebaseFirestore.instance.collection('users').doc(ids[i]).get(),
+              builder: (_, p) {
+                final v = p.data?.data() ?? {};
+                final foto = (v['photoUrl'] ?? '').toString();
+                return ListTile(
+                  leading: CircleAvatar(backgroundImage: foto.isEmpty ? null : CachedNetworkImageProvider(foto), child: foto.isEmpty ? const Icon(Icons.person) : null),
+                  title: Text((v['displayName'] ?? v['username'] ?? 'Ngel X kullanıcısı').toString()),
+                  subtitle: Text('@${v['username'] ?? 'ngelx'}'),
+                  trailing: TextButton(onPressed: () => kaldir(ids[i]), child: Text(t('unblock'))),
+                );
+              },
+            ),
+          );
+        },
+      ),
+    ),
+  );
+}
+
+class DestekPage extends StatefulWidget {const DestekPage({super.key});@override State<DestekPage> createState()=>_DestekPageState();}
+class _DestekPageState extends State<DestekPage>{
+  final aciklama=TextEditingController();String kategori='Uygulama hatası';XFile? ekran;bool gonderiliyor=false;
+  @override void dispose(){aciklama.dispose();super.dispose();}
+  Future<void> ekranSec()async{final x=await ImagePicker().pickImage(source:ImageSource.gallery,imageQuality:75,maxWidth:1440);if(x!=null&&mounted)setState(()=>ekran=x);}
+  Future<void> gonder()async{final u=FirebaseAuth.instance.currentUser;if(u==null)return;if(aciklama.text.trim().length<10){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Sorunu en az 10 karakterle açıkla.')));return;}setState(()=>gonderiliyor=true);try{String ekranUrl='';if(ekran!=null){final yol='support/${u.uid}/${DateTime.now().millisecondsSinceEpoch}.jpg';ekranUrl=await ngelxMedyaYukleBytes(bytes:await ekran!.readAsBytes(),kind:'support',ext:'jpg',legacyPath:yol);}await FirebaseFirestore.instance.collection('support_requests').add({'uid':u.uid,'email':u.email,'category':kategori,'description':aciklama.text.trim(),'screenshotUrl':ekranUrl,'status':'open','createdAt':FieldValue.serverTimestamp()});if(!mounted)return;aciklama.clear();setState(()=>ekran=null);ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Destek talebin gönderildi.')));}catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Talep gönderilemedi: $e')));}finally{if(mounted)setState(()=>gonderiliyor=false);}}
+  @override Widget build(BuildContext context)=>Theme(data:ThemeData.light().copyWith(scaffoldBackgroundColor:Colors.white,appBarTheme:const AppBarTheme(backgroundColor:Colors.white,foregroundColor:Colors.black,elevation:0),inputDecorationTheme:InputDecorationTheme(filled:true,fillColor:const Color(0xFFF3F4F6),border:OutlineInputBorder(borderRadius:BorderRadius.circular(16),borderSide:BorderSide.none))),child:Scaffold(appBar:AppBar(title:const Text('Destek ve hata bildir')),body:SafeArea(child:ListView(padding:const EdgeInsets.all(20),children:[DropdownButtonFormField<String>(initialValue:kategori,items:['Uygulama hatası','Hesap ve giriş','Güvenlik','Ödeme ve kazanç','Öneri','Diğer'].map((x)=>DropdownMenuItem(value:x,child:Text(x))).toList(),onChanged:(v)=>setState(()=>kategori=v??kategori),decoration:const InputDecoration(labelText:'Konu')),const SizedBox(height:14),TextField(controller:aciklama,minLines:5,maxLines:10,maxLength:1000,decoration:const InputDecoration(labelText:'Sorunu veya isteğini anlat')),const SizedBox(height:12),OutlinedButton.icon(onPressed:gonderiliyor?null:ekranSec,icon:const Icon(Icons.add_photo_alternate_outlined),label:Text(ekran==null?'Ekran görüntüsü ekle':'Ekran görüntüsü seçildi')),const SizedBox(height:20),RenkliButon(yazi:gonderiliyor?'Gönderiliyor...':'Destek talebini gönder',tiklama:gonderiliyor?(){}:gonder)]))));
+}
+
+class TercihlerPage extends StatefulWidget {final String baslik;const TercihlerPage({super.key,required this.baslik});@override State<TercihlerPage> createState()=>_TercihlerPageState();}
+class _TercihlerPageState extends State<TercihlerPage> {
+  bool hesapGizli=false, profilArama=true, aktiflik=true, profilPaylasArkadas=false, yorumArkadas=false, gizliKelimeler=true, mesajArkadas=true, hikayeArkadas=true, ekranGoruntusu=false, bildirim=true, mesajBildirimi=true, arkadasBildirimi=true, etkilesimBildirimi=true, indirme=true;
+  String mesajIzni='friends';
+  String profilGoruntuleme='all';
+  List<String> gizliKelimeListesi=[];
+  String? get uid => FirebaseAuth.instance.currentUser?.uid;
+
+  @override
+  void initState(){super.initState();yukle();}
+
+  Future<void> yukle() async {
+    if(uid==null)return;
+    final d=await FirebaseFirestore.instance.collection('users').doc(uid).get(),v=d.data()??{};
+    if(mounted)setState((){
+      hesapGizli=v['privateAccount']==true;
+      profilGoruntuleme=(v['profileViewPermission']??'all').toString();
+      profilArama=v['discoverableProfile']!=false;
+      aktiflik=v['showActivityStatus']!=false;
+      profilPaylasArkadas=v['profileShareFriendsOnly']==true;
+      yorumArkadas=v['friendsOnlyComments']==true;
+      gizliKelimeler=v['hiddenWordsFilter']!=false;
+      gizliKelimeListesi=List<String>.from(v['hiddenWords']??const[]);
+      mesajArkadas=v['friendsOnlyMessages']!=false;
+      mesajIzni=(v['messagePermission']??(mesajArkadas?'friends':'all')).toString();
+      hikayeArkadas=v['friendsOnlyStory']!=false;
+      ekranGoruntusu=v['allowStoryScreenshot']==true;
+      bildirim=v['notificationsEnabled']!=false;
+      mesajBildirimi=v['messageNotifications']!=false;
+      arkadasBildirimi=v['friendNotifications']!=false;
+      etkilesimBildirimi=v['interactionNotifications']!=false;
+      indirme=v['defaultAllowDownload']!=false;
+    });
+  }
+
+  Future<void> kaydet(String k,bool v) async {
+    if(uid!=null)await FirebaseFirestore.instance.collection('users').doc(uid).set({k:v},SetOptions(merge:true));
+  }
+  Future<void> kaydetMetin(String k,String v)async{
+    if(uid!=null)await FirebaseFirestore.instance.collection('users').doc(uid).set({k:v},SetOptions(merge:true));
+  }
+  Future<void> gizliKelimeYonet()async{
+    final kontrol=TextEditingController();
+    await showModalBottomSheet<void>(
+      context:context,backgroundColor:Colors.white,showDragHandle:true,isScrollControlled:true,
+      builder:(c)=>Theme(data:ThemeData.light(),child:StatefulBuilder(builder:(c,setP)=>SafeArea(child:Padding(
+        padding:EdgeInsets.fromLTRB(18,6,18,MediaQuery.of(c).viewInsets.bottom+18),
+        child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
+          const Text('Gizli kelimeler',style:TextStyle(color:Colors.black87,fontSize:20,fontWeight:FontWeight.w900)),
+          const SizedBox(height:6),
+          const Text('Bu kelimeleri içeren yorum ve özel mesajlar sende gizlenir.',style:TextStyle(color:Colors.black54)),
+          const SizedBox(height:14),
+          if(gizliKelimeListesi.isNotEmpty)Wrap(spacing:7,runSpacing:7,children:gizliKelimeListesi.map((x)=>InputChip(
+            label:Text(x),onDeleted:()async{
+              gizliKelimeListesi.remove(x);
+              await FirebaseFirestore.instance.collection('users').doc(uid!).set({'hiddenWords':gizliKelimeListesi},SetOptions(merge:true));
+              if(mounted)setState((){});setP((){});
+            },
+          )).toList()),
+          const SizedBox(height:12),
+          Row(children:[
+            Expanded(child:TextField(controller:kontrol,maxLength:30,decoration:const InputDecoration(hintText:'Kelime veya ifade ekle'))),
+            const SizedBox(width:8),
+            FilledButton(onPressed:()async{
+              final x=kontrol.text.trim().toLowerCase();
+              if(x.isEmpty||gizliKelimeListesi.contains(x))return;
+              gizliKelimeListesi.add(x);kontrol.clear();
+              await FirebaseFirestore.instance.collection('users').doc(uid!).set({'hiddenWords':gizliKelimeListesi,'hiddenWordsFilter':true},SetOptions(merge:true));
+              if(mounted)setState(()=>gizliKelimeler=true);setP((){});
+            },child:const Text('Ekle')),
+          ]),
+        ]),
+      )))),
+    );
+    kontrol.dispose();
+  }
+
+  Widget satir(String t,String s,bool v,ValueChanged<bool> f,{bool etkin=true})=>SwitchListTile(
+    contentPadding:const EdgeInsets.symmetric(horizontal:22,vertical:8),
+    title:Text(t,style:TextStyle(color:etkin?Colors.black87:Colors.black38,fontWeight:FontWeight.w600)),
+    subtitle:Text(s,style:TextStyle(color:etkin?Colors.black54:Colors.black26)),
+    value:v,onChanged:etkin?f:null,activeThumbColor:Colors.white,activeTrackColor:mavi,
+  );
+
+  List<Widget> get secenekler {
+    switch(widget.baslik){
+      case 'Gizlilik':
+        return [
+          satir('Gizli hesap','Yeni takipçiler onay bekler',hesapGizli,(v){setState(()=>hesapGizli=v);kaydet('privateAccount',v);}),
+          const Padding(padding:EdgeInsets.fromLTRB(22,14,22,4),child:Text('Profili kimler görüntüleyebilir?',style:TextStyle(fontWeight:FontWeight.w900))),
+          for(final e in const [('all','Herkes'),('followers','Takipçilerim'),('friends','Arkadaşlarım')])
+            RadioListTile<String>(
+              value:e.$1,groupValue:profilGoruntuleme,
+              title:Text(e.$2),
+              onChanged:(v)async{if(v==null)return;setState(()=>profilGoruntuleme=v);await kaydetMetin('profileViewPermission',v);},
+            ),
+          satir('Profil aramalarında görün','Kullanıcılar seni adınla bulabilsin',profilArama,(v){setState(()=>profilArama=v);kaydet('discoverableProfile',v);}),
+          satir('Aktiflik durumunu göster','Arkadaşların son görülme bilgini görebilsin',aktiflik,(v){setState(()=>aktiflik=v);kaydet('showActivityStatus',v);}),
+          satir('Profil paylaşımını arkadaşlarla sınırla','Profil bağlantını yalnızca arkadaşların paylaşabilsin',profilPaylasArkadas,(v){setState(()=>profilPaylasArkadas=v);kaydet('profileShareFriendsOnly',v);}),
+          satir('Yorumları arkadaşlarla sınırla','Yalnızca arkadaşların yorum yapabilsin',yorumArkadas,(v){setState(()=>yorumArkadas=v);kaydet('friendsOnlyComments',v);}),
+          satir('Gizli kelime filtresi','Seçtiğin kelimeleri içeren yorum ve mesajları gizle',gizliKelimeler,(v){setState(()=>gizliKelimeler=v);kaydet('hiddenWordsFilter',v);}),
+          ListTile(
+            contentPadding:const EdgeInsets.symmetric(horizontal:22,vertical:6),
+            leading:const Icon(Icons.visibility_off_outlined,color:mor),
+            title:const Text('Gizli kelimeleri yönet',style:TextStyle(fontWeight:FontWeight.w700)),
+            subtitle:Text(gizliKelimeListesi.isEmpty?'Henüz kelime eklenmedi':gizliKelimeListesi.length.toString()+' kelime / ifade'),
+            trailing:const Icon(Icons.chevron_right),
+            onTap:gizliKelimeYonet,
+          ),
+          const Divider(),
+          ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:22,vertical:6),leading:const Icon(Icons.block_outlined,color:mor),title:const Text('Engellenen hesaplar',style:TextStyle(fontWeight:FontWeight.w700)),subtitle:const Text('Engellediğin hesapları yönet'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const EngellenenlerPage()))),
+          ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:22,vertical:6),leading:const Icon(Icons.history_toggle_off_rounded,color:mor),title:const Text('Takip isteği geçmişi',style:TextStyle(fontWeight:FontWeight.w700)),subtitle:const Text('Gönderdiğin bekleyen, kabul edilen ve reddedilen istekler'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const TakipIstegiGecmisiPage()))),
+        ];
+      case 'Mesaj izinleri':
+        return [
+          Padding(padding:const EdgeInsets.fromLTRB(22,16,22,8),child:Text(t('whoCanMessage'),style:const TextStyle(fontSize:18,fontWeight:FontWeight.w900))),
+          for(final kod in const ['all','following','friends','none'])
+            RadioListTile<String>(
+              value:kod,groupValue:mesajIzni,
+              title:Text(mesajIzinEtiketi(kod),style:const TextStyle(fontWeight:FontWeight.w700)),
+              subtitle:Text(mesajIzinAciklama(kod)),
+              onChanged:(v)async{
+                if(v==null)return;
+                setState(()=>mesajIzni=v);
+                await kaydetMetin('messagePermission',v);
+                await kaydet('friendsOnlyMessages',v=='friends');
+              },
+            ),
+        ];
+      case 'Hikâye gizliliği':
+        return [
+          satir('Hikâyeyi arkadaşlar görsün','Hikâyeni yalnızca arkadaşlarına göster',hikayeArkadas,(v){setState(()=>hikayeArkadas=v);kaydet('friendsOnlyStory',v);}),
+          satir('Hikâyede ekran görüntüsü','İzin verirsen arkadaşların ekran görüntüsü alabilir',ekranGoruntusu,(v){setState(()=>ekranGoruntusu=v);kaydet('allowStoryScreenshot',v);}),
+        ];
+      case 'Bildirimler':
+        return [
+          satir('Tüm bildirimler','Uygulama bildirimlerini tek dokunuşla aç veya kapat',bildirim,(v){setState(()=>bildirim=v);kaydet('notificationsEnabled',v);}),
+          const Divider(),
+          satir('Mesajlar','Yeni mesaj ve fotoğraf bildirimleri',mesajBildirimi,(v){setState(()=>mesajBildirimi=v);kaydet('messageNotifications',v);},etkin:bildirim),
+          satir('Arkadaşlık','İstek ve kabul bildirimleri',arkadasBildirimi,(v){setState(()=>arkadasBildirimi=v);kaydet('friendNotifications',v);},etkin:bildirim),
+          satir('Beğeni ve yorumlar','Paylaşımlarındaki etkileşimler',etkilesimBildirimi,(v){setState(()=>etkilesimBildirimi=v);kaydet('interactionNotifications',v);},etkin:bildirim),
+        ];
+      case 'İndirme izinleri':
+        return [satir('Varsayılan indirme izni','Yeni paylaşımların indirilebilsin',indirme,(v){setState(()=>indirme=v);kaydet('defaultAllowDownload',v);})];
+      default:
+        return const [ListTile(leading:Icon(Icons.people,color:mavi),title:Text('Arkadaşlık isteklerini Aktivite ekranından yönet.',style:TextStyle(color:Colors.black87)))];
+    }
+  }
+
+  @override
+  Widget build(BuildContext context)=>Theme(
+    data:ThemeData.light().copyWith(scaffoldBackgroundColor:Colors.white,appBarTheme:const AppBarTheme(backgroundColor:Colors.white,foregroundColor:Colors.black,elevation:0),dividerColor:const Color(0xFFE5E7EB)),
+    child:Scaffold(appBar:AppBar(title:Text(tercihBasligi(widget.baslik))),body:SafeArea(child:ListView(children:secenekler))),
+  );
+}
+
+class ArkadaslarPage extends StatelessWidget {
+  const ArkadaslarPage({super.key});
+  @override Widget build(BuildContext context) {
+    final uid=FirebaseAuth.instance.currentUser?.uid;
+    return Theme(
+      data:ThemeData.light().copyWith(scaffoldBackgroundColor:Colors.white,appBarTheme:const AppBarTheme(backgroundColor:Colors.white,foregroundColor:Colors.black,elevation:0)),
+      child:Scaffold(
+        backgroundColor:Colors.white,
+        appBar:AppBar(title:const Text('Arkadaşlar',style:TextStyle(fontWeight:FontWeight.w900))),
+        body:FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(
+          future:uid==null?null:FirebaseFirestore.instance.collection('users').doc(uid).get(),
+          builder:(_,s){
+            final ids=List<String>.from(s.data?.data()?['friends']??[]);
+            if(ids.isEmpty)return const Center(child:Text('Henüz arkadaşın yok.',style:TextStyle(color:Colors.black54)));
+            return ListView(children:ids.map((id)=>FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(
+              future:FirebaseFirestore.instance.collection('users').doc(id).get(),
+              builder:(_,u){
+                final v=u.data?.data()??<String,dynamic>{},foto=(v['photoUrl']??'').toString();
+                return ListTile(
+                  onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciProfilPage(uid:id))),
+                  onLongPress:()async{
+                    final ok=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(
+                      title:const Text('Arkadaşlıktan çıkarılsın mı?'),
+                      content:Text('${v['displayName']??v['username']??'Bu kişi'} arkadaşlıktan çıkarılsın mı?'),
+                      actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),TextButton(onPressed:()=>Navigator.pop(c,true),child:const Text('ARKADAŞLIKTAN ÇIKAR',style:TextStyle(color:Colors.red,fontWeight:FontWeight.bold)))]));
+                    if(ok==true&&uid!=null){
+                      await FirebaseFirestore.instance.collection('users').doc(uid).update({'friends':FieldValue.arrayRemove([id])});
+                      await FirebaseFirestore.instance.collection('users').doc(id).update({'friends':FieldValue.arrayRemove([uid])});
+                    }
+                  },
+                  leading:CircleAvatar(backgroundImage:foto.isEmpty?null:CachedNetworkImageProvider(foto),child:foto.isEmpty?const Icon(Icons.person):null),
+                  title:Text((v['displayName']??v['username']??'NgelX').toString(),style:const TextStyle(fontWeight:FontWeight.w800)),
+                  subtitle:Text('@${v['username']??'ngelx'}'),trailing:const Icon(Icons.chevron_right),
+                );
+              },
+            )).toList());
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class TakipIstegiGecmisiPage extends StatelessWidget{
+  const TakipIstegiGecmisiPage({super.key});
+  String durum(Map<String,dynamic> v){
+    switch((v['status']??'pending').toString()){
+      case 'accepted':return 'Kabul edildi';
+      case 'rejected':return 'Reddedildi';
+      default:return 'Bekliyor';
+    }
+  }
+  Color durumRengi(Map<String,dynamic> v){
+    switch((v['status']??'pending').toString()){
+      case 'accepted':return Colors.green;
+      case 'rejected':return Colors.red;
+      default:return Colors.orange;
+    }
+  }
+  @override Widget build(BuildContext context){
+    final uid=FirebaseAuth.instance.currentUser?.uid;
+    return Theme(data:ThemeData.light(),child:Scaffold(
+      backgroundColor:Colors.white,
+      appBar:AppBar(title:const Text('Takip isteği geçmişi',style:TextStyle(fontWeight:FontWeight.w900))),
+      body:uid==null?const Center(child:Text('Oturum bulunamadı.')):StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
+        stream:FirebaseFirestore.instance.collection('notifications').where('fromUid',isEqualTo:uid).limit(100).snapshots(),
+        builder:(_,s){
+          if(s.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator(color:mor));
+          final docs=(s.data?.docs??[]).where((d)=>d.data()['type']=='follow_request').toList()
+            ..sort((a,b){
+              final at=a.data()['createdAt'],bt=b.data()['createdAt'];
+              final am=at is Timestamp?at.millisecondsSinceEpoch:0,bm=bt is Timestamp?bt.millisecondsSinceEpoch:0;
+              return bm.compareTo(am);
+            });
+          if(docs.isEmpty)return const Center(child:Text('Gönderilmiş takip isteğin yok.',style:TextStyle(color:Colors.black54)));
+          return ListView.separated(
+            padding:const EdgeInsets.all(12),itemCount:docs.length,separatorBuilder:(_,__)=>const Divider(),
+            itemBuilder:(_,i){
+              final v=docs[i].data(),hedef=(v['toUid']??'').toString();
+              return FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(
+                future:FirebaseFirestore.instance.collection('users').doc(hedef).get(),
+                builder:(_,u){
+                  final p=u.data?.data()??<String,dynamic>{},foto=(p['photoUrl']??'').toString(),ad=(p['displayName']??p['username']??'NgelX kullanıcısı').toString();
+                  return ListTile(
+                    onTap:hedef.isEmpty?null:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciProfilPage(uid:hedef))),
+                    leading:CircleAvatar(backgroundImage:foto.isEmpty?null:CachedNetworkImageProvider(foto),child:foto.isEmpty?const Icon(Icons.person):null),
+                    title:Text(ad,style:const TextStyle(fontWeight:FontWeight.w800)),
+                    subtitle:Text(zamanKisa(v['createdAt'])),
+                    trailing:Text(durum(v),style:TextStyle(color:durumRengi(v),fontWeight:FontWeight.w800)),
+                  );
+                },
+              );
+            },
+          );
+        },
+      ),
+    ));
+  }
+}
+
+class KullaniciListesiPage extends StatefulWidget{
+  final String uid,alan,baslik;
+  const KullaniciListesiPage({super.key,required this.uid,required this.alan,required this.baslik});
+  @override State<KullaniciListesiPage> createState()=>_KullaniciListesiPageState();
+}
+class _KullaniciListesiPageState extends State<KullaniciListesiPage>{
+  String arama='';
+  String? get me=>FirebaseAuth.instance.currentUser?.uid;
+
+  Future<void> takipciyiKaldir(String hedefUid,String ad)async{
+    final benim=me;if(benim==null||widget.uid!=benim||widget.alan!='followers')return;
+    final ok=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(
+      backgroundColor:Colors.white,surfaceTintColor:Colors.white,
+      title:const Text('Takipçi kaldırılsın mı?',style:TextStyle(color:Colors.black87,fontWeight:FontWeight.w800)),
+      content:Text(ad+' seni artık takip etmeyecek. Bu kişiye bildirim gönderilmez.',style:const TextStyle(color:Colors.black87)),
+      actions:[
+        TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),
+        FilledButton(style:FilledButton.styleFrom(backgroundColor:Colors.red,foregroundColor:Colors.white),onPressed:()=>Navigator.pop(c,true),child:const Text('Takipçiyi kaldır')),
+      ],
+    ))??false;
+    if(!ok)return;
+    final batch=FirebaseFirestore.instance.batch();
+    batch.set(FirebaseFirestore.instance.collection('users').doc(benim),{'followers':FieldValue.arrayRemove([hedefUid])},SetOptions(merge:true));
+    batch.set(FirebaseFirestore.instance.collection('users').doc(hedefUid),{'following':FieldValue.arrayRemove([benim])},SetOptions(merge:true));
+    await batch.commit();
+    if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Takipçi kaldırıldı.')));
+  }
+
+  @override Widget build(BuildContext context)=>Theme(
+    data:ThemeData.light(),
+    child:Scaffold(
+      backgroundColor:Colors.white,
+      appBar:AppBar(title:Text(widget.baslik,style:const TextStyle(fontWeight:FontWeight.w900))),
+      body:StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
+        stream:FirebaseFirestore.instance.collection('users').doc(widget.uid).snapshots(),
+        builder:(_,s){
+          if(s.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator(color:mor));
+          final ids=List<String>.from(s.data?.data()?[widget.alan]??const[]);
+          if(ids.isEmpty)return Center(child:Column(mainAxisSize:MainAxisSize.min,children:[const Icon(Icons.people_outline,size:54,color:mor),const SizedBox(height:12),Text(widget.baslik+' listesi boş.',style:const TextStyle(color:Colors.black54))]));
+          return Column(children:[
+            Padding(
+              padding:const EdgeInsets.fromLTRB(12,10,12,6),
+              child:TextField(
+                onChanged:(v)=>setState(()=>arama=v.trim().toLowerCase()),
+                decoration:InputDecoration(
+                  hintText:'Kişi ara',
+                  prefixIcon:const Icon(Icons.search_rounded),
+                  filled:true,fillColor:const Color(0xFFF3F4F6),
+                  border:OutlineInputBorder(borderRadius:BorderRadius.circular(16),borderSide:BorderSide.none),
+                ),
+              ),
+            ),
+            Expanded(child:ListView.builder(
+              padding:const EdgeInsets.all(12),itemCount:ids.length,
+              itemBuilder:(_,i)=>FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(
+                future:FirebaseFirestore.instance.collection('users').doc(ids[i]).get(),
+                builder:(_,u){
+                  final v=u.data?.data()??<String,dynamic>{},foto=(v['photoUrl']??'').toString(),ad=(v['displayName']??v['username']??'NgelX').toString(),kullanici=(v['username']??'ngelx').toString();
+                  final metin=(ad+' '+kullanici).toLowerCase();
+                  if(arama.isNotEmpty&&!metin.contains(arama))return const SizedBox.shrink();
+                  final kaldirabilir=me==widget.uid&&widget.alan=='followers'&&ids[i]!=me;
+                  return ListTile(
+                    onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciProfilPage(uid:ids[i]))),
+                    leading:CircleAvatar(backgroundImage:foto.isEmpty?null:CachedNetworkImageProvider(foto),child:foto.isEmpty?const Icon(Icons.person):null),
+                    title:Text(ad,style:const TextStyle(fontWeight:FontWeight.w800)),
+                    subtitle:Text('@'+kullanici),
+                    trailing:kaldirabilir?PopupMenuButton<String>(
+                      onSelected:(x){if(x=='remove')takipciyiKaldir(ids[i],ad);},
+                      itemBuilder:(_)=>const [PopupMenuItem(value:'remove',child:Text('Takipçiyi kaldır',style:TextStyle(color:Colors.red)))],
+                    ):const Icon(Icons.chevron_right),
+                  );
+                },
+              ),
+            )),
+          ]);
+        },
+      ),
+    ),
+  );
+}
+
+
+class EtkilesimOzetiPage extends StatelessWidget{
+  final String uid;
+  const EtkilesimOzetiPage({super.key,required this.uid});
+  int puan(Map<String,dynamic> v)=>((v['likeCount'] as num?)?.toInt()??0)+((v['commentCount'] as num?)?.toInt()??0)+((v['shareCount'] as num?)?.toInt()??0);
+  @override Widget build(BuildContext context)=>Theme(
+    data:ThemeData.light(),
+    child:Scaffold(
+      backgroundColor:Colors.white,
+      appBar:AppBar(title:const Text('Etkileşim',style:TextStyle(fontWeight:FontWeight.w900))),
+      body:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
+        stream:FirebaseFirestore.instance.collection('videos').where('ownerId',isEqualTo:uid).limit(100).snapshots(),
+        builder:(_,s){
+          final d=(s.data?.docs??[]).where((x)=>x.data()['type']!='story').toList();
+          final eksik=d.where((x)=>x.data()['likeCount']==null||x.data()['commentCount']==null).toList();
+          if(eksik.isNotEmpty){
+            return FutureBuilder<void>(
+              future:Future.wait(eksik.map((x)async{
+                final v=x.data();
+                final sonuc=await Future.wait([
+                  if(v['likeCount']==null)x.reference.collection('likes').count().get(),
+                  if(v['commentCount']==null)x.reference.collection('comments').count().get(),
+                ]);
+                int i=0;
+                final guncelle=<String,dynamic>{};
+                if(v['likeCount']==null)guncelle['likeCount']=(sonuc[i++] as AggregateQuerySnapshot).count??0;
+                if(v['commentCount']==null)guncelle['commentCount']=(sonuc[i++] as AggregateQuerySnapshot).count??0;
+                if(guncelle.isNotEmpty)await x.reference.set(guncelle,SetOptions(merge:true));
+              })),
+              builder:(_,geri){
+                if(geri.connectionState!=ConnectionState.done)return const Center(child:CircularProgressIndicator(color:mor));
+                return const SizedBox.shrink();
+              },
+            );
+          }
+          int begeni=0,yorum=0,paylasim=0;
+          for(final x in d){final v=x.data();begeni+=((v['likeCount'] as num?)?.toInt()??0);yorum+=((v['commentCount'] as num?)?.toInt()??0);paylasim+=((v['shareCount'] as num?)?.toInt()??0);}
+          final benim=FirebaseAuth.instance.currentUser?.uid==uid;
+          final top=[...d]..sort((a,b)=>puan(b.data()).compareTo(puan(a.data())));
+          return ListView(padding:const EdgeInsets.all(20),children:[
+            const Text('İçerik istatistikleri',style:TextStyle(fontSize:22,fontWeight:FontWeight.w900)),
+            const SizedBox(height:18),
+            Row(children:[_kart(Icons.favorite_rounded,'Beğeni',begeni,Colors.red),_kart(Icons.comment_rounded,'Yorum',yorum,Colors.blue)]),
+            const SizedBox(height:12),
+            Row(children:[_kart(Icons.send_rounded,'Paylaşım',paylasim,mor),_kart(Icons.grid_view_rounded,'Gönderi',d.length,Colors.orange)]),
+            if(benim)...[
+              const SizedBox(height:24),
+              ListTile(
+                contentPadding:EdgeInsets.zero,
+                leading:const CircleAvatar(backgroundColor:Color(0xFFF1E9FF),child:Icon(Icons.query_stats_rounded,color:mor)),
+                title:const Text('Profil ziyaret eğilimleri',style:TextStyle(fontWeight:FontWeight.w800)),
+                subtitle:const Text('Günlük ziyaret sayılarındaki değişimi gör'),
+                trailing:const Icon(Icons.chevron_right),
+                onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const ProfilZiyaretTrendPage())),
+              ),
+              const SizedBox(height:16),
+              const Text('En çok etkileşim alan gönderiler',style:TextStyle(fontSize:18,fontWeight:FontWeight.w900)),
+              const SizedBox(height:8),
+              if(top.isEmpty)const Text('Henüz gönderi yok.',style:TextStyle(color:Colors.black54)),
+              ...top.take(5).map((x){
+                final v=x.data(),aciklama=(v['description']??'Gönderi').toString();
+                return ListTile(
+                  contentPadding:EdgeInsets.zero,
+                  leading:CircleAvatar(backgroundColor:const Color(0xFFF1F2F4),child:Text((puan(v)).toString(),style:const TextStyle(fontWeight:FontWeight.w900))),
+                  title:Text(aciklama.isEmpty?'Gönderi':aciklama,maxLines:1,overflow:TextOverflow.ellipsis),
+                  subtitle:Text('Toplam etkileşim: '+puan(v).toString()),
+                  trailing:const Icon(Icons.chevron_right),
+                  onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>IcerikBaglantiPage(icerikId:x.id))),
+                );
+              }),
+            ],
+          ]);
+        },
+      ),
+    ),
+  );
+  Widget _kart(IconData i,String t,int n,Color c)=>Expanded(child:Container(margin:const EdgeInsets.all(5),padding:const EdgeInsets.all(18),decoration:BoxDecoration(color:c.withValues(alpha:.10),borderRadius:BorderRadius.circular(20)),child:Column(children:[Icon(i,color:c),const SizedBox(height:8),Text(n.toString(),style:const TextStyle(fontSize:24,fontWeight:FontWeight.w900)),Text(t,style:const TextStyle(color:Colors.black54))])));
+}
+
+class ProfilAramaPage extends StatefulWidget{
+  final String uid;
+  const ProfilAramaPage({super.key,required this.uid});
+  @override State<ProfilAramaPage> createState()=>_ProfilAramaPageState();
+}
+class _ProfilAramaPageState extends State<ProfilAramaPage>{
+  String q='';
+  @override Widget build(BuildContext context)=>Theme(
+    data:ThemeData.light(),
+    child:Scaffold(
+      backgroundColor:Colors.white,
+      appBar:AppBar(title:TextField(autofocus:true,onChanged:(v)=>setState(()=>q=v.trim().toLowerCase()),decoration:const InputDecoration(hintText:'Profilde ara',prefixIcon:Icon(Icons.search)))),
+      body:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
+        stream:FirebaseFirestore.instance.collection('videos').where('ownerId',isEqualTo:widget.uid).limit(100).snapshots(),
+        builder:(_,s){
+          final docs=(s.data?.docs??[]).where((d){final v=d.data();return v['type']!='story'&&(q.isEmpty||(v['description']??'').toString().toLowerCase().contains(q));}).toList();
+          if(docs.isEmpty)return const Center(child:Text('Eşleşen paylaşım bulunamadı.',style:TextStyle(color:Colors.black54)));
+          return ListView.separated(
+            padding:const EdgeInsets.all(14),itemCount:docs.length,separatorBuilder:(_,__)=>const Divider(),
+            itemBuilder:(_,i){
+              final v=docs[i].data();
+              return ListTile(onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>IcerikBaglantiPage(icerikId:docs[i].id))),leading:const CircleAvatar(backgroundColor:Color(0xFFF1E9FF),child:Icon(Icons.grid_view,color:mor)),title:Text((v['description']??'Adsız paylaşım').toString(),maxLines:2,overflow:TextOverflow.ellipsis),trailing:const Icon(Icons.chevron_right));
+            },
+          );
+        },
+      ),
+    ),
+  );
 }
 
 class HikayeArsiviPage extends StatelessWidget{
