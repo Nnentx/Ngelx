@@ -6747,7 +6747,6 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
     final fileUrl=(v['fileUrl']??'').toString(),fileName=(v['fileName']??'Dosya').toString(),locationText=(v['locationText']??metin).toString();
     final saat=mesajSaati(v['createdAt']??v['clientCreatedAt']),yanit=(v['replyToText']??'').toString(),yanitGonderen=(v['replyToSenderName']??'').toString();
     final hamTepkiler=v['reactions'],tepkiler=hamTepkiler is Map?Map<String,dynamic>.from(hamTepkiler):<String,dynamic>{};
-    if(tur=='poll')return const SizedBox.shrink();
     if(silinmis)return Align(
       alignment:ben?Alignment.centerRight:Alignment.centerLeft,
       child:Container(
