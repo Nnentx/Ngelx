@@ -11734,7 +11734,9 @@ class _YeniSohbetPageState extends State<YeniSohbetPage>{
                         final izinli=izin=='all'||
                           (izin=='friends'&&arkadaslar.contains(d.id))||
                           (izin=='following'&&hedefinTakipEttikleri.contains(me));
-                        if(!izinli&&chat.data?.exists!=true){
+                        final cv=chat.data?.data()??<String,dynamic>{};
+                        final kabulEdildi=cv['requestAccepted_$me']==true||cv['requestAccepted_${d.id}']==true;
+                        if(!izinli&&!kabulEdildi){
                           ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(t('messageNotAllowed'))));
                           return;
                         }
@@ -14111,7 +14113,7 @@ class KullaniciProfilPage extends StatelessWidget {
                     },
                   )),
                   const SizedBox(width:10),
-                  Expanded(child:OutlinedButton.icon(onPressed:()async{if(me==null)return;if(!mesajAtabilir){ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(t('messageNotAllowed'))));return;}final ids=[me,uid]..sort();final id=ids.join('_');Navigator.push(context,MaterialPageRoute(builder:(_)=>SohbetPage(chatId:id,digerUid:uid,ad:(v['displayName']??v['username']??'NgelX').toString(),foto:foto)));},icon:const Icon(Icons.message_outlined),label:Text(t('message')))),
+                  Expanded(child:OutlinedButton.icon(onPressed:()async{if(me==null)return;final ids=[me,uid]..sort();final id=ids.join('_');var izinli=mesajAtabilir;if(!izinli){try{final mevcut=await FirebaseFirestore.instance.collection('chats').doc(id).get();final cv=mevcut.data()??<String,dynamic>{};izinli=cv['requestAccepted_$me']==true||cv['requestAccepted_$uid']==true;}catch(_){}}if(!izinli){if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(t('messageNotAllowed'))));return;}if(context.mounted)Navigator.push(context,MaterialPageRoute(builder:(_)=>SohbetPage(chatId:id,digerUid:uid,ad:(v['displayName']??v['username']??'NgelX').toString(),foto:foto)));},icon:const Icon(Icons.message_outlined),label:Text(t('message')))),
                 ]),
                 const SizedBox(height:10),
                 StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
