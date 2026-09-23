@@ -7238,16 +7238,46 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
             final t=_mesajTarihi(d);
             if(t==null)return const SizedBox.shrink();
             final uyeler=List<String>.from(grupVerisi!['members']??const[]);
-            var gorulen=0;
+            final gorulenIds=<String>[];
             for(final id in uyeler){
               if(id==uid)continue;
               if(grupVerisi!['readReceipts_'+id]==false)continue;
               final r=grupVerisi!['lastReadAt_'+id];
-              if(r is Timestamp&&!r.toDate().isBefore(t))gorulen++;
+              if(r is Timestamp&&!r.toDate().isBefore(t))gorulenIds.add(id);
             }
+            final onizleme=gorulenIds.take(3).toList();
             return Padding(
               padding:const EdgeInsets.only(top:1,right:7,bottom:2),
-              child:Text(gorulen>0?gorulen.toString()+' kişi gördü':'Gönderildi',style:const TextStyle(color:ngelxPremiumMuted,fontSize:9.5,fontWeight:FontWeight.w700)),
+              child:Row(mainAxisSize:MainAxisSize.min,children:[
+                Text(gorulenIds.isNotEmpty?gorulenIds.length.toString()+' kişi gördü':'Gönderildi',style:const TextStyle(color:ngelxPremiumMuted,fontSize:9.5,fontWeight:FontWeight.w700)),
+                if(onizleme.isNotEmpty)...[
+                  const SizedBox(width:5),
+                  SizedBox(
+                    width:14.0+(onizleme.length-1)*10,
+                    height:16,
+                    child:Stack(children:[
+                      for(int i=0;i<onizleme.length;i++)
+                        Positioned(
+                          left:i*10.0,
+                          child:FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(
+                            future:_uyeGetir(onizleme[i]),
+                            builder:(_,snap){
+                              final p=snap.data?.data()??<String,dynamic>{};
+                              final foto=(p['photoUrl']??'').toString();
+                              return Container(
+                                width:16,height:16,
+                                decoration:BoxDecoration(shape:BoxShape.circle,color:ngelxGroupGreenSoft,border:Border.all(color:Colors.white,width:1.4)),
+                                child:ClipOval(child:foto.isEmpty
+                                  ?const Icon(Icons.person_rounded,color:ngelxGroupGreen,size:10)
+                                  :CachedNetworkImage(imageUrl:foto,fit:BoxFit.cover,errorWidget:(_,__,___)=>const Icon(Icons.person_rounded,color:ngelxGroupGreen,size:10))),
+                              );
+                            },
+                          ),
+                        ),
+                    ]),
+                  ),
+                ],
+              ]),
             );
           }),
         ],
