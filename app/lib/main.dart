@@ -649,6 +649,8 @@ const ceviriler = <String, Map<String,String>>{
   'accept': {'tr':'Kabul et','en':'Accept','de':'Annehmen','ar':'قبول','ru':'Принять'},
   'reject': {'tr':'Reddet','en':'Reject','de':'Ablehnen','ar':'رفض','ru':'Отклонить'},
   'noBlockedAccounts': {'tr':'Engellediğin hesap yok.','en':'You have no blocked accounts.','de':'Du hast keine blockierten Konten.','ar':'لا توجد حسابات محظورة.','ru':'У вас нет заблокированных аккаунтов.'},
+  'message': {'tr':'Mesaj','en':'Message','de':'Nachricht','ar':'رسالة','ru':'Сообщение'},
+  'messageNotAllowed': {'tr':'Bu hesap gizlilik ayarları nedeniyle senden yeni mesaj kabul etmiyor.','en':'This account is not accepting new messages from you because of its privacy settings.','de':'Dieses Konto akzeptiert aufgrund seiner Datenschutzeinstellungen keine neuen Nachrichten von dir.','ar':'هذا الحساب لا يقبل رسائل جديدة منك بسبب إعدادات الخصوصية.','ru':'Этот аккаунт не принимает от вас новые сообщения из-за настроек конфиденциальности.'},
   'unblock': {'tr':'Engeli kaldır','en':'Unblock','de':'Entsperren','ar':'إلغاء الحظر','ru':'Разблокировать'},
   'block': {'tr':'Engelle','en':'Block','de':'Blockieren','ar':'حظر','ru':'Заблокировать'},
   'member': {'tr':'üye','en':'members','de':'Mitglieder','ar':'أعضاء','ru':'участников'},
@@ -13941,6 +13943,13 @@ class KullaniciProfilPage extends StatelessWidget {
           final benimVerim = s.data![1]?.data() ?? <String, dynamic>{};
           final foto = (v['photoUrl'] ?? '').toString();
           final arkadaslar = Set<String>.from(List<dynamic>.from(benimVerim['friends'] ?? []));
+          final hedefinTakipEttikleri=Set<String>.from(List<dynamic>.from(v['following']??const[]));
+          final mesajIzni=(v['messagePermission']??(v['friendsOnlyMessages']!=false?'friends':'all')).toString();
+          final mesajAtabilir=me!=null&&(
+            mesajIzni=='all'||
+            (mesajIzni=='friends'&&arkadaslar.contains(uid))||
+            (mesajIzni=='following'&&hedefinTakipEttikleri.contains(me))
+          );
           final gizli = v['privateAccount'] == true;
           final profilIzni=(v['profileViewPermission']??'all').toString();
           final beniTakipEdiyor=me!=null&&List<String>.from(v['followers']??const[]).contains(me);
@@ -14083,7 +14092,7 @@ class KullaniciProfilPage extends StatelessWidget {
                     },
                   )),
                   const SizedBox(width:10),
-                  Expanded(child:OutlinedButton.icon(onPressed:()async{if(me==null)return;final ids=[me,uid]..sort();final id=ids.join('_');Navigator.push(context,MaterialPageRoute(builder:(_)=>SohbetPage(chatId:id,digerUid:uid,ad:(v['displayName']??v['username']??'NgelX').toString(),foto:foto)));},icon:const Icon(Icons.message_outlined),label:const Text('Mesaj'))),
+                  Expanded(child:OutlinedButton.icon(onPressed:()async{if(me==null)return;if(!mesajAtabilir){ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(t('messageNotAllowed'))));return;}final ids=[me,uid]..sort();final id=ids.join('_');Navigator.push(context,MaterialPageRoute(builder:(_)=>SohbetPage(chatId:id,digerUid:uid,ad:(v['displayName']??v['username']??'NgelX').toString(),foto:foto)));},icon:const Icon(Icons.message_outlined),label:Text(t('message')))),
                 ]),
                 const SizedBox(height:10),
                 StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
