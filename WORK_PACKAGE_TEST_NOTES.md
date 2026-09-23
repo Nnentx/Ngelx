@@ -170,3 +170,19 @@
 - **Çıkış yap** ile **Hesap değiştir** ayrı işlemler olacak.
 - İkinci erişim noktası: Ayarlar ve gizlilik > Hesaplar > Hesap değiştir / Hesap ekle.
 - Her hesabın oturum bilgisi ayrı ve güvenli tutulacak; hesaplar birbirinin mesaj, bildirim veya taslak verilerini karıştırmayacak.
+
+### 2026-09-23 Üret ekranı — aktif yayınlama düzeltmesi
+- Üret ekranı sadeleştirildi; ana akış artık **Video / Fotoğraf / Yazı** üzerine kurulu.
+- Galeriden fotoğraf ve video seçme, kameradan fotoğraf/video çekme ve yayınlama akışı gerçek işlemlere bağlandı.
+- Fotoğraf için 10 MB, video için 50 MB sınırı kullanıcıya seçim sırasında gösteriliyor ve kontrol ediliyor.
+- Video yükleme büyük dosyayı tamamen RAM'e almadan akış (stream) olarak medya servisine gönderiliyor; yavaş bağlantıda daha uzun yükleme süresi destekleniyor.
+- Firestore'daki medya servis adresi bozuk/eski olursa APK içindeki güvenli Worker adresi ikinci aday olarak deneniyor.
+- Yükleme sırasında gerçek ilerleme çubuğu ve yüzde bilgisi gösteriliyor; işlem devam ederken tekrar yayınlama engelleniyor.
+- Android galeriden/kameradan dönüşte işletim sistemi uygulamayı yeniden oluşturursa ImagePicker `retrieveLostData()` ile seçilen medya kurtarılıyor.
+- Seçilen fotoğraf için gerçek önizleme, video için belirgin seçili medya kartı ve “seçimi kaldır” eklendi.
+- **Hikâye** hızlı butonu artık 24 saatlik gerçek fotoğraf hikâyesi yayınlıyor; **Reels** video galerisine, **Kamera** kamera seçimine, **Canlı** canlı yayın hazırlığına bağlı.
+- Çalışmayan/sahte “Kırp, Filtre, Efekt, Hız, Metin, GIF/çıkartma, Kolaj, Kapak, Seslendirme, Önce/sonra” chip'leri kaldırıldı; yalnızca gerçekten çalışan kontroller bırakıldı.
+- Boş çalışan **Zamanla**, geri alınamayan **Taslak kaydet**, gerçek işlem yapmayan **Otomatik altyazı**, **Ortak gönderi**, kalite seçimi ve fotoğrafa müzik ekleme kontrolleri Üret ekranından kaldırıldı; yeniden eklenirse uçtan uca çalışan haliyle eklenecek.
+- “Yeniden paylaşıma izin ver” ayarı artık gerçek paylaşım menüsünde uygulanıyor; kapalı içerik sahibi dışındaki kullanıcılar yeniden paylaşamıyor.
+- Eski/tekrarlı `EskiYuklePage` tamamen kaldırıldı.
+- Son doğrulama: fotoğraf, video ve yazı paylaşımı iki gerçek hesapla cihazda yeniden test edilecek; yayınlanan içerik hem Akış'ta hem Profil'de görünmeli.
