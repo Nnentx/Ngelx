@@ -163,6 +163,17 @@ for token in (
     if token not in app:
         errors.append("Yeni sohbet mesaj gizliliği sözleşmesi eksik: " + token)
 
+# Firestore must enforce private-chat message privacy, not only the client UI.
+for token in (
+    "function privateChatCreateAllowed()",
+    "messagePermission",
+    "permission == 'friends'",
+    "permission == 'following'",
+    "privateChatCreateAllowed()",
+):
+    if token not in rules:
+        errors.append("Firestore özel mesaj gizliliği eksik: " + token)
+
 # Main feed must show real content only and keep user filters/live behavior intact.
 for token in (
     "class _VideoAkisiState",
