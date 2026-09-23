@@ -247,3 +247,8 @@
 - `all`, `friends`, `following`, `none` izinleri sunucu tarafında doğrulanıyor; sahte/eski bir istemci gizlilik kontrolünü atlayarak yeni özel sohbet oluşturamıyor.
 - Özel sohbet adı altında 3+ üyeli sahte sohbet oluşturma da reddediliyor; gerçek grup sohbeti akışı ayrı kurallarla çalışmaya devam ediyor.
 - Emulator testlerine herkes/arkadaş/takip edilen/kimse izinleri ve sahte 3 üyeli özel sohbet senaryoları eklendi.
+
+### 2026-09-23 özel sohbet medya kararlılığı
+- Özel sohbette 30 MB'a kadar dosya gönderimi artık dosyanın tamamını RAM'e almıyor; grup sohbetindeki gibi diskten stream yükleme kullanıyor.
+- Özel sohbet fotoğraf yüklemesindeki dış 12 saniyelik erken zaman aşımı 60 saniyeye çıkarıldı; yavaş bağlantıda gereksiz başarısızlık azaltıldı.
+- CI sözleşmesine özel sohbet dosyasının yeniden `readAsBytes()` ile tamamen belleğe alınmasını engelleyen kontrol eklendi.
