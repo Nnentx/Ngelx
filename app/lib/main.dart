@@ -6516,6 +6516,14 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
         'callParticipants':FieldValue.arrayUnion([ben]),
         'callAnsweredAt':FieldValue.serverTimestamp(),
       },SetOptions(merge:true));
+      final chatNow=await chatRef.get();
+      final callMessageId=(chatNow.data()?['callMessageId']??'').toString();
+      if(callMessageId.isNotEmpty){
+        unawaited(chatRef.collection('messages').doc(callMessageId).set({
+          'callStatus':'active',
+          'callConnectedAt':FieldValue.serverTimestamp(),
+        },SetOptions(merge:true)).catchError((_){ }));
+      }
       if(!mounted)return;
       await Navigator.push(context,MaterialPageRoute(builder:(_)=>NgelXAramaPage(
         roomName:oda,
@@ -6536,7 +6544,8 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
     final grupAdi=widget.ad;
     final odaAdi='group_${widget.chatId}_${DateTime.now().millisecondsSinceEpoch}';
     try{
-      unawaited(chatRef.set({
+      final callMessageRef=chatRef.collection('messages').doc('call_'+odaAdi);
+      await chatRef.set({
         'callStatus':'ringing',
         'callRoomName':odaAdi,
         'callStartedBy':ben,
@@ -6545,13 +6554,21 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
         'callGroup':true,
         'callParticipants':<String>[ben],
         'callCreatedAt':FieldValue.serverTimestamp(),
-      },SetOptions(merge:true)).timeout(const Duration(seconds:10)).catchError((_){ }));
-      unawaited(chatRef.collection('messages').doc('call_start_'+odaAdi).set({
-        'senderId':'system',
-        'type':'system',
-        'text':goruntulu?'Görüntülü arama başladı.':'Sesli arama başladı.',
+        'callConnectedAt':FieldValue.delete(),
+        'callAnsweredAt':FieldValue.delete(),
+        'callEndedAt':FieldValue.delete(),
+        'callEndedBy':FieldValue.delete(),
+        'callMessageId':callMessageRef.id,
+      },SetOptions(merge:true)).timeout(const Duration(seconds:10));
+      await callMessageRef.set({
+        'senderId':ben,
+        'type':'call',
+        'text':goruntulu?'Görüntülü grup araması':'Sesli grup araması',
+        'callVideo':goruntulu,
+        'callStatus':'ringing',
+        'callRoomName':odaAdi,
         'createdAt':FieldValue.serverTimestamp(),
-      },SetOptions(merge:true)).catchError((_){ }));
+      },SetOptions(merge:true));
       unawaited(chatRef.get().timeout(const Duration(seconds:10)).then((grup){
         final uyeler=List<String>.from(grup.data()?['members']??const[]);
         for(final uye in uyeler){
@@ -6616,6 +6633,66 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
       ),
       child:Text(metin,maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Color(0xFF6D5A86),fontSize:11,fontWeight:FontWeight.w700)),
     ));
+    if(tur=='call'){
+      final goruntulu=v['callVideo']==true;
+      final durum=(v['callStatus']??'ringing').toString();
+      final aktif=durum=='ringing'||durum=='active';
+      final cevapsiz=durum=='missed'||durum=='rejected';
+      final baslik=cevapsiz
+        ? (goruntulu?'Cevapsız görüntülü grup araması':'Cevapsız sesli grup araması')
+        : (goruntulu?'Görüntülü Grup Araması':'Sesli grup araması');
+      final alt=aktif?'Katılmak için dokun':cevapsiz?'Geri aramak için dokun':'Arama sona erdi';
+      return Align(
+        alignment:Alignment.centerRight,
+        child:Container(
+          width:MediaQuery.sizeOf(context).width*.68,
+          margin:const EdgeInsets.symmetric(vertical:7),
+          padding:const EdgeInsets.all(13),
+          decoration:BoxDecoration(
+            color:Colors.white.withValues(alpha:.96),
+            borderRadius:BorderRadius.circular(22),
+            border:Border.all(color:ngelxGroupBorder),
+            boxShadow:const [BoxShadow(color:Color(0x16000000),blurRadius:14,offset:Offset(0,6))],
+          ),
+          child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+            Row(children:[
+              CircleAvatar(
+                radius:21,
+                backgroundColor:cevapsiz?const Color(0xFFFF4B55):const Color(0xFFB8B8B8),
+                child:Icon(goruntulu?Icons.videocam_rounded:Icons.call_rounded,color:Colors.white,size:23),
+              ),
+              const SizedBox(width:10),
+              Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+                Text(baslik,maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Color(0xFF202124),fontSize:14,fontWeight:FontWeight.w900)),
+                const SizedBox(height:2),
+                Text(alt,style:const TextStyle(color:Color(0xFF777777),fontSize:11.5,fontWeight:FontWeight.w600)),
+              ])),
+            ]),
+            if(aktif||cevapsiz)...[
+              const SizedBox(height:10),
+              FilledButton(
+                style:FilledButton.styleFrom(
+                  backgroundColor:const Color(0xFFF5F5F5),
+                  foregroundColor:const Color(0xFF1F1F1F),
+                  elevation:0,
+                  shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(15)),
+                ),
+                onPressed:()async{
+                  if(aktif){
+                    final grup=await chatRef.get();
+                    if(!mounted)return;
+                    await aktifGrupAramasinaKatil(grup.data()??<String,dynamic>{});
+                  }else{
+                    await aramaBaslat(goruntulu);
+                  }
+                },
+                child:Text(aktif?(goruntulu?'Görüntülü grup aramasına katıl':'Sesli grup aramasına katıl'):'Tekrar Ara',maxLines:1,overflow:TextOverflow.ellipsis),
+              ),
+            ],
+          ]),
+        ),
+      );
+    }
 
     final yeniBlok=_mesajYeniBlok(d,onceki);
     final gonderenBasligi=!ben&&yeniBlok?(gonderen.isEmpty?null:FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(
@@ -7658,15 +7735,24 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
         final kalan=participants.where((x)=>x!=me).toList();
         final aramayiBitir=baslatan==me||kalan.isEmpty;
         if(aramayiBitir){
+          final kimseKatilMadi=baslatan==me&&participants.length<=1;
+          final finalDurum=kimseKatilMadi?'missed':'ended';
           await widget.aramaRef.set({
-            'callStatus':'ended',
+            'callStatus':finalDurum,
             'callParticipants':FieldValue.arrayRemove([me]),
             'callEndedAt':FieldValue.serverTimestamp(),
           },SetOptions(merge:true));
+          final mesajId=(data['callMessageId']??'').toString();
+          if(mesajId.isNotEmpty){
+            await widget.aramaRef.collection('messages').doc(mesajId).set({
+              'callStatus':finalDurum,
+              'callEndedAt':FieldValue.serverTimestamp(),
+            },SetOptions(merge:true));
+          }
           await widget.aramaRef.collection('messages').doc('call_end_'+widget.roomName).set({
             'senderId':'system',
             'type':'system',
-            'text':'Arama sona erdi.',
+            'text':kimseKatilMadi?'Arama cevaplanmadı.':'Arama sona erdi.',
             'createdAt':FieldValue.serverTimestamp(),
           },SetOptions(merge:true));
         }else{
@@ -8135,6 +8221,7 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
     setState(()=>aramaBaslatiliyor=true);
     final odaAdi='group_'+widget.chatId+'_'+DateTime.now().millisecondsSinceEpoch.toString();
     try{
+      final callMessageRef=ref.collection('messages').doc('call_'+odaAdi);
       await ref.set({
         'callStatus':'ringing',
         'callRoomName':odaAdi,
@@ -8144,11 +8231,19 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
         'callGroup':true,
         'callParticipants':<String>[me],
         'callCreatedAt':FieldValue.serverTimestamp(),
+        'callConnectedAt':FieldValue.delete(),
+        'callAnsweredAt':FieldValue.delete(),
+        'callEndedAt':FieldValue.delete(),
+        'callEndedBy':FieldValue.delete(),
+        'callMessageId':callMessageRef.id,
       },SetOptions(merge:true));
-      await ref.collection('messages').doc('call_start_'+odaAdi).set({
-        'senderId':'system',
-        'type':'system',
-        'text':goruntulu?'Görüntülü arama başladı.':'Sesli arama başladı.',
+      await callMessageRef.set({
+        'senderId':me,
+        'type':'call',
+        'text':goruntulu?'Görüntülü grup araması':'Sesli grup araması',
+        'callVideo':goruntulu,
+        'callStatus':'ringing',
+        'callRoomName':odaAdi,
         'createdAt':FieldValue.serverTimestamp(),
       },SetOptions(merge:true));
       final d=await ref.get();
