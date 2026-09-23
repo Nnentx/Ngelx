@@ -170,6 +170,10 @@ for token in (
     "Bu seçim gruptaki herkeste aynıdır.",
     "['👍','❤️','😘','🥰','😂','🔥','👏','🐥']",
     "'senderId':actor",
+    "systemAction':'member_joined'",
+    "systemAction':'call_join'",
+    "systemAction':'call_leave'",
+    "systemAction':'call_end'",
 ):
     if token not in app:
         errors.append("Konsolide grup düzeltmesi eksik: " + token)
@@ -181,6 +185,13 @@ for token in (
     "formerChatMember()",
     "formerMembers",
     "removedAt_",
+    "request.resource.data.get('systemAction', '') in [",
+    "'member_added'",
+    "'member_joined'",
+    "'member_left'",
+    "'call_join'",
+    "'call_leave'",
+    "'call_end'",
 ):
     if token not in rules:
         errors.append("Firestore grup koruması eksik: " + token)
