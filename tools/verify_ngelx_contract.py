@@ -124,6 +124,8 @@ required_group_tokens = [
     "kişi gördü",
     "grupYanitiHazirla",
     "onHorizontalDragEnd",
+    "kişi yazıyor",
+    "•••",
     "Sesli mesaj",
     "Arama cevaplanmadı",
     "Kimse aramaya katılmadı. İstersen tekrar arayabilirsin.",
