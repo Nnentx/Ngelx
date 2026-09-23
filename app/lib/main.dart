@@ -5223,13 +5223,13 @@ class _GrubaKatilPageState extends State<GrubaKatilPage>{
   }
 
   @override Widget build(BuildContext context)=>Theme(
-    data:ThemeData.light().copyWith(colorScheme:ColorScheme.fromSeed(seedColor:ngelxPremiumPurple)),
+    data:ThemeData.light().copyWith(colorScheme:ColorScheme.fromSeed(seedColor:ngelxGroupGreen)),
     child:Scaffold(
-      backgroundColor:const Color(0xFFFBF9FF),
+      backgroundColor:Colors.white,
       appBar:AppBar(
         backgroundColor:Colors.transparent,surfaceTintColor:Colors.transparent,elevation:0,
         title:const Text('Gruba katıl',style:TextStyle(fontWeight:FontWeight.w900,color:ngelxPremiumInk)),
-        flexibleSpace:Container(decoration:const BoxDecoration(gradient:LinearGradient(colors:[Color(0xFFFFFFFF),Color(0xFFF5EFFF)]),borderRadius:BorderRadius.vertical(bottom:Radius.circular(24)))),
+        flexibleSpace:Container(decoration:const BoxDecoration(gradient:LinearGradient(colors:[Color(0xFFFFFFFF),ngelxGroupGreenSoft]),borderRadius:BorderRadius.vertical(bottom:Radius.circular(24)))),
       ),
       body:ListView(
         padding:const EdgeInsets.fromLTRB(16,22,16,30),
@@ -5489,7 +5489,7 @@ class _GrupOlusturPageState extends State<GrupOlusturPage>{
               decoration:InputDecoration(
                 hintText:'Kişi ara',
                 hintStyle:const TextStyle(color:Color(0xFF9B94A1)),
-                prefixIcon:const Icon(Icons.search_rounded,color:ngelxPremiumPurple),
+                prefixIcon:Icon(Icons.search_rounded,color:widget.groupMode?ngelxGroupGreen:ngelxPremiumPurple),
                 filled:true,
                 fillColor:Colors.white,
                 border:OutlineInputBorder(borderRadius:BorderRadius.circular(20),borderSide:BorderSide.none),
@@ -6476,7 +6476,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
           child:Row(mainAxisSize:MainAxisSize.min,children:[
             CircleAvatar(radius:10,backgroundColor:ngelxGroupGreenSoft,backgroundImage:pf.isEmpty?null:CachedNetworkImageProvider(pf),child:pf.isEmpty?const Icon(Icons.person,size:11,color:ngelxGroupGreen):null),
             const SizedBox(width:6),
-            Flexible(child:Text(isim,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Color(0xFF6541C8),fontSize:11.3,fontWeight:FontWeight.w900))),
+            Flexible(child:Text(isim,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Color(0xFF187A3D),fontSize:11.3,fontWeight:FontWeight.w900))),
           ]),
         );
       },
@@ -6513,15 +6513,15 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
               margin:EdgeInsets.only(top:yeniBlok?3:1,bottom:tepkiSayilari.isEmpty?2:0,left:2,right:2),
               padding:EdgeInsets.all((tur=='photo'||tur=='gif')?4:9),
               decoration:BoxDecoration(
-                gradient:ben?const LinearGradient(colors:[Color(0xFF7A50E8),Color(0xFF6540C9)],begin:Alignment.topLeft,end:Alignment.bottomRight):null,
-                color:ben?null:const Color(0xFFF6F5F8).withValues(alpha:.98),
+                gradient:ben?const LinearGradient(colors:[Color(0xFF14AE52),Color(0xFF078B3B)],begin:Alignment.topLeft,end:Alignment.bottomRight):null,
+                color:ben?null:const Color(0xFFDDF3E4).withValues(alpha:.98),
                 borderRadius:BorderRadius.only(
                   topLeft:Radius.circular(yeniBlok?18:12),
                   topRight:Radius.circular(yeniBlok?18:12),
                   bottomLeft:Radius.circular(ben?18:6),
                   bottomRight:Radius.circular(ben?6:18),
                 ),
-                border:ben?null:Border.all(color:const Color(0xFFECE9F0)),
+                border:ben?null:Border.all(color:const Color(0xFFCBE7D4)),
                 boxShadow:yeniBlok?const [BoxShadow(color:Color(0x0C000000),blurRadius:8,offset:Offset(0,3))]:null,
               ),
               child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
@@ -6657,52 +6657,58 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
       backgroundColor:Colors.white,
       appBar:AppBar(
         toolbarHeight:72,
-        backgroundColor:Colors.transparent,
+        backgroundColor:ngelxGroupGreenHeader,
         surfaceTintColor:Colors.transparent,
         elevation:0,
-        titleSpacing:0,
-        flexibleSpace:Container(
-          decoration:const BoxDecoration(
-            gradient:LinearGradient(colors:[Color(0xFFFFFFFF),ngelxGroupGreenHeader],begin:Alignment.topLeft,end:Alignment.bottomRight),
-            borderRadius:BorderRadius.vertical(bottom:Radius.circular(24)),
-          ),
+        leading:IconButton(
+          tooltip:'Geri',
+          onPressed:()=>Navigator.maybePop(context),
+          icon:const Icon(Icons.arrow_back_rounded,color:ngelxGroupGreen,size:30),
         ),
+        titleSpacing:0,
         title:StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
           stream:_grupAkisi,
           builder:(_,snap){
-            final v=snap.data?.data()??<String,dynamic>{},ad=(v['groupName']??widget.ad).toString(),foto=(v['groupPhotoUrl']??widget.foto).toString(),uyeler=List<String>.from(v['members']??const[]);
+            final data=snap.data?.data()??<String,dynamic>{};
+            final ad=(data['groupName']??widget.ad).toString();
+            final foto=(data['groupPhotoUrl']??widget.foto).toString();
             return InkWell(
               onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupBilgiPage(chatId:widget.chatId))),
-              borderRadius:BorderRadius.circular(18),
-              child:Padding(
-                padding:const EdgeInsets.symmetric(vertical:6),
-                child:Row(children:[
-                  Stack(clipBehavior:Clip.none,children:[
-                    CircleAvatar(radius:22,backgroundColor:const Color(0xFFE4D5FF),backgroundImage:foto.isEmpty?null:CachedNetworkImageProvider(foto),child:foto.isEmpty?const Icon(Icons.groups_rounded,color:ngelxGroupGreen,size:24):null),
-                    const Positioned(right:-1,bottom:-1,child:CircleAvatar(radius:5.5,backgroundColor:Color(0xFF21C76A),child:CircleAvatar(radius:3.4,backgroundColor:Colors.white))),
-                  ]),
-                  const SizedBox(width:10),
-                  Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisSize:MainAxisSize.min,children:[
-                    Text(ad,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:18,fontWeight:FontWeight.w900,color:ngelxPremiumInk,letterSpacing:-.2)),
-                    const SizedBox(height:2),
-                    _aktifGrupUyeYazisi(uyeler),
-                  ])),
-                ]),
-              ),
+              child:Row(children:[
+                CircleAvatar(
+                  radius:22,
+                  backgroundColor:Colors.white.withValues(alpha:.72),
+                  backgroundImage:foto.isEmpty?null:CachedNetworkImageProvider(foto),
+                  child:foto.isEmpty?const Icon(Icons.groups_rounded,color:ngelxGroupGreen,size:24):null,
+                ),
+                const SizedBox(width:9),
+                Expanded(child:Text(
+                  ad,
+                  maxLines:1,
+                  overflow:TextOverflow.ellipsis,
+                  style:const TextStyle(fontSize:18,fontWeight:FontWeight.w900,color:Color(0xFF18251D),letterSpacing:-.2),
+                )),
+              ]),
             );
           },
         ),
         actions:[
-          ngelxPremiumIconButton(icon:Icons.call_rounded,tooltip:'Sesli arama',onTap:aramaBaslatiliyor?null:()=>aramaBaslat(false)),
-          const SizedBox(width:5),
-          ngelxPremiumIconButton(icon:Icons.videocam_rounded,tooltip:'Görüntülü arama',onTap:aramaBaslatiliyor?null:()=>aramaBaslat(true)),
-          const SizedBox(width:5),
-          ngelxPremiumIconButton(
-            icon:Icons.info_rounded,
-            tooltip:'Grup bilgileri',
-            onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupBilgiPage(chatId:widget.chatId))),
+          IconButton(
+            tooltip:'Sesli arama',
+            onPressed:aramaBaslatiliyor?null:()=>aramaBaslat(false),
+            icon:const Icon(Icons.call_rounded,color:ngelxGroupGreen,size:29),
           ),
-          const SizedBox(width:8),
+          IconButton(
+            tooltip:'Görüntülü arama',
+            onPressed:aramaBaslatiliyor?null:()=>aramaBaslat(true),
+            icon:const Icon(Icons.videocam_rounded,color:ngelxGroupGreen,size:30),
+          ),
+          IconButton(
+            tooltip:'Grup bilgileri',
+            onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupBilgiPage(chatId:widget.chatId))),
+            icon:const Icon(Icons.info_rounded,color:ngelxGroupGreen,size:29),
+          ),
+          const SizedBox(width:4),
         ],
       ),
       body:StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
@@ -6912,7 +6918,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
               SafeArea(
                 top:false,
                 child:Container(
-                  color:Colors.white.withValues(alpha:.96),
+                  color:ngelxGroupGreenHeader,
                   padding:const EdgeInsets.fromLTRB(2,6,2,8),
                   child:Row(children:[
                     IconButton(
@@ -7072,9 +7078,9 @@ class _GrupMedyaPageState extends State<GrupMedyaPage>{
   Query<Map<String,dynamic>> get _mesajlar=>FirebaseFirestore.instance.collection('chats').doc(widget.chatId).collection('messages').orderBy('createdAt',descending:true);
 
   @override Widget build(BuildContext context)=>Theme(
-    data:ThemeData.light().copyWith(colorScheme:ColorScheme.fromSeed(seedColor:ngelxPremiumPurple)),
+    data:ThemeData.light().copyWith(colorScheme:ColorScheme.fromSeed(seedColor:widget.groupMode?ngelxGroupGreen:ngelxPremiumPurple)),
     child:Scaffold(
-      backgroundColor:const Color(0xFFFBF9FF),
+      backgroundColor:widget.groupMode?Colors.white:const Color(0xFFFBF9FF),
       appBar:AppBar(
         backgroundColor:Colors.transparent,
         surfaceTintColor:Colors.transparent,
@@ -7098,7 +7104,7 @@ class _GrupMedyaPageState extends State<GrupMedyaPage>{
         Expanded(child:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
           stream:_mesajlar.snapshots(),
           builder:(_,snap){
-            if(snap.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator(color:ngelxPremiumPurple));
+            if(snap.connectionState==ConnectionState.waiting)return Center(child:CircularProgressIndicator(color:widget.groupMode?ngelxGroupGreen:ngelxPremiumPurple));
             final tum=snap.data?.docs??[];
             final docs=tum.where((d){
               final t=(d.data()['type']??'').toString();
@@ -8447,7 +8453,7 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
                     const SizedBox(width:7),
                     Expanded(child:_grupKisayol(Icons.text_fields_rounded,'Takma Adlar',()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupTakmaAdlarPage(chatId:widget.chatId))))),
                     const SizedBox(width:7),
-                    Expanded(child:_grupKisayol(Icons.search_rounded,'Arama',()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>SohbetMesajAramaPage(chatId:widget.chatId))))),
+                    Expanded(child:_grupKisayol(Icons.search_rounded,'Arama',()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>SohbetMesajAramaPage(chatId:widget.chatId,groupMode:true))))),
                     const SizedBox(width:7),
                     Expanded(child:_grupKisayol(Icons.palette_rounded,'Özelleştir',()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupOzellestirPage(chatId:widget.chatId))))),
                   ]),
@@ -9162,7 +9168,7 @@ class _GrupUyeleriPageState extends State<GrupUyeleriPage>{
       body:StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
         stream:ref.snapshots(),
         builder:(_,snap){
-          if(!snap.hasData)return const Center(child:CircularProgressIndicator(color:ngelxPremiumPurple));
+          if(!snap.hasData)return const Center(child:CircularProgressIndicator(color:ngelxGroupGreen));
           final v=snap.data?.data()??<String,dynamic>{};
           final ids=List<String>.from(v['members']??const[]);
           final admins=List<String>.from(v['admins']??const[]);
@@ -9206,11 +9212,11 @@ class _GrupUyeleriPageState extends State<GrupUyeleriPage>{
                         onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciProfilPage(uid:id))),
                         onLongPress:yonetici&&id!=me?()=>_uyeIslemi(id,isim,admin,yonetici):null,
                         leading:Stack(children:[
-                          CircleAvatar(radius:23,backgroundColor:const Color(0xFFECE4F5),backgroundImage:foto.isEmpty?null:CachedNetworkImageProvider(foto),child:foto.isEmpty?const Icon(Icons.person_rounded,color:ngelxPremiumPurple):null),
+                          CircleAvatar(radius:23,backgroundColor:ngelxGroupGreenSoft,backgroundImage:foto.isEmpty?null:CachedNetworkImageProvider(foto),child:foto.isEmpty?const Icon(Icons.person_rounded,color:ngelxGroupGreen):null),
                           if(online)const Positioned(right:0,bottom:0,child:CircleAvatar(radius:5.5,backgroundColor:Colors.white,child:CircleAvatar(radius:3.5,backgroundColor:Color(0xFF21C76A)))),
                         ]),
                         title:Text(isim,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w800)),
-                        subtitle:Text(admin?'Yönetici':online?'Çevrimiçi':'Grup üyesi',style:TextStyle(color:admin?ngelxPremiumPurple:ngelxPremiumMuted,fontSize:11.5,fontWeight:FontWeight.w600)),
+                        subtitle:Text(admin?'Yönetici':online?'Çevrimiçi':'Grup üyesi',style:TextStyle(color:admin?ngelxGroupGreen:ngelxPremiumMuted,fontSize:11.5,fontWeight:FontWeight.w600)),
                         trailing:yonetici&&id!=me?IconButton(onPressed:()=>_uyeIslemi(id,isim,admin,yonetici),icon:const Icon(Icons.more_horiz_rounded,color:ngelxPremiumMuted)):null,
                       ),
                     );
@@ -10927,7 +10933,8 @@ class SohbetBilgiPage extends StatelessWidget{
 
 class SohbetMesajAramaPage extends StatefulWidget{
   final String chatId;
-  const SohbetMesajAramaPage({super.key,required this.chatId});
+  final bool groupMode;
+  const SohbetMesajAramaPage({super.key,required this.chatId,this.groupMode=false});
   @override State<SohbetMesajAramaPage> createState()=>_SohbetMesajAramaPageState();
 }
 class _SohbetMesajAramaPageState extends State<SohbetMesajAramaPage>{
@@ -10948,7 +10955,7 @@ class _SohbetMesajAramaPageState extends State<SohbetMesajAramaPage>{
       overflow:TextOverflow.ellipsis,
       text:TextSpan(style:const TextStyle(color:ngelxPremiumInk,fontSize:13,height:1.35,fontWeight:FontWeight.w600),children:[
         TextSpan(text:metin.substring(0,index)),
-        TextSpan(text:metin.substring(index,index+q.length),style:const TextStyle(color:ngelxPremiumPurple,fontWeight:FontWeight.w900,backgroundColor:Color(0xFFF0E8FF))),
+        TextSpan(text:metin.substring(index,index+q.length),style:TextStyle(color:widget.groupMode?ngelxGroupGreen:ngelxPremiumPurple,fontWeight:FontWeight.w900,backgroundColor:widget.groupMode?ngelxGroupGreenSoft:const Color(0xFFF0E8FF))),
         TextSpan(text:metin.substring(index+q.length)),
       ]),
     );
@@ -10982,7 +10989,7 @@ class _SohbetMesajAramaPageState extends State<SohbetMesajAramaPage>{
               filled:true,fillColor:Colors.white,
               border:OutlineInputBorder(borderRadius:BorderRadius.circular(20),borderSide:BorderSide.none),
               enabledBorder:OutlineInputBorder(borderRadius:BorderRadius.circular(20),borderSide:const BorderSide(color:ngelxPremiumBorder)),
-              focusedBorder:OutlineInputBorder(borderRadius:BorderRadius.circular(20),borderSide:const BorderSide(color:ngelxPremiumPurple,width:1.4)),
+              focusedBorder:OutlineInputBorder(borderRadius:BorderRadius.circular(20),borderSide:BorderSide(color:widget.groupMode?ngelxGroupGreen:ngelxPremiumPurple,width:1.4)),
             ),
           ),
         ),
@@ -11019,11 +11026,11 @@ class _SohbetMesajAramaPageState extends State<SohbetMesajAramaPage>{
                       margin:const EdgeInsets.only(bottom:9),
                       padding:const EdgeInsets.fromLTRB(11,10,11,10),
                       child:Row(crossAxisAlignment:CrossAxisAlignment.start,children:[
-                        CircleAvatar(radius:21,backgroundColor:const Color(0xFFECE4F5),backgroundImage:foto.isEmpty?null:CachedNetworkImageProvider(foto),child:foto.isEmpty?const Icon(Icons.person_rounded,color:ngelxPremiumPurple,size:20):null),
+                        CircleAvatar(radius:21,backgroundColor:widget.groupMode?ngelxGroupGreenSoft:const Color(0xFFECE4F5),backgroundImage:foto.isEmpty?null:CachedNetworkImageProvider(foto),child:foto.isEmpty?Icon(Icons.person_rounded,color:widget.groupMode?ngelxGroupGreen:ngelxPremiumPurple,size:20):null),
                         const SizedBox(width:10),
                         Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
                           Row(children:[
-                            Expanded(child:Text(isim,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:ngelxPremiumPurple,fontSize:11.5,fontWeight:FontWeight.w900))),
+                            Expanded(child:Text(isim,maxLines:1,overflow:TextOverflow.ellipsis,style:TextStyle(color:widget.groupMode?ngelxGroupGreen:ngelxPremiumPurple,fontSize:11.5,fontWeight:FontWeight.w900))),
                             Text(mesajSaati(v['createdAt']),style:const TextStyle(color:ngelxPremiumMuted,fontSize:9.5,fontWeight:FontWeight.w600)),
                           ]),
                           const SizedBox(height:5),
