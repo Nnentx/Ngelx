@@ -23,8 +23,6 @@ import 'package:livekit_client/livekit_client.dart' as lk;
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:record/record.dart' as rec;
-import 'package:cronet_http/cronet_http.dart';
-import 'package:http/http.dart' as http;
 import 'group_quality.dart';
 
 Future<void> main() async {
@@ -261,7 +259,9 @@ List<String> _ngelxMediaApiAdaylari(String tercih) {
   return sonuc;
 }
 
-Future<String> _ngelxCronetYukle({
+const MethodChannel _ngelxMedyaNativeKanal=MethodChannel('com.nnentx.ngelx_app/media');
+
+Future<String> _ngelxAndroidNativeYukle({
   required Uri hedef,
   required Uint8List bytes,
   required String token,
@@ -269,31 +269,27 @@ Future<String> _ngelxCronetYukle({
   required String legacyPath,
   void Function(int sent,int total)? onProgress,
 }) async {
-  if(!Platform.isAndroid)throw UnsupportedError('Cronet yalnızca Android için kullanılıyor.');
-  final client=CronetClient.defaultCronetEngine();
-  try{
-    onProgress?.call(0,bytes.length);
-    final istek=http.Request('POST',hedef)
-      ..headers[HttpHeaders.authorizationHeader]='Bearer '+token
-      ..headers[HttpHeaders.contentTypeHeader]=contentType
-      ..headers['X-NgelX-Client']='android-v57-cronet'
-      ..headers['X-NgelX-Filename']=legacyPath
-      ..bodyBytes=bytes;
-    final akis=await client.send(istek).timeout(const Duration(minutes:3));
-    final cevap=await http.Response.fromStream(akis).timeout(const Duration(seconds:90));
+  if(!Platform.isAndroid)throw UnsupportedError('Android yerel medya yükleyicisi yalnızca Android için kullanılıyor.');
+  onProgress?.call(0,bytes.length);
+  final cevap=await _ngelxMedyaNativeKanal.invokeMapMethod<String,dynamic>('upload',{
+    'url':hedef.toString(),
+    'token':token,
+    'contentType':contentType,
+    'legacyPath':legacyPath,
+    'bytes':bytes,
+  }).timeout(const Duration(minutes:3));
+  final status=(cevap?['status'] as num?)?.toInt()??0;
+  final body=(cevap?['body']??'').toString();
+  dynamic veri;
+  try{veri=jsonDecode(body);}catch(_){veri=body;}
+  if(status>=200&&status<300){
+    final url=veri is Map?(veri['url']??'').toString():'';
+    if(url.isEmpty)throw Exception('Medya sunucusu geçerli URL döndürmedi.');
     onProgress?.call(bytes.length,bytes.length);
-    dynamic veri;
-    try{veri=jsonDecode(utf8.decode(cevap.bodyBytes));}catch(_){veri=cevap.body;}
-    if(cevap.statusCode>=200&&cevap.statusCode<300){
-      final url=veri is Map?(veri['url']??'').toString():'';
-      if(url.isEmpty)throw Exception('Medya sunucusu geçerli URL döndürmedi.');
-      return url;
-    }
-    final detay=veri is Map?(veri['message']??veri['error']??veri).toString():veri.toString();
-    throw HttpException('Medya sunucusu HTTP '+cevap.statusCode.toString()+': '+detay,uri:hedef);
-  }finally{
-    client.close();
+    return url;
   }
+  final detay=veri is Map?(veri['message']??veri['error']??veri).toString():veri.toString();
+  throw HttpException('Medya sunucusu HTTP '+status.toString()+': '+detay,uri:hedef);
 }
 
 String _ngelxYuklemeCevapUrl(Response<dynamic> cevap,Uri hedef) {
@@ -351,7 +347,7 @@ Future<String> ngelxMedyaYukleBytes({
         final token=await user.getIdToken(true);
         if(token==null||token.isEmpty)throw Exception('Güvenli medya oturumu oluşturulamadı.');
         final hedef=Uri.parse(api+'/upload').replace(queryParameters:{'kind':kind,'ext':temizExt});
-        final url=await _ngelxCronetYukle(
+        final url=await _ngelxAndroidNativeYukle(
           hedef:hedef,
           bytes:bytes,
           token:token,
@@ -440,7 +436,7 @@ Future<String> ngelxMedyaYukleBytes({
     }
   }
 
-  throw Exception('Medya yüklenemedi. Android ağ motoru ve standart bağlantı denendi. ${_ngelxYuklemeHataMesaji(sonHata)}');
+  throw Exception('Medya yüklenemedi. Android yerel bağlantısı ve standart bağlantı denendi. ${_ngelxYuklemeHataMesaji(sonHata)}');
 }
 
 Future<String> ngelxMedyaYukleDosya({
@@ -484,7 +480,7 @@ Future<String> ngelxMedyaYukleDosya({
           final token=await user.getIdToken(true);
           if(token==null||token.isEmpty)throw Exception('Güvenli medya oturumu oluşturulamadı.');
           final hedef=Uri.parse(api+'/upload').replace(queryParameters:{'kind':kind,'ext':temizExt});
-          final url=await _ngelxCronetYukle(
+          final url=await _ngelxAndroidNativeYukle(
             hedef:hedef,
             bytes:bytes,
             token:token,
@@ -541,7 +537,7 @@ Future<String> ngelxMedyaYukleDosya({
     }
   }
 
-  throw Exception('Medya yüklenemedi. Android ağ motoru ve standart bağlantı denendi. ${_ngelxYuklemeHataMesaji(sonHata)}');
+  throw Exception('Medya yüklenemedi. Android yerel bağlantısı ve standart bağlantı denendi. ${_ngelxYuklemeHataMesaji(sonHata)}');
 }
 
 Future<void> ngelxMedyaSil(String rawUrl) async {
