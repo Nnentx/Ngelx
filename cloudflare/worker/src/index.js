@@ -208,17 +208,21 @@ export default {
 
       try {
         let saved;
-        if (announced > 0) {
-          // Stream mobile uploads directly into R2 instead of buffering the whole
-          // image/video inside the Worker. This keeps memory flat and prevents
-          // connection resets on slower mobile networks.
+        const streamKinds = new Set(['videos', 'profile-intros', 'music', 'chat-files', 'chat-audio']);
+
+        if (streamKinds.has(kind) && announced > 0) {
+          // Large media stays streamed so the Worker does not need to buffer
+          // tens of megabytes in memory.
           saved = await env.MEDIA.put(key, request.body, {
             httpMetadata: {contentType, cacheControl: 'public, max-age=31536000, immutable'},
             customMetadata: {uid, kind},
           });
         } else {
-          // Chunked/unknown length fallback: buffer only when size cannot be
-          // validated from Content-Length.
+          // Profile/group/story photos are deliberately buffered before R2.
+          // Passing the incoming mobile request stream directly to R2 caused
+          // some Android/ISP connections to be reset while changing avatars.
+          // These kinds are capped at a small size, so buffering is safe and
+          // makes the upload independent from the client socket lifetime.
           const bytes = await request.arrayBuffer();
           if (!bytes.byteLength) return json({error: 'empty_file'}, 400);
           if (bytes.byteLength > maxBytes) return json({error: 'file_too_large', maxBytes}, 413);
