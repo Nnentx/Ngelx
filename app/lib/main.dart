@@ -219,6 +219,7 @@ Future<String> ngelxMedyaYukleBytes({
   required String ext,
   required String legacyPath,
   String? contentType,
+  void Function(int sent,int total)? onProgress,
 }) async {
   final user = FirebaseAuth.instance.currentUser;
   if (user == null) throw Exception('Medya yüklemek için giriş yapmalısın.');
@@ -260,6 +261,7 @@ Future<String> ngelxMedyaYukleBytes({
       )).postUri(
         hedef,
         data:{'data':base64Encode(bytes),'contentType':tur},
+        onSendProgress:onProgress,
         options:Options(
           contentType:Headers.jsonContentType,
           responseType:ResponseType.json,
@@ -289,6 +291,7 @@ Future<String> ngelxMedyaYukleBytes({
       )).postUri(
         uri,
         data:bytes,
+        onSendProgress:onProgress,
         options:Options(
           contentType:tur,
           responseType:ResponseType.json,
