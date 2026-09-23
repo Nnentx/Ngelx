@@ -9492,6 +9492,55 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
     await ref.set({alan:deger,'updatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
     if(alan=='joinApproval')await ngelxGrupDavetMetaSenkronla(ref);
   }
+
+  Future<void> grupIzinSec({
+    required String alan,
+    required String baslik,
+    required String aciklama,
+    required bool sadeceYoneticiler,
+  })async{
+    final secim=await showModalBottomSheet<bool>(
+      context:context,
+      backgroundColor:Colors.white,
+      showDragHandle:true,
+      shape:const RoundedRectangleBorder(borderRadius:BorderRadius.vertical(top:Radius.circular(28))),
+      builder:(c)=>SafeArea(
+        child:Padding(
+          padding:const EdgeInsets.fromLTRB(16,0,16,20),
+          child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
+            Text(baslik,style:const TextStyle(color:ngelxPremiumInk,fontSize:20,fontWeight:FontWeight.w900)),
+            const SizedBox(height:4),
+            Text(aciklama,style:const TextStyle(color:ngelxPremiumMuted,fontSize:12,height:1.35)),
+            const SizedBox(height:14),
+            NgelXPremiumCard(
+              padding:EdgeInsets.zero,
+              child:Column(children:[
+                RadioListTile<bool>(
+                  value:false,
+                  groupValue:sadeceYoneticiler,
+                  activeColor:ngelxGroupGreen,
+                  title:const Text('Herkes',style:TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w800)),
+                  subtitle:const Text('Gruptaki tüm üyeler kullanabilir.',style:TextStyle(color:ngelxPremiumMuted,fontSize:11)),
+                  onChanged:(v)=>Navigator.pop(c,v),
+                ),
+                const Divider(height:1,indent:58,color:Color(0xFFF0EBF5)),
+                RadioListTile<bool>(
+                  value:true,
+                  groupValue:sadeceYoneticiler,
+                  activeColor:ngelxGroupGreen,
+                  title:const Text('Yalnızca yöneticiler',style:TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w800)),
+                  subtitle:const Text('Bu işlem yönetici yetkisi gerektirir.',style:TextStyle(color:ngelxPremiumMuted,fontSize:11)),
+                  onChanged:(v)=>Navigator.pop(c,v),
+                ),
+              ]),
+            ),
+          ]),
+        ),
+      ),
+    );
+    if(secim!=null)await ayarDegistir(alan,secim);
+  }
+
   Future<void> bildirimSessiz(bool sessiz)async{
     final me=ben;if(me==null)return;
     await ref.set({'mutedFor':sessiz?FieldValue.arrayUnion([me]):FieldValue.arrayRemove([me])},SetOptions(merge:true));
@@ -9709,11 +9758,43 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
                   child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
                     const Padding(padding:EdgeInsets.symmetric(horizontal:6),child:Text('Grup ayarları',style:TextStyle(color:ngelxGroupGreen,fontSize:17,fontWeight:FontWeight.w900))),
                     const SizedBox(height:6),
-                    _grupSwitch(Icons.chat_bubble_outline_rounded,'Sadece yöneticiler yazsın','Yalnızca yöneticiler mesaj gönderebilir',v['onlyAdminsCanPost']==true,(x)=>ayarDegistir('onlyAdminsCanPost',x)),
-                    _grupSwitch(Icons.person_add_alt_1_rounded,'Sadece yöneticiler üye eklesin','Üye ekleme yetkisini yöneticilerle sınırla',v['onlyAdminsCanAddMembers']==true,(x)=>ayarDegistir('onlyAdminsCanAddMembers',x)),
+                    _grupSatir(
+                      Icons.chat_bubble_outline_rounded,
+                      'Kimler mesaj gönderebilir?',
+                      v['onlyAdminsCanPost']==true?'Yalnızca yöneticiler':'Herkes',
+                      ()=>grupIzinSec(
+                        alan:'onlyAdminsCanPost',
+                        baslik:'Kimler mesaj gönderebilir?',
+                        aciklama:'Grup sohbetine kimlerin mesaj gönderebileceğini seç.',
+                        sadeceYoneticiler:v['onlyAdminsCanPost']==true,
+                      ),
+                    ),
+                    _grupAyirici(),
+                    _grupSatir(
+                      Icons.person_add_alt_1_rounded,
+                      'Kimler kişi ekleyebilir?',
+                      v['onlyAdminsCanAddMembers']==true?'Yalnızca yöneticiler':'Herkes',
+                      ()=>grupIzinSec(
+                        alan:'onlyAdminsCanAddMembers',
+                        baslik:'Kimler kişi ekleyebilir?',
+                        aciklama:'Gruba yeni üye ekleme yetkisini belirle.',
+                        sadeceYoneticiler:v['onlyAdminsCanAddMembers']==true,
+                      ),
+                    ),
+                    _grupAyirici(),
                     _grupSwitch(Icons.edit_outlined,'Sadece yöneticiler grup bilgisini düzenlesin','Grup adı, fotoğrafı ve açıklamasını yöneticiler değiştirsin',v['onlyAdminsCanEditGroup']!=false,(x)=>ayarDegistir('onlyAdminsCanEditGroup',x)),
                     _grupSwitch(Icons.push_pin_outlined,'Sadece yöneticiler mesaj sabitlesin','Mesaj sabitleme yetkisini yöneticilerle sınırla',v['onlyAdminsCanPin']!=false,(x)=>ayarDegistir('onlyAdminsCanPin',x)),
-                    _grupSwitch(Icons.alternate_email_rounded,'Sadece yöneticiler @herkes kullansın','@herkes bildirimi yöneticilerle sınırlı olsun',v['onlyAdminsCanMentionAll']==true,(x)=>ayarDegistir('onlyAdminsCanMentionAll',x)),
+                    _grupSatir(
+                      Icons.alternate_email_rounded,
+                      'Kimler @herkes kullanabilir?',
+                      v['onlyAdminsCanMentionAll']==true?'Yalnızca yöneticiler':'Herkes',
+                      ()=>grupIzinSec(
+                        alan:'onlyAdminsCanMentionAll',
+                        baslik:'Kimler @herkes kullanabilir?',
+                        aciklama:'Tüm gruba aynı anda bildirim gönderebilecek kişileri seç.',
+                        sadeceYoneticiler:v['onlyAdminsCanMentionAll']==true,
+                      ),
+                    ),
                     _grupSwitch(Icons.history_rounded,'Yeni üyeler geçmişi görsün','Yeni üyeler eski mesajları görebilir',v['newMembersSeeHistory']!=false,(x)=>ayarDegistir('newMembersSeeHistory',x)),
                     _grupSwitch(Icons.verified_user_outlined,'Katılma isteğini onayla','Yeni katılım istekleri yönetici onayından geçer',v['joinApproval']==true,(x)=>ayarDegistir('joinApproval',x)),
                   ]),
