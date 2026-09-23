@@ -71,7 +71,13 @@ jobs:
 
       - name: Debug APK derle
         working-directory: app
-        run: flutter build apk --debug
+        run: |
+          APP_VERSION="$(awk '/^version:/ {print $2}' pubspec.yaml)"
+          BUILD_NAME="${APP_VERSION%%+*}"
+          BUILD_NUMBER="${APP_VERSION##*+}"
+          flutter build apk --debug \
+            --dart-define=NGELX_VERSION_NAME="$BUILD_NAME" \
+            --dart-define=NGELX_BUILD_NUMBER="$BUILD_NUMBER"
 
       - name: APK yukle
         uses: actions/upload-artifact@v4
