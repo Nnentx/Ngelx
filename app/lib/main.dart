@@ -8566,7 +8566,7 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
           await widget.aramaRef.collection('messages').doc('call_join_'+widget.roomName+'_'+u.uid).set({
             'senderId':'system',
             'type':'system',
-            'text':ad+' aramaya katıldı.',
+            'text':ad+(widget.goruntulu?' görüntülü aramaya katıldı.':' sesli aramaya katıldı.'),
             'createdAt':FieldValue.serverTimestamp(),
           },SetOptions(merge:true));
         }).catchError((_){ }));
@@ -8693,7 +8693,7 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
           await widget.aramaRef.collection('messages').doc('call_leave_'+widget.roomName+'_'+me).set({
             'senderId':'system',
             'type':'system',
-            'text':(ad!=null&&ad.isNotEmpty?ad:'Bir üye')+' aramadan ayrıldı.',
+            'text':(ad!=null&&ad.isNotEmpty?ad:'Bir üye')+(widget.goruntulu?' görüntülü aramadan ayrıldı.':' sesli aramadan ayrıldı.'),
             'createdAt':FieldValue.serverTimestamp(),
           },SetOptions(merge:true));
         }
@@ -9106,33 +9106,6 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
         ))),
       ]));
     }
-    if(r.remoteParticipants.isEmpty){
-      return Expanded(child:Column(children:[
-        Padding(
-          padding:const EdgeInsets.fromLTRB(18,14,10,8),
-          child:Row(children:[
-            Expanded(child:Text(widget.baslik,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.white,fontSize:19,fontWeight:FontWeight.w900))),
-            IconButton(onPressed:aramaAyarlari,icon:const Icon(Icons.person_add_alt_1_rounded,color:Colors.white,size:27)),
-            IconButton(onPressed:aramaAyarlari,icon:const Icon(Icons.more_vert_rounded,color:Colors.white,size:26)),
-          ]),
-        ),
-        Expanded(child:Center(child:Column(mainAxisSize:MainAxisSize.min,children:[
-          CircleAvatar(
-            radius:62,
-            backgroundColor:const Color(0xFF191919),
-            backgroundImage:widget.foto.isEmpty?null:CachedNetworkImageProvider(widget.foto),
-            child:widget.foto.isEmpty?const Icon(Icons.groups_rounded,color:Colors.white70,size:58):null,
-          ),
-          const SizedBox(height:24),
-          Padding(
-            padding:const EdgeInsets.symmetric(horizontal:24),
-            child:Text(widget.baslik,textAlign:TextAlign.center,maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.white,fontSize:25,fontWeight:FontWeight.w900)),
-          ),
-          const SizedBox(height:7),
-          const Text('Diğerlerinin katılması bekleniyor…',style:TextStyle(color:Colors.white70,fontSize:15,fontWeight:FontWeight.w600)),
-        ]))),
-      ]));
-    }
     final sutun=katilimcilar.length<=1?1:2;
     return Expanded(child:Column(children:[
       Padding(
@@ -9192,9 +9165,30 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
     Text(yenidenBaglaniyor?'Yeniden bağlanıyor…':baglaniyor?'Bağlanıyor…':'Sesli arama • '+_aramaSureYazi(),style:const TextStyle(color:Colors.white70,fontSize:15,fontWeight:FontWeight.w600)),
   ])));
 
+  Future<void> _aramaEkraniniKucult()async{
+    if(!grupAramasi||kucultuluyor||!mounted)return;
+    kucultuluyor=true;
+    try{
+      await Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupSohbetPage(
+        chatId:widget.aramaRef.id,
+        ad:widget.baslik,
+        foto:widget.foto,
+        aktifAramadanAcildi:true,
+      )));
+    }finally{
+      kucultuluyor=false;
+    }
+  }
+
   @override Widget build(BuildContext context)=>PopScope(
-    canPop:true,
-    onPopInvokedWithResult:(didPop,__){if(didPop)bitir(geriDon:false);},
+    canPop:!grupAramasi,
+    onPopInvokedWithResult:(didPop,__){
+      if(grupAramasi){
+        if(!didPop)unawaited(_aramaEkraniniKucult());
+      }else if(didPop){
+        unawaited(bitir(geriDon:false));
+      }
+    },
     child:Scaffold(
       backgroundColor:widget.goruntulu?Colors.black:ngelxCallBg,
       body:Container(
@@ -9252,6 +9246,7 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
             padding:const EdgeInsets.fromLTRB(14,15,14,7),
             child:Row(mainAxisAlignment:MainAxisAlignment.spaceEvenly,children:[
               if(widget.goruntulu)_aramaKontrol(kamera?Icons.videocam_rounded:Icons.videocam_off_rounded,'Kamera',kameraDegistir,kamera),
+              if(widget.goruntulu&&kamera)_aramaKontrol(Icons.cameraswitch_rounded,'Çevir',kameraCevir,true),
               _aramaKontrol(mikrofon?Icons.mic_rounded:Icons.mic_off_rounded,'Mikrofon',mikrofonDegistir,mikrofon),
               if(!widget.goruntulu)_aramaKontrol(hoparlor?Icons.volume_up_rounded:Icons.volume_off_rounded,'Hoparlör',hoparlorDegistir,hoparlor),
               if(grupAramasi)_aramaKontrol(Icons.person_add_alt_1_rounded,'Davet et',grupAramasinaKisiDavetEt,true),
