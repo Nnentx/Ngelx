@@ -13,3 +13,4 @@ bucket_name = "ngelx-media"
 [[routes]]
 pattern = "media.ngelxsocial.com"
 custom_domain = true
+zone_name = "ngelxsocial.com"
