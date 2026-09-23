@@ -8353,7 +8353,7 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
   lk.EventsListener<lk.RoomEvent>? odaOlaylari;
   Timer? aramaSureZamanlayici,cevapsizZamanlayici,yenidenBaglanmaZamanlayici;
   DateTime? aramaBaslangic;
-  bool baglaniyor=true,mikrofon=true,kamera=true,hoparlor=true,bitiyor=false,bulanik=false,rotus=false,yenidenBaglaniyor=false;
+  bool baglaniyor=true,mikrofon=true,kamera=true,hoparlor=true,bitiyor=false,bulanik=false,rotus=false,yenidenBaglaniyor=false,arkaKamera=false,kucultuluyor=false;
   int efekt=0,yenidenBaglanmaDenemesi=0;
   String? hata,bitisDurumu;
 
@@ -8616,19 +8616,30 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
   Future<void> mikrofonDegistir()async{
     final yeni=!mikrofon;
     try{await oda?.localParticipant?.setMicrophoneEnabled(yeni);if(mounted)setState(()=>mikrofon=yeni);}
-    catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Mikrofon değiştirilemedi: $e')));}
+    catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Mikrofon değiştirilemedi.')));}
   }
   Future<void> kameraDegistir()async{
     final yeni=!kamera;
     try{await oda?.localParticipant?.setCameraEnabled(yeni);if(mounted)setState(()=>kamera=yeni);}
-    catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Kamera değiştirilemedi: $e')));}
+    catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Kamera değiştirilemedi. Kamera iznini kontrol et.')));}
+  }
+  Future<void> kameraCevir()async{
+    final track=_yerelVideo;
+    if(track is! lk.LocalVideoTrack)return;
+    final yeni=!arkaKamera;
+    try{
+      await track.setCameraPosition(yeni?lk.CameraPosition.back:lk.CameraPosition.front);
+      if(mounted)setState(()=>arkaKamera=yeni);
+    }catch(_){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Kamera yönü değiştirilemedi.')));
+    }
   }
   Future<void> hoparlorDegistir()async{
     final yeni=!hoparlor;
     try{
       await lk.AudioManager.instance.setSpeakerOutputPreferred(yeni,force:yeni&&widget.goruntulu);
       if(mounted)setState(()=>hoparlor=yeni);
-    }catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Ses çıkışı değiştirilemedi: $e')));}
+    }catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Ses çıkışı değiştirilemedi.')));}
   }
 
   Future<void> bitir({bool geriDon=true})async{
