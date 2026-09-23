@@ -59,6 +59,12 @@ android {
     }
 
     buildTypes {
+        debug {
+            if (!keystorePropertiesFile.exists()) {
+                // CI debug APK'lari da acikca kalici test anahtariyla imzalansin.
+                signingConfig = signingConfigs.getByName("ngelxStableTest")
+            }
+        }
         release {
             signingConfig = if (keystorePropertiesFile.exists()) {
                 signingConfigs.getByName("ngelxRelease")
