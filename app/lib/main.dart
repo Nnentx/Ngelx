@@ -7918,7 +7918,7 @@ class _GrupMedyaPageState extends State<GrupMedyaPage>{
               final t=(d.data()['type']??'').toString();
               if(sekme==0)return t=='photo'||t=='gif'||t=='video';
               if(sekme==1)return t=='file'||t=='document';
-              if(sekme==2)return t=='shared_content'||(d.data()['url']??'').toString().isNotEmpty;
+              if(sekme==2)return t=='shared_content'||(d.data()['linkUrl']??d.data()['url']??'').toString().isNotEmpty;
               return t=='audio';
             }).toList();
             if(docs.isEmpty)return Center(child:Column(mainAxisSize:MainAxisSize.min,children:[
