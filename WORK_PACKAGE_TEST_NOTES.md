@@ -142,3 +142,9 @@
 - Form hataları yalnızca SnackBar ile değil, ilgili giriş alanının hemen altında küçük ve anlaşılır hata metniyle gösterilecek.
 - Giriş butonuna basıldığında işlem tamamlanana kadar buton kilitlenecek ve yükleme göstergesi çıkacak; böylece üst üste istek ve donmuş hissi azaltılacak.
 - Bu paket sade tutulacak; şimdilik Google/Apple/QR/biyometrik giriş gibi ek akışlar eklenmeyecek.
+
+### 2026-09-23 uygulama simgesi — NgelX logosu
+- Telefonda uygulama listesinde görünen **NgelX “N” logosu** resmi uygulama simgesi olarak kullanılacak.
+- APK kurulurken / güncellenirken, ana ekranda ve uygulama çekmecesinde aynı NgelX simgesi görünmeli.
+- Android adaptive icon, round icon ve normal launcher icon sürümleri aynı tasarımdan üretilecek; eski/geçici simgeler kaldırılacak.
+- Simgenin arka planı ve kırpılması farklı Android cihazlarda bozulmayacak şekilde kontrol edilecek.
