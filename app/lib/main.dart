@@ -5388,6 +5388,7 @@ class _GrupOlusturPageState extends State<GrupOlusturPage>{
   final Set<String> secilen={};
   final List<QueryDocumentSnapshot<Map<String,dynamic>>> adaylar=[];
   String sorgu='';
+  int filtre=0;
   String? yuklemeHatasi;
   XFile? foto;
   bool kaydediliyor=false,izinlerYukleniyor=true;
@@ -7980,6 +7981,20 @@ class _GrupMedyaPageState extends State<GrupMedyaPage>{
               _sekme('Bağlantılar',2),
               _sekme('Ses',3),
             ]),
+          ),
+        ),
+        SizedBox(
+          height:44,
+          child:ListView(
+            scrollDirection:Axis.horizontal,
+            padding:const EdgeInsets.fromLTRB(14,0,14,6),
+            children:[
+              _aramaFiltreChip('Tümü',0),
+              _aramaFiltreChip('Mesajlar',1),
+              _aramaFiltreChip('Medya',2),
+              _aramaFiltreChip('Dosyalar',3),
+              _aramaFiltreChip('Bağlantılar',4),
+            ],
           ),
         ),
         Expanded(child:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
@@ -12414,6 +12429,39 @@ class _SohbetMesajAramaPageState extends State<SohbetMesajAramaPage>{
   @override void dispose(){ara.dispose();super.dispose();}
   Future<DocumentSnapshot<Map<String,dynamic>>> _profil(String id)=>_profilCache.putIfAbsent(id,()=>FirebaseFirestore.instance.collection('users').doc(id).get());
 
+  bool _aramaFiltresineUyar(Map<String,dynamic> v){
+    final tur=(v['type']??'text').toString();
+    if(filtre==1)return tur=='text'||tur=='story_reply';
+    if(filtre==2)return tur=='photo'||tur=='video'||tur=='gif'||tur=='audio'||tur=='sticker';
+    if(filtre==3)return tur=='file'||tur=='document';
+    if(filtre==4)return tur=='shared_content'||(v['linkUrl']??v['url']??'').toString().isNotEmpty;
+    return tur!='system';
+  }
+
+  String _aramaMetni(Map<String,dynamic> v){
+    return [
+      (v['text']??'').toString(),
+      (v['fileName']??'').toString(),
+      (v['linkTitle']??'').toString(),
+      (v['linkHost']??'').toString(),
+      (v['locationText']??'').toString(),
+    ].where((x)=>x.trim().isNotEmpty).join(' • ');
+  }
+
+  Widget _aramaFiltreChip(String label,int index)=>Padding(
+    padding:const EdgeInsets.only(right:7),
+    child:ChoiceChip(
+      label:Text(label),
+      selected:filtre==index,
+      onSelected:(_)=>setState(()=>filtre=index),
+      selectedColor:widget.groupMode?ngelxGroupGreenSoft:const Color(0xFFF0E8FF),
+      backgroundColor:Colors.white,
+      side:BorderSide(color:filtre==index?(widget.groupMode?ngelxGroupGreen:ngelxPremiumPurple):ngelxPremiumBorder),
+      labelStyle:TextStyle(color:filtre==index?(widget.groupMode?ngelxGroupGreen:ngelxPremiumPurple):ngelxPremiumMuted,fontSize:11.5,fontWeight:FontWeight.w800),
+      shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(14)),
+    ),
+  );
+
   Widget _vurguluMetin(String metin){
     final q=sorgu.trim();
     if(q.isEmpty)return Text(metin,maxLines:3,overflow:TextOverflow.ellipsis,style:const TextStyle(color:ngelxPremiumInk,fontSize:13,height:1.35,fontWeight:FontWeight.w600));
@@ -12472,8 +12520,9 @@ class _SohbetMesajAramaPageState extends State<SohbetMesajAramaPage>{
               Text('Aramak istediğin kelimeyi yaz.',style:TextStyle(color:ngelxPremiumMuted,fontWeight:FontWeight.w700)),
             ]));
             final docs=(snap.data?.docs??[]).where((d){
-              final v=d.data(),tur=(v['type']??'text').toString(),metin=(v['text']??'').toString();
-              return tur!='system'&&metin.toLowerCase().contains(sorgu);
+              final v=d.data();
+              if(!_aramaFiltresineUyar(v))return false;
+              return _aramaMetni(v).toLowerCase().contains(sorgu);
             }).toList();
             if(docs.isEmpty)return const Center(child:Column(mainAxisSize:MainAxisSize.min,children:[
               Icon(Icons.search_off_rounded,color:Color(0xFFC7B8E7),size:58),
@@ -12484,7 +12533,7 @@ class _SohbetMesajAramaPageState extends State<SohbetMesajAramaPage>{
               padding:const EdgeInsets.fromLTRB(14,6,14,28),
               itemCount:docs.length,
               itemBuilder:(_,i){
-                final d=docs[i],v=d.data(),metin=(v['text']??'').toString(),sender=(v['senderId']??'').toString();
+                final d=docs[i],v=d.data(),metin=_aramaMetni(v),sender=(v['senderId']??'').toString(),tur=(v['type']??'text').toString();
                 return FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(
                   future:sender.isEmpty||sender=='system'?null:_profil(sender),
                   builder:(_,u){
@@ -12500,6 +12549,15 @@ class _SohbetMesajAramaPageState extends State<SohbetMesajAramaPage>{
                         Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
                           Row(children:[
                             Expanded(child:Text(isim,maxLines:1,overflow:TextOverflow.ellipsis,style:TextStyle(color:widget.groupMode?ngelxGroupGreen:ngelxPremiumPurple,fontSize:11.5,fontWeight:FontWeight.w900))),
+                            Container(
+                              margin:const EdgeInsets.only(right:7),
+                              padding:const EdgeInsets.symmetric(horizontal:7,vertical:3),
+                              decoration:BoxDecoration(color:widget.groupMode?ngelxGroupGreenSoft:const Color(0xFFF0E8FF),borderRadius:BorderRadius.circular(10)),
+                              child:Text(
+                                tur=='photo'?'Fotoğraf':tur=='video'?'Video':tur=='gif'?'GIF':tur=='audio'?'Ses':tur=='file'||tur=='document'?'Dosya':tur=='shared_content'?'Bağlantı':'Mesaj',
+                                style:TextStyle(color:widget.groupMode?ngelxGroupGreen:ngelxPremiumPurple,fontSize:9,fontWeight:FontWeight.w900),
+                              ),
+                            ),
                             Text(mesajSaati(v['createdAt']),style:const TextStyle(color:ngelxPremiumMuted,fontSize:9.5,fontWeight:FontWeight.w600)),
                           ]),
                           const SizedBox(height:5),
