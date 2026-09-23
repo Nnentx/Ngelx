@@ -241,3 +241,9 @@
 - Hedef yalnızca arkadaşlarından veya kendi takip ettiği hesaplardan mesaj kabul ediyorsa yeni sohbet açılmadan önce ilişki kontrol ediliyor.
 - Daha önce zaten var olan bir sohbet varsa kullanıcı mevcut konuşmasına erişebiliyor; gizlilik kontrolü yeni konuşma oluşturmayı sınırlandırıyor.
 - Yeni sohbet ekranının başlık, arama ve boş durum metinleri de uygulama diline bağlandı.
+
+### 2026-09-23 mesaj gizliliği — Firestore sunucu koruması
+- Özel sohbet oluşturma artık yalnızca istemci butonlarında değil, Firestore güvenlik kurallarında da `messagePermission` ile korunuyor.
+- `all`, `friends`, `following`, `none` izinleri sunucu tarafında doğrulanıyor; sahte/eski bir istemci gizlilik kontrolünü atlayarak yeni özel sohbet oluşturamıyor.
+- Özel sohbet adı altında 3+ üyeli sahte sohbet oluşturma da reddediliyor; gerçek grup sohbeti akışı ayrı kurallarla çalışmaya devam ediyor.
+- Emulator testlerine herkes/arkadaş/takip edilen/kimse izinleri ve sahte 3 üyeli özel sohbet senaryoları eklendi.
