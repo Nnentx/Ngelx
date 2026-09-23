@@ -67,6 +67,15 @@ required_group_tokens = [
     "onlyAdminsCanPin",
     "onlyAdminsCanMentionAll",
     "deletedForEveryone",
+    "GroupDraftStore",
+    "GroupOfflineQueue",
+    "fetchGroupLinkPreview",
+    "showGroupStickerPicker",
+    "showGroupForwardSheet",
+    "showGroupMessageInfo",
+    "lastDeliveredAt_",
+    "RoomReconnectingEvent",
+    "_cevapsizSayaciniBaslat",
     "NgelXMedyaGaleriPage",
     "_grupSesliMesajiYukle",
     "_acilisOkunmamis",
@@ -95,6 +104,12 @@ required_group_tokens = [
 for token in required_group_tokens:
     if token not in app:
         errors.append("Grup özelliği sözleşmesi eksik: " + token)
+
+# Polls are intentionally removed from NgelX group chat.
+if "'type':'poll'" in app or '"type":"poll"' in app:
+    errors.append("Anket özelliği kaldırıldığı halde uygulamada poll oluşturma kodu bulundu.")
+if "request.resource.data.get('type', 'text') != 'poll'" not in rules:
+    errors.append("Firestore anket mesajlarını engellemiyor.")
 
 # App/worker size contract for group videos and attachments.
 if "80*1024*1024" in app and "videos: 80 * 1024 * 1024" not in worker:
