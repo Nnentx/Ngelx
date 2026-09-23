@@ -98,7 +98,8 @@ service cloud.firestore {
         && resource.data.get('joinApproval', false) != true
         && request.resource.data.members.size() <= 60
         && request.resource.data.members == resource.data.members.concat([request.auth.uid])
-        && onlyChanges(['members', 'hiddenFor', 'updatedAt'])
+        && request.resource.data.get('formerMembers', []) == resource.data.get('formerMembers', []).removeAll([request.auth.uid])
+        && onlyChanges(['members', 'formerMembers', 'hiddenFor', 'updatedAt'])
         && joinReq.data.get('uid', '') == request.auth.uid
         && joinReq.data.get('status', '') == 'autojoin'
         && validInvite(code, chatId);
