@@ -12462,6 +12462,103 @@ class _SohbetMesajAramaPageState extends State<SohbetMesajAramaPage>{
     ),
   );
 
+  Future<void> _aramaSonucuAc(QueryDocumentSnapshot<Map<String,dynamic>> d)async{
+    final v=d.data(),sender=(v['senderId']??'').toString(),tur=(v['type']??'text').toString();
+    Map<String,dynamic> p=<String,dynamic>{};
+    if(sender.isNotEmpty&&sender!='system'){
+      try{p=(await _profil(sender)).data()??<String,dynamic>{};}catch(_){}
+    }
+    if(!mounted)return;
+    final isim=(p['displayName']??p['username']??(sender=='system'?'Sistem':'Grup üyesi')).toString();
+    final foto=(p['photoUrl']??'').toString();
+    final metin=_aramaMetni(v);
+    final medya=(v['mediaUrl']??'').toString();
+    final dosya=(v['fileUrl']??'').toString();
+    final link=(v['linkUrl']??v['url']??'').toString();
+    await showModalBottomSheet<void>(
+      context:context,
+      isScrollControlled:true,
+      backgroundColor:Colors.white,
+      showDragHandle:true,
+      shape:const RoundedRectangleBorder(borderRadius:BorderRadius.vertical(top:Radius.circular(28))),
+      builder:(sheet)=>SafeArea(
+        child:Padding(
+          padding:EdgeInsets.fromLTRB(16,0,16,20+MediaQuery.viewInsetsOf(sheet).bottom),
+          child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
+            Row(children:[
+              CircleAvatar(
+                radius:22,
+                backgroundColor:widget.groupMode?ngelxGroupGreenSoft:const Color(0xFFECE4F5),
+                backgroundImage:foto.isEmpty?null:CachedNetworkImageProvider(foto),
+                child:foto.isEmpty?Icon(sender=='system'?Icons.info_outline_rounded:Icons.person_rounded,color:widget.groupMode?ngelxGroupGreen:ngelxPremiumPurple):null,
+              ),
+              const SizedBox(width:10),
+              Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+                Text(isim,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:ngelxPremiumInk,fontSize:15,fontWeight:FontWeight.w900)),
+                Text(mesajSaati(v['createdAt']),style:const TextStyle(color:ngelxPremiumMuted,fontSize:11,fontWeight:FontWeight.w600)),
+              ])),
+              Container(
+                padding:const EdgeInsets.symmetric(horizontal:9,vertical:5),
+                decoration:BoxDecoration(color:widget.groupMode?ngelxGroupGreenSoft:const Color(0xFFF0E8FF),borderRadius:BorderRadius.circular(12)),
+                child:Text(
+                  tur=='photo'?'Fotoğraf':tur=='video'?'Video':tur=='gif'?'GIF':tur=='audio'?'Ses':tur=='file'||tur=='document'?'Dosya':tur=='shared_content'?'Bağlantı':'Mesaj',
+                  style:TextStyle(color:widget.groupMode?ngelxGroupGreen:ngelxPremiumPurple,fontSize:10,fontWeight:FontWeight.w900),
+                ),
+              ),
+            ]),
+            const SizedBox(height:14),
+            Container(
+              width:double.infinity,
+              padding:const EdgeInsets.all(14),
+              decoration:BoxDecoration(color:const Color(0xFFF7F8F9),borderRadius:BorderRadius.circular(18),border:Border.all(color:const Color(0xFFE8EAEC))),
+              child:SelectableText(metin.isEmpty?'Mesaj içeriği bulunamadı':metin,style:const TextStyle(color:ngelxPremiumInk,fontSize:14,height:1.4,fontWeight:FontWeight.w600)),
+            ),
+            const SizedBox(height:12),
+            Wrap(spacing:8,runSpacing:8,children:[
+              OutlinedButton.icon(
+                onPressed:metin.isEmpty?null:()async{
+                  await Clipboard.setData(ClipboardData(text:metin));
+                  if(sheet.mounted)ScaffoldMessenger.of(sheet).showSnackBar(const SnackBar(content:Text('Mesaj kopyalandı.')));
+                },
+                icon:const Icon(Icons.copy_rounded,size:18),
+                label:const Text('Kopyala'),
+              ),
+              if((tur=='photo'||tur=='gif')&&medya.isNotEmpty)OutlinedButton.icon(
+                onPressed:(){
+                  Navigator.pop(sheet);
+                  Navigator.push(context,MaterialPageRoute(builder:(_)=>TamEkranMedyaPage(url:medya)));
+                },
+                icon:const Icon(Icons.photo_outlined,size:18),
+                label:const Text('Medyayı aç'),
+              ),
+              if(tur=='video'&&medya.isNotEmpty)OutlinedButton.icon(
+                onPressed:(){
+                  Navigator.pop(sheet);
+                  Navigator.push(context,MaterialPageRoute(builder:(_)=>TamEkranVideoPage(url:medya)));
+                },
+                icon:const Icon(Icons.play_circle_outline_rounded,size:18),
+                label:const Text('Videoyu aç'),
+              ),
+              if((tur=='file'||tur=='document')&&dosya.isNotEmpty)OutlinedButton.icon(
+                onPressed:()async{await SharePlus.instance.share(ShareParams(text:dosya));},
+                icon:const Icon(Icons.insert_drive_file_outlined,size:18),
+                label:const Text('Dosyayı paylaş'),
+              ),
+              if(link.isNotEmpty)OutlinedButton.icon(
+                onPressed:()async{
+                  await Clipboard.setData(ClipboardData(text:link));
+                  if(sheet.mounted)ScaffoldMessenger.of(sheet).showSnackBar(const SnackBar(content:Text('Bağlantı kopyalandı.')));
+                },
+                icon:const Icon(Icons.link_rounded,size:18),
+                label:const Text('Bağlantıyı kopyala'),
+              ),
+            ]),
+          ]),
+        ),
+      ),
+    );
+  }
+
   Widget _vurguluMetin(String metin){
     final q=sorgu.trim();
     if(q.isEmpty)return Text(metin,maxLines:3,overflow:TextOverflow.ellipsis,style:const TextStyle(color:ngelxPremiumInk,fontSize:13,height:1.35,fontWeight:FontWeight.w600));
@@ -12543,6 +12640,7 @@ class _SohbetMesajAramaPageState extends State<SohbetMesajAramaPage>{
                     return NgelXPremiumCard(
                       margin:const EdgeInsets.only(bottom:9),
                       padding:const EdgeInsets.fromLTRB(11,10,11,10),
+                      onTap:()=>_aramaSonucuAc(d),
                       child:Row(crossAxisAlignment:CrossAxisAlignment.start,children:[
                         CircleAvatar(radius:21,backgroundColor:widget.groupMode?ngelxGroupGreenSoft:const Color(0xFFECE4F5),backgroundImage:foto.isEmpty?null:CachedNetworkImageProvider(foto),child:foto.isEmpty?Icon(Icons.person_rounded,color:widget.groupMode?ngelxGroupGreen:ngelxPremiumPurple,size:20):null),
                         const SizedBox(width:10),
