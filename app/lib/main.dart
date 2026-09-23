@@ -615,6 +615,40 @@ const ceviriler = <String, Map<String,String>>{
   'galleryPhoto': {'tr':'Galeriden fotoğraf seç','en':'Choose photo from gallery','de':'Foto aus Galerie wählen','ar':'اختيار صورة من المعرض','ru':'Выбрать фото из галереи'},
   'cameraPhoto': {'tr':'Kamerayla fotoğraf çek','en':'Take photo with camera','de':'Foto mit Kamera aufnehmen','ar':'التقاط صورة بالكاميرا','ru':'Сделать фото камерой'},
   'community': {'tr':'Topluluk','en':'Community','de':'Community','ar':'مجتمع','ru':'Сообщество'},
+  'inbox': {'tr':'Gelen Kutusu','en':'Inbox','de':'Posteingang','ar':'صندوق الوارد','ru':'Входящие'},
+  'markAllRead': {'tr':'Tümünü okundu yap','en':'Mark all as read','de':'Alle als gelesen markieren','ar':'تحديد الكل كمقروء','ru':'Отметить всё прочитанным'},
+  'createGroup': {'tr':'Grup oluştur','en':'Create group','de':'Gruppe erstellen','ar':'إنشاء مجموعة','ru':'Создать группу'},
+  'joinGroup': {'tr':'Gruba katıl','en':'Join group','de':'Gruppe beitreten','ar':'الانضمام إلى مجموعة','ru':'Вступить в группу'},
+  'newChat': {'tr':'Yeni sohbet','en':'New chat','de':'Neuer Chat','ar':'محادثة جديدة','ru':'Новый чат'},
+  'searchChats': {'tr':'Sohbetlerde ara','en':'Search chats','de':'Chats durchsuchen','ar':'البحث في المحادثات','ru':'Поиск в чатах'},
+  'all': {'tr':'Tümü','en':'All','de':'Alle','ar':'الكل','ru':'Все'},
+  'unread': {'tr':'Okunmamış','en':'Unread','de':'Ungelesen','ar':'غير مقروء','ru':'Непрочитанные'},
+  'activity': {'tr':'Aktivite','en':'Activity','de':'Aktivität','ar':'النشاط','ru':'Активность'},
+  'activitySub': {'tr':'Beğeniler, yorumlar ve güvenlik bildirimleri','en':'Likes, comments and security notifications','de':'Likes, Kommentare und Sicherheitsmeldungen','ar':'الإعجابات والتعليقات وإشعارات الأمان','ru':'Лайки, комментарии и уведомления безопасности'},
+  'messageRequests': {'tr':'Mesaj İstekleri','en':'Message requests','de':'Nachrichtenanfragen','ar':'طلبات الرسائل','ru':'Запросы сообщений'},
+  'messageRequestsSub': {'tr':'Seni takip etmeyenlerden gelen mesajlar','en':'Messages from people who do not follow you','de':'Nachrichten von Personen, die dir nicht folgen','ar':'رسائل من أشخاص لا يتابعونك','ru':'Сообщения от людей, которые на вас не подписаны'},
+  'noChats': {'tr':'Bu bölümde henüz sohbet yok.','en':'There are no chats here yet.','de':'Hier gibt es noch keine Chats.','ar':'لا توجد محادثات هنا بعد.','ru':'Здесь пока нет чатов.'},
+  'groupChat': {'tr':'Grup sohbeti','en':'Group chat','de':'Gruppenchat','ar':'محادثة جماعية','ru':'Групповой чат'},
+  'groupCreated': {'tr':'Grup oluşturuldu','en':'Group created','de':'Gruppe erstellt','ar':'تم إنشاء المجموعة','ru':'Группа создана'},
+  'pinChat': {'tr':'Sohbeti sabitle','en':'Pin chat','de':'Chat anheften','ar':'تثبيت المحادثة','ru':'Закрепить чат'},
+  'unpinChat': {'tr':'Sabitlemeyi kaldır','en':'Unpin chat','de':'Chat lösen','ar':'إلغاء تثبيت المحادثة','ru':'Открепить чат'},
+  'archiveChat': {'tr':'Arşivle','en':'Archive','de':'Archivieren','ar':'أرشفة','ru':'Архивировать'},
+  'muteChat': {'tr':'Sessize al','en':'Mute','de':'Stummschalten','ar':'كتم','ru':'Отключить уведомления'},
+  'unmuteChat': {'tr':'Sessizi kaldır','en':'Unmute','de':'Stummschaltung aufheben','ar':'إلغاء الكتم','ru':'Включить уведомления'},
+  'markRead': {'tr':'Okundu olarak işaretle','en':'Mark as read','de':'Als gelesen markieren','ar':'تحديد كمقروء','ru':'Отметить прочитанным'},
+  'leaveGroup': {'tr':'Gruptan ayrıl','en':'Leave group','de':'Gruppe verlassen','ar':'مغادرة المجموعة','ru':'Выйти из группы'},
+  'removeFromInbox': {'tr':'Sohbeti listemden kaldır','en':'Remove chat from my list','de':'Chat aus meiner Liste entfernen','ar':'إزالة المحادثة من قائمتي','ru':'Убрать чат из списка'},
+  'removeChatQuestion': {'tr':'Sohbet kaldırılsın mı?','en':'Remove this chat?','de':'Diesen Chat entfernen?','ar':'إزالة هذه المحادثة؟','ru':'Убрать этот чат?'},
+  'removeChatInfo': {'tr':'Bu sohbet yalnızca senin gelen kutundan kaldırılacak.','en':'This chat will only be removed from your inbox.','de':'Dieser Chat wird nur aus deinem Posteingang entfernt.','ar':'ستتم إزالة هذه المحادثة من صندوق الوارد لديك فقط.','ru':'Этот чат будет убран только из ваших входящих.'},
+  'remove': {'tr':'KALDIR','en':'REMOVE','de':'ENTFERNEN','ar':'إزالة','ru':'УБРАТЬ'},
+  'archivedChats': {'tr':'Arşivlenen sohbetler','en':'Archived chats','de':'Archivierte Chats','ar':'المحادثات المؤرشفة','ru':'Архивные чаты'},
+  'noArchivedChats': {'tr':'Arşivlenmiş sohbetin yok.','en':'You have no archived chats.','de':'Du hast keine archivierten Chats.','ar':'لا توجد لديك محادثات مؤرشفة.','ru':'У вас нет архивных чатов.'},
+  'unarchive': {'tr':'Arşivden çıkar','en':'Unarchive','de':'Aus Archiv holen','ar':'إلغاء الأرشفة','ru':'Вернуть из архива'},
+  'noMessageRequests': {'tr':'Yeni mesaj isteğin yok.','en':'You have no new message requests.','de':'Du hast keine neuen Nachrichtenanfragen.','ar':'لا توجد طلبات رسائل جديدة.','ru':'Новых запросов сообщений нет.'},
+  'messageRequest': {'tr':'Mesaj isteği','en':'Message request','de':'Nachrichtenanfrage','ar':'طلب رسالة','ru':'Запрос сообщения'},
+  'accept': {'tr':'Kabul et','en':'Accept','de':'Annehmen','ar':'قبول','ru':'Принять'},
+  'reject': {'tr':'Reddet','en':'Reject','de':'Ablehnen','ar':'رفض','ru':'Отклонить'},
+  'block': {'tr':'Engelle','en':'Block','de':'Blockieren','ar':'حظر','ru':'Заблокировать'},
   'member': {'tr':'üye','en':'members','de':'Mitglieder','ar':'أعضاء','ru':'участников'},
 };
 String t(String anahtar) => ceviriler[anahtar]?[uygulamaDili.value] ?? ceviriler[anahtar]?['tr'] ?? anahtar;
@@ -636,6 +670,15 @@ String kitleEtiketi(String kod){
     case 'Yalnızca ben': return t('onlyMe');
     case 'Takip ettiklerim': return t('followingPeople');
     case 'Kimse': return t('nobody');
+    default: return kod;
+  }
+}
+String sohbetFiltreEtiketi(String kod){
+  switch(kod){
+    case 'Tümü': return t('all');
+    case 'Okunmamış': return t('unread');
+    case 'Arkadaşlar': return t('friends');
+    case 'Gruplar': return t('groups');
     default: return kod;
   }
 }
@@ -781,7 +824,7 @@ Future<void> sikayetEt(BuildContext context,{required String hedefTuru,required 
 
 Future<void> kullaniciyiEngelle(BuildContext context,String hedefUid) async {
   final u=FirebaseAuth.instance.currentUser;if(u==null||u.isAnonymous)return;
-  final tamam=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(title:const Text('Kullanıcı engellensin mi?'),content:const Text('Birbirinizin profilini ve içeriklerini göremez, mesaj gönderemezsiniz.'),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),FilledButton(onPressed:()=>Navigator.pop(c,true),style:FilledButton.styleFrom(backgroundColor:Colors.red),child:const Text('Engelle'))]))??false;
+  final tamam=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(title:const Text('Kullanıcı engellensin mi?'),content:const Text('Birbirinizin profilini ve içeriklerini göremez, mesaj gönderemezsiniz.'),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),FilledButton(onPressed:()=>Navigator.pop(c,true),style:FilledButton.styleFrom(backgroundColor:Colors.red),child:Text(t('block')))]))??false;
   if(!tamam)return;
   try{await FirebaseFirestore.instance.collection('users').doc(u.uid).set({'blocked':FieldValue.arrayUnion([hedefUid])},SetOptions(merge:true));if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Kullanıcı engellendi.')));}catch(e){if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Engelleme tamamlanamadı: $e')));}
 }
@@ -5341,18 +5384,18 @@ class _MesajPageState extends State<MesajPage> {
   Future<void> sohbetMenusu(BuildContext context,String id,{bool grup=false}) async {
     final sessiz=sessizSohbetler.contains(id);
     await showModalBottomSheet(context:context,backgroundColor:Colors.white,showDragHandle:true,shape:const RoundedRectangleBorder(borderRadius:BorderRadius.vertical(top:Radius.circular(26))),builder:(c)=>Theme(data:ThemeData.light(),child:SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
-      ListTile(leading:Icon(sabitSohbetler.contains(id)?Icons.push_pin:Icons.push_pin_outlined,color:mor),title:Text(sabitSohbetler.contains(id)?'Sabitlemeyi kaldır':'Sohbeti sabitle'),onTap:(){Navigator.pop(c);sohbetTercihi('pinnedChats',id,!sabitSohbetler.contains(id));}),
-      ListTile(leading:const Icon(Icons.archive_outlined,color:Colors.blue),title:const Text('Arşivle'),onTap:(){Navigator.pop(c);sohbetTercihi('archivedChats',id,true);}),
-      ListTile(leading:Icon(sessiz?Icons.notifications_active_outlined:Icons.notifications_off_outlined),title:Text(sessiz?'Sessizi kaldır':'Sessize al'),onTap:(){Navigator.pop(c);sessiz?sessizeAl(id,false):sessizeAlMenusu(id);}),
-      ListTile(leading:const Icon(Icons.mark_chat_read_outlined,color:Colors.green),title:const Text('Okundu olarak işaretle'),onTap:()async{Navigator.pop(c);final ben=uid;if(ben!=null)await FirebaseFirestore.instance.collection('chats').doc(id).set({'unread_$ben':0},SetOptions(merge:true));}),
-      if(grup)ListTile(leading:const Icon(Icons.exit_to_app_rounded,color:Color(0xFFE23D4F)),title:const Text('Gruptan ayrıl',style:TextStyle(color:Color(0xFFE23D4F),fontWeight:FontWeight.w700)),onTap:(){Navigator.pop(c);gelenKutusundanGruptanAyril(context,id);}),
-      ListTile(leading:const Icon(Icons.delete_outline,color:Colors.red),title:const Text('Sohbeti listemden kaldır',style:TextStyle(color:Colors.red)),onTap:(){Navigator.pop(c);sohbetSil(context,id);}),
+      ListTile(leading:Icon(sabitSohbetler.contains(id)?Icons.push_pin:Icons.push_pin_outlined,color:mor),title:Text(sabitSohbetler.contains(id)?t('unpinChat'):t('pinChat')),onTap:(){Navigator.pop(c);sohbetTercihi('pinnedChats',id,!sabitSohbetler.contains(id));}),
+      ListTile(leading:const Icon(Icons.archive_outlined,color:Colors.blue),title:Text(t('archiveChat')),onTap:(){Navigator.pop(c);sohbetTercihi('archivedChats',id,true);}),
+      ListTile(leading:Icon(sessiz?Icons.notifications_active_outlined:Icons.notifications_off_outlined),title:Text(sessiz?t('unmuteChat'):t('muteChat')),onTap:(){Navigator.pop(c);sessiz?sessizeAl(id,false):sessizeAlMenusu(id);}),
+      ListTile(leading:const Icon(Icons.mark_chat_read_outlined,color:Colors.green),title:Text(t('markRead')),onTap:()async{Navigator.pop(c);final ben=uid;if(ben!=null)await FirebaseFirestore.instance.collection('chats').doc(id).set({'unread_$ben':0},SetOptions(merge:true));}),
+      if(grup)ListTile(leading:const Icon(Icons.exit_to_app_rounded,color:Color(0xFFE23D4F)),title:Text(t('leaveGroup'),style:const TextStyle(color:Color(0xFFE23D4F),fontWeight:FontWeight.w700)),onTap:(){Navigator.pop(c);gelenKutusundanGruptanAyril(context,id);}),
+      ListTile(leading:const Icon(Icons.delete_outline,color:Colors.red),title:Text(t('removeFromInbox'),style:const TextStyle(color:Colors.red)),onTap:(){Navigator.pop(c);sohbetSil(context,id);}),
     ]))));
   }
 
   Future<void> sohbetSil(BuildContext context,String id) async {
     final ben=uid;if(ben==null)return;
-    final ok=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(title:const Text('Sohbet kaldırılsın mı?'),content:const Text('Bu sohbet yalnızca senin gelen kutundan kaldırılacak.'),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),TextButton(onPressed:()=>Navigator.pop(c,true),child:const Text('KALDIR',style:TextStyle(color:Colors.red)))]))??false;
+    final ok=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(title:Text(t('removeChatQuestion')),content:Text(t('removeChatInfo')),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:Text(t('cancel'))),TextButton(onPressed:()=>Navigator.pop(c,true),child:Text(t('remove'),style:const TextStyle(color:Colors.red)))]))??false;
     if(ok)await FirebaseFirestore.instance.collection('chats').doc(id).set({'hiddenFor':FieldValue.arrayUnion([ben])},SetOptions(merge:true));
   }
 
@@ -5367,31 +5410,31 @@ class _MesajPageState extends State<MesajPage> {
               fit:BoxFit.scaleDown,
               alignment:Alignment.centerLeft,
               child:Row(mainAxisSize:MainAxisSize.min,children:[
-                const Text('Gelen Kutusu',style:TextStyle(color:Colors.black,fontSize:29,fontWeight:FontWeight.w900)),
+                Text(t('inbox'),style:const TextStyle(color:Colors.black,fontSize:29,fontWeight:FontWeight.w900)),
                 const SizedBox(width:2),
-                IconButton(constraints:const BoxConstraints.tightFor(width:36),padding:EdgeInsets.zero,tooltip:'Tümünü okundu yap',onPressed:ben==null?null:tumunuOkunduYap,icon:const Icon(Icons.done_all_rounded,color:Color(0xFF27C66F))),
+                IconButton(constraints:const BoxConstraints.tightFor(width:36),padding:EdgeInsets.zero,tooltip:t('markAllRead'),onPressed:ben==null?null:tumunuOkunduYap,icon:const Icon(Icons.done_all_rounded,color:Color(0xFF27C66F))),
               ]),
             ),
           ),
-          IconButton(constraints:const BoxConstraints.tightFor(width:38),padding:EdgeInsets.zero,tooltip:'Arşiv',onPressed:ben==null?null:()async{await Navigator.push(context,MaterialPageRoute(builder:(_)=>ArsivSohbetlerPage(uid:ben)));await tercihleriGetir();},icon:const Icon(Icons.archive_outlined,color:Colors.black54)),
-          IconButton(constraints:const BoxConstraints.tightFor(width:38),padding:EdgeInsets.zero,tooltip:'Grup oluştur',onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const GrupOlusturPage())),icon:const Icon(Icons.group_add_rounded,color:mor,size:27)),
-          IconButton(constraints:const BoxConstraints.tightFor(width:38),padding:EdgeInsets.zero,tooltip:'Gruba katıl',onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const GrubaKatilPage())),icon:const Icon(Icons.link_rounded,color:mor,size:25)),
-          IconButton(constraints:const BoxConstraints.tightFor(width:38),padding:EdgeInsets.zero,tooltip:'Yeni sohbet',onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const YeniSohbetPage())),icon:const Icon(Icons.person_add_alt_1,color:mavi,size:27)),
+          IconButton(constraints:const BoxConstraints.tightFor(width:38),padding:EdgeInsets.zero,tooltip:t('archive'),onPressed:ben==null?null:()async{await Navigator.push(context,MaterialPageRoute(builder:(_)=>ArsivSohbetlerPage(uid:ben)));await tercihleriGetir();},icon:const Icon(Icons.archive_outlined,color:Colors.black54)),
+          IconButton(constraints:const BoxConstraints.tightFor(width:38),padding:EdgeInsets.zero,tooltip:t('createGroup'),onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const GrupOlusturPage())),icon:const Icon(Icons.group_add_rounded,color:mor,size:27)),
+          IconButton(constraints:const BoxConstraints.tightFor(width:38),padding:EdgeInsets.zero,tooltip:t('joinGroup'),onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const GrubaKatilPage())),icon:const Icon(Icons.link_rounded,color:mor,size:25)),
+          IconButton(constraints:const BoxConstraints.tightFor(width:38),padding:EdgeInsets.zero,tooltip:t('newChat'),onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const YeniSohbetPage())),icon:const Icon(Icons.person_add_alt_1,color:mavi,size:27)),
         ]),
       ),
-      Padding(padding:const EdgeInsets.fromLTRB(16,4,16,10),child:TextField(controller:sohbetAra,onChanged:(v)=>setState(()=>sohbetSorgu=v.trim().toLowerCase()),style:const TextStyle(color:Colors.black87),decoration:InputDecoration(hintText:'Sohbetlerde ara',hintStyle:const TextStyle(color:Colors.black45),prefixIcon:const Icon(Icons.search,color:Colors.black45),filled:true,fillColor:const Color(0xFFF3F4F7),border:OutlineInputBorder(borderRadius:BorderRadius.circular(24),borderSide:BorderSide.none)))),
-      Padding(padding:const EdgeInsets.symmetric(horizontal:8),child:Row(children:['Tümü','Okunmamış','Arkadaşlar','Gruplar'].map((f)=>Expanded(child:Padding(padding:const EdgeInsets.symmetric(horizontal:2),child:ChoiceChip(labelPadding:const EdgeInsets.symmetric(horizontal:2),label:Center(child:FittedBox(fit:BoxFit.scaleDown,child:Text(f,maxLines:1))),selected:filtre==f,selectedColor:mor,labelStyle:TextStyle(color:filtre==f?Colors.white:Colors.black87,fontWeight:FontWeight.w700),backgroundColor:const Color(0xFFF1F2F5),side:BorderSide.none,onSelected:(_)=>setState(()=>filtre=f))))).toList())),
-      StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(stream:ben==null?null:FirebaseFirestore.instance.collection('notifications').where('toUid',isEqualTo:ben).limit(60).snapshots(),builder:(_,s){final okunmamis=(s.data?.docs??[]).where((d)=>d.data()['read']!=true).length;return Container(margin:const EdgeInsets.fromLTRB(16,8,16,5),decoration:BoxDecoration(color:const Color(0xFFF5EFFF),borderRadius:BorderRadius.circular(20)),child:ListTile(leading:const CircleAvatar(backgroundColor:Color(0xFFE5D5FF),child:Icon(Icons.favorite,color:mor)),title:const Text('Aktivite',style:TextStyle(color:Colors.black,fontWeight:FontWeight.w900)),subtitle:const Text('Beğeniler, yorumlar ve güvenlik bildirimleri',style:TextStyle(color:Colors.black54)),trailing:okunmamis==0?const Icon(Icons.chevron_right,color:Colors.black45):Badge(label:Text('$okunmamis'),child:const Icon(Icons.chevron_right,color:Colors.black45)),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const AktivitePage()))));}),
-      Container(margin:const EdgeInsets.fromLTRB(16,5,16,8),decoration:BoxDecoration(color:const Color(0xFFEDF7FF),borderRadius:BorderRadius.circular(20)),child:ListTile(leading:const CircleAvatar(backgroundColor:Color(0xFFD8ECFF),child:Icon(Icons.chat_bubble_rounded,color:Colors.blue)),title:const Text('Mesaj İstekleri',style:TextStyle(color:Colors.black,fontWeight:FontWeight.w900)),subtitle:const Text('Seni takip etmeyenlerden gelen mesajlar',style:TextStyle(color:Colors.black54)),trailing:const Icon(Icons.chevron_right,color:Colors.black45),onTap:ben==null?null:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>MesajIstekleriPage(uid:ben))))),
+      Padding(padding:const EdgeInsets.fromLTRB(16,4,16,10),child:TextField(controller:sohbetAra,onChanged:(v)=>setState(()=>sohbetSorgu=v.trim().toLowerCase()),style:const TextStyle(color:Colors.black87),decoration:InputDecoration(hintText:t('searchChats'),hintStyle:const TextStyle(color:Colors.black45),prefixIcon:const Icon(Icons.search,color:Colors.black45),filled:true,fillColor:const Color(0xFFF3F4F7),border:OutlineInputBorder(borderRadius:BorderRadius.circular(24),borderSide:BorderSide.none)))),
+      Padding(padding:const EdgeInsets.symmetric(horizontal:8),child:Row(children:['Tümü','Okunmamış','Arkadaşlar','Gruplar'].map((f)=>Expanded(child:Padding(padding:const EdgeInsets.symmetric(horizontal:2),child:ChoiceChip(labelPadding:const EdgeInsets.symmetric(horizontal:2),label:Center(child:FittedBox(fit:BoxFit.scaleDown,child:Text(sohbetFiltreEtiketi(f),maxLines:1))),selected:filtre==f,selectedColor:mor,labelStyle:TextStyle(color:filtre==f?Colors.white:Colors.black87,fontWeight:FontWeight.w700),backgroundColor:const Color(0xFFF1F2F5),side:BorderSide.none,onSelected:(_)=>setState(()=>filtre=f))))).toList())),
+      StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(stream:ben==null?null:FirebaseFirestore.instance.collection('notifications').where('toUid',isEqualTo:ben).limit(60).snapshots(),builder:(_,s){final okunmamis=(s.data?.docs??[]).where((d)=>d.data()['read']!=true).length;return Container(margin:const EdgeInsets.fromLTRB(16,8,16,5),decoration:BoxDecoration(color:const Color(0xFFF5EFFF),borderRadius:BorderRadius.circular(20)),child:ListTile(leading:const CircleAvatar(backgroundColor:Color(0xFFE5D5FF),child:Icon(Icons.favorite,color:mor)),title:Text(t('activity'),style:const TextStyle(color:Colors.black,fontWeight:FontWeight.w900)),subtitle:Text(t('activitySub'),style:const TextStyle(color:Colors.black54)),trailing:okunmamis==0?const Icon(Icons.chevron_right,color:Colors.black45):Badge(label:Text('$okunmamis'),child:const Icon(Icons.chevron_right,color:Colors.black45)),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const AktivitePage()))));}),
+      Container(margin:const EdgeInsets.fromLTRB(16,5,16,8),decoration:BoxDecoration(color:const Color(0xFFEDF7FF),borderRadius:BorderRadius.circular(20)),child:ListTile(leading:const CircleAvatar(backgroundColor:Color(0xFFD8ECFF),child:Icon(Icons.chat_bubble_rounded,color:Colors.blue)),title:Text(t('messageRequests'),style:const TextStyle(color:Colors.black,fontWeight:FontWeight.w900)),subtitle:Text(t('messageRequestsSub'),style:const TextStyle(color:Colors.black54)),trailing:const Icon(Icons.chevron_right,color:Colors.black45),onTap:ben==null?null:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>MesajIstekleriPage(uid:ben))))),
       Expanded(child:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
         stream:ben==null?null:FirebaseFirestore.instance.collection('chats').where('members',arrayContains:ben).limit(60).snapshots(),
         builder:(_,s){
           final docs=(s.data?.docs??[]).where((d){final v=d.data();if(List<String>.from(v['hiddenFor']??const[]).contains(ben)||arsivSohbetler.contains(d.id))return false;final members=List<String>.from(v['members']??const[]),grup=v['isGroup']==true||members.length>2;final unread=(v['unread_$ben']??0) as int;if(filtre=='Okunmamış'&&unread==0)return false;if(filtre=='Gruplar'&&!grup)return false;if(!grup){final other=members.firstWhere((x)=>x!=ben,orElse:()=>ben??'');final gelenIstek=v['requestRecipientUid']==ben&&v['requestAccepted_$ben']!=true&&!arkadaslar.contains(other);if(gelenIstek)return false;if(filtre=='Arkadaşlar'&&!arkadaslar.contains(other))return false;}else if(filtre=='Arkadaşlar')return false;final son='${v['groupName']??''} ${v['lastMessage']??''}'.toLowerCase();return sohbetSorgu.isEmpty||son.contains(sohbetSorgu);}).toList()..sort((a,b){final ap=sabitSohbetler.contains(a.id),bp=sabitSohbetler.contains(b.id);if(ap!=bp)return ap?-1:1;final at=a.data()['updatedAt'] as Timestamp?,bt=b.data()['updatedAt'] as Timestamp?;return (bt?.millisecondsSinceEpoch??0).compareTo(at?.millisecondsSinceEpoch??0);});
-          if(docs.isEmpty)return const Center(child:Text('Bu bölümde henüz sohbet yok.',textAlign:TextAlign.center,style:TextStyle(color:Colors.black54)));
+          if(docs.isEmpty)return Center(child:Text(t('noChats'),textAlign:TextAlign.center,style:const TextStyle(color:Colors.black54)));
           return ListView.builder(itemCount:docs.length,itemBuilder:(_,i){
             final d=docs[i],v=d.data(),members=List<String>.from(v['members']??[]);
             final grup=v['isGroup']==true||members.length>2;
-            if(grup){final ad=(v['groupName']??'Grup sohbeti').toString(),foto=(v['groupPhotoUrl']??'').toString(),unread=(v['unread_$ben']??0) as int;return ListTile(onTap:()=>sohbetiAc(d.id,GrupSohbetPage(chatId:d.id,ad:ad,foto:foto)),onLongPress:()=>sohbetMenusu(context,d.id,grup:true),leading:CircleAvatar(backgroundColor:const Color(0xFFE9DDFF),backgroundImage:foto.isEmpty?null:CachedNetworkImageProvider(foto),child:foto.isEmpty?const Icon(Icons.groups,color:mor):null),title:Text(ad,style:TextStyle(color:Colors.black87,fontWeight:unread>0?FontWeight.w900:FontWeight.w700)),subtitle:Text((v['lastMessage']??'Grup oluşturuldu').toString(),maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black54)),trailing:Wrap(crossAxisAlignment:WrapCrossAlignment.center,children:[if(sabitSohbetler.contains(d.id))const Icon(Icons.push_pin,size:16,color:mor),if(sessizSohbetler.contains(d.id))const Icon(Icons.volume_off,size:18,color:Colors.black38),if(unread>0)Badge(label:Text('$unread'))]));}
+            if(grup){final ad=(v['groupName']??t('groupChat')).toString(),foto=(v['groupPhotoUrl']??'').toString(),unread=(v['unread_$ben']??0) as int;return ListTile(onTap:()=>sohbetiAc(d.id,GrupSohbetPage(chatId:d.id,ad:ad,foto:foto)),onLongPress:()=>sohbetMenusu(context,d.id,grup:true),leading:CircleAvatar(backgroundColor:const Color(0xFFE9DDFF),backgroundImage:foto.isEmpty?null:CachedNetworkImageProvider(foto),child:foto.isEmpty?const Icon(Icons.groups,color:mor):null),title:Text(ad,style:TextStyle(color:Colors.black87,fontWeight:unread>0?FontWeight.w900:FontWeight.w700)),subtitle:Text((v['lastMessage']??t('groupCreated')).toString(),maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black54)),trailing:Wrap(crossAxisAlignment:WrapCrossAlignment.center,children:[if(sabitSohbetler.contains(d.id))const Icon(Icons.push_pin,size:16,color:mor),if(sessizSohbetler.contains(d.id))const Icon(Icons.volume_off,size:18,color:Colors.black38),if(unread>0)Badge(label:Text('$unread'))]));}
             final other=members.firstWhere((x)=>x!=ben,orElse:()=>ben??'');
             if(engellenenler.contains(other))return const SizedBox.shrink();
             return FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(future:_kullaniciGetir(other),builder:(_,u){
@@ -5407,7 +5450,7 @@ class _MesajPageState extends State<MesajPage> {
                 onLongPress:()=>sohbetMenusu(context,d.id),
                 leading:CircleAvatar(backgroundImage:(p['photoUrl']??'').toString().isEmpty?null:CachedNetworkImageProvider(p['photoUrl'])),
                 title:Text(gorunenAd,style:TextStyle(fontWeight:unread>0?FontWeight.w900:FontWeight.w700,color:Colors.black87)),
-                subtitle:Text((v['lastMessage']??'Yeni sohbet').toString(),maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black54)),
+                subtitle:Text((v['lastMessage']??t('newChat')).toString(),maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black54)),
                 trailing:Wrap(crossAxisAlignment:WrapCrossAlignment.center,children:[if(sabitSohbetler.contains(d.id))const Icon(Icons.push_pin,size:16,color:mor),if(sessiz)const Icon(Icons.volume_off,size:18,color:Colors.black38),if(unread>0)Badge(label:Text('$unread'))]),
               );
             });
@@ -5440,13 +5483,13 @@ class _ArsivSohbetlerPageState extends State<ArsivSohbetlerPage> {
     data: ThemeData.light(),
     child: Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(title: const Text('Arşivlenen sohbetler', style: TextStyle(fontWeight: FontWeight.w900))),
+      appBar: AppBar(title: Text(t('archivedChats'), style: const TextStyle(fontWeight: FontWeight.w900))),
       body: FutureBuilder<List<String>>(
         future: arsivGetir(),
         builder: (_, s) {
           final ids = s.data ?? [];
           if (s.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator(color: mor));
-          if (ids.isEmpty) return const Center(child: Text('Arşivlenmiş sohbetin yok.', style: TextStyle(color: Colors.black54)));
+          if (ids.isEmpty) return Center(child: Text(t('noArchivedChats'), style: const TextStyle(color: Colors.black54)));
           return ListView.separated(
             padding: const EdgeInsets.all(12), itemCount: ids.length,
             separatorBuilder: (_, __) => const Divider(),
@@ -5458,8 +5501,8 @@ class _ArsivSohbetlerPageState extends State<ArsivSohbetlerPage> {
                 final grup = v['isGroup'] == true || members.length > 2;
                 if (grup) return ListTile(
                   leading: const CircleAvatar(backgroundColor: Color(0xFFE9DDFF), child: Icon(Icons.groups, color: mor)),
-                  title: Text((v['groupName'] ?? 'Grup sohbeti').toString()), subtitle: Text((v['lastMessage'] ?? '').toString()),
-                  trailing: IconButton(tooltip: 'Arşivden çıkar', onPressed: () => geriAl(ids[i]), icon: const Icon(Icons.unarchive_outlined, color: mor)),
+                  title: Text((v['groupName'] ?? t('groupChat')).toString()), subtitle: Text((v['lastMessage'] ?? '').toString()),
+                  trailing: IconButton(tooltip: t('unarchive'), onPressed: () => geriAl(ids[i]), icon: const Icon(Icons.unarchive_outlined, color: mor)),
                 );
                 final other = members.firstWhere((x) => x != widget.uid, orElse: () => widget.uid);
                 return FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(
@@ -5491,7 +5534,7 @@ class MesajIstekleriPage extends StatelessWidget {
     data: ThemeData.light(),
     child: Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(title: const Text('Mesaj istekleri', style: TextStyle(fontWeight: FontWeight.w900))),
+      appBar: AppBar(title: Text(t('messageRequests'), style: const TextStyle(fontWeight: FontWeight.w900))),
       body: FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(
         future: FirebaseFirestore.instance.collection('users').doc(uid).get(),
         builder: (_, me) {
@@ -5506,7 +5549,7 @@ class MesajIstekleriPage extends StatelessWidget {
                 final hedef=(v['requestRecipientUid']??uid).toString();
                 return hedef==uid && !arkadaslar.contains(other) && v['requestAccepted_$uid']!=true && v['requestRejected_$uid']!=true;
               }).toList();
-              if(docs.isEmpty) return const Center(child: Text('Yeni mesaj isteğin yok.', style: TextStyle(color: Colors.black54)));
+              if(docs.isEmpty) return Center(child: Text(t('noMessageRequests'), style: const TextStyle(color: Colors.black54)));
               return ListView.builder(
                 padding: const EdgeInsets.all(12), itemCount: docs.length,
                 itemBuilder: (_, i) {
@@ -5522,8 +5565,8 @@ class MesajIstekleriPage extends StatelessWidget {
                         onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>MesajIstegiOnizlemePage(chatId:d.id,digerUid:other,ad:ad,foto:foto,uid:uid))),
                         leading: CircleAvatar(backgroundImage: foto.isEmpty ? null : CachedNetworkImageProvider(foto)),
                         title: Text(ad, style: const TextStyle(fontWeight: FontWeight.w800)),
-                        subtitle: Text((v['lastMessage'] ?? 'Mesaj isteği').toString()),
-                        trailing: TextButton(onPressed:kabul,child:const Text('Kabul et')),
+                        subtitle: Text((v['lastMessage'] ?? t('messageRequest')).toString()),
+                        trailing: TextButton(onPressed:kabul,child:Text(t('accept'))),
                       ));
                     },
                   );
@@ -5542,7 +5585,7 @@ class MesajIstegiOnizlemePage extends StatelessWidget{
   const MesajIstegiOnizlemePage({super.key,required this.chatId,required this.digerUid,required this.ad,required this.foto,required this.uid});
   @override Widget build(BuildContext context)=>Theme(data:ThemeData.light(),child:Scaffold(backgroundColor:Colors.white,appBar:AppBar(title:Text(ad)),body:Column(children:[
     Expanded(child:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(stream:FirebaseFirestore.instance.collection('chats').doc(chatId).collection('messages').orderBy('createdAt').limitToLast(100).snapshots(),builder:(_,s)=>ListView(padding:const EdgeInsets.all(16),children:(s.data?.docs??[]).map((d){final v=d.data(),metin=(v['text']??'').toString(),photo=v['type']=='photo';return Align(alignment:v['senderId']==uid?Alignment.centerRight:Alignment.centerLeft,child:Container(margin:const EdgeInsets.symmetric(vertical:4),padding:EdgeInsets.all(photo?4:12),constraints:const BoxConstraints(maxWidth:280),decoration:BoxDecoration(color:const Color(0xFFF0F1F4),borderRadius:BorderRadius.circular(18)),child:photo?ClipRRect(borderRadius:BorderRadius.circular(15),child:Image.network((v['mediaUrl']??'').toString())):Text(metin)));}).toList()))),
-    SafeArea(top:false,child:Padding(padding:const EdgeInsets.all(12),child:Row(children:[Expanded(child:OutlinedButton(onPressed:()async{await FirebaseFirestore.instance.collection('chats').doc(chatId).set({'requestRejected_$uid':true,'hiddenFor':FieldValue.arrayUnion([uid])},SetOptions(merge:true));if(context.mounted)Navigator.pop(context);},child:const Text('Reddet'))),const SizedBox(width:8),Expanded(child:OutlinedButton(style:OutlinedButton.styleFrom(foregroundColor:Colors.red),onPressed:()async{await kullaniciyiEngelle(context,digerUid);await FirebaseFirestore.instance.collection('chats').doc(chatId).set({'requestRejected_$uid':true,'hiddenFor':FieldValue.arrayUnion([uid])},SetOptions(merge:true));if(context.mounted)Navigator.pop(context);},child:const Text('Engelle'))),const SizedBox(width:8),Expanded(child:FilledButton(onPressed:()async{await FirebaseFirestore.instance.collection('chats').doc(chatId).set({'requestAccepted_$uid':true},SetOptions(merge:true));if(context.mounted)Navigator.pushReplacement(context,MaterialPageRoute(builder:(_)=>SohbetPage(chatId:chatId,digerUid:digerUid,ad:ad,foto:foto)));},child:const Text('Kabul et')))]))),
+    SafeArea(top:false,child:Padding(padding:const EdgeInsets.all(12),child:Row(children:[Expanded(child:OutlinedButton(onPressed:()async{await FirebaseFirestore.instance.collection('chats').doc(chatId).set({'requestRejected_$uid':true,'hiddenFor':FieldValue.arrayUnion([uid])},SetOptions(merge:true));if(context.mounted)Navigator.pop(context);},child:Text(t('reject')))),const SizedBox(width:8),Expanded(child:OutlinedButton(style:OutlinedButton.styleFrom(foregroundColor:Colors.red),onPressed:()async{await kullaniciyiEngelle(context,digerUid);await FirebaseFirestore.instance.collection('chats').doc(chatId).set({'requestRejected_$uid':true,'hiddenFor':FieldValue.arrayUnion([uid])},SetOptions(merge:true));if(context.mounted)Navigator.pop(context);},child:const Text('Engelle'))),const SizedBox(width:8),Expanded(child:FilledButton(onPressed:()async{await FirebaseFirestore.instance.collection('chats').doc(chatId).set({'requestAccepted_$uid':true},SetOptions(merge:true));if(context.mounted)Navigator.pushReplacement(context,MaterialPageRoute(builder:(_)=>SohbetPage(chatId:chatId,digerUid:digerUid,ad:ad,foto:foto)));},child:Text(t('accept'))))]))),
   ])));
 }
 
