@@ -2131,6 +2131,18 @@ Future<void> ngelxPaylasimMenusu(
   required String icerikId,
   required String aciklama,
 }) async {
+  if(!icerikId.startsWith('ornek_')){
+    try{
+      final d=await FirebaseFirestore.instance.collection('videos').doc(icerikId).get();
+      final v=d.data()??<String,dynamic>{};
+      final sahibi=(v['ownerId']??'').toString();
+      final ben=FirebaseAuth.instance.currentUser?.uid;
+      if(v['allowReshare']==false&&ben!=sahibi){
+        if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bu içerik yeniden paylaşıma kapalı.')));
+        return;
+      }
+    }catch(_){}
+  }
   final link = ngelxIcerikLink(icerikId);
   final metin = [
     'NgelX’te bunu gördüm ✨',
@@ -4595,7 +4607,7 @@ class _YeniYuklePageState extends State<YuklePage> {
         ext:uzanti,
         legacyPath:yol,
         onProgress:(sent,total){
-          if(mounted&&total>0)setState(()=>yuklemeIlerlemesi=(sent/total).clamp(0.0,1.0));
+          if(mounted&&total>0)setState(()=>yuklemeIlerlemesi=(sent/total).clamp(0.0,1.0).toDouble());
         },
       );
       final profil=await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
@@ -4630,7 +4642,7 @@ class _YeniYuklePageState extends State<YuklePage> {
     final yol='$klasor/${user.uid}/${DateTime.now().microsecondsSinceEpoch}.$uzanti';
     void ilerleme(int sent,int total){
       if(!mounted||total<=0)return;
-      setState(()=>yuklemeIlerlemesi=(sent/total).clamp(0.0,1.0));
+      setState(()=>yuklemeIlerlemesi=(sent/total).clamp(0.0,1.0).toDouble());
     }
     if(secilenTur=='video'){
       return ngelxMedyaYukleDosya(
@@ -6215,7 +6227,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
   }
   void _medyaIlerlemeGuncelle(String etiket,int sent,int total){
     if(!mounted)return;
-    final oran=total>0?(sent/total).clamp(0.0,1.0):null;
+    final oran=total>0?(sent/total).clamp(0.0,1.0).toDouble():null;
     setState((){medyaIlerlemeEtiket=etiket;medyaIlerleme=oran;});
   }
   void _medyaIlerlemeBitir(){
