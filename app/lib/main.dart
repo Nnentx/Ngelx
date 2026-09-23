@@ -6343,6 +6343,16 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
                     borderRadius:BorderRadius.circular(16),
                     child:Padding(padding:const EdgeInsets.all(7),child:Text(e,style:const TextStyle(fontSize:24))),
                   ),
+                InkWell(
+                  onTap:()=>Navigator.pop(c,'reactionMore'),
+                  borderRadius:BorderRadius.circular(16),
+                  child:Container(
+                    width:36,height:36,
+                    alignment:Alignment.center,
+                    decoration:BoxDecoration(color:ngelxGroupGreenSoft,borderRadius:BorderRadius.circular(18)),
+                    child:const Icon(Icons.add_rounded,color:ngelxGroupGreen,size:21),
+                  ),
+                ),
               ]),
             ),
             const SizedBox(height:10),
@@ -6402,6 +6412,37 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
     if(!mounted)return;
     if(sec.startsWith('reaction:')){
       await d.reference.set({'reactions.${uid!}':sec.substring(9)},SetOptions(merge:true));
+    }else if(sec=='reactionMore'){
+      final tepki=await showModalBottomSheet<String>(
+        context:context,
+        backgroundColor:Colors.white,
+        showDragHandle:true,
+        shape:const RoundedRectangleBorder(borderRadius:BorderRadius.vertical(top:Radius.circular(28))),
+        builder:(c)=>SafeArea(
+          child:Padding(
+            padding:const EdgeInsets.fromLTRB(16,0,16,22),
+            child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
+              const Text('Daha fazla tepki',style:TextStyle(color:ngelxPremiumInk,fontSize:19,fontWeight:FontWeight.w900)),
+              const SizedBox(height:4),
+              const Text('Mesaja bırakmak istediğin emojiyi seç.',style:TextStyle(color:ngelxPremiumMuted,fontSize:11.5)),
+              const SizedBox(height:14),
+              Wrap(
+                spacing:10,runSpacing:10,
+                children:['❤️','👍','😂','😮','😢','😡','🔥','👏','🎉','😍','🥰','🤔','🙏','💯','✨','😎','😭','🤯','🥹','🙌','🤝','👀','💪','⭐'].map((e)=>InkWell(
+                  onTap:()=>Navigator.pop(c,e),
+                  borderRadius:BorderRadius.circular(22),
+                  child:Container(
+                    width:44,height:44,alignment:Alignment.center,
+                    decoration:BoxDecoration(color:const Color(0xFFF5F6F7),borderRadius:BorderRadius.circular(22)),
+                    child:Text(e,style:const TextStyle(fontSize:25)),
+                  ),
+                )).toList(),
+              ),
+            ]),
+          ),
+        ),
+      );
+      if(tepki!=null&&tepki.isNotEmpty)await d.reference.set({'reactions.${uid!}':tepki},SetOptions(merge:true));
     }else if(sec=='copy'){
       await Clipboard.setData(ClipboardData(text:metin));
     }else if(sec=='reply'){
