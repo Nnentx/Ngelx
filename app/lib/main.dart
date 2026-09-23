@@ -7811,7 +7811,7 @@ class GrupMedyaPage extends StatefulWidget{
 }
 class _GrupMedyaPageState extends State<GrupMedyaPage>{
   int sekme=0;
-  Query<Map<String,dynamic>> get _mesajlar=>FirebaseFirestore.instance.collection('chats').doc(widget.chatId).collection('messages').orderBy('createdAt',descending:true);
+  Query<Map<String,dynamic>> get _mesajlar=>FirebaseFirestore.instance.collection('chats').doc(widget.chatId).collection('messages').orderBy('createdAt',descending:true).limit(500);
 
   @override Widget build(BuildContext context)=>Theme(
     data:ThemeData.light().copyWith(colorScheme:ColorScheme.fromSeed(seedColor:ngelxGroupGreen)),
@@ -7919,9 +7919,13 @@ class _GrupMedyaPageState extends State<GrupMedyaPage>{
               separatorBuilder:(_,__)=>const SizedBox(height:8),
               itemBuilder:(_,i){
                 final data=docs[i].data(),t=(data['type']??'').toString();
-                final url=(data['mediaUrl']??data['fileUrl']??data['url']??'').toString();
-                final metin=(data['fileName']??data['text']??(sekme==1?'Dosya':'Bağlantı')).toString();
-                final alt=mesajSaati(data['createdAt']);
+                final url=(data['mediaUrl']??data['fileUrl']??data['linkUrl']??data['url']??'').toString();
+                final linkBaslik=(data['linkTitle']??'').toString().trim();
+                final linkHost=(data['linkHost']??'').toString().trim();
+                final metin=sekme==2
+                  ?(linkBaslik.isNotEmpty?linkBaslik:(linkHost.isNotEmpty?linkHost:(data['text']??'Bağlantı').toString()))
+                  :(data['fileName']??data['text']??'Dosya').toString();
+                final alt=sekme==2&&linkHost.isNotEmpty?linkHost+' • '+mesajSaati(data['createdAt']):mesajSaati(data['createdAt']);
                 return NgelXPremiumCard(
                   color:const Color(0xFFF8FCF9),
                   padding:const EdgeInsets.symmetric(horizontal:12,vertical:10),
@@ -7931,12 +7935,24 @@ class _GrupMedyaPageState extends State<GrupMedyaPage>{
                     leading:Container(width:44,height:44,decoration:BoxDecoration(color:ngelxGroupGreenSoft,borderRadius:BorderRadius.circular(14)),child:Icon(sekme==1?Icons.insert_drive_file_outlined:Icons.link_rounded,color:ngelxGroupGreen)),
                     title:Text(metin,maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w800)),
                     subtitle:Text(alt,style:const TextStyle(color:ngelxPremiumMuted,fontSize:11)),
-                    trailing:const Icon(Icons.chevron_right_rounded,color:Color(0xFF99A69E)),
+                    trailing:sekme==2
+                      ?IconButton(
+                          tooltip:'Bağlantıyı kopyala',
+                          onPressed:url.isEmpty?null:()async{
+                            await Clipboard.setData(ClipboardData(text:url));
+                            if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bağlantı kopyalandı.')));
+                          },
+                          icon:const Icon(Icons.copy_rounded,color:ngelxGroupGreen,size:20),
+                        )
+                      :const Icon(Icons.chevron_right_rounded,color:Color(0xFF99A69E)),
                     onTap:url.isEmpty?null:()async{
                       if(t=='shared_content'&&(data['contentId']??'').toString().isNotEmpty){
                         Navigator.push(context,MaterialPageRoute(builder:(_)=>IcerikBaglantiPage(icerikId:(data['contentId']??'').toString())));
                       }else if(t=='file'||t=='document'){
                         await SharePlus.instance.share(ShareParams(text:url));
+                      }else if(sekme==2){
+                        await Clipboard.setData(ClipboardData(text:url));
+                        if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bağlantı kopyalandı.')));
                       }
                     },
                   ),
