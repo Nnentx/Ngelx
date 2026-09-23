@@ -5707,7 +5707,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
   List<Map<String,String>>? _mentionUyeleri;
   late Stream<QuerySnapshot<Map<String,dynamic>>> _mesajAkisi;
   late final Stream<DocumentSnapshot<Map<String,dynamic>>> _grupAkisi;
-  bool aramaBaslatiliyor=false,mesajGonderiliyor=false,sesKaydediliyor=false,_okunduYaziliyor=false,_ilkMesajKaydirma=true,_mesajBeklemeBitti=false;
+  bool aramaBaslatiliyor=false,mesajGonderiliyor=false,sesKaydediliyor=false,_okunduYaziliyor=false,_ilkMesajKaydirma=true,_mesajBeklemeBitti=false,_enAltta=true;
   int sesKaydiSaniye=0,_acilisOkunmamis=0;
   DateTime? _sonOkunduKontrolu,sesKaydiBaslangic;
   String? yanitlananMesajId,yanitlananMetin;
@@ -5721,8 +5721,20 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
     // En yeni 100 mesaj ilk ekran için yeterli; eski içerikler medya ve arama
     // sayfalarından ayrıca alınır.
     _mesajAkisiniYenile();
+    liste.addListener(_listeKonumuDegisti);
     unawaited(_acilisOkunmamisYukle());
   }
+  void _listeKonumuDegisti(){
+    if(!liste.hasClients||!mounted)return;
+    final yeni=liste.position.maxScrollExtent-liste.position.pixels<120;
+    if(yeni!=_enAltta)setState(()=>_enAltta=yeni);
+  }
+  Future<void> _enAltaGit()async{
+    if(!liste.hasClients)return;
+    await liste.animateTo(liste.position.maxScrollExtent,duration:const Duration(milliseconds:240),curve:Curves.easeOut);
+    if(mounted)setState((){_enAltta=true;_acilisOkunmamis=0;});
+  }
+
   void _mesajAkisiniYenile(){
     _mesajBeklemeZamanlayici?.cancel();
     _mesajBeklemeBitti=false;
@@ -6012,6 +6024,29 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
     if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Ses kaydı iptal edildi.')));
   }
 
+  Future<void> _grupSesliMesajiYukle(Uint8List bytes,int sure,File? yerelDosya)async{
+    try{
+      final url=await ngelxMedyaYukleBytes(
+        bytes:bytes,
+        kind:'chat-audio',
+        ext:'m4a',
+        legacyPath:'chat-audio/'+widget.chatId+'/'+DateTime.now().millisecondsSinceEpoch.toString()+'.m4a',
+        contentType:'audio/mp4',
+      ).timeout(const Duration(seconds:45));
+      final tamam=await payloadGonder({'type':'audio','audioUrl':url,'durationSeconds':sure},'🎤 Sesli mesaj');
+      if(!tamam)throw Exception('Mesaj kaydedilemedi');
+      if(yerelDosya!=null){
+        try{await yerelDosya.delete();}catch(_){}
+      }
+    }catch(_){
+      if(!mounted)return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content:const Text('Sesli mesaj gönderilemedi.'),
+        action:SnackBarAction(label:'Tekrar dene',onPressed:()=>unawaited(_grupSesliMesajiYukle(bytes,sure,yerelDosya))),
+      ));
+    }
+  }
+
   Future<void> grupSesKaydiDegistir()async{
     if(sesKaydediliyor){
       String? yol;
@@ -6021,26 +6056,14 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
         yol=await _grupSesKaydedici.stop();
       }catch(_){}
       _sesKaydiDurumunuTemizle();
-      try{
-        if(yol==null||yol.isEmpty)return;
-        final dosya=File(yol);
-        if(!await dosya.exists())return;
-        final bytes=await dosya.readAsBytes();
-        if(bytes.isEmpty)return;
-        final hesaplanan=baslangic==null?gorunenSure:DateTime.now().difference(baslangic).inSeconds;
-        final sure=hesaplanan.clamp(1,600);
-        final url=await ngelxMedyaYukleBytes(
-          bytes:bytes,
-          kind:'chat-audio',
-          ext:'m4a',
-          legacyPath:'chat-audio/'+widget.chatId+'/'+DateTime.now().millisecondsSinceEpoch.toString()+'.m4a',
-          contentType:'audio/mp4',
-        ).timeout(const Duration(seconds:30));
-        await payloadGonder({'type':'audio','audioUrl':url,'durationSeconds':sure},'🎤 Sesli mesaj');
-        try{await dosya.delete();}catch(_){}
-      }catch(_){
-        if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Sesli mesaj gönderilemedi.')));
-      }
+      if(yol==null||yol.isEmpty)return;
+      final dosya=File(yol);
+      if(!await dosya.exists())return;
+      final bytes=await dosya.readAsBytes();
+      if(bytes.isEmpty)return;
+      final hesaplanan=baslangic==null?gorunenSure:DateTime.now().difference(baslangic).inSeconds;
+      final sure=hesaplanan.clamp(1,600);
+      await _grupSesliMesajiYukle(bytes,sure,dosya);
       return;
     }
     try{
@@ -7125,6 +7148,32 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
                   );
                 },
               )),
+              if(!_enAltta)Align(
+                alignment:Alignment.centerRight,
+                child:Padding(
+                  padding:const EdgeInsets.only(right:14,bottom:6),
+                  child:InkWell(
+                    onTap:_enAltaGit,
+                    borderRadius:BorderRadius.circular(24),
+                    child:Container(
+                      padding:const EdgeInsets.symmetric(horizontal:12,vertical:8),
+                      decoration:BoxDecoration(
+                        color:Colors.white,
+                        borderRadius:BorderRadius.circular(24),
+                        border:Border.all(color:ngelxGroupBorder),
+                        boxShadow:const [BoxShadow(color:Color(0x18000000),blurRadius:12,offset:Offset(0,5))],
+                      ),
+                      child:Row(mainAxisSize:MainAxisSize.min,children:[
+                        const Icon(Icons.arrow_downward_rounded,color:ngelxGroupGreen,size:20),
+                        if(_acilisOkunmamis>0)...[
+                          const SizedBox(width:6),
+                          Text(_acilisOkunmamis.toString(),style:const TextStyle(color:ngelxGroupGreen,fontWeight:FontWeight.w900)),
+                        ],
+                      ]),
+                    ),
+                  ),
+                ),
+              ),
               if(mentionOnerileri.isNotEmpty)Container(
                 margin:const EdgeInsets.fromLTRB(10,0,10,6),
                 decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(18),border:Border.all(color:ngelxPremiumBorder),boxShadow:const [BoxShadow(color:Color(0x12000000),blurRadius:16,offset:Offset(0,6))]),
@@ -8163,6 +8212,33 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
         ))),
       ]));
     }
+    if(r.remoteParticipants.isEmpty){
+      return Expanded(child:Column(children:[
+        Padding(
+          padding:const EdgeInsets.fromLTRB(18,14,10,8),
+          child:Row(children:[
+            Expanded(child:Text(widget.baslik,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.white,fontSize:19,fontWeight:FontWeight.w900))),
+            IconButton(onPressed:aramaAyarlari,icon:const Icon(Icons.person_add_alt_1_rounded,color:Colors.white,size:27)),
+            IconButton(onPressed:aramaAyarlari,icon:const Icon(Icons.more_vert_rounded,color:Colors.white,size:26)),
+          ]),
+        ),
+        Expanded(child:Center(child:Column(mainAxisSize:MainAxisSize.min,children:[
+          CircleAvatar(
+            radius:62,
+            backgroundColor:const Color(0xFF191919),
+            backgroundImage:widget.foto.isEmpty?null:CachedNetworkImageProvider(widget.foto),
+            child:widget.foto.isEmpty?const Icon(Icons.groups_rounded,color:Colors.white70,size:58):null,
+          ),
+          const SizedBox(height:24),
+          Padding(
+            padding:const EdgeInsets.symmetric(horizontal:24),
+            child:Text(widget.baslik,textAlign:TextAlign.center,maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.white,fontSize:25,fontWeight:FontWeight.w900)),
+          ),
+          const SizedBox(height:7),
+          const Text('Diğerlerinin katılması bekleniyor…',style:TextStyle(color:Colors.white70,fontSize:15,fontWeight:FontWeight.w600)),
+        ]))),
+      ]));
+    }
     final sutun=katilimcilar.length<=1?1:2;
     return Expanded(child:Column(children:[
       Padding(
@@ -8226,11 +8302,11 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
     canPop:true,
     onPopInvokedWithResult:(didPop,__){if(didPop)bitir(geriDon:false);},
     child:Scaffold(
-      backgroundColor:ngelxCallBg,
+      backgroundColor:widget.goruntulu?Colors.black:ngelxCallBg,
       body:Container(
-        decoration:const BoxDecoration(
-          gradient:RadialGradient(center:Alignment(0,-.35),radius:1.25,colors:[Color(0xFF2A1550),ngelxCallBg]),
-        ),
+        decoration:widget.goruntulu
+          ?const BoxDecoration(color:Colors.black)
+          :const BoxDecoration(gradient:RadialGradient(center:Alignment(0,-.35),radius:1.25,colors:[Color(0xFF2A1550),ngelxCallBg])),
         child:SafeArea(child:Column(children:[
           if(hata!=null)
             Expanded(child:Center(child:Padding(padding:const EdgeInsets.all(28),child:Column(mainAxisSize:MainAxisSize.min,children:[
@@ -8257,10 +8333,11 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
           if(hata==null)Padding(
             padding:const EdgeInsets.fromLTRB(14,15,14,7),
             child:Row(mainAxisAlignment:MainAxisAlignment.spaceEvenly,children:[
-              _aramaKontrol(mikrofon?Icons.mic_rounded:Icons.mic_off_rounded,'Mikrofon',mikrofonDegistir,mikrofon),
-              _aramaKontrol(hoparlor?Icons.volume_up_rounded:Icons.volume_off_rounded,'Hoparlör',hoparlorDegistir,hoparlor),
               if(widget.goruntulu)_aramaKontrol(kamera?Icons.videocam_rounded:Icons.videocam_off_rounded,'Kamera',kameraDegistir,kamera),
+              _aramaKontrol(mikrofon?Icons.mic_rounded:Icons.mic_off_rounded,'Mikrofon',mikrofonDegistir,mikrofon),
+              if(!widget.goruntulu)_aramaKontrol(hoparlor?Icons.volume_up_rounded:Icons.volume_off_rounded,'Hoparlör',hoparlorDegistir,hoparlor),
               if(grupAramasi)_aramaKontrol(Icons.person_add_alt_1_rounded,'Katılımcı',aramaAyarlari,true),
+              if(widget.goruntulu)_aramaKontrol(hoparlor?Icons.volume_up_rounded:Icons.volume_off_rounded,'Ses',hoparlorDegistir,hoparlor),
             ]),
           ),
           if(hata==null)Padding(
