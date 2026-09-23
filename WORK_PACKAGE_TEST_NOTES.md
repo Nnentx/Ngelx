@@ -223,3 +223,9 @@
 - Keşfet > Kişiler artık aktif hesabın kendisini öneri kartı olarak göstermiyor ve `deactivated` hesapları ayıklıyor.
 - Keşfet kişi kartındaki yeşil çevrimiçi noktası artık herkese sabit gösterilmiyor; yalnızca gerçekten `isOnline=true` olan ve aktiflik görünürlüğünü kapatmamış hesaplarda çıkıyor.
 - Dil dönüşümü henüz tüm ikincil dialog/hata metinlerinde tamamlanmış sayılmıyor; sonraki temizlik turunda Sohbet, grup ayrıntıları ve kalan yardımcı ekranlardaki sabit metinler ortak dil sistemine taşınacak.
+
+### 2026-09-23 Gelen Kutusu — dil ve hesap güvenliği turu
+- Gelen Kutusu başlığı, arama alanı, ana filtreler, Aktivite, Mesaj İstekleri, arşiv ve sohbet menüsü ana eylemleri ortak uygulama diline bağlandı.
+- `Tümü / Okunmamış / Arkadaşlar / Gruplar` filtrelerinin Firestore/UI iç mantık kodları değiştirilmedi; yalnızca kullanıcıya gösterilen etiketler seçili dile çevriliyor. Böylece filtre davranışı dil değişiminden etkilenmiyor.
+- Arşivlenen sohbetler ve mesaj isteği ekranlarının temel başlık/boş durum/kabul-red-engelle metinleri de seçili dili takip ediyor.
+- CI sözleşmesine Gelen Kutusu filtrelerinin sabit iç kodlarını korurken çevrilmiş etiket göstermesini kontrol eden koruma eklendi.
