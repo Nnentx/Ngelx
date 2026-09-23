@@ -283,10 +283,14 @@ Future<void> showGroupMessageInfo({
   final chat = await chatRef.get();
   final data = chat.data() ?? <String, dynamic>{};
   final members = List<String>.from(data['members'] ?? const <String>[]);
+  final deliveredIds = <String>[];
   final seenIds = <String>[];
   if (created != null) {
     for (final id in members) {
-      if (id == currentUid || data['readReceipts_' + id] == false) continue;
+      if (id == currentUid) continue;
+      final delivered = data['lastDeliveredAt_' + id];
+      if (delivered is Timestamp && !delivered.toDate().isBefore(created)) deliveredIds.add(id);
+      if (data['readReceipts_' + id] == false) continue;
       final read = data['lastReadAt_' + id];
       if (read is Timestamp && !read.toDate().isBefore(created)) seenIds.add(id);
     }
@@ -315,6 +319,13 @@ Future<void> showGroupMessageInfo({
             subtitle: Text(created == null
                 ? 'Gönderim zamanı hazırlanıyor'
                 : created.toLocal().toString().substring(0, 16)),
+          ),
+          ListTile(
+            leading: const Icon(Icons.done_all_rounded, color: _groupGreen),
+            title: Text(
+              deliveredIds.isEmpty ? 'Teslim bilgisi bekleniyor' : deliveredIds.length.toString() + ' kişiye teslim edildi',
+              style: const TextStyle(fontWeight: FontWeight.w800),
+            ),
           ),
           ListTile(
             leading: const Icon(Icons.visibility_outlined, color: _groupGreen),
