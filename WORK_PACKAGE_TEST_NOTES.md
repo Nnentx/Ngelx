@@ -201,3 +201,10 @@
 - Video uzun basma menüsündeki, zaten “Araçlar > Oynatma hızı” içinde bulunan ikinci hız seçimi kaldırıldı.
 - Eski verilerde `allowDownload` string olarak tutulmuş olsa bile indirme gizliliği korunacak.
 - Şu an “Sana Özel” gerçek öneri algoritması değil; izin verilen gerçek içerikleri kronolojik gösteriyor. Kullanıcı tabanı büyüyünce ayrı sıralama/pagination çalışması yapılmalı.
+
+
+### 2026-09-23 sürüm etiketi + grup fotoğrafı sağlamlaştırma
+- Ayarlar > Uygulama güncellemeleri bölümündeki sabit **V42** kaldırıldı; APK artık `pubspec.yaml` içindeki gerçek sürüm ve build numarasını derleme sırasında alıp gösteriyor.
+- Mevcut paket için ekranda **v1.0.57 • Yapı 211** görünmesi bekleniyor; sonraki sürümlerde aynı alan CI tarafından otomatik güncellenecek.
+- Yeni grup oluştururken seçilen grup fotoğrafının yüklenmesi için dış 12 saniyelik erken zaman aşımı kaldırılıp 75 saniyeye çıkarıldı; R2 medya servisinin gerçek bağlantı/yükleme süresine izin veriliyor.
+- Grup fotoğrafı yüklemesi yine de başarısız olursa grup oluşturma akışı çökmeyecek ve kullanıcıya fotoğrafın atlandığı açıkça bildirilecek.
