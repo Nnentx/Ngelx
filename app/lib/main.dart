@@ -5707,10 +5707,10 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
   List<Map<String,String>>? _mentionUyeleri;
   late Stream<QuerySnapshot<Map<String,dynamic>>> _mesajAkisi;
   late final Stream<DocumentSnapshot<Map<String,dynamic>>> _grupAkisi;
-  bool aramaBaslatiliyor=false,mesajGonderiliyor=false,sesKaydediliyor=false,_okunduYaziliyor=false,_ilkMesajKaydirma=true,_mesajBeklemeBitti=false,_enAltta=true;
+  bool aramaBaslatiliyor=false,mesajGonderiliyor=false,sesKaydediliyor=false,_okunduYaziliyor=false,_ilkMesajKaydirma=true,_mesajBeklemeBitti=false,_enAltta=true,sessizGonder=false;
   int sesKaydiSaniye=0,_acilisOkunmamis=0;
   DateTime? _sonOkunduKontrolu,sesKaydiBaslangic;
-  String? yanitlananMesajId,yanitlananMetin;
+  String? yanitlananMesajId,yanitlananMetin,yanitlananGonderen;
   String? get uid=>FirebaseAuth.instance.currentUser?.uid;
   DocumentReference<Map<String,dynamic>> get chatRef=>FirebaseFirestore.instance.collection('chats').doc(widget.chatId);
   Future<DocumentSnapshot<Map<String,dynamic>>> _uyeGetir(String id)=>_uyeProfilCache.putIfAbsent(id,()=>FirebaseFirestore.instance.collection('users').doc(id).get());
@@ -5829,11 +5829,13 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
       batch.set(chatRef,g,SetOptions(merge:true));
       await batch.commit();
       final etiketler=List<String>.from(veri['mentions']??const[]);
+      final sessizMesaj=veri['silent']==true;
       final sessizde=List<String>.from(grupVerisi['mutedFor']??const[]);
       final profil=await FirebaseFirestore.instance.collection('users').doc(ben).get();
       final ad=(profil.data()?['displayName']??profil.data()?['username']??'Bir kullanıcı').toString();
       final onizleme=sonMesaj.length>80?sonMesaj.substring(0,80)+'…':sonMesaj;
       for(final hedef in uyeler){
+        if(sessizMesaj)break;
         if(hedef==ben||sessizde.contains(hedef)||etiketler.contains(hedef))continue;
         unawaited(uygulamaBildirimiGonder(
           toUid:hedef,fromUid:ben,tur:'message',
@@ -5841,7 +5843,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
           belgeId:widget.chatId,
         ).catchError((_){ }));
       }
-      if(etiketler.isNotEmpty){
+      if(!sessizMesaj&&etiketler.isNotEmpty){
         for(final hedef in etiketler.toSet()){
           if(hedef==ben||!uyeler.contains(hedef))continue;
           unawaited(uygulamaBildirimiGonder(
@@ -5859,19 +5861,22 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
   }
   Future<void> gonder()async{
     final t=mesaj.text.trim();if(t.isEmpty||mesajGonderiliyor)return;
-    final etiketler=etiketlenenUidler.toList(),yanitId=yanitlananMesajId,yanitMetin=yanitlananMetin;
+    final etiketler=etiketlenenUidler.toList(),yanitId=yanitlananMesajId,yanitMetin=yanitlananMetin,yanitGonderen=yanitlananGonderen;
+    final sessiz=sessizGonder;
     setState(()=>mesajGonderiliyor=true);
     final tamam=await payloadGonder({
       'text':t,'type':'text',
       if(etiketler.isNotEmpty)'mentions':etiketler,
+      if(sessiz)'silent':true,
       if(yanitId!=null)'replyToId':yanitId,
       if(yanitMetin!=null&&yanitMetin.isNotEmpty)'replyToText':yanitMetin,
+      if(yanitGonderen!=null&&yanitGonderen.isNotEmpty)'replyToSenderName':yanitGonderen,
     },t);
     if(tamam){
       mesaj.clear();etiketlenenUidler.clear();
       _typingZamanlayici?.cancel();
       if(_typingYazildi)unawaited(_typingTemizle());
-      if(mounted)setState((){yanitlananMesajId=null;yanitlananMetin=null;});
+      if(mounted)setState((){yanitlananMesajId=null;yanitlananMetin=null;yanitlananGonderen=null;sessizGonder=false;});
     }
     if(mounted)setState(()=>mesajGonderiliyor=false);
   }
@@ -6186,25 +6191,40 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
             final v=belgeler[i].data()??<String,dynamic>{};
             final kullanici=(v['username']??'').toString().trim();
             final ad=(v['displayName']??kullanici).toString().trim();
-            if(kullanici.isNotEmpty)uyeler.add({'uid':ids[i],'username':kullanici,'name':ad.isEmpty?kullanici:ad});
+            final foto=(v['photoUrl']??'').toString().trim();
+            if(kullanici.isNotEmpty)uyeler.add({'uid':ids[i],'username':kullanici,'name':ad.isEmpty?kullanici:ad,'photo':foto,'kind':'person'});
           }
           _mentionUyeleri=uyeler;
         }
         if(!mounted)return;
         final sonuc=<Map<String,String>>[];
-        if(herkesYetkisi&&'herkes'.contains(ara))sonuc.add({'uid':'all','username':'herkes','name':'Herkes'});
         for(final u in uyeler){
-          if(sonuc.length>=6)break;
+          if(sonuc.where((x)=>x['kind']=='person').length>=14)break;
           final kullanici=(u['username']??'').toLowerCase(),ad=(u['name']??'').toLowerCase();
           if(ara.isEmpty||kullanici.contains(ara)||ad.contains(ara))sonuc.add(u);
         }
+        if(herkesYetkisi&&'herkes'.contains(ara))sonuc.add({
+          'uid':'all','username':'herkes','name':'herkes','kind':'command',
+          'subtitle':'Bu sohbetteki herkesten bahset',
+        });
+        if('sessiz'.contains(ara))sonuc.add({
+          'uid':'silent','username':'sessiz','name':'sessiz','kind':'command',
+          'subtitle':'Bildirim göndermeden mesaj gönder',
+        });
         if(mounted)setState((){mentionOnerileri..clear()..addAll(sonuc);});
       }catch(_){}
     });
   }
   Future<void> mentionEkle(String kullanici,String? hedefUid)async{
     final metin=mesaj.text,sonBosluk=metin.lastIndexOf(RegExp(r'\s'));
-    mesaj.text='${sonBosluk<0?'':metin.substring(0,sonBosluk+1)}@$kullanici ';
+    final once=sonBosluk<0?'':metin.substring(0,sonBosluk+1);
+    if(hedefUid=='silent'){
+      mesaj.text=once;
+      mesaj.selection=TextSelection.collapsed(offset:mesaj.text.length);
+      if(mounted)setState((){sessizGonder=true;mentionOnerileri.clear();});
+      return;
+    }
+    mesaj.text='${once}@$kullanici ';
     mesaj.selection=TextSelection.collapsed(offset:mesaj.text.length);
     if(hedefUid=='all'){
       final grup=await chatRef.get();
@@ -6319,7 +6339,22 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
     }else if(sec=='copy'){
       await Clipboard.setData(ClipboardData(text:metin));
     }else if(sec=='reply'){
-      setState((){yanitlananMesajId=d.id;yanitlananMetin=metin.isEmpty?(v['type']=='gif'?'GIF':'Medya'):metin;});
+      final gonderen=(v['senderId']??'').toString();
+      String ad='Mesaj';
+      if(gonderen==uid){
+        ad='Sen';
+      }else if(gonderen.isNotEmpty){
+        try{
+          final p=await _uyeGetir(gonderen);
+          final pv=p.data()??<String,dynamic>{};
+          ad=(pv['displayName']??pv['username']??'Üye').toString();
+        }catch(_){ad='Üye';}
+      }
+      if(mounted)setState((){
+        yanitlananMesajId=d.id;
+        yanitlananMetin=metin.isEmpty?(v['type']=='gif'?'GIF':'Medya'):metin;
+        yanitlananGonderen=ad;
+      });
     }else if(sec=='pin'){
       await d.reference.set({'pinned':v['pinned']!=true,'pinnedAt':FieldValue.serverTimestamp(),'pinnedBy':uid},SetOptions(merge:true));
     }else if(sec=='delete'){
@@ -6710,7 +6745,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
     final silinmis=v['deletedForEveryone']==true;
     final sadeceEmoji=tur=='text'&&!silinmis&&_sadeceEmojiMesaj(metin);
     final fileUrl=(v['fileUrl']??'').toString(),fileName=(v['fileName']??'Dosya').toString(),locationText=(v['locationText']??metin).toString();
-    final saat=mesajSaati(v['createdAt']??v['clientCreatedAt']),yanit=(v['replyToText']??'').toString();
+    final saat=mesajSaati(v['createdAt']??v['clientCreatedAt']),yanit=(v['replyToText']??'').toString(),yanitGonderen=(v['replyToSenderName']??'').toString();
     final hamTepkiler=v['reactions'],tepkiler=hamTepkiler is Map?Map<String,dynamic>.from(hamTepkiler):<String,dynamic>{};
     if(tur=='poll')return const SizedBox.shrink();
     if(silinmis)return Align(
@@ -6839,6 +6874,17 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
         crossAxisAlignment:ben?CrossAxisAlignment.end:CrossAxisAlignment.start,
         children:[
           if(gonderenBasligi!=null)gonderenBasligi,
+          if(yanit.isNotEmpty&&yanitGonderen.isNotEmpty)Padding(
+            padding:EdgeInsets.only(left:ben?0:8,right:ben?8:0,bottom:3),
+            child:Row(mainAxisSize:MainAxisSize.min,children:[
+              Icon(Icons.reply_rounded,size:14,color:ben?ngelxPremiumMuted:ngelxGroupGreen),
+              const SizedBox(width:4),
+              Text(
+                ben?yanitGonderen+'’a yanıt verdin':yanitGonderen+'’a yanıt verdi',
+                style:TextStyle(color:ben?ngelxPremiumMuted:ngelxGroupGreen,fontSize:10.8,fontWeight:FontWeight.w700),
+              ),
+            ]),
+          ),
           GestureDetector(
             behavior:HitTestBehavior.opaque,
             onLongPress:()=>mesajMenusu(d),
@@ -6876,7 +6922,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
                     Container(width:3,height:30,decoration:BoxDecoration(color:ben?Colors.white70:ngelxGroupGreen,borderRadius:BorderRadius.circular(4))),
                     const SizedBox(width:8),
                     Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-                      Text('Yanıt',style:TextStyle(color:ben?Colors.white70:ngelxGroupGreen,fontSize:10.5,fontWeight:FontWeight.w900)),
+                      Text(yanitGonderen.isEmpty?'Yanıt':yanitGonderen,style:TextStyle(color:ben?Colors.white70:ngelxGroupGreen,fontSize:10.5,fontWeight:FontWeight.w900)),
                       Text(yanit,maxLines:1,overflow:TextOverflow.ellipsis,style:TextStyle(color:ben?Colors.white:const Color(0xFF2C2634),fontSize:12.1,fontWeight:FontWeight.w600)),
                     ])),
                   ]),
@@ -7245,15 +7291,54 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
                 ),
               ),
               if(mentionOnerileri.isNotEmpty)Container(
-                margin:const EdgeInsets.fromLTRB(10,0,10,6),
-                decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(18),border:Border.all(color:ngelxPremiumBorder),boxShadow:const [BoxShadow(color:Color(0x12000000),blurRadius:16,offset:Offset(0,6))]),
-                child:Column(mainAxisSize:MainAxisSize.min,children:mentionOnerileri.map((u)=>ListTile(
-                  dense:true,
-                  visualDensity:VisualDensity.compact,
-                  leading:CircleAvatar(radius:15,backgroundColor:ngelxGroupGreenSoft,child:Icon(u['uid']=='all'?Icons.groups_rounded:Icons.person,size:16,color:ngelxGroupGreen)),
-                  title:Text(u['uid']=='all'?'@herkes':(u['name']??'Üye')+'  @'+(u['username']??''),maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontWeight:FontWeight.w800)),
-                  onTap:()=>mentionEkle(u['username']??'',u['uid']),
-                )).toList()),
+                margin:const EdgeInsets.fromLTRB(8,0,8,6),
+                constraints:BoxConstraints(maxHeight:MediaQuery.sizeOf(context).height*.42),
+                decoration:BoxDecoration(
+                  color:Colors.white,
+                  borderRadius:BorderRadius.circular(22),
+                  border:Border.all(color:ngelxGroupBorder),
+                  boxShadow:const [BoxShadow(color:Color(0x1A000000),blurRadius:18,offset:Offset(0,7))],
+                ),
+                child:ClipRRect(
+                  borderRadius:BorderRadius.circular(22),
+                  child:ListView.builder(
+                    shrinkWrap:true,
+                    padding:const EdgeInsets.symmetric(vertical:7),
+                    itemCount:mentionOnerileri.length,
+                    itemBuilder:(_,i){
+                      final u=mentionOnerileri[i],id=u['uid']??'',ozel=id=='all'||id=='silent';
+                      final foto=u['photo']??'';
+                      return ListTile(
+                        dense:true,
+                        contentPadding:const EdgeInsets.symmetric(horizontal:12,vertical:2),
+                        leading:ozel
+                          ?Container(
+                              width:42,height:42,
+                              decoration:BoxDecoration(color:id=='silent'?const Color(0xFFF1F1F1):ngelxGroupGreenSoft,shape:BoxShape.circle),
+                              child:Icon(id=='silent'?Icons.notifications_off_rounded:Icons.groups_rounded,color:id=='silent'?const Color(0xFF4B4B4B):ngelxGroupGreen,size:24),
+                            )
+                          :CircleAvatar(
+                              radius:21,
+                              backgroundColor:ngelxGroupGreenSoft,
+                              backgroundImage:foto.isEmpty?null:CachedNetworkImageProvider(foto),
+                              child:foto.isEmpty?const Icon(Icons.person_rounded,color:ngelxGroupGreen):null,
+                            ),
+                        title:Text(
+                          ozel?(u['name']??''):(u['name']??'Üye'),
+                          maxLines:1,overflow:TextOverflow.ellipsis,
+                          style:const TextStyle(color:Color(0xFF202124),fontSize:15.5,fontWeight:FontWeight.w800),
+                        ),
+                        subtitle:Text(
+                          ozel?(u['subtitle']??''):'@'+(u['username']??''),
+                          maxLines:1,overflow:TextOverflow.ellipsis,
+                          style:const TextStyle(color:Color(0xFF777B80),fontSize:11.5,fontWeight:FontWeight.w500),
+                        ),
+                        trailing:ozel?null:const Icon(Icons.chevron_right_rounded,color:Color(0xFFB1B4B8),size:19),
+                        onTap:()=>mentionEkle(u['username']??'',id),
+                      );
+                    },
+                  ),
+                ),
               ),
               Builder(builder:(_){
                 final yazan=<String>[];
@@ -7283,18 +7368,33 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
                   },
                 );
               }),
+              if(sessizGonder)Container(
+                margin:const EdgeInsets.fromLTRB(12,4,12,2),
+                padding:const EdgeInsets.symmetric(horizontal:12,vertical:8),
+                decoration:BoxDecoration(color:const Color(0xFFF5F6F7),borderRadius:BorderRadius.circular(16),border:Border.all(color:const Color(0xFFE4E6E9))),
+                child:Row(children:[
+                  const CircleAvatar(radius:17,backgroundColor:Color(0xFFE8E9EB),child:Icon(Icons.notifications_off_rounded,color:Color(0xFF45474A),size:18)),
+                  const SizedBox(width:9),
+                  const Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+                    Text('Sessiz gönderim',style:TextStyle(color:Color(0xFF202124),fontSize:12,fontWeight:FontWeight.w900)),
+                    Text('Bu mesaj için bildirim gönderilmeyecek.',style:TextStyle(color:Color(0xFF777B80),fontSize:10.5,fontWeight:FontWeight.w500)),
+                  ])),
+                  IconButton(onPressed:()=>setState(()=>sessizGonder=false),icon:const Icon(Icons.close_rounded,size:19),visualDensity:VisualDensity.compact),
+                ]),
+              ),
               if(yanitlananMetin!=null)Container(
                 margin:const EdgeInsets.fromLTRB(12,4,12,2),
                 padding:const EdgeInsets.fromLTRB(12,8,5,8),
-                decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(16),border:Border.all(color:ngelxGroupBorder),boxShadow:const [BoxShadow(color:Color(0x0D000000),blurRadius:10,offset:Offset(0,4))]),
+                decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(17),border:Border.all(color:ngelxGroupBorder),boxShadow:const [BoxShadow(color:Color(0x0D000000),blurRadius:10,offset:Offset(0,4))]),
                 child:Row(children:[
-                  Container(width:4,height:32,decoration:BoxDecoration(gradient:const LinearGradient(colors:[ngelxGroupGreen2,ngelxGroupGreen]),borderRadius:BorderRadius.circular(4))),
+                  Container(width:4,height:38,decoration:BoxDecoration(gradient:const LinearGradient(colors:[ngelxGroupGreen2,ngelxGroupGreen]),borderRadius:BorderRadius.circular(4))),
                   const SizedBox(width:9),
                   Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-                    const Text('Yanıt',style:TextStyle(color:ngelxGroupGreen,fontSize:11,fontWeight:FontWeight.w900)),
+                    Text((yanitlananGonderen??'Mesaj')+' kişisine yanıt veriyorsun',style:const TextStyle(color:ngelxGroupGreen,fontSize:11,fontWeight:FontWeight.w900)),
+                    const SizedBox(height:2),
                     Text(yanitlananMetin!,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:ngelxPremiumInk,fontSize:12.5,fontWeight:FontWeight.w600)),
                   ])),
-                  IconButton(onPressed:()=>setState((){yanitlananMesajId=null;yanitlananMetin=null;}),icon:const Icon(Icons.close_rounded,size:19),visualDensity:VisualDensity.compact),
+                  IconButton(onPressed:()=>setState((){yanitlananMesajId=null;yanitlananMetin=null;yanitlananGonderen=null;}),icon:const Icon(Icons.close_rounded,size:19),visualDensity:VisualDensity.compact),
                 ]),
               ),
               SafeArea(
