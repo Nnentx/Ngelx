@@ -198,38 +198,48 @@ export default {
       const ext = cleanExt(url.searchParams.get('ext'));
       const maxBytes = MAX_BYTES[kind] || MAX_BYTES.default;
       const announced = Number(request.headers.get('content-length') || 0);
-      if (announced > maxBytes) return json({error: 'file_too_large', maxBytes}, 413);
-
-      if (!request.body) return json({error: 'empty_file'}, 400);
+      if (announced > maxBytes * 1.5) return json({error: 'file_too_large', maxBytes}, 413);
 
       const uid = claims.sub;
       const key = kind + '/' + uid + '/' + Date.now() + '_' + crypto.randomUUID() + '.' + ext;
-      const contentType = contentTypeFor(ext, request.headers.get('content-type'));
 
       try {
         let saved;
-        const streamKinds = new Set(['videos', 'profile-intros', 'music', 'chat-files', 'chat-audio']);
+        let contentType = contentTypeFor(ext, request.headers.get('content-type'));
+        const encoding = url.searchParams.get('encoding') || '';
 
-        if (streamKinds.has(kind) && announced > 0) {
-          // Large media stays streamed so the Worker does not need to buffer
-          // tens of megabytes in memory.
-          saved = await env.MEDIA.put(key, request.body, {
-            httpMetadata: {contentType, cacheControl: 'public, max-age=31536000, immutable'},
-            customMetadata: {uid, kind},
-          });
-        } else {
-          // Profile/group/story photos are deliberately buffered before R2.
-          // Passing the incoming mobile request stream directly to R2 caused
-          // some Android/ISP connections to be reset while changing avatars.
-          // These kinds are capped at a small size, so buffering is safe and
-          // makes the upload independent from the client socket lifetime.
-          const bytes = await request.arrayBuffer();
-          if (!bytes.byteLength) return json({error: 'empty_file'}, 400);
-          if (bytes.byteLength > maxBytes) return json({error: 'file_too_large', maxBytes}, 413);
+        if (encoding === 'base64') {
+          const payload = await request.json();
+          const raw = typeof payload?.data === 'string' ? payload.data : '';
+          if (!raw) return json({error: 'empty_file'}, 400);
+          const binary = atob(raw);
+          if (!binary.length) return json({error: 'empty_file'}, 400);
+          if (binary.length > maxBytes) return json({error: 'file_too_large', maxBytes}, 413);
+          const bytes = new Uint8Array(binary.length);
+          for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+          contentType = contentTypeFor(ext, payload?.contentType || null);
           saved = await env.MEDIA.put(key, bytes, {
             httpMetadata: {contentType, cacheControl: 'public, max-age=31536000, immutable'},
-            customMetadata: {uid, kind},
+            customMetadata: {uid, kind, transport: 'base64'},
           });
+        } else {
+          if (!request.body) return json({error: 'empty_file'}, 400);
+          const streamKinds = new Set(['videos', 'profile-intros', 'music', 'chat-files', 'chat-audio']);
+
+          if (streamKinds.has(kind) && announced > 0) {
+            saved = await env.MEDIA.put(key, request.body, {
+              httpMetadata: {contentType, cacheControl: 'public, max-age=31536000, immutable'},
+              customMetadata: {uid, kind},
+            });
+          } else {
+            const bytes = await request.arrayBuffer();
+            if (!bytes.byteLength) return json({error: 'empty_file'}, 400);
+            if (bytes.byteLength > maxBytes) return json({error: 'file_too_large', maxBytes}, 413);
+            saved = await env.MEDIA.put(key, bytes, {
+              httpMetadata: {contentType, cacheControl: 'public, max-age=31536000, immutable'},
+              customMetadata: {uid, kind},
+            });
+          }
         }
 
         return json({
