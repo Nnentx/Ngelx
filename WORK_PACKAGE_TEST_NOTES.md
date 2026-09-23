@@ -129,3 +129,8 @@
 - Telefonda görülen assertion: `framework.dart: Failed assertion: line 6281 pos 12: '_dependents.isEmpty': is not true.`
 - Örnek durumda mevcut kelimeler `aleyna`, `kandemir`; yeni olarak `test` yazılırken/eklenirken hata görüldü.
 - Bu hata unutulmayacak; final Work paketinde gizli kelime ekleme/silme, bottom-sheet kapanışı ve ilgili widget yaşam döngüsü birlikte düzeltilip gerçek cihazda tekrar test edilecek.
+
+### 2026-09-23 giriş ekranı değişikliği — Misafir girişi kaldırılacak
+- Giriş ekranındaki **“Misafir olarak keşfet”** bölümü gereksiz bulundu ve kaldırılacak.
+- Giriş ekranında yalnızca normal giriş, şifremi unuttum ve hesap oluşturma akışları kalacak.
+- Misafir/anonim girişe bağlı buton, yönlendirme ve gereksiz kodlar final Work paketinde temizlenecek; mevcut çalışan giriş/kayıt akışları korunacak.
