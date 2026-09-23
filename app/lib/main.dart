@@ -1041,9 +1041,10 @@ class _GirisPageState extends State<GirisPage> {
       if(hatirla){
         kayitliEpostalar.removeWhere((e)=>e.toLowerCase()==adres.toLowerCase());
         kayitliEpostalar.insert(0,adres);
-        if(kayitliEpostalar.length>8)kayitliEpostalar=kayitliEpostalar.take(8).toList();
+        if(kayitliEpostalar.length>5)kayitliEpostalar=kayitliEpostalar.take(5).toList();
         await hafiza.setString('hatirlanan_eposta',adres);
         await hafiza.setStringList('hatirlanan_epostalar',kayitliEpostalar);
+        await hafiza.setString('hatirlanan_uid_'+adres.toLowerCase(),user.uid);
         await guvenliHafiza.write(key:sifreAnahtari(adres),value:parola);
       }else{
         await hafiza.remove('hatirlanan_eposta');
@@ -14511,10 +14512,274 @@ class _HikayeGosterPageState extends State<HikayeGosterPage> with SingleTickerPr
   }
 }
 
+
+class HesapDegistirPage extends StatefulWidget {
+  const HesapDegistirPage({super.key});
+  @override State<HesapDegistirPage> createState()=>_HesapDegistirPageState();
+}
+
+class _HesapDegistirPageState extends State<HesapDegistirPage> {
+  final guvenliHafiza=const FlutterSecureStorage();
+  List<String> hesaplar=<String>[];
+  bool yukleniyor=true;
+  bool islem=false;
+
+  String sifreAnahtari(String adres)=>'ngelx_sifre_'+adres.trim().toLowerCase();
+  String uidAnahtari(String adres)=>'hatirlanan_uid_'+adres.trim().toLowerCase();
+
+  @override void initState(){super.initState();_yukle();}
+
+  Future<void> _yukle()async{
+    final h=await SharedPreferences.getInstance();
+    final ham=h.getStringList('hatirlanan_epostalar')??<String>[];
+    final tek=<String>[];
+    for(final e in ham){
+      final temiz=e.trim();
+      if(temiz.isNotEmpty&&!tek.any((x)=>x.toLowerCase()==temiz.toLowerCase()))tek.add(temiz);
+    }
+    if(tek.length>5)tek.removeRange(5,tek.length);
+    if(tek.length!=ham.length)await h.setStringList('hatirlanan_epostalar',tek);
+    if(mounted)setState((){hesaplar=tek;yukleniyor=false;});
+  }
+
+  Future<Map<String,dynamic>> _profil(String email)async{
+    final h=await SharedPreferences.getInstance();
+    final uid=h.getString(uidAnahtari(email))??'';
+    if(uid.isEmpty)return <String,dynamic>{'email':email};
+    try{
+      final d=await FirebaseFirestore.instance.collection('users').doc(uid).get().timeout(const Duration(seconds:6));
+      final veri=d.data()??<String,dynamic>{};
+      return <String,dynamic>{'email':email,'uid':uid,...veri};
+    }catch(_){
+      return <String,dynamic>{'email':email,'uid':uid};
+    }
+  }
+
+  Future<String?> _sifreSor(String email)async{
+    final c=TextEditingController();
+    bool gizli=true;
+    final sonuc=await showModalBottomSheet<String>(
+      context:context,isScrollControlled:true,backgroundColor:Colors.white,
+      shape:const RoundedRectangleBorder(borderRadius:BorderRadius.vertical(top:Radius.circular(28))),
+      builder:(ctx)=>Theme(data:ThemeData.light(),child:StatefulBuilder(builder:(ctx,setP)=>Padding(
+        padding:EdgeInsets.fromLTRB(20,22,20,MediaQuery.of(ctx).viewInsets.bottom+24),
+        child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+          const Text('Hesaba geç',style:TextStyle(fontSize:22,fontWeight:FontWeight.w900)),
+          const SizedBox(height:5),
+          Text(email,style:const TextStyle(color:Colors.black54)),
+          const SizedBox(height:16),
+          TextField(
+            controller:c,obscureText:gizli,autofocus:true,
+            decoration:InputDecoration(
+              labelText:'Şifre',prefixIcon:const Icon(Icons.lock_outline_rounded),
+              suffixIcon:IconButton(onPressed:()=>setP(()=>gizli=!gizli),icon:Icon(gizli?Icons.visibility_off_outlined:Icons.visibility_outlined)),
+            ),
+          ),
+          const SizedBox(height:16),
+          FilledButton(
+            style:FilledButton.styleFrom(backgroundColor:ngelxPremiumPurple,padding:const EdgeInsets.symmetric(vertical:14)),
+            onPressed:()=>Navigator.pop(ctx,c.text),
+            child:const Text('Devam et',style:TextStyle(fontWeight:FontWeight.w800)),
+          ),
+        ]),
+      ))),
+    );
+    c.dispose();
+    return sonuc;
+  }
+
+  Future<void> _giris(String email,{String? parola})async{
+    if(islem)return;
+    final mevcut=FirebaseAuth.instance.currentUser?.email?.toLowerCase();
+    if(mevcut==email.toLowerCase()){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bu hesap zaten açık.')));
+      return;
+    }
+    var sifre=parola??await guvenliHafiza.read(key:sifreAnahtari(email));
+    sifre=sifre?.trim();
+    if(sifre==null||sifre.isEmpty)sifre=await _sifreSor(email);
+    if(sifre==null||sifre.length<6)return;
+    setState(()=>islem=true);
+    try{
+      final sonuc=await FirebaseAuth.instance.signInWithEmailAndPassword(email:email.trim(),password:sifre);
+      await sonuc.user?.reload();
+      final user=FirebaseAuth.instance.currentUser;
+      if(user==null)throw Exception('Oturum açılamadı.');
+      if(user.emailVerified!=true){
+        await user.sendEmailVerification();
+        throw Exception('Bu hesabın e-postası henüz doğrulanmamış. Doğrulama bağlantısı gönderildi.');
+      }
+      final h=await SharedPreferences.getInstance();
+      hesaplar.removeWhere((x)=>x.toLowerCase()==email.toLowerCase());
+      hesaplar.insert(0,email.trim());
+      if(hesaplar.length>5)hesaplar=hesaplar.take(5).toList();
+      await h.setStringList('hatirlanan_epostalar',hesaplar);
+      await h.setString('hatirlanan_eposta',email.trim());
+      await h.setString(uidAnahtari(email),user.uid);
+      await guvenliHafiza.write(key:sifreAnahtari(email),value:sifre);
+      unawaited(girisKaydiEkle(user));
+      if(!mounted)return;
+      Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder:(_)=>const AnaEkran()),(_)=>false);
+    }on FirebaseAuthException catch(e){
+      String mesaj;
+      if(e.code=='wrong-password'||e.code=='invalid-credential'){
+        mesaj='E-posta veya şifre hatalı.';
+      }else if(e.code=='user-not-found'){
+        mesaj='Bu e-postayla kayıtlı hesap bulunamadı.';
+      }else if(e.code=='too-many-requests'){
+        mesaj='Çok fazla deneme yapıldı. Biraz sonra tekrar dene.';
+      }else{
+        mesaj='Hesaba geçilemedi: '+(e.message??e.code);
+      }
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(mesaj)));
+    }catch(e){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(e.toString().replaceFirst('Exception: ',''))));
+    }finally{
+      if(mounted)setState(()=>islem=false);
+    }
+  }
+
+  Future<void> _hesapEkle()async{
+    if(hesaplar.length>=5){
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('En fazla 5 hesap ekleyebilirsin.')));
+      return;
+    }
+    final e=TextEditingController(),p=TextEditingController();
+    bool gizli=true;
+    final sonuc=await showModalBottomSheet<Map<String,String>>(
+      context:context,isScrollControlled:true,backgroundColor:Colors.white,
+      shape:const RoundedRectangleBorder(borderRadius:BorderRadius.vertical(top:Radius.circular(28))),
+      builder:(ctx)=>Theme(data:ThemeData.light(),child:StatefulBuilder(builder:(ctx,setP)=>Padding(
+        padding:EdgeInsets.fromLTRB(20,22,20,MediaQuery.of(ctx).viewInsets.bottom+24),
+        child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+          const Text('Hesap ekle',style:TextStyle(fontSize:22,fontWeight:FontWeight.w900)),
+          const SizedBox(height:5),
+          Text(hesaplar.length.toString()+'/5 hesap kullanılıyor',style:const TextStyle(color:Colors.black54)),
+          const SizedBox(height:16),
+          TextField(controller:e,keyboardType:TextInputType.emailAddress,autocorrect:false,decoration:const InputDecoration(labelText:'E-posta adresi',prefixIcon:Icon(Icons.alternate_email_rounded))),
+          const SizedBox(height:10),
+          TextField(controller:p,obscureText:gizli,decoration:InputDecoration(labelText:'Şifre',prefixIcon:const Icon(Icons.lock_outline_rounded),suffixIcon:IconButton(onPressed:()=>setP(()=>gizli=!gizli),icon:Icon(gizli?Icons.visibility_off_outlined:Icons.visibility_outlined)))),
+          const SizedBox(height:16),
+          FilledButton(
+            style:FilledButton.styleFrom(backgroundColor:ngelxPremiumPurple,padding:const EdgeInsets.symmetric(vertical:14)),
+            onPressed:(){
+              final email=e.text.trim(),sifre=p.text;
+              if(!email.contains('@')||sifre.length<6){
+                ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content:Text('Geçerli e-posta ve şifre gir.')));
+                return;
+              }
+              Navigator.pop(ctx,{'email':email,'password':sifre});
+            },
+            child:const Text('Hesabı ekle ve geç',style:TextStyle(fontWeight:FontWeight.w800)),
+          ),
+        ]),
+      ))),
+    );
+    e.dispose();p.dispose();
+    if(sonuc==null||!mounted)return;
+    await _giris(sonuc['email']??'',parola:sonuc['password']??'');
+  }
+
+  Future<void> _kaldir(String email)async{
+    final ok=await showDialog<bool>(context:context,builder:(ctx)=>Theme(data:ThemeData.light(),child:AlertDialog(
+      backgroundColor:Colors.white,
+      title:const Text('Bu hesabı cihazdan kaldır?'),
+      content:Text(email+' için kaydedilen hızlı giriş bilgileri silinecek. Hesabın NgelX’ten silinmez.'),
+      actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('Vazgeç')),FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('Cihazdan kaldır'))],
+    )))??false;
+    if(!ok)return;
+    final h=await SharedPreferences.getInstance();
+    hesaplar.removeWhere((x)=>x.toLowerCase()==email.toLowerCase());
+    await h.setStringList('hatirlanan_epostalar',hesaplar);
+    await h.remove(uidAnahtari(email));
+    await guvenliHafiza.delete(key:sifreAnahtari(email));
+    if((h.getString('hatirlanan_eposta')??'').toLowerCase()==email.toLowerCase()){
+      if(hesaplar.isEmpty){await h.remove('hatirlanan_eposta');}else{await h.setString('hatirlanan_eposta',hesaplar.first);}
+    }
+    if(mounted)setState((){});
+  }
+
+  @override Widget build(BuildContext context){
+    final aktif=FirebaseAuth.instance.currentUser?.email?.toLowerCase()??'';
+    return Theme(data:ThemeData.light(),child:Scaffold(
+      backgroundColor:Colors.white,
+      appBar:AppBar(backgroundColor:Colors.white,surfaceTintColor:Colors.white,elevation:0,title:const Text('Hesap değiştir',style:TextStyle(fontWeight:FontWeight.w900))),
+      body:yukleniyor?const Center(child:CircularProgressIndicator(color:mor)):ListView(
+        padding:const EdgeInsets.fromLTRB(16,10,16,30),
+        children:[
+          NgelXPremiumCard(
+            color:const Color(0xFFF8F5FF),
+            child:Row(children:[
+              const Icon(Icons.switch_account_rounded,color:ngelxPremiumPurple,size:30),
+              const SizedBox(width:12),
+              const Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+                Text('NgelX hesapların',style:TextStyle(fontWeight:FontWeight.w900,fontSize:17)),
+                SizedBox(height:3),
+                Text('Bu cihazda en fazla 5 hesap arasında hızlı geçiş yapabilirsin.',style:TextStyle(color:ngelxPremiumMuted,fontSize:12,height:1.3)),
+              ])),
+              Text(hesaplar.length.toString()+'/5',style:const TextStyle(color:ngelxPremiumPurple,fontWeight:FontWeight.w900)),
+            ]),
+          ),
+          const SizedBox(height:14),
+          ...hesaplar.map((email)=>FutureBuilder<Map<String,dynamic>>(
+            future:_profil(email),
+            builder:(_,s){
+              final v=s.data??<String,dynamic>{};
+              final foto=(v['photoUrl']??'').toString();
+              final ad=(v['displayName']??v['username']??email).toString();
+              final bu=aktif==email.toLowerCase();
+              return NgelXPremiumCard(
+                margin:const EdgeInsets.only(bottom:10),
+                padding:const EdgeInsets.symmetric(horizontal:12,vertical:10),
+                child:Row(children:[
+                  CircleAvatar(
+                    radius:23,backgroundColor:const Color(0xFFF0E8FF),
+                    backgroundImage:foto.isEmpty?null:CachedNetworkImageProvider(foto),
+                    child:foto.isEmpty?Text(ad.isEmpty?'N':ad[0].toUpperCase(),style:const TextStyle(color:ngelxPremiumPurple,fontWeight:FontWeight.w900)):null,
+                  ),
+                  const SizedBox(width:11),
+                  Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+                    Row(children:[
+                      Flexible(child:Text(ad,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontWeight:FontWeight.w900))),
+                      if(v['verified']==true)...[const SizedBox(width:4),const Icon(Icons.verified_rounded,color:Color(0xFF1687FF),size:17)],
+                    ]),
+                    Text(email,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:ngelxPremiumMuted,fontSize:11.5)),
+                  ])),
+                  if(bu)
+                    Container(padding:const EdgeInsets.symmetric(horizontal:9,vertical:5),decoration:BoxDecoration(color:const Color(0xFFE7F9EF),borderRadius:BorderRadius.circular(12)),child:const Text('Bu hesap',style:TextStyle(color:Color(0xFF0A8F48),fontSize:10,fontWeight:FontWeight.w900)))
+                  else
+                    TextButton(onPressed:islem?null:()=>_giris(email),child:const Text('Geç')),
+                  PopupMenuButton<String>(
+                    enabled:!islem,
+                    onSelected:(x){if(x=='remove')_kaldir(email);},
+                    itemBuilder:(_)=>const [PopupMenuItem(value:'remove',child:Text('Bu cihazdan kaldır'))],
+                  ),
+                ]),
+              );
+            },
+          )),
+          const SizedBox(height:4),
+          OutlinedButton.icon(
+            onPressed:islem?null:_hesapEkle,
+            style:OutlinedButton.styleFrom(padding:const EdgeInsets.symmetric(vertical:14),shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(18))),
+            icon:const Icon(Icons.add_circle_outline_rounded),
+            label:Text(hesaplar.length>=5?'5 hesap sınırına ulaştın':'Hesap ekle',style:const TextStyle(fontWeight:FontWeight.w800)),
+          ),
+          if(islem)...[
+            const SizedBox(height:18),
+            const Center(child:CircularProgressIndicator(color:ngelxPremiumPurple)),
+          ],
+        ],
+      ),
+    ));
+  }
+}
+
 class AyarlarPage extends StatelessWidget {
   const AyarlarPage({super.key});
   @override Widget build(BuildContext context){final misafir=FirebaseAuth.instance.currentUser?.isAnonymous==true;return Theme(data:ThemeData.light().copyWith(scaffoldBackgroundColor:Colors.white,appBarTheme:const AppBarTheme(backgroundColor:Colors.white,foregroundColor:Colors.black,elevation:0),cardTheme:const CardThemeData(color:Colors.white,elevation:0,margin:EdgeInsets.symmetric(vertical:4)),dividerColor:Color(0xFFE5E7EB)),child:Scaffold(appBar:AppBar(title:Text(t('settingsTitle'))),body:SafeArea(child:ListView(padding:const EdgeInsets.fromLTRB(14,8,14,24),children:[
     if(!misafir)...[
+      ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:10,vertical:7),leading:const Icon(Icons.switch_account_rounded,color:mor),title:const Text('Hesap değiştir',style:TextStyle(fontWeight:FontWeight.bold,color:Colors.black87)),subtitle:const Text('Bu cihazda en fazla 5 hesap kullan',style:TextStyle(color:Colors.black54)),trailing:const Icon(Icons.chevron_right,color:Colors.black87),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const HesapDegistirPage()))),
       _ayar(context,Icons.lock_outline,'Gizlilik',t('privacy'),t('privacySub')),
       ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:10,vertical:7),leading:const Icon(Icons.people_outline,color:mor),title:Text(t('followFriends'),style:const TextStyle(fontWeight:FontWeight.bold,color:Colors.black87)),subtitle:Text(t('followFriendsSub'),style:const TextStyle(color:Colors.black54)),trailing:const Icon(Icons.chevron_right,color:Colors.black87),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const ArkadaslarPage()))),
       ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:10,vertical:7),leading:const Icon(Icons.block_outlined,color:mor),title:Text(t('blockedAccounts'),style:const TextStyle(fontWeight:FontWeight.bold,color:Colors.black87)),subtitle:Text(t('blockedAccountsSub'),style:const TextStyle(color:Colors.black54)),trailing:const Icon(Icons.chevron_right,color:Colors.black87),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const EngellenenlerPage()))),
