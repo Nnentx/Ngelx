@@ -39,7 +39,7 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: cloudflare/worker
-          command: deploy --name ngelx-upload
+          command: deploy --config wrangler-backup.toml
 
       - name: Medya servislerini dogrula
         shell: bash
