@@ -197,23 +197,23 @@ String _ngelxContentType(String ext) {
 }
 
 Future<String> ngelxMediaApiAdresi() async {
-  if (_ngelxMediaApiBuild.trim().isNotEmpty) return _ngelxMediaApiBuild.trim().replaceAll(RegExp(r'/+$'), '');
   final simdi = DateTime.now();
   if (_ngelxMediaApiCache != null &&
       _ngelxMediaApiCacheZamani != null &&
       simdi.difference(_ngelxMediaApiCacheZamani!).inMinutes < 10) {
     return _ngelxMediaApiCache!;
   }
+  // Firestore ayarı APK güncellemeden medya uç noktasını değiştirebilsin.
+  var uzaktaki='';
   try {
     final d = await FirebaseFirestore.instance.collection('app_config').doc('media').get().timeout(const Duration(seconds: 5));
-    _ngelxMediaApiCache = (d.data()?['uploadApi'] ?? '').toString().trim().replaceAll(RegExp(r'/+$'), '');
-  } catch (_) {
-    _ngelxMediaApiCache ??= '';
-  }
-  _ngelxMediaApiCacheZamani = simdi;
-  return _ngelxMediaApiCache ?? '';
+    uzaktaki=(d.data()?['uploadApi']??'').toString().trim().replaceAll(RegExp(r'/+$'), '');
+  } catch (_) {}
+  final build=_ngelxMediaApiBuild.trim().replaceAll(RegExp(r'/+$'), '');
+  _ngelxMediaApiCache=uzaktaki.isNotEmpty?uzaktaki:build;
+  _ngelxMediaApiCacheZamani=simdi;
+  return _ngelxMediaApiCache??'';
 }
-
 Future<String> ngelxMedyaYukleBytes({
   required Uint8List bytes,
   required String kind,
@@ -310,7 +310,7 @@ Future<String> ngelxMedyaYukleBytes({
     }
   }
 
-  throw Exception('Medya yüklenemedi. JSON ve ham dosya yolları denendi. '+(sonHata?.toString()??''));
+  throw Exception('Medya yüklenemedi. Lütfen bağlantını kontrol edip tekrar dene.');
 }
 
 Future<void> ngelxMedyaSil(String rawUrl) async {
