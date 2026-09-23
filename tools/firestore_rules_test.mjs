@@ -136,6 +136,31 @@ async function seed() {
       inviteCode: '',
       groupDeleted: false,
     });
+    await setDoc(doc(db, 'users/alice'), {
+      messagePermission: 'all',
+      friends: [],
+      following: [],
+    });
+    await setDoc(doc(db, 'users/friend_target'), {
+      messagePermission: 'friends',
+      friends: ['bob'],
+      following: [],
+    });
+    await setDoc(doc(db, 'users/following_target'), {
+      messagePermission: 'following',
+      friends: [],
+      following: ['bob'],
+    });
+    await setDoc(doc(db, 'users/closed_target'), {
+      messagePermission: 'none',
+      friends: [],
+      following: [],
+    });
+    await setDoc(doc(db, 'users/stranger_target'), {
+      messagePermission: 'friends',
+      friends: [],
+      following: [],
+    });
   });
 }
 
@@ -148,6 +173,39 @@ try {
   const carol = env.authenticatedContext('carol').firestore();
   const solo = env.authenticatedContext('solo').firestore();
   const founder = env.authenticatedContext('founder').firestore();
+
+  // Özel sohbet oluşturma, hedef hesabın mesaj gizliliğini sunucu tarafında da uygular.
+  await assertSucceeds(setDoc(doc(bob, 'chats/dm_all'), {
+    isGroup: false,
+    members: ['alice', 'bob'],
+    lastMessage: '',
+  }));
+  await assertSucceeds(setDoc(doc(bob, 'chats/dm_friend'), {
+    isGroup: false,
+    members: ['bob', 'friend_target'],
+    lastMessage: '',
+  }));
+  await assertSucceeds(setDoc(doc(bob, 'chats/dm_following'), {
+    isGroup: false,
+    members: ['bob', 'following_target'],
+    lastMessage: '',
+  }));
+  await assertFails(setDoc(doc(bob, 'chats/dm_closed'), {
+    isGroup: false,
+    members: ['bob', 'closed_target'],
+    lastMessage: '',
+  }));
+  await assertFails(setDoc(doc(bob, 'chats/dm_stranger'), {
+    isGroup: false,
+    members: ['bob', 'stranger_target'],
+    lastMessage: '',
+  }));
+  await assertFails(setDoc(doc(bob, 'chats/fake_private_group'), {
+    isGroup: false,
+    members: ['alice', 'bob', 'outsider'],
+    lastMessage: '',
+  }));
+
 
   // Davet kodu sadece doğrudan belge olarak okunabilir; tüm davetler listelenemez.
   await assertSucceeds(getDoc(doc(bob, 'group_invites/CODE123')));
