@@ -11455,6 +11455,13 @@ class NgelXSesliMesaj extends StatefulWidget{
 class _NgelXSesliMesajState extends State<NgelXSesliMesaj>{
   final AudioPlayer oynatici=AudioPlayer();
   bool hazirlaniyor=false;
+
+  String _sureYaz(Duration d){
+    final sn=d.inSeconds<0?0:d.inSeconds;
+    final dk=sn~/60,kalan=sn%60;
+    return '$dk:${kalan.toString().padLeft(2,'0')}';
+  }
+
   Future<void> degistir()async{
     if(widget.url.isEmpty||hazirlaniyor)return;
     if(oynatici.playing){await oynatici.pause();return;}
@@ -11471,23 +11478,80 @@ class _NgelXSesliMesajState extends State<NgelXSesliMesaj>{
       if(mounted)setState(()=>hazirlaniyor=false);
     }
   }
+
   @override void dispose(){unawaited(oynatici.dispose());super.dispose();}
+
   @override Widget build(BuildContext context)=>StreamBuilder<PlayerState>(
     stream:oynatici.playerStateStream,
-    builder:(_,snap){
-      final playing=snap.data?.playing==true;
-      return Row(children:[
-        IconButton.filledTonal(
-          onPressed:hazirlaniyor?null:degistir,
-          icon:hazirlaniyor?const SizedBox(width:18,height:18,child:CircularProgressIndicator(strokeWidth:2)):Icon(playing?Icons.pause_rounded:Icons.play_arrow_rounded),
+    builder:(_,durum){
+      final playing=durum.data?.playing==true;
+      return StreamBuilder<Duration>(
+        stream:oynatici.positionStream,
+        initialData:Duration.zero,
+        builder:(_,konumSnap)=>StreamBuilder<Duration?>(
+          stream:oynatici.durationStream,
+          initialData:oynatici.duration,
+          builder:(_,sureSnap){
+            final konum=konumSnap.data??Duration.zero;
+            final gercekSure=sureSnap.data;
+            final toplam=gercekSure??Duration(seconds:widget.durationSeconds>0?widget.durationSeconds:1);
+            final toplamMs=toplam.inMilliseconds>0?toplam.inMilliseconds:1;
+            final hamMs=konum.inMilliseconds;
+            final konumMs=hamMs<0?0:(hamMs>toplamMs?toplamMs:hamMs);
+            final vurgu=widget.benim?Colors.white:ngelxGroupGreen;
+            final soluk=widget.benim?Colors.white70:ngelxPremiumMuted;
+            return Row(crossAxisAlignment:CrossAxisAlignment.center,children:[
+              SizedBox(
+                width:42,height:42,
+                child:IconButton(
+                  padding:EdgeInsets.zero,
+                  onPressed:hazirlaniyor?null:degistir,
+                  icon:Container(
+                    width:38,height:38,
+                    decoration:BoxDecoration(color:widget.benim?Colors.white.withValues(alpha:.18):Colors.white,shape:BoxShape.circle),
+                    child:Center(child:hazirlaniyor
+                      ? SizedBox(width:17,height:17,child:CircularProgressIndicator(strokeWidth:2,color:vurgu))
+                      : Icon(playing?Icons.pause_rounded:Icons.play_arrow_rounded,color:vurgu,size:24)),
+                  ),
+                ),
+              ),
+              const SizedBox(width:6),
+              Expanded(child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
+                SizedBox(
+                  height:28,
+                  child:SliderTheme(
+                    data:SliderTheme.of(context).copyWith(
+                      trackHeight:3,
+                      thumbShape:const RoundSliderThumbShape(enabledThumbRadius:5),
+                      overlayShape:const RoundSliderOverlayShape(overlayRadius:11),
+                      activeTrackColor:vurgu,
+                      inactiveTrackColor:widget.benim?Colors.white24:const Color(0xFFB9DCC5),
+                      thumbColor:vurgu,
+                      overlayColor:vurgu.withValues(alpha:.12),
+                    ),
+                    child:Slider(
+                      min:0,
+                      max:toplamMs.toDouble(),
+                      value:konumMs.toDouble(),
+                      onChanged:hazirlaniyor?null:(v)=>oynatici.seek(Duration(milliseconds:v.round())),
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding:const EdgeInsets.symmetric(horizontal:4),
+                  child:Row(children:[
+                    Text(_sureYaz(konum),style:TextStyle(color:soluk,fontSize:10.5,fontWeight:FontWeight.w700,fontFeatures:const [FontFeature.tabularFigures()])),
+                    const Spacer(),
+                    Text(_sureYaz(toplam),style:TextStyle(color:soluk,fontSize:10.5,fontWeight:FontWeight.w700,fontFeatures:const [FontFeature.tabularFigures()])),
+                  ]),
+                ),
+              ])),
+              const SizedBox(width:4),
+              Icon(Icons.graphic_eq_rounded,color:soluk,size:22),
+            ]);
+          },
         ),
-        const SizedBox(width:6),
-        Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-          Text('Sesli mesaj',style:TextStyle(color:widget.benim?Colors.white:Colors.black87,fontWeight:FontWeight.w900)),
-          if(widget.durationSeconds>0)Text('${widget.durationSeconds} sn',style:TextStyle(color:widget.benim?Colors.white70:Colors.black54,fontSize:11)),
-        ])),
-        Icon(Icons.graphic_eq_rounded,color:widget.benim?Colors.white70:const Color(0xFF1836D8)),
-      ]);
+      );
     },
   );
 }
