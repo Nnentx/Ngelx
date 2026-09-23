@@ -225,55 +225,85 @@ Future<String> ngelxMedyaYukleBytes({
   final api = await ngelxMediaApiAdresi();
   final temizExt = _ngelxUzantiTemizle(ext);
   final tur = contentType ?? _ngelxContentType(temizExt);
+  if (api.isEmpty) throw Exception('NgelX medya servisi yapılandırılmamış.');
 
-  if (api.isNotEmpty) {
-    final uri = Uri.parse('$api/upload').replace(queryParameters: {'kind': kind, 'ext': temizExt});
-    Object? sonHata;
-    for (var deneme = 0; deneme < 3; deneme++) {
-      final istemci = HttpClient()..connectionTimeout = const Duration(seconds: 12);
-      try {
-        final token = await user.getIdToken(deneme > 0);
-        if (token == null || token.isEmpty) throw Exception('Güvenli medya oturumu oluşturulamadı.');
-        final istek = await istemci.postUrl(uri).timeout(const Duration(seconds: 15));
-        istek.persistentConnection = false;
-        istek.headers.set(HttpHeaders.authorizationHeader, 'Bearer $token');
-        istek.headers.set(HttpHeaders.contentTypeHeader, tur);
-        istek.headers.set('X-NgelX-Client', 'android-v56');
-        istek.headers.set('X-NgelX-Filename', legacyPath);
-        istek.contentLength = bytes.length;
-        istek.add(bytes);
-        final cevap = await istek.close().timeout(const Duration(seconds: 35));
-        final govde = await utf8.decoder.bind(cevap).join().timeout(const Duration(seconds: 15));
-        if (cevap.statusCode >= 200 && cevap.statusCode < 300) {
-          final veri = govde.isEmpty ? const <String,dynamic>{} : jsonDecode(govde);
-          final url = veri is Map ? (veri['url'] ?? '').toString() : '';
-          if (url.isEmpty) throw Exception('Medya sunucusu geçerli URL döndürmedi.');
-          return url;
-        }
-        sonHata = HttpException('Medya sunucusu HTTP ${cevap.statusCode}: $govde', uri: uri);
-        if (cevap.statusCode < 500 && cevap.statusCode != 408 && cevap.statusCode != 429 && cevap.statusCode != 401) {
-          throw sonHata;
-        }
-      } on SocketException catch (e) {
-        sonHata = e;
-      } on TimeoutException catch (e) {
-        sonHata = e;
-      } on HttpException catch (e) {
-        sonHata = e;
-      } catch (e) {
-        sonHata = e;
-        if (deneme >= 2) rethrow;
-      } finally {
-        istemci.close(force: true);
-      }
-      if (deneme < 2) {
-        await Future<void>.delayed(Duration(milliseconds: deneme == 0 ? 700 : 1600));
-      }
+  final uri = Uri.parse('$api/upload').replace(queryParameters: {'kind': kind, 'ext': temizExt});
+  Object? sonHata;
+
+  Future<String> cevabiCoz(Response<dynamic> cevap) async {
+    final status=cevap.statusCode??0;
+    final veri=cevap.data;
+    if(status>=200&&status<300){
+      final url=veri is Map?(veri['url']??'').toString():'';
+      if(url.isEmpty)throw Exception('Medya sunucusu geçerli URL döndürmedi.');
+      return url;
     }
-    throw Exception('Medya sunucusuna bağlanılamadı. Bağlantı otomatik olarak 3 kez denendi. ${sonHata ?? ''}');
+    throw HttpException('Medya sunucusu HTTP '+status.toString()+': '+cevap.data.toString(),uri:uri);
   }
 
-  throw Exception('NgelX medya servisi yapılandırılmamış.');
+  for(var deneme=0;deneme<2;deneme++){
+    try{
+      final token=await user.getIdToken(deneme>0);
+      if(token==null||token.isEmpty)throw Exception('Güvenli medya oturumu oluşturulamadı.');
+      final dio=Dio(BaseOptions(
+        connectTimeout:const Duration(seconds:15),
+        sendTimeout:const Duration(seconds:40),
+        receiveTimeout:const Duration(seconds:40),
+        validateStatus:(s)=>s!=null,
+      ));
+      final cevap=await dio.postUri(
+        uri,
+        data:bytes,
+        options:Options(
+          contentType:tur,
+          responseType:ResponseType.json,
+          headers:{
+            HttpHeaders.authorizationHeader:'Bearer $token',
+            'X-NgelX-Client':'android-v57',
+            'X-NgelX-Filename':legacyPath,
+          },
+        ),
+      );
+      return await cevabiCoz(cevap);
+    }catch(e){
+      sonHata=e;
+      if(deneme==0)await Future<void>.delayed(const Duration(milliseconds:700));
+    }
+  }
+
+  const jsonFallbackKinds={'photos','profiles','stories','groups','support','chat-backgrounds','thumbnails','gifs'};
+  if(jsonFallbackKinds.contains(kind)&&bytes.length<=10*1024*1024){
+    try{
+      final token=await user.getIdToken(true);
+      if(token==null||token.isEmpty)throw Exception('Güvenli medya oturumu oluşturulamadı.');
+      final fallbackUri=Uri.parse('$api/upload').replace(queryParameters:{
+        'kind':kind,'ext':temizExt,'encoding':'base64',
+      });
+      final cevap=await Dio(BaseOptions(
+        connectTimeout:const Duration(seconds:15),
+        sendTimeout:const Duration(seconds:45),
+        receiveTimeout:const Duration(seconds:45),
+        validateStatus:(s)=>s!=null,
+      )).postUri(
+        fallbackUri,
+        data:{'data':base64Encode(bytes),'contentType':tur},
+        options:Options(
+          contentType:Headers.jsonContentType,
+          responseType:ResponseType.json,
+          headers:{
+            HttpHeaders.authorizationHeader:'Bearer $token',
+            'X-NgelX-Client':'android-v57-json',
+            'X-NgelX-Filename':legacyPath,
+          },
+        ),
+      );
+      return await cevabiCoz(cevap);
+    }catch(e){
+      sonHata=e;
+    }
+  }
+
+  throw Exception('Medya sunucusuna bağlanılamadı. Bağlantı otomatik olarak farklı yöntemlerle denendi. '+(sonHata?.toString()??''));
 }
 
 Future<void> ngelxMedyaSil(String rawUrl) async {
@@ -8627,32 +8657,40 @@ class GrupTakmaAdlarPage extends StatelessWidget{
   DocumentReference<Map<String,dynamic>> get ref=>FirebaseFirestore.instance.collection('chats').doc(chatId);
 
   Future<void> _duzenle(BuildContext context,String uid,String ad,String mevcut)async{
-    final c=TextEditingController(text:mevcut);
+    var taslak=mevcut;
     final sonuc=await showDialog<String>(
       context:context,
-      builder:(x)=>AlertDialog(
-        backgroundColor:Colors.white,surfaceTintColor:Colors.white,
-        shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(24)),
-        title:Text(ad+' için takma ad',style:const TextStyle(fontWeight:FontWeight.w900)),
-        content:TextField(
-          controller:c,autofocus:true,maxLength:30,
-          decoration:InputDecoration(
-            hintText:'Takma ad',
-            filled:true,fillColor:const Color(0xFFF5F6F7),
-            border:OutlineInputBorder(borderRadius:BorderRadius.circular(16),borderSide:BorderSide.none),
+      builder:(x)=>Theme(
+        data:ThemeData.light().copyWith(colorScheme:ColorScheme.fromSeed(seedColor:ngelxGroupGreen)),
+        child:AlertDialog(
+          backgroundColor:Colors.white,surfaceTintColor:Colors.white,
+          shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(24)),
+          title:Text(ad+' için takma ad',style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w900)),
+          content:TextFormField(
+            initialValue:mevcut,
+            autofocus:true,
+            maxLength:30,
+            style:const TextStyle(color:Colors.black87,fontSize:16,fontWeight:FontWeight.w600),
+            cursorColor:ngelxGroupGreen,
+            onChanged:(v)=>taslak=v,
+            decoration:InputDecoration(
+              hintText:'Takma ad',
+              hintStyle:const TextStyle(color:Colors.black38),
+              filled:true,fillColor:const Color(0xFFF5F6F7),
+              border:OutlineInputBorder(borderRadius:BorderRadius.circular(16),borderSide:BorderSide.none),
+            ),
           ),
+          actions:[
+            TextButton(onPressed:()=>Navigator.pop(x),child:const Text('Vazgeç')),
+            FilledButton(
+              style:FilledButton.styleFrom(backgroundColor:ngelxGroupGreen),
+              onPressed:()=>Navigator.pop(x,taslak.trim()),
+              child:const Text('Kaydet'),
+            ),
+          ],
         ),
-        actions:[
-          TextButton(onPressed:()=>Navigator.pop(x),child:const Text('Vazgeç')),
-          FilledButton(
-            style:FilledButton.styleFrom(backgroundColor:ngelxGroupGreen),
-            onPressed:()=>Navigator.pop(x,c.text.trim()),
-            child:const Text('Kaydet'),
-          ),
-        ],
       ),
     );
-    c.dispose();
     if(sonuc==null)return;
     await ref.set({'nickname_'+uid:sonuc.isEmpty?FieldValue.delete():sonuc},SetOptions(merge:true));
     if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(sonuc.isEmpty?'Takma ad kaldırıldı.':'Takma ad kaydedildi.')));
