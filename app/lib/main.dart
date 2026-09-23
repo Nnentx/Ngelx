@@ -7153,7 +7153,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
                         );
                       },
                     ),
-                  ]),                  ]),
+                  ]),
                 ),
               ),
             ]),
