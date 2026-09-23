@@ -9607,7 +9607,7 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
         ),
       )??false;
       if(ok){
-        await ref.update({'members':FieldValue.arrayRemove([id]),'admins':FieldValue.arrayRemove([id]),'updatedAt':FieldValue.serverTimestamp()});
+        await ref.update({'members':FieldValue.arrayRemove([id]),'admins':FieldValue.arrayRemove([id]),'formerMembers':FieldValue.arrayUnion([id]),'removedAt_$id':FieldValue.serverTimestamp(),'updatedAt':FieldValue.serverTimestamp()});
         await ngelxGrupDavetMetaSenkronla(ref);
         await sistemMesaji('$isim gruptan çıkarıldı.');
       }
@@ -9810,12 +9810,14 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
       final p=await FirebaseFirestore.instance.collection('users').doc(me).get();
       final pv=p.data()??<String,dynamic>{};
       final ad=(pv['displayName']??pv['username']??'Bir üye').toString();
-      await ref.collection('messages').add({
-        'senderId':'system',
-        'type':'system',
-        'text':ad+' gruptan ayrıldı.',
-        'createdAt':FieldValue.serverTimestamp(),
-      });
+      try{
+        await ref.collection('messages').add({
+          'senderId':me,
+          'type':'system',
+          'text':ad+' gruptan ayrıldı.',
+          'createdAt':FieldValue.serverTimestamp(),
+        });
+      }catch(_){}
       await ref.update({
         'members':FieldValue.arrayRemove([me]),
         'admins':FieldValue.arrayRemove([me]),
