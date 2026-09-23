@@ -257,3 +257,8 @@
 - Mesaj gizliliği sonradan sıkılaştırılsa bile daha önce karşı tarafça kabul edilmiş özel sohbetler profil ve Yeni sohbet ekranından yeniden açılabiliyor.
 - Kabul edilmemiş eski bir mesaj isteği ise hedef hesabın güncel `messagePermission` kuralını atlamıyor.
 - Profil ve Yeni sohbet giriş noktaları artık `SohbetPage` içindeki gerçek gönderim izni davranışıyla aynı mantığı izliyor.
+
+### 2026-09-23 Mesaj izinleri + Aktivite dili
+- Ayarlar > Mesaj izinleri ekranındaki `all / following / friends / none` veri kodları değiştirilmeden görünen başlık ve açıklamalar uygulama diline bağlandı.
+- Aktivite ekranının başlığı, tümünü okundu yap eylemi, yükleme hatası ve boş durum metinleri ortak dil sistemine taşındı.
+- Böylece gizlilik verisi mevcut Firestore sözleşmesini korurken Türkçe/İngilizce/Almanca/Arapça/Rusça arayüz etiketi seçili dile göre değişiyor.
