@@ -34,9 +34,10 @@
 
 ## Grup sohbeti
 
+- Anket özelliği grup sohbetinden tamamen kaldırıldı ve geri eklenmemesi sözleşme testiyle korunuyor.
 - Mesajlarda gönderen adı ve profil fotoğrafı görünür.
-- Metin, fotoğraf, hareketli GIF ve gerçek zamanlı anket gönderilebilir.
-- Kamera, galeri, GIF ve anket menülerinin metin etiketleri vardır.
+- Metin, fotoğraf, video, ses, dosya, konum, çıkartma, GIF ve bağlantı gönderilebilir.
+- Kamera, galeri, video, dosya, konum, çıkartma ve GIF menülerinin metin etiketleri vardır.
 - Fotoğraflar ve GIF'ler tam ekran açılır.
 - Emoji seçici ve `@kullanıcı` önerileri eklendi.
 - Uzun basma ile yanıtla, kopyala, düzenle, sil, tepki, şikâyet ve yönetici için sabitleme çalışır.
@@ -62,7 +63,7 @@
 
 ## Güvenlik ve yayınlama notu
 
-- Yeni sohbet, grup yönetimi, anket oyu, tepki, sabitleme ve arama kayıtları için Firestore kuralları güncellendi.
+- Yeni sohbet, grup yönetimi, tepki, sabitleme ve arama kayıtları için Firestore kuralları güncellendi.
 - Uygulama koduyla birlikte `firestore.rules` dosyası da yayınlanmalıdır.
 - APK üretmeden önce Flutter analizinin hatasız geçmesi ve iki farklı hesapla arama/mesaj isteği testinin yapılması gerekir.
 
