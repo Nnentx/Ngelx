@@ -99,6 +99,10 @@ required_group_tokens = [
     "Bir üyeyi engelle",
     "Şikayet et",
     "Sohbetten ayrıl",
+    "Gruptan ayrılmak istiyor musun?",
+    "Kaydı iptal et",
+    "Kaydı gönder",
+    "oynatici.positionStream",
     "Sohbeti sil",
 ]
 for token in required_group_tokens:
