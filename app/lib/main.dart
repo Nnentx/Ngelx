@@ -6310,6 +6310,40 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
     }
   }
 
+  Future<void> grupYanitiHazirla(QueryDocumentSnapshot<Map<String,dynamic>> d)async{
+    final v=d.data(),gonderen=(v['senderId']??'').toString(),metin=(v['text']??'').toString().trim(),tur=(v['type']??'text').toString();
+    String ad='Mesaj';
+    if(gonderen==uid){
+      ad='Sen';
+    }else if(gonderen.isNotEmpty){
+      try{
+        final p=await _uyeGetir(gonderen);
+        final pv=p.data()??<String,dynamic>{};
+        ad=(pv['displayName']??pv['username']??'Üye').toString();
+      }catch(_){ad='Üye';}
+    }
+    String onizleme=metin;
+    if(onizleme.isEmpty){
+      onizleme=switch(tur){
+        'gif'=>'GIF',
+        'photo'=>'Fotoğraf',
+        'video'=>'Video',
+        'audio'=>'Sesli mesaj',
+        'file'||'document'=>'Dosya',
+        'location'=>'Konum',
+        'sticker'=>'Çıkartma',
+        _=>'Medya',
+      };
+    }
+    if(!mounted)return;
+    HapticFeedback.selectionClick();
+    setState((){
+      yanitlananMesajId=d.id;
+      yanitlananMetin=onizleme;
+      yanitlananGonderen=ad;
+    });
+  }
+
   Future<void> mesajMenusu(QueryDocumentSnapshot<Map<String,dynamic>> d)async{
     final v=d.data(),ben=v['senderId']==uid,metin=(v['text']??'').toString();
     final grup=await chatRef.get();
@@ -6446,22 +6480,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
     }else if(sec=='copy'){
       await Clipboard.setData(ClipboardData(text:metin));
     }else if(sec=='reply'){
-      final gonderen=(v['senderId']??'').toString();
-      String ad='Mesaj';
-      if(gonderen==uid){
-        ad='Sen';
-      }else if(gonderen.isNotEmpty){
-        try{
-          final p=await _uyeGetir(gonderen);
-          final pv=p.data()??<String,dynamic>{};
-          ad=(pv['displayName']??pv['username']??'Üye').toString();
-        }catch(_){ad='Üye';}
-      }
-      if(mounted)setState((){
-        yanitlananMesajId=d.id;
-        yanitlananMetin=metin.isEmpty?(v['type']=='gif'?'GIF':'Medya'):metin;
-        yanitlananGonderen=ad;
-      });
+      await grupYanitiHazirla(d);
     }else if(sec=='forward'){
       await showGroupForwardSheet(context:context,sourceChatId:widget.chatId,sourceMessageId:d.id,sourceMessage:v);
     }else if(sec=='info'){
@@ -7092,6 +7111,10 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
             behavior:HitTestBehavior.opaque,
             onLongPress:()=>mesajMenusu(d),
             onDoubleTap:()=>grupKalpBirak(d),
+            onHorizontalDragEnd:(detay){
+              final hiz=detay.primaryVelocity??0;
+              if(hiz>360)unawaited(grupYanitiHazirla(d));
+            },
             onTap:(tur=='photo'||tur=='gif')&&media.isNotEmpty
               ? ()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>TamEkranMedyaPage(url:media)))
               : tur=='video'&&media.isNotEmpty
