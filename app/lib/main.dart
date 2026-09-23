@@ -689,11 +689,15 @@ class NgelXApp extends StatelessWidget {
       home: StreamBuilder<User?>(
         stream:FirebaseAuth.instance.authStateChanges(),
         initialData:FirebaseAuth.instance.currentUser,
-        builder:(_,auth)=>UygulamaDurumKapisi(
-          child:auth.data==null
-            ? GirisPage(key:ValueKey('giris_$dil'))
-            : AnaEkran(key:ValueKey('ana_$dil')),
-        ),
+        builder:(_,auth){
+          final kullanici=auth.data;
+          return UygulamaDurumKapisi(
+            key:ValueKey('durum_${kullanici?.uid??'guest'}_$dil'),
+            child:kullanici==null
+              ? GirisPage(key:ValueKey('giris_$dil'))
+              : AnaEkran(key:ValueKey('ana_${kullanici.uid}_$dil')),
+          );
+        },
       ),
       onGenerateRoute:(settings){
         final uri=Uri.tryParse(settings.name??'');
