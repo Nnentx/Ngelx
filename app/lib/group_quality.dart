@@ -94,6 +94,7 @@ class GroupOfflineQueue {
   static Future<int> flush({
     required String chatId,
     required String senderUid,
+    Future<bool> Function(String id, Map<String,dynamic> payload, String lastMessage)? sender,
   }) async {
     final h = await SharedPreferences.getInstance();
     final rawItems = h.getStringList(_key(chatId)) ?? <String>[];
@@ -119,6 +120,18 @@ class GroupOfflineQueue {
       final payloadRaw = item['payload'];
       if (id.isEmpty || payloadRaw is! Map) continue;
       final payload = Map<String, dynamic>.from(payloadRaw);
+      final lastMessage=(item['lastMessage'] ?? payload['text'] ?? 'Mesaj').toString();
+
+      if(sender!=null){
+        final ok=await sender(id,payload,lastMessage);
+        if(ok){
+          await remove(chatId,id);
+          sent++;
+          continue;
+        }
+        break;
+      }
+
       final messageRef = chatRef.collection('messages').doc(id);
 
       try {
@@ -140,7 +153,7 @@ class GroupOfflineQueue {
         ...payload,
       });
       final chatUpdate = <String, dynamic>{
-        'lastMessage': (item['lastMessage'] ?? payload['text'] ?? 'Mesaj').toString(),
+        'lastMessage': lastMessage,
         'updatedAt': FieldValue.serverTimestamp(),
         'hiddenFor': FieldValue.arrayRemove(members),
       };
