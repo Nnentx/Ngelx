@@ -4884,7 +4884,30 @@ class _MesajPageState extends State<MesajPage> {
     final veri=d.data()??<String,dynamic>{};
     final uyeler=List<String>.from(veri['members']??const[]);
     final admins=List<String>.from(veri['admins']??const[]);
+    final kurucu=(veri['createdBy']??'').toString();
     if(!uyeler.contains(ben))return;
+
+    if(kurucu==ben&&uyeler.length>1){
+      if(!context.mounted)return;
+      final uyelereGit=await showDialog<bool>(
+        context:context,
+        builder:(c)=>AlertDialog(
+          backgroundColor:Colors.white,surfaceTintColor:Colors.white,
+          shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(26)),
+          icon:const Icon(Icons.workspace_premium_rounded,color:ngelxGroupGreen,size:36),
+          title:const Text('Önce kuruculuğu devret',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.w900)),
+          content:const Text('Gruptan ayrılmadan önce kuruculuğu başka bir üyeye devretmelisin.',textAlign:TextAlign.center),
+          actions:[
+            TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),
+            FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('Üyelere git')),
+          ],
+        ),
+      )??false;
+      if(uyelereGit&&context.mounted){
+        await Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupUyeleriPage(chatId:id)));
+      }
+      return;
+    }
 
     if(admins.length==1&&admins.contains(ben)&&uyeler.length>1){
       if(!context.mounted)return;
@@ -4932,17 +4955,21 @@ class _MesajPageState extends State<MesajPage> {
         'deletedAt':FieldValue.serverTimestamp(),
       },SetOptions(merge:true));
     }else{
-      await ref.collection('messages').add({
-        'senderId':ben,
-        'type':'system',
-        'systemAction':'member_left',
-        'actorUid':ben,
-        'text':'Bir üye gruptan ayrıldı.',
-        'createdAt':FieldValue.serverTimestamp(),
-      });
+      try{
+        await ref.collection('messages').add({
+          'senderId':ben,
+          'type':'system',
+          'systemAction':'member_left',
+          'actorUid':ben,
+          'text':'Bir üye gruptan ayrıldı.',
+          'createdAt':FieldValue.serverTimestamp(),
+        });
+      }catch(_){}
       await ref.update({
         'members':FieldValue.arrayRemove([ben]),
         'admins':FieldValue.arrayRemove([ben]),
+        'formerMembers':FieldValue.arrayUnion([ben]),
+        'removedAt_$ben':FieldValue.serverTimestamp(),
         'updatedAt':FieldValue.serverTimestamp(),
       });
     }
@@ -10592,6 +10619,22 @@ class GrupAyarlarPage extends StatelessWidget{
     final uid=me;if(uid==null)return;
     final uyeler=List<String>.from(v['members']??const[]);
     final admins=List<String>.from(v['admins']??const[]);
+    final kurucu=(v['createdBy']??'').toString();
+    if(kurucu==uid&&uyeler.length>1){
+      final uyelereGit=await showDialog<bool>(context:context,builder:(x)=>AlertDialog(
+        backgroundColor:Colors.white,surfaceTintColor:Colors.white,
+        title:const Text('Önce kuruculuğu devret',style:TextStyle(fontWeight:FontWeight.w900)),
+        content:const Text('Gruptan ayrılmadan önce kuruculuğu başka bir üyeye devretmelisin.'),
+        actions:[
+          TextButton(onPressed:()=>Navigator.pop(x,false),child:const Text('Vazgeç')),
+          FilledButton(onPressed:()=>Navigator.pop(x,true),child:const Text('Üyelere git')),
+        ],
+      ))??false;
+      if(uyelereGit&&context.mounted){
+        await Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupUyeleriPage(chatId:chatId)));
+      }
+      return;
+    }
     if(admins.length==1&&admins.contains(uid)&&uyeler.length>1){
       await showDialog<void>(context:context,builder:(x)=>AlertDialog(
         backgroundColor:Colors.white,surfaceTintColor:Colors.white,
@@ -10601,27 +10644,43 @@ class GrupAyarlarPage extends StatelessWidget{
       ));
       return;
     }
+    final sonKisi=uyeler.length==1;
     final ok=await showDialog<bool>(context:context,builder:(x)=>AlertDialog(
       backgroundColor:Colors.white,surfaceTintColor:Colors.white,
-      title:const Text('Sohbetten ayrıl?',style:TextStyle(fontWeight:FontWeight.w900)),
-      content:const Text('Gruptan ayrıldıktan sonra yeni mesaj alamazsın.'),
+      title:Text(sonKisi?'Grup silinsin mi?':'Sohbetten ayrıl?',style:const TextStyle(fontWeight:FontWeight.w900)),
+      content:Text(sonKisi?'Grupta yalnızca sen kaldın. Grup kapatılacak.':'Gruptan ayrıldıktan sonra yeni mesaj alamazsın.'),
       actions:[
         TextButton(onPressed:()=>Navigator.pop(x,false),child:const Text('Vazgeç')),
-        FilledButton(style:FilledButton.styleFrom(backgroundColor:Colors.red),onPressed:()=>Navigator.pop(x,true),child:const Text('Ayrıl')),
+        FilledButton(style:FilledButton.styleFrom(backgroundColor:Colors.red),onPressed:()=>Navigator.pop(x,true),child:Text(sonKisi?'Grubu sil':'Ayrıl')),
       ],
     ))??false;
     if(!ok)return;
-    try{
-      await ref.collection('messages').add({
-        'senderId':uid,
-        'type':'system',
-        'systemAction':'member_left',
-        'actorUid':uid,
-        'text':'Bir üye gruptan ayrıldı.',
-        'createdAt':FieldValue.serverTimestamp(),
-      });
-    }catch(_){}
-    await ref.set({'members':FieldValue.arrayRemove([uid]),'admins':FieldValue.arrayRemove([uid]),'formerMembers':FieldValue.arrayUnion([uid]),'removedAt_$uid':FieldValue.serverTimestamp(),'updatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
+    if(sonKisi){
+      await ref.set({
+        'members':FieldValue.arrayRemove([uid]),
+        'admins':FieldValue.arrayRemove([uid]),
+        'groupDeleted':true,
+        'deletedAt':FieldValue.serverTimestamp(),
+      },SetOptions(merge:true));
+    }else{
+      try{
+        await ref.collection('messages').add({
+          'senderId':uid,
+          'type':'system',
+          'systemAction':'member_left',
+          'actorUid':uid,
+          'text':'Bir üye gruptan ayrıldı.',
+          'createdAt':FieldValue.serverTimestamp(),
+        });
+      }catch(_){}
+      await ref.set({
+        'members':FieldValue.arrayRemove([uid]),
+        'admins':FieldValue.arrayRemove([uid]),
+        'formerMembers':FieldValue.arrayUnion([uid]),
+        'removedAt_$uid':FieldValue.serverTimestamp(),
+        'updatedAt':FieldValue.serverTimestamp(),
+      },SetOptions(merge:true));
+    }
     if(context.mounted)Navigator.popUntil(context,(route)=>route.isFirst);
   }
 
