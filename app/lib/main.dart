@@ -6657,27 +6657,20 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
           const SizedBox(width:5),
           ngelxPremiumIconButton(icon:Icons.videocam_rounded,tooltip:'Görüntülü arama',onTap:aramaBaslatiliyor?null:()=>aramaBaslat(true)),
           const SizedBox(width:5),
-          ngelxPremiumIconButton(icon:Icons.search_rounded,tooltip:'Ara',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>SohbetMesajAramaPage(chatId:widget.chatId)))),
-          const SizedBox(width:2),
-          PopupMenuButton<String>(
-            tooltip:'Daha fazla',
-            color:Colors.white,
-            surfaceTintColor:Colors.white,
-            shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(20)),
-            icon:const Icon(Icons.more_vert_rounded,color:ngelxGroupGreen),
-            onSelected:(x){if(x=='background')grupArkaPlanMenusu();else Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupBilgiPage(chatId:widget.chatId)));},
-            itemBuilder:(_)=>const [
-              PopupMenuItem(value:'info',child:Row(children:[Icon(Icons.info_outline_rounded,color:ngelxGroupGreen),SizedBox(width:12),Text('Grup bilgileri',style:TextStyle(fontWeight:FontWeight.w700))])),
-              PopupMenuItem(value:'background',child:Row(children:[Icon(Icons.wallpaper_rounded,color:ngelxGroupGreen),SizedBox(width:12),Text('Arka plan',style:TextStyle(fontWeight:FontWeight.w700))])),
-            ],
+          ngelxPremiumIconButton(
+            icon:Icons.info_rounded,
+            tooltip:'Grup bilgileri',
+            onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupBilgiPage(chatId:widget.chatId))),
           ),
-          const SizedBox(width:5),
+          const SizedBox(width:8),
         ],
       ),
       body:StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
         stream:_grupAkisi,
         builder:(_,tema){
-          final tv=tema.data?.data()??<String,dynamic>{},arkaPlanUrl=(tv['backgroundUrl_$uid']??'').toString();
+          final tv=tema.data?.data()??<String,dynamic>{},
+              arkaPlanUrl=(tv['backgroundUrl_$uid']??'').toString(),
+              hizliEmoji=(tv['quickEmoji_$uid']??'👍').toString();
           _typingGostergesiAcik=tv['typingIndicator_$uid']!=false;
           final opaklik=(tv['backgroundOpacity_$uid'] is num?(tv['backgroundOpacity_$uid'] as num).toDouble():.26).clamp(.10,.55).toDouble();
           return Container(
@@ -6879,35 +6872,76 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
               SafeArea(
                 top:false,
                 child:Container(
-                  margin:const EdgeInsets.fromLTRB(8,6,8,8),
-                  padding:const EdgeInsets.fromLTRB(7,6,7,6),
-                  decoration:BoxDecoration(
-                    color:Colors.white.withValues(alpha:.98),
-                    borderRadius:BorderRadius.circular(28),
-                    border:Border.all(color:const Color(0xFFEAE4F0)),
-                    boxShadow:const [BoxShadow(color:Color(0x16000000),blurRadius:18,offset:Offset(0,7))],
-                  ),
+                  color:Colors.white.withValues(alpha:.96),
+                  padding:const EdgeInsets.fromLTRB(2,6,2,8),
                   child:Row(children:[
-                    InkWell(onTap:ekMenusu,borderRadius:BorderRadius.circular(20),child:Container(width:40,height:40,decoration:const BoxDecoration(shape:BoxShape.circle,gradient:LinearGradient(colors:[ngelxGroupGreen2,ngelxGroupGreen])),child:const Icon(Icons.add_rounded,color:Colors.white,size:25))),
-                    const SizedBox(width:7),
+                    IconButton(
+                      tooltip:'Ekle',
+                      visualDensity:VisualDensity.compact,
+                      onPressed:ekMenusu,
+                      icon:const Icon(Icons.add_circle_rounded,color:ngelxGroupGreen,size:31),
+                    ),
+                    IconButton(
+                      tooltip:'Kamera',
+                      visualDensity:VisualDensity.compact,
+                      onPressed:()=>medyaGonder(ImageSource.camera),
+                      icon:const Icon(Icons.camera_alt_rounded,color:ngelxGroupGreen,size:25),
+                    ),
+                    IconButton(
+                      tooltip:'Galeri',
+                      visualDensity:VisualDensity.compact,
+                      onPressed:()=>medyaGonder(ImageSource.gallery),
+                      icon:const Icon(Icons.photo_library_rounded,color:ngelxGroupGreen,size:25),
+                    ),
+                    IconButton(
+                      tooltip:sesKaydediliyor?'Kaydı bitir ve gönder':'Sesli mesaj',
+                      visualDensity:VisualDensity.compact,
+                      onPressed:grupSesKaydiDegistir,
+                      icon:Icon(sesKaydediliyor?Icons.stop_circle_rounded:Icons.mic_rounded,color:sesKaydediliyor?Colors.red:ngelxGroupGreen,size:26),
+                    ),
                     Expanded(child:TextField(
-                      controller:mesaj,onChanged:_mesajAlanDegisti,onSubmitted:(_)=>gonder(),maxLength:2000,
+                      controller:mesaj,
+                      onChanged:_mesajAlanDegisti,
+                      onSubmitted:(_)=>gonder(),
+                      maxLength:2000,
                       buildCounter:(_, {required currentLength,required isFocused,maxLength})=>null,
                       decoration:InputDecoration(
-                        hintText:sesKaydediliyor?'Kayıt alınıyor…':'Mesaj yaz...',
-                        hintStyle:const TextStyle(color:Color(0xFF9A94A4),fontWeight:FontWeight.w500),
+                        hintText:sesKaydediliyor?'Kayıt alınıyor…':'Mesaj',
+                        hintStyle:const TextStyle(color:Color(0xFF8E8992),fontWeight:FontWeight.w500),
                         filled:true,
-                        fillColor:sesKaydediliyor?const Color(0xFFFFF0F3):const Color(0xFFF8F7FA),
-                        contentPadding:const EdgeInsets.symmetric(horizontal:16,vertical:10),
-                        border:OutlineInputBorder(borderRadius:BorderRadius.circular(22),borderSide:BorderSide.none),
+                        fillColor:sesKaydediliyor?const Color(0xFFFFF0F3):const Color(0xFFF3F4F6),
+                        contentPadding:const EdgeInsets.fromLTRB(16,10,2,10),
+                        suffixIcon:IconButton(
+                          tooltip:'Emoji',
+                          onPressed:emojiSec,
+                          icon:const Icon(Icons.emoji_emotions_rounded,color:ngelxGroupGreen),
+                        ),
+                        border:OutlineInputBorder(borderRadius:BorderRadius.circular(26),borderSide:BorderSide.none),
                       ),
                     )),
-                    IconButton(tooltip:sesKaydediliyor?'Gönder':'Sesli mesaj',onPressed:grupSesKaydiDegistir,icon:Icon(sesKaydediliyor?Icons.stop_circle_rounded:Icons.mic_rounded,color:sesKaydediliyor?Colors.red:ngelxGroupGreen)),
-                    IconButton(tooltip:'Emoji',onPressed:emojiSec,icon:const Icon(Icons.emoji_emotions_outlined,color:ngelxGroupGreen)),
-                    InkWell(
-                      onTap:mesajGonderiliyor?null:gonder,
-                      borderRadius:BorderRadius.circular(20),
-                      child:Container(width:40,height:40,decoration:const BoxDecoration(shape:BoxShape.circle,gradient:LinearGradient(colors:[ngelxGroupGreen2,ngelxGroupGreen])),child:const Icon(Icons.send_rounded,color:Colors.white,size:20)),
+                    ValueListenableBuilder<TextEditingValue>(
+                      valueListenable:mesaj,
+                      builder:(_,v,__){
+                        if(v.text.trim().isEmpty){
+                          return IconButton(
+                            tooltip:'Hızlı emoji gönder',
+                            visualDensity:VisualDensity.compact,
+                            onPressed:(){
+                              mesaj.text=hizliEmoji;
+                              gonder();
+                            },
+                            icon:Text(hizliEmoji,style:const TextStyle(fontSize:27)),
+                          );
+                        }
+                        return IconButton(
+                          tooltip:'Gönder',
+                          visualDensity:VisualDensity.compact,
+                          onPressed:mesajGonderiliyor?null:gonder,
+                          icon:mesajGonderiliyor
+                            ?const SizedBox(width:20,height:20,child:CircularProgressIndicator(strokeWidth:2,color:ngelxGroupGreen))
+                            :const Icon(Icons.send_rounded,color:ngelxGroupGreen,size:27),
+                        );
+                      },
                     ),
                   ]),
                 ),
@@ -8749,6 +8783,29 @@ class _GrupOzellestirPageState extends State<GrupOzellestirPage>{
                 style:FilledButton.styleFrom(backgroundColor:ngelxGroupGreen,padding:const EdgeInsets.symmetric(vertical:14)),
                 icon:yukleniyor?const SizedBox(width:18,height:18,child:CircularProgressIndicator(color:Colors.white,strokeWidth:2)):const Icon(Icons.photo_library_rounded),
                 label:Text(yukleniyor?'Yükleniyor...':'Galeriden arka plan seç'),
+              ),
+              const SizedBox(height:22),
+              const Text('Hızlı gönderme emojisi',style:TextStyle(fontSize:18,fontWeight:FontWeight.w900)),
+              const SizedBox(height:5),
+              const Text('Mesaj kutusu boşken sağ tarafta görünecek emojiyi seç.',style:TextStyle(color:Colors.black54)),
+              const SizedBox(height:12),
+              Wrap(
+                spacing:10,
+                runSpacing:10,
+                children:['👍','❤️','😂','🔥','👏','🐥'].map((emoji)=>InkWell(
+                  borderRadius:BorderRadius.circular(18),
+                  onTap:()=>ref.set({'quickEmoji_'+uid:emoji},SetOptions(merge:true)),
+                  child:Container(
+                    width:52,height:52,
+                    alignment:Alignment.center,
+                    decoration:BoxDecoration(
+                      color:(v['quickEmoji_'+uid]??'👍').toString()==emoji?ngelxGroupGreenSoft:const Color(0xFFF5F5F5),
+                      borderRadius:BorderRadius.circular(18),
+                      border:Border.all(color:(v['quickEmoji_'+uid]??'👍').toString()==emoji?ngelxGroupGreen:const Color(0xFFE5E5E5)),
+                    ),
+                    child:Text(emoji,style:const TextStyle(fontSize:25)),
+                  ),
+                )).toList(),
               ),
               if(url.isNotEmpty)...[
                 const SizedBox(height:12),
