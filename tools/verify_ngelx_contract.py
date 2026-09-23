@@ -115,6 +115,8 @@ required_group_tokens = [
     "Bu mesaja tepki veren kişiler",
     "Kimler mesaj gönderebilir?",
     "Kimler kişi ekleyebilir?",
+    "Kimler grup bilgisini düzenleyebilir?",
+    "Kimler mesaj sabitleyebilir?",
     "Kimler @herkes kullanabilir?",
     "grupIzinSec",
     "grupAramasinaKisiDavetEt",
