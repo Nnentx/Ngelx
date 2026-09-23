@@ -148,3 +148,9 @@
 - APK kurulurken / güncellenirken, ana ekranda ve uygulama çekmecesinde aynı NgelX simgesi görünmeli.
 - Android adaptive icon, round icon ve normal launcher icon sürümleri aynı tasarımdan üretilecek; eski/geçici simgeler kaldırılacak.
 - Simgenin arka planı ve kırpılması farklı Android cihazlarda bozulmayacak şekilde kontrol edilecek.
+
+### 2026-09-23 uygulama dili — tüm ekranlarda tek dil
+- Uygulama dili hangi dil seçiliyse uygulama içindeki tüm metinler aynı dili takip edecek.
+- Türkçe seçiliyse ekranlar, butonlar, hata mesajları ve açıklamalar Türkçe; İngilizce seçiliyse İngilizce olacak.
+- Sabit kodlanmış Türkçe/İngilizce metinler temizlenip mevcut dil sistemi üzerinden gösterilecek.
+- Dil değiştirildiğinde mümkün olan tüm ekranlar yeniden giriş gerektirmeden güncellenecek; karışık dil görünümü olmayacak.
