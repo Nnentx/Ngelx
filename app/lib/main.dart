@@ -512,8 +512,74 @@ const ceviriler = <String, Map<String,String>>{
   'create': {'tr':'Üret','en':'Create','de':'Erstellen','ar':'إنشاء','ru':'Создать'},
   'chat': {'tr':'Sohbet','en':'Chat','de':'Chat','ar':'الدردشة','ru':'Чат'},
   'me': {'tr':'Ben','en':'Me','de':'Ich','ar':'أنا','ru':'Я'},
+  'settingsTitle': {'tr':'Ayarlar ve gizlilik','en':'Settings and privacy','de':'Einstellungen und Datenschutz','ar':'الإعدادات والخصوصية','ru':'Настройки и конфиденциальность'},
+  'privacy': {'tr':'Gizlilik','en':'Privacy','de':'Datenschutz','ar':'الخصوصية','ru':'Конфиденциальность'},
+  'privacySub': {'tr':'Paylaşımlarını ve hesabını kimler görebilir','en':'Choose who can see your posts and account','de':'Lege fest, wer Beiträge und Konto sehen kann','ar':'اختر من يمكنه رؤية منشوراتك وحسابك','ru':'Выберите, кто видит ваши публикации и аккаунт'},
+  'followFriends': {'tr':'Takip ve arkadaşlık','en':'Follows and friends','de':'Folgen und Freunde','ar':'المتابعة والأصدقاء','ru':'Подписки и друзья'},
+  'followFriendsSub': {'tr':'İstekleri kabul et, reddet ve arkadaşlarını yönet','en':'Accept or reject requests and manage friends','de':'Anfragen annehmen oder ablehnen und Freunde verwalten','ar':'قبول أو رفض الطلبات وإدارة الأصدقاء','ru':'Принимайте или отклоняйте запросы и управляйте друзьями'},
+  'blockedAccounts': {'tr':'Engellenen hesaplar','en':'Blocked accounts','de':'Blockierte Konten','ar':'الحسابات المحظورة','ru':'Заблокированные аккаунты'},
+  'blockedAccountsSub': {'tr':'Engellediğin kişileri gör ve engeli kaldır','en':'View blocked people and unblock them','de':'Blockierte Personen ansehen und entsperren','ar':'عرض الأشخاص المحظورين وإلغاء حظرهم','ru':'Просматривайте заблокированных и снимайте блокировку'},
+  'messagePermissions': {'tr':'Mesaj izinleri','en':'Message permissions','de':'Nachrichtenberechtigungen','ar':'أذونات الرسائل','ru':'Разрешения сообщений'},
+  'messagePermissionsSub': {'tr':'Kimlerin mesaj gönderebileceğini seç','en':'Choose who can send you messages','de':'Lege fest, wer dir Nachrichten senden kann','ar':'اختر من يمكنه مراسلتك','ru':'Выберите, кто может отправлять вам сообщения'},
+  'storyPrivacy': {'tr':'Hikâye gizliliği','en':'Story privacy','de':'Story-Datenschutz','ar':'خصوصية القصة','ru':'Конфиденциальность историй'},
+  'storyPrivacySub': {'tr':'Görüntüleme ve ekran görüntüsü izinleri','en':'Viewing and screenshot permissions','de':'Ansichts- und Screenshot-Berechtigungen','ar':'أذونات العرض ولقطات الشاشة','ru':'Разрешения на просмотр и снимки экрана'},
+  'notifications': {'tr':'Bildirimler','en':'Notifications','de':'Benachrichtigungen','ar':'الإشعارات','ru':'Уведомления'},
+  'notificationsSub': {'tr':'Aktivite ve mesaj bildirimleri','en':'Activity and message notifications','de':'Aktivitäts- und Nachrichtenbenachrichtigungen','ar':'إشعارات النشاط والرسائل','ru':'Уведомления об активности и сообщениях'},
+  'accountSecurity': {'tr':'Hesap güvenliği','en':'Account security','de':'Kontosicherheit','ar':'أمان الحساب','ru':'Безопасность аккаунта'},
+  'accountSecuritySub': {'tr':'Hesabı dondur, silme talebi oluştur','en':'Freeze the account or request deletion','de':'Konto deaktivieren oder Löschung anfordern','ar':'تجميد الحساب أو طلب حذفه','ru':'Заморозьте аккаунт или запросите удаление'},
+  'devices': {'tr':'Giriş yapılan cihazlar','en':'Logged-in devices','de':'Angemeldete Geräte','ar':'الأجهزة المسجل دخولها','ru':'Устройства с активным входом'},
+  'devicesSub': {'tr':'Son girişleri ve cihaz bilgilerini gör','en':'View recent logins and device information','de':'Letzte Anmeldungen und Geräteinformationen anzeigen','ar':'عرض عمليات الدخول الأخيرة ومعلومات الأجهزة','ru':'Просматривайте последние входы и сведения об устройствах'},
+  'support': {'tr':'Destek ve hata bildir','en':'Support and report a problem','de':'Support und Problem melden','ar':'الدعم والإبلاغ عن مشكلة','ru':'Поддержка и сообщение о проблеме'},
+  'supportSub': {'tr':'Açıklama ve ekran görüntüsü gönder','en':'Send a description and screenshot','de':'Beschreibung und Screenshot senden','ar':'إرسال وصف ولقطة شاشة','ru':'Отправьте описание и снимок экрана'},
+  'downloadPermissions': {'tr':'İndirme izinleri','en':'Download permissions','de':'Download-Berechtigungen','ar':'أذونات التنزيل','ru':'Разрешения на скачивание'},
+  'downloadPermissionsSub': {'tr':'Varsayılan paylaşım indirme ayarı','en':'Default download setting for posts','de':'Standard-Downloadeinstellung für Beiträge','ar':'إعداد التنزيل الافتراضي للمنشورات','ru':'Настройка скачивания публикаций по умолчанию'},
+  'appUpdates': {'tr':'Uygulama güncellemeleri','en':'App updates','de':'App-Updates','ar':'تحديثات التطبيق','ru':'Обновления приложения'},
+  'build': {'tr':'Yapı','en':'Build','de':'Build','ar':'الإصدار','ru':'Сборка'},
+  'shareNgelx': {'tr':'Ngel X’i paylaş','en':'Share Ngel X','de':'Ngel X teilen','ar':'مشاركة Ngel X','ru':'Поделиться Ngel X'},
+  'shareNgelxSub': {'tr':'Uygulama bağlantısını paylaş veya kopyala','en':'Share or copy the app link','de':'App-Link teilen oder kopieren','ar':'مشاركة رابط التطبيق أو نسخه','ru':'Поделитесь ссылкой на приложение или скопируйте её'},
+  'logout': {'tr':'Çıkış yap','en':'Sign out','de':'Abmelden','ar':'تسجيل الخروج','ru':'Выйти'},
+  'logoutQuestion': {'tr':'Çıkış yapılsın mı?','en':'Sign out?','de':'Abmelden?','ar':'تسجيل الخروج؟','ru':'Выйти из аккаунта?'},
+  'logoutInfo': {'tr':'Tekrar giriş yapman gerekecek.','en':'You will need to sign in again.','de':'Du musst dich erneut anmelden.','ar':'ستحتاج إلى تسجيل الدخول مرة أخرى.','ru':'Вам потребуется войти снова.'},
+  'cancel': {'tr':'Vazgeç','en':'Cancel','de':'Abbrechen','ar':'إلغاء','ru':'Отмена'},
+  'following': {'tr':'Takip','en':'Following','de':'Folge ich','ar':'أتابع','ru':'Подписки'},
+  'followers': {'tr':'Takipçi','en':'Followers','de':'Follower','ar':'المتابعون','ru':'Подписчики'},
+  'interaction': {'tr':'Etkileşim','en':'Engagement','de':'Interaktion','ar':'التفاعل','ru':'Вовлечённость'},
+  'friends': {'tr':'Arkadaşlar','en':'Friends','de':'Freunde','ar':'الأصدقاء','ru':'Друзья'},
+  'editProfile': {'tr':'Profili Düzenle','en':'Edit profile','de':'Profil bearbeiten','ar':'تعديل الملف الشخصي','ru':'Редактировать профиль'},
+  'saved': {'tr':'Kaydedilenler','en':'Saved','de':'Gespeichert','ar':'المحفوظات','ru':'Сохранённое'},
+  'archive': {'tr':'Arşiv','en':'Archive','de':'Archiv','ar':'الأرشيف','ru':'Архив'},
+  'stories': {'tr':'Hikâyeler','en':'Stories','de':'Stories','ar':'القصص','ru':'Истории'},
+  'events': {'tr':'Etkinlikler','en':'Events','de':'Veranstaltungen','ar':'الفعاليات','ru':'События'},
+  'addIntroVideo': {'tr':'Profil tanıtım videosu ekle','en':'Add profile intro video','de':'Profil-Introvideo hinzufügen','ar':'إضافة فيديو تعريفي للملف الشخصي','ru':'Добавить видео-презентацию профиля'},
+  'changeIntroVideo': {'tr':'Tanıtım videosunu değiştir','en':'Change intro video','de':'Introvideo ändern','ar':'تغيير الفيديو التعريفي','ru':'Изменить видео-презентацию'},
+  'searchExplore': {'tr':'Kişi, grup veya içerik ara','en':'Search people, groups or content','de':'Personen, Gruppen oder Inhalte suchen','ar':'ابحث عن أشخاص أو مجموعات أو محتوى','ru':'Искать людей, группы или контент'},
+  'live': {'tr':'Canlı','en':'Live','de':'Live','ar':'مباشر','ru':'Прямой эфир'},
+  'trend': {'tr':'Trend','en':'Trending','de':'Trend','ar':'رائج','ru':'В тренде'},
+  'people': {'tr':'Kişiler','en':'People','de':'Personen','ar':'الأشخاص','ru':'Люди'},
+  'groups': {'tr':'Gruplar','en':'Groups','de':'Gruppen','ar':'المجموعات','ru':'Группы'},
+  'liveStreams': {'tr':'Canlı yayınlar','en':'Live streams','de':'Livestreams','ar':'البثوث المباشرة','ru':'Прямые эфиры'},
+  'seeAll': {'tr':'Tümünü gör ›','en':'See all ›','de':'Alle ansehen ›','ar':'عرض الكل ›','ru':'Смотреть все ›'},
+  'noLive': {'tr':'Şu anda canlı yayın yok. İlk yayını sen başlat ✨','en':'No live streams right now. Start the first one ✨','de':'Gerade gibt es keine Livestreams. Starte den ersten ✨','ar':'لا توجد بثوث مباشرة الآن. ابدأ أول بث ✨','ru':'Сейчас нет прямых эфиров. Запусти первый ✨'},
+  'trends': {'tr':'Trendler','en':'Trends','de':'Trends','ar':'الاتجاهات','ru':'Тренды'},
+  'trendContent': {'tr':'Trend içerikler','en':'Trending content','de':'Trend-Inhalte','ar':'المحتوى الرائج','ru':'Популярный контент'},
+  'discoverPeople': {'tr':'Kişileri keşfet','en':'Discover people','de':'Personen entdecken','ar':'اكتشاف أشخاص','ru':'Найти людей'},
+  'discoverGroups': {'tr':'Grupları keşfet','en':'Discover groups','de':'Gruppen entdecken','ar':'اكتشاف مجموعات','ru':'Найти группы'},
+  'startLive': {'tr':'Canlı yayın başlat','en':'Start live stream','de':'Livestream starten','ar':'بدء بث مباشر','ru':'Начать прямой эфир'},
+  'follow': {'tr':'Takip et','en':'Follow','de':'Folgen','ar':'متابعة','ru':'Подписаться'},
+  'join': {'tr':'Katıl','en':'Join','de':'Beitreten','ar':'انضمام','ru':'Вступить'},
+  'member': {'tr':'üye','en':'members','de':'Mitglieder','ar':'أعضاء','ru':'участников'},
 };
 String t(String anahtar) => ceviriler[anahtar]?[uygulamaDili.value] ?? ceviriler[anahtar]?['tr'] ?? anahtar;
+String tercihBasligi(String kod){
+  switch(kod){
+    case 'Gizlilik': return t('privacy');
+    case 'Mesaj izinleri': return t('messagePermissions');
+    case 'Hikâye gizliliği': return t('storyPrivacy');
+    case 'Bildirimler': return t('notifications');
+    case 'İndirme izinleri': return t('downloadPermissions');
+    default: return kod;
+  }
+}
 Future<void> diliDegistir(String dil) async {uygulamaDili.value=dil;final h=await SharedPreferences.getInstance();await h.setString('uygulama_dili',dil);}
 
 Future<void> uygulamaBildirimiGonder({required String toUid,required String fromUid,required String tur,required String metin,String? belgeId}) async {
@@ -14282,26 +14348,26 @@ class _HikayeGosterPageState extends State<HikayeGosterPage> with SingleTickerPr
 
 class AyarlarPage extends StatelessWidget {
   const AyarlarPage({super.key});
-  @override Widget build(BuildContext context){final misafir=FirebaseAuth.instance.currentUser?.isAnonymous==true;return Theme(data:ThemeData.light().copyWith(scaffoldBackgroundColor:Colors.white,appBarTheme:const AppBarTheme(backgroundColor:Colors.white,foregroundColor:Colors.black,elevation:0),cardTheme:const CardThemeData(color:Colors.white,elevation:0,margin:EdgeInsets.symmetric(vertical:4)),dividerColor:Color(0xFFE5E7EB)),child:Scaffold(appBar:AppBar(title:const Text('Ayarlar ve gizlilik')),body:SafeArea(child:ListView(padding:const EdgeInsets.fromLTRB(14,8,14,24),children:[
+  @override Widget build(BuildContext context){final misafir=FirebaseAuth.instance.currentUser?.isAnonymous==true;return Theme(data:ThemeData.light().copyWith(scaffoldBackgroundColor:Colors.white,appBarTheme:const AppBarTheme(backgroundColor:Colors.white,foregroundColor:Colors.black,elevation:0),cardTheme:const CardThemeData(color:Colors.white,elevation:0,margin:EdgeInsets.symmetric(vertical:4)),dividerColor:Color(0xFFE5E7EB)),child:Scaffold(appBar:AppBar(title:Text(t('settingsTitle'))),body:SafeArea(child:ListView(padding:const EdgeInsets.fromLTRB(14,8,14,24),children:[
     if(!misafir)...[
-      _ayar(context,Icons.lock_outline,'Gizlilik','Paylaşımlarını ve hesabını kimler görebilir'),
-      ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:10,vertical:7),leading:const Icon(Icons.people_outline,color:mor),title:const Text('Takip ve arkadaşlık',style:TextStyle(fontWeight:FontWeight.bold,color:Colors.black87)),subtitle:const Text('İstekleri kabul et, reddet ve arkadaşlarını yönet',style:TextStyle(color:Colors.black54)),trailing:const Icon(Icons.chevron_right,color:Colors.black87),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const ArkadaslarPage()))),
-      ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:10,vertical:7),leading:const Icon(Icons.block_outlined,color:mor),title:const Text('Engellenen hesaplar',style:TextStyle(fontWeight:FontWeight.bold,color:Colors.black87)),subtitle:const Text('Engellediğin kişileri gör ve engeli kaldır',style:TextStyle(color:Colors.black54)),trailing:const Icon(Icons.chevron_right,color:Colors.black87),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const EngellenenlerPage()))),
-      _ayar(context,Icons.chat_bubble_outline,'Mesaj izinleri','Kimlerin mesaj gönderebileceğini seç'),
-      _ayar(context,Icons.auto_stories_outlined,'Hikâye gizliliği','Görüntüleme ve ekran görüntüsü izinleri'),
-      _ayar(context,Icons.notifications_outlined,'Bildirimler','Aktivite ve mesaj bildirimleri'),
-      ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:10,vertical:7),leading:const Icon(Icons.security_outlined,color:mor),title:const Text('Hesap güvenliği',style:TextStyle(fontWeight:FontWeight.bold,color:Colors.black87)),subtitle:const Text('Hesabı dondur, silme talebi oluştur',style:TextStyle(color:Colors.black54)),trailing:const Icon(Icons.chevron_right,color:Colors.black87),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const HesapGuvenligiPage()))),
-      ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:10,vertical:7),leading:const Icon(Icons.devices_outlined,color:mor),title:const Text('Giriş yapılan cihazlar',style:TextStyle(fontWeight:FontWeight.bold,color:Colors.black87)),subtitle:const Text('Son girişleri ve cihaz bilgilerini gör',style:TextStyle(color:Colors.black54)),trailing:const Icon(Icons.chevron_right,color:Colors.black87),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const GirisGecmisiPage()))),
-      ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:10,vertical:7),leading:const Icon(Icons.support_agent,color:mor),title:const Text('Destek ve hata bildir',style:TextStyle(fontWeight:FontWeight.bold,color:Colors.black87)),subtitle:const Text('Açıklama ve ekran görüntüsü gönder',style:TextStyle(color:Colors.black54)),trailing:const Icon(Icons.chevron_right,color:Colors.black87),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const DestekPage()))),
-      _ayar(context,Icons.download_outlined,'İndirme izinleri','Varsayılan paylaşım indirme ayarı'),
+      _ayar(context,Icons.lock_outline,'Gizlilik',t('privacy'),t('privacySub')),
+      ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:10,vertical:7),leading:const Icon(Icons.people_outline,color:mor),title:Text(t('followFriends'),style:const TextStyle(fontWeight:FontWeight.bold,color:Colors.black87)),subtitle:Text(t('followFriendsSub'),style:const TextStyle(color:Colors.black54)),trailing:const Icon(Icons.chevron_right,color:Colors.black87),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const ArkadaslarPage()))),
+      ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:10,vertical:7),leading:const Icon(Icons.block_outlined,color:mor),title:Text(t('blockedAccounts'),style:const TextStyle(fontWeight:FontWeight.bold,color:Colors.black87)),subtitle:Text(t('blockedAccountsSub'),style:const TextStyle(color:Colors.black54)),trailing:const Icon(Icons.chevron_right,color:Colors.black87),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const EngellenenlerPage()))),
+      _ayar(context,Icons.chat_bubble_outline,'Mesaj izinleri',t('messagePermissions'),t('messagePermissionsSub')),
+      _ayar(context,Icons.auto_stories_outlined,'Hikâye gizliliği',t('storyPrivacy'),t('storyPrivacySub')),
+      _ayar(context,Icons.notifications_outlined,'Bildirimler',t('notifications'),t('notificationsSub')),
+      ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:10,vertical:7),leading:const Icon(Icons.security_outlined,color:mor),title:Text(t('accountSecurity'),style:const TextStyle(fontWeight:FontWeight.bold,color:Colors.black87)),subtitle:Text(t('accountSecuritySub'),style:const TextStyle(color:Colors.black54)),trailing:const Icon(Icons.chevron_right,color:Colors.black87),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const HesapGuvenligiPage()))),
+      ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:10,vertical:7),leading:const Icon(Icons.devices_outlined,color:mor),title:Text(t('devices'),style:const TextStyle(fontWeight:FontWeight.bold,color:Colors.black87)),subtitle:Text(t('devicesSub'),style:const TextStyle(color:Colors.black54)),trailing:const Icon(Icons.chevron_right,color:Colors.black87),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const GirisGecmisiPage()))),
+      ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:10,vertical:7),leading:const Icon(Icons.support_agent,color:mor),title:Text(t('support'),style:const TextStyle(fontWeight:FontWeight.bold,color:Colors.black87)),subtitle:Text(t('supportSub'),style:const TextStyle(color:Colors.black54)),trailing:const Icon(Icons.chevron_right,color:Colors.black87),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const DestekPage()))),
+      _ayar(context,Icons.download_outlined,'İndirme izinleri',t('downloadPermissions'),t('downloadPermissionsSub')),
     ],
     const Divider(),
-    ListTile(leading:const Icon(Icons.system_update,color:mor),title:const Text('Uygulama güncellemeleri'),subtitle:Text('v$ngelxVersionName • Yapı $ngelxBuildNumber'),trailing:const Icon(Icons.system_update_alt_rounded,color:Colors.green)),
-    ListTile(leading:const Icon(Icons.share,color:mavi),title:const Text('Ngel X’i paylaş'),subtitle:const Text('Uygulama bağlantısını paylaş veya kopyala'),onTap:()async=>SharePlus.instance.share(ShareParams(text:'Ngel X ile dünyanı paylaş ✨\nhttps://ngelx.app'))),
+    ListTile(leading:const Icon(Icons.system_update,color:mor),title:Text(t('appUpdates')),subtitle:Text('v$ngelxVersionName • ${t("build")} $ngelxBuildNumber'),trailing:const Icon(Icons.system_update_alt_rounded,color:Colors.green)),
+    ListTile(leading:const Icon(Icons.share,color:mavi),title:Text(t('shareNgelx')),subtitle:Text(t('shareNgelxSub')),onTap:()async=>SharePlus.instance.share(ShareParams(text:'Ngel X ile dünyanı paylaş ✨\nhttps://ngelx.app'))),
     const Divider(),
-    ListTile(leading:const Icon(Icons.logout,color:Colors.red),title:const Text('Çıkış yap',style:TextStyle(color:Colors.red)),onTap:()async{final onay=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(title:const Text('Çıkış yapılsın mı?'),content:const Text('Tekrar giriş yapman gerekecek.'),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('Çıkış yap'))]));if(onay==true){await FirebaseAuth.instance.signOut();if(context.mounted)Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder:(_)=>const GirisPage()),(_)=>false);}})
+    ListTile(leading:const Icon(Icons.logout,color:Colors.red),title:Text(t('logout'),style:const TextStyle(color:Colors.red)),onTap:()async{final onay=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(title:Text(t('logoutQuestion')),content:Text(t('logoutInfo')),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:Text(t('cancel'))),FilledButton(onPressed:()=>Navigator.pop(c,true),child:Text(t('logout')))]));if(onay==true){await FirebaseAuth.instance.signOut();if(context.mounted)Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder:(_)=>const GirisPage()),(_)=>false);}})
   ]))));}
-  Widget _ayar(BuildContext c,IconData i,String t,String s)=>Card(child:ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:10,vertical:7),onTap:()=>Navigator.push(c,MaterialPageRoute(builder:(_)=>TercihlerPage(baslik:t))),leading:Icon(i,color:mor),title:Text(t,style:const TextStyle(fontWeight:FontWeight.bold,color:Colors.black87)),subtitle:Text(s,style:const TextStyle(color:Colors.black54)),trailing:const Icon(Icons.chevron_right,color:Colors.black87)));
+  Widget _ayar(BuildContext c,IconData i,String kod,String baslik,String alt)=>Card(child:ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:10,vertical:7),onTap:()=>Navigator.push(c,MaterialPageRoute(builder:(_)=>TercihlerPage(baslik:kod))),leading:Icon(i,color:mor),title:Text(baslik,style:const TextStyle(fontWeight:FontWeight.bold,color:Colors.black87)),subtitle:Text(alt,style:const TextStyle(color:Colors.black54)),trailing:const Icon(Icons.chevron_right,color:Colors.black87)));
 }
 
 class HesapKurtarmaPage extends StatefulWidget{
@@ -14720,7 +14786,7 @@ class _TercihlerPageState extends State<TercihlerPage> {
   @override
   Widget build(BuildContext context)=>Theme(
     data:ThemeData.light().copyWith(scaffoldBackgroundColor:Colors.white,appBarTheme:const AppBarTheme(backgroundColor:Colors.white,foregroundColor:Colors.black,elevation:0),dividerColor:const Color(0xFFE5E7EB)),
-    child:Scaffold(appBar:AppBar(title:Text(widget.baslik)),body:SafeArea(child:ListView(children:secenekler))),
+    child:Scaffold(appBar:AppBar(title:Text(tercihBasligi(widget.baslik))),body:SafeArea(child:ListView(children:secenekler))),
   );
 }
 
