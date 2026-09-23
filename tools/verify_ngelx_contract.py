@@ -50,6 +50,31 @@ else:
     if "CachedNetworkImage.evictFromCache(eski)" not in profile_tail:
         errors.append("Eski profil fotoğrafı önbellekten temizlenmiyor.")
 
+# Create/publishing flow must remain functional and must not regress into fake controls.
+for token in (
+    "class _YeniYuklePageState",
+    "ngelxMedyaYukleDosya",
+    "retrieveLostData()",
+    "Fotoğraf en fazla 10 MB",
+    "Video en fazla 50 MB",
+    "Hikâye yayınlandı • 24 saat görünür.",
+    "Bu içerik yeniden paylaşıma kapalı.",
+    "'clientCreatedAt':Timestamp.now()",
+    "'allowReshare':yenidenPaylasimaIzin",
+):
+    if token not in app:
+        errors.append("Üret/yayınlama sözleşmesi eksik: " + token)
+
+for forbidden in (
+    "class EskiYuklePage",
+    "Zamanla'))",
+    "Otomatik altyazı'), value: otomatikAltyazi",
+    "Ortak gönderi'), value: ortakGonderi",
+    "aracı açıldı",
+):
+    if forbidden in app:
+        errors.append("Üret ekranında eski/sahte kontrol kaldı: " + forbidden)
+
 # Contract tokens for the group experience. These guard accidental regressions.
 required_group_tokens = [
     "class _GrupSohbetPageState",
