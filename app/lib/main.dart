@@ -2443,6 +2443,12 @@ class _GorselYaziKartiState extends State<GorselYaziKarti> {
     }
   }
 
+  Future<void> paylasanProfiliAc()async{
+    final owner=(widget.veri['ownerId']??'').trim();
+    if(owner.isEmpty)return;
+    await Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciProfilPage(uid:owner)));
+  }
+
   Future<void> paylas() async {
     await ngelxPaylasimMenusu(
       context,
@@ -2511,9 +2517,10 @@ class _GorselYaziKartiState extends State<GorselYaziKarti> {
         children: [
           if (foto.isNotEmpty)
             CachedNetworkImage(
-              imageUrl: foto,
-              fit: BoxFit.contain,
-              errorWidget: (_, __, ___) => ngelxMedyaHataGorunumu(foto),
+              imageUrl:foto,
+              fit:BoxFit.contain,
+              placeholder:(_,__)=>const Center(child:CircularProgressIndicator(color:mavi)),
+              errorWidget:(_,__,___)=>ngelxMedyaHataGorunumu(foto),
             )
           else
             Container(
@@ -2536,7 +2543,14 @@ class _GorselYaziKartiState extends State<GorselYaziKarti> {
             bottom: 28,
             right: 82,
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('@${widget.veri['username'] ?? 'ngelx'}', style: const TextStyle(fontSize: 19, fontWeight: FontWeight.bold)),
+              InkWell(
+                onTap:paylasanProfiliAc,
+                borderRadius:BorderRadius.circular(8),
+                child:Padding(
+                  padding:const EdgeInsets.symmetric(vertical:2),
+                  child:Text('@${widget.veri['username'] ?? 'ngelx'}',style:const TextStyle(fontSize:19,fontWeight:FontWeight.bold)),
+                ),
+              ),
               if (foto.isNotEmpty && yazi.isNotEmpty) ...[const SizedBox(height: 8), Text(yazi)],
               if ((widget.veri['audioUrl'] ?? '').isNotEmpty) ...[const SizedBox(height: 8), const Row(children: [Icon(Icons.music_note, size: 18), Text(' Fotoğraflı müzik')])],
     const SizedBox(height: 8),
