@@ -651,6 +651,15 @@ const ceviriler = <String, Map<String,String>>{
   'noBlockedAccounts': {'tr':'Engellediğin hesap yok.','en':'You have no blocked accounts.','de':'Du hast keine blockierten Konten.','ar':'لا توجد حسابات محظورة.','ru':'У вас нет заблокированных аккаунтов.'},
   'message': {'tr':'Mesaj','en':'Message','de':'Nachricht','ar':'رسالة','ru':'Сообщение'},
   'searchPeople': {'tr':'Kişi veya kullanıcı adı ara','en':'Search people or username','de':'Person oder Benutzername suchen','ar':'البحث عن شخص أو اسم مستخدم','ru':'Поиск по имени или имени пользователя'},
+  'whoCanMessage': {'tr':'Kim mesaj atabilir?','en':'Who can message you?','de':'Wer kann dir Nachrichten senden?','ar':'من يمكنه مراسلتك؟','ru':'Кто может отправлять вам сообщения?'},
+  'messageEveryoneDesc': {'tr':'Mesaj istekleri dahil herkes yazabilir','en':'Anyone can message you, including message requests','de':'Jeder kann dir schreiben, einschließlich Nachrichtenanfragen','ar':'يمكن للجميع مراسلتك بما في ذلك طلبات الرسائل','ru':'Любой может написать вам, включая запросы сообщений'},
+  'messageFollowingDesc': {'tr':'Yalnızca senin takip ettiğin hesaplar','en':'Only accounts you follow','de':'Nur Konten, denen du folgst','ar':'الحسابات التي تتابعها فقط','ru':'Только аккаунты, на которые вы подписаны'},
+  'messageFriendsDesc': {'tr':'Yalnızca arkadaşların','en':'Only your friends','de':'Nur deine Freunde','ar':'أصدقاؤك فقط','ru':'Только ваши друзья'},
+  'messageNoneDesc': {'tr':'Yeni özel mesaj kabul etme','en':'Do not accept new private messages','de':'Keine neuen privaten Nachrichten annehmen','ar':'عدم قبول رسائل خاصة جديدة','ru':'Не принимать новые личные сообщения'},
+  'activityLoadFailed': {'tr':'Aktiviteler yüklenemedi','en':'Activity could not be loaded','de':'Aktivität konnte nicht geladen werden','ar':'تعذر تحميل النشاط','ru':'Не удалось загрузить активность'},
+  'checkConnectionRetry': {'tr':'İnternet bağlantını kontrol edip tekrar dene.','en':'Check your internet connection and try again.','de':'Prüfe deine Internetverbindung und versuche es erneut.','ar':'تحقق من اتصال الإنترنت وحاول مرة أخرى.','ru':'Проверьте интернет-соединение и попробуйте снова.'},
+  'noActivity': {'tr':'Henüz yeni aktivite yok','en':'No new activity yet','de':'Noch keine neue Aktivität','ar':'لا يوجد نشاط جديد بعد','ru':'Новой активности пока нет'},
+  'noActivitySub': {'tr':'Beğeni, yorum ve güvenlik bildirimleri burada görünür.','en':'Likes, comments and security notifications appear here.','de':'Likes, Kommentare und Sicherheitsmeldungen erscheinen hier.','ar':'تظهر الإعجابات والتعليقات وإشعارات الأمان هنا.','ru':'Здесь отображаются лайки, комментарии и уведомления безопасности.'},
   'noPeopleFound': {'tr':'Aramana uygun kişi bulunamadı.','en':'No people matched your search.','de':'Keine passende Person gefunden.','ar':'لم يتم العثور على أشخاص مطابقين للبحث.','ru':'Подходящие пользователи не найдены.'},
   'messageNotAllowed': {'tr':'Bu hesap gizlilik ayarları nedeniyle senden yeni mesaj kabul etmiyor.','en':'This account is not accepting new messages from you because of its privacy settings.','de':'Dieses Konto akzeptiert aufgrund seiner Datenschutzeinstellungen keine neuen Nachrichten von dir.','ar':'هذا الحساب لا يقبل رسائل جديدة منك بسبب إعدادات الخصوصية.','ru':'Этот аккаунт не принимает от вас новые сообщения из-за настроек конфиденциальности.'},
   'unblock': {'tr':'Engeli kaldır','en':'Unblock','de':'Entsperren','ar':'إلغاء الحظر','ru':'Разблокировать'},
@@ -686,6 +695,24 @@ String sohbetFiltreEtiketi(String kod){
     case 'Arkadaşlar': return t('friends');
     case 'Gruplar': return t('groups');
     default: return kod;
+  }
+}
+String mesajIzinEtiketi(String kod){
+  switch(kod){
+    case 'all': return t('everyone');
+    case 'following': return t('followingPeople');
+    case 'friends': return t('friends');
+    case 'none': return t('nobody');
+    default: return kod;
+  }
+}
+String mesajIzinAciklama(String kod){
+  switch(kod){
+    case 'all': return t('messageEveryoneDesc');
+    case 'following': return t('messageFollowingDesc');
+    case 'friends': return t('messageFriendsDesc');
+    case 'none': return t('messageNoneDesc');
+    default: return '';
   }
 }
 Future<void> diliDegistir(String dil) async {uygulamaDili.value=dil;final h=await SharedPreferences.getInstance();await h.setString('uygulama_dili',dil);}
@@ -13764,11 +13791,11 @@ class AktivitePage extends StatelessWidget {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     return Theme(data:ThemeData.light().copyWith(scaffoldBackgroundColor:Colors.white,appBarTheme:const AppBarTheme(backgroundColor:Colors.white,foregroundColor:Colors.black,elevation:0),dividerColor:const Color(0xFFE8E9ED)),child:Scaffold(
       backgroundColor:Colors.white,
-      appBar: AppBar(title: const Text('Aktivite',style:TextStyle(fontWeight:FontWeight.w900)),actions:[IconButton(tooltip:'Tümünü okundu yap',onPressed:()async{if(uid==null)return;final q=await FirebaseFirestore.instance.collection('notifications').where('toUid',isEqualTo:uid).get();final b=FirebaseFirestore.instance.batch();for(final d in q.docs){b.set(d.reference,{'read':true},SetOptions(merge:true));}await b.commit();},icon:const Icon(Icons.done_all_rounded,color:Color(0xFF20B86A)))]),
+      appBar: AppBar(title: Text(t('activity'),style:const TextStyle(fontWeight:FontWeight.w900)),actions:[IconButton(tooltip:t('markAllRead'),onPressed:()async{if(uid==null)return;final q=await FirebaseFirestore.instance.collection('notifications').where('toUid',isEqualTo:uid).get();final b=FirebaseFirestore.instance.batch();for(final d in q.docs){b.set(d.reference,{'read':true},SetOptions(merge:true));}await b.commit();},icon:const Icon(Icons.done_all_rounded,color:Color(0xFF20B86A)))]),
       body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
         stream: uid == null ? null : FirebaseFirestore.instance.collection('notifications').where('toUid', isEqualTo: uid).limit(100).snapshots(),
         builder: (_, s) {
-          if(s.hasError)return const Center(child:Column(mainAxisSize:MainAxisSize.min,children:[Icon(Icons.cloud_off_rounded,color:Colors.redAccent,size:52),SizedBox(height:10),Text('Aktiviteler yüklenemedi',style:TextStyle(color:Colors.black,fontWeight:FontWeight.w800)),Text('İnternet bağlantını kontrol edip tekrar dene.',style:TextStyle(color:Colors.black54))]));
+          if(s.hasError)return Center(child:Column(mainAxisSize:MainAxisSize.min,children:[const Icon(Icons.cloud_off_rounded,color:Colors.redAccent,size:52),const SizedBox(height:10),Text(t('activityLoadFailed'),style:const TextStyle(color:Colors.black,fontWeight:FontWeight.w800)),Text(t('checkConnectionRetry'),style:const TextStyle(color:Colors.black54))]));
           if(s.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator(color:mor));
           final docs = (s.data?.docs ?? []).toList()
             ..sort((a, b) {
@@ -13778,7 +13805,7 @@ class AktivitePage extends StatelessWidget {
               final bd = bt is Timestamp ? bt.toDate() : DateTime.fromMillisecondsSinceEpoch(0);
               return bd.compareTo(ad);
             });
-          if (docs.isEmpty) return const Center(child: Column(mainAxisSize:MainAxisSize.min,children:[CircleAvatar(radius:36,backgroundColor:Color(0xFFF1E9FF),child:Icon(Icons.notifications_none_rounded,color:mor,size:38)),SizedBox(height:13),Text('Henüz yeni aktivite yok',style:TextStyle(color:Colors.black,fontSize:18,fontWeight:FontWeight.w900)),Text('Beğeni, yorum ve güvenlik bildirimleri burada görünür.',textAlign:TextAlign.center,style:TextStyle(color:Colors.black54))]));
+          if (docs.isEmpty) return Center(child: Column(mainAxisSize:MainAxisSize.min,children:[const CircleAvatar(radius:36,backgroundColor:Color(0xFFF1E9FF),child:Icon(Icons.notifications_none_rounded,color:mor,size:38)),const SizedBox(height:13),Text(t('noActivity'),style:const TextStyle(color:Colors.black,fontSize:18,fontWeight:FontWeight.w900)),Text(t('noActivitySub'),textAlign:TextAlign.center,style:const TextStyle(color:Colors.black54))]));
           return ListView.separated(padding:const EdgeInsets.fromLTRB(12,8,12,24),separatorBuilder:(_,__)=>const Divider(height:1,indent:72),itemCount:docs.length,itemBuilder:(_,i){final d=docs[i];
             final v = d.data();
             final tur=(v['type']??'').toString(),okundu=v['read']==true,foto=(v['photoUrl']??'').toString();
@@ -14885,12 +14912,12 @@ class _TercihlerPageState extends State<TercihlerPage> {
         ];
       case 'Mesaj izinleri':
         return [
-          const Padding(padding:EdgeInsets.fromLTRB(22,16,22,8),child:Text('Kim mesaj atabilir?',style:TextStyle(fontSize:18,fontWeight:FontWeight.w900))),
-          for(final e in const [('all','Herkes','Mesaj istekleri dahil herkes yazabilir'),('following','Takip ettiklerim','Yalnızca senin takip ettiğin hesaplar'),('friends','Arkadaşlar','Yalnızca arkadaşların'),('none','Kimse','Yeni özel mesaj kabul etme')])
+          Padding(padding:const EdgeInsets.fromLTRB(22,16,22,8),child:Text(t('whoCanMessage'),style:const TextStyle(fontSize:18,fontWeight:FontWeight.w900))),
+          for(final kod in const ['all','following','friends','none'])
             RadioListTile<String>(
-              value:e.$1,groupValue:mesajIzni,
-              title:Text(e.$2,style:const TextStyle(fontWeight:FontWeight.w700)),
-              subtitle:Text(e.$3),
+              value:kod,groupValue:mesajIzni,
+              title:Text(mesajIzinEtiketi(kod),style:const TextStyle(fontWeight:FontWeight.w700)),
+              subtitle:Text(mesajIzinAciklama(kod)),
               onChanged:(v)async{
                 if(v==null)return;
                 setState(()=>mesajIzni=v);
