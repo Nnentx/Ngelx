@@ -69,6 +69,12 @@ jobs:
           npm install --no-save firebase @firebase/rules-unit-testing firebase-tools
           npx firebase emulators:exec --only firestore --project demo-ngelx "node tools/firestore_rules_test.mjs"
 
+      - name: Sabit debug imzasini geri yukle
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: ngelx-stable-debug-keystore-v1
+
       - name: Debug APK derle
         working-directory: app
         run: |
