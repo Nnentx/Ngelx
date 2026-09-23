@@ -5312,17 +5312,25 @@ class _GrubaKatilPageState extends State<GrubaKatilPage>{
 
       await chat.update({
         'members':FieldValue.arrayUnion([me]),
+        'formerMembers':FieldValue.arrayRemove([me]),
         'hiddenFor':FieldValue.arrayRemove([me]),
         'updatedAt':FieldValue.serverTimestamp(),
       });
-      await chat.collection('messages').add({
-        'senderId':me,
-        'type':'system',
-        'systemAction':'member_joined',
-        'actorUid':me,
-        'text':'Yeni bir üye gruba katıldı.',
-        'createdAt':FieldValue.serverTimestamp(),
-      });
+      try{
+        final profil=await FirebaseFirestore.instance.collection('users').doc(me).get().timeout(const Duration(seconds:5));
+        final pv=profil.data()??<String,dynamic>{};
+        final isim=(pv['displayName']??pv['username']??'Bir üye').toString();
+        final olay=isim+' gruba katıldı.';
+        await chat.collection('messages').add({
+          'senderId':me,
+          'type':'system',
+          'systemAction':'member_joined',
+          'actorUid':me,
+          'text':olay,
+          'createdAt':FieldValue.serverTimestamp(),
+        });
+        await chat.set({'lastMessage':olay,'updatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
+      }catch(_){}
       await ngelxGrupDavetMetaSenkronla(chat);
       if(mounted)Navigator.pushReplacement(context,MaterialPageRoute(builder:(_)=>GrupSohbetPage(chatId:chatId,ad:ad,foto:foto)));
     }on FirebaseException catch(e){
@@ -5510,6 +5518,34 @@ class _GrupOlusturPageState extends State<GrupOlusturPage>{
         'joinApproval':false,
         'mutedFor':<String>[],
       }).timeout(const Duration(seconds:12));
+      try{
+        final profil=await FirebaseFirestore.instance.collection('users').doc(u.uid).get().timeout(const Duration(seconds:5));
+        final pv=profil.data()??<String,dynamic>{};
+        final ekleyen=(pv['displayName']??pv['username']??'Grup kurucusu').toString();
+        final secilenAdlar=adaylar.where((d)=>secilen.contains(d.id)).map((d){
+          final v=d.data();
+          return (v['displayName']??v['username']??'Bir üye').toString();
+        }).toList();
+        String birlestir(List<String> adlar){
+          if(adlar.isEmpty)return '';
+          if(adlar.length==1)return adlar.first;
+          if(adlar.length==2)return adlar.first+' ve '+adlar.last;
+          return adlar.sublist(0,adlar.length-1).join(', ')+' ve '+adlar.last;
+        }
+        final gorunen=secilenAdlar.length<=4?secilenAdlar:secilenAdlar.take(4).toList();
+        final devam=secilenAdlar.length>4?' ve '+(secilenAdlar.length-4).toString()+' kişi daha':'';
+        final olay=ekleyen+', '+birlestir(gorunen)+devam+' adlı üyeleri gruba ekledi.';
+        await ref.collection('messages').add({
+          'senderId':u.uid,
+          'type':'system',
+          'systemAction':'member_added',
+          'actorUid':u.uid,
+          'targetUids':secilen.toList(),
+          'text':olay,
+          'createdAt':FieldValue.serverTimestamp(),
+        });
+        await ref.set({'lastMessage':olay,'updatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
+      }catch(_){}
       // Sohbet ekranını, grup belgesi Firestore'a kesin olarak yazıldıktan sonra aç.
       // Böylece messages alt koleksiyonu için üyelik kuralı ilk açılışta yarış durumuna girmez.
       if(mounted){
@@ -11138,9 +11174,35 @@ class GrupKatilmaIstekleriPage extends StatelessWidget{
     final chat=FirebaseFirestore.instance.collection('chats').doc(chatId);
     final batch=FirebaseFirestore.instance.batch();
     batch.set(d.reference,{'status':onay?'accepted':'rejected','decidedAt':FieldValue.serverTimestamp(),'decidedBy':me},SetOptions(merge:true));
-    if(onay)batch.update(chat,{'members':FieldValue.arrayUnion([uid]),'hiddenFor':FieldValue.arrayRemove([uid])});
+    if(onay)batch.update(chat,{
+      'members':FieldValue.arrayUnion([uid]),
+      'formerMembers':FieldValue.arrayRemove([uid]),
+      'hiddenFor':FieldValue.arrayRemove([uid]),
+      'updatedAt':FieldValue.serverTimestamp(),
+    });
     await batch.commit();
     if(onay){
+      try{
+        final profiller=await Future.wait([
+          FirebaseFirestore.instance.collection('users').doc(me).get(),
+          FirebaseFirestore.instance.collection('users').doc(uid).get(),
+        ]);
+        final ekleyenV=profiller[0].data()??<String,dynamic>{};
+        final eklenenV=profiller[1].data()??<String,dynamic>{};
+        final ekleyen=(ekleyenV['displayName']??ekleyenV['username']??'Bir yönetici').toString();
+        final eklenen=(eklenenV['displayName']??eklenenV['username']??'Bir üye').toString();
+        final olay=ekleyen+', '+eklenen+' adlı üyeyi gruba ekledi.';
+        await chat.collection('messages').add({
+          'senderId':me,
+          'type':'system',
+          'systemAction':'member_added',
+          'actorUid':me,
+          'targetUids':<String>[uid],
+          'text':olay,
+          'createdAt':FieldValue.serverTimestamp(),
+        });
+        await chat.set({'lastMessage':olay,'updatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
+      }catch(_){}
       await ngelxGrupDavetMetaSenkronla(chat);
       unawaited(uygulamaBildirimiGonder(toUid:uid,fromUid:me,tur:'group',metin:'grup katılma isteğini onayladı',belgeId:chatId).catchError((_){ }));
     }
