@@ -252,3 +252,8 @@
 - Özel sohbette 30 MB'a kadar dosya gönderimi artık dosyanın tamamını RAM'e almıyor; grup sohbetindeki gibi diskten stream yükleme kullanıyor.
 - Özel sohbet fotoğraf yüklemesindeki dış 12 saniyelik erken zaman aşımı 60 saniyeye çıkarıldı; yavaş bağlantıda gereksiz başarısızlık azaltıldı.
 - CI sözleşmesine özel sohbet dosyasının yeniden `readAsBytes()` ile tamamen belleğe alınmasını engelleyen kontrol eklendi.
+
+### 2026-09-23 mesaj gizliliği — mevcut sohbet uyumu
+- Mesaj gizliliği sonradan sıkılaştırılsa bile daha önce karşı tarafça kabul edilmiş özel sohbetler profil ve Yeni sohbet ekranından yeniden açılabiliyor.
+- Kabul edilmemiş eski bir mesaj isteği ise hedef hesabın güncel `messagePermission` kuralını atlamıyor.
+- Profil ve Yeni sohbet giriş noktaları artık `SohbetPage` içindeki gerçek gönderim izni davranışıyla aynı mantığı izliyor.
