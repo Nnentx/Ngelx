@@ -45,10 +45,14 @@ jobs:
         shell: bash
         run: |
           set -e
+          echo "Worker yayilimi icin bekleniyor..."
+          sleep 15
           for url in \
             "https://ngelx-media.alihancaglar76.workers.dev/health" \
             "https://ngelx-upload.alihancaglar76.workers.dev/health"; do
             echo "Kontrol: $url"
-            curl --fail --silent --show-error --retry 4 --retry-delay 2 --connect-timeout 10 "$url"
+            curl --fail --silent --show-error \
+              --retry 10 --retry-all-errors --retry-delay 3 \
+              --connect-timeout 10 --max-time 20 "$url"
             echo
           done
