@@ -8440,7 +8440,7 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
                   Text(uyeler.length.toString()+' üye',style:const TextStyle(color:ngelxPremiumMuted,fontSize:13,fontWeight:FontWeight.w700)),
                   const SizedBox(height:16),
                   Row(children:[
-                    Expanded(child:_grupKisayol(Icons.person_add_alt_1_rounded,'Ekle',uyeler.length>=60?null:()=>yonetici?uyeEkle(uyeler):Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupDavetPage(chatId:widget.chatId))))),
+                    Expanded(child:_grupKisayol(Icons.person_add_alt_1_rounded,'Ekle',uyeler.length>=60?null:()=>uyeEkle(uyeler))),
                     const SizedBox(width:7),
                     Expanded(child:_grupKisayol(Icons.text_fields_rounded,'Takma Adlar',()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupTakmaAdlarPage(chatId:widget.chatId))))),
                     const SizedBox(width:7),
