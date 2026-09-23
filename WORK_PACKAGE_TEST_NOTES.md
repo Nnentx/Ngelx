@@ -160,3 +160,13 @@
 - Çalışan özellikleri bozabilecek agresif silme yapılmayacak; yalnızca derleyici tarafından kullanılmadığı doğrulanan veya davranışı tamamen yinelenen kod kaldırılacak.
 - Bu ilk temizlikte kullanılmayan medya hata değişkeni, Üret içindeki kullanılmayan kapak değişkeni, kullanılmayan grup aktif-üye yardımcı kodu, kullanılmayan arama durumu değişkeni ve Profil içindeki kullanılmayan takip snapshot değişkeni kaldırıldı.
 - Her temizlik turundan sonra analiz + test + APK derleme adımları yeşil olmadan paket hazır sayılmayacak.
+
+### 2026-09-23 profil — çoklu hesap ve hesap değiştirme
+- NgelX’te aynı cihazda **en fazla 5 kayıtlı hesap** tutulması planlanıyor.
+- Profil ekranında kullanıcı adının yanında küçük bir `⌄` oku olacak; dokununca alttan beyaz bir hesap seçme paneli açılacak.
+- Panelde kayıtlı hesaplar profil fotoğrafı + ad + `@kullanıcıadı` ile listelenecek; aktif hesabın yanında `✓` gösterilecek.
+- Panelin altında **Başka hesap ekle** ve **Hesapları yönet** seçenekleri bulunacak.
+- Hesaba dokununca diğer hesabın oturumu kapanmadan doğrudan hesap değiştirilecek.
+- **Çıkış yap** ile **Hesap değiştir** ayrı işlemler olacak.
+- İkinci erişim noktası: Ayarlar ve gizlilik > Hesaplar > Hesap değiştir / Hesap ekle.
+- Her hesabın oturum bilgisi ayrı ve güvenli tutulacak; hesaplar birbirinin mesaj, bildirim veya taslak verilerini karıştırmayacak.
