@@ -2193,7 +2193,7 @@ Future<void> ngelxOzeldenPaylas(
                     },
                   ),
                 ),
-                SafeArea(top:false,child:Padding(padding:const EdgeInsets.fromLTRB(14,8,14,12),child:SizedBox(width:double.infinity,height:52,child:FilledButton.icon(onPressed:secilenler.isEmpty||gonderiliyor?null:()async{setSheet(()=>gonderiliyor=true);try{for(final uid in secilenler){await ngelxKisiyeIcerikGonder(ben:ben,hedefUid:uid,icerikId:icerikId,aciklama:aciklama);}if(!icerikId.startsWith('ornek_'))await FirebaseFirestore.instance.collection('videos').doc(icerikId).set({'shareCount':FieldValue.increment(secilenler.length)},SetOptions(merge:true));if(sheetContext.mounted)Navigator.pop(sheetContext);if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('${secilenler.length} kişiye gönderildi ✅')));}catch(e){setSheet(()=>gonderiliyor=false);if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Gönderilemedi, tekrar dene: $e')));}},icon:gonderiliyor?const SizedBox(width:20,height:20,child:CircularProgressIndicator(strokeWidth:2)):const Icon(Icons.send_rounded),label:Text(secilenler.isEmpty?'Göndermek için kişi seç':'${secilenler.length} kişiye gönder'))))),
+                SafeArea(top:false,child:Padding(padding:const EdgeInsets.fromLTRB(14,8,14,12),child:SizedBox(width:double.infinity,height:52,child:FilledButton.icon(onPressed:secilenler.isEmpty||gonderiliyor?null:()async{setSheet(()=>gonderiliyor=true);try{for(final uid in secilenler){await ngelxKisiyeIcerikGonder(ben:ben,hedefUid:uid,icerikId:icerikId,aciklama:aciklama);}await FirebaseFirestore.instance.collection('videos').doc(icerikId).set({'shareCount':FieldValue.increment(secilenler.length)},SetOptions(merge:true));if(sheetContext.mounted)Navigator.pop(sheetContext);if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('${secilenler.length} kişiye gönderildi ✅')));}catch(e){setSheet(()=>gonderiliyor=false);if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Gönderilemedi, tekrar dene: $e')));}},icon:gonderiliyor?const SizedBox(width:20,height:20,child:CircularProgressIndicator(strokeWidth:2)):const Icon(Icons.send_rounded),label:Text(secilenler.isEmpty?'Göndermek için kişi seç':'${secilenler.length} kişiye gönder'))))),
               ],
             ),
           ),
@@ -2208,18 +2208,16 @@ Future<void> ngelxPaylasimMenusu(
   required String icerikId,
   required String aciklama,
 }) async {
-  if(!icerikId.startsWith('ornek_')){
-    try{
-      final d=await FirebaseFirestore.instance.collection('videos').doc(icerikId).get();
-      final v=d.data()??<String,dynamic>{};
-      final sahibi=(v['ownerId']??'').toString();
-      final ben=FirebaseAuth.instance.currentUser?.uid;
-      if(v['allowReshare']==false&&ben!=sahibi){
-        if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bu içerik yeniden paylaşıma kapalı.')));
-        return;
-      }
-    }catch(_){}
-  }
+  try{
+    final d=await FirebaseFirestore.instance.collection('videos').doc(icerikId).get();
+    final v=d.data()??<String,dynamic>{};
+    final sahibi=(v['ownerId']??'').toString();
+    final ben=FirebaseAuth.instance.currentUser?.uid;
+    if(v['allowReshare']==false&&ben!=sahibi){
+      if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bu içerik yeniden paylaşıma kapalı.')));
+      return;
+    }
+  }catch(_){}
   final link = ngelxIcerikLink(icerikId);
   final metin = [
     'NgelX’te bunu gördüm ✨',
@@ -2279,12 +2277,10 @@ Future<void> ngelxPaylasimMenusu(
                 await SharePlus.instance.share(
                   ShareParams(text: metin, title: 'NgelX paylaşımı'),
                 );
-                if (!icerikId.startsWith('ornek_')) {
-                  await FirebaseFirestore.instance.collection('videos').doc(icerikId).set(
-                    {'shareCount': FieldValue.increment(1)},
-                    SetOptions(merge: true),
-                  );
-                }
+                await FirebaseFirestore.instance.collection('videos').doc(icerikId).set(
+                  {'shareCount': FieldValue.increment(1)},
+                  SetOptions(merge: true),
+                );
               },
             ),
             ListTile(
@@ -3051,9 +3047,7 @@ class AkisMetaSatiri extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (icerikId.isEmpty || icerikId.startsWith('ornek_')) {
-      return const SizedBox.shrink();
-    }
+    if (icerikId.isEmpty) return const SizedBox.shrink();
     final ref = FirebaseFirestore.instance.collection('videos').doc(icerikId);
     return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
       stream: ref.snapshots(),
