@@ -61,6 +61,13 @@ const ngelxGroupGreen = Color(0xFF0A9F45);
 const ngelxGroupGreen2 = Color(0xFF16B957);
 const ngelxGroupGreenSoft = Color(0xFFEAF8EF);
 const ngelxGroupGreenHeader = Color(0xFFB9F2C8);
+const ngelxPrivateBlue = Color(0xFF146EF5);
+const ngelxPrivateBlue2 = Color(0xFF4B9DFF);
+const ngelxPrivateBlueSoft = Color(0xFFEAF3FF);
+const ngelxPrivateBlueHeader = Color(0xFFDDEBFF);
+const ngelxPrivateBlueCanvas = Color(0xFFF6FAFF);
+const ngelxPrivateBlueBorder = Color(0xFFD8E8FF);
+const ngelxPrivateBlueInk = Color(0xFF10213A);
 
 const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.57');
 const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '211');
@@ -122,6 +129,36 @@ class NgelXPremiumCard extends StatelessWidget {
         borderRadius:BorderRadius.circular(radius),
         border:Border.all(color:ngelxPremiumBorder.withValues(alpha:.78)),
         boxShadow:const [BoxShadow(color:Color(0x12000000),blurRadius:18,offset:Offset(0,7))],
+      ),
+      child:child,
+    );
+    return onTap==null?box:InkWell(onTap:onTap,borderRadius:BorderRadius.circular(radius),child:box);
+  }
+}
+
+class NgelXPrivateCard extends StatelessWidget {
+  final Widget child;
+  final EdgeInsetsGeometry padding;
+  final EdgeInsetsGeometry? margin;
+  final double radius;
+  final VoidCallback? onTap;
+  const NgelXPrivateCard({
+    super.key,
+    required this.child,
+    this.padding=const EdgeInsets.all(14),
+    this.margin,
+    this.radius=22,
+    this.onTap,
+  });
+  @override Widget build(BuildContext context){
+    final box=Container(
+      margin:margin,
+      padding:padding,
+      decoration:BoxDecoration(
+        color:Colors.white,
+        borderRadius:BorderRadius.circular(radius),
+        border:Border.all(color:ngelxPrivateBlueBorder),
+        boxShadow:const [BoxShadow(color:Color(0x100B5FD7),blurRadius:18,offset:Offset(0,7))],
       ),
       child:child,
     );
