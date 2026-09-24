@@ -5149,25 +5149,46 @@ class _KesfetPageState extends State<KesfetPage> {
       backgroundColor:Colors.white,
       showDragHandle:true,
       shape:const RoundedRectangleBorder(borderRadius:BorderRadius.vertical(top:Radius.circular(26))),
-      builder:(c)=>SafeArea(child:Padding(
-        padding:const EdgeInsets.fromLTRB(18,2,18,18),
-        child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
-          Text(t('exploreView'),style:const TextStyle(fontSize:20,fontWeight:FontWeight.w900)),
-          const SizedBox(height:8),
-          ...[
-            (Icons.live_tv_rounded,t('live')),
-            (Icons.local_fire_department_rounded,t('trend')),
-            (Icons.person_rounded,t('people')),
-            (Icons.groups_rounded,t('groups')),
-          ].asMap().entries.map((e)=>ListTile(
-            contentPadding:EdgeInsets.zero,
-            leading:Icon(e.value.$1,color:e.key==kategori?mor:Colors.black54),
-            title:Text(e.value.$2,style:TextStyle(fontWeight:e.key==kategori?FontWeight.w900:FontWeight.w600)),
-            trailing:e.key==kategori?const Icon(Icons.check_circle_rounded,color:mor):null,
-            onTap:()=>Navigator.pop(c,e.key),
-          )),
-        ]),
-      )),
+      builder:(c)=>Theme(
+        data:ThemeData.light().copyWith(
+          scaffoldBackgroundColor:Colors.white,
+          canvasColor:Colors.white,
+          colorScheme:ColorScheme.fromSeed(seedColor:mor,brightness:Brightness.light),
+          listTileTheme:const ListTileThemeData(
+            textColor:Colors.black87,
+            iconColor:Colors.black54,
+          ),
+        ),
+        child:SafeArea(child:Padding(
+          padding:const EdgeInsets.fromLTRB(18,2,18,18),
+          child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
+            Text(
+              t('exploreView'),
+              style:const TextStyle(color:Colors.black87,fontSize:20,fontWeight:FontWeight.w900),
+            ),
+            const SizedBox(height:8),
+            ...[
+              (Icons.live_tv_rounded,t('live')),
+              (Icons.local_fire_department_rounded,t('trend')),
+              (Icons.person_rounded,t('people')),
+              (Icons.groups_rounded,t('groups')),
+            ].asMap().entries.map((e)=>ListTile(
+              contentPadding:EdgeInsets.zero,
+              leading:Icon(e.value.$1,color:e.key==kategori?mor:Colors.black54),
+              title:Text(
+                e.value.$2,
+                style:TextStyle(
+                  color:Colors.black87,
+                  fontSize:16,
+                  fontWeight:e.key==kategori?FontWeight.w900:FontWeight.w700,
+                ),
+              ),
+              trailing:e.key==kategori?const Icon(Icons.check_circle_rounded,color:mor):null,
+              onTap:()=>Navigator.pop(c,e.key),
+            )),
+          ]),
+        )),
+      ),
     );
     if(secim!=null&&mounted)setState(()=>kategori=secim);
   }
