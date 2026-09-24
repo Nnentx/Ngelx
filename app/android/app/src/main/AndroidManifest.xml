@@ -13,7 +13,7 @@
     <application
         android:label="NgelX"
         android:name="${applicationName}"
-        android:icon="@drawable/ngelx_launcher">
+        android:icon="@drawable/ngelx_launcher_mark">
         <activity
             android:name=".MainActivity"
             android:exported="true"

@@ -13,16 +13,8 @@ if (keystorePropertiesFile.exists()) {
     keystorePropertiesFile.inputStream().use { keystoreProperties.load(it) }
 }
 
-val ngelxBrandResDir = layout.buildDirectory.dir("generated/ngelxBrandRes").get().asFile
-val prepareNgelxBrandResources = tasks.register<Copy>("prepareNgelxBrandResources") {
-    from(rootProject.file("../assets/ngelx_logo.png"))
-    into(file("${ngelxBrandResDir}/drawable-nodpi"))
-    rename { "ngelx_launcher_mark.png" }
-}
-
 android {
     namespace = "com.nnentx.ngelx_app"
-    sourceSets.getByName("main").res.srcDir(ngelxBrandResDir)
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -86,12 +78,6 @@ android {
 kotlin {
     compilerOptions {
         jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
-    }
-}
-
-tasks.configureEach {
-    if (name.startsWith("merge") && name.endsWith("Resources")) {
-        dependsOn(prepareNgelxBrandResources)
     }
 }
 
