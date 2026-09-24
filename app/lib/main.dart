@@ -14304,7 +14304,30 @@ class _SohbetPageState extends State<SohbetPage> {
               if(sonBenim?.id==d.id&&digerOkuma is Timestamp&&d.data()['createdAt'] is Timestamp){
                 goruldu=digerOkuma.millisecondsSinceEpoch>=(d.data()['createdAt'] as Timestamp).millisecondsSinceEpoch;
               }
-              return ozelMesajKarti(d,fontSize:mesajYaziBoyutu,goruldu:goruldu,quickReaction:hizliEmoji);
+              final hamGun=d.data()['createdAt']??d.data()['clientCreatedAt'];
+              final gunEtiketi=_ozelSohbetGunEtiketi(hamGun);
+              var gunGoster=i==1;
+              if(i>1){
+                final onceki=docs[i-2].data();
+                final oncekiEtiket=_ozelSohbetGunEtiketi(onceki['createdAt']??onceki['clientCreatedAt']);
+                gunGoster=gunEtiketi.isNotEmpty&&gunEtiketi!=oncekiEtiket;
+              }
+              return Column(children:[
+                if(gunGoster&&gunEtiketi.isNotEmpty)
+                  Padding(
+                    padding:const EdgeInsets.symmetric(vertical:10),
+                    child:Container(
+                      padding:const EdgeInsets.symmetric(horizontal:12,vertical:6),
+                      decoration:BoxDecoration(
+                        color:Colors.white.withValues(alpha:.92),
+                        borderRadius:BorderRadius.circular(16),
+                        border:Border.all(color:ngelxPrivateBlueBorder),
+                      ),
+                      child:Text(gunEtiketi,style:const TextStyle(color:ngelxPrivateBlue,fontSize:11,fontWeight:FontWeight.w800)),
+                    ),
+                  ),
+                ozelMesajKarti(d,fontSize:mesajYaziBoyutu,goruldu:goruldu,quickReaction:hizliEmoji),
+              ]);
             },
           );
         },
@@ -14315,17 +14338,38 @@ class _SohbetPageState extends State<SohbetPage> {
         final taze=at is Timestamp&&DateTime.now().difference(at.toDate()).inSeconds<6;
         if(!yaziyor||!taze)return const SizedBox.shrink();
         return Padding(
-          padding:const EdgeInsets.fromLTRB(18,4,18,2),
-          child:Align(alignment:Alignment.centerLeft,child:Text('${widget.ad} yazıyor…',style:const TextStyle(color:Colors.black54,fontSize:12,fontStyle:FontStyle.italic))),
+          padding:const EdgeInsets.fromLTRB(14,4,14,4),
+          child:Align(
+            alignment:Alignment.centerLeft,
+            child:Container(
+              padding:const EdgeInsets.symmetric(horizontal:11,vertical:7),
+              decoration:BoxDecoration(color:ngelxPrivateBlueSoft,borderRadius:BorderRadius.circular(16),border:Border.all(color:ngelxPrivateBlueBorder)),
+              child:Row(mainAxisSize:MainAxisSize.min,children:[
+                const Icon(Icons.more_horiz_rounded,color:ngelxPrivateBlue,size:17),
+                const SizedBox(width:5),
+                Text('${widget.ad} yazıyor…',style:const TextStyle(color:ngelxPrivateBlueInk,fontSize:11.5,fontWeight:FontWeight.w700)),
+              ]),
+            ),
+          ),
         );
       }),
-      if(mentionOnerileri.isNotEmpty)Container(color:Colors.white.withValues(alpha:.96),child:Column(mainAxisSize:MainAxisSize.min,children:mentionOnerileri.map((u)=>ListTile(dense:true,leading:CircleAvatar(radius:15,child:Icon(u['uid']=='all'?Icons.groups:Icons.person,size:17)),title:Text(u['name']??'Kullanıcı'),subtitle:Text('@${u['username']??''}'),onTap:()=>mentionEkle(u['username']??''))).toList())),
+      if(mentionOnerileri.isNotEmpty)Container(
+        margin:const EdgeInsets.fromLTRB(10,4,10,4),
+        decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(18),border:Border.all(color:ngelxPrivateBlueBorder),boxShadow:const [BoxShadow(color:Color(0x100B5FD7),blurRadius:12)]),
+        child:Column(mainAxisSize:MainAxisSize.min,children:mentionOnerileri.map((u)=>ListTile(
+          dense:true,
+          leading:const CircleAvatar(radius:15,backgroundColor:ngelxPrivateBlueSoft,child:Icon(Icons.person_rounded,color:ngelxPrivateBlue,size:17)),
+          title:Text(u['name']??'Kullanıcı',style:const TextStyle(color:ngelxPrivateBlueInk,fontWeight:FontWeight.w800)),
+          subtitle:Text('@${u['username']??''}',style:const TextStyle(color:Colors.black54)),
+          onTap:()=>mentionEkle(u['username']??''),
+        )).toList()),
+      ),
       if(yanitMetin!=null)Container(
         margin:const EdgeInsets.fromLTRB(10,4,10,2),
         padding:const EdgeInsets.fromLTRB(12,8,4,8),
-        decoration:BoxDecoration(color:Colors.white.withValues(alpha:.94),borderRadius:BorderRadius.circular(14),border:const Border(left:BorderSide(color:Color(0xFF1836D8),width:3))),
+        decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(16),border:Border.all(color:ngelxPrivateBlueBorder),boxShadow:const [BoxShadow(color:Color(0x100B5FD7),blurRadius:10)]),
         child:Row(children:[
-          const Icon(Icons.reply_rounded,color:Color(0xFF1836D8),size:20),const SizedBox(width:8),
+          const Icon(Icons.reply_rounded,color:ngelxPrivateBlue,size:20),const SizedBox(width:8),
           Expanded(child:Text(yanitMetin!,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w600))),
           IconButton(onPressed:()=>setState((){yanitMesajId=null;yanitMetin=null;yanitGonderenUid=null;}),icon:const Icon(Icons.close_rounded,color:Colors.black54)),
         ]),
@@ -14348,7 +14392,7 @@ class _SohbetPageState extends State<SohbetPage> {
                   decoration:BoxDecoration(
                     color:Colors.white,
                     borderRadius:BorderRadius.circular(24),
-                    border:Border.all(color:const Color(0xFFE3E6EC)),
+                    border:Border.all(color:ngelxPrivateBlueBorder),
                     boxShadow:const [BoxShadow(color:Color(0x10000000),blurRadius:10,offset:Offset(0,3))],
                   ),
                   child:Row(children:[
@@ -14359,7 +14403,7 @@ class _SohbetPageState extends State<SohbetPage> {
                     Expanded(child:Row(mainAxisAlignment:MainAxisAlignment.spaceEvenly,children:List.generate(10,(i)=>Container(
                       width:3,
                       height:8.0+((i%5)*3),
-                      decoration:BoxDecoration(color:const Color(0xFF1836D8).withValues(alpha:.48),borderRadius:BorderRadius.circular(3)),
+                      decoration:BoxDecoration(color:const ngelxPrivateBlue.withValues(alpha:.48),borderRadius:BorderRadius.circular(3)),
                     )))),
                   ]),
                 ),
@@ -14370,7 +14414,7 @@ class _SohbetPageState extends State<SohbetPage> {
                 onPressed:sesKaydiIsleniyor?null:sesKaydiDegistir,
                 icon:Container(
                   width:44,height:44,
-                  decoration:const BoxDecoration(color:Color(0xFF1836D8),shape:BoxShape.circle),
+                  decoration:const BoxDecoration(color:ngelxPrivateBlue,shape:BoxShape.circle),
                   child:Center(
                     child:sesKaydiIsleniyor
                       ?const SizedBox(width:18,height:18,child:CircularProgressIndicator(strokeWidth:2,color:Colors.white))
@@ -14386,42 +14430,45 @@ class _SohbetPageState extends State<SohbetPage> {
                   final secim=await showModalBottomSheet<String>(
                     context:context,backgroundColor:Colors.white,showDragHandle:true,
                     builder:(c)=>Theme(data:ThemeData.light(),child:SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
-                      ListTile(leading:const Icon(Icons.bookmark_rounded,color:Color(0xFF1836D8)),title:const Text('Kaydedilenler',style:TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(c,'saved')),
-                      ListTile(leading:const Icon(Icons.attach_file_rounded,color:Color(0xFF1836D8)),title:const Text('Dosyalar',style:TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(c,'file')),
-                      ListTile(leading:const Icon(Icons.sports_esports_rounded,color:Color(0xFF1836D8)),title:const Text('Oyun',style:TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(c,'game')),
-                      ListTile(leading:const Icon(Icons.location_on_rounded,color:Color(0xFF1836D8)),title:const Text('Konum',style:TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(c,'location')),
+                      ListTile(leading:const Icon(Icons.bookmark_rounded,color:ngelxPrivateBlue),title:const Text('Kaydedilenler',style:TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(c,'saved')),
+                      ListTile(leading:const Icon(Icons.attach_file_rounded,color:ngelxPrivateBlue),title:const Text('Dosyalar',style:TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(c,'file')),
+                      ListTile(leading:const Icon(Icons.sports_esports_rounded,color:ngelxPrivateBlue),title:const Text('Oyun',style:TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(c,'game')),
+                      ListTile(leading:const Icon(Icons.location_on_rounded,color:ngelxPrivateBlue),title:const Text('Konum',style:TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(c,'location')),
                       const Divider(),
                       ListTile(leading:const Icon(Icons.camera_alt_outlined,color:Colors.blue),title:const Text('Kamera',style:TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(c,'camera')),
-                      ListTile(leading:const Icon(Icons.photo_library_outlined,color:Colors.blue),title:const Text('Fotoğraf',style:TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(c,'gallery')),
+                      ListTile(leading:const Icon(Icons.photo_library_outlined,color:ngelxPrivateBlue),title:const Text('Fotoğraf',style:TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(c,'gallery')),
+                      ListTile(leading:const Icon(Icons.video_library_outlined,color:ngelxPrivateBlue),title:const Text('Video',style:TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(c,'video')),
+                      ListTile(leading:const Icon(Icons.videocam_outlined,color:ngelxPrivateBlue),title:const Text('Video çek',style:TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(c,'videoCamera')),
                     ]))),
                   );
                   if(!mounted||secim==null)return;
                   await Future<void>.delayed(const Duration(milliseconds:320));
                   if(!mounted)return;
                   if(secim=='camera'||secim=='gallery')await medyaGonder(secim=='camera'?ImageSource.camera:ImageSource.gallery);
+                  else if(secim=='video'||secim=='videoCamera')await videoGonder(secim=='videoCamera'?ImageSource.camera:ImageSource.gallery);
                   else if(secim=='saved')await Navigator.push(context,MaterialPageRoute(builder:(_)=>const KaydedilenlerPage()));
                   else if(secim=='file')await dosyaGonder();
                   else if(secim=='game')await Navigator.push(context,MaterialPageRoute(builder:(_)=>const NgelXMiniOyunPage()));
                   else if(secim=='location')await konumGonder();
                 },
-                icon:const Icon(Icons.add_circle,color:Color(0xFF1836D8),size:29),
+                icon:const Icon(Icons.add_circle,color:ngelxPrivateBlue,size:29),
               ),
-              IconButton(onPressed:()=>medyaGonder(ImageSource.camera),icon:const Icon(Icons.camera_alt,color:Color(0xFF1836D8))),
-              IconButton(onPressed:()=>medyaGonder(ImageSource.gallery),icon:const Icon(Icons.photo_library,color:Color(0xFF1836D8))),
+              IconButton(onPressed:()=>medyaGonder(ImageSource.camera),icon:const Icon(Icons.camera_alt,color:ngelxPrivateBlue)),
+              IconButton(onPressed:()=>medyaGonder(ImageSource.gallery),icon:const Icon(Icons.photo_library,color:ngelxPrivateBlue)),
               IconButton(
                 tooltip:'Sesli mesaj',
                 onPressed:sesKaydiDegistir,
-                icon:const Icon(Icons.mic_rounded,color:Color(0xFF1836D8)),
+                icon:const Icon(Icons.mic_rounded,color:ngelxPrivateBlue),
               ),
               Expanded(child:TextField(
                 controller:mesaj,onChanged:mesajDegisti,onSubmitted:(_)=>gonder(),
                 decoration:InputDecoration(
-                  hintText:'Mesaj',filled:true,fillColor:const Color(0xFFF3F4F6),
+                  hintText:'Mesaj',filled:true,fillColor:ngelxPrivateBlueSoft,
                   contentPadding:const EdgeInsets.symmetric(horizontal:16,vertical:10),
                   border:OutlineInputBorder(borderRadius:BorderRadius.circular(24),borderSide:BorderSide.none),
                 ),
               )),
-              IconButton(tooltip:'Emoji seç',onPressed:emojiSec,icon:const Icon(Icons.emoji_emotions,color:Color(0xFF1836D8))),
+              IconButton(tooltip:'Emoji seç',onPressed:emojiSec,icon:const Icon(Icons.emoji_emotions,color:ngelxPrivateBlue)),
               ValueListenableBuilder<TextEditingValue>(
                 valueListenable:mesaj,
                 builder:(_,v,__){
@@ -14432,7 +14479,7 @@ class _SohbetPageState extends State<SohbetPage> {
                   );
                   return IconButton(
                     onPressed:gonderiliyor?null:gonder,
-                    icon:gonderiliyor?const SizedBox(width:20,height:20,child:CircularProgressIndicator(strokeWidth:2)):const Icon(Icons.send,color:Color(0xFF1836D8)),
+                    icon:gonderiliyor?const SizedBox(width:20,height:20,child:CircularProgressIndicator(strokeWidth:2)):const Icon(Icons.send,color:ngelxPrivateBlue),
                   );
                 },
               ),
