@@ -113,6 +113,18 @@ service cloud.firestore {
         && groupDoc(chatId).data.get('inviteCode', '') == code
         && groupDoc(chatId).data.get('groupDeleted', false) != true;
     }
+    function validPublicSelfJoin() {
+      return signedIn()
+        && resource.data.get('isGroup', false) == true
+        && resource.data.get('discoverable', false) == true
+        && resource.data.get('joinApproval', false) != true
+        && !(request.auth.uid in resource.data.get('members', []))
+        && resource.data.get('members', []).size() < resource.data.get('maxMembers', 60)
+        && request.resource.data.get('members', []) == resource.data.get('members', []).concat([request.auth.uid])
+        && request.resource.data.get('formerMembers', []) == resource.data.get('formerMembers', []).removeAll([request.auth.uid])
+        && request.resource.data.get('hiddenFor', []) == resource.data.get('hiddenFor', []).removeAll([request.auth.uid])
+        && onlyChanges(['members', 'formerMembers', 'hiddenFor', 'updatedAt']);
+    }
     function validSelfJoin(chatId) {
       let joinReq = get(/databases/$(database)/documents/chats/$(chatId)/joinRequests/$(request.auth.uid));
       let code = joinReq.data.get('inviteCode', '');
@@ -225,7 +237,11 @@ service cloud.firestore {
             && request.auth.uid in request.resource.data.get('admins', [])
           )
         );
-      allow read: if chatViewer();
+      allow read: if chatViewer() || (
+        signedIn()
+        && resource.data.get('isGroup', false) == true
+        && resource.data.get('discoverable', false) == true
+      );
       allow update: if (
         chatMember() && (
           (
@@ -244,7 +260,7 @@ service cloud.firestore {
             )
           )
         )
-      ) || validSelfJoin(chatId) || validFormerHide() || validFounderClose();
+      ) || validSelfJoin(chatId) || validPublicSelfJoin() || validFormerHide() || validFounderClose();
       allow delete: if false;
       match /messages/{messageId} {
         allow read: if signedIn() && (
