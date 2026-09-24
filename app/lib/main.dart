@@ -13849,19 +13849,118 @@ class _SohbetPageState extends State<SohbetPage> {
     if(fazla=='info'){await ozelMesajBilgisi(d);}
     else if(fazla=='pin')await d.reference.set({'pinned':v['pinned']!=true,'pinnedAt':FieldValue.serverTimestamp(),'pinnedBy':uid},SetOptions(merge:true));
     else if(fazla=='delete'){
-      final ok=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(
-        backgroundColor:Colors.white,title:const Text('Mesaj silinsin mi?'),content:const Text('Mesaj sohbetten kalıcı olarak kaldırılacak.'),
-        actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),FilledButton(style:FilledButton.styleFrom(backgroundColor:Colors.red),onPressed:()=>Navigator.pop(c,true),child:const Text('Sil'))],
-      ))??false;
+      final ok=await showDialog<bool>(
+        context:context,
+        builder:(dialogContext)=>Theme(
+          data:ThemeData.light().copyWith(
+            colorScheme:ColorScheme.fromSeed(seedColor:ngelxPrivateBlue),
+            dialogTheme:const DialogThemeData(backgroundColor:Colors.white,surfaceTintColor:Colors.transparent),
+          ),
+          child:AlertDialog(
+            backgroundColor:Colors.white,
+            surfaceTintColor:Colors.transparent,
+            insetPadding:const EdgeInsets.symmetric(horizontal:28,vertical:24),
+            contentPadding:const EdgeInsets.fromLTRB(24,6,24,4),
+            actionsPadding:const EdgeInsets.fromLTRB(18,6,18,16),
+            shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(26)),
+            icon:Container(
+              width:52,height:52,
+              decoration:BoxDecoration(color:const Color(0xFFFFECEE),borderRadius:BorderRadius.circular(18)),
+              child:const Icon(Icons.delete_outline_rounded,color:Color(0xFFE53935),size:27),
+            ),
+            title:const Text(
+              'Mesaj silinsin mi?',
+              textAlign:TextAlign.center,
+              style:TextStyle(color:ngelxPrivateBlueInk,fontWeight:FontWeight.w900,fontSize:20),
+            ),
+            content:const Text(
+              'Mesaj sohbetten kalıcı olarak kaldırılacak.',
+              textAlign:TextAlign.center,
+              style:TextStyle(color:Colors.black54,fontSize:14,height:1.35),
+            ),
+            actions:[
+              TextButton(
+                onPressed:()=>Navigator.pop(dialogContext,false),
+                child:const Text('Vazgeç',style:TextStyle(color:ngelxPrivateBlue,fontWeight:FontWeight.w800)),
+              ),
+              FilledButton(
+                style:FilledButton.styleFrom(
+                  backgroundColor:const Color(0xFFE53935),
+                  foregroundColor:Colors.white,
+                  padding:const EdgeInsets.symmetric(horizontal:24,vertical:12),
+                  shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(18)),
+                ),
+                onPressed:()=>Navigator.pop(dialogContext,true),
+                child:const Text('Sil',style:TextStyle(fontWeight:FontWeight.w900)),
+              ),
+            ],
+          ),
+        ),
+      )??false;
       if(ok)await d.reference.delete();
     }else if(fazla=='report'){
       if(mounted)await sikayetEt(context,hedefTuru:'mesaj',hedefId:widget.chatId+'/'+d.id,hedefUid:widget.digerUid);
     }else if(fazla=='edit'){
       final x=TextEditingController(text:metin);
-      final ok=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(
-        backgroundColor:Colors.white,title:const Text('Mesajı düzenle'),content:TextField(controller:x,maxLength:2000,maxLines:5),
-        actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('Kaydet'))],
-      ))??false;
+      final ok=await showDialog<bool>(
+        context:context,
+        builder:(dialogContext)=>Theme(
+          data:ThemeData.light().copyWith(
+            colorScheme:ColorScheme.fromSeed(seedColor:ngelxPrivateBlue),
+            dialogTheme:const DialogThemeData(backgroundColor:Colors.white,surfaceTintColor:Colors.transparent),
+            inputDecorationTheme:InputDecorationTheme(
+              filled:true,
+              fillColor:ngelxPrivateBlueSoft,
+              border:OutlineInputBorder(borderRadius:BorderRadius.circular(18),borderSide:BorderSide.none),
+              enabledBorder:OutlineInputBorder(borderRadius:BorderRadius.circular(18),borderSide:BorderSide.none),
+              focusedBorder:OutlineInputBorder(borderRadius:BorderRadius.circular(18),borderSide:const BorderSide(color:ngelxPrivateBlue,width:1.4)),
+            ),
+          ),
+          child:AlertDialog(
+            backgroundColor:Colors.white,
+            surfaceTintColor:Colors.transparent,
+            insetPadding:const EdgeInsets.symmetric(horizontal:24,vertical:24),
+            contentPadding:const EdgeInsets.fromLTRB(22,10,22,4),
+            actionsPadding:const EdgeInsets.fromLTRB(18,6,18,16),
+            shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(26)),
+            title:const Text(
+              'Mesajı düzenle',
+              textAlign:TextAlign.center,
+              style:TextStyle(color:ngelxPrivateBlueInk,fontWeight:FontWeight.w900,fontSize:20),
+            ),
+            content:TextField(
+              controller:x,
+              autofocus:true,
+              maxLength:2000,
+              minLines:2,
+              maxLines:4,
+              style:const TextStyle(color:ngelxPrivateBlueInk,fontSize:16,height:1.35),
+              cursorColor:ngelxPrivateBlue,
+              decoration:const InputDecoration(
+                hintText:'Mesajını düzenle',
+                hintStyle:TextStyle(color:Colors.black38),
+                contentPadding:EdgeInsets.symmetric(horizontal:16,vertical:14),
+              ),
+            ),
+            actions:[
+              TextButton(
+                onPressed:()=>Navigator.pop(dialogContext,false),
+                child:const Text('Vazgeç',style:TextStyle(color:ngelxPrivateBlue,fontWeight:FontWeight.w800)),
+              ),
+              FilledButton(
+                style:FilledButton.styleFrom(
+                  backgroundColor:ngelxPrivateBlue,
+                  foregroundColor:Colors.white,
+                  padding:const EdgeInsets.symmetric(horizontal:22,vertical:12),
+                  shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(18)),
+                ),
+                onPressed:()=>Navigator.pop(dialogContext,true),
+                child:const Text('Kaydet',style:TextStyle(fontWeight:FontWeight.w900)),
+              ),
+            ],
+          ),
+        ),
+      )??false;
       if(ok&&x.text.trim().isNotEmpty)await d.reference.update({'text':x.text.trim(),'editedAt':FieldValue.serverTimestamp()});
       x.dispose();
     }
