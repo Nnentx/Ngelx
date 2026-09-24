@@ -98,6 +98,44 @@ for token in (
     if token not in app:
         errors.append("Hesap değişiminde UI state izolasyonu eksik: " + token)
 
+# Guest/anonymous entry is intentionally removed. Legacy anonymous sessions must be signed out.
+for forbidden in (
+    "Misafir olarak keşfet",
+    "Explore as guest",
+    "Als Gast entdecken",
+    "استكشف كضيف",
+    "Войти как гость",
+):
+    if forbidden in app:
+        errors.append("Kaldırılan misafir giriş metni/kodu geri gelmiş: " + forbidden)
+for token in (
+    "FirebaseAuth.instance.currentUser?.isAnonymous==true",
+    "kullanici==null||kullanici.isAnonymous",
+):
+    if token not in app:
+        errors.append("Eski anonim oturum temizliği eksik: " + token)
+
+# Hidden-word editing uses a dedicated page to avoid modal/IME inherited-widget teardown crashes.
+for token in (
+    "class GizliKelimelerPage",
+    "FocusManager.instance.primaryFocus?.unfocus()",
+    "builder:(_)=>GizliKelimelerPage(",
+):
+    if token not in app:
+        errors.append("Gizli kelime çökme koruması eksik: " + token)
+if "class _GizliKelimeSheet" in app:
+    errors.append("Gizli kelimelerde eski bottom-sheet yaşam döngüsü geri gelmiş.")
+
+# Android media networking has native fallbacks for Worker presign and signed R2 PUT.
+for token in (
+    "_ngelxAndroidNativeGet",
+    "_ngelxAndroidNativeR2Put",
+    "android-native-httpurlconnection",
+    "filePath:dosya.path",
+):
+    if token not in app:
+        errors.append("Android medya ağ fallback sözleşmesi eksik: " + token)
+
 # Primary screens must use the shared language system instead of fixed Turkish labels.
 for token in (
     "t('settingsTitle')",

@@ -29,6 +29,9 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   try {
     await Firebase.initializeApp();
+    if(FirebaseAuth.instance.currentUser?.isAnonymous==true){
+      await FirebaseAuth.instance.signOut();
+    }
     final hafiza = await SharedPreferences.getInstance();
     uygulamaDili.value = hafiza.getString('uygulama_dili') ?? 'tr';
     runApp(const NgelXApp());
@@ -308,6 +311,74 @@ Future<Map<String,dynamic>> _ngelxAndroidNativePost({
     final yazi=_ngelxKisaHata(e);
     if(yazi.startsWith(asama))rethrow;
     throw Exception('$asama | ${hedef.host}${hedef.path} | $yazi');
+  }
+}
+
+Future<Map<String,dynamic>> _ngelxAndroidNativeGet({
+  required Uri hedef,
+  required String token,
+  required String asama,
+}) async {
+  if(!Platform.isAndroid)throw UnsupportedError('Android yerel GET yalnızca Android için kullanılıyor.');
+  try{
+    final cevap=await _ngelxMedyaNativeKanal.invokeMapMethod<String,dynamic>('get',{
+      'url':hedef.toString(),
+      'token':token,
+    }).timeout(const Duration(seconds:45));
+    final status=(cevap?['status'] as num?)?.toInt()??0;
+    final body=(cevap?['body']??'').toString();
+    dynamic veri;
+    try{veri=jsonDecode(body);}catch(_){veri=<String,dynamic>{'raw':body};}
+    final map=veri is Map<String,dynamic>
+        ?veri
+        :veri is Map
+            ?Map<String,dynamic>.from(veri)
+            :<String,dynamic>{'raw':veri.toString()};
+    if(status<200||status>=300){
+      final detay=(map['message']??map['error']??map['raw']??'yanıt yok').toString();
+      throw Exception('$asama | ${hedef.host}${hedef.path} | HTTP $status | $detay');
+    }
+    return map;
+  }on PlatformException catch(e){
+    throw Exception('$asama | ${hedef.host}${hedef.path} | ${e.code}: ${e.message??'bağlantı hatası'}');
+  }on TimeoutException{
+    throw Exception('$asama | ${hedef.host}${hedef.path} | zaman aşımı');
+  }catch(e){
+    final yazi=_ngelxKisaHata(e);
+    if(yazi.startsWith(asama))rethrow;
+    throw Exception('$asama | ${hedef.host}${hedef.path} | $yazi');
+  }
+}
+
+Future<void> _ngelxAndroidNativeR2Put({
+  required Uri hedef,
+  required String contentType,
+  Uint8List? bytes,
+  String? filePath,
+}) async {
+  if(!Platform.isAndroid)throw UnsupportedError('Android yerel R2 PUT yalnızca Android için kullanılıyor.');
+  if((bytes==null)==(filePath==null))throw ArgumentError('bytes veya filePath alanlarından yalnızca biri verilmelidir.');
+  final method=filePath==null?'putBytes':'putFile';
+  try{
+    final cevap=await _ngelxMedyaNativeKanal.invokeMapMethod<String,dynamic>(method,{
+      'url':hedef.toString(),
+      'contentType':contentType,
+      if(bytes!=null)'bytes':bytes,
+      if(filePath!=null)'path':filePath,
+    }).timeout(const Duration(minutes:10));
+    final status=(cevap?['status'] as num?)?.toInt()??0;
+    final body=(cevap?['body']??'').toString();
+    if(status<200||status>=300){
+      throw Exception('native R2 PUT | ${hedef.host} | HTTP $status | $body');
+    }
+  }on PlatformException catch(e){
+    throw Exception('native R2 PUT | ${hedef.host} | ${e.code}: ${e.message??'bağlantı hatası'}');
+  }on TimeoutException{
+    throw Exception('native R2 PUT | ${hedef.host} | zaman aşımı');
+  }catch(e){
+    final yazi=_ngelxKisaHata(e);
+    if(yazi.startsWith('native R2 PUT'))rethrow;
+    throw Exception('native R2 PUT | ${hedef.host} | $yazi');
   }
 }
 
@@ -969,7 +1040,27 @@ Future<Map<String,dynamic>> _ngelxDirectR2Izin({
       }on DioException catch(e){
         final durum=e.response?.statusCode;
         final govde=e.response?.data;
-        hatalar.add('${hedef.host} deneme=$deneme | ${durum??'-'} | ${govde??e.message??e.type}');
+        hatalar.add('${hedef.host} deneme=$deneme dio | ${durum??'-'} | ${govde??e.message??e.type}');
+        if(Platform.isAndroid){
+          try{
+            final map=await _ngelxAndroidNativeGet(
+              hedef:hedef,
+              token:token,
+              asama:'presign native',
+            );
+            final uploadUrl=(map['uploadUrl']??'').toString();
+            final mediaUrl=(map['mediaUrl']??'').toString();
+            if(uploadUrl.isNotEmpty&&mediaUrl.isNotEmpty){
+              map['_presignHost']=hedef.host;
+              map['_presignAttempt']=deneme;
+              map['_presignTransport']='android-native-httpurlconnection';
+              return map;
+            }
+            hatalar.add('${hedef.host} deneme=$deneme native | uploadUrl/mediaUrl eksik');
+          }catch(nativeHata){
+            hatalar.add('${hedef.host} deneme=$deneme native | ${_ngelxKisaHata(nativeHata)}');
+          }
+        }
       }
 
       if(deneme<2){
@@ -1019,6 +1110,18 @@ Future<String> _ngelxDirectR2BytesYukle({
   }on DioException catch(e){
     final durum=e.response?.statusCode;
     final govde=e.response?.data;
+    if(Platform.isAndroid){
+      try{
+        await _ngelxAndroidNativeR2Put(
+          hedef:upload,
+          contentType:contentType,
+          bytes:bytes,
+        );
+        return mediaUrl;
+      }catch(nativeHata){
+        throw Exception('direct R2 PUT | ${upload.host} | dio=${durum??'-'} ${govde??e.message??e.type} | ${_ngelxKisaHata(nativeHata)}');
+      }
+    }
     throw Exception('direct R2 PUT | ${upload.host} | ${durum??'-'} | ${govde??e.message??e.type}');
   }
 }
@@ -1069,6 +1172,18 @@ Future<String> _ngelxDirectR2DosyaYukle({
   }on DioException catch(e){
     final durum=e.response?.statusCode;
     final govde=e.response?.data;
+    if(Platform.isAndroid){
+      try{
+        await _ngelxAndroidNativeR2Put(
+          hedef:upload,
+          contentType:contentType,
+          filePath:dosya.path,
+        );
+        return mediaUrl;
+      }catch(nativeHata){
+        throw Exception('direct R2 PUT | ${upload.host} | dio=${durum??'-'} ${govde??e.message??e.type} | ${_ngelxKisaHata(nativeHata)}');
+      }
+    }
     throw Exception('direct R2 PUT | ${upload.host} | ${durum??'-'} | ${govde??e.message??e.type}');
   }
 }
@@ -1157,7 +1272,6 @@ const ceviriler = <String, Map<String,String>>{
   'remember': {'tr':'Beni hatırla','en':'Remember me','de':'Angemeldet bleiben','ar':'تذكرني','ru':'Запомнить меня'},
   'forgot': {'tr':'Şifremi unuttum','en':'Forgot password','de':'Passwort vergessen','ar':'نسيت كلمة المرور','ru':'Забыли пароль'},
   'login': {'tr':'Giriş Yap','en':'Sign in','de':'Anmelden','ar':'تسجيل الدخول','ru':'Войти'},
-  'guest': {'tr':'Misafir olarak keşfet','en':'Explore as guest','de':'Als Gast entdecken','ar':'استكشف كضيف','ru':'Войти как гость'},
   'noAccount': {'tr':'Hesabın yok mu?','en':'Don’t have an account?','de':'Noch kein Konto?','ar':'ليس لديك حساب؟','ru':'Нет аккаунта?'},
   'createAccount': {'tr':'Hesap oluştur','en':'Create account','de':'Konto erstellen','ar':'إنشاء حساب','ru':'Создать аккаунт'},
   'resetTitle': {'tr':'Şifreni yenile','en':'Reset your password','de':'Passwort zurücksetzen','ar':'إعادة تعيين كلمة المرور','ru':'Сбросить пароль'},
@@ -1673,7 +1787,7 @@ class NgelXApp extends StatelessWidget {
             final kullanici=auth.data;
             return UygulamaDurumKapisi(
               key:ValueKey('durum_${kullanici?.uid??'guest'}_$dil'),
-              child:kullanici==null
+              child:kullanici==null||kullanici.isAnonymous
                 ? GirisPage(key:ValueKey('giris_$dil'))
                 : AnaEkran(key:ValueKey('ana_${kullanici.uid}_$dil')),
             );
@@ -4191,7 +4305,8 @@ class _YeniYorumlarState extends State<Yorumlar> {
       final v=d.data()??<String,dynamic>{};
       if(mounted)setState((){
         gizliKelimeFiltresi=v['hiddenWordsFilter']!=false;
-        gizliKelimeListesi=List<String>.from(v['hiddenWords']??const[]);
+        final hamGizli=v['hiddenWords'];
+      gizliKelimeListesi=hamGizli is Iterable?hamGizli.map((e)=>e.toString().trim().toLowerCase()).where((e)=>e.isNotEmpty).toSet().toList():<String>[];
       });
     });
   }
@@ -5706,63 +5821,6 @@ class _CanliYayinPageState extends State<CanliYayinPage> {
             ]),
           )),
         ]),
-      ),
-    );
-  }
-}
-
-class EskiKesfetPage extends StatelessWidget {
-  const EskiKesfetPage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: Column(
-        children: [
-          const Padding(
-            padding: EdgeInsets.all(18),
-            child: Row(
-              children: [
-                Text(
-                  'Keşfet',
-                  style: TextStyle(
-                    fontSize: 29,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                Spacer(),
-                Icon(Icons.search),
-              ],
-            ),
-          ),
-          Expanded(
-            child: GridView.builder(
-              padding: const EdgeInsets.all(5),
-              itemCount: 18,
-              gridDelegate:
-                  const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 3,
-                childAspectRatio: 0.7,
-                crossAxisSpacing: 5,
-                mainAxisSpacing: 5,
-              ),
-              itemBuilder: (_, i) {
-                return Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    color: i.isEven
-                        ? const Color(0xFF292348)
-                        : const Color(0xFF16343B),
-                  ),
-                  child: const Icon(
-                    Icons.play_arrow,
-                    color: Colors.white38,
-                  ),
-                );
-              },
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -16579,35 +16637,41 @@ class _DestekPageState extends State<DestekPage>{
 }
 
 class TercihlerPage extends StatefulWidget {final String baslik;const TercihlerPage({super.key,required this.baslik});@override State<TercihlerPage> createState()=>_TercihlerPageState();}
-class _GizliKelimeSheet extends StatefulWidget{
+
+class GizliKelimelerPage extends StatefulWidget{
   final String userId;
   final List<String> baslangic;
-  const _GizliKelimeSheet({required this.userId,required this.baslangic});
-  @override State<_GizliKelimeSheet> createState()=>_GizliKelimeSheetState();
+  const GizliKelimelerPage({super.key,required this.userId,required this.baslangic});
+  @override State<GizliKelimelerPage> createState()=>_GizliKelimelerPageState();
 }
-class _GizliKelimeSheetState extends State<_GizliKelimeSheet>{
+
+class _GizliKelimelerPageState extends State<GizliKelimelerPage>{
   final kontrol=TextEditingController();
   late List<String> kelimeler;
   bool islem=false;
 
-  @override void initState(){super.initState();kelimeler=List<String>.from(widget.baslangic);}
+  @override void initState(){
+    super.initState();
+    kelimeler=widget.baslangic.map((x)=>x.trim().toLowerCase()).where((x)=>x.isNotEmpty).toSet().toList();
+  }
   @override void dispose(){kontrol.dispose();super.dispose();}
 
   Future<void> _ekle()async{
     final x=kontrol.text.trim().toLowerCase();
     if(x.isEmpty||kelimeler.contains(x)||islem)return;
-    final onceki=List<String>.from(kelimeler);
-    setState((){islem=true;kelimeler.add(x);kontrol.clear();});
+    FocusManager.instance.primaryFocus?.unfocus();
+    final yeni=<String>[...kelimeler,x];
+    setState(()=>islem=true);
     try{
       await FirebaseFirestore.instance.collection('users').doc(widget.userId).set({
-        'hiddenWords':kelimeler,
+        'hiddenWords':yeni,
         'hiddenWordsFilter':true,
       },SetOptions(merge:true));
+      if(!mounted)return;
+      kontrol.clear();
+      setState(()=>kelimeler=yeni);
     }catch(_){
-      if(mounted){
-        setState(()=>kelimeler=onceki);
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Değişiklik kaydedilemedi.')));
-      }
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Değişiklik kaydedilemedi.')));
     }finally{
       if(mounted)setState(()=>islem=false);
     }
@@ -16615,49 +16679,82 @@ class _GizliKelimeSheetState extends State<_GizliKelimeSheet>{
 
   Future<void> _sil(String x)async{
     if(islem)return;
-    final onceki=List<String>.from(kelimeler);
-    setState((){islem=true;kelimeler.remove(x);});
+    FocusManager.instance.primaryFocus?.unfocus();
+    final yeni=kelimeler.where((e)=>e!=x).toList();
+    setState(()=>islem=true);
     try{
-      await FirebaseFirestore.instance.collection('users').doc(widget.userId).set({'hiddenWords':kelimeler},SetOptions(merge:true));
+      await FirebaseFirestore.instance.collection('users').doc(widget.userId).set({
+        'hiddenWords':yeni,
+      },SetOptions(merge:true));
+      if(!mounted)return;
+      setState(()=>kelimeler=yeni);
     }catch(_){
-      if(mounted){
-        setState(()=>kelimeler=onceki);
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Değişiklik kaydedilemedi.')));
-      }
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Değişiklik kaydedilemedi.')));
     }finally{
       if(mounted)setState(()=>islem=false);
     }
   }
 
-  @override Widget build(BuildContext context)=>SafeArea(
-    child:AnimatedPadding(
-      duration:const Duration(milliseconds:160),
-      padding:EdgeInsets.fromLTRB(18,6,18,MediaQuery.of(context).viewInsets.bottom+18),
-      child:SingleChildScrollView(
-        child:Column(
-          mainAxisSize:MainAxisSize.min,
-          crossAxisAlignment:CrossAxisAlignment.start,
+  @override Widget build(BuildContext context)=>Theme(
+    data:ThemeData.light().copyWith(
+      scaffoldBackgroundColor:Colors.white,
+      appBarTheme:const AppBarTheme(backgroundColor:Colors.white,foregroundColor:Colors.black,elevation:0),
+      inputDecorationTheme:InputDecorationTheme(
+        filled:true,
+        fillColor:const Color(0xFFF3F4F6),
+        border:OutlineInputBorder(borderRadius:BorderRadius.circular(16),borderSide:BorderSide.none),
+      ),
+    ),
+    child:Scaffold(
+      backgroundColor:Colors.white,
+      appBar:AppBar(title:Text(t('hiddenWordsTitle'))),
+      body:SafeArea(
+        child:ListView(
+          padding:const EdgeInsets.fromLTRB(18,12,18,28),
           children:[
-            Text(t('hiddenWordsTitle'),style:const TextStyle(color:Colors.black87,fontSize:20,fontWeight:FontWeight.w900)),
-            const SizedBox(height:6),
-            Text(t('hiddenWordsInfo'),style:const TextStyle(color:Colors.black54)),
-            const SizedBox(height:14),
-            if(kelimeler.isNotEmpty)Wrap(
-              spacing:7,runSpacing:7,
-              children:kelimeler.map((x)=>InputChip(label:Text(x),onDeleted:islem?null:()=>_sil(x))).toList(),
+            Text(t('hiddenWordsInfo'),style:const TextStyle(color:Colors.black54,fontSize:15)),
+            const SizedBox(height:16),
+            if(kelimeler.isEmpty)
+              Container(
+                padding:const EdgeInsets.all(18),
+                decoration:BoxDecoration(color:const Color(0xFFF7F7FA),borderRadius:BorderRadius.circular(18)),
+                child:Text(t('noHiddenWords'),style:const TextStyle(color:Colors.black54,fontWeight:FontWeight.w600)),
+              )
+            else
+              Wrap(
+                spacing:7,
+                runSpacing:7,
+                children:kelimeler.map((x)=>InputChip(
+                  label:Text(x),
+                  onDeleted:islem?null:()=>_sil(x),
+                )).toList(),
+              ),
+            const SizedBox(height:20),
+            Row(
+              crossAxisAlignment:CrossAxisAlignment.start,
+              children:[
+                Expanded(
+                  child:TextField(
+                    controller:kontrol,
+                    enabled:!islem,
+                    maxLength:30,
+                    textInputAction:TextInputAction.done,
+                    decoration:InputDecoration(hintText:t('hiddenWordHint')),
+                    onSubmitted:(_)=>_ekle(),
+                  ),
+                ),
+                const SizedBox(width:8),
+                Padding(
+                  padding:const EdgeInsets.only(top:2),
+                  child:FilledButton(
+                    onPressed:islem?null:_ekle,
+                    child:islem
+                        ?const SizedBox(width:18,height:18,child:CircularProgressIndicator(strokeWidth:2,color:Colors.white))
+                        :Text(t('add')),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height:12),
-            Row(children:[
-              Expanded(child:TextField(
-                controller:kontrol,
-                maxLength:30,
-                textInputAction:TextInputAction.done,
-                decoration:InputDecoration(hintText:t('hiddenWordHint')),
-                onSubmitted:(_)=>_ekle(),
-              )),
-              const SizedBox(width:8),
-              FilledButton(onPressed:islem?null:_ekle,child:Text(t('add'))),
-            ]),
           ],
         ),
       ),
@@ -16708,20 +16805,25 @@ class _TercihlerPageState extends State<TercihlerPage> {
   Future<void> gizliKelimeYonet()async{
     final userId=uid;
     if(userId==null)return;
-    await showModalBottomSheet<void>(
-      context:context,
-      backgroundColor:Colors.white,
-      showDragHandle:true,
-      isScrollControlled:true,
-      builder:(_)=>_GizliKelimeSheet(userId:userId,baslangic:gizliKelimeListesi),
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder:(_)=>GizliKelimelerPage(
+          userId:userId,
+          baslangic:gizliKelimeListesi,
+        ),
+      ),
     );
     if(!mounted)return;
     try{
       final d=await FirebaseFirestore.instance.collection('users').doc(userId).get();
       if(!mounted)return;
       final v=d.data()??<String,dynamic>{};
+      final ham=v['hiddenWords'];
+      final yeni=ham is Iterable
+          ?ham.map((e)=>e.toString().trim().toLowerCase()).where((e)=>e.isNotEmpty).toSet().toList()
+          :<String>[];
       setState((){
-        gizliKelimeListesi=List<String>.from(v['hiddenWords']??const[]);
+        gizliKelimeListesi=yeni;
         gizliKelimeler=v['hiddenWordsFilter']!=false;
       });
     }catch(_){}
