@@ -17957,8 +17957,8 @@ class _ProfilEtkilesimRozeti extends StatelessWidget {
 }
 
 class _ProfilSekme extends StatelessWidget{
-  final String yazi;final bool secili;final VoidCallback onTap;
-  const _ProfilSekme(this.yazi,this.secili,this.onTap);
+  final String yazi;final bool secili;final VoidCallback? onTap;
+  const _ProfilSekme(this.yazi,this.secili,[this.onTap]);
   @override Widget build(BuildContext context)=>InkWell(
     onTap:onTap,
     borderRadius:BorderRadius.circular(10),
