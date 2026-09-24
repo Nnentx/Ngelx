@@ -5218,7 +5218,7 @@ class _KesfetPageState extends State<KesfetPage> {
         stream:FirebaseFirestore.instance.collection('videos').orderBy('createdAt',descending:true).limit(50).snapshots(),
         builder:(_,snap){
           if(snap.connectionState==ConnectionState.waiting)return const SliverToBoxAdapter(child:Padding(padding:EdgeInsets.all(35),child:Center(child:CircularProgressIndicator(color:mor))));
-          if(snap.hasError)return const SliverToBoxAdapter(child:Padding(padding:EdgeInsets.all(28),child:Center(child:Text(t('trendLoadError'),style:TextStyle(color:Colors.black54)))));
+          if(snap.hasError)return SliverToBoxAdapter(child:Padding(padding:const EdgeInsets.all(28),child:Center(child:Text(t('trendLoadError'),style:const TextStyle(color:Colors.black54)))));
           final belgeler=(snap.data?.docs??[]).where((d){
             final v=d.data();
             if(v['type']=='story')return false;
@@ -5251,9 +5251,9 @@ class _KesfetPageState extends State<KesfetPage> {
       stream:FirebaseFirestore.instance.collection('users').limit(60).snapshots(),
       builder:(_,snap){
         if(snap.connectionState==ConnectionState.waiting)return const SliverToBoxAdapter(child:Padding(padding:EdgeInsets.all(35),child:Center(child:CircularProgressIndicator(color:mor))));
-        if(snap.hasError)return const SliverToBoxAdapter(child:Padding(padding:EdgeInsets.all(28),child:Center(child:Text(t('peopleLoadError'),style:TextStyle(color:Colors.black54)))));
+        if(snap.hasError)return SliverToBoxAdapter(child:Padding(padding:const EdgeInsets.all(28),child:Center(child:Text(t('peopleLoadError'),style:const TextStyle(color:Colors.black54)))));
         final kisiler=(snap.data?.docs??[]).where((d)=>d.id!=ben&&d.data()['deactivated']!=true).toList();
-        if(kisiler.isEmpty)return const SliverToBoxAdapter(child:Padding(padding:EdgeInsets.all(28),child:Center(child:Text(t('peopleEmpty'),style:TextStyle(color:Colors.black54)))));
+        if(kisiler.isEmpty)return SliverToBoxAdapter(child:Padding(padding:const EdgeInsets.all(28),child:Center(child:Text(t('peopleEmpty'),style:const TextStyle(color:Colors.black54)))));
         return SliverList(delegate:SliverChildBuilderDelegate((_,i)=>_kisiSatiri(kisiler[i].id,kisiler[i].data()),childCount:kisiler.length));
       },
     ),
@@ -5265,9 +5265,9 @@ class _KesfetPageState extends State<KesfetPage> {
       stream:FirebaseFirestore.instance.collection('chats').where('isGroup',isEqualTo:true).where('discoverable',isEqualTo:true).limit(60).snapshots(),
       builder:(_,snap){
         if(snap.connectionState==ConnectionState.waiting)return const SliverToBoxAdapter(child:Padding(padding:EdgeInsets.all(35),child:Center(child:CircularProgressIndicator(color:mor))));
-        if(snap.hasError)return const SliverToBoxAdapter(child:Padding(padding:EdgeInsets.all(28),child:Center(child:Text(t('groupsLoadError'),style:TextStyle(color:Colors.black54)))));
+        if(snap.hasError)return SliverToBoxAdapter(child:Padding(padding:const EdgeInsets.all(28),child:Center(child:Text(t('groupsLoadError'),style:const TextStyle(color:Colors.black54)))));
         final gruplar=(snap.data?.docs??[]).where((d){final ad=(d.data()['groupName']??'').toString().toLowerCase();return d.data()['groupDeleted']!=true&&!ad.contains('oyun')&&!ad.contains('game');}).toList();
-        if(gruplar.isEmpty)return const SliverToBoxAdapter(child:Padding(padding:EdgeInsets.all(28),child:Center(child:Text(t('groupsEmpty'),style:TextStyle(color:Colors.black54)))));
+        if(gruplar.isEmpty)return SliverToBoxAdapter(child:Padding(padding:const EdgeInsets.all(28),child:Center(child:Text(t('groupsEmpty'),style:const TextStyle(color:Colors.black54)))));
         return SliverList(delegate:SliverChildBuilderDelegate((_,i)=>_grupSatiri(gruplar[i].id,gruplar[i].data()),childCount:gruplar.length));
       },
     ),
