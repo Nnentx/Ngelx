@@ -1,0 +1,38 @@
+name: Diagnose NgelX Cloudflare Zone
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/diag-cloudflare-zone.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Cloudflare zone and media hostname check
+        shell: bash
+        env:
+          CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          zone_json="$(curl --fail-with-body --silent --show-error             -H "Authorization: Bearer $CF_API_TOKEN"             -H "Content-Type: application/json"             "https://api.cloudflare.com/client/v4/zones?name=ngelxsocial.com&account.id=$CF_ACCOUNT_ID")"
+          echo "api_success=$(jq -r '.success' <<<"$zone_json")"
+          echo "zone_count=$(jq -r '.result | length' <<<"$zone_json")"
+          jq -r '.result[] | "zone_name=\(.name) status=\(.status) type=\(.type)"' <<<"$zone_json"
+
+          zone_id="$(jq -r '.result[0].id // empty' <<<"$zone_json")"
+          if [ -z "$zone_id" ]; then
+            echo "NgelX domain zone was not found in this Cloudflare account."
+            exit 2
+          fi
+
+          dns_json="$(curl --fail-with-body --silent --show-error             -H "Authorization: Bearer $CF_API_TOKEN"             -H "Content-Type: application/json"             "https://api.cloudflare.com/client/v4/zones/$zone_id/dns_records?name=media.ngelxsocial.com")"
+          echo "media_dns_count=$(jq -r '.result | length' <<<"$dns_json")"
+          jq -r '.result[] | "media_dns type=\(.type) name=\(.name) proxied=\(.proxied)"' <<<"$dns_json"
