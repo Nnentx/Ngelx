@@ -1,0 +1,128 @@
+name: NgelX Media End-to-End Test
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/media-e2e.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  media-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Kaynaklari al
+        uses: actions/checkout@v4
+
+      - name: Worker paketlerini kur
+        working-directory: cloudflare/worker
+        run: npm install
+
+      - name: Gercek presign R2 PUT ve geri okuma testi
+        working-directory: cloudflare/worker
+        shell: bash
+        env:
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+
+          API_KEY="$(jq -r '.client[0].api_key[0].current_key' ../../app/android/app/google-services.json)"
+          if [ -z "$API_KEY" ] || [ "$API_KEY" = "null" ]; then
+            echo "Firebase API key bulunamadi."
+            exit 2
+          fi
+
+          SIGNUP="$(curl --fail-with-body --silent --show-error             -H 'Content-Type: application/json'             -d '{"returnSecureToken":true}'             "https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=$API_KEY" || true)"
+
+          ID_TOKEN="$(jq -r '.idToken // empty' <<<"$SIGNUP")"
+          if [ -z "$ID_TOKEN" ]; then
+            EMAIL="ngelx-ci-$(date +%s)-$RANDOM@example.com"
+            PASSWORD="NgelX-ci-$(date +%s)-A9x!"
+            SIGNUP="$(curl --fail-with-body --silent --show-error               -H 'Content-Type: application/json'               --data "$(jq -nc --arg e "$EMAIL" --arg p "$PASSWORD" '{email:$e,password:$p,returnSecureToken:true}')"               "https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=$API_KEY")"
+            ID_TOKEN="$(jq -r '.idToken // empty' <<<"$SIGNUP")"
+          fi
+
+          if [ -z "$ID_TOKEN" ]; then
+            echo "Firebase test oturumu acilamadi."
+            exit 3
+          fi
+          echo "::add-mask::$ID_TOKEN"
+
+          : > /tmp/ngelx-e2e-keys.txt
+          cleanup() {
+            set +e
+            curl --silent --show-error               -H 'Content-Type: application/json'               --data "$(jq -nc --arg t "$ID_TOKEN" '{idToken:$t}')"               "https://identitytoolkit.googleapis.com/v1/accounts:delete?key=$API_KEY" >/dev/null
+
+            if [ -s /tmp/ngelx-e2e-keys.txt ]; then
+              node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import { AwsClient } from 'aws4fetch';
+          const account = process.env.R2_ACCOUNT_ID;
+          const aws = new AwsClient({
+            service: 's3',
+            region: 'auto',
+            accessKeyId: process.env.R2_ACCESS_KEY_ID,
+            secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
+          });
+          const keys = fs.readFileSync('/tmp/ngelx-e2e-keys.txt','utf8').trim().split('\n').filter(Boolean);
+          for (const key of keys) {
+            const encoded = key.split('/').map(encodeURIComponent).join('/');
+            const url = `https://${account}.r2.cloudflarestorage.com/ngelx-media/${encoded}`;
+            const res = await aws.fetch(url, {method:'DELETE'});
+            console.log(`cleanup key status=${res.status}`);
+          }
+          NODE
+            fi
+          }
+          trap cleanup EXIT
+
+          printf 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=' | base64 -d > /tmp/ngelx-e2e.png
+          SIZE="$(wc -c < /tmp/ngelx-e2e.png | tr -d ' ')"
+          EXPECTED_SHA="$(sha256sum /tmp/ngelx-e2e.png | awk '{print $1}')"
+
+          for BASE in             "https://ngelx-media.alihancaglar76.workers.dev"             "https://ngelx-upload.alihancaglar76.workers.dev"; do
+
+            HOST="$(python3 -c 'import sys,urllib.parse; print(urllib.parse.urlparse(sys.argv[1]).hostname)' "$BASE")"
+            echo "E2E basliyor: $HOST"
+
+            PRESIGN="$(curl --fail-with-body --silent --show-error               --retry 2 --retry-all-errors --retry-delay 1               --connect-timeout 15 --max-time 30               -H "Authorization: Bearer $ID_TOKEN"               -H "X-NgelX-Client: ci-e2e-upload-r2-243"               "$BASE/upload/presign?kind=photos&ext=png&contentType=image%2Fpng&size=$SIZE&protocol=upload-r2-243")"
+
+            UPLOAD_URL="$(jq -r '.uploadUrl // empty' <<<"$PRESIGN")"
+            MEDIA_URL="$(jq -r '.mediaUrl // empty' <<<"$PRESIGN")"
+            KEY="$(jq -r '.key // empty' <<<"$PRESIGN")"
+            TRANSPORT="$(jq -r '.transport // empty' <<<"$PRESIGN")"
+
+            if [ -z "$UPLOAD_URL" ] || [ -z "$MEDIA_URL" ] || [ -z "$KEY" ]; then
+              echo "Presign yaniti eksik: $HOST"
+              jq '{ok,protocol,transport,error,stage,message}' <<<"$PRESIGN"
+              exit 4
+            fi
+
+            echo "$KEY" >> /tmp/ngelx-e2e-keys.txt
+            echo "presign ok host=$HOST transport=$TRANSPORT"
+
+            HTTP_CODE="$(curl --silent --show-error               --connect-timeout 20 --max-time 60               -o /tmp/r2-put-body.txt -w '%{http_code}'               -X PUT               -H 'Content-Type: image/png'               --data-binary @/tmp/ngelx-e2e.png               "$UPLOAD_URL")"
+
+            if [ "$HTTP_CODE" -lt 200 ] || [ "$HTTP_CODE" -ge 300 ]; then
+              echo "R2 PUT basarisiz host=$HOST HTTP=$HTTP_CODE"
+              cat /tmp/r2-put-body.txt
+              exit 5
+            fi
+            echo "R2 PUT ok host=$HOST HTTP=$HTTP_CODE"
+
+            curl --fail-with-body --silent --show-error               --retry 2 --retry-all-errors --retry-delay 1               --connect-timeout 15 --max-time 30               "$MEDIA_URL" -o /tmp/ngelx-e2e-download.png
+
+            ACTUAL_SHA="$(sha256sum /tmp/ngelx-e2e-download.png | awk '{print $1}')"
+            if [ "$ACTUAL_SHA" != "$EXPECTED_SHA" ]; then
+              echo "Geri okunan dosya SHA256 uyusmuyor: $HOST"
+              exit 6
+            fi
+
+            echo "E2E PASS host=$HOST size=$SIZE sha256=$ACTUAL_SHA"
+          done
