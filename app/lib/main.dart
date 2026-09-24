@@ -4825,6 +4825,7 @@ class KesfetPage extends StatefulWidget {
 class _KesfetPageState extends State<KesfetPage> {
   int kategori=0;
   Set<String> takipEdilenler=<String>{};
+  Set<String> gonderilenTakipIstekleri=<String>{};
   Set<String> arkadaslar=<String>{};
   Set<String> gonderilenArkadaslikIstekleri=<String>{};
   bool hesapYukleniyor=true;
@@ -4844,11 +4845,28 @@ class _KesfetPageState extends State<KesfetPage> {
       return;
     }
     try{
-      final d=await FirebaseFirestore.instance.collection('users').doc(uid).get();
+      final sonuc=await Future.wait([
+        FirebaseFirestore.instance.collection('users').doc(uid).get(),
+        FirebaseFirestore.instance.collection('notifications').where('fromUid',isEqualTo:uid).limit(100).get(),
+      ]);
+      final d=sonuc[0] as DocumentSnapshot<Map<String,dynamic>>;
+      final bildirimler=(sonuc[1] as QuerySnapshot<Map<String,dynamic>>).docs;
+      final takipBekleyen=<String>{};
+      final arkadasBekleyen=<String>{};
+      for(final n in bildirimler){
+        final v=n.data();
+        if(v['status']!='pending')continue;
+        final hedef=(v['toUid']??'').toString();
+        if(hedef.isEmpty)continue;
+        if(v['type']=='follow_request')takipBekleyen.add(hedef);
+        if(v['type']=='friend_request')arkadasBekleyen.add(hedef);
+      }
       if(!mounted)return;
       setState((){
         takipEdilenler=Set<String>.from(List<dynamic>.from(d.data()?['following']??const[]));
+        gonderilenTakipIstekleri=takipBekleyen;
         arkadaslar=Set<String>.from(List<dynamic>.from(d.data()?['friends']??const[]));
+        gonderilenArkadaslikIstekleri=arkadasBekleyen;
         hesapYukleniyor=false;
       });
     }catch(_){
@@ -4941,7 +4959,10 @@ class _KesfetPageState extends State<KesfetPage> {
             'text':'Yeni takip isteğin var','status':'pending',
             'read':false,'createdAt':FieldValue.serverTimestamp(),
           },SetOptions(merge:true));
-          if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Takip isteği gönderildi.')));
+          if(mounted){
+            setState(()=>gonderilenTakipIstekleri.add(hedefUid));
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Takip isteği gönderildi.')));
+          }
           return;
         }
       }catch(e){
@@ -5248,6 +5269,7 @@ class _KesfetPageState extends State<KesfetPage> {
     final ad=(v['displayName']??v['username']??'Kullanıcı').toString();
     final kullanici=(v['username']??'ngelx').toString();
     final takipte=takipEdilenler.contains(uid);
+    final takipIstegiBekliyor=gonderilenTakipIstekleri.contains(uid);
     return Padding(
       padding:const EdgeInsets.symmetric(horizontal:16,vertical:6),
       child:InkWell(
@@ -5272,9 +5294,9 @@ class _KesfetPageState extends State<KesfetPage> {
               SizedBox(
                 height:36,
                 child:FilledButton(
-                  onPressed:hesapYukleniyor?null:()=>_takipDegistir(uid),
-                  style:FilledButton.styleFrom(backgroundColor:takipte?const Color(0xFFECECF2):mor,foregroundColor:takipte?Colors.black87:Colors.white,padding:const EdgeInsets.symmetric(horizontal:12)),
-                  child:Text(takipte?'Takiptesin':t('follow'),style:const TextStyle(fontWeight:FontWeight.w800,fontSize:11)),
+                  onPressed:hesapYukleniyor||takipIstegiBekliyor?null:()=>_takipDegistir(uid),
+                  style:FilledButton.styleFrom(backgroundColor:(takipte||takipIstegiBekliyor)?const Color(0xFFECECF2):mor,foregroundColor:(takipte||takipIstegiBekliyor)?Colors.black87:Colors.white,padding:const EdgeInsets.symmetric(horizontal:12)),
+                  child:Text(takipte?'Takiptesin':(takipIstegiBekliyor?'İstek gönderildi':t('follow')),style:const TextStyle(fontWeight:FontWeight.w800,fontSize:11)),
                 ),
               ),
               const SizedBox(height:5),
