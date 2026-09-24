@@ -155,6 +155,24 @@ for forbidden in (
     if forbidden in app:
         errors.append("Ana ekranda sabit Türkçe metin kaldı: " + forbidden)
 
+# Social request cards must stay live and must not read deterministic request docs before create.
+for token in (
+    "StreamSubscription<DocumentSnapshot<Map<String,dynamic>>>? _hesapAboneligi",
+    "StreamSubscription<QuerySnapshot<Map<String,dynamic>>>? _gidenIstekAboneligi",
+    "sosyalIstekGonder(",
+    "gidenSosyalIstekBekliyor(",
+    "where('fromUid',isEqualTo:uid).limit(100).snapshots()",
+    "color:Colors.black87,fontWeight:FontWeight.w900,fontSize:16",
+):
+    if token not in app:
+        errors.append("Keşfet sosyal ilişki canlılık sözleşmesi eksik: " + token)
+for forbidden in (
+    "doc('friend_request_'+",
+    "doc('follow_request_'+",
+):
+    if forbidden in app:
+        errors.append("İstek gönderiminde permission-denied üreten eski deterministik belge okuması kaldı: " + forbidden)
+
 # Explore must not suggest the signed-in account and must not fake online presence.
 for token in (
     "d.id!=ben&&d.data()['deactivated']!=true",
