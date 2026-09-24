@@ -42,6 +42,35 @@ class GroupDraftStore {
   }
 }
 
+class PrivateDraftStore {
+  static final Map<String, Timer> _timers = <String, Timer>{};
+  static String _key(String chatId) => 'private_draft_' + chatId;
+
+  static Future<String> load(String chatId) async {
+    final h = await SharedPreferences.getInstance();
+    return h.getString(_key(chatId)) ?? '';
+  }
+
+  static void schedule(String chatId, String text) {
+    _timers.remove(chatId)?.cancel();
+    _timers[chatId] = Timer(const Duration(milliseconds: 450), () async {
+      final h = await SharedPreferences.getInstance();
+      if (text.trim().isEmpty) {
+        await h.remove(_key(chatId));
+      } else {
+        await h.setString(_key(chatId), text);
+      }
+      _timers.remove(chatId);
+    });
+  }
+
+  static Future<void> clear(String chatId) async {
+    _timers.remove(chatId)?.cancel();
+    final h = await SharedPreferences.getInstance();
+    await h.remove(_key(chatId));
+  }
+}
+
 class GroupOfflineQueue {
   static String _key(String chatId) => 'group_pending_' + chatId;
 
