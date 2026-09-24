@@ -28,7 +28,7 @@ const MAX_BYTES = {
 let jwksCache = null;
 let jwksExpiresAt = 0;
 
-const MEDIA_PROTOCOL = 'upload-237';
+const MEDIA_PROTOCOL = 'upload-ws-242';
 
 function uploadLog(event, data = {}) {
   console.log(JSON.stringify({service: 'ngelx-r2-media', protocol: MEDIA_PROTOCOL, event, ...data}));
@@ -195,6 +195,163 @@ export default {
       headers.set('etag', object.httpEtag);
       headers.set('cache-control', 'public, max-age=31536000, immutable');
       return new Response(object.body, {headers});
+    }
+
+    if (request.method === 'GET' && url.pathname === '/upload/ws') {
+      if ((request.headers.get('Upgrade') || '').toLowerCase() !== 'websocket') {
+        return json({error: 'websocket_required', protocol: MEDIA_PROTOCOL}, 426);
+      }
+
+      let claims;
+      try {
+        claims = await verifyFirebaseIdToken(request, env);
+      } catch (e) {
+        uploadLog('ws_auth_failed', {message: String(e?.message || e)});
+        return json({error: 'unauthorized', stage: 'ws_auth', protocol: MEDIA_PROTOCOL, message: String(e.message || e)}, 401);
+      }
+
+      const kind = cleanKind(url.searchParams.get('kind'));
+      if (!kind) return json({error: 'invalid_kind', stage: 'ws_create', protocol: MEDIA_PROTOCOL}, 400);
+      const ext = cleanExt(url.searchParams.get('ext'));
+      const size = Number(url.searchParams.get('size') || 0);
+      const maxBytes = MAX_BYTES[kind] || MAX_BYTES.default;
+      if (!Number.isFinite(size) || size <= 0) {
+        return json({error: 'invalid_size', stage: 'ws_create', protocol: MEDIA_PROTOCOL}, 400);
+      }
+      if (size > maxBytes) {
+        return json({error: 'file_too_large', stage: 'ws_create', protocol: MEDIA_PROTOCOL, maxBytes}, 413);
+      }
+
+      const uid = claims.sub;
+      const key = kind + '/' + uid + '/' + Date.now() + '_' + crypto.randomUUID() + '.' + ext;
+      const contentType = contentTypeFor(ext, url.searchParams.get('contentType'));
+
+      let upload;
+      try {
+        upload = await env.MEDIA.createMultipartUpload(key, {
+          httpMetadata: {contentType, cacheControl: 'public, max-age=31536000, immutable'},
+          customMetadata: {uid, kind, transport: 'websocket-multipart', protocol: MEDIA_PROTOCOL},
+        });
+      } catch (e) {
+        uploadLog('ws_create_failed', {kind, size, message: String(e?.message || e)});
+        return json({error: 'ws_create_failed', stage: 'ws_create', protocol: MEDIA_PROTOCOL, message: String(e?.message || e)}, 503);
+      }
+
+      const pair = new WebSocketPair();
+      const client = pair[0];
+      const server = pair[1];
+      server.accept();
+
+      let partNumber = 0;
+      let received = 0;
+      let finished = false;
+      const parts = [];
+
+      const fail = async (stage, error) => {
+        if (finished) return;
+        finished = true;
+        try { await upload.abort(); } catch (_) {}
+        const message = String(error?.message || error || 'upload_failed');
+        uploadLog('ws_failed', {kind, stage, received, partNumber, message});
+        try {
+          server.send(JSON.stringify({type: 'error', stage, protocol: MEDIA_PROTOCOL, message}));
+        } catch (_) {}
+        try { server.close(1011, 'upload failed'); } catch (_) {}
+      };
+
+      server.addEventListener('message', async (event) => {
+        if (finished) return;
+        try {
+          if (typeof event.data === 'string') {
+            let message;
+            try {
+              message = JSON.parse(event.data);
+            } catch (_) {
+              throw new Error('invalid_control_message');
+            }
+            if (message?.type === 'complete') {
+              if (received !== size) throw new Error('size_mismatch expected=' + size + ' received=' + received);
+              if (!parts.length) throw new Error('no_parts_received');
+              const object = await upload.complete(parts);
+              finished = true;
+              uploadLog('ws_completed', {kind, size: object.size, parts: parts.length, uid: uid.slice(0, 8)});
+              server.send(JSON.stringify({
+                type: 'complete',
+                ok: true,
+                protocol: MEDIA_PROTOCOL,
+                key,
+                url: url.origin + '/media/' + encodeKeyForUrl(key),
+                size: object.size,
+              }));
+              server.close(1000, 'done');
+              return;
+            }
+            if (message?.type === 'abort') {
+              await upload.abort();
+              finished = true;
+              server.close(1000, 'aborted');
+              return;
+            }
+            throw new Error('unknown_control_message');
+          }
+
+          const body = event.data instanceof ArrayBuffer
+            ? event.data
+            : event.data?.arrayBuffer
+                ? await event.data.arrayBuffer()
+                : null;
+          if (!body) throw new Error('invalid_binary_frame');
+          const length = body.byteLength;
+          if (length <= 0 || length > 5 * 1024 * 1024) {
+            throw new Error('invalid_part_size ' + length);
+          }
+          if (received + length > size || received + length > maxBytes) {
+            throw new Error('received_too_much_data');
+          }
+
+          partNumber += 1;
+          const part = await upload.uploadPart(partNumber, body);
+          parts.push({partNumber: part.partNumber, etag: part.etag});
+          received += length;
+          uploadLog('ws_part_saved', {kind, partNumber, length, received, uid: uid.slice(0, 8)});
+          server.send(JSON.stringify({
+            type: 'part',
+            ok: true,
+            protocol: MEDIA_PROTOCOL,
+            partNumber: part.partNumber,
+            received,
+          }));
+        } catch (e) {
+          await fail('ws_message', e);
+        }
+      });
+
+      server.addEventListener('close', async () => {
+        if (!finished) {
+          try { await upload.abort(); } catch (_) {}
+          uploadLog('ws_client_closed', {kind, received, partNumber, uid: uid.slice(0, 8)});
+        }
+      });
+
+      server.addEventListener('error', async (event) => {
+        await fail('ws_socket', event?.error || 'socket_error');
+      });
+
+      server.send(JSON.stringify({
+        type: 'ready',
+        ok: true,
+        protocol: MEDIA_PROTOCOL,
+        key,
+        uploadId: upload.uploadId,
+        size,
+      }));
+      uploadLog('ws_ready', {kind, size, uid: uid.slice(0, 8)});
+
+      return new Response(null, {
+        status: 101,
+        webSocket: client,
+        headers: {'X-NgelX-Worker': MEDIA_PROTOCOL},
+      });
     }
 
     if (request.method === 'POST' && url.pathname === '/upload/multipart/create') {

@@ -155,7 +155,7 @@ const _ngelxMediaApiBuild = String.fromEnvironment(
   'NGELX_MEDIA_API',
   defaultValue: 'https://ngelx-media.alihancaglar76.workers.dev',
 );
-const _ngelxMediaProtocolVersion='upload-237';
+const _ngelxMediaProtocolVersion='upload-ws-242';
 String? _ngelxMediaApiCache;
 DateTime? _ngelxMediaApiCacheZamani;
 
@@ -673,6 +673,225 @@ Future<String> _ngelxStandartBytesYukle({
   return _ngelxYuklemeCevapUrl(cevap,hedef);
 }
 
+
+Map<String,dynamic> _ngelxWsMesaj(dynamic veri,String asama){
+  try{
+    final metin=veri is String
+        ?veri
+        :veri is List<int>
+            ?utf8.decode(veri)
+            :veri.toString();
+    final cozulmus=jsonDecode(metin);
+    if(cozulmus is Map<String,dynamic>)return cozulmus;
+    if(cozulmus is Map)return Map<String,dynamic>.from(cozulmus);
+    throw Exception('geçersiz yanıt');
+  }catch(e){
+    throw Exception('$asama | WebSocket yanıtı çözülemedi: ${_ngelxKisaHata(e)}');
+  }
+}
+
+Future<Map<String,dynamic>> _ngelxWsSonraki(
+  StreamIterator<dynamic> akis,
+  String asama, {
+  Duration zamanAsimi=const Duration(seconds:90),
+}) async {
+  try{
+    final varMi=await akis.moveNext().timeout(zamanAsimi);
+    if(!varMi)throw Exception('bağlantı sunucu tarafından kapatıldı');
+    final mesaj=_ngelxWsMesaj(akis.current,asama);
+    if(mesaj['type']=='error'){
+      throw Exception('${mesaj['stage']??asama}: ${mesaj['message']??mesaj['error']??'sunucu hatası'}');
+    }
+    return mesaj;
+  }on TimeoutException{
+    throw Exception('$asama | zaman aşımı');
+  }
+}
+
+Uri _ngelxWsUri({
+  required String api,
+  required String kind,
+  required String ext,
+  required String contentType,
+  required int size,
+}){
+  final http=Uri.parse(api+'/upload/ws').replace(queryParameters:{
+    'kind':kind,
+    'ext':ext,
+    'contentType':contentType,
+    'size':size.toString(),
+    'protocol':_ngelxMediaProtocolVersion,
+  });
+  return http.replace(scheme:http.scheme=='https'?'wss':'ws');
+}
+
+Future<String> _ngelxWebSocketBytesYukleAndroid({
+  required String api,
+  required Uint8List bytes,
+  required String kind,
+  required String ext,
+  required String contentType,
+  required String legacyPath,
+  void Function(int sent,int total)? onProgress,
+}) async {
+  final user=FirebaseAuth.instance.currentUser;
+  if(user==null)throw Exception('Medya yüklemek için giriş yapmalısın.');
+  final token=await user.getIdToken(true);
+  if(token==null||token.isEmpty)throw Exception('Güvenli medya oturumu oluşturulamadı.');
+
+  final hedef=_ngelxWsUri(
+    api:api,kind:kind,ext:ext,contentType:contentType,size:bytes.length,
+  );
+  WebSocket? soket;
+  StreamIterator<dynamic>? akis;
+  try{
+    soket=await WebSocket.connect(
+      hedef.toString(),
+      headers:{
+        HttpHeaders.authorizationHeader:'Bearer $token',
+        'X-NgelX-Client':'android-websocket-$_ngelxMediaProtocolVersion',
+        'X-NgelX-Filename':legacyPath,
+      },
+    ).timeout(const Duration(seconds:18));
+    soket.pingInterval=const Duration(seconds:20);
+    akis=StreamIterator<dynamic>(soket);
+
+    final hazir=await _ngelxWsSonraki(akis,'ws ready',zamanAsimi:const Duration(seconds:20));
+    if(hazir['type']!='ready'){
+      throw Exception('ws ready | beklenmeyen yanıt: ${hazir['type']}');
+    }
+
+    const parcaBoyutu=5*1024*1024;
+    final toplam=(bytes.length+parcaBoyutu-1)~/parcaBoyutu;
+    onProgress?.call(0,bytes.length);
+    for(var i=0;i<toplam;i++){
+      final bas=i*parcaBoyutu;
+      final son=(bas+parcaBoyutu)<bytes.length?(bas+parcaBoyutu):bytes.length;
+      final parca=Uint8List.sublistView(bytes,bas,son);
+      soket.add(parca);
+      final ack=await _ngelxWsSonraki(akis,'ws part ${i+1}/$toplam');
+      if(ack['type']!='part'||(ack['partNumber'] as num?)?.toInt()!=i+1){
+        throw Exception('ws part ${i+1}/$toplam | ACK uyuşmuyor');
+      }
+      onProgress?.call(son,bytes.length);
+    }
+
+    soket.add(jsonEncode({'type':'complete'}));
+    final tamam=await _ngelxWsSonraki(
+      akis,'ws complete',zamanAsimi:const Duration(minutes:2),
+    );
+    if(tamam['type']!='complete'){
+      throw Exception('ws complete | beklenmeyen yanıt: ${tamam['type']}');
+    }
+    final url=(tamam['url']??'').toString();
+    if(url.isEmpty)throw Exception('ws complete | sunucu medya URL döndürmedi.');
+    return url;
+  }on WebSocketException catch(e){
+    throw Exception('ws connect | ${hedef.host} | ${e.message}');
+  }on SocketException catch(e){
+    throw Exception('ws socket | ${hedef.host} | ${e.message}');
+  }catch(e){
+    final yazi=_ngelxKisaHata(e);
+    if(yazi.startsWith('ws '))rethrow;
+    throw Exception('ws upload | ${hedef.host} | $yazi');
+  }finally{
+    try{await akis?.cancel();}catch(_){}
+    try{await soket?.close();}catch(_){}
+  }
+}
+
+Future<String> _ngelxWebSocketDosyaYukleAndroid({
+  required String api,
+  required XFile dosya,
+  required int size,
+  required String kind,
+  required String ext,
+  required String contentType,
+  required String legacyPath,
+  void Function(int sent,int total)? onProgress,
+}) async {
+  final yerel=File(dosya.path);
+  if(!await yerel.exists()){
+    return _ngelxWebSocketBytesYukleAndroid(
+      api:api,bytes:await dosya.readAsBytes(),kind:kind,ext:ext,
+      contentType:contentType,legacyPath:legacyPath,onProgress:onProgress,
+    );
+  }
+
+  final user=FirebaseAuth.instance.currentUser;
+  if(user==null)throw Exception('Medya yüklemek için giriş yapmalısın.');
+  final token=await user.getIdToken(true);
+  if(token==null||token.isEmpty)throw Exception('Güvenli medya oturumu oluşturulamadı.');
+
+  final hedef=_ngelxWsUri(
+    api:api,kind:kind,ext:ext,contentType:contentType,size:size,
+  );
+  WebSocket? soket;
+  StreamIterator<dynamic>? akis;
+  RandomAccessFile? raf;
+  try{
+    soket=await WebSocket.connect(
+      hedef.toString(),
+      headers:{
+        HttpHeaders.authorizationHeader:'Bearer $token',
+        'X-NgelX-Client':'android-websocket-file-$_ngelxMediaProtocolVersion',
+        'X-NgelX-Filename':legacyPath,
+      },
+    ).timeout(const Duration(seconds:18));
+    soket.pingInterval=const Duration(seconds:20);
+    akis=StreamIterator<dynamic>(soket);
+
+    final hazir=await _ngelxWsSonraki(akis,'ws ready',zamanAsimi:const Duration(seconds:20));
+    if(hazir['type']!='ready'){
+      throw Exception('ws ready | beklenmeyen yanıt: ${hazir['type']}');
+    }
+
+    const parcaBoyutu=5*1024*1024;
+    final toplam=(size+parcaBoyutu-1)~/parcaBoyutu;
+    raf=await yerel.open(mode:FileMode.read);
+    var gonderilen=0;
+    onProgress?.call(0,size);
+    for(var i=0;i<toplam;i++){
+      final kalan=size-gonderilen;
+      final okunacak=kalan<parcaBoyutu?kalan:parcaBoyutu;
+      final parca=await raf.read(okunacak);
+      if(parca.length!=okunacak){
+        throw Exception('ws part ${i+1}/$toplam | dosya okuma eksik');
+      }
+      soket.add(parca);
+      final ack=await _ngelxWsSonraki(akis,'ws part ${i+1}/$toplam');
+      if(ack['type']!='part'||(ack['partNumber'] as num?)?.toInt()!=i+1){
+        throw Exception('ws part ${i+1}/$toplam | ACK uyuşmuyor');
+      }
+      gonderilen+=parca.length;
+      onProgress?.call(gonderilen,size);
+    }
+
+    soket.add(jsonEncode({'type':'complete'}));
+    final tamam=await _ngelxWsSonraki(
+      akis,'ws complete',zamanAsimi:const Duration(minutes:2),
+    );
+    if(tamam['type']!='complete'){
+      throw Exception('ws complete | beklenmeyen yanıt: ${tamam['type']}');
+    }
+    final url=(tamam['url']??'').toString();
+    if(url.isEmpty)throw Exception('ws complete | sunucu medya URL döndürmedi.');
+    return url;
+  }on WebSocketException catch(e){
+    throw Exception('ws connect | ${hedef.host} | ${e.message}');
+  }on SocketException catch(e){
+    throw Exception('ws socket | ${hedef.host} | ${e.message}');
+  }catch(e){
+    final yazi=_ngelxKisaHata(e);
+    if(yazi.startsWith('ws '))rethrow;
+    throw Exception('ws upload | ${hedef.host} | $yazi');
+  }finally{
+    try{await raf?.close();}catch(_){}
+    try{await akis?.cancel();}catch(_){}
+    try{await soket?.close();}catch(_){}
+  }
+}
+
 Future<String> ngelxMedyaYukleBytes({
   required Uint8List bytes,
   required String kind,
@@ -690,13 +909,7 @@ Future<String> ngelxMedyaYukleBytes({
 
   if(Platform.isAndroid){
     try{
-      if(bytes.length<=10*1024*1024){
-        return await _ngelxKucukMedyaYukleAndroid(
-          api:api,bytes:bytes,kind:kind,ext:temizExt,contentType:tur,
-          legacyPath:legacyPath,onProgress:onProgress,
-        );
-      }
-      return await _ngelxMultipartBytesYukleAndroid(
+      return await _ngelxWebSocketBytesYukleAndroid(
         api:api,bytes:bytes,kind:kind,ext:temizExt,contentType:tur,
         legacyPath:legacyPath,onProgress:onProgress,
       );
@@ -730,15 +943,9 @@ Future<String> ngelxMedyaYukleDosya({
 
   if(Platform.isAndroid){
     try{
-      if(boyut<=10*1024*1024||!await yerel.exists()){
-        return await _ngelxKucukMedyaYukleAndroid(
-          api:api,bytes:await dosya.readAsBytes(),kind:kind,ext:temizExt,
-          contentType:tur,legacyPath:legacyPath,onProgress:onProgress,
-        );
-      }
-      return await _ngelxMultipartDosyaYukleAndroid(
-        api:api,file:yerel,size:boyut,kind:kind,ext:temizExt,contentType:tur,
-        legacyPath:legacyPath,onProgress:onProgress,
+      return await _ngelxWebSocketDosyaYukleAndroid(
+        api:api,dosya:dosya,size:boyut,kind:kind,ext:temizExt,
+        contentType:tur,legacyPath:legacyPath,onProgress:onProgress,
       );
     }catch(e){
       throw Exception('UPLOAD $_ngelxMediaProtocolVersion | kind=$kind | size=$boyut | host=${Uri.parse(api).host} | ${_ngelxKisaHata(e)}');
