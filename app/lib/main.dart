@@ -2785,20 +2785,33 @@ class _AramaPageState extends State<AramaPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return Theme(
+      data:ThemeData.light().copyWith(
+        scaffoldBackgroundColor:Colors.white,
+        appBarTheme:const AppBarTheme(backgroundColor:Colors.white,foregroundColor:Colors.black,elevation:0),
+        inputDecorationTheme:InputDecorationTheme(
+          filled:true,
+          fillColor:const Color(0xFFF3F4F7),
+          border:OutlineInputBorder(borderRadius:BorderRadius.circular(18),borderSide:BorderSide.none),
+        ),
+      ),
+      child:Scaffold(
+      backgroundColor:Colors.white,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0D0D14),
+        backgroundColor: Colors.white,
+        foregroundColor:Colors.black,
         titleSpacing: 0,
         title: TextField(
           controller: ara,
           autofocus: true,
           onChanged: (v) => setState(() => sorgu = v.trim().toLowerCase()),
-          decoration: InputDecoration(hintText: 'Kullanıcı, video, etiket ara', prefixIcon: const Icon(Icons.search), suffixIcon: sorgu.isEmpty ? null : IconButton(onPressed: () { ara.clear(); setState(() => sorgu = ''); }, icon: const Icon(Icons.cancel))),
+          style:const TextStyle(color:Colors.black87),
+          decoration: InputDecoration(hintText: 'Kullanıcı, video, etiket ara', hintStyle:const TextStyle(color:Colors.black45), prefixIcon: const Icon(Icons.search,color:Colors.black45), suffixIcon: sorgu.isEmpty ? null : IconButton(onPressed: () { ara.clear(); setState(() => sorgu = ''); }, icon: const Icon(Icons.cancel,color:Colors.black45))),
         ),
         actions: [TextButton(onPressed: () => FocusScope.of(context).unfocus(), child: const Text('Ara', style: TextStyle(color: mavi, fontWeight: FontWeight.bold)))],
       ),
       body: sorgu.isEmpty
-          ? const Center(child: Column(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.manage_search_rounded, size: 75, color: mavi), SizedBox(height: 12), Text('NgelX’te istediğini ara', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)), SizedBox(height: 6), Text('Kullanıcılar, açıklamalar ve etiketler', style: TextStyle(color: Colors.white38))]))
+          ? const Center(child: Column(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.manage_search_rounded, size: 75, color: mavi), SizedBox(height: 12), Text('NgelX’te istediğini ara', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold,color:Colors.black87)), SizedBox(height: 6), Text('Kullanıcılar, açıklamalar ve etiketler', style: TextStyle(color: Colors.black45))]))
           : FutureBuilder<List<QuerySnapshot<Map<String, dynamic>>>>(
               future: Future.wait([
                 FirebaseFirestore.instance.collection('users').limit(60).get(),
@@ -2818,6 +2831,7 @@ class _AramaPageState extends State<AramaPage> {
                 ]);
               },
             ),
+      ),
     );
   }
 }
@@ -17658,65 +17672,68 @@ class _ProfilPageState extends State<ProfilPage> {
                   const SizedBox(height: 8),
                   Row(mainAxisAlignment:MainAxisAlignment.center,children:[const Icon(Icons.location_on_outlined,color:Colors.black54,size:18),const SizedBox(width:4),Flexible(child:Text(konum,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black54))),const SizedBox(width:13),const Icon(Icons.calendar_month_outlined,color:Colors.black54,size:18),const SizedBox(width:4),Flexible(child:Text(katilim,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black54)))]),
                   const SizedBox(height:14),
-                  NgelXPremiumCard(
-                    padding:EdgeInsets.zero,
-                    radius:24,
-                    onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const NgelXPremiumPage())),
-                    child:Container(
-                      width:double.infinity,
-                      padding:const EdgeInsets.fromLTRB(16,15,13,15),
-                      decoration:BoxDecoration(
-                        borderRadius:BorderRadius.circular(24),
-                        gradient:const LinearGradient(
-                          colors:[Color(0xFF0637A6),Color(0xFF1768E8),Color(0xFF7844F3)],
-                          begin:Alignment.topLeft,end:Alignment.bottomRight,
-                        ),
-                        boxShadow:const [BoxShadow(color:Color(0x292F64E9),blurRadius:24,offset:Offset(0,10))],
-                      ),
-                      child:Row(children:[
-                        Container(
-                          width:48,height:48,
-                          decoration:const BoxDecoration(
-                            shape:BoxShape.circle,
-                            gradient:LinearGradient(colors:[Color(0xFF20D6ED),Color(0xFF8B5CF6)]),
+                  if(premiumAktif)...[
+                    NgelXPremiumCard(
+                      padding:EdgeInsets.zero,
+                      radius:24,
+                      onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const NgelXPremiumPage())),
+                      child:Container(
+                        width:double.infinity,
+                        padding:const EdgeInsets.fromLTRB(16,15,13,15),
+                        decoration:BoxDecoration(
+                          borderRadius:BorderRadius.circular(24),
+                          gradient:const LinearGradient(
+                            colors:[Color(0xFF0637A6),Color(0xFF1768E8),Color(0xFF7844F3)],
+                            begin:Alignment.topLeft,end:Alignment.bottomRight,
                           ),
-                          child:const Icon(Icons.workspace_premium_rounded,color:Colors.white,size:29),
+                          boxShadow:const [BoxShadow(color:Color(0x292F64E9),blurRadius:24,offset:Offset(0,10))],
                         ),
-                        const SizedBox(width:12),
-                        Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-                          Row(children:[
-                            const Flexible(child:Text('NgelX Premium',style:TextStyle(color:Colors.white,fontSize:17,fontWeight:FontWeight.w900))),
-                            const SizedBox(width:7),
-                            Container(
-                              padding:const EdgeInsets.symmetric(horizontal:7,vertical:3),
-                              decoration:BoxDecoration(color:Colors.white.withValues(alpha:.16),borderRadius:BorderRadius.circular(10)),
-                              child:Text(premiumAktif?'AKTİF':'PREMIUM',style:const TextStyle(color:Colors.white,fontSize:8.5,fontWeight:FontWeight.w900)),
-                            ),
-                          ]),
-                          const SizedBox(height:4),
-                          Text(
-                            premiumAktif?'Premium ayrıcalıkların aktif':'Özel ayrıcalıklar • Jetonlar • Rozetler',
-                            style:TextStyle(color:Colors.white.withValues(alpha:.80),fontSize:11.5,fontWeight:FontWeight.w600),
-                          ),
-                        ])),
-                        const SizedBox(width:8),
-                        Column(crossAxisAlignment:CrossAxisAlignment.end,children:[
+                        child:Row(children:[
                           Container(
-                            padding:const EdgeInsets.symmetric(horizontal:8,vertical:6),
-                            decoration:BoxDecoration(color:Colors.black.withValues(alpha:.17),borderRadius:BorderRadius.circular(14),border:Border.all(color:Colors.white24)),
-                            child:Row(mainAxisSize:MainAxisSize.min,children:[
-                              const Icon(Icons.monetization_on_rounded,color:Color(0xFFFFC928),size:17),
-                              const SizedBox(width:4),
-                              Text(jetonBakiyesi.toString(),style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w900,fontSize:11)),
-                            ]),
+                            width:48,height:48,
+                            decoration:const BoxDecoration(
+                              shape:BoxShape.circle,
+                              gradient:LinearGradient(colors:[Color(0xFF20D6ED),Color(0xFF8B5CF6)]),
+                            ),
+                            child:const Icon(Icons.workspace_premium_rounded,color:Colors.white,size:29),
                           ),
-                          const SizedBox(height:5),
-                          const Icon(Icons.chevron_right_rounded,color:Colors.white,size:22),
+                          const SizedBox(width:12),
+                          Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+                            Row(children:[
+                              const Flexible(child:Text('NgelX Premium',style:TextStyle(color:Colors.white,fontSize:17,fontWeight:FontWeight.w900))),
+                              const SizedBox(width:7),
+                              Container(
+                                padding:const EdgeInsets.symmetric(horizontal:7,vertical:3),
+                                decoration:BoxDecoration(color:Colors.white.withValues(alpha:.16),borderRadius:BorderRadius.circular(10)),
+                                child:Text(premiumAktif?'AKTİF':'PREMIUM',style:const TextStyle(color:Colors.white,fontSize:8.5,fontWeight:FontWeight.w900)),
+                              ),
+                            ]),
+                            const SizedBox(height:4),
+                            Text(
+                              premiumAktif?'Premium ayrıcalıkların aktif':'Özel ayrıcalıklar • Jetonlar • Rozetler',
+                              style:TextStyle(color:Colors.white.withValues(alpha:.80),fontSize:11.5,fontWeight:FontWeight.w600),
+                            ),
+                          ])),
+                          const SizedBox(width:8),
+                          Column(crossAxisAlignment:CrossAxisAlignment.end,children:[
+                            Container(
+                              padding:const EdgeInsets.symmetric(horizontal:8,vertical:6),
+                              decoration:BoxDecoration(color:Colors.black.withValues(alpha:.17),borderRadius:BorderRadius.circular(14),border:Border.all(color:Colors.white24)),
+                              child:Row(mainAxisSize:MainAxisSize.min,children:[
+                                const Icon(Icons.monetization_on_rounded,color:Color(0xFFFFC928),size:17),
+                                const SizedBox(width:4),
+                                Text(jetonBakiyesi.toString(),style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w900,fontSize:11)),
+                              ]),
+                            ),
+                            const SizedBox(height:5),
+                            const Icon(Icons.chevron_right_rounded,color:Colors.white,size:22),
+                          ]),
                         ]),
-                      ]),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height:18),
+                    const SizedBox(height:18),
+                  ],
+
                   StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
                     stream:aktifKullanici==null?null:FirebaseFirestore.instance.collection('videos').where('ownerId',isEqualTo:aktifKullanici!.uid).limit(100).snapshots(),
                     builder:(_,s){
