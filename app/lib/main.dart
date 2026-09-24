@@ -5488,6 +5488,7 @@ class _CanliYayinPageState extends State<CanliYayinPage> {
   bool mikrofonAcik = true;
   bool kameraAcik = true;
   bool kapatildi = false;
+  bool kalpIsleniyor = false;
 
   @override
   void initState() {
@@ -5542,6 +5543,26 @@ class _CanliYayinPageState extends State<CanliYayinPage> {
     }
     await _bitir(geriDon: false);
     return true;
+  }
+
+  Future<void> _kalpDegistir() async {
+    if(kalpIsleniyor)return;
+    final user=FirebaseAuth.instance.currentUser;
+    if(user==null)return;
+    kalpIsleniyor=true;
+    final ref=FirebaseFirestore.instance.collection('live_streams').doc(widget.belgeId).collection('reactions').doc(user.uid);
+    try{
+      final mevcut=await ref.get();
+      if(mevcut.exists){
+        await ref.delete();
+      }else{
+        await ref.set({'uid':user.uid,'type':'heart','createdAt':FieldValue.serverTimestamp()});
+      }
+    }catch(e){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Canlı yayın tepkisi gönderilemedi.')));
+    }finally{
+      kalpIsleniyor=false;
+    }
   }
 
   Future<void> _yorumGonder() async {
@@ -5619,7 +5640,19 @@ class _CanliYayinPageState extends State<CanliYayinPage> {
                   const SizedBox(width: 6),
                   FilledButton(style: FilledButton.styleFrom(backgroundColor: const Color(0xFFFF1744)), onPressed: () async { if (await _geri() && mounted) Navigator.pop(context); }, child: const Text('Bitir')),
                 ] else
-                  IconButton.filled(onPressed: () {}, icon: const Icon(Icons.favorite_rounded, color: Colors.redAccent)),
+                  StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
+                    stream:FirebaseFirestore.instance.collection('live_streams').doc(widget.belgeId).collection('reactions').snapshots(),
+                    builder:(_,s){
+                      final user=FirebaseAuth.instance.currentUser;
+                      final benim=user!=null&&(s.data?.docs??[]).any((d)=>d.id==user.uid);
+                      final sayi=s.data?.docs.length??0;
+                      return FilledButton.tonalIcon(
+                        onPressed:kalpIsleniyor?null:_kalpDegistir,
+                        icon:Icon(benim?Icons.favorite_rounded:Icons.favorite_border_rounded,color:Colors.redAccent),
+                        label:Text(sayi>0?'$sayi':'Beğen'),
+                      );
+                    },
+                  ),
               ]),
             ]),
           )),
