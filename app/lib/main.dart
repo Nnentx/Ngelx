@@ -13780,7 +13780,7 @@ class _SohbetPageState extends State<SohbetPage> {
       child:SizedBox(width:78,child:Padding(
         padding:const EdgeInsets.symmetric(vertical:8),
         child:Column(children:[
-          Icon(i,color:const Color(0xFF1836D8),size:29),
+          Icon(i,color:ngelxPrivateBlue,size:29),
           const SizedBox(height:6),
           Text(t,maxLines:2,textAlign:TextAlign.center,style:const TextStyle(fontSize:12,color:Colors.black87)),
         ]),
@@ -13914,7 +13914,7 @@ class _SohbetPageState extends State<SohbetPage> {
                 decoration:BoxDecoration(
                   color:ben?Colors.white.withValues(alpha:.16):Colors.white,
                   borderRadius:BorderRadius.circular(12),
-                  border:Border(left:BorderSide(color:ben?Colors.white:const Color(0xFF1836D8),width:3)),
+                  border:Border(left:BorderSide(color:ben?Colors.white:ngelxPrivateBlue,width:3)),
                 ),
                 child:Text((v['replyText']??'').toString(),maxLines:2,overflow:TextOverflow.ellipsis,style:TextStyle(color:ben?Colors.white:Colors.black87,fontSize:12.5,fontWeight:FontWeight.w600)),
               ),
@@ -13941,7 +13941,7 @@ class _SohbetPageState extends State<SohbetPage> {
               NgelXSesliMesaj(url:(v['audioUrl']??'').toString(),benim:ben,durationSeconds:(v['durationSeconds'] as num?)?.toInt()??0,accentColor:ngelxPrivateBlue)
             else if(file)
               Row(children:[
-                Icon(Icons.insert_drive_file_rounded,color:ben?Colors.white:const Color(0xFF1836D8),size:34),
+                Icon(Icons.insert_drive_file_rounded,color:ben?Colors.white:ngelxPrivateBlue,size:34),
                 const SizedBox(width:9),
                 Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
                   Text((v['fileName']??'Dosya').toString(),maxLines:2,overflow:TextOverflow.ellipsis,style:TextStyle(color:ben?Colors.white:Colors.black87,fontWeight:FontWeight.w800)),
@@ -14374,8 +14374,10 @@ class _SohbetPageState extends State<SohbetPage> {
           IconButton(onPressed:()=>setState((){yanitMesajId=null;yanitMetin=null;yanitGonderenUid=null;}),icon:const Icon(Icons.close_rounded,color:Colors.black54)),
         ]),
       ),
-      SafeArea(top:false,child:Padding(
-        padding:const EdgeInsets.fromLTRB(4,7,4,8),
+      SafeArea(top:false,child:Container(
+        decoration:const BoxDecoration(color:Colors.white,border:Border(top:BorderSide(color:ngelxPrivateBlueBorder))),
+        child:Padding(
+        padding:const EdgeInsets.fromLTRB(5,8,5,9),
         child:sesKaydediliyor
           ? Row(children:[
               IconButton(
@@ -14403,7 +14405,7 @@ class _SohbetPageState extends State<SohbetPage> {
                     Expanded(child:Row(mainAxisAlignment:MainAxisAlignment.spaceEvenly,children:List.generate(10,(i)=>Container(
                       width:3,
                       height:8.0+((i%5)*3),
-                      decoration:BoxDecoration(color:const ngelxPrivateBlue.withValues(alpha:.48),borderRadius:BorderRadius.circular(3)),
+                      decoration:BoxDecoration(color:ngelxPrivateBlue.withValues(alpha:.48),borderRadius:BorderRadius.circular(3)),
                     )))),
                   ]),
                 ),
@@ -14435,7 +14437,7 @@ class _SohbetPageState extends State<SohbetPage> {
                       ListTile(leading:const Icon(Icons.sports_esports_rounded,color:ngelxPrivateBlue),title:const Text('Oyun',style:TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(c,'game')),
                       ListTile(leading:const Icon(Icons.location_on_rounded,color:ngelxPrivateBlue),title:const Text('Konum',style:TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(c,'location')),
                       const Divider(),
-                      ListTile(leading:const Icon(Icons.camera_alt_outlined,color:Colors.blue),title:const Text('Kamera',style:TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(c,'camera')),
+                      ListTile(leading:const Icon(Icons.camera_alt_outlined,color:ngelxPrivateBlue),title:const Text('Kamera',style:TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(c,'camera')),
                       ListTile(leading:const Icon(Icons.photo_library_outlined,color:ngelxPrivateBlue),title:const Text('Fotoğraf',style:TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(c,'gallery')),
                       ListTile(leading:const Icon(Icons.video_library_outlined,color:ngelxPrivateBlue),title:const Text('Video',style:TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(c,'video')),
                       ListTile(leading:const Icon(Icons.videocam_outlined,color:ngelxPrivateBlue),title:const Text('Video çek',style:TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(c,'videoCamera')),
@@ -14484,7 +14486,7 @@ class _SohbetPageState extends State<SohbetPage> {
                 },
               ),
             ]),
-      )),
+      ))),
     ]));}),
   ));
 }
