@@ -29,6 +29,9 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   try {
     await Firebase.initializeApp();
+    if(FirebaseAuth.instance.currentUser?.isAnonymous==true){
+      await FirebaseAuth.instance.signOut();
+    }
     final hafiza = await SharedPreferences.getInstance();
     uygulamaDili.value = hafiza.getString('uygulama_dili') ?? 'tr';
     runApp(const NgelXApp());
@@ -1784,7 +1787,7 @@ class NgelXApp extends StatelessWidget {
             final kullanici=auth.data;
             return UygulamaDurumKapisi(
               key:ValueKey('durum_${kullanici?.uid??'guest'}_$dil'),
-              child:kullanici==null
+              child:kullanici==null||kullanici.isAnonymous
                 ? GirisPage(key:ValueKey('giris_$dil'))
                 : AnaEkran(key:ValueKey('ana_${kullanici.uid}_$dil')),
             );
