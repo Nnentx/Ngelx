@@ -2634,12 +2634,12 @@ class _VideoAkisiState extends State<VideoAkisi> {
             return const Center(child:CircularProgressIndicator(color:mavi));
           }
           if(snapshot.hasError){
-            return const Center(child:Padding(
-              padding:EdgeInsets.all(28),
+            return Center(child:Padding(
+              padding:const EdgeInsets.all(28),
               child:Column(mainAxisSize:MainAxisSize.min,children:[
-                Icon(Icons.cloud_off_rounded,color:Colors.white54,size:52),
-                SizedBox(height:12),
-                Text(t('feedLoadError'),textAlign:TextAlign.center,style:TextStyle(color:Colors.white70,fontWeight:FontWeight.w700)),
+                const Icon(Icons.cloud_off_rounded,color:Colors.white54,size:52),
+                const SizedBox(height:12),
+                Text(t('feedLoadError'),textAlign:TextAlign.center,style:const TextStyle(color:Colors.white70,fontWeight:FontWeight.w700)),
               ]),
             ));
           }
