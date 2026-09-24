@@ -459,6 +459,11 @@ service cloud.firestore {
         allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
         allow update, delete: if signedIn() && resource.data.userId == request.auth.uid;
       }
+      match /reactions/{uid} {
+        allow read: if true;
+        allow create, update: if isMe(uid) && request.resource.data.uid == request.auth.uid;
+        allow delete: if isMe(uid);
+      }
     }
   }
 }
