@@ -13870,7 +13870,7 @@ class _SohbetPageState extends State<SohbetPage> {
 
   Widget ozelMesajKarti(QueryDocumentSnapshot<Map<String,dynamic>> d,{double fontSize=16,bool goruldu=false,String quickReaction='❤️'}){
     final v=d.data(),ben=v['senderId']==uid,tur=(v['type']??'text').toString();
-    final photo=tur=='photo',shared=tur=='shared_content',audio=tur=='audio',file=tur=='file',location=tur=='location',call=tur=='call',storyReply=tur=='story_reply';
+    final photo=tur=='photo',video=tur=='video',shared=tur=='shared_content',audio=tur=='audio',file=tur=='file',location=tur=='location',call=tur=='call',storyReply=tur=='story_reply';
     final metin=(v['text']??v['message']??v['content']??'').toString().trim(),saat=mesajSaati(v['createdAt']??v['clientCreatedAt']);
     final gizlenecek=gizliKelimeFiltresi&&metin.isNotEmpty&&gizliKelimeListesi.any((x)=>x.trim().isNotEmpty&&metin.toLowerCase().contains(x.toLowerCase()));
     final gosterilecekMetin=gizlenecek?'Gizli kelime filtresi nedeniyle gizlendi.':metin;
@@ -13885,6 +13885,8 @@ class _SohbetPageState extends State<SohbetPage> {
         onDoubleTap:()=>mesajTepkiDegistir(d,quickReaction),
         onTap:photo
           ? ()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>TamEkranMedyaPage(url:(v['mediaUrl']??'').toString())))
+          : video
+            ? ()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>TamEkranVideoPage(url:(v['videoUrl']??v['mediaUrl']??'').toString())))
           : shared
             ? ()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>IcerikBaglantiPage(icerikId:(v['contentId']??'').toString())))
             : file
@@ -13896,7 +13898,13 @@ class _SohbetPageState extends State<SohbetPage> {
           constraints:const BoxConstraints(maxWidth:290),
           margin:const EdgeInsets.symmetric(horizontal:4,vertical:5),
           padding:EdgeInsets.all(photo?4:12),
-          decoration:BoxDecoration(color:ben?const Color(0xFF1687FF):const Color(0xFFF0F1F4),borderRadius:BorderRadius.circular(20)),
+          decoration:BoxDecoration(
+            color:ben?null:Colors.white,
+            gradient:ben?const LinearGradient(begin:Alignment.topLeft,end:Alignment.bottomRight,colors:[ngelxPrivateBlue2,ngelxPrivateBlue]):null,
+            borderRadius:BorderRadius.circular(20),
+            border:ben?null:Border.all(color:ngelxPrivateBlueBorder),
+            boxShadow:const [BoxShadow(color:Color(0x100B5FD7),blurRadius:12,offset:Offset(0,5))],
+          ),
           child:Column(crossAxisAlignment:CrossAxisAlignment.end,mainAxisSize:MainAxisSize.min,children:[
             if((v['replyText']??'').toString().trim().isNotEmpty)
               Container(
@@ -13912,6 +13920,8 @@ class _SohbetPageState extends State<SohbetPage> {
               ),
             if(photo)
               IgnorePointer(child:ClipRRect(borderRadius:BorderRadius.circular(16),child:CachedNetworkImage(imageUrl:(v['mediaUrl']??'').toString(),width:230,fit:BoxFit.cover)))
+            else if(video)
+              IgnorePointer(child:ClipRRect(borderRadius:BorderRadius.circular(16),child:NgelXGrupVideoMesaj(url:(v['videoUrl']??v['mediaUrl']??'').toString(),compact:true)))
             else if(shared)
               IgnorePointer(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
                 Row(children:[Icon(Icons.play_circle_fill_rounded,color:ben?Colors.white:mavi),const SizedBox(width:7),Text('NgelX paylaşımı',style:TextStyle(color:ben?Colors.white:Colors.black87,fontWeight:FontWeight.w900))]),
@@ -13928,7 +13938,7 @@ class _SohbetPageState extends State<SohbetPage> {
                 ])),
               ])
             else if(audio)
-              NgelXSesliMesaj(url:(v['audioUrl']??'').toString(),benim:ben,durationSeconds:(v['durationSeconds'] as num?)?.toInt()??0)
+              NgelXSesliMesaj(url:(v['audioUrl']??'').toString(),benim:ben,durationSeconds:(v['durationSeconds'] as num?)?.toInt()??0,accentColor:ngelxPrivateBlue)
             else if(file)
               Row(children:[
                 Icon(Icons.insert_drive_file_rounded,color:ben?Colors.white:const Color(0xFF1836D8),size:34),
@@ -13988,19 +13998,29 @@ class _SohbetPageState extends State<SohbetPage> {
   }
 
   Widget sohbetUstBilgi()=>Padding(
-    padding:const EdgeInsets.fromLTRB(12,8,12,18),
-    child:Column(children:[
-      FilledButton.tonal(onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciProfilPage(uid:widget.digerUid))),child:const Text('Profili Gör')),
-      const SizedBox(height:12),
-      const Row(mainAxisAlignment:MainAxisAlignment.center,crossAxisAlignment:CrossAxisAlignment.start,children:[
-        Icon(Icons.lock_rounded,size:15,color:Colors.black45),
-        SizedBox(width:6),
-        Flexible(child:Text(
-          'Bu sohbet güvenli bağlantı üzerinden çalışır. Mesaj ve medya içeriklerini yalnızca bu sohbette paylaştığın kişiler görebilir.',
-          textAlign:TextAlign.center,style:TextStyle(color:Colors.black54,fontSize:13,height:1.35),
-        )),
+    padding:const EdgeInsets.fromLTRB(6,10,6,18),
+    child:NgelXPrivateCard(
+      padding:const EdgeInsets.fromLTRB(14,14,14,13),
+      child:Column(children:[
+        Row(children:[
+          Container(
+            width:38,height:38,
+            decoration:const BoxDecoration(color:ngelxPrivateBlueSoft,shape:BoxShape.circle),
+            child:const Icon(Icons.lock_rounded,color:ngelxPrivateBlue,size:19),
+          ),
+          const SizedBox(width:10),
+          const Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+            Text('Özel sohbet',style:TextStyle(color:ngelxPrivateBlueInk,fontWeight:FontWeight.w900,fontSize:14)),
+            SizedBox(height:2),
+            Text('Mesaj ve medya yalnızca bu sohbetin katılımcıları içindir.',style:TextStyle(color:Colors.black54,fontSize:11.5,height:1.25)),
+          ])),
+          TextButton(
+            onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciProfilPage(uid:widget.digerUid))),
+            child:const Text('Profili gör',style:TextStyle(color:ngelxPrivateBlue,fontWeight:FontWeight.w800)),
+          ),
+        ]),
       ]),
-    ]),
+    ),
   );
 
   Future<void> emojiSec()async{final e=await showModalBottomSheet<String>(context:context,backgroundColor:Colors.white,showDragHandle:true,builder:(c)=>SafeArea(child:Padding(padding:const EdgeInsets.all(18),child:Wrap(spacing:14,runSpacing:14,children:['😀','😊','😂','😍','🥰','😎','😭','😡','👍','👏','🙏','❤️','🔥','🎉','✨','💯','🤔','😴','🙌','🤝'].map((x)=>InkWell(onTap:()=>Navigator.pop(c,x),child:Text(x,style:const TextStyle(fontSize:30)))).toList()))));if(e!=null){mesaj.text='${mesaj.text}$e';mesaj.selection=TextSelection.collapsed(offset:mesaj.text.length);}}
@@ -14410,7 +14430,8 @@ class NgelXSesliMesaj extends StatefulWidget{
   final String url;
   final bool benim;
   final int durationSeconds;
-  const NgelXSesliMesaj({super.key,required this.url,required this.benim,this.durationSeconds=0});
+  final Color accentColor;
+  const NgelXSesliMesaj({super.key,required this.url,required this.benim,this.durationSeconds=0,this.accentColor=ngelxGroupGreen});
   @override State<NgelXSesliMesaj> createState()=>_NgelXSesliMesajState();
 }
 class _NgelXSesliMesajState extends State<NgelXSesliMesaj>{
@@ -14459,7 +14480,7 @@ class _NgelXSesliMesajState extends State<NgelXSesliMesaj>{
             final toplamMs=toplam.inMilliseconds>0?toplam.inMilliseconds:1;
             final hamMs=konum.inMilliseconds;
             final konumMs=hamMs<0?0:(hamMs>toplamMs?toplamMs:hamMs);
-            final vurgu=widget.benim?Colors.white:ngelxGroupGreen;
+            final vurgu=widget.benim?Colors.white:widget.accentColor;
             final soluk=widget.benim?Colors.white70:ngelxPremiumMuted;
             return Row(crossAxisAlignment:CrossAxisAlignment.center,children:[
               SizedBox(
