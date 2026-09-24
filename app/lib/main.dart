@@ -8241,6 +8241,57 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
     });
   }
 
+  Future<void> ozelMesajBilgisi(QueryDocumentSnapshot<Map<String,dynamic>> d)async{
+    final v=d.data();
+    final olusturma=v['createdAt']??v['clientCreatedAt'];
+    final tarih=olusturma is Timestamp?olusturma.toDate().toLocal():null;
+    final chat=await FirebaseFirestore.instance.collection('chats').doc(widget.chatId).get();
+    final cv=chat.data()??<String,dynamic>{};
+    final okundu=cv['readReceipts_${widget.digerUid}']!=false;
+    final sonOkuma=cv['lastReadAt_${widget.digerUid}'];
+    final goruldu=okundu&&tarih!=null&&sonOkuma is Timestamp&&!sonOkuma.toDate().isBefore(tarih);
+    String zaman(DateTime? x){
+      if(x==null)return 'Hazırlanıyor';
+      final hh=x.hour.toString().padLeft(2,'0'),mm=x.minute.toString().padLeft(2,'0');
+      final dd=x.day.toString().padLeft(2,'0'),mo=x.month.toString().padLeft(2,'0');
+      return '$dd.$mo.${x.year} • $hh:$mm';
+    }
+    if(!mounted)return;
+    await showModalBottomSheet<void>(
+      context:context,
+      backgroundColor:Colors.white,
+      showDragHandle:true,
+      shape:const RoundedRectangleBorder(borderRadius:BorderRadius.vertical(top:Radius.circular(28))),
+      builder:(c)=>SafeArea(child:Padding(
+        padding:const EdgeInsets.fromLTRB(16,0,16,22),
+        child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
+          const Row(children:[
+            CircleAvatar(backgroundColor:ngelxPrivateBlueSoft,child:Icon(Icons.info_outline_rounded,color:ngelxPrivateBlue)),
+            SizedBox(width:12),
+            Text('Mesaj bilgisi',style:TextStyle(color:ngelxPrivateBlueInk,fontSize:20,fontWeight:FontWeight.w900)),
+          ]),
+          const SizedBox(height:16),
+          NgelXPrivateCard(
+            padding:EdgeInsets.zero,
+            child:Column(children:[
+              ListTile(
+                leading:const Icon(Icons.send_rounded,color:ngelxPrivateBlue),
+                title:const Text('Gönderildi',style:TextStyle(fontWeight:FontWeight.w800)),
+                subtitle:Text(zaman(tarih)),
+              ),
+              const Divider(height:1,indent:58),
+              ListTile(
+                leading:Icon(goruldu?Icons.done_all_rounded:Icons.done_rounded,color:goruldu?ngelxPrivateBlue:Colors.black38),
+                title:Text(goruldu?'Görüldü':'Henüz görülmedi',style:const TextStyle(fontWeight:FontWeight.w800)),
+                subtitle:Text(goruldu&&sonOkuma is Timestamp?zaman(sonOkuma.toDate().toLocal()):'Karşı taraf okuduğunda burada görünür.'),
+              ),
+            ]),
+          ),
+        ]),
+      )),
+    );
+  }
+
   Future<void> mesajMenusu(QueryDocumentSnapshot<Map<String,dynamic>> d)async{
     final v=d.data(),ben=v['senderId']==uid,metin=(v['text']??'').toString();
     final grup=await chatRef.get();
@@ -13279,6 +13330,7 @@ class _SohbetPageState extends State<SohbetPage> {
   }
 
   void mesajDegisti(String deger){
+    PrivateDraftStore.schedule(widget.chatId,deger);
     mentionAra(deger);
     final ben=uid;if(ben==null)return;
     final ref=FirebaseFirestore.instance.collection('chats').doc(widget.chatId);
@@ -13359,6 +13411,7 @@ class _SohbetPageState extends State<SohbetPage> {
       // Sunucu yazmayı kabul etmeden alanı temizleme. Böylece başarısız bir
       // mesaj gönderilmiş gibi görünmez ve art arda dokunma kopya üretmez.
       await batch.commit().timeout(const Duration(seconds:12));
+      await PrivateDraftStore.clear(widget.chatId);
       mesaj.clear();
       yaziyorZamanlayici?.cancel();
       yaziyorGonderildi=false;
@@ -13429,6 +13482,36 @@ class _SohbetPageState extends State<SohbetPage> {
       unawaited(uygulamaBildirimiGonder(toUid:widget.digerUid,fromUid:ben,tur:'message',metin:'Yeni bir fotoğraf mesajın var',belgeId:widget.chatId).catchError((_){ }));
     }catch(_){
       if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Medya hizmeti şu anda kullanılamıyor. Yazılı mesaj göndermeye devam edebilirsin.')));
+    }
+  }
+
+  Future<void> videoGonder(ImageSource kaynak)async{
+    final ben=uid;
+    if(ben==null)return;
+    final hazirlik=await mesajGonderimHazirligi();
+    if(hazirlik.engel!=null){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(hazirlik.engel!)));
+      return;
+    }
+    final x=await ImagePicker().pickVideo(source:kaynak,maxDuration:const Duration(minutes:5));
+    if(x==null)return;
+    try{
+      final boyut=await x.length();
+      if(boyut>80*1024*1024)throw Exception('Video 80 MB’den küçük olmalı.');
+      final uzanti=x.name.contains('.')?x.name.split('.').last.toLowerCase():'mp4';
+      final url=await ngelxMedyaYukleDosya(
+        dosya:x,
+        kind:'videos',
+        ext:uzanti,
+        legacyPath:'chat-videos/${widget.chatId}/${DateTime.now().millisecondsSinceEpoch}.$uzanti',
+      ).timeout(const Duration(minutes:5));
+      await ekMesajGonder(
+        {'type':'video','videoUrl':url,'mediaUrl':url},
+        '🎬 Video',
+        bildirim:'Sana bir video gönderdi',
+      );
+    }catch(e){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Video gönderilemedi: $e')));
     }
   }
 
@@ -13753,8 +13836,9 @@ class _SohbetPageState extends State<SohbetPage> {
     final fazla=await showModalBottomSheet<String>(
       context:context,backgroundColor:Colors.white,showDragHandle:true,
       builder:(c)=>Theme(data:ThemeData.light(),child:SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
-        if(benim&&metin.isNotEmpty)ListTile(leading:const Icon(Icons.edit_outlined),title:const Text('Düzenle',style:TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(c,'edit')),
-        ListTile(leading:Icon(v['pinned']==true?Icons.push_pin:Icons.push_pin_outlined,color:Colors.blue),title:Text(v['pinned']==true?'Sabitlemeyi kaldır':'Mesajı sabitle',style:const TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(c,'pin')),
+        if(benim&&metin.isNotEmpty)ListTile(leading:const Icon(Icons.edit_outlined,color:ngelxPrivateBlue),title:const Text('Düzenle',style:TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(c,'edit')),
+        if(benim)ListTile(leading:const Icon(Icons.info_outline_rounded,color:ngelxPrivateBlue),title:const Text('Mesaj bilgisi',style:TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(c,'info')),
+        ListTile(leading:Icon(v['pinned']==true?Icons.push_pin:Icons.push_pin_outlined,color:ngelxPrivateBlue),title:Text(v['pinned']==true?'Sabitlemeyi kaldır':'Mesajı sabitle',style:const TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(c,'pin')),
         if(benim)ListTile(leading:const Icon(Icons.delete_outline,color:Colors.red),title:const Text('Herkesten sil',style:TextStyle(color:Colors.red)),onTap:()=>Navigator.pop(c,'delete')),
         if(!benim)ListTile(leading:const Icon(Icons.flag_outlined),title:const Text('Şikâyet et',style:TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(c,'report')),
       ]))),
@@ -13762,7 +13846,8 @@ class _SohbetPageState extends State<SohbetPage> {
     if(fazla==null)return;
     await ngelxOverlayKapanisiniBekle();
     if(!mounted)return;
-    if(fazla=='pin')await d.reference.set({'pinned':v['pinned']!=true,'pinnedAt':FieldValue.serverTimestamp(),'pinnedBy':uid},SetOptions(merge:true));
+    if(fazla=='info'){await ozelMesajBilgisi(d);}
+    else if(fazla=='pin')await d.reference.set({'pinned':v['pinned']!=true,'pinnedAt':FieldValue.serverTimestamp(),'pinnedBy':uid},SetOptions(merge:true));
     else if(fazla=='delete'){
       final ok=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(
         backgroundColor:Colors.white,title:const Text('Mesaj silinsin mi?'),content:const Text('Mesaj sohbetten kalıcı olarak kaldırılacak.'),
@@ -14007,6 +14092,13 @@ class _SohbetPageState extends State<SohbetPage> {
     final sohbetRef=FirebaseFirestore.instance.collection('chats').doc(widget.chatId);
     _chatAkisi=sohbetRef.snapshots();
     _mesajAkisi=sohbetRef.collection('messages').orderBy('createdAt').limitToLast(100).snapshots();
+    unawaited(PrivateDraftStore.load(widget.chatId).then((taslak){
+      if(mounted&&taslak.isNotEmpty&&mesaj.text.isEmpty){
+        mesaj.text=taslak;
+        mesaj.selection=TextSelection.collapsed(offset:taslak.length);
+        setState((){});
+      }
+    }));
     unawaited(mesajGonderimHazirligi());
     if(uid!=null){
       unawaited(_okunduGuncelle());
@@ -14043,6 +14135,18 @@ class _SohbetPageState extends State<SohbetPage> {
     if((liste.position.pixels-hedef).abs()<2)return;
     liste.animateTo(hedef,duration:const Duration(milliseconds:180),curve:Curves.easeOut);
   });}
+
+  String _ozelSohbetGunEtiketi(dynamic raw){
+    if(raw is! Timestamp)return '';
+    final d=raw.toDate().toLocal(),simdi=DateTime.now();
+    final bugun=DateTime(simdi.year,simdi.month,simdi.day);
+    final gun=DateTime(d.year,d.month,d.day);
+    final fark=bugun.difference(gun).inDays;
+    if(fark==0)return 'Bugün';
+    if(fark==1)return 'Dün';
+    final dd=d.day.toString().padLeft(2,'0'),mm=d.month.toString().padLeft(2,'0');
+    return '$dd.$mm.${d.year}';
+  }
 
   @override
   Widget build(BuildContext context)=>Theme(data:ThemeData.light().copyWith(scaffoldBackgroundColor:Colors.white,appBarTheme:const AppBarTheme(backgroundColor:Colors.white,foregroundColor:Colors.black,elevation:0)),child:Scaffold(
