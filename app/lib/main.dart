@@ -4825,6 +4825,8 @@ class KesfetPage extends StatefulWidget {
 class _KesfetPageState extends State<KesfetPage> {
   int kategori=0;
   Set<String> takipEdilenler=<String>{};
+  Set<String> arkadaslar=<String>{};
+  Set<String> gonderilenArkadaslikIstekleri=<String>{};
   bool hesapYukleniyor=true;
 
   String? get ben=>FirebaseAuth.instance.currentUser?.uid;
@@ -4846,6 +4848,7 @@ class _KesfetPageState extends State<KesfetPage> {
       if(!mounted)return;
       setState((){
         takipEdilenler=Set<String>.from(List<dynamic>.from(d.data()?['following']??const[]));
+        arkadaslar=Set<String>.from(List<dynamic>.from(d.data()?['friends']??const[]));
         hesapYukleniyor=false;
       });
     }catch(_){
@@ -4920,7 +4923,32 @@ class _KesfetPageState extends State<KesfetPage> {
 
   Future<void> _takipDegistir(String hedefUid)async{
     if(await misafirEngeli(context))return;
+    final me=ben;
+    if(me==null)return;
     final takipte=takipEdilenler.contains(hedefUid);
+    if(!takipte){
+      try{
+        final hedef=await FirebaseFirestore.instance.collection('users').doc(hedefUid).get();
+        if(hedef.data()?['privateAccount']==true){
+          final ref=FirebaseFirestore.instance.collection('notifications').doc('follow_request_'+me+'_'+hedefUid);
+          final onceki=await ref.get();
+          if(onceki.data()?['status']=='pending'){
+            if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Takip isteğin zaten bekliyor.')));
+            return;
+          }
+          await ref.set({
+            'toUid':hedefUid,'fromUid':me,'type':'follow_request',
+            'text':'Yeni takip isteğin var','status':'pending',
+            'read':false,'createdAt':FieldValue.serverTimestamp(),
+          },SetOptions(merge:true));
+          if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Takip isteği gönderildi.')));
+          return;
+        }
+      }catch(e){
+        if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Takip bilgisi alınamadı: $e')));
+        return;
+      }
+    }
     setState(()=>takipte?takipEdilenler.remove(hedefUid):takipEdilenler.add(hedefUid));
     try{
       await takipDurumuDegistir(hedefUid,takipte);
@@ -4928,6 +4956,39 @@ class _KesfetPageState extends State<KesfetPage> {
       if(!mounted)return;
       setState(()=>takipte?takipEdilenler.add(hedefUid):takipEdilenler.remove(hedefUid));
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Takip işlemi tamamlanamadı: $e')));
+    }
+  }
+
+  Future<void> _arkadaslikIstegiGonder(String hedefUid)async{
+    if(await misafirEngeli(context))return;
+    final me=ben;
+    if(me==null)return;
+    if(arkadaslar.contains(hedefUid)){
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Zaten arkadaşsınız.')));
+      return;
+    }
+    if(gonderilenArkadaslikIstekleri.contains(hedefUid)){
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Arkadaşlık isteğin zaten gönderildi.')));
+      return;
+    }
+    try{
+      final ref=FirebaseFirestore.instance.collection('notifications').doc('friend_request_'+me+'_'+hedefUid);
+      final mevcut=await ref.get();
+      if(mevcut.data()?['status']=='pending'){
+        if(mounted)setState(()=>gonderilenArkadaslikIstekleri.add(hedefUid));
+        if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Arkadaşlık isteğin zaten bekliyor.')));
+        return;
+      }
+      await ref.set({
+        'toUid':hedefUid,'fromUid':me,'type':'friend_request',
+        'text':'Yeni arkadaşlık isteğin var','status':'pending',
+        'read':false,'createdAt':FieldValue.serverTimestamp(),
+      },SetOptions(merge:true));
+      if(!mounted)return;
+      setState(()=>gonderilenArkadaslikIstekleri.add(hedefUid));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Arkadaşlık isteği gönderildi.')));
+    }catch(e){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Arkadaşlık isteği gönderilemedi: $e')));
     }
   }
 
@@ -5207,14 +5268,26 @@ class _KesfetPageState extends State<KesfetPage> {
               Text('@$kullanici',style:const TextStyle(color:Colors.black45)),
             ])),
             const SizedBox(width:8),
-            SizedBox(
-              height:38,
-              child:FilledButton(
-                onPressed:hesapYukleniyor?null:()=>_takipDegistir(uid),
-                style:FilledButton.styleFrom(backgroundColor:takipte?const Color(0xFFECECF2):mor,foregroundColor:takipte?Colors.black87:Colors.white,padding:const EdgeInsets.symmetric(horizontal:14)),
-                child:Text(takipte?'Takiptesin':t('follow'),style:const TextStyle(fontWeight:FontWeight.w800,fontSize:12)),
+            Column(mainAxisSize:MainAxisSize.min,children:[
+              SizedBox(
+                height:36,
+                child:FilledButton(
+                  onPressed:hesapYukleniyor?null:()=>_takipDegistir(uid),
+                  style:FilledButton.styleFrom(backgroundColor:takipte?const Color(0xFFECECF2):mor,foregroundColor:takipte?Colors.black87:Colors.white,padding:const EdgeInsets.symmetric(horizontal:12)),
+                  child:Text(takipte?'Takiptesin':t('follow'),style:const TextStyle(fontWeight:FontWeight.w800,fontSize:11)),
+                ),
               ),
-            ),
+              const SizedBox(height:5),
+              SizedBox(
+                height:32,
+                child:OutlinedButton.icon(
+                  onPressed:arkadaslar.contains(uid)||gonderilenArkadaslikIstekleri.contains(uid)?null:()=>_arkadaslikIstegiGonder(uid),
+                  style:OutlinedButton.styleFrom(padding:const EdgeInsets.symmetric(horizontal:9),visualDensity:VisualDensity.compact),
+                  icon:Icon(arkadaslar.contains(uid)?Icons.people_alt_rounded:Icons.person_add_alt_1_rounded,size:15),
+                  label:Text(arkadaslar.contains(uid)?'Arkadaş':(gonderilenArkadaslikIstekleri.contains(uid)?'Gönderildi':'Arkadaş ekle'),style:const TextStyle(fontSize:10,fontWeight:FontWeight.w800)),
+                ),
+              ),
+            ]),
           ]),
         ),
       ),
