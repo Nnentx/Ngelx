@@ -14646,14 +14646,14 @@ class SohbetBilgiPage extends StatelessWidget{
         const ListTile(title:Text('Sohbeti özelleştir',style:TextStyle(fontWeight:FontWeight.w900)),subtitle:Text('Bu görünüm yalnızca sende görünür.')),
         const ListTile(title:Text('Arka plan rengi',style:TextStyle(fontWeight:FontWeight.w700))),
         Wrap(spacing:16,runSpacing:16,children:[
-          Colors.white,const Color(0xFFFFF4F7),const Color(0xFFF4F0FF),const Color(0xFFEFF8FF),const Color(0xFFF1FFF5)
+          ngelxPrivateBlueCanvas,Colors.white,const Color(0xFFFFF4F7),const Color(0xFFF4F0FF),const Color(0xFFF1FFF5)
         ].map((x)=>InkWell(onTap:()=>Navigator.pop(c,x.toARGB32()),child:CircleAvatar(radius:25,backgroundColor:x,child:const Icon(Icons.check,color:Colors.black26)))).toList()),
         const SizedBox(height:12),
-        ListTile(leading:const Icon(Icons.photo_library_outlined,color:mor),title:const Text('Galeriden özel fotoğraf / logo seç'),onTap:()=>Navigator.pop(c,'gallery')),
-        ListTile(leading:const Icon(Icons.camera_alt_outlined,color:mor),title:const Text('Kameradan arka plan çek'),onTap:()=>Navigator.pop(c,'camera')),
+        ListTile(leading:const Icon(Icons.photo_library_outlined,color:ngelxPrivateBlue),title:const Text('Galeriden özel fotoğraf / logo seç'),onTap:()=>Navigator.pop(c,'gallery')),
+        ListTile(leading:const Icon(Icons.camera_alt_outlined,color:ngelxPrivateBlue),title:const Text('Kameradan arka plan çek'),onTap:()=>Navigator.pop(c,'camera')),
         ListTile(leading:const Icon(Icons.hide_image_outlined,color:Colors.red),title:const Text('Özel fotoğrafı kaldır',style:TextStyle(color:Colors.red)),onTap:()=>Navigator.pop(c,'removeImage')),
         const Divider(height:28),
-        const ListTile(leading:Icon(Icons.opacity_rounded,color:mor),title:Text('Arka plan görünürlüğü',style:TextStyle(fontWeight:FontWeight.w800)),subtitle:Text('Fotoğrafın sohbetin arkasında ne kadar belirgin olacağını seç.')),
+        const ListTile(leading:Icon(Icons.opacity_rounded,color:ngelxPrivateBlue),title:Text('Arka plan görünürlüğü',style:TextStyle(fontWeight:FontWeight.w800)),subtitle:Text('Fotoğrafın sohbetin arkasında ne kadar belirgin olacağını seç.')),
         Wrap(spacing:8,children:[
           ActionChip(label:const Text('Hafif'),onPressed:()=>Navigator.pop(c,'opacity:15')),
           ActionChip(label:const Text('Normal'),onPressed:()=>Navigator.pop(c,'opacity:30')),
@@ -14661,14 +14661,14 @@ class SohbetBilgiPage extends StatelessWidget{
           ActionChip(label:const Text('Güçlü'),onPressed:()=>Navigator.pop(c,'opacity:70')),
         ]),
         const Divider(height:28),
-        const ListTile(leading:Icon(Icons.text_fields_rounded,color:mor),title:Text('Mesaj yazı boyutu',style:TextStyle(fontWeight:FontWeight.w800))),
+        const ListTile(leading:Icon(Icons.text_fields_rounded,color:ngelxPrivateBlue),title:Text('Mesaj yazı boyutu',style:TextStyle(fontWeight:FontWeight.w800))),
         Wrap(spacing:8,children:[
           ActionChip(label:const Text('Küçük'),onPressed:()=>Navigator.pop(c,'font:14')),
           ActionChip(label:const Text('Normal'),onPressed:()=>Navigator.pop(c,'font:16')),
           ActionChip(label:const Text('Büyük'),onPressed:()=>Navigator.pop(c,'font:18')),
         ]),
         const Divider(height:28),
-        const ListTile(leading:Icon(Icons.emoji_emotions_outlined,color:mor),title:Text('Hızlı gönderme emojisi',style:TextStyle(fontWeight:FontWeight.w800)),subtitle:Text('Mesaj kutusu boşken sağdaki tek dokunuş emojisini seç.')),
+        const ListTile(leading:Icon(Icons.emoji_emotions_outlined,color:ngelxPrivateBlue),title:Text('Hızlı gönderme emojisi',style:TextStyle(fontWeight:FontWeight.w800)),subtitle:Text('Mesaj kutusu boşken sağdaki tek dokunuş emojisini seç.')),
         Padding(padding:const EdgeInsets.fromLTRB(16,0,16,8),child:Wrap(spacing:12,runSpacing:12,children:
           ['👍','❤️','😂','😍','🔥','👏','🙏','🎉','😮','😢','😡','💯'].map((e)=>InkWell(
             onTap:()=>Navigator.pop(c,'quickEmoji:'+e),
@@ -14702,7 +14702,7 @@ class SohbetBilgiPage extends StatelessWidget{
     }
     if(secim=='reset'){
       await ref.set({
-        'theme_$me':Colors.white.toARGB32(),
+        'theme_$me':ngelxPrivateBlueCanvas.toARGB32(),
         'backgroundUrl_$me':'',
         'backgroundOpacity_$me':.30,
         'messageFontSize_$me':16.0,
@@ -14724,7 +14724,7 @@ class SohbetBilgiPage extends StatelessWidget{
           title:const Text('Özel fotoğraf kaldırılsın mı?',style:TextStyle(color:Colors.black87,fontWeight:FontWeight.w800)),
           content:const Text('Sohbet arka planındaki özel fotoğraf kaldırılacak. İstersen daha sonra yeniden seçebilirsin.',style:TextStyle(color:Colors.black87,height:1.35)),
           actions:[
-            TextButton(onPressed:()=>Navigator.pop(d,false),child:const Text('Vazgeç',style:TextStyle(color:mor))),
+            TextButton(onPressed:()=>Navigator.pop(d,false),child:const Text('Vazgeç',style:TextStyle(color:ngelxPrivateBlue))),
             FilledButton(style:FilledButton.styleFrom(backgroundColor:Colors.red,foregroundColor:Colors.white),onPressed:()=>Navigator.pop(d,true),child:const Text('Kaldır')),
           ],
         ),
@@ -14756,13 +14756,13 @@ class SohbetBilgiPage extends StatelessWidget{
       context:context,backgroundColor:Colors.white,showDragHandle:true,
       builder:(c)=>Theme(data:ThemeData.light(),child:SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
         const ListTile(
-          leading:Icon(Icons.timer_outlined,color:mor),
+          leading:Icon(Icons.timer_outlined,color:ngelxPrivateBlue),
           title:Text('Süreli mesajlar',style:TextStyle(color:Colors.black87,fontWeight:FontWeight.w900)),
           subtitle:Text('Yeni mesajlar seçilen sürenin sonunda sohbet görünümünden kaybolur.',style:TextStyle(color:Colors.black54)),
         ),
         for(final e in const [('Kapalı',0),('24 saat',86400),('7 gün',604800),('30 gün',2592000)])
           ListTile(
-            leading:Icon(mevcut==e.$2?Icons.radio_button_checked:Icons.radio_button_off,color:mevcut==e.$2?mor:Colors.black38),
+            leading:Icon(mevcut==e.$2?Icons.radio_button_checked:Icons.radio_button_off,color:mevcut==e.$2?ngelxPrivateBlue:Colors.black38),
             title:Text(e.$1),
             onTap:()=>Navigator.pop(c,e.$2),
           ),
@@ -14778,7 +14778,7 @@ class SohbetBilgiPage extends StatelessWidget{
     final ref=FirebaseFirestore.instance.collection('users').doc(me),d=await ref.get(),v=d.data()??<String,dynamic>{},sessiz=List<String>.from(v['mutedChats']??const[]).contains(chatId);
     if(!context.mounted)return;
     final secim=await showModalBottomSheet<String>(context:context,backgroundColor:Colors.white,showDragHandle:true,builder:(c)=>Theme(data:ThemeData.light(),child:SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
-      const ListTile(leading:Icon(Icons.notifications_off_outlined,color:mor),title:Text('Sohbet bildirimlerini sessize al',style:TextStyle(color:Colors.black87,fontWeight:FontWeight.w900)),subtitle:Text('Mesajlar gelmeye devam eder; yalnızca bu sohbetin bildirimi kapanır.',style:TextStyle(color:Colors.black54))),
+      const ListTile(leading:Icon(Icons.notifications_off_outlined,color:ngelxPrivateBlue),title:Text('Sohbet bildirimlerini sessize al',style:TextStyle(color:Colors.black87,fontWeight:FontWeight.w900)),subtitle:Text('Mesajlar gelmeye devam eder; yalnızca bu sohbetin bildirimi kapanır.',style:TextStyle(color:Colors.black54))),
       if(sessiz)ListTile(leading:const Icon(Icons.notifications_active_outlined,color:Colors.green),title:const Text('Sessizi kaldır'),onTap:()=>Navigator.pop(c,'unmute')),
       if(!sessiz)...[
         for(final e in const [('1 saat','1h'),('8 saat','8h'),('1 hafta','7d'),('Süresiz','forever')])ListTile(title:Text(e.$1),onTap:()=>Navigator.pop(c,e.$2)),
@@ -14812,7 +14812,7 @@ class SohbetBilgiPage extends StatelessWidget{
         title:Text(kisitli?'Kısıtlamayı kaldır':'$ad kısıtlansın mı?',style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w800)),
         content:Text(kisitli?'Bu kişinin bildirimleri tekrar normal şekilde gelebilir.':'Bu kişiden gelen etkileşim ve mesaj bildirimleri sessizce kısıtlanır. Engelleme değildir; sohbet tamamen kapanmaz.',style:const TextStyle(color:Colors.black87,height:1.35)),
         actions:[
-          TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç',style:TextStyle(color:mor))),
+          TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç',style:TextStyle(color:ngelxPrivateBlue))),
           FilledButton(onPressed:()=>Navigator.pop(c,true),child:Text(kisitli?'Kısıtlamayı kaldır':'Kısıtla',style:const TextStyle(color:Colors.white))),
         ],
       ),
@@ -14830,7 +14830,7 @@ class SohbetBilgiPage extends StatelessWidget{
         title:Text('$ad engellensin mi?',style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w800)),
         content:const Text('Bu kullanıcı sana mesaj gönderemez ve profilini göremez.',style:TextStyle(color:Colors.black87,height:1.35)),
         actions:[
-          TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç',style:TextStyle(color:mor))),
+          TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç',style:TextStyle(color:ngelxPrivateBlue))),
           FilledButton(style:FilledButton.styleFrom(backgroundColor:Colors.red,foregroundColor:Colors.white),onPressed:()=>Navigator.pop(c,true),child:const Text('Engelle')),
         ],
       ),
@@ -14847,7 +14847,7 @@ class SohbetBilgiPage extends StatelessWidget{
         title:const Text('Sohbet silinsin mi?',style:TextStyle(color:Colors.black87,fontWeight:FontWeight.w800)),
         content:const Text('Bu sohbet yalnızca senin sohbet listenden kaldırılacak. Karşı tarafın sohbeti silinmeyecek.',style:TextStyle(color:Colors.black87,height:1.35)),
         actions:[
-          TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç',style:TextStyle(color:mor))),
+          TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç',style:TextStyle(color:ngelxPrivateBlue))),
           FilledButton(style:FilledButton.styleFrom(backgroundColor:Colors.red,foregroundColor:Colors.white),onPressed:()=>Navigator.pop(c,true),child:const Text('Sohbeti sil')),
         ],
       ),
@@ -14880,15 +14880,16 @@ class SohbetBilgiPage extends StatelessWidget{
 
   @override Widget build(BuildContext context)=>Theme(
     data:ThemeData.light().copyWith(
-      scaffoldBackgroundColor:Colors.white,
-      appBarTheme:const AppBarTheme(backgroundColor:Colors.white,foregroundColor:Colors.black,elevation:0,surfaceTintColor:Colors.white),
-      dividerColor:const Color(0xFFECEDEF),
+      scaffoldBackgroundColor:ngelxPrivateBlueCanvas,
+      colorScheme:ColorScheme.fromSeed(seedColor:ngelxPrivateBlue),
+      appBarTheme:const AppBarTheme(backgroundColor:ngelxPrivateBlueHeader,foregroundColor:ngelxPrivateBlueInk,elevation:0,surfaceTintColor:Colors.transparent),
+      dividerColor:ngelxPrivateBlueBorder,
     ),
     child:Scaffold(
-      backgroundColor:Colors.white,
+      backgroundColor:ngelxPrivateBlueCanvas,
       appBar:AppBar(
-        leading:const BackButton(),
-        title:const SizedBox.shrink(),
+        leading:const BackButton(color:ngelxPrivateBlue),
+        title:const Text('Sohbet bilgisi',style:TextStyle(color:ngelxPrivateBlueInk,fontWeight:FontWeight.w900,fontSize:19)),
         actions:[PopupMenuButton<String>(
           icon:const Icon(Icons.more_vert_rounded),
           onSelected:(v){if(v=='share')kisiyiPaylas();if(v=='report')sikayetEt(context,hedefTuru:'kullanici',hedefId:uid,hedefUid:uid);},
@@ -14905,10 +14906,16 @@ class SohbetBilgiPage extends StatelessWidget{
           return ListView(
             padding:const EdgeInsets.fromLTRB(20,8,20,28),
             children:[
-              Center(child:CircleAvatar(radius:58,backgroundImage:foto.isEmpty?null:CachedNetworkImageProvider(foto),child:foto.isEmpty?const Icon(Icons.person,size:48):null)),
+              Center(child:Container(
+                padding:const EdgeInsets.all(3),
+                decoration:const BoxDecoration(shape:BoxShape.circle,gradient:LinearGradient(colors:[ngelxPrivateBlue2,ngelxPrivateBlue])),
+                child:CircleAvatar(radius:56,backgroundColor:Colors.white,backgroundImage:foto.isEmpty?null:CachedNetworkImageProvider(foto),child:foto.isEmpty?const Icon(Icons.person,size:48,color:ngelxPrivateBlue):null),
+              )),
               const SizedBox(height:16),
-              Text(gorunenAd,textAlign:TextAlign.center,style:const TextStyle(fontSize:29,fontWeight:FontWeight.w900,color:Colors.black)),
-              const SizedBox(height:24),
+              Text(gorunenAd,textAlign:TextAlign.center,style:const TextStyle(fontSize:29,fontWeight:FontWeight.w900,color:ngelxPrivateBlueInk)),
+              const SizedBox(height:4),
+              Center(child:AktiflikDurumuYazisi(uid:uid)),
+              const SizedBox(height:22),
               FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(
                 future:me==null?null:FirebaseFirestore.instance.collection('users').doc(me).get(),
                 builder:(_,u){
@@ -14934,7 +14941,7 @@ class SohbetBilgiPage extends StatelessWidget{
               ),
               if(me!=null)SwitchListTile(
                 contentPadding:const EdgeInsets.symmetric(horizontal:8),
-                secondary:const Icon(Icons.done_all_rounded,color:Colors.black),
+                secondary:const Icon(Icons.done_all_rounded,color:ngelxPrivateBlue),
                 title:const Text('Okundu bilgisi',style:TextStyle(color:Colors.black87,fontSize:17)),
                 subtitle:const Text('Mesajları okuduğunda karşı tarafa Görüldü bilgisi gösterilir.',style:TextStyle(color:Colors.black45,fontSize:13)),
                 value:s.data?.data()?['readReceipts_$me']!=false,
@@ -14942,7 +14949,7 @@ class SohbetBilgiPage extends StatelessWidget{
               ),
               if(me!=null)SwitchListTile(
                 contentPadding:const EdgeInsets.symmetric(horizontal:8),
-                secondary:const Icon(Icons.more_horiz_rounded,color:Colors.black),
+                secondary:const Icon(Icons.more_horiz_rounded,color:ngelxPrivateBlue),
                 title:const Text('Yazma göstergesi',style:TextStyle(color:Colors.black87,fontSize:17)),
                 subtitle:const Text('Mesaj yazarken karşı taraf “yazıyor” bilgisini görebilir.',style:TextStyle(color:Colors.black45,fontSize:13)),
                 value:s.data?.data()?['typingIndicator_$me']!=false,
@@ -14965,15 +14972,22 @@ class SohbetBilgiPage extends StatelessWidget{
       ),
     ),
   );
-  Widget _bolum(String t)=>Padding(padding:const EdgeInsets.fromLTRB(8,4,8,8),child:Text(t,style:const TextStyle(color:Colors.black54,fontSize:16,fontWeight:FontWeight.w800)));
-  Widget _kisa(IconData i,String t,VoidCallback f)=>Expanded(child:InkWell(borderRadius:BorderRadius.circular(18),onTap:f,child:Padding(padding:const EdgeInsets.symmetric(horizontal:2,vertical:4),child:Column(children:[CircleAvatar(radius:25,backgroundColor:const Color(0xFFF0F1F3),child:Icon(i,color:Colors.black,size:25)),const SizedBox(height:7),Text(t,maxLines:2,textAlign:TextAlign.center,style:const TextStyle(color:Colors.black87,fontSize:12.5,height:1.1))]))));
+  Widget _bolum(String t)=>Padding(padding:const EdgeInsets.fromLTRB(8,6,8,8),child:Text(t,style:const TextStyle(color:ngelxPrivateBlue,fontSize:15,fontWeight:FontWeight.w900)));
+  Widget _kisa(IconData i,String t,VoidCallback f)=>Expanded(child:InkWell(
+    borderRadius:BorderRadius.circular(18),onTap:f,
+    child:Padding(padding:const EdgeInsets.symmetric(horizontal:2,vertical:4),child:Column(children:[
+      CircleAvatar(radius:25,backgroundColor:ngelxPrivateBlueSoft,child:Icon(i,color:ngelxPrivateBlue,size:24)),
+      const SizedBox(height:7),
+      Text(t,maxLines:2,textAlign:TextAlign.center,style:const TextStyle(color:ngelxPrivateBlueInk,fontSize:12.5,height:1.1,fontWeight:FontWeight.w700)),
+    ])),
+  ));
   Widget _satir(IconData i,String t,VoidCallback f,{String? alt,Color? renk})=>ListTile(
     onTap:f,
     contentPadding:const EdgeInsets.symmetric(horizontal:8,vertical:6),
-    leading:Icon(i,color:renk??Colors.black,size:29),
-    title:Text(t,style:TextStyle(color:renk??Colors.black87,fontSize:17,fontWeight:FontWeight.w500)),
+    leading:Container(width:42,height:42,alignment:Alignment.center,decoration:BoxDecoration(color:renk==Colors.red?const Color(0xFFFFEEF1):ngelxPrivateBlueSoft,borderRadius:BorderRadius.circular(14)),child:Icon(i,color:renk??ngelxPrivateBlue,size:24)),
+    title:Text(t,style:TextStyle(color:renk??ngelxPrivateBlueInk,fontSize:16.5,fontWeight:FontWeight.w700)),
     subtitle:alt==null?null:Text(alt,style:const TextStyle(color:Colors.black45,fontSize:13)),
-    trailing:const Icon(Icons.chevron_right_rounded,color:Colors.black38),
+    trailing:const Icon(Icons.chevron_right_rounded,color:ngelxPrivateBlue,size:22),
   );
 }
 
