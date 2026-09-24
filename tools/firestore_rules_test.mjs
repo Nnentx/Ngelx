@@ -183,6 +183,11 @@ async function seed() {
       friends: [],
       following: [],
     });
+    await setDoc(doc(db, 'live_streams/live1'), {
+      ownerId: 'admin',
+      active: true,
+      title: 'Test Canlı',
+    });
   });
 }
 
@@ -228,6 +233,18 @@ try {
     lastMessage: '',
   }));
 
+
+  // Canlı yayın tepkisi yalnızca kullanıcının kendi reaction belgesine yazılabilir.
+  await assertSucceeds(setDoc(doc(bob, 'live_streams/live1/reactions/bob'), {
+    uid: 'bob',
+    type: 'heart',
+    createdAt: serverTimestamp(),
+  }));
+  await assertFails(setDoc(doc(bob, 'live_streams/live1/reactions/forged'), {
+    uid: 'bob',
+    type: 'heart',
+  }));
+  await assertSucceeds(getDocs(collection(outsider, 'live_streams/live1/reactions')));
 
   // Davet kodu sadece doğrudan belge olarak okunabilir; tüm davetler listelenemez.
   await assertSucceeds(getDoc(doc(bob, 'group_invites/CODE123')));
