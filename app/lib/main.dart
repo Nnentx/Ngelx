@@ -14746,25 +14746,39 @@ class _SohbetPageState extends State<SohbetPage> {
                       tooltip:'Ekle',
                       onPressed:()async{
                         final secim=await showModalBottomSheet<String>(
-                          context:context,backgroundColor:Colors.white,showDragHandle:true,
-                          builder:(c)=>Theme(data:ThemeData.light(),child:SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
-                            ListTile(leading:const Icon(Icons.bookmark_rounded,color:ngelxPrivateBlue),title:const Text('Kaydedilenler',style:TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(c,'saved')),
-                            ListTile(leading:const Icon(Icons.attach_file_rounded,color:ngelxPrivateBlue),title:const Text('Dosyalar',style:TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(c,'file')),
-                            ListTile(leading:const Icon(Icons.sports_esports_rounded,color:ngelxPrivateBlue),title:const Text('Oyun',style:TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(c,'game')),
-                            ListTile(leading:const Icon(Icons.location_on_rounded,color:ngelxPrivateBlue),title:const Text('Konum',style:TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(c,'location')),
-                            const Divider(),
-                            ListTile(leading:const Icon(Icons.camera_alt_outlined,color:ngelxPrivateBlue),title:const Text('Kamera',style:TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(c,'camera')),
-                            ListTile(leading:const Icon(Icons.photo_library_outlined,color:ngelxPrivateBlue),title:const Text('Fotoğraf',style:TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(c,'gallery')),
-                            ListTile(leading:const Icon(Icons.video_library_outlined,color:ngelxPrivateBlue),title:const Text('Video',style:TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(c,'video')),
-                            ListTile(leading:const Icon(Icons.videocam_outlined,color:ngelxPrivateBlue),title:const Text('Video çek',style:TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(c,'videoCamera')),
-                          ]))),
+                          context:context,
+                          backgroundColor:Colors.white,
+                          showDragHandle:true,
+                          isScrollControlled:true,
+                          useSafeArea:true,
+                          shape:const RoundedRectangleBorder(borderRadius:BorderRadius.vertical(top:Radius.circular(28))),
+                          builder:(sheetContext)=>Theme(
+                            data:ThemeData.light(),
+                            child:SafeArea(
+                              child:ConstrainedBox(
+                                constraints:BoxConstraints(maxHeight:MediaQuery.of(sheetContext).size.height*.72),
+                                child:SingleChildScrollView(
+                                  child:Column(mainAxisSize:MainAxisSize.min,children:[
+                                    ListTile(leading:const Icon(Icons.attach_file_rounded,color:ngelxPrivateBlue),title:const Text('Dosyalar',style:TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(sheetContext,'file')),
+                                    ListTile(leading:const Icon(Icons.sports_esports_rounded,color:ngelxPrivateBlue),title:const Text('Oyun',style:TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(sheetContext,'game')),
+                                    ListTile(leading:const Icon(Icons.location_on_rounded,color:ngelxPrivateBlue),title:const Text('Konum',style:TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(sheetContext,'location')),
+                                    const Divider(),
+                                    ListTile(leading:const Icon(Icons.camera_alt_outlined,color:ngelxPrivateBlue),title:const Text('Kamera',style:TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(sheetContext,'camera')),
+                                    ListTile(leading:const Icon(Icons.photo_library_outlined,color:ngelxPrivateBlue),title:const Text('Fotoğraf',style:TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(sheetContext,'gallery')),
+                                    ListTile(leading:const Icon(Icons.video_library_outlined,color:ngelxPrivateBlue),title:const Text('Video',style:TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(sheetContext,'video')),
+                                    ListTile(leading:const Icon(Icons.videocam_outlined,color:ngelxPrivateBlue),title:const Text('Video çek',style:TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(sheetContext,'videoCamera')),
+                                    const SizedBox(height:8),
+                                  ]),
+                                ),
+                              ),
+                            ),
+                          ),
                         );
                         if(!mounted||secim==null)return;
                         await Future<void>.delayed(const Duration(milliseconds:320));
                         if(!mounted)return;
                         if(secim=='camera'||secim=='gallery')await medyaGonder(secim=='camera'?ImageSource.camera:ImageSource.gallery);
                         else if(secim=='video'||secim=='videoCamera')await videoGonder(secim=='videoCamera'?ImageSource.camera:ImageSource.gallery);
-                        else if(secim=='saved')await Navigator.push(context,MaterialPageRoute(builder:(_)=>const KaydedilenlerPage()));
                         else if(secim=='file')await dosyaGonder();
                         else if(secim=='game')await Navigator.push(context,MaterialPageRoute(builder:(_)=>const NgelXMiniOyunPage()));
                         else if(secim=='location')await konumGonder();
