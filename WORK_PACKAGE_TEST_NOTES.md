@@ -262,3 +262,28 @@
 - Ayarlar > Mesaj izinleri ekranındaki `all / following / friends / none` veri kodları değiştirilmeden görünen başlık ve açıklamalar uygulama diline bağlandı.
 - Aktivite ekranının başlığı, tümünü okundu yap eylemi, yükleme hatası ve boş durum metinleri ortak dil sistemine taşındı.
 - Böylece gizlilik verisi mevcut Firestore sözleşmesini korurken Türkçe/İngilizce/Almanca/Arapça/Rusça arayüz etiketi seçili dile göre değişiyor.
+
+
+## 2026-09-24 kritik cihaz düzeltmeleri — Build 249
+
+- Giriş ekranındaki **Misafir olarak keşfet** metni/kodu kaynakta tamamen temizlendi.
+- Eski APK'lardan cihazda kalmış anonim Firebase oturumu açılışta kapatılıyor; anonim kullanıcı artık Ana Ekran'a düşmüyor.
+- **Gizli kelimeler** yönetimi klavye + modal bottom-sheet yaşam döngüsü çakışmasını önlemek için ayrı beyaz sayfaya taşındı.
+- Gizli kelime ekleme/silme sırasında TextEditingController artık setState içinde temizlenmiyor; Firestore yazımı tamamlandıktan sonra liste güncelleniyor ve odak güvenli biçimde kapatılıyor.
+- Firestore'daki eski/bozuk hiddenWords değerleri String'e normalize edilerek okunuyor.
+- Telefonda görülen framework.dart / _dependents.isEmpty assertion hatasının tekrarını engellemek için eski _GizliKelimeSheet kaldırıldı.
+- Üret ekranındaki Connection reset by peer medya hatası için Android'e ağ katmanı fallback'i eklendi:
+  - Worker /upload/presign çağrısı Dio bağlantı hatasında yerel HttpURLConnection ile tekrar deneniyor.
+  - Signed R2 PUT Dio'da bağlantı hatası verirse fotoğraf/byte yüklemesi yerel PUT ile, video/dosya yüklemesi dosyadan stream edilen yerel PUT ile tekrar deneniyor.
+  - Birincil ve yedek Worker adresleri korunuyor.
+- Sürüm **v1.0.57 • Yapı 249** olarak yükseltildi.
+- tools/verify_ngelx_contract.py içine misafir girişinin geri gelmesini, eski gizli-kelime bottom-sheet'inin geri gelmesini ve Android medya fallback'lerinin kaybolmasını engelleyen sözleşme kontrolleri eklendi.
+
+### Build 249 gerçek cihaz doğrulama sırası
+
+1. Uygulamayı güncelle ve Ayarlar > Uygulama güncellemeleri alanında **Yapı 249** yazdığını doğrula.
+2. Çıkış yap; giriş ekranında **Misafir olarak keşfet** görünmemeli.
+3. Profil > Gizlilik > Gizli kelimeler: test ve ikinci bir kelime ekle, birini sil, klavyeyi aç/kapat, geri dön. Kırmızı Flutter ekranı çıkmamalı.
+4. Üret > Fotoğraf: küçük bir fotoğraf yayınla; ardından yaklaşık 5–10 MB fotoğraf dene.
+5. Üret > Video: kısa bir video yayınla. presign bağlantı / Connection reset by peer hatası tekrar ederse ekranda görülen yeni hata metni kaydedilecek.
+6. Yayınlanan fotoğraf/video hem Akış'ta hem Profil'de görünmeli.
