@@ -1191,6 +1191,59 @@ Future<void> kullaniciyiEngelle(BuildContext context,String hedefUid) async {
   try{await FirebaseFirestore.instance.collection('users').doc(u.uid).set({'blocked':FieldValue.arrayUnion([hedefUid])},SetOptions(merge:true));if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Kullanıcı engellendi.')));}catch(e){if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Engelleme tamamlanamadı: $e')));}
 }
 
+class NgelXAcilisKapisi extends StatefulWidget {
+  final Widget child;
+  const NgelXAcilisKapisi({super.key,required this.child});
+
+  @override
+  State<NgelXAcilisKapisi> createState()=>_NgelXAcilisKapisiState();
+}
+
+class _NgelXAcilisKapisiState extends State<NgelXAcilisKapisi> {
+  bool _goster=true;
+
+  @override
+  void initState(){
+    super.initState();
+    Future<void>.delayed(const Duration(milliseconds:720),(){
+      if(mounted)setState(()=>_goster=false);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context){
+    if(!_goster)return widget.child;
+    return Scaffold(
+      backgroundColor:Colors.white,
+      body:Center(
+        child:TweenAnimationBuilder<double>(
+          tween:Tween<double>(begin:.76,end:1.10),
+          duration:const Duration(milliseconds:650),
+          curve:Curves.easeOutBack,
+          builder:(context,olcek,child)=>Transform.scale(scale:olcek,child:child),
+          child:SizedBox(
+            width:178,
+            height:120,
+            child:ClipRect(
+              child:Align(
+                alignment:Alignment.topCenter,
+                heightFactor:.64,
+                child:Image.asset(
+                  'assets/ngelx_logo.png',
+                  width:178,
+                  height:178,
+                  fit:BoxFit.contain,
+                  alignment:Alignment.topCenter,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class NgelXApp extends StatelessWidget {
   const NgelXApp({super.key});
 
@@ -1216,18 +1269,20 @@ class NgelXApp extends StatelessWidget {
           ),
         ),
       ),
-      home: StreamBuilder<User?>(
-        stream:FirebaseAuth.instance.authStateChanges(),
-        initialData:FirebaseAuth.instance.currentUser,
-        builder:(_,auth){
-          final kullanici=auth.data;
-          return UygulamaDurumKapisi(
-            key:ValueKey('durum_${kullanici?.uid??'guest'}_$dil'),
-            child:kullanici==null
-              ? GirisPage(key:ValueKey('giris_$dil'))
-              : AnaEkran(key:ValueKey('ana_${kullanici.uid}_$dil')),
-          );
-        },
+      home: NgelXAcilisKapisi(
+        child:StreamBuilder<User?>(
+          stream:FirebaseAuth.instance.authStateChanges(),
+          initialData:FirebaseAuth.instance.currentUser,
+          builder:(_,auth){
+            final kullanici=auth.data;
+            return UygulamaDurumKapisi(
+              key:ValueKey('durum_${kullanici?.uid??'guest'}_$dil'),
+              child:kullanici==null
+                ? GirisPage(key:ValueKey('giris_$dil'))
+                : AnaEkran(key:ValueKey('ana_${kullanici.uid}_$dil')),
+            );
+          },
+        ),
       ),
       onGenerateRoute:(settings){
         final uri=Uri.tryParse(settings.name??'');
@@ -1906,65 +1961,6 @@ class AnaEkran extends StatefulWidget {
 class _AnaEkranState extends State<AnaEkran> {
   int secili = 0;
   String? acilanAramaId;
-  bool _ngelxGecisLogoGoster=true;
-  int _ngelxGecisAnimasyon=0;
-
-  @override
-  void initState(){
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_){
-      Future<void>.delayed(const Duration(milliseconds:520),(){
-        if(mounted)setState(()=>_ngelxGecisLogoGoster=false);
-      });
-    });
-  }
-
-  Future<void> _ngelxSekmeGecisi(int i)async{
-    if(i==secili)return;
-    if(i!=0&&await misafirEngeli(context))return;
-    if(!mounted)return;
-    setState((){
-      _ngelxGecisLogoGoster=true;
-      _ngelxGecisAnimasyon++;
-    });
-    await Future<void>.delayed(const Duration(milliseconds:390));
-    if(!mounted)return;
-    setState(()=>secili=i);
-    await Future<void>.delayed(const Duration(milliseconds:70));
-    if(mounted)setState(()=>_ngelxGecisLogoGoster=false);
-  }
-
-  Widget _ngelxGecisLogoKatmani(){
-    if(!_ngelxGecisLogoGoster)return const SizedBox.shrink();
-    return Positioned.fill(
-      child:IgnorePointer(
-        child:Container(
-          color:Colors.white,
-          alignment:Alignment.center,
-          child:TweenAnimationBuilder<double>(
-            key:ValueKey(_ngelxGecisAnimasyon),
-            tween:Tween<double>(begin:.72,end:1.14),
-            duration:const Duration(milliseconds:430),
-            curve:Curves.easeOutBack,
-            builder:(context,olcek,child)=>Transform.scale(scale:olcek,child:child),
-            child:ClipRect(
-              child:Align(
-                alignment:Alignment.topCenter,
-                heightFactor:.70,
-                child:Image.asset(
-                  'assets/ngelx_logo.png',
-                  width:150,
-                  height:150,
-                  fit:BoxFit.contain,
-                  alignment:Alignment.topCenter,
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 
   Widget gelenAramaKatmani(){
     final ben=FirebaseAuth.instance.currentUser?.uid;
@@ -2110,7 +2106,6 @@ class _AnaEkranState extends State<AnaEkran> {
           ignoring:false,
           child:gelenAramaKatmani(),
         )),
-        _ngelxGecisLogoKatmani(),
       ]),
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(
@@ -2132,7 +2127,11 @@ class _AnaEkranState extends State<AnaEkran> {
           selectedIndex: secili,
           backgroundColor: Colors.transparent,
           labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-          onDestinationSelected: _ngelxSekmeGecisi,
+          onDestinationSelected: (i) async {
+            if(i==secili)return;
+            if(i!=0&&await misafirEngeli(context))return;
+            if(mounted)setState(()=>secili=i);
+          },
           destinations: [
             NavigationDestination(icon: const Icon(Icons.play_circle_outline), selectedIcon: const Icon(Icons.play_circle_fill), label: t('flow')),
             NavigationDestination(icon: const Icon(Icons.explore_outlined), selectedIcon: const Icon(Icons.explore), label: t('explore')),
