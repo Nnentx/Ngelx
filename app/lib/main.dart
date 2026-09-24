@@ -8241,57 +8241,6 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
     });
   }
 
-  Future<void> ozelMesajBilgisi(QueryDocumentSnapshot<Map<String,dynamic>> d)async{
-    final v=d.data();
-    final olusturma=v['createdAt']??v['clientCreatedAt'];
-    final tarih=olusturma is Timestamp?olusturma.toDate().toLocal():null;
-    final chat=await FirebaseFirestore.instance.collection('chats').doc(widget.chatId).get();
-    final cv=chat.data()??<String,dynamic>{};
-    final okundu=cv['readReceipts_${widget.digerUid}']!=false;
-    final sonOkuma=cv['lastReadAt_${widget.digerUid}'];
-    final goruldu=okundu&&tarih!=null&&sonOkuma is Timestamp&&!sonOkuma.toDate().isBefore(tarih);
-    String zaman(DateTime? x){
-      if(x==null)return 'Hazırlanıyor';
-      final hh=x.hour.toString().padLeft(2,'0'),mm=x.minute.toString().padLeft(2,'0');
-      final dd=x.day.toString().padLeft(2,'0'),mo=x.month.toString().padLeft(2,'0');
-      return '$dd.$mo.${x.year} • $hh:$mm';
-    }
-    if(!mounted)return;
-    await showModalBottomSheet<void>(
-      context:context,
-      backgroundColor:Colors.white,
-      showDragHandle:true,
-      shape:const RoundedRectangleBorder(borderRadius:BorderRadius.vertical(top:Radius.circular(28))),
-      builder:(c)=>SafeArea(child:Padding(
-        padding:const EdgeInsets.fromLTRB(16,0,16,22),
-        child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
-          const Row(children:[
-            CircleAvatar(backgroundColor:ngelxPrivateBlueSoft,child:Icon(Icons.info_outline_rounded,color:ngelxPrivateBlue)),
-            SizedBox(width:12),
-            Text('Mesaj bilgisi',style:TextStyle(color:ngelxPrivateBlueInk,fontSize:20,fontWeight:FontWeight.w900)),
-          ]),
-          const SizedBox(height:16),
-          NgelXPrivateCard(
-            padding:EdgeInsets.zero,
-            child:Column(children:[
-              ListTile(
-                leading:const Icon(Icons.send_rounded,color:ngelxPrivateBlue),
-                title:const Text('Gönderildi',style:TextStyle(fontWeight:FontWeight.w800)),
-                subtitle:Text(zaman(tarih)),
-              ),
-              const Divider(height:1,indent:58),
-              ListTile(
-                leading:Icon(goruldu?Icons.done_all_rounded:Icons.done_rounded,color:goruldu?ngelxPrivateBlue:Colors.black38),
-                title:Text(goruldu?'Görüldü':'Henüz görülmedi',style:const TextStyle(fontWeight:FontWeight.w800)),
-                subtitle:Text(goruldu&&sonOkuma is Timestamp?zaman(sonOkuma.toDate().toLocal()):'Karşı taraf okuduğunda burada görünür.'),
-              ),
-            ]),
-          ),
-        ]),
-      )),
-    );
-  }
-
   Future<void> mesajMenusu(QueryDocumentSnapshot<Map<String,dynamic>> d)async{
     final v=d.data(),ben=v['senderId']==uid,metin=(v['text']??'').toString();
     final grup=await chatRef.get();
@@ -13787,6 +13736,57 @@ class _SohbetPageState extends State<SohbetPage> {
       )),
     ),
   );
+
+  Future<void> ozelMesajBilgisi(QueryDocumentSnapshot<Map<String,dynamic>> d)async{
+    final v=d.data();
+    final olusturma=v['createdAt']??v['clientCreatedAt'];
+    final tarih=olusturma is Timestamp?olusturma.toDate().toLocal():null;
+    final chat=await FirebaseFirestore.instance.collection('chats').doc(widget.chatId).get();
+    final cv=chat.data()??<String,dynamic>{};
+    final okundu=cv['readReceipts_${widget.digerUid}']!=false;
+    final sonOkuma=cv['lastReadAt_${widget.digerUid}'];
+    final goruldu=okundu&&tarih!=null&&sonOkuma is Timestamp&&!sonOkuma.toDate().isBefore(tarih);
+    String zaman(DateTime? x){
+      if(x==null)return 'Hazırlanıyor';
+      final hh=x.hour.toString().padLeft(2,'0'),mm=x.minute.toString().padLeft(2,'0');
+      final dd=x.day.toString().padLeft(2,'0'),mo=x.month.toString().padLeft(2,'0');
+      return '$dd.$mo.${x.year} • $hh:$mm';
+    }
+    if(!mounted)return;
+    await showModalBottomSheet<void>(
+      context:context,
+      backgroundColor:Colors.white,
+      showDragHandle:true,
+      shape:const RoundedRectangleBorder(borderRadius:BorderRadius.vertical(top:Radius.circular(28))),
+      builder:(c)=>SafeArea(child:Padding(
+        padding:const EdgeInsets.fromLTRB(16,0,16,22),
+        child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
+          const Row(children:[
+            CircleAvatar(backgroundColor:ngelxPrivateBlueSoft,child:Icon(Icons.info_outline_rounded,color:ngelxPrivateBlue)),
+            SizedBox(width:12),
+            Text('Mesaj bilgisi',style:TextStyle(color:ngelxPrivateBlueInk,fontSize:20,fontWeight:FontWeight.w900)),
+          ]),
+          const SizedBox(height:16),
+          NgelXPrivateCard(
+            padding:EdgeInsets.zero,
+            child:Column(children:[
+              ListTile(
+                leading:const Icon(Icons.send_rounded,color:ngelxPrivateBlue),
+                title:const Text('Gönderildi',style:TextStyle(fontWeight:FontWeight.w800)),
+                subtitle:Text(zaman(tarih)),
+              ),
+              const Divider(height:1,indent:58),
+              ListTile(
+                leading:Icon(goruldu?Icons.done_all_rounded:Icons.done_rounded,color:goruldu?ngelxPrivateBlue:Colors.black38),
+                title:Text(goruldu?'Görüldü':'Henüz görülmedi',style:const TextStyle(fontWeight:FontWeight.w800)),
+                subtitle:Text(goruldu&&sonOkuma is Timestamp?zaman(sonOkuma.toDate().toLocal()):'Karşı taraf okuduğunda burada görünür.'),
+              ),
+            ]),
+          ),
+        ]),
+      )),
+    );
+  }
 
   Future<void> mesajMenusu(QueryDocumentSnapshot<Map<String,dynamic>> d)async{
     final v=d.data(),benim=v['senderId']==uid,metin=(v['text']??v['message']??v['content']??'').toString();
