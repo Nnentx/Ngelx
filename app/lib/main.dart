@@ -5224,12 +5224,19 @@ class _KesfetPageState extends State<KesfetPage> {
 }
 
 class _TrendEtiketi extends StatelessWidget {
-  final IconData ikon; final String yazi; final Color arkaPlan; final Color renk;
-  const _TrendEtiketi(this.ikon, this.yazi, this.arkaPlan, this.renk);
-  @override Widget build(BuildContext context) => Container(
-    margin: const EdgeInsets.only(right: 10), padding: const EdgeInsets.symmetric(horizontal: 16),
-    decoration: BoxDecoration(color: arkaPlan, borderRadius: BorderRadius.circular(18)),
-    child: Row(children: [Icon(ikon, color: renk, size: 20), const SizedBox(width: 7), Text(yazi, style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.w700))]),
+  final IconData ikon; final String yazi; final Color arkaPlan; final Color renk; final VoidCallback? onTap;
+  const _TrendEtiketi(this.ikon, this.yazi, this.arkaPlan, this.renk,{this.onTap});
+  @override Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(right: 10),
+    child: InkWell(
+      onTap:onTap,
+      borderRadius:BorderRadius.circular(18),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(color: arkaPlan, borderRadius: BorderRadius.circular(18)),
+        child: Row(children: [Icon(ikon, color: renk, size: 20), const SizedBox(width: 7), Text(yazi, style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.w700))]),
+      ),
+    ),
   );
 }
 
