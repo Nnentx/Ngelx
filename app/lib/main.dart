@@ -1583,6 +1583,51 @@ Future<void> uygulamaBildirimiGonder({required String toUid,required String from
   });
 }
 
+final Set<String> _sosyalIstekIslemleri=<String>{};
+
+Future<void> sosyalIstekGonder({
+  required String hedefUid,
+  required String tur,
+  required String metin,
+}) async {
+  final user=FirebaseAuth.instance.currentUser;
+  if(user==null||user.isAnonymous||hedefUid.isEmpty||hedefUid==user.uid)return;
+  final kilit='${user.uid}|$hedefUid|$tur';
+  if(!_sosyalIstekIslemleri.add(kilit))return;
+  try{
+    final profil=await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+    final p=profil.data()??<String,dynamic>{};
+    final ad=(p['displayName']??p['username']??user.displayName??'NgelX kullanıcısı').toString();
+    final foto=(p['photoUrl']??user.photoURL??'').toString();
+    await FirebaseFirestore.instance.collection('notifications').add({
+      'toUid':hedefUid,
+      'fromUid':user.uid,
+      'type':tur,
+      'senderName':ad,
+      'photoUrl':foto,
+      'text':metin,
+      'status':'pending',
+      'read':false,
+      'createdAt':FieldValue.serverTimestamp(),
+    });
+  }finally{
+    _sosyalIstekIslemleri.remove(kilit);
+  }
+}
+
+bool gidenSosyalIstekBekliyor(
+  QuerySnapshot<Map<String,dynamic>>? snap,
+  String hedefUid,
+  String tur,
+){
+  if(snap==null)return false;
+  for(final d in snap.docs){
+    final v=d.data();
+    if(v['toUid']==hedefUid&&v['type']==tur&&v['status']=='pending')return true;
+  }
+  return false;
+}
+
 Future<void> takipDurumuDegistir(String hedefUid,bool takipte)async{
   final ben=FirebaseAuth.instance.currentUser?.uid;if(ben==null||hedefUid.isEmpty||ben==hedefUid)return;
   final batch=FirebaseFirestore.instance.batch();
@@ -4971,31 +5016,38 @@ class _KesfetPageState extends State<KesfetPage> {
   Set<String> arkadaslar=<String>{};
   Set<String> gonderilenArkadaslikIstekleri=<String>{};
   bool hesapYukleniyor=true;
+  StreamSubscription<DocumentSnapshot<Map<String,dynamic>>>? _hesapAboneligi;
+  StreamSubscription<QuerySnapshot<Map<String,dynamic>>>? _gidenIstekAboneligi;
 
   String? get ben=>FirebaseAuth.instance.currentUser?.uid;
 
   @override
   void initState(){
     super.initState();
-    _hesabiYukle();
+    _iliskiDinlemeyiBaslat();
   }
 
-  Future<void> _hesabiYukle()async{
+  void _iliskiDinlemeyiBaslat(){
     final uid=ben;
     if(uid==null){
-      if(mounted)setState(()=>hesapYukleniyor=false);
+      hesapYukleniyor=false;
       return;
     }
-    try{
-      final sonuc=await Future.wait([
-        FirebaseFirestore.instance.collection('users').doc(uid).get(),
-        FirebaseFirestore.instance.collection('notifications').where('fromUid',isEqualTo:uid).limit(100).get(),
-      ]);
-      final d=sonuc[0] as DocumentSnapshot<Map<String,dynamic>>;
-      final bildirimler=(sonuc[1] as QuerySnapshot<Map<String,dynamic>>).docs;
+    _hesapAboneligi=FirebaseFirestore.instance.collection('users').doc(uid).snapshots().listen((d){
+      if(!mounted)return;
+      final v=d.data()??<String,dynamic>{};
+      setState((){
+        takipEdilenler=Set<String>.from(List<dynamic>.from(v['following']??const[]));
+        arkadaslar=Set<String>.from(List<dynamic>.from(v['friends']??const[]));
+        hesapYukleniyor=false;
+      });
+    },onError:(_){
+      if(mounted)setState(()=>hesapYukleniyor=false);
+    });
+    _gidenIstekAboneligi=FirebaseFirestore.instance.collection('notifications').where('fromUid',isEqualTo:uid).limit(100).snapshots().listen((q){
       final takipBekleyen=<String>{};
       final arkadasBekleyen=<String>{};
-      for(final n in bildirimler){
+      for(final n in q.docs){
         final v=n.data();
         if(v['status']!='pending')continue;
         final hedef=(v['toUid']??'').toString();
@@ -5005,15 +5057,17 @@ class _KesfetPageState extends State<KesfetPage> {
       }
       if(!mounted)return;
       setState((){
-        takipEdilenler=Set<String>.from(List<dynamic>.from(d.data()?['following']??const[]));
         gonderilenTakipIstekleri=takipBekleyen;
-        arkadaslar=Set<String>.from(List<dynamic>.from(d.data()?['friends']??const[]));
         gonderilenArkadaslikIstekleri=arkadasBekleyen;
-        hesapYukleniyor=false;
       });
-    }catch(_){
-      if(mounted)setState(()=>hesapYukleniyor=false);
-    }
+    });
+  }
+
+  @override
+  void dispose(){
+    _hesapAboneligi?.cancel();
+    _gidenIstekAboneligi?.cancel();
+    super.dispose();
   }
 
   Future<void> _yayinIzle(BuildContext context, Map<String, dynamic> veri, String belgeId) async {
@@ -5090,20 +5144,23 @@ class _KesfetPageState extends State<KesfetPage> {
       try{
         final hedef=await FirebaseFirestore.instance.collection('users').doc(hedefUid).get();
         if(hedef.data()?['privateAccount']==true){
-          final ref=FirebaseFirestore.instance.collection('notifications').doc('follow_request_'+me+'_'+hedefUid);
-          final onceki=await ref.get();
-          if(onceki.data()?['status']=='pending'){
+          if(gonderilenTakipIstekleri.contains(hedefUid)){
             if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Takip isteğin zaten bekliyor.')));
             return;
           }
-          await ref.set({
-            'toUid':hedefUid,'fromUid':me,'type':'follow_request',
-            'text':'Yeni takip isteğin var','status':'pending',
-            'read':false,'createdAt':FieldValue.serverTimestamp(),
-          },SetOptions(merge:true));
-          if(mounted){
-            setState(()=>gonderilenTakipIstekleri.add(hedefUid));
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Takip isteği gönderildi.')));
+          if(mounted)setState(()=>gonderilenTakipIstekleri.add(hedefUid));
+          try{
+            await sosyalIstekGonder(
+              hedefUid:hedefUid,
+              tur:'follow_request',
+              metin:'Yeni takip isteğin var',
+            );
+            if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Takip isteği gönderildi.')));
+          }catch(e){
+            if(mounted){
+              setState(()=>gonderilenTakipIstekleri.remove(hedefUid));
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Takip isteği gönderilemedi: $e')));
+            }
           }
           return;
         }
@@ -5134,24 +5191,20 @@ class _KesfetPageState extends State<KesfetPage> {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Arkadaşlık isteğin zaten gönderildi.')));
       return;
     }
+    if(mounted)setState(()=>gonderilenArkadaslikIstekleri.add(hedefUid));
     try{
-      final ref=FirebaseFirestore.instance.collection('notifications').doc('friend_request_'+me+'_'+hedefUid);
-      final mevcut=await ref.get();
-      if(mevcut.data()?['status']=='pending'){
-        if(mounted)setState(()=>gonderilenArkadaslikIstekleri.add(hedefUid));
-        if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Arkadaşlık isteğin zaten bekliyor.')));
-        return;
-      }
-      await ref.set({
-        'toUid':hedefUid,'fromUid':me,'type':'friend_request',
-        'text':'Yeni arkadaşlık isteğin var','status':'pending',
-        'read':false,'createdAt':FieldValue.serverTimestamp(),
-      },SetOptions(merge:true));
+      await sosyalIstekGonder(
+        hedefUid:hedefUid,
+        tur:'friend_request',
+        metin:'Yeni arkadaşlık isteğin var',
+      );
       if(!mounted)return;
-      setState(()=>gonderilenArkadaslikIstekleri.add(hedefUid));
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Arkadaşlık isteği gönderildi.')));
     }catch(e){
-      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Arkadaşlık isteği gönderilemedi: $e')));
+      if(mounted){
+        setState(()=>gonderilenArkadaslikIstekleri.remove(hedefUid));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Arkadaşlık isteği gönderilemedi: $e')));
+      }
     }
   }
 
@@ -5427,7 +5480,7 @@ class _KesfetPageState extends State<KesfetPage> {
             ]),
             const SizedBox(width:12),
             Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-              Text(ad,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontWeight:FontWeight.w900,fontSize:16)),
+              Text(ad,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w900,fontSize:16)),
               const SizedBox(height:2),
               Text('@$kullanici',style:const TextStyle(color:Colors.black45)),
             ])),
@@ -14583,9 +14636,9 @@ class SohbetBilgiPage extends StatelessWidget{
     final benim=await FirebaseFirestore.instance.collection('users').doc(me).get();
     final arkadaslar=List<String>.from(benim.data()?['friends']??const[]);
     if(arkadaslar.contains(uid)){if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Zaten arkadaşsınız.')));return;}
-    final istekId='friend_request_${me}_$uid',istek=FirebaseFirestore.instance.collection('notifications').doc(istekId),onceki=await istek.get();
-    if(onceki.data()?['status']=='pending'){if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Arkadaşlık isteğin zaten bekliyor.')));return;}
-    await istek.set({'toUid':uid,'fromUid':me,'type':'friend_request','text':'Yeni arkadaşlık isteğin var','status':'pending','read':false,'createdAt':FieldValue.serverTimestamp()});
+    final giden=await FirebaseFirestore.instance.collection('notifications').where('fromUid',isEqualTo:me).limit(100).get();
+    if(gidenSosyalIstekBekliyor(giden,uid,'friend_request')){if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Arkadaşlık isteğin zaten bekliyor.')));return;}
+    await sosyalIstekGonder(hedefUid:uid,tur:'friend_request',metin:'Yeni arkadaşlık isteğin var');
     if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Arkadaşlık isteği gönderildi.')));
   }
   Future<void> kisiyiPaylas()async{
@@ -15378,11 +15431,11 @@ class KullaniciProfilPage extends StatelessWidget {
                     stream:me==null?null:FirebaseFirestore.instance.collection('users').doc(me).snapshots(),
                     builder:(_,benSnap){
                       final takipte=List<String>.from(benSnap.data?.data()?['following']??const[]).contains(uid);
-                      final istekRef=me==null?null:FirebaseFirestore.instance.collection('notifications').doc('follow_request_'+me+'_'+uid);
-                      return StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
-                        stream:istekRef?.snapshots(),
+                      final gidenAkis=me==null?null:FirebaseFirestore.instance.collection('notifications').where('fromUid',isEqualTo:me).limit(100).snapshots();
+                      return StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
+                        stream:gidenAkis,
                         builder:(_,istekSnap){
-                          final bekliyor=istekSnap.data?.data()?['status']=='pending';
+                          final bekliyor=gidenSosyalIstekBekliyor(istekSnap.data,uid,'follow_request');
                           final etiket=takipte?t('followingActive'):(gizli?(bekliyor?t('requestSent'):'Takip isteği gönder'):t('follow'));
                           return OutlinedButton.icon(
                             onPressed:(bekliyor&&!takipte)?null:()async{
@@ -15405,11 +15458,7 @@ class KullaniciProfilPage extends StatelessWidget {
                               }
 
                               if(gizli){
-                                await istekRef!.set({
-                                  'toUid':uid,'fromUid':me,'type':'follow_request',
-                                  'text':'Yeni takip isteğin var','status':'pending',
-                                  'read':false,'createdAt':FieldValue.serverTimestamp(),
-                                },SetOptions(merge:true));
+                                await sosyalIstekGonder(hedefUid:uid,tur:'follow_request',metin:'Yeni takip isteğin var');
                                 if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Takip isteği gönderildi.')));
                                 return;
                               }
@@ -15432,19 +15481,14 @@ class KullaniciProfilPage extends StatelessWidget {
                   Expanded(child:OutlinedButton.icon(onPressed:()async{if(me==null)return;final ids=[me,uid]..sort();final id=ids.join('_');var izinli=mesajAtabilir;if(!izinli){try{final mevcut=await FirebaseFirestore.instance.collection('chats').doc(id).get();final cv=mevcut.data()??<String,dynamic>{};izinli=cv['requestAccepted_$me']==true||cv['requestAccepted_$uid']==true;}catch(_){}}if(!izinli){if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(t('messageNotAllowed'))));return;}if(context.mounted)Navigator.push(context,MaterialPageRoute(builder:(_)=>SohbetPage(chatId:id,digerUid:uid,ad:(v['displayName']??v['username']??'NgelX').toString(),foto:foto)));},icon:const Icon(Icons.message_outlined),label:Text(t('message')))),
                 ]),
                 const SizedBox(height:10),
-                StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
-                  stream:me==null?null:FirebaseFirestore.instance.collection('notifications').doc('friend_request_'+me+'_'+uid).snapshots(),
+                StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
+                  stream:me==null?null:FirebaseFirestore.instance.collection('notifications').where('fromUid',isEqualTo:me).limit(100).snapshots(),
                   builder:(_,istekSnap){
-                    final bekliyor=istekSnap.data?.data()?['status']=='pending';
+                    final bekliyor=gidenSosyalIstekBekliyor(istekSnap.data,uid,'friend_request');
                     return SizedBox(width:double.infinity,child:FilledButton(
                       onPressed:(arkadaslar.contains(uid)||bekliyor)?null:()async{
                         if(me==null)return;
-                        final ref=FirebaseFirestore.instance.collection('notifications').doc('friend_request_'+me+'_'+uid);
-                        await ref.set({
-                          'toUid':uid,'fromUid':me,'type':'friend_request',
-                          'text':'Yeni arkadaşlık isteğin var','status':'pending',
-                          'read':false,'createdAt':FieldValue.serverTimestamp(),
-                        },SetOptions(merge:true));
+                        await sosyalIstekGonder(hedefUid:uid,tur:'friend_request',metin:'Yeni arkadaşlık isteğin var');
                         if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Arkadaşlık isteği gönderildi.')));
                       },
                       child:Text(arkadaslar.contains(uid)?'Arkadaşsınız':(bekliyor?'Arkadaşlık isteği gönderildi':'Arkadaşlık isteği gönder')),
