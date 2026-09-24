@@ -1387,8 +1387,8 @@ const ceviriler = <String, Map<String,String>>{
   'switchAccount': {'tr':'Hesap değiştir','en':'Switch account','de':'Konto wechseln','ar':'تبديل الحساب','ru':'Сменить аккаунт'},
   'switchAccountSub': {'tr':'Bu cihazda en fazla 5 hesap kullan','en':'Use up to 5 accounts on this device','de':'Bis zu 5 Konten auf diesem Gerät verwenden','ar':'استخدم ما يصل إلى 5 حسابات على هذا الجهاز','ru':'Используйте до 5 аккаунтов на этом устройстве'},
   'profileLoadError': {'tr':'Paylaşımların yüklenemedi. Tekrar dene.','en':'Your posts could not be loaded. Try again.','de':'Deine Beiträge konnten nicht geladen werden. Versuche es erneut.','ar':'تعذر تحميل منشوراتك. حاول مرة أخرى.','ru':'Не удалось загрузить ваши публикации. Попробуйте снова.'},
-  'noVideosYet': {'tr':t('noVideosYet'),'en':'You have not shared any videos yet.','de':'Du hast noch keine Videos geteilt.','ar':'لم تشارك أي فيديو بعد.','ru':'Вы пока не публиковали видео.'},
-  'noPostsYet': {'tr':t('noPostsYet'),'en':'You have no posts yet. Publish your first one from Create ✨','de':'Du hast noch keine Beiträge. Veröffentliche deinen ersten unter Erstellen ✨','ar':'لا توجد لديك منشورات بعد. انشر أول محتوى من قسم الإنشاء ✨','ru':'У вас пока нет публикаций. Опубликуйте первую в разделе «Создать» ✨'},
+  'noVideosYet': {'tr':'Henüz video paylaşımın yok.','en':'You have not shared any videos yet.','de':'Du hast noch keine Videos geteilt.','ar':'لم تشارك أي فيديو بعد.','ru':'Вы пока не публиковали видео.'},
+  'noPostsYet': {'tr':'Henüz paylaşımın yok. Üret bölümünden ilk içeriğini yayınla ✨','en':'You have no posts yet. Publish your first one from Create ✨','de':'Du hast noch keine Beiträge. Veröffentliche deinen ersten unter Erstellen ✨','ar':'لا توجد لديك منشورات بعد. انشر أول محتوى من قسم الإنشاء ✨','ru':'У вас пока нет публикаций. Опубликуйте первую в разделе «Создать» ✨'},
 
 };
 String t(String anahtar) => ceviriler[anahtar]?[uygulamaDili.value] ?? ceviriler[anahtar]?['tr'] ?? anahtar;
@@ -2689,8 +2689,8 @@ class _VideoAkisiState extends State<VideoAkisi> {
                 const SizedBox(height:14),
                 Text(
                   takipSekmesi
-                    ?'Takip ettiğin hesapların yeni paylaşımları burada görünecek.'
-                    :'Henüz akışta gösterilecek paylaşım yok.',
+                    ?t('feedFollowingEmpty')
+                    :t('feedEmpty'),
                   textAlign:TextAlign.center,
                   style:const TextStyle(color:Colors.white70,fontSize:15,fontWeight:FontWeight.w700),
                 ),
@@ -5323,7 +5323,7 @@ class _KesfetPageState extends State<KesfetPage> {
                 child:FilledButton(
                   onPressed:hesapYukleniyor||takipIstegiBekliyor?null:()=>_takipDegistir(uid),
                   style:FilledButton.styleFrom(backgroundColor:(takipte||takipIstegiBekliyor)?const Color(0xFFECECF2):mor,foregroundColor:(takipte||takipIstegiBekliyor)?Colors.black87:Colors.white,padding:const EdgeInsets.symmetric(horizontal:12)),
-                  child:Text(takipte?'Takiptesin':(takipIstegiBekliyor?'İstek gönderildi':t('follow')),style:const TextStyle(fontWeight:FontWeight.w800,fontSize:11)),
+                  child:Text(takipte?t('followingActive'):(takipIstegiBekliyor?t('requestSent'):t('follow')),style:const TextStyle(fontWeight:FontWeight.w800,fontSize:11)),
                 ),
               ),
               const SizedBox(height:5),
@@ -5333,7 +5333,7 @@ class _KesfetPageState extends State<KesfetPage> {
                   onPressed:arkadaslar.contains(uid)||gonderilenArkadaslikIstekleri.contains(uid)?null:()=>_arkadaslikIstegiGonder(uid),
                   style:OutlinedButton.styleFrom(padding:const EdgeInsets.symmetric(horizontal:9),visualDensity:VisualDensity.compact),
                   icon:Icon(arkadaslar.contains(uid)?Icons.people_alt_rounded:Icons.person_add_alt_1_rounded,size:15),
-                  label:Text(arkadaslar.contains(uid)?'Arkadaş':(gonderilenArkadaslikIstekleri.contains(uid)?'Gönderildi':'Arkadaş ekle'),style:const TextStyle(fontSize:10,fontWeight:FontWeight.w800)),
+                  label:Text(arkadaslar.contains(uid)?t('friend'):(gonderilenArkadaslikIstekleri.contains(uid)?t('requestSent'):t('addFriend')),style:const TextStyle(fontSize:10,fontWeight:FontWeight.w800)),
                 ),
               ),
             ]),
@@ -15325,7 +15325,7 @@ class KullaniciProfilPage extends StatelessWidget {
                         stream:istekRef?.snapshots(),
                         builder:(_,istekSnap){
                           final bekliyor=istekSnap.data?.data()?['status']=='pending';
-                          final etiket=takipte?'Takiptesin':(gizli?(bekliyor?'İstek gönderildi':'Takip isteği gönder'):'Takip et');
+                          final etiket=takipte?t('followingActive'):(gizli?(bekliyor?t('requestSent'):'Takip isteği gönder'):t('follow'));
                           return OutlinedButton.icon(
                             onPressed:(bekliyor&&!takipte)?null:()async{
                               if(me==null)return;
@@ -16294,8 +16294,8 @@ class AyarlarPage extends StatelessWidget {
   const AyarlarPage({super.key});
   @override Widget build(BuildContext context){final misafir=FirebaseAuth.instance.currentUser?.isAnonymous==true;return Theme(data:ThemeData.light().copyWith(scaffoldBackgroundColor:Colors.white,appBarTheme:const AppBarTheme(backgroundColor:Colors.white,foregroundColor:Colors.black,elevation:0),cardTheme:const CardThemeData(color:Colors.white,elevation:0,margin:EdgeInsets.symmetric(vertical:4)),dividerColor:Color(0xFFE5E7EB)),child:Scaffold(appBar:AppBar(title:Text(t('settingsTitle'))),body:SafeArea(child:ListView(padding:const EdgeInsets.fromLTRB(14,8,14,24),children:[
     if(!misafir)...[
-      ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:10,vertical:7),leading:const Icon(Icons.workspace_premium_rounded,color:ngelxPremiumPurple),title:const Text('Premium ve Cüzdan',style:TextStyle(fontWeight:FontWeight.bold,color:Colors.black87)),subtitle:const Text('Premium, jetonlar, mavi tik ve satın almalar',style:TextStyle(color:Colors.black54)),trailing:const Icon(Icons.chevron_right,color:Colors.black87),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const NgelXPremiumPage()))),
-      ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:10,vertical:7),leading:const Icon(Icons.switch_account_rounded,color:mor),title:const Text('Hesap değiştir',style:TextStyle(fontWeight:FontWeight.bold,color:Colors.black87)),subtitle:Text(t('switchAccountSub'),style:TextStyle(color:Colors.black54)),trailing:const Icon(Icons.chevron_right,color:Colors.black87),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const HesapDegistirPage()))),
+      ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:10,vertical:7),leading:const Icon(Icons.workspace_premium_rounded,color:ngelxPremiumPurple),title:Text(t('premiumWallet'),style:const TextStyle(fontWeight:FontWeight.bold,color:Colors.black87)),subtitle:Text(t('premiumWalletSub'),style:const TextStyle(color:Colors.black54)),trailing:const Icon(Icons.chevron_right,color:Colors.black87),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const NgelXPremiumPage()))),
+      ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:10,vertical:7),leading:const Icon(Icons.switch_account_rounded,color:mor),title:Text(t('switchAccount'),style:const TextStyle(fontWeight:FontWeight.bold,color:Colors.black87)),subtitle:Text(t('switchAccountSub'),style:TextStyle(color:Colors.black54)),trailing:const Icon(Icons.chevron_right,color:Colors.black87),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const HesapDegistirPage()))),
       _ayar(context,Icons.lock_outline,'Gizlilik',t('privacy'),t('privacySub')),
       ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:10,vertical:7),leading:const Icon(Icons.people_outline,color:mor),title:Text(t('followFriends'),style:const TextStyle(fontWeight:FontWeight.bold,color:Colors.black87)),subtitle:Text(t('followFriendsSub'),style:const TextStyle(color:Colors.black54)),trailing:const Icon(Icons.chevron_right,color:Colors.black87),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const ArkadaslarPage()))),
       ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:10,vertical:7),leading:const Icon(Icons.block_outlined,color:mor),title:Text(t('blockedAccounts'),style:const TextStyle(fontWeight:FontWeight.bold,color:Colors.black87)),subtitle:Text(t('blockedAccountsSub'),style:const TextStyle(color:Colors.black54)),trailing:const Icon(Icons.chevron_right,color:Colors.black87),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const EngellenenlerPage()))),
@@ -17684,16 +17684,16 @@ class _ProfilPageState extends State<ProfilPage> {
     final onay = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Çıkış yapılsın mı?'),
-        content: const Text('Tekrar giriş yapman gerekecek.'),
+        title: Text(t('logoutQuestion')),
+        content: Text(t('logoutInfo')),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Vazgeç'),
+            child: Text(t('cancel')),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Çıkış Yap'),
+            child: Text(t('logout')),
           ),
         ],
       ),
@@ -17833,7 +17833,7 @@ class _ProfilPageState extends State<ProfilPage> {
                       IconButton(tooltip:t('profilePreview'),onPressed:aktifKullanici==null?null:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciProfilPage(uid:aktifKullanici!.uid,ziyaretciOnizleme:true))),icon:const Icon(Icons.visibility_outlined,color:Colors.black,size:27)),
                       IconButton(onPressed:aktifKullanici==null?null:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>ProfilAramaPage(uid:aktifKullanici!.uid))),icon:const Icon(Icons.search_rounded,color:Colors.black,size:28)),
                       StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(stream:aktifKullanici==null?null:FirebaseFirestore.instance.collection('notifications').where('toUid',isEqualTo:aktifKullanici!.uid).limit(100).snapshots(),builder:(_,s){final sayi=(s.data?.docs??[]).where((d)=>d.data()['read']!=true).length;return IconButton(onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const AktivitePage())),icon:sayi==0?const Icon(Icons.notifications_none_rounded,color:Colors.black,size:28):Badge(label:Text(sayi>99?'99+':'$sayi'),child:const Icon(Icons.notifications_none_rounded,color:Colors.black,size:28)));}),
-                      IconButton(tooltip: 'Ayarlar ve gizlilik',onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const AyarlarPage())),icon:const Icon(Icons.settings_outlined,color:Colors.black,size:28)),
+                      IconButton(tooltip:t('settingsTitle'),onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const AyarlarPage())),icon:const Icon(Icons.settings_outlined,color:Colors.black,size:28)),
                     ],
                   ),
                   const SizedBox(height: 18),
@@ -18056,7 +18056,7 @@ class _ProfilPageState extends State<ProfilPage> {
       stream:aktifKullanici==null?null:FirebaseFirestore.instance.collection('videos').where('ownerId',isEqualTo:aktifKullanici!.uid).limit(100).snapshots(),
       builder:(_,snap){
         if(snap.connectionState==ConnectionState.waiting)return const Padding(padding:EdgeInsets.all(38),child:Center(child:CircularProgressIndicator(color:mor)));
-        if(snap.hasError)return _profilBosDurum(Icons.cloud_off_outlined,'Paylaşımların yüklenemedi. Tekrar dene.');
+        if(snap.hasError)return _profilBosDurum(Icons.cloud_off_outlined,t('profileLoadError'));
         final paylasimlar=(snap.data?.docs??[]).where((d){
           final v=d.data();
           if(v['type']=='story')return false;
@@ -18073,7 +18073,7 @@ class _ProfilPageState extends State<ProfilPage> {
         if(paylasimlar.isEmpty){
           return _profilBosDurum(
             profilSekme==1?Icons.video_collection_outlined:Icons.grid_view_rounded,
-            profilSekme==1?'Henüz video paylaşımın yok.':'Henüz paylaşımın yok. Üret bölümünden ilk içeriğini yayınla ✨',
+            profilSekme==1?t('noVideosYet'):t('noPostsYet'),
           );
         }
         return _profilBelgeleriGrid(paylasimlar,menuAc:true);
