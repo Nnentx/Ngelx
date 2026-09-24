@@ -1,0 +1,27 @@
+name: Diagnose Cloudflare Zones 2
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/diag-cloudflare-zones2.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: List active zones only
+        shell: bash
+        env:
+          CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          zones="$(curl --fail-with-body --silent --show-error             -H "Authorization: Bearer $CF_API_TOKEN"             -H "Content-Type: application/json"             "https://api.cloudflare.com/client/v4/zones?account.id=$CF_ACCOUNT_ID&per_page=50")"
+          echo "success=$(jq -r '.success' <<<"$zones")"
+          echo "zone_count=$(jq -r '.result | length' <<<"$zones")"
+          jq -r '.result[] | "zone=\(.name) status=\(.status) type=\(.type)"' <<<"$zones"
