@@ -18,7 +18,7 @@ jobs:
 
       - name: Worker bagimliliklarini kur
         working-directory: cloudflare/worker
-        run: npm install --omit=dev
+        run: npm install
 
       - name: R2 bucket olustur
         continue-on-error: true
@@ -45,21 +45,39 @@ jobs:
           R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
           R2_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
-      - name: Yedek R2 Worker deploy
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          workingDirectory: cloudflare/worker
-          command: deploy --config wrangler-backup.toml
-          secrets: |
-            R2_ACCESS_KEY_ID
-            R2_SECRET_ACCESS_KEY
-            R2_ACCOUNT_ID
+      - name: Yedek Worker direct R2 secretlerini kur
+        working-directory: cloudflare/worker
+        shell: bash
         env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
           R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
           R2_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY' > /tmp/ngelx-upload-secrets.json
+          import json, os
+          print(json.dumps({
+            "R2_ACCESS_KEY_ID": os.environ["R2_ACCESS_KEY_ID"],
+            "R2_SECRET_ACCESS_KEY": os.environ["R2_SECRET_ACCESS_KEY"],
+            "R2_ACCOUNT_ID": os.environ["R2_ACCOUNT_ID"],
+          }))
+          PY
+          npx wrangler secret bulk /tmp/ngelx-upload-secrets.json \
+            --config wrangler-backup.toml \
+            --name ngelx-upload
+          rm -f /tmp/ngelx-upload-secrets.json
+
+      - name: Yedek R2 Worker deploy
+        working-directory: cloudflare/worker
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          npx wrangler deploy --config wrangler-backup.toml
 
       - name: Medya servislerini dogrula
         shell: bash
@@ -75,8 +93,8 @@ jobs:
               --retry 10 --retry-all-errors --retry-delay 3 \
               --connect-timeout 10 --max-time 20 "$url")"
             echo "$body"
-            if [[ "$url" == *"ngelx-media."* ]] && [[ "$body" != *'"directUpload":true'* ]]; then
-              echo "Ana Worker direct R2 signer aktif degil."
+            if [[ "$body" != *'"directUpload":true'* ]]; then
+              echo "Worker direct R2 signer aktif degil: $url"
               exit 1
             fi
           done
