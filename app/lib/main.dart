@@ -156,6 +156,7 @@ const _ngelxMediaApiBuild = String.fromEnvironment(
   defaultValue: 'https://ngelx-media.alihancaglar76.workers.dev',
 );
 const _ngelxMediaProtocolVersion='upload-r2-243';
+const _ngelxMediaApiBackup='https://ngelx-upload.alihancaglar76.workers.dev';
 String? _ngelxMediaApiCache;
 DateTime? _ngelxMediaApiCacheZamani;
 
@@ -905,50 +906,80 @@ Future<Map<String,dynamic>> _ngelxDirectR2Izin({
   final token=await user.getIdToken(true);
   if(token==null||token.isEmpty)throw Exception('Güvenli medya oturumu oluşturulamadı.');
 
-  final hedef=Uri.parse(api+'/upload/presign').replace(queryParameters:{
-    'kind':kind,
-    'ext':ext,
-    'contentType':contentType,
-    'size':size.toString(),
-    'protocol':_ngelxMediaProtocolVersion,
-  });
-  try{
-    final cevap=await Dio(BaseOptions(
-      connectTimeout:const Duration(seconds:15),
-      receiveTimeout:const Duration(seconds:30),
-      validateStatus:(s)=>s!=null,
-    )).getUri(
-      hedef,
-      options:Options(
-        responseType:ResponseType.json,
-        headers:{
-          HttpHeaders.authorizationHeader:'Bearer $token',
-          'X-NgelX-Client':'direct-r2-$_ngelxMediaProtocolVersion',
-        },
-      ),
-    );
-    final status=cevap.statusCode??0;
-    final veri=cevap.data;
-    final map=veri is Map<String,dynamic>
-        ?veri
-        :veri is Map
-            ?Map<String,dynamic>.from(veri)
-            :<String,dynamic>{};
-    if(status<200||status>=300){
-      final detay=(map['message']??map['error']??'yanıt yok').toString();
-      throw Exception('presign HTTP $status | $detay');
-    }
-    final uploadUrl=(map['uploadUrl']??'').toString();
-    final mediaUrl=(map['mediaUrl']??'').toString();
-    if(uploadUrl.isEmpty||mediaUrl.isEmpty){
-      throw Exception('presign yanıtında uploadUrl/mediaUrl eksik');
-    }
-    return map;
-  }on DioException catch(e){
-    final durum=e.response?.statusCode;
-    final govde=e.response?.data;
-    throw Exception('presign bağlantı | ${hedef.host} | ${durum??'-'} | ${govde??e.message??e.type}');
+  final adaylar=<String>[];
+  for(final raw in <String>[api,_ngelxMediaApiBackup]){
+    final temiz=raw.trim().replaceAll(RegExp(r'/+$'),'');
+    if(temiz.isNotEmpty&&!adaylar.contains(temiz))adaylar.add(temiz);
   }
+
+  final hatalar=<String>[];
+  for(final base in adaylar){
+    final hedef=Uri.parse(base+'/upload/presign').replace(queryParameters:{
+      'kind':kind,
+      'ext':ext,
+      'contentType':contentType,
+      'size':size.toString(),
+      'protocol':_ngelxMediaProtocolVersion,
+    });
+
+    for(var deneme=1;deneme<=2;deneme++){
+      try{
+        final cevap=await Dio(BaseOptions(
+          connectTimeout:const Duration(seconds:15),
+          receiveTimeout:const Duration(seconds:30),
+          validateStatus:(s)=>s!=null,
+        )).getUri(
+          hedef,
+          options:Options(
+            responseType:ResponseType.json,
+            headers:{
+              HttpHeaders.authorizationHeader:'Bearer $token',
+              'X-NgelX-Client':'direct-r2-$_ngelxMediaProtocolVersion',
+              'Cache-Control':'no-cache',
+            },
+          ),
+        );
+
+        final status=cevap.statusCode??0;
+        final veri=cevap.data;
+        final map=veri is Map<String,dynamic>
+            ?veri
+            :veri is Map
+                ?Map<String,dynamic>.from(veri)
+                :<String,dynamic>{};
+
+        if(status>=200&&status<300){
+          final uploadUrl=(map['uploadUrl']??'').toString();
+          final mediaUrl=(map['mediaUrl']??'').toString();
+          if(uploadUrl.isEmpty||mediaUrl.isEmpty){
+            hatalar.add('${hedef.host} deneme=$deneme | uploadUrl/mediaUrl eksik');
+          }else{
+            map['_presignHost']=hedef.host;
+            map['_presignAttempt']=deneme;
+            return map;
+          }
+        }else{
+          final detay=(map['message']??map['error']??'yanıt yok').toString();
+          hatalar.add('${hedef.host} deneme=$deneme | HTTP $status | $detay');
+          // Kimlik doğrulama hatası endpoint değiştirerek düzelmez.
+          if(status==401||status==403){
+            throw Exception('presign HTTP $status | $detay');
+          }
+        }
+      }on DioException catch(e){
+        final durum=e.response?.statusCode;
+        final govde=e.response?.data;
+        hatalar.add('${hedef.host} deneme=$deneme | ${durum??'-'} | ${govde??e.message??e.type}');
+      }
+
+      if(deneme<2){
+        await Future<void>.delayed(Duration(milliseconds:350*deneme));
+      }
+    }
+  }
+
+  final detay=hatalar.isEmpty?'bilinmeyen bağlantı hatası':hatalar.join(' || ');
+  throw Exception('presign bağlantı | primary+backup | $detay');
 }
 
 Future<String> _ngelxDirectR2BytesYukle({
