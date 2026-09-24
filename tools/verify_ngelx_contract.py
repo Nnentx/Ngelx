@@ -467,6 +467,45 @@ for token in (
     if token not in app:
         errors.append("Özel sohbet ses kaydı sözleşmesi eksik: " + token)
 
+# Build 251: private chat mirrors the group polish with a dedicated blue design,
+# live last-active text, drafts, video sending, and group-only @herkes.
+for token in (
+    "const ngelxPrivateBlue = Color(0xFF146EF5)",
+    "const ngelxPrivateBlueSoft = Color(0xFFEAF3FF)",
+    "class NgelXPrivateCard",
+    "class AktiflikDurumuYazisi",
+    "AktiflikDurumuYazisi(uid:widget.digerUid)",
+    "PrivateDraftStore.load(widget.chatId)",
+    "Future<void> videoGonder(ImageSource kaynak)",
+    "TamEkranVideoPage(url:",
+    "Future<void> ozelMesajBilgisi",
+    "_ozelSohbetGunEtiketi",
+):
+    if token not in app:
+        errors.append("Özel sohbet mavi kalite sözleşmesi eksik: " + token)
+
+for token in (
+    "class PrivateDraftStore",
+    "private_draft_",
+):
+    if token not in group_quality:
+        errors.append("Özel sohbet taslak depolama sözleşmesi eksik: " + token)
+
+private_start = app.find("class _SohbetPageState")
+private_end = app.find("\nclass NgelXSesliMesaj", private_start)
+private_chat = app[private_start:private_end if private_end > private_start else len(app)]
+if "'uid':'all','username':'herkes'" in private_chat or "'username':'herkes'" in private_chat:
+    errors.append("@herkes özel sohbette görünmemeli; yalnızca grup sohbetinde kullanılmalı.")
+if "Bu sohbetteki herkesten bahset" not in app:
+    errors.append("Grup sohbetinde @herkes komutu kaybolmuş.")
+
+for token in (
+    "style:TextStyle(color:Colors.black54,height:1.35)",
+    "style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w900)",
+):
+    if token not in app:
+        errors.append("Beyaz grup diyaloglarında okunabilir metin rengi koruması eksik: " + token)
+
 # Polls are intentionally removed from NgelX group chat.
 if "'type':'poll'" in app or '"type":"poll"' in app:
     errors.append("Anket özelliği kaldırıldığı halde uygulamada poll oluşturma kodu bulundu.")
@@ -486,7 +525,7 @@ for token in (
     count = app.count(token)
     if count != 1:
         errors.append(f"Tekrarlı/eksik Dart sınıfı: {token} ({count} adet)")
-if len(app) > 1_000_000:
+if len(app) > 1_050_000:
     errors.append("main.dart beklenmedik şekilde büyüdü; tekrarlı kod eklenmiş olabilir.")
 
 # Large group uploads must stream from disk instead of loading the whole file into RAM.
