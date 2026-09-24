@@ -6664,8 +6664,8 @@ class _MesajPageState extends State<MesajPage> {
           backgroundColor:Colors.white,surfaceTintColor:Colors.white,
           shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(26)),
           icon:const Icon(Icons.workspace_premium_rounded,color:ngelxGroupGreen,size:36),
-          title:const Text('Önce kuruculuğu devret',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.w900)),
-          content:const Text('Gruptan ayrılmadan önce kuruculuğu başka bir üyeye devretmelisin.',textAlign:TextAlign.center),
+          title:const Text('Önce kuruculuğu devret',textAlign:TextAlign.center,style:TextStyle(color:Colors.black87,fontWeight:FontWeight.w900)),
+          content:const Text('Gruptan ayrılmadan önce kuruculuğu başka bir üyeye devretmelisin.',textAlign:TextAlign.center,style:TextStyle(color:Colors.black54,height:1.35)),
           actions:[
             TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),
             FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('Üyelere git')),
@@ -6686,8 +6686,8 @@ class _MesajPageState extends State<MesajPage> {
           backgroundColor:Colors.white,surfaceTintColor:Colors.white,
           shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(26)),
           icon:const Icon(Icons.admin_panel_settings_rounded,color:ngelxGroupGreen,size:36),
-          title:const Text('Önce yönetici belirle',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.w900)),
-          content:const Text('Gruptan ayrılmadan önce başka bir üyeyi yönetici yapmalısın.',textAlign:TextAlign.center),
+          title:const Text('Önce yönetici belirle',textAlign:TextAlign.center,style:TextStyle(color:Colors.black87,fontWeight:FontWeight.w900)),
+          content:const Text('Gruptan ayrılmadan önce başka bir üyeyi yönetici yapmalısın.',textAlign:TextAlign.center,style:TextStyle(color:Colors.black54,height:1.35)),
           actions:[FilledButton(onPressed:()=>Navigator.pop(c),child:const Text('Tamam'))],
         ),
       );
@@ -6702,8 +6702,8 @@ class _MesajPageState extends State<MesajPage> {
         backgroundColor:Colors.white,surfaceTintColor:Colors.white,
         shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(26)),
         icon:Icon(sonKisi?Icons.delete_forever_rounded:Icons.exit_to_app_rounded,color:const Color(0xFFE23D4F),size:36),
-        title:Text(sonKisi?'Grup silinsin mi?':'Gruptan ayrılmak istiyor musun?',textAlign:TextAlign.center,style:const TextStyle(fontWeight:FontWeight.w900)),
-        content:Text(sonKisi?'Grupta yalnızca sen kaldın. Grup kapatılacak.':'Bu gruptaki yeni mesajları artık göremeyeceksin.',textAlign:TextAlign.center),
+        title:Text(sonKisi?'Grup silinsin mi?':'Gruptan ayrılmak istiyor musun?',textAlign:TextAlign.center,style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w900)),
+        content:Text(sonKisi?'Grupta yalnızca sen kaldın. Grup kapatılacak.':'Bu gruptaki yeni mesajları artık göremeyeceksin.',textAlign:TextAlign.center,style:const TextStyle(color:Colors.black54,height:1.35)),
         actions:[
           TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),
           FilledButton(
@@ -13887,7 +13887,6 @@ class _SohbetPageState extends State<SohbetPage> {
     final parca=deger.split(RegExp(r'\s+')).last;
     if(!parca.startsWith('@')){if(mentionOnerileri.isNotEmpty&&mounted)setState(()=>mentionOnerileri.clear());return;}
     final ara=parca.substring(1).toLowerCase(),sonuc=<Map<String,String>>[];
-    if('herkes'.contains(ara))sonuc.add({'uid':'all','username':'herkes','name':'Herkes'});
     try{
       final d=await FirebaseFirestore.instance.collection('users').doc(widget.digerUid).get(),v=d.data()??<String,dynamic>{};
       final kullanici=(v['username']??'').toString().trim(),ad=(v['displayName']??kullanici).toString().trim(),aranan='$kullanici $ad'.toLowerCase();
@@ -15167,6 +15166,49 @@ class AktivitePage extends StatelessWidget {
     ));
   }
 }
+
+class AktiflikDurumuYazisi extends StatefulWidget{
+  final String uid;
+  const AktiflikDurumuYazisi({super.key,required this.uid});
+  @override State<AktiflikDurumuYazisi> createState()=>_AktiflikDurumuYazisiState();
+}
+class _AktiflikDurumuYazisiState extends State<AktiflikDurumuYazisi>{
+  Timer? _sayac;
+  @override void initState(){
+    super.initState();
+    _sayac=Timer.periodic(const Duration(seconds:30),(_){if(mounted)setState((){});});
+  }
+  @override void dispose(){_sayac?.cancel();super.dispose();}
+  String _etiket(Map<String,dynamic> v){
+    if(v['showActivityStatus']==false)return '';
+    if(v['isOnline']==true)return '● Çevrimiçi';
+    final ham=v['lastSeenAt'];
+    if(ham is! Timestamp)return 'Çevrimdışı';
+    final fark=DateTime.now().difference(ham.toDate());
+    if(fark.inMinutes<1)return 'Az önce aktifti';
+    if(fark.inMinutes<60)return '${fark.inMinutes} dk önce aktifti';
+    if(fark.inHours<24)return '${fark.inHours} saat önce aktifti';
+    return '${fark.inDays} gün önce aktifti';
+  }
+  @override Widget build(BuildContext context)=>StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
+    stream:FirebaseFirestore.instance.collection('users').doc(widget.uid).snapshots(),
+    builder:(_,snap){
+      final v=snap.data?.data()??<String,dynamic>{};
+      final etiket=_etiket(v);
+      if(etiket.isEmpty)return const SizedBox.shrink();
+      final online=v['isOnline']==true;
+      return Text(
+        etiket,
+        style:TextStyle(
+          color:online?Colors.green:Colors.black54,
+          fontSize:12,
+          fontWeight:online?FontWeight.w700:FontWeight.w500,
+        ),
+      );
+    },
+  );
+}
+
 String zamanKisa(dynamic t){if(t is! Timestamp)return 'Şimdi';final f=DateTime.now().difference(t.toDate());if(f.inMinutes<1)return 'Şimdi';if(f.inHours<1)return '${f.inMinutes} dk önce';if(f.inDays<1)return '${f.inHours} sa önce';return '${f.inDays} gün önce';}
 String mesajSaati(dynamic t){if(t is! Timestamp)return '';final d=t.toDate().toLocal();final s=d.minute.toString().padLeft(2,'0');return '${d.hour}:$s';}
 
@@ -15397,8 +15439,7 @@ class KullaniciProfilPage extends StatelessWidget {
               Wrap(alignment:WrapAlignment.center,spacing:12,runSpacing:6,children:[
                 if((v['createdAt']??v['joinedAt']) is Timestamp)
                   Text('NgelX’e katıldı: '+((v['createdAt']??v['joinedAt']) as Timestamp).toDate().year.toString(),style:const TextStyle(color:Colors.black54,fontSize:12)),
-                if(v['showActivityStatus']!=false)
-                  Text(v['isOnline']==true?'● Çevrimiçi':(v['lastSeenAt'] is Timestamp?'Son görülme: '+zamanKisa(v['lastSeenAt']):'Çevrimdışı'),style:TextStyle(color:v['isOnline']==true?Colors.green:Colors.black54,fontSize:12,fontWeight:v['isOnline']==true?FontWeight.w700:FontWeight.w400)),
+                AktiflikDurumuYazisi(uid:uid),
               ]),
               if((v['introVideoUrl']??'').toString().isNotEmpty) ...[
                 const SizedBox(height:14),
