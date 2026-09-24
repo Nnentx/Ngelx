@@ -14169,37 +14169,53 @@ class _SohbetPageState extends State<SohbetPage> {
   }
 
   @override
-  Widget build(BuildContext context)=>Theme(data:ThemeData.light().copyWith(scaffoldBackgroundColor:Colors.white,appBarTheme:const AppBarTheme(backgroundColor:Colors.white,foregroundColor:Colors.black,elevation:0)),child:Scaffold(
+  Widget build(BuildContext context)=>Theme(
+    data:ThemeData.light().copyWith(
+      scaffoldBackgroundColor:ngelxPrivateBlueCanvas,
+      colorScheme:ColorScheme.fromSeed(seedColor:ngelxPrivateBlue),
+      appBarTheme:const AppBarTheme(
+        backgroundColor:ngelxPrivateBlueHeader,
+        foregroundColor:ngelxPrivateBlueInk,
+        surfaceTintColor:Colors.transparent,
+        elevation:0,
+      ),
+    ),
+    child:Scaffold(
+    backgroundColor:ngelxPrivateBlueCanvas,
     appBar:AppBar(
-      leading:const BackButton(color:Colors.blue),
+      leading:const BackButton(color:ngelxPrivateBlue),
+      titleSpacing:0,
       title:StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(stream:_chatAkisi,builder:(_,s){
-        final ham=s.data?.data()?['nicknames'],nicks=ham is Map?Map<String,dynamic>.from(ham):<String,dynamic>{},takma=(uid==null?'':(nicks[uid]??'').toString()).trim(),gorunenAd=takma.isNotEmpty?takma:widget.ad;
-        return StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
-          stream:FirebaseFirestore.instance.collection('users').doc(widget.digerUid).snapshots(),
-          builder:(_,u){
-            final p=u.data?.data()??<String,dynamic>{};
-            String durum='';
-            if(p['showActivityStatus']!=false){
-              if(p['isOnline']==true)durum='Şu an aktif';
-              else if(p['lastSeenAt'] is Timestamp){
-                final fark=DateTime.now().difference((p['lastSeenAt'] as Timestamp).toDate());
-                if(fark.inMinutes<60)durum='${fark.inMinutes.clamp(1,59)} dk önce aktifti';
-                else if(fark.inHours<24)durum='${fark.inHours} saat önce aktifti';
-                else durum='${fark.inDays} gün önce aktifti';
-              }
-            }
-            return InkWell(
-              onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciProfilPage(uid:widget.digerUid))),
-              child:Row(children:[
-                CircleAvatar(radius:20,backgroundImage:widget.foto.isEmpty?null:CachedNetworkImageProvider(widget.foto),child:widget.foto.isEmpty?const Icon(Icons.person):null),
-                const SizedBox(width:9),
-                Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisSize:MainAxisSize.min,children:[
-                  Text(gorunenAd,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:16,fontWeight:FontWeight.w900)),
-                  if(durum.isNotEmpty)Text(durum,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:11,color:Colors.black54,fontWeight:FontWeight.w500)),
-                ])),
-              ]),
-            );
-          },
+        final ham=s.data?.data()?['nicknames'],
+          nicks=ham is Map?Map<String,dynamic>.from(ham):<String,dynamic>{},
+          takma=(uid==null?'':(nicks[uid]??'').toString()).trim(),
+          gorunenAd=takma.isNotEmpty?takma:widget.ad;
+        return InkWell(
+          borderRadius:BorderRadius.circular(18),
+          onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciProfilPage(uid:widget.digerUid))),
+          child:Padding(
+            padding:const EdgeInsets.symmetric(vertical:4),
+            child:Row(children:[
+              Container(
+                padding:const EdgeInsets.all(2),
+                decoration:const BoxDecoration(
+                  shape:BoxShape.circle,
+                  gradient:LinearGradient(colors:[ngelxPrivateBlue2,ngelxPrivateBlue]),
+                ),
+                child:CircleAvatar(
+                  radius:19,
+                  backgroundColor:Colors.white,
+                  backgroundImage:widget.foto.isEmpty?null:CachedNetworkImageProvider(widget.foto),
+                  child:widget.foto.isEmpty?const Icon(Icons.person_rounded,color:ngelxPrivateBlue):null,
+                ),
+              ),
+              const SizedBox(width:9),
+              Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisSize:MainAxisSize.min,children:[
+                Text(gorunenAd,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:ngelxPrivateBlueInk,fontSize:16,fontWeight:FontWeight.w900)),
+                AktiflikDurumuYazisi(uid:widget.digerUid),
+              ])),
+            ]),
+          ),
         );
       }),
       actions:[
@@ -14207,18 +14223,18 @@ class _SohbetPageState extends State<SohbetPage> {
           tooltip:'Sesli arama',
           onPressed:aramaBaslatiliyor?null:()=>aramaBaslat(false),
           icon:aramaBaslatiliyor
-            ? const SizedBox(width:20,height:20,child:CircularProgressIndicator(strokeWidth:2))
-            : const Icon(Icons.call,color:Colors.blue),
+            ? const SizedBox(width:20,height:20,child:CircularProgressIndicator(strokeWidth:2,color:ngelxPrivateBlue))
+            : const Icon(Icons.call_rounded,color:ngelxPrivateBlue),
         ),
         IconButton(
           tooltip:'Görüntülü arama',
           onPressed:aramaBaslatiliyor?null:()=>aramaBaslat(true),
-          icon:const Icon(Icons.videocam,color:Colors.blue),
+          icon:const Icon(Icons.videocam_rounded,color:ngelxPrivateBlue),
         ),
-        IconButton(onPressed:bilgi,icon:const Icon(Icons.info,color:Colors.blue)),
+        IconButton(tooltip:'Sohbet bilgisi',onPressed:bilgi,icon:const Icon(Icons.info_rounded,color:ngelxPrivateBlue)),
       ],
     ),
-    body:StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(stream:_chatAkisi,builder:(_,tema){final veri=tema.data?.data()??<String,dynamic>{},ham=veri['theme_$uid'];final arkaPlan=ham is int?Color(ham):Colors.white,arkaPlanUrl=(veri['backgroundUrl_$uid']??'').toString(),hizliEmoji=(veri['quickEmoji_$uid']??'👍').toString(),arkaPlanOpaklik=(veri['backgroundOpacity_$uid'] is num?(veri['backgroundOpacity_$uid'] as num).toDouble():.30).clamp(.05,.85).toDouble(),mesajYaziBoyutu=(veri['messageFontSize_$uid'] is num?(veri['messageFontSize_$uid'] as num).toDouble():16.0).clamp(12.0,22.0).toDouble();return Container(decoration:BoxDecoration(color:arkaPlan,image:arkaPlanUrl.isEmpty?null:DecorationImage(image:CachedNetworkImageProvider(arkaPlanUrl),fit:BoxFit.cover,opacity:arkaPlanOpaklik)),child:Column(children:[
+    body:StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(stream:_chatAkisi,builder:(_,tema){final veri=tema.data?.data()??<String,dynamic>{},ham=veri['theme_$uid'];final arkaPlan=ham is int?Color(ham):ngelxPrivateBlueCanvas,arkaPlanUrl=(veri['backgroundUrl_$uid']??'').toString(),hizliEmoji=(veri['quickEmoji_$uid']??'👍').toString(),arkaPlanOpaklik=(veri['backgroundOpacity_$uid'] is num?(veri['backgroundOpacity_$uid'] as num).toDouble():.30).clamp(.05,.85).toDouble(),mesajYaziBoyutu=(veri['messageFontSize_$uid'] is num?(veri['messageFontSize_$uid'] as num).toDouble():16.0).clamp(12.0,22.0).toDouble();return Container(decoration:BoxDecoration(color:arkaPlan,image:arkaPlanUrl.isEmpty?null:DecorationImage(image:CachedNetworkImageProvider(arkaPlanUrl),fit:BoxFit.cover,opacity:arkaPlanOpaklik)),child:Column(children:[
       if(((veri['callStatus']??'').toString()=='ringing'||(veri['callStatus']??'').toString()=='active')&&(veri['callRoomName']??'').toString().isNotEmpty)
         InkWell(
           onTap:()async{
@@ -14240,7 +14256,7 @@ class _SohbetPageState extends State<SohbetPage> {
             margin:const EdgeInsets.fromLTRB(10,9,10,1),
             padding:const EdgeInsets.symmetric(horizontal:11,vertical:9),
             decoration:BoxDecoration(
-              gradient:const LinearGradient(colors:[Color(0xFF211837),Color(0xFF342052)]),
+              gradient:const LinearGradient(colors:[Color(0xFF0D5FD7),Color(0xFF3595FF)]),
               borderRadius:BorderRadius.circular(18),
               border:Border.all(color:Colors.white10),
               boxShadow:const [BoxShadow(color:Color(0x20000000),blurRadius:14,offset:Offset(0,5))],
@@ -14248,14 +14264,14 @@ class _SohbetPageState extends State<SohbetPage> {
             child:Row(children:[
               Container(
                 width:38,height:38,
-                decoration:const BoxDecoration(shape:BoxShape.circle,gradient:LinearGradient(colors:[Color(0xFF9A6AFF),Color(0xFF7048E8)])),
+                decoration:const BoxDecoration(shape:BoxShape.circle,color:Colors.white24),
                 child:Icon(veri['callVideo']==true?Icons.videocam_rounded:Icons.call_rounded,color:Colors.white,size:20),
               ),
               const SizedBox(width:10),
               Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
                 Text(veri['callVideo']==true?'Görüntülü arama devam ediyor':'Sesli arama devam ediyor',style:const TextStyle(color:Colors.white,fontSize:11.5,fontWeight:FontWeight.w900)),
                 const SizedBox(height:2),
-                Text(widget.aktifAramadanAcildi?'Aramaya dönmek için dokun':'Aramaya katılmak için dokun',style:const TextStyle(color:Color(0xFFCFC2DC),fontSize:10.5,fontWeight:FontWeight.w600)),
+                Text(widget.aktifAramadanAcildi?'Aramaya dönmek için dokun':'Aramaya katılmak için dokun',style:const TextStyle(color:Color(0xFFDCEBFF),fontSize:10.5,fontWeight:FontWeight.w600)),
               ])),
               const Icon(Icons.open_in_full_rounded,color:Colors.white70,size:19),
             ]),
