@@ -5826,63 +5826,6 @@ class _CanliYayinPageState extends State<CanliYayinPage> {
   }
 }
 
-class EskiKesfetPage extends StatelessWidget {
-  const EskiKesfetPage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: Column(
-        children: [
-          const Padding(
-            padding: EdgeInsets.all(18),
-            child: Row(
-              children: [
-                Text(
-                  'Keşfet',
-                  style: TextStyle(
-                    fontSize: 29,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                Spacer(),
-                Icon(Icons.search),
-              ],
-            ),
-          ),
-          Expanded(
-            child: GridView.builder(
-              padding: const EdgeInsets.all(5),
-              itemCount: 18,
-              gridDelegate:
-                  const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 3,
-                childAspectRatio: 0.7,
-                crossAxisSpacing: 5,
-                mainAxisSpacing: 5,
-              ),
-              itemBuilder: (_, i) {
-                return Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    color: i.isEven
-                        ? const Color(0xFF292348)
-                        : const Color(0xFF16343B),
-                  ),
-                  child: const Icon(
-                    Icons.play_arrow,
-                    color: Colors.white38,
-                  ),
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class YuklePage extends StatefulWidget {
   const YuklePage({super.key});
 
