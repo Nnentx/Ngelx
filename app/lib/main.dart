@@ -155,7 +155,7 @@ const _ngelxMediaApiBuild = String.fromEnvironment(
   'NGELX_MEDIA_API',
   defaultValue: 'https://ngelx-media.alihancaglar76.workers.dev',
 );
-const _ngelxMediaProtocolVersion='upload-ws-242';
+const _ngelxMediaProtocolVersion='upload-r2-243';
 String? _ngelxMediaApiCache;
 DateTime? _ngelxMediaApiCacheZamani;
 
@@ -892,6 +892,156 @@ Future<String> _ngelxWebSocketDosyaYukleAndroid({
   }
 }
 
+
+Future<Map<String,dynamic>> _ngelxDirectR2Izin({
+  required String api,
+  required String kind,
+  required String ext,
+  required String contentType,
+  required int size,
+}) async {
+  final user=FirebaseAuth.instance.currentUser;
+  if(user==null)throw Exception('Medya yüklemek için giriş yapmalısın.');
+  final token=await user.getIdToken(true);
+  if(token==null||token.isEmpty)throw Exception('Güvenli medya oturumu oluşturulamadı.');
+
+  final hedef=Uri.parse(api+'/upload/presign').replace(queryParameters:{
+    'kind':kind,
+    'ext':ext,
+    'contentType':contentType,
+    'size':size.toString(),
+    'protocol':_ngelxMediaProtocolVersion,
+  });
+  try{
+    final cevap=await Dio(BaseOptions(
+      connectTimeout:const Duration(seconds:15),
+      receiveTimeout:const Duration(seconds:30),
+      validateStatus:(s)=>s!=null,
+    )).getUri(
+      hedef,
+      options:Options(
+        responseType:ResponseType.json,
+        headers:{
+          HttpHeaders.authorizationHeader:'Bearer $token',
+          'X-NgelX-Client':'direct-r2-$_ngelxMediaProtocolVersion',
+        },
+      ),
+    );
+    final status=cevap.statusCode??0;
+    final veri=cevap.data;
+    final map=veri is Map<String,dynamic>
+        ?veri
+        :veri is Map
+            ?Map<String,dynamic>.from(veri)
+            :<String,dynamic>{};
+    if(status<200||status>=300){
+      final detay=(map['message']??map['error']??'yanıt yok').toString();
+      throw Exception('presign HTTP $status | $detay');
+    }
+    final uploadUrl=(map['uploadUrl']??'').toString();
+    final mediaUrl=(map['mediaUrl']??'').toString();
+    if(uploadUrl.isEmpty||mediaUrl.isEmpty){
+      throw Exception('presign yanıtında uploadUrl/mediaUrl eksik');
+    }
+    return map;
+  }on DioException catch(e){
+    final durum=e.response?.statusCode;
+    final govde=e.response?.data;
+    throw Exception('presign bağlantı | ${hedef.host} | ${durum??'-'} | ${govde??e.message??e.type}');
+  }
+}
+
+Future<String> _ngelxDirectR2BytesYukle({
+  required String api,
+  required Uint8List bytes,
+  required String kind,
+  required String ext,
+  required String contentType,
+  void Function(int sent,int total)? onProgress,
+}) async {
+  final izin=await _ngelxDirectR2Izin(
+    api:api,kind:kind,ext:ext,contentType:contentType,size:bytes.length,
+  );
+  final upload=Uri.parse((izin['uploadUrl']??'').toString());
+  final mediaUrl=(izin['mediaUrl']??'').toString();
+  try{
+    final cevap=await Dio(BaseOptions(
+      connectTimeout:const Duration(seconds:20),
+      sendTimeout:const Duration(minutes:5),
+      receiveTimeout:const Duration(seconds:90),
+      validateStatus:(s)=>s!=null,
+    )).putUri(
+      upload,
+      data:bytes,
+      onSendProgress:onProgress,
+      options:Options(
+        contentType:contentType,
+        responseType:ResponseType.plain,
+        headers:{HttpHeaders.contentLengthHeader:bytes.length},
+      ),
+    );
+    final status=cevap.statusCode??0;
+    if(status<200||status>=300){
+      throw Exception('R2 PUT HTTP $status | ${cevap.data}');
+    }
+    return mediaUrl;
+  }on DioException catch(e){
+    final durum=e.response?.statusCode;
+    final govde=e.response?.data;
+    throw Exception('direct R2 PUT | ${upload.host} | ${durum??'-'} | ${govde??e.message??e.type}');
+  }
+}
+
+Future<String> _ngelxDirectR2DosyaYukle({
+  required String api,
+  required XFile dosya,
+  required int size,
+  required String kind,
+  required String ext,
+  required String contentType,
+  void Function(int sent,int total)? onProgress,
+}) async {
+  final yerel=File(dosya.path);
+  if(!await yerel.exists()){
+    return _ngelxDirectR2BytesYukle(
+      api:api,bytes:await dosya.readAsBytes(),kind:kind,ext:ext,
+      contentType:contentType,onProgress:onProgress,
+    );
+  }
+
+  final izin=await _ngelxDirectR2Izin(
+    api:api,kind:kind,ext:ext,contentType:contentType,size:size,
+  );
+  final upload=Uri.parse((izin['uploadUrl']??'').toString());
+  final mediaUrl=(izin['mediaUrl']??'').toString();
+  try{
+    final cevap=await Dio(BaseOptions(
+      connectTimeout:const Duration(seconds:20),
+      sendTimeout:const Duration(minutes:8),
+      receiveTimeout:const Duration(seconds:90),
+      validateStatus:(s)=>s!=null,
+    )).putUri(
+      upload,
+      data:yerel.openRead(),
+      onSendProgress:onProgress,
+      options:Options(
+        contentType:contentType,
+        responseType:ResponseType.plain,
+        headers:{HttpHeaders.contentLengthHeader:size},
+      ),
+    );
+    final status=cevap.statusCode??0;
+    if(status<200||status>=300){
+      throw Exception('R2 PUT HTTP $status | ${cevap.data}');
+    }
+    return mediaUrl;
+  }on DioException catch(e){
+    final durum=e.response?.statusCode;
+    final govde=e.response?.data;
+    throw Exception('direct R2 PUT | ${upload.host} | ${durum??'-'} | ${govde??e.message??e.type}');
+  }
+}
+
 Future<String> ngelxMedyaYukleBytes({
   required Uint8List bytes,
   required String kind,
@@ -906,22 +1056,14 @@ Future<String> ngelxMedyaYukleBytes({
   final api=await ngelxMediaApiAdresi();
   final temizExt=_ngelxUzantiTemizle(ext);
   final tur=contentType??_ngelxContentType(temizExt);
-
-  if(Platform.isAndroid){
-    try{
-      return await _ngelxWebSocketBytesYukleAndroid(
-        api:api,bytes:bytes,kind:kind,ext:temizExt,contentType:tur,
-        legacyPath:legacyPath,onProgress:onProgress,
-      );
-    }catch(e){
-      throw Exception('UPLOAD $_ngelxMediaProtocolVersion | kind=$kind | host=${Uri.parse(api).host} | ${_ngelxKisaHata(e)}');
-    }
+  try{
+    return await _ngelxDirectR2BytesYukle(
+      api:api,bytes:bytes,kind:kind,ext:temizExt,contentType:tur,
+      onProgress:onProgress,
+    );
+  }catch(e){
+    throw Exception('UPLOAD $_ngelxMediaProtocolVersion | direct-r2 | kind=$kind | size=${bytes.length} | ${_ngelxKisaHata(e)}');
   }
-
-  return _ngelxStandartBytesYukle(
-    api:api,bytes:bytes,kind:kind,ext:temizExt,contentType:tur,
-    legacyPath:legacyPath,onProgress:onProgress,
-  );
 }
 
 Future<String> ngelxMedyaYukleDosya({
@@ -939,52 +1081,14 @@ Future<String> ngelxMedyaYukleDosya({
   final api=await ngelxMediaApiAdresi();
   final temizExt=_ngelxUzantiTemizle(ext);
   final tur=contentType??_ngelxContentType(temizExt);
-  final yerel=File(dosya.path);
-
-  if(Platform.isAndroid){
-    try{
-      return await _ngelxWebSocketDosyaYukleAndroid(
-        api:api,dosya:dosya,size:boyut,kind:kind,ext:temizExt,
-        contentType:tur,legacyPath:legacyPath,onProgress:onProgress,
-      );
-    }catch(e){
-      throw Exception('UPLOAD $_ngelxMediaProtocolVersion | kind=$kind | size=$boyut | host=${Uri.parse(api).host} | ${_ngelxKisaHata(e)}');
-    }
-  }
-
-  if(!await yerel.exists()){
-    return _ngelxStandartBytesYukle(
-      api:api,bytes:await dosya.readAsBytes(),kind:kind,ext:temizExt,
-      contentType:tur,legacyPath:legacyPath,onProgress:onProgress,
+  try{
+    return await _ngelxDirectR2DosyaYukle(
+      api:api,dosya:dosya,size:boyut,kind:kind,ext:temizExt,
+      contentType:tur,onProgress:onProgress,
     );
+  }catch(e){
+    throw Exception('UPLOAD $_ngelxMediaProtocolVersion | direct-r2 | kind=$kind | size=$boyut | ${_ngelxKisaHata(e)}');
   }
-
-  final user=FirebaseAuth.instance.currentUser;
-  if(user==null)throw Exception('Medya yüklemek için giriş yapmalısın.');
-  final token=await user.getIdToken(true);
-  if(token==null||token.isEmpty)throw Exception('Güvenli medya oturumu oluşturulamadı.');
-  final hedef=Uri.parse(api+'/upload').replace(queryParameters:{'kind':kind,'ext':temizExt});
-  final cevap=await Dio(BaseOptions(
-    connectTimeout:const Duration(seconds:12),
-    sendTimeout:const Duration(minutes:4),
-    receiveTimeout:const Duration(seconds:90),
-    validateStatus:(s)=>s!=null,
-  )).postUri(
-    hedef,
-    data:yerel.openRead(),
-    onSendProgress:onProgress,
-    options:Options(
-      contentType:tur,
-      responseType:ResponseType.json,
-      headers:{
-        HttpHeaders.authorizationHeader:'Bearer $token',
-        HttpHeaders.contentLengthHeader:boyut,
-        'X-NgelX-Client':'standard-file-$_ngelxMediaProtocolVersion',
-        'X-NgelX-Filename':legacyPath,
-      },
-    ),
-  );
-  return _ngelxYuklemeCevapUrl(cevap,hedef);
 }
 
 Future<void> ngelxMedyaSil(String rawUrl) async {
