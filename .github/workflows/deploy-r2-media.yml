@@ -16,6 +16,10 @@ jobs:
       - name: Kaynaklari al
         uses: actions/checkout@v4
 
+      - name: Worker bagimliliklarini kur
+        working-directory: cloudflare/worker
+        run: npm install --omit=dev
+
       - name: R2 bucket olustur
         continue-on-error: true
         uses: cloudflare/wrangler-action@v3
