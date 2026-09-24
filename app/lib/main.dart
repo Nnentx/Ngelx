@@ -2749,7 +2749,8 @@ class _VideoAkisiState extends State<VideoAkisi> {
 }
 
 class AramaPage extends StatefulWidget {
-  const AramaPage({super.key});
+  final String baslangicSorgu;
+  const AramaPage({super.key,this.baslangicSorgu=''});
   @override
   State<AramaPage> createState() => _AramaPageState();
 }
@@ -2759,7 +2760,12 @@ class _AramaPageState extends State<AramaPage> {
   String sorgu = '';
   Set<String> engellenenler={};
 
-  @override void initState(){super.initState();engellenenleriGetir();}
+  @override void initState(){
+    super.initState();
+    final ilk=widget.baslangicSorgu.trim();
+    if(ilk.isNotEmpty){ara.text=ilk;sorgu=ilk.toLowerCase();}
+    engellenenleriGetir();
+  }
   Future<void> engellenenleriGetir()async{final u=FirebaseAuth.instance.currentUser;if(u==null)return;final d=await FirebaseFirestore.instance.collection('users').doc(u.uid).get();if(mounted)setState(()=>engellenenler=Set<String>.from(List<dynamic>.from(d.data()?['blocked']??const[])));}
 
   @override
