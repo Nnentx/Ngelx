@@ -1336,6 +1336,60 @@ const ceviriler = <String, Map<String,String>>{
   'unblock': {'tr':'Engeli kaldır','en':'Unblock','de':'Entsperren','ar':'إلغاء الحظر','ru':'Разблокировать'},
   'block': {'tr':'Engelle','en':'Block','de':'Blockieren','ar':'حظر','ru':'Заблокировать'},
   'member': {'tr':'üye','en':'members','de':'Mitglieder','ar':'أعضاء','ru':'участников'},
+  'followingTab': {'tr':'Takip','en':'Following','de':'Folge ich','ar':'المتابَعون','ru':'Подписки'},
+  'forYou': {'tr':'Sana Özel','en':'For You','de':'Für dich','ar':'لك','ru':'Для вас'},
+  'search': {'tr':'Ara','en':'Search','de':'Suchen','ar':'بحث','ru':'Поиск'},
+  'filter': {'tr':'Filtrele','en':'Filter','de':'Filtern','ar':'تصفية','ru':'Фильтр'},
+  'exploreView': {'tr':'Keşfet görünümü','en':'Explore view','de':'Entdecken-Ansicht','ar':'عرض الاستكشاف','ru':'Вид обзора'},
+  'liveLoadError': {'tr':'Canlı yayınlar şu anda alınamıyor.','en':'Live streams are unavailable right now.','de':'Live-Streams sind derzeit nicht verfügbar.','ar':'البثوث المباشرة غير متاحة الآن.','ru':'Прямые эфиры сейчас недоступны.'},
+  'trendLoadError': {'tr':'Trend içerikler yüklenemedi.','en':'Trending content could not be loaded.','de':'Trend-Inhalte konnten nicht geladen werden.','ar':'تعذر تحميل المحتوى الرائج.','ru':'Не удалось загрузить трендовый контент.'},
+  'peopleLoadError': {'tr':'Kişiler yüklenemedi.','en':'People could not be loaded.','de':'Personen konnten nicht geladen werden.','ar':'تعذر تحميل الأشخاص.','ru':'Не удалось загрузить пользователей.'},
+  'peopleEmpty': {'tr':'Keşfedilecek yeni kişi bulunamadı.','en':'No new people to discover.','de':'Keine neuen Personen zum Entdecken.','ar':'لا يوجد أشخاص جدد لاكتشافهم.','ru':'Новых людей для поиска нет.'},
+  'groupsLoadError': {'tr':'Gruplar yüklenemedi.','en':'Groups could not be loaded.','de':'Gruppen konnten nicht geladen werden.','ar':'تعذر تحميل المجموعات.','ru':'Не удалось загрузить группы.'},
+  'groupsEmpty': {'tr':'Keşfedilecek grup bulunamadı.','en':'No groups to discover.','de':'Keine Gruppen zum Entdecken.','ar':'لا توجد مجموعات لاكتشافها.','ru':'Групп для поиска нет.'},
+  'followingActive': {'tr':'Takiptesin','en':'Following','de':'Abonniert','ar':'تتابعه','ru':'Вы подписаны'},
+  'requestSent': {'tr':'İstek gönderildi','en':'Request sent','de':'Anfrage gesendet','ar':'تم إرسال الطلب','ru':'Запрос отправлен'},
+  'friend': {'tr':'Arkadaş','en':'Friend','de':'Freund','ar':'صديق','ru':'Друг'},
+  'addFriend': {'tr':'Arkadaş ekle','en':'Add friend','de':'Freund hinzufügen','ar':'إضافة صديق','ru':'Добавить друга'},
+  'open': {'tr':'Aç','en':'Open','de':'Öffnen','ar':'فتح','ru':'Открыть'},
+  'feedLoadError': {'tr':'Akış yüklenemedi. İnternet bağlantını kontrol et.','en':'Feed could not be loaded. Check your internet connection.','de':'Der Feed konnte nicht geladen werden. Prüfe deine Internetverbindung.','ar':'تعذر تحميل الخلاصة. تحقق من اتصال الإنترنت.','ru':'Не удалось загрузить ленту. Проверьте подключение к интернету.'},
+  'feedFollowingEmpty': {'tr':'Takip ettiğin hesapların yeni paylaşımları burada görünecek.','en':'New posts from accounts you follow will appear here.','de':'Neue Beiträge von Konten, denen du folgst, erscheinen hier.','ar':'ستظهر هنا المنشورات الجديدة من الحسابات التي تتابعها.','ru':'Здесь будут появляться новые публикации аккаунтов, на которые вы подписаны.'},
+  'feedEmpty': {'tr':'Henüz akışta gösterilecek paylaşım yok.','en':'There are no posts to show in the feed yet.','de':'Im Feed gibt es noch keine Beiträge.','ar':'لا توجد منشورات لعرضها في الخلاصة بعد.','ru':'В ленте пока нет публикаций.'},
+  'searchHintAll': {'tr':'Kullanıcı, video, etiket ara','en':'Search users, videos, tags','de':'Nutzer, Videos, Tags suchen','ar':'ابحث عن مستخدم أو فيديو أو وسم','ru':'Поиск пользователей, видео и тегов'},
+  'searchIntro': {'tr':'NgelX’te istediğini ara','en':'Search for anything on NgelX','de':'Finde alles auf NgelX','ar':'ابحث عما تريد على NgelX','ru':'Ищите всё в NgelX'},
+  'searchIntroSub': {'tr':'Kullanıcılar, açıklamalar ve etiketler','en':'Users, descriptions and tags','de':'Nutzer, Beschreibungen und Tags','ar':'المستخدمون والأوصاف والوسوم','ru':'Пользователи, описания и теги'},
+  'noResults': {'tr':'Sonuç bulunamadı.','en':'No results found.','de':'Keine Ergebnisse gefunden.','ar':'لم يتم العثور على نتائج.','ru':'Ничего не найдено.'},
+  'usersLabel': {'tr':'Kullanıcılar','en':'Users','de':'Nutzer','ar':'المستخدمون','ru':'Пользователи'},
+  'postsLabel': {'tr':'Paylaşımlar','en':'Posts','de':'Beiträge','ar':'المنشورات','ru':'Публикации'},
+  'hiddenWordsTitle': {'tr':'Gizli kelimeler','en':'Hidden words','de':'Ausgeblendete Wörter','ar':'الكلمات المخفية','ru':'Скрытые слова'},
+  'hiddenWordsInfo': {'tr':'Bu kelimeleri içeren yorum ve özel mesajlar sende gizlenir.','en':'Comments and private messages containing these words will be hidden for you.','de':'Kommentare und private Nachrichten mit diesen Wörtern werden für dich ausgeblendet.','ar':'سيتم إخفاء التعليقات والرسائل الخاصة التي تحتوي على هذه الكلمات لديك.','ru':'Комментарии и личные сообщения с этими словами будут скрыты для вас.'},
+  'hiddenWordHint': {'tr':'Kelime veya ifade ekle','en':'Add a word or phrase','de':'Wort oder Ausdruck hinzufügen','ar':'أضف كلمة أو عبارة','ru':'Добавить слово или фразу'},
+  'add': {'tr':'Ekle','en':'Add','de':'Hinzufügen','ar':'إضافة','ru':'Добавить'},
+  'hiddenWordsFilter': {'tr':'Gizli kelime filtresi','en':'Hidden words filter','de':'Filter für ausgeblendete Wörter','ar':'فلتر الكلمات المخفية','ru':'Фильтр скрытых слов'},
+  'hiddenWordsFilterSub': {'tr':'Seçtiğin kelimeleri içeren yorum ve mesajları gizle','en':'Hide comments and messages containing words you choose','de':'Kommentare und Nachrichten mit ausgewählten Wörtern ausblenden','ar':'إخفاء التعليقات والرسائل التي تحتوي على الكلمات التي تختارها','ru':'Скрывать комментарии и сообщения с выбранными словами'},
+  'manageHiddenWords': {'tr':'Gizli kelimeleri yönet','en':'Manage hidden words','de':'Ausgeblendete Wörter verwalten','ar':'إدارة الكلمات المخفية','ru':'Управлять скрытыми словами'},
+  'noHiddenWords': {'tr':'Henüz kelime eklenmedi','en':'No words added yet','de':'Noch keine Wörter hinzugefügt','ar':'لم تتم إضافة كلمات بعد','ru':'Слова пока не добавлены'},
+  'privateAccount': {'tr':'Gizli hesap','en':'Private account','de':'Privates Konto','ar':'حساب خاص','ru':'Закрытый аккаунт'},
+  'privateAccountSub': {'tr':'Yeni takipçiler onay bekler','en':'New followers require approval','de':'Neue Follower müssen bestätigt werden','ar':'المتابعون الجدد يحتاجون إلى موافقة','ru':'Новые подписчики требуют одобрения'},
+  'profileViewWho': {'tr':'Profili kimler görüntüleyebilir?','en':'Who can view your profile?','de':'Wer kann dein Profil sehen?','ar':'من يمكنه مشاهدة ملفك الشخصي؟','ru':'Кто может просматривать ваш профиль?'},
+  'myFollowers': {'tr':'Takipçilerim','en':'My followers','de':'Meine Follower','ar':'متابعوني','ru':'Мои подписчики'},
+  'myFriends': {'tr':'Arkadaşlarım','en':'My friends','de':'Meine Freunde','ar':'أصدقائي','ru':'Мои друзья'},
+  'discoverableProfile': {'tr':'Profil aramalarında görün','en':'Appear in profile search','de':'In Profilsuche anzeigen','ar':'الظهور في بحث الملفات الشخصية','ru':'Показывать профиль в поиске'},
+  'discoverableProfileSub': {'tr':'Kullanıcılar seni adınla bulabilsin','en':'Let people find you by your name','de':'Andere können dich über deinen Namen finden','ar':'اسمح للآخرين بالعثور عليك باسمك','ru':'Позволить находить вас по имени'},
+  'activityStatus': {'tr':'Aktiflik durumunu göster','en':'Show activity status','de':'Aktivitätsstatus anzeigen','ar':'إظهار حالة النشاط','ru':'Показывать статус активности'},
+  'activityStatusSub': {'tr':'Arkadaşların son görülme bilgini görebilsin','en':'Let friends see your last seen status','de':'Freunde können deinen Zuletzt-online-Status sehen','ar':'السماح للأصدقاء برؤية آخر ظهور لك','ru':'Друзья смогут видеть время вашего последнего посещения'},
+  'profileShareFriendsOnly': {'tr':'Profil paylaşımını arkadaşlarla sınırla','en':'Limit profile sharing to friends','de':'Profilfreigabe auf Freunde beschränken','ar':'قصر مشاركة الملف الشخصي على الأصدقاء','ru':'Разрешить делиться профилем только друзьям'},
+  'profileShareFriendsOnlySub': {'tr':'Profil bağlantını yalnızca arkadaşların paylaşabilsin','en':'Only friends can share your profile link','de':'Nur Freunde können deinen Profillink teilen','ar':'يمكن للأصدقاء فقط مشاركة رابط ملفك الشخصي','ru':'Только друзья смогут делиться ссылкой на ваш профиль'},
+  'commentsFriendsOnly': {'tr':'Yorumları arkadaşlarla sınırla','en':'Limit comments to friends','de':'Kommentare auf Freunde beschränken','ar':'قصر التعليقات على الأصدقاء','ru':'Разрешить комментарии только друзьям'},
+  'commentsFriendsOnlySub': {'tr':'Yalnızca arkadaşların yorum yapabilsin','en':'Only friends can comment','de':'Nur Freunde können kommentieren','ar':'يمكن للأصدقاء فقط التعليق','ru':'Комментировать смогут только друзья'},
+  'premiumWallet': {'tr':'Premium ve Cüzdan','en':'Premium and Wallet','de':'Premium und Wallet','ar':'Premium والمحفظة','ru':'Premium и кошелёк'},
+  'premiumWalletSub': {'tr':'Premium, jetonlar, mavi tik ve satın almalar','en':'Premium, coins, verification and purchases','de':'Premium, Coins, Verifizierung und Käufe','ar':'Premium والعملات والتوثيق والمشتريات','ru':'Premium, монеты, верификация и покупки'},
+  'switchAccount': {'tr':'Hesap değiştir','en':'Switch account','de':'Konto wechseln','ar':'تبديل الحساب','ru':'Сменить аккаунт'},
+  'switchAccountSub': {'tr':'Bu cihazda en fazla 5 hesap kullan','en':'Use up to 5 accounts on this device','de':'Bis zu 5 Konten auf diesem Gerät verwenden','ar':'استخدم ما يصل إلى 5 حسابات على هذا الجهاز','ru':'Используйте до 5 аккаунтов на этом устройстве'},
+  'profileLoadError': {'tr':'Paylaşımların yüklenemedi. Tekrar dene.','en':'Your posts could not be loaded. Try again.','de':'Deine Beiträge konnten nicht geladen werden. Versuche es erneut.','ar':'تعذر تحميل منشوراتك. حاول مرة أخرى.','ru':'Не удалось загрузить ваши публикации. Попробуйте снова.'},
+  'noVideosYet': {'tr':t('noVideosYet'),'en':'You have not shared any videos yet.','de':'Du hast noch keine Videos geteilt.','ar':'لم تشارك أي فيديو بعد.','ru':'Вы пока не публиковали видео.'},
+  'noPostsYet': {'tr':t('noPostsYet'),'en':'You have no posts yet. Publish your first one from Create ✨','de':'Du hast noch keine Beiträge. Veröffentliche deinen ersten unter Erstellen ✨','ar':'لا توجد لديك منشورات بعد. انشر أول محتوى من قسم الإنشاء ✨','ru':'У вас пока нет публикаций. Опубликуйте первую в разделе «Создать» ✨'},
+
 };
 String t(String anahtar) => ceviriler[anahtar]?[uygulamaDili.value] ?? ceviriler[anahtar]?['tr'] ?? anahtar;
 String tercihBasligi(String kod){
@@ -1528,7 +1582,7 @@ Future<void> sikayetEt(BuildContext context,{required String hedefTuru,required 
 
 Future<void> kullaniciyiEngelle(BuildContext context,String hedefUid) async {
   final u=FirebaseAuth.instance.currentUser;if(u==null||u.isAnonymous)return;
-  final tamam=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(title:const Text('Kullanıcı engellensin mi?'),content:const Text('Birbirinizin profilini ve içeriklerini göremez, mesaj gönderemezsiniz.'),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),FilledButton(onPressed:()=>Navigator.pop(c,true),style:FilledButton.styleFrom(backgroundColor:Colors.red),child:Text(t('block')))]))??false;
+  final tamam=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(title:const Text('Kullanıcı engellensin mi?'),content:const Text('Birbirinizin profilini ve içeriklerini göremez, mesaj gönderemezsiniz.'),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:Text(t('cancel'))),FilledButton(onPressed:()=>Navigator.pop(c,true),style:FilledButton.styleFrom(backgroundColor:Colors.red),child:Text(t('block')))]))??false;
   if(!tamam)return;
   try{await FirebaseFirestore.instance.collection('users').doc(u.uid).set({'blocked':FieldValue.arrayUnion([hedefUid])},SetOptions(merge:true));if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Kullanıcı engellendi.')));}catch(e){if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Engelleme tamamlanamadı: $e')));}
 }
@@ -1864,24 +1918,6 @@ class _GirisPageState extends State<GirisPage> {
     }
   }
 
-  Future<void> misafirGirisi() async {
-    setState(() => yukleniyor = true);
-    try {
-      await FirebaseAuth.instance.signInAnonymously();
-      if (!mounted) return;
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const AnaEkran()),
-      );
-    } on FirebaseAuthException catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Misafir girişi başarısız: ${e.message ?? e.code}')),
-      );
-    } finally {
-      if (mounted) setState(() => yukleniyor = false);
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -1966,15 +2002,6 @@ class _GirisPageState extends State<GirisPage> {
               RenkliButon(
                 yazi: yukleniyor ? '...' : t('login'),
                 tiklama: yukleniyor ? () {} : girisYap,
-              ),
-              const SizedBox(height: 18),
-              OutlinedButton.icon(
-                onPressed: yukleniyor ? null : misafirGirisi,
-                icon: const Icon(Icons.person_outline),
-                label: Text(t('guest')),
-                style: OutlinedButton.styleFrom(
-                  minimumSize: const Size.fromHeight(54),
-                ),
               ),
               const SizedBox(height: 22),
               Row(
@@ -2612,7 +2639,7 @@ class _VideoAkisiState extends State<VideoAkisi> {
               child:Column(mainAxisSize:MainAxisSize.min,children:[
                 Icon(Icons.cloud_off_rounded,color:Colors.white54,size:52),
                 SizedBox(height:12),
-                Text('Akış yüklenemedi. İnternet bağlantını kontrol et.',textAlign:TextAlign.center,style:TextStyle(color:Colors.white70,fontWeight:FontWeight.w700)),
+                Text(t('feedLoadError'),textAlign:TextAlign.center,style:TextStyle(color:Colors.white70,fontWeight:FontWeight.w700)),
               ]),
             ));
           }
@@ -2741,12 +2768,12 @@ class _VideoAkisiState extends State<VideoAkisi> {
             const Spacer(),
             GestureDetector(
               onTap:()=>_sekmeDegistir(true),
-              child:Text('Takip',style:TextStyle(color:takipSekmesi?Colors.white:Colors.white60,fontWeight:takipSekmesi?FontWeight.bold:FontWeight.normal,decoration:takipSekmesi?TextDecoration.underline:null,decorationColor:mavi,decorationThickness:3)),
+              child:Text(t('followingTab'),style:TextStyle(color:takipSekmesi?Colors.white:Colors.white60,fontWeight:takipSekmesi?FontWeight.bold:FontWeight.normal,decoration:takipSekmesi?TextDecoration.underline:null,decorationColor:mavi,decorationThickness:3)),
             ),
             const SizedBox(width:17),
             GestureDetector(
               onTap:()=>_sekmeDegistir(false),
-              child:Text('Sana Özel',style:TextStyle(color:takipSekmesi?Colors.white60:Colors.white,fontWeight:takipSekmesi?FontWeight.normal:FontWeight.bold,decoration:takipSekmesi?null:TextDecoration.underline,decorationColor:mor,decorationThickness:3)),
+              child:Text(t('forYou'),style:TextStyle(color:takipSekmesi?Colors.white60:Colors.white,fontWeight:takipSekmesi?FontWeight.normal:FontWeight.bold,decoration:takipSekmesi?null:TextDecoration.underline,decorationColor:mor,decorationThickness:3)),
             ),
             const SizedBox(width:8),
             IconButton(
@@ -2806,12 +2833,12 @@ class _AramaPageState extends State<AramaPage> {
           autofocus: true,
           onChanged: (v) => setState(() => sorgu = v.trim().toLowerCase()),
           style:const TextStyle(color:Colors.black87),
-          decoration: InputDecoration(hintText: 'Kullanıcı, video, etiket ara', hintStyle:const TextStyle(color:Colors.black45), prefixIcon: const Icon(Icons.search,color:Colors.black45), suffixIcon: sorgu.isEmpty ? null : IconButton(onPressed: () { ara.clear(); setState(() => sorgu = ''); }, icon: const Icon(Icons.cancel,color:Colors.black45))),
+          decoration: InputDecoration(hintText: t('searchHintAll'), hintStyle:const TextStyle(color:Colors.black45), prefixIcon: const Icon(Icons.search,color:Colors.black45), suffixIcon: sorgu.isEmpty ? null : IconButton(onPressed: () { ara.clear(); setState(() => sorgu = ''); }, icon: const Icon(Icons.cancel,color:Colors.black45))),
         ),
-        actions: [TextButton(onPressed: () => FocusScope.of(context).unfocus(), child: const Text('Ara', style: TextStyle(color: mavi, fontWeight: FontWeight.bold)))],
+        actions: [TextButton(onPressed: () => FocusScope.of(context).unfocus(), child: Text(t('search'), style: const TextStyle(color: mavi, fontWeight: FontWeight.bold)))],
       ),
       body: sorgu.isEmpty
-          ? const Center(child: Column(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.manage_search_rounded, size: 75, color: mavi), SizedBox(height: 12), Text('NgelX’te istediğini ara', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold,color:Colors.black87)), SizedBox(height: 6), Text('Kullanıcılar, açıklamalar ve etiketler', style: TextStyle(color: Colors.black45))]))
+          ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [const Icon(Icons.manage_search_rounded, size: 75, color: mavi), const SizedBox(height: 12), Text(t('searchIntro'), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold,color:Colors.black87)), const SizedBox(height: 6), Text(t('searchIntroSub'), style: const TextStyle(color: Colors.black45))]))
           : FutureBuilder<List<QuerySnapshot<Map<String, dynamic>>>>(
               future: Future.wait([
                 FirebaseFirestore.instance.collection('users').limit(60).get(),
@@ -2822,11 +2849,11 @@ class _AramaPageState extends State<AramaPage> {
                 bool eslesir(String metin) => metin.toLowerCase().split(RegExp(r'[^a-z0-9ığüşöç]+')).any((kelime) => kelime.startsWith(sorgu));
                 final kullanicilar = snap.data![0].docs.where((d) { final v=d.data(); return !engellenenler.contains(d.id)&&v['deactivated']!=true&&eslesir('${v['username'] ?? ''} ${v['displayName'] ?? ''}'); }).toList();
                 final icerikler = snap.data![1].docs.where((d) { final v=d.data(); return !engellenenler.contains((v['ownerId']??'').toString())&&v['type'] != 'story' && '${v['description'] ?? ''} ${v['username'] ?? ''}'.toLowerCase().contains(sorgu); }).toList();
-                if (kullanicilar.isEmpty && icerikler.isEmpty) return const Center(child: Text('Sonuç bulunamadı.'));
+                if (kullanicilar.isEmpty && icerikler.isEmpty) return Center(child: Text(t('noResults')));
                 return ListView(children: [
-                  if (kullanicilar.isNotEmpty) const Padding(padding: EdgeInsets.fromLTRB(18, 20, 18, 8), child: Text('Kullanıcılar', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: mavi))),
+                  if (kullanicilar.isNotEmpty) Padding(padding: const EdgeInsets.fromLTRB(18, 20, 18, 8), child: Text(t('usersLabel'), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: mavi))),
                   ...kullanicilar.map((d) { final v=d.data(); final foto=(v['photoUrl'] ?? '').toString(); return ListTile(onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => KullaniciProfilPage(uid: d.id))), leading: CircleAvatar(backgroundImage: foto.isEmpty ? null : CachedNetworkImageProvider(foto), child: foto.isEmpty ? const Text('N') : null), title: Text((v['displayName'] ?? v['username'] ?? 'NgelX').toString()), subtitle: Text('@${v['username'] ?? 'ngelx'}'), trailing: const Icon(Icons.chevron_right)); }),
-                  if (icerikler.isNotEmpty) const Padding(padding: EdgeInsets.fromLTRB(18, 20, 18, 8), child: Text('Paylaşımlar', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: mor))),
+                  if (icerikler.isNotEmpty) Padding(padding: const EdgeInsets.fromLTRB(18, 20, 18, 8), child: Text(t('postsLabel'), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: mor))),
                   ...icerikler.map((d) { final v=d.data(); final tur=(v['type'] ?? 'video').toString(); final item=<String,String>{'id':d.id,'type':tur,'videoUrl':(v['videoUrl']??'').toString(),'mediaUrl':(v['mediaUrl']??'').toString(),'audioUrl':(v['audioUrl']??'').toString(),'description':(v['description']??'').toString(),'username':(v['username']??'ngelx').toString(),'ownerId':(v['ownerId']??'').toString(),'allowDownload':(v['allowDownload']??true).toString()}; return ListTile(onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => Scaffold(body: SafeArea(child: tur=='video' ? VideoKarti(adres:item['videoUrl']!,videoId:item['id']!,kullaniciAdi:item['username']!,ownerId:item['ownerId']!,indirilebilir:item['allowDownload']!='false',aktif:true) : GorselYaziKarti(veri:item,aktif:true))))), leading: Icon(tur == 'video' ? Icons.videocam : tur == 'photo' ? Icons.photo : Icons.text_fields, color: mor), title: Text((v['description'] ?? 'NgelX paylaşımı').toString(), maxLines: 2, overflow: TextOverflow.ellipsis), subtitle: Text('@${v['username'] ?? 'ngelx'}')); }),
                 ]);
               },
@@ -4919,7 +4946,7 @@ class _KesfetPageState extends State<KesfetPage> {
       builder:(c)=>SafeArea(child:Padding(
         padding:const EdgeInsets.fromLTRB(18,2,18,18),
         child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
-          const Text('Keşfet görünümü',style:TextStyle(fontSize:20,fontWeight:FontWeight.w900)),
+          Text(t('exploreView'),style:const TextStyle(fontSize:20,fontWeight:FontWeight.w900)),
           const SizedBox(height:8),
           ...[
             (Icons.live_tv_rounded,t('live')),
@@ -5059,10 +5086,10 @@ class _KesfetPageState extends State<KesfetPage> {
           SliverToBoxAdapter(child:Padding(
             padding:const EdgeInsets.fromLTRB(18,14,18,8),
             child:Row(children:[
-              const Text('Keşfet',style:TextStyle(color:Colors.black,fontSize:29,fontWeight:FontWeight.w900)),
+              Text(t('explore'),style:const TextStyle(color:Colors.black,fontSize:29,fontWeight:FontWeight.w900)),
               const Spacer(),
-              IconButton(tooltip:'Ara',onPressed:_aramaAc,icon:const Icon(Icons.search_rounded,color:Colors.black,size:27)),
-              IconButton(tooltip:'Filtrele',onPressed:_filtreAc,icon:const Icon(Icons.tune_rounded,color:Colors.black,size:25)),
+              IconButton(tooltip:t('search'),onPressed:_aramaAc,icon:const Icon(Icons.search_rounded,color:Colors.black,size:27)),
+              IconButton(tooltip:t('filter'),onPressed:_filtreAc,icon:const Icon(Icons.tune_rounded,color:Colors.black,size:25)),
             ]),
           )),
           SliverToBoxAdapter(child: Padding(
@@ -5131,7 +5158,7 @@ class _KesfetPageState extends State<KesfetPage> {
         stream:FirebaseFirestore.instance.collection('live_streams').where('active',isEqualTo:true).limit(20).snapshots(),
         builder:(_,snap){
           if(snap.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator(color:Color(0xFFFF1744)));
-          if(snap.hasError)return _bosKart('Canlı yayınlar şu anda alınamıyor.',Icons.cloud_off_outlined);
+          if(snap.hasError)return _bosKart(t('liveLoadError'),Icons.cloud_off_outlined);
           final yayinlar=snap.data?.docs??[];
           if(yayinlar.isEmpty)return _bosKart(t('noLive'),Icons.live_tv_outlined);
           return ListView.separated(
@@ -5191,7 +5218,7 @@ class _KesfetPageState extends State<KesfetPage> {
         stream:FirebaseFirestore.instance.collection('videos').orderBy('createdAt',descending:true).limit(50).snapshots(),
         builder:(_,snap){
           if(snap.connectionState==ConnectionState.waiting)return const SliverToBoxAdapter(child:Padding(padding:EdgeInsets.all(35),child:Center(child:CircularProgressIndicator(color:mor))));
-          if(snap.hasError)return const SliverToBoxAdapter(child:Padding(padding:EdgeInsets.all(28),child:Center(child:Text('Trend içerikler yüklenemedi.',style:TextStyle(color:Colors.black54)))));
+          if(snap.hasError)return const SliverToBoxAdapter(child:Padding(padding:EdgeInsets.all(28),child:Center(child:Text(t('trendLoadError'),style:TextStyle(color:Colors.black54)))));
           final belgeler=(snap.data?.docs??[]).where((d){
             final v=d.data();
             if(v['type']=='story')return false;
@@ -5224,9 +5251,9 @@ class _KesfetPageState extends State<KesfetPage> {
       stream:FirebaseFirestore.instance.collection('users').limit(60).snapshots(),
       builder:(_,snap){
         if(snap.connectionState==ConnectionState.waiting)return const SliverToBoxAdapter(child:Padding(padding:EdgeInsets.all(35),child:Center(child:CircularProgressIndicator(color:mor))));
-        if(snap.hasError)return const SliverToBoxAdapter(child:Padding(padding:EdgeInsets.all(28),child:Center(child:Text('Kişiler yüklenemedi.',style:TextStyle(color:Colors.black54)))));
+        if(snap.hasError)return const SliverToBoxAdapter(child:Padding(padding:EdgeInsets.all(28),child:Center(child:Text(t('peopleLoadError'),style:TextStyle(color:Colors.black54)))));
         final kisiler=(snap.data?.docs??[]).where((d)=>d.id!=ben&&d.data()['deactivated']!=true).toList();
-        if(kisiler.isEmpty)return const SliverToBoxAdapter(child:Padding(padding:EdgeInsets.all(28),child:Center(child:Text('Keşfedilecek yeni kişi bulunamadı.',style:TextStyle(color:Colors.black54)))));
+        if(kisiler.isEmpty)return const SliverToBoxAdapter(child:Padding(padding:EdgeInsets.all(28),child:Center(child:Text(t('peopleEmpty'),style:TextStyle(color:Colors.black54)))));
         return SliverList(delegate:SliverChildBuilderDelegate((_,i)=>_kisiSatiri(kisiler[i].id,kisiler[i].data()),childCount:kisiler.length));
       },
     ),
@@ -5238,9 +5265,9 @@ class _KesfetPageState extends State<KesfetPage> {
       stream:FirebaseFirestore.instance.collection('chats').where('isGroup',isEqualTo:true).where('discoverable',isEqualTo:true).limit(60).snapshots(),
       builder:(_,snap){
         if(snap.connectionState==ConnectionState.waiting)return const SliverToBoxAdapter(child:Padding(padding:EdgeInsets.all(35),child:Center(child:CircularProgressIndicator(color:mor))));
-        if(snap.hasError)return const SliverToBoxAdapter(child:Padding(padding:EdgeInsets.all(28),child:Center(child:Text('Gruplar yüklenemedi.',style:TextStyle(color:Colors.black54)))));
+        if(snap.hasError)return const SliverToBoxAdapter(child:Padding(padding:EdgeInsets.all(28),child:Center(child:Text(t('groupsLoadError'),style:TextStyle(color:Colors.black54)))));
         final gruplar=(snap.data?.docs??[]).where((d){final ad=(d.data()['groupName']??'').toString().toLowerCase();return d.data()['groupDeleted']!=true&&!ad.contains('oyun')&&!ad.contains('game');}).toList();
-        if(gruplar.isEmpty)return const SliverToBoxAdapter(child:Padding(padding:EdgeInsets.all(28),child:Center(child:Text('Keşfedilecek grup bulunamadı.',style:TextStyle(color:Colors.black54)))));
+        if(gruplar.isEmpty)return const SliverToBoxAdapter(child:Padding(padding:EdgeInsets.all(28),child:Center(child:Text(t('groupsEmpty'),style:TextStyle(color:Colors.black54)))));
         return SliverList(delegate:SliverChildBuilderDelegate((_,i)=>_grupSatiri(gruplar[i].id,gruplar[i].data()),childCount:gruplar.length));
       },
     ),
@@ -5350,7 +5377,7 @@ class _KesfetPageState extends State<KesfetPage> {
             FilledButton(
               onPressed:()=>_grupDurumuDegistir(id,katildi,ad:ad,foto:foto),
               style:FilledButton.styleFrom(backgroundColor:katildi?const Color(0xFFECECF2):mor,foregroundColor:katildi?Colors.black87:Colors.white,padding:const EdgeInsets.symmetric(horizontal:13)),
-              child:Text(katildi?'Aç':t('join'),style:const TextStyle(fontWeight:FontWeight.w800,fontSize:12)),
+              child:Text(katildi?t('open'):t('join'),style:const TextStyle(fontWeight:FontWeight.w800,fontSize:12)),
             ),
           ]),
         ),
@@ -16006,7 +16033,7 @@ class _HesapDegistirPageState extends State<HesapDegistirPage> {
     final aktif=FirebaseAuth.instance.currentUser?.email?.toLowerCase()??'';
     return Theme(data:ThemeData.light(),child:Scaffold(
       backgroundColor:Colors.white,
-      appBar:AppBar(backgroundColor:Colors.white,surfaceTintColor:Colors.white,elevation:0,title:const Text('Hesap değiştir',style:TextStyle(fontWeight:FontWeight.w900))),
+      appBar:AppBar(backgroundColor:Colors.white,surfaceTintColor:Colors.white,elevation:0,title:Text(t('switchAccount'),style:TextStyle(fontWeight:FontWeight.w900))),
       body:yukleniyor?const Center(child:CircularProgressIndicator(color:mor)):ListView(
         padding:const EdgeInsets.fromLTRB(16,10,16,30),
         children:[
@@ -16268,7 +16295,7 @@ class AyarlarPage extends StatelessWidget {
   @override Widget build(BuildContext context){final misafir=FirebaseAuth.instance.currentUser?.isAnonymous==true;return Theme(data:ThemeData.light().copyWith(scaffoldBackgroundColor:Colors.white,appBarTheme:const AppBarTheme(backgroundColor:Colors.white,foregroundColor:Colors.black,elevation:0),cardTheme:const CardThemeData(color:Colors.white,elevation:0,margin:EdgeInsets.symmetric(vertical:4)),dividerColor:Color(0xFFE5E7EB)),child:Scaffold(appBar:AppBar(title:Text(t('settingsTitle'))),body:SafeArea(child:ListView(padding:const EdgeInsets.fromLTRB(14,8,14,24),children:[
     if(!misafir)...[
       ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:10,vertical:7),leading:const Icon(Icons.workspace_premium_rounded,color:ngelxPremiumPurple),title:const Text('Premium ve Cüzdan',style:TextStyle(fontWeight:FontWeight.bold,color:Colors.black87)),subtitle:const Text('Premium, jetonlar, mavi tik ve satın almalar',style:TextStyle(color:Colors.black54)),trailing:const Icon(Icons.chevron_right,color:Colors.black87),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const NgelXPremiumPage()))),
-      ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:10,vertical:7),leading:const Icon(Icons.switch_account_rounded,color:mor),title:const Text('Hesap değiştir',style:TextStyle(fontWeight:FontWeight.bold,color:Colors.black87)),subtitle:const Text('Bu cihazda en fazla 5 hesap kullan',style:TextStyle(color:Colors.black54)),trailing:const Icon(Icons.chevron_right,color:Colors.black87),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const HesapDegistirPage()))),
+      ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:10,vertical:7),leading:const Icon(Icons.switch_account_rounded,color:mor),title:const Text('Hesap değiştir',style:TextStyle(fontWeight:FontWeight.bold,color:Colors.black87)),subtitle:Text(t('switchAccountSub'),style:TextStyle(color:Colors.black54)),trailing:const Icon(Icons.chevron_right,color:Colors.black87),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const HesapDegistirPage()))),
       _ayar(context,Icons.lock_outline,'Gizlilik',t('privacy'),t('privacySub')),
       ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:10,vertical:7),leading:const Icon(Icons.people_outline,color:mor),title:Text(t('followFriends'),style:const TextStyle(fontWeight:FontWeight.bold,color:Colors.black87)),subtitle:Text(t('followFriendsSub'),style:const TextStyle(color:Colors.black54)),trailing:const Icon(Icons.chevron_right,color:Colors.black87),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const ArkadaslarPage()))),
       ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:10,vertical:7),leading:const Icon(Icons.block_outlined,color:mor),title:Text(t('blockedAccounts'),style:const TextStyle(fontWeight:FontWeight.bold,color:Colors.black87)),subtitle:Text(t('blockedAccountsSub'),style:const TextStyle(color:Colors.black54)),trailing:const Icon(Icons.chevron_right,color:Colors.black87),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const EngellenenlerPage()))),
@@ -16593,39 +16620,93 @@ class _TercihlerPageState extends State<TercihlerPage> {
     if(uid!=null)await FirebaseFirestore.instance.collection('users').doc(uid).set({k:v},SetOptions(merge:true));
   }
   Future<void> gizliKelimeYonet()async{
+    final userId=uid;
+    if(userId==null)return;
     final kontrol=TextEditingController();
-    await showModalBottomSheet<void>(
-      context:context,backgroundColor:Colors.white,showDragHandle:true,isScrollControlled:true,
-      builder:(c)=>Theme(data:ThemeData.light(),child:StatefulBuilder(builder:(c,setP)=>SafeArea(child:Padding(
-        padding:EdgeInsets.fromLTRB(18,6,18,MediaQuery.of(c).viewInsets.bottom+18),
-        child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
-          const Text('Gizli kelimeler',style:TextStyle(color:Colors.black87,fontSize:20,fontWeight:FontWeight.w900)),
-          const SizedBox(height:6),
-          const Text('Bu kelimeleri içeren yorum ve özel mesajlar sende gizlenir.',style:TextStyle(color:Colors.black54)),
-          const SizedBox(height:14),
-          if(gizliKelimeListesi.isNotEmpty)Wrap(spacing:7,runSpacing:7,children:gizliKelimeListesi.map((x)=>InputChip(
-            label:Text(x),onDeleted:()async{
-              gizliKelimeListesi.remove(x);
-              await FirebaseFirestore.instance.collection('users').doc(uid!).set({'hiddenWords':gizliKelimeListesi},SetOptions(merge:true));
-              if(mounted)setState((){});setP((){});
-            },
-          )).toList()),
-          const SizedBox(height:12),
-          Row(children:[
-            Expanded(child:TextField(controller:kontrol,maxLength:30,decoration:const InputDecoration(hintText:'Kelime veya ifade ekle'))),
-            const SizedBox(width:8),
-            FilledButton(onPressed:()async{
-              final x=kontrol.text.trim().toLowerCase();
-              if(x.isEmpty||gizliKelimeListesi.contains(x))return;
-              gizliKelimeListesi.add(x);kontrol.clear();
-              await FirebaseFirestore.instance.collection('users').doc(uid!).set({'hiddenWords':gizliKelimeListesi,'hiddenWordsFilter':true},SetOptions(merge:true));
-              if(mounted)setState(()=>gizliKelimeler=true);setP((){});
-            },child:const Text('Ekle')),
-          ]),
-        ]),
-      )))),
-    );
-    kontrol.dispose();
+    final taslak=List<String>.from(gizliKelimeListesi);
+    bool filtreyiAc=false;
+    try{
+      await showModalBottomSheet<void>(
+        context:context,
+        backgroundColor:Colors.white,
+        showDragHandle:true,
+        isScrollControlled:true,
+        builder:(sheetContext)=>StatefulBuilder(
+          builder:(sheetContext,setP)=>SafeArea(
+            child:Padding(
+              padding:EdgeInsets.fromLTRB(18,6,18,MediaQuery.of(sheetContext).viewInsets.bottom+18),
+              child:Column(
+                mainAxisSize:MainAxisSize.min,
+                crossAxisAlignment:CrossAxisAlignment.start,
+                children:[
+                  Text(t('hiddenWordsTitle'),style:const TextStyle(color:Colors.black87,fontSize:20,fontWeight:FontWeight.w900)),
+                  const SizedBox(height:6),
+                  Text(t('hiddenWordsInfo'),style:const TextStyle(color:Colors.black54)),
+                  const SizedBox(height:14),
+                  if(taslak.isNotEmpty)Wrap(
+                    spacing:7,
+                    runSpacing:7,
+                    children:taslak.map((x)=>InputChip(
+                      label:Text(x),
+                      onDeleted:()async{
+                        final onceki=List<String>.from(taslak);
+                        setP(()=>taslak.remove(x));
+                        try{
+                          await FirebaseFirestore.instance.collection('users').doc(userId).set({'hiddenWords':taslak},SetOptions(merge:true));
+                        }catch(_){
+                          if(sheetContext.mounted)setP((){taslak..clear()..addAll(onceki);});
+                          if(sheetContext.mounted)ScaffoldMessenger.of(sheetContext).showSnackBar(const SnackBar(content:Text('Değişiklik kaydedilemedi.')));
+                        }
+                      },
+                    )).toList(),
+                  ),
+                  const SizedBox(height:12),
+                  Row(children:[
+                    Expanded(child:TextField(
+                      controller:kontrol,
+                      maxLength:30,
+                      textInputAction:TextInputAction.done,
+                      decoration:InputDecoration(hintText:t('hiddenWordHint')),
+                      onSubmitted:(_){},
+                    )),
+                    const SizedBox(width:8),
+                    FilledButton(
+                      onPressed:()async{
+                        final x=kontrol.text.trim().toLowerCase();
+                        if(x.isEmpty||taslak.contains(x))return;
+                        final onceki=List<String>.from(taslak);
+                        setP((){
+                          taslak.add(x);
+                          kontrol.clear();
+                        });
+                        filtreyiAc=true;
+                        try{
+                          await FirebaseFirestore.instance.collection('users').doc(userId).set({
+                            'hiddenWords':taslak,
+                            'hiddenWordsFilter':true,
+                          },SetOptions(merge:true));
+                        }catch(_){
+                          if(sheetContext.mounted)setP((){taslak..clear()..addAll(onceki);});
+                          if(sheetContext.mounted)ScaffoldMessenger.of(sheetContext).showSnackBar(const SnackBar(content:Text('Değişiklik kaydedilemedi.')));
+                        }
+                      },
+                      child:Text(t('add')),
+                    ),
+                  ]),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }finally{
+      kontrol.dispose();
+    }
+    if(!mounted)return;
+    setState((){
+      gizliKelimeListesi=List<String>.from(taslak);
+      if(filtreyiAc)gizliKelimeler=true;
+    });
   }
 
   Widget satir(String t,String s,bool v,ValueChanged<bool> f,{bool etkin=true})=>SwitchListTile(
@@ -16639,24 +16720,24 @@ class _TercihlerPageState extends State<TercihlerPage> {
     switch(widget.baslik){
       case 'Gizlilik':
         return [
-          satir('Gizli hesap','Yeni takipçiler onay bekler',hesapGizli,(v){setState(()=>hesapGizli=v);kaydet('privateAccount',v);}),
-          const Padding(padding:EdgeInsets.fromLTRB(22,14,22,4),child:Text('Profili kimler görüntüleyebilir?',style:TextStyle(fontWeight:FontWeight.w900))),
-          for(final e in const [('all','Herkes'),('followers','Takipçilerim'),('friends','Arkadaşlarım')])
+          satir(t('privateAccount'),t('privateAccountSub'),hesapGizli,(v){setState(()=>hesapGizli=v);kaydet('privateAccount',v);}),
+          Padding(padding:const EdgeInsets.fromLTRB(22,14,22,4),child:Text(t('profileViewWho'),style:const TextStyle(fontWeight:FontWeight.w900))),
+          for(final e in [('all',t('everyone')),('followers',t('myFollowers')),('friends',t('myFriends'))])
             RadioListTile<String>(
               value:e.$1,groupValue:profilGoruntuleme,
               title:Text(e.$2),
               onChanged:(v)async{if(v==null)return;setState(()=>profilGoruntuleme=v);await kaydetMetin('profileViewPermission',v);},
             ),
-          satir('Profil aramalarında görün','Kullanıcılar seni adınla bulabilsin',profilArama,(v){setState(()=>profilArama=v);kaydet('discoverableProfile',v);}),
-          satir('Aktiflik durumunu göster','Arkadaşların son görülme bilgini görebilsin',aktiflik,(v){setState(()=>aktiflik=v);kaydet('showActivityStatus',v);}),
-          satir('Profil paylaşımını arkadaşlarla sınırla','Profil bağlantını yalnızca arkadaşların paylaşabilsin',profilPaylasArkadas,(v){setState(()=>profilPaylasArkadas=v);kaydet('profileShareFriendsOnly',v);}),
-          satir('Yorumları arkadaşlarla sınırla','Yalnızca arkadaşların yorum yapabilsin',yorumArkadas,(v){setState(()=>yorumArkadas=v);kaydet('friendsOnlyComments',v);}),
-          satir('Gizli kelime filtresi','Seçtiğin kelimeleri içeren yorum ve mesajları gizle',gizliKelimeler,(v){setState(()=>gizliKelimeler=v);kaydet('hiddenWordsFilter',v);}),
+          satir(t('discoverableProfile'),t('discoverableProfileSub'),profilArama,(v){setState(()=>profilArama=v);kaydet('discoverableProfile',v);}),
+          satir(t('activityStatus'),t('activityStatusSub'),aktiflik,(v){setState(()=>aktiflik=v);kaydet('showActivityStatus',v);}),
+          satir(t('profileShareFriendsOnly'),t('profileShareFriendsOnlySub'),profilPaylasArkadas,(v){setState(()=>profilPaylasArkadas=v);kaydet('profileShareFriendsOnly',v);}),
+          satir(t('commentsFriendsOnly'),t('commentsFriendsOnlySub'),yorumArkadas,(v){setState(()=>yorumArkadas=v);kaydet('friendsOnlyComments',v);}),
+          satir(t('hiddenWordsFilter'),t('hiddenWordsFilterSub'),gizliKelimeler,(v){setState(()=>gizliKelimeler=v);kaydet('hiddenWordsFilter',v);}),
           ListTile(
             contentPadding:const EdgeInsets.symmetric(horizontal:22,vertical:6),
             leading:const Icon(Icons.visibility_off_outlined,color:mor),
-            title:const Text('Gizli kelimeleri yönet',style:TextStyle(fontWeight:FontWeight.w700)),
-            subtitle:Text(gizliKelimeListesi.isEmpty?'Henüz kelime eklenmedi':gizliKelimeListesi.length.toString()+' kelime / ifade'),
+            title:Text(t('manageHiddenWords'),style:const TextStyle(fontWeight:FontWeight.w700)),
+            subtitle:Text(gizliKelimeListesi.isEmpty?t('noHiddenWords'):gizliKelimeListesi.length.toString()+' • '+t('hiddenWordsTitle')),
             trailing:const Icon(Icons.chevron_right),
             onTap:gizliKelimeYonet,
           ),
@@ -17749,7 +17830,7 @@ class _ProfilPageState extends State<ProfilPage> {
                   Row(
                     children: [
                       const Spacer(),
-                      IconButton(tooltip:'Profil önizleme',onPressed:aktifKullanici==null?null:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciProfilPage(uid:aktifKullanici!.uid,ziyaretciOnizleme:true))),icon:const Icon(Icons.visibility_outlined,color:Colors.black,size:27)),
+                      IconButton(tooltip:t('profilePreview'),onPressed:aktifKullanici==null?null:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciProfilPage(uid:aktifKullanici!.uid,ziyaretciOnizleme:true))),icon:const Icon(Icons.visibility_outlined,color:Colors.black,size:27)),
                       IconButton(onPressed:aktifKullanici==null?null:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>ProfilAramaPage(uid:aktifKullanici!.uid))),icon:const Icon(Icons.search_rounded,color:Colors.black,size:28)),
                       StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(stream:aktifKullanici==null?null:FirebaseFirestore.instance.collection('notifications').where('toUid',isEqualTo:aktifKullanici!.uid).limit(100).snapshots(),builder:(_,s){final sayi=(s.data?.docs??[]).where((d)=>d.data()['read']!=true).length;return IconButton(onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const AktivitePage())),icon:sayi==0?const Icon(Icons.notifications_none_rounded,color:Colors.black,size:28):Badge(label:Text(sayi>99?'99+':'$sayi'),child:const Icon(Icons.notifications_none_rounded,color:Colors.black,size:28)));}),
                       IconButton(tooltip: 'Ayarlar ve gizlilik',onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const AyarlarPage())),icon:const Icon(Icons.settings_outlined,color:Colors.black,size:28)),
