@@ -4931,25 +4931,40 @@ class _KesfetPageState extends State<KesfetPage> {
     }
   }
 
-  Future<void> _grupDurumuDegistir(String id,bool katildi)async{
+  Future<void> _grupDurumuDegistir(String id,bool katildi,{required String ad,String foto=''})async{
     if(await misafirEngeli(context))return;
     final uid=ben;
     if(uid==null)return;
+    if(katildi){
+      if(mounted)Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupSohbetPage(chatId:id,ad:ad,foto:foto)));
+      return;
+    }
     try{
       await FirebaseFirestore.instance.runTransaction((tx)async{
-        final ref=FirebaseFirestore.instance.collection('groups').doc(id);
+        final ref=FirebaseFirestore.instance.collection('chats').doc(id);
         final d=await tx.get(ref);
-        final uyeler=List<String>.from(d.data()?['members']??const[]);
-        if(katildi){
-          uyeler.remove(uid);
-        }else if(!uyeler.contains(uid)){
-          uyeler.add(uid);
-        }
-        tx.set(ref,{'members':uyeler,'memberCount':uyeler.length},SetOptions(merge:true));
+        final v=d.data()??<String,dynamic>{};
+        if(v['isGroup']!=true||v['discoverable']!=true)throw Exception('Bu grup keşfete açık değil.');
+        if(v['joinApproval']==true)throw Exception('Bu grup katılma onayı istiyor.');
+        final uyeler=List<String>.from(v['members']??const[]);
+        final max=(v['maxMembers'] as num?)?.toInt()??60;
+        if(uyeler.contains(uid))return;
+        if(uyeler.length>=max)throw Exception('Grup üye sınırına ulaştı.');
+        final eski=List<String>.from(v['formerMembers']??const[])..remove(uid);
+        final gizli=List<String>.from(v['hiddenFor']??const[])..remove(uid);
+        uyeler.add(uid);
+        tx.update(ref,{
+          'members':uyeler,
+          'formerMembers':eski,
+          'hiddenFor':gizli,
+          'updatedAt':FieldValue.serverTimestamp(),
+        });
       });
-      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(katildi?'Gruptan ayrıldın.':'Gruba katıldın ✅')));
+      if(!mounted)return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Gruba katıldın ✅')));
+      Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupSohbetPage(chatId:id,ad:ad,foto:foto)));
     }catch(e){
-      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Grup işlemi tamamlanamadı: $e')));
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Gruba katılınamadı: $e')));
     }
   }
 
@@ -5138,11 +5153,11 @@ class _KesfetPageState extends State<KesfetPage> {
   List<Widget> _grupSliverleri()=>[
     SliverToBoxAdapter(child:Padding(padding:const EdgeInsets.fromLTRB(16,20,16,10),child:Text(t('discoverGroups'),style:const TextStyle(color:Colors.black,fontSize:21,fontWeight:FontWeight.w900)))),
     StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
-      stream:FirebaseFirestore.instance.collection('groups').limit(60).snapshots(),
+      stream:FirebaseFirestore.instance.collection('chats').where('isGroup',isEqualTo:true).where('discoverable',isEqualTo:true).limit(60).snapshots(),
       builder:(_,snap){
         if(snap.connectionState==ConnectionState.waiting)return const SliverToBoxAdapter(child:Padding(padding:EdgeInsets.all(35),child:Center(child:CircularProgressIndicator(color:mor))));
         if(snap.hasError)return const SliverToBoxAdapter(child:Padding(padding:EdgeInsets.all(28),child:Center(child:Text('Gruplar yüklenemedi.',style:TextStyle(color:Colors.black54)))));
-        final gruplar=(snap.data?.docs??[]).where((d){final ad=(d.data()['name']??'').toString().toLowerCase();return !ad.contains('oyun')&&!ad.contains('game');}).toList();
+        final gruplar=(snap.data?.docs??[]).where((d){final ad=(d.data()['groupName']??'').toString().toLowerCase();return d.data()['groupDeleted']!=true&&!ad.contains('oyun')&&!ad.contains('game');}).toList();
         if(gruplar.isEmpty)return const SliverToBoxAdapter(child:Padding(padding:EdgeInsets.all(28),child:Center(child:Text('Keşfedilecek grup bulunamadı.',style:TextStyle(color:Colors.black54)))));
         return SliverList(delegate:SliverChildBuilderDelegate((_,i)=>_grupSatiri(gruplar[i].id,gruplar[i].data()),childCount:gruplar.length));
       },
@@ -5207,33 +5222,43 @@ class _KesfetPageState extends State<KesfetPage> {
   }
 
   Widget _grupSatiri(String id,Map<String,dynamic> v){
-    final ad=(v['name']??t('community')).toString();
-    final aciklama=(v['description']??'NgelX topluluğu').toString();
+    final ad=(v['groupName']??t('community')).toString();
+    final aciklama=(v['groupDescription']??'NgelX topluluğu').toString();
+    final foto=(v['groupPhotoUrl']??'').toString();
     final uyeler=List<String>.from(v['members']??const[]);
     final katildi=ben!=null&&uyeler.contains(ben);
-    final sayi=(v['memberCount'] as num?)?.toInt()??uyeler.length;
+    final sayi=uyeler.length;
     return Padding(
       padding:const EdgeInsets.symmetric(horizontal:16,vertical:6),
-      child:Container(
-        padding:const EdgeInsets.all(13),
-        decoration:BoxDecoration(color:const Color(0xFFF6F3FF),borderRadius:BorderRadius.circular(20),border:Border.all(color:mor.withValues(alpha:.09))),
-        child:Row(children:[
-          Container(width:60,height:60,decoration:BoxDecoration(color:const Color(0xFFE9DDFF),borderRadius:BorderRadius.circular(16)),child:const Icon(Icons.groups_rounded,color:mor,size:32)),
-          const SizedBox(width:12),
-          Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-            Text(ad,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black,fontWeight:FontWeight.w900,fontSize:16)),
-            const SizedBox(height:3),
-            Text(aciklama,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black54,fontSize:12)),
-            const SizedBox(height:3),
-            Text('$sayi ${t('member')}',style:const TextStyle(color:Colors.black45,fontSize:12)),
-          ])),
-          const SizedBox(width:8),
-          FilledButton(
-            onPressed:()=>_grupDurumuDegistir(id,katildi),
-            style:FilledButton.styleFrom(backgroundColor:katildi?const Color(0xFFECECF2):mor,foregroundColor:katildi?Colors.black87:Colors.white,padding:const EdgeInsets.symmetric(horizontal:13)),
-            child:Text(katildi?'Katıldın':t('join'),style:const TextStyle(fontWeight:FontWeight.w800,fontSize:12)),
-          ),
-        ]),
+      child:InkWell(
+        onTap:katildi?()=>_grupDurumuDegistir(id,true,ad:ad,foto:foto):null,
+        borderRadius:BorderRadius.circular(20),
+        child:Container(
+          padding:const EdgeInsets.all(13),
+          decoration:BoxDecoration(color:const Color(0xFFF6F3FF),borderRadius:BorderRadius.circular(20),border:Border.all(color:mor.withValues(alpha:.09))),
+          child:Row(children:[
+            ClipRRect(
+              borderRadius:BorderRadius.circular(16),
+              child:foto.isEmpty
+                ?Container(width:60,height:60,color:const Color(0xFFE9DDFF),child:const Icon(Icons.groups_rounded,color:mor,size:32))
+                :CachedNetworkImage(imageUrl:foto,width:60,height:60,fit:BoxFit.cover,errorWidget:(_,__,___)=>Container(width:60,height:60,color:const Color(0xFFE9DDFF),child:const Icon(Icons.groups_rounded,color:mor,size:32))),
+            ),
+            const SizedBox(width:12),
+            Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+              Text(ad,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black,fontWeight:FontWeight.w900,fontSize:16)),
+              const SizedBox(height:3),
+              Text(aciklama.isEmpty?'NgelX topluluğu':aciklama,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black54,fontSize:12)),
+              const SizedBox(height:3),
+              Text('$sayi ${t('member')}',style:const TextStyle(color:Colors.black45,fontSize:12)),
+            ])),
+            const SizedBox(width:8),
+            FilledButton(
+              onPressed:()=>_grupDurumuDegistir(id,katildi,ad:ad,foto:foto),
+              style:FilledButton.styleFrom(backgroundColor:katildi?const Color(0xFFECECF2):mor,foregroundColor:katildi?Colors.black87:Colors.white,padding:const EdgeInsets.symmetric(horizontal:13)),
+              child:Text(katildi?'Aç':t('join'),style:const TextStyle(fontWeight:FontWeight.w800,fontSize:12)),
+            ),
+          ]),
+        ),
       ),
     );
   }
@@ -6973,6 +6998,7 @@ class _GrupOlusturPageState extends State<GrupOlusturPage>{
       final ref=FirebaseFirestore.instance.collection('chats').doc(_olusturulanGrupId);
       await ref.set({
         'isGroup':true,
+        'discoverable':true,
         'groupName':grupAdi,
         'groupPhotoUrl':fotoUrl,
         'members':[u.uid,...secilen],
