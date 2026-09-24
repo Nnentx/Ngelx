@@ -12453,8 +12453,8 @@ class GrupAyarlarPage extends StatelessWidget{
     if(kurucu==uid&&uyeler.length>1){
       final uyelereGit=await showDialog<bool>(context:context,builder:(x)=>AlertDialog(
         backgroundColor:Colors.white,surfaceTintColor:Colors.white,
-        title:const Text('Önce kuruculuğu devret',style:TextStyle(fontWeight:FontWeight.w900)),
-        content:const Text('Gruptan ayrılmadan önce kuruculuğu başka bir üyeye devretmelisin.'),
+        title:const Text('Önce kuruculuğu devret',style:TextStyle(color:Colors.black87,fontWeight:FontWeight.w900)),
+        content:const Text('Gruptan ayrılmadan önce kuruculuğu başka bir üyeye devretmelisin.',style:TextStyle(color:Colors.black54,height:1.35)),
         actions:[
           TextButton(onPressed:()=>Navigator.pop(x,false),child:const Text('Vazgeç')),
           FilledButton(onPressed:()=>Navigator.pop(x,true),child:const Text('Üyelere git')),
@@ -12468,8 +12468,8 @@ class GrupAyarlarPage extends StatelessWidget{
     if(admins.length==1&&admins.contains(uid)&&uyeler.length>1){
       await showDialog<void>(context:context,builder:(x)=>AlertDialog(
         backgroundColor:Colors.white,surfaceTintColor:Colors.white,
-        title:const Text('Önce yönetici belirle',style:TextStyle(fontWeight:FontWeight.w900)),
-        content:const Text('Gruptan ayrılmadan önce başka bir üyeyi yönetici yapmalısın.'),
+        title:const Text('Önce yönetici belirle',style:TextStyle(color:Colors.black87,fontWeight:FontWeight.w900)),
+        content:const Text('Gruptan ayrılmadan önce başka bir üyeyi yönetici yapmalısın.',style:TextStyle(color:Colors.black54,height:1.35)),
         actions:[FilledButton(onPressed:()=>Navigator.pop(x),child:const Text('Tamam'))],
       ));
       return;
@@ -12477,8 +12477,8 @@ class GrupAyarlarPage extends StatelessWidget{
     final sonKisi=uyeler.length==1;
     final ok=await showDialog<bool>(context:context,builder:(x)=>AlertDialog(
       backgroundColor:Colors.white,surfaceTintColor:Colors.white,
-      title:Text(sonKisi?'Grup silinsin mi?':'Sohbetten ayrıl?',style:const TextStyle(fontWeight:FontWeight.w900)),
-      content:Text(sonKisi?'Grupta yalnızca sen kaldın. Grup kapatılacak.':'Gruptan ayrıldıktan sonra yeni mesaj alamazsın.'),
+      title:Text(sonKisi?'Grup silinsin mi?':'Sohbetten ayrıl?',style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w900)),
+      content:Text(sonKisi?'Grupta yalnızca sen kaldın. Grup kapatılacak.':'Gruptan ayrıldıktan sonra yeni mesaj alamazsın.',style:const TextStyle(color:Colors.black54,height:1.35)),
       actions:[
         TextButton(onPressed:()=>Navigator.pop(x,false),child:const Text('Vazgeç')),
         FilledButton(style:FilledButton.styleFrom(backgroundColor:Colors.red),onPressed:()=>Navigator.pop(x,true),child:Text(sonKisi?'Grubu sil':'Ayrıl')),
@@ -12518,8 +12518,8 @@ class GrupAyarlarPage extends StatelessWidget{
     final uid=me;if(uid==null)return;
     final ok=await showDialog<bool>(context:context,builder:(x)=>AlertDialog(
       backgroundColor:Colors.white,surfaceTintColor:Colors.white,
-      title:const Text('Sohbeti sil?',style:TextStyle(fontWeight:FontWeight.w900)),
-      content:const Text('Sohbet yalnızca senin sohbet listenden kaldırılacak.'),
+      title:const Text('Sohbeti sil?',style:TextStyle(color:Colors.black87,fontWeight:FontWeight.w900)),
+      content:const Text('Sohbet yalnızca senin sohbet listenden kaldırılacak.',style:TextStyle(color:Colors.black54,height:1.35)),
       actions:[
         TextButton(onPressed:()=>Navigator.pop(x,false),child:const Text('Vazgeç')),
         FilledButton(style:FilledButton.styleFrom(backgroundColor:Colors.red),onPressed:()=>Navigator.pop(x,true),child:const Text('Sil')),
