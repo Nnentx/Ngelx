@@ -16579,6 +16579,92 @@ class _DestekPageState extends State<DestekPage>{
 }
 
 class TercihlerPage extends StatefulWidget {final String baslik;const TercihlerPage({super.key,required this.baslik});@override State<TercihlerPage> createState()=>_TercihlerPageState();}
+class _GizliKelimeSheet extends StatefulWidget{
+  final String userId;
+  final List<String> baslangic;
+  const _GizliKelimeSheet({required this.userId,required this.baslangic});
+  @override State<_GizliKelimeSheet> createState()=>_GizliKelimeSheetState();
+}
+class _GizliKelimeSheetState extends State<_GizliKelimeSheet>{
+  final kontrol=TextEditingController();
+  late List<String> kelimeler;
+  bool islem=false;
+
+  @override void initState(){super.initState();kelimeler=List<String>.from(widget.baslangic);}
+  @override void dispose(){kontrol.dispose();super.dispose();}
+
+  Future<void> _ekle()async{
+    final x=kontrol.text.trim().toLowerCase();
+    if(x.isEmpty||kelimeler.contains(x)||islem)return;
+    final onceki=List<String>.from(kelimeler);
+    setState((){islem=true;kelimeler.add(x);kontrol.clear();});
+    try{
+      await FirebaseFirestore.instance.collection('users').doc(widget.userId).set({
+        'hiddenWords':kelimeler,
+        'hiddenWordsFilter':true,
+      },SetOptions(merge:true));
+    }catch(_){
+      if(mounted){
+        setState(()=>kelimeler=onceki);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Değişiklik kaydedilemedi.')));
+      }
+    }finally{
+      if(mounted)setState(()=>islem=false);
+    }
+  }
+
+  Future<void> _sil(String x)async{
+    if(islem)return;
+    final onceki=List<String>.from(kelimeler);
+    setState((){islem=true;kelimeler.remove(x);});
+    try{
+      await FirebaseFirestore.instance.collection('users').doc(widget.userId).set({'hiddenWords':kelimeler},SetOptions(merge:true));
+    }catch(_){
+      if(mounted){
+        setState(()=>kelimeler=onceki);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Değişiklik kaydedilemedi.')));
+      }
+    }finally{
+      if(mounted)setState(()=>islem=false);
+    }
+  }
+
+  @override Widget build(BuildContext context)=>SafeArea(
+    child:AnimatedPadding(
+      duration:const Duration(milliseconds:160),
+      padding:EdgeInsets.fromLTRB(18,6,18,MediaQuery.of(context).viewInsets.bottom+18),
+      child:SingleChildScrollView(
+        child:Column(
+          mainAxisSize:MainAxisSize.min,
+          crossAxisAlignment:CrossAxisAlignment.start,
+          children:[
+            Text(t('hiddenWordsTitle'),style:const TextStyle(color:Colors.black87,fontSize:20,fontWeight:FontWeight.w900)),
+            const SizedBox(height:6),
+            Text(t('hiddenWordsInfo'),style:const TextStyle(color:Colors.black54)),
+            const SizedBox(height:14),
+            if(kelimeler.isNotEmpty)Wrap(
+              spacing:7,runSpacing:7,
+              children:kelimeler.map((x)=>InputChip(label:Text(x),onDeleted:islem?null:()=>_sil(x))).toList(),
+            ),
+            const SizedBox(height:12),
+            Row(children:[
+              Expanded(child:TextField(
+                controller:kontrol,
+                maxLength:30,
+                textInputAction:TextInputAction.done,
+                decoration:InputDecoration(hintText:t('hiddenWordHint')),
+                onSubmitted:(_)=>_ekle(),
+              )),
+              const SizedBox(width:8),
+              FilledButton(onPressed:islem?null:_ekle,child:Text(t('add'))),
+            ]),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
 class _TercihlerPageState extends State<TercihlerPage> {
   bool hesapGizli=false, profilArama=true, aktiflik=true, profilPaylasArkadas=false, yorumArkadas=false, gizliKelimeler=true, mesajArkadas=true, hikayeArkadas=true, ekranGoruntusu=false, bildirim=true, mesajBildirimi=true, arkadasBildirimi=true, etkilesimBildirimi=true, indirme=true;
   String mesajIzni='friends';
@@ -16622,91 +16708,23 @@ class _TercihlerPageState extends State<TercihlerPage> {
   Future<void> gizliKelimeYonet()async{
     final userId=uid;
     if(userId==null)return;
-    final kontrol=TextEditingController();
-    final taslak=List<String>.from(gizliKelimeListesi);
-    bool filtreyiAc=false;
-    try{
-      await showModalBottomSheet<void>(
-        context:context,
-        backgroundColor:Colors.white,
-        showDragHandle:true,
-        isScrollControlled:true,
-        builder:(sheetContext)=>StatefulBuilder(
-          builder:(sheetContext,setP)=>SafeArea(
-            child:Padding(
-              padding:EdgeInsets.fromLTRB(18,6,18,MediaQuery.of(sheetContext).viewInsets.bottom+18),
-              child:Column(
-                mainAxisSize:MainAxisSize.min,
-                crossAxisAlignment:CrossAxisAlignment.start,
-                children:[
-                  Text(t('hiddenWordsTitle'),style:const TextStyle(color:Colors.black87,fontSize:20,fontWeight:FontWeight.w900)),
-                  const SizedBox(height:6),
-                  Text(t('hiddenWordsInfo'),style:const TextStyle(color:Colors.black54)),
-                  const SizedBox(height:14),
-                  if(taslak.isNotEmpty)Wrap(
-                    spacing:7,
-                    runSpacing:7,
-                    children:taslak.map((x)=>InputChip(
-                      label:Text(x),
-                      onDeleted:()async{
-                        final onceki=List<String>.from(taslak);
-                        setP(()=>taslak.remove(x));
-                        try{
-                          await FirebaseFirestore.instance.collection('users').doc(userId).set({'hiddenWords':taslak},SetOptions(merge:true));
-                        }catch(_){
-                          if(sheetContext.mounted)setP((){taslak..clear()..addAll(onceki);});
-                          if(sheetContext.mounted)ScaffoldMessenger.of(sheetContext).showSnackBar(const SnackBar(content:Text('Değişiklik kaydedilemedi.')));
-                        }
-                      },
-                    )).toList(),
-                  ),
-                  const SizedBox(height:12),
-                  Row(children:[
-                    Expanded(child:TextField(
-                      controller:kontrol,
-                      maxLength:30,
-                      textInputAction:TextInputAction.done,
-                      decoration:InputDecoration(hintText:t('hiddenWordHint')),
-                      onSubmitted:(_){},
-                    )),
-                    const SizedBox(width:8),
-                    FilledButton(
-                      onPressed:()async{
-                        final x=kontrol.text.trim().toLowerCase();
-                        if(x.isEmpty||taslak.contains(x))return;
-                        final onceki=List<String>.from(taslak);
-                        setP((){
-                          taslak.add(x);
-                          kontrol.clear();
-                        });
-                        filtreyiAc=true;
-                        try{
-                          await FirebaseFirestore.instance.collection('users').doc(userId).set({
-                            'hiddenWords':taslak,
-                            'hiddenWordsFilter':true,
-                          },SetOptions(merge:true));
-                        }catch(_){
-                          if(sheetContext.mounted)setP((){taslak..clear()..addAll(onceki);});
-                          if(sheetContext.mounted)ScaffoldMessenger.of(sheetContext).showSnackBar(const SnackBar(content:Text('Değişiklik kaydedilemedi.')));
-                        }
-                      },
-                      child:Text(t('add')),
-                    ),
-                  ]),
-                ],
-              ),
-            ),
-          ),
-        ),
-      );
-    }finally{
-      kontrol.dispose();
-    }
+    await showModalBottomSheet<void>(
+      context:context,
+      backgroundColor:Colors.white,
+      showDragHandle:true,
+      isScrollControlled:true,
+      builder:(_)=>_GizliKelimeSheet(userId:userId,baslangic:gizliKelimeListesi),
+    );
     if(!mounted)return;
-    setState((){
-      gizliKelimeListesi=List<String>.from(taslak);
-      if(filtreyiAc)gizliKelimeler=true;
-    });
+    try{
+      final d=await FirebaseFirestore.instance.collection('users').doc(userId).get();
+      if(!mounted)return;
+      final v=d.data()??<String,dynamic>{};
+      setState((){
+        gizliKelimeListesi=List<String>.from(v['hiddenWords']??const[]);
+        gizliKelimeler=v['hiddenWordsFilter']!=false;
+      });
+    }catch(_){}
   }
 
   Widget satir(String t,String s,bool v,ValueChanged<bool> f,{bool etkin=true})=>SwitchListTile(
