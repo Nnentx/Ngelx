@@ -287,3 +287,30 @@
 4. Üret > Fotoğraf: küçük bir fotoğraf yayınla; ardından yaklaşık 5–10 MB fotoğraf dene.
 5. Üret > Video: kısa bir video yayınla. presign bağlantı / Connection reset by peer hatası tekrar ederse ekranda görülen yeni hata metni kaydedilecek.
 6. Yayınlanan fotoğraf/video hem Akış'ta hem Profil'de görünmeli.
+
+
+## 2026-09-24 — Build 251 özel sohbet + aktiflik + grup diyalog paketi
+
+- Grup çıkış/kuruculuk diyaloglarında beyaz zemin üstünde kaybolan başlık ve açıklamalar koyu renge sabitlendi.
+- Profil aktiflik satırı canlı hale getirildi: çevrimdışında **Az önce aktifti / X dk önce aktifti / X saat önce aktifti / X gün önce aktifti** gösteriyor.
+- Özel sohbette **@herkes kaldırıldı**; @herkes yalnızca grup sohbetlerinde kalıyor.
+- Özel mesajlaşma, grup sohbetindeki yeşil premium tasarımın mavi karşılığına geçirildi:
+  - mavi başlık ve avatar halkası,
+  - mavi/beyaz premium mesaj balonları,
+  - mavi yazma göstergesi, cevap kartı ve alt mesaj paneli,
+  - mavi Sohbet Bilgisi / Özelleştir görünümü.
+- Özel sohbet taslakları cihazda saklanıyor; sohbetten çıkıp dönünce yazılmamış metin geri geliyor.
+- Özel sohbete doğrudan **video / video çek** gönderimi eklendi.
+- Mesajlara tarih ayraçları (Bugün / Dün / tarih) eklendi.
+- Gönderilen mesaj için **Mesaj bilgisi** ekranı eklendi; gönderim ve görülme durumu gösteriliyor.
+- Build **v1.0.57 • Yapı 251**.
+
+### Build 251 gerçek cihaz testi
+
+1. Gelen Kutusu > bir grup > ayrıl/kuruculuk uyarısını aç: başlık ve açıklama görünür olmalı.
+2. Rojin gibi bir profilde kullanıcı uygulamayı kapattıktan sonra aktiflik satırının dakika/saat sayacına dönmesini kontrol et.
+3. Özel sohbette @ yaz: **@herkes çıkmamalı**. Grup sohbetinde @herkes çıkmalı.
+4. Özel sohbet başlığı, mesaj balonları, yazma alanı ve Sohbet Bilgisi ekranı mavi tasarımda görünmeli.
+5. Bir metin yazıp göndermeden sohbetten çıkıp geri gir: taslak geri gelmeli.
+6. Özel sohbetten kısa video gönder ve tam ekran oynat.
+7. Bir mesajı uzun bas > Daha fazla > Mesaj bilgisi ekranını aç.
