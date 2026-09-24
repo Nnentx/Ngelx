@@ -3638,6 +3638,73 @@ Future<void> ngelxPaylasimMenusu(
   );
 }
 
+Future<bool> ngelxBegeniDurumuOku(String contentId,User user) async {
+  if(contentId.isEmpty)return false;
+  final video=FirebaseFirestore.instance.collection('videos').doc(contentId);
+  try{
+    final d=await video.collection('likes').doc(user.uid).get();
+    if(d.exists)return true;
+  }on FirebaseException catch(e){
+    if(e.code!='permission-denied')rethrow;
+  }catch(_){}
+
+  try{
+    final profil=await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+    final liste=List<String>.from(profil.data()?['likedContent']??const[]);
+    if(liste.contains(contentId))return true;
+  }catch(_){}
+
+  try{
+    final hafiza=await SharedPreferences.getInstance();
+    final liste=hafiza.getStringList('ngelx_liked_'+user.uid)??const <String>[];
+    return liste.contains(contentId);
+  }catch(_){
+    return false;
+  }
+}
+
+Future<void> ngelxBegeniDurumuYaz({
+  required String contentId,
+  required User user,
+  required bool begen,
+}) async {
+  if(contentId.isEmpty)return;
+  final userRef=FirebaseFirestore.instance.collection('users').doc(user.uid);
+  var profilYazildi=false;
+  try{
+    await userRef.set({
+      'likedContent':begen
+        ?FieldValue.arrayUnion([contentId])
+        :FieldValue.arrayRemove([contentId]),
+    },SetOptions(merge:true));
+    profilYazildi=true;
+  }catch(_){}
+
+  if(!profilYazildi){
+    final hafiza=await SharedPreferences.getInstance();
+    final anahtar='ngelx_liked_'+user.uid;
+    final mevcut=<String>{...(hafiza.getStringList(anahtar)??const <String>[])};
+    if(begen)mevcut.add(contentId);else mevcut.remove(contentId);
+    await hafiza.setStringList(anahtar,mevcut.toList());
+  }
+
+  final video=FirebaseFirestore.instance.collection('videos').doc(contentId);
+  final like=video.collection('likes').doc(user.uid);
+  try{
+    if(begen){
+      await like.set({'userId':user.uid,'createdAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
+    }else{
+      await like.delete();
+    }
+  }catch(_){}
+
+  try{
+    await video.set({
+      'likeCount':FieldValue.increment(begen?1:-1),
+    },SetOptions(merge:true));
+  }catch(_){}
+}
+
 class GorselYaziKarti extends StatefulWidget {
   final Map<String, String> veri;
   final bool aktif;
@@ -3673,17 +3740,17 @@ class _GorselYaziKartiState extends State<GorselYaziKarti> {
   }
 
   Future<void> etkilesimleriGetir() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null || icerikId.isEmpty) return;
-    final ref = FirebaseFirestore.instance.collection('videos').doc(icerikId);
-    final sonuclar = await Future.wait([
-      ref.collection('likes').doc(user.uid).get(),
-      FirebaseFirestore.instance.collection('users').doc(user.uid).collection('saved').doc(icerikId).get(),
-    ]);
-    if (!mounted) return;
+    final user=FirebaseAuth.instance.currentUser;
+    if(user==null||icerikId.isEmpty)return;
+    final begeni=await ngelxBegeniDurumuOku(icerikId,user);
+    var kayit=false;
+    try{
+      kayit=(await FirebaseFirestore.instance.collection('users').doc(user.uid).collection('saved').doc(icerikId).get()).exists;
+    }catch(_){}
+    if(!mounted)return;
     setState(() {
-      begenildi = (sonuclar[0] as DocumentSnapshot).exists;
-      kaydedildi = (sonuclar[1] as DocumentSnapshot).exists;
+      begenildi=begeni;
+      kaydedildi=kayit;
     });
   }
 
@@ -3708,21 +3775,11 @@ class _GorselYaziKartiState extends State<GorselYaziKarti> {
     if(await misafirEngeli(context))return;
     final user=FirebaseAuth.instance.currentUser;
     if(user==null||icerikId.isEmpty)return;
-    final video=FirebaseFirestore.instance.collection('videos').doc(icerikId);
-    final ref=video.collection('likes').doc(user.uid);
     begeniIsleniyor=true;
     final yeni=!begenildi;
     setState(()=>begenildi=yeni);
     try{
-      final batch=FirebaseFirestore.instance.batch();
-      if(yeni){
-        batch.set(ref,{'userId':user.uid,'createdAt':FieldValue.serverTimestamp()});
-        batch.set(video,{'likeCount':FieldValue.increment(1)},SetOptions(merge:true));
-      }else{
-        batch.delete(ref);
-        batch.set(video,{'likeCount':FieldValue.increment(-1)},SetOptions(merge:true));
-      }
-      await batch.commit();
+      await ngelxBegeniDurumuYaz(contentId:icerikId,user:user,begen:yeni);
       final hedefUid=(widget.veri['ownerId']??'').toString();
       if(yeni&&hedefUid.isNotEmpty&&hedefUid!=user.uid){
         unawaited(uygulamaBildirimiGonder(
@@ -3732,7 +3789,7 @@ class _GorselYaziKartiState extends State<GorselYaziKarti> {
       }
     }catch(e){
       if(mounted)setState(()=>begenildi=!yeni);
-      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Beğeni kaydedilemedi: $e')));
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Beğeni şu anda kaydedilemedi. Tekrar dene.')));
     }finally{
       begeniIsleniyor=false;
     }
@@ -3992,17 +4049,17 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver {
   }
 
   Future<void> etkilesimleriGetir() async {
-    final kullanici = FirebaseAuth.instance.currentUser;
-    if (kullanici == null) return;
-    final video = FirebaseFirestore.instance.collection('videos').doc(videoId);
-    final sonuclar = await Future.wait([
-      video.collection('likes').doc(kullanici.uid).get(),
-      FirebaseFirestore.instance.collection('users').doc(kullanici.uid).collection('saved').doc(videoId).get(),
-    ]);
-    if (!mounted) return;
+    final kullanici=FirebaseAuth.instance.currentUser;
+    if(kullanici==null||videoId.isEmpty)return;
+    final begeni=await ngelxBegeniDurumuOku(videoId,kullanici);
+    var kayit=false;
+    try{
+      kayit=(await FirebaseFirestore.instance.collection('users').doc(kullanici.uid).collection('saved').doc(videoId).get()).exists;
+    }catch(_){}
+    if(!mounted)return;
     setState(() {
-      begenildi = (sonuclar[0] as DocumentSnapshot).exists;
-      kaydedildi = (sonuclar[1] as DocumentSnapshot).exists;
+      begenildi=begeni;
+      kaydedildi=kayit;
     });
   }
 
@@ -4027,25 +4084,15 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver {
   }
 
   Future<void> begeniyiDegistir() async {
-    if (begeniIsleniyor) return;
-    if (await misafirEngeli(context)) return;
+    if(begeniIsleniyor)return;
+    if(await misafirEngeli(context))return;
     final kullanici=FirebaseAuth.instance.currentUser;
-    if(kullanici==null)return;
-    final video=FirebaseFirestore.instance.collection('videos').doc(videoId);
-    final begeni=video.collection('likes').doc(kullanici.uid);
+    if(kullanici==null||videoId.isEmpty)return;
     final yeniDurum=!begenildi;
     begeniIsleniyor=true;
     setState(()=>begenildi=yeniDurum);
     try{
-      final batch=FirebaseFirestore.instance.batch();
-      if(yeniDurum){
-        batch.set(begeni,{'userId':kullanici.uid,'createdAt':FieldValue.serverTimestamp()});
-        batch.set(video,{'likeCount':FieldValue.increment(1)},SetOptions(merge:true));
-      }else{
-        batch.delete(begeni);
-        batch.set(video,{'likeCount':FieldValue.increment(-1)},SetOptions(merge:true));
-      }
-      await batch.commit();
+      await ngelxBegeniDurumuYaz(contentId:videoId,user:kullanici,begen:yeniDurum);
       if(yeniDurum&&widget.ownerId.isNotEmpty&&widget.ownerId!=kullanici.uid){
         unawaited(uygulamaBildirimiGonder(
           toUid:widget.ownerId,fromUid:kullanici.uid,tur:'interaction',
@@ -4054,11 +4101,12 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver {
       }
     }catch(e){
       if(mounted)setState(()=>begenildi=!yeniDurum);
-      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Beğeni kaydedilemedi: $e')));
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Beğeni şu anda kaydedilemedi. Tekrar dene.')));
     }finally{
       begeniIsleniyor=false;
     }
   }
+
 
 
   Future<void> videoyuPaylas() async {
