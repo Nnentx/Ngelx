@@ -52,6 +52,14 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: cloudflare/worker
           command: deploy --config wrangler-backup.toml
+          secrets: |
+            R2_ACCESS_KEY_ID
+            R2_SECRET_ACCESS_KEY
+            R2_ACCOUNT_ID
+        env:
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
       - name: Medya servislerini dogrula
         shell: bash
@@ -63,8 +71,12 @@ jobs:
             "https://ngelx-media.alihancaglar76.workers.dev/health" \
             "https://ngelx-upload.alihancaglar76.workers.dev/health"; do
             echo "Kontrol: $url"
-            curl --fail --silent --show-error \
+            body="$(curl --fail --silent --show-error \
               --retry 10 --retry-all-errors --retry-delay 3 \
-              --connect-timeout 10 --max-time 20 "$url"
-            echo
+              --connect-timeout 10 --max-time 20 "$url")"
+            echo "$body"
+            if [[ "$url" == *"ngelx-media."* ]] && [[ "$body" != *'"directUpload":true'* ]]; then
+              echo "Ana Worker direct R2 signer aktif degil."
+              exit 1
+            fi
           done
