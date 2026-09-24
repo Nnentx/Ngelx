@@ -1,3 +1,5 @@
+import { AwsClient } from 'aws4fetch';
+
 const ALLOWED_KINDS = new Set([
   'photos',
   'videos',
@@ -28,7 +30,7 @@ const MAX_BYTES = {
 let jwksCache = null;
 let jwksExpiresAt = 0;
 
-const MEDIA_PROTOCOL = 'upload-ws-242';
+const MEDIA_PROTOCOL = 'upload-r2-243';
 
 function uploadLog(event, data = {}) {
   console.log(JSON.stringify({service: 'ngelx-r2-media', protocol: MEDIA_PROTOCOL, event, ...data}));
@@ -167,6 +169,33 @@ function contentTypeFor(ext, supplied) {
   return map[ext] || 'application/octet-stream';
 }
 
+
+function directR2Ready(env) {
+  return Boolean(env.R2_ACCESS_KEY_ID && env.R2_SECRET_ACCESS_KEY && env.R2_ACCOUNT_ID);
+}
+
+async function presignR2Put(env, key, contentType, expiresIn = 900) {
+  if (!directR2Ready(env)) throw new Error('R2 direct upload signer is not configured');
+  const r2 = new AwsClient({
+    service: 's3',
+    region: 'auto',
+    accessKeyId: env.R2_ACCESS_KEY_ID,
+    secretAccessKey: env.R2_SECRET_ACCESS_KEY,
+  });
+  const endpoint = new URL(
+    'https://' + env.R2_ACCOUNT_ID + '.r2.cloudflarestorage.com/ngelx-media/' + encodeKeyForUrl(key),
+  );
+  endpoint.searchParams.set('X-Amz-Expires', String(expiresIn));
+  const signed = await r2.sign(
+    new Request(endpoint.toString(), {
+      method: 'PUT',
+      headers: {'Content-Type': contentType},
+    }),
+    {aws: {signQuery: true}},
+  );
+  return signed.url.toString();
+}
+
 export default {
   async fetch(request, env) {
     if (request.method === 'OPTIONS') {
@@ -178,9 +207,9 @@ export default {
     if (request.method === 'GET' && url.pathname === '/health') {
       try {
         await env.MEDIA.head('__ngelx_healthcheck__');
-        return json({ok: true, service: 'ngelx-r2-media', r2: true, protocol: MEDIA_PROTOCOL});
+        return json({ok: true, service: 'ngelx-r2-media', r2: true, directUpload: directR2Ready(env), protocol: MEDIA_PROTOCOL});
       } catch (e) {
-        return json({ok: false, service: 'ngelx-r2-media', r2: false, protocol: MEDIA_PROTOCOL, message: String(e?.message || e)}, 503);
+        return json({ok: false, service: 'ngelx-r2-media', r2: false, directUpload: directR2Ready(env), protocol: MEDIA_PROTOCOL, message: String(e?.message || e)}, 503);
       }
     }
 
@@ -195,6 +224,56 @@ export default {
       headers.set('etag', object.httpEtag);
       headers.set('cache-control', 'public, max-age=31536000, immutable');
       return new Response(object.body, {headers});
+    }
+
+    if (request.method === 'GET' && url.pathname === '/upload/presign') {
+      let claims;
+      try {
+        claims = await verifyFirebaseIdToken(request, env);
+      } catch (e) {
+        uploadLog('presign_auth_failed', {message: String(e?.message || e)});
+        return json({error: 'unauthorized', stage: 'presign_auth', protocol: MEDIA_PROTOCOL, message: String(e.message || e)}, 401);
+      }
+
+      if (!directR2Ready(env)) {
+        uploadLog('presign_not_configured');
+        return json({error: 'direct_upload_not_configured', stage: 'presign_config', protocol: MEDIA_PROTOCOL}, 503);
+      }
+
+      const kind = cleanKind(url.searchParams.get('kind'));
+      if (!kind) return json({error: 'invalid_kind', stage: 'presign_validate', protocol: MEDIA_PROTOCOL}, 400);
+      const ext = cleanExt(url.searchParams.get('ext'));
+      const size = Number(url.searchParams.get('size') || 0);
+      const maxBytes = MAX_BYTES[kind] || MAX_BYTES.default;
+      if (!Number.isFinite(size) || size <= 0) {
+        return json({error: 'invalid_size', stage: 'presign_validate', protocol: MEDIA_PROTOCOL}, 400);
+      }
+      if (size > maxBytes) {
+        return json({error: 'file_too_large', stage: 'presign_validate', protocol: MEDIA_PROTOCOL, maxBytes}, 413);
+      }
+
+      const contentType = contentTypeFor(ext, url.searchParams.get('contentType'));
+      const key = kind + '/' + claims.sub + '/' + Date.now() + '_' + crypto.randomUUID() + '.' + ext;
+      try {
+        const uploadUrl = await presignR2Put(env, key, contentType, 900);
+        const mediaUrl = url.origin + '/media/' + encodeKeyForUrl(key);
+        uploadLog('presign_created', {kind, size, uid: claims.sub.slice(0, 8)});
+        return json({
+          ok: true,
+          protocol: MEDIA_PROTOCOL,
+          transport: 'direct-r2-presigned-put',
+          method: 'PUT',
+          uploadUrl,
+          mediaUrl,
+          key,
+          contentType,
+          size,
+          expiresIn: 900,
+        });
+      } catch (e) {
+        uploadLog('presign_failed', {kind, size, message: String(e?.message || e)});
+        return json({error: 'presign_failed', stage: 'presign_sign', protocol: MEDIA_PROTOCOL, message: String(e?.message || e)}, 503);
+      }
     }
 
     if (request.method === 'GET' && url.pathname === '/upload/ws') {
