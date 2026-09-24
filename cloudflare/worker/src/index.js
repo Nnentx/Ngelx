@@ -19,6 +19,7 @@ const ALLOWED_KINDS = new Set([
 
 const MAX_BYTES = {
   videos: 80 * 1024 * 1024,
+  stories: 50 * 1024 * 1024,
   'profile-intros': 35 * 1024 * 1024,
   music: 15 * 1024 * 1024,
   'chat-files': 30 * 1024 * 1024,
@@ -715,7 +716,7 @@ export default {
           });
         } else {
           if (!request.body) return json({error: 'empty_file'}, 400);
-          const streamKinds = new Set(['videos', 'profile-intros', 'music', 'chat-files', 'chat-audio']);
+          const streamKinds = new Set(['videos', 'stories', 'profile-intros', 'music', 'chat-files', 'chat-audio']);
 
           if (streamKinds.has(kind) && announced > 0) {
             saved = await env.MEDIA.put(key, request.body, {
