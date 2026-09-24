@@ -54,6 +54,28 @@ async function seed() {
       inviteCode: 'CODE123',
       groupDeleted: false,
     });
+    await setDoc(doc(db, 'chats/group_public_discoverable'), {
+      isGroup: true,
+      discoverable: true,
+      groupName: 'Keşfet Açık Grup',
+      groupPhotoUrl: '',
+      groupDescription: 'Keşfetten katılınabilen grup',
+      members: ['admin'],
+      admins: ['admin'],
+      moderators: [],
+      createdBy: 'admin',
+      formerMembers: ['outsider'],
+      hiddenFor: ['outsider'],
+      maxMembers: 60,
+      onlyAdminsCanPost: false,
+      onlyAdminsCanAddMembers: false,
+      onlyAdminsCanEditGroup: true,
+      onlyAdminsCanPin: true,
+      onlyAdminsCanMentionAll: false,
+      newMembersSeeHistory: true,
+      joinApproval: false,
+      groupDeleted: false,
+    });
     await setDoc(doc(db, 'group_invites/CODE123'), {
       chatId: 'group_open',
       groupName: 'Açık Grup',
@@ -213,6 +235,27 @@ try {
 
   // Üye veya eski üye olmayan kişi grup belgesini doğrudan okuyamaz.
   await assertFails(getDoc(doc(outsider, 'chats/group_open')));
+
+  // Keşfete açık grup üye olmayan oturum açmış kullanıcı tarafından görülebilir.
+  await assertSucceeds(getDoc(doc(outsider, 'chats/group_public_discoverable')));
+
+  // Keşfete açık ve onaysız gruba davet kodu olmadan güvenli self-join yapılabilir.
+  await assertSucceeds(updateDoc(doc(outsider, 'chats/group_public_discoverable'), {
+    members: arrayUnion('outsider'),
+    formerMembers: arrayRemove('outsider'),
+    hiddenFor: arrayRemove('outsider'),
+    updatedAt: serverTimestamp(),
+  }));
+
+  const publicJoined = await assertSucceeds(getDoc(doc(outsider, 'chats/group_public_discoverable')));
+  assert.equal(publicJoined.data().members.includes('outsider'), true);
+  assert.equal(publicJoined.data().formerMembers.includes('outsider'), false);
+
+  // Üye olduktan sonra aynı kullanıcı grup yönetim metadatasını ele geçiremez.
+  await assertFails(updateDoc(doc(outsider, 'chats/group_public_discoverable'), {
+    admins: ['admin', 'outsider'],
+    updatedAt: serverTimestamp(),
+  }));
 
   // Geçerli davet kodu ile autojoin talebi oluşturulabilir.
   await assertSucceeds(setDoc(doc(bob, 'chats/group_open/joinRequests/bob'), {
