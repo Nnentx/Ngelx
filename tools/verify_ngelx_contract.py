@@ -696,6 +696,25 @@ for token in (
 if "metin:ekleyen+' seni '+grupAdi+' grubuna ekledi'" in app:
     errors.append("Gruba eklenme bildiriminde gönderen adı iki kez ekleniyor.")
 
+# Build 267: notification categories must be independent and group cards must
+# keep their group identity while muted-group administrative events remain visible.
+for token in (
+    "final grupBildirimi=hedefTuru=='group'||tur=='group'||(olayTuru??'').startsWith('group_');",
+    "final sosyalBildirimi=tur=='friend'||tur=='friend_request'||tur=='follow_request'||tur=='friend_accepted'||tur=='follow_accepted';",
+    "final etkilesimBildirimi=tur=='interaction'||tur=='like'||tur=='comment';",
+    "final aramaBildirimi=tur=='call';",
+    "callNotifications",
+    "final sessizeBagli=tur=='message'||tur=='call'||olayTuru=='group_message'||olayTuru=='group_mention';",
+    "final grupFoto=(v['targetPhotoUrl']??'').toString();",
+    "final foto=grup&&grupFoto.isNotEmpty?grupFoto:gonderenFoto;",
+    "olay.startsWith('group_')",
+):
+    if token not in app:
+        errors.append("Build 267 bildirim kategori sözleşmesi eksik: " + token)
+
+if app.count("olayTuru:goruntulu?'group_video_call':'group_audio_call'") < 2:
+    errors.append("Tüm grup arama başlatma yolları yapılandırılmış grup bildirim metadata'sı taşımalı.")
+
 if errors:
     print("NgelX contract doğrulaması BAŞARISIZ:")
     for e in errors:
