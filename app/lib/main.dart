@@ -6534,7 +6534,7 @@ class _YeniYuklePageState extends State<YuklePage> {
       clipBehavior:Clip.antiAlias,
       child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
         if(foto)
-          SizedBox(height:220,child:Stack(fit:StackFit.expand,children:[ClipRect(child:RotatedBox(quarterTurns:fotoDonus%4,child:Image.file(File(secilen.path),fit:kareKirp?BoxFit.cover:BoxFit.contain,errorBuilder:(_,__,___)=>const Center(child:Icon(Icons.broken_image_outlined,size:48,color:Colors.black38))))),if(medyalar.length>1)Positioned(top:10,right:10,child:Container(padding:const EdgeInsets.symmetric(horizontal:10,vertical:6),decoration:BoxDecoration(color:Colors.black65,borderRadius:BorderRadius.circular(14)),child:Text('1/${medyalar.length}',style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w900))))]))
+          SizedBox(height:220,child:Stack(fit:StackFit.expand,children:[ClipRect(child:RotatedBox(quarterTurns:fotoDonus%4,child:Image.file(File(secilen.path),fit:kareKirp?BoxFit.cover:BoxFit.contain,errorBuilder:(_,__,___)=>const Center(child:Icon(Icons.broken_image_outlined,size:48,color:Colors.black38))))),if(medyalar.length>1)Positioned(top:10,right:10,child:Container(padding:const EdgeInsets.symmetric(horizontal:10,vertical:6),decoration:BoxDecoration(color:Colors.black.withValues(alpha:.65),borderRadius:BorderRadius.circular(14)),child:Text('1/${medyalar.length}',style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w900))))]))
         else
           Container(
             height:150,
