@@ -540,3 +540,26 @@
 5. Bir grubu sessize al. Yeni grup mesajı/bahsetme/arama bildirimi gelmemeli; aynı gruba yeni üye eklenme veya katılma onayı gibi yönetim bildirimi kaybolmamalı.
 6. Grup fotoğrafı olan bir gruptan mesaj gönder. Aktivite kartında grup fotoğrafı görünmeli ve karta basınca doğru grup açılmalı.
 7. Grup Bilgileri içinden sesli/görüntülü arama başlat. Karşı hesapta bildirim **GRUP** olarak görünmeli ve doğru grup aramasına yönlenmeli.
+
+
+## 2026-09-25 — Build 268 grup sohbeti yükleme donması düzeltmesi
+
+- Daha önce özellikle not edilen **gruba girince mesajların yüklenme ekranında kalması / donma hissi** yeniden ele alındı.
+- Grup sohbeti artık yalnızca canlı Firestore akışını beklemiyor; daha önce görülen son 100 grup mesajı **yerel Firestore önbelleğinden** hızlıca alınabiliyor.
+- Ağ akışı gecikirse önbellekteki mesajlar gösterilmeye devam ediyor; kullanıcı boş/donmuş ekranda beklemiyor.
+- Canlı akış hata verirse ve önbellek varsa mevcut mesajlar korunuyor; önbellek de yoksa açık **Yeniden dene** durumu gösteriliyor.
+- İlk bağlantı 2 saniyeyi aşarsa sonsuz spinner yerine **“Mesaj bağlantısı yavaş”** durumu ve **Şimdi yeniden dene** butonu gösteriliyor. Bağlantı sonradan gelirse mesajlar otomatik güncelleniyor.
+- Yeniden dene işlemi hem canlı mesaj akışını hem de yerel önbellek okumasını tekrar başlatıyor.
+- Grup geçmişi yine en son 100 mesajla sınırlı; açılışta tüm grup geçmişi indirilmediği için performans koruması devam ediyor.
+- Eski NgelX logo tasarım kodları ve iki logo asset'i aynen korunuyor.
+- Sürüm **v1.0.57 • Yapı 268**.
+
+### Build 268 gerçek cihaz doğrulama sırası
+
+1. Daha önce mesaj bulunan bir gruba gir. Daha önce görülen mesajlar mümkünse anında/çok kısa sürede görünmeli.
+2. İnterneti yavaşlat veya kısa süre kapatıp grubu aç. Ekran sonsuz spinner'da kalmamalı; önbellekte mesaj varsa onları göstermeli.
+3. Önbelleği olmayan yeni bir grupta bağlantı gecikirse yaklaşık 2 saniye sonra **Mesaj bağlantısı yavaş** görünmeli ve uygulama donmamalı.
+4. **Şimdi yeniden dene** butonuna bas; bağlantı geldikten sonra mesaj listesi kendiliğinden dolmalı.
+5. Grup içinde yeni mesaj gönder; mesaj listede görünmeli ve karşı hesapta okunmamış sayısı/bildirim akışı çalışmalı.
+6. Aktivite'den grup mesajı bildirimine dokunup gruba gir; doğru grup açılmalı ve mesaj yükleme ekranında takılmamalı.
+7. Gruptan çıkarılmış bir kullanıcının eski mesaj geçmişi davranışı ve **Bu gruba mesaj gönderemezsin** paneli bozulmamış olmalı.
