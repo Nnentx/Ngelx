@@ -70,7 +70,7 @@ const ngelxPrivateBlueBorder = Color(0xFFD8E8FF);
 const ngelxPrivateBlueInk = Color(0xFF10213A);
 
 const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.57');
-const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '211');
+const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '258');
 const ngelxGroupBorder = Color(0xFFD9EEE0);
 
 class NgelXBirthDateFormatter extends TextInputFormatter {
@@ -4625,60 +4625,24 @@ class _YeniYorumlarState extends State<Yorumlar> {
     }catch(_){}
 
     setState(()=>gonderiliyor=true);
-    final yanitId=yanitlananId;
-    final yanitKullanici=yanitlananKullanici;
+    final yanitId=yanitlananId,yanitKullanici=yanitlananKullanici;
     try{
-      final profil=await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
-      final p=profil.data()??<String,dynamic>{};
-      final yorumRef=ref.doc();
-      final videoRef=FirebaseFirestore.instance.collection('videos').doc(widget.videoId);
-      final batch=FirebaseFirestore.instance.batch();
-      batch.set(yorumRef,{
-        'userId':user.uid,
-        'username':(p['username']??user.displayName??'ngelx').toString(),
-        'photoUrl':(p['photoUrl']??'').toString(),
-        'text':metin,
-        'parentId':yanitId??'',
-        'replyToUsername':yanitKullanici??'',
-        'likedBy':<String>[],
-        'createdAt':FieldValue.serverTimestamp(),
-      });
-      batch.set(videoRef,{'commentCount':FieldValue.increment(1)},SetOptions(merge:true));
-      await batch.commit();
-
-      yorum.clear();
-      if(mounted)setState((){
-        yanitlananId=null;
-        yanitlananKullanici=null;
-        gonderiliyor=false;
-      });
-
+      final profil=await FirebaseFirestore.instance.collection('users').doc(user.uid).get().timeout(const Duration(seconds:8)),p=profil.data()??<String,dynamic>{};
+      final yorumRef=ref.doc(),videoRef=FirebaseFirestore.instance.collection('videos').doc(widget.videoId);
+      await yorumRef.set({'userId':user.uid,'username':(p['username']??user.displayName??'ngelx').toString(),'photoUrl':(p['photoUrl']??'').toString(),'text':metin,'parentId':yanitId??'','replyToUsername':yanitKullanici??'','likedBy':<String>[],'createdAt':FieldValue.serverTimestamp(),'clientCreatedAt':Timestamp.now()}).timeout(const Duration(seconds:12));
+      unawaited(videoRef.set({'commentCount':FieldValue.increment(1)},SetOptions(merge:true)).timeout(const Duration(seconds:8)).catchError((_){ }));
+      yorum.clear();if(mounted)setState((){yanitlananId=null;yanitlananKullanici=null;});
       if(yanitId!=null&&yanitId.isNotEmpty){
-        unawaited(ref.doc(yanitId).get().then((anaYorum)async{
-          final hedefUid=(anaYorum.data()?['userId']??'').toString();
-          if(hedefUid.isEmpty||hedefUid==user.uid)return;
-          await uygulamaBildirimiGonder(
-            toUid:hedefUid,
-            fromUid:user.uid,
-            tur:'interaction',
-            metin:'Yorumuna yanıt verdi',
-            belgeId:widget.videoId,
-          );
-        }).catchError((_){ }));
+        unawaited(ref.doc(yanitId).get().then((ana)async{final hedef=(ana.data()?['userId']??'').toString();if(hedef.isNotEmpty&&hedef!=user.uid)await uygulamaBildirimiGonder(toUid:hedef,fromUid:user.uid,tur:'interaction',metin:'Yorumuna yanıt verdi',belgeId:widget.videoId);}).catchError((_){ }));
       }else if(icerikSahibi.isNotEmpty&&icerikSahibi!=user.uid){
-        unawaited(uygulamaBildirimiGonder(
-          toUid:icerikSahibi,
-          fromUid:user.uid,
-          tur:'interaction',
-          metin:'Gönderine yorum yaptı',
-          belgeId:widget.videoId,
-        ).catchError((_){ }));
+        unawaited(uygulamaBildirimiGonder(toUid:icerikSahibi,fromUid:user.uid,tur:'interaction',metin:'Gönderine yorum yaptı',belgeId:widget.videoId).catchError((_){ }));
       }
+    }on TimeoutException{
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Yorum gönderimi zaman aşımına uğradı. İnterneti kontrol edip tekrar dene.')));
     }catch(e){
-      if(mounted){
-        setState(()=>gonderiliyor=false);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Yorum gönderilemedi, tekrar dene: $e')));
-      }
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Yorum gönderilemedi, tekrar dene: $e')));
+    }finally{
+      if(mounted)setState(()=>gonderiliyor=false);
     }
   }
 
@@ -4897,13 +4861,12 @@ class YorumKarti extends StatelessWidget {
           if((mevcut[aktifUid]??'').toString()==emoji)await yorumRef.update({alan:FieldValue.delete()});
           else await yorumRef.set({alan:emoji},SetOptions(merge:true));
         }
-      } else if (secim == 'copy') {
-        await Clipboard.setData(ClipboardData(text: metin));
-        if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Yorum kopyalandı.')));
-      } else if (secim == 'report') {
-        await sikayetEt(context, hedefTuru:'yorum', hedefId:'$videoId/$yorumId', hedefUid:profilUid);
-      } else if (secim == 'block') {
-        await kullaniciyiEngelle(context, profilUid);
+      } else if(secim=='copy'){
+        try{await Clipboard.setData(ClipboardData(text:metin));if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Yorum kopyalandı ✅')));}catch(_){if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Yorum kopyalanamadı.')));}
+      }else if(secim=='report'){
+        try{await sikayetEt(context,hedefTuru:'yorum',hedefId:'$videoId/$yorumId',hedefUid:profilUid).timeout(const Duration(seconds:12));}on TimeoutException{if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Şikâyet gönderimi zaman aşımına uğradı.')));}
+      }else if(secim=='block'){
+        try{await kullaniciyiEngelle(context,profilUid).timeout(const Duration(seconds:12));}on TimeoutException{if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Engelleme işlemi zaman aşımına uğradı.')));}
       } else if (secim == 'delete') {
         final onay = await showDialog<bool>(context:context,builder:(c)=>Theme(data:ThemeData.light(),child:AlertDialog(backgroundColor:Colors.white,surfaceTintColor:Colors.white,title:const Text('Yorum silinsin mi?',style:TextStyle(color:Colors.black87)),content:const Text('Bu işlem geri alınamaz.',style:TextStyle(color:Colors.black54)),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),FilledButton(style:FilledButton.styleFrom(backgroundColor:Colors.red),onPressed:()=>Navigator.pop(c,true),child:const Text('Sil'))]))) ?? false;
         if (onay) {
@@ -5623,7 +5586,7 @@ class _KesfetPageState extends State<KesfetPage> {
       _TrendEtiketi(Icons.directions_run_rounded,'#spor',const Color(0xFFFFEEF1),Colors.red,onTap:()=>_etiketAra('#spor')),
       _TrendEtiketi(Icons.music_note_rounded,'#müzik',const Color(0xFFF1EAFE),mor,onTap:()=>_etiketAra('#müzik')),
       _TrendEtiketi(Icons.computer_rounded,'#teknoloji',const Color(0xFFE7FAFA),const Color(0xFF00AFC1),onTap:()=>_etiketAra('#teknoloji')),
-      _TrendEtiketi(Icons.flight_takeoff_rounded,'#seyahat',const Color(0xFFEAF2FF),Colors.blue,onTap:()=>_etiketAra('#seyahat')),
+      _TrendEtiketi(Icons.trending_up_rounded,'#trend',const Color(0xFFEAF2FF),Colors.blue,onTap:()=>_etiketAra('#trend')),
     ]))),
     SliverToBoxAdapter(child:Padding(padding:const EdgeInsets.fromLTRB(16,20,16,8),child:Text(t('trendContent'),style:const TextStyle(color:Colors.black,fontSize:21,fontWeight:FontWeight.w900)))),
     SliverPadding(
@@ -14809,9 +14772,12 @@ class _SohbetPageState extends State<SohbetPage> {
                           cursorColor:ngelxPrivateBlue,
                           decoration:InputDecoration(
                             hintText:'Mesaj',
+                            hintMaxLines:1,
+                            isDense:true,
+                            hintStyle:const TextStyle(fontSize:14.5,height:1.0,color:Colors.black45),
                             filled:true,
                             fillColor:ngelxPrivateBlueSoft,
-                            contentPadding:const EdgeInsets.symmetric(horizontal:16,vertical:10),
+                            contentPadding:const EdgeInsets.symmetric(horizontal:10,vertical:10),
                             border:OutlineInputBorder(borderRadius:BorderRadius.circular(24),borderSide:BorderSide.none),
                             enabledBorder:OutlineInputBorder(borderRadius:BorderRadius.circular(24),borderSide:BorderSide.none),
                             focusedBorder:OutlineInputBorder(borderRadius:BorderRadius.circular(24),borderSide:const BorderSide(color:ngelxPrivateBlue,width:1.2)),
