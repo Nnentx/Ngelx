@@ -72,7 +72,7 @@ const ngelxPrivateBlueBorder = Color(0xFFD8E8FF);
 const ngelxPrivateBlueInk = Color(0xFF10213A);
 
 const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.57');
-const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '264');
+const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '265');
 const ngelxGroupBorder = Color(0xFFD9EEE0);
 
 final GlobalKey<NavigatorState> ngelxNavigatorKey=GlobalKey<NavigatorState>();
@@ -1757,7 +1757,16 @@ String mesajIzinAciklama(String kod){
 }
 Future<void> diliDegistir(String dil) async {uygulamaDili.value=dil;final h=await SharedPreferences.getInstance();await h.setString('uygulama_dili',dil);}
 
-Future<void> uygulamaBildirimiGonder({required String toUid,required String fromUid,required String tur,required String metin,String? belgeId}) async {
+Future<void> uygulamaBildirimiGonder({
+  required String toUid,
+  required String fromUid,
+  required String tur,
+  required String metin,
+  String? belgeId,
+  String? hedefTuru,
+  String? hedefBaslik,
+  String? hedefFoto,
+}) async {
   if(toUid==fromUid)return;
   final hedef=await FirebaseFirestore.instance.collection('users').doc(toUid).get();
   final ayar=hedef.data()??{};
@@ -1780,6 +1789,9 @@ Future<void> uygulamaBildirimiGonder({required String toUid,required String from
     'senderName':gonderenAdi,'photoUrl':gonderenFoto,
     'text':'$gonderenAdi $metin',
     if(belgeId!=null)'sourceId':belgeId,
+    if(hedefTuru!=null&&hedefTuru.isNotEmpty)'targetKind':hedefTuru,
+    if(hedefBaslik!=null&&hedefBaslik.isNotEmpty)'targetTitle':hedefBaslik,
+    if(hedefFoto!=null&&hedefFoto.isNotEmpty)'targetPhotoUrl':hedefFoto,
     'read':false,'createdAt':FieldValue.serverTimestamp(),
   });
 }
@@ -8305,8 +8317,11 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
           if(hedef==ben||sessizde.contains(hedef)||etiketler.contains(hedef))continue;
           unawaited(uygulamaBildirimiGonder(
             toUid:hedef,fromUid:ben,tur:'message',
-            metin:ad+': '+onizleme,
+            metin:'${widget.ad} grubunda: '+onizleme,
             belgeId:widget.chatId,
+            hedefTuru:'group',
+            hedefBaslik:widget.ad,
+            hedefFoto:widget.foto,
           ).catchError((_){ }));
         }
         if(!sessizMesaj&&etiketler.isNotEmpty){
@@ -8314,8 +8329,11 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
             if(hedef==ben||!uyeler.contains(hedef))continue;
             unawaited(uygulamaBildirimiGonder(
               toUid:hedef,fromUid:ben,tur:'message',
-              metin:'$ad grupta senden bahsetti',
+              metin:'${widget.ad} grubunda senden bahsetti',
               belgeId:widget.chatId,
+              hedefTuru:'group',
+              hedefBaslik:widget.ad,
+              hedefFoto:widget.foto,
             ).catchError((_){ }));
           }
         }
@@ -9274,7 +9292,16 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
         final uyeler=List<String>.from(grup.data()?['members']??const[]);
         for(final uye in uyeler){
           if(uye==ben)continue;
-          unawaited(uygulamaBildirimiGonder(toUid:uye,fromUid:ben,tur:'call',metin:goruntulu?'$grupAdi grubunda görüntülü arama başlattı':'$grupAdi grubunda sesli arama başlattı',belgeId:widget.chatId).catchError((_){ }));
+          unawaited(uygulamaBildirimiGonder(
+            toUid:uye,
+            fromUid:ben,
+            tur:'call',
+            metin:goruntulu?'$grupAdi grubunda görüntülü arama başlattı':'$grupAdi grubunda sesli arama başlattı',
+            belgeId:widget.chatId,
+            hedefTuru:'group',
+            hedefBaslik:grupAdi,
+            hedefFoto:widget.foto,
+          ).catchError((_){ }));
         }
       }).catchError((_){ }));
       if(!mounted)return;
@@ -16009,13 +16036,117 @@ class AktivitePage extends StatelessWidget {
   }
 
   Future<void> _aktiviteAc(BuildContext context, QueryDocumentSnapshot<Map<String,dynamic>> d)async{
-    final v=d.data();await d.reference.set({'read':true},SetOptions(merge:true));if(!context.mounted)return;
-    final from=(v['fromUid']??v['senderId']??v['senderUid']??v['userId']??'').toString(),tur=(v['type']??'').toString();
+    final v=d.data();
+    try{await d.reference.set({'read':true},SetOptions(merge:true)).timeout(const Duration(seconds:6));}catch(_){}
+    if(!context.mounted)return;
+
+    final from=(v['fromUid']??v['senderId']??v['senderUid']??v['userId']??'').toString();
+    final tur=(v['type']??'').toString();
     final kaynak=(v['sourceId']??v['chatId']??v['belgeId']??v['postId']??v['contentId']??'').toString();
-    if(kaynak.isNotEmpty&&(tur=='interaction'||tur=='like'||tur=='comment')){Navigator.push(context,MaterialPageRoute(builder:(_)=>IcerikBaglantiPage(icerikId:kaynak)));return;}
-    if(from.isNotEmpty&&(tur=='friend'||tur=='follow_request'||tur=='friend_request'||tur=='friend_accepted'||tur=='follow_accepted')){Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciProfilPage(uid:from)));return;}
-    if(tur=='call'&&kaynak.isNotEmpty){final ref=FirebaseFirestore.instance.collection('calls').doc(kaynak),arama=await ref.get(),a=arama.data();if(!context.mounted)return;if(a==null||a['status']=='ended'){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bu arama sona ermiş.')));return;}final p=await FirebaseFirestore.instance.collection('users').doc(from).get();if(!context.mounted)return;final baslik=a['group']==true?(a['title']??'Grup araması').toString():(p.data()?['displayName']??p.data()?['username']??'NgelX araması').toString();final foto=a['group']==true?'':(p.data()?['photoUrl']??'').toString();Navigator.push(context,MaterialPageRoute(builder:(_)=>NgelXAramaPage(roomName:(a['roomName']??'').toString(),baslik:baslik,foto:foto,goruntulu:a['video']==true,aramaRef:ref)));return;}
-    if(tur=='message'&&from.isNotEmpty){final p=await FirebaseFirestore.instance.collection('users').doc(from).get();if(!context.mounted)return;final ids=[FirebaseAuth.instance.currentUser!.uid,from]..sort();Navigator.push(context,MaterialPageRoute(builder:(_)=>SohbetPage(chatId:(v['sourceId']??v['chatId']??v['belgeId']??ids.join('_')).toString(),digerUid:from,ad:(p.data()?['displayName']??p.data()?['username']??'Kullanıcı').toString(),foto:(p.data()?['photoUrl']??'').toString())));}
+    final hedefTuru=(v['targetKind']??'').toString();
+
+    if(kaynak.isNotEmpty&&(tur=='interaction'||tur=='like'||tur=='comment')){
+      Navigator.push(context,MaterialPageRoute(builder:(_)=>IcerikBaglantiPage(icerikId:kaynak)));
+      return;
+    }
+
+    if(from.isNotEmpty&&(tur=='friend'||tur=='follow_request'||tur=='friend_request'||tur=='friend_accepted'||tur=='follow_accepted')){
+      Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciProfilPage(uid:from)));
+      return;
+    }
+
+    if(tur=='message'&&kaynak.isNotEmpty){
+      try{
+        final chat=await FirebaseFirestore.instance.collection('chats').doc(kaynak).get().timeout(const Duration(seconds:8));
+        final cv=chat.data();
+        final grup=cv?['isGroup']==true||hedefTuru=='group';
+        if(grup){
+          final ben=FirebaseAuth.instance.currentUser?.uid;
+          final uyeler=List<String>.from(cv?['members']??const[]);
+          if(ben==null||!uyeler.contains(ben)){
+            if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bu grup artık erişilebilir değil.')));
+            return;
+          }
+          final ad=(cv?['groupName']??v['targetTitle']??'NgelX grubu').toString();
+          final foto=(cv?['groupPhotoUrl']??v['targetPhotoUrl']??'').toString();
+          if(!context.mounted)return;
+          Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupSohbetPage(chatId:kaynak,ad:ad,foto:foto)));
+          return;
+        }
+      }catch(_){
+        if(hedefTuru=='group'&&context.mounted){
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Grup şu anda açılamadı. Bağlantını kontrol edip tekrar dene.')));
+          return;
+        }
+      }
+    }
+
+    if(tur=='call'&&kaynak.isNotEmpty){
+      final chatRef=FirebaseFirestore.instance.collection('chats').doc(kaynak);
+      try{
+        final chat=await chatRef.get().timeout(const Duration(seconds:8));
+        final a=chat.data();
+        final oda=(a?['callRoomName']??'').toString();
+        if(a!=null&&oda.isNotEmpty){
+          final durum=(a['callStatus']??'').toString();
+          if(durum=='ended'||durum=='declined'||durum=='cancelled'){
+            if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bu arama sona ermiş.')));
+            return;
+          }
+          final grup=a['isGroup']==true||a['callGroup']==true||hedefTuru=='group';
+          String baslik=(a['callTitle']??a['groupName']??v['targetTitle']??'NgelX araması').toString();
+          String foto=(a['groupPhotoUrl']??v['targetPhotoUrl']??'').toString();
+          if(!grup&&from.isNotEmpty){
+            try{
+              final p=await FirebaseFirestore.instance.collection('users').doc(from).get().timeout(const Duration(seconds:6));
+              baslik=(p.data()?['displayName']??p.data()?['username']??baslik).toString();
+              foto=(p.data()?['photoUrl']??foto).toString();
+            }catch(_){}
+          }
+          if(!context.mounted)return;
+          Navigator.push(context,MaterialPageRoute(builder:(_)=>NgelXAramaPage(
+            roomName:oda,
+            baslik:baslik,
+            foto:foto,
+            goruntulu:a['callVideo']==true,
+            aramaRef:chatRef,
+          )));
+          return;
+        }
+      }catch(_){}
+
+      // Eski bildirim kayıtları için geriye dönük fallback.
+      try{
+        final ref=FirebaseFirestore.instance.collection('calls').doc(kaynak);
+        final arama=await ref.get().timeout(const Duration(seconds:8));
+        final a=arama.data();
+        if(!context.mounted)return;
+        if(a==null||a['status']=='ended'){
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bu arama sona ermiş.')));
+          return;
+        }
+        final p=from.isEmpty?null:await FirebaseFirestore.instance.collection('users').doc(from).get().timeout(const Duration(seconds:6));
+        if(!context.mounted)return;
+        final baslik=a['group']==true?(a['title']??'Grup araması').toString():(p?.data()?['displayName']??p?.data()?['username']??'NgelX araması').toString();
+        final foto=a['group']==true?'':(p?.data()?['photoUrl']??'').toString();
+        Navigator.push(context,MaterialPageRoute(builder:(_)=>NgelXAramaPage(roomName:(a['roomName']??'').toString(),baslik:baslik,foto:foto,goruntulu:a['video']==true,aramaRef:ref)));
+      }catch(_){
+        if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Arama bilgisi açılamadı.')));
+      }
+      return;
+    }
+
+    if(tur=='message'&&from.isNotEmpty){
+      final p=await FirebaseFirestore.instance.collection('users').doc(from).get();
+      if(!context.mounted)return;
+      final ids=[FirebaseAuth.instance.currentUser!.uid,from]..sort();
+      Navigator.push(context,MaterialPageRoute(builder:(_)=>SohbetPage(
+        chatId:(v['sourceId']??v['chatId']??v['belgeId']??ids.join('_')).toString(),
+        digerUid:from,
+        ad:(p.data()?['displayName']??p.data()?['username']??'Kullanıcı').toString(),
+        foto:(p.data()?['photoUrl']??'').toString(),
+      )));
+    }
   }
 
   Future<void> istegiSonuclandir(BuildContext context, QueryDocumentSnapshot<Map<String, dynamic>> belge, bool kabul) async {
