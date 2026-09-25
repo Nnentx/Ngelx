@@ -8,13 +8,32 @@ APP = ROOT / "app" / "lib" / "main.dart"
 GROUP_QUALITY = ROOT / "app" / "lib" / "group_quality.dart"
 WORKER = ROOT / "cloudflare" / "worker" / "src" / "index.js"
 RULES = ROOT / "firestore.rules"
+PUBSPEC = ROOT / "app" / "pubspec.yaml"
 
 app = APP.read_text(encoding="utf-8")
 group_quality = GROUP_QUALITY.read_text(encoding="utf-8")
 worker = WORKER.read_text(encoding="utf-8")
 rules = RULES.read_text(encoding="utf-8")
+pubspec = PUBSPEC.read_text(encoding="utf-8")
 
 errors = []
+
+# The original NgelX logo implementation is a protected design asset.
+# Individual screens may hide it by layout/visibility rules, but the shared
+# Logo widget and original image assets must not be deleted or replaced.
+for token in (
+    "class Logo extends StatelessWidget",
+    "'assets/ngelx_logo.png'",
+    "'assets/ngelx_logo_horizontal.png'",
+):
+    if token not in app:
+        errors.append("Eski NgelX logo tasarım kodu korunmalı: " + token)
+for token in (
+    "- assets/ngelx_logo.png",
+    "- assets/ngelx_logo_horizontal.png",
+):
+    if token not in pubspec:
+        errors.append("Eski NgelX logo asset kaydı korunmalı: " + token)
 
 # Every media kind sent by the Flutter app must be accepted by the R2 worker.
 app_kinds = set(re.findall(r"kind\s*:\s*['\"]([^'\"]+)['\"]", app))
