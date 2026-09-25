@@ -6591,6 +6591,55 @@ class _YeniYuklePageState extends State<YuklePage> {
     if(tur!='photo'||medya==null)return const SizedBox.shrink();
     return Column(children:[Row(children:[OutlinedButton.icon(onPressed:yukleniyor?null:(){setState(()=>fotoDonus=(fotoDonus+1)%4);_taslakDegisti();},icon:const Icon(Icons.rotate_90_degrees_ccw_rounded,size:18),label:const Text('90° Döndür')),const SizedBox(width:8),FilterChip(selected:kareKirp,label:const Text('Kare kırp'),onSelected:yukleniyor?null:(v){setState(()=>kareKirp=v);_taslakDegisti();})]),SizedBox(height:42,child:ListView(scrollDirection:Axis.horizontal,children:['Yok','Parlak','Sıcak','Soğuk','Siyah Beyaz'].map((e)=>Padding(padding:const EdgeInsets.only(right:7),child:ChoiceChip(label:Text(e),selected:fotoEfekti==e,onSelected:yukleniyor?null:(_){setState(()=>fotoEfekti=e);_taslakDegisti();}))).toList()))]);
   }
+  Widget _cokluMedyaSirala(){
+    if(tur!='photo'||medyalar.length<2)return const SizedBox.shrink();
+    return Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+      const Padding(
+        padding:EdgeInsets.only(bottom:8),
+        child:Text('Fotoğraf sırası',style:TextStyle(fontWeight:FontWeight.w800,color:Colors.black87)),
+      ),
+      SizedBox(
+        height:76,
+        child:ReorderableListView.builder(
+          scrollDirection:Axis.horizontal,
+          buildDefaultDragHandles:true,
+          itemCount:medyalar.length,
+          onReorder:(eski,yeni){
+            if(eski<yeni)yeni-=1;
+            setState((){
+              final x=medyalar.removeAt(eski);
+              medyalar.insert(yeni,x);
+              medya=medyalar.first;
+            });
+            _taslakDegisti();
+          },
+          itemBuilder:(_,index)=>Container(
+            key:ValueKey('${medyalar[index].path}_$index'),
+            width:70,
+            margin:const EdgeInsets.only(right:8),
+            decoration:BoxDecoration(
+              borderRadius:BorderRadius.circular(14),
+              border:Border.all(color:index==0?mor:const Color(0xFFD9DCE3),width:index==0?2:1),
+            ),
+            clipBehavior:Clip.antiAlias,
+            child:Stack(fit:StackFit.expand,children:[
+              Image.file(File(medyalar[index].path),fit:BoxFit.cover,errorBuilder:(_,__,___)=>const ColoredBox(color:Color(0xFFF1F2F5),child:Icon(Icons.broken_image_outlined))),
+              Positioned(
+                left:4,top:4,
+                child:Container(
+                  padding:const EdgeInsets.symmetric(horizontal:6,vertical:3),
+                  decoration:BoxDecoration(color:Colors.black54,borderRadius:BorderRadius.circular(10)),
+                  child:Text('${index+1}',style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w800,fontSize:11)),
+                ),
+              ),
+            ]),
+          ),
+        ),
+      ),
+      const SizedBox(height:10),
+    ]);
+  }
+
   Widget _etiketOnerileri(){
     final ham=etiketler.text.trim();if(ham.isEmpty)return const SizedBox.shrink();final son=ham.split(RegExp(r'\s+')).last;
     if(son.startsWith('@')&&son.length>1){final ara=son.substring(1).toLowerCase();return SizedBox(height:46,child:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(stream:FirebaseFirestore.instance.collection('users').limit(30).snapshots(),builder:(_,s){final ks=(s.data?.docs??[]).where((d){final u=(d.data()['username']??'').toString().toLowerCase();return u.isNotEmpty&&u.contains(ara)&&d.id!=FirebaseAuth.instance.currentUser?.uid;}).take(6).toList();return ListView(scrollDirection:Axis.horizontal,children:ks.map((d){final u=(d.data()['username']??'').toString();return Padding(padding:const EdgeInsets.only(right:7),child:ActionChip(label:Text('@'+u),onPressed:(){final p=ham.split(RegExp(r'\s+'))..removeLast();etiketler.text=[...p,'@'+u].where((x)=>x.isNotEmpty).join(' ')+' ';etiketler.selection=TextSelection.collapsed(offset:etiketler.text.length);}));}).toList());}));}
@@ -6653,6 +6702,7 @@ class _YeniYuklePageState extends State<YuklePage> {
               ]),
             _medyaOnizleme(),
             const SizedBox(height:8),
+            _cokluMedyaSirala(),
             _fotoDuzenleme(),
             const SizedBox(height:18),
             TextField(
