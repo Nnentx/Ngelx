@@ -492,7 +492,7 @@
 
 - Yeni grup oluşturulurken seçilen üyelere artık **“Rojin seni PARLAMENT grubuna ekledi.”** biçiminde grup üyelik bildirimi oluşturuluyor.
 - Grup daha sonra Üye Ekle ekranından üye aldığında da aynı bildirim üretiliyor; eski çift isim tekrarının oluşması engellendi.
-- Grup mesajları yapılandırılmış `eventKind: group_message` metadata'sı taşıyor. Aktivite kartı **“PARLAMENT grubundan Ferhat mesaj gönderdi • …”** düzeninde grup adını ve göndereni açıkça ayırıyor.
+- Grup mesajları yapılandırılmış `eventKind: group_message` metadata'sı taşıyor. Aktivite kartı grup adını ve göndereni açıkça ayırıyor; içerik türüne göre **mesaj gönderdi / gönderi gönderdi / fotoğraf gönderdi / video gönderdi / sesli mesaj gönderdi / dosya gönderdi / konum gönderdi** gibi doğru fiili kullanıyor. Örnek: **“PARLAMENT grubundan Ferhat gönderi gönderdi.”**
 - @bahsetme bildirimleri **“PARLAMENT grubunda Ferhat senden bahsetti.”** biçiminde gösteriliyor.
 - Grup aramaları sesli/görüntülü olay türüyle ayrılıyor ve Aktivite kartında grup kaynağı açıkça belirtiliyor.
 - Davetle katılma isteği yöneticilere grup adı/fotoğrafıyla geliyor; karta dokununca doğrudan **Katılma istekleri** ekranı açılıyor.
