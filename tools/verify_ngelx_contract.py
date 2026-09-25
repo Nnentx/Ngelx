@@ -715,6 +715,20 @@ for token in (
 if app.count("olayTuru:goruntulu?'group_video_call':'group_audio_call'") < 2:
     errors.append("Tüm grup arama başlatma yolları yapılandırılmış grup bildirim metadata'sı taşımalı.")
 
+# Build 268: group chat must not block on the network-only message stream.
+for token in (
+    "_grupMesajOnbellek",
+    "Future<void> _grupMesajOnbelleginiYukle()",
+    "GetOptions(source:Source.cache)",
+    "final hamDocs=snap.hasData",
+    "List<QueryDocumentSnapshot<Map<String,dynamic>>>.from(_grupMesajOnbellek)",
+    "Mesaj bağlantısı yavaş.",
+    "Ekran donmaz; bağlantı kurulunca mesajlar otomatik görünecek.",
+    "Grup mesajları yüklenemedi.",
+):
+    if token not in app:
+        errors.append("Build 268 grup mesaj yükleme koruması eksik: " + token)
+
 if errors:
     print("NgelX contract doğrulaması BAŞARISIZ:")
     for e in errors:
