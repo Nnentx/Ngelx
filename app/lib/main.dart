@@ -1768,6 +1768,7 @@ Future<void> uygulamaBildirimiGonder({
   String? hedefFoto,
   String? olayTuru,
   String? onizleme,
+  String? eylem,
 }) async {
   if(toUid==fromUid)return;
   final hedef=await FirebaseFirestore.instance.collection('users').doc(toUid).get();
@@ -1798,6 +1799,7 @@ Future<void> uygulamaBildirimiGonder({
     if(hedefFoto!=null&&hedefFoto.isNotEmpty)'targetPhotoUrl':hedefFoto,
     if(olayTuru!=null&&olayTuru.isNotEmpty)'eventKind':olayTuru,
     if(onizleme!=null&&onizleme.isNotEmpty)'preview':onizleme,
+    if(eylem!=null&&eylem.isNotEmpty)'eventAction':eylem,
     'read':false,'createdAt':FieldValue.serverTimestamp(),
   });
 }
@@ -8335,18 +8337,29 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
         final profil=await FirebaseFirestore.instance.collection('users').doc(ben).get();
         final ad=(profil.data()?['displayName']??profil.data()?['username']??'Bir kullanıcı').toString();
         final onizleme=sonMesaj.length>80?sonMesaj.substring(0,80)+'…':sonMesaj;
+        final mesajTuru=(veri['type']??'text').toString();
+        String bildirimEylemi='mesaj gönderdi';
+        if(mesajTuru=='shared_content')bildirimEylemi='gönderi gönderdi';
+        if(mesajTuru=='photo')bildirimEylemi='fotoğraf gönderdi';
+        if(mesajTuru=='video')bildirimEylemi='video gönderdi';
+        if(mesajTuru=='audio')bildirimEylemi='sesli mesaj gönderdi';
+        if(mesajTuru=='gif')bildirimEylemi='GIF gönderdi';
+        if(mesajTuru=='file'||mesajTuru=='document')bildirimEylemi='dosya gönderdi';
+        if(mesajTuru=='location')bildirimEylemi='konum gönderdi';
+        if(mesajTuru=='sticker')bildirimEylemi='çıkartma gönderdi';
         for(final hedef in uyeler){
           if(sessizMesaj)break;
           if(hedef==ben||sessizde.contains(hedef)||etiketler.contains(hedef))continue;
           unawaited(uygulamaBildirimiGonder(
             toUid:hedef,fromUid:ben,tur:'message',
-            metin:'${widget.ad} grubundan mesaj gönderdi',
+            metin:'${widget.ad} grubundan '+bildirimEylemi,
             belgeId:widget.chatId,
             hedefTuru:'group',
             hedefBaslik:widget.ad,
             hedefFoto:widget.foto,
             olayTuru:'group_message',
             onizleme:onizleme,
+            eylem:bildirimEylemi,
           ).catchError((_){ }));
         }
         if(!sessizMesaj&&etiketler.isNotEmpty){
@@ -16082,6 +16095,7 @@ class AktivitePage extends StatelessWidget {
     final grup=(v['targetTitle']??'').toString().trim();
     final olay=(v['eventKind']??'').toString();
     final onizleme=(v['preview']??'').toString().trim();
+    final eylem=(v['eventAction']??'mesaj gönderdi').toString().trim();
     final normal=TextStyle(fontWeight:okundu?FontWeight.w400:FontWeight.w600);
     const kalin=TextStyle(fontWeight:FontWeight.w900);
     const grupStil=TextStyle(color:ngelxGroupGreen,fontWeight:FontWeight.w900);
@@ -16099,7 +16113,7 @@ class AktivitePage extends StatelessWidget {
         TextSpan(text:grup,style:grupStil),
         const TextSpan(text:' grubundan '),
         TextSpan(text:ad.isEmpty?'Bir üye':ad,style:kalin),
-        TextSpan(text:' mesaj gönderdi',style:normal),
+        TextSpan(text:' '+(eylem.isEmpty?'mesaj gönderdi':eylem),style:normal),
         if(onizleme.isNotEmpty)TextSpan(text:' • '+onizleme,style:normal),
       ]),style:const TextStyle(color:Colors.black87));
     }
