@@ -593,6 +593,24 @@ if ".collection('group_invites').doc(invite)" not in app:
 if "status':onayGerekli?'pending':'autojoin'" not in app:
     errors.append("Grup davet onay/autojoin ayrımı bulunamadı.")
 
+
+# Build 262: comment edit must not manually own/dispose a controller inside a
+# transient dialog; that pattern caused a real _dependents.isEmpty framework
+# assertion on Android. Keep the controller-free form-field lifecycle.
+comment_card_start = app.find("class YorumKarti")
+comment_card_end = app.find("\nclass EskiYorumlar", comment_card_start)
+comment_card = app[comment_card_start:comment_card_end if comment_card_end > comment_card_start else len(app)]
+comment_edit = re.search(r"else if \(secim == 'edit'\) \{(.*?)\n      \}", comment_card, re.S)
+if not comment_edit:
+    errors.append("Yorum düzenleme akışı bulunamadı.")
+else:
+    comment_edit_body = comment_edit.group(1)
+    if "TextEditingController" in comment_edit_body or ".dispose()" in comment_edit_body:
+        errors.append("Yorum düzenleme dialogu manuel controller/dispose kullanmamalı.")
+    for token in ("TextFormField(", "initialValue:metin", "FocusScope.of(dialogContext).unfocus()"):
+        if token not in comment_edit_body:
+            errors.append("Yorum düzenleme yaşam döngüsü koruması eksik: " + token)
+
 if errors:
     print("NgelX contract doğrulaması BAŞARISIZ:")
     for e in errors:
