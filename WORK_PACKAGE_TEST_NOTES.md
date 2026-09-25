@@ -668,3 +668,28 @@
 6. Yeni bir gönderi oluştur; Akış’ta eski gönderilerin üstünde görünmeli.
 7. Fotoğraf, video ve yazı gönderilerinde meta satırında göreli süre ile birlikte kesin tarih ve saat görünmeli.
 8. Akışta yukarı/aşağı ve mevcut yatay geçişlerle sonraki/önceki gönderiye geri tuşu kullanmadan geçilebilmeli.
+
+
+## 2026-09-25 — Build 273 Hikâye finali
+
+- Akış üstündeki hikâye şeridi artık eski basit fotoğraf dialogunu açmıyor; profil ve arşivde kullanılan tam **HikayeGosterPage** ile açılıyor.
+- Bu sayede akış hikâyelerinde de video oynatma, ses aç/kapat, uzun basarak duraklatma, cevap yazma ve hızlı emoji tepkileri aynı davranışı kullanıyor.
+- Hikâye şeridi artık belge kimliğini, sahip UID’sini, profil fotoğrafını, oluşturulma ve bitiş zamanını viewer’a taşıyor.
+- Aktif hikâyeler client tarafında da oluşturulma zamanına göre **yeni → eski** sıralanıyor.
+- Zaman bilgisi artık yalnızca “x saat önce” değil; açık biçimde **Başladı: SS:DD • Biter: GG.AA SS:DD • x saat/dakika kaldı** gösteriyor.
+- Süresi dolmuş arşiv hikâyesinde **Bitti** etiketi gösteriliyor.
+- Kendi hikâyeni görüntülerken yanıt ve tepki sayaçları canlı olarak gösteriliyor.
+- Mevcut Hikâye Arşivi ve `highlighted` tabanlı Öne Çıkanlar yapısı korunuyor; arşivden öne çıkarma/kaldırma devam ediyor.
+- Build 272 Kaydet + Akış düzeltmeleri, Build 271 profil sosyal işlemleri ve eski NgelX logo/tasarım kodları korunuyor.
+- Sürüm **v1.0.57 • Yapı 273**.
+
+### Build 273 gerçek cihaz doğrulama sırası
+
+1. Başka hesaptan fotoğraf hikâyesi paylaş; Akış üstündeki halkadan açınca tam viewer görünmeli.
+2. Video hikâyesi paylaş; aynı halkadan açılınca video oynatılmalı ve ses düğmesi çalışmalı.
+3. Viewer üstünde **Başladı / Biter / kalan süre** metni görünmeli.
+4. Başka hesaptan hikâyeye yazılı yanıt gönder; karşı hesabın özel sohbetinde `story_reply` mesajı görünmeli.
+5. ❤️ / 😂 / 😮 tepkilerinden birini gönder; karşı hesaba mesaj/bildirim düşmeli ve hikâye sayaçları artmalı.
+6. Hikâye sahibinde aynı hikâyeyi aç; alt bölümde yanıt ve tepki sayıları görünmeli.
+7. Profil > Hikâye arşivi: eski hikâyeler açılmalı, süre dolduysa viewer **Bitti** göstermeli.
+8. Arşivden yıldızla Öne Çıkar; profil öne çıkanlar şeridinde görünmeli. Yıldızı kaldırınca şeritten kaybolmalı.
