@@ -545,7 +545,7 @@ for token in (
     count = app.count(token)
     if count != 1:
         errors.append(f"Tekrarlı/eksik Dart sınıfı: {token} ({count} adet)")
-if len(app) > 1_050_000:
+if len(app) > 1_080_000:
     errors.append("main.dart beklenmedik şekilde büyüdü; tekrarlı kod eklenmiş olabilir.")
 
 # Large group uploads must stream from disk instead of loading the whole file into RAM.
@@ -676,6 +676,23 @@ for token in (
         errors.append("Aktivite/grup yönlendirme sözleşmesi eksik: " + token)
 if "metin:ad+': '+onizleme" in app:
     errors.append("Grup bildiriminde gönderen adı iki kez yazılıyor.")
+
+# Build 266: group notification semantics must remain explicit.
+for token in (
+    "'eventKind':olayTuru",
+    "'preview':onizleme",
+    "olayTuru:'group_added'",
+    "olayTuru:'group_message'",
+    "olayTuru:'group_mention'",
+    "groupNotifications",
+    "const Text('GRUP'",
+    "GrupKatilmaIstekleriPage(chatId:kaynak)",
+    "seni $grupAdi grubuna ekledi",
+):
+    if token not in app:
+        errors.append("Grup bildirim sözleşmesi eksik: " + token)
+if "metin:ekleyen+' seni '+grupAdi+' grubuna ekledi'" in app:
+    errors.append("Gruba eklenme bildiriminde gönderen adı iki kez ekleniyor.")
 
 if errors:
     print("NgelX contract doğrulaması BAŞARISIZ:")
