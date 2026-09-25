@@ -5500,8 +5500,6 @@ class _KesfetPageState extends State<KesfetPage> {
           SliverToBoxAdapter(child:Padding(
             padding:const EdgeInsets.fromLTRB(18,14,18,8),
             child:Row(children:[
-              const Logo(kucuk:true,koyuZemin:false),
-              const SizedBox(width:10),
               Text(t('explore'),style:const TextStyle(color:Colors.black,fontSize:29,fontWeight:FontWeight.w900)),
               const Spacer(),
               IconButton(tooltip:t('search'),onPressed:_aramaAc,icon:const Icon(Icons.search_rounded,color:Colors.black,size:27)),
