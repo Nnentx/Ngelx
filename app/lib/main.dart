@@ -17408,30 +17408,136 @@ class _JetonPaketi extends StatelessWidget{
   );
 }
 
-class AyarlarPage extends StatelessWidget {
+class AyarlarPage extends StatelessWidget{
   const AyarlarPage({super.key});
-  @override Widget build(BuildContext context){final misafir=FirebaseAuth.instance.currentUser?.isAnonymous==true;return Theme(data:ThemeData.light().copyWith(scaffoldBackgroundColor:Colors.white,appBarTheme:const AppBarTheme(backgroundColor:Colors.white,foregroundColor:Colors.black,elevation:0),cardTheme:const CardThemeData(color:Colors.white,elevation:0,margin:EdgeInsets.symmetric(vertical:4)),dividerColor:Color(0xFFE5E7EB)),child:Scaffold(appBar:AppBar(title:Text(t('settingsTitle'))),body:SafeArea(child:ListView(padding:const EdgeInsets.fromLTRB(14,8,14,24),children:[
-    if(!misafir)...[
-      ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:10,vertical:7),leading:const Icon(Icons.workspace_premium_rounded,color:ngelxPremiumPurple),title:Text(t('premiumWallet'),style:const TextStyle(fontWeight:FontWeight.bold,color:Colors.black87)),subtitle:Text(t('premiumWalletSub'),style:const TextStyle(color:Colors.black54)),trailing:const Icon(Icons.chevron_right,color:Colors.black87),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const NgelXPremiumPage()))),
-      ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:10,vertical:7),leading:const Icon(Icons.switch_account_rounded,color:mor),title:Text(t('switchAccount'),style:const TextStyle(fontWeight:FontWeight.bold,color:Colors.black87)),subtitle:Text(t('switchAccountSub'),style:TextStyle(color:Colors.black54)),trailing:const Icon(Icons.chevron_right,color:Colors.black87),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const HesapDegistirPage()))),
-      _ayar(context,Icons.lock_outline,'Gizlilik',t('privacy'),t('privacySub')),
-      ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:10,vertical:7),leading:const Icon(Icons.people_outline,color:mor),title:Text(t('followFriends'),style:const TextStyle(fontWeight:FontWeight.bold,color:Colors.black87)),subtitle:Text(t('followFriendsSub'),style:const TextStyle(color:Colors.black54)),trailing:const Icon(Icons.chevron_right,color:Colors.black87),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const ArkadaslarPage()))),
-      ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:10,vertical:7),leading:const Icon(Icons.block_outlined,color:mor),title:Text(t('blockedAccounts'),style:const TextStyle(fontWeight:FontWeight.bold,color:Colors.black87)),subtitle:Text(t('blockedAccountsSub'),style:const TextStyle(color:Colors.black54)),trailing:const Icon(Icons.chevron_right,color:Colors.black87),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const EngellenenlerPage()))),
-      _ayar(context,Icons.chat_bubble_outline,'Mesaj izinleri',t('messagePermissions'),t('messagePermissionsSub')),
-      _ayar(context,Icons.auto_stories_outlined,'Hikâye gizliliği',t('storyPrivacy'),t('storyPrivacySub')),
-      _ayar(context,Icons.notifications_outlined,'Bildirimler',t('notifications'),t('notificationsSub')),
-      ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:10,vertical:7),leading:const Icon(Icons.security_outlined,color:mor),title:Text(t('accountSecurity'),style:const TextStyle(fontWeight:FontWeight.bold,color:Colors.black87)),subtitle:Text(t('accountSecuritySub'),style:const TextStyle(color:Colors.black54)),trailing:const Icon(Icons.chevron_right,color:Colors.black87),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const HesapGuvenligiPage()))),
-      ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:10,vertical:7),leading:const Icon(Icons.devices_outlined,color:mor),title:Text(t('devices'),style:const TextStyle(fontWeight:FontWeight.bold,color:Colors.black87)),subtitle:Text(t('devicesSub'),style:const TextStyle(color:Colors.black54)),trailing:const Icon(Icons.chevron_right,color:Colors.black87),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const GirisGecmisiPage()))),
-      ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:10,vertical:7),leading:const Icon(Icons.support_agent,color:mor),title:Text(t('support'),style:const TextStyle(fontWeight:FontWeight.bold,color:Colors.black87)),subtitle:Text(t('supportSub'),style:const TextStyle(color:Colors.black54)),trailing:const Icon(Icons.chevron_right,color:Colors.black87),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const DestekPage()))),
-      _ayar(context,Icons.download_outlined,'İndirme izinleri',t('downloadPermissions'),t('downloadPermissionsSub')),
-    ],
-    const Divider(),
-    ListTile(leading:const Icon(Icons.system_update,color:mor),title:Text(t('appUpdates')),subtitle:Text('v$ngelxVersionName • ${t("build")} $ngelxBuildNumber'),trailing:const Icon(Icons.system_update_alt_rounded,color:Colors.green)),
-    ListTile(leading:const Icon(Icons.share,color:mavi),title:Text(t('shareNgelx')),subtitle:Text(t('shareNgelxSub')),onTap:()async=>SharePlus.instance.share(ShareParams(text:'Ngel X ile dünyanı paylaş ✨\nhttps://ngelx.app'))),
-    const Divider(),
-    ListTile(leading:const Icon(Icons.logout,color:Colors.red),title:Text(t('logout'),style:const TextStyle(color:Colors.red)),onTap:()async{final onay=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(title:Text(t('logoutQuestion')),content:Text(t('logoutInfo')),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:Text(t('cancel'))),FilledButton(onPressed:()=>Navigator.pop(c,true),child:Text(t('logout')))]));if(onay==true){await FirebaseAuth.instance.signOut();if(context.mounted)Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder:(_)=>const GirisPage()),(_)=>false);}})
-  ]))));}
-  Widget _ayar(BuildContext c,IconData i,String kod,String baslik,String alt)=>Card(child:ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:10,vertical:7),onTap:()=>Navigator.push(c,MaterialPageRoute(builder:(_)=>TercihlerPage(baslik:kod))),leading:Icon(i,color:mor),title:Text(baslik,style:const TextStyle(fontWeight:FontWeight.bold,color:Colors.black87)),subtitle:Text(alt,style:const TextStyle(color:Colors.black54)),trailing:const Icon(Icons.chevron_right,color:Colors.black87)));
+  Widget baslik(String x)=>Padding(padding:const EdgeInsets.fromLTRB(12,20,12,5),child:Text(x,style:const TextStyle(color:Colors.black45,fontSize:12,fontWeight:FontWeight.w900,letterSpacing:.5)));
+  Widget satir(BuildContext c,IconData i,String a,String s,Widget p,{Color renk=mor})=>ListTile(
+    contentPadding:const EdgeInsets.symmetric(horizontal:10,vertical:5),
+    leading:Container(width:42,height:42,alignment:Alignment.center,decoration:BoxDecoration(color:renk.withValues(alpha:.10),borderRadius:BorderRadius.circular(14)),child:Icon(i,color:renk)),
+    title:Text(a,style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w800)),subtitle:Text(s,style:const TextStyle(color:Colors.black54)),trailing:const Icon(Icons.chevron_right),
+    onTap:()=>Navigator.push(c,MaterialPageRoute(builder:(_)=>p)),
+  );
+  @override Widget build(BuildContext context){
+    final misafir=FirebaseAuth.instance.currentUser?.isAnonymous==true;
+    return Theme(data:ThemeData.light().copyWith(scaffoldBackgroundColor:Colors.white,appBarTheme:const AppBarTheme(backgroundColor:Colors.white,foregroundColor:Colors.black,elevation:0)),child:Scaffold(
+      appBar:AppBar(title:Text(t('settingsTitle'))),
+      body:SafeArea(child:ListView(padding:const EdgeInsets.fromLTRB(14,4,14,28),children:[
+        if(!misafir)...[
+          baslik('HESAP'),
+          satir(context,Icons.manage_accounts_outlined,'Hesap ve profil bilgileri','Ad, kullanıcı adı, e-posta, telefon ve doğum tarihi',const HesapBilgileriPage()),
+          satir(context,Icons.switch_account_rounded,t('switchAccount'),t('switchAccountSub'),const HesapDegistirPage()),
+          satir(context,Icons.workspace_premium_rounded,t('premiumWallet'),t('premiumWalletSub'),const NgelXPremiumPage(),renk:ngelxPremiumPurple),
+          baslik('GİZLİLİK'),
+          satir(context,Icons.lock_outline,t('privacy'),t('privacySub'),const TercihlerPage(baslik:'Gizlilik')),
+          satir(context,Icons.people_outline,t('followFriends'),t('followFriendsSub'),const ArkadaslarPage()),
+          satir(context,Icons.block_outlined,t('blockedAccounts'),t('blockedAccountsSub'),const EngellenenlerPage()),
+          satir(context,Icons.do_not_disturb_alt_rounded,'Kısıtlanan hesaplar','Engellemeden etkileşim ve bildirimleri sınırla',const KisitlananlarPage()),
+          satir(context,Icons.chat_bubble_outline,t('messagePermissions'),t('messagePermissionsSub'),const TercihlerPage(baslik:'Mesaj izinleri')),
+          satir(context,Icons.auto_stories_outlined,t('storyPrivacy'),t('storyPrivacySub'),const TercihlerPage(baslik:'Hikâye gizliliği')),
+          baslik('İÇERİK VE ETKİLEŞİM'),
+          satir(context,Icons.tune_rounded,'İçerik ve etkileşim','Yorum, etiket, bahsetme, hassas içerik ve gizli kelimeler',const TercihlerPage(baslik:'İçerik ve etkileşim')),
+          satir(context,Icons.video_collection_outlined,'Reels ve canlı','Yeniden paylaşım, indirme, canlı yorum ve davet izinleri',const TercihlerPage(baslik:'Reels ve canlı')),
+          satir(context,Icons.download_outlined,t('downloadPermissions'),t('downloadPermissionsSub'),const TercihlerPage(baslik:'İndirme izinleri')),
+          baslik('BİLDİRİMLER'),
+          satir(context,Icons.notifications_outlined,t('notifications'),t('notificationsSub'),const TercihlerPage(baslik:'Bildirimler')),
+          baslik('GÜVENLİK'),
+          satir(context,Icons.security_outlined,t('accountSecurity'),t('accountSecuritySub'),const HesapGuvenligiPage()),
+          satir(context,Icons.warning_amber_rounded,'Güvenlik uyarıları','Şüpheli giriş uyarılarını yönet',const TercihlerPage(baslik:'Güvenlik uyarıları')),
+          satir(context,Icons.devices_outlined,t('devices'),t('devicesSub'),const GirisGecmisiPage()),
+          satir(context,Icons.health_and_safety_outlined,'Hesap kurtarma','Kurtarma e-postası, telefon ve şifre yenileme',const HesapKurtarmaPage()),
+          baslik('VERİ VE UYGULAMA'),
+          satir(context,Icons.folder_copy_outlined,'Verilerim','Verilerini dışa aktar, geçmişleri ve kaydedilenleri yönet',const VerilerimPage()),
+          satir(context,Icons.data_saver_on_rounded,'Veri ve depolama','Veri tasarrufu, otomatik oynatma ve HD kullanım',const TercihlerPage(baslik:'Veri ve depolama')),
+          satir(context,Icons.language_rounded,'Dil ve çeviri','Uygulama dili, otomatik çeviri ve altyazı',const TercihlerPage(baslik:'Dil ve çeviri')),
+          satir(context,Icons.accessibility_new_rounded,'Erişilebilirlik','Büyük yazı ve hareket tercihleri',const TercihlerPage(baslik:'Erişilebilirlik')),
+          baslik('DESTEK VE HAKKINDA'),
+          satir(context,Icons.support_agent,t('support'),t('supportSub'),const DestekPage()),
+          satir(context,Icons.info_outline_rounded,'NgelX hakkında','Kurallar, gizlilik, koşullar ve sürüm bilgisi',const NgelXHakkindaPage()),
+        ],
+        const Divider(height:28),
+        ListTile(leading:const Icon(Icons.system_update,color:mor),title:Text(t('appUpdates')),subtitle:Text('v$ngelxVersionName • ${t("build")} $ngelxBuildNumber'),trailing:const Icon(Icons.system_update_alt_rounded,color:Colors.green)),
+        ListTile(leading:const Icon(Icons.share,color:mavi),title:Text(t('shareNgelx')),subtitle:Text(t('shareNgelxSub')),onTap:()async=>SharePlus.instance.share(ShareParams(text:'Ngel X ile dünyanı paylaş ✨\nhttps://ngelx.app'))),
+        const Divider(),
+        ListTile(leading:const Icon(Icons.logout,color:Colors.red),title:Text(t('logout'),style:const TextStyle(color:Colors.red,fontWeight:FontWeight.w800)),onTap:()async{
+          final ok=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(title:Text(t('logoutQuestion')),content:Text(t('logoutInfo')),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:Text(t('cancel'))),FilledButton(onPressed:()=>Navigator.pop(c,true),child:Text(t('logout')))]));
+          if(ok==true){await FirebaseAuth.instance.signOut();if(context.mounted)Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder:(_)=>const GirisPage()),(_)=>false);}
+        }),
+      ])),
+    ));
+  }
+}
+
+class HesapBilgileriPage extends StatefulWidget{const HesapBilgileriPage({super.key});@override State<HesapBilgileriPage> createState()=>_HesapBilgileriPageState();}
+class _HesapBilgileriPageState extends State<HesapBilgileriPage>{
+  final ad=TextEditingController(),kullanici=TextEditingController(),bio=TextEditingController(),telefon=TextEditingController(),dogum=TextEditingController();
+  bool yukleniyor=true,kaydediliyor=false;
+  @override void initState(){super.initState();yukle();}
+  @override void dispose(){ad.dispose();kullanici.dispose();bio.dispose();telefon.dispose();dogum.dispose();super.dispose();}
+  Future<void> yukle()async{final u=FirebaseAuth.instance.currentUser;if(u==null)return;try{final d=await FirebaseFirestore.instance.collection('users').doc(u.uid).get(),v=d.data()??<String,dynamic>{};ad.text=(v['displayName']??u.displayName??'').toString();kullanici.text=(v['username']??'').toString();bio.text=(v['bio']??'').toString();telefon.text=(v['phone']??'').toString();dogum.text=(v['birthDate']??'').toString();}finally{if(mounted)setState(()=>yukleniyor=false);}}
+  Future<void> kaydet()async{
+    final u=FirebaseAuth.instance.currentUser;if(u==null||kaydediliyor)return;
+    final a=ad.text.trim(),k=kullanici.text.trim().toLowerCase().replaceFirst('@','');
+    if(a.length<2||!RegExp(r'^[a-z0-9_.]{3,30}$').hasMatch(k)){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Adı ve kullanıcı adını kontrol et.')));return;}
+    setState(()=>kaydediliyor=true);
+    try{
+      final q=await FirebaseFirestore.instance.collection('users').where('username',isEqualTo:k).limit(2).get().timeout(const Duration(seconds:10));
+      if(q.docs.any((x)=>x.id!=u.uid)){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bu kullanıcı adı kullanılıyor.')));return;}
+      await FirebaseFirestore.instance.collection('users').doc(u.uid).set({'displayName':a,'username':k,'bio':bio.text.trim(),'phone':telefon.text.trim(),'birthDate':dogum.text.trim(),'updatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true)).timeout(const Duration(seconds:12));
+      try{await u.updateDisplayName(a);}catch(_){}
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bilgiler kaydedildi ✅')));
+    }catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Kaydedilemedi: $e')));}finally{if(mounted)setState(()=>kaydediliyor=false);}
+  }
+  Future<void> sifre()async{final e=FirebaseAuth.instance.currentUser?.email;if(e==null)return;try{await FirebaseAuth.instance.sendPasswordResetEmail(email:e);if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Şifre bağlantısı e-postana gönderildi.')));}catch(_){}}
+  @override Widget build(BuildContext context)=>Theme(data:ThemeData.light().copyWith(scaffoldBackgroundColor:Colors.white,inputDecorationTheme:InputDecorationTheme(filled:true,fillColor:const Color(0xFFF3F4F6),border:OutlineInputBorder(borderRadius:BorderRadius.circular(16),borderSide:BorderSide.none))),child:Scaffold(
+    appBar:AppBar(title:const Text('Hesap ve profil bilgileri')),
+    body:yukleniyor?const Center(child:CircularProgressIndicator(color:mor)):ListView(padding:const EdgeInsets.all(20),children:[
+      TextField(controller:ad,maxLength:50,decoration:const InputDecoration(labelText:'Ad ve soyad')),TextField(controller:kullanici,maxLength:30,autocorrect:false,decoration:const InputDecoration(labelText:'Kullanıcı adı',prefixText:'@')),
+      TextField(controller:bio,maxLines:3,maxLength:160,decoration:const InputDecoration(labelText:'Biyografi')),
+      TextField(enabled:false,decoration:InputDecoration(labelText:'E-posta',hintText:FirebaseAuth.instance.currentUser?.email??'')),
+      TextField(controller:telefon,keyboardType:TextInputType.phone,decoration:const InputDecoration(labelText:'Telefon')),
+      TextField(controller:dogum,inputFormatters:const [NgelXBirthDateFormatter()],keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'Doğum tarihi',hintText:'GG/AA/YYYY')),
+      const SizedBox(height:14),FilledButton.icon(onPressed:kaydediliyor?null:kaydet,icon:const Icon(Icons.save_outlined),label:Text(kaydediliyor?'Kaydediliyor...':'Kaydet')),
+      OutlinedButton.icon(onPressed:sifre,icon:const Icon(Icons.lock_reset_rounded),label:const Text('Şifremi değiştir')),
+    ]),
+  ));
+}
+
+class KisitlananlarPage extends StatefulWidget{const KisitlananlarPage({super.key});@override State<KisitlananlarPage> createState()=>_KisitlananlarPageState();}
+class _KisitlananlarPageState extends State<KisitlananlarPage>{
+  Future<List<String>> getir()async{final u=FirebaseAuth.instance.currentUser;if(u==null)return[];final d=await FirebaseFirestore.instance.collection('users').doc(u.uid).get();return List<String>.from(d.data()?['restrictedUsers']??const[]);}
+  Future<void> kaldir(String id)async{final u=FirebaseAuth.instance.currentUser;if(u==null)return;await FirebaseFirestore.instance.collection('users').doc(u.uid).set({'restrictedUsers':FieldValue.arrayRemove([id])},SetOptions(merge:true));if(mounted)setState((){});}
+  @override Widget build(BuildContext context)=>Theme(data:ThemeData.light(),child:Scaffold(backgroundColor:Colors.white,appBar:AppBar(title:const Text('Kısıtlanan hesaplar')),body:FutureBuilder<List<String>>(future:getir(),builder:(_,s){
+    if(s.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator(color:mor));final ids=s.data??[];if(ids.isEmpty)return const Center(child:Text('Kısıtladığın hesap yok.'));
+    return ListView.builder(itemCount:ids.length,itemBuilder:(_,i)=>FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(future:FirebaseFirestore.instance.collection('users').doc(ids[i]).get(),builder:(_,u){final v=u.data?.data()??{},f=(v['photoUrl']??'').toString();return ListTile(leading:CircleAvatar(backgroundImage:f.isEmpty?null:CachedNetworkImageProvider(f),child:f.isEmpty?const Icon(Icons.person):null),title:Text((v['displayName']??v['username']??'NgelX').toString()),subtitle:Text('@${v['username']??'ngelx'}'),trailing:TextButton(onPressed:()=>kaldir(ids[i]),child:const Text('Kaldır')));}));
+  })));
+}
+
+class VerilerimPage extends StatefulWidget{const VerilerimPage({super.key});@override State<VerilerimPage> createState()=>_VerilerimPageState();}
+class _VerilerimPageState extends State<VerilerimPage>{
+  bool aktar=false;
+  dynamic temiz(dynamic v){if(v is Timestamp)return v.toDate().toUtc().toIso8601String();if(v is Map)return v.map((k,e)=>MapEntry(k.toString(),temiz(e)));if(v is Iterable)return v.map(temiz).toList();return v;}
+  Future<void> disa()async{final u=FirebaseAuth.instance.currentUser;if(u==null||aktar)return;setState(()=>aktar=true);try{final p=await FirebaseFirestore.instance.collection('users').doc(u.uid).get(),g=await FirebaseFirestore.instance.collection('videos').where('ownerId',isEqualTo:u.uid).limit(500).get(),dir=await getApplicationDocumentsDirectory();final f=File('${dir.path}/ngelx_verilerim_${DateTime.now().millisecondsSinceEpoch}.json');await f.writeAsString(const JsonEncoder.withIndent('  ').convert({'exportedAt':DateTime.now().toUtc().toIso8601String(),'account':temiz(p.data()??{}),'posts':g.docs.map((x)=>{'id':x.id,'data':temiz(x.data())}).toList()}));await SharePlus.instance.share(ShareParams(files:[XFile(f.path)],text:'NgelX verilerim'));}catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Hazırlanamadı: $e')));}finally{if(mounted)setState(()=>aktar=false);}}
+  Future<void> sil(String alan,String ad)async{final u=FirebaseAuth.instance.currentUser;if(u==null)return;await FirebaseFirestore.instance.collection('users').doc(u.uid).set({alan:<dynamic>[]},SetOptions(merge:true));if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('$ad temizlendi.')));}
+  @override Widget build(BuildContext context)=>Theme(data:ThemeData.light(),child:Scaffold(backgroundColor:Colors.white,appBar:AppBar(title:const Text('Verilerim')),body:ListView(padding:const EdgeInsets.all(18),children:[
+    ListTile(leading:const Icon(Icons.download_rounded,color:mor),title:const Text('NgelX verilerimi dışa aktar'),subtitle:const Text('Profil ve kendi paylaşımların JSON dosyası olur.'),trailing:aktar?const CircularProgressIndicator():const Icon(Icons.chevron_right),onTap:aktar?null:disa),
+    ListTile(leading:const Icon(Icons.search_rounded,color:mor),title:const Text('Arama geçmişini temizle'),onTap:()=>sil('searchHistory','Arama geçmişi')),
+    ListTile(leading:const Icon(Icons.play_circle_outline,color:mor),title:const Text('İzleme geçmişini temizle'),onTap:()=>sil('watchHistory','İzleme geçmişi')),
+    ListTile(leading:const Icon(Icons.bookmark_border,color:mor),title:const Text('Kaydedilenler'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const KaydedilenlerPage()))),
+    ListTile(leading:const Icon(Icons.devices_outlined,color:mor),title:const Text('Hesap hareketleri ve cihazlar'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const GirisGecmisiPage()))),
+  ]))));
+}
+
+class NgelXHakkindaPage extends StatelessWidget{
+  const NgelXHakkindaPage({super.key});
+  Future<void> metin(BuildContext c,String a,String b)=>showDialog<void>(context:c,builder:(x)=>AlertDialog(title:Text(a),content:Text(b),actions:[TextButton(onPressed:()=>Navigator.pop(x),child:const Text('Kapat'))]));
+  @override Widget build(BuildContext context)=>Theme(data:ThemeData.light(),child:Scaffold(backgroundColor:Colors.white,appBar:AppBar(title:const Text('NgelX hakkında')),body:ListView(padding:const EdgeInsets.all(18),children:[
+    const Center(child:Logo(kucuk:true)),Center(child:Text('v$ngelxVersionName • Yapı $ngelxBuildNumber',style:const TextStyle(color:Colors.black54))),const Divider(height:30),
+    ListTile(title:const Text('Topluluk kuralları'),trailing:const Icon(Icons.chevron_right),onTap:()=>metin(context,'Topluluk kuralları','Taciz, tehdit, dolandırıcılık, yasa dışı içerik ve mahremiyet ihlallerine izin verilmez.')),
+    ListTile(title:const Text('Gizlilik özeti'),trailing:const Icon(Icons.chevron_right),onTap:()=>metin(context,'Gizlilik','Görünürlük, mesaj, hikâye, etiket ve etkinlik tercihlerini Ayarlar ve gizlilik bölümünden yönetebilirsin.')),
+    ListTile(title:const Text('Kullanım koşulları'),trailing:const Icon(Icons.chevron_right),onTap:()=>metin(context,'Kullanım koşulları','NgelX kullanırken yürürlükteki yasalara, topluluk kurallarına ve başkalarının haklarına uymalısın.')),
+    ListTile(title:const Text('Telif hakkı'),trailing:const Icon(Icons.chevron_right),onTap:()=>metin(context,'Telif hakkı','Yalnızca paylaşma hakkına sahip olduğun içerikleri yüklemelisin.')),
+    ListTile(title:const Text('Açık kaynak lisansları'),trailing:const Icon(Icons.chevron_right),onTap:()=>showLicensePage(context:context,applicationName:'NgelX',applicationVersion:'$ngelxVersionName+$ngelxBuildNumber')),
+  ]))));
 }
 
 class HesapKurtarmaPage extends StatefulWidget{
