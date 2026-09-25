@@ -72,7 +72,7 @@ const ngelxPrivateBlueBorder = Color(0xFFD8E8FF);
 const ngelxPrivateBlueInk = Color(0xFF10213A);
 
 const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.57');
-const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '259');
+const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '260');
 const ngelxGroupBorder = Color(0xFFD9EEE0);
 
 class NgelXBirthDateFormatter extends TextInputFormatter {
@@ -4606,6 +4606,8 @@ class _YeniYorumlarState extends State<Yorumlar> {
   String? yanitlananKullanici;
   final Set<String> acikYanitlar = {};
   bool enCokBegenilen = false;
+  Map<String,dynamic> icerikMeta=<String,dynamic>{};
+  List<QueryDocumentSnapshot<Map<String,dynamic>>> yorumOnbellek=<QueryDocumentSnapshot<Map<String,dynamic>>>[];
 
   CollectionReference<Map<String, dynamic>> get ref => FirebaseFirestore.instance.collection('videos').doc(widget.videoId).collection('comments');
 
@@ -4620,6 +4622,12 @@ class _YeniYorumlarState extends State<Yorumlar> {
       gizliKelimeListesi=hamGizli is Iterable?hamGizli.map((e)=>e.toString().trim().toLowerCase()).where((e)=>e.isNotEmpty).toSet().toList():<String>[];
       });
     });
+    unawaited(FirebaseFirestore.instance.collection('videos').doc(widget.videoId).get().then((d){
+      if(mounted)setState(()=>icerikMeta=d.data()??<String,dynamic>{});
+    }).catchError((_){ }));
+    unawaited(ref.limit(120).get(const GetOptions(source:Source.cache)).then((s){
+      if(mounted&&s.docs.isNotEmpty)setState(()=>yorumOnbellek=s.docs.toList());
+    }).catchError((_){ }));
   }
 
   String zamanYaz(dynamic ham) {
@@ -4641,8 +4649,12 @@ class _YeniYorumlarState extends State<Yorumlar> {
 
     String icerikSahibi='';
     try{
-      final video=await FirebaseFirestore.instance.collection('videos').doc(widget.videoId).get();
-      final vv=video.data()??<String,dynamic>{};
+      var vv=icerikMeta;
+      if(vv.isEmpty){
+        final video=await FirebaseFirestore.instance.collection('videos').doc(widget.videoId).get().timeout(const Duration(seconds:4));
+        vv=video.data()??<String,dynamic>{};
+        if(mounted)setState(()=>icerikMeta=vv);else icerikMeta=vv;
+      }
       icerikSahibi=(vv['ownerId']??'').toString();
       final izin=(vv['commentAudience']??'Herkes').toString();
       if(user.uid!=icerikSahibi){
@@ -4759,11 +4771,11 @@ class _YeniYorumlarState extends State<Yorumlar> {
       child: SizedBox(
         height: MediaQuery.of(context).size.height * .72,
         child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-          stream: ref.snapshots(),
+          stream: ref.limit(120).snapshots(),
           builder: (_, snap) {
             final List<QueryDocumentSnapshot<Map<String, dynamic>>> tumu =
                 snap.data?.docs.toList() ??
-                <QueryDocumentSnapshot<Map<String, dynamic>>>[];
+                List<QueryDocumentSnapshot<Map<String,dynamic>>>.from(yorumOnbellek);
             tumu.sort((a, b) {
               final at = a.data()['createdAt']; final bt = b.data()['createdAt'];
               if (at is! Timestamp) return -1; if (bt is! Timestamp) return 1;
@@ -4785,7 +4797,7 @@ class _YeniYorumlarState extends State<Yorumlar> {
               ),
               const Divider(height: 1),
               Expanded(
-                child: snap.connectionState == ConnectionState.waiting
+                child: snap.connectionState == ConnectionState.waiting && tumu.isEmpty
                     ? const Center(child: CircularProgressIndicator(color: mavi))
                     : ana.isEmpty
                         ? const Center(child: Text('İlk yorumu sen yaz ✨'))
@@ -4797,6 +4809,7 @@ class _YeniYorumlarState extends State<Yorumlar> {
                               final yanitlar = tumu.where((x) => (x.data()['parentId'] ?? '') == d.id).toList();
                               return YorumKarti(
                                 videoId: widget.videoId,
+                                icerikSahibiUid:(icerikMeta['ownerId']??'').toString(),
                                 id: d.id,
                                 veri: v,
                                 zaman: zamanYaz(v['createdAt']),
@@ -4833,6 +4846,7 @@ class _YeniYorumlarState extends State<Yorumlar> {
 
 class YorumKarti extends StatelessWidget {
   final String videoId;
+  final String icerikSahibiUid;
   final String id;
   final Map<String, dynamic> veri;
   final String zaman;
@@ -4848,6 +4862,7 @@ class YorumKarti extends StatelessWidget {
   const YorumKarti({
     super.key,
     required this.videoId,
+    required this.icerikSahibiUid,
     required this.id,
     required this.veri,
     required this.zaman,
@@ -4878,12 +4893,7 @@ class YorumKarti extends StatelessWidget {
 
     Future<void> yorumMenusu() async {
       final benim = aktifUid == profilUid;
-      String icerikSahibi='';
-      try{
-        final videoBelgesi=await FirebaseFirestore.instance.collection('videos').doc(videoId).get().timeout(const Duration(milliseconds:1500));
-        icerikSahibi=(videoBelgesi.data()?['ownerId']??'').toString();
-      }catch(_){}
-      final silebilir=benim||(aktifUid!=null&&aktifUid==icerikSahibi);
+      final silebilir=benim||(aktifUid!=null&&aktifUid==icerikSahibiUid);
       if (!context.mounted) return;
       final secim = await showModalBottomSheet<String>(
         context: context,
@@ -4900,14 +4910,29 @@ class YorumKarti extends StatelessWidget {
           ),
           if (benim) ListTile(leading:const Icon(Icons.edit_outlined),title:const Text('Düzenle'),onTap:()=>Navigator.pop(c,'edit')),
           if (silebilir) ListTile(leading:const Icon(Icons.delete_outline,color:Colors.red),title:Text(benim?'Yorumu sil':'Gönderimden kaldır',style:const TextStyle(color:Colors.red)),onTap:()=>Navigator.pop(c,'delete')),
-          ListTile(leading:const Icon(Icons.copy_outlined),title:const Text('Kopyala'),onTap:()=>Navigator.pop(c,'copy')),
+          ListTile(
+            leading:const Icon(Icons.copy_outlined),
+            title:const Text('Kopyala'),
+            onTap:()async{
+              if(metin.isEmpty)return;
+              try{
+                await Clipboard.setData(ClipboardData(text:metin));
+                if(c.mounted)Navigator.pop(c);
+                await Future<void>.delayed(const Duration(milliseconds:90));
+                if(context.mounted){
+                  ScaffoldMessenger.of(context).clearSnackBars();
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Yorum panoya kopyalandı ✅'),duration:Duration(seconds:2)));
+                }
+              }catch(_){
+                if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Yorum kopyalanamadı.')));
+              }
+            },
+          ),
           if (!benim) ListTile(leading:const Icon(Icons.flag_outlined,color:Colors.orange),title:const Text('Şikâyet et'),onTap:()=>Navigator.pop(c,'report')),
           if (!benim) ListTile(leading:const Icon(Icons.block,color:Colors.red),title:const Text('Kullanıcıyı engelle',style:TextStyle(color:Colors.red)),onTap:()=>Navigator.pop(c,'block')),
         ]))),
       );
       if (secim == null || !context.mounted) return;
-      await ngelxOverlayKapanisiniBekle();
-      if (!context.mounted) return;
       final yorumRef = FirebaseFirestore.instance.collection('videos').doc(videoId).collection('comments').doc(yorumId);
       if (secim.startsWith('reaction:')) {
         final emoji=secim.substring(9);
@@ -4917,13 +4942,17 @@ class YorumKarti extends StatelessWidget {
           if((mevcut[aktifUid]??'').toString()==emoji)await yorumRef.update({alan:FieldValue.delete()});
           else await yorumRef.set({alan:emoji},SetOptions(merge:true));
         }
-      } else if(secim=='copy'){
-        try{await Clipboard.setData(ClipboardData(text:metin));if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Yorum kopyalandı ✅')));}catch(_){if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Yorum kopyalanamadı.')));}
       }else if(secim=='report'){
+        await Future<void>.delayed(const Duration(milliseconds:120));
+        if(!context.mounted)return;
         await sikayetEt(context,hedefTuru:'yorum',hedefId:'$videoId/$yorumId',hedefUid:profilUid);
       }else if(secim=='block'){
+        await Future<void>.delayed(const Duration(milliseconds:120));
+        if(!context.mounted)return;
         await kullaniciyiEngelle(context,profilUid);
       } else if (secim == 'delete') {
+        await Future<void>.delayed(const Duration(milliseconds:120));
+        if(!context.mounted)return;
         final onay = await showDialog<bool>(context:context,builder:(c)=>Theme(data:ThemeData.light(),child:AlertDialog(backgroundColor:Colors.white,surfaceTintColor:Colors.white,title:const Text('Yorum silinsin mi?',style:TextStyle(color:Colors.black87)),content:const Text('Bu işlem geri alınamaz.',style:TextStyle(color:Colors.black54)),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),FilledButton(style:FilledButton.styleFrom(backgroundColor:Colors.red),onPressed:()=>Navigator.pop(c,true),child:const Text('Sil'))]))) ?? false;
         if (onay) {
           try {
@@ -4944,6 +4973,8 @@ class YorumKarti extends StatelessWidget {
           }
         }
       } else if (secim == 'edit') {
+        await Future<void>.delayed(const Duration(milliseconds:120));
+        if(!context.mounted)return;
         final kontrol = TextEditingController(text:metin);
         final kaydet = await showDialog<bool>(context:context,builder:(c)=>AlertDialog(title:const Text('Yorumu düzenle'),content:TextField(controller:kontrol,maxLines:4,maxLength:500,autofocus:true),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('Kaydet'))])) ?? false;
         final yeni = kontrol.text.trim(); kontrol.dispose();
@@ -4987,7 +5018,7 @@ class YorumKarti extends StatelessWidget {
       }
     }
 
-    final likeStream = yorumBelgeRef.collection('likes').snapshots();
+    final likeStream = aktifUid==null?null:yorumBelgeRef.collection('likes').doc(aktifUid).snapshots();
 
     return GestureDetector(
       onLongPress: yorumMenusu,
@@ -5059,12 +5090,11 @@ class YorumKarti extends StatelessWidget {
               ],
             ),
           ),
-          StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+          StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
             stream: likeStream,
             builder: (_, snap) {
-              final docs = snap.data?.docs ?? const [];
-              final secili = aktifUid != null && docs.any((d) => d.id == aktifUid);
-              final sayi = docs.length;
+              final secili = snap.data?.exists == true;
+              final sayi = (v['likeCount'] as num?)?.toInt() ?? 0;
               return GestureDetector(
                 onTap: () => begen(yorumId, const []),
                 child: Column(
