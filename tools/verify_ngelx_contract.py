@@ -635,13 +635,13 @@ for token in (
     if token not in rules:
         errors.append("Sosyal istek Firestore iptal koruması eksik: " + token)
 
-# Build 264: auth/account switching must be root-driven and bounded.
+# Build 264/275: auth/account switching must be root-driven and bounded.
 for token in (
     "final GlobalKey<NavigatorState> ngelxNavigatorKey",
     "void ngelxKokRotayaDon()",
     "stream:FirebaseAuth.instance.userChanges()",
     "class NgelXDogrulanmisOturumKapisi",
-    "kullanici.emailVerified!=true",
+    "if(kullanici==null||kullanici.isAnonymous)",
     "Hesabın hazırlanıyor",
     "Uygulamayı kapatıp açman gerekmez.",
     "Giriş zaman aşımına uğradı.",
@@ -820,6 +820,22 @@ for token in (
 ):
     if token not in app:
         errors.append("Build 274 profil sözleşmesi eksik: " + token)
+
+# Build 275: exiting and signing back in must not trap legacy accounts in
+# an email-verification sign-out loop. New accounts still require verification.
+for token in (
+    "'emailVerificationRequired': true",
+    "final dogrulamaGerekli=v['emailVerificationRequired']==true&&widget.user.emailVerified!=true;",
+    "Doğruladım, tekrar kontrol et",
+    "Bağlantıyı yeniden gönder",
+    "E-posta doğrulandı. NgelX açılıyor.",
+    "emailVerificationRequired':false",
+):
+    if token not in app:
+        errors.append("Build 275 giriş/doğrulama sözleşmesi eksik: " + token)
+
+if "if(user.emailVerified!=true){" in login_block:
+    errors.append("Build 275: giriş akışı doğrulanmamış kullanıcıyı doğrudan signOut döngüsüne sokmamalı.")
 
 if errors:
     print("NgelX contract doğrulaması BAŞARISIZ:")
