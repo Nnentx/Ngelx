@@ -760,6 +760,20 @@ for token in (
     if token not in app:
         errors.append("Build 270 Gelen Kutusu sayaç sözleşmesi eksik: " + token)
 
+# Build 271: profile follow/friend/message actions must fail visibly, not silently.
+for token in (
+    "Future<bool> sosyalIstekGonder({",
+    "limit(200).get().timeout(const Duration(seconds:8))",
+    "return true;",
+    "Future<void> profildenMesajAc(BuildContext context",
+    "Mesaj izni kontrolü zaman aşımına uğradı. Tekrar dene.",
+    "Mesaj ekranı şu anda açılamadı. Tekrar dene.",
+    "Takip isteği zaten bekliyor veya bu hesabı takip ediyorsun.",
+    "Arkadaşlık isteği zaten bekliyor veya zaten arkadaşsınız.",
+):
+    if token not in app:
+        errors.append("Build 271 profil sosyal işlem sözleşmesi eksik: " + token)
+
 if errors:
     print("NgelX contract doğrulaması BAŞARISIZ:")
     for e in errors:
