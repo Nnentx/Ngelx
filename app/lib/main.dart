@@ -72,7 +72,7 @@ const ngelxPrivateBlueBorder = Color(0xFFD8E8FF);
 const ngelxPrivateBlueInk = Color(0xFF10213A);
 
 const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.57');
-const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '262');
+const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '263');
 const ngelxGroupBorder = Color(0xFFD9EEE0);
 
 class NgelXBirthDateFormatter extends TextInputFormatter {
@@ -1789,8 +1789,27 @@ Future<void> sosyalIstekGonder({
   final kilit='${user.uid}|$hedefUid|$tur';
   if(!_sosyalIstekIslemleri.add(kilit))return;
   try{
-    final profil=await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+    final sonuc=await Future.wait([
+      FirebaseFirestore.instance.collection('users').doc(user.uid).get().timeout(const Duration(seconds:8)),
+      FirebaseFirestore.instance.collection('notifications').where('fromUid',isEqualTo:user.uid).limit(100).get().timeout(const Duration(seconds:8)),
+    ]);
+    final profil=sonuc[0] as DocumentSnapshot<Map<String,dynamic>>;
+    final giden=sonuc[1] as QuerySnapshot<Map<String,dynamic>>;
     final p=profil.data()??<String,dynamic>{};
+
+    final zatenIliski=tur=='follow_request'
+      ? List<String>.from(p['following']??const[]).contains(hedefUid)
+      : tur=='friend_request'
+        ? List<String>.from(p['friends']??const[]).contains(hedefUid)
+        : false;
+    if(zatenIliski)return;
+
+    final zatenBekliyor=giden.docs.any((d){
+      final v=d.data();
+      return v['toUid']==hedefUid&&v['type']==tur&&v['status']=='pending';
+    });
+    if(zatenBekliyor)return;
+
     final ad=(p['displayName']??p['username']??user.displayName??'NgelX kullanıcısı').toString();
     final foto=(p['photoUrl']??user.photoURL??'').toString();
     await FirebaseFirestore.instance.collection('notifications').add({
@@ -1803,10 +1822,18 @@ Future<void> sosyalIstekGonder({
       'status':'pending',
       'read':false,
       'createdAt':FieldValue.serverTimestamp(),
-    });
+    }).timeout(const Duration(seconds:10));
   }finally{
     _sosyalIstekIslemleri.remove(kilit);
   }
+}
+
+Future<void> sosyalIstekIptalEt(DocumentReference<Map<String,dynamic>> ref)async{
+  await ref.update({
+    'status':'cancelled',
+    'read':true,
+    'cancelledAt':FieldValue.serverTimestamp(),
+  }).timeout(const Duration(seconds:10));
 }
 
 bool gidenSosyalIstekBekliyor(
@@ -15852,6 +15879,14 @@ class AktivitePage extends StatelessWidget {
     final takipIstegi=tur=='follow_request'&&!arkadaslikIstegi;
     if(ben==null||gonderen.isEmpty||veri['status']!='pending')return;
 
+    String benimAd='NgelX kullanıcısı',benimFoto='';
+    try{
+      final bp=await FirebaseFirestore.instance.collection('users').doc(ben).get().timeout(const Duration(seconds:6));
+      final bv=bp.data()??<String,dynamic>{};
+      benimAd=(bv['displayName']??bv['username']??'NgelX kullanıcısı').toString();
+      benimFoto=(bv['photoUrl']??'').toString();
+    }catch(_){}
+
     final toplu=FirebaseFirestore.instance.batch();
     toplu.update(belge.reference,{
       'status':kabul?'accepted':'rejected',
@@ -15874,6 +15909,7 @@ class AktivitePage extends StatelessWidget {
         FirebaseFirestore.instance.collection('notifications').doc('follow_accepted_'+ben+'_'+gonderen),
         {
           'toUid':gonderen,'fromUid':ben,'type':'follow_accepted',
+          'senderName':benimAd,'photoUrl':benimFoto,
           'text':'Takip isteğin kabul edildi','read':false,
           'createdAt':FieldValue.serverTimestamp(),
         },
@@ -15902,6 +15938,7 @@ class AktivitePage extends StatelessWidget {
         FirebaseFirestore.instance.collection('notifications').doc('friend_accepted_'+ben+'_'+gonderen),
         {
           'toUid':gonderen,'fromUid':ben,'type':'friend_accepted',
+          'senderName':benimAd,'photoUrl':benimFoto,
           'text':'Arkadaşlık isteğin kabul edildi','read':false,
           'createdAt':FieldValue.serverTimestamp(),
         },
@@ -15909,10 +15946,16 @@ class AktivitePage extends StatelessWidget {
       );
     }
 
-    await toplu.commit();
-    if(context.mounted){
-      final ad=takipIstegi?'Takip isteği':'Arkadaşlık isteği';
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(kabul?'$ad kabul edildi.':'$ad reddedildi.')));
+    try{
+      await toplu.commit().timeout(const Duration(seconds:12));
+      if(context.mounted){
+        final ad=takipIstegi?'Takip isteği':'Arkadaşlık isteği';
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(kabul?'$ad kabul edildi.':'$ad reddedildi.')));
+      }
+    }on TimeoutException{
+      if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('İstek işlemi zaman aşımına uğradı. Tekrar dene.')));
+    }catch(e){
+      if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('İstek işlenemedi: $e')));
     }
   }
 
@@ -17738,7 +17781,7 @@ class _TercihlerPageState extends State<TercihlerPage> {
           ),
           const Divider(),
           ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:22,vertical:6),leading:const Icon(Icons.block_outlined,color:mor),title:const Text('Engellenen hesaplar',style:TextStyle(fontWeight:FontWeight.w700)),subtitle:const Text('Engellediğin hesapları yönet'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const EngellenenlerPage()))),
-          ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:22,vertical:6),leading:const Icon(Icons.history_toggle_off_rounded,color:mor),title:const Text('Takip isteği geçmişi',style:TextStyle(fontWeight:FontWeight.w700)),subtitle:const Text('Gönderdiğin bekleyen, kabul edilen ve reddedilen istekler'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const TakipIstegiGecmisiPage()))),
+          ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:22,vertical:6),leading:const Icon(Icons.history_toggle_off_rounded,color:mor),title:const Text('İstek geçmişi',style:TextStyle(fontWeight:FontWeight.w700)),subtitle:const Text('Takip ve arkadaşlık isteklerinin durumunu yönet'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const TakipIstegiGecmisiPage()))),
         ];
       case 'Mesaj izinleri':
         return [
@@ -17828,50 +17871,94 @@ class ArkadaslarPage extends StatelessWidget {
 
 class TakipIstegiGecmisiPage extends StatelessWidget{
   const TakipIstegiGecmisiPage({super.key});
+
   String durum(Map<String,dynamic> v){
     switch((v['status']??'pending').toString()){
       case 'accepted':return 'Kabul edildi';
       case 'rejected':return 'Reddedildi';
+      case 'cancelled':return 'Geri çekildi';
       default:return 'Bekliyor';
     }
   }
+
   Color durumRengi(Map<String,dynamic> v){
     switch((v['status']??'pending').toString()){
       case 'accepted':return Colors.green;
       case 'rejected':return Colors.red;
+      case 'cancelled':return Colors.black45;
       default:return Colors.orange;
     }
   }
+
+  String turEtiketi(Map<String,dynamic> v)=>(v['type']??'').toString()=='friend_request'?'Arkadaşlık':'Takip';
+
+  Future<void> geriCek(BuildContext context,QueryDocumentSnapshot<Map<String,dynamic>> d)async{
+    final v=d.data();
+    if(v['status']!='pending')return;
+    final ok=await showDialog<bool>(
+      context:context,
+      builder:(c)=>AlertDialog(
+        backgroundColor:Colors.white,
+        surfaceTintColor:Colors.white,
+        title:Text('${turEtiketi(v)} isteği geri çekilsin mi?',style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w900)),
+        content:const Text('Karşı taraf artık bu bekleyen isteği kabul veya reddedemez.',style:TextStyle(color:Colors.black54)),
+        actions:[
+          TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),
+          FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('Geri çek')),
+        ],
+      ),
+    )??false;
+    if(!ok)return;
+    try{
+      await sosyalIstekIptalEt(d.reference);
+      if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('İstek geri çekildi.')));
+    }on TimeoutException{
+      if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('İstek geri çekme zaman aşımına uğradı.')));
+    }catch(e){
+      if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('İstek geri çekilemedi: $e')));
+    }
+  }
+
   @override Widget build(BuildContext context){
     final uid=FirebaseAuth.instance.currentUser?.uid;
     return Theme(data:ThemeData.light(),child:Scaffold(
       backgroundColor:Colors.white,
-      appBar:AppBar(title:const Text('Takip isteği geçmişi',style:TextStyle(fontWeight:FontWeight.w900))),
+      appBar:AppBar(title:const Text('İstek geçmişi',style:TextStyle(fontWeight:FontWeight.w900))),
       body:uid==null?const Center(child:Text('Oturum bulunamadı.')):StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
         stream:FirebaseFirestore.instance.collection('notifications').where('fromUid',isEqualTo:uid).limit(100).snapshots(),
         builder:(_,s){
           if(s.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator(color:mor));
-          final docs=(s.data?.docs??[]).where((d)=>d.data()['type']=='follow_request').toList()
+          if(s.hasError)return const Center(child:Text('İstek geçmişi yüklenemedi.',style:TextStyle(color:Colors.black54)));
+          final docs=(s.data?.docs??[]).where((d){
+            final tur=(d.data()['type']??'').toString();
+            return tur=='follow_request'||tur=='friend_request';
+          }).toList()
             ..sort((a,b){
               final at=a.data()['createdAt'],bt=b.data()['createdAt'];
               final am=at is Timestamp?at.millisecondsSinceEpoch:0,bm=bt is Timestamp?bt.millisecondsSinceEpoch:0;
               return bm.compareTo(am);
             });
-          if(docs.isEmpty)return const Center(child:Text('Gönderilmiş takip isteğin yok.',style:TextStyle(color:Colors.black54)));
+          if(docs.isEmpty)return const Center(child:Text('Gönderilmiş takip veya arkadaşlık isteğin yok.',style:TextStyle(color:Colors.black54)));
           return ListView.separated(
             padding:const EdgeInsets.all(12),itemCount:docs.length,separatorBuilder:(_,__)=>const Divider(),
             itemBuilder:(_,i){
-              final v=docs[i].data(),hedef=(v['toUid']??'').toString();
+              final d=docs[i],v=d.data(),hedef=(v['toUid']??'').toString(),bekliyor=v['status']=='pending';
               return FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(
                 future:FirebaseFirestore.instance.collection('users').doc(hedef).get(),
                 builder:(_,u){
                   final p=u.data?.data()??<String,dynamic>{},foto=(p['photoUrl']??'').toString(),ad=(p['displayName']??p['username']??'NgelX kullanıcısı').toString();
                   return ListTile(
                     onTap:hedef.isEmpty?null:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciProfilPage(uid:hedef))),
-                    leading:CircleAvatar(backgroundImage:foto.isEmpty?null:CachedNetworkImageProvider(foto),child:foto.isEmpty?const Icon(Icons.person):null),
+                    leading:CircleAvatar(
+                      backgroundColor:(v['type']=='friend_request'?mor:mavi).withValues(alpha:.12),
+                      backgroundImage:foto.isEmpty?null:CachedNetworkImageProvider(foto),
+                      child:foto.isEmpty?Icon(v['type']=='friend_request'?Icons.people_alt_outlined:Icons.person_add_alt_1_rounded,color:v['type']=='friend_request'?mor:mavi):null,
+                    ),
                     title:Text(ad,style:const TextStyle(fontWeight:FontWeight.w800)),
-                    subtitle:Text(zamanKisa(v['createdAt'])),
-                    trailing:Text(durum(v),style:TextStyle(color:durumRengi(v),fontWeight:FontWeight.w800)),
+                    subtitle:Text('${turEtiketi(v)} • ${zamanKisa(v['createdAt'])}'),
+                    trailing:bekliyor
+                      ?TextButton(onPressed:()=>geriCek(context,d),child:const Text('Geri çek'))
+                      :Text(durum(v),style:TextStyle(color:durumRengi(v),fontWeight:FontWeight.w800)),
                   );
                 },
               );
