@@ -25,6 +25,7 @@ import 'package:device_info_plus/device_info_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:record/record.dart' as rec;
 import 'group_quality.dart';
+part 'build258_settings.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -18631,7 +18632,7 @@ class _ProfilPageState extends State<ProfilPage> {
                       IconButton(tooltip:t('profilePreview'),onPressed:aktifKullanici==null?null:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciProfilPage(uid:aktifKullanici!.uid,ziyaretciOnizleme:true))),icon:const Icon(Icons.visibility_outlined,color:Colors.black,size:27)),
                       IconButton(onPressed:aktifKullanici==null?null:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>ProfilAramaPage(uid:aktifKullanici!.uid))),icon:const Icon(Icons.search_rounded,color:Colors.black,size:28)),
                       StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(stream:aktifKullanici==null?null:FirebaseFirestore.instance.collection('notifications').where('toUid',isEqualTo:aktifKullanici!.uid).limit(100).snapshots(),builder:(_,s){final sayi=(s.data?.docs??[]).where((d)=>d.data()['read']!=true).length;return IconButton(onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const AktivitePage())),icon:sayi==0?const Icon(Icons.notifications_none_rounded,color:Colors.black,size:28):Badge(label:Text(sayi>99?'99+':'$sayi'),child:const Icon(Icons.notifications_none_rounded,color:Colors.black,size:28)));}),
-                      IconButton(tooltip:t('settingsTitle'),onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const AyarlarPage())),icon:const Icon(Icons.settings_outlined,color:Colors.black,size:28)),
+                      IconButton(tooltip:t('settingsTitle'),onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const AyarlarV258Page())),icon:const Icon(Icons.settings_outlined,color:Colors.black,size:28)),
                     ],
                   ),
                   const SizedBox(height: 18),
@@ -18793,7 +18794,7 @@ class _ProfilPageState extends State<ProfilPage> {
                     ProfilTanitimVideoKarti(url:tanitimVideoUrl),
                   ],
                   const SizedBox(height: 22),
-                  Row(mainAxisAlignment:MainAxisAlignment.spaceAround,children:[_profilKisayol(Icons.bookmark_border_rounded,t('saved'),tiklama:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const KaydedilenlerPage()))),_profilKisayol(Icons.history_rounded,t('archive'),tiklama:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const HikayeArsiviPage()))),_profilKisayol(Icons.add_circle_outline_rounded,t('stories'),tiklama:hikayeyiAc),_profilKisayol(Icons.lock_outline_rounded,t('privacy'),tiklama:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const TercihlerPage(baslik:'Gizlilik')))),_profilKisayol(Icons.settings_outlined,t('settings'),tiklama:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const AyarlarPage())))]),
+                  Row(mainAxisAlignment:MainAxisAlignment.spaceAround,children:[_profilKisayol(Icons.bookmark_border_rounded,t('saved'),tiklama:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const KaydedilenlerPage()))),_profilKisayol(Icons.history_rounded,t('archive'),tiklama:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const HikayeArsiviPage()))),_profilKisayol(Icons.add_circle_outline_rounded,t('stories'),tiklama:hikayeyiAc),_profilKisayol(Icons.lock_outline_rounded,t('privacy'),tiklama:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const TercihlerPage(baslik:'Gizlilik')))),_profilKisayol(Icons.settings_outlined,t('settings'),tiklama:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const AyarlarV258Page())))]),
                   const SizedBox(height: 20),
                   SizedBox(height:92,child:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
                     stream:aktifKullanici==null?null:FirebaseFirestore.instance.collection('videos').where('ownerId',isEqualTo:aktifKullanici!.uid).limit(100).snapshots(),
