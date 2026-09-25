@@ -72,7 +72,7 @@ const ngelxPrivateBlueBorder = Color(0xFFD8E8FF);
 const ngelxPrivateBlueInk = Color(0xFF10213A);
 
 const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.57');
-const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '261');
+const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '262');
 const ngelxGroupBorder = Color(0xFFD9EEE0);
 
 class NgelXBirthDateFormatter extends TextInputFormatter {
@@ -4975,11 +4975,64 @@ class YorumKarti extends StatelessWidget {
       } else if (secim == 'edit') {
         await Future<void>.delayed(const Duration(milliseconds:120));
         if(!context.mounted)return;
-        final kontrol = TextEditingController(text:metin);
-        final kaydet = await showDialog<bool>(context:context,builder:(c)=>AlertDialog(title:const Text('Yorumu düzenle'),content:TextField(controller:kontrol,maxLines:4,maxLength:500,autofocus:true),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('Kaydet'))])) ?? false;
-        final yeni = kontrol.text.trim(); kontrol.dispose();
-        if (kaydet && yeni.isNotEmpty) {
-          try { await yorumRef.update({'text':yeni,'updatedAt':FieldValue.serverTimestamp()}); } catch(e) { if(context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Yorum güncellenemedi: $e'))); }
+        var yeniMetin=metin;
+        final kaydet=await showDialog<bool>(
+          context:context,
+          barrierDismissible:false,
+          builder:(dialogContext)=>Theme(
+            data:ThemeData.light().copyWith(
+              colorScheme:ColorScheme.fromSeed(seedColor:mor),
+              dialogTheme:const DialogThemeData(backgroundColor:Colors.white,surfaceTintColor:Colors.transparent),
+            ),
+            child:AlertDialog(
+              backgroundColor:Colors.white,
+              surfaceTintColor:Colors.transparent,
+              shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(26)),
+              title:const Text('Yorumu düzenle',style:TextStyle(color:Colors.black87,fontWeight:FontWeight.w900)),
+              content:TextFormField(
+                initialValue:metin,
+                autofocus:true,
+                maxLines:4,
+                maxLength:500,
+                onChanged:(v)=>yeniMetin=v,
+                decoration:InputDecoration(
+                  filled:true,
+                  fillColor:const Color(0xFFF5F5F7),
+                  border:OutlineInputBorder(borderRadius:BorderRadius.circular(20),borderSide:BorderSide.none),
+                  enabledBorder:OutlineInputBorder(borderRadius:BorderRadius.circular(20),borderSide:BorderSide.none),
+                  focusedBorder:OutlineInputBorder(borderRadius:BorderRadius.circular(20),borderSide:const BorderSide(color:mor,width:1.3)),
+                ),
+              ),
+              actions:[
+                TextButton(
+                  onPressed:(){
+                    FocusScope.of(dialogContext).unfocus();
+                    Navigator.pop(dialogContext,false);
+                  },
+                  child:const Text('Vazgeç'),
+                ),
+                FilledButton(
+                  onPressed:(){
+                    FocusScope.of(dialogContext).unfocus();
+                    Navigator.pop(dialogContext,true);
+                  },
+                  child:const Text('Kaydet'),
+                ),
+              ],
+            ),
+          ),
+        )??false;
+        await Future<void>.delayed(const Duration(milliseconds:180));
+        if(!context.mounted)return;
+        final yeni=yeniMetin.trim();
+        if(kaydet&&yeni.isNotEmpty&&yeni!=metin){
+          try{
+            await yorumRef.update({'text':yeni,'updatedAt':FieldValue.serverTimestamp()}).timeout(const Duration(seconds:12));
+          }on TimeoutException{
+            if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Yorum güncelleme zaman aşımına uğradı.')));
+          }catch(e){
+            if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Yorum güncellenemedi: $e')));
+          }
         }
       }
     }
