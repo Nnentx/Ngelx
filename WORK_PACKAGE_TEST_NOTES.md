@@ -517,3 +517,26 @@
 8. Normal özel mesaj bildirimi hâlâ özel sohbete açılmalı.
 9. Aktivite > sağ üst çift tik: tüm kartlar okundu olmalı ve başarı mesajı görünmeli.
 
+
+
+## 2026-09-25 — Build 267 Aktivite/Bildirim kategori doğruluk turu
+
+- **Mesajlar** ve **Gruplar** bildirim ayarları birbirinden ayrıldı. Özel mesaj bildirimleri kapalıyken grup bildirimleri açık bırakılırsa grup olayları artık yanlışlıkla susturulmuyor.
+- **Beğeni ve yorumlar** ayarı artık yalnızca `interaction` değil, yorum beğenisi gibi `like` bildirimlerini de kapsıyor.
+- Bildirim ayarlarına ayrı **Aramalar** anahtarı eklendi; özel ve grup sesli/görüntülü arama bildirimleri buradan kapatılabiliyor.
+- Grup sessize alma davranışı daraltıldı: grup mesajı, bahsetme ve arama bildirimleri sessiz kalır; **gruba eklenme**, **katılma isteği** ve **katılma onayı** gibi yönetim olayları artık yanlışlıkla kaybolmuyor.
+- Aktivite listesinde grup olayları varsa mümkün olduğunda gönderen kişinin fotoğrafı yerine **grup fotoğrafı** gösteriliyor; grup fotoğrafı yoksa mevcut güvenli ikon/avatar fallback'i korunuyor.
+- Eski veya farklı üretim yolundan gelen `group_*` olayları da grup olarak algılanıyor; yeşil grup görünümü ve doğru grup yönlendirmesi korunuyor.
+- Grup Bilgileri ekranından başlatılan sesli/görüntülü arama da artık `targetKind/group`, grup adı, grup fotoğrafı ve doğru `eventKind` metadata'sını taşıyor.
+- Eski NgelX logo tasarım kodları ve iki özgün logo asset'i korunuyor.
+- Sürüm **v1.0.57 • Yapı 267**.
+
+### Build 267 gerçek cihaz doğrulama sırası
+
+1. Ayarlar > Bildirimler: **Mesajlar kapalı**, **Gruplar açık** yap. Özel mesaj bildirimi oluşmamalı; grup mesajı bildirimi Aktivite'de görünmeli.
+2. **Gruplar kapalı**, **Mesajlar açık** yap. Grup mesajı/bahsetme bildirimi oluşmamalı; özel mesaj bildirimi çalışmaya devam etmeli.
+3. **Aramalar kapalı** yap. Özel ve grup araması başlat; arama bildirimi oluşmamalı. Tekrar açınca oluşmalı.
+4. **Beğeni ve yorumlar kapalı** yap. Gönderi beğenisi, yorum ve yorum beğenisi bildirimlerinin sustuğunu doğrula.
+5. Bir grubu sessize al. Yeni grup mesajı/bahsetme/arama bildirimi gelmemeli; aynı gruba yeni üye eklenme veya katılma onayı gibi yönetim bildirimi kaybolmamalı.
+6. Grup fotoğrafı olan bir gruptan mesaj gönder. Aktivite kartında grup fotoğrafı görünmeli ve karta basınca doğru grup açılmalı.
+7. Grup Bilgileri içinden sesli/görüntülü arama başlat. Karşı hesapta bildirim **GRUP** olarak görünmeli ve doğru grup aramasına yönlenmeli.
