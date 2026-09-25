@@ -381,3 +381,24 @@
 - Repro: Akış > Yorumlar > kendi yorumunun üç noktası > **Düzenle** > metni değiştir > **Kaydet**.
 - Eski NgelX logo tasarım kodlamaları korunacak; bu düzeltme logo tarafına dokunmayacak.
 
+## 2026-09-25 — Build 262 yorum düzenleme framework çökme düzeltmesi
+
+- Gerçek cihazda doğrulanan **Yorum > Düzenle > Kaydet** akışındaki Flutter `_dependents.isEmpty` assertion hatası hedef alındı.
+- Geçici yorum düzenleme dialogunda dışarıdan oluşturulan `TextEditingController` ve dialog kapanır kapanmaz yapılan manuel `dispose()` kaldırıldı.
+- Düzenleme alanı artık `TextFormField(initialValue: ...)` ile controller'sız çalışıyor.
+- Kaydet/Vazgeç öncesinde klavye odağı açıkça kapatılıyor; dialog tamamen sökülsün diye Firestore güncellemesinden önce kısa güvenli geçiş bekleniyor.
+- Firestore yorum güncellemesine 12 saniyelik hata/zaman aşımı geri bildirimi eklendi.
+- CI sözleşmesine yorum düzenleme akışında manuel controller/dispose kullanımının geri gelmesini engelleyen kontrol eklendi.
+- **Eski NgelX logo tasarım kodu ve logo asset'leri aynen korunuyor.**
+- Sürüm **v1.0.57 • Yapı 262**.
+
+### Build 262 doğrulama sırası
+
+1. Kendi yorumun > üç nokta > **Düzenle**.
+2. Klavye açıkken metni değiştir ve **Kaydet**.
+3. Kırmızı Flutter ekranı / `_dependents.isEmpty` çıkmamalı.
+4. Yorum metni listede yeni haliyle görünmeli.
+5. Aynı işlemi art arda 3 kez tekrarla.
+6. Düzenle penceresini açıp **Vazgeç** de; crash olmamalı.
+7. Ardından **Sil**, **Kopyala**, **Yanıtla**, beğeni/tepki işlemlerini tekrar kontrol et.
+
