@@ -729,6 +729,22 @@ for token in (
     if token not in app:
         errors.append("Build 268 grup mesaj yükleme koruması eksik: " + token)
 
+# Build 269: Activity must keep the notification overview usable as volume grows.
+for token in (
+    "class AktivitePage extends StatefulWidget",
+    "String _filtre='all';",
+    "case 'unread': return v['read']!=true;",
+    "case 'groups': return grup;",
+    "case 'messages': return tur=='message'&&!grup;",
+    "case 'requests': return tur=='follow_request'||tur=='friend_request'||olay=='group_join_request';",
+    "notificationMessages",
+    "notificationRequests",
+    "noActivityInFilter",
+    "ChoiceChip(",
+):
+    if token not in app:
+        errors.append("Build 269 Aktivite filtre sözleşmesi eksik: " + token)
+
 if errors:
     print("NgelX contract doğrulaması BAŞARISIZ:")
     for e in errors:
