@@ -60,7 +60,7 @@ class AyarlarV258Page extends StatelessWidget{
         const Divider(),
         ListTile(leading:const Icon(Icons.logout,color:Colors.red),title:Text(t('logout'),style:const TextStyle(color:Colors.red,fontWeight:FontWeight.w800)),onTap:()async{
           final ok=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(title:Text(t('logoutQuestion')),content:Text(t('logoutInfo')),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:Text(t('cancel'))),FilledButton(onPressed:()=>Navigator.pop(c,true),child:Text(t('logout')))]));
-          if(ok==true){await FirebaseAuth.instance.signOut();if(context.mounted)Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder:(_)=>const GirisPage()),(_)=>false);}
+          if(ok==true){try{await FirebaseAuth.instance.signOut().timeout(const Duration(seconds:8));ngelxKokRotayaDon();}on TimeoutException{if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Çıkış zaman aşımına uğradı. Tekrar dene.')));}catch(e){if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Çıkış yapılamadı: $e')));}}
         }),
       ]),
     ),
@@ -193,8 +193,8 @@ class _GelismisAyarlarV258PageState extends State<GelismisAyarlarV258Page>{
     if(!ok)return;
     final d=await FirebaseFirestore.instance.collection('users').doc(u.uid).get(),ham=List<dynamic>.from(d.data()?['loginHistory']??const[]),ids=ham.whereType<Map>().map((x)=>(x['deviceId']??'').toString()).where((x)=>x.isNotEmpty).toSet().toList();
     await FirebaseFirestore.instance.collection('users').doc(u.uid).set({'revokedDeviceIds':FieldValue.arrayUnion(ids),'allSessionsRevokedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
-    await FirebaseAuth.instance.signOut();
-    if(mounted)Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder:(_)=>const GirisPage()),(_)=>false);
+    await FirebaseAuth.instance.signOut().timeout(const Duration(seconds:8));
+    ngelxKokRotayaDon();
   }
 
   List<Widget> get _icerik{
