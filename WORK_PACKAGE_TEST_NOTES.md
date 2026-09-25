@@ -616,3 +616,29 @@
 7. Gelen Kutusu üstündeki çift tik **Tümünü okundu yap** düğmesine bas. Özel sohbet, grup ve Aktivite sayaçları sıfırlanmalı.
 8. Çok sayıda eski bildirim bulunan hesapta aynı işlemi dene; Firestore batch sınırı hatası oluşmamalı.
 9. Arşivlenmiş veya Gelen Kutusu'ndan kaldırılmış sohbetler üst sayaçlara dahil olmamalı.
+
+
+## 2026-09-25 — Build 271 profil takip/arkadaşlık/mesaj güvenilirlik turu
+
+- Diğer kullanıcı profilindeki **Takip isteği**, **Arkadaşlık isteği** ve **Mesaj** aksiyonları tekrar sağlamlaştırıldı.
+- Sosyal istek gönderme fonksiyonu artık gerçekten yeni kayıt oluşturulduysa true, istek zaten bekliyorsa / ilişki zaten varsa false döndürüyor. Böylece ekranda “gönderildi” yazıp arka planda hiçbir şey olmaması engelleniyor.
+- Giden istek kontrolü 100 kayıttan 200 kayda çıkarıldı; yoğun test hesaplarında eski pending isteklerin gözden kaçma ihtimali azaltıldı.
+- Gizli hesaba takip isteğinde ağ/zaman aşımı hataları artık sessiz kalmıyor; kullanıcı açık hata mesajı görüyor.
+- Arkadaşlık isteğinde de aynı görünür hata ve “zaten bekliyor / zaten arkadaşsınız” geri bildirimi eklendi.
+- Profildeki **Mesaj** butonu artık eski sayfa snapshot'ına güvenmiyor. Butona basıldığında gönderen hesap, hedef hesap ve mevcut sohbet belgesi güncel olarak yeniden kontrol ediliyor.
+- Mesaj izni; **Herkes / Arkadaşlar / Takip ettiklerim** seçenekleri ile daha önce kabul edilmiş mesaj isteği birlikte değerlendirilip sonra doğru özel sohbet açılıyor.
+- Mesaj izni kontrolü 8 saniye ile sınırlandı; ağ sorunu varsa boş/donmuş davranış yerine kullanıcıya yeniden deneme mesajı gösteriliyor.
+- Build 270 Gelen Kutusu/Aktivite canlı sayaçları ve önceki grup/bildirim düzeltmeleri korunuyor.
+- Eski NgelX logo tasarım kodları ve iki logo asset'i korunuyor.
+- Sürüm **v1.0.57 • Yapı 271**.
+
+### Build 271 gerçek cihaz doğrulama sırası
+
+1. Sultan hesabından Adem Baykar profiline gir. Gizli hesapsa **Takip isteği gönder** düğmesine bir kez bas; karşı hesap Aktivite'de isteği görmeli.
+2. Aynı düğmeye tekrar basılabilen bir yarış durumu oluşursa ikinci pending kayıt oluşmamalı; ekranda zaten beklediği belirtilmeli.
+3. **Arkadaşlık isteği gönder** düğmesine bas; karşı hesaba tek istek gitmeli ve gönderici ekranda bekleyen durum görmeli.
+4. İnterneti kapatıp takip/arkadaşlık isteği dene; buton sessiz kalmamalı, açık hata mesajı göstermeli.
+5. Mesaj izni **Herkes** olan bir hesapta Profil > **Mesaj**; doğru kişiyle özel sohbet açılmalı.
+6. Mesaj izni **Arkadaşlar** olan hesapta arkadaş değilsen açık gizlilik mesajı gösterilmeli; arkadaş olduktan sonra aynı buton sohbeti açmalı.
+7. Mesaj izni **Takip ettiklerim** ise hedef hesap seni takip ediyorsa sohbet açılmalı, takip etmiyorsa izin uyarısı görünmeli.
+8. Daha önce mesaj isteği kabul edilmiş iki hesapta gizlilik ayarı sonradan daraltılsa bile mevcut kabul edilmiş sohbet açılabilmeli.
