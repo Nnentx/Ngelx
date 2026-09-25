@@ -693,3 +693,28 @@
 6. Hikâye sahibinde aynı hikâyeyi aç; alt bölümde yanıt ve tepki sayıları görünmeli.
 7. Profil > Hikâye arşivi: eski hikâyeler açılmalı, süre dolduysa viewer **Bitti** göstermeli.
 8. Arşivden yıldızla Öne Çıkar; profil öne çıkanlar şeridinde görünmeli. Yıldızı kaldırınca şeritten kaybolmalı.
+
+
+## 2026-09-25 — Build 274 Profil finali
+
+- Diğer kullanıcı profili `StatelessWidget` yerine stateful yapıya alındı; profil ziyaret kaydı artık her rebuild'de tekrar yazılmıyor, sayfa açılışında yalnızca bir kez tetikleniyor. Profil ziyaret eğilimlerinin şişmesi engellendi.
+- Profil paylaşım gizliliği kontrolüne 8 saniyelik ağ sınırı ve görünür hata geri bildirimi eklendi.
+- Profil içi arama genişletildi: **Tümü / Fotoğraf / Video / Yazı** filtreleri eklendi.
+- Profil araması artık açıklama yanında etiket ve konum alanlarında da anahtar kelime arıyor.
+- Arama sonuçları oluşturulma zamanına göre **yeni → eski** sıralanıyor ve sonuçlarda kesin tarih/saat gösteriliyor.
+- Profilde sabit gönderi sınırı yeniden güvenceye alındı: en fazla **3 gönderi**. Sınır doluysa kullanıcı önce mevcut sabitlemelerden birini kaldırması gerektiğini görüyor.
+- Sabitleme/sabitlemeyi kaldırma işlemleri 8 saniyelik timeout ve hata geri bildirimi aldı.
+- Mevcut profil ziyaretçi önizleme, ortak gruplar, tanıtım videosu, istek geçmişi, takipçi arama/kaldırma, içerik istatistikleri ve ziyaret trendleri korunuyor.
+- Build 273 hikâye finali ve önceki NgelX logo/tasarım kodları korunuyor.
+- Sürüm **v1.0.57 • Yapı 274**.
+
+### Build 274 gerçek cihaz doğrulama sırası
+
+1. Aynı kullanıcı profilini aç ve sayfa içinde takip/arkadaşlık state'i değişirken birkaç rebuild oluşmasını sağla; profil ziyaret sayısı tek açılış için bir kez artmalı.
+2. Kendi profilinde arama ikonuna gir; **Tümü / Fotoğraf / Video / Yazı** filtreleri görünmeli.
+3. Açıklama, etiket veya konumdan bir kelime ara; doğru gönderiler gelmeli.
+4. Arama sonuçları en yeni gönderiden eskiye sıralanmalı ve tarih/saat görünmeli.
+5. Üç gönderiyi sabitle; dördüncü için **en fazla 3 gönderi** uyarısı çıkmalı.
+6. Bir sabitlemeyi kaldırıp dördüncü gönderiyi tekrar sabitle; işlem başarılı olmalı.
+7. Profil paylaşımı arkadaşlarla sınırlı bir hesapta arkadaş olmayan hesaptan paylaşmayı dene; paylaşım engellenmeli ve açık açıklama gösterilmeli.
+8. İnterneti kapatıp profil paylaşımı veya sabitleme dene; işlem sessiz kalmamalı ve timeout/hata mesajı göstermeli.
