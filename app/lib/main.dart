@@ -72,8 +72,15 @@ const ngelxPrivateBlueBorder = Color(0xFFD8E8FF);
 const ngelxPrivateBlueInk = Color(0xFF10213A);
 
 const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.57');
-const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '263');
+const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '264');
 const ngelxGroupBorder = Color(0xFFD9EEE0);
+
+final GlobalKey<NavigatorState> ngelxNavigatorKey=GlobalKey<NavigatorState>();
+void ngelxKokRotayaDon(){
+  WidgetsBinding.instance.addPostFrameCallback((_){
+    ngelxNavigatorKey.currentState?.popUntil((route)=>route.isFirst);
+  });
+}
 
 class NgelXBirthDateFormatter extends TextInputFormatter {
   const NgelXBirthDateFormatter();
@@ -2027,6 +2034,7 @@ class NgelXApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return ValueListenableBuilder<String>(valueListenable: uygulamaDili, builder: (_, dil, __) => MaterialApp(
       key: ValueKey('ngelx_app_$dil'),
+      navigatorKey:ngelxNavigatorKey,
       debugShowCheckedModeBanner: false,
       title: 'NgelX',
       theme: ThemeData(
@@ -2047,15 +2055,20 @@ class NgelXApp extends StatelessWidget {
       ),
       home: NgelXAcilisKapisi(
         child:StreamBuilder<User?>(
-          stream:FirebaseAuth.instance.authStateChanges(),
+          stream:FirebaseAuth.instance.userChanges(),
           initialData:FirebaseAuth.instance.currentUser,
           builder:(_,auth){
             final kullanici=auth.data;
-            return UygulamaDurumKapisi(
-              key:ValueKey('durum_${kullanici?.uid??'guest'}_$dil'),
-              child:kullanici==null||kullanici.isAnonymous
-                ? GirisPage(key:ValueKey('giris_$dil'))
-                : AnaEkran(key:ValueKey('ana_${kullanici.uid}_$dil')),
+            if(kullanici==null||kullanici.isAnonymous||kullanici.emailVerified!=true){
+              return UygulamaDurumKapisi(
+                key:ValueKey('durum_guest_$dil'),
+                child:GirisPage(key:ValueKey('giris_$dil')),
+              );
+            }
+            return NgelXDogrulanmisOturumKapisi(
+              key:ValueKey('oturum_${kullanici.uid}_$dil'),
+              user:kullanici,
+              dil:dil,
             );
           },
         ),
@@ -2073,6 +2086,137 @@ class NgelXApp extends StatelessWidget {
       builder: (context, child) => Directionality(textDirection: dil=='ar' ? TextDirection.rtl : TextDirection.ltr, child: child!),
     ));
   }
+}
+
+class NgelXDogrulanmisOturumKapisi extends StatefulWidget{
+  final User user;
+  final String dil;
+  const NgelXDogrulanmisOturumKapisi({super.key,required this.user,required this.dil});
+  @override State<NgelXDogrulanmisOturumKapisi> createState()=>_NgelXDogrulanmisOturumKapisiState();
+}
+
+class _NgelXDogrulanmisOturumKapisiState extends State<NgelXDogrulanmisOturumKapisi>{
+  late Future<DocumentSnapshot<Map<String,dynamic>>> profil;
+
+  @override void initState(){super.initState();_yenile();}
+  @override void didUpdateWidget(covariant NgelXDogrulanmisOturumKapisi oldWidget){
+    super.didUpdateWidget(oldWidget);
+    if(oldWidget.user.uid!=widget.user.uid)_yenile();
+  }
+
+  void _yenile(){
+    profil=FirebaseFirestore.instance.collection('users').doc(widget.user.uid).get().timeout(const Duration(seconds:12));
+  }
+
+  Future<void> _cikis()async{
+    try{
+      await FirebaseAuth.instance.signOut().timeout(const Duration(seconds:8));
+      ngelxKokRotayaDon();
+    }on TimeoutException{
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Çıkış zaman aşımına uğradı. Tekrar dene.')));
+    }catch(e){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Çıkış yapılamadı: $e')));
+    }
+  }
+
+  Future<void> _geriAc()async{
+    try{
+      await FirebaseFirestore.instance.collection('users').doc(widget.user.uid).set({
+        'deactivated':false,
+        'deletionRequestedAt':FieldValue.delete(),
+        'deletionScheduledFor':FieldValue.delete(),
+        'reactivatedAt':FieldValue.serverTimestamp(),
+      },SetOptions(merge:true)).timeout(const Duration(seconds:12));
+      if(mounted)setState(_yenile);
+    }on TimeoutException{
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Hesap yeniden açma zaman aşımına uğradı.')));
+    }catch(e){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Hesap yeniden açılamadı: $e')));
+    }
+  }
+
+  Widget _durumSayfasi({required IconData ikon,required String baslik,required String aciklama,bool yukleniyor=false,VoidCallback? tekrar}){
+    return Theme(
+      data:ThemeData.light().copyWith(scaffoldBackgroundColor:Colors.white),
+      child:Scaffold(
+        backgroundColor:Colors.white,
+        body:SafeArea(child:Center(child:Padding(
+          padding:const EdgeInsets.all(28),
+          child:Column(mainAxisSize:MainAxisSize.min,children:[
+            if(yukleniyor)const CircularProgressIndicator(color:mor) else Icon(ikon,size:64,color:mor),
+            const SizedBox(height:18),
+            Text(baslik,textAlign:TextAlign.center,style:const TextStyle(color:Colors.black87,fontSize:23,fontWeight:FontWeight.w900)),
+            const SizedBox(height:8),
+            Text(aciklama,textAlign:TextAlign.center,style:const TextStyle(color:Colors.black54,fontSize:14.5,height:1.4)),
+            if(tekrar!=null)...[
+              const SizedBox(height:20),
+              FilledButton.icon(onPressed:tekrar,icon:const Icon(Icons.refresh_rounded),label:const Text('Tekrar dene')),
+              const SizedBox(height:8),
+              TextButton(onPressed:_cikis,child:const Text('Çıkış yap')),
+            ],
+          ]),
+        ))),
+      ),
+    );
+  }
+
+  @override Widget build(BuildContext context)=>FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(
+    future:profil,
+    builder:(_,s){
+      if(s.connectionState==ConnectionState.waiting){
+        return _durumSayfasi(
+          ikon:Icons.person_rounded,
+          baslik:'Hesabın hazırlanıyor',
+          aciklama:'Profil ve güvenlik bilgilerin kontrol ediliyor.',
+          yukleniyor:true,
+        );
+      }
+      if(s.hasError){
+        return _durumSayfasi(
+          ikon:Icons.cloud_off_rounded,
+          baslik:'Profil bilgileri alınamadı',
+          aciklama:'İnternet bağlantını kontrol edip tekrar dene. Uygulamayı kapatıp açman gerekmez.',
+          tekrar:(){setState(_yenile);},
+        );
+      }
+      if(s.data?.exists!=true){
+        return _durumSayfasi(
+          ikon:Icons.person_off_outlined,
+          baslik:'Profil kaydı bulunamadı',
+          aciklama:'Hesabın açık ancak profil kaydı tamamlanmamış. Tekrar dene veya çıkış yap.',
+          tekrar:(){setState(_yenile);},
+        );
+      }
+      final v=s.data?.data()??<String,dynamic>{};
+      if(v['deactivated']==true){
+        final silmeTalebi=v['deletionRequestedAt']!=null;
+        return Theme(
+          data:ThemeData.light().copyWith(scaffoldBackgroundColor:Colors.white),
+          child:Scaffold(
+            backgroundColor:Colors.white,
+            body:SafeArea(child:Center(child:Padding(
+              padding:const EdgeInsets.all(28),
+              child:Column(mainAxisSize:MainAxisSize.min,children:[
+                Icon(silmeTalebi?Icons.restore_from_trash_rounded:Icons.pause_circle_outline_rounded,size:72,color:mor),
+                const SizedBox(height:16),
+                Text(silmeTalebi?'Hesap silme talebi var':'Hesabın dondurulmuş',textAlign:TextAlign.center,style:const TextStyle(color:Colors.black87,fontSize:24,fontWeight:FontWeight.w900)),
+                const SizedBox(height:9),
+                Text(silmeTalebi?'Hesabın silme sürecinde. Devam etmek için hesabı yeniden açabilirsin.':'NgelX’e devam etmek için hesabını yeniden etkinleştir.',textAlign:TextAlign.center,style:const TextStyle(color:Colors.black54,height:1.4)),
+                const SizedBox(height:22),
+                FilledButton.icon(onPressed:_geriAc,icon:const Icon(Icons.restore_rounded),label:const Text('Hesabı geri aç')),
+                const SizedBox(height:8),
+                TextButton(onPressed:_cikis,child:const Text('Çıkış yap')),
+              ]),
+            ))),
+          ),
+        );
+      }
+      return UygulamaDurumKapisi(
+        key:ValueKey('durum_${widget.user.uid}_${widget.dil}'),
+        child:AnaEkran(key:ValueKey('ana_${widget.user.uid}_${widget.dil}')),
+      );
+    },
+  );
 }
 
 class IcerikBaglantiPage extends StatelessWidget {
@@ -2218,17 +2362,17 @@ class _GirisPageState extends State<GirisPage> {
   }
 
   Future<void> girisYap() async {
-    final adres=email.text.trim();
+    if(yukleniyor)return;
+    final adres=email.text.trim().toLowerCase();
     final epostaGecerli=RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(adres);
-    if (!epostaGecerli || sifre.text.length < 6) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Geçerli bir e-posta ve şifreni gir.')),
-      );
+    if(!epostaGecerli||sifre.text.length<6){
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Geçerli bir e-posta ve şifreni gir.')));
       return;
     }
+
     final hafiza=await SharedPreferences.getInstance();
-    final denemeAnahtari='giris_deneme_${email.text.trim().toLowerCase()}';
-    final kilitAnahtari='giris_kilit_${email.text.trim().toLowerCase()}';
+    final denemeAnahtari='giris_deneme_$adres';
+    final kilitAnahtari='giris_kilit_$adres';
     final kilitBitis=hafiza.getInt(kilitAnahtari)??0;
     final simdi=DateTime.now().millisecondsSinceEpoch;
     if(kilitBitis>simdi){
@@ -2236,35 +2380,34 @@ class _GirisPageState extends State<GirisPage> {
       if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Çok fazla hatalı deneme yapıldı. $saniye saniye sonra tekrar dene.')));
       return;
     }
-    setState(() => yukleniyor = true);
-    try {
-      final sonuc = await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: email.text.trim(),
-        password: sifre.text,
-      );
-      final profilGelecek=FirebaseFirestore.instance.collection('users').doc(sonuc.user!.uid).get();
-      await sonuc.user?.reload();
-      if (FirebaseAuth.instance.currentUser?.emailVerified != true) {
-        await FirebaseAuth.instance.currentUser?.sendEmailVerification();
-        await FirebaseAuth.instance.signOut();
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('E-posta adresin henüz doğrulanmamış. Yeni doğrulama bağlantısı gönderildi; gelen kutunu kontrol et.')));
+
+    FocusManager.instance.primaryFocus?.unfocus();
+    setState(()=>yukleniyor=true);
+    try{
+      if(FirebaseAuth.instance.currentUser!=null){
+        await FirebaseAuth.instance.signOut().timeout(const Duration(seconds:8));
+      }
+
+      final sonuc=await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email:adres,
+        password:sifre.text,
+      ).timeout(const Duration(seconds:20));
+
+      final user=sonuc.user;
+      if(user==null)throw FirebaseAuthException(code:'user-not-found',message:'Oturum açılamadı.');
+
+      if(user.emailVerified!=true){
+        try{await user.sendEmailVerification().timeout(const Duration(seconds:12));}catch(_){}
+        try{await FirebaseAuth.instance.signOut().timeout(const Duration(seconds:8));}catch(_){}
+        if(!mounted)return;
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('E-posta adresin henüz doğrulanmamış. Yeni doğrulama bağlantısı gönderildi; gelen kutunu kontrol et.')));
         return;
       }
-      final profilBelgesi=await profilGelecek;
-      final profilVerisi=profilBelgesi.data()??{};
-      if(profilVerisi['deactivated']==true&&mounted){
-        final silmeTalebi=profilVerisi['deletionRequestedAt']!=null;
-        final yenidenAc=await showDialog<bool>(context:context,barrierDismissible:false,builder:(c)=>AlertDialog(title:Text(silmeTalebi?'Hesap silme talebi var':'Hesap dondurulmuş'),content:Text(silmeTalebi?'Hesabın 30 günlük silme sürecinde. Şimdi geri açmak ister misin?':'Hesabını yeniden etkinleştirmek ister misin?'),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('Hesabı geri aç'))]));
-        if(yenidenAc!=true){await FirebaseAuth.instance.signOut();return;}
-        await FirebaseFirestore.instance.collection('users').doc(sonuc.user!.uid).set({'deactivated':false,'deletionRequestedAt':FieldValue.delete(),'deletionScheduledFor':FieldValue.delete()},SetOptions(merge:true));
-      }
-      final aktifKullanici=FirebaseAuth.instance.currentUser!;
-      final adres=email.text.trim();
+
       final parola=sifre.text;
       final hatirla=beniHatirla;
       unawaited(_girisArkaPlanIsleri(
-        user:aktifKullanici,
+        user:user,
         hafiza:hafiza,
         denemeAnahtari:denemeAnahtari,
         kilitAnahtari:kilitAnahtari,
@@ -2272,15 +2415,13 @@ class _GirisPageState extends State<GirisPage> {
         parola:parola,
         hatirla:hatirla,
       ));
-      if (!mounted) return;
-      setState(()=>yukleniyor=false);
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const AnaEkran()),
-      );
-    } on FirebaseAuthException catch (e) {
-      if (!mounted) return;
-      var mesaj='Giriş yapılamadı: ${e.message ?? e.code}';
+      ngelxKokRotayaDon();
+    }on TimeoutException{
+      try{await FirebaseAuth.instance.signOut().timeout(const Duration(seconds:5));}catch(_){}
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Giriş zaman aşımına uğradı. İnternetini kontrol edip tekrar dene.')));
+    }on FirebaseAuthException catch(e){
+      if(!mounted)return;
+      var mesaj='Giriş yapılamadı: ${e.message??e.code}';
       if(e.code=='invalid-credential'||e.code=='wrong-password'||e.code=='user-not-found'){
         final deneme=(hafiza.getInt(denemeAnahtari)??0)+1;
         if(deneme>=5){
@@ -2291,10 +2432,18 @@ class _GirisPageState extends State<GirisPage> {
           await hafiza.setInt(denemeAnahtari,deneme);
           mesaj='E-posta veya şifre yanlış. ${5-deneme} deneme hakkın kaldı.';
         }
+      }else if(e.code=='network-request-failed'){
+        mesaj='Ağa bağlanılamadı. İnternet bağlantını kontrol et.';
+      }else if(e.code=='too-many-requests'){
+        mesaj='Çok fazla giriş denemesi yapıldı. Biraz sonra tekrar dene.';
+      }else if(e.code=='user-disabled'){
+        mesaj='Bu hesap devre dışı bırakılmış.';
       }
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(mesaj)));
-    } finally {
-      if (mounted) setState(() => yukleniyor = false);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(mesaj)));
+    }catch(e){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Giriş tamamlanamadı: $e')));
+    }finally{
+      if(mounted)setState(()=>yukleniyor=false);
     }
   }
 
@@ -16891,36 +17040,55 @@ class _HesapDegistirPageState extends State<HesapDegistirPage> {
 
   Future<void> _giris(String email,{String? parola})async{
     if(islem)return;
-    final mevcut=FirebaseAuth.instance.currentUser?.email?.toLowerCase();
-    if(mevcut==email.toLowerCase()){
+    final hedefEmail=email.trim().toLowerCase();
+    final mevcut=FirebaseAuth.instance.currentUser?.email?.trim().toLowerCase();
+    if(mevcut==hedefEmail){
       if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bu hesap zaten açık.')));
       return;
     }
-    var sifre=parola??await guvenliHafiza.read(key:sifreAnahtari(email));
+
+    var sifre=parola??await guvenliHafiza.read(key:sifreAnahtari(hedefEmail));
     sifre=sifre?.trim();
-    if(sifre==null||sifre.isEmpty)sifre=await _sifreSor(email);
+    if(sifre==null||sifre.isEmpty)sifre=await _sifreSor(hedefEmail);
     if(sifre==null||sifre.length<6)return;
-    setState(()=>islem=true);
+
+    final oncekiEmail=mevcut;
+    final oncekiSifre=oncekiEmail==null?null:await guvenliHafiza.read(key:sifreAnahtari(oncekiEmail));
+    if(mounted)setState(()=>islem=true);
+
     try{
-      final sonuc=await FirebaseAuth.instance.signInWithEmailAndPassword(email:email.trim(),password:sifre);
-      await sonuc.user?.reload();
-      final user=FirebaseAuth.instance.currentUser;
+      final sonuc=await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email:hedefEmail,
+        password:sifre,
+      ).timeout(const Duration(seconds:20));
+
+      final user=sonuc.user;
       if(user==null)throw Exception('Oturum açılamadı.');
+
       if(user.emailVerified!=true){
-        await user.sendEmailVerification();
+        try{await user.sendEmailVerification().timeout(const Duration(seconds:12));}catch(_){}
+        try{await FirebaseAuth.instance.signOut().timeout(const Duration(seconds:8));}catch(_){}
+        if(oncekiEmail!=null&&oncekiSifre!=null&&oncekiSifre.length>=6){
+          try{
+            await FirebaseAuth.instance.signInWithEmailAndPassword(email:oncekiEmail,password:oncekiSifre).timeout(const Duration(seconds:15));
+          }catch(_){}
+        }
         throw Exception('Bu hesabın e-postası henüz doğrulanmamış. Doğrulama bağlantısı gönderildi.');
       }
+
       final h=await SharedPreferences.getInstance();
-      hesaplar.removeWhere((x)=>x.toLowerCase()==email.toLowerCase());
-      hesaplar.insert(0,email.trim());
-      if(hesaplar.length>5)hesaplar=hesaplar.take(5).toList();
-      await h.setStringList('hatirlanan_epostalar',hesaplar);
-      await h.setString('hatirlanan_eposta',email.trim());
-      await h.setString(uidAnahtari(email),user.uid);
-      await guvenliHafiza.write(key:sifreAnahtari(email),value:sifre);
+      final yeniHesaplar=<String>[...hesaplar]
+        ..removeWhere((x)=>x.toLowerCase()==hedefEmail);
+      yeniHesaplar.insert(0,hedefEmail);
+      final sinirli=yeniHesaplar.take(5).toList();
+      await h.setStringList('hatirlanan_epostalar',sinirli);
+      await h.setString('hatirlanan_eposta',hedefEmail);
+      await h.setString(uidAnahtari(hedefEmail),user.uid);
+      await guvenliHafiza.write(key:sifreAnahtari(hedefEmail),value:sifre);
       unawaited(girisKaydiEkle(user));
-      if(!mounted)return;
-      Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder:(_)=>const AnaEkran()),(_)=>false);
+      ngelxKokRotayaDon();
+    }on TimeoutException{
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Hesap geçişi zaman aşımına uğradı. İnternetini kontrol edip tekrar dene.')));
     }on FirebaseAuthException catch(e){
       String mesaj;
       if(e.code=='wrong-password'||e.code=='invalid-credential'){
@@ -16929,6 +17097,8 @@ class _HesapDegistirPageState extends State<HesapDegistirPage> {
         mesaj='Bu e-postayla kayıtlı hesap bulunamadı.';
       }else if(e.code=='too-many-requests'){
         mesaj='Çok fazla deneme yapıldı. Biraz sonra tekrar dene.';
+      }else if(e.code=='network-request-failed'){
+        mesaj='Ağa bağlanılamadı. İnternet bağlantını kontrol et.';
       }else{
         mesaj='Hesaba geçilemedi: '+(e.message??e.code);
       }
@@ -17287,7 +17457,7 @@ class AyarlarPage extends StatelessWidget {
     ListTile(leading:const Icon(Icons.system_update,color:mor),title:Text(t('appUpdates')),subtitle:Text('v$ngelxVersionName • ${t("build")} $ngelxBuildNumber'),trailing:const Icon(Icons.system_update_alt_rounded,color:Colors.green)),
     ListTile(leading:const Icon(Icons.share,color:mavi),title:Text(t('shareNgelx')),subtitle:Text(t('shareNgelxSub')),onTap:()async=>SharePlus.instance.share(ShareParams(text:'Ngel X ile dünyanı paylaş ✨\nhttps://ngelx.app'))),
     const Divider(),
-    ListTile(leading:const Icon(Icons.logout,color:Colors.red),title:Text(t('logout'),style:const TextStyle(color:Colors.red)),onTap:()async{final onay=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(title:Text(t('logoutQuestion')),content:Text(t('logoutInfo')),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:Text(t('cancel'))),FilledButton(onPressed:()=>Navigator.pop(c,true),child:Text(t('logout')))]));if(onay==true){await FirebaseAuth.instance.signOut();if(context.mounted)Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder:(_)=>const GirisPage()),(_)=>false);}})
+    ListTile(leading:const Icon(Icons.logout,color:Colors.red),title:Text(t('logout'),style:const TextStyle(color:Colors.red)),onTap:()async{final onay=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(title:Text(t('logoutQuestion')),content:Text(t('logoutInfo')),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:Text(t('cancel'))),FilledButton(onPressed:()=>Navigator.pop(c,true),child:Text(t('logout')))]));if(onay==true){try{await FirebaseAuth.instance.signOut().timeout(const Duration(seconds:8));ngelxKokRotayaDon();}on TimeoutException{if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Çıkış zaman aşımına uğradı. Tekrar dene.')));}catch(e){if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Çıkış yapılamadı: $e')));}}})
   ]))));}
   Widget _ayar(BuildContext c,IconData i,String kod,String baslik,String alt)=>Card(child:ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:10,vertical:7),onTap:()=>Navigator.push(c,MaterialPageRoute(builder:(_)=>TercihlerPage(baslik:kod))),leading:Icon(i,color:mor),title:Text(baslik,style:const TextStyle(fontWeight:FontWeight.bold,color:Colors.black87)),subtitle:Text(alt,style:const TextStyle(color:Colors.black54)),trailing:const Icon(Icons.chevron_right,color:Colors.black87)));
 }
