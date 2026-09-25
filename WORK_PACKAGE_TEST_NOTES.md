@@ -718,3 +718,28 @@
 6. Bir sabitlemeyi kaldırıp dördüncü gönderiyi tekrar sabitle; işlem başarılı olmalı.
 7. Profil paylaşımı arkadaşlarla sınırlı bir hesapta arkadaş olmayan hesaptan paylaşmayı dene; paylaşım engellenmeli ve açık açıklama gösterilmeli.
 8. İnterneti kapatıp profil paylaşımı veya sabitleme dene; işlem sessiz kalmamalı ve timeout/hata mesajı göstermeli.
+
+
+## 2026-09-25 — Build 275 çıkış sonrası tekrar giriş hotfix
+
+- Gerçek cihaz testinde **Çıkış yap > aynı hesaba tekrar giriş** akışında kullanıcı giriş ekranında kalabildi.
+- Kök neden olarak e-posta doğrulaması eski hesaplar için de koşulsuz uygulanıyor ve başarılı Firebase girişinden hemen sonra hesap tekrar `signOut` ediliyordu.
+- Auth kökü artık yalnızca oturum yoksa / misafir hesapsa Giriş ekranını gösteriyor; e-posta doğrulama kararı profil kapısında veriliyor.
+- Yeni oluşturulan hesaplara `emailVerificationRequired: true` işareti yazılıyor. Bu hesaplar e-posta doğrulanmadan uygulamaya devam edemiyor.
+- Daha önce oluşturulmuş ve bu işareti taşımayan test/legacy hesapları çıkıştan sonra tekrar girişte doğrulama döngüsüne takılmıyor.
+- Doğrulama gereken hesaplar için ayrı ekran eklendi: **Doğruladım, tekrar kontrol et / Bağlantıyı yeniden gönder / Başka hesapla giriş yap**.
+- Doğrulama tamamlanınca profil belgesine `emailVerified: true`, `emailVerificationRequired: false` ve doğrulama zamanı kaydediliyor.
+- Hesap değiştirme akışındaki aynı otomatik sign-out döngüsü de kaldırıldı.
+- Build 274 profil finali ve önceki özellikler korunuyor.
+- Sürüm **v1.0.57 • Yapı 275**.
+
+### Build 275 gerçek cihaz doğrulama sırası
+
+1. Mevcut test hesabında giriş yap.
+2. Ayarlar > Çıkış yap.
+3. Aynı e-posta ve şifreyle tekrar giriş yap; ana ekran açılmalı ve uygulamayı kapatıp açmak gerekmemeli.
+4. Uygulamayı tamamen kapatıp yeniden aç; oturum korunuyorsa direkt ana ekran açılmalı.
+5. Başka kayıtlı hesaba geç; hesap değiştirme sonrası login ekranında takılı kalmamalı.
+6. Yeni bir hesap oluştur; doğrulama e-postası gelmeli ve doğrulanmamış hesap için ayrı doğrulama ekranı görünmeli.
+7. E-postayı doğrula, **Doğruladım, tekrar kontrol et** düğmesine bas; uygulama ana ekrana geçmeli.
+8. Doğrulama gereken hesapta **Bağlantıyı yeniden gönder** çalışmalı.
