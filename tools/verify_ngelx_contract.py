@@ -611,6 +611,26 @@ else:
         if token not in comment_edit_body:
             errors.append("Yorum düzenleme yaşam döngüsü koruması eksik: " + token)
 
+# Build 263: social request reliability + history/cancellation.
+for token in (
+    "Future<void> sosyalIstekIptalEt",
+    "'status':'cancelled'",
+    "class TakipIstegiGecmisiPage",
+    "İstek geçmişi",
+    "Takip ve arkadaşlık isteklerinin durumunu yönet",
+    "zatenBekliyor",
+    "zatenIliski",
+):
+    if token not in app:
+        errors.append("Sosyal istek sözleşmesi eksik: " + token)
+for token in (
+    "resource.data.fromUid == request.auth.uid",
+    "request.resource.data.get('status', '') == 'cancelled'",
+    "affectedKeys().hasOnly(['status', 'read', 'cancelledAt'])",
+):
+    if token not in rules:
+        errors.append("Sosyal istek Firestore iptal koruması eksik: " + token)
+
 if errors:
     print("NgelX contract doğrulaması BAŞARISIZ:")
     for e in errors:
