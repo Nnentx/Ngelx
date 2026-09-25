@@ -429,3 +429,35 @@
 8. Kabul edilen / reddedilen / geri çekilen durum etiketlerini doğrula.
 9. Eski NgelX logo görünümü kullanılan ekranlarda değişmemiş olmalı.
 
+## 2026-09-25 — Build 264 giriş + hesap değiştirme güvenilirlik turu
+
+- Giriş/kayıt oturum yönlendirmesi artık Firebase `userChanges()` üzerinden tek kök kapıdan yönetiliyor; giriş sonrası ayrıca ikinci bir AnaEkran route'u push edilmiyor.
+- Doğrulanmamış e-posta oturumu Ana Ekran'a geçemiyor. Kayıt sonrası oluşan kısa "ana sayfaya atıp geri dönme" yarışı engellendi.
+- Doğrulanmış kullanıcı için yeni **NgelXDogrulanmisOturumKapisi** eklendi:
+  - profil/güvenlik verisini en fazla 12 saniye bekliyor,
+  - sonsuz/boş bekleme yerine görünür durum ekranı ve **Tekrar dene** veriyor,
+  - uygulamayı kapatıp açmadan yeniden denemeye izin veriyor,
+  - dondurulmuş/silme sürecindeki hesabı doğrudan güvenli geri açma ekranına alıyor.
+- Giriş butonunda çift dokunma engellendi; mevcut/stale oturum varsa yeni girişten önce temizleniyor.
+- Firebase e-posta/şifre girişi 20 saniyelik sınırla çalışıyor; ağ, fazla deneme, devre dışı kullanıcı ve timeout durumlarına ayrı hata mesajları eklendi.
+- Başarılı girişte Navigation artık **pushReplacement(AnaEkran)** yapmıyor; kök auth kapısı ve `ngelxKokRotayaDon()` kullanılıyor.
+- Ayarlar > Çıkış yap akışı yeni bir Giriş sayfası push etmek yerine oturumu kapatıp route yığınını köke temizliyor.
+- Hesap değiştir akışında manuel AnaEkran push kaldırıldı; yeni hesap auth state ile açılıyor ve eski hesabın üst route/state'i taşınmıyor.
+- Hesap değiştir 20 saniye timeout + ağ hata geri bildirimi aldı.
+- Doğrulanmamış bir kaydedilmiş hesaba geçilmeye çalışılırsa doğrulama bağlantısı gönderiliyor; mümkünse önceki kaydedilmiş hesaba güvenli geri dönüş deneniyor.
+- **Eski NgelX logo tasarım kodu ve asset'leri korunuyor.**
+- Sürüm **v1.0.57 • Yapı 264**.
+
+### Build 264 doğrulama sırası
+
+1. Çıkış yap > farklı e-posta ve şifreyle giriş yap. Uygulamayı kapatıp açmak gerekmemeli.
+2. Yanlış şifre gir: açık hata ve kalan deneme sayısı görünmeli; boş/donmuş ekranda kalmamalı.
+3. İnternet zayıfken giriş dene: uzun süre sonsuz spinner yerine timeout mesajı gelmeli.
+4. E-postası doğrulanmamış hesapla giriş dene: Ana Ekran'a düşmemeli; doğrulama mesajı görünmeli.
+5. Yeni kayıt oluştur: doğrulama gönderildikten sonra giriş ekranında kalmalı; kısa süreli Ana Ekran flash'ı olmamalı.
+6. Ayarlar > Hesap değiştir: ikinci kaydedilmiş hesaba geç; eski hesabın sohbet/profil route'u ekranda kalmamalı.
+7. Yeni hesapta Gelen Kutusu ve Profil aç; eski hesaba ait state görünmemeli.
+8. Ayarlar > Çıkış yap: route yığını temizlenip tek giriş ekranı görünmeli.
+9. Profil verisi alınamazsa **Tekrar dene** çalışmalı; uygulamayı yeniden başlatmak gerekmemeli.
+10. Eski NgelX logo görünümü kullanılan ekranlarda değişmemiş olmalı.
+
