@@ -72,7 +72,7 @@ const ngelxPrivateBlueBorder = Color(0xFFD8E8FF);
 const ngelxPrivateBlueInk = Color(0xFF10213A);
 
 const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.57');
-const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '273');
+const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '274');
 const ngelxGroupBorder = Color(0xFFD9EEE0);
 
 final GlobalKey<NavigatorState> ngelxNavigatorKey=GlobalKey<NavigatorState>();
@@ -16922,10 +16922,22 @@ class OrtakGruplarPage extends StatelessWidget{
   }
 }
 
-class KullaniciProfilPage extends StatelessWidget {
+class KullaniciProfilPage extends StatefulWidget {
   final String uid;
   final bool ziyaretciOnizleme;
   const KullaniciProfilPage({super.key, required this.uid,this.ziyaretciOnizleme=false});
+  @override State<KullaniciProfilPage> createState()=>_KullaniciProfilPageState();
+}
+
+class _KullaniciProfilPageState extends State<KullaniciProfilPage> {
+  String get uid=>widget.uid;
+  bool get ziyaretciOnizleme=>widget.ziyaretciOnizleme;
+
+  @override
+  void initState(){
+    super.initState();
+    if(!ziyaretciOnizleme)unawaited(profilZiyaretKaydet(uid));
+  }
 
   Future<void> profildenMesajAc(BuildContext context,{required String ad,required String foto})async{
     final me=FirebaseAuth.instance.currentUser?.uid;
@@ -16969,25 +16981,30 @@ class KullaniciProfilPage extends StatelessWidget {
 
   Future<void> profiliPaylas(BuildContext context)async{
     final me=FirebaseAuth.instance.currentUser?.uid;
-    final hedef=await FirebaseFirestore.instance.collection('users').doc(uid).get();
-    final hv=hedef.data()??<String,dynamic>{};
-    if(hv['profileShareFriendsOnly']==true&&me!=uid){
-      final benim=me==null?null:await FirebaseFirestore.instance.collection('users').doc(me).get();
-      final arkadaslar=List<String>.from(benim?.data()?['friends']??const[]);
-      if(!arkadaslar.contains(uid)){
-        if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bu kullanıcı profilinin yalnızca arkadaşları tarafından paylaşılmasına izin veriyor.')));
-        return;
+    try{
+      final hedef=await FirebaseFirestore.instance.collection('users').doc(uid).get().timeout(const Duration(seconds:8));
+      final hv=hedef.data()??<String,dynamic>{};
+      if(hv['profileShareFriendsOnly']==true&&me!=uid){
+        final benim=me==null?null:await FirebaseFirestore.instance.collection('users').doc(me).get().timeout(const Duration(seconds:8));
+        final arkadaslar=List<String>.from(benim?.data()?['friends']??const[]);
+        if(!arkadaslar.contains(uid)){
+          if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bu kullanıcı profilinin yalnızca arkadaşları tarafından paylaşılmasına izin veriyor.')));
+          return;
+        }
       }
+      final ad=(hv['displayName']??hv['username']??'NgelX kullanıcısı').toString();
+      final link='$ngelxWebAdresi/u/$uid';
+      await SharePlus.instance.share(ShareParams(title:'NgelX profili',subject:'NgelX • $ad',text:'NgelX’te $ad profilini görüntüle\n$link'));
+    }on TimeoutException{
+      if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Profil paylaşım izni kontrolü zaman aşımına uğradı. Tekrar dene.')));
+    }catch(_){
+      if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Profil şu anda paylaşılamadı. Tekrar dene.')));
     }
-    final ad=(hv['displayName']??hv['username']??'NgelX kullanıcısı').toString();
-    final link='$ngelxWebAdresi/u/$uid';
-    await SharePlus.instance.share(ShareParams(title:'NgelX profili',subject:'NgelX • $ad',text:'NgelX’te $ad profilini görüntüle\n$link'));
   }
 
   @override
   Widget build(BuildContext context) {
     final me = FirebaseAuth.instance.currentUser?.uid;
-    if(!ziyaretciOnizleme)unawaited(profilZiyaretKaydet(uid));
     final hedef = FirebaseFirestore.instance.collection('users').doc(uid).get();
     final benim = me == null ? Future.value(null) : FirebaseFirestore.instance.collection('users').doc(me).get();
     return Theme(data:ThemeData.light().copyWith(scaffoldBackgroundColor:Colors.white,appBarTheme:const AppBarTheme(backgroundColor:Colors.white,foregroundColor:Colors.black,elevation:0)),child:Scaffold(
@@ -18997,23 +19014,109 @@ class ProfilAramaPage extends StatefulWidget{
 }
 class _ProfilAramaPageState extends State<ProfilAramaPage>{
   String q='';
+  String tur='all';
+
+  bool _turUyar(Map<String,dynamic> v){
+    final t=(v['type']??'').toString();
+    if(tur=='all')return true;
+    return t==tur;
+  }
+
   @override Widget build(BuildContext context)=>Theme(
     data:ThemeData.light(),
     child:Scaffold(
       backgroundColor:Colors.white,
-      appBar:AppBar(title:TextField(autofocus:true,onChanged:(v)=>setState(()=>q=v.trim().toLowerCase()),decoration:const InputDecoration(hintText:'Profilde ara',prefixIcon:Icon(Icons.search)))),
+      appBar:AppBar(
+        backgroundColor:Colors.white,
+        surfaceTintColor:Colors.white,
+        title:TextField(
+          autofocus:true,
+          onChanged:(v)=>setState(()=>q=v.trim().toLowerCase()),
+          decoration:const InputDecoration(hintText:'Profilde anahtar kelime ara',prefixIcon:Icon(Icons.search_rounded),border:InputBorder.none),
+        ),
+      ),
       body:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
         stream:FirebaseFirestore.instance.collection('videos').where('ownerId',isEqualTo:widget.uid).limit(100).snapshots(),
         builder:(_,s){
-          final docs=(s.data?.docs??[]).where((d){final v=d.data();return v['type']!='story'&&(q.isEmpty||(v['description']??'').toString().toLowerCase().contains(q));}).toList();
-          if(docs.isEmpty)return const Center(child:Text('Eşleşen paylaşım bulunamadı.',style:TextStyle(color:Colors.black54)));
-          return ListView.separated(
-            padding:const EdgeInsets.all(14),itemCount:docs.length,separatorBuilder:(_,__)=>const Divider(),
-            itemBuilder:(_,i){
-              final v=docs[i].data();
-              return ListTile(onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>IcerikBaglantiPage(icerikId:docs[i].id))),leading:const CircleAvatar(backgroundColor:Color(0xFFF1E9FF),child:Icon(Icons.grid_view,color:mor)),title:Text((v['description']??'Adsız paylaşım').toString(),maxLines:2,overflow:TextOverflow.ellipsis),trailing:const Icon(Icons.chevron_right));
-            },
+          if(s.connectionState==ConnectionState.waiting&&!s.hasData)return const Center(child:CircularProgressIndicator(color:mor));
+          if(s.hasError)return const Center(child:Text('Profil araması yüklenemedi. Tekrar dene.',style:TextStyle(color:Colors.black54)));
+          final tum=(s.data?.docs??[]).where((d)=>d.data()['type']!='story').toList()
+            ..sort((a,b){
+              final at=a.data()['createdAt']??a.data()['clientCreatedAt'];
+              final bt=b.data()['createdAt']??b.data()['clientCreatedAt'];
+              final am=at is Timestamp?at.millisecondsSinceEpoch:0;
+              final bm=bt is Timestamp?bt.millisecondsSinceEpoch:0;
+              return bm.compareTo(am);
+            });
+          final docs=tum.where((d){
+            final v=d.data();
+            if(!_turUyar(v))return false;
+            if(q.isEmpty)return true;
+            final metin=[
+              (v['description']??'').toString(),
+              (v['tags']??'').toString(),
+              (v['location']??'').toString(),
+            ].join(' ').toLowerCase();
+            return metin.contains(q);
+          }).toList();
+
+          Widget chip(String kod,String yazi,IconData ikon)=>Padding(
+            padding:const EdgeInsets.only(right:7),
+            child:ChoiceChip(
+              selected:tur==kod,
+              showCheckmark:false,
+              avatar:Icon(ikon,size:17,color:tur==kod?mor:Colors.black54),
+              label:Text(yazi),
+              onSelected:(_)=>setState(()=>tur=kod),
+              selectedColor:const Color(0xFFF1E9FF),
+              side:BorderSide(color:tur==kod?mor:const Color(0xFFE4E5E9)),
+              labelStyle:TextStyle(color:tur==kod?mor:Colors.black67,fontWeight:FontWeight.w800),
+            ),
           );
+
+          return Column(children:[
+            SizedBox(
+              height:48,
+              child:ListView(
+                padding:const EdgeInsets.symmetric(horizontal:12,vertical:5),
+                scrollDirection:Axis.horizontal,
+                children:[
+                  chip('all','Tümü',Icons.grid_view_rounded),
+                  chip('photo','Fotoğraf',Icons.photo_outlined),
+                  chip('video','Video',Icons.videocam_outlined),
+                  chip('text','Yazı',Icons.notes_rounded),
+                ],
+              ),
+            ),
+            const Divider(height:1),
+            Expanded(
+              child:docs.isEmpty
+                ?Center(child:Column(mainAxisSize:MainAxisSize.min,children:[
+                    const Icon(Icons.manage_search_rounded,size:54,color:mor),
+                    const SizedBox(height:10),
+                    Text(q.isEmpty?'Bu kategoride paylaşım yok.':'Eşleşen paylaşım bulunamadı.',style:const TextStyle(color:Colors.black54,fontWeight:FontWeight.w700)),
+                  ]))
+                :ListView.separated(
+                    padding:const EdgeInsets.all(14),
+                    itemCount:docs.length,
+                    separatorBuilder:(_,__)=>const Divider(),
+                    itemBuilder:(_,i){
+                      final v=docs[i].data(),t=(v['type']??'text').toString();
+                      final zaman=akisTamTarihSaat(v['createdAt']??v['clientCreatedAt']);
+                      return ListTile(
+                        onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>IcerikBaglantiPage(icerikId:docs[i].id))),
+                        leading:CircleAvatar(
+                          backgroundColor:const Color(0xFFF1E9FF),
+                          child:Icon(t=='video'?Icons.videocam_rounded:t=='photo'?Icons.photo_rounded:Icons.notes_rounded,color:mor),
+                        ),
+                        title:Text((v['description']??'Adsız paylaşım').toString().trim().isEmpty?'Adsız paylaşım':(v['description']??'').toString(),maxLines:2,overflow:TextOverflow.ellipsis),
+                        subtitle:zaman.isEmpty?null:Text(zaman),
+                        trailing:const Icon(Icons.chevron_right),
+                      );
+                    },
+                  ),
+            ),
+          ]);
         },
       ),
     ),
@@ -19673,18 +19776,30 @@ class _ProfilPageState extends State<ProfilPage> {
           leading:Icon(sabit?Icons.push_pin:Icons.push_pin_outlined,color:mor),
           title:Text(sabit?'Sabitlemeyi kaldır':'Profilde sabitle'),
           onTap:()async{
-            if(!sabit){
-              final u=aktifKullanici;if(u==null)return;
-              final q=await FirebaseFirestore.instance.collection('videos').where('ownerId',isEqualTo:u.uid).get();
-              final sayi=q.docs.where((x)=>x.data()['type']!='story'&&x.data()['pinned']==true).length;
-              if(sayi>=3){
-                if(ctx.mounted)Navigator.pop(ctx);
-                if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Profilde en fazla 3 gönderi sabitleyebilirsin.')));
-                return;
+            try{
+              if(!sabit){
+                final u=aktifKullanici;if(u==null)return;
+                final q=await FirebaseFirestore.instance.collection('videos').where('ownerId',isEqualTo:u.uid).limit(100).get().timeout(const Duration(seconds:8));
+                final sayi=q.docs.where((x)=>x.data()['type']!='story'&&x.data()['pinned']==true).length;
+                if(sayi>=3){
+                  if(ctx.mounted)Navigator.pop(ctx);
+                  if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Profilde en fazla 3 gönderi sabitleyebilirsin. Önce bir sabitlemeyi kaldır.')));
+                  return;
+                }
               }
+              await d.reference.set({
+                'pinned':!sabit,
+                'pinnedAt':!sabit?FieldValue.serverTimestamp():null,
+              },SetOptions(merge:true)).timeout(const Duration(seconds:8));
+              if(ctx.mounted)Navigator.pop(ctx);
+              if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(sabit?'Sabitleme kaldırıldı.':'Gönderi profilde sabitlendi.')));
+            }on TimeoutException{
+              if(ctx.mounted)Navigator.pop(ctx);
+              if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Sabitleme işlemi zaman aşımına uğradı. Tekrar dene.')));
+            }catch(_){
+              if(ctx.mounted)Navigator.pop(ctx);
+              if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Sabitleme işlemi tamamlanamadı. Tekrar dene.')));
             }
-            await d.reference.set({'pinned':!sabit,'pinnedAt':!sabit?FieldValue.serverTimestamp():null},SetOptions(merge:true));
-            if(ctx.mounted)Navigator.pop(ctx);
           },
         ),
         ListTile(leading:const Icon(Icons.delete_forever,color:Colors.red),title:const Text('PAYLAŞIMI SİL',style:TextStyle(color:Colors.red,fontWeight:FontWeight.bold)),onTap:(){Navigator.pop(ctx);icerikSil(d);}),
