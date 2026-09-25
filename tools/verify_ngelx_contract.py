@@ -111,8 +111,9 @@ if "kind: 'groups'" in app and ").timeout(const Duration(seconds:75));" not in a
 
 # Authenticated account changes must rebuild account-scoped UI state.
 for token in (
-    "durum_${kullanici?.uid??'guest'}_$dil",
-    "ana_${kullanici.uid}_$dil",
+    "oturum_${kullanici.uid}_$dil",
+    "durum_${widget.user.uid}_${widget.dil}",
+    "ana_${widget.user.uid}_${widget.dil}",
 ):
     if token not in app:
         errors.append("Hesap değişiminde UI state izolasyonu eksik: " + token)
