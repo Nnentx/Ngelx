@@ -745,6 +745,21 @@ for token in (
     if token not in app:
         errors.append("Build 269 Aktivite filtre sözleşmesi eksik: " + token)
 
+# Build 270: Inbox and Activity unread state must stay synchronized.
+for token in (
+    "Future<void> tumunuOkunduYap() async",
+    "Mesajlar ve aktiviteler okundu olarak işaretlendi.",
+    "String _sayacEtiketi(int sayi)",
+    "Widget _canliGelenKutusuSayaclari(String ben)",
+    "ozelOkunmamis",
+    "grupOkunmamis",
+    "aktiviteOkunmamis",
+    "limit(200).snapshots()",
+    "if(mounted)setState((){});",
+):
+    if token not in app:
+        errors.append("Build 270 Gelen Kutusu sayaç sözleşmesi eksik: " + token)
+
 if errors:
     print("NgelX contract doğrulaması BAŞARISIZ:")
     for e in errors:
