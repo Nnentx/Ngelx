@@ -264,7 +264,7 @@ if "kind: 'chats'" in app and ").timeout(const Duration(seconds:60));" not in ap
 
 # Accepted private conversations remain reachable even if new-message privacy later becomes stricter.
 for token in (
-    "cv['requestAccepted_$me']==true||cv['requestAccepted_$uid']==true",
+    "sohbet['requestAccepted_$me']==true||sohbet['requestAccepted_$uid']==true",
     "final kabulEdildi=cv['requestAccepted_$me']==true",
 ):
     if token not in app:
