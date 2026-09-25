@@ -791,6 +791,21 @@ for token in (
     if token not in app:
         errors.append("Build 272 Kaydet/Akış sözleşmesi eksik: " + token)
 
+# Build 273: story strip/archive/highlights must use the full viewer with explicit timing.
+for token in (
+    "'_storyId':d.id",
+    "'_ownerPhotoUrl'",
+    "Navigator.push(context,MaterialPageRoute(builder:(_)=>HikayeGosterPage(",
+    "Başladı:",
+    "Biter:",
+    "replyCount",
+    "reactionCount",
+    "class HikayeArsiviPage",
+    "highlighted",
+):
+    if token not in app:
+        errors.append("Build 273 Hikâye sözleşmesi eksik: " + token)
+
 if errors:
     print("NgelX contract doğrulaması BAŞARISIZ:")
     for e in errors:
