@@ -12273,7 +12273,7 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
         belgeId:widget.chatId,
         hedefTuru:'group',
         hedefBaslik:grupAdi,
-        hedefFoto:(gv['groupPhotoUrl']??widget.foto).toString(),
+        hedefFoto:(gv['groupPhotoUrl']??'').toString(),
         olayTuru:'group_added',
       ).catchError((_){ }));
     }
