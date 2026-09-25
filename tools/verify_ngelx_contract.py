@@ -681,6 +681,8 @@ if "metin:ad+': '+onizleme" in app:
 for token in (
     "'eventKind':olayTuru",
     "'preview':onizleme",
+    "'eventAction':eylem",
+    "bildirimEylemi='gönderi gönderdi'",
     "olayTuru:'group_added'",
     "olayTuru:'group_message'",
     "olayTuru:'group_mention'",
