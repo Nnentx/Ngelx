@@ -188,6 +188,20 @@ async function seed() {
       active: true,
       title: 'Test Canlı',
     });
+    await setDoc(doc(db, 'notifications/follow_pending'), {
+      toUid: 'alice',
+      fromUid: 'bob',
+      type: 'follow_request',
+      status: 'pending',
+      read: false,
+    });
+    await setDoc(doc(db, 'notifications/friend_pending'), {
+      toUid: 'alice',
+      fromUid: 'bob',
+      type: 'friend_request',
+      status: 'pending',
+      read: false,
+    });
   });
 }
 
@@ -233,6 +247,26 @@ try {
     lastMessage: '',
   }));
 
+
+  // Sosyal istek: gönderen yalnızca kendi bekleyen isteğini "cancelled" yapabilir.
+  await assertSucceeds(updateDoc(doc(bob, 'notifications/follow_pending'), {
+    status: 'cancelled',
+    read: true,
+    cancelledAt: serverTimestamp(),
+  }));
+  await assertFails(updateDoc(doc(bob, 'notifications/friend_pending'), {
+    text: 'Sahte metin',
+  }));
+  await assertFails(updateDoc(doc(outsider, 'notifications/friend_pending'), {
+    status: 'cancelled',
+    read: true,
+    cancelledAt: serverTimestamp(),
+  }));
+  await assertSucceeds(updateDoc(doc(env.authenticatedContext('alice').firestore(), 'notifications/friend_pending'), {
+    status: 'accepted',
+    read: true,
+    answeredAt: serverTimestamp(),
+  }));
 
   // Canlı yayın tepkisi yalnızca kullanıcının kendi reaction belgesine yazılabilir.
   await assertSucceeds(setDoc(doc(bob, 'live_streams/live1/reactions/bob'), {
