@@ -373,3 +373,11 @@
 6. Yazı yazarken "yazıyor" göstergesi sohbeti ağırlaştırmamalı.
 7. Logo kullanılan mevcut ekranları kontrol et: eski logo görünümü değişmemiş olmalı.
 
+### 2026-09-25 gerçek cihaz — Yorum düzenle kritik Flutter assertion
+- Gerçek cihazda **Yorum > üç nokta > Düzenle** akışında metin düzenleme penceresi açılıyor.
+- Metin değiştirildikten sonra **Kaydet** sonrası uygulama kırmızı Flutter hata ekranına düşebiliyor.
+- Görülen hata: `package:flutter/src/widgets/framework.dart` — `Failed assertion: line 6281 pos 12: '_dependents.isEmpty': is not true.`
+- Bu hata daha önce gizli kelimeler modal yaşam döngüsünde görülen `_dependents.isEmpty` sınıfıyla aynı türde framework yaşam-döngüsü çakışmasına işaret ediyor; **yorum düzenleme dialog/controller kapanış akışı ayrı olarak sağlamlaştırılacak**.
+- Repro: Akış > Yorumlar > kendi yorumunun üç noktası > **Düzenle** > metni değiştir > **Kaydet**.
+- Eski NgelX logo tasarım kodlamaları korunacak; bu düzeltme logo tarafına dokunmayacak.
+
