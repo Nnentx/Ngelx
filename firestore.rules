@@ -415,7 +415,17 @@ service cloud.firestore {
         request.resource.data.fromUid == request.auth.uid
         || request.resource.data.toUid == request.auth.uid
       );
-      allow update, delete: if signedIn() && resource.data.toUid == request.auth.uid;
+      allow update: if signedIn() && (
+        resource.data.toUid == request.auth.uid
+        || (
+          resource.data.fromUid == request.auth.uid
+          && resource.data.get('type', '') in ['follow_request', 'friend_request']
+          && resource.data.get('status', '') == 'pending'
+          && request.resource.data.get('status', '') == 'cancelled'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'read', 'cancelledAt'])
+        )
+      );
+      allow delete: if signedIn() && resource.data.toUid == request.auth.uid;
     }
 
     match /friendships/{friendshipId} {
