@@ -19070,7 +19070,7 @@ class _ProfilAramaPageState extends State<ProfilAramaPage>{
               onSelected:(_)=>setState(()=>tur=kod),
               selectedColor:const Color(0xFFF1E9FF),
               side:BorderSide(color:tur==kod?mor:const Color(0xFFE4E5E9)),
-              labelStyle:TextStyle(color:tur==kod?mor:Colors.black67,fontWeight:FontWeight.w800),
+              labelStyle:TextStyle(color:tur==kod?mor:Colors.black54,fontWeight:FontWeight.w800),
             ),
           );
 
