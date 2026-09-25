@@ -314,3 +314,20 @@
 5. Bir metin yazıp göndermeden sohbetten çıkıp geri gir: taslak geri gelmeli.
 6. Özel sohbetten kısa video gönder ve tam ekran oynat.
 7. Bir mesajı uzun bas > Daha fazla > Mesaj bilgisi ekranını aç.
+
+## 2026-09-25 — Build 259 yorum + özel sohbet güvenilirlik düzeltmesi
+
+- Akış yorum gönderimi artık kullanıcı profil belgesinin ağdan gelmesini beklemiyor; yorum önce güvenli bir yerel kullanıcı adıyla yazılıyor, profil adı/fotoğrafı arka planda tamamlanıyor.
+- Yorum seçenekleri açılırken içerik sahibi sorgusu en fazla 1,5 saniye bekletiliyor; zayıf bağlantıda menünün hiç açılmaması önlendi.
+- Yorumdaki **Şikâyet et** ve **Kullanıcıyı engelle** kullanıcı etkileşimleri artık 12 saniyelik dış zaman aşımıyla kesilmiyor.
+- Özel sohbet yazma satırındaki ayrı Kamera ve Galeri kısayolları kaldırıldı; bu seçenekler **+** menüsünde duruyor. Böylece mesaj alanı genişledi ve **Mesaj** yazısındaki son harfin alt satıra düşmesi engellendi.
+- Sürüm **v1.0.57 • Yapı 259**.
+
+### Build 259 gerçek cihaz testi
+
+1. Akış > Yorumlar: **slm** yazıp gönder; yorum birkaç saniye içinde görünmeli ve metin alanı temizlenmeli.
+2. Bir yoruma uzun bas veya üç nokta menüsüne dokun; menü zayıf bağlantıda da açılmalı.
+3. **Kopyala** ile yorumu panoya kopyala; ardından **Şikâyet et** ve **Kullanıcıyı engelle** akışlarının kullanıcı seçim süresi yüzünden kapanmadığını kontrol et.
+4. Özel sohbete gir; alt alanda **Mesaj** tek satır görünmeli, son **j** aşağı düşmemeli.
+5. Kamera ve Fotoğraf seçeneklerinin özel sohbette **+** menüsü altında hâlâ çalıştığını doğrula.
+
