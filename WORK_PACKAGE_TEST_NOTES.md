@@ -331,3 +331,24 @@
 4. Özel sohbete gir; alt alanda **Mesaj** tek satır görünmeli, son **j** aşağı düşmemeli.
 5. Kamera ve Fotoğraf seçeneklerinin özel sohbette **+** menüsü altında hâlâ çalıştığını doğrula.
 
+## 2026-09-25 — Build 260 yorum performans ve Kopyala düzeltmesi
+
+- Yorum üç-nokta/uzun-bas menüsü açılmadan önce yapılan içerik sahibi Firestore sorgusu kaldırıldı; menü artık anında açılıyor.
+- İçerik sahibi bilgisi yorum ekranı açılırken arka planda bir kez yükleniyor ve tüm yorum kartları tarafından paylaşılıyor.
+- **Kopyala** işlemi artık bottom-sheet kapandıktan sonra beklemiyor; panoya yazma doğrudan Kopyala satırına dokunulduğu anda yapılıyor ve kullanıcıya "Yorum panoya kopyalandı" bildirimi gösteriliyor.
+- Yorum ekranı Firestore yerel önbelleğini açılışta kullanıyor; önbellek varsa ağ beklenmeden yorumlar gösteriliyor.
+- Yorum akışı tek seferde en fazla 120 kayıt dinliyor.
+- Her yorum için tüm beğeni alt koleksiyonunu dinlemek yerine yalnızca aktif kullanıcının beğeni belgesi dinleniyor; toplam sayı yorum belgesindeki likeCount alanından okunuyor. Bu, yorum listesindeki eşzamanlı Firestore yükünü ciddi biçimde azaltıyor.
+- Yorum gönderiminde içerik gizlilik/izin bilgisi açılışta yüklenen gönderi metasından kullanılıyor; aynı bilgi tekrar tekrar ağdan istenmiyor.
+- Düzenle / Sil / Şikâyet / Engelle gibi menüden sonra açılan ikinci katmanlar için yalnızca kısa 120 ms geçiş payı bırakıldı.
+- Sürüm **v1.0.57 • Yapı 260**.
+
+### Build 260 gerçek cihaz testi
+
+1. Yorumları aç: daha önce görüntülenen yorumlar mümkünse bekleme çarkı olmadan gelmeli.
+2. Bir yorumdaki üç noktaya dokun: menü gecikmeden açılmalı.
+3. **Kopyala**'ya dokun: menü kapanmalı ve "Yorum panoya kopyalandı ✅" bildirimi gelmeli; başka bir metin alanına yapıştırınca yorum metni çıkmalı.
+4. Kendi yorumunda **Düzenle** ve **Yorumu sil** akışlarını tekrar dene.
+5. Başka bir kullanıcının yorumunda **Şikâyet et** ve **Kullanıcıyı engelle** akışlarını dene.
+6. Yorum listesini birkaç kez aç/kapat ve hızlı kaydır; takılma/boş beyaz ekran/uzun spinner olmamalı.
+
