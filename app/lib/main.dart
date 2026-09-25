@@ -72,7 +72,7 @@ const ngelxPrivateBlueBorder = Color(0xFFD8E8FF);
 const ngelxPrivateBlueInk = Color(0xFF10213A);
 
 const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.57');
-const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '274');
+const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '275');
 const ngelxGroupBorder = Color(0xFFD9EEE0);
 
 final GlobalKey<NavigatorState> ngelxNavigatorKey=GlobalKey<NavigatorState>();
@@ -2095,7 +2095,7 @@ class NgelXApp extends StatelessWidget {
           initialData:FirebaseAuth.instance.currentUser,
           builder:(_,auth){
             final kullanici=auth.data;
-            if(kullanici==null||kullanici.isAnonymous||kullanici.emailVerified!=true){
+            if(kullanici==null||kullanici.isAnonymous){
               return UygulamaDurumKapisi(
                 key:ValueKey('durum_guest_$dil'),
                 child:GirisPage(key:ValueKey('giris_$dil')),
@@ -2152,6 +2152,41 @@ class _NgelXDogrulanmisOturumKapisiState extends State<NgelXDogrulanmisOturumKap
       if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Çıkış zaman aşımına uğradı. Tekrar dene.')));
     }catch(e){
       if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Çıkış yapılamadı: $e')));
+    }
+  }
+
+  Future<void> _dogrulamaGonder()async{
+    try{
+      await widget.user.sendEmailVerification().timeout(const Duration(seconds:12));
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Doğrulama bağlantısı yeniden gönderildi. E-posta kutunu kontrol et.')));
+    }on TimeoutException{
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Doğrulama bağlantısı gönderme zaman aşımına uğradı.')));
+    }catch(e){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Doğrulama bağlantısı gönderilemedi: $e')));
+    }
+  }
+
+  Future<void> _dogrulamayiYenile()async{
+    try{
+      await widget.user.reload().timeout(const Duration(seconds:12));
+      final guncel=FirebaseAuth.instance.currentUser;
+      if(guncel?.emailVerified==true){
+        await FirebaseFirestore.instance.collection('users').doc(widget.user.uid).set({
+          'emailVerified':true,
+          'emailVerificationRequired':false,
+          'emailVerifiedAt':FieldValue.serverTimestamp(),
+        },SetOptions(merge:true)).timeout(const Duration(seconds:12));
+        if(mounted){
+          setState(_yenile);
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('E-posta doğrulandı. NgelX açılıyor.')));
+        }
+        return;
+      }
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('E-posta henüz doğrulanmamış görünüyor. Bağlantıya dokunduktan sonra tekrar kontrol et.')));
+    }on TimeoutException{
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Doğrulama kontrolü zaman aşımına uğradı. Tekrar dene.')));
+    }catch(e){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Doğrulama kontrol edilemedi: $e')));
     }
   }
 
@@ -2224,6 +2259,33 @@ class _NgelXDogrulanmisOturumKapisiState extends State<NgelXDogrulanmisOturumKap
         );
       }
       final v=s.data?.data()??<String,dynamic>{};
+      final dogrulamaGerekli=v['emailVerificationRequired']==true&&widget.user.emailVerified!=true;
+      if(dogrulamaGerekli){
+        return Theme(
+          data:ThemeData.light().copyWith(scaffoldBackgroundColor:Colors.white),
+          child:Scaffold(
+            backgroundColor:Colors.white,
+            body:SafeArea(child:Center(child:Padding(
+              padding:const EdgeInsets.all(28),
+              child:Column(mainAxisSize:MainAxisSize.min,children:[
+                const Icon(Icons.mark_email_unread_outlined,size:72,color:mor),
+                const SizedBox(height:16),
+                const Text('E-postanı doğrula',textAlign:TextAlign.center,style:TextStyle(color:Colors.black87,fontSize:24,fontWeight:FontWeight.w900)),
+                const SizedBox(height:9),
+                Text(widget.user.email??'Hesap e-postası',textAlign:TextAlign.center,style:const TextStyle(color:Colors.black54,fontWeight:FontWeight.w700)),
+                const SizedBox(height:7),
+                const Text('Bu hesap e-posta doğrulaması gerektiriyor. Bağlantıya dokunduktan sonra buradan tekrar kontrol edebilirsin.',textAlign:TextAlign.center,style:TextStyle(color:Colors.black54,height:1.4)),
+                const SizedBox(height:22),
+                SizedBox(width:double.infinity,child:FilledButton.icon(onPressed:_dogrulamayiYenile,icon:const Icon(Icons.verified_outlined),label:const Text('Doğruladım, tekrar kontrol et'))),
+                const SizedBox(height:9),
+                SizedBox(width:double.infinity,child:OutlinedButton.icon(onPressed:_dogrulamaGonder,icon:const Icon(Icons.forward_to_inbox_outlined),label:const Text('Bağlantıyı yeniden gönder'))),
+                const SizedBox(height:8),
+                TextButton(onPressed:_cikis,child:const Text('Başka hesapla giriş yap')),
+              ]),
+            ))),
+          ),
+        );
+      }
       if(v['deactivated']==true){
         final silmeTalebi=v['deletionRequestedAt']!=null;
         return Theme(
@@ -2431,14 +2493,6 @@ class _GirisPageState extends State<GirisPage> {
 
       final user=sonuc.user;
       if(user==null)throw FirebaseAuthException(code:'user-not-found',message:'Oturum açılamadı.');
-
-      if(user.emailVerified!=true){
-        try{await user.sendEmailVerification().timeout(const Duration(seconds:12));}catch(_){}
-        try{await FirebaseAuth.instance.signOut().timeout(const Duration(seconds:8));}catch(_){}
-        if(!mounted)return;
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('E-posta adresin henüz doğrulanmamış. Yeni doğrulama bağlantısı gönderildi; gelen kutunu kontrol et.')));
-        return;
-      }
 
       final parola=sifre.text;
       final hatirla=beniHatirla;
@@ -2774,6 +2828,7 @@ class _KayitPageState extends State<KayitPage> {
         'birthDate': dogumTarihi.text.trim(),
         'phone': telefon.text.trim(),
         'emailVerified': false,
+        'emailVerificationRequired': true,
         'bio': 'NgelX dünyasına yeni katıldı ✦',
         'createdAt': FieldValue.serverTimestamp(),
       });
@@ -17767,17 +17822,6 @@ class _HesapDegistirPageState extends State<HesapDegistirPage> {
 
       final user=sonuc.user;
       if(user==null)throw Exception('Oturum açılamadı.');
-
-      if(user.emailVerified!=true){
-        try{await user.sendEmailVerification().timeout(const Duration(seconds:12));}catch(_){}
-        try{await FirebaseAuth.instance.signOut().timeout(const Duration(seconds:8));}catch(_){}
-        if(oncekiEmail!=null&&oncekiSifre!=null&&oncekiSifre.length>=6){
-          try{
-            await FirebaseAuth.instance.signInWithEmailAndPassword(email:oncekiEmail,password:oncekiSifre).timeout(const Duration(seconds:15));
-          }catch(_){}
-        }
-        throw Exception('Bu hesabın e-postası henüz doğrulanmamış. Doğrulama bağlantısı gönderildi.');
-      }
 
       final h=await SharedPreferences.getInstance();
       final yeniHesaplar=<String>[...hesaplar]
