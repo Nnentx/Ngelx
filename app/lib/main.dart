@@ -16095,7 +16095,7 @@ class AktivitePage extends StatelessWidget {
     final grup=(v['targetTitle']??'').toString().trim();
     final olay=(v['eventKind']??'').toString();
     final onizleme=(v['preview']??'').toString().trim();
-    final eylem=(v['eventAction']??'mesaj gönderdi').toString().trim();
+    final grupEylem=(v['eventAction']??'mesaj gönderdi').toString().trim();
     final normal=TextStyle(fontWeight:okundu?FontWeight.w400:FontWeight.w600);
     const kalin=TextStyle(fontWeight:FontWeight.w900);
     const grupStil=TextStyle(color:ngelxGroupGreen,fontWeight:FontWeight.w900);
@@ -16113,7 +16113,7 @@ class AktivitePage extends StatelessWidget {
         TextSpan(text:grup,style:grupStil),
         const TextSpan(text:' grubundan '),
         TextSpan(text:ad.isEmpty?'Bir üye':ad,style:kalin),
-        TextSpan(text:' '+(eylem.isEmpty?'mesaj gönderdi':eylem),style:normal),
+        TextSpan(text:' '+(grupEylem.isEmpty?'mesaj gönderdi':grupEylem),style:normal),
         if(onizleme.isNotEmpty)TextSpan(text:' • '+onizleme,style:normal),
       ]),style:const TextStyle(color:Colors.black87));
     }
