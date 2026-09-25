@@ -219,11 +219,13 @@ for forbidden in (
     if forbidden in app:
         errors.append("Gelen Kutusu ana görünümünde sabit dil metni kaldı: " + forbidden)
 
-# Profile-to-chat entry must honor the target account's message permission.
+# Profile-to-chat entry must honor the target account's current message permission.
 for token in (
-    "final mesajIzni=(v['messagePermission']",
+    "Future<void> profildenMesajAc(BuildContext context",
+    "final mesajIzni=(hedef['messagePermission']",
     "mesajIzni=='friends'&&arkadaslar.contains(uid)",
     "mesajIzni=='following'&&hedefinTakipEttikleri.contains(me)",
+    "final kabulEdildi=sohbet['requestAccepted_$me']==true||sohbet['requestAccepted_$uid']==true",
     "t('messageNotAllowed')",
 ):
     if token not in app:
