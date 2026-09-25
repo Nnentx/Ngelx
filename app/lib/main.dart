@@ -17929,21 +17929,25 @@ class _GizliKelimelerPageState extends State<GizliKelimelerPage>{
 }
 
 class _TercihlerPageState extends State<TercihlerPage> {
-  bool hesapGizli=false, profilArama=true, aktiflik=true, profilPaylasArkadas=false, yorumArkadas=false, gizliKelimeler=true, mesajArkadas=true, hikayeArkadas=true, ekranGoruntusu=false, bildirim=true, mesajBildirimi=true, arkadasBildirimi=true, etkilesimBildirimi=true, indirme=true;
-  String mesajIzni='friends';
-  String profilGoruntuleme='all';
+  bool hesapGizli=false,profilArama=true,aktiflik=true,profilPaylasArkadas=false,yorumArkadas=false,gizliKelimeler=true,mesajArkadas=true,hikayeArkadas=true,ekranGoruntusu=false;
+  bool bildirim=true,mesajBildirimi=true,arkadasBildirimi=true,etkilesimBildirimi=true,canliBildirimi=true,grupBildirimi=true,indirme=true;
+  bool mesajIstekleri=true,grupDavetleri=true,okunduBilgisi=true,etiketOnayi=false,uygunsuzYorumFiltresi=true;
+  bool reelsIndirme=true,reelsPaylasim=true,canliYorum=true,canliDavet=true,supheliGirisUyarisi=true;
+  bool veriTasarrufu=false,otomatikOynatma=true,wifiHd=false,otomatikCeviri=true,hareketAzalt=false,buyukYazi=false,sessizSaatler=false;
+  String mesajIzni='friends',profilGoruntuleme='all',profilFotoGoruntuleme='all',bahsetmeIzni='all',etiketIzni='all',hassasIcerik='standard',altyaziDili='tr';
   List<String> gizliKelimeListesi=[];
-  String? get uid => FirebaseAuth.instance.currentUser?.uid;
+  String? get uid=>FirebaseAuth.instance.currentUser?.uid;
 
-  @override
-  void initState(){super.initState();yukle();}
+  @override void initState(){super.initState();yukle();}
 
-  Future<void> yukle() async {
+  Future<void> yukle()async{
     if(uid==null)return;
-    final d=await FirebaseFirestore.instance.collection('users').doc(uid).get(),v=d.data()??{};
-    if(mounted)setState((){
+    final d=await FirebaseFirestore.instance.collection('users').doc(uid).get(),v=d.data()??<String,dynamic>{};
+    if(!mounted)return;
+    setState((){
       hesapGizli=v['privateAccount']==true;
       profilGoruntuleme=(v['profileViewPermission']??'all').toString();
+      profilFotoGoruntuleme=(v['profilePhotoPermission']??'all').toString();
       profilArama=v['discoverableProfile']!=false;
       aktiflik=v['showActivityStatus']!=false;
       profilPaylasArkadas=v['profileShareFriendsOnly']==true;
@@ -17952,123 +17956,195 @@ class _TercihlerPageState extends State<TercihlerPage> {
       gizliKelimeListesi=List<String>.from(v['hiddenWords']??const[]);
       mesajArkadas=v['friendsOnlyMessages']!=false;
       mesajIzni=(v['messagePermission']??(mesajArkadas?'friends':'all')).toString();
+      mesajIstekleri=v['allowMessageRequests']!=false;
+      grupDavetleri=v['allowGroupInvites']!=false;
+      okunduBilgisi=v['globalReadReceipts']!=false;
       hikayeArkadas=v['friendsOnlyStory']!=false;
       ekranGoruntusu=v['allowStoryScreenshot']==true;
       bildirim=v['notificationsEnabled']!=false;
       mesajBildirimi=v['messageNotifications']!=false;
       arkadasBildirimi=v['friendNotifications']!=false;
       etkilesimBildirimi=v['interactionNotifications']!=false;
+      canliBildirimi=v['liveNotifications']!=false;
+      grupBildirimi=v['groupNotifications']!=false;
+      sessizSaatler=v['quietHoursEnabled']==true;
       indirme=v['defaultAllowDownload']!=false;
+      bahsetmeIzni=(v['mentionPermission']??'all').toString();
+      etiketIzni=(v['tagPermission']??'all').toString();
+      etiketOnayi=v['reviewTagsBeforeProfile']==true;
+      uygunsuzYorumFiltresi=v['offensiveCommentFilter']!=false;
+      hassasIcerik=(v['sensitiveContentLevel']??'standard').toString();
+      reelsIndirme=v['allowReelsDownload']!=false;
+      reelsPaylasim=v['allowReelsReshare']!=false;
+      canliYorum=v['allowLiveComments']!=false;
+      canliDavet=v['allowLiveInvites']!=false;
+      supheliGirisUyarisi=v['suspiciousLoginAlerts']!=false;
+      veriTasarrufu=v['dataSaver']==true;
+      otomatikOynatma=v['autoplayVideos']!=false;
+      wifiHd=v['wifiOnlyHd']==true;
+      otomatikCeviri=v['autoTranslate']!=false;
+      altyaziDili=(v['captionLanguage']??uygulamaDili.value).toString();
+      hareketAzalt=v['reduceMotion']==true;
+      buyukYazi=v['largeText']==true;
     });
   }
 
-  Future<void> kaydet(String k,bool v) async {
-    if(uid!=null)await FirebaseFirestore.instance.collection('users').doc(uid).set({k:v},SetOptions(merge:true));
-  }
-  Future<void> kaydetMetin(String k,String v)async{
-    if(uid!=null)await FirebaseFirestore.instance.collection('users').doc(uid).set({k:v},SetOptions(merge:true));
+  Future<void> kaydet(String k,bool v)async{if(uid!=null)await FirebaseFirestore.instance.collection('users').doc(uid).set({k:v},SetOptions(merge:true));}
+  Future<void> kaydetMetin(String k,String v)async{if(uid!=null)await FirebaseFirestore.instance.collection('users').doc(uid).set({k:v},SetOptions(merge:true));}
+  Future<void> listeTemizle(String k,String mesaj)async{
+    if(uid==null)return;
+    await FirebaseFirestore.instance.collection('users').doc(uid).set({k:<dynamic>[]},SetOptions(merge:true));
+    if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(mesaj)));
   }
   Future<void> gizliKelimeYonet()async{
-    final userId=uid;
-    if(userId==null)return;
-    await Navigator.of(context).push<void>(
-      MaterialPageRoute(
-        builder:(_)=>GizliKelimelerPage(
-          userId:userId,
-          baslangic:gizliKelimeListesi,
-        ),
-      ),
-    );
+    final userId=uid;if(userId==null)return;
+    await Navigator.of(context).push<void>(MaterialPageRoute(builder:(_)=>GizliKelimelerPage(userId:userId,baslangic:gizliKelimeListesi)));
     if(!mounted)return;
     try{
-      final d=await FirebaseFirestore.instance.collection('users').doc(userId).get();
-      if(!mounted)return;
-      final v=d.data()??<String,dynamic>{};
-      final ham=v['hiddenWords'];
-      final yeni=ham is Iterable
-          ?ham.map((e)=>e.toString().trim().toLowerCase()).where((e)=>e.isNotEmpty).toSet().toList()
-          :<String>[];
-      setState((){
-        gizliKelimeListesi=yeni;
-        gizliKelimeler=v['hiddenWordsFilter']!=false;
-      });
+      final d=await FirebaseFirestore.instance.collection('users').doc(userId).get(),v=d.data()??<String,dynamic>{},ham=v['hiddenWords'];
+      final yeni=ham is Iterable?ham.map((e)=>e.toString().trim().toLowerCase()).where((e)=>e.isNotEmpty).toSet().toList():<String>[];
+      if(mounted)setState((){gizliKelimeListesi=yeni;gizliKelimeler=v['hiddenWordsFilter']!=false;});
     }catch(_){}
   }
 
-  Widget satir(String t,String s,bool v,ValueChanged<bool> f,{bool etkin=true})=>SwitchListTile(
-    contentPadding:const EdgeInsets.symmetric(horizontal:22,vertical:8),
-    title:Text(t,style:TextStyle(color:etkin?Colors.black87:Colors.black38,fontWeight:FontWeight.w600)),
+  Widget satir(String a,String s,bool v,ValueChanged<bool> f,{bool etkin=true})=>SwitchListTile(
+    contentPadding:const EdgeInsets.symmetric(horizontal:22,vertical:7),
+    title:Text(a,style:TextStyle(color:etkin?Colors.black87:Colors.black38,fontWeight:FontWeight.w700)),
     subtitle:Text(s,style:TextStyle(color:etkin?Colors.black54:Colors.black26)),
     value:v,onChanged:etkin?f:null,activeThumbColor:Colors.white,activeTrackColor:mavi,
   );
+  Widget altBaslik(String t)=>Padding(padding:const EdgeInsets.fromLTRB(22,18,22,6),child:Text(t,style:const TextStyle(color:Colors.black54,fontSize:13,fontWeight:FontWeight.w900)));
+  List<Widget> izinRadyo({required String alan,required String secili,required ValueChanged<String> degistir,bool kimse=true}){
+    final kodlar=kimse?const ['all','following','friends','none']:const ['all','following','friends'];
+    return [
+      for(final kod in kodlar)RadioListTile<String>(
+        value:kod,groupValue:secili,
+        title:Text(kod=='all'?'Herkes':kod=='following'?'Takip ettiklerim':kod=='friends'?'Arkadaşlar':'Kimse'),
+        onChanged:(v)async{if(v==null)return;degistir(v);await kaydetMetin(alan,v);},
+      ),
+    ];
+  }
 
-  List<Widget> get secenekler {
+  Future<void> dilSec()async{
+    final sec=await showModalBottomSheet<String>(
+      context:context,backgroundColor:Colors.white,showDragHandle:true,
+      builder:(c)=>SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:dilAdlari.entries.map((e)=>ListTile(
+        leading:uygulamaDili.value==e.key?const Icon(Icons.check_circle,color:mor):const Icon(Icons.language,color:Colors.black45),
+        title:Text(e.value),onTap:()=>Navigator.pop(c,e.key),
+      )).toList())),
+    );
+    if(sec!=null){await diliDegistir(sec);if(mounted)setState(()=>altyaziDili=altyaziDili);}
+  }
+
+  List<Widget> get secenekler{
     switch(widget.baslik){
       case 'Gizlilik':
         return [
           satir(t('privateAccount'),t('privateAccountSub'),hesapGizli,(v){setState(()=>hesapGizli=v);kaydet('privateAccount',v);}),
-          Padding(padding:const EdgeInsets.fromLTRB(22,14,22,4),child:Text(t('profileViewWho'),style:const TextStyle(fontWeight:FontWeight.w900))),
-          for(final e in [('all',t('everyone')),('followers',t('myFollowers')),('friends',t('myFriends'))])
-            RadioListTile<String>(
-              value:e.$1,groupValue:profilGoruntuleme,
-              title:Text(e.$2),
-              onChanged:(v)async{if(v==null)return;setState(()=>profilGoruntuleme=v);await kaydetMetin('profileViewPermission',v);},
-            ),
+          altBaslik(t('profileViewWho')),
+          for(final e in [('all',t('everyone')),('followers',t('myFollowers')),('friends',t('myFriends'))])RadioListTile<String>(
+            value:e.$1,groupValue:profilGoruntuleme,title:Text(e.$2),
+            onChanged:(v)async{if(v==null)return;setState(()=>profilGoruntuleme=v);await kaydetMetin('profileViewPermission',v);},
+          ),
+          altBaslik('Profil fotoğrafını kim görebilir?'),
+          ...izinRadyo(alan:'profilePhotoPermission',secili:profilFotoGoruntuleme,kimse:false,degistir:(v)=>setState(()=>profilFotoGoruntuleme=v)),
           satir(t('discoverableProfile'),t('discoverableProfileSub'),profilArama,(v){setState(()=>profilArama=v);kaydet('discoverableProfile',v);}),
           satir(t('activityStatus'),t('activityStatusSub'),aktiflik,(v){setState(()=>aktiflik=v);kaydet('showActivityStatus',v);}),
           satir(t('profileShareFriendsOnly'),t('profileShareFriendsOnlySub'),profilPaylasArkadas,(v){setState(()=>profilPaylasArkadas=v);kaydet('profileShareFriendsOnly',v);}),
-          satir(t('commentsFriendsOnly'),t('commentsFriendsOnlySub'),yorumArkadas,(v){setState(()=>yorumArkadas=v);kaydet('friendsOnlyComments',v);}),
-          satir(t('hiddenWordsFilter'),t('hiddenWordsFilterSub'),gizliKelimeler,(v){setState(()=>gizliKelimeler=v);kaydet('hiddenWordsFilter',v);}),
-          ListTile(
-            contentPadding:const EdgeInsets.symmetric(horizontal:22,vertical:6),
-            leading:const Icon(Icons.visibility_off_outlined,color:mor),
-            title:Text(t('manageHiddenWords'),style:const TextStyle(fontWeight:FontWeight.w700)),
-            subtitle:Text(gizliKelimeListesi.isEmpty?t('noHiddenWords'):gizliKelimeListesi.length.toString()+' • '+t('hiddenWordsTitle')),
-            trailing:const Icon(Icons.chevron_right),
-            onTap:gizliKelimeYonet,
-          ),
           const Divider(),
-          ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:22,vertical:6),leading:const Icon(Icons.block_outlined,color:mor),title:const Text('Engellenen hesaplar',style:TextStyle(fontWeight:FontWeight.w700)),subtitle:const Text('Engellediğin hesapları yönet'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const EngellenenlerPage()))),
-          ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:22,vertical:6),leading:const Icon(Icons.history_toggle_off_rounded,color:mor),title:const Text('Takip isteği geçmişi',style:TextStyle(fontWeight:FontWeight.w700)),subtitle:const Text('Gönderdiğin bekleyen, kabul edilen ve reddedilen istekler'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const TakipIstegiGecmisiPage()))),
+          ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:22,vertical:6),leading:const Icon(Icons.block_outlined,color:mor),title:const Text('Engellenen hesaplar',style:TextStyle(fontWeight:FontWeight.w700)),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const EngellenenlerPage()))),
+          ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:22,vertical:6),leading:const Icon(Icons.do_not_disturb_alt_rounded,color:mor),title:const Text('Kısıtlanan hesaplar',style:TextStyle(fontWeight:FontWeight.w700)),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const KisitlananlarPage()))),
+          ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:22,vertical:6),leading:const Icon(Icons.history_toggle_off_rounded,color:mor),title:const Text('Takip isteği geçmişi',style:TextStyle(fontWeight:FontWeight.w700)),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const TakipIstegiGecmisiPage()))),
         ];
       case 'Mesaj izinleri':
         return [
-          Padding(padding:const EdgeInsets.fromLTRB(22,16,22,8),child:Text(t('whoCanMessage'),style:const TextStyle(fontSize:18,fontWeight:FontWeight.w900))),
-          for(final kod in const ['all','following','friends','none'])
-            RadioListTile<String>(
-              value:kod,groupValue:mesajIzni,
-              title:Text(mesajIzinEtiketi(kod),style:const TextStyle(fontWeight:FontWeight.w700)),
-              subtitle:Text(mesajIzinAciklama(kod)),
-              onChanged:(v)async{
-                if(v==null)return;
-                setState(()=>mesajIzni=v);
-                await kaydetMetin('messagePermission',v);
-                await kaydet('friendsOnlyMessages',v=='friends');
-              },
-            ),
+          altBaslik(t('whoCanMessage')),
+          for(final kod in const ['all','following','friends','none'])RadioListTile<String>(
+            value:kod,groupValue:mesajIzni,title:Text(mesajIzinEtiketi(kod),style:const TextStyle(fontWeight:FontWeight.w700)),subtitle:Text(mesajIzinAciklama(kod)),
+            onChanged:(v)async{if(v==null)return;setState(()=>mesajIzni=v);await kaydetMetin('messagePermission',v);await kaydet('friendsOnlyMessages',v=='friends');},
+          ),
+          const Divider(),
+          satir('Mesaj istekleri','Takip etmediğin kişiler mesaj isteği gönderebilir',mesajIstekleri,(v){setState(()=>mesajIstekleri=v);kaydet('allowMessageRequests',v);}),
+          satir('Grup davetleri','Diğer kullanıcılar seni gruplara davet edebilir',grupDavetleri,(v){setState(()=>grupDavetleri=v);kaydet('allowGroupInvites',v);}),
+          satir('Okundu bilgisi','Mesajları okuduğunda karşı tarafa Görüldü göster',okunduBilgisi,(v){setState(()=>okunduBilgisi=v);kaydet('globalReadReceipts',v);}),
         ];
       case 'Hikâye gizliliği':
         return [
           satir('Hikâyeyi arkadaşlar görsün','Hikâyeni yalnızca arkadaşlarına göster',hikayeArkadas,(v){setState(()=>hikayeArkadas=v);kaydet('friendsOnlyStory',v);}),
-          satir('Hikâyede ekran görüntüsü','İzin verirsen arkadaşların ekran görüntüsü alabilir',ekranGoruntusu,(v){setState(()=>ekranGoruntusu=v);kaydet('allowStoryScreenshot',v);}),
+          satir('Hikâyede ekran görüntüsü','İzin verirsen hikâyenin ekran görüntüsü alınabilir',ekranGoruntusu,(v){setState(()=>ekranGoruntusu=v);kaydet('allowStoryScreenshot',v);}),
+        ];
+      case 'İçerik ve etkileşim':
+        return [
+          altBaslik('Kim senden bahsedebilir?'),
+          ...izinRadyo(alan:'mentionPermission',secili:bahsetmeIzni,degistir:(v)=>setState(()=>bahsetmeIzni=v)),
+          altBaslik('Kim seni etiketleyebilir?'),
+          ...izinRadyo(alan:'tagPermission',secili:etiketIzni,degistir:(v)=>setState(()=>etiketIzni=v)),
+          satir('Etiketleri önce onayla','Etiketlenen içerik profilinde görünmeden önce onay iste',etiketOnayi,(v){setState(()=>etiketOnayi=v);kaydet('reviewTagsBeforeProfile',v);}),
+          satir('Uygunsuz yorum filtresi','Hakaret ve saldırgan ifadeleri otomatik gizlemeye yardımcı olur',uygunsuzYorumFiltresi,(v){setState(()=>uygunsuzYorumFiltresi=v);kaydet('offensiveCommentFilter',v);}),
+          satir(t('hiddenWordsFilter'),t('hiddenWordsFilterSub'),gizliKelimeler,(v){setState(()=>gizliKelimeler=v);kaydet('hiddenWordsFilter',v);}),
+          ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:22,vertical:5),leading:const Icon(Icons.visibility_off_outlined,color:mor),title:Text(t('manageHiddenWords'),style:const TextStyle(fontWeight:FontWeight.w700)),subtitle:Text(gizliKelimeListesi.isEmpty?t('noHiddenWords'):'${gizliKelimeListesi.length} gizli kelime'),trailing:const Icon(Icons.chevron_right),onTap:gizliKelimeYonet),
+          altBaslik('Hassas içerik seviyesi'),
+          for(final e in const [('less','Daha az'),('standard','Standart'),('more','Daha fazla')])RadioListTile<String>(
+            value:e.$1,groupValue:hassasIcerik,title:Text(e.$2),
+            onChanged:(v)async{if(v==null)return;setState(()=>hassasIcerik=v);await kaydetMetin('sensitiveContentLevel',v);},
+          ),
+          ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:22),leading:const Icon(Icons.restart_alt_rounded,color:mor),title:const Text('“İlgilenmiyorum” geçmişini temizle'),onTap:()=>listeTemizle('notInterestedIds','İlgilenmiyorum geçmişi temizlendi.')),
+        ];
+      case 'Reels ve canlı':
+        return [
+          satir('Reels indirilebilsin','Yeni Reels paylaşımlarında indirmeye izin ver',reelsIndirme,(v){setState(()=>reelsIndirme=v);kaydet('allowReelsDownload',v);}),
+          satir('Reels yeniden paylaşılabilsin','İçeriklerinin yeniden paylaşılmasına izin ver',reelsPaylasim,(v){setState(()=>reelsPaylasim=v);kaydet('allowReelsReshare',v);}),
+          const Divider(),
+          satir('Canlı yayın yorumları','Canlı yayınlarında izleyiciler yorum yapabilsin',canliYorum,(v){setState(()=>canliYorum=v);kaydet('allowLiveComments',v);}),
+          satir('Canlı yayın davetleri','Diğer kullanıcılar canlı yayına davet gönderebilsin',canliDavet,(v){setState(()=>canliDavet=v);kaydet('allowLiveInvites',v);}),
         ];
       case 'Bildirimler':
         return [
-          satir('Tüm bildirimler','Uygulama bildirimlerini tek dokunuşla aç veya kapat',bildirim,(v){setState(()=>bildirim=v);kaydet('notificationsEnabled',v);}),
+          satir('Tüm bildirimler','Uygulama bildirimlerini aç veya kapat',bildirim,(v){setState(()=>bildirim=v);kaydet('notificationsEnabled',v);}),
           const Divider(),
-          satir('Mesajlar','Yeni mesaj ve fotoğraf bildirimleri',mesajBildirimi,(v){setState(()=>mesajBildirimi=v);kaydet('messageNotifications',v);},etkin:bildirim),
-          satir('Arkadaşlık','İstek ve kabul bildirimleri',arkadasBildirimi,(v){setState(()=>arkadasBildirimi=v);kaydet('friendNotifications',v);},etkin:bildirim),
+          satir('Mesajlar','Yeni mesaj bildirimleri',mesajBildirimi,(v){setState(()=>mesajBildirimi=v);kaydet('messageNotifications',v);},etkin:bildirim),
+          satir('Arkadaşlık ve takip','İstek ve kabul bildirimleri',arkadasBildirimi,(v){setState(()=>arkadasBildirimi=v);kaydet('friendNotifications',v);},etkin:bildirim),
           satir('Beğeni ve yorumlar','Paylaşımlarındaki etkileşimler',etkilesimBildirimi,(v){setState(()=>etkilesimBildirimi=v);kaydet('interactionNotifications',v);},etkin:bildirim),
+          satir('Canlı yayınlar','Takip ettiğin hesapların canlı yayınları',canliBildirimi,(v){setState(()=>canliBildirimi=v);kaydet('liveNotifications',v);},etkin:bildirim),
+          satir('Gruplar','Grup etkinlikleri ve davetler',grupBildirimi,(v){setState(()=>grupBildirimi=v);kaydet('groupNotifications',v);},etkin:bildirim),
+          satir('Sessiz saatler','22:00–08:00 arasında sesli bildirimleri azalt',sessizSaatler,(v){setState(()=>sessizSaatler=v);kaydet('quietHoursEnabled',v);},etkin:bildirim),
+        ];
+      case 'Güvenlik uyarıları':
+        return [
+          satir('Şüpheli giriş uyarıları','Yeni veya alışılmadık bir cihaz algılandığında uyarı oluştur',supheliGirisUyarisi,(v){setState(()=>supheliGirisUyarisi=v);kaydet('suspiciousLoginAlerts',v);}),
+          ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:22,vertical:5),leading:const Icon(Icons.devices_outlined,color:mor),title:const Text('Giriş yapılan cihazlar',style:TextStyle(fontWeight:FontWeight.w700)),subtitle:const Text('Aktif cihazları gör ve uzaktan çıkış yap'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const GirisGecmisiPage()))),
+          ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:22,vertical:5),leading:const Icon(Icons.health_and_safety_outlined,color:mor),title:const Text('Hesap kurtarma seçenekleri',style:TextStyle(fontWeight:FontWeight.w700)),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const HesapKurtarmaPage()))),
+        ];
+      case 'Veri ve depolama':
+        return [
+          satir('Veri tasarrufu','Mobil veride daha düşük veri tüketimi kullan',veriTasarrufu,(v){setState(()=>veriTasarrufu=v);kaydet('dataSaver',v);}),
+          satir('Videoları otomatik oynat','Akışta videolar görünür olduğunda otomatik başlat',otomatikOynatma,(v){setState(()=>otomatikOynatma=v);kaydet('autoplayVideos',v);}),
+          satir('HD yalnızca Wi‑Fi ile','HD medyayı mobil veride sınırla',wifiHd,(v){setState(()=>wifiHd=v);kaydet('wifiOnlyHd',v);}),
+          ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:22),leading:const Icon(Icons.folder_copy_outlined,color:mor),title:const Text('Verilerim'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const VerilerimPage()))),
+        ];
+      case 'Dil ve çeviri':
+        return [
+          ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:22,vertical:6),leading:const Icon(Icons.language_rounded,color:mor),title:const Text('Uygulama dili',style:TextStyle(fontWeight:FontWeight.w700)),subtitle:Text(dilAdlari[uygulamaDili.value]??uygulamaDili.value),trailing:const Icon(Icons.chevron_right),onTap:dilSec),
+          satir('Otomatik gönderi çevirisi','Farklı dillerdeki metinler için çeviri seçeneğini göster',otomatikCeviri,(v){setState(()=>otomatikCeviri=v);kaydet('autoTranslate',v);}),
+          altBaslik('Varsayılan altyazı dili'),
+          for(final e in dilAdlari.entries)RadioListTile<String>(
+            value:e.key,groupValue:altyaziDili,title:Text(e.value),
+            onChanged:(v)async{if(v==null)return;setState(()=>altyaziDili=v);await kaydetMetin('captionLanguage',v);},
+          ),
+        ];
+      case 'Erişilebilirlik':
+        return [
+          satir('Hareketleri azalt','Yoğun animasyon ve geçişleri azaltmayı tercih et',hareketAzalt,(v){setState(()=>hareketAzalt=v);kaydet('reduceMotion',v);}),
+          satir('Daha büyük yazı','NgelX arayüzünde daha büyük metin tercih et',buyukYazi,(v){setState(()=>buyukYazi=v);kaydet('largeText',v);}),
         ];
       case 'İndirme izinleri':
         return [satir('Varsayılan indirme izni','Yeni paylaşımların indirilebilsin',indirme,(v){setState(()=>indirme=v);kaydet('defaultAllowDownload',v);})];
       default:
-        return const [ListTile(leading:Icon(Icons.people,color:mavi),title:Text('Arkadaşlık isteklerini Aktivite ekranından yönet.',style:TextStyle(color:Colors.black87)))];
+        return const [ListTile(leading:Icon(Icons.info_outline,color:mavi),title:Text('Bu ayar bu sürümde yönetilebilir durumda değil.'))];
     }
   }
 
-  @override
-  Widget build(BuildContext context)=>Theme(
+  @override Widget build(BuildContext context)=>Theme(
     data:ThemeData.light().copyWith(scaffoldBackgroundColor:Colors.white,appBarTheme:const AppBarTheme(backgroundColor:Colors.white,foregroundColor:Colors.black,elevation:0),dividerColor:const Color(0xFFE5E7EB)),
     child:Scaffold(appBar:AppBar(title:Text(tercihBasligi(widget.baslik))),body:SafeArea(child:ListView(children:secenekler))),
   );
