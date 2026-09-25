@@ -17810,8 +17810,6 @@ class _HesapDegistirPageState extends State<HesapDegistirPage> {
     if(sifre==null||sifre.isEmpty)sifre=await _sifreSor(hedefEmail);
     if(sifre==null||sifre.length<6)return;
 
-    final oncekiEmail=mevcut;
-    final oncekiSifre=oncekiEmail==null?null:await guvenliHafiza.read(key:sifreAnahtari(oncekiEmail));
     if(mounted)setState(()=>islem=true);
 
     try{
