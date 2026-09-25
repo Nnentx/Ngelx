@@ -70,7 +70,7 @@ const ngelxPrivateBlueBorder = Color(0xFFD8E8FF);
 const ngelxPrivateBlueInk = Color(0xFF10213A);
 
 const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.57');
-const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '211');
+const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '258');
 const ngelxGroupBorder = Color(0xFFD9EEE0);
 
 class NgelXBirthDateFormatter extends TextInputFormatter {
@@ -4628,12 +4628,14 @@ class _YeniYorumlarState extends State<Yorumlar> {
     final yanitId=yanitlananId;
     final yanitKullanici=yanitlananKullanici;
     try{
-      final profil=await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      final profil=await FirebaseFirestore.instance.collection('users').doc(user.uid).get().timeout(const Duration(seconds:8));
       final p=profil.data()??<String,dynamic>{};
       final yorumRef=ref.doc();
       final videoRef=FirebaseFirestore.instance.collection('videos').doc(widget.videoId);
-      final batch=FirebaseFirestore.instance.batch();
-      batch.set(yorumRef,{
+
+      // Yorumu sayaç güncellemesinden bağımsız yaz. Sayaç veya bildirim hatası,
+      // kullanıcının yorumunun gönderilmesini engellemesin.
+      await yorumRef.set({
         'userId':user.uid,
         'username':(p['username']??user.displayName??'ngelx').toString(),
         'photoUrl':(p['photoUrl']??'').toString(),
@@ -4642,15 +4644,20 @@ class _YeniYorumlarState extends State<Yorumlar> {
         'replyToUsername':yanitKullanici??'',
         'likedBy':<String>[],
         'createdAt':FieldValue.serverTimestamp(),
-      });
-      batch.set(videoRef,{'commentCount':FieldValue.increment(1)},SetOptions(merge:true));
-      await batch.commit();
+        'clientCreatedAt':Timestamp.now(),
+      }).timeout(const Duration(seconds:12));
+
+      // Sayacı arka planda güncelle. Yorum başarıyla gittiyse kullanıcı bekletilmez.
+      unawaited(
+        videoRef.set({'commentCount':FieldValue.increment(1)},SetOptions(merge:true))
+          .timeout(const Duration(seconds:8))
+          .catchError((_){ }),
+      );
 
       yorum.clear();
       if(mounted)setState((){
         yanitlananId=null;
         yanitlananKullanici=null;
-        gonderiliyor=false;
       });
 
       if(yanitId!=null&&yanitId.isNotEmpty){
@@ -4674,11 +4681,16 @@ class _YeniYorumlarState extends State<Yorumlar> {
           belgeId:widget.videoId,
         ).catchError((_){ }));
       }
+    }on TimeoutException{
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content:Text('Yorum gönderimi zaman aşımına uğradı. İnterneti kontrol edip tekrar dene.')),
+      );
     }catch(e){
-      if(mounted){
-        setState(()=>gonderiliyor=false);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Yorum gönderilemedi, tekrar dene: $e')));
-      }
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content:Text('Yorum gönderilemedi, tekrar dene: $e')),
+      );
+    }finally{
+      if(mounted)setState(()=>gonderiliyor=false);
     }
   }
 
@@ -4898,12 +4910,25 @@ class YorumKarti extends StatelessWidget {
           else await yorumRef.set({alan:emoji},SetOptions(merge:true));
         }
       } else if (secim == 'copy') {
-        await Clipboard.setData(ClipboardData(text: metin));
-        if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Yorum kopyalandı.')));
+        try{
+          await Clipboard.setData(ClipboardData(text: metin));
+          if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Yorum kopyalandı ✅')));
+        }catch(_){
+          if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Yorum kopyalanamadı.')));
+        }
       } else if (secim == 'report') {
-        await sikayetEt(context, hedefTuru:'yorum', hedefId:'$videoId/$yorumId', hedefUid:profilUid);
+        try{
+          await sikayetEt(context, hedefTuru:'yorum', hedefId:'$videoId/$yorumId', hedefUid:profilUid)
+            .timeout(const Duration(seconds:12));
+        }on TimeoutException{
+          if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Şikâyet gönderimi zaman aşımına uğradı.')));
+        }
       } else if (secim == 'block') {
-        await kullaniciyiEngelle(context, profilUid);
+        try{
+          await kullaniciyiEngelle(context, profilUid).timeout(const Duration(seconds:12));
+        }on TimeoutException{
+          if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Engelleme işlemi zaman aşımına uğradı.')));
+        }
       } else if (secim == 'delete') {
         final onay = await showDialog<bool>(context:context,builder:(c)=>Theme(data:ThemeData.light(),child:AlertDialog(backgroundColor:Colors.white,surfaceTintColor:Colors.white,title:const Text('Yorum silinsin mi?',style:TextStyle(color:Colors.black87)),content:const Text('Bu işlem geri alınamaz.',style:TextStyle(color:Colors.black54)),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),FilledButton(style:FilledButton.styleFrom(backgroundColor:Colors.red),onPressed:()=>Navigator.pop(c,true),child:const Text('Sil'))]))) ?? false;
         if (onay) {
@@ -5623,7 +5648,7 @@ class _KesfetPageState extends State<KesfetPage> {
       _TrendEtiketi(Icons.directions_run_rounded,'#spor',const Color(0xFFFFEEF1),Colors.red,onTap:()=>_etiketAra('#spor')),
       _TrendEtiketi(Icons.music_note_rounded,'#müzik',const Color(0xFFF1EAFE),mor,onTap:()=>_etiketAra('#müzik')),
       _TrendEtiketi(Icons.computer_rounded,'#teknoloji',const Color(0xFFE7FAFA),const Color(0xFF00AFC1),onTap:()=>_etiketAra('#teknoloji')),
-      _TrendEtiketi(Icons.flight_takeoff_rounded,'#seyahat',const Color(0xFFEAF2FF),Colors.blue,onTap:()=>_etiketAra('#seyahat')),
+      _TrendEtiketi(Icons.trending_up_rounded,'#trend',const Color(0xFFEAF2FF),Colors.blue,onTap:()=>_etiketAra('#trend')),
     ]))),
     SliverToBoxAdapter(child:Padding(padding:const EdgeInsets.fromLTRB(16,20,16,8),child:Text(t('trendContent'),style:const TextStyle(color:Colors.black,fontSize:21,fontWeight:FontWeight.w900)))),
     SliverPadding(
@@ -14809,9 +14834,12 @@ class _SohbetPageState extends State<SohbetPage> {
                           cursorColor:ngelxPrivateBlue,
                           decoration:InputDecoration(
                             hintText:'Mesaj',
+                            hintMaxLines:1,
+                            isDense:true,
+                            hintStyle:const TextStyle(fontSize:14.5,height:1.0,color:Colors.black45),
                             filled:true,
                             fillColor:ngelxPrivateBlueSoft,
-                            contentPadding:const EdgeInsets.symmetric(horizontal:16,vertical:10),
+                            contentPadding:const EdgeInsets.symmetric(horizontal:10,vertical:10),
                             border:OutlineInputBorder(borderRadius:BorderRadius.circular(24),borderSide:BorderSide.none),
                             enabledBorder:OutlineInputBorder(borderRadius:BorderRadius.circular(24),borderSide:BorderSide.none),
                             focusedBorder:OutlineInputBorder(borderRadius:BorderRadius.circular(24),borderSide:const BorderSide(color:ngelxPrivateBlue,width:1.2)),
@@ -18834,12 +18862,20 @@ class _ProfilPageState extends State<ProfilPage> {
                     },
                   )),
                   const SizedBox(height: 14),
-                  Row(mainAxisAlignment:MainAxisAlignment.spaceAround,children:[
-                    _ProfilSekme(t('posts'),profilSekme==0,()=>setState(()=>profilSekme=0)),
-                    _ProfilSekme(t('reels'),profilSekme==1,()=>setState(()=>profilSekme=1)),
-                    _ProfilSekme(t('tagged'),profilSekme==2,()=>setState(()=>profilSekme=2)),
-                    _ProfilSekme(t('liked'),profilSekme==3,()=>setState(()=>profilSekme=3)),
-                  ]),
+                  SingleChildScrollView(
+                    scrollDirection:Axis.horizontal,
+                    child:Row(children:[
+                      _ProfilSekme(t('posts'),profilSekme==0,()=>setState(()=>profilSekme=0)),
+                      const SizedBox(width:12),
+                      _ProfilSekme(t('reels'),profilSekme==1,()=>setState(()=>profilSekme=1)),
+                      const SizedBox(width:12),
+                      _ProfilSekme(t('tagged'),profilSekme==2,()=>setState(()=>profilSekme=2)),
+                      const SizedBox(width:12),
+                      _ProfilSekme(t('liked'),profilSekme==3,()=>setState(()=>profilSekme=3)),
+                      const SizedBox(width:12),
+                      _ProfilSekme(t('saved'),profilSekme==4,()=>setState(()=>profilSekme=4)),
+                    ]),
+                  ),
                 ],
               ),
             ),
@@ -18854,6 +18890,7 @@ class _ProfilPageState extends State<ProfilPage> {
   Widget _profilGrid(){
     if(profilSekme==2)return _etiketlenenGrid();
     if(profilSekme==3)return _begenilenGrid();
+    if(profilSekme==4)return _kaydedilenGrid();
     return StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
       stream:aktifKullanici==null?null:FirebaseFirestore.instance.collection('videos').where('ownerId',isEqualTo:aktifKullanici!.uid).limit(100).snapshots(),
       builder:(_,snap){
@@ -18922,6 +18959,28 @@ class _ProfilPageState extends State<ProfilPage> {
       return bm.compareTo(am);
     });
     return mevcut;
+  }
+
+  Widget _kaydedilenGrid(){
+    final uid=aktifKullanici?.uid;
+    if(uid==null)return _profilBosDurum(Icons.bookmark_border_rounded,'Kaydedilenleri görmek için giriş yap.');
+    return StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
+      stream:FirebaseFirestore.instance.collection('users').doc(uid).collection('saved').orderBy('savedAt',descending:true).limit(100).snapshots(),
+      builder:(_,s){
+        if(s.connectionState==ConnectionState.waiting)return const Padding(padding:EdgeInsets.all(38),child:Center(child:CircularProgressIndicator(color:mor)));
+        final kayitlar=s.data?.docs??const <QueryDocumentSnapshot<Map<String,dynamic>>>[];
+        if(kayitlar.isEmpty)return _profilBosDurum(Icons.bookmark_border_rounded,'Henüz kaydettiğin bir paylaşım yok.');
+        return FutureBuilder<List<DocumentSnapshot<Map<String,dynamic>>>>(
+          future:Future.wait(kayitlar.map((x)=>FirebaseFirestore.instance.collection('videos').doc((x.data()['contentId']??x.id).toString()).get())),
+          builder:(_,v){
+            if(v.connectionState!=ConnectionState.done)return const Padding(padding:EdgeInsets.all(38),child:Center(child:CircularProgressIndicator(color:mor)));
+            final docs=(v.data??const <DocumentSnapshot<Map<String,dynamic>>>[]).where((d)=>d.exists&&d.data()?['type']!='story').toList();
+            if(docs.isEmpty)return _profilBosDurum(Icons.bookmark_border_rounded,'Kaydedilmiş içerikler artık kullanılamıyor.');
+            return _profilBelgeleriGrid(docs,menuAc:false);
+          },
+        );
+      },
+    );
   }
 
   Widget _begenilenGrid()=>FutureBuilder<List<DocumentSnapshot<Map<String,dynamic>>>>(
