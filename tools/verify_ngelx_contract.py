@@ -776,6 +776,21 @@ for token in (
     if token not in app:
         errors.append("Build 271 profil sosyal işlem sözleşmesi eksik: " + token)
 
+# Build 272: save actions stay profile-scoped and feed chronology/timestamps stay explicit.
+for token in (
+    "bool kaydetIsleniyor = false;",
+    "collection('saved').doc(icerikId)",
+    "collection('saved').doc(videoId)",
+    "Profil > Kaydedilenler’e eklendi ✅",
+    "Kaydetme işlemi zaman aşımına uğradı. Tekrar dene.",
+    "String akisTamTarihSaat(dynamic ham)",
+    "tam.isEmpty?zaman:'$zaman • $tam'",
+    "..sort((a,b){",
+    "return bm.compareTo(am);",
+):
+    if token not in app:
+        errors.append("Build 272 Kaydet/Akış sözleşmesi eksik: " + token)
+
 if errors:
     print("NgelX contract doğrulaması BAŞARISIZ:")
     for e in errors:
