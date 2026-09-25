@@ -72,7 +72,7 @@ const ngelxPrivateBlueBorder = Color(0xFFD8E8FF);
 const ngelxPrivateBlueInk = Color(0xFF10213A);
 
 const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.57');
-const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '268');
+const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '269');
 const ngelxGroupBorder = Color(0xFFD9EEE0);
 
 final GlobalKey<NavigatorState> ngelxNavigatorKey=GlobalKey<NavigatorState>();
@@ -1609,6 +1609,9 @@ const ceviriler = <String, Map<String,String>>{
   'searchChats': {'tr':'Sohbetlerde ara','en':'Search chats','de':'Chats durchsuchen','ar':'البحث في المحادثات','ru':'Поиск в чатах'},
   'all': {'tr':'Tümü','en':'All','de':'Alle','ar':'الكل','ru':'Все'},
   'unread': {'tr':'Okunmamış','en':'Unread','de':'Ungelesen','ar':'غير مقروء','ru':'Непрочитанные'},
+  'notificationMessages': {'tr':'Mesajlar','en':'Messages','de':'Nachrichten','ar':'الرسائل','ru':'Сообщения'},
+  'notificationRequests': {'tr':'İstekler','en':'Requests','de':'Anfragen','ar':'الطلبات','ru':'Запросы'},
+  'noActivityInFilter': {'tr':'Bu filtrede yeni aktivite yok.','en':'No new activity in this filter.','de':'Keine neue Aktivität in diesem Filter.','ar':'لا يوجد نشاط جديد في هذا الفلتر.','ru':'В этом фильтре нет новых событий.'},
   'activity': {'tr':'Aktivite','en':'Activity','de':'Aktivität','ar':'النشاط','ru':'Активность'},
   'activitySub': {'tr':'Beğeniler, yorumlar ve güvenlik bildirimleri','en':'Likes, comments and security notifications','de':'Likes, Kommentare und Sicherheitsmeldungen','ar':'الإعجابات والتعليقات وإشعارات الأمان','ru':'Лайки, комментарии и уведомления безопасности'},
   'messageRequests': {'tr':'Mesaj İstekleri','en':'Message requests','de':'Nachrichtenanfragen','ar':'طلبات الرسائل','ru':'Запросы сообщений'},
@@ -16141,8 +16144,26 @@ class _SohbetMesajAramaPageState extends State<SohbetMesajAramaPage>{
 }
 
 
-class AktivitePage extends StatelessWidget {
+class AktivitePage extends StatefulWidget {
   const AktivitePage({super.key});
+  @override State<AktivitePage> createState()=>_AktivitePageState();
+}
+
+class _AktivitePageState extends State<AktivitePage> {
+  String _filtre='all';
+
+  bool _filtreUyar(Map<String,dynamic> v){
+    final tur=(v['type']??'').toString();
+    final olay=(v['eventKind']??'').toString();
+    final grup=(v['targetKind']??'').toString()=='group'||tur=='group'||olay.startsWith('group_');
+    switch(_filtre){
+      case 'unread': return v['read']!=true;
+      case 'groups': return grup;
+      case 'messages': return tur=='message'&&!grup;
+      case 'requests': return tur=='follow_request'||tur=='friend_request'||olay=='group_join_request';
+      default: return true;
+    }
+  }
 
   IconData _ikon(String tur){switch(tur){case 'like':case 'interaction':return Icons.favorite_rounded;case 'comment':return Icons.mode_comment_rounded;case 'message':return Icons.chat_bubble_rounded;case 'security':return Icons.shield_rounded;case 'friend':case 'follow_request':case 'friend_request':return Icons.person_add_alt_1_rounded;case 'friend_accepted':return Icons.people_rounded;case 'follow_accepted':return Icons.person_rounded;default:return Icons.notifications_rounded;}}
   Color _renk(String tur){switch(tur){case 'like':case 'interaction':return const Color(0xFFFF3B73);case 'comment':return Colors.blue;case 'security':return Colors.orange;case 'friend':case 'follow_request':case 'friend_request':return mor;default:return const Color(0xFF20B86A);}}
@@ -16471,7 +16492,7 @@ class AktivitePage extends StatelessWidget {
         builder: (_, s) {
           if(s.hasError)return Center(child:Column(mainAxisSize:MainAxisSize.min,children:[const Icon(Icons.cloud_off_rounded,color:Colors.redAccent,size:52),const SizedBox(height:10),Text(t('activityLoadFailed'),style:const TextStyle(color:Colors.black,fontWeight:FontWeight.w800)),Text(t('checkConnectionRetry'),style:const TextStyle(color:Colors.black54))]));
           if(s.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator(color:mor));
-          final docs = (s.data?.docs ?? []).toList()
+          final tumDocs = (s.data?.docs ?? []).toList()
             ..sort((a, b) {
               final at = a.data()['createdAt'];
               final bt = b.data()['createdAt'];
@@ -16479,8 +16500,61 @@ class AktivitePage extends StatelessWidget {
               final bd = bt is Timestamp ? bt.toDate() : DateTime.fromMillisecondsSinceEpoch(0);
               return bd.compareTo(ad);
             });
-          if (docs.isEmpty) return Center(child: Column(mainAxisSize:MainAxisSize.min,children:[const CircleAvatar(radius:36,backgroundColor:Color(0xFFF1E9FF),child:Icon(Icons.notifications_none_rounded,color:mor,size:38)),const SizedBox(height:13),Text(t('noActivity'),style:const TextStyle(color:Colors.black,fontSize:18,fontWeight:FontWeight.w900)),Text(t('noActivitySub'),textAlign:TextAlign.center,style:const TextStyle(color:Colors.black54))]));
-          return ListView.separated(padding:const EdgeInsets.fromLTRB(12,8,12,24),separatorBuilder:(_,__)=>const Divider(height:1,indent:72),itemCount:docs.length,itemBuilder:(_,i){final d=docs[i];
+          if (tumDocs.isEmpty) return Center(child: Column(mainAxisSize:MainAxisSize.min,children:[const CircleAvatar(radius:36,backgroundColor:Color(0xFFF1E9FF),child:Icon(Icons.notifications_none_rounded,color:mor,size:38)),const SizedBox(height:13),Text(t('noActivity'),style:const TextStyle(color:Colors.black,fontSize:18,fontWeight:FontWeight.w900)),Text(t('noActivitySub'),textAlign:TextAlign.center,style:const TextStyle(color:Colors.black54))]));
+
+          final docs=tumDocs.where((d)=>_filtreUyar(d.data())).toList();
+          bool grupMu(Map<String,dynamic> v){
+            final tur=(v['type']??'').toString(),olay=(v['eventKind']??'').toString();
+            return (v['targetKind']??'').toString()=='group'||tur=='group'||olay.startsWith('group_');
+          }
+          int say(String kod)=>tumDocs.where((d){
+            final v=d.data(),tur=(v['type']??'').toString(),olay=(v['eventKind']??'').toString(),grup=grupMu(v);
+            switch(kod){
+              case 'unread': return v['read']!=true;
+              case 'groups': return grup;
+              case 'messages': return tur=='message'&&!grup;
+              case 'requests': return tur=='follow_request'||tur=='friend_request'||olay=='group_join_request';
+              default: return true;
+            }
+          }).length;
+          Widget filtreChip(String kod,String etiket){
+            final adet=say(kod),secili=_filtre==kod;
+            return Padding(
+              padding:const EdgeInsets.only(right:7),
+              child:ChoiceChip(
+                selected:secili,
+                showCheckmark:false,
+                label:Text(adet>0?'$etiket $adet':etiket),
+                onSelected:(_){if(_filtre!=kod)setState(()=>_filtre=kod);},
+                selectedColor:kod=='groups'?ngelxGroupGreenSoft:const Color(0xFFF0E8FF),
+                side:BorderSide(color:secili?(kod=='groups'?ngelxGroupGreen:mor):const Color(0xFFE4E5E9)),
+                labelStyle:TextStyle(color:secili?(kod=='groups'?ngelxGroupGreen:mor):Colors.black67,fontWeight:FontWeight.w800,fontSize:11),
+              ),
+            );
+          }
+
+          return Column(children:[
+            Container(
+              color:Colors.white,
+              padding:const EdgeInsets.fromLTRB(12,7,0,6),
+              child:SizedBox(
+                height:38,
+                child:ListView(
+                  scrollDirection:Axis.horizontal,
+                  children:[
+                    filtreChip('all',t('all')),
+                    filtreChip('unread',t('unread')),
+                    filtreChip('groups',t('groups')),
+                    filtreChip('messages',t('notificationMessages')),
+                    filtreChip('requests',t('notificationRequests')),
+                  ],
+                ),
+              ),
+            ),
+            const Divider(height:1),
+            Expanded(child:docs.isEmpty
+              ?Center(child:Text(t('noActivityInFilter'),style:const TextStyle(color:Colors.black54,fontWeight:FontWeight.w700)))
+              :ListView.separated(padding:const EdgeInsets.fromLTRB(12,8,12,24),separatorBuilder:(_,__)=>const Divider(height:1,indent:72),itemCount:docs.length,itemBuilder:(_,i){final d=docs[i];
             final v = d.data();
             final tur=(v['type']??'').toString(),okundu=v['read']==true;
             final olay=(v['eventKind']??'').toString();
@@ -16507,7 +16581,9 @@ class AktivitePage extends StatelessWidget {
               ]) : (v['status'] == 'accepted' ? const Icon(Icons.people, color: Colors.green) : null),
               onTap: () => _aktiviteAc(context,d),
             ));
-          });
+          }),
+            ),
+          ]);
         },
       ),
     ));
