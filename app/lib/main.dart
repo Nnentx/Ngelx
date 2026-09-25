@@ -72,7 +72,7 @@ const ngelxPrivateBlueBorder = Color(0xFFD8E8FF);
 const ngelxPrivateBlueInk = Color(0xFF10213A);
 
 const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.57');
-const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '260');
+const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '261');
 const ngelxGroupBorder = Color(0xFFD9EEE0);
 
 class NgelXBirthDateFormatter extends TextInputFormatter {
@@ -13497,6 +13497,7 @@ class SohbetPage extends StatefulWidget {final String chatId,digerUid,ad,foto;fi
 class _SohbetPageState extends State<SohbetPage> {
   final mesaj=TextEditingController(),liste=ScrollController();
   final List<Map<String,String>> mentionOnerileri=[];
+  final List<QueryDocumentSnapshot<Map<String,dynamic>>> _mesajOnbellek=<QueryDocumentSnapshot<Map<String,dynamic>>>[];
   late final Stream<DocumentSnapshot<Map<String,dynamic>>> _chatAkisi;
   late final Stream<QuerySnapshot<Map<String,dynamic>>> _mesajAkisi;
   bool _okunduYaziliyor=false;
@@ -13522,7 +13523,7 @@ class _SohbetPageState extends State<SohbetPage> {
     final ben=uid;
     if(ben==null)return (engel:'Mesaj göndermek için giriş yap.',sohbet:<String,dynamic>{},diger:<String,dynamic>{},sohbetMevcut:false);
     final simdi=DateTime.now();
-    if(!zorla&&_mesajHazirlikZamani!=null&&simdi.difference(_mesajHazirlikZamani!).inSeconds<15){
+    if(!zorla&&_mesajHazirlikZamani!=null&&simdi.difference(_mesajHazirlikZamani!).inSeconds<60){
       return (engel:_mesajHazirlikEngeli,sohbet:_mesajHazirlikSohbet,diger:_mesajHazirlikDiger,sohbetMevcut:_mesajHazirlikSohbetMevcut);
     }
     try{
@@ -13617,11 +13618,9 @@ class _SohbetPageState extends State<SohbetPage> {
     if(!yaziyorGonderildi){
       yaziyorGonderildi=true;
       _sonYaziyorGonderim=simdi;
-      unawaited(ref.get().then((d){
-        if(d.data()?['typingIndicator_$ben']!=false){
-          return ref.set({'typing_$ben':true,'typingAt_$ben':FieldValue.serverTimestamp()},SetOptions(merge:true));
-        }
-      }).catchError((_){ }));
+      if(_mesajHazirlikSohbet['typingIndicator_$ben']!=false){
+        unawaited(ref.set({'typing_$ben':true,'typingAt_$ben':FieldValue.serverTimestamp()},SetOptions(merge:true)).catchError((_){ }));
+      }
     }else if(_sonYaziyorGonderim==null||simdi.difference(_sonYaziyorGonderim!).inSeconds>=4){
       _sonYaziyorGonderim=simdi;
       unawaited(ref.set({'typingAt_$ben':FieldValue.serverTimestamp()},SetOptions(merge:true)).catchError((_){ }));
@@ -14130,7 +14129,20 @@ class _SohbetPageState extends State<SohbetPage> {
           ),
           Row(mainAxisAlignment:MainAxisAlignment.spaceAround,children:[
             _mesajAksiyon(Icons.reply_rounded,'Yanıtla',()=>Navigator.pop(c,'reply')),
-            _mesajAksiyon(Icons.copy_rounded,'Kopyala',()=>Navigator.pop(c,'copy'),etkin:metin.isNotEmpty),
+            _mesajAksiyon(Icons.copy_rounded,'Kopyala',()async{
+              if(metin.isEmpty)return;
+              try{
+                await Clipboard.setData(ClipboardData(text:metin));
+                if(c.mounted)Navigator.pop(c);
+                await Future<void>.delayed(const Duration(milliseconds:90));
+                if(mounted){
+                  ScaffoldMessenger.of(context).clearSnackBars();
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Mesaj panoya kopyalandı ✅'),duration:Duration(seconds:2)));
+                }
+              }catch(_){
+                if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Mesaj kopyalanamadı.')));
+              }
+            },etkin:metin.isNotEmpty),
             _mesajAksiyon(Icons.schedule_rounded,'Hatırlatma ayarla',()=>Navigator.pop(c,'remind')),
             _mesajAksiyon(Icons.more_horiz_rounded,'Daha fazla',()=>Navigator.pop(c,'more')),
           ]),
@@ -14138,11 +14150,13 @@ class _SohbetPageState extends State<SohbetPage> {
       )),
     );
     if(sec==null)return;
-    await ngelxOverlayKapanisiniBekle();
     if(!mounted)return;
     if(sec.startsWith('reaction:')){await mesajTepkiDegistir(d,sec.substring(9));return;}
-    if(sec=='reaction_more'){final e=await mesajTepkisiSec();if(e!=null)await mesajTepkiDegistir(d,e);return;}
-    if(sec=='copy'&&metin.isNotEmpty){await Clipboard.setData(ClipboardData(text:metin));return;}
+    if(sec=='reaction_more'){
+      await Future<void>.delayed(const Duration(milliseconds:100));
+      if(!mounted)return;
+      final e=await mesajTepkisiSec();if(e!=null)await mesajTepkiDegistir(d,e);return;
+    }
     if(sec=='reply'){
       final tur=(v['type']??'text').toString();
       setState((){
@@ -14154,6 +14168,8 @@ class _SohbetPageState extends State<SohbetPage> {
     }
     if(sec=='remind'){await mesajHatirlat(d,metin);return;}
     if(sec!='more')return;
+    await Future<void>.delayed(const Duration(milliseconds:100));
+    if(!mounted)return;
 
     final fazla=await showModalBottomSheet<String>(
       context:context,backgroundColor:Colors.white,showDragHandle:true,
@@ -14166,7 +14182,7 @@ class _SohbetPageState extends State<SohbetPage> {
       ]))),
     );
     if(fazla==null)return;
-    await ngelxOverlayKapanisiniBekle();
+    await Future<void>.delayed(const Duration(milliseconds:100));
     if(!mounted)return;
     if(fazla=='info'){await ozelMesajBilgisi(d);}
     else if(fazla=='pin')await d.reference.set({'pinned':v['pinned']!=true,'pinnedAt':FieldValue.serverTimestamp(),'pinnedBy':uid},SetOptions(merge:true));
@@ -14533,6 +14549,16 @@ class _SohbetPageState extends State<SohbetPage> {
     final sohbetRef=FirebaseFirestore.instance.collection('chats').doc(widget.chatId);
     _chatAkisi=sohbetRef.snapshots();
     _mesajAkisi=sohbetRef.collection('messages').orderBy('createdAt').limitToLast(100).snapshots();
+    unawaited(
+      sohbetRef.collection('messages').orderBy('createdAt').limitToLast(100).get(const GetOptions(source:Source.cache)).then((s){
+        if(!mounted||s.docs.isEmpty)return;
+        setState((){
+          _mesajOnbellek
+            ..clear()
+            ..addAll(s.docs);
+        });
+      }).catchError((_){ }),
+    );
     unawaited(PrivateDraftStore.load(widget.chatId).then((taslak){
       if(mounted&&taslak.isNotEmpty&&mesaj.text.isEmpty){
         mesaj.text=taslak;
@@ -14701,7 +14727,7 @@ class _SohbetPageState extends State<SohbetPage> {
       Expanded(child:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
         stream:_mesajAkisi,
         builder:(_,s){
-          final tumDocs=s.data?.docs??<QueryDocumentSnapshot<Map<String,dynamic>>>[];
+          final tumDocs=s.data?.docs??List<QueryDocumentSnapshot<Map<String,dynamic>>>.from(_mesajOnbellek);
           final simdi=DateTime.now();
           final docs=tumDocs.where((d){
             final x=d.data()['expiresAt'];
