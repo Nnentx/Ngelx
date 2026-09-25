@@ -3101,6 +3101,8 @@ class _VideoAkisiState extends State<VideoAkisi> {
                   'type':tur,
                   'videoUrl':(item['videoUrl']??'').toString(),
                   'mediaUrl':(item['mediaUrl']??item['videoUrl']??'').toString(),
+                  'mediaUrls':jsonEncode(item['mediaUrls']??const <String>[]),
+                  'mediaCount':(item['mediaCount']??0).toString(),
                   'audioUrl':(item['audioUrl']??'').toString(),
                   'description':(item['description']??'').toString(),
                   'username':(item['username']??'ngelx').toString(),
@@ -3738,6 +3740,7 @@ class _GorselYaziKartiState extends State<GorselYaziKarti> {
   bool indiriliyor = false;
   bool kalpAnimasyonu = false;
   bool begeniIsleniyor = false;
+  int medyaSayfasi = 0;
 
   String get icerikId => widget.veri['id'] ?? '';
   bool get indirilebilir => widget.veri['allowDownload'] != 'false' || FirebaseAuth.instance.currentUser?.uid == widget.veri['ownerId'];
@@ -3911,6 +3914,14 @@ class _GorselYaziKartiState extends State<GorselYaziKarti> {
   Widget build(BuildContext context) {
     final foto = widget.veri['mediaUrl'] ?? '';
     final yazi = widget.veri['description'] ?? '';
+    List<String> fotoListesi=<String>[];
+    try{
+      final ham=widget.veri['mediaUrls']??'';
+      if(ham.isNotEmpty){
+        fotoListesi=List<dynamic>.from(jsonDecode(ham) as List).map((e)=>e.toString()).where((e)=>e.isNotEmpty).toList();
+      }
+    }catch(_){}
+    if(fotoListesi.isEmpty&&foto.isNotEmpty)fotoListesi=<String>[foto];
     return GestureDetector(
       onLongPress: uzunBasmaMenusu,
       onDoubleTap: ciftTikBegen,
@@ -3919,12 +3930,16 @@ class _GorselYaziKartiState extends State<GorselYaziKarti> {
         child: Stack(
         fit: StackFit.expand,
         children: [
-          if (foto.isNotEmpty)
-            CachedNetworkImage(
-              imageUrl:foto,
-              fit:BoxFit.contain,
-              placeholder:(_,__)=>const Center(child:CircularProgressIndicator(color:mavi)),
-              errorWidget:(_,__,___)=>ngelxMedyaHataGorunumu(foto),
+          if (fotoListesi.isNotEmpty)
+            PageView.builder(
+              itemCount:fotoListesi.length,
+              onPageChanged:(i)=>setState(()=>medyaSayfasi=i),
+              itemBuilder:(_,i)=>CachedNetworkImage(
+                imageUrl:fotoListesi[i],
+                fit:BoxFit.contain,
+                placeholder:(_,__)=>const Center(child:CircularProgressIndicator(color:mavi)),
+                errorWidget:(_,__,___)=>ngelxMedyaHataGorunumu(fotoListesi[i]),
+              ),
             )
           else
             Container(
@@ -3942,6 +3957,15 @@ class _GorselYaziKartiState extends State<GorselYaziKarti> {
           ),
           if (kalpAnimasyonu)
             const Center(child: KalpPatlama()),
+          if(fotoListesi.length>1)
+            Positioned(
+              top:78,right:18,
+              child:Container(
+                padding:const EdgeInsets.symmetric(horizontal:10,vertical:6),
+                decoration:BoxDecoration(color:Colors.black54,borderRadius:BorderRadius.circular(15)),
+                child:Text('${medyaSayfasi+1}/${fotoListesi.length}',style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w900)),
+              ),
+            ),
           Positioned(
             left: 20,
             bottom: 28,
@@ -18831,12 +18855,16 @@ class _ProfilPageState extends State<ProfilPage> {
                     },
                   )),
                   const SizedBox(height: 14),
-                  Row(mainAxisAlignment:MainAxisAlignment.spaceAround,children:[
-                    _ProfilSekme(t('posts'),profilSekme==0,()=>setState(()=>profilSekme=0)),
-                    _ProfilSekme(t('reels'),profilSekme==1,()=>setState(()=>profilSekme=1)),
-                    _ProfilSekme(t('tagged'),profilSekme==2,()=>setState(()=>profilSekme=2)),
-                    _ProfilSekme(t('liked'),profilSekme==3,()=>setState(()=>profilSekme=3)),
-                  ]),
+                  SingleChildScrollView(
+                    scrollDirection:Axis.horizontal,
+                    child:Row(children:[
+                      _ProfilSekme(t('posts'),profilSekme==0,()=>setState(()=>profilSekme=0)),const SizedBox(width:12),
+                      _ProfilSekme(t('reels'),profilSekme==1,()=>setState(()=>profilSekme=1)),const SizedBox(width:12),
+                      _ProfilSekme(t('tagged'),profilSekme==2,()=>setState(()=>profilSekme=2)),const SizedBox(width:12),
+                      _ProfilSekme(t('liked'),profilSekme==3,()=>setState(()=>profilSekme=3)),const SizedBox(width:12),
+                      _ProfilSekme(t('saved'),profilSekme==4,()=>setState(()=>profilSekme=4)),
+                    ]),
+                  ),
                 ],
               ),
             ),
@@ -18851,6 +18879,7 @@ class _ProfilPageState extends State<ProfilPage> {
   Widget _profilGrid(){
     if(profilSekme==2)return _etiketlenenGrid();
     if(profilSekme==3)return _begenilenGrid();
+    if(profilSekme==4)return _kaydedilenGrid();
     return StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
       stream:aktifKullanici==null?null:FirebaseFirestore.instance.collection('videos').where('ownerId',isEqualTo:aktifKullanici!.uid).limit(100).snapshots(),
       builder:(_,snap){
@@ -18919,6 +18948,29 @@ class _ProfilPageState extends State<ProfilPage> {
       return bm.compareTo(am);
     });
     return mevcut;
+  }
+
+  Widget _kaydedilenGrid(){
+    final uid=aktifKullanici?.uid;
+    if(uid==null)return _profilBosDurum(Icons.bookmark_border_rounded,'Kaydedilenleri görmek için giriş yap.');
+    return StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
+      stream:FirebaseFirestore.instance.collection('users').doc(uid).collection('saved').orderBy('savedAt',descending:true).limit(100).snapshots(),
+      builder:(_,snap){
+        if(snap.connectionState==ConnectionState.waiting)return const Padding(padding:EdgeInsets.all(38),child:Center(child:CircularProgressIndicator(color:mor)));
+        if(snap.hasError)return _profilBosDurum(Icons.cloud_off_outlined,'Kaydedilenler yüklenemedi.');
+        final refs=snap.data?.docs??const <QueryDocumentSnapshot<Map<String,dynamic>>>[];
+        if(refs.isEmpty)return _profilBosDurum(Icons.bookmark_border_rounded,'Henüz kaydettiğin bir paylaşım yok.');
+        return FutureBuilder<List<DocumentSnapshot<Map<String,dynamic>>>>(
+          future:Future.wait(refs.map((x)=>FirebaseFirestore.instance.collection('videos').doc((x.data()['contentId']??x.id).toString()).get())),
+          builder:(_,icerikler){
+            if(icerikler.connectionState!=ConnectionState.done)return const Padding(padding:EdgeInsets.all(38),child:Center(child:CircularProgressIndicator(color:mor)));
+            final docs=(icerikler.data??const <DocumentSnapshot<Map<String,dynamic>>>[]).where((d)=>d.exists&&d.data()?['type']!='story').toList();
+            if(docs.isEmpty)return _profilBosDurum(Icons.bookmark_border_rounded,'Kaydedilmiş içerikler artık kullanılamıyor.');
+            return _profilBelgeleriGrid(docs,menuAc:false);
+          },
+        );
+      },
+    );
   }
 
   Widget _begenilenGrid()=>FutureBuilder<List<DocumentSnapshot<Map<String,dynamic>>>>(
