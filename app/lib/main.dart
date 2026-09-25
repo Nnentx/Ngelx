@@ -16528,7 +16528,7 @@ class _AktivitePageState extends State<AktivitePage> {
                 onSelected:(_){if(_filtre!=kod)setState(()=>_filtre=kod);},
                 selectedColor:kod=='groups'?ngelxGroupGreenSoft:const Color(0xFFF0E8FF),
                 side:BorderSide(color:secili?(kod=='groups'?ngelxGroupGreen:mor):const Color(0xFFE4E5E9)),
-                labelStyle:TextStyle(color:secili?(kod=='groups'?ngelxGroupGreen:mor):Colors.black67,fontWeight:FontWeight.w800,fontSize:11),
+                labelStyle:TextStyle(color:secili?(kod=='groups'?ngelxGroupGreen:mor):Colors.black54,fontWeight:FontWeight.w800,fontSize:11),
               ),
             );
           }
