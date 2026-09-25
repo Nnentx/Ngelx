@@ -150,7 +150,7 @@ class _NgelXUserArrayPageState extends State<_NgelXUserArrayPage>{
     if(s.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator(color:mor));
     final ids=s.data??[];if(ids.isEmpty)return Center(child:Text(widget.bosMetin,style:const TextStyle(color:Colors.black54)));
     return ListView.builder(itemCount:ids.length,itemBuilder:(_,i)=>FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(future:FirebaseFirestore.instance.collection('users').doc(ids[i]).get(),builder:(_,u){final v=u.data?.data()??{},f=(v['photoUrl']??'').toString();return ListTile(onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciProfilPage(uid:ids[i]))),leading:CircleAvatar(backgroundImage:f.isEmpty?null:CachedNetworkImageProvider(f),child:f.isEmpty?const Icon(Icons.person):null),title:Text((v['displayName']??v['username']??'NgelX').toString()),subtitle:Text('@${v['username']??'ngelx'}'),trailing:widget.trailing(ids[i]));}));
-  }))));
+  })));
 }
 
 class GelismisAyarlarV258Page extends StatefulWidget{
@@ -295,7 +295,7 @@ class _VerilerimV258PageState extends State<VerilerimV258Page>{
     ListTile(leading:const Icon(Icons.play_circle_outline,color:mor),title:const Text('İzleme geçmişini temizle'),onTap:()=>_sil('watchHistory','İzleme geçmişi')),
     ListTile(leading:const Icon(Icons.bookmark_border,color:mor),title:const Text('Kaydedilenler'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const KaydedilenlerPage()))),
     ListTile(leading:const Icon(Icons.devices_outlined,color:mor),title:const Text('Hesap hareketleri ve cihazlar'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const GirisGecmisiPage()))),
-  ]))));
+  ])));
 }
 
 class NgelXHakkindaV258Page extends StatelessWidget{
@@ -308,5 +308,5 @@ class NgelXHakkindaV258Page extends StatelessWidget{
     ListTile(title:const Text('Kullanım koşulları'),trailing:const Icon(Icons.chevron_right),onTap:()=>_m(context,'Kullanım koşulları','NgelX kullanırken yürürlükteki yasalara, topluluk kurallarına ve başkalarının haklarına uymalısın.')),
     ListTile(title:const Text('Telif hakkı'),trailing:const Icon(Icons.chevron_right),onTap:()=>_m(context,'Telif hakkı','Yalnızca paylaşma hakkına sahip olduğun içerikleri yüklemelisin.')),
     ListTile(title:const Text('Açık kaynak lisansları'),trailing:const Icon(Icons.chevron_right),onTap:()=>showLicensePage(context:context,applicationName:'NgelX',applicationVersion:'$ngelxVersionName+$ngelxBuildNumber')),
-  ]))));
+  ])));
 }
