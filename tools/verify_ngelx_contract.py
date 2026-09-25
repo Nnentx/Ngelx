@@ -631,6 +631,37 @@ for token in (
     if token not in rules:
         errors.append("Sosyal istek Firestore iptal koruması eksik: " + token)
 
+# Build 264: auth/account switching must be root-driven and bounded.
+for token in (
+    "final GlobalKey<NavigatorState> ngelxNavigatorKey",
+    "void ngelxKokRotayaDon()",
+    "stream:FirebaseAuth.instance.userChanges()",
+    "class NgelXDogrulanmisOturumKapisi",
+    "kullanici.emailVerified!=true",
+    "Hesabın hazırlanıyor",
+    "Uygulamayı kapatıp açman gerekmez.",
+    "Giriş zaman aşımına uğradı.",
+    "Hesap geçişi zaman aşımına uğradı.",
+):
+    if token not in app:
+        errors.append("Oturum güvenilirliği sözleşmesi eksik: " + token)
+
+login_start = app.find("class _GirisPageState")
+login_end = app.find("\nclass _NgelXRenkliBaslik", login_start)
+login_block = app[login_start:login_end if login_end > login_start else len(app)]
+if "Navigator.pushReplacement(" in login_block:
+    errors.append("Giriş akışı AnaEkran'ı elle push etmemeli; auth root kapısı kullanılmalı.")
+if ".signInWithEmailAndPassword(" not in login_block or ".timeout(const Duration(seconds:20))" not in login_block:
+    errors.append("Giriş işlemi sınırlı bekleme süresiyle çalışmalı.")
+
+switch_start = app.find("class _HesapDegistirPageState")
+switch_end = app.find("\nclass NgelXPremiumPage", switch_start)
+switch_block = app[switch_start:switch_end if switch_end > switch_start else len(app)]
+if "pushAndRemoveUntil(MaterialPageRoute(builder:(_)=>const AnaEkran())" in switch_block:
+    errors.append("Hesap değiştirme eski AnaEkran push davranışına dönmemeli.")
+if "ngelxKokRotayaDon();" not in switch_block:
+    errors.append("Hesap değiştirme kök rota temizliğini kullanmalı.")
+
 if errors:
     print("NgelX contract doğrulaması BAŞARISIZ:")
     for e in errors:
