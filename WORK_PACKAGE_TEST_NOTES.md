@@ -402,3 +402,30 @@
 6. Düzenle penceresini açıp **Vazgeç** de; crash olmamalı.
 7. Ardından **Sil**, **Kopyala**, **Yanıtla**, beğeni/tepki işlemlerini tekrar kontrol et.
 
+## 2026-09-25 — Build 263 takip + arkadaşlık istekleri sağlamlaştırma
+
+- Takip ve arkadaşlık isteği gönderiminde aynı kullanıcıya aynı türde ikinci bir **pending** istek oluşturulması engellendi.
+- Kullanıcı zaten takip ediliyorsa veya zaten arkadaşsa yeni istek üretilmiyor.
+- Sosyal istek gönderimi profil + mevcut giden istek kontrolüyle çalışıyor ve ağ işlemlerine zaman aşımı eklendi.
+- Ayarlar > Gizlilik altındaki **Takip isteği geçmişi**, birleşik **İstek geçmişi** ekranına dönüştürüldü.
+- İstek geçmişi artık hem **Takip** hem **Arkadaşlık** isteklerini; Bekliyor / Kabul edildi / Reddedildi / Geri çekildi durumlarıyla gösteriyor.
+- Bekleyen giden istekler kullanıcı tarafından **Geri çek** ile iptal edilebiliyor.
+- Firestore kuralı, gönderenin yalnızca kendi bekleyen takip/arkadaşlık isteğini `cancelled` durumuna çekmesine izin veriyor; metni veya hedefi değiştirmesine izin vermiyor.
+- Emulator testlerine gönderen iptali, sahte alan güncelleme reddi, yabancı kullanıcı reddi ve alıcının kabul yetkisi eklendi.
+- Takip/arkadaşlık kabul bildirimlerine kabul eden hesabın adı ve fotoğrafı ekleniyor.
+- Kabul/reddet batch işleminde timeout ve görünür hata geri bildirimi eklendi.
+- **Eski NgelX logo tasarım kodu ve asset'leri korunuyor.**
+- Sürüm **v1.0.57 • Yapı 263**.
+
+### Build 263 doğrulama sırası
+
+1. Gizli bir hesaba Takip isteği gönder; buton bekleyen duruma geçmeli ve tek istek oluşmalı.
+2. Aynı kişiye art arda tekrar dokun; ikinci pending kayıt oluşmamalı.
+3. Arkadaşlık isteği gönder; Aktivite ekranında karşı hesaba ulaşmalı.
+4. Karşı hesap isteği kabul etsin; iki hesapta arkadaş listesi güncellenmeli.
+5. Takip isteğini kabul et; takipçi/takip sayıları iki hesapta doğru güncellenmeli.
+6. Ayarlar > Gizlilik > **İstek geçmişi**: takip + arkadaşlık istekleri birlikte görünmeli.
+7. Bekleyen bir istekte **Geri çek**: karşı hesap artık kabul/reddet butonunu görmemeli.
+8. Kabul edilen / reddedilen / geri çekilen durum etiketlerini doğrula.
+9. Eski NgelX logo görünümü kullanılan ekranlarda değişmemiş olmalı.
+
