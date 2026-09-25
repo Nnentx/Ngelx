@@ -72,7 +72,7 @@ const ngelxPrivateBlueBorder = Color(0xFFD8E8FF);
 const ngelxPrivateBlueInk = Color(0xFF10213A);
 
 const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.57');
-const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '270');
+const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '271');
 const ngelxGroupBorder = Color(0xFFD9EEE0);
 
 final GlobalKey<NavigatorState> ngelxNavigatorKey=GlobalKey<NavigatorState>();
@@ -1821,19 +1821,19 @@ Future<void> uygulamaBildirimiGonder({
 
 final Set<String> _sosyalIstekIslemleri=<String>{};
 
-Future<void> sosyalIstekGonder({
+Future<bool> sosyalIstekGonder({
   required String hedefUid,
   required String tur,
   required String metin,
 }) async {
   final user=FirebaseAuth.instance.currentUser;
-  if(user==null||user.isAnonymous||hedefUid.isEmpty||hedefUid==user.uid)return;
+  if(user==null||user.isAnonymous||hedefUid.isEmpty||hedefUid==user.uid)return false;
   final kilit='${user.uid}|$hedefUid|$tur';
-  if(!_sosyalIstekIslemleri.add(kilit))return;
+  if(!_sosyalIstekIslemleri.add(kilit))return false;
   try{
     final sonuc=await Future.wait([
       FirebaseFirestore.instance.collection('users').doc(user.uid).get().timeout(const Duration(seconds:8)),
-      FirebaseFirestore.instance.collection('notifications').where('fromUid',isEqualTo:user.uid).limit(100).get().timeout(const Duration(seconds:8)),
+      FirebaseFirestore.instance.collection('notifications').where('fromUid',isEqualTo:user.uid).limit(200).get().timeout(const Duration(seconds:8)),
     ]);
     final profil=sonuc[0] as DocumentSnapshot<Map<String,dynamic>>;
     final giden=sonuc[1] as QuerySnapshot<Map<String,dynamic>>;
@@ -1844,13 +1844,13 @@ Future<void> sosyalIstekGonder({
       : tur=='friend_request'
         ? List<String>.from(p['friends']??const[]).contains(hedefUid)
         : false;
-    if(zatenIliski)return;
+    if(zatenIliski)return false;
 
     final zatenBekliyor=giden.docs.any((d){
       final v=d.data();
       return v['toUid']==hedefUid&&v['type']==tur&&v['status']=='pending';
     });
-    if(zatenBekliyor)return;
+    if(zatenBekliyor)return false;
 
     final ad=(p['displayName']??p['username']??user.displayName??'NgelX kullanıcısı').toString();
     final foto=(p['photoUrl']??user.photoURL??'').toString();
@@ -1865,6 +1865,7 @@ Future<void> sosyalIstekGonder({
       'read':false,
       'createdAt':FieldValue.serverTimestamp(),
     }).timeout(const Duration(seconds:10));
+    return true;
   }finally{
     _sosyalIstekIslemleri.remove(kilit);
   }
@@ -16851,6 +16852,46 @@ class KullaniciProfilPage extends StatelessWidget {
   final bool ziyaretciOnizleme;
   const KullaniciProfilPage({super.key, required this.uid,this.ziyaretciOnizleme=false});
 
+  Future<void> profildenMesajAc(BuildContext context,{required String ad,required String foto})async{
+    final me=FirebaseAuth.instance.currentUser?.uid;
+    if(me==null||me==uid)return;
+    final ids=<String>[me,uid]..sort();
+    final chatId=ids.join('_');
+    try{
+      final sonuc=await Future.wait([
+        FirebaseFirestore.instance.collection('users').doc(me).get().timeout(const Duration(seconds:8)),
+        FirebaseFirestore.instance.collection('users').doc(uid).get().timeout(const Duration(seconds:8)),
+        FirebaseFirestore.instance.collection('chats').doc(chatId).get().timeout(const Duration(seconds:8)),
+      ]);
+      final benim=(sonuc[0] as DocumentSnapshot<Map<String,dynamic>>).data()??<String,dynamic>{};
+      final hedef=(sonuc[1] as DocumentSnapshot<Map<String,dynamic>>).data()??<String,dynamic>{};
+      final sohbet=(sonuc[2] as DocumentSnapshot<Map<String,dynamic>>).data()??<String,dynamic>{};
+      final arkadaslar=List<String>.from(benim['friends']??const[]);
+      final hedefinTakipEttikleri=List<String>.from(hedef['following']??const[]);
+      final mesajIzni=(hedef['messagePermission']??(hedef['friendsOnlyMessages']!=false?'friends':'all')).toString();
+      final kabulEdildi=sohbet['requestAccepted_$me']==true||sohbet['requestAccepted_$uid']==true;
+      final izinli=kabulEdildi||
+        mesajIzni=='all'||
+        (mesajIzni=='friends'&&arkadaslar.contains(uid))||
+        (mesajIzni=='following'&&hedefinTakipEttikleri.contains(me));
+      if(!izinli){
+        if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(t('messageNotAllowed'))));
+        return;
+      }
+      if(!context.mounted)return;
+      await Navigator.push(context,MaterialPageRoute(builder:(_)=>SohbetPage(
+        chatId:chatId,
+        digerUid:uid,
+        ad:ad,
+        foto:foto,
+      )));
+    }on TimeoutException{
+      if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Mesaj izni kontrolü zaman aşımına uğradı. Tekrar dene.')));
+    }catch(_){
+      if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Mesaj ekranı şu anda açılamadı. Tekrar dene.')));
+    }
+  }
+
   Future<void> profiliPaylas(BuildContext context)async{
     final me=FirebaseAuth.instance.currentUser?.uid;
     final hedef=await FirebaseFirestore.instance.collection('users').doc(uid).get();
@@ -16888,13 +16929,6 @@ class KullaniciProfilPage extends StatelessWidget {
           final benimVerim = s.data![1]?.data() ?? <String, dynamic>{};
           final foto = (v['photoUrl'] ?? '').toString();
           final arkadaslar = Set<String>.from(List<dynamic>.from(benimVerim['friends'] ?? []));
-          final hedefinTakipEttikleri=Set<String>.from(List<dynamic>.from(v['following']??const[]));
-          final mesajIzni=(v['messagePermission']??(v['friendsOnlyMessages']!=false?'friends':'all')).toString();
-          final mesajAtabilir=me!=null&&(
-            mesajIzni=='all'||
-            (mesajIzni=='friends'&&arkadaslar.contains(uid))||
-            (mesajIzni=='following'&&hedefinTakipEttikleri.contains(me))
-          );
           final gizli = v['privateAccount'] == true;
           final profilIzni=(v['profileViewPermission']??'all').toString();
           final beniTakipEdiyor=me!=null&&List<String>.from(v['followers']??const[]).contains(me);
@@ -17013,8 +17047,14 @@ class KullaniciProfilPage extends StatelessWidget {
                               }
 
                               if(gizli){
-                                await sosyalIstekGonder(hedefUid:uid,tur:'follow_request',metin:'Yeni takip isteğin var');
-                                if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Takip isteği gönderildi.')));
+                                try{
+                                  final gonderildi=await sosyalIstekGonder(hedefUid:uid,tur:'follow_request',metin:'Yeni takip isteğin var');
+                                  if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(gonderildi?'Takip isteği gönderildi.':'Takip isteği zaten bekliyor veya bu hesabı takip ediyorsun.')));
+                                }on TimeoutException{
+                                  if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Takip isteği zaman aşımına uğradı. Tekrar dene.')));
+                                }catch(_){
+                                  if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Takip isteği gönderilemedi. Bağlantını kontrol edip tekrar dene.')));
+                                }
                                 return;
                               }
 
@@ -17033,7 +17073,15 @@ class KullaniciProfilPage extends StatelessWidget {
                     },
                   )),
                   const SizedBox(width:10),
-                  Expanded(child:OutlinedButton.icon(onPressed:()async{if(me==null)return;final ids=[me,uid]..sort();final id=ids.join('_');var izinli=mesajAtabilir;if(!izinli){try{final mevcut=await FirebaseFirestore.instance.collection('chats').doc(id).get();final cv=mevcut.data()??<String,dynamic>{};izinli=cv['requestAccepted_$me']==true||cv['requestAccepted_$uid']==true;}catch(_){}}if(!izinli){if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(t('messageNotAllowed'))));return;}if(context.mounted)Navigator.push(context,MaterialPageRoute(builder:(_)=>SohbetPage(chatId:id,digerUid:uid,ad:(v['displayName']??v['username']??'NgelX').toString(),foto:foto)));},icon:const Icon(Icons.message_outlined),label:Text(t('message')))),
+                  Expanded(child:OutlinedButton.icon(
+                    onPressed:me==null?null:()=>profildenMesajAc(
+                      context,
+                      ad:(v['displayName']??v['username']??'NgelX').toString(),
+                      foto:foto,
+                    ),
+                    icon:const Icon(Icons.message_outlined),
+                    label:Text(t('message')),
+                  )),
                 ]),
                 const SizedBox(height:10),
                 StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
@@ -17043,8 +17091,14 @@ class KullaniciProfilPage extends StatelessWidget {
                     return SizedBox(width:double.infinity,child:FilledButton(
                       onPressed:(arkadaslar.contains(uid)||bekliyor)?null:()async{
                         if(me==null)return;
-                        await sosyalIstekGonder(hedefUid:uid,tur:'friend_request',metin:'Yeni arkadaşlık isteğin var');
-                        if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Arkadaşlık isteği gönderildi.')));
+                        try{
+                          final gonderildi=await sosyalIstekGonder(hedefUid:uid,tur:'friend_request',metin:'Yeni arkadaşlık isteğin var');
+                          if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(gonderildi?'Arkadaşlık isteği gönderildi.':'Arkadaşlık isteği zaten bekliyor veya zaten arkadaşsınız.')));
+                        }on TimeoutException{
+                          if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Arkadaşlık isteği zaman aşımına uğradı. Tekrar dene.')));
+                        }catch(_){
+                          if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Arkadaşlık isteği gönderilemedi. Bağlantını kontrol edip tekrar dene.')));
+                        }
                       },
                       child:Text(arkadaslar.contains(uid)?'Arkadaşsınız':(bekliyor?'Arkadaşlık isteği gönderildi':'Arkadaşlık isteği gönder')),
                     ));
