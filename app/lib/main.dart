@@ -72,7 +72,7 @@ const ngelxPrivateBlueBorder = Color(0xFFD8E8FF);
 const ngelxPrivateBlueInk = Color(0xFF10213A);
 
 const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.57');
-const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '272');
+const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '273');
 const ngelxGroupBorder = Color(0xFFD9EEE0);
 
 final GlobalKey<NavigatorState> ngelxNavigatorKey=GlobalKey<NavigatorState>();
@@ -3443,55 +3443,53 @@ class HikayeSeridi extends StatelessWidget {
     final ben = FirebaseAuth.instance.currentUser?.uid;
     if (ben == null) return [];
     final benimBelgem = await FirebaseFirestore.instance.collection('users').doc(ben).get();
-    final arkadaslar = Set<String>.from(List<dynamic>.from(benimBelgem.data()?['friends'] ?? []));
+    final benimVerim=benimBelgem.data()??<String,dynamic>{};
+    final arkadaslar = Set<String>.from(List<dynamic>.from(benimVerim['friends'] ?? []));
     final simdi = DateTime.now();
-    final adaylar = belgeler.map((d) => d.data()).where((v) {
-      final bitis = v['expiresAt'];
+    final adaylar = belgeler.where((d) {
+      final v=d.data(),bitis=v['expiresAt'];
       return v['type'] == 'story' && bitis is Timestamp && bitis.toDate().isAfter(simdi);
-    }).toList();
+    }).toList()
+      ..sort((a,b){
+        final at=a.data()['createdAt']??a.data()['clientCreatedAt'];
+        final bt=b.data()['createdAt']??b.data()['clientCreatedAt'];
+        final am=at is Timestamp?at.millisecondsSinceEpoch:0;
+        final bm=bt is Timestamp?bt.millisecondsSinceEpoch:0;
+        return bm.compareTo(am);
+      });
     final sonuc = <Map<String, dynamic>>[];
-    for (final h in adaylar) {
+    for (final d in adaylar) {
+      final h=<String,dynamic>{...d.data(),'_storyId':d.id};
       final sahibi = (h['ownerId'] ?? '').toString();
-      if (sahibi.isEmpty || sahibi == ben) { sonuc.add(h); continue; }
+      if (sahibi.isEmpty) continue;
+      if (sahibi == ben) {
+        h['_ownerPhotoUrl']=(benimVerim['photoUrl']??'').toString();
+        sonuc.add(h);
+        continue;
+      }
       final sahipBelgesi = await FirebaseFirestore.instance.collection('users').doc(sahibi).get();
-      final profil = sahipBelgesi.data() ?? {};
+      final profil = sahipBelgesi.data() ?? <String,dynamic>{};
       if (profil['deactivated'] == true) continue;
       if (profil['friendsOnlyStory'] != false && !arkadaslar.contains(sahibi)) continue;
+      h['_ownerPhotoUrl']=(profil['photoUrl']??'').toString();
       sonuc.add(h);
     }
     return sonuc;
   }
 
   void ac(BuildContext context, Map<String, dynamic> veri) {
-    showDialog(
-      context: context,
-      barrierColor: Colors.black,
-      builder: (_) => Dialog.fullscreen(
-        backgroundColor: Colors.black,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            CachedNetworkImage(imageUrl: (veri['mediaUrl'] ?? '').toString(), fit: BoxFit.contain),
-            const Positioned(
-              top: 45,
-              left: 18,
-              right: 18,
-              child: LinearProgressIndicator(value: 1, color: mavi),
-            ),
-            Positioned(
-              top: 62,
-              left: 20,
-              child: Text('@${veri['username'] ?? 'ngelx'}', style: const TextStyle(fontWeight: FontWeight.bold)),
-            ),
-            Positioned(
-              top: 48,
-              right: 14,
-              child: IconButton(icon: const Icon(Icons.close, size: 30), onPressed: () => Navigator.pop(context)),
-            ),
-          ],
-        ),
-      ),
-    );
+    final url=(veri['mediaUrl']??veri['videoUrl']??'').toString();
+    if(url.isEmpty)return;
+    Navigator.push(context,MaterialPageRoute(builder:(_)=>HikayeGosterPage(
+      url:url,
+      mediaType:(veri['storyMediaType']??'photo').toString(),
+      kullanici:'@'+(veri['username']??'ngelx').toString().replaceFirst('@',''),
+      fotoUrl:(veri['_ownerPhotoUrl']??'').toString(),
+      ownerUid:(veri['ownerId']??'').toString(),
+      storyId:(veri['_storyId']??'').toString(),
+      createdAt:veri['createdAt']??veri['clientCreatedAt'],
+      expiresAt:veri['expiresAt'],
+    )));
   }
 
   @override
@@ -17441,18 +17439,21 @@ class _HikayeGosterPageState extends State<HikayeGosterPage> with SingleTickerPr
   String get zamanBilgisi{
     final olusma=widget.createdAt is Timestamp?(widget.createdAt as Timestamp).toDate():null;
     final bitis=widget.expiresAt is Timestamp?(widget.expiresAt as Timestamp).toDate():null;
-    String baslangic='Az önce';
+    String iki(int n)=>n.toString().padLeft(2,'0');
+    String saat(DateTime d)=>'${iki(d.hour)}:${iki(d.minute)}';
+    String tarihSaat(DateTime d)=>'${iki(d.day)}.${iki(d.month)} ${saat(d)}';
+    String baslangic='Başladı: az önce';
     if(olusma!=null){
-      final fark=DateTime.now().difference(olusma);
-      if(fark.inMinutes<60)baslangic='${fark.inMinutes.clamp(1,59)} dk önce';
-      else if(fark.inHours<24)baslangic='${fark.inHours} sa önce';
-      else baslangic='${fark.inDays} gün önce';
+      baslangic='Başladı: ${saat(olusma)}';
     }
     if(bitis==null)return baslangic;
     final kalan=bitis.difference(DateTime.now());
-    if(kalan.isNegative)return '$baslangic • Süresi doldu';
-    if(kalan.inHours>=1)return '$baslangic • ${kalan.inHours} sa kaldı';
-    return '$baslangic • ${kalan.inMinutes.clamp(1,59)} dk kaldı';
+    final bitisEtiketi=olusma!=null&&olusma.day==bitis.day&&olusma.month==bitis.month&&olusma.year==bitis.year
+      ?saat(bitis)
+      :tarihSaat(bitis);
+    if(kalan.isNegative)return '$baslangic • Bitti: $bitisEtiketi';
+    final kalanYazi=kalan.inHours>=1?'${kalan.inHours} sa kaldı':'${kalan.inMinutes.clamp(1,59)} dk kaldı';
+    return '$baslangic • Biter: $bitisEtiketi • $kalanYazi';
   }
 
   Future<void> _yanitGonder(String ham,{bool tepki=false})async{
@@ -17605,10 +17606,32 @@ class _HikayeGosterPageState extends State<HikayeGosterPage> with SingleTickerPr
                     ),
                 ]),
               ] else
-                Container(
-                  padding:const EdgeInsets.symmetric(horizontal:14,vertical:9),
-                  decoration:BoxDecoration(color:Colors.black45,borderRadius:BorderRadius.circular(18)),
-                  child:Text(videoMu?'Video hikâyen':'Hikâyen',style:const TextStyle(color:Colors.white70,fontWeight:FontWeight.w700)),
+                StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
+                  stream:widget.storyId.isEmpty?null:FirebaseFirestore.instance.collection('videos').doc(widget.storyId).snapshots(),
+                  builder:(_,s){
+                    final v=s.data?.data()??const <String,dynamic>{};
+                    final yanit=(v['replyCount'] as num?)?.toInt()??0;
+                    final tepki=(v['reactionCount'] as num?)?.toInt()??0;
+                    return Container(
+                      padding:const EdgeInsets.symmetric(horizontal:14,vertical:9),
+                      decoration:BoxDecoration(color:Colors.black45,borderRadius:BorderRadius.circular(18)),
+                      child:Row(mainAxisSize:MainAxisSize.min,children:[
+                        Icon(videoMu?Icons.videocam_rounded:Icons.auto_stories_rounded,color:Colors.white70,size:18),
+                        const SizedBox(width:6),
+                        Text(videoMu?'Video hikâyen':'Hikâyen',style:const TextStyle(color:Colors.white70,fontWeight:FontWeight.w700)),
+                        if(widget.storyId.isNotEmpty)...[
+                          const SizedBox(width:12),
+                          const Icon(Icons.reply_rounded,color:Colors.white70,size:18),
+                          const SizedBox(width:3),
+                          Text(yanit.toString(),style:const TextStyle(color:Colors.white70,fontWeight:FontWeight.w800)),
+                          const SizedBox(width:9),
+                          const Text('❤️',style:TextStyle(fontSize:15)),
+                          const SizedBox(width:3),
+                          Text(tepki.toString(),style:const TextStyle(color:Colors.white70,fontWeight:FontWeight.w800)),
+                        ],
+                      ]),
+                    );
+                  },
                 ),
             ]),
           )),
