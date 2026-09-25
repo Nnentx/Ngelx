@@ -563,3 +563,29 @@
 5. Grup içinde yeni mesaj gönder; mesaj listede görünmeli ve karşı hesapta okunmamış sayısı/bildirim akışı çalışmalı.
 6. Aktivite'den grup mesajı bildirimine dokunup gruba gir; doğru grup açılmalı ve mesaj yükleme ekranında takılmamalı.
 7. Gruptan çıkarılmış bir kullanıcının eski mesaj geçmişi davranışı ve **Bu gruba mesaj gönderemezsin** paneli bozulmamış olmalı.
+
+
+## 2026-09-25 — Build 269 Aktivite filtreleme ve okunmamış görünümü
+
+- Aktivite ekranı büyüyen bildirim listesini daha rahat yönetmek için filtrelendi: **Tümü / Okunmamış / Gruplar / Mesajlar / İstekler**.
+- Her filtre, o kategoride kayıt varsa sayısını doğrudan filtre etiketinde gösteriyor.
+- **Gruplar** filtresi yalnızca `type: group` kayıtlarına değil, yeni yapıdaki `targetKind: group` ve eski/uyumlu `group_*` olaylarına da bakıyor.
+- **Mesajlar** filtresi özel mesajları grup mesajlarından ayırıyor.
+- **İstekler** filtresi takip isteği, arkadaşlık isteği ve grup katılma isteğini birlikte topluyor.
+- Filtre seçildiğinde bildirimler yeniden Firestore'dan indirilmeden mevcut canlı liste üzerinde ayrıştırılıyor.
+- Seçilen filtre boşsa genel “Aktivite yok” yerine açık **“Bu filtrede yeni aktivite yok.”** durumu gösteriliyor.
+- Filtre etiketleri Türkçe, İngilizce, Almanca, Arapça ve Rusça ortak dil sözlüğüne bağlandı.
+- Build 265–268’deki doğru grup yönlendirmesi, grup fotoğrafı, bildirim kategorileri ve grup mesaj yükleme koruması aynen korunuyor.
+- Eski NgelX logo tasarım kodları ve iki logo asset'i korunuyor.
+- Sürüm **v1.0.57 • Yapı 269**.
+
+### Build 269 gerçek cihaz doğrulama sırası
+
+1. Aktivite ekranını aç; üstte yatay **Tümü / Okunmamış / Gruplar / Mesajlar / İstekler** filtreleri görünmeli.
+2. İki hesapla özel mesaj, grup mesajı, takip isteği ve arkadaşlık isteği oluştur. Her kayıt doğru filtre altında görünmeli.
+3. Okunmamış filtre sayısını kontrol et; bir karta dokunup geri dönünce sayı azalmalı.
+4. Grup mesajı **Mesajlar** filtresine sızmamalı; **Gruplar** filtresinde görünmeli.
+5. Takip/arkadaşlık isteğindeki kabul-red butonları **İstekler** filtresinde de çalışmalı.
+6. Grup katılma isteği **İstekler** ve **Gruplar** filtrelerinde görünmeli; karta basınca Katılma İstekleri ekranı açılmalı.
+7. Uygulama dilini İngilizce veya başka desteklenen dile al; yeni filtre etiketleri seçilen dili takip etmeli.
+8. Aktivite > Tümünü okundu yap sonrası Okunmamış filtresi boş duruma geçmeli.
