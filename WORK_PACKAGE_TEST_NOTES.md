@@ -352,3 +352,24 @@
 5. Başka bir kullanıcının yorumunda **Şikâyet et** ve **Kullanıcıyı engelle** akışlarını dene.
 6. Yorum listesini birkaç kez aç/kapat ve hızlı kaydır; takılma/boş beyaz ekran/uzun spinner olmamalı.
 
+## 2026-09-25 — Build 261 özel sohbet hız/menü turu + logo koruması
+
+- Kullanıcının talebi gereği **eski NgelX logo tasarım kodlamaları ve iki özgün logo asset'i korunuyor**. Belirli ekranlarda logo görünmeyecekse ortak logo kodu silinmeyecek; yalnızca o ekranın görünürlük/yerleşim davranışı değiştirilecek.
+- CI sözleşmesine `Logo` widget'ı, `assets/ngelx_logo.png` ve `assets/ngelx_logo_horizontal.png` için koruma eklendi; yanlışlıkla silinmeleri build'i durduracak.
+- Özel sohbet açılışında son 100 mesajın Firestore yerel önbelleği kullanılıyor; ağ akışı gelene kadar daha önce görülen sohbet boş görünmeyecek.
+- Özel mesaj **Kopyala** işlemi yorumlardaki yeni güvenilir davranışa geçirildi: dokunulduğu anda panoya yazılıyor ve kullanıcıya açık başarı bildirimi veriliyor.
+- Mesaj uzun-bas menüsündeki gereksiz 360 ms genel beklemeler kaldırıldı; yalnızca ikinci katman açılışlarında 100 ms güvenli geçiş bırakıldı.
+- Yazma göstergesi ilk tuşta ek Firestore okuması yapmıyor; önceden alınmış sohbet ayarını kullanıyor.
+- Mesaj gönderim izin/sohbet hazırlığı önbelleği 15 saniyeden 60 saniyeye çıkarıldı. Firestore güvenlik kuralları yine nihai yetki kontrolünü yapmaya devam ediyor.
+- Sürüm **v1.0.57 • Yapı 261**.
+
+### Build 261 gerçek cihaz testi
+
+1. Daha önce mesaj bulunan özel sohbete gir: mesaj listesi gereksiz boş ekran/spinner göstermeden gelmeli.
+2. Bir metin mesajına uzun bas > **Kopyala**: menü kapanmalı, "Mesaj panoya kopyalandı ✅" bildirimi görünmeli ve başka alana yapıştırınca aynı metin gelmeli.
+3. Uzun bas > Yanıtla / Tepki / Daha fazla: menüler hızlı ve dengeli açılmalı.
+4. Daha fazla > Düzenle / Mesaj bilgisi / Sabitle / Herkesten sil akışlarını kontrol et.
+5. Birkaç kısa mesajı peş peşe gönder; gönderim alanı gereksiz beklememeli ve mesajlar ekranda görünmeli.
+6. Yazı yazarken "yazıyor" göstergesi sohbeti ağırlaştırmamalı.
+7. Logo kullanılan mevcut ekranları kontrol et: eski logo görünümü değişmemiş olmalı.
+
