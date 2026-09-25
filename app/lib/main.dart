@@ -72,7 +72,7 @@ const ngelxPrivateBlueBorder = Color(0xFFD8E8FF);
 const ngelxPrivateBlueInk = Color(0xFF10213A);
 
 const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.57');
-const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '271');
+const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '272');
 const ngelxGroupBorder = Color(0xFFD9EEE0);
 
 final GlobalKey<NavigatorState> ngelxNavigatorKey=GlobalKey<NavigatorState>();
@@ -3242,9 +3242,15 @@ class _VideoAkisiState extends State<VideoAkisi> {
             return true;
           }).toList();
 
-          final videolar=takipSekmesi
+          final videolar=(takipSekmesi
             ?yuklenenler.where((v)=>takipEdilenler.contains(v['ownerId'])).toList()
-            :yuklenenler;
+            :List<Map<String,dynamic>>.from(yuklenenler))
+            ..sort((a,b){
+              final at=a['createdAt'],bt=b['createdAt'];
+              final am=at is Timestamp?at.millisecondsSinceEpoch:0;
+              final bm=bt is Timestamp?bt.millisecondsSinceEpoch:0;
+              return bm.compareTo(am);
+            });
 
           if(videolar.isEmpty){
             return Center(child:Padding(
@@ -3952,6 +3958,7 @@ class _GorselYaziKartiState extends State<GorselYaziKarti> {
   bool indiriliyor = false;
   bool kalpAnimasyonu = false;
   bool begeniIsleniyor = false;
+  bool kaydetIsleniyor = false;
   int medyaSayfasi = 0;
 
   String get icerikId => widget.veri['id'] ?? '';
@@ -3987,11 +3994,40 @@ class _GorselYaziKartiState extends State<GorselYaziKarti> {
   }
 
   Future<void> icerigiKaydet() async {
-    if (await misafirEngeli(context)) return;
-    final user=FirebaseAuth.instance.currentUser;if(user==null||icerikId.isEmpty)return;
+    if(kaydetIsleniyor)return;
+    if(await misafirEngeli(context))return;
+    final user=FirebaseAuth.instance.currentUser;
+    if(user==null||icerikId.isEmpty)return;
     final ref=FirebaseFirestore.instance.collection('users').doc(user.uid).collection('saved').doc(icerikId);
-    final yeni=!kaydedildi;setState(()=>kaydedildi=yeni);
-    try{if(yeni){await ref.set({'contentId':icerikId,'type':widget.veri['type']??'photo','savedAt':FieldValue.serverTimestamp()});}else{await ref.delete();}if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(yeni?'Kaydedilenlere eklendi ✅':'Kaydedilenlerden kaldırıldı.')));}catch(e){if(mounted)setState(()=>kaydedildi=!yeni);}
+    final yeni=!kaydedildi;
+    kaydetIsleniyor=true;
+    setState(()=>kaydedildi=yeni);
+    try{
+      if(yeni){
+        await ref.set({
+          'contentId':icerikId,
+          'type':widget.veri['type']??'photo',
+          'ownerId':widget.veri['ownerId']??'',
+          'savedAt':FieldValue.serverTimestamp(),
+          'clientSavedAt':Timestamp.now(),
+        },SetOptions(merge:true)).timeout(const Duration(seconds:12));
+      }else{
+        await ref.delete().timeout(const Duration(seconds:12));
+      }
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(yeni?'Profil > Kaydedilenler’e eklendi ✅':'Kaydedilenlerden kaldırıldı.')));
+    }on TimeoutException{
+      if(mounted){
+        setState(()=>kaydedildi=!yeni);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Kaydetme işlemi zaman aşımına uğradı. Tekrar dene.')));
+      }
+    }catch(_){
+      if(mounted){
+        setState(()=>kaydedildi=!yeni);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Gönderi kaydedilemedi. Bağlantını kontrol edip tekrar dene.')));
+      }
+    }finally{
+      kaydetIsleniyor=false;
+    }
   }
 
   Future<void> ciftTikBegen() async {
@@ -4249,6 +4285,7 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver {
   bool sessiz = false;
   bool kalpAnimasyonu = false;
   bool begeniIsleniyor = false;
+  bool kaydetIsleniyor = false;
   String? medyaHatasi;
   String profilFoto = '';
 
@@ -4317,9 +4354,40 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver {
   }
 
   Future<void> videoyuKaydet() async {
-    if(await misafirEngeli(context))return;final u=FirebaseAuth.instance.currentUser;if(u==null||videoId.isEmpty)return;
-    final ref=FirebaseFirestore.instance.collection('users').doc(u.uid).collection('saved').doc(videoId),yeni=!kaydedildi;setState(()=>kaydedildi=yeni);
-    try{if(yeni){await ref.set({'contentId':videoId,'type':'video','savedAt':FieldValue.serverTimestamp()});}else{await ref.delete();}if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(yeni?'Kaydedilenlere eklendi ✅':'Kaydedilenlerden kaldırıldı.')));}catch(e){if(mounted)setState(()=>kaydedildi=!yeni);}
+    if(kaydetIsleniyor)return;
+    if(await misafirEngeli(context))return;
+    final u=FirebaseAuth.instance.currentUser;
+    if(u==null||videoId.isEmpty)return;
+    final ref=FirebaseFirestore.instance.collection('users').doc(u.uid).collection('saved').doc(videoId);
+    final yeni=!kaydedildi;
+    kaydetIsleniyor=true;
+    setState(()=>kaydedildi=yeni);
+    try{
+      if(yeni){
+        await ref.set({
+          'contentId':videoId,
+          'type':'video',
+          'ownerId':widget.ownerId,
+          'savedAt':FieldValue.serverTimestamp(),
+          'clientSavedAt':Timestamp.now(),
+        },SetOptions(merge:true)).timeout(const Duration(seconds:12));
+      }else{
+        await ref.delete().timeout(const Duration(seconds:12));
+      }
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(yeni?'Profil > Kaydedilenler’e eklendi ✅':'Kaydedilenlerden kaldırıldı.')));
+    }on TimeoutException{
+      if(mounted){
+        setState(()=>kaydedildi=!yeni);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Kaydetme işlemi zaman aşımına uğradı. Tekrar dene.')));
+      }
+    }catch(_){
+      if(mounted){
+        setState(()=>kaydedildi=!yeni);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Video kaydedilemedi. Bağlantını kontrol edip tekrar dene.')));
+      }
+    }finally{
+      kaydetIsleniyor=false;
+    }
   }
 
   Future<void> ciftTikBegenVideo() async {
@@ -4651,6 +4719,13 @@ String akisKisaZaman(dynamic ham) {
   return '${d.day}.${d.month}.${d.year}';
 }
 
+String akisTamTarihSaat(dynamic ham){
+  if(ham is! Timestamp)return '';
+  final d=ham.toDate();
+  String iki(int n)=>n.toString().padLeft(2,'0');
+  return '${iki(d.day)}.${iki(d.month)}.${d.year} • ${iki(d.hour)}:${iki(d.minute)}';
+}
+
 class KalpPatlama extends StatelessWidget {
   const KalpPatlama({super.key});
   @override
@@ -4694,12 +4769,14 @@ class AkisMetaSatiri extends StatelessWidget {
     return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
       stream: ref.snapshots(),
       builder: (_, belge) {
-        final zaman = akisKisaZaman(belge.data?.data()?['createdAt']);
+        final olusma=belge.data?.data()?['createdAt']??belge.data?.data()?['clientCreatedAt'];
+        final zaman=akisKisaZaman(olusma);
+        final tam=akisTamTarihSaat(olusma);
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              zaman,
+              tam.isEmpty?zaman:'$zaman • $tam',
               style: const TextStyle(
                 color: Colors.white60,
                 fontSize: 11,
