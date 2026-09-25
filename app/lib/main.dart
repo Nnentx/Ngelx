@@ -72,7 +72,7 @@ const ngelxPrivateBlueBorder = Color(0xFFD8E8FF);
 const ngelxPrivateBlueInk = Color(0xFF10213A);
 
 const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.57');
-const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '266');
+const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '267');
 const ngelxGroupBorder = Color(0xFFD9EEE0);
 
 final GlobalKey<NavigatorState> ngelxNavigatorKey=GlobalKey<NavigatorState>();
@@ -1775,12 +1775,24 @@ Future<void> uygulamaBildirimiGonder({
   final ayar=hedef.data()??{};
   if(List<String>.from(ayar['restrictedUsers']??const[]).contains(fromUid))return;
   if(ayar['notificationsEnabled']==false)return;
-  final grupBildirimi=hedefTuru=='group'||tur=='group';
-  if(tur=='message'&&ayar['messageNotifications']==false)return;
-  if(grupBildirimi&&ayar['groupNotifications']==false)return;
-  if(tur=='interaction'&&ayar['interactionNotifications']==false)return;
-  if(tur=='friend'&&ayar['friendNotifications']==false)return;
-  if((tur=='message'||grupBildirimi)&&belgeId!=null&&List<String>.from(ayar['mutedChats']??const[]).contains(belgeId)){
+  final grupBildirimi=hedefTuru=='group'||tur=='group'||(olayTuru??'').startsWith('group_');
+  final sosyalBildirimi=tur=='friend'||tur=='friend_request'||tur=='follow_request'||tur=='friend_accepted'||tur=='follow_accepted';
+  final etkilesimBildirimi=tur=='interaction'||tur=='like'||tur=='comment';
+  final aramaBildirimi=tur=='call';
+  // Grup mesajları ayrı kategoriye aittir: "Mesajlar" kapalı olsa da
+  // "Gruplar" açıksa grup bildirimleri çalışmaya devam eder.
+  if(grupBildirimi){
+    if(ayar['groupNotifications']==false)return;
+  }else if(tur=='message'&&ayar['messageNotifications']==false){
+    return;
+  }
+  if(sosyalBildirimi&&ayar['friendNotifications']==false)return;
+  if(etkilesimBildirimi&&ayar['interactionNotifications']==false)return;
+  if(aramaBildirimi&&ayar['callNotifications']==false)return;
+  // Grup sessize alma yalnızca sohbet/arama trafiğini susturur.
+  // Üyeliğe eklenme ve katılma onayı gibi yönetim olayları kaybolmamalı.
+  final sessizeBagli=tur=='message'||tur=='call'||olayTuru=='group_message'||olayTuru=='group_mention';
+  if(sessizeBagli&&belgeId!=null&&List<String>.from(ayar['mutedChats']??const[]).contains(belgeId)){
     final ham=(ayar['mutedChatUntil'] is Map)?(ayar['mutedChatUntil'] as Map)[belgeId]:null;
     final bitis=DateTime.tryParse((ham??'').toString());
     if(bitis==null||bitis.isAfter(DateTime.now().toUtc()))return;
@@ -11857,6 +11869,10 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
           toUid:uye,fromUid:me,tur:'call',
           metin:goruntulu?grupAdi+' grubunda görüntülü arama başlattı':grupAdi+' grubunda sesli arama başlattı',
           belgeId:widget.chatId,
+          hedefTuru:'group',
+          hedefBaslik:grupAdi,
+          hedefFoto:foto,
+          olayTuru:goruntulu?'group_video_call':'group_audio_call',
         ).catchError((_){ }));
       }
       if(!mounted)return;
@@ -16424,8 +16440,12 @@ class AktivitePage extends StatelessWidget {
           if (docs.isEmpty) return Center(child: Column(mainAxisSize:MainAxisSize.min,children:[const CircleAvatar(radius:36,backgroundColor:Color(0xFFF1E9FF),child:Icon(Icons.notifications_none_rounded,color:mor,size:38)),const SizedBox(height:13),Text(t('noActivity'),style:const TextStyle(color:Colors.black,fontSize:18,fontWeight:FontWeight.w900)),Text(t('noActivitySub'),textAlign:TextAlign.center,style:const TextStyle(color:Colors.black54))]));
           return ListView.separated(padding:const EdgeInsets.fromLTRB(12,8,12,24),separatorBuilder:(_,__)=>const Divider(height:1,indent:72),itemCount:docs.length,itemBuilder:(_,i){final d=docs[i];
             final v = d.data();
-            final tur=(v['type']??'').toString(),okundu=v['read']==true,foto=(v['photoUrl']??'').toString();
-            final grup=(v['targetKind']??'').toString()=='group'||tur=='group';
+            final tur=(v['type']??'').toString(),okundu=v['read']==true;
+            final olay=(v['eventKind']??'').toString();
+            final gonderenFoto=(v['photoUrl']??'').toString();
+            final grupFoto=(v['targetPhotoUrl']??'').toString();
+            final grup=(v['targetKind']??'').toString()=='group'||tur=='group'||olay.startsWith('group_');
+            final foto=grup&&grupFoto.isNotEmpty?grupFoto:gonderenFoto;
             final renk=grup?ngelxGroupGreen:_renk(tur);
             final ikon=grup?Icons.groups_rounded:_ikon(tur);
             final bekliyor = (v['type'] == 'follow_request' || v['type'] == 'friend_request') && v['status'] == 'pending';
@@ -18154,7 +18174,7 @@ class _GizliKelimelerPageState extends State<GizliKelimelerPage>{
 }
 
 class _TercihlerPageState extends State<TercihlerPage> {
-  bool hesapGizli=false, profilArama=true, aktiflik=true, profilPaylasArkadas=false, yorumArkadas=false, gizliKelimeler=true, mesajArkadas=true, hikayeArkadas=true, ekranGoruntusu=false, bildirim=true, mesajBildirimi=true, grupBildirimi=true, arkadasBildirimi=true, etkilesimBildirimi=true, indirme=true;
+  bool hesapGizli=false, profilArama=true, aktiflik=true, profilPaylasArkadas=false, yorumArkadas=false, gizliKelimeler=true, mesajArkadas=true, hikayeArkadas=true, ekranGoruntusu=false, bildirim=true, mesajBildirimi=true, grupBildirimi=true, aramaBildirimi=true, arkadasBildirimi=true, etkilesimBildirimi=true, indirme=true;
   String mesajIzni='friends';
   String profilGoruntuleme='all';
   List<String> gizliKelimeListesi=[];
@@ -18182,6 +18202,7 @@ class _TercihlerPageState extends State<TercihlerPage> {
       bildirim=v['notificationsEnabled']!=false;
       mesajBildirimi=v['messageNotifications']!=false;
       grupBildirimi=v['groupNotifications']!=false;
+      aramaBildirimi=v['callNotifications']!=false;
       arkadasBildirimi=v['friendNotifications']!=false;
       etkilesimBildirimi=v['interactionNotifications']!=false;
       indirme=v['defaultAllowDownload']!=false;
@@ -18284,6 +18305,7 @@ class _TercihlerPageState extends State<TercihlerPage> {
           const Divider(),
           satir('Mesajlar','Özel mesaj, fotoğraf ve dosya bildirimleri',mesajBildirimi,(v){setState(()=>mesajBildirimi=v);kaydet('messageNotifications',v);},etkin:bildirim),
           satir('Gruplar','Grup mesajı, bahsetme, eklenme ve grup araması bildirimleri',grupBildirimi,(v){setState(()=>grupBildirimi=v);kaydet('groupNotifications',v);},etkin:bildirim),
+          satir('Aramalar','Özel ve grup sesli/görüntülü arama bildirimleri',aramaBildirimi,(v){setState(()=>aramaBildirimi=v);kaydet('callNotifications',v);},etkin:bildirim),
           satir('Arkadaşlık','İstek ve kabul bildirimleri',arkadasBildirimi,(v){setState(()=>arkadasBildirimi=v);kaydet('friendNotifications',v);},etkin:bildirim),
           satir('Beğeni ve yorumlar','Paylaşımlarındaki etkileşimler',etkilesimBildirimi,(v){setState(()=>etkilesimBildirimi=v);kaydet('interactionNotifications',v);},etkin:bildirim),
         ];
