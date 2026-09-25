@@ -488,3 +488,32 @@
 8. Grup bildirimi metninde gönderen adı iki kez tekrarlanmamalı.
 9. Normal özel mesaj bildirimi hâlâ doğru özel sohbete açılmalı.
 
+## 2026-09-25 — Build 266 Aktivite/Bildirimler grup odaklı yenileme
+
+- Yeni grup oluşturulurken seçilen üyelere artık **“Rojin seni PARLAMENT grubuna ekledi.”** biçiminde grup üyelik bildirimi oluşturuluyor.
+- Grup daha sonra Üye Ekle ekranından üye aldığında da aynı bildirim üretiliyor; eski çift isim tekrarının oluşması engellendi.
+- Grup mesajları yapılandırılmış `eventKind: group_message` metadata'sı taşıyor. Aktivite kartı **“PARLAMENT grubundan Ferhat mesaj gönderdi • …”** düzeninde grup adını ve göndereni açıkça ayırıyor.
+- @bahsetme bildirimleri **“PARLAMENT grubunda Ferhat senden bahsetti.”** biçiminde gösteriliyor.
+- Grup aramaları sesli/görüntülü olay türüyle ayrılıyor ve Aktivite kartında grup kaynağı açıkça belirtiliyor.
+- Davetle katılma isteği yöneticilere grup adı/fotoğrafıyla geliyor; karta dokununca doğrudan **Katılma istekleri** ekranı açılıyor.
+- Katılma isteği onaylanan kullanıcıya onaylayan kişi + grup adıyla bildirim gidiyor.
+- Aktivite kartlarında grup olayları yeşil grup ikonu, **GRUP** etiketi ve grup temalı okunmamış arka planıyla ayrılıyor.
+- Ayarlar > Bildirimler bölümüne ayrı **Gruplar** anahtarı eklendi. Grup mesajı, bahsetme, eklenme ve grup araması bildirimleri buradan kapatılabiliyor.
+- Grup sessize alınmışsa o grubun mesaj temelli uygulama bildirimleri sessiz kalmaya devam ediyor.
+- **Tümünü okundu işaretle** işlemine timeout, başarı ve hata geri bildirimi eklendi.
+- Build 265'teki Aktivite > grup yönlendirme düzeltmesi korunuyor ve yeni grup olay tipleri de aynı doğru yönlendirmeyi kullanıyor.
+- Eski NgelX logo tasarım kodları ve asset'leri korunuyor.
+- Sürüm **v1.0.57 • Yapı 266**.
+
+### Build 266 gerçek cihaz doğrulama sırası
+
+1. Hesap A ile **PARLAMENT** adında grup oluştur, Hesap B'yi oluşturma sırasında seç.
+2. Hesap B > Aktivite: **“A seni PARLAMENT grubuna ekledi.”** bildirimi görünmeli; karta basınca PARLAMENT açılmalı.
+3. Hesap A gruba “merhaba” yazsın. Hesap B Aktivite’de **PARLAMENT grubundan A mesaj gönderdi • merhaba** görmeli.
+4. Hesap A, @HesapB yazsın. Aktivite kartı **PARLAMENT grubunda A senden bahsetti.** demeli ve basınca grup açılmalı.
+5. Grup bilgileri > Üye ekle ile üçüncü hesabı ekle; üçüncü hesaba aynı gruba eklenme bildirimi gitmeli.
+6. Davetle katılma onayı açık grupta katılma isteği gönder; yönetici bildirime basınca Katılma İstekleri sayfasına gitmeli.
+7. Ayarlar > Bildirimler > **Gruplar** kapalıyken yeni grup mesajı/bahsetme uygulama bildirimi oluşmamalı; tekrar açınca oluşmalı.
+8. Normal özel mesaj bildirimi hâlâ özel sohbete açılmalı.
+9. Aktivite > sağ üst çift tik: tüm kartlar okundu olmalı ve başarı mesajı görünmeli.
+
