@@ -72,7 +72,7 @@ const ngelxPrivateBlueBorder = Color(0xFFD8E8FF);
 const ngelxPrivateBlueInk = Color(0xFF10213A);
 
 const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.57');
-const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '269');
+const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '270');
 const ngelxGroupBorder = Color(0xFFD9EEE0);
 
 final GlobalKey<NavigatorState> ngelxNavigatorKey=GlobalKey<NavigatorState>();
@@ -7236,14 +7236,103 @@ class _MesajPageState extends State<MesajPage> {
 
   Future<void> tumunuOkunduYap() async {
     final ben=uid;if(ben==null)return;
-    final q=await FirebaseFirestore.instance.collection('chats').where('members',arrayContains:ben).get();
-    final batch=FirebaseFirestore.instance.batch();
-    for(final d in q.docs){if((d.data()['unread_$ben']??0)!=0)batch.set(d.reference,{'unread_$ben':0},SetOptions(merge:true));}
-    final bildirimler=await FirebaseFirestore.instance.collection('notifications').where('toUid',isEqualTo:ben).get();
-    for(final d in bildirimler.docs){if(d.data()['read']!=true)batch.update(d.reference,{'read':true});}
-    await batch.commit();
-    if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Tüm bildirimler okundu olarak işaretlendi.')));
+    try{
+      final sonuc=await Future.wait([
+        FirebaseFirestore.instance.collection('chats').where('members',arrayContains:ben).get().timeout(const Duration(seconds:12)),
+        FirebaseFirestore.instance.collection('notifications').where('toUid',isEqualTo:ben).get().timeout(const Duration(seconds:12)),
+      ]);
+      final sohbetler=sonuc[0] as QuerySnapshot<Map<String,dynamic>>;
+      final bildirimler=sonuc[1] as QuerySnapshot<Map<String,dynamic>>;
+      var batch=FirebaseFirestore.instance.batch(),islem=0;
+      Future<void> yaz()async{
+        if(islem==0)return;
+        await batch.commit().timeout(const Duration(seconds:12));
+        batch=FirebaseFirestore.instance.batch();
+        islem=0;
+      }
+      for(final d in sohbetler.docs){
+        final okunmamis=(d.data()['unread_$ben'] as num?)?.toInt()??0;
+        if(okunmamis<=0)continue;
+        batch.set(d.reference,{'unread_$ben':0},SetOptions(merge:true));
+        islem++;
+        if(islem>=400)await yaz();
+      }
+      for(final d in bildirimler.docs){
+        if(d.data()['read']==true)continue;
+        batch.set(d.reference,{'read':true},SetOptions(merge:true));
+        islem++;
+        if(islem>=400)await yaz();
+      }
+      await yaz();
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Mesajlar ve aktiviteler okundu olarak işaretlendi.')));
+    }on TimeoutException{
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Okundu işlemi zaman aşımına uğradı. Tekrar dene.')));
+    }catch(_){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Okundu durumu güncellenemedi. Tekrar dene.')));
+    }
   }
+
+  String _sayacEtiketi(int sayi)=>sayi>99?'99+':sayi.toString();
+
+  Widget _gelenKutusuSayacKarti({
+    required IconData icon,
+    required String etiket,
+    required int sayi,
+    required Color renk,
+  })=>Expanded(
+    child:Container(
+      padding:const EdgeInsets.symmetric(horizontal:10,vertical:10),
+      decoration:BoxDecoration(
+        color:renk.withValues(alpha:.08),
+        borderRadius:BorderRadius.circular(17),
+        border:Border.all(color:renk.withValues(alpha:.16)),
+      ),
+      child:Row(children:[
+        Container(
+          width:34,height:34,
+          decoration:BoxDecoration(color:renk.withValues(alpha:.13),shape:BoxShape.circle),
+          child:Icon(icon,color:renk,size:19),
+        ),
+        const SizedBox(width:8),
+        Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisSize:MainAxisSize.min,children:[
+          Text(etiket,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black54,fontSize:10.5,fontWeight:FontWeight.w700)),
+          Text(_sayacEtiketi(sayi),style:TextStyle(color:renk,fontSize:18,fontWeight:FontWeight.w900,height:1.1)),
+        ])),
+      ]),
+    ),
+  );
+
+  Widget _canliGelenKutusuSayaclari(String ben)=>StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
+    stream:FirebaseFirestore.instance.collection('chats').where('members',arrayContains:ben).limit(100).snapshots(),
+    builder:(_,chatSnap){
+      var ozelOkunmamis=0,grupOkunmamis=0;
+      for(final d in chatSnap.data?.docs??const <QueryDocumentSnapshot<Map<String,dynamic>>>[]){
+        final v=d.data();
+        if(List<String>.from(v['hiddenFor']??const[]).contains(ben)||arsivSohbetler.contains(d.id))continue;
+        final okunmamis=(v['unread_$ben'] as num?)?.toInt()??0;
+        if(okunmamis<=0)continue;
+        final uyeler=List<String>.from(v['members']??const[]);
+        final grup=v['isGroup']==true||uyeler.length>2;
+        if(grup){grupOkunmamis+=okunmamis;}else{ozelOkunmamis+=okunmamis;}
+      }
+      return StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
+        stream:FirebaseFirestore.instance.collection('notifications').where('toUid',isEqualTo:ben).limit(200).snapshots(),
+        builder:(_,bildirimSnap){
+          final aktiviteOkunmamis=(bildirimSnap.data?.docs??const <QueryDocumentSnapshot<Map<String,dynamic>>>[]).where((d)=>d.data()['read']!=true).length;
+          return Padding(
+            padding:const EdgeInsets.fromLTRB(16,0,16,9),
+            child:Row(children:[
+              _gelenKutusuSayacKarti(icon:Icons.chat_bubble_rounded,etiket:t('notificationMessages'),sayi:ozelOkunmamis,renk:ngelxPrivateBlue),
+              const SizedBox(width:7),
+              _gelenKutusuSayacKarti(icon:Icons.groups_rounded,etiket:t('groups'),sayi:grupOkunmamis,renk:ngelxGroupGreen),
+              const SizedBox(width:7),
+              _gelenKutusuSayacKarti(icon:Icons.notifications_rounded,etiket:t('activity'),sayi:aktiviteOkunmamis,renk:mor),
+            ]),
+          );
+        },
+      );
+    },
+  );
 
   Future<void> sohbetiAc(String chatId,Widget sayfa) async {
     // Okundu yazısı ekran geçişini asla bekletmez. Ağ/kural hatası olsa bile
@@ -7259,6 +7348,7 @@ class _MesajPageState extends State<MesajPage> {
       );
     }
     await Navigator.push(context,MaterialPageRoute(builder:(_)=>sayfa));
+    if(mounted)setState((){});
   }
 
   Future<void> sohbetTercihi(String alan,String chatId,bool ekle) async {
@@ -7419,8 +7509,9 @@ class _MesajPageState extends State<MesajPage> {
         ]),
       ),
       Padding(padding:const EdgeInsets.fromLTRB(16,4,16,10),child:TextField(controller:sohbetAra,onChanged:(v)=>setState(()=>sohbetSorgu=v.trim().toLowerCase()),style:const TextStyle(color:Colors.black87),decoration:InputDecoration(hintText:t('searchChats'),hintStyle:const TextStyle(color:Colors.black45),prefixIcon:const Icon(Icons.search,color:Colors.black45),filled:true,fillColor:const Color(0xFFF3F4F7),border:OutlineInputBorder(borderRadius:BorderRadius.circular(24),borderSide:BorderSide.none)))),
+      if(ben!=null)_canliGelenKutusuSayaclari(ben),
       Padding(padding:const EdgeInsets.symmetric(horizontal:8),child:Row(children:['Tümü','Okunmamış','Arkadaşlar','Gruplar'].map((f)=>Expanded(child:Padding(padding:const EdgeInsets.symmetric(horizontal:2),child:ChoiceChip(labelPadding:const EdgeInsets.symmetric(horizontal:2),label:Center(child:FittedBox(fit:BoxFit.scaleDown,child:Text(sohbetFiltreEtiketi(f),maxLines:1))),selected:filtre==f,selectedColor:mor,labelStyle:TextStyle(color:filtre==f?Colors.white:Colors.black87,fontWeight:FontWeight.w700),backgroundColor:const Color(0xFFF1F2F5),side:BorderSide.none,onSelected:(_)=>setState(()=>filtre=f))))).toList())),
-      StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(stream:ben==null?null:FirebaseFirestore.instance.collection('notifications').where('toUid',isEqualTo:ben).limit(60).snapshots(),builder:(_,s){final okunmamis=(s.data?.docs??[]).where((d)=>d.data()['read']!=true).length;return Container(margin:const EdgeInsets.fromLTRB(16,8,16,5),decoration:BoxDecoration(color:const Color(0xFFF5EFFF),borderRadius:BorderRadius.circular(20)),child:ListTile(leading:const CircleAvatar(backgroundColor:Color(0xFFE5D5FF),child:Icon(Icons.favorite,color:mor)),title:Text(t('activity'),style:const TextStyle(color:Colors.black,fontWeight:FontWeight.w900)),subtitle:Text(t('activitySub'),style:const TextStyle(color:Colors.black54)),trailing:okunmamis==0?const Icon(Icons.chevron_right,color:Colors.black45):Badge(label:Text('$okunmamis'),child:const Icon(Icons.chevron_right,color:Colors.black45)),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const AktivitePage()))));}),
+      StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(stream:ben==null?null:FirebaseFirestore.instance.collection('notifications').where('toUid',isEqualTo:ben).limit(200).snapshots(),builder:(_,s){final okunmamis=(s.data?.docs??[]).where((d)=>d.data()['read']!=true).length;return Container(margin:const EdgeInsets.fromLTRB(16,8,16,5),decoration:BoxDecoration(color:const Color(0xFFF5EFFF),borderRadius:BorderRadius.circular(20)),child:ListTile(leading:const CircleAvatar(backgroundColor:Color(0xFFE5D5FF),child:Icon(Icons.favorite,color:mor)),title:Text(t('activity'),style:const TextStyle(color:Colors.black,fontWeight:FontWeight.w900)),subtitle:Text(t('activitySub'),style:const TextStyle(color:Colors.black54)),trailing:okunmamis==0?const Icon(Icons.chevron_right,color:Colors.black45):Badge(label:Text(_sayacEtiketi(okunmamis)),child:const Icon(Icons.chevron_right,color:Colors.black45)),onTap:()async{await Navigator.push(context,MaterialPageRoute(builder:(_)=>const AktivitePage()));if(mounted)setState((){});})));}),
       Container(margin:const EdgeInsets.fromLTRB(16,5,16,8),decoration:BoxDecoration(color:const Color(0xFFEDF7FF),borderRadius:BorderRadius.circular(20)),child:ListTile(leading:const CircleAvatar(backgroundColor:Color(0xFFD8ECFF),child:Icon(Icons.chat_bubble_rounded,color:Colors.blue)),title:Text(t('messageRequests'),style:const TextStyle(color:Colors.black,fontWeight:FontWeight.w900)),subtitle:Text(t('messageRequestsSub'),style:const TextStyle(color:Colors.black54)),trailing:const Icon(Icons.chevron_right,color:Colors.black45),onTap:ben==null?null:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>MesajIstekleriPage(uid:ben))))),
       Expanded(child:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
         stream:ben==null?null:FirebaseFirestore.instance.collection('chats').where('members',arrayContains:ben).limit(60).snapshots(),
