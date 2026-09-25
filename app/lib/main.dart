@@ -72,7 +72,7 @@ const ngelxPrivateBlueBorder = Color(0xFFD8E8FF);
 const ngelxPrivateBlueInk = Color(0xFF10213A);
 
 const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.57');
-const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '258');
+const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '259');
 const ngelxGroupBorder = Color(0xFFD9EEE0);
 
 class NgelXBirthDateFormatter extends TextInputFormatter {
@@ -4668,9 +4668,21 @@ class _YeniYorumlarState extends State<Yorumlar> {
     setState(()=>gonderiliyor=true);
     final yanitId=yanitlananId,yanitKullanici=yanitlananKullanici;
     try{
-      final profil=await FirebaseFirestore.instance.collection('users').doc(user.uid).get().timeout(const Duration(seconds:8)),p=profil.data()??<String,dynamic>{};
       final yorumRef=ref.doc(),videoRef=FirebaseFirestore.instance.collection('videos').doc(widget.videoId);
-      await yorumRef.set({'userId':user.uid,'username':(p['username']??user.displayName??'ngelx').toString(),'photoUrl':(p['photoUrl']??'').toString(),'text':metin,'parentId':yanitId??'','replyToUsername':yanitKullanici??'','likedBy':<String>[],'createdAt':FieldValue.serverTimestamp(),'clientCreatedAt':Timestamp.now()}).timeout(const Duration(seconds:12));
+      final emailAdi=(user.email??'').split('@').first.trim();
+      final gorunenAd=(user.displayName??'').trim();
+      final fallbackUsername=gorunenAd.isNotEmpty?gorunenAd:(emailAdi.isNotEmpty?emailAdi:'ngelx');
+      await yorumRef.set({'userId':user.uid,'username':fallbackUsername,'photoUrl':'','text':metin,'parentId':yanitId??'','replyToUsername':yanitKullanici??'','likedBy':<String>[],'createdAt':FieldValue.serverTimestamp(),'clientCreatedAt':Timestamp.now()}).timeout(const Duration(seconds:12));
+      unawaited(
+        FirebaseFirestore.instance.collection('users').doc(user.uid).get().timeout(const Duration(seconds:5)).then((profil)async{
+          final p=profil.data()??<String,dynamic>{};
+          final username=(p['username']??fallbackUsername).toString().trim();
+          final photoUrl=(p['photoUrl']??'').toString().trim();
+          if(username!=fallbackUsername||photoUrl.isNotEmpty){
+            await yorumRef.set({'username':username.isEmpty?fallbackUsername:username,'photoUrl':photoUrl},SetOptions(merge:true));
+          }
+        }).catchError((_){ }),
+      );
       unawaited(videoRef.set({'commentCount':FieldValue.increment(1)},SetOptions(merge:true)).timeout(const Duration(seconds:8)).catchError((_){ }));
       yorum.clear();if(mounted)setState((){yanitlananId=null;yanitlananKullanici=null;});
       if(yanitId!=null&&yanitId.isNotEmpty){
@@ -4866,9 +4878,12 @@ class YorumKarti extends StatelessWidget {
 
     Future<void> yorumMenusu() async {
       final benim = aktifUid == profilUid;
-      final videoBelgesi = await FirebaseFirestore.instance.collection('videos').doc(videoId).get();
-      final icerikSahibi = (videoBelgesi.data()?['ownerId'] ?? '').toString();
-      final silebilir = benim || (aktifUid != null && aktifUid == icerikSahibi);
+      String icerikSahibi='';
+      try{
+        final videoBelgesi=await FirebaseFirestore.instance.collection('videos').doc(videoId).get().timeout(const Duration(milliseconds:1500));
+        icerikSahibi=(videoBelgesi.data()?['ownerId']??'').toString();
+      }catch(_){}
+      final silebilir=benim||(aktifUid!=null&&aktifUid==icerikSahibi);
       if (!context.mounted) return;
       final secim = await showModalBottomSheet<String>(
         context: context,
@@ -4905,9 +4920,9 @@ class YorumKarti extends StatelessWidget {
       } else if(secim=='copy'){
         try{await Clipboard.setData(ClipboardData(text:metin));if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Yorum kopyalandı ✅')));}catch(_){if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Yorum kopyalanamadı.')));}
       }else if(secim=='report'){
-        try{await sikayetEt(context,hedefTuru:'yorum',hedefId:'$videoId/$yorumId',hedefUid:profilUid).timeout(const Duration(seconds:12));}on TimeoutException{if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Şikâyet gönderimi zaman aşımına uğradı.')));}
+        await sikayetEt(context,hedefTuru:'yorum',hedefId:'$videoId/$yorumId',hedefUid:profilUid);
       }else if(secim=='block'){
-        try{await kullaniciyiEngelle(context,profilUid).timeout(const Duration(seconds:12));}on TimeoutException{if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Engelleme işlemi zaman aşımına uğradı.')));}
+        await kullaniciyiEngelle(context,profilUid);
       } else if (secim == 'delete') {
         final onay = await showDialog<bool>(context:context,builder:(c)=>Theme(data:ThemeData.light(),child:AlertDialog(backgroundColor:Colors.white,surfaceTintColor:Colors.white,title:const Text('Yorum silinsin mi?',style:TextStyle(color:Colors.black87)),content:const Text('Bu işlem geri alınamaz.',style:TextStyle(color:Colors.black54)),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),FilledButton(style:FilledButton.styleFrom(backgroundColor:Colors.red),onPressed:()=>Navigator.pop(c,true),child:const Text('Sil'))]))) ?? false;
         if (onay) {
@@ -14852,8 +14867,6 @@ class _SohbetPageState extends State<SohbetPage> {
                       icon:const Icon(Icons.add_circle,color:ngelxPrivateBlue,size:29),
                     ),
                     if(!yaziyor)...[
-                      IconButton(onPressed:()=>medyaGonder(ImageSource.camera),icon:const Icon(Icons.camera_alt,color:ngelxPrivateBlue)),
-                      IconButton(onPressed:()=>medyaGonder(ImageSource.gallery),icon:const Icon(Icons.photo_library,color:ngelxPrivateBlue)),
                       IconButton(
                         tooltip:'Sesli mesaj',
                         onPressed:sesKaydiDegistir,
