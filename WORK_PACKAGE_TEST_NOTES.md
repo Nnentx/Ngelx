@@ -642,3 +642,29 @@
 6. Mesaj izni **Arkadaşlar** olan hesapta arkadaş değilsen açık gizlilik mesajı gösterilmeli; arkadaş olduktan sonra aynı buton sohbeti açmalı.
 7. Mesaj izni **Takip ettiklerim** ise hedef hesap seni takip ediyorsa sohbet açılmalı, takip etmiyorsa izin uyarısı görünmeli.
 8. Daha önce mesaj isteği kabul edilmiş iki hesapta gizlilik ayarı sonradan daraltılsa bile mevcut kabul edilmiş sohbet açılabilmeli.
+
+
+## 2026-09-25 — Build 272 Kaydet + Akış güvenilirlik turu
+
+- Fotoğraf/yazı ve video kartlarındaki **Kaydet** işlemleri tek tıklama kilidi aldı; hızlı üst üste dokunmalarda çift yazma/silme yarışı engellendi.
+- Kaydedilen içerik yalnızca `users/{uid}/saved/{contentId}` altında tutuluyor; akış belgesine kaydetme amacıyla yeni paylaşım yazılmıyor.
+- Kaydet kayıtlarına içerik türü, içerik sahibi, sunucu zamanı ve istemci zamanı ekleniyor; Profil > Kaydedilenler ekranı için daha dayanıklı metadata oluşuyor.
+- Kaydet / kayıttan çıkar işlemleri 12 saniye ağ sınırı aldı. Timeout veya hata olduğunda ikon eski haline geri dönüyor ve kullanıcı açık hata mesajı görüyor.
+- Başarılı kayıtta geri bildirim açıkça **Profil > Kaydedilenler’e eklendi** diyor.
+- Akış listesi Firestore sorgusuna ek olarak istemci tarafında da `createdAt/clientCreatedAt` zamanına göre yeniden **yeni → eski** sıralanıyor. Böylece filtreleme sonrasında sıra bozulmuyor.
+- Gönderi meta satırı artık yalnızca “5 dk önce” değil, yanında kesin **GG.AA.YYYY • SS:DD** tarih/saatini de gösteriyor.
+- Mevcut dikey PageView ve yatay sonraki/önceki geçiş davranışı korunuyor; fotoğraf/video/yazı kartları aynı akış sıralamasını kullanıyor.
+- Build 271 profil sosyal işlem güvenilirliği ve önceki bildirim/grup düzeltmeleri korunuyor.
+- Eski NgelX logo tasarım kodları ve assetleri korunuyor.
+- Sürüm **v1.0.57 • Yapı 272**.
+
+### Build 272 gerçek cihaz doğrulama sırası
+
+1. Fotoğraf gönderisinde **Kaydet**: ikon anında dolmalı ve mesaj `Profil > Kaydedilenler’e eklendi` olmalı.
+2. Aynı gönderide Kaydet’e art arda hızlı bas; çift kayıt veya ters ikon durumu oluşmamalı.
+3. Profil > Kaydedilenler’e gir; kaydedilen fotoğraf/yazı/video burada görünmeli.
+4. Kaydı kaldır; Profil > Kaydedilenler’den kaybolmalı ve akışta gönderi silinmemeli/yeni gönderi oluşmamalı.
+5. İnterneti kapatıp Kaydet’e bas; timeout/hata sonrası ikon önceki haline dönmeli ve açık hata mesajı görünmeli.
+6. Yeni bir gönderi oluştur; Akış’ta eski gönderilerin üstünde görünmeli.
+7. Fotoğraf, video ve yazı gönderilerinde meta satırında göreli süre ile birlikte kesin tarih ve saat görünmeli.
+8. Akışta yukarı/aşağı ve mevcut yatay geçişlerle sonraki/önceki gönderiye geri tuşu kullanmadan geçilebilmeli.
