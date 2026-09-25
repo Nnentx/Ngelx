@@ -663,6 +663,20 @@ if "pushAndRemoveUntil(MaterialPageRoute(builder:(_)=>const AnaEkran())" in swit
 if "ngelxKokRotayaDon();" not in switch_block:
     errors.append("Hesap değiştirme kök rota temizliğini kullanmalı.")
 
+# Build 265: Activity notifications must route group messages to group chat.
+for token in (
+    "if(tur=='message'&&kaynak.isNotEmpty)",
+    "cv?['isGroup']==true||hedefTuru=='group'",
+    "GrupSohbetPage(chatId:kaynak,ad:ad,foto:foto)",
+    "'targetKind':hedefTuru",
+    "hedefTuru:'group'",
+    "Hesap geçişi zaman aşımına uğradı.",
+):
+    if token not in app:
+        errors.append("Aktivite/grup yönlendirme sözleşmesi eksik: " + token)
+if "metin:ad+': '+onizleme" in app:
+    errors.append("Grup bildiriminde gönderen adı iki kez yazılıyor.")
+
 if errors:
     print("NgelX contract doğrulaması BAŞARISIZ:")
     for e in errors:
