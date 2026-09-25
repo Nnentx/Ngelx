@@ -72,7 +72,7 @@ const ngelxPrivateBlueBorder = Color(0xFFD8E8FF);
 const ngelxPrivateBlueInk = Color(0xFF10213A);
 
 const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.57');
-const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '267');
+const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '268');
 const ngelxGroupBorder = Color(0xFFD9EEE0);
 
 final GlobalKey<NavigatorState> ngelxNavigatorKey=GlobalKey<NavigatorState>();
@@ -8192,6 +8192,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
   Timer? mentionZamanlayici,_mesajBeklemeZamanlayici,_typingZamanlayici,_sesKaydiZamanlayici,_offlineRetryZamanlayici;
   bool _typingYazildi=false,_typingGostergesiAcik=true;
   List<Map<String,String>>? _mentionUyeleri;
+  final List<QueryDocumentSnapshot<Map<String,dynamic>>> _grupMesajOnbellek=[];
   late Stream<QuerySnapshot<Map<String,dynamic>>> _mesajAkisi;
   late final Stream<DocumentSnapshot<Map<String,dynamic>>> _grupAkisi;
   bool aramaBaslatiliyor=false,mesajGonderiliyor=false,sesKaydediliyor=false,_okunduYaziliyor=false,_ilkMesajKaydirma=true,_mesajBeklemeBitti=false,_enAltta=true,sessizGonder=false;
@@ -8210,6 +8211,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
     // En yeni 100 mesaj ilk ekran için yeterli; eski içerikler medya ve arama
     // sayfalarından ayrıca alınır.
     _mesajAkisiniYenile();
+    unawaited(_grupMesajOnbelleginiYukle());
     liste.addListener(_listeKonumuDegisti);
     unawaited(GroupDraftStore.load(widget.chatId).then((t){
       if(mounted&&t.isNotEmpty&&mesaj.text.isEmpty){
@@ -8244,6 +8246,22 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
     if(!liste.hasClients)return;
     await liste.animateTo(liste.position.maxScrollExtent,duration:const Duration(milliseconds:240),curve:Curves.easeOut);
     if(mounted)setState((){_enAltta=true;_acilisOkunmamis=0;});
+  }
+
+  Future<void> _grupMesajOnbelleginiYukle()async{
+    try{
+      final s=await chatRef
+          .collection('messages')
+          .orderBy('createdAt')
+          .limitToLast(100)
+          .get(const GetOptions(source:Source.cache));
+      if(!mounted||s.docs.isEmpty)return;
+      setState((){
+        _grupMesajOnbellek
+          ..clear()
+          ..addAll(s.docs);
+      });
+    }catch(_){}
   }
 
   void _mesajAkisiniYenile(){
@@ -10084,8 +10102,21 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
               Expanded(child:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
                 stream:mesajAkisi,
                 builder:(_,snap){
-                  if(snap.hasError)return Center(child:OutlinedButton.icon(onPressed:(){setState(()=>_mesajAkisiniYenile());},icon:const Icon(Icons.refresh),label:const Text('Yeniden dene')));
-                  final docs=<QueryDocumentSnapshot<Map<String,dynamic>>>[...?snap.data?.docs].where((d)=>(d.data()['type']??'').toString()!='poll').toList()
+                  final hamDocs=snap.hasData
+                    ?snap.data!.docs
+                    :List<QueryDocumentSnapshot<Map<String,dynamic>>>.from(_grupMesajOnbellek);
+                  if(snap.hasError&&hamDocs.isEmpty){
+                    return Center(child:Column(mainAxisSize:MainAxisSize.min,children:[
+                      const Icon(Icons.cloud_off_rounded,color:ngelxGroupGreen,size:44),
+                      const SizedBox(height:9),
+                      const Text('Grup mesajları yüklenemedi.',style:TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w900)),
+                      const SizedBox(height:5),
+                      const Text('Bağlantını kontrol edip yeniden deneyebilirsin.',style:TextStyle(color:ngelxPremiumMuted,fontSize:12)),
+                      const SizedBox(height:12),
+                      OutlinedButton.icon(onPressed:(){setState(()=>_mesajAkisiniYenile());unawaited(_grupMesajOnbelleginiYukle());},icon:const Icon(Icons.refresh),label:const Text('Yeniden dene')),
+                    ]));
+                  }
+                  final docs=<QueryDocumentSnapshot<Map<String,dynamic>>>[...hamDocs].where((d)=>(d.data()['type']??'').toString()!='poll').toList()
                     ..sort((a,b){
                       final ad=a.data(),bd=b.data(),av=ad['createdAt']??ad['clientCreatedAt'],bv=bd['createdAt']??bd['clientCreatedAt'];
                       final ams=av is Timestamp?av.millisecondsSinceEpoch:0,bms=bv is Timestamp?bv.millisecondsSinceEpoch:0;
@@ -10094,6 +10125,17 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
                   if(snap.hasData){if(docs.isNotEmpty&&docs.last.data()['senderId']!=uid)unawaited(_okunduIsaretle());sonaGit();}
                   if(docs.isEmpty){
                     if(snap.connectionState==ConnectionState.waiting&&!_mesajBeklemeBitti)return const Center(child:CircularProgressIndicator(color:ngelxGroupGreen,strokeWidth:2));
+                    if(!snap.hasData&&_mesajBeklemeBitti){
+                      return Center(child:Column(mainAxisSize:MainAxisSize.min,children:[
+                        const Icon(Icons.sync_problem_rounded,color:ngelxGroupGreen,size:42),
+                        const SizedBox(height:9),
+                        const Text('Mesaj bağlantısı yavaş.',style:TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w900)),
+                        const SizedBox(height:5),
+                        const Padding(padding:EdgeInsets.symmetric(horizontal:26),child:Text('Ekran donmaz; bağlantı kurulunca mesajlar otomatik görünecek.',textAlign:TextAlign.center,style:TextStyle(color:ngelxPremiumMuted,fontSize:12))),
+                        const SizedBox(height:12),
+                        OutlinedButton.icon(onPressed:(){setState(()=>_mesajAkisiniYenile());unawaited(_grupMesajOnbelleginiYukle());},icon:const Icon(Icons.refresh),label:const Text('Şimdi yeniden dene')),
+                      ]));
+                    }
                     return const Center(child:Text('İlk mesajı yaz.',style:TextStyle(color:ngelxPremiumMuted,fontWeight:FontWeight.w700)));
                   }
                   return ListView.builder(
