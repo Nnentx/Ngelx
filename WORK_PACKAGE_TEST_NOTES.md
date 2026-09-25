@@ -461,3 +461,30 @@
 9. Profil verisi alınamazsa **Tekrar dene** çalışmalı; uygulamayı yeniden başlatmak gerekmemeli.
 10. Eski NgelX logo görünümü kullanılan ekranlarda değişmemiş olmalı.
 
+## 2026-09-25 — Build 265 Aktivite > grup bildirimi doğru yönlendirme
+
+- Gerçek cihaz ekranında doğrulanan hata: Grup mesajı Aktivite listesinde görünüyor fakat bildirime dokununca **grup sohbeti yerine gönderen kişiyle normal özel sohbet** açılıyordu.
+- Kök neden: Grup mesaj bildirimleri de `type: message` olarak oluşturuluyor, Aktivite yönlendirmesi ise tüm `message` bildirimlerini koşulsuz `SohbetPage` (özel sohbet) olarak açıyordu.
+- Aktivite yönlendirmesi artık önce bildirimin `sourceId/chatId` değerindeki chat belgesini kontrol ediyor.
+- Chat `isGroup == true` ise doğrudan **GrupSohbetPage** açılıyor; grup adı ve fotoğrafı gerçek chat belgesinden alınıyor.
+- Bu kontrol eski bildirimlerde de çalışıyor; Build 265 kurulmadan önce oluşmuş grup mesajlarına dokunulduğunda da chat belgesi grup ise doğru gruba gitmeli.
+- Kullanıcı artık grubun üyesi değilse yanlış özel sohbete düşmek yerine **Bu grup artık erişilebilir değil** uyarısı gösteriliyor.
+- Yeni grup bildirimlerine `targetKind: group`, grup adı ve grup fotoğrafı metadata'sı yazılıyor.
+- Aktivite ekranındaki **Rojin Candan Rojin Candan: ...** benzeri tekrar da düzeltildi; grup mesajı metni gönderen adını ikinci kez eklemiyor.
+- Grup @bahsetme bildirimleri de aynı grup hedef metadata'sını taşıyor.
+- Aynı kök sorun arama bildirimlerinde de vardı: özel/grup arama bildirimleri chatId taşıdığı halde Aktivite eski `calls/{id}` yolunu açıyordu. Aktivite artık önce chat üzerindeki aktif arama bilgisini kullanıyor, eski kayıtlar için calls fallback'i korunuyor.
+- **Eski NgelX logo tasarım kodu ve asset'leri korunuyor.**
+- Sürüm **v1.0.57 • Yapı 265**.
+
+### Build 265 gerçek cihaz doğrulaması
+
+1. Hesap A ile bir grup oluştur ve Hesap B'yi ekle.
+2. Hesap A'dan gruba normal metin gönder.
+3. Hesap B > Aktivite: yeni grup mesajı bildirimine dokun.
+4. **Özel sohbet değil, ilgili GrupSohbetPage açılmalı.**
+5. Build 265 öncesinden kalan eski bir grup mesaj bildirimi varsa ona da dokun; aynı gruba gitmeli.
+6. Grupta @HesapB ile bahset; Aktivite bildirimine dokununca yine aynı grup açılmalı.
+7. Grup araması başlat; Aktivite arama bildirimi aktif aramayı açmalı.
+8. Grup bildirimi metninde gönderen adı iki kez tekrarlanmamalı.
+9. Normal özel mesaj bildirimi hâlâ doğru özel sohbete açılmalı.
+
