@@ -806,6 +806,20 @@ for token in (
     if token not in app:
         errors.append("Build 273 Hikâye sözleşmesi eksik: " + token)
 
+# Build 274: profile visit analytics/search/pinning must stay deterministic.
+for token in (
+    "class KullaniciProfilPage extends StatefulWidget",
+    "if(!ziyaretciOnizleme)unawaited(profilZiyaretKaydet(uid));",
+    "Profilde anahtar kelime ara",
+    "chip('photo','Fotoğraf'",
+    "chip('video','Video'",
+    "chip('text','Yazı'",
+    "Profilde en fazla 3 gönderi sabitleyebilirsin. Önce bir sabitlemeyi kaldır.",
+    "Profil paylaşım izni kontrolü zaman aşımına uğradı. Tekrar dene.",
+):
+    if token not in app:
+        errors.append("Build 274 profil sözleşmesi eksik: " + token)
+
 if errors:
     print("NgelX contract doğrulaması BAŞARISIZ:")
     for e in errors:
