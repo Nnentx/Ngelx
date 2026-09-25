@@ -589,3 +589,30 @@
 6. Grup katılma isteği **İstekler** ve **Gruplar** filtrelerinde görünmeli; karta basınca Katılma İstekleri ekranı açılmalı.
 7. Uygulama dilini İngilizce veya başka desteklenen dile al; yeni filtre etiketleri seçilen dili takip etmeli.
 8. Aktivite > Tümünü okundu yap sonrası Okunmamış filtresi boş duruma geçmeli.
+
+
+## 2026-09-25 — Build 270 Gelen Kutusu + Aktivite sayaç senkronizasyonu
+
+- Gelen Kutusu üst bölümüne canlı **Mesajlar / Gruplar / Aktivite** sayaç kartları eklendi.
+- Özel sohbet okunmamış mesajları ile grup okunmamış mesajları ayrı ayrı toplanıyor; arşivlenmiş veya Gelen Kutusu'ndan gizlenmiş konuşmalar sayaçlara karışmıyor.
+- Aktivite sayacı son bildirim akışındaki okunmamış kayıtları canlı gösteriyor; 99 üzeri değerler **99+** olarak sınırlandırılıyor.
+- Aktivite kartındaki okunmamış rozeti 60 kayıttan 200 kayda çıkarıldı ve yeni sayaç gösterimiyle aynı biçimde çalışıyor.
+- Sohbetten geri dönüldüğünde Gelen Kutusu state'i yeniden çiziliyor; okundu sayaçlarının eski değerde kalması engelleniyor.
+- Aktivite ekranından geri dönüldüğünde de Gelen Kutusu sayaçları anında yeniden hesaplanıyor.
+- **Tümünü okundu yap** işlemi artık sohbetleri ve aktiviteleri birlikte güncelliyor; Firestore'un tek batch sınırına takılmamak için işlemler 400'lük güvenli parçalara bölünüyor.
+- Tümünü okundu işlemine 12 saniyelik ağ sınırı ve görünür hata geri bildirimi eklendi.
+- Build 265–269'daki grup yönlendirme, bildirim kategorileri, grup yükleme önbelleği ve Aktivite filtreleri korunuyor.
+- Eski NgelX logo tasarım kodları ve iki logo asset'i korunuyor.
+- Sürüm **v1.0.57 • Yapı 270**.
+
+### Build 270 gerçek cihaz doğrulama sırası
+
+1. Hesap A'dan Hesap B'ye iki özel mesaj gönder. Hesap B > Gelen Kutusu'nda **Mesajlar** sayacı 2 artmalı.
+2. Bir gruptan Hesap B'ye üç mesaj gönder. **Gruplar** sayacı 3 artmalı; özel mesaj sayacına eklenmemeli.
+3. Beğeni/yorum veya takip isteği oluştur. **Aktivite** sayacı canlı artmalı.
+4. Özel sohbeti açıp geri dön. O sohbete ait okunmamış sayı sıfırlanmalı ve Mesajlar kartı anında azalmalı.
+5. Grup sohbetini açıp geri dön. Grup okunmamış sayacı anında azalmalı.
+6. Aktivite ekranında okunmamış bir karta dokunup geri dön. Aktivite sayacı azalmalı.
+7. Gelen Kutusu üstündeki çift tik **Tümünü okundu yap** düğmesine bas. Özel sohbet, grup ve Aktivite sayaçları sıfırlanmalı.
+8. Çok sayıda eski bildirim bulunan hesapta aynı işlemi dene; Firestore batch sınırı hatası oluşmamalı.
+9. Arşivlenmiş veya Gelen Kutusu'ndan kaldırılmış sohbetler üst sayaçlara dahil olmamalı.
