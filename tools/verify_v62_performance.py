@@ -36,6 +36,11 @@ checks = [
         "Hizli emoji gereksiz yazma engeli",
         "toString()==emoji?null:()=>unawaited(ref.set({'quickEmoji':emoji}" in app,
     ),
+    (
+        "Okundu bilgisi gereksiz chat rebuild yapmaz",
+        "if(okunmamis<=0)return;" in app
+        and "if(okunmamis>0)'unread_$ben':0" not in app,
+    ),
 ]
 
 failed = []
