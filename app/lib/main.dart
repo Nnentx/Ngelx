@@ -7589,22 +7589,27 @@ class _MesajPageState extends State<MesajPage> {
           'createdAt':FieldValue.serverTimestamp(),
         });
       }catch(_){}
+      final ayrilanAd=await ngelxCurrentDisplayName();
       await ref.update({
         'members':FieldValue.arrayRemove([ben]),
         'admins':FieldValue.arrayRemove([ben]),
         'formerMembers':FieldValue.arrayUnion([ben]),
         'removedAt_$ben':FieldValue.serverTimestamp(),
+        'leftAt_$ben':FieldValue.serverTimestamp(),
+        'exitType_$ben':'left',
+        'exitActorUid_$ben':ben,
+        'exitActorName_$ben':ayrilanAd,
         'updatedAt':FieldValue.serverTimestamp(),
       });
     }
     await FirebaseFirestore.instance.collection('users').doc(ben).set({
       'pinnedChats':FieldValue.arrayRemove([id]),
-      'archivedChats':FieldValue.arrayRemove([id]),
+      'archivedChats':FieldValue.arrayUnion([id]),
       'mutedChats':FieldValue.arrayRemove([id]),
     },SetOptions(merge:true));
     if(mounted)setState((){
       sabitSohbetler.remove(id);
-      arsivSohbetler.remove(id);
+      arsivSohbetler.add(id);
       sessizSohbetler.remove(id);
     });
   }
@@ -9213,8 +9218,11 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
     await ngelxOverlayKapanisiniBekle();
     if(!mounted)return;
     if(sec.startsWith('reaction:')){
-      await d.reference.update({'reactions.${uid!}':sec.substring(9)});
-    }else if(sec=='reactionMore'){
+      final emoji=sec.substring(9);
+      final ham=d.data()['reactions'];
+      final mevcut=ham is Map?(ham[uid]??'').toString():'';
+      await d.reference.update({'reactions.'+uid!:mevcut==emoji?FieldValue.delete():emoji});
+      HapticFeedback.selectionClick();    }else if(sec=='reactionMore'){
       final tepki=await showModalBottomSheet<String>(
         context:context,
         backgroundColor:Colors.white,
@@ -9244,7 +9252,12 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
           ),
         ),
       );
-      if(tepki!=null&&tepki.isNotEmpty)await d.reference.update({'reactions.${uid!}':tepki});
+      if(tepki!=null&&tepki.isNotEmpty){
+        final ham=d.data()['reactions'];
+        final mevcut=ham is Map?(ham[uid]??'').toString():'';
+        await d.reference.update({'reactions.'+uid!:mevcut==tepki?FieldValue.delete():tepki});
+        HapticFeedback.selectionClick();
+      }
     }else if(sec=='copy'){
       await Clipboard.setData(ClipboardData(text:metin));
     }else if(sec=='reply'){
@@ -12535,9 +12548,18 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
       ),
     )??false;
     if(!ok)return;
-    await ref.update({'members':FieldValue.arrayRemove([id]),'admins':FieldValue.arrayRemove([id]),'formerMembers':FieldValue.arrayUnion([id]),'removedAt_'+id:FieldValue.serverTimestamp(),'updatedAt':FieldValue.serverTimestamp()});
-    await ngelxGrupDavetMetaSenkronla(ref);
     final yapanAd=await ngelxCurrentDisplayName();
+    await ref.update({
+      'members':FieldValue.arrayRemove([id]),
+      'admins':FieldValue.arrayRemove([id]),
+      'formerMembers':FieldValue.arrayUnion([id]),
+      'removedAt_'+id:FieldValue.serverTimestamp(),
+      'exitType_'+id:'removed',
+      'exitActorUid_'+id:me,
+      'exitActorName_'+id:yapanAd,
+      'updatedAt':FieldValue.serverTimestamp(),
+    });
+    await ngelxGrupDavetMetaSenkronla(ref);
     await sistemMesaji(yapanAd+', '+isim+' adlı üyeyi gruptan çıkardı.',action:'member_removed',targetUids:[id]);
   }
   Future<void> uyeEkle(List<String> mevcut)async{
@@ -12658,12 +12680,20 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
     }).toList();
     final pv=p.data()??<String,dynamic>{};
     final ekleyen=(pv['displayName']??pv['username']??'Bir yönetici').toString();
-    await ref.update({
+    final grupGuncelle=<String,dynamic>{
       'members':FieldValue.arrayUnion(secilen.toList()),
       'formerMembers':FieldValue.arrayRemove(secilen.toList()),
       'hiddenFor':FieldValue.arrayRemove(secilen.toList()),
       'updatedAt':FieldValue.serverTimestamp(),
-    });
+    };
+    for(final id in secilen){
+      grupGuncelle['removedAt_'+id]=FieldValue.delete();
+      grupGuncelle['leftAt_'+id]=FieldValue.delete();
+      grupGuncelle['exitType_'+id]=FieldValue.delete();
+      grupGuncelle['exitActorUid_'+id]=FieldValue.delete();
+      grupGuncelle['exitActorName_'+id]=FieldValue.delete();
+    }
+    await ref.update(grupGuncelle);
     _uyeProfilCache.clear();
     await ngelxGrupDavetMetaSenkronla(ref);
     String adlariBirlestir(List<String> adlar){
@@ -12764,13 +12794,19 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
           'createdAt':FieldValue.serverTimestamp(),
         });
       }catch(_){}
+      final ayrilanAd=await ngelxCurrentDisplayName();
       await ref.update({
         'members':FieldValue.arrayRemove([me]),
         'admins':FieldValue.arrayRemove([me]),
         'formerMembers':FieldValue.arrayUnion([me]),
         'removedAt_$me':FieldValue.serverTimestamp(),
+        'leftAt_$me':FieldValue.serverTimestamp(),
+        'exitType_$me':'left',
+        'exitActorUid_$me':me,
+        'exitActorName_$me':ayrilanAd,
         'updatedAt':FieldValue.serverTimestamp(),
       });
+      await FirebaseFirestore.instance.collection('users').doc(me).set({'archivedChats':FieldValue.arrayUnion([widget.chatId])},SetOptions(merge:true));
     }
     if(mounted)Navigator.popUntil(context,(r)=>r.isFirst);
   }
@@ -13582,13 +13618,19 @@ class GrupAyarlarPage extends StatelessWidget{
           'createdAt':FieldValue.serverTimestamp(),
         });
       }catch(_){}
+      final ayrilanAd=await ngelxCurrentDisplayName();
       await ref.set({
         'members':FieldValue.arrayRemove([uid]),
         'admins':FieldValue.arrayRemove([uid]),
         'formerMembers':FieldValue.arrayUnion([uid]),
         'removedAt_$uid':FieldValue.serverTimestamp(),
+        'leftAt_$uid':FieldValue.serverTimestamp(),
+        'exitType_$uid':'left',
+        'exitActorUid_$uid':uid,
+        'exitActorName_$uid':ayrilanAd,
         'updatedAt':FieldValue.serverTimestamp(),
       },SetOptions(merge:true));
+      await FirebaseFirestore.instance.collection('users').doc(uid).set({'archivedChats':FieldValue.arrayUnion([chatId])},SetOptions(merge:true));
     }
     if(context.mounted)Navigator.popUntil(context,(route)=>route.isFirst);
   }
@@ -13834,14 +13876,17 @@ class _GrupUyeleriPageState extends State<GrupUyeleriPage>{
       ),
     )??false;
     if(!ok)return;
+    final yapanAd=await ngelxCurrentDisplayName();
     await ref.update({
       'members':FieldValue.arrayRemove([uid]),
       'admins':FieldValue.arrayRemove([uid]),
       'formerMembers':FieldValue.arrayUnion([uid]),
       'removedAt_'+uid:FieldValue.serverTimestamp(),
+      'exitType_'+uid:'removed',
+      'exitActorUid_'+uid:me,
+      'exitActorName_'+uid:yapanAd,
       'updatedAt':FieldValue.serverTimestamp(),
     });
-    final yapanAd=await ngelxCurrentDisplayName();
     await _sistemMesaji(yapanAd+', '+isim+' adlı üyeyi gruptan çıkardı.');
   }
 
