@@ -773,3 +773,12 @@
 - Olası kontrol alanlari: slider onChanged sirasinda Firestore/yazma islemi yapilmasi, tum sohbet listesinin rebuild edilmesi, buyuk arka plan gorselinin her frame yeniden decode/render edilmesi, opacity/backdrop katman maliyeti.
 - Beklenen: slider sadece lokal onizlemeyi 60fps'e yakin akici guncellemeli; kalici kayit onChangeEnd/debounce ile yapilmali.
 - Durum: V61 performans hatasi, duzeltme paketine dahil edilecek.
+
+
+## 2026-09-26 V61 QA - Sohbet alt bar spinner / takilma
+- Grup sohbetine donuldugunde alt mesaj cubugunun sag tarafinda yukleniyor/donen durum gostergesi kalabiliyor.
+- Bu sirada sohbet belirgin sekilde kasiyor ve dokunmalara gec tepki veriyor.
+- Hata, arka plan gorunurlugu / hizli emoji degisikligi sonrasinda goruldu.
+- Kontrol edilecekler: pending sync/loading state'in kapanmamasi, ayni ayarin tekrar tekrar kaydedilmesi, Firestore listener dongusu, tum sohbet listesinin rebuild edilmesi ve arka plan render maliyeti.
+- Beklenen: ayar kaydi bittiginde spinner hemen kaybolmali; sohbet akici kalmali ve arka planda tekrar eden senkronizasyon dongusu olmamali.
+- Durum: V61 performans/stuck-loading hatasi, duzeltme paketine dahil edilecek.
