@@ -15,10 +15,19 @@ const _muted = Color(0xFF777B80);
 
 class GroupDraftStore {
   static final Map<String, Timer> _timers = <String, Timer>{};
-  static String _key(String chatId) => 'group_draft_' + chatId;
+
+  static String _legacyKey(String chatId) => 'group_draft_' + chatId;
+  static String _key(String chatId) {
+    final uid = FirebaseAuth.instance.currentUser?.uid ?? 'guest';
+    return 'group_draft_' + uid + '_' + chatId;
+  }
 
   static Future<String> load(String chatId) async {
     final h = await SharedPreferences.getInstance();
+    // Eski sürümlerde taslak anahtarı hesaptan bağımsızdı. Hesap değişiminde
+    // başka kullanıcının taslağının görünmesini önlemek için eski anahtarı
+    // bilinçli olarak taşımıyor, temizliyoruz.
+    await h.remove(_legacyKey(chatId));
     return h.getString(_key(chatId)) ?? '';
   }
 
@@ -44,10 +53,18 @@ class GroupDraftStore {
 
 class PrivateDraftStore {
   static final Map<String, Timer> _timers = <String, Timer>{};
-  static String _key(String chatId) => 'private_draft_' + chatId;
+
+  static String _legacyKey(String chatId) => 'private_draft_' + chatId;
+  static String _key(String chatId) {
+    final uid = FirebaseAuth.instance.currentUser?.uid ?? 'guest';
+    return 'private_draft_' + uid + '_' + chatId;
+  }
 
   static Future<String> load(String chatId) async {
     final h = await SharedPreferences.getInstance();
+    // Özel sohbet taslakları cihaz genelinde değil, hesap + sohbet bazında
+    // saklanır. Eski ortak anahtar güvenli biçimde silinir.
+    await h.remove(_legacyKey(chatId));
     return h.getString(_key(chatId)) ?? '';
   }
 
