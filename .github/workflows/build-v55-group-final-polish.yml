@@ -1,8 +1,8 @@
-name: NgelX V62 Performance Repair
+name: NgelX V63 Input Performance Repair
 
 on:
   push:
-    branches: [main]
+    branches: [main, v63-input-performance]
     paths:
       - 'app/**'
       - 'cloudflare/worker/**'
@@ -15,7 +15,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: ngelx-v62-performance-repair
+  group: ngelx-v63-input-performance
   cancel-in-progress: true
 
 jobs:
@@ -42,10 +42,10 @@ jobs:
       - name: NgelX sozlesmesini dogrula
         run: python3 tools/verify_ngelx_contract.py
 
-      - name: V62 grup QA ve performans hedeflerini dogrula
+      - name: V63 grup QA ve girdi performans hedeflerini dogrula
         shell: bash
         run: |
-          grep -q "version: 1.0.62+281" app/pubspec.yaml
+          grep -q "version: 1.0.63+282" app/pubspec.yaml
           grep -q "bool ngelxPresenceOnline" app/lib/main.dart
           grep -q "Profili görüntüle" app/lib/main.dart
           grep -q "final sadeMedya=" app/lib/main.dart
@@ -74,6 +74,9 @@ jobs:
 
       - name: V62 performans duzeltmelerini dogrula
         run: python3 tools/verify_v62_performance.py
+
+      - name: V63 girdi performans duzeltmelerini dogrula
+        run: python3 tools/verify_v63_input_performance.py
 
       - name: R2 Worker JavaScript kontrolu
         run: node --check cloudflare/worker/src/index.js
@@ -135,7 +138,7 @@ jobs:
       - name: APK yukle
         uses: actions/upload-artifact@v4
         with:
-          name: NgelX-V62-PERFORMANCE-APK
+          name: NgelX-V63-INPUT-PERFORMANCE-APK
           path: app/build/app/outputs/flutter-apk/app-debug.apk
           if-no-files-found: error
           retention-days: 14
