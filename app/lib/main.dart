@@ -12627,7 +12627,7 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
       'formerMembers':FieldValue.arrayUnion([id]),
       'removedAt_'+id:FieldValue.serverTimestamp(),
       'exitType_'+id:'removed',
-      'exitActorUid_'+id:me,
+      'exitActorUid_'+id:benUid,
       'exitActorName_'+id:yapanAd,
       'updatedAt':FieldValue.serverTimestamp(),
     });
