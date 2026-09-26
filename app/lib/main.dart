@@ -27,6 +27,25 @@ import 'package:record/record.dart' as rec;
 import 'group_quality.dart';
 part 'build258_settings.dart';
 
+bool ngelxHiddenWordMatches(String text, Iterable<String> hiddenWords) {
+  String normalize(String value) => value
+      .toLowerCase()
+      .replaceAll(RegExp(r'[^a-z0-9çğıöşü]+', caseSensitive: false), ' ')
+      .replaceAll(RegExp(r'\s+'), ' ')
+      .trim();
+  final normalizedText = normalize(text);
+  if (normalizedText.isEmpty) return false;
+  final paddedText = ' ' + normalizedText + ' ';
+  for (final raw in hiddenWords) {
+    final word = normalize(raw);
+    // Tek harflik girdiler normal yorumların büyük bölümünü yanlışlıkla
+    // eşleştirebildiği için filtre anahtarı olarak kabul edilmez.
+    if (word.length < 2) continue;
+    if (paddedText.contains(' ' + word + ' ')) return true;
+  }
+  return false;
+}
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   try {
@@ -5223,7 +5242,7 @@ class YorumKarti extends StatelessWidget {
   }) {
     final ad = (v['username'] ?? 'ngelx').toString();
     final metin = (v['text'] ?? v['message'] ?? v['content'] ?? '').toString().trim();
-    final gizlenecek=gizliKelimeFiltresi&&metin.isNotEmpty&&gizliKelimeListesi.any((x)=>x.trim().isNotEmpty&&metin.toLowerCase().contains(x.toLowerCase()));
+    final gizlenecek=gizliKelimeFiltresi&&metin.isNotEmpty&&ngelxHiddenWordMatches(metin,gizliKelimeListesi);
     final gosterilecekMetin=gizlenecek?'Gizli kelime filtresi nedeniyle gizlendi.':metin;
     final foto = (v['photoUrl'] ?? '').toString();
     final profilUid = (v['userId'] ?? '').toString();
@@ -8725,32 +8744,42 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
     final etiketler=etiketlenenUidler.toList(),yanitId=yanitlananMesajId,yanitMetin=yanitlananMetin,yanitGonderen=yanitlananGonderen,yanitTur=yanitlananTur,yanitMedya=yanitlananMedyaUrl;
     final sessiz=sessizGonder;
     setState(()=>mesajGonderiliyor=true);
-    final preview=await fetchGroupLinkPreview(t);
-    final payload=<String,dynamic>{
-      'text':t,'type':'text',
-      if(etiketler.isNotEmpty)'mentions':etiketler,
-      if(sessiz)'silent':true,
-      if(yanitId!=null)'replyToId':yanitId,
-      if(yanitMetin!=null&&yanitMetin.isNotEmpty)'replyToText':yanitMetin,
-      if(yanitGonderen!=null&&yanitGonderen.isNotEmpty)'replyToSenderName':yanitGonderen,
-      if(yanitTur!=null&&yanitTur.isNotEmpty)'replyToType':yanitTur,
-      if(yanitMedya!=null&&yanitMedya.isNotEmpty)'replyToMediaUrl':yanitMedya,
-      ...preview,
-    };
-    final id='local_'+(uid??'u')+'_'+DateTime.now().microsecondsSinceEpoch.toString();
-    await GroupOfflineQueue.enqueue(chatId:widget.chatId,id:id,payload:payload,lastMessage:t);
-    final tamam=await payloadGonder(payload,t,docId:id,sessizHata:true);
-    if(tamam){
-      await GroupOfflineQueue.remove(widget.chatId,id);
-      await GroupDraftStore.clear(widget.chatId);
-      mesaj.clear();etiketlenenUidler.clear();
-      _typingZamanlayici?.cancel();
-      if(_typingYazildi)unawaited(_typingTemizle());
-      if(mounted)setState((){yanitlananMesajId=null;yanitlananMetin=null;yanitlananGonderen=null;yanitlananTur=null;yanitlananMedyaUrl=null;sessizGonder=false;});
-    }else if(mounted){
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Mesaj beklemeye alındı. Bağlantı gelince otomatik gönderilecek.')));
+    try{
+      Map<String,String> preview=<String,String>{};
+      try{
+        preview=await fetchGroupLinkPreview(t).timeout(const Duration(seconds:4));
+      }catch(_){}
+      final payload=<String,dynamic>{
+        'text':t,'type':'text',
+        if(etiketler.isNotEmpty)'mentions':etiketler,
+        if(sessiz)'silent':true,
+        if(yanitId!=null)'replyToId':yanitId,
+        if(yanitMetin!=null&&yanitMetin.isNotEmpty)'replyToText':yanitMetin,
+        if(yanitGonderen!=null&&yanitGonderen.isNotEmpty)'replyToSenderName':yanitGonderen,
+        if(yanitTur!=null&&yanitTur.isNotEmpty)'replyToType':yanitTur,
+        if(yanitMedya!=null&&yanitMedya.isNotEmpty)'replyToMediaUrl':yanitMedya,
+        ...preview,
+      };
+      final id='local_'+(uid??'u')+'_'+DateTime.now().microsecondsSinceEpoch.toString();
+      try{
+        await GroupOfflineQueue.enqueue(chatId:widget.chatId,id:id,payload:payload,lastMessage:t);
+      }catch(_){}
+      final tamam=await payloadGonder(payload,t,docId:id,sessizHata:true);
+      if(tamam){
+        try{await GroupOfflineQueue.remove(widget.chatId,id);}catch(_){}
+        try{await GroupDraftStore.clear(widget.chatId);}catch(_){}
+        mesaj.clear();etiketlenenUidler.clear();
+        _typingZamanlayici?.cancel();
+        if(_typingYazildi)unawaited(_typingTemizle());
+        if(mounted)setState((){yanitlananMesajId=null;yanitlananMetin=null;yanitlananGonderen=null;yanitlananTur=null;yanitlananMedyaUrl=null;sessizGonder=false;});
+      }else if(mounted){
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Mesaj beklemeye alındı. Bağlantı gelince otomatik gönderilecek.')));
+      }
+    }catch(_){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Mesaj gönderimi tamamlanamadı. Tekrar dene.')));
+    }finally{
+      if(mounted)setState(()=>mesajGonderiliyor=false);
     }
-    if(mounted)setState(()=>mesajGonderiliyor=false);
   }
   void _medyaIlerlemeGuncelle(String etiket,int sent,int total){
     if(!mounted)return;
@@ -9339,7 +9368,25 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
     }else if(sec=='info'){
       final me=uid;if(me!=null)await showGroupMessageInfo(context:context,chatRef:chatRef,message:v,currentUid:me);
     }else if(sec=='pin'){
-      await d.reference.set({'pinned':v['pinned']!=true,'pinnedAt':FieldValue.serverTimestamp(),'pinnedBy':uid},SetOptions(merge:true));
+      final yeniDurum=v['pinned']!=true;
+      try{
+        await d.reference.set({
+          'pinned':yeniDurum,
+          'pinnedAt':yeniDurum?FieldValue.serverTimestamp():FieldValue.delete(),
+          'pinnedBy':yeniDurum?uid:FieldValue.delete(),
+        },SetOptions(merge:true));
+        final dogrulama=await d.reference.get(const GetOptions(source:Source.server));
+        if(dogrulama.data()?['pinned']!=yeniDurum)throw StateError('pin_not_persisted');
+        if(mounted){
+          ScaffoldMessenger.of(context).removeCurrentSnackBar();
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(yeniDurum?'Mesaj sabitlendi.':'Sabitleme kaldırıldı.')));
+        }
+      }catch(_){
+        if(mounted){
+          ScaffoldMessenger.of(context).removeCurrentSnackBar();
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Sabitleme sunucuya kaydedilemedi. Tekrar dene.')));
+        }
+      }
     }else if(sec=='delete'){
       final ok=await showDialog<bool>(
         context:context,
@@ -13598,6 +13645,8 @@ class _GrupOzellestirPageState extends State<GrupOzellestirPage>{
           final v=snap.data?.data()??<String,dynamic>{},uid=me!;
           final url=(v['backgroundUrl']??'').toString();
           final opacity=(v['backgroundOpacity'] is num?(v['backgroundOpacity'] as num).toDouble():.35).clamp(.10,.55).toDouble();
+          final canManage=List<String>.from(v['admins']??const[]).contains(uid)||(v['createdBy']??'').toString()==uid;
+          var sliderOpacity=opacity;
           return ListView(
             padding:const EdgeInsets.fromLTRB(18,14,18,30),
             children:[
@@ -13637,7 +13686,7 @@ class _GrupOzellestirPageState extends State<GrupOzellestirPage>{
                 runSpacing:10,
                 children:['👍','❤️','😘','🥰','😂','🔥','👏','🐥'].map((emoji)=>InkWell(
                   borderRadius:BorderRadius.circular(18),
-                  onTap:()=>ref.set({'quickEmoji':emoji},SetOptions(merge:true)),
+                  onTap:(v['quickEmoji']??'👍').toString()==emoji?null:()=>unawaited(ref.set({'quickEmoji':emoji},SetOptions(merge:true)).catchError((_){ })),
                   child:Container(
                     width:52,height:52,
                     alignment:Alignment.center,
@@ -13653,15 +13702,30 @@ class _GrupOzellestirPageState extends State<GrupOzellestirPage>{
               if(url.isNotEmpty)...[
                 const SizedBox(height:12),
                 const Text('Arka plan görünürlüğü',style:TextStyle(fontWeight:FontWeight.w800)),
-                Slider(
-                  value:opacity,min:.10,max:.55,
-                  onChanged:(x)async{
-                    if(!await ngelxCanManageGroup(widget.chatId,uid)){
-                      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Grup arka planını yalnızca kurucu ve yöneticiler değiştirebilir.')));
-                      return;
-                    }
-                    await ref.set({'backgroundOpacity':x,'backgroundVersion':FieldValue.increment(1),'backgroundChangedAt':FieldValue.serverTimestamp(),'updatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
-                  },
+                StatefulBuilder(
+                  builder:(context,setSliderState)=>Slider(
+                    value:sliderOpacity,min:.10,max:.55,
+                    onChanged:(x){
+                      if(!canManage)return;
+                      setSliderState(()=>sliderOpacity=x);
+                    },
+                    onChangeEnd:(x)async{
+                      if(!canManage){
+                        if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Grup arka planını yalnızca kurucu ve yöneticiler değiştirebilir.')));
+                        return;
+                      }
+                      try{
+                        final kaydedilecek=(x*100).round()/100.0;
+                        await ref.set({
+                          'backgroundOpacity':kaydedilecek,
+                          'backgroundVersion':FieldValue.increment(1),
+                          'backgroundChangedAt':FieldValue.serverTimestamp(),
+                        },SetOptions(merge:true));
+                      }catch(_){
+                        if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Arka plan görünürlüğü kaydedilemedi.')));
+                      }
+                    },
+                  ),
                 ),
                 OutlinedButton.icon(
                   onPressed:()=>_arkaPlanKaldir(url),
@@ -15406,7 +15470,7 @@ class _SohbetPageState extends State<SohbetPage> {
     final photo=tur=='photo',video=tur=='video',shared=tur=='shared_content',audio=tur=='audio',file=tur=='file',location=tur=='location',call=tur=='call',storyReply=tur=='story_reply';
     final sadeMedya=photo||video;
     final metin=(v['text']??v['message']??v['content']??'').toString().trim(),saat=mesajSaati(v['createdAt']??v['clientCreatedAt']);
-    final gizlenecek=gizliKelimeFiltresi&&metin.isNotEmpty&&gizliKelimeListesi.any((x)=>x.trim().isNotEmpty&&metin.toLowerCase().contains(x.toLowerCase()));
+    final gizlenecek=gizliKelimeFiltresi&&metin.isNotEmpty&&ngelxHiddenWordMatches(metin,gizliKelimeListesi);
     final gosterilecekMetin=gizlenecek?'Gizli kelime filtresi nedeniyle gizlendi.':metin;
     final tepkiler=Map<String,dynamic>.from(v['reactions']??{});
     final sayilar=<String,int>{};
