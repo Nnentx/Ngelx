@@ -751,3 +751,10 @@
 - Yalnizca kullanicinin gizli kelime listesinde bulunan gercek eslesmelerde gizleme uygulanmali.
 - Gizlenen yorum icin uygun yetkideki kullaniciya goruntuleme/acma imkani olmali.
 - Durum: V61 testinde BASARISIZ, sonraki duzeltme paketine dahil edilecek.
+
+
+## 2026-09-26 V61 QA - Mesaj sabitleme hatasi
+- Grup sohbetinde "Mesaji sabitle" secenegi aciliyor ve sabitleme islemi tetikleniyor.
+- Sabitlendi bildirimi gorunuyor ancak sabitlenen mesaj ust alanda hemen kayboluyor.
+- Beklenen: sabit mesaj kalici olarak ustte gorunmeli; sohbetten cikilip geri girildiginde ve diger hesaplarda da gorunmeli.
+- Durum: V61 testinde BASARISIZ, duzeltme paketine dahil edilecek.
