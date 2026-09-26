@@ -8555,11 +8555,13 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
     final v=d.data()??<String,dynamic>{};
     final uyeler=List<String>.from(v['members']??const[]);
     final yoneticiler=List<String>.from(v['admins']??const[]);
+    final kurucu=(v['createdBy']??'').toString();
+    final yonetici=yoneticiler.contains(ben)||kurucu==ben;
     if(!uyeler.contains(ben)){
       if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Artık bu grubun üyesi değilsin.')));
       return null;
     }
-    if(v['onlyAdminsCanPost']==true&&!yoneticiler.contains(ben)){
+    if(v['onlyAdminsCanPost']==true&&!yonetici){
       if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bu grupta yalnızca yöneticiler mesaj gönderebilir.')));
       return null;
     }
@@ -9391,12 +9393,28 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
     ),
   );
 
+  Future<void> _grupArkaPlanOlayi(String eylem)async{
+    final me=uid;if(me==null)return;
+    final ad=await ngelxCurrentDisplayName();
+    try{
+      await chatRef.collection('messages').add({
+        'senderId':me,'actorUid':me,'type':'system','systemAction':'background_changed',
+        'text':ad+' '+eylem,'createdAt':FieldValue.serverTimestamp(),
+      });
+      await chatRef.set({'lastMessage':ad+' '+eylem,'updatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
+    }catch(_){}
+  }
+
   Future<void> grupArkaPlanMenusu()async{
     final me=uid;if(me==null)return;
+    if(!await ngelxCanManageGroup(widget.chatId,me)){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Grup arka planını yalnızca kurucu ve yöneticiler değiştirebilir.')));
+      return;
+    }
     final d=await chatRef.get();
     final v=d.data()??<String,dynamic>{};
-    final mevcutUrl=(v['backgroundUrl_$me']??'').toString();
-    final mevcutOpacity=(v['backgroundOpacity_$me'] is num?(v['backgroundOpacity_$me'] as num).toDouble():.35).clamp(.10,.55).toDouble();
+    final mevcutUrl=(v['backgroundUrl']??v['backgroundUrl_$me']??'').toString();
+    final mevcutOpacity=(v['backgroundOpacity'] is num?(v['backgroundOpacity'] as num).toDouble():(v['backgroundOpacity_$me'] is num?(v['backgroundOpacity_$me'] as num).toDouble():.35)).clamp(.10,.55).toDouble();
 
     final secim=await showModalBottomSheet<String>(
       context:context,
@@ -9489,19 +9507,22 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
     if(secim==null||!mounted)return;
     if(secim.startsWith('opacity:')){
       final oran=(int.tryParse(secim.substring(8))??35)/100;
-      await chatRef.set({'backgroundOpacity_$me':oran},SetOptions(merge:true));
+      await chatRef.set({'backgroundOpacity':oran},SetOptions(merge:true));
+      await _grupArkaPlanOlayi('grup arka plan görünürlüğünü değiştirdi.');
       return;
     }
     if(secim=='remove'){
-      await chatRef.set({'backgroundUrl_$me':''},SetOptions(merge:true));
+      await chatRef.set({'backgroundUrl':'','backgroundOpacity':FieldValue.delete()},SetOptions(merge:true));
+      await _grupArkaPlanOlayi('grup arka planını kaldırdı.');
       return;
     }
-    final x=await ImagePicker().pickImage(source:ImageSource.gallery,imageQuality:80,maxWidth:1440);
+    final x=await ImagePicker().pickImage(source:ImageSource.gallery,imageQuality:68,maxWidth:1080);
     if(x==null)return;
     try{
       final yol='chat-backgrounds/'+me+'/'+widget.chatId+'_'+DateTime.now().millisecondsSinceEpoch.toString()+'.jpg';
       final url=await ngelxMedyaYukleBytes(bytes:await x.readAsBytes(),kind:'chat-backgrounds',ext:'jpg',legacyPath:yol);
-      await chatRef.set({'backgroundUrl_$me':url,'backgroundOpacity_$me':.35},SetOptions(merge:true));
+      await chatRef.set({'backgroundUrl':url,'backgroundOpacity':.32},SetOptions(merge:true));
+      await _grupArkaPlanOlayi('grup arka planını değiştirdi.');
     }catch(_){
       if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Arka plan yüklenemedi.')));
     }
@@ -10079,7 +10100,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
             }
             final onizleme=gorulenIds.take(3).toList();
             return Padding(
-              padding:const EdgeInsets.only(top:1,right:7,bottom:2),
+              padding:const EdgeInsets.only(top:0,right:7,bottom:7),
               child:Row(mainAxisSize:MainAxisSize.min,children:[
                 Text(gorulenIds.isNotEmpty?gorulenIds.length.toString()+' kişi gördü':'Gönderildi',style:const TextStyle(color:ngelxPremiumMuted,fontSize:9.5,fontWeight:FontWeight.w700)),
                 if(onizleme.isNotEmpty)...[
@@ -10214,7 +10235,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
         stream:_grupAkisi,
         builder:(_,tema){
           final tv=tema.data?.data()??<String,dynamic>{},
-              arkaPlanUrl=(tv['backgroundUrl_$uid']??'').toString(),
+              arkaPlanUrl=(tv['backgroundUrl']??tv['backgroundUrl_$uid']??'').toString(),
               hizliEmoji=(tv['quickEmoji']??tv['quickEmoji_$uid']??'👍').toString();
           final uyeMi=List<String>.from(tv['members']??const[]).contains(uid);
           final cikisZamani=tv['removedAt_$uid'];
@@ -10222,11 +10243,11 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
             ?chatRef.collection('messages').where('createdAt',isLessThanOrEqualTo:cikisZamani).orderBy('createdAt').limitToLast(100).snapshots()
             :_mesajAkisi;
           _typingGostergesiAcik=tv['typingIndicator_$uid']!=false;
-          final opaklik=(tv['backgroundOpacity_$uid'] is num?(tv['backgroundOpacity_$uid'] as num).toDouble():.26).clamp(.10,.55).toDouble();
+          final opaklik=(tv['backgroundOpacity'] is num?(tv['backgroundOpacity'] as num).toDouble():(tv['backgroundOpacity_$uid'] is num?(tv['backgroundOpacity_$uid'] as num).toDouble():.26)).clamp(.10,.55).toDouble();
           return Container(
             decoration:BoxDecoration(
               color:Colors.white,
-              image:arkaPlanUrl.isEmpty?null:DecorationImage(image:CachedNetworkImageProvider(arkaPlanUrl),fit:BoxFit.cover,opacity:opaklik),
+              image:arkaPlanUrl.isEmpty?null:DecorationImage(image:ResizeImage(CachedNetworkImageProvider(arkaPlanUrl),width:1080),fit:BoxFit.cover,opacity:opaklik),
             ),
             child:Column(children:[
               if(uyeMi&&((tv['callStatus']??'').toString()=='ringing'||(tv['callStatus']??'').toString()=='active')&&(tv['callRoomName']??'').toString().isNotEmpty)
@@ -11069,7 +11090,31 @@ class SabitlenenGrupMesajlariPage extends StatelessWidget{
                         const SizedBox(height:3),
                         Text(saat,style:const TextStyle(color:ngelxPremiumMuted,fontSize:10.5,fontWeight:FontWeight.w600)),
                       ])),
-                      const Icon(Icons.more_horiz_rounded,color:Color(0xFFA49BAB)),
+                      PopupMenuButton<String>(
+                        tooltip:'Mesaj işlemleri',
+                        icon:const Icon(Icons.more_horiz_rounded,color:Color(0xFFA49BAB)),
+                        onSelected:(sec)async{
+                          if(sec!='unpin')return;
+                          final chat=await FirebaseFirestore.instance.collection('chats').doc(chatId).get();
+                          final data=chat.data()??<String,dynamic>{};
+                          final me=FirebaseAuth.instance.currentUser?.uid;
+                          final admins=List<String>.from(data['admins']??const[]);
+                          final owner=(data['createdBy']??'').toString();
+                          final onlyAdmins=data['onlyAdminsCanPin']!=false;
+                          if(me==null||(onlyAdmins&&!admins.contains(me)&&owner!=me)){
+                            if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bu mesajı sabitlemeden kaldırma yetkin yok.')));
+                            return;
+                          }
+                          await d.reference.set({'pinned':false,'pinnedAt':FieldValue.delete(),'pinnedBy':FieldValue.delete()},SetOptions(merge:true));
+                        },
+                        itemBuilder:(_)=>const [
+                          PopupMenuItem<String>(value:'unpin',child:Row(children:[
+                            Icon(Icons.push_pin_outlined,size:19),
+                            SizedBox(width:9),
+                            Text('Sabitlemeyi kaldır'),
+                          ])),
+                        ],
+                      ),
                     ]),
                     if(url.isNotEmpty)...[
                       const SizedBox(height:10),
@@ -12403,7 +12448,8 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
       if(ok){
         await ref.update({'members':FieldValue.arrayRemove([id]),'admins':FieldValue.arrayRemove([id]),'formerMembers':FieldValue.arrayUnion([id]),'removedAt_$id':FieldValue.serverTimestamp(),'updatedAt':FieldValue.serverTimestamp()});
         await ngelxGrupDavetMetaSenkronla(ref);
-        await sistemMesaji('$isim gruptan çıkarıldı.');
+        final yapanAd=await ngelxCurrentDisplayName();
+        await sistemMesaji('$yapanAd, $isim adlı üyeyi gruptan çıkardı.',action:'member_removed',targetUids:[id]);
       }
     }
   }
@@ -12412,9 +12458,9 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
     if(me==null)return;
     final grup=await ref.get();
     final gv=grup.data()??<String,dynamic>{};
-    final yonetici=List<String>.from(gv['admins']??const[]).contains(me);
-    if(gv['onlyAdminsCanAddMembers']==true&&!yonetici){
-      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bu grupta yalnızca yöneticiler üye ekleyebilir.')));
+    final yonetici=List<String>.from(gv['admins']??const[]).contains(me)||(gv['createdBy']??'').toString()==me;
+    if(!yonetici){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Yalnızca grup kurucusu ve yöneticiler üye ekleyebilir.')));
       return;
     }
     if(mevcut.length>=60){
@@ -12642,6 +12688,7 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
     if(mounted)Navigator.popUntil(context,(r)=>r.isFirst);
   }
   Future<void> ayarDegistir(String alan,bool deger)async{
+    if(alan=='onlyAdminsCanAddMembers')deger=true;
     await ref.set({alan:deger,'updatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
     if(alan=='joinApproval')await ngelxGrupDavetMetaSenkronla(ref);
   }
@@ -12652,6 +12699,11 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
     required String aciklama,
     required bool sadeceYoneticiler,
   })async{
+    if(alan=='onlyAdminsCanAddMembers'){
+      await ayarDegistir(alan,true);
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Üye ekleme yalnızca kurucu ve yöneticilere açıktır.')));
+      return;
+    }
     final secim=await showModalBottomSheet<bool>(
       context:context,
       backgroundColor:Colors.white,
@@ -12728,8 +12780,9 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
           final v=snap.data?.data()??<String,dynamic>{};
           final uyeler=List<String>.from(v['members']??const[]);
           final yoneticiler=List<String>.from(v['admins']??const[]);
-          final yonetici=yoneticiler.contains(ben);
-          final duzenleyebilir=yonetici||v['onlyAdminsCanEditGroup']!=true;
+          final kurucu=(v['createdBy']??'').toString();
+          final yonetici=yoneticiler.contains(ben)||kurucu==ben;
+          final duzenleyebilir=yonetici;
           final foto=(v['groupPhotoUrl']??'').toString();
           final ad=(v['groupName']??'Grup').toString();
           return ListView(
@@ -12770,7 +12823,7 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
                   Text(uyeler.length.toString()+' üye',style:const TextStyle(color:ngelxPremiumMuted,fontSize:13,fontWeight:FontWeight.w700)),
                   const SizedBox(height:16),
                   Row(children:[
-                    Expanded(child:_grupKisayol(Icons.person_add_alt_1_rounded,'Ekle',uyeler.length>=60?null:()=>uyeEkle(uyeler))),
+                    Expanded(child:_grupKisayol(Icons.person_add_alt_1_rounded,'Ekle',!yonetici||uyeler.length>=60?null:()=>uyeEkle(uyeler))),
                     const SizedBox(width:7),
                     Expanded(child:_grupKisayol(Icons.text_fields_rounded,'Takma Adlar',()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupTakmaAdlarPage(chatId:widget.chatId))))),
                     const SizedBox(width:7),
@@ -12795,7 +12848,7 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
                     builder:(_,istekSnap){
                       final bekleyen=(istekSnap.data?.docs??const[]).where((d)=>(d.data()['status']??'pending').toString()=='pending').length;
                       return ListTile(
-                        onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupKatilmaIstekleriPage(chatId:widget.chatId))),
+                        onTap:yonetici?()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupKatilmaIstekleriPage(chatId:widget.chatId))):null,
                         contentPadding:const EdgeInsets.symmetric(horizontal:6,vertical:4),
                         leading:Container(width:42,height:42,decoration:BoxDecoration(color:ngelxGroupGreenSoft,borderRadius:BorderRadius.circular(14)),child:const Icon(Icons.how_to_reg_rounded,color:ngelxGroupGreen)),
                         title:const Text('Davetler ve istekler',style:TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w900)),
@@ -13138,10 +13191,26 @@ class _GrupOzellestirPageState extends State<GrupOzellestirPage>{
   String? get me=>FirebaseAuth.instance.currentUser?.uid;
   DocumentReference<Map<String,dynamic>> get ref=>FirebaseFirestore.instance.collection('chats').doc(widget.chatId);
 
+  Future<void> _arkaPlanSistemMesaji(String eylem)async{
+    final uid=me;if(uid==null)return;
+    final ad=await ngelxCurrentDisplayName();
+    try{
+      await ref.collection('messages').add({
+        'senderId':uid,'actorUid':uid,'type':'system','systemAction':'background_changed',
+        'text':ad+' '+eylem,'createdAt':FieldValue.serverTimestamp(),
+      });
+      await ref.set({'lastMessage':ad+' '+eylem,'updatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
+    }catch(_){}
+  }
+
   Future<void> _arkaPlanSec()async{
     final uid=me;if(uid==null||yukleniyor)return;
+    if(!await ngelxCanManageGroup(widget.chatId,uid)){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Grup arka planını yalnızca kurucu ve yöneticiler değiştirebilir.')));
+      return;
+    }
     XFile? x;
-    try{x=await ImagePicker().pickImage(source:ImageSource.gallery,imageQuality:82,maxWidth:1440);}catch(e){
+    try{x=await ImagePicker().pickImage(source:ImageSource.gallery,imageQuality:68,maxWidth:1080);}catch(e){
       if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Galeri açılamadı: $e')));
       return;
     }
@@ -13154,8 +13223,9 @@ class _GrupOzellestirPageState extends State<GrupOzellestirPage>{
         legacyPath:'chat-backgrounds/'+uid+'/'+widget.chatId+'_'+DateTime.now().millisecondsSinceEpoch.toString()+'.'+ext,
       );
       final onceki=await ref.get();
-      final eski=(onceki.data()?['backgroundUrl_'+uid]??'').toString();
-      await ref.set({'backgroundUrl_'+uid:url,'backgroundOpacity_'+uid:.35},SetOptions(merge:true));
+      final eski=(onceki.data()?['backgroundUrl']??'').toString();
+      await ref.set({'backgroundUrl':url,'backgroundOpacity':.32},SetOptions(merge:true));
+      await _arkaPlanSistemMesaji('grup arka planını değiştirdi.');
       if(eski.isNotEmpty&&eski!=url){
         await CachedNetworkImage.evictFromCache(eski);
         unawaited(ngelxMedyaSil(eski).catchError((_){ }));
@@ -13168,7 +13238,12 @@ class _GrupOzellestirPageState extends State<GrupOzellestirPage>{
 
   Future<void> _arkaPlanKaldir(String eski)async{
     final uid=me;if(uid==null)return;
-    await ref.set({'backgroundUrl_'+uid:FieldValue.delete(),'backgroundOpacity_'+uid:FieldValue.delete()},SetOptions(merge:true));
+    if(!await ngelxCanManageGroup(widget.chatId,uid)){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Grup arka planını yalnızca kurucu ve yöneticiler değiştirebilir.')));
+      return;
+    }
+    await ref.set({'backgroundUrl':FieldValue.delete(),'backgroundOpacity':FieldValue.delete()},SetOptions(merge:true));
+    await _arkaPlanSistemMesaji('grup arka planını kaldırdı.');
     if(eski.isNotEmpty){
       await CachedNetworkImage.evictFromCache(eski);
       unawaited(ngelxMedyaSil(eski).catchError((_){ }));
@@ -13184,14 +13259,14 @@ class _GrupOzellestirPageState extends State<GrupOzellestirPage>{
         stream:ref.snapshots(),
         builder:(_,snap){
           final v=snap.data?.data()??<String,dynamic>{},uid=me!;
-          final url=(v['backgroundUrl_'+uid]??'').toString();
-          final opacity=(v['backgroundOpacity_'+uid] is num?(v['backgroundOpacity_'+uid] as num).toDouble():.35).clamp(.10,.55).toDouble();
+          final url=(v['backgroundUrl']??v['backgroundUrl_'+uid]??'').toString();
+          final opacity=(v['backgroundOpacity'] is num?(v['backgroundOpacity'] as num).toDouble():(v['backgroundOpacity_'+uid] is num?(v['backgroundOpacity_'+uid] as num).toDouble():.35)).clamp(.10,.55).toDouble();
           return ListView(
             padding:const EdgeInsets.fromLTRB(18,14,18,30),
             children:[
               const Text('Sohbet arka planı',style:TextStyle(fontSize:20,fontWeight:FontWeight.w900)),
               const SizedBox(height:6),
-              const Text('Grup sohbetinde yalnızca sana özel görünecek arka planı seç.',style:TextStyle(color:Colors.black54)),
+              const Text('Grup arka planını yalnızca kurucu ve yöneticiler değiştirebilir.',style:TextStyle(color:Colors.black54)),
               const SizedBox(height:16),
               Container(
                 height:210,
@@ -13199,7 +13274,7 @@ class _GrupOzellestirPageState extends State<GrupOzellestirPage>{
                   color:ngelxGroupGreenSoft,
                   borderRadius:BorderRadius.circular(24),
                   border:Border.all(color:ngelxGroupBorder),
-                  image:url.isEmpty?null:DecorationImage(image:CachedNetworkImageProvider(url),fit:BoxFit.cover,opacity:opacity),
+                  image:url.isEmpty?null:DecorationImage(image:ResizeImage(CachedNetworkImageProvider(url),width:1080),fit:BoxFit.cover,opacity:opacity),
                 ),
                 alignment:Alignment.center,
                 child:url.isEmpty?const Column(mainAxisSize:MainAxisSize.min,children:[
@@ -13647,7 +13722,8 @@ class _GrupUyeleriPageState extends State<GrupUyeleriPage>{
         'removedAt_$uid':FieldValue.serverTimestamp(),
         'updatedAt':FieldValue.serverTimestamp(),
       });
-      await _sistemMesaji(isim+' gruptan çıkarıldı.');
+      final yapanAd=await ngelxCurrentDisplayName();
+      await _sistemMesaji(yapanAd+', '+isim+' adlı üyeyi gruptan çıkardı.');
     }
   }
 
@@ -15737,7 +15813,42 @@ class SohbetBilgiPage extends StatelessWidget{
   final String uid,ad,foto,chatId;
   const SohbetBilgiPage({super.key,required this.uid,required this.ad,required this.foto,required this.chatId});
 
-  Future<void> takmaAd(BuildContext context)async{final me=FirebaseAuth.instance.currentUser?.uid;if(me==null)return;final chat=await FirebaseFirestore.instance.collection('chats').doc(chatId).get(),c=TextEditingController(text:(chat.data()?['nicknames']?[me]??'').toString());if(!context.mounted)return;final sonuc=await showDialog<String>(context:context,builder:(x)=>AlertDialog(backgroundColor:Colors.white,title:const Text('Takma ad'),content:TextField(controller:c,maxLength:30,decoration:const InputDecoration(hintText:'Bu sohbette görünecek ad')),actions:[TextButton(onPressed:()=>Navigator.pop(x),child:const Text('Vazgeç')),FilledButton(onPressed:()=>Navigator.pop(x,c.text.trim()),child:const Text('Kaydet'))]));c.dispose();if(sonuc!=null)await FirebaseFirestore.instance.collection('chats').doc(chatId).update({'nicknames.$me':sonuc});}
+  Future<void> takmaAd(BuildContext context)async{
+    final me=FirebaseAuth.instance.currentUser?.uid;
+    if(me==null)return;
+    final chat=await FirebaseFirestore.instance.collection('chats').doc(chatId).get();
+    if(!context.mounted)return;
+    var taslak=(chat.data()?['nicknames']?[me]??'').toString();
+    final sonuc=await showDialog<String>(
+      context:context,
+      builder:(x)=>AlertDialog(
+        backgroundColor:Colors.white,
+        title:const Text('Takma ad'),
+        content:TextFormField(
+          initialValue:taslak,
+          autofocus:true,
+          maxLength:30,
+          onChanged:(v)=>taslak=v,
+          decoration:const InputDecoration(hintText:'Bu sohbette görünecek ad'),
+        ),
+        actions:[
+          TextButton(
+            onPressed:(){FocusScope.of(x).unfocus();Navigator.of(x).pop();},
+            child:const Text('Vazgeç'),
+          ),
+          FilledButton(
+            onPressed:(){FocusScope.of(x).unfocus();Navigator.of(x).pop(taslak.trim());},
+            child:const Text('Kaydet'),
+          ),
+        ],
+      ),
+    );
+    if(sonuc==null||!context.mounted)return;
+    await FirebaseFirestore.instance.collection('chats').doc(chatId).set({
+      'nicknames.$me':sonuc.isEmpty?FieldValue.delete():sonuc,
+      'updatedAt':FieldValue.serverTimestamp(),
+    },SetOptions(merge:true));
+  }
   Future<void> ozellestir(BuildContext context)async{
     final me=FirebaseAuth.instance.currentUser?.uid;if(me==null)return;
     final secim=await showModalBottomSheet<Object>(
