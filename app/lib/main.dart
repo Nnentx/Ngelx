@@ -1835,13 +1835,14 @@ Future<bool> sosyalIstekGonder({
   final kilit='${user.uid}|$hedefUid|$tur';
   if(!_sosyalIstekIslemleri.add(kilit))return false;
   try{
-    final sonuc=await Future.wait([
-      FirebaseFirestore.instance.collection('users').doc(user.uid).get().timeout(const Duration(seconds:8)),
-      FirebaseFirestore.instance.collection('notifications').where('fromUid',isEqualTo:user.uid).limit(200).get().timeout(const Duration(seconds:8)),
-    ]);
-    final profil=sonuc[0] as DocumentSnapshot<Map<String,dynamic>>;
-    final giden=sonuc[1] as QuerySnapshot<Map<String,dynamic>>;
-    final p=profil.data()??<String,dynamic>{};
+    Map<String,dynamic> p=<String,dynamic>{};
+    try{
+      final cached=await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get(const GetOptions(source:Source.cache));
+      p=cached.data()??<String,dynamic>{};
+    }catch(_){}
 
     final zatenIliski=tur=='follow_request'
       ? List<String>.from(p['following']??const[]).contains(hedefUid)
@@ -1850,13 +1851,8 @@ Future<bool> sosyalIstekGonder({
         : false;
     if(zatenIliski)return false;
 
-    final zatenBekliyor=giden.docs.any((d){
-      final v=d.data();
-      return v['toUid']==hedefUid&&v['type']==tur&&v['status']=='pending';
-    });
-    if(zatenBekliyor)return false;
-
-    final ad=(p['displayName']??p['username']??user.displayName??'NgelX kullanıcısı').toString();
+    final emailAdi=(user.email??'').split('@').first.trim();
+    final ad=(p['displayName']??p['username']??user.displayName??(emailAdi.isNotEmpty?emailAdi:'NgelX kullanıcısı')).toString();
     final foto=(p['photoUrl']??user.photoURL??'').toString();
     await FirebaseFirestore.instance.collection('notifications').add({
       'toUid':hedefUid,
@@ -1868,6 +1864,7 @@ Future<bool> sosyalIstekGonder({
       'status':'pending',
       'read':false,
       'createdAt':FieldValue.serverTimestamp(),
+      'clientCreatedAt':Timestamp.now(),
     }).timeout(const Duration(seconds:10));
     return true;
   }finally{
@@ -4135,6 +4132,8 @@ class _GorselYaziKartiState extends State<GorselYaziKarti> {
     if (icerikId.isEmpty) return;
     showModalBottomSheet(
       context: context,
+      isScrollControlled:true,
+      useSafeArea:true,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(25))),
       builder: (_) => Yorumlar(videoId: icerikId),
@@ -4599,9 +4598,13 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver {
     super.dispose();
   }
 
-  void yorumlariAc() {
-    showModalBottomSheet(
+  Future<void> yorumlariAc() async {
+    final oynuyordu=hazir&&kontrol.value.isPlaying;
+    if(oynuyordu)await kontrol.pause();
+    await showModalBottomSheet(
       context: context,
+      isScrollControlled:true,
+      useSafeArea:true,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(
@@ -4610,6 +4613,9 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver {
       ),
       builder: (_) => Yorumlar(videoId: videoId),
     );
+    if(mounted&&hazir&&widget.aktif&&oynuyordu&&!duraklatildi){
+      unawaited(kontrol.play());
+    }
   }
 
   @override
@@ -4982,7 +4988,7 @@ class _YeniYorumlarState extends State<Yorumlar> {
     unawaited(FirebaseFirestore.instance.collection('videos').doc(widget.videoId).get().then((d){
       if(mounted)setState(()=>icerikMeta=d.data()??<String,dynamic>{});
     }).catchError((_){ }));
-    unawaited(ref.limit(120).get(const GetOptions(source:Source.cache)).then((s){
+    unawaited(ref.limit(80).get(const GetOptions(source:Source.cache)).then((s){
       if(mounted&&s.docs.isNotEmpty)setState(()=>yorumOnbellek=s.docs.toList());
     }).catchError((_){ }));
   }
@@ -5078,26 +5084,36 @@ class _YeniYorumlarState extends State<Yorumlar> {
 
     try {
       final varMi = await likeRef.get();
+      final batch=FirebaseFirestore.instance.batch();
       if (varMi.exists) {
-        await likeRef.delete();
-        await yorumRef.set({'likeCount': FieldValue.increment(-1)}, SetOptions(merge:true));
+        batch.delete(likeRef);
+        batch.set(yorumRef,{
+          'likeCount':FieldValue.increment(-1),
+          'reactions.$uid':FieldValue.delete(),
+        },SetOptions(merge:true));
       } else {
-        await likeRef.set({
-          'uid': uid,
-          'createdAt': FieldValue.serverTimestamp(),
+        batch.set(likeRef,{
+          'uid':uid,
+          'createdAt':FieldValue.serverTimestamp(),
         });
-        await yorumRef.set({'likeCount': FieldValue.increment(1)}, SetOptions(merge:true));
+        batch.set(yorumRef,{
+          'likeCount':FieldValue.increment(1),
+          'reactions.$uid':'❤️',
+        },SetOptions(merge:true));
+      }
+      await batch.commit();
 
+      if(!varMi.exists){
         final yorumBelgesi = await yorumRef.get();
         final yorumSahibi = (yorumBelgesi.data()?['userId'] ?? '').toString();
         if (yorumSahibi.isNotEmpty && yorumSahibi != uid) {
-          await uygulamaBildirimiGonder(
+          unawaited(uygulamaBildirimiGonder(
             toUid: yorumSahibi,
             fromUid: uid,
             tur: 'like',
             metin: 'Yorumunu beğendi',
             belgeId: widget.videoId,
-          );
+          ).catchError((_){ }));
         }
       }
     } catch (e) {
@@ -5128,7 +5144,7 @@ class _YeniYorumlarState extends State<Yorumlar> {
       child: SizedBox(
         height: MediaQuery.of(context).size.height * .72,
         child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-          stream: ref.limit(120).snapshots(),
+          stream: ref.limit(80).snapshots(),
           builder: (_, snap) {
             final List<QueryDocumentSnapshot<Map<String, dynamic>>> tumu =
                 snap.data?.docs.toList() ??
@@ -5139,6 +5155,11 @@ class _YeniYorumlarState extends State<Yorumlar> {
               return bt.compareTo(at);
             });
             final ana = tumu.where((d) => (d.data()['parentId'] ?? '').toString().isEmpty).toList();
+            final yanitHaritasi=<String,List<QueryDocumentSnapshot<Map<String,dynamic>>>>{};
+            for(final x in tumu){
+              final parent=(x.data()['parentId']??'').toString();
+              if(parent.isNotEmpty)(yanitHaritasi[parent]??=<QueryDocumentSnapshot<Map<String,dynamic>>>[]).add(x);
+            }
             if (enCokBegenilen) {
               ana.sort((a, b) {
                 final al = (a.data()['likeCount'] as num?)?.toInt() ?? 0;
@@ -5159,11 +5180,12 @@ class _YeniYorumlarState extends State<Yorumlar> {
                     : ana.isEmpty
                         ? const Center(child: Text('İlk yorumu sen yaz ✨'))
                         : ListView.builder(
+                            keyboardDismissBehavior:ScrollViewKeyboardDismissBehavior.onDrag,
                             padding: const EdgeInsets.fromLTRB(14, 8, 14, 18),
                             itemCount: ana.length,
                             itemBuilder: (_, i) {
                               final d = ana[i]; final v = d.data();
-                              final yanitlar = tumu.where((x) => (x.data()['parentId'] ?? '') == d.id).toList();
+                              final yanitlar = yanitHaritasi[d.id] ?? <QueryDocumentSnapshot<Map<String,dynamic>>>[];
                               return YorumKarti(
                                 videoId: widget.videoId,
                                 icerikSahibiUid:(icerikMeta['ownerId']??'').toString(),
@@ -5428,7 +5450,9 @@ class YorumKarti extends StatelessWidget {
       }
     }
 
-    final likeStream = aktifUid==null?null:yorumBelgeRef.collection('likes').doc(aktifUid).snapshots();
+    final tepkiler=v['reactions'] is Map?Map<String,dynamic>.from(v['reactions'] as Map):<String,dynamic>{};
+    final secili=aktifUid!=null&&tepkiler.containsKey(aktifUid);
+    final begeniSayisi=(v['likeCount'] as num?)?.toInt()??0;
 
     return GestureDetector(
       onLongPress: yorumMenusu,
@@ -5500,26 +5524,19 @@ class YorumKarti extends StatelessWidget {
               ],
             ),
           ),
-          StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-            stream: likeStream,
-            builder: (_, snap) {
-              final secili = snap.data?.exists == true;
-              final sayi = (v['likeCount'] as num?)?.toInt() ?? 0;
-              return GestureDetector(
-                onTap: () => begen(yorumId, const []),
-                child: Column(
-                  children: [
-                    Icon(
-                      secili ? Icons.favorite : Icons.favorite_border,
-                      color: secili ? const Color(0xFFFF2D55) : Colors.black45,
-                      size: 22,
-                    ),
-                    if (sayi > 0)
-                      Text('$sayi', style: const TextStyle(fontSize: 11, color: Colors.black45)),
-                  ],
+          GestureDetector(
+            onTap: () => begen(yorumId, const []),
+            child: Column(
+              children: [
+                Icon(
+                  secili ? Icons.favorite : Icons.favorite_border,
+                  color: secili ? const Color(0xFFFF2D55) : Colors.black45,
+                  size: 22,
                 ),
-              );
-            },
+                if (begeniSayisi > 0)
+                  Text('$begeniSayisi', style: const TextStyle(fontSize: 11, color: Colors.black45)),
+              ],
+            ),
           ),
           IconButton(
             tooltip: 'Yorum seçenekleri',
@@ -5561,130 +5578,6 @@ class YorumKarti extends StatelessWidget {
     );
   }
 }
-
-class EskiYorumlar extends StatefulWidget {
-  final String videoId;
-
-  const EskiYorumlar({super.key, required this.videoId});
-
-  @override
-  State<EskiYorumlar> createState() => _YorumlarState();
-}
-
-class _YorumlarState extends State<EskiYorumlar> {
-  final yorum = TextEditingController();
-  bool gonderiliyor = false;
-
-  CollectionReference<Map<String, dynamic>> get yorumlar =>
-      FirebaseFirestore.instance
-          .collection('videos')
-          .doc(widget.videoId)
-          .collection('comments');
-
-  Future<void> yorumGonder() async {
-    final metin = yorum.text.trim();
-    final kullanici = FirebaseAuth.instance.currentUser;
-    if (metin.isEmpty || kullanici == null || gonderiliyor) return;
-    setState(() => gonderiliyor = true);
-    try {
-      final profil = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(kullanici.uid)
-          .get();
-      final veri = profil.data() ?? {};
-      final kullaniciAdi = (veri['username'] ?? kullanici.displayName ?? 'ngelx').toString();
-      await yorumlar.add({
-        'userId': kullanici.uid,
-        'username': kullaniciAdi,
-        'text': metin,
-        'createdAt': FieldValue.serverTimestamp(),
-      });
-      yorum.clear();
-    } finally {
-      if (mounted) setState(() => gonderiliyor = false);
-    }
-  }
-
-  @override
-  void dispose() {
-    yorum.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: SizedBox(
-        height: 430,
-        child: Column(
-          children: [
-            const Padding(
-              padding: EdgeInsets.all(16),
-              child: Text(
-                'Yorumlar',
-                style: TextStyle(
-                  fontSize: 19,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-            Expanded(
-              child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                stream: yorumlar.orderBy('createdAt', descending: true).snapshots(),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-                  final belgeler = snapshot.data?.docs ?? [];
-                  if (belgeler.isEmpty) {
-                    return const Center(child: Text('İlk yorumu sen yaz.'));
-                  }
-                  return ListView.builder(
-                    itemCount: belgeler.length,
-                    itemBuilder: (_, i) {
-                      final veri = belgeler[i].data();
-                      final ad = (veri['username'] ?? 'ngelx').toString();
-                      final metin = (veri['text'] ?? '').toString();
-                      return ListTile(
-                        leading: CircleAvatar(
-                          child: Text(ad.isEmpty ? 'N' : ad[0].toUpperCase()),
-                        ),
-                        title: Text('@$ad'),
-                        subtitle: Text(metin),
-                      );
-                    },
-                  );
-                },
-              ),
-            ),
-            Padding(
-              padding: EdgeInsets.all(12),
-              child: TextField(
-                controller: yorum,
-                onSubmitted: (_) => yorumGonder(),
-                decoration: InputDecoration(
-                  hintText: 'Yorum yaz...',
-                  suffixIcon: IconButton(
-                    onPressed: gonderiliyor ? null : yorumGonder,
-                    icon: gonderiliyor
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.send),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-const liveKitTestSunucuId = 'ngelx-g49q1h';
 
 class KesfetPage extends StatefulWidget {
   final bool gorunur;
@@ -17460,18 +17353,25 @@ class _ProfilTanitimVideoKartiState extends State<ProfilTanitimVideoKarti>{
   @override void dispose(){c?.dispose();super.dispose();}
   @override Widget build(BuildContext context){
     final x=c;
-    if(!hazir||x==null)return Container(height:180,decoration:BoxDecoration(color:const Color(0xFFF1F2F4),borderRadius:BorderRadius.circular(18)),child:const Center(child:CircularProgressIndicator(color:mor)));
-    return ClipRRect(
-      borderRadius:BorderRadius.circular(18),
-      child:AspectRatio(
-        aspectRatio:x.value.aspectRatio==0?16/9:x.value.aspectRatio,
-        child:Stack(fit:StackFit.expand,children:[
-          VideoPlayer(x),
-          Center(child:IconButton.filledTonal(
-            onPressed:(){setState((){x.value.isPlaying?x.pause():x.play();});},
-            icon:Icon(x.value.isPlaying?Icons.pause_rounded:Icons.play_arrow_rounded,size:36),
-          )),
-        ]),
+    if(!hazir||x==null)return Container(height:150,decoration:BoxDecoration(color:const Color(0xFFF1F2F4),borderRadius:BorderRadius.circular(18)),child:const Center(child:CircularProgressIndicator(color:mor)));
+    return SizedBox(
+      height:150,
+      width:double.infinity,
+      child:ClipRRect(
+        borderRadius:BorderRadius.circular(18),
+        child:ColoredBox(
+          color:Colors.black,
+          child:Stack(fit:StackFit.expand,children:[
+            Center(child:AspectRatio(
+              aspectRatio:x.value.aspectRatio==0?16/9:x.value.aspectRatio,
+              child:VideoPlayer(x),
+            )),
+            Center(child:IconButton.filledTonal(
+              onPressed:(){setState((){x.value.isPlaying?x.pause():x.play();});},
+              icon:Icon(x.value.isPlaying?Icons.pause_rounded:Icons.play_arrow_rounded,size:32),
+            )),
+          ]),
+        ),
       ),
     );
   }
@@ -17936,20 +17836,6 @@ class MedyaOnizleme extends StatelessWidget {
                   ),
                 ),
     ),
-  );
-}
-
-// V46: compatibility widget. It deliberately does not open the original MP4.
-class VideoIlkKare extends StatelessWidget {
-  final String url;
-  const VideoIlkKare({super.key, required this.url});
-  @override
-  Widget build(BuildContext context) => const Stack(
-    fit: StackFit.expand,
-    children: [
-      ColoredBox(color: Color(0xFFE9ECF2)),
-      Center(child: Icon(Icons.play_arrow_rounded, size: 48, color: Colors.black45)),
-    ],
   );
 }
 
@@ -18715,32 +18601,6 @@ class _JetonPaketi extends StatelessWidget{
       ]),
     ),
   );
-}
-
-class AyarlarPage extends StatelessWidget {
-  const AyarlarPage({super.key});
-  @override Widget build(BuildContext context){final misafir=FirebaseAuth.instance.currentUser?.isAnonymous==true;return Theme(data:ThemeData.light().copyWith(scaffoldBackgroundColor:Colors.white,appBarTheme:const AppBarTheme(backgroundColor:Colors.white,foregroundColor:Colors.black,elevation:0),cardTheme:const CardThemeData(color:Colors.white,elevation:0,margin:EdgeInsets.symmetric(vertical:4)),dividerColor:Color(0xFFE5E7EB)),child:Scaffold(appBar:AppBar(title:Text(t('settingsTitle'))),body:SafeArea(child:ListView(padding:const EdgeInsets.fromLTRB(14,8,14,24),children:[
-    if(!misafir)...[
-      ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:10,vertical:7),leading:const Icon(Icons.workspace_premium_rounded,color:ngelxPremiumPurple),title:Text(t('premiumWallet'),style:const TextStyle(fontWeight:FontWeight.bold,color:Colors.black87)),subtitle:Text(t('premiumWalletSub'),style:const TextStyle(color:Colors.black54)),trailing:const Icon(Icons.chevron_right,color:Colors.black87),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const NgelXPremiumPage()))),
-      ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:10,vertical:7),leading:const Icon(Icons.switch_account_rounded,color:mor),title:Text(t('switchAccount'),style:const TextStyle(fontWeight:FontWeight.bold,color:Colors.black87)),subtitle:Text(t('switchAccountSub'),style:TextStyle(color:Colors.black54)),trailing:const Icon(Icons.chevron_right,color:Colors.black87),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const HesapDegistirPage()))),
-      _ayar(context,Icons.lock_outline,'Gizlilik',t('privacy'),t('privacySub')),
-      ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:10,vertical:7),leading:const Icon(Icons.people_outline,color:mor),title:Text(t('followFriends'),style:const TextStyle(fontWeight:FontWeight.bold,color:Colors.black87)),subtitle:Text(t('followFriendsSub'),style:const TextStyle(color:Colors.black54)),trailing:const Icon(Icons.chevron_right,color:Colors.black87),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const ArkadaslarPage()))),
-      ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:10,vertical:7),leading:const Icon(Icons.block_outlined,color:mor),title:Text(t('blockedAccounts'),style:const TextStyle(fontWeight:FontWeight.bold,color:Colors.black87)),subtitle:Text(t('blockedAccountsSub'),style:const TextStyle(color:Colors.black54)),trailing:const Icon(Icons.chevron_right,color:Colors.black87),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const EngellenenlerPage()))),
-      _ayar(context,Icons.chat_bubble_outline,'Mesaj izinleri',t('messagePermissions'),t('messagePermissionsSub')),
-      _ayar(context,Icons.auto_stories_outlined,'Hikâye gizliliği',t('storyPrivacy'),t('storyPrivacySub')),
-      _ayar(context,Icons.notifications_outlined,'Bildirimler',t('notifications'),t('notificationsSub')),
-      ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:10,vertical:7),leading:const Icon(Icons.security_outlined,color:mor),title:Text(t('accountSecurity'),style:const TextStyle(fontWeight:FontWeight.bold,color:Colors.black87)),subtitle:Text(t('accountSecuritySub'),style:const TextStyle(color:Colors.black54)),trailing:const Icon(Icons.chevron_right,color:Colors.black87),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const HesapGuvenligiPage()))),
-      ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:10,vertical:7),leading:const Icon(Icons.devices_outlined,color:mor),title:Text(t('devices'),style:const TextStyle(fontWeight:FontWeight.bold,color:Colors.black87)),subtitle:Text(t('devicesSub'),style:const TextStyle(color:Colors.black54)),trailing:const Icon(Icons.chevron_right,color:Colors.black87),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const GirisGecmisiPage()))),
-      ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:10,vertical:7),leading:const Icon(Icons.support_agent,color:mor),title:Text(t('support'),style:const TextStyle(fontWeight:FontWeight.bold,color:Colors.black87)),subtitle:Text(t('supportSub'),style:const TextStyle(color:Colors.black54)),trailing:const Icon(Icons.chevron_right,color:Colors.black87),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const DestekPage()))),
-      _ayar(context,Icons.download_outlined,'İndirme izinleri',t('downloadPermissions'),t('downloadPermissionsSub')),
-    ],
-    const Divider(),
-    ListTile(leading:const Icon(Icons.system_update,color:mor),title:Text(t('appUpdates')),subtitle:Text('v$ngelxVersionName • ${t("build")} $ngelxBuildNumber'),trailing:const Icon(Icons.system_update_alt_rounded,color:Colors.green)),
-    ListTile(leading:const Icon(Icons.share,color:mavi),title:Text(t('shareNgelx')),subtitle:Text(t('shareNgelxSub')),onTap:()async=>SharePlus.instance.share(ShareParams(text:'Ngel X ile dünyanı paylaş ✨\nhttps://ngelx.app'))),
-    const Divider(),
-    ListTile(leading:const Icon(Icons.logout,color:Colors.red),title:Text(t('logout'),style:const TextStyle(color:Colors.red)),onTap:()async{final onay=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(title:Text(t('logoutQuestion')),content:Text(t('logoutInfo')),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:Text(t('cancel'))),FilledButton(onPressed:()=>Navigator.pop(c,true),child:Text(t('logout')))]));if(onay==true){try{await FirebaseAuth.instance.signOut().timeout(const Duration(seconds:8));ngelxKokRotayaDon();}on TimeoutException{if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Çıkış zaman aşımına uğradı. Tekrar dene.')));}catch(e){if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Çıkış yapılamadı: $e')));}}})
-  ]))));}
-  Widget _ayar(BuildContext c,IconData i,String kod,String baslik,String alt)=>Card(child:ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:10,vertical:7),onTap:()=>Navigator.push(c,MaterialPageRoute(builder:(_)=>TercihlerPage(baslik:kod))),leading:Icon(i,color:mor),title:Text(baslik,style:const TextStyle(fontWeight:FontWeight.bold,color:Colors.black87)),subtitle:Text(alt,style:const TextStyle(color:Colors.black54)),trailing:const Icon(Icons.chevron_right,color:Colors.black87)));
 }
 
 class HesapKurtarmaPage extends StatefulWidget{
@@ -19752,8 +19612,6 @@ class HikayeArsiviPage extends StatelessWidget{
     ));
   }
 }
-
-class ProfilBolumuPage extends StatelessWidget{final String baslik,aciklama;final IconData ikon;const ProfilBolumuPage({super.key,required this.baslik,required this.aciklama,required this.ikon});@override Widget build(BuildContext context)=>Theme(data:ThemeData.light(),child:Scaffold(backgroundColor:Colors.white,appBar:AppBar(title:Text(baslik,style:const TextStyle(fontWeight:FontWeight.w900))),body:Center(child:Padding(padding:const EdgeInsets.all(28),child:Column(mainAxisSize:MainAxisSize.min,children:[CircleAvatar(radius:38,backgroundColor:const Color(0xFFF1E9FF),child:Icon(ikon,color:mor,size:38)),const SizedBox(height:14),Text(aciklama,textAlign:TextAlign.center,style:const TextStyle(color:Colors.black54,fontSize:16))])))));}
 
 class IcerikGizlemePage extends StatelessWidget{
   final String videoId;
@@ -21032,73 +20890,6 @@ class RenkliButon extends StatelessWidget {
               fontWeight: FontWeight.bold,
             ),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class Istatistik extends StatelessWidget {
-  final String sayi;
-  final String yazi;
-  final VoidCallback? tiklama;
-
-  const Istatistik(this.sayi, this.yazi, {super.key,this.tiklama});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(onTap:tiklama,child:Column(
-      children: [
-        Text(
-          sayi,
-          style: const TextStyle(
-            fontSize: 19,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        Text(
-          yazi,
-          style: const TextStyle(color: Colors.white54),
-        ),
-      ],
-    ));
-  }
-}
-
-class BosEkran extends StatelessWidget {
-  final IconData ikon;
-  final String baslik;
-  final String aciklama;
-
-  const BosEkran({
-    super.key,
-    required this.ikon,
-    required this.baslik,
-    required this.aciklama,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(ikon, size: 65, color: mavi),
-            const SizedBox(height: 18),
-            Text(
-              baslik,
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 7),
-            Text(
-              aciklama,
-              style: const TextStyle(color: Colors.white54),
-            ),
-          ],
         ),
       ),
     );
