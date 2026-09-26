@@ -1,4 +1,4 @@
-name: NgelX V60 Group Final UX
+name: NgelX V61 Group QA Final
 
 on:
   push:
@@ -15,7 +15,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: ngelx-v60-group-final-ux
+  group: ngelx-v61-group-qa-final
   cancel-in-progress: true
 
 jobs:
@@ -42,10 +42,10 @@ jobs:
       - name: NgelX sozlesmesini dogrula
         run: python3 tools/verify_ngelx_contract.py
 
-      - name: V60 grup final hedeflerini dogrula
+      - name: V61 grup QA hedeflerini dogrula
         shell: bash
         run: |
-          grep -q "version: 1.0.60+279" app/pubspec.yaml
+          grep -q "version: 1.0.61+280" app/pubspec.yaml
           grep -q "bool ngelxPresenceOnline" app/lib/main.dart
           grep -q "Profili görüntüle" app/lib/main.dart
           grep -q "final sadeMedya=" app/lib/main.dart
@@ -56,6 +56,21 @@ jobs:
           grep -q "kişi için onay iste" app/lib/main.dart
           grep -q "Gruptan ayrıldın" app/lib/main.dart
           grep -q "gorulenIds.take(4)" app/lib/main.dart
+          grep -q "replyToMediaUrl" app/lib/main.dart
+          grep -q "NgelXReplyMediaPreview" app/lib/main.dart
+          grep -q "Icons.replay_10_rounded" app/lib/main.dart
+          grep -q "Icons.forward_10_rounded" app/lib/main.dart
+          grep -q "backgroundVersion" app/lib/main.dart
+          grep -q "nickname_changed" app/lib/main.dart
+          grep -q "VideoParametersPresets.h360_169" app/lib/main.dart
+          grep -q "Mesajı sabitle" app/lib/main.dart
+          grep -q "group_archives" app/lib/group_quality.dart
+          grep -q "deliveredTo" app/lib/group_quality.dart
+          grep -q "seenBy" app/lib/group_quality.dart
+          grep -q "match /group_archives/{uid}/items/{chatId}" firestore.rules
+
+      - name: V61 test edilen grup sorunlarini tek tek dogrula
+        run: python3 tools/verify_v61_group_qa.py
 
       - name: R2 Worker JavaScript kontrolu
         run: node --check cloudflare/worker/src/index.js
@@ -117,7 +132,7 @@ jobs:
       - name: APK yukle
         uses: actions/upload-artifact@v4
         with:
-          name: NgelX-V60-GROUP-FINAL-UX-APK
+          name: NgelX-V61-GROUP-QA-APK
           path: app/build/app/outputs/flutter-apk/app-debug.apk
           if-no-files-found: error
           retention-days: 14
