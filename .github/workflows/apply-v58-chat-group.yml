@@ -1,0 +1,65 @@
+name: Apply NgelX V58 Chat Group Fixes
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/apply-v58-chat-group.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ngelx-v58-apply
+  cancel-in-progress: true
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Kaynaklari al
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Flutter kur
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: V58 yamalarini uygula
+        run: python3 tools/patch_v58_chat_group.py
+
+      - name: Paketleri kur
+        working-directory: app
+        run: flutter pub get
+
+      - name: Kod analizi
+        working-directory: app
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
+
+      - name: Hedef degisiklikleri dogrula
+        shell: bash
+        run: |
+          grep -q "version: 1.0.58+277" app/pubspec.yaml
+          grep -q "TextFormField(" app/lib/main.dart
+          grep -q "member_removed" app/lib/main.dart
+          grep -q "PopupMenuButton<String>" app/lib/main.dart
+          grep -q "backgroundUrl':url" app/lib/main.dart
+          grep -q "Yalnızca grup kurucusu ve yöneticiler üye ekleyebilir" app/lib/main.dart
+
+      - name: V58 degisikliklerini kaydet
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/lib/main.dart app/pubspec.yaml app/pubspec.lock
+          if git diff --cached --quiet; then
+            echo "Uygulanacak değişiklik bulunamadı."
+            exit 1
+          fi
+          git commit -m "Fix V58 chat and group QA issues"
+          git push
