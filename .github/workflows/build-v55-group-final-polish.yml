@@ -1,4 +1,4 @@
-name: NgelX V61 Group QA Final
+name: NgelX V62 Performance Repair
 
 on:
   push:
@@ -15,7 +15,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: ngelx-v61-group-qa-final
+  group: ngelx-v62-performance-repair
   cancel-in-progress: true
 
 jobs:
@@ -42,10 +42,10 @@ jobs:
       - name: NgelX sozlesmesini dogrula
         run: python3 tools/verify_ngelx_contract.py
 
-      - name: V61 grup QA hedeflerini dogrula
+      - name: V62 grup QA ve performans hedeflerini dogrula
         shell: bash
         run: |
-          grep -q "version: 1.0.61+280" app/pubspec.yaml
+          grep -q "version: 1.0.62+281" app/pubspec.yaml
           grep -q "bool ngelxPresenceOnline" app/lib/main.dart
           grep -q "Profili görüntüle" app/lib/main.dart
           grep -q "final sadeMedya=" app/lib/main.dart
@@ -135,7 +135,7 @@ jobs:
       - name: APK yukle
         uses: actions/upload-artifact@v4
         with:
-          name: NgelX-V61-GROUP-QA-APK
+          name: NgelX-V62-PERFORMANCE-APK
           path: app/build/app/outputs/flutter-apk/app-debug.apk
           if-no-files-found: error
           retention-days: 14
