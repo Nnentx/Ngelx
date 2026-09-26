@@ -17182,3 +17182,1749 @@ class GrupAyarlarPage extends StatelessWidget{
     final uid=me;if(uid==null)return;
     final c=TextEditingController();
     final neden=await showDialog<String
+
+===== NEEDLE: final gonderenBasligi =====
+
+
+--- HIT 1 INDEX 491808 ---
+
+için dokun'
+        :cevapsiz
+          ?'Geri aramak için dokun'
+          :(sureYazi.isEmpty?'Arama sona erdi':'Arama sona erdi • '+sureYazi);
+      return Align(
+        alignment:Alignment.centerRight,
+        child:Container(
+          width:MediaQuery.sizeOf(context).width*.68,
+          margin:const EdgeInsets.symmetric(vertical:7),
+          padding:const EdgeInsets.all(13),
+          decoration:BoxDecoration(
+            color:Colors.white.withValues(alpha:.96),
+            borderRadius:BorderRadius.circular(22),
+            border:Border.all(color:ngelxGroupBorder),
+            boxShadow:const [BoxShadow(color:Color(0x16000000),blurRadius:14,offset:Offset(0,6))],
+          ),
+          child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+            Row(children:[
+              CircleAvatar(
+                radius:21,
+                backgroundColor:cevapsiz?const Color(0xFFFF4B55):const Color(0xFFB8B8B8),
+                child:Icon(goruntulu?Icons.videocam_rounded:Icons.call_rounded,color:Colors.white,size:23),
+              ),
+              const SizedBox(width:10),
+              Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+                Text(baslik,maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Color(0xFF202124),fontSize:14,fontWeight:FontWeight.w900)),
+                const SizedBox(height:2),
+                Text(alt,style:const TextStyle(color:Color(0xFF777777),fontSize:11.5,fontWeight:FontWeight.w600)),
+              ])),
+            ]),
+            if(aktif||cevapsiz)...[
+              const SizedBox(height:10),
+              FilledButton(
+                style:FilledButton.styleFrom(
+                  backgroundColor:const Color(0xFFF5F5F5),
+                  foregroundColor:const Color(0xFF1F1F1F),
+                  elevation:0,
+                  shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(15)),
+                ),
+                onPressed:()async{
+                  if(aktif){
+                    final grup=await chatRef.get();
+                    if(!mounted)return;
+                    await aktifGrupAramasinaKatil(grup.data()??<String,dynamic>{});
+                  }else{
+                    await aramaBaslat(goruntulu);
+                  }
+                },
+                child:Text(aktif?(goruntulu?'Görüntülü grup aramasına katıl':'Sesli grup aramasına katıl'):'Tekrar Ara',maxLines:1,overflow:TextOverflow.ellipsis),
+              ),
+            ],
+          ]),
+        ),
+      );
+    }
+
+    final yeniBlok=_mesajYeniBlok(d,onceki);
+    final gonderenBasligi=!ben&&yeniBlok?(gonderen.isEmpty?null:FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(
+      future:_uyeGetir(gonderen),
+      builder:(_,u){
+        final p=u.data?.data()??<String,dynamic>{},pf=(p['photoUrl']??'').toString();
+        final varsayilan=(p['displayName']??p['username']??'Üye').toString();
+        final takma=(grupVerisi?['nickname_$gonderen']??'').toString().trim();
+        final isim=takma.isEmpty?varsayilan:takma;
+        return Padding(
+          padding:const EdgeInsets.only(left:2,bottom:5),
+          child:Row(mainAxisSize:MainAxisSize.min,children:[
+            CircleAvatar(radius:10,backgroundColor:ngelxGroupGreenSoft,backgroundImage:pf.isEmpty?null:CachedNetworkImageProvider(pf),child:pf.isEmpty?const Icon(Icons.person,size:11,color:ngelxGroupGreen):null),
+            const SizedBox(width:6),
+            Flexible(child:Text(isim,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Color(0xFF187A3D),fontSize:11.3,fontWeight:FontWeight.w900))),
+          ]),
+        );
+      },
+    )):null;
+
+    final yaziRengi=ben?Colors.white:const Color(0xFF211B2C);
+    final tepkiSayilari=<String,int>{};
+    for(final e in tepkiler.values){
+      final k=e.toString();
+      if(k.isNotEmpty)tepkiSayilari[k]=(tepkiSayilari[k]??0)+1;
+    }
+
+    return Align(
+      alignment:ben?Alignment.centerRight:Alignment.centerLeft,
+      child:Column(
+        crossAxisAlignment:ben?CrossAxisAlignment.end:CrossAxisAlignment.start,
+        children:[
+          if(gonderenBasligi!=null)gonderenBasligi,
+          if(v['forwarded']==true)Padding(
+            padding:EdgeInsets.only(left:ben?0:8,right:ben?8:0,bottom:3),
+            child:Row(mainAxisSize:MainAxisSize.min,children:[
+              Icon(Icons.forward_rounded,size:13,color:ben?ngelxPremiumMuted:ngelxGroupGreen),
+              const SizedBox(width:4),
+              Text('İletildi',style:TextStyle(color:ben?ngelxPremiumMuted:ngelxGroupGreen,fontSize:10.5,fontWeight:FontWeight.w700)),
+            ]),
+          ),
+          if(yanit.isNotEmpty&&yanitGonderen.isNotEmpty)Padding(
+            padding:EdgeInsets.only(left:ben?0:8,right:ben?8:0,bottom:3),
+            child:Row(mainAxisSize:MainAxisSize.min,children:[
+              Icon(Icons.reply_rounded,size:14,color:ben?ngelxPremiumMuted:ngelxGroupGreen),
+              const SizedBox(width:4),
+              Text(
+                ben?yanitGonderen+'’a yanıt verdin':yanitGonderen+'’a yanıt verdi',
+                style:TextStyle(color:ben?ngelxPremiumMuted:ngelxGroupGreen,fontSize:10.8,fontWeight:FontWeight.w700),
+              ),
+            ]),
+          ),
+          GestureDetector(
+            behavior:HitTestBehavior.opaque,
+            onLongPress:()=>mesajMenusu(d),
+            onDoubleTap:()=>grupKalpBirak(d),
+            onHorizontalDragEnd:(detay){
+              final hiz=detay.primaryVelocity??0;
+              if(hiz>360)unawaited(grupYanitiHazirla(d));
+            },
+            onTap:(tur=='photo'||tur=='gif')&&media.isNotEmpty
+              ? ()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>TamEkranMedyaPage(url:media)))
+              : tur=='video'&&media.isNotEmpty
+                ? ()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>TamEkranVideoPage(url:media)))
+              : tur=='file'&&fileUrl.isNotEmpty
+                ? ()=>grupDosyayiPaylas(v)
+                : tur=='location'
+                  ? ()async{await Clipboard.setData(ClipboardData(text:locationText));if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Konum metni kopyalandı.')));}
+                  : linkUrl.isNotEmpty
+                    ? ()async{
+                        await Clipboard.setData(ClipboardData(text:linkUrl));
+                        if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bağlantı kopyalandı.')));
+                      }
+                    : null,
+            child:Container(
+              constraints:BoxConstraints(maxWidth:MediaQuery.sizeOf(context).width*.72),
+              margin:EdgeInsets.only(top:yeniBlok?3:1,bottom:tepkiSayilari.isEmpty?2:0,left:2,right:2),
+              padding:sadeceEmoji?const EdgeInsets.symmetric(horizontal:3,vertical:2):EdgeInsets.all((tur=='photo'||tur=='gif')?4:9),
+              decoration:BoxDecoration(
+                gradient:sadeceEmoji?null:(ben?const LinearGradient(colors:[Color(0xFF14AE52),Color(0xFF078B3B)],begin:Alignment.topLeft,end:Alignment.bottomRight):null),
+                color:sadeceEmoji?Colors.transparent:(ben?null:const Color(0xFFDDF3E4).withValues(alpha:.98)),
+                borderRadius:BorderRadius.only(
+                  topLeft:Radius.circular(yeniBlok?18:12),
+                  topRight:Radius.circular(yeniBlok?18:12),
+                  bottomLeft:Radius.circular(ben?18:6),
+                  bottomRight:Radius.circular(ben?6:18),
+                ),
+                border:sadeceEmoji?null:(ben?null:Border.all(color:const Color(0xFFCBE7D4))),
+                boxShadow:sadeceEmoji?null:(yeniBlok?const [BoxShadow(color:Color(0x0C000000),blurRadius:8,offset:Offset(0,3))]:null),
+              ),
+              child:Column(mainAxisSiz
+
+===== NEEDLE: class GrupDavetPage extends =====
+
+
+--- HIT 1 INDEX 711486 ---
+
+10),
+                ...ids.map((id)=>FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(
+                  future:FirebaseFirestore.instance.collection('users').doc(id).get(),
+                  builder:(_,u){
+                    final p=u.data?.data()??<String,dynamic>{};
+                    final isim=(p['displayName']??p['username']??'Kullanıcı').toString();
+                    final username=(p['username']??'').toString();
+                    if(sorgu.isNotEmpty&&!isim.toLowerCase().contains(sorgu)&&!username.toLowerCase().contains(sorgu))return const SizedBox.shrink();
+                    final foto=(p['photoUrl']??'').toString(),admin=admins.contains(id),online=p['isOnline']==true||p['online']==true,hedefKurucu=id==kurucu;
+                    final menuVar=hedefKurucu||yonetici;
+                    return NgelXPremiumCard(
+                      margin:const EdgeInsets.only(bottom:8),
+                      padding:const EdgeInsets.symmetric(horizontal:10,vertical:7),
+                      child:ListTile(
+                        dense:true,contentPadding:EdgeInsets.zero,
+                        onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciProfilPage(uid:id))),
+                        onLongPress:menuVar?()=>_uyeIslemi(id,isim,admin,yonetici,kurucu):null,
+                        leading:Stack(children:[
+                          CircleAvatar(radius:23,backgroundColor:ngelxGroupGreenSoft,backgroundImage:foto.isEmpty?null:CachedNetworkImageProvider(foto),child:foto.isEmpty?const Icon(Icons.person_rounded,color:ngelxGroupGreen):null),
+                          if(online)const Positioned(right:0,bottom:0,child:CircleAvatar(radius:5.5,backgroundColor:Colors.white,child:CircleAvatar(radius:3.5,backgroundColor:Color(0xFF21C76A)))),
+                        ]),
+                        title:Text(isim,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w800)),
+                        subtitle:Text(hedefKurucu?'KURUCU • Yönetici':admin?'Yönetici':online?'Çevrimiçi':'Grup üyesi',style:TextStyle(color:(hedefKurucu||admin)?ngelxGroupGreen:ngelxPremiumMuted,fontSize:11.5,fontWeight:(hedefKurucu||admin)?FontWeight.w800:FontWeight.w600)),
+                        trailing:menuVar?IconButton(onPressed:()=>_uyeIslemi(id,isim,admin,yonetici,kurucu),icon:const Icon(Icons.more_horiz_rounded,color:ngelxPremiumMuted)):null,
+                      ),
+                    );
+                  },
+                )),
+              ],
+            )),
+          ]);
+        },
+      ),
+    ),
+  );
+}
+class GrupDavetPage extends StatefulWidget{
+  final String chatId;
+  const GrupDavetPage({super.key,required this.chatId});
+  @override State<GrupDavetPage> createState()=>_GrupDavetPageState();
+}
+class _GrupDavetPageState extends State<GrupDavetPage>{
+  DocumentReference<Map<String,dynamic>> get ref=>FirebaseFirestore.instance.collection('chats').doc(widget.chatId);
+  String kod='';
+  String ad='Grup';
+  bool yukleniyor=true,yonetici=false;
+  @override void initState(){super.initState();_hazirla();}
+
+  String _yeniKod(){
+    final ham=base64Url.encode(utf8.encode(widget.chatId+':'+DateTime.now().microsecondsSinceEpoch.toString())).replaceAll('=','');
+    return ham.length>12?ham.substring(0,12):ham;
+  }
+  String get link=>ngelxWebAdresi+'/join/'+kod;
+
+  Future<void> _hazirla()async{
+    try{
+      var d=await ref.get(),v=d.data()??<String,dynamic>{};
+      final me=FirebaseAuth.instance.currentUser?.uid;
+      ad=(v['groupName']??'Grup').toString();
+      yonetici=List<String>.from(v['admins']??const[]).contains(me);
+      kod=(v['inviteCode']??'').toString();
+      if(kod.isEmpty){
+        if(!yonetici){
+          if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Davet bağlantısını önce bir grup yöneticisi oluşturmalı.')));
+          return;
+        }
+        kod=_yeniKod();
+        await ref.set({'inviteCode':kod,'inviteUpdatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
+        d=await ref.get();
+        v=d.data()??<String,dynamic>{};
+      }
+      await ngelxGrupDavetMetaSenkronla(ref);
+    }finally{
+      if(mounted)setState(()=>yukleniyor=false);
+    }
+  }
+
+  Future<void> _yenile()async{
+    if(!yonetici)return;
+    final ok=await showDialog<bool>(
+      context:context,
+      builder:(c)=>AlertDialog(
+        shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(28)),
+        backgroundColor:Colors.white,surfaceTintColor:Colors.white,
+        icon:Container(width:56,height:56,decoration:BoxDecoration(color:ngelxGroupGreenSoft,borderRadius:BorderRadius.circular(18)),child:const Icon(Icons.refresh_rounded,color:ngelxGroupGreen,size:29)),
+        title:const Text('Davet bağlantısı yenilensin mi?',textAlign:TextAlign.center,style:TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w900)),
+        content:const Text('Eski bağlantı artık kullanılamayacak. Yeni bağlantıyı tekrar paylaşman gerekir.',textAlign:TextAlign.center,style:TextStyle(color:ngelxPremiumMuted,height:1.4)),
+        actions:[
+          TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),
+          FilledButton(style:FilledButton.styleFrom(backgroundColor:ngelxGroupGreen),onPressed:()=>Navigator.pop(c,true),child:const Text('Yenile')),
+        ],
+      ),
+    )??false;
+    if(!ok)return;
+    final eski=kod;
+    final yeni=_yeniKod();
+    await ref.set({'inviteCode':yeni,'inviteUpdatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
+    if(mounted)setState(()=>kod=yeni);
+    await ngelxGrupDavetMetaSenkronla(ref);
+    if(eski.isNotEmpty&&eski!=yeni){
+      try{await FirebaseFirestore.instance.collection('group_invites').doc(eski).delete();}catch(_){}
+    }
+  }
+
+  @override Widget build(BuildContext context)=>Theme(
+    data:ThemeData.light().copyWith(colorScheme:ColorScheme.fromSeed(seedColor:ngelxPremiumPurple)),
+    child:Scaffold(
+      backgroundColor:const Color(0xFFFBF9FF),
+      appBar:AppBar(
+        backgroundColor:Colors.transparent,surfaceTintColor:Colors.transparent,elevation:0,
+        title:const Text('Davet bağlantısı',style:TextStyle(fontWeight:FontWeight.w900,color:ngelxPremiumInk)),
+        flexibleSpace:Container(decoration:const BoxDecoration(gradient:LinearGradient(colors:[Color(0xFFFFFFFF),Color(0xFFF5EFFF)]),borderRadius:BorderRadius.vertical(bottom:Radius.circular(24)))),
+      ),
+      body:yukleniyor?const Center(child:CircularProgressIndicator(color:ngelxPremiumPurple)):ListView(
+        padding:const EdgeInsets.fromLTRB(14,18,14,30),
+        children:[
+          NgelXPremiumCard(
+            padding:const EdgeInsets.fromLTRB(18,24,18,22),
+            child:Column(children:[
+              Container(width:74,height:74,decoration:BoxDecoration(color:const Color(0xFFF0E8FF),borderRadius:BorderRadius.circular(25)),child:const Icon(Icons.group_add_rounded,color:ngelxPremiumPurple,size:38)),
+              const SizedBox(height:14),
+              Text(ad,textAlign:TextAlign.center,style:const TextStyle(color:ngelxPremiumInk,fontSize:20,fontWeight:FontWeight.w900)),
+              const SizedBox(height:5),
+              const Text('Bağlantıyı paylaşarak gruba davet et.',style:TextStyle(color:ngelxPremiumMuted,fontSize:12,fontWeight:FontWeight.w600)),
+            ]),
+          ),
+          const SizedBox(height:14),
+          NgelXPremiumCard(
+            padding:const EdgeInsets.all(14),
+            child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+              const Text('Davet bağlantısı',style:TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w900)),
+              const SizedBox(height:10),
+              Container(
+                padding:const EdgeInsets.symmetric(horizontal:12,vertical:11),
+      
+
+===== NEEDLE: Future<void> _paylas =====
+
+NO HIT
+
+
+===== NEEDLE: Share.share =====
+
+NO HIT
+
+
+===== NEEDLE: SharePlus.instance =====
+
+
+--- HIT 1 INDEX 200578 ---
+
+ure<void> ngelxPaylasimMenusu(
+  BuildContext context, {
+  required String icerikId,
+  required String aciklama,
+}) async {
+  try{
+    final d=await FirebaseFirestore.instance.collection('videos').doc(icerikId).get();
+    final v=d.data()??<String,dynamic>{};
+    final sahibi=(v['ownerId']??'').toString();
+    final ben=FirebaseAuth.instance.currentUser?.uid;
+    if(v['allowReshare']==false&&ben!=sahibi){
+      if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bu içerik yeniden paylaşıma kapalı.')));
+      return;
+    }
+  }catch(_){}
+  final link = ngelxIcerikLink(icerikId);
+  final metin = [
+    'NgelX’te bunu gördüm ✨',
+    if (aciklama.trim().isNotEmpty) aciklama.trim(),
+    '',
+    'İçeriğe bak: $link',
+    'NgelX: $ngelxWebAdresi',
+  ].join('\n');
+
+  await showModalBottomSheet<void>(
+    context: context,
+    backgroundColor: Colors.white,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+    ),
+    builder: (c) => Theme(
+      data: ThemeData.light(),
+      child: SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 42,
+              height: 4,
+              margin: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.black26,
+                borderRadius: BorderRadius.circular(9),
+              ),
+            ),
+            const ListTile(
+              title: Text(
+                'Paylaş',
+                style: TextStyle(color: Colors.black, fontSize: 20, fontWeight: FontWeight.w900),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.forum_rounded, color: mor),
+              title: const Text(
+                'NgelX içinde özele gönder',
+                style: TextStyle(color: Colors.black87, fontWeight: FontWeight.w800),
+              ),
+              onTap: () {
+                Navigator.pop(c);
+                ngelxOzeldenPaylas(context, icerikId: icerikId, aciklama: aciklama);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.share_rounded, color: Color(0xFF20B86A)),
+              title: const Text(
+                'WhatsApp / diğer uygulamalar',
+                style: TextStyle(color: Colors.black87, fontWeight: FontWeight.w800),
+              ),
+              subtitle: const Text(ngelxWebAdresi, style: TextStyle(color: Colors.black54)),
+              onTap: () async {
+                Navigator.pop(c);
+                await SharePlus.instance.share(
+                  ShareParams(text: metin, title: 'NgelX paylaşımı'),
+                );
+                await FirebaseFirestore.instance.collection('videos').doc(icerikId).set(
+                  {'shareCount': FieldValue.increment(1)},
+                  SetOptions(merge: true),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.link_rounded, color: Colors.blue),
+              title: const Text(
+                'Bağlantıyı kopyala',
+                style: TextStyle(color: Colors.black87, fontWeight: FontWeight.w800),
+              ),
+              subtitle: Text(link, style: const TextStyle(color: Colors.black54)),
+              onTap: () async {
+                await Clipboard.setData(ClipboardData(text: link));
+                if (c.mounted) Navigator.pop(c);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('NgelX bağlantısı kopyalandı ✅')),
+                  );
+                }
+              },
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+Future<bool> ngelxBegeniDurumuOku(String contentId,User user) async {
+  if(contentId.isEmpty)return false;
+  final video=FirebaseFirestore.instance.collection('videos').doc(contentId);
+  try{
+    final d=await video.collection('likes').doc(user.uid).get();
+    if(d.exists)return true;
+  }on FirebaseException catch(e){
+    if(e.code!='permission-denied')rethrow;
+  }catch(_){}
+
+  try{
+    final profil=await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+    final liste=List<String>.from(profil.data()?['likedContent']??const[]);
+    if(liste.contains(contentId))return true;
+  }catch(_){}
+
+  try{
+    final hafiza=await SharedPreferences.getInstance();
+    final liste=hafiza.getStringList('ngelx_liked_'+user.uid)??const <String>[];
+    return liste.contains(contentId);
+  }catch(_){
+    return false;
+  }
+}
+
+Future<void> ngelxBegeniDurumuYaz({
+  required String contentId,
+  required User user,
+  required bool begen,
+}) async {
+  if(contentId.isEmpty)return;
+  final userRef=FirebaseFirestore.instance.collection('users').doc(user.uid);
+  var profilYazildi=false;
+  try{
+    await userRef.set({
+      'likedContent':begen
+        ?FieldValue.arrayUnion([contentId])
+        :FieldValue.arrayRemove([contentId]),
+    },SetOptions(merge:true));
+    profilYazildi=true;
+  }catch(_){}
+
+  if(!profilYazildi){
+    final hafiza=await SharedPreferences.getInstance();
+    final anahtar='ngelx_liked_'+user.uid;
+    final mevcut=<String>{...(hafiza.getStringList(anahtar)??const <String>[])};
+    if(begen)mevcut.add(contentId);else mevcut.remove(contentId);
+    await hafiza.setStringList(anahtar,mevcut.toList());
+  }
+
+  final video=FirebaseFirestore.instance.collection('videos').doc(contentId);
+  final like=video.collection('likes').doc(user.uid);
+  try{
+    if(begen){
+      await like.set({'userId':user.uid,'createdAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
+    }else{
+      await like.delete();
+    }
+  }catch(_){}
+
+  try{
+    await video.set({
+      'likeCount':FieldValue.increment(begen?1:-1),
+    },SetOptions(merge:true));
+  }catch(_){}
+}
+
+class GorselYaziKarti extends StatefulWidget {
+  final Map<String, String> veri;
+  final bool aktif;
+  const GorselYaziKarti({super.key, required this.veri, required this.aktif});
+
+  @override
+  State<GorselYaziKarti> createState() => _GorselYaziKartiState();
+}
+
+class _GorselYaziKartiState extends State<GorselYaziKarti> {
+  AudioPlayer? oynatici;
+  bool begenildi = false;
+  bool kaydedildi = false;
+  bool indiriliyor = false;
+  bool kalpAnimasyonu = false;
+  bool begeniIsleniyor = false;
+  bool kaydetIsleniyor = false;
+  int medyaSayfasi = 0;
+
+  String get icerikId => widget.veri['id'] ?? '';
+  bool get indirilebilir => widget.veri['allowDownload'] != 'false' || FirebaseAuth.instance.currentUser?.uid == widget.veri['ownerId'];
+
+  @override
+  void initState() {
+    super.initState();
+    etkilesimleriGetir();
+    final ses = widget.veri['audioUrl'] ?? '';
+    if (ses.isNotEmpty) {
+      oynatici = AudioPlayer();
+      oynatici!.setUrl(ses).then((_) {
+        oynatici!.setLoopMode(LoopMode.one);
+        if (widget.aktif) oynatici!.play();
+      });
+    }
+  }
+
+  Future<void> etkilesimleriGetir() async {
+    final user=FirebaseAuth.instance.currentUser;
+    if(user==null||icerikId.isEmpty)return;
+    final begeni=await ngelxBegeniDurumuOku(icerikId,user);
+    var kayit=false;
+    try{
+      kayit=(await FirebaseFirestore.instance.collection('users').doc(user.uid).collection('saved').doc(icerikId).get()).exists;
+    }catch(_){}
+    if(!mounted)return;
+    setState(() {
+      begenildi=begeni;
+      kaydedildi=kayit;
+    });
+  }
+
+  Future<void> icerigiKaydet() async {
+    if(kaydetIsleniyor)return;
+    if(await misafirEngeli(context))return;
+    final user=FirebaseAuth.instance.currentUser;
+    if(user==null||icerikId.isEmpty)return;
+    final ref=FirebaseFirestore.instance.collection('users').doc(user.uid).collection('saved').doc(icerikId);
+    final yeni=!kaydedildi;
+    kaydetIsleniyor=true;
+    setState(()=>kaydedild
+
+--- HIT 2 INDEX 437837 ---
+
+sya:x,
+        kind:'videos',
+        ext:uzanti,
+        legacyPath:'groups/'+widget.chatId+'/'+DateTime.now().millisecondsSinceEpoch.toString()+'.'+uzanti,
+        contentType:uzanti=='mov'?'video/quicktime':'video/mp4',
+        onProgress:(sent,total)=>_medyaIlerlemeGuncelle('Video yükleniyor',sent,total),
+      ).timeout(const Duration(minutes:3));
+      await payloadGonder({'type':'video','mediaUrl':url},'🎥 Video');
+    }catch(_){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Video gönderilemedi. Tekrar dene.')));
+    }finally{
+      _medyaIlerlemeBitir();
+    }
+  }
+
+  Future<void> gifGonder()async{const tur=XTypeGroup(label:'GIF',extensions:['gif']);final x=await openFile(acceptedTypeGroups:[tur]);if(x==null)return;try{final yol='groups/${widget.chatId}/${DateTime.now().millisecondsSinceEpoch}.gif';final bytes=await x.readAsBytes().timeout(const Duration(seconds:8));final url=await ngelxMedyaYukleBytes(bytes:bytes,kind:'gifs',ext:'gif',legacyPath:yol,contentType:'image/gif').timeout(const Duration(seconds:12));await payloadGonder({'type':'gif','mediaUrl':url},'GIF');}catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('GIF gönderilemedi.')));}}
+  Future<void> grupDosyaGonder()async{
+    final x=await openFile();
+    if(x==null)return;
+    try{
+      final boyut=await x.length();
+      if(boyut>30*1024*1024)throw Exception('Dosya 30 MB’den küçük olmalı.');
+      final ad=x.name.isEmpty?'dosya':x.name;
+      final uzanti=ad.contains('.')?ad.split('.').last.toLowerCase():'bin';
+      final url=await ngelxMedyaYukleDosya(
+        dosya:x,
+        kind:'chat-files',
+        ext:uzanti,
+        legacyPath:'chat-files/'+widget.chatId+'/'+DateTime.now().millisecondsSinceEpoch.toString()+'_'+ad,
+        onProgress:(sent,total)=>_medyaIlerlemeGuncelle('Dosya yükleniyor',sent,total),
+      ).timeout(const Duration(minutes:3));
+      await payloadGonder({'type':'file','fileUrl':url,'fileName':ad,'fileSize':boyut},'📎 '+ad);
+    }catch(_){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Dosya gönderilemedi. Tekrar dene.')));
+    }finally{
+      _medyaIlerlemeBitir();
+    }
+  }
+
+  Future<void> grupDosyayiPaylas(Map<String,dynamic> v)async{
+    final url=(v['fileUrl']??'').toString();
+    if(url.isEmpty)return;
+    try{
+      final dir=await getTemporaryDirectory();
+      final ad=(v['fileName']??'NgelX_dosya').toString().replaceAll(RegExp(r'[\\/:*?"<>|]'),'_');
+      final yol=dir.path+'/'+ad;
+      await Dio().download(url,yol);
+      await SharePlus.instance.share(ShareParams(files:[XFile(yol)],text:'NgelX grup dosyası: '+ad));
+    }catch(_){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Dosya açılamadı.')));
+    }
+  }
+
+  Future<void> grupKonumGonder()async{
+    final c=TextEditingController();
+    final sonuc=await showDialog<String>(
+      context:context,
+      builder:(x)=>Theme(
+        data:ThemeData.light().copyWith(colorScheme:ColorScheme.fromSeed(seedColor:ngelxGroupGreen)),
+        child:AlertDialog(
+          shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(28)),
+          backgroundColor:Colors.white,surfaceTintColor:Colors.white,
+          icon:Container(width:54,height:54,decoration:BoxDecoration(color:ngelxGroupGreenSoft,borderRadius:BorderRadius.circular(18)),child:const Icon(Icons.location_on_rounded,color:ngelxGroupGreen)),
+          title:const Text('Konum paylaş',textAlign:TextAlign.center,style:TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w900)),
+          content:TextField(
+            controller:c,autofocus:true,maxLength:160,maxLines:3,
+            decoration:InputDecoration(
+              hintText:'Konum veya adres yaz',
+              filled:true,fillColor:const Color(0xFFF7F4F9),
+              border:OutlineInputBorder(borderRadius:BorderRadius.circular(18),borderSide:BorderSide.none),
+            ),
+          ),
+          actions:[
+            TextButton(onPressed:()=>Navigator.pop(x),child:const Text('Vazgeç')),
+            FilledButton(style:FilledButton.styleFrom(backgroundColor:ngelxGroupGreen),onPressed:()=>Navigator.pop(x,c.text.trim()),child:const Text('Gönder')),
+          ],
+        ),
+      ),
+    );
+    final metin=sonuc?.trim()??'';
+    await ngelxOverlayKapanisiniBekle();
+    c.dispose();
+    if(metin.isEmpty||!mounted)return;
+    await payloadGonder({'type':'location','text':metin,'locationText':metin},'📍 '+metin);
+  }
+
+
+  String _sesKaydiSureYazisi(){
+    final dk=sesKaydiSaniye~/60,sn=sesKaydiSaniye%60;
+    return dk.toString().padLeft(2,'0')+':'+sn.toString().padLeft(2,'0');
+  }
+
+  void _sesKaydiSayaciniBaslat(){
+    _sesKaydiZamanlayici?.cancel();
+    sesKaydiSaniye=0;
+    _sesKaydiZamanlayici=Timer.periodic(const Duration(seconds:1),(_){
+      if(!mounted||!sesKaydediliyor)return;
+      if(sesKaydiSaniye>=599){
+        unawaited(grupSesKaydiDegistir());
+        return;
+      }
+      setState(()=>sesKaydiSaniye++);
+    });
+  }
+
+  void _sesKaydiDurumunuTemizle(){
+    _sesKaydiZamanlayici?.cancel();
+    _sesKaydiZamanlayici=null;
+    sesKaydiBaslangic=null;
+    if(mounted){
+      setState((){
+        sesKaydediliyor=false;
+        sesKaydiSaniye=0;
+      });
+    }else{
+      sesKaydediliyor=false;
+      sesKaydiSaniye=0;
+    }
+  }
+
+  Future<void> grupSesKaydiniIptal()async{
+    if(!sesKaydediliyor)return;
+    try{await _grupSesKaydedici.cancel();}catch(_){}
+    _sesKaydiDurumunuTemizle();
+    if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Ses kaydı iptal edildi.')));
+  }
+
+  Future<void> _grupSesliMesajiYukle(Uint8List bytes,int sure,File? yerelDosya)async{
+    try{
+      final url=await ngelxMedyaYukleBytes(
+        bytes:bytes,
+        kind:'chat-audio',
+        ext:'m4a',
+        legacyPath:'chat-audio/'+widget.chatId+'/'+DateTime.now().millisecondsSinceEpoch.toString()+'.m4a',
+        contentType:'audio/mp4',
+      ).timeout(const Duration(seconds:45));
+      final tamam=await payloadGonder({'type':'audio','audioUrl':url,'durationSeconds':sure},'🎤 Sesli mesaj');
+      if(!tamam)throw Exception('Mesaj kaydedilemedi');
+      if(yerelDosya!=null){
+        try{await yerelDosya.delete();}catch(_){}
+      }
+    }catch(_){
+      if(!mounted)return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content:const Text('Sesli mesaj gönderilemedi.'),
+        action:SnackBarAction(label:'Tekrar dene',onPressed:()=>unawaited(_grupSesliMesajiYukle(bytes,sure,yerelDosya))),
+      ));
+    }
+  }
+
+  Future<void> grupSesKaydiDegistir()async{
+    if(sesKaydediliyor){
+      String? yol;
+      final baslangic=sesKaydiBaslangic;
+      final gorunenSure=sesKaydiSaniye;
+      try{
+        yol=await _grupSesKaydedici.stop();
+      }catch(_){}
+      _sesKaydiDurumunuTemizle();
+      if(yol==null||yol.isEmpty)return;
+      final dosya=File(yol);
+      if(!await dosya.exists())return;
+      final bytes=await dosya.readAsBytes();
+      if(bytes.isEmpty)return;
+      final hesaplanan=baslangic==null?gorunenSure:DateTime.now().difference(baslangic).inSeconds;
+      final sure=hesaplanan.clamp(1,600);
+      await _grupSesliMesajiYukle(bytes,sure,dosya);
+      return;
+    }
+    try{
+      if(!await _grupSesKaydedici.hasPermission()){
+        if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Mikrofon izni gerekli.')));
+        return;
+      }
+      final dir=await getTemporaryDirectory();
+      final yol=dir.path+'/ngelx_group_voice_'+DateTime.now().millisecondsSinceEpoch.toString()+'.m4a';
+      await _grupSesKaydedici.start(
+        const rec.RecordConfig(encoder:rec.AudioEncoder.aacLc,bitRate:96000,sampleRate:44100),
+        path:yol,
+      );
+      sesKaydiBaslangic=DateTim
+
+--- HIT 3 INDEX 557458 ---
+
+    separatorBuilder:(_,__)=>const SizedBox(height:8),
+              itemBuilder:(_,i){
+                final data=docs[i].data(),t=(data['type']??'').toString();
+                final url=(data['mediaUrl']??data['fileUrl']??data['linkUrl']??data['url']??'').toString();
+                final linkBaslik=(data['linkTitle']??'').toString().trim();
+                final linkHost=(data['linkHost']??'').toString().trim();
+                final metin=sekme==2
+                  ?(linkBaslik.isNotEmpty?linkBaslik:(linkHost.isNotEmpty?linkHost:(data['text']??'Bağlantı').toString()))
+                  :(data['fileName']??data['text']??'Dosya').toString();
+                final alt=sekme==2&&linkHost.isNotEmpty?linkHost+' • '+mesajSaati(data['createdAt']):mesajSaati(data['createdAt']);
+                return NgelXPremiumCard(
+                  color:const Color(0xFFF8FCF9),
+                  padding:const EdgeInsets.symmetric(horizontal:12,vertical:10),
+                  child:ListTile(
+                    dense:true,
+                    contentPadding:EdgeInsets.zero,
+                    leading:Container(width:44,height:44,decoration:BoxDecoration(color:ngelxGroupGreenSoft,borderRadius:BorderRadius.circular(14)),child:Icon(sekme==1?Icons.insert_drive_file_outlined:Icons.link_rounded,color:ngelxGroupGreen)),
+                    title:Text(metin,maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w800)),
+                    subtitle:Text(alt,style:const TextStyle(color:ngelxPremiumMuted,fontSize:11)),
+                    trailing:sekme==2
+                      ?IconButton(
+                          tooltip:'Bağlantıyı kopyala',
+                          onPressed:url.isEmpty?null:()async{
+                            await Clipboard.setData(ClipboardData(text:url));
+                            if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bağlantı kopyalandı.')));
+                          },
+                          icon:const Icon(Icons.copy_rounded,color:ngelxGroupGreen,size:20),
+                        )
+                      :const Icon(Icons.chevron_right_rounded,color:Color(0xFF99A69E)),
+                    onTap:url.isEmpty?null:()async{
+                      if(t=='shared_content'&&(data['contentId']??'').toString().isNotEmpty){
+                        Navigator.push(context,MaterialPageRoute(builder:(_)=>IcerikBaglantiPage(icerikId:(data['contentId']??'').toString())));
+                      }else if(t=='file'||t=='document'){
+                        await SharePlus.instance.share(ShareParams(text:url));
+                      }else if(sekme==2){
+                        await Clipboard.setData(ClipboardData(text:url));
+                        if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bağlantı kopyalandı.')));
+                      }
+                    },
+                  ),
+                );
+              },
+            );
+          },
+        )),
+      ]),
+    ),
+  );
+
+  Widget _sekme(String label,int index)=>Expanded(
+    child:InkWell(
+      onTap:()=>setState(()=>sekme=index),
+      borderRadius:BorderRadius.circular(14),
+      child:AnimatedContainer(
+        duration:const Duration(milliseconds:180),
+        height:40,
+        alignment:Alignment.center,
+        decoration:BoxDecoration(color:sekme==index?ngelxGroupGreen:Colors.transparent,borderRadius:BorderRadius.circular(14)),
+        child:FittedBox(
+          fit:BoxFit.scaleDown,
+          child:Text(label,style:TextStyle(color:sekme==index?Colors.white:ngelxPremiumMuted,fontSize:11.2,fontWeight:FontWeight.w800)),
+        ),
+      ),
+    ),
+  );
+}
+
+class NgelXMedyaGaleriPage extends StatefulWidget{
+  final List<String> urls;
+  final int initialIndex;
+  const NgelXMedyaGaleriPage({super.key,required this.urls,required this.initialIndex});
+  @override State<NgelXMedyaGaleriPage> createState()=>_NgelXMedyaGaleriPageState();
+}
+class _NgelXMedyaGaleriPageState extends State<NgelXMedyaGaleriPage>{
+  late final PageController controller;
+  late int index;
+  @override void initState(){
+    super.initState();
+    index=widget.initialIndex.clamp(0,widget.urls.isEmpty?0:widget.urls.length-1);
+    controller=PageController(initialPage:index);
+  }
+  @override void dispose(){controller.dispose();super.dispose();}
+  @override Widget build(BuildContext context)=>Scaffold(
+    backgroundColor:Colors.black,
+    appBar:AppBar(
+      backgroundColor:Colors.black,
+      foregroundColor:Colors.white,
+      elevation:0,
+      title:Text(widget.urls.isEmpty?'Medya':(index+1).toString()+' / '+widget.urls.length.toString(),style:const TextStyle(fontWeight:FontWeight.w800)),
+    ),
+    body:widget.urls.isEmpty
+      ?const Center(child:Icon(Icons.broken_image_outlined,color:Colors.white54,size:58))
+      :PageView.builder(
+        controller:controller,
+        itemCount:widget.urls.length,
+        onPageChanged:(i)=>setState(()=>index=i),
+        itemBuilder:(_,i)=>InteractiveViewer(
+          minScale:1,
+          maxScale:4,
+          child:Center(child:CachedNetworkImage(
+            imageUrl:widget.urls[i],
+            fit:BoxFit.contain,
+            placeholder:(_,__)=>const CircularProgressIndicator(color:Colors.white),
+            errorWidget:(_,__,___)=>const Icon(Icons.broken_image_outlined,color:Colors.white54,size:58),
+          )),
+        ),
+      ),
+  );
+}
+
+class SabitlenenGrupMesajlariPage extends StatelessWidget{
+  final String chatId;
+  const SabitlenenGrupMesajlariPage({super.key,required this.chatId});
+
+  @override Widget build(BuildContext context)=>Theme(
+    data:ThemeData.light().copyWith(colorScheme:ColorScheme.fromSeed(seedColor:ngelxGroupGreen)),
+    child:Scaffold(
+      backgroundColor:Colors.white,
+      appBar:AppBar(
+        backgroundColor:Colors.transparent,
+        surfaceTintColor:Colors.transparent,
+        elevation:0,
+        title:const Text('Sabitlenen mesajlar',style:TextStyle(fontWeight:FontWeight.w900,color:ngelxPremiumInk)),
+        flexibleSpace:Container(decoration:const BoxDecoration(gradient:LinearGradient(colors:[Color(0xFFFFFFFF),ngelxGroupGreenSoft]),borderRadius:BorderRadius.vertical(bottom:Radius.circular(24)))),
+      ),
+      body:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
+        stream:FirebaseFirestore.instance.collection('chats').doc(chatId).collection('messages').where('pinned',isEqualTo:true).snapshots(),
+        builder:(_,snap){
+          if(snap.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator(color:ngelxGroupGreen));
+          final docs=snap.data?.docs??[];
+          if(docs.isEmpty)return const Center(child:Column(mainAxisSize:MainAxisSize.min,children:[
+            Icon(Icons.push_pin_outlined,color:ngelxGroupGreen,size:56),
+            SizedBox(height:10),
+            Text('Henüz sabitlenen mesaj yok.',style:TextStyle(color:ngelxPremiumMuted,fontWeight:FontWeight.w700)),
+          ]));
+          return ListView(
+            padding:const EdgeInsets.fromLTRB(14,14,14,28),
+            children:[
+              Container(
+                margin:const EdgeInsets.only(bottom:12),
+                padding:const EdgeInsets.symmetric(horizontal:14,vertical:12),
+                decoration:BoxDecoration(color:ngelxGroupGreenSoft,borderRadius:BorderRadius.circular(18),border:Border.all(color:ngelxGroupBorder)),
+                child:const Row(children:[
+                  Icon(Icons.push_pin_rounded,color:ngelxGroupGreen,size:20),
+                  SizedBox(width:10),
+                  Expanded(child:Text('Önemli mesajlara buradan hızlıca ulaşabilirsin.',style:TextStyle(color:ngelxPremiumInk,fontSize:12,fontWeight:FontWeight.w700))),
+                ]),
+          
+
+--- HIT 4 INDEX 717788 ---
+
+nearGradient(colors:[Color(0xFFFFFFFF),Color(0xFFF5EFFF)]),borderRadius:BorderRadius.vertical(bottom:Radius.circular(24)))),
+      ),
+      body:yukleniyor?const Center(child:CircularProgressIndicator(color:ngelxPremiumPurple)):ListView(
+        padding:const EdgeInsets.fromLTRB(14,18,14,30),
+        children:[
+          NgelXPremiumCard(
+            padding:const EdgeInsets.fromLTRB(18,24,18,22),
+            child:Column(children:[
+              Container(width:74,height:74,decoration:BoxDecoration(color:const Color(0xFFF0E8FF),borderRadius:BorderRadius.circular(25)),child:const Icon(Icons.group_add_rounded,color:ngelxPremiumPurple,size:38)),
+              const SizedBox(height:14),
+              Text(ad,textAlign:TextAlign.center,style:const TextStyle(color:ngelxPremiumInk,fontSize:20,fontWeight:FontWeight.w900)),
+              const SizedBox(height:5),
+              const Text('Bağlantıyı paylaşarak gruba davet et.',style:TextStyle(color:ngelxPremiumMuted,fontSize:12,fontWeight:FontWeight.w600)),
+            ]),
+          ),
+          const SizedBox(height:14),
+          NgelXPremiumCard(
+            padding:const EdgeInsets.all(14),
+            child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+              const Text('Davet bağlantısı',style:TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w900)),
+              const SizedBox(height:10),
+              Container(
+                padding:const EdgeInsets.symmetric(horizontal:12,vertical:11),
+                decoration:BoxDecoration(color:const Color(0xFFF6F3F8),borderRadius:BorderRadius.circular(15)),
+                child:Row(children:[
+                  Expanded(child:Text(link,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Color(0xFF5E5566),fontSize:11,fontWeight:FontWeight.w600))),
+                  IconButton(
+                    visualDensity:VisualDensity.compact,
+                    onPressed:()async{
+                      await Clipboard.setData(ClipboardData(text:link));
+                      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bağlantı kopyalandı.')));
+                    },
+                    icon:const Icon(Icons.copy_rounded,color:ngelxPremiumPurple,size:19),
+                  ),
+                ]),
+              ),
+              const SizedBox(height:12),
+              Row(children:[
+                Expanded(child:FilledButton.icon(
+                  style:FilledButton.styleFrom(backgroundColor:ngelxPremiumPurple,padding:const EdgeInsets.symmetric(vertical:13)),
+                  onPressed:()=>SharePlus.instance.share(ShareParams(title:'NgelX grup daveti',text:'NgelX’te '+ad+' grubuna katıl\n'+link)),
+                  icon:const Icon(Icons.share_rounded),label:const Text('Paylaş'),
+                )),
+                const SizedBox(width:9),
+                Expanded(child:OutlinedButton.icon(
+                  style:OutlinedButton.styleFrom(padding:const EdgeInsets.symmetric(vertical:13)),
+                  onPressed:yonetici?_yenile:null,icon:const Icon(Icons.refresh_rounded),label:const Text('Yenile'),
+                )),
+              ]),
+            ]),
+          ),
+          const SizedBox(height:14),
+          NgelXPremiumCard(
+            padding:const EdgeInsets.all(14),
+            child:const Row(crossAxisAlignment:CrossAxisAlignment.start,children:[
+              Icon(Icons.verified_user_outlined,color:ngelxPremiumPurple),
+              SizedBox(width:10),
+              Expanded(child:Text('Katılma onayı açıksa, bağlantıyla gelen kişiler yönetici onayından sonra gruba eklenir.',style:TextStyle(color:ngelxPremiumMuted,fontSize:11.5,height:1.35,fontWeight:FontWeight.w600))),
+            ]),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+class GrupKatilmaIstekleriPage extends StatelessWidget{
+  final String chatId;
+  const GrupKatilmaIstekleriPage({super.key,required this.chatId});
+
+  Future<void> _karar(BuildContext context,QueryDocumentSnapshot<Map<String,dynamic>> d,bool onay)async{
+    final uid=(d.data()['uid']??d.id).toString();
+    final me=FirebaseAuth.instance.currentUser?.uid;
+    if(uid.isEmpty||me==null)return;
+    final chat=FirebaseFirestore.instance.collection('chats').doc(chatId);
+    final batch=FirebaseFirestore.instance.batch();
+    batch.set(d.reference,{'status':onay?'accepted':'rejected','decidedAt':FieldValue.serverTimestamp(),'decidedBy':me},SetOptions(merge:true));
+    if(onay)batch.update(chat,{
+      'members':FieldValue.arrayUnion([uid]),
+      'formerMembers':FieldValue.arrayRemove([uid]),
+      'hiddenFor':FieldValue.arrayRemove([uid]),
+      'updatedAt':FieldValue.serverTimestamp(),
+    });
+    await batch.commit();
+    if(onay){
+      try{
+        final profiller=await Future.wait([
+          FirebaseFirestore.instance.collection('users').doc(me).get(),
+          FirebaseFirestore.instance.collection('users').doc(uid).get(),
+        ]);
+        final ekleyenV=profiller[0].data()??<String,dynamic>{};
+        final eklenenV=profiller[1].data()??<String,dynamic>{};
+        final ekleyen=(ekleyenV['displayName']??ekleyenV['username']??'Bir yönetici').toString();
+        final eklenen=(eklenenV['displayName']??eklenenV['username']??'Bir üye').toString();
+        final olay=ekleyen+', '+eklenen+' adlı üyeyi gruba ekledi.';
+        await chat.collection('messages').add({
+          'senderId':me,
+          'type':'system',
+          'systemAction':'member_added',
+          'actorUid':me,
+          'targetUids':<String>[uid],
+          'text':olay,
+          'createdAt':FieldValue.serverTimestamp(),
+        });
+        await chat.set({'lastMessage':olay,'updatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
+      }catch(_){}
+      await ngelxGrupDavetMetaSenkronla(chat);
+      unawaited(chat.get().then((g){
+        final gv=g.data()??<String,dynamic>{};
+        final grupAdi=(gv['groupName']??'NgelX grubu').toString();
+        final grupFoto=(gv['groupPhotoUrl']??'').toString();
+        return uygulamaBildirimiGonder(
+          toUid:uid,
+          fromUid:me,
+          tur:'group',
+          metin:grupAdi+' grubuna katılma isteğini onayladı',
+          belgeId:chatId,
+          hedefTuru:'group',
+          hedefBaslik:grupAdi,
+          hedefFoto:grupFoto,
+          olayTuru:'group_join_approved',
+        );
+      }).catchError((_){ }));
+    }
+    if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(onay?'İstek onaylandı.':'İstek reddedildi.')));
+  }
+
+  @override Widget build(BuildContext context)=>Theme(
+    data:ThemeData.light().copyWith(colorScheme:ColorScheme.fromSeed(seedColor:ngelxPremiumPurple)),
+    child:Scaffold(
+      backgroundColor:const Color(0xFFFBF9FF),
+      appBar:AppBar(
+        backgroundColor:Colors.transparent,surfaceTintColor:Colors.transparent,elevation:0,
+        title:const Text('Katılma istekleri',style:TextStyle(fontWeight:FontWeight.w900,color:ngelxPremiumInk)),
+        flexibleSpace:Container(decoration:const BoxDecoration(gradient:LinearGradient(colors:[Color(0xFFFFFFFF),Color(0xFFF5EFFF)]),borderRadius:BorderRadius.vertical(bottom:Radius.circular(24)))),
+      ),
+      body:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
+        stream:FirebaseFirestore.instance.collection('chats').doc(chatId).collection('joinRequests').snapshots(),
+        builder:(_,snap){
+          if(snap.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator(color:ngelxPremiumPurple));
+          final docs=(snap.data?.docs??[]).where((d)=>(d.data()['status']??'pending').toString()=='pending').toList();
+          if(docs.isEmpty)return const Center(child:Column(mainAxisSize:MainAxisSize.min,children:[
+            Icon(Icons.how_to_reg_rounded,color:Color(0xFFC7B8E7),size:58
+
+--- HIT 5 INDEX 748768 ---
+
+get.chatId);
+    final simdi=DateTime.now(),clientCreatedAt=Timestamp.fromDate(simdi);
+    final arkadas=List<String>.from(hazirlik.diger['friends']??const[]).contains(ben);
+    final mesajRef=ref.collection('messages').doc();
+    final batch=FirebaseFirestore.instance.batch();
+    batch.set(ref,{
+      'members':[ben,widget.digerUid],
+      'lastMessage':sonMesaj,
+      'updatedAt':FieldValue.serverTimestamp(),
+      'unread_${widget.digerUid}':FieldValue.increment(1),
+      if(!hazirlik.sohbetMevcut&&!arkadas)'requestSenderUid':ben,
+      if(!hazirlik.sohbetMevcut&&!arkadas)'requestRecipientUid':widget.digerUid,
+    },SetOptions(merge:true));
+    batch.set(mesajRef,{
+      'senderId':ben,
+      'createdAt':FieldValue.serverTimestamp(),
+      'clientCreatedAt':clientCreatedAt,
+      ...veri,
+    });
+    try{
+      await batch.commit().timeout(const Duration(seconds:15));
+      _mesajHazirlikSohbetMevcut=true;
+      _mesajHazirlikSohbet={...hazirlik.sohbet,'lastMessage':sonMesaj,'updatedAt':clientCreatedAt};
+      unawaited(uygulamaBildirimiGonder(toUid:widget.digerUid,fromUid:ben,tur:'message',metin:bildirim,belgeId:widget.chatId).catchError((_){ }));
+      return true;
+    }catch(_){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Gönderilemedi. Bağlantını kontrol edip tekrar dene.')));
+      return false;
+    }
+  }
+
+  Future<void> dosyaGonder()async{
+    final x=await openFile();
+    if(x==null)return;
+    try{
+      final boyut=await x.length();
+      if(boyut>30*1024*1024)throw Exception('Dosya 30 MB’den küçük olmalı.');
+      final ad=x.name.isEmpty?'dosya':x.name;
+      final uzanti=ad.contains('.')?ad.split('.').last.toLowerCase():'bin';
+      final url=await ngelxMedyaYukleDosya(
+        dosya:x,
+        kind:'chat-files',
+        ext:uzanti,
+        legacyPath:'chat-files/${widget.chatId}/${DateTime.now().millisecondsSinceEpoch}_$ad',
+      ).timeout(const Duration(minutes:3));
+      await ekMesajGonder({'type':'file','fileUrl':url,'fileName':ad,'fileSize':boyut},'📎 $ad',bildirim:'Sana bir dosya gönderdi');
+    }catch(e){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Dosya gönderilemedi: $e')));
+    }
+  }
+
+  Future<void> dosyayiPaylas(Map<String,dynamic> v)async{
+    final url=(v['fileUrl']??'').toString();
+    if(url.isEmpty)return;
+    try{
+      final dir=await getTemporaryDirectory();
+      final ad=(v['fileName']??'NgelX_dosya').toString().replaceAll(RegExp(r'[\\/:*?"<>|]'),'_');
+      final yol='${dir.path}/$ad';
+      await Dio().download(url,yol);
+      await SharePlus.instance.share(ShareParams(files:[XFile(yol)],text:'NgelX dosyası: $ad'));
+    }catch(_){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Dosya açılamadı.')));
+    }
+  }
+
+  Future<void> konumGonder()async{
+    final c=TextEditingController();
+    final sonuc=await showDialog<String>(
+      context:context,
+      builder:(d)=>Theme(data:ThemeData.light(),child:AlertDialog(
+        backgroundColor:Colors.white,
+        title:const Text('Konum paylaş'),
+        content:TextField(controller:c,autofocus:true,maxLength:160,decoration:const InputDecoration(prefixIcon:Icon(Icons.location_on_outlined),hintText:'Konum veya adres yaz')),
+        actions:[
+          TextButton(onPressed:()=>Navigator.pop(d),child:const Text('Vazgeç')),
+          FilledButton(onPressed:()=>Navigator.pop(d,c.text.trim()),child:const Text('Gönder')),
+        ],
+      )),
+    );
+    final metin=sonuc?.trim()??'';
+    await ngelxOverlayKapanisiniBekle();
+    c.dispose();
+    if(metin.isEmpty||!mounted)return;
+    await ekMesajGonder({'type':'location','text':metin,'locationText':metin},'📍 $metin',bildirim:'Sana bir konum gönderdi');
+  }
+
+  String _ozelSesKaydiSureYazisi(){
+    final dk=sesKaydiSaniye~/60,sn=sesKaydiSaniye%60;
+    return dk.toString().padLeft(2,'0')+':'+sn.toString().padLeft(2,'0');
+  }
+
+  void _ozelSesKaydiSayaciniBaslat(){
+    sesKaydiZamanlayici?.cancel();
+    sesKaydiSaniye=0;
+    sesKaydiZamanlayici=Timer.periodic(const Duration(seconds:1),(_){
+      if(!mounted||!sesKaydediliyor||sesKaydiIsleniyor)return;
+      if(sesKaydiSaniye>=599){
+        unawaited(sesKaydiDegistir());
+        return;
+      }
+      setState(()=>sesKaydiSaniye++);
+    });
+  }
+
+  void _ozelSesKaydiDurumunuTemizle(){
+    sesKaydiZamanlayici?.cancel();
+    sesKaydiZamanlayici=null;
+    sesKaydiBaslangic=null;
+    if(mounted){
+      setState((){
+        sesKaydediliyor=false;
+        sesKaydiIsleniyor=false;
+        sesKaydiSaniye=0;
+      });
+    }else{
+      sesKaydediliyor=false;
+      sesKaydiIsleniyor=false;
+      sesKaydiSaniye=0;
+    }
+  }
+
+  Future<void> sesKaydiniIptal()async{
+    if(!sesKaydediliyor||sesKaydiIsleniyor)return;
+    if(mounted)setState(()=>sesKaydiIsleniyor=true);
+    else sesKaydiIsleniyor=true;
+    try{await _sesKaydedici.cancel();}catch(_){}
+    _ozelSesKaydiDurumunuTemizle();
+    if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Ses kaydı iptal edildi.')));
+  }
+
+  Future<void> _ozelSesliMesajiYukle(Uint8List bytes,int sure,File? yerelDosya)async{
+    try{
+      final url=await ngelxMedyaYukleBytes(
+        bytes:bytes,
+        kind:'chat-audio',
+        ext:'m4a',
+        legacyPath:'chat-audio/${widget.chatId}/${DateTime.now().millisecondsSinceEpoch}.m4a',
+        contentType:'audio/mp4',
+      ).timeout(const Duration(seconds:45));
+      final tamam=await ekMesajGonder(
+        {'type':'audio','audioUrl':url,'durationSeconds':sure},
+        '🎤 Sesli mesaj',
+        bildirim:'Sana sesli mesaj gönderdi',
+      );
+      if(!tamam)throw Exception('Mesaj kaydedilemedi');
+      if(yerelDosya!=null){
+        try{await yerelDosya.delete();}catch(_){}
+      }
+    }catch(_){
+      if(!mounted)return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content:const Text('Sesli mesaj gönderilemedi.'),
+        action:SnackBarAction(label:'Tekrar dene',onPressed:()=>unawaited(_ozelSesliMesajiYukle(bytes,sure,yerelDosya))),
+      ));
+    }
+  }
+
+  Future<void> sesKaydiDegistir()async{
+    if(sesKaydiIsleniyor)return;
+    if(sesKaydediliyor){
+      if(mounted)setState(()=>sesKaydiIsleniyor=true);
+      else sesKaydiIsleniyor=true;
+      String? yol;
+      final baslangic=sesKaydiBaslangic;
+      final gorunenSure=sesKaydiSaniye;
+      try{yol=await _sesKaydedici.stop();}catch(_){}
+      _ozelSesKaydiDurumunuTemizle();
+      if(yol==null||yol.isEmpty)return;
+      final dosya=File(yol);
+      if(!await dosya.exists())return;
+      final bytes=await dosya.readAsBytes();
+      if(bytes.isEmpty)return;
+      final hesaplanan=baslangic==null?gorunenSure:DateTime.now().difference(baslangic).inSeconds;
+      final sure=hesaplanan.clamp(1,600);
+      await _ozelSesliMesajiYukle(bytes,sure,dosya);
+      return;
+    }
+    try{
+      if(!await _sesKaydedici.hasPermission()){
+        if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Sesli mesaj için mikrofon izni gerekli.')));
+        return;
+      }
+      final dir=await getTemporaryDirectory();
+      final yol='${dir.path}/ngelx_voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
+      await _sesKaydedici.start(
+        const rec.RecordConfig(encoder:rec.AudioEncoder.aacLc,bitRate:96000,sampleRate:44100),
+        path:yol,
+      );
+      sesKaydiBaslangic=DateTime.now();
+      if(mounted)setState((){
+        sesKaydediliyor=true;
+        sesKaydiIsleniyor=false;
+        sesKaydiSaniye=0;
+      });
+      else sesKaydediliyor=true;
+      _ozelSesKaydiSayaciniBaslat();
+    }catch(_){
+      _ozelSesKaydiDurumunuTemizle();
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Ses kaydı başlatılamadı.')));
+    }
+  }
+
+  Future<void> mes
+
+--- HIT 6 INDEX 834446 ---
+
+     data:ThemeData.light().copyWith(dialogTheme:const DialogThemeData(backgroundColor:Colors.white)),
+      child:AlertDialog(
+        backgroundColor:Colors.white,
+        surfaceTintColor:Colors.white,
+        title:const Text('Sohbet silinsin mi?',style:TextStyle(color:Colors.black87,fontWeight:FontWeight.w800)),
+        content:const Text('Bu sohbet yalnızca senin sohbet listenden kaldırılacak. Karşı tarafın sohbeti silinmeyecek.',style:TextStyle(color:Colors.black87,height:1.35)),
+        actions:[
+          TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç',style:TextStyle(color:ngelxPrivateBlue))),
+          FilledButton(style:FilledButton.styleFrom(backgroundColor:Colors.red,foregroundColor:Colors.white),onPressed:()=>Navigator.pop(c,true),child:const Text('Sohbeti sil')),
+        ],
+      ),
+    ))??false;
+    if(!ok)return;
+    await FirebaseFirestore.instance.collection('chats').doc(chatId).set({'hiddenFor':FieldValue.arrayUnion([me])},SetOptions(merge:true));
+    if(context.mounted)Navigator.popUntil(context,(r)=>r.isFirst);
+  }
+
+  Future<void> arkadasEkle(BuildContext context)async{
+    final me=FirebaseAuth.instance.currentUser?.uid;if(me==null||me==uid)return;
+    final benim=await FirebaseFirestore.instance.collection('users').doc(me).get();
+    final arkadaslar=List<String>.from(benim.data()?['friends']??const[]);
+    if(arkadaslar.contains(uid)){if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Zaten arkadaşsınız.')));return;}
+    final giden=await FirebaseFirestore.instance.collection('notifications').where('fromUid',isEqualTo:me).limit(100).get();
+    if(gidenSosyalIstekBekliyor(giden,uid,'friend_request')){if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Arkadaşlık isteğin zaten bekliyor.')));return;}
+    await sosyalIstekGonder(hedefUid:uid,tur:'friend_request',metin:'Yeni arkadaşlık isteğin var');
+    if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Arkadaşlık isteği gönderildi.')));
+  }
+  Future<void> kisiyiPaylas()async{
+    final me=FirebaseAuth.instance.currentUser?.uid;
+    final hedef=await FirebaseFirestore.instance.collection('users').doc(uid).get(),hv=hedef.data()??<String,dynamic>{};
+    if(hv['profileShareFriendsOnly']==true&&me!=uid){
+      final benim=me==null?null:await FirebaseFirestore.instance.collection('users').doc(me).get();
+      if(!List<String>.from(benim?.data()?['friends']??const[]).contains(uid))return;
+    }
+    final link='$ngelxWebAdresi/u/$uid';
+    await SharePlus.instance.share(ShareParams(title:'NgelX profili',subject:'NgelX • $ad',text:'NgelX’te $ad profilini görüntüle\n$link'));
+  }
+
+  @override Widget build(BuildContext context)=>Theme(
+    data:ThemeData.light().copyWith(
+      scaffoldBackgroundColor:ngelxPrivateBlueCanvas,
+      colorScheme:ColorScheme.fromSeed(seedColor:ngelxPrivateBlue),
+      appBarTheme:const AppBarTheme(backgroundColor:ngelxPrivateBlueHeader,foregroundColor:ngelxPrivateBlueInk,elevation:0,surfaceTintColor:Colors.transparent),
+      dividerColor:ngelxPrivateBlueBorder,
+    ),
+    child:Scaffold(
+      backgroundColor:ngelxPrivateBlueCanvas,
+      appBar:AppBar(
+        leading:const BackButton(color:ngelxPrivateBlue),
+        title:const Text('Sohbet bilgisi',style:TextStyle(color:ngelxPrivateBlueInk,fontWeight:FontWeight.w900,fontSize:19)),
+        actions:[PopupMenuButton<String>(
+          icon:const Icon(Icons.more_vert_rounded),
+          onSelected:(v){if(v=='share')kisiyiPaylas();if(v=='report')sikayetEt(context,hedefTuru:'kullanici',hedefId:uid,hedefUid:uid);},
+          itemBuilder:(_)=>const [
+            PopupMenuItem(value:'share',child:Row(children:[Icon(Icons.share_outlined),SizedBox(width:10),Text('Kişiyi paylaş')])),
+            PopupMenuItem(value:'report',child:Row(children:[Icon(Icons.flag_outlined),SizedBox(width:10),Text('Şikâyet et')])),
+          ],
+        )],
+      ),
+      body:StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
+        stream:FirebaseFirestore.instance.collection('chats').doc(chatId).snapshots(),
+        builder:(_,s){
+          final me=FirebaseAuth.instance.currentUser?.uid,ham=s.data?.data()?['nicknames'],nicks=ham is Map?Map<String,dynamic>.from(ham):<String,dynamic>{},takma=(me==null?'':(nicks[me]??'').toString()).trim(),gorunenAd=takma.isNotEmpty?takma:ad;
+          return ListView(
+            padding:const EdgeInsets.fromLTRB(20,8,20,28),
+            children:[
+              Center(child:Container(
+                padding:const EdgeInsets.all(3),
+                decoration:const BoxDecoration(shape:BoxShape.circle,gradient:LinearGradient(colors:[ngelxPrivateBlue2,ngelxPrivateBlue])),
+                child:CircleAvatar(radius:56,backgroundColor:Colors.white,backgroundImage:foto.isEmpty?null:CachedNetworkImageProvider(foto),child:foto.isEmpty?const Icon(Icons.person,size:48,color:ngelxPrivateBlue):null),
+              )),
+              const SizedBox(height:16),
+              Text(gorunenAd,textAlign:TextAlign.center,style:const TextStyle(fontSize:29,fontWeight:FontWeight.w900,color:ngelxPrivateBlueInk)),
+              const SizedBox(height:4),
+              Center(child:AktiflikDurumuYazisi(uid:uid)),
+              const SizedBox(height:22),
+              FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(
+                future:me==null?null:FirebaseFirestore.instance.collection('users').doc(me).get(),
+                builder:(_,u){
+                  final arkadas=me!=null&&List<String>.from(u.data?.data()?['friends']??const[]).contains(uid);
+                  return Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[
+                    _kisa(arkadas?Icons.people_alt_rounded:Icons.person_add_alt_1_rounded,arkadas?'Arkadaş':'Arkadaş ekle',arkadas?(){}:()=>arkadasEkle(context)),
+                    _kisa(Icons.person_rounded,'Profil',()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciProfilPage(uid:uid)))),
+                    _kisa(Icons.text_fields_rounded,'Takma ad',()=>takmaAd(context)),
+                    _kisa(Icons.search_rounded,'Arama',()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>SohbetMesajAramaPage(chatId:chatId)))),
+                    _kisa(Icons.palette_rounded,'Özelleştir',()=>ozellestir(context)),
+                  ]);
+                },
+              ),
+              const SizedBox(height:30),
+              _bolum('Sohbet bilgisi'),
+              _satir(Icons.photo_library_outlined,'Medya, dosya ve bağlantılar',()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupMedyaPage(chatId:chatId)))),
+              _satir(Icons.push_pin_outlined,'Sabitlenmiş mesajlar',()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>SabitlenenGrupMesajlariPage(chatId:chatId)))),
+              _satir(
+                Icons.timer_outlined,
+                'Süreli mesajlar',
+                ()=>sureliMesajlar(context,(s.data?.data()?['disappearingSeconds'] is num?(s.data!.data()!['disappearingSeconds'] as num).toInt():0)),
+                alt:(s.data?.data()?['disappearingSeconds']??0)==0?'Kapalı':'Yeni mesajlar otomatik kaybolur',
+              ),
+              if(me!=null)SwitchListTile(
+                contentPadding:const EdgeInsets.symmetric(horizontal:8),
+                secondary:const Icon(Icons.done_all_rounded,color:ngelxPrivateBlue),
+                title:const Text('Okundu bilgisi',style:TextStyle(color:Colors.black87,fontSize:17)),
+                subtitle:const Text('Mesajları okuduğunda karşı tarafa Görüldü bilgisi gösterilir.',style:TextStyle(color:Colors.black45,fontSize:13)),
+                value:s.data?.data()?['readReceipts_$me']!=false,
+                onChanged:(x)=>FirebaseFirestore.instance.collectio
+
+--- HIT 7 INDEX 849900 ---
+
+])),
+              Container(
+                padding:const EdgeInsets.symmetric(horizontal:9,vertical:5),
+                decoration:BoxDecoration(color:widget.groupMode?ngelxGroupGreenSoft:const Color(0xFFF0E8FF),borderRadius:BorderRadius.circular(12)),
+                child:Text(
+                  tur=='photo'?'Fotoğraf':tur=='video'?'Video':tur=='gif'?'GIF':tur=='audio'?'Ses':tur=='file'||tur=='document'?'Dosya':tur=='shared_content'?'Bağlantı':'Mesaj',
+                  style:TextStyle(color:widget.groupMode?ngelxGroupGreen:ngelxPremiumPurple,fontSize:10,fontWeight:FontWeight.w900),
+                ),
+              ),
+            ]),
+            const SizedBox(height:14),
+            Container(
+              width:double.infinity,
+              padding:const EdgeInsets.all(14),
+              decoration:BoxDecoration(color:const Color(0xFFF7F8F9),borderRadius:BorderRadius.circular(18),border:Border.all(color:const Color(0xFFE8EAEC))),
+              child:SelectableText(metin.isEmpty?'Mesaj içeriği bulunamadı':metin,style:const TextStyle(color:ngelxPremiumInk,fontSize:14,height:1.4,fontWeight:FontWeight.w600)),
+            ),
+            const SizedBox(height:12),
+            Wrap(spacing:8,runSpacing:8,children:[
+              OutlinedButton.icon(
+                onPressed:metin.isEmpty?null:()async{
+                  await Clipboard.setData(ClipboardData(text:metin));
+                  if(sheet.mounted)ScaffoldMessenger.of(sheet).showSnackBar(const SnackBar(content:Text('Mesaj kopyalandı.')));
+                },
+                icon:const Icon(Icons.copy_rounded,size:18),
+                label:const Text('Kopyala'),
+              ),
+              if((tur=='photo'||tur=='gif')&&medya.isNotEmpty)OutlinedButton.icon(
+                onPressed:(){
+                  Navigator.pop(sheet);
+                  Navigator.push(context,MaterialPageRoute(builder:(_)=>TamEkranMedyaPage(url:medya)));
+                },
+                icon:const Icon(Icons.photo_outlined,size:18),
+                label:const Text('Medyayı aç'),
+              ),
+              if(tur=='video'&&medya.isNotEmpty)OutlinedButton.icon(
+                onPressed:(){
+                  Navigator.pop(sheet);
+                  Navigator.push(context,MaterialPageRoute(builder:(_)=>TamEkranVideoPage(url:medya)));
+                },
+                icon:const Icon(Icons.play_circle_outline_rounded,size:18),
+                label:const Text('Videoyu aç'),
+              ),
+              if((tur=='file'||tur=='document')&&dosya.isNotEmpty)OutlinedButton.icon(
+                onPressed:()async{await SharePlus.instance.share(ShareParams(text:dosya));},
+                icon:const Icon(Icons.insert_drive_file_outlined,size:18),
+                label:const Text('Dosyayı paylaş'),
+              ),
+              if(link.isNotEmpty)OutlinedButton.icon(
+                onPressed:()async{
+                  await Clipboard.setData(ClipboardData(text:link));
+                  if(sheet.mounted)ScaffoldMessenger.of(sheet).showSnackBar(const SnackBar(content:Text('Bağlantı kopyalandı.')));
+                },
+                icon:const Icon(Icons.link_rounded,size:18),
+                label:const Text('Bağlantıyı kopyala'),
+              ),
+            ]),
+          ]),
+        ),
+      ),
+    );
+  }
+
+  Widget _vurguluMetin(String metin){
+    final q=sorgu.trim();
+    if(q.isEmpty)return Text(metin,maxLines:3,overflow:TextOverflow.ellipsis,style:const TextStyle(color:ngelxPremiumInk,fontSize:13,height:1.35,fontWeight:FontWeight.w600));
+    final lower=metin.toLowerCase(),index=lower.indexOf(q.toLowerCase());
+    if(index<0)return Text(metin,maxLines:3,overflow:TextOverflow.ellipsis,style:const TextStyle(color:ngelxPremiumInk,fontSize:13,height:1.35,fontWeight:FontWeight.w600));
+    return RichText(
+      maxLines:3,
+      overflow:TextOverflow.ellipsis,
+      text:TextSpan(style:const TextStyle(color:ngelxPremiumInk,fontSize:13,height:1.35,fontWeight:FontWeight.w600),children:[
+        TextSpan(text:metin.substring(0,index)),
+        TextSpan(text:metin.substring(index,index+q.length),style:TextStyle(color:widget.groupMode?ngelxGroupGreen:ngelxPremiumPurple,fontWeight:FontWeight.w900,backgroundColor:widget.groupMode?ngelxGroupGreenSoft:const Color(0xFFF0E8FF))),
+        TextSpan(text:metin.substring(index+q.length)),
+      ]),
+    );
+  }
+
+  @override Widget build(BuildContext context)=>Theme(
+    data:ThemeData.light().copyWith(colorScheme:ColorScheme.fromSeed(seedColor:widget.groupMode?ngelxGroupGreen:ngelxPremiumPurple)),
+    child:Scaffold(
+      backgroundColor:widget.groupMode?Colors.white:const Color(0xFFFBF9FF),
+      appBar:AppBar(
+        toolbarHeight:64,
+        backgroundColor:Colors.transparent,
+        surfaceTintColor:Colors.transparent,
+        elevation:0,
+        title:const Text('Sohbette ara',style:TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w900)),
+        flexibleSpace:Container(decoration:BoxDecoration(gradient:LinearGradient(colors:[const Color(0xFFFFFFFF),widget.groupMode?ngelxGroupGreenSoft:const Color(0xFFF5EFFF)]),borderRadius:const BorderRadius.vertical(bottom:Radius.circular(24)))),
+      ),
+      body:Column(children:[
+        Padding(
+          padding:const EdgeInsets.fromLTRB(14,14,14,8),
+          child:TextField(
+            controller:ara,
+            autofocus:true,
+            textInputAction:TextInputAction.search,
+            onChanged:(v)=>setState(()=>sorgu=v.trim().toLowerCase()),
+            decoration:InputDecoration(
+              hintText:'Mesajlarda ara',
+              hintStyle:const TextStyle(color:Color(0xFF9A93A2)),
+              prefixIcon:Icon(Icons.search_rounded,color:widget.groupMode?ngelxGroupGreen:ngelxPremiumPurple),
+              suffixIcon:sorgu.isEmpty?null:IconButton(onPressed:(){ara.clear();setState(()=>sorgu='');},icon:const Icon(Icons.close_rounded,color:ngelxPremiumMuted)),
+              filled:true,fillColor:Colors.white,
+              border:OutlineInputBorder(borderRadius:BorderRadius.circular(20),borderSide:BorderSide.none),
+              enabledBorder:OutlineInputBorder(borderRadius:BorderRadius.circular(20),borderSide:const BorderSide(color:ngelxPremiumBorder)),
+              focusedBorder:OutlineInputBorder(borderRadius:BorderRadius.circular(20),borderSide:BorderSide(color:widget.groupMode?ngelxGroupGreen:ngelxPremiumPurple,width:1.4)),
+            ),
+          ),
+        ),
+        SizedBox(
+          height:44,
+          child:ListView(
+            scrollDirection:Axis.horizontal,
+            padding:const EdgeInsets.fromLTRB(14,0,14,6),
+            children:[
+              _aramaFiltreChip('Tümü',0),
+              _aramaFiltreChip('Mesajlar',1),
+              _aramaFiltreChip('Medya',2),
+              _aramaFiltreChip('Dosyalar',3),
+              _aramaFiltreChip('Bağlantılar',4),
+            ],
+          ),
+        ),
+        Expanded(child:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
+          stream:FirebaseFirestore.instance.collection('chats').doc(widget.chatId).collection('messages').orderBy('createdAt',descending:true).limit(300).snapshots(),
+          builder:(_,snap){
+            if(snap.connectionState==ConnectionState.waiting)return Center(child:CircularProgressIndicator(color:widget.groupMode?ngelxGroupGreen:ngelxPremiumPurple));
+            if(sorgu.isEmpty)return const Center(child:Column(mainAxisSize:MainAxisSize.min,children:[
+              Icon(Icons.manage_search_rounded,color:Color(0xFFC7B8E7),size:62),
+              SizedBox(height:11),
+              Text('Aramak istediğin kelimeyi yaz.',style:TextStyle(color:ngelxPremiumMuted,fontWeight:FontWeight.w700)),
+            ]));
+            final docs=(snap.data?.docs??[]).where((d){
+              final v=d.data();
+              if(!_aramaFiltresineUyar(v)
+
+--- HIT 8 INDEX 894841 ---
+
+chatId).get().timeout(const Duration(seconds:8)),
+      ]);
+      final benim=(sonuc[0] as DocumentSnapshot<Map<String,dynamic>>).data()??<String,dynamic>{};
+      final hedef=(sonuc[1] as DocumentSnapshot<Map<String,dynamic>>).data()??<String,dynamic>{};
+      final sohbet=(sonuc[2] as DocumentSnapshot<Map<String,dynamic>>).data()??<String,dynamic>{};
+      final arkadaslar=List<String>.from(benim['friends']??const[]);
+      final hedefinTakipEttikleri=List<String>.from(hedef['following']??const[]);
+      final mesajIzni=(hedef['messagePermission']??(hedef['friendsOnlyMessages']!=false?'friends':'all')).toString();
+      final kabulEdildi=sohbet['requestAccepted_$me']==true||sohbet['requestAccepted_$uid']==true;
+      final izinli=kabulEdildi||
+        mesajIzni=='all'||
+        (mesajIzni=='friends'&&arkadaslar.contains(uid))||
+        (mesajIzni=='following'&&hedefinTakipEttikleri.contains(me));
+      if(!izinli){
+        if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(t('messageNotAllowed'))));
+        return;
+      }
+      if(!context.mounted)return;
+      await Navigator.push(context,MaterialPageRoute(builder:(_)=>SohbetPage(
+        chatId:chatId,
+        digerUid:uid,
+        ad:ad,
+        foto:foto,
+      )));
+    }on TimeoutException{
+      if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Mesaj izni kontrolü zaman aşımına uğradı. Tekrar dene.')));
+    }catch(_){
+      if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Mesaj ekranı şu anda açılamadı. Tekrar dene.')));
+    }
+  }
+
+  Future<void> profiliPaylas(BuildContext context)async{
+    final me=FirebaseAuth.instance.currentUser?.uid;
+    try{
+      final hedef=await FirebaseFirestore.instance.collection('users').doc(uid).get().timeout(const Duration(seconds:8));
+      final hv=hedef.data()??<String,dynamic>{};
+      if(hv['profileShareFriendsOnly']==true&&me!=uid){
+        final benim=me==null?null:await FirebaseFirestore.instance.collection('users').doc(me).get().timeout(const Duration(seconds:8));
+        final arkadaslar=List<String>.from(benim?.data()?['friends']??const[]);
+        if(!arkadaslar.contains(uid)){
+          if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bu kullanıcı profilinin yalnızca arkadaşları tarafından paylaşılmasına izin veriyor.')));
+          return;
+        }
+      }
+      final ad=(hv['displayName']??hv['username']??'NgelX kullanıcısı').toString();
+      final link='$ngelxWebAdresi/u/$uid';
+      await SharePlus.instance.share(ShareParams(title:'NgelX profili',subject:'NgelX • $ad',text:'NgelX’te $ad profilini görüntüle\n$link'));
+    }on TimeoutException{
+      if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Profil paylaşım izni kontrolü zaman aşımına uğradı. Tekrar dene.')));
+    }catch(_){
+      if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Profil şu anda paylaşılamadı. Tekrar dene.')));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final me = FirebaseAuth.instance.currentUser?.uid;
+    final hedef = FirebaseFirestore.instance.collection('users').doc(uid).get();
+    final benim = me == null ? Future.value(null) : FirebaseFirestore.instance.collection('users').doc(me).get();
+    return Theme(data:ThemeData.light().copyWith(scaffoldBackgroundColor:Colors.white,appBarTheme:const AppBarTheme(backgroundColor:Colors.white,foregroundColor:Colors.black,elevation:0)),child:Scaffold(
+      backgroundColor:Colors.white,
+      appBar: AppBar(
+        title:Text(ziyaretciOnizleme?t('profilePreview'):t('profile'),style:const TextStyle(fontWeight:FontWeight.w900)),
+        actions:[IconButton(tooltip:'Profili paylaş',onPressed:()=>profiliPaylas(context),icon:const Icon(Icons.share_outlined))],
+      ),
+      body: FutureBuilder<List<DocumentSnapshot<Map<String, dynamic>>?>>(
+        future: Future.wait([hedef, benim]),
+        builder: (_, s) {
+          if (!s.hasData) return const Center(child: CircularProgressIndicator(color: mavi));
+          final v = s.data![0]?.data() ?? <String, dynamic>{};
+          final benimVerim = s.data![1]?.data() ?? <String, dynamic>{};
+          final foto = (v['photoUrl'] ?? '').toString();
+          final arkadaslar = Set<String>.from(List<dynamic>.from(benimVerim['friends'] ?? []));
+          final gizli = v['privateAccount'] == true;
+          final profilIzni=(v['profileViewPermission']??'all').toString();
+          final beniTakipEdiyor=me!=null&&List<String>.from(v['followers']??const[]).contains(me);
+          final izinVar=profilIzni=='all'||(profilIzni=='followers'&&beniTakipEdiyor)||(profilIzni=='friends'&&arkadaslar.contains(uid));
+          final erisimVar = ziyaretciOnizleme
+              ? (profilIzni=='all'&&!gizli)
+              : (me==uid||(izinVar&&(!gizli||beniTakipEdiyor||arkadaslar.contains(uid))));
+          return ListView(
+            padding: const EdgeInsets.all(22),
+            children: [
+              Center(child:GestureDetector(
+                onTap:!erisimVar?null:()async{
+                  try{
+                    final q=await FirebaseFirestore.instance.collection('videos').where('ownerId',isEqualTo:uid).limit(100).get();
+                    final simdi=DateTime.now();
+                    final hikayeler=q.docs.where((d){
+                      final x=d.data(),bitis=x['expiresAt'];
+                      return x['type']=='story'&&bitis is Timestamp&&bitis.toDate().isAfter(simdi);
+                    }).toList()..sort((a,b){
+                      final at=a.data()['createdAt'],bt=b.data()['createdAt'];
+                      final am=at is Timestamp?at.millisecondsSinceEpoch:0,bm=bt is Timestamp?bt.millisecondsSinceEpoch:0;
+                      return bm.compareTo(am);
+                    });
+                    if(!context.mounted)return;
+                    if(hikayeler.isEmpty){
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Aktif hikâye yok.')));
+                      return;
+                    }
+                    final d=hikayeler.first,x=d.data();
+                    Navigator.push(context,MaterialPageRoute(builder:(_)=>HikayeGosterPage(
+                      url:(x['mediaUrl']??'').toString(),
+                      mediaType:(x['storyMediaType']??'photo').toString(),
+                      kullanici:'@'+(v['username']??'ngelx').toString(),
+                      fotoUrl:foto,
+                      ownerUid:uid,
+                      storyId:d.id,
+                      createdAt:x['createdAt'],
+                      expiresAt:x['expiresAt'],
+                    )));
+                  }catch(_){
+                    if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Hikâye açılamadı.')));
+                  }
+                },
+                child:Container(
+                  padding:const EdgeInsets.all(3),
+                  decoration:const BoxDecoration(shape:BoxShape.circle,gradient:LinearGradient(colors:[Color(0xFF22D3EE),Color(0xFF8B5CF6)])),
+                  child:CircleAvatar(radius:55,backgroundColor:Colors.white,backgroundImage:foto.isEmpty?null:CachedNetworkImageProvider(foto),child:foto.isEmpty?const Text('N',style:TextStyle(fontSize:40)):null),
+                ),
+              )),
+              const SizedBox(height: 12),
+              Text((v['displayName'] ?? v['username'] ?? 'NgelX').toString(), textAlign: TextAlign.center, style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold)),
+              Text('@' + (v['username'] ?? 'ngelx').toString(), textAlign: TextAlign.center, style: const TextStyle(color: Colors.black54)),
+  
+
+===== NEEDLE: class SohbetMesajAramaPage =====
+
+
+--- HIT 1 INDEX 843027 ---
+
+)),
+              ),
+              const SizedBox(height:18),
+              _bolum('İşlemler'),
+              _satir(Icons.notifications_off_outlined,'Sessize al',()=>sessizeAl(context),alt:'Bu sohbetin bildirimlerini yönet'),
+              _satir(Icons.notifications_outlined,'Bildirimler ve sesler',()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const TercihlerPage(baslik:'Bildirimler'))),alt:'Mesaj bildirim ayarları'),
+              _satir(Icons.share_outlined,'Kişiyi paylaş',kisiyiPaylas),
+              const SizedBox(height:18),
+              _bolum('Gizlilik ve destek'),
+              _satir(Icons.shield_outlined,'Mesaj izinleri',()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const TercihlerPage(baslik:'Mesaj izinleri')))),
+              _satir(Icons.do_not_disturb_alt_rounded,'Kısıtla',()=>kisitla(context)),
+              _satir(Icons.block_rounded,'Engelle',()=>engelle(context),renk:Colors.black),
+              _satir(Icons.delete_outline_rounded,'Sohbeti sil',()=>sohbetiSil(context),alt:'Yalnızca senin sohbet listenden kaldırır',renk:Colors.red),
+            ],
+          );
+        },
+      ),
+    ),
+  );
+  Widget _bolum(String t)=>Padding(padding:const EdgeInsets.fromLTRB(8,6,8,8),child:Text(t,style:const TextStyle(color:ngelxPrivateBlue,fontSize:15,fontWeight:FontWeight.w900)));
+  Widget _kisa(IconData i,String t,VoidCallback f)=>Expanded(child:InkWell(
+    borderRadius:BorderRadius.circular(18),onTap:f,
+    child:Padding(padding:const EdgeInsets.symmetric(horizontal:2,vertical:4),child:Column(children:[
+      CircleAvatar(radius:25,backgroundColor:ngelxPrivateBlueSoft,child:Icon(i,color:ngelxPrivateBlue,size:24)),
+      const SizedBox(height:7),
+      Text(t,maxLines:2,textAlign:TextAlign.center,style:const TextStyle(color:ngelxPrivateBlueInk,fontSize:12.5,height:1.1,fontWeight:FontWeight.w700)),
+    ])),
+  ));
+  Widget _satir(IconData i,String t,VoidCallback f,{String? alt,Color? renk})=>ListTile(
+    onTap:f,
+    contentPadding:const EdgeInsets.symmetric(horizontal:8,vertical:6),
+    leading:Container(width:42,height:42,alignment:Alignment.center,decoration:BoxDecoration(color:renk==Colors.red?const Color(0xFFFFEEF1):ngelxPrivateBlueSoft,borderRadius:BorderRadius.circular(14)),child:Icon(i,color:renk??ngelxPrivateBlue,size:24)),
+    title:Text(t,style:TextStyle(color:renk??ngelxPrivateBlueInk,fontSize:16.5,fontWeight:FontWeight.w700)),
+    subtitle:alt==null?null:Text(alt,style:const TextStyle(color:Colors.black45,fontSize:13)),
+    trailing:const Icon(Icons.chevron_right_rounded,color:ngelxPrivateBlue,size:22),
+  );
+}
+
+class SohbetMesajAramaPage extends StatefulWidget{
+  final String chatId;
+  final bool groupMode;
+  const SohbetMesajAramaPage({super.key,required this.chatId,this.groupMode=false});
+  @override State<SohbetMesajAramaPage> createState()=>_SohbetMesajAramaPageState();
+}
+class _SohbetMesajAramaPageState extends State<SohbetMesajAramaPage>{
+  final ara=TextEditingController();
+  final Map<String,Future<DocumentSnapshot<Map<String,dynamic>>>> _profilCache={};
+  String sorgu='';
+  int filtre=0;
+
+  @override void dispose(){ara.dispose();super.dispose();}
+  Future<DocumentSnapshot<Map<String,dynamic>>> _profil(String id)=>_profilCache.putIfAbsent(id,()=>FirebaseFirestore.instance.collection('users').doc(id).get());
+
+  bool _aramaFiltresineUyar(Map<String,dynamic> v){
+    final tur=(v['type']??'text').toString();
+    if(filtre==1)return tur=='text'||tur=='story_reply';
+    if(filtre==2)return tur=='photo'||tur=='video'||tur=='gif'||tur=='audio'||tur=='sticker';
+    if(filtre==3)return tur=='file'||tur=='document';
+    if(filtre==4)return tur=='shared_content'||(v['linkUrl']??v['url']??'').toString().isNotEmpty;
+    return tur!='system';
+  }
+
+  String _aramaMetni(Map<String,dynamic> v){
+    return [
+      (v['text']??'').toString(),
+      (v['fileName']??'').toString(),
+      (v['linkTitle']??'').toString(),
+      (v['linkHost']??'').toString(),
+      (v['locationText']??'').toString(),
+    ].where((x)=>x.trim().isNotEmpty).join(' • ');
+  }
+
+  Widget _aramaFiltreChip(String label,int index)=>Padding(
+    padding:const EdgeInsets.only(right:7),
+    child:ChoiceChip(
+      label:Text(label),
+      selected:filtre==index,
+      onSelected:(_)=>setState(()=>filtre=index),
+      selectedColor:widget.groupMode?ngelxGroupGreenSoft:const Color(0xFFF0E8FF),
+      backgroundColor:Colors.white,
+      side:BorderSide(color:filtre==index?(widget.groupMode?ngelxGroupGreen:ngelxPremiumPurple):ngelxPremiumBorder),
+      labelStyle:TextStyle(color:filtre==index?(widget.groupMode?ngelxGroupGreen:ngelxPremiumPurple):ngelxPremiumMuted,fontSize:11.5,fontWeight:FontWeight.w800),
+      shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(14)),
+    ),
+  );
+
+  Future<void> _aramaSonucuAc(QueryDocumentSnapshot<Map<String,dynamic>> d)async{
+    final v=d.data(),sender=(v['senderId']??'').toString(),tur=(v['type']??'text').toString();
+    Map<String,dynamic> p=<String,dynamic>{};
+    if(sender.isNotEmpty&&sender!='system'){
+      try{p=(await _profil(sender)).data()??<String,dynamic>{};}catch(_){}
+    }
+    if(!mounted)return;
+    final isim=(p['displayName']??p['username']??(sender=='system'?'Sistem':'Grup üyesi')).toString();
+    final foto=(p['photoUrl']??'').toString();
+    final metin=_aramaMetni(v);
+    final medya=(v['mediaUrl']??'').toString();
+    final dosya=(v['fileUrl']??'').toString();
+    final link=(v['linkUrl']??v['url']??'').toString();
+    await showModalBottomSheet<void>(
+      context:context,
+      isScrollControlled:true,
+      backgroundColor:Colors.white,
+      showDragHandle:true,
+      shape:const RoundedRectangleBorder(borderRadius:BorderRadius.vertical(top:Radius.circular(28))),
+      builder:(sheet)=>SafeArea(
+        child:Padding(
+          padding:EdgeInsets.fromLTRB(16,0,16,20+MediaQuery.viewInsetsOf(sheet).bottom),
+          child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
+            Row(children:[
+              CircleAvatar(
+                radius:22,
+                backgroundColor:widget.groupMode?ngelxGroupGreenSoft:const Color(0xFFECE4F5),
+                backgroundImage:foto.isEmpty?null:CachedNetworkImageProvider(foto),
+                child:foto.isEmpty?Icon(sender=='system'?Icons.info_outline_rounded:Icons.person_rounded,color:widget.groupMode?ngelxGroupGreen:ngelxPremiumPurple):null,
+              ),
+              const SizedBox(width:10),
+              Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+                Text(isim,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:ngelxPremiumInk,fontSize:15,fontWeight:FontWeight.w900)),
+                Text(mesajSaati(v['createdAt']),style:const TextStyle(color:ngelxPremiumMuted,fontSize:11,fontWeight:FontWeight.w600)),
+              ])),
+              Container(
+                padding:const EdgeInsets.symmetric(horizontal:9,vertical:5),
+                decoration:BoxDecoration(color:widget.groupMode?ngelxGroupGreenSoft:const Color(0xFFF0E8FF),borderRadius:BorderRadius.circular(12)),
+                child:Text(
+                  tur=='photo'?'Fotoğraf':tur=='video'?'Video':tur=='gif'?'GIF':tur=='audio'?'Ses':tur=='file'||tur=='document'?'Dosya':tur=='shared_content'?'Bağlantı':'Mesaj',
+                  style:TextStyle(color:widget.groupMode?ngelxGroupGreen:ngelxPremiumPurple,fontSize:10,fontWeight:FontWeight.w900),
+                ),
+              ),
+            ]),
+            const SizedBox(height:14),
+            Container(
+              width:double.infinity,
+              padding:const EdgeInsets.all(14),
+              decoration:BoxDecoration(color:const Color(0xFFF7F8F9),borderRadius:BorderRadius.circular(18),border:Border.all(color:c
