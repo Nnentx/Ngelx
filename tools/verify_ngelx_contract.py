@@ -196,7 +196,7 @@ for forbidden in (
 # Explore must not suggest the signed-in account and must not fake online presence.
 for token in (
     "d.id!=ben&&d.data()['deactivated']!=true",
-    "v['isOnline']==true&&v['showActivityStatus']!=false",
+    "ngelxPresenceOnline(v)&&v['showActivityStatus']!=false",
 ):
     if token not in app:
         errors.append("Keşfet kişi kartı kapsam/aktiflik koruması eksik: " + token)
