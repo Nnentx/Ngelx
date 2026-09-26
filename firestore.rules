@@ -340,23 +340,38 @@ service cloud.firestore {
       }
 
       match /joinRequests/{requestUid} {
-        allow create: if signedIn()
+        allow create: if (
+          signedIn()
           && request.auth.uid == requestUid
           && request.resource.data.get('uid', '') == request.auth.uid
           && request.resource.data.get('status', '') in ['pending', 'autojoin']
-          && validInvite(request.resource.data.get('inviteCode', ''), chatId);
+          && validInvite(request.resource.data.get('inviteCode', ''), chatId)
+        ) || (
+          signedIn()
+          && request.auth.uid in groupDoc(chatId).data.get('members', [])
+          && request.resource.data.get('type', '') == 'member_add'
+          && request.resource.data.get('requestedBy', '') == request.auth.uid
+          && request.resource.data.get('targetUid', '') is string
+          && request.resource.data.get('targetUid', '').size() > 0
+          && !(request.resource.data.get('targetUid', '') in groupDoc(chatId).data.get('members', []))
+          && request.resource.data.get('status', '') == 'pending'
+        );
         allow get: if signedIn() && (
-          request.auth.uid == requestUid || isGroupAdmin(chatId)
+          request.auth.uid == requestUid
+          || resource.data.get('requestedBy', '') == request.auth.uid
+          || isGroupAdmin(chatId)
         );
         allow list: if isGroupAdmin(chatId);
         allow update: if isGroupAdmin(chatId) || (
           signedIn()
-          && request.auth.uid == requestUid
+          && (request.auth.uid == requestUid || resource.data.get('requestedBy', '') == request.auth.uid)
           && onlyChanges(['status', 'updatedAt'])
           && request.resource.data.get('status', '') == 'cancelled'
         );
         allow delete: if signedIn() && (
-          request.auth.uid == requestUid || isGroupAdmin(chatId)
+          request.auth.uid == requestUid
+          || resource.data.get('requestedBy', '') == request.auth.uid
+          || isGroupAdmin(chatId)
         );
       }
     }

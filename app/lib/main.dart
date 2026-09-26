@@ -10337,33 +10337,37 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
                 StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
                   stream:chatRef.collection('joinRequests').snapshots(),
                   builder:(_,istekSnap){
-                    final sayi=(istekSnap.data?.docs??const[]).where((d)=>(d.data()['status']??'pending').toString()=='pending').length;
-                    if(sayi==0)return const SizedBox.shrink();
-                    return InkWell(
-                      onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupKatilmaIstekleriPage(chatId:widget.chatId))),
-                      child:Container(
-                        margin:const EdgeInsets.fromLTRB(10,9,10,1),
-                        padding:const EdgeInsets.symmetric(horizontal:12,vertical:10),
-                        decoration:BoxDecoration(
-                          color:Colors.white,
-                          borderRadius:BorderRadius.circular(18),
-                          border:Border.all(color:ngelxGroupBorder),
-                          boxShadow:const [BoxShadow(color:Color(0x10000000),blurRadius:12,offset:Offset(0,4))],
-                        ),
-                        child:Row(children:[
-                          const CircleAvatar(radius:20,backgroundColor:Color(0xFFFF4D55),child:Icon(Icons.person_add_alt_1_rounded,color:Colors.white,size:22)),
-                          const SizedBox(width:11),
-                          Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-                            const Text('Katılma isteği',style:TextStyle(color:Color(0xFF656565),fontSize:12,fontWeight:FontWeight.w800)),
-                            Text(sayi.toString()+' kişi katılmak istiyor.',style:const TextStyle(color:Colors.black87,fontSize:14,fontWeight:FontWeight.w900)),
-                          ])),
-                          const Icon(Icons.chevron_right_rounded,color:Colors.black38),
-                        ]),
-                      ),
+                    final bekleyen=(istekSnap.data?.docs??const <QueryDocumentSnapshot<Map<String,dynamic>>>[])
+                      .where((d)=>(d.data()['status']??'pending').toString()=='pending').toList();
+                    if(bekleyen.isEmpty)return const SizedBox.shrink();
+                    final ilk=bekleyen.first,v=ilk.data(),uyeEkle=(v['type']??'').toString()=='member_add';
+                    final isteyen=(v['requestedByName']??'Bir üye').toString(),hedef=(v['targetName']??'bir kişiyi').toString();
+                    final aciklama=bekleyen.length==1
+                      ?(uyeEkle?isteyen+' · '+hedef:'1 katılma isteği var')
+                      :bekleyen.length.toString()+' bekleyen üye isteği var';
+                    return Container(
+                      margin:const EdgeInsets.fromLTRB(10,8,10,1),
+                      padding:const EdgeInsets.fromLTRB(11,8,8,8),
+                      decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(16),border:Border.all(color:ngelxGroupBorder)),
+                      child:Row(children:[
+                        const CircleAvatar(radius:18,backgroundColor:ngelxGroupGreenSoft,child:Icon(Icons.person_add_alt_1_rounded,color:ngelxGroupGreen,size:19)),
+                        const SizedBox(width:9),
+                        Expanded(child:InkWell(
+                          onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupKatilmaIstekleriPage(chatId:widget.chatId))),
+                          child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+                            const Text('Üye ekleme isteği',style:TextStyle(color:Color(0xFF5F6368),fontSize:10.5,fontWeight:FontWeight.w800)),
+                            Text(aciklama,maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black87,fontSize:12.5,fontWeight:FontWeight.w900)),
+                          ]),
+                        )),
+                        if(bekleyen.length==1)...[
+                          IconButton(tooltip:'Reddet',visualDensity:VisualDensity.compact,onPressed:()=>unawaited(GrupKatilmaIstekleriPage.kararHizli(widget.chatId,ilk,false)),icon:const Icon(Icons.close_rounded,color:Color(0xFFE13F51))),
+                          IconButton(tooltip:'Onayla',visualDensity:VisualDensity.compact,onPressed:()=>unawaited(GrupKatilmaIstekleriPage.kararHizli(widget.chatId,ilk,true)),icon:const Icon(Icons.check_rounded,color:ngelxGroupGreen)),
+                        ]else
+                          IconButton(onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupKatilmaIstekleriPage(chatId:widget.chatId))),icon:const Icon(Icons.chevron_right_rounded,color:Colors.black38)),
+                      ]),
                     );
                   },
-                ),
-              StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
+                ),              StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
                 stream:chatRef.collection('messages').where('pinned',isEqualTo:true).limit(1).snapshots(),
                 builder:(_,pinSnap){
                   final pins=pinSnap.data?.docs??[];
@@ -12568,10 +12572,6 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
     final grup=await ref.get();
     final gv=grup.data()??<String,dynamic>{};
     final yonetici=List<String>.from(gv['admins']??const[]).contains(me)||(gv['createdBy']??'').toString()==me;
-    if(!yonetici){
-      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Yalnızca grup kurucusu ve yöneticiler üye ekleyebilir.')));
-      return;
-    }
     if(mevcut.length>=60){
       if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bu grup 60 üyelik üst sınıra ulaştı.')));
       return;
@@ -12665,7 +12665,10 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
                   style:FilledButton.styleFrom(backgroundColor:ngelxGroupGreen,padding:const EdgeInsets.symmetric(vertical:14),shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(17))),
                   onPressed:secilen.isEmpty?null:()=>Navigator.pop(c,true),
                   icon:const Icon(Icons.person_add_alt_1_rounded),
-                  label:Text(secilen.isEmpty?'Kişi seç':secilen.length.toString()+' kişiyi ekle',style:const TextStyle(fontWeight:FontWeight.w900)),
+                  label:Text(
+                    secilen.isEmpty?'Kişi seç':(yonetici?secilen.length.toString()+' kişiyi ekle':secilen.length.toString()+' kişi için onay iste'),
+                    style:const TextStyle(fontWeight:FontWeight.w900),
+                  ),
                 ),
               ),
             ),
@@ -12679,7 +12682,28 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
       return (v['displayName']??v['username']??'Bir üye').toString();
     }).toList();
     final pv=p.data()??<String,dynamic>{};
-    final ekleyen=(pv['displayName']??pv['username']??'Bir yönetici').toString();
+    final ekleyen=(pv['displayName']??pv['username']??'Bir üye').toString();
+    if(!yonetici){
+      for(final hedef in adaylar.where((d)=>secilen.contains(d.id))){
+        final hv=hedef.data()??<String,dynamic>{};
+        final hedefAd=(hv['displayName']??hv['username']??'Bir kullanıcı').toString();
+        await ref.collection('joinRequests').doc(me+'_'+hedef.id).set({
+          'type':'member_add',
+          'uid':hedef.id,
+          'targetUid':hedef.id,
+          'targetName':hedefAd,
+          'targetPhoto':(hv['photoUrl']??'').toString(),
+          'requestedBy':me,
+          'requestedByName':ekleyen,
+          'requestedByPhoto':(pv['photoUrl']??'').toString(),
+          'status':'pending',
+          'createdAt':FieldValue.serverTimestamp(),
+          'updatedAt':FieldValue.serverTimestamp(),
+        },SetOptions(merge:true));
+      }
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(secilen.length.toString()+' üye ekleme isteği yönetici onayına gönderildi.')));
+      return;
+    }
     final grupGuncelle=<String,dynamic>{
       'members':FieldValue.arrayUnion(secilen.toList()),
       'formerMembers':FieldValue.arrayRemove(secilen.toList()),
@@ -14109,6 +14133,27 @@ class _GrupDavetPageState extends State<GrupDavetPage>{
 
 class GrupKatilmaIstekleriPage extends StatelessWidget{
   final String chatId;
+  static Future<void> kararHizli(String chatId,QueryDocumentSnapshot<Map<String,dynamic>> d,bool onay)async{
+    final uid=(d.data()['uid']??d.id).toString();
+    final me=FirebaseAuth.instance.currentUser?.uid;
+    if(uid.isEmpty||me==null)return;
+    final chat=FirebaseFirestore.instance.collection('chats').doc(chatId);
+    final batch=FirebaseFirestore.instance.batch();
+    batch.set(d.reference,{'status':onay?'accepted':'rejected','decidedAt':FieldValue.serverTimestamp(),'decidedBy':me},SetOptions(merge:true));
+    if(onay)batch.update(chat,{
+      'members':FieldValue.arrayUnion([uid]),
+      'formerMembers':FieldValue.arrayRemove([uid]),
+      'hiddenFor':FieldValue.arrayRemove([uid]),
+      'removedAt_'+uid:FieldValue.delete(),
+      'leftAt_'+uid:FieldValue.delete(),
+      'exitType_'+uid:FieldValue.delete(),
+      'exitActorUid_'+uid:FieldValue.delete(),
+      'exitActorName_'+uid:FieldValue.delete(),
+      'updatedAt':FieldValue.serverTimestamp(),
+    });
+    await batch.commit();
+    if(onay)await ngelxGrupDavetMetaSenkronla(chat);
+  }
   const GrupKatilmaIstekleriPage({super.key,required this.chatId});
 
   Future<void> _karar(BuildContext context,QueryDocumentSnapshot<Map<String,dynamic>> d,bool onay)async{
@@ -14122,6 +14167,11 @@ class GrupKatilmaIstekleriPage extends StatelessWidget{
       'members':FieldValue.arrayUnion([uid]),
       'formerMembers':FieldValue.arrayRemove([uid]),
       'hiddenFor':FieldValue.arrayRemove([uid]),
+      'removedAt_'+uid:FieldValue.delete(),
+      'leftAt_'+uid:FieldValue.delete(),
+      'exitType_'+uid:FieldValue.delete(),
+      'exitActorUid_'+uid:FieldValue.delete(),
+      'exitActorName_'+uid:FieldValue.delete(),
       'updatedAt':FieldValue.serverTimestamp(),
     });
     await batch.commit();
@@ -14135,7 +14185,10 @@ class GrupKatilmaIstekleriPage extends StatelessWidget{
         final eklenenV=profiller[1].data()??<String,dynamic>{};
         final ekleyen=(ekleyenV['displayName']??ekleyenV['username']??'Bir yönetici').toString();
         final eklenen=(eklenenV['displayName']??eklenenV['username']??'Bir üye').toString();
-        final olay=ekleyen+', '+eklenen+' adlı üyeyi gruba ekledi.';
+        final isteyen=(d.data()['requestedByName']??'').toString().trim();
+        final olay=isteyen.isNotEmpty&&isteyen!=ekleyen
+          ?ekleyen+', '+isteyen+' tarafından istenen '+eklenen+' adlı üyeyi gruba ekledi.'
+          :ekleyen+', '+eklenen+' adlı üyeyi gruba ekledi.';
         await chat.collection('messages').add({
           'senderId':me,
           'type':'system',
@@ -14174,7 +14227,7 @@ class GrupKatilmaIstekleriPage extends StatelessWidget{
       backgroundColor:const Color(0xFFFBF9FF),
       appBar:AppBar(
         backgroundColor:Colors.transparent,surfaceTintColor:Colors.transparent,elevation:0,
-        title:const Text('Katılma istekleri',style:TextStyle(fontWeight:FontWeight.w900,color:ngelxPremiumInk)),
+        title:const Text('Davetler ve istekler',style:TextStyle(fontWeight:FontWeight.w900,color:ngelxPremiumInk)),
         flexibleSpace:Container(decoration:const BoxDecoration(gradient:LinearGradient(colors:[Color(0xFFFFFFFF),Color(0xFFF5EFFF)]),borderRadius:BorderRadius.vertical(bottom:Radius.circular(24)))),
       ),
       body:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
@@ -14185,17 +14238,19 @@ class GrupKatilmaIstekleriPage extends StatelessWidget{
           if(docs.isEmpty)return const Center(child:Column(mainAxisSize:MainAxisSize.min,children:[
             Icon(Icons.how_to_reg_rounded,color:Color(0xFFC7B8E7),size:58),
             SizedBox(height:10),
-            Text('Bekleyen katılma isteği yok.',style:TextStyle(color:ngelxPremiumMuted,fontWeight:FontWeight.w700)),
+            Text('Bekleyen istek yok.',style:TextStyle(color:ngelxPremiumMuted,fontWeight:FontWeight.w700)),
           ]));
           return ListView.builder(
             padding:const EdgeInsets.fromLTRB(14,14,14,28),
             itemCount:docs.length,
             itemBuilder:(_,i){
-              final d=docs[i],uid=(d.data()['uid']??d.id).toString();
+              final d=docs[i],veri=d.data(),uid=(veri['uid']??d.id).toString();
+              final uyeEkle=(veri['type']??'').toString()=='member_add';
               return FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(
                 future:FirebaseFirestore.instance.collection('users').doc(uid).get(),
                 builder:(_,u){
                   final p=u.data?.data()??<String,dynamic>{},isim=(p['displayName']??p['username']??'Kullanıcı').toString(),foto=(p['photoUrl']??'').toString();
+                  final isteyen=(veri['requestedByName']??'Bir üye').toString();
                   return NgelXPremiumCard(
                     margin:const EdgeInsets.only(bottom:10),
                     padding:const EdgeInsets.fromLTRB(12,10,12,12),
@@ -14203,8 +14258,8 @@ class GrupKatilmaIstekleriPage extends StatelessWidget{
                       ListTile(
                         contentPadding:EdgeInsets.zero,
                         leading:CircleAvatar(radius:24,backgroundColor:const Color(0xFFECE4F5),backgroundImage:foto.isEmpty?null:CachedNetworkImageProvider(foto),child:foto.isEmpty?const Icon(Icons.person_rounded,color:ngelxPremiumPurple):null),
-                        title:Text(isim,style:const TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w800)),
-                        subtitle:Text('@'+(p['username']??'ngelx').toString(),style:const TextStyle(color:ngelxPremiumMuted,fontSize:11)),
+                        title:Text(uyeEkle?isteyen+' bu kişiyi eklemek istiyor':isim,style:const TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w800)),
+                        subtitle:Text(uyeEkle?isim:'@'+(p['username']??'ngelx').toString(),style:const TextStyle(color:ngelxPremiumMuted,fontSize:11)),
                       ),
                       Row(children:[
                         Expanded(child:FilledButton(onPressed:()=>_karar(context,d,true),style:FilledButton.styleFrom(backgroundColor:ngelxPremiumPurple),child:const Text('Onayla'))),
