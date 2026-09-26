@@ -2,7 +2,7 @@ name: NgelX V63 Input Performance Repair
 
 on:
   push:
-    branches: [main, v63-input-performance]
+    branches: [main]
     paths:
       - 'app/**'
       - 'cloudflare/worker/**'
