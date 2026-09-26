@@ -52,6 +52,65 @@ Future<bool> ngelxCanManageGroup(String chatId, [String? explicitUid]) async {
   }
 }
 
+
+DocumentReference<Map<String, dynamic>> ngelxGroupArchiveRef(String uid, String chatId) =>
+    FirebaseFirestore.instance.collection('group_archives').doc(uid).collection('items').doc(chatId);
+
+Future<void> ngelxRecordGroupArchive({
+  required String chatId,
+  required String targetUid,
+  required String exitType,
+  required String actorUid,
+  required String actorName,
+  required String groupName,
+  required String groupPhotoUrl,
+}) async {
+  await ngelxGroupArchiveRef(targetUid, chatId).set(<String, dynamic>{
+    'chatId': chatId,
+    'targetUid': targetUid,
+    'exitType': exitType,
+    'actorUid': actorUid,
+    'actorName': actorName,
+    'groupName': groupName,
+    'groupPhotoUrl': groupPhotoUrl,
+    'archivedAt': FieldValue.serverTimestamp(),
+    'updatedAt': FieldValue.serverTimestamp(),
+  }, SetOptions(merge: true));
+}
+
+Future<void> ngelxClearGroupArchive(String uid, String chatId) async {
+  try {
+    await ngelxGroupArchiveRef(uid, chatId).delete();
+  } catch (_) {}
+}
+
+Future<void> ngelxMarkGroupMessagesSeen({
+  required String chatId,
+  required List<QueryDocumentSnapshot<Map<String, dynamic>>> docs,
+  required String uid,
+  required bool shareReadReceipt,
+}) async {
+  if (docs.isEmpty) return;
+  final batch = FirebaseFirestore.instance.batch();
+  var changed = 0;
+  for (final d in docs.reversed.take(30)) {
+    final v = d.data();
+    if ((v['senderId'] ?? '').toString() == uid) continue;
+    if ((v['type'] ?? '').toString() == 'system') continue;
+    final delivered = List<String>.from(v['deliveredTo'] ?? const <String>[]);
+    final seen = List<String>.from(v['seenBy'] ?? const <String>[]);
+    final needsDelivered = !delivered.contains(uid);
+    final needsSeen = shareReadReceipt && !seen.contains(uid);
+    if (!needsDelivered && !needsSeen) continue;
+    batch.set(d.reference, <String, dynamic>{
+      if (needsDelivered) 'deliveredTo': FieldValue.arrayUnion(<String>[uid]),
+      if (needsSeen) 'seenBy': FieldValue.arrayUnion(<String>[uid]),
+    }, SetOptions(merge: true));
+    changed++;
+  }
+  if (changed > 0) await batch.commit();
+}
+
 class GroupDraftStore {
   static final Map<String, Timer> _timers = <String, Timer>{};
 
@@ -424,8 +483,19 @@ Future<void> showGroupMessageInfo({
   final members = List<String>.from(data['members'] ?? const <String>[]);
   final deliveredIds = <String>[];
   final seenIds = <String>[];
+  final directDelivered = List<String>.from(message['deliveredTo'] ?? const <String>[]);
+  final directSeen = List<String>.from(message['seenBy'] ?? const <String>[]);
 
-  if (created != null) {
+  if (directDelivered.isNotEmpty || directSeen.isNotEmpty) {
+    for (final id in <String>{...directDelivered, ...directSeen}) {
+      if (id == currentUid) continue;
+      if (directSeen.contains(id)) {
+        seenIds.add(id);
+      } else {
+        deliveredIds.add(id);
+      }
+    }
+  } else if (created != null) {
     for (final id in members) {
       if (id == currentUid) continue;
       final delivered = data['lastDeliveredAt_' + id];
@@ -591,156 +661,181 @@ Future<void> showGroupForwardSheet({
       .where('members', arrayContains: uid)
       .limit(60)
       .get();
+  final rows = chats.docs.where((d) => d.id != sourceChatId).toList();
 
   if (!context.mounted) return;
   final selected = <String>{};
   var sending = false;
+  final profileFutures = <String, Future<DocumentSnapshot<Map<String, dynamic>>>>{};
+
   await showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.white,
     showDragHandle: true,
     shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
-    builder: (sheet) => StatefulBuilder(builder: (sheet, setSheet) {
-      return SafeArea(
-        child: SizedBox(
-          height: MediaQuery.sizeOf(sheet).height * .76,
-          child: Column(children: [
-            const Padding(
-              padding: EdgeInsets.fromLTRB(18, 2, 18, 12),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text('Mesajı ilet', style: TextStyle(color: _ink, fontSize: 20, fontWeight: FontWeight.w900)),
-              ),
-            ),
-            Expanded(
-              child: ListView.builder(
-                itemCount: chats.docs.length,
-                itemBuilder: (_, i) {
-                  final doc = chats.docs[i];
-                  final data = doc.data();
-                  final members = List<String>.from(data['members'] ?? const <String>[]);
-                  final isGroup = data['isGroup'] == true || members.length > 2;
-                  final checked = selected.contains(doc.id);
-
-                  Widget title;
-                  Widget leading;
-                  if (isGroup) {
-                    final name = (data['groupName'] ?? 'Grup sohbeti').toString();
-                    final photo = (data['groupPhotoUrl'] ?? '').toString();
-                    title = Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800));
-                    leading = CircleAvatar(
-                      backgroundColor: _groupGreenSoft,
-                      backgroundImage: photo.isEmpty ? null : CachedNetworkImageProvider(photo),
-                      child: photo.isEmpty ? const Icon(Icons.groups_rounded, color: _groupGreen) : null,
-                    );
-                  } else {
-                    final other = members.firstWhere((x) => x != uid, orElse: () => '');
-                    title = FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-                      future: other.isEmpty ? null : FirebaseFirestore.instance.collection('users').doc(other).get(),
-                      builder: (_, snap) {
-                        final p = snap.data?.data() ?? <String, dynamic>{};
-                        return Text(
-                          (p['displayName'] ?? p['username'] ?? 'Sohbet').toString(),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontWeight: FontWeight.w800),
-                        );
-                      },
-                    );
-                    leading = const CircleAvatar(backgroundColor: _groupGreenSoft, child: Icon(Icons.person_rounded, color: _groupGreen));
-                  }
-
-                  return CheckboxListTile(
-                    value: checked,
-                    secondary: leading,
-                    title: title,
-                    activeColor: _groupGreen,
-                    onChanged: sending
-                        ? null
-                        : (x) => setSheet(() {
-                              if (x == true) {
-                                selected.add(doc.id);
-                              } else {
-                                selected.remove(doc.id);
-                              }
-                            }),
-                  );
-                },
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(14, 8, 14, 14),
-              child: SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: FilledButton.icon(
-                  style: FilledButton.styleFrom(backgroundColor: _groupGreen),
-                  onPressed: selected.isEmpty || sending
-                      ? null
-                      : () async {
-                          setSheet(() => sending = true);
-                          var sent = 0;
-                          for (final chatId in selected) {
-                            final target = FirebaseFirestore.instance.collection('chats').doc(chatId);
-                            try {
-                              final targetDoc = await target.get();
-                              final targetData = targetDoc.data() ?? <String, dynamic>{};
-                              final members = List<String>.from(targetData['members'] ?? const <String>[]);
-                              final admins = List<String>.from(targetData['admins'] ?? const <String>[]);
-                              if (!members.contains(uid)) continue;
-                              if (targetData['onlyAdminsCanPost'] == true && !admins.contains(uid)) continue;
-
-                              final out = <String, dynamic>{
-                                'senderId': uid,
-                                'type': type,
-                                'createdAt': FieldValue.serverTimestamp(),
-                                'clientCreatedAt': Timestamp.now(),
-                                'forwarded': true,
-                                'forwardedFromChatId': sourceChatId,
-                                'forwardedFromMessageId': sourceMessageId,
-                              };
-                              for (final key in <String>[
-                                'text','mediaUrl','audioUrl','durationSeconds','fileUrl','fileName','fileSize',
-                                'locationText','sticker','contentId','linkUrl','linkHost','linkTitle','linkDescription','linkImage'
-                              ]) {
-                                if (sourceMessage.containsKey(key)) out[key] = sourceMessage[key];
-                              }
-                              final messageRef = target.collection('messages').doc();
-                              final update = <String, dynamic>{
-                                'lastMessage': type == 'text'
-                                    ? (sourceMessage['text'] ?? 'İletilen mesaj').toString()
-                                    : '↪️ İletilen mesaj',
-                                'updatedAt': FieldValue.serverTimestamp(),
-                                'hiddenFor': FieldValue.arrayRemove(members),
-                              };
-                              for (final member in members) {
-                                if (member != uid) update['unread_' + member] = FieldValue.increment(1);
-                              }
-                              final batch = FirebaseFirestore.instance.batch();
-                              batch.set(messageRef, out);
-                              batch.set(target, update, SetOptions(merge: true));
-                              await batch.commit();
-                              sent++;
-                            } catch (_) {}
-                          }
-                          if (sheet.mounted) Navigator.pop(sheet);
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text(sent > 0 ? sent.toString() + ' sohbete iletildi.' : 'Mesaj iletilemedi.')),
-                            );
-                          }
-                        },
-                  icon: sending
-                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                      : const Icon(Icons.forward_rounded),
-                  label: Text(sending ? 'İletiliyor...' : 'İlet'),
+    builder: (sheetContext) => Theme(
+      data: ThemeData.light().copyWith(
+        scaffoldBackgroundColor: Colors.white,
+        colorScheme: ColorScheme.fromSeed(seedColor: _groupGreen),
+        listTileTheme: const ListTileThemeData(textColor: _ink, iconColor: _groupGreen),
+      ),
+      child: StatefulBuilder(builder: (sheet, setSheet) {
+        return SafeArea(
+          child: SizedBox(
+            height: MediaQuery.sizeOf(sheet).height * .76,
+            child: Column(children: [
+              const Padding(
+                padding: EdgeInsets.fromLTRB(18, 2, 18, 12),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text('Mesajı ilet', style: TextStyle(color: _ink, fontSize: 20, fontWeight: FontWeight.w900)),
                 ),
               ),
-            ),
-          ]),
-        ),
-      );
-    }),
+              const Divider(height: 1),
+              Expanded(
+                child: rows.isEmpty
+                    ? const Center(child: Text('İletilebilecek başka sohbet yok.', style: TextStyle(color: _muted, fontWeight: FontWeight.w700)))
+                    : ListView.separated(
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        itemCount: rows.length,
+                        separatorBuilder: (_, __) => const Divider(height: 1, indent: 74, color: Color(0xFFF0F0F0)),
+                        itemBuilder: (_, i) {
+                          final doc = rows[i];
+                          final data = doc.data();
+                          final members = List<String>.from(data['members'] ?? const <String>[]);
+                          final isGroup = data['isGroup'] == true || members.length > 2;
+                          final checked = selected.contains(doc.id);
+
+                          Widget row(String name, String subtitle, String photo, {required bool group}) {
+                            return ListTile(
+                              minVerticalPadding: 6,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+                              onTap: sending ? null : () => setSheet(() => checked ? selected.remove(doc.id) : selected.add(doc.id)),
+                              leading: CircleAvatar(
+                                radius: 23,
+                                backgroundColor: _groupGreenSoft,
+                                backgroundImage: photo.isEmpty ? null : CachedNetworkImageProvider(photo),
+                                child: photo.isEmpty ? Icon(group ? Icons.groups_rounded : Icons.person_rounded, color: _groupGreen) : null,
+                              ),
+                              title: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: _ink, fontSize: 15, fontWeight: FontWeight.w900)),
+                              subtitle: subtitle.isEmpty ? null : Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: _muted, fontSize: 11.5)),
+                              trailing: AnimatedContainer(
+                                duration: const Duration(milliseconds: 140),
+                                width: 29,
+                                height: 29,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: checked ? _groupGreen : Colors.white,
+                                  border: Border.all(color: checked ? _groupGreen : const Color(0xFFD1D5DB), width: 1.4),
+                                ),
+                                child: checked ? const Icon(Icons.check_rounded, color: Colors.white, size: 18) : null,
+                              ),
+                            );
+                          }
+
+                          if (isGroup) {
+                            return row(
+                              (data['groupName'] ?? 'Grup sohbeti').toString(),
+                              (data['lastMessage'] ?? 'Grup sohbeti').toString(),
+                              (data['groupPhotoUrl'] ?? '').toString(),
+                              group: true,
+                            );
+                          }
+
+                          final other = members.firstWhere((x) => x != uid, orElse: () => '');
+                          if (other.isEmpty) return row('Sohbet', '', '', group: false);
+                          final future = profileFutures.putIfAbsent(
+                            other,
+                            () => FirebaseFirestore.instance.collection('users').doc(other).get(),
+                          );
+                          return FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+                            future: future,
+                            builder: (_, snap) {
+                              final p = snap.data?.data() ?? <String, dynamic>{};
+                              final name = (p['displayName'] ?? p['username'] ?? 'Sohbet').toString();
+                              final username = (p['username'] ?? '').toString().trim();
+                              return row(name, username.isEmpty ? 'Özel sohbet' : '@' + username, (p['photoUrl'] ?? '').toString(), group: false);
+                            },
+                          );
+                        },
+                      ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 8, 14, 14),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: FilledButton.icon(
+                    style: FilledButton.styleFrom(backgroundColor: _groupGreen),
+                    onPressed: selected.isEmpty || sending
+                        ? null
+                        : () async {
+                            setSheet(() => sending = true);
+                            var sent = 0;
+                            for (final chatId in selected) {
+                              final target = FirebaseFirestore.instance.collection('chats').doc(chatId);
+                              try {
+                                final targetDoc = await target.get();
+                                final targetData = targetDoc.data() ?? <String, dynamic>{};
+                                final members = List<String>.from(targetData['members'] ?? const <String>[]);
+                                final admins = List<String>.from(targetData['admins'] ?? const <String>[]);
+                                final owner = (targetData['createdBy'] ?? '').toString();
+                                if (!members.contains(uid)) continue;
+                                if (targetData['onlyAdminsCanPost'] == true && !admins.contains(uid) && owner != uid) continue;
+
+                                final out = <String, dynamic>{
+                                  'senderId': uid,
+                                  'type': type,
+                                  'createdAt': FieldValue.serverTimestamp(),
+                                  'clientCreatedAt': Timestamp.now(),
+                                  'forwarded': true,
+                                  'forwardedFromChatId': sourceChatId,
+                                  'forwardedFromMessageId': sourceMessageId,
+                                };
+                                for (final key in <String>[
+                                  'text','mediaUrl','audioUrl','durationSeconds','fileUrl','fileName','fileSize',
+                                  'locationText','sticker','contentId','linkUrl','linkHost','linkTitle','linkDescription','linkImage'
+                                ]) {
+                                  if (sourceMessage.containsKey(key)) out[key] = sourceMessage[key];
+                                }
+                                final messageRef = target.collection('messages').doc();
+                                final update = <String, dynamic>{
+                                  'lastMessage': type == 'text'
+                                      ? (sourceMessage['text'] ?? 'İletilen mesaj').toString()
+                                      : '↪️ İletilen mesaj',
+                                  'updatedAt': FieldValue.serverTimestamp(),
+                                  'hiddenFor': FieldValue.arrayRemove(members),
+                                };
+                                for (final member in members) {
+                                  if (member != uid) update['unread_' + member] = FieldValue.increment(1);
+                                }
+                                final batch = FirebaseFirestore.instance.batch();
+                                batch.set(messageRef, out);
+                                batch.set(target, update, SetOptions(merge: true));
+                                await batch.commit();
+                                sent++;
+                              } catch (_) {}
+                            }
+                            if (sheet.mounted) Navigator.pop(sheet);
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text(sent > 0 ? sent.toString() + ' sohbete iletildi.' : 'Mesaj iletilemedi.')),
+                              );
+                            }
+                          },
+                    icon: sending
+                        ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                        : const Icon(Icons.forward_rounded),
+                    label: Text(sending ? 'İletiliyor...' : 'İlet'),
+                  ),
+                ),
+              ),
+            ]),
+          ),
+        );
+      }),
+    ),
   );
 }
+
