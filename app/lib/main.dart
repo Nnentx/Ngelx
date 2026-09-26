@@ -8505,9 +8505,12 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
   final List<Map<String,String>> mentionOnerileri=[];
   final Set<String> etiketlenenUidler={};
   final Map<String,Future<DocumentSnapshot<Map<String,dynamic>>>> _uyeProfilCache={};
-  Timer? mentionZamanlayici,_mesajBeklemeZamanlayici,_typingZamanlayici,_sesKaydiZamanlayici,_offlineRetryZamanlayici;
+  Timer? mentionZamanlayici,_mesajBeklemeZamanlayici,_typingZamanlayici,_typingBaslatZamanlayici,_sesKaydiZamanlayici,_offlineRetryZamanlayici;
   bool _typingYazildi=false,_typingGostergesiAcik=true;
   List<Map<String,String>>? _mentionUyeleri;
+  Map<String,dynamic> _sonGrupVerisi=<String,dynamic>{};
+  String _mentionUyeImzasi='';
+  int _mentionAramaSurumu=0;
   final List<QueryDocumentSnapshot<Map<String,dynamic>>> _grupMesajOnbellek=[];
   late Stream<QuerySnapshot<Map<String,dynamic>>> _mesajAkisi;
   late final Stream<DocumentSnapshot<Map<String,dynamic>>> _grupAkisi;
@@ -8520,6 +8523,36 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
   String? get uid=>FirebaseAuth.instance.currentUser?.uid;
   DocumentReference<Map<String,dynamic>> get chatRef=>FirebaseFirestore.instance.collection('chats').doc(widget.chatId);
   Future<DocumentSnapshot<Map<String,dynamic>>> _uyeGetir(String id)=>_uyeProfilCache.putIfAbsent(id,()=>FirebaseFirestore.instance.collection('users').doc(id).get());
+
+  void _grupVerisiniOnbellekle(Map<String,dynamic> veri){
+    _sonGrupVerisi=veri;
+    final imza=List<String>.from(veri['members']??const[]).join('|');
+    if(imza!=_mentionUyeImzasi){
+      _mentionUyeImzasi=imza;
+      _mentionUyeleri=null;
+    }
+  }
+
+  Future<Map<String,dynamic>> _grupVerisiHizli()async{
+    if(_sonGrupVerisi.isNotEmpty)return _sonGrupVerisi;
+    try{
+      final yerel=await chatRef.get(const GetOptions(source:Source.cache));
+      final v=yerel.data();
+      if(v!=null&&v.isNotEmpty){
+        _grupVerisiniOnbellekle(v);
+        return v;
+      }
+    }catch(_){}
+    try{
+      final uzak=await chatRef.get().timeout(const Duration(seconds:4));
+      final v=uzak.data()??<String,dynamic>{};
+      if(v.isNotEmpty)_grupVerisiniOnbellekle(v);
+      return v;
+    }catch(_){
+      return <String,dynamic>{};
+    }
+  }
+
   @override void initState(){
     super.initState();
     _grupAkisi=chatRef.snapshots();
@@ -8596,7 +8629,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
     });
   }
   @override void dispose(){
-    mentionZamanlayici?.cancel();_mesajBeklemeZamanlayici?.cancel();_typingZamanlayici?.cancel();_sesKaydiZamanlayici?.cancel();_offlineRetryZamanlayici?.cancel();
+    mentionZamanlayici?.cancel();_mesajBeklemeZamanlayici?.cancel();_typingZamanlayici?.cancel();_typingBaslatZamanlayici?.cancel();_sesKaydiZamanlayici?.cancel();_offlineRetryZamanlayici?.cancel();
     if(_typingYazildi)unawaited(_typingTemizle());
     if(sesKaydediliyor)unawaited(_grupSesKaydedici.cancel());
     unawaited(_grupSesKaydedici.dispose());
@@ -8654,8 +8687,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
 
   Future<Map<String,dynamic>?> mesajGonderimVerisi()async{
     final ben=uid;if(ben==null)return null;
-    final d=await chatRef.get();
-    final v=d.data()??<String,dynamic>{};
+    final v=await _grupVerisiHizli();
     final uyeler=List<String>.from(v['members']??const[]);
     final yoneticiler=List<String>.from(v['admins']??const[]);
     final kurucu=(v['createdBy']??'').toString();
@@ -9073,18 +9105,28 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
     if(me==null)return;
     _typingZamanlayici?.cancel();
     if(!_typingGostergesiAcik){
+      _typingBaslatZamanlayici?.cancel();
+      _typingBaslatZamanlayici=null;
       if(_typingYazildi)unawaited(_typingTemizle());
       return;
     }
     if(deger.trim().isEmpty){
+      _typingBaslatZamanlayici?.cancel();
+      _typingBaslatZamanlayici=null;
       if(_typingYazildi)unawaited(_typingTemizle());
       return;
     }
-    if(!_typingYazildi){
-      _typingYazildi=true;
-      unawaited(chatRef.set({'typing_'+me:FieldValue.serverTimestamp()},SetOptions(merge:true)).catchError((_){ }));
+    if(!_typingYazildi&&_typingBaslatZamanlayici==null){
+      _typingBaslatZamanlayici=Timer(const Duration(milliseconds:220),(){
+        _typingBaslatZamanlayici=null;
+        if(!mounted||mesaj.text.trim().isEmpty||!_typingGostergesiAcik)return;
+        _typingYazildi=true;
+        unawaited(chatRef.set({'typing_'+me:FieldValue.serverTimestamp()},SetOptions(merge:true)).catchError((_){ }));
+      });
     }
     _typingZamanlayici=Timer(const Duration(milliseconds:2400),(){
+      _typingBaslatZamanlayici?.cancel();
+      _typingBaslatZamanlayici=null;
       if(_typingYazildi)unawaited(_typingTemizle());
     });
   }
@@ -9098,20 +9140,23 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
     mentionZamanlayici?.cancel();
     final parca=deger.split(RegExp(r'\s+')).last;
     if(!parca.startsWith('@')){
+      _mentionAramaSurumu++;
       if(mentionOnerileri.isNotEmpty&&mounted)setState(()=>mentionOnerileri.clear());
       return;
     }
     final ara=parca.substring(1).toLowerCase();
-    mentionZamanlayici=Timer(const Duration(milliseconds:260),()async{
+    final surum=++_mentionAramaSurumu;
+    mentionZamanlayici=Timer(const Duration(milliseconds:120),()async{
       try{
-        final grup=await chatRef.get();
-        final grupData=grup.data()??<String,dynamic>{};
-        final yonetici=List<String>.from(grupData['admins']??const[]).contains(uid);
+        final grupData=await _grupVerisiHizli();
+        if(!mounted||surum!=_mentionAramaSurumu)return;
+        final yonetici=List<String>.from(grupData['admins']??const[]).contains(uid)||(grupData['createdBy']??'').toString()==uid;
         final herkesYetkisi=yonetici||grupData['onlyAdminsCanMentionAll']!=true;
         var uyeler=_mentionUyeleri;
         if(uyeler==null){
           final ids=List<String>.from(grupData['members']??const[]).take(60).toList();
           final belgeler=await Future.wait(ids.map(_uyeGetir));
+          if(!mounted||surum!=_mentionAramaSurumu)return;
           uyeler=<Map<String,String>>[];
           for(int i=0;i<belgeler.length;i++){
             final v=belgeler[i].data()??<String,dynamic>{};
@@ -9122,12 +9167,15 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
           }
           _mentionUyeleri=uyeler;
         }
-        if(!mounted)return;
         final sonuc=<Map<String,String>>[];
+        var kisiSayisi=0;
         for(final u in uyeler){
-          if(sonuc.where((x)=>x['kind']=='person').length>=14)break;
+          if(kisiSayisi>=8)break;
           final kullanici=(u['username']??'').toLowerCase(),ad=(u['name']??'').toLowerCase();
-          if(ara.isEmpty||kullanici.contains(ara)||ad.contains(ara))sonuc.add(u);
+          if(ara.isEmpty||kullanici.contains(ara)||ad.contains(ara)){
+            sonuc.add(u);
+            kisiSayisi++;
+          }
         }
         if(herkesYetkisi&&'herkes'.contains(ara))sonuc.add({
           'uid':'all','username':'herkes','name':'herkes','kind':'command',
@@ -9137,7 +9185,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
           'uid':'silent','username':'sessiz','name':'sessiz','kind':'command',
           'subtitle':'Bildirim göndermeden mesaj gönder',
         });
-        if(mounted)setState((){mentionOnerileri..clear()..addAll(sonuc);});
+        if(mounted&&surum==_mentionAramaSurumu)setState((){mentionOnerileri..clear()..addAll(sonuc);});
       }catch(_){}
     });
   }
@@ -9153,9 +9201,8 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
     mesaj.text='${once}@$kullanici ';
     mesaj.selection=TextSelection.collapsed(offset:mesaj.text.length);
     if(hedefUid=='all'){
-      final grup=await chatRef.get();
-      final veri=grup.data()??<String,dynamic>{};
-      final yonetici=List<String>.from(veri['admins']??const[]).contains(uid);
+      final veri=await _grupVerisiHizli();
+      final yonetici=List<String>.from(veri['admins']??const[]).contains(uid)||(veri['createdBy']??'').toString()==uid;
       if(veri['onlyAdminsCanMentionAll']==true&&!yonetici){
         if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('@herkes yalnızca yöneticiler tarafından kullanılabilir.')));
         return;
@@ -9170,8 +9217,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
   Future<void> grupKalpBirak(QueryDocumentSnapshot<Map<String,dynamic>> d)async{
     final ben=uid;if(ben==null)return;
     try{
-      final grup=await chatRef.get();
-      final gv=grup.data()??<String,dynamic>{};
+      final gv=await _grupVerisiHizli();
       if(!List<String>.from(gv['members']??const[]).contains(ben))return;
       final emoji=(gv['quickEmoji']??gv['quickEmoji_$ben']??'👍').toString();
       final ham=d.data()['reactions'];
@@ -9224,8 +9270,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
 
   Future<void> mesajMenusu(QueryDocumentSnapshot<Map<String,dynamic>> d)async{
     final v=d.data(),ben=v['senderId']==uid,metin=(v['text']??'').toString();
-    final grup=await chatRef.get();
-    final grupData=grup.data()??<String,dynamic>{};
+    final grupData=await _grupVerisiHizli();
     final yonetici=List<String>.from(grupData['admins']??const[]).contains(uid)||(grupData['createdBy']??'').toString()==uid;
     final sabitleyebilir=yonetici||grupData['onlyAdminsCanPin']!=true;
     final sec=await showModalBottomSheet<String>(
@@ -9429,32 +9474,52 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
     }else if(sec=='report'){
       await sikayetEt(context,hedefTuru:'grup_mesaji',hedefId:'${widget.chatId}/${d.id}',hedefUid:v['senderId']?.toString());
     }else if(sec=='edit'){
+      await ngelxOverlayKapanisiniBekle();
+      if(!mounted)return;
       final c=TextEditingController(text:metin);
       final ok=await showDialog<bool>(
         context:context,
+        useSafeArea:true,
         builder:(x)=>AlertDialog(
+          insetPadding:const EdgeInsets.symmetric(horizontal:26,vertical:20),
+          contentPadding:const EdgeInsets.fromLTRB(22,8,22,4),
+          actionsPadding:const EdgeInsets.fromLTRB(16,6,16,16),
           shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(26)),
           backgroundColor:Colors.white,surfaceTintColor:Colors.white,
           title:const Text('Mesajı düzenle',style:TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w900)),
           content:TextField(
-            controller:c,maxLines:5,maxLength:2000,
-            style:const TextStyle(color:Color(0xFF202124),fontSize:16),
+            controller:c,autofocus:true,minLines:2,maxLines:4,maxLength:2000,
+            buildCounter:(_, {required currentLength,required isFocused,maxLength})=>null,
+            scrollPadding:const EdgeInsets.only(bottom:72),
+            style:const TextStyle(color:Color(0xFF202124),fontSize:16,height:1.3),
             cursorColor:ngelxGroupGreen,
             decoration:InputDecoration(
               filled:true,
               fillColor:const Color(0xFFF7F4F9),
+              contentPadding:const EdgeInsets.symmetric(horizontal:16,vertical:14),
               hintStyle:const TextStyle(color:Color(0xFF8A8D91)),
               border:OutlineInputBorder(borderRadius:BorderRadius.circular(18),borderSide:BorderSide.none),
             ),
           ),
           actions:[
             TextButton(onPressed:()=>Navigator.pop(x,false),child:const Text('Vazgeç')),
-            FilledButton(onPressed:()=>Navigator.pop(x,true),child:const Text('Kaydet')),
+            FilledButton(
+              style:FilledButton.styleFrom(backgroundColor:ngelxGroupGreen),
+              onPressed:()=>Navigator.pop(x,true),
+              child:const Text('Kaydet'),
+            ),
           ],
         ),
       )??false;
-      if(ok&&c.text.trim().isNotEmpty)await d.reference.update({'text':c.text.trim(),'editedAt':FieldValue.serverTimestamp()});
+      final yeni=c.text.trim();
       c.dispose();
+      if(ok&&yeni.isNotEmpty&&yeni!=metin){
+        try{
+          await d.reference.update({'text':yeni,'editedAt':FieldValue.serverTimestamp()}).timeout(const Duration(seconds:5));
+        }catch(_){
+          if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Düzenleme kaydedilemedi. Tekrar dene.')));
+        }
+      }
     }
   }
 
@@ -10297,6 +10362,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
           final tv=tema.data?.data()??<String,dynamic>{},
               arkaPlanUrl=(tv['backgroundUrl']??'').toString(),
               hizliEmoji=(tv['quickEmoji']??'👍').toString();
+          _grupVerisiniOnbellekle(tv);
           final uyeMi=List<String>.from(tv['members']??const[]).contains(uid);
           final cikisZamani=tv['removedAt_$uid'];
           final mesajAkisi=(!uyeMi&&cikisZamani is Timestamp)
@@ -10527,7 +10593,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
               ),
               if(uyeMi&&mentionOnerileri.isNotEmpty)Container(
                 margin:const EdgeInsets.fromLTRB(8,0,8,6),
-                constraints:BoxConstraints(maxHeight:(MediaQuery.sizeOf(context).height-MediaQuery.viewInsetsOf(context).bottom-190).clamp(150.0,360.0).toDouble()),
+                constraints:BoxConstraints(maxHeight:MediaQuery.viewInsetsOf(context).bottom>0?170:300),
                 decoration:BoxDecoration(
                   color:Colors.white,
                   borderRadius:BorderRadius.circular(22),
