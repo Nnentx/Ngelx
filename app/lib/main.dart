@@ -15285,6 +15285,7 @@ class _SohbetPageState extends State<SohbetPage> {
   Widget ozelMesajKarti(QueryDocumentSnapshot<Map<String,dynamic>> d,{double fontSize=16,bool goruldu=false,String quickReaction='❤️'}){
     final v=d.data(),ben=v['senderId']==uid,tur=(v['type']??'text').toString();
     final photo=tur=='photo',video=tur=='video',shared=tur=='shared_content',audio=tur=='audio',file=tur=='file',location=tur=='location',call=tur=='call',storyReply=tur=='story_reply';
+    final sadeMedya=photo||video;
     final metin=(v['text']??v['message']??v['content']??'').toString().trim(),saat=mesajSaati(v['createdAt']??v['clientCreatedAt']);
     final gizlenecek=gizliKelimeFiltresi&&metin.isNotEmpty&&gizliKelimeListesi.any((x)=>x.trim().isNotEmpty&&metin.toLowerCase().contains(x.toLowerCase()));
     final gosterilecekMetin=gizlenecek?'Gizli kelime filtresi nedeniyle gizlendi.':metin;
@@ -15311,13 +15312,13 @@ class _SohbetPageState extends State<SohbetPage> {
         child:Container(
           constraints:const BoxConstraints(maxWidth:290),
           margin:const EdgeInsets.symmetric(horizontal:4,vertical:5),
-          padding:EdgeInsets.all(photo?4:12),
+          padding:sadeMedya?EdgeInsets.zero:const EdgeInsets.all(12),
           decoration:BoxDecoration(
-            color:ben?null:Colors.white,
-            gradient:ben?const LinearGradient(begin:Alignment.topLeft,end:Alignment.bottomRight,colors:[ngelxPrivateBlue2,ngelxPrivateBlue]):null,
+            color:sadeMedya?Colors.transparent:(ben?null:Colors.white),
+            gradient:sadeMedya?null:(ben?const LinearGradient(begin:Alignment.topLeft,end:Alignment.bottomRight,colors:[ngelxPrivateBlue2,ngelxPrivateBlue]):null),
             borderRadius:BorderRadius.circular(20),
-            border:ben?null:Border.all(color:ngelxPrivateBlueBorder),
-            boxShadow:const [BoxShadow(color:Color(0x100B5FD7),blurRadius:12,offset:Offset(0,5))],
+            border:sadeMedya?null:(ben?null:Border.all(color:ngelxPrivateBlueBorder)),
+            boxShadow:sadeMedya?null:const [BoxShadow(color:Color(0x100B5FD7),blurRadius:12,offset:Offset(0,5))],
           ),
           child:Column(crossAxisAlignment:CrossAxisAlignment.end,mainAxisSize:MainAxisSize.min,children:[
             if((v['replyText']??'').toString().trim().isNotEmpty)
@@ -15326,11 +15327,11 @@ class _SohbetPageState extends State<SohbetPage> {
                 margin:const EdgeInsets.only(bottom:8),
                 padding:const EdgeInsets.symmetric(horizontal:10,vertical:8),
                 decoration:BoxDecoration(
-                  color:ben?Colors.white.withValues(alpha:.16):Colors.white,
+                  color:Colors.white.withValues(alpha:.95),
                   borderRadius:BorderRadius.circular(12),
-                  border:Border(left:BorderSide(color:ben?Colors.white:ngelxPrivateBlue,width:3)),
+                  border:const Border(left:BorderSide(color:Color(0xFF9CA3AF),width:3)),
                 ),
-                child:Text((v['replyText']??'').toString(),maxLines:2,overflow:TextOverflow.ellipsis,style:TextStyle(color:ben?Colors.white:Colors.black87,fontSize:12.5,fontWeight:FontWeight.w600)),
+                child:Text((v['replyText']??'').toString(),maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Color(0xFF202124),fontSize:12.5,fontWeight:FontWeight.w600)),
               ),
             if(photo)
               IgnorePointer(child:ClipRRect(borderRadius:BorderRadius.circular(16),child:CachedNetworkImage(imageUrl:(v['mediaUrl']??'').toString(),width:230,fit:BoxFit.cover)))
@@ -15791,10 +15792,11 @@ class _SohbetPageState extends State<SohbetPage> {
       if(yanitMetin!=null)Container(
         margin:const EdgeInsets.fromLTRB(10,4,10,2),
         padding:const EdgeInsets.fromLTRB(12,8,4,8),
-        decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(16),border:Border.all(color:ngelxPrivateBlueBorder),boxShadow:const [BoxShadow(color:Color(0x100B5FD7),blurRadius:10)]),
+        decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(16),border:Border.all(color:const Color(0xFFE5E7EB))),
         child:Row(children:[
-          const Icon(Icons.reply_rounded,color:ngelxPrivateBlue,size:20),const SizedBox(width:8),
-          Expanded(child:Text(yanitMetin!,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w600))),
+          Container(width:3,height:32,decoration:BoxDecoration(color:const Color(0xFF9CA3AF),borderRadius:BorderRadius.circular(3))),
+          const SizedBox(width:8),
+          Expanded(child:Text(yanitMetin!,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Color(0xFF202124),fontWeight:FontWeight.w600))),
           IconButton(onPressed:()=>setState((){yanitMesajId=null;yanitMetin=null;yanitGonderenUid=null;}),icon:const Icon(Icons.close_rounded,color:Colors.black54)),
         ]),
       ),
