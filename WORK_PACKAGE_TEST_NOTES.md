@@ -796,3 +796,18 @@
 - `.debug/main-chat-snippets.txt` çalışma artığı depodan kaldırıldı.
 - V64 otomatik doğrulaması Akış / Keşfet / Üret / Sohbet / Ben navigasyon bağlantılarını, Ayarlar sayfasını, yorum performans sözleşmesini, profil tanıtım video boyutunu, takip isteği kritik yolunu ve sahte/demo akış verisinin geri dönmemesini kontrol ediyor.
 - Sürüm: **1.0.64+283**.
+
+## V65 consolidated WORK — 2026-09-26
+
+- Branch: `work/v65-consolidated-qa`; `main` bu çalışma sırasında değiştirilmedi.
+- Akış yorum tepkisi düzeltildi: 😡/😂/diğer tepki seçildiğinde sağdaki kalp artık yanlışlıkla dolu görünmüyor; kalp yalnızca kullanıcının tepkisi ❤️ ise seçili.
+- Medya/hikâye yükleme hatalarında R2/presign/websocket/chunk gibi düşük seviye hata metinleri kullanıcıya gösterilmiyor; anlaşılır hata mesajlarına çevriliyor.
+- Premium görünürlüğü artırıldı: kendi profilinde ve diğer kullanıcı profillerinde adın yanında küçük PREMIUM rozeti gösteriliyor; eski `premiumActive` yanında `isPremium/plan/accountType` alanları da uyumlu okunuyor.
+- Üret'e lisans kontrollü müzik seçici eklendi: arama + Senin için / Popüler / Kaydedilenler + önizleme. İstemci yalnızca `licensed/royalty-free/permissioned/public-domain` işaretli parçaları gösteriyor; `music_catalog` istemci yazımına kapalı.
+- Üret'e video kes/kırp aralığı, video/fotoğraf üzerine yazı ve müzik seçimi eklendi. Düzenleme durumu taslakta saklanıyor.
+- Fotoğraf + müzik akışta sesli içerik olarak çalışıyor. Video tarafında kesim aralığı, yazı bindirmesi ve seçilen müzik akış oynatıcısında uygulanıyor.
+- Çoklu fotoğraf verisinin Akış eşlemesinde kaybolması engellendi; `mediaUrls/mediaCount` korunuyor.
+- Sürüm hedefi: `1.0.65+284`.
+- İlk V65 QA koşusu başarılı: sözleşme, V61–V65 regresyon kontrolleri, Flutter analyze, Flutter test, Firestore emulator testi ve debug APK build geçti.
+- Gerçek R2 story-video E2E testi başarılı: `kind=stories`, `video/mp4` presign → PUT → geri okuma iki medya worker alanında geçti.
+- Son sürüm/build numarası ve müzik kataloğu Firestore testleri için final QA koşusu ayrıca çalıştırılıyor.
