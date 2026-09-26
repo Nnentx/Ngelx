@@ -758,3 +758,10 @@
 - Sabitlendi bildirimi gorunuyor ancak sabitlenen mesaj ust alanda hemen kayboluyor.
 - Beklenen: sabit mesaj kalici olarak ustte gorunmeli; sohbetten cikilip geri girildiginde ve diger hesaplarda da gorunmeli.
 - Durum: V61 testinde BASARISIZ, duzeltme paketine dahil edilecek.
+
+
+## 2026-09-26 V61 QA - Performans / agirlasma
+- Grup ozellestirme ve arka plan testi sirasinda uygulama belirgin sekilde agirlasti ve gecikmeli tepki vermeye basladi.
+- Ozellikle sohbet arka plani uygulandiktan sonra grup sohbetinde performans dususu hissedildi.
+- Kontrol edilecekler: arka plan gorseli boyutu/cozunurlugu, yeniden cizim sayisi, opacity katmanlari, video/gorsel cache, liste rebuild'leri ve bellek kullanimi.
+- Durum: V61 performans sorunu, duzeltme paketine dahil edilecek.
