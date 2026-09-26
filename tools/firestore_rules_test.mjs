@@ -9,6 +9,7 @@ import {
   arrayRemove,
   arrayUnion,
   collection,
+  deleteDoc,
   doc,
   getDoc,
   getDocs,
@@ -471,6 +472,62 @@ try {
     text: 'Yönetici mesajı',
     createdAt: serverTimestamp(),
   }));
+
+  // V61: grup mesajı teslim/görüldü bilgisi kişi bazında mesaja yazılabilir.
+  await assertSucceeds(updateDoc(doc(bob, 'chats/group_open/messages/admin_msg'), {
+    deliveredTo: arrayUnion('bob'),
+    seenBy: arrayUnion('bob'),
+  }));
+  await assertFails(updateDoc(doc(outsider, 'chats/group_open/messages/admin_msg'), {
+    deliveredTo: arrayUnion('outsider'),
+    seenBy: arrayUnion('outsider'),
+  }));
+
+  // V61: mesaj gönderme yöneticilere kapalı olsa bile geçerli grup sistem olayları yazılabilir.
+  await assertSucceeds(setDoc(doc(bob, 'chats/group_open/messages/nickname_event'), {
+    senderId: 'bob',
+    type: 'system',
+    systemAction: 'nickname_changed',
+    actorUid: 'bob',
+    targetUids: ['admin'],
+    targetName: 'Admin',
+    newNickname: 'Patron',
+    text: 'Bob, Admin adlı üyenin takma adını Patron olarak değiştirdi.',
+    createdAt: serverTimestamp(),
+  }));
+
+  // V61: ortak grup arka planı yalnızca grup yöneticisi/kurucusu tarafından değiştirilebilir.
+  await assertFails(updateDoc(doc(bob, 'chats/group_open'), {
+    backgroundUrl: 'https://example.test/member-bg.jpg',
+    backgroundOpacity: 0.32,
+    backgroundVersion: 1,
+    backgroundChangedAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  }));
+  await assertSucceeds(updateDoc(doc(admin, 'chats/group_open'), {
+    backgroundUrl: 'https://example.test/admin-bg.jpg',
+    backgroundOpacity: 0.32,
+    backgroundVersion: 1,
+    backgroundChangedAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  }));
+
+  // V61: çıkış/çıkarma arşivi hedef kullanıcıya özel ve yönetici tarafından yazılabilir.
+  await assertSucceeds(setDoc(doc(admin, 'group_archives/bob/items/group_open'), {
+    chatId: 'group_open',
+    targetUid: 'bob',
+    exitType: 'removed',
+    actorUid: 'admin',
+    actorName: 'Admin',
+    groupName: 'Açık Grup',
+    groupPhotoUrl: '',
+    archivedAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  }));
+  const archived = await assertSucceeds(getDoc(doc(bob, 'group_archives/bob/items/group_open')));
+  assert.equal(archived.exists(), true);
+  await assertFails(getDoc(doc(outsider, 'group_archives/bob/items/group_open')));
+  await assertSucceeds(deleteDoc(doc(bob, 'group_archives/bob/items/group_open')));
 
   // Normal mesaj kapalı olsa bile üyelik/arama sistem olayları aktörün kendi kimliğiyle yazılabilir.
   await assertSucceeds(setDoc(doc(bob, 'chats/group_open/messages/member_event'), {
