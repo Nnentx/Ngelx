@@ -64,6 +64,12 @@ jobs:
             'class GrupMesaj',
             'class GrupOzellestirPage',
             'quickEmoji',
+            'final gonderenBasligi',
+            'class GrupDavetPage extends',
+            'Future<void> _paylas',
+            'Share.share',
+            'SharePlus.instance',
+            'class SohbetMesajAramaPage',
           ]
           for n in needles:
               out.append('\n===== NEEDLE: '+n+' =====\n')
