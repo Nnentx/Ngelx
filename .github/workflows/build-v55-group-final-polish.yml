@@ -1,4 +1,4 @@
-name: NgelX V57 Group Polish
+name: NgelX V59 Group Chat Final
 
 on:
   push:
@@ -15,7 +15,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: ngelx-v57-main-group-polish
+  group: ngelx-v59-group-chat-final
   cancel-in-progress: true
 
 jobs:
@@ -41,6 +41,17 @@ jobs:
 
       - name: NgelX sozlesmesini dogrula
         run: python3 tools/verify_ngelx_contract.py
+
+      - name: V59 grup sohbet hedeflerini dogrula
+        shell: bash
+        run: |
+          grep -q "version: 1.0.59+278" app/pubspec.yaml
+          grep -q "bool ngelxPresenceOnline" app/lib/main.dart
+          grep -q "Profili görüntüle" app/lib/main.dart
+          grep -q "final sadeMedya=" app/lib/main.dart
+          grep -q "Grup bilgileri yükleniyor" app/lib/main.dart
+          grep -q "'onlyAdminsCanAddMembers':true" app/lib/main.dart
+          grep -q "en fazla 10 yönetici" app/lib/main.dart
 
       - name: R2 Worker JavaScript kontrolu
         run: node --check cloudflare/worker/src/index.js
@@ -102,7 +113,7 @@ jobs:
       - name: APK yukle
         uses: actions/upload-artifact@v4
         with:
-          name: NgelX-V57-GROUP-MESSENGER-POLISH-APK
+          name: NgelX-V59-GROUP-CHAT-FINAL-APK
           path: app/build/app/outputs/flutter-apk/app-debug.apk
           if-no-files-found: error
           retention-days: 14
