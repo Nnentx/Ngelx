@@ -26,6 +26,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:record/record.dart' as rec;
 import 'group_quality.dart';
 part 'build258_settings.dart';
+part 'create_music_editor.dart';
 
 bool ngelxHiddenWordMatches(String text, Iterable<String> hiddenWords) {
   String normalize(String value) => value
@@ -3302,7 +3303,15 @@ class _VideoAkisiState extends State<VideoAkisi> {
               'ownerId':(veri['ownerId']??'').toString(),
               'type':(veri['type']??'video').toString(),
               'mediaUrl':(veri['mediaUrl']??veri['videoUrl']??'').toString(),
+              'mediaUrls':List<String>.from(veri['mediaUrls']??const[]),
+              'mediaCount':(veri['mediaCount'] as num?)?.toInt()??0,
               'audioUrl':(veri['audioUrl']??'').toString(),
+              'overlayText':(veri['overlayText']??'').toString(),
+              'videoTrimStartMs':(veri['videoTrimStartMs'] as num?)?.toInt()??0,
+              'videoTrimEndMs':(veri['videoTrimEndMs'] as num?)?.toInt()??0,
+              'musicTitle':(veri['musicTitle']??'').toString(),
+              'musicArtist':(veri['musicArtist']??'').toString(),
+              'musicCoverUrl':(veri['musicCoverUrl']??'').toString(),
               'description':(veri['description']??'').toString(),
               'allowDownload':veri['allowDownload']??true,
               'privacy':(veri['privacy']??'Herkes').toString(),
@@ -3394,6 +3403,12 @@ class _VideoAkisiState extends State<VideoAkisi> {
                     kullaniciAdi:(item['username']??'ngelx').toString(),
                     ownerId:(item['ownerId']??'').toString(),
                     aciklama:(item['description']??'').toString(),
+                    audioUrl:(item['audioUrl']??'').toString(),
+                    overlayText:(item['overlayText']??'').toString(),
+                    musicTitle:(item['musicTitle']??'').toString(),
+                    musicArtist:(item['musicArtist']??'').toString(),
+                    trimStartMs:(item['videoTrimStartMs'] as num?)?.toInt()??0,
+                    trimEndMs:(item['videoTrimEndMs'] as num?)?.toInt()??0,
                     indirilebilir:item['allowDownload']!=false&&item['allowDownload'].toString()!='false',
                     aktif:widget.gorunur&&aktif==i,
                   );
@@ -3406,6 +3421,9 @@ class _VideoAkisiState extends State<VideoAkisi> {
                   'mediaUrls':jsonEncode(item['mediaUrls']??const <String>[]),
                   'mediaCount':(item['mediaCount']??0).toString(),
                   'audioUrl':(item['audioUrl']??'').toString(),
+                  'overlayText':(item['overlayText']??'').toString(),
+                  'musicTitle':(item['musicTitle']??'').toString(),
+                  'musicArtist':(item['musicArtist']??'').toString(),
                   'description':(item['description']??'').toString(),
                   'username':(item['username']??'ngelx').toString(),
                   'ownerId':(item['ownerId']??'').toString(),
@@ -4287,6 +4305,8 @@ class _GorselYaziKartiState extends State<GorselYaziKarti> {
               gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.black54, Colors.transparent, Colors.black87]),
             ),
           ),
+          if((widget.veri['overlayText']??'').trim().isNotEmpty)
+            Center(child:Container(margin:const EdgeInsets.all(30),padding:const EdgeInsets.symmetric(horizontal:14,vertical:9),decoration:BoxDecoration(color:Colors.black54,borderRadius:BorderRadius.circular(13)),child:Text((widget.veri['overlayText']??'').trim(),textAlign:TextAlign.center,style:const TextStyle(color:Colors.white,fontSize:22,fontWeight:FontWeight.w900)))),
           if (kalpAnimasyonu)
             const Center(child: KalpPatlama()),
           if(fotoListesi.length>1)
@@ -6521,6 +6541,9 @@ class _YeniYuklePageState extends State<YuklePage> {
   String fotoEfekti='Yok';
   int fotoDonus=0;
   bool kareKirp=false,taslakVar=false;
+  String medyaYazisi='';
+  int videoBaslangicMs=0,videoBitisMs=0;
+  Map<String,dynamic>? secilenMuzik;
   Timer? taslakZamanlayici;
   double yuklemeIlerlemesi=0;
   String yuklemeDurumu='';
@@ -6569,21 +6592,21 @@ class _YeniYuklePageState extends State<YuklePage> {
       final v=Map<String,dynamic>.from(jsonDecode(ham) as Map),yollar=List<String>.from(v['mediaPaths']??const <String>[]),m=<XFile>[];
       for(final p in yollar){if(p.isNotEmpty&&await File(p).exists())m.add(XFile(p));}
       if(!mounted)return;
-      setState((){tur=(v['type']??tur).toString();gizlilik=(v['privacy']??gizlilik).toString();yorumKitlesi=(v['commentAudience']??yorumKitlesi).toString();indirmeyeIzin=v['allowDownload']!=false;yorumlaraIzin=v['allowComments']!=false;yenidenPaylasimaIzin=v['allowReshare']!=false;fotoEfekti=(v['photoEffect']??'Yok').toString();fotoDonus=(v['photoRotation'] as num?)?.toInt()??0;kareKirp=v['photoSquareCrop']==true;medyalar=m;medya=m.isEmpty?null:m.first;taslakVar=true;});
+      setState((){tur=(v['type']??tur).toString();gizlilik=(v['privacy']??gizlilik).toString();yorumKitlesi=(v['commentAudience']??yorumKitlesi).toString();indirmeyeIzin=v['allowDownload']!=false;yorumlaraIzin=v['allowComments']!=false;yenidenPaylasimaIzin=v['allowReshare']!=false;fotoEfekti=(v['photoEffect']??'Yok').toString();fotoDonus=(v['photoRotation'] as num?)?.toInt()??0;kareKirp=v['photoSquareCrop']==true;medyaYazisi=(v['overlayText']??'').toString();videoBaslangicMs=(v['videoTrimStartMs'] as num?)?.toInt()??0;videoBitisMs=(v['videoTrimEndMs'] as num?)?.toInt()??0;final muzik=v['music'];secilenMuzik=muzik is Map?Map<String,dynamic>.from(muzik):null;medyalar=m;medya=m.isEmpty?null:m.first;taslakVar=true;});
       aciklama.text=(v['description']??'').toString();konum.text=(v['location']??'').toString();etiketler.text=(v['tags']??'').toString();
     }catch(_){}
   }
   Future<void> _taslagiKaydet({bool sessiz=false})async{
     final h=await SharedPreferences.getInstance(),bos=aciklama.text.trim().isEmpty&&konum.text.trim().isEmpty&&etiketler.text.trim().isEmpty&&medyalar.isEmpty&&medya==null;
     if(bos){await h.remove(_taslakAnahtar);if(mounted)setState(()=>taslakVar=false);return;}
-    await h.setString(_taslakAnahtar,jsonEncode({'type':tur,'description':aciklama.text,'location':konum.text,'tags':etiketler.text,'privacy':gizlilik,'commentAudience':yorumKitlesi,'allowDownload':indirmeyeIzin,'allowComments':yorumlaraIzin,'allowReshare':yenidenPaylasimaIzin,'photoEffect':fotoEfekti,'photoRotation':fotoDonus,'photoSquareCrop':kareKirp,'mediaPaths':medyalar.isNotEmpty?medyalar.map((e)=>e.path).toList():(medya==null?<String>[]:<String>[medya!.path])}));
+    await h.setString(_taslakAnahtar,jsonEncode({'type':tur,'description':aciklama.text,'location':konum.text,'tags':etiketler.text,'privacy':gizlilik,'commentAudience':yorumKitlesi,'allowDownload':indirmeyeIzin,'allowComments':yorumlaraIzin,'allowReshare':yenidenPaylasimaIzin,'photoEffect':fotoEfekti,'photoRotation':fotoDonus,'photoSquareCrop':kareKirp,'overlayText':medyaYazisi,'videoTrimStartMs':videoBaslangicMs,'videoTrimEndMs':videoBitisMs,'music':secilenMuzik,'mediaPaths':medyalar.isNotEmpty?medyalar.map((e)=>e.path).toList():(medya==null?<String>[]:<String>[medya!.path])}));
     if(mounted)setState(()=>taslakVar=true);if(!sessiz&&mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Taslak kaydedildi ✅')));
   }
   Future<void> _taslagiSil({bool mesaj=true})async{final h=await SharedPreferences.getInstance();await h.remove(_taslakAnahtar);if(mounted){setState(()=>taslakVar=false);if(mesaj)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Taslak temizlendi.')));}}
 
   void _turDegistir(String yeni){
     if(yukleniyor)return;
-    setState((){tur=yeni;medya=null;medyalar=<XFile>[];fotoEfekti='Yok';fotoDonus=0;kareKirp=false;yuklemeIlerlemesi=0;yuklemeDurumu='';});
+    setState((){tur=yeni;medya=null;medyalar=<XFile>[];fotoEfekti='Yok';fotoDonus=0;kareKirp=false;medyaYazisi='';videoBaslangicMs=0;videoBitisMs=0;secilenMuzik=null;yuklemeIlerlemesi=0;yuklemeDurumu='';});
     _taslakDegisti();
   }
 
@@ -6616,8 +6639,8 @@ class _YeniYuklePageState extends State<YuklePage> {
   Future<void> medyaSec()async{
     if(yukleniyor||tur=='text')return;
     try{
-      if(tur=='video'){final x=await ImagePicker().pickVideo(source:ImageSource.gallery);if(x==null||!mounted)return;if(!await _medyaBoyutuUygun(x,tur))return;setState((){medya=x;medyalar=<XFile>[x];});}
-      else{final xs=await ImagePicker().pickMultiImage(imageQuality:84,maxWidth:1600,limit:10);if(xs.isEmpty||!mounted)return;final uygun=<XFile>[];for(final x in xs.take(10)){if(await _medyaBoyutuUygun(x,'photo'))uygun.add(x);}if(uygun.isEmpty||!mounted)return;setState((){medya=uygun.first;medyalar=uygun;});}
+      if(tur=='video'){final x=await ImagePicker().pickVideo(source:ImageSource.gallery);if(x==null||!mounted)return;if(!await _medyaBoyutuUygun(x,tur))return;setState((){medya=x;medyalar=<XFile>[x];medyaYazisi='';videoBaslangicMs=0;videoBitisMs=0;});}
+      else{final xs=await ImagePicker().pickMultiImage(imageQuality:84,maxWidth:1600,limit:10);if(xs.isEmpty||!mounted)return;final uygun=<XFile>[];for(final x in xs.take(10)){if(await _medyaBoyutuUygun(x,'photo'))uygun.add(x);}if(uygun.isEmpty||!mounted)return;setState((){medya=uygun.first;medyalar=uygun;medyaYazisi='';videoBaslangicMs=0;videoBitisMs=0;});}
       _taslakDegisti();
     }catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(_dosyaHataMetni(e))));}
   }
@@ -6637,7 +6660,7 @@ class _YeniYuklePageState extends State<YuklePage> {
       if(secilen==null||!mounted)return;
       final secilenTur=video?'video':'photo';
       if(!await _medyaBoyutuUygun(secilen,secilenTur))return;
-      if(mounted)setState((){tur=secilenTur;medya=secilen;medyalar=<XFile>[secilen];});_taslakDegisti();
+      if(mounted)setState((){tur=secilenTur;medya=secilen;medyalar=<XFile>[secilen];medyaYazisi='';videoBaslangicMs=0;videoBitisMs=0;});_taslakDegisti();
     }catch(e){
       if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(_dosyaHataMetni(e))));
     }
@@ -6795,6 +6818,104 @@ class _YeniYuklePageState extends State<YuklePage> {
     }
   }
 
+  Future<void> _videoDuzenle()async{
+    final dosya=medya;
+    if(yukleniyor||tur!='video'||dosya==null)return;
+    final sonuc=await Navigator.push<Map<String,dynamic>>(context,MaterialPageRoute(builder:(_)=>NgelXVideoDuzenlemePage(
+      dosya:dosya,baslangicMs:videoBaslangicMs,bitisMs:videoBitisMs,yazi:medyaYazisi,
+    )));
+    if(sonuc==null||!mounted)return;
+    setState((){
+      videoBaslangicMs=(sonuc['trimStartMs'] as num?)?.toInt()??0;
+      videoBitisMs=(sonuc['trimEndMs'] as num?)?.toInt()??0;
+      medyaYazisi=(sonuc['overlayText']??'').toString();
+    });
+    _taslakDegisti();
+  }
+
+  Future<void> _medyaYazisiDuzenle()async{
+    if(yukleniyor||medya==null)return;
+    final c=TextEditingController(text:medyaYazisi);
+    final sonuc=await showDialog<String>(
+      context:context,
+      builder:(d)=>AlertDialog(
+        backgroundColor:Colors.white,surfaceTintColor:Colors.white,
+        shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(24)),
+        title:Text(tur=='video'?'Video üzerine yazı':'Fotoğraf üzerine yazı',style:const TextStyle(fontWeight:FontWeight.w900)),
+        content:TextField(controller:c,autofocus:true,maxLength:120,maxLines:3,decoration:const InputDecoration(hintText:'Yazını ekle')),
+        actions:[
+          TextButton(onPressed:()=>Navigator.pop(d),child:const Text('Vazgeç')),
+          TextButton(onPressed:()=>Navigator.pop(d,''),child:const Text('Temizle')),
+          FilledButton(onPressed:()=>Navigator.pop(d,c.text.trim()),child:const Text('Uygula')),
+        ],
+      ),
+    );
+    c.dispose();
+    if(sonuc==null||!mounted)return;
+    setState(()=>medyaYazisi=sonuc);
+    _taslakDegisti();
+  }
+
+  Future<void> _muzikSec()async{
+    if(yukleniyor||tur=='text')return;
+    final sonuc=await Navigator.push<Map<String,dynamic>>(context,MaterialPageRoute(builder:(_)=>const NgelXMuzikSecPage()));
+    if(sonuc==null||!mounted)return;
+    setState(()=>secilenMuzik=sonuc);
+    _taslakDegisti();
+  }
+
+  Widget _duzenlemeAraclari(){
+    if(tur=='text'||medya==null)return const SizedBox.shrink();
+    return Padding(
+      padding:const EdgeInsets.only(top:10),
+      child:Wrap(spacing:8,runSpacing:8,children:[
+        if(tur=='video')OutlinedButton.icon(
+          onPressed:yukleniyor?null:_videoDuzenle,
+          icon:const Icon(Icons.content_cut_rounded,size:18),
+          label:Text(videoBaslangicMs>0||videoBitisMs>0?'Kesimi düzenle':'Kes / kırp'),
+        ),
+        OutlinedButton.icon(
+          onPressed:yukleniyor?null:_medyaYazisiDuzenle,
+          icon:const Icon(Icons.text_fields_rounded,size:18),
+          label:Text(medyaYazisi.isEmpty?'Yazı ekle':'Yazıyı düzenle'),
+        ),
+        OutlinedButton.icon(
+          onPressed:yukleniyor?null:_muzikSec,
+          icon:const Icon(Icons.music_note_rounded,size:18),
+          label:Text(secilenMuzik==null?'Müzik ekle':'Müziği değiştir'),
+        ),
+      ]),
+    );
+  }
+
+  Widget _muzikOzeti(){
+    final muzik=secilenMuzik;
+    if(muzik==null)return const SizedBox.shrink();
+    final baslik=(muzik['title']??'NgelX müziği').toString();
+    final sanatci=(muzik['artist']??'').toString();
+    final kapak=(muzik['coverUrl']??'').toString();
+    return Container(
+      margin:const EdgeInsets.only(top:10),
+      padding:const EdgeInsets.all(10),
+      decoration:BoxDecoration(color:const Color(0xFFF3F5F8),borderRadius:BorderRadius.circular(18)),
+      child:Row(children:[
+        ClipRRect(
+          borderRadius:BorderRadius.circular(11),
+          child:kapak.isEmpty
+            ?Container(width:48,height:48,color:const Color(0xFFE3E5EA),child:const Icon(Icons.music_note_rounded))
+            :CachedNetworkImage(imageUrl:kapak,width:48,height:48,fit:BoxFit.cover,errorWidget:(_,__,___)=>Container(width:48,height:48,color:const Color(0xFFE3E5EA),child:const Icon(Icons.music_note_rounded))),
+        ),
+        const SizedBox(width:10),
+        Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+          Text(baslik,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontWeight:FontWeight.w900)),
+          if(sanatci.isNotEmpty)Text(sanatci,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black54,fontSize:12)),
+          const Text('Lisansı uygun NgelX müzik kataloğu',style:TextStyle(color:Colors.black45,fontSize:10.5)),
+        ])),
+        IconButton(tooltip:'Müziği kaldır',onPressed:yukleniyor?null:(){setState(()=>secilenMuzik=null);_taslakDegisti();},icon:const Icon(Icons.close_rounded,color:Colors.redAccent)),
+      ]),
+    );
+  }
+
   Future<String> xDosyasiYukle(XFile dosya,String klasor)async{
     final user=FirebaseAuth.instance.currentUser;
     if(user==null)throw Exception('Paylaşmak için giriş yapmalısın.');
@@ -6858,6 +6979,15 @@ class _YeniYuklePageState extends State<YuklePage> {
         'mediaCount':medyaUrlListesi.length,
         'thumbnailUrl':'',
         'photoEffect':fotoEfekti,'photoRotation':fotoDonus,'photoSquareCrop':kareKirp,
+        'overlayText':medyaYazisi,
+        'videoTrimStartMs':tur=='video'?videoBaslangicMs:0,
+        'videoTrimEndMs':tur=='video'?videoBitisMs:0,
+        'audioUrl':(secilenMuzik?['audioUrl']??'').toString(),
+        'musicId':(secilenMuzik?['id']??'').toString(),
+        'musicTitle':(secilenMuzik?['title']??'').toString(),
+        'musicArtist':(secilenMuzik?['artist']??'').toString(),
+        'musicCoverUrl':(secilenMuzik?['coverUrl']??'').toString(),
+        'musicLicense':(secilenMuzik?['licenseStatus']??'').toString(),
         'description':metin,
         'allowDownload':indirmeyeIzin,
         'allowComments':yorumlaraIzin,
@@ -6878,7 +7008,7 @@ class _YeniYuklePageState extends State<YuklePage> {
 
       if(!mounted)return;
       setState((){
-        medya=null;medyalar=<XFile>[];fotoEfekti='Yok';fotoDonus=0;kareKirp=false;
+        medya=null;medyalar=<XFile>[];fotoEfekti='Yok';fotoDonus=0;kareKirp=false;medyaYazisi='';videoBaslangicMs=0;videoBitisMs=0;secilenMuzik=null;
         aciklama.clear();
         konum.clear();
         etiketler.clear();
@@ -6930,7 +7060,7 @@ class _YeniYuklePageState extends State<YuklePage> {
       clipBehavior:Clip.antiAlias,
       child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
         if(foto)
-          SizedBox(height:220,child:Stack(fit:StackFit.expand,children:[ClipRect(child:RotatedBox(quarterTurns:fotoDonus%4,child:Image.file(File(secilen.path),fit:kareKirp?BoxFit.cover:BoxFit.contain,errorBuilder:(_,__,___)=>const Center(child:Icon(Icons.broken_image_outlined,size:48,color:Colors.black38))))),if(medyalar.length>1)Positioned(top:10,right:10,child:Container(padding:const EdgeInsets.symmetric(horizontal:10,vertical:6),decoration:BoxDecoration(color:Colors.black.withValues(alpha:.65),borderRadius:BorderRadius.circular(14)),child:Text('1/${medyalar.length}',style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w900))))]))
+          SizedBox(height:220,child:Stack(fit:StackFit.expand,children:[ClipRect(child:RotatedBox(quarterTurns:fotoDonus%4,child:Image.file(File(secilen.path),fit:kareKirp?BoxFit.cover:BoxFit.contain,errorBuilder:(_,__,___)=>const Center(child:Icon(Icons.broken_image_outlined,size:48,color:Colors.black38))))),if(medyalar.length>1)Positioned(top:10,right:10,child:Container(padding:const EdgeInsets.symmetric(horizontal:10,vertical:6),decoration:BoxDecoration(color:Colors.black.withValues(alpha:.65),borderRadius:BorderRadius.circular(14)),child:Text('1/${medyalar.length}',style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w900)))),if(medyaYazisi.trim().isNotEmpty)Center(child:Container(margin:const EdgeInsets.all(18),padding:const EdgeInsets.symmetric(horizontal:12,vertical:8),decoration:BoxDecoration(color:Colors.black54,borderRadius:BorderRadius.circular(12)),child:Text(medyaYazisi.trim(),textAlign:TextAlign.center,style:const TextStyle(color:Colors.white,fontSize:20,fontWeight:FontWeight.w900))))]))
         else
           Container(
             height:150,
@@ -7076,6 +7206,8 @@ class _YeniYuklePageState extends State<YuklePage> {
             const SizedBox(height:8),
             _cokluMedyaSirala(),
             _fotoDuzenleme(),
+            _duzenlemeAraclari(),
+            _muzikOzeti(),
             const SizedBox(height:18),
             TextField(
               controller:aciklama,
