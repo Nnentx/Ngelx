@@ -2,7 +2,7 @@ name: NgelX V61 Group QA Final
 
 on:
   push:
-    branches: [main]
+    branches: [main, v62-performance-repair]
     paths:
       - 'app/**'
       - 'cloudflare/worker/**'
