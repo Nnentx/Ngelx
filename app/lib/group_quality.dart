@@ -13,6 +13,34 @@ const _groupGreenSoft = Color(0xFFE4F6EA);
 const _ink = Color(0xFF202124);
 const _muted = Color(0xFF777B80);
 
+Future<String> ngelxCurrentDisplayName() async {
+  final uid = FirebaseAuth.instance.currentUser?.uid;
+  if (uid == null) return 'NgelX kullanıcısı';
+  try {
+    final snap = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+    final data = snap.data() ?? <String, dynamic>{};
+    final display = (data['displayName'] ?? '').toString().trim();
+    if (display.isNotEmpty) return display;
+    final username = (data['username'] ?? '').toString().trim();
+    if (username.isNotEmpty) return username;
+  } catch (_) {}
+  return 'NgelX kullanıcısı';
+}
+
+Future<bool> ngelxCanManageGroup(String chatId, [String? explicitUid]) async {
+  final uid = explicitUid ?? FirebaseAuth.instance.currentUser?.uid;
+  if (uid == null) return false;
+  try {
+    final snap = await FirebaseFirestore.instance.collection('chats').doc(chatId).get();
+    final data = snap.data() ?? <String, dynamic>{};
+    final admins = List<String>.from(data['admins'] ?? const <String>[]);
+    final owner = (data['createdBy'] ?? '').toString();
+    return owner == uid || admins.contains(uid);
+  } catch (_) {
+    return false;
+  }
+}
+
 class GroupDraftStore {
   static final Map<String, Timer> _timers = <String, Timer>{};
 
@@ -190,8 +218,10 @@ class GroupOfflineQueue {
     final data = chat.data() ?? <String, dynamic>{};
     final members = List<String>.from(data['members'] ?? const <String>[]);
     final admins = List<String>.from(data['admins'] ?? const <String>[]);
+    final owner = (data['createdBy'] ?? '').toString();
+    final canManage = owner == senderUid || admins.contains(senderUid);
     if (!members.contains(senderUid)) return 0;
-    if (data['onlyAdminsCanPost'] == true && !admins.contains(senderUid)) return 0;
+    if (data['onlyAdminsCanPost'] == true && !canManage) return 0;
 
     var sent = 0;
     for (final raw in rawItems.take(12)) {
