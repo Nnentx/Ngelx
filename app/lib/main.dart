@@ -9489,7 +9489,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
           title:const Text('Mesajı düzenle',style:TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w900)),
           content:TextField(
             controller:c,autofocus:true,minLines:2,maxLines:4,maxLength:2000,
-            buildCounter:(_, {required currentLength,required isFocused,maxLength})=>null,
+            buildCounter:(_, {required int currentLength,required bool isFocused,required int? maxLength})=>null,
             scrollPadding:const EdgeInsets.only(bottom:72),
             style:const TextStyle(color:Color(0xFF202124),fontSize:16,height:1.3),
             cursorColor:ngelxGroupGreen,
