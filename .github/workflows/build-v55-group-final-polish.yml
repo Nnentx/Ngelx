@@ -72,6 +72,9 @@ jobs:
       - name: V61 test edilen grup sorunlarini tek tek dogrula
         run: python3 tools/verify_v61_group_qa.py
 
+      - name: V62 performans duzeltmelerini dogrula
+        run: python3 tools/verify_v62_performance.py
+
       - name: R2 Worker JavaScript kontrolu
         run: node --check cloudflare/worker/src/index.js
 
