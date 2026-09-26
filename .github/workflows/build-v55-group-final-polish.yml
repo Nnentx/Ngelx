@@ -1,4 +1,4 @@
-name: NgelX V63 Input Performance Repair
+name: NgelX V64 App Quality Performance
 
 on:
   push:
@@ -15,7 +15,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: ngelx-v63-input-performance
+  group: ngelx-v64-app-quality-performance
   cancel-in-progress: true
 
 jobs:
@@ -45,7 +45,7 @@ jobs:
       - name: V63 grup QA ve girdi performans hedeflerini dogrula
         shell: bash
         run: |
-          grep -q "version: 1.0.63+282" app/pubspec.yaml
+          grep -q "version: 1.0.64+283" app/pubspec.yaml
           grep -q "bool ngelxPresenceOnline" app/lib/main.dart
           grep -q "Profili görüntüle" app/lib/main.dart
           grep -q "final sadeMedya=" app/lib/main.dart
@@ -77,6 +77,9 @@ jobs:
 
       - name: V63 girdi performans duzeltmelerini dogrula
         run: python3 tools/verify_v63_input_performance.py
+
+      - name: V64 Akis Uret Kesfet Profil Ayarlar kalite kontrolleri
+        run: python3 tools/verify_v64_app_quality.py
 
       - name: R2 Worker JavaScript kontrolu
         run: node --check cloudflare/worker/src/index.js
@@ -138,7 +141,7 @@ jobs:
       - name: APK yukle
         uses: actions/upload-artifact@v4
         with:
-          name: NgelX-V63-INPUT-PERFORMANCE-APK
+          name: NgelX-V64-APP-QUALITY-PERFORMANCE-APK
           path: app/build/app/outputs/flutter-apk/app-debug.apk
           if-no-files-found: error
           retention-days: 14
