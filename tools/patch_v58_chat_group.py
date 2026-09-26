@@ -125,9 +125,19 @@ replace_once(
 )
 
 replace_once(
-"""  })async{
+"""  Future<void> grupIzinSec({
+    required String alan,
+    required String baslik,
+    required String aciklama,
+    required bool sadeceYoneticiler,
+  })async{
     final secim=await showModalBottomSheet<bool>(""",
-"""  })async{
+"""  Future<void> grupIzinSec({
+    required String alan,
+    required String baslik,
+    required String aciklama,
+    required bool sadeceYoneticiler,
+  })async{
     if(alan=='onlyAdminsCanAddMembers'){
       await ayarDegistir(alan,true);
       if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Üye ekleme yalnızca kurucu ve yöneticilere açıktır.')));
