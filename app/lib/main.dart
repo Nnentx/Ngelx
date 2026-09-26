@@ -10603,23 +10603,8 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
                   IconButton(onPressed:()=>setState(()=>sessizGonder=false),icon:const Icon(Icons.close_rounded,size:19),visualDensity:VisualDensity.compact),
                 ]),
               ),
-              FutureBuilder<int>(
-                future:GroupOfflineQueue.pendingCount(widget.chatId),
-                builder:(_,snap){
-                  final n=snap.data??0;
-                  if(n<=0)return const SizedBox.shrink();
-                  return Container(
-                    margin:const EdgeInsets.fromLTRB(12,5,12,3),
-                    padding:const EdgeInsets.symmetric(horizontal:12,vertical:9),
-                    decoration:BoxDecoration(color:const Color(0xFFFFF8E6),borderRadius:BorderRadius.circular(16),border:Border.all(color:const Color(0xFFF4D78B))),
-                    child:Row(children:[
-                      const SizedBox(width:18,height:18,child:CircularProgressIndicator(strokeWidth:2,color:Color(0xFFB37A00))),
-                      const SizedBox(width:9),
-                      Expanded(child:Text(n.toString()+' mesaj bekliyor · bağlantı gelince otomatik gönderilecek',style:const TextStyle(color:Color(0xFF755000),fontSize:11,fontWeight:FontWeight.w800))),
-                    ]),
-                  );
-                },
-              ),
+              // Bekleyen/offline mesaj kuyruğu arka planda çalışır; kullanıcıya
+              // sohbet içinde ayrı bir "mesaj bekliyor" bandı gösterilmez.
               if(medyaIlerlemeEtiket!=null)Container(
                 margin:const EdgeInsets.fromLTRB(12,5,12,3),
                 padding:const EdgeInsets.fromLTRB(12,9,12,10),
