@@ -765,3 +765,11 @@
 - Ozellikle sohbet arka plani uygulandiktan sonra grup sohbetinde performans dususu hissedildi.
 - Kontrol edilecekler: arka plan gorseli boyutu/cozunurlugu, yeniden cizim sayisi, opacity katmanlari, video/gorsel cache, liste rebuild'leri ve bellek kullanimi.
 - Durum: V61 performans sorunu, duzeltme paketine dahil edilecek.
+
+
+## 2026-09-26 V61 QA - Arka plan gorunurlugu slider performansi
+- Grup Ozellestir ekranindaki "Arka plan gorunurlugu" slideri suruklenirken arayuz belirgin sekilde agirliyor/gecikiyor.
+- Slider hareketi akici degil; parmak hareketine gec tepki veriyor ve sohbet arka planinin opacity degisimi jank olusturuyor.
+- Olası kontrol alanlari: slider onChanged sirasinda Firestore/yazma islemi yapilmasi, tum sohbet listesinin rebuild edilmesi, buyuk arka plan gorselinin her frame yeniden decode/render edilmesi, opacity/backdrop katman maliyeti.
+- Beklenen: slider sadece lokal onizlemeyi 60fps'e yakin akici guncellemeli; kalici kayit onChangeEnd/debounce ile yapilmali.
+- Durum: V61 performans hatasi, duzeltme paketine dahil edilecek.
