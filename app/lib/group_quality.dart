@@ -89,7 +89,16 @@ class PrivateDraftStore {
 }
 
 class GroupOfflineQueue {
-  static String _key(String chatId) => 'group_pending_' + chatId;
+  static String _legacyKey(String chatId) => 'group_pending_' + chatId;
+  static String _key(String chatId, [String? explicitUid]) {
+    final uid = explicitUid ?? FirebaseAuth.instance.currentUser?.uid ?? 'guest';
+    return 'group_pending_' + uid + '_' + chatId;
+  }
+
+  static Future<void> _dropLegacy(String chatId) async {
+    final h = await SharedPreferences.getInstance();
+    await h.remove(_legacyKey(chatId));
+  }
 
   static Future<void> enqueue({
     required String chatId,
@@ -97,6 +106,7 @@ class GroupOfflineQueue {
     required Map<String, dynamic> payload,
     required String lastMessage,
   }) async {
+    await _dropLegacy(chatId);
     final h = await SharedPreferences.getInstance();
     final current = h.getStringList(_key(chatId)) ?? <String>[];
     final filtered = <String>[];
@@ -116,6 +126,7 @@ class GroupOfflineQueue {
   }
 
   static Future<void> remove(String chatId, String id) async {
+    await _dropLegacy(chatId);
     final h = await SharedPreferences.getInstance();
     final current = h.getStringList(_key(chatId)) ?? <String>[];
     final kept = <String>[];
@@ -132,7 +143,26 @@ class GroupOfflineQueue {
     }
   }
 
+  static Future<void> _removeFor(String chatId, String id, String uid) async {
+    final h = await SharedPreferences.getInstance();
+    final key = _key(chatId, uid);
+    final current = h.getStringList(key) ?? <String>[];
+    final kept = <String>[];
+    for (final raw in current) {
+      try {
+        final m = Map<String, dynamic>.from(jsonDecode(raw) as Map);
+        if ((m['id'] ?? '').toString() != id) kept.add(raw);
+      } catch (_) {}
+    }
+    if (kept.isEmpty) {
+      await h.remove(key);
+    } else {
+      await h.setStringList(key, kept);
+    }
+  }
+
   static Future<int> pendingCount(String chatId) async {
+    await _dropLegacy(chatId);
     final h = await SharedPreferences.getInstance();
     return (h.getStringList(_key(chatId)) ?? <String>[]).length;
   }
@@ -142,8 +172,9 @@ class GroupOfflineQueue {
     required String senderUid,
     Future<bool> Function(String id, Map<String,dynamic> payload, String lastMessage)? sender,
   }) async {
+    await _dropLegacy(chatId);
     final h = await SharedPreferences.getInstance();
-    final rawItems = h.getStringList(_key(chatId)) ?? <String>[];
+    final rawItems = h.getStringList(_key(chatId, senderUid)) ?? <String>[];
     if (rawItems.isEmpty) return 0;
 
     final chatRef = FirebaseFirestore.instance.collection('chats').doc(chatId);
@@ -183,7 +214,7 @@ class GroupOfflineQueue {
       try {
         final existing = await messageRef.get();
         if (existing.exists) {
-          await remove(chatId, id);
+          await _removeFor(chatId, id, senderUid);
           sent++;
           continue;
         }
@@ -209,7 +240,7 @@ class GroupOfflineQueue {
       batch.set(chatRef, chatUpdate, SetOptions(merge: true));
       try {
         await batch.commit().timeout(const Duration(seconds: 12));
-        await remove(chatId, id);
+        await _removeFor(chatId, id, senderUid);
         sent++;
       } catch (_) {
         break;
