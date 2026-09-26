@@ -1466,6 +1466,23 @@ Future<void> ngelxMedyaSil(String rawUrl) async {
   }
 }
 
+String ngelxMedyaHataMetni(Object e) {
+  final ham=e.toString().replaceFirst('Exception: ','').trim();
+  final k=ham.toLowerCase();
+  if(k.contains('camera_access_denied'))return 'Kamera izni verilmedi.';
+  if(k.contains('photo_access_denied'))return 'Galeri izni verilmedi.';
+  if(k.contains('permission-denied'))return 'Bu işlem için gerekli veri izni alınamadı.';
+  if(k.contains('socketexception')||k.contains('connection')||k.contains('network')||k.contains('zaman aşımı')||k.contains('timeout')){
+    return 'Bağlantı kurulamadı. İnternetini kontrol edip tekrar dene.';
+  }
+  if(k.contains('upload-r2')||k.contains('direct r2')||k.contains('presign')||k.contains('websocket')||k.contains('multipart')||k.contains('chunk ')||k.contains('http 4')||k.contains('http 5')){
+    return 'Medya yüklenemedi. Birkaç saniye sonra tekrar dene.';
+  }
+  if(ham.isEmpty)return 'İşlem tamamlanamadı. Tekrar dene.';
+  if(ham.length>180)return 'İşlem tamamlanamadı. Tekrar dene.';
+  return ham;
+}
+
 final uygulamaDili = ValueNotifier<String>('tr');
 
 const dilAdlari = {'tr':'Türkçe','en':'English','de':'Deutsch','ar':'العربية','ru':'Русский'};
@@ -5455,7 +5472,8 @@ class YorumKarti extends StatelessWidget {
     }
 
     final tepkiler=v['reactions'] is Map?Map<String,dynamic>.from(v['reactions'] as Map):<String,dynamic>{};
-    final secili=aktifUid!=null&&tepkiler.containsKey(aktifUid);
+    final benimTepkim=aktifUid==null?'':(tepkiler[aktifUid]??'').toString();
+    final kalpSecili=benimTepkim=='❤️';
     final begeniSayisi=(v['likeCount'] as num?)?.toInt()??0;
 
     return GestureDetector(
@@ -5533,8 +5551,8 @@ class YorumKarti extends StatelessWidget {
             child: Column(
               children: [
                 Icon(
-                  secili ? Icons.favorite : Icons.favorite_border,
-                  color: secili ? const Color(0xFFFF2D55) : Colors.black45,
+                  kalpSecili ? Icons.favorite : Icons.favorite_border,
+                  color: kalpSecili ? const Color(0xFFFF2D55) : Colors.black45,
                   size: 22,
                 ),
                 if (begeniSayisi > 0)
@@ -6578,7 +6596,7 @@ class _YeniYuklePageState extends State<YuklePage> {
     if(e is FirebaseException&&e.code=='permission-denied'){
       return 'Paylaşım kaydedilemedi. Uygulama veri izinlerini kontrol et.';
     }
-    return e.toString().replaceFirst('Exception: ','');
+    return ngelxMedyaHataMetni(e);
   }
 
   Future<bool> _medyaBoyutuUygun(XFile dosya,String secilenTur)async{
@@ -17568,7 +17586,25 @@ class _KullaniciProfilPageState extends State<KullaniciProfilPage> {
                 ),
               )),
               const SizedBox(height: 12),
-              Text((v['displayName'] ?? v['username'] ?? 'NgelX').toString(), textAlign: TextAlign.center, style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold)),
+              Row(mainAxisAlignment:MainAxisAlignment.center,mainAxisSize:MainAxisSize.min,children:[
+                Flexible(child:Text((v['displayName'] ?? v['username'] ?? 'NgelX').toString(),maxLines:1,overflow:TextOverflow.ellipsis,textAlign:TextAlign.center,style:const TextStyle(fontSize:26,fontWeight:FontWeight.bold))),
+                if(v['verified']==true)...[
+                  const SizedBox(width:6),
+                  const Icon(Icons.verified_rounded,color:Color(0xFF1687FF),size:22),
+                ],
+                if(v['premiumActive']==true||v['isPremium']==true||(v['plan']??'').toString().toLowerCase()=='premium'||(v['accountType']??'').toString().toLowerCase()=='premium')...[
+                  const SizedBox(width:7),
+                  Container(
+                    padding:const EdgeInsets.symmetric(horizontal:8,vertical:4),
+                    decoration:BoxDecoration(gradient:const LinearGradient(colors:[Color(0xFF1768E8),Color(0xFF7844F3)]),borderRadius:BorderRadius.circular(12)),
+                    child:const Row(mainAxisSize:MainAxisSize.min,children:[
+                      Icon(Icons.workspace_premium_rounded,color:Colors.white,size:14),
+                      SizedBox(width:4),
+                      Text('PREMIUM',style:TextStyle(color:Colors.white,fontSize:9,fontWeight:FontWeight.w900,letterSpacing:.4)),
+                    ]),
+                  ),
+                ],
+              ]),
               Text('@' + (v['username'] ?? 'ngelx').toString(), textAlign: TextAlign.center, style: const TextStyle(color: Colors.black54)),
               const SizedBox(height: 16),
               Text((v['bio'] ?? '').toString(), textAlign: TextAlign.center),
@@ -19730,7 +19766,10 @@ class _ProfilPageState extends State<ProfilPage> {
           takipciSayisi = followers.length;
           arkadasSayisi = friends.length;
           jetonBakiyesi = (veri['coinBalance'] as num?)?.toInt() ?? 0;
-          premiumAktif = veri['premiumActive'] == true;
+          premiumAktif = veri['premiumActive'] == true ||
+              veri['isPremium'] == true ||
+              (veri['plan'] ?? '').toString().toLowerCase() == 'premium' ||
+              (veri['accountType'] ?? '').toString().toLowerCase() == 'premium';
           dogrulanmis = veri['verified'] == true;
           yukleniyor = false;
         });
@@ -20002,7 +20041,7 @@ class _ProfilPageState extends State<ProfilPage> {
         ),
       ));
     }catch(e){
-      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Hikâye yüklenemedi: '+e.toString())));
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Hikâye yüklenemedi: '+ngelxMedyaHataMetni(e))));
     }finally{
       if(mounted)setState(()=>fotoYukleniyor=false);
     }
@@ -20394,6 +20433,21 @@ class _ProfilPageState extends State<ProfilPage> {
                       if(dogrulanmis)...[
                         const SizedBox(width:6),
                         const Icon(Icons.verified_rounded,color:Color(0xFF1687FF),size:23),
+                      ],
+                      if(premiumAktif)...[
+                        const SizedBox(width:7),
+                        Container(
+                          padding:const EdgeInsets.symmetric(horizontal:8,vertical:4),
+                          decoration:BoxDecoration(
+                            gradient:const LinearGradient(colors:[Color(0xFF1768E8),Color(0xFF7844F3)]),
+                            borderRadius:BorderRadius.circular(12),
+                          ),
+                          child:const Row(mainAxisSize:MainAxisSize.min,children:[
+                            Icon(Icons.workspace_premium_rounded,color:Colors.white,size:14),
+                            SizedBox(width:4),
+                            Text('PREMIUM',style:TextStyle(color:Colors.white,fontSize:9,fontWeight:FontWeight.w900,letterSpacing:.4)),
+                          ]),
+                        ),
                       ],
                     ],
                   ),
