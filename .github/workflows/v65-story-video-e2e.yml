@@ -4,6 +4,8 @@ on:
   push:
     branches: [work/v65-consolidated-qa]
     paths:
+      - 'app/lib/main.dart'
+      - 'cloudflare/worker/**'
       - '.github/workflows/v65-story-video-e2e.yml'
   workflow_dispatch:
 
