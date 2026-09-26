@@ -6,18 +6,24 @@ on:
     paths:
       - '.github/workflows/inspect-ngelx-chat.yml'
 
+permissions:
+  contents: write
+
 jobs:
   inspect:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Print targeted chat snippets
+        with:
+          fetch-depth: 0
+      - name: Extract targeted chat snippets
         shell: bash
         run: |
           python3 - <<'PY'
           from pathlib import Path
           p=Path('app/lib/main.dart')
           s=p.read_text(encoding='utf-8')
+          out=[]
           needles=[
             'class SohbetBilgiPage',
             'class GrupSohbetPage',
@@ -34,16 +40,24 @@ jobs:
             'Kuruculuğu devret',
           ]
           for n in needles:
-              print('\n===== NEEDLE:', n, '=====')
-              start=0
-              count=0
+              out.append('\n===== NEEDLE: '+n+' =====\n')
+              start=0; count=0
               while True:
                   i=s.find(n,start)
-                  if i<0 or count>=6: break
-                  a=max(0,i-2200); b=min(len(s),i+4200)
-                  print('\n--- HIT',count+1,'INDEX',i,'---\n')
-                  print(s[a:b])
+                  if i<0 or count>=8: break
+                  a=max(0,i-2600); b=min(len(s),i+5200)
+                  out.append('\n--- HIT '+str(count+1)+' INDEX '+str(i)+' ---\n')
+                  out.append(s[a:b])
                   start=i+len(n); count+=1
-              if count==0:
-                  print('NO HIT')
+              if count==0: out.append('NO HIT\n')
+          Path('.debug').mkdir(exist_ok=True)
+          Path('.debug/main-chat-snippets.txt').write_text('\n'.join(out),encoding='utf-8')
           PY
+      - name: Commit snippets
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .debug/main-chat-snippets.txt
+          git diff --cached --quiet || git commit -m "chore: capture chat source snippets"
+          git push
