@@ -2,7 +2,7 @@ name: NgelX V62 Performance Repair
 
 on:
   push:
-    branches: [main, v62-performance-repair]
+    branches: [main]
     paths:
       - 'app/**'
       - 'cloudflare/worker/**'
