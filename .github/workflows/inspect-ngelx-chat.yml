@@ -1,0 +1,49 @@
+name: Inspect NgelX chat source
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/inspect-ngelx-chat.yml'
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Print targeted chat snippets
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('app/lib/main.dart')
+          s=p.read_text(encoding='utf-8')
+          needles=[
+            'class SohbetBilgiPage',
+            'class GrupSohbetPage',
+            'Takma ad',
+            'chatAliases',
+            'Sohbette ara',
+            'Sabitlenen mesajlar',
+            'Davetler ve istekler',
+            'Kimler mesaj gönderebilir?',
+            'Galeriden arka plan seç',
+            'Sohbet arka planı',
+            'Gönderildi',
+            'Gruptan çıkar',
+            'Kuruculuğu devret',
+          ]
+          for n in needles:
+              print('\n===== NEEDLE:', n, '=====')
+              start=0
+              count=0
+              while True:
+                  i=s.find(n,start)
+                  if i<0 or count>=6: break
+                  a=max(0,i-2200); b=min(len(s),i+4200)
+                  print('\n--- HIT',count+1,'INDEX',i,'---\n')
+                  print(s[a:b])
+                  start=i+len(n); count+=1
+              if count==0:
+                  print('NO HIT')
+          PY
