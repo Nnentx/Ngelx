@@ -223,6 +223,7 @@ service cloud.firestore {
           resource.data.userId == request.auth.uid
           || onlyChanges(['likeCount'])
           || onlyChanges(['reactions'])
+          || onlyChanges(['likeCount', 'reactions'])
         );
         allow delete: if signedIn() && (
           resource.data.userId == request.auth.uid
