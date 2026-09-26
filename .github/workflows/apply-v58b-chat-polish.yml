@@ -1,0 +1,53 @@
+name: Apply NgelX V58B Chat Polish
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/apply-v58b-chat-polish.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ngelx-v58b-apply
+  cancel-in-progress: true
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: V58B yamalarini uygula
+        run: python3 tools/patch_v58b_chat_polish.py
+      - name: Paketleri kur
+        working-directory: app
+        run: flutter pub get
+      - name: Kod analizi
+        working-directory: app
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
+      - name: Degisiklikleri dogrula
+        shell: bash
+        run: |
+          grep -q "version: 1.0.59+278" app/pubspec.yaml
+          grep -q "Yazıyor…" app/lib/main.dart
+          grep -q "final sadeMedya=" app/lib/main.dart
+          grep -q "ngelxPresenceOnline" app/lib/main.dart
+          grep -q "backgroundOpacity':x" app/lib/main.dart
+      - name: Degisiklikleri kaydet
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/lib/main.dart app/pubspec.yaml app/pubspec.lock
+          git diff --cached --quiet && { echo "Degisiklik yok"; exit 1; }
+          git commit -m "Polish V58B chat behavior"
+          git push
