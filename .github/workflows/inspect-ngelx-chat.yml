@@ -38,6 +38,17 @@ jobs:
             'Gönderildi',
             'Gruptan çıkar',
             'Kuruculuğu devret',
+            'backgroundUrl_',
+            'backgroundOpacity_',
+            'formerMembers',
+            'members.contains',
+            'onlyAdminsCanAddMembers',
+            'class GrupKatilmaIstekleriPage',
+            'class GrupUyeleriPage',
+            'class GrupBilgiPage',
+            'class SohbetMesajAramaPage',
+            'Future<bool> payloadGonder',
+            'Future<void> payloadGonder',
           ]
           for n in needles:
               out.append('\n===== NEEDLE: '+n+' =====\n')
