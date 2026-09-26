@@ -5087,19 +5087,19 @@ class _YeniYorumlarState extends State<Yorumlar> {
       final batch=FirebaseFirestore.instance.batch();
       if (varMi.exists) {
         batch.delete(likeRef);
-        batch.set(yorumRef,{
+        batch.update(yorumRef,{
           'likeCount':FieldValue.increment(-1),
           'reactions.$uid':FieldValue.delete(),
-        },SetOptions(merge:true));
+        });
       } else {
         batch.set(likeRef,{
           'uid':uid,
           'createdAt':FieldValue.serverTimestamp(),
         });
-        batch.set(yorumRef,{
+        batch.update(yorumRef,{
           'likeCount':FieldValue.increment(1),
           'reactions.$uid':'❤️',
-        },SetOptions(merge:true));
+        });
       }
       await batch.commit();
 
@@ -5319,7 +5319,7 @@ class YorumKarti extends StatelessWidget {
           final alan='reactions.'+aktifUid;
           final mevcut=Map<String,dynamic>.from(v['reactions']??const{});
           if((mevcut[aktifUid]??'').toString()==emoji)await yorumRef.update({alan:FieldValue.delete()});
-          else await yorumRef.set({alan:emoji},SetOptions(merge:true));
+          else await yorumRef.update({alan:emoji});
         }
       }else if(secim=='report'){
         await Future<void>.delayed(const Duration(milliseconds:120));
@@ -5434,15 +5434,19 @@ class YorumKarti extends StatelessWidget {
       final uid=FirebaseAuth.instance.currentUser?.uid;
       if(uid==null)return;
       try{
-        await yorumBelgeRef.set({'reactions.$uid':'❤️'},SetOptions(merge:true));
         final likeRef=yorumBelgeRef.collection('likes').doc(uid);
         final mevcut=await likeRef.get();
+        final batch=FirebaseFirestore.instance.batch();
         if(!mevcut.exists){
-          final batch=FirebaseFirestore.instance.batch();
           batch.set(likeRef,{'uid':uid,'createdAt':FieldValue.serverTimestamp()});
-          batch.set(yorumBelgeRef,{'likeCount':FieldValue.increment(1)},SetOptions(merge:true));
-          await batch.commit();
+          batch.update(yorumBelgeRef,{
+            'likeCount':FieldValue.increment(1),
+            'reactions.$uid':'❤️',
+          });
+        }else{
+          batch.update(yorumBelgeRef,{'reactions.$uid':'❤️'});
         }
+        await batch.commit();
       }catch(_){
         if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content:Text('❤️ tepki eklenemedi.')),
