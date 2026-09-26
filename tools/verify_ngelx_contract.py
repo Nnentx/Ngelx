@@ -9,12 +9,14 @@ GROUP_QUALITY = ROOT / "app" / "lib" / "group_quality.dart"
 WORKER = ROOT / "cloudflare" / "worker" / "src" / "index.js"
 RULES = ROOT / "firestore.rules"
 PUBSPEC = ROOT / "app" / "pubspec.yaml"
+SETTINGS = ROOT / "app" / "lib" / "build258_settings.dart"
 
 app = APP.read_text(encoding="utf-8")
 group_quality = GROUP_QUALITY.read_text(encoding="utf-8")
 worker = WORKER.read_text(encoding="utf-8")
 rules = RULES.read_text(encoding="utf-8")
 pubspec = PUBSPEC.read_text(encoding="utf-8")
+settings = SETTINGS.read_text(encoding="utf-8")
 
 errors = []
 
@@ -98,11 +100,12 @@ for forbidden in (
 for token in (
     "NGELX_VERSION_NAME",
     "NGELX_BUILD_NUMBER",
-    "v$ngelxVersionName • ${t(\"build\")} $ngelxBuildNumber",
 ):
     if token not in app:
-        errors.append("Uygulama sürüm etiketi otomatik değil: " + token)
-if "V42 • Geliştiriliyor" in app:
+        errors.append("Uygulama sürüm ortamı otomatik değil: " + token)
+if "v$ngelxVersionName • ${t(\"build\")} $ngelxBuildNumber" not in settings:
+    errors.append("Ayarlar sürüm etiketi otomatik değil.")
+if "V42 • Geliştiriliyor" in app or "V42 • Geliştiriliyor" in settings:
     errors.append("Eski sabit V42 sürüm etiketi kaldı.")
 
 # Group creation must give the media service enough time to upload the selected avatar.
@@ -626,7 +629,7 @@ for token in (
     "class TakipIstegiGecmisiPage",
     "İstek geçmişi",
     "Takip ve arkadaşlık isteklerinin durumunu yönet",
-    "zatenBekliyor",
+    "GetOptions(source:Source.cache)",
     "zatenIliski",
 ):
     if token not in app:
@@ -770,7 +773,7 @@ for token in (
 # Build 271: profile follow/friend/message actions must fail visibly, not silently.
 for token in (
     "Future<bool> sosyalIstekGonder({",
-    "limit(200).get().timeout(const Duration(seconds:8))",
+    "'clientCreatedAt':Timestamp.now()",
     "return true;",
     "Future<void> profildenMesajAc(BuildContext context",
     "Mesaj izni kontrolü zaman aşımına uğradı. Tekrar dene.",
