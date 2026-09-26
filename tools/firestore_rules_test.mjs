@@ -203,6 +203,14 @@ async function seed() {
       status: 'pending',
       read: false,
     });
+    await setDoc(doc(db, 'music_catalog/track_licensed'), {
+      title: 'CI Licensed Track',
+      artist: 'NgelX CI',
+      active: true,
+      licensed: true,
+      licenseStatus: 'licensed',
+      audioUrl: 'https://example.test/licensed.mp3',
+    });
   });
 }
 
@@ -215,6 +223,16 @@ try {
   const carol = env.authenticatedContext('carol').firestore();
   const solo = env.authenticatedContext('solo').firestore();
   const founder = env.authenticatedContext('founder').firestore();
+  const publicDb = env.unauthenticatedContext().firestore();
+
+  // V65: lisanslı müzik kataloğu herkese okunur, istemci tarafından yazılamaz.
+  const licensedTrack = await assertSucceeds(getDoc(doc(publicDb, 'music_catalog/track_licensed')));
+  assert.equal(licensedTrack.exists(), true);
+  await assertFails(setDoc(doc(bob, 'music_catalog/unlicensed_client_track'), {
+    title: 'Yetkisiz parça',
+    active: true,
+    audioUrl: 'https://example.test/unlicensed.mp3',
+  }));
 
   // Özel sohbet oluşturma, hedef hesabın mesaj gizliliğini sunucu tarafında da uygular.
   await assertSucceeds(setDoc(doc(bob, 'chats/dm_all'), {
