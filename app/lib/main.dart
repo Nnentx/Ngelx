@@ -7564,17 +7564,18 @@ class _MesajPageState extends State<MesajPage> {
         'deletedAt':FieldValue.serverTimestamp(),
       },SetOptions(merge:true));
     }else{
+      final ayrilanAd=await ngelxCurrentDisplayName();
+      final olay=ayrilanAd+' gruptan ayrıldı.';
       try{
         await ref.collection('messages').add({
           'senderId':ben,
           'type':'system',
           'systemAction':'member_left',
           'actorUid':ben,
-          'text':'Bir üye gruptan ayrıldı.',
+          'text':olay,
           'createdAt':FieldValue.serverTimestamp(),
         });
       }catch(_){}
-      final ayrilanAd=await ngelxCurrentDisplayName();
       await ref.update({
         'members':FieldValue.arrayRemove([ben]),
         'admins':FieldValue.arrayRemove([ben]),
@@ -7584,8 +7585,13 @@ class _MesajPageState extends State<MesajPage> {
         'exitType_$ben':'left',
         'exitActorUid_$ben':ben,
         'exitActorName_$ben':ayrilanAd,
+        'lastMessage':olay,
         'updatedAt':FieldValue.serverTimestamp(),
       });
+      await ngelxRecordGroupArchive(
+        chatId:id,targetUid:ben,exitType:'left',actorUid:ben,actorName:ayrilanAd,
+        groupName:(veri['groupName']??'Grup').toString(),groupPhotoUrl:(veri['groupPhotoUrl']??'').toString(),
+      );
     }
     await FirebaseFirestore.instance.collection('users').doc(ben).set({
       'pinnedChats':FieldValue.arrayRemove([id]),
@@ -7692,7 +7698,12 @@ class _ArsivSohbetlerPageState extends State<ArsivSohbetlerPage> {
     final user=await FirebaseFirestore.instance.collection('users').doc(widget.uid).get();
     final manuel=Set<String>.from(List<String>.from(user.data()?['archivedChats']??const[]));
     final eski=await FirebaseFirestore.instance.collection('chats').where('formerMembers',arrayContains:widget.uid).limit(60).get();
-    final ids=<String>{...manuel,...eski.docs.map((e)=>e.id)};
+    final kayitlar=await FirebaseFirestore.instance.collection('group_archives').doc(widget.uid).collection('items').limit(60).get();
+    final ids=<String>{
+      ...manuel,
+      ...eski.docs.map((e)=>e.id),
+      ...kayitlar.docs.map((e)=>(e.data()['chatId']??e.id).toString()).where((e)=>e.isNotEmpty),
+    };
     final docs=await Future.wait(ids.map((id)=>FirebaseFirestore.instance.collection('chats').doc(id).get()));
     final sonuc=docs.where((d){
       if(!d.exists)return false;
@@ -7710,12 +7721,14 @@ class _ArsivSohbetlerPageState extends State<ArsivSohbetlerPage> {
   Future<void> geriAl(String id) async {
     await FirebaseFirestore.instance.collection('users').doc(widget.uid).set(
       {'archivedChats': FieldValue.arrayRemove([id])}, SetOptions(merge: true));
+    await ngelxClearGroupArchive(widget.uid,id);
     if (mounted) setState(() {});
   }
 
   Future<void> eskiSohbetiSil(String id)async{
     await FirebaseFirestore.instance.collection('chats').doc(id).set(
       {'hiddenFor':FieldValue.arrayUnion([widget.uid])},SetOptions(merge:true));
+    await ngelxClearGroupArchive(widget.uid,id);
     if(mounted)setState((){});
   }
 
@@ -8502,6 +8515,18 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
     if(uid!=null)unawaited(_bekleyenleriGonder());
     _offlineRetryZamanlayici=Timer.periodic(const Duration(seconds:20),(_)=>unawaited(_bekleyenleriGonder()));
     unawaited(_acilisOkunmamisYukle());
+    unawaited(_aktifGrupArsiviniTemizle());
+  }
+  Future<void> _aktifGrupArsiviniTemizle()async{
+    final me=uid;if(me==null)return;
+    try{
+      final d=await chatRef.get();
+      if(!List<String>.from(d.data()?['members']??const[]).contains(me))return;
+      await ngelxClearGroupArchive(me,widget.chatId);
+      await FirebaseFirestore.instance.collection('users').doc(me).set(
+        {'archivedChats':FieldValue.arrayRemove([widget.chatId])},SetOptions(merge:true),
+      );
+    }catch(_){}
   }
   Future<void> _bekleyenleriGonder()async{
     final me=uid;if(me==null)return;
@@ -12702,6 +12727,10 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
       'exitActorName_'+id:yapanAd,
       'updatedAt':FieldValue.serverTimestamp(),
     });
+    await ngelxRecordGroupArchive(
+      chatId:widget.chatId,targetUid:id,exitType:'removed',actorUid:benUid,actorName:yapanAd,
+      groupName:(sv['groupName']??gv['groupName']??'Grup').toString(),groupPhotoUrl:(sv['groupPhotoUrl']??gv['groupPhotoUrl']??'').toString(),
+    );
     await ngelxGrupDavetMetaSenkronla(ref);
     await sistemMesaji(yapanAd+', '+isim+' adlı üyeyi gruptan çıkardı.',action:'member_removed',targetUids:[id]);
   }
@@ -12857,9 +12886,7 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
       grupGuncelle['exitActorName_'+id]=FieldValue.delete();
     }
     await ref.update(grupGuncelle);
-    await Future.wait(secilen.map((id)=>FirebaseFirestore.instance.collection('users').doc(id).set(
-      {'archivedChats':FieldValue.arrayRemove([widget.chatId])},SetOptions(merge:true),
-    )));
+    await Future.wait(secilen.map((id)=>ngelxClearGroupArchive(id,widget.chatId)));
     _uyeProfilCache.clear();
     await ngelxGrupDavetMetaSenkronla(ref);
     String adlariBirlestir(List<String> adlar){
@@ -12961,6 +12988,7 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
         });
       }catch(_){}
       final ayrilanAd=await ngelxCurrentDisplayName();
+      final olay=ayrilanAd+' gruptan ayrıldı.';
       await ref.update({
         'members':FieldValue.arrayRemove([me]),
         'admins':FieldValue.arrayRemove([me]),
@@ -12970,8 +12998,13 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
         'exitType_$me':'left',
         'exitActorUid_$me':me,
         'exitActorName_$me':ayrilanAd,
+        'lastMessage':olay,
         'updatedAt':FieldValue.serverTimestamp(),
       });
+      await ngelxRecordGroupArchive(
+        chatId:widget.chatId,targetUid:me,exitType:'left',actorUid:me,actorName:ayrilanAd,
+        groupName:(grupVerisi['groupName']??'Grup').toString(),groupPhotoUrl:(grupVerisi['groupPhotoUrl']??'').toString(),
+      );
       await FirebaseFirestore.instance.collection('users').doc(me).set({'archivedChats':FieldValue.arrayUnion([widget.chatId])},SetOptions(merge:true));
     }
     if(mounted)Navigator.popUntil(context,(r)=>r.isFirst);
@@ -14068,6 +14101,10 @@ class _GrupUyeleriPageState extends State<GrupUyeleriPage>{
       'exitActorName_'+uid:yapanAd,
       'updatedAt':FieldValue.serverTimestamp(),
     });
+    await ngelxRecordGroupArchive(
+      chatId:widget.chatId,targetUid:uid,exitType:'removed',actorUid:me!,actorName:yapanAd,
+      groupName:(sv['groupName']??'Grup').toString(),groupPhotoUrl:(sv['groupPhotoUrl']??'').toString(),
+    );
     await _sistemMesaji(yapanAd+', '+isim+' adlı üyeyi gruptan çıkardı.');
   }
 
@@ -14310,9 +14347,7 @@ class GrupKatilmaIstekleriPage extends StatelessWidget{
     });
     await batch.commit();
     if(onay){
-      await FirebaseFirestore.instance.collection('users').doc(uid).set(
-        {'archivedChats':FieldValue.arrayRemove([chatId])},SetOptions(merge:true),
-      );
+      await ngelxClearGroupArchive(uid,chatId);
       await ngelxGrupDavetMetaSenkronla(chat);
     }
   }
@@ -14338,9 +14373,7 @@ class GrupKatilmaIstekleriPage extends StatelessWidget{
     });
     await batch.commit();
     if(onay){
-      await FirebaseFirestore.instance.collection('users').doc(uid).set(
-        {'archivedChats':FieldValue.arrayRemove([chatId])},SetOptions(merge:true),
-      );
+      await ngelxClearGroupArchive(uid,chatId);
       try{
         final profiller=await Future.wait([
           FirebaseFirestore.instance.collection('users').doc(me).get(),
