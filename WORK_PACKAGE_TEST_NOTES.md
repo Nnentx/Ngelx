@@ -743,3 +743,11 @@
 6. Yeni bir hesap oluştur; doğrulama e-postası gelmeli ve doğrulanmamış hesap için ayrı doğrulama ekranı görünmeli.
 7. E-postayı doğrula, **Doğruladım, tekrar kontrol et** düğmesine bas; uygulama ana ekrana geçmeli.
 8. Doğrulama gereken hesapta **Bağlantıyı yeniden gönder** çalışmalı.
+
+
+## 2026-09-26 V61 QA - Gizli kelime filtresi hatasi
+- Akis yorumlarinda normal yorumlar "Gizli kelime filtresi nedeniyle gizlendi" mesaji ile gizleniyor.
+- Filtre fazla agresif calisiyor; varsayilan durumda normal yorumlari gizlememeli.
+- Yalnizca kullanicinin gizli kelime listesinde bulunan gercek eslesmelerde gizleme uygulanmali.
+- Gizlenen yorum icin uygun yetkideki kullaniciya goruntuleme/acma imkani olmali.
+- Durum: V61 testinde BASARISIZ, sonraki duzeltme paketine dahil edilecek.
