@@ -8449,13 +8449,8 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
     _mesajAkisiniYenile();
     unawaited(_grupMesajOnbelleginiYukle());
     liste.addListener(_listeKonumuDegisti);
-    unawaited(GroupDraftStore.load(widget.chatId).then((t){
-      if(mounted&&t.isNotEmpty&&mesaj.text.isEmpty){
-        mesaj.text=t;
-        mesaj.selection=TextSelection.collapsed(offset:t.length);
-        setState((){});
-      }
-    }));
+    // Grup sohbetine geri dönüldüğünde önceki yazı tekrar belirmesin.
+    unawaited(GroupDraftStore.clear(widget.chatId));
     if(uid!=null)unawaited(_bekleyenleriGonder());
     _offlineRetryZamanlayici=Timer.periodic(const Duration(seconds:20),(_)=>unawaited(_bekleyenleriGonder()));
     unawaited(_acilisOkunmamisYukle());
@@ -8513,6 +8508,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
     if(_typingYazildi)unawaited(_typingTemizle());
     if(sesKaydediliyor)unawaited(_grupSesKaydedici.cancel());
     unawaited(_grupSesKaydedici.dispose());
+    unawaited(GroupDraftStore.clear(widget.chatId));
     mesaj.dispose();liste.dispose();super.dispose();
   }
   Future<void> _acilisOkunmamisYukle()async{
@@ -8986,7 +8982,6 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
   }
 
   void _mesajAlanDegisti(String deger){
-    GroupDraftStore.schedule(widget.chatId,deger);
     mentionAra(deger);
     _typingGuncelle(deger);
   }
@@ -9307,7 +9302,14 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
           title:const Text('Mesajı düzenle',style:TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w900)),
           content:TextField(
             controller:c,maxLines:5,maxLength:2000,
-            decoration:InputDecoration(filled:true,fillColor:const Color(0xFFF7F4F9),border:OutlineInputBorder(borderRadius:BorderRadius.circular(18),borderSide:BorderSide.none)),
+            style:const TextStyle(color:Color(0xFF202124),fontSize:16),
+            cursorColor:ngelxGroupGreen,
+            decoration:InputDecoration(
+              filled:true,
+              fillColor:const Color(0xFFF7F4F9),
+              hintStyle:const TextStyle(color:Color(0xFF8A8D91)),
+              border:OutlineInputBorder(borderRadius:BorderRadius.circular(18),borderSide:BorderSide.none),
+            ),
           ),
           actions:[
             TextButton(onPressed:()=>Navigator.pop(x,false),child:const Text('Vazgeç')),
@@ -9820,15 +9822,9 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
         ]),
       ),
     );
-    if(tur=='system')return Center(child:Container(
-      margin:const EdgeInsets.symmetric(vertical:7),
-      padding:const EdgeInsets.symmetric(horizontal:12,vertical:6),
-      decoration:BoxDecoration(
-        color:ngelxGroupGreenSoft.withValues(alpha:.94),
-        borderRadius:BorderRadius.circular(18),
-        border:Border.all(color:ngelxGroupBorder),
-      ),
-      child:Text(metin,maxLines:3,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Color(0xFF554361),fontSize:11.2,fontWeight:FontWeight.w800)),
+    if(tur=='system')return Center(child:Padding(
+      padding:const EdgeInsets.symmetric(horizontal:18,vertical:6),
+      child:Text(metin,maxLines:3,textAlign:TextAlign.center,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Color(0xFF6B7280),fontSize:11.2,fontWeight:FontWeight.w600)),
     ));
     if(tur=='call'){
       final goruntulu=v['callVideo']==true;
@@ -9994,13 +9990,17 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
               child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
                 if(yanit.isNotEmpty)Container(
                   width:double.infinity,margin:const EdgeInsets.only(bottom:7),padding:const EdgeInsets.symmetric(horizontal:9,vertical:7),
-                  decoration:BoxDecoration(color:ben?Colors.white.withValues(alpha:.14):Colors.white,borderRadius:BorderRadius.circular(12)),
+                  decoration:BoxDecoration(
+                    color:Colors.white.withValues(alpha:.94),
+                    borderRadius:BorderRadius.circular(12),
+                    border:Border.all(color:const Color(0xFFE5E7EB)),
+                  ),
                   child:Row(children:[
-                    Container(width:3,height:30,decoration:BoxDecoration(color:ben?Colors.white70:ngelxGroupGreen,borderRadius:BorderRadius.circular(4))),
+                    Container(width:3,height:30,decoration:BoxDecoration(color:const Color(0xFF9CA3AF),borderRadius:BorderRadius.circular(4))),
                     const SizedBox(width:8),
                     Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-                      Text(yanitGonderen.isEmpty?'Yanıt':yanitGonderen,style:TextStyle(color:ben?Colors.white70:ngelxGroupGreen,fontSize:10.5,fontWeight:FontWeight.w900)),
-                      Text(yanit,maxLines:1,overflow:TextOverflow.ellipsis,style:TextStyle(color:ben?Colors.white:const Color(0xFF2C2634),fontSize:12.1,fontWeight:FontWeight.w600)),
+                      Text(yanitGonderen.isEmpty?'Yanıt':yanitGonderen,style:const TextStyle(color:Color(0xFF5F6368),fontSize:10.5,fontWeight:FontWeight.w800)),
+                      Text(yanit,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Color(0xFF202124),fontSize:12.1,fontWeight:FontWeight.w600)),
                     ])),
                   ]),
                 ),
@@ -10114,39 +10114,51 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
               final r=grupVerisi!['lastReadAt_'+id];
               if(r is Timestamp&&!r.toDate().isBefore(t))gorulenIds.add(id);
             }
-            final onizleme=gorulenIds.take(3).toList();
-            return Padding(
-              padding:const EdgeInsets.only(top:0,right:7,bottom:7),
-              child:Row(mainAxisSize:MainAxisSize.min,children:[
-                Text(gorulenIds.isNotEmpty?gorulenIds.length.toString()+' kişi gördü':'Gönderildi',style:const TextStyle(color:ngelxPremiumMuted,fontSize:9.5,fontWeight:FontWeight.w700)),
-                if(onizleme.isNotEmpty)...[
-                  const SizedBox(width:5),
-                  SizedBox(
-                    width:14.0+(onizleme.length-1)*10,
-                    height:16,
-                    child:Stack(children:[
-                      for(int i=0;i<onizleme.length;i++)
-                        Positioned(
-                          left:i*10.0,
-                          child:FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(
-                            future:_uyeGetir(onizleme[i]),
-                            builder:(_,snap){
-                              final p=snap.data?.data()??<String,dynamic>{};
-                              final foto=(p['photoUrl']??'').toString();
-                              return Container(
-                                width:16,height:16,
-                                decoration:BoxDecoration(shape:BoxShape.circle,color:ngelxGroupGreenSoft,border:Border.all(color:Colors.white,width:1.4)),
-                                child:ClipOval(child:foto.isEmpty
-                                  ?const Icon(Icons.person_rounded,color:ngelxGroupGreen,size:10)
-                                  :CachedNetworkImage(imageUrl:foto,fit:BoxFit.cover,errorWidget:(_,__,___)=>const Icon(Icons.person_rounded,color:ngelxGroupGreen,size:10))),
-                              );
-                            },
+            final onizleme=gorulenIds.take(4).toList();
+            final fazla=(gorulenIds.length-onizleme.length).clamp(0,999);
+            return InkWell(
+              onTap:gorulenIds.isEmpty?null:(){
+                final me=uid;
+                if(me!=null)unawaited(showGroupMessageInfo(context:context,chatRef:chatRef,message:v,currentUid:me));
+              },
+              borderRadius:BorderRadius.circular(18),
+              child:Padding(
+                padding:const EdgeInsets.only(top:1,right:7,bottom:7,left:7),
+                child:Row(mainAxisSize:MainAxisSize.min,children:[
+                  if(onizleme.isEmpty)
+                    const Text('Gönderildi',style:TextStyle(color:ngelxPremiumMuted,fontSize:9.5,fontWeight:FontWeight.w700))
+                  else ...[
+                    SizedBox(
+                      width:18.0+(onizleme.length-1)*11,
+                      height:18,
+                      child:Stack(children:[
+                        for(int i=0;i<onizleme.length;i++)
+                          Positioned(
+                            left:i*11.0,
+                            child:FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(
+                              future:_uyeGetir(onizleme[i]),
+                              builder:(_,snap){
+                                final p=snap.data?.data()??<String,dynamic>{};
+                                final foto=(p['photoUrl']??'').toString();
+                                return Container(
+                                  width:18,height:18,
+                                  decoration:BoxDecoration(shape:BoxShape.circle,color:ngelxGroupGreenSoft,border:Border.all(color:Colors.white,width:1.5)),
+                                  child:ClipOval(child:foto.isEmpty
+                                    ?const Icon(Icons.person_rounded,color:ngelxGroupGreen,size:10)
+                                    :CachedNetworkImage(imageUrl:foto,fit:BoxFit.cover,errorWidget:(_,__,___)=>const Icon(Icons.person_rounded,color:ngelxGroupGreen,size:10))),
+                                );
+                              },
+                            ),
                           ),
-                        ),
-                    ]),
-                  ),
-                ],
-              ]),
+                      ]),
+                    ),
+                    if(fazla>0)...[
+                      const SizedBox(width:5),
+                      Text('+'+fazla.toString(),style:const TextStyle(color:ngelxPremiumMuted,fontSize:9.5,fontWeight:FontWeight.w900)),
+                    ],
+                  ],
+                ]),
+              ),
             );
           }),
         ],
@@ -10394,7 +10406,10 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
                       final ams=av is Timestamp?av.millisecondsSinceEpoch:0,bms=bv is Timestamp?bv.millisecondsSinceEpoch:0;
                       return ams.compareTo(bms);
                     });
-                  if(snap.hasData){if(docs.isNotEmpty&&docs.last.data()['senderId']!=uid)unawaited(_okunduIsaretle());sonaGit();}
+                  if(snap.hasData){
+                    if(docs.isNotEmpty&&docs.last.data()['senderId']!=uid)unawaited(_okunduIsaretle());
+                    if(_ilkMesajKaydirma||_enAltta)sonaGit();
+                  }
                   if(docs.isEmpty){
                     if(snap.connectionState==ConnectionState.waiting&&!_mesajBeklemeBitti)return const Center(child:CircularProgressIndicator(color:ngelxGroupGreen,strokeWidth:2));
                     if(!snap.hasData&&_mesajBeklemeBitti){
@@ -10623,16 +10638,16 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
               if(yanitlananMetin!=null)Container(
                 margin:const EdgeInsets.fromLTRB(12,4,12,2),
                 padding:const EdgeInsets.fromLTRB(12,8,5,8),
-                decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(17),border:Border.all(color:ngelxGroupBorder),boxShadow:const [BoxShadow(color:Color(0x0D000000),blurRadius:10,offset:Offset(0,4))]),
+                decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(17),border:Border.all(color:const Color(0xFFE5E7EB))),
                 child:Row(children:[
-                  Container(width:4,height:38,decoration:BoxDecoration(gradient:const LinearGradient(colors:[ngelxGroupGreen2,ngelxGroupGreen]),borderRadius:BorderRadius.circular(4))),
+                  Container(width:4,height:38,decoration:BoxDecoration(color:const Color(0xFF9CA3AF),borderRadius:BorderRadius.circular(4))),
                   const SizedBox(width:9),
                   Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-                    Text((yanitlananGonderen??'Mesaj')+' kişisine yanıt veriyorsun',style:const TextStyle(color:ngelxGroupGreen,fontSize:11,fontWeight:FontWeight.w900)),
+                    Text((yanitlananGonderen??'Mesaj')+' kişisine yanıt veriyorsun',style:const TextStyle(color:Color(0xFF5F6368),fontSize:11,fontWeight:FontWeight.w800)),
                     const SizedBox(height:2),
-                    Text(yanitlananMetin!,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:ngelxPremiumInk,fontSize:12.5,fontWeight:FontWeight.w600)),
+                    Text(yanitlananMetin!,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Color(0xFF202124),fontSize:12.5,fontWeight:FontWeight.w600)),
                   ])),
-                  IconButton(onPressed:()=>setState((){yanitlananMesajId=null;yanitlananMetin=null;yanitlananGonderen=null;}),icon:const Icon(Icons.close_rounded,size:19),visualDensity:VisualDensity.compact),
+                  IconButton(onPressed:()=>setState((){yanitlananMesajId=null;yanitlananMetin=null;yanitlananGonderen=null;}),icon:const Icon(Icons.close_rounded,size:19,color:Color(0xFF6B7280)),visualDensity:VisualDensity.compact),
                 ]),
               ),
               if(uyeMi)SafeArea(
@@ -13712,7 +13727,8 @@ class _GrupUyeleriPageState extends State<GrupUyeleriPage>{
               shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(16)),
               tileColor:Colors.white,
               leading:Icon(admin?Icons.person_off_outlined:Icons.admin_panel_settings_rounded,color:ngelxPremiumPurple),
-              title:Text(admin?'Yöneticilikten çıkar':'Yönetici yap',style:const TextStyle(fontWeight:FontWeight.w700)),
+              title:Text(admin?'Yöneticilikten çıkar':'Yönetici yap',style:const TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w800)),
+              subtitle:Text(admin?'Yönetici yetkilerini kaldır':'Bu üyeye yönetici yetkisi ver',style:const TextStyle(color:ngelxPremiumMuted,fontSize:11)),
               onTap:()=>Navigator.pop(c,admin?'demote':'promote'),
             ),
             const SizedBox(height:8),
