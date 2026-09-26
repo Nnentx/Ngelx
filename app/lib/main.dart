@@ -8624,9 +8624,13 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
     try{
       final d=await chatRef.get().timeout(const Duration(seconds:5));
       final okunmamis=(d.data()?['unread_$ben'] as num?)?.toInt()??0;
+      // Mesaj snapshot'i teslim/goruldu alanlari guncellenince bir kez daha
+      // tetiklenir. Okunmamis zaten sifirsa chat belgesine tekrar timestamp
+      // yazmak tum grup ekranini gereksiz yere yeniden ciziyordu.
+      if(okunmamis<=0)return;
       final okunduPaylas=d.data()?['readReceipts_$ben']!=false;
       await chatRef.set({
-        if(okunmamis>0)'unread_$ben':0,
+        'unread_$ben':0,
         'lastDeliveredAt_$ben':FieldValue.serverTimestamp(),
         if(okunduPaylas)'lastReadAt_$ben':FieldValue.serverTimestamp(),
       },SetOptions(merge:true)).timeout(const Duration(seconds:5));
