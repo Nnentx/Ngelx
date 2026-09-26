@@ -32,22 +32,26 @@ class GroupDraftStore {
   }
 
   static void schedule(String chatId, String text) {
-    _timers.remove(chatId)?.cancel();
-    _timers[chatId] = Timer(const Duration(milliseconds: 450), () async {
+    // UID ve saklama anahtarını şimdi yakala. Kullanıcı timer çalışmadan önce
+    // hesap değiştirirse eski hesabın metni yeni hesaba yazılmasın.
+    final key = _key(chatId);
+    _timers.remove(key)?.cancel();
+    _timers[key] = Timer(const Duration(milliseconds: 450), () async {
       final h = await SharedPreferences.getInstance();
       if (text.trim().isEmpty) {
-        await h.remove(_key(chatId));
+        await h.remove(key);
       } else {
-        await h.setString(_key(chatId), text);
+        await h.setString(key, text);
       }
-      _timers.remove(chatId);
+      _timers.remove(key);
     });
   }
 
   static Future<void> clear(String chatId) async {
-    _timers.remove(chatId)?.cancel();
+    final key = _key(chatId);
+    _timers.remove(key)?.cancel();
     final h = await SharedPreferences.getInstance();
-    await h.remove(_key(chatId));
+    await h.remove(key);
   }
 }
 
@@ -69,22 +73,26 @@ class PrivateDraftStore {
   }
 
   static void schedule(String chatId, String text) {
-    _timers.remove(chatId)?.cancel();
-    _timers[chatId] = Timer(const Duration(milliseconds: 450), () async {
+    // UID ve saklama anahtarını şimdi yakala. Kullanıcı timer çalışmadan önce
+    // hesap değiştirirse eski hesabın metni yeni hesaba yazılmasın.
+    final key = _key(chatId);
+    _timers.remove(key)?.cancel();
+    _timers[key] = Timer(const Duration(milliseconds: 450), () async {
       final h = await SharedPreferences.getInstance();
       if (text.trim().isEmpty) {
-        await h.remove(_key(chatId));
+        await h.remove(key);
       } else {
-        await h.setString(_key(chatId), text);
+        await h.setString(key, text);
       }
-      _timers.remove(chatId);
+      _timers.remove(key);
     });
   }
 
   static Future<void> clear(String chatId) async {
-    _timers.remove(chatId)?.cancel();
+    final key = _key(chatId);
+    _timers.remove(key)?.cancel();
     final h = await SharedPreferences.getInstance();
-    await h.remove(_key(chatId));
+    await h.remove(key);
   }
 }
 
@@ -202,7 +210,7 @@ class GroupOfflineQueue {
       if(sender!=null){
         final ok=await sender(id,payload,lastMessage);
         if(ok){
-          await remove(chatId,id);
+          await _removeFor(chatId, id, senderUid);
           sent++;
           continue;
         }
