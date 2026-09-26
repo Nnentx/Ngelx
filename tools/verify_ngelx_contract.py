@@ -353,6 +353,10 @@ required_group_tokens = [
     "GrupAyarlarPage",
     "Sohbet üyelerini gör",
     "Davetler ve istekler",
+    "member_add",
+    "kişi için onay iste",
+    "exitActorName_",
+    "Gruptan ayrıldın",
     "Sohbet bilgileri",
     "Sohbet balonu aç",
     "Okundu bilgisi",
@@ -382,7 +386,7 @@ required_group_tokens = [
     "Grup aramasına davet et",
     "Davet gönderildi",
     "gorulenIds",
-    "kişi gördü",
+    "final fazla=(gorulenIds.length-onizleme.length)",
     "grupYanitiHazirla",
     "onHorizontalDragEnd",
     "kişi yazıyor",
@@ -548,7 +552,7 @@ for token in (
     if count != 1:
         errors.append(f"Tekrarlı/eksik Dart sınıfı: {token} ({count} adet)")
 # Build 274 profil arama ve ziyaret doğruluğu ekleriyle kontrollü boyut artışı.
-if len(app) > 1_100_000:
+if len(app) > 1_180_000:
     errors.append("main.dart beklenmedik şekilde büyüdü; tekrarlı kod eklenmiş olabilir.")
 
 # Large group uploads must stream from disk instead of loading the whole file into RAM.

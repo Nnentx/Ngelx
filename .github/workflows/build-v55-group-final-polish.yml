@@ -1,4 +1,4 @@
-name: NgelX V59 Group Chat Final
+name: NgelX V60 Group Final UX
 
 on:
   push:
@@ -15,7 +15,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: ngelx-v59-group-chat-final
+  group: ngelx-v60-group-final-ux
   cancel-in-progress: true
 
 jobs:
@@ -42,16 +42,20 @@ jobs:
       - name: NgelX sozlesmesini dogrula
         run: python3 tools/verify_ngelx_contract.py
 
-      - name: V59 grup sohbet hedeflerini dogrula
+      - name: V60 grup final hedeflerini dogrula
         shell: bash
         run: |
-          grep -q "version: 1.0.59+278" app/pubspec.yaml
+          grep -q "version: 1.0.60+279" app/pubspec.yaml
           grep -q "bool ngelxPresenceOnline" app/lib/main.dart
           grep -q "Profili görüntüle" app/lib/main.dart
           grep -q "final sadeMedya=" app/lib/main.dart
           grep -q "Grup bilgileri yükleniyor" app/lib/main.dart
-          grep -q "'onlyAdminsCanAddMembers':true" app/lib/main.dart
           grep -q "en fazla 10 yönetici" app/lib/main.dart
+          grep -q "exitActorName_" app/lib/main.dart
+          grep -q "member_add" app/lib/main.dart
+          grep -q "kişi için onay iste" app/lib/main.dart
+          grep -q "Gruptan ayrıldın" app/lib/main.dart
+          grep -q "gorulenIds.take(4)" app/lib/main.dart
 
       - name: R2 Worker JavaScript kontrolu
         run: node --check cloudflare/worker/src/index.js
@@ -113,7 +117,7 @@ jobs:
       - name: APK yukle
         uses: actions/upload-artifact@v4
         with:
-          name: NgelX-V59-GROUP-CHAT-FINAL-APK
+          name: NgelX-V60-GROUP-FINAL-UX-APK
           path: app/build/app/outputs/flutter-apk/app-debug.apk
           if-no-files-found: error
           retention-days: 14

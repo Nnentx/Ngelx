@@ -369,6 +369,35 @@ try {
     updatedAt: serverTimestamp(),
   }));
 
+  // Normal üye doğrudan ekleyemese de yönetici onayına üye ekleme isteği gönderebilir.
+  await assertSucceeds(setDoc(doc(bob, 'chats/group_open/joinRequests/bob_mallory'), {
+    type: 'member_add',
+    uid: 'mallory',
+    targetUid: 'mallory',
+    targetName: 'Mallory',
+    targetPhoto: '',
+    requestedBy: 'bob',
+    requestedByName: 'Bob',
+    requestedByPhoto: '',
+    status: 'pending',
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  }));
+  await assertFails(setDoc(doc(outsider, 'chats/group_open/joinRequests/outsider_mallory'), {
+    type: 'member_add',
+    uid: 'mallory',
+    targetUid: 'mallory',
+    requestedBy: 'outsider',
+    status: 'pending',
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  }));
+  await assertSucceeds(updateDoc(doc(admin, 'chats/group_open/joinRequests/bob_mallory'), {
+    status: 'accepted',
+    decidedBy: 'admin',
+    decidedAt: serverTimestamp(),
+  }));
+
   // Grup bilgisi varsayılan olarak yöneticiye özel; açılırsa normal üye açıklamayı değiştirebilir.
   await assertFails(updateDoc(doc(bob, 'chats/group_open'), {
     groupDescription: 'Yetkisiz değişiklik',
