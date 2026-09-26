@@ -413,10 +413,10 @@ class _NgelXVideoDuzenlemePageState extends State<NgelXVideoDuzenlemePage> {
     yazi = TextEditingController(text: widget.yazi);
     kontrol = VideoPlayerController.file(File(widget.dosya.path));
     kontrol.initialize().then((_) async {
-      toplam = math.max(1.0, kontrol.value.duration.inMilliseconds / 1000.0);
-      bas = (widget.baslangicMs / 1000.0).clamp(0.0, toplam);
+      toplam = math.max(1.0, kontrol.value.duration.inMilliseconds / 1000.0).toDouble();
+      bas = (widget.baslangicMs / 1000.0).clamp(0.0, toplam).toDouble();
       son = widget.bitisMs > 0
-          ? (widget.bitisMs / 1000.0).clamp(bas + .1, toplam)
+          ? (widget.bitisMs / 1000.0).clamp(bas + .1, toplam).toDouble()
           : toplam;
       if (son <= bas) son = math.min(toplam, bas + .1);
       await kontrol.seekTo(Duration(milliseconds: (bas * 1000).round()));
