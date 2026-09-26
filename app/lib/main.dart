@@ -7695,6 +7695,7 @@ class _MesajPageState extends State<MesajPage> {
   }
 }
 
+
 class ArsivSohbetlerPage extends StatefulWidget {
   final String uid;
   const ArsivSohbetlerPage({super.key, required this.uid});
@@ -7702,9 +7703,23 @@ class ArsivSohbetlerPage extends StatefulWidget {
 }
 
 class _ArsivSohbetlerPageState extends State<ArsivSohbetlerPage> {
-  Future<List<String>> arsivGetir() async {
-    final d = await FirebaseFirestore.instance.collection('users').doc(widget.uid).get();
-    return List<String>.from(d.data()?['archivedChats'] ?? const []);
+  Future<List<DocumentSnapshot<Map<String,dynamic>>>> arsivGetir() async {
+    final user=await FirebaseFirestore.instance.collection('users').doc(widget.uid).get();
+    final manuel=Set<String>.from(List<String>.from(user.data()?['archivedChats']??const[]));
+    final eski=await FirebaseFirestore.instance.collection('chats').where('formerMembers',arrayContains:widget.uid).limit(60).get();
+    final ids=<String>{...manuel,...eski.docs.map((e)=>e.id)};
+    final docs=await Future.wait(ids.map((id)=>FirebaseFirestore.instance.collection('chats').doc(id).get()));
+    final sonuc=docs.where((d){
+      if(!d.exists)return false;
+      final v=d.data()??<String,dynamic>{};
+      return !List<String>.from(v['hiddenFor']??const[]).contains(widget.uid);
+    }).toList();
+    sonuc.sort((a,b){
+      final at=a.data()?['updatedAt'],bt=b.data()?['updatedAt'];
+      final am=at is Timestamp?at.millisecondsSinceEpoch:0,bm=bt is Timestamp?bt.millisecondsSinceEpoch:0;
+      return bm.compareTo(am);
+    });
+    return sonuc;
   }
 
   Future<void> geriAl(String id) async {
@@ -7713,47 +7728,90 @@ class _ArsivSohbetlerPageState extends State<ArsivSohbetlerPage> {
     if (mounted) setState(() {});
   }
 
+  Future<void> eskiSohbetiSil(String id)async{
+    await FirebaseFirestore.instance.collection('chats').doc(id).set(
+      {'hiddenFor':FieldValue.arrayUnion([widget.uid])},SetOptions(merge:true));
+    if(mounted)setState((){});
+  }
+
   @override Widget build(BuildContext context) => Theme(
     data: ThemeData.light(),
     child: Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(title: Text(t('archivedChats'), style: const TextStyle(fontWeight: FontWeight.w900))),
-      body: FutureBuilder<List<String>>(
+      appBar: AppBar(
+        backgroundColor:Colors.white,
+        surfaceTintColor:Colors.white,
+        title: Text(t('archivedChats'), style: const TextStyle(fontWeight: FontWeight.w900)),
+      ),
+      body: FutureBuilder<List<DocumentSnapshot<Map<String,dynamic>>>>(
         future: arsivGetir(),
-        builder: (_, s) {
-          final ids = s.data ?? [];
-          if (s.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator(color: mor));
-          if (ids.isEmpty) return Center(child: Text(t('noArchivedChats'), style: const TextStyle(color: Colors.black54)));
+        builder: (_, snap) {
+          final docs = snap.data ?? const <DocumentSnapshot<Map<String,dynamic>>>[];
+          if (snap.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator(color: mor));
+          }
+          if (docs.isEmpty) {
+            return Center(child: Text(t('noArchivedChats'), style: const TextStyle(color: Colors.black54)));
+          }
           return ListView.separated(
-            padding: const EdgeInsets.all(12), itemCount: ids.length,
-            separatorBuilder: (_, __) => const Divider(),
-            itemBuilder: (_, i) => FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(
-              future: FirebaseFirestore.instance.collection('chats').doc(ids[i]).get(),
-              builder: (_, c) {
-                final v = c.data?.data() ?? <String,dynamic>{};
-                final members = List<String>.from(v['members'] ?? const []);
-                final grup = v['isGroup'] == true || members.length > 2;
-                if (grup) return ListTile(
-                  leading: const CircleAvatar(backgroundColor: Color(0xFFE9DDFF), child: Icon(Icons.groups, color: mor)),
-                  title: Text((v['groupName'] ?? t('groupChat')).toString()), subtitle: Text((v['lastMessage'] ?? '').toString()),
-                  trailing: IconButton(tooltip: t('unarchive'), onPressed: () => geriAl(ids[i]), icon: const Icon(Icons.unarchive_outlined, color: mor)),
+            padding: const EdgeInsets.all(12),
+            itemCount: docs.length,
+            separatorBuilder: (_, __) => const Divider(height:1),
+            itemBuilder: (_, i) {
+              final d=docs[i],v=d.data()??<String,dynamic>{};
+              final members=List<String>.from(v['members']??const[]);
+              final former=List<String>.from(v['formerMembers']??const[]).contains(widget.uid)&&!members.contains(widget.uid);
+              final grup=v['isGroup']==true||former||members.length>2;
+              if(grup){
+                final ad=(v['groupName']??t('groupChat')).toString();
+                final foto=(v['groupPhotoUrl']??'').toString();
+                final exitType=(v['exitType_'+widget.uid]??'').toString();
+                final aktor=(v['exitActorName_'+widget.uid]??'').toString().trim();
+                final durum=former
+                  ?(exitType=='removed'
+                    ?(aktor.isEmpty?'Bu gruptan çıkarıldın.':aktor+' seni gruptan çıkardı.')
+                    :'Gruptan ayrıldın.')
+                  :(v['lastMessage']??'').toString();
+                return ListTile(
+                  onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupSohbetPage(chatId:d.id,ad:ad,foto:foto))),
+                  leading:CircleAvatar(
+                    backgroundColor:ngelxGroupGreenSoft,
+                    backgroundImage:foto.isEmpty?null:CachedNetworkImageProvider(foto),
+                    child:foto.isEmpty?const Icon(Icons.groups_rounded,color:ngelxGroupGreen):null,
+                  ),
+                  title:Text(ad,style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w800)),
+                  subtitle:Text(
+                    durum,
+                    maxLines:2,
+                    overflow:TextOverflow.ellipsis,
+                    style:TextStyle(color:former?const Color(0xFF6B7280):Colors.black54,fontWeight:former?FontWeight.w700:FontWeight.w400),
+                  ),
+                  trailing:IconButton(
+                    tooltip:former?'Konuşmayı sil':t('unarchive'),
+                    onPressed:()=>former?eskiSohbetiSil(d.id):geriAl(d.id),
+                    icon:Icon(former?Icons.delete_outline_rounded:Icons.unarchive_outlined,color:former?const Color(0xFFE13F51):mor),
+                  ),
                 );
-                final other = members.firstWhere((x) => x != widget.uid, orElse: () => widget.uid);
-                return FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(
-                  future: FirebaseFirestore.instance.collection('users').doc(other).get(),
-                  builder: (_, u) {
-                    final p = u.data?.data() ?? <String,dynamic>{};
-                    final foto = (p['photoUrl'] ?? '').toString();
-                    return ListTile(
-                      leading: CircleAvatar(backgroundImage: foto.isEmpty ? null : CachedNetworkImageProvider(foto)),
-                      title: Text((p['displayName'] ?? p['username'] ?? 'NgelX').toString(), style: const TextStyle(fontWeight: FontWeight.w800)),
-                      subtitle: Text((v['lastMessage'] ?? '').toString()),
-                      trailing: IconButton(tooltip: 'Arşivden çıkar', onPressed: () => geriAl(ids[i]), icon: const Icon(Icons.unarchive_outlined, color: mor)),
-                    );
-                  },
-                );
-              },
-            ),
+              }
+              final other=members.firstWhere((x)=>x!=widget.uid,orElse:()=>widget.uid);
+              return FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(
+                future:FirebaseFirestore.instance.collection('users').doc(other).get(),
+                builder:(_,u){
+                  final p=u.data?.data()??<String,dynamic>{};
+                  final foto=(p['photoUrl']??'').toString();
+                  return ListTile(
+                    leading:CircleAvatar(backgroundImage:foto.isEmpty?null:CachedNetworkImageProvider(foto)),
+                    title:Text((p['displayName']??p['username']??'NgelX').toString(),style:const TextStyle(fontWeight:FontWeight.w800)),
+                    subtitle:Text((v['lastMessage']??'').toString()),
+                    trailing:IconButton(
+                      tooltip:t('unarchive'),
+                      onPressed:()=>geriAl(d.id),
+                      icon:const Icon(Icons.unarchive_outlined,color:mor),
+                    ),
+                  );
+                },
+              );
+            },
           );
         },
       ),
@@ -10190,25 +10248,35 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
     }
   }
 
-  Widget _gruptanCikarildiPaneli()=>SafeArea(
-    top:false,
-    child:Container(
-      color:ngelxGroupGreenHeader,
-      padding:const EdgeInsets.fromLTRB(14,13,14,14),
-      child:Column(mainAxisSize:MainAxisSize.min,children:[
-        const Text('Bu gruba mesaj gönderemezsin',textAlign:TextAlign.center,style:TextStyle(color:Color(0xFF5D555F),fontSize:16,fontWeight:FontWeight.w900)),
-        const SizedBox(height:4),
-        const Text('Artık bu grupta değilsin. Tekrar ekleninceye kadar arama veya mesaj gönderemez ve alamazsın.',textAlign:TextAlign.center,style:TextStyle(color:Color(0xFF746F78),fontSize:12.5,height:1.3,fontWeight:FontWeight.w600)),
-        const SizedBox(height:12),
-        SizedBox(width:double.infinity,child:FilledButton.icon(
-          style:FilledButton.styleFrom(backgroundColor:const Color(0xFFE52335),foregroundColor:Colors.white,padding:const EdgeInsets.symmetric(vertical:13),shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(18))),
-          onPressed:_cikarilmisSohbetiGizle,
-          icon:const Icon(Icons.delete_outline_rounded),
-          label:const Text('Konuşmayı sil',style:TextStyle(fontWeight:FontWeight.w900)),
-        )),
-      ]),
-    ),
-  );
+  Widget _gruptanCikarildiPaneli(Map<String,dynamic> tv){
+    final ben=uid??'';
+    final tur=(tv['exitType_'+ben]??'removed').toString();
+    final aktor=(tv['exitActorName_'+ben]??'').toString().trim();
+    final grupAd=(tv['groupName']??widget.ad).toString();
+    final baslik=tur=='left'?'Gruptan ayrıldın':'Bu gruptan çıkarıldın';
+    final aciklama=tur=='left'
+      ?grupAd+' grubu arşivde kalır. Tekrar eklenene kadar yeni mesaj gönderemezsin.'
+      :(aktor.isEmpty?'Artık '+grupAd+' grubunun üyesi değilsin.':aktor+' seni '+grupAd+' grubundan çıkardı.');
+    return SafeArea(
+      top:false,
+      child:Container(
+        color:ngelxGroupGreenHeader,
+        padding:const EdgeInsets.fromLTRB(14,13,14,14),
+        child:Column(mainAxisSize:MainAxisSize.min,children:[
+          Text(baslik,textAlign:TextAlign.center,style:const TextStyle(color:Color(0xFF5D555F),fontSize:16,fontWeight:FontWeight.w900)),
+          const SizedBox(height:4),
+          Text(aciklama,textAlign:TextAlign.center,style:const TextStyle(color:Color(0xFF746F78),fontSize:12.5,height:1.3,fontWeight:FontWeight.w600)),
+          const SizedBox(height:12),
+          SizedBox(width:double.infinity,child:FilledButton.icon(
+            style:FilledButton.styleFrom(backgroundColor:const Color(0xFFE52335),foregroundColor:Colors.white,padding:const EdgeInsets.symmetric(vertical:13),shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(18))),
+            onPressed:_cikarilmisSohbetiGizle,
+            icon:const Icon(Icons.delete_outline_rounded),
+            label:const Text('Konuşmayı sil',style:TextStyle(fontWeight:FontWeight.w900)),
+          )),
+        ]),
+      ),
+    );
+  }
 @override Widget build(BuildContext context)=>Theme(
     data:ThemeData.light().copyWith(
       scaffoldBackgroundColor:Colors.white,
@@ -10779,7 +10847,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
                   ]),
                 ),
               )
-              else _gruptanCikarildiPaneli(),
+              else _gruptanCikarildiPaneli(tv),
             ]),
           );
         },
@@ -12718,6 +12786,9 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
       grupGuncelle['exitActorName_'+id]=FieldValue.delete();
     }
     await ref.update(grupGuncelle);
+    await Future.wait(secilen.map((id)=>FirebaseFirestore.instance.collection('users').doc(id).set(
+      {'archivedChats':FieldValue.arrayRemove([widget.chatId])},SetOptions(merge:true),
+    )));
     _uyeProfilCache.clear();
     await ngelxGrupDavetMetaSenkronla(ref);
     String adlariBirlestir(List<String> adlar){
@@ -14152,7 +14223,12 @@ class GrupKatilmaIstekleriPage extends StatelessWidget{
       'updatedAt':FieldValue.serverTimestamp(),
     });
     await batch.commit();
-    if(onay)await ngelxGrupDavetMetaSenkronla(chat);
+    if(onay){
+      await FirebaseFirestore.instance.collection('users').doc(uid).set(
+        {'archivedChats':FieldValue.arrayRemove([chatId])},SetOptions(merge:true),
+      );
+      await ngelxGrupDavetMetaSenkronla(chat);
+    }
   }
   const GrupKatilmaIstekleriPage({super.key,required this.chatId});
 
@@ -14176,6 +14252,9 @@ class GrupKatilmaIstekleriPage extends StatelessWidget{
     });
     await batch.commit();
     if(onay){
+      await FirebaseFirestore.instance.collection('users').doc(uid).set(
+        {'archivedChats':FieldValue.arrayRemove([chatId])},SetOptions(merge:true),
+      );
       try{
         final profiller=await Future.wait([
           FirebaseFirestore.instance.collection('users').doc(me).get(),
