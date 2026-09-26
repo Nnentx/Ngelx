@@ -27,6 +27,17 @@ Future<String> ngelxCurrentDisplayName() async {
   return 'NgelX kullanıcısı';
 }
 
+bool ngelxPresenceOnline(
+  Map<String, dynamic> data, {
+  Duration maxAge = const Duration(seconds: 100),
+}) {
+  if (data['isOnline'] != true && data['online'] != true) return false;
+  final last = data['lastSeenAt'];
+  if (last is! Timestamp) return false;
+  final age = DateTime.now().difference(last.toDate());
+  return !age.isNegative && age <= maxAge;
+}
+
 Future<bool> ngelxCanManageGroup(String chatId, [String? explicitUid]) async {
   final uid = explicitUid ?? FirebaseAuth.instance.currentUser?.uid;
   if (uid == null) return false;
