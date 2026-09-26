@@ -49,6 +49,21 @@ jobs:
             'class SohbetMesajAramaPage',
             'Future<bool> payloadGonder',
             'Future<void> payloadGonder',
+            'class GrupDavetPage',
+            'class OzelSohbetPage',
+            'class SohbetPage',
+            'class PrivateChat',
+            'typingIndicator',
+            'typing_',
+            'lastSeen',
+            'isOnline',
+            'Çevrimiçi',
+            'KullaniciProfilPage(uid:',
+            'senderId',
+            'replyToSenderName',
+            'class GrupMesaj',
+            'class GrupOzellestirPage',
+            'quickEmoji',
           ]
           for n in needles:
               out.append('\n===== NEEDLE: '+n+' =====\n')
