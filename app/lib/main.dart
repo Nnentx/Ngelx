@@ -4332,7 +4332,20 @@ class _GorselYaziKartiState extends State<GorselYaziKarti> {
                 ),
               ),
               if (foto.isNotEmpty && yazi.isNotEmpty) ...[const SizedBox(height: 8), Text(yazi)],
-              if ((widget.veri['audioUrl'] ?? '').isNotEmpty) ...[const SizedBox(height: 8), const Row(children: [Icon(Icons.music_note, size: 18), Text(' Fotoğraflı müzik')])],
+              if ((widget.veri['audioUrl'] ?? '').isNotEmpty) ...[
+                const SizedBox(height:8),
+                Row(children:[
+                  const Icon(Icons.music_note_rounded,size:16,color:Colors.white70),
+                  const SizedBox(width:5),
+                  Expanded(child:Text(
+                    (widget.veri['musicTitle']??'').isEmpty
+                      ?'Müzikli fotoğraf'
+                      :(widget.veri['musicTitle']??'')+((widget.veri['musicArtist']??'').isEmpty?'':' • '+(widget.veri['musicArtist']??'')),
+                    maxLines:1,overflow:TextOverflow.ellipsis,
+                    style:const TextStyle(color:Colors.white70,fontSize:11,fontWeight:FontWeight.w700),
+                  )),
+                ]),
+              ],
     const SizedBox(height: 8),
     AkisMetaSatiri(icerikId: icerikId, yorumlariAc: yorumlariAc),
             ]),
@@ -4361,6 +4374,12 @@ class VideoKarti extends StatefulWidget {
   final String kullaniciAdi;
   final String ownerId;
   final String aciklama;
+  final String audioUrl;
+  final String overlayText;
+  final String musicTitle;
+  final String musicArtist;
+  final int trimStartMs;
+  final int trimEndMs;
   final bool aktif;
   final bool indirilebilir;
 
@@ -4372,6 +4391,12 @@ class VideoKarti extends StatefulWidget {
     required this.ownerId,
     required this.aktif,
     this.aciklama = '',
+    this.audioUrl = '',
+    this.overlayText = '',
+    this.musicTitle = '',
+    this.musicArtist = '',
+    this.trimStartMs = 0,
+    this.trimEndMs = 0,
     this.indirilebilir = true,
   });
 
@@ -4381,7 +4406,9 @@ class VideoKarti extends StatefulWidget {
 
 class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver {
   late final VideoPlayerController kontrol;
+  AudioPlayer? muzikOynatici;
   bool hazir = false;
+  bool kesimAtliyor = false;
   bool begenildi = false;
   bool kaydedildi = false;
   bool duraklatildi = false;
@@ -4407,11 +4434,19 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver {
     etkilesimleriGetir();
     profilFotosunuGetir();
 
-    kontrol.initialize().then((_) {
-      kontrol.setLooping(true);
+    kontrol.addListener(_kesimKontrol);
+    unawaited(_muzigiHazirla());
+
+    kontrol.initialize().then((_) async {
+      await kontrol.setLooping(widget.trimEndMs<=0);
+      await kontrol.setVolume(widget.audioUrl.isNotEmpty ? .25 : 1);
+      if(widget.trimStartMs>0){
+        await kontrol.seekTo(Duration(milliseconds:widget.trimStartMs));
+      }
 
       if (widget.aktif) {
-        kontrol.play();
+        await kontrol.play();
+        if(muzikOynatici!=null)unawaited(muzikOynatici!.play());
       }
 
       if (mounted) {
@@ -4424,12 +4459,50 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver {
     });
   }
 
+  Future<void> _muzigiHazirla()async{
+    if(widget.audioUrl.isEmpty)return;
+    final p=AudioPlayer();
+    muzikOynatici=p;
+    try{
+      await p.setUrl(widget.audioUrl);
+      await p.setLoopMode(LoopMode.one);
+      await p.setVolume(sessiz?0:1);
+      if(widget.aktif&&!duraklatildi)unawaited(p.play());
+    }catch(_){
+      if(identical(muzikOynatici,p))muzikOynatici=null;
+      unawaited(p.dispose());
+    }
+  }
+
+  void _kesimKontrol(){
+    if(!hazir||kesimAtliyor||widget.trimEndMs<=0)return;
+    if(kontrol.value.position.inMilliseconds<widget.trimEndMs)return;
+    kesimAtliyor=true;
+    final hedef=Duration(milliseconds:widget.trimStartMs.clamp(0,widget.trimEndMs).toInt());
+    unawaited(kontrol.seekTo(hedef).then((_){
+      if(widget.aktif&&!duraklatildi)unawaited(kontrol.play());
+      final p=muzikOynatici;
+      if(p!=null)unawaited(p.seek(Duration.zero));
+    }).whenComplete(()=>kesimAtliyor=false));
+  }
+
+  void _oynatmalariDuraklat(){
+    if(hazir)unawaited(kontrol.pause());
+    final p=muzikOynatici;
+    if(p!=null)unawaited(p.pause());
+  }
+
+  void _oynatmalariBaslat(){
+    if(!hazir||!widget.aktif||duraklatildi)return;
+    unawaited(kontrol.play());
+    final p=muzikOynatici;
+    if(p!=null)unawaited(p.play());
+  }
+
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state != AppLifecycleState.resumed && hazir) kontrol.pause();
-    if (state == AppLifecycleState.resumed && widget.aktif && !duraklatildi && hazir) {
-      kontrol.play();
-    }
+    if (state != AppLifecycleState.resumed) _oynatmalariDuraklat();
+    if (state == AppLifecycleState.resumed) _oynatmalariBaslat();
   }
 
   Future<void> profilFotosunuGetir() async {
@@ -4505,7 +4578,8 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver {
   void sesiDegistir() {
     if (!hazir) return;
     setState(() => sessiz = !sessiz);
-    kontrol.setVolume(sessiz ? 0 : 1);
+    kontrol.setVolume(sessiz ? 0 : (widget.audioUrl.isNotEmpty ? .25 : 1));
+    muzikOynatici?.setVolume(sessiz ? 0 : 1);
   }
 
   Future<void> begeniyiDegistir() async {
@@ -4622,22 +4696,25 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver {
     super.didUpdateWidget(oldWidget);
     if (!hazir) return;
     if (widget.aktif) {
-      if (!duraklatildi) kontrol.play();
+      _oynatmalariBaslat();
     } else {
-      kontrol.pause();
+      _oynatmalariDuraklat();
     }
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    kontrol.removeListener(_kesimKontrol);
+    final p=muzikOynatici;
+    if(p!=null)unawaited(p.dispose());
     kontrol.dispose();
     super.dispose();
   }
 
   Future<void> yorumlariAc() async {
     final oynuyordu=hazir&&kontrol.value.isPlaying;
-    if(oynuyordu)await kontrol.pause();
+    if(oynuyordu){await kontrol.pause();final p=muzikOynatici;if(p!=null)await p.pause();}
     await showModalBottomSheet(
       context: context,
       isScrollControlled:true,
@@ -4652,6 +4729,7 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver {
     );
     if(mounted&&hazir&&widget.aktif&&oynuyordu&&!duraklatildi){
       unawaited(kontrol.play());
+      final p=muzikOynatici;if(p!=null)unawaited(p.play());
     }
   }
 
@@ -4665,9 +4743,11 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver {
         setState(() {
           if (kontrol.value.isPlaying) {
             kontrol.pause();
+            muzikOynatici?.pause();
             duraklatildi = true;
           } else {
             kontrol.play();
+            muzikOynatici?.play();
             duraklatildi = false;
           }
         });
@@ -4705,6 +4785,8 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver {
               ),
             ),
           ),
+if(widget.overlayText.trim().isNotEmpty)
+  Center(child:Container(margin:const EdgeInsets.all(30),padding:const EdgeInsets.symmetric(horizontal:14,vertical:9),decoration:BoxDecoration(color:Colors.black54,borderRadius:BorderRadius.circular(13)),child:Text(widget.overlayText.trim(),textAlign:TextAlign.center,style:const TextStyle(color:Colors.white,fontSize:22,fontWeight:FontWeight.w900)))),
 if (kalpAnimasyonu)
   const Center(child: KalpPatlama()),
 Positioned(
@@ -4752,6 +4834,18 @@ Positioned(
                     maxLines:3,
                     overflow:TextOverflow.ellipsis,
                   ),
+                ],
+                if(widget.audioUrl.isNotEmpty)...[
+                  const SizedBox(height:7),
+                  Row(children:[
+                    const Icon(Icons.music_note_rounded,color:Colors.white70,size:15),
+                    const SizedBox(width:5),
+                    Expanded(child:Text(
+                      widget.musicTitle.isEmpty?'Müzik eklendi':widget.musicTitle+(widget.musicArtist.isEmpty?'':' • '+widget.musicArtist),
+                      maxLines:1,overflow:TextOverflow.ellipsis,
+                      style:const TextStyle(color:Colors.white70,fontSize:11,fontWeight:FontWeight.w700),
+                    )),
+                  ]),
                 ],
                 const SizedBox(height:8),
                 AkisMetaSatiri(icerikId:videoId,yorumlariAc:yorumlariAc),
