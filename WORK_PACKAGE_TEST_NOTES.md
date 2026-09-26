@@ -782,3 +782,17 @@
 - Kontrol edilecekler: pending sync/loading state'in kapanmamasi, ayni ayarin tekrar tekrar kaydedilmesi, Firestore listener dongusu, tum sohbet listesinin rebuild edilmesi ve arka plan render maliyeti.
 - Beklenen: ayar kaydi bittiginde spinner hemen kaybolmali; sohbet akici kalmali ve arka planda tekrar eden senkronizasyon dongusu olmamali.
 - Durum: V61 performans/stuck-loading hatasi, duzeltme paketine dahil edilecek.
+
+
+## 2026-09-26 — V64 Akış yorumları + profil tanıtım videosu + uygulama kalite turu
+
+- Gerçek cihazda Akış > Yorumlar açıldığında belirgin kasma ve dokunmaların cevap vermemesi tekrar görüldü.
+- Yorum ekranında her yorum için ayrı Firestore beğeni dinleyicisi kaldırıldı. Beğeni durumu canlı yorum belgesindeki reaction alanından okunuyor; yorum beğenisi tek batch ile güncelleniyor.
+- Yorum/yanıt eşleştirmesi her kartta listeyi baştan taramak yerine bir kez oluşturulan `yanitHaritasi` üzerinden yapılıyor. Canlı yorum penceresi 120 kayıttan 80 kayda düşürüldü.
+- Video Akışı'nda yorum paneli açılırken arkadaki video duraklatılıyor; panel kapanınca yalnızca daha önce oynuyorsa devam ediyor. Yorum listesinde aşağı kaydırma klavyeyi kapatabiliyor.
+- Profil tanıtım videosu dikey videolarda sayfayı aşırı büyütmeyecek şekilde sabit 150 px yüksekliğe indirildi.
+- Takip/arkadaşlık isteği gönderiminde kritik yoldaki geniş `notifications/fromUid` ön sorgusu kaldırıldı; kimlik bilgisi yerel cache'den alınabildiği kadar kullanılıyor ve istek doğrudan Firestore yazım kuyruğuna gidiyor.
+- Kullanılmayan eski yorum ekranı, V46 video uyumluluk placeholder'ı, yinelenen eski Ayarlar sayfası, profil placeholder ekranı ve artık kullanılmayan `Istatistik/BosEkran` widget'ları ana koddan temizlendi.
+- `.debug/main-chat-snippets.txt` çalışma artığı depodan kaldırıldı.
+- V64 otomatik doğrulaması Akış / Keşfet / Üret / Sohbet / Ben navigasyon bağlantılarını, Ayarlar sayfasını, yorum performans sözleşmesini, profil tanıtım video boyutunu, takip isteği kritik yolunu ve sahte/demo akış verisinin geri dönmemesini kontrol ediyor.
+- Sürüm: **1.0.64+283**.
