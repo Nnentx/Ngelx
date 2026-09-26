@@ -213,33 +213,20 @@ Future<void> ngelxOverlayKapanisiniBekle() async {
   await Future<void>.delayed(const Duration(milliseconds: 360));
 }
 
-bool ngelxEskiSupabaseMedya(String url) =>
-    url.contains('.supabase.co/storage/v1/object/');
-
-Widget ngelxMedyaHataGorunumu(String url) => Container(
+Widget ngelxMedyaHataGorunumu(String _) => Container(
   color: const Color(0xFF09090F),
   alignment: Alignment.center,
   padding: const EdgeInsets.all(28),
-  child: Column(
+  child: const Column(
     mainAxisSize: MainAxisSize.min,
     children: [
-      const Icon(Icons.cloud_off_rounded, color: Colors.white54, size: 54),
-      const SizedBox(height: 12),
+      Icon(Icons.cloud_off_rounded, color: Colors.white54, size: 54),
+      SizedBox(height: 12),
       Text(
-        ngelxEskiSupabaseMedya(url)
-            ? 'Bu eski medya Supabase kotası nedeniyle geçici olarak açılamıyor.'
-            : 'Medya şu anda yüklenemedi.',
+        'Medya şu anda yüklenemedi.',
         textAlign: TextAlign.center,
-        style: const TextStyle(color: Colors.white70, fontSize: 15, fontWeight: FontWeight.w700),
+        style: TextStyle(color: Colors.white70, fontSize: 15, fontWeight: FontWeight.w700),
       ),
-      if (ngelxEskiSupabaseMedya(url)) ...[
-        const SizedBox(height: 7),
-        const Text(
-          'Yeni yüklemeler Cloudflare R2 üzerinden devam ediyor.',
-          textAlign: TextAlign.center,
-          style: TextStyle(color: Colors.white38, fontSize: 12),
-        ),
-      ],
     ],
   ),
 );
@@ -1458,8 +1445,6 @@ Future<void> ngelxMedyaSil(String rawUrl) async {
       return;
     }
   }
-  // Eski Supabase bağlantıları yalnızca geçmiş içerikleri göstermek için tutulur.
-  // Yeni medya R2'ye yazıldığı için eski depoya artık silme/yazma isteği gönderilmez.
 }
 
 final uygulamaDili = ValueNotifier<String>('tr');

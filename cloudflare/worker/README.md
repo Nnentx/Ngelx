@@ -1,6 +1,6 @@
 # NgelX ücretsiz medya katmanı (Cloudflare R2)
 
-Bu Worker, NgelX fotoğraf/video dosyalarını Supabase Storage yerine Cloudflare R2'ye taşımak için hazırlanmıştır.
+Bu Worker, NgelX fotoğraf/video dosyalarını Cloudflare R2 üzerinde depolamak ve Firebase Authentication ile güvenli yükleme/silme işlemleri yapmak için hazırlanmıştır.
 
 ## Güvenlik
 - Upload ve delete istekleri Firebase Authentication ID token ile doğrulanır.
@@ -16,7 +16,7 @@ Bu Worker, NgelX fotoğraf/video dosyalarını Supabase Storage yerine Cloudflar
 5. Worker adresini not al. Örnek: `https://ngelx-media.<hesap>.workers.dev`.
 6. Firestore'da `app_config/media` belgesine `uploadApi` alanı olarak bu adresi yaz.
 
-Uygulama V48'de bu belgeyi okuyacak. Adres tanımlıysa yeni medya R2'ye gider; tanımlı değilse geçiş sırasında mevcut Supabase yolu yedek olarak çalışır.
+Uygulama `app_config/media` belgesindeki `uploadApi` adresini kullanır. Yeni medya yalnızca Cloudflare R2'ye yüklenir.
 
 ## Ücretsiz kota yaklaşımı
-R2 internet egress ücreti almaması nedeniyle Supabase'deki cached-egress problemini ortadan kaldırmak için seçildi. R2 depolama ve işlem ücretsiz kotası aşıldığında ücret oluşabilir; bu yüzden uygulamadaki thumbnail/cache/boyut limitleri ayrıca korunur.
+R2 depolama ve işlem ücretsiz kotası aşıldığında ücret oluşabilir; bu yüzden uygulamadaki thumbnail/cache/boyut limitleri ayrıca korunur.
