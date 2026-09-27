@@ -1,0 +1,62 @@
+name: NgelX V67 Firestore Music Catalog Rules Deploy
+
+on:
+  push:
+    branches:
+      - work/v65-consolidated-qa
+    paths:
+      - 'firestore.rules'
+      - '.github/workflows/v67-firestore-rules-deploy.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ngelx-v67-firestore-rules-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy-rules:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Kaynaklari al
+        uses: actions/checkout@v4
+
+      - name: Node kur
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Firebase CLI kur
+        run: npm install --global firebase-tools
+
+      - name: Firestore kurallarini ngelx-44eed projesine yayinla
+        shell: bash
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          FIREBASE_SERVICE_ACCOUNT_NGELX_44EED: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_NGELX_44EED }}
+          GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_JSON }}
+        run: |
+          set -euo pipefail
+          PROJECT_ID="ngelx-44eed"
+          SA="${FIREBASE_SERVICE_ACCOUNT_NGELX_44EED:-${FIREBASE_SERVICE_ACCOUNT:-${GOOGLE_APPLICATION_CREDENTIALS_JSON:-}}}"
+
+          if [ -n "$SA" ]; then
+            if printf '%s' "$SA" | jq -e . >/dev/null 2>&1; then
+              printf '%s' "$SA" > /tmp/ngelx-firebase-sa.json
+            else
+              printf '%s' "$SA" | base64 --decode > /tmp/ngelx-firebase-sa.json
+              jq -e . /tmp/ngelx-firebase-sa.json >/dev/null
+            fi
+            chmod 600 /tmp/ngelx-firebase-sa.json
+            export GOOGLE_APPLICATION_CREDENTIALS=/tmp/ngelx-firebase-sa.json
+            firebase deploy --only firestore:rules --project "$PROJECT_ID" --non-interactive
+          elif [ -n "${FIREBASE_TOKEN:-}" ]; then
+            firebase deploy --only firestore:rules --project "$PROJECT_ID" --token "$FIREBASE_TOKEN" --non-interactive
+          else
+            echo "Firebase deploy kimligi ayarli degil."
+            exit 20
+          fi

@@ -796,3 +796,226 @@
 - `.debug/main-chat-snippets.txt` çalışma artığı depodan kaldırıldı.
 - V64 otomatik doğrulaması Akış / Keşfet / Üret / Sohbet / Ben navigasyon bağlantılarını, Ayarlar sayfasını, yorum performans sözleşmesini, profil tanıtım video boyutunu, takip isteği kritik yolunu ve sahte/demo akış verisinin geri dönmemesini kontrol ediyor.
 - Sürüm: **1.0.64+283**.
+
+## V65 consolidated WORK — 2026-09-26
+
+- Branch: `work/v65-consolidated-qa`; `main` bu çalışma sırasında değiştirilmedi.
+- Akış yorum tepkisi düzeltildi: 😡/😂/diğer tepki seçildiğinde sağdaki kalp artık yanlışlıkla dolu görünmüyor; kalp yalnızca kullanıcının tepkisi ❤️ ise seçili.
+- Medya/hikâye yükleme hatalarında R2/presign/websocket/chunk gibi düşük seviye hata metinleri kullanıcıya gösterilmiyor; anlaşılır hata mesajlarına çevriliyor.
+- Premium görünürlüğü artırıldı: kendi profilinde ve diğer kullanıcı profillerinde adın yanında küçük PREMIUM rozeti gösteriliyor; eski `premiumActive` yanında `isPremium/plan/accountType` alanları da uyumlu okunuyor.
+- Üret'e lisans kontrollü müzik seçici eklendi: arama + Senin için / Popüler / Kaydedilenler + önizleme. İstemci yalnızca `licensed/royalty-free/permissioned/public-domain` işaretli parçaları gösteriyor; `music_catalog` istemci yazımına kapalı.
+- Üret'e video kes/kırp aralığı, video/fotoğraf üzerine yazı ve müzik seçimi eklendi. Düzenleme durumu taslakta saklanıyor.
+- Fotoğraf + müzik akışta sesli içerik olarak çalışıyor. Video tarafında kesim aralığı, yazı bindirmesi ve seçilen müzik akış oynatıcısında uygulanıyor.
+- Çoklu fotoğraf verisinin Akış eşlemesinde kaybolması engellendi; `mediaUrls/mediaCount` korunuyor.
+- Sürüm hedefi: `1.0.65+284`.
+- İlk V65 QA koşusu başarılı: sözleşme, V61–V65 regresyon kontrolleri, Flutter analyze, Flutter test, Firestore emulator testi ve debug APK build geçti.
+- Gerçek R2 story-video E2E testi başarılı: `kind=stories`, `video/mp4` presign → PUT → geri okuma iki medya worker alanında geçti.
+- Son sürüm/build numarası ve müzik kataloğu Firestore testleri için final QA koşusu ayrıca çalıştırılıyor.
+
+### V65 cihaz testi — Üret / Yazı ekle çökmesi — 2026-09-27 07:35
+
+- Üret > fotoğraf seç > **Yazı ekle** akışında metin giriş penceresi açılıyor.
+- Kullanıcı metin yazdıktan sonra işlem sırasında uygulama Flutter kırmızı hata ekranına düşebiliyor.
+- Görülen assertion: `package:flutter/src/widgets/framework.dart` — `Failed assertion: line 6281 pos 12: '_dependents.isEmpty': is not true.`
+- Bu hata özellikle medya üzerine yazı düzenleme diyaloğunun kapanışı / widget lifecycle temizliği sırasında oluşuyor gibi görünüyor; final düzeltmede dialog controller/dispose ve context lifecycle güvenliği kontrol edilecek.
+- Aynı ekranda seçilen dosya adının açık arka planda çok soluk/beyaz görünmesi de görsel okunabilirlik problemi olarak not edildi.
+- Üret foto düzenleme araçları (90° döndür, kare kırp, filtreler, Yazı ekle, Müzik ekle) görünür durumda; çökme nedeniyle bu akış uçtan uca yeniden test edilecek.
+
+### Grup üyeleri — üç nokta yönetici işlemleri — 2026-09-27
+
+- Üyeler ekranında her üyenin sağındaki **üç nokta** menüsü rol bazlı çalışmalı.
+- Seçilen kişi **yönetici ise** menüde **“Yöneticilikten çıkar”** seçeneği görünmeli.
+- Seçilen kişi normal üyeyse, yetkili kullanıcı için **“Yönetici yap”** seçeneği bulunmalı.
+- Kurucu için yanlışlıkla yöneticilik kaldırma yapılmamalı; **kurucu rolü korunmalı**.
+- Bu işlemler yalnızca gerekli yetkiye sahip kurucu/yönetici hesaplarda görünmeli.
+- Rol değişikliği grup içindeki tüm üyelerde **anlık senkron** görünmeli ve Üyeler ekranındaki “Kurucu / Yönetici / Grup üyesi” etiketi hemen güncellenmeli.
+
+### Profil — “Arkadaşsınız” butonu etkileşimli olsun — 2026-09-27 07:42
+
+- Başka kullanıcının profilinde gri **“Arkadaşsınız”** alanı şu anda tıklanmıyor.
+- Bu alan gerçek bir buton gibi çalışmalı.
+- Dokununca **“Arkadaşlıktan çıkarmak istiyor musun?”** benzeri bir onay penceresi açılmalı.
+- Onay seçenekleri: **Vazgeç / Arkadaşlıktan çıkar**.
+- Onaylanırsa iki hesaptaki arkadaşlık ilişkisi güvenli şekilde kaldırılmalı ve profil üzerindeki durum **anlık güncellenmeli**.
+- İşlem sonrası buton tekrar uygun duruma dönmeli: örneğin **“Arkadaşlık isteği gönder”**.
+- Yanlışlıkla tek dokunuşla arkadaş silinmemeli; mutlaka ikinci onay olmalı.
+
+### Profil — takip isteği gönderildikten sonra buton durumu güncellenmiyor — 2026-09-27 07:42
+
+- Başka kullanıcının profilinde **“Takip isteği gönder”** butonuna basınca altta **“Takip isteği gönderildi.”** bildirimi çıkıyor.
+- Buna rağmen buton etiketi ekranda hâlâ **“Takip isteği gönder”** olarak kalıyor.
+- Başarılı gönderimden hemen sonra buton durumu **anlık** değişmeli; önerilen durum: **“İstek gönderildi”**.
+- Bekleyen istek varken kullanıcı aynı isteği tekrar tekrar gönderememeli.
+- Bekleyen istek için tercihen **“İsteği geri çek”** işlemi sunulmalı.
+- Profil yeniden açıldığında / uygulama yeniden başladığında da bekleyen istek durumu Firestore’dan doğru okunup aynı şekilde görünmeli.
+- İstek kabul/reddedildiğinde buton durumu otomatik güncellenmeli.
+
+### Üret — fotoğraf editörü A kalite değil / araçlar çalışmıyor — 2026-09-27 07:45
+
+- Fotoğraf editöründe seçilen görsel düzenleme alanını **tam ve kaliteli biçimde doldurmuyor**; önizleme küçük/yarım kalıyor. Editör, fotoğrafı mümkün olan en büyük çalışma alanında göstermeli; yakınlaştırma, sürükleme ve kırpma sonucu kullanıcıya net görünmeli.
+- **Fotoğraf üzerine yazı** şu an sadece ortada siyah kutu içinde sabit metin gibi duruyor. A kalite editörde yazı:
+  - parmakla sürüklenebilmeli,
+  - büyütülüp küçültülebilmeli,
+  - döndürülebilmeli,
+  - font/boyut/renk/arka plan/hizalama seçenekleri olmalı,
+  - birden fazla yazı katmanı destekleyebilmeli,
+  - seçildiğinde gerçek zamanlı önizleme vermeli.
+- Yazı düzenleme akışında tekrar Flutter kırmızı assertion ekranı görülüyor: `_dependents.isEmpty is not true`. Bu lifecycle/dialog çökmesi kritik hata olarak açık kalıyor.
+- Alt taraftaki düzenleme araçlarının bazıları kullanıcı testinde **aktif çalışmıyor / tepki vermiyor**. Özellikle:
+  - 90° Döndür,
+  - Kare kırp,
+  - Parlak / Sıcak / Soğuk / Siyah Beyaz filtreleri,
+  - Yazıyı düzenle,
+  - Müzik ekle
+  tek tek fonksiyonel olarak doğrulanmalı.
+- Görselde dosya adı açık zeminde hâlâ çok soluk/beyaz; okunabilirlik düzeltilmeli.
+- Editörün tamamı “buton var ama işlev yok” durumundan çıkarılmalı; her araç gerçek işlev uygulamalı ve sonucu anında önizlemede göstermeli.
+- Hedef: Üret fotoğraf editörü **A kalite, tam ekran çalışma alanlı, katmanlı ve akıcı** olacak; düzenleme tamamlanmadan paylaşım ekranına geçilmeyecek.
+
+### Üret — video/foto düzenleyici etkileşim ve A kalite geliştirmeler — 2026-09-27 07:50
+
+- Video düzenleme ekranında eklenen yazı şu anda sabit konumda; kullanıcı yazının üzerine basılı tutup sürükleyerek sağa/sola/yukarı/aşağı taşıyamıyor.
+- Yazı katmanı sürüklenebilir, ölçeklenebilir ve döndürülebilir olmalı; konum/ölçek/dönüş düzenleme boyunca korunmalı ve paylaşımda aynı yerde görünmeli.
+- Video kes/kırp aralığı seçildiğinde oynatma/önizleme seçilen başlangıç noktasına ilerlemiyor; trim slider ile video zaman çizgisi senkron çalışmalı.
+- Trim kolları sürüklenirken anlık kare/zaman önizlemesi güncellenmeli; kullanıcı bıraktığında video otomatik seçilen başlangıca gitmeli.
+- Video editörü gerçek timeline mantığına geçirilmeli: küçük kare thumbnail şeridi, başlangıç/bitiş kolları ve seçili aralık vurgusu.
+- Fotoğraf ve video editörü için A kalite hedef:
+  - sürüklenebilir/ölçeklenebilir/döndürülebilir yazı ve sticker katmanları,
+  - font, renk, arka plan, opaklık, hizalama, gölge/çerçeve,
+  - kırpma oranları 9:16 / 1:1 / 4:5 / serbest,
+  - zoom + pan,
+  - filtre yoğunluğu sliderı,
+  - parlaklık / kontrast / doygunluk / sıcaklık / keskinlik,
+  - geri al / yinele,
+  - düzenleme öncesi/sonrası karşılaştırma,
+  - video hız 0.5x / 1x / 1.5x / 2x,
+  - videoyu bölme, parçayı silme ve sessize alma,
+  - müzik ses seviyesi ve orijinal video ses seviyesi ayrı ayar,
+  - seçilen müzikte başlangıç noktası seçme,
+  - kapak karesi seçme,
+  - düzenleme sırasında otomatik taslak kaydı.
+- Müzik kataloğu ekranında cihaz testinde “Müzik kataloğu şu anda yüklenemedi.” hatası görüldü; katalog/veri kaynağı ve Firestore erişimi ayrıca düzeltilecek.
+
+### Üret — ek A kalite editör özellikleri — 2026-09-27
+
+- Sticker / emoji / GIF katmanları; yazı gibi sürüklenebilir, büyütülebilir ve döndürülebilir olmalı.
+- Serbest çizim araçları: kalem, fosforlu kalem, silgi, renk ve kalınlık seçimi.
+- Yüz/plaka ve seçili bölgeler için bulanıklaştırma / mozaik aracı.
+- Fotoğrafta arka plan silme ve arka planı renk/görselle değiştirme.
+- Videoda otomatik altyazı; konuşmayı yazıya çevirip videoya yerleştirme.
+- Video parçaları arasında geçiş efektleri.
+- Keyframe mantığı: yazı/sticker zaman içinde konum, ölçek veya dönüş değiştirebilmeli.
+- Müzik ritmine göre otomatik kesim / beat sync.
+- Hazır şablonlar: fotoğraf + video + müzikten otomatik kısa içerik üretme.
+- Katman yönetimi: öne getir, arkaya gönder, kopyala, sil, kilitle.
+- Güvenli alan çizgileri: yazı/sticker paylaşım arayüzü butonlarının altında kalmamalı.
+- Dışa aktarma seçenekleri: 720p / 1080p, kalite ve yaklaşık dosya boyutu.
+- Final ekranı: Düzenlemeye dön / Taslak kaydet / Paylaş.
+- Uzun işlemlerde yükleme/işleme yüzdesi ve ilerleme durumu gösterilmeli.
+- Özellikle öncelikli: otomatik altyazı, sticker/GIF, çizim, blur/mozaik, geçiş, beat sync, katman sistemi ve 1080p çıktı.
+
+## V66 cihaz-test düzeltme paketi — 2026-09-27
+
+### Üret
+- Foto/video üzerine yazı düzenleme eski dışarıdan controller dispose eden dialog yapısından çıkarıldı; controller kendi Stateful sheet yaşam döngüsünde yönetiliyor. Cihazda görülen `_dependents.isEmpty` assertion hatasının kaynağına yönelik düzeltme.
+- Yazı rengi paleti, yazı arka planı ve boyut ayarı eklendi.
+- Yazı katmanı fotoğraf ve video önizlemesinde parmakla sürüklenebilir; iki parmakla büyüt/küçült ve döndür destekleniyor.
+- Yazının renk/konum/ölçek/dönüş ayarları taslak ve paylaşım metadata’sında korunuyor; Akışta aynı konum/stille gösteriliyor.
+- Fotoğraf düzenleme çalışma alanı büyütüldü; dosya adı açık zeminde koyu/okunur yapıldı.
+- Parlak / Sıcak / Soğuk / Siyah Beyaz filtreleri seçim anında önizlemeye yansıyor.
+- Video trim sliderı sürüklenirken önizleme seçilen zamana seek ediyor; bırakınca seçilen başlangıca geliyor.
+- Müzik kataloğu sorgusu sadeleştirildi, active filtresi istemci tarafına alındı ve Tekrar dene arayüzü eklendi.
+- Not: production Firestore’da `music_catalog` okuma kuralının ayrıca deploy edilmiş olması ve lisanslı katalog verisinin bulunması gerekir; istemci lisanssız parça uydurmaz.
+
+### Hikâye
+- Aynı kullanıcının aktif hikâyeleri artık tek hikâye yerine seri olarak açılıyor; yeni hikâye eskisini görüntüleyiciden düşürmüyor.
+- Hikâye şeridi owner bazında gruplanıyor: kullanıcı başına bir profil halkası.
+- Fotoğraf ve video türleri ayrı korunuyor; videolar gerçek süreleriyle oynuyor.
+- Üstte her hikâye için segmentli ilerleme çubuğu eklendi.
+- Sağ tarafa dokun sonraki, sol tarafa dokun önceki; basılı tut durdur/devam; aşağı hızlı kaydır kapat.
+- Başlangıç saati, bitiş tarihi/saati ve kalan süre gösteriliyor.
+- Ses aç/kapat, mesajla yanıt, hızlı emoji/kalp tepkileri, takip butonu eklendi.
+- Kendi hikâyesinde görüntüleme/yanıt/tepki sayaç özeti gösteriliyor.
+- Profil fotoğrafında aktif hikâye varsa mavi/turkuaz/mor halka çıkıyor ve dokununca hikâye serisi açılıyor.
+- Kendi profilinde hikâye yoksa avatar dokunuşu hikâye ekleme akışına gider; profil fotoğrafı değiştirme kamera düğmesi ve uzun basma ile korunur.
+
+### Profil / sosyal
+- Takip isteği gönderildiğinde buton anında “İstek gönderildi” durumuna geçiyor.
+- Bekleyen takip isteğine dokunarak geri çekme eklendi.
+- Arkadaşlık isteği de anlık bekleyen duruma geçiyor ve geri çekilebiliyor.
+- “Arkadaşsınız” artık aktif buton; dokununca ikinci onayla iki taraflı arkadaşlıktan çıkarma yapılıyor.
+- Premium rozeti önceki V65 düzeltmesiyle ad yanında korunuyor.
+
+### Gruplar
+- Üye üç nokta menüsündeki mevcut rol sistemi doğrulandı: kurucu normal üyeyi “Yönetici yap”, yöneticiyi “Yöneticilikten çıkar” yapabiliyor; kurucu korunuyor ve rol değişikliği Firestore grup belgesi üzerinden canlı senkron.
+
+
+### V67 cihaz testi — Üret yazı klavyesi + müzik kataloğu — 2026-09-27 11:05
+
+- V66 gerçek cihaz testinde Üret > Yazı ekle ekranında klavye açıkken **BOTTOM OVERFLOWED BY 16 PIXELS** görüldü.
+- Yazı düzenleyici klavye insetine duyarlı, kaydırılabilir yapıya geçirildi; alt aksiyonlar Wrap ile dar yükseklik/genişlikte taşmayacak.
+- V66 Müzik ekle ekranı gerçek cihazda **Müzik kataloğu şu anda yüklenemedi** hatası verdi.
+- Katalog hatası permission-denied / unavailable olarak ayrıştırıldı; yanıltıcı genel bağlantı mesajı kaldırıldı.
+- Müzik seçici NgelX beyaz Üret şablonuyla uyumlu hale getirildi.
+- music_catalog okuma kuralının üretim Firebase projesine yayınlanması için ayrı V67 Firestore rules deploy workflow'u eklendi.
+- Sürüm: **1.0.67+286**.
+
+
+### V68 cihaz testi — Video yazı katmanı gesture/düzenleme — 2026-09-27 11:36
+
+- Gerçek cihaz testinde videoya eklenen yazının doğrudan dokunup seçilmesi, sağa/sola-yukarı/aşağı sürüklenmesi, büyütülmesi ve döndürülmesi istenildi.
+- Video yazı katmanı seçim durumu eklendi; seçiliyken mor çerçeve/gölge ile aktif katman görünür.
+- Tek parmak sürükleme için gesture başlangıç noktası sabitlenerek hareketin sıçramaması sağlandı.
+- İki parmak pinch ile büyüt/küçült ve rotation korunuyor; büyük metnin tamamen ekran dışına kaçmasını azaltan güvenli sınırlar eklendi.
+- Yazıya çift dokununca metin/renk/arka plan/boyut düzenleme sheet'i açılıyor.
+- Seçili yazı için Küçült, Büyüt, Döndür, Ortala, Düzenle, Sıfırla ve Sil hızlı araçları eklendi.
+- Video alanının boş yerine dokununca yazı seçimi kapanıyor; metin alanına dokununca katman yeniden seçiliyor.
+- Dönüşüm değerleri Bitti ile mevcut overlayX/Y/Scale/Rotation metadata akışında korunuyor.
+- Sürüm: **1.0.68+287**.
+
+
+### Video ses miksajı / müzik kataloğu notu — 2026-09-27
+
+- Video düzenleyicide müzik kataloğu şu anda üretim Firestore izni beklediği için çalışmıyor.
+- Video paylaşımına ses miksaj seçenekleri eklenecek:
+  - **Orijinal ses**: videonun kendi sesi aynen kullanılır.
+  - **Müzik + orijinal ses**: iki ses için ayrı seviye kontrolü olur.
+  - **Sadece müzik**: videonun orijinal sesi tamamen kapatılır.
+  - **Ses ekle / voiceover**: kullanıcı video üstüne kendi ses kaydını ekleyebilir.
+- Ayrı ses seviye sliderları:
+  - **Orijinal ses** 0–100
+  - **Müzik** 0–100
+  - **Seslendirme** 0–100
+- Yeni müzik/ses eklendiğinde seslerin birbirini bastırmaması için varsayılan otomatik dengeleme yapılacak.
+- Voiceover aktifken gerektiğinde arka plan müziği/orijinal ses otomatik kısılacak (ducking).
+- Önizlemede duyulan miks ile yayınlanan videodaki miks aynı olacak.
+- Kullanıcı isterse tek dokunuşla **Orijinal sese dön** seçeneğini kullanabilecek.
+- Bu iş video editör WORK paketinde müzik kataloğu backend izni açıldıktan sonra uçtan uca test edilecek.
+
+
+### Fotoğraf editörü cihaz testi notu — 2026-09-27 12:22
+
+- Fotoğraf üzeri yazı gesture testi çalışıyor: yazı büyütülebiliyor, döndürülebiliyor ve konumu değiştirilebiliyor.
+- Yazı kaldırıldıktan sonra bile alttaki **"Yazıyı sürükle • iki parmakla büyüt/döndür"** yardım balonu görünmeye devam ediyor. Bu ipucu yalnızca aktif yazı katmanı varken gösterilecek; tercihen birkaç saniye sonra otomatik kaybolacak.
+- Fotoğraf editöründeki alt düzenleme kontrolleri bazı ekran boyutlarında alt navigasyona fazla yaklaşıyor / kısmen kapanıyor. Alt güvenli alan (SafeArea) ve ekstra bottom padding kontrol edilecek.
+- Müzik ekle ekranı beyaz şablonda doğru açılıyor ancak katalog hâlâ **"Müzik kataloğu sunucu izni bekliyor"** durumunda. Bu uygulama UI hatası değil; üretim Firestore music_catalog kuralı deploy edilmeden katalog yüklenmeyecek.
+- Müzik kataloğu düzeldiğinde fotoğraf + müzik akışı ayrıca cihazda uçtan uca test edilecek.
+
+
+### Fotoğraf editörü etkileşim notu — 2026-09-27
+
+- Fotoğrafa dokununca **kırpma/düzenleme araçları fotoğrafın içine bindirilmesin**.
+- Fotoğraf alanı mümkün olduğunca temiz kalsın; kırpma, döndürme ve benzeri kontroller **görselin dışında ayrı kontrol alanında / alt panelde** açılsın.
+- Fotoğrafın üzerindeki doğrudan gesture alanı yalnızca gerekli içerik katmanları (örn. yazıyı seçme/taşıma/büyütme/döndürme) için kullanılsın.
+- Yardım balonları ve araç çubukları görseli kapatmayacak şekilde dışarı taşınacak veya kısa süre sonra otomatik gizlenecek.
+
+
+### Uygulama açılışı / oturum kapısı UX notu — 2026-09-27
+
+- Uygulama açılırken bazı denemelerde **"Hesabın hazırlanıyor"** ekranında bekleme/donma hissi oluşuyor ve ana ekrana geçiş gecikiyor.
+- Açılışta profil ve güvenlik bilgileri yüklenirken kullanıcıya uzun süre metinli tam ekran bekleme ekranı gösterilmesin.
+- **"Hesabın hazırlanıyor / Profil ve güvenlik bilgilerin kontrol ediliyor"** metinleri kaldırılacak veya daha sade bir açılış göstergesiyle değiştirilecek.
+- Hedef: oturum doğrulama ve profil fetch işlemlerini mümkün olduğunca arka planda ve paralel yürütmek; ana ekranı gereksiz yere bloklamamak.
+- Profil fetch için mevcut timeout ve yeniden deneme akışı gözden geçirilecek; yavaş bağlantıda uygulamanın donmuş gibi görünmesi engellenecek.
+- Gerekirse kısa süreli logo/loader gösterilecek; 1–2 saniyeyi aşan beklemede sade hata/yenileme akışı kullanılacak.
+- Uygulama kapanıp açılmadan kendi kendine toparlanmalı.

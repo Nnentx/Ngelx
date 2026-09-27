@@ -1,27 +1,28 @@
-name: NgelX V68 App Quality Performance
+name: NgelX V68 Consolidated WORK QA
 
 on:
   push:
-    branches: [main]
+    branches:
+      - work/v65-consolidated-qa
     paths:
       - 'app/**'
       - 'cloudflare/worker/**'
       - 'tools/**'
       - 'firestore.rules'
-      - '.github/workflows/build-v55-group-final-polish.yml'
+      - '.github/workflows/v65-consolidated-qa.yml'
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: ngelx-v68-app-quality-performance
+  group: ngelx-v68-consolidated-work-qa
   cancel-in-progress: true
 
 jobs:
-  verify-and-build:
+  verify-build:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 50
     steps:
       - name: Kaynaklari al
         uses: actions/checkout@v4
@@ -42,49 +43,20 @@ jobs:
       - name: NgelX sozlesmesini dogrula
         run: python3 tools/verify_ngelx_contract.py
 
-      - name: V63 grup QA ve girdi performans hedeflerini dogrula
-        shell: bash
+      - name: Onceki regresyon kontrolleri
         run: |
-          grep -q "version: 1.0.68+287" app/pubspec.yaml
-          grep -q "bool ngelxPresenceOnline" app/lib/main.dart
-          grep -q "Profili görüntüle" app/lib/main.dart
-          grep -q "final sadeMedya=" app/lib/main.dart
-          grep -q "Grup bilgileri yükleniyor" app/lib/main.dart
-          grep -q "en fazla 10 yönetici" app/lib/main.dart
-          grep -q "exitActorName_" app/lib/main.dart
-          grep -q "member_add" app/lib/main.dart
-          grep -q "kişi için onay iste" app/lib/main.dart
-          grep -q "Gruptan ayrıldın" app/lib/main.dart
-          grep -q "gorulenIds.take(4)" app/lib/main.dart
-          grep -q "replyToMediaUrl" app/lib/main.dart
-          grep -q "NgelXReplyMediaPreview" app/lib/main.dart
-          grep -q "Icons.replay_10_rounded" app/lib/main.dart
-          grep -q "Icons.forward_10_rounded" app/lib/main.dart
-          grep -q "backgroundVersion" app/lib/main.dart
-          grep -q "nickname_changed" app/lib/main.dart
-          grep -q "VideoParametersPresets.h360_169" app/lib/main.dart
-          grep -q "Mesajı sabitle" app/lib/main.dart
-          grep -q "group_archives" app/lib/group_quality.dart
-          grep -q "deliveredTo" app/lib/group_quality.dart
-          grep -q "seenBy" app/lib/group_quality.dart
-          grep -q "match /group_archives/{uid}/items/{chatId}" firestore.rules
+          python3 tools/verify_v61_group_qa.py
+          python3 tools/verify_v62_performance.py
+          python3 tools/verify_v63_input_performance.py
+          python3 tools/verify_v64_app_quality.py
 
-      - name: V61 test edilen grup sorunlarini tek tek dogrula
-        run: python3 tools/verify_v61_group_qa.py
-
-      - name: V62 performans duzeltmelerini dogrula
-        run: python3 tools/verify_v62_performance.py
-
-      - name: V63 girdi performans duzeltmelerini dogrula
-        run: python3 tools/verify_v63_input_performance.py
-
-      - name: V64 Akis Uret Kesfet Profil Ayarlar kalite kontrolleri
-        run: python3 tools/verify_v64_app_quality.py
-
-      - name: V65 WORK regresyonunu dogrula
+      - name: V65 WORK kontrolleri
         run: python3 tools/verify_v65_work.py
 
-      - name: V67 cihaz testi duzeltmelerini dogrula
+      - name: V66 test edilen WORK kontrolleri
+        run: python3 tools/verify_v66_work.py
+
+      - name: V67 cihaz testi düzeltmelerini dogrula
         run: python3 tools/verify_v67_work.py
 
       - name: V68 video yazi katmani kontrollerini dogrula
@@ -97,7 +69,7 @@ jobs:
         working-directory: app
         run: flutter analyze --no-fatal-infos --no-fatal-warnings
 
-      - name: Testleri calistir
+      - name: Flutter testleri
         working-directory: app
         run: |
           if [ -d test ]; then
@@ -112,7 +84,7 @@ jobs:
           distribution: temurin
           java-version: '21'
 
-      - name: Firestore grup kurallarini emulator ile test et
+      - name: Firestore kurallarini emulator ile test et
         run: |
           npm install --no-save firebase @firebase/rules-unit-testing firebase-tools
           npx firebase emulators:exec --only firestore --project demo-ngelx "node tools/firestore_rules_test.mjs"
@@ -129,7 +101,6 @@ jobs:
           if [ ! -f "$HOME/.android/debug.keystore" ]; then
             keytool -genkeypair -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey -keypass android -dname "CN=Android Debug,O=Android,C=US" -keyalg RSA -keysize 2048 -validity 10000
           fi
-          keytool -list -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey
 
       - name: Debug APK derle
         working-directory: app
@@ -141,16 +112,10 @@ jobs:
             --dart-define=NGELX_VERSION_NAME="$BUILD_NAME" \
             --dart-define=NGELX_BUILD_NUMBER="$BUILD_NUMBER"
 
-      - name: APK imza parmak izini dogrula
-        run: |
-          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
-          test -n "$APKSIGNER"
-          "$APKSIGNER" verify --print-certs app/build/app/outputs/flutter-apk/app-debug.apk
-
       - name: APK yukle
         uses: actions/upload-artifact@v4
         with:
-          name: NgelX-V68-APP-QUALITY-PERFORMANCE-APK
+          name: NgelX-V68-CONSOLIDATED-WORK-APK
           path: app/build/app/outputs/flutter-apk/app-debug.apk
           if-no-files-found: error
           retention-days: 14

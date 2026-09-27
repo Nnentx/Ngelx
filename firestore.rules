@@ -195,6 +195,15 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // V70 device QA: redeploy catalog reads and current-group-member reaction permissions.
+      match /music_catalog/{trackId} {
+      // Public catalogue contains only tracks whose use rights were verified
+      // by the backend/admin process. Clients can read; they cannot publish
+      // arbitrary copyrighted songs into the catalogue.
+      allow read: if true;
+      allow write: if false;
+    }
+
     match /users/{uid} {
       allow read: if signedIn();
       allow create, delete: if isMe(uid);

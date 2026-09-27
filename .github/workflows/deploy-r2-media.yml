@@ -2,7 +2,7 @@ name: Deploy NgelX R2 Media Worker
 
 on:
   push:
-    branches: [main]
+    branches: [main, work/v65-consolidated-qa]
     paths:
       - 'cloudflare/worker/**'
       - '.github/workflows/deploy-r2-media.yml'

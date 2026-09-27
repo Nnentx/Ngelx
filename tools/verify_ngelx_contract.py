@@ -58,14 +58,18 @@ for forbidden in (
     if forbidden in app:
         errors.append("Eski Supabase çalışma zamanı kodu kaldı: " + forbidden)
 
-# The main profile avatar must directly open the photo editor.
+# The main profile avatar opens an active story (or story creation when none
+# exists). Profile-photo editing remains reachable through the camera button
+# and long press, so the story-ring interaction does not remove photo editing.
 profile_class = app.find("class _ProfilPageState")
 if profile_class < 0:
     errors.append("Profil sayfası bulunamadı.")
 else:
     profile_tail = app[profile_class:]
-    if "onTap: fotografYukle" not in profile_tail:
-        errors.append("Profil fotoğrafına dokunma fotografYukle akışına bağlı değil.")
+    if "NgelXHikayeliAvatar(" not in profile_tail or "hikayeYoksaTikla:" not in profile_tail:
+        errors.append("Profil avatarı aktif hikâye halkası / hikâye açma akışına bağlı değil.")
+    if "uzunBas:fotografYukle" not in profile_tail or "onTap:fotografYukle" not in profile_tail:
+        errors.append("Profil fotoğrafı düzenleme kamera düğmesi ve uzun basma ile korunmalı.")
     if "await user.updatePhotoURL(url)" not in profile_tail:
         errors.append("Profil fotoğrafı Firebase Auth photoURL ile senkronize edilmiyor.")
     if "CachedNetworkImage.evictFromCache(eski)" not in profile_tail:
@@ -642,20 +646,30 @@ for token in (
     if token not in rules:
         errors.append("Sosyal istek Firestore iptal koruması eksik: " + token)
 
-# Build 264/275: auth/account switching must be root-driven and bounded.
+# Build 264/275 + 2026-09-27 startup pass: auth/account switching remains
+# root-driven, but slow profile/status reads must not create the old verbose
+# full-screen freeze experience.
 for token in (
     "final GlobalKey<NavigatorState> ngelxNavigatorKey",
     "void ngelxKokRotayaDon()",
     "stream:FirebaseAuth.instance.userChanges()",
     "class NgelXDogrulanmisOturumKapisi",
     "if(kullanici==null||kullanici.isAnonymous)",
-    "Hesabın hazırlanıyor",
+    "Future<DocumentSnapshot<Map<String,dynamic>>> _profilOku()",
+    "GetOptions(source:Source.server)",
+    "if(s.connectionState==ConnectionState.waiting)return widget.child;",
     "Uygulamayı kapatıp açman gerekmez.",
     "Giriş zaman aşımına uğradı.",
     "Hesap geçişi zaman aşımına uğradı.",
 ):
     if token not in app:
         errors.append("Oturum güvenilirliği sözleşmesi eksik: " + token)
+for forbidden in (
+    "baslik:'Hesabın hazırlanıyor'",
+    "aciklama:'Profil ve güvenlik bilgilerin kontrol ediliyor.'",
+):
+    if forbidden in app:
+        errors.append("Eski bloklayan açılış metni geri gelmiş: " + forbidden)
 
 login_start = app.find("class _GirisPageState")
 login_end = app.find("\nclass _NgelXRenkliBaslik", login_start)
