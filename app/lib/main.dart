@@ -3580,7 +3580,7 @@ class HikayeSeridi extends StatelessWidget {
     return SizedBox(
       height: 82,
       child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-        stream: FirebaseFirestore.instance.collection('videos').limit(30).snapshots(),
+        stream: FirebaseFirestore.instance.collection('videos').where('type',isEqualTo:'story').limit(30).snapshots(),
         builder: (_, snap) {
           if (!snap.hasData) return const SizedBox.shrink();
           return FutureBuilder<List<Map<String, dynamic>>>(
@@ -17597,7 +17597,7 @@ class _KullaniciProfilPageState extends State<KullaniciProfilPage> {
               Center(child:GestureDetector(
                 onTap:!erisimVar?null:()async{
                   try{
-                    final q=await FirebaseFirestore.instance.collection('videos').where('ownerId',isEqualTo:uid).limit(100).get();
+                    final q=await FirebaseFirestore.instance.collection('videos').where('ownerId',isEqualTo:uid).where('type',isEqualTo:'story').limit(30).get();
                     final simdi=DateTime.now();
                     final hikayeler=q.docs.where((d){
                       final x=d.data(),bitis=x['expiresAt'];
@@ -19641,10 +19641,10 @@ class HikayeArsiviPage extends StatelessWidget{
       backgroundColor:Colors.white,
       appBar:AppBar(title:const Text('Hikâye arşivi',style:TextStyle(fontWeight:FontWeight.w900))),
       body:uid==null?const Center(child:Text('Oturum bulunamadı.')):StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
-        stream:FirebaseFirestore.instance.collection('videos').where('ownerId',isEqualTo:uid).limit(100).snapshots(),
+        stream:FirebaseFirestore.instance.collection('videos').where('ownerId',isEqualTo:uid).where('type',isEqualTo:'story').limit(100).snapshots(),
         builder:(_,s){
           if(s.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator(color:mor));
-          final docs=(s.data?.docs??[]).where((d)=>d.data()['type']=='story').toList()
+          final docs=(s.data?.docs??[]).toList()
             ..sort((a,b){
               final at=a.data()['createdAt'],bt=b.data()['createdAt'];
               final am=at is Timestamp?at.millisecondsSinceEpoch:0,bm=bt is Timestamp?bt.millisecondsSinceEpoch:0;
@@ -20079,7 +20079,7 @@ class _ProfilPageState extends State<ProfilPage> {
   Future<void> hikayeyiAc() async {
     final user = aktifKullanici;
     if (user == null) return;
-    final sonuc = await FirebaseFirestore.instance.collection('videos').where('ownerId', isEqualTo: user.uid).get();
+    final sonuc = await FirebaseFirestore.instance.collection('videos').where('ownerId', isEqualTo: user.uid).where('type',isEqualTo:'story').limit(30).get();
     final simdi = DateTime.now();
     final aktif = sonuc.docs.where((d) {
       final v = d.data();
@@ -20565,9 +20565,9 @@ class _ProfilPageState extends State<ProfilPage> {
                   Row(mainAxisAlignment:MainAxisAlignment.spaceAround,children:[_profilKisayol(Icons.bookmark_border_rounded,t('saved'),tiklama:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const KaydedilenlerPage()))),_profilKisayol(Icons.history_rounded,t('archive'),tiklama:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const HikayeArsiviPage()))),_profilKisayol(Icons.add_circle_outline_rounded,t('stories'),tiklama:hikayeyiAc),_profilKisayol(Icons.lock_outline_rounded,t('privacy'),tiklama:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const TercihlerPage(baslik:'Gizlilik')))),_profilKisayol(Icons.settings_outlined,t('settings'),tiklama:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const AyarlarV258Page())))]),
                   const SizedBox(height: 20),
                   SizedBox(height:92,child:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
-                    stream:aktifKullanici==null?null:FirebaseFirestore.instance.collection('videos').where('ownerId',isEqualTo:aktifKullanici!.uid).limit(100).snapshots(),
+                    stream:aktifKullanici==null?null:FirebaseFirestore.instance.collection('videos').where('ownerId',isEqualTo:aktifKullanici!.uid).where('type',isEqualTo:'story').limit(100).snapshots(),
                     builder:(_,hs){
-                      final h=(hs.data?.docs??[]).where((d)=>d.data()['type']=='story'&&d.data()['highlighted']==true).toList()
+                      final h=(hs.data?.docs??[]).where((d)=>d.data()['highlighted']==true).toList()
                         ..sort((a,b){
                           final at=a.data()['createdAt'],bt=b.data()['createdAt'];
                           final am=at is Timestamp?at.millisecondsSinceEpoch:0,bm=bt is Timestamp?bt.millisecondsSinceEpoch:0;
