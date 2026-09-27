@@ -45,7 +45,7 @@ jobs:
       - name: V63 grup QA ve girdi performans hedeflerini dogrula
         shell: bash
         run: |
-          grep -q "version: 1.0.64+283" app/pubspec.yaml
+          grep -q "version: 1.0.65+284" app/pubspec.yaml
           grep -q "bool ngelxPresenceOnline" app/lib/main.dart
           grep -q "Profili görüntüle" app/lib/main.dart
           grep -q "final sadeMedya=" app/lib/main.dart
