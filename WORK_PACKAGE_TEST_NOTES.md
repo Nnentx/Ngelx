@@ -871,3 +871,27 @@
 - Görselde dosya adı açık zeminde hâlâ çok soluk/beyaz; okunabilirlik düzeltilmeli.
 - Editörün tamamı “buton var ama işlev yok” durumundan çıkarılmalı; her araç gerçek işlev uygulamalı ve sonucu anında önizlemede göstermeli.
 - Hedef: Üret fotoğraf editörü **A kalite, tam ekran çalışma alanlı, katmanlı ve akıcı** olacak; düzenleme tamamlanmadan paylaşım ekranına geçilmeyecek.
+
+### Üret — video/foto düzenleyici etkileşim ve A kalite geliştirmeler — 2026-09-27 07:50
+
+- Video düzenleme ekranında eklenen yazı şu anda sabit konumda; kullanıcı yazının üzerine basılı tutup sürükleyerek sağa/sola/yukarı/aşağı taşıyamıyor.
+- Yazı katmanı sürüklenebilir, ölçeklenebilir ve döndürülebilir olmalı; konum/ölçek/dönüş düzenleme boyunca korunmalı ve paylaşımda aynı yerde görünmeli.
+- Video kes/kırp aralığı seçildiğinde oynatma/önizleme seçilen başlangıç noktasına ilerlemiyor; trim slider ile video zaman çizgisi senkron çalışmalı.
+- Trim kolları sürüklenirken anlık kare/zaman önizlemesi güncellenmeli; kullanıcı bıraktığında video otomatik seçilen başlangıca gitmeli.
+- Video editörü gerçek timeline mantığına geçirilmeli: küçük kare thumbnail şeridi, başlangıç/bitiş kolları ve seçili aralık vurgusu.
+- Fotoğraf ve video editörü için A kalite hedef:
+  - sürüklenebilir/ölçeklenebilir/döndürülebilir yazı ve sticker katmanları,
+  - font, renk, arka plan, opaklık, hizalama, gölge/çerçeve,
+  - kırpma oranları 9:16 / 1:1 / 4:5 / serbest,
+  - zoom + pan,
+  - filtre yoğunluğu sliderı,
+  - parlaklık / kontrast / doygunluk / sıcaklık / keskinlik,
+  - geri al / yinele,
+  - düzenleme öncesi/sonrası karşılaştırma,
+  - video hız 0.5x / 1x / 1.5x / 2x,
+  - videoyu bölme, parçayı silme ve sessize alma,
+  - müzik ses seviyesi ve orijinal video ses seviyesi ayrı ayar,
+  - seçilen müzikte başlangıç noktası seçme,
+  - kapak karesi seçme,
+  - düzenleme sırasında otomatik taslak kaydı.
+- Müzik kataloğu ekranında cihaz testinde “Müzik kataloğu şu anda yüklenemedi.” hatası görüldü; katalog/veri kaynağı ve Firestore erişimi ayrıca düzeltilecek.
