@@ -895,3 +895,21 @@
   - kapak karesi seçme,
   - düzenleme sırasında otomatik taslak kaydı.
 - Müzik kataloğu ekranında cihaz testinde “Müzik kataloğu şu anda yüklenemedi.” hatası görüldü; katalog/veri kaynağı ve Firestore erişimi ayrıca düzeltilecek.
+
+### Üret — ek A kalite editör özellikleri — 2026-09-27
+
+- Sticker / emoji / GIF katmanları; yazı gibi sürüklenebilir, büyütülebilir ve döndürülebilir olmalı.
+- Serbest çizim araçları: kalem, fosforlu kalem, silgi, renk ve kalınlık seçimi.
+- Yüz/plaka ve seçili bölgeler için bulanıklaştırma / mozaik aracı.
+- Fotoğrafta arka plan silme ve arka planı renk/görselle değiştirme.
+- Videoda otomatik altyazı; konuşmayı yazıya çevirip videoya yerleştirme.
+- Video parçaları arasında geçiş efektleri.
+- Keyframe mantığı: yazı/sticker zaman içinde konum, ölçek veya dönüş değiştirebilmeli.
+- Müzik ritmine göre otomatik kesim / beat sync.
+- Hazır şablonlar: fotoğraf + video + müzikten otomatik kısa içerik üretme.
+- Katman yönetimi: öne getir, arkaya gönder, kopyala, sil, kilitle.
+- Güvenli alan çizgileri: yazı/sticker paylaşım arayüzü butonlarının altında kalmamalı.
+- Dışa aktarma seçenekleri: 720p / 1080p, kalite ve yaklaşık dosya boyutu.
+- Final ekranı: Düzenlemeye dön / Taslak kaydet / Paylaş.
+- Uzun işlemlerde yükleme/işleme yüzdesi ve ilerleme durumu gösterilmeli.
+- Özellikle öncelikli: otomatik altyazı, sticker/GIF, çizim, blur/mozaik, geçiş, beat sync, katman sistemi ve 1080p çıktı.
