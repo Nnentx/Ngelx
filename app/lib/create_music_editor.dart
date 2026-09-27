@@ -536,7 +536,7 @@ class _NgelXSuruklenebilirYaziKatmaniState extends State<NgelXSuruklenebilirYazi
             onScaleUpdate:_guncelle,
             child:AnimatedContainer(
               duration:const Duration(milliseconds:120),
-              constraints:BoxConstraints(maxWidth:math.max(90,widget.canvasWidth*.74)),
+              constraints:BoxConstraints(maxWidth:math.max(90.0,widget.canvasWidth*.74).toDouble()),
               padding:const EdgeInsets.symmetric(horizontal:12,vertical:7),
               decoration:BoxDecoration(
                 color:widget.arkaPlanRenk==0?Colors.transparent:Color(widget.arkaPlanRenk),
