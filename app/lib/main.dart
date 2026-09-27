@@ -4045,18 +4045,32 @@ class _GorselYaziKartiState extends State<GorselYaziKarti> {
   String get icerikId => widget.veri['id'] ?? '';
   bool get indirilebilir => widget.veri['allowDownload'] != 'false' || FirebaseAuth.instance.currentUser?.uid == widget.veri['ownerId'];
 
+  Future<void> _aktifSesiHazirla() async {
+    final ses=widget.veri['audioUrl']??'';
+    if(!widget.aktif||ses.isEmpty)return;
+    var p=oynatici;
+    if(p==null){
+      p=AudioPlayer();
+      oynatici=p;
+      try{
+        await p.setUrl(ses);
+        await p.setLoopMode(LoopMode.one);
+      }catch(_){
+        if(identical(oynatici,p))oynatici=null;
+        await p.dispose();
+        return;
+      }
+    }
+    if(!mounted||!widget.aktif)return;
+    await p.play();
+  }
+
   @override
   void initState() {
     super.initState();
     etkilesimleriGetir();
-    final ses = widget.veri['audioUrl'] ?? '';
-    if (ses.isNotEmpty) {
-      oynatici = AudioPlayer();
-      oynatici!.setUrl(ses).then((_) {
-        oynatici!.setLoopMode(LoopMode.one);
-        if (widget.aktif) oynatici!.play();
-      });
-    }
+    // Trafik tasarrufu: komsu akıs kartlarindaki sesi onceden indirme.
+    if(widget.aktif)unawaited(_aktifSesiHazirla());
   }
 
   Future<void> etkilesimleriGetir() async {
@@ -4228,10 +4242,20 @@ class _GorselYaziKartiState extends State<GorselYaziKarti> {
   @override
   void didUpdateWidget(covariant GorselYaziKarti oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.aktif) {
-      oynatici?.play();
-    } else {
-      oynatici?.pause();
+    final eskiSes=oldWidget.veri['audioUrl']??'';
+    final yeniSes=widget.veri['audioUrl']??'';
+    if(eskiSes!=yeniSes){
+      final eski=oynatici;
+      oynatici=null;
+      if(eski!=null)unawaited(eski.dispose());
+      if(widget.aktif)unawaited(_aktifSesiHazirla());
+      return;
+    }
+    if(widget.aktif&&!oldWidget.aktif){
+      unawaited(_aktifSesiHazirla());
+    }else if(!widget.aktif&&oldWidget.aktif){
+      final p=oynatici;
+      if(p!=null)unawaited(p.pause());
     }
   }
 
