@@ -514,11 +514,11 @@ class _NgelXSuruklenebilirYaziKatmaniState extends State<NgelXSuruklenebilirYazi
   @override Widget build(BuildContext context){
     if(widget.yazi.trim().isEmpty)return const SizedBox.shrink();
     return Align(
-      alignment:Alignment(widget.x.clamp(-.95,.95),widget.y.clamp(-.95,.95)),
+      alignment:Alignment(widget.x.clamp(-.95,.95).toDouble(),widget.y.clamp(-.95,.95).toDouble()),
       child:Transform.rotate(
         angle:widget.rotation,
         child:Transform.scale(
-          scale:widget.scale.clamp(.45,3.2),
+          scale:widget.scale.clamp(.45,3.2).toDouble(),
           child:GestureDetector(
             behavior:HitTestBehavior.opaque,
             onScaleStart:(_){basScale=widget.scale;basRotation=widget.rotation;},
@@ -794,7 +794,7 @@ class _NgelXVideoDuzenlemePageState extends State<NgelXVideoDuzenlemePage> {
                     ]),
                     Row(children:[
                       const Text('Yazı boyutu',style:TextStyle(fontWeight:FontWeight.w800)),
-                      Expanded(child:Slider(min:14,max:54,value:yaziBoyut.clamp(14,54),onChanged:(v)=>setState(()=>yaziBoyut=v))),
+                      Expanded(child:Slider(min:14,max:54,value:yaziBoyut.clamp(14,54).toDouble(),onChanged:(v)=>setState(()=>yaziBoyut=v))),
                     ]),
                     const SizedBox(height:6),
                     const Text('Yazının üzerine basıp sürükle. İki parmakla büyüt/küçült ve döndür.',style:TextStyle(color:Colors.white60,fontSize:12)),
