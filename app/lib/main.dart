@@ -4369,13 +4369,13 @@ class _GorselYaziKartiState extends State<GorselYaziKarti> {
           if((widget.veri['overlayText']??'').trim().isNotEmpty)
             Align(
               alignment:Alignment(
-                (double.tryParse(widget.veri['overlayX']??'')??0).clamp(-.95,.95),
-                (double.tryParse(widget.veri['overlayY']??'')??0).clamp(-.95,.95),
+                (double.tryParse(widget.veri['overlayX']??'')??0).clamp(-.95,.95).toDouble(),
+                (double.tryParse(widget.veri['overlayY']??'')??0).clamp(-.95,.95).toDouble(),
               ),
               child:Transform.rotate(
                 angle:double.tryParse(widget.veri['overlayRotation']??'')??0,
                 child:Transform.scale(
-                  scale:(double.tryParse(widget.veri['overlayScale']??'')??1).clamp(.45,3.2),
+                  scale:(double.tryParse(widget.veri['overlayScale']??'')??1).clamp(.45,3.2).toDouble(),
                   child:Container(
                     margin:const EdgeInsets.all(18),
                     padding:const EdgeInsets.symmetric(horizontal:14,vertical:9),
@@ -4888,11 +4888,11 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver {
           ),
 if(widget.overlayText.trim().isNotEmpty)
   Align(
-    alignment:Alignment(widget.overlayX.clamp(-.95,.95),widget.overlayY.clamp(-.95,.95)),
+    alignment:Alignment(widget.overlayX.clamp(-.95,.95).toDouble(),widget.overlayY.clamp(-.95,.95).toDouble()),
     child:Transform.rotate(
       angle:widget.overlayRotation,
       child:Transform.scale(
-        scale:widget.overlayScale.clamp(.45,3.2),
+        scale:widget.overlayScale.clamp(.45,3.2).toDouble(),
         child:Container(
           margin:const EdgeInsets.all(30),
           padding:const EdgeInsets.symmetric(horizontal:14,vertical:9),
