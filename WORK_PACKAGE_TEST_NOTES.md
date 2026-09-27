@@ -1000,3 +1000,11 @@
 - Fotoğraf editöründeki alt düzenleme kontrolleri bazı ekran boyutlarında alt navigasyona fazla yaklaşıyor / kısmen kapanıyor. Alt güvenli alan (SafeArea) ve ekstra bottom padding kontrol edilecek.
 - Müzik ekle ekranı beyaz şablonda doğru açılıyor ancak katalog hâlâ **"Müzik kataloğu sunucu izni bekliyor"** durumunda. Bu uygulama UI hatası değil; üretim Firestore music_catalog kuralı deploy edilmeden katalog yüklenmeyecek.
 - Müzik kataloğu düzeldiğinde fotoğraf + müzik akışı ayrıca cihazda uçtan uca test edilecek.
+
+
+### Fotoğraf editörü etkileşim notu — 2026-09-27
+
+- Fotoğrafa dokununca **kırpma/düzenleme araçları fotoğrafın içine bindirilmesin**.
+- Fotoğraf alanı mümkün olduğunca temiz kalsın; kırpma, döndürme ve benzeri kontroller **görselin dışında ayrı kontrol alanında / alt panelde** açılsın.
+- Fotoğrafın üzerindeki doğrudan gesture alanı yalnızca gerekli içerik katmanları (örn. yazıyı seçme/taşıma/büyütme/döndürme) için kullanılsın.
+- Yardım balonları ve araç çubukları görseli kapatmayacak şekilde dışarı taşınacak veya kısa süre sonra otomatik gizlenecek.
