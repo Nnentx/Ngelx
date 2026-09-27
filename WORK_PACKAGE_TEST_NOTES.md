@@ -849,3 +849,25 @@
 - Bekleyen istek için tercihen **“İsteği geri çek”** işlemi sunulmalı.
 - Profil yeniden açıldığında / uygulama yeniden başladığında da bekleyen istek durumu Firestore’dan doğru okunup aynı şekilde görünmeli.
 - İstek kabul/reddedildiğinde buton durumu otomatik güncellenmeli.
+
+### Üret — fotoğraf editörü A kalite değil / araçlar çalışmıyor — 2026-09-27 07:45
+
+- Fotoğraf editöründe seçilen görsel düzenleme alanını **tam ve kaliteli biçimde doldurmuyor**; önizleme küçük/yarım kalıyor. Editör, fotoğrafı mümkün olan en büyük çalışma alanında göstermeli; yakınlaştırma, sürükleme ve kırpma sonucu kullanıcıya net görünmeli.
+- **Fotoğraf üzerine yazı** şu an sadece ortada siyah kutu içinde sabit metin gibi duruyor. A kalite editörde yazı:
+  - parmakla sürüklenebilmeli,
+  - büyütülüp küçültülebilmeli,
+  - döndürülebilmeli,
+  - font/boyut/renk/arka plan/hizalama seçenekleri olmalı,
+  - birden fazla yazı katmanı destekleyebilmeli,
+  - seçildiğinde gerçek zamanlı önizleme vermeli.
+- Yazı düzenleme akışında tekrar Flutter kırmızı assertion ekranı görülüyor: `_dependents.isEmpty is not true`. Bu lifecycle/dialog çökmesi kritik hata olarak açık kalıyor.
+- Alt taraftaki düzenleme araçlarının bazıları kullanıcı testinde **aktif çalışmıyor / tepki vermiyor**. Özellikle:
+  - 90° Döndür,
+  - Kare kırp,
+  - Parlak / Sıcak / Soğuk / Siyah Beyaz filtreleri,
+  - Yazıyı düzenle,
+  - Müzik ekle
+  tek tek fonksiyonel olarak doğrulanmalı.
+- Görselde dosya adı açık zeminde hâlâ çok soluk/beyaz; okunabilirlik düzeltilmeli.
+- Editörün tamamı “buton var ama işlev yok” durumundan çıkarılmalı; her araç gerçek işlev uygulamalı ve sonucu anında önizlemede göstermeli.
+- Hedef: Üret fotoğraf editörü **A kalite, tam ekran çalışma alanlı, katmanlı ve akıcı** olacak; düzenleme tamamlanmadan paylaşım ekranına geçilmeyecek.
