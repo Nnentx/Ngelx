@@ -14858,49 +14858,7 @@ class _YeniSohbetPageState extends State<YeniSohbetPage>{
   }
   @override void dispose(){arama.dispose();super.dispose();}
   TextSpan vurgula(String metin){final q=sorgu.toLowerCase(),m=metin.toLowerCase(),i=q.isEmpty?-1:m.indexOf(q);if(i<0)return TextSpan(text:metin,style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w600));return TextSpan(children:[TextSpan(text:metin.substring(0,i),style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w600)),TextSpan(text:metin.substring(i,i+q.length),style:const TextStyle(color:Colors.blue,fontWeight:FontWeight.w900)),TextSpan(text:metin.substring(i+q.length),style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w600))]);}
-  Future<void> _arkadasliktanCikar(String me,String gorunenAd)async{
-    final onay=await showDialog<bool>(
-      context:context,
-      builder:(d)=>AlertDialog(
-        backgroundColor:Colors.white,
-        surfaceTintColor:Colors.white,
-        title:const Text('Arkadaşlıktan çıkarılsın mı?',style:TextStyle(fontWeight:FontWeight.w900)),
-        content:Text('$gorunenAd ile arkadaşlığını kaldırmak istiyor musun?'),
-        actions:[
-          TextButton(onPressed:()=>Navigator.pop(d,false),child:const Text('Vazgeç')),
-          FilledButton(
-            style:FilledButton.styleFrom(backgroundColor:Colors.red,foregroundColor:Colors.white),
-            onPressed:()=>Navigator.pop(d,true),
-            child:const Text('Arkadaşlıktan çıkar'),
-          ),
-        ],
-      ),
-    )??false;
-    if(!onay||!mounted)return;
-    try{
-      final ids=<String>[me,uid]..sort();
-      final batch=FirebaseFirestore.instance.batch();
-      batch.set(FirebaseFirestore.instance.collection('users').doc(me),{
-        'friends':FieldValue.arrayRemove([uid]),
-      },SetOptions(merge:true));
-      batch.set(FirebaseFirestore.instance.collection('users').doc(uid),{
-        'friends':FieldValue.arrayRemove([me]),
-      },SetOptions(merge:true));
-      batch.set(FirebaseFirestore.instance.collection('friendships').doc(ids.join('_')),{
-        'members':ids,
-        'active':false,
-        'endedAt':FieldValue.serverTimestamp(),
-      },SetOptions(merge:true));
-      await batch.commit().timeout(const Duration(seconds:12));
-      if(!mounted)return;
-      setState((){});
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Arkadaşlık kaldırıldı.')));
-    }on TimeoutException{
-      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Arkadaşlık işlemi zaman aşımına uğradı.')));
-    }catch(_){
-      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Arkadaşlık kaldırılamadı. Tekrar dene.')));
-    }
-  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -18006,6 +17964,50 @@ class _KullaniciProfilPageState extends State<KullaniciProfilPage> {
       if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Profil paylaşım izni kontrolü zaman aşımına uğradı. Tekrar dene.')));
     }catch(_){
       if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Profil şu anda paylaşılamadı. Tekrar dene.')));
+    }
+  }
+
+  Future<void> _arkadasliktanCikar(String me,String gorunenAd)async{
+    final onay=await showDialog<bool>(
+      context:context,
+      builder:(d)=>AlertDialog(
+        backgroundColor:Colors.white,
+        surfaceTintColor:Colors.white,
+        title:const Text('Arkadaşlıktan çıkarılsın mı?',style:TextStyle(fontWeight:FontWeight.w900)),
+        content:Text('$gorunenAd ile arkadaşlığını kaldırmak istiyor musun?'),
+        actions:[
+          TextButton(onPressed:()=>Navigator.pop(d,false),child:const Text('Vazgeç')),
+          FilledButton(
+            style:FilledButton.styleFrom(backgroundColor:Colors.red,foregroundColor:Colors.white),
+            onPressed:()=>Navigator.pop(d,true),
+            child:const Text('Arkadaşlıktan çıkar'),
+          ),
+        ],
+      ),
+    )??false;
+    if(!onay||!mounted)return;
+    try{
+      final ids=<String>[me,uid]..sort();
+      final batch=FirebaseFirestore.instance.batch();
+      batch.set(FirebaseFirestore.instance.collection('users').doc(me),{
+        'friends':FieldValue.arrayRemove([uid]),
+      },SetOptions(merge:true));
+      batch.set(FirebaseFirestore.instance.collection('users').doc(uid),{
+        'friends':FieldValue.arrayRemove([me]),
+      },SetOptions(merge:true));
+      batch.set(FirebaseFirestore.instance.collection('friendships').doc(ids.join('_')),{
+        'members':ids,
+        'active':false,
+        'endedAt':FieldValue.serverTimestamp(),
+      },SetOptions(merge:true));
+      await batch.commit().timeout(const Duration(seconds:12));
+      if(!mounted)return;
+      setState((){});
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Arkadaşlık kaldırıldı.')));
+    }on TimeoutException{
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Arkadaşlık işlemi zaman aşımına uğradı.')));
+    }catch(_){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Arkadaşlık kaldırılamadı. Tekrar dene.')));
     }
   }
 
