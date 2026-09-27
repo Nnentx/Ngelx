@@ -162,7 +162,6 @@ class _NgelXMuzikSecPageState extends State<NgelXMuzikSecPage> {
                 child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                   stream: FirebaseFirestore.instance
                       .collection('music_catalog')
-                      .where('active', isEqualTo: true)
                       .limit(100)
                       .snapshots(),
                   builder: (_, snap) {
@@ -170,18 +169,35 @@ class _NgelXMuzikSecPageState extends State<NgelXMuzikSecPage> {
                       return const Center(child: CircularProgressIndicator(color: mavi));
                     }
                     if (snap.hasError) {
-                      return const Center(
+                      return Center(
                         child: Padding(
-                          padding: EdgeInsets.all(24),
-                          child: Text(
-                            'Müzik kataloğu şu anda yüklenemedi.',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(color: Colors.white70),
-                          ),
+                          padding: const EdgeInsets.all(24),
+                          child: Column(mainAxisSize:MainAxisSize.min,children:[
+                            const Icon(Icons.cloud_off_rounded,color:Colors.white54,size:52),
+                            const SizedBox(height:10),
+                            const Text(
+                              'Müzik kataloğu şu anda yüklenemedi.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(color: Colors.white70,fontWeight:FontWeight.w800),
+                            ),
+                            const SizedBox(height:6),
+                            const Text(
+                              'Bağlantıyı kontrol edip tekrar dene.',
+                              textAlign:TextAlign.center,
+                              style:TextStyle(color:Colors.white38,fontSize:12),
+                            ),
+                            const SizedBox(height:12),
+                            OutlinedButton.icon(
+                              onPressed:()=>setState((){}),
+                              icon:const Icon(Icons.refresh_rounded),
+                              label:const Text('Tekrar dene'),
+                            ),
+                          ]),
                         ),
                       );
                     }
                     var docs = (snap.data?.docs ?? const <QueryDocumentSnapshot<Map<String, dynamic>>>[])
+                        .where((d) => d.data()['active'] != false)
                         .where((d) => _lisansUygun(d.data()))
                         .where((d) {
                           final v = d.data();
