@@ -824,6 +824,7 @@ V65 trafik optimizasyonlari:
 - Hikâye şeridi, profil hikâye açma, arşiv ve öne çıkanlar sorguları yalnızca type=story belgelerini hedefliyor; normal gönderiler hikâye işlemleri için boşuna okunmuyor.
 - Profil tanıtım videosu değiştirilirken veya kaldırılırken eski R2 nesnesi temizleniyor; gereksiz depolama dosyası bırakılmıyor.
 - Özel sohbet arka planı değiştirilince, kaldırılınca veya özelleştirme sıfırlanınca eski R2 görseli temizleniyor.
+- Mesaj herkesten silindiğinde fotoğraf, video, ses ve dosya eklerinin R2 nesneleri de temizleniyor; özel sohbet ve grup mesajlarında yetim medya bırakılmıyor.
 
 Calisma dali: `perf/media-traffic-v65`
 PR: #11 — V65: reduce unnecessary media traffic
