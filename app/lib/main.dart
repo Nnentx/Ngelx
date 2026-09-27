@@ -2183,8 +2183,32 @@ class _NgelXDogrulanmisOturumKapisiState extends State<NgelXDogrulanmisOturumKap
     if(oldWidget.user.uid!=widget.user.uid)_yenile();
   }
 
+  Future<DocumentSnapshot<Map<String,dynamic>>> _profilOku()async{
+    final ref=FirebaseFirestore.instance.collection('users').doc(widget.user.uid);
+    try{
+      final onbellek=await ref.get(const GetOptions(source:Source.cache));
+      if(onbellek.exists){
+        unawaited(ref.get(const GetOptions(source:Source.server)).then((guncel){
+          if(!mounted||!guncel.exists)return;
+          setState((){profil=Future<DocumentSnapshot<Map<String,dynamic>>>.value(guncel);});
+        }).catchError((_){ }));
+        return onbellek;
+      }
+    }catch(_){}
+    Object? sonHata;
+    for(var deneme=0;deneme<2;deneme++){
+      try{
+        return await ref.get().timeout(const Duration(seconds:6));
+      }catch(e){
+        sonHata=e;
+        if(deneme==0)await Future<void>.delayed(const Duration(milliseconds:850));
+      }
+    }
+    throw sonHata??StateError('Profil bilgileri alınamadı.');
+  }
+
   void _yenile(){
-    profil=FirebaseFirestore.instance.collection('users').doc(widget.user.uid).get().timeout(const Duration(seconds:12));
+    profil=_profilOku();
   }
 
   Future<void> _cikis()async{
@@ -2278,11 +2302,9 @@ class _NgelXDogrulanmisOturumKapisiState extends State<NgelXDogrulanmisOturumKap
     future:profil,
     builder:(_,s){
       if(s.connectionState==ConnectionState.waiting){
-        return _durumSayfasi(
-          ikon:Icons.person_rounded,
-          baslik:'Hesabın hazırlanıyor',
-          aciklama:'Profil ve güvenlik bilgilerin kontrol ediliyor.',
-          yukleniyor:true,
+        return const Scaffold(
+          backgroundColor:Colors.white,
+          body:Center(child:SizedBox(width:28,height:28,child:CircularProgressIndicator(strokeWidth:2.5,color:mor))),
         );
       }
       if(s.hasError){
@@ -2403,7 +2425,7 @@ class _UygulamaDurumKapisiState extends State<UygulamaDurumKapisi> with WidgetsB
   @override Widget build(BuildContext context)=>FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(
     future:durum,
     builder:(context,s){
-      if(s.connectionState==ConnectionState.waiting)return const Scaffold(backgroundColor:Colors.white,body:Center(child:CircularProgressIndicator()));
+      if(s.connectionState==ConnectionState.waiting)return widget.child;
       if(s.hasError)return widget.child;
       final v=s.data?.data()??{};
       if(v['maintenance']!=true)return widget.child;
@@ -2431,6 +2453,7 @@ class _GirisPageState extends State<GirisPage> {
   bool gizli = true;
   bool beniHatirla = true;
   bool yukleniyor = false;
+  String? girisHatasi;
   List<String> kayitliEpostalar=[];
   List<String> epostaOnerileri=[];
 
@@ -2518,7 +2541,7 @@ class _GirisPageState extends State<GirisPage> {
     final adres=email.text.trim().toLowerCase();
     final epostaGecerli=RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(adres);
     if(!epostaGecerli||sifre.text.length<6){
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Geçerli bir e-posta ve şifreni gir.')));
+      if(mounted)setState(()=>girisHatasi='Geçerli bir e-posta ve şifreni gir.');
       return;
     }
 
@@ -2529,17 +2552,13 @@ class _GirisPageState extends State<GirisPage> {
     final simdi=DateTime.now().millisecondsSinceEpoch;
     if(kilitBitis>simdi){
       final saniye=((kilitBitis-simdi)/1000).ceil();
-      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Çok fazla hatalı deneme yapıldı. $saniye saniye sonra tekrar dene.')));
+      if(mounted)setState(()=>girisHatasi='Çok fazla hatalı deneme yapıldı. $saniye saniye sonra tekrar dene.');
       return;
     }
 
     FocusManager.instance.primaryFocus?.unfocus();
-    setState(()=>yukleniyor=true);
+    setState((){yukleniyor=true;girisHatasi=null;});
     try{
-      if(FirebaseAuth.instance.currentUser!=null){
-        await FirebaseAuth.instance.signOut().timeout(const Duration(seconds:8));
-      }
-
       final sonuc=await FirebaseAuth.instance.signInWithEmailAndPassword(
         email:adres,
         password:sifre.text,
@@ -2561,8 +2580,7 @@ class _GirisPageState extends State<GirisPage> {
       ));
       ngelxKokRotayaDon();
     }on TimeoutException{
-      try{await FirebaseAuth.instance.signOut().timeout(const Duration(seconds:5));}catch(_){}
-      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Giriş zaman aşımına uğradı. İnternetini kontrol edip tekrar dene.')));
+      if(mounted)setState(()=>girisHatasi='Giriş zaman aşımına uğradı. İnternetini kontrol edip tekrar dene.');
     }on FirebaseAuthException catch(e){
       if(!mounted)return;
       var mesaj='Giriş yapılamadı: ${e.message??e.code}';
@@ -2583,9 +2601,9 @@ class _GirisPageState extends State<GirisPage> {
       }else if(e.code=='user-disabled'){
         mesaj='Bu hesap devre dışı bırakılmış.';
       }
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(mesaj)));
-    }catch(e){
-      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Giriş tamamlanamadı: $e')));
+      setState(()=>girisHatasi=mesaj);
+    }catch(_){
+      if(mounted)setState(()=>girisHatasi='Giriş tamamlanamadı. Bağlantını kontrol edip tekrar dene.');
     }finally{
       if(mounted)setState(()=>yukleniyor=false);
     }
@@ -2643,6 +2661,7 @@ class _GirisPageState extends State<GirisPage> {
                 textInputAction:TextInputAction.done,
                 autofillHints:const [AutofillHints.password],
                 onSubmitted:yukleniyor?null:(_)=>girisYap(),
+                onChanged:(_){if(girisHatasi!=null)setState(()=>girisHatasi=null);},
                 decoration: InputDecoration(
                   prefixIcon: const Icon(Icons.lock_outline),
                   hintText: t('password'),
@@ -2657,6 +2676,16 @@ class _GirisPageState extends State<GirisPage> {
                     ),
                   ),
                 ),
+              ),
+              if(girisHatasi!=null)Container(
+                margin:const EdgeInsets.only(top:10),
+                padding:const EdgeInsets.symmetric(horizontal:12,vertical:10),
+                decoration:BoxDecoration(color:const Color(0xFFFFF1F1),borderRadius:BorderRadius.circular(12),border:Border.all(color:const Color(0xFFFFC7C7))),
+                child:Row(crossAxisAlignment:CrossAxisAlignment.start,children:[
+                  const Icon(Icons.error_outline_rounded,color:Color(0xFFD93025),size:19),
+                  const SizedBox(width:8),
+                  Expanded(child:Text(girisHatasi!,style:const TextStyle(color:Color(0xFF9D201A),fontSize:13,fontWeight:FontWeight.w700))),
+                ]),
               ),
               CheckboxListTile(
                 contentPadding: EdgeInsets.zero,
@@ -7420,7 +7449,7 @@ class _YeniYuklePageState extends State<YuklePage> {
                     child:Text('1/${medyalar.length}',style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w900)),
                   ),
                 ),
-                Positioned(
+                if(medyaYazisi.trim().isNotEmpty&&medyaYaziSecili)Positioned(
                   left:12,bottom:12,
                   child:Container(
                     padding:const EdgeInsets.symmetric(horizontal:9,vertical:5),
@@ -7565,7 +7594,7 @@ class _YeniYuklePageState extends State<YuklePage> {
       child:ColoredBox(
         color:Colors.white,
         child:SafeArea(child:ListView(
-          padding:const EdgeInsets.fromLTRB(22,22,22,110),
+          padding:const EdgeInsets.fromLTRB(22,22,22,148),
           children:[
             Text(t('createNew'),textAlign:TextAlign.center,style:const TextStyle(color:Colors.black,fontSize:27,fontWeight:FontWeight.w900)),
             const SizedBox(height:8),
