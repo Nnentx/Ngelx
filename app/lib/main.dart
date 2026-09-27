@@ -3438,11 +3438,30 @@ class _AramaPageState extends State<AramaPage> {
   final ara = TextEditingController();
   String sorgu = '';
   Set<String> engellenenler={};
+  Future<List<QuerySnapshot<Map<String,dynamic>>>>? _aramaVerisi;
+
+  Future<List<QuerySnapshot<Map<String,dynamic>>>> _aramaVerisiniHazirla(){
+    // Trafik tasarrufu: her harfte 60 kullanici + 100 icerigi yeniden indirme.
+    return _aramaVerisi??=Future.wait([
+      FirebaseFirestore.instance.collection('users').limit(60).get(),
+      FirebaseFirestore.instance.collection('videos').limit(100).get(),
+    ]);
+  }
+
+  void _sorguDegisti(String v){
+    final yeni=v.trim().toLowerCase();
+    if(yeni.isNotEmpty)unawaited(_aramaVerisiniHazirla());
+    setState(()=>sorgu=yeni);
+  }
 
   @override void initState(){
     super.initState();
     final ilk=widget.baslangicSorgu.trim();
-    if(ilk.isNotEmpty){ara.text=ilk;sorgu=ilk.toLowerCase();}
+    if(ilk.isNotEmpty){
+      ara.text=ilk;
+      sorgu=ilk.toLowerCase();
+      unawaited(_aramaVerisiniHazirla());
+    }
     engellenenleriGetir();
   }
   Future<void> engellenenleriGetir()async{final u=FirebaseAuth.instance.currentUser;if(u==null)return;final d=await FirebaseFirestore.instance.collection('users').doc(u.uid).get();if(mounted)setState(()=>engellenenler=Set<String>.from(List<dynamic>.from(d.data()?['blocked']??const[])));}
@@ -3471,7 +3490,7 @@ class _AramaPageState extends State<AramaPage> {
         title: TextField(
           controller: ara,
           autofocus: true,
-          onChanged: (v) => setState(() => sorgu = v.trim().toLowerCase()),
+          onChanged: _sorguDegisti,
           style:const TextStyle(color:Colors.black87),
           decoration: InputDecoration(hintText: t('searchHintAll'), hintStyle:const TextStyle(color:Colors.black45), prefixIcon: const Icon(Icons.search,color:Colors.black45), suffixIcon: sorgu.isEmpty ? null : IconButton(onPressed: () { ara.clear(); setState(() => sorgu = ''); }, icon: const Icon(Icons.cancel,color:Colors.black45))),
         ),
@@ -3480,10 +3499,7 @@ class _AramaPageState extends State<AramaPage> {
       body: sorgu.isEmpty
           ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [const Icon(Icons.manage_search_rounded, size: 75, color: mavi), const SizedBox(height: 12), Text(t('searchIntro'), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold,color:Colors.black87)), const SizedBox(height: 6), Text(t('searchIntroSub'), style: const TextStyle(color: Colors.black45))]))
           : FutureBuilder<List<QuerySnapshot<Map<String, dynamic>>>>(
-              future: Future.wait([
-                FirebaseFirestore.instance.collection('users').limit(60).get(),
-                FirebaseFirestore.instance.collection('videos').limit(100).get(),
-              ]),
+              future: _aramaVerisiniHazirla(),
               builder: (_, snap) {
                 if (!snap.hasData) return const Center(child: CircularProgressIndicator(color: mavi));
                 bool eslesir(String metin) => metin.toLowerCase().split(RegExp(r'[^a-z0-9ığüşöç]+')).any((kelime) => kelime.startsWith(sorgu));
