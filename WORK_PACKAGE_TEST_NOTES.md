@@ -991,3 +991,12 @@
 - Önizlemede duyulan miks ile yayınlanan videodaki miks aynı olacak.
 - Kullanıcı isterse tek dokunuşla **Orijinal sese dön** seçeneğini kullanabilecek.
 - Bu iş video editör WORK paketinde müzik kataloğu backend izni açıldıktan sonra uçtan uca test edilecek.
+
+
+### Fotoğraf editörü cihaz testi notu — 2026-09-27 12:22
+
+- Fotoğraf üzeri yazı gesture testi çalışıyor: yazı büyütülebiliyor, döndürülebiliyor ve konumu değiştirilebiliyor.
+- Yazı kaldırıldıktan sonra bile alttaki **"Yazıyı sürükle • iki parmakla büyüt/döndür"** yardım balonu görünmeye devam ediyor. Bu ipucu yalnızca aktif yazı katmanı varken gösterilecek; tercihen birkaç saniye sonra otomatik kaybolacak.
+- Fotoğraf editöründeki alt düzenleme kontrolleri bazı ekran boyutlarında alt navigasyona fazla yaklaşıyor / kısmen kapanıyor. Alt güvenli alan (SafeArea) ve ekstra bottom padding kontrol edilecek.
+- Müzik ekle ekranı beyaz şablonda doğru açılıyor ancak katalog hâlâ **"Müzik kataloğu sunucu izni bekliyor"** durumunda. Bu uygulama UI hatası değil; üretim Firestore music_catalog kuralı deploy edilmeden katalog yüklenmeyecek.
+- Müzik kataloğu düzeldiğinde fotoğraf + müzik akışı ayrıca cihazda uçtan uca test edilecek.
