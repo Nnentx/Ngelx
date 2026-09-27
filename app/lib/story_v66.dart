@@ -187,7 +187,7 @@ class _NgelXHikayeSeriPageState extends State<NgelXHikayeSeriPage> with SingleTi
       videoKontrol=x;
       await x.initialize();
       if(!mounted||nesil!=medyaNesli){await x.dispose();return;}
-      final ms=x.value.duration.inMilliseconds.clamp(1000,60000);
+      final ms=math.max(1000,x.value.duration.inMilliseconds).toInt();
       sure.duration=Duration(milliseconds:ms);
       await x.setLooping(false);
       await x.setVolume(sessiz?0:1);
