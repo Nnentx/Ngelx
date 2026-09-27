@@ -4345,6 +4345,7 @@ class VideoKarti extends StatefulWidget {
 class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver {
   late final VideoPlayerController kontrol;
   bool hazir = false;
+  bool hazirlaniyor = false;
   bool begenildi = false;
   bool kaydedildi = false;
   bool duraklatildi = false;
@@ -4370,21 +4371,26 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver {
     etkilesimleriGetir();
     profilFotosunuGetir();
 
-    kontrol.initialize().then((_) {
-      kontrol.setLooping(true);
+    // Trafik tasarrufu: PageView komsu sayfalari onceden olusturabilir.
+    // Video controller ag baglantisini yalnizca kart aktif oldugunda baslatir.
+    if (widget.aktif) unawaited(_videoyuHazirla());
+  }
 
-      if (widget.aktif) {
-        kontrol.play();
+  Future<void> _videoyuHazirla() async {
+    if (hazir || hazirlaniyor || medyaHatasi != null) return;
+    hazirlaniyor = true;
+    try {
+      await kontrol.initialize();
+      await kontrol.setLooping(true);
+      if (widget.aktif && !duraklatildi) {
+        await kontrol.play();
       }
-
-      if (mounted) {
-        setState(() => hazir = true);
-      }
-    }).catchError((e) {
-      if (mounted) {
-        setState(() => medyaHatasi = e.toString());
-      }
-    });
+      if (mounted) setState(() => hazir = true);
+    } catch (e) {
+      if (mounted) setState(() => medyaHatasi = e.toString());
+    } finally {
+      hazirlaniyor = false;
+    }
   }
 
   @override
@@ -4583,6 +4589,10 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver {
   @override
   void didUpdateWidget(covariant VideoKarti oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (widget.aktif && !hazir) {
+      unawaited(_videoyuHazirla());
+      return;
+    }
     if (!hazir) return;
     if (widget.aktif) {
       if (!duraklatildi) kontrol.play();
@@ -7792,7 +7802,7 @@ class MesajIstegiOnizlemePage extends StatelessWidget{
   final String chatId,digerUid,ad,foto,uid;
   const MesajIstegiOnizlemePage({super.key,required this.chatId,required this.digerUid,required this.ad,required this.foto,required this.uid});
   @override Widget build(BuildContext context)=>Theme(data:ThemeData.light(),child:Scaffold(backgroundColor:Colors.white,appBar:AppBar(title:Text(ad)),body:Column(children:[
-    Expanded(child:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(stream:FirebaseFirestore.instance.collection('chats').doc(chatId).collection('messages').orderBy('createdAt').limitToLast(100).snapshots(),builder:(_,s)=>ListView(padding:const EdgeInsets.all(16),children:(s.data?.docs??[]).map((d){final v=d.data(),metin=(v['text']??'').toString(),photo=v['type']=='photo';return Align(alignment:v['senderId']==uid?Alignment.centerRight:Alignment.centerLeft,child:Container(margin:const EdgeInsets.symmetric(vertical:4),padding:EdgeInsets.all(photo?4:12),constraints:const BoxConstraints(maxWidth:280),decoration:BoxDecoration(color:const Color(0xFFF0F1F4),borderRadius:BorderRadius.circular(18)),child:photo?ClipRRect(borderRadius:BorderRadius.circular(15),child:Image.network((v['mediaUrl']??'').toString())):Text(metin)));}).toList()))),
+    Expanded(child:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(stream:FirebaseFirestore.instance.collection('chats').doc(chatId).collection('messages').orderBy('createdAt').limitToLast(100).snapshots(),builder:(_,s)=>ListView(padding:const EdgeInsets.all(16),children:(s.data?.docs??[]).map((d){final v=d.data(),metin=(v['text']??'').toString(),photo=v['type']=='photo';return Align(alignment:v['senderId']==uid?Alignment.centerRight:Alignment.centerLeft,child:Container(margin:const EdgeInsets.symmetric(vertical:4),padding:EdgeInsets.all(photo?4:12),constraints:const BoxConstraints(maxWidth:280),decoration:BoxDecoration(color:const Color(0xFFF0F1F4),borderRadius:BorderRadius.circular(18)),child:photo?ClipRRect(borderRadius:BorderRadius.circular(15),child:CachedNetworkImage(imageUrl:(v['mediaUrl']??'').toString(),fit:BoxFit.cover,errorWidget:(_,__,___)=>const SizedBox(height:120,child:Center(child:Icon(Icons.broken_image_outlined))))):Text(metin)));}).toList()))),
     SafeArea(top:false,child:Padding(padding:const EdgeInsets.all(12),child:Row(children:[Expanded(child:OutlinedButton(onPressed:()async{await FirebaseFirestore.instance.collection('chats').doc(chatId).set({'requestRejected_$uid':true,'hiddenFor':FieldValue.arrayUnion([uid])},SetOptions(merge:true));if(context.mounted)Navigator.pop(context);},child:Text(t('reject')))),const SizedBox(width:8),Expanded(child:OutlinedButton(style:OutlinedButton.styleFrom(foregroundColor:Colors.red),onPressed:()async{await kullaniciyiEngelle(context,digerUid);await FirebaseFirestore.instance.collection('chats').doc(chatId).set({'requestRejected_$uid':true,'hiddenFor':FieldValue.arrayUnion([uid])},SetOptions(merge:true));if(context.mounted)Navigator.pop(context);},child:const Text('Engelle'))),const SizedBox(width:8),Expanded(child:FilledButton(onPressed:()async{await FirebaseFirestore.instance.collection('chats').doc(chatId).set({'requestAccepted_$uid':true},SetOptions(merge:true));if(context.mounted)Navigator.pushReplacement(context,MaterialPageRoute(builder:(_)=>SohbetPage(chatId:chatId,digerUid:digerUid,ad:ad,foto:foto)));},child:Text(t('accept'))))]))),
   ])));
 }
@@ -10771,43 +10781,24 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
   );
 }
 
-class TamEkranMedyaPage extends StatelessWidget{final String url;const TamEkranMedyaPage({super.key,required this.url});@override Widget build(BuildContext context)=>Scaffold(backgroundColor:Colors.black,appBar:AppBar(backgroundColor:Colors.black,foregroundColor:Colors.white),body:Center(child:InteractiveViewer(minScale:.5,maxScale:5,child:Image.network(url,fit:BoxFit.contain,errorBuilder:(_,__,___)=>const Text('Medya açılamadı.',style:TextStyle(color:Colors.white))))));}
+class TamEkranMedyaPage extends StatelessWidget{final String url;const TamEkranMedyaPage({super.key,required this.url});@override Widget build(BuildContext context)=>Scaffold(backgroundColor:Colors.black,appBar:AppBar(backgroundColor:Colors.black,foregroundColor:Colors.white),body:Center(child:InteractiveViewer(minScale:.5,maxScale:5,child:CachedNetworkImage(imageUrl:url,fit:BoxFit.contain,errorWidget:(_,__,___)=>const Text('Medya açılamadı.',style:TextStyle(color:Colors.white))))));}
 
 
-class NgelXReplyMediaPreview extends StatefulWidget{
+class NgelXReplyMediaPreview extends StatelessWidget{
   final String url;
   final String type;
   const NgelXReplyMediaPreview({super.key,required this.url,required this.type});
-  @override State<NgelXReplyMediaPreview> createState()=>_NgelXReplyMediaPreviewState();
-}
-class _NgelXReplyMediaPreviewState extends State<NgelXReplyMediaPreview>{
-  VideoPlayerController? _video;
-  bool _hazir=false;
-  @override void initState(){
-    super.initState();
-    if(widget.type=='video'&&widget.url.isNotEmpty){
-      final c=VideoPlayerController.networkUrl(Uri.parse(widget.url));
-      _video=c;
-      c.initialize().then((_){if(mounted)setState(()=>_hazir=true);}).catchError((_){});
-    }
-  }
-  @override void dispose(){_video?.dispose();super.dispose();}
   @override Widget build(BuildContext context){
-    Widget child;
-    if(widget.type=='video'){
-      final c=_video;
-      child=Stack(fit:StackFit.expand,alignment:Alignment.center,children:[
-        Container(color:Colors.black),
-        if(c!=null&&_hazir&&c.value.size.width>0&&c.value.size.height>0)
-          FittedBox(fit:BoxFit.cover,child:SizedBox(width:c.value.size.width,height:c.value.size.height,child:VideoPlayer(c))),
-        Container(alignment:Alignment.center,color:Colors.black.withValues(alpha:.12),child:const Icon(Icons.play_arrow_rounded,color:Colors.white,size:24)),
-      ]);
-    }else{
-      child=CachedNetworkImage(
-        imageUrl:widget.url,fit:BoxFit.cover,
-        errorWidget:(_,__,___)=>Container(color:const Color(0xFFF0F1F2),child:const Icon(Icons.photo_outlined,color:Color(0xFF777B80),size:22)),
-      );
-    }
+    final Widget child=type=='video'
+      ?Stack(fit:StackFit.expand,alignment:Alignment.center,children:[
+          Container(color:Colors.black),
+          Container(alignment:Alignment.center,color:Colors.black.withValues(alpha:.12),child:const Icon(Icons.play_arrow_rounded,color:Colors.white,size:24)),
+        ])
+      :CachedNetworkImage(
+          imageUrl:url,fit:BoxFit.cover,
+          errorWidget:(_,__,___)=>Container(color:const Color(0xFFF0F1F2),child:const Icon(Icons.photo_outlined,color:Color(0xFF777B80),size:22)),
+        );
+    // Yanittaki 46px video onizlemesi icin tum videoyu agdan acma.
     return ClipRRect(borderRadius:BorderRadius.circular(9),child:SizedBox(width:46,height:46,child:child));
   }
 }
@@ -10820,18 +10811,30 @@ class NgelXGrupVideoMesaj extends StatefulWidget{
 }
 class _NgelXGrupVideoMesajState extends State<NgelXGrupVideoMesaj>{
   late final VideoPlayerController kontrol;
-  bool hazir=false,hata=false;
+  bool hazir=false,hata=false,yukleniyor=false;
   @override void initState(){
     super.initState();
+    // Sohbet acilir acilmaz her video icin veri indirme; ilk dokunusta baslat.
     kontrol=VideoPlayerController.networkUrl(Uri.parse(widget.url));
-    kontrol.initialize().then((_){
-      kontrol.setLooping(true);
-      if(mounted)setState(()=>hazir=true);
-    }).catchError((_){if(mounted)setState(()=>hata=true);});
   }
   @override void dispose(){kontrol.dispose();super.dispose();}
   Future<void> oynat()async{
-    if(!hazir)return;
+    if(!hazir){
+      if(yukleniyor)return;
+      setState(()=>yukleniyor=true);
+      try{
+        await kontrol.initialize();
+        await kontrol.setLooping(true);
+        if(!mounted)return;
+        setState(()=>hazir=true);
+        await kontrol.play();
+      }catch(_){
+        if(mounted)setState(()=>hata=true);
+      }finally{
+        if(mounted)setState(()=>yukleniyor=false);
+      }
+      return;
+    }
     if(kontrol.value.isPlaying){await kontrol.pause();}else{await kontrol.play();}
     if(mounted)setState((){});
   }
@@ -10846,7 +10849,20 @@ class _NgelXGrupVideoMesajState extends State<NgelXGrupVideoMesaj>{
   @override Widget build(BuildContext context){
     final yukseklik=widget.compact?178.0:MediaQuery.sizeOf(context).height*.68;
     if(hata)return Container(width:246,height:150,alignment:Alignment.center,decoration:BoxDecoration(color:const Color(0xFF211837),borderRadius:BorderRadius.circular(14)),child:const Icon(Icons.videocam_off_rounded,color:Colors.white54,size:38));
-    if(!hazir)return Container(width:246,height:150,alignment:Alignment.center,decoration:BoxDecoration(color:const Color(0xFF211837),borderRadius:BorderRadius.circular(14)),child:const CircularProgressIndicator(color:Color(0xFFCDB9FF),strokeWidth:2));
+    if(!hazir)return GestureDetector(
+      onTap:()=>unawaited(oynat()),
+      child:Container(
+        width:246,height:150,alignment:Alignment.center,
+        decoration:BoxDecoration(color:const Color(0xFF211837),borderRadius:BorderRadius.circular(14)),
+        child:yukleniyor
+          ?const CircularProgressIndicator(color:Color(0xFFCDB9FF),strokeWidth:2)
+          :const Column(mainAxisSize:MainAxisSize.min,children:[
+              Icon(Icons.play_circle_fill_rounded,color:Colors.white,size:48),
+              SizedBox(height:6),
+              Text('Dokun ve oynat',style:TextStyle(color:Colors.white70,fontSize:11,fontWeight:FontWeight.w700)),
+            ]),
+      ),
+    );
     final oynuyor=kontrol.value.isPlaying;
     return GestureDetector(
       onTap:()=>unawaited(oynat()),
