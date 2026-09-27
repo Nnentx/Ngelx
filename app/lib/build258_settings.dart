@@ -175,9 +175,19 @@ class _GelismisAyarlarV258PageState extends State<GelismisAyarlarV258Page>{
       bildirim=v['notificationsEnabled']!=false;mesajBildirim=v['messageNotifications']!=false;arkadasBildirim=v['friendNotifications']!=false;etkilesimBildirim=v['interactionNotifications']!=false;canliBildirim=v['liveNotifications']!=false;grupBildirim=v['groupNotifications']!=false;sessizSaat=v['quietHoursEnabled']==true;
       supheliGiris=v['suspiciousLoginAlerts']!=false;veriTasarruf=v['dataSaver']==true;otomatikOynat=v['autoplayVideos']!=false;wifiHd=v['wifiOnlyHd']==true;otomatikCeviri=v['autoTranslate']!=false;altyazi=(v['captionLanguage']??uygulamaDili.value).toString();hareketAzalt=v['reduceMotion']==true;buyukYazi=v['largeText']==true;
     });
+    final h=await SharedPreferences.getInstance();
+    await h.setBool('ngelx_auto_translate',otomatikCeviri);
+    await h.setString('ngelx_caption_language',altyazi);
+    ngelxIcerikDilRevizyonu.value++;
   }
-  Future<void> _bool(String k,bool v)async{if(uid!=null)await FirebaseFirestore.instance.collection('users').doc(uid).set({k:v},SetOptions(merge:true));}
-  Future<void> _str(String k,String v)async{if(uid!=null)await FirebaseFirestore.instance.collection('users').doc(uid).set({k:v},SetOptions(merge:true));}
+  Future<void> _bool(String k,bool v)async{
+    if(uid!=null)await FirebaseFirestore.instance.collection('users').doc(uid).set({k:v},SetOptions(merge:true));
+    if(k=='autoTranslate'){final h=await SharedPreferences.getInstance();await h.setBool('ngelx_auto_translate',v);ngelxIcerikDilRevizyonu.value++;}
+  }
+  Future<void> _str(String k,String v)async{
+    if(uid!=null)await FirebaseFirestore.instance.collection('users').doc(uid).set({k:v},SetOptions(merge:true));
+    if(k=='captionLanguage'){final h=await SharedPreferences.getInstance();await h.setString('ngelx_caption_language',v);ngelxIcerikDilRevizyonu.value++;}
+  }
   Widget _sw(String a,String s,bool v,ValueChanged<bool> f,{bool enabled=true})=>SwitchListTile(contentPadding:const EdgeInsets.symmetric(horizontal:20,vertical:5),title:Text(a,style:const TextStyle(fontWeight:FontWeight.w700)),subtitle:Text(s),value:v,onChanged:enabled?f:null,activeTrackColor:mavi);
   Widget _h(String x)=>Padding(padding:const EdgeInsets.fromLTRB(20,18,20,5),child:Text(x,style:const TextStyle(color:Colors.black54,fontWeight:FontWeight.w900)));
   List<Widget> _izin(String alan,String secili,ValueChanged<String> f)=>const [('all','Herkes'),('following','Takip ettiklerim'),('friends','Arkadaşlar'),('none','Kimse')].map((e)=>RadioListTile<String>(value:e.$1,groupValue:secili,title:Text(e.$2),onChanged:(v){if(v!=null){f(v);}})).toList();

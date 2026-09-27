@@ -1544,6 +1544,18 @@ const ceviriler = <String, Map<String,String>>{
   'downloadPermissionsSub': {'tr':'Varsayılan paylaşım indirme ayarı','en':'Default download setting for posts','de':'Standard-Downloadeinstellung für Beiträge','ar':'إعداد التنزيل الافتراضي للمنشورات','ru':'Настройка скачивания публикаций по умолчанию'},
   'appUpdates': {'tr':'Uygulama güncellemeleri','en':'App updates','de':'App-Updates','ar':'تحديثات التطبيق','ru':'Обновления приложения'},
   'build': {'tr':'Yapı','en':'Build','de':'Build','ar':'الإصدار','ru':'Сборка'},
+  'contentTools': {'tr':'İçerik araçları','en':'Content tools','de':'Inhaltswerkzeuge','ar':'أدوات المحتوى','ru':'Инструменты контента'},
+  'languageTranslate': {'tr':'Dil ve çeviri','en':'Language and translation','de':'Sprache und Übersetzung','ar':'اللغة والترجمة','ru':'Язык и перевод'},
+  'translationTarget': {'tr':'Çeviri dili','en':'Translation language','de':'Übersetzungssprache','ar':'لغة الترجمة','ru':'Язык перевода'},
+  'translationReady': {'tr':'Çeviri hazır','en':'Translation available','de':'Übersetzung verfügbar','ar':'الترجمة متاحة','ru':'Перевод доступен'},
+  'translationUnavailable': {'tr':'Bu dil için gerçek çeviri henüz yok','en':'No real translation is available for this language yet','de':'Für diese Sprache ist noch keine echte Übersetzung verfügbar','ar':'لا توجد ترجمة فعلية لهذه اللغة بعد','ru':'Для этого языка пока нет готового перевода'},
+  'showTranslation': {'tr':'Çeviriyi göster','en':'Show translation','de':'Übersetzung anzeigen','ar':'إظهار الترجمة','ru':'Показать перевод'},
+  'captionsLabel': {'tr':'Altyazı','en':'Captions','de':'Untertitel','ar':'الترجمة النصية','ru':'Субтитры'},
+  'captionsShow': {'tr':'Konuşmaları yazı olarak göster','en':'Show speech as text','de':'Gesprochenes als Text anzeigen','ar':'إظهار الكلام كنص','ru':'Показывать речь текстом'},
+  'captionsUnavailable': {'tr':'Bu içerik için gerçek altyazı henüz yok','en':'No real captions are available for this content yet','de':'Für diesen Inhalt sind noch keine echten Untertitel verfügbar','ar':'لا توجد ترجمة نصية فعلية لهذا المحتوى بعد','ru':'Для этого контента пока нет готовых субтитров'},
+  'playbackSpeed': {'tr':'Oynatma hızı','en':'Playback speed','de':'Wiedergabegeschwindigkeit','ar':'سرعة التشغيل','ru':'Скорость воспроизведения'},
+  'contentInfo': {'tr':'İçerik bilgileri','en':'Content information','de':'Inhaltsinformationen','ar':'معلومات المحتوى','ru':'Информация о контенте'},
+  'reportContent': {'tr':'Bildir / Şikâyet et','en':'Report content','de':'Inhalt melden','ar':'الإبلاغ عن المحتوى','ru':'Пожаловаться на контент'},
   'shareNgelx': {'tr':'Ngel X’i paylaş','en':'Share Ngel X','de':'Ngel X teilen','ar':'مشاركة Ngel X','ru':'Поделиться Ngel X'},
   'shareNgelxSub': {'tr':'Uygulama bağlantısını paylaş veya kopyala','en':'Share or copy the app link','de':'App-Link teilen oder kopieren','ar':'مشاركة رابط التطبيق أو نسخه','ru':'Поделитесь ссылкой на приложение или скопируйте её'},
   'logout': {'tr':'Çıkış yap','en':'Sign out','de':'Abmelden','ar':'تسجيل الخروج','ru':'Выйти'},
@@ -1944,6 +1956,118 @@ Future<void> takipDurumuDegistir(String hedefUid,bool takipte)async{
   if(!takipte)await uygulamaBildirimiGonder(toUid:hedefUid,fromUid:ben,tur:'friend',metin:'Seni takip etmeye başladı');
 }
 
+
+final ValueNotifier<int> ngelxIcerikDilRevizyonu=ValueNotifier<int>(0);
+
+String ngelxDilKodu(dynamic ham){
+  final s=(ham??'').toString().trim().toLowerCase().replaceAll('_','-');
+  if(s.isEmpty)return '';
+  return s.split('-').first;
+}
+
+Map<String,String> ngelxDilMetinHaritasi(dynamic ham){
+  dynamic kaynak=ham;
+  if(kaynak is String){
+    final s=kaynak.trim();
+    if(s.isEmpty)return <String,String>{};
+    try{kaynak=jsonDecode(s);}catch(_){return <String,String>{};}
+  }
+  if(kaynak is! Map)return <String,String>{};
+  final sonuc=<String,String>{};
+  kaynak.forEach((k,v){
+    final dil=ngelxDilKodu(k);
+    final metin=(v??'').toString().trim();
+    if(dil.isNotEmpty&&metin.isNotEmpty)sonuc[dil]=metin;
+  });
+  return sonuc;
+}
+
+class NgelXCeviriliMetin extends StatefulWidget{
+  final String icerikId,orijinal,icerikDili;
+  final Map<String,String> ceviriler;
+  final TextStyle? style;
+  final int? maxLines;
+  final TextOverflow? overflow;
+  final TextAlign? textAlign;
+  const NgelXCeviriliMetin({
+    super.key,
+    required this.icerikId,
+    required this.orijinal,
+    this.icerikDili='',
+    this.ceviriler=const <String,String>{},
+    this.style,
+    this.maxLines,
+    this.overflow,
+    this.textAlign,
+  });
+  @override State<NgelXCeviriliMetin> createState()=>_NgelXCeviriliMetinState();
+}
+class _NgelXCeviriliMetinState extends State<NgelXCeviriliMetin>{
+  bool ceviriAcik=false;
+  String hedefDil='';
+  @override void initState(){super.initState();ngelxIcerikDilRevizyonu.addListener(_yenile);_yenile();}
+  @override void didUpdateWidget(covariant NgelXCeviriliMetin oldWidget){super.didUpdateWidget(oldWidget);if(oldWidget.icerikId!=widget.icerikId)_yenile();}
+  @override void dispose(){ngelxIcerikDilRevizyonu.removeListener(_yenile);super.dispose();}
+  void _yenile(){unawaited(_tercihYukle());}
+  Future<void> _tercihYukle()async{
+    final h=await SharedPreferences.getInstance();
+    final hedef=ngelxDilKodu(h.getString('content_translation_language_${widget.icerikId}')??uygulamaDili.value);
+    final acik=h.getBool('content_translate_${widget.icerikId}')??(h.getBool('ngelx_auto_translate')??false);
+    if(mounted)setState((){hedefDil=hedef;ceviriAcik=acik;});
+  }
+  @override Widget build(BuildContext context){
+    final kaynak=ngelxDilKodu(widget.icerikDili);
+    final ceviri=widget.ceviriler[hedefDil]?.trim()??'';
+    final metin=ceviriAcik&&hedefDil.isNotEmpty&&hedefDil!=kaynak&&ceviri.isNotEmpty?ceviri:widget.orijinal;
+    return Text(metin,style:widget.style,maxLines:widget.maxLines,overflow:widget.overflow,textAlign:widget.textAlign);
+  }
+}
+
+class NgelXAltyaziKatmani extends StatefulWidget{
+  final String icerikId,captionText;
+  final Map<String,String> captions,captionTranslations;
+  const NgelXAltyaziKatmani({
+    super.key,
+    required this.icerikId,
+    this.captionText='',
+    this.captions=const <String,String>{},
+    this.captionTranslations=const <String,String>{},
+  });
+  @override State<NgelXAltyaziKatmani> createState()=>_NgelXAltyaziKatmaniState();
+}
+class _NgelXAltyaziKatmaniState extends State<NgelXAltyaziKatmani>{
+  bool acik=false;
+  String hedefDil='';
+  @override void initState(){super.initState();ngelxIcerikDilRevizyonu.addListener(_yenile);_yenile();}
+  @override void didUpdateWidget(covariant NgelXAltyaziKatmani oldWidget){super.didUpdateWidget(oldWidget);if(oldWidget.icerikId!=widget.icerikId)_yenile();}
+  @override void dispose(){ngelxIcerikDilRevizyonu.removeListener(_yenile);super.dispose();}
+  void _yenile(){unawaited(_tercihYukle());}
+  Future<void> _tercihYukle()async{
+    final h=await SharedPreferences.getInstance();
+    final hedef=ngelxDilKodu(h.getString('ngelx_caption_language')??uygulamaDili.value);
+    final aktif=h.getBool('content_caption_${widget.icerikId}')??false;
+    if(mounted)setState((){hedefDil=hedef;acik=aktif;});
+  }
+  String get metin{
+    final ceviri=widget.captionTranslations[hedefDil]?.trim()??'';
+    if(ceviri.isNotEmpty)return ceviri;
+    final yerel=widget.captions[hedefDil]?.trim()??'';
+    if(yerel.isNotEmpty)return yerel;
+    return widget.captionText.trim();
+  }
+  @override Widget build(BuildContext context){
+    final yazi=metin;
+    if(!acik||yazi.isEmpty)return const SizedBox.shrink();
+    return Center(
+      child:Container(
+        padding:const EdgeInsets.symmetric(horizontal:12,vertical:7),
+        decoration:BoxDecoration(color:Colors.black.withValues(alpha:.72),borderRadius:BorderRadius.circular(10)),
+        child:Text(yazi,textAlign:TextAlign.center,maxLines:3,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.white,fontSize:15,height:1.25,fontWeight:FontWeight.w700)),
+      ),
+    );
+  }
+}
+
 Future<void> tepkiMenusu(BuildContext context,String icerikId) async {
   final user=FirebaseAuth.instance.currentUser;
   if(user==null||user.isAnonymous||icerikId.isEmpty){await misafirEngeli(context);return;}
@@ -1958,33 +2082,65 @@ Future<void> tepkiMenusu(BuildContext context,String icerikId) async {
 Future<void> icerikAracMenusu(BuildContext context,String icerikId,{Future<void> Function(double)? hizDegistir,double mevcutHiz=1.0})async{
   if(icerikId.isEmpty)return;
   final belge=await FirebaseFirestore.instance.collection('videos').doc(icerikId).get();
-  final hafiza=await SharedPreferences.getInstance(),altyaziVar=(belge.data()?['captionText']??belge.data()?['captions']??'').toString().trim().isNotEmpty;
+  final v=belge.data()??<String,dynamic>{};
+  final hafiza=await SharedPreferences.getInstance();
+  final ceviriler=ngelxDilMetinHaritasi(v['translations']);
+  final captions=ngelxDilMetinHaritasi(v['captions']);
+  final captionTranslations=ngelxDilMetinHaritasi(v['captionTranslations']);
+  final captionText=(v['captionText']??'').toString().trim();
   bool altyazi=hafiza.getBool('content_caption_$icerikId')??false;
-  String icerikDili=hafiza.getString('content_language_$icerikId')??uygulamaDili.value;
+  bool ceviri=hafiza.getBool('content_translate_$icerikId')??(hafiza.getBool('ngelx_auto_translate')??false);
+  String hedefDil=ngelxDilKodu(hafiza.getString('content_translation_language_$icerikId')??uygulamaDili.value);
+  final altyaziDili=ngelxDilKodu(hafiza.getString('ngelx_caption_language')??uygulamaDili.value);
+  bool ceviriHazir()=>ceviriler[hedefDil]?.trim().isNotEmpty==true;
+  String altyaziMetni(){
+    final c=captionTranslations[altyaziDili]?.trim()??'';
+    if(c.isNotEmpty)return c;
+    final d=captions[altyaziDili]?.trim()??'';
+    if(d.isNotEmpty)return d;
+    return captionText;
+  }
   if(!context.mounted)return;
   await showModalBottomSheet(context:context,backgroundColor:Colors.white,shape:const RoundedRectangleBorder(borderRadius:BorderRadius.vertical(top:Radius.circular(28))),builder:(c)=>StatefulBuilder(builder:(c,setPencere)=>SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
     Container(width:42,height:4,margin:const EdgeInsets.all(12),decoration:BoxDecoration(color:Colors.black26,borderRadius:BorderRadius.circular(8))),
-    const Text('İçerik araçları',style:TextStyle(color:Colors.black,fontSize:20,fontWeight:FontWeight.w900)),
-    ListTile(leading:const Icon(Icons.translate_rounded,color:mor),title:const Text('Dil ve çeviri',style:TextStyle(color:Colors.black87,fontWeight:FontWeight.w700)),subtitle:Text('Bu içerik için: ${dilAdlari[icerikDili]}',style:const TextStyle(color:Colors.black54)),onTap:()async{final sec=await showDialog<String>(context:c,builder:(d)=>Theme(data:ThemeData.light(),child:SimpleDialog(backgroundColor:Colors.white,title:const Text('İçerik dili',style:TextStyle(color:Colors.black87)),children:dilAdlari.entries.map((e)=>SimpleDialogOption(onPressed:()=>Navigator.pop(d,e.key),child:Row(children:[if(e.key==icerikDili)const Icon(Icons.check,color:mor),if(e.key==icerikDili)const SizedBox(width:8),Text(e.value,style:const TextStyle(color:Colors.black87))]))).toList())));if(sec!=null){await hafiza.setString('content_language_$icerikId',sec);setPencere(()=>icerikDili=sec);}}),
-    SwitchListTile(secondary:const Icon(Icons.closed_caption_rounded,color:Colors.blue),title:const Text('Altyazı',style:TextStyle(color:Colors.black87,fontWeight:FontWeight.w700)),subtitle:Text(altyaziVar?'Konuşmaları yazı olarak göster':'Bu içerik için altyazı henüz yok',style:const TextStyle(color:Colors.black54)),value:altyazi&&altyaziVar,onChanged:altyaziVar?(v)async{await hafiza.setBool('content_caption_$icerikId',v);setPencere(()=>altyazi=v);}:null),
+    Text(t('contentTools'),style:const TextStyle(color:Colors.black,fontSize:20,fontWeight:FontWeight.w900)),
+    ListTile(
+      leading:const Icon(Icons.translate_rounded,color:mor),
+      title:Text(t('languageTranslate'),style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w700)),
+      subtitle:Text('${dilAdlari[hedefDil]??hedefDil} • ${ceviriHazir()?t('translationReady'):t('translationUnavailable')}',style:const TextStyle(color:Colors.black54)),
+      onTap:()async{
+        final sec=await showDialog<String>(context:c,builder:(d)=>Theme(data:ThemeData.light(),child:SimpleDialog(backgroundColor:Colors.white,title:Text(t('translationTarget'),style:const TextStyle(color:Colors.black87)),children:dilAdlari.entries.map((e)=>SimpleDialogOption(onPressed:()=>Navigator.pop(d,e.key),child:Row(children:[if(e.key==hedefDil)const Icon(Icons.check,color:mor),if(e.key==hedefDil)const SizedBox(width:8),Text(e.value,style:const TextStyle(color:Colors.black87))]))).toList())));
+        if(sec!=null){
+          await hafiza.setString('content_translation_language_$icerikId',sec);
+          setPencere(()=>hedefDil=sec);
+          ngelxIcerikDilRevizyonu.value++;
+        }
+      },
+    ),
+    SwitchListTile(
+      secondary:const Icon(Icons.g_translate_rounded,color:mor),
+      title:Text(t('showTranslation'),style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w700)),
+      subtitle:Text(ceviriHazir()?t('translationReady'):t('translationUnavailable'),style:const TextStyle(color:Colors.black54)),
+      value:ceviri&&ceviriHazir(),
+      onChanged:ceviriHazir()?(x)async{await hafiza.setBool('content_translate_$icerikId',x);setPencere(()=>ceviri=x);ngelxIcerikDilRevizyonu.value++;}:null,
+    ),
+    SwitchListTile(
+      secondary:const Icon(Icons.closed_caption_rounded,color:Colors.blue),
+      title:Text(t('captionsLabel'),style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w700)),
+      subtitle:Text(altyaziMetni().isNotEmpty?'${dilAdlari[altyaziDili]??altyaziDili} • ${t('captionsShow')}':t('captionsUnavailable'),style:const TextStyle(color:Colors.black54)),
+      value:altyazi&&altyaziMetni().isNotEmpty,
+      onChanged:altyaziMetni().isNotEmpty?(x)async{await hafiza.setBool('content_caption_$icerikId',x);setPencere(()=>altyazi=x);ngelxIcerikDilRevizyonu.value++;}:null,
+    ),
     if(hizDegistir!=null)ListTile(
       leading:const Icon(Icons.speed_rounded,color:Colors.orange),
-      title:const Text('Oynatma hızı',style:TextStyle(color:Colors.black87,fontWeight:FontWeight.w700)),
+      title:Text(t('playbackSpeed'),style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w700)),
       subtitle:Wrap(spacing:7,children:[.5,1.0,1.5,2.0].map((x){
         final secili=(x-mevcutHiz).abs()<.01;
-        return ChoiceChip(
-          label:Text('${x}x'),
-          selected:secili,
-          selectedColor:mor,
-          backgroundColor:const Color(0xFFF1F2F5),
-          side:BorderSide.none,
-          labelStyle:TextStyle(color:secili?Colors.white:Colors.black87,fontWeight:FontWeight.w800),
-          onSelected:(_)async{await hizDegistir(x);if(c.mounted)Navigator.pop(c);},
-        );
+        return ChoiceChip(label:Text('${x}x'),selected:secili,selectedColor:mor,backgroundColor:const Color(0xFFF1F2F5),side:BorderSide.none,labelStyle:TextStyle(color:secili?Colors.white:Colors.black87,fontWeight:FontWeight.w800),onSelected:(_)async{await hizDegistir(x);if(c.mounted)Navigator.pop(c);});
       }).toList()),
     ),
-    ListTile(leading:const Icon(Icons.info_outline_rounded,color:Colors.black54),title:const Text('İçerik bilgileri',style:TextStyle(color:Colors.black87,fontWeight:FontWeight.w700)),subtitle:Text('İçerik kimliği: $icerikId',maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black45))),
-    ListTile(leading:const Icon(Icons.flag_outlined,color:Colors.redAccent),title:const Text('Bildir / Şikâyet et',style:TextStyle(color:Colors.redAccent,fontWeight:FontWeight.w700)),onTap:(){Navigator.pop(c);sikayetEt(context,hedefTuru:'paylasim',hedefId:icerikId,hedefUid:'');}),
+    ListTile(leading:const Icon(Icons.info_outline_rounded,color:Colors.black54),title:Text(t('contentInfo'),style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w700)),subtitle:Text(icerikId,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black45))),
+    ListTile(leading:const Icon(Icons.flag_outlined,color:Colors.redAccent),title:Text(t('reportContent'),style:const TextStyle(color:Colors.redAccent,fontWeight:FontWeight.w700)),onTap:(){Navigator.pop(c);sikayetEt(context,hedefTuru:'paylasim',hedefId:icerikId,hedefUid:'');}),
   ]))));
 }
 
@@ -3373,6 +3529,11 @@ class _VideoAkisiState extends State<VideoAkisi> {
               'musicArtist':(veri['musicArtist']??'').toString(),
               'musicCoverUrl':(veri['musicCoverUrl']??'').toString(),
               'description':(veri['description']??'').toString(),
+              'contentLanguage':(veri['contentLanguage']??veri['language']??'').toString(),
+              'translations':ngelxDilMetinHaritasi(veri['translations']),
+              'captionText':(veri['captionText']??'').toString(),
+              'captions':ngelxDilMetinHaritasi(veri['captions']),
+              'captionTranslations':ngelxDilMetinHaritasi(veri['captionTranslations']),
               'allowDownload':veri['allowDownload']??true,
               'privacy':(veri['privacy']??'Herkes').toString(),
               'visibleTo':List<String>.from(veri['visibleTo']??const[]),
@@ -3463,6 +3624,11 @@ class _VideoAkisiState extends State<VideoAkisi> {
                     kullaniciAdi:(item['username']??'ngelx').toString(),
                     ownerId:(item['ownerId']??'').toString(),
                     aciklama:(item['description']??'').toString(),
+                    contentLanguage:(item['contentLanguage']??'').toString(),
+                    translations:Map<String,String>.from(item['translations'] as Map? ??const <String,String>{}),
+                    captionText:(item['captionText']??'').toString(),
+                    captions:Map<String,String>.from(item['captions'] as Map? ??const <String,String>{}),
+                    captionTranslations:Map<String,String>.from(item['captionTranslations'] as Map? ??const <String,String>{}),
                     audioUrl:(item['audioUrl']??'').toString(),
                     overlayText:(item['overlayText']??'').toString(),
                     overlayColor:(item['overlayColor'] as num?)?.toInt()??0xFFFFFFFF,
@@ -3499,6 +3665,11 @@ class _VideoAkisiState extends State<VideoAkisi> {
                   'musicTitle':(item['musicTitle']??'').toString(),
                   'musicArtist':(item['musicArtist']??'').toString(),
                   'description':(item['description']??'').toString(),
+                  'contentLanguage':(item['contentLanguage']??'').toString(),
+                  'translations':jsonEncode(item['translations']??const <String,String>{}),
+                  'captionText':(item['captionText']??'').toString(),
+                  'captions':jsonEncode(item['captions']??const <String,String>{}),
+                  'captionTranslations':jsonEncode(item['captionTranslations']??const <String,String>{}),
                   'username':(item['username']??'ngelx').toString(),
                   'ownerId':(item['ownerId']??'').toString(),
                   'allowDownload':(item['allowDownload']??true).toString(),
@@ -4388,7 +4559,14 @@ class _GorselYaziKartiState extends State<GorselYaziKarti> {
               decoration: const BoxDecoration(
                 gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFF16213E), Color(0xFF47256D)]),
               ),
-              child: Text(yazi, textAlign: TextAlign.center, style: const TextStyle(fontSize: 29, height: 1.3, fontWeight: FontWeight.w800)),
+              child:NgelXCeviriliMetin(
+                icerikId:icerikId,
+                orijinal:yazi,
+                icerikDili:widget.veri['contentLanguage']??'',
+                ceviriler:ngelxDilMetinHaritasi(widget.veri['translations']),
+                textAlign:TextAlign.center,
+                style:const TextStyle(fontSize:29,height:1.3,fontWeight:FontWeight.w800),
+              ),
             ),
           const DecoratedBox(
             decoration: BoxDecoration(
@@ -4452,7 +4630,17 @@ class _GorselYaziKartiState extends State<GorselYaziKarti> {
                   child:Text('@${widget.veri['username'] ?? 'ngelx'}',style:const TextStyle(fontSize:19,fontWeight:FontWeight.bold)),
                 ),
               ),
-              if (foto.isNotEmpty && yazi.isNotEmpty) ...[const SizedBox(height: 8), Text(yazi)],
+              if (foto.isNotEmpty && yazi.isNotEmpty) ...[
+                const SizedBox(height:8),
+                NgelXCeviriliMetin(
+                  icerikId:icerikId,
+                  orijinal:yazi,
+                  icerikDili:widget.veri['contentLanguage']??'',
+                  ceviriler:ngelxDilMetinHaritasi(widget.veri['translations']),
+                  maxLines:3,
+                  overflow:TextOverflow.ellipsis,
+                ),
+              ],
               if ((widget.veri['audioUrl'] ?? '').isNotEmpty) ...[
                 const SizedBox(height:8),
                 Row(children:[
@@ -4495,6 +4683,10 @@ class VideoKarti extends StatefulWidget {
   final String kullaniciAdi;
   final String ownerId;
   final String aciklama;
+  final String contentLanguage;
+  final Map<String,String> translations;
+  final String captionText;
+  final Map<String,String> captions,captionTranslations;
   final String audioUrl;
   final String overlayText;
   final int overlayColor,overlayBackgroundColor;
@@ -4514,6 +4706,11 @@ class VideoKarti extends StatefulWidget {
     required this.ownerId,
     required this.aktif,
     this.aciklama = '',
+    this.contentLanguage = '',
+    this.translations = const <String,String>{},
+    this.captionText = '',
+    this.captions = const <String,String>{},
+    this.captionTranslations = const <String,String>{},
     this.audioUrl = '',
     this.overlayText = '',
     this.overlayColor=0xFFFFFFFF,
@@ -4943,6 +5140,18 @@ if(widget.overlayText.trim().isNotEmpty)
       ),
     ),
   ),
+if(widget.captionText.trim().isNotEmpty||widget.captions.isNotEmpty||widget.captionTranslations.isNotEmpty)
+  Positioned(
+    left:42,
+    right:42,
+    bottom:155,
+    child:NgelXAltyaziKatmani(
+      icerikId:videoId,
+      captionText:widget.captionText,
+      captions:widget.captions,
+      captionTranslations:widget.captionTranslations,
+    ),
+  ),
 if (kalpAnimasyonu)
   const Center(child: KalpPatlama()),
 Positioned(
@@ -4985,8 +5194,11 @@ Positioned(
                 ),
                 if(widget.aciklama.trim().isNotEmpty) ...[
                   const SizedBox(height:8),
-                  Text(
-                    widget.aciklama.trim(),
+                  NgelXCeviriliMetin(
+                    icerikId:videoId,
+                    orijinal:widget.aciklama.trim(),
+                    icerikDili:widget.contentLanguage,
+                    ceviriler:widget.translations,
                     maxLines:3,
                     overflow:TextOverflow.ellipsis,
                   ),
@@ -7317,6 +7529,7 @@ class _YeniYuklePageState extends State<YuklePage> {
         'musicCoverUrl':(secilenMuzik?['coverUrl']??'').toString(),
         'musicLicense':(secilenMuzik?['licenseStatus']??'').toString(),
         'description':metin,
+        'contentLanguage':uygulamaDili.value,
         'allowDownload':indirmeyeIzin,
         'allowComments':yorumlaraIzin,
         'commentAudience':yorumlaraIzin?yorumKitlesi:'Kimse',
