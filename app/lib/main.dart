@@ -92,11 +92,12 @@ const ngelxPrivateBlueCanvas = Color(0xFFF6FAFF);
 const ngelxPrivateBlueBorder = Color(0xFFD8E8FF);
 const ngelxPrivateBlueInk = Color(0xFF10213A);
 
-const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.71');
-const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '290');
+const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.73');
+const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '292');
 const ngelxGroupBorder = Color(0xFFD9EEE0);
 
 final GlobalKey<NavigatorState> ngelxNavigatorKey=GlobalKey<NavigatorState>();
+final RouteObserver<PageRoute<dynamic>> ngelxRouteObserver=RouteObserver<PageRoute<dynamic>>();
 void ngelxKokRotayaDon(){
   WidgetsBinding.instance.addPostFrameCallback((_){
     ngelxNavigatorKey.currentState?.popUntil((route)=>route.isFirst);
@@ -2009,6 +2010,7 @@ class NgelXCeviriliMetin extends StatefulWidget{
 class _NgelXCeviriliMetinState extends State<NgelXCeviriliMetin>{
   bool ceviriAcik=false;
   String hedefDil='';
+  Map<String,String> kullaniciCevirileri=<String,String>{};
   @override void initState(){super.initState();ngelxIcerikDilRevizyonu.addListener(_yenile);_yenile();}
   @override void didUpdateWidget(covariant NgelXCeviriliMetin oldWidget){super.didUpdateWidget(oldWidget);if(oldWidget.icerikId!=widget.icerikId)_yenile();}
   @override void dispose(){ngelxIcerikDilRevizyonu.removeListener(_yenile);super.dispose();}
@@ -2017,11 +2019,12 @@ class _NgelXCeviriliMetinState extends State<NgelXCeviriliMetin>{
     final h=await SharedPreferences.getInstance();
     final hedef=ngelxDilKodu(h.getString('content_translation_language_${widget.icerikId}')??uygulamaDili.value);
     final acik=h.getBool('content_translate_${widget.icerikId}')??(h.getBool('ngelx_auto_translate')??false);
-    if(mounted)setState((){hedefDil=hedef;ceviriAcik=acik;});
+    final yerel=ngelxDilMetinHaritasi(h.getString('content_translation_cache_${widget.icerikId}')??'');
+    if(mounted)setState((){hedefDil=hedef;ceviriAcik=acik;kullaniciCevirileri=yerel;});
   }
   @override Widget build(BuildContext context){
     final kaynak=ngelxDilKodu(widget.icerikDili);
-    final ceviri=widget.ceviriler[hedefDil]?.trim()??'';
+    final ceviri=(kullaniciCevirileri[hedefDil]??widget.ceviriler[hedefDil])?.trim()??'';
     final metin=ceviriAcik&&hedefDil.isNotEmpty&&hedefDil!=kaynak&&ceviri.isNotEmpty?ceviri:widget.orijinal;
     return Text(metin,style:widget.style,maxLines:widget.maxLines,overflow:widget.overflow,textAlign:widget.textAlign);
   }
@@ -2042,6 +2045,8 @@ class NgelXAltyaziKatmani extends StatefulWidget{
 class _NgelXAltyaziKatmaniState extends State<NgelXAltyaziKatmani>{
   bool acik=false;
   String hedefDil='';
+  String yerelCaptionText='';
+  Map<String,String> yerelCaptions=<String,String>{},yerelCaptionTranslations=<String,String>{};
   @override void initState(){super.initState();ngelxIcerikDilRevizyonu.addListener(_yenile);_yenile();}
   @override void didUpdateWidget(covariant NgelXAltyaziKatmani oldWidget){super.didUpdateWidget(oldWidget);if(oldWidget.icerikId!=widget.icerikId)_yenile();}
   @override void dispose(){ngelxIcerikDilRevizyonu.removeListener(_yenile);super.dispose();}
@@ -2050,14 +2055,22 @@ class _NgelXAltyaziKatmaniState extends State<NgelXAltyaziKatmani>{
     final h=await SharedPreferences.getInstance();
     final hedef=ngelxDilKodu(h.getString('ngelx_caption_language')??uygulamaDili.value);
     final aktif=h.getBool('content_caption_${widget.icerikId}')??false;
-    if(mounted)setState((){hedefDil=hedef;acik=aktif;});
+    final cacheRaw=h.getString('content_caption_cache_${widget.icerikId}')??'';
+    Map<String,dynamic> cache=<String,dynamic>{};
+    if(cacheRaw.isNotEmpty){try{final x=jsonDecode(cacheRaw);if(x is Map)cache=Map<String,dynamic>.from(x);}catch(_){ }}
+    if(mounted)setState((){
+      hedefDil=hedef;acik=aktif;
+      yerelCaptionText=(cache['captionText']??'').toString();
+      yerelCaptions=ngelxDilMetinHaritasi(cache['captions']);
+      yerelCaptionTranslations=ngelxDilMetinHaritasi(cache['captionTranslations']);
+    });
   }
   String get metin{
-    final ceviri=widget.captionTranslations[hedefDil]?.trim()??'';
+    final ceviri=(yerelCaptionTranslations[hedefDil]??widget.captionTranslations[hedefDil])?.trim()??'';
     if(ceviri.isNotEmpty)return ceviri;
-    final yerel=widget.captions[hedefDil]?.trim()??'';
+    final yerel=(yerelCaptions[hedefDil]??widget.captions[hedefDil])?.trim()??'';
     if(yerel.isNotEmpty)return yerel;
-    return widget.captionText.trim();
+    return yerelCaptionText.trim().isNotEmpty?yerelCaptionText.trim():widget.captionText.trim();
   }
   @override Widget build(BuildContext context){
     final yazi=metin;
@@ -2112,8 +2125,23 @@ Future<Map<String,String>> ngelxGercekAltyaziOlustur({required String mediaUrl,r
 Future<void> icerikAracMenusu(BuildContext context,String icerikId,{Future<void> Function(double)? hizDegistir,double mevcutHiz=1.0,String medyaUrlOncelikli=''})async{
   if(icerikId.isEmpty)return;
   final belge=await FirebaseFirestore.instance.collection('videos').doc(icerikId).get(),v=belge.data()??<String,dynamic>{};
-  final hafiza=await SharedPreferences.getInstance(),ceviriler=ngelxDilMetinHaritasi(v['translations']),captions=ngelxDilMetinHaritasi(v['captions']),captionTranslations=ngelxDilMetinHaritasi(v['captionTranslations']);
-  String captionText=(v['captionText']??'').toString().trim();
+  final hafiza=await SharedPreferences.getInstance();
+  final aktif=FirebaseAuth.instance.currentUser;
+  final DocumentReference<Map<String,dynamic>>? aracHafizaRef=aktif==null||aktif.isAnonymous
+      ?null
+      :FirebaseFirestore.instance.collection('users').doc(aktif.uid).collection('content_tools').doc(icerikId);
+  Map<String,dynamic> aracHafiza=<String,dynamic>{};
+  if(aracHafizaRef!=null){
+    try{aracHafiza=(await aracHafizaRef.get()).data()??<String,dynamic>{};}catch(_){ }
+  }
+  final yerelCeviri=ngelxDilMetinHaritasi(hafiza.getString('content_translation_cache_$icerikId')??'');
+  Map<String,dynamic> yerelAltyazi=<String,dynamic>{};
+  final yerelAltyaziRaw=hafiza.getString('content_caption_cache_$icerikId')??'';
+  if(yerelAltyaziRaw.isNotEmpty){try{final x=jsonDecode(yerelAltyaziRaw);if(x is Map)yerelAltyazi=Map<String,dynamic>.from(x);}catch(_){ }}
+  final ceviriler=<String,String>{...ngelxDilMetinHaritasi(v['translations']),...yerelCeviri,...ngelxDilMetinHaritasi(aracHafiza['translations'])};
+  final captions=<String,String>{...ngelxDilMetinHaritasi(v['captions']),...ngelxDilMetinHaritasi(yerelAltyazi['captions']),...ngelxDilMetinHaritasi(aracHafiza['captions'])};
+  final captionTranslations=<String,String>{...ngelxDilMetinHaritasi(v['captionTranslations']),...ngelxDilMetinHaritasi(yerelAltyazi['captionTranslations']),...ngelxDilMetinHaritasi(aracHafiza['captionTranslations'])};
+  String captionText=(aracHafiza['captionText']??yerelAltyazi['captionText']??v['captionText']??'').toString().trim();
   final icerikMetni=(v['description']??v['text']??v['content']??'').toString().trim();
   final medyaAdaylari=<dynamic>[medyaUrlOncelikli,v['videoUrl'],v['mediaUrl'],v['playbackUrl'],v['downloadUrl'],v['fileUrl'],v['url'],...((v['mediaUrls'] is Iterable)?List<dynamic>.from(v['mediaUrls'] as Iterable):const <dynamic>[])];
   final medyaUrl=medyaAdaylari.map((e)=>(e??'').toString().trim()).firstWhere((e)=>e.isNotEmpty,orElse:()=>'');
@@ -2125,14 +2153,29 @@ Future<void> icerikAracMenusu(BuildContext context,String icerikId,{Future<void>
   String altyaziMetni(){final c=captionTranslations[altyaziDili]?.trim()??'';if(c.isNotEmpty)return c;final d=captions[altyaziDili]?.trim()??'';if(d.isNotEmpty)return d;return captionText;}
   Future<void> ceviriUret(StateSetter setP)async{
     if(ceviriHazir())return;if(icerikMetni.isEmpty)throw Exception('Bu içerikte çevrilecek yazı bulunamadı.');setP(()=>islem=true);
-    try{final sonuc=await ngelxGercekCeviriOlustur(metin:icerikMetni,kaynakDil:kaynakDil,hedefDil:hedefDil);ceviriler[hedefDil]=sonuc;await belge.reference.update({'translations.$hedefDil':sonuc});}finally{setP(()=>islem=false);}
+    try{
+      if(aracHafizaRef==null)throw Exception('Çeviri için hesabına giriş yapmalısın.');
+      final sonuc=await ngelxGercekCeviriOlustur(metin:icerikMetni,kaynakDil:kaynakDil,hedefDil:hedefDil);
+      ceviriler[hedefDil]=sonuc;
+      await aracHafizaRef.set({'contentId':icerikId,'translations':ceviriler,'updatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
+      await hafiza.setString('content_translation_cache_$icerikId',jsonEncode(ceviriler));
+    }finally{setP(()=>islem=false);}
   }
   Future<void> altyaziUret(StateSetter setP)async{
     if(altyaziMetni().isNotEmpty)return;if(medyaUrl.isEmpty)throw Exception('Bu içerikte altyazı üretilecek video bulunamadı.');setP(()=>islem=true);
     try{
+      if(aracHafizaRef==null)throw Exception('Altyazı için hesabına giriş yapmalısın.');
       final sonuc=await ngelxGercekAltyaziOlustur(mediaUrl:medyaUrl,kaynakDil:kaynakDil);captionText=sonuc['text']??'';captions[kaynakDil]=captionText;
-      await belge.reference.update({'captionText':captionText,'captions.$kaynakDil':captionText,if((sonuc['vtt']??'').isNotEmpty)'captionVtt':sonuc['vtt']});
-      if(altyaziDili!=kaynakDil){final x=await ngelxGercekCeviriOlustur(metin:captionText,kaynakDil:kaynakDil,hedefDil:altyaziDili);captionTranslations[altyaziDili]=x;await belge.reference.update({'captionTranslations.$altyaziDili':x});}
+      if(altyaziDili!=kaynakDil){final x=await ngelxGercekCeviriOlustur(metin:captionText,kaynakDil:kaynakDil,hedefDil:altyaziDili);captionTranslations[altyaziDili]=x;}
+      await aracHafizaRef.set({
+        'contentId':icerikId,
+        'captionText':captionText,
+        'captions':captions,
+        'captionTranslations':captionTranslations,
+        if((sonuc['vtt']??'').isNotEmpty)'captionVtt':sonuc['vtt'],
+        'updatedAt':FieldValue.serverTimestamp(),
+      },SetOptions(merge:true));
+      await hafiza.setString('content_caption_cache_$icerikId',jsonEncode({'captionText':captionText,'captions':captions,'captionTranslations':captionTranslations}));
     }finally{setP(()=>islem=false);}
   }
   if(!context.mounted)return;
@@ -2285,6 +2328,7 @@ class NgelXApp extends StatelessWidget {
     return ValueListenableBuilder<String>(valueListenable: uygulamaDili, builder: (_, dil, __) => MaterialApp(
       key: ValueKey('ngelx_app_$dil'),
       navigatorKey:ngelxNavigatorKey,
+      navigatorObservers:[ngelxRouteObserver],
       debugShowCheckedModeBanner: false,
       title: 'NgelX',
       theme: ThemeData(
@@ -3467,7 +3511,27 @@ class _AnaEkranState extends State<AnaEkran> {
           destinations: [
             NavigationDestination(icon: const Icon(Icons.play_circle_outline), selectedIcon: const Icon(Icons.play_circle_fill), label: t('flow')),
             NavigationDestination(icon: const Icon(Icons.explore_outlined), selectedIcon: const Icon(Icons.explore), label: t('explore')),
-            NavigationDestination(icon: const Icon(Icons.add_box_outlined, size: 30), selectedIcon: const Icon(Icons.add_box, size: 32), label: t('create')),
+            NavigationDestination(
+              icon:Container(
+                width:42,height:34,
+                decoration:BoxDecoration(
+                  gradient:const LinearGradient(colors:[Color(0xFF22D3EE),Color(0xFF7C3AED)]),
+                  borderRadius:BorderRadius.circular(13),
+                  boxShadow:const [BoxShadow(color:Color(0x337C3AED),blurRadius:10,offset:Offset(0,4))],
+                ),
+                child:const Icon(Icons.add_rounded,color:Colors.white,size:28),
+              ),
+              selectedIcon:Container(
+                width:48,height:38,
+                decoration:BoxDecoration(
+                  gradient:const LinearGradient(colors:[Color(0xFF14CFE4),Color(0xFF7C3AED)]),
+                  borderRadius:BorderRadius.circular(14),
+                  boxShadow:const [BoxShadow(color:Color(0x557C3AED),blurRadius:14,offset:Offset(0,5))],
+                ),
+                child:const Icon(Icons.add_rounded,color:Colors.white,size:31),
+              ),
+              label:t('create'),
+            ),
             NavigationDestination(icon: const Badge(child: Icon(Icons.forum_outlined)), selectedIcon: const Icon(Icons.forum), label: t('chat')),
             NavigationDestination(icon: const Icon(Icons.person_outline), selectedIcon: const Icon(Icons.person), label: t('me')),
           ],
@@ -4009,6 +4073,25 @@ class HikayeSeridi extends StatelessWidget {
   }
 }
 
+Future<void> ngelxPaylasimVeAltKayitlariniSil(DocumentReference<Map<String,dynamic>> ref)async{
+  final silinecek=<DocumentReference<Map<String,dynamic>>>[];
+  final likes=await ref.collection('likes').get();
+  silinecek.addAll(likes.docs.map((x)=>x.reference));
+  final comments=await ref.collection('comments').get();
+  for(final yorum in comments.docs){
+    final yorumLikes=await yorum.reference.collection('likes').get();
+    silinecek.addAll(yorumLikes.docs.map((x)=>x.reference));
+    silinecek.add(yorum.reference);
+  }
+  silinecek.add(ref);
+  for(var i=0;i<silinecek.length;i+=400){
+    final batch=FirebaseFirestore.instance.batch();
+    final son=i+400<silinecek.length?i+400:silinecek.length;
+    for(final belge in silinecek.sublist(i,son)){batch.delete(belge);}
+    await batch.commit();
+  }
+}
+
 Future<void> kendiPaylasiminiSil(
   BuildContext context,
   String id,
@@ -4036,27 +4119,13 @@ Future<void> kendiPaylasiminiSil(
 
   final ref = FirebaseFirestore.instance.collection('videos').doc(id);
   try {
-    await ref.delete();
+    await ngelxPaylasimVeAltKayitlariniSil(ref);
   } catch (e) {
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Paylaşım silinemedi: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Paylaşım silinemedi. Yetkini ve bağlantını kontrol edip tekrar dene.')));
     }
     return;
   }
-
-  try {
-    final likes = await ref.collection('likes').get();
-    for (final x in likes.docs) {
-      try { await x.reference.delete(); } catch (_) {}
-    }
-  } catch (_) {}
-
-  try {
-    final comments = await ref.collection('comments').get();
-    for (final x in comments.docs) {
-      try { await x.reference.delete(); } catch (_) {}
-    }
-  } catch (_) {}
 
   for (final raw in [
     (veri['mediaUrl'] ?? '').toString(),
@@ -5432,6 +5501,20 @@ Positioned(
               ],
             ),
           ),
+          if(hazir)
+            Positioned(
+              left:0,right:0,bottom:0,
+              child:VideoProgressIndicator(
+                kontrol,
+                allowScrubbing:true,
+                padding:EdgeInsets.zero,
+                colors:const VideoProgressColors(
+                  playedColor:Color(0xFF22D3EE),
+                  bufferedColor:Colors.white38,
+                  backgroundColor:Colors.white18,
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -7960,9 +8043,26 @@ class _YeniYuklePageState extends State<YuklePage> {
         child:SafeArea(child:ListView(
           padding:const EdgeInsets.fromLTRB(22,22,22,148),
           children:[
-            Text(t('createNew'),textAlign:TextAlign.center,style:const TextStyle(color:Colors.black,fontSize:27,fontWeight:FontWeight.w900)),
-            const SizedBox(height:8),
-            Text(t('createSubtitle'),textAlign:TextAlign.center,style:const TextStyle(color:Colors.black54)),
+            Container(
+              padding:const EdgeInsets.fromLTRB(20,22,20,20),
+              decoration:BoxDecoration(
+                gradient:const LinearGradient(colors:[Color(0xFFECFBFF),Color(0xFFF3ECFF)],begin:Alignment.topLeft,end:Alignment.bottomRight),
+                borderRadius:BorderRadius.circular(28),
+                border:Border.all(color:const Color(0xFFE6DDF8)),
+                boxShadow:const [BoxShadow(color:Color(0x147C3AED),blurRadius:22,offset:Offset(0,9))],
+              ),
+              child:Column(children:[
+                Container(
+                  width:52,height:52,
+                  decoration:const BoxDecoration(shape:BoxShape.circle,gradient:LinearGradient(colors:[Color(0xFF22D3EE),Color(0xFF7C3AED)])),
+                  child:const Icon(Icons.auto_awesome_rounded,color:Colors.white,size:28),
+                ),
+                const SizedBox(height:11),
+                Text(t('createNew'),textAlign:TextAlign.center,style:const TextStyle(color:Colors.black,fontSize:27,fontWeight:FontWeight.w900,letterSpacing:-.4)),
+                const SizedBox(height:6),
+                Text(t('createSubtitle'),textAlign:TextAlign.center,style:const TextStyle(color:Colors.black54,height:1.3)),
+              ]),
+            ),
             if(taslakVar)Row(mainAxisAlignment:MainAxisAlignment.center,children:[const Icon(Icons.drafts_outlined,size:17,color:mor),const SizedBox(width:6),const Text('Taslak otomatik kaydediliyor',style:TextStyle(color:Colors.black54,fontSize:12,fontWeight:FontWeight.w700)),TextButton(onPressed:yukleniyor?null:()=>_taslagiSil(),child:const Text('Temizle'))]),
             const SizedBox(height:24),
             Container(
@@ -10321,7 +10421,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
       await ngelxOverlayKapanisiniBekle();
       if(!mounted)return;
       final c=TextEditingController(text:metin);
-      final ok=await showDialog<bool>(
+      final yeni=await showDialog<String>(
         context:context,
         useSafeArea:true,
         builder:(x)=>AlertDialog(
@@ -10346,18 +10446,23 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
             ),
           ),
           actions:[
-            TextButton(onPressed:()=>Navigator.pop(x,false),child:const Text('Vazgeç')),
+            TextButton(onPressed:(){FocusScope.of(x).unfocus();Navigator.pop(x);},child:const Text('Vazgeç')),
             FilledButton(
               style:FilledButton.styleFrom(backgroundColor:ngelxGroupGreen),
-              onPressed:()=>Navigator.pop(x,true),
+              onPressed:(){
+                final yazi=c.text.trim();
+                if(yazi.isEmpty)return;
+                FocusScope.of(x).unfocus();
+                Navigator.pop(x,yazi);
+              },
               child:const Text('Kaydet'),
             ),
           ],
         ),
-      )??false;
-      final yeni=c.text.trim();
+      );
+      await ngelxOverlayKapanisiniBekle();
       c.dispose();
-      if(ok&&yeni.isNotEmpty&&yeni!=metin){
+      if(yeni!=null&&yeni!=metin){
         try{
           await d.reference.update({'text':yeni,'editedAt':FieldValue.serverTimestamp()}).timeout(const Duration(seconds:5));
         }catch(_){
@@ -15458,7 +15563,7 @@ class _SohbetPageState extends State<SohbetPage> {
   bool sesKaydediliyor=false,sesKaydiIsleniyor=false;
   int sesKaydiSaniye=0;
   DateTime? sesKaydiBaslangic;
-  Timer? yaziyorZamanlayici,sureliMesajZamanlayici,sesKaydiZamanlayici;
+  Timer? yaziyorZamanlayici,yaziyorBaslatZamanlayici,sureliMesajZamanlayici,sesKaydiZamanlayici;
   bool gizliKelimeFiltresi=true;
   List<String> gizliKelimeListesi=[];
   String? yanitMesajId,yanitMetin,yanitGonderenUid;
@@ -15553,20 +15658,26 @@ class _SohbetPageState extends State<SohbetPage> {
     final ref=FirebaseFirestore.instance.collection('chats').doc(widget.chatId);
     yaziyorZamanlayici?.cancel();
     if(deger.trim().isEmpty){
+      yaziyorBaslatZamanlayici?.cancel();
+      yaziyorBaslatZamanlayici=null;
       if(yaziyorGonderildi){
         yaziyorGonderildi=false;
         unawaited(ref.set({'typing_$ben':false},SetOptions(merge:true)));
       }
       return;
     }
-    final simdi=DateTime.now();
     if(!yaziyorGonderildi){
-      yaziyorGonderildi=true;
-      _sonYaziyorGonderim=simdi;
-      if(_mesajHazirlikSohbet['typingIndicator_$ben']!=false){
-        unawaited(ref.set({'typing_$ben':true,'typingAt_$ben':FieldValue.serverTimestamp()},SetOptions(merge:true)).catchError((_){ }));
-      }
-    }else if(_sonYaziyorGonderim==null||simdi.difference(_sonYaziyorGonderim!).inSeconds>=4){
+      yaziyorBaslatZamanlayici??=Timer(const Duration(milliseconds:450),(){
+        yaziyorBaslatZamanlayici=null;
+        if(!mounted||mesaj.text.trim().isEmpty)return;
+        yaziyorGonderildi=true;
+        _sonYaziyorGonderim=DateTime.now();
+        if(_mesajHazirlikSohbet['typingIndicator_$ben']!=false){
+          unawaited(ref.set({'typing_$ben':true,'typingAt_$ben':FieldValue.serverTimestamp()},SetOptions(merge:true)).catchError((_){ }));
+        }
+      });
+    }else if(_sonYaziyorGonderim==null||DateTime.now().difference(_sonYaziyorGonderim!).inSeconds>=4){
+      final simdi=DateTime.now();
       _sonYaziyorGonderim=simdi;
       unawaited(ref.set({'typingAt_$ben':FieldValue.serverTimestamp()},SetOptions(merge:true)).catchError((_){ }));
     }
@@ -16196,8 +16307,10 @@ class _SohbetPageState extends State<SohbetPage> {
     }else if(fazla=='report'){
       if(mounted)await sikayetEt(context,hedefTuru:'mesaj',hedefId:widget.chatId+'/'+d.id,hedefUid:widget.digerUid);
     }else if(fazla=='edit'){
+      await ngelxOverlayKapanisiniBekle();
+      if(!mounted)return;
       final x=TextEditingController(text:metin);
-      final ok=await showDialog<bool>(
+      final yeni=await showDialog<String>(
         context:context,
         builder:(dialogContext)=>Theme(
           data:ThemeData.light().copyWith(
@@ -16239,7 +16352,7 @@ class _SohbetPageState extends State<SohbetPage> {
             ),
             actions:[
               TextButton(
-                onPressed:()=>Navigator.pop(dialogContext,false),
+                onPressed:(){FocusScope.of(dialogContext).unfocus();Navigator.pop(dialogContext);},
                 child:const Text('Vazgeç',style:TextStyle(color:ngelxPrivateBlue,fontWeight:FontWeight.w800)),
               ),
               FilledButton(
@@ -16249,15 +16362,28 @@ class _SohbetPageState extends State<SohbetPage> {
                   padding:const EdgeInsets.symmetric(horizontal:22,vertical:12),
                   shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(18)),
                 ),
-                onPressed:()=>Navigator.pop(dialogContext,true),
+                onPressed:(){
+                  final metin=x.text.trim();
+                  if(metin.isEmpty)return;
+                  FocusScope.of(dialogContext).unfocus();
+                  Navigator.pop(dialogContext,metin);
+                },
                 child:const Text('Kaydet',style:TextStyle(fontWeight:FontWeight.w900)),
               ),
             ],
           ),
         ),
-      )??false;
-      if(ok&&x.text.trim().isNotEmpty)await d.reference.update({'text':x.text.trim(),'editedAt':FieldValue.serverTimestamp()});
+      );
+      await ngelxOverlayKapanisiniBekle();
       x.dispose();
+      if(!mounted||yeni==null||yeni==metin)return;
+      try{
+        await d.reference.update({'text':yeni,'editedAt':FieldValue.serverTimestamp()}).timeout(const Duration(seconds:8));
+      }on TimeoutException{
+        if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Düzenleme zaman aşımına uğradı. Tekrar dene.')));
+      }catch(_){
+        if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Mesaj düzenlenemedi. Tekrar dene.')));
+      }
     }
   }
 
@@ -16540,6 +16666,7 @@ class _SohbetPageState extends State<SohbetPage> {
   @override
   void dispose(){
     yaziyorZamanlayici?.cancel();
+    yaziyorBaslatZamanlayici?.cancel();
     sureliMesajZamanlayici?.cancel();
     sesKaydiZamanlayici?.cancel();
     final ben=uid;
@@ -18326,9 +18453,37 @@ class ProfilTanitimVideoKarti extends StatefulWidget{
   const ProfilTanitimVideoKarti({super.key,required this.url});
   @override State<ProfilTanitimVideoKarti> createState()=>_ProfilTanitimVideoKartiState();
 }
-class _ProfilTanitimVideoKartiState extends State<ProfilTanitimVideoKarti>{
+class _ProfilTanitimVideoKartiState extends State<ProfilTanitimVideoKarti> with RouteAware,WidgetsBindingObserver{
   VideoPlayerController? c;
   bool hazir=false,yukleniyor=false,hata=false;
+  PageRoute<dynamic>? _rota;
+  bool _geriDonusteOynat=false;
+  @override void didChangeDependencies(){
+    super.didChangeDependencies();
+    final aday=ModalRoute.of(context);
+    if(aday is! PageRoute<dynamic>)return;
+    final yeni=aday;
+    if(yeni==_rota)return;
+    if(_rota!=null)ngelxRouteObserver.unsubscribe(this);
+    _rota=yeni;
+    if(yeni!=null)ngelxRouteObserver.subscribe(this,yeni);
+  }
+  void _gorunmezkenDuraklat(){
+    final x=c;
+    if(x?.value.isPlaying==true)_geriDonusteOynat=true;
+    if(x?.value.isInitialized==true)unawaited(x!.pause());
+  }
+  void _yenidenGorunur(){
+    final x=c;
+    if(_geriDonusteOynat&&x?.value.isInitialized==true)unawaited(x!.play());
+    _geriDonusteOynat=false;
+  }
+  @override void didPushNext()=>_gorunmezkenDuraklat();
+  @override void didPopNext()=>_yenidenGorunur();
+  @override void didChangeAppLifecycleState(AppLifecycleState state){
+    if(state!=AppLifecycleState.resumed)_gorunmezkenDuraklat();
+    else _yenidenGorunur();
+  }
   Future<void> _hazirla()async{
     if(widget.url.isEmpty||hazir||yukleniyor)return;
     setState(()=>yukleniyor=true);
@@ -18346,7 +18501,13 @@ class _ProfilTanitimVideoKartiState extends State<ProfilTanitimVideoKarti>{
       if(mounted)setState(()=>yukleniyor=false);
     }
   }
-  @override void dispose(){c?.dispose();super.dispose();}
+  @override void initState(){super.initState();WidgetsBinding.instance.addObserver(this);}
+  @override void dispose(){
+    WidgetsBinding.instance.removeObserver(this);
+    ngelxRouteObserver.unsubscribe(this);
+    final x=c;if(x!=null)unawaited(x.dispose());
+    super.dispose();
+  }
   @override Widget build(BuildContext context){
     final x=c;
     if(hata)return Container(
@@ -18645,6 +18806,20 @@ class _KullaniciProfilPageState extends State<KullaniciProfilPage> {
               ),
               const SizedBox(height: 22),
               if (me != uid && !ziyaretciOnizleme) ...[
+                Container(
+                  width:double.infinity,
+                  padding:const EdgeInsets.fromLTRB(14,12,14,12),
+                  margin:const EdgeInsets.only(bottom:12),
+                  decoration:BoxDecoration(color:const Color(0xFFF7F4FF),borderRadius:BorderRadius.circular(16)),
+                  child:const Row(crossAxisAlignment:CrossAxisAlignment.start,children:[
+                    Icon(Icons.hub_outlined,color:mor,size:21),
+                    SizedBox(width:9),
+                    Expanded(child:Text(
+                      'Takip, içerikleri Akışında gösterir. Arkadaşlık karşılıklı onaydır. Mesaj izni ise hesabın gizlilik ayarına göre çalışır.',
+                      style:TextStyle(color:Colors.black54,fontSize:12.5,height:1.35,fontWeight:FontWeight.w600),
+                    )),
+                  ]),
+                ),
                 Row(children:[
                   Expanded(child:StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
                     stream:me==null?null:FirebaseFirestore.instance.collection('users').doc(me).snapshots(),
@@ -18662,7 +18837,7 @@ class _KullaniciProfilPageState extends State<KullaniciProfilPage> {
                             });
                           }
                           final bekliyor=sunucuBekliyor||_yerelTakipIstekleri.contains(uid);
-                          final etiket=takipte?t('followingActive'):(bekliyor?'İstek gönderildi':(gizli?'Takip isteği gönder':t('follow')));
+                          final etiket=takipte?'Takip ediyorsun':(bekliyor?'Takip isteği bekliyor':(gizli?'Takip isteği gönder':t('follow')));
                           return OutlinedButton.icon(
                             onPressed:()async{
                               if(me==null)return;
@@ -18790,7 +18965,7 @@ class _KullaniciProfilPageState extends State<KullaniciProfilPage> {
                             }
                           },
                           icon:Icon(arkadas?Icons.people_alt_rounded:(bekliyor?Icons.schedule_rounded:Icons.person_add_alt_1_rounded)),
-                          label:Text(arkadas?'Arkadaşsınız':(bekliyor?'Arkadaşlık isteği gönderildi':'Arkadaşlık isteği gönder')),
+                          label:Text(arkadas?'Arkadaşsınız':(bekliyor?'Arkadaşlık isteği bekliyor':'Arkadaşlık isteği gönder')),
                         ));
                       },
                     );
@@ -21372,7 +21547,46 @@ class _ProfilPageState extends State<ProfilPage> {
     );
   }
 
-  Future<void> icerikDuzenle(QueryDocumentSnapshot<Map<String,dynamic>> d) async {final c=TextEditingController(text:(d.data()['description']??'').toString());final ok=await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(title:const Text('Paylaşımı düzenle'),content:TextField(controller:c,maxLength:500,maxLines:4),actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('Vazgeç')),FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('Kaydet'))]));if(ok==true)await d.reference.update({'description':c.text.trim(),'updatedAt':FieldValue.serverTimestamp()});c.dispose();}
+  Future<void> icerikDuzenle(QueryDocumentSnapshot<Map<String,dynamic>> d) async {
+    await ngelxOverlayKapanisiniBekle();
+    if(!mounted)return;
+    final c=TextEditingController(text:(d.data()['description']??'').toString());
+    final sonuc=await showDialog<String>(
+      context:context,
+      builder:(ctx)=>AlertDialog(
+        backgroundColor:Colors.white,
+        surfaceTintColor:Colors.white,
+        shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(24)),
+        title:const Text('Paylaşımı düzenle',style:TextStyle(color:Colors.black,fontWeight:FontWeight.w800)),
+        content:TextField(
+          controller:c,
+          maxLength:500,
+          maxLines:4,
+          autofocus:true,
+          style:const TextStyle(color:Colors.black),
+          decoration:InputDecoration(
+            hintText:'Açıklama yaz…',
+            filled:true,
+            fillColor:const Color(0xFFF4F4F8),
+            border:OutlineInputBorder(borderRadius:BorderRadius.circular(18),borderSide:BorderSide.none),
+          ),
+        ),
+        actions:[
+          TextButton(onPressed:(){FocusScope.of(ctx).unfocus();Navigator.pop(ctx);},child:const Text('Vazgeç')),
+          FilledButton(onPressed:(){FocusScope.of(ctx).unfocus();Navigator.pop(ctx,c.text.trim());},child:const Text('Kaydet')),
+        ],
+      ),
+    );
+    await ngelxOverlayKapanisiniBekle();
+    c.dispose();
+    if(sonuc==null||!mounted)return;
+    try{
+      await d.reference.update({'description':sonuc,'updatedAt':FieldValue.serverTimestamp()}).timeout(const Duration(seconds:8));
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Açıklama güncellendi.')));
+    }catch(_){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Açıklama güncellenemedi. Bağlantını kontrol edip tekrar dene.')));
+    }
+  }
 
   Future<void> icerikSil(QueryDocumentSnapshot<Map<String,dynamic>> d) async {
     await ngelxOverlayKapanisiniBekle();
@@ -21383,8 +21597,10 @@ class _ProfilPageState extends State<ProfilPage> {
       builder:(ctx)=>AlertDialog(
         backgroundColor:Colors.white,
         surfaceTintColor:Colors.white,
-        title:const Text('Bu paylaşımı silmek istiyor musun?'),
-        content:const Text('Paylaşım profilinden ve akıştan tamamen kaldırılacak.'),
+        shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(24)),
+        icon:const Icon(Icons.delete_outline_rounded,color:Colors.red,size:34),
+        title:const Text('Paylaşımı sil?',style:TextStyle(color:Colors.black,fontWeight:FontWeight.w800)),
+        content:const Text('Bu işlem geri alınamaz. Paylaşım profilinden ve akıştan tamamen kaldırılır.',style:TextStyle(color:Color(0xFF55555F),height:1.35)),
         actions:[
           TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('Vazgeç')),
           FilledButton(
@@ -21401,17 +21617,7 @@ class _ProfilPageState extends State<ProfilPage> {
 
     try{
       final v=d.data();
-      final likes=await d.reference.collection('likes').get();
-      final comments=await d.reference.collection('comments').get();
-      final batch=FirebaseFirestore.instance.batch();
-      for(final x in likes.docs){batch.delete(x.reference);}
-      for(final x in comments.docs){
-        final altLikes=await x.reference.collection('likes').get();
-        for(final l in altLikes.docs){batch.delete(l.reference);}
-        batch.delete(x.reference);
-      }
-      batch.delete(d.reference);
-      await batch.commit();
+      await ngelxPaylasimVeAltKayitlariniSil(d.reference);
 
       for(final raw in <String>[
         (v['mediaUrl']??'').toString(),
@@ -21424,9 +21630,9 @@ class _ProfilPageState extends State<ProfilPage> {
       if(mounted)ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content:Text('Paylaşım silindi.')),
       );
-    }catch(e){
+    }catch(_){
       if(mounted)ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content:Text('Paylaşım silinemedi: $e')),
+        const SnackBar(content:Text('Paylaşım silinemedi. Yetkini ve bağlantını kontrol edip tekrar dene.')),
       );
     }
   }
@@ -21455,6 +21661,22 @@ class _ProfilPageState extends State<ProfilPage> {
                       IconButton(tooltip:t('profilePreview'),onPressed:aktifKullanici==null?null:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciProfilPage(uid:aktifKullanici!.uid,ziyaretciOnizleme:true))),icon:const Icon(Icons.visibility_outlined,color:Colors.black,size:27)),
                       IconButton(onPressed:aktifKullanici==null?null:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>ProfilAramaPage(uid:aktifKullanici!.uid))),icon:const Icon(Icons.search_rounded,color:Colors.black,size:28)),
                       StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(stream:aktifKullanici==null?null:FirebaseFirestore.instance.collection('notifications').where('toUid',isEqualTo:aktifKullanici!.uid).limit(100).snapshots(),builder:(_,s){final sayi=(s.data?.docs??[]).where((d)=>d.data()['read']!=true).length;return IconButton(onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const AktivitePage())),icon:sayi==0?const Icon(Icons.notifications_none_rounded,color:Colors.black,size:28):Badge(label:Text(sayi>99?'99+':'$sayi'),child:const Icon(Icons.notifications_none_rounded,color:Colors.black,size:28)));}),
+                      Tooltip(
+                        message:'NgelX Premium',
+                        child:InkWell(
+                          onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const NgelXPremiumPage())),
+                          borderRadius:BorderRadius.circular(13),
+                          child:Container(
+                            width:38,height:38,
+                            margin:const EdgeInsets.symmetric(horizontal:2),
+                            decoration:BoxDecoration(
+                              gradient:const LinearGradient(colors:[Color(0xFF1768E8),Color(0xFF7844F3)]),
+                              borderRadius:BorderRadius.circular(13),
+                            ),
+                            child:const Icon(Icons.workspace_premium_rounded,color:Colors.white,size:22),
+                          ),
+                        ),
+                      ),
                       IconButton(tooltip:t('settingsTitle'),onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const AyarlarV258Page())),icon:const Icon(Icons.settings_outlined,color:Colors.black,size:28)),
                     ],
                   ),

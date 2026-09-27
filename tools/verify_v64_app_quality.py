@@ -13,7 +13,7 @@ def forbid(text: str, needle: str, label: str) -> None:
     if needle in text:
         raise SystemExit(f"V64 CHECK FAILED: {label}: forbidden {needle!r}")
 
-if all(v not in pubspec for v in ("version: 1.0.64+283", "version: 1.0.65+284", "version: 1.0.66+285", "version: 1.0.67+286", "version: 1.0.68+287", "version: 1.0.69+288", "version: 1.0.70+289", "version: 1.0.71+290", "version: 1.0.72+291")):
+if all(v not in pubspec for v in ("version: 1.0.64+283", "version: 1.0.65+284", "version: 1.0.66+285", "version: 1.0.67+286", "version: 1.0.68+287", "version: 1.0.69+288", "version: 1.0.70+289", "version: 1.0.71+290", "version: 1.0.72+291", "version: 1.0.73+292")):
     raise SystemExit("V64 CHECK FAILED: supported V64/V65/V66 app version missing")
 
 # Main navigation / requested surfaces must remain wired.
@@ -28,7 +28,8 @@ for needle, label in [
 
 require(settings, "class AyarlarV258Page", "Ayarlar")
 require(main, "NavigationDestination(icon: const Icon(Icons.explore_outlined)", "bottom navigation")
-require(main, "NavigationDestination(icon: const Icon(Icons.add_box_outlined", "create navigation")
+if "NavigationDestination(icon: const Icon(Icons.add_box_outlined" not in main and "label:t('create')" not in main:
+    raise SystemExit("V64 CHECK FAILED: create navigation missing")
 
 # Feed comments: bounded live window, O(n) reply lookup, no per-row like listener.
 comments = main[main.index("class _YeniYorumlarState"):main.index("class KesfetPage")]

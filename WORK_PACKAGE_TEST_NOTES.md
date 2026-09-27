@@ -1019,3 +1019,154 @@
 - Profil fetch için mevcut timeout ve yeniden deneme akışı gözden geçirilecek; yavaş bağlantıda uygulamanın donmuş gibi görünmesi engellenecek.
 - Gerekirse kısa süreli logo/loader gösterilecek; 1–2 saniyeyi aşan beklemede sade hata/yenileme akışı kullanılacak.
 - Uygulama kapanıp açılmadan kendi kendine toparlanmalı.
+
+
+### V72 Build 291 cihaz testi — profil tanıtım videosu sayfa dışında oynuyor — 2026-09-27 23:13
+
+- Profildeki tanıtım videosu oynatıldıktan sonra kullanıcı başka bir sayfaya geçtiğinde video/ses durmuyor ve arka planda oynatmaya devam ediyor.
+- Profil ekranı görünür olmaktan çıktığı anda oynatma durdurulmalı; video controller yaşam döngüsü sayfa ve sekme geçişleriyle birlikte yönetilmeli.
+- Alt navigasyonla başka sekmeye geçme, yeni sayfa açma, geri dönme ve uygulamayı arka plana alma durumları ayrı ayrı doğrulanmalı.
+- Profil ekranına geri dönüldüğünde video otomatik başlamamalı; kullanıcı yeniden oynat düğmesine basmalı.
+
+
+### V72 Build 291 cihaz testi — paylaşılan hikâye medyası açılmıyor — 2026-09-27 23:13
+
+- Hikâye başarıyla paylaşılmış ve süre bilgileri görünüyor; ancak görüntüleyicide medya yerine siyah ekran ile bozuk görsel simgesi çıkıyor.
+- Hikâye belgesindeki medya URL'si, medya türü ve R2 erişim adresi birlikte kontrol edilmeli; fotoğraf/video ayrımı yanlış yapılmamalı.
+- Yükleme tamamlanmadan hikâye belgesi yayınlanmamalı; başarısız medya yüklemesinde kullanıcıya açık hata ve yeniden deneme seçeneği gösterilmeli.
+- Hikâye görüntüleyicide yükleme göstergesi, ağ hatası ve yeniden deneme durumu olmalı; ilerleme çubuğu medya hazır olmadan ilerlememeli.
+- Aynı hikâye uygulama yeniden açıldıktan sonra, farklı hesapta ve farklı bağlantıda tekrar doğrulanmalı.
+
+
+### V72 Build 291 cihaz testi — gönderi silme penceresi ve Firestore izni — 2026-09-27 23:14
+
+- Profilde bir gönderinin menüsünden **PAYLAŞIMI SİL** seçilince onay penceresi boş, aşırı yüksek ve dengesiz açılıyor; yalnızca altta **Vazgeç** ve **Sil** düğmeleri görünüyor.
+- Onay penceresinde kısa ve açık başlık/açıklama bulunmalı; beyaz şablon, içerik yüksekliğine göre kompakt tasarım ve güvenli alan korunmalı.
+- **Sil** işleminden sonra gönderi kaldırılamıyor ve kullanıcıya ham teknik hata gösteriliyor: `[cloud_firestore/permission-denied] PERMISSION_DENIED: Missing or insufficient permissions.`
+- Firestore gönderi silme kuralı, mevcut kullanıcı kimliği ile gönderinin gerçek sahip alanını aynı şemada kontrol etmeli; eski/yeni gönderi belgelerindeki sahip alanı farkları geriye dönük desteklenmeli.
+- Uygulama; alt koleksiyonları/ilişkili kayıtları temizleme, gönderiyi akıştan ve profilden anlık kaldırma ve başarısızlıkta kullanıcı dostu Türkçe hata gösterme akışını birlikte ele almalı.
+- Silinen gönderi tekrar görünmemeli; uygulama yeniden açıldığında, farklı hesapta ve kaydedilenler/akış/profil görünümlerinde uçtan uca doğrulanmalı.
+
+
+### V72 Build 291 cihaz testi — içerik çevirisi, altyazı ve dil seçimi çalışmıyor — 2026-09-27 23:15
+
+- Akıştaki **Araçlar > İçerik araçları** ekranında dil seçimi yapılabilse de seçilen dil için gerçek çeviri üretilemiyor.
+- **Çeviriyi göster** açıldığında işlem Firestore `permission-denied` hatasına düşüyor ve kullanıcıya ham teknik hata gösteriliyor.
+- **Altyazı** anahtarı da gerçek altyazı üretip videoda göstermiyor; işlem sonrası anahtar kapalı/pasif duruma dönüyor.
+- Kod, üretilen `translations`, `captionText`, `captions`, `captionTranslations` alanlarını doğrudan içerik belgesine yazmaya çalışıyor; mevcut Firestore güncelleme izinleri bu alanlarla uyumlu değil.
+- Çeviri/altyazı üretimi için güvenli sahiplik ve sunucu yazma modeli belirlenmeli; başka kullanıcının içeriğine istemcinin yetkisiz alan yazması engellenirken üretilen sonuç kullanıcıya gösterilebilmeli.
+- Dil seçimi, çeviri ve altyazı işlemleri ayrı yükleme/hata/yeniden deneme durumlarına sahip olmalı; ham Firebase hataları yerine anlaşılır Türkçe mesaj gösterilmeli.
+- Türkçe, İngilizce, Almanca, Arapça ve Rusça seçenekleri; içerik sahibi ve izleyici hesaplarında, uygulama yeniden açıldıktan sonra ve farklı videolarda uçtan uca doğrulanmalı.
+
+
+### V72 Build 291 cihaz testi — yorum ve grup mesajı yazarken donma — 2026-09-27 23:17
+
+- Akışta video üzerindeki yorum paneli açıldığında yorum alanına yazı yazmak çok yavaş; tuş girişleri gecikiyor ve arayüz donmuş hissi veriyor.
+- Klavye açılış/kapanışında yorum paneli ve arkadaki video akışı gereksiz yeniden çizilmemeli; aktif video oynatıcı yazılan her karakterde yeniden kurulup yüklenmemeli.
+- Yorum listesi sorgusu, beğeni durumu, kullanıcı profili ve medya katmanı metin girişinden ayrıştırılmalı; yalnızca giriş alanı güncellenmeli.
+- Gönder düğmesi yazım sırasında akıcı kalmalı; gönderim tek istek olmalı ve işlem bitene kadar yinelenen dokunuşlar engellenmeli.
+- Grup sohbetinde mesaj yazarken de karakter girişleri belirgin biçimde yavaşlıyor; önceki V63 girdi performansı iyileştirmelerine rağmen gerçek cihazda regresyon sürüyor.
+- Grup belge/üye/mention sorguları her karakterde tekrar çalışmamalı; yazıyor bilgisi debounce edilmeli, mesaj listesi ve ağır medya önizlemeleri klavye girişinden bağımsız tutulmalı.
+- Yorum ve grup mesajı girişleri uzun metin, hızlı yazma, emoji, yanıt modu, zayıf bağlantı ve klavye aç/kapat senaryolarında gerçek cihazda yeniden ölçülmeli.
+
+
+### V72 Build 291 cihaz testi — özel mesaj düzenlerken Flutter assertion çökmesi — 2026-09-27 23:19
+
+- Özel sohbet mesajında **Mesajı düzenle** penceresi açılıyor; metin değiştirildikten sonra **Kaydet** seçilince uygulama kırmızı Flutter hata ekranına düşüyor.
+- Cihazda görülen assertion: `framework.dart: Failed assertion: line 6281 pos 12: '_dependents.isEmpty': is not true.`
+- Özel mesaj düzenleme akışı, grup mesajı düzenlemede kullanılan güvenli overlay kapanışını bekleme ve controller yaşam döngüsü yaklaşımıyla eşitlenmeli.
+- Klavye/focus tamamen kapanmadan dialog ağacı ve `TextEditingController` dispose edilmemeli; async Firestore güncellemesi dialog kapanışından ayrıştırılmalı.
+- Kaydet sırasında düğme kilitlenmeli, boş/değişmemiş metin yazılmamalı ve hata durumunda kırmızı ekran yerine kullanıcı dostu geri bildirim gösterilmeli.
+- Vazgeç, Kaydet, klavye geri tuşu, hızlı art arda aç/kapat, uzun metin ve zayıf bağlantı senaryoları hem özel hem grup sohbetinde gerçek cihazda doğrulanmalı.
+
+
+### V72 Build 291 cihaz testi — takip, arkadaşlık ve mesaj durumları sadeleştirilecek — 2026-09-27 23:20
+
+- Başka kullanıcı profilinde takip, arkadaşlık ve mesaj eylemleri birbirine karışmış hissi veriyor; durumlar tek ve açık bir sosyal ilişki modeline bağlanacak.
+- **Takip sistemi** bağımsız olacak:
+  - Herkese açık hesap: **Takip et** → **Takiptesin**; tekrar dokununca onayla **Takibi bırak**.
+  - Gizli hesap: **Takip isteği gönder** → **İstek gönderildi**; tekrar dokununca **İsteği geri çek**.
+  - İstek kabul edilince durum otomatik **Takiptesin** olacak; reddedilince **Takip isteği gönder** durumuna dönecek.
+- **Arkadaşlık sistemi** ayrı ve çift taraflı olacak:
+  - **Arkadaş ekle** → **Arkadaşlık isteği gönderildi**; beklerken geri çekilebilecek.
+  - Alıcıda yalnızca **Kabul et** ve **Reddet** görünecek.
+  - Kabul edilince iki profilde **Arkadaşsınız** görünecek; tekrar dokununca onayla arkadaşlıktan çıkarma sunulacak.
+  - Zaten arkadaşken yeniden **Arkadaşlık isteği gönder** düğmesi görünmeyecek.
+- **Mesaj sistemi** takip/arkadaşlıktan ayrı olarak kullanıcının **Kim mesaj atabilir?** gizlilik ayarına uyacak:
+  - İzin varsa **Mesaj** doğrudan mevcut sohbeti açacak veya tek bir sohbet oluşturacak.
+  - Mesaj isteği gerekiyorsa ilk mesaj **Mesaj isteği** olarak gelen kutusuna düşecek.
+  - İzin yoksa düğme pasif **Mesajlara kapalı** olacak; boş/yanıtsız ekran açılmayacak.
+- Takip veya arkadaşlık kabul/red bilgisi sohbet balonlarının içine karıştırılmayacak; **Sohbet > Hareketler/Bildirimler** alanında ayrı kart olarak gösterilecek.
+- Profil ana eylem sırası sade olacak: üst satır **Takip durumu + Mesaj**, ikinci satır yalnızca gerekli olduğunda **Arkadaş ekle / İstek gönderildi / Arkadaşsınız**, altında **Ortak gruplar**.
+- Aynı kişiye art arda basınca yinelenen takip, arkadaşlık, bildirim veya sohbet belgesi oluşmamalı; tüm durumlar Firestore'dan canlı ve tek kaynaktan okunmalı.
+- Sultan ve Adem Baykar hesaplarıyla gönderme, geri çekme, kabul, reddetme, takipten çıkma, arkadaşlıktan çıkarma ve mesaj gizliliği uçtan uca yeniden test edilecek.
+
+
+### V72 cihaz testi isteği — Akış video ilerleme çizgisi — 2026-09-27 23:23
+
+- Akışta video izlerken ekranın alt bölümünde ince ve belirgin bir ilerleme çizgisi gösterilecek.
+- Çizginin dolu bölümü izlenen kısmı, kalan bölümü videonun henüz izlenmeyen kısmını gösterecek; mevcut konum küçük bir tutamaçla anlaşılacak.
+- Kullanıcı çizgiye dokunarak veya sürükleyerek videoda ileri/geri gidebilecek.
+- Sürükleme sırasında **geçen süre / toplam süre** bilgisi kısa süreli gösterilecek; işlem bırakıldığında video seçilen zamandan devam edecek.
+- Çizgi NgelX arayüzünü kapatmayacak kadar ince olacak, açık/koyu videolarda okunacak kontrast kullanacak ve alt navigasyonun altında kalmayacak.
+- Çok kısa videolarda, video yüklenirken, ağ kesilince, video sona erince ve tekrar oynatılınca ilerleme durumu doğru güncellenecek.
+- Akış, profil videosu ve tam ekran video görüntüleyicide aynı oynatma davranışı korunacak.
+
+
+### Profil — küçük Premium giriş düğmesi — 2026-09-27 23:26
+
+- Profil sayfasına fazla yer kaplamayan, tek dokunuşla **NgelX Premium** sayfasını açan küçük bir Premium giriş düğmesi eklenecek.
+- Yerleşim: profilin sağ üst araç alanında, ayarlar simgesinin yanında; mevcut profil içeriğini aşağı itmeyecek kompakt boyutta olacak.
+- Görünüm: NgelX Premium ekranıyla uyumlu mavi–mor degrade, küçük rozet/taç simgesi; uzun reklam kartı veya büyük metin kullanılmayacak.
+- Dokunma alanı erişilebilir boyutta tutulacak; simgeye basınca doğrudan mevcut Premium sayfası açılacak.
+- Premium olmayan kullanıcıda davet simgesi, Premium kullanıcıda aktif rozet durumu gösterilecek; aynı sayfaya yinelenen giriş düğmeleri eklenmeyecek.
+- Küçük ekranlarda bildirim, arama ve ayarlar simgeleriyle çakışmaması gerçek cihazda doğrulanacak.
+
+
+### Üret ekranı ve alt gezinme — A kalite görsel yenileme — 2026-09-27 23:28
+
+#### Üret ekranı
+
+- Üret bölümü NgelX'in beyaz tasarım yönünde, sade ve premium görünümlü tek bir oluşturma merkezi olarak yeniden düzenlenecek.
+- Üstte kısa **Üret** başlığı; yanında taslaklara erişim ve kapatma/geri dönüş olacak. Gereksiz N/NgelX başlık logoları kullanılmayacak.
+- Ana seçimler **Video / Fotoğraf / Yazı** olarak belirgin, eşit ve tek dokunuşla değişen sekmeler halinde gösterilecek.
+- Kamera/önizleme alanı ekranın ana odağı olacak; seçilen medya büyük, kesilmeden ve güvenli alan içinde görünecek.
+- Alt araçlar düzenli bir panelde **Galeri, Kamera, Efektler, Müzik, Yazı, Sticker/GIF, Kırp** gibi gerçek çalışan seçenekleri gösterecek; işlevsiz araç bırakılmayacak.
+- **Devam et / Paylaş** ana eylemi tek ve belirgin mavi–mor NgelX düğmesi olacak; yükleme sırasında yüzde/ilerleme gösterecek ve yinelenen dokunuşu engelleyecek.
+- Klavye, medya seçici, düzenleyici ve küçük ekranlarda taşma olmayacak; SafeArea ve kaydırılabilir yerleşim korunacak.
+
+#### Alt gezinme çubuğu
+
+- Alt sıra **Akış / Keşfet / Üret / Gelen Kutusu / Ben** düzeninde, tüm ana ekranlarda aynı sırada kalacak.
+- Beyaz zemin, çok hafif gölge ve yuvarlatılmış üst yapı kullanılacak; ekran içeriğini gereksiz kapatmayacak.
+- Ortadaki **Üret** düğmesi diğerlerinden biraz daha belirgin, mavi–mor degrade daire/yuvarlatılmış kare içinde `+` simgeli olacak; ancak çubuğun dışına taşarak içerikle çakışmayacak.
+- Seçili sekmede açık mor/turkuaz kapsül arka plan, dolu simge ve net etiket; seçili olmayanlarda sade gri çizgi simge kullanılacak.
+- Gelen Kutusu simgesinde okunmamış mesaj/bildirim sayısı küçük kırmızı rozetle gösterilecek; rozet metni veya simgeyi kapatmayacak.
+- Uzun **Gelen Kutusu** etiketi küçük ekranlarda iki satıra bölünmeden okunacak uygun font/alanla çözülecek.
+- Klavye açıldığında çubuk mesaj/yorum alanının üstüne binmeyecek; Android hareket çubuğu ve klasik gezinme tuşlarıyla SafeArea doğrulanacak.
+- Sekmeler arası geçişte mevcut sayfa durumu korunacak; oynayan video/ses görünmeyen sekmede otomatik duracak.
+
+
+### Final paket — güvenli kullanılmayan kod temizliği — 2026-09-27 23:29
+
+- Uygulamada gerçekten kullanılmayan import, değişken, yardımcı metot, sınıf, eski yinelenen widget ve ulaşılamayan kodlar güvenli biçimde temizlenecek.
+- Çalışan veya kabul edilmiş hiçbir özellik yalnızca şu anda ekranda görünmüyor diye silinmeyecek.
+- Firestore eski belge şemaları, veri geçişleri, geriye dönük alan adları, medya türleri, bildirim türleri, gizlilik kontrolleri ve APK güncelleme zinciri korunacak.
+- Dinamik çağrılan rotalar, Firebase alanları, platform kanalları, Worker sözleşmeleri ve cihazda kullanılan ancak analiz aracının doğrudan göremediği kodlar kanıt olmadan kaldırılmayacak.
+- Aynı işi yapan yinelenen kodlar tek yardımcı yapıda birleştirilecek; davranış ve görünüm değişmeden tutulacak.
+- Büyük ve riskli toplu silme yapılmayacak; temizlik küçük, incelenebilir gruplar halinde uygulanacak.
+- Her temizlik grubundan sonra proje doğrulama betikleri, Flutter analyze, Flutter testleri, Firestore emulator kuralları ve APK build çalıştırılacak.
+- Son APK önceki Build 291'in üzerine kurulacak; oturum, mesajlar, gruplar, medya, profil ve kayıtlı tercihler kaybolmayacak.
+- Temizlik performans ve bakım kolaylığı sağlayacak; özellik güncellemelerini engellemeyecek ve sonraki geliştirmeler için kod yapısını sadeleştirecek.
+
+
+### Final paket — tespit edilen gerekli eksikleri tamamlama yetkisi — 2026-09-27 23:30
+
+- Cihaz testinde ayrıca gösterilmese bile mevcut özelliklerin çalışması için zorunlu eksikler tespit edilip tamamlanacak.
+- Özellikle yükleniyor/boş/hata/yeniden dene durumları, çevrimdışı ve yavaş bağlantı davranışı, çift dokunma koruması, sayfa/oynatıcı yaşam döngüsü ve kullanıcı dostu hata mesajları gözden geçirilecek.
+- Güvenlik, Firestore sahiplik/izin kuralları, gizlilik seçeneklerinin uygulanması, veri doğrulama ve oturum ayrımı eksikleri kapatılacak.
+- Türkçe/İngilizce karışıklığı, küçük ekran taşmaları, SafeArea, klavye çakışmaları, okunabilirlik ve erişilebilir dokunma alanları düzeltilecek.
+- Takip/arkadaşlık/mesaj, bildirim, grup, hikâye, gönderi, kaydetme, çeviri/altyazı, profil ve Üret akışlarında eksik durum geçişleri uçtan uca tamamlanacak.
+- Kritik yollar için gerçek testler eklenecek; yalnızca metin arayan doğrulama betikleriyle yetinilmeyecek.
+- Mevcut kabul edilmiş NgelX kapsamı dışında zaman ve uygulama boyutunu gereksiz büyüten rastgele özellikler eklenmeyecek.
+- Eklenen her zorunlu eksik final değişiklik özetinde açıkça belirtilecek ve Build 292+ doğrulamalarına dahil edilecek.

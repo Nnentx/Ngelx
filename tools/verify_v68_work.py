@@ -8,7 +8,7 @@ def require(text: str, needle: str, label: str) -> None:
     if needle not in text:
         raise SystemExit(f"V68 CHECK FAILED: {label}: missing {needle!r}")
 
-if all(v not in pubspec for v in ("version: 1.0.68+287", "version: 1.0.69+288", "version: 1.0.70+289", "version: 1.0.71+290", "version: 1.0.72+291")):
+if all(v not in pubspec for v in ("version: 1.0.68+287", "version: 1.0.69+288", "version: 1.0.70+289", "version: 1.0.71+290", "version: 1.0.72+291", "version: 1.0.73+292")):
     raise SystemExit("V68 CHECK FAILED: supported V68/V69 app version missing")
 
 for needle, label in [

@@ -184,6 +184,20 @@ async function seed() {
       friends: [],
       following: [],
     });
+    await setDoc(doc(db, 'videos/owned_post'), {
+      ownerId: 'alice',
+      description: 'Silme ve içerik araçları testi',
+    });
+    await setDoc(doc(db, 'videos/owned_post/likes/bob'), {
+      uid: 'bob',
+    });
+    await setDoc(doc(db, 'videos/owned_post/comments/comment_bob'), {
+      userId: 'bob',
+      text: 'Test yorumu',
+    });
+    await setDoc(doc(db, 'videos/owned_post/comments/comment_bob/likes/bob'), {
+      uid: 'bob',
+    });
     await setDoc(doc(db, 'live_streams/live1'), {
       ownerId: 'admin',
       active: true,
@@ -218,12 +232,31 @@ try {
   await seed();
 
   const bob = env.authenticatedContext('bob').firestore();
+  const alice = env.authenticatedContext('alice').firestore();
   const outsider = env.authenticatedContext('outsider').firestore();
   const admin = env.authenticatedContext('admin').firestore();
   const carol = env.authenticatedContext('carol').firestore();
   const solo = env.authenticatedContext('solo').firestore();
   const founder = env.authenticatedContext('founder').firestore();
   const publicDb = env.unauthenticatedContext().firestore();
+
+  // V72 cihaz testi: çeviri/altyazı sonucu videoya değil kullanıcıya özel önbelleğe yazılır.
+  await assertSucceeds(setDoc(doc(alice, 'users/alice/content_tools/owned_post'), {
+    translation: 'Örnek çeviri',
+    captions: 'Örnek altyazı',
+    updatedAt: serverTimestamp(),
+  }));
+  await assertSucceeds(getDoc(doc(alice, 'users/alice/content_tools/owned_post')));
+  await assertFails(getDoc(doc(bob, 'users/alice/content_tools/owned_post')));
+  await assertFails(setDoc(doc(bob, 'users/alice/content_tools/owned_post'), {
+    translation: 'Yetkisiz değişiklik',
+  }));
+
+  // V72 cihaz testi: içerik sahibi, gönderiyi silerken başkasına ait alt kayıtları da temizleyebilir.
+  await assertSucceeds(deleteDoc(doc(alice, 'videos/owned_post/likes/bob')));
+  await assertSucceeds(deleteDoc(doc(alice, 'videos/owned_post/comments/comment_bob/likes/bob')));
+  await assertSucceeds(deleteDoc(doc(alice, 'videos/owned_post/comments/comment_bob')));
+  await assertSucceeds(deleteDoc(doc(alice, 'videos/owned_post')));
 
   // V65: lisanslı müzik kataloğu herkese okunur, istemci tarafından yazılamaz.
   const licensedTrack = await assertSucceeds(getDoc(doc(publicDb, 'music_catalog/track_licensed')));

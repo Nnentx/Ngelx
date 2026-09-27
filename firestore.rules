@@ -209,6 +209,9 @@ service cloud.firestore {
       allow create, delete: if isMe(uid);
       allow update: if isMe(uid) || relationshipUpdate();
       match /saved/{contentId} { allow read, write: if isMe(uid); }
+      // AI translation/caption results are private per-user cache entries.
+      // Viewers never need permission to mutate another creator's video document.
+      match /content_tools/{contentId} { allow read, write: if isMe(uid); }
     }
 
     match /videos/{videoId} {
@@ -223,7 +226,11 @@ service cloud.firestore {
       allow delete: if signedIn() && resource.data.ownerId == request.auth.uid;
       match /likes/{uid} {
         allow read: if true;
-        allow create, update, delete: if isMe(uid);
+        allow create, update: if isMe(uid);
+        allow delete: if isMe(uid) || (
+          signedIn()
+          && get(/databases/$(database)/documents/videos/$(videoId)).data.ownerId == request.auth.uid
+        );
       }
       match /comments/{commentId} {
         allow read: if true;
@@ -240,7 +247,11 @@ service cloud.firestore {
         );
         match /likes/{uid} {
           allow read: if true;
-          allow create, update, delete: if isMe(uid);
+          allow create, update: if isMe(uid);
+          allow delete: if isMe(uid) || (
+            signedIn()
+            && get(/databases/$(database)/documents/videos/$(videoId)).data.ownerId == request.auth.uid
+          );
         }
       }
     }

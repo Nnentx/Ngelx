@@ -114,8 +114,10 @@ class _NgelXHikayeSeriPageState extends State<NgelXHikayeSeriPage> with SingleTi
       hikayeler.isEmpty||aktif<0||aktif>=hikayeler.length?null:hikayeler[aktif];
   Map<String,dynamic> get veri=>belge?.data()??<String,dynamic>{};
   String get storyId=>belge?.id??'';
-  String get url=>(veri['mediaUrl']??veri['videoUrl']??'').toString();
-  String get mediaType=>(veri['storyMediaType']??'photo').toString();
+  String get url=><dynamic>[
+    veri['mediaUrl'],veri['videoUrl'],veri['playbackUrl'],veri['downloadUrl'],veri['url'],
+  ].map((e)=>(e??'').toString().trim()).firstWhere((e)=>e.isNotEmpty,orElse:()=>'');
+  String get mediaType=>(veri['storyMediaType']??veri['mediaType']??'photo').toString().toLowerCase();
 
   bool get videoMu{
     if(mediaType=='video')return true;
@@ -173,6 +175,14 @@ class _NgelXHikayeSeriPageState extends State<NgelXHikayeSeriPage> with SingleTi
 
     final d=belge;
     if(d==null)return;
+    final medyaAdresi=url;
+    if(medyaAdresi.isEmpty||Uri.tryParse(medyaAdresi)?.hasScheme!=true){
+      videoHata=true;
+      sure.duration=const Duration(seconds:7);
+      if(mounted)setState((){});
+      sure.forward(from:0);
+      return;
+    }
     unawaited(_gorulduKaydet(d));
 
     if(!videoMu){
@@ -183,7 +193,7 @@ class _NgelXHikayeSeriPageState extends State<NgelXHikayeSeriPage> with SingleTi
     }
 
     try{
-      final x=VideoPlayerController.networkUrl(Uri.parse(url));
+      final x=VideoPlayerController.networkUrl(Uri.parse(medyaAdresi));
       videoKontrol=x;
       await x.initialize();
       if(!mounted||nesil!=medyaNesli){await x.dispose();return;}
@@ -322,6 +332,11 @@ class _NgelXHikayeSeriPageState extends State<NgelXHikayeSeriPage> with SingleTi
   }
 
   Widget _medya(){
+    if(url.isEmpty)return const Center(child:Column(mainAxisSize:MainAxisSize.min,children:[
+      Icon(Icons.broken_image_outlined,color:Colors.white54,size:60),
+      SizedBox(height:10),
+      Text('Hikâye medyası bulunamadı',style:TextStyle(color:Colors.white70,fontWeight:FontWeight.w700)),
+    ]));
     if(!videoMu){
       return CachedNetworkImage(
         imageUrl:url,
