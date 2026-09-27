@@ -18723,7 +18723,90 @@ class _KullaniciProfilPageState extends State<KullaniciProfilPage> {
 
 class NgelXVideoKapakOnizleme extends StatefulWidget{final String url;const NgelXVideoKapakOnizleme({super.key,required this.url});@override State<NgelXVideoKapakOnizleme> createState()=>_NgelXVideoKapakOnizlemeState();}
 class _NgelXVideoKapakOnizlemeState extends State<NgelXVideoKapakOnizleme>{VideoPlayerController? c;bool hazir=false,hata=false;@override void initState(){super.initState();unawaited(kur());}Future<void> kur()async{if(widget.url.trim().isEmpty){if(mounted)setState(()=>hata=true);return;}final x=VideoPlayerController.networkUrl(Uri.parse(widget.url));c=x;try{await x.initialize();await x.seekTo(Duration.zero);await x.pause();await x.setVolume(0);if(mounted)setState(()=>hazir=true);}catch(_){if(mounted)setState(()=>hata=true);}}@override void dispose(){final x=c;if(x!=null)unawaited(x.dispose());super.dispose();}@override Widget build(BuildContext context){final x=c;if(hazir&&x!=null&&x.value.isInitialized){final s=x.value.size;return ClipRect(child:FittedBox(fit:BoxFit.cover,child:SizedBox(width:s.width<=0?360:s.width,height:s.height<=0?640:s.height,child:VideoPlayer(x))));}if(hata)return const ColoredBox(color:Color(0xFFE9ECF2),child:Center(child:Icon(Icons.video_library_outlined,size:42,color:Colors.black38)));return const ColoredBox(color:Color(0xFFE9ECF2),child:Center(child:SizedBox(width:22,height:22,child:CircularProgressIndicator(strokeWidth:2,color:Colors.black26))));}}
-class MedyaOnizleme extends StatelessWidget{final String tur,url,yazi,thumbnailUrl;final Color arkaPlan;const MedyaOnizleme({super.key,required this.tur,required this.url,required this.yazi,required this.arkaPlan,this.thumbnailUrl=''});@override Widget build(BuildContext context)=>ClipRRect(borderRadius:BorderRadius.circular(13),child:ColoredBox(color:arkaPlan,child:tur=='photo'&&url.isNotEmpty?CachedNetworkImage(imageUrl:url,fit:BoxFit.cover,placeholder:(_,__)=>const Center(child:CircularProgressIndicator(strokeWidth:2,color:Colors.black26)),errorWidget:(_,__,___)=>const Center(child:Icon(Icons.broken_image_outlined,color:Colors.black38))):tur=='video'?Stack(fit:StackFit.expand,children:[if(thumbnailUrl.isNotEmpty)CachedNetworkImage(imageUrl:thumbnailUrl,fit:BoxFit.cover,placeholder:(_,__)=>url.isEmpty?const ColoredBox(color:Color(0xFFE9ECF2)):NgelXVideoKapakOnizleme(url:url),errorWidget:(_,__,___)=>url.isEmpty?const ColoredBox(color:Color(0xFFE9ECF2)):NgelXVideoKapakOnizleme(url:url))else if(url.isNotEmpty)NgelXVideoKapakOnizleme(url:url)else const ColoredBox(color:Color(0xFFE9ECF2),child:Center(child:Icon(Icons.video_library_outlined,size:42,color:Colors.black38))),const Center(child:DecoratedBox(decoration:BoxDecoration(color:Colors.black45,shape:BoxShape.circle),child:Padding(padding:EdgeInsets.all(8),child:Icon(Icons.play_arrow_rounded,size:34,color:Colors.white))))]):Padding(padding:const EdgeInsets.all(9),child:Center(child:Text(yazi,maxLines:6,overflow:TextOverflow.ellipsis,textAlign:TextAlign.center))))));}
+class MedyaOnizleme extends StatelessWidget {
+  final String tur, url, yazi, thumbnailUrl;
+  final Color arkaPlan;
+
+  const MedyaOnizleme({
+    super.key,
+    required this.tur,
+    required this.url,
+    required this.yazi,
+    required this.arkaPlan,
+    this.thumbnailUrl = '',
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    Widget govde;
+    if (tur == 'photo' && url.isNotEmpty) {
+      govde = CachedNetworkImage(
+        imageUrl: url,
+        fit: BoxFit.cover,
+        placeholder: (_, _) => const Center(
+          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black26),
+        ),
+        errorWidget: (_, _, _) => const Center(
+          child: Icon(Icons.broken_image_outlined, color: Colors.black38),
+        ),
+      );
+    } else if (tur == 'video') {
+      final Widget kapak;
+      if (thumbnailUrl.isNotEmpty) {
+        kapak = CachedNetworkImage(
+          imageUrl: thumbnailUrl,
+          fit: BoxFit.cover,
+          placeholder: (_, _) => url.isEmpty
+              ? const ColoredBox(color: Color(0xFFE9ECF2))
+              : NgelXVideoKapakOnizleme(url: url),
+          errorWidget: (_, _, _) => url.isEmpty
+              ? const ColoredBox(color: Color(0xFFE9ECF2))
+              : NgelXVideoKapakOnizleme(url: url),
+        );
+      } else if (url.isNotEmpty) {
+        kapak = NgelXVideoKapakOnizleme(url: url);
+      } else {
+        kapak = const ColoredBox(
+          color: Color(0xFFE9ECF2),
+          child: Center(
+            child: Icon(Icons.video_library_outlined, size: 42, color: Colors.black38),
+          ),
+        );
+      }
+      govde = Stack(
+        fit: StackFit.expand,
+        children: [
+          kapak,
+          const Center(
+            child: DecoratedBox(
+              decoration: BoxDecoration(color: Colors.black45, shape: BoxShape.circle),
+              child: Padding(
+                padding: EdgeInsets.all(8),
+                child: Icon(Icons.play_arrow_rounded, size: 34, color: Colors.white),
+              ),
+            ),
+          ),
+        ],
+      );
+    } else {
+      govde = Padding(
+        padding: const EdgeInsets.all(9),
+        child: Center(
+          child: Text(
+            yazi,
+            maxLines: 6,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+    }
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(13),
+      child: ColoredBox(color: arkaPlan, child: govde),
+    );
+  }
+}
 
 class HikayeGosterPage extends StatefulWidget {
   final String url,kullanici,fotoUrl,ownerUid,storyId,mediaType;
