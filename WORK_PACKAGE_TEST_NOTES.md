@@ -822,6 +822,8 @@ V65 trafik optimizasyonlari:
 - Akıştaki beğeni/yorum sayaçları artık likes/comments alt koleksiyonlarının tamamını indirmiyor; ana içerik belgesindeki likeCount/commentCount sayaçlarını kullanıyor.
 - Akış meta satırı pasif kartlarda Firestore dinleyicisi açmıyor ve yorum sayısı için comments alt koleksiyonunu indirmiyor.
 - Hikâye şeridi, profil hikâye açma, arşiv ve öne çıkanlar sorguları yalnızca type=story belgelerini hedefliyor; normal gönderiler hikâye işlemleri için boşuna okunmuyor.
+- Profil tanıtım videosu değiştirilirken veya kaldırılırken eski R2 nesnesi temizleniyor; gereksiz depolama dosyası bırakılmıyor.
+- Özel sohbet arka planı değiştirilince, kaldırılınca veya özelleştirme sıfırlanınca eski R2 görseli temizleniyor.
 
 Calisma dali: `perf/media-traffic-v65`
 PR: #11 — V65: reduce unnecessary media traffic
