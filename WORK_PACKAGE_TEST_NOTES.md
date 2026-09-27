@@ -839,3 +839,13 @@
 - Onaylanırsa iki hesaptaki arkadaşlık ilişkisi güvenli şekilde kaldırılmalı ve profil üzerindeki durum **anlık güncellenmeli**.
 - İşlem sonrası buton tekrar uygun duruma dönmeli: örneğin **“Arkadaşlık isteği gönder”**.
 - Yanlışlıkla tek dokunuşla arkadaş silinmemeli; mutlaka ikinci onay olmalı.
+
+### Profil — takip isteği gönderildikten sonra buton durumu güncellenmiyor — 2026-09-27 07:42
+
+- Başka kullanıcının profilinde **“Takip isteği gönder”** butonuna basınca altta **“Takip isteği gönderildi.”** bildirimi çıkıyor.
+- Buna rağmen buton etiketi ekranda hâlâ **“Takip isteği gönder”** olarak kalıyor.
+- Başarılı gönderimden hemen sonra buton durumu **anlık** değişmeli; önerilen durum: **“İstek gönderildi”**.
+- Bekleyen istek varken kullanıcı aynı isteği tekrar tekrar gönderememeli.
+- Bekleyen istek için tercihen **“İsteği geri çek”** işlemi sunulmalı.
+- Profil yeniden açıldığında / uygulama yeniden başladığında da bekleyen istek durumu Firestore’dan doğru okunup aynı şekilde görünmeli.
+- İstek kabul/reddedildiğinde buton durumu otomatik güncellenmeli.
