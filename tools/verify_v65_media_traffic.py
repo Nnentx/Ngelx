@@ -21,6 +21,7 @@ checks = {
     "Ozel sohbet fotograflari 1280px ile sinirli": bool(re.search(r"medyaGonder\(ImageSource kaynak\)[\s\S]{0,900}maxWidth:1280,[\s\S]{0,200}maxHeight:1280", main)),
     "Genel arama her harfte Firestore'u yeniden okumuyor": "Trafik tasarrufu: her harfte 60 kullanici + 100 icerigi yeniden indirme." in main and "future: _aramaVerisiniHazirla()," in main,
     "Hikaye yuzeyleri yalnizca story belgelerini sorguluyor": "collection('videos').where('type',isEqualTo:'story').limit(30).snapshots()" in main and "where('ownerId',isEqualTo:uid).where('type',isEqualTo:'story').limit(30).get()" in main,
+    "Degistirilen profil videosu ve ozel sohbet arka plani temizleniyor": "final eski=tanitimVideoUrl;" in main and "ngelxMedyaSil(eski)" in main and "final eskiArkaPlan=(onceki.data()?['backgroundUrl_$me']??'').toString();" in main and "ngelxMedyaSil(eskiArkaPlan)" in main,
     "R2 byte range destegi aktif": "rangeHeader" in worker and "accept-ranges" in worker and "content-range" in worker,
 }
 
