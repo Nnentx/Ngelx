@@ -6762,6 +6762,7 @@ class _YeniYuklePageState extends State<YuklePage> {
   String fotoEfekti='Yok';
   int fotoDonus=0;
   bool kareKirp=false,taslakVar=false;
+  bool medyaYaziSecili=false;
   String medyaYazisi='';
   int medyaYaziRenk=0xFFFFFFFF;
   int medyaYaziArkaPlanRenk=0x99000000;
@@ -6831,7 +6832,7 @@ class _YeniYuklePageState extends State<YuklePage> {
 
   void _turDegistir(String yeni){
     if(yukleniyor)return;
-    setState((){tur=yeni;medya=null;medyalar=<XFile>[];fotoEfekti='Yok';fotoDonus=0;kareKirp=false;medyaYazisi='';medyaYaziRenk=0xFFFFFFFF;medyaYaziArkaPlanRenk=0x99000000;medyaYaziBoyut=22;medyaYaziX=0;medyaYaziY=0;medyaYaziScale=1;medyaYaziRotation=0;videoBaslangicMs=0;videoBitisMs=0;secilenMuzik=null;yuklemeIlerlemesi=0;yuklemeDurumu='';});
+    setState((){tur=yeni;medya=null;medyalar=<XFile>[];fotoEfekti='Yok';fotoDonus=0;kareKirp=false;medyaYazisi='';medyaYaziRenk=0xFFFFFFFF;medyaYaziArkaPlanRenk=0x99000000;medyaYaziBoyut=22;medyaYaziX=0;medyaYaziY=0;medyaYaziScale=1;medyaYaziRotation=0;medyaYaziSecili=false;videoBaslangicMs=0;videoBitisMs=0;secilenMuzik=null;medyaYaziSecili=false;yuklemeIlerlemesi=0;yuklemeDurumu='';});
     _taslakDegisti();
   }
 
@@ -7085,6 +7086,60 @@ class _YeniYuklePageState extends State<YuklePage> {
       medyaYaziRenk=(sonuc['color'] as num?)?.toInt()??medyaYaziRenk;
       medyaYaziArkaPlanRenk=(sonuc['backgroundColor'] as num?)?.toInt()??medyaYaziArkaPlanRenk;
       medyaYaziBoyut=(sonuc['fontSize'] as num?)?.toDouble()??medyaYaziBoyut;
+      medyaYaziSecili=medyaYazisi.trim().isNotEmpty;
+    });
+    _taslakDegisti();
+  }
+
+  void _fotoYaziOlcekle(double fark){
+    if(yukleniyor||medyaYazisi.trim().isEmpty)return;
+    setState((){
+      medyaYaziScale=(medyaYaziScale+fark).clamp(.45,3.2).toDouble();
+      medyaYaziSecili=true;
+    });
+    _taslakDegisti();
+  }
+
+  void _fotoYaziDondur(){
+    if(yukleniyor||medyaYazisi.trim().isEmpty)return;
+    setState((){
+      medyaYaziRotation+=math.pi/12;
+      medyaYaziSecili=true;
+    });
+    _taslakDegisti();
+  }
+
+  void _fotoYaziOrtala(){
+    if(yukleniyor||medyaYazisi.trim().isEmpty)return;
+    setState((){
+      medyaYaziX=0;
+      medyaYaziY=0;
+      medyaYaziSecili=true;
+    });
+    _taslakDegisti();
+  }
+
+  void _fotoYaziSifirla(){
+    if(yukleniyor||medyaYazisi.trim().isEmpty)return;
+    setState((){
+      medyaYaziX=0;
+      medyaYaziY=0;
+      medyaYaziScale=1;
+      medyaYaziRotation=0;
+      medyaYaziSecili=true;
+    });
+    _taslakDegisti();
+  }
+
+  void _fotoYaziSil(){
+    if(yukleniyor)return;
+    setState((){
+      medyaYazisi='';
+      medyaYaziX=0;
+      medyaYaziY=0;
+      medyaYaziScale=1;
+      medyaYaziRotation=0;
+      medyaYaziSecili=false;
     });
     _taslakDegisti();
   }
@@ -7158,7 +7213,11 @@ class _YeniYuklePageState extends State<YuklePage> {
     final yol='$klasor/${user.uid}/${DateTime.now().microsecondsSinceEpoch}.$uzanti';
     void ilerleme(int sent,int total){
       if(!mounted||total<=0)return;
-      setState(()=>yuklemeIlerlemesi=(sent/total).clamp(0.0,1.0).toDouble());
+      final oran=(sent/total).clamp(0.0,1.0).toDouble();
+      setState((){
+        yuklemeIlerlemesi=oran;
+        if(oran>=.999)yuklemeDurumu='Medya aktarımı tamamlandı, doğrulanıyor...';
+      });
     }
     if(secilenTur=='video'){
       return ngelxMedyaYukleDosya(
@@ -7343,8 +7402,13 @@ class _YeniYuklePageState extends State<YuklePage> {
                     yazi:medyaYazisi.trim(),renk:medyaYaziRenk,arkaPlanRenk:medyaYaziArkaPlanRenk,boyut:medyaYaziBoyut,
                     x:medyaYaziX,y:medyaYaziY,scale:medyaYaziScale,rotation:medyaYaziRotation,
                     canvasWidth:c.maxWidth,canvasHeight:c.maxHeight,
+                    secili:medyaYaziSecili,
+                    onSelect:()=>setState(()=>medyaYaziSecili=true),
+                    onEdit:()=>unawaited(_medyaYazisiDuzenle()),
                     onChanged:(x,y,s,r){
-                      setState((){medyaYaziX=x;medyaYaziY=y;medyaYaziScale=s;medyaYaziRotation=r;});
+                      setState((){
+                        medyaYaziX=x;medyaYaziY=y;medyaYaziScale=s;medyaYaziRotation=r;medyaYaziSecili=true;
+                      });
                       _taslakDegisti();
                     },
                   ),
@@ -7361,7 +7425,7 @@ class _YeniYuklePageState extends State<YuklePage> {
                   child:Container(
                     padding:const EdgeInsets.symmetric(horizontal:9,vertical:5),
                     decoration:BoxDecoration(color:Colors.black54,borderRadius:BorderRadius.circular(12)),
-                    child:const Text('Yazıyı sürükle • iki parmakla büyüt/döndür',style:TextStyle(color:Colors.white70,fontSize:10,fontWeight:FontWeight.w700)),
+                    child:const Text('Yazıya dokun • sürükle • iki parmakla büyüt/döndür • çift dokun düzenle',style:TextStyle(color:Colors.white70,fontSize:10,fontWeight:FontWeight.w700)),
                   ),
                 ),
               ]);
@@ -7382,6 +7446,31 @@ class _YeniYuklePageState extends State<YuklePage> {
               ],
             ]),
           ),
+        if(foto&&medyaYazisi.trim().isNotEmpty&&medyaYaziSecili)
+          Container(
+            margin:const EdgeInsets.fromLTRB(10,10,10,0),
+            padding:const EdgeInsets.symmetric(horizontal:8,vertical:6),
+            decoration:BoxDecoration(
+              color:const Color(0xFFF4F0FF),
+              borderRadius:BorderRadius.circular(15),
+              border:Border.all(color:const Color(0xFFD8C8FF)),
+            ),
+            child:Wrap(
+              alignment:WrapAlignment.center,
+              crossAxisAlignment:WrapCrossAlignment.center,
+              spacing:2,
+              runSpacing:2,
+              children:[
+                IconButton(tooltip:'Küçült',onPressed:yukleniyor?null:()=>_fotoYaziOlcekle(-.12),icon:const Icon(Icons.remove_circle_outline_rounded,color:mor)),
+                IconButton(tooltip:'Büyüt',onPressed:yukleniyor?null:()=>_fotoYaziOlcekle(.12),icon:const Icon(Icons.add_circle_outline_rounded,color:mor)),
+                IconButton(tooltip:'Döndür',onPressed:yukleniyor?null:_fotoYaziDondur,icon:const Icon(Icons.rotate_right_rounded,color:mor)),
+                TextButton.icon(onPressed:yukleniyor?null:_fotoYaziOrtala,icon:const Icon(Icons.center_focus_strong_rounded,size:17),label:const Text('Ortala')),
+                TextButton.icon(onPressed:yukleniyor?null:()=>unawaited(_medyaYazisiDuzenle()),icon:const Icon(Icons.edit_rounded,size:17),label:const Text('Düzenle')),
+                TextButton.icon(onPressed:yukleniyor?null:_fotoYaziSifirla,icon:const Icon(Icons.restart_alt_rounded,size:17),label:const Text('Sıfırla')),
+                IconButton(tooltip:'Yazıyı sil',onPressed:yukleniyor?null:_fotoYaziSil,icon:const Icon(Icons.delete_outline_rounded,color:Colors.redAccent)),
+              ],
+            ),
+          ),
         Padding(
           padding:const EdgeInsets.fromLTRB(14,10,8,10),
           child:Row(children:[
@@ -7394,7 +7483,7 @@ class _YeniYuklePageState extends State<YuklePage> {
             )),
             IconButton(
               tooltip:t('removeSelection'),
-              onPressed:yukleniyor?null:(){setState((){medya=null;medyalar=<XFile>[];});_taslakDegisti();},
+              onPressed:yukleniyor?null:(){setState((){medya=null;medyalar=<XFile>[];medyaYaziSecili=false;});_taslakDegisti();},
               icon:const Icon(Icons.close_rounded,color:Colors.redAccent),
             ),
           ]),
@@ -7582,7 +7671,7 @@ class _YeniYuklePageState extends State<YuklePage> {
             if(!yukleniyor)const SizedBox(height:8),
             if(yukleniyor)...[
               LinearProgressIndicator(
-                value:yuklemeIlerlemesi>0&&yuklemeIlerlemesi<1?yuklemeIlerlemesi:null,
+                value:yuklemeIlerlemesi>0?yuklemeIlerlemesi.clamp(0.0,1.0).toDouble():null,
                 minHeight:7,
                 borderRadius:BorderRadius.circular(12),
                 color:mor,
@@ -7594,8 +7683,8 @@ class _YeniYuklePageState extends State<YuklePage> {
                 textAlign:TextAlign.center,
                 style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w800),
               ),
-              if(yuklemeIlerlemesi>0&&yuklemeIlerlemesi<1)
-                Text('%${(yuklemeIlerlemesi*100).round()}',textAlign:TextAlign.center,style:const TextStyle(color:Colors.black54,fontWeight:FontWeight.w700)),
+              if(yuklemeIlerlemesi>0)
+                Text('%${(yuklemeIlerlemesi.clamp(0.0,1.0)*100).round()}',textAlign:TextAlign.center,style:const TextStyle(color:Colors.black54,fontWeight:FontWeight.w700)),
             ]else
               Container(
                 decoration:BoxDecoration(
