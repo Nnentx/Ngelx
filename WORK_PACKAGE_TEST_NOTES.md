@@ -913,3 +913,38 @@
 - Final ekranı: Düzenlemeye dön / Taslak kaydet / Paylaş.
 - Uzun işlemlerde yükleme/işleme yüzdesi ve ilerleme durumu gösterilmeli.
 - Özellikle öncelikli: otomatik altyazı, sticker/GIF, çizim, blur/mozaik, geçiş, beat sync, katman sistemi ve 1080p çıktı.
+
+## V66 cihaz-test düzeltme paketi — 2026-09-27
+
+### Üret
+- Foto/video üzerine yazı düzenleme eski dışarıdan controller dispose eden dialog yapısından çıkarıldı; controller kendi Stateful sheet yaşam döngüsünde yönetiliyor. Cihazda görülen `_dependents.isEmpty` assertion hatasının kaynağına yönelik düzeltme.
+- Yazı rengi paleti, yazı arka planı ve boyut ayarı eklendi.
+- Yazı katmanı fotoğraf ve video önizlemesinde parmakla sürüklenebilir; iki parmakla büyüt/küçült ve döndür destekleniyor.
+- Yazının renk/konum/ölçek/dönüş ayarları taslak ve paylaşım metadata’sında korunuyor; Akışta aynı konum/stille gösteriliyor.
+- Fotoğraf düzenleme çalışma alanı büyütüldü; dosya adı açık zeminde koyu/okunur yapıldı.
+- Parlak / Sıcak / Soğuk / Siyah Beyaz filtreleri seçim anında önizlemeye yansıyor.
+- Video trim sliderı sürüklenirken önizleme seçilen zamana seek ediyor; bırakınca seçilen başlangıca geliyor.
+- Müzik kataloğu sorgusu sadeleştirildi, active filtresi istemci tarafına alındı ve Tekrar dene arayüzü eklendi.
+- Not: production Firestore’da `music_catalog` okuma kuralının ayrıca deploy edilmiş olması ve lisanslı katalog verisinin bulunması gerekir; istemci lisanssız parça uydurmaz.
+
+### Hikâye
+- Aynı kullanıcının aktif hikâyeleri artık tek hikâye yerine seri olarak açılıyor; yeni hikâye eskisini görüntüleyiciden düşürmüyor.
+- Hikâye şeridi owner bazında gruplanıyor: kullanıcı başına bir profil halkası.
+- Fotoğraf ve video türleri ayrı korunuyor; videolar gerçek süreleriyle oynuyor.
+- Üstte her hikâye için segmentli ilerleme çubuğu eklendi.
+- Sağ tarafa dokun sonraki, sol tarafa dokun önceki; basılı tut durdur/devam; aşağı hızlı kaydır kapat.
+- Başlangıç saati, bitiş tarihi/saati ve kalan süre gösteriliyor.
+- Ses aç/kapat, mesajla yanıt, hızlı emoji/kalp tepkileri, takip butonu eklendi.
+- Kendi hikâyesinde görüntüleme/yanıt/tepki sayaç özeti gösteriliyor.
+- Profil fotoğrafında aktif hikâye varsa mavi/turkuaz/mor halka çıkıyor ve dokununca hikâye serisi açılıyor.
+- Kendi profilinde hikâye yoksa avatar dokunuşu hikâye ekleme akışına gider; profil fotoğrafı değiştirme kamera düğmesi ve uzun basma ile korunur.
+
+### Profil / sosyal
+- Takip isteği gönderildiğinde buton anında “İstek gönderildi” durumuna geçiyor.
+- Bekleyen takip isteğine dokunarak geri çekme eklendi.
+- Arkadaşlık isteği de anlık bekleyen duruma geçiyor ve geri çekilebiliyor.
+- “Arkadaşsınız” artık aktif buton; dokununca ikinci onayla iki taraflı arkadaşlıktan çıkarma yapılıyor.
+- Premium rozeti önceki V65 düzeltmesiyle ad yanında korunuyor.
+
+### Gruplar
+- Üye üç nokta menüsündeki mevcut rol sistemi doğrulandı: kurucu normal üyeyi “Yönetici yap”, yöneticiyi “Yöneticilikten çıkar” yapabiliyor; kurucu korunuyor ve rol değişikliği Firestore grup belgesi üzerinden canlı senkron.
