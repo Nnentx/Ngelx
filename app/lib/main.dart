@@ -5511,7 +5511,7 @@ Positioned(
                 colors:const VideoProgressColors(
                   playedColor:Color(0xFF22D3EE),
                   bufferedColor:Colors.white38,
-                  backgroundColor:Colors.white18,
+                  backgroundColor:Color(0x2EFFFFFF),
                 ),
               ),
             ),
@@ -18466,7 +18466,7 @@ class _ProfilTanitimVideoKartiState extends State<ProfilTanitimVideoKarti> with 
     if(yeni==_rota)return;
     if(_rota!=null)ngelxRouteObserver.unsubscribe(this);
     _rota=yeni;
-    if(yeni!=null)ngelxRouteObserver.subscribe(this,yeni);
+    ngelxRouteObserver.subscribe(this,yeni);
   }
   void _gorunmezkenDuraklat(){
     final x=c;
@@ -21281,7 +21281,7 @@ class _ProfilPageState extends State<ProfilPage> {
         ?await ngelxMedyaYukleDosya(dosya:dosya,kind:'stories',ext:uzanti,legacyPath:yol)
         :await ngelxMedyaYukleBytes(bytes:await dosya.readAsBytes(),kind:'stories',ext:uzanti,legacyPath:yol);
 
-      final ref=await FirebaseFirestore.instance.collection('videos').add({
+      await FirebaseFirestore.instance.collection('videos').add({
         'ownerId':user.uid,
         'username':kullanici.replaceFirst('@',''),
         'type':'story',
