@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - work/v65-consolidated-qa
+      - work/v72-combined
     paths:
       - 'firestore.rules'
       - '.github/workflows/v67-firestore-rules-deploy.yml'
