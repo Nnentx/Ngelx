@@ -204,13 +204,15 @@ class _NgelXHikayeSeriPageState extends State<NgelXHikayeSeriPage> with SingleTi
 
   Future<void> _gorulduKaydet(QueryDocumentSnapshot<Map<String,dynamic>> d)async{
     final me=FirebaseAuth.instance.currentUser?.uid;
+    var yeniGoruldu=true;
     try{
       final h=await SharedPreferences.getInstance();
       final anahtar='ngelx_story_seen_${me??'guest'}';
       final seen=<String>{...(h.getStringList(anahtar)??const <String>[])};
-      if(seen.add(d.id))await h.setStringList(anahtar,seen.take(500).toList());
+      yeniGoruldu=seen.add(d.id);
+      if(yeniGoruldu)await h.setStringList(anahtar,seen.take(500).toList());
     }catch(_){}
-    if(me==null||me==widget.ownerUid)return;
+    if(me==null||me==widget.ownerUid||!yeniGoruldu)return;
     try{
       await d.reference.set({'viewCount':FieldValue.increment(1)},SetOptions(merge:true));
     }catch(_){}
@@ -261,18 +263,22 @@ class _NgelXHikayeSeriPageState extends State<NgelXHikayeSeriPage> with SingleTi
     if(x?.value.isInitialized==true)await x!.setVolume(yeni?0:1);
   }
 
+  String _saat(DateTime x)=>'${x.hour.toString().padLeft(2,'0')}:${x.minute.toString().padLeft(2,'0')}';
+  String _tarihSaat(DateTime x)=>'${x.day.toString().padLeft(2,'0')}.${x.month.toString().padLeft(2,'0')} ${_saat(x)}';
+
   String get zamanBilgisi{
     final olusma=veri['createdAt'] is Timestamp?(veri['createdAt'] as Timestamp).toDate():
         (veri['clientCreatedAt'] is Timestamp?(veri['clientCreatedAt'] as Timestamp).toDate():null);
     final bitis=veri['expiresAt'] is Timestamp?(veri['expiresAt'] as Timestamp).toDate():null;
     if(olusma==null)return 'Az önce';
-    final fark=DateTime.now().difference(olusma);
-    final bas=fark.inMinutes<1?'az önce':fark.inHours<1?'${fark.inMinutes} dk önce':fark.inHours<24?'${fark.inHours} sa önce':'${fark.inDays} gün önce';
-    if(bitis==null)return bas;
+    if(bitis==null)return 'Başladı: ${_saat(olusma)}';
     final kalan=bitis.difference(DateTime.now());
-    if(kalan.isNegative)return bas;
-    final kalanYazi=kalan.inHours>=1?'${kalan.inHours} sa kaldı':'${kalan.inMinutes.clamp(1,59)} dk kaldı';
-    return '$bas • $kalanYazi';
+    final kalanYazi=kalan.isNegative
+      ?'süresi doldu'
+      :kalan.inHours>=1
+        ?'${kalan.inHours} sa kaldı'
+        :'${kalan.inMinutes.clamp(1,59)} dk kaldı';
+    return 'Başladı: ${_saat(olusma)} • Biter: ${_tarihSaat(bitis)} • $kalanYazi';
   }
 
   Future<void> _yanitGonder(String ham,{bool tepki=false})async{
@@ -455,6 +461,9 @@ class _NgelXHikayeSeriPageState extends State<NgelXHikayeSeriPage> with SingleTi
             },
             onLongPressStart:(_)=>_duraklat(),
             onLongPressEnd:(_)=>_devam(),
+            onVerticalDragEnd:(d){
+              if((d.primaryVelocity??0)>550&&mounted)Navigator.pop(context);
+            },
           )),
           SafeArea(child:Padding(
             padding:const EdgeInsets.fromLTRB(14,10,14,12),
@@ -502,9 +511,23 @@ class _NgelXHikayeSeriPageState extends State<NgelXHikayeSeriPage> with SingleTi
                 ])
               else
                 Container(
-                  padding:const EdgeInsets.symmetric(horizontal:13,vertical:8),
-                  decoration:BoxDecoration(color:Colors.black45,borderRadius:BorderRadius.circular(18)),
-                  child:Text('${aktif+1}/${hikayeler.length} hikâye',style:const TextStyle(color:Colors.white70,fontWeight:FontWeight.w800)),
+                  padding:const EdgeInsets.symmetric(horizontal:13,vertical:9),
+                  decoration:BoxDecoration(color:Colors.black54,borderRadius:BorderRadius.circular(18)),
+                  child:Row(mainAxisSize:MainAxisSize.min,children:[
+                    Text('${aktif+1}/${hikayeler.length}',style:const TextStyle(color:Colors.white70,fontWeight:FontWeight.w900)),
+                    const SizedBox(width:13),
+                    const Icon(Icons.visibility_rounded,color:Colors.white70,size:17),
+                    const SizedBox(width:4),
+                    Text('${(veri['viewCount'] as num?)?.toInt()??0}',style:const TextStyle(color:Colors.white70,fontWeight:FontWeight.w800)),
+                    const SizedBox(width:10),
+                    const Icon(Icons.reply_rounded,color:Colors.white70,size:17),
+                    const SizedBox(width:4),
+                    Text('${(veri['replyCount'] as num?)?.toInt()??0}',style:const TextStyle(color:Colors.white70,fontWeight:FontWeight.w800)),
+                    const SizedBox(width:10),
+                    const Text('❤️',style:TextStyle(fontSize:15)),
+                    const SizedBox(width:3),
+                    Text('${(veri['reactionCount'] as num?)?.toInt()??0}',style:const TextStyle(color:Colors.white70,fontWeight:FontWeight.w800)),
+                  ]),
                 ),
             ]),
           )),
