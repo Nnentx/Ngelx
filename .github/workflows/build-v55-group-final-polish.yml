@@ -81,6 +81,9 @@ jobs:
       - name: V64 Akis Uret Kesfet Profil Ayarlar kalite kontrolleri
         run: python3 tools/verify_v64_app_quality.py
 
+      - name: V65 medya trafik optimizasyonlarini dogrula
+        run: python3 tools/verify_v65_media_traffic.py
+
       - name: R2 Worker JavaScript kontrolu
         run: node --check cloudflare/worker/src/index.js
 
