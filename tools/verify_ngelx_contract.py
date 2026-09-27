@@ -58,14 +58,18 @@ for forbidden in (
     if forbidden in app:
         errors.append("Eski Supabase çalışma zamanı kodu kaldı: " + forbidden)
 
-# The main profile avatar must directly open the photo editor.
+# The main profile avatar opens an active story (or story creation when none
+# exists). Profile-photo editing remains reachable through the camera button
+# and long press, so the story-ring interaction does not remove photo editing.
 profile_class = app.find("class _ProfilPageState")
 if profile_class < 0:
     errors.append("Profil sayfası bulunamadı.")
 else:
     profile_tail = app[profile_class:]
-    if "onTap: fotografYukle" not in profile_tail:
-        errors.append("Profil fotoğrafına dokunma fotografYukle akışına bağlı değil.")
+    if "NgelXHikayeliAvatar(" not in profile_tail or "hikayeYoksaTikla:" not in profile_tail:
+        errors.append("Profil avatarı aktif hikâye halkası / hikâye açma akışına bağlı değil.")
+    if "uzunBas:fotografYukle" not in profile_tail or "onTap:fotografYukle" not in profile_tail:
+        errors.append("Profil fotoğrafı düzenleme kamera düğmesi ve uzun basma ile korunmalı.")
     if "await user.updatePhotoURL(url)" not in profile_tail:
         errors.append("Profil fotoğrafı Firebase Auth photoURL ile senkronize edilmiyor.")
     if "CachedNetworkImage.evictFromCache(eski)" not in profile_tail:
