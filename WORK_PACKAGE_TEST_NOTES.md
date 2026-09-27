@@ -959,3 +959,16 @@
 - Müzik seçici NgelX beyaz Üret şablonuyla uyumlu hale getirildi.
 - music_catalog okuma kuralının üretim Firebase projesine yayınlanması için ayrı V67 Firestore rules deploy workflow'u eklendi.
 - Sürüm: **1.0.67+286**.
+
+
+### V68 cihaz testi — Video yazı katmanı gesture/düzenleme — 2026-09-27 11:36
+
+- Gerçek cihaz testinde videoya eklenen yazının doğrudan dokunup seçilmesi, sağa/sola-yukarı/aşağı sürüklenmesi, büyütülmesi ve döndürülmesi istenildi.
+- Video yazı katmanı seçim durumu eklendi; seçiliyken mor çerçeve/gölge ile aktif katman görünür.
+- Tek parmak sürükleme için gesture başlangıç noktası sabitlenerek hareketin sıçramaması sağlandı.
+- İki parmak pinch ile büyüt/küçült ve rotation korunuyor; büyük metnin tamamen ekran dışına kaçmasını azaltan güvenli sınırlar eklendi.
+- Yazıya çift dokununca metin/renk/arka plan/boyut düzenleme sheet'i açılıyor.
+- Seçili yazı için Küçült, Büyüt, Döndür, Ortala, Düzenle, Sıfırla ve Sil hızlı araçları eklendi.
+- Video alanının boş yerine dokununca yazı seçimi kapanıyor; metin alanına dokununca katman yeniden seçiliyor.
+- Dönüşüm değerleri Bitti ile mevcut overlayX/Y/Scale/Rotation metadata akışında korunuyor.
+- Sürüm: **1.0.68+287**.
