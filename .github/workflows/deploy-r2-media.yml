@@ -149,3 +149,55 @@ jobs:
               exit 1
             fi
           done
+
+
+      - name: R2 byte-range medya yanitini dogrula
+        working-directory: cloudflare/worker
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import { AwsClient } from 'aws4fetch';
+
+          const account=process.env.R2_ACCOUNT_ID;
+          const key='__ngelx_ci/range-'+Date.now()+'.txt';
+          const encoded=key.split('/').map(encodeURIComponent).join('/');
+          const r2Url=`https://${account}.r2.cloudflarestorage.com/ngelx-media/${encoded}`;
+          const body='0123456789abcdefghijklmnopqrstuvwxyz';
+          const client=new AwsClient({
+            service:'s3',
+            region:'auto',
+            accessKeyId:process.env.R2_ACCESS_KEY_ID,
+            secretAccessKey:process.env.R2_SECRET_ACCESS_KEY,
+          });
+
+          const put=await client.fetch(r2Url,{method:'PUT',headers:{'Content-Type':'text/plain'},body});
+          if(!put.ok){
+            console.log('Range test PUT='+put.status);
+            console.log((await put.text()).slice(0,500));
+            process.exit(10);
+          }
+
+          try {
+            for (const base of [
+              'https://ngelx-media.alihancaglar76.workers.dev',
+              'https://ngelx-upload.alihancaglar76.workers.dev',
+            ]) {
+              let response=null;
+              for(let attempt=1;attempt<=10;attempt++){
+                response=await fetch(base+'/media/'+encoded,{headers:{Range:'bytes=5-9'}});
+                if(response.status===206)break;
+                await new Promise(resolve=>setTimeout(resolve,3000));
+              }
+              const text=await response.text();
+              const contentRange=response.headers.get('content-range')||'';
+              console.log(base+' range status='+response.status+' content-range='+contentRange+' body='+text);
+              if(response.status!==206)process.exit(11);
+              if(text!=='56789')process.exit(12);
+              if(contentRange!==`bytes 5-9/${body.length}`)process.exit(13);
+            }
+          } finally {
+            const del=await client.fetch(r2Url,{method:'DELETE'});
+            console.log('Range test cleanup DELETE='+del.status);
+          }
+          NODE

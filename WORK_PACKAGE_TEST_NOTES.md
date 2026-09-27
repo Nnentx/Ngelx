@@ -796,3 +796,35 @@
 - `.debug/main-chat-snippets.txt` çalışma artığı depodan kaldırıldı.
 - V64 otomatik doğrulaması Akış / Keşfet / Üret / Sohbet / Ben navigasyon bağlantılarını, Ayarlar sayfasını, yorum performans sözleşmesini, profil tanıtım video boyutunu, takip isteği kritik yolunu ve sahte/demo akış verisinin geri dönmemesini kontrol ediyor.
 - Sürüm: **1.0.64+283**.
+
+
+## 2026-09-27 — V65 gereksiz trafik / Pro kota korumasi
+
+Supabase Free planda Cached Egress kotasi 20.904 GB / 5 GB seviyesine cikti ve servis kisitlandi. Pro plana gecildikten sonra yeni NgelX medya akisinin gereksiz kota tuketmemesi icin kod denetimi yapildi.
+
+Uygulamanin guncel surumunde `supabase_flutter` bagimliligi ve dogrudan Supabase Storage yazma/silme yolu kaldirilmis durumda. Yeni medya Cloudflare R2 Worker katmanina gidiyor. Eski Firestore kayitlarinda Supabase medya URL'leri kalmissa, bu eski icerikler acildiginda Supabase egress olusturabilir; eski medyayi silmeden R2'ye tasima ayri migrasyon isi olarak tutulacak.
+
+V65 trafik optimizasyonlari:
+- Akis videolari sadece aktif sayfa gorunur oldugunda initialize edilir; komsu PageView kartlari videoyu bosuna acmaz.
+- Grup sohbetindeki video mesajlari sohbet acilir acilmaz indirilmez; kullanici dokununca initialize edilir.
+- Yanit icindeki 46 px video onizlemesi artik gercek video akisini acmaz.
+- Profil tanitim videosu profil acilinca otomatik initialize edilmez; oynat tusuna dokununca yuklenir.
+- Mesaj istegi onizlemesinde ilk acilista 100 yerine son 30 mesaj okunur.
+- Ozel sohbet fotografi 1280x1280 ile sinirlanarak gereksiz yukleme/indirme boyutu azaltildi.
+- Genel arama her harfte 60 kullanici + 100 icerigi yeniden Firestore'dan cekmiyor; ayni sayfa oturumunda veri tek Future ile tekrar kullaniliyor.
+- Tam ekran ve mesaj istegi fotograflari `CachedNetworkImage` ile onbellekten tekrar kullaniliyor.
+- Cloudflare R2 medya endpointine HTTP byte-range (206 / Content-Range / Accept-Ranges) destegi eklendi; video oynatici tum dosyayi her istekte yeniden indirmek yerine gereken bayt araligini alabilecek.
+- `tools/verify_v65_media_traffic.py` ile yukaridaki trafik korumalari CI icinde otomatik dogrulaniyor.
+
+- Akis fotoğraf/yazı kartlarında ağ medyası artık yalnızca aktif kartta yükleniyor; PageView komşu kartları boşuna tam görsel indirmiyor.
+- Fotoğraf/yazı kartlarındaki müzik yalnızca aktif kartta hazırlanıyor ve çalınıyor.
+- Video kartlarında profil fotoğrafı, beğeni/kayıt kullanıcı durumu yalnızca kart aktif olduğunda okunuyor.
+- Akıştaki beğeni/yorum sayaçları artık likes/comments alt koleksiyonlarının tamamını indirmiyor; ana içerik belgesindeki likeCount/commentCount sayaçlarını kullanıyor.
+- Akış meta satırı pasif kartlarda Firestore dinleyicisi açmıyor ve yorum sayısı için comments alt koleksiyonunu indirmiyor.
+- Hikâye şeridi, profil hikâye açma, arşiv ve öne çıkanlar sorguları yalnızca type=story belgelerini hedefliyor; normal gönderiler hikâye işlemleri için boşuna okunmuyor.
+- Profil tanıtım videosu değiştirilirken veya kaldırılırken eski R2 nesnesi temizleniyor; gereksiz depolama dosyası bırakılmıyor.
+- Özel sohbet arka planı değiştirilince, kaldırılınca veya özelleştirme sıfırlanınca eski R2 görseli temizleniyor.
+- Mesaj herkesten silindiğinde fotoğraf, video, ses ve dosya eklerinin R2 nesneleri de temizleniyor; özel sohbet ve grup mesajlarında yetim medya bırakılmıyor.
+
+Calisma dali: `perf/media-traffic-v65`
+PR: #11 — V65: reduce unnecessary media traffic

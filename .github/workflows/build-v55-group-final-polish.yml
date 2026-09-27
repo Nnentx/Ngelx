@@ -2,7 +2,7 @@ name: NgelX V64 App Quality Performance
 
 on:
   push:
-    branches: [main]
+    branches: [main, perf/media-traffic-v65]
     paths:
       - 'app/**'
       - 'cloudflare/worker/**'
@@ -45,7 +45,7 @@ jobs:
       - name: V63 grup QA ve girdi performans hedeflerini dogrula
         shell: bash
         run: |
-          grep -q "version: 1.0.64+283" app/pubspec.yaml
+          grep -q "version: 1.0.65+284" app/pubspec.yaml
           grep -q "bool ngelxPresenceOnline" app/lib/main.dart
           grep -q "Profili görüntüle" app/lib/main.dart
           grep -q "final sadeMedya=" app/lib/main.dart
@@ -80,6 +80,9 @@ jobs:
 
       - name: V64 Akis Uret Kesfet Profil Ayarlar kalite kontrolleri
         run: python3 tools/verify_v64_app_quality.py
+
+      - name: V65 medya trafik optimizasyonlarini dogrula
+        run: python3 tools/verify_v65_media_traffic.py
 
       - name: R2 Worker JavaScript kontrolu
         run: node --check cloudflare/worker/src/index.js
