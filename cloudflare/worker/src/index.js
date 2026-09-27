@@ -258,14 +258,32 @@ export default {
     if (request.method === 'GET' && url.pathname.startsWith('/media/')) {
       const key = decodeURIComponent(url.pathname.slice('/media/'.length));
       if (!key || key.includes('..')) return json({error: 'invalid_key'}, 400);
-      const object = await env.MEDIA.get(key);
+
+      // Video oyunculari Range istekleri gonderir. Tum dosyayi her seferinde
+      // dondurmek yerine yalnizca istenen bayt araligini R2'den oku.
+      const rangeHeader = request.headers.get('range');
+      const object = await env.MEDIA.get(
+        key,
+        rangeHeader ? {range: request.headers} : undefined,
+      );
       if (!object) return json({error: 'not_found'}, 404);
 
       const headers = new Headers(cors());
       object.writeHttpMetadata(headers);
       headers.set('etag', object.httpEtag);
       headers.set('cache-control', 'public, max-age=31536000, immutable');
-      return new Response(object.body, {headers});
+      headers.set('accept-ranges', 'bytes');
+
+      let status = 200;
+      if (object.range && typeof object.range.offset === 'number' && typeof object.range.length === 'number') {
+        const start = object.range.offset;
+        const length = object.range.length;
+        const end = start + length - 1;
+        headers.set('content-range', `bytes ${start}-${end}/${object.size}`);
+        headers.set('content-length', String(length));
+        status = 206;
+      }
+      return new Response(object.body, {headers, status});
     }
 
     if (request.method === 'GET' && url.pathname === '/upload/presign') {

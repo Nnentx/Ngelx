@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - work/v65-consolidated-qa
+      - work/v72-combined
     paths:
       - 'app/**'
       - 'cloudflare/worker/**'
@@ -62,6 +63,9 @@ jobs:
       - name: V68 video yazi katmani kontrollerini dogrula
         run: python3 tools/verify_v68_work.py
 
+      - name: V72 medya trafik optimizasyonlarini dogrula
+        run: python3 tools/verify_v65_media_traffic.py
+
       - name: R2 Worker JavaScript kontrolu
         run: node --check cloudflare/worker/src/index.js
 
@@ -115,7 +119,7 @@ jobs:
       - name: APK yukle
         uses: actions/upload-artifact@v4
         with:
-          name: NgelX-V68-CONSOLIDATED-WORK-APK
+          name: NgelX-V72-COMBINED-WORK-APK
           path: app/build/app/outputs/flutter-apk/app-debug.apk
           if-no-files-found: error
           retention-days: 14
