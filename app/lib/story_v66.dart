@@ -18,6 +18,8 @@ class NgelXHikayeliAvatar extends StatelessWidget{
   final String kullanici;
   final double radius;
   final bool etkin;
+  final VoidCallback? hikayeYoksaTikla;
+  final VoidCallback? uzunBas;
   const NgelXHikayeliAvatar({
     super.key,
     required this.uid,
@@ -25,6 +27,8 @@ class NgelXHikayeliAvatar extends StatelessWidget{
     required this.kullanici,
     this.radius=55,
     this.etkin=true,
+    this.hikayeYoksaTikla,
+    this.uzunBas,
   });
 
   @override
@@ -39,12 +43,15 @@ class NgelXHikayeliAvatar extends StatelessWidget{
           ..sort((a,b)=>ngelxHikayeZamani(a.data()).compareTo(ngelxHikayeZamani(b.data())));
         final varMi=aktif.isNotEmpty;
         return GestureDetector(
-          onTap:!etkin||!varMi?null:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>NgelXHikayeSeriPage(
-            ownerUid:uid,
-            initialStoryId:aktif.first.id,
-            kullanici:kullanici,
-            fotoUrl:fotoUrl,
-          ))),
+          onTap:!etkin?null:varMi
+            ?()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>NgelXHikayeSeriPage(
+              ownerUid:uid,
+              initialStoryId:aktif.first.id,
+              kullanici:kullanici,
+              fotoUrl:fotoUrl,
+            )))
+            :hikayeYoksaTikla,
+          onLongPress:uzunBas,
           child:_avatar(varMi,aktif.isEmpty?null:aktif.first.id),
         );
       },
