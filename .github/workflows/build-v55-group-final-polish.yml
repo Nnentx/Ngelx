@@ -2,7 +2,7 @@ name: NgelX V64 App Quality Performance
 
 on:
   push:
-    branches: [main, perf/media-traffic-v65]
+    branches: [main]
     paths:
       - 'app/**'
       - 'cloudflare/worker/**'
