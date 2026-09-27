@@ -2541,7 +2541,84 @@ class _NgelXDogrulanmisOturumKapisiState extends State<NgelXDogrulanmisOturumKap
 class IcerikBaglantiPage extends StatelessWidget {
   final String icerikId;
   const IcerikBaglantiPage({super.key,required this.icerikId});
-  @override Widget build(BuildContext context)=>Scaffold(backgroundColor:const Color(0xFF09090F),appBar:AppBar(title:const Text('NgelX paylaşımı')),body:FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(future:FirebaseFirestore.instance.collection('videos').doc(icerikId).get(),builder:(_,s){if(s.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator(color:mavi));if(s.hasError)return Center(child:Padding(padding:const EdgeInsets.all(24),child:Column(mainAxisSize:MainAxisSize.min,children:[const Icon(Icons.cloud_off_rounded,size:55,color:Colors.redAccent),const SizedBox(height:12),const Text('İçerik yüklenemedi.'),TextButton(onPressed:()=>Navigator.pop(context),child:const Text('Akışa dön'))])));if(s.data?.exists!=true)return const Center(child:Text('Bu paylaşım kaldırılmış veya artık kullanılamıyor.'));final v={'id':icerikId,...?s.data?.data()};final tur=(v['type']??'video').toString();return tur=='video'?VideoKarti(adres:(v['videoUrl']??v['mediaUrl']??'').toString(),videoId:icerikId,kullaniciAdi:(v['username']??'ngelx').toString(),ownerId:(v['ownerId']??'').toString(),indirilebilir:v['allowDownload']!=false,aktif:true):GorselYaziKarti(veri:v.map((k,e)=>MapEntry(k,e?.toString()??'')),aktif:true); }));
+
+  Map<String,String> _gorselKart(Map<String,dynamic> v)=> <String,String>{
+    'id':icerikId,
+    'type':(v['type']??'text').toString(),
+    'videoUrl':(v['videoUrl']??'').toString(),
+    'mediaUrl':(v['mediaUrl']??v['videoUrl']??'').toString(),
+    'mediaUrls':jsonEncode(v['mediaUrls']??const <String>[]),
+    'mediaCount':(v['mediaCount']??0).toString(),
+    'audioUrl':(v['audioUrl']??'').toString(),
+    'overlayText':(v['overlayText']??'').toString(),
+    'overlayColor':(v['overlayColor']??0xFFFFFFFF).toString(),
+    'overlayBackgroundColor':(v['overlayBackgroundColor']??0x99000000).toString(),
+    'overlayFontSize':(v['overlayFontSize']??22).toString(),
+    'overlayX':(v['overlayX']??0).toString(),
+    'overlayY':(v['overlayY']??0).toString(),
+    'overlayScale':(v['overlayScale']??1).toString(),
+    'overlayRotation':(v['overlayRotation']??0).toString(),
+    'musicTitle':(v['musicTitle']??'').toString(),
+    'musicArtist':(v['musicArtist']??'').toString(),
+    'description':(v['description']??'').toString(),
+    'contentLanguage':(v['contentLanguage']??v['language']??'').toString(),
+    'translations':jsonEncode(ngelxDilMetinHaritasi(v['translations'])),
+    'captionText':(v['captionText']??'').toString(),
+    'captions':jsonEncode(ngelxDilMetinHaritasi(v['captions'])),
+    'captionTranslations':jsonEncode(ngelxDilMetinHaritasi(v['captionTranslations'])),
+    'username':(v['username']??'ngelx').toString(),
+    'ownerId':(v['ownerId']??'').toString(),
+    'allowDownload':(v['allowDownload']??true).toString(),
+  };
+
+  @override
+  Widget build(BuildContext context)=>Scaffold(
+    backgroundColor:const Color(0xFF09090F),
+    appBar:AppBar(title:const Text('NgelX paylaşımı')),
+    body:FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(
+      future:FirebaseFirestore.instance.collection('videos').doc(icerikId).get(),
+      builder:(_,s){
+        if(s.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator(color:mavi));
+        if(s.hasError)return Center(child:Padding(padding:const EdgeInsets.all(24),child:Column(mainAxisSize:MainAxisSize.min,children:[
+          const Icon(Icons.cloud_off_rounded,size:55,color:Colors.redAccent),
+          const SizedBox(height:12),
+          const Text('İçerik yüklenemedi.'),
+          TextButton(onPressed:()=>Navigator.pop(context),child:const Text('Akışa dön')),
+        ])));
+        if(s.data?.exists!=true)return const Center(child:Text('Bu paylaşım kaldırılmış veya artık kullanılamıyor.'));
+        final v=s.data?.data()??<String,dynamic>{};
+        final tur=(v['type']??'video').toString();
+        if(tur!='video')return GorselYaziKarti(veri:_gorselKart(v),aktif:true);
+        return VideoKarti(
+          adres:(v['videoUrl']??v['mediaUrl']??'').toString(),
+          videoId:icerikId,
+          kullaniciAdi:(v['username']??'ngelx').toString(),
+          ownerId:(v['ownerId']??'').toString(),
+          aciklama:(v['description']??'').toString(),
+          contentLanguage:(v['contentLanguage']??v['language']??'').toString(),
+          translations:ngelxDilMetinHaritasi(v['translations']),
+          captionText:(v['captionText']??'').toString(),
+          captions:ngelxDilMetinHaritasi(v['captions']),
+          captionTranslations:ngelxDilMetinHaritasi(v['captionTranslations']),
+          audioUrl:(v['audioUrl']??'').toString(),
+          overlayText:(v['overlayText']??'').toString(),
+          overlayColor:(v['overlayColor'] as num?)?.toInt()??0xFFFFFFFF,
+          overlayBackgroundColor:(v['overlayBackgroundColor'] as num?)?.toInt()??0x99000000,
+          overlayFontSize:(v['overlayFontSize'] as num?)?.toDouble()??22,
+          overlayX:(v['overlayX'] as num?)?.toDouble()??0,
+          overlayY:(v['overlayY'] as num?)?.toDouble()??0,
+          overlayScale:(v['overlayScale'] as num?)?.toDouble()??1,
+          overlayRotation:(v['overlayRotation'] as num?)?.toDouble()??0,
+          musicTitle:(v['musicTitle']??'').toString(),
+          musicArtist:(v['musicArtist']??'').toString(),
+          trimStartMs:(v['videoTrimStartMs'] as num?)?.toInt()??0,
+          trimEndMs:(v['videoTrimEndMs'] as num?)?.toInt()??0,
+          indirilebilir:v['allowDownload']!=false&&v['allowDownload'].toString()!='false',
+          aktif:true,
+        );
+      },
+    ),
+  );
 }
 
 class UygulamaDurumKapisi extends StatefulWidget {final Widget child;const UygulamaDurumKapisi({super.key,required this.child});@override State<UygulamaDurumKapisi> createState()=>_UygulamaDurumKapisiState();}
@@ -3774,7 +3851,7 @@ class _AramaPageState extends State<AramaPage> {
                   if (kullanicilar.isNotEmpty) Padding(padding: const EdgeInsets.fromLTRB(18, 20, 18, 8), child: Text(t('usersLabel'), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: mavi))),
                   ...kullanicilar.map((d) { final v=d.data(); final foto=(v['photoUrl'] ?? '').toString(); return ListTile(onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => KullaniciProfilPage(uid: d.id))), leading: CircleAvatar(backgroundImage: foto.isEmpty ? null : CachedNetworkImageProvider(foto), child: foto.isEmpty ? const Text('N') : null), title: Text((v['displayName'] ?? v['username'] ?? 'NgelX').toString()), subtitle: Text('@${v['username'] ?? 'ngelx'}'), trailing: const Icon(Icons.chevron_right)); }),
                   if (icerikler.isNotEmpty) Padding(padding: const EdgeInsets.fromLTRB(18, 20, 18, 8), child: Text(t('postsLabel'), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: mor))),
-                  ...icerikler.map((d) { final v=d.data(); final tur=(v['type'] ?? 'video').toString(); final item=<String,String>{'id':d.id,'type':tur,'videoUrl':(v['videoUrl']??'').toString(),'mediaUrl':(v['mediaUrl']??'').toString(),'audioUrl':(v['audioUrl']??'').toString(),'description':(v['description']??'').toString(),'username':(v['username']??'ngelx').toString(),'ownerId':(v['ownerId']??'').toString(),'allowDownload':(v['allowDownload']??true).toString()}; return ListTile(onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => Scaffold(body: SafeArea(child: tur=='video' ? VideoKarti(adres:item['videoUrl']!,videoId:item['id']!,kullaniciAdi:item['username']!,ownerId:item['ownerId']!,indirilebilir:item['allowDownload']!='false',aktif:true) : GorselYaziKarti(veri:item,aktif:true))))), leading: Icon(tur == 'video' ? Icons.videocam : tur == 'photo' ? Icons.photo : Icons.text_fields, color: mor), title: Text((v['description'] ?? 'NgelX paylaşımı').toString(), maxLines: 2, overflow: TextOverflow.ellipsis), subtitle: Text('@${v['username'] ?? 'ngelx'}')); }),
+                  ...icerikler.map((d) { final v=d.data(); final tur=(v['type'] ?? 'video').toString(); return ListTile(onTap: () => Navigator.push(context,MaterialPageRoute(builder:(_)=>IcerikBaglantiPage(icerikId:d.id))), leading: Icon(tur == 'video' ? Icons.videocam : tur == 'photo' ? Icons.photo : Icons.text_fields, color: mor), title: Text((v['description'] ?? 'NgelX paylaşımı').toString(), maxLines: 2, overflow: TextOverflow.ellipsis), subtitle: Text('@${v['username'] ?? 'ngelx'}')); }),
                 ]);
               },
             ),
@@ -21092,10 +21169,9 @@ class _ProfilPageState extends State<ProfilPage> {
     );
   }
 
-  Map<String,String> icerikHaritasi(QueryDocumentSnapshot<Map<String,dynamic>> d){final v=d.data();return {'id':d.id,'type':(v['type']??'video').toString(),'videoUrl':(v['videoUrl']??'').toString(),'mediaUrl':(v['mediaUrl']??v['videoUrl']??'').toString(),'audioUrl':(v['audioUrl']??'').toString(),'description':(v['description']??'').toString(),'username':(v['username']??'ngelx').toString(),'ownerId':(v['ownerId']??'').toString(),'allowDownload':(v['allowDownload']??true).toString()};}
-
-  void icerigiAc(QueryDocumentSnapshot<Map<String,dynamic>> d){final item=icerikHaritasi(d),tur=item['type'];Navigator.push(context,MaterialPageRoute(builder:(_)=>Scaffold(body:SafeArea(child:tur=='video'?VideoKarti(adres:item['videoUrl']!,videoId:item['id']!,kullaniciAdi:item['username']!,ownerId:item['ownerId']!,indirilebilir:item['allowDownload']!='false',aktif:true):GorselYaziKarti(veri:item,aktif:true)))));}
-
+  void icerigiAc(QueryDocumentSnapshot<Map<String,dynamic>> d){
+    Navigator.push(context,MaterialPageRoute(builder:(_)=>IcerikBaglantiPage(icerikId:d.id)));
+  }
   Future<void> icerikMenusu(QueryDocumentSnapshot<Map<String,dynamic>> d) async {
     final sabit=d.data()['pinned']==true;
     await showModalBottomSheet(
