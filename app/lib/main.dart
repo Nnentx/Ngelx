@@ -92,8 +92,8 @@ const ngelxPrivateBlueCanvas = Color(0xFFF6FAFF);
 const ngelxPrivateBlueBorder = Color(0xFFD8E8FF);
 const ngelxPrivateBlueInk = Color(0xFF10213A);
 
-const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.70');
-const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '289');
+const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.71');
+const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '290');
 const ngelxGroupBorder = Color(0xFFD9EEE0);
 
 final GlobalKey<NavigatorState> ngelxNavigatorKey=GlobalKey<NavigatorState>();
@@ -2109,12 +2109,15 @@ Future<Map<String,String>> ngelxGercekAltyaziOlustur({required String mediaUrl,r
   final metin=(sonuc['text']??'').toString().trim(),vtt=(sonuc['vtt']??'').toString().trim();
   if(metin.isEmpty)throw Exception('Videoda konuşma algılanamadı.');return {'text':metin,'vtt':vtt};
 }
-Future<void> icerikAracMenusu(BuildContext context,String icerikId,{Future<void> Function(double)? hizDegistir,double mevcutHiz=1.0})async{
+Future<void> icerikAracMenusu(BuildContext context,String icerikId,{Future<void> Function(double)? hizDegistir,double mevcutHiz=1.0,String medyaUrlOncelikli=''})async{
   if(icerikId.isEmpty)return;
   final belge=await FirebaseFirestore.instance.collection('videos').doc(icerikId).get(),v=belge.data()??<String,dynamic>{};
   final hafiza=await SharedPreferences.getInstance(),ceviriler=ngelxDilMetinHaritasi(v['translations']),captions=ngelxDilMetinHaritasi(v['captions']),captionTranslations=ngelxDilMetinHaritasi(v['captionTranslations']);
   String captionText=(v['captionText']??'').toString().trim();
-  final icerikMetni=(v['description']??v['text']??v['content']??'').toString().trim(),medyaUrl=(v['videoUrl']??v['mediaUrl']??'').toString().trim(),kaynakDil=ngelxDilKodu((v['contentLanguage']??v['language']??'tr').toString());
+  final icerikMetni=(v['description']??v['text']??v['content']??'').toString().trim();
+  final medyaAdaylari=<dynamic>[medyaUrlOncelikli,v['videoUrl'],v['mediaUrl'],v['playbackUrl'],v['downloadUrl'],v['fileUrl'],v['url'],...((v['mediaUrls'] is Iterable)?List<dynamic>.from(v['mediaUrls'] as Iterable):const <dynamic>[])];
+  final medyaUrl=medyaAdaylari.map((e)=>(e??'').toString().trim()).firstWhere((e)=>e.isNotEmpty,orElse:()=>'');
+  final kaynakDil=ngelxDilKodu((v['contentLanguage']??v['language']??'tr').toString());
   bool altyazi=hafiza.getBool('content_caption_$icerikId')??false,ceviri=hafiza.getBool('content_translate_$icerikId')??(hafiza.getBool('ngelx_auto_translate')??false),islem=false;
   String hedefDil=ngelxDilKodu(hafiza.getString('content_translation_language_$icerikId')??uygulamaDili.value);
   final altyaziDili=ngelxDilKodu(hafiza.getString('ngelx_caption_language')??uygulamaDili.value);
@@ -5352,7 +5355,7 @@ Positioned(
                   renk: kaydedildi ? mavi : Colors.white,
                   tiklama: videoyuKaydet,
                 ),
-                IslemButonu(ikon:Icons.menu_rounded,yazi:'Araçlar',tiklama:()=>icerikAracMenusu(context,videoId,mevcutHiz:kontrol.value.playbackSpeed,hizDegistir:(x)async=>kontrol.setPlaybackSpeed(x))),
+                IslemButonu(ikon:Icons.menu_rounded,yazi:'Araçlar',tiklama:()=>icerikAracMenusu(context,videoId,mevcutHiz:kontrol.value.playbackSpeed,hizDegistir:(x)async=>kontrol.setPlaybackSpeed(x),medyaUrlOncelikli:widget.adres)),
                 IslemButonu(
                   ikon: Icons.send_outlined,
                   yazi: 'Paylaş',
