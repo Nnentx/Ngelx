@@ -27,6 +27,7 @@ import 'package:record/record.dart' as rec;
 import 'group_quality.dart';
 part 'build258_settings.dart';
 part 'create_music_editor.dart';
+part 'story_v66.dart';
 
 bool ngelxHiddenWordMatches(String text, Iterable<String> hiddenWords) {
   String normalize(String value) => value
@@ -3580,57 +3581,73 @@ class HikayeSeridi extends StatelessWidget {
   }
 
   void ac(BuildContext context, Map<String, dynamic> veri) {
-    final url=(veri['mediaUrl']??veri['videoUrl']??'').toString();
-    if(url.isEmpty)return;
-    Navigator.push(context,MaterialPageRoute(builder:(_)=>HikayeGosterPage(
-      url:url,
-      mediaType:(veri['storyMediaType']??'photo').toString(),
+    final owner=(veri['ownerId']??'').toString();
+    if(owner.isEmpty)return;
+    Navigator.push(context,MaterialPageRoute(builder:(_)=>NgelXHikayeSeriPage(
+      ownerUid:owner,
+      initialStoryId:(veri['_storyId']??'').toString(),
       kullanici:'@'+(veri['username']??'ngelx').toString().replaceFirst('@',''),
       fotoUrl:(veri['_ownerPhotoUrl']??'').toString(),
-      ownerUid:(veri['ownerId']??'').toString(),
-      storyId:(veri['_storyId']??'').toString(),
-      createdAt:veri['createdAt']??veri['clientCreatedAt'],
-      expiresAt:veri['expiresAt'],
     )));
   }
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 82,
-      child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-        stream: FirebaseFirestore.instance.collection('videos').limit(30).snapshots(),
-        builder: (_, snap) {
-          if (!snap.hasData) return const SizedBox.shrink();
-          return FutureBuilder<List<Map<String, dynamic>>>(
-            future: gorunebilirHikayeler(snap.data!.docs),
-            builder: (_, gorunur) {
-              final hikayeler = gorunur.data ?? [];
-              if (hikayeler.isEmpty) return const SizedBox.shrink();
+      height:82,
+      child:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
+        stream:FirebaseFirestore.instance.collection('videos').limit(100).snapshots(),
+        builder:(_,snap){
+          if(!snap.hasData)return const SizedBox.shrink();
+          return FutureBuilder<List<Map<String,dynamic>>>(
+            future:gorunebilirHikayeler(snap.data!.docs),
+            builder:(_,gorunur){
+              final tum=gorunur.data??<Map<String,dynamic>>[];
+              if(tum.isEmpty)return const SizedBox.shrink();
+              final gruplar=<String,List<Map<String,dynamic>>>{};
+              for(final h in tum){
+                final owner=(h['ownerId']??'').toString();
+                if(owner.isEmpty)continue;
+                (gruplar[owner]??=<Map<String,dynamic>>[]).add(h);
+              }
+              final sahipler=gruplar.keys.toList()..sort((a,b){
+                final aa=gruplar[a]!..sort((x,y)=>ngelxHikayeZamani(x).compareTo(ngelxHikayeZamani(y)));
+                final bb=gruplar[b]!..sort((x,y)=>ngelxHikayeZamani(x).compareTo(ngelxHikayeZamani(y)));
+                return ngelxHikayeZamani(bb.last).compareTo(ngelxHikayeZamani(aa.last));
+              });
               return ListView.separated(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            scrollDirection: Axis.horizontal,
-            itemCount: hikayeler.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 10),
-            itemBuilder: (_, i) {
-              final h = hikayeler[i];
-              return GestureDetector(
-                onTap: () => ac(context, h),
-                child: Container(
-                  width: 70,
-                  padding: const EdgeInsets.all(3),
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(colors: [mavi, mor, Colors.pinkAccent]),
-                    boxShadow: [BoxShadow(color: mor, blurRadius: 12)],
-                  ),
-                  child: CircleAvatar(
-                    backgroundColor: panel,
-                    backgroundImage: CachedNetworkImageProvider((h['mediaUrl'] ?? '').toString()),
-                  ),
-                ),
-              );
-            },
+                padding:const EdgeInsets.symmetric(horizontal:12),
+                scrollDirection:Axis.horizontal,
+                itemCount:sahipler.length,
+                separatorBuilder:(_,__)=>const SizedBox(width:10),
+                itemBuilder:(_,i){
+                  final liste=gruplar[sahipler[i]]!..sort((a,b)=>ngelxHikayeZamani(a).compareTo(ngelxHikayeZamani(b)));
+                  final ilk=liste.first,profilFoto=(ilk['_ownerPhotoUrl']??'').toString();
+                  final ad=(ilk['username']??'ngelx').toString().replaceFirst('@','');
+                  return GestureDetector(
+                    onTap:()=>ac(context,ilk),
+                    child:SizedBox(
+                      width:70,
+                      child:Column(mainAxisSize:MainAxisSize.min,children:[
+                        Container(
+                          padding:const EdgeInsets.all(3),
+                          decoration:const BoxDecoration(
+                            shape:BoxShape.circle,
+                            gradient:LinearGradient(colors:[Color(0xFF22D3EE),Color(0xFF3B82F6),Color(0xFF8B5CF6)]),
+                          ),
+                          child:CircleAvatar(
+                            radius:28,
+                            backgroundColor:panel,
+                            backgroundImage:profilFoto.isEmpty?null:CachedNetworkImageProvider(profilFoto),
+                            child:profilFoto.isEmpty?Text(ad.isEmpty?'N':ad[0].toUpperCase(),style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w900)):null,
+                          ),
+                        ),
+                        const SizedBox(height:4),
+                        Text(ad,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:10.5,fontWeight:FontWeight.w700)),
+                      ]),
+                    ),
+                  );
+                },
               );
             },
           );
@@ -6889,14 +6906,10 @@ class _YeniYuklePageState extends State<YuklePage> {
           label:'Görüntüle',
           onPressed:(){
             if(!mounted)return;
-            Navigator.push(context,MaterialPageRoute(builder:(_)=>HikayeGosterPage(
-              url:url,
-              mediaType:video?'video':'photo',
-              kullanici:'@'+adi,
+            Navigator.push(context,MaterialPageRoute(builder:(_)=>NgelXHikayeSeriPage(
               ownerUid:user.uid,
-              storyId:ref.id,
-              createdAt:olusturma,
-              expiresAt:Timestamp.fromDate(DateTime.now().add(const Duration(hours:24))),
+              initialStoryId:ref.id,
+              kullanici:'@'+adi,
             )));
           },
         ),
@@ -17772,44 +17785,12 @@ class _KullaniciProfilPageState extends State<KullaniciProfilPage> {
           return ListView(
             padding: const EdgeInsets.all(22),
             children: [
-              Center(child:GestureDetector(
-                onTap:!erisimVar?null:()async{
-                  try{
-                    final q=await FirebaseFirestore.instance.collection('videos').where('ownerId',isEqualTo:uid).limit(100).get();
-                    final simdi=DateTime.now();
-                    final hikayeler=q.docs.where((d){
-                      final x=d.data(),bitis=x['expiresAt'];
-                      return x['type']=='story'&&bitis is Timestamp&&bitis.toDate().isAfter(simdi);
-                    }).toList()..sort((a,b){
-                      final at=a.data()['createdAt'],bt=b.data()['createdAt'];
-                      final am=at is Timestamp?at.millisecondsSinceEpoch:0,bm=bt is Timestamp?bt.millisecondsSinceEpoch:0;
-                      return bm.compareTo(am);
-                    });
-                    if(!context.mounted)return;
-                    if(hikayeler.isEmpty){
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Aktif hikâye yok.')));
-                      return;
-                    }
-                    final d=hikayeler.first,x=d.data();
-                    Navigator.push(context,MaterialPageRoute(builder:(_)=>HikayeGosterPage(
-                      url:(x['mediaUrl']??'').toString(),
-                      mediaType:(x['storyMediaType']??'photo').toString(),
-                      kullanici:'@'+(v['username']??'ngelx').toString(),
-                      fotoUrl:foto,
-                      ownerUid:uid,
-                      storyId:d.id,
-                      createdAt:x['createdAt'],
-                      expiresAt:x['expiresAt'],
-                    )));
-                  }catch(_){
-                    if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Hikâye açılamadı.')));
-                  }
-                },
-                child:Container(
-                  padding:const EdgeInsets.all(3),
-                  decoration:const BoxDecoration(shape:BoxShape.circle,gradient:LinearGradient(colors:[Color(0xFF22D3EE),Color(0xFF8B5CF6)])),
-                  child:CircleAvatar(radius:55,backgroundColor:Colors.white,backgroundImage:foto.isEmpty?null:CachedNetworkImageProvider(foto),child:foto.isEmpty?const Text('N',style:TextStyle(fontSize:40)):null),
-                ),
+              Center(child:NgelXHikayeliAvatar(
+                uid:uid,
+                fotoUrl:foto,
+                kullanici:'@'+(v['username']??'ngelx').toString(),
+                radius:55,
+                etkin:erisimVar,
               )),
               const SizedBox(height: 12),
               Row(mainAxisAlignment:MainAxisAlignment.center,mainAxisSize:MainAxisSize.min,children:[
@@ -20258,10 +20239,8 @@ class _ProfilPageState extends State<ProfilPage> {
           label:'Görüntüle',
           onPressed:(){
             if(!mounted)return;
-            Navigator.push(context,MaterialPageRoute(builder:(_)=>HikayeGosterPage(
-              url:url,mediaType:video?'video':'photo',kullanici:kullanici,fotoUrl:fotoUrl,
-              ownerUid:user.uid,storyId:ref.id,createdAt:Timestamp.now(),
-              expiresAt:Timestamp.fromDate(DateTime.now().add(const Duration(hours:24))),
+            Navigator.push(context,MaterialPageRoute(builder:(_)=>NgelXHikayeSeriPage(
+              ownerUid:user.uid,initialStoryId:ref.id,kullanici:kullanici,fotoUrl:fotoUrl,
             )));
           },
         ),
@@ -20288,9 +20267,11 @@ class _ProfilPageState extends State<ProfilPage> {
       await hikayeYukle();
       return;
     }
-    final belge = aktif.last;
-    final veri = belge.data();
-    Navigator.push(context,MaterialPageRoute(builder:(_)=>HikayeGosterPage(url:(veri['mediaUrl']??'').toString(),mediaType:(veri['storyMediaType']??'photo').toString(),kullanici:kullanici,fotoUrl:fotoUrl,ownerUid:user.uid,storyId:belge.id,createdAt:veri['createdAt'],expiresAt:veri['expiresAt'])));
+    aktif.sort((a,b)=>ngelxHikayeZamani(a.data()).compareTo(ngelxHikayeZamani(b.data())));
+    final belge=aktif.first;
+    Navigator.push(context,MaterialPageRoute(builder:(_)=>NgelXHikayeSeriPage(
+      ownerUid:user.uid,initialStoryId:belge.id,kullanici:kullanici,fotoUrl:fotoUrl,
+    )));
   }
 
   Future<void> duzenle() async {
@@ -20793,7 +20774,7 @@ class _ProfilPageState extends State<ProfilPage> {
                           return Padding(
                             padding:const EdgeInsets.only(right:10),
                             child:InkWell(
-                              onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>HikayeGosterPage(url:url,mediaType:medyaTuru,kullanici:kullanici,fotoUrl:fotoUrl,ownerUid:aktifKullanici?.uid??'',storyId:d.id,createdAt:v['createdAt'],expiresAt:v['expiresAt']))),
+                              onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>NgelXHikayeSeriPage(ownerUid:aktifKullanici?.uid??'',initialStoryId:d.id,kullanici:kullanici,fotoUrl:fotoUrl))),
                               child:SizedBox(width:70,child:Column(children:[
                                 CircleAvatar(
                                   radius:28,
