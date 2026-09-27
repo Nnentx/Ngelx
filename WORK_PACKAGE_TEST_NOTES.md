@@ -948,3 +948,14 @@
 
 ### Gruplar
 - Üye üç nokta menüsündeki mevcut rol sistemi doğrulandı: kurucu normal üyeyi “Yönetici yap”, yöneticiyi “Yöneticilikten çıkar” yapabiliyor; kurucu korunuyor ve rol değişikliği Firestore grup belgesi üzerinden canlı senkron.
+
+
+### V67 cihaz testi — Üret yazı klavyesi + müzik kataloğu — 2026-09-27 11:05
+
+- V66 gerçek cihaz testinde Üret > Yazı ekle ekranında klavye açıkken **BOTTOM OVERFLOWED BY 16 PIXELS** görüldü.
+- Yazı düzenleyici klavye insetine duyarlı, kaydırılabilir yapıya geçirildi; alt aksiyonlar Wrap ile dar yükseklik/genişlikte taşmayacak.
+- V66 Müzik ekle ekranı gerçek cihazda **Müzik kataloğu şu anda yüklenemedi** hatası verdi.
+- Katalog hatası permission-denied / unavailable olarak ayrıştırıldı; yanıltıcı genel bağlantı mesajı kaldırıldı.
+- Müzik seçici NgelX beyaz Üret şablonuyla uyumlu hale getirildi.
+- music_catalog okuma kuralının üretim Firebase projesine yayınlanması için ayrı V67 Firestore rules deploy workflow'u eklendi.
+- Sürüm: **1.0.67+286**.
