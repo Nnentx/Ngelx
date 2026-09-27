@@ -972,3 +972,22 @@
 - Video alanının boş yerine dokununca yazı seçimi kapanıyor; metin alanına dokununca katman yeniden seçiliyor.
 - Dönüşüm değerleri Bitti ile mevcut overlayX/Y/Scale/Rotation metadata akışında korunuyor.
 - Sürüm: **1.0.68+287**.
+
+
+### Video ses miksajı / müzik kataloğu notu — 2026-09-27
+
+- Video düzenleyicide müzik kataloğu şu anda üretim Firestore izni beklediği için çalışmıyor.
+- Video paylaşımına ses miksaj seçenekleri eklenecek:
+  - **Orijinal ses**: videonun kendi sesi aynen kullanılır.
+  - **Müzik + orijinal ses**: iki ses için ayrı seviye kontrolü olur.
+  - **Sadece müzik**: videonun orijinal sesi tamamen kapatılır.
+  - **Ses ekle / voiceover**: kullanıcı video üstüne kendi ses kaydını ekleyebilir.
+- Ayrı ses seviye sliderları:
+  - **Orijinal ses** 0–100
+  - **Müzik** 0–100
+  - **Seslendirme** 0–100
+- Yeni müzik/ses eklendiğinde seslerin birbirini bastırmaması için varsayılan otomatik dengeleme yapılacak.
+- Voiceover aktifken gerektiğinde arka plan müziği/orijinal ses otomatik kısılacak (ducking).
+- Önizlemede duyulan miks ile yayınlanan videodaki miks aynı olacak.
+- Kullanıcı isterse tek dokunuşla **Orijinal sese dön** seçeneğini kullanabilecek.
+- Bu iş video editör WORK paketinde müzik kataloğu backend izni açıldıktan sonra uçtan uca test edilecek.
