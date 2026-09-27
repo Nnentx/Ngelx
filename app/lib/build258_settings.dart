@@ -191,7 +191,7 @@ class _GelismisAyarlarV258PageState extends State<GelismisAyarlarV258Page>{
   Widget _sw(String a,String s,bool v,ValueChanged<bool> f,{bool enabled=true})=>SwitchListTile(contentPadding:const EdgeInsets.symmetric(horizontal:20,vertical:5),title:Text(a,style:const TextStyle(fontWeight:FontWeight.w700)),subtitle:Text(s),value:v,onChanged:enabled?f:null,activeTrackColor:mavi);
   Widget _h(String x)=>Padding(padding:const EdgeInsets.fromLTRB(20,18,20,5),child:Text(x,style:const TextStyle(color:Colors.black54,fontWeight:FontWeight.w900)));
   List<Widget> _izin(String alan,String secili,ValueChanged<String> f)=>const [('all','Herkes'),('following','Takip ettiklerim'),('friends','Arkadaşlar'),('none','Kimse')].map((e)=>RadioListTile<String>(value:e.$1,groupValue:secili,title:Text(e.$2),onChanged:(v){if(v!=null){f(v);}})).toList();
-  String get _baslik=>switch(widget.tur){'mesaj'=>'Mesaj ve grup izinleri','icerik'=>'İçerik ve etkileşim','reels'=>'Reels ve canlı','bildirim'=>'Bildirim tercihleri','guvenlik'=>'Güvenlik uyarıları','veri'=>'Veri ve depolama','dil'=>'Dil ve çeviri','erisim'=>'Görünüm ve erişilebilirlik',_=>'Ayarlar'};
+  String get _baslik=>switch(widget.tur){'mesaj'=>'Mesaj ve grup izinleri','icerik'=>'İçerik ve etkileşim','reels'=>'Reels ve canlı','bildirim'=>'Bildirim tercihleri','guvenlik'=>'Güvenlik uyarıları','veri'=>'Veri ve depolama','dil'=>t('languageTranslate'),'erisim'=>'Görünüm ve erişilebilirlik',_=>'Ayarlar'};
 
   Future<void> _dilSec()async{
     final sec=await showModalBottomSheet<String>(context:context,backgroundColor:Colors.white,showDragHandle:true,builder:(c)=>SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:dilAdlari.entries.map((e)=>ListTile(leading:uygulamaDili.value==e.key?const Icon(Icons.check_circle,color:mor):const Icon(Icons.language),title:Text(e.value),onTap:()=>Navigator.pop(c,e.key))).toList())));
@@ -264,9 +264,9 @@ class _GelismisAyarlarV258PageState extends State<GelismisAyarlarV258Page>{
         ];
       case 'dil':
         return [
-          ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:20),leading:const Icon(Icons.language,color:mor),title:const Text('Uygulama dili',style:TextStyle(fontWeight:FontWeight.w800)),subtitle:Text(dilAdlari[uygulamaDili.value]??uygulamaDili.value),trailing:const Icon(Icons.chevron_right),onTap:_dilSec),
-          _sw('Otomatik gönderi çevirisi','Farklı dillerdeki metinler için çeviri seçeneğini göster',otomatikCeviri,(v){setState(()=>otomatikCeviri=v);_bool('autoTranslate',v);}),
-          _h('Varsayılan altyazı dili'),
+          ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:20),leading:const Icon(Icons.language,color:mor),title:Text(t('appLanguage'),style:const TextStyle(fontWeight:FontWeight.w800)),subtitle:Text(dilAdlari[uygulamaDili.value]??uygulamaDili.value),trailing:const Icon(Icons.chevron_right),onTap:_dilSec),
+          _sw(t('autoPostTranslation'),t('autoPostTranslationSub'),otomatikCeviri,(v){setState(()=>otomatikCeviri=v);_bool('autoTranslate',v);}),
+          _h(t('defaultCaptionLanguage')),
           for(final e in dilAdlari.entries)RadioListTile<String>(value:e.key,groupValue:altyazi,title:Text(e.value),onChanged:(v){if(v!=null){setState(()=>altyazi=v);_str('captionLanguage',v);}}),
         ];
       case 'erisim':
