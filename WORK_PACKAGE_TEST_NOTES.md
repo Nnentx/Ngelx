@@ -811,3 +811,12 @@
 - İlk V65 QA koşusu başarılı: sözleşme, V61–V65 regresyon kontrolleri, Flutter analyze, Flutter test, Firestore emulator testi ve debug APK build geçti.
 - Gerçek R2 story-video E2E testi başarılı: `kind=stories`, `video/mp4` presign → PUT → geri okuma iki medya worker alanında geçti.
 - Son sürüm/build numarası ve müzik kataloğu Firestore testleri için final QA koşusu ayrıca çalıştırılıyor.
+
+### V65 cihaz testi — Üret / Yazı ekle çökmesi — 2026-09-27 07:35
+
+- Üret > fotoğraf seç > **Yazı ekle** akışında metin giriş penceresi açılıyor.
+- Kullanıcı metin yazdıktan sonra işlem sırasında uygulama Flutter kırmızı hata ekranına düşebiliyor.
+- Görülen assertion: `package:flutter/src/widgets/framework.dart` — `Failed assertion: line 6281 pos 12: '_dependents.isEmpty': is not true.`
+- Bu hata özellikle medya üzerine yazı düzenleme diyaloğunun kapanışı / widget lifecycle temizliği sırasında oluşuyor gibi görünüyor; final düzeltmede dialog controller/dispose ve context lifecycle güvenliği kontrol edilecek.
+- Aynı ekranda seçilen dosya adının açık arka planda çok soluk/beyaz görünmesi de görsel okunabilirlik problemi olarak not edildi.
+- Üret foto düzenleme araçları (90° döndür, kare kırp, filtreler, Yazı ekle, Müzik ekle) görünür durumda; çökme nedeniyle bu akış uçtan uca yeniden test edilecek.
