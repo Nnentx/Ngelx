@@ -1,4 +1,4 @@
-name: NgelX V66 Consolidated WORK QA
+name: NgelX V67 Consolidated WORK QA
 
 on:
   push:
@@ -16,7 +16,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: ngelx-v66-consolidated-work-qa
+  group: ngelx-v67-consolidated-work-qa
   cancel-in-progress: true
 
 jobs:
@@ -55,6 +55,9 @@ jobs:
 
       - name: V66 test edilen WORK kontrolleri
         run: python3 tools/verify_v66_work.py
+
+      - name: V67 cihaz testi düzeltmelerini dogrula
+        run: python3 tools/verify_v67_work.py
 
       - name: R2 Worker JavaScript kontrolu
         run: node --check cloudflare/worker/src/index.js
@@ -109,7 +112,7 @@ jobs:
       - name: APK yukle
         uses: actions/upload-artifact@v4
         with:
-          name: NgelX-V66-CONSOLIDATED-WORK-APK
+          name: NgelX-V67-CONSOLIDATED-WORK-APK
           path: app/build/app/outputs/flutter-apk/app-debug.apk
           if-no-files-found: error
           retention-days: 14
