@@ -44,6 +44,18 @@ class _NgelXMuzikSecPageState extends State<NgelXMuzikSecPage> {
         durum == 'public_domain';
   }
 
+  String _katalogHataMetni(Object? e) {
+    if (e is FirebaseException) {
+      if (e.code == 'permission-denied') {
+        return 'Müzik kataloğu sunucu izni bekliyor. Tekrar dene.';
+      }
+      if (e.code == 'unavailable') {
+        return 'Bağlantı kurulamadı. İnternetini kontrol edip tekrar dene.';
+      }
+    }
+    return 'Müzik kataloğuna ulaşılamadı. Birkaç saniye sonra tekrar dene.';
+  }
+
   Future<void> _onizle(String id, String url) async {
     if (url.isEmpty) return;
     try {
@@ -108,10 +120,10 @@ class _NgelXMuzikSecPageState extends State<NgelXMuzikSecPage> {
     return Theme(
       data: ThemeData.light(),
       child: Scaffold(
-        backgroundColor: const Color(0xFF202124),
+        backgroundColor: Colors.white,
         appBar: AppBar(
-          backgroundColor: const Color(0xFF202124),
-          foregroundColor: Colors.white,
+          backgroundColor: Colors.white,
+          foregroundColor: Colors.black87,
           title: const Text('Müzik ekle', style: TextStyle(fontWeight: FontWeight.w900)),
           surfaceTintColor: Colors.transparent,
         ),
@@ -124,11 +136,11 @@ class _NgelXMuzikSecPageState extends State<NgelXMuzikSecPage> {
                 child: TextField(
                   controller: ara,
                   onChanged: (v) => setState(() => sorgu = v.trim().toLowerCase()),
-                  style: const TextStyle(color: Colors.white),
+                  style: const TextStyle(color: Colors.black87),
                   decoration: InputDecoration(
                     hintText: 'Müziklerde ara',
-                    hintStyle: const TextStyle(color: Colors.white54),
-                    prefixIcon: const Icon(Icons.search_rounded, color: Colors.white54),
+                    hintStyle: const TextStyle(color: Colors.black45),
+                    prefixIcon: const Icon(Icons.search_rounded, color: Colors.black45),
                     suffixIcon: sorgu.isEmpty
                         ? null
                         : IconButton(
@@ -136,10 +148,10 @@ class _NgelXMuzikSecPageState extends State<NgelXMuzikSecPage> {
                               ara.clear();
                               setState(() => sorgu = '');
                             },
-                            icon: const Icon(Icons.close_rounded, color: Colors.white54),
+                            icon: const Icon(Icons.close_rounded, color: Colors.black45),
                           ),
                     filled: true,
-                    fillColor: const Color(0xFF343538),
+                    fillColor: const Color(0xFFF3F4F7),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(28),
                       borderSide: BorderSide.none,
@@ -173,18 +185,18 @@ class _NgelXMuzikSecPageState extends State<NgelXMuzikSecPage> {
                         child: Padding(
                           padding: const EdgeInsets.all(24),
                           child: Column(mainAxisSize:MainAxisSize.min,children:[
-                            const Icon(Icons.cloud_off_rounded,color:Colors.white54,size:52),
+                            const Icon(Icons.cloud_off_rounded,color:Colors.black45,size:52),
                             const SizedBox(height:10),
                             const Text(
                               'Müzik kataloğu şu anda yüklenemedi.',
                               textAlign: TextAlign.center,
-                              style: TextStyle(color: Colors.white70,fontWeight:FontWeight.w800),
+                              style: TextStyle(color: Colors.black54,fontWeight:FontWeight.w800),
                             ),
                             const SizedBox(height:6),
-                            const Text(
-                              'Bağlantıyı kontrol edip tekrar dene.',
+                            Text(
+                              _katalogHataMetni(snap.error),
                               textAlign:TextAlign.center,
-                              style:TextStyle(color:Colors.white38,fontSize:12),
+                              style:const TextStyle(color:Colors.black45,fontSize:12),
                             ),
                             const SizedBox(height:12),
                             OutlinedButton.icon(
@@ -230,18 +242,18 @@ class _NgelXMuzikSecPageState extends State<NgelXMuzikSecPage> {
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.library_music_outlined, color: Colors.white38, size: 54),
+                              Icon(Icons.library_music_outlined, color: Colors.black38, size: 54),
                               SizedBox(height: 10),
                               Text(
                                 'Bu bölümde kullanım hakkı uygun müzik bulunamadı.',
                                 textAlign: TextAlign.center,
-                                style: TextStyle(color: Colors.white60, fontWeight: FontWeight.w700),
+                                style: TextStyle(color: Colors.black54, fontWeight: FontWeight.w700),
                               ),
                               SizedBox(height: 6),
                               Text(
                                 'Yalnızca lisanslı, izinli veya telifsiz parçalar gösterilir.',
                                 textAlign: TextAlign.center,
-                                style: TextStyle(color: Colors.white38, fontSize: 12),
+                                style: TextStyle(color: Colors.black38, fontSize: 12),
                               ),
                             ],
                           ),
@@ -290,8 +302,8 @@ class _NgelXMuzikSecPageState extends State<NgelXMuzikSecPage> {
                                         ? Container(
                                             width: 58,
                                             height: 58,
-                                            color: const Color(0xFF3B3C40),
-                                            child: const Icon(Icons.music_note_rounded, color: Colors.white70),
+                                            color: const Color(0xFFF1EDFF),
+                                            child: const Icon(Icons.music_note_rounded, color: Colors.black54),
                                           )
                                         : CachedNetworkImage(
                                             imageUrl: kapak,
@@ -301,8 +313,8 @@ class _NgelXMuzikSecPageState extends State<NgelXMuzikSecPage> {
                                             errorWidget: (_, __, ___) => Container(
                                               width: 58,
                                               height: 58,
-                                              color: const Color(0xFF3B3C40),
-                                              child: const Icon(Icons.music_note_rounded, color: Colors.white70),
+                                              color: const Color(0xFFF1EDFF),
+                                              child: const Icon(Icons.music_note_rounded, color: Colors.black54),
                                             ),
                                           ),
                                   ),
@@ -315,14 +327,14 @@ class _NgelXMuzikSecPageState extends State<NgelXMuzikSecPage> {
                                           baslik,
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
-                                          style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w900),
+                                          style: const TextStyle(color: Colors.black87, fontSize: 16, fontWeight: FontWeight.w900),
                                         ),
                                         const SizedBox(height: 3),
                                         Text(
                                           sanatci,
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
-                                          style: const TextStyle(color: Colors.white70, fontSize: 13),
+                                          style: const TextStyle(color: Colors.black54, fontSize: 13),
                                         ),
                                       ],
                                     ),
@@ -330,14 +342,14 @@ class _NgelXMuzikSecPageState extends State<NgelXMuzikSecPage> {
                                   IconButton(
                                     tooltip: kayitli ? 'Kaydedilenlerden çıkar' : 'Kaydet',
                                     onPressed: () => unawaited(_kaydet(d.id)),
-                                    icon: Icon(kayitli ? Icons.bookmark_rounded : Icons.bookmark_border_rounded, color: Colors.white70),
+                                    icon: Icon(kayitli ? Icons.bookmark_rounded : Icons.bookmark_border_rounded, color: Colors.black54),
                                   ),
                                   IconButton(
                                     tooltip: oynuyor ? 'Duraklat' : 'Önizle',
                                     onPressed: url.isEmpty ? null : () => unawaited(_onizle(d.id, url)),
                                     icon: CircleAvatar(
-                                      backgroundColor: const Color(0xFF3B3C40),
-                                      child: Icon(oynuyor ? Icons.pause_rounded : Icons.play_arrow_rounded, color: Colors.white),
+                                      backgroundColor: const Color(0xFFF1EDFF),
+                                      child: Icon(oynuyor ? Icons.pause_rounded : Icons.play_arrow_rounded, color: mor),
                                     ),
                                   ),
                                 ],
@@ -368,13 +380,13 @@ class _NgelXMuzikSecPageState extends State<NgelXMuzikSecPage> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 10),
             decoration: BoxDecoration(
-              color: secili ? const Color(0xFF17365A) : Colors.transparent,
+              color: secili ? const Color(0xFFEFE8FF) : Colors.transparent,
               borderRadius: BorderRadius.circular(18),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(ikon, size: 17, color: secili ? const Color(0xFF78B7FF) : Colors.white70),
+                Icon(ikon, size: 17, color: secili ? mor : Colors.black54),
                 const SizedBox(width: 5),
                 Flexible(
                   child: Text(
@@ -382,7 +394,7 @@ class _NgelXMuzikSecPageState extends State<NgelXMuzikSecPage> {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      color: secili ? const Color(0xFF78B7FF) : Colors.white,
+                      color: secili ? mor : Colors.black87,
                       fontWeight: secili ? FontWeight.w900 : FontWeight.w700,
                       fontSize: 12,
                     ),
@@ -402,99 +414,49 @@ class NgelXMedyaYaziAyariSheet extends StatefulWidget{
   final int renk;
   final int arkaPlanRenk;
   final double boyut;
-  const NgelXMedyaYaziAyariSheet({
-    super.key,
-    this.yazi='',
-    this.renk=0xFFFFFFFF,
-    this.arkaPlanRenk=0x99000000,
-    this.boyut=22,
-  });
+  const NgelXMedyaYaziAyariSheet({super.key,this.yazi='',this.renk=0xFFFFFFFF,this.arkaPlanRenk=0x99000000,this.boyut=22});
   @override State<NgelXMedyaYaziAyariSheet> createState()=>_NgelXMedyaYaziAyariSheetState();
 }
-
 class _NgelXMedyaYaziAyariSheetState extends State<NgelXMedyaYaziAyariSheet>{
   late final TextEditingController kontrol;
-  late int renk;
-  late int arkaPlanRenk;
+  late int renk,arkaPlanRenk;
   late double boyut;
-  static const renkler=<int>[
-    0xFFFFFFFF,0xFF111111,0xFFFF3B30,0xFFFFD60A,0xFF0A84FF,
-    0xFF30D158,0xFFBF5AF2,0xFF64D2FF,0xFFFF9F0A,0xFFFF2D55,
-  ];
-
-  @override void initState(){
-    super.initState();
-    kontrol=TextEditingController(text:widget.yazi);
-    renk=widget.renk;
-    arkaPlanRenk=widget.arkaPlanRenk;
-    boyut=widget.boyut.clamp(14,54).toDouble();
-  }
+  static const renkler=<int>[0xFFFFFFFF,0xFF111111,0xFFFF3B30,0xFFFFD60A,0xFF0A84FF,0xFF30D158,0xFFBF5AF2,0xFF64D2FF,0xFFFF9F0A,0xFFFF2D55];
+  @override void initState(){super.initState();kontrol=TextEditingController(text:widget.yazi);renk=widget.renk;arkaPlanRenk=widget.arkaPlanRenk;boyut=widget.boyut.clamp(14,54).toDouble();}
   @override void dispose(){kontrol.dispose();super.dispose();}
-
   @override Widget build(BuildContext context){
+    final klavye=MediaQuery.viewInsetsOf(context).bottom;
     return Theme(
       data:ThemeData.light(),
       child:SafeArea(
         top:false,
-        child:Padding(
-          padding:EdgeInsets.fromLTRB(18,16,18,MediaQuery.viewInsetsOf(context).bottom+18),
+        child:SingleChildScrollView(
+          keyboardDismissBehavior:ScrollViewKeyboardDismissBehavior.onDrag,
+          padding:EdgeInsets.fromLTRB(18,16,18,18+klavye),
           child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
             const Text('Yazıyı düzenle',style:TextStyle(fontSize:21,fontWeight:FontWeight.w900)),
             const SizedBox(height:12),
             TextField(
-              controller:kontrol,autofocus:true,maxLength:120,maxLines:3,
+              controller:kontrol,autofocus:true,maxLength:120,minLines:2,maxLines:3,
+              scrollPadding:EdgeInsets.only(bottom:klavye+140),
               style:TextStyle(color:Color(renk),fontSize:boyut,fontWeight:FontWeight.w800),
-              decoration:InputDecoration(
-                hintText:'Yazını ekle',
-                filled:true,fillColor:const Color(0xFFF3F4F7),
-                border:OutlineInputBorder(borderRadius:BorderRadius.circular(18),borderSide:BorderSide.none),
-              ),
+              decoration:InputDecoration(hintText:'Yazını ekle',filled:true,fillColor:const Color(0xFFF3F4F7),border:OutlineInputBorder(borderRadius:BorderRadius.circular(18),borderSide:BorderSide.none)),
             ),
             const SizedBox(height:6),
             const Text('Yazı rengi',style:TextStyle(fontWeight:FontWeight.w800)),
             const SizedBox(height:8),
             Wrap(spacing:9,runSpacing:9,children:renkler.map((c)=>InkWell(
-              onTap:()=>setState(()=>renk=c),
-              borderRadius:BorderRadius.circular(24),
-              child:Container(
-                width:34,height:34,
-                decoration:BoxDecoration(
-                  color:Color(c),shape:BoxShape.circle,
-                  border:Border.all(color:renk==c?mor:Colors.black12,width:renk==c?3:1),
-                ),
-                child:renk==c?Icon(Icons.check_rounded,color:c==0xFFFFFFFF?Colors.black:Colors.white,size:19):null,
-              ),
+              onTap:()=>setState(()=>renk=c),borderRadius:BorderRadius.circular(24),
+              child:Container(width:34,height:34,decoration:BoxDecoration(color:Color(c),shape:BoxShape.circle,border:Border.all(color:renk==c?mor:Colors.black12,width:renk==c?3:1)),child:renk==c?Icon(Icons.check_rounded,color:c==0xFFFFFFFF?Colors.black:Colors.white,size:19):null),
             )).toList()),
             const SizedBox(height:12),
-            Row(children:[
-              const Expanded(child:Text('Yazı arka planı',style:TextStyle(fontWeight:FontWeight.w800))),
-              Switch(
-                value:arkaPlanRenk!=0,
-                onChanged:(v)=>setState(()=>arkaPlanRenk=v?0x99000000:0),
-              ),
-            ]),
-            Row(children:[
-              const Text('Boyut',style:TextStyle(fontWeight:FontWeight.w800)),
-              Expanded(child:Slider(
-                min:14,max:54,value:boyut,
-                onChanged:(v)=>setState(()=>boyut=v),
-              )),
-              SizedBox(width:42,child:Text(boyut.round().toString(),textAlign:TextAlign.right)),
-            ]),
+            Row(children:[const Expanded(child:Text('Yazı arka planı',style:TextStyle(fontWeight:FontWeight.w800))),Switch(value:arkaPlanRenk!=0,onChanged:(v)=>setState(()=>arkaPlanRenk=v?0x99000000:0))]),
+            Row(children:[const Text('Boyut',style:TextStyle(fontWeight:FontWeight.w800)),Expanded(child:Slider(min:14,max:54,value:boyut,onChanged:(v)=>setState(()=>boyut=v))),SizedBox(width:42,child:Text(boyut.round().toString(),textAlign:TextAlign.right))]),
             const SizedBox(height:6),
-            Row(children:[
+            Wrap(alignment:WrapAlignment.end,crossAxisAlignment:WrapCrossAlignment.center,spacing:8,runSpacing:8,children:[
               TextButton(onPressed:()=>Navigator.pop(context),child:const Text('Vazgeç')),
               TextButton(onPressed:()=>Navigator.pop(context,<String,dynamic>{'text':'','color':renk,'backgroundColor':arkaPlanRenk,'fontSize':boyut}),child:const Text('Temizle')),
-              const Spacer(),
-              FilledButton(
-                onPressed:()=>Navigator.pop(context,<String,dynamic>{
-                  'text':kontrol.text.trim(),
-                  'color':renk,
-                  'backgroundColor':arkaPlanRenk,
-                  'fontSize':boyut,
-                }),
-                child:const Text('Uygula'),
-              ),
+              FilledButton(onPressed:()=>Navigator.pop(context,<String,dynamic>{'text':kontrol.text.trim(),'color':renk,'backgroundColor':arkaPlanRenk,'fontSize':boyut}),child:const Text('Uygula')),
             ]),
           ]),
         ),
