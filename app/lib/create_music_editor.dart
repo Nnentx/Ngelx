@@ -469,6 +469,8 @@ class NgelXSuruklenebilirYaziKatmani extends StatefulWidget{
   final String yazi;
   final int renk,arkaPlanRenk;
   final double boyut,x,y,scale,rotation,canvasWidth,canvasHeight;
+  final bool secili;
+  final VoidCallback? onSelect,onEdit;
   final void Function(double x,double y,double scale,double rotation) onChanged;
   const NgelXSuruklenebilirYaziKatmani({
     super.key,
@@ -482,40 +484,72 @@ class NgelXSuruklenebilirYaziKatmani extends StatefulWidget{
     required this.rotation,
     required this.canvasWidth,
     required this.canvasHeight,
+    this.secili=false,
+    this.onSelect,
+    this.onEdit,
     required this.onChanged,
   });
   @override State<NgelXSuruklenebilirYaziKatmani> createState()=>_NgelXSuruklenebilirYaziKatmaniState();
 }
 
 class _NgelXSuruklenebilirYaziKatmaniState extends State<NgelXSuruklenebilirYaziKatmani>{
-  double basScale=1,basRotation=0;
+  double basScale=1,basRotation=0,basX=0,basY=0;
+  Offset basFocal=Offset.zero;
+
+  void _basla(ScaleStartDetails d){
+    basScale=widget.scale;
+    basRotation=widget.rotation;
+    basX=widget.x;
+    basY=widget.y;
+    basFocal=d.focalPoint;
+    widget.onSelect?.call();
+  }
+
+  void _guncelle(ScaleUpdateDetails d){
+    final fark=d.focalPoint-basFocal;
+    final yarimW=math.max(1.0,widget.canvasWidth/2);
+    final yarimH=math.max(1.0,widget.canvasHeight/2);
+    final ns=(basScale*d.scale).clamp(.45,3.2).toDouble();
+    final nr=basRotation+d.rotation;
+    // Büyük metinlerde biraz daha güvenli sınır kullanarak katmanın tamamen
+    // ekran dışına kaçmasını engelle.
+    final guvenliX=(.90-math.min(.28,(ns-1).abs()*.08)).clamp(.58,.90).toDouble();
+    final guvenliY=(.90-math.min(.24,(ns-1).abs()*.07)).clamp(.62,.90).toDouble();
+    final nx=(basX+fark.dx/yarimW).clamp(-guvenliX,guvenliX).toDouble();
+    final ny=(basY+fark.dy/yarimH).clamp(-guvenliY,guvenliY).toDouble();
+    widget.onChanged(nx,ny,ns,nr);
+  }
+
   @override Widget build(BuildContext context){
     if(widget.yazi.trim().isEmpty)return const SizedBox.shrink();
     return Align(
-      alignment:Alignment(widget.x.clamp(-.95,.95).toDouble(),widget.y.clamp(-.95,.95).toDouble()),
+      alignment:Alignment(widget.x.clamp(-.90,.90).toDouble(),widget.y.clamp(-.90,.90).toDouble()),
       child:Transform.rotate(
         angle:widget.rotation,
         child:Transform.scale(
           scale:widget.scale.clamp(.45,3.2).toDouble(),
           child:GestureDetector(
-            behavior:HitTestBehavior.opaque,
-            onScaleStart:(_){basScale=widget.scale;basRotation=widget.rotation;},
-            onScaleUpdate:(d){
-              final nx=(widget.x+d.focalPointDelta.dx/math.max(1,widget.canvasWidth/2)).clamp(-.95,.95).toDouble();
-              final ny=(widget.y+d.focalPointDelta.dy/math.max(1,widget.canvasHeight/2)).clamp(-.95,.95).toDouble();
-              final ns=(basScale*d.scale).clamp(.45,3.2).toDouble();
-              final nr=basRotation+d.rotation;
-              widget.onChanged(nx,ny,ns,nr);
-            },
-            child:Container(
+            behavior:HitTestBehavior.translucent,
+            onTap:widget.onSelect,
+            onDoubleTap:widget.onEdit,
+            onScaleStart:_basla,
+            onScaleUpdate:_guncelle,
+            child:AnimatedContainer(
+              duration:const Duration(milliseconds:120),
+              constraints:BoxConstraints(maxWidth:math.max(90,widget.canvasWidth*.74)),
               padding:const EdgeInsets.symmetric(horizontal:12,vertical:7),
               decoration:BoxDecoration(
                 color:widget.arkaPlanRenk==0?Colors.transparent:Color(widget.arkaPlanRenk),
                 borderRadius:BorderRadius.circular(12),
+                border:widget.secili?Border.all(color:const Color(0xFFB99BFF),width:1.8):null,
+                boxShadow:widget.secili
+                  ?const [BoxShadow(color:Color(0x663F22A8),blurRadius:10,spreadRadius:1)]
+                  :null,
               ),
               child:Text(
                 widget.yazi,
                 textAlign:TextAlign.center,
+                softWrap:true,
                 style:TextStyle(
                   color:Color(widget.renk),
                   fontSize:widget.boyut,
@@ -564,6 +598,7 @@ class _NgelXVideoDuzenlemePageState extends State<NgelXVideoDuzenlemePage> {
   bool hazir = false;
   bool oynuyor = false;
   bool trimOncesiOynuyordu=false;
+  bool yaziSecili=false;
   double bas = 0;
   double son = 1;
   double toplam = 1;
@@ -643,6 +678,78 @@ class _NgelXVideoDuzenlemePageState extends State<NgelXVideoDuzenlemePage> {
     });
   }
 
+  Future<void> _yaziKatmaniniDuzenle() async{
+    FocusManager.instance.primaryFocus?.unfocus();
+    final sonuc=await showModalBottomSheet<Map<String,dynamic>>(
+      context:context,
+      isScrollControlled:true,
+      useSafeArea:true,
+      backgroundColor:Colors.white,
+      showDragHandle:true,
+      builder:(_)=>NgelXMedyaYaziAyariSheet(
+        yazi:yazi.text.trim(),
+        renk:yaziRenk,
+        arkaPlanRenk:yaziArkaPlanRenk,
+        boyut:yaziBoyut,
+      ),
+    );
+    if(!mounted||sonuc==null)return;
+    yazi.text=(sonuc['text']??'').toString();
+    setState((){
+      yaziRenk=(sonuc['color'] as num?)?.toInt()??yaziRenk;
+      yaziArkaPlanRenk=(sonuc['backgroundColor'] as num?)?.toInt()??yaziArkaPlanRenk;
+      yaziBoyut=(sonuc['fontSize'] as num?)?.toDouble()??yaziBoyut;
+      yaziSecili=yazi.text.trim().isNotEmpty;
+    });
+  }
+
+  void _yaziOrtala(){
+    if(yazi.text.trim().isEmpty)return;
+    setState((){
+      yaziX=0;
+      yaziY=0;
+      yaziSecili=true;
+    });
+  }
+
+  void _yaziSifirla(){
+    if(yazi.text.trim().isEmpty)return;
+    setState((){
+      yaziX=0;
+      yaziY=0;
+      yaziScale=1;
+      yaziRotation=0;
+      yaziSecili=true;
+    });
+  }
+
+  void _yaziSil(){
+    yazi.clear();
+    setState((){
+      yaziX=0;
+      yaziY=0;
+      yaziScale=1;
+      yaziRotation=0;
+      yaziSecili=false;
+    });
+  }
+
+  void _yaziOlcekle(double fark){
+    if(yazi.text.trim().isEmpty)return;
+    setState((){
+      yaziScale=(yaziScale+fark).clamp(.45,3.2).toDouble();
+      yaziSecili=true;
+    });
+  }
+
+  void _yaziDondur(){
+    if(yazi.text.trim().isEmpty)return;
+    setState((){
+      yaziRotation+=math.pi/12;
+      yaziSecili=true;
+    });
+  }
+
   @override
   void dispose() {
     seekTimer?.cancel();
@@ -691,13 +798,22 @@ class _NgelXVideoDuzenlemePageState extends State<NgelXVideoDuzenlemePage> {
                       child: LayoutBuilder(builder:(_,c)=>Stack(
                         fit: StackFit.expand,
                         children: [
-                          VideoPlayer(kontrol),
+                          GestureDetector(
+                            behavior:HitTestBehavior.opaque,
+                            onTap:()=>setState(()=>yaziSecili=false),
+                            child:VideoPlayer(kontrol),
+                          ),
                           if (yazi.text.trim().isNotEmpty)
                             NgelXSuruklenebilirYaziKatmani(
                               yazi:yazi.text.trim(),renk:yaziRenk,arkaPlanRenk:yaziArkaPlanRenk,boyut:yaziBoyut,
                               x:yaziX,y:yaziY,scale:yaziScale,rotation:yaziRotation,
                               canvasWidth:c.maxWidth,canvasHeight:c.maxHeight,
-                              onChanged:(x,y,s,r)=>setState((){yaziX=x;yaziY=y;yaziScale=s;yaziRotation=r;}),
+                              secili:yaziSecili,
+                              onSelect:()=>setState(()=>yaziSecili=true),
+                              onEdit:()=>unawaited(_yaziKatmaniniDuzenle()),
+                              onChanged:(x,y,s,r)=>setState((){
+                                yaziX=x;yaziY=y;yaziScale=s;yaziRotation=r;yaziSecili=true;
+                              }),
                             ),
                           Positioned(
                             top:12,right:12,
@@ -711,6 +827,60 @@ class _NgelXVideoDuzenlemePageState extends State<NgelXVideoDuzenlemePage> {
                         ],
                       )),
                     ),
+                    if(yazi.text.trim().isNotEmpty&&yaziSecili)...[
+                      const SizedBox(height:10),
+                      Container(
+                        padding:const EdgeInsets.symmetric(horizontal:8,vertical:7),
+                        decoration:BoxDecoration(
+                          color:const Color(0xFF17151D),
+                          borderRadius:BorderRadius.circular(16),
+                          border:Border.all(color:const Color(0xFF4B3A68)),
+                        ),
+                        child:Wrap(
+                          alignment:WrapAlignment.center,
+                          crossAxisAlignment:WrapCrossAlignment.center,
+                          spacing:2,
+                          runSpacing:4,
+                          children:[
+                            IconButton(
+                              tooltip:'Küçült',
+                              onPressed:()=>_yaziOlcekle(-.12),
+                              icon:const Icon(Icons.remove_circle_outline_rounded),
+                            ),
+                            IconButton(
+                              tooltip:'Büyüt',
+                              onPressed:()=>_yaziOlcekle(.12),
+                              icon:const Icon(Icons.add_circle_outline_rounded),
+                            ),
+                            IconButton(
+                              tooltip:'Döndür',
+                              onPressed:_yaziDondur,
+                              icon:const Icon(Icons.rotate_right_rounded),
+                            ),
+                            TextButton.icon(
+                              onPressed:_yaziOrtala,
+                              icon:const Icon(Icons.center_focus_strong_rounded,size:18),
+                              label:const Text('Ortala'),
+                            ),
+                            TextButton.icon(
+                              onPressed:()=>unawaited(_yaziKatmaniniDuzenle()),
+                              icon:const Icon(Icons.edit_rounded,size:18),
+                              label:const Text('Düzenle'),
+                            ),
+                            TextButton.icon(
+                              onPressed:_yaziSifirla,
+                              icon:const Icon(Icons.restart_alt_rounded,size:18),
+                              label:const Text('Sıfırla'),
+                            ),
+                            IconButton(
+                              tooltip:'Yazıyı sil',
+                              onPressed:_yaziSil,
+                              icon:const Icon(Icons.delete_outline_rounded,color:Colors.redAccent),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 16),
                     const Text('Kes / kırp',style:TextStyle(fontSize:17,fontWeight:FontWeight.w900)),
                     const SizedBox(height:4),
@@ -747,7 +917,8 @@ class _NgelXVideoDuzenlemePageState extends State<NgelXVideoDuzenlemePage> {
                     const SizedBox(height:10),
                     TextField(
                       controller:yazi,maxLength:120,
-                      onChanged:(_)=>setState((){}),
+                      onTap:()=>setState(()=>yaziSecili=true),
+                      onChanged:(_)=>setState(()=>yaziSecili=yazi.text.trim().isNotEmpty),
                       decoration:InputDecoration(
                         labelText:'Video üzerine yazı',
                         prefixIcon:const Icon(Icons.text_fields_rounded),
@@ -776,7 +947,7 @@ class _NgelXVideoDuzenlemePageState extends State<NgelXVideoDuzenlemePage> {
                       Expanded(child:Slider(min:14,max:54,value:yaziBoyut.clamp(14,54).toDouble(),onChanged:(v)=>setState(()=>yaziBoyut=v))),
                     ]),
                     const SizedBox(height:6),
-                    const Text('Yazının üzerine basıp sürükle. İki parmakla büyüt/küçült ve döndür.',style:TextStyle(color:Colors.white60,fontSize:12)),
+                    const Text('Yazıya dokun: seç • sürükle: taşı • iki parmak: büyüt/döndür • çift dokun: düzenle.',style:TextStyle(color:Colors.white60,fontSize:12)),
                   ],
                 )
               : const Center(child: CircularProgressIndicator(color: mavi)),
