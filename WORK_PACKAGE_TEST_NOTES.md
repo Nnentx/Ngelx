@@ -1008,3 +1008,14 @@
 - Fotoğraf alanı mümkün olduğunca temiz kalsın; kırpma, döndürme ve benzeri kontroller **görselin dışında ayrı kontrol alanında / alt panelde** açılsın.
 - Fotoğrafın üzerindeki doğrudan gesture alanı yalnızca gerekli içerik katmanları (örn. yazıyı seçme/taşıma/büyütme/döndürme) için kullanılsın.
 - Yardım balonları ve araç çubukları görseli kapatmayacak şekilde dışarı taşınacak veya kısa süre sonra otomatik gizlenecek.
+
+
+### Uygulama açılışı / oturum kapısı UX notu — 2026-09-27
+
+- Uygulama açılırken bazı denemelerde **"Hesabın hazırlanıyor"** ekranında bekleme/donma hissi oluşuyor ve ana ekrana geçiş gecikiyor.
+- Açılışta profil ve güvenlik bilgileri yüklenirken kullanıcıya uzun süre metinli tam ekran bekleme ekranı gösterilmesin.
+- **"Hesabın hazırlanıyor / Profil ve güvenlik bilgilerin kontrol ediliyor"** metinleri kaldırılacak veya daha sade bir açılış göstergesiyle değiştirilecek.
+- Hedef: oturum doğrulama ve profil fetch işlemlerini mümkün olduğunca arka planda ve paralel yürütmek; ana ekranı gereksiz yere bloklamamak.
+- Profil fetch için mevcut timeout ve yeniden deneme akışı gözden geçirilecek; yavaş bağlantıda uygulamanın donmuş gibi görünmesi engellenecek.
+- Gerekirse kısa süreli logo/loader gösterilecek; 1–2 saniyeyi aşan beklemede sade hata/yenileme akışı kullanılacak.
+- Uygulama kapanıp açılmadan kendi kendine toparlanmalı.
