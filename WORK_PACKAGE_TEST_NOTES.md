@@ -816,5 +816,12 @@ V65 trafik optimizasyonlari:
 - Cloudflare R2 medya endpointine HTTP byte-range (206 / Content-Range / Accept-Ranges) destegi eklendi; video oynatici tum dosyayi her istekte yeniden indirmek yerine gereken bayt araligini alabilecek.
 - `tools/verify_v65_media_traffic.py` ile yukaridaki trafik korumalari CI icinde otomatik dogrulaniyor.
 
+- Akis fotoğraf/yazı kartlarında ağ medyası artık yalnızca aktif kartta yükleniyor; PageView komşu kartları boşuna tam görsel indirmiyor.
+- Fotoğraf/yazı kartlarındaki müzik yalnızca aktif kartta hazırlanıyor ve çalınıyor.
+- Video kartlarında profil fotoğrafı, beğeni/kayıt kullanıcı durumu yalnızca kart aktif olduğunda okunuyor.
+- Akıştaki beğeni/yorum sayaçları artık likes/comments alt koleksiyonlarının tamamını indirmiyor; ana içerik belgesindeki likeCount/commentCount sayaçlarını kullanıyor.
+- Akış meta satırı pasif kartlarda Firestore dinleyicisi açmıyor ve yorum sayısı için comments alt koleksiyonunu indirmiyor.
+- Hikâye şeridi, profil hikâye açma, arşiv ve öne çıkanlar sorguları yalnızca type=story belgelerini hedefliyor; normal gönderiler hikâye işlemleri için boşuna okunmuyor.
+
 Calisma dali: `perf/media-traffic-v65`
 PR: #11 — V65: reduce unnecessary media traffic
