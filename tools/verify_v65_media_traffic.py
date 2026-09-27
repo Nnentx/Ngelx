@@ -9,8 +9,8 @@ worker = (root / "cloudflare/worker/src/index.js").read_text(encoding="utf-8")
 checks = {
     "Supabase Flutter bagimliligi kaldirilmis": "supabase_flutter:" not in pubspec,
     "Uygulama kaynak kodunda Supabase istemcisi yok": "supa.Supabase" not in main and ".supabase.co" not in main,
-    "Akis videosu sadece aktif kartta hazirlaniyor": "if (widget.aktif) unawaited(_videoyuHazirla());" in main,
-    "Akis sesi sadece aktif kartta hazirlaniyor": "Trafik tasarrufu: komsu akıs kartlarindaki sesi onceden indirme." in main and "if(widget.aktif)unawaited(_aktifSesiHazirla());" in main,
+    "Akis videosu sadece aktif kartta hazirlaniyor": bool(re.search(r"if\s*\(widget\.aktif\)\s*\{[\s\S]{0,220}unawaited\(_videoyuHazirla\(\)\)", main)),
+    "Akis sesi sadece aktif kartta hazirlaniyor": "Trafik tasarrufu: komsu akis kartlarinda medya ve kullanici durumunu onceden indirme." in main and bool(re.search(r"if\s*\(widget\.aktif\)[\s\S]{0,260}unawaited\(_aktifSesiHazirla\(\)\)", main)),
     "Komsu akis karti medya ve durum verisini onceden indirmiyor": "Trafik tasarrufu: komsu akis kartlarinda medya ve kullanici durumunu onceden indirme." in main and "widget.aktif\n              ?PageView.builder" in main,
     "Like ve yorum sayaclari alt koleksiyonlari indirmiyor": "stream: ref.collection('comments').snapshots()" not in main and "stream: ref.snapshots()" not in main and "final parent=ref.parent;" in main,
     "Akis meta bilgisi sadece aktif kartta dinleniyor": "required this.aktif" in main and "if (!aktif||icerikId.isEmpty) return const SizedBox.shrink();" in main,
