@@ -820,3 +820,12 @@
 - Bu hata özellikle medya üzerine yazı düzenleme diyaloğunun kapanışı / widget lifecycle temizliği sırasında oluşuyor gibi görünüyor; final düzeltmede dialog controller/dispose ve context lifecycle güvenliği kontrol edilecek.
 - Aynı ekranda seçilen dosya adının açık arka planda çok soluk/beyaz görünmesi de görsel okunabilirlik problemi olarak not edildi.
 - Üret foto düzenleme araçları (90° döndür, kare kırp, filtreler, Yazı ekle, Müzik ekle) görünür durumda; çökme nedeniyle bu akış uçtan uca yeniden test edilecek.
+
+### Grup üyeleri — üç nokta yönetici işlemleri — 2026-09-27
+
+- Üyeler ekranında her üyenin sağındaki **üç nokta** menüsü rol bazlı çalışmalı.
+- Seçilen kişi **yönetici ise** menüde **“Yöneticilikten çıkar”** seçeneği görünmeli.
+- Seçilen kişi normal üyeyse, yetkili kullanıcı için **“Yönetici yap”** seçeneği bulunmalı.
+- Kurucu için yanlışlıkla yöneticilik kaldırma yapılmamalı; **kurucu rolü korunmalı**.
+- Bu işlemler yalnızca gerekli yetkiye sahip kurucu/yönetici hesaplarda görünmeli.
+- Rol değişikliği grup içindeki tüm üyelerde **anlık senkron** görünmeli ve Üyeler ekranındaki “Kurucu / Yönetici / Grup üyesi” etiketi hemen güncellenmeli.
