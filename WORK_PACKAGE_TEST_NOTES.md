@@ -829,3 +829,13 @@
 - Kurucu için yanlışlıkla yöneticilik kaldırma yapılmamalı; **kurucu rolü korunmalı**.
 - Bu işlemler yalnızca gerekli yetkiye sahip kurucu/yönetici hesaplarda görünmeli.
 - Rol değişikliği grup içindeki tüm üyelerde **anlık senkron** görünmeli ve Üyeler ekranındaki “Kurucu / Yönetici / Grup üyesi” etiketi hemen güncellenmeli.
+
+### Profil — “Arkadaşsınız” butonu etkileşimli olsun — 2026-09-27 07:42
+
+- Başka kullanıcının profilinde gri **“Arkadaşsınız”** alanı şu anda tıklanmıyor.
+- Bu alan gerçek bir buton gibi çalışmalı.
+- Dokununca **“Arkadaşlıktan çıkarmak istiyor musun?”** benzeri bir onay penceresi açılmalı.
+- Onay seçenekleri: **Vazgeç / Arkadaşlıktan çıkar**.
+- Onaylanırsa iki hesaptaki arkadaşlık ilişkisi güvenli şekilde kaldırılmalı ve profil üzerindeki durum **anlık güncellenmeli**.
+- İşlem sonrası buton tekrar uygun duruma dönmeli: örneğin **“Arkadaşlık isteği gönder”**.
+- Yanlışlıkla tek dokunuşla arkadaş silinmemeli; mutlaka ikinci onay olmalı.
