@@ -20909,7 +20909,7 @@ class _ProfilPageState extends State<ProfilPage> {
                           fotoUrl:fotoUrl,
                           kullanici:kullanici,
                           radius:59,
-                          hikayeYoksaTikla:()=>unawaited(hikayeYukle()),
+                          hikayeYoksaTikla:fotografYukle,
                           uzunBas:fotografYukle,
                         ),
                         if(fotoYukleniyor)
