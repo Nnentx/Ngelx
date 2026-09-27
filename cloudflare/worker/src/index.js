@@ -208,10 +208,51 @@ export default {
     if (request.method === 'GET' && url.pathname === '/health') {
       try {
         await env.MEDIA.head('__ngelx_healthcheck__');
-        return json({ok: true, service: 'ngelx-r2-media', r2: true, directUpload: directR2Ready(env), protocol: MEDIA_PROTOCOL});
+        return json({ok: true, service: 'ngelx-r2-media', r2: true, ai: Boolean(env.AI), directUpload: directR2Ready(env), protocol: MEDIA_PROTOCOL});
       } catch (e) {
         return json({ok: false, service: 'ngelx-r2-media', r2: false, directUpload: directR2Ready(env), protocol: MEDIA_PROTOCOL, message: String(e?.message || e)}, 503);
       }
+    }
+
+
+    if (request.method === 'POST' && url.pathname === '/ai/translate') {
+      try { await verifyFirebaseIdToken(request, env); } catch (e) { return json({error:'unauthorized',message:String(e?.message||e)},401); }
+      if(!env.AI)return json({error:'ai_not_configured',message:'Çeviri servisi yapılandırılmamış.'},503);
+      let body;try{body=await request.json();}catch(_){return json({error:'invalid_json'},400);}
+      const text=String(body?.text||'').trim(),sourceLanguage=String(body?.sourceLanguage||'tr').trim().toLowerCase(),targetLanguage=String(body?.targetLanguage||'').trim().toLowerCase();
+      if(!text||text.length>6000||!targetLanguage)return json({error:'invalid_translation_request'},400);
+      if(sourceLanguage===targetLanguage)return json({ok:true,translatedText:text,sourceLanguage,targetLanguage});
+      try{
+        const result=await env.AI.run('@cf/meta/m2m100-1.2b',{text,source_lang:sourceLanguage,target_lang:targetLanguage});
+        const translatedText=String(result?.translated_text||result?.translatedText||result?.text||'').trim();
+        if(!translatedText)throw new Error('empty_translation');
+        return json({ok:true,translatedText,sourceLanguage,targetLanguage});
+      }catch(e){return json({error:'translation_failed',message:String(e?.message||e)},502);}
+    }
+
+    if (request.method === 'POST' && url.pathname === '/ai/captions') {
+      try { await verifyFirebaseIdToken(request, env); } catch (e) { return json({error:'unauthorized',message:String(e?.message||e)},401); }
+      if(!env.AI)return json({error:'ai_not_configured',message:'Altyazı servisi yapılandırılmamış.'},503);
+      let body;try{body=await request.json();}catch(_){return json({error:'invalid_json'},400);}
+      const mediaUrl=String(body?.mediaUrl||'').trim(),language=String(body?.language||'').trim().toLowerCase();
+      let target;try{target=new URL(mediaUrl);}catch(_){return json({error:'invalid_media_url'},400);}
+      if(target.protocol!=='https:')return json({error:'invalid_media_url'},400);
+      const allowedHost=target.hostname.endsWith('.workers.dev')||target.hostname.endsWith('.googleapis.com')||target.hostname.endsWith('.firebasestorage.app')||target.hostname.endsWith('.appspot.com');
+      if(!allowedHost)return json({error:'media_host_not_allowed'},400);
+      try{
+        const res=await fetch(target.toString(),{redirect:'follow'});
+        if(!res.ok)throw new Error('media_fetch_http_'+res.status);
+        const announced=Number(res.headers.get('content-length')||0);
+        if(announced>24*1024*1024)return json({error:'media_too_large_for_captioning',message:'Altyazı için video şu an en fazla 24 MB olabilir.'},413);
+        const bytes=new Uint8Array(await res.arrayBuffer());
+        if(!bytes.length)throw new Error('empty_media');
+        if(bytes.length>24*1024*1024)return json({error:'media_too_large_for_captioning',message:'Altyazı için video şu an en fazla 24 MB olabilir.'},413);
+        let binary='';for(let i=0;i<bytes.length;i+=0x8000)binary+=String.fromCharCode(...bytes.subarray(i,Math.min(i+0x8000,bytes.length)));
+        const result=await env.AI.run('@cf/openai/whisper-large-v3-turbo',{audio:btoa(binary),task:'transcribe',...(language?{language}:{}),vad_filter:true});
+        const text=String(result?.text||'').trim(),vtt=String(result?.vtt||'').trim();
+        if(!text)throw new Error('no_speech_detected');
+        return json({ok:true,text,vtt,language});
+      }catch(e){return json({error:'caption_failed',message:String(e?.message||e)},502);}
     }
 
     if (request.method === 'GET' && url.pathname.startsWith('/media/')) {
