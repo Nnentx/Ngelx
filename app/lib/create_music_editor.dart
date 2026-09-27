@@ -737,11 +737,12 @@ class _NgelXVideoDuzenlemePageState extends State<NgelXVideoDuzenlemePage> {
                               canvasWidth:c.maxWidth,canvasHeight:c.maxHeight,
                               onChanged:(x,y,s,r)=>setState((){yaziX=x;yaziY=y;yaziScale=s;yaziRotation=r;}),
                             ),
-                          Center(
-                            child: IconButton.filled(
-                              onPressed: _oynat,
-                              style: IconButton.styleFrom(backgroundColor: Colors.black54),
-                              icon: Icon(oynuyor ? Icons.pause_rounded : Icons.play_arrow_rounded, size: 34),
+                          Positioned(
+                            top:12,right:12,
+                            child:IconButton.filled(
+                              onPressed:_oynat,
+                              style:IconButton.styleFrom(backgroundColor:Colors.black54),
+                              icon:Icon(oynuyor?Icons.pause_rounded:Icons.play_arrow_rounded,size:30),
                             ),
                           ),
                           Positioned(left:0,right:0,bottom:0,child:VideoProgressIndicator(kontrol,allowScrubbing:true,padding:EdgeInsets.zero)),
