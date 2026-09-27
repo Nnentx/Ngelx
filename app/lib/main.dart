@@ -7802,7 +7802,7 @@ class MesajIstegiOnizlemePage extends StatelessWidget{
   final String chatId,digerUid,ad,foto,uid;
   const MesajIstegiOnizlemePage({super.key,required this.chatId,required this.digerUid,required this.ad,required this.foto,required this.uid});
   @override Widget build(BuildContext context)=>Theme(data:ThemeData.light(),child:Scaffold(backgroundColor:Colors.white,appBar:AppBar(title:Text(ad)),body:Column(children:[
-    Expanded(child:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(stream:FirebaseFirestore.instance.collection('chats').doc(chatId).collection('messages').orderBy('createdAt').limitToLast(100).snapshots(),builder:(_,s)=>ListView(padding:const EdgeInsets.all(16),children:(s.data?.docs??[]).map((d){final v=d.data(),metin=(v['text']??'').toString(),photo=v['type']=='photo';return Align(alignment:v['senderId']==uid?Alignment.centerRight:Alignment.centerLeft,child:Container(margin:const EdgeInsets.symmetric(vertical:4),padding:EdgeInsets.all(photo?4:12),constraints:const BoxConstraints(maxWidth:280),decoration:BoxDecoration(color:const Color(0xFFF0F1F4),borderRadius:BorderRadius.circular(18)),child:photo?ClipRRect(borderRadius:BorderRadius.circular(15),child:CachedNetworkImage(imageUrl:(v['mediaUrl']??'').toString(),fit:BoxFit.cover,errorWidget:(_,__,___)=>const SizedBox(height:120,child:Center(child:Icon(Icons.broken_image_outlined))))):Text(metin)));}).toList()))),
+    Expanded(child:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(stream:FirebaseFirestore.instance.collection('chats').doc(chatId).collection('messages').orderBy('createdAt').limitToLast(30).snapshots(),builder:(_,s)=>ListView(padding:const EdgeInsets.all(16),children:(s.data?.docs??[]).map((d){final v=d.data(),metin=(v['text']??'').toString(),photo=v['type']=='photo';return Align(alignment:v['senderId']==uid?Alignment.centerRight:Alignment.centerLeft,child:Container(margin:const EdgeInsets.symmetric(vertical:4),padding:EdgeInsets.all(photo?4:12),constraints:const BoxConstraints(maxWidth:280),decoration:BoxDecoration(color:const Color(0xFFF0F1F4),borderRadius:BorderRadius.circular(18)),child:photo?ClipRRect(borderRadius:BorderRadius.circular(15),child:CachedNetworkImage(imageUrl:(v['mediaUrl']??'').toString(),fit:BoxFit.cover,errorWidget:(_,__,___)=>const SizedBox(height:120,child:Center(child:Icon(Icons.broken_image_outlined))))):Text(metin)));}).toList()))),
     SafeArea(top:false,child:Padding(padding:const EdgeInsets.all(12),child:Row(children:[Expanded(child:OutlinedButton(onPressed:()async{await FirebaseFirestore.instance.collection('chats').doc(chatId).set({'requestRejected_$uid':true,'hiddenFor':FieldValue.arrayUnion([uid])},SetOptions(merge:true));if(context.mounted)Navigator.pop(context);},child:Text(t('reject')))),const SizedBox(width:8),Expanded(child:OutlinedButton(style:OutlinedButton.styleFrom(foregroundColor:Colors.red),onPressed:()async{await kullaniciyiEngelle(context,digerUid);await FirebaseFirestore.instance.collection('chats').doc(chatId).set({'requestRejected_$uid':true,'hiddenFor':FieldValue.arrayUnion([uid])},SetOptions(merge:true));if(context.mounted)Navigator.pop(context);},child:const Text('Engelle'))),const SizedBox(width:8),Expanded(child:FilledButton(onPressed:()async{await FirebaseFirestore.instance.collection('chats').doc(chatId).set({'requestAccepted_$uid':true},SetOptions(merge:true));if(context.mounted)Navigator.pushReplacement(context,MaterialPageRoute(builder:(_)=>SohbetPage(chatId:chatId,digerUid:digerUid,ad:ad,foto:foto)));},child:Text(t('accept'))))]))),
   ])));
 }
@@ -14723,7 +14723,12 @@ class _SohbetPageState extends State<SohbetPage> {
       if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(hazirlik.engel!)));
       return;
     }
-    final x=await ImagePicker().pickImage(source:kaynak,imageQuality:78);
+    final x=await ImagePicker().pickImage(
+      source:kaynak,
+      imageQuality:78,
+      maxWidth:1280,
+      maxHeight:1280,
+    );
     if(x==null)return;
     try{
       final yol='chats/${widget.chatId}/${DateTime.now().millisecondsSinceEpoch}.jpg';
@@ -17364,18 +17369,47 @@ class ProfilTanitimVideoKarti extends StatefulWidget{
 }
 class _ProfilTanitimVideoKartiState extends State<ProfilTanitimVideoKarti>{
   VideoPlayerController? c;
-  bool hazir=false;
-  @override void initState(){super.initState();_hazirla();}
+  bool hazir=false,yukleniyor=false,hata=false;
   Future<void> _hazirla()async{
-    if(widget.url.isEmpty)return;
+    if(widget.url.isEmpty||hazir||yukleniyor)return;
+    setState(()=>yukleniyor=true);
     final x=VideoPlayerController.networkUrl(Uri.parse(widget.url));
     c=x;
-    try{await x.initialize();if(mounted)setState(()=>hazir=true);}catch(_){}
+    try{
+      await x.initialize();
+      await x.setLooping(false);
+      if(!mounted)return;
+      setState(()=>hazir=true);
+      await x.play();
+    }catch(_){
+      if(mounted)setState(()=>hata=true);
+    }finally{
+      if(mounted)setState(()=>yukleniyor=false);
+    }
   }
   @override void dispose(){c?.dispose();super.dispose();}
   @override Widget build(BuildContext context){
     final x=c;
-    if(!hazir||x==null)return Container(height:150,decoration:BoxDecoration(color:const Color(0xFFF1F2F4),borderRadius:BorderRadius.circular(18)),child:const Center(child:CircularProgressIndicator(color:mor)));
+    if(hata)return Container(
+      height:150,
+      decoration:BoxDecoration(color:const Color(0xFFF1F2F4),borderRadius:BorderRadius.circular(18)),
+      child:const Center(child:Icon(Icons.videocam_off_rounded,color:Colors.black38,size:38)),
+    );
+    if(!hazir||x==null)return InkWell(
+      onTap:yukleniyor?null:()=>unawaited(_hazirla()),
+      borderRadius:BorderRadius.circular(18),
+      child:Container(
+        height:150,
+        decoration:BoxDecoration(color:const Color(0xFFF1F2F4),borderRadius:BorderRadius.circular(18)),
+        child:Center(child:yukleniyor
+          ?const CircularProgressIndicator(color:mor)
+          :const Column(mainAxisSize:MainAxisSize.min,children:[
+              Icon(Icons.play_circle_fill_rounded,color:mor,size:52),
+              SizedBox(height:7),
+              Text('Tanıtım videosunu oynat',style:TextStyle(color:Colors.black54,fontWeight:FontWeight.w800)),
+            ])),
+      ),
+    );
     return SizedBox(
       height:150,
       width:double.infinity,
@@ -19917,11 +19951,13 @@ class _ProfilPageState extends State<ProfilPage> {
     if(mounted)setState(()=>fotoYukleniyor=true);
     try{
       final yol='profile-intros/'+user.uid+'/'+DateTime.now().millisecondsSinceEpoch.toString()+'.mp4';
-      final url=await ngelxMedyaYukleBytes(
-        bytes: await dosya.readAsBytes(),
-        kind: 'profile-intros',
-        ext: 'mp4',
-        legacyPath: yol,
+      final boyut=await dosya.length();
+      if(boyut>35*1024*1024)throw Exception('Tanıtım videosu 35 MB’den küçük olmalı.');
+      final url=await ngelxMedyaYukleDosya(
+        dosya:dosya,
+        kind:'profile-intros',
+        ext:'mp4',
+        legacyPath:yol,
       );
       await FirebaseFirestore.instance.collection('users').doc(user.uid).set({'introVideoUrl':url,'updatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
       if(mounted){setState(()=>tanitimVideoUrl=url);ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Profil tanıtım videosu kaydedildi.')));}
