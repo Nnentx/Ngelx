@@ -9437,14 +9437,19 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
         ),
       )??false;
       if(ok){
-        final eskiMedia=(v['mediaUrl']??'').toString();
-        final eskiAudio=(v['audioUrl']??'').toString();
+        final eskiMedya=<String>{
+          (v['mediaUrl']??'').toString(),
+          (v['videoUrl']??'').toString(),
+          (v['audioUrl']??'').toString(),
+          (v['fileUrl']??'').toString(),
+        }..remove('');
         await d.reference.set({
           'deletedForEveryone':true,
           'deletedAt':FieldValue.serverTimestamp(),
           'deletedBy':uid,
           'text':'',
           'mediaUrl':'',
+          'videoUrl':'',
           'audioUrl':'',
           'fileUrl':'',
           'fileName':'',
@@ -9453,8 +9458,9 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
           'pinnedAt':null,
           'pinnedBy':null,
         },SetOptions(merge:true));
-        if(eskiMedia.isNotEmpty)unawaited(ngelxMedyaSil(eskiMedia).catchError((_){ }));
-        if(eskiAudio.isNotEmpty)unawaited(ngelxMedyaSil(eskiAudio).catchError((_){ }));
+        for(final url in eskiMedya){
+          unawaited(ngelxMedyaSil(url).catchError((_){ }));
+        }
       }
     }else if(sec=='report'){
       await sikayetEt(context,hedefTuru:'grup_mesaji',hedefId:'${widget.chatId}/${d.id}',hedefUid:v['senderId']?.toString());
@@ -15326,7 +15332,18 @@ class _SohbetPageState extends State<SohbetPage> {
           ),
         ),
       )??false;
-      if(ok)await d.reference.delete();
+      if(ok){
+        final eskiMedya=<String>{
+          (v['mediaUrl']??'').toString(),
+          (v['videoUrl']??'').toString(),
+          (v['audioUrl']??'').toString(),
+          (v['fileUrl']??'').toString(),
+        }..remove('');
+        await d.reference.delete();
+        for(final url in eskiMedya){
+          unawaited(ngelxMedyaSil(url).catchError((_){ }));
+        }
+      }
     }else if(fazla=='report'){
       if(mounted)await sikayetEt(context,hedefTuru:'mesaj',hedefId:widget.chatId+'/'+d.id,hedefUid:widget.digerUid);
     }else if(fazla=='edit'){
