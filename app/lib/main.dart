@@ -16325,6 +16325,8 @@ class SohbetBilgiPage extends StatelessWidget{
       return;
     }
     if(secim=='reset'){
+      final onceki=await ref.get();
+      final eskiArkaPlan=(onceki.data()?['backgroundUrl_$me']??'').toString();
       await ref.set({
         'theme_$me':ngelxPrivateBlueCanvas.toARGB32(),
         'backgroundUrl_$me':'',
@@ -16332,6 +16334,10 @@ class SohbetBilgiPage extends StatelessWidget{
         'messageFontSize_$me':16.0,
         'quickEmoji_$me':'👍',
       },SetOptions(merge:true));
+      if(eskiArkaPlan.isNotEmpty){
+        await CachedNetworkImage.evictFromCache(eskiArkaPlan);
+        unawaited(ngelxMedyaSil(eskiArkaPlan).catchError((_){ }));
+      }
       if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Sohbet özelleştirmeleri sıfırlandı.')));
       return;
     }
@@ -16354,7 +16360,13 @@ class SohbetBilgiPage extends StatelessWidget{
         ),
       ))??false;
       if(!onay)return;
+      final onceki=await ref.get();
+      final eskiArkaPlan=(onceki.data()?['backgroundUrl_$me']??'').toString();
       await ref.set({'backgroundUrl_$me':''},SetOptions(merge:true));
+      if(eskiArkaPlan.isNotEmpty){
+        await CachedNetworkImage.evictFromCache(eskiArkaPlan);
+        unawaited(ngelxMedyaSil(eskiArkaPlan).catchError((_){ }));
+      }
       if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Özel sohbet arka planı kaldırıldı.')));
       return;
     }
@@ -16362,6 +16374,8 @@ class SohbetBilgiPage extends StatelessWidget{
     final kaynak=secim=='camera'?ImageSource.camera:ImageSource.gallery;
     final x=await ImagePicker().pickImage(source:kaynak,imageQuality:76,maxWidth:1280);if(x==null)return;
     try{
+      final onceki=await ref.get();
+      final eskiArkaPlan=(onceki.data()?['backgroundUrl_$me']??'').toString();
       final yol='chat-backgrounds/'+me+'/'+chatId+'_'+DateTime.now().millisecondsSinceEpoch.toString()+'.jpg';
       final url=await ngelxMedyaYukleBytes(
         bytes: await x.readAsBytes(),
@@ -16370,6 +16384,10 @@ class SohbetBilgiPage extends StatelessWidget{
         legacyPath: yol,
       );
       await ref.set({'backgroundUrl_$me':url},SetOptions(merge:true));
+      if(eskiArkaPlan.isNotEmpty&&eskiArkaPlan!=url){
+        await CachedNetworkImage.evictFromCache(eskiArkaPlan);
+        unawaited(ngelxMedyaSil(eskiArkaPlan).catchError((_){ }));
+      }
       if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Özel sohbet arka planın kaydedildi.')));
     }catch(e){
       if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Arka plan yüklenemedi: '+e.toString())));
@@ -20018,14 +20036,17 @@ class _ProfilPageState extends State<ProfilPage> {
     );
     if(secim==null)return;
     if(secim=='remove'){
+      final eski=tanitimVideoUrl;
       await FirebaseFirestore.instance.collection('users').doc(user.uid).set({'introVideoUrl':''},SetOptions(merge:true));
       if(mounted)setState(()=>tanitimVideoUrl='');
+      if(eski.isNotEmpty)unawaited(ngelxMedyaSil(eski).catchError((_){ }));
       return;
     }
     final dosya=await ImagePicker().pickVideo(source:ImageSource.gallery,maxDuration:const Duration(seconds:30));
     if(dosya==null)return;
     if(mounted)setState(()=>fotoYukleniyor=true);
     try{
+      final eski=tanitimVideoUrl;
       final yol='profile-intros/'+user.uid+'/'+DateTime.now().millisecondsSinceEpoch.toString()+'.mp4';
       final boyut=await dosya.length();
       if(boyut>35*1024*1024)throw Exception('Tanıtım videosu 35 MB’den küçük olmalı.');
@@ -20036,6 +20057,7 @@ class _ProfilPageState extends State<ProfilPage> {
         legacyPath:yol,
       );
       await FirebaseFirestore.instance.collection('users').doc(user.uid).set({'introVideoUrl':url,'updatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
+      if(eski.isNotEmpty&&eski!=url)unawaited(ngelxMedyaSil(eski).catchError((_){ }));
       if(mounted){setState(()=>tanitimVideoUrl=url);ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Profil tanıtım videosu kaydedildi.')));}
     }catch(e){
       if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Tanıtım videosu yüklenemedi: '+e.toString())));
