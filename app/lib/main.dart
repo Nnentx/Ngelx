@@ -3331,6 +3331,13 @@ class _VideoAkisiState extends State<VideoAkisi> {
               'mediaCount':(veri['mediaCount'] as num?)?.toInt()??0,
               'audioUrl':(veri['audioUrl']??'').toString(),
               'overlayText':(veri['overlayText']??'').toString(),
+              'overlayColor':(veri['overlayColor'] as num?)?.toInt()??0xFFFFFFFF,
+              'overlayBackgroundColor':(veri['overlayBackgroundColor'] as num?)?.toInt()??0x99000000,
+              'overlayFontSize':(veri['overlayFontSize'] as num?)?.toDouble()??22,
+              'overlayX':(veri['overlayX'] as num?)?.toDouble()??0,
+              'overlayY':(veri['overlayY'] as num?)?.toDouble()??0,
+              'overlayScale':(veri['overlayScale'] as num?)?.toDouble()??1,
+              'overlayRotation':(veri['overlayRotation'] as num?)?.toDouble()??0,
               'videoTrimStartMs':(veri['videoTrimStartMs'] as num?)?.toInt()??0,
               'videoTrimEndMs':(veri['videoTrimEndMs'] as num?)?.toInt()??0,
               'musicTitle':(veri['musicTitle']??'').toString(),
@@ -3429,6 +3436,13 @@ class _VideoAkisiState extends State<VideoAkisi> {
                     aciklama:(item['description']??'').toString(),
                     audioUrl:(item['audioUrl']??'').toString(),
                     overlayText:(item['overlayText']??'').toString(),
+                    overlayColor:(item['overlayColor'] as num?)?.toInt()??0xFFFFFFFF,
+                    overlayBackgroundColor:(item['overlayBackgroundColor'] as num?)?.toInt()??0x99000000,
+                    overlayFontSize:(item['overlayFontSize'] as num?)?.toDouble()??22,
+                    overlayX:(item['overlayX'] as num?)?.toDouble()??0,
+                    overlayY:(item['overlayY'] as num?)?.toDouble()??0,
+                    overlayScale:(item['overlayScale'] as num?)?.toDouble()??1,
+                    overlayRotation:(item['overlayRotation'] as num?)?.toDouble()??0,
                     musicTitle:(item['musicTitle']??'').toString(),
                     musicArtist:(item['musicArtist']??'').toString(),
                     trimStartMs:(item['videoTrimStartMs'] as num?)?.toInt()??0,
@@ -3446,6 +3460,13 @@ class _VideoAkisiState extends State<VideoAkisi> {
                   'mediaCount':(item['mediaCount']??0).toString(),
                   'audioUrl':(item['audioUrl']??'').toString(),
                   'overlayText':(item['overlayText']??'').toString(),
+                  'overlayColor':(item['overlayColor']??0xFFFFFFFF).toString(),
+                  'overlayBackgroundColor':(item['overlayBackgroundColor']??0x99000000).toString(),
+                  'overlayFontSize':(item['overlayFontSize']??22).toString(),
+                  'overlayX':(item['overlayX']??0).toString(),
+                  'overlayY':(item['overlayY']??0).toString(),
+                  'overlayScale':(item['overlayScale']??1).toString(),
+                  'overlayRotation':(item['overlayRotation']??0).toString(),
                   'musicTitle':(item['musicTitle']??'').toString(),
                   'musicArtist':(item['musicArtist']??'').toString(),
                   'description':(item['description']??'').toString(),
@@ -4346,7 +4367,38 @@ class _GorselYaziKartiState extends State<GorselYaziKarti> {
             ),
           ),
           if((widget.veri['overlayText']??'').trim().isNotEmpty)
-            Center(child:Container(margin:const EdgeInsets.all(30),padding:const EdgeInsets.symmetric(horizontal:14,vertical:9),decoration:BoxDecoration(color:Colors.black54,borderRadius:BorderRadius.circular(13)),child:Text((widget.veri['overlayText']??'').trim(),textAlign:TextAlign.center,style:const TextStyle(color:Colors.white,fontSize:22,fontWeight:FontWeight.w900)))),
+            Align(
+              alignment:Alignment(
+                (double.tryParse(widget.veri['overlayX']??'')??0).clamp(-.95,.95),
+                (double.tryParse(widget.veri['overlayY']??'')??0).clamp(-.95,.95),
+              ),
+              child:Transform.rotate(
+                angle:double.tryParse(widget.veri['overlayRotation']??'')??0,
+                child:Transform.scale(
+                  scale:(double.tryParse(widget.veri['overlayScale']??'')??1).clamp(.45,3.2),
+                  child:Container(
+                    margin:const EdgeInsets.all(18),
+                    padding:const EdgeInsets.symmetric(horizontal:14,vertical:9),
+                    decoration:BoxDecoration(
+                      color:(int.tryParse(widget.veri['overlayBackgroundColor']??'')??0x99000000)==0
+                        ?Colors.transparent
+                        :Color(int.tryParse(widget.veri['overlayBackgroundColor']??'')??0x99000000),
+                      borderRadius:BorderRadius.circular(13),
+                    ),
+                    child:Text(
+                      (widget.veri['overlayText']??'').trim(),
+                      textAlign:TextAlign.center,
+                      style:TextStyle(
+                        color:Color(int.tryParse(widget.veri['overlayColor']??'')??0xFFFFFFFF),
+                        fontSize:double.tryParse(widget.veri['overlayFontSize']??'')??22,
+                        fontWeight:FontWeight.w900,
+                        shadows:const [Shadow(color:Colors.black45,blurRadius:3,offset:Offset(0,1))],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
           if (kalpAnimasyonu)
             const Center(child: KalpPatlama()),
           if(fotoListesi.length>1)
@@ -4416,6 +4468,8 @@ class VideoKarti extends StatefulWidget {
   final String aciklama;
   final String audioUrl;
   final String overlayText;
+  final int overlayColor,overlayBackgroundColor;
+  final double overlayFontSize,overlayX,overlayY,overlayScale,overlayRotation;
   final String musicTitle;
   final String musicArtist;
   final int trimStartMs;
@@ -4433,6 +4487,13 @@ class VideoKarti extends StatefulWidget {
     this.aciklama = '',
     this.audioUrl = '',
     this.overlayText = '',
+    this.overlayColor=0xFFFFFFFF,
+    this.overlayBackgroundColor=0x99000000,
+    this.overlayFontSize=22,
+    this.overlayX=0,
+    this.overlayY=0,
+    this.overlayScale=1,
+    this.overlayRotation=0,
     this.musicTitle = '',
     this.musicArtist = '',
     this.trimStartMs = 0,
@@ -4826,7 +4887,33 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver {
             ),
           ),
 if(widget.overlayText.trim().isNotEmpty)
-  Center(child:Container(margin:const EdgeInsets.all(30),padding:const EdgeInsets.symmetric(horizontal:14,vertical:9),decoration:BoxDecoration(color:Colors.black54,borderRadius:BorderRadius.circular(13)),child:Text(widget.overlayText.trim(),textAlign:TextAlign.center,style:const TextStyle(color:Colors.white,fontSize:22,fontWeight:FontWeight.w900)))),
+  Align(
+    alignment:Alignment(widget.overlayX.clamp(-.95,.95),widget.overlayY.clamp(-.95,.95)),
+    child:Transform.rotate(
+      angle:widget.overlayRotation,
+      child:Transform.scale(
+        scale:widget.overlayScale.clamp(.45,3.2),
+        child:Container(
+          margin:const EdgeInsets.all(30),
+          padding:const EdgeInsets.symmetric(horizontal:14,vertical:9),
+          decoration:BoxDecoration(
+            color:widget.overlayBackgroundColor==0?Colors.transparent:Color(widget.overlayBackgroundColor),
+            borderRadius:BorderRadius.circular(13),
+          ),
+          child:Text(
+            widget.overlayText.trim(),
+            textAlign:TextAlign.center,
+            style:TextStyle(
+              color:Color(widget.overlayColor),
+              fontSize:widget.overlayFontSize,
+              fontWeight:FontWeight.w900,
+              shadows:const [Shadow(color:Colors.black45,blurRadius:3,offset:Offset(0,1))],
+            ),
+          ),
+        ),
+      ),
+    ),
+  ),
 if (kalpAnimasyonu)
   const Center(child: KalpPatlama()),
 Positioned(
@@ -6676,6 +6763,10 @@ class _YeniYuklePageState extends State<YuklePage> {
   int fotoDonus=0;
   bool kareKirp=false,taslakVar=false;
   String medyaYazisi='';
+  int medyaYaziRenk=0xFFFFFFFF;
+  int medyaYaziArkaPlanRenk=0x99000000;
+  double medyaYaziBoyut=22;
+  double medyaYaziX=0,medyaYaziY=0,medyaYaziScale=1,medyaYaziRotation=0;
   int videoBaslangicMs=0,videoBitisMs=0;
   Map<String,dynamic>? secilenMuzik;
   Timer? taslakZamanlayici;
@@ -6726,21 +6817,21 @@ class _YeniYuklePageState extends State<YuklePage> {
       final v=Map<String,dynamic>.from(jsonDecode(ham) as Map),yollar=List<String>.from(v['mediaPaths']??const <String>[]),m=<XFile>[];
       for(final p in yollar){if(p.isNotEmpty&&await File(p).exists())m.add(XFile(p));}
       if(!mounted)return;
-      setState((){tur=(v['type']??tur).toString();gizlilik=(v['privacy']??gizlilik).toString();yorumKitlesi=(v['commentAudience']??yorumKitlesi).toString();indirmeyeIzin=v['allowDownload']!=false;yorumlaraIzin=v['allowComments']!=false;yenidenPaylasimaIzin=v['allowReshare']!=false;fotoEfekti=(v['photoEffect']??'Yok').toString();fotoDonus=(v['photoRotation'] as num?)?.toInt()??0;kareKirp=v['photoSquareCrop']==true;medyaYazisi=(v['overlayText']??'').toString();videoBaslangicMs=(v['videoTrimStartMs'] as num?)?.toInt()??0;videoBitisMs=(v['videoTrimEndMs'] as num?)?.toInt()??0;final muzik=v['music'];secilenMuzik=muzik is Map?Map<String,dynamic>.from(muzik):null;medyalar=m;medya=m.isEmpty?null:m.first;taslakVar=true;});
+      setState((){tur=(v['type']??tur).toString();gizlilik=(v['privacy']??gizlilik).toString();yorumKitlesi=(v['commentAudience']??yorumKitlesi).toString();indirmeyeIzin=v['allowDownload']!=false;yorumlaraIzin=v['allowComments']!=false;yenidenPaylasimaIzin=v['allowReshare']!=false;fotoEfekti=(v['photoEffect']??'Yok').toString();fotoDonus=(v['photoRotation'] as num?)?.toInt()??0;kareKirp=v['photoSquareCrop']==true;medyaYazisi=(v['overlayText']??'').toString();medyaYaziRenk=(v['overlayColor'] as num?)?.toInt()??0xFFFFFFFF;medyaYaziArkaPlanRenk=(v['overlayBackgroundColor'] as num?)?.toInt()??0x99000000;medyaYaziBoyut=(v['overlayFontSize'] as num?)?.toDouble()??22;medyaYaziX=(v['overlayX'] as num?)?.toDouble()??0;medyaYaziY=(v['overlayY'] as num?)?.toDouble()??0;medyaYaziScale=(v['overlayScale'] as num?)?.toDouble()??1;medyaYaziRotation=(v['overlayRotation'] as num?)?.toDouble()??0;videoBaslangicMs=(v['videoTrimStartMs'] as num?)?.toInt()??0;videoBitisMs=(v['videoTrimEndMs'] as num?)?.toInt()??0;final muzik=v['music'];secilenMuzik=muzik is Map?Map<String,dynamic>.from(muzik):null;medyalar=m;medya=m.isEmpty?null:m.first;taslakVar=true;});
       aciklama.text=(v['description']??'').toString();konum.text=(v['location']??'').toString();etiketler.text=(v['tags']??'').toString();
     }catch(_){}
   }
   Future<void> _taslagiKaydet({bool sessiz=false})async{
     final h=await SharedPreferences.getInstance(),bos=aciklama.text.trim().isEmpty&&konum.text.trim().isEmpty&&etiketler.text.trim().isEmpty&&medyalar.isEmpty&&medya==null;
     if(bos){await h.remove(_taslakAnahtar);if(mounted)setState(()=>taslakVar=false);return;}
-    await h.setString(_taslakAnahtar,jsonEncode({'type':tur,'description':aciklama.text,'location':konum.text,'tags':etiketler.text,'privacy':gizlilik,'commentAudience':yorumKitlesi,'allowDownload':indirmeyeIzin,'allowComments':yorumlaraIzin,'allowReshare':yenidenPaylasimaIzin,'photoEffect':fotoEfekti,'photoRotation':fotoDonus,'photoSquareCrop':kareKirp,'overlayText':medyaYazisi,'videoTrimStartMs':videoBaslangicMs,'videoTrimEndMs':videoBitisMs,'music':secilenMuzik,'mediaPaths':medyalar.isNotEmpty?medyalar.map((e)=>e.path).toList():(medya==null?<String>[]:<String>[medya!.path])}));
+    await h.setString(_taslakAnahtar,jsonEncode({'type':tur,'description':aciklama.text,'location':konum.text,'tags':etiketler.text,'privacy':gizlilik,'commentAudience':yorumKitlesi,'allowDownload':indirmeyeIzin,'allowComments':yorumlaraIzin,'allowReshare':yenidenPaylasimaIzin,'photoEffect':fotoEfekti,'photoRotation':fotoDonus,'photoSquareCrop':kareKirp,'overlayText':medyaYazisi,'overlayColor':medyaYaziRenk,'overlayBackgroundColor':medyaYaziArkaPlanRenk,'overlayFontSize':medyaYaziBoyut,'overlayX':medyaYaziX,'overlayY':medyaYaziY,'overlayScale':medyaYaziScale,'overlayRotation':medyaYaziRotation,'videoTrimStartMs':videoBaslangicMs,'videoTrimEndMs':videoBitisMs,'music':secilenMuzik,'mediaPaths':medyalar.isNotEmpty?medyalar.map((e)=>e.path).toList():(medya==null?<String>[]:<String>[medya!.path])}));
     if(mounted)setState(()=>taslakVar=true);if(!sessiz&&mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Taslak kaydedildi ✅')));
   }
   Future<void> _taslagiSil({bool mesaj=true})async{final h=await SharedPreferences.getInstance();await h.remove(_taslakAnahtar);if(mounted){setState(()=>taslakVar=false);if(mesaj)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Taslak temizlendi.')));}}
 
   void _turDegistir(String yeni){
     if(yukleniyor)return;
-    setState((){tur=yeni;medya=null;medyalar=<XFile>[];fotoEfekti='Yok';fotoDonus=0;kareKirp=false;medyaYazisi='';videoBaslangicMs=0;videoBitisMs=0;secilenMuzik=null;yuklemeIlerlemesi=0;yuklemeDurumu='';});
+    setState((){tur=yeni;medya=null;medyalar=<XFile>[];fotoEfekti='Yok';fotoDonus=0;kareKirp=false;medyaYazisi='';medyaYaziRenk=0xFFFFFFFF;medyaYaziArkaPlanRenk=0x99000000;medyaYaziBoyut=22;medyaYaziX=0;medyaYaziY=0;medyaYaziScale=1;medyaYaziRotation=0;videoBaslangicMs=0;videoBitisMs=0;secilenMuzik=null;yuklemeIlerlemesi=0;yuklemeDurumu='';});
     _taslakDegisti();
   }
 
@@ -6953,36 +7044,48 @@ class _YeniYuklePageState extends State<YuklePage> {
     if(yukleniyor||tur!='video'||dosya==null)return;
     final sonuc=await Navigator.push<Map<String,dynamic>>(context,MaterialPageRoute(builder:(_)=>NgelXVideoDuzenlemePage(
       dosya:dosya,baslangicMs:videoBaslangicMs,bitisMs:videoBitisMs,yazi:medyaYazisi,
+      yaziRenk:medyaYaziRenk,yaziArkaPlanRenk:medyaYaziArkaPlanRenk,yaziBoyut:medyaYaziBoyut,
+      yaziX:medyaYaziX,yaziY:medyaYaziY,yaziScale:medyaYaziScale,yaziRotation:medyaYaziRotation,
     )));
     if(sonuc==null||!mounted)return;
     setState((){
       videoBaslangicMs=(sonuc['trimStartMs'] as num?)?.toInt()??0;
       videoBitisMs=(sonuc['trimEndMs'] as num?)?.toInt()??0;
       medyaYazisi=(sonuc['overlayText']??'').toString();
+      medyaYaziRenk=(sonuc['overlayColor'] as num?)?.toInt()??medyaYaziRenk;
+      medyaYaziArkaPlanRenk=(sonuc['overlayBackgroundColor'] as num?)?.toInt()??medyaYaziArkaPlanRenk;
+      medyaYaziBoyut=(sonuc['overlayFontSize'] as num?)?.toDouble()??medyaYaziBoyut;
+      medyaYaziX=(sonuc['overlayX'] as num?)?.toDouble()??medyaYaziX;
+      medyaYaziY=(sonuc['overlayY'] as num?)?.toDouble()??medyaYaziY;
+      medyaYaziScale=(sonuc['overlayScale'] as num?)?.toDouble()??medyaYaziScale;
+      medyaYaziRotation=(sonuc['overlayRotation'] as num?)?.toDouble()??medyaYaziRotation;
     });
     _taslakDegisti();
   }
 
   Future<void> _medyaYazisiDuzenle()async{
     if(yukleniyor||medya==null)return;
-    final c=TextEditingController(text:medyaYazisi);
-    final sonuc=await showDialog<String>(
+    FocusScope.of(context).unfocus();
+    final sonuc=await showModalBottomSheet<Map<String,dynamic>>(
       context:context,
-      builder:(d)=>AlertDialog(
-        backgroundColor:Colors.white,surfaceTintColor:Colors.white,
-        shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(24)),
-        title:Text(tur=='video'?'Video üzerine yazı':'Fotoğraf üzerine yazı',style:const TextStyle(fontWeight:FontWeight.w900)),
-        content:TextField(controller:c,autofocus:true,maxLength:120,maxLines:3,decoration:const InputDecoration(hintText:'Yazını ekle')),
-        actions:[
-          TextButton(onPressed:()=>Navigator.pop(d),child:const Text('Vazgeç')),
-          TextButton(onPressed:()=>Navigator.pop(d,''),child:const Text('Temizle')),
-          FilledButton(onPressed:()=>Navigator.pop(d,c.text.trim()),child:const Text('Uygula')),
-        ],
+      isScrollControlled:true,
+      backgroundColor:Colors.white,
+      useSafeArea:true,
+      shape:const RoundedRectangleBorder(borderRadius:BorderRadius.vertical(top:Radius.circular(28))),
+      builder:(_)=>NgelXMedyaYaziAyariSheet(
+        yazi:medyaYazisi,
+        renk:medyaYaziRenk,
+        arkaPlanRenk:medyaYaziArkaPlanRenk,
+        boyut:medyaYaziBoyut,
       ),
     );
-    c.dispose();
     if(sonuc==null||!mounted)return;
-    setState(()=>medyaYazisi=sonuc);
+    setState((){
+      medyaYazisi=(sonuc['text']??'').toString();
+      medyaYaziRenk=(sonuc['color'] as num?)?.toInt()??medyaYaziRenk;
+      medyaYaziArkaPlanRenk=(sonuc['backgroundColor'] as num?)?.toInt()??medyaYaziArkaPlanRenk;
+      medyaYaziBoyut=(sonuc['fontSize'] as num?)?.toDouble()??medyaYaziBoyut;
+    });
     _taslakDegisti();
   }
 
@@ -7110,6 +7213,13 @@ class _YeniYuklePageState extends State<YuklePage> {
         'thumbnailUrl':'',
         'photoEffect':fotoEfekti,'photoRotation':fotoDonus,'photoSquareCrop':kareKirp,
         'overlayText':medyaYazisi,
+        'overlayColor':medyaYaziRenk,
+        'overlayBackgroundColor':medyaYaziArkaPlanRenk,
+        'overlayFontSize':medyaYaziBoyut,
+        'overlayX':medyaYaziX,
+        'overlayY':medyaYaziY,
+        'overlayScale':medyaYaziScale,
+        'overlayRotation':medyaYaziRotation,
         'videoTrimStartMs':tur=='video'?videoBaslangicMs:0,
         'videoTrimEndMs':tur=='video'?videoBitisMs:0,
         'audioUrl':(secilenMuzik?['audioUrl']??'').toString(),
@@ -7138,7 +7248,7 @@ class _YeniYuklePageState extends State<YuklePage> {
 
       if(!mounted)return;
       setState((){
-        medya=null;medyalar=<XFile>[];fotoEfekti='Yok';fotoDonus=0;kareKirp=false;medyaYazisi='';videoBaslangicMs=0;videoBitisMs=0;secilenMuzik=null;
+        medya=null;medyalar=<XFile>[];fotoEfekti='Yok';fotoDonus=0;kareKirp=false;medyaYazisi='';medyaYaziRenk=0xFFFFFFFF;medyaYaziArkaPlanRenk=0x99000000;medyaYaziBoyut=22;medyaYaziX=0;medyaYaziY=0;medyaYaziScale=1;medyaYaziRotation=0;videoBaslangicMs=0;videoBitisMs=0;secilenMuzik=null;
         aciklama.clear();
         konum.clear();
         etiketler.clear();
@@ -7176,10 +7286,33 @@ class _YeniYuklePageState extends State<YuklePage> {
     unawaited(medyaSec());
   }
 
+  ColorFilter? _fotoOnizlemeFiltresi(){
+    switch(fotoEfekti){
+      case 'Parlak':
+        return const ColorFilter.matrix(<double>[
+          1.15,0,0,0,10, 0,1.15,0,0,10, 0,0,1.15,0,10, 0,0,0,1,0,
+        ]);
+      case 'Sıcak':
+        return const ColorFilter.matrix(<double>[
+          1.10,0,0,0,8, 0,1.02,0,0,2, 0,0,.90,0,-4, 0,0,0,1,0,
+        ]);
+      case 'Soğuk':
+        return const ColorFilter.matrix(<double>[
+          .92,0,0,0,-2, 0,1.02,0,0,0, 0,0,1.12,0,7, 0,0,0,1,0,
+        ]);
+      case 'Siyah Beyaz':
+        return const ColorFilter.matrix(<double>[
+          .2126,.7152,.0722,0,0, .2126,.7152,.0722,0,0, .2126,.7152,.0722,0,0, 0,0,0,1,0,
+        ]);
+      default:return null;
+    }
+  }
+
   Widget _medyaOnizleme(){
     final secilen=medya;
     if(secilen==null||tur=='text')return const SizedBox.shrink();
     final foto=tur=='photo';
+    final filtre=_fotoOnizlemeFiltresi();
     return Container(
       margin:const EdgeInsets.only(top:14),
       decoration:BoxDecoration(
@@ -7190,16 +7323,63 @@ class _YeniYuklePageState extends State<YuklePage> {
       clipBehavior:Clip.antiAlias,
       child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
         if(foto)
-          SizedBox(height:220,child:Stack(fit:StackFit.expand,children:[ClipRect(child:RotatedBox(quarterTurns:fotoDonus%4,child:Image.file(File(secilen.path),fit:kareKirp?BoxFit.cover:BoxFit.contain,errorBuilder:(_,__,___)=>const Center(child:Icon(Icons.broken_image_outlined,size:48,color:Colors.black38))))),if(medyalar.length>1)Positioned(top:10,right:10,child:Container(padding:const EdgeInsets.symmetric(horizontal:10,vertical:6),decoration:BoxDecoration(color:Colors.black.withValues(alpha:.65),borderRadius:BorderRadius.circular(14)),child:Text('1/${medyalar.length}',style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w900)))),if(medyaYazisi.trim().isNotEmpty)Center(child:Container(margin:const EdgeInsets.all(18),padding:const EdgeInsets.symmetric(horizontal:12,vertical:8),decoration:BoxDecoration(color:Colors.black54,borderRadius:BorderRadius.circular(12)),child:Text(medyaYazisi.trim(),textAlign:TextAlign.center,style:const TextStyle(color:Colors.white,fontSize:20,fontWeight:FontWeight.w900))))]))
+          SizedBox(
+            height:390,
+            child:LayoutBuilder(builder:(_,c){
+              Widget gorsel=RotatedBox(
+                quarterTurns:fotoDonus%4,
+                child:Image.file(
+                  File(secilen.path),
+                  fit:kareKirp?BoxFit.cover:BoxFit.contain,
+                  width:double.infinity,height:double.infinity,
+                  errorBuilder:(_,__,___)=>const Center(child:Icon(Icons.broken_image_outlined,size:48,color:Colors.black38)),
+                ),
+              );
+              if(filtre!=null)gorsel=ColorFiltered(colorFilter:filtre,child:gorsel);
+              return Stack(fit:StackFit.expand,children:[
+                ColoredBox(color:Colors.black,child:ClipRect(child:gorsel)),
+                if(medyaYazisi.trim().isNotEmpty)
+                  NgelXSuruklenebilirYaziKatmani(
+                    yazi:medyaYazisi.trim(),renk:medyaYaziRenk,arkaPlanRenk:medyaYaziArkaPlanRenk,boyut:medyaYaziBoyut,
+                    x:medyaYaziX,y:medyaYaziY,scale:medyaYaziScale,rotation:medyaYaziRotation,
+                    canvasWidth:c.maxWidth,canvasHeight:c.maxHeight,
+                    onChanged:(x,y,s,r){
+                      setState((){medyaYaziX=x;medyaYaziY=y;medyaYaziScale=s;medyaYaziRotation=r;});
+                      _taslakDegisti();
+                    },
+                  ),
+                if(medyalar.length>1)Positioned(
+                  top:10,right:10,
+                  child:Container(
+                    padding:const EdgeInsets.symmetric(horizontal:10,vertical:6),
+                    decoration:BoxDecoration(color:Colors.black.withValues(alpha:.65),borderRadius:BorderRadius.circular(14)),
+                    child:Text('1/${medyalar.length}',style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w900)),
+                  ),
+                ),
+                Positioned(
+                  left:12,bottom:12,
+                  child:Container(
+                    padding:const EdgeInsets.symmetric(horizontal:9,vertical:5),
+                    decoration:BoxDecoration(color:Colors.black54,borderRadius:BorderRadius.circular(12)),
+                    child:const Text('Yazıyı sürükle • iki parmakla büyüt/döndür',style:TextStyle(color:Colors.white70,fontSize:10,fontWeight:FontWeight.w700)),
+                  ),
+                ),
+              ]);
+            }),
+          )
         else
           Container(
-            height:150,
+            height:170,
             alignment:Alignment.center,
             decoration:const BoxDecoration(gradient:LinearGradient(colors:[Color(0xFF171A24),Color(0xFF32234F)])),
             child:Column(mainAxisSize:MainAxisSize.min,children:[
               const Icon(Icons.play_circle_fill_rounded,color:Colors.white,size:62),
               const SizedBox(height:8),
               Text(t('videoSelected'),style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w900)),
+              if(medyaYazisi.trim().isNotEmpty)...[
+                const SizedBox(height:7),
+                Text('Yazı katmanı hazır',style:TextStyle(color:Color(medyaYaziRenk),fontWeight:FontWeight.w800)),
+              ],
             ]),
           ),
         Padding(
@@ -7207,7 +7387,11 @@ class _YeniYuklePageState extends State<YuklePage> {
           child:Row(children:[
             Icon(foto?Icons.photo_rounded:Icons.videocam_rounded,color:foto?mavi:mor),
             const SizedBox(width:9),
-            Expanded(child:Text(medyalar.length>1?'${medyalar.length} fotoğraf seçildi':secilen.name,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontWeight:FontWeight.w700))),
+            Expanded(child:Text(
+              medyalar.length>1?'${medyalar.length} fotoğraf seçildi':secilen.name,
+              maxLines:1,overflow:TextOverflow.ellipsis,
+              style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w800),
+            )),
             IconButton(
               tooltip:t('removeSelection'),
               onPressed:yukleniyor?null:(){setState((){medya=null;medyalar=<XFile>[];});_taslakDegisti();},
