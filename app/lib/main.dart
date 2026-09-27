@@ -21074,7 +21074,10 @@ class _ProfilPageState extends State<ProfilPage> {
                           return Padding(
                             padding:const EdgeInsets.only(right:10),
                             child:InkWell(
-                              onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>NgelXHikayeSeriPage(ownerUid:aktifKullanici?.uid??'',initialStoryId:d.id,kullanici:kullanici,fotoUrl:fotoUrl))),
+                              onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>HikayeGosterPage(
+                                url:url,mediaType:medyaTuru,kullanici:kullanici,fotoUrl:fotoUrl,
+                                ownerUid:aktifKullanici?.uid??'',storyId:d.id,createdAt:v['createdAt'],expiresAt:v['expiresAt'],
+                              ))),
                               child:SizedBox(width:70,child:Column(children:[
                                 CircleAvatar(
                                   radius:28,
