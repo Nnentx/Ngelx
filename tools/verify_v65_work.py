@@ -13,7 +13,9 @@ def forbid(text: str, needle: str, label: str) -> None:
     if needle in text:
         raise SystemExit(f"V65 CHECK FAILED: {label}: forbidden {needle!r}")
 
-require((root / "app/pubspec.yaml").read_text(encoding="utf-8"), "version: 1.0.65+284", "V65 app version")
+pubspec = (root / "app/pubspec.yaml").read_text(encoding="utf-8")
+if "version: 1.0.65+284" not in pubspec and "version: 1.0.66+285" not in pubspec:
+    raise SystemExit("V65 CHECK FAILED: supported V65/V66 app version missing")
 
 # New Create/editor surfaces are wired into the app.
 require(main, "part 'create_music_editor.dart';", "editor part")
