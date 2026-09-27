@@ -20897,46 +20897,29 @@ class _ProfilPageState extends State<ProfilPage> {
                     ],
                   ),
                   const SizedBox(height: 18),
-                  GestureDetector(
-                    onTap: fotografYukle,
-                    onLongPress: fotografYukle,
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        Container(
-                          width: 126,
-                          height: 126,
-                          padding: const EdgeInsets.all(4),
-                          decoration: const BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: LinearGradient(colors: [mavi, mor]),
-                          ),
-                          child: CircleAvatar(
-                            backgroundColor: const Color(0xFFF0E8FF),
-                            backgroundImage: fotoUrl.isEmpty ? null : CachedNetworkImageProvider(fotoUrl),
-                            child: fotoUrl.isNotEmpty
-                                ? null
-                                : Text(
-                                    ad.isEmpty ? 'N' : ad[0].toUpperCase(),
-                                    style: const TextStyle(
-                                      color: mor,
-                                      fontSize: 45,
-                                      fontWeight: FontWeight.w900,
-                                    ),
-                                  ),
-                          ),
+                  SizedBox(
+                    width:132,height:132,
+                    child:Stack(
+                      alignment:Alignment.center,
+                      children:[
+                        NgelXHikayeliAvatar(
+                          uid:aktifKullanici?.uid??'',
+                          fotoUrl:fotoUrl,
+                          kullanici:kullanici,
+                          radius:59,
+                          hikayeYoksaTikla:()=>unawaited(hikayeYukle()),
+                          uzunBas:fotografYukle,
                         ),
-                        if (fotoYukleniyor)
-                          const CircularProgressIndicator(color: Colors.white),
+                        if(fotoYukleniyor)
+                          const CircularProgressIndicator(color:Colors.white),
                         Positioned(
-                          right: 0,
-                          bottom: 0,
-                          child: GestureDetector(
-                            onTap: fotografYukle,
-                            child: Container(
-                              padding: const EdgeInsets.all(9),
-                              decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle, boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 10)]),
-                              child: const Icon(Icons.photo_camera_rounded, color: Colors.black, size: 20),
+                          right:0,bottom:0,
+                          child:GestureDetector(
+                            onTap:fotografYukle,
+                            child:Container(
+                              padding:const EdgeInsets.all(9),
+                              decoration:const BoxDecoration(color:Colors.white,shape:BoxShape.circle,boxShadow:[BoxShadow(color:Colors.black26,blurRadius:10)]),
+                              child:const Icon(Icons.photo_camera_rounded,color:Colors.black,size:20),
                             ),
                           ),
                         ),
