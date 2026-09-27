@@ -15,6 +15,7 @@ checks = {
     "Profil tanitim videosu tiklanmadan acilmiyor": "Tanıtım videosunu oynat" in main and "if(widget.url.isEmpty||hazir||yukleniyor)return;" in main,
     "Mesaj istegi onizlemesi 30 mesajla sinirli": bool(re.search(r"MesajIstegiOnizlemePage[\s\S]{0,2500}limitToLast\(30\)", main)),
     "Ozel sohbet fotograflari 1280px ile sinirli": bool(re.search(r"medyaGonder\(ImageSource kaynak\)[\s\S]{0,900}maxWidth:1280,[\s\S]{0,200}maxHeight:1280", main)),
+    "Genel arama her harfte Firestore'u yeniden okumuyor": "Trafik tasarrufu: her harfte 60 kullanici + 100 icerigi yeniden indirme." in main and "future: _aramaVerisiniHazirla()," in main,
     "R2 byte range destegi aktif": "rangeHeader" in worker and "accept-ranges" in worker and "content-range" in worker,
 }
 
