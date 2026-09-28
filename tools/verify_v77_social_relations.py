@@ -9,8 +9,8 @@ def require(cond,msg):
     if not cond:
         raise SystemExit("Build 296 sosyal ilişki kontrolu eksik: "+msg)
 
-require("version: 1.0.81+300" in PUB,"Build 300 surumu")
-require("defaultValue: '1.0.81'" in MAIN and "defaultValue: '300'" in MAIN,"uygulama ici surum")
+require("version: 1.0.82+301" in PUB,"Build 301 surumu")
+require("defaultValue: '1.0.82'" in MAIN and "defaultValue: '301'" in MAIN,"uygulama ici surum")
 require(".where('fromUid',isEqualTo:user.uid)" in MAIN and ".where('toUid',isEqualTo:hedefUid)" in MAIN,
         "istek gondermeden once kullanici-cifti bazli bekleyen istek kontrolu")
 require("GetOptions(source:Source.server)" in MAIN,

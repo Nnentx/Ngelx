@@ -33,8 +33,8 @@ story_end = MAIN.index("Future<void> hikayeyiAc()", story_start)
 story = MAIN[story_start:story_end]
 require("final url=video" in story and "ngelxMedyaYukleDosya(" in story,
         "video hikâyesinde dosya tabanlı yükleme")
-require("ngelxMedyaYukleBytes(" in story,
-        "fotoğraf hikâyesinde güvenli PNG normalizasyonu")
+require("ngelxFotografYukle(" in story,
+        "fotoğraf hikâyesinde dosya+PNG fallback hattı")
 
 require("class NgelXYorumYazici extends StatelessWidget" in MAIN,
         "yorum yazıcısının canlı listeden ayrılması")

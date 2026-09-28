@@ -9,13 +9,13 @@ def require(c,m):
     if not c:
         raise SystemExit("Build 298 fotoğraf yükleme kontrolu eksik: "+m)
 
-require("version: 1.0.81+300" in PUB,"Build 300 surumu")
-require("defaultValue: '1.0.81'" in MAIN and "defaultValue: '300'" in MAIN,"uygulama ici surum")
+require("version: 1.0.82+301" in PUB,"Build 301 surumu")
+require("defaultValue: '1.0.82'" in MAIN and "defaultValue: '301'" in MAIN,"uygulama ici surum")
 
 group_start=MAIN.index("Future<void> _grupFotografiniGonder")
 group_end=MAIN.index("Future<void> grupVideoGonder",group_start)
 group=MAIN[group_start:group_end]
-require("ngelxMedyaYukleDosya(" in group,"grup fotografi dosya/stream yukleme yolu")
+require("ngelxFotografYukle(" in group,"grup fotografi ortak fallback yukleme yolu")
 require("ngelxMedyaYukleBytes(" not in group,"grup fotografinda bozuk bytes yukleme yolu kaldirilmasi")
 require("dosya:x" in group and "kind:'groups'" in group,"grup fotograf dosyasi ve kind")
 require("'type':'photo','mediaUrl':url,'imageUrl':url,'photoUrl':url" in group,"grup fotograf mesaj alanlari")
@@ -23,7 +23,7 @@ require("'type':'photo','mediaUrl':url,'imageUrl':url,'photoUrl':url" in group,"
 private_start=MAIN.index("Future<void> medyaGonder(ImageSource kaynak)", MAIN.index("class _SohbetPageState"))
 private_end=MAIN.index("Future<void> videoGonder",private_start)
 private=MAIN[private_start:private_end]
-require("ngelxMedyaYukleDosya(" in private,"ozel sohbet fotografi dosya/stream yukleme yolu")
+require("ngelxFotografYukle(" in private,"ozel sohbet fotografi ortak fallback yukleme yolu")
 require("ngelxMedyaYukleBytes(" not in private,"ozel sohbet fotografinda bozuk bytes yukleme yolu kaldirilmasi")
 require("dosya:x" in private and "kind:'chats'" in private,"ozel fotograf dosyasi ve kind")
 require("'senderId':ben,'text':'','type':'photo','mediaUrl':url,'imageUrl':url,'photoUrl':url" in private,"ozel fotograf mesaj alanlari")

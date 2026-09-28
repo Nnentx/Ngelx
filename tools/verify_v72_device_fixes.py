@@ -15,8 +15,8 @@ def require(condition: bool, message: str) -> None:
         raise SystemExit(f"V72 cihaz düzeltmesi eksik: {message}")
 
 
-require("version: 1.0.81+300" in PUBSPEC, "Build 300 sürüm zinciri")
-require("defaultValue: '1.0.81'" in MAIN and "defaultValue: '300'" in MAIN,
+require("version: 1.0.82+301" in PUBSPEC, "Build 301 sürüm zinciri")
+require("defaultValue: '1.0.82'" in MAIN and "defaultValue: '301'" in MAIN,
         "uygulama içi sürüm varsayılanları")
 require("ValueKey('ngelx_tab_${secili}_$dil')" in MAIN,
         "açık sekmelerin dil değişiminde yeniden oluşturulması")
