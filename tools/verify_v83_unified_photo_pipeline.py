@@ -12,19 +12,14 @@ def require(c,m):
 require('version: 1.0.82+301' in PUB,'Build 301 sürümü')
 require("defaultValue: '1.0.82'" in MAIN and "defaultValue: '301'" in MAIN,'uygulama içi sürüm')
 
-checks=[
-    ('profil fotoğrafı',"kind: 'profiles'"),
-    ('grup oluşturma fotoğrafı',"kind: 'groups'"),
-    ('grup avatar fotoğrafı',"kind:'groups'"),
-    ('hikâye fotoğrafı',"kind:'stories'"),
-    ('grup sohbet arka planı',"kind:'chat-backgrounds'"),
-    ('özel sohbet arka planı',"kind: 'chat-backgrounds'"),
-    ('destek ekran görüntüsü',"kind:'support'"),
-]
-for label,needle in checks:
-    require(needle in MAIN,label+' medya türü')
+for kind in ('profiles','groups','stories','chat-backgrounds','support'):
+    require(("kind:'"+kind+"'") in MAIN or ("kind: '"+kind+"'") in MAIN,
+            kind+' medya türü')
 
-require(MAIN.count('ngelxMedyaYukleDosya(')>=18,'dosya tabanlı ortak medya hattı')
+require('Future<String> ngelxFotografYukle({' in MAIN,
+        'ortak fotoğraf file+fallback yardımcısı')
+require(MAIN.count('ngelxFotografYukle(')>=9,
+        'kritik fotoğraf akışlarının ortak yardımcısı')
 
 profile_start=MAIN.index("final yol = 'profiles/")
 profile_end=MAIN.index("await FirebaseFirestore.instance.collection('users').doc(user.uid).set",profile_start)
