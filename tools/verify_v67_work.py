@@ -10,7 +10,7 @@ def require(text: str, needle: str, label: str) -> None:
     if needle not in text:
         raise SystemExit(f"V67 CHECK FAILED: {label}: missing {needle!r}")
 
-if all(v not in pubspec for v in ("version: 1.0.67+286", "version: 1.0.68+287", "version: 1.0.69+288", "version: 1.0.70+289", "version: 1.0.71+290", "version: 1.0.72+291", "version: 1.0.73+292", "version: 1.0.74+293", "version: 1.0.75+294", "version: 1.0.76+295", "version: 1.0.77+296", "version: 1.0.78+297", "version: 1.0.79+298")):
+if all(v not in pubspec for v in ("version: 1.0.67+286", "version: 1.0.68+287", "version: 1.0.69+288", "version: 1.0.70+289", "version: 1.0.71+290", "version: 1.0.72+291", "version: 1.0.73+292", "version: 1.0.74+293", "version: 1.0.75+294", "version: 1.0.76+295", "version: 1.0.77+296", "version: 1.0.78+297", "version: 1.0.79+298", "version: 1.0.80+299")):
     raise SystemExit("V67 CHECK FAILED: supported V67/V68 app version missing")
 require(editor, "SingleChildScrollView(", "keyboard-safe text editor scroll")
 require(editor, "ScrollViewKeyboardDismissBehavior.onDrag", "keyboard dismiss behavior")
