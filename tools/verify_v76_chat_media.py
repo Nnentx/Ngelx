@@ -11,8 +11,8 @@ def require(condition: bool, message: str) -> None:
         raise SystemExit(f"Build 295 sohbet medya kontrolu eksik: {message}")
 
 
-require("version: 1.0.77+296" in PUBSPEC, "Build 296 surumu")
-require("defaultValue: '1.0.77'" in MAIN and "defaultValue: '296'" in MAIN,
+require("version: 1.0.78+297" in PUBSPEC, "Build 297 surumu")
+require("defaultValue: '1.0.78'" in MAIN and "defaultValue: '297'" in MAIN,
         "uygulama ici surum varsayilanlari")
 require("String ngelxMesajMedyaUrl(" in MAIN,
         "eski ve yeni sohbet medya alanlari icin URL cozumleyici")

@@ -92,8 +92,8 @@ const ngelxPrivateBlueCanvas = Color(0xFFF6FAFF);
 const ngelxPrivateBlueBorder = Color(0xFFD8E8FF);
 const ngelxPrivateBlueInk = Color(0xFF10213A);
 
-const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.77');
-const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '296');
+const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.78');
+const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '297');
 const ngelxGroupBorder = Color(0xFFD9EEE0);
 
 final GlobalKey<NavigatorState> ngelxNavigatorKey=GlobalKey<NavigatorState>();
@@ -9844,7 +9844,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
         bytes:bytes,kind:'groups',ext:uzanti,legacyPath:yol,
         onProgress:(sent,total)=>_medyaIlerlemeGuncelle('Fotoğraf yükleniyor',sent,total),
       ).timeout(const Duration(seconds:60));
-      final tamam=await payloadGonder({'type':'photo','mediaUrl':url},'📷 Fotoğraf');
+      final tamam=await payloadGonder({'type':'photo','mediaUrl':url,'imageUrl':url,'photoUrl':url},'📷 Fotoğraf');
       if(!tamam)throw Exception('Mesaj kaydedilemedi');
     }catch(_){
       if(!mounted)return;
@@ -9871,7 +9871,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
         contentType:uzanti=='mov'?'video/quicktime':'video/mp4',
         onProgress:(sent,total)=>_medyaIlerlemeGuncelle('Video yükleniyor',sent,total),
       ).timeout(const Duration(minutes:3));
-      await payloadGonder({'type':'video','mediaUrl':url},'🎥 Video');
+      await payloadGonder({'type':'video','mediaUrl':url,'videoUrl':url},'🎥 Video');
     }catch(_){
       if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Video gönderilemedi. Tekrar dene.')));
     }finally{
@@ -10871,7 +10871,8 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
 
   Widget mesajKarti(QueryDocumentSnapshot<Map<String,dynamic>> d,{QueryDocumentSnapshot<Map<String,dynamic>>? onceki,Map<String,dynamic>? grupVerisi,bool sonMesaj=false}){
     final v=d.data(),gonderen=(v['senderId']??v['fromUid']??v['uid']??'').toString(),ben=gonderen==uid;
-    final metin=(v['text']??v['message']??v['content']??'').toString(),tur=(v['type']??'text').toString(),media=(v['mediaUrl']??'').toString(),audio=(v['audioUrl']??'').toString();
+    final metin=(v['text']??v['message']??v['content']??'').toString(),tur=(v['type']??'text').toString();
+    final media=ngelxMesajMedyaUrl(v,video:tur=='video'),videoKapak=ngelxMesajVideoKapagi(v),audio=(v['audioUrl']??'').toString();
     final sticker=(v['sticker']??'').toString(),linkUrl=(v['linkUrl']??'').toString(),linkHost=(v['linkHost']??'').toString(),linkTitle=(v['linkTitle']??'').toString(),linkDesc=(v['linkDescription']??'').toString(),linkImage=(v['linkImage']??'').toString();
     final silinmis=v['deletedForEveryone']==true;
     final sadeceEmoji=tur=='text'&&!silinmis&&_sadeceEmojiMesaj(metin);
@@ -11083,13 +11084,15 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
                 ),
                 if(tur=='sticker'&&sticker.isNotEmpty)
                   Padding(padding:const EdgeInsets.symmetric(horizontal:5,vertical:3),child:Text(sticker,style:const TextStyle(fontSize:58,height:1.05)))
-                else if((tur=='photo'||tur=='gif')&&media.isNotEmpty)
+                else if(tur=='photo'&&media.isNotEmpty)
+                  IgnorePointer(child:NgelXSohbetFotoOnizleme(url:media))
+                else if(tur=='gif'&&media.isNotEmpty)
                   IgnorePointer(child:ClipRRect(borderRadius:BorderRadius.circular(14),child:CachedNetworkImage(
                     imageUrl:media,width:246,fit:BoxFit.cover,
                     errorWidget:(_,__,___)=>const SizedBox(width:246,height:116,child:Center(child:Icon(Icons.broken_image_outlined))),
                   )))
                 else if(tur=='video'&&media.isNotEmpty)
-                  IgnorePointer(child:NgelXGrupVideoMesaj(url:media))
+                  IgnorePointer(child:NgelXSohbetVideoOnizleme(url:media,thumbnailUrl:videoKapak))
                 else if(tur=='audio'&&audio.isNotEmpty)
                   SizedBox(width:228,child:NgelXSesliMesaj(url:audio,benim:ben,durationSeconds:(v['durationSeconds'] as num?)?.toInt()??0))
                 else if(tur=='file')
@@ -12017,7 +12020,19 @@ class NgelXSohbetVideoOnizleme extends StatelessWidget{
         ]),
       );
     }
-    return NgelXGrupVideoMesaj(url:url,compact:true);
+    return ClipRRect(
+      borderRadius:BorderRadius.circular(16),
+      child:SizedBox(
+        width:246,height:178,
+        child:Stack(
+          fit:StackFit.expand,
+          children:[
+            NgelXVideoKapakOnizleme(url:url),
+            IgnorePointer(child:_oynatKatmani()),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -12225,7 +12240,9 @@ class _GrupMedyaPageState extends State<GrupMedyaPage>{
                 itemCount:docs.length,
                 gridDelegate:const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount:3,crossAxisSpacing:8,mainAxisSpacing:8),
                 itemBuilder:(_,i){
-                  final data=docs[i].data(),url=(data['mediaUrl']??'').toString(),t=(data['type']??'').toString();
+                  final data=docs[i].data(),t=(data['type']??'').toString();
+                  final url=ngelxMesajMedyaUrl(data,video:t=='video');
+                  final thumb=ngelxMesajVideoKapagi(data);
                   final imageIndex=t=='video'?-1:imageUrls.indexOf(url);
                   return InkWell(
                     onTap:url.isEmpty?null:()=>Navigator.push(context,MaterialPageRoute(
@@ -12237,9 +12254,21 @@ class _GrupMedyaPageState extends State<GrupMedyaPage>{
                     child:ClipRRect(
                       borderRadius:BorderRadius.circular(16),
                       child:Stack(fit:StackFit.expand,children:[
-                        if(t=='video')const ColoredBox(color:Color(0xFF15231A),child:Center(child:Icon(Icons.play_circle_fill_rounded,color:Colors.white,size:42)))
+                        if(t=='video'&&thumb.isNotEmpty)
+                          CachedNetworkImage(
+                            imageUrl:thumb,fit:BoxFit.cover,
+                            errorWidget:(_,__,___)=>url.isEmpty
+                              ?const ColoredBox(color:Color(0xFF15231A))
+                              :NgelXVideoKapakOnizleme(url:url),
+                          )
+                        else if(t=='video'&&url.isNotEmpty)NgelXVideoKapakOnizleme(url:url)
+                        else if(t=='video')const ColoredBox(color:Color(0xFF15231A))
                         else if(url.isNotEmpty)CachedNetworkImage(imageUrl:url,fit:BoxFit.cover,errorWidget:(_,__,___)=>const ColoredBox(color:Color(0xFFF0F5F2),child:Icon(Icons.broken_image_outlined)))
                         else const ColoredBox(color:Color(0xFFF0F5F2),child:Icon(Icons.image_outlined)),
+                        if(t=='video')const Center(child:DecoratedBox(
+                          decoration:BoxDecoration(color:Colors.black45,shape:BoxShape.circle),
+                          child:Padding(padding:EdgeInsets.all(7),child:Icon(Icons.play_arrow_rounded,color:Colors.white,size:31)),
+                        )),
                         if(t=='gif')Positioned(left:7,bottom:7,child:Container(padding:const EdgeInsets.symmetric(horizontal:7,vertical:4),decoration:BoxDecoration(color:Colors.black54,borderRadius:BorderRadius.circular(10)),child:const Text('GIF',style:TextStyle(color:Colors.white,fontSize:9,fontWeight:FontWeight.w900)))),
                       ]),
                     ),
@@ -16010,7 +16039,7 @@ class _SohbetPageState extends State<SohbetPage> {
         if(!hazirlik.sohbetMevcut&&!arkadas)'requestRecipientUid':widget.digerUid,
       },SetOptions(merge:true));
       batch.set(mesajRef,{
-        'senderId':ben,'text':'','type':'photo','mediaUrl':url,
+        'senderId':ben,'text':'','type':'photo','mediaUrl':url,'imageUrl':url,'photoUrl':url,
         'createdAt':FieldValue.serverTimestamp(),'clientCreatedAt':clientCreatedAt,
         if(bitis!=null)'expiresAt':bitis,
       });
@@ -18900,19 +18929,62 @@ class _KullaniciProfilPageState extends State<KullaniciProfilPage> {
   Future<void> _arkadasliktanCikar(String me,String gorunenAd)async{
     final onay=await showDialog<bool>(
       context:context,
-      builder:(d)=>AlertDialog(
-        backgroundColor:Colors.white,
-        surfaceTintColor:Colors.white,
-        title:const Text('Arkadaşlıktan çıkarılsın mı?',style:TextStyle(fontWeight:FontWeight.w900)),
-        content:Text('$gorunenAd ile arkadaşlığını kaldırmak istiyor musun?'),
-        actions:[
-          TextButton(onPressed:()=>Navigator.pop(d,false),child:const Text('Vazgeç')),
-          FilledButton(
-            style:FilledButton.styleFrom(backgroundColor:Colors.red,foregroundColor:Colors.white),
-            onPressed:()=>Navigator.pop(d,true),
-            child:const Text('Arkadaşlıktan çıkar'),
+      builder:(d)=>Theme(
+        data:ThemeData.light().copyWith(
+          colorScheme:ColorScheme.fromSeed(seedColor:mor,brightness:Brightness.light),
+          dialogTheme:const DialogThemeData(backgroundColor:Colors.white,surfaceTintColor:Colors.transparent),
+          textTheme:ThemeData.light().textTheme.apply(bodyColor:Colors.black87,displayColor:Colors.black87),
+        ),
+        child:AlertDialog(
+          backgroundColor:Colors.white,
+          surfaceTintColor:Colors.transparent,
+          insetPadding:const EdgeInsets.symmetric(horizontal:28,vertical:24),
+          contentPadding:const EdgeInsets.fromLTRB(24,8,24,8),
+          actionsPadding:const EdgeInsets.fromLTRB(18,8,18,18),
+          shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(28)),
+          icon:Container(
+            width:54,height:54,
+            decoration:BoxDecoration(color:const Color(0xFFFFECEE),borderRadius:BorderRadius.circular(18)),
+            child:const Icon(Icons.person_remove_alt_1_rounded,color:Color(0xFFE53935),size:28),
           ),
-        ],
+          title:const Text(
+            'Arkadaşlıktan çıkarılsın mı?',
+            textAlign:TextAlign.center,
+            style:TextStyle(color:Colors.black87,fontWeight:FontWeight.w900,fontSize:20),
+          ),
+          content:Column(
+            mainAxisSize:MainAxisSize.min,
+            children:[
+              Text(
+                '$gorunenAd ile arkadaşlığını kaldırmak istiyor musun?',
+                textAlign:TextAlign.center,
+                style:const TextStyle(color:Colors.black87,fontSize:14,height:1.35,fontWeight:FontWeight.w600),
+              ),
+              const SizedBox(height:8),
+              const Text(
+                'Bu işlem yalnızca arkadaşlığı kaldırır. İstersen daha sonra tekrar arkadaşlık isteği gönderebilirsin.',
+                textAlign:TextAlign.center,
+                style:TextStyle(color:Colors.black54,fontSize:12.5,height:1.35),
+              ),
+            ],
+          ),
+          actions:[
+            TextButton(
+              onPressed:()=>Navigator.pop(d,false),
+              child:const Text('Vazgeç',style:TextStyle(color:mor,fontWeight:FontWeight.w800)),
+            ),
+            FilledButton(
+              style:FilledButton.styleFrom(
+                backgroundColor:const Color(0xFFE53935),
+                foregroundColor:Colors.white,
+                padding:const EdgeInsets.symmetric(horizontal:22,vertical:12),
+                shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(18)),
+              ),
+              onPressed:()=>Navigator.pop(d,true),
+              child:const Text('Arkadaşlıktan çıkar',style:TextStyle(fontWeight:FontWeight.w900)),
+            ),
+          ],
+        ),
       ),
     )??false;
     if(!onay||!mounted)return;
