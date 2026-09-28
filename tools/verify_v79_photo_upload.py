@@ -9,8 +9,8 @@ def require(c,m):
     if not c:
         raise SystemExit("Build 298 fotoğraf yükleme kontrolu eksik: "+m)
 
-require("version: 1.0.79+298" in PUB,"Build 298 surumu")
-require("defaultValue: '1.0.79'" in MAIN and "defaultValue: '298'" in MAIN,"uygulama ici surum")
+require("version: 1.0.80+299" in PUB,"Build 299 surumu")
+require("defaultValue: '1.0.80'" in MAIN and "defaultValue: '299'" in MAIN,"uygulama ici surum")
 
 group_start=MAIN.index("Future<void> _grupFotografiniGonder")
 group_end=MAIN.index("Future<void> grupVideoGonder",group_start)
