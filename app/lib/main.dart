@@ -1304,6 +1304,41 @@ Future<String> _ngelxDirectR2DosyaYukle({
   }
 }
 
+Future<String> _ngelxMedyaYayininiDogrula(String rawUrl) async {
+  final url=rawUrl.trim();
+  final uri=Uri.tryParse(url);
+  if(uri==null||uri.scheme!='https'||uri.host.isEmpty){
+    throw Exception('Medya servisi geçersiz bir yayın adresi döndürdü.');
+  }
+  Object? sonHata;
+  for(var deneme=1;deneme<=3;deneme++){
+    try{
+      final cevap=await Dio(BaseOptions(
+        connectTimeout:const Duration(seconds:12),
+        receiveTimeout:const Duration(seconds:20),
+        validateStatus:(s)=>s!=null,
+      )).getUri(
+        uri,
+        options:Options(
+          responseType:ResponseType.bytes,
+          headers:{HttpHeaders.rangeHeader:'bytes=0-0','Cache-Control':'no-cache'},
+        ),
+      );
+      final status=cevap.statusCode??0;
+      final veri=cevap.data;
+      final dolu=veri is List<int> ? veri.isNotEmpty : veri!=null;
+      if((status==200||status==206)&&dolu)return url;
+      sonHata=Exception('medya doğrulama HTTP $status');
+    }catch(e){
+      sonHata=e;
+    }
+    if(deneme<3){
+      await Future<void>.delayed(Duration(milliseconds:300*deneme));
+    }
+  }
+  throw Exception('Yüklenen medya yayın adresinden okunamadı: ${_ngelxKisaHata(sonHata??'bilinmeyen hata')}');
+}
+
 Future<String> ngelxMedyaYukleBytes({
   required Uint8List bytes,
   required String kind,
@@ -1321,10 +1356,11 @@ Future<String> ngelxMedyaYukleBytes({
   final hatalar=<String>[];
 
   try{
-    return await _ngelxDirectR2BytesYukle(
+    final url=await _ngelxDirectR2BytesYukle(
       api:api,bytes:bytes,kind:kind,ext:temizExt,contentType:tur,
       onProgress:onProgress,
     );
+    return await _ngelxMedyaYayininiDogrula(url);
   }catch(e){
     hatalar.add('direct: '+_ngelxKisaHata(e));
   }
@@ -1337,7 +1373,7 @@ Future<String> ngelxMedyaYukleBytes({
 
   for(final base in adaylar){
     try{
-      return await _ngelxStandartBytesYukle(
+      final url=await _ngelxStandartBytesYukle(
         api:base,
         bytes:bytes,
         kind:kind,
@@ -1346,6 +1382,7 @@ Future<String> ngelxMedyaYukleBytes({
         legacyPath:legacyPath,
         onProgress:onProgress,
       );
+      return await _ngelxMedyaYayininiDogrula(url);
     }catch(e){
       hatalar.add(base+': '+_ngelxKisaHata(e));
     }
@@ -1354,7 +1391,7 @@ Future<String> ngelxMedyaYukleBytes({
   if(Platform.isAndroid&&bytes.length<=10*1024*1024){
     for(final base in adaylar){
       try{
-        return await _ngelxKucukMedyaYukleAndroid(
+        final url=await _ngelxKucukMedyaYukleAndroid(
           api:base,
           bytes:bytes,
           kind:kind,
@@ -1363,6 +1400,7 @@ Future<String> ngelxMedyaYukleBytes({
           legacyPath:legacyPath,
           onProgress:onProgress,
         );
+        return await _ngelxMedyaYayininiDogrula(url);
       }catch(e){
         hatalar.add('chunk '+base+': '+_ngelxKisaHata(e));
       }
@@ -1390,10 +1428,11 @@ Future<String> ngelxMedyaYukleDosya({
   final hatalar=<String>[];
 
   try{
-    return await _ngelxDirectR2DosyaYukle(
+    final url=await _ngelxDirectR2DosyaYukle(
       api:api,dosya:dosya,size:boyut,kind:kind,ext:temizExt,
       contentType:tur,onProgress:onProgress,
     );
+    return await _ngelxMedyaYayininiDogrula(url);
   }catch(e){
     hatalar.add('direct: '+_ngelxKisaHata(e));
   }
@@ -1406,7 +1445,7 @@ Future<String> ngelxMedyaYukleDosya({
 
   for(final base in adaylar){
     try{
-      return await _ngelxStandartDosyaYukle(
+      final url=await _ngelxStandartDosyaYukle(
         api:base,
         dosya:dosya,
         size:boyut,
@@ -1416,6 +1455,7 @@ Future<String> ngelxMedyaYukleDosya({
         legacyPath:legacyPath,
         onProgress:onProgress,
       );
+      return await _ngelxMedyaYayininiDogrula(url);
     }catch(e){
       hatalar.add(base+': '+_ngelxKisaHata(e));
     }
@@ -1424,7 +1464,7 @@ Future<String> ngelxMedyaYukleDosya({
   if(Platform.isAndroid){
     for(final base in adaylar){
       try{
-        return await _ngelxWebSocketDosyaYukleAndroid(
+        final url=await _ngelxWebSocketDosyaYukleAndroid(
           api:base,
           dosya:dosya,
           size:boyut,
@@ -1434,6 +1474,7 @@ Future<String> ngelxMedyaYukleDosya({
           legacyPath:legacyPath,
           onProgress:onProgress,
         );
+        return await _ngelxMedyaYayininiDogrula(url);
       }catch(e){
         hatalar.add('ws '+base+': '+_ngelxKisaHata(e));
       }
@@ -2170,12 +2211,48 @@ Future<void> icerikAracMenusu(BuildContext context,String icerikId,{Future<void>
   String altyaziMetni(){final c=captionTranslations[altyaziDili]?.trim()??'';if(c.isNotEmpty)return c;final d=captions[altyaziDili]?.trim()??'';if(d.isNotEmpty)return d;return captionText;}
   Future<void> ceviriUret(StateSetter setP,{String? dil})async{
     final istenenDil=ngelxDilKodu(dil??hedefDil);
-    if(ceviriHazir(istenenDil))return;if(icerikMetni.isEmpty)throw Exception('Bu içerikte çevrilecek yazı bulunamadı.');setP(()=>islem=true);
+    if(ceviriHazir(istenenDil))return;
+    if(icerikMetni.isEmpty&&medyaUrlListesi.isEmpty)throw Exception('Bu içerikte çevrilecek yazı veya konuşma bulunamadı.');
+    setP(()=>islem=true);
     try{
       if(aracHafizaRef==null)throw Exception('Çeviri için hesabına giriş yapmalısın.');
-      final sonuc=await ngelxGercekCeviriOlustur(metin:icerikMetni,kaynakDil:kaynakDil,hedefDil:istenenDil);
+      var cevrilecekMetin=icerikMetni;
+      var gercekKaynakDil=kaynakDil;
+      // Açıklamasız videolarda "Çeviriyi göster" konuşmayı önce yazıya
+      // döker. Böylece çeviri anahtarı yalnızca açıklamaya bağlı kalmaz.
+      if(cevrilecekMetin.isEmpty){
+        final altyaziSonucu=await ngelxGercekAltyaziOlustur(
+          mediaUrls:medyaUrlListesi,
+          kaynakDil:kaynakDil,
+        );
+        cevrilecekMetin=(altyaziSonucu['text']??'').trim();
+        captionText=cevrilecekMetin;
+        final algilanan=ngelxDilKodu(altyaziSonucu['language']);
+        if(algilanan.isNotEmpty)gercekKaynakDil=algilanan;
+        if(gercekKaynakDil.isNotEmpty)captions[gercekKaynakDil]=captionText;
+        await hafiza.setString('content_caption_cache_$icerikId',jsonEncode({
+          'captionText':captionText,
+          'captions':captions,
+          'captionTranslations':captionTranslations,
+        }));
+      }
+      final sonuc=gercekKaynakDil==istenenDil
+        ?cevrilecekMetin
+        :await ngelxGercekCeviriOlustur(
+            metin:cevrilecekMetin,
+            kaynakDil:gercekKaynakDil,
+            hedefDil:istenenDil,
+          );
       ceviriler[istenenDil]=sonuc;
-      await aracHafizaRef.set({'contentId':icerikId,'translations':ceviriler,'updatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
+      if(icerikMetni.isEmpty)captionTranslations[istenenDil]=sonuc;
+      await aracHafizaRef.set({
+        'contentId':icerikId,
+        'translations':ceviriler,
+        if(captionText.isNotEmpty)'captionText':captionText,
+        if(captions.isNotEmpty)'captions':captions,
+        if(captionTranslations.isNotEmpty)'captionTranslations':captionTranslations,
+        'updatedAt':FieldValue.serverTimestamp(),
+      },SetOptions(merge:true));
       await hafiza.setString('content_translation_cache_$icerikId',jsonEncode(ceviriler));
     }finally{setP(()=>islem=false);}
   }
@@ -5928,7 +6005,7 @@ class _YeniYorumlarState extends State<Yorumlar> {
       ),
       child: SafeArea(
       child: SizedBox(
-        height: MediaQuery.of(context).size.height * .72,
+        height: MediaQuery.sizeOf(context).height * .72,
         child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
           stream: ref.limit(80).snapshots(),
           builder: (_, snap) {
@@ -5992,19 +6069,72 @@ class _YeniYorumlarState extends State<Yorumlar> {
               ),
               if (yanitlananId != null)
                 Container(color: mor.withValues(alpha: .15), padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 7), child: Row(children: [Expanded(child: Text('@$yanitlananKullanici kullanıcısına yanıt veriyorsun', style: const TextStyle(color: mavi))), IconButton(onPressed: () => setState(() { yanitlananId = null; yanitlananKullanici = null; }), icon: const Icon(Icons.close, size: 18))])),
-              Padding(
-                padding: EdgeInsets.fromLTRB(12, 8, 12, MediaQuery.of(context).viewInsets.bottom + 10),
-                child: Row(children: [
-                  IconButton(onPressed: () => yorum.text += ' 😊', icon: const Icon(Icons.emoji_emotions_outlined, color: mor)),
-                  Expanded(child: TextField(controller: yorum, onSubmitted: (_) => gonder(), decoration: InputDecoration(hintText: yanitlananId == null ? 'Yorum ekle...' : 'Yanıt yaz...', contentPadding: const EdgeInsets.symmetric(horizontal: 17, vertical: 12)))),
-                  IconButton(onPressed: gonderiliyor ? null : gonder, icon: gonderiliyor ? const SizedBox(width: 21, height: 21, child: CircularProgressIndicator(strokeWidth: 2, color: mavi)) : const Icon(Icons.send_rounded, color: mavi)),
-                ]),
+              NgelXYorumYazici(
+                controller:yorum,
+                yanitYaziliyor:yanitlananId!=null,
+                gonderiliyor:gonderiliyor,
+                onGonder:gonder,
               ),
             ]);
           },
         ),
       ),
     ),
+    );
+  }
+}
+
+class NgelXYorumYazici extends StatelessWidget{
+  final TextEditingController controller;
+  final bool yanitYaziliyor;
+  final bool gonderiliyor;
+  final VoidCallback onGonder;
+  const NgelXYorumYazici({
+    super.key,
+    required this.controller,
+    required this.yanitYaziliyor,
+    required this.gonderiliyor,
+    required this.onGonder,
+  });
+  @override Widget build(BuildContext context){
+    // Klavye animasyonu yalnızca bu küçük alanı yeniden kurar; 80 yorumluk
+    // Firestore listesi her tuşta/klavye karesinde tekrar çizilmez.
+    final klavye=MediaQuery.viewInsetsOf(context).bottom;
+    return AnimatedPadding(
+      duration:const Duration(milliseconds:120),
+      curve:Curves.easeOut,
+      padding:EdgeInsets.fromLTRB(12,8,12,klavye+10),
+      child:RepaintBoundary(child:Row(children:[
+        IconButton(
+          onPressed:(){
+            final secim=controller.selection;
+            final konum=secim.isValid?secim.start:controller.text.length;
+            final yeni=controller.text.replaceRange(konum,konum,' 😊');
+            controller.value=TextEditingValue(
+              text:yeni,
+              selection:TextSelection.collapsed(offset:konum+3),
+            );
+          },
+          icon:const Icon(Icons.emoji_emotions_outlined,color:mor),
+        ),
+        Expanded(child:TextField(
+          controller:controller,
+          textInputAction:TextInputAction.send,
+          minLines:1,
+          maxLines:4,
+          onSubmitted:(_)=>onGonder(),
+          decoration:InputDecoration(
+            hintText:yanitYaziliyor?'Yanıt yaz...':'Yorum ekle...',
+            contentPadding:const EdgeInsets.symmetric(horizontal:17,vertical:12),
+          ),
+        )),
+        IconButton(
+          onPressed:gonderiliyor?null:onGonder,
+          icon:gonderiliyor
+            ?const SizedBox(width:21,height:21,child:CircularProgressIndicator(strokeWidth:2,color:mavi))
+            :const Icon(Icons.send_rounded,color:mavi),
+        ),
+      ])),
     );
   }
 }
@@ -16043,14 +16173,12 @@ class _SohbetPageState extends State<SohbetPage> {
         'createdAt':FieldValue.serverTimestamp(),'clientCreatedAt':clientCreatedAt,
         if(bitis!=null)'expiresAt':bitis,
       });
+      await batch.commit().timeout(const Duration(seconds:20));
       _mesajHazirlikSohbetMevcut=true;
       _mesajHazirlikSohbet={...hazirlik.sohbet,'lastMessage':'📷 Fotoğraf','updatedAt':clientCreatedAt};
-      unawaited(batch.commit().timeout(const Duration(seconds:12)).catchError((e){
-        if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Fotoğraf gönderilemedi. Tekrar dene.')));
-      }));
       unawaited(uygulamaBildirimiGonder(toUid:widget.digerUid,fromUid:ben,tur:'message',metin:'Yeni bir fotoğraf mesajın var',belgeId:widget.chatId).catchError((_){ }));
-    }catch(_){
-      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Medya hizmeti şu anda kullanılamıyor. Yazılı mesaj göndermeye devam edebilirsin.')));
+    }catch(e){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Fotoğraf gönderilemedi: ${ngelxMedyaHataMetni(e)}')));
     }
   }
 
@@ -18775,14 +18903,19 @@ class _ProfilTanitimVideoKartiState extends State<ProfilTanitimVideoKarti> with 
       borderRadius:BorderRadius.circular(18),
       child:Container(
         height:150,
+        clipBehavior:Clip.antiAlias,
         decoration:BoxDecoration(color:const Color(0xFFF1F2F4),borderRadius:BorderRadius.circular(18)),
-        child:Center(child:yukleniyor
-          ?const CircularProgressIndicator(color:mor)
-          :const Column(mainAxisSize:MainAxisSize.min,children:[
-              Icon(Icons.play_circle_fill_rounded,color:mor,size:52),
-              SizedBox(height:7),
-              Text('Tanıtım videosunu oynat',style:TextStyle(color:Colors.black54,fontWeight:FontWeight.w800)),
-            ])),
+        child:Stack(fit:StackFit.expand,children:[
+          NgelXVideoKapakOnizleme(url:widget.url),
+          ColoredBox(color:Colors.black26),
+          Center(child:yukleniyor
+            ?const CircularProgressIndicator(color:Colors.white)
+            :const Column(mainAxisSize:MainAxisSize.min,children:[
+                Icon(Icons.play_circle_fill_rounded,color:Colors.white,size:54),
+                SizedBox(height:7),
+                Text('Tanıtım videosunu oynat',style:TextStyle(color:Colors.white,fontWeight:FontWeight.w900)),
+              ])),
+        ]),
       ),
     );
     return SizedBox(
@@ -21586,9 +21719,13 @@ class _ProfilPageState extends State<ProfilPage> {
       setState(()=>fotoYukleniyor=true);
       final uzanti=dosya.name.contains('.')?dosya.name.split('.').last.toLowerCase():(video?'mp4':'jpg');
       final yol='stories/'+user.uid+'/'+DateTime.now().millisecondsSinceEpoch.toString()+'.'+uzanti;
-      final url=video
-        ?await ngelxMedyaYukleDosya(dosya:dosya,kind:'stories',ext:uzanti,legacyPath:yol)
-        :await ngelxMedyaYukleBytes(bytes:await dosya.readAsBytes(),kind:'stories',ext:uzanti,legacyPath:yol);
+      final url=await ngelxMedyaYukleDosya(
+        dosya:dosya,
+        kind:'stories',
+        ext:uzanti,
+        legacyPath:yol,
+        contentType:video&&uzanti=='mov'?'video/quicktime':null,
+      );
 
       await FirebaseFirestore.instance.collection('videos').add({
         'ownerId':user.uid,
