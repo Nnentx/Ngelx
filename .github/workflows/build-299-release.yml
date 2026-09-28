@@ -1,0 +1,104 @@
+name: NgelX Build 299 Release Candidate
+
+on:
+  push:
+    branches:
+      - work/build-299-release
+      - work/v72-combined
+    paths:
+      - 'app/**'
+      - 'tools/**'
+      - 'cloudflare/worker/**'
+      - 'firestore.rules'
+      - '.github/workflows/build-299-release.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ngelx-build-299-release-candidate
+  cancel-in-progress: true
+
+jobs:
+  verify-and-build-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - name: Kaynakları al
+        uses: actions/checkout@v4
+
+      - name: Flutter kur
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Paketleri kur
+        working-directory: app
+        run: flutter pub get
+
+      - name: Kilit dosyasını doğrula
+        run: git diff --exit-code -- app/pubspec.lock
+
+      - name: Bütün kaynak regresyonlarını çalıştır
+        run: |
+          for test_file in tools/verify_*.py; do
+            python3 "$test_file"
+          done
+          python3 tools/verify_v80_critical_firebase.py
+          python3 tools/verify_v81_music_layers.py
+
+      - name: Worker testleri
+        run: |
+          node --check cloudflare/worker/src/index.js
+          cd cloudflare/worker
+          npm test
+
+      - name: Flutter statik analiz
+        working-directory: app
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
+
+      - name: Flutter testleri
+        working-directory: app
+        run: |
+          if [ -d test ]; then flutter test; else echo "Test klasörü yok."; fi
+
+      - name: Java 21 kur
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Sabit test imzasını geri yükle
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: ngelx-stable-debug-keystore-v1
+
+      - name: Sabit test anahtarı yoksa oluştur
+        run: |
+          mkdir -p "$HOME/.android"
+          if [ ! -f "$HOME/.android/debug.keystore" ]; then
+            keytool -genkeypair -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey -keypass android -dname "CN=Android Debug,O=Android,C=US" -keyalg RSA -keysize 2048 -validity 10000
+          fi
+
+      - name: Build 299 debug APK derle
+        working-directory: app
+        run: |
+          APP_VERSION="$(awk '/^version:/ {print $2}' pubspec.yaml)"
+          BUILD_NAME="${APP_VERSION%%+*}"
+          BUILD_NUMBER="${APP_VERSION##*+}"
+          test "$BUILD_NAME" = "1.0.80"
+          test "$BUILD_NUMBER" = "299"
+          flutter build apk --debug \
+            --dart-define=NGELX_VERSION_NAME="$BUILD_NAME" \
+            --dart-define=NGELX_BUILD_NUMBER="$BUILD_NUMBER"
+
+      - name: Build 299 APK artifact yükle
+        uses: actions/upload-artifact@v4
+        with:
+          name: NgelX-1.0.80-Build-299-TEST-APK
+          path: app/build/app/outputs/flutter-apk/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
