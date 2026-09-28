@@ -1,0 +1,48 @@
+name: Apply NgelX Build 301 Unified Media
+
+on:
+  push:
+    branches:
+      - work/v72-combined
+    paths:
+      - 'tools/apply_v83_unified_photo_pipeline.py'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ngelx-build-301-unified-media
+  cancel-in-progress: true
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Kaynaklari al
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Birlesik medya yamasini uygula
+        run: python3 tools/apply_v83_unified_photo_pipeline.py
+
+      - name: Build 301 medya hattini dogrula
+        run: python3 tools/verify_v83_unified_photo_pipeline.py
+
+      - name: Diff kontrolu
+        run: git diff --check
+
+      - name: Build 301 degisikliklerini kaydet
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/lib/main.dart app/pubspec.yaml             tools/verify_v64_app_quality.py tools/verify_v65_media_traffic.py tools/verify_v65_work.py             tools/verify_v66_work.py tools/verify_v67_work.py tools/verify_v68_work.py             tools/verify_v72_device_fixes.py tools/verify_v76_chat_media.py tools/verify_v77_social_relations.py             tools/verify_v78_media_dialog.py tools/verify_v79_photo_upload.py tools/verify_v80_critical_firebase.py             tools/verify_v82_media_reliability.py
+          if git diff --cached --quiet; then
+            echo "Uygulanacak degisiklik bulunamadi."
+            exit 1
+          fi
+          git commit -m "fix: unify profile group and story photo uploads"
+          git push
