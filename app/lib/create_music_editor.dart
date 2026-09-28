@@ -108,6 +108,42 @@ class _NgelXMuzikSecPageState extends State<NgelXMuzikSecPage> {
     }
   }
 
+  Future<void> _cihazdanSesSec() async {
+    final onay=await showDialog<bool>(
+      context:context,
+      builder:(c)=>AlertDialog(
+        title:const Text('Kendi ses dosyanı ekle'),
+        content:const Text('Yalnızca sana ait, kullanım iznin olan veya telifsiz bir ses dosyası seçmelisin.'),
+        actions:[
+          TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),
+          FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('Onaylıyorum')),
+        ],
+      ),
+    );
+    if(onay!=true||!mounted)return;
+    const tur=XTypeGroup(label:'Ses dosyası',extensions:['mp3','m4a','aac','wav','ogg']);
+    final dosya=await openFile(acceptedTypeGroups:[tur]);
+    if(dosya==null||!mounted)return;
+    final boyut=await dosya.length();
+    if(boyut<=0||boyut>15*1024*1024){
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Ses dosyası 15 MB’den küçük olmalı.')));
+      return;
+    }
+    final ad=dosya.name.trim().isEmpty?'Kendi sesim':dosya.name.trim();
+    await onizleme.stop();
+    if(!mounted)return;
+    Navigator.pop(context,<String,dynamic>{
+      'id':'user_${DateTime.now().millisecondsSinceEpoch}',
+      'title':ad,
+      'artist':'Cihazımdan',
+      'audioUrl':'',
+      'localPath':dosya.path,
+      'licenseStatus':'user-owned',
+      'sourceType':'user-upload',
+      'durationSeconds':0,
+    });
+  }
+
   @override
   void dispose() {
     ara.dispose();
@@ -131,6 +167,15 @@ class _NgelXMuzikSecPageState extends State<NgelXMuzikSecPage> {
           top: false,
           child: Column(
             children: [
+              Padding(
+                padding:const EdgeInsets.fromLTRB(16,10,16,4),
+                child:OutlinedButton.icon(
+                  onPressed:_cihazdanSesSec,
+                  style:OutlinedButton.styleFrom(minimumSize:const Size.fromHeight(50)),
+                  icon:const Icon(Icons.audio_file_rounded,color:mor),
+                  label:const Text('Cihazımdan ses dosyası seç'),
+                ),
+              ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
                 child: TextField(
@@ -405,6 +450,80 @@ class _NgelXMuzikSecPageState extends State<NgelXMuzikSecPage> {
           ),
         ),
       ),
+    );
+  }
+}
+
+extension NgelXMuzikYayinArayuzu on _YeniYuklePageState {
+  Future<String> xDosyasiYukle(XFile dosya,String klasor)async{
+    final user=FirebaseAuth.instance.currentUser;
+    if(user==null)throw Exception('Paylaşmak için giriş yapmalısın.');
+    final secilenTur=klasor=='videos'?'video':'photo';
+    if(!await _medyaBoyutuUygun(dosya,secilenTur))throw Exception('Dosya boyutu uygun değil.');
+    final uzanti=dosya.name.contains('.')?dosya.name.split('.').last.toLowerCase():(secilenTur=='video'?'mp4':'jpg');
+    final yol='$klasor/${user.uid}/${DateTime.now().microsecondsSinceEpoch}.$uzanti';
+    void ilerleme(int sent,int total){
+      if(!mounted||total<=0)return;
+      final oran=(sent/total).clamp(0.0,1.0).toDouble();
+      setState((){
+        yuklemeIlerlemesi=oran;
+        if(oran>=.999)yuklemeDurumu='Medya aktarımı tamamlandı, doğrulanıyor...';
+      });
+    }
+    if(secilenTur=='video'){
+      return ngelxMedyaYukleDosya(
+        dosya:dosya,kind:'videos',ext:uzanti,legacyPath:yol,onProgress:ilerleme,
+      );
+    }
+    var b=await dosya.readAsBytes();
+    var ext=uzanti;
+    if(fotoEfekti!='Yok'||fotoDonus%4!=0||kareKirp){
+      b=await ngelxFotoDuzenle(b,efekt:fotoEfekti,donus:fotoDonus,kareKirp:kareKirp);
+      ext='png';
+    }
+    return ngelxMedyaYukleBytes(
+      bytes:b,kind:'photos',ext:ext,
+      legacyPath:yol.replaceFirst(RegExp(r'\.[^.]+$'),'.'+ext),onProgress:ilerleme,
+    );
+  }
+
+  Widget _muzikOzeti(){
+    final muzik=secilenMuzik;
+    if(muzik==null)return const SizedBox.shrink();
+    final baslik=(muzik['title']??'NgelX müziği').toString();
+    final sanatci=(muzik['artist']??'').toString();
+    final kapak=(muzik['coverUrl']??'').toString();
+    return Container(
+      margin:const EdgeInsets.only(top:10),
+      padding:const EdgeInsets.all(10),
+      decoration:BoxDecoration(color:const Color(0xFFF3F5F8),borderRadius:BorderRadius.circular(18)),
+      child:Column(children:[
+        Row(children:[
+          ClipRRect(
+            borderRadius:BorderRadius.circular(11),
+            child:kapak.isEmpty
+              ?Container(width:48,height:48,color:const Color(0xFFE3E5EA),child:const Icon(Icons.music_note_rounded))
+              :CachedNetworkImage(imageUrl:kapak,width:48,height:48,fit:BoxFit.cover,errorWidget:(_,__,___)=>Container(width:48,height:48,color:const Color(0xFFE3E5EA),child:const Icon(Icons.music_note_rounded))),
+          ),
+          const SizedBox(width:10),
+          Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+            Text(baslik,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontWeight:FontWeight.w900)),
+            if(sanatci.isNotEmpty)Text(sanatci,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black54,fontSize:12)),
+            Text((muzik['sourceType']??'')=='user-upload'?'Kullanım hakkı kullanıcı tarafından onaylandı':'Lisansı uygun NgelX müzik kataloğu',style:const TextStyle(color:Colors.black45,fontSize:10.5)),
+          ])),
+          IconButton(tooltip:'Müziği kaldır',onPressed:yukleniyor?null:(){setState(()=>secilenMuzik=null);_taslakDegisti();},icon:const Icon(Icons.close_rounded,color:Colors.redAccent)),
+        ]),
+        if(tur=='video')Row(children:[
+          const SizedBox(width:104,child:Text('Video sesi',style:TextStyle(fontSize:12,fontWeight:FontWeight.w700))),
+          Expanded(child:Slider(value:orijinalSesSeviyesi,onChanged:yukleniyor?null:(v){setState(()=>orijinalSesSeviyesi=v);_taslakDegisti();})),
+          SizedBox(width:38,child:Text('${(orijinalSesSeviyesi*100).round()}%',style:const TextStyle(fontSize:11))),
+        ]),
+        Row(children:[
+          const SizedBox(width:104,child:Text('Müzik sesi',style:TextStyle(fontSize:12,fontWeight:FontWeight.w700))),
+          Expanded(child:Slider(value:muzikSesSeviyesi,onChanged:yukleniyor?null:(v){setState(()=>muzikSesSeviyesi=v);_taslakDegisti();})),
+          SizedBox(width:38,child:Text('${(muzikSesSeviyesi*100).round()}%',style:const TextStyle(fontSize:11))),
+        ]),
+      ]),
     );
   }
 }

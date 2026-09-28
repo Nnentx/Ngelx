@@ -39,8 +39,8 @@ for needle, label in [
     ("'overlayText':medyaYazisi", "publish overlay"),
     ("'videoTrimStartMs':tur=='video'?videoBaslangicMs:0", "publish trim start"),
     ("'videoTrimEndMs':tur=='video'?videoBitisMs:0", "publish trim end"),
-    ("'audioUrl':(secilenMuzik?['audioUrl']??'').toString()", "publish music url"),
-    ("'musicLicense':(secilenMuzik?['licenseStatus']??'').toString()", "publish license metadata"),
+    ("'audioUrl':(yayinMuzik?['audioUrl']??'').toString()", "publish music url"),
+    ("'musicLicense':(yayinMuzik?['licenseStatus']??'').toString()", "publish license metadata"),
 ]:
     require(main, needle, label)
 

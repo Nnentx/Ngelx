@@ -2712,6 +2712,8 @@ class IcerikBaglantiPage extends StatelessWidget {
     'mediaUrls':jsonEncode(v['mediaUrls']??const <String>[]),
     'mediaCount':(v['mediaCount']??0).toString(),
     'audioUrl':(v['audioUrl']??'').toString(),
+    'originalAudioVolume':(v['originalAudioVolume']??.25).toString(),
+    'musicVolume':(v['musicVolume']??1).toString(),
     'overlayText':(v['overlayText']??'').toString(),
     'overlayColor':(v['overlayColor']??0xFFFFFFFF).toString(),
     'overlayBackgroundColor':(v['overlayBackgroundColor']??0x99000000).toString(),
@@ -2763,6 +2765,8 @@ class IcerikBaglantiPage extends StatelessWidget {
           captions:ngelxDilMetinHaritasi(v['captions']),
           captionTranslations:ngelxDilMetinHaritasi(v['captionTranslations']),
           audioUrl:(v['audioUrl']??'').toString(),
+          originalAudioVolume:(v['originalAudioVolume'] as num?)?.toDouble()??.25,
+          musicVolume:(v['musicVolume'] as num?)?.toDouble()??1,
           overlayText:(v['overlayText']??'').toString(),
           overlayColor:(v['overlayColor'] as num?)?.toInt()??0xFFFFFFFF,
           overlayBackgroundColor:(v['overlayBackgroundColor'] as num?)?.toInt()??0x99000000,
@@ -3790,6 +3794,8 @@ class _VideoAkisiState extends State<VideoAkisi> {
               'musicTitle':(veri['musicTitle']??'').toString(),
               'musicArtist':(veri['musicArtist']??'').toString(),
               'musicCoverUrl':(veri['musicCoverUrl']??'').toString(),
+              'originalAudioVolume':(veri['originalAudioVolume'] as num?)?.toDouble()??.25,
+              'musicVolume':(veri['musicVolume'] as num?)?.toDouble()??1,
               'description':(veri['description']??'').toString(),
               'contentLanguage':(veri['contentLanguage']??veri['language']??'').toString(),
               'translations':ngelxDilMetinHaritasi(veri['translations']),
@@ -3892,6 +3898,8 @@ class _VideoAkisiState extends State<VideoAkisi> {
                     captions:Map<String,String>.from(item['captions'] as Map? ??const <String,String>{}),
                     captionTranslations:Map<String,String>.from(item['captionTranslations'] as Map? ??const <String,String>{}),
                     audioUrl:(item['audioUrl']??'').toString(),
+                    originalAudioVolume:(item['originalAudioVolume'] as num?)?.toDouble()??.25,
+                    musicVolume:(item['musicVolume'] as num?)?.toDouble()??1,
                     overlayText:(item['overlayText']??'').toString(),
                     overlayColor:(item['overlayColor'] as num?)?.toInt()??0xFFFFFFFF,
                     overlayBackgroundColor:(item['overlayBackgroundColor'] as num?)?.toInt()??0x99000000,
@@ -3916,6 +3924,7 @@ class _VideoAkisiState extends State<VideoAkisi> {
                   'mediaUrls':jsonEncode(item['mediaUrls']??const <String>[]),
                   'mediaCount':(item['mediaCount']??0).toString(),
                   'audioUrl':(item['audioUrl']??'').toString(),
+                  'musicVolume':(item['musicVolume']??1).toString(),
                   'overlayText':(item['overlayText']??'').toString(),
                   'overlayColor':(item['overlayColor']??0xFFFFFFFF).toString(),
                   'overlayBackgroundColor':(item['overlayBackgroundColor']??0x99000000).toString(),
@@ -4619,6 +4628,7 @@ class _GorselYaziKartiState extends State<GorselYaziKarti> {
       try{
         await p.setUrl(ses);
         await p.setLoopMode(LoopMode.one);
+        await p.setVolume((double.tryParse(widget.veri['musicVolume']??'')??1).clamp(0,1).toDouble());
       }catch(_){
         if(identical(oynatici,p))oynatici=null;
         await p.dispose();
@@ -5003,6 +5013,7 @@ class VideoKarti extends StatefulWidget {
   final String captionText;
   final Map<String,String> captions,captionTranslations;
   final String audioUrl;
+  final double originalAudioVolume,musicVolume;
   final String overlayText;
   final int overlayColor,overlayBackgroundColor;
   final double overlayFontSize,overlayX,overlayY,overlayScale,overlayRotation;
@@ -5027,6 +5038,8 @@ class VideoKarti extends StatefulWidget {
     this.captions = const <String,String>{},
     this.captionTranslations = const <String,String>{},
     this.audioUrl = '',
+    this.originalAudioVolume = .25,
+    this.musicVolume = 1,
     this.overlayText = '',
     this.overlayColor=0xFFFFFFFF,
     this.overlayBackgroundColor=0x99000000,
@@ -5093,7 +5106,7 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver {
     try{
       await kontrol.initialize();
       await kontrol.setLooping(widget.trimEndMs<=0);
-      await kontrol.setVolume(widget.audioUrl.isNotEmpty ? .25 : 1);
+      await kontrol.setVolume(widget.audioUrl.isNotEmpty?widget.originalAudioVolume.clamp(0,1).toDouble():1);
       if(widget.trimStartMs>0){
         await kontrol.seekTo(Duration(milliseconds:widget.trimStartMs));
       }
@@ -5116,7 +5129,7 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver {
     try{
       await p.setUrl(widget.audioUrl);
       await p.setLoopMode(LoopMode.one);
-      await p.setVolume(sessiz?0:1);
+      await p.setVolume(sessiz?0:widget.musicVolume.clamp(0,1).toDouble());
       if(widget.aktif&&!duraklatildi)unawaited(p.play());
     }catch(_){
       if(identical(muzikOynatici,p))muzikOynatici=null;
@@ -5232,8 +5245,8 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver {
   void sesiDegistir() {
     if (!hazir) return;
     setState(() => sessiz = !sessiz);
-    kontrol.setVolume(sessiz ? 0 : (widget.audioUrl.isNotEmpty ? .25 : 1));
-    muzikOynatici?.setVolume(sessiz ? 0 : 1);
+    kontrol.setVolume(sessiz?0:(widget.audioUrl.isNotEmpty?widget.originalAudioVolume.clamp(0,1).toDouble():1));
+    muzikOynatici?.setVolume(sessiz?0:widget.musicVolume.clamp(0,1).toDouble());
   }
 
   Future<void> begeniyiDegistir() async {
@@ -7445,6 +7458,7 @@ class _YeniYuklePageState extends State<YuklePage> {
   double medyaYaziX=0,medyaYaziY=0,medyaYaziScale=1,medyaYaziRotation=0;
   int videoBaslangicMs=0,videoBitisMs=0;
   Map<String,dynamic>? secilenMuzik;
+  double orijinalSesSeviyesi=.25,muzikSesSeviyesi=1;
   Timer? taslakZamanlayici;
   double yuklemeIlerlemesi=0;
   String yuklemeDurumu='';
@@ -7493,21 +7507,21 @@ class _YeniYuklePageState extends State<YuklePage> {
       final v=Map<String,dynamic>.from(jsonDecode(ham) as Map),yollar=List<String>.from(v['mediaPaths']??const <String>[]),m=<XFile>[];
       for(final p in yollar){if(p.isNotEmpty&&await File(p).exists())m.add(XFile(p));}
       if(!mounted)return;
-      setState((){tur=(v['type']??tur).toString();gizlilik=(v['privacy']??gizlilik).toString();yorumKitlesi=(v['commentAudience']??yorumKitlesi).toString();indirmeyeIzin=v['allowDownload']!=false;yorumlaraIzin=v['allowComments']!=false;yenidenPaylasimaIzin=v['allowReshare']!=false;fotoEfekti=(v['photoEffect']??'Yok').toString();fotoDonus=(v['photoRotation'] as num?)?.toInt()??0;kareKirp=v['photoSquareCrop']==true;medyaYazisi=(v['overlayText']??'').toString();medyaYaziRenk=(v['overlayColor'] as num?)?.toInt()??0xFFFFFFFF;medyaYaziArkaPlanRenk=(v['overlayBackgroundColor'] as num?)?.toInt()??0x99000000;medyaYaziBoyut=(v['overlayFontSize'] as num?)?.toDouble()??22;medyaYaziX=(v['overlayX'] as num?)?.toDouble()??0;medyaYaziY=(v['overlayY'] as num?)?.toDouble()??0;medyaYaziScale=(v['overlayScale'] as num?)?.toDouble()??1;medyaYaziRotation=(v['overlayRotation'] as num?)?.toDouble()??0;videoBaslangicMs=(v['videoTrimStartMs'] as num?)?.toInt()??0;videoBitisMs=(v['videoTrimEndMs'] as num?)?.toInt()??0;final muzik=v['music'];secilenMuzik=muzik is Map?Map<String,dynamic>.from(muzik):null;medyalar=m;medya=m.isEmpty?null:m.first;taslakVar=true;});
+      setState((){tur=(v['type']??tur).toString();gizlilik=(v['privacy']??gizlilik).toString();yorumKitlesi=(v['commentAudience']??yorumKitlesi).toString();indirmeyeIzin=v['allowDownload']!=false;yorumlaraIzin=v['allowComments']!=false;yenidenPaylasimaIzin=v['allowReshare']!=false;fotoEfekti=(v['photoEffect']??'Yok').toString();fotoDonus=(v['photoRotation'] as num?)?.toInt()??0;kareKirp=v['photoSquareCrop']==true;medyaYazisi=(v['overlayText']??'').toString();medyaYaziRenk=(v['overlayColor'] as num?)?.toInt()??0xFFFFFFFF;medyaYaziArkaPlanRenk=(v['overlayBackgroundColor'] as num?)?.toInt()??0x99000000;medyaYaziBoyut=(v['overlayFontSize'] as num?)?.toDouble()??22;medyaYaziX=(v['overlayX'] as num?)?.toDouble()??0;medyaYaziY=(v['overlayY'] as num?)?.toDouble()??0;medyaYaziScale=(v['overlayScale'] as num?)?.toDouble()??1;medyaYaziRotation=(v['overlayRotation'] as num?)?.toDouble()??0;videoBaslangicMs=(v['videoTrimStartMs'] as num?)?.toInt()??0;videoBitisMs=(v['videoTrimEndMs'] as num?)?.toInt()??0;orijinalSesSeviyesi=((v['originalAudioVolume'] as num?)?.toDouble()??.25).clamp(0,1).toDouble();muzikSesSeviyesi=((v['musicVolume'] as num?)?.toDouble()??1).clamp(0,1).toDouble();final muzik=v['music'];secilenMuzik=muzik is Map?Map<String,dynamic>.from(muzik):null;medyalar=m;medya=m.isEmpty?null:m.first;taslakVar=true;});
       aciklama.text=(v['description']??'').toString();konum.text=(v['location']??'').toString();etiketler.text=(v['tags']??'').toString();
     }catch(_){}
   }
   Future<void> _taslagiKaydet({bool sessiz=false})async{
     final h=await SharedPreferences.getInstance(),bos=aciklama.text.trim().isEmpty&&konum.text.trim().isEmpty&&etiketler.text.trim().isEmpty&&medyalar.isEmpty&&medya==null;
     if(bos){await h.remove(_taslakAnahtar);if(mounted)setState(()=>taslakVar=false);return;}
-    await h.setString(_taslakAnahtar,jsonEncode({'type':tur,'description':aciklama.text,'location':konum.text,'tags':etiketler.text,'privacy':gizlilik,'commentAudience':yorumKitlesi,'allowDownload':indirmeyeIzin,'allowComments':yorumlaraIzin,'allowReshare':yenidenPaylasimaIzin,'photoEffect':fotoEfekti,'photoRotation':fotoDonus,'photoSquareCrop':kareKirp,'overlayText':medyaYazisi,'overlayColor':medyaYaziRenk,'overlayBackgroundColor':medyaYaziArkaPlanRenk,'overlayFontSize':medyaYaziBoyut,'overlayX':medyaYaziX,'overlayY':medyaYaziY,'overlayScale':medyaYaziScale,'overlayRotation':medyaYaziRotation,'videoTrimStartMs':videoBaslangicMs,'videoTrimEndMs':videoBitisMs,'music':secilenMuzik,'mediaPaths':medyalar.isNotEmpty?medyalar.map((e)=>e.path).toList():(medya==null?<String>[]:<String>[medya!.path])}));
+    await h.setString(_taslakAnahtar,jsonEncode({'type':tur,'description':aciklama.text,'location':konum.text,'tags':etiketler.text,'privacy':gizlilik,'commentAudience':yorumKitlesi,'allowDownload':indirmeyeIzin,'allowComments':yorumlaraIzin,'allowReshare':yenidenPaylasimaIzin,'photoEffect':fotoEfekti,'photoRotation':fotoDonus,'photoSquareCrop':kareKirp,'overlayText':medyaYazisi,'overlayColor':medyaYaziRenk,'overlayBackgroundColor':medyaYaziArkaPlanRenk,'overlayFontSize':medyaYaziBoyut,'overlayX':medyaYaziX,'overlayY':medyaYaziY,'overlayScale':medyaYaziScale,'overlayRotation':medyaYaziRotation,'videoTrimStartMs':videoBaslangicMs,'videoTrimEndMs':videoBitisMs,'originalAudioVolume':orijinalSesSeviyesi,'musicVolume':muzikSesSeviyesi,'music':secilenMuzik,'mediaPaths':medyalar.isNotEmpty?medyalar.map((e)=>e.path).toList():(medya==null?<String>[]:<String>[medya!.path])}));
     if(mounted)setState(()=>taslakVar=true);if(!sessiz&&mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Taslak kaydedildi ✅')));
   }
   Future<void> _taslagiSil({bool mesaj=true})async{final h=await SharedPreferences.getInstance();await h.remove(_taslakAnahtar);if(mounted){setState(()=>taslakVar=false);if(mesaj)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Taslak temizlendi.')));}}
 
   void _turDegistir(String yeni){
     if(yukleniyor)return;
-    setState((){tur=yeni;medya=null;medyalar=<XFile>[];fotoEfekti='Yok';fotoDonus=0;kareKirp=false;medyaYazisi='';medyaYaziRenk=0xFFFFFFFF;medyaYaziArkaPlanRenk=0x99000000;medyaYaziBoyut=22;medyaYaziX=0;medyaYaziY=0;medyaYaziScale=1;medyaYaziRotation=0;medyaYaziSecili=false;videoBaslangicMs=0;videoBitisMs=0;secilenMuzik=null;medyaYaziSecili=false;yuklemeIlerlemesi=0;yuklemeDurumu='';});
+    setState((){tur=yeni;medya=null;medyalar=<XFile>[];fotoEfekti='Yok';fotoDonus=0;kareKirp=false;medyaYazisi='';medyaYaziRenk=0xFFFFFFFF;medyaYaziArkaPlanRenk=0x99000000;medyaYaziBoyut=22;medyaYaziX=0;medyaYaziY=0;medyaYaziScale=1;medyaYaziRotation=0;medyaYaziSecili=false;videoBaslangicMs=0;videoBitisMs=0;secilenMuzik=null;orijinalSesSeviyesi=.25;muzikSesSeviyesi=1;medyaYaziSecili=false;yuklemeIlerlemesi=0;yuklemeDurumu='';});
     _taslakDegisti();
   }
 
@@ -7811,7 +7825,7 @@ class _YeniYuklePageState extends State<YuklePage> {
     if(yukleniyor||tur=='text')return;
     final sonuc=await Navigator.push<Map<String,dynamic>>(context,MaterialPageRoute(builder:(_)=>const NgelXMuzikSecPage()));
     if(sonuc==null||!mounted)return;
-    setState(()=>secilenMuzik=sonuc);
+    setState((){secilenMuzik=sonuc;if(tur=='video'&&orijinalSesSeviyesi> .5)orijinalSesSeviyesi=.25;});
     _taslakDegisti();
   }
 
@@ -7839,62 +7853,6 @@ class _YeniYuklePageState extends State<YuklePage> {
     );
   }
 
-  Widget _muzikOzeti(){
-    final muzik=secilenMuzik;
-    if(muzik==null)return const SizedBox.shrink();
-    final baslik=(muzik['title']??'NgelX müziği').toString();
-    final sanatci=(muzik['artist']??'').toString();
-    final kapak=(muzik['coverUrl']??'').toString();
-    return Container(
-      margin:const EdgeInsets.only(top:10),
-      padding:const EdgeInsets.all(10),
-      decoration:BoxDecoration(color:const Color(0xFFF3F5F8),borderRadius:BorderRadius.circular(18)),
-      child:Row(children:[
-        ClipRRect(
-          borderRadius:BorderRadius.circular(11),
-          child:kapak.isEmpty
-            ?Container(width:48,height:48,color:const Color(0xFFE3E5EA),child:const Icon(Icons.music_note_rounded))
-            :CachedNetworkImage(imageUrl:kapak,width:48,height:48,fit:BoxFit.cover,errorWidget:(_,__,___)=>Container(width:48,height:48,color:const Color(0xFFE3E5EA),child:const Icon(Icons.music_note_rounded))),
-        ),
-        const SizedBox(width:10),
-        Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-          Text(baslik,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontWeight:FontWeight.w900)),
-          if(sanatci.isNotEmpty)Text(sanatci,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black54,fontSize:12)),
-          const Text('Lisansı uygun NgelX müzik kataloğu',style:TextStyle(color:Colors.black45,fontSize:10.5)),
-        ])),
-        IconButton(tooltip:'Müziği kaldır',onPressed:yukleniyor?null:(){setState(()=>secilenMuzik=null);_taslakDegisti();},icon:const Icon(Icons.close_rounded,color:Colors.redAccent)),
-      ]),
-    );
-  }
-
-  Future<String> xDosyasiYukle(XFile dosya,String klasor)async{
-    final user=FirebaseAuth.instance.currentUser;
-    if(user==null)throw Exception('Paylaşmak için giriş yapmalısın.');
-    final secilenTur=klasor=='videos'?'video':'photo';
-    if(!await _medyaBoyutuUygun(dosya,secilenTur))throw Exception('Dosya boyutu uygun değil.');
-    final uzanti=dosya.name.contains('.')?dosya.name.split('.').last.toLowerCase():(secilenTur=='video'?'mp4':'jpg');
-    final yol='$klasor/${user.uid}/${DateTime.now().microsecondsSinceEpoch}.$uzanti';
-    void ilerleme(int sent,int total){
-      if(!mounted||total<=0)return;
-      final oran=(sent/total).clamp(0.0,1.0).toDouble();
-      setState((){
-        yuklemeIlerlemesi=oran;
-        if(oran>=.999)yuklemeDurumu='Medya aktarımı tamamlandı, doğrulanıyor...';
-      });
-    }
-    if(secilenTur=='video'){
-      return ngelxMedyaYukleDosya(
-        dosya:dosya,
-        kind:'videos',
-        ext:uzanti,
-        legacyPath:yol,
-        onProgress:ilerleme,
-      );
-    }
-    var b=await dosya.readAsBytes();var ext=uzanti;if(fotoEfekti!='Yok'||fotoDonus%4!=0||kareKirp){b=await ngelxFotoDuzenle(b,efekt:fotoEfekti,donus:fotoDonus,kareKirp:kareKirp);ext='png';}
-    return ngelxMedyaYukleBytes(bytes:b,kind:'photos',ext:ext,legacyPath:yol.replaceFirst(RegExp(r'\.[^.]+$'),'.'+ext),onProgress:ilerleme);
-  }
-
   Future<void> yayinla()async{
     final user=FirebaseAuth.instance.currentUser;
     if(user==null||yukleniyor)return;
@@ -7919,6 +7877,21 @@ class _YeniYuklePageState extends State<YuklePage> {
       String medyaUrl='';final medyaUrlListesi=<String>[];
       if(tur=='photo'&&medyalar.isNotEmpty){for(int i=0;i<medyalar.length;i++){if(mounted)setState(()=>yuklemeDurumu='Fotoğraf ${i+1}/${medyalar.length} yükleniyor...');medyaUrlListesi.add(await xDosyasiYukle(medyalar[i],'photos'));}medyaUrl=medyaUrlListesi.first;}
       else if(medya!=null){medyaUrl=await xDosyasiYukle(medya!,tur=='video'?'videos':'photos');medyaUrlListesi.add(medyaUrl);}
+      var yayinMuzik=secilenMuzik==null?null:Map<String,dynamic>.from(secilenMuzik!);
+      final yerelSes=(yayinMuzik?['localPath']??'').toString();
+      if(yerelSes.isNotEmpty){
+        if(mounted)setState(()=>yuklemeDurumu='Müzik yükleniyor...');
+        final sesDosyasi=XFile(yerelSes);
+        if(!await File(yerelSes).exists())throw Exception('Seçilen ses dosyası artık cihazda bulunamıyor.');
+        final uzanti=sesDosyasi.name.contains('.')?sesDosyasi.name.split('.').last.toLowerCase():'mp3';
+        final sesUrl=await ngelxMedyaYukleDosya(
+          dosya:sesDosyasi,
+          kind:'music',
+          ext:uzanti,
+          legacyPath:'music/${user.uid}/${DateTime.now().microsecondsSinceEpoch}.$uzanti',
+        );
+        yayinMuzik={...yayinMuzik!,'audioUrl':sesUrl,'localPath':'','sourceType':'user-upload','licenseStatus':'user-owned'};
+      }
       if(mounted)setState(()=>yuklemeDurumu='Gönderi kaydediliyor...');
 
       final profil=await FirebaseFirestore.instance.collection('users').doc(user.uid).get().timeout(const Duration(seconds:10));
@@ -7944,12 +7917,15 @@ class _YeniYuklePageState extends State<YuklePage> {
         'overlayRotation':medyaYaziRotation,
         'videoTrimStartMs':tur=='video'?videoBaslangicMs:0,
         'videoTrimEndMs':tur=='video'?videoBitisMs:0,
-        'audioUrl':(secilenMuzik?['audioUrl']??'').toString(),
-        'musicId':(secilenMuzik?['id']??'').toString(),
-        'musicTitle':(secilenMuzik?['title']??'').toString(),
-        'musicArtist':(secilenMuzik?['artist']??'').toString(),
-        'musicCoverUrl':(secilenMuzik?['coverUrl']??'').toString(),
-        'musicLicense':(secilenMuzik?['licenseStatus']??'').toString(),
+        'audioUrl':(yayinMuzik?['audioUrl']??'').toString(),
+        'musicId':(yayinMuzik?['id']??'').toString(),
+        'musicTitle':(yayinMuzik?['title']??'').toString(),
+        'musicArtist':(yayinMuzik?['artist']??'').toString(),
+        'musicCoverUrl':(yayinMuzik?['coverUrl']??'').toString(),
+        'musicLicense':(yayinMuzik?['licenseStatus']??'').toString(),
+        'musicSourceType':(yayinMuzik?['sourceType']??'catalog').toString(),
+        'originalAudioVolume':tur=='video'?orijinalSesSeviyesi:0,
+        'musicVolume':yayinMuzik==null?0:muzikSesSeviyesi,
         'description':metin,
         'contentLanguage':uygulamaDili.value,
         'allowDownload':indirmeyeIzin,
@@ -7971,7 +7947,7 @@ class _YeniYuklePageState extends State<YuklePage> {
 
       if(!mounted)return;
       setState((){
-        medya=null;medyalar=<XFile>[];fotoEfekti='Yok';fotoDonus=0;kareKirp=false;medyaYazisi='';medyaYaziRenk=0xFFFFFFFF;medyaYaziArkaPlanRenk=0x99000000;medyaYaziBoyut=22;medyaYaziX=0;medyaYaziY=0;medyaYaziScale=1;medyaYaziRotation=0;videoBaslangicMs=0;videoBitisMs=0;secilenMuzik=null;
+        medya=null;medyalar=<XFile>[];fotoEfekti='Yok';fotoDonus=0;kareKirp=false;medyaYazisi='';medyaYaziRenk=0xFFFFFFFF;medyaYaziArkaPlanRenk=0x99000000;medyaYaziBoyut=22;medyaYaziX=0;medyaYaziY=0;medyaYaziScale=1;medyaYaziRotation=0;videoBaslangicMs=0;videoBitisMs=0;secilenMuzik=null;orijinalSesSeviyesi=.25;muzikSesSeviyesi=1;
         aciklama.clear();
         konum.clear();
         etiketler.clear();
