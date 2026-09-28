@@ -1,0 +1,295 @@
+--- a/app/lib/main.dart
++++ b/app/lib/main.dart
+@@ -92,8 +92,8 @@
+ const ngelxPrivateBlueBorder = Color(0xFFD8E8FF);
+ const ngelxPrivateBlueInk = Color(0xFF10213A);
+ 
+-const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.79');
+-const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '298');
++const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.80');
++const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '299');
+ const ngelxGroupBorder = Color(0xFFD9EEE0);
+ 
+ final GlobalKey<NavigatorState> ngelxNavigatorKey=GlobalKey<NavigatorState>();
+--- a/app/pubspec.yaml
++++ b/app/pubspec.yaml
+@@ -1,7 +1,7 @@
+ name: ngelx_app
+ description: "A new Flutter project."
+ publish_to: 'none'
+-version: 1.0.79+298
++version: 1.0.80+299
+ environment:
+   sdk: ^3.13.3
+ 
+--- a/tools/verify_v64_app_quality.py
++++ b/tools/verify_v64_app_quality.py
+@@ -13,7 +13,7 @@
+     if needle in text:
+         raise SystemExit(f"V64 CHECK FAILED: {label}: forbidden {needle!r}")
+ 
+-if all(v not in pubspec for v in ("version: 1.0.64+283", "version: 1.0.65+284", "version: 1.0.66+285", "version: 1.0.67+286", "version: 1.0.68+287", "version: 1.0.69+288", "version: 1.0.70+289", "version: 1.0.71+290", "version: 1.0.72+291", "version: 1.0.73+292", "version: 1.0.74+293", "version: 1.0.75+294", "version: 1.0.76+295", "version: 1.0.77+296", "version: 1.0.78+297", "version: 1.0.79+298")):
++if all(v not in pubspec for v in ("version: 1.0.64+283", "version: 1.0.65+284", "version: 1.0.66+285", "version: 1.0.67+286", "version: 1.0.68+287", "version: 1.0.69+288", "version: 1.0.70+289", "version: 1.0.71+290", "version: 1.0.72+291", "version: 1.0.73+292", "version: 1.0.74+293", "version: 1.0.75+294", "version: 1.0.76+295", "version: 1.0.77+296", "version: 1.0.78+297", "version: 1.0.79+298", "version: 1.0.80+299")):
+     raise SystemExit("V64 CHECK FAILED: supported V64/V65/V66 app version missing")
+ 
+ # Main navigation / requested surfaces must remain wired.
+--- a/tools/verify_v65_media_traffic.py
++++ b/tools/verify_v65_media_traffic.py
+@@ -5,7 +5,7 @@
+ pubspec=(root/"app/pubspec.yaml").read_text(encoding="utf-8")
+ worker=(root/"cloudflare/worker/src/index.js").read_text(encoding="utf-8")
+ checks={
+-"V72+ surumu":any(v in pubspec for v in ("version: 1.0.72+291", "version: 1.0.73+292", "version: 1.0.74+293", "version: 1.0.75+294", "version: 1.0.76+295", "version: 1.0.77+296", "version: 1.0.78+297", "version: 1.0.79+298")),
++"V72+ surumu":any(v in pubspec for v in ("version: 1.0.72+291", "version: 1.0.73+292", "version: 1.0.74+293", "version: 1.0.75+294", "version: 1.0.76+295", "version: 1.0.77+296", "version: 1.0.78+297", "version: 1.0.79+298", "version: 1.0.80+299")),
+ "Supabase Flutter yok":"supabase_flutter:" not in pubspec,
+ "Arama cache":"Trafik tasarrufu: her harfte 60 kullanici + 100 icerigi yeniden indirme." in main and "future: _aramaVerisiniHazirla()," in main,
+ "Foto lazy":"widget.aktif\n              ?PageView.builder" in main,
+--- a/tools/verify_v65_work.py
++++ b/tools/verify_v65_work.py
+@@ -14,7 +14,7 @@
+         raise SystemExit(f"V65 CHECK FAILED: {label}: forbidden {needle!r}")
+ 
+ pubspec = (root / "app/pubspec.yaml").read_text(encoding="utf-8")
+-if all(v not in pubspec for v in ("version: 1.0.65+284", "version: 1.0.66+285", "version: 1.0.67+286", "version: 1.0.68+287", "version: 1.0.69+288", "version: 1.0.70+289", "version: 1.0.71+290", "version: 1.0.72+291", "version: 1.0.73+292", "version: 1.0.74+293", "version: 1.0.75+294", "version: 1.0.76+295", "version: 1.0.77+296", "version: 1.0.78+297", "version: 1.0.79+298")):
++if all(v not in pubspec for v in ("version: 1.0.65+284", "version: 1.0.66+285", "version: 1.0.67+286", "version: 1.0.68+287", "version: 1.0.69+288", "version: 1.0.70+289", "version: 1.0.71+290", "version: 1.0.72+291", "version: 1.0.73+292", "version: 1.0.74+293", "version: 1.0.75+294", "version: 1.0.76+295", "version: 1.0.77+296", "version: 1.0.78+297", "version: 1.0.79+298", "version: 1.0.80+299")):
+     raise SystemExit("V65 CHECK FAILED: supported V65/V66 app version missing")
+ 
+ # New Create/editor surfaces are wired into the app.
+--- a/tools/verify_v66_work.py
++++ b/tools/verify_v66_work.py
+@@ -14,7 +14,7 @@
+     if needle in text:
+         raise SystemExit(f"V66 CHECK FAILED: {label}: forbidden {needle!r}")
+ 
+-if all(v not in pubspec for v in ("version: 1.0.66+285", "version: 1.0.67+286", "version: 1.0.68+287", "version: 1.0.69+288", "version: 1.0.70+289", "version: 1.0.71+290", "version: 1.0.72+291", "version: 1.0.73+292", "version: 1.0.74+293", "version: 1.0.75+294", "version: 1.0.76+295", "version: 1.0.77+296", "version: 1.0.78+297", "version: 1.0.79+298")):
++if all(v not in pubspec for v in ("version: 1.0.66+285", "version: 1.0.67+286", "version: 1.0.68+287", "version: 1.0.69+288", "version: 1.0.70+289", "version: 1.0.71+290", "version: 1.0.72+291", "version: 1.0.73+292", "version: 1.0.74+293", "version: 1.0.75+294", "version: 1.0.76+295", "version: 1.0.77+296", "version: 1.0.78+297", "version: 1.0.79+298", "version: 1.0.80+299")):
+     raise SystemExit("V66 CHECK FAILED: supported V66/V67 app version missing")
+ 
+ # Story: one ring per owner, multiple active stories in series, segmented progress,
+--- a/tools/verify_v67_work.py
++++ b/tools/verify_v67_work.py
+@@ -10,7 +10,7 @@
+     if needle not in text:
+         raise SystemExit(f"V67 CHECK FAILED: {label}: missing {needle!r}")
+ 
+-if all(v not in pubspec for v in ("version: 1.0.67+286", "version: 1.0.68+287", "version: 1.0.69+288", "version: 1.0.70+289", "version: 1.0.71+290", "version: 1.0.72+291", "version: 1.0.73+292", "version: 1.0.74+293", "version: 1.0.75+294", "version: 1.0.76+295", "version: 1.0.77+296", "version: 1.0.78+297", "version: 1.0.79+298")):
++if all(v not in pubspec for v in ("version: 1.0.67+286", "version: 1.0.68+287", "version: 1.0.69+288", "version: 1.0.70+289", "version: 1.0.71+290", "version: 1.0.72+291", "version: 1.0.73+292", "version: 1.0.74+293", "version: 1.0.75+294", "version: 1.0.76+295", "version: 1.0.77+296", "version: 1.0.78+297", "version: 1.0.79+298", "version: 1.0.80+299")):
+     raise SystemExit("V67 CHECK FAILED: supported V67/V68 app version missing")
+ require(editor, "SingleChildScrollView(", "keyboard-safe text editor scroll")
+ require(editor, "ScrollViewKeyboardDismissBehavior.onDrag", "keyboard dismiss behavior")
+--- a/tools/verify_v68_work.py
++++ b/tools/verify_v68_work.py
+@@ -8,7 +8,7 @@
+     if needle not in text:
+         raise SystemExit(f"V68 CHECK FAILED: {label}: missing {needle!r}")
+ 
+-if all(v not in pubspec for v in ("version: 1.0.68+287", "version: 1.0.69+288", "version: 1.0.70+289", "version: 1.0.71+290", "version: 1.0.72+291", "version: 1.0.73+292", "version: 1.0.74+293", "version: 1.0.75+294", "version: 1.0.76+295", "version: 1.0.77+296", "version: 1.0.78+297", "version: 1.0.79+298")):
++if all(v not in pubspec for v in ("version: 1.0.68+287", "version: 1.0.69+288", "version: 1.0.70+289", "version: 1.0.71+290", "version: 1.0.72+291", "version: 1.0.73+292", "version: 1.0.74+293", "version: 1.0.75+294", "version: 1.0.76+295", "version: 1.0.77+296", "version: 1.0.78+297", "version: 1.0.79+298", "version: 1.0.80+299")):
+     raise SystemExit("V68 CHECK FAILED: supported V68/V69 app version missing")
+ 
+ for needle, label in [
+--- a/tools/verify_v72_device_fixes.py
++++ b/tools/verify_v72_device_fixes.py
+@@ -15,8 +15,8 @@
+         raise SystemExit(f"V72 cihaz düzeltmesi eksik: {message}")
+ 
+ 
+-require("version: 1.0.79+298" in PUBSPEC, "Build 298 sürüm zinciri")
+-require("defaultValue: '1.0.79'" in MAIN and "defaultValue: '298'" in MAIN,
++require("version: 1.0.80+299" in PUBSPEC, "Build 299 sürüm zinciri")
++require("defaultValue: '1.0.80'" in MAIN and "defaultValue: '299'" in MAIN,
+         "uygulama içi sürüm varsayılanları")
+ require("ValueKey('ngelx_tab_${secili}_$dil')" in MAIN,
+         "açık sekmelerin dil değişiminde yeniden oluşturulması")
+--- a/tools/verify_v76_chat_media.py
++++ b/tools/verify_v76_chat_media.py
+@@ -11,8 +11,8 @@
+         raise SystemExit(f"Build 295 sohbet medya kontrolu eksik: {message}")
+ 
+ 
+-require("version: 1.0.79+298" in PUBSPEC, "Build 298 surumu")
+-require("defaultValue: '1.0.79'" in MAIN and "defaultValue: '298'" in MAIN,
++require("version: 1.0.80+299" in PUBSPEC, "Build 299 surumu")
++require("defaultValue: '1.0.80'" in MAIN and "defaultValue: '299'" in MAIN,
+         "uygulama ici surum varsayilanlari")
+ require("String ngelxMesajMedyaUrl(" in MAIN,
+         "eski ve yeni sohbet medya alanlari icin URL cozumleyici")
+--- a/tools/verify_v77_social_relations.py
++++ b/tools/verify_v77_social_relations.py
+@@ -9,8 +9,8 @@
+     if not cond:
+         raise SystemExit("Build 296 sosyal ilişki kontrolu eksik: "+msg)
+ 
+-require("version: 1.0.79+298" in PUB,"Build 298 surumu")
+-require("defaultValue: '1.0.79'" in MAIN and "defaultValue: '298'" in MAIN,"uygulama ici surum")
++require("version: 1.0.80+299" in PUB,"Build 299 surumu")
++require("defaultValue: '1.0.80'" in MAIN and "defaultValue: '299'" in MAIN,"uygulama ici surum")
+ require(".where('fromUid',isEqualTo:user.uid)" in MAIN and ".where('toUid',isEqualTo:hedefUid)" in MAIN,
+         "istek gondermeden once kullanici-cifti bazli bekleyen istek kontrolu")
+ require("GetOptions(source:Source.server)" in MAIN,
+--- a/tools/verify_v78_media_dialog.py
++++ b/tools/verify_v78_media_dialog.py
+@@ -9,8 +9,8 @@
+     if not cond:
+         raise SystemExit("Build 298 medya/diyalog kontrolu eksik: "+msg)
+ 
+-require("version: 1.0.79+298" in PUB,"Build 298 surumu")
+-require("defaultValue: '1.0.79'" in MAIN and "defaultValue: '298'" in MAIN,"uygulama ici surum")
++require("version: 1.0.80+299" in PUB,"Build 299 surumu")
++require("defaultValue: '1.0.80'" in MAIN and "defaultValue: '299'" in MAIN,"uygulama ici surum")
+ require("class NgelXSohbetFotoOnizleme" in MAIN and "ngelxMesajMedyaUrl(v,video:tur=='video')" in MAIN,
+         "grup fotograf/video URL cozumleme")
+ require("videoKapak=ngelxMesajVideoKapagi(v)" in MAIN,
+--- a/tools/verify_v79_photo_upload.py
++++ b/tools/verify_v79_photo_upload.py
+@@ -9,8 +9,8 @@
+     if not c:
+         raise SystemExit("Build 298 fotoğraf yükleme kontrolu eksik: "+m)
+ 
+-require("version: 1.0.79+298" in PUB,"Build 298 surumu")
+-require("defaultValue: '1.0.79'" in MAIN and "defaultValue: '298'" in MAIN,"uygulama ici surum")
++require("version: 1.0.80+299" in PUB,"Build 299 surumu")
++require("defaultValue: '1.0.80'" in MAIN and "defaultValue: '299'" in MAIN,"uygulama ici surum")
+ 
+ group_start=MAIN.index("Future<void> _grupFotografiniGonder")
+ group_end=MAIN.index("Future<void> grupVideoGonder",group_start)
+--- /dev/null
++++ b/tools/verify_build_299_release.py
+@@ -0,0 +1,30 @@
++#!/usr/bin/env python3
++from pathlib import Path
++
++ROOT=Path(__file__).resolve().parents[1]
++MAIN=(ROOT/'app/lib/main.dart').read_text(encoding='utf-8')
++PUB=(ROOT/'app/pubspec.yaml').read_text(encoding='utf-8')
++WORKFLOW=(ROOT/'.github/workflows/build-299-release.yml').read_text(encoding='utf-8')
++
++
++def require(condition: bool, message: str) -> None:
++    if not condition:
++        raise SystemExit('Build 299 release kontrolü eksik: '+message)
++
++
++require('version: 1.0.80+299' in PUB,'pubspec sürümü')
++require("defaultValue: '1.0.80'" in MAIN and "defaultValue: '299'" in MAIN,
++        'uygulama içi sürüm')
++require('python3 tools/verify_v80_critical_firebase.py' in WORKFLOW,
++        'V80 Firebase doğrulaması')
++require('python3 tools/verify_v81_music_layers.py' in WORKFLOW,
++        'V81 müzik katmanı doğrulaması')
++require('flutter analyze --no-fatal-infos --no-fatal-warnings' in WORKFLOW,
++        'Flutter statik analiz')
++require('flutter build apk --debug' in WORKFLOW and
++        'NGELX_BUILD_NUMBER="$BUILD_NUMBER"' in WORKFLOW,
++        'sürüm bilgili Android APK derlemesi')
++require('NgelX-1.0.80-Build-299-TEST-APK' in WORKFLOW,
++        'tanımlı APK artifact adı')
++
++print('Build 299 sürüm ve APK üretim zinciri doğrulandı.')
+--- /dev/null
++++ b/.github/workflows/build-299-release.yml
+@@ -0,0 +1,104 @@
++name: NgelX Build 299 Release Candidate
++
++on:
++  push:
++    branches:
++      - work/build-299-release
++      - work/v72-combined
++    paths:
++      - 'app/**'
++      - 'tools/**'
++      - 'cloudflare/worker/**'
++      - 'firestore.rules'
++      - '.github/workflows/build-299-release.yml'
++  workflow_dispatch:
++
++permissions:
++  contents: read
++
++concurrency:
++  group: ngelx-build-299-release-candidate
++  cancel-in-progress: true
++
++jobs:
++  verify-and-build-apk:
++    runs-on: ubuntu-latest
++    timeout-minutes: 55
++    steps:
++      - name: Kaynakları al
++        uses: actions/checkout@v4
++
++      - name: Flutter kur
++        uses: subosito/flutter-action@v2
++        with:
++          channel: stable
++          cache: true
++
++      - name: Paketleri kur
++        working-directory: app
++        run: flutter pub get
++
++      - name: Kilit dosyasını doğrula
++        run: git diff --exit-code -- app/pubspec.lock
++
++      - name: Bütün kaynak regresyonlarını çalıştır
++        run: |
++          for test_file in tools/verify_*.py; do
++            python3 "$test_file"
++          done
++          python3 tools/verify_v80_critical_firebase.py
++          python3 tools/verify_v81_music_layers.py
++
++      - name: Worker testleri
++        run: |
++          node --check cloudflare/worker/src/index.js
++          cd cloudflare/worker
++          npm test
++
++      - name: Flutter statik analiz
++        working-directory: app
++        run: flutter analyze --no-fatal-infos --no-fatal-warnings
++
++      - name: Flutter testleri
++        working-directory: app
++        run: |
++          if [ -d test ]; then flutter test; else echo "Test klasörü yok."; fi
++
++      - name: Java 21 kur
++        uses: actions/setup-java@v4
++        with:
++          distribution: temurin
++          java-version: '21'
++
++      - name: Sabit test imzasını geri yükle
++        uses: actions/cache@v4
++        with:
++          path: ~/.android/debug.keystore
++          key: ngelx-stable-debug-keystore-v1
++
++      - name: Sabit test anahtarı yoksa oluştur
++        run: |
++          mkdir -p "$HOME/.android"
++          if [ ! -f "$HOME/.android/debug.keystore" ]; then
++            keytool -genkeypair -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey -keypass android -dname "CN=Android Debug,O=Android,C=US" -keyalg RSA -keysize 2048 -validity 10000
++          fi
++
++      - name: Build 299 debug APK derle
++        working-directory: app
++        run: |
++          APP_VERSION="$(awk '/^version:/ {print $2}' pubspec.yaml)"
++          BUILD_NAME="${APP_VERSION%%+*}"
++          BUILD_NUMBER="${APP_VERSION##*+}"
++          test "$BUILD_NAME" = "1.0.80"
++          test "$BUILD_NUMBER" = "299"
++          flutter build apk --debug \
++            --dart-define=NGELX_VERSION_NAME="$BUILD_NAME" \
++            --dart-define=NGELX_BUILD_NUMBER="$BUILD_NUMBER"
++
++      - name: Build 299 APK artifact yükle
++        uses: actions/upload-artifact@v4
++        with:
++          name: NgelX-1.0.80-Build-299-TEST-APK
++          path: app/build/app/outputs/flutter-apk/app-debug.apk
++          if-no-files-found: error
++          retention-days: 14
