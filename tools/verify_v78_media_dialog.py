@@ -13,7 +13,7 @@ require("version: 1.0.78+297" in PUB,"Build 297 surumu")
 require("defaultValue: '1.0.78'" in MAIN and "defaultValue: '297'" in MAIN,"uygulama ici surum")
 require("class NgelXSohbetFotoOnizleme" in MAIN and "ngelxMesajMedyaUrl(v,video:tur=='video')" in MAIN,
         "grup fotograf/video URL cozumleme")
-require("final videoKapak=ngelxMesajVideoKapagi(v);" in MAIN,
+require("videoKapak=ngelxMesajVideoKapagi(v)" in MAIN,
         "grup video kapak alanlari")
 require("NgelXSohbetFotoOnizleme(url:media)" in MAIN,
         "grup fotograf karti gercek onizleme")
