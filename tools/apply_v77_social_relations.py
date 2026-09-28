@@ -120,9 +120,13 @@ main=one(main,
 ""","resolve duplicates")
 
 main=one(main,
-"final arkadaslar = Set<String>.from(List<dynamic>.from(benimVerim['friends'] ?? []));",
-"""final arkadaslar = Set<String>.from(List<dynamic>.from(benimVerim['friends'] ?? []));
-          if(me!=null&&List<String>.from(v['friends']??const[]).contains(me))arkadaslar.add(uid);""","bilateral profile friendship")
+"""final foto = (v['photoUrl'] ?? '').toString();
+          final arkadaslar = Set<String>.from(List<dynamic>.from(benimVerim['friends'] ?? []));
+          final gizli = v['privateAccount'] == true;""",
+"""final foto = (v['photoUrl'] ?? '').toString();
+          final arkadaslar = Set<String>.from(List<dynamic>.from(benimVerim['friends'] ?? []));
+          if(me!=null&&List<String>.from(v['friends']??const[]).contains(me))arkadaslar.add(uid);
+          final gizli = v['privateAccount'] == true;""","bilateral profile friendship")
 
 main=one(main,
 "final takipte=List<String>.from(benSnap.data?.data()?['following']??const[]).contains(uid);",
