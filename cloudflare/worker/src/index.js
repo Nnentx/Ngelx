@@ -1,4 +1,9 @@
 import { AwsClient } from 'aws4fetch';
+import {
+  captionMediaCandidates,
+  detectTranslationSource,
+  normalizeLanguageCode,
+} from './content_tools.js';
 
 const ALLOWED_KINDS = new Set([
   'photos',
@@ -170,6 +175,58 @@ function contentTypeFor(ext, supplied) {
   return map[ext] || 'application/octet-stream';
 }
 
+function captionError(code, message, status = 502) {
+  const error = new Error(message);
+  error.code = code;
+  error.status = status;
+  return error;
+}
+
+async function loadCaptionMedia(candidates, requestUrl, env) {
+  const requestHost = new URL(requestUrl).hostname;
+  for (const mediaUrl of candidates) {
+    let target;
+    try { target = new URL(mediaUrl); } catch (_) { continue; }
+    if (target.protocol !== 'https:') continue;
+    const allowedHost = target.hostname.endsWith('.workers.dev') ||
+      target.hostname.endsWith('.googleapis.com') ||
+      target.hostname.endsWith('.firebasestorage.app') ||
+      target.hostname.endsWith('.appspot.com');
+    if (!allowedHost) continue;
+
+    // İki NgelX Worker alan adı aynı R2 bucket'ını kullanır. /media/ nesnesini
+    // binding ile okumak, eski alan adı geçişlerindeki yanlış 404'leri önler.
+    if (target.pathname.startsWith('/media/') && target.hostname.endsWith('.workers.dev')) {
+      try {
+        const key = decodeURIComponent(target.pathname.slice('/media/'.length));
+        if (key && !key.includes('..')) {
+          const object = await env.MEDIA.get(key);
+          if (object) {
+            if (object.size > 24 * 1024 * 1024) throw captionError('media_too_large_for_captioning', 'Altyazı için video şu an en fazla 24 MB olabilir.', 413);
+            return {bytes: new Uint8Array(await object.arrayBuffer()), mediaUrl, via: target.hostname === requestHost ? 'r2-local' : 'r2-alias'};
+          }
+        }
+      } catch (e) {
+        if (e?.code) throw e;
+      }
+    }
+
+    try {
+      const response = await fetch(target.toString(), {redirect: 'follow'});
+      if (!response.ok) continue;
+      const announced = Number(response.headers.get('content-length') || 0);
+      if (announced > 24 * 1024 * 1024) throw captionError('media_too_large_for_captioning', 'Altyazı için video şu an en fazla 24 MB olabilir.', 413);
+      const bytes = new Uint8Array(await response.arrayBuffer());
+      if (!bytes.length) continue;
+      if (bytes.length > 24 * 1024 * 1024) throw captionError('media_too_large_for_captioning', 'Altyazı için video şu an en fazla 24 MB olabilir.', 413);
+      return {bytes, mediaUrl, via: 'https'};
+    } catch (e) {
+      if (e?.code) throw e;
+    }
+  }
+  throw captionError('media_not_found', 'Videonun kaynak dosyası sunucuda bulunamadı. Yeni yüklenen bir video ile tekrar dene.', 404);
+}
+
 
 function directR2Ready(env) {
   return Boolean(env.R2_ACCESS_KEY_ID && env.R2_SECRET_ACCESS_KEY && env.R2_ACCOUNT_ID);
@@ -219,7 +276,7 @@ export default {
       try { await verifyFirebaseIdToken(request, env); } catch (e) { return json({error:'unauthorized',message:String(e?.message||e)},401); }
       if(!env.AI)return json({error:'ai_not_configured',message:'Çeviri servisi yapılandırılmamış.'},503);
       let body;try{body=await request.json();}catch(_){return json({error:'invalid_json'},400);}
-      const text=String(body?.text||'').trim(),sourceLanguage=String(body?.sourceLanguage||'tr').trim().toLowerCase(),targetLanguage=String(body?.targetLanguage||'').trim().toLowerCase();
+      const text=String(body?.text||'').trim(),sourceLanguage=detectTranslationSource(body?.text,body?.sourceLanguage),targetLanguage=normalizeLanguageCode(body?.targetLanguage);
       if(!text||text.length>6000||!targetLanguage)return json({error:'invalid_translation_request'},400);
       if(sourceLanguage===targetLanguage)return json({ok:true,translatedText:text,sourceLanguage,targetLanguage});
       try{
@@ -234,25 +291,17 @@ export default {
       try { await verifyFirebaseIdToken(request, env); } catch (e) { return json({error:'unauthorized',message:String(e?.message||e)},401); }
       if(!env.AI)return json({error:'ai_not_configured',message:'Altyazı servisi yapılandırılmamış.'},503);
       let body;try{body=await request.json();}catch(_){return json({error:'invalid_json'},400);}
-      const mediaUrl=String(body?.mediaUrl||'').trim(),language=String(body?.language||'').trim().toLowerCase();
-      let target;try{target=new URL(mediaUrl);}catch(_){return json({error:'invalid_media_url'},400);}
-      if(target.protocol!=='https:')return json({error:'invalid_media_url'},400);
-      const allowedHost=target.hostname.endsWith('.workers.dev')||target.hostname.endsWith('.googleapis.com')||target.hostname.endsWith('.firebasestorage.app')||target.hostname.endsWith('.appspot.com');
-      if(!allowedHost)return json({error:'media_host_not_allowed'},400);
+      const mediaUrls=captionMediaCandidates(body),language=normalizeLanguageCode(body?.language);
+      if(!mediaUrls.length)return json({error:'invalid_media_url',message:'Altyazı üretilecek video bulunamadı.'},400);
       try{
-        const res=await fetch(target.toString(),{redirect:'follow'});
-        if(!res.ok)throw new Error('media_fetch_http_'+res.status);
-        const announced=Number(res.headers.get('content-length')||0);
-        if(announced>24*1024*1024)return json({error:'media_too_large_for_captioning',message:'Altyazı için video şu an en fazla 24 MB olabilir.'},413);
-        const bytes=new Uint8Array(await res.arrayBuffer());
-        if(!bytes.length)throw new Error('empty_media');
-        if(bytes.length>24*1024*1024)return json({error:'media_too_large_for_captioning',message:'Altyazı için video şu an en fazla 24 MB olabilir.'},413);
+        const loaded=await loadCaptionMedia(mediaUrls,request.url,env),bytes=loaded.bytes;
         let binary='';for(let i=0;i<bytes.length;i+=0x8000)binary+=String.fromCharCode(...bytes.subarray(i,Math.min(i+0x8000,bytes.length)));
         const result=await env.AI.run('@cf/openai/whisper-large-v3-turbo',{audio:btoa(binary),task:'transcribe',...(language?{language}:{}),vad_filter:true});
         const text=String(result?.text||'').trim(),vtt=String(result?.vtt||'').trim();
         if(!text)throw new Error('no_speech_detected');
-        return json({ok:true,text,vtt,language});
-      }catch(e){return json({error:'caption_failed',message:String(e?.message||e)},502);}
+        const detectedLanguage=normalizeLanguageCode(result?.transcription_info?.language||result?.language||language);
+        return json({ok:true,text,vtt,language:detectedLanguage,mediaSource:loaded.via});
+      }catch(e){return json({error:e?.code||'caption_failed',message:String(e?.message||e)},Number(e?.status)||502);}
     }
 
     if (request.method === 'GET' && url.pathname.startsWith('/media/')) {

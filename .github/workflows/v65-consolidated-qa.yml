@@ -70,7 +70,9 @@ jobs:
         run: python3 tools/verify_v72_device_fixes.py
 
       - name: R2 Worker JavaScript kontrolu
-        run: node --check cloudflare/worker/src/index.js
+        run: |
+          node --check cloudflare/worker/src/index.js
+          cd cloudflare/worker && npm test
 
       - name: Kod analizi
         working-directory: app

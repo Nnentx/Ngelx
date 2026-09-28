@@ -14,8 +14,8 @@ def require(condition: bool, message: str) -> None:
         raise SystemExit(f"V72 cihaz düzeltmesi eksik: {message}")
 
 
-require("version: 1.0.73+292" in PUBSPEC, "Build 292 sürüm zinciri")
-require("defaultValue: '1.0.73'" in MAIN and "defaultValue: '292'" in MAIN,
+require("version: 1.0.74+293" in PUBSPEC, "Build 293 sürüm zinciri")
+require("defaultValue: '1.0.74'" in MAIN and "defaultValue: '293'" in MAIN,
         "uygulama içi sürüm varsayılanları")
 require("match /content_tools/{contentId}" in RULES and "allow read, write: if isMe(uid)" in RULES,
         "kullanıcıya özel çeviri/altyazı önbellek kuralı")
@@ -40,5 +40,7 @@ require("Takip, içerikleri Akışında gösterir" in MAIN,
         "takip/arkadaşlık/mesaj açıklaması")
 require("NgelX Premium" in MAIN and "workspace_premium_rounded" in MAIN,
         "kompakt Premium geçişi")
+require("mediaUrls':adaylar" in MAIN and "ceviriUret(setP,dil:sec)" in MAIN,
+        "çeviri dili değişiminde üretim ve altyazı medya geri dönüşleri")
 
 print("V72 cihaz testi düzeltmeleri doğrulandı.")

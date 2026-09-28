@@ -5,7 +5,7 @@ main=(root/"app/lib/main.dart").read_text(encoding="utf-8")
 pubspec=(root/"app/pubspec.yaml").read_text(encoding="utf-8")
 worker=(root/"cloudflare/worker/src/index.js").read_text(encoding="utf-8")
 checks={
-"V72+ surumu":any(v in pubspec for v in ("version: 1.0.72+291", "version: 1.0.73+292")),
+"V72+ surumu":any(v in pubspec for v in ("version: 1.0.72+291", "version: 1.0.73+292", "version: 1.0.74+293")),
 "Supabase Flutter yok":"supabase_flutter:" not in pubspec,
 "Arama cache":"Trafik tasarrufu: her harfte 60 kullanici + 100 icerigi yeniden indirme." in main and "future: _aramaVerisiniHazirla()," in main,
 "Foto lazy":"widget.aktif\n              ?PageView.builder" in main,

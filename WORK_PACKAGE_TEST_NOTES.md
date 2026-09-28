@@ -1170,3 +1170,13 @@
 - Kritik yollar için gerçek testler eklenecek; yalnızca metin arayan doğrulama betikleriyle yetinilmeyecek.
 - Mevcut kabul edilmiş NgelX kapsamı dışında zaman ve uygulama boyutunu gereksiz büyüten rastgele özellikler eklenmeyecek.
 - Eklenen her zorunlu eksik final değişiklik özetinde açıkça belirtilecek ve Build 292+ doğrulamalarına dahil edilecek.
+# V73 / Build 293 çeviri ve altyazı doğrulama paketi
+
+- Cihaz testi: gönderi silme artık başarılı; üretim Firestore kuralları yayınlandı.
+- Çeviri dili değiştirilince özellik açıksa yeni dil otomatik üretilir ve görünüm yenilenir.
+- Eski paylaşımlarda eksik `contentLanguage` artık zorla Türkçe kabul edilmez; desteklenen diller sunucuda belirlenir.
+- Altyazı isteği tek bir eski URL yerine en fazla sekiz benzersiz medya adayını güvenli sırayla dener.
+- NgelX Worker `/media/` adresleri HTTP ile yeniden çağrılmak yerine aynı R2 binding üzerinden okunur.
+- Gerçekten bulunmayan eski medya için ham `media_fetch_http_404` yerine anlaşılır hata döner.
+- Kullanılmayan medya endpoint önbellek değişkenleri ve hikâye paylaşımındaki kullanılmayan yerel değerler kaldırıldı.
+- Sürüm: `1.0.74+293`.

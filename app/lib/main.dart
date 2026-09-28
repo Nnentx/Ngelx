@@ -92,8 +92,8 @@ const ngelxPrivateBlueCanvas = Color(0xFFF6FAFF);
 const ngelxPrivateBlueBorder = Color(0xFFD8E8FF);
 const ngelxPrivateBlueInk = Color(0xFF10213A);
 
-const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.73');
-const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '292');
+const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.74');
+const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '293');
 const ngelxGroupBorder = Color(0xFFD9EEE0);
 
 final GlobalKey<NavigatorState> ngelxNavigatorKey=GlobalKey<NavigatorState>();
@@ -228,8 +228,6 @@ const _ngelxMediaApiBuild = String.fromEnvironment(
 );
 const _ngelxMediaProtocolVersion='upload-r2-243';
 const _ngelxMediaApiBackup='https://ngelx-upload.alihancaglar76.workers.dev';
-String? _ngelxMediaApiCache;
-DateTime? _ngelxMediaApiCacheZamani;
 
 Future<void> ngelxOverlayKapanisiniBekle() async {
   await Future<void>.delayed(const Duration(milliseconds: 360));
@@ -330,8 +328,6 @@ Future<String> ngelxMediaApiAdresi() async {
   // Böylece ilk gerçek hata başka fallback'ler tarafından gizlenmiyor.
   final build=_ngelxMediaApiBuild.trim().replaceAll(RegExp(r'/+$'), '');
   if(build.isEmpty)throw Exception('NgelX medya servisi yapılandırılmamış.');
-  _ngelxMediaApiCache=build;
-  _ngelxMediaApiCacheZamani=DateTime.now();
   return build;
 }
 
@@ -2116,11 +2112,13 @@ Future<String> ngelxGercekCeviriOlustur({required String metin,required String k
   final sonuc=await _ngelxAiPost('/ai/translate',{'text':temiz,'sourceLanguage':ngelxDilKodu(kaynakDil),'targetLanguage':ngelxDilKodu(hedefDil)});
   final ceviri=(sonuc['translatedText']??'').toString().trim();if(ceviri.isEmpty)throw Exception('Çeviri servisi boş yanıt verdi.');return ceviri;
 }
-Future<Map<String,String>> ngelxGercekAltyaziOlustur({required String mediaUrl,required String kaynakDil})async{
-  if(mediaUrl.trim().isEmpty)throw Exception('Altyazı üretilecek video bulunamadı.');
-  final sonuc=await _ngelxAiPost('/ai/captions',{'mediaUrl':mediaUrl.trim(),'language':ngelxDilKodu(kaynakDil)});
+Future<Map<String,String>> ngelxGercekAltyaziOlustur({required List<String> mediaUrls,required String kaynakDil})async{
+  final adaylar=mediaUrls.map((x)=>x.trim()).where((x)=>x.isNotEmpty).toSet().take(8).toList();
+  if(adaylar.isEmpty)throw Exception('Altyazı üretilecek video bulunamadı.');
+  final sonuc=await _ngelxAiPost('/ai/captions',{'mediaUrl':adaylar.first,'mediaUrls':adaylar,'language':ngelxDilKodu(kaynakDil)});
   final metin=(sonuc['text']??'').toString().trim(),vtt=(sonuc['vtt']??'').toString().trim();
-  if(metin.isEmpty)throw Exception('Videoda konuşma algılanamadı.');return {'text':metin,'vtt':vtt};
+  final algilananDil=ngelxDilKodu(sonuc['language']);
+  if(metin.isEmpty)throw Exception('Videoda konuşma algılanamadı.');return {'text':metin,'vtt':vtt,'language':algilananDil};
 }
 Future<void> icerikAracMenusu(BuildContext context,String icerikId,{Future<void> Function(double)? hizDegistir,double mevcutHiz=1.0,String medyaUrlOncelikli=''})async{
   if(icerikId.isEmpty)return;
@@ -2144,29 +2142,34 @@ Future<void> icerikAracMenusu(BuildContext context,String icerikId,{Future<void>
   String captionText=(aracHafiza['captionText']??yerelAltyazi['captionText']??v['captionText']??'').toString().trim();
   final icerikMetni=(v['description']??v['text']??v['content']??'').toString().trim();
   final medyaAdaylari=<dynamic>[medyaUrlOncelikli,v['videoUrl'],v['mediaUrl'],v['playbackUrl'],v['downloadUrl'],v['fileUrl'],v['url'],...((v['mediaUrls'] is Iterable)?List<dynamic>.from(v['mediaUrls'] as Iterable):const <dynamic>[])];
-  final medyaUrl=medyaAdaylari.map((e)=>(e??'').toString().trim()).firstWhere((e)=>e.isNotEmpty,orElse:()=>'');
-  final kaynakDil=ngelxDilKodu((v['contentLanguage']??v['language']??'tr').toString());
+  final medyaUrlListesi=medyaAdaylari.map((e)=>(e??'').toString().trim()).where((e)=>e.isNotEmpty).toSet().toList();
+  // Eski kayıtlarda contentLanguage alanı yok. Bu durumda sunucu kaynak dili
+  // otomatik belirler; Türkçe varsaymak İngilizce içerikleri çevrilmiş gibi gösteriyordu.
+  final kaynakDil=ngelxDilKodu((v['contentLanguage']??v['language']??'').toString());
   bool altyazi=hafiza.getBool('content_caption_$icerikId')??false,ceviri=hafiza.getBool('content_translate_$icerikId')??(hafiza.getBool('ngelx_auto_translate')??false),islem=false;
   String hedefDil=ngelxDilKodu(hafiza.getString('content_translation_language_$icerikId')??uygulamaDili.value);
   final altyaziDili=ngelxDilKodu(hafiza.getString('ngelx_caption_language')??uygulamaDili.value);
-  bool ceviriHazir()=>hedefDil==kaynakDil||ceviriler[hedefDil]?.trim().isNotEmpty==true;
+  bool ceviriHazir([String? dil]){final hedef=ngelxDilKodu(dil??hedefDil);return hedef.isNotEmpty&&((kaynakDil.isNotEmpty&&hedef==kaynakDil)||ceviriler[hedef]?.trim().isNotEmpty==true);}
   String altyaziMetni(){final c=captionTranslations[altyaziDili]?.trim()??'';if(c.isNotEmpty)return c;final d=captions[altyaziDili]?.trim()??'';if(d.isNotEmpty)return d;return captionText;}
-  Future<void> ceviriUret(StateSetter setP)async{
-    if(ceviriHazir())return;if(icerikMetni.isEmpty)throw Exception('Bu içerikte çevrilecek yazı bulunamadı.');setP(()=>islem=true);
+  Future<void> ceviriUret(StateSetter setP,{String? dil})async{
+    final istenenDil=ngelxDilKodu(dil??hedefDil);
+    if(ceviriHazir(istenenDil))return;if(icerikMetni.isEmpty)throw Exception('Bu içerikte çevrilecek yazı bulunamadı.');setP(()=>islem=true);
     try{
       if(aracHafizaRef==null)throw Exception('Çeviri için hesabına giriş yapmalısın.');
-      final sonuc=await ngelxGercekCeviriOlustur(metin:icerikMetni,kaynakDil:kaynakDil,hedefDil:hedefDil);
-      ceviriler[hedefDil]=sonuc;
+      final sonuc=await ngelxGercekCeviriOlustur(metin:icerikMetni,kaynakDil:kaynakDil,hedefDil:istenenDil);
+      ceviriler[istenenDil]=sonuc;
       await aracHafizaRef.set({'contentId':icerikId,'translations':ceviriler,'updatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
       await hafiza.setString('content_translation_cache_$icerikId',jsonEncode(ceviriler));
     }finally{setP(()=>islem=false);}
   }
   Future<void> altyaziUret(StateSetter setP)async{
-    if(altyaziMetni().isNotEmpty)return;if(medyaUrl.isEmpty)throw Exception('Bu içerikte altyazı üretilecek video bulunamadı.');setP(()=>islem=true);
+    if(altyaziMetni().isNotEmpty)return;if(medyaUrlListesi.isEmpty)throw Exception('Bu içerikte altyazı üretilecek video bulunamadı.');setP(()=>islem=true);
     try{
       if(aracHafizaRef==null)throw Exception('Altyazı için hesabına giriş yapmalısın.');
-      final sonuc=await ngelxGercekAltyaziOlustur(mediaUrl:medyaUrl,kaynakDil:kaynakDil);captionText=sonuc['text']??'';captions[kaynakDil]=captionText;
-      if(altyaziDili!=kaynakDil){final x=await ngelxGercekCeviriOlustur(metin:captionText,kaynakDil:kaynakDil,hedefDil:altyaziDili);captionTranslations[altyaziDili]=x;}
+      final sonuc=await ngelxGercekAltyaziOlustur(mediaUrls:medyaUrlListesi,kaynakDil:kaynakDil);captionText=sonuc['text']??'';
+      final gercekKaynakDil=ngelxDilKodu(sonuc['language']).isNotEmpty?ngelxDilKodu(sonuc['language']):kaynakDil;
+      if(gercekKaynakDil.isNotEmpty)captions[gercekKaynakDil]=captionText;
+      if(altyaziDili!=gercekKaynakDil){final x=await ngelxGercekCeviriOlustur(metin:captionText,kaynakDil:gercekKaynakDil,hedefDil:altyaziDili);captionTranslations[altyaziDili]=x;}
       await aracHafizaRef.set({
         'contentId':icerikId,
         'captionText':captionText,
@@ -2187,10 +2190,16 @@ Future<void> icerikAracMenusu(BuildContext context,String icerikId,{Future<void>
       if(islem)const Padding(padding:EdgeInsets.fromLTRB(18,10,18,2),child:LinearProgressIndicator(color:mor,minHeight:3)),
       ListTile(leading:const Icon(Icons.translate_rounded,color:mor),title:Text(t('languageTranslate'),style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w700)),subtitle:Text('${dilAdlari[hedefDil]??hedefDil} • ${ceviriHazir()?t('translationReady'):t('translationUnavailable')}',style:const TextStyle(color:Colors.black54)),onTap:islem?null:()async{
         final sec=await showDialog<String>(context:c,builder:(d)=>Theme(data:ThemeData.light(),child:SimpleDialog(backgroundColor:Colors.white,title:Text(t('translationTarget'),style:const TextStyle(color:Colors.black87)),children:dilAdlari.entries.map((e)=>SimpleDialogOption(onPressed:()=>Navigator.pop(d,e.key),child:Row(children:[if(e.key==hedefDil)const Icon(Icons.check,color:mor),if(e.key==hedefDil)const SizedBox(width:8),Text(e.value,style:const TextStyle(color:Colors.black87))]))).toList())));
-        if(sec!=null){await hafiza.setString('content_translation_language_$icerikId',sec);setP(()=>hedefDil=sec);ngelxIcerikDilRevizyonu.value++;}
+        if(sec!=null){
+          await hafiza.setString('content_translation_language_$icerikId',sec);setP(()=>hedefDil=sec);
+          try{
+            if(ceviri){await ceviriUret(setP,dil:sec);await hafiza.setBool('content_translate_$icerikId',true);}
+          }catch(e){await hafiza.setBool('content_translate_$icerikId',false);setP(()=>ceviri=false);if(c.mounted)ScaffoldMessenger.of(c).showSnackBar(SnackBar(content:Text('Çeviri oluşturulamadı: ${_ngelxKisaHata(e)}')));}
+          ngelxIcerikDilRevizyonu.value++;
+        }
       }),
       SwitchListTile(secondary:const Icon(Icons.g_translate_rounded,color:mor),title:Text(t('showTranslation'),style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w700)),subtitle:Text(ceviriHazir()?t('translationReady'):'Dokununca gerçek çeviri oluşturulur',style:const TextStyle(color:Colors.black54)),value:ceviri&&ceviriHazir(),onChanged:islem?null:(x)async{
-        try{if(x)await ceviriUret(setP);await hafiza.setBool('content_translate_$icerikId',x);setP(()=>ceviri=x);ngelxIcerikDilRevizyonu.value++;}catch(e){if(c.mounted)ScaffoldMessenger.of(c).showSnackBar(SnackBar(content:Text('Çeviri oluşturulamadı: ${_ngelxKisaHata(e)}')));}
+        try{if(x)await ceviriUret(setP);await hafiza.setBool('content_translate_$icerikId',x);setP(()=>ceviri=x);ngelxIcerikDilRevizyonu.value++;}catch(e){await hafiza.setBool('content_translate_$icerikId',false);setP(()=>ceviri=false);if(c.mounted)ScaffoldMessenger.of(c).showSnackBar(SnackBar(content:Text('Çeviri oluşturulamadı: ${_ngelxKisaHata(e)}')));}
       }),
       SwitchListTile(secondary:const Icon(Icons.closed_caption_rounded,color:Colors.blue),title:Text(t('captionsLabel'),style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w700)),subtitle:Text(altyaziMetni().isNotEmpty?'${dilAdlari[altyaziDili]??altyaziDili} • ${t('captionsShow')}':'Açınca videonun konuşmalarından altyazı oluşturulur',style:const TextStyle(color:Colors.black54)),value:altyazi&&altyaziMetni().isNotEmpty,onChanged:islem?null:(x)async{
         try{if(x)await altyaziUret(setP);await hafiza.setBool('content_caption_$icerikId',x);setP(()=>altyazi=x);ngelxIcerikDilRevizyonu.value++;}catch(e){if(c.mounted)ScaffoldMessenger.of(c).showSnackBar(SnackBar(content:Text('Altyazı oluşturulamadı: ${_ngelxKisaHata(e)}')));}
@@ -7485,7 +7494,7 @@ class _YeniYuklePageState extends State<YuklePage> {
 
       final profil=await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
       final adi=(profil.data()?['username']??'ngelx').toString();
-      final ref=await FirebaseFirestore.instance.collection('videos').add({
+      await FirebaseFirestore.instance.collection('videos').add({
         'ownerId':user.uid,
         'username':adi,
         'type':'story',
@@ -7500,7 +7509,6 @@ class _YeniYuklePageState extends State<YuklePage> {
       });
 
       if(!mounted)return;
-      final olusturma=Timestamp.now();
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content:Text(video?'Video hikâyen yayınlandı • 24 saat görünür.':'Hikâye yayınlandı • 24 saat görünür.')
       ));
