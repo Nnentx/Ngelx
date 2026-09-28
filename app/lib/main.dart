@@ -92,8 +92,8 @@ const ngelxPrivateBlueCanvas = Color(0xFFF6FAFF);
 const ngelxPrivateBlueBorder = Color(0xFFD8E8FF);
 const ngelxPrivateBlueInk = Color(0xFF10213A);
 
-const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.78');
-const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '297');
+const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.79');
+const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '298');
 const ngelxGroupBorder = Color(0xFFD9EEE0);
 
 final GlobalKey<NavigatorState> ngelxNavigatorKey=GlobalKey<NavigatorState>();
@@ -9837,13 +9837,12 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
   }
   Future<void> _grupFotografiniGonder(XFile x,ImageSource kaynak)async{
     try{
-      final bytes=await x.readAsBytes();
       final uzanti=x.name.contains('.')?x.name.split('.').last.toLowerCase():'jpg';
       final yol='groups/${widget.chatId}/${DateTime.now().millisecondsSinceEpoch}.$uzanti';
-      final url=await ngelxMedyaYukleBytes(
-        bytes:bytes,kind:'groups',ext:uzanti,legacyPath:yol,
+      final url=await ngelxMedyaYukleDosya(
+        dosya:x,kind:'groups',ext:uzanti,legacyPath:yol,
         onProgress:(sent,total)=>_medyaIlerlemeGuncelle('Fotoğraf yükleniyor',sent,total),
-      ).timeout(const Duration(seconds:60));
+      ).timeout(const Duration(seconds:75));
       final tamam=await payloadGonder({'type':'photo','mediaUrl':url,'imageUrl':url,'photoUrl':url},'📷 Fotoğraf');
       if(!tamam)throw Exception('Mesaj kaydedilemedi');
     }catch(_){
@@ -16015,13 +16014,14 @@ class _SohbetPageState extends State<SohbetPage> {
     );
     if(x==null)return;
     try{
-      final yol='chats/${widget.chatId}/${DateTime.now().millisecondsSinceEpoch}.jpg';
-      final url=await ngelxMedyaYukleBytes(
-        bytes: await x.readAsBytes(),
-        kind: 'chats',
-        ext: 'jpg',
-        legacyPath: yol,
-      ).timeout(const Duration(seconds:60));
+      final uzanti=x.name.contains('.')?x.name.split('.').last.toLowerCase():'jpg';
+      final yol='chats/${widget.chatId}/${DateTime.now().millisecondsSinceEpoch}.$uzanti';
+      final url=await ngelxMedyaYukleDosya(
+        dosya:x,
+        kind:'chats',
+        ext:uzanti,
+        legacyPath:yol,
+      ).timeout(const Duration(seconds:75));
       final ref=FirebaseFirestore.instance.collection('chats').doc(widget.chatId);
       final sureHam=hazirlik.sohbet['disappearingSeconds'];
       final sure=sureHam is num?sureHam.toInt():0;

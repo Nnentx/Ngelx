@@ -7,10 +7,10 @@ PUB=(ROOT/"app/pubspec.yaml").read_text(encoding="utf-8")
 
 def require(cond,msg):
     if not cond:
-        raise SystemExit("Build 297 medya/diyalog kontrolu eksik: "+msg)
+        raise SystemExit("Build 298 medya/diyalog kontrolu eksik: "+msg)
 
-require("version: 1.0.78+297" in PUB,"Build 297 surumu")
-require("defaultValue: '1.0.78'" in MAIN and "defaultValue: '297'" in MAIN,"uygulama ici surum")
+require("version: 1.0.79+298" in PUB,"Build 298 surumu")
+require("defaultValue: '1.0.79'" in MAIN and "defaultValue: '298'" in MAIN,"uygulama ici surum")
 require("class NgelXSohbetFotoOnizleme" in MAIN and "ngelxMesajMedyaUrl(v,video:tur=='video')" in MAIN,
         "grup fotograf/video URL cozumleme")
 require("videoKapak=ngelxMesajVideoKapagi(v)" in MAIN,
@@ -35,5 +35,5 @@ require("Arkadaşlıktan çıkarılsın mı?" in MAIN and
         "dialogTheme:const DialogThemeData(backgroundColor:Colors.white" in MAIN,
         "arkadasliktan cikarma diyalogu gorunur metin/stil")
 
-print("Build 297 grup/ozel medya onizleme ve arkadaslik diyalogu dogrulandi.")
-# Build 297 final QA trigger
+print("Build 298 grup/ozel medya onizleme ve arkadaslik diyalogu dogrulandi.")
+# Build 298 final QA trigger

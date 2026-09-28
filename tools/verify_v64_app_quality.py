@@ -13,7 +13,7 @@ def forbid(text: str, needle: str, label: str) -> None:
     if needle in text:
         raise SystemExit(f"V64 CHECK FAILED: {label}: forbidden {needle!r}")
 
-if all(v not in pubspec for v in ("version: 1.0.64+283", "version: 1.0.65+284", "version: 1.0.66+285", "version: 1.0.67+286", "version: 1.0.68+287", "version: 1.0.69+288", "version: 1.0.70+289", "version: 1.0.71+290", "version: 1.0.72+291", "version: 1.0.73+292", "version: 1.0.74+293", "version: 1.0.75+294", "version: 1.0.76+295", "version: 1.0.77+296", "version: 1.0.78+297")):
+if all(v not in pubspec for v in ("version: 1.0.64+283", "version: 1.0.65+284", "version: 1.0.66+285", "version: 1.0.67+286", "version: 1.0.68+287", "version: 1.0.69+288", "version: 1.0.70+289", "version: 1.0.71+290", "version: 1.0.72+291", "version: 1.0.73+292", "version: 1.0.74+293", "version: 1.0.75+294", "version: 1.0.76+295", "version: 1.0.77+296", "version: 1.0.78+297", "version: 1.0.79+298")):
     raise SystemExit("V64 CHECK FAILED: supported V64/V65/V66 app version missing")
 
 # Main navigation / requested surfaces must remain wired.
