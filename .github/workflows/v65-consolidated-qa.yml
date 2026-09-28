@@ -78,6 +78,9 @@ jobs:
       - name: Build 297 grup-ozel medya ve diyalog duzeltmelerini dogrula
         run: python3 tools/verify_v78_media_dialog.py
 
+      - name: Build 298 grup-ozel fotograf yukleme yolunu dogrula
+        run: python3 tools/verify_v79_photo_upload.py
+
       - name: R2 Worker JavaScript kontrolu
         run: |
           node --check cloudflare/worker/src/index.js
