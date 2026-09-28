@@ -92,8 +92,8 @@ const ngelxPrivateBlueCanvas = Color(0xFFF6FAFF);
 const ngelxPrivateBlueBorder = Color(0xFFD8E8FF);
 const ngelxPrivateBlueInk = Color(0xFF10213A);
 
-const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.75');
-const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '294');
+const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.76');
+const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '295');
 const ngelxGroupBorder = Color(0xFFD9EEE0);
 
 final GlobalKey<NavigatorState> ngelxNavigatorKey=GlobalKey<NavigatorState>();
@@ -11857,6 +11857,157 @@ class NgelXReplyMediaPreview extends StatelessWidget{
   }
 }
 
+
+String _ngelxIlkGecerliMedyaAdresi(Iterable<dynamic> adaylar){
+  for(final ham in adaylar){
+    final adres=(ham??'').toString().trim();
+    if(adres.isEmpty)continue;
+    final uri=Uri.tryParse(adres);
+    if(uri!=null&&(uri.scheme=='https'||uri.scheme=='http'))return adres;
+  }
+  return '';
+}
+
+String ngelxMesajMedyaUrl(Map<String,dynamic> veri,{bool video=false}){
+  return _ngelxIlkGecerliMedyaAdresi(video
+    ?<dynamic>[
+      veri['videoUrl'],
+      veri['mediaUrl'],
+      veri['playbackUrl'],
+      veri['downloadUrl'],
+      veri['url'],
+      veri['attachmentUrl'],
+    ]
+    :<dynamic>[
+      veri['mediaUrl'],
+      veri['imageUrl'],
+      veri['photoUrl'],
+      veri['downloadUrl'],
+      veri['url'],
+      veri['attachmentUrl'],
+    ]);
+}
+
+String ngelxMesajVideoKapagi(Map<String,dynamic> veri){
+  return _ngelxIlkGecerliMedyaAdresi(<dynamic>[
+    veri['thumbnailUrl'],
+    veri['posterUrl'],
+    veri['previewUrl'],
+    veri['coverUrl'],
+    veri['imageUrl'],
+  ]);
+}
+
+class NgelXSohbetFotoOnizleme extends StatelessWidget{
+  final String url;
+  const NgelXSohbetFotoOnizleme({super.key,required this.url});
+
+  @override
+  Widget build(BuildContext context){
+    Widget hata()=>Container(
+      width:230,
+      height:180,
+      alignment:Alignment.center,
+      decoration:BoxDecoration(
+        color:const Color(0xFFF3F4F6),
+        borderRadius:BorderRadius.circular(16),
+      ),
+      child:const Column(
+        mainAxisSize:MainAxisSize.min,
+        children:[
+          Icon(Icons.image_not_supported_outlined,color:Color(0xFF6B7280),size:34),
+          SizedBox(height:7),
+          Text('Fotoğraf yüklenemedi',style:TextStyle(color:Color(0xFF4B5563),fontSize:12,fontWeight:FontWeight.w700)),
+        ],
+      ),
+    );
+    if(url.isEmpty)return hata();
+    return ClipRRect(
+      borderRadius:BorderRadius.circular(16),
+      child:SizedBox(
+        width:230,
+        height:180,
+        child:CachedNetworkImage(
+          key:ValueKey('chat-photo-$url'),
+          imageUrl:url,
+          fit:BoxFit.cover,
+          memCacheWidth:720,
+          fadeInDuration:const Duration(milliseconds:120),
+          placeholder:(_,__)=>const ColoredBox(
+            color:Color(0xFFF3F4F6),
+            child:Center(child:SizedBox(width:24,height:24,child:CircularProgressIndicator(strokeWidth:2,color:Color(0xFF6B7280)))),
+          ),
+          errorWidget:(_,__,___)=>hata(),
+        ),
+      ),
+    );
+  }
+}
+
+class NgelXSohbetVideoOnizleme extends StatelessWidget{
+  final String url,thumbnailUrl;
+  const NgelXSohbetVideoOnizleme({super.key,required this.url,this.thumbnailUrl=''});
+
+  Widget _oynatKatmani()=>Center(
+    child:Container(
+      width:54,
+      height:54,
+      decoration:BoxDecoration(
+        color:Colors.black.withValues(alpha:.58),
+        shape:BoxShape.circle,
+        border:Border.all(color:Colors.white54),
+      ),
+      child:const Icon(Icons.play_arrow_rounded,color:Colors.white,size:36),
+    ),
+  );
+
+  Widget _videoIlkKaresi(){
+    if(url.isEmpty){
+      return Container(
+        width:246,
+        height:178,
+        alignment:Alignment.center,
+        decoration:BoxDecoration(color:const Color(0xFF20242D),borderRadius:BorderRadius.circular(16)),
+        child:const Column(mainAxisSize:MainAxisSize.min,children:[
+          Icon(Icons.videocam_off_outlined,color:Colors.white60,size:36),
+          SizedBox(height:7),
+          Text('Video açılamadı',style:TextStyle(color:Colors.white70,fontSize:12,fontWeight:FontWeight.w700)),
+        ]),
+      );
+    }
+    return NgelXGrupVideoMesaj(url:url,compact:true);
+  }
+
+  @override
+  Widget build(BuildContext context){
+    if(thumbnailUrl.isEmpty)return _videoIlkKaresi();
+    return ClipRRect(
+      borderRadius:BorderRadius.circular(16),
+      child:SizedBox(
+        width:246,
+        height:178,
+        child:Stack(
+          fit:StackFit.expand,
+          children:[
+            CachedNetworkImage(
+              key:ValueKey('chat-video-thumb-$thumbnailUrl'),
+              imageUrl:thumbnailUrl,
+              fit:BoxFit.cover,
+              memCacheWidth:720,
+              placeholder:(_,__)=>const ColoredBox(
+                color:Color(0xFF20242D),
+                child:Center(child:SizedBox(width:24,height:24,child:CircularProgressIndicator(strokeWidth:2,color:Colors.white70))),
+              ),
+              errorWidget:(_,__,___)=>_videoIlkKaresi(),
+            ),
+            IgnorePointer(child:_oynatKatmani()),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class NgelXGrupVideoMesaj extends StatefulWidget{
   final String url;
   final bool compact;
@@ -16407,6 +16558,8 @@ class _SohbetPageState extends State<SohbetPage> {
   Widget ozelMesajKarti(QueryDocumentSnapshot<Map<String,dynamic>> d,{double fontSize=16,bool goruldu=false,String quickReaction='❤️'}){
     final v=d.data(),ben=v['senderId']==uid,tur=(v['type']??'text').toString();
     final photo=tur=='photo',video=tur=='video',shared=tur=='shared_content',audio=tur=='audio',file=tur=='file',location=tur=='location',call=tur=='call',storyReply=tur=='story_reply';
+    final medyaUrl=ngelxMesajMedyaUrl(v,video:video);
+    final videoKapakUrl=video?ngelxMesajVideoKapagi(v):'';
     final sadeMedya=photo||video;
     final metin=(v['text']??v['message']??v['content']??'').toString().trim(),saat=mesajSaati(v['createdAt']??v['clientCreatedAt']);
     final gizlenecek=gizliKelimeFiltresi&&metin.isNotEmpty&&ngelxHiddenWordMatches(metin,gizliKelimeListesi);
@@ -16421,9 +16574,9 @@ class _SohbetPageState extends State<SohbetPage> {
         onLongPress:()=>mesajMenusu(d),
         onDoubleTap:()=>mesajTepkiDegistir(d,quickReaction),
         onTap:photo
-          ? ()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>TamEkranMedyaPage(url:(v['mediaUrl']??'').toString())))
+          ? ()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>TamEkranMedyaPage(url:medyaUrl)))
           : video
-            ? ()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>TamEkranVideoPage(url:(v['videoUrl']??v['mediaUrl']??'').toString())))
+            ? ()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>TamEkranVideoPage(url:medyaUrl)))
           : shared
             ? ()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>IcerikBaglantiPage(icerikId:(v['contentId']??'').toString())))
             : file
@@ -16456,9 +16609,9 @@ class _SohbetPageState extends State<SohbetPage> {
                 child:Text((v['replyText']??'').toString(),maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Color(0xFF202124),fontSize:12.5,fontWeight:FontWeight.w600)),
               ),
             if(photo)
-              IgnorePointer(child:ClipRRect(borderRadius:BorderRadius.circular(16),child:CachedNetworkImage(imageUrl:(v['mediaUrl']??'').toString(),width:230,fit:BoxFit.cover)))
+              IgnorePointer(child:NgelXSohbetFotoOnizleme(url:medyaUrl))
             else if(video)
-              IgnorePointer(child:ClipRRect(borderRadius:BorderRadius.circular(16),child:NgelXGrupVideoMesaj(url:(v['videoUrl']??v['mediaUrl']??'').toString(),compact:true)))
+              IgnorePointer(child:NgelXSohbetVideoOnizleme(url:medyaUrl,thumbnailUrl:videoKapakUrl))
             else if(shared)
               IgnorePointer(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
                 Row(children:[Icon(Icons.play_circle_fill_rounded,color:ben?Colors.white:mavi),const SizedBox(width:7),Text('NgelX paylaşımı',style:TextStyle(color:ben?Colors.white:Colors.black87,fontWeight:FontWeight.w900))]),

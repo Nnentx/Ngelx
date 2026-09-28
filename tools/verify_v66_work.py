@@ -14,7 +14,7 @@ def forbid(text: str, needle: str, label: str) -> None:
     if needle in text:
         raise SystemExit(f"V66 CHECK FAILED: {label}: forbidden {needle!r}")
 
-if all(v not in pubspec for v in ("version: 1.0.66+285", "version: 1.0.67+286", "version: 1.0.68+287", "version: 1.0.69+288", "version: 1.0.70+289", "version: 1.0.71+290", "version: 1.0.72+291", "version: 1.0.73+292", "version: 1.0.74+293", "version: 1.0.75+294")):
+if all(v not in pubspec for v in ("version: 1.0.66+285", "version: 1.0.67+286", "version: 1.0.68+287", "version: 1.0.69+288", "version: 1.0.70+289", "version: 1.0.71+290", "version: 1.0.72+291", "version: 1.0.73+292", "version: 1.0.74+293", "version: 1.0.75+294", "version: 1.0.76+295")):
     raise SystemExit("V66 CHECK FAILED: supported V66/V67 app version missing")
 
 # Story: one ring per owner, multiple active stories in series, segmented progress,
