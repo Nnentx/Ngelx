@@ -13,7 +13,7 @@ def forbid(text: str, needle: str, label: str) -> None:
     if needle in text:
         raise SystemExit(f"V64 CHECK FAILED: {label}: forbidden {needle!r}")
 
-if all(v not in pubspec for v in ("version: 1.0.64+283", "version: 1.0.65+284", "version: 1.0.66+285", "version: 1.0.67+286", "version: 1.0.68+287", "version: 1.0.69+288", "version: 1.0.70+289", "version: 1.0.71+290", "version: 1.0.72+291", "version: 1.0.73+292", "version: 1.0.74+293", "version: 1.0.75+294", "version: 1.0.76+295")):
+if all(v not in pubspec for v in ("version: 1.0.64+283", "version: 1.0.65+284", "version: 1.0.66+285", "version: 1.0.67+286", "version: 1.0.68+287", "version: 1.0.69+288", "version: 1.0.70+289", "version: 1.0.71+290", "version: 1.0.72+291", "version: 1.0.73+292", "version: 1.0.74+293", "version: 1.0.75+294", "version: 1.0.76+295", "version: 1.0.77+296")):
     raise SystemExit("V64 CHECK FAILED: supported V64/V65/V66 app version missing")
 
 # Main navigation / requested surfaces must remain wired.
@@ -47,10 +47,14 @@ intro = main[main.index("class ProfilTanitimVideoKarti"):main.index("class Ortak
 require(intro, "height:150", "compact intro video")
 require(intro, "width:double.infinity", "intro width")
 
-# Social request must not block on a broad outgoing notifications read before sending.
+# Social requests keep cached identity for quick labels, but correctness is
+# verified from the server and pending-request reads are scoped to the pair.
 social = main[main.index("Future<bool> sosyalIstekGonder"):main.index("Future<void> sosyalIstekIptalEt")]
-forbid(social, ".where('fromUid'", "social request preflight scan")
-require(social, "GetOptions(source:Source.cache)", "non-blocking cached identity")
+require(social, "GetOptions(source:Source.cache)", "cached identity")
+require(social, "GetOptions(source:Source.server)", "authoritative relationship check")
+require(social, ".where('fromUid',isEqualTo:user.uid)", "pair request sender filter")
+require(social, ".where('toUid',isEqualTo:hedefUid)", "pair request target filter")
+require(social, ".limit(20)", "bounded pair request query")
 require(social, "'clientCreatedAt':Timestamp.now()", "offline request timestamp")
 
 # Remove obsolete placeholder / compatibility code from runtime.
