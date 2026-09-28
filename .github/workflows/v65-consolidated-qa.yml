@@ -75,6 +75,9 @@ jobs:
       - name: Build 296 takip ve arkadaslik isteklerini dogrula
         run: python3 tools/verify_v77_social_relations.py
 
+      - name: Build 297 grup-ozel medya ve diyalog duzeltmelerini dogrula
+        run: python3 tools/verify_v78_media_dialog.py
+
       - name: R2 Worker JavaScript kontrolu
         run: |
           node --check cloudflare/worker/src/index.js
