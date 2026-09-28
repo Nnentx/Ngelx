@@ -81,6 +81,18 @@ jobs:
       - name: Build 298 grup-ozel fotograf yukleme yolunu dogrula
         run: python3 tools/verify_v79_photo_upload.py
 
+      - name: V80 kritik Firebase ve medya kontrolleri
+        run: python3 tools/verify_v80_critical_firebase.py
+
+      - name: V81 muzik katmani kontrolleri
+        run: python3 tools/verify_v81_music_layers.py
+
+      - name: V82 medya guvenilirligi kontrolleri
+        run: python3 tools/verify_v82_media_reliability.py
+
+      - name: Build 301 birlesik fotograf hattini dogrula
+        run: python3 tools/verify_v83_unified_photo_pipeline.py
+
       - name: R2 Worker JavaScript kontrolu
         run: |
           node --check cloudflare/worker/src/index.js
