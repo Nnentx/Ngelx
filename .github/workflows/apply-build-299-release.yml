@@ -1,0 +1,36 @@
+name: Apply Build 299 release candidate
+
+on:
+  push:
+    branches:
+      - work/build-299-release
+    paths:
+      - .github/workflows/apply-build-299-release.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: work/build-299-release
+          fetch-depth: 0
+      - name: Apply Build 299 patch
+        run: git apply --check tools/build_299_release.patch && git apply tools/build_299_release.patch
+      - name: Verify source contracts
+        run: |
+          for test_file in tools/verify_*.py; do
+            python3 "$test_file"
+          done
+          node --check cloudflare/worker/src/index.js
+      - name: Commit Build 299 candidate
+        run: |
+          git config user.name "ngelx-ci"
+          git config user.email "actions@users.noreply.github.com"
+          git add app/lib/main.dart app/pubspec.yaml tools .github/workflows/build-299-release.yml
+          git commit -m "release: prepare NgelX 1.0.80 Build 299"
+          git push origin work/build-299-release
