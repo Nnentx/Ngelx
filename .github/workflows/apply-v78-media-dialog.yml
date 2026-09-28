@@ -1,0 +1,48 @@
+name: Apply NgelX Build 297 Media Dialog Fix
+
+on:
+  push:
+    branches:
+      - work/v72-combined
+    paths:
+      - 'tools/apply_v78_media_dialog.py'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ngelx-build-297-media-dialog
+  cancel-in-progress: true
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Kaynaklari al
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Medya ve diyalog yamasini uygula
+        run: python3 tools/apply_v78_media_dialog.py
+
+      - name: Hedef degisiklikleri dogrula
+        run: python3 tools/verify_v78_media_dialog.py
+
+      - name: Diff kontrolu
+        run: git diff --check
+
+      - name: Build 297 degisikliklerini kaydet
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/lib/main.dart app/pubspec.yaml tools/verify_v64_app_quality.py tools/verify_v65_media_traffic.py tools/verify_v65_work.py tools/verify_v66_work.py tools/verify_v67_work.py tools/verify_v68_work.py tools/verify_v72_device_fixes.py tools/verify_v76_chat_media.py tools/verify_v77_social_relations.py .github/workflows/v65-consolidated-qa.yml
+          if git diff --cached --quiet; then
+            echo "Uygulanacak degisiklik bulunamadi."
+            exit 1
+          fi
+          git commit -m "fix: repair group media previews and friendship dialog"
+          git push
