@@ -36,3 +36,4 @@ require("Arkadaşlıktan çıkarılsın mı?" in MAIN and
         "arkadasliktan cikarma diyalogu gorunur metin/stil")
 
 print("Build 297 grup/ozel medya onizleme ve arkadaslik diyalogu dogrulandi.")
+# Build 297 final QA trigger
