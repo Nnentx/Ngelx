@@ -62,11 +62,20 @@ class NgelXHikayeliAvatar extends StatelessWidget{
     final avatar=CircleAvatar(
       radius:radius,
       backgroundColor:Colors.white,
-      backgroundImage:fotoUrl.isEmpty?null:CachedNetworkImageProvider(fotoUrl),
       child:fotoUrl.isEmpty?Text(
         kullanici.replaceFirst('@','').isEmpty?'N':kullanici.replaceFirst('@','')[0].toUpperCase(),
         style:TextStyle(fontSize:radius*.72,fontWeight:FontWeight.w800),
-      ):null,
+      ):ClipOval(child:SizedBox(
+        width:radius*2,height:radius*2,
+        child:NgelXAgResmi(
+          url:fotoUrl,fit:BoxFit.cover,
+          placeholder:const ColoredBox(color:Colors.white),
+          error:Center(child:Text(
+            kullanici.replaceFirst('@','').isEmpty?'N':kullanici.replaceFirst('@','')[0].toUpperCase(),
+            style:TextStyle(fontSize:radius*.72,fontWeight:FontWeight.w800),
+          )),
+        ),
+      )),
     );
     if(!hikayeVar)return avatar;
     return Container(
@@ -338,11 +347,11 @@ class _NgelXHikayeSeriPageState extends State<NgelXHikayeSeriPage> with SingleTi
       Text('Hikâye medyası bulunamadı',style:TextStyle(color:Colors.white70,fontWeight:FontWeight.w700)),
     ]));
     if(!videoMu){
-      return CachedNetworkImage(
-        imageUrl:url,
+      return NgelXAgResmi(
+        url:url,
         fit:BoxFit.contain,
-        placeholder:(_,__)=>const Center(child:CircularProgressIndicator(color:Colors.white)),
-        errorWidget:(_,__,___)=>const Center(child:Icon(Icons.broken_image_outlined,color:Colors.white54,size:60)),
+        placeholder:const Center(child:CircularProgressIndicator(color:Colors.white)),
+        error:const Center(child:Icon(Icons.broken_image_outlined,color:Colors.white54,size:60)),
       );
     }
     if(videoHata)return const Center(child:Column(mainAxisSize:MainAxisSize.min,children:[

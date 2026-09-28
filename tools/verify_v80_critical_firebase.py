@@ -12,7 +12,7 @@ def require(condition: bool, message: str) -> None:
 
 require("Future<String> _ngelxMedyaYayininiDogrula" in MAIN,
         "yüklenen medya yayın doğrulaması")
-require("HttpHeaders.rangeHeader:'bytes=0-0'" in MAIN,
+require("HttpHeaders.rangeHeader:'bytes=0-63'" in MAIN,
         "düşük trafikli medya okuma kontrolü")
 require(MAIN.count("return await _ngelxMedyaYayininiDogrula(url);") >= 6,
         "bütün medya taşıma yollarında yayın doğrulaması")
@@ -31,10 +31,10 @@ require("unawaited(batch.commit()" not in private,
 story_start = MAIN.index("Future<void> hikayeYukle()")
 story_end = MAIN.index("Future<void> hikayeyiAc()", story_start)
 story = MAIN[story_start:story_end]
-require("final url=await ngelxMedyaYukleDosya(" in story,
-        "fotoğraf ve video hikâyelerinde dosya tabanlı yükleme")
-require("ngelxMedyaYukleBytes" not in story,
-        "hikâye fotoğrafındaki bellek tabanlı bozuk yolun kaldırılması")
+require("final url=video" in story and "ngelxMedyaYukleDosya(" in story,
+        "video hikâyesinde dosya tabanlı yükleme")
+require("ngelxMedyaYukleBytes(" in story,
+        "fotoğraf hikâyesinde güvenli PNG normalizasyonu")
 
 require("class NgelXYorumYazici extends StatelessWidget" in MAIN,
         "yorum yazıcısının canlı listeden ayrılması")

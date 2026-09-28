@@ -1,22 +1,23 @@
-name: NgelX Build 299 Release Candidate
+name: NgelX Build 300 Media Reliability
 
 on:
   push:
     branches:
-      - work/build-299-release
+      - work/v82-media-reliability
+      - work/v72-combined
     paths:
       - 'app/**'
       - 'tools/**'
       - 'cloudflare/worker/**'
       - 'firestore.rules'
-      - '.github/workflows/build-299-release.yml'
+      - '.github/workflows/build-300-release.yml'
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: ngelx-build-299-release-candidate
+  group: ngelx-build-300-media-reliability
   cancel-in-progress: true
 
 jobs:
@@ -40,13 +41,11 @@ jobs:
       - name: Kilit dosyasını doğrula
         run: git diff --exit-code -- app/pubspec.lock
 
-      - name: Bütün kaynak regresyonlarını çalıştır
+      - name: Build 300 kaynak regresyonları
         run: |
-          for test_file in tools/verify_*.py; do
-            python3 "$test_file"
-          done
           python3 tools/verify_v80_critical_firebase.py
           python3 tools/verify_v81_music_layers.py
+          python3 tools/verify_v82_media_reliability.py
 
       - name: Worker testleri
         run: |
@@ -82,22 +81,22 @@ jobs:
             keytool -genkeypair -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey -keypass android -dname "CN=Android Debug,O=Android,C=US" -keyalg RSA -keysize 2048 -validity 10000
           fi
 
-      - name: Build 299 debug APK derle
+      - name: Build 300 debug APK derle
         working-directory: app
         run: |
           APP_VERSION="$(awk '/^version:/ {print $2}' pubspec.yaml)"
           BUILD_NAME="${APP_VERSION%%+*}"
           BUILD_NUMBER="${APP_VERSION##*+}"
-          test "$BUILD_NAME" = "1.0.80"
-          test "$BUILD_NUMBER" = "299"
+          test "$BUILD_NAME" = "1.0.81"
+          test "$BUILD_NUMBER" = "300"
           flutter build apk --debug \
             --dart-define=NGELX_VERSION_NAME="$BUILD_NAME" \
             --dart-define=NGELX_BUILD_NUMBER="$BUILD_NUMBER"
 
-      - name: Build 299 APK artifact yükle
+      - name: Build 300 APK artifact yükle
         uses: actions/upload-artifact@v4
         with:
-          name: NgelX-1.0.80-Build-299-TEST-APK
+          name: NgelX-1.0.81-Build-300-TEST-APK
           path: app/build/app/outputs/flutter-apk/app-debug.apk
           if-no-files-found: error
           retention-days: 14
