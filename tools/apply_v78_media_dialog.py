@@ -258,20 +258,6 @@ t=t.replace('require("version: 1.0.77+296" in PUB,"Build 296 surumu")','require(
 t=t.replace('require("defaultValue: \'1.0.77\'" in MAIN and "defaultValue: \'296\'" in MAIN,"uygulama ici surum")','require("defaultValue: \'1.0.78\'" in MAIN and "defaultValue: \'297\'" in MAIN,"uygulama ici surum")')
 v77.write_text(t,encoding="utf-8")
 
-qa=QA_PATH.read_text(encoding="utf-8")
-old="""      - name: Build 296 takip ve arkadaslik isteklerini dogrula
-        run: python3 tools/verify_v77_social_relations.py
-
-      - name: R2 Worker JavaScript kontrolu"""
-new="""      - name: Build 296 takip ve arkadaslik isteklerini dogrula
-        run: python3 tools/verify_v77_social_relations.py
-
-      - name: Build 297 grup-ozel medya ve diyalog duzeltmelerini dogrula
-        run: python3 tools/verify_v78_media_dialog.py
-
-      - name: R2 Worker JavaScript kontrolu"""
-qa=one(qa,old,new,"QA Build 297 step")
-QA_PATH.write_text(qa,encoding="utf-8")
-
 print("Build 297 media/dialog patch prepared.")
 # retry verifier sync\n# workflow rewrite handled by connector\n
+# QA workflow is updated separately
