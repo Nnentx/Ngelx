@@ -281,24 +281,30 @@ class _NgelXMuzikSecPageState extends State<NgelXMuzikSecPage> {
                     }
 
                     if (docs.isEmpty) {
-                      return const Center(
+                      return Center(
                         child: Padding(
-                          padding: EdgeInsets.all(28),
+                          padding: const EdgeInsets.all(28),
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.library_music_outlined, color: Colors.black38, size: 54),
-                              SizedBox(height: 10),
-                              Text(
+                              const Icon(Icons.library_music_outlined, color: Colors.black38, size: 54),
+                              const SizedBox(height: 10),
+                              const Text(
                                 'Bu bölümde kullanım hakkı uygun müzik bulunamadı.',
                                 textAlign: TextAlign.center,
                                 style: TextStyle(color: Colors.black54, fontWeight: FontWeight.w700),
                               ),
-                              SizedBox(height: 6),
-                              Text(
+                              const SizedBox(height: 6),
+                              const Text(
                                 'Yalnızca lisanslı, izinli veya telifsiz parçalar gösterilir.',
                                 textAlign: TextAlign.center,
                                 style: TextStyle(color: Colors.black38, fontSize: 12),
+                              ),
+                              const SizedBox(height:16),
+                              FilledButton.icon(
+                                onPressed:_cihazdanSesSec,
+                                icon:const Icon(Icons.audio_file_rounded),
+                                label:const Text('Cihazımdan müzik ekle'),
                               ),
                             ],
                           ),
