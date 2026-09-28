@@ -69,6 +69,9 @@ jobs:
       - name: V72 cihaz testi düzeltmelerini dogrula
         run: python3 tools/verify_v72_device_fixes.py
 
+      - name: Build 295 sohbet medya duzeltmelerini dogrula
+        run: python3 tools/verify_v76_chat_media.py
+
       - name: R2 Worker JavaScript kontrolu
         run: |
           node --check cloudflare/worker/src/index.js
