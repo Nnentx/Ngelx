@@ -92,8 +92,8 @@ const ngelxPrivateBlueCanvas = Color(0xFFF6FAFF);
 const ngelxPrivateBlueBorder = Color(0xFFD8E8FF);
 const ngelxPrivateBlueInk = Color(0xFF10213A);
 
-const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.76');
-const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '295');
+const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.77');
+const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '296');
 const ngelxGroupBorder = Color(0xFFD9EEE0);
 
 final GlobalKey<NavigatorState> ngelxNavigatorKey=GlobalKey<NavigatorState>();
@@ -1874,32 +1874,44 @@ Future<bool> sosyalIstekGonder({
   try{
     Map<String,dynamic> p=<String,dynamic>{};
     try{
-      final cached=await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
+      final cached=await FirebaseFirestore.instance.collection('users').doc(user.uid)
           .get(const GetOptions(source:Source.cache));
       p=cached.data()??<String,dynamic>{};
     }catch(_){}
 
+    final sonuc=await Future.wait<dynamic>([
+      FirebaseFirestore.instance.collection('users').doc(user.uid)
+          .get(const GetOptions(source:Source.server)).timeout(const Duration(seconds:8)),
+      FirebaseFirestore.instance.collection('users').doc(hedefUid)
+          .get(const GetOptions(source:Source.server)).timeout(const Duration(seconds:8)),
+      FirebaseFirestore.instance.collection('notifications')
+          .where('fromUid',isEqualTo:user.uid)
+          .where('toUid',isEqualTo:hedefUid)
+          .limit(20).get().timeout(const Duration(seconds:8)),
+    ]);
+    final benimVeri=(sonuc[0] as DocumentSnapshot<Map<String,dynamic>>).data()??<String,dynamic>{};
+    final hedefVeri=(sonuc[1] as DocumentSnapshot<Map<String,dynamic>>).data()??<String,dynamic>{};
+    final pairIstekler=sonuc[2] as QuerySnapshot<Map<String,dynamic>>;
+    p=<String,dynamic>{...p,...benimVeri};
+
     final zatenIliski=tur=='follow_request'
-      ? List<String>.from(p['following']??const[]).contains(hedefUid)
+      ? List<String>.from(benimVeri['following']??const[]).contains(hedefUid)
+        ||List<String>.from(hedefVeri['followers']??const[]).contains(user.uid)
       : tur=='friend_request'
-        ? List<String>.from(p['friends']??const[]).contains(hedefUid)
+        ? List<String>.from(benimVeri['friends']??const[]).contains(hedefUid)
+          ||List<String>.from(hedefVeri['friends']??const[]).contains(user.uid)
         : false;
     if(zatenIliski)return false;
+
+    if(pairIstekler.docs.any((d)=>d.data()['type']==tur&&d.data()['status']=='pending'))return false;
 
     final emailAdi=(user.email??'').split('@').first.trim();
     final ad=(p['displayName']??p['username']??user.displayName??(emailAdi.isNotEmpty?emailAdi:'NgelX kullanıcısı')).toString();
     final foto=(p['photoUrl']??user.photoURL??'').toString();
     await FirebaseFirestore.instance.collection('notifications').add({
-      'toUid':hedefUid,
-      'fromUid':user.uid,
-      'type':tur,
-      'senderName':ad,
-      'photoUrl':foto,
-      'text':metin,
-      'status':'pending',
-      'read':false,
+      'toUid':hedefUid,'fromUid':user.uid,'type':tur,
+      'senderName':ad,'photoUrl':foto,'text':metin,
+      'status':'pending','read':false,
       'createdAt':FieldValue.serverTimestamp(),
       'clientCreatedAt':Timestamp.now(),
     }).timeout(const Duration(seconds:10));
@@ -6516,11 +6528,26 @@ class _KesfetPageState extends State<KesfetPage> {
           }
           if(mounted)setState(()=>gonderilenTakipIstekleri.add(hedefUid));
           try{
-            await sosyalIstekGonder(
+            final gonderildi=await sosyalIstekGonder(
               hedefUid:hedefUid,
               tur:'follow_request',
               metin:'Yeni takip isteğin var',
             );
+            if(!gonderildi){
+              final gercek=await FirebaseFirestore.instance.collection('users').doc(me)
+                  .get(const GetOptions(source:Source.server)).timeout(const Duration(seconds:8));
+              final zatenTakipte=List<String>.from(gercek.data()?['following']??const[]).contains(hedefUid);
+              if(mounted){
+                setState((){
+                  gonderilenTakipIstekleri.remove(hedefUid);
+                  if(zatenTakipte)takipEdilenler.add(hedefUid);
+                });
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(
+                  zatenTakipte?'Bu hesabı zaten takip ediyorsun.':'Takip isteğin zaten bekliyor.',
+                )));
+              }
+              return;
+            }
             if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Takip isteği gönderildi.')));
           }catch(e){
             if(mounted){
@@ -6559,11 +6586,26 @@ class _KesfetPageState extends State<KesfetPage> {
     }
     if(mounted)setState(()=>gonderilenArkadaslikIstekleri.add(hedefUid));
     try{
-      await sosyalIstekGonder(
+      final gonderildi=await sosyalIstekGonder(
         hedefUid:hedefUid,
         tur:'friend_request',
         metin:'Yeni arkadaşlık isteğin var',
       );
+      if(!gonderildi){
+        final gercek=await FirebaseFirestore.instance.collection('users').doc(me)
+            .get(const GetOptions(source:Source.server)).timeout(const Duration(seconds:8));
+        final zatenArkadas=List<String>.from(gercek.data()?['friends']??const[]).contains(hedefUid);
+        if(mounted){
+          setState((){
+            gonderilenArkadaslikIstekleri.remove(hedefUid);
+            if(zatenArkadas)arkadaslar.add(hedefUid);
+          });
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(
+            zatenArkadas?'Zaten arkadaşsınız.':'Arkadaşlık isteğin zaten bekliyor.',
+          )));
+        }
+        return;
+      }
       if(!mounted)return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Arkadaşlık isteği gönderildi.')));
     }catch(e){
@@ -18315,6 +18357,19 @@ class _AktivitePageState extends State<AktivitePage> {
     final takipIstegi=tur=='follow_request'&&!arkadaslikIstegi;
     if(ben==null||gonderen.isEmpty||veri['status']!='pending')return;
 
+    final ayniBekleyen=<QueryDocumentSnapshot<Map<String,dynamic>>>[];
+    try{
+      final q=await FirebaseFirestore.instance.collection('notifications')
+          .where('toUid',isEqualTo:ben)
+          .where('fromUid',isEqualTo:gonderen)
+          .limit(20).get().timeout(const Duration(seconds:6));
+      for(final istek in q.docs){
+        final x=istek.data();
+        if((x['type']??'').toString()==tur&&x['status']=='pending')ayniBekleyen.add(istek);
+      }
+    }catch(_){}
+    if(!ayniBekleyen.any((x)=>x.reference.path==belge.reference.path))ayniBekleyen.add(belge);
+
     String benimAd='NgelX kullanıcısı',benimFoto='';
     try{
       final bp=await FirebaseFirestore.instance.collection('users').doc(ben).get().timeout(const Duration(seconds:6));
@@ -18324,11 +18379,13 @@ class _AktivitePageState extends State<AktivitePage> {
     }catch(_){}
 
     final toplu=FirebaseFirestore.instance.batch();
-    toplu.update(belge.reference,{
-      'status':kabul?'accepted':'rejected',
-      'read':true,
-      'answeredAt':FieldValue.serverTimestamp(),
-    });
+    for(final istek in ayniBekleyen){
+      toplu.update(istek.reference,{
+        'status':kabul?'accepted':'rejected',
+        'read':true,
+        'answeredAt':FieldValue.serverTimestamp(),
+      });
+    }
 
     if(kabul&&takipIstegi){
       toplu.set(
@@ -18903,6 +18960,7 @@ class _KullaniciProfilPageState extends State<KullaniciProfilPage> {
           final benimVerim = s.data![1]?.data() ?? <String, dynamic>{};
           final foto = (v['photoUrl'] ?? '').toString();
           final arkadaslar = Set<String>.from(List<dynamic>.from(benimVerim['friends'] ?? []));
+          if(me!=null&&List<String>.from(v['friends']??const[]).contains(me))arkadaslar.add(uid);
           final gizli = v['privateAccount'] == true;
           final profilIzni=(v['profileViewPermission']??'all').toString();
           final beniTakipEdiyor=me!=null&&List<String>.from(v['followers']??const[]).contains(me);
@@ -18993,8 +19051,13 @@ class _KullaniciProfilPageState extends State<KullaniciProfilPage> {
                   Expanded(child:StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
                     stream:me==null?null:FirebaseFirestore.instance.collection('users').doc(me).snapshots(),
                     builder:(_,benSnap){
-                      final takipte=List<String>.from(benSnap.data?.data()?['following']??const[]).contains(uid);
-                      final gidenAkis=me==null?null:FirebaseFirestore.instance.collection('notifications').where('fromUid',isEqualTo:me).limit(100).snapshots();
+                      final benimTakipEttiklerim=List<String>.from(benSnap.data?.data()?['following']??const[]);
+                      final hedefTakipcileri=List<String>.from(v['followers']??const[]);
+                      final takipte=benimTakipEttiklerim.contains(uid)||(me!=null&&hedefTakipcileri.contains(me));
+                      final gidenAkis=me==null?null:FirebaseFirestore.instance.collection('notifications')
+                          .where('fromUid',isEqualTo:me)
+                          .where('toUid',isEqualTo:uid)
+                          .limit(20).snapshots();
                       return StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
                         stream:gidenAkis,
                         builder:(_,istekSnap){
@@ -19087,9 +19150,14 @@ class _KullaniciProfilPageState extends State<KullaniciProfilPage> {
                 StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
                   stream:me==null?null:FirebaseFirestore.instance.collection('users').doc(me).snapshots(),
                   builder:(_,benSnap){
-                    final arkadas=List<String>.from(benSnap.data?.data()?['friends']??const[]).contains(uid);
+                    final benimArkadaslarim=List<String>.from(benSnap.data?.data()?['friends']??const[]);
+                    final hedefArkadaslari=List<String>.from(v['friends']??const[]);
+                    final arkadas=benimArkadaslarim.contains(uid)||(me!=null&&hedefArkadaslari.contains(me));
                     return StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
-                      stream:me==null?null:FirebaseFirestore.instance.collection('notifications').where('fromUid',isEqualTo:me).limit(100).snapshots(),
+                      stream:me==null?null:FirebaseFirestore.instance.collection('notifications')
+                        .where('fromUid',isEqualTo:me)
+                        .where('toUid',isEqualTo:uid)
+                        .limit(20).snapshots(),
                       builder:(_,istekSnap){
                         final pendingDoc=gidenSosyalIstekBelgesi(istekSnap.data,uid,'friend_request');
                         final sunucuBekliyor=pendingDoc!=null;
