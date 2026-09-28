@@ -558,8 +558,9 @@ for token in (
     count = app.count(token)
     if count != 1:
         errors.append(f"Tekrarlı/eksik Dart sınıfı: {token} ({count} adet)")
-# Build 274 profil arama ve ziyaret doğruluğu ekleriyle kontrollü boyut artışı.
-if len(app) > 1_180_000:
+# Build 274-297 profil, sosyal ilişki ve medya önizleme düzeltmeleriyle
+# kontrollü boyut artışı. Eşik yalnızca gerekli yeni akışlar kadar yükseltildi.
+if len(app) > 1_185_000:
     errors.append("main.dart beklenmedik şekilde büyüdü; tekrarlı kod eklenmiş olabilir.")
 
 # Large group uploads must stream from disk instead of loading the whole file into RAM.
