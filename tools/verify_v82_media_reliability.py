@@ -13,9 +13,9 @@ def require(condition: bool, message: str) -> None:
         raise SystemExit("V82 medya güvenilirliği kontrolü eksik: " + message)
 
 
-require("version: 1.0.82+301" in PUB, "Build 301 sürümü")
-require("defaultValue: '1.0.82'" in MAIN and "defaultValue: '301'" in MAIN,
-        "uygulama içi Build 301 bilgisi")
+require("version: 1.0.83+302" in PUB, "Build 302 sürümü")
+require("defaultValue: '1.0.83'" in MAIN and "defaultValue: '302'" in MAIN,
+        "uygulama içi Build 302 bilgisi")
 require("List<String> ngelxMedyaUrlAdaylari" in MAIN and "_ngelxMediaApiBackup" in MAIN,
         "ana/yedek medya URL çözümlemesi")
 require("class NgelXAgResmi extends StatefulWidget" in MAIN,
@@ -36,4 +36,4 @@ require("NgelXAgResmi(" in STORY,
 require("Cihazımdan müzik ekle" in MUSIC,
         "boş katalogda çalışan cihaz müziği yolu")
 
-print("V82 Build 301 medya/Firebase güvenilirliği doğrulandı.")
+print("V82 Build 302 medya/Firebase güvenilirliği doğrulandı.")

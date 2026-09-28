@@ -92,8 +92,8 @@ const ngelxPrivateBlueCanvas = Color(0xFFF6FAFF);
 const ngelxPrivateBlueBorder = Color(0xFFD8E8FF);
 const ngelxPrivateBlueInk = Color(0xFF10213A);
 
-const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.82');
-const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '301');
+const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.83');
+const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '302');
 const ngelxGroupBorder = Color(0xFFD9EEE0);
 
 final GlobalKey<NavigatorState> ngelxNavigatorKey=GlobalKey<NavigatorState>();
@@ -1950,6 +1950,31 @@ Future<void> diliDegistir(String dil) async {
   if(uygulamaDili.value!=yeniDil)uygulamaDili.value=yeniDil;
 }
 
+Future<void> ngelxBatchCommitDogrula({
+  required WriteBatch batch,
+  required DocumentReference<Map<String,dynamic>> marker,
+  Duration timeout=const Duration(seconds:15),
+}) async {
+  try{
+    await batch.commit().timeout(timeout);
+    return;
+  }on TimeoutException catch(e){
+    try{
+      await Future<void>.delayed(const Duration(milliseconds:450));
+      final sonuc=await marker.get(const GetOptions(source:Source.server))
+          .timeout(const Duration(seconds:6));
+      if(sonuc.exists)return;
+    }catch(_){}
+    throw e;
+  }
+}
+
+String ngelxBildirimBelgeId(String raw){
+  final temiz=raw.trim().replaceAll(RegExp(r'[^a-zA-Z0-9_-]'),'_');
+  if(temiz.isEmpty)return '';
+  return temiz.length<=300?temiz:temiz.substring(0,300);
+}
+
 Future<void> uygulamaBildirimiGonder({
   required String toUid,
   required String fromUid,
@@ -1962,6 +1987,7 @@ Future<void> uygulamaBildirimiGonder({
   String? olayTuru,
   String? onizleme,
   String? eylem,
+  String? dedupeKey,
 }) async {
   if(toUid==fromUid)return;
   final hedef=await FirebaseFirestore.instance.collection('users').doc(toUid).get();
@@ -1972,8 +1998,6 @@ Future<void> uygulamaBildirimiGonder({
   final sosyalBildirimi=tur=='friend'||tur=='friend_request'||tur=='follow_request'||tur=='friend_accepted'||tur=='follow_accepted';
   final etkilesimBildirimi=tur=='interaction'||tur=='like'||tur=='comment';
   final aramaBildirimi=tur=='call';
-  // Grup mesajları ayrı kategoriye aittir: "Mesajlar" kapalı olsa da
-  // "Gruplar" açıksa grup bildirimleri çalışmaya devam eder.
   if(grupBildirimi){
     if(ayar['groupNotifications']==false)return;
   }else if(tur=='message'&&ayar['messageNotifications']==false){
@@ -1982,19 +2006,18 @@ Future<void> uygulamaBildirimiGonder({
   if(sosyalBildirimi&&ayar['friendNotifications']==false)return;
   if(etkilesimBildirimi&&ayar['interactionNotifications']==false)return;
   if(aramaBildirimi&&ayar['callNotifications']==false)return;
-  // Grup sessize alma yalnızca sohbet/arama trafiğini susturur.
-  // Üyeliğe eklenme ve katılma onayı gibi yönetim olayları kaybolmamalı.
   final sessizeBagli=tur=='message'||tur=='call'||olayTuru=='group_message'||olayTuru=='group_mention';
   if(sessizeBagli&&belgeId!=null&&List<String>.from(ayar['mutedChats']??const[]).contains(belgeId)){
     final ham=(ayar['mutedChatUntil'] is Map)?(ayar['mutedChatUntil'] as Map)[belgeId]:null;
     final bitis=DateTime.tryParse((ham??'').toString());
     if(bitis==null||bitis.isAfter(DateTime.now().toUtc()))return;
   }
+
   final gonderen=await FirebaseFirestore.instance.collection('users').doc(fromUid).get();
   final gonderenVeri=gonderen.data()??{};
   final gonderenAdi=(gonderenVeri['displayName']??gonderenVeri['username']??'NgelX kullanıcısı').toString();
   final gonderenFoto=(gonderenVeri['photoUrl']??'').toString();
-  await FirebaseFirestore.instance.collection('notifications').add({
+  final payload=<String,dynamic>{
     'toUid':toUid,'fromUid':fromUid,'type':tur,
     'senderName':gonderenAdi,'photoUrl':gonderenFoto,
     'text':'$gonderenAdi $metin',
@@ -2006,7 +2029,32 @@ Future<void> uygulamaBildirimiGonder({
     if(onizleme!=null&&onizleme.isNotEmpty)'preview':onizleme,
     if(eylem!=null&&eylem.isNotEmpty)'eventAction':eylem,
     'read':false,'createdAt':FieldValue.serverTimestamp(),
-  });
+  };
+
+  final bildirimler=FirebaseFirestore.instance.collection('notifications');
+  final anahtar=ngelxBildirimBelgeId(dedupeKey??'');
+  if(anahtar.isEmpty){
+    await bildirimler.add(payload).timeout(const Duration(seconds:10));
+    return;
+  }
+
+  final doc=bildirimler.doc(anahtar);
+  try{
+    final mevcut=await doc.get(const GetOptions(source:Source.server))
+        .timeout(const Duration(seconds:6));
+    if(mevcut.exists)return;
+  }catch(_){}
+
+  try{
+    await doc.set(payload).timeout(const Duration(seconds:10));
+  }catch(e){
+    try{
+      final mevcut=await doc.get(const GetOptions(source:Source.server))
+          .timeout(const Duration(seconds:6));
+      if(mevcut.exists)return;
+    }catch(_){}
+    rethrow;
+  }
 }
 
 final Set<String> _sosyalIstekIslemleri=<String>{};
@@ -9951,7 +9999,11 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
       final g=<String,dynamic>{'lastMessage':sonMesaj,'updatedAt':FieldValue.serverTimestamp(),'hiddenFor':FieldValue.arrayRemove(uyeler)};
       for(final x in uyeler){if(x!=ben)g['unread_$x']=FieldValue.increment(1);}
       batch.set(chatRef,g,SetOptions(merge:true));
-      await batch.commit();
+      await ngelxBatchCommitDogrula(
+        batch:batch,
+        marker:mesajRef,
+        timeout:const Duration(seconds:15),
+      );
       // Mesaj Firestore'a ulaştıysa gönderim başarılıdır. Bildirim/profil gibi
       // ikincil işler hata verse bile mesajı tekrar kuyruğa sokup çoğaltmayız.
       try{
@@ -9984,6 +10036,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
             olayTuru:'group_message',
             onizleme:onizleme,
             eylem:bildirimEylemi,
+            dedupeKey:'group_msg_${widget.chatId}_${mesajRef.id}_$hedef',
           ).catchError((_){ }));
         }
         if(!sessizMesaj&&etiketler.isNotEmpty){
@@ -9997,6 +10050,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
               hedefBaslik:widget.ad,
               hedefFoto:widget.foto,
               olayTuru:'group_mention',
+              dedupeKey:'group_mention_${widget.chatId}_${mesajRef.id}_$hedef',
             ).catchError((_){ }));
           }
         }
@@ -16206,7 +16260,11 @@ class _SohbetPageState extends State<SohbetPage> {
     try{
       // Sunucu yazmayı kabul etmeden alanı temizleme. Böylece başarısız bir
       // mesaj gönderilmiş gibi görünmez ve art arda dokunma kopya üretmez.
-      await batch.commit().timeout(const Duration(seconds:12));
+      await ngelxBatchCommitDogrula(
+        batch:batch,
+        marker:mesajRef,
+        timeout:const Duration(seconds:12),
+      );
       await PrivateDraftStore.clear(widget.chatId);
       mesaj.clear();
       yaziyorZamanlayici?.cancel();
@@ -16223,7 +16281,11 @@ class _SohbetPageState extends State<SohbetPage> {
         yanitGonderenUid=null;
       });
       unawaited(ref.set({'typing_$ben':false},SetOptions(merge:true)).catchError((_){ }));
-      unawaited(uygulamaBildirimiGonder(toUid:widget.digerUid,fromUid:ben,tur:'message',metin:'Yeni bir mesajın var',belgeId:widget.chatId).catchError((_){ }));
+      unawaited(uygulamaBildirimiGonder(
+        toUid:widget.digerUid,fromUid:ben,tur:'message',metin:'Yeni bir mesajın var',
+        belgeId:widget.chatId,
+        dedupeKey:'private_msg_${widget.chatId}_${mesajRef.id}_${widget.digerUid}',
+      ).catchError((_){ }));
     }catch(_){
       if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Mesaj gönderilemedi. Bağlantını kontrol edip tekrar dene.')));
     }finally{
@@ -16276,10 +16338,18 @@ class _SohbetPageState extends State<SohbetPage> {
         'createdAt':FieldValue.serverTimestamp(),'clientCreatedAt':clientCreatedAt,
         if(bitis!=null)'expiresAt':bitis,
       });
-      await batch.commit().timeout(const Duration(seconds:20));
+      await ngelxBatchCommitDogrula(
+        batch:batch,
+        marker:mesajRef,
+        timeout:const Duration(seconds:20),
+      );
       _mesajHazirlikSohbetMevcut=true;
       _mesajHazirlikSohbet={...hazirlik.sohbet,'lastMessage':'📷 Fotoğraf','updatedAt':clientCreatedAt};
-      unawaited(uygulamaBildirimiGonder(toUid:widget.digerUid,fromUid:ben,tur:'message',metin:'Yeni bir fotoğraf mesajın var',belgeId:widget.chatId).catchError((_){ }));
+      unawaited(uygulamaBildirimiGonder(
+        toUid:widget.digerUid,fromUid:ben,tur:'message',metin:'Yeni bir fotoğraf mesajın var',
+        belgeId:widget.chatId,
+        dedupeKey:'private_photo_${widget.chatId}_${mesajRef.id}_${widget.digerUid}',
+      ).catchError((_){ }));
     }catch(e){
       if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Fotoğraf gönderilemedi: ${ngelxMedyaHataMetni(e)}')));
     }
@@ -16343,10 +16413,18 @@ class _SohbetPageState extends State<SohbetPage> {
       ...veri,
     });
     try{
-      await batch.commit().timeout(const Duration(seconds:15));
+      await ngelxBatchCommitDogrula(
+        batch:batch,
+        marker:mesajRef,
+        timeout:const Duration(seconds:15),
+      );
       _mesajHazirlikSohbetMevcut=true;
       _mesajHazirlikSohbet={...hazirlik.sohbet,'lastMessage':sonMesaj,'updatedAt':clientCreatedAt};
-      unawaited(uygulamaBildirimiGonder(toUid:widget.digerUid,fromUid:ben,tur:'message',metin:bildirim,belgeId:widget.chatId).catchError((_){ }));
+      unawaited(uygulamaBildirimiGonder(
+        toUid:widget.digerUid,fromUid:ben,tur:'message',metin:bildirim,
+        belgeId:widget.chatId,
+        dedupeKey:'private_extra_${widget.chatId}_${mesajRef.id}_${widget.digerUid}',
+      ).catchError((_){ }));
       return true;
     }catch(_){
       if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Gönderilemedi. Bağlantını kontrol edip tekrar dene.')));
@@ -17064,7 +17142,11 @@ class _SohbetPageState extends State<SohbetPage> {
         'createdAt':FieldValue.serverTimestamp(),
         'clientCreatedAt':Timestamp.now(),
       });
-      await batch.commit().timeout(const Duration(seconds:10));
+      await ngelxBatchCommitDogrula(
+        batch:batch,
+        marker:mesajRef,
+        timeout:const Duration(seconds:10),
+      );
       if(!mounted)return;
       unawaited(uygulamaBildirimiGonder(
         toUid:widget.digerUid,

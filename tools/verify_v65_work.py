@@ -14,7 +14,7 @@ def forbid(text: str, needle: str, label: str) -> None:
         raise SystemExit(f"V65 CHECK FAILED: {label}: forbidden {needle!r}")
 
 pubspec = (root / "app/pubspec.yaml").read_text(encoding="utf-8")
-if all(v not in pubspec for v in ("version: 1.0.65+284", "version: 1.0.66+285", "version: 1.0.67+286", "version: 1.0.68+287", "version: 1.0.69+288", "version: 1.0.70+289", "version: 1.0.71+290", "version: 1.0.72+291", "version: 1.0.73+292", "version: 1.0.74+293", "version: 1.0.75+294", "version: 1.0.76+295", "version: 1.0.77+296", "version: 1.0.78+297", "version: 1.0.79+298", "version: 1.0.80+299", "version: 1.0.82+301")):
+if all(v not in pubspec for v in ("version: 1.0.65+284", "version: 1.0.66+285", "version: 1.0.67+286", "version: 1.0.68+287", "version: 1.0.69+288", "version: 1.0.70+289", "version: 1.0.71+290", "version: 1.0.72+291", "version: 1.0.73+292", "version: 1.0.74+293", "version: 1.0.75+294", "version: 1.0.76+295", "version: 1.0.77+296", "version: 1.0.78+297", "version: 1.0.79+298", "version: 1.0.80+299", "version: 1.0.83+302")):
     raise SystemExit("V65 CHECK FAILED: supported V65/V66 app version missing")
 
 # New Create/editor surfaces are wired into the app.

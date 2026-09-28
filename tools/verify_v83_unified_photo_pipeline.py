@@ -7,10 +7,10 @@ PUB=(ROOT/'app/pubspec.yaml').read_text(encoding='utf-8')
 
 def require(c,m):
     if not c:
-        raise SystemExit('Build 301 birleşik fotoğraf hattı eksik: '+m)
+        raise SystemExit('Build 302 birleşik fotoğraf hattı eksik: '+m)
 
-require('version: 1.0.82+301' in PUB,'Build 301 sürümü')
-require("defaultValue: '1.0.82'" in MAIN and "defaultValue: '301'" in MAIN,'uygulama içi sürüm')
+require('version: 1.0.83+302' in PUB,'Build 302 sürümü')
+require("defaultValue: '1.0.83'" in MAIN and "defaultValue: '302'" in MAIN,'uygulama içi sürüm')
 
 for kind in ('profiles','groups','stories','chat-backgrounds','support'):
     require(("kind:'"+kind+"'") in MAIN or ("kind: '"+kind+"'") in MAIN,
@@ -52,4 +52,4 @@ require("final bytes=await foto!.readAsBytes()" not in MAIN,
 require("bytes:await ekran!.readAsBytes()" not in MAIN,
         'destek ekran görüntüsünde gereksiz bytes yolu kaldırılması')
 
-print('Build 301 profil/grup/hikâye/arka plan/destek fotoğraf hattı doğrulandı.')
+print('Build 302 profil/grup/hikâye/arka plan/destek fotoğraf hattı doğrulandı.')

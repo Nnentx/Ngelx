@@ -9,8 +9,8 @@ def require(cond,msg):
     if not cond:
         raise SystemExit("Build 298 medya/diyalog kontrolu eksik: "+msg)
 
-require("version: 1.0.82+301" in PUB,"Build 301 surumu")
-require("defaultValue: '1.0.82'" in MAIN and "defaultValue: '301'" in MAIN,"uygulama ici surum")
+require("version: 1.0.83+302" in PUB,"Build 302 surumu")
+require("defaultValue: '1.0.83'" in MAIN and "defaultValue: '302'" in MAIN,"uygulama ici surum")
 require("class NgelXSohbetFotoOnizleme" in MAIN and "ngelxMesajMedyaUrl(v,video:tur=='video')" in MAIN,
         "grup fotograf/video URL cozumleme")
 require("videoKapak=ngelxMesajVideoKapagi(v)" in MAIN,
