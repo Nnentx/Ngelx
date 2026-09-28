@@ -9,6 +9,14 @@ on:
       - 'tools/**'
       - 'firestore.rules'
       - '.github/workflows/build-v55-group-final-polish.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'app/**'
+      - 'cloudflare/worker/**'
+      - 'tools/**'
+      - 'firestore.rules'
+      - '.github/workflows/build-v55-group-final-polish.yml'
   workflow_dispatch:
 
 permissions:
