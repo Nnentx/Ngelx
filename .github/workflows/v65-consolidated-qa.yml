@@ -93,6 +93,9 @@ jobs:
       - name: Build 301 birlesik fotograf hattini dogrula
         run: python3 tools/verify_v83_unified_photo_pipeline.py
 
+      - name: Build 302 Firestore mesaj ve bildirim tutarliligini dogrula
+        run: python3 tools/verify_v84_firestore_consistency.py
+
       - name: R2 Worker JavaScript kontrolu
         run: |
           node --check cloudflare/worker/src/index.js
