@@ -92,8 +92,8 @@ const ngelxPrivateBlueCanvas = Color(0xFFF6FAFF);
 const ngelxPrivateBlueBorder = Color(0xFFD8E8FF);
 const ngelxPrivateBlueInk = Color(0xFF10213A);
 
-const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.80');
-const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '299');
+const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.81');
+const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '300');
 const ngelxGroupBorder = Color(0xFFD9EEE0);
 
 final GlobalKey<NavigatorState> ngelxNavigatorKey=GlobalKey<NavigatorState>();
@@ -229,6 +229,55 @@ const _ngelxMediaApiBuild = String.fromEnvironment(
 const _ngelxMediaProtocolVersion='upload-r2-243';
 const _ngelxMediaApiBackup='https://ngelx-upload.alihancaglar76.workers.dev';
 
+List<String> ngelxMedyaUrlAdaylari(String rawUrl){
+  final temiz=rawUrl.trim();
+  if(temiz.isEmpty)return const <String>[];
+  final sonuc=<String>[temiz];
+  final uri=Uri.tryParse(temiz);
+  if(uri==null||uri.pathSegments.isEmpty||uri.pathSegments.first!='media')return sonuc;
+  for(final rawBase in <String>[_ngelxMediaApiBuild,_ngelxMediaApiBackup]){
+    final base=Uri.tryParse(rawBase.trim().replaceAll(RegExp(r'/+$'),''));
+    if(base==null||base.host.isEmpty)continue;
+    final aday=uri.replace(scheme:base.scheme,host:base.host,port:base.hasPort?base.port:null).toString();
+    if(!sonuc.contains(aday))sonuc.add(aday);
+  }
+  return sonuc;
+}
+
+class NgelXAgResmi extends StatefulWidget{
+  final String url;
+  final BoxFit fit;
+  final double? width,height;
+  final Widget? placeholder,error;
+  const NgelXAgResmi({super.key,required this.url,this.fit=BoxFit.cover,this.width,this.height,this.placeholder,this.error});
+  @override State<NgelXAgResmi> createState()=>_NgelXAgResmiState();
+}
+
+class _NgelXAgResmiState extends State<NgelXAgResmi>{
+  late List<String> adaylar;
+  int sira=0;
+  @override void initState(){super.initState();adaylar=ngelxMedyaUrlAdaylari(widget.url);}
+  @override void didUpdateWidget(covariant NgelXAgResmi oldWidget){
+    super.didUpdateWidget(oldWidget);
+    if(oldWidget.url!=widget.url){adaylar=ngelxMedyaUrlAdaylari(widget.url);sira=0;}
+  }
+  void siradakiniDene(){
+    if(sira+1>=adaylar.length)return;
+    WidgetsBinding.instance.addPostFrameCallback((_){if(mounted&&sira+1<adaylar.length)setState(()=>sira++);});
+  }
+  @override Widget build(BuildContext context){
+    if(adaylar.isEmpty)return widget.error??const Center(child:Icon(Icons.broken_image_outlined));
+    return CachedNetworkImage(
+      key:ValueKey('ngelx-net-${adaylar[sira]}'),imageUrl:adaylar[sira],fit:widget.fit,width:widget.width,height:widget.height,
+      placeholder:(_,__)=>widget.placeholder??const Center(child:SizedBox(width:22,height:22,child:CircularProgressIndicator(strokeWidth:2))),
+      errorWidget:(_,__,___){
+        if(sira+1<adaylar.length){siradakiniDene();return widget.placeholder??const SizedBox.shrink();}
+        return widget.error??const Center(child:Icon(Icons.broken_image_outlined));
+      },
+    );
+  }
+}
+
 Future<void> ngelxOverlayKapanisiniBekle() async {
   await Future<void>.delayed(const Duration(milliseconds: 360));
 }
@@ -291,7 +340,9 @@ String _ngelxContentType(String ext) {
 }
 
 Future<Uint8List> ngelxFotoDuzenle(Uint8List bytes,{String efekt='Yok',int donus=0,bool kareKirp=false})async{
-  final turns=((donus%4)+4)%4;if(efekt=='Yok'&&turns==0&&!kareKirp)return bytes;
+  // Galeri sağlayıcıları uzantısı JPG görünen HEIC/WEBP baytları döndürebiliyor.
+  // Her fotoğrafı yeniden kodlamak, R2 Content-Type ile gerçek dosya biçimini eşitler.
+  final turns=((donus%4)+4)%4;
   final codec=await ui.instantiateImageCodec(bytes),frame=await codec.getNextFrame(),kaynak=frame.image;
   int kw=kaynak.width,kh=kaynak.height;if(kareKirp){final k=math.min(kw,kh);kw=k;kh=k;}
   final sol=(kaynak.width-kw)/2,ust=(kaynak.height-kh)/2,ow=turns.isOdd?kh:kw,oh=turns.isOdd?kw:kh;
@@ -1305,39 +1356,44 @@ Future<String> _ngelxDirectR2DosyaYukle({
 }
 
 Future<String> _ngelxMedyaYayininiDogrula(String rawUrl) async {
-  final url=rawUrl.trim();
-  final uri=Uri.tryParse(url);
-  if(uri==null||uri.scheme!='https'||uri.host.isEmpty){
+  final adaylar=ngelxMedyaUrlAdaylari(rawUrl);
+  if(adaylar.isEmpty){
     throw Exception('Medya servisi geçersiz bir yayın adresi döndürdü.');
   }
   Object? sonHata;
-  for(var deneme=1;deneme<=3;deneme++){
-    try{
-      final cevap=await Dio(BaseOptions(
-        connectTimeout:const Duration(seconds:12),
-        receiveTimeout:const Duration(seconds:20),
-        validateStatus:(s)=>s!=null,
-      )).getUri(
-        uri,
-        options:Options(
-          responseType:ResponseType.bytes,
-          headers:{HttpHeaders.rangeHeader:'bytes=0-0','Cache-Control':'no-cache'},
-        ),
-      );
-      final status=cevap.statusCode??0;
-      final veri=cevap.data;
-      final dolu=veri is List<int> ? veri.isNotEmpty : veri!=null;
-      if((status==200||status==206)&&dolu)return url;
-      sonHata=Exception('medya doğrulama HTTP $status');
-    }catch(e){
-      sonHata=e;
-    }
-    if(deneme<3){
-      await Future<void>.delayed(Duration(milliseconds:300*deneme));
+  for(final url in adaylar){
+    final uri=Uri.tryParse(url);
+    if(uri==null||uri.scheme!='https'||uri.host.isEmpty)continue;
+    for(var deneme=1;deneme<=3;deneme++){
+      try{
+        final cevap=await Dio(BaseOptions(
+          connectTimeout:const Duration(seconds:12),
+          receiveTimeout:const Duration(seconds:20),
+          validateStatus:(s)=>s!=null,
+        )).getUri(
+          uri,
+          options:Options(
+            responseType:ResponseType.bytes,
+            headers:{HttpHeaders.rangeHeader:'bytes=0-63','Cache-Control':'no-cache, no-store'},
+          ),
+        );
+        final status=cevap.statusCode??0;
+        final veri=cevap.data;
+        final dolu=veri is List<int> ? veri.length>=4 : veri!=null;
+        if((status==200||status==206)&&dolu)return url;
+        sonHata=Exception('${uri.host} medya doğrulama HTTP $status');
+      }catch(e){
+        sonHata=e;
+      }
+      if(deneme<3)await Future<void>.delayed(Duration(milliseconds:300*deneme));
     }
   }
   throw Exception('Yüklenen medya yayın adresinden okunamadı: ${_ngelxKisaHata(sonHata??'bilinmeyen hata')}');
 }
+
+bool _ngelxFotoKind(String kind)=>const <String>{
+  'photos','profiles','stories','groups','chat-images','chat-backgrounds','support'
+}.contains(kind);
 
 Future<String> ngelxMedyaYukleBytes({
   required Uint8List bytes,
@@ -1348,16 +1404,25 @@ Future<String> ngelxMedyaYukleBytes({
   void Function(int sent,int total)? onProgress,
 }) async {
   if(bytes.isEmpty)throw Exception('Seçilen medya boş.');
+  var yuklenecekBytes=bytes;
+  var temizExt=_ngelxUzantiTemizle(ext);
+  var yuklenecekYol=legacyPath;
+  var zorunluContentType=contentType;
+  if(_ngelxFotoKind(kind)&&temizExt!='gif'){
+    yuklenecekBytes=await ngelxFotoDuzenle(bytes);
+    temizExt='png';
+    zorunluContentType='image/png';
+    yuklenecekYol=legacyPath.replaceFirst(RegExp(r'\.[^.]+$'),'.png');
+  }
   final max=_ngelxMaksimumMedyaBoyutu(kind);
-  if(bytes.length>max)throw Exception('Dosya boyutu bu medya türü için sınırı aşıyor.');
+  if(yuklenecekBytes.length>max)throw Exception('Dosya boyutu bu medya türü için sınırı aşıyor.');
   final api=await ngelxMediaApiAdresi();
-  final temizExt=_ngelxUzantiTemizle(ext);
-  final tur=contentType??_ngelxContentType(temizExt);
+  final tur=zorunluContentType??_ngelxContentType(temizExt);
   final hatalar=<String>[];
 
   try{
     final url=await _ngelxDirectR2BytesYukle(
-      api:api,bytes:bytes,kind:kind,ext:temizExt,contentType:tur,
+      api:api,bytes:yuklenecekBytes,kind:kind,ext:temizExt,contentType:tur,
       onProgress:onProgress,
     );
     return await _ngelxMedyaYayininiDogrula(url);
@@ -1375,11 +1440,11 @@ Future<String> ngelxMedyaYukleBytes({
     try{
       final url=await _ngelxStandartBytesYukle(
         api:base,
-        bytes:bytes,
+        bytes:yuklenecekBytes,
         kind:kind,
         ext:temizExt,
         contentType:tur,
-        legacyPath:legacyPath,
+        legacyPath:yuklenecekYol,
         onProgress:onProgress,
       );
       return await _ngelxMedyaYayininiDogrula(url);
@@ -1388,16 +1453,16 @@ Future<String> ngelxMedyaYukleBytes({
     }
   }
 
-  if(Platform.isAndroid&&bytes.length<=10*1024*1024){
+  if(Platform.isAndroid&&yuklenecekBytes.length<=10*1024*1024){
     for(final base in adaylar){
       try{
         final url=await _ngelxKucukMedyaYukleAndroid(
           api:base,
-          bytes:bytes,
+          bytes:yuklenecekBytes,
           kind:kind,
           ext:temizExt,
           contentType:tur,
-          legacyPath:legacyPath,
+          legacyPath:yuklenecekYol,
           onProgress:onProgress,
         );
         return await _ngelxMedyaYayininiDogrula(url);
@@ -1407,7 +1472,7 @@ Future<String> ngelxMedyaYukleBytes({
     }
   }
 
-  throw Exception('UPLOAD $_ngelxMediaProtocolVersion | kind=$kind | size=${bytes.length} | '+hatalar.join(' || '));
+  throw Exception('UPLOAD $_ngelxMediaProtocolVersion | kind=$kind | size=${yuklenecekBytes.length} | '+hatalar.join(' || '));
 }
 
 Future<String> ngelxMedyaYukleDosya({
@@ -2357,7 +2422,18 @@ Future<bool> misafirEngeli(BuildContext context) async {
 Future<void> sikayetEt(BuildContext context,{required String hedefTuru,required String hedefId,String? hedefUid}) async {
   final bildiren=FirebaseAuth.instance.currentUser;
   if(bildiren==null||bildiren.isAnonymous){await misafirEngeli(context);return;}
-  final neden=await showModalBottomSheet<String>(context:context,backgroundColor:Colors.white,showDragHandle:true,shape:const RoundedRectangleBorder(borderRadius:BorderRadius.vertical(top:Radius.circular(28))),builder:(c)=>Theme(data:ThemeData.light(),child:SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[const ListTile(title:Text('Şikâyet nedenini seç',style:TextStyle(color:Colors.black,fontWeight:FontWeight.bold))),for(final n in ['Spam veya yanıltıcı','Taciz veya zorbalık','Nefret söylemi','Çıplaklık veya cinsel içerik','Şiddet veya tehlikeli davranış','Başkasını taklit ediyor'])ListTile(title:Text(n,style:const TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(c,n)),const SizedBox(height:12)]))));
+  final neden=await showModalBottomSheet<String>(
+    context:context,backgroundColor:Colors.white,showDragHandle:true,isScrollControlled:true,useSafeArea:true,
+    shape:const RoundedRectangleBorder(borderRadius:BorderRadius.vertical(top:Radius.circular(28))),
+    builder:(c)=>Theme(data:ThemeData.light(),child:ConstrainedBox(
+      constraints:BoxConstraints(maxHeight:MediaQuery.sizeOf(c).height*.76),
+      child:ListView(shrinkWrap:true,padding:const EdgeInsets.only(bottom:16),children:[
+        const ListTile(title:Text('Şikâyet nedenini seç',style:TextStyle(color:Colors.black,fontWeight:FontWeight.bold))),
+        for(final n in ['Spam veya yanıltıcı','Taciz veya zorbalık','Nefret söylemi','Çıplaklık veya cinsel içerik','Şiddet veya tehlikeli davranış','Başkasını taklit ediyor'])
+          ListTile(title:Text(n,style:const TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(c,n)),
+      ]),
+    )),
+  );
   await ngelxOverlayKapanisiniBekle();
   if(neden==null||!context.mounted)return;
   try{await FirebaseFirestore.instance.collection('reports').add({'reporterUid':bildiren.uid,'targetType':hedefTuru,'targetId':hedefId,'targetUid':hedefUid,'reason':neden,'status':'pending','createdAt':FieldValue.serverTimestamp()});if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Şikâyetin incelemeye gönderildi.')));}catch(_){if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Şikâyet gönderilemedi. Tekrar dene.')));}
@@ -7688,6 +7764,7 @@ class _YeniYuklePageState extends State<YuklePage> {
 
       final profil=await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
       final adi=(profil.data()?['username']??'ngelx').toString();
+      final sahipFoto=(profil.data()?['photoUrl']??user.photoURL??'').toString();
       await FirebaseFirestore.instance.collection('videos').add({
         'ownerId':user.uid,
         'username':adi,
@@ -7695,6 +7772,7 @@ class _YeniYuklePageState extends State<YuklePage> {
         'storyMediaType':video?'video':'photo',
         'mediaUrl':url,
         'videoUrl':video?url:'',
+        'ownerPhotoUrl':sahipFoto,
         'createdAt':FieldValue.serverTimestamp(),
         'clientCreatedAt':Timestamp.now(),
         'expiresAt':Timestamp.fromDate(DateTime.now().add(const Duration(hours:24))),
@@ -13603,6 +13681,7 @@ class GrupBilgiPage extends StatefulWidget{final String chatId;const GrupBilgiPa
 class _GrupBilgiPageState extends State<GrupBilgiPage>{
   final Map<String,Future<DocumentSnapshot<Map<String,dynamic>>>> _uyeProfilCache={};
   bool aramaBaslatiliyor=false;
+  bool grupFotografiIsleniyor=false;
   DocumentReference<Map<String,dynamic>> get ref=>FirebaseFirestore.instance.collection('chats').doc(widget.chatId);
   String? get ben=>FirebaseAuth.instance.currentUser?.uid;
   Future<DocumentSnapshot<Map<String,dynamic>>> _uyeGetir(String id)=>
@@ -13765,6 +13844,7 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
   }
 
   Future<void> fotografDuzenle()async{
+    if(grupFotografiIsleniyor)return;
     final fotoBelgesi=await ref.get();
     final mevcutFoto=(fotoBelgesi.data()?['groupPhotoUrl']??'').toString();
     if(!mounted)return;
@@ -13814,6 +13894,7 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
     await ngelxOverlayKapanisiniBekle();
     if(!mounted)return;
 
+    setState(()=>grupFotografiIsleniyor=true);
     try{
       final eski=mevcutFoto;
       if(secim=='remove'){
@@ -13840,9 +13921,9 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
       await ngelxGrupDavetMetaSenkronla(ref);
       await sistemMesaji('Yönetici grup fotoğrafını değiştirdi.');
       if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Grup fotoğrafı kaydedildi.')));
-    }catch(_){
-      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Grup fotoğrafı değiştirilemedi. Tekrar dene.')));
-    }
+    }catch(e){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Grup fotoğrafı değiştirilemedi: ${ngelxMedyaHataMetni(e)}')));
+    }finally{if(mounted)setState(()=>grupFotografiIsleniyor=false);}
   }
 
   Widget _fotoSecenek(BuildContext c,IconData icon,String title,String subtitle,String value)=>ListTile(
@@ -14402,7 +14483,9 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
                           border:Border.all(color:Colors.white,width:4),
                           boxShadow:const [BoxShadow(color:Color(0x220A9F45),blurRadius:24,offset:Offset(0,9))],
                         ),
-                        child:ClipOval(child:foto.isEmpty?const Icon(Icons.groups_rounded,color:ngelxGroupGreen,size:54):CachedNetworkImage(imageUrl:foto,fit:BoxFit.cover)),
+                        child:ClipOval(child:foto.isEmpty
+                          ?const Icon(Icons.groups_rounded,color:ngelxGroupGreen,size:54)
+                          :NgelXAgResmi(url:foto,fit:BoxFit.cover,error:const Icon(Icons.groups_rounded,color:ngelxGroupGreen,size:54))),
                       ),
                       if(duzenleyebilir)const Positioned(right:-3,bottom:2,child:CircleAvatar(radius:17,backgroundColor:ngelxGroupGreen,child:Icon(Icons.camera_alt_rounded,color:Colors.white,size:17))),
                     ]),
@@ -19494,13 +19577,13 @@ class MedyaOnizleme extends StatelessWidget {
   Widget build(BuildContext context) {
     Widget govde;
     if (tur == 'photo' && url.isNotEmpty) {
-      govde = CachedNetworkImage(
-        imageUrl: url,
+      govde = NgelXAgResmi(
+        url: url,
         fit: BoxFit.cover,
-        placeholder: (_, _) => const Center(
+        placeholder: const Center(
           child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black26),
         ),
-        errorWidget: (_, _, _) => const Center(
+        error: const Center(
           child: Icon(Icons.broken_image_outlined, color: Colors.black38),
         ),
       );
@@ -19739,11 +19822,11 @@ class _HikayeGosterPageState extends State<HikayeGosterPage> with SingleTickerPr
 
   Widget _medya(){
     if(!videoMu){
-      return CachedNetworkImage(
-        imageUrl:widget.url,
+      return NgelXAgResmi(
+        url:widget.url,
         fit:BoxFit.contain,
-        placeholder:(_,__)=>const Center(child:CircularProgressIndicator(color:Colors.white)),
-        errorWidget:(_,__,___)=>const Center(child:Icon(Icons.broken_image_outlined,color:Colors.white54,size:60)),
+        placeholder:const Center(child:CircularProgressIndicator(color:Colors.white)),
+        error:const Center(child:Icon(Icons.broken_image_outlined,color:Colors.white54,size:60)),
       );
     }
     if(videoHata)return const Center(child:Column(mainAxisSize:MainAxisSize.min,children:[
@@ -21695,13 +21778,14 @@ class _ProfilPageState extends State<ProfilPage> {
       setState(()=>fotoYukleniyor=true);
       final uzanti=dosya.name.contains('.')?dosya.name.split('.').last.toLowerCase():(video?'mp4':'jpg');
       final yol='stories/'+user.uid+'/'+DateTime.now().millisecondsSinceEpoch.toString()+'.'+uzanti;
-      final url=await ngelxMedyaYukleDosya(
-        dosya:dosya,
-        kind:'stories',
-        ext:uzanti,
-        legacyPath:yol,
-        contentType:video&&uzanti=='mov'?'video/quicktime':null,
-      );
+      final url=video
+        ?await ngelxMedyaYukleDosya(
+            dosya:dosya,kind:'stories',ext:uzanti,legacyPath:yol,
+            contentType:uzanti=='mov'?'video/quicktime':null,
+          )
+        :await ngelxMedyaYukleBytes(
+            bytes:await dosya.readAsBytes(),kind:'stories',ext:uzanti,legacyPath:yol,
+          );
 
       await FirebaseFirestore.instance.collection('videos').add({
         'ownerId':user.uid,
@@ -21710,6 +21794,7 @@ class _ProfilPageState extends State<ProfilPage> {
         'storyMediaType':video?'video':'photo',
         'mediaUrl':url,
         'videoUrl':video?url:'',
+        'ownerPhotoUrl':fotoUrl,
         'createdAt':FieldValue.serverTimestamp(),
         'clientCreatedAt':Timestamp.now(),
         'expiresAt':Timestamp.fromDate(DateTime.now().add(const Duration(hours:24))),
