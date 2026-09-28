@@ -21,6 +21,17 @@ def scoped_replace(text,start_marker,end_marker,old,new,label):
     section=section.replace(old,new,1)
     return text[:a]+section+text[b:]
 
+def scoped_replace_after(text,anchor_marker,start_marker,end_marker,old,new,label):
+    root=text.index(anchor_marker)
+    a=text.index(start_marker,root)
+    b=text.index(end_marker,a)
+    section=text[a:b]
+    n=section.count(old)
+    if n!=1:
+        raise SystemExit(f'Build 302 patch failed: {label}: expected 1 anchored match, got {n}')
+    section=section.replace(old,new,1)
+    return text[:a]+section+text[b:]
+
 main=MAIN_PATH.read_text(encoding='utf-8')
 pub=PUB_PATH.read_text(encoding='utf-8')
 if 'version: 1.0.83+302' in pub:
@@ -178,8 +189,9 @@ main=scoped_replace(
     'group mention notification dedupe',
 )
 
-main=scoped_replace(
+main=scoped_replace_after(
     main,
+    'class _SohbetPageState',
     'Future<void> gonder() async {',
     'Future<void> medyaGonder(ImageSource kaynak) async {',
     '      await batch.commit().timeout(const Duration(seconds:12));',
@@ -190,8 +202,9 @@ main=scoped_replace(
       );""",
     'private text commit verification',
 )
-main=scoped_replace(
+main=scoped_replace_after(
     main,
+    'class _SohbetPageState',
     'Future<void> gonder() async {',
     'Future<void> medyaGonder(ImageSource kaynak) async {',
     """      unawaited(uygulamaBildirimiGonder(toUid:widget.digerUid,fromUid:ben,tur:'message',metin:'Yeni bir mesajın var',belgeId:widget.chatId).catchError((_){ }));""",
@@ -203,8 +216,9 @@ main=scoped_replace(
     'private text notification dedupe',
 )
 
-main=scoped_replace(
+main=scoped_replace_after(
     main,
+    'class _SohbetPageState',
     'Future<void> medyaGonder(ImageSource kaynak) async {',
     'Future<void> videoGonder(ImageSource kaynak)async{',
     '      await batch.commit().timeout(const Duration(seconds:20));',
@@ -215,8 +229,9 @@ main=scoped_replace(
       );""",
     'private photo commit verification',
 )
-main=scoped_replace(
+main=scoped_replace_after(
     main,
+    'class _SohbetPageState',
     'Future<void> medyaGonder(ImageSource kaynak) async {',
     'Future<void> videoGonder(ImageSource kaynak)async{',
     """      unawaited(uygulamaBildirimiGonder(toUid:widget.digerUid,fromUid:ben,tur:'message',metin:'Yeni bir fotoğraf mesajın var',belgeId:widget.chatId).catchError((_){ }));""",
@@ -228,8 +243,9 @@ main=scoped_replace(
     'private photo notification dedupe',
 )
 
-main=scoped_replace(
+main=scoped_replace_after(
     main,
+    'class _SohbetPageState',
     'Future<bool> ekMesajGonder(',
     'Future<void> dosyaGonder()async',
     '      await batch.commit().timeout(const Duration(seconds:15));',
@@ -240,8 +256,9 @@ main=scoped_replace(
       );""",
     'private extra commit verification',
 )
-main=scoped_replace(
+main=scoped_replace_after(
     main,
+    'class _SohbetPageState',
     'Future<bool> ekMesajGonder(',
     'Future<void> dosyaGonder()async',
     """      unawaited(uygulamaBildirimiGonder(toUid:widget.digerUid,fromUid:ben,tur:'message',metin:bildirim,belgeId:widget.chatId).catchError((_){ }));""",
@@ -253,8 +270,9 @@ main=scoped_replace(
     'private extra notification dedupe',
 )
 
-main=scoped_replace(
+main=scoped_replace_after(
     main,
+    'class _SohbetPageState',
     'Future<void> aramaBaslat(bool goruntulu)async{',
     'void bilgi()=>',
     '      await batch.commit().timeout(const Duration(seconds:10));',
@@ -284,3 +302,4 @@ for path in (ROOT/'tools').glob('verify_v*.py'):
     path.write_text(t,encoding='utf-8')
 
 print('Build 302 Firestore consistency patch prepared.')
+# retry Build 302 anchored private chat
