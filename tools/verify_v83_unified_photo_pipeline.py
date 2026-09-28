@@ -23,12 +23,13 @@ require(MAIN.count('ngelxFotografYukle(')>=9,
 
 profile_start=MAIN.index("final yol = 'profiles/")
 profile_end=MAIN.index("await FirebaseFirestore.instance.collection('users').doc(user.uid).set",profile_start)
-require('ngelxMedyaYukleDosya(' in MAIN[profile_start:profile_end] and 'dosya: dosya' in MAIN[profile_start:profile_end],
-        'profil fotoğrafı dosya yüklemesi')
+require('ngelxFotografYukle(' in MAIN[profile_start:profile_end] and
+        ('dosya:dosya' in MAIN[profile_start:profile_end] or 'dosya: dosya' in MAIN[profile_start:profile_end]),
+        'profil fotoğrafı ortak yüklemesi')
 
 group_avatar=MAIN.index("avatar_")
-require('ngelxMedyaYukleDosya(' in MAIN[group_avatar:group_avatar+1200],
-        'grup avatarı dosya yüklemesi')
+require('ngelxFotografYukle(' in MAIN[group_avatar:group_avatar+1200],
+        'grup avatarı ortak yüklemesi')
 
 create_story=MAIN.index("Future<void> _hikayePaylas")
 create_story_end=MAIN.index("Future<void> _videoDuzenle",create_story)
