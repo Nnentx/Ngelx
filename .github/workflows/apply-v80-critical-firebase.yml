@@ -1,0 +1,37 @@
+name: Apply V80 critical Firebase fixes
+
+on:
+  push:
+    branches:
+      - work/v80-critical-firebase
+    paths:
+      - .github/workflows/apply-v80-critical-firebase.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apply-and-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: work/v80-critical-firebase
+          fetch-depth: 0
+      - name: Apply critical Firebase patch
+        run: git apply --check tools/v80_critical_firebase.patch && git apply tools/v80_critical_firebase.patch
+      - name: Run NgelX regression checks
+        run: |
+          for test_file in tools/verify_*.py; do
+            python3 "$test_file"
+          done
+          node --check cloudflare/worker/src/index.js
+          python3 -m py_compile tools/verify_v80_critical_firebase.py
+      - name: Commit verified changes
+        run: |
+          git config user.name "ngelx-ci"
+          git config user.email "actions@users.noreply.github.com"
+          git add app/lib/main.dart tools/verify_v80_critical_firebase.py
+          git commit -m "fix: stabilize Firebase media comments and captions"
+          git push origin work/v80-critical-firebase
