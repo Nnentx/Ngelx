@@ -274,4 +274,4 @@ qa=one(qa,old,new,"QA Build 297 step")
 QA_PATH.write_text(qa,encoding="utf-8")
 
 print("Build 297 media/dialog patch prepared.")
-# retry verifier sync
+# retry verifier sync\n# workflow rewrite handled by connector\n
