@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - work/build-299-release
-      - work/v72-combined
     paths:
       - 'app/**'
       - 'tools/**'
