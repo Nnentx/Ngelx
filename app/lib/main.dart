@@ -92,8 +92,8 @@ const ngelxPrivateBlueCanvas = Color(0xFFF6FAFF);
 const ngelxPrivateBlueBorder = Color(0xFFD8E8FF);
 const ngelxPrivateBlueInk = Color(0xFF10213A);
 
-const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.74');
-const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '293');
+const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.75');
+const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '294');
 const ngelxGroupBorder = Color(0xFFD9EEE0);
 
 final GlobalKey<NavigatorState> ngelxNavigatorKey=GlobalKey<NavigatorState>();
@@ -1794,7 +1794,12 @@ String mesajIzinAciklama(String kod){
     default: return '';
   }
 }
-Future<void> diliDegistir(String dil) async {uygulamaDili.value=dil;final h=await SharedPreferences.getInstance();await h.setString('uygulama_dili',dil);}
+Future<void> diliDegistir(String dil) async {
+  final yeniDil=dilAdlari.containsKey(dil)?dil:'tr';
+  final h=await SharedPreferences.getInstance();
+  await h.setString('uygulama_dili',yeniDil);
+  if(uygulamaDili.value!=yeniDil)uygulamaDili.value=yeniDil;
+}
 
 Future<void> uygulamaBildirimiGonder({
   required String toUid,
@@ -3484,9 +3489,11 @@ class _AnaEkranState extends State<AnaEkran> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return ValueListenableBuilder<String>(
+      valueListenable:uygulamaDili,
+      builder:(context,dil,_)=>Scaffold(
       body:Stack(children:[
-        Positioned.fill(child:KeyedSubtree(key:ValueKey('ngelx_tab_$secili'),child:_aktifSayfa())),
+        Positioned.fill(child:KeyedSubtree(key:ValueKey('ngelx_tab_${secili}_$dil'),child:_aktifSayfa())),
         Positioned.fill(child:IgnorePointer(
           ignoring:false,
           child:gelenAramaKatmani(),
@@ -3546,6 +3553,7 @@ class _AnaEkranState extends State<AnaEkran> {
           ],
         ),
         ),
+      ),
       ),
     );
   }

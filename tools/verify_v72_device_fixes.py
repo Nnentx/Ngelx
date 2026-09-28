@@ -7,6 +7,7 @@ STORY = (ROOT / "app/lib/story_v66.dart").read_text(encoding="utf-8")
 RULES = (ROOT / "firestore.rules").read_text(encoding="utf-8")
 PUBSPEC = (ROOT / "app/pubspec.yaml").read_text(encoding="utf-8")
 RULE_TEST = (ROOT / "tools/firestore_rules_test.mjs").read_text(encoding="utf-8")
+SETTINGS = (ROOT / "app/lib/build258_settings.dart").read_text(encoding="utf-8")
 
 
 def require(condition: bool, message: str) -> None:
@@ -14,9 +15,13 @@ def require(condition: bool, message: str) -> None:
         raise SystemExit(f"V72 cihaz düzeltmesi eksik: {message}")
 
 
-require("version: 1.0.74+293" in PUBSPEC, "Build 293 sürüm zinciri")
-require("defaultValue: '1.0.74'" in MAIN and "defaultValue: '293'" in MAIN,
+require("version: 1.0.75+294" in PUBSPEC, "Build 294 sürüm zinciri")
+require("defaultValue: '1.0.75'" in MAIN and "defaultValue: '294'" in MAIN,
         "uygulama içi sürüm varsayılanları")
+require("ValueKey('ngelx_tab_${secili}_$dil')" in MAIN,
+        "açık sekmelerin dil değişiminde yeniden oluşturulması")
+require("valueListenable:uygulamaDili" in SETTINGS,
+        "ayarlar ekranlarının dil değişimini canlı dinlemesi")
 require("match /content_tools/{contentId}" in RULES and "allow read, write: if isMe(uid)" in RULES,
         "kullanıcıya özel çeviri/altyazı önbellek kuralı")
 require("content_translation_cache_$icerikId" in MAIN and "content_caption_cache_$icerikId" in MAIN,

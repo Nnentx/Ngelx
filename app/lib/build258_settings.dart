@@ -11,10 +11,10 @@ class AyarlarV258Page extends StatelessWidget{
     trailing:const Icon(Icons.chevron_right_rounded),
     onTap:()=>Navigator.push(c,MaterialPageRoute(builder:(_)=>p)),
   );
-  @override Widget build(BuildContext context)=>Theme(
+  @override Widget build(BuildContext context)=>ValueListenableBuilder<String>(valueListenable:uygulamaDili,builder:(context,_,__)=>Theme(
     data:ThemeData.light().copyWith(scaffoldBackgroundColor:Colors.white,appBarTheme:const AppBarTheme(backgroundColor:Colors.white,foregroundColor:Colors.black,elevation:0)),
     child:Scaffold(
-      appBar:AppBar(title:const Text('Ayarlar ve gizlilik')),
+      appBar:AppBar(title:Text(t('settingsTitle'))),
       body:ListView(padding:const EdgeInsets.fromLTRB(14,4,14,30),children:[
         _baslik('HESAP'),
         _satir(context,Icons.manage_accounts_outlined,'Hesap ve profil bilgileri','Ad, kullanıcı adı, e-posta, telefon, doğum tarihi ve şifre',const HesapBilgileriV258Page()),
@@ -64,7 +64,7 @@ class AyarlarV258Page extends StatelessWidget{
         }),
       ]),
     ),
-  );
+  ));
 }
 
 class HesapBilgileriV258Page extends StatefulWidget{
@@ -277,7 +277,7 @@ class _GelismisAyarlarV258PageState extends State<GelismisAyarlarV258Page>{
       default:return const [ListTile(title:Text('Ayar bulunamadı.'))];
     }
   }
-  @override Widget build(BuildContext context)=>Theme(data:ThemeData.light().copyWith(scaffoldBackgroundColor:Colors.white,appBarTheme:const AppBarTheme(backgroundColor:Colors.white,foregroundColor:Colors.black,elevation:0)),child:Scaffold(appBar:AppBar(title:Text(_baslik)),body:ListView(children:_icerik)));
+  @override Widget build(BuildContext context)=>ValueListenableBuilder<String>(valueListenable:uygulamaDili,builder:(context,_,__)=>Theme(data:ThemeData.light().copyWith(scaffoldBackgroundColor:Colors.white,appBarTheme:const AppBarTheme(backgroundColor:Colors.white,foregroundColor:Colors.black,elevation:0)),child:Scaffold(appBar:AppBar(title:Text(_baslik)),body:ListView(children:_icerik))));
 }
 
 class VerilerimV258Page extends StatefulWidget{

@@ -1180,3 +1180,10 @@
 - Gerçekten bulunmayan eski medya için ham `media_fetch_http_404` yerine anlaşılır hata döner.
 - Kullanılmayan medya endpoint önbellek değişkenleri ve hikâye paylaşımındaki kullanılmayan yerel değerler kaldırıldı.
 - Sürüm: `1.0.74+293`.
+# V74 / Build 294 canlı uygulama dili düzeltmesi
+
+- Sürüm: `1.0.75+294`.
+- Oturum açıkken uygulama dili değiştirildiğinde ana sekmeler artık seçili dil anahtarıyla anında yeniden oluşturulur.
+- Ayarlar ana sayfası ve Dil ve çeviri sayfası dil değişimini doğrudan dinler; çıkış yapıp yeniden giriş gerekmez.
+- Dil tercihi önce cihaz hafızasına güvenle kaydedilir, ardından uygulama arayüzüne uygulanır.
+- Regresyon doğrulamasına canlı dil dinleyicisi ve Build 294 sürüm zinciri kontrolleri eklendi.
