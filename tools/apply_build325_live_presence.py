@@ -215,8 +215,8 @@ main=rep(
 # Profile page shows live ring + direct watch button.
 main=rep(
     main,
-    "           final foto = (v['photoUrl'] ?? '').toString();\n           final arkadaslar =",
-    "           final foto = (v['photoUrl'] ?? '').toString();\n           final canli=v['isLive']==true&&(v['currentLiveId']??'').toString().isNotEmpty;\n           final canliId=(v['currentLiveId']??'').toString();\n           final arkadaslar =",
+    "          final foto = (v['photoUrl'] ?? '').toString();\n          final arkadaslar =",
+    "          final foto = (v['photoUrl'] ?? '').toString();\n          final canli=v['isLive']==true&&(v['currentLiveId']??'').toString().isNotEmpty;\n          final canliId=(v['currentLiveId']??'').toString();\n          final arkadaslar =",
     "profile live state",
 )
 main=rep(
