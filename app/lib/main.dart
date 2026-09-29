@@ -92,8 +92,8 @@ const ngelxPrivateBlueCanvas = Color(0xFFF6FAFF);
 const ngelxPrivateBlueBorder = Color(0xFFD8E8FF);
 const ngelxPrivateBlueInk = Color(0xFF10213A);
 
-const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.89');
-const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '308');
+const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.90');
+const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '309');
 const ngelxGroupBorder = Color(0xFFD9EEE0);
 
 final GlobalKey<NavigatorState> ngelxNavigatorKey=GlobalKey<NavigatorState>();
@@ -12277,7 +12277,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
   );
 }
 
-class TamEkranMedyaPage extends StatelessWidget{final String url;const TamEkranMedyaPage({super.key,required this.url});@override Widget build(BuildContext context)=>Scaffold(backgroundColor:Colors.black,appBar:AppBar(backgroundColor:Colors.black,foregroundColor:Colors.white),body:Center(child:InteractiveViewer(minScale:.5,maxScale:5,child:CachedNetworkImage(imageUrl:url,fit:BoxFit.contain,errorWidget:(_,__,___)=>const Text('Medya açılamadı.',style:TextStyle(color:Colors.white))))));}
+class TamEkranMedyaPage extends StatelessWidget{final String url;const TamEkranMedyaPage({super.key,required this.url});@override Widget build(BuildContext context)=>Scaffold(backgroundColor:Colors.black,appBar:AppBar(backgroundColor:Colors.black,foregroundColor:Colors.white),body:Center(child:InteractiveViewer(minScale:.5,maxScale:5,child:NgelXAgResmi(url:url,fit:BoxFit.contain,placeholder:const Center(child:CircularProgressIndicator(color:Colors.white)),error:const Text('Medya açılamadı.',style:TextStyle(color:Colors.white))))));}
 
 
 class NgelXReplyMediaPreview extends StatelessWidget{
@@ -12290,9 +12290,10 @@ class NgelXReplyMediaPreview extends StatelessWidget{
           Container(color:Colors.black),
           Container(alignment:Alignment.center,color:Colors.black.withValues(alpha:.12),child:const Icon(Icons.play_arrow_rounded,color:Colors.white,size:24)),
         ])
-      :CachedNetworkImage(
-          imageUrl:url,fit:BoxFit.cover,
-          errorWidget:(_,__,___)=>Container(color:const Color(0xFFF0F1F2),child:const Icon(Icons.photo_outlined,color:Color(0xFF777B80),size:22)),
+      :NgelXAgResmi(
+          url:url,fit:BoxFit.cover,
+          placeholder:Container(color:const Color(0xFFF0F1F2)),
+          error:Container(color:const Color(0xFFF0F1F2),child:const Icon(Icons.photo_outlined,color:Color(0xFF777B80),size:22)),
         );
     // Yanittaki 46px video onizlemesi icin tum videoyu agdan acma.
     return ClipRRect(borderRadius:BorderRadius.circular(9),child:SizedBox(width:46,height:46,child:child));
@@ -12369,17 +12370,14 @@ class NgelXSohbetFotoOnizleme extends StatelessWidget{
       child:SizedBox(
         width:230,
         height:180,
-        child:CachedNetworkImage(
-          key:ValueKey('chat-photo-$url'),
-          imageUrl:url,
+        child:NgelXAgResmi(
+          url:url,
           fit:BoxFit.cover,
-          memCacheWidth:720,
-          fadeInDuration:const Duration(milliseconds:120),
-          placeholder:(_,__)=>const ColoredBox(
+          placeholder:const ColoredBox(
             color:Color(0xFFF3F4F6),
             child:Center(child:SizedBox(width:24,height:24,child:CircularProgressIndicator(strokeWidth:2,color:Color(0xFF6B7280)))),
           ),
-          errorWidget:(_,__,___)=>hata(),
+          error:hata(),
         ),
       ),
     );
@@ -12443,16 +12441,14 @@ class NgelXSohbetVideoOnizleme extends StatelessWidget{
         child:Stack(
           fit:StackFit.expand,
           children:[
-            CachedNetworkImage(
-              key:ValueKey('chat-video-thumb-$thumbnailUrl'),
-              imageUrl:thumbnailUrl,
+            NgelXAgResmi(
+              url:thumbnailUrl,
               fit:BoxFit.cover,
-              memCacheWidth:720,
-              placeholder:(_,__)=>const ColoredBox(
+              placeholder:const ColoredBox(
                 color:Color(0xFF20242D),
                 child:Center(child:SizedBox(width:24,height:24,child:CircularProgressIndicator(strokeWidth:2,color:Colors.white70))),
               ),
-              errorWidget:(_,__,___)=>_videoIlkKaresi(),
+              error:_videoIlkKaresi(),
             ),
             IgnorePointer(child:_oynatKatmani()),
           ],
@@ -12892,7 +12888,7 @@ class SabitlenenGrupMesajlariPage extends StatelessWidget{
                       InkWell(
                         onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>TamEkranMedyaPage(url:url))),
                         borderRadius:BorderRadius.circular(14),
-                        child:ClipRRect(borderRadius:BorderRadius.circular(14),child:CachedNetworkImage(imageUrl:url,height:128,width:double.infinity,fit:BoxFit.cover,errorWidget:(_,__,___)=>const SizedBox(height:100,child:Center(child:Icon(Icons.broken_image_outlined))))),
+                        child:ClipRRect(borderRadius:BorderRadius.circular(14),child:SizedBox(height:128,width:double.infinity,child:NgelXAgResmi(url:url,fit:BoxFit.cover,error:const SizedBox(height:100,child:Center(child:Icon(Icons.broken_image_outlined)))))),
                       ),
                     ],
                   ]),
