@@ -14,6 +14,10 @@ const _groupGreenSoft = Color(0xFFE4F6EA);
 const _ink = Color(0xFF202124);
 const _muted = Color(0xFF777B80);
 
+String _gl(String lang,String tr,String en){
+  return lang=='tr'?tr:en;
+}
+
 const _groupMediaPrimary='https://ngelx-media.alihancaglar76.workers.dev';
 const _groupMediaBackup='https://ngelx-upload.alihancaglar76.workers.dev';
 final Map<String,Uint8List> _groupImageMemory=<String,Uint8List>{};
@@ -515,7 +519,7 @@ Future<Map<String, String>> fetchGroupLinkPreview(String text) async {
   }
 }
 
-Future<String?> showGroupStickerPicker(BuildContext context) {
+Future<String?> showGroupStickerPicker(BuildContext context,{String lang='tr'}) {
   const stickers = <String>[
     '😂','😍','🥳','😎','😭','😡','🤯','🥹',
     '❤️','🔥','👏','👍','🙏','💯','🎉','✨',
@@ -530,9 +534,9 @@ Future<String?> showGroupStickerPicker(BuildContext context) {
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 22),
         child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Text('Çıkartmalar', style: TextStyle(color: _ink, fontSize: 20, fontWeight: FontWeight.w900)),
+          Text(_gl(lang,'Çıkartmalar','Stickers'), style: TextStyle(color: _ink, fontSize: 20, fontWeight: FontWeight.w900)),
           const SizedBox(height: 4),
-          const Text('Bir çıkartma seç ve sohbete gönder.', style: TextStyle(color: _muted, fontSize: 12)),
+          Text(_gl(lang,'Bir çıkartma seç ve sohbete gönder.','Choose a sticker and send it to the chat.'), style: TextStyle(color: _muted, fontSize: 12)),
           const SizedBox(height: 14),
           GridView.count(
             shrinkWrap: true,
@@ -560,6 +564,7 @@ Future<String?> showGroupStickerPicker(BuildContext context) {
 }
 
 Future<void> showGroupMessageInfo({
+  String lang='tr',
   required BuildContext context,
   required DocumentReference<Map<String, dynamic>> chatRef,
   required Map<String, dynamic> message,
@@ -608,7 +613,7 @@ Future<void> showGroupMessageInfo({
     final sameDay = local.year == today.year && local.month == today.month && local.day == today.day;
     final hh = local.hour.toString().padLeft(2, '0');
     final mm = local.minute.toString().padLeft(2, '0');
-    if (sameDay) return 'Bugün ' + hh + ':' + mm;
+    if (sameDay) return _gl(lang,'Bugün ','Today ') + hh + ':' + mm;
     final dd = local.day.toString().padLeft(2, '0');
     final mo = local.month.toString().padLeft(2, '0');
     return dd + '.' + mo + '.' + local.year.toString() + ' ' + hh + ':' + mm;
@@ -621,7 +626,7 @@ Future<void> showGroupMessageInfo({
       future: FirebaseFirestore.instance.collection('users').doc(id).get(),
       builder: (_, snap) {
         final user = snap.data?.data() ?? <String, dynamic>{};
-        final name = (user['displayName'] ?? user['username'] ?? 'Grup üyesi').toString();
+        final name = (user['displayName'] ?? user['username'] ?? _gl(lang,'Grup üyesi','Group member')).toString();
         final username = (user['username'] ?? '').toString().trim();
         final photo = (user['photoUrl'] ?? '').toString();
         return ListTile(
@@ -664,15 +669,15 @@ Future<void> showGroupMessageInfo({
           children: [
             const ListTile(
               leading: CircleAvatar(backgroundColor: _groupGreenSoft, child: Icon(Icons.info_outline_rounded, color: _groupGreen)),
-              title: Text('Mesaj bilgisi', style: TextStyle(color: _ink, fontWeight: FontWeight.w900)),
-              subtitle: Text('Kim gördü, kime teslim edildi', style: TextStyle(color: _muted)),
+              title: Text(_gl(lang,'Mesaj bilgisi','Message info'), style: TextStyle(color: _ink, fontWeight: FontWeight.w900)),
+              subtitle: Text(_gl(lang,'Kim gördü, kime teslim edildi','Who saw it and who received it'), style: TextStyle(color: _muted)),
             ),
             const Divider(height: 1),
             ListTile(
               leading: const Icon(Icons.check_circle_outline_rounded, color: _groupGreen),
-              title: const Text('Gönderildi', style: TextStyle(color: _ink, fontWeight: FontWeight.w800)),
+              title: Text(_gl(lang,'Gönderildi','Sent'), style: TextStyle(color: _ink, fontWeight: FontWeight.w800)),
               subtitle: Text(
-                created == null ? 'Gönderim zamanı hazırlanıyor' : timeText(Timestamp.fromDate(created)),
+                created == null ? _gl(lang,'Gönderim zamanı hazırlanıyor','Preparing sent time') : timeText(Timestamp.fromDate(created)),
                 style: const TextStyle(color: _muted),
               ),
             ),
@@ -684,14 +689,14 @@ Future<void> showGroupMessageInfo({
                 const Icon(Icons.visibility_outlined, color: _groupGreen, size: 20),
                 const SizedBox(width: 8),
                 Expanded(child: Text(
-                  seenIds.isEmpty ? 'Henüz kimse görmedi' : seenIds.length.toString() + ' kişi gördü',
+                  seenIds.isEmpty ? _gl(lang,'Henüz kimse görmedi','No one has seen it yet') : (lang=='tr'?seenIds.length.toString() + ' kişi gördü':seenIds.length.toString() + ' people saw it'),
                   style: const TextStyle(color: _ink, fontWeight: FontWeight.w900),
                 )),
                 const SizedBox(width: 8),
                 const Icon(Icons.done_all_rounded, color: _groupGreen, size: 20),
                 const SizedBox(width: 6),
                 Text(
-                  deliveredOnlyIds.isEmpty ? '0 teslim' : deliveredOnlyIds.length.toString() + ' teslim',
+                  deliveredOnlyIds.isEmpty ? _gl(lang,'0 teslim','0 delivered') : (lang=='tr'?deliveredOnlyIds.length.toString() + ' teslim':deliveredOnlyIds.length.toString() + ' delivered'),
                   style: const TextStyle(color: _muted, fontSize: 12, fontWeight: FontWeight.w800),
                 ),
               ]),
@@ -699,7 +704,7 @@ Future<void> showGroupMessageInfo({
             if (seenIds.isNotEmpty) ...[
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 3),
-                child: Text('Görüldü • ' + seenIds.length.toString(), style: const TextStyle(color: _groupGreen, fontSize: 13, fontWeight: FontWeight.w900)),
+                child: Text(_gl(lang,'Görüldü • ','Seen • ') + seenIds.length.toString(), style: const TextStyle(color: _groupGreen, fontSize: 13, fontWeight: FontWeight.w900)),
               ),
               ...seenIds.map((id) => personRow(id, seen: true)),
             ],
@@ -707,7 +712,7 @@ Future<void> showGroupMessageInfo({
               const Divider(height: 24, indent: 16, endIndent: 16),
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 2, 16, 3),
-                child: Text('Teslim edildi • ' + deliveredOnlyIds.length.toString(), style: const TextStyle(color: _groupGreen, fontSize: 13, fontWeight: FontWeight.w900)),
+                child: Text(_gl(lang,'Teslim edildi • ','Delivered • ') + deliveredOnlyIds.length.toString(), style: const TextStyle(color: _groupGreen, fontSize: 13, fontWeight: FontWeight.w900)),
               ),
               ...deliveredOnlyIds.map((id) => personRow(id, seen: false)),
             ],
@@ -715,7 +720,7 @@ Future<void> showGroupMessageInfo({
               const Padding(
                 padding: EdgeInsets.fromLTRB(18, 18, 18, 6),
                 child: Text(
-                  'Teslim ve görülme bilgileri geldikçe burada kişi bazında görünecek.',
+                  _gl(lang,'Teslim ve görülme bilgileri geldikçe burada kişi bazında görünecek.','Delivery and read details will appear here for each person.'),
                   textAlign: TextAlign.center,
                   style: TextStyle(color: _muted, fontSize: 12, height: 1.35),
                 ),
@@ -728,6 +733,7 @@ Future<void> showGroupMessageInfo({
 }
 
 Future<void> showGroupForwardSheet({
+  String lang='tr',
   required BuildContext context,
   required String sourceChatId,
   required String sourceMessageId,
@@ -740,7 +746,7 @@ Future<void> showGroupForwardSheet({
   final type = (sourceMessage['type'] ?? 'text').toString();
   if (!allowedTypes.contains(type)) {
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Bu mesaj türü iletilemiyor.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(_gl(lang,'Bu mesaj türü iletilemiyor.','This message type cannot be forwarded.'))));
     }
     return;
   }
@@ -778,13 +784,13 @@ Future<void> showGroupForwardSheet({
                 padding: EdgeInsets.fromLTRB(18, 2, 18, 12),
                 child: Align(
                   alignment: Alignment.centerLeft,
-                  child: Text('Mesajı ilet', style: TextStyle(color: _ink, fontSize: 20, fontWeight: FontWeight.w900)),
+                  child: Text(_gl(lang,'Mesajı ilet','Forward message'), style: TextStyle(color: _ink, fontSize: 20, fontWeight: FontWeight.w900)),
                 ),
               ),
               const Divider(height: 1),
               Expanded(
                 child: rows.isEmpty
-                    ? const Center(child: Text('İletilebilecek başka sohbet yok.', style: TextStyle(color: _muted, fontWeight: FontWeight.w700)))
+                    ? Center(child: Text(_gl(lang,'İletilebilecek başka sohbet yok.','There are no other chats to forward to.'), style: TextStyle(color: _muted, fontWeight: FontWeight.w700)))
                     : ListView.separated(
                         padding: const EdgeInsets.symmetric(vertical: 6),
                         itemCount: rows.length,
@@ -825,15 +831,15 @@ Future<void> showGroupForwardSheet({
 
                           if (isGroup) {
                             return row(
-                              (data['groupName'] ?? 'Grup sohbeti').toString(),
-                              (data['lastMessage'] ?? 'Grup sohbeti').toString(),
+                              (data['groupName'] ?? _gl(lang,'Grup sohbeti','Group chat')).toString(),
+                              (data['lastMessage'] ?? _gl(lang,'Grup sohbeti','Group chat')).toString(),
                               (data['groupPhotoUrl'] ?? '').toString(),
                               group: true,
                             );
                           }
 
                           final other = members.firstWhere((x) => x != uid, orElse: () => '');
-                          if (other.isEmpty) return row('Sohbet', '', '', group: false);
+                          if (other.isEmpty) return row(_gl(lang,'Sohbet','Chat'), '', '', group: false);
                           final future = profileFutures.putIfAbsent(
                             other,
                             () => FirebaseFirestore.instance.collection('users').doc(other).get(),
@@ -842,9 +848,9 @@ Future<void> showGroupForwardSheet({
                             future: future,
                             builder: (_, snap) {
                               final p = snap.data?.data() ?? <String, dynamic>{};
-                              final name = (p['displayName'] ?? p['username'] ?? 'Sohbet').toString();
+                              final name = (p['displayName'] ?? p['username'] ?? _gl(lang,'Sohbet','Chat')).toString();
                               final username = (p['username'] ?? '').toString().trim();
-                              return row(name, username.isEmpty ? 'Özel sohbet' : '@' + username, (p['photoUrl'] ?? '').toString(), group: false);
+                              return row(name, username.isEmpty ? _gl(lang,'Özel sohbet','Private chat') : '@' + username, (p['photoUrl'] ?? '').toString(), group: false);
                             },
                           );
                         },
@@ -891,8 +897,8 @@ Future<void> showGroupForwardSheet({
                                 final messageRef = target.collection('messages').doc();
                                 final update = <String, dynamic>{
                                   'lastMessage': type == 'text'
-                                      ? (sourceMessage['text'] ?? 'İletilen mesaj').toString()
-                                      : '↪️ İletilen mesaj',
+                                      ? (sourceMessage['text'] ?? _gl(lang,'İletilen mesaj','Forwarded message')).toString()
+                                      : _gl(lang,'↪️ İletilen mesaj','↪️ Forwarded message'),
                                   'updatedAt': FieldValue.serverTimestamp(),
                                   'hiddenFor': FieldValue.arrayRemove(members),
                                 };
@@ -909,14 +915,14 @@ Future<void> showGroupForwardSheet({
                             if (sheet.mounted) Navigator.pop(sheet);
                             if (context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text(sent > 0 ? sent.toString() + ' sohbete iletildi.' : 'Mesaj iletilemedi.')),
+                                SnackBar(content: Text(sent > 0 ? (lang=='tr'?sent.toString() + ' sohbete iletildi.':sent.toString() + ' chats received it.') : _gl(lang,'Mesaj iletilemedi.','Message could not be forwarded.'))),
                               );
                             }
                           },
                     icon: sending
                         ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
                         : const Icon(Icons.forward_rounded),
-                    label: Text(sending ? 'İletiliyor...' : 'İlet'),
+                    label: Text(sending ? _gl(lang,'İletiliyor...','Forwarding...') : _gl(lang,'İlet','Forward')),
                   ),
                 ),
               ),
