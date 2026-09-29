@@ -13,6 +13,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:camera/camera.dart';
 import 'package:image/image.dart' as img;
 import 'package:video_player/video_player.dart';
 import 'package:share_plus/share_plus.dart';
@@ -28,6 +29,8 @@ import 'package:record/record.dart' as rec;
 import 'group_quality.dart';
 part 'build258_settings.dart';
 part 'create_music_editor.dart';
+part 'camera_studio.dart';
+part 'feed_creator_badge.dart';
 part 'story_v66.dart';
 
 bool ngelxHiddenWordMatches(String text, Iterable<String> hiddenWords) {
@@ -93,8 +96,8 @@ const ngelxPrivateBlueCanvas = Color(0xFFF6FAFF);
 const ngelxPrivateBlueBorder = Color(0xFFD8E8FF);
 const ngelxPrivateBlueInk = Color(0xFF10213A);
 
-const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.101');
-const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '320');
+const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.102');
+const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '321');
 const ngelxGroupBorder = Color(0xFFD9EEE0);
 
 final GlobalKey<NavigatorState> ngelxNavigatorKey=GlobalKey<NavigatorState>();
@@ -3333,6 +3336,7 @@ class IcerikBaglantiPage extends StatelessWidget {
     'captions':jsonEncode(ngelxDilMetinHaritasi(v['captions'])),
     'captionTranslations':jsonEncode(ngelxDilMetinHaritasi(v['captionTranslations'])),
     'username':(v['username']??'ngelx').toString(),
+    'sharedByUsername':(v['sharedByUsername']??'').toString(),
     'ownerId':(v['ownerId']??'').toString(),
     'allowDownload':(v['allowDownload']??true).toString(),
   };
@@ -3359,6 +3363,7 @@ class IcerikBaglantiPage extends StatelessWidget {
           adres:(v['videoUrl']??v['mediaUrl']??'').toString(),
           videoId:icerikId,
           kullaniciAdi:(v['username']??'ngelx').toString(),
+          sharedByUsername:(v['sharedByUsername']??'').toString(),
           ownerId:(v['ownerId']??'').toString(),
           aciklama:(v['description']??'').toString(),
           contentLanguage:(v['contentLanguage']??v['language']??'').toString(),
@@ -4399,6 +4404,7 @@ class _VideoAkisiState extends State<VideoAkisi> {
               'id':belge.id,
               'videoUrl':(veri['videoUrl']??'').toString(),
               'username':(veri['username']??'ngelx').toString(),
+              'sharedByUsername':(veri['sharedByUsername']??'').toString(),
               'ownerId':(veri['ownerId']??'').toString(),
               'type':(veri['type']??'video').toString(),
               'mediaUrl':(veri['mediaUrl']??veri['videoUrl']??'').toString(),
@@ -4520,6 +4526,7 @@ class _VideoAkisiState extends State<VideoAkisi> {
                     adres:(item['videoUrl']??item['mediaUrl']??'').toString(),
                     videoId:(item['id']??'').toString(),
                     kullaniciAdi:(item['username']??'ngelx').toString(),
+                    sharedByUsername:(item['sharedByUsername']??'').toString(),
                     ownerId:(item['ownerId']??'').toString(),
                     aciklama:(item['description']??'').toString(),
                     contentLanguage:(item['contentLanguage']??'').toString(),
@@ -4572,6 +4579,7 @@ class _VideoAkisiState extends State<VideoAkisi> {
                   'captions':jsonEncode(item['captions']??const <String,String>{}),
                   'captionTranslations':jsonEncode(item['captionTranslations']??const <String,String>{}),
                   'username':(item['username']??'ngelx').toString(),
+                  'sharedByUsername':(item['sharedByUsername']??'').toString(),
                   'ownerId':(item['ownerId']??'').toString(),
                   'allowDownload':(item['allowDownload']??true).toString(),
                 };
@@ -5614,14 +5622,7 @@ class _GorselYaziKartiState extends State<GorselYaziKarti> with RouteAware {
             bottom: 28,
             right: 82,
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              InkWell(
-                onTap:paylasanProfiliAc,
-                borderRadius:BorderRadius.circular(8),
-                child:Padding(
-                  padding:const EdgeInsets.symmetric(vertical:2),
-                  child:Text('@${widget.veri['username'] ?? 'ngelx'}',style:const TextStyle(fontSize:19,fontWeight:FontWeight.bold)),
-                ),
-              ),
+              NgelXPaylasanSatiri(username:widget.veri['username']??'ngelx',onTap:paylasanProfiliAc,sharedByUsername:widget.veri['sharedByUsername']??''),
               if (foto.isNotEmpty && yazi.isNotEmpty) ...[
                 const SizedBox(height:8),
                 NgelXCeviriliMetin(
@@ -5700,6 +5701,7 @@ class VideoKarti extends StatefulWidget {
   final double overlayFontSize,overlayX,overlayY,overlayScale,overlayRotation;
   final String musicTitle;
   final String musicArtist;
+  final String sharedByUsername;
   final int trimStartMs;
   final int trimEndMs;
   final bool aktif;
@@ -5731,6 +5733,7 @@ class VideoKarti extends StatefulWidget {
     this.overlayRotation=0,
     this.musicTitle = '',
     this.musicArtist = '',
+    this.sharedByUsername = '',
     this.trimStartMs = 0,
     this.trimEndMs = 0,
     this.indirilebilir = true,
@@ -6229,13 +6232,7 @@ Positioned(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  '@${widget.kullaniciAdi}',
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                NgelXPaylasanSatiri(username:widget.kullaniciAdi,onTap:paylasanProfiliAc,sharedByUsername:widget.sharedByUsername),
                 if(widget.aciklama.trim().isNotEmpty) ...[
                   const SizedBox(height:8),
                   NgelXCeviriliMetin(
@@ -8281,23 +8278,15 @@ class _YeniYuklePageState extends State<YuklePage> {
 
   Future<void> kamerayiAc({required bool video})async{
     if(yukleniyor)return;
-    try{
-      final kameraIzni=await Permission.camera.request();
-      if(!kameraIzni.isGranted){
-        if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(lt('Kamerayı kullanmak için kamera izni vermelisin.','Camera permission is required to use the camera.'))));
-        return;
-      }
-      if(video)await Permission.microphone.request();
-      final secilen=video
-        ?await ngelxVideoSec(source:ImageSource.camera,maxDuration:const Duration(minutes:10))
-        :await ngelxResimSec(source:ImageSource.camera,imageQuality:86,maxWidth:1600);
-      if(secilen==null||!mounted)return;
-      final secilenTur=video?'video':'photo';
-      if(!await _medyaBoyutuUygun(secilen,secilenTur))return;
-      if(mounted)setState((){tur=secilenTur;medya=secilen;medyalar=<XFile>[secilen];medyaYazisi='';videoBaslangicMs=0;videoBitisMs=0;});_taslakDegisti();
-    }catch(e){
-      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(_dosyaHataMetni(e))));
-    }
+    final izin=await Permission.camera.request();
+    if(!izin.isGranted){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(lt('Kamerayı kullanmak için kamera izni vermelisin.','Camera permission is required to use the camera.'))));return;}
+    final r=await Navigator.push<Map<String,dynamic>>(context,MaterialPageRoute(builder:(_)=>NgelXCameraStudioPage(baslangicVideo:video)));
+    final x=r?['file'];
+    if(x is! XFile||!mounted)return;
+    final v=r?['video']==true,secilenTur=v?'video':'photo';
+    if(!await _medyaBoyutuUygun(x,secilenTur))return;
+    setState((){tur=secilenTur;medya=x;medyalar=<XFile>[x];medyaYazisi='';videoBaslangicMs=0;videoBitisMs=0;});
+    _taslakDegisti();
   }
 
   Future<void> kameraSecimi()async{
@@ -8411,6 +8400,10 @@ class _YeniYuklePageState extends State<YuklePage> {
       await FirebaseFirestore.instance.collection('videos').add({
         'ownerId':user.uid,
         'username':adi,
+        'creatorId':user.uid,
+        'creatorUsername':adi,
+        'sharedById':'',
+        'sharedByUsername':'',
         'type':'story',
         'storyMediaType':video?'video':'photo',
         'mediaUrl':url,
