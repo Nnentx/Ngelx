@@ -1216,3 +1216,12 @@
 - Kamera değiştirirken, uygulama arka plana giderken ve arama küçültülürken kamera/efekt yaşam döngüsü güvenli şekilde kapatılıp geri açılacak.
 - Filtre/rötuş tercihleri cihazda son kullanılan ayar olarak saklanabilir; her yeni canlı yayın/arama için kolayca sıfırlanabilir.
 - Bu özellikler Build 320 yenileme paketinden ayrı, sonraki Üret + Kamera Kalite paketinde uygulanacak.
+
+
+## 2026-09-29 — Video düzenleyici onay akışı
+- Video düzenlerken filtre, rötuş, yazı, kırpma, müzik ve benzeri araçlarda yapılan her seçim anında kalıcı kaydedilmeyecek / düzenleyiciden çıkarmayacak.
+- Kullanıcı filtre veya başka bir ayarı seçtiğinde yalnızca **canlı önizleme** değişecek; kullanıcı düzenlemeye devam edebilecek.
+- Değişiklikler ancak kullanıcı üstteki **Bitti / Onayla** düğmesine bastığında tek seferde uygulanıp Üret ekranına geri dönülecek.
+- Filtre seçmek, yoğunluk değiştirmek, yazı eklemek veya kırpma kolunu oynatmak otomatik onay sayılmayacak.
+- Geri / X ile çıkılırsa kullanıcıya “Değişiklikler kaydedilsin mi?” seçeneği verilecek: Vazgeç / Kaydetmeden çık / Değişiklikleri uygula.
+- Düzenleme ekranında aktif işlemler geçici state içinde tutulacak; Firestore/medya yükleme işlemi ancak yayınlama veya açık kullanıcı onayı aşamasında başlayacak.
