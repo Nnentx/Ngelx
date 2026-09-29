@@ -667,15 +667,15 @@ Future<void> showGroupMessageInfo({
         child: ListView(
           padding: const EdgeInsets.only(bottom: 18),
           children: [
-            const ListTile(
-              leading: CircleAvatar(backgroundColor: _groupGreenSoft, child: Icon(Icons.info_outline_rounded, color: _groupGreen)),
-              title: Text(_gl(lang,'Mesaj bilgisi','Message info'), style: TextStyle(color: _ink, fontWeight: FontWeight.w900)),
-              subtitle: Text(_gl(lang,'Kim gördü, kime teslim edildi','Who saw it and who received it'), style: TextStyle(color: _muted)),
+            ListTile(
+              leading: const CircleAvatar(backgroundColor: _groupGreenSoft, child: Icon(Icons.info_outline_rounded, color: _groupGreen)),
+              title: Text(_gl(lang,'Mesaj bilgisi','Message info'), style: const TextStyle(color: _ink, fontWeight: FontWeight.w900)),
+              subtitle: Text(_gl(lang,'Kim gördü, kime teslim edildi','Who saw it and who received it'), style: const TextStyle(color: _muted)),
             ),
             const Divider(height: 1),
             ListTile(
               leading: const Icon(Icons.check_circle_outline_rounded, color: _groupGreen),
-              title: Text(_gl(lang,'Gönderildi','Sent'), style: TextStyle(color: _ink, fontWeight: FontWeight.w800)),
+              title: Text(_gl(lang,'Gönderildi','Sent'), style: const TextStyle(color: _ink, fontWeight: FontWeight.w800)),
               subtitle: Text(
                 created == null ? _gl(lang,'Gönderim zamanı hazırlanıyor','Preparing sent time') : timeText(Timestamp.fromDate(created)),
                 style: const TextStyle(color: _muted),
@@ -717,12 +717,12 @@ Future<void> showGroupMessageInfo({
               ...deliveredOnlyIds.map((id) => personRow(id, seen: false)),
             ],
             if (seenIds.isEmpty && deliveredOnlyIds.isEmpty)
-              const Padding(
-                padding: EdgeInsets.fromLTRB(18, 18, 18, 6),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(18, 18, 18, 6),
                 child: Text(
                   _gl(lang,'Teslim ve görülme bilgileri geldikçe burada kişi bazında görünecek.','Delivery and read details will appear here for each person.'),
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: _muted, fontSize: 12, height: 1.35),
+                  style: const TextStyle(color: _muted, fontSize: 12, height: 1.35),
                 ),
               ),
           ],
@@ -780,17 +780,17 @@ Future<void> showGroupForwardSheet({
           child: SizedBox(
             height: MediaQuery.sizeOf(sheet).height * .76,
             child: Column(children: [
-              const Padding(
-                padding: EdgeInsets.fromLTRB(18, 2, 18, 12),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(18, 2, 18, 12),
                 child: Align(
                   alignment: Alignment.centerLeft,
-                  child: Text(_gl(lang,'Mesajı ilet','Forward message'), style: TextStyle(color: _ink, fontSize: 20, fontWeight: FontWeight.w900)),
+                  child: Text(_gl(lang,'Mesajı ilet','Forward message'), style: const TextStyle(color: _ink, fontSize: 20, fontWeight: FontWeight.w900)),
                 ),
               ),
               const Divider(height: 1),
               Expanded(
                 child: rows.isEmpty
-                    ? Center(child: Text(_gl(lang,'İletilebilecek başka sohbet yok.','There are no other chats to forward to.'), style: TextStyle(color: _muted, fontWeight: FontWeight.w700)))
+                    ? Center(child: Text(_gl(lang,'İletilebilecek başka sohbet yok.','There are no other chats to forward to.'), style: const TextStyle(color: _muted, fontWeight: FontWeight.w700)))
                     : ListView.separated(
                         padding: const EdgeInsets.symmetric(vertical: 6),
                         itemCount: rows.length,
