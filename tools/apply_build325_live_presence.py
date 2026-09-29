@@ -220,39 +220,44 @@ main=rep(
 
 main=rep(
     main,
-    """              GestureDetector(
-                onTap:paylasanProfiliAc,
-                child:CircleAvatar(
-                  radius:27,
-                  backgroundColor:mavi,
-                  child:CircleAvatar(
-                    radius:23,
-                    backgroundColor:panel,
-                    backgroundImage:profilFoto.isEmpty?null:NgelXAgImageProvider(profilFoto),
-                    child:profilFoto.isNotEmpty?null:const Text('N',style:TextStyle(fontWeight:FontWeight.bold)),
-                  ),
-                ),
-              ),""",
-    """              GestureDetector(
-                onTap:paylasanProfiliAc,
-                child:Stack(clipBehavior:Clip.none,alignment:Alignment.center,children:[
-                  CircleAvatar(
-                    radius:28,
-                    backgroundColor:profilCanli?const Color(0xFFFF1744):mavi,
-                    child:CircleAvatar(
-                      radius:23,
-                      backgroundColor:panel,
-                      backgroundImage:profilFoto.isEmpty?null:NgelXAgImageProvider(profilFoto),
-                      child:profilFoto.isNotEmpty?null:const Text('N',style:TextStyle(fontWeight:FontWeight.bold)),
+    """                GestureDetector(
+                  onTap: paylasanProfiliAc,
+                  child: CircleAvatar(
+                    radius: 27,
+                    backgroundColor: mavi,
+                    child: CircleAvatar(
+                      radius: 23,
+                      backgroundColor: panel,
+                      backgroundImage: profilFoto.isEmpty ? null : NgelXAgImageProvider(profilFoto),
+                      child: profilFoto.isNotEmpty ? null : const Text(
+                        'N',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
                   ),
-                  if(profilCanli)Positioned(bottom:-5,child:Container(
-                    padding:const EdgeInsets.symmetric(horizontal:6,vertical:2),
-                    decoration:BoxDecoration(color:const Color(0xFFFF1744),borderRadius:BorderRadius.circular(7),border:Border.all(color:Colors.white,width:1)),
-                    child:const Text('CANLI',style:TextStyle(color:Colors.white,fontSize:8,fontWeight:FontWeight.w900)),
-                  )),
-                ]),
-              ),""",
+                ),""",
+    """                GestureDetector(
+                  onTap: paylasanProfiliAc,
+                  child:Stack(clipBehavior:Clip.none,alignment:Alignment.center,children:[
+                    CircleAvatar(
+                      radius:28,
+                      backgroundColor:profilCanli?const Color(0xFFFF1744):mavi,
+                      child:CircleAvatar(
+                        radius:23,
+                        backgroundColor:panel,
+                        backgroundImage:profilFoto.isEmpty?null:NgelXAgImageProvider(profilFoto),
+                        child:profilFoto.isNotEmpty?null:const Text('N',style:TextStyle(fontWeight:FontWeight.bold)),
+                      ),
+                    ),
+                    if(profilCanli)Positioned(bottom:-5,child:Container(
+                      padding:const EdgeInsets.symmetric(horizontal:6,vertical:2),
+                      decoration:BoxDecoration(color:const Color(0xFFFF1744),borderRadius:BorderRadius.circular(7),border:Border.all(color:Colors.white,width:1)),
+                      child:const Text('CANLI',style:TextStyle(color:Colors.white,fontSize:8,fontWeight:FontWeight.w900)),
+                    )),
+                  ]),
+                ),""",
     "video feed live ring",
 )
 
