@@ -17,8 +17,20 @@ const List<NgelXKameraFiltre> ngelxKameraFiltreleri=[
     1.12,0,0,0,4, 0,1.06,0,0,2, 0,0,1.10,0,2, 0,0,0,1,0,
   ],doygunluk:1.18),
   NgelXKameraFiltre('Portre',<double>[
-    1.05,0,0,0,5, 0,1.01,0,0,3, 0,0,.96,0,1, 0,0,0,1,0,
-  ],parlaklik:1.04,doygunluk:1.04,sicaklik:.08),
+    1.04,0,0,0,5, 0,1.02,0,0,4, 0,0,.98,0,2, 0,0,0,1,0,
+  ],parlaklik:1.04,doygunluk:1.03,sicaklik:.06),
+  NgelXKameraFiltre('Clean',<double>[
+    1.03,0,0,0,4, 0,1.03,0,0,4, 0,0,1.02,0,3, 0,0,0,1,0,
+  ],parlaklik:1.05,doygunluk:1.02),
+  NgelXKameraFiltre('Soft',<double>[
+    1.02,0,0,0,7, 0,1.01,0,0,6, 0,0,1.00,0,5, 0,0,0,1,0,
+  ],parlaklik:1.06,doygunluk:.98,sicaklik:.04),
+  NgelXKameraFiltre('Glow',<double>[
+    1.05,0,0,0,8, 0,1.03,0,0,6, 0,0,1.01,0,4, 0,0,0,1,0,
+  ],parlaklik:1.07,doygunluk:1.05,sicaklik:.05),
+  NgelXKameraFiltre('HD',<double>[
+    1.06,0,0,0,2, 0,1.05,0,0,2, 0,0,1.06,0,2, 0,0,0,1,0,
+  ],parlaklik:1.02,doygunluk:1.06),
   NgelXKameraFiltre('Sıcak',<double>[
     1.10,0,0,0,5, 0,1.03,0,0,2, 0,0,.92,0,-2, 0,0,0,1,0,
   ],sicaklik:.18),
@@ -80,27 +92,26 @@ class _NgelXCameraStudioPageState extends State<NgelXCameraStudioPage> with Widg
 
   Future<void> _kontroluKur(CameraDescription kamera)async{
     final eski=kontrol;
-    final yeni=CameraController(
-      kamera,
-      ResolutionPreset.high,
-      enableAudio:video,
-      imageFormatGroup:ImageFormatGroup.jpeg,
-    );
-    kontrol=yeni;
+    kontrol=null;
+    if(mounted)setState(()=>hazirlaniyor=true);
+    if(eski!=null){
+      try{await eski.dispose();}catch(_){}
+      await Future<void>.delayed(const Duration(milliseconds:140));
+    }
+    final yeni=CameraController(kamera,ResolutionPreset.high,enableAudio:video,imageFormatGroup:ImageFormatGroup.jpeg);
     try{
       await yeni.initialize();
-      minZoom=await yeni.getMinZoomLevel();
-      maxZoom=await yeni.getMaxZoomLevel();
+      minZoom=await yeni.getMinZoomLevel();maxZoom=await yeni.getMaxZoomLevel();
       zoom=zoom.clamp(minZoom,maxZoom).toDouble();
-      await yeni.setZoomLevel(zoom);
-      await yeni.setFlashMode(flash);
+      try{await yeni.setZoomLevel(zoom);}catch(_){}
+      try{await yeni.setFlashMode(kamera.lensDirection==CameraLensDirection.front?FlashMode.off:flash);}catch(_){}
+      if(!mounted){await yeni.dispose();return;}
+      kontrol=yeni;
+      setState(()=>hazirlaniyor=false);
+    }catch(e){
+      try{await yeni.dispose();}catch(_){}
       if(mounted)setState(()=>hazirlaniyor=false);
-    }catch(_){
-      if(identical(kontrol,yeni))kontrol=null;
-      await yeni.dispose();
       rethrow;
-    }finally{
-      if(eski!=null&&eski!=yeni)await eski.dispose();
     }
   }
 
@@ -120,13 +131,14 @@ class _NgelXCameraStudioPageState extends State<NgelXCameraStudioPage> with Widg
   }
 
   Future<void> _kameraCevir()async{
-    if(isleniyor||kayit||kameralar.length<2)return;
-    final mevcut=kontrol?.description;
-    int hedef=kameralar.indexWhere((k)=>k.lensDirection!=(mevcut?.lensDirection??CameraLensDirection.back));
+    if(isleniyor||kayit||hazirlaniyor||kameralar.length<2)return;
+    final mevcut=kontrol?.description.lensDirection??kameralar[kameraIndex].lensDirection;
+    final hedefYon=mevcut==CameraLensDirection.front?CameraLensDirection.back:CameraLensDirection.front;
+    var hedef=kameralar.indexWhere((k)=>k.lensDirection==hedefYon);
     if(hedef<0)hedef=(kameraIndex+1)%kameralar.length;
     kameraIndex=hedef;
-    setState(()=>hazirlaniyor=true);
-    try{await _kontroluKur(kameralar[kameraIndex]);}catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Kamera değiştirilemedi: $e')));}
+    try{await _kontroluKur(kameralar[hedef]);}
+    catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Kamera değiştirilemedi. Tekrar dene.')));}
   }
 
   Future<void> _flashDegistir()async{
