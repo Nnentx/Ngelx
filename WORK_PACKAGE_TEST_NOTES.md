@@ -1196,3 +1196,23 @@
 - Üret kamerası için özel NgelX kamera ekranı önerildi: ön/arka kamera çevirme, flaş, foto/video modu, 3/10 sn zamanlayıcı, ızgara, pinch zoom, oran seçimi, galeri kısayolu, çekim sonrası tekrar çek/kullan.
 - Video için ikinci aşama önerileri: 0.5x/1x/2x hız, kayıt sırasında müzik önizleme, duraklat/devam et, efekt/filtre.
 - Özel kamera geçişi mevcut image_picker sistem kamerasından ayrı ele alınacak; Android cihaz testleriyle güvenli biçimde eklenecek.
+
+
+## 2026-09-29 — Kamera / Canlı / Grup görüntülü arama filtre + rötuş paketi
+- TikTok benzeri, ancak NgelX tasarımında özgün kamera efekt paneli eklenecek.
+- Aynı ortak görüntü işleme katmanı şu üç alanda kullanılacak:
+  1) Üret kamerası (fotoğraf/video),
+  2) Canlı yayın,
+  3) Grup görüntülü arama.
+- Ön ve arka kamera için ayrı ayrı çalışacak; kamera çevrilince efekt/rötuş durumu korunacak ve yeni kameraya yeniden uygulanacak.
+- Temel kamera kontrolleri: ön/arka kamera çevirme, flaş, mikrofon, oran, zamanlayıcı, ızgara, yakınlaştırma, galeri kısayolu.
+- Rötuş kontrolleri: cilt yumuşatma, parlaklık, kontrast, sıcaklık, doygunluk, keskinlik, yüz aydınlatma ve hafif gölge dengesi.
+- Yüz rötuşu doğal sınırlar içinde olacak; varsayılan değerler düşük/orta, kullanıcı isterse kapatabilecek ve tek tuşla sıfırlayabilecek.
+- Filtre kategorileri: Doğal, Portre, Canlı, Sıcak, Soğuk, Sinematik, Retro, Siyah-beyaz, Gece, Yemek/ürün.
+- Filtre yoğunluğu 0–100 kaydırıcısıyla ayarlanacak; filtre seçimi ve yoğunluk canlı önizlemede anında gösterilecek.
+- Canlı yayın ve grup görüntülü aramada performans öncelikli hafif filtre seti kullanılacak; düşük cihazlarda otomatik kalite düşürme/efekt azaltma yapılacak.
+- Görüntülü aramada filtre/rötuş yalnızca yerel kamera görüntüsüne uygulanacak; karşı tarafın videosu değiştirilmeden gösterilecek.
+- Arka kamerada yüz rötuşu devre dışı/uygulanmaz durumda olacak; genel renk filtreleri çalışmaya devam edecek. Yüz algılanırsa rötuş opsiyonel devreye girebilir.
+- Kamera değiştirirken, uygulama arka plana giderken ve arama küçültülürken kamera/efekt yaşam döngüsü güvenli şekilde kapatılıp geri açılacak.
+- Filtre/rötuş tercihleri cihazda son kullanılan ayar olarak saklanabilir; her yeni canlı yayın/arama için kolayca sıfırlanabilir.
+- Bu özellikler Build 320 yenileme paketinden ayrı, sonraki Üret + Kamera Kalite paketinde uygulanacak.
