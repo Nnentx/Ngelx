@@ -8860,9 +8860,9 @@ class _YeniYuklePageState extends State<YuklePage> {
   Widget _cokluMedyaSirala(){
     if(tur!='photo'||medyalar.length<2)return const SizedBox.shrink();
     return Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-      const Padding(
-        padding:EdgeInsets.only(bottom:8),
-        child:Text(lt('Fotoğraf sırası','Photo order'),style:TextStyle(fontWeight:FontWeight.w800,color:Colors.black87)),
+      Padding(
+        padding:const EdgeInsets.only(bottom:8),
+        child:Text(lt('Fotoğraf sırası','Photo order'),style:const TextStyle(fontWeight:FontWeight.w800,color:Colors.black87)),
       ),
       SizedBox(
         height:76,
