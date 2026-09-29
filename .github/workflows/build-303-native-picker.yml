@@ -1,8 +1,6 @@
 name: NgelX Build 303 Native Picker
 
 on:
-  push:
-    branches: [work/v85-native-picker-hotfix]
   pull_request:
     branches: [work/v72-combined]
   workflow_dispatch:
