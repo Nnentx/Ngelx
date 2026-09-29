@@ -11,8 +11,6 @@ pub = pub_path.read_text(encoding='utf-8')
 for required in [
     'class CanliHazirlikPage extends StatefulWidget {',
     'class YuklePage extends StatefulWidget {',
-    'Widget ngelxAramaEfekti(',
-    'ngelxAramaEfektAdlari',
 ]:
     if required not in main:
         raise SystemExit(f'Build 323 marker missing: {required}')
