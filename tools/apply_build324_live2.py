@@ -28,7 +28,7 @@ live = rep(
     "preparation state",
 )
 
-live = rep(live, "    maxFrameRate: 30,\n", "    maxFrameRate: fps,\n", "fps camera options")
+live = rep(live, "    maxFrameRate: 30,\n", "    maxFrameRate: fps.toDouble(),\n", "fps camera options")
 
 live = rep(
     live,
