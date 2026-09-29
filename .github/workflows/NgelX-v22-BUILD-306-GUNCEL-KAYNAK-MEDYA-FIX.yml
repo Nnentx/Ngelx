@@ -44,22 +44,23 @@ jobs:
           grep -q 'android.intent.action.GET_CONTENT' app/android/app/src/main/AndroidManifest.xml
           grep -q 'android:icon="@drawable/ngelx_launcher_mark"' app/android/app/src/main/AndroidManifest.xml
 
-      - name: Kalici test imza anahtarini hazirla
+      - name: Sabit NgelX imza anahtarini geri yukle
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: ngelx-stable-debug-keystore-v1
+          fail-on-cache-miss: true
+
+      - name: Imza anahtarini dogrula
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p "$HOME/.android"
-          if [ ! -s "$HOME/.android/debug.keystore" ]; then
-            keytool -genkeypair -v \
-              -keystore "$HOME/.android/debug.keystore" \
-              -storepass android \
-              -alias androiddebugkey \
-              -keypass android \
-              -keyalg RSA \
-              -keysize 2048 \
-              -validity 10000 \
-              -dname "CN=Android Debug,O=Android,C=US"
-          fi
+          test -s "$HOME/.android/debug.keystore"
+          keytool -list -v \
+            -keystore "$HOME/.android/debug.keystore" \
+            -storepass android \
+            -alias androiddebugkey \
+            | grep -F 'SHA256: BE:20:B2:7F:0B:A1:F4:DE:CD:29:41:D4:10:B1:53:6D:E8:9E:48:DC:89:4F:04:F0:38:F9:D2:6B:11:EC:D6:AA'
 
       - name: Bagimliliklari al ve analiz et
         shell: bash
