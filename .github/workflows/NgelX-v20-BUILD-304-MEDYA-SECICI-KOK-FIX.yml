@@ -2,8 +2,6 @@ name: Ngel X v20 BUILD 304 MEDYA SECICI KOK FIX
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
 
 jobs:
   build:

@@ -2,8 +2,6 @@ name: Ngel X v21 BUILD 305 GUNCEL ARAYUZ MEDYA FIX
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
 
 jobs:
   build:
