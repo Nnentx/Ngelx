@@ -18,47 +18,43 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: work/live2-full-package
-      - name: Extract integration contexts
+      - name: Extract focused integration contexts
         shell: bash
         run: |
           python3 - <<'PY'
           from pathlib import Path
           import re
-          p=Path('app/lib/main.dart')
-          lines=p.read_text(encoding='utf-8').splitlines()
-          pats=[
-            r'Tanıtım', r'tanıtım', r'tanitim', r'intro', r'VideoPlayerController',
-            r'Takipçi', r'Etkileşim', r'Arkadaşlar', r'profil', r'Profil',
-            r'notifications', r'bildirim', r'Bildirim', r'avatar', r'photoUrl',
-            r'live_streams', r'CanliYayinPage', r'CanliHazirlikPage'
+          lines=Path('app/lib/main.dart').read_text(encoding='utf-8').splitlines()
+          needles=[
+            'addIntroVideo','changeIntroVideo','introVideo','intro_video','tanitim','tanıtım',
+            'KullaniciProfilPage','ProfilPage','Profilim','profileVideo',
+            'AktivitePage','sourceId','targetKind','eventKind','eventAction',
+            'uygulamaBildirimiGonder','photoUrl','CircleAvatar','_yayinIzle'
           ]
-          rx=[re.compile(x,re.I) for x in pats]
-          hits=[]
+          hit=set()
           for i,line in enumerate(lines):
-            if any(r.search(line) for r in rx):
-              hits.append(i)
-          # Merge nearby windows.
-          windows=[]
-          for i in hits:
-            a=max(0,i-12); b=min(len(lines),i+18)
-            if windows and a<=windows[-1][1]+4:
-              windows[-1]=(windows[-1][0],max(windows[-1][1],b))
-            else:
-              windows.append((a,b))
-          # Keep contexts most relevant, cap around 5000 lines.
+            low=line.lower()
+            if any(n.lower() in low for n in needles):
+              for j in range(max(0,i-45),min(len(lines),i+75)):
+                hit.add(j)
+          # Also include exact fixed ranges we already know are relevant.
+          for a,b in [(2320,2520),(5550,5880),(7150,7650),(8850,9100),(16300,18500),(18500,21500)]:
+            for j in range(max(0,a-1),min(len(lines),b)):
+              if any(n.lower() in lines[j].lower() for n in needles) or a in (2320,5550,7150,8850):
+                for k in range(max(0,j-35),min(len(lines),j+55)): hit.add(k)
+          ordered=sorted(hit)
           out=[]
-          count=0
-          for a,b in windows:
-            chunk=b-a
-            if count+chunk>5000: break
-            out.append(f'===== LINES {a+1}-{b} =====')
-            out.extend(f'{j+1:06d}: {lines[j]}' for j in range(a,b))
-            count+=chunk
-          Path('/tmp/build325-main-context.txt').write_text('\n'.join(out),encoding='utf-8')
-          print(f'hits={len(hits)} windows={len(windows)} exported_lines={count}')
+          last=None
+          for j in ordered:
+            if last is None or j>last+1:
+              out.append(f'===== LINES {j+1} =====')
+            out.append(f'{j+1:06d}: {lines[j]}')
+            last=j
+          Path('/tmp/build325-focused-context.txt').write_text('\n'.join(out),encoding='utf-8')
+          print('exported',len(ordered))
           PY
       - uses: actions/upload-artifact@v4
         with:
-          name: build325-main-context
-          path: /tmp/build325-main-context.txt
+          name: build325-focused-context
+          path: /tmp/build325-focused-context.txt
           retention-days: 1
