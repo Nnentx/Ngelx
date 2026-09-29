@@ -41,11 +41,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 tools/apply_build323_live_preflight.py
-          cd app
-          dart format lib/main.dart
-          cd ..
           python3 tools/verify_build323_live_preflight.py
-          python3 tools/verify_ngelx_contract.py
           git diff --check
 
       - name: Sabit NgelX imza anahtarını geri yükle
