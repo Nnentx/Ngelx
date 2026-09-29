@@ -92,8 +92,8 @@ const ngelxPrivateBlueCanvas = Color(0xFFF6FAFF);
 const ngelxPrivateBlueBorder = Color(0xFFD8E8FF);
 const ngelxPrivateBlueInk = Color(0xFF10213A);
 
-const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.90');
-const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '309');
+const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.91');
+const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '310');
 const ngelxGroupBorder = Color(0xFFD9EEE0);
 
 final GlobalKey<NavigatorState> ngelxNavigatorKey=GlobalKey<NavigatorState>();
@@ -1508,7 +1508,7 @@ Future<String> _ngelxMedyaYayininiDogrula(String rawUrl) async {
 }
 
 bool _ngelxFotoKind(String kind)=>const <String>{
-  'photos','profiles','stories','groups','chat-images','chat-backgrounds','support'
+  'photos','profiles','stories','groups','chats','chat-images','chat-backgrounds','support','thumbnails'
 }.contains(kind);
 
 Future<String> ngelxMedyaYukleBytes({
@@ -1676,25 +1676,12 @@ Future<String> ngelxFotografYukle({
   final ad=dosya.name.trim();
   final hamExt=(ext??(ad.contains('.')?ad.split('.').last:'jpg')).toLowerCase();
   final temizExt=_ngelxUzantiTemizle(hamExt);
-  final dogrudanUygun=const <String>{'jpg','jpeg','png','webp'}.contains(temizExt);
-  Object? ilkHata;
-
-  if(dogrudanUygun){
-    try{
-      return await ngelxMedyaYukleDosya(
-        dosya:dosya,
-        kind:kind,
-        ext:temizExt,
-        legacyPath:legacyPath,
-        onProgress:onProgress,
-      );
-    }catch(e){
-      ilkHata=e;
-    }
-  }
-
   try{
     final bytes=await dosya.readAsBytes();
+    if(bytes.isEmpty)throw Exception('Seçilen fotoğraf boş görünüyor.');
+    // Tüm fotoğraflar ortak byte hattından geçer. Bu hat gerçek baytları
+    // yeniden kodlayıp PNG olarak yükler; galeri JPG adı verip HEIC/WEBP
+    // baytı döndürse bile profil, grup, hikâye, sohbet ve akışta açılabilir.
     return await ngelxMedyaYukleBytes(
       bytes:bytes,
       kind:kind,
@@ -1703,8 +1690,7 @@ Future<String> ngelxFotografYukle({
       onProgress:onProgress,
     );
   }catch(e){
-    final ilk=ilkHata==null?'':(' | dosya: '+_ngelxKisaHata(ilkHata));
-    throw Exception('Fotoğraf yüklenemedi'+ilk+' | fallback: '+_ngelxKisaHata(e));
+    throw Exception('Fotoğraf yüklenemedi: '+_ngelxKisaHata(e));
   }
 }
 
@@ -5152,12 +5138,12 @@ class _GorselYaziKartiState extends State<GorselYaziKarti> {
               ?PageView.builder(
                   itemCount:fotoListesi.length,
                   onPageChanged:(i)=>setState(()=>medyaSayfasi=i),
-                  itemBuilder:(_,i)=>CachedNetworkImage(
-                    imageUrl:fotoListesi[i],
-                    fit:BoxFit.contain,
-                    placeholder:(_,__)=>const Center(child:CircularProgressIndicator(color:mavi)),
-                    errorWidget:(_,__,___)=>ngelxMedyaHataGorunumu(fotoListesi[i]),
-                  ),
+                  itemBuilder:(_,i)=>NgelXAgResmi(
+                url:fotoListesi[i],
+                fit:BoxFit.contain,
+                placeholder:const Center(child:CircularProgressIndicator(color:mavi)),
+                error:ngelxMedyaHataGorunumu(fotoListesi[i]),
+              ),
                 )
               :const ColoredBox(color:Color(0xFF09090F))
           else
