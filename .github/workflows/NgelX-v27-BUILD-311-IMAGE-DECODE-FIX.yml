@@ -1,0 +1,138 @@
+name: Ngel X v27 BUILD 311 IMAGE DECODE FIX
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - work/build311-image-decode-fix
+    paths:
+      - 'app/**'
+      - 'tools/apply_build311_image_decode_fix.py'
+      - 'tools/verify_build311_image_decode_fix.py'
+      - '.github/workflows/NgelX-v27-BUILD-311-IMAGE-DECODE-FIX.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+
+    steps:
+      - name: Kaynaklari al
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build 311 fotograf decode duzeltmesini uygula
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/apply_build311_image_decode_fix.py
+          python3 tools/verify_build311_image_decode_fix.py
+          git diff --check
+
+      - name: Medya servis sagligini kontrol et
+        shell: bash
+        run: |
+          set -euo pipefail
+          for url in             "https://ngelx-media.alihancaglar76.workers.dev/health"             "https://ngelx-upload.alihancaglar76.workers.dev/health"; do
+            body="$(curl --fail --silent --show-error --retry 4 --retry-all-errors --retry-delay 2 --connect-timeout 10 --max-time 25 "$url")"
+            echo "$body"
+            grep -q '"r2":true' <<<"$body"
+            grep -q '"directUpload":true' <<<"$body"
+          done
+
+      - name: Java 17 kur
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Flutter kur
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Sabit NgelX imza anahtarini geri yukle
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: ngelx-stable-debug-keystore-v1
+          fail-on-cache-miss: true
+
+      - name: Imza anahtarini dogrula
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s "$HOME/.android/debug.keystore"
+          keytool -list -v             -keystore "$HOME/.android/debug.keystore"             -storepass android             -alias androiddebugkey | tee /tmp/ngelx-key.txt
+          grep -F 'SHA256: BE:20:B2:7F:0B:A1:F4:DE:CD:29:41:D4:10:B1:53:6D:E8:9E:48:DC:89:4F:04:F0:38:F9:D2:6B:11:EC:D6:AA' /tmp/ngelx-key.txt
+
+      - name: Build 311 kaynak kontrolu
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q '^version: 1.0.92+311$' app/pubspec.yaml
+          grep -q "defaultValue: '1.0.92'" app/lib/main.dart
+          grep -q "defaultValue: '311'" app/lib/main.dart
+          grep -q 'Future<String> ngelxFotografYukle' app/lib/main.dart
+          grep -q 'contentType:tur' app/lib/main.dart
+          grep -q 'private fun normalizeImageToJpeg' app/android/app/src/main/kotlin/com/nnentx/ngelx_app/MainActivity.kt
+          grep -q 'ImageDecoder.createSource(contentResolver, uri)' app/android/app/src/main/kotlin/com/nnentx/ngelx_app/MainActivity.kt
+          test "$(wc -c < app/lib/main.dart)" -gt 1150000
+
+      - name: Bagimliliklari al ve analiz et
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter clean
+          flutter pub get
+          flutter analyze --machine > analyze.log 2>&1 || true
+          cat analyze.log
+          if grep -q '^ERROR|' analyze.log; then
+            echo 'Gercek Flutter analiz hatasi bulundu.' >&2
+            exit 1
+          fi
+
+      - name: APK olustur ve imzayi dogrula
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter build apk --release
+          APK=build/app/outputs/flutter-apk/app-release.apk
+          test -s "$APK"
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          test -n "$APKSIGNER"
+          "$APKSIGNER" verify --print-certs "$APK" | tee build/app/outputs/flutter-apk/apksigner-certs.txt
+          grep -qi 'be20b27f0ba1f4decd2941d410b1536de89e48dc894f04f038f9d26b11ecd6aa' build/app/outputs/flutter-apk/apksigner-certs.txt
+          sha256sum "$APK" > "$APK.sha256"
+
+      - name: Build 311 kaynak degisikliklerini branch'e kaydet
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- app/lib/main.dart app/pubspec.yaml app/android/app/src/main/kotlin/com/nnentx/ngelx_app/MainActivity.kt; then
+            echo "Kaynak zaten Build 311."
+            exit 0
+          fi
+          git config user.name "NgelX Build Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add app/lib/main.dart app/pubspec.yaml app/android/app/src/main/kotlin/com/nnentx/ngelx_app/MainActivity.kt
+          git commit -m "Build 311: apply Android image decode fix [skip ci]"
+          git push origin HEAD:work/build311-image-decode-fix
+
+      - name: APK yukle
+        uses: actions/upload-artifact@v4
+        with:
+          name: NgelX-1.0.92-Build-311-IMAGE-DECODE-FIX
+          path: |
+            app/build/app/outputs/flutter-apk/app-release.apk
+            app/build/app/outputs/flutter-apk/app-release.apk.sha256
+            app/build/app/outputs/flutter-apk/apksigner-certs.txt
+          if-no-files-found: error
+          retention-days: 14
