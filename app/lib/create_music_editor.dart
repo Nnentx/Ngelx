@@ -356,7 +356,7 @@ class _NgelXMuzikSecPageState extends State<NgelXMuzikSecPage> {
                                             color: const Color(0xFFF1EDFF),
                                             child: const Icon(Icons.music_note_rounded, color: Colors.black54),
                                           )
-                                        : CachedNetworkImage(
+                                        : NgelXAgResmi(
                                             imageUrl: kapak,
                                             width: 58,
                                             height: 58,
@@ -509,7 +509,7 @@ extension NgelXMuzikYayinArayuzu on _YeniYuklePageState {
             borderRadius:BorderRadius.circular(11),
             child:kapak.isEmpty
               ?Container(width:48,height:48,color:const Color(0xFFE3E5EA),child:const Icon(Icons.music_note_rounded))
-              :CachedNetworkImage(imageUrl:kapak,width:48,height:48,fit:BoxFit.cover,errorWidget:(_,__,___)=>Container(width:48,height:48,color:const Color(0xFFE3E5EA),child:const Icon(Icons.music_note_rounded))),
+              :NgelXAgResmi(imageUrl:kapak,width:48,height:48,fit:BoxFit.cover,errorWidget:(_,__,___)=>Container(width:48,height:48,color:const Color(0xFFE3E5EA),child:const Icon(Icons.music_note_rounded))),
           ),
           const SizedBox(width:10),
           Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
