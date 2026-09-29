@@ -7393,8 +7393,14 @@ jobs:
           cd ngelx_app
           dart format lib/main.dart
           flutter pub get
-          # Uyarilar derlemeyi durdurmaz; gercek analiz hatalari durdurur.
-          flutter analyze --no-fatal-infos --no-fatal-warnings
+          # Yeni Flutter surumleri yalnizca warning/info varken de 1 donebiliyor.
+          # Makine formatinda yalnizca gercek ERROR kayitlarini fatal say.
+          flutter analyze --machine > analyze.log || true
+          cat analyze.log
+          if grep -q '^ERROR|' analyze.log; then
+            echo 'Gercek Flutter analiz hatasi bulundu.' >&2
+            exit 1
+          fi
           grep -q 'ACTION_GET_CONTENT' android/app/src/main/kotlin/com/nnentx/ngelx_app/MainActivity.kt
           grep -q 'com.nnentx.ngelx_app/media' lib/main.dart
           # Tum ozellikler ortak secici servisinden gecmeli; dogrudan eski
