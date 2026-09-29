@@ -93,8 +93,8 @@ const ngelxPrivateBlueCanvas = Color(0xFFF6FAFF);
 const ngelxPrivateBlueBorder = Color(0xFFD8E8FF);
 const ngelxPrivateBlueInk = Color(0xFF10213A);
 
-const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.98');
-const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '317');
+const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.99');
+const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '318');
 const ngelxGroupBorder = Color(0xFFD9EEE0);
 
 final GlobalKey<NavigatorState> ngelxNavigatorKey=GlobalKey<NavigatorState>();
@@ -2236,6 +2236,16 @@ const ceviriler = <String, Map<String,String>>{
 
 };
 String t(String anahtar) => ceviriler[anahtar]?[uygulamaDili.value] ?? ceviriler[anahtar]?['tr'] ?? anahtar;
+
+String lt(String tr,String en,{String? de,String? ar,String? ru}){
+  switch(uygulamaDili.value){
+    case 'en': return en;
+    case 'de': return de??en;
+    case 'ar': return ar??en;
+    case 'ru': return ru??en;
+    default: return tr;
+  }
+}
 String tercihBasligi(String kod){
   switch(kod){
     case 'Gizlilik': return t('privacy');
@@ -9366,7 +9376,7 @@ class _MesajPageState extends State<MesajPage> {
       },SetOptions(merge:true));
     }else{
       final ayrilanAd=await ngelxCurrentDisplayName();
-      final olay=ayrilanAd+' gruptan ayrıldı.';
+      final olay=ayrilanAd+lt(' gruptan ayrıldı.',' left the group.');
       try{
         await ref.collection('messages').add({
           'senderId':ben,
@@ -9690,7 +9700,7 @@ Future<void> ngelxGrupDavetMetaSenkronla(DocumentReference<Map<String,dynamic>> 
     if(code.isEmpty||v['isGroup']!=true||v['groupDeleted']==true)return;
     await FirebaseFirestore.instance.collection('group_invites').doc(code).set({
       'chatId':chatRef.id,
-      'groupName':(v['groupName']??'Grup').toString(),
+      'groupName':(v['groupName']??lt('Grup','Group')).toString(),
       'groupPhotoUrl':(v['groupPhotoUrl']??'').toString(),
       'joinApproval':v['joinApproval']==true,
       'admins':List<String>.from(v['admins']??const[]),
@@ -11194,9 +11204,9 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
     }else if(sec=='reply'){
       await grupYanitiHazirla(d);
     }else if(sec=='forward'){
-      await showGroupForwardSheet(context:context,sourceChatId:widget.chatId,sourceMessageId:d.id,sourceMessage:v);
+      await showGroupForwardSheet(lang:uygulamaDili.value,context:context,sourceChatId:widget.chatId,sourceMessageId:d.id,sourceMessage:v);
     }else if(sec=='info'){
-      final me=uid;if(me!=null)await showGroupMessageInfo(context:context,chatRef:chatRef,message:v,currentUid:me);
+      final me=uid;if(me!=null)await showGroupMessageInfo(lang:uygulamaDili.value,context:context,chatRef:chatRef,message:v,currentUid:me);
     }else if(sec=='pin'){
       final yeniDurum=v['pinned']!=true;
       try{
@@ -11325,7 +11335,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
   );
 
   Future<void> stickerGonder()async{
-    final sticker=await showGroupStickerPicker(context);
+    final sticker=await showGroupStickerPicker(context,lang:uygulamaDili.value);
     if(sticker==null||sticker.isEmpty)return;
     await payloadGonder({'type':'sticker','sticker':sticker},'Çıkartma '+sticker);
   }
@@ -11991,7 +12001,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
             return InkWell(
               onTap:gorulenIds.isEmpty?null:(){
                 final me=uid;
-                if(me!=null)unawaited(showGroupMessageInfo(context:context,chatRef:chatRef,message:v,currentUid:me));
+                if(me!=null)unawaited(showGroupMessageInfo(lang:uygulamaDili.value,context:context,chatRef:chatRef,message:v,currentUid:me));
               },
               borderRadius:BorderRadius.circular(18),
               child:Padding(
@@ -14940,12 +14950,12 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
           'type':'system',
           'systemAction':'member_left',
           'actorUid':me,
-          'text':ad+' gruptan ayrıldı.',
+          'text':ad+lt(' gruptan ayrıldı.',' left the group.'),
           'createdAt':FieldValue.serverTimestamp(),
         });
       }catch(_){}
       final ayrilanAd=await ngelxCurrentDisplayName();
-      final olay=ayrilanAd+' gruptan ayrıldı.';
+      final olay=ayrilanAd+lt(' gruptan ayrıldı.',' left the group.');
       await ref.update({
         'members':FieldValue.arrayRemove([me]),
         'admins':FieldValue.arrayRemove([me]),
@@ -14980,7 +14990,7 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
   })async{
     if(alan=='onlyAdminsCanAddMembers'){
       await ayarDegistir(alan,true);
-      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Üye ekleme yalnızca kurucu ve yöneticilere açıktır.')));
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(lt('Üye ekleme yalnızca kurucu ve yöneticilere açıktır.','Only the creator and admins can add members.'))));
       return;
     }
     final secim=await showModalBottomSheet<bool>(
@@ -15003,8 +15013,8 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
                   value:false,
                   groupValue:sadeceYoneticiler,
                   activeColor:ngelxGroupGreen,
-                  title:const Text('Herkes',style:TextStyle(color:Colors.black87,fontWeight:FontWeight.w900)),
-                  subtitle:const Text('Gruptaki tüm üyeler kullanabilir.',style:TextStyle(color:Color(0xFF5F5965),fontSize:11,fontWeight:FontWeight.w600)),
+                  title:Text(lt('Herkes','Everyone'),style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w900)),
+                  subtitle:Text(lt('Gruptaki tüm üyeler kullanabilir.','All group members can use this.'),style:const TextStyle(color:Color(0xFF5F5965),fontSize:11,fontWeight:FontWeight.w600)),
                   onChanged:(v)=>Navigator.pop(c,v),
                 ),
                 const Divider(height:1,indent:58,color:Color(0xFFF0EBF5)),
@@ -15012,8 +15022,8 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
                   value:true,
                   groupValue:sadeceYoneticiler,
                   activeColor:ngelxGroupGreen,
-                  title:const Text('Yalnızca yöneticiler',style:TextStyle(color:Colors.black87,fontWeight:FontWeight.w900)),
-                  subtitle:const Text('Bu işlem yönetici yetkisi gerektirir.',style:TextStyle(color:Color(0xFF5F5965),fontSize:11,fontWeight:FontWeight.w600)),
+                  title:Text(lt('Yalnızca yöneticiler','Admins only'),style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w900)),
+                  subtitle:Text(lt('Bu işlem yönetici yetkisi gerektirir.','This action requires admin permission.'),style:const TextStyle(color:Color(0xFF5F5965),fontSize:11,fontWeight:FontWeight.w600)),
                   onChanged:(v)=>Navigator.pop(c,v),
                 ),
               ]),
@@ -15044,7 +15054,7 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
         title:null,
         actions:[
           IconButton(
-            tooltip:'Grup ayarları',
+            tooltip:lt('Grup ayarları','Group settings'),
             onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupAyarlarPage(chatId:widget.chatId))),
             icon:const Icon(Icons.more_vert_rounded,color:Colors.black87),
           ),
@@ -15063,7 +15073,7 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
           final yonetici=yoneticiler.contains(ben)||kurucu==ben;
           final duzenleyebilir=yonetici;
           final foto=(v['groupPhotoUrl']??'').toString();
-          final ad=(v['groupName']??'Grup').toString();
+          final ad=(v['groupName']??lt('Grup','Group')).toString();
           return ListView(
             padding:EdgeInsets.fromLTRB(14,16,14,32+MediaQuery.paddingOf(context).bottom),
             children:[
@@ -15101,16 +15111,16 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
                     ],
                   ]),
                   const SizedBox(height:3),
-                  Text(uyeler.length.toString()+' üye',style:const TextStyle(color:ngelxPremiumMuted,fontSize:13,fontWeight:FontWeight.w700)),
+                  Text(uygulamaDili.value=='tr'?uyeler.length.toString()+' üye':uyeler.length.toString()+' members',style:const TextStyle(color:ngelxPremiumMuted,fontSize:13,fontWeight:FontWeight.w700)),
                   const SizedBox(height:16),
                   Row(children:[
-                    Expanded(child:_grupKisayol(Icons.person_add_alt_1_rounded,'Ekle',uyeler.length>=60?null:()=>uyeEkle(uyeler))),
+                    Expanded(child:_grupKisayol(Icons.person_add_alt_1_rounded,lt('Ekle','Add'),uyeler.length>=60?null:()=>uyeEkle(uyeler))),
                     const SizedBox(width:7),
-                    Expanded(child:_grupKisayol(Icons.text_fields_rounded,'Takma Adlar',()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupTakmaAdlarPage(chatId:widget.chatId))))),
+                    Expanded(child:_grupKisayol(Icons.text_fields_rounded,lt('Takma Adlar','Nicknames'),()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupTakmaAdlarPage(chatId:widget.chatId))))),
                     const SizedBox(width:7),
-                    Expanded(child:_grupKisayol(Icons.search_rounded,'Arama',()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>SohbetMesajAramaPage(chatId:widget.chatId,groupMode:true))))),
+                    Expanded(child:_grupKisayol(Icons.search_rounded,lt('Arama','Search'),()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>SohbetMesajAramaPage(chatId:widget.chatId,groupMode:true))))),
                     const SizedBox(width:7),
-                    Expanded(child:_grupKisayol(Icons.palette_rounded,'Özelleştir',()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupOzellestirPage(chatId:widget.chatId))))),
+                    Expanded(child:_grupKisayol(Icons.palette_rounded,lt('Özelleştir','Customize'),()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupOzellestirPage(chatId:widget.chatId))))),
                   ]),
                 ]),
               ),
@@ -15120,9 +15130,9 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
                 child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
                   Padding(
                     padding:const EdgeInsets.fromLTRB(6,2,6,8),
-                    child:Text(uyeler.length.toString()+' üye',style:const TextStyle(color:ngelxPremiumMuted,fontSize:15,fontWeight:FontWeight.w800)),
+                    child:Text(uygulamaDili.value=='tr'?uyeler.length.toString()+' üye':uyeler.length.toString()+' members',style:const TextStyle(color:ngelxPremiumMuted,fontSize:15,fontWeight:FontWeight.w800)),
                   ),
-                  _grupSatir(Icons.groups_rounded,'Sohbet üyelerini gör','Tüm üyeleri ve yöneticileri gör',()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupUyeleriPage(chatId:widget.chatId)))),
+                  _grupSatir(Icons.groups_rounded,lt('Sohbet üyelerini gör','View chat members'),lt('Tüm üyeleri ve yöneticileri gör','View all members and admins'),()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupUyeleriPage(chatId:widget.chatId)))),
                   _grupAyirici(),
                   StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
                     stream:ref.collection('joinRequests').snapshots(),
@@ -15132,8 +15142,8 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
                         onTap:yonetici?()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupKatilmaIstekleriPage(chatId:widget.chatId))):null,
                         contentPadding:const EdgeInsets.symmetric(horizontal:6,vertical:4),
                         leading:Container(width:42,height:42,decoration:BoxDecoration(color:ngelxGroupGreenSoft,borderRadius:BorderRadius.circular(14)),child:const Icon(Icons.how_to_reg_rounded,color:ngelxGroupGreen)),
-                        title:const Text('Davetler ve istekler',style:TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w900)),
-                        subtitle:Text(bekleyen==0?'Bekleyen istek yok':bekleyen.toString()+' katılma isteği bekliyor',style:const TextStyle(color:ngelxPremiumMuted,fontSize:11.5)),
+                        title:Text(lt('Davetler ve istekler','Invites and requests'),style:TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w900)),
+                        subtitle:Text(bekleyen==0?lt('Bekleyen istek yok','No pending requests'):(uygulamaDili.value=='tr'?bekleyen.toString()+' katılma isteği bekliyor':bekleyen.toString()+' join requests pending'),style:const TextStyle(color:ngelxPremiumMuted,fontSize:11.5)),
                         trailing:Row(mainAxisSize:MainAxisSize.min,children:[
                           if(bekleyen>0)Container(
                             margin:const EdgeInsets.only(right:7),
@@ -15153,7 +15163,7 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
                 padding:const EdgeInsets.fromLTRB(12,13,12,12),
                 onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupMedyaPage(chatId:widget.chatId))),
                 child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-                  const Text('Sohbet bilgileri',style:TextStyle(color:ngelxPremiumMuted,fontSize:16,fontWeight:FontWeight.w900)),
+                  Text(lt('Sohbet bilgileri','Chat information'),style:TextStyle(color:ngelxPremiumMuted,fontSize:16,fontWeight:FontWeight.w900)),
                   const SizedBox(height:10),
                   StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
                     stream:ref.collection('messages').orderBy('createdAt',descending:true).limit(30).snapshots(),
@@ -15165,7 +15175,7 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
                       if(medya.isEmpty)return Container(
                         height:94,width:double.infinity,alignment:Alignment.center,
                         decoration:BoxDecoration(color:const Color(0xFFF5F6F7),borderRadius:BorderRadius.circular(18)),
-                        child:const Text('Henüz paylaşılan fotoğraf yok.',style:TextStyle(color:ngelxPremiumMuted,fontWeight:FontWeight.w700)),
+                        child:Text(lt('Henüz paylaşılan fotoğraf yok.','No photos shared yet.'),style:TextStyle(color:ngelxPremiumMuted,fontWeight:FontWeight.w700)),
                       );
                       return SizedBox(
                         height:150,
@@ -15211,29 +15221,29 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
                 padding:const EdgeInsets.symmetric(horizontal:8,vertical:7),
                 child:Column(children:[
                   if(duzenleyebilir)...[
-                    _grupSatir(Icons.photo_camera_rounded,'Grup fotoğrafını değiştir','Kamera veya galeriden yeni görsel seç',fotografDuzenle),
+                    _grupSatir(Icons.photo_camera_rounded,lt('Grup fotoğrafını değiştir','Change group photo'),lt('Kamera veya galeriden yeni görsel seç','Choose a new image from camera or gallery'),fotografDuzenle),
                     _grupAyirici(),
-                    _grupSatir(Icons.notes_rounded,'Grup açıklamasını düzenle','Grubun amacını ve bilgisini güncelle',()=>aciklamaDuzenle((v['groupDescription']??'').toString())),
+                    _grupSatir(Icons.notes_rounded,lt('Grup açıklamasını düzenle','Edit group description'),lt('Grubun amacını ve bilgisini güncelle','Update the group purpose and information'),()=>aciklamaDuzenle((v['groupDescription']??'').toString())),
                     _grupAyirici(),
                   ],
-                  _grupSatir(Icons.link_rounded,'Davet bağlantısı','Bağlantıyı paylaş veya yenile',()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupDavetPage(chatId:widget.chatId)))),
+                  _grupSatir(Icons.link_rounded,lt('Davet bağlantısı','Invite link'),lt('Bağlantıyı paylaş veya yenile','Share or refresh the link'),()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupDavetPage(chatId:widget.chatId)))),
                   if(yonetici)...[
                     _grupAyirici(),
-                    _grupSatir(Icons.how_to_reg_rounded,'Katılma istekleri','Bekleyen istekleri yönet',()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupKatilmaIstekleriPage(chatId:widget.chatId)))),
+                    _grupSatir(Icons.how_to_reg_rounded,lt('Katılma istekleri','Join requests'),lt('Bekleyen istekleri yönet','Manage pending requests'),()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupKatilmaIstekleriPage(chatId:widget.chatId)))),
                   ],
                   _grupAyirici(),
-                  _grupSatir(Icons.photo_library_outlined,'Medya ve bağlantılar','Paylaşılan fotoğraf, video ve bağlantılar',()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupMedyaPage(chatId:widget.chatId)))),
+                  _grupSatir(Icons.photo_library_outlined,lt('Medya ve bağlantılar','Media and links'),lt('Paylaşılan fotoğraf, video ve bağlantılar','Shared photos, videos and links'),()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupMedyaPage(chatId:widget.chatId)))),
                   _grupAyirici(),
-                  _grupSatir(Icons.push_pin_outlined,'Sabitlenen mesajlar','Önemli mesajlara hızlı ulaş',()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>SabitlenenGrupMesajlariPage(chatId:widget.chatId)))),
+                  _grupSatir(Icons.push_pin_outlined,lt('Sabitlenen mesajlar','Pinned messages'),lt('Önemli mesajlara hızlı ulaş','Quickly access important messages'),()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>SabitlenenGrupMesajlariPage(chatId:widget.chatId)))),
                 ]),
               ),
               const SizedBox(height:14),
               NgelXPremiumCard(
                 padding:const EdgeInsets.fromLTRB(12,13,12,7),
                 child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-                  const Padding(padding:EdgeInsets.symmetric(horizontal:6),child:Text('Bildirimler',style:TextStyle(color:ngelxGroupGreen,fontSize:17,fontWeight:FontWeight.w900))),
+                  Padding(padding:const EdgeInsets.symmetric(horizontal:6),child:Text(lt('Bildirimler','Notifications'),style:TextStyle(color:ngelxGroupGreen,fontSize:17,fontWeight:FontWeight.w900))),
                   const SizedBox(height:6),
-                  _grupSwitch(Icons.notifications_off_outlined,'Bildirimleri sessize al','Bu gruptan yeni mesaj bildirimi alma',List<String>.from(v['mutedFor']??const[]).contains(ben),bildirimSessiz),
+                  _grupSwitch(Icons.notifications_off_outlined,lt('Bildirimleri sessize al','Mute notifications'),lt('Bu gruptan yeni mesaj bildirimi alma','Do not receive new message notifications from this group'),List<String>.from(v['mutedFor']??const[]).contains(ben),bildirimSessiz),
                 ]),
               ),
               if(yonetici)...[
@@ -15241,69 +15251,69 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
                 NgelXPremiumCard(
                   padding:const EdgeInsets.fromLTRB(12,13,12,7),
                   child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-                    const Padding(padding:EdgeInsets.symmetric(horizontal:6),child:Text('Grup ayarları',style:TextStyle(color:ngelxGroupGreen,fontSize:17,fontWeight:FontWeight.w900))),
+                    Padding(padding:const EdgeInsets.symmetric(horizontal:6),child:Text(lt('Grup ayarları','Group settings'),style:TextStyle(color:ngelxGroupGreen,fontSize:17,fontWeight:FontWeight.w900))),
                     const SizedBox(height:6),
                     _grupSatir(
                       Icons.chat_bubble_outline_rounded,
-                      'Kimler mesaj gönderebilir?',
-                      v['onlyAdminsCanPost']==true?'Yalnızca yöneticiler':'Herkes',
+                      lt('Kimler mesaj gönderebilir?','Who can send messages?'),
+                      v['onlyAdminsCanPost']==true?lt('Yalnızca yöneticiler','Admins only'):lt('Herkes','Everyone'),
                       ()=>grupIzinSec(
                         alan:'onlyAdminsCanPost',
-                        baslik:'Kimler mesaj gönderebilir?',
-                        aciklama:'Grup sohbetine kimlerin mesaj gönderebileceğini seç.',
+                        baslik:lt('Kimler mesaj gönderebilir?','Who can send messages?'),
+                        aciklama:lt('Grup sohbetine kimlerin mesaj gönderebileceğini seç.','Choose who can send messages in the group chat.'),
                         sadeceYoneticiler:v['onlyAdminsCanPost']==true,
                       ),
                     ),
                     _grupAyirici(),
                     _grupSatir(
                       Icons.person_add_alt_1_rounded,
-                      'Kimler kişi ekleyebilir?',
-                      v['onlyAdminsCanAddMembers']==true?'Yalnızca yöneticiler':'Herkes',
+                      lt('Kimler kişi ekleyebilir?','Who can add people?'),
+                      v['onlyAdminsCanAddMembers']==true?lt('Yalnızca yöneticiler','Admins only'):lt('Herkes','Everyone'),
                       ()=>grupIzinSec(
                         alan:'onlyAdminsCanAddMembers',
-                        baslik:'Kimler kişi ekleyebilir?',
-                        aciklama:'Gruba yeni üye ekleme yetkisini belirle.',
+                        baslik:lt('Kimler kişi ekleyebilir?','Who can add people?'),
+                        aciklama:lt('Gruba yeni üye ekleme yetkisini belirle.','Choose who can add new members to the group.'),
                         sadeceYoneticiler:v['onlyAdminsCanAddMembers']==true,
                       ),
                     ),
                     _grupAyirici(),
                     _grupSatir(
                       Icons.edit_outlined,
-                      'Kimler grup bilgisini düzenleyebilir?',
-                      v['onlyAdminsCanEditGroup']!=false?'Yalnızca yöneticiler':'Herkes',
+                      lt('Kimler grup bilgisini düzenleyebilir?','Who can edit group info?'),
+                      v['onlyAdminsCanEditGroup']!=false?lt('Yalnızca yöneticiler','Admins only'):lt('Herkes','Everyone'),
                       ()=>grupIzinSec(
                         alan:'onlyAdminsCanEditGroup',
-                        baslik:'Kimler grup bilgisini düzenleyebilir?',
-                        aciklama:'Grup adı, fotoğrafı ve açıklamasını kimlerin değiştirebileceğini seç.',
+                        baslik:lt('Kimler grup bilgisini düzenleyebilir?','Who can edit group info?'),
+                        aciklama:lt('Grup adı, fotoğrafı ve açıklamasını kimlerin değiştirebileceğini seç.','Choose who can change the group name, photo and description.'),
                         sadeceYoneticiler:v['onlyAdminsCanEditGroup']!=false,
                       ),
                     ),
                     _grupAyirici(),
                     _grupSatir(
                       Icons.push_pin_outlined,
-                      'Kimler mesaj sabitleyebilir?',
-                      v['onlyAdminsCanPin']!=false?'Yalnızca yöneticiler':'Herkes',
+                      lt('Kimler mesaj sabitleyebilir?','Who can pin messages?'),
+                      v['onlyAdminsCanPin']!=false?lt('Yalnızca yöneticiler','Admins only'):lt('Herkes','Everyone'),
                       ()=>grupIzinSec(
                         alan:'onlyAdminsCanPin',
-                        baslik:'Kimler mesaj sabitleyebilir?',
-                        aciklama:'Önemli mesajları grubun üst kısmına kimlerin sabitleyebileceğini seç.',
+                        baslik:lt('Kimler mesaj sabitleyebilir?','Who can pin messages?'),
+                        aciklama:lt('Önemli mesajları grubun üst kısmına kimlerin sabitleyebileceğini seç.','Choose who can pin important messages to the top of the group.'),
                         sadeceYoneticiler:v['onlyAdminsCanPin']!=false,
                       ),
                     ),
                     _grupAyirici(),
                     _grupSatir(
                       Icons.alternate_email_rounded,
-                      'Kimler @herkes kullanabilir?',
-                      v['onlyAdminsCanMentionAll']==true?'Yalnızca yöneticiler':'Herkes',
+                      lt('Kimler @herkes kullanabilir?','Who can use @everyone?'),
+                      v['onlyAdminsCanMentionAll']==true?lt('Yalnızca yöneticiler','Admins only'):lt('Herkes','Everyone'),
                       ()=>grupIzinSec(
                         alan:'onlyAdminsCanMentionAll',
-                        baslik:'Kimler @herkes kullanabilir?',
-                        aciklama:'Tüm gruba aynı anda bildirim gönderebilecek kişileri seç.',
+                        baslik:lt('Kimler @herkes kullanabilir?','Who can use @everyone?'),
+                        aciklama:lt('Tüm gruba aynı anda bildirim gönderebilecek kişileri seç.','Choose who can notify the whole group at once.'),
                         sadeceYoneticiler:v['onlyAdminsCanMentionAll']==true,
                       ),
                     ),
-                    _grupSwitch(Icons.history_rounded,'Yeni üyeler geçmişi görsün','Yeni üyeler eski mesajları görebilir',v['newMembersSeeHistory']!=false,(x)=>ayarDegistir('newMembersSeeHistory',x)),
-                    _grupSwitch(Icons.verified_user_outlined,'Katılma isteğini onayla','Yeni katılım istekleri yönetici onayından geçer',v['joinApproval']==true,(x)=>ayarDegistir('joinApproval',x)),
+                    _grupSwitch(Icons.history_rounded,lt('Yeni üyeler geçmişi görsün','New members can see history'),lt('Yeni üyeler eski mesajları görebilir','New members can see previous messages'),v['newMembersSeeHistory']!=false,(x)=>ayarDegistir('newMembersSeeHistory',x)),
+                    _grupSwitch(Icons.verified_user_outlined,lt('Katılma isteğini onayla','Approve join requests'),lt('Yeni katılım istekleri yönetici onayından geçer','New join requests require admin approval'),v['joinApproval']==true,(x)=>ayarDegistir('joinApproval',x)),
                   ]),
                 ),
               ],
@@ -15317,7 +15327,7 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
                   child:Row(children:[
                     const Icon(Icons.exit_to_app_rounded,color:Color(0xFFE73D4F)),
                     const SizedBox(width:12),
-                    Expanded(child:Text(uyeler.length==1?'Grubu sil':'Gruptan ayrıl',style:const TextStyle(color:Color(0xFFE73D4F),fontWeight:FontWeight.w900))),
+                    Expanded(child:Text(uyeler.length==1?lt('Grubu sil','Delete group'):lt('Gruptan ayrıl','Leave group'),style:const TextStyle(color:Color(0xFFE73D4F),fontWeight:FontWeight.w900))),
                     const Icon(Icons.chevron_right_rounded,color:Color(0xFFE73D4F)),
                   ]),
                 ),
@@ -15876,7 +15886,7 @@ class GrupAyarlarPage extends StatelessWidget{
         stream:ref.snapshots(),
         builder:(_,snap){
           final v=snap.data?.data()??<String,dynamic>{},uid=me!;
-          final ad=(v['groupName']??'Grup').toString();
+          final ad=(v['groupName']??lt('Grup','Group')).toString();
           final sessiz=List<String>.from(v['mutedFor']??const[]).contains(uid);
           final read=v['readReceipts_'+uid]!=false;
           final typing=v['typingIndicator_'+uid]!=false;
@@ -16182,7 +16192,7 @@ class _GrupDavetPageState extends State<GrupDavetPage>{
     try{
       var d=await ref.get(),v=d.data()??<String,dynamic>{};
       final me=FirebaseAuth.instance.currentUser?.uid;
-      ad=(v['groupName']??'Grup').toString();
+      ad=(v['groupName']??lt('Grup','Group')).toString();
       yonetici=List<String>.from(v['admins']??const[]).contains(me)||(v['createdBy']??'').toString()==me;
       kod=(v['inviteCode']??'').toString();
       if(kod.isEmpty){
@@ -16401,7 +16411,7 @@ class GrupKatilmaIstekleriPage extends StatelessWidget{
       backgroundColor:const Color(0xFFFBF9FF),
       appBar:AppBar(
         backgroundColor:Colors.transparent,surfaceTintColor:Colors.transparent,elevation:0,
-        title:const Text('Davetler ve istekler',style:TextStyle(fontWeight:FontWeight.w900,color:ngelxPremiumInk)),
+        title:Text(lt('Davetler ve istekler','Invites and requests'),style:TextStyle(fontWeight:FontWeight.w900,color:ngelxPremiumInk)),
         flexibleSpace:Container(decoration:const BoxDecoration(gradient:LinearGradient(colors:[Color(0xFFFFFFFF),Color(0xFFF5EFFF)]),borderRadius:BorderRadius.vertical(bottom:Radius.circular(24)))),
       ),
       body:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
@@ -19647,7 +19657,7 @@ class OrtakGruplarPage extends StatelessWidget{
           return ListView.separated(
             padding:const EdgeInsets.all(12),itemCount:docs.length,separatorBuilder:(_,__)=>const Divider(),
             itemBuilder:(_,i){
-              final d=docs[i],v=d.data(),foto=(v['groupPhotoUrl']??'').toString(),ad=(v['groupName']??'Grup').toString();
+              final d=docs[i],v=d.data(),foto=(v['groupPhotoUrl']??'').toString(),ad=(v['groupName']??lt('Grup','Group')).toString();
               return ListTile(
                 leading:CircleAvatar(backgroundImage:foto.isEmpty?null:NgelXAgImageProvider(foto),child:foto.isEmpty?const Icon(Icons.groups):null),
                 title:Text(ad,style:const TextStyle(fontWeight:FontWeight.w800)),
