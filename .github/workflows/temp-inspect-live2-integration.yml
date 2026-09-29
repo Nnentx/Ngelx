@@ -1,0 +1,64 @@
+name: NgelX TEMP inspect LIVE2 integration
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - work/live2-full-package
+    paths:
+      - '.github/workflows/temp-inspect-live2-integration.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: work/live2-full-package
+      - name: Extract integration contexts
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          p=Path('app/lib/main.dart')
+          lines=p.read_text(encoding='utf-8').splitlines()
+          pats=[
+            r'Tanıtım', r'tanıtım', r'tanitim', r'intro', r'VideoPlayerController',
+            r'Takipçi', r'Etkileşim', r'Arkadaşlar', r'profil', r'Profil',
+            r'notifications', r'bildirim', r'Bildirim', r'avatar', r'photoUrl',
+            r'live_streams', r'CanliYayinPage', r'CanliHazirlikPage'
+          ]
+          rx=[re.compile(x,re.I) for x in pats]
+          hits=[]
+          for i,line in enumerate(lines):
+            if any(r.search(line) for r in rx):
+              hits.append(i)
+          # Merge nearby windows.
+          windows=[]
+          for i in hits:
+            a=max(0,i-12); b=min(len(lines),i+18)
+            if windows and a<=windows[-1][1]+4:
+              windows[-1]=(windows[-1][0],max(windows[-1][1],b))
+            else:
+              windows.append((a,b))
+          # Keep contexts most relevant, cap around 5000 lines.
+          out=[]
+          count=0
+          for a,b in windows:
+            chunk=b-a
+            if count+chunk>5000: break
+            out.append(f'===== LINES {a+1}-{b} =====')
+            out.extend(f'{j+1:06d}: {lines[j]}' for j in range(a,b))
+            count+=chunk
+          Path('/tmp/build325-main-context.txt').write_text('\n'.join(out),encoding='utf-8')
+          print(f'hits={len(hits)} windows={len(windows)} exported_lines={count}')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: build325-main-context
+          path: /tmp/build325-main-context.txt
+          retention-days: 1
