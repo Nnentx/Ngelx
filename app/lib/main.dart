@@ -97,8 +97,8 @@ const ngelxPrivateBlueCanvas = Color(0xFFF6FAFF);
 const ngelxPrivateBlueBorder = Color(0xFFD8E8FF);
 const ngelxPrivateBlueInk = Color(0xFF10213A);
 
-const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.105');
-const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '324');
+const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.106');
+const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '325');
 const ngelxGroupBorder = Color(0xFFD9EEE0);
 
 final GlobalKey<NavigatorState> ngelxNavigatorKey=GlobalKey<NavigatorState>();
@@ -2350,6 +2350,48 @@ Future<void> ngelxBatchCommitDogrula({
   }
 }
 
+Future<void> ngelxCanliYayinaKatil(BuildContext context,String belgeId)async{
+  if(belgeId.isEmpty||await misafirEngeli(context))return;
+  final user=FirebaseAuth.instance.currentUser;
+  if(user==null)return;
+  lk.Room? oda;
+  try{
+    final belge=await FirebaseFirestore.instance.collection('live_streams').doc(belgeId).get().timeout(const Duration(seconds:8));
+    final veri=belge.data()??<String,dynamic>{};
+    final roomName=(veri['roomName']??'').toString();
+    if(veri['active']!=true||roomName.isEmpty){
+      if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bu canlı yayın sona ermiş.')));
+      return;
+    }
+    final kaynak=lk.DevelopmentTokenSource(id:liveKitTestSunucuId);
+    final kimlik='${user.uid}-${DateTime.now().millisecondsSinceEpoch}';
+    final cevap=await kaynak.fetch(lk.TokenRequestOptions(
+      roomName:roomName,
+      participantIdentity:kimlik,
+      participantName:user.displayName?.isNotEmpty==true?user.displayName!:'NgelX izleyicisi',
+      participantAttributes:const {'role':'viewer'},
+    ));
+    oda=lk.Room(roomOptions:lk.RoomOptions(adaptiveStream:true,dynacast:true));
+    await oda.connect(cevap.serverUrl,cevap.participantToken);
+    if(!context.mounted){
+      await oda.disconnect();
+      await oda.dispose();
+      return;
+    }
+    Navigator.push(context,MaterialPageRoute(builder:(_)=>CanliYayinPage(
+      oda:oda!,
+      belgeId:belgeId,
+      baslik:(veri['title']??'NgelX canlı yayını').toString(),
+      yayinSahibi:false,
+      ownerId:(veri['ownerId']??'').toString(),
+      username:(veri['username']??'ngelx').toString(),
+    )));
+  }catch(e){
+    if(oda!=null){try{await oda.disconnect();await oda.dispose();}catch(_){}}
+    if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Canlı yayına şu anda bağlanılamadı.')));
+  }
+}
+
 String ngelxBildirimBelgeId(String raw){
   final temiz=raw.trim().replaceAll(RegExp(r'[^a-zA-Z0-9_-]'),'_');
   if(temiz.isEmpty)return '';
@@ -2379,6 +2421,7 @@ Future<void> uygulamaBildirimiGonder({
   final sosyalBildirimi=tur=='friend'||tur=='friend_request'||tur=='follow_request'||tur=='friend_accepted'||tur=='follow_accepted';
   final etkilesimBildirimi=tur=='interaction'||tur=='like'||tur=='comment';
   final aramaBildirimi=tur=='call';
+  final canliBildirimi=tur=='live'||olayTuru=='live_started';
   if(grupBildirimi){
     if(ayar['groupNotifications']==false)return;
   }else if(tur=='message'&&ayar['messageNotifications']==false){
@@ -2387,6 +2430,7 @@ Future<void> uygulamaBildirimiGonder({
   if(sosyalBildirimi&&ayar['friendNotifications']==false)return;
   if(etkilesimBildirimi&&ayar['interactionNotifications']==false)return;
   if(aramaBildirimi&&ayar['callNotifications']==false)return;
+  if(canliBildirimi&&ayar['liveNotifications']==false)return;
   final sessizeBagli=tur=='message'||tur=='call'||olayTuru=='group_message'||olayTuru=='group_mention';
   if(sessizeBagli&&belgeId!=null&&List<String>.from(ayar['mutedChats']??const[]).contains(belgeId)){
     final ham=(ayar['mutedChatUntil'] is Map)?(ayar['mutedChatUntil'] as Map)[belgeId]:null;
@@ -5238,6 +5282,9 @@ class _GorselYaziKartiState extends State<GorselYaziKarti> with RouteAware {
   bool _etkilesimlerIstendi = false;
   bool _profilFotoIstendi = false;
   String profilFoto = '';
+  bool profilCanli=false;
+  String profilCanliId='';
+  StreamSubscription<DocumentSnapshot<Map<String,dynamic>>>? _profilCanliAboneligi;
   int medyaSayfasi = 0;
   PageRoute<dynamic>? _rota;
   bool _rotaGorunur=true;
@@ -5294,11 +5341,16 @@ class _GorselYaziKartiState extends State<GorselYaziKarti> with RouteAware {
     _profilFotoIstendi=true;
     final owner=(widget.veri['ownerId']??'').trim();
     if(owner.isEmpty)return;
-    try{
-      final belge=await FirebaseFirestore.instance.collection('users').doc(owner).get();
+    await _profilCanliAboneligi?.cancel();
+    _profilCanliAboneligi=FirebaseFirestore.instance.collection('users').doc(owner).snapshots().listen((belge){
       if(!mounted)return;
-      setState(()=>profilFoto=(belge.data()?['photoUrl']??'').toString().trim());
-    }catch(_){}
+      final v=belge.data()??<String,dynamic>{};
+      setState((){
+        profilFoto=(v['photoUrl']??'').toString().trim();
+        profilCanli=v['isLive']==true&&(v['currentLiveId']??'').toString().isNotEmpty;
+        profilCanliId=(v['currentLiveId']??'').toString();
+      });
+    });
   }
 
   Future<void> etkilesimleriGetir() async {
@@ -5499,6 +5551,7 @@ class _GorselYaziKartiState extends State<GorselYaziKarti> with RouteAware {
   @override
   void dispose() {
     ngelxRouteObserver.unsubscribe(this);
+    unawaited(_profilCanliAboneligi?.cancel());
     oynatici?.dispose();
     super.dispose();
   }
@@ -5642,16 +5695,23 @@ class _GorselYaziKartiState extends State<GorselYaziKarti> with RouteAware {
             child: Column(children: [
               GestureDetector(
                 onTap:paylasanProfiliAc,
-                child:CircleAvatar(
-                  radius:27,
-                  backgroundColor:mavi,
-                  child:CircleAvatar(
-                    radius:23,
-                    backgroundColor:panel,
-                    backgroundImage:profilFoto.isEmpty?null:NgelXAgImageProvider(profilFoto),
-                    child:profilFoto.isNotEmpty?null:const Text('N',style:TextStyle(fontWeight:FontWeight.bold)),
+                child:Stack(clipBehavior:Clip.none,alignment:Alignment.center,children:[
+                  CircleAvatar(
+                    radius:28,
+                    backgroundColor:profilCanli?const Color(0xFFFF1744):mavi,
+                    child:CircleAvatar(
+                      radius:23,
+                      backgroundColor:panel,
+                      backgroundImage:profilFoto.isEmpty?null:NgelXAgImageProvider(profilFoto),
+                      child:profilFoto.isNotEmpty?null:const Text('N',style:TextStyle(fontWeight:FontWeight.bold)),
+                    ),
                   ),
-                ),
+                  if(profilCanli)Positioned(bottom:-5,child:Container(
+                    padding:const EdgeInsets.symmetric(horizontal:6,vertical:2),
+                    decoration:BoxDecoration(color:const Color(0xFFFF1744),borderRadius:BorderRadius.circular(7),border:Border.all(color:Colors.white,width:1)),
+                    child:const Text('CANLI',style:TextStyle(color:Colors.white,fontSize:8,fontWeight:FontWeight.w900)),
+                  )),
+                ]),
               ),
               const SizedBox(height:6),
               CanliSayacButonu(ref: FirebaseFirestore.instance.collection('videos').doc(icerikId).collection('likes'), ikon: begenildi ? Icons.favorite : Icons.favorite_border, renk: begenildi ? const Color(0xFFE6003C) : Colors.white, tiklama: begeniyiDegistir, uzunBasma:()async{await tepkiMenusu(context,icerikId);if(mounted)setState(()=>begenildi=true);},aktif:widget.aktif),
@@ -5745,6 +5805,9 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver,Rou
   bool _profilFotoIstendi=false;
   String? medyaHatasi;
   String profilFoto = '';
+  bool profilCanli=false;
+  String profilCanliId='';
+  StreamSubscription<DocumentSnapshot<Map<String,dynamic>>>? _profilCanliAboneligi;
   PageRoute<dynamic>? _rota;
   bool _rotaGorunur=true;
 
@@ -5851,13 +5914,17 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver,Rou
   Future<void> profilFotosunuGetir() async {
     if(_profilFotoIstendi)return;
     _profilFotoIstendi=true;
-    if (widget.ownerId.isEmpty) return;
-    final belge = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(widget.ownerId)
-        .get();
-    if (!mounted) return;
-    setState(() => profilFoto = (belge.data()?['photoUrl'] ?? '').toString());
+    if(widget.ownerId.isEmpty)return;
+    await _profilCanliAboneligi?.cancel();
+    _profilCanliAboneligi=FirebaseFirestore.instance.collection('users').doc(widget.ownerId).snapshots().listen((belge){
+      if(!mounted)return;
+      final v=belge.data()??<String,dynamic>{};
+      setState((){
+        profilFoto=(v['photoUrl']??'').toString();
+        profilCanli=v['isLive']==true&&(v['currentLiveId']??'').toString().isNotEmpty;
+        profilCanliId=(v['currentLiveId']??'').toString();
+      });
+    });
   }
 
   Future<void> etkilesimleriGetir() async {
@@ -6060,6 +6127,7 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver,Rou
     WidgetsBinding.instance.removeObserver(this);
     ngelxRouteObserver.unsubscribe(this);
     kontrol.removeListener(_kesimKontrol);
+    unawaited(_profilCanliAboneligi?.cancel());
     final p=muzikOynatici;
     if(p!=null)unawaited(p.dispose());
     kontrol.dispose();
@@ -6248,21 +6316,23 @@ Positioned(
               children: [
                 GestureDetector(
                   onTap: paylasanProfiliAc,
-                  child: CircleAvatar(
-                    radius: 27,
-                    backgroundColor: mavi,
-                    child: CircleAvatar(
-                      radius: 23,
-                      backgroundColor: panel,
-                      backgroundImage: profilFoto.isEmpty ? null : NgelXAgImageProvider(profilFoto),
-                      child: profilFoto.isNotEmpty ? null : const Text(
-                        'N',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                        ),
+                  child:Stack(clipBehavior:Clip.none,alignment:Alignment.center,children:[
+                    CircleAvatar(
+                      radius:28,
+                      backgroundColor:profilCanli?const Color(0xFFFF1744):mavi,
+                      child:CircleAvatar(
+                        radius:23,
+                        backgroundColor:panel,
+                        backgroundImage:profilFoto.isEmpty?null:NgelXAgImageProvider(profilFoto),
+                        child:profilFoto.isNotEmpty?null:const Text('N',style:TextStyle(fontWeight:FontWeight.bold)),
                       ),
                     ),
-                  ),
+                    if(profilCanli)Positioned(bottom:-5,child:Container(
+                      padding:const EdgeInsets.symmetric(horizontal:6,vertical:2),
+                      decoration:BoxDecoration(color:const Color(0xFFFF1744),borderRadius:BorderRadius.circular(7),border:Border.all(color:Colors.white,width:1)),
+                      child:const Text('CANLI',style:TextStyle(color:Colors.white,fontSize:8,fontWeight:FontWeight.w900)),
+                    )),
+                  ]),
                 ),
                 CanliSayacButonu(
         ref: FirebaseFirestore.instance.collection('videos').doc(videoId).collection('likes'),
@@ -9219,7 +9289,7 @@ class _MesajPageState extends State<MesajPage> {
             if(grup){final ad=(v['groupName']??t('groupChat')).toString(),foto=(v['groupPhotoUrl']??'').toString(),unread=(v['unread_$ben']??0) as int;return ListTile(onTap:()=>sohbetiAc(d.id,GrupSohbetPage(chatId:d.id,ad:ad,foto:foto)),onLongPress:()=>sohbetMenusu(context,d.id,grup:true),leading:CircleAvatar(backgroundColor:const Color(0xFFE9DDFF),backgroundImage:foto.isEmpty?null:NgelXAgImageProvider(foto),child:foto.isEmpty?const Icon(Icons.groups,color:mor):null),title:Text(ad,style:TextStyle(color:Colors.black87,fontWeight:unread>0?FontWeight.w900:FontWeight.w700)),subtitle:Text((v['lastMessage']??t('groupCreated')).toString(),maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black54)),trailing:Wrap(crossAxisAlignment:WrapCrossAlignment.center,children:[if(sabitSohbetler.contains(d.id))const Icon(Icons.push_pin,size:16,color:mor),if(sessizSohbetler.contains(d.id))const Icon(Icons.volume_off,size:18,color:Colors.black38),if(unread>0)Badge(label:Text('$unread'))]));}
             final other=members.firstWhere((x)=>x!=ben,orElse:()=>ben??'');
             if(engellenenler.contains(other))return const SizedBox.shrink();
-            return FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(future:_kullaniciGetir(other),builder:(_,u){
+            return StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(stream:FirebaseFirestore.instance.collection('users').doc(other).snapshots(),builder:(_,u){
               final p=u.data?.data()??{};
               if(p['deactivated']==true||List<String>.from(p['blocked']??const[]).contains(ben))return const SizedBox.shrink();
               final hamTakmalar=v['nicknames'],takmalar=hamTakmalar is Map?Map<String,dynamic>.from(hamTakmalar):<String,dynamic>{},takma=(ben==null?'':(takmalar[ben]??'').toString()).trim(),profilAdi=(p['displayName']??p['username']??'NgelX').toString(),gorunenAd=takma.isNotEmpty?takma:profilAdi;
@@ -9230,7 +9300,14 @@ class _MesajPageState extends State<MesajPage> {
               return ListTile(
                 onTap:()=>sohbetiAc(d.id,SohbetPage(chatId:d.id,digerUid:other,ad:gorunenAd,foto:(p['photoUrl']??'').toString())),
                 onLongPress:()=>sohbetMenusu(context,d.id),
-                leading:CircleAvatar(backgroundImage:(p['photoUrl']??'').toString().isEmpty?null:NgelXAgImageProvider(p['photoUrl'])),
+                leading:Stack(clipBehavior:Clip.none,alignment:Alignment.center,children:[
+                  Container(
+                    padding:EdgeInsets.all(p['isLive']==true?2.5:0),
+                    decoration:BoxDecoration(shape:BoxShape.circle,border:p['isLive']==true?Border.all(color:const Color(0xFFFF1744),width:2.5):null),
+                    child:CircleAvatar(backgroundImage:(p['photoUrl']??'').toString().isEmpty?null:NgelXAgImageProvider(p['photoUrl'])),
+                  ),
+                  if(p['isLive']==true)const Positioned(bottom:-4,child:Text('CANLI',style:TextStyle(color:Color(0xFFFF1744),fontSize:7.5,fontWeight:FontWeight.w900))),
+                ]),
                 title:Text(gorunenAd,style:TextStyle(fontWeight:unread>0?FontWeight.w900:FontWeight.w700,color:Colors.black87)),
                 subtitle:Text((v['lastMessage']??t('newChat')).toString(),maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black54)),
                 trailing:Wrap(crossAxisAlignment:WrapCrossAlignment.center,children:[if(sabitSohbetler.contains(d.id))const Icon(Icons.push_pin,size:16,color:mor),if(sessiz)const Icon(Icons.volume_off,size:18,color:Colors.black38),if(unread>0)Badge(label:Text('$unread'))]),
@@ -18740,8 +18817,8 @@ class _AktivitePageState extends State<AktivitePage> {
     }
   }
 
-  IconData _ikon(String tur){switch(tur){case 'like':case 'interaction':return Icons.favorite_rounded;case 'comment':return Icons.mode_comment_rounded;case 'message':return Icons.chat_bubble_rounded;case 'security':return Icons.shield_rounded;case 'friend':case 'follow_request':case 'friend_request':return Icons.person_add_alt_1_rounded;case 'friend_accepted':return Icons.people_rounded;case 'follow_accepted':return Icons.person_rounded;default:return Icons.notifications_rounded;}}
-  Color _renk(String tur){switch(tur){case 'like':case 'interaction':return const Color(0xFFFF3B73);case 'comment':return Colors.blue;case 'security':return Colors.orange;case 'friend':case 'follow_request':case 'friend_request':return mor;default:return const Color(0xFF20B86A);}}
+  IconData _ikon(String tur){switch(tur){case 'live':return Icons.live_tv_rounded;case 'like':case 'interaction':return Icons.favorite_rounded;case 'comment':return Icons.mode_comment_rounded;case 'message':return Icons.chat_bubble_rounded;case 'security':return Icons.shield_rounded;case 'friend':case 'follow_request':case 'friend_request':return Icons.person_add_alt_1_rounded;case 'friend_accepted':return Icons.people_rounded;case 'follow_accepted':return Icons.person_rounded;default:return Icons.notifications_rounded;}}
+  Color _renk(String tur){switch(tur){case 'live':return const Color(0xFFFF1744);case 'like':case 'interaction':return const Color(0xFFFF3B73);case 'comment':return Colors.blue;case 'security':return Colors.orange;case 'friend':case 'follow_request':case 'friend_request':return mor;default:return const Color(0xFF20B86A);}}
 
   Widget _bildirimBasligi(Map<String,dynamic> v,bool okundu){
     final tam=(v['text']??v['message']??v['content']??'Yeni bildirim').toString();
@@ -18825,6 +18902,11 @@ class _AktivitePageState extends State<AktivitePage> {
     final tur=(v['type']??'').toString();
     final kaynak=(v['sourceId']??v['chatId']??v['belgeId']??v['postId']??v['contentId']??'').toString();
     final hedefTuru=(v['targetKind']??'').toString();
+
+    if(tur=='live'&&kaynak.isNotEmpty){
+      await ngelxCanliYayinaKatil(context,kaynak);
+      return;
+    }
 
     if(kaynak.isNotEmpty&&(tur=='interaction'||tur=='like'||tur=='comment')){
       Navigator.push(context,MaterialPageRoute(builder:(_)=>IcerikBaglantiPage(icerikId:kaynak)));
@@ -19289,7 +19371,8 @@ class ProfilTanitimVideoKarti extends StatefulWidget{
 }
 class _ProfilTanitimVideoKartiState extends State<ProfilTanitimVideoKarti> with RouteAware,WidgetsBindingObserver{
   VideoPlayerController? c;
-  bool hazir=false,yukleniyor=false,hata=false;
+  bool hazir=false,yukleniyor=false,hata=false,kontrollerGorunur=false,sessiz=false;
+  Timer? kontrolZamanlayici;
   PageRoute<dynamic>? _rota;
   bool _geriDonusteOynat=false;
   @override void didChangeDependencies(){
@@ -19312,6 +19395,21 @@ class _ProfilTanitimVideoKartiState extends State<ProfilTanitimVideoKarti> with 
     if(_geriDonusteOynat&&x?.value.isInitialized==true)unawaited(x!.play());
     _geriDonusteOynat=false;
   }
+  void _kontrolleriGoster(){
+    if(!mounted)return;
+    kontrolZamanlayici?.cancel();
+    setState(()=>kontrollerGorunur=true);
+    kontrolZamanlayici=Timer(const Duration(seconds:2),(){
+      final x=c;
+      if(mounted&&x?.value.isPlaying==true)setState(()=>kontrollerGorunur=false);
+    });
+  }
+  void _videoDurumu(){
+    final x=c;
+    if(!mounted||x==null||!x.value.isInitialized)return;
+    final bitti=x.value.duration>Duration.zero&&x.value.position>=x.value.duration-const Duration(milliseconds:180)&&!x.value.isPlaying;
+    if(bitti&&!kontrollerGorunur)setState(()=>kontrollerGorunur=true);
+  }
   @override void didPushNext()=>_gorunmezkenDuraklat();
   @override void didPopNext()=>_yenidenGorunur();
   @override void didChangeAppLifecycleState(AppLifecycleState state){
@@ -19326,8 +19424,10 @@ class _ProfilTanitimVideoKartiState extends State<ProfilTanitimVideoKarti> with 
     try{
       await x.initialize();
       await x.setLooping(false);
+      await x.setVolume(sessiz?0:1);
+      x.addListener(_videoDurumu);
       if(!mounted)return;
-      setState(()=>hazir=true);
+      setState((){hazir=true;kontrollerGorunur=false;});
       await x.play();
     }catch(_){
       if(mounted)setState(()=>hata=true);
@@ -19339,7 +19439,9 @@ class _ProfilTanitimVideoKartiState extends State<ProfilTanitimVideoKarti> with 
   @override void dispose(){
     WidgetsBinding.instance.removeObserver(this);
     ngelxRouteObserver.unsubscribe(this);
-    final x=c;if(x!=null)unawaited(x.dispose());
+    kontrolZamanlayici?.cancel();
+    final x=c;
+    if(x!=null){x.removeListener(_videoDurumu);unawaited(x.dispose());}
     super.dispose();
   }
   @override Widget build(BuildContext context){
@@ -19369,23 +19471,43 @@ class _ProfilTanitimVideoKartiState extends State<ProfilTanitimVideoKarti> with 
         ]),
       ),
     );
+    final videoOrani=x.value.aspectRatio==0?16/9:x.value.aspectRatio;
+    final yukseklik=videoOrani<1?340.0:210.0;
     return SizedBox(
-      height:150,
+      height:yukseklik,
       width:double.infinity,
       child:ClipRRect(
         borderRadius:BorderRadius.circular(18),
-        child:ColoredBox(
-          color:Colors.black,
-          child:Stack(fit:StackFit.expand,children:[
-            Center(child:AspectRatio(
-              aspectRatio:x.value.aspectRatio==0?16/9:x.value.aspectRatio,
-              child:VideoPlayer(x),
-            )),
-            Center(child:IconButton.filledTonal(
-              onPressed:(){setState((){x.value.isPlaying?x.pause():x.play();});},
-              icon:Icon(x.value.isPlaying?Icons.pause_rounded:Icons.play_arrow_rounded,size:32),
-            )),
-          ]),
+        child:GestureDetector(
+          onTap:_kontrolleriGoster,
+          child:ColoredBox(
+            color:Colors.black,
+            child:Stack(fit:StackFit.expand,children:[
+              Center(child:AspectRatio(aspectRatio:videoOrani,child:VideoPlayer(x))),
+              Positioned(top:8,right:8,child:IconButton.filledTonal(
+                tooltip:sessiz?'Sesi aç':'Sesi kapat',
+                onPressed:()async{
+                  sessiz=!sessiz;
+                  await x.setVolume(sessiz?0:1);
+                  if(mounted)setState((){});
+                },
+                icon:Icon(sessiz?Icons.volume_off_rounded:Icons.volume_up_rounded),
+              )),
+              if(kontrollerGorunur||!x.value.isPlaying)Center(child:IconButton.filledTonal(
+                onPressed:()async{
+                  if(x.value.isPlaying){
+                    await x.pause();
+                    if(mounted)setState(()=>kontrollerGorunur=true);
+                  }else{
+                    if(x.value.duration>Duration.zero&&x.value.position>=x.value.duration-const Duration(milliseconds:180))await x.seekTo(Duration.zero);
+                    await x.play();
+                    if(mounted)setState(()=>kontrollerGorunur=false);
+                  }
+                },
+                icon:Icon(x.value.isPlaying?Icons.pause_rounded:Icons.play_arrow_rounded,size:32),
+              )),
+            ]),
+          ),
         ),
       ),
     );
@@ -19615,6 +19737,8 @@ class _KullaniciProfilPageState extends State<KullaniciProfilPage> {
           final v = s.data![0]?.data() ?? <String, dynamic>{};
           final benimVerim = s.data![1]?.data() ?? <String, dynamic>{};
           final foto = (v['photoUrl'] ?? '').toString();
+          final canli=v['isLive']==true&&(v['currentLiveId']??'').toString().isNotEmpty;
+          final canliId=(v['currentLiveId']??'').toString();
           final arkadaslar = Set<String>.from(List<dynamic>.from(benimVerim['friends'] ?? []));
           if(me!=null&&List<String>.from(v['friends']??const[]).contains(me))arkadaslar.add(uid);
           final gizli = v['privateAccount'] == true;
@@ -19627,13 +19751,24 @@ class _KullaniciProfilPageState extends State<KullaniciProfilPage> {
           return ListView(
             padding: const EdgeInsets.all(22),
             children: [
-              Center(child:NgelXHikayeliAvatar(
-                uid:uid,
-                fotoUrl:foto,
-                kullanici:'@'+(v['username']??'ngelx').toString(),
-                radius:55,
-                etkin:erisimVar,
-              )),
+              Center(child:Stack(clipBehavior:Clip.none,alignment:Alignment.center,children:[
+                Container(
+                  padding:EdgeInsets.all(canli?4:0),
+                  decoration:BoxDecoration(shape:BoxShape.circle,border:canli?Border.all(color:const Color(0xFFFF1744),width:3):null),
+                  child:NgelXHikayeliAvatar(
+                    uid:uid,
+                    fotoUrl:foto,
+                    kullanici:'@'+(v['username']??'ngelx').toString(),
+                    radius:55,
+                    etkin:erisimVar,
+                  ),
+                ),
+                if(canli)Positioned(bottom:-7,child:Container(
+                  padding:const EdgeInsets.symmetric(horizontal:10,vertical:3),
+                  decoration:BoxDecoration(color:const Color(0xFFFF1744),borderRadius:BorderRadius.circular(9),border:Border.all(color:Colors.white,width:1.5)),
+                  child:const Text('CANLI',style:TextStyle(color:Colors.white,fontSize:10,fontWeight:FontWeight.w900)),
+                )),
+              ])),
               const SizedBox(height: 12),
               Row(mainAxisAlignment:MainAxisAlignment.center,mainAxisSize:MainAxisSize.min,children:[
                 Flexible(child:Text((v['displayName'] ?? v['username'] ?? 'NgelX').toString(),maxLines:1,overflow:TextOverflow.ellipsis,textAlign:TextAlign.center,style:const TextStyle(fontSize:26,fontWeight:FontWeight.bold))),
@@ -19663,6 +19798,15 @@ class _KullaniciProfilPageState extends State<KullaniciProfilPage> {
                   Text('NgelX’e katıldı: '+((v['createdAt']??v['joinedAt']) as Timestamp).toDate().year.toString(),style:const TextStyle(color:Colors.black54,fontSize:12)),
                 AktiflikDurumuYazisi(uid:uid),
               ]),
+              if(canli&&canliId.isNotEmpty)...[
+                const SizedBox(height:12),
+                Center(child:FilledButton.icon(
+                  style:FilledButton.styleFrom(backgroundColor:const Color(0xFFFF1744),foregroundColor:Colors.white,padding:const EdgeInsets.symmetric(horizontal:22,vertical:12)),
+                  onPressed:()=>ngelxCanliYayinaKatil(context,canliId),
+                  icon:const Icon(Icons.live_tv_rounded),
+                  label:const Text('Canlı yayını izle',style:TextStyle(fontWeight:FontWeight.w900)),
+                )),
+              ],
               if((v['introVideoUrl']??'').toString().isNotEmpty) ...[
                 const SizedBox(height:14),
                 ProfilTanitimVideoKarti(url:(v['introVideoUrl']??'').toString()),

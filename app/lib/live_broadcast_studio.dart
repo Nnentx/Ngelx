@@ -235,6 +235,21 @@ class _CanliHazirlikPageState extends State<CanliHazirlikPage> {
         'liveTitle': baslik.text.trim(),
         'liveStartedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
+      final canliHedefler=List<String>.from(profil.data()?['friends']??const[]);
+      if(canliHedefler.isNotEmpty){
+        unawaited(Future.wait(canliHedefler.take(60).map((hedefUid)=>uygulamaBildirimiGonder(
+          toUid:hedefUid,
+          fromUid:user.uid,
+          tur:'live',
+          metin:'canlı yayında',
+          belgeId:belge.id,
+          hedefTuru:'live',
+          hedefBaslik:baslik.text.trim(),
+          olayTuru:'live_started',
+          onizleme:baslik.text.trim(),
+          dedupeKey:'live_${belge.id}_$hedefUid',
+        ))));
+      }
       if (!mounted) return;
       Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => CanliYayinPage(
         oda: oda!,
