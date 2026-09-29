@@ -72,7 +72,10 @@ else:
         errors.append("Profil fotoğrafı düzenleme kamera düğmesi ve uzun basma ile korunmalı.")
     if "await user.updatePhotoURL(url)" not in profile_tail:
         errors.append("Profil fotoğrafı Firebase Auth photoURL ile senkronize edilmiyor.")
-    if "CachedNetworkImage.evictFromCache(eski)" not in profile_tail:
+    if (
+        "CachedNetworkImage.evictFromCache(eski)" not in profile_tail
+        and "ngelxAgResmiOnbelleginiTemizle(eski)" not in profile_tail
+    ):
         errors.append("Eski profil fotoğrafı önbellekten temizlenmiyor.")
 
 # Create/publishing flow must remain functional and must not regress into fake controls.
