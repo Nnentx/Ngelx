@@ -92,8 +92,8 @@ const ngelxPrivateBlueCanvas = Color(0xFFF6FAFF);
 const ngelxPrivateBlueBorder = Color(0xFFD8E8FF);
 const ngelxPrivateBlueInk = Color(0xFF10213A);
 
-const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.92');
-const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '311');
+const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.93');
+const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '312');
 const ngelxGroupBorder = Color(0xFFD9EEE0);
 
 final GlobalKey<NavigatorState> ngelxNavigatorKey=GlobalKey<NavigatorState>();
@@ -449,14 +449,23 @@ Future<XFile?> ngelxResimSec({
   double? maxWidth,
   double? maxHeight,
 }) async{
+  var yenidenKodla=true;
   if(source==ImageSource.gallery&&Platform.isAndroid){
     try{
       final x=await _ngelxAndroidBelgeSec(const <String>['image/*']);
       if(x!=null)return x;
     }catch(_){}
+    // Android belge sağlayıcısı bazı bulut/galeri URI'lerini kopyalayamazsa
+    // image_picker'a yalnızca ham dosyayı aldır. imageQuality/maxWidth vermek
+    // plugin'in resmi yeniden decode etmesine ve "could not decompress image"
+    // hatasının aynı seçimde yeniden oluşmasına neden olur.
+    yenidenKodla=false;
   }
   return ImagePicker().pickImage(
-    source:source,imageQuality:imageQuality,maxWidth:maxWidth,maxHeight:maxHeight,
+    source:source,
+    imageQuality:yenidenKodla?imageQuality:null,
+    maxWidth:yenidenKodla?maxWidth:null,
+    maxHeight:yenidenKodla?maxHeight:null,
   );
 }
 
@@ -479,15 +488,21 @@ Future<List<XFile>> ngelxCokluResimSec({
   double? maxHeight,
   int? limit,
 }) async{
+  var yenidenKodla=true;
   if(Platform.isAndroid){
     try{
       final xs=await _ngelxAndroidBelgelerSec(const <String>['image/*']);
       if(xs.isNotEmpty)return limit==null?xs:xs.take(limit).toList();
     }catch(_){}
+    yenidenKodla=false;
   }
-  return ImagePicker().pickMultiImage(
-    imageQuality:imageQuality,maxWidth:maxWidth,maxHeight:maxHeight,limit:limit,
+  final xs=await ImagePicker().pickMultiImage(
+    imageQuality:yenidenKodla?imageQuality:null,
+    maxWidth:yenidenKodla?maxWidth:null,
+    maxHeight:yenidenKodla?maxHeight:null,
+    limit:limit,
   );
+  return limit==null?xs:xs.take(limit).toList();
 }
 
 Future<XFile?> ngelxDosyaSec({XTypeGroup? tur}) async{
@@ -1686,7 +1701,25 @@ Future<String> ngelxFotografYukle({
   else if(mime=='image/heif')temizExt='heif';
   else if(mime=='image/avif')temizExt='avif';
 
-  final tur=mime.startsWith('image/')?mime:_ngelxContentType(temizExt);
+  var tur=mime.startsWith('image/')?mime:_ngelxContentType(temizExt);
+  // Sağlayıcıların "foto.jpg" adıyla HEIC/AVIF/WEBP döndürmesi yaygındır.
+  // R2 metadata'sını gerçek dosya başlığıyla eşleştir; böylece yüklenen medya
+  // ağdan okunurken yanlış codec seçilmez.
+  try{
+    final bas=await dosya.openRead(0,32).fold<List<int>>(<int>[],(tum,parca){tum.addAll(parca);return tum;});
+    bool es(int offset,List<int> imza)=>bas.length>=offset+imza.length&&List<int>.generate(imza.length,(i)=>bas[offset+i]).asMap().entries.every((e)=>e.value==imza[e.key]);
+    String ascii(int offset,int length)=>bas.length>=offset+length?String.fromCharCodes(bas.sublist(offset,offset+length)):'';
+    if(es(0,const [0xFF,0xD8,0xFF])){temizExt='jpg';tur='image/jpeg';}
+    else if(es(0,const [0x89,0x50,0x4E,0x47,0x0D,0x0A,0x1A,0x0A])){temizExt='png';tur='image/png';}
+    else if(ascii(0,4)=='GIF8'){temizExt='gif';tur='image/gif';}
+    else if(ascii(0,4)=='RIFF'&&ascii(8,4)=='WEBP'){temizExt='webp';tur='image/webp';}
+    else if(ascii(4,4)=='ftyp'){
+      final marka=ascii(8,4).toLowerCase();
+      if(marka=='avif'||marka=='avis'){temizExt='avif';tur='image/avif';}
+      else if(const <String>{'heic','heix','hevc','hevx'}.contains(marka)){temizExt='heic';tur='image/heic';}
+      else if(const <String>{'mif1','msf1'}.contains(marka)){temizExt='heif';tur='image/heif';}
+    }
+  }catch(_){}
   try{
     final boyut=await dosya.length();
     if(boyut<=0)throw Exception('Seçilen fotoğraf boş görünüyor.');

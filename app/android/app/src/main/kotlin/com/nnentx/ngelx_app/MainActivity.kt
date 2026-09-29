@@ -32,6 +32,7 @@ class MainActivity : FlutterActivity() {
     private val mediaChannel = "com.nnentx.ngelx_app/media"
     private var pendingPickerResult: MethodChannel.Result? = null
     private var pickerAllowMultiple = false
+    private var pickerRequestedImage = false
     private val executor = Executors.newCachedThreadPool()
     private val mainHandler = Handler(Looper.getMainLooper())
 
@@ -50,6 +51,7 @@ class MainActivity : FlutterActivity() {
                             ?.distinct()
                             .orEmpty()
                         pickerAllowMultiple = call.method == "pickDocuments"
+                        pickerRequestedImage = mimeTypes.any { it == "image/*" || it.startsWith("image/") }
                         pendingPickerResult = result
                         launchPicker(mimeTypes, pickerAllowMultiple)
                     }
@@ -157,6 +159,8 @@ class MainActivity : FlutterActivity() {
         if (requestCode != REQUEST_PICK) return
         val result = pendingPickerResult ?: return
         pendingPickerResult = null
+        val requestedImage = pickerRequestedImage
+        pickerRequestedImage = false
 
         if (resultCode != Activity.RESULT_OK || data == null) {
             if (pickerAllowMultiple) result.success(emptyList<Map<String, Any?>>())
@@ -173,18 +177,22 @@ class MainActivity : FlutterActivity() {
                 }
             }
             data.data?.let { if (!uris.contains(it)) uris.add(it) }
-            val files = uris.map { copyUriToCache(it) }
+            val files = uris.map { copyUriToCache(it, requestedImage) }
             if (pickerAllowMultiple) result.success(files) else result.success(files.firstOrNull())
         } catch (e: Exception) {
             result.error("PICKER_COPY", "Seçilen medya okunamadı: ${e.message}", null)
         }
     }
 
-    private fun copyUriToCache(uri: Uri): Map<String, Any?> {
+    private fun copyUriToCache(uri: Uri, requestedImage: Boolean): Map<String, Any?> {
         val originalName = displayName(uri).ifBlank { "ngelx_${System.currentTimeMillis()}" }
         val mimeType = contentResolver.getType(uri)?.lowercase()
+        val gif = mimeType == "image/gif" || originalName.lowercase().endsWith(".gif")
 
-        if (mimeType?.startsWith("image/") == true && mimeType != "image/gif") {
+        // Bazı Android galeri/bulut sağlayıcıları image/* seçimine rağmen MIME
+        // bilgisini null veya application/octet-stream döndürüyor. İstek resimse
+        // uzantıya/MIME'a güvenmeden yerel codec ile normalize etmeyi dene.
+        if ((requestedImage || mimeType?.startsWith("image/") == true) && !gif) {
             val normalized = normalizeImageToJpeg(uri)
             if (normalized != null && normalized.length() > 0L) {
                 val baseName = originalName.substringBeforeLast('.', originalName)
@@ -207,12 +215,34 @@ class MainActivity : FlutterActivity() {
             requireNotNull(input) { "Dosya akışına erişilemedi." }
             FileOutputStream(target).use { output -> input.copyTo(output) }
         }
+        val detected = if (requestedImage) detectImageType(target) else null
         return mapOf(
             "path" to target.absolutePath,
-            "name" to originalName,
-            "mimeType" to mimeType,
+            "name" to if (detected == null) originalName else originalName.substringBeforeLast('.', originalName) + "." + detected.first,
+            "mimeType" to (detected?.second ?: mimeType),
             "size" to target.length(),
         )
+    }
+
+    private fun detectImageType(file: File): Pair<String, String>? {
+        return try {
+            val bytes = ByteArray(32)
+            val count = file.inputStream().use { it.read(bytes) }
+            fun ascii(offset: Int, length: Int): String =
+                if (count >= offset + length) String(bytes, offset, length, Charsets.US_ASCII) else ""
+            when {
+                count >= 3 && bytes[0] == 0xFF.toByte() && bytes[1] == 0xD8.toByte() && bytes[2] == 0xFF.toByte() -> "jpg" to "image/jpeg"
+                count >= 8 && bytes.sliceArray(0..7).contentEquals(byteArrayOf(0x89.toByte(), 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A)) -> "png" to "image/png"
+                ascii(0, 4) == "GIF8" -> "gif" to "image/gif"
+                ascii(0, 4) == "RIFF" && ascii(8, 4) == "WEBP" -> "webp" to "image/webp"
+                ascii(4, 4) == "ftyp" && ascii(8, 4).lowercase() in setOf("avif", "avis") -> "avif" to "image/avif"
+                ascii(4, 4) == "ftyp" && ascii(8, 4).lowercase() in setOf("heic", "heix", "hevc", "hevx") -> "heic" to "image/heic"
+                ascii(4, 4) == "ftyp" && ascii(8, 4).lowercase() in setOf("mif1", "msf1") -> "heif" to "image/heif"
+                else -> null
+            }
+        } catch (_: Throwable) {
+            null
+        }
     }
 
     private fun normalizeImageToJpeg(uri: Uri): File? {
@@ -288,6 +318,7 @@ class MainActivity : FlutterActivity() {
     private fun finishPickerWithError(code: String, message: String) {
         pendingPickerResult?.error(code, message, null)
         pendingPickerResult = null
+        pickerRequestedImage = false
     }
 
     private fun executeGet(target: String, token: String, result: MethodChannel.Result) {
