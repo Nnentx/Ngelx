@@ -1,9 +1,12 @@
 package com.nnentx.ngelx_app
 
 import android.app.Activity
+import android.content.ActivityNotFoundException
 import android.content.Intent
+import android.database.Cursor
 import android.net.Uri
 import android.provider.OpenableColumns
+import java.io.FileOutputStream
 import android.os.Handler
 import android.os.Looper
 import io.flutter.embedding.android.FlutterActivity
@@ -17,18 +20,35 @@ import java.net.URL
 import java.util.concurrent.Executors
 
 class MainActivity : FlutterActivity() {
+    companion object {
+        private const val REQUEST_PICK = 3061
+    }
+
     private val mediaChannel = "com.nnentx.ngelx_app/media"
+    private var pendingPickerResult: MethodChannel.Result? = null
+    private var pickerAllowMultiple = false
     private val executor = Executors.newCachedThreadPool()
     private val mainHandler = Handler(Looper.getMainLooper())
-    private val nativePickerRequestCode = 8701
-    private val nativeMultiPickerRequestCode = 8702
-    private var pendingPickerResult: MethodChannel.Result? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, mediaChannel)
             .setMethodCallHandler { call, result ->
                 when (call.method) {
+                    "pickDocument", "pickDocuments" -> {
+                        if (pendingPickerResult != null) {
+                            result.error("PICKER_BUSY", "Medya seçici zaten açık.", null)
+                            return@setMethodCallHandler
+                        }
+                        val mimeTypes = call.argument<List<String>>("mimeTypes")
+                            ?.filter { it.isNotBlank() }
+                            ?.distinct()
+                            .orEmpty()
+                        pickerAllowMultiple = call.method == "pickDocuments"
+                        pendingPickerResult = result
+                        launchPicker(mimeTypes, pickerAllowMultiple)
+                    }
+
                     "get" -> {
                         val target = call.argument<String>("url")
                         val token = call.argument<String>("token")
@@ -92,115 +112,106 @@ class MainActivity : FlutterActivity() {
                         executeFilePut(target, contentType, path, result)
                     }
 
-                    "pickDocument" -> {
-                        launchDocumentPicker(
-                            call.argument<List<String>>("mimeTypes") ?: listOf("*/*"),
-                            allowMultiple = false,
-                            result = result,
-                        )
-                    }
-
-                    "pickDocuments" -> {
-                        launchDocumentPicker(
-                            call.argument<List<String>>("mimeTypes") ?: listOf("*/*"),
-                            allowMultiple = true,
-                            result = result,
-                        )
-                    }
-
                     else -> result.notImplemented()
                 }
             }
     }
 
-    private fun launchDocumentPicker(
-        mimeTypes: List<String>,
-        allowMultiple: Boolean,
-        result: MethodChannel.Result,
-    ) {
-        if (pendingPickerResult != null) {
-            result.error("PICKER_BUSY", "Dosya seçici zaten açık.", null)
-            return
-        }
-        try {
-            val cleanTypes = mimeTypes.filter { it.isNotBlank() }.ifEmpty { listOf("*/*") }
-            val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
-                addCategory(Intent.CATEGORY_OPENABLE)
-                type = if (cleanTypes.size == 1) cleanTypes.first() else "*/*"
-                if (cleanTypes.size > 1) putExtra(Intent.EXTRA_MIME_TYPES, cleanTypes.toTypedArray())
-                putExtra(Intent.EXTRA_ALLOW_MULTIPLE, allowMultiple)
-                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    private fun launchPicker(mimeTypes: List<String>, multiple: Boolean) {
+        val cleanTypes = mimeTypes.ifEmpty { listOf("*/*") }
+        val primaryType = if (cleanTypes.size == 1) cleanTypes.first() else "*/*"
+
+        fun build(action: String) = Intent(action).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = primaryType
+            putExtra(Intent.EXTRA_ALLOW_MULTIPLE, multiple)
+            if (cleanTypes.size > 1) {
+                putExtra(Intent.EXTRA_MIME_TYPES, cleanTypes.toTypedArray())
             }
-            pendingPickerResult = result
-            startActivityForResult(
-                Intent.createChooser(intent, if (allowMultiple) "Dosyaları seç" else "Dosya seç"),
-                if (allowMultiple) nativeMultiPickerRequestCode else nativePickerRequestCode,
-            )
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+
+        try {
+            startActivityForResult(build(Intent.ACTION_GET_CONTENT), REQUEST_PICK)
+        } catch (first: ActivityNotFoundException) {
+            try {
+                startActivityForResult(build(Intent.ACTION_OPEN_DOCUMENT), REQUEST_PICK)
+            } catch (second: Exception) {
+                finishPickerWithError(
+                    "PICKER_LAUNCH",
+                    "Android medya seçicisi başlatılamadı: ${second.message ?: first.message}",
+                )
+            }
         } catch (e: Exception) {
-            pendingPickerResult = null
-            result.error("PICKER_LAUNCH", e.javaClass.simpleName + ": " + (e.message ?: "seçici açılamadı"), null)
+            finishPickerWithError("PICKER_LAUNCH", "Seçici başlatma hatası: ${e.message}")
         }
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        if (requestCode == nativePickerRequestCode || requestCode == nativeMultiPickerRequestCode) {
-            val callback = pendingPickerResult
-            pendingPickerResult = null
-            if (callback == null) return
-            if (resultCode != Activity.RESULT_OK || data == null) {
-                callback.success(if (requestCode == nativeMultiPickerRequestCode) emptyList<Map<String, String>>() else null)
-                return
-            }
-            try {
-                if (requestCode == nativeMultiPickerRequestCode) {
-                    val uris = mutableListOf<Uri>()
-                    data.clipData?.let { clip ->
-                        for (i in 0 until clip.itemCount) uris.add(clip.getItemAt(i).uri)
-                    }
-                    data.data?.let { if (!uris.contains(it)) uris.add(it) }
-                    callback.success(uris.mapNotNull { copyPickedUriToCache(it) })
-                } else {
-                    val uri = data.data
-                    callback.success(if (uri == null) null else copyPickedUriToCache(uri))
-                }
-            } catch (e: Exception) {
-                callback.error("PICKER_COPY", e.javaClass.simpleName + ": " + (e.message ?: "dosya okunamadı"), null)
-            }
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode != REQUEST_PICK) return
+        val result = pendingPickerResult ?: return
+        pendingPickerResult = null
+
+        if (resultCode != Activity.RESULT_OK || data == null) {
+            if (pickerAllowMultiple) result.success(emptyList<Map<String, Any?>>())
+            else result.success(null)
             return
         }
-        super.onActivityResult(requestCode, resultCode, data)
+
+        try {
+            val uris = mutableListOf<Uri>()
+            data.clipData?.let { clip ->
+                for (i in 0 until clip.itemCount) {
+                    val uri = clip.getItemAt(i).uri
+                    if (!uris.contains(uri)) uris.add(uri)
+                }
+            }
+            data.data?.let { if (!uris.contains(it)) uris.add(it) }
+            val files = uris.map { copyUriToCache(it) }
+            if (pickerAllowMultiple) result.success(files) else result.success(files.firstOrNull())
+        } catch (e: Exception) {
+            result.error("PICKER_COPY", "Seçilen medya okunamadı: ${e.message}", null)
+        }
     }
 
-    private fun copyPickedUriToCache(uri: Uri): Map<String, String>? {
-        val mime = contentResolver.getType(uri) ?: "application/octet-stream"
-        var displayName = ""
-        contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
-            val index = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-            if (index >= 0 && cursor.moveToFirst()) displayName = cursor.getString(index) ?: ""
+    private fun copyUriToCache(uri: Uri): Map<String, Any?> {
+        val originalName = displayName(uri).ifBlank { "ngelx_${System.currentTimeMillis()}" }
+        val safeName = originalName.replace(Regex("[^A-Za-z0-9._-]"), "_")
+            .ifBlank { "ngelx_${System.currentTimeMillis()}" }
+        val pickerDir = File(cacheDir, "ngelx_picker").apply { mkdirs() }
+        val target = File(pickerDir, "${System.currentTimeMillis()}_$safeName")
+        contentResolver.openInputStream(uri).use { input ->
+            requireNotNull(input) { "Dosya akışına erişilemedi." }
+            FileOutputStream(target).use { output -> input.copyTo(output) }
         }
-        if (displayName.isBlank()) {
-            val ext = when {
-                mime.startsWith("image/") -> mime.substringAfter("image/").replace("jpeg", "jpg")
-                mime.startsWith("video/") -> mime.substringAfter("video/")
-                mime.startsWith("audio/") -> mime.substringAfter("audio/").replace("mpeg", "mp3").replace("mp4", "m4a")
-                else -> "bin"
-            }
-            displayName = "ngelx_${System.currentTimeMillis()}.$ext"
-        }
-        val safeName = displayName.replace(Regex("[^A-Za-z0-9._-]"), "_")
-        val pickerDir = File(cacheDir, "native_picker").apply { mkdirs() }
-        val outFile = File(pickerDir, "${System.currentTimeMillis()}_$safeName")
-        contentResolver.openInputStream(uri)?.use { input ->
-            outFile.outputStream().buffered().use { output ->
-                input.copyTo(output, 64 * 1024)
-            }
-        } ?: return null
-        if (!outFile.exists() || outFile.length() <= 0L) return null
         return mapOf(
-            "path" to outFile.absolutePath,
-            "name" to displayName,
-            "mimeType" to mime,
+            "path" to target.absolutePath,
+            "name" to originalName,
+            "mimeType" to contentResolver.getType(uri),
+            "size" to target.length(),
         )
+    }
+
+    private fun displayName(uri: Uri): String {
+        var cursor: Cursor? = null
+        return try {
+            cursor = contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)
+            if (cursor != null && cursor.moveToFirst()) {
+                val index = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                if (index >= 0) cursor.getString(index) ?: uri.lastPathSegment.orEmpty()
+                else uri.lastPathSegment.orEmpty()
+            } else {
+                uri.lastPathSegment.orEmpty()
+            }
+        } finally {
+            cursor?.close()
+        }
+    }
+
+    private fun finishPickerWithError(code: String, message: String) {
+        pendingPickerResult?.error(code, message, null)
+        pendingPickerResult = null
     }
 
     private fun executeGet(target: String, token: String, result: MethodChannel.Result) {
@@ -349,6 +360,8 @@ class MainActivity : FlutterActivity() {
     }
 
     override fun onDestroy() {
+        pendingPickerResult?.error("PICKER_DESTROYED", "Medya seçici kapatıldı.", null)
+        pendingPickerResult = null
         executor.shutdownNow()
         super.onDestroy()
     }
