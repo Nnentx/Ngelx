@@ -497,7 +497,7 @@ Future<XFile?> ngelxDosyaSec({XTypeGroup? tur}) async{
       if(x!=null)return x;
     }catch(_){}
   }
-  return openFile(acceptedTypeGroups:tur==null?null:<XTypeGroup>[tur]);
+  return tur==null?openFile():openFile(acceptedTypeGroups:<XTypeGroup>[tur]);
 }
 
 String _ngelxKisaHata(Object hata) {
