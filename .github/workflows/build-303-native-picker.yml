@@ -1,0 +1,69 @@
+name: NgelX Build 303 Native Picker
+
+on:
+  push:
+    branches: [work/v85-native-picker-hotfix]
+  pull_request:
+    branches: [work/v72-combined]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ngelx-build-303-native-picker
+  cancel-in-progress: true
+
+jobs:
+  verify-and-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Paketleri kur
+        working-directory: app
+        run: flutter pub get
+      - name: Kilit dosyasini dogrula
+        run: git diff --exit-code -- app/pubspec.lock
+      - name: Native picker kontrolu
+        run: python3 tools/verify_v85_native_picker.py
+      - name: Flutter analiz
+        working-directory: app
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
+      - name: Flutter testleri
+        working-directory: app
+        run: |
+          if [ -d test ]; then flutter test; else echo "Test klasoru yok."; fi
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Sabit debug imzasi
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: ngelx-stable-debug-keystore-v1
+      - name: Debug anahtari yoksa olustur
+        run: |
+          mkdir -p "$HOME/.android"
+          if [ ! -f "$HOME/.android/debug.keystore" ]; then keytool -genkeypair -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey -keypass android -dname "CN=Android Debug,O=Android,C=US" -keyalg RSA -keysize 2048 -validity 10000; fi
+      - name: APK derle
+        working-directory: app
+        run: |
+          APP_VERSION="$(awk '/^version:/ {print $2}' pubspec.yaml)"
+          BUILD_NAME="${APP_VERSION%%+*}"
+          BUILD_NUMBER="${APP_VERSION##*+}"
+          test "$BUILD_NAME" = "1.0.84"
+          test "$BUILD_NUMBER" = "303"
+          flutter build apk --debug --dart-define=NGELX_VERSION_NAME="$BUILD_NAME" --dart-define=NGELX_BUILD_NUMBER="$BUILD_NUMBER"
+      - name: APK yukle
+        uses: actions/upload-artifact@v4
+        with:
+          name: NgelX-1.0.84-Build-303-NATIVE-PICKER-APK
+          path: app/build/app/outputs/flutter-apk/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
