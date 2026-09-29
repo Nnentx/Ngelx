@@ -60,6 +60,7 @@ class _NgelXCameraStudioPageState extends State<NgelXCameraStudioPage> with Widg
   CameraController? kontrol;
   int kameraIndex=0;
   bool video=false,kayit=false,hazirlaniyor=true,isleniyor=false,ayna=true,izgara=false;
+  int videoSureSaniye=15;
   int sayac=0;
   Timer? sayacTimer,kayitTimer;
   Duration kayitSure=Duration.zero;
@@ -128,6 +129,18 @@ class _NgelXCameraStudioPageState extends State<NgelXCameraStudioPage> with Widg
     final d=kontrol?.description??(kameralar.isNotEmpty?kameralar[kameraIndex]:null);
     if(d==null)return;
     try{await _kontroluKur(d);}catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Kamera modu değiştirilemedi: $e')));}
+  }
+
+  Duration get _aktifVideoLimiti{
+    final secilen=Duration(seconds:videoSureSaniye);
+    return secilen.compareTo(widget.maxVideo)<=0?secilen:widget.maxVideo;
+  }
+
+  Future<void> _videoSuresiSec(int saniye)async{
+    if(kayit||isleniyor||hazirlaniyor)return;
+    if(!video)await _videoModu(true);
+    if(!mounted||!video)return;
+    setState(()=>videoSureSaniye=saniye);
   }
 
   Future<void> _kameraCevir()async{
@@ -208,7 +221,20 @@ class _NgelXCameraStudioPageState extends State<NgelXCameraStudioPage> with Widg
         setState(()=>isleniyor=true);
         final ham=await c.takePicture();
         final sonuc=await _fotoyuIsle(ham);
-        if(mounted)Navigator.pop(context,<String,dynamic>{'file':sonuc,'video':false,'filter':ngelxKameraFiltreleri[filtreIndex].ad,'retouch':retus});
+        if(!mounted)return;
+        final duzenlenmis=await Navigator.push<XFile>(
+          context,
+          MaterialPageRoute(builder:(_)=>NgelXFotoDuzenlemePage(dosya:sonuc)),
+        );
+        if(duzenlenmis!=null&&mounted){
+          Navigator.pop(context,<String,dynamic>{
+            'file':duzenlenmis,
+            'video':false,
+            'filter':ngelxKameraFiltreleri[filtreIndex].ad,
+            'retouch':retus,
+            'edited':true,
+          });
+        }
       }catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Fotoğraf çekilemedi: $e')));}
       finally{if(mounted)setState(()=>isleniyor=false);}
     });
@@ -220,10 +246,11 @@ class _NgelXCameraStudioPageState extends State<NgelXCameraStudioPage> with Widg
       await c.startVideoRecording();
       kayitSure=Duration.zero;
       kayitTimer?.cancel();
+      final limit=_aktifVideoLimiti;
       kayitTimer=Timer.periodic(const Duration(seconds:1),(_){
         if(!mounted)return;
         final yeni=kayitSure+const Duration(seconds:1);
-        if(yeni>=widget.maxVideo){unawaited(_videoDurdur());return;}
+        if(yeni>=limit){setState(()=>kayitSure=limit);unawaited(_videoDurdur());return;}
         setState(()=>kayitSure=yeni);
       });
       setState(()=>kayit=true);
@@ -236,10 +263,22 @@ class _NgelXCameraStudioPageState extends State<NgelXCameraStudioPage> with Widg
       setState(()=>isleniyor=true);
       final x=await c.stopVideoRecording();
       kayitTimer?.cancel();
-      if(mounted)Navigator.pop(context,<String,dynamic>{
-        'file':x,'video':true,'filter':ngelxKameraFiltreleri[filtreIndex].ad,'retouch':retus,
-        'filterPreviewOnly':filtreIndex!=0||retus>.01,
-      });
+      if(!mounted)return;
+      setState(()=>kayit=false);
+      final duzenleme=await Navigator.push<Map<String,dynamic>>(
+        context,
+        MaterialPageRoute(builder:(_)=>NgelXVideoDuzenlemePage(dosya:x)),
+      );
+      if(duzenleme!=null&&mounted){
+        Navigator.pop(context,<String,dynamic>{
+          'file':x,
+          'video':true,
+          'filter':ngelxKameraFiltreleri[filtreIndex].ad,
+          'retouch':retus,
+          'videoSeconds':videoSureSaniye,
+          ...duzenleme,
+        });
+      }
     }catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Video tamamlanamadı: $e')));}
     finally{if(mounted)setState((){kayit=false;isleniyor=false;});}
   }
@@ -376,28 +415,39 @@ class _NgelXCameraStudioPageState extends State<NgelXCameraStudioPage> with Widg
         Positioned(left:12,right:12,bottom:18,child:Column(children:[
           if(zoom>1.01)Padding(padding:const EdgeInsets.only(bottom:8),child:Text('${zoom.toStringAsFixed(1)}x',style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w900))),
           Row(mainAxisAlignment:MainAxisAlignment.center,children:[
-            TextButton(onPressed:kayit?null:()=>unawaited(_videoModu(false)),child:Text('FOTOĞRAF',style:TextStyle(color:!video?Colors.white:Colors.white54,fontWeight:FontWeight.w900))),
-            const SizedBox(width:8),
-            GestureDetector(
-              onTap:()=>unawaited(_cek()),
-              child:AnimatedContainer(
-                duration:const Duration(milliseconds:160),
-                width:82,height:82,
-                decoration:BoxDecoration(
-                  shape:BoxShape.circle,
-                  color:kayit?Colors.red:Colors.white,
-                  border:Border.all(color:Colors.white,width:5),
-                  boxShadow:const [BoxShadow(color:Colors.black45,blurRadius:12)],
-                ),
-                child:isleniyor?const Padding(padding:EdgeInsets.all(25),child:CircularProgressIndicator(strokeWidth:3,color:Colors.black54)):Icon(kayit?Icons.stop_rounded:(video?Icons.videocam_rounded:Icons.camera_alt_rounded),color:kayit?Colors.white:Colors.black,size:32),
-              ),
+            TextButton(
+              onPressed:kayit?null:()=>unawaited(_videoSuresiSec(60)),
+              child:Text('60 sn',style:TextStyle(color:video&&videoSureSaniye==60?Colors.white:Colors.white54,fontWeight:FontWeight.w900)),
             ),
-            const SizedBox(width:8),
-            TextButton(onPressed:kayit?null:()=>unawaited(_videoModu(true)),child:Text('VİDEO',style:TextStyle(color:video?Colors.white:Colors.white54,fontWeight:FontWeight.w900))),
+            TextButton(
+              onPressed:kayit?null:()=>unawaited(_videoSuresiSec(15)),
+              child:Text('15 sn',style:TextStyle(color:video&&videoSureSaniye==15?Colors.white:Colors.white54,fontWeight:FontWeight.w900)),
+            ),
+            TextButton(
+              onPressed:kayit?null:()=>unawaited(_videoModu(false)),
+              child:Text('FOTOĞRAF',style:TextStyle(color:!video?Colors.white:Colors.white54,fontWeight:FontWeight.w900)),
+            ),
           ]),
           const SizedBox(height:8),
+          GestureDetector(
+            onTap:()=>unawaited(_cek()),
+            child:AnimatedContainer(
+              duration:const Duration(milliseconds:160),
+              width:82,height:82,
+              decoration:BoxDecoration(
+                shape:BoxShape.circle,
+                color:kayit?Colors.red:Colors.white,
+                border:Border.all(color:Colors.white,width:5),
+                boxShadow:const [BoxShadow(color:Colors.black45,blurRadius:12)],
+              ),
+              child:isleniyor?const Padding(padding:EdgeInsets.all(25),child:CircularProgressIndicator(strokeWidth:3,color:Colors.black54)):Icon(kayit?Icons.stop_rounded:(video?Icons.videocam_rounded:Icons.camera_alt_rounded),color:kayit?Colors.white:Colors.black,size:32),
+            ),
+          ),
+          const SizedBox(height:8),
           Text(
-            video&&filtreIndex!=0?lt('Video filtresi canlı önizlemede gösterilir; yayın sonrası filtre işleme sonraki kalite aşamasında tamamlanacak.','Video filter is previewed live; post-processing will be completed in the next quality pass.'):lt('İki parmakla yakınlaştır • Ön/arka kamerayı istediğin an çevir','Pinch to zoom • Switch front/back camera anytime'),
+            video
+              ?lt('Çekimden sonra düzenleme ekranı açılır • Filtre ve rötuş seçimleri “Bitti” ile onaylanır','The editor opens after recording • Filters and retouch are confirmed with Done')
+              :lt('Çekimden sonra kırpma • güzelleştirme • kontrast editörü açılır','Crop • beautify • contrast editor opens after capture'),
             textAlign:TextAlign.center,
             style:const TextStyle(color:Colors.white54,fontSize:10.5),
           ),
