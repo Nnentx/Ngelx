@@ -122,7 +122,7 @@ class _NgelXMuzikSecPageState extends State<NgelXMuzikSecPage> {
     );
     if(onay!=true||!mounted)return;
     const tur=XTypeGroup(label:'Ses dosyası',extensions:['mp3','m4a','aac','wav','ogg']);
-    final dosya=await openFile(acceptedTypeGroups:[tur]);
+    final dosya=await ngelxDosyaSec(tur:tur);
     if(dosya==null||!mounted)return;
     final boyut=await dosya.length();
     if(boyut<=0||boyut>15*1024*1024){
