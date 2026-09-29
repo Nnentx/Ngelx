@@ -15,20 +15,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Print current live broadcast section
+      - name: Print live launch call sites
         shell: python
         run: |
           from pathlib import Path
-          p=Path('app/lib/main.dart')
-          text=p.read_text(encoding='utf-8')
-          marker='class _CanliYayinPageState'
-          i=text.find(marker)
-          if i<0:
-              raise SystemExit('CanliYayinPageState not found')
-          j=text.find('\nclass ',i+len(marker))
-          if j<0:
-              j=min(len(text),i+50000)
-          block=text[i:j]
-          print('--- NGELX LIVE BLOCK START ---')
-          print(block[:50000])
-          print('--- NGELX LIVE BLOCK END ---')
+          text=Path('app/lib/main.dart').read_text(encoding='utf-8')
+          needles=['class CanliYayinPage','CanliYayinPage(','live_streams','setCameraEnabled(true)']
+          for needle in needles:
+              print(f'--- NEEDLE {needle} ---')
+              start=0
+              count=0
+              while True:
+                  i=text.find(needle,start)
+                  if i<0 or count>=20:
+                      break
+                  a=max(0,i-2200)
+                  b=min(len(text),i+4200)
+                  print(f'@@ OCCURRENCE {count+1} INDEX {i} @@')
+                  print(text[a:b])
+                  start=i+len(needle)
+                  count+=1
