@@ -4768,10 +4768,10 @@ jobs:
                 showDragHandle: true,
                 builder: (c) => SafeArea(
                   child: Wrap(children: [
-                    ListTile(leading: Icon(Icons.photo_library_outlined, color: tema), title: const Text('Galeriden fotoğraf'), onTap: () { Navigator.pop(c); medyaGonder(ImageSource.gallery); }),
-                    ListTile(leading: Icon(Icons.video_library_outlined, color: tema), title: const Text('Galeriden video'), onTap: () { Navigator.pop(c); medyaGonder(ImageSource.gallery, video: true); }),
-                    ListTile(leading: Icon(Icons.photo_camera_outlined, color: tema), title: const Text('Kamerayla fotoğraf çek'), onTap: () { Navigator.pop(c); medyaGonder(ImageSource.camera); }),
-                    ListTile(leading: Icon(Icons.videocam_outlined, color: tema), title: const Text('Kamerayla video çek'), onTap: () { Navigator.pop(c); medyaGonder(ImageSource.camera, video: true); }),
+                    ListTile(leading: Icon(Icons.photo_library_outlined, color: Color(temaRengi)), title: const Text('Galeriden fotoğraf'), onTap: () { Navigator.pop(c); medyaGonder(ImageSource.gallery); }),
+                    ListTile(leading: Icon(Icons.video_library_outlined, color: Color(temaRengi)), title: const Text('Galeriden video'), onTap: () { Navigator.pop(c); medyaGonder(ImageSource.gallery, video: true); }),
+                    ListTile(leading: Icon(Icons.photo_camera_outlined, color: Color(temaRengi)), title: const Text('Kamerayla fotoğraf çek'), onTap: () { Navigator.pop(c); medyaGonder(ImageSource.camera); }),
+                    ListTile(leading: Icon(Icons.videocam_outlined, color: Color(temaRengi)), title: const Text('Kamerayla video çek'), onTap: () { Navigator.pop(c); medyaGonder(ImageSource.camera, video: true); }),
                   ]),
                 ),
               );
@@ -5783,7 +5783,7 @@ jobs:
                 showDragHandle: true,
                 builder: (c) => SafeArea(
                   child: Column(mainAxisSize: MainAxisSize.min, children: [
-                    for (final e in const {14.0: 'Küçük', 16.0: 'Normal', 18.0: 'Büyük', 20.0: 'Çok büyük'}.entries)
+                    for (final e in {14.0: 'Küçük', 16.0: 'Normal', 18.0: 'Büyük', 20.0: 'Çok büyük'}.entries)
                       RadioListTile<double>(value: e.key, groupValue: yazi, title: Text(e.value), onChanged: (v) => Navigator.pop(c, v)),
                   ]),
                 ),
@@ -7395,7 +7395,7 @@ jobs:
           flutter pub get
           # Yeni Flutter surumleri yalnizca warning/info varken de 1 donebiliyor.
           # Makine formatinda yalnizca gercek ERROR kayitlarini fatal say.
-          flutter analyze --machine > analyze.log || true
+          flutter analyze --machine > analyze.log 2>&1 || true
           cat analyze.log
           if grep -q '^ERROR|' analyze.log; then
             echo 'Gercek Flutter analiz hatasi bulundu.' >&2
