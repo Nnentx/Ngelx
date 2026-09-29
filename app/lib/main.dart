@@ -8614,6 +8614,7 @@ class _YeniYuklePageState extends State<YuklePage> {
       await FirebaseFirestore.instance.collection('videos').add({
         'ownerId':user.uid,
         'username':adi,
+        'creatorId':user.uid,'creatorUsername':adi,'sharedById':'','sharedByUsername':'',
         'type':tur,
         'videoUrl':tur=='video'?medyaUrl:'',
         'mediaUrl':medyaUrl,
