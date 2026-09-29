@@ -1234,3 +1234,15 @@
 - Başarılı silmeden sonra mevcut PageView/akış state'i yeniden hesaplanmalı; aktif indeks geçerli aralığa çekilmeli ve silinen öğe kullanıcıya tekrar gösterilmemeli.
 - Sunucudan yenileme yapıldığında silinen içerik cache/önbellekten geri gelmemeli.
 - Profil, Akış, Keşfet, bağlantı ile açılan içerik ve Kaydedilenler tarafında aynı silinmiş içerik görünürlüğü kontrolü ortaklaştırılmalı.
+
+
+## 2026-09-29 — Canlı yayın ön hazırlık + kamera çevirme
+- Canlı yayın ekranında **ön/arka kamera çevirme** butonu bulunacak ve yayın sırasında da güvenli biçimde çalışacak.
+- Canlı yayın **başlatılmadan önce** bir ön hazırlık/önizleme ekranı açılacak.
+- Bu ön hazırlık ekranında kullanıcı şu ayarları seçebilecek: ön/arka kamera, filtre, rötuş, mikrofon açık/kapalı, flaş (desteklenen cihazlarda), oran ve mümkünse çözünürlük/kalite.
+- Filtre ve rötuş seçimleri yayına başlamadan önce canlı kamera önizlemesinde görülecek.
+- Kullanıcı ayarlarını yaptıktan sonra ayrı bir **Canlı yayını başlat** düğmesine basacak; seçim yapmak otomatik olarak yayını başlatmayacak.
+- Yayın başladıktan sonra filtre/rötuş ayarları değiştirilebilecek ancak ilk tercihlerin yayın açılmadan önce hazırlanması ana akış olacak.
+- Ön/arka kamera değiştirildiğinde seçili filtre/rötuş ayarları korunacak.
+- Kamera değişimi, mikrofon ve efektler LiveKit/video track yaşam döngüsünü bozmayacak; yayın kopmadan track yeniden yayınlanacak.
+- Düşük performanslı cihazlarda canlı yayın filtresi hafif moda geçecek; rötuş yoğunluğu ve efekt kalitesi gerektiğinde otomatik azaltılacak.
