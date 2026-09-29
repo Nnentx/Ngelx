@@ -144,6 +144,29 @@ class _NgelXMuzikSecPageState extends State<NgelXMuzikSecPage> {
     });
   }
 
+  Future<void> _geriCik()async{
+    if(!mounted)return;
+    final secim=await showDialog<String>(
+      context:context,
+      builder:(d)=>AlertDialog(
+        title:const Text('Düzenlemeden çıkılsın mı?'),
+        content:const Text('Yaptığın değişiklikleri uygulayabilir veya kaydetmeden çıkabilirsin.'),
+        actions:[
+          TextButton(onPressed:()=>Navigator.pop(d),child:const Text('Vazgeç')),
+          TextButton(onPressed:()=>Navigator.pop(d,'discard'),child:const Text('Kaydetmeden çık')),
+          FilledButton(onPressed:()=>Navigator.pop(d,'apply'),child:const Text('Değişiklikleri uygula')),
+        ],
+      ),
+    );
+    if(!mounted||secim==null)return;
+    if(secim=='discard'){Navigator.pop(context);return;}
+    Navigator.pop(context,<String,dynamic>{
+      'trimStartMs':(bas*1000).round(),'trimEndMs':son>=toplam-.05?0:(son*1000).round(),
+      'overlayText':yazi.text.trim(),'overlayColor':yaziRenk,'overlayBackgroundColor':yaziArkaPlanRenk,
+      'overlayFontSize':yaziBoyut,'overlayX':yaziX,'overlayY':yaziY,'overlayScale':yaziScale,'overlayRotation':yaziRotation,
+    });
+  }
+
   @override
   void dispose() {
     ara.dispose();
@@ -892,6 +915,7 @@ class _NgelXVideoDuzenlemePageState extends State<NgelXVideoDuzenlemePage> {
         backgroundColor: Colors.black,
         appBar: AppBar(
           backgroundColor: Colors.black,
+          leading:IconButton(onPressed:()=>unawaited(_geriCik()),icon:const Icon(Icons.arrow_back_rounded)),
           title: const Text('Videoyu düzenle', style: TextStyle(fontWeight: FontWeight.w900)),
           actions: [
             TextButton(
