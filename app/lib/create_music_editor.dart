@@ -160,7 +160,7 @@ class _NgelXMuzikSecPageState extends State<NgelXMuzikSecPage> {
         appBar: AppBar(
           backgroundColor: Colors.white,
           foregroundColor: Colors.black87,
-          title: const Text('Müzik ekle', style: TextStyle(fontWeight: FontWeight.w900)),
+          title: const Text('NgelX Müzik', style: TextStyle(fontWeight: FontWeight.w900)),
           surfaceTintColor: Colors.transparent,
         ),
         body: SafeArea(
@@ -173,7 +173,7 @@ class _NgelXMuzikSecPageState extends State<NgelXMuzikSecPage> {
                   onPressed:_cihazdanSesSec,
                   style:OutlinedButton.styleFrom(minimumSize:const Size.fromHeight(50)),
                   icon:const Icon(Icons.audio_file_rounded,color:mor),
-                  label:const Text('Cihazımdan ses dosyası seç'),
+                  label:const Text('Cihazımdan müzik ekle'),
                 ),
               ),
               Padding(
@@ -183,7 +183,7 @@ class _NgelXMuzikSecPageState extends State<NgelXMuzikSecPage> {
                   onChanged: (v) => setState(() => sorgu = v.trim().toLowerCase()),
                   style: const TextStyle(color: Colors.black87),
                   decoration: InputDecoration(
-                    hintText: 'Müziklerde ara',
+                    hintText: 'NgelX müziklerinde ara',
                     hintStyle: const TextStyle(color: Colors.black45),
                     prefixIcon: const Icon(Icons.search_rounded, color: Colors.black45),
                     suffixIcon: sorgu.isEmpty
