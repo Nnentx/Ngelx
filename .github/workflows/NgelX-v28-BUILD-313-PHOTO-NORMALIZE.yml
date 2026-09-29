@@ -1,0 +1,105 @@
+name: Ngel X v28 BUILD 313 PHOTO NORMALIZE
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - work/build313-photo-normalize
+    paths:
+      - '.github/workflows/NgelX-v28-BUILD-313-PHOTO-NORMALIZE.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - name: Kaynaklari al
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Build 313 foto kok duzeltmesini uygula ve dogrula
+        shell: bash
+        run: |
+          set -euo pipefail
+          PATCH_GZ_B64='H4sIAAAAAAACA7U6yXbbxrJ7fkVHN8cALyGIpGbKlCJZlKMkln1kO/f5+Dk8TaBJdojpYqAEyfqNu/Uya2+y8k7yf93qagwNDpLs855zQgGNmrqquobutvlwSFZXRzwmdI0GwZrDB2su5Z5p0zAmg/mxGvdsdknsjY0ttr1jmrt0Z7u13iatZnNrY6O2urq6iFKt0WgspPbTT2S1ZWyRRsvYJj/9VCPcDXzgrImvHRqlnqXtzYxavjdlYTw3zn0YalSHIt+hMZsDdWk81giNiHiY/RinAbP7No3pHF7CESvhe1LyNoq+jrIXkAG1JnTEOpbjJ3Z/yEMWxX7I1mbeUQEqhxwvGtMQBAhCNmQh8ywWrc0PLcUeOkkcs7AfMSsJWV+wguG1xcNLqXAXfvsBtyYsXFNfcozGQgwJKmGEorg7WkB8ym3m9wOHpkBcfVkqjkWtMczfY/GFH076kteiwfuVCmySTJn4mEMLW+62jR3S2N2AX3gFH4ti4o2Yc/kq5FPwoSMnYc+oN4VZdckz3/FDvXl5cnKydXJ4clIHjotRjvzQZmEF5Xint3Mfyqk3qcC3mu3W+qGAr60qGL+zMOK+d0ZdBuCv45B7I3MY+m7Pm/LQ91zmxbp29rz32//0f++dvz59edY/O3zR0wxisyFNnPh3Ctw6RGuZTXN3XQMOKv2jhDv2WeIOUPz76R+9Pf3tuH/29sVR73ye/nqrLYg3/v+E35il/38pPGpGtdXz0E+CRYbd7fV6TTQUGXKPOuS54w+o8ytLn57RKR9RWHWvYzDzviRUDAJEdymsXpceur65JcLN+uaOsb4lnPQkiWEtP33LvXjnNx7FGdUTP/aPkyvmOUwvvpFBGrPIuJaqIBBHJnFXe+dPNANAiO17SVQjJJMbQlSXXlBICyGzTObZ58yC+QKmXjdj/1QsNd2/MPxx3Qi8UQEbwccjYHQMwVMf+iGEV4iZJsKL8RMcMgGlvseHukDteonj1ONx6F+Q3qXFghj8QtfEJO4+hXRI7NsvOBePuczmJhgjZDBvjwC2OUiGEBFNGhUTFdoiN2CCxrx6+oV+RkCZ/xKw0c/0iocOVRQ1pq4QNaoTTD/kutYgBITNx00e9dwgTudlfs1u/+IgKBkWwg/8r59MdE5C1tbI7X8gdpMTGYvXLD6mV+BYNrM0TgCTjFh4+xdYBmjQ27/uPjt0AH7M7z5xj5MJ9e4+xw41ydHt36nDLJZR/bl3+mzt8PfTEzLiA04OPTv0ua1xJFJQIBG9+wRh9u6zdfeZDDjI6jos5ODwZHT7ZQo65uTV2XMtzenat397t1++frr9Eu6R5Ip6MSBOWUorpEAojyCTUPJ5cQrrlGY0XZbyK1MQlJ5VesucrxaK3yvB/wQTZfCnMpebYeIpNtX1urQQIVMawlyEOu0uJB5TPr8Cn0V/k0BgyBwGPe/jx+zVvOB2PH7abZYjY8ZH4xiG6hkHQqTNZSyQzrzQZ9GmJKbwDNqxqUdu/7r9++r2i1M4saR4I/9Igsw7StJk8ivzaNhtt7aapcyiTjFdeqlXpDWqktb3VQql0PmEK7j73SpyDkzIgVCe5QfpOYv4FctZGojWUVmI0MHCQNgFFNAReKfqiOlwj4EkJe3OEtpShu8iXtWkdJsIwpnVLbwEIz8GB0EF6ifg+UswKrj/O6EOj9PObrOek5N0Jr4Xh76juJNAQ+qKQ+VQmUNlr4pD5SPf6lAQnO4+Q3TywIF+edV7DmEa/CsRAy617z7P+VEWGVFA/HIjAUBIsZJMCE4jkGnj40fx+r754YeuSFzZawtfj3eyVwVjtV2BNB0axQi7m89kLhjOyc4mEZ/I8DHwr5JJLjyKngkuiMMgDEEFB2lJBuwXFFDdxH3B7JQe+SnEdT3LYxNoR0QAAAmiCx5bY6IrQ7CwaMSIhjVmpHVk0b7ZlmX75uaGsdlUEqmkmacJ5PaOphB6PX4MGQP0nrMN6cXb0CkzxCIFvLv9MhFZyyOuoERSES8hJNuQJkUT5RF/kmSG7JAfryXXX3lEfxbZE2wo/h4caBBbuYijgDEWTUn9RpvNcVXJ8wT3SOGLYEttmjoQesrpA9yhHOR6hoY2ezn4k1nxAcmElAEbqiBJJwkdIpKPxMw9JP/Gu29DbsZh+oqGEdOTnCZ6qficLSN4NCOo8F32Q1cbx3EQaXJw7MOKzpMwrJyYewnLly0IIfOAKBe6rT358LS7nj01GsraC9PrMjRJ+Sw2pUGWcY65rx+BA71Ei0Z6CYsR2wMVvOEu8xPsSWEBHychhiYduizfs6NOq103VCyophifsgewNjarWFOITtCOMlEOJlFHj+rd/egHVJMCV6+bIxaDbp+KSPcUls/+fkVk0F2FrC+n1Vk0PSFqFMAoewPdcOdceTFlJVmFHjMK1XDUudaeia5s9ZmMeFpH8/xVbNQMAk/Y+Go3FWR1rrknKJEc59xFs5jy5RmE4YOD5hwo1A8ZnJ37pPwHfiUxn7abEI3l8353XbwIpMzh4LEIkPVrVcS5tf3jde6IN0qxl0dnl5Kf37x5RX6UnDR1VjcVsUqW+63mP6HR28CfB7i/w0giQ6tSajIZbkRkGdx+SSH8mMtYS4WhIRdlSRBr3hIDEXgX1GKKt5W1mIo4X5PJ/mFQFnuKSirVWT3LC3KhIJf3TaP5Ya+6qBBGfr2vPlLRbupVB8HZQULcbz55Ip9b8JzzhyClgD/SHQY0hWo9hJp5SfEHUlgUcpbOVINnMbXLSqj8AdWD8Wy9Lg2Rxf8p1Pv7oFyxi2LrRUBxuePwIqo0m/+U2PVK1YA/92SvckJRAmVFIqpZWf+7Sgbbg/YEvBI6SQY9wNdPMQ+5I6b7HalN5v+B7ztKQvsVcmYl63f3M6/Ikh9mYS0YA2ykGVoQ+kNoqcSjiDocn0aicxcPFrDL/67izlHxNqDWRMCBzgRuEoiNJHiKx4k78Ch3Ig2SrykSD+UQNlGYbD9wc6NptNehtthqbRnt3QW1hVJaJKBgbHh0FF2krTRBpVts8g7qSYeNqAVpErcoJcCVD0vOSUR4ZV4swnHXKp8RDJxkRmso4ZMnMXP5Ve8SCjdtxIca+NyqcIKSJwqzrDvLVyvi5KS6GrRWWja4QDZN7tQpQMtmaIYscKjFTngIAeicjXqXgR5q/2u+/8P80PhRqxua2DYo1s5iqe9p8CvRppT/z0CI1rhfflGWanOMv30CglkdjXRT7rVAV9ddXudm3iXtOjPpPHUAhfnNiGM/wkpbUCGDJCtCY+jlb78Q0fzDKsbmXQQo+vXT3efUD81MvKweDLjqDSAWp4cBP8QKVlchwcW78+o7OJDzUob0XPMqtlj6ou7MF8l7GahnVk4qqtmZUjaZqWNzihiXRHAJK46xsKRXCtAs2i9aPnkIPljkaLMkS/YFXqccy7oeUstLUKKWx05F4mMOJWN83kZ7Y8TQa1meAOt04H8DHbsz4xqGELojfgx2GXdyrRtKsOjAXI2cmO+9CkF4FkWd8jH7mi/6TDvfoVCJUjGgBKqmQFlJSmcwqW3rmo3T7xCtMZNCMIfhOpJxd3vH2BZhd6spz2IeHXXlv3IZdyrr2yhB7tNQqaPv0tKj9DSvqaquBtCoNLR7VFUqa3dLKguV9u3KepS6HlKYqrLvVNoj1bZIcTNuZo0TbwKae4QOCy1u7baNDZHqt7c3jHZ7mR6LEIFr91oJ+9ADdnVbRGlTPMuAqWl1aI25i9vsv/kXLHwGMsFbFDg81rU9+D4UGaYSPl2RynRY6AcHOrXL0kSDeH4AAxkyvOHOTQezXn2GRVFjFMlRKuGt2Pjlb8Sg3KSV0XtVWE/sTIp5VBLlx48zY8BrNuECLnMiNkcAU/yC6mIh8AUbBCo0vi8Hx6KnhBavy4GhY7BUaHy/F3w4A34fdTqtguN7plM0AeRTgSA63jCO/sXjsZ6hgkXFl869qXUV9+9fK7v02Ih4ZEVU86IOWSGiak8dWp4erP2rd/QKN/1tqBJcyPFiTY3EBjZUCWZG9LwNpURM8XhcFhD5qQWxZckBxYRz9/nukyTP4I1hP7AHbak8tyBpdW8sIw3iiuZCZMoknMDHlHpA6eunbD89wvMVl12hLJg6V5X+lOZVoFxUfsC8c0ZtvWmst2HV+I6t9qqyXfxg6HHiGgENLVq/hkcREA4dR5cj+VETfNi7yQMWNiYQEsUGpT8cRiw2CrqEu1cUWhMQJq/OuhKmIb5kY0+eFAjmCNQA7RrTle+GziWN9znuh7pJoxc0gEgA5hbdjMmmLEx1CE3dfWZOxWlltytovGfmhKUfcmmzSolGFueqyOJRclssrnw9UI5On41pKPZeIpFrzCgZOGKvICNXwarXO1pe8IPrA0bTkM3ae7GJbIhNZkM8faiD0quhQbh+pey+kXTydVQltrMLdDab8LPREz/b8NM8Fj+H8NM6xKcqF4wpChd8n2EitdU0NuqwZJ+fnuxoKgWMHAoFfL+PwvnpyYn25Ikc25FjYrFVqMropZCVAwvpbkgawzgNij6u7CfCCe2WvGaj/GqxlyAhs+gDUbt8jSqSyeikSCYHbnJSuWwz/biMmYb4c4l/pvJteqkp7TNyrRhIhlqFnRx4kJ3Lhy1g4Ebw5yEGw1kG5XzwT1Yy9OvXN4vKdHUvTEYb6fh6XibkO0rirOex58RkdPs3NGfe7Ze8E5svu2dqM2zy9FwxKEkHf41iRx3F2H+gwbzv/D1rIZc0i43Z7URVKSGE38NIFpDKJv/gu47R59WD9CBvwAIltsgTeNY64WTMQgV5UT0rO2C7OHHHIyqNFSTzo2/ZLzvwW566k6yJ6gDchKYeFanOwGNvMmXFQbnHSIQYYVTSlSMRNN/nbS2FREgd0OqVRUmSjnDrGI/T8fA/ICnzuNjOnfi2I9K1YJRvK5IRfArN8oR4ttT5+LHw+GzDZ7b2aTzkXtJyeb0tG81s9z8rhss2Mx+ptJu5ZyoNw7ftmGiNoqopiM31sI17mBRfK1hVxRwoWuvIU5XHtcXV3sKevUwZJIMoYJaZUtfJbj+qQ9lVytZ6027tbptma9vaGti781cpK0jlTcrKsLxIuV1epPQoFInSoH2ArhFI3FbIcY11yMoh+OdFfhOFBKEvDvTMlRoJMK+P+7EPfZDne0yrrU7lba0OkTfFGuutdq1RHdyAwfUaYeX1qg4eytqTDvlj3Wytm/BVSrmNp6/bsve0WYBHFhaUNIih3gcE1LbZ2jCbNTzKnb/uBwDwVX5XbynCeMtsA8tGNo6ArabZQqGKC4ACDiSTBEbUQYYoKkRTDhr4Y9NstQCrYtsYCsBoDebPh2l/IG6awdz7uPPc98QZvsOvmBmkYKfHgtaENcR+NXGhwspdQDpIU/4zzV2229xubaNnrNlsuiZ8NXOIRzMSJoB6STjKBnpK4x8/rCVRuDbg3hqYjwRpPPY9UJ2o+UgAa8jhg/w+pVhStUatcf7y5RvSxVe93xeC9/t1WNCR70xFuwrlM7hA9L71odZ4cXh6BrA64qyRlblbwCt1zBT9GGKHjrczIKF3V5J4uLqzUq81Xr09msVXff8h9GfnvcM3vUUSWIAXs76bRNzqM5vHfvgogcR/NhtC7Px3wkOm++DkoiswoJ2JInS3KA7rZHWfnMEK6uRBmng+1N+TjrKDQTkUM6/TCEJS7xKa9BW8uUjAeASNyS08yiFDCjq2YeGSRs4kEyQXYmXBglwR5/CgPoOsZBojGZSYRoFZXSIKEn7Iuq9ipaYV3MXXMZEGGp56NllZcKeygAA2YeLFkL6WyPbIe8YqQVVuSaBC81tuBqpk5TVseZ0lX1Rongr1h663qRRhFXOr1LD4G5HIT0IYxH2eGV08cHupolQGNZm8eZN58Byt2StNKrrjWzm+BKv4Y4XU428LqQws3w0cFjPJQ1TpkIiW8viWiy5VLbg+8MBAuJz6A5cdFhDEcQLuAKXuhef4FCxRIfmYs+/76UrUCtElZ6wqHRkoSEauEkMGYNNJVGzfEGtMQY2RjGjIuI/7TRAqBTET08+c6hdvDwsikgQEiW8iIHuY6xWDKCIU1JJA6DYj+F6B6BTcPigKevAAEFWlkgaVUUc2L5mXyPGoWOGsYoIHTgkX0UcHx/aAg2kTSK8hj8Ek0yrlR58pLZtDVXxZC+SOIL1JmhrT9WMtPbOBLSgg/lIz410ExcivuaODcUumOYWqacvvnZy+atgFDSWqQaEknF9UUFINf/rQ/EuzVkI1CXjAxNXRiu4XOvX9DJJIhGqZEZCNBGLhfYSls69gITBHPKQXGW1kk+lnkAY0itCOUxkO1IAg+q/80gPKm1U7mHaXz0pCiSiMJRAZOtCD44wKr7crmhr6ITZ7Arlgm1+xAPNmQ/lVi3Iku3KxUu/k/aYUPSdWTa0oB0xV7Nzkd+zysic7h601AnDPSqUklVY1s1BAxfersVDolNkmTO2/azC37QQ3AAA='
+          printf '%s' "$PATCH_GZ_B64" | base64 --decode | gzip --decompress | git apply
+          python3 tools/verify_build313_photo_normalize.py
+          python3 tools/verify_ngelx_contract.py
+          git diff --check
+      - name: Medya servis sagligini kontrol et
+        shell: bash
+        run: |
+          set -euo pipefail
+          for url in "https://ngelx-media.alihancaglar76.workers.dev/health" "https://ngelx-upload.alihancaglar76.workers.dev/health"; do
+            body="$(curl --fail --silent --show-error --retry 4 --retry-all-errors --retry-delay 2 --connect-timeout 10 --max-time 25 "$url")"
+            echo "$body"
+            grep -q '"r2":true' <<<"$body"
+            grep -q '"directUpload":true' <<<"$body"
+          done
+      - name: Java 17 kur
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Flutter kur
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Sabit NgelX imza anahtarini geri yukle
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: ngelx-stable-debug-keystore-v1
+          fail-on-cache-miss: true
+      - name: Imza anahtarini dogrula
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s "$HOME/.android/debug.keystore"
+          keytool -list -v -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey | tee /tmp/ngelx-key.txt
+          grep -F 'SHA256: BE:20:B2:7F:0B:A1:F4:DE:CD:29:41:D4:10:B1:53:6D:E8:9E:48:DC:89:4F:04:F0:38:F9:D2:6B:11:EC:D6:AA' /tmp/ngelx-key.txt
+      - name: Flutter analiz
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter clean
+          flutter pub get
+          flutter analyze --machine > analyze.log 2>&1 || true
+          cat analyze.log
+          if grep -q '^ERROR|' analyze.log; then exit 1; fi
+      - name: APK olustur ve imzayi dogrula
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter build apk --release
+          APK=build/app/outputs/flutter-apk/app-release.apk
+          test -s "$APK"
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          "$APKSIGNER" verify --print-certs "$APK" | tee build/app/outputs/flutter-apk/apksigner-certs.txt
+          grep -qi 'be20b27f0ba1f4decd2941d410b1536de89e48dc894f04f038f9d26b11ecd6aa' build/app/outputs/flutter-apk/apksigner-certs.txt
+          sha256sum "$APK" > "$APK.sha256"
+      - name: Build 313 kaynagini dala kaydet
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "NgelX Build Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add app/lib/main.dart app/pubspec.yaml app/pubspec.lock tools/verify_build313_photo_normalize.py
+          git commit -m "Build 313: normalize and verify photo uploads [skip ci]"
+          git push origin HEAD:work/build313-photo-normalize
+      - name: APK yukle
+        uses: actions/upload-artifact@v4
+        with:
+          name: NgelX-1.0.94-Build-313-PHOTO-NORMALIZE
+          path: |
+            app/build/app/outputs/flutter-apk/app-release.apk
+            app/build/app/outputs/flutter-apk/app-release.apk.sha256
+            app/build/app/outputs/flutter-apk/apksigner-certs.txt
+          if-no-files-found: error
+          retention-days: 14
