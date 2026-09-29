@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:isolate';
 import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui' as ui;
@@ -12,6 +13,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:image/image.dart' as img;
 import 'package:video_player/video_player.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:share_plus/share_plus.dart';
@@ -92,8 +94,8 @@ const ngelxPrivateBlueCanvas = Color(0xFFF6FAFF);
 const ngelxPrivateBlueBorder = Color(0xFFD8E8FF);
 const ngelxPrivateBlueInk = Color(0xFF10213A);
 
-const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.93');
-const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '312');
+const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.94');
+const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '313');
 const ngelxGroupBorder = Color(0xFFD9EEE0);
 
 final GlobalKey<NavigatorState> ngelxNavigatorKey=GlobalKey<NavigatorState>();
@@ -354,6 +356,36 @@ Future<Uint8List> ngelxFotoDuzenle(Uint8List bytes,{String efekt='Yok',int donus
   if(efekt=='Siyah Beyaz')p.colorFilter=const ColorFilter.matrix([.299,.587,.114,0,0,.299,.587,.114,0,0,.299,.587,.114,0,0,0,0,0,1,0]);
   canvas.drawImageRect(kaynak,Rect.fromLTWH(sol,ust,kw.toDouble(),kh.toDouble()),Rect.fromCenter(center:Offset.zero,width:kw.toDouble(),height:kh.toDouble()),p);
   final res=await rec.endRecording().toImage(ow,oh),png=await res.toByteData(format:ui.ImageByteFormat.png);if(png==null)throw Exception('Fotoğraf düzenlenemedi.');return png.buffer.asUint8List();
+}
+
+Future<Uint8List> _ngelxFotografiJpegHazirla(Uint8List hamBytes) async {
+  if(hamBytes.isEmpty)throw Exception('Seçilen fotoğraf boş.');
+  // Önce Flutter/cihaz codec'i ile gerçekten açılabildiğini kanıtla. Böylece
+  // HEIC/AVIF gibi Android'in açabildiği sağlayıcı biçimleri de güvenli PNG'ye
+  // dönüşür; uzantı veya sağlayıcının bildirdiği MIME'a güvenmeyiz.
+  final png=await ngelxFotoDuzenle(hamBytes);
+  final jpeg=await Isolate.run<Uint8List>(() {
+    var decoded=img.decodePng(png);
+    if(decoded==null||decoded.width<=0||decoded.height<=0){
+      throw const FormatException('Fotoğraf codec tarafından çözülemedi.');
+    }
+    const enBuyukKenar=2160;
+    if(math.max(decoded.width,decoded.height)>enBuyukKenar){
+      decoded=decoded.width>=decoded.height
+        ?img.copyResize(decoded,width:enBuyukKenar,interpolation:img.Interpolation.linear)
+        :img.copyResize(decoded,height:enBuyukKenar,interpolation:img.Interpolation.linear);
+    }
+    final sonuc=Uint8List.fromList(img.encodeJpg(decoded,quality:90));
+    final kontrol=img.decodeJpg(sonuc);
+    if(kontrol==null||kontrol.width<=0||kontrol.height<=0){
+      throw const FormatException('Hazırlanan JPEG doğrulanamadı.');
+    }
+    return sonuc;
+  });
+  if(jpeg.length<4||jpeg[0]!=0xFF||jpeg[1]!=0xD8||jpeg[jpeg.length-2]!=0xFF||jpeg.last!=0xD9){
+    throw Exception('Hazırlanan JPEG eksik veya bozuk.');
+  }
+  return jpeg;
 }
 
 int _ngelxMaksimumMedyaBoyutu(String kind) {
@@ -1522,6 +1554,50 @@ Future<String> _ngelxMedyaYayininiDogrula(String rawUrl) async {
   throw Exception('Yüklenen medya yayın adresinden okunamadı: ${_ngelxKisaHata(sonHata??'bilinmeyen hata')}');
 }
 
+Future<String> _ngelxFotografYayininiDogrula(String rawUrl) async {
+  final adaylar=ngelxMedyaUrlAdaylari(rawUrl);
+  Object? sonHata;
+  for(final url in adaylar){
+    final uri=Uri.tryParse(url);
+    if(uri==null||uri.scheme!='https'||uri.host.isEmpty)continue;
+    for(var deneme=1;deneme<=3;deneme++){
+      try{
+        final cevap=await Dio(BaseOptions(
+          connectTimeout:const Duration(seconds:12),
+          receiveTimeout:const Duration(seconds:45),
+          validateStatus:(s)=>s!=null,
+        )).getUri<List<int>>(
+          uri,
+          options:Options(
+            responseType:ResponseType.bytes,
+            headers:{'Cache-Control':'no-cache, no-store'},
+          ),
+        );
+        final status=cevap.statusCode??0;
+        final ham=cevap.data;
+        if(status<200||status>=300||ham==null||ham.length<4){
+          throw Exception('${uri.host} fotoğraf doğrulama HTTP $status');
+        }
+        if(ham.length>10*1024*1024){
+          throw Exception('Yayınlanan fotoğraf beklenenden büyük.');
+        }
+        final bytes=Uint8List.fromList(ham);
+        final boyut=await Isolate.run<List<int>>(() {
+          final decoded=img.decodeImage(bytes);
+          if(decoded==null)return const <int>[0,0];
+          return <int>[decoded.width,decoded.height];
+        });
+        if(boyut[0]>0&&boyut[1]>0)return url;
+        throw Exception('${uri.host} fotoğraf baytları çözülemedi.');
+      }catch(e){
+        sonHata=e;
+      }
+      if(deneme<3)await Future<void>.delayed(Duration(milliseconds:400*deneme));
+    }
+  }
+  throw Exception('Yüklenen fotoğraf sunucudan sağlam okunamadı; kayıt değiştirilmedi: ${_ngelxKisaHata(sonHata??'bilinmeyen hata')}');
+}
+
 bool _ngelxFotoKind(String kind)=>const <String>{
   'photos','profiles','stories','groups','chats','chat-images','chat-backgrounds','support','thumbnails'
 }.contains(kind);
@@ -1540,23 +1616,29 @@ Future<String> ngelxMedyaYukleBytes({
   var yuklenecekYol=legacyPath;
   var zorunluContentType=contentType;
   if(_ngelxFotoKind(kind)&&temizExt!='gif'){
-    yuklenecekBytes=await ngelxFotoDuzenle(bytes);
-    temizExt='png';
-    zorunluContentType='image/png';
-    yuklenecekYol=legacyPath.replaceFirst(RegExp(r'\.[^.]+$'),'.png');
+    yuklenecekBytes=await _ngelxFotografiJpegHazirla(bytes);
+    temizExt='jpg';
+    zorunluContentType='image/jpeg';
+    yuklenecekYol=legacyPath.replaceFirst(RegExp(r'\.[^.]+$'),'.jpg');
   }
   final max=_ngelxMaksimumMedyaBoyutu(kind);
   if(yuklenecekBytes.length>max)throw Exception('Dosya boyutu bu medya türü için sınırı aşıyor.');
   final api=await ngelxMediaApiAdresi();
   final tur=zorunluContentType??_ngelxContentType(temizExt);
   final hatalar=<String>[];
+  Future<String> yayinDogrula(String url) async {
+    final okunabilir=await _ngelxMedyaYayininiDogrula(url);
+    return _ngelxFotoKind(kind)
+      ?await _ngelxFotografYayininiDogrula(okunabilir)
+      :okunabilir;
+  }
 
   try{
     final url=await _ngelxDirectR2BytesYukle(
       api:api,bytes:yuklenecekBytes,kind:kind,ext:temizExt,contentType:tur,
       onProgress:onProgress,
     );
-    return await _ngelxMedyaYayininiDogrula(url);
+    return await yayinDogrula(url);
   }catch(e){
     hatalar.add('direct: '+_ngelxKisaHata(e));
   }
@@ -1578,7 +1660,7 @@ Future<String> ngelxMedyaYukleBytes({
         legacyPath:yuklenecekYol,
         onProgress:onProgress,
       );
-      return await _ngelxMedyaYayininiDogrula(url);
+      return await yayinDogrula(url);
     }catch(e){
       hatalar.add(base+': '+_ngelxKisaHata(e));
     }
@@ -1596,7 +1678,7 @@ Future<String> ngelxMedyaYukleBytes({
           legacyPath:yuklenecekYol,
           onProgress:onProgress,
         );
-        return await _ngelxMedyaYayininiDogrula(url);
+        return await yayinDogrula(url);
       }catch(e){
         hatalar.add('chunk '+base+': '+_ngelxKisaHata(e));
       }
@@ -1692,43 +1774,22 @@ Future<String> ngelxFotografYukle({
   final mime=(dosya.mimeType??'').trim().toLowerCase().split(';').first;
   final hamExt=(ext??(ad.contains('.')?ad.split('.').last:'jpg')).toLowerCase();
   var temizExt=_ngelxUzantiTemizle(hamExt);
-
-  if(mime=='image/jpeg'||mime=='image/jpg')temizExt='jpg';
-  else if(mime=='image/png')temizExt='png';
-  else if(mime=='image/webp')temizExt='webp';
-  else if(mime=='image/gif')temizExt='gif';
-  else if(mime=='image/heic')temizExt='heic';
-  else if(mime=='image/heif')temizExt='heif';
-  else if(mime=='image/avif')temizExt='avif';
-
-  var tur=mime.startsWith('image/')?mime:_ngelxContentType(temizExt);
-  // Sağlayıcıların "foto.jpg" adıyla HEIC/AVIF/WEBP döndürmesi yaygındır.
-  // R2 metadata'sını gerçek dosya başlığıyla eşleştir; böylece yüklenen medya
-  // ağdan okunurken yanlış codec seçilmez.
-  try{
-    final bas=await dosya.openRead(0,32).fold<List<int>>(<int>[],(tum,parca){tum.addAll(parca);return tum;});
-    bool es(int offset,List<int> imza)=>bas.length>=offset+imza.length&&List<int>.generate(imza.length,(i)=>bas[offset+i]).asMap().entries.every((e)=>e.value==imza[e.key]);
-    String ascii(int offset,int length)=>bas.length>=offset+length?String.fromCharCodes(bas.sublist(offset,offset+length)):'';
-    if(es(0,const [0xFF,0xD8,0xFF])){temizExt='jpg';tur='image/jpeg';}
-    else if(es(0,const [0x89,0x50,0x4E,0x47,0x0D,0x0A,0x1A,0x0A])){temizExt='png';tur='image/png';}
-    else if(ascii(0,4)=='GIF8'){temizExt='gif';tur='image/gif';}
-    else if(ascii(0,4)=='RIFF'&&ascii(8,4)=='WEBP'){temizExt='webp';tur='image/webp';}
-    else if(ascii(4,4)=='ftyp'){
-      final marka=ascii(8,4).toLowerCase();
-      if(marka=='avif'||marka=='avis'){temizExt='avif';tur='image/avif';}
-      else if(const <String>{'heic','heix','hevc','hevx'}.contains(marka)){temizExt='heic';tur='image/heic';}
-      else if(const <String>{'mif1','msf1'}.contains(marka)){temizExt='heif';tur='image/heif';}
-    }
-  }catch(_){}
   try{
     final boyut=await dosya.length();
     if(boyut<=0)throw Exception('Seçilen fotoğraf boş görünüyor.');
-    return await ngelxMedyaYukleDosya(
-      dosya:dosya,
+    if(boyut>_ngelxMaksimumMedyaBoyutu(kind))throw Exception('Fotoğraf boyutu sınırı aşıyor.');
+    final bytes=await dosya.readAsBytes();
+    if(bytes.isEmpty)throw Exception('Seçilen fotoğraf boş görünüyor.');
+    // GIF dışındaki her fotoğraf ngelxMedyaYukleBytes içinde gerçek JPEG'e
+    // dönüştürülür. Böylece content:// kaynağı, MIME ve uzantı ne söylerse
+    // söylesin R2'ye yalnızca uygulamanın açıp yeniden kodladığı baytlar gider.
+    if(mime=='image/gif'||temizExt=='gif')temizExt='gif';
+    return await ngelxMedyaYukleBytes(
+      bytes:bytes,
       kind:kind,
       ext:temizExt,
-      legacyPath:legacyPath.replaceFirst(RegExp(r'\.[^.]+$'),'.'+temizExt),
-      contentType:tur,
+      legacyPath:legacyPath,
+      contentType:temizExt=='gif'?'image/gif':null,
       onProgress:onProgress,
     );
   }catch(e){
