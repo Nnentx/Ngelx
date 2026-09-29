@@ -15,7 +15,6 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:image/image.dart' as img;
 import 'package:video_player/video_player.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:gal/gal.dart';
 import 'package:dio/dio.dart';
@@ -94,8 +93,8 @@ const ngelxPrivateBlueCanvas = Color(0xFFF6FAFF);
 const ngelxPrivateBlueBorder = Color(0xFFD8E8FF);
 const ngelxPrivateBlueInk = Color(0xFF10213A);
 
-const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.94');
-const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '313');
+const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.95');
+const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '314');
 const ngelxGroupBorder = Color(0xFFD9EEE0);
 
 final GlobalKey<NavigatorState> ngelxNavigatorKey=GlobalKey<NavigatorState>();
@@ -246,36 +245,173 @@ List<String> ngelxMedyaUrlAdaylari(String rawUrl){
   return sonuc;
 }
 
+final Map<String,Uint8List> _ngelxAgResmiBellek=<String,Uint8List>{};
+const int _ngelxAgResmiBellekSiniri=96;
+
+Future<Uint8List> _ngelxAgResmiBaytlari(String rawUrl) async {
+  final temiz=rawUrl.trim();
+  if(temiz.isEmpty)throw Exception('Fotoğraf adresi boş.');
+  final hazir=_ngelxAgResmiBellek[temiz];
+  if(hazir!=null&&hazir.isNotEmpty)return hazir;
+
+  Object? sonHata;
+  for(final aday in ngelxMedyaUrlAdaylari(temiz)){
+    final uri=Uri.tryParse(aday);
+    if(uri==null||uri.scheme!='https'||uri.host.isEmpty)continue;
+    for(var deneme=1;deneme<=3;deneme++){
+      try{
+        final cevap=await Dio(BaseOptions(
+          connectTimeout:const Duration(seconds:12),
+          receiveTimeout:const Duration(seconds:45),
+          validateStatus:(s)=>s!=null,
+        )).getUri<List<int>>(
+          uri,
+          options:Options(
+            responseType:ResponseType.bytes,
+            headers:const {
+              'Accept':'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
+              'Cache-Control':'no-cache, no-store, max-age=0',
+              'Pragma':'no-cache',
+            },
+          ),
+        );
+        final status=cevap.statusCode??0;
+        final ham=cevap.data;
+        if(status<200||status>=300||ham==null||ham.length<4){
+          throw Exception('HTTP $status');
+        }
+        if(ham.length>12*1024*1024)throw Exception('Fotoğraf çok büyük.');
+        final bytes=Uint8List.fromList(ham);
+
+        // Ağ cevabını ortak ImageProvider önbelleğine koymadan önce gerçek
+        // Flutter cihaz codec'i ile aç. Bozuk/stale yanıt varsa diğer medya
+        // hostuna geçilir; geçerli bayt gelmeden UI kaynağı oluşturulmaz.
+        final codec=await ui.instantiateImageCodec(bytes);
+        final frame=await codec.getNextFrame();
+        frame.image.dispose();
+        codec.dispose();
+
+        if(_ngelxAgResmiBellek.length>=_ngelxAgResmiBellekSiniri){
+          _ngelxAgResmiBellek.remove(_ngelxAgResmiBellek.keys.first);
+        }
+        _ngelxAgResmiBellek[temiz]=bytes;
+        _ngelxAgResmiBellek[aday]=bytes;
+        return bytes;
+      }catch(e){
+        sonHata=e;
+      }
+      if(deneme<3)await Future<void>.delayed(Duration(milliseconds:250*deneme));
+    }
+  }
+  throw Exception('Fotoğraf ağdan açılamadı: ${_ngelxKisaHata(sonHata??'bilinmeyen hata')}');
+}
+
+@immutable
+class NgelXAgImageProvider extends ImageProvider<NgelXAgImageProvider>{
+  final String url;
+  const NgelXAgImageProvider(this.url);
+
+  @override
+  Future<NgelXAgImageProvider> obtainKey(ImageConfiguration configuration)=>Future<NgelXAgImageProvider>.value(this);
+
+  @override
+  ImageStreamCompleter loadImage(NgelXAgImageProvider key,ImageDecoderCallback decode){
+    return MultiFrameImageStreamCompleter(
+      codec:_codecYukle(key,decode),
+      scale:1.0,
+      informationCollector:()=> <DiagnosticsNode>[
+        ErrorDescription('NgelX ağ resmi: ${key.url}'),
+      ],
+    );
+  }
+
+  Future<ui.Codec> _codecYukle(NgelXAgImageProvider key,ImageDecoderCallback decode) async {
+    final bytes=await _ngelxAgResmiBaytlari(key.url);
+    final buffer=await ui.ImmutableBuffer.fromUint8List(bytes);
+    return decode(buffer);
+  }
+
+  @override
+  bool operator ==(Object other)=>other is NgelXAgImageProvider&&other.url==url;
+  @override
+  int get hashCode=>url.hashCode;
+}
+
+Future<void> ngelxAgResmiOnbelleginiTemizle([String? rawUrl]) async {
+  final temiz=(rawUrl??'').trim();
+  if(temiz.isEmpty){
+    _ngelxAgResmiBellek.clear();
+    PaintingBinding.instance.imageCache.clear();
+    PaintingBinding.instance.imageCache.clearLiveImages();
+    return;
+  }
+  _ngelxAgResmiBellek.remove(temiz);
+  for(final aday in ngelxMedyaUrlAdaylari(temiz)){
+    _ngelxAgResmiBellek.remove(aday);
+    await PaintingBinding.instance.imageCache.evict(NgelXAgImageProvider(aday),includeLive:true);
+  }
+  await PaintingBinding.instance.imageCache.evict(NgelXAgImageProvider(temiz),includeLive:true);
+}
+
 class NgelXAgResmi extends StatefulWidget{
   final String url;
   final BoxFit fit;
   final double? width,height;
-  final Widget? placeholder,error;
-  const NgelXAgResmi({super.key,required this.url,this.fit=BoxFit.cover,this.width,this.height,this.placeholder,this.error});
+  final Object? placeholder,error,errorWidget;
+  const NgelXAgResmi({
+    super.key,
+    String? url,
+    String? imageUrl,
+    this.fit=BoxFit.cover,
+    this.width,
+    this.height,
+    this.placeholder,
+    this.error,
+    this.errorWidget,
+  }):url=url??imageUrl??'';
+
   @override State<NgelXAgResmi> createState()=>_NgelXAgResmiState();
 }
 
 class _NgelXAgResmiState extends State<NgelXAgResmi>{
-  late List<String> adaylar;
-  int sira=0;
-  @override void initState(){super.initState();adaylar=ngelxMedyaUrlAdaylari(widget.url);}
-  @override void didUpdateWidget(covariant NgelXAgResmi oldWidget){
-    super.didUpdateWidget(oldWidget);
-    if(oldWidget.url!=widget.url){adaylar=ngelxMedyaUrlAdaylari(widget.url);sira=0;}
+  Widget _placeholder(BuildContext context){
+    final p=widget.placeholder;
+    if(p is Widget)return p;
+    if(p is Function){
+      try{
+        final sonuc=Function.apply(p,<Object?>[context,widget.url]);
+        if(sonuc is Widget)return sonuc;
+      }catch(_){}
+    }
+    return const Center(child:SizedBox(width:22,height:22,child:CircularProgressIndicator(strokeWidth:2)));
   }
-  void siradakiniDene(){
-    if(sira+1>=adaylar.length)return;
-    WidgetsBinding.instance.addPostFrameCallback((_){if(mounted&&sira+1<adaylar.length)setState(()=>sira++);});
+
+  Widget _error(BuildContext context,Object hata){
+    final e=widget.errorWidget??widget.error;
+    if(e is Widget)return e;
+    if(e is Function){
+      try{
+        final sonuc=Function.apply(e,<Object?>[context,widget.url,hata]);
+        if(sonuc is Widget)return sonuc;
+      }catch(_){}
+    }
+    return const Center(child:Icon(Icons.broken_image_outlined));
   }
+
   @override Widget build(BuildContext context){
-    if(adaylar.isEmpty)return widget.error??const Center(child:Icon(Icons.broken_image_outlined));
-    return CachedNetworkImage(
-      key:ValueKey('ngelx-net-${adaylar[sira]}'),imageUrl:adaylar[sira],fit:widget.fit,width:widget.width,height:widget.height,
-      placeholder:(_,__)=>widget.placeholder??const Center(child:SizedBox(width:22,height:22,child:CircularProgressIndicator(strokeWidth:2))),
-      errorWidget:(_,__,___){
-        if(sira+1<adaylar.length){siradakiniDene();return widget.placeholder??const SizedBox.shrink();}
-        return widget.error??const Center(child:Icon(Icons.broken_image_outlined));
+    final temiz=widget.url.trim();
+    if(temiz.isEmpty)return _error(context,StateError('Fotoğraf adresi boş.'));
+    return Image(
+      key:ValueKey('ngelx-direct-$temiz'),
+      image:NgelXAgImageProvider(temiz),
+      fit:widget.fit,
+      width:widget.width,
+      height:widget.height,
+      frameBuilder:(context,child,frame,wasSync){
+        if(wasSync||frame!=null)return child;
+        return _placeholder(context);
       },
+      errorBuilder:(context,error,stack)=>_error(context,error),
     );
   }
 }
@@ -3863,7 +3999,7 @@ class _AnaEkranState extends State<AnaEkran> {
                         child:CircleAvatar(
                           radius:25,
                           backgroundColor:const Color(0xFFE9DDFF),
-                          backgroundImage:foto.isEmpty?null:CachedNetworkImageProvider(foto),
+                          backgroundImage:foto.isEmpty?null:NgelXAgImageProvider(foto),
                           child:foto.isEmpty?Icon(grup?Icons.groups_rounded:Icons.person_rounded,color:ngelxPremiumPurple):null,
                         ),
                       ),
@@ -4431,7 +4567,7 @@ class _AramaPageState extends State<AramaPage> {
                 if (kullanicilar.isEmpty && icerikler.isEmpty) return Center(child: Text(t('noResults')));
                 return ListView(children: [
                   if (kullanicilar.isNotEmpty) Padding(padding: const EdgeInsets.fromLTRB(18, 20, 18, 8), child: Text(t('usersLabel'), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: mavi))),
-                  ...kullanicilar.map((d) { final v=d.data(); final foto=(v['photoUrl'] ?? '').toString(); return ListTile(onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => KullaniciProfilPage(uid: d.id))), leading: CircleAvatar(backgroundImage: foto.isEmpty ? null : CachedNetworkImageProvider(foto), child: foto.isEmpty ? const Text('N') : null), title: Text((v['displayName'] ?? v['username'] ?? 'NgelX').toString()), subtitle: Text('@${v['username'] ?? 'ngelx'}'), trailing: const Icon(Icons.chevron_right)); }),
+                  ...kullanicilar.map((d) { final v=d.data(); final foto=(v['photoUrl'] ?? '').toString(); return ListTile(onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => KullaniciProfilPage(uid: d.id))), leading: CircleAvatar(backgroundImage: foto.isEmpty ? null : NgelXAgImageProvider(foto), child: foto.isEmpty ? const Text('N') : null), title: Text((v['displayName'] ?? v['username'] ?? 'NgelX').toString()), subtitle: Text('@${v['username'] ?? 'ngelx'}'), trailing: const Icon(Icons.chevron_right)); }),
                   if (icerikler.isNotEmpty) Padding(padding: const EdgeInsets.fromLTRB(18, 20, 18, 8), child: Text(t('postsLabel'), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: mor))),
                   ...icerikler.map((d) { final v=d.data(); final tur=(v['type'] ?? 'video').toString(); return ListTile(onTap: () => Navigator.push(context,MaterialPageRoute(builder:(_)=>IcerikBaglantiPage(icerikId:d.id))), leading: Icon(tur == 'video' ? Icons.videocam : tur == 'photo' ? Icons.photo : Icons.text_fields, color: mor), title: Text((v['description'] ?? 'NgelX paylaşımı').toString(), maxLines: 2, overflow: TextOverflow.ellipsis), subtitle: Text('@${v['username'] ?? 'ngelx'}')); }),
                 ]);
@@ -4541,7 +4677,7 @@ class HikayeSeridi extends StatelessWidget {
                           child:CircleAvatar(
                             radius:28,
                             backgroundColor:panel,
-                            backgroundImage:profilFoto.isEmpty?null:CachedNetworkImageProvider(profilFoto),
+                            backgroundImage:profilFoto.isEmpty?null:NgelXAgImageProvider(profilFoto),
                             child:profilFoto.isEmpty?Text(ad.isEmpty?'N':ad[0].toUpperCase(),style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w900)):null,
                           ),
                         ),
@@ -4773,7 +4909,7 @@ Future<void> ngelxOzeldenPaylas(
                           final ad = (v['displayName'] ?? v['username'] ?? t('user')).toString();
                           return ListTile(
                             leading: CircleAvatar(
-                              backgroundImage: foto.isEmpty ? null : CachedNetworkImageProvider(foto),
+                              backgroundImage: foto.isEmpty ? null : NgelXAgImageProvider(foto),
                               child: foto.isEmpty ? const Icon(Icons.person) : null,
                             ),
                             title: Text(ad, style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.w800)),
@@ -5951,7 +6087,7 @@ Positioned(
                     child: CircleAvatar(
                       radius: 23,
                       backgroundColor: panel,
-                      backgroundImage: profilFoto.isEmpty ? null : CachedNetworkImageProvider(profilFoto),
+                      backgroundImage: profilFoto.isEmpty ? null : NgelXAgImageProvider(profilFoto),
                       child: profilFoto.isNotEmpty ? null : const Text(
                         'N',
                         style: TextStyle(
@@ -6772,7 +6908,7 @@ class YorumKarti extends StatelessWidget {
             onTap: profilAc,
             child: CircleAvatar(
               radius: yanit ? 16 : 21,
-              backgroundImage: foto.isEmpty ? null : CachedNetworkImageProvider(foto),
+              backgroundImage: foto.isEmpty ? null : NgelXAgImageProvider(foto),
               child: foto.isEmpty ? Text(ad.isEmpty ? 'N' : ad[0].toUpperCase()) : null,
             ),
           ),
@@ -7265,7 +7401,7 @@ class _KesfetPageState extends State<KesfetPage> {
                   width:245,
                   decoration:BoxDecoration(
                     color:const Color(0xFF2A2630),
-                    image:(y['coverUrl']??'').toString().isEmpty?null:DecorationImage(image:CachedNetworkImageProvider((y['coverUrl']).toString()),fit:BoxFit.cover),
+                    image:(y['coverUrl']??'').toString().isEmpty?null:DecorationImage(image:NgelXAgImageProvider((y['coverUrl']).toString()),fit:BoxFit.cover),
                     borderRadius:BorderRadius.circular(20),
                     border:Border.all(color:const Color(0xFFFF1744),width:2),
                     boxShadow:const [BoxShadow(color:Color(0x22000000),blurRadius:12,offset:Offset(0,5))],
@@ -7398,7 +7534,7 @@ class _KesfetPageState extends State<KesfetPage> {
           decoration:BoxDecoration(color:const Color(0xFFF7F7FA),borderRadius:BorderRadius.circular(20),border:Border.all(color:Colors.black.withValues(alpha:.05))),
           child:Row(children:[
             Stack(children:[
-              CircleAvatar(radius:30,backgroundColor:const Color(0xFFF0E8FF),backgroundImage:foto.isEmpty?null:CachedNetworkImageProvider(foto),child:foto.isEmpty?Text(ad.isEmpty?'N':ad[0].toUpperCase(),style:const TextStyle(color:mor,fontSize:21,fontWeight:FontWeight.bold)):null),
+              CircleAvatar(radius:30,backgroundColor:const Color(0xFFF0E8FF),backgroundImage:foto.isEmpty?null:NgelXAgImageProvider(foto),child:foto.isEmpty?Text(ad.isEmpty?'N':ad[0].toUpperCase(),style:const TextStyle(color:mor,fontSize:21,fontWeight:FontWeight.bold)):null),
               if(ngelxPresenceOnline(v)&&v['showActivityStatus']!=false)const Positioned(right:1,bottom:1,child:CircleAvatar(radius:7,backgroundColor:Color(0xFF23D160))),
             ]),
             const SizedBox(width:12),
@@ -7454,7 +7590,7 @@ class _KesfetPageState extends State<KesfetPage> {
               borderRadius:BorderRadius.circular(16),
               child:foto.isEmpty
                 ?Container(width:60,height:60,color:const Color(0xFFE9DDFF),child:const Icon(Icons.groups_rounded,color:mor,size:32))
-                :CachedNetworkImage(imageUrl:foto,width:60,height:60,fit:BoxFit.cover,errorWidget:(_,__,___)=>Container(width:60,height:60,color:const Color(0xFFE9DDFF),child:const Icon(Icons.groups_rounded,color:mor,size:32))),
+                :NgelXAgResmi(imageUrl:foto,width:60,height:60,fit:BoxFit.cover,errorWidget:(_,__,___)=>Container(width:60,height:60,color:const Color(0xFFE9DDFF),child:const Icon(Icons.groups_rounded,color:mor,size:32))),
             ),
             const SizedBox(width:12),
             Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
@@ -9161,7 +9297,7 @@ class _MesajPageState extends State<MesajPage> {
           return ListView.builder(itemCount:docs.length,itemBuilder:(_,i){
             final d=docs[i],v=d.data(),members=List<String>.from(v['members']??[]);
             final grup=v['isGroup']==true||members.length>2;
-            if(grup){final ad=(v['groupName']??t('groupChat')).toString(),foto=(v['groupPhotoUrl']??'').toString(),unread=(v['unread_$ben']??0) as int;return ListTile(onTap:()=>sohbetiAc(d.id,GrupSohbetPage(chatId:d.id,ad:ad,foto:foto)),onLongPress:()=>sohbetMenusu(context,d.id,grup:true),leading:CircleAvatar(backgroundColor:const Color(0xFFE9DDFF),backgroundImage:foto.isEmpty?null:CachedNetworkImageProvider(foto),child:foto.isEmpty?const Icon(Icons.groups,color:mor):null),title:Text(ad,style:TextStyle(color:Colors.black87,fontWeight:unread>0?FontWeight.w900:FontWeight.w700)),subtitle:Text((v['lastMessage']??t('groupCreated')).toString(),maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black54)),trailing:Wrap(crossAxisAlignment:WrapCrossAlignment.center,children:[if(sabitSohbetler.contains(d.id))const Icon(Icons.push_pin,size:16,color:mor),if(sessizSohbetler.contains(d.id))const Icon(Icons.volume_off,size:18,color:Colors.black38),if(unread>0)Badge(label:Text('$unread'))]));}
+            if(grup){final ad=(v['groupName']??t('groupChat')).toString(),foto=(v['groupPhotoUrl']??'').toString(),unread=(v['unread_$ben']??0) as int;return ListTile(onTap:()=>sohbetiAc(d.id,GrupSohbetPage(chatId:d.id,ad:ad,foto:foto)),onLongPress:()=>sohbetMenusu(context,d.id,grup:true),leading:CircleAvatar(backgroundColor:const Color(0xFFE9DDFF),backgroundImage:foto.isEmpty?null:NgelXAgImageProvider(foto),child:foto.isEmpty?const Icon(Icons.groups,color:mor):null),title:Text(ad,style:TextStyle(color:Colors.black87,fontWeight:unread>0?FontWeight.w900:FontWeight.w700)),subtitle:Text((v['lastMessage']??t('groupCreated')).toString(),maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black54)),trailing:Wrap(crossAxisAlignment:WrapCrossAlignment.center,children:[if(sabitSohbetler.contains(d.id))const Icon(Icons.push_pin,size:16,color:mor),if(sessizSohbetler.contains(d.id))const Icon(Icons.volume_off,size:18,color:Colors.black38),if(unread>0)Badge(label:Text('$unread'))]));}
             final other=members.firstWhere((x)=>x!=ben,orElse:()=>ben??'');
             if(engellenenler.contains(other))return const SizedBox.shrink();
             return FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(future:_kullaniciGetir(other),builder:(_,u){
@@ -9175,7 +9311,7 @@ class _MesajPageState extends State<MesajPage> {
               return ListTile(
                 onTap:()=>sohbetiAc(d.id,SohbetPage(chatId:d.id,digerUid:other,ad:gorunenAd,foto:(p['photoUrl']??'').toString())),
                 onLongPress:()=>sohbetMenusu(context,d.id),
-                leading:CircleAvatar(backgroundImage:(p['photoUrl']??'').toString().isEmpty?null:CachedNetworkImageProvider(p['photoUrl'])),
+                leading:CircleAvatar(backgroundImage:(p['photoUrl']??'').toString().isEmpty?null:NgelXAgImageProvider(p['photoUrl'])),
                 title:Text(gorunenAd,style:TextStyle(fontWeight:unread>0?FontWeight.w900:FontWeight.w700,color:Colors.black87)),
                 subtitle:Text((v['lastMessage']??t('newChat')).toString(),maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black54)),
                 trailing:Wrap(crossAxisAlignment:WrapCrossAlignment.center,children:[if(sabitSohbetler.contains(d.id))const Icon(Icons.push_pin,size:16,color:mor),if(sessiz)const Icon(Icons.volume_off,size:18,color:Colors.black38),if(unread>0)Badge(label:Text('$unread'))]),
@@ -9276,7 +9412,7 @@ class _ArsivSohbetlerPageState extends State<ArsivSohbetlerPage> {
                   onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupSohbetPage(chatId:d.id,ad:ad,foto:foto))),
                   leading:CircleAvatar(
                     backgroundColor:ngelxGroupGreenSoft,
-                    backgroundImage:foto.isEmpty?null:CachedNetworkImageProvider(foto),
+                    backgroundImage:foto.isEmpty?null:NgelXAgImageProvider(foto),
                     child:foto.isEmpty?const Icon(Icons.groups_rounded,color:ngelxGroupGreen):null,
                   ),
                   title:Text(ad,style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w800)),
@@ -9300,7 +9436,7 @@ class _ArsivSohbetlerPageState extends State<ArsivSohbetlerPage> {
                   final p=u.data?.data()??<String,dynamic>{};
                   final foto=(p['photoUrl']??'').toString();
                   return ListTile(
-                    leading:CircleAvatar(backgroundImage:foto.isEmpty?null:CachedNetworkImageProvider(foto)),
+                    leading:CircleAvatar(backgroundImage:foto.isEmpty?null:NgelXAgImageProvider(foto)),
                     title:Text((p['displayName']??p['username']??'NgelX').toString(),style:const TextStyle(fontWeight:FontWeight.w800)),
                     subtitle:Text((v['lastMessage']??'').toString()),
                     trailing:IconButton(
@@ -9355,7 +9491,7 @@ class MesajIstekleriPage extends StatelessWidget {
                       Future<void> kabul()async{await d.reference.set({'requestAccepted_$uid':true,'requestRejected_$uid':false},SetOptions(merge:true));if(context.mounted)Navigator.push(context,MaterialPageRoute(builder:(_)=>SohbetPage(chatId:d.id,digerUid:other,ad:ad,foto:foto)));}
                       return Card(child: ListTile(
                         onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>MesajIstegiOnizlemePage(chatId:d.id,digerUid:other,ad:ad,foto:foto,uid:uid))),
-                        leading: CircleAvatar(backgroundImage: foto.isEmpty ? null : CachedNetworkImageProvider(foto)),
+                        leading: CircleAvatar(backgroundImage: foto.isEmpty ? null : NgelXAgImageProvider(foto)),
                         title: Text(ad, style: const TextStyle(fontWeight: FontWeight.w800)),
                         subtitle: Text((v['lastMessage'] ?? t('messageRequest')).toString()),
                         trailing: TextButton(onPressed:kabul,child:Text(t('accept'))),
@@ -9376,7 +9512,7 @@ class MesajIstegiOnizlemePage extends StatelessWidget{
   final String chatId,digerUid,ad,foto,uid;
   const MesajIstegiOnizlemePage({super.key,required this.chatId,required this.digerUid,required this.ad,required this.foto,required this.uid});
   @override Widget build(BuildContext context)=>Theme(data:ThemeData.light(),child:Scaffold(backgroundColor:Colors.white,appBar:AppBar(title:Text(ad)),body:Column(children:[
-    Expanded(child:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(stream:FirebaseFirestore.instance.collection('chats').doc(chatId).collection('messages').orderBy('createdAt').limitToLast(30).snapshots(),builder:(_,s)=>ListView(padding:const EdgeInsets.all(16),children:(s.data?.docs??[]).map((d){final v=d.data(),metin=(v['text']??'').toString(),photo=v['type']=='photo';return Align(alignment:v['senderId']==uid?Alignment.centerRight:Alignment.centerLeft,child:Container(margin:const EdgeInsets.symmetric(vertical:4),padding:EdgeInsets.all(photo?4:12),constraints:const BoxConstraints(maxWidth:280),decoration:BoxDecoration(color:const Color(0xFFF0F1F4),borderRadius:BorderRadius.circular(18)),child:photo?ClipRRect(borderRadius:BorderRadius.circular(15),child:CachedNetworkImage(imageUrl:(v['mediaUrl']??'').toString(),fit:BoxFit.cover,errorWidget:(_,__,___)=>const SizedBox(height:120,child:Center(child:Icon(Icons.broken_image_outlined))))):Text(metin)));}).toList()))),
+    Expanded(child:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(stream:FirebaseFirestore.instance.collection('chats').doc(chatId).collection('messages').orderBy('createdAt').limitToLast(30).snapshots(),builder:(_,s)=>ListView(padding:const EdgeInsets.all(16),children:(s.data?.docs??[]).map((d){final v=d.data(),metin=(v['text']??'').toString(),photo=v['type']=='photo';return Align(alignment:v['senderId']==uid?Alignment.centerRight:Alignment.centerLeft,child:Container(margin:const EdgeInsets.symmetric(vertical:4),padding:EdgeInsets.all(photo?4:12),constraints:const BoxConstraints(maxWidth:280),decoration:BoxDecoration(color:const Color(0xFFF0F1F4),borderRadius:BorderRadius.circular(18)),child:photo?ClipRRect(borderRadius:BorderRadius.circular(15),child:NgelXAgResmi(imageUrl:(v['mediaUrl']??'').toString(),fit:BoxFit.cover,errorWidget:(_,__,___)=>const SizedBox(height:120,child:Center(child:Icon(Icons.broken_image_outlined))))):Text(metin)));}).toList()))),
     SafeArea(top:false,child:Padding(padding:const EdgeInsets.all(12),child:Row(children:[Expanded(child:OutlinedButton(onPressed:()async{await FirebaseFirestore.instance.collection('chats').doc(chatId).set({'requestRejected_$uid':true,'hiddenFor':FieldValue.arrayUnion([uid])},SetOptions(merge:true));if(context.mounted)Navigator.pop(context);},child:Text(t('reject')))),const SizedBox(width:8),Expanded(child:OutlinedButton(style:OutlinedButton.styleFrom(foregroundColor:Colors.red),onPressed:()async{await kullaniciyiEngelle(context,digerUid);await FirebaseFirestore.instance.collection('chats').doc(chatId).set({'requestRejected_$uid':true,'hiddenFor':FieldValue.arrayUnion([uid])},SetOptions(merge:true));if(context.mounted)Navigator.pop(context);},child:const Text('Engelle'))),const SizedBox(width:8),Expanded(child:FilledButton(onPressed:()async{await FirebaseFirestore.instance.collection('chats').doc(chatId).set({'requestAccepted_$uid':true},SetOptions(merge:true));if(context.mounted)Navigator.pushReplacement(context,MaterialPageRoute(builder:(_)=>SohbetPage(chatId:chatId,digerUid:digerUid,ad:ad,foto:foto)));},child:Text(t('accept'))))]))),
   ])));
 }
@@ -9879,7 +10015,7 @@ class _GrupOlusturPageState extends State<GrupOlusturPage>{
                       margin:const EdgeInsets.only(right:8),
                       child:Column(children:[
                         Stack(clipBehavior:Clip.none,children:[
-                          CircleAvatar(radius:24,backgroundColor:const Color(0xFFEDE5F6),backgroundImage:pf.isEmpty?null:CachedNetworkImageProvider(pf),child:pf.isEmpty?const Icon(Icons.person_rounded,color:ngelxPremiumPurple):null),
+                          CircleAvatar(radius:24,backgroundColor:const Color(0xFFEDE5F6),backgroundImage:pf.isEmpty?null:NgelXAgImageProvider(pf),child:pf.isEmpty?const Icon(Icons.person_rounded,color:ngelxPremiumPurple):null),
                           Positioned(right:-5,top:-4,child:InkWell(
                             onTap:()=>setState(()=>secilen.remove(id)),
                             child:const CircleAvatar(radius:9,backgroundColor:Color(0xFF2A2231),child:Icon(Icons.close_rounded,color:Colors.white,size:11)),
@@ -9934,7 +10070,7 @@ class _GrupOlusturPageState extends State<GrupOlusturPage>{
                         setState(()=>secili?secilen.remove(d.id):secilen.add(d.id));
                       },
                       leading:Stack(children:[
-                        CircleAvatar(radius:23,backgroundColor:const Color(0xFFECE4F5),backgroundImage:pf.isEmpty?null:CachedNetworkImageProvider(pf),child:pf.isEmpty?const Icon(Icons.person_rounded,color:ngelxPremiumPurple):null),
+                        CircleAvatar(radius:23,backgroundColor:const Color(0xFFECE4F5),backgroundImage:pf.isEmpty?null:NgelXAgImageProvider(pf),child:pf.isEmpty?const Icon(Icons.person_rounded,color:ngelxPremiumPurple):null),
                         if(online)const Positioned(right:0,bottom:0,child:CircleAvatar(radius:5.5,backgroundColor:Colors.white,child:CircleAvatar(radius:3.5,backgroundColor:Color(0xFF21C76A)))),
                       ]),
                       title:Text(isim,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w800)),
@@ -11334,7 +11470,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
                       leading:CircleAvatar(
                         radius:21,
                         backgroundColor:ngelxGroupGreenSoft,
-                        backgroundImage:foto.isEmpty?null:CachedNetworkImageProvider(foto),
+                        backgroundImage:foto.isEmpty?null:NgelXAgImageProvider(foto),
                         child:foto.isEmpty?const Icon(Icons.person_rounded,color:ngelxGroupGreen):null,
                       ),
                       title:Text(id==uid?'Sen':ad,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w800)),
@@ -11467,7 +11603,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
           child:Padding(
             padding:const EdgeInsets.only(left:2,bottom:5,right:6,top:2),
             child:Row(mainAxisSize:MainAxisSize.min,children:[
-              CircleAvatar(radius:10,backgroundColor:ngelxGroupGreenSoft,backgroundImage:pf.isEmpty?null:CachedNetworkImageProvider(pf),child:pf.isEmpty?const Icon(Icons.person,size:11,color:ngelxGroupGreen):null),
+              CircleAvatar(radius:10,backgroundColor:ngelxGroupGreenSoft,backgroundImage:pf.isEmpty?null:NgelXAgImageProvider(pf),child:pf.isEmpty?const Icon(Icons.person,size:11,color:ngelxGroupGreen):null),
               const SizedBox(width:6),
               Flexible(child:Text(isim,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Color(0xFF187A3D),fontSize:11.3,fontWeight:FontWeight.w900))),
             ]),
@@ -11573,7 +11709,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
                 else if(tur=='photo'&&media.isNotEmpty)
                   IgnorePointer(child:NgelXSohbetFotoOnizleme(url:media))
                 else if(tur=='gif'&&media.isNotEmpty)
-                  IgnorePointer(child:ClipRRect(borderRadius:BorderRadius.circular(14),child:CachedNetworkImage(
+                  IgnorePointer(child:ClipRRect(borderRadius:BorderRadius.circular(14),child:NgelXAgResmi(
                     imageUrl:media,width:246,fit:BoxFit.cover,
                     errorWidget:(_,__,___)=>const SizedBox(width:246,height:116,child:Center(child:Icon(Icons.broken_image_outlined))),
                   )))
@@ -11613,7 +11749,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
                       border:Border.all(color:ben?Colors.white24:ngelxGroupBorder),
                     ),
                     child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-                      if(linkImage.isNotEmpty)CachedNetworkImage(imageUrl:linkImage,height:105,width:250,fit:BoxFit.cover,errorWidget:(_,__,___)=>const SizedBox.shrink()),
+                      if(linkImage.isNotEmpty)NgelXAgResmi(imageUrl:linkImage,height:105,width:250,fit:BoxFit.cover,errorWidget:(_,__,___)=>const SizedBox.shrink()),
                       Padding(
                         padding:const EdgeInsets.all(9),
                         child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
@@ -11718,7 +11854,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
                                   decoration:BoxDecoration(shape:BoxShape.circle,color:ngelxGroupGreenSoft,border:Border.all(color:Colors.white,width:1.5)),
                                   child:ClipOval(child:foto.isEmpty
                                     ?const Icon(Icons.person_rounded,color:ngelxGroupGreen,size:10)
-                                    :CachedNetworkImage(imageUrl:foto,fit:BoxFit.cover,errorWidget:(_,__,___)=>const Icon(Icons.person_rounded,color:ngelxGroupGreen,size:10))),
+                                    :NgelXAgResmi(imageUrl:foto,fit:BoxFit.cover,errorWidget:(_,__,___)=>const Icon(Icons.person_rounded,color:ngelxGroupGreen,size:10))),
                                 );
                               },
                             ),
@@ -11809,7 +11945,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
                 CircleAvatar(
                   radius:22,
                   backgroundColor:Colors.white.withValues(alpha:.72),
-                  backgroundImage:foto.isEmpty?null:CachedNetworkImageProvider(foto),
+                  backgroundImage:foto.isEmpty?null:NgelXAgImageProvider(foto),
                   child:foto.isEmpty?const Icon(Icons.groups_rounded,color:ngelxGroupGreen,size:24):null,
                 ),
                 const SizedBox(width:9),
@@ -11869,7 +12005,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
           return Container(
             decoration:BoxDecoration(
               color:Colors.white,
-              image:arkaPlanUrl.isEmpty?null:DecorationImage(image:ResizeImage(CachedNetworkImageProvider(arkaPlanUrl),width:1080),fit:BoxFit.cover,opacity:opaklik),
+              image:arkaPlanUrl.isEmpty?null:DecorationImage(image:ResizeImage(NgelXAgImageProvider(arkaPlanUrl),width:1080),fit:BoxFit.cover,opacity:opaklik),
             ),
             child:Column(children:[
               if(uyeMi&&((tv['callStatus']??'').toString()=='ringing'||(tv['callStatus']??'').toString()=='active')&&(tv['callRoomName']??'').toString().isNotEmpty)
@@ -12116,7 +12252,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
                           :CircleAvatar(
                               radius:21,
                               backgroundColor:ngelxGroupGreenSoft,
-                              backgroundImage:foto.isEmpty?null:CachedNetworkImageProvider(foto),
+                              backgroundImage:foto.isEmpty?null:NgelXAgImageProvider(foto),
                               child:foto.isEmpty?const Icon(Icons.person_rounded,color:ngelxGroupGreen):null,
                             ),
                         title:Text(baslik,maxLines:1,overflow:TextOverflow.ellipsis,style:TextStyle(color:ozel?const Color(0xFF111512):const Color(0xFF202124),fontSize:15.5,fontWeight:ozel?FontWeight.w900:FontWeight.w800)),
@@ -12177,7 +12313,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
                         CircleAvatar(
                           radius:13,
                           backgroundColor:ngelxGroupGreenSoft,
-                          backgroundImage:yazan.length==1&&foto.isNotEmpty?CachedNetworkImageProvider(foto):null,
+                          backgroundImage:yazan.length==1&&foto.isNotEmpty?NgelXAgImageProvider(foto):null,
                           child:yazan.length>1
                             ?const Icon(Icons.groups_rounded,color:ngelxGroupGreen,size:14)
                             :foto.isEmpty?const Icon(Icons.person_rounded,color:ngelxGroupGreen,size:14):null,
@@ -12737,7 +12873,7 @@ class _GrupMedyaPageState extends State<GrupMedyaPage>{
                       borderRadius:BorderRadius.circular(16),
                       child:Stack(fit:StackFit.expand,children:[
                         if(t=='video'&&thumb.isNotEmpty)
-                          CachedNetworkImage(
+                          NgelXAgResmi(
                             imageUrl:thumb,fit:BoxFit.cover,
                             errorWidget:(_,__,___)=>url.isEmpty
                               ?const ColoredBox(color:Color(0xFF15231A))
@@ -12745,7 +12881,7 @@ class _GrupMedyaPageState extends State<GrupMedyaPage>{
                           )
                         else if(t=='video'&&url.isNotEmpty)NgelXVideoKapakOnizleme(url:url)
                         else if(t=='video')const ColoredBox(color:Color(0xFF15231A))
-                        else if(url.isNotEmpty)CachedNetworkImage(imageUrl:url,fit:BoxFit.cover,errorWidget:(_,__,___)=>const ColoredBox(color:Color(0xFFF0F5F2),child:Icon(Icons.broken_image_outlined)))
+                        else if(url.isNotEmpty)NgelXAgResmi(imageUrl:url,fit:BoxFit.cover,errorWidget:(_,__,___)=>const ColoredBox(color:Color(0xFFF0F5F2),child:Icon(Icons.broken_image_outlined)))
                         else const ColoredBox(color:Color(0xFFF0F5F2),child:Icon(Icons.image_outlined)),
                         if(t=='video')const Center(child:DecoratedBox(
                           decoration:BoxDecoration(color:Colors.black45,shape:BoxShape.circle),
@@ -12880,7 +13016,7 @@ class _NgelXMedyaGaleriPageState extends State<NgelXMedyaGaleriPage>{
         itemBuilder:(_,i)=>InteractiveViewer(
           minScale:1,
           maxScale:4,
-          child:Center(child:CachedNetworkImage(
+          child:Center(child:NgelXAgResmi(
             imageUrl:widget.urls[i],
             fit:BoxFit.contain,
             placeholder:(_,__)=>const CircularProgressIndicator(color:Colors.white),
@@ -13528,7 +13664,7 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
                           child:ListTile(
                             leading:CircleAvatar(
                               backgroundColor:const Color(0xFF352154),
-                              backgroundImage:foto.isEmpty?null:CachedNetworkImageProvider(foto),
+                              backgroundImage:foto.isEmpty?null:NgelXAgImageProvider(foto),
                               child:foto.isEmpty?const Icon(Icons.person_rounded,color:Color(0xFFCDB9FF)):null,
                             ),
                             title:Text(ad,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w800)),
@@ -13673,14 +13809,14 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
     final ilk=ad.trim().isEmpty?'N':ad.trim()[0].toUpperCase();
     if(yerel){
       final f=FirebaseAuth.instance.currentUser?.photoURL??'';
-      return CircleAvatar(radius:radius,backgroundColor:const Color(0xFFE9DDFF),backgroundImage:f.isEmpty?null:CachedNetworkImageProvider(f),child:f.isEmpty?Text(ilk,style:TextStyle(color:ngelxPremiumPurple,fontSize:radius*.78,fontWeight:FontWeight.w900)):null);
+      return CircleAvatar(radius:radius,backgroundColor:const Color(0xFFE9DDFF),backgroundImage:f.isEmpty?null:NgelXAgImageProvider(f),child:f.isEmpty?Text(ilk,style:TextStyle(color:ngelxPremiumPurple,fontSize:radius*.78,fontWeight:FontWeight.w900)):null);
     }
     final id=p.identity.toString();
     return FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(
       future:_aramaProfil(id),
       builder:(_,snap){
         final foto=(snap.data?.data()?['photoUrl']??'').toString();
-        return CircleAvatar(radius:radius,backgroundColor:const Color(0xFFE9DDFF),backgroundImage:foto.isEmpty?null:CachedNetworkImageProvider(foto),child:foto.isEmpty?Text(ilk,style:TextStyle(color:ngelxPremiumPurple,fontSize:radius*.78,fontWeight:FontWeight.w900)):null);
+        return CircleAvatar(radius:radius,backgroundColor:const Color(0xFFE9DDFF),backgroundImage:foto.isEmpty?null:NgelXAgImageProvider(foto),child:foto.isEmpty?Text(ilk,style:TextStyle(color:ngelxPremiumPurple,fontSize:radius*.78,fontWeight:FontWeight.w900)):null);
       },
     );
   }
@@ -13799,7 +13935,7 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
         clipBehavior:Clip.antiAlias,
         decoration:BoxDecoration(color:ngelxCallCard,borderRadius:BorderRadius.circular(28),border:Border.all(color:Colors.white10)),
         child:ana!=null?_efektliVideo(ana):Center(child:Column(mainAxisSize:MainAxisSize.min,children:[
-          CircleAvatar(radius:52,backgroundColor:const Color(0xFFE9DDFF),backgroundImage:widget.foto.isEmpty?null:CachedNetworkImageProvider(widget.foto),child:widget.foto.isEmpty?const Icon(Icons.person_rounded,color:ngelxPremiumPurple,size:48):null),
+          CircleAvatar(radius:52,backgroundColor:const Color(0xFFE9DDFF),backgroundImage:widget.foto.isEmpty?null:NgelXAgImageProvider(widget.foto),child:widget.foto.isEmpty?const Icon(Icons.person_rounded,color:ngelxPremiumPurple,size:48):null),
           const SizedBox(height:14),
           Text(baglaniyor?'Bağlanıyor…':'Görüntü bekleniyor…',style:const TextStyle(color:Colors.white70,fontWeight:FontWeight.w700)),
         ])),
@@ -13821,7 +13957,7 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
     Container(
       padding:const EdgeInsets.all(5),
       decoration:const BoxDecoration(shape:BoxShape.circle,gradient:LinearGradient(colors:[Color(0xFFB77BFF),Color(0xFF6F49E8)]),boxShadow:[BoxShadow(color:Color(0x557A50E8),blurRadius:30,spreadRadius:4)]),
-      child:CircleAvatar(radius:66,backgroundColor:const Color(0xFFE9DDFF),backgroundImage:widget.foto.isEmpty?null:CachedNetworkImageProvider(widget.foto),child:widget.foto.isEmpty?const Icon(Icons.call_rounded,color:ngelxPremiumPurple,size:62):null),
+      child:CircleAvatar(radius:66,backgroundColor:const Color(0xFFE9DDFF),backgroundImage:widget.foto.isEmpty?null:NgelXAgImageProvider(widget.foto),child:widget.foto.isEmpty?const Icon(Icons.call_rounded,color:ngelxPremiumPurple,size:62):null),
     ),
     const SizedBox(height:22),
     Text(widget.baslik,textAlign:TextAlign.center,style:const TextStyle(color:Colors.white,fontSize:29,fontWeight:FontWeight.w900)),
@@ -14199,7 +14335,7 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
       if(secim=='remove'){
         await ref.update({'groupPhotoUrl':'','updatedAt':FieldValue.serverTimestamp()});
         if(eski.isNotEmpty){
-          await CachedNetworkImage.evictFromCache(eski);
+          await ngelxAgResmiOnbelleginiTemizle(eski);
           unawaited(ngelxMedyaSil(eski).catchError((_){ }));
         }
         await ngelxGrupDavetMetaSenkronla(ref);
@@ -14214,7 +14350,7 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
       final url=await ngelxFotografYukle(dosya:x,kind:'groups',ext:uzanti,legacyPath:yol);
       await ref.update({'groupPhotoUrl':url,'updatedAt':FieldValue.serverTimestamp()});
       if(eski.isNotEmpty&&eski!=url){
-        await CachedNetworkImage.evictFromCache(eski);
+        await ngelxAgResmiOnbelleginiTemizle(eski);
         unawaited(ngelxMedyaSil(eski).catchError((_){ }));
       }
       await ngelxGrupDavetMetaSenkronla(ref);
@@ -14467,7 +14603,7 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
                           setP(()=>secili?secilen.remove(d.id):secilen.add(d.id));
                         },
                         leading:Stack(children:[
-                          CircleAvatar(radius:23,backgroundColor:const Color(0xFFECE4F5),backgroundImage:foto.isEmpty?null:CachedNetworkImageProvider(foto),child:foto.isEmpty?const Icon(Icons.person_rounded,color:ngelxGroupGreen):null),
+                          CircleAvatar(radius:23,backgroundColor:const Color(0xFFECE4F5),backgroundImage:foto.isEmpty?null:NgelXAgImageProvider(foto),child:foto.isEmpty?const Icon(Icons.person_rounded,color:ngelxGroupGreen):null),
                           if(online)const Positioned(right:0,bottom:0,child:CircleAvatar(radius:5.5,backgroundColor:Colors.white,child:CircleAvatar(radius:3.5,backgroundColor:Color(0xFF21C76A)))),
                         ]),
                         title:Text(ad,style:const TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w800)),
@@ -14875,7 +15011,7 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
                             flex:3,
                             child:ClipRRect(
                               borderRadius:BorderRadius.circular(18),
-                              child:CachedNetworkImage(
+                              child:NgelXAgResmi(
                                 imageUrl:(medya.first.data()['mediaUrl']??'').toString(),
                                 width:double.infinity,height:150,fit:BoxFit.cover,
                                 errorWidget:(_,__,___)=>Container(color:const Color(0xFFF1F3F4),child:const Icon(Icons.broken_image_outlined)),
@@ -14892,7 +15028,7 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
                                 itemCount:(medya.length-1).clamp(0,4).toInt(),
                                 itemBuilder:(_,i)=>ClipRRect(
                                   borderRadius:BorderRadius.circular(10),
-                                  child:CachedNetworkImage(
+                                  child:NgelXAgResmi(
                                     imageUrl:(medya[i+1].data()['mediaUrl']??'').toString(),
                                     fit:BoxFit.cover,
                                     errorWidget:(_,__,___)=>Container(color:const Color(0xFFF1F3F4),child:const Icon(Icons.broken_image_outlined,size:18)),
@@ -15162,7 +15298,7 @@ class GrupTakmaAdlarPage extends StatelessWidget{
                   onTap:()=>_duzenle(context,ids[i],ad,takma),
                   leading:CircleAvatar(
                     backgroundColor:ngelxGroupGreenSoft,
-                    backgroundImage:foto.isEmpty?null:CachedNetworkImageProvider(foto),
+                    backgroundImage:foto.isEmpty?null:NgelXAgImageProvider(foto),
                     child:foto.isEmpty?const Icon(Icons.person_rounded,color:ngelxGroupGreen):null,
                   ),
                   title:Text(ad,style:const TextStyle(fontWeight:FontWeight.w800)),
@@ -15224,7 +15360,7 @@ class _GrupOzellestirPageState extends State<GrupOzellestirPage>{
       await ref.set({'backgroundUrl':url,'backgroundOpacity':.32,'backgroundVersion':FieldValue.increment(1),'backgroundChangedAt':FieldValue.serverTimestamp(),'updatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
       await _arkaPlanSistemMesaji('grup arka planını değiştirdi.');
       if(eski.isNotEmpty&&eski!=url){
-        await CachedNetworkImage.evictFromCache(eski);
+        await ngelxAgResmiOnbelleginiTemizle(eski);
         unawaited(ngelxMedyaSil(eski).catchError((_){ }));
       }
       if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Sohbet arka planı değiştirildi.')));
@@ -15242,7 +15378,7 @@ class _GrupOzellestirPageState extends State<GrupOzellestirPage>{
     await ref.set({'backgroundUrl':FieldValue.delete(),'backgroundOpacity':FieldValue.delete(),'backgroundVersion':FieldValue.increment(1),'backgroundChangedAt':FieldValue.serverTimestamp(),'updatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
     await _arkaPlanSistemMesaji('grup arka planını kaldırdı.');
     if(eski.isNotEmpty){
-      await CachedNetworkImage.evictFromCache(eski);
+      await ngelxAgResmiOnbelleginiTemizle(eski);
       unawaited(ngelxMedyaSil(eski).catchError((_){ }));
     }
   }
@@ -15273,7 +15409,7 @@ class _GrupOzellestirPageState extends State<GrupOzellestirPage>{
                   color:ngelxGroupGreenSoft,
                   borderRadius:BorderRadius.circular(24),
                   border:Border.all(color:ngelxGroupBorder),
-                  image:url.isEmpty?null:DecorationImage(image:ResizeImage(CachedNetworkImageProvider(url),width:1080),fit:BoxFit.cover,opacity:opacity),
+                  image:url.isEmpty?null:DecorationImage(image:ResizeImage(NgelXAgImageProvider(url),width:1080),fit:BoxFit.cover,opacity:opacity),
                 ),
                 alignment:Alignment.center,
                 child:url.isEmpty?const Column(mainAxisSize:MainAxisSize.min,children:[
@@ -15392,7 +15528,7 @@ class GrupUyeEngellePage extends StatelessWidget{
                       final ad=(p['displayName']??p['username']??'Kullanıcı').toString();
                       final foto=(p['photoUrl']??'').toString(),engelli=blocked.contains(ids[i]);
                       return ListTile(
-                        leading:CircleAvatar(backgroundColor:ngelxGroupGreenSoft,backgroundImage:foto.isEmpty?null:CachedNetworkImageProvider(foto),child:foto.isEmpty?const Icon(Icons.person,color:ngelxGroupGreen):null),
+                        leading:CircleAvatar(backgroundColor:ngelxGroupGreenSoft,backgroundImage:foto.isEmpty?null:NgelXAgImageProvider(foto),child:foto.isEmpty?const Icon(Icons.person,color:ngelxGroupGreen):null),
                         title:Text(ad,style:const TextStyle(fontWeight:FontWeight.w800)),
                         subtitle:Text('@'+(p['username']??'ngelx').toString()),
                         trailing:TextButton(onPressed:()=>_degistir(context,ids[i],engelli),child:Text(engelli?'Engeli kaldır':'Engelle',style:TextStyle(color:engelli?ngelxGroupGreen:Colors.red,fontWeight:FontWeight.w800))),
@@ -15843,7 +15979,7 @@ class _GrupUyeleriPageState extends State<GrupUyeleriPage>{
                         onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciProfilPage(uid:id))),
                         onLongPress:menuVar?()=>_uyeIslemi(id,isim,admin,yonetici,kurucu):null,
                         leading:Stack(children:[
-                          CircleAvatar(radius:23,backgroundColor:ngelxGroupGreenSoft,backgroundImage:foto.isEmpty?null:CachedNetworkImageProvider(foto),child:foto.isEmpty?const Icon(Icons.person_rounded,color:ngelxGroupGreen):null),
+                          CircleAvatar(radius:23,backgroundColor:ngelxGroupGreenSoft,backgroundImage:foto.isEmpty?null:NgelXAgImageProvider(foto),child:foto.isEmpty?const Icon(Icons.person_rounded,color:ngelxGroupGreen):null),
                           if(online)const Positioned(right:0,bottom:0,child:CircleAvatar(radius:5.5,backgroundColor:Colors.white,child:CircleAvatar(radius:3.5,backgroundColor:Color(0xFF21C76A)))),
                         ]),
                         title:Text(isim,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w800)),
@@ -16132,7 +16268,7 @@ class GrupKatilmaIstekleriPage extends StatelessWidget{
                     child:Column(children:[
                       ListTile(
                         contentPadding:EdgeInsets.zero,
-                        leading:CircleAvatar(radius:24,backgroundColor:const Color(0xFFECE4F5),backgroundImage:foto.isEmpty?null:CachedNetworkImageProvider(foto),child:foto.isEmpty?const Icon(Icons.person_rounded,color:ngelxPremiumPurple):null),
+                        leading:CircleAvatar(radius:24,backgroundColor:const Color(0xFFECE4F5),backgroundImage:foto.isEmpty?null:NgelXAgImageProvider(foto),child:foto.isEmpty?const Icon(Icons.person_rounded,color:ngelxPremiumPurple):null),
                         title:Text(uyeEkle?isteyen+' bu kişiyi eklemek istiyor':isim,style:const TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w800)),
                         subtitle:Text(uyeEkle?isim:'@'+(p['username']??'ngelx').toString(),style:const TextStyle(color:ngelxPremiumMuted,fontSize:11)),
                       ),
@@ -16249,7 +16385,7 @@ class _YeniSohbetPageState extends State<YeniSohbetPage>{
                         leading: CircleAvatar(
                           radius: 27,
                           backgroundColor: const Color(0xFFE5E7EB),
-                          backgroundImage: foto.isEmpty ? null : CachedNetworkImageProvider(foto),
+                          backgroundImage: foto.isEmpty ? null : NgelXAgImageProvider(foto),
                           child: foto.isEmpty ? const Icon(Icons.person, color: Colors.black45) : null,
                         ),
                         title: RichText(text:vurgula(ad)),
@@ -17200,7 +17336,7 @@ class _SohbetPageState extends State<SohbetPage> {
               ]))
             else if(storyReply)
               Row(crossAxisAlignment:CrossAxisAlignment.center,children:[
-                ClipRRect(borderRadius:BorderRadius.circular(12),child:CachedNetworkImage(imageUrl:(v['storyUrl']??'').toString(),width:62,height:82,fit:BoxFit.cover,errorWidget:(_,__,___)=>const SizedBox(width:62,height:82,child:Icon(Icons.auto_stories)))),
+                ClipRRect(borderRadius:BorderRadius.circular(12),child:NgelXAgResmi(imageUrl:(v['storyUrl']??'').toString(),width:62,height:82,fit:BoxFit.cover,errorWidget:(_,__,___)=>const SizedBox(width:62,height:82,child:Icon(Icons.auto_stories)))),
                 const SizedBox(width:10),
                 Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
                   Text(v['reaction']==true?'Hikâye tepkisi':'Hikâye yanıtı',style:TextStyle(color:ben?Colors.white70:Colors.black54,fontSize:11,fontWeight:FontWeight.w700)),
@@ -17491,7 +17627,7 @@ class _SohbetPageState extends State<SohbetPage> {
                 child:CircleAvatar(
                   radius:19,
                   backgroundColor:Colors.white,
-                  backgroundImage:widget.foto.isEmpty?null:CachedNetworkImageProvider(widget.foto),
+                  backgroundImage:widget.foto.isEmpty?null:NgelXAgImageProvider(widget.foto),
                   child:widget.foto.isEmpty?const Icon(Icons.person_rounded,color:ngelxPrivateBlue):null,
                 ),
               ),
@@ -17520,7 +17656,7 @@ class _SohbetPageState extends State<SohbetPage> {
         IconButton(tooltip:'Sohbet bilgisi',onPressed:bilgi,icon:const Icon(Icons.info_rounded,color:ngelxPrivateBlue)),
       ],
     ),
-    body:StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(stream:_chatAkisi,builder:(_,tema){final veri=tema.data?.data()??<String,dynamic>{},ham=veri['theme_$uid'];final arkaPlan=ham is int?Color(ham):ngelxPrivateBlueCanvas,arkaPlanUrl=(veri['backgroundUrl_$uid']??'').toString(),hizliEmoji=(veri['quickEmoji_$uid']??'👍').toString(),arkaPlanOpaklik=(veri['backgroundOpacity_$uid'] is num?(veri['backgroundOpacity_$uid'] as num).toDouble():.30).clamp(.05,.85).toDouble(),mesajYaziBoyutu=(veri['messageFontSize_$uid'] is num?(veri['messageFontSize_$uid'] as num).toDouble():16.0).clamp(12.0,22.0).toDouble();return Container(decoration:BoxDecoration(color:arkaPlan,image:arkaPlanUrl.isEmpty?null:DecorationImage(image:CachedNetworkImageProvider(arkaPlanUrl),fit:BoxFit.cover,opacity:arkaPlanOpaklik)),child:Column(children:[
+    body:StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(stream:_chatAkisi,builder:(_,tema){final veri=tema.data?.data()??<String,dynamic>{},ham=veri['theme_$uid'];final arkaPlan=ham is int?Color(ham):ngelxPrivateBlueCanvas,arkaPlanUrl=(veri['backgroundUrl_$uid']??'').toString(),hizliEmoji=(veri['quickEmoji_$uid']??'👍').toString(),arkaPlanOpaklik=(veri['backgroundOpacity_$uid'] is num?(veri['backgroundOpacity_$uid'] as num).toDouble():.30).clamp(.05,.85).toDouble(),mesajYaziBoyutu=(veri['messageFontSize_$uid'] is num?(veri['messageFontSize_$uid'] as num).toDouble():16.0).clamp(12.0,22.0).toDouble();return Container(decoration:BoxDecoration(color:arkaPlan,image:arkaPlanUrl.isEmpty?null:DecorationImage(image:NgelXAgImageProvider(arkaPlanUrl),fit:BoxFit.cover,opacity:arkaPlanOpaklik)),child:Column(children:[
       if(((veri['callStatus']??'').toString()=='ringing'||(veri['callStatus']??'').toString()=='active')&&(veri['callRoomName']??'').toString().isNotEmpty)
         InkWell(
           onTap:()async{
@@ -18081,7 +18217,7 @@ class SohbetBilgiPage extends StatelessWidget{
         'quickEmoji_$me':'👍',
       },SetOptions(merge:true));
       if(eskiArkaPlan.isNotEmpty){
-        await CachedNetworkImage.evictFromCache(eskiArkaPlan);
+        await ngelxAgResmiOnbelleginiTemizle(eskiArkaPlan);
         unawaited(ngelxMedyaSil(eskiArkaPlan).catchError((_){ }));
       }
       if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Sohbet özelleştirmeleri sıfırlandı.')));
@@ -18110,7 +18246,7 @@ class SohbetBilgiPage extends StatelessWidget{
       final eskiArkaPlan=(onceki.data()?['backgroundUrl_$me']??'').toString();
       await ref.set({'backgroundUrl_$me':''},SetOptions(merge:true));
       if(eskiArkaPlan.isNotEmpty){
-        await CachedNetworkImage.evictFromCache(eskiArkaPlan);
+        await ngelxAgResmiOnbelleginiTemizle(eskiArkaPlan);
         unawaited(ngelxMedyaSil(eskiArkaPlan).catchError((_){ }));
       }
       if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Özel sohbet arka planı kaldırıldı.')));
@@ -18131,7 +18267,7 @@ class SohbetBilgiPage extends StatelessWidget{
       );
       await ref.set({'backgroundUrl_$me':url},SetOptions(merge:true));
       if(eskiArkaPlan.isNotEmpty&&eskiArkaPlan!=url){
-        await CachedNetworkImage.evictFromCache(eskiArkaPlan);
+        await ngelxAgResmiOnbelleginiTemizle(eskiArkaPlan);
         unawaited(ngelxMedyaSil(eskiArkaPlan).catchError((_){ }));
       }
       if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Özel sohbet arka planın kaydedildi.')));
@@ -18297,7 +18433,7 @@ class SohbetBilgiPage extends StatelessWidget{
               Center(child:Container(
                 padding:const EdgeInsets.all(3),
                 decoration:const BoxDecoration(shape:BoxShape.circle,gradient:LinearGradient(colors:[ngelxPrivateBlue2,ngelxPrivateBlue])),
-                child:CircleAvatar(radius:56,backgroundColor:Colors.white,backgroundImage:foto.isEmpty?null:CachedNetworkImageProvider(foto),child:foto.isEmpty?const Icon(Icons.person,size:48,color:ngelxPrivateBlue):null),
+                child:CircleAvatar(radius:56,backgroundColor:Colors.white,backgroundImage:foto.isEmpty?null:NgelXAgImageProvider(foto),child:foto.isEmpty?const Icon(Icons.person,size:48,color:ngelxPrivateBlue):null),
               )),
               const SizedBox(height:16),
               Text(gorunenAd,textAlign:TextAlign.center,style:const TextStyle(fontSize:29,fontWeight:FontWeight.w900,color:ngelxPrivateBlueInk)),
@@ -18454,7 +18590,7 @@ class _SohbetMesajAramaPageState extends State<SohbetMesajAramaPage>{
               CircleAvatar(
                 radius:22,
                 backgroundColor:widget.groupMode?ngelxGroupGreenSoft:const Color(0xFFECE4F5),
-                backgroundImage:foto.isEmpty?null:CachedNetworkImageProvider(foto),
+                backgroundImage:foto.isEmpty?null:NgelXAgImageProvider(foto),
                 child:foto.isEmpty?Icon(sender=='system'?Icons.info_outline_rounded:Icons.person_rounded,color:widget.groupMode?ngelxGroupGreen:ngelxPremiumPurple):null,
               ),
               const SizedBox(width:10),
@@ -18621,7 +18757,7 @@ class _SohbetMesajAramaPageState extends State<SohbetMesajAramaPage>{
                       padding:const EdgeInsets.fromLTRB(11,10,11,10),
                       onTap:()=>_aramaSonucuAc(d),
                       child:Row(crossAxisAlignment:CrossAxisAlignment.start,children:[
-                        CircleAvatar(radius:21,backgroundColor:widget.groupMode?ngelxGroupGreenSoft:const Color(0xFFECE4F5),backgroundImage:foto.isEmpty?null:CachedNetworkImageProvider(foto),child:foto.isEmpty?Icon(Icons.person_rounded,color:widget.groupMode?ngelxGroupGreen:ngelxPremiumPurple,size:20):null),
+                        CircleAvatar(radius:21,backgroundColor:widget.groupMode?ngelxGroupGreenSoft:const Color(0xFFECE4F5),backgroundImage:foto.isEmpty?null:NgelXAgImageProvider(foto),child:foto.isEmpty?Icon(Icons.person_rounded,color:widget.groupMode?ngelxGroupGreen:ngelxPremiumPurple,size:20):null),
                         const SizedBox(width:10),
                         Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
                           Row(children:[
@@ -19091,7 +19227,7 @@ class _AktivitePageState extends State<AktivitePage> {
             final ikon=grup?Icons.groups_rounded:_ikon(tur);
             final bekliyor = (v['type'] == 'follow_request' || v['type'] == 'friend_request') && v['status'] == 'pending';
             return Container(decoration:BoxDecoration(color:okundu?Colors.white:(grup?ngelxGroupGreenSoft:const Color(0xFFF8F4FF)),borderRadius:BorderRadius.circular(17)),child:ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:12,vertical:7),
-              leading: Stack(children:[CircleAvatar(radius:26,backgroundColor:renk.withValues(alpha:.13),backgroundImage:foto.isEmpty?null:CachedNetworkImageProvider(foto),child:foto.isEmpty?Icon(ikon,color:renk):null),if(!okundu)Positioned(right:0,top:0,child:CircleAvatar(radius:5,backgroundColor:grup?ngelxGroupGreen:const Color(0xFF7C3AED)))]),
+              leading: Stack(children:[CircleAvatar(radius:26,backgroundColor:renk.withValues(alpha:.13),backgroundImage:foto.isEmpty?null:NgelXAgImageProvider(foto),child:foto.isEmpty?Icon(ikon,color:renk):null),if(!okundu)Positioned(right:0,top:0,child:CircleAvatar(radius:5,backgroundColor:grup?ngelxGroupGreen:const Color(0xFF7C3AED)))]),
               title: _bildirimBasligi(v,okundu),
               subtitle: Row(children:[
                 if(grup)...[
@@ -19349,7 +19485,7 @@ class OrtakGruplarPage extends StatelessWidget{
             itemBuilder:(_,i){
               final d=docs[i],v=d.data(),foto=(v['groupPhotoUrl']??'').toString(),ad=(v['groupName']??'Grup').toString();
               return ListTile(
-                leading:CircleAvatar(backgroundImage:foto.isEmpty?null:CachedNetworkImageProvider(foto),child:foto.isEmpty?const Icon(Icons.groups):null),
+                leading:CircleAvatar(backgroundImage:foto.isEmpty?null:NgelXAgImageProvider(foto),child:foto.isEmpty?const Icon(Icons.groups):null),
                 title:Text(ad,style:const TextStyle(fontWeight:FontWeight.w800)),
                 subtitle:Text(List<String>.from(v['members']??const[]).length.toString()+' üye'),
                 trailing:const Icon(Icons.chevron_right),
@@ -19917,7 +20053,7 @@ class MedyaOnizleme extends StatelessWidget {
     } else if (tur == 'video') {
       final Widget kapak;
       if (thumbnailUrl.isNotEmpty) {
-        kapak = CachedNetworkImage(
+        kapak = NgelXAgResmi(
           imageUrl: thumbnailUrl,
           fit: BoxFit.cover,
           placeholder: (_, _) => url.isEmpty
@@ -20184,7 +20320,7 @@ class _HikayeGosterPageState extends State<HikayeGosterPage> with SingleTickerPr
               AnimatedBuilder(animation:sure,builder:(_,__)=>ClipRRect(borderRadius:BorderRadius.circular(8),child:LinearProgressIndicator(value:sure.value,minHeight:3,color:Colors.white,backgroundColor:Colors.white24))),
               const SizedBox(height:10),
               Row(children:[
-                CircleAvatar(radius:20,backgroundColor:mor,backgroundImage:widget.fotoUrl.isEmpty?null:CachedNetworkImageProvider(widget.fotoUrl),child:widget.fotoUrl.isEmpty?Text(widget.kullanici.replaceFirst('@','').isEmpty?'N':widget.kullanici.replaceFirst('@','')[0].toUpperCase()):null),
+                CircleAvatar(radius:20,backgroundColor:mor,backgroundImage:widget.fotoUrl.isEmpty?null:NgelXAgImageProvider(widget.fotoUrl),child:widget.fotoUrl.isEmpty?Text(widget.kullanici.replaceFirst('@','').isEmpty?'N':widget.kullanici.replaceFirst('@','')[0].toUpperCase()):null),
                 const SizedBox(width:9),
                 Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
                   Text(widget.kullanici,style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w900,fontSize:16)),
@@ -20510,7 +20646,7 @@ class _HesapDegistirPageState extends State<HesapDegistirPage> {
                 child:Row(children:[
                   CircleAvatar(
                     radius:23,backgroundColor:const Color(0xFFF0E8FF),
-                    backgroundImage:foto.isEmpty?null:CachedNetworkImageProvider(foto),
+                    backgroundImage:foto.isEmpty?null:NgelXAgImageProvider(foto),
                     child:foto.isEmpty?Text(ad.isEmpty?'N':ad[0].toUpperCase(),style:const TextStyle(color:ngelxPremiumPurple,fontWeight:FontWeight.w900)):null,
                   ),
                   const SizedBox(width:11),
@@ -20975,7 +21111,7 @@ class _EngellenenlerPageState extends State<EngellenenlerPage>{
                 final v = p.data?.data() ?? {};
                 final foto = (v['photoUrl'] ?? '').toString();
                 return ListTile(
-                  leading: CircleAvatar(backgroundImage: foto.isEmpty ? null : CachedNetworkImageProvider(foto), child: foto.isEmpty ? const Icon(Icons.person) : null),
+                  leading: CircleAvatar(backgroundImage: foto.isEmpty ? null : NgelXAgImageProvider(foto), child: foto.isEmpty ? const Icon(Icons.person) : null),
                   title: Text((v['displayName'] ?? v['username'] ?? 'Ngel X kullanıcısı').toString()),
                   subtitle: Text('@${v['username'] ?? 'ngelx'}'),
                   trailing: TextButton(onPressed: () => kaldir(ids[i]), child: Text(t('unblock'))),
@@ -21304,7 +21440,7 @@ class ArkadaslarPage extends StatelessWidget {
                       await FirebaseFirestore.instance.collection('users').doc(id).update({'friends':FieldValue.arrayRemove([uid])});
                     }
                   },
-                  leading:CircleAvatar(backgroundImage:foto.isEmpty?null:CachedNetworkImageProvider(foto),child:foto.isEmpty?const Icon(Icons.person):null),
+                  leading:CircleAvatar(backgroundImage:foto.isEmpty?null:NgelXAgImageProvider(foto),child:foto.isEmpty?const Icon(Icons.person):null),
                   title:Text((v['displayName']??v['username']??'NgelX').toString(),style:const TextStyle(fontWeight:FontWeight.w800)),
                   subtitle:Text('@${v['username']??'ngelx'}'),trailing:const Icon(Icons.chevron_right),
                 );
@@ -21399,7 +21535,7 @@ class TakipIstegiGecmisiPage extends StatelessWidget{
                     onTap:hedef.isEmpty?null:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciProfilPage(uid:hedef))),
                     leading:CircleAvatar(
                       backgroundColor:(v['type']=='friend_request'?mor:mavi).withValues(alpha:.12),
-                      backgroundImage:foto.isEmpty?null:CachedNetworkImageProvider(foto),
+                      backgroundImage:foto.isEmpty?null:NgelXAgImageProvider(foto),
                       child:foto.isEmpty?Icon(v['type']=='friend_request'?Icons.people_alt_outlined:Icons.person_add_alt_1_rounded,color:v['type']=='friend_request'?mor:mavi):null,
                     ),
                     title:Text(ad,style:const TextStyle(fontWeight:FontWeight.w800)),
@@ -21481,7 +21617,7 @@ class _KullaniciListesiPageState extends State<KullaniciListesiPage>{
                   final kaldirabilir=me==widget.uid&&widget.alan=='followers'&&ids[i]!=me;
                   return ListTile(
                     onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciProfilPage(uid:ids[i]))),
-                    leading:CircleAvatar(backgroundImage:foto.isEmpty?null:CachedNetworkImageProvider(foto),child:foto.isEmpty?const Icon(Icons.person):null),
+                    leading:CircleAvatar(backgroundImage:foto.isEmpty?null:NgelXAgImageProvider(foto),child:foto.isEmpty?const Icon(Icons.person):null),
                     title:Text(ad,style:const TextStyle(fontWeight:FontWeight.w800)),
                     subtitle:Text('@'+kullanici),
                     trailing:kaldirabilir?PopupMenuButton<String>(
@@ -21725,7 +21861,7 @@ class HikayeArsiviPage extends StatelessWidget{
                     ?Container(width:54,height:54,color:const Color(0xFF20232D),child:const Icon(Icons.play_circle_fill_rounded,color:Colors.white,size:32))
                     :url.isEmpty
                       ?const SizedBox(width:54,height:54,child:Icon(Icons.image_not_supported_outlined))
-                      :CachedNetworkImage(imageUrl:url,width:54,height:54,fit:BoxFit.cover),
+                      :NgelXAgResmi(imageUrl:url,width:54,height:54,fit:BoxFit.cover),
                 ),
                 title:Text(zamanKisa(v['createdAt']),style:const TextStyle(fontWeight:FontWeight.w800)),
                 subtitle:Text(oneCikan?'Öne çıkanlarda gösteriliyor':'Arşivde'),
@@ -21775,7 +21911,7 @@ class IcerikGizlemePage extends StatelessWidget{
                     return CheckboxListTile(
                       value:secili,
                       onChanged:(x)=>videoRef.set({'hiddenFor':x==true?FieldValue.arrayUnion([ids[i]]):FieldValue.arrayRemove([ids[i]])},SetOptions(merge:true)),
-                      secondary:CircleAvatar(backgroundImage:foto.isEmpty?null:CachedNetworkImageProvider(foto),child:foto.isEmpty?const Icon(Icons.person):null),
+                      secondary:CircleAvatar(backgroundImage:foto.isEmpty?null:NgelXAgImageProvider(foto),child:foto.isEmpty?const Icon(Icons.person):null),
                       title:Text(ad,style:const TextStyle(fontWeight:FontWeight.w700)),
                       subtitle:Text('@'+(v['username']??'ngelx').toString()),
                     );
@@ -21937,7 +22073,7 @@ class _ProfilPageState extends State<ProfilPage> {
         if (!mounted) return;
         setState(() => fotoUrl = '');
         if (eski.isNotEmpty) {
-          await CachedNetworkImage.evictFromCache(eski);
+          await ngelxAgResmiOnbelleginiTemizle(eski);
           unawaited(ngelxMedyaSil(eski).catchError((_){ }));
         }
         ScaffoldMessenger.of(context).showSnackBar(
@@ -21992,9 +22128,9 @@ class _ProfilPageState extends State<ProfilPage> {
       try { await user.updatePhotoURL(url); } catch (_) {}
       if (!mounted) return;
       setState(() => fotoUrl = url);
-      try { await precacheImage(CachedNetworkImageProvider(url), context); } catch (_) {}
+      try { await precacheImage(NgelXAgImageProvider(url), context); } catch (_) {}
       if (eski.isNotEmpty && eski != url) {
-        await CachedNetworkImage.evictFromCache(eski);
+        await ngelxAgResmiOnbelleginiTemizle(eski);
         unawaited(ngelxMedyaSil(eski).catchError((_){ }));
       }
       ScaffoldMessenger.of(context).showSnackBar(
@@ -22691,7 +22827,7 @@ class _ProfilPageState extends State<ProfilPage> {
                                 CircleAvatar(
                                   radius:28,
                                   backgroundColor:video?const Color(0xFF24212D):const Color(0xFFF1E9FF),
-                                  backgroundImage:(!video&&url.isNotEmpty)?CachedNetworkImageProvider(url):null,
+                                  backgroundImage:(!video&&url.isNotEmpty)?NgelXAgImageProvider(url):null,
                                   child:video?const Icon(Icons.play_arrow_rounded,color:Colors.white,size:30):(url.isEmpty?const Icon(Icons.auto_stories_rounded,color:mor):null),
                                 ),
                                 const SizedBox(height:5),
