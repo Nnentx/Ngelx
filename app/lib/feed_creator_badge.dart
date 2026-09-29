@@ -6,23 +6,23 @@ class NgelXIcerikUreticisiRozeti extends StatelessWidget {
 
   @override
   Widget build(BuildContext context){
-    final h=kucuk?20.0:22.0;
+    final h=kucuk?17.0:19.0;
     return Container(
       height:h,
-      padding:EdgeInsets.symmetric(horizontal:kucuk?7:8,vertical:2),
+      padding:EdgeInsets.symmetric(horizontal:kucuk?6:7,vertical:1),
       decoration:BoxDecoration(
         gradient:const LinearGradient(colors:[Color(0xFF00C2FF),Color(0xFF8B5CF6)]),
         borderRadius:BorderRadius.circular(999),
         boxShadow:const [BoxShadow(color:Color(0x3300B8F5),blurRadius:8,offset:Offset(0,2))],
       ),
       child:Row(mainAxisSize:MainAxisSize.min,children:[
-        Icon(Icons.auto_awesome_rounded,color:Colors.white,size:kucuk?11:12),
+        Icon(Icons.auto_awesome_rounded,color:Colors.white,size:kucuk?9:10),
         const SizedBox(width:4),
         Text(
           lt('İçerik Üreticisi','Content Creator'),
           maxLines:1,
           overflow:TextOverflow.ellipsis,
-          style:TextStyle(color:Colors.white,fontSize:kucuk?9.5:10.5,fontWeight:FontWeight.w900,letterSpacing:.1),
+          style:TextStyle(color:Colors.white,fontSize:kucuk?8.3:9.2,fontWeight:FontWeight.w900,letterSpacing:.1),
         ),
       ]),
     );
@@ -68,16 +68,16 @@ class NgelXPaylasanSatiri extends StatelessWidget {
             padding:const EdgeInsets.symmetric(vertical:2),
             child:Wrap(
               crossAxisAlignment:WrapCrossAlignment.center,
-              spacing:7,
+              spacing:5,
               runSpacing:5,
               children:[
                 Text(
                   '@${username.replaceFirst('@','')}',
                   maxLines:1,
                   overflow:TextOverflow.ellipsis,
-                  style:const TextStyle(color:Colors.white,fontSize:18,fontWeight:FontWeight.w900),
+                  style:const TextStyle(color:Colors.white,fontSize:17,fontWeight:FontWeight.w900),
                 ),
-                if(creatorBadge)const NgelXIcerikUreticisiRozeti(),
+                if(creatorBadge)const NgelXIcerikUreticisiRozeti(kucuk:true),
               ],
             ),
           ),
@@ -85,4 +85,25 @@ class NgelXPaylasanSatiri extends StatelessWidget {
       ],
     );
   }
+}
+
+
+class NgelXYorumKullaniciSatiri extends StatelessWidget{
+  final String ad;final bool icerikUreticisi;final VoidCallback? onTap;
+  const NgelXYorumKullaniciSatiri({super.key,required this.ad,required this.icerikUreticisi,this.onTap});
+  @override Widget build(BuildContext context)=>InkWell(
+    onTap:onTap,
+    child:Wrap(crossAxisAlignment:WrapCrossAlignment.center,spacing:5,runSpacing:3,children:[
+      Text('@$ad',style:const TextStyle(fontWeight:FontWeight.w800,color:Colors.black87,fontSize:13.5)),
+      if(icerikUreticisi)const NgelXIcerikUreticisiRozeti(kucuk:true),
+    ]),
+  );
+}
+
+final Set<String> ngelxSilinenIcerikIdleri=<String>{};
+final ValueNotifier<int> ngelxIcerikSilmeRevizyonu=ValueNotifier<int>(0);
+void ngelxIcerikSilindi(String id){
+  if(id.isEmpty)return;
+  ngelxSilinenIcerikIdleri.add(id);
+  ngelxIcerikSilmeRevizyonu.value++;
 }
