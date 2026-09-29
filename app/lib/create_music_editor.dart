@@ -690,6 +690,170 @@ class _NgelXSuruklenebilirYaziKatmaniState extends State<NgelXSuruklenebilirYazi
   }
 }
 
+
+class NgelXFotoDuzenlemePage extends StatefulWidget{
+  final XFile dosya;
+  const NgelXFotoDuzenlemePage({super.key,required this.dosya});
+  @override State<NgelXFotoDuzenlemePage> createState()=>_NgelXFotoDuzenlemePageState();
+}
+
+class _NgelXFotoDuzenlemePageState extends State<NgelXFotoDuzenlemePage>{
+  String oran='Orijinal';
+  String filtre='Doğal';
+  int donus=0;
+  double guzellik=.18,parlaklik=0,kontrast=0,doygunluk=0;
+  bool kaydediliyor=false;
+
+  static const filtreler=<String>['Doğal','Portre','Canlı','Soft','Sıcak','Soğuk','Retro','S/B'];
+  static const oranlar=<String>['Orijinal','9:16','4:5','1:1','16:9'];
+
+  ColorFilter? _onizlemeFiltresi(){
+    switch(filtre){
+      case 'Portre':return const ColorFilter.matrix(<double>[1.05,0,0,0,6,0,1.03,0,0,5,0,0,.99,0,3,0,0,0,1,0]);
+      case 'Canlı':return const ColorFilter.matrix(<double>[1.12,-.03,-.03,0,3,-.03,1.10,-.03,0,2,-.02,-.03,1.12,0,2,0,0,0,1,0]);
+      case 'Soft':return const ColorFilter.matrix(<double>[1.03,0,0,0,8,0,1.02,0,0,7,0,0,1.00,0,6,0,0,0,1,0]);
+      case 'Sıcak':return const ColorFilter.matrix(<double>[1.10,0,0,0,7,0,1.03,0,0,3,0,0,.93,0,-3,0,0,0,1,0]);
+      case 'Soğuk':return const ColorFilter.matrix(<double>[.95,0,0,0,-2,0,1.02,0,0,1,0,0,1.11,0,6,0,0,0,1,0]);
+      case 'Retro':return const ColorFilter.matrix(<double>[.98,.04,.02,0,6,.02,.93,.02,0,2,.05,.03,.84,0,-2,0,0,0,1,0]);
+      case 'S/B':return const ColorFilter.matrix(<double>[.33,.59,.11,0,0,.33,.59,.11,0,0,.33,.59,.11,0,0,0,0,0,1,0]);
+      default:return null;
+    }
+  }
+
+  double? get _hedefOran=>switch(oran){
+    '9:16'=>9/16,
+    '4:5'=>4/5,
+    '1:1'=>1,
+    '16:9'=>16/9,
+    _=>null,
+  };
+
+  Future<void> _bitir()async{
+    if(kaydediliyor)return;
+    setState(()=>kaydediliyor=true);
+    try{
+      final bytes=await widget.dosya.readAsBytes();
+      var g=img.decodeImage(bytes);
+      if(g==null)throw const FormatException('Fotoğraf çözülemedi.');
+      g=img.bakeOrientation(g);
+      for(int i=0;i<donus%4;i++){g=img.copyRotate(g,angle:90);}
+      final hedef=_hedefOran;
+      if(hedef!=null){
+        final mevcut=g.width/g.height;
+        int x=0,y=0,w=g.width,h=g.height;
+        if(mevcut>hedef){w=(g.height*hedef).round().clamp(1,g.width);x=((g.width-w)/2).round();}
+        else if(mevcut<hedef){h=(g.width/hedef).round().clamp(1,g.height);y=((g.height-h)/2).round();}
+        g=img.copyCrop(g,x:x,y:y,width:w,height:h);
+      }
+      var b=1+(parlaklik*.22)+(guzellik*.045);
+      var s=1+(doygunluk*.32)+(guzellik*.045);
+      var k=1+(kontrast*.38)+(guzellik*.035);
+      if(filtre=='Portre'){b+=.035;s+=.02;}
+      if(filtre=='Canlı'){s+=.17;k+=.05;}
+      if(filtre=='Soft'){b+=.05;k-=.04;}
+      if(filtre=='Sıcak'){b+=.025;s+=.06;}
+      if(filtre=='Soğuk'){k+=.025;}
+      if(filtre=='Retro'){g=img.sepia(g);s*=.86;}
+      if(filtre=='S/B')s=0;
+      g=img.adjustColor(g,brightness:b.clamp(.72,1.32),contrast:k.clamp(.65,1.45),saturation:s.clamp(0,1.55));
+      final dir=await getTemporaryDirectory();
+      final yol='${dir.path}/ngelx_photo_edit_${DateTime.now().microsecondsSinceEpoch}.jpg';
+      await File(yol).writeAsBytes(img.encodeJpg(g,quality:92),flush:true);
+      if(!mounted)return;
+      Navigator.pop(context,XFile(yol,name:'ngelx_photo.jpg',mimeType:'image/jpeg'));
+    }catch(e){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Fotoğraf düzenlenemedi: $e')));
+    }finally{
+      if(mounted)setState(()=>kaydediliyor=false);
+    }
+  }
+
+  Widget _slider(String baslik,double deger,ValueChanged<double> onChanged,{double min=-1,double max=1}){
+    return Row(children:[
+      SizedBox(width:86,child:Text(baslik,style:const TextStyle(color:Colors.white70,fontWeight:FontWeight.w700,fontSize:12))),
+      Expanded(child:Slider(value:deger,min:min,max:max,onChanged:kaydediliyor?null:onChanged)),
+      SizedBox(width:42,child:Text('${(deger*100).round()}',textAlign:TextAlign.end,style:const TextStyle(color:Colors.white70,fontSize:11))),
+    ]);
+  }
+
+  @override Widget build(BuildContext context){
+    Widget gorsel=RotatedBox(
+      quarterTurns:donus%4,
+      child:Image.file(File(widget.dosya.path),fit:_hedefOran==null?BoxFit.contain:BoxFit.cover,width:double.infinity,height:double.infinity),
+    );
+    final cf=_onizlemeFiltresi();
+    if(cf!=null)gorsel=ColorFiltered(colorFilter:cf,child:gorsel);
+    return Theme(
+      data:ThemeData.dark(),
+      child:Scaffold(
+        backgroundColor:Colors.black,
+        appBar:AppBar(
+          backgroundColor:Colors.black,
+          foregroundColor:Colors.white,
+          title:const Text('Fotoğrafı düzenle',style:TextStyle(fontWeight:FontWeight.w900)),
+          actions:[TextButton(onPressed:kaydediliyor?null:()=>unawaited(_bitir()),child:kaydediliyor?const SizedBox(width:20,height:20,child:CircularProgressIndicator(strokeWidth:2)):const Text('Bitti',style:TextStyle(color:mavi,fontWeight:FontWeight.w900)))],
+        ),
+        body:SafeArea(child:Column(children:[
+          Expanded(
+            child:Padding(
+              padding:const EdgeInsets.symmetric(horizontal:8),
+              child:ClipRRect(
+                borderRadius:BorderRadius.circular(22),
+                child:ColoredBox(
+                  color:const Color(0xFF09090D),
+                  child:Center(
+                    child:AspectRatio(
+                      aspectRatio:_hedefOran??9/16,
+                      child:ClipRect(child:gorsel),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Container(
+            constraints:BoxConstraints(maxHeight:MediaQuery.sizeOf(context).height*.43),
+            padding:const EdgeInsets.fromLTRB(14,12,14,14),
+            decoration:const BoxDecoration(color:Color(0xFF111217),borderRadius:BorderRadius.vertical(top:Radius.circular(26))),
+            child:SingleChildScrollView(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+              Row(children:[
+                const Text('Kırpma / oran',style:TextStyle(color:Colors.white,fontWeight:FontWeight.w900)),
+                const Spacer(),
+                TextButton.icon(onPressed:kaydediliyor?null:()=>setState(()=>donus=(donus+1)%4),icon:const Icon(Icons.rotate_90_degrees_ccw_rounded,size:18),label:const Text('Döndür')),
+                TextButton(onPressed:kaydediliyor?null:()=>setState((){oran='Orijinal';filtre='Doğal';donus=0;guzellik=.18;parlaklik=0;kontrast=0;doygunluk=0;}),child:const Text('Sıfırla')),
+              ]),
+              SizedBox(height:40,child:ListView.separated(
+                scrollDirection:Axis.horizontal,
+                itemCount:oranlar.length,
+                separatorBuilder:(_,__)=>const SizedBox(width:7),
+                itemBuilder:(_,i)=>ChoiceChip(label:Text(oranlar[i]),selected:oran==oranlar[i],onSelected:kaydediliyor?null:(_)=>setState(()=>oran=oranlar[i])),
+              )),
+              const SizedBox(height:12),
+              const Text('Filtreler',style:TextStyle(color:Colors.white,fontWeight:FontWeight.w900)),
+              const SizedBox(height:7),
+              SizedBox(height:42,child:ListView.separated(
+                scrollDirection:Axis.horizontal,
+                itemCount:filtreler.length,
+                separatorBuilder:(_,__)=>const SizedBox(width:7),
+                itemBuilder:(_,i)=>ChoiceChip(label:Text(filtreler[i]),selected:filtre==filtreler[i],onSelected:kaydediliyor?null:(_)=>setState(()=>filtre=filtreler[i])),
+              )),
+              const SizedBox(height:10),
+              _slider('Güzelleştir',guzellik,(v)=>setState(()=>guzellik=v),min:0,max:1),
+              _slider('Parlaklık',parlaklik,(v)=>setState(()=>parlaklik=v)),
+              _slider('Kontrast',kontrast,(v)=>setState(()=>kontrast=v)),
+              _slider('Doygunluk',doygunluk,(v)=>setState(()=>doygunluk=v)),
+              const Padding(
+                padding:EdgeInsets.only(top:4),
+                child:Text('Değişiklikler yalnızca “Bitti” ile uygulanır.',style:TextStyle(color:Colors.white54,fontSize:11)),
+              ),
+            ])),
+          ),
+        ])),
+      ),
+    );
+  }
+}
+
 class NgelXVideoDuzenlemePage extends StatefulWidget {
   final XFile dosya;
   final int baslangicMs;
