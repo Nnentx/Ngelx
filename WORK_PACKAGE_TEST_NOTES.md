@@ -1246,3 +1246,10 @@
 - Ön/arka kamera değiştirildiğinde seçili filtre/rötuş ayarları korunacak.
 - Kamera değişimi, mikrofon ve efektler LiveKit/video track yaşam döngüsünü bozmayacak; yayın kopmadan track yeniden yayınlanacak.
 - Düşük performanslı cihazlarda canlı yayın filtresi hafif moda geçecek; rötuş yoğunluğu ve efekt kalitesi gerektiğinde otomatik azaltılacak.
+
+
+## 2026-09-29 — Grup sohbeti üst bardaki yenileme ikonunu kaldır
+- Grup sohbeti üst başlığında grup adı ile sesli/görüntülü arama ikonlarının arasına eklenen **↻ yenile** butonu kaldırılacak.
+- Üst bar yalnızca geri, grup bilgisi/profil, sesli arama, görüntülü arama ve bilgi/ayar kontrollerini taşıyacak.
+- Grup sohbetindeki manuel yenileme ihtiyacı varsa **aşağı çekerek yenileme (pull-to-refresh)** üzerinden devam edecek; arama ikonlarının yanında ayrı yenileme butonu olmayacak.
+- Gelen Kutusu ve uygun liste ekranlarındaki manuel yenileme ayrı kalacak; bu değişiklik yalnızca grup sohbeti üst barını sadeleştirir.
