@@ -1,0 +1,34 @@
+name: NgelX TEMP inspect live class
+
+on:
+  push:
+    branches:
+      - work/build322-polish-bugfix
+    paths:
+      - '.github/workflows/ngelx-temp-inspect-live.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Print current live broadcast section
+        shell: python
+        run: |
+          from pathlib import Path
+          p=Path('app/lib/main.dart')
+          text=p.read_text(encoding='utf-8')
+          marker='class _CanliYayinPageState'
+          i=text.find(marker)
+          if i<0:
+              raise SystemExit('CanliYayinPageState not found')
+          j=text.find('\nclass ',i+len(marker))
+          if j<0:
+              j=min(len(text),i+50000)
+          block=text[i:j]
+          print('--- NGELX LIVE BLOCK START ---')
+          print(block[:50000])
+          print('--- NGELX LIVE BLOCK END ---')
