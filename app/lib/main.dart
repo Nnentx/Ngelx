@@ -93,8 +93,8 @@ const ngelxPrivateBlueCanvas = Color(0xFFF6FAFF);
 const ngelxPrivateBlueBorder = Color(0xFFD8E8FF);
 const ngelxPrivateBlueInk = Color(0xFF10213A);
 
-const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.96');
-const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '315');
+const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.97');
+const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '316');
 const ngelxGroupBorder = Color(0xFFD9EEE0);
 
 final GlobalKey<NavigatorState> ngelxNavigatorKey=GlobalKey<NavigatorState>();
@@ -5121,6 +5121,8 @@ class _GorselYaziKartiState extends State<GorselYaziKarti> {
   bool begeniIsleniyor = false;
   bool kaydetIsleniyor = false;
   bool _etkilesimlerIstendi = false;
+  bool _profilFotoIstendi = false;
+  String profilFoto = '';
   int medyaSayfasi = 0;
 
   String get icerikId => widget.veri['id'] ?? '';
@@ -5154,7 +5156,20 @@ class _GorselYaziKartiState extends State<GorselYaziKarti> {
     if(widget.aktif){
       unawaited(etkilesimleriGetir());
       unawaited(_aktifSesiHazirla());
+      unawaited(profilFotosunuGetir());
     }
+  }
+
+  Future<void> profilFotosunuGetir() async {
+    if(_profilFotoIstendi)return;
+    _profilFotoIstendi=true;
+    final owner=(widget.veri['ownerId']??'').trim();
+    if(owner.isEmpty)return;
+    try{
+      final belge=await FirebaseFirestore.instance.collection('users').doc(owner).get();
+      if(!mounted)return;
+      setState(()=>profilFoto=(belge.data()?['photoUrl']??'').toString().trim());
+    }catch(_){}
   }
 
   Future<void> etkilesimleriGetir() async {
@@ -5340,6 +5355,7 @@ class _GorselYaziKartiState extends State<GorselYaziKarti> {
     if(widget.aktif&&!oldWidget.aktif){
       unawaited(etkilesimleriGetir());
       unawaited(_aktifSesiHazirla());
+      unawaited(profilFotosunuGetir());
     }else if(!widget.aktif&&oldWidget.aktif){
       final p=oynatici;
       if(p!=null)unawaited(p.pause());
@@ -5496,6 +5512,20 @@ class _GorselYaziKartiState extends State<GorselYaziKarti> {
             right: 15,
             bottom: 25,
             child: Column(children: [
+              GestureDetector(
+                onTap:paylasanProfiliAc,
+                child:CircleAvatar(
+                  radius:27,
+                  backgroundColor:mavi,
+                  child:CircleAvatar(
+                    radius:23,
+                    backgroundColor:panel,
+                    backgroundImage:profilFoto.isEmpty?null:NgelXAgImageProvider(profilFoto),
+                    child:profilFoto.isNotEmpty?null:const Text('N',style:TextStyle(fontWeight:FontWeight.bold)),
+                  ),
+                ),
+              ),
+              const SizedBox(height:6),
               CanliSayacButonu(ref: FirebaseFirestore.instance.collection('videos').doc(icerikId).collection('likes'), ikon: begenildi ? Icons.favorite : Icons.favorite_border, renk: begenildi ? const Color(0xFFE6003C) : Colors.white, tiklama: begeniyiDegistir, uzunBasma:()async{await tepkiMenusu(context,icerikId);if(mounted)setState(()=>begenildi=true);},aktif:widget.aktif),
               CanliSayacButonu(ref: FirebaseFirestore.instance.collection('videos').doc(icerikId).collection('comments'), ikon: Icons.mode_comment_outlined, tiklama: yorumlariAc,aktif:widget.aktif),
               IslemButonu(ikon: kaydedildi ? Icons.bookmark : Icons.bookmark_border, yazi: kaydedildi ? 'Kaydedildi' : 'Kaydet', renk: kaydedildi ? mavi : Colors.white, tiklama: icerigiKaydet),
