@@ -1,0 +1,117 @@
+name: Ngel X v27 BUILD 312 MEDIA ROOT FIX
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - work/build312-media-root-fix-v2
+    paths:
+      - 'app/**'
+      - 'tools/verify_build312_media_root_fix.py'
+      - '.github/workflows/NgelX-v27-BUILD-312-MEDIA-ROOT-FIX.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - name: Kaynaklari al
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build 312 medya kok duzeltmesini uygula ve dogrula
+        shell: bash
+        run: |
+          set -euo pipefail
+          PATCH_GZ_B64='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'
+          printf '%s' "$PATCH_GZ_B64" | base64 --decode | gzip --decompress | git apply
+          python3 tools/verify_build312_media_root_fix.py
+          python3 tools/verify_ngelx_contract.py
+          git diff --check
+
+      - name: Medya servis sagligini kontrol et
+        shell: bash
+        run: |
+          set -euo pipefail
+          for url in "https://ngelx-media.alihancaglar76.workers.dev/health" "https://ngelx-upload.alihancaglar76.workers.dev/health"; do
+            body="$(curl --fail --silent --show-error --retry 4 --retry-all-errors --retry-delay 2 --connect-timeout 10 --max-time 25 "$url")"
+            echo "$body"
+            grep -q '"r2":true' <<<"$body"
+            grep -q '"directUpload":true' <<<"$body"
+          done
+
+      - name: Java 17 kur
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Flutter kur
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Sabit NgelX imza anahtarini geri yukle
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: ngelx-stable-debug-keystore-v1
+          fail-on-cache-miss: true
+
+      - name: Imza anahtarini dogrula
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s "$HOME/.android/debug.keystore"
+          keytool -list -v -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey | tee /tmp/ngelx-key.txt
+          grep -F 'SHA256: BE:20:B2:7F:0B:A1:F4:DE:CD:29:41:D4:10:B1:53:6D:E8:9E:48:DC:89:4F:04:F0:38:F9:D2:6B:11:EC:D6:AA' /tmp/ngelx-key.txt
+
+      - name: Flutter analiz
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter clean
+          flutter pub get
+          flutter analyze --machine > analyze.log 2>&1 || true
+          cat analyze.log
+          if grep -q '^ERROR|' analyze.log; then exit 1; fi
+
+      - name: APK olustur ve imzayi dogrula
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter build apk --release
+          APK=build/app/outputs/flutter-apk/app-release.apk
+          test -s "$APK"
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          "$APKSIGNER" verify --print-certs "$APK" | tee build/app/outputs/flutter-apk/apksigner-certs.txt
+          grep -qi 'be20b27f0ba1f4decd2941d410b1536de89e48dc894f04f038f9d26b11ecd6aa' build/app/outputs/flutter-apk/apksigner-certs.txt
+          sha256sum "$APK" > "$APK.sha256"
+
+      - name: Build 312 kaynagini dala kaydet
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "NgelX Build Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add app/lib/main.dart app/pubspec.yaml app/android/app/src/main/kotlin/com/nnentx/ngelx_app/MainActivity.kt
+          git commit -m "Build 312: apply Android media root fix [skip ci]"
+          git push origin HEAD:work/build312-media-root-fix-v2
+
+      - name: APK yukle
+        uses: actions/upload-artifact@v4
+        with:
+          name: NgelX-1.0.93-Build-312-MEDIA-ROOT-FIX
+          path: |
+            app/build/app/outputs/flutter-apk/app-release.apk
+            app/build/app/outputs/flutter-apk/app-release.apk.sha256
+            app/build/app/outputs/flutter-apk/apksigner-certs.txt
+          if-no-files-found: error
+          retention-days: 14
