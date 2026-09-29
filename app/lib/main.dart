@@ -8425,7 +8425,7 @@ class _YeniYuklePageState extends State<YuklePage> {
 
       if(!mounted)return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content:Text(video?lt('Video hikâyen yayınlandı • 24 saat görünür.','Your video story is live • visible for 24 hours.'):lt('Hikâyen yayınlandı • 24 saat görünür.','Your story is live • visible for 24 hours.'))
+        content:Text(video?lt('Video hikâyen yayınlandı • 24 saat görünür.','Your video story is live • visible for 24 hours.'):lt('Hikâye yayınlandı • 24 saat görünür.','Your story is live • visible for 24 hours.'))
       ));
     }catch(e){
       if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(lt('Hikâye yayınlanamadı: ','Story could not be published: ')+_dosyaHataMetni(e))));
