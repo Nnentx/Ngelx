@@ -1,7 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
 
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dio/dio.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -12,6 +13,94 @@ const _groupGreen = Color(0xFF0A8F45);
 const _groupGreenSoft = Color(0xFFE4F6EA);
 const _ink = Color(0xFF202124);
 const _muted = Color(0xFF777B80);
+
+const _groupMediaPrimary='https://ngelx-media.alihancaglar76.workers.dev';
+const _groupMediaBackup='https://ngelx-upload.alihancaglar76.workers.dev';
+final Map<String,Uint8List> _groupImageMemory=<String,Uint8List>{};
+
+List<String> _groupImageCandidates(String raw){
+  final clean=raw.trim();
+  if(clean.isEmpty)return const <String>[];
+  final out=<String>[clean];
+  final uri=Uri.tryParse(clean);
+  if(uri==null||uri.pathSegments.isEmpty||uri.pathSegments.first!='media')return out;
+  for(final baseText in const <String>[_groupMediaPrimary,_groupMediaBackup]){
+    final base=Uri.tryParse(baseText);
+    if(base==null)continue;
+    final candidate=uri.replace(scheme:base.scheme,host:base.host,port:base.hasPort?base.port:null).toString();
+    if(!out.contains(candidate))out.add(candidate);
+  }
+  return out;
+}
+
+Future<Uint8List> _groupImageBytes(String raw) async {
+  final clean=raw.trim();
+  final cached=_groupImageMemory[clean];
+  if(cached!=null&&cached.isNotEmpty)return cached;
+  Object? last;
+  for(final candidate in _groupImageCandidates(clean)){
+    final uri=Uri.tryParse(candidate);
+    if(uri==null||uri.scheme!='https'||uri.host.isEmpty)continue;
+    try{
+      final response=await Dio(BaseOptions(
+        connectTimeout:const Duration(seconds:12),
+        receiveTimeout:const Duration(seconds:45),
+        validateStatus:(status)=>status!=null,
+      )).getUri<List<int>>(
+        uri,
+        options:Options(
+          responseType:ResponseType.bytes,
+          headers:const {
+            'Cache-Control':'no-cache, no-store, max-age=0',
+            'Pragma':'no-cache',
+            'Accept':'image/*,*/*;q=0.8',
+          },
+        ),
+      );
+      final status=response.statusCode??0;
+      final data=response.data;
+      if(status<200||status>=300||data==null||data.length<4)throw Exception('HTTP $status');
+      final bytes=Uint8List.fromList(data);
+      final codec=await ui.instantiateImageCodec(bytes);
+      final frame=await codec.getNextFrame();
+      frame.image.dispose();
+      codec.dispose();
+      if(_groupImageMemory.length>=64)_groupImageMemory.remove(_groupImageMemory.keys.first);
+      _groupImageMemory[clean]=bytes;
+      _groupImageMemory[candidate]=bytes;
+      return bytes;
+    }catch(e){
+      last=e;
+    }
+  }
+  throw Exception('Grup resmi açılamadı: $last');
+}
+
+@immutable
+class _NgelXGroupImageProvider extends ImageProvider<_NgelXGroupImageProvider>{
+  final String url;
+  const _NgelXGroupImageProvider(this.url);
+
+  @override
+  Future<_NgelXGroupImageProvider> obtainKey(ImageConfiguration configuration)=>
+      Future<_NgelXGroupImageProvider>.value(this);
+
+  @override
+  ImageStreamCompleter loadImage(_NgelXGroupImageProvider key,ImageDecoderCallback decode){
+    return MultiFrameImageStreamCompleter(codec:_load(key,decode),scale:1.0);
+  }
+
+  Future<ui.Codec> _load(_NgelXGroupImageProvider key,ImageDecoderCallback decode) async {
+    final bytes=await _groupImageBytes(key.url);
+    final buffer=await ui.ImmutableBuffer.fromUint8List(bytes);
+    return decode(buffer);
+  }
+
+  @override
+  bool operator ==(Object other)=>other is _NgelXGroupImageProvider&&other.url==url;
+  @override
+  int get hashCode=>url.hashCode;
+}
 
 Future<String> ngelxCurrentDisplayName() async {
   final uid = FirebaseAuth.instance.currentUser?.uid;
@@ -541,7 +630,7 @@ Future<void> showGroupMessageInfo({
           leading: CircleAvatar(
             radius: 20,
             backgroundColor: _groupGreenSoft,
-            backgroundImage: photo.isEmpty ? null : NgelXAgImageProvider(photo),
+            backgroundImage: photo.isEmpty ? null : _NgelXGroupImageProvider(photo),
             child: photo.isEmpty ? const Icon(Icons.person_rounded, color: _groupGreen) : null,
           ),
           title: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: _ink, fontWeight: FontWeight.w800)),
@@ -715,7 +804,7 @@ Future<void> showGroupForwardSheet({
                               leading: CircleAvatar(
                                 radius: 23,
                                 backgroundColor: _groupGreenSoft,
-                                backgroundImage: photo.isEmpty ? null : NgelXAgImageProvider(photo),
+                                backgroundImage: photo.isEmpty ? null : _NgelXGroupImageProvider(photo),
                                 child: photo.isEmpty ? Icon(group ? Icons.groups_rounded : Icons.person_rounded, color: _groupGreen) : null,
                               ),
                               title: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: _ink, fontSize: 15, fontWeight: FontWeight.w900)),
