@@ -10,6 +10,7 @@ import android.graphics.ImageDecoder
 import android.os.Build
 import android.net.Uri
 import android.provider.OpenableColumns
+import android.util.Size
 import java.io.FileOutputStream
 import android.os.Handler
 import android.os.Looper
@@ -215,6 +216,23 @@ class MainActivity : FlutterActivity() {
             requireNotNull(input) { "Dosya akışına erişilemedi." }
             FileOutputStream(target).use { output -> input.copyTo(output) }
         }
+        if (requestedImage && !gif) {
+            val normalizedCopy = normalizeImageFileToJpeg(target)
+            if (normalizedCopy != null) {
+                target.delete()
+                val baseName = originalName.substringBeforeLast('.', originalName)
+                    .replace(Regex("[^A-Za-z0-9._-]"), "_")
+                    .ifBlank { "ngelx_${System.currentTimeMillis()}" }
+                return mapOf(
+                    "path" to normalizedCopy.absolutePath,
+                    "name" to "$baseName.jpg",
+                    "mimeType" to "image/jpeg",
+                    "size" to normalizedCopy.length(),
+                )
+            }
+            target.delete()
+            throw IllegalArgumentException("Galeriden seçilen fotoğraf çözülemedi.")
+        }
         val detected = if (requestedImage) detectImageType(target) else null
         return mapOf(
             "path" to target.absolutePath,
@@ -245,58 +263,93 @@ class MainActivity : FlutterActivity() {
         }
     }
 
-    private fun normalizeImageToJpeg(uri: Uri): File? {
-        return try {
-            val bitmap: Bitmap? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+    private fun decodeGalleryBitmap(uri: Uri): Bitmap? {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            try {
                 val source = ImageDecoder.createSource(contentResolver, uri)
-                ImageDecoder.decodeBitmap(source) { decoder, info, _ ->
+                return ImageDecoder.decodeBitmap(source) { decoder, info, _ ->
                     decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
-                    val width = info.size.width
-                    val height = info.size.height
-                    val largest = max(width, height)
-                    if (largest > 4096) {
-                        val ratio = 4096.0 / largest.toDouble()
+                    val largest = max(info.size.width, info.size.height)
+                    if (largest > 2160) {
+                        val ratio = 2160.0 / largest.toDouble()
                         decoder.setTargetSize(
-                            max(1, (width * ratio).toInt()),
-                            max(1, (height * ratio).toInt()),
+                            max(1, (info.size.width * ratio).toInt()),
+                            max(1, (info.size.height * ratio).toInt()),
                         )
                     }
                 }
-            } else {
-                val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-                contentResolver.openInputStream(uri).use { input ->
-                    if (input != null) BitmapFactory.decodeStream(input, null, bounds)
-                }
-                var sample = 1
-                while (
-                    bounds.outWidth > 0 &&
-                    bounds.outHeight > 0 &&
-                    max(bounds.outWidth / sample, bounds.outHeight / sample) > 4096
-                ) {
-                    sample *= 2
-                }
-                val options = BitmapFactory.Options().apply { inSampleSize = sample }
-                contentResolver.openInputStream(uri).use { input ->
-                    if (input == null) null else BitmapFactory.decodeStream(input, null, options)
-                }
+            } catch (_: Throwable) {}
+        }
+        try {
+            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            contentResolver.openInputStream(uri).use { input ->
+                if (input != null) BitmapFactory.decodeStream(input, null, bounds)
             }
+            var sample = 1
+            while (
+                bounds.outWidth > 0 &&
+                bounds.outHeight > 0 &&
+                max(bounds.outWidth / sample, bounds.outHeight / sample) > 2160
+            ) sample *= 2
+            val options = BitmapFactory.Options().apply { inSampleSize = sample }
+            contentResolver.openInputStream(uri).use { input ->
+                val decoded = if (input == null) null else BitmapFactory.decodeStream(input, null, options)
+                if (decoded != null) return decoded
+            }
+        } catch (_: Throwable) {}
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            try {
+                return contentResolver.loadThumbnail(uri, Size(2160, 2160), null)
+            } catch (_: Throwable) {}
+        }
+        return null
+    }
 
-            if (bitmap == null) return null
+    private fun writeBitmapJpeg(bitmap: Bitmap, prefix: String = "normalized"): File? {
+        return try {
             val pickerDir = File(cacheDir, "ngelx_picker").apply { mkdirs() }
-            val target = File(pickerDir, "normalized_${System.currentTimeMillis()}.jpg")
+            val target = File(pickerDir, "${prefix}_${System.nanoTime()}.jpg")
             val ok = FileOutputStream(target).use { output ->
                 bitmap.compress(Bitmap.CompressFormat.JPEG, 92, output)
             }
             bitmap.recycle()
-            if (!ok || target.length() <= 0L) {
+            val verify = if (ok && target.length() > 0L) BitmapFactory.decodeFile(target.absolutePath) else null
+            val valid = verify != null && verify.width > 0 && verify.height > 0
+            verify?.recycle()
+            if (valid) target else {
                 target.delete()
                 null
-            } else {
-                target
             }
         } catch (_: Throwable) {
+            try { bitmap.recycle() } catch (_: Throwable) {}
             null
         }
+    }
+
+    private fun normalizeImageToJpeg(uri: Uri): File? {
+        val bitmap = decodeGalleryBitmap(uri) ?: return null
+        return writeBitmapJpeg(bitmap)
+    }
+
+    private fun normalizeImageFileToJpeg(file: File): File? {
+        var bitmap: Bitmap? = null
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            try {
+                val source = ImageDecoder.createSource(file)
+                bitmap = ImageDecoder.decodeBitmap(source) { decoder, info, _ ->
+                    decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
+                    val largest = max(info.size.width, info.size.height)
+                    if (largest > 2160) {
+                        val ratio = 2160.0 / largest.toDouble()
+                        decoder.setTargetSize(max(1, (info.size.width * ratio).toInt()), max(1, (info.size.height * ratio).toInt()))
+                    }
+                }
+            } catch (_: Throwable) {}
+        }
+        if (bitmap == null) {
+            try { bitmap = BitmapFactory.decodeFile(file.absolutePath) } catch (_: Throwable) {}
+        }
+        return bitmap?.let { writeBitmapJpeg(it, "copied") }
     }
 
     private fun displayName(uri: Uri): String {
