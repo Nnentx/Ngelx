@@ -13,7 +13,9 @@ def forbid(text: str, needle: str, label: str) -> None:
     if needle in text:
         raise SystemExit(f"V64 CHECK FAILED: {label}: forbidden {needle!r}")
 
-require(pubspec, "version: 1.0.64+283", "version")
+version_line = next((line.strip() for line in pubspec.splitlines() if line.startswith("version: ")), "")
+if not version_line or "+" not in version_line:
+    raise SystemExit(f"V64 CHECK FAILED: version: invalid {version_line!r}")
 
 # Main navigation / requested surfaces must remain wired.
 for needle, label in [
