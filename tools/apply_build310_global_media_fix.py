@@ -69,20 +69,31 @@ main, n = pattern.subn(replacement, main, count=1)
 if n != 1:
     raise SystemExit(f"Build 310 patch failed: photo-kind set expected 1 match, got {n}")
 
-# 3) Feed photos must use the same primary/backup media host fallback as story/group/chat.
-feed_old = """              itemBuilder:(_,i)=>CachedNetworkImage(
-                imageUrl:fotoListesi[i],
-                fit:BoxFit.contain,
-                placeholder:(_,__)=>const Center(child:CircularProgressIndicator(color:mavi)),
-                errorWidget:(_,__,___)=>ngelxMedyaHataGorunumu(fotoListesi[i]),
-              ),"""
-feed_new = """              itemBuilder:(_,i)=>NgelXAgResmi(
+# 3) Feed photos: use the same primary/backup host fallback when this older
+# CachedNetworkImage form is still present. Some later sources already contain it.
+feed_pattern = re.compile(
+    r"itemBuilder:\s*\(_\s*,\s*i\)\s*=>\s*CachedNetworkImage\(\s*"
+    r"imageUrl\s*:\s*fotoListesi\[i\]\s*,\s*"
+    r"fit\s*:\s*BoxFit\.contain\s*,\s*"
+    r"placeholder\s*:\s*\(_\s*,\s*__\)\s*=>\s*const Center\(child:CircularProgressIndicator\(color\s*:\s*mavi\)\)\s*,\s*"
+    r"errorWidget\s*:\s*\(_\s*,\s*__\s*,\s*___\)\s*=>\s*ngelxMedyaHataGorunumu\(fotoListesi\[i\]\)\s*,\s*"
+    r"\)\s*,",
+    re.S,
+)
+feed_new = """itemBuilder:(_,i)=>NgelXAgResmi(
                 url:fotoListesi[i],
                 fit:BoxFit.contain,
                 placeholder:const Center(child:CircularProgressIndicator(color:mavi)),
                 error:ngelxMedyaHataGorunumu(fotoListesi[i]),
               ),"""
-main = one(main, feed_old, feed_new, "feed photo host fallback")
+main, feed_n = feed_pattern.subn(feed_new, main, count=1)
+if feed_n == 0:
+    # Do not fail if this source already uses the fallback in the feed.
+    g0 = main.find("class _GorselYaziKartiState")
+    g1 = main.find("\nclass ", g0 + 10) if g0 >= 0 else -1
+    region = main[g0:(g1 if g1 > g0 else len(main))] if g0 >= 0 else ""
+    if "fotoListesi[i]" not in region or "NgelXAgResmi(" not in region:
+        raise SystemExit("Build 310 patch failed: feed media fallback form could not be located")
 
 # 4) Version/build.
 main = one(main, "defaultValue: '1.0.90'", "defaultValue: '1.0.91'", "runtime version")
