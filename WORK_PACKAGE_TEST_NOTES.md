@@ -1187,3 +1187,12 @@
 - Ayarlar ana sayfası ve Dil ve çeviri sayfası dil değişimini doğrudan dinler; çıkış yapıp yeniden giriş gerekmez.
 - Dil tercihi önce cihaz hafızasına güvenle kaydedilir, ardından uygulama arayüzüne uygulanır.
 - Regresyon doğrulamasına canlı dil dinleyicisi ve Build 294 sürüm zinciri kontrolleri eklendi.
+
+
+## 2026-09-29 — Akış içerik üreticisi rozeti + kamera üretim önerileri
+- Akışta fotoğraf, video ve yazı içeriklerinde paylaşan/orijinal içerik sahibi adı yanında renkli **İçerik Üreticisi** rozeti gösterilecek.
+- İleride uygulama içi yeniden paylaşım eklendiğinde "X paylaştı" ile orijinal içerik üreticisi ayrı gösterilecek; orijinal sahip bilgisi kaybolmayacak.
+- Mevcut NgelX Müzik sistemi korunacak: katalog, Senin için / Popüler / Kaydedilenler, önizleme, cihazdan lisanslı/kullanım hakkı olan ses ekleme ve fotoğraf/video müziği.
+- Üret kamerası için özel NgelX kamera ekranı önerildi: ön/arka kamera çevirme, flaş, foto/video modu, 3/10 sn zamanlayıcı, ızgara, pinch zoom, oran seçimi, galeri kısayolu, çekim sonrası tekrar çek/kullan.
+- Video için ikinci aşama önerileri: 0.5x/1x/2x hız, kayıt sırasında müzik önizleme, duraklat/devam et, efekt/filtre.
+- Özel kamera geçişi mevcut image_picker sistem kamerasından ayrı ele alınacak; Android cihaz testleriyle güvenli biçimde eklenecek.
