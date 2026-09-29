@@ -8,6 +8,13 @@ on:
       - 'app/**'
       - 'tools/verify_v83_native_picker.py'
       - '.github/workflows/build-301-native-picker.yml'
+  pull_request:
+    branches:
+      - work/v72-combined
+    paths:
+      - 'app/**'
+      - 'tools/verify_v83_native_picker.py'
+      - '.github/workflows/build-301-native-picker.yml'
   workflow_dispatch:
 
 permissions:
