@@ -93,8 +93,8 @@ const ngelxPrivateBlueCanvas = Color(0xFFF6FAFF);
 const ngelxPrivateBlueBorder = Color(0xFFD8E8FF);
 const ngelxPrivateBlueInk = Color(0xFF10213A);
 
-const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.99');
-const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '318');
+const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.100');
+const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '319');
 const ngelxGroupBorder = Color(0xFFD9EEE0);
 
 final GlobalKey<NavigatorState> ngelxNavigatorKey=GlobalKey<NavigatorState>();
@@ -496,32 +496,52 @@ Future<Uint8List> ngelxFotoDuzenle(Uint8List bytes,{String efekt='Yok',int donus
 
 Future<Uint8List> _ngelxFotografiJpegHazirla(Uint8List hamBytes) async {
   if(hamBytes.isEmpty)throw Exception('Seçilen fotoğraf boş.');
-  // Önce Flutter/cihaz codec'i ile gerçekten açılabildiğini kanıtla. Böylece
-  // HEIC/AVIF gibi Android'in açabildiği sağlayıcı biçimleri de güvenli PNG'ye
-  // dönüşür; uzantı veya sağlayıcının bildirdiği MIME'a güvenmeyiz.
-  final png=await ngelxFotoDuzenle(hamBytes);
-  final jpeg=await Isolate.run<Uint8List>(() {
-    var decoded=img.decodePng(png);
-    if(decoded==null||decoded.width<=0||decoded.height<=0){
-      throw const FormatException('Fotoğraf codec tarafından çözülemedi.');
-    }
-    const enBuyukKenar=2160;
-    if(math.max(decoded.width,decoded.height)>enBuyukKenar){
-      decoded=decoded.width>=decoded.height
-        ?img.copyResize(decoded,width:enBuyukKenar,interpolation:img.Interpolation.linear)
-        :img.copyResize(decoded,height:enBuyukKenar,interpolation:img.Interpolation.linear);
-    }
-    final sonuc=Uint8List.fromList(img.encodeJpg(decoded,quality:90));
-    final kontrol=img.decodeJpg(sonuc);
-    if(kontrol==null||kontrol.width<=0||kontrol.height<=0){
-      throw const FormatException('Hazırlanan JPEG doğrulanamadı.');
-    }
-    return sonuc;
-  });
-  if(jpeg.length<4||jpeg[0]!=0xFF||jpeg[1]!=0xD8||jpeg[jpeg.length-2]!=0xFF||jpeg.last!=0xD9){
-    throw Exception('Hazırlanan JPEG eksik veya bozuk.');
+  Uint8List? jpeg;
+  try{
+    jpeg=await Isolate.run<Uint8List?>(() {
+      var decoded=img.decodeImage(hamBytes);
+      if(decoded==null||decoded.width<=0||decoded.height<=0)return null;
+      const enBuyukKenar=2160;
+      if(math.max(decoded.width,decoded.height)>enBuyukKenar){
+        decoded=decoded.width>=decoded.height
+          ?img.copyResize(decoded,width:enBuyukKenar,interpolation:img.Interpolation.linear)
+          :img.copyResize(decoded,height:enBuyukKenar,interpolation:img.Interpolation.linear);
+      }
+      final sonuc=Uint8List.fromList(img.encodeJpg(decoded,quality:90));
+      final kontrol=img.decodeJpg(sonuc);
+      return kontrol==null||kontrol.width<=0||kontrol.height<=0?null:sonuc;
+    });
+  }catch(_){}
+  if(jpeg==null){
+    try{
+      final png=await ngelxFotoDuzenle(hamBytes);
+      jpeg=await Isolate.run<Uint8List?>(() {
+        var decoded=img.decodePng(png);
+        if(decoded==null||decoded.width<=0||decoded.height<=0)return null;
+        const enBuyukKenar=2160;
+        if(math.max(decoded.width,decoded.height)>enBuyukKenar){
+          decoded=decoded.width>=decoded.height
+            ?img.copyResize(decoded,width:enBuyukKenar,interpolation:img.Interpolation.linear)
+            :img.copyResize(decoded,height:enBuyukKenar,interpolation:img.Interpolation.linear);
+        }
+        final sonuc=Uint8List.fromList(img.encodeJpg(decoded,quality:90));
+        return img.decodeJpg(sonuc)==null?null:sonuc;
+      });
+    }catch(_){}
+  }
+  if(jpeg==null||jpeg.length<4||jpeg[0]!=0xFF||jpeg[1]!=0xD8||jpeg[jpeg.length-2]!=0xFF||jpeg.last!=0xD9){
+    throw const FormatException('Fotoğraf çözülemedi. Galeriden seçilen görsel desteklenen JPEG biçimine dönüştürülemedi.');
   }
   return jpeg;
+}
+
+Future<XFile> _ngelxGaleridenResmiNormalizeEt(XFile secilen) async {
+  final ham=await secilen.readAsBytes();
+  final jpeg=await _ngelxFotografiJpegHazirla(ham);
+  final klasor=await getTemporaryDirectory();
+  final hedef=File('${klasor.path}/ngelx_gallery_${DateTime.now().microsecondsSinceEpoch}.jpg');
+  await hedef.writeAsBytes(jpeg,flush:true);
+  return XFile(hedef.path,name:hedef.uri.pathSegments.last,mimeType:'image/jpeg');
 }
 
 int _ngelxMaksimumMedyaBoyutu(String kind) {
@@ -621,20 +641,18 @@ Future<XFile?> ngelxResimSec({
   if(source==ImageSource.gallery&&Platform.isAndroid){
     try{
       final x=await _ngelxAndroidBelgeSec(const <String>['image/*']);
-      if(x!=null)return x;
+      if(x!=null)return await _ngelxGaleridenResmiNormalizeEt(x);
     }catch(_){}
-    // Android belge sağlayıcısı bazı bulut/galeri URI'lerini kopyalayamazsa
-    // image_picker'a yalnızca ham dosyayı aldır. imageQuality/maxWidth vermek
-    // plugin'in resmi yeniden decode etmesine ve "could not decompress image"
-    // hatasının aynı seçimde yeniden oluşmasına neden olur.
     yenidenKodla=false;
   }
-  return ImagePicker().pickImage(
+  final x=await ImagePicker().pickImage(
     source:source,
     imageQuality:yenidenKodla?imageQuality:null,
     maxWidth:yenidenKodla?maxWidth:null,
     maxHeight:yenidenKodla?maxHeight:null,
   );
+  if(x==null)return null;
+  return source==ImageSource.gallery?await _ngelxGaleridenResmiNormalizeEt(x):x;
 }
 
 Future<XFile?> ngelxVideoSec({
@@ -657,20 +675,29 @@ Future<List<XFile>> ngelxCokluResimSec({
   int? limit,
 }) async{
   var yenidenKodla=true;
+  List<XFile> xs=<XFile>[];
   if(Platform.isAndroid){
     try{
-      final xs=await _ngelxAndroidBelgelerSec(const <String>['image/*']);
-      if(xs.isNotEmpty)return limit==null?xs:xs.take(limit).toList();
+      xs=await _ngelxAndroidBelgelerSec(const <String>['image/*']);
+      if(xs.isNotEmpty){
+        final secilen=limit==null?xs:xs.take(limit).toList();
+        final guvenli=<XFile>[];
+        for(final x in secilen)guvenli.add(await _ngelxGaleridenResmiNormalizeEt(x));
+        return guvenli;
+      }
     }catch(_){}
     yenidenKodla=false;
   }
-  final xs=await ImagePicker().pickMultiImage(
+  xs=await ImagePicker().pickMultiImage(
     imageQuality:yenidenKodla?imageQuality:null,
     maxWidth:yenidenKodla?maxWidth:null,
     maxHeight:yenidenKodla?maxHeight:null,
     limit:limit,
   );
-  return limit==null?xs:xs.take(limit).toList();
+  final secilen=limit==null?xs:xs.take(limit).toList();
+  final guvenli=<XFile>[];
+  for(final x in secilen)guvenli.add(await _ngelxGaleridenResmiNormalizeEt(x));
+  return guvenli;
 }
 
 Future<XFile?> ngelxDosyaSec({XTypeGroup? tur}) async{
@@ -1958,8 +1985,11 @@ Future<void> ngelxMedyaSil(String rawUrl) async {
 String ngelxMedyaHataMetni(Object e) {
   final ham=e.toString().replaceFirst('Exception: ','').trim();
   final k=ham.toLowerCase();
-  if(k.contains('camera_access_denied'))return 'Kamera izni verilmedi.';
-  if(k.contains('photo_access_denied'))return 'Galeri izni verilmedi.';
+  if(k.contains('camera_access_denied'))return lt('Kamera izni verilmedi.','Camera permission was not granted.');
+  if(k.contains('photo_access_denied'))return lt('Galeri izni verilmedi.','Photo library permission was not granted.');
+  if(k.contains('could not decompress image')||k.contains('fotoğraf çözülemedi')||k.contains('image codec')){
+    return lt('Galeriden seçilen fotoğraf okunamadı. Görseli güvenli JPEG biçimine dönüştürüp tekrar deniyoruz.','The selected gallery photo could not be decoded. NgelX will convert it to a safe JPEG and try again.');
+  }
   if(k.contains('permission-denied'))return 'Bu işlem için gerekli veri izni alınamadı.';
   if(k.contains('socketexception')||k.contains('connection')||k.contains('network')||k.contains('zaman aşımı')||k.contains('timeout')){
     return 'Bağlantı kurulamadı. İnternetini kontrol edip tekrar dene.';
@@ -5205,7 +5235,7 @@ class GorselYaziKarti extends StatefulWidget {
   State<GorselYaziKarti> createState() => _GorselYaziKartiState();
 }
 
-class _GorselYaziKartiState extends State<GorselYaziKarti> {
+class _GorselYaziKartiState extends State<GorselYaziKarti> with RouteAware {
   AudioPlayer? oynatici;
   bool begenildi = false;
   bool kaydedildi = false;
@@ -5217,13 +5247,15 @@ class _GorselYaziKartiState extends State<GorselYaziKarti> {
   bool _profilFotoIstendi = false;
   String profilFoto = '';
   int medyaSayfasi = 0;
+  PageRoute<dynamic>? _rota;
+  bool _rotaGorunur=true;
 
   String get icerikId => widget.veri['id'] ?? '';
   bool get indirilebilir => widget.veri['allowDownload'] != 'false' || FirebaseAuth.instance.currentUser?.uid == widget.veri['ownerId'];
 
   Future<void> _aktifSesiHazirla() async {
     final ses=widget.veri['audioUrl']??'';
-    if(!widget.aktif||ses.isEmpty)return;
+    if(!widget.aktif||!_rotaGorunur||ses.isEmpty)return;
     var p=oynatici;
     if(p==null){
       p=AudioPlayer();
@@ -5238,7 +5270,7 @@ class _GorselYaziKartiState extends State<GorselYaziKarti> {
         return;
       }
     }
-    if(!mounted||!widget.aktif)return;
+    if(!mounted||!widget.aktif||!_rotaGorunur)return;
     await p.play();
   }
 
@@ -5252,6 +5284,18 @@ class _GorselYaziKartiState extends State<GorselYaziKarti> {
       unawaited(profilFotosunuGetir());
     }
   }
+
+  @override
+  void didChangeDependencies(){
+    super.didChangeDependencies();
+    final aday=ModalRoute.of(context);
+    if(aday is! PageRoute<dynamic>||aday==_rota)return;
+    if(_rota!=null)ngelxRouteObserver.unsubscribe(this);
+    _rota=aday;
+    ngelxRouteObserver.subscribe(this,aday);
+  }
+  @override void didPushNext(){_rotaGorunur=false;final p=oynatici;if(p!=null)unawaited(p.pause());}
+  @override void didPopNext(){_rotaGorunur=true;if(widget.aktif)unawaited(_aktifSesiHazirla());}
 
   Future<void> profilFotosunuGetir() async {
     if(_profilFotoIstendi)return;
@@ -5462,6 +5506,7 @@ class _GorselYaziKartiState extends State<GorselYaziKarti> {
 
   @override
   void dispose() {
+    ngelxRouteObserver.unsubscribe(this);
     oynatici?.dispose();
     super.dispose();
   }
@@ -5695,7 +5740,7 @@ class VideoKarti extends StatefulWidget {
   State<VideoKarti> createState() => _VideoKartiState();
 }
 
-class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver {
+class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver,RouteAware {
   late final VideoPlayerController kontrol;
   AudioPlayer? muzikOynatici;
   bool hazir = false;
@@ -5713,6 +5758,8 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver {
   bool _profilFotoIstendi=false;
   String? medyaHatasi;
   String profilFoto = '';
+  PageRoute<dynamic>? _rota;
+  bool _rotaGorunur=true;
 
   String get videoId => widget.videoId;
 
@@ -5736,6 +5783,18 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver {
     }
   }
 
+  @override
+  void didChangeDependencies(){
+    super.didChangeDependencies();
+    final aday=ModalRoute.of(context);
+    if(aday is! PageRoute<dynamic>||aday==_rota)return;
+    if(_rota!=null)ngelxRouteObserver.unsubscribe(this);
+    _rota=aday;
+    ngelxRouteObserver.subscribe(this,aday);
+  }
+  @override void didPushNext(){_rotaGorunur=false;_oynatmalariDuraklat();}
+  @override void didPopNext(){_rotaGorunur=true;_oynatmalariBaslat();}
+
   Future<void> _videoyuHazirla() async {
     if(hazir||hazirlaniyor||medyaHatasi!=null)return;
     hazirlaniyor=true;
@@ -5746,7 +5805,7 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver {
       if(widget.trimStartMs>0){
         await kontrol.seekTo(Duration(milliseconds:widget.trimStartMs));
       }
-      if(widget.aktif&&!duraklatildi){
+      if(widget.aktif&&_rotaGorunur&&!duraklatildi){
         await kontrol.play();
         if(muzikOynatici!=null)unawaited(muzikOynatici!.play());
       }
@@ -5792,7 +5851,7 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver {
   }
 
   void _oynatmalariBaslat(){
-    if(!hazir||!widget.aktif||duraklatildi)return;
+    if(!hazir||!widget.aktif||!_rotaGorunur||duraklatildi)return;
     unawaited(kontrol.play());
     final p=muzikOynatici;
     if(p!=null)unawaited(p.play());
@@ -6016,6 +6075,7 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    ngelxRouteObserver.unsubscribe(this);
     kontrol.removeListener(_kesimKontrol);
     final p=muzikOynatici;
     if(p!=null)unawaited(p.dispose());
@@ -8151,7 +8211,7 @@ class _YeniYuklePageState extends State<YuklePage> {
       final secilenTur=video?'video':'photo';
       if(!await _medyaBoyutuUygun(dosya,secilenTur))return;
       if(mounted)setState((){tur=secilenTur;medya=dosya;medyalar=<XFile>[dosya];});_taslakDegisti();
-      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Seçtiğin medya geri yüklendi.')));
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(lt('Seçtiğin medya geri yüklendi.','Your selected media was restored.'))));
     }catch(_){}
   }
 
@@ -8176,7 +8236,7 @@ class _YeniYuklePageState extends State<YuklePage> {
     await h.setString(_taslakAnahtar,jsonEncode({'type':tur,'description':aciklama.text,'location':konum.text,'tags':etiketler.text,'privacy':gizlilik,'commentAudience':yorumKitlesi,'allowDownload':indirmeyeIzin,'allowComments':yorumlaraIzin,'allowReshare':yenidenPaylasimaIzin,'photoEffect':fotoEfekti,'photoRotation':fotoDonus,'photoSquareCrop':kareKirp,'overlayText':medyaYazisi,'overlayColor':medyaYaziRenk,'overlayBackgroundColor':medyaYaziArkaPlanRenk,'overlayFontSize':medyaYaziBoyut,'overlayX':medyaYaziX,'overlayY':medyaYaziY,'overlayScale':medyaYaziScale,'overlayRotation':medyaYaziRotation,'videoTrimStartMs':videoBaslangicMs,'videoTrimEndMs':videoBitisMs,'originalAudioVolume':orijinalSesSeviyesi,'musicVolume':muzikSesSeviyesi,'music':secilenMuzik,'mediaPaths':medyalar.isNotEmpty?medyalar.map((e)=>e.path).toList():(medya==null?<String>[]:<String>[medya!.path])}));
     if(mounted)setState(()=>taslakVar=true);if(!sessiz&&mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Taslak kaydedildi ✅')));
   }
-  Future<void> _taslagiSil({bool mesaj=true})async{final h=await SharedPreferences.getInstance();await h.remove(_taslakAnahtar);if(mounted){setState(()=>taslakVar=false);if(mesaj)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Taslak temizlendi.')));}}
+  Future<void> _taslagiSil({bool mesaj=true})async{final h=await SharedPreferences.getInstance();await h.remove(_taslakAnahtar);if(mounted){setState(()=>taslakVar=false);if(mesaj)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(lt('Taslak temizlendi.','Draft cleared.'))));}}
 
   void _turDegistir(String yeni){
     if(yukleniyor)return;
@@ -8186,12 +8246,12 @@ class _YeniYuklePageState extends State<YuklePage> {
 
   String _dosyaHataMetni(Object e){
     if(e is PlatformException){
-      if(e.code.contains('camera_access_denied'))return 'Kamera izni verilmedi.';
-      if(e.code.contains('photo_access_denied'))return 'Galeri izni verilmedi.';
-      return 'Dosya seçilemedi. Tekrar dene.';
+      if(e.code.contains('camera_access_denied'))return lt('Kamera izni verilmedi.','Camera permission was not granted.');
+      if(e.code.contains('photo_access_denied'))return lt('Galeri izni verilmedi.','Photo library permission was not granted.');
+      return lt('Dosya seçilemedi. Tekrar dene.','The file could not be selected. Try again.');
     }
     if(e is FirebaseException&&e.code=='permission-denied'){
-      return 'Paylaşım kaydedilemedi. Uygulama veri izinlerini kontrol et.';
+      return lt('Paylaşım kaydedilemedi. Uygulama veri izinlerini kontrol et.','The post could not be saved. Check the app data permissions.');
     }
     return ngelxMedyaHataMetni(e);
   }
@@ -8200,11 +8260,11 @@ class _YeniYuklePageState extends State<YuklePage> {
     final boyut=await dosya.length();
     final limit=secilenTur=='video'?50*1024*1024:10*1024*1024;
     if(boyut<=0){
-      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Seçilen dosya boş görünüyor.')));
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(lt('Seçilen dosya boş görünüyor.','The selected file appears to be empty.'))));
       return false;
     }
     if(boyut>limit){
-      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(secilenTur=='video'?'Video en fazla 50 MB olabilir.':'Fotoğraf en fazla 10 MB olabilir.')));
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(secilenTur=='video'?lt('Video en fazla 50 MB olabilir.','Video can be up to 50 MB.'):lt('Fotoğraf en fazla 10 MB olabilir.','Photo can be up to 10 MB.'))));
       return false;
     }
     return true;
@@ -8224,7 +8284,7 @@ class _YeniYuklePageState extends State<YuklePage> {
     try{
       final kameraIzni=await Permission.camera.request();
       if(!kameraIzni.isGranted){
-        if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Kamerayı kullanmak için kamera izni vermelisin.')));
+        if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(lt('Kamerayı kullanmak için kamera izni vermelisin.','Camera permission is required to use the camera.'))));
         return;
       }
       if(video)await Permission.microphone.request();
@@ -8271,12 +8331,12 @@ class _YeniYuklePageState extends State<YuklePage> {
       builder:(c)=>Theme(data:ThemeData.light(),child:SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
         ListTile(
           title:Text(t('createStory'),style:const TextStyle(fontSize:20,fontWeight:FontWeight.w900)),
-          subtitle:const Text('Fotoğraf veya en fazla 30 saniyelik video • 24 saat görünür'),
+          subtitle:Text(lt('Fotoğraf veya en fazla 30 saniyelik video • 24 saat görünür','Photo or video up to 30 seconds • visible for 24 hours')),
         ),
         Row(children:[
           Expanded(child:ListTile(
             leading:const Icon(Icons.photo_library_outlined,color:mor),
-            title:const Text('Galeriden fotoğraf'),
+            title:Text(lt('Galeriden fotoğraf','Photo from gallery')),
             onTap:(){Navigator.pop(c);unawaited(_hikayePaylas(ImageSource.gallery,video:false));},
           )),
           Expanded(child:ListTile(
@@ -8288,12 +8348,12 @@ class _YeniYuklePageState extends State<YuklePage> {
         Row(children:[
           Expanded(child:ListTile(
             leading:const Icon(Icons.photo_camera_outlined,color:mavi),
-            title:const Text('Fotoğraf çek'),
+            title:Text(lt('Fotoğraf çek','Take photo')),
             onTap:(){Navigator.pop(c);unawaited(_hikayePaylas(ImageSource.camera,video:false));},
           )),
           Expanded(child:ListTile(
             leading:const Icon(Icons.videocam_outlined,color:mavi),
-            title:const Text('Video çek'),
+            title:Text(lt('Video çek','Record video')),
             onTap:(){Navigator.pop(c);unawaited(_hikayePaylas(ImageSource.camera,video:true));},
           )),
         ]),
@@ -8309,13 +8369,13 @@ class _YeniYuklePageState extends State<YuklePage> {
       if(kaynak==ImageSource.camera){
         final izin=await Permission.camera.request();
         if(!izin.isGranted){
-          if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Hikâye çekmek için kamera izni vermelisin.')));
+          if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(lt('Hikâye çekmek için kamera izni vermelisin.','Camera permission is required to create a story.'))));
           return;
         }
         if(video){
           final mikrofon=await Permission.microphone.request();
           if(!mikrofon.isGranted){
-            if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Videolu hikâye için mikrofon izni vermelisin.')));
+            if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(lt('Videolu hikâye için mikrofon izni vermelisin.','Microphone permission is required for a video story.'))));
             return;
           }
         }
@@ -8365,10 +8425,10 @@ class _YeniYuklePageState extends State<YuklePage> {
 
       if(!mounted)return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content:Text(video?'Video hikâyen yayınlandı • 24 saat görünür.':'Hikâye yayınlandı • 24 saat görünür.')
+        content:Text(video?lt('Video hikâyen yayınlandı • 24 saat görünür.','Your video story is live • visible for 24 hours.'):lt('Hikâyen yayınlandı • 24 saat görünür.','Your story is live • visible for 24 hours.'))
       ));
     }catch(e){
-      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Hikâye yayınlanamadı: '+_dosyaHataMetni(e))));
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(lt('Hikâye yayınlanamadı: ','Story could not be published: ')+_dosyaHataMetni(e))));
     }finally{
       if(mounted)setState((){
         yukleniyor=false;
@@ -8519,11 +8579,11 @@ class _YeniYuklePageState extends State<YuklePage> {
     if(user==null||yukleniyor)return;
     final metin=aciklama.text.trim();
     if(tur!='text'&&medya==null){
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Önce galeriden bir dosya seç veya kamerayı kullan.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(lt('Önce galeriden bir dosya seç veya kamerayı kullan.','Choose a file from the gallery or use the camera first.'))));
       return;
     }
     if(tur=='text'&&metin.isEmpty){
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Paylaşmak istediğin yazıyı gir.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(lt('Paylaşmak istediğin yazıyı gir.','Enter the text you want to share.'))));
       return;
     }
 
@@ -8617,7 +8677,7 @@ class _YeniYuklePageState extends State<YuklePage> {
       });
       unawaited(_taslagiSil(mesaj:false));
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content:const Text('Paylaşım yayınlandı ✅ Akışta ve profilinde görünecek.'),
+        content:Text(lt('Paylaşım yayınlandı ✅ Akışta ve profilinde görünecek.','Post published ✅ It will appear in your feed and profile.')),
         action:SnackBarAction(
           label:'Akışa git',
           onPressed:(){
@@ -8627,7 +8687,7 @@ class _YeniYuklePageState extends State<YuklePage> {
         ),
       ));
     }catch(e){
-      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Yayınlanamadı: ${_dosyaHataMetni(e)}')));
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(lt('Yayınlanamadı: ','Could not publish: ')+_dosyaHataMetni(e))));
     }finally{
       if(mounted)setState((){
         yukleniyor=false;
@@ -8766,8 +8826,8 @@ class _YeniYuklePageState extends State<YuklePage> {
                 IconButton(tooltip:'Büyüt',onPressed:yukleniyor?null:()=>_fotoYaziOlcekle(.12),icon:const Icon(Icons.add_circle_outline_rounded,color:mor)),
                 IconButton(tooltip:'Döndür',onPressed:yukleniyor?null:_fotoYaziDondur,icon:const Icon(Icons.rotate_right_rounded,color:mor)),
                 TextButton.icon(onPressed:yukleniyor?null:_fotoYaziOrtala,icon:const Icon(Icons.center_focus_strong_rounded,size:17),label:const Text('Ortala')),
-                TextButton.icon(onPressed:yukleniyor?null:()=>unawaited(_medyaYazisiDuzenle()),icon:const Icon(Icons.edit_rounded,size:17),label:const Text('Düzenle')),
-                TextButton.icon(onPressed:yukleniyor?null:_fotoYaziSifirla,icon:const Icon(Icons.restart_alt_rounded,size:17),label:const Text('Sıfırla')),
+                TextButton.icon(onPressed:yukleniyor?null:()=>unawaited(_medyaYazisiDuzenle()),icon:const Icon(Icons.edit_rounded,size:17),label:Text(lt('Düzenle','Edit'))),
+                TextButton.icon(onPressed:yukleniyor?null:_fotoYaziSifirla,icon:const Icon(Icons.restart_alt_rounded,size:17),label:Text(lt('Sıfırla','Reset'))),
                 IconButton(tooltip:'Yazıyı sil',onPressed:yukleniyor?null:_fotoYaziSil,icon:const Icon(Icons.delete_outline_rounded,color:Colors.redAccent)),
               ],
             ),
@@ -8778,7 +8838,7 @@ class _YeniYuklePageState extends State<YuklePage> {
             Icon(foto?Icons.photo_rounded:Icons.videocam_rounded,color:foto?mavi:mor),
             const SizedBox(width:9),
             Expanded(child:Text(
-              medyalar.length>1?'${medyalar.length} fotoğraf seçildi':secilen.name,
+              medyalar.length>1?(uygulamaDili.value=='tr'?'${medyalar.length} fotoğraf seçildi':'${medyalar.length} photos selected'):secilen.name,
               maxLines:1,overflow:TextOverflow.ellipsis,
               style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w800),
             )),
@@ -8795,14 +8855,14 @@ class _YeniYuklePageState extends State<YuklePage> {
 
   Widget _fotoDuzenleme(){
     if(tur!='photo'||medya==null)return const SizedBox.shrink();
-    return Column(children:[Row(children:[OutlinedButton.icon(onPressed:yukleniyor?null:(){setState(()=>fotoDonus=(fotoDonus+1)%4);_taslakDegisti();},icon:const Icon(Icons.rotate_90_degrees_ccw_rounded,size:18),label:const Text('90° Döndür')),const SizedBox(width:8),FilterChip(selected:kareKirp,label:const Text('Kare kırp'),onSelected:yukleniyor?null:(v){setState(()=>kareKirp=v);_taslakDegisti();})]),SizedBox(height:42,child:ListView(scrollDirection:Axis.horizontal,children:['Yok','Parlak','Sıcak','Soğuk','Siyah Beyaz'].map((e)=>Padding(padding:const EdgeInsets.only(right:7),child:ChoiceChip(label:Text(e),selected:fotoEfekti==e,onSelected:yukleniyor?null:(_){setState(()=>fotoEfekti=e);_taslakDegisti();}))).toList()))]);
+    return Column(children:[Row(children:[OutlinedButton.icon(onPressed:yukleniyor?null:(){setState(()=>fotoDonus=(fotoDonus+1)%4);_taslakDegisti();},icon:const Icon(Icons.rotate_90_degrees_ccw_rounded,size:18),label:Text(lt('90° Döndür','Rotate 90°'))),const SizedBox(width:8),FilterChip(selected:kareKirp,label:Text(lt('Kare kırp','Square crop')),onSelected:yukleniyor?null:(v){setState(()=>kareKirp=v);_taslakDegisti();})]),SizedBox(height:42,child:ListView(scrollDirection:Axis.horizontal,children:['Yok','Parlak','Sıcak','Soğuk','Siyah Beyaz'].map((e)=>Padding(padding:const EdgeInsets.only(right:7),child:ChoiceChip(label:Text(e=='Yok'?lt('Yok','None'):e=='Parlak'?lt('Parlak','Bright'):e=='Sıcak'?lt('Sıcak','Warm'):e=='Soğuk'?lt('Soğuk','Cool'):lt('Siyah Beyaz','Black & White')),selected:fotoEfekti==e,onSelected:yukleniyor?null:(_){setState(()=>fotoEfekti=e);_taslakDegisti();}))).toList()))]);
   }
   Widget _cokluMedyaSirala(){
     if(tur!='photo'||medyalar.length<2)return const SizedBox.shrink();
     return Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
       const Padding(
         padding:EdgeInsets.only(bottom:8),
-        child:Text('Fotoğraf sırası',style:TextStyle(fontWeight:FontWeight.w800,color:Colors.black87)),
+        child:Text(lt('Fotoğraf sırası','Photo order'),style:TextStyle(fontWeight:FontWeight.w800,color:Colors.black87)),
       ),
       SizedBox(
         height:76,
@@ -8909,7 +8969,7 @@ class _YeniYuklePageState extends State<YuklePage> {
                 Text(t('createSubtitle'),textAlign:TextAlign.center,style:const TextStyle(color:Colors.black54,height:1.3)),
               ]),
             ),
-            if(taslakVar)Row(mainAxisAlignment:MainAxisAlignment.center,children:[const Icon(Icons.drafts_outlined,size:17,color:mor),const SizedBox(width:6),const Text('Taslak otomatik kaydediliyor',style:TextStyle(color:Colors.black54,fontSize:12,fontWeight:FontWeight.w700)),TextButton(onPressed:yukleniyor?null:()=>_taslagiSil(),child:const Text('Temizle'))]),
+            if(taslakVar)Row(mainAxisAlignment:MainAxisAlignment.center,children:[const Icon(Icons.drafts_outlined,size:17,color:mor),const SizedBox(width:6),Text(lt('Taslak otomatik kaydediliyor','Draft is autosaving'),style:TextStyle(color:Colors.black54,fontSize:12,fontWeight:FontWeight.w700)),TextButton(onPressed:yukleniyor?null:()=>_taslagiSil(),child:Text(lt('Temizle','Clear')))]),
             const SizedBox(height:24),
             Container(
               padding:const EdgeInsets.all(6),
@@ -9006,7 +9066,7 @@ class _YeniYuklePageState extends State<YuklePage> {
               onChanged:yukleniyor?null:(v)=>setState(()=>yenidenPaylasimaIzin=v),
             ),
             const SizedBox(height:12),
-            if(!yukleniyor)OutlinedButton.icon(onPressed:()=>_taslagiKaydet(),icon:const Icon(Icons.drafts_outlined),label:const Text('Taslağa kaydet')),
+            if(!yukleniyor)OutlinedButton.icon(onPressed:()=>_taslagiKaydet(),icon:const Icon(Icons.drafts_outlined),label:Text(lt('Taslağa kaydet','Save draft'))),
             if(!yukleniyor)const SizedBox(height:8),
             if(yukleniyor)...[
               LinearProgressIndicator(
@@ -18272,7 +18332,7 @@ class _NgelXMiniOyunPageState extends State<NgelXMiniOyunPage>{
           child:Text(hedefler[hamle],style:const TextStyle(fontSize:64)),
         )),
         const SizedBox(height:30),
-        OutlinedButton.icon(onPressed:()=>setState(()=>puan=0),icon:const Icon(Icons.refresh),label:const Text('Sıfırla')),
+        OutlinedButton.icon(onPressed:()=>setState(()=>puan=0),icon:const Icon(Icons.refresh),label:Text(lt('Sıfırla','Reset'))),
       ]))),
     ),
   );
@@ -22374,10 +22434,10 @@ class _ProfilPageState extends State<ProfilPage> {
           title:Text('Yeni hikâye',style:TextStyle(fontSize:20,fontWeight:FontWeight.w900)),
           subtitle:Text('Fotoğraf veya 30 saniyeye kadar video • 24 saat görünür'),
         ),
-        ListTile(leading:const Icon(Icons.photo_library_outlined,color:mor),title:const Text('Galeriden fotoğraf'),onTap:()=>Navigator.pop(c,{'source':ImageSource.gallery,'video':false})),
+        ListTile(leading:const Icon(Icons.photo_library_outlined,color:mor),title:Text(lt('Galeriden fotoğraf','Photo from gallery')),onTap:()=>Navigator.pop(c,{'source':ImageSource.gallery,'video':false})),
         ListTile(leading:const Icon(Icons.video_library_outlined,color:mor),title:const Text('Galeriden video'),onTap:()=>Navigator.pop(c,{'source':ImageSource.gallery,'video':true})),
-        ListTile(leading:const Icon(Icons.photo_camera_outlined,color:mavi),title:const Text('Fotoğraf çek'),onTap:()=>Navigator.pop(c,{'source':ImageSource.camera,'video':false})),
-        ListTile(leading:const Icon(Icons.videocam_outlined,color:mavi),title:const Text('Video çek'),onTap:()=>Navigator.pop(c,{'source':ImageSource.camera,'video':true})),
+        ListTile(leading:const Icon(Icons.photo_camera_outlined,color:mavi),title:Text(lt('Fotoğraf çek','Take photo')),onTap:()=>Navigator.pop(c,{'source':ImageSource.camera,'video':false})),
+        ListTile(leading:const Icon(Icons.videocam_outlined,color:mavi),title:Text(lt('Video çek','Record video')),onTap:()=>Navigator.pop(c,{'source':ImageSource.camera,'video':true})),
       ]))),
     );
     if(secim==null||!mounted)return;
