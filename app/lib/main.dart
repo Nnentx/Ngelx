@@ -93,8 +93,8 @@ const ngelxPrivateBlueCanvas = Color(0xFFF6FAFF);
 const ngelxPrivateBlueBorder = Color(0xFFD8E8FF);
 const ngelxPrivateBlueInk = Color(0xFF10213A);
 
-const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.97');
-const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '316');
+const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.98');
+const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '317');
 const ngelxGroupBorder = Color(0xFFD9EEE0);
 
 final GlobalKey<NavigatorState> ngelxNavigatorKey=GlobalKey<NavigatorState>();
@@ -2703,7 +2703,7 @@ Future<void> icerikAracMenusu(BuildContext context,String icerikId,{Future<void>
   final kaynakDil=ngelxDilKodu((v['contentLanguage']??v['language']??'').toString());
   bool altyazi=hafiza.getBool('content_caption_$icerikId')??false,ceviri=hafiza.getBool('content_translate_$icerikId')??(hafiza.getBool('ngelx_auto_translate')??false),islem=false;
   String hedefDil=ngelxDilKodu(hafiza.getString('content_translation_language_$icerikId')??uygulamaDili.value);
-  final altyaziDili=ngelxDilKodu(hafiza.getString('ngelx_caption_language')??uygulamaDili.value);
+  String altyaziDili=ngelxDilKodu(hafiza.getString('ngelx_caption_language')??uygulamaDili.value);
   bool ceviriHazir([String? dil]){final hedef=ngelxDilKodu(dil??hedefDil);return hedef.isNotEmpty&&((kaynakDil.isNotEmpty&&hedef==kaynakDil)||ceviriler[hedef]?.trim().isNotEmpty==true);}
   String altyaziMetni(){final c=captionTranslations[altyaziDili]?.trim()??'';if(c.isNotEmpty)return c;final d=captions[altyaziDili]?.trim()??'';if(d.isNotEmpty)return d;return captionText;}
   Future<void> ceviriUret(StateSetter setP,{String? dil})async{
@@ -2753,23 +2753,45 @@ Future<void> icerikAracMenusu(BuildContext context,String icerikId,{Future<void>
       await hafiza.setString('content_translation_cache_$icerikId',jsonEncode(ceviriler));
     }finally{setP(()=>islem=false);}
   }
-  Future<void> altyaziUret(StateSetter setP)async{
-    if(altyaziMetni().isNotEmpty)return;if(medyaUrlListesi.isEmpty)throw Exception('Bu içerikte altyazı üretilecek video bulunamadı.');setP(()=>islem=true);
+  Future<void> altyaziUret(StateSetter setP,{bool zorlaCeviri=false})async{
+    if(medyaUrlListesi.isEmpty&&captionText.trim().isEmpty)throw Exception('Bu içerikte altyazı üretilecek video bulunamadı.');
+    setP(()=>islem=true);
     try{
       if(aracHafizaRef==null)throw Exception('Altyazı için hesabına giriş yapmalısın.');
-      final sonuc=await ngelxGercekAltyaziOlustur(mediaUrls:medyaUrlListesi,kaynakDil:kaynakDil);captionText=sonuc['text']??'';
-      final gercekKaynakDil=ngelxDilKodu(sonuc['language']).isNotEmpty?ngelxDilKodu(sonuc['language']):kaynakDil;
-      if(gercekKaynakDil.isNotEmpty)captions[gercekKaynakDil]=captionText;
-      if(altyaziDili!=gercekKaynakDil){final x=await ngelxGercekCeviriOlustur(metin:captionText,kaynakDil:gercekKaynakDil,hedefDil:altyaziDili);captionTranslations[altyaziDili]=x;}
+      var gercekKaynakDil=kaynakDil;
+      if(captionText.trim().isEmpty){
+        final sonuc=await ngelxGercekAltyaziOlustur(mediaUrls:medyaUrlListesi,kaynakDil:kaynakDil);
+        captionText=(sonuc['text']??'').trim();
+        final algilanan=ngelxDilKodu(sonuc['language']);
+        if(algilanan.isNotEmpty)gercekKaynakDil=algilanan;
+        if(gercekKaynakDil.isNotEmpty)captions[gercekKaynakDil]=captionText;
+        if((sonuc['vtt']??'').isNotEmpty){
+          await aracHafizaRef.set({'captionVtt':sonuc['vtt']},SetOptions(merge:true));
+        }
+      }else if(captions.isNotEmpty){
+        gercekKaynakDil=captions.keys.first;
+      }
+      final hedef=ngelxDilKodu(altyaziDili);
+      final mevcutCeviri=captionTranslations[hedef]?.trim()??'';
+      if(hedef.isNotEmpty&&captionText.isNotEmpty&&(zorlaCeviri||mevcutCeviri.isEmpty)&&hedef!=gercekKaynakDil){
+        captionTranslations[hedef]=await ngelxGercekCeviriOlustur(
+          metin:captionText,
+          kaynakDil:gercekKaynakDil,
+          hedefDil:hedef,
+        );
+      }
       await aracHafizaRef.set({
         'contentId':icerikId,
         'captionText':captionText,
         'captions':captions,
         'captionTranslations':captionTranslations,
-        if((sonuc['vtt']??'').isNotEmpty)'captionVtt':sonuc['vtt'],
         'updatedAt':FieldValue.serverTimestamp(),
       },SetOptions(merge:true));
-      await hafiza.setString('content_caption_cache_$icerikId',jsonEncode({'captionText':captionText,'captions':captions,'captionTranslations':captionTranslations}));
+      await hafiza.setString('content_caption_cache_$icerikId',jsonEncode({
+        'captionText':captionText,
+        'captions':captions,
+        'captionTranslations':captionTranslations,
+      }));
     }finally{setP(()=>islem=false);}
   }
   if(!context.mounted)return;
@@ -2792,6 +2814,38 @@ Future<void> icerikAracMenusu(BuildContext context,String icerikId,{Future<void>
       SwitchListTile(secondary:const Icon(Icons.g_translate_rounded,color:mor),title:Text(t('showTranslation'),style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w700)),subtitle:Text(ceviriHazir()?t('translationReady'):'Dokununca gerçek çeviri oluşturulur',style:const TextStyle(color:Colors.black54)),value:ceviri&&ceviriHazir(),onChanged:islem?null:(x)async{
         try{if(x)await ceviriUret(setP);await hafiza.setBool('content_translate_$icerikId',x);setP(()=>ceviri=x);ngelxIcerikDilRevizyonu.value++;}catch(e){await hafiza.setBool('content_translate_$icerikId',false);setP(()=>ceviri=false);if(c.mounted)ScaffoldMessenger.of(c).showSnackBar(SnackBar(content:Text('Çeviri oluşturulamadı: ${_ngelxKisaHata(e)}')));}
       }),
+      ListTile(
+        leading:const Icon(Icons.language_rounded,color:Colors.blue),
+        title:const Text('Altyazı dili',style:TextStyle(color:Colors.black87,fontWeight:FontWeight.w700)),
+        subtitle:Text(dilAdlari[altyaziDili]??altyaziDili,style:const TextStyle(color:Colors.black54)),
+        onTap:islem?null:()async{
+          final sec=await showDialog<String>(context:c,builder:(d)=>Theme(data:ThemeData.light(),child:SimpleDialog(
+            backgroundColor:Colors.white,
+            title:const Text('Altyazı dili',style:TextStyle(color:Colors.black87)),
+            children:dilAdlari.entries.map((e)=>SimpleDialogOption(
+              onPressed:()=>Navigator.pop(d,e.key),
+              child:Row(children:[
+                if(e.key==altyaziDili)const Icon(Icons.check,color:Colors.blue),
+                if(e.key==altyaziDili)const SizedBox(width:8),
+                Text(e.value,style:const TextStyle(color:Colors.black87)),
+              ]),
+            )).toList(),
+          )));
+          if(sec!=null){
+            await hafiza.setString('ngelx_caption_language',sec);
+            setP(()=>altyaziDili=ngelxDilKodu(sec));
+            try{
+              if(altyazi||captionText.isNotEmpty){
+                await altyaziUret(setP,zorlaCeviri:true);
+                await hafiza.setBool('content_caption_$icerikId',altyazi);
+              }
+            }catch(e){
+              if(c.mounted)ScaffoldMessenger.of(c).showSnackBar(SnackBar(content:Text('Altyazı dili hazırlanamadı: ${_ngelxKisaHata(e)}')));
+            }
+            ngelxIcerikDilRevizyonu.value++;
+          }
+        },
+      ),
       SwitchListTile(secondary:const Icon(Icons.closed_caption_rounded,color:Colors.blue),title:Text(t('captionsLabel'),style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w700)),subtitle:Text(altyaziMetni().isNotEmpty?'${dilAdlari[altyaziDili]??altyaziDili} • ${t('captionsShow')}':'Açınca videonun konuşmalarından altyazı oluşturulur',style:const TextStyle(color:Colors.black54)),value:altyazi&&altyaziMetni().isNotEmpty,onChanged:islem?null:(x)async{
         try{if(x)await altyaziUret(setP);await hafiza.setBool('content_caption_$icerikId',x);setP(()=>altyazi=x);ngelxIcerikDilRevizyonu.value++;}catch(e){if(c.mounted)ScaffoldMessenger.of(c).showSnackBar(SnackBar(content:Text('Altyazı oluşturulamadı: ${_ngelxKisaHata(e)}')));}
       }),
@@ -4180,6 +4234,28 @@ class _VideoAkisiState extends State<VideoAkisi> {
   Set<String> gizlenenIcerikler={};
   final Set<String> _buOturumdaGorulenler={};
 
+  Future<void> _akisiYenile() async {
+    final uid=FirebaseAuth.instance.currentUser?.uid;
+    try{
+      final futures=<Future<dynamic>>[
+        FirebaseFirestore.instance.collection('videos').orderBy('createdAt',descending:true).limit(1).get(const GetOptions(source:Source.server)),
+      ];
+      if(uid!=null){
+        futures.add(FirebaseFirestore.instance.collection('users').doc(uid).get(const GetOptions(source:Source.server)));
+      }
+      await Future.wait(futures).timeout(const Duration(seconds:10));
+    }catch(_){}
+    if(!mounted)return;
+    setState((){
+      aktif=0;
+      _buOturumdaGorulenler.clear();
+    });
+    await Future<void>.delayed(const Duration(milliseconds:80));
+    if(akisKontrol.hasClients){
+      await akisKontrol.animateToPage(0,duration:const Duration(milliseconds:220),curve:Curves.easeOut);
+    }
+  }
+
   @override
   void initState(){
     super.initState();
@@ -4372,7 +4448,12 @@ class _VideoAkisiState extends State<VideoAkisi> {
             });
           }
 
-          return GestureDetector(
+          return RefreshIndicator(
+            color:mor,
+            backgroundColor:Colors.white,
+            displacement:82,
+            onRefresh:_akisiYenile,
+            child:GestureDetector(
             behavior:HitTestBehavior.translucent,
             onHorizontalDragEnd:(detay){
               final hiz=detay.primaryVelocity??0;
@@ -4384,6 +4465,7 @@ class _VideoAkisiState extends State<VideoAkisi> {
             },
             child:PageView.builder(
               controller:akisKontrol,
+              physics:const PageScrollPhysics(parent:AlwaysScrollableScrollPhysics()),
               scrollDirection:Axis.vertical,
               itemCount:videolar.length,
               onPageChanged:(i){
@@ -4456,6 +4538,7 @@ class _VideoAkisiState extends State<VideoAkisi> {
                 return GorselYaziKarti(veri:kartVeri,aktif:widget.gorunur&&aktif==i);
               },
             ),
+          ),
           );
         },
       ),
@@ -5300,7 +5383,12 @@ class _GorselYaziKartiState extends State<GorselYaziKarti> {
   Future<void> paylasanProfiliAc()async{
     final owner=(widget.veri['ownerId']??'').trim();
     if(owner.isEmpty)return;
+    final p=oynatici;
+    if(p!=null)await p.pause();
     await Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciProfilPage(uid:owner)));
+    if(mounted&&widget.aktif&&p!=null){
+      try{await p.play();}catch(_){}
+    }
   }
 
   Future<void> paylas() async {
@@ -5855,12 +5943,14 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver {
 
   Future<void> paylasanProfiliAc() async {
     if (widget.ownerId.isEmpty) return;
+    _oynatmalariDuraklat();
     await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => KullaniciProfilPage(uid: widget.ownerId),
       ),
     );
+    if(mounted&&widget.aktif&&!duraklatildi)_oynatmalariBaslat();
   }
 
   Future<void> uzunBasmaMenusu() async {
@@ -7054,6 +7144,7 @@ class _KesfetPageState extends State<KesfetPage> {
   Set<String> arkadaslar=<String>{};
   Set<String> gonderilenArkadaslikIstekleri=<String>{};
   bool hesapYukleniyor=true;
+  int _yenileRevizyonu=0;
   StreamSubscription<DocumentSnapshot<Map<String,dynamic>>>? _hesapAboneligi;
   StreamSubscription<QuerySnapshot<Map<String,dynamic>>>? _gidenIstekAboneligi;
 
@@ -7334,12 +7425,31 @@ class _KesfetPageState extends State<KesfetPage> {
     }
   }
 
+  Future<void> _kesfetiYenile() async {
+    final uid=ben;
+    try{
+      if(uid!=null){
+        await FirebaseFirestore.instance.collection('users').doc(uid)
+            .get(const GetOptions(source:Source.server))
+            .timeout(const Duration(seconds:8));
+      }
+    }catch(_){}
+    if(!mounted)return;
+    setState(()=>_yenileRevizyonu++);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        child: CustomScrollView(slivers: [
+        child: RefreshIndicator(
+          color:mor,
+          onRefresh:_kesfetiYenile,
+          child:CustomScrollView(
+          key:ValueKey('kesfet_refresh_$_yenileRevizyonu'),
+          physics:const AlwaysScrollableScrollPhysics(),
+          slivers: [
           SliverToBoxAdapter(child:Padding(
             padding:const EdgeInsets.fromLTRB(18,14,18,8),
             child:Row(children:[
@@ -7385,6 +7495,7 @@ class _KesfetPageState extends State<KesfetPage> {
           if(kategori==3)..._grupSliverleri(),
           const SliverToBoxAdapter(child:SizedBox(height:100)),
         ]),
+        ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       floatingActionButton:kategori==0?FilledButton.icon(
@@ -8387,7 +8498,7 @@ class _YeniYuklePageState extends State<YuklePage> {
         OutlinedButton.icon(
           onPressed:yukleniyor?null:_muzikSec,
           icon:const Icon(Icons.music_note_rounded,size:18),
-          label:Text(secilenMuzik==null?'Müzik ekle':'Müziği değiştir'),
+          label:Text(secilenMuzik==null?(tur=='photo'?'NgelX müzik ekle':'Müzik ekle'):'Müziği değiştir'),
         ),
       ]),
     );
@@ -8731,6 +8842,23 @@ class _YeniYuklePageState extends State<YuklePage> {
     return Wrap(spacing:7,runSpacing:6,children:['#spor','#müzik','#teknoloji','#trend'].map((e)=>ActionChip(label:Text(e),onPressed:(){final m=etiketler.text.trim();if(!m.toLowerCase().contains(e.toLowerCase())){etiketler.text=(m.isEmpty?'':m+' ')+e+' ';etiketler.selection=TextSelection.collapsed(offset:etiketler.text.length);}})).toList());
   }
 
+  Future<void> _uretiYenile() async {
+    if(yukleniyor)return;
+    try{
+      await _taslagiKaydet(sessiz:true);
+      final uid=FirebaseAuth.instance.currentUser?.uid;
+      if(uid!=null){
+        final d=await FirebaseFirestore.instance.collection('users').doc(uid)
+            .get(const GetOptions(source:Source.server))
+            .timeout(const Duration(seconds:8));
+        if(mounted)setState(()=>indirmeyeIzin=d.data()?['defaultAllowDownload']!=false);
+      }
+      await _taslagiYukle();
+      await _kayipMedyaKurtar();
+    }catch(_){}
+    if(mounted)setState((){});
+  }
+
   @override
   Widget build(BuildContext context){
     return Theme(
@@ -8744,7 +8872,11 @@ class _YeniYuklePageState extends State<YuklePage> {
       ),
       child:ColoredBox(
         color:Colors.white,
-        child:SafeArea(child:ListView(
+        child:SafeArea(child:RefreshIndicator(
+         color:mor,
+         onRefresh:_uretiYenile,
+         child:ListView(
+          physics:const AlwaysScrollableScrollPhysics(),
           padding:const EdgeInsets.fromLTRB(22,22,22,148),
           children:[
             Container(
@@ -8905,6 +9037,7 @@ class _YeniYuklePageState extends State<YuklePage> {
             const SizedBox(height:12),
             Text(t('mediaLimits'),textAlign:TextAlign.center,style:const TextStyle(color:Colors.black45,fontSize:12)),
           ],
+        ),
         )),
       ),
     );
