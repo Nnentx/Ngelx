@@ -9207,7 +9207,7 @@ class _MesajPageState extends State<MesajPage> {
     });
   }
 
-  Future<void> _gelenKutusunuYenile() async {
+  Future<void> _gelenKutusunuYenile()async{
     final ben=uid;if(ben==null)return;
     try{
       await Future.wait([
@@ -9215,14 +9215,8 @@ class _MesajPageState extends State<MesajPage> {
         FirebaseFirestore.instance.collection('chats').where('members',arrayContains:ben).limit(100).get(const GetOptions(source:Source.server)),
         FirebaseFirestore.instance.collection('notifications').where('toUid',isEqualTo:ben).limit(200).get(const GetOptions(source:Source.server)),
       ]).timeout(const Duration(seconds:10));
-      _kullaniciCache.clear();
-      await tercihleriGetir();
-      if(mounted)setState((){});
-    }on TimeoutException{
-      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(lt('Gelen Kutusu yenilenemedi. Bağlantını kontrol edip tekrar dene.','Inbox could not be refreshed. Check your connection and try again.'))));
-    }catch(_){
-      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(lt('Gelen Kutusu yenilenemedi.','Inbox could not be refreshed.'))));
-    }
+      _kullaniciCache.clear();await tercihleriGetir();if(mounted)setState((){});
+    }catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(lt('Gelen Kutusu yenilenemedi. Tekrar dene.','Inbox could not be refreshed. Try again.'))));}
   }
 
   @override void initState(){super.initState();tercihleriGetir();}
@@ -10505,31 +10499,18 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
     });
   }
 
-  Future<void> _grupSohbetiniYenile() async {
+  Future<void> _grupSohbetiniYenile()async{
     try{
       final sonuc=await Future.wait([
         chatRef.get(const GetOptions(source:Source.server)),
         chatRef.collection('messages').orderBy('createdAt').limitToLast(100).get(const GetOptions(source:Source.server)),
       ]).timeout(const Duration(seconds:10));
-      final grup=sonuc[0] as DocumentSnapshot<Map<String,dynamic>>;
-      final mesajlar=sonuc[1] as QuerySnapshot<Map<String,dynamic>>;
-      final veri=grup.data();
-      if(veri!=null)_grupVerisiniOnbellekle(veri);
-      _uyeProfilCache.clear();
-      _mentionUyeleri=null;
+      final g=sonuc[0] as DocumentSnapshot<Map<String,dynamic>>,m=sonuc[1] as QuerySnapshot<Map<String,dynamic>>;
+      if(g.data()!=null)_grupVerisiniOnbellekle(g.data()!);_uyeProfilCache.clear();_mentionUyeleri=null;
       if(!mounted)return;
-      setState((){
-        _grupMesajOnbellek
-          ..clear()
-          ..addAll(mesajlar.docs);
-        _mesajAkisiniYenile();
-      });
+      setState((){_grupMesajOnbellek..clear()..addAll(m.docs);_mesajAkisiniYenile();});
       unawaited(_okunduIsaretle());
-    }on TimeoutException{
-      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(lt('Grup yenilenemedi. Bağlantını kontrol edip tekrar dene.','Group could not be refreshed. Check your connection and try again.'))));
-    }catch(_){
-      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(lt('Grup yenilenemedi.','Group could not be refreshed.'))));
-    }
+    }catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(lt('Grup yenilenemedi. Tekrar dene.','Group could not be refreshed. Try again.'))));}
   }
   @override void dispose(){
     mentionZamanlayici?.cancel();_mesajBeklemeZamanlayici?.cancel();_typingZamanlayici?.cancel();_typingBaslatZamanlayici?.cancel();_sesKaydiZamanlayici?.cancel();_offlineRetryZamanlayici?.cancel();
@@ -17845,7 +17826,7 @@ class _SohbetPageState extends State<SohbetPage> {
     }
   }
 
-  Future<void> _ozelSohbetiYenile() async {
+  Future<void> _ozelSohbetiYenile()async{
     final ref=FirebaseFirestore.instance.collection('chats').doc(widget.chatId);
     try{
       final sonuc=await Future.wait([
@@ -17853,21 +17834,10 @@ class _SohbetPageState extends State<SohbetPage> {
         ref.collection('messages').orderBy('createdAt').limitToLast(100).get(const GetOptions(source:Source.server)),
         FirebaseFirestore.instance.collection('users').doc(widget.digerUid).get(const GetOptions(source:Source.server)),
       ]).timeout(const Duration(seconds:10));
-      final mesajlar=sonuc[1] as QuerySnapshot<Map<String,dynamic>>;
-      _mesajHazirlikZamani=null;
-      if(!mounted)return;
-      setState((){
-        _mesajOnbellek
-          ..clear()
-          ..addAll(mesajlar.docs);
-      });
-      unawaited(mesajGonderimHazirligi(zorla:true));
-      unawaited(_okunduGuncelle());
-    }on TimeoutException{
-      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(lt('Sohbet yenilenemedi. Bağlantını kontrol edip tekrar dene.','Chat could not be refreshed. Check your connection and try again.'))));
-    }catch(_){
-      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(lt('Sohbet yenilenemedi.','Chat could not be refreshed.'))));
-    }
+      final m=sonuc[1] as QuerySnapshot<Map<String,dynamic>>;_mesajHazirlikZamani=null;
+      if(!mounted)return;setState((){_mesajOnbellek..clear()..addAll(m.docs);});
+      unawaited(mesajGonderimHazirligi(zorla:true));unawaited(_okunduGuncelle());
+    }catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(lt('Sohbet yenilenemedi. Tekrar dene.','Chat could not be refreshed. Try again.'))));}
   }
 
   @override
@@ -19124,21 +19094,10 @@ class AktivitePage extends StatefulWidget {
 class _AktivitePageState extends State<AktivitePage> {
   String _filtre='all';
 
-  Future<void> _aktiviteyiYenile() async {
-    final ben=FirebaseAuth.instance.currentUser?.uid;
-    if(ben==null)return;
-    try{
-      await FirebaseFirestore.instance.collection('notifications')
-          .where('toUid',isEqualTo:ben)
-          .limit(200)
-          .get(const GetOptions(source:Source.server))
-          .timeout(const Duration(seconds:10));
-      if(mounted)setState((){});
-    }on TimeoutException{
-      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(lt('Aktiviteler yenilenemedi. Bağlantını kontrol et.','Activity could not be refreshed. Check your connection.'))));
-    }catch(_){
-      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(lt('Aktiviteler yenilenemedi.','Activity could not be refreshed.'))));
-    }
+  Future<void> _aktiviteyiYenile()async{
+    final ben=FirebaseAuth.instance.currentUser?.uid;if(ben==null)return;
+    try{await FirebaseFirestore.instance.collection('notifications').where('toUid',isEqualTo:ben).limit(200).get(const GetOptions(source:Source.server)).timeout(const Duration(seconds:10));if(mounted)setState((){});}
+    catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(lt('Aktiviteler yenilenemedi.','Activity could not be refreshed.'))));}
   }
 
   bool _filtreUyar(Map<String,dynamic> v){
