@@ -1,4 +1,4 @@
-name: Ngel X v24 BUILD 309 CHAT MEDIA DISPLAY FIX
+name: Ngel X v25 BUILD 309 CHAT MEDIA DISPLAY FIX
 
 on:
   workflow_dispatch:
@@ -7,7 +7,7 @@ on:
       - work/build309-chat-media-display-fix
     paths:
       - 'app/**'
-      - '.github/workflows/NgelX-v24-BUILD-308-MODERN-STABLE.yml'
+      - '.github/workflows/NgelX-v25-BUILD-309-CHAT-MEDIA-DISPLAY-FIX.yml'
 
 jobs:
   build:
@@ -96,7 +96,7 @@ jobs:
       - name: APK yukle
         uses: actions/upload-artifact@v4
         with:
-          name: NgelX-1.0.90-Build-308-MODERN-STABLE
+          name: NgelX-1.0.90-Build-309-CHAT-MEDIA-DISPLAY-FIX
           path: |
             app/build/app/outputs/flutter-apk/app-release.apk
             app/build/app/outputs/flutter-apk/app-release.apk.sha256
