@@ -4,6 +4,10 @@ import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.database.Cursor
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.ImageDecoder
+import android.os.Build
 import android.net.Uri
 import android.provider.OpenableColumns
 import java.io.FileOutputStream
@@ -18,6 +22,7 @@ import java.io.InputStreamReader
 import java.net.HttpURLConnection
 import java.net.URL
 import java.util.concurrent.Executors
+import kotlin.math.max
 
 class MainActivity : FlutterActivity() {
     companion object {
@@ -177,6 +182,23 @@ class MainActivity : FlutterActivity() {
 
     private fun copyUriToCache(uri: Uri): Map<String, Any?> {
         val originalName = displayName(uri).ifBlank { "ngelx_${System.currentTimeMillis()}" }
+        val mimeType = contentResolver.getType(uri)?.lowercase()
+
+        if (mimeType?.startsWith("image/") == true && mimeType != "image/gif") {
+            val normalized = normalizeImageToJpeg(uri)
+            if (normalized != null && normalized.length() > 0L) {
+                val baseName = originalName.substringBeforeLast('.', originalName)
+                    .replace(Regex("[^A-Za-z0-9._-]"), "_")
+                    .ifBlank { "ngelx_${System.currentTimeMillis()}" }
+                return mapOf(
+                    "path" to normalized.absolutePath,
+                    "name" to "$baseName.jpg",
+                    "mimeType" to "image/jpeg",
+                    "size" to normalized.length(),
+                )
+            }
+        }
+
         val safeName = originalName.replace(Regex("[^A-Za-z0-9._-]"), "_")
             .ifBlank { "ngelx_${System.currentTimeMillis()}" }
         val pickerDir = File(cacheDir, "ngelx_picker").apply { mkdirs() }
@@ -188,9 +210,63 @@ class MainActivity : FlutterActivity() {
         return mapOf(
             "path" to target.absolutePath,
             "name" to originalName,
-            "mimeType" to contentResolver.getType(uri),
+            "mimeType" to mimeType,
             "size" to target.length(),
         )
+    }
+
+    private fun normalizeImageToJpeg(uri: Uri): File? {
+        return try {
+            val bitmap: Bitmap? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                val source = ImageDecoder.createSource(contentResolver, uri)
+                ImageDecoder.decodeBitmap(source) { decoder, info, _ ->
+                    decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
+                    val width = info.size.width
+                    val height = info.size.height
+                    val largest = max(width, height)
+                    if (largest > 4096) {
+                        val ratio = 4096.0 / largest.toDouble()
+                        decoder.setTargetSize(
+                            max(1, (width * ratio).toInt()),
+                            max(1, (height * ratio).toInt()),
+                        )
+                    }
+                }
+            } else {
+                val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                contentResolver.openInputStream(uri).use { input ->
+                    if (input != null) BitmapFactory.decodeStream(input, null, bounds)
+                }
+                var sample = 1
+                while (
+                    bounds.outWidth > 0 &&
+                    bounds.outHeight > 0 &&
+                    max(bounds.outWidth / sample, bounds.outHeight / sample) > 4096
+                ) {
+                    sample *= 2
+                }
+                val options = BitmapFactory.Options().apply { inSampleSize = sample }
+                contentResolver.openInputStream(uri).use { input ->
+                    if (input == null) null else BitmapFactory.decodeStream(input, null, options)
+                }
+            }
+
+            if (bitmap == null) return null
+            val pickerDir = File(cacheDir, "ngelx_picker").apply { mkdirs() }
+            val target = File(pickerDir, "normalized_${System.currentTimeMillis()}.jpg")
+            val ok = FileOutputStream(target).use { output ->
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 92, output)
+            }
+            bitmap.recycle()
+            if (!ok || target.length() <= 0L) {
+                target.delete()
+                null
+            } else {
+                target
+            }
+        } catch (_: Throwable) {
+            null
+        }
     }
 
     private fun displayName(uri: Uri): String {

@@ -92,8 +92,8 @@ const ngelxPrivateBlueCanvas = Color(0xFFF6FAFF);
 const ngelxPrivateBlueBorder = Color(0xFFD8E8FF);
 const ngelxPrivateBlueInk = Color(0xFF10213A);
 
-const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.91');
-const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '310');
+const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.92');
+const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '311');
 const ngelxGroupBorder = Color(0xFFD9EEE0);
 
 final GlobalKey<NavigatorState> ngelxNavigatorKey=GlobalKey<NavigatorState>();
@@ -1674,19 +1674,28 @@ Future<String> ngelxFotografYukle({
   void Function(int sent,int total)? onProgress,
 }) async {
   final ad=dosya.name.trim();
+  final mime=(dosya.mimeType??'').trim().toLowerCase().split(';').first;
   final hamExt=(ext??(ad.contains('.')?ad.split('.').last:'jpg')).toLowerCase();
-  final temizExt=_ngelxUzantiTemizle(hamExt);
+  var temizExt=_ngelxUzantiTemizle(hamExt);
+
+  if(mime=='image/jpeg'||mime=='image/jpg')temizExt='jpg';
+  else if(mime=='image/png')temizExt='png';
+  else if(mime=='image/webp')temizExt='webp';
+  else if(mime=='image/gif')temizExt='gif';
+  else if(mime=='image/heic')temizExt='heic';
+  else if(mime=='image/heif')temizExt='heif';
+  else if(mime=='image/avif')temizExt='avif';
+
+  final tur=mime.startsWith('image/')?mime:_ngelxContentType(temizExt);
   try{
-    final bytes=await dosya.readAsBytes();
-    if(bytes.isEmpty)throw Exception('Seçilen fotoğraf boş görünüyor.');
-    // Tüm fotoğraflar ortak byte hattından geçer. Bu hat gerçek baytları
-    // yeniden kodlayıp PNG olarak yükler; galeri JPG adı verip HEIC/WEBP
-    // baytı döndürse bile profil, grup, hikâye, sohbet ve akışta açılabilir.
-    return await ngelxMedyaYukleBytes(
-      bytes:bytes,
+    final boyut=await dosya.length();
+    if(boyut<=0)throw Exception('Seçilen fotoğraf boş görünüyor.');
+    return await ngelxMedyaYukleDosya(
+      dosya:dosya,
       kind:kind,
       ext:temizExt,
-      legacyPath:legacyPath,
+      legacyPath:legacyPath.replaceFirst(RegExp(r'\.[^.]+$'),'.'+temizExt),
+      contentType:tur,
       onProgress:onProgress,
     );
   }catch(e){
