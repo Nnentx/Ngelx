@@ -93,8 +93,8 @@ const ngelxPrivateBlueCanvas = Color(0xFFF6FAFF);
 const ngelxPrivateBlueBorder = Color(0xFFD8E8FF);
 const ngelxPrivateBlueInk = Color(0xFF10213A);
 
-const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.95');
-const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '314');
+const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.96');
+const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '315');
 const ngelxGroupBorder = Color(0xFFD9EEE0);
 
 final GlobalKey<NavigatorState> ngelxNavigatorKey=GlobalKey<NavigatorState>();
@@ -16575,7 +16575,7 @@ class _SohbetPageState extends State<SohbetPage> {
     final batch=FirebaseFirestore.instance.batch();
 
     batch.set(ref,{
-      'members':[ben,widget.digerUid],
+      if(!hazirlik.sohbetMevcut)'members':[ben,widget.digerUid],
       'lastMessage':t,
       'updatedAt':FieldValue.serverTimestamp(),
       'unread_${widget.digerUid}':FieldValue.increment(1),
@@ -16623,8 +16623,9 @@ class _SohbetPageState extends State<SohbetPage> {
         belgeId:widget.chatId,
         dedupeKey:'private_msg_${widget.chatId}_${mesajRef.id}_${widget.digerUid}',
       ).catchError((_){ }));
-    }catch(_){
-      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Mesaj gönderilemedi. Bağlantını kontrol edip tekrar dene.')));
+    }catch(e){
+      final hata=e is FirebaseException?'${e.code}: ${e.message??e.toString()}':e.toString();
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Mesaj gönderilemedi: $hata')));
     }finally{
       if(mounted)setState(()=>gonderiliyor=false);
     }
@@ -16663,7 +16664,7 @@ class _SohbetPageState extends State<SohbetPage> {
       final mesajRef=ref.collection('messages').doc();
       final batch=FirebaseFirestore.instance.batch();
       batch.set(ref,{
-        'members':[ben,widget.digerUid],
+        if(!hazirlik.sohbetMevcut)'members':[ben,widget.digerUid],
         'lastMessage':'📷 Fotoğraf',
         'updatedAt':FieldValue.serverTimestamp(),
         'unread_${widget.digerUid}':FieldValue.increment(1),
@@ -16736,7 +16737,7 @@ class _SohbetPageState extends State<SohbetPage> {
     final mesajRef=ref.collection('messages').doc();
     final batch=FirebaseFirestore.instance.batch();
     batch.set(ref,{
-      'members':[ben,widget.digerUid],
+      if(!hazirlik.sohbetMevcut)'members':[ben,widget.digerUid],
       'lastMessage':sonMesaj,
       'updatedAt':FieldValue.serverTimestamp(),
       'unread_${widget.digerUid}':FieldValue.increment(1),
