@@ -4,6 +4,9 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
+    paths:
+      - 'app/**'
+      - '.github/workflows/NgelX-v22-BUILD-306-GUNCEL-KAYNAK-MEDYA-FIX.yml'
 
 jobs:
   build:
