@@ -92,8 +92,8 @@ const ngelxPrivateBlueCanvas = Color(0xFFF6FAFF);
 const ngelxPrivateBlueBorder = Color(0xFFD8E8FF);
 const ngelxPrivateBlueInk = Color(0xFF10213A);
 
-const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.83');
-const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '302');
+const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.84');
+const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '303');
 const ngelxGroupBorder = Color(0xFFD9EEE0);
 
 final GlobalKey<NavigatorState> ngelxNavigatorKey=GlobalKey<NavigatorState>();
@@ -383,6 +383,122 @@ Future<String> ngelxMediaApiAdresi() async {
 }
 
 const MethodChannel _ngelxMedyaNativeKanal=MethodChannel('com.nnentx.ngelx_app/media');
+
+List<String> _ngelxMimeTurleri(XTypeGroup? tur){
+  final ext=tur?.extensions??const <String>[];
+  if(ext.isEmpty)return const <String>['*/*'];
+  final sonuc=<String>{};
+  for(final raw in ext){
+    switch(raw.toLowerCase()){
+      case 'jpg':case 'jpeg':sonuc.add('image/jpeg');break;
+      case 'png':sonuc.add('image/png');break;
+      case 'gif':sonuc.add('image/gif');break;
+      case 'webp':sonuc.add('image/webp');break;
+      case 'mp4':sonuc.add('video/mp4');break;
+      case 'mov':sonuc.add('video/quicktime');break;
+      case 'mp3':sonuc.add('audio/mpeg');break;
+      case 'm4a':sonuc.add('audio/mp4');break;
+      case 'aac':sonuc.add('audio/aac');break;
+      case 'wav':sonuc.add('audio/wav');break;
+      case 'ogg':sonuc.add('audio/ogg');break;
+      default:sonuc.add('*/*');
+    }
+  }
+  return sonuc.toList();
+}
+
+Future<XFile?> _ngelxAndroidBelgeSec(List<String> mimeTypes) async{
+  if(!Platform.isAndroid)return null;
+  final sonuc=await _ngelxMedyaNativeKanal.invokeMapMethod<String,dynamic>('pickDocument',{
+    'mimeTypes':mimeTypes,
+  });
+  if(sonuc==null)return null;
+  final path=(sonuc['path']??'').toString();
+  if(path.isEmpty)return null;
+  return XFile(
+    path,
+    name:(sonuc['name']??'').toString().trim().isEmpty?path.split(Platform.pathSeparator).last:(sonuc['name']??'').toString(),
+    mimeType:(sonuc['mimeType']??'').toString().trim().isEmpty?null:(sonuc['mimeType']??'').toString(),
+  );
+}
+
+Future<List<XFile>> _ngelxAndroidBelgelerSec(List<String> mimeTypes) async{
+  if(!Platform.isAndroid)return const <XFile>[];
+  final raw=await _ngelxMedyaNativeKanal.invokeMethod<List<dynamic>>('pickDocuments',{
+    'mimeTypes':mimeTypes,
+  });
+  if(raw==null)return const <XFile>[];
+  final sonuc=<XFile>[];
+  for(final item in raw){
+    if(item is! Map)continue;
+    final map=Map<String,dynamic>.from(item);
+    final path=(map['path']??'').toString();
+    if(path.isEmpty)continue;
+    sonuc.add(XFile(
+      path,
+      name:(map['name']??'').toString().trim().isEmpty?path.split(Platform.pathSeparator).last:(map['name']??'').toString(),
+      mimeType:(map['mimeType']??'').toString().trim().isEmpty?null:(map['mimeType']??'').toString(),
+    ));
+  }
+  return sonuc;
+}
+
+Future<XFile?> ngelxResimSec({
+  required ImageSource source,
+  int? imageQuality,
+  double? maxWidth,
+  double? maxHeight,
+}) async{
+  if(source==ImageSource.gallery&&Platform.isAndroid){
+    try{
+      final x=await _ngelxAndroidBelgeSec(const <String>['image/*']);
+      if(x!=null)return x;
+    }catch(_){}
+  }
+  return ImagePicker().pickImage(
+    source:source,imageQuality:imageQuality,maxWidth:maxWidth,maxHeight:maxHeight,
+  );
+}
+
+Future<XFile?> ngelxVideoSec({
+  required ImageSource source,
+  Duration? maxDuration,
+}) async{
+  if(source==ImageSource.gallery&&Platform.isAndroid){
+    try{
+      final x=await _ngelxAndroidBelgeSec(const <String>['video/*']);
+      if(x!=null)return x;
+    }catch(_){}
+  }
+  return ImagePicker().pickVideo(source:source,maxDuration:maxDuration);
+}
+
+Future<List<XFile>> ngelxCokluResimSec({
+  int? imageQuality,
+  double? maxWidth,
+  double? maxHeight,
+  int? limit,
+}) async{
+  if(Platform.isAndroid){
+    try{
+      final xs=await _ngelxAndroidBelgelerSec(const <String>['image/*']);
+      if(xs.isNotEmpty)return limit==null?xs:xs.take(limit).toList();
+    }catch(_){}
+  }
+  return ImagePicker().pickMultiImage(
+    imageQuality:imageQuality,maxWidth:maxWidth,maxHeight:maxHeight,limit:limit,
+  );
+}
+
+Future<XFile?> ngelxDosyaSec({XTypeGroup? tur}) async{
+  if(Platform.isAndroid){
+    try{
+      final x=await _ngelxAndroidBelgeSec(_ngelxMimeTurleri(tur));
+      if(x!=null)return x;
+    }catch(_){}
+  }
+  return openFile(acceptedTypeGroups:tur==null?null:<XTypeGroup>[tur]);
+}
 
 String _ngelxKisaHata(Object hata) {
   final raw=hata.toString().replaceFirst('Exception: ','').replaceAll('\n',' ').trim();
@@ -7721,8 +7837,8 @@ class _YeniYuklePageState extends State<YuklePage> {
   Future<void> medyaSec()async{
     if(yukleniyor||tur=='text')return;
     try{
-      if(tur=='video'){final x=await ImagePicker().pickVideo(source:ImageSource.gallery);if(x==null||!mounted)return;if(!await _medyaBoyutuUygun(x,tur))return;setState((){medya=x;medyalar=<XFile>[x];medyaYazisi='';videoBaslangicMs=0;videoBitisMs=0;});}
-      else{final xs=await ImagePicker().pickMultiImage(imageQuality:84,maxWidth:1600,limit:10);if(xs.isEmpty||!mounted)return;final uygun=<XFile>[];for(final x in xs.take(10)){if(await _medyaBoyutuUygun(x,'photo'))uygun.add(x);}if(uygun.isEmpty||!mounted)return;setState((){medya=uygun.first;medyalar=uygun;medyaYazisi='';videoBaslangicMs=0;videoBitisMs=0;});}
+      if(tur=='video'){final x=await ngelxVideoSec(source:ImageSource.gallery);if(x==null||!mounted)return;if(!await _medyaBoyutuUygun(x,tur))return;setState((){medya=x;medyalar=<XFile>[x];medyaYazisi='';videoBaslangicMs=0;videoBitisMs=0;});}
+      else{final xs=await ngelxCokluResimSec(imageQuality:84,maxWidth:1600,limit:10);if(xs.isEmpty||!mounted)return;final uygun=<XFile>[];for(final x in xs.take(10)){if(await _medyaBoyutuUygun(x,'photo'))uygun.add(x);}if(uygun.isEmpty||!mounted)return;setState((){medya=uygun.first;medyalar=uygun;medyaYazisi='';videoBaslangicMs=0;videoBitisMs=0;});}
       _taslakDegisti();
     }catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(_dosyaHataMetni(e))));}
   }
@@ -7737,8 +7853,8 @@ class _YeniYuklePageState extends State<YuklePage> {
       }
       if(video)await Permission.microphone.request();
       final secilen=video
-        ?await ImagePicker().pickVideo(source:ImageSource.camera,maxDuration:const Duration(minutes:10))
-        :await ImagePicker().pickImage(source:ImageSource.camera,imageQuality:86,maxWidth:1600);
+        ?await ngelxVideoSec(source:ImageSource.camera,maxDuration:const Duration(minutes:10))
+        :await ngelxResimSec(source:ImageSource.camera,imageQuality:86,maxWidth:1600);
       if(secilen==null||!mounted)return;
       final secilenTur=video?'video':'photo';
       if(!await _medyaBoyutuUygun(secilen,secilenTur))return;
@@ -7830,8 +7946,8 @@ class _YeniYuklePageState extends State<YuklePage> {
       }
 
       final XFile? dosya=video
-        ?await ImagePicker().pickVideo(source:kaynak,maxDuration:const Duration(seconds:30))
-        :await ImagePicker().pickImage(source:kaynak,imageQuality:84,maxWidth:1600);
+        ?await ngelxVideoSec(source:kaynak,maxDuration:const Duration(seconds:30))
+        :await ngelxResimSec(source:kaynak,imageQuality:84,maxWidth:1600);
       if(dosya==null||!mounted)return;
       if(!await _medyaBoyutuUygun(dosya,video?'video':'photo'))return;
 
@@ -9591,7 +9707,7 @@ class _GrupOlusturPageState extends State<GrupOlusturPage>{
               child:Column(children:[
                 GestureDetector(
                   onTap:()async{
-                    final x=await ImagePicker().pickImage(source:ImageSource.gallery,imageQuality:80,maxWidth:1280);
+                    final x=await ngelxResimSec(source:ImageSource.gallery,imageQuality:80,maxWidth:1280);
                     if(x!=null&&mounted)setState(()=>foto=x);
                   },
                   child:Stack(clipBehavior:Clip.none,children:[
@@ -10113,7 +10229,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
   }
 
   Future<void> medyaGonder(ImageSource kaynak)async{
-    final x=await ImagePicker().pickImage(source:kaynak,imageQuality:76,maxWidth:1280);
+    final x=await ngelxResimSec(source:kaynak,imageQuality:76,maxWidth:1280);
     if(x==null)return;
     await _grupFotografiniGonder(x,kaynak);
   }
@@ -10138,7 +10254,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
     }
   }
   Future<void> grupVideoGonder()async{
-    final x=await ImagePicker().pickVideo(source:ImageSource.gallery,maxDuration:const Duration(minutes:3));
+    final x=await ngelxVideoSec(source:ImageSource.gallery,maxDuration:const Duration(minutes:3));
     if(x==null)return;
     try{
       final boyut=await x.length();
@@ -10160,9 +10276,9 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
     }
   }
 
-  Future<void> gifGonder()async{const tur=XTypeGroup(label:'GIF',extensions:['gif']);final x=await openFile(acceptedTypeGroups:[tur]);if(x==null)return;try{final yol='groups/${widget.chatId}/${DateTime.now().millisecondsSinceEpoch}.gif';final bytes=await x.readAsBytes().timeout(const Duration(seconds:8));final url=await ngelxMedyaYukleBytes(bytes:bytes,kind:'gifs',ext:'gif',legacyPath:yol,contentType:'image/gif').timeout(const Duration(seconds:12));await payloadGonder({'type':'gif','mediaUrl':url},'GIF');}catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('GIF gönderilemedi.')));}}
+  Future<void> gifGonder()async{const tur=XTypeGroup(label:'GIF',extensions:['gif']);final x=await ngelxDosyaSec(tur:tur);if(x==null)return;try{final yol='groups/${widget.chatId}/${DateTime.now().millisecondsSinceEpoch}.gif';final bytes=await x.readAsBytes().timeout(const Duration(seconds:8));final url=await ngelxMedyaYukleBytes(bytes:bytes,kind:'gifs',ext:'gif',legacyPath:yol,contentType:'image/gif').timeout(const Duration(seconds:12));await payloadGonder({'type':'gif','mediaUrl':url},'GIF');}catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('GIF gönderilemedi.')));}}
   Future<void> grupDosyaGonder()async{
-    final x=await openFile();
+    final x=await ngelxDosyaSec();
     if(x==null)return;
     try{
       final boyut=await x.length();
@@ -14006,7 +14122,7 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
         if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Grup fotoğrafı kaldırıldı.')));
         return;
       }
-      final x=await ImagePicker().pickImage(source:secim=='camera'?ImageSource.camera:ImageSource.gallery,imageQuality:82,maxWidth:1280);
+      final x=await ngelxResimSec(source:secim=='camera'?ImageSource.camera:ImageSource.gallery,imageQuality:82,maxWidth:1280);
       if(x==null)return;
       final uzanti=x.name.contains('.')?x.name.split('.').last.toLowerCase():'jpg';
       final yol='groups/${widget.chatId}/avatar_${DateTime.now().millisecondsSinceEpoch}.$uzanti';
@@ -15006,7 +15122,7 @@ class _GrupOzellestirPageState extends State<GrupOzellestirPage>{
       return;
     }
     XFile? x;
-    try{x=await ImagePicker().pickImage(source:ImageSource.gallery,imageQuality:68,maxWidth:1080);}catch(e){
+    try{x=await ngelxResimSec(source:ImageSource.gallery,imageQuality:68,maxWidth:1080);}catch(e){
       if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Galeri açılamadı: $e')));
       return;
     }
@@ -16301,7 +16417,7 @@ class _SohbetPageState extends State<SohbetPage> {
       if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(hazirlik.engel!)));
       return;
     }
-    final x=await ImagePicker().pickImage(
+    final x=await ngelxResimSec(
       source:kaynak,
       imageQuality:78,
       maxWidth:1280,
@@ -16363,7 +16479,7 @@ class _SohbetPageState extends State<SohbetPage> {
       if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(hazirlik.engel!)));
       return;
     }
-    final x=await ImagePicker().pickVideo(source:kaynak,maxDuration:const Duration(minutes:5));
+    final x=await ngelxVideoSec(source:kaynak,maxDuration:const Duration(minutes:5));
     if(x==null)return;
     try{
       final boyut=await x.length();
@@ -16433,7 +16549,7 @@ class _SohbetPageState extends State<SohbetPage> {
   }
 
   Future<void> dosyaGonder()async{
-    final x=await openFile();
+    final x=await ngelxDosyaSec();
     if(x==null)return;
     try{
       final boyut=await x.length();
@@ -17917,7 +18033,7 @@ class SohbetBilgiPage extends StatelessWidget{
     }
 
     final kaynak=secim=='camera'?ImageSource.camera:ImageSource.gallery;
-    final x=await ImagePicker().pickImage(source:kaynak,imageQuality:76,maxWidth:1280);if(x==null)return;
+    final x=await ngelxResimSec(source:kaynak,imageQuality:76,maxWidth:1280);if(x==null)return;
     try{
       final onceki=await ref.get();
       final eskiArkaPlan=(onceki.data()?['backgroundUrl_$me']??'').toString();
@@ -20792,7 +20908,7 @@ class DestekPage extends StatefulWidget {const DestekPage({super.key});@override
 class _DestekPageState extends State<DestekPage>{
   final aciklama=TextEditingController();String kategori='Uygulama hatası';XFile? ekran;bool gonderiliyor=false;
   @override void dispose(){aciklama.dispose();super.dispose();}
-  Future<void> ekranSec()async{final x=await ImagePicker().pickImage(source:ImageSource.gallery,imageQuality:75,maxWidth:1440);if(x!=null&&mounted)setState(()=>ekran=x);}
+  Future<void> ekranSec()async{final x=await ngelxResimSec(source:ImageSource.gallery,imageQuality:75,maxWidth:1440);if(x!=null&&mounted)setState(()=>ekran=x);}
   Future<void> gonder()async{final u=FirebaseAuth.instance.currentUser;if(u==null)return;if(aciklama.text.trim().length<10){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Sorunu en az 10 karakterle açıkla.')));return;}setState(()=>gonderiliyor=true);try{String ekranUrl='';if(ekran!=null){final yol='support/${u.uid}/${DateTime.now().millisecondsSinceEpoch}.jpg';ekranUrl=await ngelxFotografYukle(dosya:ekran!,kind:'support',ext:'jpg',legacyPath:yol);}await FirebaseFirestore.instance.collection('support_requests').add({'uid':u.uid,'email':u.email,'category':kategori,'description':aciklama.text.trim(),'screenshotUrl':ekranUrl,'status':'open','createdAt':FieldValue.serverTimestamp()});if(!mounted)return;aciklama.clear();setState(()=>ekran=null);ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Destek talebin gönderildi.')));}catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Talep gönderilemedi: $e')));}finally{if(mounted)setState(()=>gonderiliyor=false);}}
   @override Widget build(BuildContext context)=>Theme(data:ThemeData.light().copyWith(scaffoldBackgroundColor:Colors.white,appBarTheme:const AppBarTheme(backgroundColor:Colors.white,foregroundColor:Colors.black,elevation:0),inputDecorationTheme:InputDecorationTheme(filled:true,fillColor:const Color(0xFFF3F4F6),border:OutlineInputBorder(borderRadius:BorderRadius.circular(16),borderSide:BorderSide.none))),child:Scaffold(appBar:AppBar(title:const Text('Destek ve hata bildir')),body:SafeArea(child:ListView(padding:const EdgeInsets.all(20),children:[DropdownButtonFormField<String>(initialValue:kategori,items:['Uygulama hatası','Hesap ve giriş','Güvenlik','Ödeme ve kazanç','Öneri','Diğer'].map((x)=>DropdownMenuItem(value:x,child:Text(x))).toList(),onChanged:(v)=>setState(()=>kategori=v??kategori),decoration:const InputDecoration(labelText:'Konu')),const SizedBox(height:14),TextField(controller:aciklama,minLines:5,maxLines:10,maxLength:1000,decoration:const InputDecoration(labelText:'Sorunu veya isteğini anlat')),const SizedBox(height:12),OutlinedButton.icon(onPressed:gonderiliyor?null:ekranSec,icon:const Icon(Icons.add_photo_alternate_outlined),label:Text(ekran==null?'Ekran görüntüsü ekle':'Ekran görüntüsü seçildi')),const SizedBox(height:20),RenkliButon(yazi:gonderiliyor?'Gönderiliyor...':'Destek talebini gönder',tiklama:gonderiliyor?(){}:gonder)]))));
 }
@@ -21756,7 +21872,7 @@ class _ProfilPageState extends State<ProfilPage> {
 
     XFile? dosya;
     try {
-      dosya = await ImagePicker().pickImage(
+      dosya = await ngelxResimSec(
         source: secim == 'camera' ? ImageSource.camera : ImageSource.gallery,
         imageQuality: 82,
         maxWidth: 1080,
@@ -21827,7 +21943,7 @@ class _ProfilPageState extends State<ProfilPage> {
       if(eski.isNotEmpty)unawaited(ngelxMedyaSil(eski).catchError((_){ }));
       return;
     }
-    final dosya=await ImagePicker().pickVideo(source:ImageSource.gallery,maxDuration:const Duration(seconds:30));
+    final dosya=await ngelxVideoSec(source:ImageSource.gallery,maxDuration:const Duration(seconds:30));
     if(dosya==null)return;
     if(mounted)setState(()=>fotoYukleniyor=true);
     try{
@@ -21890,8 +22006,8 @@ class _ProfilPageState extends State<ProfilPage> {
       }
 
       final XFile? dosya=video
-        ?await ImagePicker().pickVideo(source:kaynak,maxDuration:const Duration(seconds:30))
-        :await ImagePicker().pickImage(source:kaynak,imageQuality:84,maxWidth:1440);
+        ?await ngelxVideoSec(source:kaynak,maxDuration:const Duration(seconds:30))
+        :await ngelxResimSec(source:kaynak,imageQuality:84,maxWidth:1440);
       if(dosya==null||!mounted)return;
 
       final boyut=await dosya.length();
