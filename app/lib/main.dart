@@ -93,8 +93,8 @@ const ngelxPrivateBlueCanvas = Color(0xFFF6FAFF);
 const ngelxPrivateBlueBorder = Color(0xFFD8E8FF);
 const ngelxPrivateBlueInk = Color(0xFF10213A);
 
-const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.100');
-const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '319');
+const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.101');
+const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '320');
 const ngelxGroupBorder = Color(0xFFD9EEE0);
 
 final GlobalKey<NavigatorState> ngelxNavigatorKey=GlobalKey<NavigatorState>();
@@ -9207,6 +9207,24 @@ class _MesajPageState extends State<MesajPage> {
     });
   }
 
+  Future<void> _gelenKutusunuYenile() async {
+    final ben=uid;if(ben==null)return;
+    try{
+      await Future.wait([
+        FirebaseFirestore.instance.collection('users').doc(ben).get(const GetOptions(source:Source.server)),
+        FirebaseFirestore.instance.collection('chats').where('members',arrayContains:ben).limit(100).get(const GetOptions(source:Source.server)),
+        FirebaseFirestore.instance.collection('notifications').where('toUid',isEqualTo:ben).limit(200).get(const GetOptions(source:Source.server)),
+      ]).timeout(const Duration(seconds:10));
+      _kullaniciCache.clear();
+      await tercihleriGetir();
+      if(mounted)setState((){});
+    }on TimeoutException{
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(lt('Gelen Kutusu yenilenemedi. Bağlantını kontrol edip tekrar dene.','Inbox could not be refreshed. Check your connection and try again.'))));
+    }catch(_){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(lt('Gelen Kutusu yenilenemedi.','Inbox could not be refreshed.'))));
+    }
+  }
+
   @override void initState(){super.initState();tercihleriGetir();}
   @override void dispose(){sohbetAra.dispose();super.dispose();}
 
@@ -9511,6 +9529,7 @@ class _MesajPageState extends State<MesajPage> {
               ]),
             ),
           ),
+          IconButton(constraints:const BoxConstraints.tightFor(width:38),padding:EdgeInsets.zero,tooltip:lt('Yenile','Refresh'),onPressed:ben==null?null:_gelenKutusunuYenile,icon:const Icon(Icons.refresh_rounded,color:mor)),
           IconButton(constraints:const BoxConstraints.tightFor(width:38),padding:EdgeInsets.zero,tooltip:t('archive'),onPressed:ben==null?null:()async{await Navigator.push(context,MaterialPageRoute(builder:(_)=>ArsivSohbetlerPage(uid:ben)));await tercihleriGetir();},icon:const Icon(Icons.archive_outlined,color:Colors.black54)),
           IconButton(constraints:const BoxConstraints.tightFor(width:38),padding:EdgeInsets.zero,tooltip:t('createGroup'),onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const GrupOlusturPage())),icon:const Icon(Icons.group_add_rounded,color:mor,size:27)),
           IconButton(constraints:const BoxConstraints.tightFor(width:38),padding:EdgeInsets.zero,tooltip:t('joinGroup'),onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const GrubaKatilPage())),icon:const Icon(Icons.link_rounded,color:mor,size:25)),
@@ -9522,12 +9541,15 @@ class _MesajPageState extends State<MesajPage> {
       Padding(padding:const EdgeInsets.symmetric(horizontal:8),child:Row(children:['Tümü','Okunmamış','Arkadaşlar','Gruplar'].map((f)=>Expanded(child:Padding(padding:const EdgeInsets.symmetric(horizontal:2),child:ChoiceChip(labelPadding:const EdgeInsets.symmetric(horizontal:2),label:Center(child:FittedBox(fit:BoxFit.scaleDown,child:Text(sohbetFiltreEtiketi(f),maxLines:1))),selected:filtre==f,selectedColor:mor,labelStyle:TextStyle(color:filtre==f?Colors.white:Colors.black87,fontWeight:FontWeight.w700),backgroundColor:const Color(0xFFF1F2F5),side:BorderSide.none,onSelected:(_)=>setState(()=>filtre=f))))).toList())),
       StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(stream:ben==null?null:FirebaseFirestore.instance.collection('notifications').where('toUid',isEqualTo:ben).limit(200).snapshots(),builder:(_,s){final okunmamis=(s.data?.docs??[]).where((d)=>d.data()['read']!=true).length;return Container(margin:const EdgeInsets.fromLTRB(16,8,16,5),decoration:BoxDecoration(color:const Color(0xFFF5EFFF),borderRadius:BorderRadius.circular(20)),child:ListTile(leading:const CircleAvatar(backgroundColor:Color(0xFFE5D5FF),child:Icon(Icons.favorite,color:mor)),title:Text(t('activity'),style:const TextStyle(color:Colors.black,fontWeight:FontWeight.w900)),subtitle:Text(t('activitySub'),style:const TextStyle(color:Colors.black54)),trailing:okunmamis==0?const Icon(Icons.chevron_right,color:Colors.black45):Badge(label:Text(_sayacEtiketi(okunmamis)),child:const Icon(Icons.chevron_right,color:Colors.black45)),onTap:()async{await Navigator.push(context,MaterialPageRoute(builder:(_)=>const AktivitePage()));if(mounted)setState((){});}));}),
       Container(margin:const EdgeInsets.fromLTRB(16,5,16,8),decoration:BoxDecoration(color:const Color(0xFFEDF7FF),borderRadius:BorderRadius.circular(20)),child:ListTile(leading:const CircleAvatar(backgroundColor:Color(0xFFD8ECFF),child:Icon(Icons.chat_bubble_rounded,color:Colors.blue)),title:Text(t('messageRequests'),style:const TextStyle(color:Colors.black,fontWeight:FontWeight.w900)),subtitle:Text(t('messageRequestsSub'),style:const TextStyle(color:Colors.black54)),trailing:const Icon(Icons.chevron_right,color:Colors.black45),onTap:ben==null?null:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>MesajIstekleriPage(uid:ben))))),
-      Expanded(child:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
+      Expanded(child:RefreshIndicator(
+        color:mor,
+        onRefresh:_gelenKutusunuYenile,
+        child:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
         stream:ben==null?null:FirebaseFirestore.instance.collection('chats').where('members',arrayContains:ben).limit(60).snapshots(),
         builder:(_,s){
           final docs=(s.data?.docs??[]).where((d){final v=d.data();if(List<String>.from(v['hiddenFor']??const[]).contains(ben)||arsivSohbetler.contains(d.id))return false;final members=List<String>.from(v['members']??const[]),grup=v['isGroup']==true||members.length>2;final unread=(v['unread_$ben']??0) as int;if(filtre=='Okunmamış'&&unread==0)return false;if(filtre=='Gruplar'&&!grup)return false;if(!grup){final other=members.firstWhere((x)=>x!=ben,orElse:()=>ben??'');final gelenIstek=v['requestRecipientUid']==ben&&v['requestAccepted_$ben']!=true&&!arkadaslar.contains(other);if(gelenIstek)return false;if(filtre=='Arkadaşlar'&&!arkadaslar.contains(other))return false;}else if(filtre=='Arkadaşlar')return false;final son='${v['groupName']??''} ${v['lastMessage']??''}'.toLowerCase();return sohbetSorgu.isEmpty||son.contains(sohbetSorgu);}).toList()..sort((a,b){final ap=sabitSohbetler.contains(a.id),bp=sabitSohbetler.contains(b.id);if(ap!=bp)return ap?-1:1;final at=a.data()['updatedAt'] as Timestamp?,bt=b.data()['updatedAt'] as Timestamp?;return (bt?.millisecondsSinceEpoch??0).compareTo(at?.millisecondsSinceEpoch??0);});
-          if(docs.isEmpty)return Center(child:Text(t('noChats'),textAlign:TextAlign.center,style:const TextStyle(color:Colors.black54)));
-          return ListView.builder(itemCount:docs.length,itemBuilder:(_,i){
+          if(docs.isEmpty)return ListView(physics:const AlwaysScrollableScrollPhysics(),children:[SizedBox(height:220,child:Center(child:Text(t('noChats'),textAlign:TextAlign.center,style:const TextStyle(color:Colors.black54))))]);
+          return ListView.builder(physics:const AlwaysScrollableScrollPhysics(),itemCount:docs.length,itemBuilder:(_,i){
             final d=docs[i],v=d.data(),members=List<String>.from(v['members']??[]);
             final grup=v['isGroup']==true||members.length>2;
             if(grup){final ad=(v['groupName']??t('groupChat')).toString(),foto=(v['groupPhotoUrl']??'').toString(),unread=(v['unread_$ben']??0) as int;return ListTile(onTap:()=>sohbetiAc(d.id,GrupSohbetPage(chatId:d.id,ad:ad,foto:foto)),onLongPress:()=>sohbetMenusu(context,d.id,grup:true),leading:CircleAvatar(backgroundColor:const Color(0xFFE9DDFF),backgroundImage:foto.isEmpty?null:NgelXAgImageProvider(foto),child:foto.isEmpty?const Icon(Icons.groups,color:mor):null),title:Text(ad,style:TextStyle(color:Colors.black87,fontWeight:unread>0?FontWeight.w900:FontWeight.w700)),subtitle:Text((v['lastMessage']??t('groupCreated')).toString(),maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black54)),trailing:Wrap(crossAxisAlignment:WrapCrossAlignment.center,children:[if(sabitSohbetler.contains(d.id))const Icon(Icons.push_pin,size:16,color:mor),if(sessizSohbetler.contains(d.id))const Icon(Icons.volume_off,size:18,color:Colors.black38),if(unread>0)Badge(label:Text('$unread'))]));}
@@ -9552,7 +9574,7 @@ class _MesajPageState extends State<MesajPage> {
             });
           });
         },
-      )),
+      ))),
     ]))));
   }
 }
@@ -10481,6 +10503,33 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
     _mesajBeklemeZamanlayici=Timer(const Duration(seconds:2),(){
       if(mounted)setState(()=>_mesajBeklemeBitti=true);
     });
+  }
+
+  Future<void> _grupSohbetiniYenile() async {
+    try{
+      final sonuc=await Future.wait([
+        chatRef.get(const GetOptions(source:Source.server)),
+        chatRef.collection('messages').orderBy('createdAt').limitToLast(100).get(const GetOptions(source:Source.server)),
+      ]).timeout(const Duration(seconds:10));
+      final grup=sonuc[0] as DocumentSnapshot<Map<String,dynamic>>;
+      final mesajlar=sonuc[1] as QuerySnapshot<Map<String,dynamic>>;
+      final veri=grup.data();
+      if(veri!=null)_grupVerisiniOnbellekle(veri);
+      _uyeProfilCache.clear();
+      _mentionUyeleri=null;
+      if(!mounted)return;
+      setState((){
+        _grupMesajOnbellek
+          ..clear()
+          ..addAll(mesajlar.docs);
+        _mesajAkisiniYenile();
+      });
+      unawaited(_okunduIsaretle());
+    }on TimeoutException{
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(lt('Grup yenilenemedi. Bağlantını kontrol edip tekrar dene.','Group could not be refreshed. Check your connection and try again.'))));
+    }catch(_){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(lt('Grup yenilenemedi.','Group could not be refreshed.'))));
+    }
   }
   @override void dispose(){
     mentionZamanlayici?.cancel();_mesajBeklemeZamanlayici?.cancel();_typingZamanlayici?.cancel();_typingBaslatZamanlayici?.cancel();_sesKaydiZamanlayici?.cancel();_offlineRetryZamanlayici?.cancel();
@@ -12194,6 +12243,11 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
         ),
         actions:[
           IconButton(
+            tooltip:lt('Yenile','Refresh'),
+            onPressed:_grupSohbetiniYenile,
+            icon:const Icon(Icons.refresh_rounded,color:ngelxGroupGreen,size:27),
+          ),
+          IconButton(
             tooltip:'Sesli arama',
             onPressed:aramaBaslatiliyor?null:()=>aramaBaslat(false),
             icon:const Icon(Icons.call_rounded,color:ngelxGroupGreen,size:29),
@@ -12391,8 +12445,12 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
                     }
                     return const Center(child:Text('İlk mesajı yaz.',style:TextStyle(color:ngelxPremiumMuted,fontWeight:FontWeight.w700)));
                   }
-                  return ListView.builder(
+                  return RefreshIndicator(
+                    color:ngelxGroupGreen,
+                    onRefresh:_grupSohbetiniYenile,
+                    child:ListView.builder(
                     controller:liste,
+                    physics:const AlwaysScrollableScrollPhysics(),
                     keyboardDismissBehavior:ScrollViewKeyboardDismissBehavior.onDrag,
                     padding:const EdgeInsets.fromLTRB(12,12,12,10),
                     itemCount:docs.length,
@@ -12427,7 +12485,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
                         ]),
                       );
                     },
-                  );
+                  ));
                 },
               )),
               if(!_enAltta)Align(
@@ -17787,6 +17845,31 @@ class _SohbetPageState extends State<SohbetPage> {
     }
   }
 
+  Future<void> _ozelSohbetiYenile() async {
+    final ref=FirebaseFirestore.instance.collection('chats').doc(widget.chatId);
+    try{
+      final sonuc=await Future.wait([
+        ref.get(const GetOptions(source:Source.server)),
+        ref.collection('messages').orderBy('createdAt').limitToLast(100).get(const GetOptions(source:Source.server)),
+        FirebaseFirestore.instance.collection('users').doc(widget.digerUid).get(const GetOptions(source:Source.server)),
+      ]).timeout(const Duration(seconds:10));
+      final mesajlar=sonuc[1] as QuerySnapshot<Map<String,dynamic>>;
+      _mesajHazirlikZamani=null;
+      if(!mounted)return;
+      setState((){
+        _mesajOnbellek
+          ..clear()
+          ..addAll(mesajlar.docs);
+      });
+      unawaited(mesajGonderimHazirligi(zorla:true));
+      unawaited(_okunduGuncelle());
+    }on TimeoutException{
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(lt('Sohbet yenilenemedi. Bağlantını kontrol edip tekrar dene.','Chat could not be refreshed. Check your connection and try again.'))));
+    }catch(_){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(lt('Sohbet yenilenemedi.','Chat could not be refreshed.'))));
+    }
+  }
+
   @override
   void dispose(){
     yaziyorZamanlayici?.cancel();
@@ -17876,6 +17959,11 @@ class _SohbetPageState extends State<SohbetPage> {
       }),
       actions:[
         IconButton(
+          tooltip:lt('Yenile','Refresh'),
+          onPressed:_ozelSohbetiYenile,
+          icon:const Icon(Icons.refresh_rounded,color:ngelxPrivateBlue),
+        ),
+        IconButton(
           tooltip:'Sesli arama',
           onPressed:aramaBaslatiliyor?null:()=>aramaBaslat(false),
           icon:aramaBaslatiliyor
@@ -17949,8 +18037,12 @@ class _SohbetPageState extends State<SohbetPage> {
           QueryDocumentSnapshot<Map<String,dynamic>>? sonBenim;
           for(final d in docs){if(d.data()['senderId']==uid)sonBenim=d;}
           final digerOkuma=veri['readReceipts_${widget.digerUid}']!=false?veri['lastReadAt_${widget.digerUid}']:null;
-          return ListView.builder(
+          return RefreshIndicator(
+            color:ngelxPrivateBlue,
+            onRefresh:_ozelSohbetiYenile,
+            child:ListView.builder(
             controller:liste,
+            physics:const AlwaysScrollableScrollPhysics(),
             padding:const EdgeInsets.all(12),
             itemCount:docs.length+1,
             itemBuilder:(_,i){
@@ -17985,7 +18077,7 @@ class _SohbetPageState extends State<SohbetPage> {
                 ozelMesajKarti(d,fontSize:mesajYaziBoyutu,goruldu:goruldu,quickReaction:hizliEmoji),
               ]);
             },
-          );
+          ));
         },
       )),
       Builder(builder:(_){
@@ -19032,6 +19124,23 @@ class AktivitePage extends StatefulWidget {
 class _AktivitePageState extends State<AktivitePage> {
   String _filtre='all';
 
+  Future<void> _aktiviteyiYenile() async {
+    final ben=FirebaseAuth.instance.currentUser?.uid;
+    if(ben==null)return;
+    try{
+      await FirebaseFirestore.instance.collection('notifications')
+          .where('toUid',isEqualTo:ben)
+          .limit(200)
+          .get(const GetOptions(source:Source.server))
+          .timeout(const Duration(seconds:10));
+      if(mounted)setState((){});
+    }on TimeoutException{
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(lt('Aktiviteler yenilenemedi. Bağlantını kontrol et.','Activity could not be refreshed. Check your connection.'))));
+    }catch(_){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(lt('Aktiviteler yenilenemedi.','Activity could not be refreshed.'))));
+    }
+  }
+
   bool _filtreUyar(Map<String,dynamic> v){
     final tur=(v['type']??'').toString();
     final olay=(v['eventKind']??'').toString();
@@ -19370,7 +19479,7 @@ class _AktivitePageState extends State<AktivitePage> {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     return Theme(data:ThemeData.light().copyWith(scaffoldBackgroundColor:Colors.white,appBarTheme:const AppBarTheme(backgroundColor:Colors.white,foregroundColor:Colors.black,elevation:0),dividerColor:const Color(0xFFE8E9ED)),child:Scaffold(
       backgroundColor:Colors.white,
-      appBar: AppBar(title: Text(t('activity'),style:const TextStyle(fontWeight:FontWeight.w900)),actions:[IconButton(tooltip:t('markAllRead'),onPressed:()async{
+      appBar: AppBar(title: Text(t('activity'),style:const TextStyle(fontWeight:FontWeight.w900)),actions:[IconButton(tooltip:lt('Yenile','Refresh'),onPressed:_aktiviteyiYenile,icon:const Icon(Icons.refresh_rounded,color:mor)),IconButton(tooltip:t('markAllRead'),onPressed:()async{
         if(uid==null)return;
         try{
           final q=await FirebaseFirestore.instance.collection('notifications').where('toUid',isEqualTo:uid).limit(200).get().timeout(const Duration(seconds:10));
