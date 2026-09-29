@@ -1225,3 +1225,12 @@
 - Filtre seçmek, yoğunluk değiştirmek, yazı eklemek veya kırpma kolunu oynatmak otomatik onay sayılmayacak.
 - Geri / X ile çıkılırsa kullanıcıya “Değişiklikler kaydedilsin mi?” seçeneği verilecek: Vazgeç / Kaydetmeden çık / Değişiklikleri uygula.
 - Düzenleme ekranında aktif işlemler geçici state içinde tutulacak; Firestore/medya yükleme işlemi ancak yayınlama veya açık kullanıcı onayı aşamasında başlayacak.
+
+
+## 2026-09-29 — Silinen paylaşımın Akışta kalması
+- Kullanıcı kendi videosunu sildiğinde onay mesajı "Paylaşım tamamen silindi ✅" gösteriliyor; ancak Akış yenilense bile silinen video ekranda kalabiliyor.
+- Silme işlemi yalnızca belgeyi/uzak kaydı güncellemekle kalmamalı; aktif Akış listesinden ve yerel/ekran önbelleğinden içerik anında çıkarılmalı.
+- Silinen içerik için Firestore dokümanı gerçekten silinmeli veya silinmiş durumuna getiriliyorsa tüm Akış/Keşfet/Profil sorguları bunu kesin olarak filtrelemeli.
+- Başarılı silmeden sonra mevcut PageView/akış state'i yeniden hesaplanmalı; aktif indeks geçerli aralığa çekilmeli ve silinen öğe kullanıcıya tekrar gösterilmemeli.
+- Sunucudan yenileme yapıldığında silinen içerik cache/önbellekten geri gelmemeli.
+- Profil, Akış, Keşfet, bağlantı ile açılan içerik ve Kaydedilenler tarafında aynı silinmiş içerik görünürlüğü kontrolü ortaklaştırılmalı.
