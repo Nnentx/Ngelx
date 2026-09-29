@@ -541,7 +541,7 @@ Future<void> showGroupMessageInfo({
           leading: CircleAvatar(
             radius: 20,
             backgroundColor: _groupGreenSoft,
-            backgroundImage: photo.isEmpty ? null : CachedNetworkImageProvider(photo),
+            backgroundImage: photo.isEmpty ? null : NgelXAgImageProvider(photo),
             child: photo.isEmpty ? const Icon(Icons.person_rounded, color: _groupGreen) : null,
           ),
           title: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: _ink, fontWeight: FontWeight.w800)),
@@ -715,7 +715,7 @@ Future<void> showGroupForwardSheet({
                               leading: CircleAvatar(
                                 radius: 23,
                                 backgroundColor: _groupGreenSoft,
-                                backgroundImage: photo.isEmpty ? null : CachedNetworkImageProvider(photo),
+                                backgroundImage: photo.isEmpty ? null : NgelXAgImageProvider(photo),
                                 child: photo.isEmpty ? Icon(group ? Icons.groups_rounded : Icons.person_rounded, color: _groupGreen) : null,
                               ),
                               title: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: _ink, fontSize: 15, fontWeight: FontWeight.w900)),
