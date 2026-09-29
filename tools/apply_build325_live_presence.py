@@ -83,6 +83,60 @@ main=rep(
     "live notification setting",
 )
 
+# Image/text feed card live presence.
+main=rep(
+    main,
+    "  bool _profilFotoIstendi = false;\n  String profilFoto = '';\n  int medyaSayfasi = 0;",
+    "  bool _profilFotoIstendi = false;\n  String profilFoto = '';\n  bool profilCanli=false;\n  String profilCanliId='';\n  StreamSubscription<DocumentSnapshot<Map<String,dynamic>>>? _profilCanliAboneligi;\n  int medyaSayfasi = 0;",
+    "image feed live state",
+)
+main=rep(
+    main,
+    """  Future<void> profilFotosunuGetir() async {
+    if(_profilFotoIstendi)return;
+    _profilFotoIstendi=true;
+    final owner=(widget.veri['ownerId']??'').trim();
+    if(owner.isEmpty)return;
+    try{
+      final belge=await FirebaseFirestore.instance.collection('users').doc(owner).get();
+      if(!mounted)return;
+      setState(()=>profilFoto=(belge.data()?['photoUrl']??'').toString().trim());
+    }catch(_){}
+  }""",
+    """  Future<void> profilFotosunuGetir() async {
+    if(_profilFotoIstendi)return;
+    _profilFotoIstendi=true;
+    final owner=(widget.veri['ownerId']??'').trim();
+    if(owner.isEmpty)return;
+    await _profilCanliAboneligi?.cancel();
+    _profilCanliAboneligi=FirebaseFirestore.instance.collection('users').doc(owner).snapshots().listen((belge){
+      if(!mounted)return;
+      final v=belge.data()??<String,dynamic>{};
+      setState((){
+        profilFoto=(v['photoUrl']??'').toString().trim();
+        profilCanli=v['isLive']==true&&(v['currentLiveId']??'').toString().isNotEmpty;
+        profilCanliId=(v['currentLiveId']??'').toString();
+      });
+    });
+  }""",
+    "image feed live listener",
+)
+main=rep(
+    main,
+    """  void dispose() {
+    ngelxRouteObserver.unsubscribe(this);
+    oynatici?.dispose();
+    super.dispose();
+  }""",
+    """  void dispose() {
+    ngelxRouteObserver.unsubscribe(this);
+    unawaited(_profilCanliAboneligi?.cancel());
+    oynatici?.dispose();
+    super.dispose();
+  }""",
+    "image feed listener dispose",
+)
+
 # Feed profile avatar listens to live presence in real time.
 main=rep(
     main,
@@ -162,6 +216,44 @@ main=rep(
                 ]),
               ),""",
     "feed live ring",
+)
+
+main=rep(
+    main,
+    """              GestureDetector(
+                onTap:paylasanProfiliAc,
+                child:CircleAvatar(
+                  radius:27,
+                  backgroundColor:mavi,
+                  child:CircleAvatar(
+                    radius:23,
+                    backgroundColor:panel,
+                    backgroundImage:profilFoto.isEmpty?null:NgelXAgImageProvider(profilFoto),
+                    child:profilFoto.isNotEmpty?null:const Text('N',style:TextStyle(fontWeight:FontWeight.bold)),
+                  ),
+                ),
+              ),""",
+    """              GestureDetector(
+                onTap:paylasanProfiliAc,
+                child:Stack(clipBehavior:Clip.none,alignment:Alignment.center,children:[
+                  CircleAvatar(
+                    radius:28,
+                    backgroundColor:profilCanli?const Color(0xFFFF1744):mavi,
+                    child:CircleAvatar(
+                      radius:23,
+                      backgroundColor:panel,
+                      backgroundImage:profilFoto.isEmpty?null:NgelXAgImageProvider(profilFoto),
+                      child:profilFoto.isNotEmpty?null:const Text('N',style:TextStyle(fontWeight:FontWeight.bold)),
+                    ),
+                  ),
+                  if(profilCanli)Positioned(bottom:-5,child:Container(
+                    padding:const EdgeInsets.symmetric(horizontal:6,vertical:2),
+                    decoration:BoxDecoration(color:const Color(0xFFFF1744),borderRadius:BorderRadius.circular(7),border:Border.all(color:Colors.white,width:1)),
+                    child:const Text('CANLI',style:TextStyle(color:Colors.white,fontSize:8,fontWeight:FontWeight.w900)),
+                  )),
+                ]),
+              ),""",
+    "video feed live ring",
 )
 
 # Chat list live ring + realtime user document.
