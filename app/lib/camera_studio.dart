@@ -67,6 +67,10 @@ class _NgelXCameraStudioPageState extends State<NgelXCameraStudioPage> with Widg
     try{
       kameralar=await availableCameras();
       if(kameralar.isEmpty)throw Exception('Kamera bulunamadı.');
+      if(video){
+        final mic=await Permission.microphone.request();
+        if(!mic.isGranted)video=false;
+      }
       final on=kameraIndex<kameralar.length?kameralar[kameraIndex]:kameralar.first;
       await _kontroluKur(on);
     }catch(e){
@@ -79,7 +83,7 @@ class _NgelXCameraStudioPageState extends State<NgelXCameraStudioPage> with Widg
     final yeni=CameraController(
       kamera,
       ResolutionPreset.high,
-      enableAudio:true,
+      enableAudio:video,
       imageFormatGroup:ImageFormatGroup.jpeg,
     );
     kontrol=yeni;
@@ -98,6 +102,21 @@ class _NgelXCameraStudioPageState extends State<NgelXCameraStudioPage> with Widg
     }finally{
       if(eski!=null&&eski!=yeni)await eski.dispose();
     }
+  }
+
+  Future<void> _videoModu(bool yeni)async{
+    if(kayit||isleniyor||video==yeni)return;
+    if(yeni){
+      final mic=await Permission.microphone.request();
+      if(!mic.isGranted){
+        if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Sesli video için mikrofon izni vermelisin.')));
+        return;
+      }
+    }
+    setState((){video=yeni;hazirlaniyor=true;});
+    final d=kontrol?.description??(kameralar.isNotEmpty?kameralar[kameraIndex]:null);
+    if(d==null)return;
+    try{await _kontroluKur(d);}catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Kamera modu değiştirilemedi: $e')));}
   }
 
   Future<void> _kameraCevir()async{
@@ -146,13 +165,15 @@ class _NgelXCameraStudioPageState extends State<NgelXCameraStudioPage> with Widg
         g=img.copyCrop(g,x:x,y:y,width:w,height:h);
       }
       final f=ngelxKameraFiltreleri[filtreIndex];
-      if(f.ad=='S/B')g=img.grayscale(g);
-      else if(f.ad=='Retro')g=img.sepia(g);
-      else{
+      if(f.ad=='S/B'){
+        g=img.adjustColor(g,saturation:(1-filtreYogunluk).clamp(0.0,1.0),brightness:1+(retus*.04),contrast:1+(retus*.04));
+      }else if(f.ad=='Retro'&&filtreYogunluk>.55){
+        g=img.sepia(g);
+      }else{
         g=img.adjustColor(
           g,
-          brightness:f.parlaklik+(retus*.06),
-          saturation:f.doygunluk+(retus*.08),
+          brightness:1+((f.parlaklik-1)*filtreYogunluk)+(retus*.04),
+          saturation:1+((f.doygunluk-1)*filtreYogunluk)+(retus*.06),
           contrast:1+(retus*.04),
         );
       }
@@ -216,6 +237,12 @@ class _NgelXCameraStudioPageState extends State<NgelXCameraStudioPage> with Widg
     return '$m:$s';
   }
 
+  List<double> _filtreMatris(List<double> kaynak){
+    const kimlik=<double>[1,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,1,0];
+    final a=filtreYogunluk.clamp(0.0,1.0);
+    return List<double>.generate(20,(i)=>kimlik[i]+((kaynak[i]-kimlik[i])*a));
+  }
+
   List<double> _retusMatris(){
     final a=retus.clamp(0.0,1.0);
     final b=255*(a*.035);
@@ -232,7 +259,7 @@ class _NgelXCameraStudioPageState extends State<NgelXCameraStudioPage> with Widg
     if(c==null||!c.value.isInitialized)return const Center(child:CircularProgressIndicator(color:Colors.white));
     Widget p=CameraPreview(c);
     final f=ngelxKameraFiltreleri[filtreIndex];
-    if(filtreIndex!=0)p=ColorFiltered(colorFilter:ColorFilter.matrix(f.matris),child:p);
+    if(filtreIndex!=0)p=ColorFiltered(colorFilter:ColorFilter.matrix(_filtreMatris(f.matris)),child:p);
     if(retus>.01)p=ColorFiltered(colorFilter:ColorFilter.matrix(_retusMatris()),child:p);
     if(c.description.lensDirection==CameraLensDirection.front&&ayna)p=Transform(alignment:Alignment.center,transform:Matrix4.rotationY(math.pi),child:p);
     return GestureDetector(
@@ -337,7 +364,7 @@ class _NgelXCameraStudioPageState extends State<NgelXCameraStudioPage> with Widg
         Positioned(left:12,right:12,bottom:18,child:Column(children:[
           if(zoom>1.01)Padding(padding:const EdgeInsets.only(bottom:8),child:Text('${zoom.toStringAsFixed(1)}x',style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w900))),
           Row(mainAxisAlignment:MainAxisAlignment.center,children:[
-            TextButton(onPressed:kayit?null:()=>setState(()=>video=false),child:Text('FOTOĞRAF',style:TextStyle(color:!video?Colors.white:Colors.white54,fontWeight:FontWeight.w900))),
+            TextButton(onPressed:kayit?null:()=>unawaited(_videoModu(false)),child:Text('FOTOĞRAF',style:TextStyle(color:!video?Colors.white:Colors.white54,fontWeight:FontWeight.w900))),
             const SizedBox(width:8),
             GestureDetector(
               onTap:()=>unawaited(_cek()),
@@ -354,7 +381,7 @@ class _NgelXCameraStudioPageState extends State<NgelXCameraStudioPage> with Widg
               ),
             ),
             const SizedBox(width:8),
-            TextButton(onPressed:kayit?null:()=>setState(()=>video=true),child:Text('VİDEO',style:TextStyle(color:video?Colors.white:Colors.white54,fontWeight:FontWeight.w900))),
+            TextButton(onPressed:kayit?null:()=>unawaited(_videoModu(true)),child:Text('VİDEO',style:TextStyle(color:video?Colors.white:Colors.white54,fontWeight:FontWeight.w900))),
           ]),
           const SizedBox(height:8),
           Text(
