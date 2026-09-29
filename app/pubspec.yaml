@@ -1,7 +1,7 @@
 name: ngelx_app
 description: "A new Flutter project."
 publish_to: 'none'
-version: 1.0.101+320
+version: 1.0.102+321
 environment:
   sdk: ^3.13.3
 
@@ -17,6 +17,7 @@ dependencies:
   video_player: ^2.14.0
   cached_network_image: ^4.0.0
   image_picker: ^1.2.3
+  camera: ^0.11.2+1
   image: ^4.10.1
   share_plus: ^13.3.0
   gal: ^2.3.3
