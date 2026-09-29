@@ -497,7 +497,7 @@ class _NgelXHikayeSeriPageState extends State<NgelXHikayeSeriPage> with SingleTi
               Row(children:[
                 GestureDetector(
                   onTap:widget.ownerUid.isEmpty?null:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciProfilPage(uid:widget.ownerUid))),
-                  child:CircleAvatar(radius:20,backgroundColor:mor,backgroundImage:widget.fotoUrl.isEmpty?null:CachedNetworkImageProvider(widget.fotoUrl),child:widget.fotoUrl.isEmpty?Text(widget.kullanici.replaceFirst('@','').isEmpty?'N':widget.kullanici.replaceFirst('@','')[0].toUpperCase()):null),
+                  child:CircleAvatar(radius:20,backgroundColor:mor,backgroundImage:widget.fotoUrl.isEmpty?null:NgelXAgImageProvider(widget.fotoUrl),child:widget.fotoUrl.isEmpty?Text(widget.kullanici.replaceFirst('@','').isEmpty?'N':widget.kullanici.replaceFirst('@','')[0].toUpperCase()):null),
                 ),
                 const SizedBox(width:9),
                 Expanded(child:GestureDetector(
