@@ -107,3 +107,26 @@ void ngelxIcerikSilindi(String id){
   ngelxSilinenIcerikIdleri.add(id);
   ngelxIcerikSilmeRevizyonu.value++;
 }
+
+
+Widget ngelxAramaEfekti(Widget w,int efekt,{required bool rotus,required bool bulanik}){
+  const m=<List<double>>[
+    <double>[1,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,1,0],
+    <double>[1.03,0,0,0,5,0,1.03,0,0,5,0,0,1.02,0,4,0,0,0,1,0],
+    <double>[1.02,0,0,0,8,0,1.01,0,0,7,0,0,1.00,0,6,0,0,0,1,0],
+    <double>[1.05,0,0,0,9,0,1.03,0,0,7,0,0,1.01,0,5,0,0,0,1,0],
+    <double>[1.08,0,0,0,5,0,1.03,0,0,2,0,0,.95,0,-1,0,0,0,1,0],
+    <double>[.96,0,0,0,-1,0,1.02,0,0,1,0,0,1.09,0,4,0,0,0,1,0],
+    <double>[1.07,0,0,0,2,0,1.06,0,0,2,0,0,1.07,0,2,0,0,0,1,0],
+    <double>[.33,.59,.11,0,0,.33,.59,.11,0,0,.33,.59,.11,0,0,0,0,0,1,0],
+  ];
+  final i=efekt.clamp(0,m.length-1);
+  if(i>0)w=ColorFiltered(colorFilter:ColorFilter.matrix(m[i]),child:w);
+  if(rotus)w=ColorFiltered(colorFilter:const ColorFilter.matrix(<double>[
+    1.025,0,0,0,6,0,1.02,0,0,6,0,0,.995,0,5,0,0,0,1,0,
+  ]),child:w);
+  if(bulanik)w=ImageFiltered(imageFilter:ui.ImageFilter.blur(sigmaX:4,sigmaY:4),child:w);
+  return w;
+}
+
+const List<String> ngelxAramaEfektAdlari=<String>['Doğal','Clean','Soft','Glow','Sıcak','Soğuk','HD','S/B'];
