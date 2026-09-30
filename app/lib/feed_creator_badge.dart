@@ -38,7 +38,7 @@ class NgelXPaylasanSatiri extends StatelessWidget {
     super.key,
     required this.username,
     this.onTap,
-    this.creatorBadge=true,
+    this.creatorBadge=false,
     this.sharedByUsername='',
   });
 
