@@ -99,8 +99,8 @@ const ngelxPrivateBlueCanvas = Color(0xFFF6FAFF);
 const ngelxPrivateBlueBorder = Color(0xFFD8E8FF);
 const ngelxPrivateBlueInk = Color(0xFF10213A);
 
-const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.117');
-const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '336');
+const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.118');
+const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '337');
 const ngelxGroupBorder = Color(0xFFD9EEE0);
 
 final GlobalKey<NavigatorState> ngelxNavigatorKey=GlobalKey<NavigatorState>();
@@ -19235,7 +19235,7 @@ class _AktivitePageState extends State<AktivitePage> {
 
   Future<void> _aktiviteyiYenile()async{
     final ben=FirebaseAuth.instance.currentUser?.uid;if(ben==null)return;
-    try{await FirebaseFirestore.instance.collection('notifications').where('toUid',isEqualTo:ben).orderBy('createdAt',descending:true).limit(200).get(const GetOptions(source:Source.server)).timeout(const Duration(seconds:10));if(mounted)setState((){});}
+    try{await FirebaseFirestore.instance.collection('notifications').where('toUid',isEqualTo:ben).limit(200).get(const GetOptions(source:Source.server)).timeout(const Duration(seconds:10));if(mounted)setState((){});}
     catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(lt('Aktiviteler yenilenemedi.','Activity could not be refreshed.'))));}
   }
 
@@ -19651,7 +19651,7 @@ class _AktivitePageState extends State<AktivitePage> {
         }
       },icon:const Icon(Icons.done_all_rounded,color:Color(0xFF20B86A)))]),
       body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-        stream: uid == null ? null : FirebaseFirestore.instance.collection('notifications').where('toUid', isEqualTo: uid).orderBy('createdAt',descending:true).limit(200).snapshots(),
+        stream: uid == null ? null : FirebaseFirestore.instance.collection('notifications').where('toUid', isEqualTo: uid).limit(200).snapshots(),
         builder: (_, s) {
           if(s.hasError)return Center(child:Column(mainAxisSize:MainAxisSize.min,children:[const Icon(Icons.cloud_off_rounded,color:Colors.redAccent,size:52),const SizedBox(height:10),Text(t('activityLoadFailed'),style:const TextStyle(color:Colors.black,fontWeight:FontWeight.w800)),Text(t('checkConnectionRetry'),style:const TextStyle(color:Colors.black54))]));
           if(s.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator(color:mor));
