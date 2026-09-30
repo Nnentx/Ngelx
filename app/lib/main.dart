@@ -16405,7 +16405,14 @@ class _YeniSohbetPageState extends State<YeniSohbetPage>{
   }
 
   void _kullaniciAkisiniYenile({bool bildir=true}){
-    final yeni=FirebaseFirestore.instance.collection('users').limit(100).snapshots();
+    final yeni=FirebaseFirestore.instance
+        .collection('users')
+        .limit(100)
+        .snapshots()
+        .timeout(const Duration(seconds:10),onTimeout:(sink){
+          sink.addError(TimeoutException('Kişi listesi zaman aşımına uğradı.'));
+          sink.close();
+        });
     if(bildir&&mounted){
       setState(()=>kullaniciAkisi=yeni);
     }else{
@@ -16443,7 +16450,12 @@ class _YeniSohbetPageState extends State<YeniSohbetPage>{
         final chat=await FirebaseFirestore.instance.collection('chats').doc(chatId).get()
             .timeout(const Duration(seconds:8));
         cv=chat.data()??<String,dynamic>{};
-      }catch(_){}
+      }catch(_){
+        if(mounted)ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content:Text('Sohbet bilgisi yüklenemedi. Tekrar dene.')),
+        );
+        return;
+      }
       final izin=(v['messagePermission']??(v['friendsOnlyMessages']!=false?'friends':'all')).toString();
       final hedefinTakipEttikleri=Set<String>.from(List<dynamic>.from(v['following']??const[]));
       final izinli=izin=='all'||
