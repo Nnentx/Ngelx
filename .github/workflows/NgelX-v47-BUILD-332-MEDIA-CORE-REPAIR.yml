@@ -1,0 +1,255 @@
+name: Ngel X v47 BUILD 332 MEDIA CORE REPAIR
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - work/build332-media-core-repair
+    paths:
+      - '.github/workflows/NgelX-v47-BUILD-332-MEDIA-CORE-REPAIR.yml'
+      - 'cloudflare/worker/**'
+      - 'app/lib/main.dart'
+      - 'app/pubspec.yaml'
+      - 'app/android/app/src/main/**'
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-media:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: work/build332-media-core-repair
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Worker paketlerini kur
+        working-directory: cloudflare/worker
+        run: npm install
+
+      - name: R2 S3 kimligini Cloudflare tokeninden turet
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          verify="$(curl --fail-with-body --silent --show-error             -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN"             "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/tokens/verify" || true)"
+          token_id="$(jq -r '.result.id // empty' <<<"$verify")"
+          if [ -z "$token_id" ]; then
+            verify="$(curl --fail-with-body --silent --show-error               -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN"               "https://api.cloudflare.com/client/v4/user/tokens/verify")"
+            token_id="$(jq -r '.result.id // empty' <<<"$verify")"
+          fi
+          test -n "$token_id"
+          r2_secret="$(printf '%s' "$CLOUDFLARE_API_TOKEN" | sha256sum | awk '{print $1}')"
+          echo "::add-mask::$token_id"
+          echo "::add-mask::$r2_secret"
+          echo "R2_ACCESS_KEY_ID=$token_id" >> "$GITHUB_ENV"
+          echo "R2_SECRET_ACCESS_KEY=$r2_secret" >> "$GITHUB_ENV"
+          echo "R2_ACCOUNT_ID=$CLOUDFLARE_ACCOUNT_ID" >> "$GITHUB_ENV"
+
+      - name: Primary Worker secret ve deploy
+        working-directory: cloudflare/worker
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY' > /tmp/ngelx-media-secrets.json
+          import json, os
+          print(json.dumps({
+            "R2_ACCESS_KEY_ID": os.environ["R2_ACCESS_KEY_ID"],
+            "R2_SECRET_ACCESS_KEY": os.environ["R2_SECRET_ACCESS_KEY"],
+            "R2_ACCOUNT_ID": os.environ["R2_ACCOUNT_ID"],
+          }))
+          PY
+          npx wrangler secret bulk /tmp/ngelx-media-secrets.json --name ngelx-media
+          npx wrangler deploy
+          rm -f /tmp/ngelx-media-secrets.json
+
+      - name: Backup Worker secret ve deploy
+        working-directory: cloudflare/worker
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY' > /tmp/ngelx-upload-secrets.json
+          import json, os
+          print(json.dumps({
+            "R2_ACCESS_KEY_ID": os.environ["R2_ACCESS_KEY_ID"],
+            "R2_SECRET_ACCESS_KEY": os.environ["R2_SECRET_ACCESS_KEY"],
+            "R2_ACCOUNT_ID": os.environ["R2_ACCOUNT_ID"],
+          }))
+          PY
+          npx wrangler secret bulk /tmp/ngelx-upload-secrets.json             --config wrangler-backup.toml             --name ngelx-upload
+          npx wrangler deploy --config wrangler-backup.toml
+          rm -f /tmp/ngelx-upload-secrets.json
+
+      - name: Ozel medya alan adlarini dogrula
+        shell: bash
+        run: |
+          set -euo pipefail
+          sleep 15
+          for base in             "https://media.ngelxsocial.com"             "https://media2.ngelxsocial.com"             "https://ngelx-media.alihancaglar76.workers.dev"             "https://ngelx-upload.alihancaglar76.workers.dev"; do
+            echo "HEALTH $base"
+            body="$(curl --fail-with-body --silent --show-error               --retry 8 --retry-all-errors --retry-delay 3               --connect-timeout 10 --max-time 20 "$base/health")"
+            echo "$body" | jq '{ok,r2,directUpload,protocol}'
+            grep -q '"ok":true' <<<"$body"
+          done
+
+      - name: Ozel alan adinda gercek R2 yukle oku range testi
+        working-directory: cloudflare/worker
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import { AwsClient } from 'aws4fetch';
+          const account=process.env.R2_ACCOUNT_ID;
+          const key='__ngelx_ci/build332-'+Date.now()+'.png';
+          const encoded=key.split('/').map(encodeURIComponent).join('/');
+          const r2Url=`https://${account}.r2.cloudflarestorage.com/ngelx-media/${encoded}`;
+          const bytes=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=','base64');
+          const client=new AwsClient({
+            service:'s3',region:'auto',
+            accessKeyId:process.env.R2_ACCESS_KEY_ID,
+            secretAccessKey:process.env.R2_SECRET_ACCESS_KEY,
+          });
+          const put=await client.fetch(r2Url,{method:'PUT',headers:{'Content-Type':'image/png'},body:bytes});
+          if(!put.ok)throw new Error('R2 PUT '+put.status);
+          try{
+            for(const base of ['https://media.ngelxsocial.com','https://media2.ngelxsocial.com']){
+              const full=await fetch(base+'/media/'+encoded);
+              const body=new Uint8Array(await full.arrayBuffer());
+              console.log(base,'GET',full.status,full.headers.get('content-type'),body.length);
+              if(full.status!==200||body.length!==bytes.length)throw new Error(base+' full GET failed');
+              const part=await fetch(base+'/media/'+encoded,{headers:{Range:'bytes=0-15'}});
+              const p=new Uint8Array(await part.arrayBuffer());
+              console.log(base,'RANGE',part.status,part.headers.get('content-range'),p.length);
+              if(part.status!==206||p.length!==16)throw new Error(base+' range failed');
+            }
+          }finally{
+            await client.fetch(r2Url,{method:'DELETE'});
+          }
+          NODE
+
+      - name: Firestore mevcut medya URLlerini ozel domain uzerinden dogrula
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, urllib.request, urllib.error, urllib.parse, concurrent.futures
+          with open('app/android/app/google-services.json','r',encoding='utf-8') as f:
+              gs=json.load(f)
+          key=gs['client'][0]['api_key'][0]['current_key']
+          url='https://firestore.googleapis.com/v1/projects/ngelx-44eed/databases/(default)/documents/videos?pageSize=100&key='+key
+          with urllib.request.urlopen(url,timeout=20) as r:
+              data=json.load(r)
+          urls=[]
+          for d in data.get('documents',[]):
+              fields=d.get('fields',{})
+              for name in ('mediaUrl','videoUrl','imageUrl','photoUrl','thumbnailUrl'):
+                  v=fields.get(name,{})
+                  u=v.get('stringValue','') if isinstance(v,dict) else ''
+                  if not u.startswith('https://'): continue
+                  parsed=urllib.parse.urlparse(u)
+                  if parsed.hostname not in ('ngelx-media.alihancaglar76.workers.dev','ngelx-upload.alihancaglar76.workers.dev','media.ngelxsocial.com','media2.ngelxsocial.com'):
+                      continue
+                  urls.append(urllib.parse.urlunparse(parsed._replace(netloc='media.ngelxsocial.com')))
+          urls=list(dict.fromkeys(urls))
+          def probe(u):
+              try:
+                  req=urllib.request.Request(u,headers={'Range':'bytes=0-31','User-Agent':'NgelX-Build332-CI'})
+                  with urllib.request.urlopen(req,timeout=8) as r:
+                      r.read(32)
+                      return r.status
+              except urllib.error.HTTPError as e:
+                  return e.code
+              except Exception:
+                  return 0
+          with concurrent.futures.ThreadPoolExecutor(max_workers=20) as ex:
+              statuses=list(ex.map(probe,urls))
+          bad=[s for s in statuses if s not in (200,206)]
+          print('existing_media_checked=',len(urls),'bad=',len(bad))
+          if bad:
+              raise SystemExit('Mevcut R2 medyasinin ozel domain testi basarisiz')
+          PY
+
+  build-apk:
+    needs: deploy-media
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: work/build332-media-core-repair
+          fetch-depth: 0
+
+      - name: Build 332 kaynak sozlesmesini dogrula
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -F "version: 1.0.113+332" app/pubspec.yaml
+          grep -F "defaultValue: '332'" app/lib/main.dart
+          grep -F "https://media.ngelxsocial.com" app/lib/main.dart
+          grep -F "upload-r2-332" app/lib/main.dart
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Sabit NgelX imza anahtarini geri yukle
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: ngelx-stable-debug-keystore-v1
+          fail-on-cache-miss: true
+
+      - name: Flutter analiz
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter clean
+          flutter pub get
+          flutter analyze --machine > analyze.log 2>&1 || true
+          cat analyze.log
+          if grep -q '^ERROR|' analyze.log; then exit 1; fi
+
+      - name: APK olustur ve imzayi dogrula
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter build apk --release
+          APK=build/app/outputs/flutter-apk/app-release.apk
+          test -s "$APK"
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          "$APKSIGNER" verify --print-certs "$APK" | tee build/app/outputs/flutter-apk/apksigner-certs.txt
+          grep -qi 'be20b27f0ba1f4decd2941d410b1536de89e48dc894f04f038f9d26b11ecd6aa' build/app/outputs/flutter-apk/apksigner-certs.txt
+          sha256sum "$APK" > "$APK.sha256"
+
+      - name: APK yukle
+        uses: actions/upload-artifact@v4
+        with:
+          name: NgelX-1.0.113-Build-332-MEDIA-CORE-REPAIR
+          path: |
+            app/build/app/outputs/flutter-apk/app-release.apk
+            app/build/app/outputs/flutter-apk/app-release.apk.sha256
+            app/build/app/outputs/flutter-apk/apksigner-certs.txt
+          if-no-files-found: error
+          retention-days: 14
