@@ -185,6 +185,19 @@ class MainActivity : FlutterActivity() {
         }
     }
 
+    private fun mediaStagingDir(): File {
+        val dir = File(filesDir, "ngelx_media_staging/picker").apply { mkdirs() }
+        val cutoff = System.currentTimeMillis() - 30L * 24L * 60L * 60L * 1000L
+        try {
+            dir.listFiles()?.forEach { file ->
+                if (file.isFile && file.lastModified() in 1 until cutoff) {
+                    try { file.delete() } catch (_: Throwable) {}
+                }
+            }
+        } catch (_: Throwable) {}
+        return dir
+    }
+
     private fun copyUriToCache(uri: Uri, requestedImage: Boolean): Map<String, Any?> {
         val originalName = displayName(uri).ifBlank { "ngelx_${System.currentTimeMillis()}" }
         val mimeType = contentResolver.getType(uri)?.lowercase()
@@ -210,7 +223,7 @@ class MainActivity : FlutterActivity() {
 
         val safeName = originalName.replace(Regex("[^A-Za-z0-9._-]"), "_")
             .ifBlank { "ngelx_${System.currentTimeMillis()}" }
-        val pickerDir = File(cacheDir, "ngelx_picker").apply { mkdirs() }
+        val pickerDir = mediaStagingDir()
         val target = File(pickerDir, "${System.currentTimeMillis()}_$safeName")
         contentResolver.openInputStream(uri).use { input ->
             requireNotNull(input) { "Dosya akışına erişilemedi." }
@@ -307,7 +320,7 @@ class MainActivity : FlutterActivity() {
 
     private fun writeBitmapJpeg(bitmap: Bitmap, prefix: String = "normalized"): File? {
         return try {
-            val pickerDir = File(cacheDir, "ngelx_picker").apply { mkdirs() }
+            val pickerDir = mediaStagingDir()
             val target = File(pickerDir, "${prefix}_${System.nanoTime()}.jpg")
             val ok = FileOutputStream(target).use { output ->
                 bitmap.compress(Bitmap.CompressFormat.JPEG, 92, output)
