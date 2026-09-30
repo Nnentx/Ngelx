@@ -307,7 +307,7 @@ class _NgelXCanliPkKatmaniState extends State<NgelXCanliPkKatmani>{
                 +((((b['giftPoints'] as num?)?.toInt()??0)-((r['startGiftB'] as num?)?.toInt()??0))~/10);
               final ends=r['endsAt'];
               var kalan=180;
-              if(ends is Timestamp)kalan=ends.toDate().difference(DateTime.now()).inSeconds.clamp(0,180);
+              if(ends is Timestamp)kalan=ends.toDate().difference(DateTime.now()).inSeconds.clamp(0,180).toInt();
               if(kalan<=0&&widget.yayinSahibi&&!_bitiriliyor)unawaited(_pkBitir(requestId));
               final dk=(kalan~/60).toString().padLeft(2,'0'),sn=(kalan%60).toString().padLeft(2,'0');
               final toplam=(scoreA+scoreB).clamp(1,1<<30);
