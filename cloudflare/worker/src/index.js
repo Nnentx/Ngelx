@@ -36,7 +36,7 @@ const MAX_BYTES = {
 let jwksCache = null;
 let jwksExpiresAt = 0;
 
-const MEDIA_PROTOCOL = 'upload-r2-243';
+const MEDIA_PROTOCOL = 'upload-r2-332';
 
 function uploadLog(event, data = {}) {
   console.log(JSON.stringify({service: 'ngelx-r2-media', protocol: MEDIA_PROTOCOL, event, ...data}));
@@ -349,7 +349,7 @@ export default {
         headers.set('x-ngelx-media-source', 'r2-binding');
 
         let status = 200;
-        if (object.range && typeof object.range.offset === 'number' && typeof object.range.length === 'number') {
+        if (rangeHeader && object.range && typeof object.range.offset === 'number' && typeof object.range.length === 'number') {
           const start = object.range.offset;
           const length = object.range.length;
           const end = start + length - 1;
@@ -357,7 +357,11 @@ export default {
           headers.set('content-length', String(length));
           status = 206;
         } else {
+          // R2 normal GET'te de object.range doldurabiliyor. İstemci Range
+          // istemediyse 206 dönmek Android image/video decoderlarını bozuyordu.
+          headers.delete('content-range');
           headers.set('content-length', String(object.size));
+          status = 200;
         }
         return new Response(object.body, {headers, status});
       }
