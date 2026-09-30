@@ -50,8 +50,8 @@ jobs:
 
           # Build 334 sosyal bağlantı, sohbet ve PK sözleşmesi.
           grep -F "Future<bool> sosyalIstekGonder" app/lib/main.dart
-          grep -F "requestAccepted_$ben" app/lib/main.dart
-          grep -F "openedAt_$me" app/lib/main.dart
+          grep -F 'requestAccepted_$ben' app/lib/main.dart
+          grep -F 'openedAt_$me' app/lib/main.dart
           grep -F "final arkaPlan=ham is int?Color(ham):Colors.white" app/lib/main.dart
           grep -F "NgelXCanliPkKatmani" app/lib/live_broadcast_studio.dart
           grep -F "live_pk_requests" app/lib/live_pk.dart
