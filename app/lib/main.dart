@@ -98,8 +98,8 @@ const ngelxPrivateBlueCanvas = Color(0xFFF6FAFF);
 const ngelxPrivateBlueBorder = Color(0xFFD8E8FF);
 const ngelxPrivateBlueInk = Color(0xFF10213A);
 
-const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.113');
-const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '332');
+const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.114');
+const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '333');
 const ngelxGroupBorder = Color(0xFFD9EEE0);
 
 final GlobalKey<NavigatorState> ngelxNavigatorKey=GlobalKey<NavigatorState>();
@@ -304,7 +304,7 @@ Future<Uint8List> _ngelxAgResmiBaytlari(String rawUrl) async {
           'Accept':'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
           'Cache-Control':'no-cache, no-store, max-age=0',
           'Pragma':'no-cache',
-          'X-NgelX-Client':'android-image-build332',
+          'X-NgelX-Client':'android-image-build333',
           if(token!=null&&token.isNotEmpty)HttpHeaders.authorizationHeader:'Bearer $token',
         },
       ),
@@ -19920,11 +19920,13 @@ class _ProfilTanitimVideoKartiState extends State<ProfilTanitimVideoKarti> with 
       ),
     );
     final videoOrani=x.value.aspectRatio==0?16/9:x.value.aspectRatio;
-    final yukseklik=videoOrani<1?340.0:210.0;
-    return SizedBox(
-      height:yukseklik,
-      width:double.infinity,
-      child:ClipRRect(
+    final yukseklik=videoOrani<1?250.0:180.0;
+    return Center(child:ConstrainedBox(
+      constraints:const BoxConstraints(maxWidth:390),
+      child:SizedBox(
+        height:yukseklik,
+        width:double.infinity,
+        child:ClipRRect(
         borderRadius:BorderRadius.circular(18),
         child:GestureDetector(
           onTap:_kontrolleriGoster,
@@ -19957,8 +19959,9 @@ class _ProfilTanitimVideoKartiState extends State<ProfilTanitimVideoKarti> with 
             ]),
           ),
         ),
+        ),
       ),
-    );
+    ));
   }
 }
 
