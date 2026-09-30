@@ -393,7 +393,7 @@ class _NgelXAgResmiState extends State<NgelXAgResmi>{
   Future<void> _tekrarDene()async{
     final temiz=widget.url.trim();
     if(temiz.isEmpty)return;
-    try{await ngelxAgResmiYenile(temiz);}catch(_){}
+    try{await ngelxAgResmiOnbelleginiTemizle(temiz);}catch(_){}
     if(mounted)setState((){
       _yenileme++;
       _otomatikTekrarPlanlandi=false;
