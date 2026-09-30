@@ -683,6 +683,8 @@ class _CanliYayinPageState extends State<CanliYayinPage> {
   bool yayinBitti=false;
   bool yenidenBaglaniyor=false;
   bool uzakKameraAcik=true;
+  bool pkAktifYerel=false;
+  int heartbeatTik=0;
   int yenidenBaglanmaDenemesi=0;
   String bitisMesaji='Canlı yayın sona erdi.';
   int maxIzleyici = 0;
@@ -702,6 +704,8 @@ class _CanliYayinPageState extends State<CanliYayinPage> {
     widget.oda.addListener(_yenile);
     canliDurumAboneligi=FirebaseFirestore.instance.collection('live_streams').doc(widget.belgeId).snapshots().listen((snap){
       final v=snap.data()??<String,dynamic>{};
+      final yeniPk=v['pkActive']==true;
+      if(mounted&&pkAktifYerel!=yeniPk)setState(()=>pkAktifYerel=yeniPk);
       if(!widget.yayinSahibi&&v.isNotEmpty){
         final kameraDurumu=v['cameraEnabled']!=false;
         if(mounted&&uzakKameraAcik!=kameraDurumu)setState(()=>uzakKameraAcik=kameraDurumu);
@@ -718,7 +722,7 @@ class _CanliYayinPageState extends State<CanliYayinPage> {
       unawaited(_katildimKaydet());
     } else {
       unawaited(_heartbeatYaz());
-      heartbeat=Timer.periodic(const Duration(seconds:12),(_)=>unawaited(_heartbeatYaz()));
+      heartbeat=Timer.periodic(const Duration(seconds:6),(_)=>unawaited(_heartbeatYaz()));
     }
     sayac = Timer.periodic(const Duration(seconds: 1), (_) {
       final izleyici = widget.oda.remoteParticipants.length;
@@ -789,10 +793,34 @@ class _CanliYayinPageState extends State<CanliYayinPage> {
 
   Future<void> _heartbeatYaz()async{
     if(!widget.yayinSahibi||kapatildi||widget.oda.connectionState==lk.ConnectionState.disconnected)return;
+    heartbeatTik++;
+    final yama=<String,dynamic>{
+      'active':true,
+      'lastHeartbeatAt':FieldValue.serverTimestamp(),
+      'viewerCount':_aktifIzleyiciler().length,
+    };
+    if(pkAktifYerel||heartbeatTik%3==0){
+      try{
+        final sonuc=await Future.wait([
+          FirebaseFirestore.instance.collection('live_streams').doc(widget.belgeId).collection('reactions').get(),
+          FirebaseFirestore.instance.collection('live_streams').doc(widget.belgeId).collection('comments').get(),
+        ]);
+        final rs=sonuc[0] as QuerySnapshot<Map<String,dynamic>>;
+        final cs=sonuc[1] as QuerySnapshot<Map<String,dynamic>>;
+        var kalp=0,hediye=0,yorumSayisi=0;
+        for(final d in rs.docs)kalp+=(d.data()['count'] as num?)?.toInt()??1;
+        for(final d in cs.docs){
+          final v=d.data();
+          if(v['kind']=='gift')hediye+=(v['points'] as num?)?.toInt()??0;
+          if((v['kind']??'comment')=='comment')yorumSayisi++;
+        }
+        yama['likeCount']=kalp;
+        yama['giftPoints']=hediye;
+        yama['commentCount']=yorumSayisi;
+      }catch(_){}
+    }
     try{
-      await FirebaseFirestore.instance.collection('live_streams').doc(widget.belgeId).set({
-        'active':true,'lastHeartbeatAt':FieldValue.serverTimestamp(),'viewerCount':_aktifIzleyiciler().length,
-      },SetOptions(merge:true));
+      await FirebaseFirestore.instance.collection('live_streams').doc(widget.belgeId).set(yama,SetOptions(merge:true));
     }catch(_){}
   }
 
