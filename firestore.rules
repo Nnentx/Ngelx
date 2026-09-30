@@ -88,6 +88,7 @@ service cloud.firestore {
         ? request.resource.data.members[1]
         : request.resource.data.members[0];
       let target = get(/databases/$(database)/documents/users/$(otherUid));
+      let sender = get(/databases/$(database)/documents/users/$(request.auth.uid));
       let permission = target.data.get(
         'messagePermission',
         target.data.get('friendsOnlyMessages', true) ? 'friends' : 'all'
@@ -98,7 +99,10 @@ service cloud.firestore {
           permission == 'all'
           || (
             permission == 'friends'
-            && request.auth.uid in target.data.get('friends', [])
+            && (
+              request.auth.uid in target.data.get('friends', [])
+              || otherUid in sender.data.get('friends', [])
+            )
           )
           || (
             permission == 'following'
