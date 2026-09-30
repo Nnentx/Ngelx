@@ -2716,7 +2716,7 @@ Future<bool> sosyalIstekGonder({
   try{
     final bildirimler=FirebaseFirestore.instance.collection('notifications');
     final belgeId=ngelxBildirimBelgeId('${tur}_${user.uid}_$hedefUid');
-    final tersId=ngelxBildirimBelgeId('${tur}_$hedefUid_${user.uid}');
+    final tersId=ngelxBildirimBelgeId('${tur}_${hedefUid}_${user.uid}');
     final istekRef=bildirimler.doc(belgeId);
     final tersRef=bildirimler.doc(tersId);
 
