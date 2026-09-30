@@ -32,6 +32,7 @@ part 'create_music_editor.dart';
 part 'camera_studio.dart';
 part 'live_broadcast_studio.dart';
 part 'live_feed_card.dart';
+part 'live_pk.dart';
 part 'feed_creator_badge.dart';
 part 'story_v66.dart';
 
@@ -98,8 +99,8 @@ const ngelxPrivateBlueCanvas = Color(0xFFF6FAFF);
 const ngelxPrivateBlueBorder = Color(0xFFD8E8FF);
 const ngelxPrivateBlueInk = Color(0xFF10213A);
 
-const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.114');
-const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '333');
+const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.115');
+const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '334');
 const ngelxGroupBorder = Color(0xFFD9EEE0);
 
 final GlobalKey<NavigatorState> ngelxNavigatorKey=GlobalKey<NavigatorState>();
@@ -2713,27 +2714,28 @@ Future<bool> sosyalIstekGonder({
   final kilit='${user.uid}|$hedefUid|$tur';
   if(!_sosyalIstekIslemleri.add(kilit))return false;
   try{
-    Map<String,dynamic> p=<String,dynamic>{};
-    try{
-      final cached=await FirebaseFirestore.instance.collection('users').doc(user.uid)
-          .get(const GetOptions(source:Source.cache));
-      p=cached.data()??<String,dynamic>{};
-    }catch(_){}
+    final bildirimler=FirebaseFirestore.instance.collection('notifications');
+    final belgeId=ngelxBildirimBelgeId('${tur}_${user.uid}_$hedefUid');
+    final tersId=ngelxBildirimBelgeId('${tur}_$hedefUid_${user.uid}');
+    final istekRef=bildirimler.doc(belgeId);
+    final tersRef=bildirimler.doc(tersId);
 
     final sonuc=await Future.wait<dynamic>([
       FirebaseFirestore.instance.collection('users').doc(user.uid)
           .get(const GetOptions(source:Source.server)).timeout(const Duration(seconds:8)),
       FirebaseFirestore.instance.collection('users').doc(hedefUid)
           .get(const GetOptions(source:Source.server)).timeout(const Duration(seconds:8)),
-      FirebaseFirestore.instance.collection('notifications')
-          .where('fromUid',isEqualTo:user.uid)
-          .where('toUid',isEqualTo:hedefUid)
-          .limit(20).get().timeout(const Duration(seconds:8)),
+      istekRef.get(const GetOptions(source:Source.server)).timeout(const Duration(seconds:8)),
+      tersRef.get(const GetOptions(source:Source.server)).timeout(const Duration(seconds:8)),
     ]);
     final benimVeri=(sonuc[0] as DocumentSnapshot<Map<String,dynamic>>).data()??<String,dynamic>{};
     final hedefVeri=(sonuc[1] as DocumentSnapshot<Map<String,dynamic>>).data()??<String,dynamic>{};
-    final pairIstekler=sonuc[2] as QuerySnapshot<Map<String,dynamic>>;
-    p=<String,dynamic>{...p,...benimVeri};
+    final mevcut=sonuc[2] as DocumentSnapshot<Map<String,dynamic>>;
+    final ters=sonuc[3] as DocumentSnapshot<Map<String,dynamic>>;
+
+    if(hedefVeri['deactivated']==true)return false;
+    if(List<String>.from(benimVeri['blocked']??const[]).contains(hedefUid))return false;
+    if(List<String>.from(hedefVeri['blocked']??const[]).contains(user.uid))return false;
 
     final zatenIliski=tur=='follow_request'
       ? List<String>.from(benimVeri['following']??const[]).contains(hedefUid)
@@ -2744,18 +2746,29 @@ Future<bool> sosyalIstekGonder({
         : false;
     if(zatenIliski)return false;
 
-    if(pairIstekler.docs.any((d)=>d.data()['type']==tur&&d.data()['status']=='pending'))return false;
+    if(mevcut.exists&&(mevcut.data()?['status']??'pending')=='pending')return false;
+    if(ters.exists&&(ters.data()?['status']??'pending')=='pending')return false;
 
     final emailAdi=(user.email??'').split('@').first.trim();
-    final ad=(p['displayName']??p['username']??user.displayName??(emailAdi.isNotEmpty?emailAdi:'NgelX kullanıcısı')).toString();
-    final foto=(p['photoUrl']??user.photoURL??'').toString();
-    await FirebaseFirestore.instance.collection('notifications').add({
-      'toUid':hedefUid,'fromUid':user.uid,'type':tur,
-      'senderName':ad,'photoUrl':foto,'text':metin,
-      'status':'pending','read':false,
+    final ad=(benimVeri['displayName']??benimVeri['username']??user.displayName??(emailAdi.isNotEmpty?emailAdi:'NgelX kullanıcısı')).toString();
+    final foto=(benimVeri['photoUrl']??user.photoURL??'').toString();
+
+    await istekRef.set({
+      'toUid':hedefUid,
+      'fromUid':user.uid,
+      'type':tur,
+      'senderName':ad,
+      'photoUrl':foto,
+      'text':metin,
+      'status':'pending',
+      'read':false,
       'createdAt':FieldValue.serverTimestamp(),
       'clientCreatedAt':Timestamp.now(),
-    }).timeout(const Duration(seconds:10));
+      'updatedAt':FieldValue.serverTimestamp(),
+      'answeredAt':FieldValue.delete(),
+      'cancelledAt':FieldValue.delete(),
+      'eventKind':tur,
+    },SetOptions(merge:true)).timeout(const Duration(seconds:10));
     return true;
   }finally{
     _sosyalIstekIslemleri.remove(kilit);
@@ -16638,31 +16651,27 @@ class _YeniSohbetPageState extends State<YeniSohbetPage>{
     try{
       final ids=<String>[me,hedefUid]..sort();
       final chatId=ids.join('_');
-      Map<String,dynamic> cv=<String,dynamic>{};
-      try{
-        final chat=await FirebaseFirestore.instance.collection('chats').doc(chatId).get()
-            .timeout(const Duration(seconds:8));
-        cv=chat.data()??<String,dynamic>{};
-      }catch(_){
-        if(mounted)ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content:Text('Sohbet bilgisi yüklenemedi. Tekrar dene.')),
-        );
+      final blocked=List<String>.from(v['blocked']??const[]).contains(me);
+      if(blocked){
+        if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bu hesapla sohbet açılamıyor.')));
         return;
       }
-      final izin=(v['messagePermission']??(v['friendsOnlyMessages']!=false?'friends':'all')).toString();
-      final hedefinTakipEttikleri=Set<String>.from(List<dynamic>.from(v['following']??const[]));
-      final izinli=izin=='all'||
-        (izin=='friends'&&arkadaslar.contains(hedefUid))||
-        (izin=='following'&&hedefinTakipEttikleri.contains(me));
-      final kabulEdildi=cv['requestAccepted_$me']==true||cv['requestAccepted_$hedefUid']==true;
-      if(!izinli&&!kabulEdildi){
-        if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(t('messageNotAllowed'))));
-        return;
-      }
+      await FirebaseFirestore.instance.collection('chats').doc(chatId).set({
+        'members':ids,
+        'isGroup':false,
+        'peerA':ids.first,
+        'peerB':ids.last,
+        if(arkadaslar.contains(hedefUid))'requestAccepted_$me':true,
+        if(arkadaslar.contains(hedefUid))'requestAccepted_$hedefUid':true,
+        'openedAt_$me':FieldValue.serverTimestamp(),
+        'updatedAt':FieldValue.serverTimestamp(),
+      },SetOptions(merge:true)).timeout(const Duration(seconds:10));
       if(!mounted)return;
       Navigator.pushReplacement(context,MaterialPageRoute(
         builder:(_)=>SohbetPage(chatId:chatId,digerUid:hedefUid,ad:ad,foto:foto),
       ));
+    }on TimeoutException{
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Sohbet hazırlanamadı. Tekrar dene.')));
     }finally{
       if(mounted)setState(()=>acilanUid=null);
     }
@@ -17989,17 +17998,17 @@ class _SohbetPageState extends State<SohbetPage> {
   @override
   Widget build(BuildContext context)=>Theme(
     data:ThemeData.light().copyWith(
-      scaffoldBackgroundColor:ngelxPrivateBlueCanvas,
+      scaffoldBackgroundColor:Colors.white,
       colorScheme:ColorScheme.fromSeed(seedColor:ngelxPrivateBlue),
       appBarTheme:const AppBarTheme(
-        backgroundColor:ngelxPrivateBlueHeader,
+        backgroundColor:Colors.white,
         foregroundColor:ngelxPrivateBlueInk,
         surfaceTintColor:Colors.transparent,
         elevation:0,
       ),
     ),
     child:Scaffold(
-    backgroundColor:ngelxPrivateBlueCanvas,
+    backgroundColor:Colors.white,
     appBar:AppBar(
       leading:const BackButton(color:ngelxPrivateBlue),
       titleSpacing:0,
@@ -18057,7 +18066,7 @@ class _SohbetPageState extends State<SohbetPage> {
         IconButton(tooltip:'Sohbet bilgisi',onPressed:bilgi,icon:const Icon(Icons.info_rounded,color:ngelxPrivateBlue)),
       ],
     ),
-    body:StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(stream:_chatAkisi,builder:(_,tema){final veri=tema.data?.data()??<String,dynamic>{},ham=veri['theme_$uid'];final arkaPlan=ham is int?Color(ham):ngelxPrivateBlueCanvas,arkaPlanUrl=(veri['backgroundUrl_$uid']??'').toString(),hizliEmoji=(veri['quickEmoji_$uid']??'👍').toString(),arkaPlanOpaklik=(veri['backgroundOpacity_$uid'] is num?(veri['backgroundOpacity_$uid'] as num).toDouble():.30).clamp(.05,.85).toDouble(),mesajYaziBoyutu=(veri['messageFontSize_$uid'] is num?(veri['messageFontSize_$uid'] as num).toDouble():16.0).clamp(12.0,22.0).toDouble();return Container(decoration:BoxDecoration(color:arkaPlan,image:arkaPlanUrl.isEmpty?null:DecorationImage(image:NgelXAgImageProvider(arkaPlanUrl),fit:BoxFit.cover,opacity:arkaPlanOpaklik)),child:Column(children:[
+    body:StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(stream:_chatAkisi,builder:(_,tema){final veri=tema.data?.data()??<String,dynamic>{},ham=veri['theme_$uid'];final arkaPlan=ham is int?Color(ham):Colors.white,arkaPlanUrl=(veri['backgroundUrl_$uid']??'').toString(),hizliEmoji=(veri['quickEmoji_$uid']??'👍').toString(),arkaPlanOpaklik=(veri['backgroundOpacity_$uid'] is num?(veri['backgroundOpacity_$uid'] as num).toDouble():.30).clamp(.05,.85).toDouble(),mesajYaziBoyutu=(veri['messageFontSize_$uid'] is num?(veri['messageFontSize_$uid'] as num).toDouble():16.0).clamp(12.0,22.0).toDouble();return Container(decoration:BoxDecoration(color:arkaPlan,image:arkaPlanUrl.isEmpty?null:DecorationImage(image:NgelXAgImageProvider(arkaPlanUrl),fit:BoxFit.cover,opacity:arkaPlanOpaklik)),child:Column(children:[
       if(((veri['callStatus']??'').toString()=='ringing'||(veri['callStatus']??'').toString()=='active')&&(veri['callRoomName']??'').toString().isNotEmpty)
         InkWell(
           onTap:()async{
@@ -19566,6 +19575,18 @@ class _AktivitePageState extends State<AktivitePage> {
         SetOptions(merge:true),
       );
       toplu.set(
+        FirebaseFirestore.instance.collection('chats').doc(ids.join('_')),
+        {
+          'members':ids,
+          'requestAccepted_$ben':true,
+          'requestAccepted_$gonderen':true,
+          'friendChat':true,
+          'friendSince':FieldValue.serverTimestamp(),
+          'updatedAt':FieldValue.serverTimestamp(),
+        },
+        SetOptions(merge:true),
+      );
+      toplu.set(
         FirebaseFirestore.instance.collection('notifications').doc('friend_accepted_'+ben+'_'+gonderen),
         {
           'toUid':gonderen,'fromUid':ben,'type':'friend_accepted',
@@ -20029,23 +20050,33 @@ class _KullaniciProfilPageState extends State<KullaniciProfilPage> {
       final sonuc=await Future.wait([
         FirebaseFirestore.instance.collection('users').doc(me).get().timeout(const Duration(seconds:8)),
         FirebaseFirestore.instance.collection('users').doc(uid).get().timeout(const Duration(seconds:8)),
-        FirebaseFirestore.instance.collection('chats').doc(chatId).get().timeout(const Duration(seconds:8)),
       ]);
       final benim=(sonuc[0] as DocumentSnapshot<Map<String,dynamic>>).data()??<String,dynamic>{};
       final hedef=(sonuc[1] as DocumentSnapshot<Map<String,dynamic>>).data()??<String,dynamic>{};
-      final sohbet=(sonuc[2] as DocumentSnapshot<Map<String,dynamic>>).data()??<String,dynamic>{};
-      final arkadaslar=List<String>.from(benim['friends']??const[]);
-      final hedefinTakipEttikleri=List<String>.from(hedef['following']??const[]);
-      final mesajIzni=(hedef['messagePermission']??(hedef['friendsOnlyMessages']!=false?'friends':'all')).toString();
-      final kabulEdildi=sohbet['requestAccepted_$me']==true||sohbet['requestAccepted_$uid']==true;
-      final izinli=kabulEdildi||
-        mesajIzni=='all'||
-        (mesajIzni=='friends'&&arkadaslar.contains(uid))||
-        (mesajIzni=='following'&&hedefinTakipEttikleri.contains(me));
-      if(!izinli){
-        if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(t('messageNotAllowed'))));
+      if(hedef['deactivated']==true){
+        if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bu hesap şu anda kullanılamıyor.')));
         return;
       }
+      final engelli=List<String>.from(benim['blocked']??const[]).contains(uid)
+        ||List<String>.from(hedef['blocked']??const[]).contains(me);
+      if(engelli){
+        if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Engellenen hesaplar arasında sohbet açılamaz.')));
+        return;
+      }
+
+      final arkadas=List<String>.from(benim['friends']??const[]).contains(uid)
+        ||List<String>.from(hedef['friends']??const[]).contains(me);
+      await FirebaseFirestore.instance.collection('chats').doc(chatId).set({
+        'members':ids,
+        'isGroup':false,
+        'peerA':ids.first,
+        'peerB':ids.last,
+        if(arkadas)'requestAccepted_$me':true,
+        if(arkadas)'requestAccepted_$uid':true,
+        'openedAt_$me':FieldValue.serverTimestamp(),
+        'updatedAt':FieldValue.serverTimestamp(),
+      },SetOptions(merge:true)).timeout(const Duration(seconds:10));
+
       if(!context.mounted)return;
       await Navigator.push(context,MaterialPageRoute(builder:(_)=>SohbetPage(
         chatId:chatId,
@@ -20054,7 +20085,7 @@ class _KullaniciProfilPageState extends State<KullaniciProfilPage> {
         foto:foto,
       )));
     }on TimeoutException{
-      if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Mesaj izni kontrolü zaman aşımına uğradı. Tekrar dene.')));
+      if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Mesaj ekranı hazırlanamadı. Tekrar dene.')));
     }catch(_){
       if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Mesaj ekranı şu anda açılamadı. Tekrar dene.')));
     }
