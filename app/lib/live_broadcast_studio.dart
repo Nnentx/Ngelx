@@ -1610,6 +1610,7 @@ class _CanliYayinPageState extends State<CanliYayinPage> {
     try{
       final ids=<String>[ben.uid,hedefUid]..sort();
       String chatId='';
+      var mevcutSohbet=false;
       try{
         final mevcut=await FirebaseFirestore.instance.collection('chats')
             .where('members',arrayContains:ben.uid).limit(100)
@@ -1620,6 +1621,7 @@ class _CanliYayinPageState extends State<CanliYayinPage> {
           final grup=v['isGroup']==true||uyeler.length>2;
           if(!grup&&uyeler.length==2&&uyeler.contains(ben.uid)&&uyeler.contains(hedefUid)){
             chatId=d.id;
+            mevcutSohbet=true;
             break;
           }
         }
@@ -1627,11 +1629,19 @@ class _CanliYayinPageState extends State<CanliYayinPage> {
       if(chatId.isEmpty)chatId=ids.join('_');
       final chat=FirebaseFirestore.instance.collection('chats').doc(chatId);
       final metin='🔴 CANLI • ${widget.baslik}\n@${widget.username}\nYayına katıl: ngelx://live/${widget.belgeId}';
-      await chat.set({
-        'members':ids,
-        'isGroup':false,
-        'updatedAt':FieldValue.serverTimestamp(),
-      },SetOptions(merge:true)).timeout(const Duration(seconds:8));
+      if(mevcutSohbet){
+        // Build 338: mevcut özel sohbet üyelerini yeniden yazmadan canlı kartını gönder.
+        await chat.set({
+          'updatedAt':FieldValue.serverTimestamp(),
+        },SetOptions(merge:true)).timeout(const Duration(seconds:8));
+      }else{
+        await chat.set({
+          'members':ids,
+          'isGroup':false,
+          'createdAt':FieldValue.serverTimestamp(),
+          'updatedAt':FieldValue.serverTimestamp(),
+        },SetOptions(merge:true)).timeout(const Duration(seconds:8));
+      }
       final mesajRef=await chat.collection('messages').add({
         'senderId':ben.uid,
         'text':metin,
