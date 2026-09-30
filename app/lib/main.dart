@@ -97,8 +97,8 @@ const ngelxPrivateBlueCanvas = Color(0xFFF6FAFF);
 const ngelxPrivateBlueBorder = Color(0xFFD8E8FF);
 const ngelxPrivateBlueInk = Color(0xFF10213A);
 
-const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.110');
-const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '329');
+const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.111');
+const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '330');
 const ngelxGroupBorder = Color(0xFFD9EEE0);
 
 final GlobalKey<NavigatorState> ngelxNavigatorKey=GlobalKey<NavigatorState>();
@@ -378,6 +378,37 @@ class NgelXAgResmi extends StatefulWidget{
 }
 
 class _NgelXAgResmiState extends State<NgelXAgResmi>{
+  int _yenileme=0;
+  bool _otomatikTekrarPlanlandi=false;
+
+  @override
+  void didUpdateWidget(covariant NgelXAgResmi oldWidget){
+    super.didUpdateWidget(oldWidget);
+    if(oldWidget.url!=widget.url){
+      _yenileme=0;
+      _otomatikTekrarPlanlandi=false;
+    }
+  }
+
+  Future<void> _tekrarDene()async{
+    final temiz=widget.url.trim();
+    if(temiz.isEmpty)return;
+    try{await ngelxAgResmiYenile(temiz);}catch(_){}
+    if(mounted)setState((){
+      _yenileme++;
+      _otomatikTekrarPlanlandi=false;
+    });
+  }
+
+  void _otomatikTekrarDene(){
+    if(_otomatikTekrarPlanlandi||_yenileme>0)return;
+    _otomatikTekrarPlanlandi=true;
+    Future<void>.delayed(const Duration(milliseconds:900),()async{
+      if(!mounted)return;
+      await _tekrarDene();
+    });
+  }
+
   Widget _placeholder(BuildContext context){
     final p=widget.placeholder;
     if(p is Widget)return p;
@@ -399,14 +430,26 @@ class _NgelXAgResmiState extends State<NgelXAgResmi>{
         if(sonuc is Widget)return sonuc;
       }catch(_){}
     }
-    return const Center(child:Icon(Icons.broken_image_outlined));
+    _otomatikTekrarDene();
+    return Center(child:Column(
+      mainAxisSize:MainAxisSize.min,
+      children:[
+        const Icon(Icons.broken_image_outlined,color:Colors.black38),
+        const SizedBox(height:4),
+        TextButton.icon(
+          onPressed:_tekrarDene,
+          icon:const Icon(Icons.refresh_rounded,size:17),
+          label:const Text('Tekrar dene'),
+        ),
+      ],
+    ));
   }
 
   @override Widget build(BuildContext context){
     final temiz=widget.url.trim();
     if(temiz.isEmpty)return _error(context,StateError('Fotoğraf adresi boş.'));
     return Image(
-      key:ValueKey('ngelx-direct-$temiz'),
+      key:ValueKey('ngelx-direct-$temiz-$_yenileme'),
       image:NgelXAgImageProvider(temiz),
       fit:widget.fit,
       width:widget.width,
@@ -539,12 +582,66 @@ Future<Uint8List> _ngelxFotografiJpegHazirla(Uint8List hamBytes) async {
   return jpeg;
 }
 
+Future<Directory> _ngelxKaliciMedyaKlasoru() async {
+  final temel=await getApplicationSupportDirectory();
+  final klasor=Directory('${temel.path}${Platform.pathSeparator}ngelx_media_staging');
+  if(!await klasor.exists())await klasor.create(recursive:true);
+  return klasor;
+}
+
+String _ngelxYerelUzanti(XFile dosya,{String varsayilan='bin'}){
+  final ad=dosya.name.trim().isNotEmpty?dosya.name:dosya.path;
+  final nokta=ad.lastIndexOf('.');
+  if(nokta<0||nokta==ad.length-1)return varsayilan;
+  final temiz=ad.substring(nokta+1).toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'),'');
+  return temiz.isEmpty?varsayilan:(temiz.length>8?temiz.substring(0,8):temiz);
+}
+
+Future<void> _ngelxEskiYerelMedyaTemizle(Directory klasor) async {
+  try{
+    final sinir=DateTime.now().subtract(const Duration(days:30));
+    await for(final entity in klasor.list(recursive:true,followLinks:false)){
+      if(entity is! File)continue;
+      try{
+        final stat=await entity.stat();
+        if(stat.modified.isBefore(sinir))await entity.delete();
+      }catch(_){}
+    }
+  }catch(_){}
+}
+
+Future<XFile> _ngelxKaliciYerelKopya(
+  XFile secilen,{
+  String? uzanti,
+  String? mimeType,
+}) async {
+  final klasor=await _ngelxKaliciMedyaKlasoru();
+  unawaited(_ngelxEskiYerelMedyaTemizle(klasor));
+  final ext=(uzanti??_ngelxYerelUzanti(secilen)).replaceAll(RegExp(r'[^a-zA-Z0-9]'),'').toLowerCase();
+  final guvenliExt=ext.isEmpty?'bin':ext;
+  final hedef=File('${klasor.path}${Platform.pathSeparator}ngelx_${DateTime.now().microsecondsSinceEpoch}.$guvenliExt');
+  final kaynak=File(secilen.path);
+  if(await kaynak.exists()){
+    await kaynak.copy(hedef.path);
+  }else{
+    await hedef.writeAsBytes(await secilen.readAsBytes(),flush:true);
+  }
+  if(!await hedef.exists()||await hedef.length()<=0)throw Exception('Seçilen medya kalıcı alana kopyalanamadı.');
+  return XFile(
+    hedef.path,
+    name:hedef.uri.pathSegments.last,
+    mimeType:mimeType??secilen.mimeType,
+  );
+}
+
 Future<XFile> _ngelxGaleridenResmiNormalizeEt(XFile secilen) async {
   final ham=await secilen.readAsBytes();
   final jpeg=await _ngelxFotografiJpegHazirla(ham);
-  final klasor=await getTemporaryDirectory();
-  final hedef=File('${klasor.path}/ngelx_gallery_${DateTime.now().microsecondsSinceEpoch}.jpg');
+  final klasor=await _ngelxKaliciMedyaKlasoru();
+  unawaited(_ngelxEskiYerelMedyaTemizle(klasor));
+  final hedef=File('${klasor.path}${Platform.pathSeparator}ngelx_gallery_${DateTime.now().microsecondsSinceEpoch}.jpg');
   await hedef.writeAsBytes(jpeg,flush:true);
+  if(!await hedef.exists()||await hedef.length()<=0)throw Exception('Fotoğraf kalıcı alana yazılamadı.');
   return XFile(hedef.path,name:hedef.uri.pathSegments.last,mimeType:'image/jpeg');
 }
 
@@ -656,20 +753,29 @@ Future<XFile?> ngelxResimSec({
     maxHeight:yenidenKodla?maxHeight:null,
   );
   if(x==null)return null;
-  return source==ImageSource.gallery?await _ngelxGaleridenResmiNormalizeEt(x):x;
+  if(source==ImageSource.gallery)return _ngelxGaleridenResmiNormalizeEt(x);
+  return _ngelxKaliciYerelKopya(
+    x,
+    uzanti:_ngelxYerelUzanti(x,varsayilan:'jpg'),
+    mimeType:x.mimeType??'image/jpeg',
+  );
 }
 
 Future<XFile?> ngelxVideoSec({
   required ImageSource source,
   Duration? maxDuration,
 }) async{
+  XFile? x;
   if(source==ImageSource.gallery&&Platform.isAndroid){
-    try{
-      final x=await _ngelxAndroidBelgeSec(const <String>['video/*']);
-      if(x!=null)return x;
-    }catch(_){}
+    try{x=await _ngelxAndroidBelgeSec(const <String>['video/*']);}catch(_){}
   }
-  return ImagePicker().pickVideo(source:source,maxDuration:maxDuration);
+  x??=await ImagePicker().pickVideo(source:source,maxDuration:maxDuration);
+  if(x==null)return null;
+  return _ngelxKaliciYerelKopya(
+    x,
+    uzanti:_ngelxYerelUzanti(x,varsayilan:'mp4'),
+    mimeType:x.mimeType??'video/mp4',
+  );
 }
 
 Future<List<XFile>> ngelxCokluResimSec({
@@ -705,13 +811,13 @@ Future<List<XFile>> ngelxCokluResimSec({
 }
 
 Future<XFile?> ngelxDosyaSec({XTypeGroup? tur}) async{
+  XFile? x;
   if(Platform.isAndroid){
-    try{
-      final x=await _ngelxAndroidBelgeSec(_ngelxMimeTurleri(tur));
-      if(x!=null)return x;
-    }catch(_){}
+    try{x=await _ngelxAndroidBelgeSec(_ngelxMimeTurleri(tur));}catch(_){}
   }
-  return tur==null?openFile():openFile(acceptedTypeGroups:<XTypeGroup>[tur]);
+  x??=await (tur==null?openFile():openFile(acceptedTypeGroups:<XTypeGroup>[tur]));
+  if(x==null)return null;
+  return _ngelxKaliciYerelKopya(x,uzanti:_ngelxYerelUzanti(x),mimeType:x.mimeType);
 }
 
 String _ngelxKisaHata(Object hata) {
@@ -16288,105 +16394,187 @@ class _YeniSohbetPageState extends State<YeniSohbetPage>{
   String sorgu='';
   Set<String> engellenenler={};
   Set<String> arkadaslar={};
-  @override void initState(){super.initState();engellenenleriGetir();}
-  Future<void> engellenenleriGetir()async{
-    final u=FirebaseAuth.instance.currentUser;if(u==null)return;
-    final d=await FirebaseFirestore.instance.collection('users').doc(u.uid).get();
-    if(mounted)setState((){
-      engellenenler=Set<String>.from(List<dynamic>.from(d.data()?['blocked']??const[]));
-      arkadaslar=Set<String>.from(List<dynamic>.from(d.data()?['friends']??const[]));
-    });
+  String? acilanUid;
+  late Stream<QuerySnapshot<Map<String,dynamic>>> kullaniciAkisi;
+
+  @override
+  void initState(){
+    super.initState();
+    _kullaniciAkisiniYenile(bildir:false);
+    unawaited(engellenenleriGetir());
   }
+
+  void _kullaniciAkisiniYenile({bool bildir=true}){
+    final yeni=FirebaseFirestore.instance.collection('users').limit(100).snapshots();
+    if(bildir&&mounted){
+      setState(()=>kullaniciAkisi=yeni);
+    }else{
+      kullaniciAkisi=yeni;
+    }
+  }
+
+  Future<void> engellenenleriGetir()async{
+    final u=FirebaseAuth.instance.currentUser;
+    if(u==null)return;
+    try{
+      final d=await FirebaseFirestore.instance.collection('users').doc(u.uid).get()
+          .timeout(const Duration(seconds:8));
+      if(mounted)setState((){
+        engellenenler=Set<String>.from(List<dynamic>.from(d.data()?['blocked']??const[]));
+        arkadaslar=Set<String>.from(List<dynamic>.from(d.data()?['friends']??const[]));
+      });
+    }catch(_){}
+  }
+
+  Future<void> _sohbetAc(
+    String hedefUid,
+    Map<String,dynamic> v,
+    String ad,
+    String foto,
+  )async{
+    final me=FirebaseAuth.instance.currentUser?.uid;
+    if(me==null||acilanUid!=null)return;
+    setState(()=>acilanUid=hedefUid);
+    try{
+      final ids=<String>[me,hedefUid]..sort();
+      final chatId=ids.join('_');
+      Map<String,dynamic> cv=<String,dynamic>{};
+      try{
+        final chat=await FirebaseFirestore.instance.collection('chats').doc(chatId).get()
+            .timeout(const Duration(seconds:8));
+        cv=chat.data()??<String,dynamic>{};
+      }catch(_){}
+      final izin=(v['messagePermission']??(v['friendsOnlyMessages']!=false?'friends':'all')).toString();
+      final hedefinTakipEttikleri=Set<String>.from(List<dynamic>.from(v['following']??const[]));
+      final izinli=izin=='all'||
+        (izin=='friends'&&arkadaslar.contains(hedefUid))||
+        (izin=='following'&&hedefinTakipEttikleri.contains(me));
+      final kabulEdildi=cv['requestAccepted_$me']==true||cv['requestAccepted_$hedefUid']==true;
+      if(!izinli&&!kabulEdildi){
+        if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(t('messageNotAllowed'))));
+        return;
+      }
+      if(!mounted)return;
+      Navigator.pushReplacement(context,MaterialPageRoute(
+        builder:(_)=>SohbetPage(chatId:chatId,digerUid:hedefUid,ad:ad,foto:foto),
+      ));
+    }finally{
+      if(mounted)setState(()=>acilanUid=null);
+    }
+  }
+
   @override void dispose(){arama.dispose();super.dispose();}
-  TextSpan vurgula(String metin){final q=sorgu.toLowerCase(),m=metin.toLowerCase(),i=q.isEmpty?-1:m.indexOf(q);if(i<0)return TextSpan(text:metin,style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w600));return TextSpan(children:[TextSpan(text:metin.substring(0,i),style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w600)),TextSpan(text:metin.substring(i,i+q.length),style:const TextStyle(color:Colors.blue,fontWeight:FontWeight.w900)),TextSpan(text:metin.substring(i+q.length),style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w600))]);}
+
+  TextSpan vurgula(String metin){
+    final q=sorgu.toLowerCase(),m=metin.toLowerCase(),i=q.isEmpty?-1:m.indexOf(q);
+    if(i<0)return TextSpan(text:metin,style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w600));
+    return TextSpan(children:[
+      TextSpan(text:metin.substring(0,i),style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w600)),
+      TextSpan(text:metin.substring(i,i+q.length),style:const TextStyle(color:Colors.blue,fontWeight:FontWeight.w900)),
+      TextSpan(text:metin.substring(i+q.length),style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w600)),
+    ]);
+  }
 
   @override
   Widget build(BuildContext context) {
-    final me = FirebaseAuth.instance.currentUser?.uid;
-    final beyazTema = ThemeData.light().copyWith(
-      scaffoldBackgroundColor: Colors.white,
-      appBarTheme: const AppBarTheme(backgroundColor: Colors.white, foregroundColor: Colors.black, elevation: 0),
-      inputDecorationTheme: InputDecorationTheme(
-        filled: true,
-        fillColor: const Color(0xFFF1F3F5),
-        prefixIconColor: Colors.black54,
-        hintStyle: const TextStyle(color: Colors.black45),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide.none),
+    final me=FirebaseAuth.instance.currentUser?.uid;
+    final beyazTema=ThemeData.light().copyWith(
+      scaffoldBackgroundColor:Colors.white,
+      appBarTheme:const AppBarTheme(backgroundColor:Colors.white,foregroundColor:Colors.black,elevation:0),
+      inputDecorationTheme:InputDecorationTheme(
+        filled:true,
+        fillColor:const Color(0xFFF1F3F5),
+        prefixIconColor:Colors.black54,
+        hintStyle:const TextStyle(color:Colors.black45),
+        border:OutlineInputBorder(borderRadius:BorderRadius.circular(24),borderSide:BorderSide.none),
       ),
     );
     return Theme(
-      data: beyazTema,
-      child: Scaffold(
-        appBar: AppBar(title: Text(t('newChat'), style: const TextStyle(fontWeight: FontWeight.bold))),
-        body: Column(children: [
+      data:beyazTema,
+      child:Scaffold(
+        appBar:AppBar(title:Text(t('newChat'),style:const TextStyle(fontWeight:FontWeight.bold))),
+        body:Column(children:[
           Padding(
-            padding: const EdgeInsets.fromLTRB(18, 8, 18, 14),
-            child: TextField(
-              controller: arama,
-              onChanged: (v) => setState(() => sorgu = v.trim().toLowerCase()),
-              style: const TextStyle(color: Colors.black87),
-              decoration: InputDecoration(prefixIcon: const Icon(Icons.search), hintText: t('searchPeople')),
+            padding:const EdgeInsets.fromLTRB(18,8,18,14),
+            child:TextField(
+              controller:arama,
+              onChanged:(v)=>setState(()=>sorgu=v.trim().toLowerCase()),
+              style:const TextStyle(color:Colors.black87),
+              decoration:InputDecoration(prefixIcon:const Icon(Icons.search),hintText:t('searchPeople')),
             ),
           ),
-          Expanded(
-            child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-              stream: FirebaseFirestore.instance.collection('users').limit(100).snapshots(),
-              builder: (_, s) {
-                final docs = (s.data?.docs ?? []).where((d) {
-                  if (d.id == me || engellenenler.contains(d.id)) return false;
-                  final v = d.data();
-                  if(v['deactivated']==true||List<String>.from(v['blocked']??const[]).contains(me))return false;
-                  return true;
-                }).toList();
-                if (s.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator(color: mavi));
-                }
-                if (docs.isEmpty) {
-                  return Center(child: Text(t('noPeopleFound'), style: const TextStyle(color: Colors.black54)));
-                }
-                return ListView.separated(
-                  itemCount: docs.length,
-                  separatorBuilder: (_, __) => const Divider(height: 1, indent: 82, color: Color(0xFFE5E7EB)),
-                  itemBuilder: (_, i) {
-                    final d = docs[i], v = d.data();
-                    final foto = (v['photoUrl'] ?? '').toString();
-                    final ad = (v['displayName'] ?? v['username'] ?? 'NgelX').toString();
-                    final ids = me==null?<String>[d.id]:<String>[me,d.id]..sort();
-                    final chatId=ids.join('_');
-                    return FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(future:FirebaseFirestore.instance.collection('chats').doc(chatId).get(),builder:(_,chat){final last=(chat.data?.data()?['lastMessage']??'').toString();final adEslesir=ad.toLowerCase().contains(sorgu)||(v['username']??'').toString().toLowerCase().contains(sorgu);final mesajEslesir=last.toLowerCase().contains(sorgu);if(sorgu.isNotEmpty&&!adEslesir&&!mesajEslesir)return const SizedBox.shrink();return InkWell(
-                      onTap: () {
-                        if (me == null) return;
-                        final izin=(v['messagePermission']??(v['friendsOnlyMessages']!=false?'friends':'all')).toString();
-                        final hedefinTakipEttikleri=Set<String>.from(List<dynamic>.from(v['following']??const[]));
-                        final izinli=izin=='all'||
-                          (izin=='friends'&&arkadaslar.contains(d.id))||
-                          (izin=='following'&&hedefinTakipEttikleri.contains(me));
-                        final cv=chat.data?.data()??<String,dynamic>{};
-                        final kabulEdildi=cv['requestAccepted_$me']==true||cv['requestAccepted_${d.id}']==true;
-                        if(!izinli&&!kabulEdildi){
-                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(t('messageNotAllowed'))));
-                          return;
-                        }
-                        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => SohbetPage(chatId: chatId, digerUid: d.id, ad: ad, foto: foto)));
-                      },
-                      child: ListTile(
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 22, vertical: 8),
-                        leading: CircleAvatar(
-                          radius: 27,
-                          backgroundColor: const Color(0xFFE5E7EB),
-                          backgroundImage: foto.isEmpty ? null : NgelXAgImageProvider(foto),
-                          child: foto.isEmpty ? const Icon(Icons.person, color: Colors.black45) : null,
-                        ),
-                        title: RichText(text:vurgula(ad)),
-                        subtitle: Text(last.isNotEmpty?last:'@${v['username'] ?? 'ngelx'}',maxLines:1,overflow:TextOverflow.ellipsis,style:TextStyle(color:mesajEslesir&&sorgu.isNotEmpty?Colors.blue:Colors.black54,fontWeight:mesajEslesir&&sorgu.isNotEmpty?FontWeight.bold:FontWeight.normal)),
-                        trailing: const Icon(Icons.chevron_right, color: Colors.blue),
+          Expanded(child:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
+            stream:kullaniciAkisi,
+            builder:(_,s){
+              if(s.connectionState==ConnectionState.waiting&&!s.hasData){
+                return const Center(child:Column(mainAxisSize:MainAxisSize.min,children:[
+                  CircularProgressIndicator(color:mavi),
+                  SizedBox(height:12),
+                  Text('Kişiler yükleniyor...',style:TextStyle(color:Colors.black54,fontWeight:FontWeight.w700)),
+                ]));
+              }
+              if(s.hasError){
+                return Center(child:Column(mainAxisSize:MainAxisSize.min,children:[
+                  const Icon(Icons.cloud_off_rounded,color:Colors.black38,size:44),
+                  const SizedBox(height:8),
+                  const Text('Kişiler yüklenemedi.',style:TextStyle(color:Colors.black54,fontWeight:FontWeight.w700)),
+                  const SizedBox(height:8),
+                  FilledButton.tonalIcon(
+                    onPressed:()=>_kullaniciAkisiniYenile(),
+                    icon:const Icon(Icons.refresh_rounded),
+                    label:const Text('Tekrar dene'),
+                  ),
+                ]));
+              }
+              final docs=(s.data?.docs??[]).where((d){
+                if(d.id==me||engellenenler.contains(d.id))return false;
+                final v=d.data();
+                if(v['deactivated']==true||List<String>.from(v['blocked']??const[]).contains(me))return false;
+                final ad=(v['displayName']??v['username']??'NgelX').toString().toLowerCase();
+                final kullanici=(v['username']??'').toString().toLowerCase();
+                return sorgu.isEmpty||ad.contains(sorgu)||kullanici.contains(sorgu);
+              }).toList()
+                ..sort((a,b){
+                  final af=arkadaslar.contains(a.id)?0:1;
+                  final bf=arkadaslar.contains(b.id)?0:1;
+                  if(af!=bf)return af.compareTo(bf);
+                  final aa=(a.data()['displayName']??a.data()['username']??'').toString().toLowerCase();
+                  final ba=(b.data()['displayName']??b.data()['username']??'').toString().toLowerCase();
+                  return aa.compareTo(ba);
+                });
+              if(docs.isEmpty){
+                return Center(child:Text(t('noPeopleFound'),style:const TextStyle(color:Colors.black54)));
+              }
+              return ListView.separated(
+                keyboardDismissBehavior:ScrollViewKeyboardDismissBehavior.onDrag,
+                itemCount:docs.length,
+                separatorBuilder:(_,__)=>const Divider(height:1,indent:82,color:Color(0xFFE5E7EB)),
+                itemBuilder:(_,i){
+                  final d=docs[i],v=d.data();
+                  final foto=(v['photoUrl']??'').toString();
+                  final ad=(v['displayName']??v['username']??'NgelX').toString();
+                  final aciliyor=acilanUid==d.id;
+                  return InkWell(
+                    onTap:acilanUid==null?()=>_sohbetAc(d.id,v,ad,foto):null,
+                    child:ListTile(
+                      contentPadding:const EdgeInsets.symmetric(horizontal:22,vertical:8),
+                      leading:CircleAvatar(
+                        radius:27,
+                        backgroundColor:const Color(0xFFE5E7EB),
+                        backgroundImage:foto.isEmpty?null:NgelXAgImageProvider(foto),
+                        child:foto.isEmpty?const Icon(Icons.person,color:Colors.black45):null,
                       ),
-                    );});
-                  },
-                );
-              },
-            ),
-          ),
+                      title:RichText(text:vurgula(ad)),
+                      subtitle:Text('@${v['username']??'ngelx'}',maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black54)),
+                      trailing:aciliyor
+                        ?const SizedBox(width:20,height:20,child:CircularProgressIndicator(strokeWidth:2,color:Colors.blue))
+                        :const Icon(Icons.chevron_right,color:Colors.blue),
+                    ),
+                  );
+                },
+              );
+            },
+          )),
         ]),
       ),
     );
