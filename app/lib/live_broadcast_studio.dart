@@ -1034,6 +1034,34 @@ class _CanliYayinPageState extends State<CanliYayinPage> {
     );
   }
 
+  Future<void> _izleyiciGuvenlikMenusu()async{
+    if(widget.yayinSahibi)return;
+    await showModalBottomSheet<void>(
+      context:context,
+      backgroundColor:Colors.white,
+      showDragHandle:true,
+      builder:(sheetContext)=>SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
+        ListTile(
+          leading:const Icon(Icons.flag_outlined,color:Colors.redAccent),
+          title:const Text('Canlı yayını şikâyet et',style:TextStyle(color:Colors.redAccent,fontWeight:FontWeight.w800)),
+          onTap:(){
+            Navigator.pop(sheetContext);
+            unawaited(sikayetEt(context,hedefTuru:'canli_yayin',hedefId:widget.belgeId,hedefUid:widget.ownerId));
+          },
+        ),
+        if(widget.ownerId.isNotEmpty)ListTile(
+          leading:const Icon(Icons.block_rounded,color:Colors.black87),
+          title:const Text('Yayıncıyı engelle',style:TextStyle(color:Colors.black87,fontWeight:FontWeight.w800)),
+          subtitle:const Text('Engellediğinde içerikleri ve mesajları da gizlenir.',style:TextStyle(color:Colors.black54,fontSize:12)),
+          onTap:(){
+            Navigator.pop(sheetContext);
+            unawaited(kullaniciyiEngelle(context,widget.ownerId));
+          },
+        ),
+      ])),
+    );
+  }
+
   Future<void> _izleyiciListesiniAc()async{
     final izleyiciler=_aktifIzleyiciler();
     await showModalBottomSheet<void>(
@@ -1888,6 +1916,11 @@ class _CanliYayinPageState extends State<CanliYayinPage> {
                   child:Container(padding:const EdgeInsets.symmetric(horizontal:11,vertical:8),decoration:BoxDecoration(color:Colors.black45,borderRadius:BorderRadius.circular(14)),child:Text('👁 ${_aktifIzleyiciler().length}')),
                 ),
                 const Spacer(),
+                if(!widget.yayinSahibi)IconButton(
+                  tooltip:'Canlı yayın seçenekleri',
+                  onPressed:_izleyiciGuvenlikMenusu,
+                  icon:const Icon(Icons.more_horiz_rounded,size:28),
+                ),
                 IconButton(onPressed:()async{if(await _geri()&&mounted)Navigator.pop(context);},icon:const Icon(Icons.close_rounded,size:31)),
               ]),
               const SizedBox(height:7),
@@ -1968,5 +2001,22 @@ class _CanliYayinPageState extends State<CanliYayinPage> {
       ),
     );
   }
+}
+
+
+class _CanliOzetSatiri extends StatelessWidget{
+  final IconData ikon;
+  final String etiket;
+  final String deger;
+  const _CanliOzetSatiri({required this.ikon,required this.etiket,required this.deger});
+  @override Widget build(BuildContext context)=>Padding(
+    padding:const EdgeInsets.symmetric(vertical:7),
+    child:Row(children:[
+      Icon(ikon,color:const Color(0xFFFF1744),size:21),
+      const SizedBox(width:10),
+      Expanded(child:Text(etiket,style:const TextStyle(fontWeight:FontWeight.w700))),
+      Text(deger,style:const TextStyle(fontWeight:FontWeight.w900)),
+    ]),
+  );
 }
 
