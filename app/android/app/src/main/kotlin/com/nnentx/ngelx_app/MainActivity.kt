@@ -190,7 +190,8 @@ class MainActivity : FlutterActivity() {
         val cutoff = System.currentTimeMillis() - 30L * 24L * 60L * 60L * 1000L
         try {
             dir.listFiles()?.forEach { file ->
-                if (file.isFile && file.lastModified() in 1 until cutoff) {
+                val modified = file.lastModified()
+                if (file.isFile && modified > 0L && modified < cutoff) {
                     try { file.delete() } catch (_: Throwable) {}
                 }
             }
