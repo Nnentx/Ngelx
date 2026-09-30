@@ -31,6 +31,7 @@ part 'build258_settings.dart';
 part 'create_music_editor.dart';
 part 'camera_studio.dart';
 part 'live_broadcast_studio.dart';
+part 'audio_live_rooms.dart';
 part 'live_feed_card.dart';
 part 'live_pk.dart';
 part 'feed_creator_badge.dart';
@@ -99,8 +100,8 @@ const ngelxPrivateBlueCanvas = Color(0xFFF6FAFF);
 const ngelxPrivateBlueBorder = Color(0xFFD8E8FF);
 const ngelxPrivateBlueInk = Color(0xFF10213A);
 
-const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.120');
-const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '339');
+const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.121');
+const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '340');
 const ngelxGroupBorder = Color(0xFFD9EEE0);
 
 final GlobalKey<NavigatorState> ngelxNavigatorKey=GlobalKey<NavigatorState>();
@@ -7934,16 +7935,18 @@ class _KesfetPageState extends State<KesfetPage> {
               scrollDirection:Axis.horizontal,
               children:[
                 _kesfetSekmesi(Icons.live_tv_rounded,t('live'),0),
-                _kesfetSekmesi(Icons.local_fire_department_rounded,t('trend'),1),
-                _kesfetSekmesi(Icons.person_rounded,t('people'),2),
-                _kesfetSekmesi(Icons.groups_rounded,t('groups'),3),
+                _kesfetSekmesi(Icons.mic_rounded,'Sesli',1),
+                _kesfetSekmesi(Icons.local_fire_department_rounded,t('trend'),2),
+                _kesfetSekmesi(Icons.person_rounded,t('people'),3),
+                _kesfetSekmesi(Icons.groups_rounded,t('groups'),4),
               ],
             ),
           )),
           if(kategori==0)..._canliSliverleri(),
-          if(kategori==1)..._trendSliverleri(),
-          if(kategori==2)..._kisiSliverleri(),
-          if(kategori==3)..._grupSliverleri(),
+          if(kategori==1)...ngelxSesliKesfetSliverleri(context),
+          if(kategori==2)..._trendSliverleri(),
+          if(kategori==3)..._kisiSliverleri(),
+          if(kategori==4)..._grupSliverleri(),
           const SliverToBoxAdapter(child:SizedBox(height:100)),
         ]),
         ),
@@ -7962,6 +7965,10 @@ class _KesfetPageState extends State<KesfetPage> {
         },
         icon: const Icon(Icons.videocam_rounded),
         label: Text(t('startLive'), style: const TextStyle(fontWeight: FontWeight.w800)),
+      ):kategori==1?FilledButton.icon(
+        style:FilledButton.styleFrom(backgroundColor:mor,minimumSize:const Size(230,54),shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(24)),elevation:12),
+        onPressed:()async{if(await misafirEngeli(context))return;if(context.mounted)Navigator.push(context,MaterialPageRoute(builder:(_)=>const SesliOdaHazirlikPage()));},
+        icon:const Icon(Icons.mic_rounded),label:const Text('Sesli oda başlat',style:TextStyle(fontWeight:FontWeight.w900)),
       ):null,
     );
   }
@@ -9275,6 +9282,7 @@ class _MesajPageState extends State<MesajPage> {
       _kullaniciCache.putIfAbsent(id,()=>FirebaseFirestore.instance.collection('users').doc(id).get());
   String sohbetSorgu='';
   String filtre='Tümü';
+  bool _gelenKutusuYenileniyor=false;
 
   Future<void> tercihleriGetir() async {
     final ben=uid;if(ben==null)return;
@@ -9293,15 +9301,33 @@ class _MesajPageState extends State<MesajPage> {
   }
 
   Future<void> _gelenKutusunuYenile()async{
-    final ben=uid;if(ben==null)return;
+    final ben=uid;if(ben==null||_gelenKutusuYenileniyor)return;
+    if(mounted)setState(()=>_gelenKutusuYenileniyor=true);
+    var basarili=0;
+    Future<void> dene(Future<dynamic> islem)async{
+      try{await islem.timeout(const Duration(seconds:9));basarili++;}catch(_){}
+    }
     try{
       await Future.wait([
-        FirebaseFirestore.instance.collection('users').doc(ben).get(const GetOptions(source:Source.server)),
-        FirebaseFirestore.instance.collection('chats').where('members',arrayContains:ben).limit(100).get(const GetOptions(source:Source.server)),
-        FirebaseFirestore.instance.collection('notifications').where('toUid',isEqualTo:ben).limit(200).get(const GetOptions(source:Source.server)),
-      ]).timeout(const Duration(seconds:10));
-      _kullaniciCache.clear();await tercihleriGetir();if(mounted)setState((){});
-    }catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(lt('Gelen Kutusu yenilenemedi. Tekrar dene.','Inbox could not be refreshed. Try again.'))));}
+        dene(FirebaseFirestore.instance.collection('users').doc(ben).get(const GetOptions(source:Source.server))),
+        dene(FirebaseFirestore.instance.collection('chats').where('members',arrayContains:ben).limit(100).get(const GetOptions(source:Source.server))),
+        dene(FirebaseFirestore.instance.collection('notifications').where('toUid',isEqualTo:ben).limit(200).get(const GetOptions(source:Source.server))),
+      ]);
+      if(basarili==0)throw StateError('inbox_refresh_all_failed');
+      _kullaniciCache.clear();
+      try{await tercihleriGetir();}catch(_){}
+      if(mounted){
+        setState((){});
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content:Text(basarili==3?lt('Gelen Kutusu yenilendi.','Inbox refreshed.'):lt('Gelen Kutusu yenilendi. Bazı veriler gecikebilir.','Inbox refreshed. Some data may be delayed.')),
+          duration:const Duration(milliseconds:1200),behavior:SnackBarBehavior.floating,
+        ));
+      }
+    }catch(_){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(lt('Gelen Kutusu yenilenemedi. Tekrar dene.','Inbox could not be refreshed. Try again.'))));
+    }finally{
+      if(mounted)setState(()=>_gelenKutusuYenileniyor=false);
+    }
   }
 
   @override void initState(){super.initState();tercihleriGetir();}
@@ -9608,7 +9634,7 @@ class _MesajPageState extends State<MesajPage> {
               ]),
             ),
           ),
-          IconButton(constraints:const BoxConstraints.tightFor(width:38),padding:EdgeInsets.zero,tooltip:lt('Yenile','Refresh'),onPressed:ben==null?null:_gelenKutusunuYenile,icon:const Icon(Icons.refresh_rounded,color:mor)),
+          IconButton(constraints:const BoxConstraints.tightFor(width:38),padding:EdgeInsets.zero,tooltip:lt('Yenile','Refresh'),onPressed:ben==null||_gelenKutusuYenileniyor?null:_gelenKutusunuYenile,icon:_gelenKutusuYenileniyor?const SizedBox(width:18,height:18,child:CircularProgressIndicator(strokeWidth:2,color:mor)):const Icon(Icons.refresh_rounded,color:mor)),
           IconButton(constraints:const BoxConstraints.tightFor(width:38),padding:EdgeInsets.zero,tooltip:t('archive'),onPressed:ben==null?null:()async{await Navigator.push(context,MaterialPageRoute(builder:(_)=>ArsivSohbetlerPage(uid:ben)));await tercihleriGetir();},icon:const Icon(Icons.archive_outlined,color:Colors.black54)),
           IconButton(constraints:const BoxConstraints.tightFor(width:38),padding:EdgeInsets.zero,tooltip:t('createGroup'),onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const GrupOlusturPage())),icon:const Icon(Icons.group_add_rounded,color:mor,size:27)),
           IconButton(constraints:const BoxConstraints.tightFor(width:38),padding:EdgeInsets.zero,tooltip:t('joinGroup'),onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const GrubaKatilPage())),icon:const Icon(Icons.link_rounded,color:mor,size:25)),
@@ -19302,11 +19328,27 @@ class AktivitePage extends StatefulWidget {
 
 class _AktivitePageState extends State<AktivitePage> {
   String _filtre='all';
+  List<QueryDocumentSnapshot<Map<String,dynamic>>> _sunucuAktiviteleri=[];
+  bool _aktiviteYenileniyor=false;
 
-  Future<void> _aktiviteyiYenile()async{
-    final ben=FirebaseAuth.instance.currentUser?.uid;if(ben==null)return;
-    try{await FirebaseFirestore.instance.collection('notifications').where('toUid',isEqualTo:ben).limit(200).get(const GetOptions(source:Source.server)).timeout(const Duration(seconds:10));if(mounted)setState((){});}
-    catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(lt('Aktiviteler yenilenemedi.','Activity could not be refreshed.'))));}
+  @override void initState(){
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_){if(mounted)unawaited(_aktiviteyiYenile(sessiz:true));});
+  }
+
+  Future<void> _aktiviteyiYenile({bool sessiz=false})async{
+    final ben=FirebaseAuth.instance.currentUser?.uid;if(ben==null||_aktiviteYenileniyor)return;
+    if(mounted)setState(()=>_aktiviteYenileniyor=true);
+    try{
+      final q=await FirebaseFirestore.instance.collection('notifications').where('toUid',isEqualTo:ben).limit(200).get(const GetOptions(source:Source.server)).timeout(const Duration(seconds:10));
+      if(!mounted)return;
+      setState(()=>_sunucuAktiviteleri=q.docs);
+      if(!sessiz)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(lt('Aktiviteler yenilendi.','Activity refreshed.')),duration:const Duration(milliseconds:1100),behavior:SnackBarBehavior.floating));
+    }catch(_){
+      if(mounted&&!sessiz)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(lt('Aktiviteler yenilenemedi.','Activity could not be refreshed.'))));
+    }finally{
+      if(mounted)setState(()=>_aktiviteYenileniyor=false);
+    }
   }
 
   bool _filtreUyar(Map<String,dynamic> v){
@@ -19719,7 +19761,7 @@ class _AktivitePageState extends State<AktivitePage> {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     return Theme(data:ThemeData.light().copyWith(scaffoldBackgroundColor:Colors.white,appBarTheme:const AppBarTheme(backgroundColor:Colors.white,foregroundColor:Colors.black,elevation:0),dividerColor:const Color(0xFFE8E9ED)),child:Scaffold(
       backgroundColor:Colors.white,
-      appBar: AppBar(title: Text(t('activity'),style:const TextStyle(fontWeight:FontWeight.w900)),actions:[IconButton(tooltip:lt('Yenile','Refresh'),onPressed:_aktiviteyiYenile,icon:const Icon(Icons.refresh_rounded,color:mor)),IconButton(tooltip:t('markAllRead'),onPressed:()async{
+      appBar: AppBar(title: Text(t('activity'),style:const TextStyle(fontWeight:FontWeight.w900)),actions:[IconButton(tooltip:lt('Yenile','Refresh'),onPressed:_aktiviteYenileniyor?null:()=>_aktiviteyiYenile(),icon:_aktiviteYenileniyor?const SizedBox(width:19,height:19,child:CircularProgressIndicator(strokeWidth:2,color:mor)):const Icon(Icons.refresh_rounded,color:mor)),IconButton(tooltip:t('markAllRead'),onPressed:()async{
         if(uid==null)return;
         try{
           final q=await FirebaseFirestore.instance.collection('notifications').where('toUid',isEqualTo:uid).limit(200).get().timeout(const Duration(seconds:10));
@@ -19734,9 +19776,12 @@ class _AktivitePageState extends State<AktivitePage> {
       body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
         stream: uid == null ? null : FirebaseFirestore.instance.collection('notifications').where('toUid', isEqualTo: uid).limit(200).snapshots(),
         builder: (_, s) {
-          if(s.hasError)return Center(child:Column(mainAxisSize:MainAxisSize.min,children:[const Icon(Icons.cloud_off_rounded,color:Colors.redAccent,size:52),const SizedBox(height:10),Text(t('activityLoadFailed'),style:const TextStyle(color:Colors.black,fontWeight:FontWeight.w800)),Text(t('checkConnectionRetry'),style:const TextStyle(color:Colors.black54))]));
-          if(s.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator(color:mor));
-          final gelenDocs=(s.data?.docs??[]).toList();
+          if(s.hasError&&_sunucuAktiviteleri.isEmpty)return Center(child:Column(mainAxisSize:MainAxisSize.min,children:[const Icon(Icons.cloud_off_rounded,color:Colors.redAccent,size:52),const SizedBox(height:10),Text(t('activityLoadFailed'),style:const TextStyle(color:Colors.black,fontWeight:FontWeight.w800)),Text(t('checkConnectionRetry'),style:const TextStyle(color:Colors.black54))]));
+          if(s.connectionState==ConnectionState.waiting&&_sunucuAktiviteleri.isEmpty)return const Center(child:CircularProgressIndicator(color:mor));
+          final birlesik=<String,QueryDocumentSnapshot<Map<String,dynamic>>>{};
+          for(final d in s.data?.docs??<QueryDocumentSnapshot<Map<String,dynamic>>>[])birlesik[d.id]=d;
+          for(final d in _sunucuAktiviteleri)birlesik[d.id]=d;
+          final gelenDocs=birlesik.values.toList();
           int bildirimZamani(QueryDocumentSnapshot<Map<String,dynamic>> d){
             final ham=d.data()['createdAt'];
             return ham is Timestamp?ham.millisecondsSinceEpoch:0;
