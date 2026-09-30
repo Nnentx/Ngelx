@@ -256,7 +256,7 @@ r"""  Widget _proSlider(String etiket,IconData ikon,double deger,double min,doub
   Widget _canliSecimKutusu(String etiket, String deger, List<String> secenekler, FutureOr<void> Function(String) degisti) {""","pro slider helper")
 
 live=rep(live,
-"""  Future<void> _paylas() async {
+r"""  Future<void> _paylas() async {
     await Clipboard.setData(ClipboardData(text: 'NgelX canlı yayın • ${widget.baslik}\nngelx://live/${widget.belgeId}'));
     if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Canlı yayın bağlantısı kopyalandı.')));
   }""",
