@@ -97,8 +97,8 @@ const ngelxPrivateBlueCanvas = Color(0xFFF6FAFF);
 const ngelxPrivateBlueBorder = Color(0xFFD8E8FF);
 const ngelxPrivateBlueInk = Color(0xFF10213A);
 
-const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.109');
-const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '328');
+const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.110');
+const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '329');
 const ngelxGroupBorder = Color(0xFFD9EEE0);
 
 final GlobalKey<NavigatorState> ngelxNavigatorKey=GlobalKey<NavigatorState>();
@@ -2361,7 +2361,7 @@ Future<void> ngelxCanliYayinaKatil(BuildContext context,String belgeId)async{
     final roomName=(veri['roomName']??'').toString();
     if(!ngelxCanliKaydiTaze(veri)||roomName.isEmpty){
       if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content:const Text('Bu canlı yayın sona ermiş.',style:TextStyle(fontWeight:FontWeight.w700)),
+        content:const Text('Bu canlı yayın bitti.',style:TextStyle(fontWeight:FontWeight.w700)),
         behavior:SnackBarBehavior.floating,width:235,duration:const Duration(milliseconds:1400),
         shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(14)),
       ));
@@ -2389,6 +2389,9 @@ Future<void> ngelxCanliYayinaKatil(BuildContext context,String belgeId)async{
       yayinSahibi:false,
       ownerId:(veri['ownerId']??'').toString(),
       username:(veri['username']??'ngelx').toString(),
+      ilkKameraAcik:veri['cameraEnabled']!=false,
+      serverUrl:cevap.serverUrl,
+      participantToken:cevap.participantToken,
     )));
   }catch(e){
     if(oda!=null){try{await oda.disconnect();await oda.dispose();}catch(_){}}
@@ -2419,6 +2422,8 @@ Future<void> uygulamaBildirimiGonder({
   if(toUid==fromUid)return;
   final hedef=await FirebaseFirestore.instance.collection('users').doc(toUid).get();
   final ayar=hedef.data()??{};
+  if(ayar['deactivated']==true)return;
+  if(List<String>.from(ayar['blocked']??const[]).contains(fromUid))return;
   if(List<String>.from(ayar['restrictedUsers']??const[]).contains(fromUid))return;
   if(ayar['notificationsEnabled']==false)return;
   final grupBildirimi=hedefTuru=='group'||tur=='group'||(olayTuru??'').startsWith('group_');
@@ -2444,6 +2449,8 @@ Future<void> uygulamaBildirimiGonder({
 
   final gonderen=await FirebaseFirestore.instance.collection('users').doc(fromUid).get();
   final gonderenVeri=gonderen.data()??{};
+  if(gonderenVeri['deactivated']==true)return;
+  if(List<String>.from(gonderenVeri['blocked']??const[]).contains(toUid))return;
   final gonderenAdi=(gonderenVeri['displayName']??gonderenVeri['username']??'NgelX kullanıcısı').toString();
   final gonderenFoto=(gonderenVeri['photoUrl']??'').toString();
   final payload=<String,dynamic>{
@@ -18824,6 +18831,36 @@ class _AktivitePageState extends State<AktivitePage> {
   IconData _ikon(String tur){switch(tur){case 'live':return Icons.live_tv_rounded;case 'like':case 'interaction':return Icons.favorite_rounded;case 'comment':return Icons.mode_comment_rounded;case 'message':return Icons.chat_bubble_rounded;case 'security':return Icons.shield_rounded;case 'friend':case 'follow_request':case 'friend_request':return Icons.person_add_alt_1_rounded;case 'friend_accepted':return Icons.people_rounded;case 'follow_accepted':return Icons.person_rounded;default:return Icons.notifications_rounded;}}
   Color _renk(String tur){switch(tur){case 'live':return const Color(0xFFFF1744);case 'like':case 'interaction':return const Color(0xFFFF3B73);case 'comment':return Colors.blue;case 'security':return Colors.orange;case 'friend':case 'follow_request':case 'friend_request':return mor;default:return const Color(0xFF20B86A);}}
 
+
+  bool _canliAktivitesi(Map<String,dynamic> v){
+    final tur=(v['type']??'').toString();
+    final hedef=(v['targetKind']??'').toString();
+    final olay=(v['eventKind']??'').toString();
+    return tur=='live'||hedef=='live'||olay=='live_started'||olay=='live_share';
+  }
+
+  Widget _bildirimBasligiDurumlu(Map<String,dynamic> v,bool okundu){
+    if(!_canliAktivitesi(v))return _bildirimBasligi(v,okundu);
+    final kaynak=(v['sourceId']??v['belgeId']??'').toString();
+    if(kaynak.isEmpty)return _bildirimBasligi(v,okundu);
+    return StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
+      stream:FirebaseFirestore.instance.collection('live_streams').doc(kaynak).snapshots(),
+      builder:(_,snap){
+        final canli=snap.data?.data();
+        final aktif=canli!=null&&ngelxCanliKaydiTaze(canli);
+        if(aktif)return _bildirimBasligi(v,okundu);
+        final ad=(v['senderName']??v['fromName']??'NgelX kullanıcısı').toString().trim();
+        return Text.rich(
+          TextSpan(children:[
+            TextSpan(text:ad.isEmpty?'Canlı yayın':ad,style:const TextStyle(fontWeight:FontWeight.w900)),
+            const TextSpan(text:' • Canlı yayın sona erdi'),
+          ]),
+          style:TextStyle(color:Colors.black54,fontWeight:okundu?FontWeight.w500:FontWeight.w700),
+        );
+      },
+    );
+  }
+
   Widget _bildirimBasligi(Map<String,dynamic> v,bool okundu){
     final tam=(v['text']??v['message']??v['content']??'Yeni bildirim').toString();
     final ad=(v['senderName']??v['fromName']??'').toString().trim();
@@ -18906,9 +18943,24 @@ class _AktivitePageState extends State<AktivitePage> {
     final tur=(v['type']??'').toString();
     final kaynak=(v['sourceId']??v['chatId']??v['belgeId']??v['postId']??v['contentId']??'').toString();
     final hedefTuru=(v['targetKind']??'').toString();
+    final olay=(v['eventKind']??'').toString();
+    final canliHedefi=tur=='live'||hedefTuru=='live'||olay=='live_started'||olay=='live_share';
 
-    if(tur=='live'&&kaynak.isNotEmpty){
-      await ngelxCanliYayinaKatil(context,kaynak);
+    if(canliHedefi&&kaynak.isNotEmpty){
+      try{
+        final canli=await FirebaseFirestore.instance.collection('live_streams').doc(kaynak).get(const GetOptions(source:Source.server)).timeout(const Duration(seconds:8));
+        final cv=canli.data()??<String,dynamic>{};
+        if(!ngelxCanliKaydiTaze(cv)){
+          try{await d.reference.set({'liveEnded':true},SetOptions(merge:true));}catch(_){}
+          if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content:const Text('Bu canlı yayın bitti.',style:TextStyle(fontWeight:FontWeight.w800)),
+            behavior:SnackBarBehavior.floating,width:230,duration:const Duration(milliseconds:1400),
+            shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(14)),
+          ));
+          return;
+        }
+      }catch(_){}
+      if(context.mounted)await ngelxCanliYayinaKatil(context,kaynak);
       return;
     }
 
@@ -18922,7 +18974,6 @@ class _AktivitePageState extends State<AktivitePage> {
       return;
     }
 
-    final olay=(v['eventKind']??'').toString();
     if(hedefTuru=='group'&&kaynak.isNotEmpty&&tur!='call'){
       if(olay=='group_join_request'){
         Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupKatilmaIstekleriPage(chatId:kaynak)));
@@ -19243,7 +19294,7 @@ class _AktivitePageState extends State<AktivitePage> {
             final bekliyor = (v['type'] == 'follow_request' || v['type'] == 'friend_request') && v['status'] == 'pending';
             return Container(decoration:BoxDecoration(color:okundu?Colors.white:(grup?ngelxGroupGreenSoft:const Color(0xFFF8F4FF)),borderRadius:BorderRadius.circular(17)),child:ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:12,vertical:7),
               leading: Stack(children:[CircleAvatar(radius:26,backgroundColor:renk.withValues(alpha:.13),backgroundImage:foto.isEmpty?null:NgelXAgImageProvider(foto),child:foto.isEmpty?Icon(ikon,color:renk):null),if(!okundu)Positioned(right:0,top:0,child:CircleAvatar(radius:5,backgroundColor:grup?ngelxGroupGreen:const Color(0xFF7C3AED)))]),
-              title: _bildirimBasligi(v,okundu),
+              title:_bildirimBasligiDurumlu(v,okundu),
               subtitle: Row(children:[
                 if(grup)...[
                   Container(padding:const EdgeInsets.symmetric(horizontal:7,vertical:2),decoration:BoxDecoration(color:ngelxGroupGreenSoft,borderRadius:BorderRadius.circular(8)),child:const Text('GRUP',style:TextStyle(color:ngelxGroupGreen,fontSize:9,fontWeight:FontWeight.w900))),

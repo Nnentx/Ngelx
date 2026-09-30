@@ -390,13 +390,27 @@ class _CanliHazirlikPageState extends State<CanliHazirlikPage> {
         'liveTitle': baslik.text.trim(),
         'liveStartedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
-      final canliHedefler=List<String>.from(profil.data()?['friends']??const[]);
+      final profilVeri=profil.data()??<String,dynamic>{};
+      final arkadaslar=<String>{
+        ...List<String>.from(profilVeri['friends']??const[]),
+        ...List<String>.from(profilVeri['friendIds']??const[]),
+      };
+      final takipciler=<String>{
+        ...List<String>.from(profilVeri['followers']??const[]),
+        ...List<String>.from(profilVeri['followerIds']??const[]),
+      };
+      final canliHedefler=<String>{
+        if(gizlilik=='Arkadaşlar')...arkadaslar,
+        if(gizlilik=='Takipçiler')...takipciler,
+        if(gizlilik=='Herkese açık')...arkadaslar,
+        if(gizlilik=='Herkese açık')...takipciler,
+      }..remove(user.uid);
       if(canliHedefler.isNotEmpty){
-        unawaited(Future.wait(canliHedefler.take(60).map((hedefUid)=>uygulamaBildirimiGonder(
+        unawaited(Future.wait(canliHedefler.take(120).map((hedefUid)=>uygulamaBildirimiGonder(
           toUid:hedefUid,
           fromUid:user.uid,
           tur:'live',
-          metin:'canlı yayında',
+          metin:'canlı yayın başlattı',
           belgeId:belge.id,
           hedefTuru:'live',
           hedefBaslik:baslik.text.trim(),
@@ -417,6 +431,8 @@ class _CanliHazirlikPageState extends State<CanliHazirlikPage> {
         kameraAyarlari: _kameraAyarlari,
         ownerId: user.uid,
         username: ad,
+        serverUrl:cevap.serverUrl,
+        participantToken:cevap.participantToken,
       )));
     } catch (e) {
       if (oda != null) {
@@ -610,6 +626,8 @@ class CanliYayinPage extends StatefulWidget {
   final lk.CameraCaptureOptions kameraAyarlari;
   final String ownerId;
   final String username;
+  final String serverUrl;
+  final String participantToken;
   const CanliYayinPage({
     super.key,
     required this.oda,
@@ -622,6 +640,8 @@ class CanliYayinPage extends StatefulWidget {
     this.kameraAyarlari = const lk.CameraCaptureOptions(),
     this.ownerId = '',
     this.username = 'ngelx',
+    this.serverUrl = '',
+    this.participantToken = '',
   });
   @override
   State<CanliYayinPage> createState() => _CanliYayinPageState();
@@ -631,6 +651,7 @@ class _CanliYayinPageState extends State<CanliYayinPage> {
   final yorum = TextEditingController();
   Timer? sayac;
   Timer? heartbeat;
+  StreamSubscription<DocumentSnapshot<Map<String,dynamic>>>? canliDurumAboneligi;
   int saniye = 0;
   bool mikrofonAcik = true;
   bool kameraAcik = true;
@@ -640,6 +661,11 @@ class _CanliYayinPageState extends State<CanliYayinPage> {
   bool kameraDegisiyor = false;
   bool hediyeGonderiliyor = false;
   bool katilimKaydiYapildi = false;
+  bool yayinBitti=false;
+  bool yenidenBaglaniyor=false;
+  bool uzakKameraAcik=true;
+  int yenidenBaglanmaDenemesi=0;
+  String bitisMesaji='Canlı yayın sona erdi.';
   int maxIzleyici = 0;
   int yerelKalpSerisi = 0;
   DateTime? sonYorumZamani;
@@ -650,7 +676,19 @@ class _CanliYayinPageState extends State<CanliYayinPage> {
     arkaKamera = widget.ilkArkaKamera;
     mikrofonAcik = widget.ilkMikrofonAcik;
     kameraAcik = widget.ilkKameraAcik;
+    uzakKameraAcik=widget.ilkKameraAcik;
     widget.oda.addListener(_yenile);
+    canliDurumAboneligi=FirebaseFirestore.instance.collection('live_streams').doc(widget.belgeId).snapshots().listen((snap){
+      final v=snap.data()??<String,dynamic>{};
+      if(!widget.yayinSahibi&&v.isNotEmpty){
+        final kameraDurumu=v['cameraEnabled']!=false;
+        if(mounted&&uzakKameraAcik!=kameraDurumu)setState(()=>uzakKameraAcik=kameraDurumu);
+        if(v['active']==false&&!yayinBitti){
+          final neden=(v['endReason']??'').toString();
+          unawaited(_izleyicideYayinBitti(neden));
+        }
+      }
+    });
     if (!widget.yayinSahibi) {
       unawaited(_katildimKaydet());
     } else {
@@ -666,10 +704,62 @@ class _CanliYayinPageState extends State<CanliYayinPage> {
 
   void _yenile() {
     if (mounted) setState(() {});
+    if(widget.oda.connectionState==lk.ConnectionState.disconnected&&!kapatildi&&!yayinBitti){
+      unawaited(_otomatikYenidenBaglan());
+    }
+  }
+
+  Future<void> _izleyicideYayinBitti(String neden)async{
+    if(widget.yayinSahibi||yayinBitti)return;
+    sayac?.cancel();
+    bitisMesaji=neden=='host_ended'?'Yayıncı canlı yayını bitirdi.':'Canlı yayın sona erdi.';
+    if(mounted)setState(()=>yayinBitti=true);
+    try{await widget.oda.disconnect();}catch(_){}
+  }
+
+  Future<void> _otomatikYenidenBaglan()async{
+    if(yenidenBaglaniyor||kapatildi||yayinBitti||widget.serverUrl.isEmpty||widget.participantToken.isEmpty)return;
+    yenidenBaglaniyor=true;
+    if(mounted)setState((){});
+    for(var deneme=1;deneme<=3;deneme++){
+      yenidenBaglanmaDenemesi=deneme;
+      if(mounted)setState((){});
+      if(!widget.yayinSahibi){
+        try{
+          final doc=await FirebaseFirestore.instance.collection('live_streams').doc(widget.belgeId).get(const GetOptions(source:Source.server));
+          final v=doc.data()??<String,dynamic>{};
+          if(v['active']==false){
+            yenidenBaglaniyor=false;
+            await _izleyicideYayinBitti((v['endReason']??'').toString());
+            return;
+          }
+        }catch(_){}
+      }
+      await Future<void>.delayed(Duration(seconds:deneme==1?1:deneme==2?2:4));
+      if(kapatildi||yayinBitti)break;
+      try{
+        await widget.oda.connect(widget.serverUrl,widget.participantToken);
+        if(widget.oda.connectionState==lk.ConnectionState.connected){
+          if(widget.yayinSahibi){
+            try{
+              await widget.oda.localParticipant?.setCameraEnabled(kameraAcik,cameraCaptureOptions:widget.kameraAyarlari.copyWith(cameraPosition:arkaKamera?lk.CameraPosition.back:lk.CameraPosition.front));
+              await widget.oda.localParticipant?.setMicrophoneEnabled(mikrofonAcik);
+            }catch(_){}
+            unawaited(_heartbeatYaz());
+          }
+          yenidenBaglaniyor=false;
+          yenidenBaglanmaDenemesi=0;
+          if(mounted)setState((){});
+          return;
+        }
+      }catch(_){}
+    }
+    yenidenBaglaniyor=false;
+    if(mounted)setState((){});
   }
 
   Future<void> _heartbeatYaz()async{
-    if(!widget.yayinSahibi||kapatildi)return;
+    if(!widget.yayinSahibi||kapatildi||widget.oda.connectionState==lk.ConnectionState.disconnected)return;
     try{
       await FirebaseFirestore.instance.collection('live_streams').doc(widget.belgeId).set({
         'active':true,'lastHeartbeatAt':FieldValue.serverTimestamp(),'viewerCount':_aktifIzleyiciler().length,
@@ -720,6 +810,7 @@ class _CanliYayinPageState extends State<CanliYayinPage> {
     final yeni = !mikrofonAcik;
     try {
       await widget.oda.localParticipant?.setMicrophoneEnabled(yeni);
+      await FirebaseFirestore.instance.collection('live_streams').doc(widget.belgeId).set({'microphoneEnabled':yeni},SetOptions(merge:true));
       if (mounted) setState(() => mikrofonAcik = yeni);
     } catch (_) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Mikrofon ayarı değiştirilemedi.')));
@@ -733,6 +824,7 @@ class _CanliYayinPageState extends State<CanliYayinPage> {
         yeni,
         cameraCaptureOptions: widget.kameraAyarlari.copyWith(cameraPosition: arkaKamera ? lk.CameraPosition.back : lk.CameraPosition.front),
       );
+      await FirebaseFirestore.instance.collection('live_streams').doc(widget.belgeId).set({'cameraEnabled':yeni},SetOptions(merge:true));
       if (mounted) setState(() => kameraAcik = yeni);
     } catch (_) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Kamera ayarı değiştirilemedi.')));
@@ -762,7 +854,11 @@ class _CanliYayinPageState extends State<CanliYayinPage> {
       } catch (_) {}
       await FirebaseFirestore.instance.collection('live_streams').doc(widget.belgeId).set({
         'active': false,
+        'status':'ended',
+        'endReason':'host_ended',
         'endedAt': FieldValue.serverTimestamp(),
+        'lastHeartbeatAt':FieldValue.serverTimestamp(),
+        'cameraEnabled':false,
         'durationSeconds': saniye,
         'maxViewers': maxIzleyici,
         'likeCount': toplamKalp,
@@ -788,7 +884,7 @@ class _CanliYayinPageState extends State<CanliYayinPage> {
     if (widget.yayinSahibi) {
       final onay = await showDialog<bool>(context: context, builder: (_) => AlertDialog(
         title: const Text('Yayın bitsin mi?'),
-        content: const Text('Canlı yayın tüm izleyiciler için kapanacak.'),
+        content: const Text('Canlı yayın tüm izleyiciler için anında kapanacak, Keşfet’ten kaldırılacak ve bildirimlerde “yayın sona erdi” olarak görünecek.'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Devam et')),
           FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Yayını bitir')),
@@ -849,7 +945,13 @@ class _CanliYayinPageState extends State<CanliYayinPage> {
     final kalite=widget.oda.localParticipant?.connectionQuality??lk.ConnectionQuality.unknown;
     String yazi='Bağlı';
     Color renk=const Color(0xFF27D17F);
-    if(durum==lk.ConnectionState.reconnecting||durum==lk.ConnectionState.connecting){
+    if(yayinBitti){
+      yazi='Sona erdi';
+      renk=Colors.white54;
+    }else if(yenidenBaglaniyor){
+      yazi='Tekrar $yenidenBaglanmaDenemesi/3';
+      renk=const Color(0xFFFFB020);
+    }else if(durum==lk.ConnectionState.reconnecting||durum==lk.ConnectionState.connecting){
       yazi='Bağlanıyor';
       renk=const Color(0xFFFFB020);
     }else if(durum==lk.ConnectionState.disconnected){
@@ -1357,6 +1459,52 @@ class _CanliYayinPageState extends State<CanliYayinPage> {
     );
   }
 
+
+  Widget _goruntuYokEkrani(){
+    final kameraKapali=widget.yayinSahibi?!kameraAcik:!uzakKameraAcik;
+    if(kameraKapali){
+      return const ColoredBox(
+        color:Colors.black,
+        child:Center(child:Column(mainAxisSize:MainAxisSize.min,children:[
+          Icon(Icons.videocam_off_rounded,color:Colors.white54,size:58),
+          SizedBox(height:12),
+          Text('Kamera kapalı',style:TextStyle(color:Colors.white,fontSize:18,fontWeight:FontWeight.w900)),
+          SizedBox(height:5),
+          Text('Canlı yayın ses ve yorumlarla devam ediyor.',style:TextStyle(color:Colors.white60,fontWeight:FontWeight.w600)),
+        ])),
+      );
+    }
+    if(yenidenBaglaniyor||widget.oda.connectionState==lk.ConnectionState.reconnecting){
+      return ColoredBox(
+        color:Colors.black,
+        child:Center(child:Column(mainAxisSize:MainAxisSize.min,children:[
+          const CircularProgressIndicator(color:Color(0xFFFFB020)),
+          const SizedBox(height:13),
+          Text('Yeniden bağlanıyor… ${yenidenBaglanmaDenemesi>0?'$yenidenBaglanmaDenemesi/3':''}',style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w900)),
+          const SizedBox(height:5),
+          const Text('Yayın bağlantısı korunuyor.',style:TextStyle(color:Colors.white60)),
+        ])),
+      );
+    }
+    if(widget.oda.connectionState==lk.ConnectionState.disconnected){
+      return ColoredBox(
+        color:Colors.black,
+        child:Center(child:Column(mainAxisSize:MainAxisSize.min,children:[
+          const Icon(Icons.wifi_off_rounded,color:Color(0xFFFF5A67),size:54),
+          const SizedBox(height:12),
+          const Text('Yayın bağlantısı kesildi',style:TextStyle(color:Colors.white,fontSize:18,fontWeight:FontWeight.w900)),
+          const SizedBox(height:8),
+          FilledButton.icon(onPressed:_otomatikYenidenBaglan,icon:const Icon(Icons.refresh_rounded),label:const Text('Tekrar bağlan')),
+        ])),
+      );
+    }
+    return Center(child:Column(mainAxisSize:MainAxisSize.min,children:[
+      const CircularProgressIndicator(color:Colors.white),
+      const SizedBox(height:12),
+      Text(saniye<8?'Yayın görüntüsü hazırlanıyor…':'Yayın görüntüsü alınamadı. Bağlantı sürüyorsa kamerayı yeniden açmayı dene.',textAlign:TextAlign.center,style:const TextStyle(color:Colors.white70,fontWeight:FontWeight.w700)),
+    ]));
+  }
+
   Future<void> _hediyeGonder(String ad, String emoji, int puan) async {
     if (hediyeGonderiliyor) return;
     final user = FirebaseAuth.instance.currentUser;
@@ -1498,6 +1646,7 @@ class _CanliYayinPageState extends State<CanliYayinPage> {
   void dispose() {
     sayac?.cancel();
     heartbeat?.cancel();
+    canliDurumAboneligi?.cancel();
     yorum.dispose();
     widget.oda.removeListener(_yenile);
     if (!kapatildi) _bitir(geriDon: false);
@@ -1516,11 +1665,7 @@ class _CanliYayinPageState extends State<CanliYayinPage> {
         body: Stack(children: [
           Positioned.fill(
             child:track==null
-              ?Center(child:Column(mainAxisSize:MainAxisSize.min,children:[
-                const CircularProgressIndicator(color:Colors.white),
-                const SizedBox(height:12),
-                Text(saniye<8?'Yayın görüntüsü hazırlanıyor…':'Yayın görüntüsü alınamadı. Tekrar bağlanmayı deneyebilirsin.',textAlign:TextAlign.center,style:const TextStyle(color:Colors.white70,fontWeight:FontWeight.w700)),
-              ]))
+              ?_goruntuYokEkrani()
               :StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
                 stream:FirebaseFirestore.instance.collection('live_streams').doc(widget.belgeId).snapshots(),
                 builder:(_,snap){
@@ -1609,6 +1754,26 @@ class _CanliYayinPageState extends State<CanliYayinPage> {
                 ]),
               ],
             ]),
+          )),
+          if(yayinBitti)Positioned.fill(child:ColoredBox(
+            color:const Color(0xF2111111),
+            child:SafeArea(child:Center(child:Padding(
+              padding:const EdgeInsets.all(28),
+              child:Column(mainAxisSize:MainAxisSize.min,children:[
+                const Icon(Icons.stop_circle_rounded,color:Color(0xFFFF1744),size:74),
+                const SizedBox(height:16),
+                const Text('CANLI YAYIN SONA ERDİ',textAlign:TextAlign.center,style:TextStyle(color:Colors.white,fontSize:23,fontWeight:FontWeight.w900)),
+                const SizedBox(height:8),
+                Text(bitisMesaji,textAlign:TextAlign.center,style:const TextStyle(color:Colors.white70,fontSize:14,fontWeight:FontWeight.w600)),
+                const SizedBox(height:22),
+                FilledButton.icon(
+                  style:FilledButton.styleFrom(backgroundColor:Colors.white,foregroundColor:Colors.black,minimumSize:const Size(220,50)),
+                  onPressed:()async{await _bitir(geriDon:false);if(mounted)Navigator.pop(context);},
+                  icon:const Icon(Icons.explore_rounded),
+                  label:const Text('Keşfet’e dön',style:TextStyle(fontWeight:FontWeight.w900)),
+                ),
+              ]),
+            ))),
           )),
         ]),
       ),
