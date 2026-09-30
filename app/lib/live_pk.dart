@@ -20,6 +20,24 @@ Map<String,dynamic> _ngelxPkTemizleAlanlari()=> <String,dynamic>{
   'pkOpponentName':FieldValue.delete(),
 };
 
+Future<Map<String,int>> _ngelxPkHamSkor(String liveId)async{
+  var kalp=0,hediye=0;
+  try{
+    final sonuc=await Future.wait([
+      FirebaseFirestore.instance.collection('live_streams').doc(liveId).collection('reactions').get(),
+      FirebaseFirestore.instance.collection('live_streams').doc(liveId).collection('comments').get(),
+    ]);
+    final rs=sonuc[0] as QuerySnapshot<Map<String,dynamic>>;
+    final cs=sonuc[1] as QuerySnapshot<Map<String,dynamic>>;
+    for(final d in rs.docs)kalp+=(d.data()['count'] as num?)?.toInt()??1;
+    for(final d in cs.docs){
+      final v=d.data();
+      if(v['kind']=='gift')hediye+=(v['points'] as num?)?.toInt()??0;
+    }
+  }catch(_){}
+  return <String,int>{'likes':kalp,'gifts':hediye};
+}
+
 Future<void> ngelxCanliPkYayindanCik(String liveId)async{
   if(liveId.isEmpty)return;
   final me=FirebaseAuth.instance.currentUser?.uid;
@@ -308,10 +326,11 @@ class _NgelXCanliPkKatmaniState extends State<NgelXCanliPkKatmani>{
       }
       final now=DateTime.now();
       final ends=Timestamp.fromDate(now.add(const Duration(minutes:3)));
-      final startLikeA=(a['likeCount'] as num?)?.toInt()??0;
-      final startLikeB=(b['likeCount'] as num?)?.toInt()??0;
-      final startGiftA=(a['giftPoints'] as num?)?.toInt()??0;
-      final startGiftB=(b['giftPoints'] as num?)?.toInt()??0;
+      final hamSkorlar=await Future.wait([_ngelxPkHamSkor(aId),_ngelxPkHamSkor(bId)]);
+      final startLikeA=hamSkorlar[0]['likes']??0;
+      final startLikeB=hamSkorlar[1]['likes']??0;
+      final startGiftA=hamSkorlar[0]['gifts']??0;
+      final startGiftB=hamSkorlar[1]['gifts']??0;
 
       await ref.set({
         'status':'active',
