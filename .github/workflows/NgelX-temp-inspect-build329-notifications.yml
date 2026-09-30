@@ -1,0 +1,16 @@
+name: NgelX TEMP inspect Build 329 notifications
+on:
+  workflow_dispatch:
+  push:
+    branches: [work/build329-live-lifecycle-reconnect]
+    paths:
+      - '.github/workflows/NgelX-temp-inspect-build329-notifications.yml'
+      - 'tools/inspect_build329_notifications.py'
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: work/build329-live-lifecycle-reconnect
+      - run: python3 tools/inspect_build329_notifications.py
