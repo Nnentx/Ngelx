@@ -54,7 +54,7 @@ jobs:
           grep -F "setState(()=>yayinBitti=true)" app/lib/live_broadcast_studio.dart
           grep -F "sayac?.cancel();" app/lib/live_broadcast_studio.dart
           grep -F "where('members',arrayContains:ben.uid).limit(100)" app/lib/live_broadcast_studio.dart
-          grep -F "Activity ve Sohbet üzerinden gönderildi" app/lib/live_broadcast_studio.dart
+          grep -F "Aktivite ve Sohbet üzerinden gönderildi" app/lib/live_broadcast_studio.dart
           grep -F "orderBy('createdAt',descending:true).limit(200)" app/lib/main.dart
           grep -F "class NgelXArsivMerkeziPage" app/lib/main.dart
           grep -F "class CanliYayinGecmisiPage" app/lib/main.dart
