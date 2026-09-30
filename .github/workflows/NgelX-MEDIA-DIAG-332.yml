@@ -23,7 +23,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 - <<'PY'
-          import json, urllib.request, urllib.error, hashlib, time
+          import json, urllib.request, urllib.error, urllib.parse, hashlib, time, concurrent.futures
 
           with open('app/android/app/google-services.json','r',encoding='utf-8') as f:
               gs=json.load(f)
@@ -68,18 +68,23 @@ jobs:
 
           stats={}
           broken=[]
-          for mid,typ,u in tests[:300]:
+          def probe(item):
+              mid,typ,u=item
               status='ERR'
               try:
                   req=urllib.request.Request(u,headers={'Range':'bytes=0-31','User-Agent':'NgelX-Media-Diag/332'})
-                  with urllib.request.urlopen(req,timeout=12) as r:
+                  with urllib.request.urlopen(req,timeout=6) as r:
                       status=str(r.status)
                       r.read(32)
               except urllib.error.HTTPError as e:
                   status=str(e.code)
-              except Exception as e:
+              except Exception:
                   status='ERR'
               host=urllib.parse.urlparse(u).hostname or ''
+              return mid,typ,u,host,status
+          with concurrent.futures.ThreadPoolExecutor(max_workers=24) as ex:
+              results=list(ex.map(probe,tests[:300]))
+          for mid,typ,u,host,status in results:
               key=(host,status)
               stats[key]=stats.get(key,0)+1
               if status not in ('200','206'):
