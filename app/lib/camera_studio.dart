@@ -278,19 +278,28 @@ class _NgelXCameraStudioPageState extends State<NgelXCameraStudioPage> with Widg
 
   List<double> _retusMatris(){
     final a=retus.clamp(0.0,1.0);
-    final b=255*(a*.035);
+    final b=255*(a*.045);
     return <double>[
-      1+a*.03,0,0,0,b,
-      0,1+a*.02,0,0,b,
-      0,0,1-a*.01,0,b,
+      1+a*.018,0,0,0,b,
+      0,1+a*.014,0,0,b,
+      0,0,1-a*.012,0,b*.78,
       0,0,0,1,0,
     ];
   }
+
+  List<double> _otomatikPortreMatris()=>const <double>[
+    1.015,0,0,0,2.4,
+    0,1.008,0,0,2.0,
+    0,0,.992,0,1.2,
+    0,0,0,1,0,
+  ];
 
   Widget _kameraOnizleme(){
     final c=kontrol;
     if(c==null||!c.value.isInitialized)return const Center(child:CircularProgressIndicator(color:Colors.white));
     Widget p=CameraPreview(c);
+    final onKamera=c.description.lensDirection==CameraLensDirection.front;
+    if(onKamera&&otomatikPortre)p=ColorFiltered(colorFilter:ColorFilter.matrix(_otomatikPortreMatris()),child:p);
     final f=ngelxKameraFiltreleri[filtreIndex];
     if(filtreIndex!=0)p=ColorFiltered(colorFilter:ColorFilter.matrix(_filtreMatris(f.matris)),child:p);
     if(retus>.01)p=ColorFiltered(colorFilter:ColorFilter.matrix(_retusMatris()),child:p);
@@ -306,9 +315,22 @@ class _NgelXCameraStudioPageState extends State<NgelXCameraStudioPage> with Widg
   }
   double _zoomBaslangic=1;
 
-  Widget _yuvarlak(IconData ikon,VoidCallback? onTap,{String? yazi})=>Column(mainAxisSize:MainAxisSize.min,children:[
-    InkWell(onTap:onTap,borderRadius:BorderRadius.circular(28),child:Container(width:48,height:48,decoration:BoxDecoration(color:Colors.black45,shape:BoxShape.circle,border:Border.all(color:Colors.white24)),child:Icon(ikon,color:Colors.white))),
-    if(yazi!=null)...[const SizedBox(height:3),Text(yazi,style:const TextStyle(color:Colors.white,fontSize:9,fontWeight:FontWeight.w700))],
+  Widget _yuvarlak(IconData ikon,VoidCallback? onTap,{String? yazi,bool aktif=false})=>Column(mainAxisSize:MainAxisSize.min,children:[
+    InkWell(
+      onTap:onTap,
+      borderRadius:BorderRadius.circular(28),
+      child:AnimatedContainer(
+        duration:const Duration(milliseconds:140),
+        width:48,height:48,
+        decoration:BoxDecoration(
+          color:aktif?mor.withValues(alpha:.88):Colors.black45,
+          shape:BoxShape.circle,
+          border:Border.all(color:aktif?Colors.white70:Colors.white24,width:aktif?1.6:1),
+        ),
+        child:Icon(ikon,color:Colors.white),
+      ),
+    ),
+    if(yazi!=null)...[const SizedBox(height:3),Text(yazi,style:TextStyle(color:aktif?Colors.white:Colors.white70,fontSize:9,fontWeight:FontWeight.w800))],
   ]);
 
   Future<void> _filtrePaneli()async{
@@ -352,6 +374,13 @@ class _NgelXCameraStudioPageState extends State<NgelXCameraStudioPage> with Widg
           Row(children:[const Text('Rötuş',style:TextStyle(color:Colors.white,fontSize:18,fontWeight:FontWeight.w900)),const Spacer(),TextButton(onPressed:(){setState(()=>retus=0);setP((){});},child:const Text('Sıfırla'))]),
           const Text('Doğal görünüm için düşük ve orta seviyeler önerilir.',style:TextStyle(color:Colors.white60,fontSize:11)),
           Row(children:[const Icon(Icons.face_retouching_natural_rounded,color:Colors.white70),Expanded(child:Slider(value:retus,min:0,max:1,onChanged:(v){setState(()=>retus=v);setP((){});})),Text('%${(retus*100).round()}',style:const TextStyle(color:Colors.white))]),
+          SwitchListTile(
+            contentPadding:EdgeInsets.zero,dense:true,value:otomatikPortre,
+            onChanged:(v){setState(()=>otomatikPortre=v);setP((){});},
+            secondary:const Icon(Icons.auto_awesome_rounded,color:Colors.white70),
+            title:const Text('Otomatik doğal portre',style:TextStyle(color:Colors.white,fontWeight:FontWeight.w800)),
+            subtitle:const Text('Ön kamerada ışık, ten tonu ve sert kontrastı dengeler.',style:TextStyle(color:Colors.white60,fontSize:11)),
+          ),
         ]),
       ))),
     );
@@ -383,16 +412,20 @@ class _NgelXCameraStudioPageState extends State<NgelXCameraStudioPage> with Widg
           const Spacer(),
           if(kayit)Container(padding:const EdgeInsets.symmetric(horizontal:10,vertical:6),decoration:BoxDecoration(color:Colors.red,borderRadius:BorderRadius.circular(18)),child:Text(_kayitYazi,style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w900))),
           const Spacer(),
-          _yuvarlak(Icons.cameraswitch_rounded,_kameraCevir,yazi:'Çevir'),
+          _yuvarlak(Icons.cameraswitch_rounded,_kameraCevir,yazi:'Çevir',aktif:kontrol?.description.lensDirection==CameraLensDirection.front),
         ])),
         Positioned(top:74,right:12,child:Column(children:[
-          _yuvarlak(_flashIkon,_flashDegistir,yazi:'Flaş'),const SizedBox(height:10),
-          _yuvarlak(Icons.timer_outlined,(){setState(()=>sayac=sayac==0?3:sayac==3?10:0);},yazi:sayac==0?'Sayaç':'${sayac}s'),const SizedBox(height:10),
-          _yuvarlak(Icons.grid_3x3_rounded,()=>setState(()=>izgara=!izgara),yazi:'Izgara'),const SizedBox(height:10),
-          _yuvarlak(Icons.aspect_ratio_rounded,(){setState(()=>oran=oran=='9:16'?'1:1':oran=='1:1'?'16:9':'9:16');},yazi:oran),const SizedBox(height:10),
-          _yuvarlak(Icons.face_retouching_natural_rounded,()=>unawaited(_retusPaneli()),yazi:'Rötuş'),const SizedBox(height:10),
-          _yuvarlak(Icons.filter_alt_rounded,()=>unawaited(_filtrePaneli()),yazi:'Filtre'),
+          _yuvarlak(_flashIkon,_flashDegistir,yazi:'Flaş',aktif:flash!=FlashMode.off),const SizedBox(height:10),
+          _yuvarlak(Icons.timer_outlined,(){setState(()=>sayac=sayac==0?3:sayac==3?10:0);},yazi:sayac==0?'Sayaç':'${sayac}s',aktif:sayac>0),const SizedBox(height:10),
+          _yuvarlak(Icons.grid_3x3_rounded,()=>setState(()=>izgara=!izgara),yazi:'Izgara',aktif:izgara),const SizedBox(height:10),
+          _yuvarlak(Icons.aspect_ratio_rounded,(){setState(()=>oran=oran=='9:16'?'1:1':oran=='1:1'?'16:9':'9:16');},yazi:oran,aktif:oran!='9:16'),const SizedBox(height:10),
+          _yuvarlak(Icons.face_retouching_natural_rounded,()=>unawaited(_retusPaneli()),yazi:'Rötuş',aktif:retus>.01||otomatikPortre),const SizedBox(height:10),
+          _yuvarlak(Icons.filter_alt_rounded,()=>unawaited(_filtrePaneli()),yazi:'Filtre',aktif:filtreIndex!=0),
         ])),
+        if(oran!='9:16')Positioned.fill(child:IgnorePointer(child:Center(child:AspectRatio(
+          aspectRatio:oran=='1:1'?1:16/9,
+          child:Container(decoration:BoxDecoration(border:Border.all(color:Colors.white70,width:2),borderRadius:BorderRadius.circular(14))),
+        )))),
         if(_aktifSayac>0)Center(child:Text(_aktifSayac.toString(),style:const TextStyle(color:Colors.white,fontSize:92,fontWeight:FontWeight.w900,shadows:[Shadow(blurRadius:18,color:Colors.black)]))),
         Positioned(left:12,right:12,bottom:18,child:Column(children:[
           if(zoom>1.01)Padding(padding:const EdgeInsets.only(bottom:8),child:Text('${zoom.toStringAsFixed(1)}x',style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w900))),
