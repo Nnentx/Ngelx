@@ -1631,6 +1631,7 @@ class _CanliYayinPageState extends State<CanliYayinPage> {
       final metin='🔴 CANLI • ${widget.baslik}\n@${widget.username}\nYayına katıl: ngelx://live/${widget.belgeId}';
       if(mevcutSohbet){
         // Build 338: mevcut özel sohbet üyelerini yeniden yazmadan canlı kartını gönder.
+        // Release tetikleme: düzeltme gerçek cihaz APK testine hazır.
         await chat.set({
           'updatedAt':FieldValue.serverTimestamp(),
         },SetOptions(merge:true)).timeout(const Duration(seconds:8));
