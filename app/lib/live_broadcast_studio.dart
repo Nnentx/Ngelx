@@ -40,7 +40,7 @@ _NgelXCanliFiltrePreset ngelxCanliPresetBul(String? ad){
 List<double> ngelxCanliRenkMatrisi({
   required _NgelXCanliFiltrePreset preset,
   double parlaklik=0,double kontrast=1,double doygunluk=1,double sicaklik=0,double netlik=0,
-  double ciltTonu=.08,double highlightKoruma=.65,double golgeAcma=.10,double guzellik=.18,
+  double ciltTonu=.10,double highlightKoruma=.72,double golgeAcma=.18,double guzellik=.34,
   bool otomatikIyilestirme=true,bool dusukIsik=false,
 }){
   var b=(preset.parlaklik+parlaklik).clamp(-.18,.24).toDouble();
@@ -52,17 +52,17 @@ List<double> ngelxCanliRenkMatrisi({
   final sh=golgeAcma.clamp(0.0,1.0).toDouble();
   final skin=ciltTonu.clamp(-1.0,1.0).toDouble();
   final beauty=guzellik.clamp(0.0,1.0).toDouble();
-  if(otomatikIyilestirme){b-=.010;c*=1.008;s*=1.010;}
-  if(dusukIsik){b+=.045;c*=.965;s*=1.020;w+=.018;}
-  b-=hp*.022;
-  c*=1-(hp*.055);
-  b+=sh*.030;
-  c*=1-(sh*.018);
-  w+=skin*.085;
-  s*=1+(skin.abs()*.012);
-  c*=1-(beauty*.028);
-  s*=1-(beauty*.010);
-  b+=beauty*.004;
+  if(otomatikIyilestirme){b+=.004;c*=.985;s*=1.018;w+=.006;}
+  if(dusukIsik){b+=.050;c*=.955;s*=1.020;w+=.018;}
+  b-=hp*.026;
+  c*=1-(hp*.075);
+  b+=sh*.040;
+  c*=1-(sh*.024);
+  w+=skin*.095;
+  s*=1+(skin.abs()*.014);
+  c*=1-(beauty*.060);
+  s*=1-(beauty*.016);
+  b+=beauty*.006;
   c=(c*(1+n*.085)).clamp(.75,1.60).toDouble();
   s=(s*(1+n*.035)).clamp(.65,1.70).toDouble();
   const lr=.2126,lg=.7152,lb=.0722;
@@ -80,7 +80,7 @@ List<double> ngelxCanliRenkMatrisi({
 
 Widget ngelxCanliEfektKatmani({required Widget child,required Map<String,dynamic> veri}){
   final preset=ngelxCanliPresetBul((veri['filterPro']??veri['filter']??'Doğal').toString());
-  final beauty=_ngelxCanliDouble(veri['beauty']??veri['retouch'],.20).clamp(0.0,1.0).toDouble();
+  final beauty=_ngelxCanliDouble(veri['beauty']??veri['retouch'],.34).clamp(0.0,1.0).toDouble();
   final matris=ngelxCanliRenkMatrisi(
     preset:preset,
     parlaklik:_ngelxCanliDouble(veri['filterBrightness'],0),
@@ -88,9 +88,9 @@ Widget ngelxCanliEfektKatmani({required Widget child,required Map<String,dynamic
     doygunluk:_ngelxCanliDouble(veri['filterSaturation'],1),
     sicaklik:_ngelxCanliDouble(veri['filterWarmth'],0),
     netlik:_ngelxCanliDouble(veri['filterClarity'],.10),
-    ciltTonu:_ngelxCanliDouble(veri['skinTone'],.08),
-    highlightKoruma:_ngelxCanliDouble(veri['highlightProtect'],.65),
-    golgeAcma:_ngelxCanliDouble(veri['shadowLift'],.10),
+    ciltTonu:_ngelxCanliDouble(veri['skinTone'],.10),
+    highlightKoruma:_ngelxCanliDouble(veri['highlightProtect'],.72),
+    golgeAcma:_ngelxCanliDouble(veri['shadowLift'],.18),
     guzellik:beauty,
     otomatikIyilestirme:veri['autoEnhance']!=false,
     dusukIsik:veri['lowLight']==true,
@@ -118,18 +118,18 @@ class _CanliHazirlikPageState extends State<CanliHazirlikPage> {
   bool onizlemeHazirlaniyor = true;
   bool arkaKamera = false;
   bool flashAcik = false;
-  double retus = .18;
+  double retus = .36;
   double parlaklik = 0;
-  double kontrast = 1;
-  double doygunluk = 1;
-  double sicaklik = 0;
-  double netlik = .10;
-  double ciltTonu = .08;
-  double highlightKoruma = .65;
-  double golgeAcma = .10;
+  double kontrast = .98;
+  double doygunluk = 1.03;
+  double sicaklik = .02;
+  double netlik = .08;
+  double ciltTonu = .10;
+  double highlightKoruma = .72;
+  double golgeAcma = .18;
   bool otomatikIyilestirme = true;
   bool dusukIsik = false;
-  int filtreIndex = 0;
+  int filtreIndex = 2;
   String oran = '9:16';
   String kalite = '720p';
   String gizlilik = 'Herkese açık';
@@ -1383,10 +1383,18 @@ class _CanliYayinPageState extends State<CanliYayinPage> {
     }catch(_){}
     try{
       await uygulamaBildirimiGonder(
-        toUid:hedefUid,fromUid:ben.uid,tur:'message',metin:'Sana bir canlı yayın gönderdi',
+        toUid:hedefUid,fromUid:ben.uid,tur:'live',metin:'Sana bir canlı yayın gönderdi',
         belgeId:widget.belgeId,hedefTuru:'live',hedefBaslik:widget.baslik,
         olayTuru:'live_share',onizleme:widget.baslik,
+        dedupeKey:'live_share_${widget.belgeId}_${ben.uid}_$hedefUid',
       );
+    }catch(_){}
+    try{
+      await FirebaseFirestore.instance.collection('live_streams').doc(widget.belgeId)
+        .collection('share_receipts').doc('${ben.uid}_$hedefUid').set({
+          'senderUid':ben.uid,'targetUid':hedefUid,'status':'sent',
+          'sentAt':FieldValue.serverTimestamp(),
+        },SetOptions(merge:true));
     }catch(_){}
   }
 
