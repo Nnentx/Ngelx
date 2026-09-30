@@ -2,29 +2,27 @@
 from pathlib import Path
 
 root=Path(__file__).resolve().parents[1]/"app/lib"
-needles=[
-  "ngelxKisiyeIcerikGonder",
-  "shared_content",
-  "collection('chats')",
-  'collection("chats")',
-  "live_streams",
-  "Canlı yayınlar",
-  "CanliYayin",
-  "_canliSecimKutusu",
-]
+
+def emit(label,p,text,i,before=1800,after=6000):
+    print(f"\n===== {label} :: {p.relative_to(root)} @ {i} =====\n")
+    print(text[max(0,i-before):min(len(text),i+after)])
+
 for p in root.rglob("*.dart"):
-    try:
-        text=p.read_text(encoding="utf-8")
-    except Exception:
-        continue
-    for n in needles:
+    try:text=p.read_text(encoding="utf-8")
+    except Exception:continue
+    for label,needle in [
+        ("SEND_HELPER","Future<void> ngelxKisiyeIcerikGonder"),
+        ("SHARED_RENDER","shared_content"),
+        ("LIVE_SHARE_RENDER","liveShare"),
+        ("EXPLORE_LIVE_TITLE","Canlı yayınlar"),
+        ("EXPLORE_ACTIVE_QUERY",".where('active'"),
+        ("EXPLORE_LIVE_COLLECTION","collection('live_streams')"),
+        ("LIVE_OPEN","CanliYayinPage("),
+    ]:
         start=0
-        hit=0
-        while hit<8:
-            i=text.find(n,start)
-            if i<0: break
-            a=max(0,i-1800); b=min(len(text),i+6500)
-            print(f"\n===== {p.relative_to(root)} :: {n} :: hit {hit+1} @ {i} =====\n")
-            print(text[a:b])
-            start=i+len(n)
-            hit+=1
+        hits=0
+        while hits<6:
+            i=text.find(needle,start)
+            if i<0:break
+            emit(label,p,text,i)
+            start=i+len(needle);hits+=1
