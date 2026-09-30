@@ -13,6 +13,13 @@ if parts:
     data=base64.b64decode(raw)
     if len(data)!=22102:
         raise SystemExit(f'audio module byte size mismatch: {len(data)}')
+    audio_text=data.decode('utf-8')
+    # Build 340 audio request sheet: remove one extra closing parenthesis found by release compiler.
+    bad="]));});}))));}"
+    good="]));});})));}"
+    if bad in audio_text:
+        audio_text=audio_text.replace(bad,good,1)
+    data=audio_text.encode('utf-8')
     audio_path.write_bytes(data)
 if not audio_path.exists():
     raise SystemExit('audio_live_rooms.dart missing')
