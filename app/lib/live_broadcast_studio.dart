@@ -960,6 +960,8 @@ class _CanliYayinPageState extends State<CanliYayinPage> {
     yenidenBaglanmaDenemesi=0;
     bitisMesaji='Canlı yayın sona erdi.';
     if(mounted)setState(()=>yayinBitti=true);
+    sayac?.cancel();
+    sayac=null;
     heartbeat?.cancel();
     heartbeat=null;
     if (widget.yayinSahibi) {
