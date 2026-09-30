@@ -382,6 +382,7 @@ class _CanliHazirlikPageState extends State<CanliHazirlikPage> {
         'commentsEnabled': true,
         'slowModeSeconds': 0,
         'mutedUsers': <String>[],
+        'bannedUsers': <String>[],
         'shareCount': 0,
         'welcomeMessage': 'Hoş geldiniz 👋',
       });
@@ -407,18 +408,35 @@ class _CanliHazirlikPageState extends State<CanliHazirlikPage> {
         if(gizlilik=='Herkese açık')...takipciler,
       }..remove(user.uid);
       if(canliHedefler.isNotEmpty){
-        unawaited(Future.wait(canliHedefler.take(120).map((hedefUid)=>uygulamaBildirimiGonder(
-          toUid:hedefUid,
-          fromUid:user.uid,
-          tur:'live',
-          metin:'canlı yayın başlattı',
-          belgeId:belge.id,
-          hedefTuru:'live',
-          hedefBaslik:baslik.text.trim(),
-          olayTuru:'live_started',
-          onizleme:baslik.text.trim(),
-          dedupeKey:'live_${belge.id}_$hedefUid',
-        ))));
+        unawaited(Future.wait(canliHedefler.take(120).map((hedefUid)async{
+          try{
+            await uygulamaBildirimiGonder(
+              toUid:hedefUid,
+              fromUid:user.uid,
+              tur:'live',
+              metin:'canlı yayın başlattı',
+              belgeId:belge.id,
+              hedefTuru:'live',
+              hedefBaslik:baslik.text.trim(),
+              olayTuru:'live_started',
+              onizleme:baslik.text.trim(),
+              dedupeKey:'live_${belge.id}_$hedefUid',
+            );
+            return true;
+          }catch(_){
+            return false;
+          }
+        })).then((sonuclar)async{
+          final basarili=sonuclar.where((x)=>x).length;
+          final basarisiz=sonuclar.length-basarili;
+          try{
+            await FirebaseFirestore.instance.collection('live_streams').doc(belge.id).set({
+              'startNotificationSent':basarili,
+              'startNotificationFailed':basarisiz,
+              'startNotificationUpdatedAt':FieldValue.serverTimestamp(),
+            },SetOptions(merge:true));
+          }catch(_){}
+        }));
       }
       if (!mounted) return;
       Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => CanliYayinPage(
@@ -668,6 +686,9 @@ class _CanliYayinPageState extends State<CanliYayinPage> {
   int yenidenBaglanmaDenemesi=0;
   String bitisMesaji='Canlı yayın sona erdi.';
   int maxIzleyici = 0;
+  int sonToplamKalp = 0;
+  int sonHediyePuani = 0;
+  int sonYorumSayisi = 0;
   int yerelKalpSerisi = 0;
   DateTime? sonYorumZamani;
 
@@ -684,7 +705,10 @@ class _CanliYayinPageState extends State<CanliYayinPage> {
       if(!widget.yayinSahibi&&v.isNotEmpty){
         final kameraDurumu=v['cameraEnabled']!=false;
         if(mounted&&uzakKameraAcik!=kameraDurumu)setState(()=>uzakKameraAcik=kameraDurumu);
-        if(v['active']==false&&!yayinBitti){
+        final benUid=FirebaseAuth.instance.currentUser?.uid??'';
+        if(benUid.isNotEmpty&&List<String>.from(v['bannedUsers']??const[]).contains(benUid)&&!yayinBitti){
+          unawaited(_izleyicideYayinBitti('removed'));
+        }else if(v['active']==false&&!yayinBitti){
           final neden=(v['endReason']??'').toString();
           unawaited(_izleyicideYayinBitti(neden));
         }
@@ -713,7 +737,11 @@ class _CanliYayinPageState extends State<CanliYayinPage> {
   Future<void> _izleyicideYayinBitti(String neden)async{
     if(widget.yayinSahibi||yayinBitti)return;
     sayac?.cancel();
-    bitisMesaji=neden=='host_ended'?'Yayıncı canlı yayını bitirdi.':'Canlı yayın sona erdi.';
+    bitisMesaji=neden=='host_ended'
+      ?'Yayıncı canlı yayını bitirdi.'
+      :neden=='removed'
+        ?'Yayıncı seni bu canlı yayından çıkardı.'
+        :'Canlı yayın sona erdi.';
     if(mounted)setState(()=>yayinBitti=true);
     try{await widget.oda.disconnect();}catch(_){}
   }
@@ -854,6 +882,9 @@ class _CanliYayinPageState extends State<CanliYayinPage> {
           if ((data['kind'] ?? 'comment') == 'comment') yorumSayisi++;
         }
       } catch (_) {}
+      sonToplamKalp=toplamKalp;
+      sonHediyePuani=hediyePuani;
+      sonYorumSayisi=yorumSayisi;
       await FirebaseFirestore.instance.collection('live_streams').doc(widget.belgeId).set({
         'active': false,
         'status':'ended',
@@ -895,6 +926,31 @@ class _CanliYayinPageState extends State<CanliYayinPage> {
       if (!onay) return false;
     }
     await _bitir(geriDon: false);
+    if(widget.yayinSahibi&&mounted){
+      final dk=saniye~/60;
+      final sn=(saniye%60).toString().padLeft(2,'0');
+      await showDialog<void>(
+        context:context,
+        barrierDismissible:false,
+        builder:(ctx)=>AlertDialog(
+          title:const Row(children:[
+            Icon(Icons.analytics_rounded,color:Color(0xFFFF1744)),
+            SizedBox(width:9),
+            Text('Canlı yayın özeti'),
+          ]),
+          content:Column(mainAxisSize:MainAxisSize.min,children:[
+            _CanliOzetSatiri(ikon:Icons.schedule_rounded,etiket:'Süre',deger:'$dk:$sn'),
+            _CanliOzetSatiri(ikon:Icons.visibility_rounded,etiket:'En yüksek izleyici',deger:'$maxIzleyici'),
+            _CanliOzetSatiri(ikon:Icons.favorite_rounded,etiket:'Beğeni',deger:'$sonToplamKalp'),
+            _CanliOzetSatiri(ikon:Icons.chat_bubble_rounded,etiket:'Yorum',deger:'$sonYorumSayisi'),
+            _CanliOzetSatiri(ikon:Icons.card_giftcard_rounded,etiket:'Hediye puanı',deger:'$sonHediyePuani'),
+          ]),
+          actions:[
+            FilledButton(onPressed:()=>Navigator.pop(ctx),child:const Text('Tamam')),
+          ],
+        ),
+      );
+    }
     return true;
   }
 
