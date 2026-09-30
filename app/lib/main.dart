@@ -422,6 +422,7 @@ class _NgelXAgResmiState extends State<NgelXAgResmi>{
   }
 
   Widget _error(BuildContext context,Object hata){
+    _otomatikTekrarDene();
     final e=widget.errorWidget??widget.error;
     if(e is Widget)return e;
     if(e is Function){
@@ -430,7 +431,6 @@ class _NgelXAgResmiState extends State<NgelXAgResmi>{
         if(sonuc is Widget)return sonuc;
       }catch(_){}
     }
-    _otomatikTekrarDene();
     return Center(child:Column(
       mainAxisSize:MainAxisSize.min,
       children:[
