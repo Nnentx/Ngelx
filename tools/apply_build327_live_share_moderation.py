@@ -620,7 +620,7 @@ share=r"""  Future<void> _canliKisiyeGonder(User ben,String hedefUid)async{
 
 """
 
-live=rep_between(live,"  Future<void> _paylas() async {","  Future<void> _hediyeGonder(",share+"  Future<void> _hediyeGonder(","share flow")
+live=rep_between(live,"  Future<void> _paylas() async {","  Future<void> _hediyeGonder(",share,"share flow")
 
 yorum=r"""  Future<void> _yorumGonder() async {
     final metin=yorum.text.trim();
@@ -662,8 +662,7 @@ live=rep_between(
     "  Future<void> _yorumGonder() async {",
     """  @override
   void dispose()""",
-    yorum+"""  @override
-  void dispose()""",
+    yorum,
     "comment moderation send",
 )
 
