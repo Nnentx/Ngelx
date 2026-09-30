@@ -1,0 +1,126 @@
+name: Ngel X v50 BUILD 335 LIVE COMPLETE
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - work/build335-live-complete
+    paths:
+      - '.github/workflows/NgelX-v50-BUILD-335-LIVE-COMPLETE.yml'
+      - 'app/lib/main.dart'
+      - 'app/lib/live_broadcast_studio.dart'
+      - 'app/lib/live_pk.dart'
+      - 'app/lib/live_feed_card.dart'
+      - 'app/lib/feed_creator_badge.dart'
+      - 'app/lib/camera_studio.dart'
+      - 'app/lib/story_v66.dart'
+      - 'app/lib/group_quality.dart'
+      - 'app/pubspec.yaml'
+      - 'app/android/app/src/main/**'
+
+permissions:
+  contents: read
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 80
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: work/build335-live-complete
+          fetch-depth: 0
+
+      - name: Build 335 canli yayin ve regresyon sozlesmesi
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -F "version: 1.0.116+335" app/pubspec.yaml
+          grep -F "defaultValue: '1.0.116'" app/lib/main.dart
+          grep -F "defaultValue: '335'" app/lib/main.dart
+          grep -F "part 'live_pk.dart';" app/lib/main.dart
+
+          # Çalışan medya/kamera omurgası korunmalı.
+          grep -F "https://media.ngelxsocial.com" app/lib/main.dart
+          grep -F "introVideoUrl" app/lib/main.dart
+          grep -F "expiresAt" app/lib/main.dart
+          grep -F "groupPhotoUrl" app/lib/main.dart
+          grep -F "otomatikPortre=true" app/lib/camera_studio.dart
+
+          # Akış, Keşfet, profil ve canlı durum bağlantıları korunmalı.
+          grep -F "NgelXAkisCanliKarti" app/lib/main.dart
+          grep -F "_canliSliverleri(trend:true)" app/lib/main.dart
+          grep -F "profilCanli" app/lib/main.dart
+          grep -F "currentLiveId" app/lib/main.dart
+          grep -F "Canlı yayın sona erdi" app/lib/main.dart
+
+          # Doğrudan paylaşım Aktiviteye düşmeli ve PK gerçek bölünmüş görüntü kullanmalı.
+          grep -F "olayTuru:'live_share'" app/lib/live_broadcast_studio.dart
+          grep -F "tur:'live'" app/lib/live_broadcast_studio.dart
+          grep -F "NgelXCanliPkGoruntuKatmani" app/lib/live_broadcast_studio.dart
+          grep -F "collection('calls')" app/lib/live_pk.dart
+          if grep -Fq "live_pk_requests" app/lib/live_pk.dart; then
+            echo "Eski izin verilmeyen live_pk_requests koleksiyonu geri gelmiş."
+            exit 1
+          fi
+          grep -F "durationSeconds':180" app/lib/live_pk.dart
+          grep -F "NgelXPkRakipVideo" app/lib/live_pk.dart
+
+          # İçerik üreticisi rozeti Akışta kapalı, yorumda mevcut kalmalı.
+          grep -F "this.creatorBadge=false" app/lib/feed_creator_badge.dart
+          grep -F "class NgelXYorumKullaniciSatiri" app/lib/feed_creator_badge.dart
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Sabit NgelX imza anahtarini geri yukle
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: ngelx-stable-debug-keystore-v1
+          fail-on-cache-miss: true
+
+      - name: Flutter analiz
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter clean
+          flutter pub get
+          flutter analyze --machine > analyze.log 2>&1 || true
+          cat analyze.log
+          if grep -q '^ERROR|' analyze.log; then
+            echo "Flutter analyze ERROR buldu."
+            exit 1
+          fi
+
+      - name: APK olustur ve imzayi dogrula
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter build apk --release
+          APK=build/app/outputs/flutter-apk/app-release.apk
+          test -s "$APK"
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          "$APKSIGNER" verify --print-certs "$APK" | tee build/app/outputs/flutter-apk/apksigner-certs.txt
+          grep -qi 'be20b27f0ba1f4decd2941d410b1536de89e48dc894f04f038f9d26b11ecd6aa' build/app/outputs/flutter-apk/apksigner-certs.txt
+          sha256sum "$APK" > "$APK.sha256"
+
+      - name: APK yukle
+        uses: actions/upload-artifact@v4
+        with:
+          name: NgelX-1.0.116-Build-335-LIVE-COMPLETE
+          path: |
+            app/build/app/outputs/flutter-apk/app-release.apk
+            app/build/app/outputs/flutter-apk/app-release.apk.sha256
+            app/build/app/outputs/flutter-apk/apksigner-certs.txt
+          if-no-files-found: error
+          retention-days: 14
