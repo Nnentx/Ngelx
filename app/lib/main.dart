@@ -5783,8 +5783,8 @@ class _GorselYaziKartiState extends State<GorselYaziKarti> with RouteAware {
       if(url.isNotEmpty&&gorulen.add(url))fotoListesi.add(url);
     }
 
-    final ham=widget.veri['mediaUrls'];
-    if(ham is Iterable){
+    final dynamic ham=widget.veri['mediaUrls'];
+    if(ham is List){
       for(final item in ham)medyaEkle(item);
     }else if(ham is String&&ham.trim().isNotEmpty){
       try{
@@ -5806,6 +5806,7 @@ class _GorselYaziKartiState extends State<GorselYaziKarti> with RouteAware {
       }
     }
 
+    final foto=fotoListesi.isEmpty?'':fotoListesi.first;
     final eskiAlanAlternatifleri=<String>[];
     if(fotoListesi.length<=1){
       final ana=fotoListesi.isEmpty?'':fotoListesi.first;
