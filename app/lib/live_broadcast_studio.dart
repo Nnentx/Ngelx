@@ -1762,15 +1762,18 @@ class _CanliYayinPageState extends State<CanliYayinPage> {
         backgroundColor: Colors.black,
         body: Stack(children: [
           Positioned.fill(
-            child:track==null
-              ?_goruntuYokEkrani()
-              :StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
-                stream:FirebaseFirestore.instance.collection('live_streams').doc(widget.belgeId).snapshots(),
-                builder:(_,snap){
-                  final veri=snap.data?.data()??<String,dynamic>{};
-                  return ngelxCanliEfektKatmani(veri:veri,child:lk.VideoTrackRenderer(track,fit:lk.VideoViewFit.cover));
-                },
-              ),
+            child:NgelXCanliPkGoruntuKatmani(
+              liveId:widget.belgeId,
+              child:track==null
+                ?_goruntuYokEkrani()
+                :StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
+                  stream:FirebaseFirestore.instance.collection('live_streams').doc(widget.belgeId).snapshots(),
+                  builder:(_,snap){
+                    final veri=snap.data?.data()??<String,dynamic>{};
+                    return ngelxCanliEfektKatmani(veri:veri,child:lk.VideoTrackRenderer(track,fit:lk.VideoViewFit.cover));
+                  },
+                ),
+            ),
           ),
           Positioned.fill(child:DecoratedBox(decoration:BoxDecoration(gradient:LinearGradient(begin:Alignment.topCenter,end:Alignment.bottomCenter,colors:[Colors.black54,Colors.transparent,Colors.black.withOpacity(.8)])))),
           if(widget.oda.connectionState==lk.ConnectionState.reconnecting)
