@@ -2,26 +2,17 @@
 from pathlib import Path
 root=Path(__file__).resolve().parents[1]
 main=(root/"app/lib/main.dart").read_text(encoding="utf-8")
-live=(root/"app/lib/live_broadcast_studio.dart").read_text(encoding="utf-8")
 
-targets=[
-  ("SEND_HELPER",main,"Future<void> ngelxKisiyeIcerikGonder"),
-  ("SHARE_UI",main,"NgelXPaylas"),
-  ("MESAJ_PAGE",main,"class MesajPage"),
-  ("CHAT_PAGE",main,"class Sohbet"),
-  ("FRIENDS_FIELD",main,"['friends']"),
-  ("GROUP_COLLECTION",main,"collection('groups')"),
-  ("NOTIFY_HELPER",main,"Future<void> uygulamaBildirimiGonder"),
-  ("USERS_STREAM",main,"collection('users')"),
-  ("LIVE_SHARE",live,"Future<void> _paylas()"),
-  ("LIVE_BUILD",live,"class _CanliYayinPageState"),
-]
+def hits(label,needle,before=1300,after=5500,limit=5):
+    start=0
+    for n in range(limit):
+        i=main.find(needle,start)
+        if i<0: break
+        print(f"\n===== {label} HIT {n+1} =====\n")
+        print(main[max(0,i-before):min(len(main),i+after)])
+        start=i+len(needle)
 
-for label,text,needle in targets:
-    i=text.find(needle)
-    if i<0:
-        print(f"===== {label} NOT FOUND: {needle} =====")
-        continue
-    a=max(0,i-1400); b=min(len(text),i+7000)
-    print(f"\n===== {label} =====\n")
-    print(text[a:b])
+hits("SHARED_CONTENT_RENDER","shared_content",1500,6500,6)
+hits("CHAT_MESSAGES_RENDER","collection('messages').orderBy",1800,6500,4)
+hits("GROUPS","collection('groups')",1600,6500,6)
+hits("OPEN_PROFILE","ProfilPage(",1200,3200,3)
