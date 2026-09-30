@@ -1066,7 +1066,36 @@ class _CanliYayinPageState extends State<CanliYayinPage> {
                       leading:CircleAvatar(backgroundImage:foto.isEmpty?null:NgelXAgImageProvider(foto),child:foto.isEmpty?const Icon(Icons.person_rounded):null),
                       title:Text(ad.isEmpty?'NgelX izleyicisi':ad,style:const TextStyle(fontWeight:FontWeight.w800)),
                       subtitle:Text((v['username']??'').toString().isEmpty?'Canlı yayında':'@${v['username']}'),
-                      trailing:const Icon(Icons.chevron_right_rounded),
+                      trailing:widget.yayinSahibi&&uid.isNotEmpty
+                        ?PopupMenuButton<String>(
+                          tooltip:'İzleyici yönetimi',
+                          onSelected:(secim)async{
+                            if(secim=='profile'){
+                              if(sheetContext.mounted)Navigator.pop(sheetContext);
+                              if(mounted)Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciProfilPage(uid:uid)));
+                              return;
+                            }
+                            if(secim=='mute'){
+                              await FirebaseFirestore.instance.collection('live_streams').doc(widget.belgeId).set({
+                                'mutedUsers':FieldValue.arrayUnion([uid]),
+                              },SetOptions(merge:true));
+                              return;
+                            }
+                            if(secim=='remove'){
+                              await FirebaseFirestore.instance.collection('live_streams').doc(widget.belgeId).set({
+                                'bannedUsers':FieldValue.arrayUnion([uid]),
+                                'mutedUsers':FieldValue.arrayUnion([uid]),
+                              },SetOptions(merge:true));
+                              if(sheetContext.mounted)ScaffoldMessenger.of(sheetContext).showSnackBar(const SnackBar(content:Text('İzleyici canlı yayından çıkarıldı.')));
+                            }
+                          },
+                          itemBuilder:(_)=>const [
+                            PopupMenuItem(value:'profile',child:ListTile(contentPadding:EdgeInsets.zero,leading:Icon(Icons.person_outline_rounded),title:Text('Profili aç'))),
+                            PopupMenuItem(value:'mute',child:ListTile(contentPadding:EdgeInsets.zero,leading:Icon(Icons.volume_off_rounded),title:Text('Yorumlarını sustur'))),
+                            PopupMenuItem(value:'remove',child:ListTile(contentPadding:EdgeInsets.zero,leading:Icon(Icons.block_rounded,color:Colors.redAccent),title:Text('Yayından çıkar',style:TextStyle(color:Colors.redAccent)))),
+                          ],
+                        )
+                        :const Icon(Icons.chevron_right_rounded),
                       onTap:uid.isEmpty?null:(){
                         Navigator.pop(sheetContext);
                         Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciProfilPage(uid:uid)));
