@@ -31,6 +31,7 @@ part 'build258_settings.dart';
 part 'create_music_editor.dart';
 part 'camera_studio.dart';
 part 'live_broadcast_studio.dart';
+part 'live_feed_card.dart';
 part 'feed_creator_badge.dart';
 part 'story_v66.dart';
 
@@ -4527,6 +4528,7 @@ class VideoAkisi extends StatefulWidget {
 class _VideoAkisiState extends State<VideoAkisi> {
   final PageController akisKontrol=PageController();
   StreamSubscription<DocumentSnapshot<Map<String,dynamic>>>? _profilAboneligi;
+  StreamSubscription<QuerySnapshot<Map<String,dynamic>>>? _canliAboneligi;
   int aktif=0;
   bool takipSekmesi=false;
   bool profilHazir=false;
@@ -4535,6 +4537,7 @@ class _VideoAkisiState extends State<VideoAkisi> {
   Set<String> engellenenler={};
   Set<String> gizlenenIcerikler={};
   final Set<String> _buOturumdaGorulenler={};
+  List<Map<String,dynamic>> canliYayinlar=<Map<String,dynamic>>[];
 
   Future<void> _akisiYenile() async {
     final uid=FirebaseAuth.instance.currentUser?.uid;
@@ -4559,8 +4562,34 @@ class _VideoAkisiState extends State<VideoAkisi> {
   }
 
   void _silmeYenilendi(){if(mounted)setState((){});}
-  @override void initState(){super.initState();ngelxIcerikSilmeRevizyonu.addListener(_silmeYenilendi);_profilTakibiniBaslat();}
-  @override void dispose(){ngelxIcerikSilmeRevizyonu.removeListener(_silmeYenilendi);_profilAboneligi?.cancel();akisKontrol.dispose();super.dispose();}
+  @override void initState(){super.initState();ngelxIcerikSilmeRevizyonu.addListener(_silmeYenilendi);_profilTakibiniBaslat();_canliTakibiniBaslat();}
+  @override void dispose(){ngelxIcerikSilmeRevizyonu.removeListener(_silmeYenilendi);_profilAboneligi?.cancel();_canliAboneligi?.cancel();akisKontrol.dispose();super.dispose();}
+
+  void _canliTakibiniBaslat(){
+    _canliAboneligi=FirebaseFirestore.instance.collection('live_streams')
+      .where('active',isEqualTo:true).limit(24).snapshots().listen((snap){
+        if(!mounted)return;
+        final yeni=snap.docs.where((d)=>ngelxCanliKaydiTaze(d.data())).map((d){
+          final v=d.data();
+          return <String,dynamic>{
+            'id':d.id,
+            'type':'live',
+            'ownerId':(v['ownerId']??'').toString(),
+            'username':(v['username']??'ngelx').toString(),
+            'title':(v['title']??'Canlı yayın').toString(),
+            'viewerCount':(v['viewerCount'] as num?)?.toInt()??0,
+            'likeCount':(v['likeCount'] as num?)?.toInt()??0,
+            'shareCount':(v['shareCount'] as num?)?.toInt()??0,
+            'giftPoints':(v['giftPoints'] as num?)?.toInt()??0,
+            'coverUrl':(v['coverUrl']??'').toString(),
+            'visibility':(v['visibility']??'Herkese açık').toString(),
+            'startedAt':v['startedAt'],
+            'createdAt':v['startedAt'],
+          };
+        }).where((v)=>(v['ownerId']??'').toString().isNotEmpty).toList();
+        setState(()=>canliYayinlar=yeni);
+      },onError:(_){if(mounted)setState(()=>canliYayinlar=<Map<String,dynamic>>[]);});
+  }
 
   void _profilTakibiniBaslat(){
     final uid=FirebaseAuth.instance.currentUser?.uid;
@@ -4588,6 +4617,7 @@ class _VideoAkisiState extends State<VideoAkisi> {
   }
 
   Future<void> _goruntulemeKaydet(Map<String,dynamic> item)async{
+    if((item['type']??'').toString()=='live')return;
     final id=(item['id']??'').toString();
     final owner=(item['ownerId']??'').toString();
     final me=FirebaseAuth.instance.currentUser?.uid;
@@ -4702,15 +4732,33 @@ class _VideoAkisiState extends State<VideoAkisi> {
             return true;
           }).toList();
 
-          final videolar=(takipSekmesi
+          final videolar=takipSekmesi
             ?yuklenenler.where((v)=>takipEdilenler.contains(v['ownerId'])).toList()
-            :List<Map<String,dynamic>>.from(yuklenenler))
+            :List<Map<String,dynamic>>.from(yuklenenler);
+          videolar.sort((a,b){
+            final at=a['createdAt'],bt=b['createdAt'];
+            final am=at is Timestamp?at.millisecondsSinceEpoch:0;
+            final bm=bt is Timestamp?bt.millisecondsSinceEpoch:0;
+            return bm.compareTo(am);
+          });
+
+          final me=FirebaseAuth.instance.currentUser?.uid;
+          final canliAdaylar=canliYayinlar.where((v){
+            final owner=(v['ownerId']??'').toString();
+            if(owner.isEmpty||owner==me||engellenenler.contains(owner))return false;
+            final gorunurluk=(v['visibility']??'Herkese açık').toString();
+            if(gorunurluk=='Arkadaşlar'&&!arkadaslar.contains(owner))return false;
+            if(gorunurluk=='Takipçiler'&&!takipEdilenler.contains(owner))return false;
+            if(takipSekmesi&&!takipEdilenler.contains(owner)&&!arkadaslar.contains(owner))return false;
+            return true;
+          }).toList()
             ..sort((a,b){
-              final at=a['createdAt'],bt=b['createdAt'];
-              final am=at is Timestamp?at.millisecondsSinceEpoch:0;
-              final bm=bt is Timestamp?bt.millisecondsSinceEpoch:0;
-              return bm.compareTo(am);
+              final ayakin=takipEdilenler.contains(a['ownerId'])||arkadaslar.contains(a['ownerId']);
+              final byakin=takipEdilenler.contains(b['ownerId'])||arkadaslar.contains(b['ownerId']);
+              if(ayakin!=byakin)return ayakin?-1:1;
+              return ngelxCanliTrendPuani(b).compareTo(ngelxCanliTrendPuani(a));
             });
+          if(canliAdaylar.isNotEmpty)videolar.insertAll(0,canliAdaylar.take(takipSekmesi?3:2));
 
           if(videolar.isEmpty){
             return Center(child:Padding(
@@ -4769,6 +4817,13 @@ class _VideoAkisiState extends State<VideoAkisi> {
               itemBuilder:(_,i){
                 final item=videolar[i];
                 final tur=(item['type']??'video').toString();
+                if(tur=='live'){
+                  return NgelXAkisCanliKarti(
+                    liveId:(item['id']??'').toString(),
+                    ilkVeri:item,
+                    aktif:widget.gorunur&&aktif==i,
+                  );
+                }
                 if(tur=='video'){
                   return VideoKarti(
                     adres:(item['videoUrl']??item['mediaUrl']??'').toString(),
@@ -7876,10 +7931,10 @@ class _KesfetPageState extends State<KesfetPage> {
     );
   }
 
-  List<Widget> _canliSliverleri()=>[
+  List<Widget> _canliSliverleri({bool trend=false})=>[
     SliverToBoxAdapter(child:Padding(
       padding:const EdgeInsets.fromLTRB(16,18,16,10),
-      child:Text(t('liveStreams'),style:const TextStyle(color:Colors.black,fontSize:21,fontWeight:FontWeight.w900)),
+      child:Text(trend?'Trend canlı yayınlar':t('liveStreams'),style:const TextStyle(color:Colors.black,fontSize:21,fontWeight:FontWeight.w900)),
     )),
     SliverToBoxAdapter(child:SizedBox(
       height:220,
@@ -7888,7 +7943,8 @@ class _KesfetPageState extends State<KesfetPage> {
         builder:(_,snap){
           if(snap.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator(color:Color(0xFFFF1744)));
           if(snap.hasError)return _bosKart(t('liveLoadError'),Icons.cloud_off_outlined);
-          final yayinlar=(snap.data?.docs??[]).where((d)=>ngelxCanliKaydiTaze(d.data())).toList();
+          final yayinlar=(snap.data?.docs??[]).where((d)=>ngelxCanliKaydiTaze(d.data())).toList()
+            ..sort((a,b)=>ngelxCanliTrendPuani(b.data()).compareTo(ngelxCanliTrendPuani(a.data())));
           if(yayinlar.isEmpty)return _bosKart(t('noLive'),Icons.live_tv_outlined);
           return ListView.separated(
             padding:const EdgeInsets.symmetric(horizontal:16),
@@ -7920,7 +7976,10 @@ class _KesfetPageState extends State<KesfetPage> {
                       const Spacer(),
                       Text((y['title']??'Canlı yayın').toString(),maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w900,fontSize:18)),
                       const SizedBox(height:5),
-                      Text('@${y['username']??'ngelx'}',style:const TextStyle(color:Colors.white70)),
+                      Row(children:[
+                        Expanded(child:Text('@${y['username']??'ngelx'}',maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.white70))),
+                        NgelXCanliTakipButonu(ownerId:(y['ownerId']??'').toString(),compact:true),
+                      ]),
                     ]),
                   ),
                 ),
@@ -7933,6 +7992,7 @@ class _KesfetPageState extends State<KesfetPage> {
   ];
 
   List<Widget> _trendSliverleri()=>[
+    ..._canliSliverleri(trend:true),
     SliverToBoxAdapter(child:Padding(padding:const EdgeInsets.fromLTRB(16,20,16,10),child:Text(t('trends'),style:const TextStyle(color:Colors.black,fontSize:21,fontWeight:FontWeight.w900)))),
     SliverToBoxAdapter(child:SizedBox(height:48,child:ListView(padding:const EdgeInsets.symmetric(horizontal:16),scrollDirection:Axis.horizontal,children:[
       _TrendEtiketi(Icons.directions_run_rounded,'#spor',const Color(0xFFFFEEF1),Colors.red,onTap:()=>_etiketAra('#spor')),
