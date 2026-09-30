@@ -6,7 +6,7 @@ on:
     branches:
       - work/build338-live-chat-card-fix
     paths:
-      - '.github/workflows/NgelX-v52-BUILD-338-LIVE-CHAT-CARD-FIX.yml'
+      - '.github/workflows/NgelX-v53-BUILD-338-LIVE-CHAT-CARD-FIX.yml'
       - 'app/lib/main.dart'
       - 'app/lib/live_broadcast_studio.dart'
       - 'app/lib/live_pk.dart'
