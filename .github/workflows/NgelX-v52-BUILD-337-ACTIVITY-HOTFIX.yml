@@ -55,7 +55,7 @@ jobs:
           grep -F "sayac?.cancel();" app/lib/live_broadcast_studio.dart
           grep -F "where('members',arrayContains:ben.uid).limit(100)" app/lib/live_broadcast_studio.dart
           grep -F "Aktivite ve Sohbet üzerinden gönderildi" app/lib/live_broadcast_studio.dart
-          grep -F "orderBy('createdAt',descending:true).limit(200)" app/lib/main.dart
+          grep -F "where('toUid', isEqualTo: uid).limit(200).snapshots()" app/lib/main.dart
           grep -F "class NgelXArsivMerkeziPage" app/lib/main.dart
           grep -F "class CanliYayinGecmisiPage" app/lib/main.dart
           if grep -Fq "where('toUid', isEqualTo: uid).orderBy('createdAt',descending:true).limit(200)" app/lib/main.dart; then
