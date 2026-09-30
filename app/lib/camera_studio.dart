@@ -199,15 +199,15 @@ class _NgelXCameraStudioPageState extends State<NgelXCameraStudioPage> with Widg
       }
       final f=ngelxKameraFiltreleri[filtreIndex];
       if(f.ad=='S/B'){
-        g=img.adjustColor(g,saturation:(1-filtreYogunluk).clamp(0.0,1.0),brightness:1+(retus*.04)+(portre?.02:0),contrast:1+(retus*.02)-(portre?.015:0));
+        g=img.adjustColor(g,saturation:(1-filtreYogunluk).clamp(0.0,1.0),brightness:1+(retus*.04)+(portre ? .02 : 0),contrast:1+(retus*.02)-(portre ? .015 : 0));
       }else if(f.ad=='Retro'&&filtreYogunluk>.55){
         g=img.sepia(g);
       }else{
         g=img.adjustColor(
           g,
-          brightness:1+((f.parlaklik-1)*filtreYogunluk)+(retus*.04)+(portre?.025:0),
-          saturation:1+((f.doygunluk-1)*filtreYogunluk)+(retus*.045)+(portre?.018:0),
-          contrast:1+(retus*.018)-(portre?.018:0),
+          brightness:1+((f.parlaklik-1)*filtreYogunluk)+(retus*.04)+(portre ? .025 : 0),
+          saturation:1+((f.doygunluk-1)*filtreYogunluk)+(retus*.045)+(portre ? .018 : 0),
+          contrast:1+(retus*.018)-(portre ? .018 : 0),
         );
       }
       final dir=await getTemporaryDirectory();
