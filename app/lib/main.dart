@@ -443,7 +443,7 @@ class _NgelXAgResmiState extends State<NgelXAgResmi>{
   String get _aktifUrl{
     final xs=_kaynaklar;
     if(xs.isEmpty)return '';
-    final i=_kaynakIndex.clamp(0,xs.length-1);
+    final i=_kaynakIndex.clamp(0,xs.length-1).toInt();
     return xs[i];
   }
 
