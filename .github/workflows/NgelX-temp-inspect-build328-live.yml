@@ -1,0 +1,20 @@
+name: NgelX TEMP inspect Build 328 live fixes
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - work/build328-live-fixes-premium-beauty
+    paths:
+      - '.github/workflows/NgelX-temp-inspect-build328-live.yml'
+      - 'tools/inspect_build328_live_fixes.py'
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: work/build328-live-fixes-premium-beauty
+      - name: Inspect live/share/explore integration
+        run: python3 tools/inspect_build328_live_fixes.py
