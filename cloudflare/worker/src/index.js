@@ -232,6 +232,31 @@ function directR2Ready(env) {
   return Boolean(env.R2_ACCESS_KEY_ID && env.R2_SECRET_ACCESS_KEY && env.R2_ACCOUNT_ID);
 }
 
+function directR2Client(env) {
+  if (!directR2Ready(env)) return null;
+  return new AwsClient({
+    service: 's3',
+    region: 'auto',
+    accessKeyId: env.R2_ACCESS_KEY_ID,
+    secretAccessKey: env.R2_SECRET_ACCESS_KEY,
+  });
+}
+
+async function directR2Read(env, key, rangeHeader = '') {
+  const client = directR2Client(env);
+  if (!client) return null;
+  const endpoint =
+    'https://' + env.R2_ACCOUNT_ID + '.r2.cloudflarestorage.com/ngelx-media/' + encodeKeyForUrl(key);
+  const headers = {};
+  if (rangeHeader) headers.Range = rangeHeader;
+  try {
+    const response = await client.fetch(endpoint, {method: 'GET', headers});
+    return response.ok || response.status === 206 ? response : null;
+  } catch (_) {
+    return null;
+  }
+}
+
 async function presignR2Put(env, key, contentType, expiresIn = 900) {
   if (!directR2Ready(env)) throw new Error('R2 direct upload signer is not configured');
   const r2 = new AwsClient({
@@ -308,31 +333,53 @@ export default {
       const key = decodeURIComponent(url.pathname.slice('/media/'.length));
       if (!key || key.includes('..')) return json({error: 'invalid_key'}, 400);
 
-      // Video oyunculari Range istekleri gonderir. Tum dosyayi her seferinde
-      // dondurmek yerine yalnizca istenen bayt araligini R2'den oku.
-      const rangeHeader = request.headers.get('range');
+      const rangeHeader = request.headers.get('range') || '';
       const object = await env.MEDIA.get(
         key,
         rangeHeader ? {range: request.headers} : undefined,
       );
-      if (!object) return json({error: 'not_found'}, 404);
 
-      const headers = new Headers(cors());
-      object.writeHttpMetadata(headers);
-      headers.set('etag', object.httpEtag);
-      headers.set('cache-control', 'public, max-age=31536000, immutable');
-      headers.set('accept-ranges', 'bytes');
+      if (object) {
+        const headers = new Headers(cors());
+        object.writeHttpMetadata(headers);
+        headers.set('etag', object.httpEtag);
+        headers.set('cache-control', 'public, max-age=31536000, immutable');
+        headers.set('accept-ranges', 'bytes');
+        headers.set('access-control-expose-headers', 'Content-Length, Content-Range, Accept-Ranges, ETag, Content-Type');
+        headers.set('x-ngelx-media-source', 'r2-binding');
 
-      let status = 200;
-      if (object.range && typeof object.range.offset === 'number' && typeof object.range.length === 'number') {
-        const start = object.range.offset;
-        const length = object.range.length;
-        const end = start + length - 1;
-        headers.set('content-range', `bytes ${start}-${end}/${object.size}`);
-        headers.set('content-length', String(length));
-        status = 206;
+        let status = 200;
+        if (object.range && typeof object.range.offset === 'number' && typeof object.range.length === 'number') {
+          const start = object.range.offset;
+          const length = object.range.length;
+          const end = start + length - 1;
+          headers.set('content-range', `bytes ${start}-${end}/${object.size}`);
+          headers.set('content-length', String(length));
+          status = 206;
+        } else {
+          headers.set('content-length', String(object.size));
+        }
+        return new Response(object.body, {headers, status});
       }
-      return new Response(object.body, {headers, status});
+
+      // Direct-upload ile yazılmış eski nesne binding tarafında görünmüyorsa
+      // aynı anahtarı S3 kimliği üzerinden kurtarmayı dene. Bu, hesap/binding
+      // geçişlerinde oluşmuş kırık URL'leri yeniden yükleme istemeden açar.
+      const rescue = await directR2Read(env, key, rangeHeader);
+      if (rescue) {
+        const headers = new Headers(cors());
+        for (const name of ['content-type','content-length','content-range','etag','last-modified']) {
+          const value = rescue.headers.get(name);
+          if (value) headers.set(name, value);
+        }
+        headers.set('cache-control', 'public, max-age=31536000, immutable');
+        headers.set('accept-ranges', 'bytes');
+        headers.set('access-control-expose-headers', 'Content-Length, Content-Range, Accept-Ranges, ETag, Content-Type');
+        headers.set('x-ngelx-media-source', 'r2-signed-rescue');
+        return new Response(rescue.body, {headers, status: rescue.status});
+      }
+
+      return json({error: 'not_found'}, 404);
     }
 
     if (request.method === 'GET' && url.pathname === '/upload/presign') {
