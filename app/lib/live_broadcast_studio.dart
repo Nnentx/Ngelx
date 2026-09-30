@@ -383,6 +383,7 @@ class _CanliHazirlikPageState extends State<CanliHazirlikPage> {
         'slowModeSeconds': 0,
         'mutedUsers': <String>[],
         'shareCount': 0,
+        'welcomeMessage': 'Hoş geldiniz 👋',
       });
       await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
         'isLive': true,
@@ -1076,8 +1077,17 @@ class _CanliYayinPageState extends State<CanliYayinPage> {
           title:const Text('Yorumu sabitle',style:TextStyle(color:Colors.white,fontWeight:FontWeight.w800)),
           onTap:()async{
             Navigator.pop(sheetContext);
+            final yayinci=uid.isNotEmpty&&uid==widget.ownerId;
             await FirebaseFirestore.instance.collection('live_streams').doc(widget.belgeId).set({
-              'pinnedComment':{'commentId':yorumId,'uid':uid,'username':username,'text':metin},
+              'pinnedComment':{
+                'commentId':yorumId,
+                'uid':uid,
+                'username':username,
+                'text':metin,
+                'isHost':yayinci||y['isHost']==true,
+                'role':yayinci||y['isHost']==true?'host':'viewer',
+                'pinnedAt':FieldValue.serverTimestamp(),
+              },
             },SetOptions(merge:true));
           },
         ),
@@ -1111,21 +1121,58 @@ class _CanliYayinPageState extends State<CanliYayinPage> {
         StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
           stream:ref.snapshots(),
           builder:(_,snap){
-            final pinned=snap.data?.data()?['pinnedComment'];
-            if(pinned is! Map)return const SizedBox.shrink();
-            final p=Map<String,dynamic>.from(pinned);
-            if((p['text']??'').toString().isEmpty)return const SizedBox.shrink();
+            final veri=snap.data?.data()??<String,dynamic>{};
+            final pinned=veri['pinnedComment'];
+            Map<String,dynamic>? p;
+            var sabit=false;
+            if(pinned is Map){
+              final aday=Map<String,dynamic>.from(pinned);
+              if((aday['text']??'').toString().trim().isNotEmpty){
+                p=aday;
+                sabit=true;
+              }
+            }
+            if(p==null){
+              final welcome=(veri['welcomeMessage']??'Hoş geldiniz 👋').toString().trim();
+              if(welcome.isEmpty)return const SizedBox.shrink();
+              p=<String,dynamic>{
+                'uid':widget.ownerId,
+                'username':widget.username,
+                'text':welcome,
+                'isHost':true,
+                'role':'host',
+              };
+            }
+            final yayinci=p['isHost']==true||p['role']=='host'||(p['uid']??'').toString()==widget.ownerId;
             return Container(
               width:double.infinity,
               margin:const EdgeInsets.only(bottom:6),
-              padding:const EdgeInsets.symmetric(horizontal:9,vertical:6),
-              decoration:BoxDecoration(color:const Color(0x665D5FEF),borderRadius:BorderRadius.circular(12)),
+              padding:const EdgeInsets.symmetric(horizontal:9,vertical:7),
+              decoration:BoxDecoration(
+                color:yayinci?const Color(0xCCB00020):const Color(0x665D5FEF),
+                borderRadius:BorderRadius.circular(12),
+                border:yayinci?Border.all(color:const Color(0xFFFF5A67).withOpacity(.55)):null,
+              ),
               child:Row(children:[
-                const Icon(Icons.push_pin_rounded,color:Colors.white70,size:15),
-                const SizedBox(width:5),
-                Expanded(child:Text('@${p['username']??'ngelx'}  ${p['text']??''}',maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.white,fontSize:11.5,fontWeight:FontWeight.w800))),
-                if(widget.yayinSahibi)IconButton(
+                Icon(sabit?Icons.push_pin_rounded:Icons.waving_hand_rounded,color:Colors.white,size:15),
+                const SizedBox(width:6),
+                if(yayinci)...[
+                  Container(
+                    padding:const EdgeInsets.symmetric(horizontal:6,vertical:3),
+                    decoration:BoxDecoration(color:const Color(0xFFFF1744),borderRadius:BorderRadius.circular(7)),
+                    child:const Text('YAYINCI',style:TextStyle(color:Colors.white,fontSize:9,fontWeight:FontWeight.w900,letterSpacing:.3)),
+                  ),
+                  const SizedBox(width:6),
+                ],
+                Expanded(child:Text(
+                  '@${p['username']??widget.username}  ${p['text']??''}',
+                  maxLines:2,
+                  overflow:TextOverflow.ellipsis,
+                  style:const TextStyle(color:Colors.white,fontSize:11.5,fontWeight:FontWeight.w800),
+                )),
+                if(widget.yayinSahibi&&sabit)IconButton(
                   visualDensity:VisualDensity.compact,
+                  tooltip:'Sabitlemeyi kaldır',
                   onPressed:()=>ref.set({'pinnedComment':FieldValue.delete()},SetOptions(merge:true)),
                   icon:const Icon(Icons.close_rounded,color:Colors.white70,size:16),
                 ),
@@ -1151,11 +1198,34 @@ class _CanliYayinPageState extends State<CanliYayinPage> {
                   child:Text('${y['giftEmoji']??'🎁'} ${y['username']??'ngelx'} • ${y['giftName']??'N-Hediye'} +${y['points']??0} N',style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w800)),
                 ));
               }
+              final yorumUid=(y['uid']??y['userId']??'').toString();
+              final yayiniciMesaji=y['isHost']==true||y['role']=='host'||(yorumUid.isNotEmpty&&yorumUid==widget.ownerId);
               return GestureDetector(
                 onLongPress:widget.yayinSahibi?()=>_yorumYonet(d.id,y):null,
                 child:Padding(
                   padding:const EdgeInsets.symmetric(vertical:3),
-                  child:Text('@${y['username']??'ngelx'}  ${y['text']??''}',style:const TextStyle(color:Colors.white)),
+                  child:yayiniciMesaji
+                    ?Container(
+                        padding:const EdgeInsets.symmetric(horizontal:8,vertical:6),
+                        decoration:BoxDecoration(
+                          color:const Color(0x99B00020),
+                          borderRadius:BorderRadius.circular(10),
+                          border:Border.all(color:const Color(0xFFFF5A67).withOpacity(.45)),
+                        ),
+                        child:Row(mainAxisSize:MainAxisSize.min,children:[
+                          Container(
+                            padding:const EdgeInsets.symmetric(horizontal:5,vertical:2),
+                            decoration:BoxDecoration(color:const Color(0xFFFF1744),borderRadius:BorderRadius.circular(6)),
+                            child:const Text('YAYINCI',style:TextStyle(color:Colors.white,fontSize:8.5,fontWeight:FontWeight.w900,letterSpacing:.3)),
+                          ),
+                          const SizedBox(width:6),
+                          Flexible(child:Text(
+                            '@${y['username']??widget.username}  ${y['text']??''}',
+                            style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w800),
+                          )),
+                        ]),
+                      )
+                    :Text('@${y['username']??'ngelx'}  ${y['text']??''}',style:const TextStyle(color:Colors.white)),
                 ),
               );
             });
@@ -1637,7 +1707,11 @@ class _CanliYayinPageState extends State<CanliYayinPage> {
     await ref.collection('comments').add({
       'uid':user.uid,'userId':user.uid,
       'username':(profil.data()?['username']??'ngelx').toString(),
-      'text':metin,'kind':'comment','createdAt':FieldValue.serverTimestamp(),
+      'text':metin,
+      'kind':'comment',
+      'isHost':widget.yayinSahibi,
+      'role':widget.yayinSahibi?'host':'viewer',
+      'createdAt':FieldValue.serverTimestamp(),
     });
     sonYorumZamani=DateTime.now();
   }
