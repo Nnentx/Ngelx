@@ -1,0 +1,20 @@
+name: NgelX TEMP inspect Build 327 live integration
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - work/build327-live-share-moderation
+    paths:
+      - '.github/workflows/NgelX-temp-inspect-build327-live.yml'
+      - 'tools/inspect_build327_live_integration.py'
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: work/build327-live-share-moderation
+      - name: Inspect current NgelX live/chat/group integration
+        run: python3 tools/inspect_build327_live_integration.py
