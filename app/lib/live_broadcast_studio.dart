@@ -1630,6 +1630,7 @@ class _CanliYayinPageState extends State<CanliYayinPage> {
       final chat=FirebaseFirestore.instance.collection('chats').doc(chatId);
       final metin='🔴 CANLI • ${widget.baslik}\n@${widget.username}\nYayına katıl: ngelx://live/${widget.belgeId}';
       if(mevcutSohbet){
+        // Build 338: canlı paylaşım kartı için mevcut özel sohbet üyelerini koru.
         // Mevcut özel sohbette üyeler dizisini yeniden yazma. Eski sohbetlerde üye
         // sırası farklı olabildiği için Firestore kuralları bunu üyelik değişikliği
         // sayıp canlı kartını reddedebiliyordu.
