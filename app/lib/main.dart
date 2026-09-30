@@ -99,8 +99,8 @@ const ngelxPrivateBlueCanvas = Color(0xFFF6FAFF);
 const ngelxPrivateBlueBorder = Color(0xFFD8E8FF);
 const ngelxPrivateBlueInk = Color(0xFF10213A);
 
-const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.116');
-const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '335');
+const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.117');
+const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '336');
 const ngelxGroupBorder = Color(0xFFD9EEE0);
 
 final GlobalKey<NavigatorState> ngelxNavigatorKey=GlobalKey<NavigatorState>();
@@ -2675,7 +2675,9 @@ Future<void> uygulamaBildirimiGonder({
     if(olayTuru!=null&&olayTuru.isNotEmpty)'eventKind':olayTuru,
     if(onizleme!=null&&onizleme.isNotEmpty)'preview':onizleme,
     if(eylem!=null&&eylem.isNotEmpty)'eventAction':eylem,
-    'read':false,'createdAt':FieldValue.serverTimestamp(),
+    'read':false,
+    'createdAt':FieldValue.serverTimestamp(),
+    'clientCreatedAt':Timestamp.now(),
   };
 
   final bildirimler=FirebaseFirestore.instance.collection('notifications');
@@ -19233,7 +19235,7 @@ class _AktivitePageState extends State<AktivitePage> {
 
   Future<void> _aktiviteyiYenile()async{
     final ben=FirebaseAuth.instance.currentUser?.uid;if(ben==null)return;
-    try{await FirebaseFirestore.instance.collection('notifications').where('toUid',isEqualTo:ben).limit(200).get(const GetOptions(source:Source.server)).timeout(const Duration(seconds:10));if(mounted)setState((){});}
+    try{await FirebaseFirestore.instance.collection('notifications').where('toUid',isEqualTo:ben).orderBy('createdAt',descending:true).limit(200).get(const GetOptions(source:Source.server)).timeout(const Duration(seconds:10));if(mounted)setState((){});}
     catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(lt('Aktiviteler yenilenemedi.','Activity could not be refreshed.'))));}
   }
 
@@ -19649,7 +19651,7 @@ class _AktivitePageState extends State<AktivitePage> {
         }
       },icon:const Icon(Icons.done_all_rounded,color:Color(0xFF20B86A)))]),
       body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-        stream: uid == null ? null : FirebaseFirestore.instance.collection('notifications').where('toUid', isEqualTo: uid).limit(100).snapshots(),
+        stream: uid == null ? null : FirebaseFirestore.instance.collection('notifications').where('toUid', isEqualTo: uid).orderBy('createdAt',descending:true).limit(200).snapshots(),
         builder: (_, s) {
           if(s.hasError)return Center(child:Column(mainAxisSize:MainAxisSize.min,children:[const Icon(Icons.cloud_off_rounded,color:Colors.redAccent,size:52),const SizedBox(height:10),Text(t('activityLoadFailed'),style:const TextStyle(color:Colors.black,fontWeight:FontWeight.w800)),Text(t('checkConnectionRetry'),style:const TextStyle(color:Colors.black54))]));
           if(s.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator(color:mor));
@@ -20064,8 +20066,6 @@ class _KullaniciProfilPageState extends State<KullaniciProfilPage> {
   Future<void> profildenMesajAc(BuildContext context,{required String ad,required String foto})async{
     final me=FirebaseAuth.instance.currentUser?.uid;
     if(me==null||me==uid)return;
-    final ids=<String>[me,uid]..sort();
-    final chatId=ids.join('_');
     try{
       final sonuc=await Future.wait([
         FirebaseFirestore.instance.collection('users').doc(me).get().timeout(const Duration(seconds:8)),
@@ -20084,18 +20084,49 @@ class _KullaniciProfilPageState extends State<KullaniciProfilPage> {
         return;
       }
 
-      final arkadas=List<String>.from(benim['friends']??const[]).contains(uid)
-        ||List<String>.from(hedef['friends']??const[]).contains(me);
-      await FirebaseFirestore.instance.collection('chats').doc(chatId).set({
-        'members':ids,
-        'isGroup':false,
-        'peerA':ids.first,
-        'peerB':ids.last,
-        if(arkadas)'requestAccepted_$me':true,
-        if(arkadas)'requestAccepted_$uid':true,
-        'openedAt_$me':FieldValue.serverTimestamp(),
-        'updatedAt':FieldValue.serverTimestamp(),
-      },SetOptions(merge:true)).timeout(const Duration(seconds:10));
+      String chatId='';
+      try{
+        final mevcut=await FirebaseFirestore.instance.collection('chats')
+            .where('members',arrayContains:me).limit(100)
+            .get(const GetOptions(source:Source.server)).timeout(const Duration(seconds:8));
+        for(final d in mevcut.docs){
+          final v=d.data();
+          final uyeler=List<String>.from(v['members']??const[]);
+          final grup=v['isGroup']==true||uyeler.length>2;
+          if(!grup&&uyeler.length==2&&uyeler.contains(me)&&uyeler.contains(uid)){
+            chatId=d.id;
+            break;
+          }
+        }
+      }catch(_){}
+
+      final ids=<String>[me,uid]..sort();
+      if(chatId.isEmpty){
+        chatId=ids.join('_');
+        final arkadas=List<String>.from(benim['friends']??const[]).contains(uid)
+          ||List<String>.from(hedef['friends']??const[]).contains(me);
+        final izin=(hedef['messagePermission']??(hedef['friendsOnlyMessages']==true?'friends':'all')).toString();
+        final takipIzin=List<String>.from(hedef['following']??const[]).contains(me);
+        final izinVar=izin=='all'||(izin=='friends'&&arkadas)||(izin=='following'&&takipIzin);
+        if(!izinVar){
+          if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bu kullanıcı mesaj gizliliği nedeniyle yeni sohbet kabul etmiyor.')));
+          return;
+        }
+        await FirebaseFirestore.instance.collection('chats').doc(chatId).set({
+          'members':ids,
+          'isGroup':false,
+          'peerA':ids.first,
+          'peerB':ids.last,
+          if(arkadas)'requestAccepted_$me':true,
+          if(arkadas)'requestAccepted_$uid':true,
+          'openedAt_$me':FieldValue.serverTimestamp(),
+          'updatedAt':FieldValue.serverTimestamp(),
+        },SetOptions(merge:true)).timeout(const Duration(seconds:10));
+      }else{
+        unawaited(FirebaseFirestore.instance.collection('chats').doc(chatId).set({
+          'openedAt_$me':FieldValue.serverTimestamp(),
+        },SetOptions(merge:true)).timeout(const Duration(seconds:5)).catchError((_){ }));
+      }
 
       if(!context.mounted)return;
       await Navigator.push(context,MaterialPageRoute(builder:(_)=>SohbetPage(
@@ -20106,8 +20137,8 @@ class _KullaniciProfilPageState extends State<KullaniciProfilPage> {
       )));
     }on TimeoutException{
       if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Mesaj ekranı hazırlanamadı. Tekrar dene.')));
-    }catch(_){
-      if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Mesaj ekranı şu anda açılamadı. Tekrar dene.')));
+    }catch(e){
+      if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Mesaj ekranı açılamadı. Tekrar dene.')));
     }
   }
 
@@ -22499,6 +22530,139 @@ class IcerikGizlemePage extends StatelessWidget{
   }
 }
 
+
+class NgelXArsivMerkeziPage extends StatelessWidget{
+  const NgelXArsivMerkeziPage({super.key});
+  @override
+  Widget build(BuildContext context)=>Theme(
+    data:ThemeData.light(),
+    child:Scaffold(
+      backgroundColor:Colors.white,
+      appBar:AppBar(title:const Text('Arşiv',style:TextStyle(fontWeight:FontWeight.w900))),
+      body:ListView(
+        padding:const EdgeInsets.all(16),
+        children:[
+          Container(
+            decoration:BoxDecoration(color:const Color(0xFFF7F3FF),borderRadius:BorderRadius.circular(20)),
+            child:ListTile(
+              leading:const CircleAvatar(backgroundColor:Color(0xFFE8DBFF),child:Icon(Icons.auto_stories_rounded,color:mor)),
+              title:const Text('Hikâye arşivi',style:TextStyle(fontWeight:FontWeight.w900)),
+              subtitle:const Text('Eski hikâyelerin ve öne çıkanların'),
+              trailing:const Icon(Icons.chevron_right_rounded),
+              onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const HikayeArsiviPage())),
+            ),
+          ),
+          const SizedBox(height:12),
+          Container(
+            decoration:BoxDecoration(color:const Color(0xFFFFF1F3),borderRadius:BorderRadius.circular(20)),
+            child:ListTile(
+              leading:const CircleAvatar(backgroundColor:Color(0xFFFFDDE3),child:Icon(Icons.live_tv_rounded,color:Color(0xFFFF1744))),
+              title:const Text('Canlı yayın geçmişi',style:TextStyle(fontWeight:FontWeight.w900)),
+              subtitle:const Text('Süre, izleyici, beğeni, yorum, paylaşım ve hediye istatistikleri'),
+              trailing:const Icon(Icons.chevron_right_rounded),
+              onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const CanliYayinGecmisiPage())),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+class CanliYayinGecmisiPage extends StatelessWidget{
+  const CanliYayinGecmisiPage({super.key});
+
+  String _sure(dynamic ham){
+    final saniye=(ham as num?)?.toInt()??0;
+    final dk=saniye~/60;
+    final sn=(saniye%60).toString().padLeft(2,'0');
+    return '$dk:$sn';
+  }
+
+  Widget _istat(IconData ikon,String deger)=>Padding(
+    padding:const EdgeInsets.only(right:12,top:7),
+    child:Row(mainAxisSize:MainAxisSize.min,children:[
+      Icon(ikon,size:15,color:Colors.black54),
+      const SizedBox(width:4),
+      Text(deger,style:const TextStyle(color:Colors.black54,fontSize:11.5,fontWeight:FontWeight.w700)),
+    ]),
+  );
+
+  @override
+  Widget build(BuildContext context){
+    final uid=FirebaseAuth.instance.currentUser?.uid;
+    return Theme(
+      data:ThemeData.light(),
+      child:Scaffold(
+        backgroundColor:Colors.white,
+        appBar:AppBar(title:const Text('Canlı yayın geçmişi',style:TextStyle(fontWeight:FontWeight.w900))),
+        body:uid==null
+          ?const Center(child:Text('Oturum bulunamadı.'))
+          :StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
+            stream:FirebaseFirestore.instance.collection('live_streams').where('ownerId',isEqualTo:uid).limit(100).snapshots(),
+            builder:(_,snap){
+              if(snap.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator(color:mor));
+              if(snap.hasError)return const Center(child:Text('Canlı yayın geçmişi yüklenemedi.',style:TextStyle(color:Colors.black54)));
+              final docs=(snap.data?.docs??const <QueryDocumentSnapshot<Map<String,dynamic>>>[]).toList()
+                ..sort((a,b){
+                  final at=a.data()['startedAt'],bt=b.data()['startedAt'];
+                  final am=at is Timestamp?at.millisecondsSinceEpoch:0;
+                  final bm=bt is Timestamp?bt.millisecondsSinceEpoch:0;
+                  return bm.compareTo(am);
+                });
+              if(docs.isEmpty)return const Center(child:Text('Henüz tamamlanmış canlı yayının yok.',style:TextStyle(color:Colors.black54)));
+              return ListView.separated(
+                padding:const EdgeInsets.all(14),
+                itemCount:docs.length,
+                separatorBuilder:(_,__)=>const SizedBox(height:10),
+                itemBuilder:(_,i){
+                  final v=docs[i].data();
+                  final aktif=ngelxCanliKaydiTaze(v);
+                  final baslik=(v['title']??'Canlı yayın').toString();
+                  final gizlilik=(v['visibility']??'Herkese açık').toString();
+                  final max=(v['maxViewers'] as num?)?.toInt()??0;
+                  final begeni=(v['likeCount'] as num?)?.toInt()??0;
+                  final yorum=(v['commentCount'] as num?)?.toInt()??0;
+                  final paylasim=(v['shareCount'] as num?)?.toInt()??0;
+                  final hediye=(v['giftPoints'] as num?)?.toInt()??0;
+                  return Container(
+                    padding:const EdgeInsets.all(14),
+                    decoration:BoxDecoration(
+                      color:Colors.white,
+                      borderRadius:BorderRadius.circular(20),
+                      border:Border.all(color:aktif?const Color(0xFFFFA8B6):const Color(0xFFE6E7EB)),
+                      boxShadow:const [BoxShadow(color:Color(0x0A000000),blurRadius:12,offset:Offset(0,4))],
+                    ),
+                    child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+                      Row(children:[
+                        Container(
+                          padding:const EdgeInsets.symmetric(horizontal:8,vertical:4),
+                          decoration:BoxDecoration(color:aktif?const Color(0xFFFF1744):const Color(0xFFF1F2F5),borderRadius:BorderRadius.circular(10)),
+                          child:Text(aktif?'CANLI':'BİTTİ',style:TextStyle(color:aktif?Colors.white:Colors.black54,fontSize:10,fontWeight:FontWeight.w900)),
+                        ),
+                        const SizedBox(width:8),
+                        Expanded(child:Text(baslik,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontWeight:FontWeight.w900,fontSize:16))),
+                      ]),
+                      const SizedBox(height:5),
+                      Text('${zamanKisa(v['startedAt'])} • $gizlilik • ${_sure(v['durationSeconds'])}',style:const TextStyle(color:Colors.black54,fontSize:12)),
+                      Wrap(children:[
+                        _istat(Icons.visibility_rounded,'$max'),
+                        _istat(Icons.favorite_rounded,'$begeni'),
+                        _istat(Icons.mode_comment_rounded,'$yorum'),
+                        _istat(Icons.share_rounded,'$paylasim'),
+                        _istat(Icons.card_giftcard_rounded,'$hediye'),
+                      ]),
+                    ]),
+                  );
+                },
+              );
+            },
+          ),
+      ),
+    );
+  }
+}
+
 class ProfilPage extends StatefulWidget {
   const ProfilPage({super.key});
 
@@ -23373,7 +23537,7 @@ class _ProfilPageState extends State<ProfilPage> {
                     ProfilTanitimVideoKarti(url:tanitimVideoUrl),
                   ],
                   const SizedBox(height: 22),
-                  Row(mainAxisAlignment:MainAxisAlignment.spaceAround,children:[_profilKisayol(Icons.bookmark_border_rounded,t('saved'),tiklama:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const KaydedilenlerPage()))),_profilKisayol(Icons.history_rounded,t('archive'),tiklama:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const HikayeArsiviPage()))),_profilKisayol(Icons.add_circle_outline_rounded,t('stories'),tiklama:hikayeyiAc),_profilKisayol(Icons.lock_outline_rounded,t('privacy'),tiklama:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const TercihlerPage(baslik:'Gizlilik')))),_profilKisayol(Icons.settings_outlined,t('settings'),tiklama:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const AyarlarV258Page())))]),
+                  Row(mainAxisAlignment:MainAxisAlignment.spaceAround,children:[_profilKisayol(Icons.bookmark_border_rounded,t('saved'),tiklama:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const KaydedilenlerPage()))),_profilKisayol(Icons.history_rounded,t('archive'),tiklama:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const NgelXArsivMerkeziPage()))),_profilKisayol(Icons.add_circle_outline_rounded,t('stories'),tiklama:hikayeyiAc),_profilKisayol(Icons.lock_outline_rounded,t('privacy'),tiklama:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const TercihlerPage(baslik:'Gizlilik')))),_profilKisayol(Icons.settings_outlined,t('settings'),tiklama:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const AyarlarV258Page())))]),
                   const SizedBox(height: 20),
                   SizedBox(height:92,child:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
                     stream:aktifKullanici==null?null:FirebaseFirestore.instance.collection('videos').where('ownerId',isEqualTo:aktifKullanici!.uid).where('type',isEqualTo:'story').limit(100).snapshots(),
