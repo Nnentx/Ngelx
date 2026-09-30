@@ -250,7 +250,37 @@ List<String> ngelxMedyaUrlAdaylari(String rawUrl){
   ];
   final tabanlar=<Uri>[];
   for(final raw in rawTabanlar){
-    final base=Uri.tryParse(raw.trim().replaceAll(RegExp(r'/+final Map<String,Uint8List> _ngelxAgResmiBellek=<String,Uint8List>{};
+    final base=Uri.tryParse(raw.trim().replaceAll(RegExp(r'/+$'),''));
+    if(base!=null&&base.scheme=='https'&&base.host.isNotEmpty)tabanlar.add(base);
+  }
+  final bilinenHost=tabanlar.any((base)=>base.host.toLowerCase()==uri.host.toLowerCase());
+  if(!bilinenHost)return <String>[temiz];
+
+  final sonuc=<String>[];
+  void ekle(String value){
+    final v=value.trim();
+    if(v.isNotEmpty&&!sonuc.contains(v))sonuc.add(v);
+  }
+
+  for(final base in tabanlar.take(2)){
+    ekle(uri.replace(
+      scheme:base.scheme,
+      host:base.host,
+      port:base.hasPort?base.port:null,
+    ).toString());
+  }
+  ekle(temiz);
+  for(final base in tabanlar.skip(2)){
+    ekle(uri.replace(
+      scheme:base.scheme,
+      host:base.host,
+      port:base.hasPort?base.port:null,
+    ).toString());
+  }
+  return sonuc;
+}
+
+final Map<String,Uint8List> _ngelxAgResmiBellek=<String,Uint8List>{};
 const int _ngelxAgResmiBellekSiniri=96;
 
 Future<Uint8List> _ngelxAgResmiBaytlari(String rawUrl) async {
@@ -274,7 +304,7 @@ Future<Uint8List> _ngelxAgResmiBaytlari(String rawUrl) async {
           'Accept':'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
           'Cache-Control':'no-cache, no-store, max-age=0',
           'Pragma':'no-cache',
-          'X-NgelX-Client':'android-image-build331',
+          'X-NgelX-Client':'android-image-build332',
           if(token!=null&&token.isNotEmpty)HttpHeaders.authorizationHeader:'Bearer $token',
         },
       ),
