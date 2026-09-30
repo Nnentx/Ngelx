@@ -1,0 +1,114 @@
+name: Ngel X v49 BUILD 334 SOCIAL CHAT PK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - work/build334-social-chat
+    paths:
+      - '.github/workflows/NgelX-v49-BUILD-334-SOCIAL-CHAT-PK.yml'
+      - 'app/lib/main.dart'
+      - 'app/lib/live_broadcast_studio.dart'
+      - 'app/lib/live_pk.dart'
+      - 'app/lib/camera_studio.dart'
+      - 'app/lib/live_feed_card.dart'
+      - 'app/lib/story_v66.dart'
+      - 'app/lib/group_quality.dart'
+      - 'app/pubspec.yaml'
+      - 'app/android/app/src/main/**'
+
+permissions:
+  contents: read
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: work/build334-social-chat
+          fetch-depth: 0
+
+      - name: Build 334 kaynak ve regresyon sozlesmesi
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -F "version: 1.0.115+334" app/pubspec.yaml
+          grep -F "defaultValue: '1.0.115'" app/lib/main.dart
+          grep -F "defaultValue: '334'" app/lib/main.dart
+          grep -F "part 'live_pk.dart';" app/lib/main.dart
+
+          # Çalışan medya omurgası ve Build 333 kamera/canlı işleri korunmalı.
+          grep -F "https://media.ngelxsocial.com" app/lib/main.dart
+          grep -F "introVideoUrl" app/lib/main.dart
+          grep -F "expiresAt" app/lib/main.dart
+          grep -F "groupPhotoUrl" app/lib/main.dart
+          grep -F "otomatikPortre=true" app/lib/camera_studio.dart
+          grep -F "NgelXAkisCanliKarti" app/lib/main.dart
+          grep -F "_canliSliverleri(trend:true)" app/lib/main.dart
+
+          # Build 334 sosyal bağlantı, sohbet ve PK sözleşmesi.
+          grep -F "Future<bool> sosyalIstekGonder" app/lib/main.dart
+          grep -F "requestAccepted_$ben" app/lib/main.dart
+          grep -F "openedAt_$me" app/lib/main.dart
+          grep -F "final arkaPlan=ham is int?Color(ham):Colors.white" app/lib/main.dart
+          grep -F "NgelXCanliPkKatmani" app/lib/live_broadcast_studio.dart
+          grep -F "live_pk_requests" app/lib/live_pk.dart
+          grep -F "durationSeconds':180" app/lib/live_pk.dart
+          grep -F "pkSessionId" app/lib/live_pk.dart
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Sabit NgelX imza anahtarini geri yukle
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: ngelx-stable-debug-keystore-v1
+          fail-on-cache-miss: true
+
+      - name: Flutter analiz
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter clean
+          flutter pub get
+          flutter analyze --machine > analyze.log 2>&1 || true
+          cat analyze.log
+          if grep -q '^ERROR|' analyze.log; then
+            echo "Flutter analyze ERROR buldu."
+            exit 1
+          fi
+
+      - name: APK olustur ve imzayi dogrula
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter build apk --release
+          APK=build/app/outputs/flutter-apk/app-release.apk
+          test -s "$APK"
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          "$APKSIGNER" verify --print-certs "$APK" | tee build/app/outputs/flutter-apk/apksigner-certs.txt
+          grep -qi 'be20b27f0ba1f4decd2941d410b1536de89e48dc894f04f038f9d26b11ecd6aa' build/app/outputs/flutter-apk/apksigner-certs.txt
+          sha256sum "$APK" > "$APK.sha256"
+
+      - name: APK yukle
+        uses: actions/upload-artifact@v4
+        with:
+          name: NgelX-1.0.115-Build-334-SOCIAL-CHAT-PK
+          path: |
+            app/build/app/outputs/flutter-apk/app-release.apk
+            app/build/app/outputs/flutter-apk/app-release.apk.sha256
+            app/build/app/outputs/flutter-apk/apksigner-certs.txt
+          if-no-files-found: error
+          retention-days: 14
