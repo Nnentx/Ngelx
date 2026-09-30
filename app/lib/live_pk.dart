@@ -6,6 +6,40 @@ String ngelxCanliPkBelgeId(String a,String b){
   return ngelxBildirimBelgeId('pk_${x}_${y}');
 }
 
+Future<void> ngelxCanliPkYayindanCik(String liveId)async{
+  if(liveId.isEmpty)return;
+  try{
+    final liveRef=FirebaseFirestore.instance.collection('live_streams').doc(liveId);
+    final live=await liveRef.get();
+    final lv=live.data()??<String,dynamic>{};
+    final sessionId=(lv['pkSessionId']??'').toString();
+    if(sessionId.isEmpty)return;
+    final sessionRef=FirebaseFirestore.instance.collection('live_pk_requests').doc(sessionId);
+    final session=await sessionRef.get();
+    final sv=session.data()??<String,dynamic>{};
+    final a=(sv['inviterLiveId']??'').toString();
+    final b=(sv['inviteeLiveId']??'').toString();
+    final batch=FirebaseFirestore.instance.batch();
+    batch.set(sessionRef,{
+      'status':'ended',
+      'endReason':'live_ended',
+      'endedAt':FieldValue.serverTimestamp(),
+    },SetOptions(merge:true));
+    for(final id in <String>{a,b,liveId}.where((x)=>x.isNotEmpty)){
+      batch.set(FirebaseFirestore.instance.collection('live_streams').doc(id),{
+        'pkActive':false,
+        'pkSessionId':FieldValue.delete(),
+        'pkOpponentLiveId':FieldValue.delete(),
+        'pkOpponentUid':FieldValue.delete(),
+        'pkEndsAt':FieldValue.delete(),
+        'pendingPkRequestId':FieldValue.delete(),
+        'pendingPkFromLiveId':FieldValue.delete(),
+      },SetOptions(merge:true));
+    }
+    await batch.commit();
+  }catch(_){}
+}
+
 Future<void> ngelxCanliPkIstekPaneli(
   BuildContext context,{
   required String liveId,
