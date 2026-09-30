@@ -59,12 +59,12 @@ class _NgelXCameraStudioPageState extends State<NgelXCameraStudioPage> with Widg
   List<CameraDescription> kameralar=<CameraDescription>[];
   CameraController? kontrol;
   int kameraIndex=0;
-  bool video=false,kayit=false,hazirlaniyor=true,isleniyor=false,ayna=true,izgara=false;
+  bool video=false,kayit=false,hazirlaniyor=true,isleniyor=false,ayna=false,izgara=false,otomatikPortre=true;
   int sayac=0;
   Timer? sayacTimer,kayitTimer;
   Duration kayitSure=Duration.zero;
   FlashMode flash=FlashMode.off;
-  double zoom=1,minZoom=1,maxZoom=1,retus=.18,filtreYogunluk=1;
+  double zoom=1,minZoom=1,maxZoom=1,retus=.34,filtreYogunluk=1;
   int filtreIndex=0;
   String oran='9:16';
 
@@ -98,9 +98,19 @@ class _NgelXCameraStudioPageState extends State<NgelXCameraStudioPage> with Widg
       try{await eski.dispose();}catch(_){}
       await Future<void>.delayed(const Duration(milliseconds:140));
     }
-    final yeni=CameraController(kamera,ResolutionPreset.high,enableAudio:video,imageFormatGroup:ImageFormatGroup.jpeg);
+    final preset=kamera.lensDirection==CameraLensDirection.front?ResolutionPreset.veryHigh:ResolutionPreset.high;
+    final yeni=CameraController(kamera,preset,enableAudio:video,imageFormatGroup:ImageFormatGroup.jpeg);
     try{
       await yeni.initialize();
+      try{await yeni.setFocusMode(FocusMode.auto);}catch(_){}
+      try{await yeni.setExposureMode(ExposureMode.auto);}catch(_){}
+      if(kamera.lensDirection==CameraLensDirection.front){
+        try{
+          final minExp=await yeni.getMinExposureOffset();
+          final maxExp=await yeni.getMaxExposureOffset();
+          await yeni.setExposureOffset((-0.18).clamp(minExp,maxExp).toDouble());
+        }catch(_){}
+      }
       minZoom=await yeni.getMinZoomLevel();maxZoom=await yeni.getMaxZoomLevel();
       zoom=zoom.clamp(minZoom,maxZoom).toDouble();
       try{await yeni.setZoomLevel(zoom);}catch(_){}
@@ -143,8 +153,17 @@ class _NgelXCameraStudioPageState extends State<NgelXCameraStudioPage> with Widg
 
   Future<void> _flashDegistir()async{
     final c=kontrol;if(c==null||!c.value.isInitialized)return;
+    if(c.description.lensDirection==CameraLensDirection.front){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Ön kamerada donanım flaşı yok. Arka kameraya geçince flaş kullanılabilir.')));
+      return;
+    }
     final siradaki=switch(flash){FlashMode.off=>FlashMode.auto,FlashMode.auto=>FlashMode.always,FlashMode.always=>FlashMode.torch,FlashMode.torch=>FlashMode.off};
-    try{await c.setFlashMode(siradaki);if(mounted)setState(()=>flash=siradaki);}catch(_){}
+    try{
+      await c.setFlashMode(siradaki);
+      if(mounted)setState(()=>flash=siradaki);
+    }catch(_){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bu cihaz seçilen flaş modunu desteklemiyor.')));
+    }
   }
 
   IconData get _flashIkon=>switch(flash){FlashMode.off=>Icons.flash_off_rounded,FlashMode.auto=>Icons.flash_auto_rounded,FlashMode.always=>Icons.flash_on_rounded,FlashMode.torch=>Icons.highlight_rounded};
@@ -162,7 +181,9 @@ class _NgelXCameraStudioPageState extends State<NgelXCameraStudioPage> with Widg
   int _aktifSayac=0;
 
   Future<XFile> _fotoyuIsle(XFile ham)async{
-    if(filtreIndex==0&&retus<=.01&&oran=='9:16')return ham;
+    final onKamera=kontrol?.description.lensDirection==CameraLensDirection.front;
+    final portre=onKamera&&otomatikPortre;
+    if(filtreIndex==0&&retus<=.01&&oran=='9:16'&&!portre)return ham;
     try{
       final bytes=await ham.readAsBytes();
       var g=img.decodeImage(bytes);
@@ -178,15 +199,15 @@ class _NgelXCameraStudioPageState extends State<NgelXCameraStudioPage> with Widg
       }
       final f=ngelxKameraFiltreleri[filtreIndex];
       if(f.ad=='S/B'){
-        g=img.adjustColor(g,saturation:(1-filtreYogunluk).clamp(0.0,1.0),brightness:1+(retus*.04),contrast:1+(retus*.04));
+        g=img.adjustColor(g,saturation:(1-filtreYogunluk).clamp(0.0,1.0),brightness:1+(retus*.04)+(portre?.02:0),contrast:1+(retus*.02)-(portre?.015:0));
       }else if(f.ad=='Retro'&&filtreYogunluk>.55){
         g=img.sepia(g);
       }else{
         g=img.adjustColor(
           g,
-          brightness:1+((f.parlaklik-1)*filtreYogunluk)+(retus*.04),
-          saturation:1+((f.doygunluk-1)*filtreYogunluk)+(retus*.06),
-          contrast:1+(retus*.04),
+          brightness:1+((f.parlaklik-1)*filtreYogunluk)+(retus*.04)+(portre?.025:0),
+          saturation:1+((f.doygunluk-1)*filtreYogunluk)+(retus*.045)+(portre?.018:0),
+          contrast:1+(retus*.018)-(portre?.018:0),
         );
       }
       final dir=await getTemporaryDirectory();
