@@ -1366,36 +1366,51 @@ class _CanliYayinPageState extends State<CanliYayinPage> {
   }
 
   Future<void> _canliKisiyeGonder(User ben,String hedefUid)async{
-    final ids=<String>[ben.uid,hedefUid]..sort();
-    final chatId=ids.join('_');
-    final chat=FirebaseFirestore.instance.collection('chats').doc(chatId);
-    final metin='🔴 CANLI • ${widget.baslik}\n@${widget.username}\nYayına katıl: ngelx://live/${widget.belgeId}';
-    await chat.set({'members':ids,'updatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
-    await chat.collection('messages').add({
-      'senderId':ben.uid,'text':metin,'type':'text','liveShare':true,
-      'liveId':widget.belgeId,'liveTitle':widget.baslik,'liveOwnerId':widget.ownerId,
-      'liveUsername':widget.username,'createdAt':FieldValue.serverTimestamp(),
-    });
+    if(hedefUid.isEmpty||hedefUid==ben.uid)return;
+
+    // Doğrudan canlı paylaşımın ana teslim kanalı Aktivite bildirimidir.
+    // Sohbet gizlilik ayarları mesaj kartını engellese bile canlı daveti kaybolmaz.
+    await uygulamaBildirimiGonder(
+      toUid:hedefUid,
+      fromUid:ben.uid,
+      tur:'live',
+      metin:'Sana bir canlı yayın gönderdi',
+      belgeId:widget.belgeId,
+      hedefTuru:'live',
+      hedefBaslik:widget.baslik,
+      olayTuru:'live_share',
+      onizleme:widget.baslik,
+      dedupeKey:'live_share_${widget.belgeId}_${ben.uid}_$hedefUid',
+    ).timeout(const Duration(seconds:12));
+
+    // Sohbete canlı kartı düşürmek ikincil kanaldır. Mesaj izni yüzünden bu adım
+    // başarısız olursa bildirim teslim edilmiş sayılır.
     try{
+      final ids=<String>[ben.uid,hedefUid]..sort();
+      final chatId=ids.join('_');
+      final chat=FirebaseFirestore.instance.collection('chats').doc(chatId);
+      final metin='🔴 CANLI • ${widget.baslik}\n@${widget.username}\nYayına katıl: ngelx://live/${widget.belgeId}';
       await chat.set({
-        'lastMessage':'🔴 ${widget.baslik}','updatedAt':FieldValue.serverTimestamp(),
+        'members':ids,
+        'isGroup':false,
+        'updatedAt':FieldValue.serverTimestamp(),
+      },SetOptions(merge:true)).timeout(const Duration(seconds:8));
+      await chat.collection('messages').add({
+        'senderId':ben.uid,
+        'text':metin,
+        'type':'text',
+        'liveShare':true,
+        'liveId':widget.belgeId,
+        'liveTitle':widget.baslik,
+        'liveOwnerId':widget.ownerId,
+        'liveUsername':widget.username,
+        'createdAt':FieldValue.serverTimestamp(),
+      }).timeout(const Duration(seconds:8));
+      await chat.set({
+        'lastMessage':'🔴 ${widget.baslik}',
+        'updatedAt':FieldValue.serverTimestamp(),
         'unread_$hedefUid':FieldValue.increment(1),
-      },SetOptions(merge:true));
-    }catch(_){}
-    try{
-      await uygulamaBildirimiGonder(
-        toUid:hedefUid,fromUid:ben.uid,tur:'live',metin:'Sana bir canlı yayın gönderdi',
-        belgeId:widget.belgeId,hedefTuru:'live',hedefBaslik:widget.baslik,
-        olayTuru:'live_share',onizleme:widget.baslik,
-        dedupeKey:'live_share_${widget.belgeId}_${ben.uid}_$hedefUid',
-      );
-    }catch(_){}
-    try{
-      await FirebaseFirestore.instance.collection('live_streams').doc(widget.belgeId)
-        .collection('share_receipts').doc('${ben.uid}_$hedefUid').set({
-          'senderUid':ben.uid,'targetUid':hedefUid,'status':'sent',
-          'sentAt':FieldValue.serverTimestamp(),
-        },SetOptions(merge:true));
+      },SetOptions(merge:true)).timeout(const Duration(seconds:8));
     }catch(_){}
   }
 
