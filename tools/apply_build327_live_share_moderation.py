@@ -657,9 +657,15 @@ yorum=r"""  Future<void> _yorumGonder() async {
 
 """
 
-live=rep_between(live,"  Future<void> _yorumGonder() async {","  @override
-  void dispose()",yorum+"  @override
-  void dispose()","comment moderation send")
+live=rep_between(
+    live,
+    "  Future<void> _yorumGonder() async {",
+    """  @override
+  void dispose()""",
+    yorum+"""  @override
+  void dispose()""",
+    "comment moderation send",
+)
 
 live=rep(live,
 """          Positioned.fill(child: DecoratedBox(decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.black54, Colors.transparent, Colors.black.withOpacity(.8)])))),""",
