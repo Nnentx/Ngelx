@@ -15,6 +15,13 @@ def rep(text,old,new,label):
         raise SystemExit("Build 328 patch failed: marker not found: "+label)
     return text.replace(old,new,1)
 
+def rep_between(text,start,end,new,label):
+    a=text.find(start)
+    if a<0: raise SystemExit("Build 328 patch failed: start marker not found: "+label)
+    b=text.find(end,a+len(start))
+    if b<0: raise SystemExit("Build 328 patch failed: end marker not found: "+label)
+    return text[:a]+new+text[b:]
+
 pub=rep(pub,"version: 1.0.108+327","version: 1.0.109+328","version")
 main=main.replace("defaultValue: '1.0.108'","defaultValue: '1.0.109'")
 main=main.replace("defaultValue: '327'","defaultValue: '328'")
@@ -334,43 +341,11 @@ live=rep(live,
             ayarSlider('Gölgeler',Icons.brightness_4_rounded,shadowLift,0,1,(v)=>setSheet(()=>shadowLift=v),(v)=>unawaited(yaz({'shadowLift':v})),percent:true),
             SwitchListTile(""","live studio premium sliders")
 
-old_send="""  Future<void> _canliKisiyeGonder(User ben,String hedefUid)async{
-    final ids=<String>[ben.uid,hedefUid]..sort();
-    final chatId=ids.join('_');
-    final chat=FirebaseFirestore.instance.collection('chats').doc(chatId);
-    final metin='🔴 CANLI • ${widget.baslik}\n@${widget.username}\nNgelX canlı yayınına katıl\nngelx://live/${widget.belgeId}';
-    await chat.set({'members':ids,'updatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
-    await chat.collection('messages').add({
-      'senderId':ben.uid,
-      'text':metin,
-      'type':'text',
-      'liveShare':true,
-      'liveId':widget.belgeId,
-      'liveTitle':widget.baslik,
-      'liveOwnerId':widget.ownerId,
-      'createdAt':FieldValue.serverTimestamp(),
-    });
-    await chat.set({
-      'lastMessage':'🔴 Canlı yayın paylaşıldı',
-      'updatedAt':FieldValue.serverTimestamp(),
-      'unread_$hedefUid':FieldValue.increment(1),
-    },SetOptions(merge:true));
-    await uygulamaBildirimiGonder(
-      toUid:hedefUid,fromUid:ben.uid,tur:'live',
-      metin:'Sana bir canlı yayın gönderdi',
-      belgeId:widget.belgeId,
-      hedefTuru:'live',
-      hedefBaslik:widget.baslik,
-      olayTuru:'live_share',
-      onizleme:widget.baslik,
-      dedupeKey:'live_share_${widget.belgeId}_${ben.uid}_$hedefUid',
-    );
-  }"""
 new_send="""  Future<void> _canliKisiyeGonder(User ben,String hedefUid)async{
     final ids=<String>[ben.uid,hedefUid]..sort();
     final chatId=ids.join('_');
     final chat=FirebaseFirestore.instance.collection('chats').doc(chatId);
-    final metin='🔴 CANLI • ${widget.baslik}\n@${widget.username}\nYayına katıl: ngelx://live/${widget.belgeId}';
+    final metin='🔴 CANLI • ${widget.baslik}\\n@${widget.username}\\nYayına katıl: ngelx://live/${widget.belgeId}';
     await chat.set({'members':ids,'updatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
     await chat.collection('messages').add({
       'senderId':ben.uid,'text':metin,'type':'text','liveShare':true,
@@ -390,8 +365,16 @@ new_send="""  Future<void> _canliKisiyeGonder(User ben,String hedefUid)async{
         olayTuru:'live_share',onizleme:widget.baslik,
       );
     }catch(_){}
-  }"""
-live=rep(live,old_send,new_send,"robust live send")
+  }
+
+"""
+live=rep_between(
+    live,
+    "  Future<void> _canliKisiyeGonder(User ben,String hedefUid)async{",
+    "  Future<void> _baglantiKopyala()async{",
+    new_send,
+    "robust live send",
+)
 
 live=rep(live,
 """          const SizedBox(height:4),
