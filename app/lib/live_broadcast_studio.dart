@@ -137,6 +137,7 @@ class _CanliHazirlikPageState extends State<CanliHazirlikPage> {
   int fps = 30;
   bool geriSayim = true;
   int baslangicSayaci = 0;
+  bool _gizlilikElleDegisti = false;
   String? kameraHatasi;
   List<CameraDescription> kameralar = <CameraDescription>[];
   CameraController? onizleme;
@@ -144,7 +145,35 @@ class _CanliHazirlikPageState extends State<CanliHazirlikPage> {
   @override
   void initState() {
     super.initState();
+    unawaited(_canliTercihleriniYukle());
     unawaited(_onizlemeyiBaslat());
+  }
+
+  Future<void> _canliTercihleriniYukle() async {
+    final uid=FirebaseAuth.instance.currentUser?.uid;
+    if(uid==null)return;
+    try{
+      final d=await FirebaseFirestore.instance.collection('users').doc(uid)
+          .get(const GetOptions(source:Source.server)).timeout(const Duration(seconds:6));
+      final kayit=(d.data()?['lastLiveVisibility']??'').toString();
+      if(!_gizlilikElleDegisti&&mounted&&const ['Herkese açık','Takipçiler','Arkadaşlar'].contains(kayit)){
+        setState(()=>gizlilik=kayit);
+      }
+    }catch(_){}
+  }
+
+  Future<void> _gizlilikDegistir(String yeni) async {
+    if(!const ['Herkese açık','Takipçiler','Arkadaşlar'].contains(yeni))return;
+    _gizlilikElleDegisti=true;
+    if(mounted)setState(()=>gizlilik=yeni);
+    final uid=FirebaseAuth.instance.currentUser?.uid;
+    if(uid==null)return;
+    try{
+      await FirebaseFirestore.instance.collection('users').doc(uid).set({
+        'lastLiveVisibility':yeni,
+        'lastLiveVisibilityUpdatedAt':FieldValue.serverTimestamp(),
+      },SetOptions(merge:true)).timeout(const Duration(seconds:6));
+    }catch(_){}
   }
 
   @override
@@ -284,12 +313,46 @@ class _CanliHazirlikPageState extends State<CanliHazirlikPage> {
   }
 
   Future<void> _geriSayimCalistir() async {
-    for (var i = 3; i >= 1; i--) {
-      if (!mounted) return;
-      setState(() => baslangicSayaci = i);
-      await Future<void>.delayed(const Duration(milliseconds: 700));
+    if(!mounted)return;
+    final sayac=ValueNotifier<int>(3);
+    final overlay=Overlay.of(context,rootOverlay:true);
+    late final OverlayEntry giris;
+    giris=OverlayEntry(builder:(_)=>Positioned.fill(
+      child:IgnorePointer(
+        child:ColoredBox(
+          color:const Color(0xAA000000),
+          child:Center(child:ValueListenableBuilder<int>(
+            valueListenable:sayac,
+            builder:(_,deger,__)=>Container(
+              width:132,height:132,
+              decoration:BoxDecoration(
+                color:Colors.black87,
+                shape:BoxShape.circle,
+                border:Border.all(color:Colors.white,width:3),
+                boxShadow:const [BoxShadow(color:Colors.black45,blurRadius:28,spreadRadius:8)],
+              ),
+              alignment:Alignment.center,
+              child:Text('$deger',style:const TextStyle(
+                color:Colors.white,fontSize:72,fontWeight:FontWeight.w900,height:1,
+              )),
+            ),
+          )),
+        ),
+      ),
+    ));
+    overlay.insert(giris);
+    try{
+      for(var i=3;i>=1;i--){
+        if(!mounted)break;
+        sayac.value=i;
+        setState(()=>baslangicSayaci=i);
+        await Future<void>.delayed(const Duration(seconds:1));
+      }
+    }finally{
+      if(mounted)setState(()=>baslangicSayaci=0);
+      giris.remove();
+      sayac.dispose();
     }
-    if (mounted) setState(() => baslangicSayaci = 0);
   }
 
   Future<void> baslat() async {
@@ -391,6 +454,8 @@ class _CanliHazirlikPageState extends State<CanliHazirlikPage> {
         'currentLiveId': belge.id,
         'liveTitle': baslik.text.trim(),
         'liveStartedAt': FieldValue.serverTimestamp(),
+        'lastLiveVisibility':gizlilik,
+        'lastLiveVisibilityUpdatedAt':FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
       final profilVeri=profil.data()??<String,dynamic>{};
       final arkadaslar=<String>{
@@ -566,7 +631,7 @@ class _CanliHazirlikPageState extends State<CanliHazirlikPage> {
             Row(children: [
               Expanded(child: _canliSecimKutusu('Kategori', kategori, const ['Sohbet', 'Müzik', 'Oyun', 'Spor', 'Eğlence', 'Eğitim'], (v) => setState(() => kategori = v))),
               const SizedBox(width: 12),
-              Expanded(child: _canliSecimKutusu('Gizlilik', gizlilik, const ['Herkese açık', 'Takipçiler', 'Arkadaşlar'], (v) => setState(() => gizlilik = v))),
+              Expanded(child: _canliSecimKutusu('Gizlilik', gizlilik, const ['Herkese açık', 'Takipçiler', 'Arkadaşlar'], _gizlilikDegistir)),
             ]),
             const SizedBox(height: 10),
             Row(children: [
@@ -891,6 +956,10 @@ class _CanliYayinPageState extends State<CanliYayinPage> {
   Future<void> _bitir({bool geriDon = true}) async {
     if (kapatildi) return;
     kapatildi = true;
+    yenidenBaglaniyor=false;
+    yenidenBaglanmaDenemesi=0;
+    bitisMesaji='Canlı yayın sona erdi.';
+    if(mounted)setState(()=>yayinBitti=true);
     heartbeat?.cancel();
     heartbeat=null;
     if (widget.yayinSahibi) {
@@ -1506,8 +1575,8 @@ class _CanliYayinPageState extends State<CanliYayinPage> {
     );
   }
 
-  Future<void> _canliKisiyeGonder(User ben,String hedefUid)async{
-    if(hedefUid.isEmpty||hedefUid==ben.uid)return;
+  Future<bool> _canliKisiyeGonder(User ben,String hedefUid)async{
+    if(hedefUid.isEmpty||hedefUid==ben.uid)return false;
 
     // Doğrudan canlı paylaşımın ana teslim kanalı Aktivite bildirimidir.
     // Sohbet gizlilik ayarları mesaj kartını engellese bile canlı daveti kaybolmaz.
@@ -1546,7 +1615,7 @@ class _CanliYayinPageState extends State<CanliYayinPage> {
         'isGroup':false,
         'updatedAt':FieldValue.serverTimestamp(),
       },SetOptions(merge:true)).timeout(const Duration(seconds:8));
-      await chat.collection('messages').add({
+      final mesajRef=await chat.collection('messages').add({
         'senderId':ben.uid,
         'text':metin,
         'type':'text',
@@ -1562,7 +1631,11 @@ class _CanliYayinPageState extends State<CanliYayinPage> {
         'updatedAt':FieldValue.serverTimestamp(),
         'unread_$hedefUid':FieldValue.increment(1),
       },SetOptions(merge:true)).timeout(const Duration(seconds:8));
-    }catch(_){}
+      final mesaj=await mesajRef.get(const GetOptions(source:Source.server)).timeout(const Duration(seconds:6));
+      return mesaj.exists;
+    }catch(_){
+      return false;
+    }
   }
 
   Future<void> _baglantiKopyala()async{
@@ -1674,15 +1747,27 @@ class _CanliYayinPageState extends State<CanliYayinPage> {
                   setSheet(()=>gonderiliyor=true);
                   var basarili=0;
                   var basarisiz=0;
+                  var sohbetBasarisiz=0;
                   for(final uid in secilen.toList()){
-                    try{await _canliKisiyeGonder(ben,uid);basarili++;}catch(_){basarisiz++;}
+                    try{
+                      final sohbetTamam=await _canliKisiyeGonder(ben,uid);
+                      basarili++;
+                      if(!sohbetTamam)sohbetBasarisiz++;
+                    }catch(_){basarisiz++;}
                   }
                   if(basarili>0){
                     try{await FirebaseFirestore.instance.collection('live_streams').doc(widget.belgeId).set({'shareCount':FieldValue.increment(basarili)},SetOptions(merge:true));}catch(_){}
                     if(sheetContext.mounted)Navigator.pop(sheetContext);
                     if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                      content:Text(basarisiz==0?'Canlı yayın $basarili kişiye gönderildi.':'$basarili kişiye gönderildi • $basarisiz kişiye gönderilemedi.',style:const TextStyle(fontWeight:FontWeight.w700)),
-                      behavior:SnackBarBehavior.floating,width:basarisiz==0?285:330,duration:const Duration(milliseconds:1500),
+                      content:Text(
+                        basarisiz>0
+                          ?'$basarili kişiye Aktivite bildirimi gönderildi • $basarisiz kişiye gönderilemedi.'
+                          :sohbetBasarisiz>0
+                            ?'Bildirim $basarili kişiye ulaştı • $sohbetBasarisiz sohbet kartı gizlilik nedeniyle gönderilemedi.'
+                            :'Canlı yayın $basarili kişiye Aktivite ve Sohbet üzerinden gönderildi.',
+                        style:const TextStyle(fontWeight:FontWeight.w700),
+                      ),
+                      behavior:SnackBarBehavior.floating,width:360,duration:const Duration(milliseconds:2200),
                       shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(14)),
                     ));
                   }else{
@@ -1927,7 +2012,7 @@ class _CanliYayinPageState extends State<CanliYayinPage> {
             ),
           ),
           Positioned.fill(child:DecoratedBox(decoration:BoxDecoration(gradient:LinearGradient(begin:Alignment.topCenter,end:Alignment.bottomCenter,colors:[Colors.black54,Colors.transparent,Colors.black.withOpacity(.8)])))),
-          if(widget.oda.connectionState==lk.ConnectionState.reconnecting)
+          if(!yayinBitti&&!kapatildi&&widget.oda.connectionState==lk.ConnectionState.reconnecting)
             Positioned(
               top:74,left:70,right:70,
               child:SafeArea(child:Container(
