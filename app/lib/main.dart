@@ -99,8 +99,8 @@ const ngelxPrivateBlueCanvas = Color(0xFFF6FAFF);
 const ngelxPrivateBlueBorder = Color(0xFFD8E8FF);
 const ngelxPrivateBlueInk = Color(0xFF10213A);
 
-const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.119');
-const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '338');
+const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.120');
+const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '339');
 const ngelxGroupBorder = Color(0xFFD9EEE0);
 
 final GlobalKey<NavigatorState> ngelxNavigatorKey=GlobalKey<NavigatorState>();
@@ -17685,8 +17685,53 @@ class _SohbetPageState extends State<SohbetPage> {
     }
   }
 
+  Future<void> canliPaylasimMesajiniAc(Map<String,dynamic> v)async{
+    var canliId=(v['liveId']??v['sourceId']??v['belgeId']??'').toString().trim();
+    if(canliId.isEmpty){
+      final ham=(v['text']??v['message']??v['content']??'').toString();
+      final eslesme=RegExp(r'ngelx://live/([A-Za-z0-9_-]+)').firstMatch(ham);
+      canliId=eslesme?.group(1)??'';
+    }
+    if(canliId.isEmpty){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content:Text('Canlı yayın bağlantısı bulunamadı.',style:TextStyle(fontWeight:FontWeight.w800)),
+        behavior:SnackBarBehavior.floating,
+      ));
+      return;
+    }
+    try{
+      final canli=await FirebaseFirestore.instance.collection('live_streams').doc(canliId)
+          .get(const GetOptions(source:Source.server)).timeout(const Duration(seconds:8));
+      final veri=canli.data()??<String,dynamic>{};
+      if(!canli.exists||!ngelxCanliKaydiTaze(veri)){
+        if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content:const Text('Bu canlı yayın bitti.',style:TextStyle(fontWeight:FontWeight.w800)),
+          behavior:SnackBarBehavior.floating,
+          width:230,
+          duration:const Duration(milliseconds:1400),
+          shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(14)),
+        ));
+        return;
+      }
+      if(mounted)await ngelxCanliYayinaKatil(context,canliId);
+    }on TimeoutException{
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content:Text('Canlı yayın kontrolü zaman aşımına uğradı. Tekrar dene.',style:TextStyle(fontWeight:FontWeight.w700)),
+        behavior:SnackBarBehavior.floating,
+      ));
+    }catch(_){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content:Text('Canlı yayın açılamadı. Bağlantını kontrol edip tekrar dene.',style:TextStyle(fontWeight:FontWeight.w700)),
+        behavior:SnackBarBehavior.floating,
+      ));
+    }
+  }
+
   Widget ozelMesajKarti(QueryDocumentSnapshot<Map<String,dynamic>> d,{double fontSize=16,bool goruldu=false,String quickReaction='❤️'}){
     final v=d.data(),ben=v['senderId']==uid,tur=(v['type']??'text').toString();
+    final canliPaylasimi=v['liveShare']==true||tur=='live_share'||(v['liveId']??'').toString().trim().isNotEmpty;
+    final canliBaslik=(v['liveTitle']??'Canlı yayın').toString().trim();
+    final canliKullanici=(v['liveUsername']??'').toString().trim();
     final photo=tur=='photo',video=tur=='video',shared=tur=='shared_content',audio=tur=='audio',file=tur=='file',location=tur=='location',call=tur=='call',storyReply=tur=='story_reply';
     final medyaUrl=ngelxMesajMedyaUrl(v,video:video);
     final videoKapakUrl=video?ngelxMesajVideoKapagi(v):'';
@@ -17703,7 +17748,9 @@ class _SohbetPageState extends State<SohbetPage> {
         behavior:HitTestBehavior.opaque,
         onLongPress:()=>mesajMenusu(d),
         onDoubleTap:()=>mesajTepkiDegistir(d,quickReaction),
-        onTap:photo
+        onTap:canliPaylasimi
+          ? ()=>canliPaylasimMesajiniAc(v)
+          : photo
           ? ()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>TamEkranMedyaPage(url:medyaUrl)))
           : video
             ? ()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>TamEkranVideoPage(url:medyaUrl)))
@@ -17747,6 +17794,29 @@ class _SohbetPageState extends State<SohbetPage> {
                 Row(children:[Icon(Icons.play_circle_fill_rounded,color:ben?Colors.white:mavi),const SizedBox(width:7),Text('NgelX paylaşımı',style:TextStyle(color:ben?Colors.white:Colors.black87,fontWeight:FontWeight.w900))]),
                 const SizedBox(height:8),Text(metin,maxLines:4,overflow:TextOverflow.ellipsis,style:TextStyle(color:ben?Colors.white70:Colors.black54)),
               ]))
+            else if(canliPaylasimi)
+              Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+                Row(children:[
+                  Container(
+                    width:34,height:34,
+                    decoration:const BoxDecoration(color:Color(0xFFFF1744),shape:BoxShape.circle),
+                    child:const Icon(Icons.live_tv_rounded,color:Colors.white,size:19),
+                  ),
+                  const SizedBox(width:10),
+                  Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+                    Text('CANLI',style:TextStyle(color:ben?Colors.white70:const Color(0xFFFF1744),fontSize:10.5,fontWeight:FontWeight.w900,letterSpacing:.4)),
+                    const SizedBox(height:2),
+                    Text(canliBaslik.isEmpty?'Canlı yayın':canliBaslik,maxLines:2,overflow:TextOverflow.ellipsis,style:TextStyle(color:ben?Colors.white:Colors.black87,fontSize:fontSize,fontWeight:FontWeight.w900)),
+                    if(canliKullanici.isNotEmpty)Text('@'+canliKullanici,maxLines:1,overflow:TextOverflow.ellipsis,style:TextStyle(color:ben?Colors.white70:Colors.black54,fontSize:11.5,fontWeight:FontWeight.w700)),
+                  ])),
+                ]),
+                const SizedBox(height:9),
+                Row(children:[
+                  Icon(Icons.touch_app_rounded,color:ben?Colors.white70:ngelxPrivateBlue,size:16),
+                  const SizedBox(width:5),
+                  Expanded(child:Text('Yayına gitmek için dokun',style:TextStyle(color:ben?Colors.white70:ngelxPrivateBlue,fontSize:11.5,fontWeight:FontWeight.w800))),
+                ]),
+              ])
             else if(storyReply)
               Row(crossAxisAlignment:CrossAxisAlignment.center,children:[
                 ClipRRect(borderRadius:BorderRadius.circular(12),child:NgelXAgResmi(imageUrl:(v['storyUrl']??'').toString(),width:62,height:82,fit:BoxFit.cover,errorWidget:(_,__,___)=>const SizedBox(width:62,height:82,child:Icon(Icons.auto_stories)))),
@@ -19263,6 +19333,17 @@ class _AktivitePageState extends State<AktivitePage> {
     return tur=='live'||hedef=='live'||olay=='live_started'||olay=='live_share'||olay=='live_pk_request'||olay=='live_pk_accept';
   }
 
+  String _aktiviteTekilAnahtar(QueryDocumentSnapshot<Map<String,dynamic>> d){
+    final v=d.data();
+    final tur=(v['type']??'').toString();
+    final olay=(v['eventKind']??'').toString();
+    final kaynak=(v['sourceId']??v['belgeId']??'').toString();
+    final from=(v['fromUid']??v['senderId']??v['senderUid']??'').toString();
+    final genelCanli=olay=='live_started'||olay=='live_share'||(tur=='live'&&!olay.startsWith('live_pk_'));
+    if(genelCanli&&kaynak.isNotEmpty)return 'live|'+kaynak+'|'+from;
+    return 'doc|'+d.id;
+  }
+
   Widget _bildirimBasligiDurumlu(Map<String,dynamic> v,bool okundu){
     if(!_canliAktivitesi(v))return _bildirimBasligi(v,okundu);
     final kaynak=(v['sourceId']??v['belgeId']??'').toString();
@@ -19655,14 +19736,26 @@ class _AktivitePageState extends State<AktivitePage> {
         builder: (_, s) {
           if(s.hasError)return Center(child:Column(mainAxisSize:MainAxisSize.min,children:[const Icon(Icons.cloud_off_rounded,color:Colors.redAccent,size:52),const SizedBox(height:10),Text(t('activityLoadFailed'),style:const TextStyle(color:Colors.black,fontWeight:FontWeight.w800)),Text(t('checkConnectionRetry'),style:const TextStyle(color:Colors.black54))]));
           if(s.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator(color:mor));
-          final tumDocs = (s.data?.docs ?? []).toList()
-            ..sort((a, b) {
-              final at = a.data()['createdAt'];
-              final bt = b.data()['createdAt'];
-              final ad = at is Timestamp ? at.toDate() : DateTime.fromMillisecondsSinceEpoch(0);
-              final bd = bt is Timestamp ? bt.toDate() : DateTime.fromMillisecondsSinceEpoch(0);
-              return bd.compareTo(ad);
-            });
+          final gelenDocs=(s.data?.docs??[]).toList();
+          int bildirimZamani(QueryDocumentSnapshot<Map<String,dynamic>> d){
+            final ham=d.data()['createdAt'];
+            return ham is Timestamp?ham.millisecondsSinceEpoch:0;
+          }
+          final tekil=<String,QueryDocumentSnapshot<Map<String,dynamic>>>{};
+          for(final d in gelenDocs){
+            final anahtar=_aktiviteTekilAnahtar(d);
+            final onceki=tekil[anahtar];
+            if(onceki==null){
+              tekil[anahtar]=d;
+              continue;
+            }
+            final yeniZaman=bildirimZamani(d),eskiZaman=bildirimZamani(onceki);
+            if(yeniZaman>eskiZaman||(yeniZaman==eskiZaman&&onceki.data()['read']==true&&d.data()['read']!=true)){
+              tekil[anahtar]=d;
+            }
+          }
+          final tumDocs=tekil.values.toList()
+            ..sort((a,b)=>bildirimZamani(b).compareTo(bildirimZamani(a)));
           if (tumDocs.isEmpty) return Center(child: Column(mainAxisSize:MainAxisSize.min,children:[const CircleAvatar(radius:36,backgroundColor:Color(0xFFF1E9FF),child:Icon(Icons.notifications_none_rounded,color:mor,size:38)),const SizedBox(height:13),Text(t('noActivity'),style:const TextStyle(color:Colors.black,fontSize:18,fontWeight:FontWeight.w900)),Text(t('noActivitySub'),textAlign:TextAlign.center,style:const TextStyle(color:Colors.black54))]));
 
           final docs=tumDocs.where((d)=>_filtreUyar(d.data())).toList();
