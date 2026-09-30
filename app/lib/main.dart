@@ -97,8 +97,8 @@ const ngelxPrivateBlueCanvas = Color(0xFFF6FAFF);
 const ngelxPrivateBlueBorder = Color(0xFFD8E8FF);
 const ngelxPrivateBlueInk = Color(0xFF10213A);
 
-const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.108');
-const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '327');
+const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.109');
+const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '328');
 const ngelxGroupBorder = Color(0xFFD9EEE0);
 
 final GlobalKey<NavigatorState> ngelxNavigatorKey=GlobalKey<NavigatorState>();
@@ -2359,8 +2359,12 @@ Future<void> ngelxCanliYayinaKatil(BuildContext context,String belgeId)async{
     final belge=await FirebaseFirestore.instance.collection('live_streams').doc(belgeId).get().timeout(const Duration(seconds:8));
     final veri=belge.data()??<String,dynamic>{};
     final roomName=(veri['roomName']??'').toString();
-    if(veri['active']!=true||roomName.isEmpty){
-      if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bu canlı yayın sona ermiş.')));
+    if(!ngelxCanliKaydiTaze(veri)||roomName.isEmpty){
+      if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content:const Text('Bu canlı yayın sona ermiş.',style:TextStyle(fontWeight:FontWeight.w700)),
+        behavior:SnackBarBehavior.floating,width:235,duration:const Duration(milliseconds:1400),
+        shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(14)),
+      ));
       return;
     }
     final kaynak=lk.DevelopmentTokenSource(id:liveKitTestSunucuId);
@@ -2421,7 +2425,7 @@ Future<void> uygulamaBildirimiGonder({
   final sosyalBildirimi=tur=='friend'||tur=='friend_request'||tur=='follow_request'||tur=='friend_accepted'||tur=='follow_accepted';
   final etkilesimBildirimi=tur=='interaction'||tur=='like'||tur=='comment';
   final aramaBildirimi=tur=='call';
-  final canliBildirimi=tur=='live'||olayTuru=='live_started';
+  final canliBildirimi=tur=='live'||olayTuru=='live_started'||olayTuru=='live_share';
   if(grupBildirimi){
     if(ayar['groupNotifications']==false)return;
   }else if(tur=='message'&&ayar['messageNotifications']==false){
@@ -7638,7 +7642,7 @@ class _KesfetPageState extends State<KesfetPage> {
         builder:(_,snap){
           if(snap.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator(color:Color(0xFFFF1744)));
           if(snap.hasError)return _bosKart(t('liveLoadError'),Icons.cloud_off_outlined);
-          final yayinlar=snap.data?.docs??[];
+          final yayinlar=(snap.data?.docs??[]).where((d)=>ngelxCanliKaydiTaze(d.data())).toList();
           if(yayinlar.isEmpty)return _bosKart(t('noLive'),Icons.live_tv_outlined);
           return ListView.separated(
             padding:const EdgeInsets.symmetric(horizontal:16),
