@@ -1483,6 +1483,7 @@ class _CanliYayinPageState extends State<CanliYayinPage> {
 
     // Doğrudan canlı paylaşımın ana teslim kanalı Aktivite bildirimidir.
     // Sohbet gizlilik ayarları mesaj kartını engellese bile canlı daveti kaybolmaz.
+    final teslimAnahtari='live_share_${widget.belgeId}_${ben.uid}_$hedefUid';
     await uygulamaBildirimiGonder(
       toUid:hedefUid,
       fromUid:ben.uid,
@@ -1493,8 +1494,17 @@ class _CanliYayinPageState extends State<CanliYayinPage> {
       hedefBaslik:widget.baslik,
       olayTuru:'live_share',
       onizleme:widget.baslik,
-      dedupeKey:'live_share_${widget.belgeId}_${ben.uid}_$hedefUid',
+      dedupeKey:teslimAnahtari,
     ).timeout(const Duration(seconds:12));
+
+    // Başarı sayısı ancak Aktivite belgesi gerçekten oluştuysa artar.
+    final teslimId=ngelxBildirimBelgeId(teslimAnahtari);
+    final teslim=await FirebaseFirestore.instance.collection('notifications').doc(teslimId)
+      .get(const GetOptions(source:Source.server)).timeout(const Duration(seconds:8));
+    final tv=teslim.data()??<String,dynamic>{};
+    if(!teslim.exists||(tv['toUid']??'').toString()!=hedefUid||(tv['sourceId']??'').toString()!=widget.belgeId){
+      throw StateError('live_share_delivery_not_confirmed');
+    }
 
     // Sohbete canlı kartı düşürmek ikincil kanaldır. Mesaj izni yüzünden bu adım
     // başarısız olursa bildirim teslim edilmiş sayılır.
