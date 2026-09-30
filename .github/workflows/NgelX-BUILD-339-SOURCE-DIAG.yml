@@ -1,0 +1,50 @@
+name: Ngel X BUILD 339 SOURCE DIAG
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - work/build339-live-card-tap-dedupe
+    paths:
+      - '.github/workflows/NgelX-BUILD-339-SOURCE-DIAG.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: work/build339-live-card-tap-dedupe
+          fetch-depth: 0
+      - name: Inspect chat and activity source
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          p=Path('app/lib/main.dart')
+          s=p.read_text(encoding='utf-8')
+          print('MAIN_LEN',len(s))
+          pats=[
+            r'class\s+\w*(?:Sohbet|Chat)\w*',
+            r"collection\('messages'\)",
+            r"where\('toUid', isEqualTo: uid\)",
+            r'liveShare',
+            r'liveId',
+            r'Canlı yayın sona erdi',
+            r'Bu canlı yayın bitti',
+            r'notifications',
+          ]
+          shown=[]
+          for pat in pats:
+            print('\n=== PATTERN',pat,'===')
+            for m in list(re.finditer(pat,s,re.I))[:20]:
+              a=max(0,m.start()-1800); b=min(len(s),m.end()+3200)
+              key=(a,b)
+              if key in shown: continue
+              shown.append(key)
+              print('\n---',m.start(),'---\n',s[a:b])
+          PY
