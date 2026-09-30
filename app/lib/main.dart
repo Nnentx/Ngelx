@@ -97,8 +97,8 @@ const ngelxPrivateBlueCanvas = Color(0xFFF6FAFF);
 const ngelxPrivateBlueBorder = Color(0xFFD8E8FF);
 const ngelxPrivateBlueInk = Color(0xFF10213A);
 
-const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.111');
-const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '330');
+const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.112');
+const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '331');
 const ngelxGroupBorder = Color(0xFFD9EEE0);
 
 final GlobalKey<NavigatorState> ngelxNavigatorKey=GlobalKey<NavigatorState>();
@@ -239,12 +239,41 @@ List<String> ngelxMedyaUrlAdaylari(String rawUrl){
   if(temiz.isEmpty)return const <String>[];
   final sonuc=<String>[temiz];
   final uri=Uri.tryParse(temiz);
-  if(uri==null||uri.pathSegments.isEmpty||uri.pathSegments.first!='media')return sonuc;
+  if(uri==null||uri.host.isEmpty)return sonuc;
+
+  final tabanlar=<Uri>[];
   for(final rawBase in <String>[_ngelxMediaApiBuild,_ngelxMediaApiBackup]){
     final base=Uri.tryParse(rawBase.trim().replaceAll(RegExp(r'/+$'),''));
-    if(base==null||base.host.isEmpty)continue;
-    final aday=uri.replace(scheme:base.scheme,host:base.host,port:base.hasPort?base.port:null).toString();
-    if(!sonuc.contains(aday))sonuc.add(aday);
+    if(base!=null&&base.host.isNotEmpty)tabanlar.add(base);
+  }
+  if(tabanlar.isEmpty)return sonuc;
+
+  final bilinenHost=tabanlar.any((e)=>e.host.toLowerCase()==uri.host.toLowerCase());
+  final mediaYolu=uri.pathSegments.isNotEmpty&&uri.pathSegments.first.toLowerCase()=='media';
+  if(!bilinenHost&&!mediaYolu)return sonuc;
+
+  void ekle(Uri aday){
+    final yazi=aday.toString();
+    if(yazi.isNotEmpty&&!sonuc.contains(yazi))sonuc.add(yazi);
+  }
+
+  for(final base in tabanlar){
+    final ayniYol=uri.replace(
+      scheme:base.scheme,
+      host:base.host,
+      port:base.hasPort?base.port:null,
+    );
+    ekle(ayniYol);
+
+    // Eski NgelX sürümlerinde medya anahtarı bazen /media öneki olmadan
+    // saklandı. Yeni Worker /media/<anahtar> kullanıyor; iki biçimi de dene.
+    if(uri.pathSegments.isNotEmpty){
+      if(mediaYolu&&uri.pathSegments.length>1){
+        ekle(ayniYol.replace(pathSegments:uri.pathSegments.skip(1).toList()));
+      }else if(!mediaYolu){
+        ekle(ayniYol.replace(pathSegments:<String>['media',...uri.pathSegments]));
+      }
+    }
   }
   return sonuc;
 }
@@ -259,27 +288,46 @@ Future<Uint8List> _ngelxAgResmiBaytlari(String rawUrl) async {
   if(hazir!=null&&hazir.isNotEmpty)return hazir;
 
   Object? sonHata;
+  String? kimlikTokeni;
+  Future<Response<List<int>>> indir(Uri uri,{String? token}) {
+    return Dio(BaseOptions(
+      connectTimeout:const Duration(seconds:12),
+      receiveTimeout:const Duration(seconds:45),
+      validateStatus:(s)=>s!=null,
+    )).getUri<List<int>>(
+      uri,
+      options:Options(
+        responseType:ResponseType.bytes,
+        headers:<String,String>{
+          'Accept':'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
+          'Cache-Control':'no-cache, no-store, max-age=0',
+          'Pragma':'no-cache',
+          'X-NgelX-Client':'android-image-build331',
+          if(token!=null&&token.isNotEmpty)HttpHeaders.authorizationHeader:'Bearer $token',
+        },
+      ),
+    );
+  }
+
   for(final aday in ngelxMedyaUrlAdaylari(temiz)){
     final uri=Uri.tryParse(aday);
     if(uri==null||uri.scheme!='https'||uri.host.isEmpty)continue;
     for(var deneme=1;deneme<=3;deneme++){
       try{
-        final cevap=await Dio(BaseOptions(
-          connectTimeout:const Duration(seconds:12),
-          receiveTimeout:const Duration(seconds:45),
-          validateStatus:(s)=>s!=null,
-        )).getUri<List<int>>(
-          uri,
-          options:Options(
-            responseType:ResponseType.bytes,
-            headers:const {
-              'Accept':'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
-              'Cache-Control':'no-cache, no-store, max-age=0',
-              'Pragma':'no-cache',
-            },
-          ),
-        );
-        final status=cevap.statusCode??0;
+        var cevap=await indir(uri);
+        var status=cevap.statusCode??0;
+
+        // Bazı eski/özel medya kayıtları anonim GET yerine oturum belirteci
+        // isteyebiliyor. Sadece 401/403 sonrası token alarak normal fotoğraf
+        // yüklemelerini yavaşlatmadan ikinci yolu dene.
+        if(status==401||status==403){
+          kimlikTokeni??=await FirebaseAuth.instance.currentUser?.getIdToken();
+          if(kimlikTokeni?.isNotEmpty==true){
+            cevap=await indir(uri,token:kimlikTokeni);
+            status=cevap.statusCode??0;
+          }
+        }
+
         final ham=cevap.data;
         if(status<200||status>=300||ham==null||ham.length<4){
           throw Exception('HTTP $status');
@@ -287,9 +335,6 @@ Future<Uint8List> _ngelxAgResmiBaytlari(String rawUrl) async {
         if(ham.length>12*1024*1024)throw Exception('Fotoğraf çok büyük.');
         final bytes=Uint8List.fromList(ham);
 
-        // Ağ cevabını ortak ImageProvider önbelleğine koymadan önce gerçek
-        // Flutter cihaz codec'i ile aç. Bozuk/stale yanıt varsa diğer medya
-        // hostuna geçilir; geçerli bayt gelmeden UI kaynağı oluşturulmaz.
         final codec=await ui.instantiateImageCodec(bytes);
         final frame=await codec.getNextFrame();
         frame.image.dispose();
@@ -359,19 +404,23 @@ Future<void> ngelxAgResmiOnbelleginiTemizle([String? rawUrl]) async {
 
 class NgelXAgResmi extends StatefulWidget{
   final String url;
+  final List<String> fallbackUrls;
   final BoxFit fit;
   final double? width,height;
   final Object? placeholder,error,errorWidget;
+  final Widget Function(BuildContext context,Object error,VoidCallback retry)? retryErrorBuilder;
   const NgelXAgResmi({
     super.key,
     String? url,
     String? imageUrl,
+    this.fallbackUrls=const <String>[],
     this.fit=BoxFit.cover,
     this.width,
     this.height,
     this.placeholder,
     this.error,
     this.errorWidget,
+    this.retryErrorBuilder,
   }):url=url??imageUrl??'';
 
   @override State<NgelXAgResmi> createState()=>_NgelXAgResmiState();
@@ -379,25 +428,64 @@ class NgelXAgResmi extends StatefulWidget{
 
 class _NgelXAgResmiState extends State<NgelXAgResmi>{
   int _yenileme=0;
+  int _kaynakIndex=0;
   bool _otomatikTekrarPlanlandi=false;
+  bool _kaynakDegisimiPlanlandi=false;
+
+  List<String> get _kaynaklar{
+    final gorulen=<String>{};
+    return <String>[widget.url,...widget.fallbackUrls]
+        .map((e)=>e.trim())
+        .where((e)=>e.isNotEmpty&&gorulen.add(e))
+        .toList(growable:false);
+  }
+
+  String get _aktifUrl{
+    final xs=_kaynaklar;
+    if(xs.isEmpty)return '';
+    final i=_kaynakIndex.clamp(0,xs.length-1);
+    return xs[i];
+  }
 
   @override
   void didUpdateWidget(covariant NgelXAgResmi oldWidget){
     super.didUpdateWidget(oldWidget);
-    if(oldWidget.url!=widget.url){
+    final eski='<'+oldWidget.url+'>'+oldWidget.fallbackUrls.join('|');
+    final yeni='<'+widget.url+'>'+widget.fallbackUrls.join('|');
+    if(eski!=yeni){
       _yenileme=0;
+      _kaynakIndex=0;
       _otomatikTekrarPlanlandi=false;
+      _kaynakDegisimiPlanlandi=false;
     }
   }
 
   Future<void> _tekrarDene()async{
-    final temiz=widget.url.trim();
-    if(temiz.isEmpty)return;
-    try{await ngelxAgResmiOnbelleginiTemizle(temiz);}catch(_){}
+    final xs=_kaynaklar;
+    if(xs.isEmpty)return;
+    for(final url in xs){
+      try{await ngelxAgResmiOnbelleginiTemizle(url);}catch(_){}
+    }
     if(mounted)setState((){
+      _kaynakIndex=0;
       _yenileme++;
       _otomatikTekrarPlanlandi=false;
+      _kaynakDegisimiPlanlandi=false;
     });
+  }
+
+  bool _sonrakiKaynagiPlanla(){
+    final xs=_kaynaklar;
+    if(_kaynakDegisimiPlanlandi||_kaynakIndex+1>=xs.length)return false;
+    _kaynakDegisimiPlanlandi=true;
+    WidgetsBinding.instance.addPostFrameCallback((_){
+      if(!mounted)return;
+      setState((){
+        _kaynakIndex++;
+        _kaynakDegisimiPlanlandi=false;
+      });
+    });
+    return true;
   }
 
   void _otomatikTekrarDene(){
@@ -414,7 +502,7 @@ class _NgelXAgResmiState extends State<NgelXAgResmi>{
     if(p is Widget)return p;
     if(p is Function){
       try{
-        final sonuc=Function.apply(p,<Object?>[context,widget.url]);
+        final sonuc=Function.apply(p,<Object?>[context,_aktifUrl]);
         if(sonuc is Widget)return sonuc;
       }catch(_){}
     }
@@ -422,12 +510,16 @@ class _NgelXAgResmiState extends State<NgelXAgResmi>{
   }
 
   Widget _error(BuildContext context,Object hata){
+    if(_sonrakiKaynagiPlanla())return _placeholder(context);
     _otomatikTekrarDene();
+    final tekrar=(){unawaited(_tekrarDene());};
+    final rb=widget.retryErrorBuilder;
+    if(rb!=null)return rb(context,hata,tekrar);
     final e=widget.errorWidget??widget.error;
     if(e is Widget)return e;
     if(e is Function){
       try{
-        final sonuc=Function.apply(e,<Object?>[context,widget.url,hata]);
+        final sonuc=Function.apply(e,<Object?>[context,_aktifUrl,hata]);
         if(sonuc is Widget)return sonuc;
       }catch(_){}
     }
@@ -437,7 +529,7 @@ class _NgelXAgResmiState extends State<NgelXAgResmi>{
         const Icon(Icons.broken_image_outlined,color:Colors.black38),
         const SizedBox(height:4),
         TextButton.icon(
-          onPressed:_tekrarDene,
+          onPressed:tekrar,
           icon:const Icon(Icons.refresh_rounded,size:17),
           label:const Text('Tekrar dene'),
         ),
@@ -446,7 +538,7 @@ class _NgelXAgResmiState extends State<NgelXAgResmi>{
   }
 
   @override Widget build(BuildContext context){
-    final temiz=widget.url.trim();
+    final temiz=_aktifUrl;
     if(temiz.isEmpty)return _error(context,StateError('Fotoğraf adresi boş.'));
     return Image(
       key:ValueKey('ngelx-direct-$temiz-$_yenileme'),
@@ -467,20 +559,28 @@ Future<void> ngelxOverlayKapanisiniBekle() async {
   await Future<void>.delayed(const Duration(milliseconds: 360));
 }
 
-Widget ngelxMedyaHataGorunumu(String _) => Container(
+Widget ngelxMedyaHataGorunumu(String _,{VoidCallback? onRetry}) => Container(
   color: const Color(0xFF09090F),
   alignment: Alignment.center,
   padding: const EdgeInsets.all(28),
-  child: const Column(
+  child: Column(
     mainAxisSize: MainAxisSize.min,
     children: [
-      Icon(Icons.cloud_off_rounded, color: Colors.white54, size: 54),
-      SizedBox(height: 12),
-      Text(
+      const Icon(Icons.cloud_off_rounded, color: Colors.white54, size: 54),
+      const SizedBox(height: 12),
+      const Text(
         'Medya şu anda yüklenemedi.',
         textAlign: TextAlign.center,
         style: TextStyle(color: Colors.white70, fontSize: 15, fontWeight: FontWeight.w700),
       ),
+      if(onRetry!=null)...[
+        const SizedBox(height:10),
+        TextButton.icon(
+          onPressed:onRetry,
+          icon:const Icon(Icons.refresh_rounded,color:Colors.white),
+          label:const Text('Tekrar dene',style:TextStyle(color:Colors.white,fontWeight:FontWeight.w800)),
+        ),
+      ],
     ],
   ),
 );
@@ -5675,16 +5775,46 @@ class _GorselYaziKartiState extends State<GorselYaziKarti> with RouteAware {
 
   @override
   Widget build(BuildContext context) {
-    final foto = widget.veri['mediaUrl'] ?? '';
     final yazi = widget.veri['description'] ?? '';
-    List<String> fotoListesi=<String>[];
-    try{
-      final ham=widget.veri['mediaUrls']??'';
-      if(ham.isNotEmpty){
-        fotoListesi=List<dynamic>.from(jsonDecode(ham) as List).map((e)=>e.toString()).where((e)=>e.isNotEmpty).toList();
+    final fotoListesi=<String>[];
+    final gorulen=<String>{};
+    void medyaEkle(dynamic raw){
+      final url=(raw??'').toString().trim();
+      if(url.isNotEmpty&&gorulen.add(url))fotoListesi.add(url);
+    }
+
+    final ham=widget.veri['mediaUrls'];
+    if(ham is Iterable){
+      for(final item in ham)medyaEkle(item);
+    }else if(ham is String&&ham.trim().isNotEmpty){
+      try{
+        final decoded=jsonDecode(ham);
+        if(decoded is Iterable){
+          for(final item in decoded)medyaEkle(item);
+        }else{
+          medyaEkle(decoded);
+        }
+      }catch(_){
+        medyaEkle(ham);
       }
-    }catch(_){}
-    if(fotoListesi.isEmpty&&foto.isNotEmpty)fotoListesi=<String>[foto];
+    }
+
+    if(fotoListesi.isEmpty){
+      for(final alan in const <String>['mediaUrl','imageUrl','photoUrl','url','thumbnailUrl']){
+        medyaEkle(widget.veri[alan]);
+        if(fotoListesi.isNotEmpty)break;
+      }
+    }
+
+    final eskiAlanAlternatifleri=<String>[];
+    if(fotoListesi.length<=1){
+      final ana=fotoListesi.isEmpty?'':fotoListesi.first;
+      final altGorulen=<String>{ana};
+      for(final alan in const <String>['mediaUrl','imageUrl','photoUrl','url','thumbnailUrl']){
+        final url=(widget.veri[alan]??'').toString().trim();
+        if(url.isNotEmpty&&altGorulen.add(url))eskiAlanAlternatifleri.add(url);
+      }
+    }
     return GestureDetector(
       onLongPress: uzunBasmaMenusu,
       onDoubleTap: ciftTikBegen,
@@ -5700,9 +5830,10 @@ class _GorselYaziKartiState extends State<GorselYaziKarti> with RouteAware {
                   onPageChanged:(i)=>setState(()=>medyaSayfasi=i),
                   itemBuilder:(_,i)=>NgelXAgResmi(
                 url:fotoListesi[i],
+                fallbackUrls:i==0?eskiAlanAlternatifleri:const <String>[],
                 fit:BoxFit.contain,
                 placeholder:const Center(child:CircularProgressIndicator(color:mavi)),
-                error:ngelxMedyaHataGorunumu(fotoListesi[i]),
+                retryErrorBuilder:(context,error,retry)=>ngelxMedyaHataGorunumu(fotoListesi[i],onRetry:retry),
               ),
                 )
               :const ColoredBox(color:Color(0xFF09090F))
