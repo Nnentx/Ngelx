@@ -1,0 +1,182 @@
+name: Ngel X v55 BUILD 340 AUDIO LIVE ACTIVITY REFRESH
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - work/build340-audio-live-activity-refresh
+    paths:
+      - '.github/workflows/NgelX-v55-BUILD-340-AUDIO-LIVE-ACTIVITY-REFRESH.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: work/build340-audio-live-activity-refresh
+          fetch-depth: 0
+
+      - name: Build 340 kaynak duzeltmelerini uygula
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile .github/scripts/build340_audio_activity_patch.py
+          python3 .github/scripts/build340_audio_activity_patch.py
+          git diff --check
+
+          grep -F "version: 1.0.121+340" app/pubspec.yaml
+          grep -F "defaultValue: '1.0.121'" app/lib/main.dart
+          grep -F "defaultValue: '340'" app/lib/main.dart
+
+          # Sesli canlı, mevcut video canlıdan ayrı bir modül olarak eklenmeli.
+          grep -F "part 'audio_live_rooms.dart';" app/lib/main.dart
+          grep -F "class SesliOdaHazirlikPage" app/lib/audio_live_rooms.dart
+          grep -F "class SesliOdaPage" app/lib/audio_live_rooms.dart
+          grep -F "collection('audio_rooms')" app/lib/audio_live_rooms.dart
+          grep -F "ngelxSesliMaksKonusmaci=12" app/lib/audio_live_rooms.dart
+          grep -F "ngelxSesliMaksModerator=3" app/lib/audio_live_rooms.dart
+          grep -F "speaker_requests" app/lib/audio_live_rooms.dart
+          grep -F "ngelxSesliKesfetSliverleri(context)" app/lib/main.dart
+          grep -F "Sesli oda başlat" app/lib/main.dart
+          grep -F "match /audio_rooms/{roomId}" firestore.rules
+
+          # Testten geçmeyen Aktivite/Gelen Kutusu yenilemeleri düzeltildi.
+          grep -F "_gelenKutusuYenileniyor" app/lib/main.dart
+          grep -F "inbox_refresh_all_failed" app/lib/main.dart
+          grep -F "_sunucuAktiviteleri" app/lib/main.dart
+          grep -F "final birlesik=<String,QueryDocumentSnapshot<Map<String,dynamic>>>{};" app/lib/main.dart
+          grep -F "Aktiviteler yenilendi." app/lib/main.dart
+
+          # Build 339 sohbet CANLI kartı ve çalışan video canlı omurgası korunmalı.
+          grep -F "Future<void> canliPaylasimMesajiniAc" app/lib/main.dart
+          grep -F "onTap:canliPaylasimi" app/lib/main.dart
+          grep -F "Yayına gitmek için dokun" app/lib/main.dart
+          grep -F "Bu canlı yayın bitti." app/lib/main.dart
+          grep -F "part 'live_pk.dart';" app/lib/main.dart
+          grep -F "where('members',arrayContains:ben.uid).limit(100)" app/lib/live_broadcast_studio.dart
+          grep -F "Aktivite ve Sohbet üzerinden gönderildi" app/lib/live_broadcast_studio.dart
+          grep -F "Overlay.of(context,rootOverlay:true)" app/lib/live_broadcast_studio.dart
+          grep -F "lastLiveVisibility" app/lib/live_broadcast_studio.dart
+          grep -F "sayac?.cancel();" app/lib/live_broadcast_studio.dart
+          grep -F "https://media.ngelxsocial.com" app/lib/main.dart
+
+      - name: Build 340 kaynak commitini dala yaz
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- app/lib/main.dart app/lib/audio_live_rooms.dart app/pubspec.yaml firestore.rules; then
+            echo "Kaynak zaten Build 340 seviyesinde."
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add app/lib/main.dart app/lib/audio_live_rooms.dart app/pubspec.yaml firestore.rules
+            git commit -m "Build 340: audio live rooms and refresh reliability"
+            git push origin HEAD:work/build340-audio-live-activity-refresh
+          fi
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Sabit NgelX imza anahtarini geri yukle
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: ngelx-stable-debug-keystore-v1
+          fail-on-cache-miss: true
+
+      - name: Flutter analiz
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter clean
+          flutter pub get
+          flutter analyze --machine > analyze.log 2>&1 || true
+          cat analyze.log
+          if grep -q '^ERROR|' analyze.log; then
+            echo "Flutter analyze ERROR buldu."
+            exit 1
+          fi
+
+      - name: APK olustur ve imzayi dogrula
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter build apk --release
+          APK=build/app/outputs/flutter-apk/app-release.apk
+          test -s "$APK"
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          "$APKSIGNER" verify --print-certs "$APK" | tee build/app/outputs/flutter-apk/apksigner-certs.txt
+          grep -qi 'be20b27f0ba1f4decd2941d410b1536de89e48dc894f04f038f9d26b11ecd6aa' build/app/outputs/flutter-apk/apksigner-certs.txt
+          sha256sum "$APK" > "$APK.sha256"
+
+      - name: APK yukle
+        uses: actions/upload-artifact@v4
+        with:
+          name: NgelX-1.0.121-Build-340-AUDIO-LIVE-ACTIVITY-REFRESH
+          path: |
+            app/build/app/outputs/flutter-apk/app-release.apk
+            app/build/app/outputs/flutter-apk/app-release.apk.sha256
+            app/build/app/outputs/flutter-apk/apksigner-certs.txt
+          if-no-files-found: error
+          retention-days: 14
+
+  deploy-firestore-rules:
+    needs: build-apk
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: work/build340-audio-live-activity-refresh
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Firebase CLI kur
+        run: npm install --global firebase-tools
+
+      - name: Build 340 Firestore kurallarini yayinla
+        shell: bash
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          FIREBASE_SERVICE_ACCOUNT_NGELX_44EED: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_NGELX_44EED }}
+          GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_JSON }}
+        run: |
+          set -euo pipefail
+          grep -F "match /audio_rooms/{roomId}" firestore.rules
+          PROJECT_ID="ngelx-44eed"
+          SA="${FIREBASE_SERVICE_ACCOUNT_NGELX_44EED:-${FIREBASE_SERVICE_ACCOUNT:-${GOOGLE_APPLICATION_CREDENTIALS_JSON:-}}}"
+
+          if [ -n "$SA" ]; then
+            if printf '%s' "$SA" | jq -e . >/dev/null 2>&1; then
+              printf '%s' "$SA" > /tmp/ngelx-firebase-sa.json
+            else
+              printf '%s' "$SA" | base64 --decode > /tmp/ngelx-firebase-sa.json
+              jq -e . /tmp/ngelx-firebase-sa.json >/dev/null
+            fi
+            chmod 600 /tmp/ngelx-firebase-sa.json
+            export GOOGLE_APPLICATION_CREDENTIALS=/tmp/ngelx-firebase-sa.json
+            firebase deploy --only firestore:rules --project "$PROJECT_ID" --non-interactive
+          elif [ -n "${FIREBASE_TOKEN:-}" ]; then
+            firebase deploy --only firestore:rules --project "$PROJECT_ID" --token "$FIREBASE_TOKEN" --non-interactive
+          else
+            echo "Firebase deploy kimligi ayarli degil."
+            exit 20
+          fi
