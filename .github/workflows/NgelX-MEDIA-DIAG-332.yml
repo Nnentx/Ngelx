@@ -1,0 +1,94 @@
+name: NgelX MEDIA DIAG 332
+
+on:
+  push:
+    branches:
+      - work/build332-media-core-repair
+    paths:
+      - '.github/workflows/NgelX-MEDIA-DIAG-332.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Firestore medya kayitlarini ve canli URLleri kontrol et
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, urllib.request, urllib.error, hashlib, time
+
+          with open('app/android/app/google-services.json','r',encoding='utf-8') as f:
+              gs=json.load(f)
+          api_key=gs['client'][0]['api_key'][0]['current_key']
+          base='https://firestore.googleapis.com/v1/projects/ngelx-44eed/databases/(default)/documents/videos'
+          token=None
+          docs=[]
+          for _ in range(10):
+              url=base+'?pageSize=100&key='+api_key
+              if token:
+                  url+='&pageToken='+urllib.parse.quote(token)
+              req=urllib.request.Request(url,headers={'User-Agent':'NgelX-Media-Diag/332'})
+              try:
+                  with urllib.request.urlopen(req,timeout=20) as r:
+                      data=json.load(r)
+              except Exception as e:
+                  print('FIRESTORE_READ_FAILED',type(e).__name__,str(e)[:180])
+                  raise
+              docs.extend(data.get('documents',[]))
+              token=data.get('nextPageToken')
+              if not token:
+                  break
+
+          def val(field):
+              if not isinstance(field,dict): return ''
+              for k in ('stringValue','referenceValue','integerValue','doubleValue','timestampValue'):
+                  if k in field: return str(field[k])
+              return ''
+
+          tests=[]
+          for d in docs:
+              f=d.get('fields',{})
+              typ=val(f.get('type'))
+              urls=[]
+              for key in ('mediaUrl','videoUrl','imageUrl','photoUrl','thumbnailUrl','introVideoUrl'):
+                  u=val(f.get(key)).strip()
+                  if u and u.startswith('http') and u not in urls:
+                      urls.append(u)
+              mid=d.get('name','').rsplit('/',1)[-1]
+              for u in urls:
+                  tests.append((mid,typ,u))
+
+          stats={}
+          broken=[]
+          for mid,typ,u in tests[:300]:
+              status='ERR'
+              try:
+                  req=urllib.request.Request(u,headers={'Range':'bytes=0-31','User-Agent':'NgelX-Media-Diag/332'})
+                  with urllib.request.urlopen(req,timeout=12) as r:
+                      status=str(r.status)
+                      r.read(32)
+              except urllib.error.HTTPError as e:
+                  status=str(e.code)
+              except Exception as e:
+                  status='ERR'
+              host=urllib.parse.urlparse(u).hostname or ''
+              key=(host,status)
+              stats[key]=stats.get(key,0)+1
+              if status not in ('200','206'):
+                  broken.append((hashlib.sha256(mid.encode()).hexdigest()[:10],typ,host,status,urllib.parse.urlparse(u).path[:120]))
+
+          print('DOC_COUNT',len(docs),'URL_COUNT',len(tests))
+          for (host,status),count in sorted(stats.items()):
+              print('STATUS',host,status,count)
+          print('BROKEN_COUNT',len(broken))
+          for item in broken[:40]:
+              print('BROKEN',*item)
+          PY
