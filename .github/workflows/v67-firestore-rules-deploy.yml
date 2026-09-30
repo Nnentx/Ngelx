@@ -5,6 +5,7 @@ on:
     branches:
       - work/v65-consolidated-qa
       - work/v72-combined
+      - work/build336-live-fixes
     paths:
       - 'firestore.rules'
       - '.github/workflows/v67-firestore-rules-deploy.yml'
