@@ -838,6 +838,7 @@ class _CanliYayinPageState extends State<CanliYayinPage> {
     heartbeat?.cancel();
     heartbeat=null;
     if (widget.yayinSahibi) {
+      unawaited(ngelxCanliPkYayindanCik(widget.belgeId));
       var toplamKalp = 0;
       var hediyePuani = 0;
       var yorumSayisi = 0;
@@ -1792,6 +1793,8 @@ class _CanliYayinPageState extends State<CanliYayinPage> {
                 const SizedBox(width:7),
                 _baglantiRozeti(),
               ]),
+              const SizedBox(height:8),
+              NgelXCanliPkKatmani(liveId:widget.belgeId,yayinSahibi:widget.yayinSahibi),
               const Spacer(),
               Align(alignment:Alignment.centerLeft,child:_yorumPaneli()),
               const SizedBox(height: 10),
@@ -1821,19 +1824,20 @@ class _CanliYayinPageState extends State<CanliYayinPage> {
                 Padding(padding: const EdgeInsets.only(top: 6), child: Align(alignment: Alignment.centerRight, child: Text('N-Kombo x$yerelKalpSerisi ❤️', style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.w800)))),
               if (widget.yayinSahibi) ...[
                 const SizedBox(height: 9),
-                Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                  IconButton.filled(onPressed: _yayinMikrofonunuDegistir, tooltip: mikrofonAcik ? 'Mikrofonu kapat' : 'Mikrofonu aç', icon: Icon(mikrofonAcik ? Icons.mic : Icons.mic_off)),
-                  const SizedBox(width: 9),
-                  IconButton.filled(onPressed: _yayinKamerasiniAcKapat, tooltip: kameraAcik ? 'Kamerayı kapat' : 'Kamerayı aç', icon: Icon(kameraAcik ? Icons.videocam : Icons.videocam_off)),
-                  const SizedBox(width: 9),
-                  IconButton.filled(onPressed: kameraAcik && !kameraDegisiyor ? _yayinKamerasiniCevir : null, tooltip: 'Ön/arka kamerayı çevir', icon: kameraDegisiyor ? const SizedBox(width: 19, height: 19, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.cameraswitch_rounded)),
-                  const SizedBox(width: 9),
-                  IconButton.filledTonal(onPressed: _goruntuStudyoPaneli, tooltip: 'Görüntü Stüdyosu', icon: const Icon(Icons.tune_rounded)),
-                  const SizedBox(width: 9),
-                  IconButton.filledTonal(onPressed: _paylas, tooltip: 'Yayını paylaş', icon: const Icon(Icons.share_rounded)),
-                  const SizedBox(width: 9),
-                  FilledButton.icon(style: FilledButton.styleFrom(backgroundColor: const Color(0xFFFF1744)), onPressed: () async { if (await _geri() && mounted) Navigator.pop(context); }, icon: const Icon(Icons.stop_circle_outlined), label: const Text('Bitir')),
-                ]),
+                Wrap(
+                  alignment:WrapAlignment.center,
+                  spacing:9,
+                  runSpacing:7,
+                  children:[
+                    IconButton.filled(onPressed: _yayinMikrofonunuDegistir, tooltip: mikrofonAcik ? 'Mikrofonu kapat' : 'Mikrofonu aç', icon: Icon(mikrofonAcik ? Icons.mic : Icons.mic_off)),
+                    IconButton.filled(onPressed: _yayinKamerasiniAcKapat, tooltip: kameraAcik ? 'Kamerayı kapat' : 'Kamerayı aç', icon: Icon(kameraAcik ? Icons.videocam : Icons.videocam_off)),
+                    IconButton.filled(onPressed: kameraAcik && !kameraDegisiyor ? _yayinKamerasiniCevir : null, tooltip: 'Ön/arka kamerayı çevir', icon: kameraDegisiyor ? const SizedBox(width: 19, height: 19, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.cameraswitch_rounded)),
+                    IconButton.filledTonal(onPressed: _goruntuStudyoPaneli, tooltip: 'Görüntü Stüdyosu', icon: const Icon(Icons.tune_rounded)),
+                    NgelXCanliPkButonu(liveId:widget.belgeId,ownerUid:widget.ownerId),
+                    IconButton.filledTonal(onPressed: _paylas, tooltip: 'Yayını paylaş', icon: const Icon(Icons.share_rounded)),
+                    FilledButton.icon(style: FilledButton.styleFrom(backgroundColor: const Color(0xFFFF1744)), onPressed: () async { if (await _geri() && mounted) Navigator.pop(context); }, icon: const Icon(Icons.stop_circle_outlined), label: const Text('Bitir')),
+                  ],
+                ),
               ],
             ]),
           )),
