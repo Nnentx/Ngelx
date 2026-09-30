@@ -1607,7 +1607,22 @@ class _CanliYayinPageState extends State<CanliYayinPage> {
     // başarısız olursa bildirim teslim edilmiş sayılır.
     try{
       final ids=<String>[ben.uid,hedefUid]..sort();
-      final chatId=ids.join('_');
+      String chatId='';
+      try{
+        final mevcut=await FirebaseFirestore.instance.collection('chats')
+            .where('members',arrayContains:ben.uid).limit(100)
+            .get(const GetOptions(source:Source.server)).timeout(const Duration(seconds:8));
+        for(final d in mevcut.docs){
+          final v=d.data();
+          final uyeler=List<String>.from(v['members']??const[]);
+          final grup=v['isGroup']==true||uyeler.length>2;
+          if(!grup&&uyeler.length==2&&uyeler.contains(ben.uid)&&uyeler.contains(hedefUid)){
+            chatId=d.id;
+            break;
+          }
+        }
+      }catch(_){}
+      if(chatId.isEmpty)chatId=ids.join('_');
       final chat=FirebaseFirestore.instance.collection('chats').doc(chatId);
       final metin='🔴 CANLI • ${widget.baslik}\n@${widget.username}\nYayına katıl: ngelx://live/${widget.belgeId}';
       await chat.set({
