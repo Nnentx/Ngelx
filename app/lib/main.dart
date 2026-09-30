@@ -5630,14 +5630,23 @@ class _GorselYaziKartiState extends State<GorselYaziKarti> with RouteAware {
     final owner=(widget.veri['ownerId']??'').trim();
     if(owner.isEmpty)return;
     await _profilCanliAboneligi?.cancel();
-    _profilCanliAboneligi=FirebaseFirestore.instance.collection('users').doc(owner).snapshots().listen((belge){
+    _profilCanliAboneligi=FirebaseFirestore.instance.collection('users').doc(owner).snapshots().listen((belge)async{
       if(!mounted)return;
       final v=belge.data()??<String,dynamic>{};
+      final canliId=(v['currentLiveId']??'').toString();
+      final aday=v['isLive']==true&&canliId.isNotEmpty;
       setState((){
         profilFoto=(v['photoUrl']??'').toString().trim();
-        profilCanli=v['isLive']==true&&(v['currentLiveId']??'').toString().isNotEmpty;
-        profilCanliId=(v['currentLiveId']??'').toString();
+        profilCanli=false;
+        profilCanliId=canliId;
       });
+      if(aday){
+        try{
+          final live=await FirebaseFirestore.instance.collection('live_streams').doc(canliId).get();
+          final taze=ngelxCanliKaydiTaze(live.data()??<String,dynamic>{});
+          if(mounted&&profilCanliId==canliId)setState(()=>profilCanli=taze);
+        }catch(_){}
+      }
     });
   }
 
@@ -6014,7 +6023,7 @@ class _GorselYaziKartiState extends State<GorselYaziKarti> with RouteAware {
             bottom: 25,
             child: Column(children: [
               GestureDetector(
-                onTap:paylasanProfiliAc,
+                onTap:profilCanli&&profilCanliId.isNotEmpty?()=>ngelxCanliYayinaKatil(context,profilCanliId):paylasanProfiliAc,
                 child:Stack(clipBehavior:Clip.none,alignment:Alignment.center,children:[
                   CircleAvatar(
                     radius:28,
@@ -6236,14 +6245,23 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver,Rou
     _profilFotoIstendi=true;
     if(widget.ownerId.isEmpty)return;
     await _profilCanliAboneligi?.cancel();
-    _profilCanliAboneligi=FirebaseFirestore.instance.collection('users').doc(widget.ownerId).snapshots().listen((belge){
+    _profilCanliAboneligi=FirebaseFirestore.instance.collection('users').doc(widget.ownerId).snapshots().listen((belge)async{
       if(!mounted)return;
       final v=belge.data()??<String,dynamic>{};
+      final canliId=(v['currentLiveId']??'').toString();
+      final aday=v['isLive']==true&&canliId.isNotEmpty;
       setState((){
         profilFoto=(v['photoUrl']??'').toString();
-        profilCanli=v['isLive']==true&&(v['currentLiveId']??'').toString().isNotEmpty;
-        profilCanliId=(v['currentLiveId']??'').toString();
+        profilCanli=false;
+        profilCanliId=canliId;
       });
+      if(aday){
+        try{
+          final live=await FirebaseFirestore.instance.collection('live_streams').doc(canliId).get();
+          final taze=ngelxCanliKaydiTaze(live.data()??<String,dynamic>{});
+          if(mounted&&profilCanliId==canliId)setState(()=>profilCanli=taze);
+        }catch(_){}
+      }
     });
   }
 
@@ -6635,7 +6653,7 @@ Positioned(
             child: Column(
               children: [
                 GestureDetector(
-                  onTap: paylasanProfiliAc,
+                  onTap:profilCanli&&profilCanliId.isNotEmpty?()=>ngelxCanliYayinaKatil(context,profilCanliId):paylasanProfiliAc,
                   child:Stack(clipBehavior:Clip.none,alignment:Alignment.center,children:[
                     CircleAvatar(
                       radius:28,
