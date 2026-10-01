@@ -1415,3 +1415,14 @@ Bu maddeler Build 359'un çalışan arama/görüntülü arama davranışını bo
 - Aynı anda üstteki **arkadaşlık isteği** pending olarak kalmaya devam etti; takip kabulü arkadaşlık isteğini otomatik kabul etmedi veya sıfırlamadı. Üçlü model ayrımı bu adımda doğrulandı.
 - Ancak ekran görüntüsü kabul mesajı gösterilirken takip isteği kartını hâlâ listede gösteriyor. Bu kısa süreli stream gecikmesi olabilir; manuel yenileme / birkaç saniye sonrası kontrol edilecek. Kabul edilmiş kart kalıcı olarak görünüyorsa Aktivite listesinin `status == pending` filtrelemesi güçlendirilecek.
 - **Takip İstekleri 6** sayacı geçmiş/legacy istekleri de sayıyor olabilir; aktif pending sayısı ile legacy tarihsel bildirimler ayrılacak.
+
+
+## 2026-10-01 — Build 360 Aktivite yenileme/cache birleşimi hatası doğrulandı
+
+- Takip isteği kabul edildikten sonra ilişki yazımı başarıyla tamamlandı ve **“Takip isteği kabul edildi.”** mesajı görüldü; ancak Aktivite kartı ekranda pending eylemleriyle kalmaya devam etti.
+- Mor manuel yenileme düğmesine basıldığında **“Aktiviteler yenilenemedi.”** mesajı çıktı.
+- Kod incelemesinde Aktivite ekranı canlı stream belgelerini önce birlesik haritasına yazıyor, ardından _sunucuAktiviteleri cache listesini aynı belge ID'leriyle **üzerine yazıyor**. Bu nedenle kabul sonrası stream'de accepted olan belge, eski cache'deki pending sürümle tekrar ezilebiliyor.
+- Sonraki pakette birleşim sırası ters çevrilecek: **önce server/cache, sonra canlı stream**; canlı Firestore snapshot her zaman öncelikli olacak.
+- istegiSonuclandir başarı sonrası ilgili belge _sunucuAktiviteleri cache'inde de yerel olarak accepted/rejected kabul edilerek stale pending eylemleri anında kaldırılacak.
+- Manuel refresh, Source.server çağrısı başarısız olursa mevcut canlı stream'i bozmamalı; kullanıcıya hata gösterebilir fakat eski cache canlı snapshot'ın üstüne çıkmamalı.
+- **Takip İstekleri / Arkadaşlık İstekleri sayaçları** yalnızca status == pending aktif istekleri sayacak. Accepted/rejected veya legacy tarihsel kayıtlar aktif istek sayacına dahil edilmeyecek.
