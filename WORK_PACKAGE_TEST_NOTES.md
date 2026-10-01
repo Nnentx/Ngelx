@@ -1354,3 +1354,12 @@ Bu maddeler Build 359'un çalışan arama/görüntülü arama davranışını bo
 - **Başka kullanıcı profili alt taşması kesin doğrulandı:** ekranın altındaki **Ortak gruplar** butonu Android sistem gezinme alanı tarafından kısmen örtülüyor / kesiliyor.
 - Profil scroll içeriğinin sonuna cihazın gerçek `MediaQuery.viewPadding.bottom` değerine ek yeterli kaydırılabilir boşluk verilecek; yalnızca SafeArea sarmalamakla yetinilmeyecek.
 - Son etkileşimli öğe (Ortak gruplar ve devam eden kartlar) tamamen yukarı taşınabilmeli ve 3 tuşlu gezinme çubuğunun altında kalmamalı.
+
+
+## 2026-10-01 — Ortak Gruplar ekranı alt taşma doğrulaması
+
+- Cihaz testinde **Ortak gruplar** listesinin en alt öğesi klasik 3 tuşlu Android gezinme alanının altında/kısmen içinde kalıyor.
+- Ekran görüntüsünde son görünen grup satırı (**“testtt gruppppp”**) sistem gezinme çubuğu tarafından kısmen örtülmüş; satırın tamamı rahatça görünür ve dokunulabilir değil.
+- Ortak Gruplar ekranında yalnızca üstteki AppBar değil, listenin scroll sonu için de cihazın gerçek `MediaQuery.viewPadding.bottom` / `padding.bottom` değeri dikkate alınacak.
+- Son grup satırının tamamen yukarı taşınabilmesi için dinamik alt liste boşluğu eklenecek; sabit piksel kullanılmayacak.
+- Jest gezinme ve 3 tuşlu Android gezinme birlikte doğrulanacak.
