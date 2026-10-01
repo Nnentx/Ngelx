@@ -19946,7 +19946,9 @@ class _AktivitePageState extends State<AktivitePage> {
       return;
     }
 
-    if(hedefTuru=='group'&&kaynak.isNotEmpty&&tur!='call'){
+    // Grup çağrısı bildirimi önce grup sohbetini açar. Aramaya otomatik girilmez;
+    // kullanıcı isterse grup içindeki aktif arama kartından kendisi katılır.
+    if((hedefTuru=='group'||olay=='group_audio_call'||olay=='group_video_call')&&kaynak.isNotEmpty){
       if(olay=='group_join_request'){
         Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupKatilmaIstekleriPage(chatId:kaynak)));
         return;
