@@ -925,7 +925,7 @@ Future<String> ngelxYerlesikMuzikDosyasi(String trackId)async{
       }
       if(style==4)x+=.08*math.sin(twoPi*55*t);
     }
-    x*=env*(style==5?.72:.64);
+    x*=env*(style == 5 ? 0.72 : 0.64);
     final v=(x.clamp(-1.0,1.0)*32760).round();
     data.setInt16(44+i*2,v,Endian.little);
   }
