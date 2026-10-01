@@ -113,8 +113,8 @@ Future<void> ngelxSesliPaylas(BuildContext context,String roomId,String baslik)a
 }
 
 String ngelxSesliMesajRolEtiketi(String rol){
-  if(rol=='owner')return 'SAHİP';
-  if(rol=='moderator')return 'MOD';
+  if(rol=='owner')return 'ADMIN';
+  if(rol=='moderator')return 'YÖNETİCİ';
   if(rol=='speaker')return 'KONUŞMACI';
   return '';
 }
@@ -122,12 +122,14 @@ String ngelxSesliMesajRolEtiketi(String rol){
 Widget ngelxSesliMesajRolRozeti(String rol){
   final yazi=ngelxSesliMesajRolEtiketi(rol);
   if(yazi.isEmpty)return const SizedBox.shrink();
-  final sahip=rol=='owner';
+  final admin=rol=='owner';
+  final yonetici=rol=='moderator';
+  final renk=admin?Colors.red:yonetici?const Color(0xFFFF8A00):mor;
   return Container(
     margin:const EdgeInsets.only(left:5),
     padding:const EdgeInsets.symmetric(horizontal:6,vertical:2),
-    decoration:BoxDecoration(color:sahip?mor:const Color(0xFFEDE7F8),borderRadius:BorderRadius.circular(8)),
-    child:Text(yazi,style:TextStyle(color:sahip?Colors.white:mor,fontSize:8.5,fontWeight:FontWeight.w900)),
+    decoration:BoxDecoration(color:renk.withValues(alpha:admin?1:.12),borderRadius:BorderRadius.circular(8),border:admin?null:Border.all(color:renk.withValues(alpha:.35))),
+    child:Text(yazi,style:TextStyle(color:admin?Colors.white:renk,fontSize:8.5,fontWeight:FontWeight.w900)),
   );
 }
 
@@ -176,30 +178,45 @@ Future<String?> ngelxSesliMesajGonder({
 
 Future<void> ngelxSesliKullaniciMenuAc(BuildContext context,String roomId,String hedefUid,String ad)async{
   final ben=FirebaseAuth.instance.currentUser?.uid;if(ben==null)return;
-  final oda=(await FirebaseFirestore.instance.collection('audio_rooms').doc(roomId).get()).data()??<String,dynamic>{};
-  if((oda['ownerId']??'').toString()!=ben){
-    if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bu işlemleri yalnızca oda sahibi yapabilir.')));
+  final ref=FirebaseFirestore.instance.collection('audio_rooms').doc(roomId);
+  final oda=(await ref.get()).data()??<String,dynamic>{};
+  final owner=(oda['ownerId']??'').toString();
+  final mods=List<String>.from(oda['moderatorIds']??const[]);
+  final admin=owner==ben,yonetici=mods.contains(ben);
+  if(!admin&&!yonetici){
+    if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bu işlem için yönetici yetkisi gerekiyor.')));
     return;
   }
-  final mods=List<String>.from(oda['moderatorIds']??const[]);
+  if(hedefUid==owner){
+    if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('ADMIN hesabı yönetilemez.')));
+    return;
+  }
+  if(yonetici&&mods.contains(hedefUid)){
+    if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Yöneticiler birbirini yönetemez.')));
+    return;
+  }
   final speakers=List<String>.from(oda['speakerIds']??const[]);
   final susturulan=List<String>.from(oda['chatMutedUserIds']??const[]);
-  final mod=mods.contains(hedefUid),speaker=speakers.contains(hedefUid),chatMuted=susturulan.contains(hedefUid);
+  final hedefMod=mods.contains(hedefUid),speaker=speakers.contains(hedefUid),chatMuted=susturulan.contains(hedefUid);
   if(!context.mounted)return;
   final sec=await showModalBottomSheet<String>(
     context:context,
     backgroundColor:Colors.white,
     showDragHandle:true,
     builder:(c)=>SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
-      Padding(padding:const EdgeInsets.fromLTRB(18,0,18,8),child:Row(children:[const Icon(Icons.admin_panel_settings_rounded,color:mor),const SizedBox(width:8),Expanded(child:Text(ad,style:const TextStyle(color:Colors.black87,fontSize:17,fontWeight:FontWeight.w900)))])),
+      Padding(padding:const EdgeInsets.fromLTRB(18,0,18,8),child:Row(children:[
+        Icon(admin?Icons.admin_panel_settings_rounded:Icons.shield_rounded,color:admin?Colors.red:const Color(0xFFFF8A00)),
+        const SizedBox(width:8),
+        Expanded(child:Text(ad,style:const TextStyle(color:Colors.black87,fontSize:17,fontWeight:FontWeight.w900))),
+      ])),
       if(!speaker)ListTile(leading:const Icon(Icons.mic_rounded,color:mor),title:const Text('Konuşmacı yap'),onTap:()=>Navigator.pop(c,'speaker')),
       if(speaker)ListTile(leading:const Icon(Icons.mic_off_rounded,color:Colors.orange),title:const Text('Mikrofonunu kapat / dinleyici yap'),onTap:()=>Navigator.pop(c,'mute')),
-      if(!mod)ListTile(leading:const Icon(Icons.shield_outlined,color:mor),title:const Text('Moderatör yap'),onTap:()=>Navigator.pop(c,'moderator')),
-      if(mod)ListTile(leading:const Icon(Icons.shield_outlined,color:Colors.orange),title:const Text('Moderatörlüğü kaldır'),onTap:()=>Navigator.pop(c,'unmoderator')),
+      if(admin&&!hedefMod)ListTile(leading:const Icon(Icons.shield_outlined,color:Color(0xFFFF8A00)),title:const Text('Yönetici yap'),onTap:()=>Navigator.pop(c,'moderator')),
+      if(admin&&hedefMod)ListTile(leading:const Icon(Icons.shield_outlined,color:Colors.orange),title:const Text('Yöneticiliği kaldır'),onTap:()=>Navigator.pop(c,'unmoderator')),
       ListTile(leading:Icon(chatMuted?Icons.chat_bubble_outline:Icons.comments_disabled_outlined,color:Colors.orange),title:Text(chatMuted?'Sohbet susturmasını kaldır':'Sohbetten sustur'),onTap:()=>Navigator.pop(c,'chatmute')),
       const Divider(height:1),
       ListTile(leading:const Icon(Icons.person_remove_alt_1_rounded,color:Colors.redAccent),title:const Text('Odadan çıkar',style:TextStyle(color:Colors.redAccent,fontWeight:FontWeight.w800)),onTap:()=>Navigator.pop(c,'remove')),
-      ListTile(leading:const Icon(Icons.block_rounded,color:Colors.red),title:const Text('Odadan çıkar ve tekrar girişini engelle',style:TextStyle(color:Colors.red,fontWeight:FontWeight.w900)),onTap:()=>Navigator.pop(c,'ban')),
+      if(admin)ListTile(leading:const Icon(Icons.block_rounded,color:Colors.red),title:const Text('Odadan çıkar ve tekrar girişini engelle',style:TextStyle(color:Colors.red,fontWeight:FontWeight.w900)),onTap:()=>Navigator.pop(c,'ban')),
     ])),
   );
   if(sec!=null&&context.mounted)await ngelxSesliRolDegistir(context:context,roomId:roomId,hedefUid:hedefUid,islem:sec);
@@ -217,11 +234,17 @@ Future<void> ngelxSesliRolDegistir({
   try{
     await FirebaseFirestore.instance.runTransaction((tx)async{
       final d=await tx.get(ref),v=d.data()??<String,dynamic>{};
-      if((v['ownerId']??'').toString()!=ben)throw StateError('owner_only');
+      final owner=(v['ownerId']??'').toString();
       final sp=List<String>.from(v['speakerIds']??const[]);
       final mods=List<String>.from(v['moderatorIds']??const[]);
       final banned=List<String>.from(v['bannedUserIds']??const[]);
       final chatMuted=List<String>.from(v['chatMutedUserIds']??const[]);
+      final admin=owner==ben,yonetici=mods.contains(ben);
+      if(!admin&&!yonetici)throw StateError('manager_only');
+      if(hedefUid==owner)throw StateError('admin_target');
+      if(yonetici&&mods.contains(hedefUid))throw StateError('manager_target');
+      if(yonetici&&!const ['speaker','listener','mute','chatmute','remove'].contains(islem))throw StateError('admin_only');
+
       if(islem=='speaker'){
         if(!sp.contains(hedefUid)&&sp.length>=ngelxSesliMaksKonusmaci)throw StateError('speaker_limit');
         if(!sp.contains(hedefUid))sp.add(hedefUid);
@@ -232,11 +255,13 @@ Future<void> ngelxSesliRolDegistir({
         tx.update(ref,{'speakerIds':sp,'speakerCount':sp.length,'updatedAt':FieldValue.serverTimestamp()});
         tx.set(pref,{'role':mods.contains(hedefUid)?'moderator':'listener','forcedMutedAt':FieldValue.serverTimestamp(),'updatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
       }else if(islem=='moderator'){
+        if(!admin)throw StateError('admin_only');
         if(!mods.contains(hedefUid)&&mods.length>=ngelxSesliMaksModerator)throw StateError('moderator_limit');
         if(!mods.contains(hedefUid))mods.add(hedefUid);
         tx.update(ref,{'moderatorIds':mods,'updatedAt':FieldValue.serverTimestamp()});
         tx.set(pref,{'role':'moderator','updatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
       }else if(islem=='unmoderator'){
+        if(!admin)throw StateError('admin_only');
         mods.remove(hedefUid);
         tx.update(ref,{'moderatorIds':mods,'updatedAt':FieldValue.serverTimestamp()});
         tx.set(pref,{'role':sp.contains(hedefUid)?'speaker':'listener','updatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
@@ -245,6 +270,7 @@ Future<void> ngelxSesliRolDegistir({
         tx.update(ref,{'chatMutedUserIds':chatMuted,'updatedAt':FieldValue.serverTimestamp()});
         tx.set(pref,{'chatMuted':chatMuted.contains(hedefUid),'updatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
       }else if(islem=='remove'||islem=='ban'){
+        if(islem=='ban'&&!admin)throw StateError('admin_only');
         sp.remove(hedefUid);mods.remove(hedefUid);
         if(islem=='ban'&&!banned.contains(hedefUid))banned.add(hedefUid);
         tx.update(ref,{'speakerIds':sp,'speakerCount':sp.length,'moderatorIds':mods,'bannedUserIds':banned,'updatedAt':FieldValue.serverTimestamp()});
@@ -257,14 +283,19 @@ Future<void> ngelxSesliRolDegistir({
     }
   }catch(e){
     if(context.mounted){
-      final m=e.toString().contains('speaker_limit')?'Konuşmacı sınırı dolu.':e.toString().contains('moderator_limit')?'Moderatör sınırı dolu.':e.toString().contains('owner_only')?'Bu işlemi yalnızca oda sahibi yapabilir.':'İşlem tamamlanamadı.';
+      final s=e.toString();
+      final m=s.contains('speaker_limit')?'Konuşmacı sınırı dolu.':s.contains('moderator_limit')?'Yönetici sınırı dolu.':s.contains('admin_only')?'Bu işlem yalnızca ADMIN tarafından yapılabilir.':s.contains('admin_target')?'ADMIN hesabı yönetilemez.':s.contains('manager_target')?'Yöneticiler birbirini yönetemez.':s.contains('manager_only')?'Yönetici yetkisi gerekiyor.':'İşlem tamamlanamadı.';
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(m)));
     }
   }
 }
+
 Future<void> ngelxSesliKatilimcilarAc(BuildContext context,String roomId,String ownerId)async{
   final ben=FirebaseAuth.instance.currentUser?.uid;
   if(ben==null)return;
+  final oda=(await FirebaseFirestore.instance.collection('audio_rooms').doc(roomId).get()).data()??<String,dynamic>{};
+  final mods=List<String>.from(oda['moderatorIds']??const[]);
+  final benYonetici=ben==ownerId||mods.contains(ben);
   await showModalBottomSheet<void>(
     context:context,
     backgroundColor:Colors.white,
@@ -299,12 +330,12 @@ Future<void> ngelxSesliKatilimcilarAc(BuildContext context,String roomId,String 
                 itemBuilder:(_,i){
                   final d=docs[i],v=d.data(),id=(v['userId']??d.id).toString(),foto=(v['photoUrl']??'').toString(),rol=(v['role']??'listener').toString();
                   final sahip=id==ownerId;
-                  final rolYazi=sahip?'Oda sahibi':rol=='moderator'?'Moderatör':rol=='speaker'?'Konuşmacı':'Dinleyici';
+                  final rolYazi=sahip?'ADMIN':rol=='moderator'?'YÖNETİCİ':rol=='speaker'?'Konuşmacı':'Dinleyici';
                   return ListTile(
                     leading:CircleAvatar(backgroundColor:const Color(0xFFF0E8FF),backgroundImage:foto.isEmpty?null:NgelXAgImageProvider(foto),child:foto.isEmpty?const Icon(Icons.person,color:mor):null),
                     title:Text((v['displayName']??'NgelX').toString(),style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w900)),
                     subtitle:Text(rolYazi,style:TextStyle(color:rol=='moderator'?mor:Colors.black45,fontWeight:FontWeight.w700)),
-                    trailing:ben==ownerId&&!sahip?IconButton(
+                    trailing:benYonetici&&!sahip?IconButton(
                       tooltip:'Kullanıcıyı yönet',
                       onPressed:()=>ngelxSesliKullaniciMenuAc(c,roomId,id,(v['displayName']??'NgelX').toString()),
                       icon:const Icon(Icons.admin_panel_settings_outlined,color:mor),
@@ -351,7 +382,7 @@ class _NgelxSesliSohbetPanelState extends State<NgelxSesliSohbetPanel>{
     final ben=FirebaseAuth.instance.currentUser?.uid,benim=(v['userId']??'').toString()==ben;
     final sec=await showModalBottomSheet<String>(context:context,backgroundColor:Colors.white,showDragHandle:true,builder:(c)=>SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
       if(widget.yonetici)ListTile(leading:const Icon(Icons.push_pin_outlined,color:mor),title:Text(v['pinned']==true?'Sabitlemeyi kaldır':'Mesajı sabitle'),onTap:()=>Navigator.pop(c,'pin')),
-      if(widget.sahibiyim&&!benim)ListTile(leading:const Icon(Icons.admin_panel_settings_outlined,color:mor),title:const Text('Kullanıcıyı yönet'),onTap:()=>Navigator.pop(c,'manage')),
+      if(widget.yonetici&&!benim)ListTile(leading:const Icon(Icons.admin_panel_settings_outlined,color:mor),title:const Text('Kullanıcıyı yönet'),onTap:()=>Navigator.pop(c,'manage')),
       if(widget.yonetici||benim)ListTile(leading:const Icon(Icons.delete_outline,color:Colors.redAccent),title:const Text('Mesajı sil',style:TextStyle(color:Colors.redAccent,fontWeight:FontWeight.w800)),onTap:()=>Navigator.pop(c,'delete')),
     ])));
     if(sec=='delete')await ref.delete();
@@ -498,7 +529,7 @@ class _NgelxSesliInlineSohbetState extends State<NgelxSesliInlineSohbet>{
       showDragHandle:true,
       builder:(c)=>SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
         if(widget.yonetici)ListTile(leading:const Icon(Icons.push_pin_outlined,color:mor),title:Text(v['pinned']==true?'Sabitlemeyi kaldır':'Mesajı sabitle'),onTap:()=>Navigator.pop(c,'pin')),
-        if(widget.sahibiyim&&!benim)ListTile(leading:const Icon(Icons.admin_panel_settings_outlined,color:mor),title:const Text('Kullanıcıyı yönet'),onTap:()=>Navigator.pop(c,'manage')),
+        if(widget.yonetici&&!benim)ListTile(leading:const Icon(Icons.admin_panel_settings_outlined,color:mor),title:const Text('Kullanıcıyı yönet'),onTap:()=>Navigator.pop(c,'manage')),
         if(widget.yonetici||benim)ListTile(leading:const Icon(Icons.delete_outline,color:Colors.redAccent),title:const Text('Mesajı sil',style:TextStyle(color:Colors.redAccent,fontWeight:FontWeight.w800)),onTap:()=>Navigator.pop(c,'delete')),
       ])),
     );
