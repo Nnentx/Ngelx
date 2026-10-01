@@ -10,6 +10,7 @@ on:
       - 'app/lib/main.dart'
       - 'app/pubspec.yaml'
       - 'firestore.rules'
+      - 'WORK_PACKAGE_TEST_NOTES.md'
 
 permissions:
   contents: read
