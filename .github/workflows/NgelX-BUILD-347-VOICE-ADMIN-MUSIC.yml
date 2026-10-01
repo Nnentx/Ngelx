@@ -58,6 +58,36 @@ jobs:
           grep -q "onTap: yorumMenusu" app/lib/main.dart
           grep -q "final gonderenBasligi=yeniBlok" app/lib/main.dart
 
+      - name: Gradle Kotlin Maven Central duzeltmesi
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/.gradle"
+          cat > "$HOME/.gradle/init.gradle" <<'GRADLE'
+          beforeSettings { settings ->
+              settings.pluginManagement.repositories {
+                  exclusiveContent {
+                      forRepository {
+                          maven { url = "https://repo.maven.apache.org/maven2" }
+                      }
+                      filter {
+                          includeGroup "org.jetbrains.kotlin"
+                      }
+                  }
+                  google()
+                  mavenCentral()
+                  gradlePluginPortal()
+              }
+          }
+          gradle.beforeProject { project ->
+              project.buildscript.repositories {
+                  mavenCentral()
+                  google()
+                  gradlePluginPortal()
+              }
+          }
+          GRADLE
+
       - name: Bagimliliklari al ve analiz et
         shell: bash
         run: |
