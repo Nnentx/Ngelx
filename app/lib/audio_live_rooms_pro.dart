@@ -845,6 +845,94 @@ class _NgelxSesliInlineSohbetState extends State<NgelxSesliInlineSohbet>{
 
 
 
+
+class NgelxYerlesikMuzik{
+  final String id,baslik,kategori,aciklama;
+  final IconData ikon;
+  const NgelxYerlesikMuzik(this.id,this.baslik,this.kategori,this.aciklama,this.ikon);
+}
+
+const List<NgelxYerlesikMuzik> ngelxYerlesikMuzikler=[
+  NgelxYerlesikMuzik('mor_gece','Mor Gece','Chill','Yumuşak ambient döngü • NgelX Original',Icons.nightlight_round),
+  NgelxYerlesikMuzik('sakin_akis','Sakin Akış','Chill','Rahat sohbet ritmi • NgelX Original',Icons.waves_rounded),
+  NgelxYerlesikMuzik('odak','Odak','Odak','Minimal arpej döngüsü • NgelX Original',Icons.center_focus_strong_rounded),
+  NgelxYerlesikMuzik('gun_dogumu','Gün Doğumu','Ambient','Sıcak pad ve hafif armoni • NgelX Original',Icons.wb_sunny_outlined),
+  NgelxYerlesikMuzik('gece_yolu','Gece Yolu','Ambient','Derin ve sakin arka plan • NgelX Original',Icons.route_rounded),
+  NgelxYerlesikMuzik('hafif_tempo','Hafif Tempo','Sohbet','Canlı ama konuşmayı bastırmayan döngü • NgelX Original',Icons.graphic_eq_rounded),
+];
+
+Future<String> ngelxYerlesikMuzikDosyasi(String trackId)async{
+  final dir=await getTemporaryDirectory();
+  final file=File('${dir.path}/ngelx_original_$trackId.wav');
+  try{
+    if(await file.exists()&&await file.length()>200000)return file.path;
+  }catch(_){}
+  const sampleRate=16000;
+  const seconds=12;
+  const totalSamples=sampleRate*seconds;
+  const dataBytes=totalSamples*2;
+  final data=ByteData(44+dataBytes);
+  void ascii(int offset,String value){
+    for(var i=0;i<value.length;i++)data.setUint8(offset+i,value.codeUnitAt(i));
+  }
+  ascii(0,'RIFF');
+  data.setUint32(4,36+dataBytes,Endian.little);
+  ascii(8,'WAVE');
+  ascii(12,'fmt ');
+  data.setUint32(16,16,Endian.little);
+  data.setUint16(20,1,Endian.little);
+  data.setUint16(22,1,Endian.little);
+  data.setUint32(24,sampleRate,Endian.little);
+  data.setUint32(28,sampleRate*2,Endian.little);
+  data.setUint16(32,2,Endian.little);
+  data.setUint16(34,16,Endian.little);
+  ascii(36,'data');
+  data.setUint32(40,dataBytes,Endian.little);
+
+  late List<double> roots;
+  late int style;
+  switch(trackId){
+    case 'sakin_akis': roots=[196.0,220.0,174.61,196.0];style=1;break;
+    case 'odak': roots=[220.0,246.94,261.63,196.0];style=2;break;
+    case 'gun_dogumu': roots=[261.63,293.66,220.0,246.94];style=3;break;
+    case 'gece_yolu': roots=[146.83,164.81,130.81,146.83];style=4;break;
+    case 'hafif_tempo': roots=[220.0,246.94,196.0,220.0];style=5;break;
+    default: roots=[174.61,196.0,164.81,174.61];style=0;
+  }
+  final twoPi=math.pi*2;
+  for(var i=0;i<totalSamples;i++){
+    final t=i/sampleRate;
+    final section=((t/3).floor())%roots.length;
+    final root=roots[section];
+    final local=t%3;
+    final fadeIn=(local/.32).clamp(0.0,1.0).toDouble();
+    final fadeOut=((3-local)/.38).clamp(0.0,1.0).toDouble();
+    final env=math.min(fadeIn,fadeOut);
+    double x=0;
+    if(style==2){
+      final step=((t*4).floor())%4;
+      final note=<double>[1,1.25,1.5,2][step];
+      x=.45*math.sin(twoPi*root*note*t)+.18*math.sin(twoPi*root*.5*t);
+    }else{
+      final third=style==3?1.2599:1.1892;
+      const fifth=1.4983;
+      x=.34*math.sin(twoPi*root*t)+.22*math.sin(twoPi*root*third*t)+.18*math.sin(twoPi*root*fifth*t)+.10*math.sin(twoPi*root*.5*t);
+      if(style==1||style==5){
+        final beat=t%.5;
+        if(beat<.08)x+=.20*math.sin(twoPi*62*beat)*(1-beat/.08);
+        final hat=t%.25;
+        if(hat<.025)x+=.035*math.sin(i*1.618)*(1-hat/.025);
+      }
+      if(style==4)x+=.08*math.sin(twoPi*55*t);
+    }
+    x*=env*(style==5?.72:.64);
+    final v=(x.clamp(-1.0,1.0)*32760).round();
+    data.setInt16(44+i*2,v,Endian.little);
+  }
+  await file.writeAsBytes(data.buffer.asUint8List(),flush:true);
+  return file.path;
+}
+
 class NgelxSesliMuzikKontrolu extends StatefulWidget{
   final String roomId;
   final bool yonetici,bitti;
@@ -877,7 +965,10 @@ class _NgelxSesliMuzikKontroluState extends State<NgelxSesliMuzikKontrolu>{
       if(ek>0)hedef+=ek;
     }
     final sure=_oynatici.duration?.inMilliseconds??0;
-    if(sure>0)hedef=hedef.clamp(0,sure).toInt();
+    if(sure>0){
+      if(_url.startsWith('ngelx://original/'))hedef=hedef%sure;
+      else hedef=hedef.clamp(0,sure).toInt();
+    }
     return hedef<0?0:hedef;
   }
 
@@ -897,8 +988,15 @@ class _NgelxSesliMuzikKontroluState extends State<NgelxSesliMuzikKontrolu>{
       if(url!=_url){
         _url=url;
         if(mounted)setState(()=>_hazirlaniyor=true);
-        await _oynatici.setUrl(url);
-        await _oynatici.setLoopMode(LoopMode.off);
+        if(url.startsWith('ngelx://original/')){
+          final id=url.substring('ngelx://original/'.length);
+          final path=await ngelxYerlesikMuzikDosyasi(id);
+          await _oynatici.setFilePath(path);
+          await _oynatici.setLoopMode(LoopMode.one);
+        }else{
+          await _oynatici.setUrl(url);
+          await _oynatici.setLoopMode(LoopMode.off);
+        }
         await _oynatici.setVolume(_ses);
       }
       final hedef=_hedefKonumMs();
@@ -917,30 +1015,105 @@ class _NgelxSesliMuzikKontroluState extends State<NgelxSesliMuzikKontrolu>{
 
   Future<void> _muzikEkle()async{
     if(!widget.yonetici||widget.bitti||_yukleniyor)return;
-    final x=await ngelxDosyaSec(tur:const XTypeGroup(label:'Müzik',extensions:['mp3','m4a','aac','wav','ogg']));
-    if(x==null)return;
-    final ad=x.name.trim().isEmpty?'Müzik':x.name.trim();
-    final ext=(ad.contains('.')?ad.split('.').last:'mp3').toLowerCase();
-    final baslik=ad.replaceFirst(RegExp(r'\.[^.]+$'),'').trim();
-    if(mounted)setState(()=>_yukleniyor=true);
+    final arama=TextEditingController();
+    var kategori='Tümü';
+    NgelxYerlesikMuzik? secilen;
+    if(!mounted)return;
+    secilen=await showModalBottomSheet<NgelxYerlesikMuzik>(
+      context:context,
+      backgroundColor:Colors.white,
+      isScrollControlled:true,
+      showDragHandle:true,
+      shape:const RoundedRectangleBorder(borderRadius:BorderRadius.vertical(top:Radius.circular(28))),
+      builder:(sheet)=>StatefulBuilder(builder:(sheet,setSheet){
+        final q=arama.text.trim().toLowerCase();
+        final liste=ngelxYerlesikMuzikler.where((x)=>(kategori=='Tümü'||x.kategori==kategori)&&(q.isEmpty||x.baslik.toLowerCase().contains(q)||x.kategori.toLowerCase().contains(q))).toList();
+        return SafeArea(top:false,child:Padding(
+          padding:EdgeInsets.fromLTRB(16,4,16,18+MediaQuery.viewInsetsOf(sheet).bottom),
+          child:SizedBox(
+            height:math.min(MediaQuery.sizeOf(sheet).height*.76,620.0).toDouble(),
+            child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+              const Row(children:[
+                CircleAvatar(backgroundColor:Color(0xFFF0E8FF),child:Icon(Icons.library_music_rounded,color:mor)),
+                SizedBox(width:10),
+                Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+                  Text('NgelX Müzik Kütüphanesi',style:TextStyle(fontSize:20,fontWeight:FontWeight.w900)),
+                  Text('NgelX için üretilmiş orijinal döngüler',style:TextStyle(color:Colors.black54,fontSize:12)),
+                ])),
+              ]),
+              const SizedBox(height:12),
+              Container(
+                padding:const EdgeInsets.symmetric(horizontal:11,vertical:9),
+                decoration:BoxDecoration(color:const Color(0xFFF7F2FF),borderRadius:BorderRadius.circular(14)),
+                child:const Row(children:[
+                  Icon(Icons.verified_rounded,color:mor,size:18),
+                  SizedBox(width:7),
+                  Expanded(child:Text('Telefon dosyaları açılmaz. Harici telifli parça yüklenmez.',style:TextStyle(color:Colors.black54,fontSize:11.5,fontWeight:FontWeight.w700))),
+                ]),
+              ),
+              const SizedBox(height:10),
+              TextField(
+                controller:arama,
+                onChanged:(_)=>setSheet((){}),
+                decoration:InputDecoration(
+                  hintText:'Müzik ara',
+                  prefixIcon:const Icon(Icons.search_rounded),
+                  filled:true,
+                  fillColor:const Color(0xFFF6F6F8),
+                  border:OutlineInputBorder(borderRadius:BorderRadius.circular(16),borderSide:BorderSide.none),
+                ),
+              ),
+              const SizedBox(height:9),
+              SizedBox(height:38,child:ListView(
+                scrollDirection:Axis.horizontal,
+                children:['Tümü','Chill','Ambient','Odak','Sohbet'].map((x)=>Padding(
+                  padding:const EdgeInsets.only(right:7),
+                  child:ChoiceChip(label:Text(x),selected:kategori==x,onSelected:(_)=>setSheet(()=>kategori=x)),
+                )).toList(),
+              )),
+              const SizedBox(height:8),
+              Expanded(child:liste.isEmpty
+                ?const Center(child:Text('Eşleşen müzik yok.',style:TextStyle(color:Colors.black45)))
+                :ListView.separated(
+                  itemCount:liste.length,
+                  separatorBuilder:(_,__)=>const Divider(height:1),
+                  itemBuilder:(_,i){
+                    final x=liste[i];
+                    final aktif=_url=='ngelx://original/${x.id}';
+                    return ListTile(
+                      contentPadding:const EdgeInsets.symmetric(horizontal:4,vertical:4),
+                      leading:CircleAvatar(backgroundColor:aktif?mor:const Color(0xFFF0E8FF),child:Icon(x.ikon,color:aktif?Colors.white:mor)),
+                      title:Text(x.baslik,style:const TextStyle(fontWeight:FontWeight.w900)),
+                      subtitle:Text('${x.kategori} • ${x.aciklama}',maxLines:2,overflow:TextOverflow.ellipsis),
+                      trailing:FilledButton.tonalIcon(
+                        onPressed:()=>Navigator.pop(sheet,x),
+                        icon:Icon(aktif?Icons.replay_rounded:Icons.play_arrow_rounded,size:18),
+                        label:Text(aktif?'Yeniden':'Seç'),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ]),
+          ),
+        ));
+      }),
+    );
+    arama.dispose();
+    if(secilen==null||!mounted)return;
+    setState(()=>_yukleniyor=true);
     try{
-      final url=await ngelxMedyaYukleDosya(
-        dosya:x,
-        kind:'music',
-        ext:ext,
-        legacyPath:'audio-rooms/${widget.roomId}/${DateTime.now().millisecondsSinceEpoch}.$ext',
-        contentType:(x.mimeType??'').trim().isEmpty?null:x.mimeType,
-      );
-      int sureMs=0;
+      final path=await ngelxYerlesikMuzikDosyasi(secilen.id);
+      int sureMs=12000;
       try{
         final p=AudioPlayer();
-        final sure=await p.setUrl(url);
-        sureMs=sure?.inMilliseconds??0;
+        final sure=await p.setFilePath(path);
+        sureMs=sure?.inMilliseconds??12000;
         await p.dispose();
       }catch(_){}
       await FirebaseFirestore.instance.collection('audio_rooms').doc(widget.roomId).set({
-        'musicUrl':url,
-        'musicTitle':baslik.isEmpty?'Müzik':baslik,
+        'musicUrl':'ngelx://original/${secilen.id}',
+        'musicTitle':secilen.baslik,
         'musicPlaying':true,
         'musicPositionMs':0,
         'musicStartedAt':FieldValue.serverTimestamp(),
@@ -948,9 +1121,9 @@ class _NgelxSesliMuzikKontroluState extends State<NgelxSesliMuzikKontrolu>{
         'musicAddedBy':FirebaseAuth.instance.currentUser?.uid??'',
         'musicUpdatedAt':FieldValue.serverTimestamp(),
       },SetOptions(merge:true));
-      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Müzik odaya eklendi.')));
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('${secilen.baslik} odaya eklendi.')));
     }catch(e){
-      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Müzik eklenemedi: ${_ngelxKisaHata(e)}')));
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Müzik hazırlanamadı: ${_ngelxKisaHata(e)}')));
     }finally{
       if(mounted)setState(()=>_yukleniyor=false);
     }
@@ -1013,7 +1186,7 @@ class _NgelxSesliMuzikKontroluState extends State<NgelxSesliMuzikKontrolu>{
               const SizedBox(width:10),
               Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
                 const Text('Oda müziği',style:TextStyle(color:Colors.black87,fontSize:19,fontWeight:FontWeight.w900)),
-                Text(_baslik.isEmpty?'Henüz müzik eklenmedi':_baslik,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black54)),
+                Text(_baslik.isEmpty?'Henüz müzik seçilmedi':(_baslik+' • NgelX Original'),maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black54)),
               ])),
             ]),
             const SizedBox(height:14),
@@ -1033,7 +1206,7 @@ class _NgelxSesliMuzikKontroluState extends State<NgelxSesliMuzikKontrolu>{
                   style:FilledButton.styleFrom(backgroundColor:mor,minimumSize:const Size.fromHeight(46)),
                   onPressed:_yukleniyor?null:()async{Navigator.pop(c);await _muzikEkle();},
                   icon:_yukleniyor?const SizedBox(width:17,height:17,child:CircularProgressIndicator(strokeWidth:2,color:Colors.white)):const Icon(Icons.library_music_rounded),
-                  label:Text(_url.isEmpty?'Müzik ekle':'Müziği değiştir',style:const TextStyle(fontWeight:FontWeight.w900)),
+                  label:Text(_url.isEmpty?'Kütüphaneyi aç':'Müziği değiştir',style:const TextStyle(fontWeight:FontWeight.w900)),
                 )),
                 if(_url.isNotEmpty)...[
                   const SizedBox(width:8),
@@ -1053,7 +1226,7 @@ class _NgelxSesliMuzikKontroluState extends State<NgelxSesliMuzikKontrolu>{
               ]),
             ],
             if(!widget.yonetici&&_url.isEmpty)
-              const Padding(padding:EdgeInsets.only(top:8),child:Text('ADMIN veya yönetici müzik eklediğinde burada dinleyebilirsin.',style:TextStyle(color:Colors.black45))),
+              const Padding(padding:EdgeInsets.only(top:8),child:Text('ADMIN veya yönetici NgelX kütüphanesinden müzik seçtiğinde burada dinleyebilirsin.',style:TextStyle(color:Colors.black45))),
           ]),
         ));
       }),
