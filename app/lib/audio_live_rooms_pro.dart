@@ -350,3 +350,120 @@ Future<void> ngelxSesliSohbetAc(BuildContext context,String roomId,bool yonetici
     builder:(c)=>FractionallySizedBox(heightFactor:.78,child:NgelxSesliSohbetPanel(roomId:roomId,yonetici:yonetici)),
   );
 }
+
+
+class NgelxSesliInlineSohbet extends StatefulWidget{
+  final String roomId;
+  final bool yonetici;
+  const NgelxSesliInlineSohbet({super.key,required this.roomId,required this.yonetici});
+  @override State<NgelxSesliInlineSohbet> createState()=>_NgelxSesliInlineSohbetState();
+}
+class _NgelxSesliInlineSohbetState extends State<NgelxSesliInlineSohbet>{
+  final _mesaj=TextEditingController();
+  bool _gonderiyor=false;
+  String _ad='NgelX',_foto='';
+  @override void initState(){super.initState();unawaited(_profil());}
+  Future<void> _profil()async{
+    final u=FirebaseAuth.instance.currentUser;if(u==null)return;
+    try{
+      final p=(await FirebaseFirestore.instance.collection('users').doc(u.uid).get()).data()??<String,dynamic>{};
+      if(mounted)setState((){_ad=(p['displayName']??p['username']??u.displayName??'NgelX').toString();_foto=(p['photoUrl']??'').toString();});
+    }catch(_){}
+  }
+  Future<void> _gonder()async{
+    final u=FirebaseAuth.instance.currentUser,t=_mesaj.text.trim();
+    if(u==null||t.isEmpty||_gonderiyor)return;
+    setState(()=>_gonderiyor=true);
+    _mesaj.clear();
+    try{
+      await FirebaseFirestore.instance.collection('audio_rooms').doc(widget.roomId).collection('messages').add({
+        'userId':u.uid,
+        'displayName':_ad,
+        'photoUrl':_foto,
+        'text':t.length>600?t.substring(0,600):t,
+        'createdAt':FieldValue.serverTimestamp(),
+        'pinned':false,
+      });
+    }catch(_){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Mesaj gönderilemedi.')));
+    }finally{if(mounted)setState(()=>_gonderiyor=false);}
+  }
+  Widget _satir(Map<String,dynamic> v){
+    final ad=(v['displayName']??'NgelX').toString(),metin=(v['text']??'').toString();
+    return Padding(
+      padding:const EdgeInsets.symmetric(vertical:1),
+      child:Row(children:[
+        Flexible(child:Text(ad,overflow:TextOverflow.ellipsis,style:const TextStyle(color:mor,fontSize:11,fontWeight:FontWeight.w900))),
+        const SizedBox(width:5),
+        Expanded(flex:3,child:Text(metin,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black87,fontSize:12.5,fontWeight:FontWeight.w600))),
+      ]),
+    );
+  }
+  @override Widget build(BuildContext context)=>Container(
+    height:150,
+    decoration:const BoxDecoration(color:Colors.white,border:Border(top:BorderSide(color:Color(0xFFEDE8F2)))),
+    child:Column(children:[
+      SizedBox(
+        height:34,
+        child:Padding(
+          padding:const EdgeInsets.symmetric(horizontal:12),
+          child:Row(children:[
+            const Icon(Icons.chat_bubble_rounded,color:mor,size:17),
+            const SizedBox(width:6),
+            const Text('Sohbet',style:TextStyle(color:Colors.black87,fontWeight:FontWeight.w900)),
+            const Spacer(),
+            TextButton.icon(
+              style:TextButton.styleFrom(padding:const EdgeInsets.symmetric(horizontal:6),visualDensity:VisualDensity.compact),
+              onPressed:()=>ngelxSesliSohbetAc(context,widget.roomId,widget.yonetici),
+              icon:const Icon(Icons.open_in_full_rounded,size:15),
+              label:const Text('Büyüt',style:TextStyle(fontSize:11,fontWeight:FontWeight.w800)),
+            ),
+          ]),
+        ),
+      ),
+      Expanded(
+        child:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
+          stream:FirebaseFirestore.instance.collection('audio_rooms').doc(widget.roomId).collection('messages').orderBy('createdAt',descending:true).limit(3).snapshots(),
+          builder:(_,s){
+            final docs=s.data?.docs??[];
+            if(s.connectionState==ConnectionState.waiting&&docs.isEmpty)return const Center(child:SizedBox(width:18,height:18,child:CircularProgressIndicator(strokeWidth:2,color:mor)));
+            if(docs.isEmpty)return const Center(child:Text('Henüz mesaj yok • Yazışma ses açıkken burada görünür.',style:TextStyle(color:Colors.black38,fontSize:11.5,fontWeight:FontWeight.w600)));
+            final gorunen=docs.take(2).toList().reversed.toList();
+            return Padding(
+              padding:const EdgeInsets.fromLTRB(12,1,12,2),
+              child:Column(mainAxisAlignment:MainAxisAlignment.end,children:gorunen.map((d)=>_satir(d.data())).toList()),
+            );
+          },
+        ),
+      ),
+      Padding(
+        padding:const EdgeInsets.fromLTRB(10,4,10,7),
+        child:Row(children:[
+          Expanded(child:TextField(
+            controller:_mesaj,
+            minLines:1,maxLines:1,
+            textInputAction:TextInputAction.send,
+            style:const TextStyle(color:Colors.black87,fontSize:13.5),
+            decoration:InputDecoration(
+              hintText:'Mesaj yaz...',
+              hintStyle:const TextStyle(color:Colors.black38),
+              filled:true,
+              fillColor:const Color(0xFFF5F5F8),
+              isDense:true,
+              contentPadding:const EdgeInsets.symmetric(horizontal:13,vertical:10),
+              border:OutlineInputBorder(borderRadius:BorderRadius.circular(20),borderSide:BorderSide.none),
+            ),
+            onSubmitted:(_)=>_gonder(),
+          )),
+          const SizedBox(width:6),
+          IconButton.filled(
+            style:IconButton.styleFrom(backgroundColor:mor,minimumSize:const Size(40,40)),
+            onPressed:_gonderiyor?null:_gonder,
+            icon:_gonderiyor?const SizedBox(width:17,height:17,child:CircularProgressIndicator(strokeWidth:2,color:Colors.white)):const Icon(Icons.send_rounded,color:Colors.white,size:19),
+          ),
+        ]),
+      ),
+    ]),
+  );
+  @override void dispose(){_mesaj.dispose();super.dispose();}
+}
