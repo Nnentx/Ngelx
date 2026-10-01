@@ -18195,11 +18195,6 @@ class _SohbetPageState extends State<SohbetPage> {
       }),
       actions:[
         IconButton(
-          tooltip:lt('Yenile','Refresh'),
-          onPressed:_ozelSohbetiYenile,
-          icon:const Icon(Icons.refresh_rounded,color:ngelxPrivateBlue),
-        ),
-        IconButton(
           tooltip:'Sesli arama',
           onPressed:aramaBaslatiliyor?null:()=>aramaBaslat(false),
           icon:aramaBaslatiliyor
