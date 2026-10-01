@@ -1574,3 +1574,33 @@ Build 364 düzeltmeleri:
 - Üstteki **Mesajlar** unread toplamı pending Mesaj İsteklerini normal mesaj sayısına katmıyor.
 - Mesaj isteği kabul edildiğinde recipient unread sayacı 0'a çekiliyor ve varsa hidden state temizleniyor; sohbet normal Gelen Kutusu'na temiz şekilde taşınıyor.
 - Sürüm: **1.0.143+364**.
+
+
+## 2026-10-02 — Build 365 cihaz testi + Build 366 eski/yeni hesap uyumluluk notları
+
+Build 365 cihaz testinde mesaj isteği ana akışı doğrulandı:
+- Arkadaş olmayan Sultan → DİLEK mesajı **Mesaj İstekleri** bölümüne düştü.
+- Pending mesaj isteği normal Gelen Kutusu listesine ve üstteki **Mesajlar** unread sayacına eklenmedi.
+- Mesaj isteği önizlemesindeki **Reddet** işlemi çalıştı; istek listeden kayboldu ve normal Gelen Kutusu'na taşınmadı.
+- Önceki DİLEK → ADEM testinde **Kabul et**, normal sohbete taşıma ve unread sayacının açınca sıfırlanması da cihazda geçti.
+
+### Eski ve yeni hesap uyumluluğu — kritik
+- DİLEK profilinde ilk denemede **Profil → Mesaj** yolu `Mesaj ekranı açılamadı. Tekrar dene.` hatası verdi.
+- DİLEK hesabında **Mesaj izinleri → Herkes** seçilip ayar kaydedildikten sonra aynı Sultan → DİLEK mesaj akışı açıldı ve mesaj gönderilebildi.
+- Uygulama tarafındaki bazı kod yolları eksik `messagePermission` alanını **all/Herkes** gibi yorumlarken Firestore güvenlik kuralı eksik alanda `friendsOnlyMessages` varsayımı nedeniyle **friends/Arkadaşlar** kabul edebiliyor. Bu tutarsızlık eski/legacy kullanıcı kayıtlarında profil → mesaj oluşturmayı engelleyebilir.
+- Yeni hesap oluşturma kodu şu anda kullanıcı belgesine `messagePermission` ve `friendsOnlyMessages` alanlarını açıkça başlangıç değeriyle yazmıyor. Bu nedenle sorun yalnızca eski hesaplara özgü kabul edilmeyecek; **yeni hesap başlangıç verisi de standardize edilecek**.
+- Build 366 hedefi: uygulama, kayıt akışı ve Firestore rules aynı tek varsayılan mesaj izni politikasını kullanacak. Mevcut kullanıcı belgeleri için güvenli geriye dönük uyumluluk/backfill stratejisi uygulanacak.
+- Test matrisi ayrı tutulacak: **eski hesap → eski hesap**, **eski → yeni**, **yeni → eski**, **yeni → yeni**. Her kombinasyonda Herkes / Takip ettiklerim / Arkadaşlar / Kimse seçenekleri kontrol edilecek.
+- Gizlilik nedeniyle mesaj açılamadığında genel `Mesaj ekranı açılamadı` yerine gerçek neden kullanıcıya açıkça gösterilecek.
+
+### Aktivite sayacı ile liste içeriği uyuşmazlığı
+- Gelen Kutusu kartında **Aktivite 2** görünürken Aktivite → Tümü ekranı **“Bu filtrede yeni aktivite yok.”** gösterdi.
+- Kök neden: Gelen Kutusu Aktivite sayacı `notifications` içindeki okunmamış kayıtların tamamını sayıyor; Aktivite ekranı ise `type == message` kayıtlarını özellikle filtreleyip göstermiyor.
+- Build 366 hedefi: **Aktivite sayacı yalnızca Aktivite ekranında gösterilebilen okunmamış kayıtları saysın.** Mesaj bildirimleri Sohbet/Mesajlar alanında kalacak ve Aktivite sayacını şişirmeyecek.
+- Sayaç ve ekran listesi için aynı ortak filtre/helper kullanılacak; böylece ileride yeni notification türlerinde tekrar ayrışma oluşmayacak.
+
+### Build 366 regresyon zorunlulukları
+- Build 364/365 mesaj isteği ayrımı bozulmayacak.
+- Kabul → normal sohbet, Reddet → iki listeden de çıkarma, unread sıfırlama davranışları korunacak.
+- Eski ve yeni hesaplarda mesaj izni varsayılanı aynı olacak.
+- Aktivite kartındaki sayı ile Aktivite ekranında gösterilebilen okunmamış kayıt sayısı birebir uyumlu olacak.
