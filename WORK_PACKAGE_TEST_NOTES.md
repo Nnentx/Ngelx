@@ -1772,3 +1772,12 @@ Kod incelemesinde mevcut NgelX efekt sisteminin gerçek zamanlı yüz/AR efekt m
 - **Aktivite 0** olarak kalıyor.
 - Sonuç: pending mesaj isteği normal Gelen Kutusu ve Mesajlar unread sayacından başarıyla ayrılmış durumda.
 - Sıradaki doğrulama: Sultan isteğinde **Kabul et** sonrası sohbetin normal Gelen Kutusu'na taşınması ve unread state'in doğru başlaması.
+
+
+## 2026-10-02 — Build 367 cihaz testi: Mesaj isteği kabulü normal sohbete geçti
+
+- DİLEK hesabında Sultan mesaj isteği önizlemesi açıldı; **Reddet / Engelle / Kabul et** eylemleri görünür durumda.
+- **Kabul et** sonrası uygulama Sultan ile normal özel sohbet ekranını açtı.
+- Önceki istek mesajları (**Slm test**, 👍, **Testt**) normal sohbet geçmişinde korunarak göründü.
+- Sonuç: Build 367'de mesaj isteği kabulü → normal özel sohbet geçişi cihazda başarılı.
+- Sıradaki doğrulama: Gelen Kutusu'na dönünce Sultan'ın artık normal sohbet listesinde görünmesi ve pending Mesaj İstekleri listesinden kalkması.
