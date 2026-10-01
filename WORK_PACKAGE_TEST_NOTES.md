@@ -1690,3 +1690,26 @@ Build 366'da bu ilke için:
 - Mesaj bildirimleri Aktivite listesine dahil edilmiyorsa Aktivite sayacına da dahil edilmeyecek.
 - Aynı gerçek Aktivite olayı eski ve yeni hesaplarda aynı kartı üretmeli.
 - Test matrisi: yeni→yeni, yeni→eski, eski→yeni, eski→eski hesap çiftlerinde takip isteği, arkadaşlık isteği, kabul/red, beğeni/yorum, güvenlik bildirimi ve mesaj isteği ayrı ayrı kontrol edilecek.
+
+
+## 2026-10-02 — Efekt/rötuş motoru kalite açığı: TikTok seviyesi değil
+
+Kod incelemesinde mevcut NgelX efekt sisteminin gerçek zamanlı yüz/AR efekt motoru olmadığı netleşti:
+- Canlı yayın ve kamera önizlemesindeki filtreler büyük ölçüde Flutter `ColorFiltered / ColorFilter.matrix` ile tüm kareye uygulanan renk matrisi.
+- Mevcut “Güzellik/Rötuş” yüzü ayrı algılamıyor; kontrast, doygunluk, parlaklık ve çok hafif ten rengi overlay'i tüm görüntüye uygulanıyor.
+- Yüz landmark/face mesh, cilt maskesi/segmentasyonu, göz-dudak-burun gibi bölgesel takip, zamansal yumuşatma ve 3D/AR varlık sabitleme motoru yok.
+- Üret kamerasında fotoğraf çıktısı da çoğunlukla tüm kareye `adjustColor` uygulanarak işleniyor.
+- Video tarafında kod açıkça filtrenin şu anda yalnızca canlı önizlemede gösterildiğini, yayın sonrası gerçek video filtre işlemenin kalite aşamasında tamamlanacağını belirtiyor.
+- Canlı yayında efekt şu an LiveKit video renderer üstünde istemci UI katmanı olarak uygulanıyor; gerçek yayın video frame/track'inin içine GPU işlem olarak işlenmiş değil.
+
+### Kalıcı kalite hedefi
+- NgelX için ortak gerçek zamanlı **Effect Engine** kurulacak.
+- GPU tabanlı shader/LUT pipeline kullanılacak; basit renk matrisi yalnızca düşük seviye fallback olacak.
+- Face mesh/landmark + cilt/yüz segmentasyonu ile rötuş yalnızca ilgili yüz bölgelerine uygulanacak.
+- Cilt yumuşatma, göz altı/gölge, diş/göz aydınlatma, yüz ışığı ve ten dengesi doğal sınırlar içinde ayrı parametreler olacak.
+- Yüz takibi zamansal smoothing kullanacak; kafa hareketinde efekt titremeyecek/kaymayacak.
+- Sticker/maske/AR efektleri landmarklara sabitlenecek.
+- Aynı motor Üret kamerası, canlı yayın ve görüntülü aramada kullanılacak.
+- Canlı/arama yayınında efekt yerel preview'e çizilmiş makyaj gibi kalmayacak; gönderilen video frame/track pipeline'ına uygulanacak.
+- Video kaydı/publish çıktısına seçilen efekt gerçekten işlenecek; “preview only” durumu kaldırılacak.
+- Düşük cihazlarda otomatik hafif mod/fps/çözünürlük düşürme uygulanacak.
