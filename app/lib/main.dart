@@ -90,8 +90,8 @@ const ngelxPrivateBlueCanvas = Color(0xFFF6FAFF);
 const ngelxPrivateBlueBorder = Color(0xFFD8E8FF);
 const ngelxPrivateBlueInk = Color(0xFF10213A);
 
-const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.61');
-const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '280');
+const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.128');
+const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '347');
 const ngelxGroupBorder = Color(0xFFD9EEE0);
 
 final GlobalKey<NavigatorState> ngelxNavigatorKey=GlobalKey<NavigatorState>();
@@ -99,6 +99,44 @@ void ngelxKokRotayaDon(){
   WidgetsBinding.instance.addPostFrameCallback((_){
     ngelxNavigatorKey.currentState?.popUntil((route)=>route.isFirst);
   });
+}
+
+String? _ngelxAktifAramaOdaYerel;
+Future<bool> ngelxAramaKilidiAl({required String roomName,required String chatId}) async {
+  final u=FirebaseAuth.instance.currentUser;if(u==null)return false;
+  final yerel=_ngelxAktifAramaOdaYerel;if(yerel!=null&&yerel.isNotEmpty&&yerel!=roomName)return false;
+  try{
+    final userRef=FirebaseFirestore.instance.collection('users').doc(u.uid);
+    final snap=await userRef.get().timeout(const Duration(seconds:6));
+    final veri=snap.data()??<String,dynamic>{};
+    final eski=(veri['activeCallRoom']??'').toString(),eskiChat=(veri['activeCallChatId']??'').toString();
+    if(eski.isNotEmpty&&eski!=roomName){
+      var aktif=true;
+      if(eskiChat.isNotEmpty){
+        try{
+          final c=await FirebaseFirestore.instance.collection('chats').doc(eskiChat).get().timeout(const Duration(seconds:6));
+          final cv=c.data()??<String,dynamic>{},durum=(cv['callStatus']??'').toString(),kayitli=(cv['callRoomName']??'').toString();
+          aktif=(durum=='ringing'||durum=='active')&&kayitli==eski;
+        }catch(_){}
+      }
+      if(aktif)return false;
+    }
+    _ngelxAktifAramaOdaYerel=roomName;
+    await userRef.set({'activeCallRoom':roomName,'activeCallChatId':chatId,'activeCallUpdatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true)).timeout(const Duration(seconds:6));
+    return true;
+  }catch(_){
+    if(_ngelxAktifAramaOdaYerel==null||_ngelxAktifAramaOdaYerel==roomName){_ngelxAktifAramaOdaYerel=roomName;return true;}
+    return false;
+  }
+}
+Future<void> ngelxAramaKilidiBirak(String roomName) async {
+  if(_ngelxAktifAramaOdaYerel==roomName)_ngelxAktifAramaOdaYerel=null;
+  final u=FirebaseAuth.instance.currentUser;if(u==null)return;
+  try{
+    final ref=FirebaseFirestore.instance.collection('users').doc(u.uid),d=await FirebaseFirestore.instance.collection('users').doc(u.uid).get().timeout(const Duration(seconds:5));
+    if((d.data()?['activeCallRoom']??'').toString()!=roomName)return;
+    await ref.set({'activeCallRoom':FieldValue.delete(),'activeCallChatId':FieldValue.delete(),'activeCallUpdatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true)).timeout(const Duration(seconds:5));
+  }catch(_){}
 }
 
 class NgelXBirthDateFormatter extends TextInputFormatter {
@@ -5578,6 +5616,7 @@ class YorumKarti extends StatelessWidget {
     final begeniSayisi=(v['likeCount'] as num?)?.toInt()??0;
 
     return GestureDetector(
+      onTap: yorumMenusu,
       onLongPress: yorumMenusu,
       onDoubleTap: hizliKalp,
       child: Padding(
@@ -9674,6 +9713,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
     setState(()=>aramaBaslatiliyor=true);
     final grupAdi=widget.ad;
     final odaAdi='group_${widget.chatId}_${DateTime.now().millisecondsSinceEpoch}';
+    if(!await ngelxAramaKilidiAl(roomName:odaAdi,chatId:widget.chatId)){if(mounted){setState(()=>aramaBaslatiliyor=false);ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Önce açık olan sesli veya görüntülü odayı kapat.')));}return;}
     try{
       final callMessageRef=chatRef.collection('messages').doc('call_'+odaAdi);
       await chatRef.set({
@@ -9684,6 +9724,11 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
         'callTitle':grupAdi,
         'callGroup':true,
         'callParticipants':<String>[ben],
+        'callKickedUids':<String>[],
+        'callMusicUrl':FieldValue.delete(),
+        'callMusicTitle':FieldValue.delete(),
+        'callMusicPlaying':false,
+        'callMusicPositionMs':0,
         'callCreatedAt':FieldValue.serverTimestamp(),
         'callConnectedAt':FieldValue.delete(),
         'callAnsweredAt':FieldValue.delete(),
@@ -9724,6 +9769,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
       )));
       if(tekrar==true&&mounted)await aramaBaslat(goruntulu);
     }catch(_){
+      await ngelxAramaKilidiBirak(odaAdi);
       if(!mounted)return;
       setState(()=>aramaBaslatiliyor=false);
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Arama açılamadı.')));
@@ -9978,13 +10024,13 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
     }
 
     final yeniBlok=_mesajYeniBlok(d,onceki);
-    final gonderenBasligi=!ben&&yeniBlok?(gonderen.isEmpty?null:FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(
+    final gonderenBasligi=yeniBlok?(gonderen.isEmpty?null:FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(
       future:_uyeGetir(gonderen),
       builder:(_,u){
         final p=u.data?.data()??<String,dynamic>{},pf=(p['photoUrl']??'').toString();
         final varsayilan=(p['displayName']??p['username']??'Üye').toString();
         final takma=(grupVerisi?['nickname_$gonderen']??'').toString().trim();
-        final isim=takma.isEmpty?varsayilan:takma;
+        final isim=ben?'Sen':(takma.isEmpty?varsayilan:takma);
         return InkWell(
           onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciProfilPage(uid:gonderen))),
           borderRadius:BorderRadius.circular(14),
@@ -10054,7 +10100,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
                         await Clipboard.setData(ClipboardData(text:linkUrl));
                         if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bağlantı kopyalandı.')));
                       }
-                    : null,
+                    : ()=>mesajMenusu(d),
             child:Container(
               constraints:BoxConstraints(maxWidth:MediaQuery.sizeOf(context).width*.72),
               margin:EdgeInsets.only(top:yeniBlok?3:1,bottom:tepkiSayilari.isEmpty?2:0,left:2,right:2),
@@ -11343,22 +11389,28 @@ class NgelXAramaPage extends StatefulWidget{
 }
 class _NgelXAramaPageState extends State<NgelXAramaPage>{
   lk.Room? oda;
+  final AudioPlayer odaMuzikOynatici=AudioPlayer();
   final Map<String,Future<DocumentSnapshot<Map<String,dynamic>>>> _aramaProfilCache={};
   StreamSubscription<DocumentSnapshot<Map<String,dynamic>>>? aramaDurumAboneligi;
   lk.EventsListener<lk.RoomEvent>? odaOlaylari;
   Timer? aramaSureZamanlayici,cevapsizZamanlayici,yenidenBaglanmaZamanlayici;
   DateTime? aramaBaslangic,_sonOdaCizimi;
   bool baglaniyor=true,mikrofon=true,kamera=true,hoparlor=true,bitiyor=false,bulanik=false,rotus=false,yenidenBaglaniyor=false,arkaKamera=false,kucultuluyor=false;
+  bool odaMuzikCalisiyor=false;
   int efekt=0,yenidenBaglanmaDenemesi=0;
   String? hata,bitisDurumu;
+  String aramaAdminUid='',odaMuzikUrl='',odaMuzikBaslik='',_sonMuzikImza='';
 
   @override void initState(){
     super.initState();
     aramaDurumAboneligi=widget.aramaRef.snapshots().listen((d){
-      final durum=(d.data()?['callStatus']??'').toString();
-      if((durum=='ended'||durum=='rejected'||durum=='missed')&&!bitiyor){
-        unawaited(_uzaktanBitirildi(durum));
-      }
+      final veri=d.data()??<String,dynamic>{},durum=(d.data()?['callStatus']??'').toString();
+      final yeniAdmin=(veri['callStartedBy']??'').toString();
+      if(yeniAdmin!=aramaAdminUid&&mounted)setState(()=>aramaAdminUid=yeniAdmin);
+      final me=FirebaseAuth.instance.currentUser?.uid,atilan=List<String>.from(veri['callKickedUids']??const[]);
+      if(me!=null&&atilan.contains(me)&&!bitiyor){unawaited(_adminTarafindanAtildi());return;}
+      if(!widget.goruntulu)unawaited(_odaMuzikSenkronla(veri));
+      if((durum=='ended'||durum=='rejected'||durum=='missed')&&!bitiyor)unawaited(_uzaktanBitirildi(durum));
     });
     baglan();
   }
@@ -11445,6 +11497,30 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
     });
   }
 
+  Future<void> _odaMuzikSenkronla(Map<String,dynamic> veri)async{
+    final url=(veri['callMusicUrl']??'').toString().trim(),baslik=(veri['callMusicTitle']??'Müzik').toString().trim();
+    final caliyor=veri['callMusicPlaying']==true,pozisyon=(veri['callMusicPositionMs'] as num?)?.toInt()??0,guncel=veri['callMusicUpdatedAt'];
+    final guncelMs=guncel is Timestamp?guncel.millisecondsSinceEpoch:0,imza='$url|$caliyor|$pozisyon|$guncelMs';
+    if(imza==_sonMuzikImza)return;_sonMuzikImza=imza;
+    try{
+      if(url.isEmpty){await odaMuzikOynatici.stop();if(mounted)setState((){odaMuzikUrl='';odaMuzikBaslik='';odaMuzikCalisiyor=false;});return;}
+      if(odaMuzikUrl!=url)await odaMuzikOynatici.setUrl(url).timeout(const Duration(seconds:12));
+      var hedefMs=pozisyon;
+      if(caliyor&&guncel is Timestamp)hedefMs+=(DateTime.now().difference(guncel.toDate()).inMilliseconds).clamp(0,30000);
+      final sure=odaMuzikOynatici.duration;if(sure!=null)hedefMs=hedefMs.clamp(0,sure.inMilliseconds);
+      await odaMuzikOynatici.seek(Duration(milliseconds:hedefMs));
+      if(caliyor){unawaited(odaMuzikOynatici.play());}else{await odaMuzikOynatici.pause();}
+      if(mounted)setState((){odaMuzikUrl=url;odaMuzikBaslik=baslik.isEmpty?'Müzik':baslik;odaMuzikCalisiyor=caliyor;});
+    }catch(_){if(mounted)setState(()=>odaMuzikCalisiyor=false);}
+  }
+  Future<void> _adminTarafindanAtildi()async{
+    if(bitiyor)return;bitiyor=true;
+    aramaSureZamanlayici?.cancel();cevapsizZamanlayici?.cancel();yenidenBaglanmaZamanlayici?.cancel();
+    await ngelxAramaKilidiBirak(widget.roomName);try{await odaMuzikOynatici.stop();}catch(_){}
+    final r=oda;oda=null;if(r!=null){r.removeListener(_odaDegisti);try{await r.disconnect();}catch(_){}try{await r.dispose();}catch(_){}}
+    if(!mounted)return;ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Admin seni sesli odadan çıkardı.')));Navigator.maybePop(context);
+  }
+
   Future<void> _uzaktanBitirildi(String durum)async{
     if(bitiyor)return;
     bitiyor=true;
@@ -11457,6 +11533,7 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
       try{await r.disconnect();}catch(_){}
       try{await r.dispose();}catch(_){}
     }
+    await ngelxAramaKilidiBirak(widget.roomName);try{await odaMuzikOynatici.stop();}catch(_){}
     if(!mounted)return;
     final belge=await widget.aramaRef.get();
     final mesajId=(belge.data()?['callMessageId']??'').toString();
@@ -11503,6 +11580,11 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
   Future<void> baglan({bool yeniden=false})async{
     final u=FirebaseAuth.instance.currentUser;
     if(u==null){if(mounted)setState((){baglaniyor=false;hata='Arama için giriş yapman gerekiyor.';});return;}
+    if(!await ngelxAramaKilidiAl(roomName:widget.roomName,chatId:widget.aramaRef.id)){if(mounted)setState((){baglaniyor=false;hata='Önce açık olan sesli veya görüntülü odayı kapat.';});return;}
+    try{
+      final onKontrol=await widget.aramaRef.get().timeout(const Duration(seconds:6));
+      if(List<String>.from(onKontrol.data()?['callKickedUids']??const[]).contains(u.uid)){await ngelxAramaKilidiBirak(widget.roomName);if(mounted)setState((){baglaniyor=false;hata='Bu odadan Admin tarafından çıkarıldın.';});return;}
+    }catch(_){}
     lk.Room? r;
     try{
       if(yeniden){
@@ -11593,6 +11675,7 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
         if(mounted)setState(()=>yenidenBaglaniyor=true);
         await _yenidenBaglanmayiPlanla();
       }else if(mounted){
+        await ngelxAramaKilidiBirak(widget.roomName);
         setState((){baglaniyor=false;yenidenBaglaniyor=false;hata=e.toString().replaceFirst('Exception: ','');});
       }
     }
@@ -11733,6 +11816,7 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
       try{await r.disconnect();}catch(_){}
       try{await r.dispose();}catch(_){}
     }
+    await ngelxAramaKilidiBirak(widget.roomName);try{await odaMuzikOynatici.stop();}catch(_){}
     if(geriDon&&mounted)Navigator.pop(context);
   }
 
@@ -11742,6 +11826,7 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
     yenidenBaglanmaZamanlayici?.cancel();
     odaOlaylari?.dispose();
     aramaDurumAboneligi?.cancel();
+    unawaited(odaMuzikOynatici.dispose());
     final r=oda;
     if(r!=null){
       r.removeListener(_odaDegisti);
@@ -11914,6 +11999,50 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
     }
   }
 
+  Future<void> _katilimciYonet(String hedefUid,String ad)async{
+    final me=FirebaseAuth.instance.currentUser?.uid;if(me==null||hedefUid.isEmpty||hedefUid==me)return;
+    final d=await widget.aramaRef.get();if((d.data()?['callStartedBy']??'').toString()!=me){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bu işlem yalnızca Admin tarafından yapılabilir.')));return;}
+    if(!mounted)return;
+    final sec=await showModalBottomSheet<String>(context:context,backgroundColor:const Color(0xFF211837),showDragHandle:true,builder:(c)=>SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
+      ListTile(leading:const Icon(Icons.person_remove_rounded,color:Color(0xFFFF5A68)),title:Text('$ad odadan çıkar',style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w900)),onTap:()=>Navigator.pop(c,'kick')),
+      ListTile(leading:const Icon(Icons.block_rounded,color:Color(0xFFFF5A68)),title:const Text('Kullanıcıyı engelle',style:TextStyle(color:Colors.white,fontWeight:FontWeight.w800)),onTap:()=>Navigator.pop(c,'block')),
+    ])));
+    if(sec=='kick'){await widget.aramaRef.set({'callKickedUids':FieldValue.arrayUnion([hedefUid]),'callParticipants':FieldValue.arrayRemove([hedefUid])},SetOptions(merge:true));if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('$ad odadan çıkarıldı.')));}
+    else if(sec=='block'&&mounted)await kullaniciyiEngelle(context,hedefUid);
+  }
+
+  Future<void> odaMuzikPaneli()async{
+    if(widget.goruntulu)return;
+    final d=await widget.aramaRef.get(),veri=d.data()??<String,dynamic>{},me=FirebaseAuth.instance.currentUser?.uid;
+    final admin=(veri['callStartedBy']??'').toString()==me;
+    final urlController=TextEditingController(text:(veri['callMusicUrl']??'').toString()),titleController=TextEditingController(text:(veri['callMusicTitle']??'').toString());
+    if(!mounted){urlController.dispose();titleController.dispose();return;}
+    final sec=await showModalBottomSheet<String>(context:context,isScrollControlled:true,backgroundColor:const Color(0xFF211837),showDragHandle:true,builder:(c)=>Padding(
+      padding:EdgeInsets.fromLTRB(18,4,18,18+MediaQuery.viewInsetsOf(c).bottom),
+      child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
+        const Text('Sesli oda müziği',style:TextStyle(color:Colors.white,fontSize:20,fontWeight:FontWeight.w900)),
+        const SizedBox(height:5),Text(odaMuzikBaslik.isEmpty?'Odada ortak müzik çal.':odaMuzikBaslik,style:const TextStyle(color:Colors.white60,fontSize:12)),const SizedBox(height:14),
+        if(admin)...[
+          TextField(controller:titleController,style:const TextStyle(color:Colors.white),decoration:InputDecoration(hintText:'Müzik adı',hintStyle:const TextStyle(color:Colors.white38),filled:true,fillColor:Colors.white10,border:OutlineInputBorder(borderRadius:BorderRadius.circular(15),borderSide:BorderSide.none))),
+          const SizedBox(height:9),
+          TextField(controller:urlController,keyboardType:TextInputType.url,style:const TextStyle(color:Colors.white),decoration:InputDecoration(hintText:'https://... doğrudan ses bağlantısı',hintStyle:const TextStyle(color:Colors.white38),filled:true,fillColor:Colors.white10,border:OutlineInputBorder(borderRadius:BorderRadius.circular(15),borderSide:BorderSide.none))),
+          const SizedBox(height:12),
+          Row(children:[Expanded(child:FilledButton.icon(onPressed:()=>Navigator.pop(c,'load'),icon:const Icon(Icons.play_arrow_rounded),label:const Text('Yükle ve oynat'))),const SizedBox(width:8),Expanded(child:OutlinedButton.icon(onPressed:()=>Navigator.pop(c,odaMuzikCalisiyor?'pause':'play'),icon:Icon(odaMuzikCalisiyor?Icons.pause_rounded:Icons.play_arrow_rounded),label:Text(odaMuzikCalisiyor?'Duraklat':'Oynat')))]),
+          TextButton.icon(onPressed:()=>Navigator.pop(c,'stop'),icon:const Icon(Icons.stop_rounded,color:Color(0xFFFF5A68)),label:const Text('Müziği kapat',style:TextStyle(color:Color(0xFFFF5A68)))),
+        ]else const Text('Müziği Admin yönetir. Çalınan müzik tüm katılımcılarda duyulur.',style:TextStyle(color:Colors.white70,fontSize:13,height:1.35)),
+      ]),
+    ));
+    final url=urlController.text.trim(),baslik=titleController.text.trim();urlController.dispose();titleController.dispose();if(!admin||sec==null)return;
+    if(sec=='load'){
+      if(!url.startsWith('http://')&&!url.startsWith('https://')){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Geçerli bir http/https müzik bağlantısı gir.')));return;}
+      await widget.aramaRef.set({'callMusicUrl':url,'callMusicTitle':baslik.isEmpty?'Müzik':baslik,'callMusicPlaying':true,'callMusicPositionMs':0,'callMusicUpdatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
+    }else if(sec=='play'||sec=='pause'){
+      await widget.aramaRef.set({'callMusicPlaying':sec=='play','callMusicPositionMs':odaMuzikOynatici.position.inMilliseconds,'callMusicUpdatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
+    }else if(sec=='stop'){
+      await widget.aramaRef.set({'callMusicUrl':FieldValue.delete(),'callMusicTitle':FieldValue.delete(),'callMusicPlaying':false,'callMusicPositionMs':0,'callMusicUpdatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
+    }
+  }
+
   Future<void> aramaAyarlari()async{
     await showModalBottomSheet<void>(
       context:context,
@@ -11923,6 +12052,8 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
       shape:const RoundedRectangleBorder(borderRadius:BorderRadius.vertical(top:Radius.circular(30))),
       builder:(c){
         final r=oda;
+        final me=FirebaseAuth.instance.currentUser?.uid;
+        final adminMi=me!=null&&me==aramaAdminUid;
         final katilimcilar=<({lk.Participant p,bool yerel})>[
           if(r?.localParticipant!=null)(p:r!.localParticipant!,yerel:true),
           ...?r?.remoteParticipants.values.map((p)=>(p:p,yerel:false)),
@@ -11967,7 +12098,8 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
                         Text(ad,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w800)),
                         Text(x.yerel&&mikrofon?'Bağlı • mikrofon açık':'Bağlı',style:const TextStyle(color:Colors.white54,fontSize:10.5,fontWeight:FontWeight.w600)),
                       ])),
-                      Icon(x.yerel&&mikrofon?Icons.graphic_eq_rounded:Icons.mic_none_rounded,color:x.yerel&&mikrofon?const Color(0xFFB88BFF):Colors.white38,size:20),
+                      if(adminMi&&!x.yerel)IconButton(onPressed:()=>_katilimciYonet(x.p.identity.toString(),ad),icon:const Icon(Icons.admin_panel_settings_rounded,color:Color(0xFFFF5A68)),tooltip:'Admin işlemleri')
+                      else Icon(x.yerel&&mikrofon?Icons.graphic_eq_rounded:Icons.mic_none_rounded,color:x.yerel&&mikrofon?const Color(0xFFB88BFF):Colors.white38,size:20),
                     ]),
                   );
                 },
@@ -12059,6 +12191,7 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
 
   Widget _grupSesliKatilimci(lk.Participant p,{bool yerel=false}){
     final ad=_katilimciAdi(p,yerel:yerel);
+    final admin=p.identity.toString()==aramaAdminUid;
     final aktif=yerel&&mikrofon;
     return SizedBox(
       width:126,
@@ -12078,6 +12211,10 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
         ),
         const SizedBox(height:9),
         Text(ad,maxLines:1,overflow:TextOverflow.ellipsis,textAlign:TextAlign.center,style:const TextStyle(color:Colors.white,fontSize:13,fontWeight:FontWeight.w800)),
+        if(admin)...[
+          const SizedBox(height:5),
+          Container(padding:const EdgeInsets.symmetric(horizontal:8,vertical:3),decoration:BoxDecoration(color:const Color(0xFFFFE7EA),borderRadius:BorderRadius.circular(10),border:Border.all(color:const Color(0xFFFF5A68))),child:const Text('Admin',style:TextStyle(color:Color(0xFFE21F37),fontSize:9.5,fontWeight:FontWeight.w900))),
+        ],
       ]),
     );
   }
@@ -12272,6 +12409,7 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
               if(widget.goruntulu&&kamera)_aramaKontrol(Icons.cameraswitch_rounded,'Çevir',kameraCevir,true),
               _aramaKontrol(mikrofon?Icons.mic_rounded:Icons.mic_off_rounded,'Mikrofon',mikrofonDegistir,mikrofon),
               if(!widget.goruntulu)_aramaKontrol(hoparlor?Icons.volume_up_rounded:Icons.volume_off_rounded,'Hoparlör',hoparlorDegistir,hoparlor),
+              if(grupAramasi&&!widget.goruntulu)_aramaKontrol(Icons.music_note_rounded,'Müzik',odaMuzikPaneli,odaMuzikCalisiyor),
               if(grupAramasi)_aramaKontrol(Icons.person_add_alt_1_rounded,'Davet et',grupAramasinaKisiDavetEt,true),
               if(widget.goruntulu)_aramaKontrol(hoparlor?Icons.volume_up_rounded:Icons.volume_off_rounded,'Ses',hoparlorDegistir,hoparlor),
             ]),
@@ -12354,6 +12492,7 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
     if(me==null||aramaBaslatiliyor)return;
     setState(()=>aramaBaslatiliyor=true);
     final odaAdi='group_'+widget.chatId+'_'+DateTime.now().millisecondsSinceEpoch.toString();
+    if(!await ngelxAramaKilidiAl(roomName:odaAdi,chatId:widget.chatId)){if(mounted){setState(()=>aramaBaslatiliyor=false);ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Önce açık olan sesli veya görüntülü odayı kapat.')));}return;}
     try{
       final callMessageRef=ref.collection('messages').doc('call_'+odaAdi);
       await ref.set({
@@ -12364,6 +12503,11 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
         'callTitle':grupAdi,
         'callGroup':true,
         'callParticipants':<String>[me],
+        'callKickedUids':<String>[],
+        'callMusicUrl':FieldValue.delete(),
+        'callMusicTitle':FieldValue.delete(),
+        'callMusicPlaying':false,
+        'callMusicPositionMs':0,
         'callCreatedAt':FieldValue.serverTimestamp(),
         'callConnectedAt':FieldValue.delete(),
         'callAnsweredAt':FieldValue.delete(),
@@ -12401,6 +12545,7 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
       )));
       if(tekrar==true&&mounted)await grupAramasiBaslat(goruntulu,grupAdi,foto);
     }catch(_){
+      await ngelxAramaKilidiBirak(odaAdi);
       if(mounted){
         setState(()=>aramaBaslatiliyor=false);
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Arama başlatılamadı.')));
@@ -13981,7 +14126,7 @@ class _GrupUyeleriPageState extends State<GrupUyeleriPage>{
           ListTile(
             leading:const Icon(Icons.person_rounded,color:ngelxPremiumPurple),
             title:const Text('Profili görüntüle',style:TextStyle(fontWeight:FontWeight.w900,color:ngelxPremiumInk)),
-            subtitle:Text(isim+' • '+(hedefKurucu?'KURUCU • Yönetici':admin?'Yönetici':'Grup üyesi'),style:TextStyle(color:hedefKurucu?ngelxGroupGreen:ngelxPremiumMuted,fontWeight:FontWeight.w800)),
+            subtitle:Text(isim+' • '+((hedefKurucu||admin)?'Admin':'Grup üyesi'),style:TextStyle(color:(hedefKurucu||admin)?const Color(0xFFE21F37):ngelxPremiumMuted,fontWeight:FontWeight.w800)),
             trailing:const Icon(Icons.chevron_right_rounded),
             onTap:()=>Navigator.pop(c,'profile'),
           ),
@@ -14187,7 +14332,7 @@ class _GrupUyeleriPageState extends State<GrupUyeleriPage>{
                           if(online)const Positioned(right:0,bottom:0,child:CircleAvatar(radius:5.5,backgroundColor:Colors.white,child:CircleAvatar(radius:3.5,backgroundColor:Color(0xFF21C76A)))),
                         ]),
                         title:Text(isim,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w800)),
-                        subtitle:Text(hedefKurucu?'KURUCU • Yönetici':admin?'Yönetici':online?'Çevrimiçi':'Grup üyesi',style:TextStyle(color:(hedefKurucu||admin)?ngelxGroupGreen:ngelxPremiumMuted,fontSize:11.5,fontWeight:(hedefKurucu||admin)?FontWeight.w800:FontWeight.w600)),
+                        subtitle:Text((hedefKurucu||admin)?'Admin':online?'Çevrimiçi':'Grup üyesi',style:TextStyle(color:(hedefKurucu||admin)?const Color(0xFFE21F37):ngelxPremiumMuted,fontSize:11.5,fontWeight:(hedefKurucu||admin)?FontWeight.w900:FontWeight.w600)),
                         trailing:menuVar?IconButton(onPressed:()=>_uyeIslemi(id,isim,admin,yonetici,kurucu),icon:const Icon(Icons.more_horiz_rounded,color:ngelxPremiumMuted)):null,
                       ),
                     );
@@ -15595,6 +15740,7 @@ class _SohbetPageState extends State<SohbetPage> {
     setState(()=>aramaBaslatiliyor=true);
     final odaAdi='chat_${widget.chatId}_${DateTime.now().millisecondsSinceEpoch}';
     final ref=FirebaseFirestore.instance.collection('chats').doc(widget.chatId);
+    if(!await ngelxAramaKilidiAl(roomName:odaAdi,chatId:widget.chatId)){if(mounted){setState(()=>aramaBaslatiliyor=false);ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Önce açık olan sesli veya görüntülü odayı kapat.')));}return;}
     try{
       final mesajRef=ref.collection('messages').doc();
       final aramaVerisi=<String,dynamic>{
@@ -15604,6 +15750,7 @@ class _SohbetPageState extends State<SohbetPage> {
         'callVideo':goruntulu,
         'callTitle':widget.ad,
         'callParticipants':<String>[ben],
+        'callKickedUids':<String>[],
         'callCreatedAt':FieldValue.serverTimestamp(),
         'callMessageId':mesajRef.id,
         'members':<String>[ben,widget.digerUid],
@@ -15645,10 +15792,12 @@ class _SohbetPageState extends State<SohbetPage> {
       );
       if(tekrar==true&&mounted)await aramaBaslat(goruntulu);
     }on TimeoutException{
+      await ngelxAramaKilidiBirak(odaAdi);
       if(!mounted)return;
       setState(()=>aramaBaslatiliyor=false);
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Arama bağlantısı kurulamadı. İnternetini kontrol edip tekrar dene.')));
     }catch(_){
+      await ngelxAramaKilidiBirak(odaAdi);
       if(!mounted)return;
       setState(()=>aramaBaslatiliyor=false);
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Arama başlatılamadı. Lütfen tekrar dene.')));
