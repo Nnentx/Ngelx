@@ -48,6 +48,101 @@ const List<NgelXKameraFiltre> ngelxKameraFiltreleri=[
   ],doygunluk:0),
 ];
 
+
+bool _ngelxTenPikseli(num r,num g,num b){
+  final mx=math.max(r,math.max(g,b)),mn=math.min(r,math.min(g,b));
+  final klasik=r>82&&g>32&&b>18&&(mx-mn)>12&&(r-g).abs()>8&&r>g&&r>b;
+  final acikTen=r>170&&g>145&&b>125&&(r-g).abs()<55&&r>b&&g>b;
+  return klasik||acikTen;
+}
+
+double _ngelxNoktaUzaklik(double x,double y,Offset? p){
+  if(p==null)return 999999;
+  final dx=x-p.dx,dy=y-p.dy;
+  return math.sqrt(dx*dx+dy*dy);
+}
+
+img.Image _ngelxYuzBolgeselRetus(
+  img.Image kaynak,
+  List<Face> yuzler,
+  double yogunluk,
+){
+  if(yuzler.isEmpty||yogunluk<=.01)return kaynak;
+  final amount=yogunluk.clamp(0.0,1.0).toDouble();
+  final blur=img.gaussianBlur(kaynak.clone(),radius:math.max(1,(1+amount*3).round()));
+  for(final face in yuzler){
+    final box=face.boundingBox;
+    final fw=box.width,fh=box.height;
+    if(fw<20||fh<20)continue;
+    final cx=box.center.dx,cy=box.center.dy;
+    final rx=math.max(12.0,fw*.58),ry=math.max(16.0,fh*.66);
+    final x0=math.max(0,(cx-rx).floor()),x1=math.min(kaynak.width-1,(cx+rx).ceil());
+    final y0=math.max(0,(cy-ry).floor()),y1=math.min(kaynak.height-1,(cy+ry).ceil());
+
+    Offset? lm(FaceLandmarkType t){
+      final p=face.landmarks[t]?.position;
+      return p==null?null:Offset(p.x.toDouble(),p.y.toDouble());
+    }
+    final solGoz=lm(FaceLandmarkType.leftEye);
+    final sagGoz=lm(FaceLandmarkType.rightEye);
+    final agizAlt=lm(FaceLandmarkType.bottomMouth);
+    final burun=lm(FaceLandmarkType.noseBase);
+
+    for(var y=y0;y<=y1;y++){
+      for(var x=x0;x<=x1;x++){
+        final nx=(x-cx)/rx,ny=(y-cy)/ry;
+        final elips=nx*nx+ny*ny;
+        if(elips>=1)continue;
+        final p=kaynak.getPixel(x,y);
+        final r=p.r.toDouble(),g=p.g.toDouble(),b=p.b.toDouble();
+        if(!_ngelxTenPikseli(r,g,b))continue;
+
+        var detay=1.0;
+        final gozR=fw*.105,agizR=fw*.14,burunR=fw*.075;
+        if(_ngelxNoktaUzaklik(x.toDouble(),y.toDouble(),solGoz)<gozR)detay*=.18;
+        if(_ngelxNoktaUzaklik(x.toDouble(),y.toDouble(),sagGoz)<gozR)detay*=.18;
+        if(_ngelxNoktaUzaklik(x.toDouble(),y.toDouble(),agizAlt)<agizR)detay*=.22;
+        if(_ngelxNoktaUzaklik(x.toDouble(),y.toDouble(),burun)<burunR)detay*=.52;
+
+        final kenar=math.pow((1-elips).clamp(0.0,1.0),.62).toDouble();
+        final a=(amount*.58*kenar*detay).clamp(0.0,.62).toDouble();
+        if(a<=.01)continue;
+        final q=blur.getPixel(x,y);
+        final light=amount*2.8*kenar;
+        kaynak.setPixelRgba(
+          x,y,
+          (r*(1-a)+q.r*a+light).clamp(0,255),
+          (g*(1-a)+q.g*a+light*.78).clamp(0,255),
+          (b*(1-a)+q.b*a+light*.52).clamp(0,255),
+          p.a,
+        );
+      }
+    }
+
+    // Gözleri bulanıklaştırmak yerine çok hafif canlı tut.
+    for(final eye in <Offset?>[solGoz,sagGoz]){
+      if(eye==null)continue;
+      final rr=math.max(2,(fw*.055).round());
+      for(var yy=math.max(0,eye.dy.round()-rr);yy<=math.min(kaynak.height-1,eye.dy.round()+rr);yy++){
+        for(var xx=math.max(0,eye.dx.round()-rr);xx<=math.min(kaynak.width-1,eye.dx.round()+rr);xx++){
+          final d=_ngelxNoktaUzaklik(xx.toDouble(),yy.toDouble(),eye);
+          if(d>rr)continue;
+          final p=kaynak.getPixel(xx,yy);
+          final boost=(1-d/rr)*amount*5.0;
+          kaynak.setPixelRgba(
+            xx,yy,
+            (p.r+boost).clamp(0,255),
+            (p.g+boost).clamp(0,255),
+            (p.b+boost*1.15).clamp(0,255),
+            p.a,
+          );
+        }
+      }
+    }
+  }
+  return kaynak;
+}
+
 class NgelXCameraStudioPage extends StatefulWidget{
   final bool baslangicVideo;
   final Duration maxVideo;
@@ -56,6 +151,14 @@ class NgelXCameraStudioPage extends StatefulWidget{
 }
 
 class _NgelXCameraStudioPageState extends State<NgelXCameraStudioPage> with WidgetsBindingObserver{
+  final FaceDetector _yuzAlgilayici=FaceDetector(options:FaceDetectorOptions(
+    performanceMode:FaceDetectorMode.fast,
+    enableLandmarks:true,
+    enableContours:false,
+    enableClassification:false,
+    enableTracking:false,
+  ));
+  int _sonYuzSayisi=0;
   List<CameraDescription> kameralar=<CameraDescription>[];
   CameraController? kontrol;
   int kameraIndex=0;
@@ -180,6 +283,23 @@ class _NgelXCameraStudioPageState extends State<NgelXCameraStudioPage> with Widg
   }
   int _aktifSayac=0;
 
+  Future<img.Image> _aiYuzRetusuUygula(img.Image g,Directory dir)async{
+    if(retus<=.01&&!otomatikPortre)return g;
+    try{
+      final yol='${dir.path}/ngelx_face_detect_${DateTime.now().microsecondsSinceEpoch}.jpg';
+      final dosya=File(yol);
+      await dosya.writeAsBytes(img.encodeJpg(g,quality:94),flush:true);
+      final yuzler=await _yuzAlgilayici.processImage(InputImage.fromFilePath(yol)).timeout(const Duration(seconds:8));
+      _sonYuzSayisi=yuzler.length;
+      try{await dosya.delete();}catch(_){}
+      if(yuzler.isEmpty)return g;
+      return _ngelxYuzBolgeselRetus(g,yuzler,retus<=.01?.18:retus);
+    }catch(e){
+      debugPrint('AI yüz rötuşu atlandı: $e');
+      return g;
+    }
+  }
+
   Future<XFile> _fotoyuIsle(XFile ham)async{
     final onKamera=kontrol?.description.lensDirection==CameraLensDirection.front;
     final portre=onKamera&&otomatikPortre;
@@ -189,6 +309,10 @@ class _NgelXCameraStudioPageState extends State<NgelXCameraStudioPage> with Widg
       var g=img.decodeImage(bytes);
       if(g==null)return ham;
       g=img.bakeOrientation(g);
+      final dir=await getTemporaryDirectory();
+      if((kontrol?.description.lensDirection==CameraLensDirection.front)&&(retus>.01||otomatikPortre)){
+        g=await _aiYuzRetusuUygula(g,dir);
+      }
       if(oran!='9:16'){
         final hedef=oran=='1:1'?1.0:16/9;
         final mevcut=g.width/g.height;
@@ -199,18 +323,17 @@ class _NgelXCameraStudioPageState extends State<NgelXCameraStudioPage> with Widg
       }
       final f=ngelxKameraFiltreleri[filtreIndex];
       if(f.ad=='S/B'){
-        g=img.adjustColor(g,saturation:(1-filtreYogunluk).clamp(0.0,1.0),brightness:1+(retus*.04)+(portre ? .02 : 0),contrast:1+(retus*.02)-(portre ? .015 : 0));
+        g=img.adjustColor(g,saturation:(1-filtreYogunluk).clamp(0.0,1.0),brightness:1+(retus*.010)+(portre ? .010 : 0),contrast:1+(retus*.02)-(portre ? .015 : 0));
       }else if(f.ad=='Retro'&&filtreYogunluk>.55){
         g=img.sepia(g);
       }else{
         g=img.adjustColor(
           g,
-          brightness:1+((f.parlaklik-1)*filtreYogunluk)+(retus*.04)+(portre ? .025 : 0),
-          saturation:1+((f.doygunluk-1)*filtreYogunluk)+(retus*.045)+(portre ? .018 : 0),
-          contrast:1+(retus*.018)-(portre ? .018 : 0),
+          brightness:1+((f.parlaklik-1)*filtreYogunluk)+(retus*.010)+(portre ? .012 : 0),
+          saturation:1+((f.doygunluk-1)*filtreYogunluk)+(retus*.012)+(portre ? .010 : 0),
+          contrast:1+(retus*.006)-(portre ? .010 : 0),
         );
       }
-      final dir=await getTemporaryDirectory();
       final yol='${dir.path}/ngelx_camera_${DateTime.now().microsecondsSinceEpoch}.jpg';
       await File(yol).writeAsBytes(img.encodeJpg(g,quality:90),flush:true);
       return XFile(yol,mimeType:'image/jpeg');
@@ -229,7 +352,7 @@ class _NgelXCameraStudioPageState extends State<NgelXCameraStudioPage> with Widg
         setState(()=>isleniyor=true);
         final ham=await c.takePicture();
         final sonuc=await _fotoyuIsle(ham);
-        if(mounted)Navigator.pop(context,<String,dynamic>{'file':sonuc,'video':false,'filter':ngelxKameraFiltreleri[filtreIndex].ad,'retouch':retus});
+        if(mounted)Navigator.pop(context,<String,dynamic>{'file':sonuc,'video':false,'filter':ngelxKameraFiltreleri[filtreIndex].ad,'retouch':retus,'aiFaceRetouch':_sonYuzSayisi>0,'facesDetected':_sonYuzSayisi});
       }catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Fotoğraf çekilemedi: $e')));}
       finally{if(mounted)setState(()=>isleniyor=false);}
     });
@@ -372,7 +495,7 @@ class _NgelXCameraStudioPageState extends State<NgelXCameraStudioPage> with Widg
         padding:const EdgeInsets.all(18),
         child:Column(mainAxisSize:MainAxisSize.min,children:[
           Row(children:[const Text('Rötuş',style:TextStyle(color:Colors.white,fontSize:18,fontWeight:FontWeight.w900)),const Spacer(),TextButton(onPressed:(){setState(()=>retus=0);setP((){});},child:const Text('Sıfırla'))]),
-          const Text('Doğal görünüm için düşük ve orta seviyeler önerilir.',style:TextStyle(color:Colors.white60,fontSize:11)),
+          const Text('AI yüz algılama cildi bölgesel işler; göz, ağız ve yüz detaylarını mümkün olduğunca korur.',style:TextStyle(color:Colors.white60,fontSize:11)),
           Row(children:[const Icon(Icons.face_retouching_natural_rounded,color:Colors.white70),Expanded(child:Slider(value:retus,min:0,max:1,onChanged:(v){setState(()=>retus=v);setP((){});})),Text('%${(retus*100).round()}',style:const TextStyle(color:Colors.white))]),
           SwitchListTile(
             contentPadding:EdgeInsets.zero,dense:true,value:otomatikPortre,
@@ -399,6 +522,7 @@ class _NgelXCameraStudioPageState extends State<NgelXCameraStudioPage> with Widg
     WidgetsBinding.instance.removeObserver(this);
     sayacTimer?.cancel();kayitTimer?.cancel();
     unawaited(kontrol?.dispose());
+    unawaited(_yuzAlgilayici.close());
     super.dispose();
   }
 
