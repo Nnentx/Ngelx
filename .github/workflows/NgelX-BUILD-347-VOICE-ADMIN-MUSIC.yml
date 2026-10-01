@@ -79,13 +79,6 @@ jobs:
                   gradlePluginPortal()
               }
           }
-          gradle.beforeProject { project ->
-              project.buildscript.repositories {
-                  mavenCentral()
-                  google()
-                  gradlePluginPortal()
-              }
-          }
           GRADLE
 
       - name: Bagimliliklari al ve analiz et
