@@ -1406,3 +1406,12 @@ Bu maddeler Build 359'un çalışan arama/görüntülü arama davranışını bo
 - Eski Build 359/öncesi **“Yeni takip isteğin var”** kaydı aynı ekranda tarihsel/legacy bildirim olarak hâlâ duruyor. Yeni akışla karışmaması için pending olmayan/legacy sosyal istek kartları istek sekmelerinin aktif sayacına dahil edilmemeli; Tümü ekranında da mümkünse durum etiketiyle tarihsel olay olarak gösterilmeli ya da temizlenmeli.
 - Cihaz testinin sıradaki kritik adımı: önce yalnızca yeni **takip isteğini** kabul et; arkadaşlık isteğinin pending kalması ve takip state/sayaçlarının tek başına güncellenmesi doğrulanacak. Ardından arkadaşlık ayrı kabul edilecek.
 - Bu ekran görüntüsü listenin scroll sonunu göstermediği için alt SafeArea sonucu henüz kesin değil; gerçek son öğeye kadar kaydırılarak tekrar doğrulanacak.
+
+
+## 2026-10-01 — Build 360 takip isteği kabul cihaz testi
+
+- Adem hesabında yeni **“Sultan Sultan seni takip etmek istiyor”** kartındaki yeşil onay kullanıldı.
+- Build 359'da görülen Firestore `permission-denied` oluşmadı; uygulama **“Takip isteği kabul edildi.”** mesajını gösterdi. Yeni Firestore kuralları ve kabul yazma zinciri cihazda çalışıyor.
+- Aynı anda üstteki **arkadaşlık isteği** pending olarak kalmaya devam etti; takip kabulü arkadaşlık isteğini otomatik kabul etmedi veya sıfırlamadı. Üçlü model ayrımı bu adımda doğrulandı.
+- Ancak ekran görüntüsü kabul mesajı gösterilirken takip isteği kartını hâlâ listede gösteriyor. Bu kısa süreli stream gecikmesi olabilir; manuel yenileme / birkaç saniye sonrası kontrol edilecek. Kabul edilmiş kart kalıcı olarak görünüyorsa Aktivite listesinin `status == pending` filtrelemesi güçlendirilecek.
+- **Takip İstekleri 6** sayacı geçmiş/legacy istekleri de sayıyor olabilir; aktif pending sayısı ile legacy tarihsel bildirimler ayrılacak.
