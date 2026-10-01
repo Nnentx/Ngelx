@@ -26,6 +26,8 @@ import 'package:livekit_client/livekit_client.dart' as lk;
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:record/record.dart' as rec;
+import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
+import 'package:google_mlkit_commons/google_mlkit_commons.dart';
 import 'group_quality.dart';
 part 'build258_settings.dart';
 part 'create_music_editor.dart';
