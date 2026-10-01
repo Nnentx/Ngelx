@@ -12506,7 +12506,12 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
                       Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
                         Text(tv['callVideo']==true?'Görüntülü grup araması':'Sesli grup araması',style:const TextStyle(color:Colors.white,fontSize:11.5,fontWeight:FontWeight.w900)),
                         const SizedBox(height:2),
-                        const Text('Arama devam ediyor • Katılmak için dokun',style:TextStyle(color:Color(0xFFCFC2DC),fontSize:10.5,fontWeight:FontWeight.w600)),
+                        Text(
+                          ((tv['callStartedBy']??'').toString()==uid||List<String>.from(tv['callParticipants']??const[]).contains(uid))
+                            ?'Arama devam ediyor • Aramaya dön'
+                            :'Arama devam ediyor • Katılmak için dokun',
+                          style:const TextStyle(color:Color(0xFFCFC2DC),fontSize:10.5,fontWeight:FontWeight.w600),
+                        ),
                       ])),
                       Container(
                         padding:const EdgeInsets.symmetric(horizontal:10,vertical:7),
@@ -13787,12 +13792,16 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
     // kilitleme. Ag/izin hatasi arama rotasinin kapanmasini engellememeli.
     try{
       final belge=await widget.aramaRef.get().timeout(const Duration(seconds:6));
-      final mesajId=(belge.data()?['callMessageId']??'').toString();
-      if(mesajId.isNotEmpty){
-        unawaited(widget.aramaRef.collection('messages').doc(mesajId).set({
-          'callStatus':durum,
-          'callEndedAt':FieldValue.serverTimestamp(),
-        },SetOptions(merge:true)).catchError((_){ }));
+      final veri=belge.data()??<String,dynamic>{};
+      final kayitliOda=(veri['callRoomName']??'').toString();
+      if(kayitliOda.isEmpty||kayitliOda==widget.roomName){
+        final mesajId=(veri['callMessageId']??'').toString();
+        if(mesajId.isNotEmpty){
+          unawaited(widget.aramaRef.collection('messages').doc(mesajId).set({
+            'callStatus':durum,
+            'callEndedAt':FieldValue.serverTimestamp(),
+          },SetOptions(merge:true)).catchError((_){ }));
+        }
       }
     }catch(_){}
     if(!mounted)return;
@@ -18436,7 +18445,12 @@ class _SohbetPageState extends State<SohbetPage> {
               Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
                 Text(veri['callVideo']==true?'Görüntülü arama devam ediyor':'Sesli arama devam ediyor',style:const TextStyle(color:Colors.white,fontSize:11.5,fontWeight:FontWeight.w900)),
                 const SizedBox(height:2),
-                Text(widget.aktifAramadanAcildi?'Aramaya dönmek için dokun':'Aramaya katılmak için dokun',style:const TextStyle(color:Color(0xFFDCEBFF),fontSize:10.5,fontWeight:FontWeight.w600)),
+                Text(
+                  ((veri['callStartedBy']??'').toString()==uid||List<String>.from(veri['callParticipants']??const[]).contains(uid))
+                    ?'Aramaya dönmek için dokun'
+                    :'Aramaya katılmak için dokun',
+                  style:const TextStyle(color:Color(0xFFDCEBFF),fontSize:10.5,fontWeight:FontWeight.w600),
+                ),
               ])),
               const Icon(Icons.open_in_full_rounded,color:Colors.white70,size:19),
             ]),
@@ -20958,7 +20972,11 @@ class _KullaniciProfilPageState extends State<KullaniciProfilPage> {
                             }
                           },
                           icon:Icon(arkadas?Icons.people_alt_rounded:(bekliyor?Icons.schedule_rounded:Icons.person_add_alt_1_rounded)),
-                          label:Text(arkadas?'Arkadaşsınız':(bekliyor?'Arkadaşlık isteği bekliyor':'Arkadaşlık isteği gönder')),
+                          label:Text(
+                            arkadas?'Arkadaşsınız':(bekliyor?'İstek bekliyor':'Arkadaşlık isteği gönder'),
+                            maxLines:1,
+                            overflow:TextOverflow.ellipsis,
+                          ),
                         ));
                       },
                     );
