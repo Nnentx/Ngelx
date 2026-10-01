@@ -1512,3 +1512,11 @@ Build 362 cihaz ekranlarında alt sistem çubuğunun bazı ekranlarda hâlâ iç
 - Kullanıcı sesli/görüntülü aramaya katılmak isterse grup sohbetindeki aktif arama kartı / arama kontrolü üzerinden kendisi katılır.
 - `targetKind == group` olan çağrı bildirimlerinin yanı sıra legacy `group_audio_call` ve `group_video_call` eventKind kayıtları da aynı güvenli grup yönlendirmesine dahil edildi.
 - Özel 1:1 çağrı bildirimlerinin mevcut doğrudan çağrı davranışı değişmedi.
+
+
+## 2026-10-01 — Build 363 grup arama Aktivite yönlendirmesi cihazda doğrulandı
+
+- Kullanıcı cihaz testinde Aktivite içindeki grup sesli arama bildirimi seçildiğinde uygulama doğrudan arama odasına girmedi; önce ilgili grup sohbeti açıldı.
+- Aynı kural grup görüntülü arama bildirimi için de cihazda doğrulandı.
+- Grup sohbetinde geçmiş/cevapsız arama kartı görünmeye devam ediyor; aramaya katılım artık yalnızca grup içindeki aktif arama kontrolünden kullanıcı isteğiyle yapılacak.
+- Sonuç: Build 363'te **grup sesli + görüntülü Aktivite bildirimi → önce grup sohbeti** davranışı geçti.
