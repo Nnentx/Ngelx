@@ -644,7 +644,7 @@ class _SesliOdaPageState extends State<SesliOdaPage> with WidgetsBindingObserver
     return null;
   }
 
-  Widget koltuk(String id,{String mesaj=''}){
+  Widget koltuk(String id){
     if(id.isEmpty)return Container(
       decoration:BoxDecoration(color:const Color(0xFFF8F6FA),borderRadius:BorderRadius.circular(18),border:Border.all(color:const Color(0xFFECE7F0))),
       child:const Column(mainAxisAlignment:MainAxisAlignment.center,children:[
@@ -687,22 +687,6 @@ class _SesliOdaPageState extends State<SesliOdaPage> with WidgetsBindingObserver
             const SizedBox(height:5),
             Text(ad,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black87,fontSize:10.5,fontWeight:FontWeight.w900)),
             Text(rol,style:TextStyle(fontSize:8,color:rolRenk,fontWeight:FontWeight.w900)),
-            if(mesaj.isNotEmpty)...[
-              const SizedBox(height:4),
-              Container(
-                constraints:const BoxConstraints(maxWidth:118),
-                padding:const EdgeInsets.symmetric(horizontal:6,vertical:5),
-                decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(10),border:Border.all(color:const Color(0xFFE7E1EB))),
-                child:Row(crossAxisAlignment:CrossAxisAlignment.start,children:[
-                  CircleAvatar(radius:8,backgroundImage:foto.isEmpty?null:NgelXAgImageProvider(foto),child:foto.isEmpty?const Icon(Icons.person,size:9):null),
-                  const SizedBox(width:4),
-                  Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-                    Text(ad,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:mor,fontSize:7.8,fontWeight:FontWeight.w900)),
-                    Text(mesaj,maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black87,fontSize:8.8,height:1.12,fontWeight:FontWeight.w700)),
-                  ])),
-                ]),
-              ),
-            ],
           ]),
         );
       },
@@ -732,23 +716,17 @@ class _SesliOdaPageState extends State<SesliOdaPage> with WidgetsBindingObserver
   ),
   OutlinedButton.icon(onPressed:()=>ngelxSesliPaylas(context,widget.odaId,(veri['title']??widget.baslik).toString()),icon:const Icon(Icons.ios_share_rounded,size:18),label:const Text('Davet')),
   NgelxSesliMuzikKontrolu(roomId:widget.odaId,yonetici:yoneticiyim,bitti:bitti),
-]),const SizedBox(height:14),Row(children:[const Text('Sahne',style:TextStyle(fontSize:18,fontWeight:FontWeight.w900)),const Spacer(),if(yoneticiyim&&!bitti)TextButton.icon(onPressed:istekler,icon:const Icon(Icons.pan_tool_alt,size:16),label:const Text('İstekler'))]),StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
-  stream:FirebaseFirestore.instance.collection('audio_rooms').doc(widget.odaId).collection('messages').orderBy('createdAt',descending:true).limit(40).snapshots(),
-  builder:(_,ms){
-    final son=<String,String>{};
-    for(final d in ms.data?.docs??const <QueryDocumentSnapshot<Map<String,dynamic>>>[]){
-      final v=d.data(),k=(v['userId']??'').toString(),t=(v['text']??'').toString().trim();
-      if(k.isNotEmpty&&t.isNotEmpty&&!son.containsKey(k))son[k]=t.length>42?t.substring(0,42)+'…':t;
-    }
+]),const SizedBox(height:14),Row(children:[const Text('Sahne',style:TextStyle(fontSize:18,fontWeight:FontWeight.w900)),const Spacer(),if(yoneticiyim&&!bitti)TextButton.icon(onPressed:istekler,icon:const Icon(Icons.pan_tool_alt,size:16),label:const Text('İstekler'))]),Builder(
+  builder:(_){
     final gorunen=(sp.length+(sp.length<ngelxSesliMaksKonusmaci?1:0)).clamp(3,ngelxSesliMaksKonusmaci).toInt();
     return GridView.builder(
       shrinkWrap:true,
       physics:const NeverScrollableScrollPhysics(),
-      gridDelegate:const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount:3,crossAxisSpacing:8,mainAxisSpacing:8,childAspectRatio:.78),
+      gridDelegate:const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount:3,crossAxisSpacing:8,mainAxisSpacing:8,childAspectRatio:.92),
       itemCount:gorunen,
       itemBuilder:(_,i){
         final id=i<sp.length?sp[i]:'';
-        return koltuk(id,mesaj:id.isEmpty?'':(son[id]??''));
+        return koltuk(id);
       },
     );
   },
