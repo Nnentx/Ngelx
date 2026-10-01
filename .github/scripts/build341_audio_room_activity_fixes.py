@@ -237,6 +237,23 @@ new_activity = """          int bildirimZamani(QueryDocumentSnapshot<Map<String,
           final gelenDocs=tekil.values.toList();"""
 main = replace_once(main, old_activity, new_activity, "activity duplicate filter")
 
+main = replace_once(
+    main,
+    """          final tekil=<String,QueryDocumentSnapshot<Map<String,dynamic>>>{};
+          for(final d in birlesik.values){
+            final anahtar=bildirimTekrarAnahtari(d),onceki=tekil[anahtar];
+            if(onceki==null||bildirimZamani(d)>bildirimZamani(onceki))tekil[anahtar]=d;
+          }
+          final gelenDocs=tekil.values.toList();""",
+    """          final tekilOlay=<String,QueryDocumentSnapshot<Map<String,dynamic>>>{};
+          for(final d in birlesik.values){
+            final anahtar=bildirimTekrarAnahtari(d),onceki=tekilOlay[anahtar];
+            if(onceki==null||bildirimZamani(d)>bildirimZamani(onceki))tekilOlay[anahtar]=d;
+          }
+          final gelenDocs=tekilOlay.values.toList();""",
+    "activity local dedupe variable collision",
+)
+
 main_path.write_text(main, encoding="utf-8")
 audio_path.write_text(audio, encoding="utf-8")
 pub_path.write_text(pub, encoding="utf-8")
