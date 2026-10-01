@@ -1,0 +1,120 @@
+name: Ngel X BUILD 367 ACTIVITY BADGE CONSISTENCY
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - work/build367-activity-badge-consistency
+    paths:
+      - '.github/workflows/NgelX-BUILD-367-ACTIVITY-BADGE-CONSISTENCY.yml'
+      - 'app/lib/main.dart'
+      - 'app/pubspec.yaml'
+      - 'WORK_PACKAGE_TEST_NOTES.md'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ngelx-build367-activity-badge-consistency
+  cancel-in-progress: true
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Kaynaklari al
+        uses: actions/checkout@v4
+        with:
+          ref: work/build367-activity-badge-consistency
+          fetch-depth: 0
+
+      - name: Build 367 statik regresyon kontrolleri
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          grep -F "version: 1.0.146+367" app/pubspec.yaml
+          grep -F "defaultValue: '1.0.146'" app/lib/main.dart
+          grep -F "defaultValue: '367'" app/lib/main.dart
+          python3 - <<'PY'
+          from pathlib import Path
+          main=Path('app/lib/main.dart').read_text(encoding='utf-8')
+
+          helper="ngelxAktiviteBildirimiGosterilir"
+          assert f"bool {helper}(Map<String,dynamic> v)" in main
+          # Üst özet kartı + alttaki büyük Aktivite kısayolu aynı görünürlük filtresini kullanmalı.
+          assert main.count("d.data()['read']!=true&&ngelxAktiviteBildirimiGosterilir(d.data())") >= 2
+          # Aktivite listesi ve filtre sayaçları da aynı helper'ı kullanıyor.
+          assert main.count("if(!ngelxAktiviteBildirimiGosterilir(v))return false;") >= 2
+
+          # Build 366 ayarlar / hesap eşitleme korunmalı.
+          assert "Future<void> ngelxKullaniciSemasiniTamamla(User user)" in main
+          assert "'messagePermission': 'all'" in main
+          assert "settingsSchemaVersion" in main
+
+          # Mesaj isteği ayrımı regresyona uğramamalı.
+          assert "if(!arkadas)'requestSenderUid':me" in main
+          assert "if(!arkadas)'requestRecipientUid':uid" in main
+          assert "if(gelenIstek)continue;" in main
+
+          print('Build 367 static checks OK')
+          PY
+
+      - name: Java 17 kur
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Flutter kur
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Sabit NgelX imza anahtarini geri yukle
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: ngelx-stable-debug-keystore-v1
+          fail-on-cache-miss: true
+
+      - name: Flutter analiz ve test
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter clean
+          flutter pub get
+          flutter analyze --machine > analyze.log 2>&1 || true
+          cat analyze.log
+          if grep -q '^ERROR|' analyze.log; then
+            echo "Flutter analyze ERROR buldu."
+            exit 1
+          fi
+          if [ -d test ]; then flutter test; else echo "Test klasoru yok."; fi
+
+      - name: APK olustur ve imzayi dogrula
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter build apk --release
+          APK=build/app/outputs/flutter-apk/app-release.apk
+          test -s "$APK"
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          "$APKSIGNER" verify --print-certs "$APK" | tee build/app/outputs/flutter-apk/apksigner-certs.txt
+          grep -qi 'be20b27f0ba1f4decd2941d410b1536de89e48dc894f04f038f9d26b11ecd6aa' build/app/outputs/flutter-apk/apksigner-certs.txt
+          sha256sum "$APK" > "$APK.sha256"
+
+      - name: APK yukle
+        uses: actions/upload-artifact@v4
+        with:
+          name: NgelX-1.0.146-Build-367-ACTIVITY-BADGE-CONSISTENCY
+          path: |
+            app/build/app/outputs/flutter-apk/app-release.apk
+            app/build/app/outputs/flutter-apk/app-release.apk.sha256
+            app/build/app/outputs/flutter-apk/apksigner-certs.txt
+          if-no-files-found: error
+          retention-days: 14
