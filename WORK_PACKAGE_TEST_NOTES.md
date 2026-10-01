@@ -1781,3 +1781,14 @@ Kod incelemesinde mevcut NgelX efekt sisteminin gerçek zamanlı yüz/AR efekt m
 - Önceki istek mesajları (**Slm test**, 👍, **Testt**) normal sohbet geçmişinde korunarak göründü.
 - Sonuç: Build 367'de mesaj isteği kabulü → normal özel sohbet geçişi cihazda başarılı.
 - Sıradaki doğrulama: Gelen Kutusu'na dönünce Sultan'ın artık normal sohbet listesinde görünmesi ve pending Mesaj İstekleri listesinden kalkması.
+
+
+## 2026-10-02 — Build 367 cihaz testi: Kabul edilen istek normal Gelen Kutusu'na taşındı
+
+- DİLEK hesabında Sultan mesaj isteği kabul edildikten sonra Gelen Kutusu tekrar kontrol edildi.
+- **Sultan Sultan** artık normal sohbet listesinde görünüyor; son mesaj önizlemesi **“Testt”**.
+- Sultan satırında okunmamış rozeti görünmüyor.
+- Üst **Mesajlar** sayacı **2** ve bu sayı yalnızca ADEM sohbetindeki kırmızı **2** okunmamış rozetiyle eşleşiyor.
+- **Aktivite 0** olarak kalıyor.
+- Sonuç: kabul edilen mesaj isteği normal Gelen Kutusu'na doğru taşınıyor ve kabul sonrası unread sayacı yanlış şişmiyor.
+- Kalan son kontrol: **Mesaj İstekleri** ekranında Sultan'ın artık listede olmadığını doğrulamak.
