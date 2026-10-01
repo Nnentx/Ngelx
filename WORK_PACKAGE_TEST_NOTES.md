@@ -1395,3 +1395,14 @@ Bu maddeler Build 359'un çalışan arama/görüntülü arama davranışını bo
 - Profil, Aktivite, Ortak Gruplar ve Mesaj İstekleri ekranlarının scroll sonuna dinamik Android alt safe-area boşluğu güçlendirildi. Ayarlar ve Gelen Kutusu da aynı ortak yardımcıyı kullanır.
 - Sürüm: **1.0.139+360**.
 - **Test ön koşulu:** yeni `follow_requests` / `friend_requests` izinleri için güncel `firestore.rules` üretime yayınlanmalıdır.
+
+
+## 2026-10-01 — Build 360 Adem Aktivite: yeni takip/arkadaşlık ayrımı cihazda göründü
+
+- Adem hesabı Aktivite ekranında yeni model cihazda doğru ayrıştı:
+  - **“Sultan Sultan sana arkadaşlık isteği gönderdi”** ayrı kart ve ayrı ✓ / X eylemleriyle görünüyor.
+  - **“Sultan Sultan seni takip etmek istiyor”** ayrı kart ve ayrı ✓ / X eylemleriyle görünüyor.
+  - Üst filtrelerde **Takip İstekleri** ve **Arkadaşlık İstekleri** ayrı sekmeler olarak görünüyor.
+- Eski Build 359/öncesi **“Yeni takip isteğin var”** kaydı aynı ekranda tarihsel/legacy bildirim olarak hâlâ duruyor. Yeni akışla karışmaması için pending olmayan/legacy sosyal istek kartları istek sekmelerinin aktif sayacına dahil edilmemeli; Tümü ekranında da mümkünse durum etiketiyle tarihsel olay olarak gösterilmeli ya da temizlenmeli.
+- Cihaz testinin sıradaki kritik adımı: önce yalnızca yeni **takip isteğini** kabul et; arkadaşlık isteğinin pending kalması ve takip state/sayaçlarının tek başına güncellenmesi doğrulanacak. Ardından arkadaşlık ayrı kabul edilecek.
+- Bu ekran görüntüsü listenin scroll sonunu göstermediği için alt SafeArea sonucu henüz kesin değil; gerçek son öğeye kadar kaydırılarak tekrar doğrulanacak.
