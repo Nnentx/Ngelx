@@ -1286,3 +1286,9 @@ Cihaz testinde görülen eksikler Build 358 dalında kodlandı:
 - Başka kullanıcı profilindeki arkadaşlık düğmesinin uzun bekleme etiketi küçük ekranlarda tek satıra sığacak şekilde sadeleştirildi.
 - Sürüm: `1.0.137+358`.
 
+## 2026-10-01 — Build 358 cihaz testi: kalan yerleşim hataları
+
+- **Ayarlar ve gizlilik:** Sayfanın en altındaki **“Sessize alınan hesaplar”** satırı Android sistem gezinme çubuğunun altında kalıyor. Bu ekranda da dinamik alt SafeArea / `MediaQuery.viewPadding.bottom` uygulanmalı.
+- **Aktivite:** Bildirim listesinin ilk satırı üstteki filtre sekmelerinin altına girip kısmen kesiliyor. Liste başlangıcına filtre bar yüksekliğini/SafeArea'yı dikkate alan üst boşluk eklenmeli.
+- Bu iki sorun sonraki düzeltme paketinde birlikte ele alınacak ve 3 tuşlu Android gezinmede yeniden test edilecek.
+
