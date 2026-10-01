@@ -33,6 +33,7 @@ part 'camera_studio.dart';
 part 'live_broadcast_studio.dart';
 part 'audio_live_rooms.dart';
 part 'audio_live_rooms_pro.dart';
+part 'audio_live_rooms_extras.dart';
 part 'live_feed_card.dart';
 part 'live_pk.dart';
 part 'feed_creator_badge.dart';
@@ -101,8 +102,8 @@ const ngelxPrivateBlueCanvas = Color(0xFFF6FAFF);
 const ngelxPrivateBlueBorder = Color(0xFFD8E8FF);
 const ngelxPrivateBlueInk = Color(0xFF10213A);
 
-const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.126');
-const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '345');
+const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.127');
+const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '346');
 const ngelxGroupBorder = Color(0xFFD9EEE0);
 
 final GlobalKey<NavigatorState> ngelxNavigatorKey=GlobalKey<NavigatorState>();
@@ -3363,7 +3364,7 @@ class NgelXApp extends StatelessWidget {
         }
         return null;
       },
-      builder: (context, child) => Directionality(textDirection: dil=='ar' ? TextDirection.rtl : TextDirection.ltr, child: child!),
+      builder: (context, child) => Directionality(textDirection: dil=='ar' ? TextDirection.rtl : TextDirection.ltr, child:Stack(children:[Positioned.fill(child:child!),const NgelxSesliMiniGlobalOverlay()])),
     ));
   }
 }
@@ -11871,6 +11872,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
   Widget mesajKarti(QueryDocumentSnapshot<Map<String,dynamic>> d,{QueryDocumentSnapshot<Map<String,dynamic>>? onceki,Map<String,dynamic>? grupVerisi,bool sonMesaj=false}){
     final v=d.data(),gonderen=(v['senderId']??v['fromUid']??v['uid']??'').toString(),ben=gonderen==uid;
     final metin=(v['text']??v['message']??v['content']??'').toString(),tur=(v['type']??'text').toString();
+    final sesliOdaPaylasimi=tur=='audio_room_share'||(v['audioRoomId']??'').toString().trim().isNotEmpty;
     final media=ngelxMesajMedyaUrl(v,video:tur=='video'),videoKapak=ngelxMesajVideoKapagi(v),audio=(v['audioUrl']??'').toString();
     final sticker=(v['sticker']??'').toString(),linkUrl=(v['linkUrl']??'').toString(),linkHost=(v['linkHost']??'').toString(),linkTitle=(v['linkTitle']??'').toString(),linkDesc=(v['linkDescription']??'').toString(),linkImage=(v['linkImage']??'').toString();
     final silinmis=v['deletedForEveryone']==true;
@@ -12030,7 +12032,9 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
               final hiz=detay.primaryVelocity??0;
               if(hiz>360)unawaited(grupYanitiHazirla(d));
             },
-            onTap:(tur=='photo'||tur=='gif')&&media.isNotEmpty
+            onTap:sesliOdaPaylasimi
+              ? ()=>ngelxSesliPaylasimMesajiniAc(context,v)
+              : (tur=='photo'||tur=='gif')&&media.isNotEmpty
               ? ()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>TamEkranMedyaPage(url:media)))
               : tur=='video'&&media.isNotEmpty
                 ? ()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>TamEkranVideoPage(url:media)))
@@ -17757,6 +17761,7 @@ class _SohbetPageState extends State<SohbetPage> {
   Widget ozelMesajKarti(QueryDocumentSnapshot<Map<String,dynamic>> d,{double fontSize=16,bool goruldu=false,String quickReaction='❤️'}){
     final v=d.data(),ben=v['senderId']==uid,tur=(v['type']??'text').toString();
     final canliPaylasimi=v['liveShare']==true||tur=='live_share'||(v['liveId']??'').toString().trim().isNotEmpty;
+    final sesliOdaPaylasimi=tur=='audio_room_share'||(v['audioRoomId']??'').toString().trim().isNotEmpty;
     final canliBaslik=(v['liveTitle']??'Canlı yayın').toString().trim();
     final canliKullanici=(v['liveUsername']??'').toString().trim();
     final photo=tur=='photo',video=tur=='video',shared=tur=='shared_content',audio=tur=='audio',file=tur=='file',location=tur=='location',call=tur=='call',storyReply=tur=='story_reply';
@@ -17775,7 +17780,9 @@ class _SohbetPageState extends State<SohbetPage> {
         behavior:HitTestBehavior.opaque,
         onLongPress:()=>mesajMenusu(d),
         onDoubleTap:()=>mesajTepkiDegistir(d,quickReaction),
-        onTap:canliPaylasimi
+        onTap:sesliOdaPaylasimi
+          ? ()=>ngelxSesliPaylasimMesajiniAc(context,v)
+          : canliPaylasimi
           ? ()=>canliPaylasimMesajiniAc(v)
           : photo
           ? ()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>TamEkranMedyaPage(url:medyaUrl)))
@@ -19331,6 +19338,8 @@ class _AktivitePageState extends State<AktivitePage> {
   String _filtre='all';
   List<QueryDocumentSnapshot<Map<String,dynamic>>> _sunucuAktiviteleri=[];
   bool _aktiviteYenileniyor=false;
+  final Set<String> _secilenBildirimler=<String>{};
+  bool get _secimModu=>_secilenBildirimler.isNotEmpty;
 
   @override void initState(){
     super.initState();
@@ -19352,6 +19361,34 @@ class _AktivitePageState extends State<AktivitePage> {
     }
   }
 
+  void _bildirimSec(String id){
+    if(id.isEmpty)return;
+    setState((){
+      if(!_secilenBildirimler.add(id))_secilenBildirimler.remove(id);
+    });
+  }
+
+  Future<void> _secilenBildirimleriSil()async{
+    final uid=FirebaseAuth.instance.currentUser?.uid;
+    final ids=_secilenBildirimler.toList();
+    if(uid==null||ids.isEmpty)return;
+    try{
+      final batch=FirebaseFirestore.instance.batch();
+      for(final id in ids){
+        batch.delete(FirebaseFirestore.instance.collection('notifications').doc(id));
+      }
+      await batch.commit().timeout(const Duration(seconds:12));
+      if(!mounted)return;
+      setState((){
+        _sunucuAktiviteleri.removeWhere((d)=>ids.contains(d.id));
+        _secilenBildirimler.clear();
+      });
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(ids.length.toString()+' bildirim silindi.')));
+    }catch(_){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bildirimler silinemedi. Tekrar dene.')));
+    }
+  }
+
   bool _filtreUyar(Map<String,dynamic> v){
     final tur=(v['type']??'').toString();
     final olay=(v['eventKind']??'').toString();
@@ -19365,8 +19402,8 @@ class _AktivitePageState extends State<AktivitePage> {
     }
   }
 
-  IconData _ikon(String tur){switch(tur){case 'live':return Icons.live_tv_rounded;case 'like':case 'interaction':return Icons.favorite_rounded;case 'comment':return Icons.mode_comment_rounded;case 'message':return Icons.chat_bubble_rounded;case 'security':return Icons.shield_rounded;case 'friend':case 'follow_request':case 'friend_request':return Icons.person_add_alt_1_rounded;case 'friend_accepted':return Icons.people_rounded;case 'follow_accepted':return Icons.person_rounded;default:return Icons.notifications_rounded;}}
-  Color _renk(String tur){switch(tur){case 'live':return const Color(0xFFFF1744);case 'like':case 'interaction':return const Color(0xFFFF3B73);case 'comment':return Colors.blue;case 'security':return Colors.orange;case 'friend':case 'follow_request':case 'friend_request':return mor;default:return const Color(0xFF20B86A);}}
+  IconData _ikon(String tur){switch(tur){case 'audio_live':return Icons.graphic_eq_rounded;case 'live':return Icons.live_tv_rounded;case 'like':case 'interaction':return Icons.favorite_rounded;case 'comment':return Icons.mode_comment_rounded;case 'message':return Icons.chat_bubble_rounded;case 'security':return Icons.shield_rounded;case 'friend':case 'follow_request':case 'friend_request':return Icons.person_add_alt_1_rounded;case 'friend_accepted':return Icons.people_rounded;case 'follow_accepted':return Icons.person_rounded;default:return Icons.notifications_rounded;}}
+  Color _renk(String tur){switch(tur){case 'audio_live':return mor;case 'live':return const Color(0xFFFF1744);case 'like':case 'interaction':return const Color(0xFFFF3B73);case 'comment':return Colors.blue;case 'security':return Colors.orange;case 'friend':case 'follow_request':case 'friend_request':return mor;default:return const Color(0xFF20B86A);}}
 
 
   bool _canliAktivitesi(Map<String,dynamic> v){
@@ -19493,6 +19530,12 @@ class _AktivitePageState extends State<AktivitePage> {
     final hedefTuru=(v['targetKind']??'').toString();
     final olay=(v['eventKind']??'').toString();
     final canliHedefi=tur=='live'||hedefTuru=='live'||olay=='live_started'||olay=='live_share';
+    final sesliHedefi=tur=='audio_live'||hedefTuru=='audio_room'||olay=='audio_room_started';
+
+    if(sesliHedefi&&kaynak.isNotEmpty){
+      await ngelxSesliOdayaKatil(context,kaynak);
+      return;
+    }
 
     if(canliHedefi&&kaynak.isNotEmpty){
       try{
@@ -19762,18 +19805,29 @@ class _AktivitePageState extends State<AktivitePage> {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     return Theme(data:ThemeData.light().copyWith(scaffoldBackgroundColor:Colors.white,appBarTheme:const AppBarTheme(backgroundColor:Colors.white,foregroundColor:Colors.black,elevation:0),dividerColor:const Color(0xFFE8E9ED)),child:Scaffold(
       backgroundColor:Colors.white,
-      appBar: AppBar(title: Text(t('activity'),style:const TextStyle(fontWeight:FontWeight.w900)),actions:[IconButton(tooltip:lt('Yenile','Refresh'),onPressed:_aktiviteYenileniyor?null:()=>_aktiviteyiYenile(),icon:_aktiviteYenileniyor?const SizedBox(width:19,height:19,child:CircularProgressIndicator(strokeWidth:2,color:mor)):const Icon(Icons.refresh_rounded,color:mor)),IconButton(tooltip:t('markAllRead'),onPressed:()async{
-        if(uid==null)return;
-        try{
-          final q=await FirebaseFirestore.instance.collection('notifications').where('toUid',isEqualTo:uid).limit(200).get().timeout(const Duration(seconds:10));
-          final b=FirebaseFirestore.instance.batch();
-          for(final d in q.docs){b.set(d.reference,{'read':true},SetOptions(merge:true));}
-          await b.commit().timeout(const Duration(seconds:10));
-          if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Tüm aktiviteler okundu olarak işaretlendi.')));
-        }catch(_){
-          if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Aktiviteler güncellenemedi. Tekrar dene.')));
-        }
-      },icon:const Icon(Icons.done_all_rounded,color:Color(0xFF20B86A)))]),
+      appBar: AppBar(
+        title:Text(_secimModu?(_secilenBildirimler.length.toString()+' seçildi'):t('activity'),style:const TextStyle(fontWeight:FontWeight.w900)),
+        actions:_secimModu
+          ?[
+              IconButton(tooltip:'Sil',onPressed:_secilenBildirimleriSil,icon:const Icon(Icons.delete_forever_rounded,color:Colors.red)),
+              IconButton(tooltip:'Seçimi kapat',onPressed:()=>setState(()=>_secilenBildirimler.clear()),icon:const Icon(Icons.close_rounded,color:Colors.black54)),
+            ]
+          :[
+              IconButton(tooltip:lt('Yenile','Refresh'),onPressed:_aktiviteYenileniyor?null:()=>_aktiviteyiYenile(),icon:_aktiviteYenileniyor?const SizedBox(width:19,height:19,child:CircularProgressIndicator(strokeWidth:2,color:mor)):const Icon(Icons.refresh_rounded,color:mor)),
+              IconButton(tooltip:t('markAllRead'),onPressed:()async{
+                if(uid==null)return;
+                try{
+                  final q=await FirebaseFirestore.instance.collection('notifications').where('toUid',isEqualTo:uid).limit(200).get().timeout(const Duration(seconds:10));
+                  final b=FirebaseFirestore.instance.batch();
+                  for(final d in q.docs){b.set(d.reference,{'read':true},SetOptions(merge:true));}
+                  await b.commit().timeout(const Duration(seconds:10));
+                  if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Tüm aktiviteler okundu olarak işaretlendi.')));
+                }catch(_){
+                  if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Aktiviteler güncellenemedi. Tekrar dene.')));
+                }
+              },icon:const Icon(Icons.done_all_rounded,color:Color(0xFF20B86A))),
+            ],
+      ),
       body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
         stream: uid == null ? null : FirebaseFirestore.instance.collection('notifications').where('toUid', isEqualTo: uid).limit(200).snapshots(),
         builder: (_, s) {
@@ -19885,8 +19939,11 @@ class _AktivitePageState extends State<AktivitePage> {
             final renk=grup?ngelxGroupGreen:_renk(tur);
             final ikon=grup?Icons.groups_rounded:_ikon(tur);
             final bekliyor = (v['type'] == 'follow_request' || v['type'] == 'friend_request') && v['status'] == 'pending';
+            final secili=_secilenBildirimler.contains(d.id);
             return Container(decoration:BoxDecoration(color:okundu?Colors.white:(grup?ngelxGroupGreenSoft:const Color(0xFFF8F4FF)),borderRadius:BorderRadius.circular(17)),child:ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:12,vertical:7),
-              leading: Stack(children:[CircleAvatar(radius:26,backgroundColor:renk.withValues(alpha:.13),backgroundImage:foto.isEmpty?null:NgelXAgImageProvider(foto),child:foto.isEmpty?Icon(ikon,color:renk):null),if(!okundu)Positioned(right:0,top:0,child:CircleAvatar(radius:5,backgroundColor:grup?ngelxGroupGreen:const Color(0xFF7C3AED)))]),
+              leading:secili
+                ?const CircleAvatar(radius:26,backgroundColor:mor,child:Icon(Icons.check_rounded,color:Colors.white))
+                :Stack(children:[CircleAvatar(radius:26,backgroundColor:renk.withValues(alpha:.13),backgroundImage:foto.isEmpty?null:NgelXAgImageProvider(foto),child:foto.isEmpty?Icon(ikon,color:renk):null),if(!okundu)Positioned(right:0,top:0,child:CircleAvatar(radius:5,backgroundColor:grup?ngelxGroupGreen:const Color(0xFF7C3AED)))]),
               title:_bildirimBasligiDurumlu(v,okundu),
               subtitle: Row(children:[
                 if(grup)...[
@@ -19899,7 +19956,8 @@ class _AktivitePageState extends State<AktivitePage> {
                 IconButton(onPressed: () => istegiSonuclandir(context, d, true), icon: const Icon(Icons.check, color: Colors.green)),
                 IconButton(onPressed: () => istegiSonuclandir(context, d, false), icon: const Icon(Icons.close, color: Colors.red)),
               ]) : (v['status'] == 'accepted' ? const Icon(Icons.people, color: Colors.green) : null),
-              onTap: () => _aktiviteAc(context,d),
+              onLongPress:()=>_bildirimSec(d.id),
+              onTap:()=>_secimModu?_bildirimSec(d.id):_aktiviteAc(context,d),
             ));
           }),
             ),
