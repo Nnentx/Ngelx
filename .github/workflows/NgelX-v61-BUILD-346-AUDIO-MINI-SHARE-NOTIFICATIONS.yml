@@ -1,0 +1,121 @@
+name: Ngel X v61 BUILD 346 AUDIO MINI SHARE NOTIFICATIONS
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - work/build346-audio-mini-share-notifications
+    paths:
+      - '.github/workflows/NgelX-v61-BUILD-346-AUDIO-MINI-SHARE-NOTIFICATIONS.yml'
+      - '.github/scripts/build346_audio_mini_share_notifications.py'
+      - 'app/lib/audio_live_rooms.dart'
+      - 'app/lib/audio_live_rooms_pro.dart'
+      - 'app/lib/audio_live_rooms_extras.dart'
+
+permissions:
+  contents: write
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: work/build346-audio-mini-share-notifications
+          fetch-depth: 0
+
+      - name: Build 346 kaynaklarini uygula ve kontrol et
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile .github/scripts/build346_audio_mini_share_notifications.py
+          python3 .github/scripts/build346_audio_mini_share_notifications.py
+          git diff --check
+
+          grep -F "version: 1.0.127+346" app/pubspec.yaml
+          grep -F "defaultValue: '1.0.127'" app/lib/main.dart
+          grep -F "defaultValue: '346'" app/lib/main.dart
+          grep -F "part 'audio_live_rooms_extras.dart';" app/lib/main.dart
+          grep -F "NgelxSesliMiniGlobalOverlay" app/lib/main.dart
+          grep -F "_secilenBildirimleriSil" app/lib/main.dart
+          grep -F "audio_room_share" app/lib/main.dart
+          grep -F "ngelxSesliPaylasimMesajiniAc" app/lib/main.dart
+          grep -F "Future<void> kucult()" app/lib/audio_live_rooms.dart
+          grep -F "ngelxSesliOdaBaslangicBildirimi" app/lib/audio_live_rooms.dart
+          grep -F "('public','Herkes')" app/lib/audio_live_rooms.dart
+          grep -F "('followers','Takipçiler')" app/lib/audio_live_rooms.dart
+          grep -F "('friends','Arkadaşlar')" app/lib/audio_live_rooms.dart
+          grep -F "backgroundColor:Colors.red" app/lib/audio_live_rooms.dart
+          grep -F "ngelxSesliNgelxIcindePaylas" app/lib/audio_live_rooms_pro.dart
+          grep -F "class NgelxSesliMiniGlobalOverlay" app/lib/audio_live_rooms_extras.dart
+          grep -F "audio_room_started" app/lib/audio_live_rooms_extras.dart
+
+      - name: Build 346 kaynaklarini dala yaz
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- app/lib/main.dart app/pubspec.yaml; then
+            echo "Kaynaklar zaten Build 346 seviyesinde."
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add app/lib/main.dart app/pubspec.yaml
+            git commit -m "Build 346: wire mini audio share and notification cleanup"
+            git push origin HEAD:work/build346-audio-mini-share-notifications
+          fi
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Sabit NgelX imza anahtarini geri yukle
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: ngelx-stable-debug-keystore-v1
+          fail-on-cache-miss: true
+
+      - name: Flutter analiz
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter clean
+          flutter pub get
+          flutter analyze --machine > analyze.log 2>&1 || true
+          cat analyze.log
+          if grep -q '^ERROR|' analyze.log; then
+            echo "Flutter analyze ERROR buldu."
+            exit 1
+          fi
+
+      - name: APK olustur ve imzayi dogrula
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter build apk --release
+          APK=build/app/outputs/flutter-apk/app-release.apk
+          test -s "$APK"
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          "$APKSIGNER" verify --print-certs "$APK" | tee build/app/outputs/flutter-apk/apksigner-certs.txt
+          grep -qi 'be20b27f0ba1f4decd2941d410b1536de89e48dc894f04f038f9d26b11ecd6aa' build/app/outputs/flutter-apk/apksigner-certs.txt
+          sha256sum "$APK" > "$APK.sha256"
+
+      - name: APK yukle
+        uses: actions/upload-artifact@v4
+        with:
+          name: NgelX-1.0.127-Build-346-AUDIO-MINI-SHARE-NOTIFICATIONS
+          path: |
+            app/build/app/outputs/flutter-apk/app-release.apk
+            app/build/app/outputs/flutter-apk/app-release.apk.sha256
+            app/build/app/outputs/flutter-apk/apksigner-certs.txt
+          if-no-files-found: error
+          retention-days: 14
