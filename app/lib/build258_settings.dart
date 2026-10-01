@@ -15,7 +15,11 @@ class AyarlarV258Page extends StatelessWidget{
     data:ThemeData.light().copyWith(scaffoldBackgroundColor:Colors.white,appBarTheme:const AppBarTheme(backgroundColor:Colors.white,foregroundColor:Colors.black,elevation:0)),
     child:Scaffold(
       appBar:AppBar(title:Text(t('settingsTitle'))),
-      body:ListView(padding:const EdgeInsets.fromLTRB(14,4,14,30),children:[
+      body:SafeArea(
+        top:false,
+        maintainBottomViewPadding:true,
+        minimum:const EdgeInsets.only(bottom:12),
+        child:ListView(padding:const EdgeInsets.fromLTRB(14,4,14,30),children:[
         _baslik('HESAP'),
         _satir(context,Icons.manage_accounts_outlined,'Hesap ve profil bilgileri','Ad, kullanıcı adı, e-posta, telefon, doğum tarihi ve şifre',const HesapBilgileriV258Page()),
         _satir(context,Icons.switch_account_rounded,t('switchAccount'),t('switchAccountSub'),const HesapDegistirPage()),
@@ -62,7 +66,7 @@ class AyarlarV258Page extends StatelessWidget{
           final ok=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(title:Text(t('logoutQuestion')),content:Text(t('logoutInfo')),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:Text(t('cancel'))),FilledButton(onPressed:()=>Navigator.pop(c,true),child:Text(t('logout')))]));
           if(ok==true){try{await FirebaseAuth.instance.signOut().timeout(const Duration(seconds:8));ngelxKokRotayaDon();}on TimeoutException{if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Çıkış zaman aşımına uğradı. Tekrar dene.')));}catch(e){if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Çıkış yapılamadı: $e')));}}
         }),
-      ]),
+      ])),
     ),
   ));
 }
@@ -146,11 +150,11 @@ class _NgelXUserArrayPage extends StatefulWidget{
 }
 class _NgelXUserArrayPageState extends State<_NgelXUserArrayPage>{
   Future<List<String>> _ids()async{final u=FirebaseAuth.instance.currentUser;if(u==null)return[];final d=await FirebaseFirestore.instance.collection('users').doc(u.uid).get();return List<String>.from(d.data()?[widget.alan]??const[]);}
-  @override Widget build(BuildContext context)=>Theme(data:ThemeData.light(),child:Scaffold(backgroundColor:Colors.white,appBar:AppBar(title:Text(widget.baslik)),body:FutureBuilder<List<String>>(future:_ids(),builder:(_,s){
+  @override Widget build(BuildContext context)=>Theme(data:ThemeData.light(),child:Scaffold(backgroundColor:Colors.white,appBar:AppBar(title:Text(widget.baslik)),body:SafeArea(top:false,maintainBottomViewPadding:true,minimum:const EdgeInsets.only(bottom:12),child:FutureBuilder<List<String>>(future:_ids(),builder:(_,s){
     if(s.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator(color:mor));
     final ids=s.data??[];if(ids.isEmpty)return Center(child:Text(widget.bosMetin,style:const TextStyle(color:Colors.black54)));
     return ListView.builder(itemCount:ids.length,itemBuilder:(_,i)=>FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(future:FirebaseFirestore.instance.collection('users').doc(ids[i]).get(),builder:(_,u){final v=u.data?.data()??{},f=(v['photoUrl']??'').toString();return ListTile(onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciProfilPage(uid:ids[i]))),leading:CircleAvatar(backgroundImage:f.isEmpty?null:NgelXAgImageProvider(f),child:f.isEmpty?const Icon(Icons.person):null),title:Text((v['displayName']??v['username']??'NgelX').toString()),subtitle:Text('@${v['username']??'ngelx'}'),trailing:widget.trailing(ids[i]));}));
-  })));
+  }))));
 }
 
 class GelismisAyarlarV258Page extends StatefulWidget{
@@ -277,7 +281,7 @@ class _GelismisAyarlarV258PageState extends State<GelismisAyarlarV258Page>{
       default:return const [ListTile(title:Text('Ayar bulunamadı.'))];
     }
   }
-  @override Widget build(BuildContext context)=>ValueListenableBuilder<String>(valueListenable:uygulamaDili,builder:(context,_,__)=>Theme(data:ThemeData.light().copyWith(scaffoldBackgroundColor:Colors.white,appBarTheme:const AppBarTheme(backgroundColor:Colors.white,foregroundColor:Colors.black,elevation:0)),child:Scaffold(appBar:AppBar(title:Text(_baslik)),body:ListView(children:_icerik))));
+  @override Widget build(BuildContext context)=>ValueListenableBuilder<String>(valueListenable:uygulamaDili,builder:(context,_,__)=>Theme(data:ThemeData.light().copyWith(scaffoldBackgroundColor:Colors.white,appBarTheme:const AppBarTheme(backgroundColor:Colors.white,foregroundColor:Colors.black,elevation:0)),child:Scaffold(appBar:AppBar(title:Text(_baslik)),body:SafeArea(top:false,maintainBottomViewPadding:true,minimum:const EdgeInsets.only(bottom:12),child:ListView(children:_icerik)))));
 }
 
 class VerilerimV258Page extends StatefulWidget{
