@@ -1100,7 +1100,7 @@ class _NgelxSesliMuzikKontroluState extends State<NgelxSesliMuzikKontrolu>{
         return SafeArea(top:false,child:Padding(
           padding:EdgeInsets.fromLTRB(16,4,16,18+MediaQuery.viewInsetsOf(sheet).bottom),
           child:SizedBox(
-            height:math.min(MediaQuery.sizeOf(sheet).height*.76,620.0).toDouble(),
+            height:math.min(MediaQuery.sizeOf(sheet).height*.88,720.0).toDouble(),
             child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
               const Row(children:[
                 CircleAvatar(backgroundColor:Color(0xFFF0E8FF),child:Icon(Icons.library_music_rounded,color:mor)),
@@ -1159,16 +1159,22 @@ class _NgelxSesliMuzikKontroluState extends State<NgelxSesliMuzikKontrolu>{
               const SizedBox(height:9),
               const Text('Tür',style:TextStyle(color:Colors.black87,fontSize:12,fontWeight:FontWeight.w900)),
               const SizedBox(height:6),
-              Wrap(
-                spacing:6,runSpacing:6,
-                children:['Tümü','Pop / R&B','Rock / Folk','Rock','Indie / Lo-fi','Elektronik','Country / Folk','Folk / Historic','Geleneksel / Folk'].map((x)=>ChoiceChip(
-                  label:Text(x,style:TextStyle(color:kategori==x?Colors.white:Colors.black87,fontWeight:FontWeight.w800)),
-                  selected:kategori==x,
-                  selectedColor:const Color(0xFF21C7E8),
-                  backgroundColor:const Color(0xFFF3F1F5),
-                  side:BorderSide.none,
-                  onSelected:(_)=>setSheet(()=>kategori=x),
-                )).toList(),
+              SizedBox(
+                height:44,
+                child:ListView(
+                  scrollDirection:Axis.horizontal,
+                  children:['Tümü','Pop / R&B','Rock / Folk','Rock','Indie / Lo-fi','Elektronik','Country / Folk','Folk / Historic','Geleneksel / Folk'].map((x)=>Padding(
+                    padding:const EdgeInsets.only(right:6),
+                    child:ChoiceChip(
+                      label:Text(x,style:TextStyle(color:kategori==x?Colors.white:Colors.black87,fontWeight:FontWeight.w800)),
+                      selected:kategori==x,
+                      selectedColor:const Color(0xFF21C7E8),
+                      backgroundColor:const Color(0xFFF3F1F5),
+                      side:BorderSide.none,
+                      onSelected:(_)=>setSheet(()=>kategori=x),
+                    ),
+                  )).toList(),
+                ),
               ),
               const SizedBox(height:8),
               Expanded(child:liste.isEmpty
