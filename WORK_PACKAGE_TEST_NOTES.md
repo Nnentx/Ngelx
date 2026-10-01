@@ -1529,3 +1529,13 @@ Build 362 cihaz ekranlarında alt sistem çubuğunun bazı ekranlarda hâlâ iç
 - **“Test mesajı 1”** mesajı gönderildi ve gönderici tarafında saat **23:51** ile anında görünür durumda.
 - Mesaj yazma kutusu Android 3 tuşlu gezinme alanının üstünde; bu görüntüde alt çubuğa taşma/kesilme yok.
 - Sıradaki doğrulama: Adem hesabında aynı mesajın normal sohbet olarak görünmesi, Mesaj İstekleri'ne düşmemesi ve okunmamış göstergesinin doğru çalışması.
+
+
+## 2026-10-01 — Build 363 1:1 mesaj alıcı tarafı cihaz testi
+
+- Adem hesabında Sultan sohbeti açıldı.
+- Sultan'dan gönderilen **“Test mesajı 1”** mesajı alıcı tarafında **23:51** saatiyle doğru şekilde göründü.
+- Mesaj geçmişi iki tarafta da tutarlı; önceki metin ve emoji mesajları görünür.
+- Sohbet normal 1:1 ekranında açılıyor; bu görüntüde mesaj isteği önizleme/istek kabul-red arayüzü yok.
+- Mesaj yazma kutusu Android 3 tuşlu gezinme alanının üstünde ve kesilmeden kullanılabilir görünüyor.
+- Gelen Kutusu liste ekranındaki okunmamış rozeti bu görüntüde görünmediği için unread sayaç doğrulaması ayrı testte yapılacak.
