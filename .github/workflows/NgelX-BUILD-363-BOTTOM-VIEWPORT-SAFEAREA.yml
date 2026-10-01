@@ -59,6 +59,13 @@ jobs:
           assert "sosyalIstekRef(me,uid,'follow_request').snapshots()" in s
           assert "sosyalIstekRef(me,uid,'friend_request').snapshots()" in s
           assert "Takip tek yönlüdür. Arkadaşlık state'ine dokunulmaz." in s
+
+          # Grup arama Aktivite bildirimi doğrudan eski/aktif aramaya sokmamalı.
+          group_route="if((hedefTuru=='group'||olay=='group_audio_call'||olay=='group_video_call')&&kaynak.isNotEmpty)"
+          private_call="if(tur=='call'&&kaynak.isNotEmpty)"
+          assert group_route in s
+          assert s.index(group_route) < s.index(private_call)
+
           assert 'ngelxArkaPlanAramaSakla(' in s
           assert 'ngelxArkaPlanAramayiGeriAl(widget.roomName)' in s
           assert 'rotus=widget.goruntulu;' in s
