@@ -65,8 +65,10 @@ double _ngelxNoktaUzaklik(double x,double y,Offset? p){
 img.Image _ngelxYuzBolgeselRetus(
   img.Image kaynak,
   List<Face> yuzler,
-  double yogunluk,
-){
+  double yogunluk,{
+  double gozCanlilik=.18,
+  double yuzIsigi=.14,
+}){
   if(yuzler.isEmpty||yogunluk<=.01)return kaynak;
   final amount=yogunluk.clamp(0.0,1.0).toDouble();
   final blur=img.gaussianBlur(kaynak.clone(),radius:math.max(1,(1+amount*3).round()));
@@ -108,7 +110,7 @@ img.Image _ngelxYuzBolgeselRetus(
         final a=(amount*.58*kenar*detay).clamp(0.0,.62).toDouble();
         if(a<=.01)continue;
         final q=blur.getPixel(x,y);
-        final light=amount*2.8*kenar;
+        final light=(amount*2.8+yuzIsigi.clamp(0.0,1.0)*5.0)*kenar;
         kaynak.setPixelRgba(
           x,y,
           (r*(1-a)+q.r*a+light).clamp(0,255),
@@ -128,7 +130,7 @@ img.Image _ngelxYuzBolgeselRetus(
           final d=_ngelxNoktaUzaklik(xx.toDouble(),yy.toDouble(),eye);
           if(d>rr)continue;
           final p=kaynak.getPixel(xx,yy);
-          final boost=(1-d/rr)*amount*5.0;
+          final boost=(1-d/rr)*(amount*4.0+gozCanlilik.clamp(0.0,1.0)*10.0);
           kaynak.setPixelRgba(
             xx,yy,
             (p.r+boost).clamp(0,255),
@@ -167,7 +169,7 @@ class _NgelXCameraStudioPageState extends State<NgelXCameraStudioPage> with Widg
   Timer? sayacTimer,kayitTimer;
   Duration kayitSure=Duration.zero;
   FlashMode flash=FlashMode.off;
-  double zoom=1,minZoom=1,maxZoom=1,retus=.34,filtreYogunluk=1;
+  double zoom=1,minZoom=1,maxZoom=1,retus=.34,gozCanlilik=.22,yuzIsigi=.16,filtreYogunluk=1;
   int filtreIndex=0;
   String oran='9:16';
 
@@ -293,7 +295,7 @@ class _NgelXCameraStudioPageState extends State<NgelXCameraStudioPage> with Widg
       _sonYuzSayisi=yuzler.length;
       try{await dosya.delete();}catch(_){}
       if(yuzler.isEmpty)return g;
-      return _ngelxYuzBolgeselRetus(g,yuzler,retus<=.01?.18:retus);
+      return _ngelxYuzBolgeselRetus(g,yuzler,retus<=.01?.18:retus,gozCanlilik:gozCanlilik,yuzIsigi:yuzIsigi);
     }catch(e){
       debugPrint('AI yüz rötuşu atlandı: $e');
       return g;
@@ -352,7 +354,7 @@ class _NgelXCameraStudioPageState extends State<NgelXCameraStudioPage> with Widg
         setState(()=>isleniyor=true);
         final ham=await c.takePicture();
         final sonuc=await _fotoyuIsle(ham);
-        if(mounted)Navigator.pop(context,<String,dynamic>{'file':sonuc,'video':false,'filter':ngelxKameraFiltreleri[filtreIndex].ad,'retouch':retus,'aiFaceRetouch':_sonYuzSayisi>0,'facesDetected':_sonYuzSayisi});
+        if(mounted)Navigator.pop(context,<String,dynamic>{'file':sonuc,'video':false,'filter':ngelxKameraFiltreleri[filtreIndex].ad,'retouch':retus,'eyeBoost':gozCanlilik,'faceLight':yuzIsigi,'aiFaceRetouch':_sonYuzSayisi>0,'facesDetected':_sonYuzSayisi});
       }catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Fotoğraf çekilemedi: $e')));}
       finally{if(mounted)setState(()=>isleniyor=false);}
     });
@@ -494,9 +496,11 @@ class _NgelXCameraStudioPageState extends State<NgelXCameraStudioPage> with Widg
       builder:(c)=>SafeArea(child:StatefulBuilder(builder:(c,setP)=>Padding(
         padding:const EdgeInsets.all(18),
         child:Column(mainAxisSize:MainAxisSize.min,children:[
-          Row(children:[const Text('Rötuş',style:TextStyle(color:Colors.white,fontSize:18,fontWeight:FontWeight.w900)),const Spacer(),TextButton(onPressed:(){setState(()=>retus=0);setP((){});},child:const Text('Sıfırla'))]),
+          Row(children:[const Text('AI Yüz Rötuşu',style:TextStyle(color:Colors.white,fontSize:18,fontWeight:FontWeight.w900)),const Spacer(),TextButton(onPressed:(){setState((){retus=0;gozCanlilik=0;yuzIsigi=0;});setP((){});},child:const Text('Sıfırla'))]),
           const Text('AI yüz algılama cildi bölgesel işler; göz, ağız ve yüz detaylarını mümkün olduğunca korur.',style:TextStyle(color:Colors.white60,fontSize:11)),
-          Row(children:[const Icon(Icons.face_retouching_natural_rounded,color:Colors.white70),Expanded(child:Slider(value:retus,min:0,max:1,onChanged:(v){setState(()=>retus=v);setP((){});})),Text('%${(retus*100).round()}',style:const TextStyle(color:Colors.white))]),
+          Row(children:[const SizedBox(width:78,child:Text('Cilt',style:TextStyle(color:Colors.white70,fontWeight:FontWeight.w700))),Expanded(child:Slider(value:retus,min:0,max:1,onChanged:(v){setState(()=>retus=v);setP((){});})),Text('%${(retus*100).round()}',style:const TextStyle(color:Colors.white))]),
+          Row(children:[const SizedBox(width:78,child:Text('Göz',style:TextStyle(color:Colors.white70,fontWeight:FontWeight.w700))),Expanded(child:Slider(value:gozCanlilik,min:0,max:.7,onChanged:(v){setState(()=>gozCanlilik=v);setP((){});})),Text('%${(gozCanlilik*100).round()}',style:const TextStyle(color:Colors.white))]),
+          Row(children:[const SizedBox(width:78,child:Text('Yüz ışığı',style:TextStyle(color:Colors.white70,fontWeight:FontWeight.w700))),Expanded(child:Slider(value:yuzIsigi,min:0,max:.7,onChanged:(v){setState(()=>yuzIsigi=v);setP((){});})),Text('%${(yuzIsigi*100).round()}',style:const TextStyle(color:Colors.white))]),
           SwitchListTile(
             contentPadding:EdgeInsets.zero,dense:true,value:otomatikPortre,
             onChanged:(v){setState(()=>otomatikPortre=v);setP((){});},
