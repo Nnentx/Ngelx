@@ -1446,3 +1446,15 @@ Bu maddeler Build 359'un çalışan arama/görüntülü arama davranışını bo
 - Arkadaşlık kabul mesajı çıkmasına rağmen arkadaşlık kartı ekranda hâlâ ✓ / X ile pending gibi görünüyor. Bu, takip kabulünde de görülen **stale Aktivite cache / merge sırası** hatasının arkadaşlık kartını da etkilediğini doğruluyor.
 - Sonraki düzeltmede accepted/rejected sosyal istek kartları canlı stream state'ine göre anında eylemsiz hale getirilecek ve aktif istek sayaçları yalnızca pending kayıtları sayacak.
 - Son cihaz doğrulaması: Sultan hesabına dönüp Adem profilinde **Takip ediyorsun + Arkadaşsınız** durumlarının birlikte ve bağımsız görünmesi kontrol edilecek.
+
+
+## 2026-10-01 — Build 360 sosyal model ana akışı cihazda tamamlandı
+
+- Sultan hesabında Adem profili son doğrulandı:
+  - **Takip ediyorsun** durumu korunuyor.
+  - **Arkadaşsınız** durumu aynı anda ve bağımsız olarak görünüyor.
+  - Adem'in **Takipçi** sayısı 2 ve **Arkadaşlar** sayısı 2 olarak güncellendi.
+- Sultan Aktivite ekranında **“ADEM baykar arkadaşlık isteğini kabul etti”** kabul bildirimi ulaştı. Böylece arkadaşlık kabul sonucu göndericiye geri bildirim zinciri de cihazda doğrulandı.
+- Temel üçlü model cihazda geçti: takip tek yönlü, arkadaşlık karşılıklı ve mesaj akışı ayrı.
+- Kalan Aktivite temizliği: önceki testte doğrulanan stale cache/manuel refresh sorunu nedeniyle pending kart/sayaç temizliği ayrıca düzeltilecek.
+- Alt alan gözlemi: Profilde Ortak gruplar artık tamamen görünür; ancak hemen altındaki **“Arkadaşlığınız bugün başladı”** kartı mevcut scroll konumunda Android 3 tuşlu gezinme alanına kısmen giriyor. Aktivite ekranında da en alttaki görünen satır kısmen sistem gezinme alanına yaklaşıyor. Gerçek scroll sonu ayrı doğrulanacak; son içerik tamamen yukarı alınabilmeli.
