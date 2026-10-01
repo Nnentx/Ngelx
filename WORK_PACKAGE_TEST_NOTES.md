@@ -1458,3 +1458,14 @@ Bu maddeler Build 359'un çalışan arama/görüntülü arama davranışını bo
 - Temel üçlü model cihazda geçti: takip tek yönlü, arkadaşlık karşılıklı ve mesaj akışı ayrı.
 - Kalan Aktivite temizliği: önceki testte doğrulanan stale cache/manuel refresh sorunu nedeniyle pending kart/sayaç temizliği ayrıca düzeltilecek.
 - Alt alan gözlemi: Profilde Ortak gruplar artık tamamen görünür; ancak hemen altındaki **“Arkadaşlığınız bugün başladı”** kartı mevcut scroll konumunda Android 3 tuşlu gezinme alanına kısmen giriyor. Aktivite ekranında da en alttaki görünen satır kısmen sistem gezinme alanına yaklaşıyor. Gerçek scroll sonu ayrı doğrulanacak; son içerik tamamen yukarı alınabilmeli.
+
+
+## 2026-10-01 — Build 361 uygulama: Aktivite temizliği + belirgin kabul/red + kalan SafeArea
+
+- Build 360 cihaz testinden kalan stale Aktivite cache sorunu düzeltildi. Yardımcı server/cache snapshot artık önce, canlı Firestore stream en son birleştiriliyor; canlı accepted/rejected state eski pending kayıtla ezilmiyor.
+- Takip/arkadaşlık isteği başarıyla sonuçlandırılınca aynı bildirim belgesinin eski cache kopyası yerel listeden anında çıkarılıyor.
+- **Takip İstekleri** ve **Arkadaşlık İstekleri** sekmeleri/sayaçları yalnızca `status == pending` aktif istekleri gösteriyor; accepted/rejected ve legacy kayıtlar sayacı şişirmiyor.
+- Manuel Aktivite yenileme önce gerçek server kaynağını dener; anlık server erişim hatasında normal Firestore fallback kullanır. Başarısız yenileme canlı stream state'ini ezmez.
+- Kullanıcı isteğiyle Aktivite istek kartındaki eylemler belirginleştirildi: **Kabul et = dolu yeşil 44px buton + beyaz ✓**, **Reddet = dolu kırmızı 44px buton + beyaz X**. Kabul/red sonrası tarihsel kartta büyük durum ikonu görünür.
+- Profil, Aktivite, Ortak Gruplar ve Mesaj İstekleri scroll sonundaki Android 3 tuşlu gezinme boşluğu 112px ek güvenli alanla güçlendirildi; Gelen Kutusu 72px, Ayarlar 96px ek güvenli alan kullanıyor.
+- Sürüm: **1.0.140+361**.

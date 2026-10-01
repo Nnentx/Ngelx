@@ -102,8 +102,8 @@ const ngelxPrivateBlueCanvas = Color(0xFFF6FAFF);
 const ngelxPrivateBlueBorder = Color(0xFFD8E8FF);
 const ngelxPrivateBlueInk = Color(0xFF10213A);
 
-const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.139');
-const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '360');
+const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.140');
+const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '361');
 const ngelxGroupBorder = Color(0xFFD9EEE0);
 
 final GlobalKey<NavigatorState> ngelxNavigatorKey=GlobalKey<NavigatorState>();
@@ -9835,7 +9835,7 @@ class _MesajPageState extends State<MesajPage> {
         stream:ben==null?null:FirebaseFirestore.instance.collection('chats').where('members',arrayContains:ben).limit(60).snapshots(),
         builder:(_,s){
           final docs=(s.data?.docs??[]).where((d){final v=d.data();if(List<String>.from(v['hiddenFor']??const[]).contains(ben)||arsivSohbetler.contains(d.id))return false;final members=List<String>.from(v['members']??const[]),grup=v['isGroup']==true||members.length>2;final unread=(v['unread_$ben']??0) as int;if(filtre=='Okunmamış'&&unread==0)return false;if(filtre=='Gruplar'&&!grup)return false;if(!grup){final other=members.firstWhere((x)=>x!=ben,orElse:()=>ben??'');final gelenIstek=v['requestRecipientUid']==ben&&v['requestAccepted_$ben']!=true&&!arkadaslar.contains(other);if(gelenIstek)return false;if(filtre=='Arkadaşlar'&&!arkadaslar.contains(other))return false;}else if(filtre=='Arkadaşlar')return false;final son='${v['groupName']??''} ${v['lastMessage']??''}'.toLowerCase();return sohbetSorgu.isEmpty||son.contains(sohbetSorgu);}).toList()..sort((a,b){final ap=sabitSohbetler.contains(a.id),bp=sabitSohbetler.contains(b.id);if(ap!=bp)return ap?-1:1;final at=a.data()['updatedAt'] as Timestamp?,bt=b.data()['updatedAt'] as Timestamp?;return (bt?.millisecondsSinceEpoch??0).compareTo(at?.millisecondsSinceEpoch??0);});
-          final altBosluk=ngelxAltGuvenliBosluk(context,extra:42);
+          final altBosluk=ngelxAltGuvenliBosluk(context,extra:72);
           if(docs.isEmpty)return ListView(
             physics:const AlwaysScrollableScrollPhysics(),
             padding:EdgeInsets.only(bottom:altBosluk),
@@ -10036,7 +10036,7 @@ class MesajIstekleriPage extends StatelessWidget {
               }).toList();
               if(docs.isEmpty) return Center(child: Text(t('noMessageRequests'), style: const TextStyle(color: Colors.black54)));
               return ListView.builder(
-                padding:EdgeInsets.fromLTRB(12,12,12,ngelxAltGuvenliBosluk(context,extra:72)), itemCount: docs.length,
+                padding:EdgeInsets.fromLTRB(12,12,12,ngelxAltGuvenliBosluk(context,extra:112)), itemCount: docs.length,
                 itemBuilder: (_, i) {
                   final d=docs[i], v=d.data(), m=List<String>.from(v['members'] ?? const []);
                   final other=m.firstWhere((x)=>x!=uid,orElse:()=>uid);
@@ -19698,12 +19698,38 @@ class _AktivitePageState extends State<AktivitePage> {
     final ben=FirebaseAuth.instance.currentUser?.uid;if(ben==null||_aktiviteYenileniyor)return;
     if(mounted)setState(()=>_aktiviteYenileniyor=true);
     try{
-      final q=await FirebaseFirestore.instance.collection('notifications').where('toUid',isEqualTo:ben).limit(200).get(const GetOptions(source:Source.server)).timeout(const Duration(seconds:10));
+      QuerySnapshot<Map<String,dynamic>> q;
+      try{
+        q=await FirebaseFirestore.instance
+            .collection('notifications')
+            .where('toUid',isEqualTo:ben)
+            .limit(200)
+            .get(const GetOptions(source:Source.server))
+            .timeout(const Duration(seconds:10));
+      }catch(_){
+        // Sunucu anlık erişilemezse mevcut Firestore cache/server seçimine düş.
+        // Bu fallback canlı stream'i ezmez; yalnızca yardımcı snapshot listesini tazeler.
+        q=await FirebaseFirestore.instance
+            .collection('notifications')
+            .where('toUid',isEqualTo:ben)
+            .limit(200)
+            .get()
+            .timeout(const Duration(seconds:8));
+      }
       if(!mounted)return;
       setState(()=>_sunucuAktiviteleri=q.docs);
-      if(!sessiz)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(lt('Aktiviteler yenilendi.','Activity refreshed.')),duration:const Duration(milliseconds:1100),behavior:SnackBarBehavior.floating));
+      if(!sessiz)ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content:Text(lt('Aktiviteler yenilendi.','Activity refreshed.')),
+        duration:const Duration(milliseconds:1100),
+        behavior:SnackBarBehavior.floating,
+        margin:EdgeInsets.fromLTRB(16,8,16,ngelxAltGuvenliBosluk(context,extra:8)),
+      ));
     }catch(_){
-      if(mounted&&!sessiz)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(lt('Aktiviteler yenilenemedi.','Activity could not be refreshed.'))));
+      if(mounted&&!sessiz)ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content:Text(lt('Aktiviteler yenilenemedi. Bağlantıyı kontrol edip tekrar dene.','Activity could not be refreshed. Check your connection and try again.')),
+        behavior:SnackBarBehavior.floating,
+        margin:EdgeInsets.fromLTRB(16,8,16,ngelxAltGuvenliBosluk(context,extra:8)),
+      ));
     }finally{
       if(mounted)setState(()=>_aktiviteYenileniyor=false);
     }
@@ -19743,8 +19769,8 @@ class _AktivitePageState extends State<AktivitePage> {
     final grup=(v['targetKind']??'').toString()=='group'||tur=='group'||olay.startsWith('group_');
     if(tur=='message')return false;
     switch(_filtre){
-      case 'follow_requests': return tur=='follow_request';
-      case 'friend_requests': return tur=='friend_request';
+      case 'follow_requests': return tur=='follow_request'&&v['status']=='pending';
+      case 'friend_requests': return tur=='friend_request'&&v['status']=='pending';
       case 'groups': return grup;
       default: return true;
     }
@@ -20031,6 +20057,38 @@ class _AktivitePageState extends State<AktivitePage> {
     }
   }
 
+  Widget _istekEylemButonu({
+    required bool kabul,
+    required VoidCallback? onTap,
+  }){
+    final renk=kabul?const Color(0xFF20B86A):const Color(0xFFE53935);
+    return Tooltip(
+      message:kabul?'Kabul et':'Reddet',
+      child:InkWell(
+        onTap:onTap,
+        borderRadius:BorderRadius.circular(15),
+        child:Container(
+          width:44,
+          height:44,
+          margin:const EdgeInsets.only(left:7),
+          decoration:BoxDecoration(
+            color:renk,
+            borderRadius:BorderRadius.circular(15),
+            border:Border.all(color:Colors.white,width:2),
+            boxShadow:[BoxShadow(color:renk.withValues(alpha:.28),blurRadius:10,offset:const Offset(0,4))],
+          ),
+          alignment:Alignment.center,
+          child:Icon(
+            kabul?Icons.check_rounded:Icons.close_rounded,
+            color:Colors.white,
+            size:29,
+            weight:700,
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> istegiSonuclandir(BuildContext context, QueryDocumentSnapshot<Map<String, dynamic>> belge, bool kabul) async {
     final ben=FirebaseAuth.instance.currentUser?.uid;
     final veri=belge.data();
@@ -20118,6 +20176,9 @@ class _AktivitePageState extends State<AktivitePage> {
 
     try{
       await toplu.commit().timeout(const Duration(seconds:12));
+      if(mounted){
+        setState(()=>_sunucuAktiviteleri.removeWhere((d)=>d.id==belge.id));
+      }
       if(kabul){
         unawaited(uygulamaBildirimiGonder(
           toUid:gonderen,
@@ -20201,8 +20262,10 @@ class _AktivitePageState extends State<AktivitePage> {
             return '$tur|$actor|$hedef|$metin|$zamanKovasi';
           }
           final birlesik=<String,QueryDocumentSnapshot<Map<String,dynamic>>>{};
-          for(final d in s.data?.docs??<QueryDocumentSnapshot<Map<String,dynamic>>>[])birlesik[d.id]=d;
+          // Yardımcı server/cache snapshot önce, canlı stream en son yazılır.
+          // Böylece accepted/rejected gibi yeni state'ler eski pending cache ile ezilmez.
           for(final d in _sunucuAktiviteleri)birlesik[d.id]=d;
+          for(final d in s.data?.docs??<QueryDocumentSnapshot<Map<String,dynamic>>>[])birlesik[d.id]=d;
           final tekilOlay=<String,QueryDocumentSnapshot<Map<String,dynamic>>>{};
           for(final d in birlesik.values){
             final anahtar=bildirimTekrarAnahtari(d),onceki=tekilOlay[anahtar];
@@ -20235,8 +20298,8 @@ class _AktivitePageState extends State<AktivitePage> {
             final v=d.data(),tur=(v['type']??'').toString(),olay=(v['eventKind']??'').toString(),grup=grupMu(v);
             if(tur=='message')return false;
             switch(kod){
-              case 'follow_requests': return tur=='follow_request';
-              case 'friend_requests': return tur=='friend_request';
+              case 'follow_requests': return tur=='follow_request'&&v['status']=='pending';
+              case 'friend_requests': return tur=='friend_request'&&v['status']=='pending';
               case 'groups': return grup;
               default: return true;
             }
@@ -20279,7 +20342,7 @@ class _AktivitePageState extends State<AktivitePage> {
               ?Center(child:Text(t('noActivityInFilter'),style:const TextStyle(color:Colors.black54,fontWeight:FontWeight.w700)))
               :ListView.separated(
                 clipBehavior:Clip.hardEdge,
-                padding:EdgeInsets.fromLTRB(12,14,12,ngelxAltGuvenliBosluk(context,extra:72)),
+                padding:EdgeInsets.fromLTRB(12,14,12,ngelxAltGuvenliBosluk(context,extra:112)),
                 separatorBuilder:(_,__)=>const Divider(height:1,indent:72),
                 itemCount:docs.length,
                 itemBuilder:(_,i){final d=docs[i];
@@ -20306,10 +20369,16 @@ class _AktivitePageState extends State<AktivitePage> {
                 ],
                 Text(zamanKisa(v['createdAt']),style:const TextStyle(color:Colors.black45)),
               ]),
-              trailing: bekliyor ? Wrap(children: [
-                IconButton(onPressed: () => istegiSonuclandir(context, d, true), icon: const Icon(Icons.check, color: Colors.green)),
-                IconButton(onPressed: () => istegiSonuclandir(context, d, false), icon: const Icon(Icons.close, color: Colors.red)),
-              ]) : (v['status'] == 'accepted' ? const Icon(Icons.people, color: Colors.green) : null),
+              trailing: bekliyor
+                ?Row(mainAxisSize:MainAxisSize.min,children:[
+                    _istekEylemButonu(kabul:true,onTap:()=>istegiSonuclandir(context,d,true)),
+                    _istekEylemButonu(kabul:false,onTap:()=>istegiSonuclandir(context,d,false)),
+                  ])
+                :(v['status']=='accepted'
+                    ?const Icon(Icons.check_circle_rounded,color:Color(0xFF20B86A),size:30)
+                    :(v['status']=='rejected'
+                        ?const Icon(Icons.cancel_rounded,color:Color(0xFFE53935),size:30)
+                        :null)),
               onLongPress:()=>_bildirimSec(d.id),
               onTap:()=>_secimModu?_bildirimSec(d.id):_aktiviteAc(context,d),
             ));
@@ -20595,7 +20664,7 @@ class OrtakGruplarPage extends StatelessWidget{
           }).toList();
           if(docs.isEmpty)return const Center(child:Text('Ortak grubunuz yok.',style:TextStyle(color:Colors.black54)));
           return ListView.separated(
-            padding:EdgeInsets.fromLTRB(12,12,12,ngelxAltGuvenliBosluk(context,extra:72)),itemCount:docs.length,separatorBuilder:(_,__)=>const Divider(),
+            padding:EdgeInsets.fromLTRB(12,12,12,ngelxAltGuvenliBosluk(context,extra:112)),itemCount:docs.length,separatorBuilder:(_,__)=>const Divider(),
             itemBuilder:(_,i){
               final d=docs[i],v=d.data(),foto=(v['groupPhotoUrl']??'').toString(),ad=(v['groupName']??lt('Grup','Group')).toString();
               return ListTile(
@@ -20850,7 +20919,7 @@ class _KullaniciProfilPageState extends State<KullaniciProfilPage> {
           final erisimVar = ziyaretciOnizleme
               ? (profilIzni=='all'&&!gizli)
               : (me==uid||(izinVar&&(!gizli||beniTakipEdiyor||arkadaslar.contains(uid))));
-          final altGuvenliAlan=ngelxAltGuvenliBosluk(context,extra:72);
+          final altGuvenliAlan=ngelxAltGuvenliBosluk(context,extra:112);
           return ListView(
             padding:EdgeInsets.fromLTRB(22,22,22,altGuvenliAlan),
             children: [

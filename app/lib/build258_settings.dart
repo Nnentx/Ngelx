@@ -16,7 +16,7 @@ class AyarlarV258Page extends StatelessWidget{
     child:Scaffold(
       appBar:AppBar(title:Text(t('settingsTitle'))),
       body:ListView(
-        padding:EdgeInsets.fromLTRB(14,4,14,ngelxAltGuvenliBosluk(context,extra:64)),
+        padding:EdgeInsets.fromLTRB(14,4,14,ngelxAltGuvenliBosluk(context,extra:96)),
         children:[
         _baslik('HESAP'),
         _satir(context,Icons.manage_accounts_outlined,'Hesap ve profil bilgileri','Ad, kullanıcı adı, e-posta, telefon, doğum tarihi ve şifre',const HesapBilgileriV258Page()),

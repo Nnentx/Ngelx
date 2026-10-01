@@ -1,0 +1,139 @@
+name: Ngel X BUILD 361 ACTIVITY CLEANUP
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - work/build361-activity-cleanup
+    paths:
+      - '.github/workflows/NgelX-BUILD-361-ACTIVITY-CLEANUP.yml'
+      - 'app/lib/main.dart'
+      - 'app/lib/build258_settings.dart'
+      - 'app/pubspec.yaml'
+      - 'WORK_PACKAGE_TEST_NOTES.md'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ngelx-build361-activity-cleanup
+  cancel-in-progress: true
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Kaynaklari al
+        uses: actions/checkout@v4
+        with:
+          ref: work/build361-activity-cleanup
+          fetch-depth: 0
+
+      - name: Build 361 regresyonlarini kontrol et
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          grep -F "version: 1.0.140+361" app/pubspec.yaml
+          grep -F "defaultValue: '1.0.140'" app/lib/main.dart
+          grep -F "defaultValue: '361'" app/lib/main.dart
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path('app/lib/main.dart').read_text(encoding='utf-8')
+          settings=Path('app/lib/build258_settings.dart').read_text(encoding='utf-8')
+
+          # Build 360 sosyal ayrımı korunuyor.
+          assert "sosyalIstekRef(me,uid,'follow_request').snapshots()" in s
+          assert "sosyalIstekRef(me,uid,'friend_request').snapshots()" in s
+          assert "Arkadaşlık isteği bekliyor" in s
+          assert "Takip tek yönlüdür. Arkadaşlık state'ine dokunulmaz." in s
+
+          # Canlı stream cache'den sonra yazılarak stale pending override önleniyor.
+          cache="for(final d in _sunucuAktiviteleri)birlesik[d.id]=d;"
+          live="for(final d in s.data?.docs??<QueryDocumentSnapshot<Map<String,dynamic>>>[])birlesik[d.id]=d;"
+          assert s.index(cache) < s.index(live)
+          assert "removeWhere((d)=>d.id==belge.id)" in s
+
+          # Sadece pending sosyal istekler aktif sayaç/sekmeye giriyor.
+          assert "case 'follow_requests': return tur=='follow_request'&&v['status']=='pending';" in s
+          assert "case 'friend_requests': return tur=='friend_request'&&v['status']=='pending';" in s
+
+          # Belirgin eylem butonları.
+          assert "Widget _istekEylemButonu" in s
+          assert "width:44" in s and "height:44" in s
+          assert "kabul?const Color(0xFF20B86A):const Color(0xFFE53935)" in s
+          assert "Icons.check_rounded:Icons.close_rounded" in s
+
+          # Manuel yenileme fallback.
+          assert "get(const GetOptions(source:Source.server))" in s
+          assert "normal Firestore cache/server seçimine düş" in s
+
+          # Gerçek cihaz alt alan düzeltmeleri.
+          assert s.count("ngelxAltGuvenliBosluk(context,extra:112)") >= 4
+          assert "ngelxAltGuvenliBosluk(context,extra:96)" in settings
+
+          # Önceki arama davranışları korunuyor.
+          assert 'ngelxArkaPlanAramaSakla(' in s
+          assert 'ngelxArkaPlanAramayiGeriAl(widget.roomName)' in s
+          assert 'rotus=widget.goruntulu;' in s
+          print('Build 361 static regression checks OK')
+          PY
+
+      - name: Java 17 kur
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Flutter kur
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Sabit NgelX imza anahtarini geri yukle
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: ngelx-stable-debug-keystore-v1
+          fail-on-cache-miss: true
+
+      - name: Flutter analiz ve test
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter clean
+          flutter pub get
+          flutter analyze --machine > analyze.log 2>&1 || true
+          cat analyze.log
+          if grep -q '^ERROR|' analyze.log; then
+            echo "Flutter analyze ERROR buldu."
+            exit 1
+          fi
+          if [ -d test ]; then flutter test; else echo "Test klasoru yok."; fi
+
+      - name: APK olustur ve imzayi dogrula
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter build apk --release
+          APK=build/app/outputs/flutter-apk/app-release.apk
+          test -s "$APK"
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          "$APKSIGNER" verify --print-certs "$APK" | tee build/app/outputs/flutter-apk/apksigner-certs.txt
+          grep -qi 'be20b27f0ba1f4decd2941d410b1536de89e48dc894f04f038f9d26b11ecd6aa' build/app/outputs/flutter-apk/apksigner-certs.txt
+          sha256sum "$APK" > "$APK.sha256"
+
+      - name: APK yukle
+        uses: actions/upload-artifact@v4
+        with:
+          name: NgelX-1.0.140-Build-361-ACTIVITY-CLEANUP
+          path: |
+            app/build/app/outputs/flutter-apk/app-release.apk
+            app/build/app/outputs/flutter-apk/app-release.apk.sha256
+            app/build/app/outputs/flutter-apk/apksigner-certs.txt
+          if-no-files-found: error
+          retention-days: 14
