@@ -1502,3 +1502,13 @@ Build 362 cihaz ekranlarında alt sistem çubuğunun bazı ekranlarda hâlâ iç
 - Takip İstekleri sayacı önceki 6 değerinden **2**'ye, Arkadaşlık İstekleri **1**'e indi; accepted/rejected geçmiş kayıtların aktif pending sayacından ayrılması cihazda gözle görülür biçimde çalışıyor.
 - Eski kabul edilmiş takip/arkadaşlık kayıtları Tümü geçmişinde yeşil durum ikonu ile kalıyor; legacy reddedilmiş “Yeni takip isteğin var” kaydı kırmızı durum ikonu ile geçmişte görünüyor.
 - Alt viewport taşması Build 362 ekranında hâlâ gözlenebiliyor; bu nedenle Build 363'te minimum 64dp sistem rezervi uygulanıyor.
+
+
+## 2026-10-01 — Grup arama Aktivite bildirimi yönlendirmesi
+
+- Kullanıcı testi: **“selamm grubunda Sultan Sultan sesli arama başlattı/katıldı”** türü Aktivite kaydına dokununca uygulama doğrudan eski grup arama ekranını açıyordu.
+- İstenen davranış uygulandı: grup çağrısı Aktivite bildirimi artık **önce ilgili grup sohbetini açar**.
+- Aktivite bildirimi hiçbir grup çağrısına otomatik katılım başlatmaz.
+- Kullanıcı sesli/görüntülü aramaya katılmak isterse grup sohbetindeki aktif arama kartı / arama kontrolü üzerinden kendisi katılır.
+- `targetKind == group` olan çağrı bildirimlerinin yanı sıra legacy `group_audio_call` ve `group_video_call` eventKind kayıtları da aynı güvenli grup yönlendirmesine dahil edildi.
+- Özel 1:1 çağrı bildirimlerinin mevcut doğrudan çağrı davranışı değişmedi.
