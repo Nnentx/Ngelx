@@ -24,7 +24,7 @@ Future<void> ngelxSesliOdayaKatil(BuildContext context,String odaId)async{
     final gizlilik=(v['visibility']??'public').toString(),owner=(v['ownerId']??'').toString();
     final yasaklilar=List<String>.from(v['bannedUserIds']??const[]);
     if(yasaklilar.contains(user.uid)){
-      if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Oda sahibi bu odaya tekrar girişini engelledi.')));
+      if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('ADMIN bu odaya tekrar girişini engelledi.')));
       return;
     }
     if(gizlilik!='public'&&owner!=user.uid){
@@ -281,7 +281,7 @@ class _SesliOdaPageState extends State<SesliOdaPage>{
     try{await aktifOda.localParticipant?.setMicrophoneEnabled(false);}catch(_){}
     try{await aktifOda.disconnect();}catch(_){}
     if(mounted){
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(yasakli?'Oda sahibi bu odaya tekrar girişini engelledi.':'Oda sahibi seni odadan çıkardı.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(yasakli?'ADMIN bu odaya tekrar girişini engelledi.':'ADMIN veya yönetici seni odadan çıkardı.')));
       Navigator.pop(context);
     }
   }
@@ -455,6 +455,16 @@ class _SesliOdaPageState extends State<SesliOdaPage>{
     );
     kucultulmus=false;
     ngelxSesliMiniTemizle(widget.odaId);
+    if(!bitti&&!kapatiliyor){
+      if(!bagli){
+        await tekrarBaglan();
+      }else if(konusmaciyim&&mikrofonTercihi&&!mikrofon){
+        try{
+          await aktifOda.localParticipant?.setMicrophoneEnabled(true);
+          if(mounted)setState(()=>mikrofon=true);
+        }catch(_){unawaited(tekrarBaglan());}
+      }
+    }
   }
   Future<void> bitir()async{
     ngelxSesliMiniTemizle(widget.odaId);
@@ -495,7 +505,73 @@ class _SesliOdaPageState extends State<SesliOdaPage>{
     try{await aktifOda.disconnect();}catch(_){}
     if(mounted)Navigator.pop(context);
   }
-  Widget koltuk(String id){if(id.isEmpty)return Container(decoration:BoxDecoration(color:const Color(0xFFF8F6FA),borderRadius:BorderRadius.circular(18)),child:const Column(mainAxisAlignment:MainAxisAlignment.center,children:[CircleAvatar(backgroundColor:Color(0xFFEDEAF0),child:Icon(Icons.add,color:Colors.black26)),SizedBox(height:5),Text('Boş',style:TextStyle(color:Colors.black38,fontSize:11))]));return StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(stream:FirebaseFirestore.instance.collection('users').doc(id).snapshots(),builder:(_,s){final p=s.data?.data()??<String,dynamic>{},foto=(p['photoUrl']??'').toString(),ad=(p['displayName']??p['username']??(id==widget.ownerId?'Oda sahibi':'Konuşmacı')).toString();return Container(padding:const EdgeInsets.all(8),decoration:BoxDecoration(color:const Color(0xFFF8F4FD),borderRadius:BorderRadius.circular(18),border:Border.all(color:id==widget.ownerId?mor:const Color(0xFFEAE3F2))),child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[CircleAvatar(radius:24,backgroundImage:foto.isEmpty?null:NgelXAgImageProvider(foto),child:foto.isEmpty?const Icon(Icons.person,color:mor):null),const SizedBox(height:5),Text(ad,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black87,fontSize:10.5,fontWeight:FontWeight.w900)),Text(id==widget.ownerId?'SAHİP':'KONUŞMACI',style:TextStyle(fontSize:8,color:id==widget.ownerId?mor:Colors.black38,fontWeight:FontWeight.w900))]));});}
+  dynamic _liveKitKatilimci(String id){
+    if(id.isEmpty)return null;
+    if(id==uid)return aktifOda.localParticipant;
+    for(final p in aktifOda.remoteParticipants.values){
+      if(p.identity==id)return p;
+    }
+    return null;
+  }
+
+  Widget koltuk(String id,{String mesaj=''}){
+    if(id.isEmpty)return Container(
+      decoration:BoxDecoration(color:const Color(0xFFF8F6FA),borderRadius:BorderRadius.circular(18),border:Border.all(color:const Color(0xFFECE7F0))),
+      child:const Column(mainAxisAlignment:MainAxisAlignment.center,children:[
+        CircleAvatar(backgroundColor:Color(0xFFEDEAF0),child:Icon(Icons.add,color:Colors.black26)),
+        SizedBox(height:5),
+        Text('Boş',style:TextStyle(color:Colors.black38,fontSize:11)),
+      ]),
+    );
+    final dynamic lkKisi=_liveKitKatilimci(id);
+    final konusuyor=lkKisi?.isSpeaking==true;
+    final micAcik=id==uid?mikrofon:(lkKisi?.isMicrophoneEnabled()==true);
+    final admin=id==widget.ownerId;
+    final yonetici=moderatorler.contains(id);
+    final rol=admin?'ADMIN':yonetici?'YÖNETİCİ':'KONUŞMACI';
+    final rolRenk=admin?Colors.red:yonetici?const Color(0xFFFF8A00):mor;
+    return StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
+      stream:FirebaseFirestore.instance.collection('users').doc(id).snapshots(),
+      builder:(_,s){
+        final p=s.data?.data()??<String,dynamic>{},foto=(p['photoUrl']??'').toString(),ad=(p['displayName']??p['username']??(admin?'ADMIN':'Konuşmacı')).toString();
+        return Container(
+          padding:const EdgeInsets.all(7),
+          decoration:BoxDecoration(
+            color:const Color(0xFFF8F4FD),
+            borderRadius:BorderRadius.circular(18),
+            border:Border.all(color:konusuyor?const Color(0xFF22C55E):rolRenk.withValues(alpha:admin?1:.45),width:konusuyor?2.5:1.2),
+            boxShadow:konusuyor?const [BoxShadow(color:Color(0x3322C55E),blurRadius:12,spreadRadius:1)]:null,
+          ),
+          child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[
+            Stack(clipBehavior:Clip.none,children:[
+              CircleAvatar(radius:24,backgroundImage:foto.isEmpty?null:NgelXAgImageProvider(foto),child:foto.isEmpty?Icon(Icons.person,color:rolRenk):null),
+              Positioned(
+                right:-4,bottom:-3,
+                child:Container(
+                  width:19,height:19,
+                  decoration:BoxDecoration(color:micAcik?const Color(0xFF22C55E):Colors.red,shape:BoxShape.circle,border:Border.all(color:Colors.white,width:2)),
+                  child:Icon(micAcik?Icons.mic_rounded:Icons.mic_off_rounded,color:Colors.white,size:11),
+                ),
+              ),
+            ]),
+            const SizedBox(height:5),
+            Text(ad,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black87,fontSize:10.5,fontWeight:FontWeight.w900)),
+            Text(rol,style:TextStyle(fontSize:8,color:rolRenk,fontWeight:FontWeight.w900)),
+            if(mesaj.isNotEmpty)...[
+              const SizedBox(height:4),
+              Container(
+                constraints:const BoxConstraints(maxWidth:105),
+                padding:const EdgeInsets.symmetric(horizontal:7,vertical:4),
+                decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(10),border:Border.all(color:const Color(0xFFE7E1EB))),
+                child:Text(mesaj,maxLines:2,overflow:TextOverflow.ellipsis,textAlign:TextAlign.center,style:const TextStyle(color:Colors.black87,fontSize:9.5,fontWeight:FontWeight.w700)),
+              ),
+            ],
+          ]),
+        );
+      },
+    );
+  }
+
   @override Widget build(BuildContext context){final sp=speakers.isEmpty?[widget.ownerId]:speakers;final sayfa=Scaffold(backgroundColor:Colors.white,appBar:AppBar(backgroundColor:Colors.white,foregroundColor:Colors.black,leading:IconButton(tooltip:'Küçült',onPressed:kucult,icon:const Icon(Icons.keyboard_arrow_down_rounded)),title:const Text('Sesli',style:TextStyle(fontWeight:FontWeight.w900))),body:SafeArea(child:Column(children:[
     if(durum.isNotEmpty&&!bitti)InkWell(onTap:!yeniden&&!bitti?()=>unawaited(tekrarBaglan()):null,child:Container(width:double.infinity,padding:const EdgeInsets.all(9),color:const Color(0xFFFFF5D9),child:Row(mainAxisAlignment:MainAxisAlignment.center,children:[Icon(bitti?Icons.stop_circle_outlined:Icons.wifi_off_rounded,size:18,color:bitti?Colors.redAccent:Colors.black54),const SizedBox(width:7),Flexible(child:Text(durum,textAlign:TextAlign.center,style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w800)))]))),
     if(sahibiyim&&aktifKisiSayisi<2&&yalnizlikBasladi!=null&&!bitti)
@@ -518,9 +594,47 @@ class _SesliOdaPageState extends State<SesliOdaPage>{
     child:Container(padding:const EdgeInsets.symmetric(horizontal:12,vertical:8),decoration:BoxDecoration(border:Border.all(color:const Color(0xFFD5CEDD)),borderRadius:BorderRadius.circular(20)),child:const Row(mainAxisSize:MainAxisSize.min,children:[Icon(Icons.add_reaction_outlined,size:18,color:mor),SizedBox(width:6),Text('Tepki',style:TextStyle(color:Colors.black87,fontWeight:FontWeight.w700))])),
   ),
   OutlinedButton.icon(onPressed:()=>ngelxSesliPaylas(context,widget.odaId,(veri['title']??widget.baslik).toString()),icon:const Icon(Icons.ios_share_rounded,size:18),label:const Text('Davet')),
-]),const SizedBox(height:14),Row(children:[const Text('Sahne',style:TextStyle(fontSize:18,fontWeight:FontWeight.w900)),const Spacer(),if(yoneticiyim&&!bitti)TextButton.icon(onPressed:istekler,icon:const Icon(Icons.pan_tool_alt,size:16),label:const Text('İstekler'))]),GridView.builder(shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),gridDelegate:const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount:3,crossAxisSpacing:8,mainAxisSpacing:8,childAspectRatio:.9),itemCount:ngelxSesliMaksKonusmaci,itemBuilder:(_,i)=>koltuk(i<sp.length?sp[i]:'')),if(!konusmaciyim&&!bitti)...[const SizedBox(height:14),FilledButton.icon(style:FilledButton.styleFrom(backgroundColor:const Color(0xFFF0E8FF),foregroundColor:mor),onPressed:sozIste,icon:const Icon(Icons.pan_tool_alt_rounded),label:const Text('Söz iste'))],if(bitti)...[const SizedBox(height:14),const Text('Bu sesli oda sona erdi.',style:TextStyle(color:Colors.redAccent,fontWeight:FontWeight.w900))]])),NgelxSesliInlineSohbet(roomId:widget.odaId,yonetici:yoneticiyim,sahibiyim:sahibiyim,bitti:bitti),Container(padding:const EdgeInsets.all(12),decoration:const BoxDecoration(border:Border(top:BorderSide(color:Color(0xFFEDE8F2)))),child:bitti
-  ?FilledButton.icon(style:FilledButton.styleFrom(backgroundColor:Colors.red,minimumSize:const Size.fromHeight(50)),onPressed:()=>Navigator.pop(context),icon:const Icon(Icons.close_rounded),label:const Text('Kapat',style:TextStyle(fontWeight:FontWeight.w900)))
-  :Row(children:[Expanded(child:FilledButton.icon(style:FilledButton.styleFrom(backgroundColor:konusmaciyim&&mikrofon?mor:const Color(0xFFF0E8FF),foregroundColor:konusmaciyim&&mikrofon?Colors.white:mor),onPressed:konusmaciyim&&bagli?mic:null,icon:Icon(mikrofon?Icons.mic:Icons.mic_off),label:Text(!bagli?'Bağlantı bekleniyor':konusmaciyim?(mikrofon?'Mikrofon açık':'Mikrofon kapalı'):'Dinleyici'))),const SizedBox(width:8),OutlinedButton.icon(style:OutlinedButton.styleFrom(foregroundColor:Colors.red,side:const BorderSide(color:Colors.redAccent)),onPressed:ayril,icon:Icon(sahibiyim?Icons.stop_circle:Icons.logout),label:Text(sahibiyim?'Bitir':'Ayrıl',style:const TextStyle(fontWeight:FontWeight.w900)))]))])));
+]),const SizedBox(height:14),Row(children:[const Text('Sahne',style:TextStyle(fontSize:18,fontWeight:FontWeight.w900)),const Spacer(),if(yoneticiyim&&!bitti)TextButton.icon(onPressed:istekler,icon:const Icon(Icons.pan_tool_alt,size:16),label:const Text('İstekler'))]),StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
+  stream:FirebaseFirestore.instance.collection('audio_rooms').doc(widget.odaId).collection('messages').orderBy('createdAt',descending:true).limit(40).snapshots(),
+  builder:(_,ms){
+    final son=<String,String>{};
+    for(final d in ms.data?.docs??const <QueryDocumentSnapshot<Map<String,dynamic>>>[]){
+      final v=d.data(),k=(v['userId']??'').toString(),t=(v['text']??'').toString().trim();
+      if(k.isNotEmpty&&t.isNotEmpty&&!son.containsKey(k))son[k]=t.length>42?t.substring(0,42)+'…':t;
+    }
+    final gorunen=(sp.length+(sp.length<ngelxSesliMaksKonusmaci?1:0)).clamp(3,ngelxSesliMaksKonusmaci);
+    return GridView.builder(
+      shrinkWrap:true,
+      physics:const NeverScrollableScrollPhysics(),
+      gridDelegate:const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount:3,crossAxisSpacing:8,mainAxisSpacing:8,childAspectRatio:.78),
+      itemCount:gorunen,
+      itemBuilder:(_,i){
+        final id=i<sp.length?sp[i]:'';
+        return koltuk(id,mesaj:id.isEmpty?'':(son[id]??''));
+      },
+    );
+  },
+),if(!konusmaciyim&&!bitti)...[const SizedBox(height:14),FilledButton.icon(style:FilledButton.styleFrom(backgroundColor:const Color(0xFFF0E8FF),foregroundColor:mor),onPressed:sozIste,icon:const Icon(Icons.pan_tool_alt_rounded),label:const Text('Söz iste'))],if(bitti)...[const SizedBox(height:14),const Text('Bu sesli oda sona erdi.',style:TextStyle(color:Colors.redAccent,fontWeight:FontWeight.w900))]])),Container(
+  padding:const EdgeInsets.fromLTRB(12,9,12,9),
+  decoration:const BoxDecoration(color:Color(0xFFFDFBFF),border:Border(top:BorderSide(color:Color(0xFFEDE8F2)),bottom:BorderSide(color:Color(0xFFEDE8F2)))),
+  child:bitti
+    ?FilledButton.icon(style:FilledButton.styleFrom(backgroundColor:Colors.red,minimumSize:const Size.fromHeight(48)),onPressed:()=>Navigator.pop(context),icon:const Icon(Icons.close_rounded),label:const Text('Kapat',style:TextStyle(fontWeight:FontWeight.w900)))
+    :Row(children:[
+      Expanded(child:FilledButton.icon(
+        style:FilledButton.styleFrom(backgroundColor:konusmaciyim&&mikrofon?mor:const Color(0xFFF0E8FF),foregroundColor:konusmaciyim&&mikrofon?Colors.white:mor),
+        onPressed:konusmaciyim?(bagli?mic:()=>unawaited(tekrarBaglan())):null,
+        icon:Icon(!bagli?Icons.refresh_rounded:(mikrofon?Icons.mic:Icons.mic_off)),
+        label:Text(!bagli?(konusmaciyim?'Yeniden bağlan':'Bağlantı bekleniyor'):konusmaciyim?(mikrofon?'Mikrofon açık':'Mikrofon kapalı'):'Dinleyici'),
+      )),
+      const SizedBox(width:8),
+      OutlinedButton.icon(
+        style:OutlinedButton.styleFrom(foregroundColor:Colors.red,side:const BorderSide(color:Colors.redAccent)),
+        onPressed:ayril,
+        icon:Icon(sahibiyim?Icons.stop_circle:Icons.logout),
+        label:Text(sahibiyim?'Bitir':'Ayrıl',style:const TextStyle(fontWeight:FontWeight.w900)),
+      ),
+    ]),
+),NgelxSesliInlineSohbet(roomId:widget.odaId,yonetici:yoneticiyim,sahibiyim:sahibiyim,bitti:bitti)])));
     return PopScope(canPop:false,onPopInvokedWithResult:(didPop,result){if(!didPop)unawaited(kucult());},child:sayfa);
   }
   @override void dispose(){kapatiliyor=true;heartbeat?.cancel();yalnizlikTimer?.cancel();abonelik?.cancel();katilimAboneligi?.cancel();odaKatilimAboneligi?.cancel();aktifOda.removeListener(odaDegisti);final ben=uid;if(ben!=null&&!bitti)unawaited(ngelxSesliKatilimciAyril(widget.odaId,ben));if(!widget.yayinSahibi)unawaited(aktifOda.disconnect());unawaited(aktifOda.dispose());super.dispose();}
