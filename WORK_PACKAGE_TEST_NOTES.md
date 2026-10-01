@@ -1292,3 +1292,18 @@ Cihaz testinde görülen eksikler Build 358 dalında kodlandı:
 - **Aktivite:** Bildirim listesinin ilk satırı üstteki filtre sekmelerinin altına girip kısmen kesiliyor. Liste başlangıcına filtre bar yüksekliğini/SafeArea'yı dikkate alan üst boşluk eklenmeli.
 - Bu iki sorun sonraki düzeltme paketinde birlikte ele alınacak ve 3 tuşlu Android gezinmede yeniden test edilecek.
 
+## 2026-10-01 — Build 359 tek paket: sosyal istek + kalan SafeArea düzeltmeleri
+
+Build 358 cihaz testinde açık kalan maddeler tek pakette ele alındı; Build 358'de geçen sesli/görüntülü arama yapısı korunuyor.
+
+- **Takip isteği / arkadaşlık isteği:** sosyal istek gönderimindeki deterministic bildirim belgesini önceden `get()` ile okuma kaldırıldı. Firestore bildirim kuralları olmayan belgeyi sahiplik kuralıyla okuyamadığı için oluşabilen `permission-denied` yolu kapatıldı.
+- Bekleyen sosyal istek kontrolü artık yalnızca kullanıcının okuyabildiği tek-alanlı `fromUid` / `toUid` sorguları üzerinden yapılıyor; yeni istek benzersiz notification belgesi olarak oluşturuluyor.
+- Profilde takip/arkadaşlık durum stream'leri tek-alanlı sorguya geçirildi; hedef UID ve istek tipi istemci tarafında mevcut helper ile filtreleniyor.
+- İstek kabul akışındaki gereksiz çok-alanlı sorgu kaldırıldı; alıcıya ait bildirimler okunup gönderici/tür yerelde filtreleniyor.
+- **Ayarlar ve gizlilik:** ana ayarlar listesine gerçek Android alt `viewPadding` değeri eklendi.
+- **Aktivite:** filtre şeridi ile ilk bildirim arasındaki boşluk artırıldı; listenin üst padding'i ve clip davranışı netleştirildi.
+- **Gelen Kutusu:** sohbet listesine alt NavigationBar/sistem gezinme alanı için ek dinamik bottom padding eklendi.
+- **Mesaj İstekleri:** Kabul et işlemi timeout + hata yönetimi, accepted/rejected tutarlılığı ve başarıdan sonra doğrudan sohbet ekranına geçişle sağlamlaştırıldı.
+- Build 358'de geçen arama geri tuşu, arka planda görüşme, sesli/görüntülü doğru bant, rötuş, özel bağlantı ve arama state-race korumaları değiştirilmeden korunacak.
+- Sürüm: `1.0.138+359`.
+
