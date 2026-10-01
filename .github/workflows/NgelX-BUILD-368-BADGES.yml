@@ -1,4 +1,4 @@
-name: Ngel X BUILD 368 BADGES
+name: Ngel X BUILD 368 BADGES SOCIAL AI EFFECTS
 
 on:
   workflow_dispatch:
@@ -8,6 +8,7 @@ on:
     paths:
       - '.github/workflows/NgelX-BUILD-368-BADGES.yml'
       - 'app/lib/main.dart'
+      - 'app/lib/camera_studio.dart'
       - 'app/pubspec.yaml'
       - 'WORK_PACKAGE_TEST_NOTES.md'
 
@@ -52,11 +53,35 @@ jobs:
           assert "v['requestAccepted_$ben']!=true" in main
           assert "v['requestRejected_$ben']!=true" in main
 
+          # Eski/yeni hesap ayrımı yok: yeni kayıt aynı şema ile başlıyor.
+          assert "'settingsSchemaVersion': 368" in main
+          assert "patch['settingsSchemaVersion']=368" in main
+          for field in [
+              "'followers': <String>[]",
+              "'following': <String>[]",
+              "'friends': <String>[]",
+              "'friendNotifications': true",
+              "'notificationsEnabled': true",
+              "'messagePermission': 'all'",
+          ]:
+              assert field in main
+          assert "dedupeKey:'social_" in main
+          assert "tur:takipIstegi?'follow_accepted':'friend_accepted'" in main
+          assert "tur=='follow_request'||tur=='friend_request'" in main
+
           # Önceki mesaj/aktivite regresyonları korunuyor.
           assert "if(gelenIstek)continue;" in main
           assert "if(!ngelxAktiviteBildirimiGosterilir(v))return false;" in main
           assert "Future<void> ngelxKullaniciSemasiniTamamla(User user)" in main
 
+          camera=Path('app/lib/camera_studio.dart').read_text(encoding='utf-8')
+          pubspec=Path('app/pubspec.yaml').read_text(encoding='utf-8')
+          assert "google_mlkit_face_detection: ^0.15.1" in pubspec
+          assert "FaceDetector _yuzAlgilayici" in camera
+          assert "_ngelxYuzBolgeselRetus" in camera
+          assert "_ngelxTenPikseli" in camera
+          assert "InputImage.fromFilePath" in camera
+          assert "'aiFaceRetouch':_sonYuzSayisi>0" in camera
           print('Build 368 static checks OK')
           PY
 
@@ -110,7 +135,7 @@ jobs:
       - name: APK yukle
         uses: actions/upload-artifact@v4
         with:
-          name: NgelX-1.0.147-Build-368-BADGES
+          name: NgelX-1.0.147-Build-368-BADGES-SOCIAL-AI-EFFECTS
           path: |
             app/build/app/outputs/flutter-apk/app-release.apk
             app/build/app/outputs/flutter-apk/app-release.apk.sha256
