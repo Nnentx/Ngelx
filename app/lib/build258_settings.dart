@@ -15,7 +15,9 @@ class AyarlarV258Page extends StatelessWidget{
     data:ThemeData.light().copyWith(scaffoldBackgroundColor:Colors.white,appBarTheme:const AppBarTheme(backgroundColor:Colors.white,foregroundColor:Colors.black,elevation:0)),
     child:Scaffold(
       appBar:AppBar(title:Text(t('settingsTitle'))),
-      body:ListView(padding:const EdgeInsets.fromLTRB(14,4,14,30),children:[
+      body:ListView(
+        padding:EdgeInsets.fromLTRB(14,4,14,30+MediaQuery.viewPaddingOf(context).bottom),
+        children:[
         _baslik('HESAP'),
         _satir(context,Icons.manage_accounts_outlined,'Hesap ve profil bilgileri','Ad, kullanıcı adı, e-posta, telefon, doğum tarihi ve şifre',const HesapBilgileriV258Page()),
         _satir(context,Icons.switch_account_rounded,t('switchAccount'),t('switchAccountSub'),const HesapDegistirPage()),
