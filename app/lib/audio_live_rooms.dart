@@ -57,6 +57,7 @@ Future<void> ngelxSesliEskiOdayiKapat(String uid,String roomId)async{
       'active':false,
       'endedAt':FieldValue.serverTimestamp(),
       'endReason':'replaced_by_new_room',
+      'musicPlaying':false,
     },SetOptions(merge:true));
   }catch(_){}
   await ngelxSesliSahipKilidiniBirak(uid,roomId);
@@ -364,6 +365,7 @@ class _SesliOdaPageState extends State<SesliOdaPage> with WidgetsBindingObserver
         'endedAt':FieldValue.serverTimestamp(),
         'durationSeconds':sure<0?0:sure,
         'endReason':'not_enough_participants',
+        'musicPlaying':false,
         'autoClosed':true,
         'minParticipantsRequired':2,
         'autoCloseAfterSeconds':600,
@@ -601,7 +603,7 @@ class _SesliOdaPageState extends State<SesliOdaPage> with WidgetsBindingObserver
     kapatiliyor=true;heartbeat?.cancel();yalnizlikTimer?.cancel();
     final bas=veri['startedAt'];
     final sure=bas is Timestamp?DateTime.now().difference(bas.toDate()).inSeconds:0;
-    await FirebaseFirestore.instance.collection('audio_rooms').doc(widget.odaId).set({'active':false,'endedAt':FieldValue.serverTimestamp(),'durationSeconds':sure<0?0:sure,'endReason':'host_ended'},SetOptions(merge:true));
+    await FirebaseFirestore.instance.collection('audio_rooms').doc(widget.odaId).set({'active':false,'endedAt':FieldValue.serverTimestamp(),'durationSeconds':sure<0?0:sure,'endReason':'host_ended','musicPlaying':false},SetOptions(merge:true));
     final ben=uid;
     if(ben!=null){
       await ngelxSesliSahipKilidiniBirak(ben,widget.odaId);
