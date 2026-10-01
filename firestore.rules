@@ -571,7 +571,8 @@ service cloud.firestore {
         );
         allow create: if isMe(uid)
           && request.resource.data.get('userId', '') == request.auth.uid
-          && request.resource.data.get('status', '') == 'pending';
+          && request.resource.data.get('status', '') == 'pending'
+          && !(request.auth.uid in get(/databases/$(database)/documents/audio_rooms/$(roomId)).data.get('bannedUserIds', []));
         allow update: if signedIn() && (
           (
             isMe(uid)
@@ -590,6 +591,7 @@ service cloud.firestore {
         allow read: if signedIn();
         allow create: if isMe(uid)
           && request.resource.data.get('userId', '') == request.auth.uid
+          && !(request.auth.uid in get(/databases/$(database)/documents/audio_rooms/$(roomId)).data.get('bannedUserIds', []))
           && (
             request.resource.data.get('role', 'listener') == 'listener'
             || get(/databases/$(database)/documents/audio_rooms/$(roomId)).data.get('ownerId', '') == request.auth.uid
@@ -609,7 +611,10 @@ service cloud.firestore {
         allow create: if signedIn()
           && request.resource.data.get('userId', '') == request.auth.uid
           && request.resource.data.get('text', '') is string
-          && request.resource.data.get('text', '').size() <= 600;
+          && request.resource.data.get('text', '').size() <= 600
+          && get(/databases/$(database)/documents/audio_rooms/$(roomId)).data.get('active', false) == true
+          && !(request.auth.uid in get(/databases/$(database)/documents/audio_rooms/$(roomId)).data.get('chatMutedUserIds', []))
+          && !(request.auth.uid in get(/databases/$(database)/documents/audio_rooms/$(roomId)).data.get('bannedUserIds', []));
         allow update: if signedIn()
           && (
             get(/databases/$(database)/documents/audio_rooms/$(roomId)).data.get('ownerId', '') == request.auth.uid
