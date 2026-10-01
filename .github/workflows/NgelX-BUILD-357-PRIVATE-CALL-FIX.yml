@@ -113,7 +113,11 @@ jobs:
             echo "Flutter analyze ERROR buldu."
             exit 1
           fi
-          flutter test
+          if [ -d test ]; then
+            flutter test
+          else
+            echo "Test klasoru yok; Flutter test adimi atlandi."
+          fi
 
       - name: APK olustur ve imzayi dogrula
         shell: bash
