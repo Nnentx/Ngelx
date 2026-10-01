@@ -1253,3 +1253,19 @@
 - Üst bar yalnızca geri, grup bilgisi/profil, sesli arama, görüntülü arama ve bilgi/ayar kontrollerini taşıyacak.
 - Grup sohbetindeki manuel yenileme ihtiyacı varsa **aşağı çekerek yenileme (pull-to-refresh)** üzerinden devam edecek; arama ikonlarının yanında ayrı yenileme butonu olmayacak.
 - Gelen Kutusu ve uygun liste ekranlarındaki manuel yenileme ayrı kalacak; bu değişiklik yalnızca grup sohbeti üst barını sadeleştirir.
+
+## 2026-10-01 — Alt SafeArea / ekran sonu taşmaları
+
+Cihaz testinde üç ayrı ekranda alt bölümün Android sistem gezinme alanına fazla yaklaşması / kısmen taşması görüldü:
+
+- **Aktivite** ekranı: Listenin en alttaki aktivite kartı Android sistem gezinme çubuğunun altına giriyor ve kısmen kesiliyor.
+- **Başka kullanıcı profili** ekranı: Alt gönderi gridinin ilk satırı ve ekran sonu sistem gezinme alanına fazla yaklaşıyor; güvenli alt boşluk yetersiz.
+- **Mesaj İstekleri** ekranı: Sayfanın alt sınırı sistem gezinme alanına yaslanıyor; ekran sonu SafeArea davranışı diğer beyaz sayfalarla tutarlı değil.
+
+Düzeltme hedefi:
+- İlgili Scaffold/scrollable yapılarda gerçek **SafeArea bottom inset** kullanılacak.
+- Liste/Grid sonuna cihazın `MediaQuery.viewPadding.bottom` / `padding.bottom` değerini dikkate alan dinamik alt boşluk eklenecek.
+- Sabit piksel ile cihaz navigasyon tipini varsaymak yerine jest gezinme ve 3 tuşlu Android gezinme birlikte desteklenmeli.
+- Alt içerik sistem çubuğunun arkasında kalmamalı, son kart/öğe tamamen görünür ve kaydırılabilir olmalı.
+- Aktivite, Profil ve Mesaj İstekleri ekranları küçük ekran + klasik 3 tuşlu Android navigasyon ile yeniden test edilecek.
+
