@@ -1539,3 +1539,11 @@ Build 362 cihaz ekranlarında alt sistem çubuğunun bazı ekranlarda hâlâ iç
 - Sohbet normal 1:1 ekranında açılıyor; bu görüntüde mesaj isteği önizleme/istek kabul-red arayüzü yok.
 - Mesaj yazma kutusu Android 3 tuşlu gezinme alanının üstünde ve kesilmeden kullanılabilir görünüyor.
 - Gelen Kutusu liste ekranındaki okunmamış rozeti bu görüntüde görünmediği için unread sayaç doğrulaması ayrı testte yapılacak.
+
+
+## 2026-10-01 — Unread sayaç düzeltme notu
+
+- İlk Gelen Kutusu görüntüsünde Sultan sohbetinde kırmızı **5** rozeti görünüyordu; bu görüntü sohbet açılmadan önceki unread state idi.
+- Sohbet açılıp geri dönüldükten sonra cihazda sayaç doğru şekilde **5 → 0** düştü.
+- Üstteki **Mesajlar** toplam sayacı da **0** oldu; Sultan satırındaki kırmızı rozet kayboldu.
+- Sonuç: 1:1 sohbet için okundu/unread sıfırlama akışı cihazda çalışıyor; bu konuda ek kod düzeltmesi gerekmiyor.
