@@ -1469,3 +1469,17 @@ Bu maddeler Build 359'un çalışan arama/görüntülü arama davranışını bo
 - Kullanıcı isteğiyle Aktivite istek kartındaki eylemler belirginleştirildi: **Kabul et = dolu yeşil 44px buton + beyaz ✓**, **Reddet = dolu kırmızı 44px buton + beyaz X**. Kabul/red sonrası tarihsel kartta büyük durum ikonu görünür.
 - Profil, Aktivite, Ortak Gruplar ve Mesaj İstekleri scroll sonundaki Android 3 tuşlu gezinme boşluğu 112px ek güvenli alanla güçlendirildi; Gelen Kutusu 72px, Ayarlar 96px ek güvenli alan kullanıyor.
 - Sürüm: **1.0.140+361**.
+
+
+## 2026-10-01 — Build 362: gerçek Android alt taşma final düzeltmesi
+
+Build 359/360 cihaz ekran görüntülerinde görülen alt sistem çubuğu taşmaları yalnızca scroll padding artırılarak değil, yapısal SafeArea ile kapatıldı.
+
+- **Aktivite:** son bildirim kartı Android 3 tuşlu gezinme alanının altına çizilmeyecek.
+- **Başka kullanıcı profili:** Ortak gruplar ve “Arkadaşlığınız bugün başladı” gibi alt kartlar sistem navigasyonunun arkasına girmeyecek.
+- **Ortak Gruplar:** son grup satırı tamamen görünür ve dokunulabilir olacak.
+- **Mesaj İstekleri:** uzun listede son kart için aynı fiziksel SafeArea rezervi eklendi.
+- **Ayarlar ve gizlilik:** son ayar/çıkış satırları Android sistem gezinme alanının üstünde tutulacak.
+- Önceki 112px/96px büyük scroll boşlukları kaldırıldı; SafeArea fiziksel alanı ayırırken içerikte 36px görsel nefes boşluğu bırakıldı.
+- Build 361'deki belirgin **yeşil ✓ Kabul / kırmızı X Reddet**, Aktivite cache düzeltmesi ve pending sayaç mantığı korunuyor.
+- Sürüm: **1.0.141+362**.

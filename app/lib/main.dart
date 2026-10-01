@@ -102,8 +102,8 @@ const ngelxPrivateBlueCanvas = Color(0xFFF6FAFF);
 const ngelxPrivateBlueBorder = Color(0xFFD8E8FF);
 const ngelxPrivateBlueInk = Color(0xFF10213A);
 
-const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.140');
-const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '361');
+const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.141');
+const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '362');
 const ngelxGroupBorder = Color(0xFFD9EEE0);
 
 final GlobalKey<NavigatorState> ngelxNavigatorKey=GlobalKey<NavigatorState>();
@@ -10020,6 +10020,7 @@ class MesajIstekleriPage extends StatelessWidget {
     child: Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(title: Text(t('messageRequests'), style: const TextStyle(fontWeight: FontWeight.w900))),
+      bottomNavigationBar:const SafeArea(top:false,bottom:true,minimum:EdgeInsets.only(bottom:8),child:SizedBox(height:8)),
       body: FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(
         future: FirebaseFirestore.instance.collection('users').doc(uid).get(),
         builder: (_, me) {
@@ -10036,7 +10037,7 @@ class MesajIstekleriPage extends StatelessWidget {
               }).toList();
               if(docs.isEmpty) return Center(child: Text(t('noMessageRequests'), style: const TextStyle(color: Colors.black54)));
               return ListView.builder(
-                padding:EdgeInsets.fromLTRB(12,12,12,ngelxAltGuvenliBosluk(context,extra:112)), itemCount: docs.length,
+                padding:EdgeInsets.fromLTRB(12,12,12,36.0), itemCount: docs.length,
                 itemBuilder: (_, i) {
                   final d=docs[i], v=d.data(), m=List<String>.from(v['members'] ?? const []);
                   final other=m.firstWhere((x)=>x!=uid,orElse:()=>uid);
@@ -20239,6 +20240,7 @@ class _AktivitePageState extends State<AktivitePage> {
               },icon:const Icon(Icons.done_all_rounded,color:Color(0xFF20B86A))),
             ],
       ),
+      bottomNavigationBar:const SafeArea(top:false,bottom:true,minimum:EdgeInsets.only(bottom:8),child:SizedBox(height:8)),
       body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
         stream: uid == null ? null : FirebaseFirestore.instance.collection('notifications').where('toUid', isEqualTo: uid).limit(200).snapshots(),
         builder: (_, s) {
@@ -20342,7 +20344,7 @@ class _AktivitePageState extends State<AktivitePage> {
               ?Center(child:Text(t('noActivityInFilter'),style:const TextStyle(color:Colors.black54,fontWeight:FontWeight.w700)))
               :ListView.separated(
                 clipBehavior:Clip.hardEdge,
-                padding:EdgeInsets.fromLTRB(12,14,12,ngelxAltGuvenliBosluk(context,extra:112)),
+                padding:EdgeInsets.fromLTRB(12,14,12,36.0),
                 separatorBuilder:(_,__)=>const Divider(height:1,indent:72),
                 itemCount:docs.length,
                 itemBuilder:(_,i){final d=docs[i];
@@ -20654,6 +20656,7 @@ class OrtakGruplarPage extends StatelessWidget{
     return Theme(data:ThemeData.light(),child:Scaffold(
       backgroundColor:Colors.white,
       appBar:AppBar(title:const Text('Ortak gruplar',style:TextStyle(fontWeight:FontWeight.w900))),
+      bottomNavigationBar:const SafeArea(top:false,bottom:true,minimum:EdgeInsets.only(bottom:8),child:SizedBox(height:8)),
       body:me==null?const Center(child:Text('Oturum bulunamadı.')):StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
         stream:FirebaseFirestore.instance.collection('chats').where('members',arrayContains:me).limit(60).snapshots(),
         builder:(_,s){
@@ -20664,7 +20667,7 @@ class OrtakGruplarPage extends StatelessWidget{
           }).toList();
           if(docs.isEmpty)return const Center(child:Text('Ortak grubunuz yok.',style:TextStyle(color:Colors.black54)));
           return ListView.separated(
-            padding:EdgeInsets.fromLTRB(12,12,12,ngelxAltGuvenliBosluk(context,extra:112)),itemCount:docs.length,separatorBuilder:(_,__)=>const Divider(),
+            padding:EdgeInsets.fromLTRB(12,12,12,36.0),itemCount:docs.length,separatorBuilder:(_,__)=>const Divider(),
             itemBuilder:(_,i){
               final d=docs[i],v=d.data(),foto=(v['groupPhotoUrl']??'').toString(),ad=(v['groupName']??lt('Grup','Group')).toString();
               return ListTile(
@@ -20901,6 +20904,7 @@ class _KullaniciProfilPageState extends State<KullaniciProfilPage> {
         title:Text(ziyaretciOnizleme?t('profilePreview'):t('profile'),style:const TextStyle(fontWeight:FontWeight.w900)),
         actions:[IconButton(tooltip:'Profili paylaş',onPressed:()=>profiliPaylas(context),icon:const Icon(Icons.share_outlined))],
       ),
+      bottomNavigationBar:const SafeArea(top:false,bottom:true,minimum:EdgeInsets.only(bottom:8),child:SizedBox(height:8)),
       body: FutureBuilder<List<DocumentSnapshot<Map<String, dynamic>>?>>(
         future: Future.wait([hedef, benim]),
         builder: (_, s) {
@@ -20919,7 +20923,7 @@ class _KullaniciProfilPageState extends State<KullaniciProfilPage> {
           final erisimVar = ziyaretciOnizleme
               ? (profilIzni=='all'&&!gizli)
               : (me==uid||(izinVar&&(!gizli||beniTakipEdiyor||arkadaslar.contains(uid))));
-          final altGuvenliAlan=ngelxAltGuvenliBosluk(context,extra:112);
+          final altGuvenliAlan=36.0;
           return ListView(
             padding:EdgeInsets.fromLTRB(22,22,22,altGuvenliAlan),
             children: [
