@@ -1724,3 +1724,13 @@ Kod incelemesinde mevcut NgelX efekt sisteminin gerçek zamanlı yüz/AR efekt m
 - Arama temizleme (X) kontrolü görünür durumda.
 - Sonuç: Build 366 **Ayarlar arama ve anahtar kelime eşleştirme** cihaz testini geçti.
 - Sıradaki kontrol: sonuç satırına dokununca doğru alt sayfanın açılması ve değiştirilen ayarın uygulama kapat/aç sonrasında korunması.
+
+
+## 2026-10-02 — Build 366 cihaz testi: Ayarlar aramasından Mesaj gizliliğine yönlendirme
+
+- Ayarlar aramasında `mesaj` sonucu içindeki **Mesaj gizliliği** satırına dokunuldu.
+- Uygulama doğru şekilde **Mesaj izinleri** ekranını açtı.
+- Ekranda **Herkes / Takip ettiklerim / Arkadaşlar / Kimse** seçenekleri eksiksiz görünüyor.
+- Cihaz görüntüsünde mevcut seçim **Herkes** olarak okunuyor.
+- Sonuç: Ayarlar araması → ilgili alt ayara yönlendirme cihaz testini geçti.
+- Sıradaki doğrulama: seçim değiştirildikten sonra geri çıkıp tekrar girildiğinde ve uygulama kapat/aç sonrasında tercihin korunması.
