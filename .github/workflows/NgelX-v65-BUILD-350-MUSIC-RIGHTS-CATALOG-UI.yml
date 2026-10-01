@@ -1,0 +1,125 @@
+name: Ngel X v65 BUILD 350 MUSIC RIGHTS CATALOG UI
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - work/build350-music-rights-catalog-ui
+    paths:
+      - '.github/workflows/NgelX-v65-BUILD-350-MUSIC-RIGHTS-CATALOG-UI.yml'
+      - 'app/lib/main.dart'
+      - 'app/pubspec.yaml'
+      - 'app/lib/audio_live_rooms.dart'
+      - 'app/lib/audio_live_rooms_pro.dart'
+      - 'app/lib/audio_live_rooms_extras.dart'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ngelx-build350-music-rights-catalog-ui
+  cancel-in-progress: true
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Kaynaklari al
+        uses: actions/checkout@v4
+        with:
+          ref: work/build350-music-rights-catalog-ui
+          fetch-depth: 0
+
+      - name: Build 350 kaynaklarini kontrol et
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+
+          grep -F "version: 1.0.131+350" app/pubspec.yaml
+          grep -F "defaultValue: '1.0.131'" app/lib/main.dart
+          grep -F "defaultValue: '350'" app/lib/main.dart
+
+          grep -F "NgelX Müzik Kütüphanesi" app/lib/audio_live_rooms_pro.dart
+          grep -F "NgelX Original" app/lib/audio_live_rooms_pro.dart
+          grep -F "ngelx://original/" app/lib/audio_live_rooms_pro.dart
+          grep -F "Mesajı düzenle" app/lib/audio_live_rooms_pro.dart
+          grep -F "Mesaj silinsin mi?" app/lib/audio_live_rooms_pro.dart
+          grep -F "CircleAvatar(radius:9" app/lib/audio_live_rooms_pro.dart
+          grep -F "Bağımsız sanatçılar" app/lib/audio_live_rooms_pro.dart
+          grep -F "Lisanslı katalog" app/lib/audio_live_rooms_pro.dart
+          grep -F "Telif süresi dolmuş eserler" app/lib/audio_live_rooms_pro.dart
+          grep -F "Hak durumuna göre ayrılmış güvenli müzik kataloğu" app/lib/audio_live_rooms_pro.dart
+          grep -F "NgelX Müzik Kütüphanesi',style:TextStyle(color:Colors.black87" app/lib/audio_live_rooms_pro.dart
+
+          if grep -F "XTypeGroup(label:'Müzik'" app/lib/audio_live_rooms_pro.dart; then
+            echo "Telefon dosya secici muzik akisinda kalmis." >&2
+            exit 1
+          fi
+          if grep -F "koltuk(id,mesaj:" app/lib/audio_live_rooms.dart; then
+            echo "Konusmaci kartinda mesaj onizlemesi kalmis." >&2
+            exit 1
+          fi
+          if grep -F "if(mesaj.isNotEmpty)" app/lib/audio_live_rooms.dart; then
+            echo "Konusmaci kartinda yinelenen mesaj blogu kalmis." >&2
+            exit 1
+          fi
+
+      - name: Java 17 kur
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Flutter kur
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Sabit NgelX imza anahtarini geri yukle
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: ngelx-stable-debug-keystore-v1
+          fail-on-cache-miss: true
+
+      - name: Flutter analiz
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter clean
+          flutter pub get
+          flutter analyze --machine > analyze.log 2>&1 || true
+          cat analyze.log
+          if grep -q '^ERROR|' analyze.log; then
+            echo "Flutter analyze ERROR buldu."
+            exit 1
+          fi
+
+      - name: APK olustur ve imzayi dogrula
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter build apk --release
+          APK=build/app/outputs/flutter-apk/app-release.apk
+          test -s "$APK"
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          "$APKSIGNER" verify --print-certs "$APK" | tee build/app/outputs/flutter-apk/apksigner-certs.txt
+          grep -qi 'be20b27f0ba1f4decd2941d410b1536de89e48dc894f04f038f9d26b11ecd6aa' build/app/outputs/flutter-apk/apksigner-certs.txt
+          sha256sum "$APK" > "$APK.sha256"
+
+      - name: APK yukle
+        uses: actions/upload-artifact@v4
+        with:
+          name: NgelX-1.0.131-Build-350-MUSIC-RIGHTS-CATALOG-UI
+          path: |
+            app/build/app/outputs/flutter-apk/app-release.apk
+            app/build/app/outputs/flutter-apk/app-release.apk.sha256
+            app/build/app/outputs/flutter-apk/apksigner-certs.txt
+          if-no-files-found: error
+          retention-days: 14
