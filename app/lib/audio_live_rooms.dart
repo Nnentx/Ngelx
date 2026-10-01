@@ -35,13 +35,31 @@ Future<void> ngelxSesliOdayaKatil(BuildContext context,String odaId)async{
     final roomName=(v['roomName']??'').toString();if(roomName.isEmpty)throw StateError('room_name');
     final p=(await FirebaseFirestore.instance.collection('users').doc(user.uid).get()).data()??<String,dynamic>{};
     final ad=(p['displayName']??p['username']??user.displayName??'NgelX').toString(),foto=(p['photoUrl']??'').toString();
-    final cevap=await lk.DevelopmentTokenSource(id:liveKitTestSunucuId).fetch(lk.TokenRequestOptions(roomName:roomName,participantIdentity:user.uid,participantName:ad,participantAttributes:const {'role':'listener','mode':'audio'}));
-    oda=lk.Room(roomOptions:lk.RoomOptions(adaptiveStream:true,dynacast:true));
-    await oda.connect(cevap.serverUrl,cevap.participantToken).timeout(const Duration(seconds:18));
-    await oda.localParticipant?.setMicrophoneEnabled(false);
+    String serverUrl='',participantToken='';
+    Object? sonHata;
+    for(var deneme=1;deneme<=3;deneme++){
+      lk.Room? aday;
+      try{
+        final cevap=await lk.DevelopmentTokenSource(id:liveKitTestSunucuId)
+            .fetch(lk.TokenRequestOptions(roomName:roomName,participantIdentity:user.uid,participantName:ad,participantAttributes:const {'role':'listener','mode':'audio'}))
+            .timeout(const Duration(seconds:12));
+        aday=lk.Room(roomOptions:lk.RoomOptions(adaptiveStream:true,dynacast:true));
+        await aday.connect(cevap.serverUrl,cevap.participantToken).timeout(const Duration(seconds:22));
+        if(aday.connectionState!=lk.ConnectionState.connected)throw StateError('livekit_not_connected');
+        await aday.localParticipant?.setMicrophoneEnabled(false);
+        oda=aday;serverUrl=cevap.serverUrl;participantToken=cevap.participantToken;
+        sonHata=null;
+        break;
+      }catch(e){
+        sonHata=e;
+        if(aday!=null){try{await aday.disconnect();}catch(_){}try{await aday.dispose();}catch(_){}}
+        if(deneme<3)await Future.delayed(Duration(milliseconds:650*deneme));
+      }
+    }
+    if(oda==null||oda.connectionState!=lk.ConnectionState.connected)throw StateError('livekit_join_failed:$sonHata');
     await ngelxSesliKatilimciYaz(roomId:odaId,uid:user.uid,ad:ad,foto:foto,rol:'listener');
     if(!context.mounted){await oda.disconnect();await oda.dispose();return;}
-    await Navigator.push(context,MaterialPageRoute(builder:(_)=>SesliOdaPage(oda:oda!,odaId:odaId,ownerId:owner,baslik:(v['title']??'Sesli oda').toString(),yayinSahibi:false,serverUrl:cevap.serverUrl,participantToken:cevap.participantToken)));
+    await Navigator.push(context,MaterialPageRoute(builder:(_)=>SesliOdaPage(oda:oda!,odaId:odaId,ownerId:owner,baslik:(v['title']??'Sesli oda').toString(),yayinSahibi:false,serverUrl:serverUrl,participantToken:participantToken)));
   }catch(_){
     if(oda!=null){try{await oda.disconnect();await oda.dispose();}catch(_){} }
     if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Sesli odaya bağlanılamadı.')));
@@ -276,25 +294,28 @@ class _SesliOdaPageState extends State<SesliOdaPage>{
     for(var i=1;i<=4;i++){
       if(mounted)setState(()=>durum='Tekrar bağlanılıyor $i/4');
       try{
-        await Future.delayed(Duration(milliseconds:450*i));
-        if(i==1){
-          try{
-            await widget.oda.connect(widget.serverUrl,widget.participantToken).timeout(const Duration(seconds:10));
-            final micAcik=konusmaciyim&&mikrofonTercihi;
-            await widget.oda.localParticipant?.setMicrophoneEnabled(micAcik);
-            yeniden=false;
-            if(mounted)setState((){mikrofon=micAcik;durum='';});
-            return;
-          }catch(_){}
-        }
+        await Future.delayed(Duration(milliseconds:400*i));
         final d=await FirebaseFirestore.instance.collection('audio_rooms').doc(widget.odaId).get(const GetOptions(source:Source.server)).timeout(const Duration(seconds:8));
         final v=d.data()??<String,dynamic>{};
         if(!d.exists||v['active']!=true){bitti=true;throw StateError('audio_room_ended');}
-        final roomName=(v['roomName']??'').toString();if(roomName.isEmpty)throw StateError('room_name');
-        final p=(await FirebaseFirestore.instance.collection('users').doc(user.uid).get()).data()??<String,dynamic>{};
-        final ad=(p['displayName']??p['username']??user.displayName??'NgelX').toString();
-        final cevap=await lk.DevelopmentTokenSource(id:liveKitTestSunucuId).fetch(lk.TokenRequestOptions(roomName:roomName,participantIdentity:user.uid,participantName:ad,participantAttributes:{'role':sahibiyim?'host':'listener','mode':'audio'}));
-        await widget.oda.connect(cevap.serverUrl,cevap.participantToken).timeout(const Duration(seconds:12));
+
+        if(widget.oda.connectionState!=lk.ConnectionState.connected){
+          try{
+            await widget.oda.reconnect().timeout(const Duration(seconds:14));
+          }catch(_){}
+        }
+
+        if(widget.oda.connectionState!=lk.ConnectionState.connected){
+          final roomName=(v['roomName']??'').toString();if(roomName.isEmpty)throw StateError('room_name');
+          final p=(await FirebaseFirestore.instance.collection('users').doc(user.uid).get()).data()??<String,dynamic>{};
+          final ad=(p['displayName']??p['username']??user.displayName??'NgelX').toString();
+          final cevap=await lk.DevelopmentTokenSource(id:liveKitTestSunucuId)
+              .fetch(lk.TokenRequestOptions(roomName:roomName,participantIdentity:user.uid,participantName:ad,participantAttributes:{'role':sahibiyim?'host':'listener','mode':'audio'}))
+              .timeout(const Duration(seconds:12));
+          await widget.oda.connect(cevap.serverUrl,cevap.participantToken).timeout(const Duration(seconds:18));
+        }
+
+        if(widget.oda.connectionState!=lk.ConnectionState.connected)throw StateError('reconnect_not_connected');
         final micAcik=konusmaciyim&&mikrofonTercihi;
         await widget.oda.localParticipant?.setMicrophoneEnabled(micAcik);
         yeniden=false;
@@ -303,7 +324,7 @@ class _SesliOdaPageState extends State<SesliOdaPage>{
       }catch(_){}
     }
     yeniden=false;
-    if(mounted)setState((){mikrofon=false;durum=bitti?'Bu sesli oda sona erdi.':'Bağlantı kurulamadı. Tekrar denemek için dokun.';});
+    if(mounted)setState((){mikrofon=false;durum=bitti?'':'Bağlantı kurulamadı. Tekrar denemek için dokun.';});
   }
   Future<void> mic()async{
     if(!konusmaciyim)return;
@@ -380,7 +401,7 @@ class _SesliOdaPageState extends State<SesliOdaPage>{
   Future<void> istekSonuc(String hedef,bool kabul)async{final ref=FirebaseFirestore.instance.collection('audio_rooms').doc(widget.odaId),req=ref.collection('speaker_requests').doc(hedef);if(kabul){await FirebaseFirestore.instance.runTransaction((tx)async{final d=await tx.get(ref),v=d.data()??<String,dynamic>{},sp=List<String>.from(v['speakerIds']??const[]);if(!sp.contains(hedef)&&sp.length>=ngelxSesliMaksKonusmaci)throw StateError('limit');if(!sp.contains(hedef))sp.add(hedef);tx.update(ref,{'speakerIds':sp,'speakerCount':sp.length,'updatedAt':FieldValue.serverTimestamp()});tx.set(req,{'status':'accepted','updatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));});}else{await req.set({'status':'declined','updatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));}}
   Future<void> bitir()async{
     if(!sahibiyim)return;
-    final ok=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(title:const Text('Sesli oda bitsin mi?'),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('Bitir'))]));
+    final ok=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(title:const Text('Sesli odayı bitirmek istiyor musun?'),content:const Text('Oda kapanacak ve odadaki herkes çıkarılacak.'),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('Bitir'))]));
     if(ok!=true)return;
     kapatiliyor=true;heartbeat?.cancel();yalnizlikTimer?.cancel();
     final bas=veri['startedAt'];
@@ -396,13 +417,27 @@ class _SesliOdaPageState extends State<SesliOdaPage>{
   }
   Future<void> ayril()async{
     if(sahibiyim){await bitir();return;}
+    if(bitti){if(mounted)Navigator.pop(context);return;}
+    final ok=await showDialog<bool>(
+      context:context,
+      builder:(c)=>AlertDialog(
+        title:const Text('Sesli odadan ayrılmak istiyor musun?'),
+        content:const Text('Ayrılırsan ses bağlantın kesilecek. Daha sonra oda açıksa tekrar katılabilirsin.'),
+        actions:[
+          TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),
+          FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('Ayrıl')),
+        ],
+      ),
+    );
+    if(ok!=true)return;
     kapatiliyor=true;
     final ben=uid;if(ben!=null)await ngelxSesliKatilimciAyril(widget.odaId,ben);
+    try{await widget.oda.localParticipant?.setMicrophoneEnabled(false);}catch(_){}
     try{await widget.oda.disconnect();}catch(_){}
     if(mounted)Navigator.pop(context);
   }
   Widget koltuk(String id){if(id.isEmpty)return Container(decoration:BoxDecoration(color:const Color(0xFFF8F6FA),borderRadius:BorderRadius.circular(18)),child:const Column(mainAxisAlignment:MainAxisAlignment.center,children:[CircleAvatar(backgroundColor:Color(0xFFEDEAF0),child:Icon(Icons.add,color:Colors.black26)),SizedBox(height:5),Text('Boş',style:TextStyle(color:Colors.black38,fontSize:11))]));return StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(stream:FirebaseFirestore.instance.collection('users').doc(id).snapshots(),builder:(_,s){final p=s.data?.data()??<String,dynamic>{},foto=(p['photoUrl']??'').toString(),ad=(p['displayName']??p['username']??(id==widget.ownerId?'Oda sahibi':'Konuşmacı')).toString();return Container(padding:const EdgeInsets.all(8),decoration:BoxDecoration(color:const Color(0xFFF8F4FD),borderRadius:BorderRadius.circular(18),border:Border.all(color:id==widget.ownerId?mor:const Color(0xFFEAE3F2))),child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[CircleAvatar(radius:24,backgroundImage:foto.isEmpty?null:NgelXAgImageProvider(foto),child:foto.isEmpty?const Icon(Icons.person,color:mor):null),const SizedBox(height:5),Text(ad,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black87,fontSize:10.5,fontWeight:FontWeight.w900)),Text(id==widget.ownerId?'SAHİP':'KONUŞMACI',style:TextStyle(fontSize:8,color:id==widget.ownerId?mor:Colors.black38,fontWeight:FontWeight.w900))]));});}
-  @override Widget build(BuildContext context){final sp=speakers.isEmpty?[widget.ownerId]:speakers;return Scaffold(backgroundColor:Colors.white,appBar:AppBar(backgroundColor:Colors.white,foregroundColor:Colors.black,leading:IconButton(onPressed:ayril,icon:const Icon(Icons.arrow_back)),title:const Text('Sesli',style:TextStyle(fontWeight:FontWeight.w900)),actions:[if(yoneticiyim&&!bitti)IconButton(tooltip:'Söz istekleri',onPressed:istekler,icon:const Icon(Icons.pan_tool_alt_rounded,color:mor))]),body:SafeArea(child:Column(children:[
+  @override Widget build(BuildContext context){final sp=speakers.isEmpty?[widget.ownerId]:speakers;return Scaffold(backgroundColor:Colors.white,appBar:AppBar(backgroundColor:Colors.white,foregroundColor:Colors.black,leading:IconButton(onPressed:ayril,icon:const Icon(Icons.arrow_back)),title:const Text('Sesli',style:TextStyle(fontWeight:FontWeight.w900))),body:SafeArea(child:Column(children:[
     if(durum.isNotEmpty&&!bitti)InkWell(onTap:!yeniden&&!bitti?()=>unawaited(tekrarBaglan()):null,child:Container(width:double.infinity,padding:const EdgeInsets.all(9),color:const Color(0xFFFFF5D9),child:Row(mainAxisAlignment:MainAxisAlignment.center,children:[Icon(bitti?Icons.stop_circle_outlined:Icons.wifi_off_rounded,size:18,color:bitti?Colors.redAccent:Colors.black54),const SizedBox(width:7),Flexible(child:Text(durum,textAlign:TextAlign.center,style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w800)))]))),
     if(sahibiyim&&aktifKisiSayisi<2&&yalnizlikBasladi!=null&&!bitti)
       Container(
