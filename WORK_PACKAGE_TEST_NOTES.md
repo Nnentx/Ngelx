@@ -1803,3 +1803,14 @@ Kod incelemesinde mevcut NgelX efekt sisteminin gerçek zamanlı yüz/AR efekt m
 - Bir istek kabul/red/engel işlemiyle kapanınca sayaç anlık olarak azalacak.
 - Normal **Mesajlar** unread sayacı ile bu sayaç birbirine karışmayacak.
 - Eski/yeni hesaplarda aynı mantık kullanılacak.
+
+
+## 2026-10-02 — Build 367 cihaz testi: Kabul sonrası normal sohbet unread sıfırlama geçti
+
+- Sultan'ın kabul edilmiş normal sohbetine 2 yeni mesaj geldi ve Gelen Kutusu'nda Sultan satırında **2 unread** oluştu.
+- Sultan sohbeti açıldıktan sonra geri dönüldüğünde Sultan satırındaki unread rozeti tamamen kayboldu.
+- Üst **Mesajlar** sayacı **4 → 2** düştü.
+- Kalan **2**, ADEM sohbetindeki kırmızı **2** unread rozetiyle birebir eşleşiyor.
+- **Aktivite 0** olarak kaldı.
+- Sonuç: kabul edilmiş normal sohbetlerde unread artırma + sohbet açılınca sıfırlama cihaz testini geçti.
+- Açık kalan işler: Profil üst zil sayacını ortak Aktivite filtresine bağlamak ve Mesaj İstekleri kartına bağımsız pending sayaç rozeti eklemek.
