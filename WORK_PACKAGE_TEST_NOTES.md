@@ -1323,3 +1323,14 @@ Cihaz testinde Build 359 sonrasında aşağıdaki açıklar doğrulandı ve sonr
 - **Genel final kontrol:** Aktivite, başka kullanıcı profili, Mesaj İstekleri, Ayarlar, Ortak Gruplar ve Gelen Kutusu ekranlarında yalnızca üst/orta alan değil, özellikle listenin/gridin **en son öğesi** 3 tuşlu Android navigasyonda tek tek kontrol edilecek.
 
 Bu maddeler Build 359'un çalışan arama/görüntülü arama davranışını bozmadan ve mevcut sosyal veri sözleşmesini koruyarak sonraki konsolide pakette ele alınacak.
+
+
+## 2026-10-01 — Adem hesabı Aktivite testi: takip isteği geldi, kabul işlemi permission-denied
+
+- Adem hesabına geçildiğinde Aktivite ekranında **“Sultan Sultan Yeni takip isteğin var”** bildirimi göründü. Bu, takip isteği bildiriminin alıcı hesaba ulaştığını doğruluyor.
+- Bildirim kartındaki yeşil onay / kabul işlemi denendiğinde uygulama şu hatayı gösterdi: **`[cloud_firestore/permission-denied] PERMISSION_DENIED: Missing or insufficient permissions.`**
+- Bu nedenle sorun artık istek oluşturma/bildirim ulaştırma değil; **alıcı hesabın isteği kabul/işleme sırasında yaptığı Firestore yazma/güncelleme zincirinde izin kuralı uyuşmazlığı** olarak doğrulandı.
+- Kabul akışında hangi belgelerin yazıldığı/güncellendiği tek tek kontrol edilecek; alıcının kendi isteğini kabul etmesine izin veren Firestore kuralı mevcut veri sözleşmesi bozulmadan düzeltilecek.
+- Aynı akışta red (X) işlemi de ayrıca test edilip aynı permission-denied yoluna düşüp düşmediği doğrulanacak.
+- Aktivite ekranının en alt kartı klasik 3 tuşlu Android gezinme alanında kısmen kesiliyor. Son öğe tamamen görünür ve dokunulabilir olana kadar dinamik bottom SafeArea/padding artırılacak.
+- Hata SnackBar'ı görünürken alt liste öğelerini kapatıyor; hata mesajı gösterimi SafeArea ile çakışmayacak biçimde gözden geçirilecek.
