@@ -1372,3 +1372,11 @@ Bu maddeler Build 359'un çalışan arama/görüntülü arama davranışını bo
 - Ancak kısa liste SafeArea doğrulaması için yeterli değil. Uzun liste / scroll sonu senaryosunda son kartın sistem gezinme alanının üstünde tamamen görünür ve dokunulabilir olduğu ayrıca kontrol edilecek.
 - Adem satırında son mesaj önizlemesi **“Selamın aleyküm test”** olarak görünüyor ve **Kabul et** eylemi mevcut.
 - Sonraki cihaz adımı: Adem isteğinde **Kabul et** işlemi test edilip sohbet ekranına geçiş, Firestore izinleri ve isteğin listeden kalkması doğrulanacak.
+
+
+## 2026-10-01 — Mesaj İsteği Kabul Et cihaz testi: doğrudan sohbet açıldı
+
+- Mesaj İstekleri ekranında **ADEM baykar > Kabul et** işlemine basıldığında herhangi bir Firestore permission hatası göstermeden doğrudan mevcut bire bir sohbet ekranı açıldı.
+- Bu davranış kabul akışının ana yönlendirmesinin çalıştığını doğruluyor.
+- Son doğrulama için sohbetten geri çıkıldığında ilgili isteğin Mesaj İstekleri listesinden kalktığı ve kabul sonrası normal metin mesajı gönderiminin açık olduğu kontrol edilecek.
+- Takip isteği kabulündeki `permission-denied` hatasıyla bu akış karıştırılmayacak; mesaj isteği kabulü şu an cihazda ayrı olarak çalışıyor görünüyor.
