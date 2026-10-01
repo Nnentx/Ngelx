@@ -468,22 +468,13 @@ class _NgelxSesliInlineSohbetState extends State<NgelxSesliInlineSohbet>{
     }catch(_){}
   }
   Future<void> _gonder()async{
-    final u=FirebaseAuth.instance.currentUser,t=_mesaj.text.trim();
-    if(u==null||t.isEmpty||_gonderiyor)return;
+    final t=_mesaj.text.trim();
+    if(t.isEmpty||_gonderiyor||widget.bitti)return;
     setState(()=>_gonderiyor=true);
     _mesaj.clear();
-    try{
-      await FirebaseFirestore.instance.collection('audio_rooms').doc(widget.roomId).collection('messages').add({
-        'userId':u.uid,
-        'displayName':_ad,
-        'photoUrl':_foto,
-        'text':t.length>600?t.substring(0,600):t,
-        'createdAt':FieldValue.serverTimestamp(),
-        'pinned':false,
-      });
-    }catch(_){
-      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Mesaj gönderilemedi.')));
-    }finally{if(mounted)setState(()=>_gonderiyor=false);}
+    final hata=await ngelxSesliMesajGonder(roomId:widget.roomId,ad:_ad,foto:_foto,text:t);
+    if(hata!=null&&mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(hata)));
+    if(mounted)setState(()=>_gonderiyor=false);
   }
   Widget _satir(Map<String,dynamic> v){
     final ad=(v['displayName']??'NgelX').toString(),metin=(v['text']??'').toString(),rol=(v['authorRole']??'').toString();
@@ -544,7 +535,7 @@ class _NgelxSesliInlineSohbetState extends State<NgelxSesliInlineSohbet>{
             textInputAction:TextInputAction.send,
             style:const TextStyle(color:Colors.black87,fontSize:13.5),
             decoration:InputDecoration(
-              hintText:'Mesaj yaz...',
+              hintText:widget.bitti?'Bu oda sona erdi':'Mesaj yaz...',
               hintStyle:const TextStyle(color:Colors.black38),
               filled:true,
               fillColor:const Color(0xFFF5F5F8),
@@ -552,12 +543,12 @@ class _NgelxSesliInlineSohbetState extends State<NgelxSesliInlineSohbet>{
               contentPadding:const EdgeInsets.symmetric(horizontal:13,vertical:10),
               border:OutlineInputBorder(borderRadius:BorderRadius.circular(20),borderSide:BorderSide.none),
             ),
-            onSubmitted:(_)=>_gonder(),
+            onSubmitted:widget.bitti?null:(_)=>_gonder(),
           )),
           const SizedBox(width:6),
           IconButton.filled(
             style:IconButton.styleFrom(backgroundColor:mor,minimumSize:const Size(40,40)),
-            onPressed:_gonderiyor?null:_gonder,
+            onPressed:_gonderiyor||widget.bitti?null:_gonder,
             icon:_gonderiyor?const SizedBox(width:17,height:17,child:CircularProgressIndicator(strokeWidth:2,color:Colors.white)):const Icon(Icons.send_rounded,color:Colors.white,size:19),
           ),
         ]),
