@@ -1713,3 +1713,14 @@ Kod incelemesinde mevcut NgelX efekt sisteminin gerçek zamanlı yüz/AR efekt m
 - Canlı/arama yayınında efekt yerel preview'e çizilmiş makyaj gibi kalmayacak; gönderilen video frame/track pipeline'ına uygulanacak.
 - Video kaydı/publish çıktısına seçilen efekt gerçekten işlenecek; “preview only” durumu kaldırılacak.
 - Düşük cihazlarda otomatik hafif mod/fps/çözünürlük düşürme uygulanacak.
+
+
+## 2026-10-02 — Build 366 cihaz testi: Ayarlar araması çalışıyor
+
+- Gerçek cihazda **Ayarlar ve gizlilik > Ayarlarda ara** alanına `mesaj` yazıldı.
+- Arama anlık olarak **3 ayar bulundu** sonucunu gösterdi.
+- Sonuçlarda **Mesajlar ve iletişim**, **Bildirimler** ve **Mesaj gizliliği** doğru şekilde listelendi.
+- Arama sonucu satırlarında ilgili ana kategori + açıklama birlikte gösteriliyor.
+- Arama temizleme (X) kontrolü görünür durumda.
+- Sonuç: Build 366 **Ayarlar arama ve anahtar kelime eşleştirme** cihaz testini geçti.
+- Sıradaki kontrol: sonuç satırına dokununca doğru alt sayfanın açılması ve değiştirilen ayarın uygulama kapat/aç sonrasında korunması.
