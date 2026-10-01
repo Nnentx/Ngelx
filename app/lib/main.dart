@@ -102,8 +102,8 @@ const ngelxPrivateBlueCanvas = Color(0xFFF6FAFF);
 const ngelxPrivateBlueBorder = Color(0xFFD8E8FF);
 const ngelxPrivateBlueInk = Color(0xFF10213A);
 
-const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.143');
-const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '364');
+const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.144');
+const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '365');
 const ngelxGroupBorder = Color(0xFFD9EEE0);
 
 final GlobalKey<NavigatorState> ngelxNavigatorKey=GlobalKey<NavigatorState>();
@@ -20741,6 +20741,12 @@ class _KullaniciProfilPageState extends State<KullaniciProfilPage> {
   Future<void> profildenMesajAc(BuildContext context,{required String ad,required String foto})async{
     final me=FirebaseAuth.instance.currentUser?.uid;
     if(me==null||me==uid)return;
+
+    List<String> stringList(dynamic raw){
+      if(raw is! Iterable)return const <String>[];
+      return raw.map((e)=>e.toString()).where((e)=>e.isNotEmpty).toList(growable:false);
+    }
+
     try{
       final sonuc=await Future.wait([
         FirebaseFirestore.instance.collection('users').doc(me).get().timeout(const Duration(seconds:8)),
@@ -20752,21 +20758,22 @@ class _KullaniciProfilPageState extends State<KullaniciProfilPage> {
         if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bu hesap şu anda kullanılamıyor.')));
         return;
       }
-      final engelli=List<String>.from(benim['blocked']??const[]).contains(uid)
-        ||List<String>.from(hedef['blocked']??const[]).contains(me);
+      final engelli=stringList(benim['blocked']).contains(uid)
+        ||stringList(hedef['blocked']).contains(me);
       if(engelli){
         if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Engellenen hesaplar arasında sohbet açılamaz.')));
         return;
       }
 
+      final chats=FirebaseFirestore.instance.collection('chats');
       String chatId='';
       try{
-        final mevcut=await FirebaseFirestore.instance.collection('chats')
+        final mevcut=await chats
             .where('members',arrayContains:me).limit(100)
             .get(const GetOptions(source:Source.server)).timeout(const Duration(seconds:8));
         for(final d in mevcut.docs){
           final v=d.data();
-          final uyeler=List<String>.from(v['members']??const[]);
+          final uyeler=stringList(v['members']);
           final grup=v['isGroup']==true||uyeler.length>2;
           if(!grup&&uyeler.length==2&&uyeler.contains(me)&&uyeler.contains(uid)){
             chatId=d.id;
@@ -20777,17 +20784,17 @@ class _KullaniciProfilPageState extends State<KullaniciProfilPage> {
 
       final ids=<String>[me,uid]..sort();
       if(chatId.isEmpty){
-        chatId=ids.join('_');
-        final arkadas=List<String>.from(benim['friends']??const[]).contains(uid)
-          ||List<String>.from(hedef['friends']??const[]).contains(me);
+        final arkadas=stringList(benim['friends']).contains(uid)
+          ||stringList(hedef['friends']).contains(me);
         final izin=(hedef['messagePermission']??(hedef['friendsOnlyMessages']==true?'friends':'all')).toString();
-        final takipIzin=List<String>.from(hedef['following']??const[]).contains(me);
+        final takipIzin=stringList(hedef['following']).contains(me);
         final izinVar=izin=='all'||(izin=='friends'&&arkadas)||(izin=='following'&&takipIzin);
         if(!izinVar){
           if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bu kullanıcı mesaj gizliliği nedeniyle yeni sohbet kabul etmiyor.')));
           return;
         }
-        await FirebaseFirestore.instance.collection('chats').doc(chatId).set({
+
+        final chatVerisi=<String,dynamic>{
           'members':ids,
           'isGroup':false,
           'peerA':ids.first,
@@ -20799,9 +20806,27 @@ class _KullaniciProfilPageState extends State<KullaniciProfilPage> {
           if(!arkadas)'requestRejected_$uid':false,
           'openedAt_$me':FieldValue.serverTimestamp(),
           'updatedAt':FieldValue.serverTimestamp(),
-        },SetOptions(merge:true)).timeout(const Duration(seconds:10));
+        };
+
+        // Eski/yarım kalmış özel sohbet kaydı deterministik kimliği işgal etmişse
+        // merge güncellemesi güvenlik kuralında reddedilebilir. Önce normal kimliği
+        // dener, yalnızca çakışma/izin kaynaklı durumda yeni belge kimliğiyle temiz
+        // bir özel sohbet oluştururuz. Böylece profil > Mesaj yolu kilitlenmez.
+        final varsayilanChatId=ids.join('_');
+        try{
+          await chats.doc(varsayilanChatId).set(
+            chatVerisi,
+            SetOptions(merge:true),
+          ).timeout(const Duration(seconds:10));
+          chatId=varsayilanChatId;
+        }on FirebaseException catch(e){
+          if(e.code!='permission-denied'&&e.code!='failed-precondition')rethrow;
+          final yeniRef=chats.doc();
+          await yeniRef.set(chatVerisi).timeout(const Duration(seconds:10));
+          chatId=yeniRef.id;
+        }
       }else{
-        unawaited(FirebaseFirestore.instance.collection('chats').doc(chatId).set({
+        unawaited(chats.doc(chatId).set({
           'openedAt_$me':FieldValue.serverTimestamp(),
         },SetOptions(merge:true)).timeout(const Duration(seconds:5)).catchError((_){ }));
       }
@@ -20816,6 +20841,7 @@ class _KullaniciProfilPageState extends State<KullaniciProfilPage> {
     }on TimeoutException{
       if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Mesaj ekranı hazırlanamadı. Tekrar dene.')));
     }catch(e){
+      debugPrint('profildenMesajAc hata: $e');
       if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Mesaj ekranı açılamadı. Tekrar dene.')));
     }
   }
