@@ -1520,3 +1520,12 @@ Build 362 cihaz ekranlarında alt sistem çubuğunun bazı ekranlarda hâlâ iç
 - Aynı kural grup görüntülü arama bildirimi için de cihazda doğrulandı.
 - Grup sohbetinde geçmiş/cevapsız arama kartı görünmeye devam ediyor; aramaya katılım artık yalnızca grup içindeki aktif arama kontrolünden kullanıcı isteğiyle yapılacak.
 - Sonuç: Build 363'te **grup sesli + görüntülü Aktivite bildirimi → önce grup sohbeti** davranışı geçti.
+
+
+## 2026-10-01 — Build 363 1:1 mesaj gönderme cihaz testi
+
+- Sultan hesabından Adem profili üzerindeki Mesaj akışı açıldı.
+- Sohbet ekranı başarıyla açıldı; geçmiş mesajlar görünür.
+- **“Test mesajı 1”** mesajı gönderildi ve gönderici tarafında saat **23:51** ile anında görünür durumda.
+- Mesaj yazma kutusu Android 3 tuşlu gezinme alanının üstünde; bu görüntüde alt çubuğa taşma/kesilme yok.
+- Sıradaki doğrulama: Adem hesabında aynı mesajın normal sohbet olarak görünmesi, Mesaj İstekleri'ne düşmemesi ve okunmamış göstergesinin doğru çalışması.
