@@ -1,0 +1,135 @@
+name: Ngel X BUILD 365 PROFILE MESSAGE OPEN FIX
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - work/build365-profile-message-open-fix
+    paths:
+      - '.github/workflows/NgelX-BUILD-365-PROFILE-MESSAGE-OPEN-FIX.yml'
+      - 'app/lib/main.dart'
+      - 'app/pubspec.yaml'
+      - 'WORK_PACKAGE_TEST_NOTES.md'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ngelx-build365-profile-message-open-fix
+  cancel-in-progress: true
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Kaynaklari al
+        uses: actions/checkout@v4
+        with:
+          ref: work/build365-profile-message-open-fix
+          fetch-depth: 0
+
+      - name: Build 365 regresyonlarini kontrol et
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          grep -F "version: 1.0.144+365" app/pubspec.yaml
+          grep -F "defaultValue: '1.0.144'" app/lib/main.dart
+          grep -F "defaultValue: '365'" app/lib/main.dart
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path('app/lib/main.dart').read_text(encoding='utf-8')
+
+          # Build 365: profil > Mesaj yeni sohbet acma sertlestirmesi.
+          assert "List<String> stringList(dynamic raw)" in s
+          assert "stringList(benim['blocked']).contains(uid)" in s
+          assert "stringList(hedef['following']).contains(me)" in s
+          assert "final varsayilanChatId=ids.join('_');" in s
+          assert "on FirebaseException catch(e)" in s
+          assert "e.code!='permission-denied'&&e.code!='failed-precondition'" in s
+          assert "final yeniRef=chats.doc();" in s
+          assert "await yeniRef.set(chatVerisi)" in s
+          assert "chatId=yeniRef.id;" in s
+          assert "debugPrint('profildenMesajAc hata: $e');" in s
+
+          # Build 364 mesaj istegi ayrimi korunmali.
+          assert "if(!arkadas)'requestSenderUid':me" in s
+          assert "if(!arkadas)'requestRecipientUid':uid" in s
+          assert "final istekGerekli=!arkadas&&!istekKabulEdildi;" in s
+          assert s.count("if(istekGerekli&&mevcutIstekGonderen.isEmpty)'requestSenderUid':ben") >= 3
+          assert s.count("if(istekGerekli&&mevcutIstekAlici.isEmpty)'requestRecipientUid':widget.digerUid") >= 3
+          assert "final hedef=(v['requestRecipientUid']??'').toString();" in s
+          assert "final sonMesaj=(v['lastMessage']??'').toString().trim();" in s
+          assert "hedef==uid && sonMesaj.isNotEmpty" in s
+          assert "if(gelenIstek)continue;" in s
+          assert "v['requestRejected_$ben']!=true&&!arkadaslar.contains(other);if(gelenIstek)return false;" in s
+          assert s.count("'unread_$uid':0") >= 2
+          assert s.count("'hiddenFor':FieldValue.arrayRemove([uid])") >= 2
+
+          # Onceki kritik davranislar korunmali.
+          assert "if((hedefTuru=='group'||olay=='group_audio_call'||olay=='group_video_call')&&kaynak.isNotEmpty)" in s
+          assert "double ngelxAltSistemRezervi(BuildContext context,{double minimum=64})" in s
+          assert "Widget _istekEylemButonu" in s
+          assert "case 'follow_requests': return tur=='follow_request'&&v['status']=='pending';" in s
+          assert "case 'friend_requests': return tur=='friend_request'&&v['status']=='pending';" in s
+          print('Build 365 static regression checks OK')
+          PY
+
+      - name: Java 17 kur
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Flutter kur
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Sabit NgelX imza anahtarini geri yukle
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: ngelx-stable-debug-keystore-v1
+          fail-on-cache-miss: true
+
+      - name: Flutter analiz ve test
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter clean
+          flutter pub get
+          flutter analyze --machine > analyze.log 2>&1 || true
+          cat analyze.log
+          if grep -q '^ERROR|' analyze.log; then
+            echo "Flutter analyze ERROR buldu."
+            exit 1
+          fi
+          if [ -d test ]; then flutter test; else echo "Test klasoru yok."; fi
+
+      - name: APK olustur ve imzayi dogrula
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter build apk --release
+          APK=build/app/outputs/flutter-apk/app-release.apk
+          test -s "$APK"
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          "$APKSIGNER" verify --print-certs "$APK" | tee build/app/outputs/flutter-apk/apksigner-certs.txt
+          grep -qi 'be20b27f0ba1f4decd2941d410b1536de89e48dc894f04f038f9d26b11ecd6aa' build/app/outputs/flutter-apk/apksigner-certs.txt
+          sha256sum "$APK" > "$APK.sha256"
+
+      - name: APK yukle
+        uses: actions/upload-artifact@v4
+        with:
+          name: NgelX-1.0.144-Build-365-PROFILE-MESSAGE-OPEN-FIX
+          path: |
+            app/build/app/outputs/flutter-apk/app-release.apk
+            app/build/app/outputs/flutter-apk/app-release.apk.sha256
+            app/build/app/outputs/flutter-apk/apksigner-certs.txt
+          if-no-files-found: error
+          retention-days: 14
