@@ -133,8 +133,8 @@ Future<void> ngelxKullaniciSemasiniTamamla(User user) async {
 
     // Bu alan yalnızca veri modelinin hangi tabana tamamlandığını izler.
     // Kullanıcı tercihlerini temsil etmez.
-    if((v['settingsSchemaVersion'] is! num)||(v['settingsSchemaVersion'] as num).toInt()<366){
-      patch['settingsSchemaVersion']=366;
+    if((v['settingsSchemaVersion'] is! num)||(v['settingsSchemaVersion'] as num).toInt()<368){
+      patch['settingsSchemaVersion']=368;
     }
 
     if(patch.isNotEmpty){
@@ -4475,9 +4475,53 @@ class _KayitPageState extends State<KayitPage> {
         'phone': telefon.text.trim(),
         'emailVerified': false,
         'emailVerificationRequired': true,
+        'followers': <String>[],
+        'following': <String>[],
+        'friends': <String>[],
+        'blocked': <String>[],
+        'restrictedUsers': <String>[],
+        'mutedUsers': <String>[],
+        'hiddenWords': <String>[],
+        'privateAccount': false,
+        'profileViewPermission': 'all',
+        'discoverableProfile': true,
+        'showActivityStatus': true,
+        'profileShareFriendsOnly': false,
+        'friendsOnlyComments': false,
+        'hiddenWordsFilter': true,
+        'friendsOnlyStory': true,
+        'allowStoryScreenshot': false,
+        'defaultAllowDownload': true,
         'messagePermission': 'all',
         'friendsOnlyMessages': false,
         'allowMessageRequests': true,
+        'allowGroupInvites': true,
+        'globalReadReceipts': true,
+        'notificationsEnabled': true,
+        'messageNotifications': true,
+        'friendNotifications': true,
+        'interactionNotifications': true,
+        'liveNotifications': true,
+        'groupNotifications': true,
+        'callNotifications': true,
+        'quietHoursEnabled': false,
+        'reviewTagsBeforeProfile': false,
+        'offensiveCommentFilter': true,
+        'mentionPermission': 'all',
+        'tagPermission': 'all',
+        'sensitiveContentLevel': 'standard',
+        'allowReelsDownload': true,
+        'allowReelsReshare': true,
+        'allowLiveComments': true,
+        'allowLiveInvites': true,
+        'suspiciousLoginAlerts': true,
+        'dataSaver': false,
+        'autoplayVideos': true,
+        'wifiOnlyHd': false,
+        'autoTranslate': true,
+        'reduceMotion': false,
+        'largeText': false,
+        'settingsSchemaVersion': 368,
         'bio': 'NgelX dünyasına yeni katıldı ✦',
         'createdAt': FieldValue.serverTimestamp(),
       });
@@ -20350,6 +20394,8 @@ class _AktivitePageState extends State<AktivitePage> {
           fromUid:ben,
           tur:takipIstegi?'follow_accepted':'friend_accepted',
           metin:takipIstegi?'takip isteğini kabul etti':'arkadaşlık isteğini kabul etti',
+          olayTuru:takipIstegi?'follow_accepted':'friend_accepted',
+          dedupeKey:'social_${takipIstegi?'follow':'friend'}_accepted_${gonderen}_${ben}',
         ).catchError((_){ }));
       }
 
