@@ -602,7 +602,7 @@ class _SesliOdaPageState extends State<SesliOdaPage>{
       final v=d.data(),k=(v['userId']??'').toString(),t=(v['text']??'').toString().trim();
       if(k.isNotEmpty&&t.isNotEmpty&&!son.containsKey(k))son[k]=t.length>42?t.substring(0,42)+'…':t;
     }
-    final gorunen=(sp.length+(sp.length<ngelxSesliMaksKonusmaci?1:0)).clamp(3,ngelxSesliMaksKonusmaci);
+    final gorunen=(sp.length+(sp.length<ngelxSesliMaksKonusmaci?1:0)).clamp(3,ngelxSesliMaksKonusmaci).toInt();
     return GridView.builder(
       shrinkWrap:true,
       physics:const NeverScrollableScrollPhysics(),
