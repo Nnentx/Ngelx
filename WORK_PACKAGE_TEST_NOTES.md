@@ -1761,3 +1761,14 @@ Kod incelemesinde mevcut NgelX efekt sisteminin gerçek zamanlı yüz/AR efekt m
 - Büyük **Aktivite** kısayol kartındaki önceki kırmızı **2** rozeti artık görünmüyor.
 - Böylece Build 366'da kalan ikinci sayaç yolu da Build 367'de ortak aktivite filtresine bağlanmış olarak cihazda doğrulandı.
 - Sonuç: mesaj tipi gizli notification kayıtları Aktivite ekranında gösterilmiyorsa artık ne üst özet ne de büyük Aktivite kartı bunları sayıyor.
+
+
+## 2026-10-02 — Build 367 cihaz testi: pending mesaj isteği normal Gelen Kutusu'nu etkilemiyor
+
+- DİLEK Gelen Kutusu kontrol edildi.
+- Sultan'ın pending mesaj isteği normal sohbet listesinde görünmüyor.
+- Üst **Mesajlar** sayacı **2** ve bu sayı ekrandaki ADEM sohbetindeki **2 okunmamış mesaj** ile birebir eşleşiyor.
+- Sultan'ın pending isteği bu sayaca eklenmemiş.
+- **Aktivite 0** olarak kalıyor.
+- Sonuç: pending mesaj isteği normal Gelen Kutusu ve Mesajlar unread sayacından başarıyla ayrılmış durumda.
+- Sıradaki doğrulama: Sultan isteğinde **Kabul et** sonrası sohbetin normal Gelen Kutusu'na taşınması ve unread state'in doğru başlaması.
