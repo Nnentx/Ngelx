@@ -1,0 +1,155 @@
+name: Ngel X v57 BUILD 342 AUDIO ROOM PRO CORE
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - work/build342-audio-room-pro-core
+    paths:
+      - '.github/workflows/NgelX-v57-BUILD-342-AUDIO-ROOM-PRO-CORE.yml'
+      - '.github/scripts/build342_audio_room_pro_core.py'
+      - 'app/lib/audio_live_rooms_pro.dart'
+
+permissions:
+  contents: write
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: work/build342-audio-room-pro-core
+          fetch-depth: 0
+
+      - name: Build 342 duzeltmelerini uygula
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile .github/scripts/build342_audio_room_pro_core.py
+          python3 .github/scripts/build342_audio_room_pro_core.py
+          git diff --check
+
+          grep -F "version: 1.0.123+342" app/pubspec.yaml
+          grep -F "defaultValue: '1.0.123'" app/lib/main.dart
+          grep -F "defaultValue: '342'" app/lib/main.dart
+          grep -F "part 'audio_live_rooms_pro.dart';" app/lib/main.dart
+          grep -F "NgelxSesliSureSayaci" app/lib/audio_live_rooms.dart
+          grep -F "Oda sohbeti" app/lib/audio_live_rooms_pro.dart
+          grep -F "Odadaki kişiler" app/lib/audio_live_rooms_pro.dart
+          grep -F "peakListenerCount" app/lib/audio_live_rooms.dart
+          grep -F "match /participants/{uid}" firestore.rules
+          grep -F "match /messages/{messageId}" firestore.rules
+          grep -F "match /reactions/{reactionId}" firestore.rules
+
+      - name: Build 342 kaynaklarini dala yaz
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- app/lib/main.dart app/lib/audio_live_rooms.dart app/lib/audio_live_rooms_pro.dart app/pubspec.yaml firestore.rules; then
+            echo "Kaynak zaten Build 342 seviyesinde."
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add app/lib/main.dart app/lib/audio_live_rooms.dart app/lib/audio_live_rooms_pro.dart app/pubspec.yaml firestore.rules
+            git commit -m "Build 342: audio room pro core"
+            git push origin HEAD:work/build342-audio-room-pro-core
+          fi
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Sabit NgelX imza anahtarini geri yukle
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: ngelx-stable-debug-keystore-v1
+          fail-on-cache-miss: true
+
+      - name: Flutter analiz
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter clean
+          flutter pub get
+          flutter analyze --machine > analyze.log 2>&1 || true
+          cat analyze.log
+          if grep -q '^ERROR|' analyze.log; then
+            echo "Flutter analyze ERROR buldu."
+            exit 1
+          fi
+
+      - name: APK olustur ve imzayi dogrula
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter build apk --release
+          APK=build/app/outputs/flutter-apk/app-release.apk
+          test -s "$APK"
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          "$APKSIGNER" verify --print-certs "$APK" | tee build/app/outputs/flutter-apk/apksigner-certs.txt
+          grep -qi 'be20b27f0ba1f4decd2941d410b1536de89e48dc894f04f038f9d26b11ecd6aa' build/app/outputs/flutter-apk/apksigner-certs.txt
+          sha256sum "$APK" > "$APK.sha256"
+
+      - name: APK yukle
+        uses: actions/upload-artifact@v4
+        with:
+          name: NgelX-1.0.123-Build-342-AUDIO-ROOM-PRO-CORE
+          path: |
+            app/build/app/outputs/flutter-apk/app-release.apk
+            app/build/app/outputs/flutter-apk/app-release.apk.sha256
+            app/build/app/outputs/flutter-apk/apksigner-certs.txt
+          if-no-files-found: error
+          retention-days: 14
+
+  deploy-firestore-rules:
+    needs: build-apk
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: work/build342-audio-room-pro-core
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Firebase CLI kur
+        run: npm install --global firebase-tools
+      - name: Build 342 Firestore kurallarini yayinla
+        shell: bash
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          FIREBASE_SERVICE_ACCOUNT_NGELX_44EED: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_NGELX_44EED }}
+          GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_JSON }}
+        run: |
+          set -euo pipefail
+          PROJECT_ID="ngelx-44eed"
+          SA="${FIREBASE_SERVICE_ACCOUNT_NGELX_44EED:-${FIREBASE_SERVICE_ACCOUNT:-${GOOGLE_APPLICATION_CREDENTIALS_JSON:-}}}"
+          if [ -n "$SA" ]; then
+            if printf '%s' "$SA" | jq -e . >/dev/null 2>&1; then
+              printf '%s' "$SA" > /tmp/ngelx-firebase-sa.json
+            else
+              printf '%s' "$SA" | base64 --decode > /tmp/ngelx-firebase-sa.json
+              jq -e . /tmp/ngelx-firebase-sa.json >/dev/null
+            fi
+            chmod 600 /tmp/ngelx-firebase-sa.json
+            export GOOGLE_APPLICATION_CREDENTIALS=/tmp/ngelx-firebase-sa.json
+            firebase deploy --only firestore:rules --project "$PROJECT_ID" --non-interactive
+          elif [ -n "${FIREBASE_TOKEN:-}" ]; then
+            firebase deploy --only firestore:rules --project "$PROJECT_ID" --token "$FIREBASE_TOKEN"
+          else
+            echo "Firebase deploy kimligi ayarli degil."
+            exit 20
+          fi
