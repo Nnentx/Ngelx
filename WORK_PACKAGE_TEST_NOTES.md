@@ -1734,3 +1734,12 @@ Kod incelemesinde mevcut NgelX efekt sisteminin gerçek zamanlı yüz/AR efekt m
 - Cihaz görüntüsünde mevcut seçim **Herkes** olarak okunuyor.
 - Sonuç: Ayarlar araması → ilgili alt ayara yönlendirme cihaz testini geçti.
 - Sıradaki doğrulama: seçim değiştirildikten sonra geri çıkıp tekrar girildiğinde ve uygulama kapat/aç sonrasında tercihin korunması.
+
+
+## 2026-10-02 — Build 366 cihaz testi: Mesaj gizliliği seçimi korunuyor
+
+- Mesaj izinlerinde geçici olarak **Arkadaşlar** seçildi.
+- Geri çıkıp yeniden aynı ayar ekranına girildiğinde **Arkadaşlar** seçimi korunmuş olarak göründü.
+- Sonuç: mesaj gizliliği ayarı Firestore'a kaydoluyor ve ekran yeniden açıldığında doğru state okunuyor.
+- Bu test Ayarlar araması → Mesaj gizliliği yönlendirmesi + ayar kalıcılığı zincirini cihazda doğruladı.
+- Test sonrası normal kullanım tercihi olarak **Herkes** seçeneğine geri dönülebilir.
