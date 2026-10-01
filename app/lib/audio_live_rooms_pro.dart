@@ -847,22 +847,131 @@ class _NgelxSesliInlineSohbetState extends State<NgelxSesliInlineSohbet>{
 
 
 class NgelxYerlesikMuzik{
-  final String id,baslik,kategori,aciklama,kaynak;
+  final String id,baslik,sanatci,kategori,aciklama,kaynak,url,lisans,lisansUrl,kaynakUrl;
   final IconData ikon;
-  const NgelxYerlesikMuzik(this.id,this.baslik,this.kategori,this.aciklama,this.ikon,{this.kaynak='NgelX Original'});
+  const NgelxYerlesikMuzik({
+    required this.id,
+    required this.baslik,
+    required this.sanatci,
+    required this.kategori,
+    required this.aciklama,
+    required this.kaynak,
+    required this.url,
+    required this.lisans,
+    required this.lisansUrl,
+    required this.kaynakUrl,
+    required this.ikon,
+  });
 }
 
 const List<NgelxYerlesikMuzik> ngelxYerlesikMuzikler=[
-  NgelxYerlesikMuzik('mor_gece','Mor Gece','Chill','Yumuşak ambient döngü',Icons.nightlight_round),
-  NgelxYerlesikMuzik('sakin_akis','Sakin Akış','Chill','Rahat sohbet ritmi',Icons.waves_rounded),
-  NgelxYerlesikMuzik('odak','Odak','Odak','Minimal arpej döngüsü',Icons.center_focus_strong_rounded),
-  NgelxYerlesikMuzik('gun_dogumu','Gün Doğumu','Ambient','Sıcak pad ve hafif armoni',Icons.wb_sunny_outlined),
-  NgelxYerlesikMuzik('gece_yolu','Gece Yolu','Ambient','Derin ve sakin arka plan',Icons.route_rounded),
-  NgelxYerlesikMuzik('hafif_tempo','Hafif Tempo','Sohbet','Canlı ama konuşmayı bastırmayan döngü',Icons.graphic_eq_rounded),
+  NgelxYerlesikMuzik(
+    id:'kick_back',
+    baslik:'Kick Back',
+    sanatci:'Mahogany Marie',
+    kategori:'Pop / R&B',
+    aciklama:'Gerçek sanatçı kaydı • açık lisanslı',
+    kaynak:'Bağımsız sanatçılar',
+    url:'https://files.freemusicarchive.org/storage-freemusicarchive-org/music/ccCommunity/Mahogany_Marie/Kick_Back/Mahogany_Marie_-_Kick_Back.mp3',
+    lisans:'CC BY 4.0',
+    lisansUrl:'https://creativecommons.org/licenses/by/4.0/',
+    kaynakUrl:'https://commons.wikimedia.org/wiki/File:Mahogany_Marie_-_Kick_Back.ogg',
+    ikon:Icons.album_rounded,
+  ),
+  NgelxYerlesikMuzik(
+    id:'in_the_pines',
+    baslik:'In the Pines',
+    sanatci:'Punk Rock Opera',
+    kategori:'Rock / Folk',
+    aciklama:'Gerçek grup kaydı • açık lisanslı',
+    kaynak:'Bağımsız sanatçılar',
+    url:'https://files.freemusicarchive.org/storage-freemusicarchive-org/music/ccCommunity/Punk_Rock_Opera/Punk_Rock_Opera_Vol_II/Punk_Rock_Opera_-_04_-_In_the_Pines.mp3',
+    lisans:'CC BY 4.0',
+    lisansUrl:'https://creativecommons.org/licenses/by/4.0/',
+    kaynakUrl:'https://commons.wikimedia.org/wiki/File:Punk_Rock_Opera_-_04_-_In_the_Pines.ogg',
+    ikon:Icons.music_note_rounded,
+  ),
+  NgelxYerlesikMuzik(
+    id:'1918',
+    baslik:'1918',
+    sanatci:'Punk Rock Opera',
+    kategori:'Rock',
+    aciklama:'Gerçek grup kaydı • açık lisanslı',
+    kaynak:'Bağımsız sanatçılar',
+    url:'https://files.freemusicarchive.org/storage-freemusicarchive-org/music/ccCommunity/Punk_Rock_Opera/Punk_Rock_Opera_Vol_II/Punk_Rock_Opera_-_01_-_1918.mp3',
+    lisans:'CC BY 4.0',
+    lisansUrl:'https://creativecommons.org/licenses/by/4.0/',
+    kaynakUrl:'https://commons.wikimedia.org/wiki/File:Punk_Rock_Opera_-_01_-_1918.ogg',
+    ikon:Icons.queue_music_rounded,
+  ),
+  NgelxYerlesikMuzik(
+    id:'killing_time_liking_you',
+    baslik:'Killing Time Liking You',
+    sanatci:'Mack Aroni',
+    kategori:'Indie / Lo-fi',
+    aciklama:'Gerçek sanatçı kaydı • açık lisanslı',
+    kaynak:'Bağımsız sanatçılar',
+    url:'https://files.freemusicarchive.org/storage-freemusicarchive-org/music/ccCommunity/Mack_Aroni/Lowfi_Spirit/Mack_Aroni_-_03_-_Killing_Time_Liking_You.mp3',
+    lisans:'CC BY 4.0',
+    lisansUrl:'https://creativecommons.org/licenses/by/4.0/',
+    kaynakUrl:'https://commons.wikimedia.org/wiki/File:Mack_Aroni_-_03_-_Killing_Time_Liking_You.ogg',
+    ikon:Icons.favorite_rounded,
+  ),
+  NgelxYerlesikMuzik(
+    id:'freedom',
+    baslik:'Freedom',
+    sanatci:'Cyrus',
+    kategori:'Elektronik',
+    aciklama:'Gerçek sanatçı kaydı • açık lisanslı',
+    kaynak:'Bağımsız sanatçılar',
+    url:'https://files.freemusicarchive.org/storage-freemusicarchive-org/music/ccCommunity/Cyrus/Beginning_EP/Cyrus_-_01_-_Freedom.mp3',
+    lisans:'CC BY 4.0',
+    lisansUrl:'https://creativecommons.org/licenses/by/4.0/',
+    kaynakUrl:'https://commons.wikimedia.org/wiki/File:Cyrus_-_01_-_Freedom.ogg',
+    ikon:Icons.graphic_eq_rounded,
+  ),
+  NgelxYerlesikMuzik(
+    id:'little_old_cabin',
+    baslik:'Little Old Log Cabin in the Lane',
+    sanatci:"Fiddlin' John Carson",
+    kategori:'Country / Folk',
+    aciklama:'1923 tarihli gerçek ses kaydı',
+    kaynak:'Telif süresi dolmuş eserler',
+    url:'https://commons.wikimedia.org/wiki/Special:Redirect/file/LittleOldCabinInTheLane.ogg',
+    lisans:'Public Domain',
+    lisansUrl:'https://creativecommons.org/publicdomain/mark/1.0/',
+    kaynakUrl:'https://commons.wikimedia.org/wiki/File:LittleOldCabinInTheLane.ogg',
+    ikon:Icons.history_rounded,
+  ),
+  NgelxYerlesikMuzik(
+    id:'marching_through_georgia',
+    baslik:'Marching Through Georgia',
+    sanatci:'Harlan & Stanley',
+    kategori:'Folk / Historic',
+    aciklama:'1904 tarihli gerçek vokal kaydı',
+    kaynak:'Telif süresi dolmuş eserler',
+    url:'https://commons.wikimedia.org/wiki/Special:Redirect/file/%22Marching_Through_Georgia%22_by_Henry_C._Work_%E2%80%93_sung_by_Harlan_%26_Stanley_(1904).ogg',
+    lisans:'Public Domain',
+    lisansUrl:'https://creativecommons.org/publicdomain/mark/1.0/',
+    kaynakUrl:'https://commons.wikimedia.org/wiki/File:%22Marching_Through_Georgia%22_by_Henry_C._Work_%E2%80%93_sung_by_Harlan_%26_Stanley_(1904).ogg',
+    ikon:Icons.mic_external_on_rounded,
+  ),
+  NgelxYerlesikMuzik(
+    id:'chakrulo_1957',
+    baslik:'Chakrulo',
+    sanatci:'Georgian State Folk Song and Dance Ensemble',
+    kategori:'Geleneksel / Folk',
+    aciklama:'1957 tarihli gerçek topluluk kaydı',
+    kaynak:'Telif süresi dolmuş eserler',
+    url:'https://commons.wikimedia.org/wiki/Special:Redirect/file/Chakrulo_(1957).ogg',
+    lisans:'Public Domain',
+    lisansUrl:'https://creativecommons.org/publicdomain/mark/1.0/',
+    kaynakUrl:'https://commons.wikimedia.org/wiki/File:Chakrulo_(1957).ogg',
+    ikon:Icons.groups_rounded,
+  ),
 ];
 
 const List<String> ngelxMuzikKaynaklari=[
-  'NgelX Original',
   'Bağımsız sanatçılar',
   'Lisanslı katalog',
   'Telif süresi dolmuş eserler',
@@ -871,86 +980,14 @@ const List<String> ngelxMuzikKaynaklari=[
 String ngelxMuzikKaynakAciklama(String kaynak){
   switch(kaynak){
     case 'Bağımsız sanatçılar':
-      return 'Sanatçının NgelX kullanımı için açık izni ve sözleşmesi doğrulanan parçalar burada yer alacak.';
+      return 'Gerçek sanatçı kayıtları. Yalnızca ticari kullanıma izin veren açık lisansı doğrulanmış parçalar gösterilir.';
     case 'Lisanslı katalog':
-      return 'Plak şirketi, yayıncı veya katalog sağlayıcısıyla lisans tamamlandığında gerçek sanatçı kataloğu burada açılacak.';
+      return 'Tarkan, İbrahim Tatlıses ve diğer ticari kataloglar ancak hak sahibiyle lisans anlaşması tamamlandığında burada açılır.';
     case 'Telif süresi dolmuş eserler':
-      return 'Eser ve kullanılan ses kaydının hak durumu ayrı ayrı doğrulanan kamu malı içerikler burada yer alacak.';
+      return 'Eser ve ses kaydı için kamu malı durumu doğrulanan gerçek tarihî kayıtlar.';
     default:
-      return 'NgelX için üretilmiş, harici telifli kayıt içermeyen özgün parçalar.';
+      return '';
   }
-}
-
-Future<String> ngelxYerlesikMuzikDosyasi(String trackId)async{
-  final dir=await getTemporaryDirectory();
-  final file=File('${dir.path}/ngelx_original_$trackId.wav');
-  try{
-    if(await file.exists()&&await file.length()>200000)return file.path;
-  }catch(_){}
-  const sampleRate=16000;
-  const seconds=12;
-  const totalSamples=sampleRate*seconds;
-  const dataBytes=totalSamples*2;
-  final data=ByteData(44+dataBytes);
-  void ascii(int offset,String value){
-    for(var i=0;i<value.length;i++)data.setUint8(offset+i,value.codeUnitAt(i));
-  }
-  ascii(0,'RIFF');
-  data.setUint32(4,36+dataBytes,Endian.little);
-  ascii(8,'WAVE');
-  ascii(12,'fmt ');
-  data.setUint32(16,16,Endian.little);
-  data.setUint16(20,1,Endian.little);
-  data.setUint16(22,1,Endian.little);
-  data.setUint32(24,sampleRate,Endian.little);
-  data.setUint32(28,sampleRate*2,Endian.little);
-  data.setUint16(32,2,Endian.little);
-  data.setUint16(34,16,Endian.little);
-  ascii(36,'data');
-  data.setUint32(40,dataBytes,Endian.little);
-
-  late List<double> roots;
-  late int style;
-  switch(trackId){
-    case 'sakin_akis': roots=[196.0,220.0,174.61,196.0];style=1;break;
-    case 'odak': roots=[220.0,246.94,261.63,196.0];style=2;break;
-    case 'gun_dogumu': roots=[261.63,293.66,220.0,246.94];style=3;break;
-    case 'gece_yolu': roots=[146.83,164.81,130.81,146.83];style=4;break;
-    case 'hafif_tempo': roots=[220.0,246.94,196.0,220.0];style=5;break;
-    default: roots=[174.61,196.0,164.81,174.61];style=0;
-  }
-  final twoPi=math.pi*2;
-  for(var i=0;i<totalSamples;i++){
-    final t=i/sampleRate;
-    final section=((t/3).floor())%roots.length;
-    final root=roots[section];
-    final local=t%3;
-    final fadeIn=(local/.32).clamp(0.0,1.0).toDouble();
-    final fadeOut=((3-local)/.38).clamp(0.0,1.0).toDouble();
-    final env=math.min(fadeIn,fadeOut);
-    double x=0;
-    if(style==2){
-      final step=((t*4).floor())%4;
-      final note=<double>[1,1.25,1.5,2][step];
-      x=.45*math.sin(twoPi*root*note*t)+.18*math.sin(twoPi*root*.5*t);
-    }else{
-      final third=style==3?1.2599:1.1892;
-      const fifth=1.4983;
-      x=.34*math.sin(twoPi*root*t)+.22*math.sin(twoPi*root*third*t)+.18*math.sin(twoPi*root*fifth*t)+.10*math.sin(twoPi*root*.5*t);
-      if(style==1||style==5){
-        final beat=t%.5;
-        if(beat<.08)x+=.20*math.sin(twoPi*62*beat)*(1-beat/.08);
-        final hat=t%.25;
-        if(hat<.025)x+=.035*math.sin(i*1.618)*(1-hat/.025);
-      }
-      if(style==4)x+=.08*math.sin(twoPi*55*t);
-    }
-    x*=env*(style == 5 ? 0.72 : 0.64);
-    final v=(x.clamp(-1.0,1.0)*32760).round();
-    data.setInt16(44+i*2,v,Endian.little);
-  }
-  await file.writeAsBytes(data.buffer.asUint8List(),flush:true);
-  return file.path;
 }
 
 final Map<String,_NgelxSesliMuzikKontroluState> _ngelxSesliMuzikOynaticilari=<String,_NgelxSesliMuzikKontroluState>{};
@@ -1027,15 +1064,8 @@ class _NgelxSesliMuzikKontroluState extends State<NgelxSesliMuzikKontrolu>{
       if(url!=_url){
         _url=url;
         if(mounted)setState(()=>_hazirlaniyor=true);
-        if(url.startsWith('ngelx://original/')){
-          final id=url.substring('ngelx://original/'.length);
-          final path=await ngelxYerlesikMuzikDosyasi(id);
-          await _oynatici.setFilePath(path);
-          await _oynatici.setLoopMode(LoopMode.one);
-        }else{
-          await _oynatici.setUrl(url);
-          await _oynatici.setLoopMode(LoopMode.off);
-        }
+        await _oynatici.setUrl(url);
+        await _oynatici.setLoopMode(LoopMode.off);
         await _oynatici.setVolume(_ses);
       }
       final hedef=_hedefKonumMs();
@@ -1056,7 +1086,7 @@ class _NgelxSesliMuzikKontroluState extends State<NgelxSesliMuzikKontrolu>{
     if(!widget.yonetici||widget.bitti||_yukleniyor)return;
     final arama=TextEditingController();
     var kategori='Tümü';
-    var kaynak='NgelX Original';
+    var kaynak='Bağımsız sanatçılar';
     NgelxYerlesikMuzik? secilen;
     if(!mounted)return;
     secilen=await showModalBottomSheet<NgelxYerlesikMuzik>(
@@ -1067,7 +1097,7 @@ class _NgelxSesliMuzikKontroluState extends State<NgelxSesliMuzikKontrolu>{
       shape:const RoundedRectangleBorder(borderRadius:BorderRadius.vertical(top:Radius.circular(28))),
       builder:(sheet)=>StatefulBuilder(builder:(sheet,setSheet){
         final q=arama.text.trim().toLowerCase();
-        final liste=ngelxYerlesikMuzikler.where((x)=>x.kaynak==kaynak&&(kategori=='Tümü'||x.kategori==kategori)&&(q.isEmpty||x.baslik.toLowerCase().contains(q)||x.kategori.toLowerCase().contains(q)||x.aciklama.toLowerCase().contains(q))).toList();
+        final liste=ngelxYerlesikMuzikler.where((x)=>x.kaynak==kaynak&&(kategori=='Tümü'||x.kategori==kategori)&&(q.isEmpty||x.baslik.toLowerCase().contains(q)||x.sanatci.toLowerCase().contains(q)||x.kategori.toLowerCase().contains(q)||x.aciklama.toLowerCase().contains(q))).toList();
         return SafeArea(top:false,child:Padding(
           padding:EdgeInsets.fromLTRB(16,4,16,18+MediaQuery.viewInsetsOf(sheet).bottom),
           child:SizedBox(
@@ -1132,7 +1162,7 @@ class _NgelxSesliMuzikKontroluState extends State<NgelxSesliMuzikKontrolu>{
               const SizedBox(height:6),
               Wrap(
                 spacing:6,runSpacing:6,
-                children:['Tümü','Chill','Ambient','Odak','Sohbet'].map((x)=>ChoiceChip(
+                children:['Tümü','Pop / R&B','Rock / Folk','Rock','Indie / Lo-fi','Elektronik','Country / Folk','Folk / Historic','Geleneksel / Folk'].map((x)=>ChoiceChip(
                   label:Text(x,style:TextStyle(color:kategori==x?Colors.white:Colors.black87,fontWeight:FontWeight.w800)),
                   selected:kategori==x,
                   selectedColor:const Color(0xFF21C7E8),
@@ -1158,12 +1188,12 @@ class _NgelxSesliMuzikKontroluState extends State<NgelxSesliMuzikKontrolu>{
                   separatorBuilder:(_,__)=>const Divider(height:1),
                   itemBuilder:(_,i){
                     final x=liste[i];
-                    final aktif=_url=='ngelx://original/${x.id}';
+                    final aktif=_url==x.url;
                     return ListTile(
                       contentPadding:const EdgeInsets.symmetric(horizontal:4,vertical:4),
                       leading:CircleAvatar(backgroundColor:aktif?mor:const Color(0xFFF0E8FF),child:Icon(x.ikon,color:aktif?Colors.white:mor)),
                       title:Text(x.baslik,style:const TextStyle(color:Colors.black87,fontSize:15,fontWeight:FontWeight.w900)),
-                      subtitle:Text('${x.kategori} • ${x.aciklama} • ${x.kaynak}',maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black54,fontSize:11.5,height:1.25,fontWeight:FontWeight.w600)),
+                      subtitle:Text('${x.sanatci} • ${x.kategori} • ${x.lisans}',maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black54,fontSize:11.5,height:1.25,fontWeight:FontWeight.w700)),
                       trailing:FilledButton.tonalIcon(
                         onPressed:()=>Navigator.pop(sheet,x),
                         icon:Icon(aktif?Icons.replay_rounded:Icons.play_arrow_rounded,size:18),
@@ -1182,17 +1212,20 @@ class _NgelxSesliMuzikKontroluState extends State<NgelxSesliMuzikKontrolu>{
     if(secilen==null||!mounted)return;
     setState(()=>_yukleniyor=true);
     try{
-      final path=await ngelxYerlesikMuzikDosyasi(secilen.id);
-      int sureMs=12000;
+      int sureMs=0;
       try{
         final p=AudioPlayer();
-        final sure=await p.setFilePath(path);
-        sureMs=sure?.inMilliseconds??12000;
+        final sure=await p.setUrl(secilen.url).timeout(const Duration(seconds:15));
+        sureMs=sure?.inMilliseconds??0;
         await p.dispose();
       }catch(_){}
       await FirebaseFirestore.instance.collection('audio_rooms').doc(widget.roomId).set({
-        'musicUrl':'ngelx://original/${secilen.id}',
+        'musicUrl':secilen.url,
         'musicTitle':secilen.baslik,
+        'musicArtist':secilen.sanatci,
+        'musicLicense':secilen.lisans,
+        'musicLicenseUrl':secilen.lisansUrl,
+        'musicSourceUrl':secilen.kaynakUrl,
         'musicPlaying':true,
         'musicPositionMs':0,
         'musicStartedAt':FieldValue.serverTimestamp(),
@@ -1200,7 +1233,7 @@ class _NgelxSesliMuzikKontroluState extends State<NgelxSesliMuzikKontrolu>{
         'musicAddedBy':FirebaseAuth.instance.currentUser?.uid??'',
         'musicUpdatedAt':FieldValue.serverTimestamp(),
       },SetOptions(merge:true));
-      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('${secilen.baslik} odaya eklendi.')));
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('${secilen.sanatci} • ${secilen.baslik} odaya eklendi.')));
     }catch(e){
       if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Müzik hazırlanamadı: ${_ngelxKisaHata(e)}')));
     }finally{
