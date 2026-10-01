@@ -953,6 +953,14 @@ Future<String> ngelxYerlesikMuzikDosyasi(String trackId)async{
   return file.path;
 }
 
+final Map<String,_NgelxSesliMuzikKontroluState> _ngelxSesliMuzikOynaticilari=<String,_NgelxSesliMuzikKontroluState>{};
+
+Future<void> ngelxSesliMuzigiYereldeDurdur(String roomId)async{
+  final s=_ngelxSesliMuzikOynaticilari[roomId];
+  if(s==null)return;
+  await s._zorlaDurdur();
+}
+
 class NgelxSesliMuzikKontrolu extends StatefulWidget{
   final String roomId;
   final bool yonetici,bitti;
@@ -971,11 +979,22 @@ class _NgelxSesliMuzikKontroluState extends State<NgelxSesliMuzikKontrolu>{
 
   @override void initState(){
     super.initState();
+    _ngelxSesliMuzikOynaticilari[widget.roomId]=this;
     unawaited(_oynatici.setVolume(_ses));
     _odaAboneligi=FirebaseFirestore.instance.collection('audio_rooms').doc(widget.roomId).snapshots().listen((d){
       final v=d.data()??<String,dynamic>{};
       unawaited(_durumuUygula(v));
     });
+  }
+
+  Future<void> _zorlaDurdur()async{
+    _oynuyor=false;
+    _url='';
+    _baslik='';
+    _konumMs=0;
+    _baslatildi=null;
+    try{await _oynatici.stop();}catch(_){}
+    if(mounted)setState((){});
   }
 
   int _hedefKonumMs(){
@@ -1319,6 +1338,7 @@ class _NgelxSesliMuzikKontroluState extends State<NgelxSesliMuzikKontrolu>{
 
   @override void dispose(){
     _odaAboneligi?.cancel();
+    if(identical(_ngelxSesliMuzikOynaticilari[widget.roomId],this))_ngelxSesliMuzikOynaticilari.remove(widget.roomId);
     unawaited(_oynatici.stop());
     unawaited(_oynatici.dispose());
     super.dispose();
