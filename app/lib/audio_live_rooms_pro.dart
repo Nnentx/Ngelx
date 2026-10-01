@@ -457,9 +457,22 @@ class NgelxSesliInlineSohbet extends StatefulWidget{
 }
 class _NgelxSesliInlineSohbetState extends State<NgelxSesliInlineSohbet>{
   final _mesaj=TextEditingController();
-  bool _gonderiyor=false;
+  final _liste=ScrollController();
+  bool _gonderiyor=false,_enYenide=true;
   String _ad='NgelX',_foto='';
-  @override void initState(){super.initState();unawaited(_profil());}
+
+  @override void initState(){
+    super.initState();
+    _liste.addListener(_kaydirmaDegisti);
+    unawaited(_profil());
+  }
+
+  void _kaydirmaDegisti(){
+    if(!_liste.hasClients)return;
+    final yeni=_liste.offset<36;
+    if(yeni!=_enYenide&&mounted)setState(()=>_enYenide=yeni);
+  }
+
   Future<void> _profil()async{
     final u=FirebaseAuth.instance.currentUser;if(u==null)return;
     try{
@@ -467,6 +480,7 @@ class _NgelxSesliInlineSohbetState extends State<NgelxSesliInlineSohbet>{
       if(mounted)setState((){_ad=(p['displayName']??p['username']??u.displayName??'NgelX').toString();_foto=(p['photoUrl']??'').toString();});
     }catch(_){}
   }
+
   Future<void> _gonder()async{
     final t=_mesaj.text.trim();
     if(t.isEmpty||_gonderiyor||widget.bitti)return;
@@ -474,26 +488,68 @@ class _NgelxSesliInlineSohbetState extends State<NgelxSesliInlineSohbet>{
     _mesaj.clear();
     final hata=await ngelxSesliMesajGonder(roomId:widget.roomId,ad:_ad,foto:_foto,text:t);
     if(hata!=null&&mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(hata)));
-    if(mounted)setState(()=>_gonderiyor=false);
+    if(mounted){
+      setState(()=>_gonderiyor=false);
+      WidgetsBinding.instance.addPostFrameCallback((_){
+        if(mounted&&_liste.hasClients)_liste.animateTo(0,duration:const Duration(milliseconds:220),curve:Curves.easeOut);
+      });
+    }
   }
-  Widget _satir(Map<String,dynamic> v){
-    final ad=(v['displayName']??'NgelX').toString(),metin=(v['text']??'').toString(),rol=(v['authorRole']??'').toString();
-    return Padding(
-      padding:const EdgeInsets.symmetric(vertical:1),
-      child:Row(children:[
-        Flexible(child:Text(ad,overflow:TextOverflow.ellipsis,style:const TextStyle(color:mor,fontSize:11,fontWeight:FontWeight.w900))),
-        ngelxSesliMesajRolRozeti(rol),
-        const SizedBox(width:5),
-        Expanded(flex:3,child:Text(metin,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black87,fontSize:12.5,fontWeight:FontWeight.w600))),
-      ]),
+
+  Future<void> _mesajIslem(QueryDocumentSnapshot<Map<String,dynamic>> d)async{
+    final v=d.data(),ben=FirebaseAuth.instance.currentUser?.uid,benim=(v['userId']??'').toString()==ben;
+    final sec=await showModalBottomSheet<String>(
+      context:context,
+      backgroundColor:Colors.white,
+      showDragHandle:true,
+      builder:(c)=>SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
+        if(widget.yonetici)ListTile(leading:const Icon(Icons.push_pin_outlined,color:mor),title:Text(v['pinned']==true?'Sabitlemeyi kaldır':'Mesajı sabitle'),onTap:()=>Navigator.pop(c,'pin')),
+        if(widget.sahibiyim&&!benim)ListTile(leading:const Icon(Icons.admin_panel_settings_outlined,color:mor),title:const Text('Kullanıcıyı yönet'),onTap:()=>Navigator.pop(c,'manage')),
+        if(widget.yonetici||benim)ListTile(leading:const Icon(Icons.delete_outline,color:Colors.redAccent),title:const Text('Mesajı sil',style:TextStyle(color:Colors.redAccent,fontWeight:FontWeight.w800)),onTap:()=>Navigator.pop(c,'delete')),
+      ])),
+    );
+    if(sec=='delete')await d.reference.delete();
+    if(sec=='pin')await d.reference.set({'pinned':v['pinned']!=true,'updatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
+    if(sec=='manage'&&mounted)await ngelxSesliKullaniciMenuAc(context,widget.roomId,(v['userId']??'').toString(),(v['displayName']??'NgelX').toString());
+  }
+
+  Widget _mesajBalonu(QueryDocumentSnapshot<Map<String,dynamic>> d){
+    final v=d.data(),ben=FirebaseAuth.instance.currentUser?.uid;
+    final benim=(v['userId']??'').toString()==ben;
+    final ad=(v['displayName']??'NgelX').toString(),metin=(v['text']??'').toString(),rol=(v['authorRole']??'').toString(),pin=v['pinned']==true;
+    return Align(
+      alignment:benim?Alignment.centerRight:Alignment.centerLeft,
+      child:GestureDetector(
+        onLongPress:()=>_mesajIslem(d),
+        child:Container(
+          constraints:BoxConstraints(maxWidth:MediaQuery.sizeOf(context).width*.82),
+          margin:const EdgeInsets.symmetric(horizontal:10,vertical:3),
+          padding:const EdgeInsets.fromLTRB(11,7,11,8),
+          decoration:BoxDecoration(
+            color:benim?const Color(0xFFF0E8FF):const Color(0xFFF5F5F7),
+            borderRadius:BorderRadius.circular(15),
+            border:pin?Border.all(color:mor,width:1.2):null,
+          ),
+          child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+            Row(mainAxisSize:MainAxisSize.min,children:[
+              if(pin)...[const Icon(Icons.push_pin_rounded,size:12,color:mor),const SizedBox(width:3)],
+              Flexible(child:Text(ad,overflow:TextOverflow.ellipsis,style:const TextStyle(color:mor,fontSize:10.5,fontWeight:FontWeight.w900))),
+              ngelxSesliMesajRolRozeti(rol),
+            ]),
+            const SizedBox(height:2),
+            Text(metin,style:const TextStyle(color:Colors.black87,fontSize:13.5,height:1.25)),
+          ]),
+        ),
+      ),
     );
   }
+
   @override Widget build(BuildContext context)=>Container(
-    height:150,
+    height:230,
     decoration:const BoxDecoration(color:Colors.white,border:Border(top:BorderSide(color:Color(0xFFEDE8F2)))),
     child:Column(children:[
       SizedBox(
-        height:34,
+        height:38,
         child:Padding(
           padding:const EdgeInsets.symmetric(horizontal:12),
           child:Row(children:[
@@ -501,37 +557,43 @@ class _NgelxSesliInlineSohbetState extends State<NgelxSesliInlineSohbet>{
             const SizedBox(width:6),
             const Text('Sohbet',style:TextStyle(color:Colors.black87,fontWeight:FontWeight.w900)),
             const Spacer(),
-            TextButton.icon(
-              style:TextButton.styleFrom(padding:const EdgeInsets.symmetric(horizontal:6),visualDensity:VisualDensity.compact),
-              onPressed:()=>ngelxSesliSohbetAc(context,widget.roomId,widget.yonetici,sahibiyim:widget.sahibiyim,bitti:widget.bitti),
-              icon:const Icon(Icons.open_in_full_rounded,size:15),
-              label:const Text('Büyüt',style:TextStyle(fontSize:11,fontWeight:FontWeight.w800)),
-            ),
+            if(!_enYenide)
+              TextButton.icon(
+                style:TextButton.styleFrom(padding:const EdgeInsets.symmetric(horizontal:7),visualDensity:VisualDensity.compact),
+                onPressed:(){
+                  if(_liste.hasClients)_liste.animateTo(0,duration:const Duration(milliseconds:240),curve:Curves.easeOut);
+                },
+                icon:const Icon(Icons.arrow_downward_rounded,size:14),
+                label:const Text('Yeni mesajlar',style:TextStyle(fontSize:10.5,fontWeight:FontWeight.w800)),
+              ),
           ]),
         ),
       ),
       Expanded(
         child:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
-          stream:FirebaseFirestore.instance.collection('audio_rooms').doc(widget.roomId).collection('messages').orderBy('createdAt',descending:true).limit(3).snapshots(),
+          stream:FirebaseFirestore.instance.collection('audio_rooms').doc(widget.roomId).collection('messages').orderBy('createdAt',descending:true).limit(80).snapshots(),
           builder:(_,s){
             final docs=s.data?.docs??[];
             if(s.connectionState==ConnectionState.waiting&&docs.isEmpty)return const Center(child:SizedBox(width:18,height:18,child:CircularProgressIndicator(strokeWidth:2,color:mor)));
-            if(docs.isEmpty)return Center(child:Text(widget.bitti?'Bu oda sona erdi • Sohbet salt okunur.':'Henüz mesaj yok • Yazışma ses açıkken burada görünür.',style:const TextStyle(color:Colors.black38,fontSize:11.5,fontWeight:FontWeight.w600)));
-            final gorunen=docs.take(2).toList().reversed.toList();
-            return Padding(
-              padding:const EdgeInsets.fromLTRB(12,1,12,2),
-              child:Column(mainAxisAlignment:MainAxisAlignment.end,children:gorunen.map((d)=>_satir(d.data())).toList()),
+            if(docs.isEmpty)return Center(child:Padding(padding:const EdgeInsets.symmetric(horizontal:18),child:Text(widget.bitti?'Bu oda sona erdi • Sohbet salt okunur.':'Henüz mesaj yok • Mesajlar burada akış gibi görünecek.',textAlign:TextAlign.center,style:const TextStyle(color:Colors.black38,fontSize:11.5,fontWeight:FontWeight.w600))));
+            return ListView.builder(
+              controller:_liste,
+              reverse:true,
+              padding:const EdgeInsets.fromLTRB(2,2,2,5),
+              physics:const BouncingScrollPhysics(parent:AlwaysScrollableScrollPhysics()),
+              itemCount:docs.length,
+              itemBuilder:(_,i)=>_mesajBalonu(docs[i]),
             );
           },
         ),
       ),
       Padding(
-        padding:const EdgeInsets.fromLTRB(10,4,10,7),
+        padding:const EdgeInsets.fromLTRB(10,5,10,8),
         child:Row(children:[
           Expanded(child:TextField(
             controller:_mesaj,
             enabled:!widget.bitti,
-            minLines:1,maxLines:1,
+            minLines:1,maxLines:2,
             textInputAction:TextInputAction.send,
             style:const TextStyle(color:Colors.black87,fontSize:13.5),
             decoration:InputDecoration(
@@ -547,7 +609,7 @@ class _NgelxSesliInlineSohbetState extends State<NgelxSesliInlineSohbet>{
           )),
           const SizedBox(width:6),
           IconButton.filled(
-            style:IconButton.styleFrom(backgroundColor:mor,minimumSize:const Size(40,40)),
+            style:IconButton.styleFrom(backgroundColor:mor,minimumSize:const Size(42,42)),
             onPressed:_gonderiyor||widget.bitti?null:_gonder,
             icon:_gonderiyor?const SizedBox(width:17,height:17,child:CircularProgressIndicator(strokeWidth:2,color:Colors.white)):const Icon(Icons.send_rounded,color:Colors.white,size:19),
           ),
@@ -555,5 +617,12 @@ class _NgelxSesliInlineSohbetState extends State<NgelxSesliInlineSohbet>{
       ),
     ]),
   );
-  @override void dispose(){_mesaj.dispose();super.dispose();}
+
+  @override void dispose(){
+    _liste.removeListener(_kaydirmaDegisti);
+    _liste.dispose();
+    _mesaj.dispose();
+    super.dispose();
+  }
 }
+
