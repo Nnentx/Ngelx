@@ -14372,7 +14372,9 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
         boxShadow:const [BoxShadow(color:Color(0x28000000),blurRadius:18,offset:Offset(0,8))],
       ),
       child:Stack(fit:StackFit.expand,children:[
-        if(widget.goruntulu&&track!=null)_efektliVideo(track) else Center(child:_katilimciAvatar(p,yerel:yerel,radius:45)),
+        if(widget.goruntulu&&track!=null)
+          (yerel?_efektliVideo(track):lk.VideoTrackRenderer(track,fit:lk.VideoViewFit.cover))
+        else Center(child:_katilimciAvatar(p,yerel:yerel,radius:45)),
         Positioned(
           left:10,right:10,bottom:10,
           child:Container(
@@ -14474,7 +14476,11 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
         margin:const EdgeInsets.fromLTRB(12,8,12,0),
         clipBehavior:Clip.antiAlias,
         decoration:BoxDecoration(color:ngelxCallCard,borderRadius:BorderRadius.circular(28),border:Border.all(color:Colors.white10)),
-        child:ana!=null?_efektliVideo(ana):Center(child:Column(mainAxisSize:MainAxisSize.min,children:[
+        child:ana!=null
+          ?(uzak!=null
+            ?lk.VideoTrackRenderer(uzak,fit:lk.VideoViewFit.cover)
+            :_efektliVideo(yerel!))
+          :Center(child:Column(mainAxisSize:MainAxisSize.min,children:[
           CircleAvatar(radius:52,backgroundColor:const Color(0xFFE9DDFF),backgroundImage:widget.foto.isEmpty?null:NgelXAgImageProvider(widget.foto),child:widget.foto.isEmpty?const Icon(Icons.person_rounded,color:ngelxPremiumPurple,size:48):null),
           const SizedBox(height:14),
           Text(baglaniyor?'Bağlanıyor…':'Görüntü bekleniyor…',style:const TextStyle(color:Colors.white70,fontWeight:FontWeight.w700)),
