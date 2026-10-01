@@ -1426,3 +1426,13 @@ Bu maddeler Build 359'un çalışan arama/görüntülü arama davranışını bo
 - istegiSonuclandir başarı sonrası ilgili belge _sunucuAktiviteleri cache'inde de yerel olarak accepted/rejected kabul edilerek stale pending eylemleri anında kaldırılacak.
 - Manuel refresh, Source.server çağrısı başarısız olursa mevcut canlı stream'i bozmamalı; kullanıcıya hata gösterebilir fakat eski cache canlı snapshot'ın üstüne çıkmamalı.
 - **Takip İstekleri / Arkadaşlık İstekleri sayaçları** yalnızca status == pending aktif istekleri sayacak. Accepted/rejected veya legacy tarihsel kayıtlar aktif istek sayacına dahil edilmeyecek.
+
+
+## 2026-10-01 — Build 360 profil doğrulaması: takip kabulü arkadaşlığı etkilemedi
+
+- Sultan hesabına dönülüp Adem profili açıldı.
+- Takip kabulü sonrası profil butonu doğru şekilde **“Takip ediyorsun”** durumuna geçti.
+- Adem profilindeki **Takipçi** sayısı **1 → 2** yükseldi; ilişki yazımı ve sayaç güncellemesi cihazda doğrulandı.
+- Aynı anda **“Arkadaşlık isteği bekliyor”** durumu korunmaya devam etti; takip kabulü arkadaşlık isteğini kabul etmedi, iptal etmedi veya sıfırlamadı.
+- Bu adımla Build 360'taki temel bağımsız state hedefi cihazda doğrulandı: takip ve arkadaşlık birbirinden ayrı çalışıyor.
+- Profil ekranının ana eylem alanındaki alt taşma önceki Build 359 görüntüsüne göre düzelmiş görünüyor; yine de scroll'un gerçek en son öğesi ayrı SafeArea testinde kontrol edilmeye devam edecek.
