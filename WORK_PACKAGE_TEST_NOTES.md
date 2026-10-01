@@ -1334,3 +1334,12 @@ Bu maddeler Build 359'un çalışan arama/görüntülü arama davranışını bo
 - Aynı akışta red (X) işlemi de ayrıca test edilip aynı permission-denied yoluna düşüp düşmediği doğrulanacak.
 - Aktivite ekranının en alt kartı klasik 3 tuşlu Android gezinme alanında kısmen kesiliyor. Son öğe tamamen görünür ve dokunulabilir olana kadar dinamik bottom SafeArea/padding artırılacak.
 - Hata SnackBar'ı görünürken alt liste öğelerini kapatıyor; hata mesajı gösterimi SafeArea ile çakışmayacak biçimde gözden geçirilecek.
+
+
+## 2026-10-01 — Adem hesabı Aktivite testi: takip isteği reddetme çalışıyor
+
+- Aynı takip isteği kartındaki kırmızı **X / reddet** işlemi cihazda başarıyla tamamlandı.
+- Uygulama **“Takip isteği reddedildi.”** mesajını gösterdi ve bu işlemde Firestore `permission-denied` hatası oluşmadı.
+- Böylece Build 359'da sorun **reddetme genel izni** değil; özellikle yeşil onay / kabul akışındaki yazma-güncelleme zincirine daraltıldı.
+- Build 360 düzeltmesinde reddetme akışı korunacak, kabul akışı Firestore kuralları ve ilgili belge güncellemeleriyle ayrı olarak düzeltilecek.
+- Ekranın alt kısmında siyah işlem mesajı ve Android 3 tuşlu gezinme çubuğu birlikte görünürken listenin son kartı hâlâ fazla aşağıda kalıyor; Aktivite ekranının bottom SafeArea/padding kontrolü açık kalacak.
