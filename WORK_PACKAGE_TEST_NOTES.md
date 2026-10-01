@@ -1792,3 +1792,14 @@ Kod incelemesinde mevcut NgelX efekt sisteminin gerçek zamanlı yüz/AR efekt m
 - **Aktivite 0** olarak kalıyor.
 - Sonuç: kabul edilen mesaj isteği normal Gelen Kutusu'na doğru taşınıyor ve kabul sonrası unread sayacı yanlış şişmiyor.
 - Kalan son kontrol: **Mesaj İstekleri** ekranında Sultan'ın artık listede olmadığını doğrulamak.
+
+
+## 2026-10-02 — Mesaj İstekleri için sayaç rozeti
+
+- Build 367 cihaz testinde kabul edilen Sultan isteği sonrasında **Mesaj İstekleri** ekranı doğru şekilde **“Yeni mesaj isteğin yok.”** durumuna geçti; kabul edilen istek listeden tamamen kalktı.
+- Yeni UX isteği: Gelen Kutusu'ndaki **Mesaj İstekleri** kartında pending istek sayısını gösteren bir sayaç/rozet olacak.
+- Sayaç yalnızca gerçekten **bekleyen (pending), kabul edilmemiş, reddedilmemiş ve normal Gelen Kutusu'na taşınmamış** mesaj isteklerini sayacak.
+- Bekleyen istek yoksa rozet gösterilmeyecek.
+- Bir istek kabul/red/engel işlemiyle kapanınca sayaç anlık olarak azalacak.
+- Normal **Mesajlar** unread sayacı ile bu sayaç birbirine karışmayacak.
+- Eski/yeni hesaplarda aynı mantık kullanılacak.
