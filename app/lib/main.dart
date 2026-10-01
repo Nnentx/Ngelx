@@ -102,8 +102,8 @@ const ngelxPrivateBlueCanvas = Color(0xFFF6FAFF);
 const ngelxPrivateBlueBorder = Color(0xFFD8E8FF);
 const ngelxPrivateBlueInk = Color(0xFF10213A);
 
-const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.133');
-const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '352');
+const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.134');
+const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '354');
 const ngelxGroupBorder = Color(0xFFD9EEE0);
 
 final GlobalKey<NavigatorState> ngelxNavigatorKey=GlobalKey<NavigatorState>();
@@ -11676,6 +11676,8 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
         'callParticipants':<String>[ben],
         'callCreatedAt':FieldValue.serverTimestamp(),
         'callConnectedAt':FieldValue.delete(),
+        'callAutoEnded':false,
+        'callAutoEndedReason':FieldValue.delete(),
         'callAnsweredAt':FieldValue.delete(),
         'callEndedAt':FieldValue.delete(),
         'callEndedBy':FieldValue.delete(),
@@ -13590,9 +13592,15 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
     });
   }
 
-  void _cevapsizSayaciniBaslat(){
+  void _cevapsizSayaciniBaslat({Timestamp? olusturuldu}){
     cevapsizZamanlayici?.cancel();
-    cevapsizZamanlayici=Timer(const Duration(seconds:45),()async{
+    final toplamSaniye=grupAramasi?120:45;
+    var kalan=toplamSaniye;
+    if(olusturuldu!=null){
+      final gecen=DateTime.now().difference(olusturuldu.toDate()).inSeconds;
+      kalan=(toplamSaniye-gecen).clamp(0,toplamSaniye).toInt();
+    }
+    cevapsizZamanlayici=Timer(Duration(seconds:kalan),()async{
       if(bitiyor)return;
       try{
         final d=await widget.aramaRef.get();
@@ -13604,6 +13612,8 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
         await widget.aramaRef.set({
           'callStatus':'missed',
           'callEndedAt':FieldValue.serverTimestamp(),
+          if(grupAramasi)'callAutoEnded':true,
+          if(grupAramasi)'callAutoEndedReason':'no_participants_2m',
         },SetOptions(merge:true));
         final id=(v['callMessageId']??'').toString();
         if(id.isNotEmpty){
@@ -13611,12 +13621,13 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
             'callStatus':'missed',
             'callEndedAt':FieldValue.serverTimestamp(),
             'durationSeconds':0,
+            if(grupAramasi)'callAutoEnded':true,
+            if(grupAramasi)'callAutoEndedReason':'no_participants_2m',
           },SetOptions(merge:true));
         }
       }catch(_){}
     });
   }
-
   Future<void> _uzaktanBitirildi(String durum)async{
     if(bitiyor)return;
     bitiyor=true;
@@ -13636,6 +13647,11 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
       unawaited(widget.aramaRef.collection('messages').doc(mesajId).set({'callStatus':durum,'callEndedAt':FieldValue.serverTimestamp()},SetOptions(merge:true)).catchError((_){ }));
     }
     if(!mounted)return;
+    if(grupAramasi&&durum=='missed'){
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Kimse katılmadığı için grup araması otomatik kapatıldı.')));
+      Navigator.maybePop(context,false);
+      return;
+    }
     if(durum=='missed'||durum=='rejected'){
       setState((){bitisDurumu=durum;baglaniyor=false;yenidenBaglaniyor=false;hata=null;});
       return;
@@ -13722,7 +13738,11 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
       }else{
         aramaSureZamanlayici?.cancel();
         aramaBaslangic=null;
-        _cevapsizSayaciniBaslat();
+        _cevapsizSayaciniBaslat(
+          olusturuldu:aramaVerisi['callCreatedAt'] is Timestamp
+            ?aramaVerisi['callCreatedAt'] as Timestamp
+            :null,
+        );
       }
       final durumGuncelleme=<String,dynamic>{
         'callStatus':aktif?'active':'ringing',
@@ -14252,7 +14272,7 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
             Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
               Text(widget.baslik,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.white,fontSize:29,fontWeight:FontWeight.w900,letterSpacing:-.5)),
               const SizedBox(height:5),
-              Row(children:[const Icon(Icons.graphic_eq_rounded,color:Color(0xFFB88BFF),size:20),const SizedBox(width:7),Text(yenidenBaglaniyor?'Yeniden bağlanıyor…':baglaniyor?'Bağlanıyor…':'Sesli arama • '+_aramaSureYazi(),style:const TextStyle(color:Colors.white70,fontSize:13,fontWeight:FontWeight.w700))]),
+              Row(children:[const Icon(Icons.graphic_eq_rounded,color:Color(0xFFB88BFF),size:20),const SizedBox(width:7),Text(yenidenBaglaniyor?'Yeniden bağlanıyor…':baglaniyor?'Bağlanıyor…':r.remoteParticipants.isEmpty?'Katılımcılar bekleniyor…':'Sesli grup araması',style:const TextStyle(color:Colors.white70,fontSize:13,fontWeight:FontWeight.w700))]),
             ])),
             Container(padding:const EdgeInsets.symmetric(horizontal:13,vertical:9),decoration:BoxDecoration(color:Colors.white10,borderRadius:BorderRadius.circular(18),border:Border.all(color:Colors.white10)),child:Text(katilimcilar.length.toString()+' kişi',style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w800))),
           ]),
@@ -14270,7 +14290,7 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
         child:Row(children:[
           Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
             Text(widget.baslik,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.white,fontSize:22,fontWeight:FontWeight.w900)),
-            Text(yenidenBaglaniyor?'Yeniden bağlanıyor…':baglaniyor?'Görüntülü görüşme':'Görüntülü görüşme • '+_aramaSureYazi(),style:const TextStyle(color:Colors.white60,fontSize:12,fontWeight:FontWeight.w700)),
+            Text(yenidenBaglaniyor?'Yeniden bağlanıyor…':baglaniyor?'Görüntülü görüşme':r.remoteParticipants.isEmpty?'Katılımcılar bekleniyor…':'Görüntülü grup araması',style:const TextStyle(color:Colors.white60,fontSize:12,fontWeight:FontWeight.w700)),
           ])),
           Container(padding:const EdgeInsets.symmetric(horizontal:12,vertical:8),decoration:BoxDecoration(color:Colors.white10,borderRadius:BorderRadius.circular(16)),child:Text(katilimcilar.length.toString()+' kişi',style:const TextStyle(color:Colors.white70,fontWeight:FontWeight.w800))),
         ]),
@@ -14515,6 +14535,8 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
         'callParticipants':<String>[me],
         'callCreatedAt':FieldValue.serverTimestamp(),
         'callConnectedAt':FieldValue.delete(),
+        'callAutoEnded':false,
+        'callAutoEndedReason':FieldValue.delete(),
         'callAnsweredAt':FieldValue.delete(),
         'callEndedAt':FieldValue.delete(),
         'callEndedBy':FieldValue.delete(),
