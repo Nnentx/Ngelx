@@ -19798,12 +19798,12 @@ class _AktivitePageState extends State<AktivitePage> {
           final birlesik=<String,QueryDocumentSnapshot<Map<String,dynamic>>>{};
           for(final d in s.data?.docs??<QueryDocumentSnapshot<Map<String,dynamic>>>[])birlesik[d.id]=d;
           for(final d in _sunucuAktiviteleri)birlesik[d.id]=d;
-          final tekil=<String,QueryDocumentSnapshot<Map<String,dynamic>>>{};
+          final tekilOlay=<String,QueryDocumentSnapshot<Map<String,dynamic>>>{};
           for(final d in birlesik.values){
-            final anahtar=bildirimTekrarAnahtari(d),onceki=tekil[anahtar];
-            if(onceki==null||bildirimZamani(d)>bildirimZamani(onceki))tekil[anahtar]=d;
+            final anahtar=bildirimTekrarAnahtari(d),onceki=tekilOlay[anahtar];
+            if(onceki==null||bildirimZamani(d)>bildirimZamani(onceki))tekilOlay[anahtar]=d;
           }
-          final gelenDocs=tekil.values.toList();
+          final gelenDocs=tekilOlay.values.toList();
           final tekil=<String,QueryDocumentSnapshot<Map<String,dynamic>>>{};
           for(final d in gelenDocs){
             final anahtar=_aktiviteTekilAnahtar(d);
