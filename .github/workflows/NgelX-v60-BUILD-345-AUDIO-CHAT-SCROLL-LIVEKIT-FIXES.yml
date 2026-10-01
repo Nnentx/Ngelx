@@ -38,7 +38,8 @@ jobs:
           grep -F "class NgelxSesliInlineSohbet" app/lib/audio_live_rooms_pro.dart
           grep -F "Yeni mesajlar" app/lib/audio_live_rooms_pro.dart
           ! grep -F "label:const Text('Büyüt'" app/lib/audio_live_rooms_pro.dart
-          grep -F "widget.oda.reconnect()" app/lib/audio_live_rooms.dart
+          grep -F "aktifOda=yeniOda" app/lib/audio_live_rooms.dart
+          grep -F "yeniOda=lk.Room" app/lib/audio_live_rooms.dart
           grep -F "Sesli odadan ayrılmak istiyor musun?" app/lib/audio_live_rooms.dart
           grep -F "Oda kapanacak ve odadaki herkes çıkarılacak." app/lib/audio_live_rooms.dart
           ! grep -F "tooltip:'Söz istekleri'" app/lib/audio_live_rooms.dart
