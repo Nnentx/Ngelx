@@ -729,6 +729,7 @@ class _SesliOdaPageState extends State<SesliOdaPage> with WidgetsBindingObserver
     child:Container(padding:const EdgeInsets.symmetric(horizontal:12,vertical:8),decoration:BoxDecoration(border:Border.all(color:const Color(0xFFD5CEDD)),borderRadius:BorderRadius.circular(20)),child:const Row(mainAxisSize:MainAxisSize.min,children:[Icon(Icons.add_reaction_outlined,size:18,color:mor),SizedBox(width:6),Text('Tepki',style:TextStyle(color:Colors.black87,fontWeight:FontWeight.w700))])),
   ),
   OutlinedButton.icon(onPressed:()=>ngelxSesliPaylas(context,widget.odaId,(veri['title']??widget.baslik).toString()),icon:const Icon(Icons.ios_share_rounded,size:18),label:const Text('Davet')),
+  NgelxSesliMuzikKontrolu(roomId:widget.odaId,yonetici:yoneticiyim,bitti:bitti),
 ]),const SizedBox(height:14),Row(children:[const Text('Sahne',style:TextStyle(fontSize:18,fontWeight:FontWeight.w900)),const Spacer(),if(yoneticiyim&&!bitti)TextButton.icon(onPressed:istekler,icon:const Icon(Icons.pan_tool_alt,size:16),label:const Text('İstekler'))]),StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
   stream:FirebaseFirestore.instance.collection('audio_rooms').doc(widget.odaId).collection('messages').orderBy('createdAt',descending:true).limit(40).snapshots(),
   builder:(_,ms){
