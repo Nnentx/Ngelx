@@ -295,7 +295,7 @@ class _NgelXCameraStudioPageState extends State<NgelXCameraStudioPage> with Widg
       _sonYuzSayisi=yuzler.length;
       try{await dosya.delete();}catch(_){}
       if(yuzler.isEmpty)return g;
-      return _ngelxYuzBolgeselRetus(g,yuzler,retus<=.01?.18:retus,gozCanlilik:gozCanlilik,yuzIsigi:yuzIsigi);
+      return _ngelxYuzBolgeselRetus(g,yuzler,retus <= .01 ? .18 : retus,gozCanlilik:gozCanlilik,yuzIsigi:yuzIsigi);
     }catch(e){
       debugPrint('AI yüz rötuşu atlandı: $e');
       return g;
