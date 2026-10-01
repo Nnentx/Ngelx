@@ -1,0 +1,162 @@
+name: Ngel X BUILD 358 CALL UI SAFEAREA
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - work/build358-call-ui-safearea
+    paths:
+      - '.github/workflows/NgelX-BUILD-358-CALL-UI-SAFEAREA.yml'
+      - 'app/lib/main.dart'
+      - 'app/lib/feed_creator_badge.dart'
+      - 'app/pubspec.yaml'
+      - 'WORK_PACKAGE_TEST_NOTES.md'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ngelx-build358-call-ui-safearea
+  cancel-in-progress: true
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Kaynaklari al
+        uses: actions/checkout@v4
+        with:
+          ref: work/build358-call-ui-safearea
+          fetch-depth: 0
+
+      - name: Build 358 regresyonlarini kontrol et
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+
+          grep -F "version: 1.0.137+358" app/pubspec.yaml
+          grep -F "defaultValue: '1.0.137'" app/lib/main.dart
+          grep -F "defaultValue: '358'" app/lib/main.dart
+
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path('app/lib/main.dart').read_text(encoding='utf-8')
+          e=Path('app/lib/feed_creator_badge.dart').read_text(encoding='utf-8')
+
+          # Build 357 private-call startup fix korunur.
+          chat=s.index('class _SohbetPageState extends State<SohbetPage>')
+          a=s.index('  Future<void> aramaBaslat(bool goruntulu)async{',chat)
+          b=s.index('  void bilgi()=>',a)
+          block=s[a:b]
+          assert 'mesajGonderimHazirligi(zorla:true)' in block
+          assert "private_chat_members_invalid" in block
+          assert "'callGroup':false" in block
+          assert "'callRoomName':odaAdi" in block
+
+          # Arama geri tusu artik yeni bir sohbet route'u push etmez.
+          cs=s.index('class _NgelXAramaPageState')
+          ma=s.index('  Future<void> _aramaEkraniniKucult()async{',cs)
+          mb=s.index('  @override Widget build(BuildContext context)=>PopScope(',ma)
+          mini=s[ma:mb]
+          assert 'ngelxArkaPlanAramaSakla(' in mini
+          assert 'Navigator.pop(context,false)' in mini
+          assert 'Navigator.push(context,MaterialPageRoute(builder:(_)=>SohbetPage' not in mini
+          assert 'Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupSohbetPage' not in mini
+
+          # Arka plandaki LiveKit odasi ayni roomName ile geri alinir ve timeout korunur.
+          assert 'ngelxArkaPlanAramayiGeriAl(widget.roomName)' in s
+          assert "_ngelxArkaPlanAramaZamanAsimlari" in s
+          assert "roomName.startsWith('group_')?120:45" in s
+
+          # Eski route yeni aramayi sonlandiramaz.
+          assert 'final buAramaHalaGuncel=kayitliOda.isEmpty||kayitliOda==widget.roomName;' in s
+          assert "if(kayitliOda.isEmpty||kayitliOda==widget.roomName)" in s
+
+          # Ozel arama ayarlari grup metni gostermemeli.
+          assert "grupAramasi?'Katılımcılar':'Özel arama'" in s
+          assert "grupAramasi?'Güvenli grup bağlantısı':'Güvenli özel bağlantı'" in s
+
+          # Video arama rötuşu otomatik acik ve daha belirgin.
+          assert 'rotus=widget.goruntulu;' in s
+          assert '1.065,0,0,0,10' in e
+
+          # Android alt SafeArea düzeltmeleri.
+          assert '22+altGuvenliAlan' in s
+          assert '24+MediaQuery.viewPaddingOf(context).bottom' in s
+          assert '20+MediaQuery.viewPaddingOf(context).bottom' in s
+          assert "maxLines:1,overflow:TextOverflow.ellipsis" in s
+
+          # Onceki grup timeout ve ozel sohbet pull-to-refresh davranisi korunur.
+          assert 'final toplamSaniye=grupAramasi?120:45;' in s
+          assert "callAutoEndedReason':'no_participants_2m'" in s
+          appbar=s[chat:]
+          actions=appbar[appbar.index('      actions:['):appbar.index('    ),\n    body:',appbar.index('      actions:['))]
+          assert "Icons.refresh_rounded" not in actions
+          assert "onRefresh:_ozelSohbetiYenile" in appbar
+          print('Build 358 checks OK')
+          PY
+
+      - name: Java 17 kur
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Flutter kur
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Sabit NgelX imza anahtarini geri yukle
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: ngelx-stable-debug-keystore-v1
+          fail-on-cache-miss: true
+
+      - name: Flutter analiz ve test
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter clean
+          flutter pub get
+          flutter analyze --machine > analyze.log 2>&1 || true
+          cat analyze.log
+          if grep -q '^ERROR|' analyze.log; then
+            echo "Flutter analyze ERROR buldu."
+            exit 1
+          fi
+          if [ -d test ]; then
+            flutter test
+          else
+            echo "Test klasoru yok; Flutter test adimi atlandi."
+          fi
+
+      - name: APK olustur ve imzayi dogrula
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter build apk --release
+          APK=build/app/outputs/flutter-apk/app-release.apk
+          test -s "$APK"
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          "$APKSIGNER" verify --print-certs "$APK" | tee build/app/outputs/flutter-apk/apksigner-certs.txt
+          grep -qi 'be20b27f0ba1f4decd2941d410b1536de89e48dc894f04f038f9d26b11ecd6aa' build/app/outputs/flutter-apk/apksigner-certs.txt
+          sha256sum "$APK" > "$APK.sha256"
+
+      - name: APK yukle
+        uses: actions/upload-artifact@v4
+        with:
+          name: NgelX-1.0.137-Build-358-CALL-UI-SAFEAREA
+          path: |
+            app/build/app/outputs/flutter-apk/app-release.apk
+            app/build/app/outputs/flutter-apk/app-release.apk.sha256
+            app/build/app/outputs/flutter-apk/apksigner-certs.txt
+          if-no-files-found: error
+          retention-days: 14
