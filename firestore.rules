@@ -490,6 +490,52 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // Build 360: Takip ve arkadaşlık istekleri bildirimlerden bağımsız source-of-truth belgelerinde tutulur.
+    function validSocialRequestCreate(fromUid, toUid, kind) {
+      return signedIn()
+        && request.auth.uid == fromUid
+        && fromUid != toUid
+        && request.resource.data.get('fromUid', '') == fromUid
+        && request.resource.data.get('toUid', '') == toUid
+        && request.resource.data.get('type', '') == kind
+        && request.resource.data.get('status', '') == 'pending';
+    }
+
+    function validSocialRequestUpdate(fromUid, toUid, kind) {
+      return signedIn()
+        && request.resource.data.get('fromUid', '') == fromUid
+        && request.resource.data.get('toUid', '') == toUid
+        && request.resource.data.get('type', '') == kind
+        && request.resource.data.get('fromUid', '') == resource.data.get('fromUid', '')
+        && request.resource.data.get('toUid', '') == resource.data.get('toUid', '')
+        && request.resource.data.get('type', '') == resource.data.get('type', '')
+        && (
+          (
+            request.auth.uid == fromUid
+            && request.resource.data.get('status', '') in ['pending', 'cancelled']
+          )
+          || (
+            request.auth.uid == toUid
+            && resource.data.get('status', '') == 'pending'
+            && request.resource.data.get('status', '') in ['accepted', 'rejected']
+          )
+        );
+    }
+
+    match /follow_requests/{fromUid}/outgoing/{toUid} {
+      allow read: if signedIn() && (request.auth.uid == fromUid || request.auth.uid == toUid);
+      allow create: if validSocialRequestCreate(fromUid, toUid, 'follow_request');
+      allow update: if validSocialRequestUpdate(fromUid, toUid, 'follow_request');
+      allow delete: if false;
+    }
+
+    match /friend_requests/{fromUid}/outgoing/{toUid} {
+      allow read: if signedIn() && (request.auth.uid == fromUid || request.auth.uid == toUid);
+      allow create: if validSocialRequestCreate(fromUid, toUid, 'friend_request');
+      allow update: if validSocialRequestUpdate(fromUid, toUid, 'friend_request');
+      allow delete: if false;
+    }
+
     match /notifications/{notificationId} {
       allow read: if signedIn() && (
         resource.data.toUid == request.auth.uid

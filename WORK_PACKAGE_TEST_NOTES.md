@@ -1380,3 +1380,18 @@ Bu maddeler Build 359'un çalışan arama/görüntülü arama davranışını bo
 - Bu davranış kabul akışının ana yönlendirmesinin çalıştığını doğruluyor.
 - Son doğrulama için sohbetten geri çıkıldığında ilgili isteğin Mesaj İstekleri listesinden kalktığı ve kabul sonrası normal metin mesajı gönderiminin açık olduğu kontrol edilecek.
 - Takip isteği kabulündeki `permission-denied` hatasıyla bu akış karıştırılmayacak; mesaj isteği kabulü şu an cihazda ayrı olarak çalışıyor görünüyor.
+
+
+## 2026-10-01 — Build 360 uygulama: sade üçlü sosyal istek modeli
+
+- **Takip** tek yönlüdür. Açık hesap anında takip edilir; gizli hesapta yalnızca takip isteği bekler. Takip işlemi arkadaşlık state'ine dokunmaz.
+- **Arkadaşlık** karşılıklı onaydır. **Arkadaş ekle → Arkadaşlık isteği bekliyor → Arkadaşsınız** akışı takipten bağımsızdır. Kabul edilmesi otomatik takip veya mesaj kabulü oluşturmaz.
+- **Mesaj** mevcut sohbet/mesaj isteği yapısında ayrı kalır. Mesaj istekleri Aktivite yerine Gelen Kutusu > Mesaj İstekleri altında yönetilir.
+- Takip ve arkadaşlık isteklerinin source-of-truth verisi artık notification listesinin ilk 100 kaydına bağlı değildir. `follow_requests/{fromUid}/outgoing/{toUid}` ve `friend_requests/{fromUid}/outgoing/{toUid}` belgeleri kullanılır.
+- Bildirimler yalnızca kullanıcıya gösterilen olay katmanıdır; profil buton state'i bildirim listesinden türetilmez.
+- Aktivite filtreleri sadeleştirildi: **Tümü / Takip İstekleri / Arkadaşlık İstekleri / Gruplar**. Doğrudan mesaj bildirimleri Aktivite listesinden çıkarıldı; Gelen Kutusu'nda kalır.
+- Takip isteği kabulündeki Build 359 `permission-denied` yolunu tetikleyen deterministik kabul-bildirimi güncellemesi kaldırıldı. İlişki batch'i tamamlandıktan sonra yeni kabul bildirimi ayrı oluşturulur.
+- Arkadaşlık kabulü artık sohbet belgesini otomatik değiştirmez; mesaj sistemi ile arkadaşlık sistemi birbirinden ayrıldı.
+- Profil, Aktivite, Ortak Gruplar ve Mesaj İstekleri ekranlarının scroll sonuna dinamik Android alt safe-area boşluğu güçlendirildi. Ayarlar ve Gelen Kutusu da aynı ortak yardımcıyı kullanır.
+- Sürüm: **1.0.139+360**.
+- **Test ön koşulu:** yeni `follow_requests` / `friend_requests` izinleri için güncel `firestore.rules` üretime yayınlanmalıdır.

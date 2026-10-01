@@ -102,8 +102,8 @@ const ngelxPrivateBlueCanvas = Color(0xFFF6FAFF);
 const ngelxPrivateBlueBorder = Color(0xFFD8E8FF);
 const ngelxPrivateBlueInk = Color(0xFF10213A);
 
-const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.138');
-const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '359');
+const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.139');
+const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '360');
 const ngelxGroupBorder = Color(0xFFD9EEE0);
 
 final GlobalKey<NavigatorState> ngelxNavigatorKey=GlobalKey<NavigatorState>();
@@ -2477,6 +2477,8 @@ const ceviriler = <String, Map<String,String>>{
   'activity': {'tr':'Aktivite','en':'Activity','de':'Aktivität','ar':'النشاط','ru':'Активность'},
   'activitySub': {'tr':'Beğeniler, yorumlar ve güvenlik bildirimleri','en':'Likes, comments and security notifications','de':'Likes, Kommentare und Sicherheitsmeldungen','ar':'الإعجابات والتعليقات وإشعارات الأمان','ru':'Лайки, комментарии и уведомления безопасности'},
   'messageRequests': {'tr':'Mesaj İstekleri','en':'Message requests','de':'Nachrichtenanfragen','ar':'طلبات الرسائل','ru':'Запросы сообщений'},
+  'followRequests': {'tr':'Takip İstekleri','en':'Follow requests','de':'Folgeanfragen','ar':'طلبات المتابعة','ru':'Запросы на подписку'},
+  'friendRequests': {'tr':'Arkadaşlık İstekleri','en':'Friend requests','de':'Freundschaftsanfragen','ar':'طلبات الصداقة','ru':'Запросы в друзья'},
   'messageRequestsSub': {'tr':'Seni takip etmeyenlerden gelen mesajlar','en':'Messages from people who do not follow you','de':'Nachrichten von Personen, die dir nicht folgen','ar':'رسائل من أشخاص لا يتابعونك','ru':'Сообщения от людей, которые на вас не подписаны'},
   'noChats': {'tr':'Bu bölümde henüz sohbet yok.','en':'There are no chats here yet.','de':'Hier gibt es noch keine Chats.','ar':'لا توجد محادثات هنا بعد.','ru':'Здесь пока нет чатов.'},
   'groupChat': {'tr':'Grup sohbeti','en':'Group chat','de':'Gruppenchat','ar':'محادثة جماعية','ru':'Групповой чат'},
@@ -2805,6 +2807,22 @@ Future<void> uygulamaBildirimiGonder({
 
 final Set<String> _sosyalIstekIslemleri=<String>{};
 
+String sosyalIstekKoleksiyonu(String tur){
+  if(tur=='follow_request')return 'follow_requests';
+  if(tur=='friend_request')return 'friend_requests';
+  throw ArgumentError('Desteklenmeyen sosyal istek türü: $tur');
+}
+
+DocumentReference<Map<String,dynamic>> sosyalIstekRef(
+  String fromUid,
+  String toUid,
+  String tur,
+)=>FirebaseFirestore.instance
+    .collection(sosyalIstekKoleksiyonu(tur))
+    .doc(fromUid)
+    .collection('outgoing')
+    .doc(toUid);
+
 Future<bool> sosyalIstekGonder({
   required String hedefUid,
   required String tur,
@@ -2817,17 +2835,18 @@ Future<bool> sosyalIstekGonder({
   if(!_sosyalIstekIslemleri.add(kilit))return false;
   try{
     final firestore=FirebaseFirestore.instance;
-    final bildirimler=firestore.collection('notifications');
+    final benimRef=firestore.collection('users').doc(user.uid);
+    final hedefRef=firestore.collection('users').doc(hedefUid);
+    final istekRef=sosyalIstekRef(user.uid,hedefUid,tur);
+
     final sonuc=await Future.wait<dynamic>([
-      firestore.collection('users').doc(user.uid).get(const GetOptions(source:Source.server)).timeout(const Duration(seconds:8)),
-      firestore.collection('users').doc(hedefUid).get(const GetOptions(source:Source.server)).timeout(const Duration(seconds:8)),
-      bildirimler.where('fromUid',isEqualTo:user.uid).limit(100).get(const GetOptions(source:Source.server)).timeout(const Duration(seconds:8)),
-      bildirimler.where('toUid',isEqualTo:user.uid).limit(100).get(const GetOptions(source:Source.server)).timeout(const Duration(seconds:8)),
+      benimRef.get(const GetOptions(source:Source.server)).timeout(const Duration(seconds:8)),
+      hedefRef.get(const GetOptions(source:Source.server)).timeout(const Duration(seconds:8)),
+      istekRef.get(const GetOptions(source:Source.server)).timeout(const Duration(seconds:8)),
     ]);
     final benimVeri=(sonuc[0] as DocumentSnapshot<Map<String,dynamic>>).data()??<String,dynamic>{};
     final hedefVeri=(sonuc[1] as DocumentSnapshot<Map<String,dynamic>>).data()??<String,dynamic>{};
-    final giden=sonuc[2] as QuerySnapshot<Map<String,dynamic>>;
-    final gelen=sonuc[3] as QuerySnapshot<Map<String,dynamic>>;
+    final mevcut=sonuc[2] as DocumentSnapshot<Map<String,dynamic>>;
 
     if(hedefVeri['deactivated']==true)return false;
     if(List<String>.from(benimVeri['blocked']??const[]).contains(hedefUid))return false;
@@ -2839,25 +2858,32 @@ Future<bool> sosyalIstekGonder({
       : List<String>.from(benimVeri['friends']??const[]).contains(hedefUid)
         ||List<String>.from(hedefVeri['friends']??const[]).contains(user.uid);
     if(zatenIliski)return false;
+    if(mevcut.exists&&mevcut.data()?['status']=='pending')return false;
 
-    bool bekleyen(QuerySnapshot<Map<String,dynamic>> q,{required bool ters}){
-      for(final d in q.docs){
-        final v=d.data();
-        if((v['type']??'').toString()!=tur||v['status']!='pending')continue;
-        final from=(v['fromUid']??'').toString();
-        final to=(v['toUid']??'').toString();
-        if(!ters&&from==user.uid&&to==hedefUid)return true;
-        if(ters&&from==hedefUid&&to==user.uid)return true;
-      }
-      return false;
+    if(tur=='friend_request'){
+      final ters=await sosyalIstekRef(hedefUid,user.uid,tur)
+          .get(const GetOptions(source:Source.server))
+          .timeout(const Duration(seconds:8));
+      if(ters.exists&&ters.data()?['status']=='pending')return false;
     }
-    if(bekleyen(giden,ters:false)||bekleyen(gelen,ters:true))return false;
 
     final emailAdi=(user.email??'').split('@').first.trim();
     final ad=(benimVeri['displayName']??benimVeri['username']??user.displayName??(emailAdi.isNotEmpty?emailAdi:'NgelX kullanıcısı')).toString();
     final foto=(benimVeri['photoUrl']??user.photoURL??'').toString();
+    final bildirimRef=firestore.collection('notifications').doc();
+    final batch=firestore.batch();
 
-    await bildirimler.doc().set({
+    batch.set(istekRef,{
+      'fromUid':user.uid,
+      'toUid':hedefUid,
+      'type':tur,
+      'status':'pending',
+      'notificationId':bildirimRef.id,
+      'createdAt':FieldValue.serverTimestamp(),
+      'updatedAt':FieldValue.serverTimestamp(),
+    },SetOptions(merge:true));
+
+    batch.set(bildirimRef,{
       'toUid':hedefUid,
       'fromUid':user.uid,
       'type':tur,
@@ -2870,8 +2896,11 @@ Future<bool> sosyalIstekGonder({
       'clientCreatedAt':Timestamp.now(),
       'updatedAt':FieldValue.serverTimestamp(),
       'eventKind':tur,
+      'requestPath':istekRef.path,
       'requestKey':'${tur}_${user.uid}_$hedefUid',
-    }).timeout(const Duration(seconds:10));
+    });
+
+    await batch.commit().timeout(const Duration(seconds:12));
     return true;
   }finally{
     _sosyalIstekIslemleri.remove(kilit);
@@ -2879,11 +2908,60 @@ Future<bool> sosyalIstekGonder({
 }
 
 Future<void> sosyalIstekIptalEt(DocumentReference<Map<String,dynamic>> ref)async{
-  await ref.update({
-    'status':'cancelled',
-    'read':true,
-    'cancelledAt':FieldValue.serverTimestamp(),
-  }).timeout(const Duration(seconds:10));
+  final firestore=FirebaseFirestore.instance;
+  DocumentReference<Map<String,dynamic>>? istekRef;
+  DocumentReference<Map<String,dynamic>>? bildirimRef;
+  Map<String,dynamic> veri=<String,dynamic>{};
+
+  if(ref.parent.id=='notifications'){
+    final n=await ref.get(const GetOptions(source:Source.server)).timeout(const Duration(seconds:8));
+    if(!n.exists)return;
+    veri=n.data()??<String,dynamic>{};
+    bildirimRef=ref;
+    final from=(veri['fromUid']??'').toString();
+    final to=(veri['toUid']??'').toString();
+    final tur=(veri['type']??'').toString();
+    if(from.isNotEmpty&&to.isNotEmpty&&(tur=='follow_request'||tur=='friend_request')){
+      istekRef=sosyalIstekRef(from,to,tur);
+    }
+  }else{
+    final r=await ref.get(const GetOptions(source:Source.server)).timeout(const Duration(seconds:8));
+    if(!r.exists)return;
+    veri=r.data()??<String,dynamic>{};
+    istekRef=ref;
+    final notificationId=(veri['notificationId']??'').toString();
+    if(notificationId.isNotEmpty)bildirimRef=firestore.collection('notifications').doc(notificationId);
+  }
+
+  final batch=firestore.batch();
+  var degisiklik=false;
+  if(istekRef!=null){
+    try{
+      final r=await istekRef.get(const GetOptions(source:Source.server)).timeout(const Duration(seconds:6));
+      if(r.exists&&r.data()?['status']=='pending'){
+        batch.update(istekRef,{
+          'status':'cancelled',
+          'cancelledAt':FieldValue.serverTimestamp(),
+          'updatedAt':FieldValue.serverTimestamp(),
+        });
+        degisiklik=true;
+      }
+    }catch(_){}
+  }
+  if(bildirimRef!=null){
+    try{
+      final n=await bildirimRef.get(const GetOptions(source:Source.server)).timeout(const Duration(seconds:6));
+      if(n.exists&&n.data()?['status']=='pending'){
+        batch.update(bildirimRef,{
+          'status':'cancelled',
+          'read':true,
+          'cancelledAt':FieldValue.serverTimestamp(),
+        });
+        degisiklik=true;
+      }
+    }catch(_){}
+  }
+  if(degisiklik)await batch.commit().timeout(const Duration(seconds:10));
 }
 
 bool gidenSosyalIstekBekliyor(
@@ -2929,6 +3007,12 @@ Future<void> takipDurumuDegistir(String hedefUid,bool takipte)async{
   batch.set(FirebaseFirestore.instance.collection('users').doc(hedefUid),{'followers':takipte?FieldValue.arrayRemove([ben]):FieldValue.arrayUnion([ben])},SetOptions(merge:true));
   await batch.commit();
   if(!takipte)await uygulamaBildirimiGonder(toUid:hedefUid,fromUid:ben,tur:'friend',metin:'Seni takip etmeye başladı');
+}
+
+double ngelxAltGuvenliBosluk(BuildContext context,{double extra=48}){
+  final mq=MediaQuery.of(context);
+  final sistem=math.max(mq.viewPadding.bottom,mq.padding.bottom);
+  return sistem+extra;
 }
 
 final ValueNotifier<int> ngelxIcerikDilRevizyonu=ValueNotifier<int>(0);
@@ -9751,7 +9835,7 @@ class _MesajPageState extends State<MesajPage> {
         stream:ben==null?null:FirebaseFirestore.instance.collection('chats').where('members',arrayContains:ben).limit(60).snapshots(),
         builder:(_,s){
           final docs=(s.data?.docs??[]).where((d){final v=d.data();if(List<String>.from(v['hiddenFor']??const[]).contains(ben)||arsivSohbetler.contains(d.id))return false;final members=List<String>.from(v['members']??const[]),grup=v['isGroup']==true||members.length>2;final unread=(v['unread_$ben']??0) as int;if(filtre=='Okunmamış'&&unread==0)return false;if(filtre=='Gruplar'&&!grup)return false;if(!grup){final other=members.firstWhere((x)=>x!=ben,orElse:()=>ben??'');final gelenIstek=v['requestRecipientUid']==ben&&v['requestAccepted_$ben']!=true&&!arkadaslar.contains(other);if(gelenIstek)return false;if(filtre=='Arkadaşlar'&&!arkadaslar.contains(other))return false;}else if(filtre=='Arkadaşlar')return false;final son='${v['groupName']??''} ${v['lastMessage']??''}'.toLowerCase();return sohbetSorgu.isEmpty||son.contains(sohbetSorgu);}).toList()..sort((a,b){final ap=sabitSohbetler.contains(a.id),bp=sabitSohbetler.contains(b.id);if(ap!=bp)return ap?-1:1;final at=a.data()['updatedAt'] as Timestamp?,bt=b.data()['updatedAt'] as Timestamp?;return (bt?.millisecondsSinceEpoch??0).compareTo(at?.millisecondsSinceEpoch??0);});
-          final altBosluk=26.0+MediaQuery.viewPaddingOf(context).bottom;
+          final altBosluk=ngelxAltGuvenliBosluk(context,extra:42);
           if(docs.isEmpty)return ListView(
             physics:const AlwaysScrollableScrollPhysics(),
             padding:EdgeInsets.only(bottom:altBosluk),
@@ -9952,7 +10036,7 @@ class MesajIstekleriPage extends StatelessWidget {
               }).toList();
               if(docs.isEmpty) return Center(child: Text(t('noMessageRequests'), style: const TextStyle(color: Colors.black54)));
               return ListView.builder(
-                padding:EdgeInsets.fromLTRB(12,12,12,20+MediaQuery.viewPaddingOf(context).bottom), itemCount: docs.length,
+                padding:EdgeInsets.fromLTRB(12,12,12,ngelxAltGuvenliBosluk(context,extra:72)), itemCount: docs.length,
                 itemBuilder: (_, i) {
                   final d=docs[i], v=d.data(), m=List<String>.from(v['members'] ?? const []);
                   final other=m.firstWhere((x)=>x!=uid,orElse:()=>uid);
@@ -19657,11 +19741,11 @@ class _AktivitePageState extends State<AktivitePage> {
     final tur=(v['type']??'').toString();
     final olay=(v['eventKind']??'').toString();
     final grup=(v['targetKind']??'').toString()=='group'||tur=='group'||olay.startsWith('group_');
+    if(tur=='message')return false;
     switch(_filtre){
-      case 'unread': return v['read']!=true;
+      case 'follow_requests': return tur=='follow_request';
+      case 'friend_requests': return tur=='friend_request';
       case 'groups': return grup;
-      case 'messages': return tur=='message'&&!grup;
-      case 'requests': return tur=='follow_request'||tur=='friend_request'||olay=='group_join_request';
       default: return true;
     }
   }
@@ -19951,23 +20035,25 @@ class _AktivitePageState extends State<AktivitePage> {
     final ben=FirebaseAuth.instance.currentUser?.uid;
     final veri=belge.data();
     final gonderen=(veri['fromUid']??'').toString();
-    final tur=(veri['type']??'').toString();
+    final hamTur=(veri['type']??'').toString();
     final eskiArkadaslik=belge.id.startsWith('friend_request_')||(veri['text']??'').toString().toLowerCase().contains('arkadaşlık');
-    final arkadaslikIstegi=tur=='friend_request'||eskiArkadaslik;
-    final takipIstegi=tur=='follow_request'&&!arkadaslikIstegi;
+    final arkadaslikIstegi=hamTur=='friend_request'||eskiArkadaslik;
+    final istekTuru=arkadaslikIstegi?'friend_request':'follow_request';
+    final takipIstegi=istekTuru=='follow_request';
     if(ben==null||gonderen.isEmpty||veri['status']!='pending')return;
 
-    final ayniBekleyen=<QueryDocumentSnapshot<Map<String,dynamic>>>[];
+    DocumentSnapshot<Map<String,dynamic>>? istekSnap;
+    final istekRef=sosyalIstekRef(gonderen,ben,istekTuru);
     try{
-      final q=await FirebaseFirestore.instance.collection('notifications')
-          .where('toUid',isEqualTo:ben)
-          .limit(100).get(const GetOptions(source:Source.server)).timeout(const Duration(seconds:6));
-      for(final istek in q.docs){
-        final x=istek.data();
-        if((x['type']??'').toString()==tur&&x['status']=='pending')ayniBekleyen.add(istek);
+      istekSnap=await istekRef.get(const GetOptions(source:Source.server)).timeout(const Duration(seconds:7));
+      if(istekSnap.exists&&istekSnap.data()?['status']!='pending'){
+        if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content:Text('Bu istek daha önce sonuçlandırılmış.'),
+          behavior:SnackBarBehavior.floating,
+        ));
+        return;
       }
     }catch(_){}
-    if(!ayniBekleyen.any((x)=>x.reference.path==belge.reference.path))ayniBekleyen.add(belge);
 
     String benimAd='NgelX kullanıcısı',benimFoto='';
     try{
@@ -19978,15 +20064,21 @@ class _AktivitePageState extends State<AktivitePage> {
     }catch(_){}
 
     final toplu=FirebaseFirestore.instance.batch();
-    for(final istek in ayniBekleyen){
-      toplu.update(istek.reference,{
+    toplu.update(belge.reference,{
+      'status':kabul?'accepted':'rejected',
+      'read':true,
+      'answeredAt':FieldValue.serverTimestamp(),
+    });
+    if(istekSnap?.exists==true){
+      toplu.update(istekRef,{
         'status':kabul?'accepted':'rejected',
-        'read':true,
         'answeredAt':FieldValue.serverTimestamp(),
+        'updatedAt':FieldValue.serverTimestamp(),
       });
     }
 
     if(kabul&&takipIstegi){
+      // Takip tek yönlüdür. Arkadaşlık state'ine dokunulmaz.
       toplu.set(
         FirebaseFirestore.instance.collection('users').doc(ben),
         {'followers':FieldValue.arrayUnion([gonderen])},
@@ -19997,19 +20089,10 @@ class _AktivitePageState extends State<AktivitePage> {
         {'following':FieldValue.arrayUnion([ben])},
         SetOptions(merge:true),
       );
-      toplu.set(
-        FirebaseFirestore.instance.collection('notifications').doc('follow_accepted_'+ben+'_'+gonderen),
-        {
-          'toUid':gonderen,'fromUid':ben,'type':'follow_accepted',
-          'senderName':benimAd,'photoUrl':benimFoto,
-          'text':'Takip isteğin kabul edildi','read':false,
-          'createdAt':FieldValue.serverTimestamp(),
-        },
-        SetOptions(merge:true),
-      );
     }
 
     if(kabul&&arkadaslikIstegi){
+      // Arkadaşlık karşılıklıdır fakat otomatik takip veya mesaj kabulü yapmaz.
       toplu.set(
         FirebaseFirestore.instance.collection('users').doc(ben),
         {'friends':FieldValue.arrayUnion([gonderen])},
@@ -20023,28 +20106,11 @@ class _AktivitePageState extends State<AktivitePage> {
       final ids=[ben,gonderen]..sort();
       toplu.set(
         FirebaseFirestore.instance.collection('friendships').doc(ids.join('_')),
-        {'members':ids,'since':FieldValue.serverTimestamp()},
-        SetOptions(merge:true),
-      );
-      toplu.set(
-        FirebaseFirestore.instance.collection('chats').doc(ids.join('_')),
         {
           'members':ids,
-          'requestAccepted_$ben':true,
-          'requestAccepted_$gonderen':true,
-          'friendChat':true,
-          'friendSince':FieldValue.serverTimestamp(),
+          'active':true,
+          'since':FieldValue.serverTimestamp(),
           'updatedAt':FieldValue.serverTimestamp(),
-        },
-        SetOptions(merge:true),
-      );
-      toplu.set(
-        FirebaseFirestore.instance.collection('notifications').doc('friend_accepted_'+ben+'_'+gonderen),
-        {
-          'toUid':gonderen,'fromUid':ben,'type':'friend_accepted',
-          'senderName':benimAd,'photoUrl':benimFoto,
-          'text':'Arkadaşlık isteğin kabul edildi','read':false,
-          'createdAt':FieldValue.serverTimestamp(),
         },
         SetOptions(merge:true),
       );
@@ -20052,14 +20118,35 @@ class _AktivitePageState extends State<AktivitePage> {
 
     try{
       await toplu.commit().timeout(const Duration(seconds:12));
+      if(kabul){
+        unawaited(uygulamaBildirimiGonder(
+          toUid:gonderen,
+          fromUid:ben,
+          tur:takipIstegi?'follow_accepted':'friend_accepted',
+          metin:takipIstegi?'takip isteğini kabul etti':'arkadaşlık isteğini kabul etti',
+        ).catchError((_){ }));
+      }
+
       if(context.mounted){
         final ad=takipIstegi?'Takip isteği':'Arkadaşlık isteği';
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(kabul?'$ad kabul edildi.':'$ad reddedildi.')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content:Text(kabul?'$ad kabul edildi.':'$ad reddedildi.'),
+          behavior:SnackBarBehavior.floating,
+          margin:EdgeInsets.fromLTRB(16,8,16,ngelxAltGuvenliBosluk(context,extra:8)),
+        ));
       }
     }on TimeoutException{
-      if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('İstek işlemi zaman aşımına uğradı. Tekrar dene.')));
+      if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content:const Text('İstek işlemi zaman aşımına uğradı. Tekrar dene.'),
+        behavior:SnackBarBehavior.floating,
+        margin:EdgeInsets.fromLTRB(16,8,16,ngelxAltGuvenliBosluk(context,extra:8)),
+      ));
     }catch(e){
-      if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('İstek işlenemedi: $e')));
+      if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content:Text('İstek işlenemedi: $e'),
+        behavior:SnackBarBehavior.floating,
+        margin:EdgeInsets.fromLTRB(16,8,16,ngelxAltGuvenliBosluk(context,extra:8)),
+      ));
     }
   }
 
@@ -20146,11 +20233,11 @@ class _AktivitePageState extends State<AktivitePage> {
           }
           int say(String kod)=>tumDocs.where((d){
             final v=d.data(),tur=(v['type']??'').toString(),olay=(v['eventKind']??'').toString(),grup=grupMu(v);
+            if(tur=='message')return false;
             switch(kod){
-              case 'unread': return v['read']!=true;
+              case 'follow_requests': return tur=='follow_request';
+              case 'friend_requests': return tur=='friend_request';
               case 'groups': return grup;
-              case 'messages': return tur=='message'&&!grup;
-              case 'requests': return tur=='follow_request'||tur=='friend_request'||olay=='group_join_request';
               default: return true;
             }
           }).length;
@@ -20180,10 +20267,9 @@ class _AktivitePageState extends State<AktivitePage> {
                   scrollDirection:Axis.horizontal,
                   children:[
                     filtreChip('all',t('all')),
-                    filtreChip('unread',t('unread')),
+                    filtreChip('follow_requests',t('followRequests')),
+                    filtreChip('friend_requests',t('friendRequests')),
                     filtreChip('groups',t('groups')),
-                    filtreChip('messages',t('notificationMessages')),
-                    filtreChip('requests',t('notificationRequests')),
                   ],
                 ),
               ),
@@ -20193,7 +20279,7 @@ class _AktivitePageState extends State<AktivitePage> {
               ?Center(child:Text(t('noActivityInFilter'),style:const TextStyle(color:Colors.black54,fontWeight:FontWeight.w700)))
               :ListView.separated(
                 clipBehavior:Clip.hardEdge,
-                padding:EdgeInsets.fromLTRB(12,14,12,24+MediaQuery.viewPaddingOf(context).bottom),
+                padding:EdgeInsets.fromLTRB(12,14,12,ngelxAltGuvenliBosluk(context,extra:72)),
                 separatorBuilder:(_,__)=>const Divider(height:1,indent:72),
                 itemCount:docs.length,
                 itemBuilder:(_,i){final d=docs[i];
@@ -20509,7 +20595,7 @@ class OrtakGruplarPage extends StatelessWidget{
           }).toList();
           if(docs.isEmpty)return const Center(child:Text('Ortak grubunuz yok.',style:TextStyle(color:Colors.black54)));
           return ListView.separated(
-            padding:EdgeInsets.fromLTRB(12,12,12,20+MediaQuery.viewPaddingOf(context).bottom),itemCount:docs.length,separatorBuilder:(_,__)=>const Divider(),
+            padding:EdgeInsets.fromLTRB(12,12,12,ngelxAltGuvenliBosluk(context,extra:72)),itemCount:docs.length,separatorBuilder:(_,__)=>const Divider(),
             itemBuilder:(_,i){
               final d=docs[i],v=d.data(),foto=(v['groupPhotoUrl']??'').toString(),ad=(v['groupName']??lt('Grup','Group')).toString();
               return ListTile(
@@ -20764,9 +20850,9 @@ class _KullaniciProfilPageState extends State<KullaniciProfilPage> {
           final erisimVar = ziyaretciOnizleme
               ? (profilIzni=='all'&&!gizli)
               : (me==uid||(izinVar&&(!gizli||beniTakipEdiyor||arkadaslar.contains(uid))));
-          final altGuvenliAlan=MediaQuery.viewPaddingOf(context).bottom;
+          final altGuvenliAlan=ngelxAltGuvenliBosluk(context,extra:72);
           return ListView(
-            padding:EdgeInsets.fromLTRB(22,22,22,22+altGuvenliAlan),
+            padding:EdgeInsets.fromLTRB(22,22,22,altGuvenliAlan),
             children: [
               Center(child:Stack(clipBehavior:Clip.none,alignment:Alignment.center,children:[
                 Container(
@@ -20871,14 +20957,12 @@ class _KullaniciProfilPageState extends State<KullaniciProfilPage> {
                       final benimTakipEttiklerim=List<String>.from(benSnap.data?.data()?['following']??const[]);
                       final hedefTakipcileri=List<String>.from(v['followers']??const[]);
                       final takipte=benimTakipEttiklerim.contains(uid)||(me!=null&&hedefTakipcileri.contains(me));
-                      final gidenAkis=me==null?null:FirebaseFirestore.instance.collection('notifications')
-                          .where('fromUid',isEqualTo:me)
-                          .limit(100).snapshots();
-                      return StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
+                      final gidenAkis=me==null?null:sosyalIstekRef(me,uid,'follow_request').snapshots();
+                      return StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
                         stream:gidenAkis,
                         builder:(_,istekSnap){
-                          final pendingDoc=gidenSosyalIstekBelgesi(istekSnap.data,uid,'follow_request');
-                          final sunucuBekliyor=pendingDoc!=null;
+                          final pendingSnap=istekSnap.data;
+                          final sunucuBekliyor=pendingSnap?.exists==true&&pendingSnap?.data()?['status']=='pending';
                           if(sunucuBekliyor&&_yerelTakipIstekleri.contains(uid)){
                             WidgetsBinding.instance.addPostFrameCallback((_){
                               if(mounted&&_yerelTakipIstekleri.remove(uid))setState((){});
@@ -20907,12 +20991,12 @@ class _KullaniciProfilPageState extends State<KullaniciProfilPage> {
                               }
 
                               if(bekliyor){
-                                if(pendingDoc==null){
+                                if(!sunucuBekliyor||pendingSnap==null){
                                   if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('İstek kaydediliyor. Bir saniye sonra tekrar dene.')));
                                   return;
                                 }
                                 try{
-                                  await sosyalIstekIptalEt(pendingDoc.reference);
+                                  await sosyalIstekIptalEt(pendingSnap.reference);
                                   if(mounted)setState(()=>_yerelTakipIstekleri.remove(uid));
                                   if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Takip isteği geri çekildi.')));
                                 }catch(_){
@@ -20924,7 +21008,7 @@ class _KullaniciProfilPageState extends State<KullaniciProfilPage> {
                               if(gizli){
                                 if(mounted)setState(()=>_yerelTakipIstekleri.add(uid));
                                 try{
-                                  final gonderildi=await sosyalIstekGonder(hedefUid:uid,tur:'follow_request',metin:'Yeni takip isteğin var');
+                                  final gonderildi=await sosyalIstekGonder(hedefUid:uid,tur:'follow_request',metin:'seni takip etmek istiyor');
                                   if(!gonderildi&&mounted)setState(()=>_yerelTakipIstekleri.remove(uid));
                                   if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(gonderildi?'Takip isteği gönderildi.':'Takip isteği zaten bekliyor veya bu hesabı takip ediyorsun.')));
                                 }on TimeoutException{
@@ -20933,7 +21017,7 @@ class _KullaniciProfilPageState extends State<KullaniciProfilPage> {
                                 }on FirebaseException catch(e){
                                   if(mounted)setState(()=>_yerelTakipIstekleri.remove(uid));
                                   final mesaj=e.code=='permission-denied'
-                                    ?'Takip isteği izni doğrulanamadı. Uygulamayı güncelleyip tekrar dene.'
+                                    ?'Takip isteği için güncel Firestore kuralları gerekli.'
                                     :'Takip isteği gönderilemedi. Tekrar dene.';
                                   if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(mesaj)));
                                 }catch(_){
@@ -20975,13 +21059,11 @@ class _KullaniciProfilPageState extends State<KullaniciProfilPage> {
                     final benimArkadaslarim=List<String>.from(benSnap.data?.data()?['friends']??const[]);
                     final hedefArkadaslari=List<String>.from(v['friends']??const[]);
                     final arkadas=benimArkadaslarim.contains(uid)||(me!=null&&hedefArkadaslari.contains(me));
-                    return StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
-                      stream:me==null?null:FirebaseFirestore.instance.collection('notifications')
-                        .where('fromUid',isEqualTo:me)
-                        .limit(100).snapshots(),
+                    return StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
+                      stream:me==null?null:sosyalIstekRef(me,uid,'friend_request').snapshots(),
                       builder:(_,istekSnap){
-                        final pendingDoc=gidenSosyalIstekBelgesi(istekSnap.data,uid,'friend_request');
-                        final sunucuBekliyor=pendingDoc!=null;
+                        final pendingSnap=istekSnap.data;
+                        final sunucuBekliyor=pendingSnap?.exists==true&&pendingSnap?.data()?['status']=='pending';
                         if(sunucuBekliyor&&_yerelArkadasIstekleri.contains(uid)){
                           WidgetsBinding.instance.addPostFrameCallback((_){
                             if(mounted&&_yerelArkadasIstekleri.remove(uid))setState((){});
@@ -20996,12 +21078,12 @@ class _KullaniciProfilPageState extends State<KullaniciProfilPage> {
                               return;
                             }
                             if(bekliyor){
-                              if(pendingDoc==null){
+                              if(!sunucuBekliyor||pendingSnap==null){
                                 if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('İstek kaydediliyor. Bir saniye sonra tekrar dene.')));
                                 return;
                               }
                               try{
-                                await sosyalIstekIptalEt(pendingDoc.reference);
+                                await sosyalIstekIptalEt(pendingSnap.reference);
                                 if(mounted)setState(()=>_yerelArkadasIstekleri.remove(uid));
                                 if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Arkadaşlık isteği geri çekildi.')));
                               }catch(_){
@@ -21011,7 +21093,7 @@ class _KullaniciProfilPageState extends State<KullaniciProfilPage> {
                             }
                             if(mounted)setState(()=>_yerelArkadasIstekleri.add(uid));
                             try{
-                              final gonderildi=await sosyalIstekGonder(hedefUid:uid,tur:'friend_request',metin:'Yeni arkadaşlık isteğin var');
+                              final gonderildi=await sosyalIstekGonder(hedefUid:uid,tur:'friend_request',metin:'sana arkadaşlık isteği gönderdi');
                               if(!gonderildi&&mounted)setState(()=>_yerelArkadasIstekleri.remove(uid));
                               if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(gonderildi?'Arkadaşlık isteği gönderildi.':'Arkadaşlık isteği zaten bekliyor veya zaten arkadaşsınız.')));
                             }on TimeoutException{
@@ -21020,7 +21102,7 @@ class _KullaniciProfilPageState extends State<KullaniciProfilPage> {
                             }on FirebaseException catch(e){
                               if(mounted)setState(()=>_yerelArkadasIstekleri.remove(uid));
                               final mesaj=e.code=='permission-denied'
-                                ?'Arkadaşlık isteği izni doğrulanamadı. Uygulamayı güncelleyip tekrar dene.'
+                                ?'Arkadaşlık isteği için güncel Firestore kuralları gerekli.'
                                 :'Arkadaşlık isteği gönderilemedi. Tekrar dene.';
                               if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(mesaj)));
                             }catch(_){
@@ -21030,7 +21112,7 @@ class _KullaniciProfilPageState extends State<KullaniciProfilPage> {
                           },
                           icon:Icon(arkadas?Icons.people_alt_rounded:(bekliyor?Icons.schedule_rounded:Icons.person_add_alt_1_rounded)),
                           label:Text(
-                            arkadas?'Arkadaşsınız':(bekliyor?'İstek bekliyor':'Arkadaşlık isteği gönder'),
+                            arkadas?'Arkadaşsınız':(bekliyor?'Arkadaşlık isteği bekliyor':'Arkadaş ekle'),
                             maxLines:1,
                             overflow:TextOverflow.ellipsis,
                           ),

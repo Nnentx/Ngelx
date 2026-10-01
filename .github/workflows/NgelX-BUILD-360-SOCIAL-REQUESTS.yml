@@ -1,0 +1,158 @@
+name: Ngel X BUILD 360 SOCIAL REQUEST MODEL
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - work/build360-device-followup
+    paths:
+      - '.github/workflows/NgelX-BUILD-360-SOCIAL-REQUESTS.yml'
+      - 'app/lib/main.dart'
+      - 'app/lib/build258_settings.dart'
+      - 'app/pubspec.yaml'
+      - 'firestore.rules'
+      - 'WORK_PACKAGE_TEST_NOTES.md'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ngelx-build360-social-requests
+  cancel-in-progress: true
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Kaynaklari al
+        uses: actions/checkout@v4
+        with:
+          ref: work/build360-device-followup
+          fetch-depth: 0
+
+      - name: Build 360 regresyonlarini kontrol et
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          grep -F "version: 1.0.139+360" app/pubspec.yaml
+          grep -F "defaultValue: '1.0.139'" app/lib/main.dart
+          grep -F "defaultValue: '360'" app/lib/main.dart
+
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path('app/lib/main.dart').read_text(encoding='utf-8')
+          rules=Path('firestore.rules').read_text(encoding='utf-8')
+          settings=Path('app/lib/build258_settings.dart').read_text(encoding='utf-8')
+
+          assert "collection(sosyalIstekKoleksiyonu(tur))" in s
+          assert ".doc(fromUid)" in s and ".collection('outgoing')" in s and ".doc(toUid)" in s
+          assert "requestPath':istekRef.path" in s
+          assert "Takip tek yönlüdür. Arkadaşlık state'ine dokunulmaz." in s
+          assert "Arkadaşlık karşılıklıdır fakat otomatik takip veya mesaj kabulü yapmaz." in s
+
+          p0=s.index('class _KullaniciProfilPageState extends State<KullaniciProfilPage>')
+          p1=s.index('class NgelXVideoKapakOnizleme',p0)
+          profile=s[p0:p1]
+          assert "sosyalIstekRef(me,uid,'follow_request').snapshots()" in profile
+          assert "sosyalIstekRef(me,uid,'friend_request').snapshots()" in profile
+          assert "Arkadaşlık isteği bekliyor" in profile
+          assert "Arkadaş ekle" in profile
+          assert ".limit(100).snapshots()" not in profile
+
+          a=s.index('Future<void> istegiSonuclandir(')
+          b=s.index('@override\n  Widget build',a)
+          accept=s[a:b]
+          assert "ayniBekleyen" not in accept
+          assert "follow_accepted_" not in accept
+          assert "friend_accepted_" not in accept
+          assert "uygulamaBildirimiGonder(" in accept
+          assert "'friendChat':true" not in accept
+
+          activity=s[s.index('class _AktivitePageState'):s.index('bool ngelxPresenceOnline')]
+          assert "if(tur=='message')return false;" in activity
+          assert "filtreChip('follow_requests',t('followRequests'))" in activity
+          assert "filtreChip('friend_requests',t('friendRequests'))" in activity
+          assert "filtreChip('messages'" not in activity
+
+          assert "double ngelxAltGuvenliBosluk(" in s
+          assert s.count("ngelxAltGuvenliBosluk(context,extra:72)") >= 4
+          assert "ngelxAltGuvenliBosluk(context,extra:64)" in settings
+
+          assert "match /follow_requests/{fromUid}/outgoing/{toUid}" in rules
+          assert "match /friend_requests/{fromUid}/outgoing/{toUid}" in rules
+          assert "validSocialRequestUpdate" in rules
+
+          assert 'ngelxArkaPlanAramaSakla(' in s
+          assert 'ngelxArkaPlanAramayiGeriAl(widget.roomName)' in s
+          assert 'final buAramaHalaGuncel=kayitliOda.isEmpty||kayitliOda==widget.roomName;' in s
+          assert "grupAramasi?'Güvenli grup bağlantısı':'Güvenli özel bağlantı'" in s
+          assert 'rotus=widget.goruntulu;' in s
+          assert 'final toplamSaniye=grupAramasi?120:45;' in s
+
+          print('Build 360 static regression checks OK')
+          PY
+
+      - name: Java 17 kur
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Flutter kur
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Sabit NgelX imza anahtarini geri yukle
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: ngelx-stable-debug-keystore-v1
+          fail-on-cache-miss: true
+
+      - name: Flutter analiz ve test
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter clean
+          flutter pub get
+          flutter analyze --machine > analyze.log 2>&1 || true
+          cat analyze.log
+          if grep -q '^ERROR|' analyze.log; then
+            echo "Flutter analyze ERROR buldu."
+            exit 1
+          fi
+          if [ -d test ]; then
+            flutter test
+          else
+            echo "Test klasoru yok; Flutter test adimi atlandi."
+          fi
+
+      - name: APK olustur ve imzayi dogrula
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter build apk --release
+          APK=build/app/outputs/flutter-apk/app-release.apk
+          test -s "$APK"
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          "$APKSIGNER" verify --print-certs "$APK" | tee build/app/outputs/flutter-apk/apksigner-certs.txt
+          grep -qi 'be20b27f0ba1f4decd2941d410b1536de89e48dc894f04f038f9d26b11ecd6aa' build/app/outputs/flutter-apk/apksigner-certs.txt
+          sha256sum "$APK" > "$APK.sha256"
+
+      - name: APK yukle
+        uses: actions/upload-artifact@v4
+        with:
+          name: NgelX-1.0.139-Build-360-SOCIAL-REQUESTS
+          path: |
+            app/build/app/outputs/flutter-apk/app-release.apk
+            app/build/app/outputs/flutter-apk/app-release.apk.sha256
+            app/build/app/outputs/flutter-apk/apksigner-certs.txt
+          if-no-files-found: error
+          retention-days: 14
