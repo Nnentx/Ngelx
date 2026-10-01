@@ -1483,3 +1483,14 @@ Build 359/360 cihaz ekran görüntülerinde görülen alt sistem çubuğu taşma
 - Önceki 112px/96px büyük scroll boşlukları kaldırıldı; SafeArea fiziksel alanı ayırırken içerikte 36px görsel nefes boşluğu bırakıldı.
 - Build 361'deki belirgin **yeşil ✓ Kabul / kırmızı X Reddet**, Aktivite cache düzeltmesi ve pending sayaç mantığı korunuyor.
 - Sürüm: **1.0.141+362**.
+
+
+## 2026-10-01 — Build 363: Android alt viewport rezervi
+
+Build 362 cihaz ekranlarında alt sistem çubuğunun bazı ekranlarda hâlâ içerik üstüne geldiği görüldü. Android 15 edge-to-edge davranışında SafeArea inset değeri bazı cihazlarda 0/çok küçük raporlandığı için gerçek viewport rezervi güçlendirildi.
+
+- Ayarlar ve gizlilik, Ortak gruplar, Profil, Aktivite ve Mesaj İstekleri ekranlarında alt sistem alanı en az 64dp rezerve ediliyor.
+- Yeni `ngelxAltSistemRezervi` helper'ı `viewPadding`, `padding` ve `systemGestureInsets` değerlerinden en büyüğünü alıyor ve 64dp minimum uyguluyor.
+- Böylece son satır/kart Android 3 tuşlu gezinme alanının arkasına çizilmiyor.
+- Build 361/362 sosyal istek, belirgin yeşil ✓ / kırmızı X, pending sayaç ve cache düzeltmeleri korunuyor.
+- Sürüm: **1.0.142+363**.

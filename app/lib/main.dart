@@ -102,8 +102,8 @@ const ngelxPrivateBlueCanvas = Color(0xFFF6FAFF);
 const ngelxPrivateBlueBorder = Color(0xFFD8E8FF);
 const ngelxPrivateBlueInk = Color(0xFF10213A);
 
-const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.141');
-const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '362');
+const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.142');
+const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '363');
 const ngelxGroupBorder = Color(0xFFD9EEE0);
 
 final GlobalKey<NavigatorState> ngelxNavigatorKey=GlobalKey<NavigatorState>();
@@ -3011,8 +3011,14 @@ Future<void> takipDurumuDegistir(String hedefUid,bool takipte)async{
 
 double ngelxAltGuvenliBosluk(BuildContext context,{double extra=48}){
   final mq=MediaQuery.of(context);
-  final sistem=math.max(mq.viewPadding.bottom,mq.padding.bottom);
+  final sistem=math.max(math.max(mq.viewPadding.bottom,mq.padding.bottom),mq.systemGestureInsets.bottom);
   return sistem+extra;
+}
+
+double ngelxAltSistemRezervi(BuildContext context,{double minimum=64}){
+  final mq=MediaQuery.of(context);
+  final sistem=math.max(math.max(mq.viewPadding.bottom,mq.padding.bottom),mq.systemGestureInsets.bottom);
+  return math.max(sistem,minimum);
 }
 
 final ValueNotifier<int> ngelxIcerikDilRevizyonu=ValueNotifier<int>(0);
@@ -10020,7 +10026,7 @@ class MesajIstekleriPage extends StatelessWidget {
     child: Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(title: Text(t('messageRequests'), style: const TextStyle(fontWeight: FontWeight.w900))),
-      bottomNavigationBar:const SafeArea(top:false,bottom:true,minimum:EdgeInsets.only(bottom:8),child:SizedBox(height:8)),
+      bottomNavigationBar:SizedBox(height:ngelxAltSistemRezervi(context)),
       body: FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(
         future: FirebaseFirestore.instance.collection('users').doc(uid).get(),
         builder: (_, me) {
@@ -20240,7 +20246,7 @@ class _AktivitePageState extends State<AktivitePage> {
               },icon:const Icon(Icons.done_all_rounded,color:Color(0xFF20B86A))),
             ],
       ),
-      bottomNavigationBar:const SafeArea(top:false,bottom:true,minimum:EdgeInsets.only(bottom:8),child:SizedBox(height:8)),
+      bottomNavigationBar:SizedBox(height:ngelxAltSistemRezervi(context)),
       body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
         stream: uid == null ? null : FirebaseFirestore.instance.collection('notifications').where('toUid', isEqualTo: uid).limit(200).snapshots(),
         builder: (_, s) {
@@ -20656,7 +20662,7 @@ class OrtakGruplarPage extends StatelessWidget{
     return Theme(data:ThemeData.light(),child:Scaffold(
       backgroundColor:Colors.white,
       appBar:AppBar(title:const Text('Ortak gruplar',style:TextStyle(fontWeight:FontWeight.w900))),
-      bottomNavigationBar:const SafeArea(top:false,bottom:true,minimum:EdgeInsets.only(bottom:8),child:SizedBox(height:8)),
+      bottomNavigationBar:SizedBox(height:ngelxAltSistemRezervi(context)),
       body:me==null?const Center(child:Text('Oturum bulunamadı.')):StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
         stream:FirebaseFirestore.instance.collection('chats').where('members',arrayContains:me).limit(60).snapshots(),
         builder:(_,s){
@@ -20904,7 +20910,7 @@ class _KullaniciProfilPageState extends State<KullaniciProfilPage> {
         title:Text(ziyaretciOnizleme?t('profilePreview'):t('profile'),style:const TextStyle(fontWeight:FontWeight.w900)),
         actions:[IconButton(tooltip:'Profili paylaş',onPressed:()=>profiliPaylas(context),icon:const Icon(Icons.share_outlined))],
       ),
-      bottomNavigationBar:const SafeArea(top:false,bottom:true,minimum:EdgeInsets.only(bottom:8),child:SizedBox(height:8)),
+      bottomNavigationBar:SizedBox(height:ngelxAltSistemRezervi(context)),
       body: FutureBuilder<List<DocumentSnapshot<Map<String, dynamic>>?>>(
         future: Future.wait([hedef, benim]),
         builder: (_, s) {
