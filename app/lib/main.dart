@@ -100,8 +100,8 @@ const ngelxPrivateBlueCanvas = Color(0xFFF6FAFF);
 const ngelxPrivateBlueBorder = Color(0xFFD8E8FF);
 const ngelxPrivateBlueInk = Color(0xFF10213A);
 
-const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.121');
-const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '340');
+const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.122');
+const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '341');
 const ngelxGroupBorder = Color(0xFFD9EEE0);
 
 final GlobalKey<NavigatorState> ngelxNavigatorKey=GlobalKey<NavigatorState>();
@@ -19778,14 +19778,32 @@ class _AktivitePageState extends State<AktivitePage> {
         builder: (_, s) {
           if(s.hasError&&_sunucuAktiviteleri.isEmpty)return Center(child:Column(mainAxisSize:MainAxisSize.min,children:[const Icon(Icons.cloud_off_rounded,color:Colors.redAccent,size:52),const SizedBox(height:10),Text(t('activityLoadFailed'),style:const TextStyle(color:Colors.black,fontWeight:FontWeight.w800)),Text(t('checkConnectionRetry'),style:const TextStyle(color:Colors.black54))]));
           if(s.connectionState==ConnectionState.waiting&&_sunucuAktiviteleri.isEmpty)return const Center(child:CircularProgressIndicator(color:mor));
-          final birlesik=<String,QueryDocumentSnapshot<Map<String,dynamic>>>{};
-          for(final d in s.data?.docs??<QueryDocumentSnapshot<Map<String,dynamic>>>[])birlesik[d.id]=d;
-          for(final d in _sunucuAktiviteleri)birlesik[d.id]=d;
-          final gelenDocs=birlesik.values.toList();
           int bildirimZamani(QueryDocumentSnapshot<Map<String,dynamic>> d){
             final ham=d.data()['createdAt'];
             return ham is Timestamp?ham.millisecondsSinceEpoch:0;
           }
+          String bildirimTekrarAnahtari(QueryDocumentSnapshot<Map<String,dynamic>> d){
+            final v=d.data();
+            final eventId=(v['eventId']??v['dedupeKey']??'').toString();
+            if(eventId.isNotEmpty)return 'event:$eventId';
+            final ham=v['createdAt'];
+            if(ham is! Timestamp)return 'doc:'+d.id;
+            final actor=(v['fromUid']??v['senderId']??v['actorUid']??v['userId']??'').toString();
+            final hedef=(v['groupId']??v['chatId']??v['postId']??v['storyId']??v['callId']??v['messageId']??'').toString();
+            final tur=(v['type']??v['kind']??v['notificationType']??'').toString();
+            final metin=(v['body']??v['message']??v['text']??v['title']??'').toString();
+            final zamanKovasi=ham.millisecondsSinceEpoch~/15000;
+            return '$tur|$actor|$hedef|$metin|$zamanKovasi';
+          }
+          final birlesik=<String,QueryDocumentSnapshot<Map<String,dynamic>>>{};
+          for(final d in s.data?.docs??<QueryDocumentSnapshot<Map<String,dynamic>>>[])birlesik[d.id]=d;
+          for(final d in _sunucuAktiviteleri)birlesik[d.id]=d;
+          final tekil=<String,QueryDocumentSnapshot<Map<String,dynamic>>>{};
+          for(final d in birlesik.values){
+            final anahtar=bildirimTekrarAnahtari(d),onceki=tekil[anahtar];
+            if(onceki==null||bildirimZamani(d)>bildirimZamani(onceki))tekil[anahtar]=d;
+          }
+          final gelenDocs=tekil.values.toList();
           final tekil=<String,QueryDocumentSnapshot<Map<String,dynamic>>>{};
           for(final d in gelenDocs){
             final anahtar=_aktiviteTekilAnahtar(d);
