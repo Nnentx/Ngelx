@@ -1363,3 +1363,12 @@ Bu maddeler Build 359'un çalışan arama/görüntülü arama davranışını bo
 - Ortak Gruplar ekranında yalnızca üstteki AppBar değil, listenin scroll sonu için de cihazın gerçek `MediaQuery.viewPadding.bottom` / `padding.bottom` değeri dikkate alınacak.
 - Son grup satırının tamamen yukarı taşınabilmesi için dinamik alt liste boşluğu eklenecek; sabit piksel kullanılmayacak.
 - Jest gezinme ve 3 tuşlu Android gezinme birlikte doğrulanacak.
+
+
+## 2026-10-01 — Mesaj İstekleri ekranı cihaz kontrolü
+
+- Mesaj İstekleri ekranı cihazda açıldı ve mevcut istek kartları görünüyor.
+- Bu ekran görüntüsünde yalnızca iki kart olduğu için listenin son öğesi Android 3 tuşlu gezinme alanına taşmıyor; belirgin bir alt kesilme görünmedi.
+- Ancak kısa liste SafeArea doğrulaması için yeterli değil. Uzun liste / scroll sonu senaryosunda son kartın sistem gezinme alanının üstünde tamamen görünür ve dokunulabilir olduğu ayrıca kontrol edilecek.
+- Adem satırında son mesaj önizlemesi **“Selamın aleyküm test”** olarak görünüyor ve **Kabul et** eylemi mevcut.
+- Sonraki cihaz adımı: Adem isteğinde **Kabul et** işlemi test edilip sohbet ekranına geçiş, Firestore izinleri ve isteğin listeden kalkması doğrulanacak.
