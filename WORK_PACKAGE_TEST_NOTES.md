@@ -1269,3 +1269,20 @@ Düzeltme hedefi:
 - Alt içerik sistem çubuğunun arkasında kalmamalı, son kart/öğe tamamen görünür ve kaydırılabilir olmalı.
 - Aktivite, Profil ve Mesaj İstekleri ekranları küçük ekran + klasik 3 tuşlu Android navigasyon ile yeniden test edilecek.
 
+## 2026-10-01 — Build 358 arama navigasyonu + görüntülü arama + SafeArea düzeltmeleri
+
+Cihaz testinde görülen eksikler Build 358 dalında kodlandı:
+
+- Arama ekranında Android geri tuşuna basınca artık ikinci bir sohbet sayfası arama ekranının üstüne eklenmiyor. LiveKit odası arka planda korunup mevcut sohbet sayfasına dönülüyor.
+- Sohbetten tekrar geri çıkınca arama ekranının kendiliğinden öne gelmesine yol açan rota zinciri kaldırıldı.
+- Sohbetteki aktif arama bandına dokununca arka plandaki aynı LiveKit odası yeniden devralınıyor; gereksiz yeni bağlantı açılmıyor.
+- Arka planda bekleyen cevapsız özel/grup araması için 45 sn / 2 dk zaman aşımı korunuyor.
+- Eski bir arama ekranı kapanırken aynı sohbette daha yeni açılmış sesli/görüntülü aramanın Firestore durumunu yanlışlıkla `ended` yapması engellendi.
+- Aktif arama bandı sesli/görüntülü türünü Firestore `callVideo` alanından gösteriyor; alt metin artık kullanıcının aramanın katılımcısı/başlatanı olup olmadığına göre **Aramaya dön** / **Katıl** şeklinde belirleniyor.
+- Özel aramadaki ayarlar panelinde **Güvenli grup bağlantısı** yerine **Güvenli özel bağlantı** ve özel aramaya uygun başlık gösteriliyor.
+- Görüntülü aramalar rötuş açık başlayacak. Filtre ve rötuş renk matrisi gerçek cihazda daha belirgin fakat doğal olacak şekilde güçlendirildi.
+- Aktivite, başka kullanıcı profili, Mesaj İstekleri ve Ortak Gruplar listelerine cihazın gerçek alt `viewPadding` değeri eklendi; 3 tuşlu Android gezinme alanında son içerik kesilmemeli.
+- Ortak Gruplar satırlarında uzun grup adı/üye metni ellipsis ile sınırlandı.
+- Başka kullanıcı profilindeki arkadaşlık düğmesinin uzun bekleme etiketi küçük ekranlarda tek satıra sığacak şekilde sadeleştirildi.
+- Sürüm: `1.0.137+358`.
+
