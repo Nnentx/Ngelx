@@ -9751,8 +9751,17 @@ class _MesajPageState extends State<MesajPage> {
         stream:ben==null?null:FirebaseFirestore.instance.collection('chats').where('members',arrayContains:ben).limit(60).snapshots(),
         builder:(_,s){
           final docs=(s.data?.docs??[]).where((d){final v=d.data();if(List<String>.from(v['hiddenFor']??const[]).contains(ben)||arsivSohbetler.contains(d.id))return false;final members=List<String>.from(v['members']??const[]),grup=v['isGroup']==true||members.length>2;final unread=(v['unread_$ben']??0) as int;if(filtre=='Okunmamış'&&unread==0)return false;if(filtre=='Gruplar'&&!grup)return false;if(!grup){final other=members.firstWhere((x)=>x!=ben,orElse:()=>ben??'');final gelenIstek=v['requestRecipientUid']==ben&&v['requestAccepted_$ben']!=true&&!arkadaslar.contains(other);if(gelenIstek)return false;if(filtre=='Arkadaşlar'&&!arkadaslar.contains(other))return false;}else if(filtre=='Arkadaşlar')return false;final son='${v['groupName']??''} ${v['lastMessage']??''}'.toLowerCase();return sohbetSorgu.isEmpty||son.contains(sohbetSorgu);}).toList()..sort((a,b){final ap=sabitSohbetler.contains(a.id),bp=sabitSohbetler.contains(b.id);if(ap!=bp)return ap?-1:1;final at=a.data()['updatedAt'] as Timestamp?,bt=b.data()['updatedAt'] as Timestamp?;return (bt?.millisecondsSinceEpoch??0).compareTo(at?.millisecondsSinceEpoch??0);});
-          if(docs.isEmpty)return ListView(physics:const AlwaysScrollableScrollPhysics(),children:[SizedBox(height:220,child:Center(child:Text(t('noChats'),textAlign:TextAlign.center,style:const TextStyle(color:Colors.black54))))]);
-          return ListView.builder(physics:const AlwaysScrollableScrollPhysics(),itemCount:docs.length,itemBuilder:(_,i){
+          final altBosluk=26.0+MediaQuery.viewPaddingOf(context).bottom;
+          if(docs.isEmpty)return ListView(
+            physics:const AlwaysScrollableScrollPhysics(),
+            padding:EdgeInsets.only(bottom:altBosluk),
+            children:[SizedBox(height:220,child:Center(child:Text(t('noChats'),textAlign:TextAlign.center,style:const TextStyle(color:Colors.black54))))],
+          );
+          return ListView.builder(
+            physics:const AlwaysScrollableScrollPhysics(),
+            padding:EdgeInsets.only(bottom:altBosluk),
+            itemCount:docs.length,
+            itemBuilder:(_,i){
             final d=docs[i],v=d.data(),members=List<String>.from(v['members']??[]);
             final grup=v['isGroup']==true||members.length>2;
             if(grup){final ad=(v['groupName']??t('groupChat')).toString(),foto=(v['groupPhotoUrl']??'').toString(),unread=(v['unread_$ben']??0) as int;return ListTile(onTap:()=>sohbetiAc(d.id,GrupSohbetPage(chatId:d.id,ad:ad,foto:foto)),onLongPress:()=>sohbetMenusu(context,d.id,grup:true),leading:CircleAvatar(backgroundColor:const Color(0xFFE9DDFF),backgroundImage:foto.isEmpty?null:NgelXAgImageProvider(foto),child:foto.isEmpty?const Icon(Icons.groups,color:mor):null),title:Text(ad,style:TextStyle(color:Colors.black87,fontWeight:unread>0?FontWeight.w900:FontWeight.w700)),subtitle:Text((v['lastMessage']??t('groupCreated')).toString(),maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black54)),trailing:Wrap(crossAxisAlignment:WrapCrossAlignment.center,children:[if(sabitSohbetler.contains(d.id))const Icon(Icons.push_pin,size:16,color:mor),if(sessizSohbetler.contains(d.id))const Icon(Icons.volume_off,size:18,color:Colors.black38),if(unread>0)Badge(label:Text('$unread'))]));}
@@ -9952,7 +9961,20 @@ class MesajIstekleriPage extends StatelessWidget {
                     builder: (_, u) {
                       final p=u.data?.data() ?? <String,dynamic>{}, foto=(p['photoUrl'] ?? '').toString();
                       final ad=(p['displayName'] ?? p['username'] ?? 'NgelX').toString();
-                      Future<void> kabul()async{await d.reference.set({'requestAccepted_$uid':true,'requestRejected_$uid':false},SetOptions(merge:true));if(context.mounted)Navigator.push(context,MaterialPageRoute(builder:(_)=>SohbetPage(chatId:d.id,digerUid:other,ad:ad,foto:foto)));}
+                      Future<void> kabul()async{
+                        try{
+                          await d.reference.set({
+                            'requestAccepted_$uid':true,
+                            'requestRejected_$uid':false,
+                            'requestAcceptedAt_$uid':FieldValue.serverTimestamp(),
+                          },SetOptions(merge:true)).timeout(const Duration(seconds:10));
+                          if(context.mounted)Navigator.pushReplacement(context,MaterialPageRoute(builder:(_)=>SohbetPage(chatId:d.id,digerUid:other,ad:ad,foto:foto)));
+                        }on TimeoutException{
+                          if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Mesaj isteği kabulü zaman aşımına uğradı. Tekrar dene.')));
+                        }catch(_){
+                          if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Mesaj isteği kabul edilemedi. Tekrar dene.')));
+                        }
+                      }
                       return Card(child: ListTile(
                         onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>MesajIstegiOnizlemePage(chatId:d.id,digerUid:other,ad:ad,foto:foto,uid:uid))),
                         leading: CircleAvatar(backgroundImage: foto.isEmpty ? null : NgelXAgImageProvider(foto)),
@@ -20138,7 +20160,7 @@ class _AktivitePageState extends State<AktivitePage> {
           return Column(children:[
             Container(
               color:Colors.white,
-              padding:const EdgeInsets.fromLTRB(12,7,0,6),
+              padding:const EdgeInsets.fromLTRB(12,7,0,10),
               child:SizedBox(
                 height:38,
                 child:ListView(
@@ -20156,7 +20178,12 @@ class _AktivitePageState extends State<AktivitePage> {
             const Divider(height:1),
             Expanded(child:docs.isEmpty
               ?Center(child:Text(t('noActivityInFilter'),style:const TextStyle(color:Colors.black54,fontWeight:FontWeight.w700)))
-              :ListView.separated(padding:EdgeInsets.fromLTRB(12,8,12,24+MediaQuery.viewPaddingOf(context).bottom),separatorBuilder:(_,__)=>const Divider(height:1,indent:72),itemCount:docs.length,itemBuilder:(_,i){final d=docs[i];
+              :ListView.separated(
+                clipBehavior:Clip.hardEdge,
+                padding:EdgeInsets.fromLTRB(12,14,12,24+MediaQuery.viewPaddingOf(context).bottom),
+                separatorBuilder:(_,__)=>const Divider(height:1,indent:72),
+                itemCount:docs.length,
+                itemBuilder:(_,i){final d=docs[i];
             final v = d.data();
             final tur=(v['type']??'').toString(),okundu=v['read']==true;
             final olay=(v['eventKind']??'').toString();
@@ -20890,9 +20917,15 @@ class _KullaniciProfilPageState extends State<KullaniciProfilPage> {
                                 }on TimeoutException{
                                   if(mounted)setState(()=>_yerelTakipIstekleri.remove(uid));
                                   if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Takip isteği zaman aşımına uğradı. Tekrar dene.')));
+                                }on FirebaseException catch(e){
+                                  if(mounted)setState(()=>_yerelTakipIstekleri.remove(uid));
+                                  final mesaj=e.code=='permission-denied'
+                                    ?'Takip isteği izni doğrulanamadı. Uygulamayı güncelleyip tekrar dene.'
+                                    :'Takip isteği gönderilemedi. Tekrar dene.';
+                                  if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(mesaj)));
                                 }catch(_){
                                   if(mounted)setState(()=>_yerelTakipIstekleri.remove(uid));
-                                  if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Takip isteği gönderilemedi. Bağlantını kontrol edip tekrar dene.')));
+                                  if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Takip isteği gönderilemedi. Tekrar dene.')));
                                 }
                                 return;
                               }
@@ -20971,9 +21004,15 @@ class _KullaniciProfilPageState extends State<KullaniciProfilPage> {
                             }on TimeoutException{
                               if(mounted)setState(()=>_yerelArkadasIstekleri.remove(uid));
                               if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Arkadaşlık isteği zaman aşımına uğradı. Tekrar dene.')));
+                            }on FirebaseException catch(e){
+                              if(mounted)setState(()=>_yerelArkadasIstekleri.remove(uid));
+                              final mesaj=e.code=='permission-denied'
+                                ?'Arkadaşlık isteği izni doğrulanamadı. Uygulamayı güncelleyip tekrar dene.'
+                                :'Arkadaşlık isteği gönderilemedi. Tekrar dene.';
+                              if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(mesaj)));
                             }catch(_){
                               if(mounted)setState(()=>_yerelArkadasIstekleri.remove(uid));
-                              if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Arkadaşlık isteği gönderilemedi. Bağlantını kontrol edip tekrar dene.')));
+                              if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Arkadaşlık isteği gönderilemedi. Tekrar dene.')));
                             }
                           },
                           icon:Icon(arkadas?Icons.people_alt_rounded:(bekliyor?Icons.schedule_rounded:Icons.person_add_alt_1_rounded)),
