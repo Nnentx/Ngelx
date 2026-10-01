@@ -136,7 +136,7 @@ class _SesliOdaPageState extends State<SesliOdaPage>{
     aktifOda=widget.oda;
     mikrofon=widget.yayinSahibi;mikrofonTercihi=widget.yayinSahibi;
     aktifOda.addListener(odaDegisti);
-    abonelik=FirebaseFirestore.instance.collection('audio_rooms').doc(aktifOdaId).snapshots().listen((d){
+    abonelik=FirebaseFirestore.instance.collection('audio_rooms').doc(widget.odaId).snapshots().listen((d){
       final v=d.data()??<String,dynamic>{};if(!mounted)return;
       final once=konusmaciyim;
       final yeniBitti=v.isNotEmpty&&v['active']!=true;
@@ -147,13 +147,13 @@ class _SesliOdaPageState extends State<SesliOdaPage>{
     });
     final ben=uid;
     if(ben!=null){
-      katilimAboneligi=FirebaseFirestore.instance.collection('audio_rooms').doc(aktifOdaId).collection('participants').doc(ben).snapshots().listen((d){
+      katilimAboneligi=FirebaseFirestore.instance.collection('audio_rooms').doc(widget.odaId).collection('participants').doc(ben).snapshots().listen((d){
         final v=d.data();
         if(v!=null&&v['removed']==true&&!sahibiyim&&!kapatiliyor)unawaited(odadanCikarildi(yasakli:v['banned']==true));
       });
     }
     if(widget.yayinSahibi){
-      odaKatilimAboneligi=FirebaseFirestore.instance.collection('audio_rooms').doc(aktifOdaId).collection('participants').where('active',isEqualTo:true).snapshots().listen((s){
+      odaKatilimAboneligi=FirebaseFirestore.instance.collection('audio_rooms').doc(widget.odaId).collection('participants').where('active',isEqualTo:true).snapshots().listen((s){
         if(!mounted)return;
         final simdi=DateTime.now();
         var sayi=0;
@@ -212,7 +212,7 @@ class _SesliOdaPageState extends State<SesliOdaPage>{
     final bas=veri['startedAt'];
     final sure=bas is Timestamp?DateTime.now().difference(bas.toDate()).inSeconds:0;
     try{
-      await FirebaseFirestore.instance.collection('audio_rooms').doc(aktifOdaId).set({
+      await FirebaseFirestore.instance.collection('audio_rooms').doc(widget.odaId).set({
         'active':false,
         'endedAt':FieldValue.serverTimestamp(),
         'durationSeconds':sure<0?0:sure,
@@ -224,7 +224,7 @@ class _SesliOdaPageState extends State<SesliOdaPage>{
     }catch(_){}
     final ben=uid;
     if(ben!=null){
-      await ngelxSesliKatilimciAyril(aktifOdaId,ben);
+      await ngelxSesliKatilimciAyril(widget.odaId,ben);
       try{await FirebaseFirestore.instance.collection('users').doc(ben).set({'isAudioLive':false,'currentAudioRoomId':FieldValue.delete()},SetOptions(merge:true));}catch(_){}
     }
     try{await aktifOda.disconnect();}catch(_){}
@@ -275,13 +275,13 @@ class _SesliOdaPageState extends State<SesliOdaPage>{
     if(kapatiliyor||bitti)return;
     final ben=uid;
     if(ben!=null){
-      try{await FirebaseFirestore.instance.collection('audio_rooms').doc(aktifOdaId).collection('participants').doc(ben).set({'active':true,'lastSeenAt':FieldValue.serverTimestamp()},SetOptions(merge:true));}catch(_){}
+      try{await FirebaseFirestore.instance.collection('audio_rooms').doc(widget.odaId).collection('participants').doc(ben).set({'active':true,'lastSeenAt':FieldValue.serverTimestamp()},SetOptions(merge:true));}catch(_){}
     }
     if(!widget.yayinSahibi)return;
     try{
       final dinleyici=aktifOda.remoteParticipants.length;
       final onceki=(veri['peakListenerCount'] is num)?(veri['peakListenerCount'] as num).toInt():0;
-      await FirebaseFirestore.instance.collection('audio_rooms').doc(aktifOdaId).set({
+      await FirebaseFirestore.instance.collection('audio_rooms').doc(widget.odaId).set({
         'lastHeartbeatAt':FieldValue.serverTimestamp(),
         'listenerCount':dinleyici,
         'peakListenerCount':dinleyici>onceki?dinleyici:onceki,
@@ -349,7 +349,7 @@ class _SesliOdaPageState extends State<SesliOdaPage>{
       unawaited(tekrarBaglan());
     }
   }
-  Future<void> sozIste()async{final ben=uid;if(ben==null||konusmaciyim)return;final p=(await FirebaseFirestore.instance.collection('users').doc(ben).get()).data()??<String,dynamic>{};await FirebaseFirestore.instance.collection('audio_rooms').doc(aktifOdaId).collection('speaker_requests').doc(ben).set({'userId':ben,'displayName':(p['displayName']??p['username']??'NgelX').toString(),'photoUrl':(p['photoUrl']??'').toString(),'status':'pending','createdAt':FieldValue.serverTimestamp(),'updatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Söz isteğin gönderildi.')));}
+  Future<void> sozIste()async{final ben=uid;if(ben==null||konusmaciyim)return;final p=(await FirebaseFirestore.instance.collection('users').doc(ben).get()).data()??<String,dynamic>{};await FirebaseFirestore.instance.collection('audio_rooms').doc(widget.odaId).collection('speaker_requests').doc(ben).set({'userId':ben,'displayName':(p['displayName']??p['username']??'NgelX').toString(),'photoUrl':(p['photoUrl']??'').toString(),'status':'pending','createdAt':FieldValue.serverTimestamp(),'updatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Söz isteğin gönderildi.')));}
   Future<void> istekler()async{
     if(!yoneticiyim)return;
     await showModalBottomSheet<void>(
@@ -376,7 +376,7 @@ class _SesliOdaPageState extends State<SesliOdaPage>{
               const Divider(height:1,color:Color(0xFFEDE8F2)),
               Expanded(
                 child:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
-                  stream:FirebaseFirestore.instance.collection('audio_rooms').doc(aktifOdaId).collection('speaker_requests').where('status',isEqualTo:'pending').limit(30).snapshots(),
+                  stream:FirebaseFirestore.instance.collection('audio_rooms').doc(widget.odaId).collection('speaker_requests').where('status',isEqualTo:'pending').limit(30).snapshots(),
                   builder:(_,s){
                     if(s.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator(color:mor));
                     if(s.hasError)return const Center(child:Padding(padding:EdgeInsets.all(24),child:Column(mainAxisSize:MainAxisSize.min,children:[Icon(Icons.cloud_off_rounded,color:Colors.redAccent,size:36),SizedBox(height:8),Text('İstekler yüklenemedi.',style:TextStyle(color:Colors.black87,fontWeight:FontWeight.w900)),SizedBox(height:3),Text('Bağlantını kontrol edip tekrar dene.',style:TextStyle(color:Colors.black45))])));
@@ -408,7 +408,7 @@ class _SesliOdaPageState extends State<SesliOdaPage>{
       ),
     );
   }
-  Future<void> istekSonuc(String hedef,bool kabul)async{final ref=FirebaseFirestore.instance.collection('audio_rooms').doc(aktifOdaId),req=ref.collection('speaker_requests').doc(hedef);if(kabul){await FirebaseFirestore.instance.runTransaction((tx)async{final d=await tx.get(ref),v=d.data()??<String,dynamic>{},sp=List<String>.from(v['speakerIds']??const[]);if(!sp.contains(hedef)&&sp.length>=ngelxSesliMaksKonusmaci)throw StateError('limit');if(!sp.contains(hedef))sp.add(hedef);tx.update(ref,{'speakerIds':sp,'speakerCount':sp.length,'updatedAt':FieldValue.serverTimestamp()});tx.set(req,{'status':'accepted','updatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));});}else{await req.set({'status':'declined','updatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));}}
+  Future<void> istekSonuc(String hedef,bool kabul)async{final ref=FirebaseFirestore.instance.collection('audio_rooms').doc(widget.odaId),req=ref.collection('speaker_requests').doc(hedef);if(kabul){await FirebaseFirestore.instance.runTransaction((tx)async{final d=await tx.get(ref),v=d.data()??<String,dynamic>{},sp=List<String>.from(v['speakerIds']??const[]);if(!sp.contains(hedef)&&sp.length>=ngelxSesliMaksKonusmaci)throw StateError('limit');if(!sp.contains(hedef))sp.add(hedef);tx.update(ref,{'speakerIds':sp,'speakerCount':sp.length,'updatedAt':FieldValue.serverTimestamp()});tx.set(req,{'status':'accepted','updatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));});}else{await req.set({'status':'declined','updatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));}}
   Future<void> bitir()async{
     if(!sahibiyim)return;
     final ok=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(title:const Text('Sesli odayı bitirmek istiyor musun?'),content:const Text('Oda kapanacak ve odadaki herkes çıkarılacak.'),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('Bitir'))]));
@@ -416,10 +416,10 @@ class _SesliOdaPageState extends State<SesliOdaPage>{
     kapatiliyor=true;heartbeat?.cancel();yalnizlikTimer?.cancel();
     final bas=veri['startedAt'];
     final sure=bas is Timestamp?DateTime.now().difference(bas.toDate()).inSeconds:0;
-    await FirebaseFirestore.instance.collection('audio_rooms').doc(aktifOdaId).set({'active':false,'endedAt':FieldValue.serverTimestamp(),'durationSeconds':sure<0?0:sure,'endReason':'host_ended'},SetOptions(merge:true));
+    await FirebaseFirestore.instance.collection('audio_rooms').doc(widget.odaId).set({'active':false,'endedAt':FieldValue.serverTimestamp(),'durationSeconds':sure<0?0:sure,'endReason':'host_ended'},SetOptions(merge:true));
     final ben=uid;
     if(ben!=null){
-      await ngelxSesliKatilimciAyril(aktifOdaId,ben);
+      await ngelxSesliKatilimciAyril(widget.odaId,ben);
       await FirebaseFirestore.instance.collection('users').doc(ben).set({'isAudioLive':false,'currentAudioRoomId':FieldValue.delete()},SetOptions(merge:true));
     }
     try{await aktifOda.disconnect();}catch(_){}
@@ -441,7 +441,7 @@ class _SesliOdaPageState extends State<SesliOdaPage>{
     );
     if(ok!=true)return;
     kapatiliyor=true;
-    final ben=uid;if(ben!=null)await ngelxSesliKatilimciAyril(aktifOdaId,ben);
+    final ben=uid;if(ben!=null)await ngelxSesliKatilimciAyril(widget.odaId,ben);
     try{await aktifOda.localParticipant?.setMicrophoneEnabled(false);}catch(_){}
     try{await aktifOda.disconnect();}catch(_){}
     if(mounted)Navigator.pop(context);
@@ -460,18 +460,18 @@ class _SesliOdaPageState extends State<SesliOdaPage>{
           Flexible(child:Text('2. kişi bekleniyor • ${ngelxSesliSureMetni(Duration(seconds:yalnizlikKalan))} sonra oda kapanır',textAlign:TextAlign.center,style:const TextStyle(color:Color(0xFF6F5200),fontSize:12,fontWeight:FontWeight.w800))),
         ]),
       ),
-    Expanded(child:ListView(padding:const EdgeInsets.all(16),children:[Container(padding:const EdgeInsets.all(16),decoration:BoxDecoration(color:const Color(0xFFF6F0FF),borderRadius:BorderRadius.circular(22)),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Row(children:[Icon(bitti?Icons.stop_circle:Icons.graphic_eq_rounded,color:bitti?Colors.redAccent:mor),const SizedBox(width:6),Text(bitti?'SONA ERDİ':'SESLİ CANLI',style:TextStyle(color:bitti?Colors.redAccent:mor,fontWeight:FontWeight.w900)),const SizedBox(width:8),NgelxSesliSureSayaci(baslangic:veri['startedAt'] is Timestamp?(veri['startedAt'] as Timestamp).toDate():null,bitti:bitti),const Spacer(),const Icon(Icons.headphones,size:17,color:Colors.black45),Text(' ${aktifOda.remoteParticipants.length}',style:const TextStyle(fontWeight:FontWeight.w800))]),const SizedBox(height:9),Text((veri['title']??widget.baslik).toString(),style:const TextStyle(color:Colors.black,fontSize:20,fontWeight:FontWeight.w900)),const SizedBox(height:4),Text('${sp.length}/12 konuşmacı',style:const TextStyle(color:Colors.black54,fontWeight:FontWeight.w700))])),NgelxSesliTepkiAkisi(roomId:aktifOdaId),const SizedBox(height:10),Wrap(spacing:8,runSpacing:8,children:[
-  OutlinedButton.icon(onPressed:()=>ngelxSesliKatilimcilarAc(context,aktifOdaId,widget.ownerId),icon:const Icon(Icons.headphones_rounded,size:18),label:const Text('Dinleyiciler')),
+    Expanded(child:ListView(padding:const EdgeInsets.all(16),children:[Container(padding:const EdgeInsets.all(16),decoration:BoxDecoration(color:const Color(0xFFF6F0FF),borderRadius:BorderRadius.circular(22)),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Row(children:[Icon(bitti?Icons.stop_circle:Icons.graphic_eq_rounded,color:bitti?Colors.redAccent:mor),const SizedBox(width:6),Text(bitti?'SONA ERDİ':'SESLİ CANLI',style:TextStyle(color:bitti?Colors.redAccent:mor,fontWeight:FontWeight.w900)),const SizedBox(width:8),NgelxSesliSureSayaci(baslangic:veri['startedAt'] is Timestamp?(veri['startedAt'] as Timestamp).toDate():null,bitti:bitti),const Spacer(),const Icon(Icons.headphones,size:17,color:Colors.black45),Text(' ${aktifOda.remoteParticipants.length}',style:const TextStyle(fontWeight:FontWeight.w800))]),const SizedBox(height:9),Text((veri['title']??widget.baslik).toString(),style:const TextStyle(color:Colors.black,fontSize:20,fontWeight:FontWeight.w900)),const SizedBox(height:4),Text('${sp.length}/12 konuşmacı',style:const TextStyle(color:Colors.black54,fontWeight:FontWeight.w700))])),NgelxSesliTepkiAkisi(roomId:widget.odaId),const SizedBox(height:10),Wrap(spacing:8,runSpacing:8,children:[
+  OutlinedButton.icon(onPressed:()=>ngelxSesliKatilimcilarAc(context,widget.odaId,widget.ownerId),icon:const Icon(Icons.headphones_rounded,size:18),label:const Text('Dinleyiciler')),
   PopupMenuButton<String>(
     tooltip:'Tepki gönder',
-    onSelected:(x)=>ngelxSesliTepkiGonder(aktifOdaId,x),
+    onSelected:(x)=>ngelxSesliTepkiGonder(widget.odaId,x),
     itemBuilder:(_)=>['❤️','👏','😂','🔥','🎉'].map((x)=>PopupMenuItem(value:x,child:Text(x,style:const TextStyle(fontSize:24)))).toList(),
     child:Container(padding:const EdgeInsets.symmetric(horizontal:12,vertical:8),decoration:BoxDecoration(border:Border.all(color:const Color(0xFFD5CEDD)),borderRadius:BorderRadius.circular(20)),child:const Row(mainAxisSize:MainAxisSize.min,children:[Icon(Icons.add_reaction_outlined,size:18,color:mor),SizedBox(width:6),Text('Tepki',style:TextStyle(color:Colors.black87,fontWeight:FontWeight.w700))])),
   ),
-  OutlinedButton.icon(onPressed:()=>ngelxSesliPaylas(context,aktifOdaId,(veri['title']??widget.baslik).toString()),icon:const Icon(Icons.ios_share_rounded,size:18),label:const Text('Davet')),
-]),const SizedBox(height:14),Row(children:[const Text('Sahne',style:TextStyle(fontSize:18,fontWeight:FontWeight.w900)),const Spacer(),if(yoneticiyim&&!bitti)TextButton.icon(onPressed:istekler,icon:const Icon(Icons.pan_tool_alt,size:16),label:const Text('İstekler'))]),GridView.builder(shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),gridDelegate:const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount:3,crossAxisSpacing:8,mainAxisSpacing:8,childAspectRatio:.9),itemCount:ngelxSesliMaksKonusmaci,itemBuilder:(_,i)=>koltuk(i<sp.length?sp[i]:'')),if(!konusmaciyim&&!bitti)...[const SizedBox(height:14),FilledButton.icon(style:FilledButton.styleFrom(backgroundColor:const Color(0xFFF0E8FF),foregroundColor:mor),onPressed:sozIste,icon:const Icon(Icons.pan_tool_alt_rounded),label:const Text('Söz iste'))],if(bitti)...[const SizedBox(height:14),const Text('Bu sesli oda sona erdi.',style:TextStyle(color:Colors.redAccent,fontWeight:FontWeight.w900))]])),NgelxSesliInlineSohbet(roomId:aktifOdaId,yonetici:yoneticiyim,sahibiyim:sahibiyim,bitti:bitti),Container(padding:const EdgeInsets.all(12),decoration:const BoxDecoration(border:Border(top:BorderSide(color:Color(0xFFEDE8F2)))),child:bitti
+  OutlinedButton.icon(onPressed:()=>ngelxSesliPaylas(context,widget.odaId,(veri['title']??widget.baslik).toString()),icon:const Icon(Icons.ios_share_rounded,size:18),label:const Text('Davet')),
+]),const SizedBox(height:14),Row(children:[const Text('Sahne',style:TextStyle(fontSize:18,fontWeight:FontWeight.w900)),const Spacer(),if(yoneticiyim&&!bitti)TextButton.icon(onPressed:istekler,icon:const Icon(Icons.pan_tool_alt,size:16),label:const Text('İstekler'))]),GridView.builder(shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),gridDelegate:const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount:3,crossAxisSpacing:8,mainAxisSpacing:8,childAspectRatio:.9),itemCount:ngelxSesliMaksKonusmaci,itemBuilder:(_,i)=>koltuk(i<sp.length?sp[i]:'')),if(!konusmaciyim&&!bitti)...[const SizedBox(height:14),FilledButton.icon(style:FilledButton.styleFrom(backgroundColor:const Color(0xFFF0E8FF),foregroundColor:mor),onPressed:sozIste,icon:const Icon(Icons.pan_tool_alt_rounded),label:const Text('Söz iste'))],if(bitti)...[const SizedBox(height:14),const Text('Bu sesli oda sona erdi.',style:TextStyle(color:Colors.redAccent,fontWeight:FontWeight.w900))]])),NgelxSesliInlineSohbet(roomId:widget.odaId,yonetici:yoneticiyim,sahibiyim:sahibiyim,bitti:bitti),Container(padding:const EdgeInsets.all(12),decoration:const BoxDecoration(border:Border(top:BorderSide(color:Color(0xFFEDE8F2)))),child:bitti
   ?FilledButton.icon(style:FilledButton.styleFrom(backgroundColor:mor,minimumSize:const Size.fromHeight(50)),onPressed:()=>Navigator.pop(context),icon:const Icon(Icons.close_rounded),label:const Text('Kapat',style:TextStyle(fontWeight:FontWeight.w900)))
   :Row(children:[Expanded(child:FilledButton.icon(style:FilledButton.styleFrom(backgroundColor:konusmaciyim&&mikrofon?mor:const Color(0xFFF0E8FF),foregroundColor:konusmaciyim&&mikrofon?Colors.white:mor),onPressed:konusmaciyim&&bagli?mic:null,icon:Icon(mikrofon?Icons.mic:Icons.mic_off),label:Text(!bagli?'Bağlantı bekleniyor':konusmaciyim?(mikrofon?'Mikrofon açık':'Mikrofon kapalı'):'Dinleyici'))),const SizedBox(width:8),OutlinedButton.icon(onPressed:ayril,icon:Icon(sahibiyim?Icons.stop_circle:Icons.logout),label:Text(sahibiyim?'Bitir':'Ayrıl'))]))])));
   }
-  @override void dispose(){kapatiliyor=true;heartbeat?.cancel();yalnizlikTimer?.cancel();abonelik?.cancel();katilimAboneligi?.cancel();odaKatilimAboneligi?.cancel();aktifOda.removeListener(odaDegisti);final ben=uid;if(ben!=null&&!bitti)unawaited(ngelxSesliKatilimciAyril(aktifOdaId,ben));if(!widget.yayinSahibi)unawaited(aktifOda.disconnect());unawaited(aktifOda.dispose());super.dispose();}
+  @override void dispose(){kapatiliyor=true;heartbeat?.cancel();yalnizlikTimer?.cancel();abonelik?.cancel();katilimAboneligi?.cancel();odaKatilimAboneligi?.cancel();aktifOda.removeListener(odaDegisti);final ben=uid;if(ben!=null&&!bitti)unawaited(ngelxSesliKatilimciAyril(widget.odaId,ben));if(!widget.yayinSahibi)unawaited(aktifOda.disconnect());unawaited(aktifOda.dispose());super.dispose();}
 }
