@@ -91,7 +91,7 @@ service cloud.firestore {
       let sender = get(/databases/$(database)/documents/users/$(request.auth.uid));
       let permission = target.data.get(
         'messagePermission',
-        target.data.get('friendsOnlyMessages', true) ? 'friends' : 'all'
+        target.data.get('friendsOnlyMessages', false) ? 'friends' : 'all'
       );
       return request.resource.data.members.size() == 2
         && otherUid != request.auth.uid
