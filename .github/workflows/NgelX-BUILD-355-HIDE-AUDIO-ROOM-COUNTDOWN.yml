@@ -1,0 +1,155 @@
+name: Ngel X BUILD 355 HIDE AUDIO ROOM COUNTDOWN
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - work/build355-hide-audio-room-countdown
+    paths:
+      - '.github/workflows/NgelX-BUILD-355-HIDE-AUDIO-ROOM-COUNTDOWN.yml'
+      - 'app/lib/main.dart'
+      - 'app/pubspec.yaml'
+      - 'app/lib/audio_live_rooms.dart'
+      - 'app/lib/audio_live_rooms_pro.dart'
+      - 'app/lib/audio_live_rooms_extras.dart'
+      - 'app/lib/group_quality.dart'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ngelx-build355-hide-audio-room-countdown
+  cancel-in-progress: true
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Kaynaklari al
+        uses: actions/checkout@v4
+        with:
+          ref: work/build355-hide-audio-room-countdown
+          fetch-depth: 0
+
+      - name: Build 355 kaynaklarini ve regresyonlari kontrol et
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+
+          grep -F "version: 1.0.135+355" app/pubspec.yaml
+          grep -F "defaultValue: '1.0.135'" app/lib/main.dart
+          grep -F "defaultValue: '355'" app/lib/main.dart
+
+          # Grup aramasi: kimse katilmazsa 2 dakika, ozel arama 45 saniye kalir.
+          grep -F "final toplamSaniye=grupAramasi?120:45;" app/lib/main.dart
+          grep -F "callAutoEndedReason':'no_participants_2m'" app/lib/main.dart
+          grep -F "Kimse katılmadığı için grup araması otomatik kapatıldı." app/lib/main.dart
+          grep -F "olusturuldu:aramaVerisi['callCreatedAt'] is Timestamp" app/lib/main.dart
+
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path('app/lib/main.dart').read_text(encoding='utf-8')
+          a=s.index('  Widget _grupAramaAlani(){')
+          b=s.index('  Widget _videoAlani(){',a)
+          block=s[a:b]
+          assert '_aramaSureYazi()' not in block, 'Grup arama ekraninda sayac yeniden gorunur olmus.'
+          assert 'Katılımcılar bekleniyor…' in block, 'Bekleme durumu etiketi kayip.'
+          assert "'callCreatedAt':FieldValue.serverTimestamp()" in s
+          assert s.count("'callAutoEnded':false") >= 2, 'Yeni grup aramalari timeout durumunu sifirlamiyor.'
+          print('Build 355 group call checks OK')
+          PY
+
+          # Sesli oda 10 dakikalik otomatik kapanma mantigi korunur; geri sayim kullaniciya gosterilmez.
+          grep -F "int yalnizlikKalan=600" app/lib/audio_live_rooms.dart
+          grep -F "final kalan=600-gecen;" app/lib/audio_live_rooms.dart
+          grep -F "Flexible(child:Text('2. kişi bekleniyor'" app/lib/audio_live_rooms.dart
+          if grep -F "sonra oda kapanır" app/lib/audio_live_rooms.dart; then
+            echo "Sesli oda geri sayimi yeniden gorunur olmus." >&2
+            exit 1
+          fi
+
+          # Onceki calisan muzik kutuphanesi ve Build 353 gorunurluk duzeltmesi korunur.
+          grep -F "NgelX Müzik Kütüphanesi" app/lib/audio_live_rooms_pro.dart
+          grep -F "Bağımsız sanatçılar" app/lib/audio_live_rooms_pro.dart
+          grep -F "Lisanslı katalog" app/lib/audio_live_rooms_pro.dart
+          grep -F "Telif süresi dolmuş eserler" app/lib/audio_live_rooms_pro.dart
+          grep -F "Mahogany Marie" app/lib/audio_live_rooms_pro.dart
+          grep -F "Punk Rock Opera" app/lib/audio_live_rooms_pro.dart
+          grep -F "CC BY 4.0" app/lib/audio_live_rooms_pro.dart
+          grep -F "height:math.min(MediaQuery.sizeOf(sheet).height*.88,720.0).toDouble()" app/lib/audio_live_rooms_pro.dart
+          grep -F "scrollDirection:Axis.horizontal" app/lib/audio_live_rooms_pro.dart
+
+          if grep -F "Mor Gece" app/lib/audio_live_rooms_pro.dart; then
+            echo "Eski uretilmis placeholder muzik geri gelmis." >&2
+            exit 1
+          fi
+          if grep -F "ngelx://original/" app/lib/audio_live_rooms_pro.dart; then
+            echo "Eski yerel muzik semasi geri gelmis." >&2
+            exit 1
+          fi
+
+          # Sesli oda ve onceki kritik davranislar korunur.
+          grep -F "Future<void> ngelxSesliMuzigiYereldeDurdur" app/lib/audio_live_rooms_pro.dart
+          grep -F "await ngelxSesliMuzigiYereldeDurdur(widget.odaId);" app/lib/audio_live_rooms.dart
+          grep -F "Mesajı düzenle" app/lib/audio_live_rooms_pro.dart
+          grep -F "Mesaj silinsin mi?" app/lib/audio_live_rooms_pro.dart
+
+      - name: Java 17 kur
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Flutter kur
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Sabit NgelX imza anahtarini geri yukle
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: ngelx-stable-debug-keystore-v1
+          fail-on-cache-miss: true
+
+      - name: Flutter analiz
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter clean
+          flutter pub get
+          flutter analyze --machine > analyze.log 2>&1 || true
+          cat analyze.log
+          if grep -q '^ERROR|' analyze.log; then
+            echo "Flutter analyze ERROR buldu."
+            exit 1
+          fi
+
+      - name: APK olustur ve imzayi dogrula
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter build apk --release
+          APK=build/app/outputs/flutter-apk/app-release.apk
+          test -s "$APK"
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          "$APKSIGNER" verify --print-certs "$APK" | tee build/app/outputs/flutter-apk/apksigner-certs.txt
+          grep -qi 'be20b27f0ba1f4decd2941d410b1536de89e48dc894f04f038f9d26b11ecd6aa' build/app/outputs/flutter-apk/apksigner-certs.txt
+          sha256sum "$APK" > "$APK.sha256"
+
+      - name: APK yukle
+        uses: actions/upload-artifact@v4
+        with:
+          name: NgelX-1.0.135-Build-355-HIDE-AUDIO-ROOM-COUNTDOWN
+          path: |
+            app/build/app/outputs/flutter-apk/app-release.apk
+            app/build/app/outputs/flutter-apk/app-release.apk.sha256
+            app/build/app/outputs/flutter-apk/apksigner-certs.txt
+          if-no-files-found: error
+          retention-days: 14
