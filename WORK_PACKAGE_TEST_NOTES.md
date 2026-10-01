@@ -1494,3 +1494,11 @@ Build 362 cihaz ekranlarında alt sistem çubuğunun bazı ekranlarda hâlâ iç
 - Böylece son satır/kart Android 3 tuşlu gezinme alanının arkasına çizilmiyor.
 - Build 361/362 sosyal istek, belirgin yeşil ✓ / kırmızı X, pending sayaç ve cache düzeltmeleri korunuyor.
 - Sürüm: **1.0.142+363**.
+
+
+## 2026-10-01 — Build 362 cihaz görüntüsü: belirgin istek eylemleri doğrulandı
+
+- Aktivite ekranındaki yeni sosyal istek kartlarında **yeşil dolu ✓ kabul** ve **kırmızı dolu X reddet** butonları cihazda net ve ayırt edilebilir görünüyor.
+- Takip İstekleri sayacı önceki 6 değerinden **2**'ye, Arkadaşlık İstekleri **1**'e indi; accepted/rejected geçmiş kayıtların aktif pending sayacından ayrılması cihazda gözle görülür biçimde çalışıyor.
+- Eski kabul edilmiş takip/arkadaşlık kayıtları Tümü geçmişinde yeşil durum ikonu ile kalıyor; legacy reddedilmiş “Yeni takip isteğin var” kaydı kırmızı durum ikonu ile geçmişte görünüyor.
+- Alt viewport taşması Build 362 ekranında hâlâ gözlenebiliyor; bu nedenle Build 363'te minimum 64dp sistem rezervi uygulanıyor.
