@@ -9999,7 +9999,20 @@ class MesajIstegiOnizlemePage extends StatelessWidget{
   const MesajIstegiOnizlemePage({super.key,required this.chatId,required this.digerUid,required this.ad,required this.foto,required this.uid});
   @override Widget build(BuildContext context)=>Theme(data:ThemeData.light(),child:Scaffold(backgroundColor:Colors.white,appBar:AppBar(title:Text(ad)),body:Column(children:[
     Expanded(child:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(stream:FirebaseFirestore.instance.collection('chats').doc(chatId).collection('messages').orderBy('createdAt').limitToLast(30).snapshots(),builder:(_,s)=>ListView(padding:const EdgeInsets.all(16),children:(s.data?.docs??[]).map((d){final v=d.data(),metin=(v['text']??'').toString(),photo=v['type']=='photo';return Align(alignment:v['senderId']==uid?Alignment.centerRight:Alignment.centerLeft,child:Container(margin:const EdgeInsets.symmetric(vertical:4),padding:EdgeInsets.all(photo?4:12),constraints:const BoxConstraints(maxWidth:280),decoration:BoxDecoration(color:const Color(0xFFF0F1F4),borderRadius:BorderRadius.circular(18)),child:photo?ClipRRect(borderRadius:BorderRadius.circular(15),child:NgelXAgResmi(imageUrl:(v['mediaUrl']??'').toString(),fit:BoxFit.cover,errorWidget:(_,__,___)=>const SizedBox(height:120,child:Center(child:Icon(Icons.broken_image_outlined))))):Text(metin)));}).toList()))),
-    SafeArea(top:false,child:Padding(padding:const EdgeInsets.all(12),child:Row(children:[Expanded(child:OutlinedButton(onPressed:()async{await FirebaseFirestore.instance.collection('chats').doc(chatId).set({'requestRejected_$uid':true,'hiddenFor':FieldValue.arrayUnion([uid])},SetOptions(merge:true));if(context.mounted)Navigator.pop(context);},child:Text(t('reject')))),const SizedBox(width:8),Expanded(child:OutlinedButton(style:OutlinedButton.styleFrom(foregroundColor:Colors.red),onPressed:()async{await kullaniciyiEngelle(context,digerUid);await FirebaseFirestore.instance.collection('chats').doc(chatId).set({'requestRejected_$uid':true,'hiddenFor':FieldValue.arrayUnion([uid])},SetOptions(merge:true));if(context.mounted)Navigator.pop(context);},child:const Text('Engelle'))),const SizedBox(width:8),Expanded(child:FilledButton(onPressed:()async{await FirebaseFirestore.instance.collection('chats').doc(chatId).set({'requestAccepted_$uid':true},SetOptions(merge:true));if(context.mounted)Navigator.pushReplacement(context,MaterialPageRoute(builder:(_)=>SohbetPage(chatId:chatId,digerUid:digerUid,ad:ad,foto:foto)));},child:Text(t('accept'))))]))),
+    SafeArea(top:false,child:Padding(padding:const EdgeInsets.all(12),child:Row(children:[Expanded(child:OutlinedButton(onPressed:()async{await FirebaseFirestore.instance.collection('chats').doc(chatId).set({'requestRejected_$uid':true,'hiddenFor':FieldValue.arrayUnion([uid])},SetOptions(merge:true));if(context.mounted)Navigator.pop(context);},child:Text(t('reject')))),const SizedBox(width:8),Expanded(child:OutlinedButton(style:OutlinedButton.styleFrom(foregroundColor:Colors.red),onPressed:()async{await kullaniciyiEngelle(context,digerUid);await FirebaseFirestore.instance.collection('chats').doc(chatId).set({'requestRejected_$uid':true,'hiddenFor':FieldValue.arrayUnion([uid])},SetOptions(merge:true));if(context.mounted)Navigator.pop(context);},child:const Text('Engelle'))),const SizedBox(width:8),Expanded(child:FilledButton(onPressed:()async{
+      try{
+        await FirebaseFirestore.instance.collection('chats').doc(chatId).set({
+          'requestAccepted_$uid':true,
+          'requestRejected_$uid':false,
+          'requestAcceptedAt_$uid':FieldValue.serverTimestamp(),
+        },SetOptions(merge:true)).timeout(const Duration(seconds:10));
+        if(context.mounted)Navigator.pushReplacement(context,MaterialPageRoute(builder:(_)=>SohbetPage(chatId:chatId,digerUid:digerUid,ad:ad,foto:foto)));
+      }on TimeoutException{
+        if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Mesaj isteği kabulü zaman aşımına uğradı.')));
+      }catch(_){
+        if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Mesaj isteği kabul edilemedi.')));
+      }
+    },child:Text(t('accept'))))]))),
   ])));
 }
 
