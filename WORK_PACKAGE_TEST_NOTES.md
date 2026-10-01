@@ -1555,3 +1555,22 @@ Build 362 cihaz ekranlarında alt sistem çubuğunun bazı ekranlarda hâlâ iç
 - Dilek tarafından **“Mesaj isteği test et”** mesajı 00:05'te başarıyla gönderildi.
 - Gönderici tarafında sohbet başlığında **“Özel sohbet”** bilgi kartı görünüyor ve mesaj normal konuşma balonu olarak yerleşiyor.
 - Bu adım yalnızca gönderici tarafını doğrular. Sıradaki kritik kontrol: Adem hesabında bu yeni sohbetin ana Gelen Kutusu listesine değil **Mesaj İstekleri** bölümüne düşmesi ve kabul/red akışının çalışması.
+
+
+## 2026-10-02 — Build 364: Mesaj İstekleri ile normal Gelen Kutusu kesin ayrımı
+
+Cihaz testinde Dilek → Adem yeni mesaj isteği doğru şekilde **Mesaj İstekleri** sayfasında görünmesine rağmen aynı anda normal Gelen Kutusu listesine de düştü ve üstteki **Mesajlar** sayacına 1 olarak eklendi.
+
+Kök neden:
+- Profil üzerinden Mesaj ekranı açılırken özel chat belgesi mesaj gönderilmeden önce oluşturuluyor.
+- İlk mesaj gönderiminde `requestSenderUid/requestRecipientUid` yalnızca chat belgesi yeni ise yazılıyordu.
+- Mesaj İstekleri ekranı recipient metadata eksik olsa bile current user'ı varsaydığı için isteği gösterebiliyor, normal Gelen Kutusu ise aynı kaydı request olarak tanıyamıyordu.
+
+Build 364 düzeltmeleri:
+- Arkadaş olmayan kullanıcı profilinden yeni özel sohbet açıldığında request yönü chat belgesine açıkça kaydediliyor.
+- Metin, fotoğraf ve diğer özel mesaj gönderimlerinde chat önceden oluşturulmuş olsa bile kabul edilmemiş non-friend konuşmada eksik request metadata tamamlanıyor.
+- Mesaj İstekleri yalnızca **explicit requestRecipientUid == current user** ve **lastMessage dolu** kayıtları gösteriyor; boş chat kabukları istek olarak görünmüyor.
+- Incoming pending message request artık normal Gelen Kutusu sohbet listesinde görünmüyor.
+- Üstteki **Mesajlar** unread toplamı pending Mesaj İsteklerini normal mesaj sayısına katmıyor.
+- Mesaj isteği kabul edildiğinde recipient unread sayacı 0'a çekiliyor ve varsa hidden state temizleniyor; sohbet normal Gelen Kutusu'na temiz şekilde taşınıyor.
+- Sürüm: **1.0.143+364**.
