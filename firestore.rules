@@ -559,7 +559,7 @@ service cloud.firestore {
           resource.data.ownerId == request.auth.uid
           || (
             request.auth.uid in resource.data.get('moderatorIds', [])
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['speakerIds', 'speakerCount', 'updatedAt'])
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['speakerIds', 'speakerCount', 'chatMutedUserIds', 'updatedAt'])
           )
         );
       allow delete: if false;
