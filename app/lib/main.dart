@@ -102,12 +102,106 @@ const ngelxPrivateBlueCanvas = Color(0xFFF6FAFF);
 const ngelxPrivateBlueBorder = Color(0xFFD8E8FF);
 const ngelxPrivateBlueInk = Color(0xFF10213A);
 
-const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.136');
-const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '357');
+const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.137');
+const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '358');
 const ngelxGroupBorder = Color(0xFFD9EEE0);
 
 final GlobalKey<NavigatorState> ngelxNavigatorKey=GlobalKey<NavigatorState>();
 final RouteObserver<PageRoute<dynamic>> ngelxRouteObserver=RouteObserver<PageRoute<dynamic>>();
+
+final Map<String,lk.Room> _ngelxArkaPlanAramaOdalari=<String,lk.Room>{};
+final Map<String,DateTime?> _ngelxArkaPlanAramaBaslangiclari=<String,DateTime?>{};
+final Map<String,StreamSubscription<DocumentSnapshot<Map<String,dynamic>>>> _ngelxArkaPlanAramaAbonelikleri=<String,StreamSubscription<DocumentSnapshot<Map<String,dynamic>>>>{};
+final Map<String,Timer> _ngelxArkaPlanAramaZamanAsimlari=<String,Timer>{};
+
+Future<void> ngelxArkaPlanAramayiTemizle(String roomName)async{
+  final abonelik=_ngelxArkaPlanAramaAbonelikleri.remove(roomName);
+  if(abonelik!=null){
+    try{await abonelik.cancel();}catch(_){}
+  }
+  _ngelxArkaPlanAramaZamanAsimlari.remove(roomName)?.cancel();
+  _ngelxArkaPlanAramaBaslangiclari.remove(roomName);
+  final room=_ngelxArkaPlanAramaOdalari.remove(roomName);
+  if(room!=null){
+    try{await room.disconnect();}catch(_){}
+    try{await room.dispose();}catch(_){}
+  }
+}
+
+void ngelxArkaPlanAramaSakla({
+  required String roomName,
+  required lk.Room room,
+  required DocumentReference<Map<String,dynamic>> aramaRef,
+  DateTime? baslangic,
+}){
+  final eskiAbonelik=_ngelxArkaPlanAramaAbonelikleri.remove(roomName);
+  if(eskiAbonelik!=null)unawaited(eskiAbonelik.cancel());
+  _ngelxArkaPlanAramaZamanAsimlari.remove(roomName)?.cancel();
+  final eskiRoom=_ngelxArkaPlanAramaOdalari.remove(roomName);
+  if(eskiRoom!=null&&!identical(eskiRoom,room)){
+    unawaited(eskiRoom.disconnect().catchError((_){ }));
+    unawaited(eskiRoom.dispose().catchError((_){ }));
+  }
+  _ngelxArkaPlanAramaOdalari[roomName]=room;
+  _ngelxArkaPlanAramaBaslangiclari[roomName]=baslangic;
+
+  _ngelxArkaPlanAramaAbonelikleri[roomName]=aramaRef.snapshots().listen((d){
+    final v=d.data()??<String,dynamic>{};
+    final durum=(v['callStatus']??'').toString();
+    final kayitliOda=(v['callRoomName']??'').toString();
+    if((kayitliOda.isNotEmpty&&kayitliOda!=roomName)||durum=='ended'||durum=='rejected'||durum=='missed'){
+      unawaited(ngelxArkaPlanAramayiTemizle(roomName));
+    }
+  },onError:(_){});
+
+  unawaited(aramaRef.get().then((d){
+    if(!_ngelxArkaPlanAramaOdalari.containsKey(roomName))return;
+    final v=d.data()??<String,dynamic>{};
+    if((v['callRoomName']??'').toString()!=roomName||(v['callStatus']??'').toString()!='ringing')return;
+    final toplam=roomName.startsWith('group_')?120:45;
+    final created=v['callCreatedAt'];
+    var kalan=toplam;
+    if(created is Timestamp){
+      final gecen=DateTime.now().difference(created.toDate()).inSeconds;
+      kalan=(toplam-gecen).clamp(0,toplam).toInt();
+    }
+    _ngelxArkaPlanAramaZamanAsimlari[roomName]=Timer(Duration(seconds:kalan),()async{
+      try{
+        final current=await aramaRef.get();
+        final data=current.data()??<String,dynamic>{};
+        if((data['callRoomName']??'').toString()!=roomName||(data['callStatus']??'').toString()!='ringing')return;
+        final participants=List<String>.from(data['callParticipants']??const[]);
+        if(participants.length>1)return;
+        await aramaRef.set({
+          'callStatus':'missed',
+          'callEndedAt':FieldValue.serverTimestamp(),
+          if(roomName.startsWith('group_'))'callAutoEnded':true,
+          if(roomName.startsWith('group_'))'callAutoEndedReason':'no_participants_2m',
+        },SetOptions(merge:true));
+        final mesajId=(data['callMessageId']??'').toString();
+        if(mesajId.isNotEmpty){
+          await aramaRef.collection('messages').doc(mesajId).set({
+            'callStatus':'missed',
+            'callEndedAt':FieldValue.serverTimestamp(),
+            'durationSeconds':0,
+            if(roomName.startsWith('group_'))'callAutoEnded':true,
+            if(roomName.startsWith('group_'))'callAutoEndedReason':'no_participants_2m',
+          },SetOptions(merge:true));
+        }
+      }catch(_){}
+    });
+  }).catchError((_){ }));
+}
+
+({lk.Room room,DateTime? baslangic})? ngelxArkaPlanAramayiGeriAl(String roomName){
+  final room=_ngelxArkaPlanAramaOdalari.remove(roomName);
+  if(room==null)return null;
+  final baslangic=_ngelxArkaPlanAramaBaslangiclari.remove(roomName);
+  final abonelik=_ngelxArkaPlanAramaAbonelikleri.remove(roomName);
+  if(abonelik!=null)unawaited(abonelik.cancel());
+  _ngelxArkaPlanAramaZamanAsimlari.remove(roomName)?.cancel();
+  return (room:room,baslangic:baslangic);
+}
 void ngelxKokRotayaDon(){
   WidgetsBinding.instance.addPostFrameCallback((_){
     ngelxNavigatorKey.currentState?.popUntil((route)=>route.isFirst);
@@ -9847,7 +9941,7 @@ class MesajIstekleriPage extends StatelessWidget {
               }).toList();
               if(docs.isEmpty) return Center(child: Text(t('noMessageRequests'), style: const TextStyle(color: Colors.black54)));
               return ListView.builder(
-                padding: const EdgeInsets.all(12), itemCount: docs.length,
+                padding:EdgeInsets.fromLTRB(12,12,12,20+MediaQuery.viewPaddingOf(context).bottom), itemCount: docs.length,
                 itemBuilder: (_, i) {
                   final d=docs[i], v=d.data(), m=List<String>.from(v['members'] ?? const []);
                   final other=m.firstWhere((x)=>x!=uid,orElse:()=>uid);
@@ -13528,13 +13622,47 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
 
   @override void initState(){
     super.initState();
+    rotus=widget.goruntulu;
     aramaDurumAboneligi=widget.aramaRef.snapshots().listen((d){
       final durum=(d.data()?['callStatus']??'').toString();
+      final kayitliOda=(d.data()?['callRoomName']??'').toString();
+      if(kayitliOda.isNotEmpty&&kayitliOda!=widget.roomName){
+        unawaited(_uzaktanBitirildi('ended'));
+        return;
+      }
       if((durum=='ended'||durum=='rejected'||durum=='missed')&&!bitiyor){
         unawaited(_uzaktanBitirildi(durum));
       }
     });
-    baglan();
+    final arkaPlan=ngelxArkaPlanAramayiGeriAl(widget.roomName);
+    if(arkaPlan!=null){
+      oda=arkaPlan.room;
+      baglaniyor=false;
+      final r=arkaPlan.room;
+      r.addListener(_odaDegisti);
+      _aramaOlaylariniBagla(r);
+      if(arkaPlan.baslangic!=null)_aramaSureBaslat(arkaPlan.baslangic!);
+      unawaited(_arkaPlanAramaDurumunuYenile());
+      WidgetsBinding.instance.addPostFrameCallback((_){if(mounted)_odaDegisti();});
+    }else{
+      baglan();
+    }
+  }
+
+  Future<void> _arkaPlanAramaDurumunuYenile()async{
+    try{
+      final d=await widget.aramaRef.get().timeout(const Duration(seconds:6));
+      if(!mounted)return;
+      final v=d.data()??<String,dynamic>{};
+      if((v['callRoomName']??'').toString()!=widget.roomName)return;
+      final connected=v['callConnectedAt'];
+      if(connected is Timestamp){
+        _aramaSureBaslat(connected.toDate().toLocal());
+      }else if((v['callStatus']??'').toString()=='ringing'){
+        _cevapsizSayaciniBaslat(olusturuldu:v['callCreatedAt'] is Timestamp?v['callCreatedAt'] as Timestamp:null);
+      }
+      if(mounted)setState(()=>baglaniyor=false);
+    }catch(_){}
   }
   void _odaDegisti(){
     final r=oda;
@@ -13867,24 +13995,70 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
     try{
       final d=await widget.aramaRef.get();
       final data=d.data()??<String,dynamic>{};
-      final me=FirebaseAuth.instance.currentUser?.uid;
-      final grup=widget.roomName.startsWith('group_');
-      final baslangicHam=data['callConnectedAt'];
-      final sureSaniye=baslangicHam is Timestamp
-        ?DateTime.now().difference(baslangicHam.toDate()).inSeconds.clamp(0,24*60*60)
-        :0;
-      if(grup&&me!=null){
-        final participants=List<String>.from(data['callParticipants']??const[]);
-        final baslatan=(data['callStartedBy']??'').toString();
-        final kalan=participants.where((x)=>x!=me).toList();
-        final aramayiBitir=baslatan==me||kalan.isEmpty;
-        if(aramayiBitir){
-          final kimseKatilMadi=baslatan==me&&participants.length<=1;
+      final kayitliOda=(data['callRoomName']??'').toString();
+      final buAramaHalaGuncel=kayitliOda.isEmpty||kayitliOda==widget.roomName;
+      if(buAramaHalaGuncel){
+        final me=FirebaseAuth.instance.currentUser?.uid;
+        final grup=widget.roomName.startsWith('group_');
+        final baslangicHam=data['callConnectedAt'];
+        final sureSaniye=baslangicHam is Timestamp
+          ?DateTime.now().difference(baslangicHam.toDate()).inSeconds.clamp(0,24*60*60)
+          :0;
+        if(grup&&me!=null){
+          final participants=List<String>.from(data['callParticipants']??const[]);
+          final baslatan=(data['callStartedBy']??'').toString();
+          final kalan=participants.where((x)=>x!=me).toList();
+          final aramayiBitir=baslatan==me||kalan.isEmpty;
+          if(aramayiBitir){
+            final kimseKatilMadi=baslatan==me&&participants.length<=1;
+            final finalDurum=kimseKatilMadi?'missed':'ended';
+            await widget.aramaRef.set({
+              'callStatus':finalDurum,
+              'callParticipants':FieldValue.arrayRemove([me]),
+              'callEndedAt':FieldValue.serverTimestamp(),
+            },SetOptions(merge:true));
+            final mesajId=(data['callMessageId']??'').toString();
+            if(mesajId.isNotEmpty){
+              await widget.aramaRef.collection('messages').doc(mesajId).set({
+                'callStatus':finalDurum,
+                'callEndedAt':FieldValue.serverTimestamp(),
+                'durationSeconds':sureSaniye,
+              },SetOptions(merge:true));
+            }
+            await widget.aramaRef.collection('messages').doc('call_end_'+widget.roomName).set({
+              'senderId':me,
+              'type':'system',
+              'systemAction':'call_end',
+              'actorUid':me,
+              'callVideo':widget.goruntulu,
+              'text':kimseKatilMadi?'Arama cevaplanmadı.':'Arama sona erdi.',
+              'createdAt':FieldValue.serverTimestamp(),
+            },SetOptions(merge:true));
+          }else{
+            await widget.aramaRef.set({
+              'callStatus':'active',
+              'callParticipants':FieldValue.arrayRemove([me]),
+            },SetOptions(merge:true));
+            final ad=FirebaseAuth.instance.currentUser?.displayName?.trim();
+            await widget.aramaRef.collection('messages').doc('call_leave_'+widget.roomName+'_'+me).set({
+              'senderId':me,
+              'type':'system',
+              'systemAction':'call_leave',
+              'actorUid':me,
+              'callVideo':widget.goruntulu,
+              'text':(ad!=null&&ad.isNotEmpty?ad:'Bir üye')+(widget.goruntulu?' görüntülü aramadan ayrıldı.':' sesli aramadan ayrıldı.'),
+              'createdAt':FieldValue.serverTimestamp(),
+            },SetOptions(merge:true));
+          }
+        }else{
+          final participants=List<String>.from(data['callParticipants']??const[]);
+          final baslatan=(data['callStartedBy']??'').toString();
+          final kimseKatilMadi=me!=null&&baslatan==me&&participants.where((x)=>x!=me).isEmpty&&baslangicHam is! Timestamp;
           final finalDurum=kimseKatilMadi?'missed':'ended';
           await widget.aramaRef.set({
             'callStatus':finalDurum,
-            'callParticipants':FieldValue.arrayRemove([me]),
             'callEndedAt':FieldValue.serverTimestamp(),
+            if(me!=null)'callParticipants':FieldValue.arrayRemove([me]),
           },SetOptions(merge:true));
           final mesajId=(data['callMessageId']??'').toString();
           if(mesajId.isNotEmpty){
@@ -13894,52 +14068,11 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
               'durationSeconds':sureSaniye,
             },SetOptions(merge:true));
           }
-          await widget.aramaRef.collection('messages').doc('call_end_'+widget.roomName).set({
-            'senderId':me,
-            'type':'system',
-            'systemAction':'call_end',
-            'actorUid':me,
-            'callVideo':widget.goruntulu,
-            'text':kimseKatilMadi?'Arama cevaplanmadı.':'Arama sona erdi.',
-            'createdAt':FieldValue.serverTimestamp(),
-          },SetOptions(merge:true));
-        }else{
-          await widget.aramaRef.set({
-            'callStatus':'active',
-            'callParticipants':FieldValue.arrayRemove([me]),
-          },SetOptions(merge:true));
-          final ad=FirebaseAuth.instance.currentUser?.displayName?.trim();
-          await widget.aramaRef.collection('messages').doc('call_leave_'+widget.roomName+'_'+me).set({
-            'senderId':me,
-            'type':'system',
-            'systemAction':'call_leave',
-            'actorUid':me,
-            'callVideo':widget.goruntulu,
-            'text':(ad!=null&&ad.isNotEmpty?ad:'Bir üye')+(widget.goruntulu?' görüntülü aramadan ayrıldı.':' sesli aramadan ayrıldı.'),
-            'createdAt':FieldValue.serverTimestamp(),
-          },SetOptions(merge:true));
-        }
-      }else{
-        final participants=List<String>.from(data['callParticipants']??const[]);
-        final baslatan=(data['callStartedBy']??'').toString();
-        final kimseKatilMadi=me!=null&&baslatan==me&&participants.where((x)=>x!=me).isEmpty&&baslangicHam is! Timestamp;
-        final finalDurum=kimseKatilMadi?'missed':'ended';
-        await widget.aramaRef.set({
-          'callStatus':finalDurum,
-          'callEndedAt':FieldValue.serverTimestamp(),
-          if(me!=null)'callParticipants':FieldValue.arrayRemove([me]),
-        },SetOptions(merge:true));
-        final mesajId=(data['callMessageId']??'').toString();
-        if(mesajId.isNotEmpty){
-          await widget.aramaRef.collection('messages').doc(mesajId).set({
-            'callStatus':finalDurum,
-            'callEndedAt':FieldValue.serverTimestamp(),
-            'durationSeconds':sureSaniye,
-          },SetOptions(merge:true));
         }
       }
     }catch(_){}
 
+    await ngelxArkaPlanAramayiTemizle(widget.roomName);
     final r=oda;oda=null;
     if(r!=null){
       r.removeListener(_odaDegisti);
@@ -14120,7 +14253,7 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
           padding:const EdgeInsets.fromLTRB(16,4,16,24),
           child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
             Row(children:[
-              const Expanded(child:Text('Katılımcılar',style:TextStyle(color:Colors.white,fontSize:20,fontWeight:FontWeight.w900))),
+              Expanded(child:Text(grupAramasi?'Katılımcılar':'Özel arama',style:const TextStyle(color:Colors.white,fontSize:20,fontWeight:FontWeight.w900))),
               Container(
                 padding:const EdgeInsets.symmetric(horizontal:10,vertical:7),
                 decoration:BoxDecoration(color:Colors.white10,borderRadius:BorderRadius.circular(14)),
@@ -14131,10 +14264,10 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
             Container(
               padding:const EdgeInsets.symmetric(horizontal:11,vertical:9),
               decoration:BoxDecoration(color:const Color(0xFF251A37),borderRadius:BorderRadius.circular(16),border:Border.all(color:Colors.white10)),
-              child:const Row(children:[
-                Icon(Icons.lock_rounded,color:Color(0xFFCDB9FF),size:17),
-                SizedBox(width:7),
-                Text('Güvenli grup bağlantısı',style:TextStyle(color:Color(0xFFD9CDEE),fontSize:11,fontWeight:FontWeight.w700)),
+              child:Row(children:[
+                const Icon(Icons.lock_rounded,color:Color(0xFFCDB9FF),size:17),
+                const SizedBox(width:7),
+                Text(grupAramasi?'Güvenli grup bağlantısı':'Güvenli özel bağlantı',style:const TextStyle(color:Color(0xFFD9CDEE),fontSize:11,fontWeight:FontWeight.w700)),
               ]),
             ),
             const SizedBox(height:12),
@@ -14366,34 +14499,20 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
   Future<void> _aramaEkraniniKucult()async{
     if(kucultuluyor||!mounted)return;
     kucultuluyor=true;
-    try{
-      if(grupAramasi){
-        await Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupSohbetPage(
-          chatId:widget.aramaRef.id,
-          ad:widget.baslik,
-          foto:widget.foto,
-          aktifAramadanAcildi:true,
-        )));
-        return;
-      }
-      final me=FirebaseAuth.instance.currentUser?.uid;
-      if(me==null)return;
-      final d=await widget.aramaRef.get().timeout(const Duration(seconds:6));
-      final members=List<String>.from(d.data()?['members']??const[]);
-      final diger=members.firstWhere((x)=>x!=me,orElse:()=>'');
-      if(diger.isEmpty||!mounted)return;
-      await Navigator.push(context,MaterialPageRoute(builder:(_)=>SohbetPage(
-        chatId:widget.aramaRef.id,
-        digerUid:diger,
-        ad:widget.baslik,
-        foto:widget.foto,
-        aktifAramadanAcildi:true,
-      )));
-    }catch(_){
-      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Arama küçültülemedi. Arama devam ediyor.')));
-    }finally{
-      kucultuluyor=false;
+    final r=oda;
+    if(r!=null){
+      r.removeListener(_odaDegisti);
+      odaOlaylari?.dispose();
+      odaOlaylari=null;
+      oda=null;
+      ngelxArkaPlanAramaSakla(
+        roomName:widget.roomName,
+        room:r,
+        aramaRef:widget.aramaRef,
+        baslangic:aramaBaslangic,
+      );
     }
+    if(mounted)Navigator.pop(context,false);
   }
 
   @override Widget build(BuildContext context)=>PopScope(
@@ -20016,7 +20135,7 @@ class _AktivitePageState extends State<AktivitePage> {
             const Divider(height:1),
             Expanded(child:docs.isEmpty
               ?Center(child:Text(t('noActivityInFilter'),style:const TextStyle(color:Colors.black54,fontWeight:FontWeight.w700)))
-              :ListView.separated(padding:const EdgeInsets.fromLTRB(12,8,12,24),separatorBuilder:(_,__)=>const Divider(height:1,indent:72),itemCount:docs.length,itemBuilder:(_,i){final d=docs[i];
+              :ListView.separated(padding:EdgeInsets.fromLTRB(12,8,12,24+MediaQuery.viewPaddingOf(context).bottom),separatorBuilder:(_,__)=>const Divider(height:1,indent:72),itemCount:docs.length,itemBuilder:(_,i){final d=docs[i];
             final v = d.data();
             final tur=(v['type']??'').toString(),okundu=v['read']==true;
             final olay=(v['eventKind']??'').toString();
@@ -20329,13 +20448,13 @@ class OrtakGruplarPage extends StatelessWidget{
           }).toList();
           if(docs.isEmpty)return const Center(child:Text('Ortak grubunuz yok.',style:TextStyle(color:Colors.black54)));
           return ListView.separated(
-            padding:const EdgeInsets.all(12),itemCount:docs.length,separatorBuilder:(_,__)=>const Divider(),
+            padding:EdgeInsets.fromLTRB(12,12,12,20+MediaQuery.viewPaddingOf(context).bottom),itemCount:docs.length,separatorBuilder:(_,__)=>const Divider(),
             itemBuilder:(_,i){
               final d=docs[i],v=d.data(),foto=(v['groupPhotoUrl']??'').toString(),ad=(v['groupName']??lt('Grup','Group')).toString();
               return ListTile(
                 leading:CircleAvatar(backgroundImage:foto.isEmpty?null:NgelXAgImageProvider(foto),child:foto.isEmpty?const Icon(Icons.groups):null),
-                title:Text(ad,style:const TextStyle(fontWeight:FontWeight.w800)),
-                subtitle:Text(List<String>.from(v['members']??const[]).length.toString()+' üye'),
+                title:Text(ad,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontWeight:FontWeight.w800)),
+                subtitle:Text(List<String>.from(v['members']??const[]).length.toString()+' üye',maxLines:1,overflow:TextOverflow.ellipsis),
                 trailing:const Icon(Icons.chevron_right),
                 onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupSohbetPage(chatId:d.id,ad:ad,foto:foto))),
               );
@@ -20584,8 +20703,9 @@ class _KullaniciProfilPageState extends State<KullaniciProfilPage> {
           final erisimVar = ziyaretciOnizleme
               ? (profilIzni=='all'&&!gizli)
               : (me==uid||(izinVar&&(!gizli||beniTakipEdiyor||arkadaslar.contains(uid))));
+          final altGuvenliAlan=MediaQuery.viewPaddingOf(context).bottom;
           return ListView(
-            padding: const EdgeInsets.all(22),
+            padding:EdgeInsets.fromLTRB(22,22,22,22+altGuvenliAlan),
             children: [
               Center(child:Stack(clipBehavior:Clip.none,alignment:Alignment.center,children:[
                 Container(
