@@ -1307,3 +1307,19 @@ Build 358 cihaz testinde açık kalan maddeler tek pakette ele alındı; Build 3
 - Build 358'de geçen arama geri tuşu, arka planda görüşme, sesli/görüntülü doğru bant, rötuş, özel bağlantı ve arama state-race korumaları değiştirilmeden korunacak.
 - Sürüm: `1.0.138+359`.
 
+
+
+## 2026-10-01 — Build 359 cihaz testi: sosyal state + alt bölüm taşmaları
+
+Cihaz testinde Build 359 sonrasında aşağıdaki açıklar doğrulandı ve sonraki tek pakette birlikte ele alınacak:
+
+- **Takip / arkadaşlık state ayrımı:** Takip isteği ve arkadaşlık isteği ekranda birbirinin durumunu etkileyebiliyor. Arkadaşlık isteği kısa süre **“İstek bekliyor”** olduktan sonra takip state'i yenilenince yeniden **“Arkadaşlık isteği gönder”** durumuna dönebiliyor.
+- **Takip sayaç/state senkronu:** Buton metni, takipçi sayacı ve SnackBar mesajı aynı anda tutarlı güncellenmeli; biri yeni state'i gösterirken diğeri eski state'e dönmemeli.
+- **Arkadaşlık bildirimi:** Göndericide **“Arkadaşlık isteği gönderildi”** mesajı görünmesine rağmen alıcının Aktivite ekranında arkadaşlık isteği bildirimi görünmedi. Takip bildirimi ise aynı testte başarıyla ulaştı. Arkadaşlık bildirimi oluşturma/okuma akışı ayrıca düzeltilecek.
+- **Başka kullanıcı profili — alt SafeArea:** Klasik 3 tuşlu Android gezinmede profilin alt bölümleri sistem gezinme alanına fazla yaklaşıyor. Ekranın altındaki **Ortak gruplar** ve devamındaki gizlilik/içerik kartları bazı scroll konumlarında kısmen kesiliyor veya sistem çubuğu/SnackBar altında kalıyor.
+- **Profil scroll sonu:** Son etkileşimli öğe yalnızca ekrana sığdığı kadar değil, cihazın gerçek `MediaQuery.viewPadding.bottom` değeri kadar ekstra dinamik boşlukla tamamen yukarı kaydırılabilir olmalı. Jest gezinme ve 3 tuşlu gezinme birlikte desteklenecek.
+- **SnackBar + alt içerik:** Takip/arkadaşlık işlem mesajları alt sistem alanına yapışmamalı ve profilin son etkileşimli bölümünü erişilemez bırakmamalı. SnackBar görünürken de alt içerik güvenli şekilde yukarı kaydırılabilmeli.
+- **Aktivite alt satırı:** Aktivite ekranında son bildirim satırı / alt meta metinleri sistem gezinme alanına yakın veya kısmen altında kalabiliyor. Build 359'da eklenen bottom padding tekrar gerçek cihazda doğrulanacak; son satır tamamen görünür ve dokunulabilir olacak.
+- **Genel final kontrol:** Aktivite, başka kullanıcı profili, Mesaj İstekleri, Ayarlar, Ortak Gruplar ve Gelen Kutusu ekranlarında yalnızca üst/orta alan değil, özellikle listenin/gridin **en son öğesi** 3 tuşlu Android navigasyonda tek tek kontrol edilecek.
+
+Bu maddeler Build 359'un çalışan arama/görüntülü arama davranışını bozmadan ve mevcut sosyal veri sözleşmesini koruyarak sonraki konsolide pakette ele alınacak.
