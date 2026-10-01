@@ -22,6 +22,11 @@ Future<void> ngelxSesliOdayaKatil(BuildContext context,String odaId)async{
       if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bu sesli oda sona erdi.')));return;
     }
     final gizlilik=(v['visibility']??'public').toString(),owner=(v['ownerId']??'').toString();
+    final yasaklilar=List<String>.from(v['bannedUserIds']??const[]);
+    if(yasaklilar.contains(user.uid)){
+      if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Oda sahibi bu odaya tekrar girişini engelledi.')));
+      return;
+    }
     if(gizlilik!='public'&&owner!=user.uid){
       final p=(await FirebaseFirestore.instance.collection('users').doc(owner).get()).data()??<String,dynamic>{};
       final izin=gizlilik=='friends'?List<String>.from(p['friends']??const[]).contains(user.uid):List<String>.from(p['followers']??const[]).contains(user.uid);
@@ -77,7 +82,7 @@ class _SesliOdaHazirlikPageState extends State<SesliOdaHazirlikPage>{
       final ad=(p['displayName']??p['username']??user.displayName??'NgelX').toString(),foto=(p['photoUrl']??'').toString(),roomName='ngelx_audio_${user.uid}_${DateTime.now().millisecondsSinceEpoch}';
       final cevap=await lk.DevelopmentTokenSource(id:liveKitTestSunucuId).fetch(lk.TokenRequestOptions(roomName:roomName,participantIdentity:user.uid,participantName:ad,participantAttributes:const {'role':'host','mode':'audio'}));
       oda=lk.Room(roomOptions:lk.RoomOptions(adaptiveStream:true,dynacast:true));await oda.connect(cevap.serverUrl,cevap.participantToken).timeout(const Duration(seconds:18));await oda.localParticipant?.setMicrophoneEnabled(true);
-      final d=await FirebaseFirestore.instance.collection('audio_rooms').add({'roomName':roomName,'ownerId':user.uid,'ownerName':ad,'ownerPhotoUrl':foto,'title':baslik.text.trim(),'category':kategori,'visibility':gizlilik,'active':true,'startedAt':FieldValue.serverTimestamp(),'lastHeartbeatAt':FieldValue.serverTimestamp(),'speakerIds':[user.uid],'moderatorIds':<String>[],'speakerCount':1,'listenerCount':0,'maxSpeakers':ngelxSesliMaksKonusmaci,'maxModerators':ngelxSesliMaksModerator,'mode':'audio'});
+      final d=await FirebaseFirestore.instance.collection('audio_rooms').add({'roomName':roomName,'ownerId':user.uid,'ownerName':ad,'ownerPhotoUrl':foto,'title':baslik.text.trim(),'category':kategori,'visibility':gizlilik,'active':true,'startedAt':FieldValue.serverTimestamp(),'lastHeartbeatAt':FieldValue.serverTimestamp(),'speakerIds':[user.uid],'moderatorIds':<String>[],'bannedUserIds':<String>[],'chatMutedUserIds':<String>[],'speakerCount':1,'listenerCount':0,'maxSpeakers':ngelxSesliMaksKonusmaci,'maxModerators':ngelxSesliMaksModerator,'mode':'audio'});
       await ngelxSesliKatilimciYaz(roomId:d.id,uid:user.uid,ad:ad,foto:foto,rol:'speaker');
       await FirebaseFirestore.instance.collection('users').doc(user.uid).set({'isAudioLive':true,'currentAudioRoomId':d.id,'audioRoomTitle':baslik.text.trim()},SetOptions(merge:true));
       if(!mounted)return;Navigator.pushReplacement(context,MaterialPageRoute(builder:(_)=>SesliOdaPage(oda:oda!,odaId:d.id,ownerId:user.uid,baslik:baslik.text.trim(),yayinSahibi:true,serverUrl:cevap.serverUrl,participantToken:cevap.participantToken)));
@@ -114,7 +119,9 @@ class _SesliOdaPageState extends State<SesliOdaPage>{
     abonelik=FirebaseFirestore.instance.collection('audio_rooms').doc(widget.odaId).snapshots().listen((d){
       final v=d.data()??<String,dynamic>{};if(!mounted)return;
       final once=konusmaciyim;
-      setState((){veri=v;bitti=v.isNotEmpty&&v['active']!=true;});
+      final yeniBitti=v.isNotEmpty&&v['active']!=true;
+      setState((){veri=v;bitti=yeniBitti;if(yeniBitti){durum='';yeniden=false;}});
+      if(yeniBitti)unawaited(_odaBittiTemizle());
       if(once&&!konusmaciyim&&mikrofon){mikrofon=false;unawaited(widget.oda.localParticipant?.setMicrophoneEnabled(false));}
       if(sahibiyim&&aktifKisiSayisi<2&&yalnizlikBasladi==null&&!bitti)_yalnizlikBaslat();
     });
@@ -122,7 +129,7 @@ class _SesliOdaPageState extends State<SesliOdaPage>{
     if(ben!=null){
       katilimAboneligi=FirebaseFirestore.instance.collection('audio_rooms').doc(widget.odaId).collection('participants').doc(ben).snapshots().listen((d){
         final v=d.data();
-        if(v!=null&&v['removed']==true&&!sahibiyim&&!kapatiliyor)unawaited(odadanCikarildi());
+        if(v!=null&&v['removed']==true&&!sahibiyim&&!kapatiliyor)unawaited(odadanCikarildi(yasakli:v['banned']==true));
       });
     }
     if(widget.yayinSahibi){
@@ -214,14 +221,23 @@ class _SesliOdaPageState extends State<SesliOdaPage>{
     if(mounted)Navigator.pop(context);
   }
 
-  Future<void> odadanCikarildi()async{
+  Future<void> _odaBittiTemizle()async{
+    yalnizlikTimer?.cancel();
+    mikrofon=false;mikrofonTercihi=false;
+    try{await widget.oda.localParticipant?.setMicrophoneEnabled(false);}catch(_){}
+    if(widget.oda.connectionState!=lk.ConnectionState.disconnected){
+      try{await widget.oda.disconnect();}catch(_){}
+    }
+    if(mounted)setState((){durum='';yeniden=false;});
+  }
+  Future<void> odadanCikarildi({bool yasakli=false})async{
     if(kapatiliyor)return;
     kapatiliyor=true;
     mikrofon=false;mikrofonTercihi=false;
     try{await widget.oda.localParticipant?.setMicrophoneEnabled(false);}catch(_){}
     try{await widget.oda.disconnect();}catch(_){}
     if(mounted){
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Oda yöneticisi seni odadan çıkardı.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(yasakli?'Oda sahibi bu odaya tekrar girişini engelledi.':'Oda sahibi seni odadan çıkardı.')));
       Navigator.pop(context);
     }
   }
@@ -230,7 +246,7 @@ class _SesliOdaPageState extends State<SesliOdaPage>{
     final koptu=widget.oda.connectionState==lk.ConnectionState.disconnected;
     if(koptu&&mikrofon)mikrofon=false;
     setState((){
-      if(koptu&&!kapatiliyor&&!bitti)durum='Bağlantı koptu. Yeniden bağlanılıyor...';
+      if(koptu&&!kapatiliyor&&!bitti)durum='Bağlantı koptu. Yeniden bağlanılıyor...';else if(bitti)durum='';
       if(!koptu&&bagli)durum='';
     });
     if(koptu&&!kapatiliyor&&!bitti)unawaited(tekrarBaglan());
@@ -386,8 +402,8 @@ class _SesliOdaPageState extends State<SesliOdaPage>{
     if(mounted)Navigator.pop(context);
   }
   Widget koltuk(String id){if(id.isEmpty)return Container(decoration:BoxDecoration(color:const Color(0xFFF8F6FA),borderRadius:BorderRadius.circular(18)),child:const Column(mainAxisAlignment:MainAxisAlignment.center,children:[CircleAvatar(backgroundColor:Color(0xFFEDEAF0),child:Icon(Icons.add,color:Colors.black26)),SizedBox(height:5),Text('Boş',style:TextStyle(color:Colors.black38,fontSize:11))]));return StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(stream:FirebaseFirestore.instance.collection('users').doc(id).snapshots(),builder:(_,s){final p=s.data?.data()??<String,dynamic>{},foto=(p['photoUrl']??'').toString(),ad=(p['displayName']??p['username']??(id==widget.ownerId?'Oda sahibi':'Konuşmacı')).toString();return Container(padding:const EdgeInsets.all(8),decoration:BoxDecoration(color:const Color(0xFFF8F4FD),borderRadius:BorderRadius.circular(18),border:Border.all(color:id==widget.ownerId?mor:const Color(0xFFEAE3F2))),child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[CircleAvatar(radius:24,backgroundImage:foto.isEmpty?null:NgelXAgImageProvider(foto),child:foto.isEmpty?const Icon(Icons.person,color:mor):null),const SizedBox(height:5),Text(ad,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black87,fontSize:10.5,fontWeight:FontWeight.w900)),Text(id==widget.ownerId?'SAHİP':'KONUŞMACI',style:TextStyle(fontSize:8,color:id==widget.ownerId?mor:Colors.black38,fontWeight:FontWeight.w900))]));});}
-  @override Widget build(BuildContext context){final sp=speakers.isEmpty?[widget.ownerId]:speakers;return Scaffold(backgroundColor:Colors.white,appBar:AppBar(backgroundColor:Colors.white,foregroundColor:Colors.black,leading:IconButton(onPressed:ayril,icon:const Icon(Icons.arrow_back)),title:const Text('Sesli',style:TextStyle(fontWeight:FontWeight.w900)),actions:[if(yoneticiyim)IconButton(tooltip:'Söz istekleri',onPressed:istekler,icon:const Icon(Icons.pan_tool_alt_rounded,color:mor))]),body:SafeArea(child:Column(children:[
-    if(durum.isNotEmpty)InkWell(onTap:!yeniden&&!bitti?()=>unawaited(tekrarBaglan()):null,child:Container(width:double.infinity,padding:const EdgeInsets.all(9),color:const Color(0xFFFFF5D9),child:Row(mainAxisAlignment:MainAxisAlignment.center,children:[Icon(bitti?Icons.stop_circle_outlined:Icons.wifi_off_rounded,size:18,color:bitti?Colors.redAccent:Colors.black54),const SizedBox(width:7),Flexible(child:Text(durum,textAlign:TextAlign.center,style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w800)))]))),
+  @override Widget build(BuildContext context){final sp=speakers.isEmpty?[widget.ownerId]:speakers;return Scaffold(backgroundColor:Colors.white,appBar:AppBar(backgroundColor:Colors.white,foregroundColor:Colors.black,leading:IconButton(onPressed:ayril,icon:const Icon(Icons.arrow_back)),title:const Text('Sesli',style:TextStyle(fontWeight:FontWeight.w900)),actions:[if(yoneticiyim&&!bitti)IconButton(tooltip:'Söz istekleri',onPressed:istekler,icon:const Icon(Icons.pan_tool_alt_rounded,color:mor))]),body:SafeArea(child:Column(children:[
+    if(durum.isNotEmpty&&!bitti)InkWell(onTap:!yeniden&&!bitti?()=>unawaited(tekrarBaglan()):null,child:Container(width:double.infinity,padding:const EdgeInsets.all(9),color:const Color(0xFFFFF5D9),child:Row(mainAxisAlignment:MainAxisAlignment.center,children:[Icon(bitti?Icons.stop_circle_outlined:Icons.wifi_off_rounded,size:18,color:bitti?Colors.redAccent:Colors.black54),const SizedBox(width:7),Flexible(child:Text(durum,textAlign:TextAlign.center,style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w800)))]))),
     if(sahibiyim&&aktifKisiSayisi<2&&yalnizlikBasladi!=null&&!bitti)
       Container(
         width:double.infinity,
@@ -409,7 +425,9 @@ class _SesliOdaPageState extends State<SesliOdaPage>{
     child:Container(padding:const EdgeInsets.symmetric(horizontal:12,vertical:8),decoration:BoxDecoration(border:Border.all(color:const Color(0xFFD5CEDD)),borderRadius:BorderRadius.circular(20)),child:const Row(mainAxisSize:MainAxisSize.min,children:[Icon(Icons.add_reaction_outlined,size:18,color:mor),SizedBox(width:6),Text('Tepki',style:TextStyle(color:Colors.black87,fontWeight:FontWeight.w700))])),
   ),
   OutlinedButton.icon(onPressed:()=>ngelxSesliPaylas(context,widget.odaId,(veri['title']??widget.baslik).toString()),icon:const Icon(Icons.ios_share_rounded,size:18),label:const Text('Davet')),
-]),const SizedBox(height:14),Row(children:[const Text('Sahne',style:TextStyle(fontSize:18,fontWeight:FontWeight.w900)),const Spacer(),if(yoneticiyim)TextButton.icon(onPressed:istekler,icon:const Icon(Icons.pan_tool_alt,size:16),label:const Text('İstekler'))]),GridView.builder(shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),gridDelegate:const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount:3,crossAxisSpacing:8,mainAxisSpacing:8,childAspectRatio:.9),itemCount:ngelxSesliMaksKonusmaci,itemBuilder:(_,i)=>koltuk(i<sp.length?sp[i]:'')),if(!konusmaciyim&&!bitti)...[const SizedBox(height:14),FilledButton.icon(style:FilledButton.styleFrom(backgroundColor:const Color(0xFFF0E8FF),foregroundColor:mor),onPressed:sozIste,icon:const Icon(Icons.pan_tool_alt_rounded),label:const Text('Söz iste'))],if(bitti)...[const SizedBox(height:14),const Text('Bu sesli oda sona erdi.',style:TextStyle(color:Colors.redAccent,fontWeight:FontWeight.w900))]])),NgelxSesliInlineSohbet(roomId:widget.odaId,yonetici:yoneticiyim),Container(padding:const EdgeInsets.all(12),decoration:const BoxDecoration(border:Border(top:BorderSide(color:Color(0xFFEDE8F2)))),child:Row(children:[Expanded(child:FilledButton.icon(style:FilledButton.styleFrom(backgroundColor:konusmaciyim&&mikrofon?mor:const Color(0xFFF0E8FF),foregroundColor:konusmaciyim&&mikrofon?Colors.white:mor),onPressed:konusmaciyim&&!bitti&&bagli?mic:null,icon:Icon(mikrofon?Icons.mic:Icons.mic_off),label:Text(!bagli?'Bağlantı bekleniyor':konusmaciyim?(mikrofon?'Mikrofon açık':'Mikrofon kapalı'):'Dinleyici'))),const SizedBox(width:8),OutlinedButton.icon(onPressed:ayril,icon:Icon(sahibiyim?Icons.stop_circle:Icons.logout),label:Text(sahibiyim?'Bitir':'Ayrıl'))]))])));
+]),const SizedBox(height:14),Row(children:[const Text('Sahne',style:TextStyle(fontSize:18,fontWeight:FontWeight.w900)),const Spacer(),if(yoneticiyim&&!bitti)TextButton.icon(onPressed:istekler,icon:const Icon(Icons.pan_tool_alt,size:16),label:const Text('İstekler'))]),GridView.builder(shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),gridDelegate:const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount:3,crossAxisSpacing:8,mainAxisSpacing:8,childAspectRatio:.9),itemCount:ngelxSesliMaksKonusmaci,itemBuilder:(_,i)=>koltuk(i<sp.length?sp[i]:'')),if(!konusmaciyim&&!bitti)...[const SizedBox(height:14),FilledButton.icon(style:FilledButton.styleFrom(backgroundColor:const Color(0xFFF0E8FF),foregroundColor:mor),onPressed:sozIste,icon:const Icon(Icons.pan_tool_alt_rounded),label:const Text('Söz iste'))],if(bitti)...[const SizedBox(height:14),const Text('Bu sesli oda sona erdi.',style:TextStyle(color:Colors.redAccent,fontWeight:FontWeight.w900))]])),NgelxSesliInlineSohbet(roomId:widget.odaId,yonetici:yoneticiyim),Container(padding:const EdgeInsets.all(12),decoration:const BoxDecoration(border:Border(top:BorderSide(color:Color(0xFFEDE8F2)))),child:bitti
+  ?FilledButton.icon(style:FilledButton.styleFrom(backgroundColor:mor,minimumSize:const Size.fromHeight(50)),onPressed:()=>Navigator.pop(context),icon:const Icon(Icons.close_rounded),label:const Text('Kapat',style:TextStyle(fontWeight:FontWeight.w900)))
+  :Row(children:[Expanded(child:FilledButton.icon(style:FilledButton.styleFrom(backgroundColor:konusmaciyim&&mikrofon?mor:const Color(0xFFF0E8FF),foregroundColor:konusmaciyim&&mikrofon?Colors.white:mor),onPressed:konusmaciyim&&bagli?mic:null,icon:Icon(mikrofon?Icons.mic:Icons.mic_off),label:Text(!bagli?'Bağlantı bekleniyor':konusmaciyim?(mikrofon?'Mikrofon açık':'Mikrofon kapalı'):'Dinleyici'))),const SizedBox(width:8),OutlinedButton.icon(onPressed:ayril,icon:Icon(sahibiyim?Icons.stop_circle:Icons.logout),label:Text(sahibiyim?'Bitir':'Ayrıl'))]))])));
   }
   @override void dispose(){kapatiliyor=true;heartbeat?.cancel();yalnizlikTimer?.cancel();abonelik?.cancel();katilimAboneligi?.cancel();odaKatilimAboneligi?.cancel();widget.oda.removeListener(odaDegisti);final ben=uid;if(ben!=null&&!bitti)unawaited(ngelxSesliKatilimciAyril(widget.odaId,ben));if(!widget.yayinSahibi)unawaited(widget.oda.disconnect());unawaited(widget.oda.dispose());super.dispose();}
 }
