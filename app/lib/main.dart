@@ -102,8 +102,8 @@ const ngelxPrivateBlueCanvas = Color(0xFFF6FAFF);
 const ngelxPrivateBlueBorder = Color(0xFFD8E8FF);
 const ngelxPrivateBlueInk = Color(0xFF10213A);
 
-const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.142');
-const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '363');
+const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.143');
+const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '364');
 const ngelxGroupBorder = Color(0xFFD9EEE0);
 
 final GlobalKey<NavigatorState> ngelxNavigatorKey=GlobalKey<NavigatorState>();
@@ -9622,6 +9622,12 @@ class _MesajPageState extends State<MesajPage> {
         if(okunmamis<=0)continue;
         final uyeler=List<String>.from(v['members']??const[]);
         final grup=v['isGroup']==true||uyeler.length>2;
+        if(!grup){
+          final gelenIstek=(v['requestRecipientUid']??'').toString()==ben
+            && v['requestAccepted_$ben']!=true
+            && v['requestRejected_$ben']!=true;
+          if(gelenIstek)continue;
+        }
         if(grup){grupOkunmamis+=okunmamis;}else{ozelOkunmamis+=okunmamis;}
       }
       return StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
@@ -9840,7 +9846,7 @@ class _MesajPageState extends State<MesajPage> {
         child:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
         stream:ben==null?null:FirebaseFirestore.instance.collection('chats').where('members',arrayContains:ben).limit(60).snapshots(),
         builder:(_,s){
-          final docs=(s.data?.docs??[]).where((d){final v=d.data();if(List<String>.from(v['hiddenFor']??const[]).contains(ben)||arsivSohbetler.contains(d.id))return false;final members=List<String>.from(v['members']??const[]),grup=v['isGroup']==true||members.length>2;final unread=(v['unread_$ben']??0) as int;if(filtre=='Okunmamış'&&unread==0)return false;if(filtre=='Gruplar'&&!grup)return false;if(!grup){final other=members.firstWhere((x)=>x!=ben,orElse:()=>ben??'');final gelenIstek=v['requestRecipientUid']==ben&&v['requestAccepted_$ben']!=true&&!arkadaslar.contains(other);if(gelenIstek)return false;if(filtre=='Arkadaşlar'&&!arkadaslar.contains(other))return false;}else if(filtre=='Arkadaşlar')return false;final son='${v['groupName']??''} ${v['lastMessage']??''}'.toLowerCase();return sohbetSorgu.isEmpty||son.contains(sohbetSorgu);}).toList()..sort((a,b){final ap=sabitSohbetler.contains(a.id),bp=sabitSohbetler.contains(b.id);if(ap!=bp)return ap?-1:1;final at=a.data()['updatedAt'] as Timestamp?,bt=b.data()['updatedAt'] as Timestamp?;return (bt?.millisecondsSinceEpoch??0).compareTo(at?.millisecondsSinceEpoch??0);});
+          final docs=(s.data?.docs??[]).where((d){final v=d.data();if(List<String>.from(v['hiddenFor']??const[]).contains(ben)||arsivSohbetler.contains(d.id))return false;final members=List<String>.from(v['members']??const[]),grup=v['isGroup']==true||members.length>2;final unread=(v['unread_$ben']??0) as int;if(filtre=='Okunmamış'&&unread==0)return false;if(filtre=='Gruplar'&&!grup)return false;if(!grup){final other=members.firstWhere((x)=>x!=ben,orElse:()=>ben??'');final gelenIstek=(v['requestRecipientUid']??'').toString()==ben&&v['requestAccepted_$ben']!=true&&v['requestRejected_$ben']!=true&&!arkadaslar.contains(other);if(gelenIstek)return false;if(filtre=='Arkadaşlar'&&!arkadaslar.contains(other))return false;}else if(filtre=='Arkadaşlar')return false;final son='${v['groupName']??''} ${v['lastMessage']??''}'.toLowerCase();return sohbetSorgu.isEmpty||son.contains(sohbetSorgu);}).toList()..sort((a,b){final ap=sabitSohbetler.contains(a.id),bp=sabitSohbetler.contains(b.id);if(ap!=bp)return ap?-1:1;final at=a.data()['updatedAt'] as Timestamp?,bt=b.data()['updatedAt'] as Timestamp?;return (bt?.millisecondsSinceEpoch??0).compareTo(at?.millisecondsSinceEpoch??0);});
           final altBosluk=ngelxAltGuvenliBosluk(context,extra:72);
           if(docs.isEmpty)return ListView(
             physics:const AlwaysScrollableScrollPhysics(),
@@ -10038,8 +10044,9 @@ class MesajIstekleriPage extends StatelessWidget {
                 final v=d.data(), m=List<String>.from(v['members'] ?? const []);
                 if(v['isGroup']==true || m.length!=2) return false;
                 final other=m.firstWhere((x)=>x!=uid,orElse:()=>uid);
-                final hedef=(v['requestRecipientUid']??uid).toString();
-                return hedef==uid && !arkadaslar.contains(other) && v['requestAccepted_$uid']!=true && v['requestRejected_$uid']!=true;
+                final hedef=(v['requestRecipientUid']??'').toString();
+                final sonMesaj=(v['lastMessage']??'').toString().trim();
+                return hedef==uid && sonMesaj.isNotEmpty && !arkadaslar.contains(other) && v['requestAccepted_$uid']!=true && v['requestRejected_$uid']!=true;
               }).toList();
               if(docs.isEmpty) return Center(child: Text(t('noMessageRequests'), style: const TextStyle(color: Colors.black54)));
               return ListView.builder(
@@ -10058,6 +10065,8 @@ class MesajIstekleriPage extends StatelessWidget {
                             'requestAccepted_$uid':true,
                             'requestRejected_$uid':false,
                             'requestAcceptedAt_$uid':FieldValue.serverTimestamp(),
+                            'unread_$uid':0,
+                            'hiddenFor':FieldValue.arrayRemove([uid]),
                           },SetOptions(merge:true)).timeout(const Duration(seconds:10));
                           if(context.mounted)Navigator.pushReplacement(context,MaterialPageRoute(builder:(_)=>SohbetPage(chatId:d.id,digerUid:other,ad:ad,foto:foto)));
                         }on TimeoutException{
@@ -10096,6 +10105,8 @@ class MesajIstegiOnizlemePage extends StatelessWidget{
           'requestAccepted_$uid':true,
           'requestRejected_$uid':false,
           'requestAcceptedAt_$uid':FieldValue.serverTimestamp(),
+          'unread_$uid':0,
+          'hiddenFor':FieldValue.arrayRemove([uid]),
         },SetOptions(merge:true)).timeout(const Duration(seconds:10));
         if(context.mounted)Navigator.pushReplacement(context,MaterialPageRoute(builder:(_)=>SohbetPage(chatId:chatId,digerUid:digerUid,ad:ad,foto:foto)));
       }on TimeoutException{
@@ -17319,6 +17330,10 @@ class _SohbetPageState extends State<SohbetPage> {
     final clientCreatedAt=Timestamp.fromDate(simdi);
     final bitis=sure>0?Timestamp.fromDate(simdi.add(Duration(seconds:sure))):null;
     final arkadas=List<String>.from(hazirlik.diger['friends']??const[]).contains(ben);
+    final istekKabulEdildi=hazirlik.sohbet['requestAccepted_$ben']==true||hazirlik.sohbet['requestAccepted_${widget.digerUid}']==true;
+    final istekGerekli=!arkadas&&!istekKabulEdildi;
+    final mevcutIstekGonderen=(hazirlik.sohbet['requestSenderUid']??'').toString();
+    final mevcutIstekAlici=(hazirlik.sohbet['requestRecipientUid']??'').toString();
     final cevapId=yanitMesajId,cevapMetin=yanitMetin,cevapUid=yanitGonderenUid;
     final mesajRef=ref.collection('messages').doc();
     final batch=FirebaseFirestore.instance.batch();
@@ -17328,8 +17343,9 @@ class _SohbetPageState extends State<SohbetPage> {
       'lastMessage':t,
       'updatedAt':FieldValue.serverTimestamp(),
       'unread_${widget.digerUid}':FieldValue.increment(1),
-      if(!hazirlik.sohbetMevcut&&!arkadas)'requestSenderUid':ben,
-      if(!hazirlik.sohbetMevcut&&!arkadas)'requestRecipientUid':widget.digerUid,
+      if(istekGerekli&&mevcutIstekGonderen.isEmpty)'requestSenderUid':ben,
+      if(istekGerekli&&mevcutIstekAlici.isEmpty)'requestRecipientUid':widget.digerUid,
+      if(istekGerekli)'requestRejected_${widget.digerUid}':false,
     },SetOptions(merge:true));
     batch.set(mesajRef,{
       'senderId':ben,
@@ -17410,6 +17426,10 @@ class _SohbetPageState extends State<SohbetPage> {
       final simdi=DateTime.now(),clientCreatedAt=Timestamp.fromDate(simdi);
       final bitis=sure>0?Timestamp.fromDate(simdi.add(Duration(seconds:sure))):null;
       final arkadas=List<String>.from(hazirlik.diger['friends']??const[]).contains(ben);
+      final istekKabulEdildi=hazirlik.sohbet['requestAccepted_$ben']==true||hazirlik.sohbet['requestAccepted_${widget.digerUid}']==true;
+      final istekGerekli=!arkadas&&!istekKabulEdildi;
+      final mevcutIstekGonderen=(hazirlik.sohbet['requestSenderUid']??'').toString();
+      final mevcutIstekAlici=(hazirlik.sohbet['requestRecipientUid']??'').toString();
       final mesajRef=ref.collection('messages').doc();
       final batch=FirebaseFirestore.instance.batch();
       batch.set(ref,{
@@ -17417,8 +17437,9 @@ class _SohbetPageState extends State<SohbetPage> {
         'lastMessage':'📷 Fotoğraf',
         'updatedAt':FieldValue.serverTimestamp(),
         'unread_${widget.digerUid}':FieldValue.increment(1),
-        if(!hazirlik.sohbetMevcut&&!arkadas)'requestSenderUid':ben,
-        if(!hazirlik.sohbetMevcut&&!arkadas)'requestRecipientUid':widget.digerUid,
+        if(istekGerekli&&mevcutIstekGonderen.isEmpty)'requestSenderUid':ben,
+        if(istekGerekli&&mevcutIstekAlici.isEmpty)'requestRecipientUid':widget.digerUid,
+      if(istekGerekli)'requestRejected_${widget.digerUid}':false,
       },SetOptions(merge:true));
       batch.set(mesajRef,{
         'senderId':ben,'text':'','type':'photo','mediaUrl':url,'imageUrl':url,'photoUrl':url,
@@ -17483,6 +17504,10 @@ class _SohbetPageState extends State<SohbetPage> {
     final ref=FirebaseFirestore.instance.collection('chats').doc(widget.chatId);
     final simdi=DateTime.now(),clientCreatedAt=Timestamp.fromDate(simdi);
     final arkadas=List<String>.from(hazirlik.diger['friends']??const[]).contains(ben);
+    final istekKabulEdildi=hazirlik.sohbet['requestAccepted_$ben']==true||hazirlik.sohbet['requestAccepted_${widget.digerUid}']==true;
+    final istekGerekli=!arkadas&&!istekKabulEdildi;
+    final mevcutIstekGonderen=(hazirlik.sohbet['requestSenderUid']??'').toString();
+    final mevcutIstekAlici=(hazirlik.sohbet['requestRecipientUid']??'').toString();
     final mesajRef=ref.collection('messages').doc();
     final batch=FirebaseFirestore.instance.batch();
     batch.set(ref,{
@@ -17490,8 +17515,9 @@ class _SohbetPageState extends State<SohbetPage> {
       'lastMessage':sonMesaj,
       'updatedAt':FieldValue.serverTimestamp(),
       'unread_${widget.digerUid}':FieldValue.increment(1),
-      if(!hazirlik.sohbetMevcut&&!arkadas)'requestSenderUid':ben,
-      if(!hazirlik.sohbetMevcut&&!arkadas)'requestRecipientUid':widget.digerUid,
+      if(istekGerekli&&mevcutIstekGonderen.isEmpty)'requestSenderUid':ben,
+      if(istekGerekli&&mevcutIstekAlici.isEmpty)'requestRecipientUid':widget.digerUid,
+      if(istekGerekli)'requestRejected_${widget.digerUid}':false,
     },SetOptions(merge:true));
     batch.set(mesajRef,{
       'senderId':ben,
@@ -20768,6 +20794,9 @@ class _KullaniciProfilPageState extends State<KullaniciProfilPage> {
           'peerB':ids.last,
           if(arkadas)'requestAccepted_$me':true,
           if(arkadas)'requestAccepted_$uid':true,
+          if(!arkadas)'requestSenderUid':me,
+          if(!arkadas)'requestRecipientUid':uid,
+          if(!arkadas)'requestRejected_$uid':false,
           'openedAt_$me':FieldValue.serverTimestamp(),
           'updatedAt':FieldValue.serverTimestamp(),
         },SetOptions(merge:true)).timeout(const Duration(seconds:10));
