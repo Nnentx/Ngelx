@@ -1,0 +1,167 @@
+name: Ngel X BUILD 359 SOCIAL SAFEAREA PACK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - work/build359-social-safearea-pack
+    paths:
+      - '.github/workflows/NgelX-BUILD-359-SOCIAL-SAFEAREA.yml'
+      - 'app/lib/main.dart'
+      - 'app/lib/build258_settings.dart'
+      - 'app/pubspec.yaml'
+      - 'WORK_PACKAGE_TEST_NOTES.md'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ngelx-build359-social-safearea
+  cancel-in-progress: true
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Kaynaklari al
+        uses: actions/checkout@v4
+        with:
+          ref: work/build359-social-safearea-pack
+          fetch-depth: 0
+
+      - name: Build 359 regresyonlarini kontrol et
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+
+          grep -F "version: 1.0.138+359" app/pubspec.yaml
+          grep -F "defaultValue: '1.0.138'" app/lib/main.dart
+          grep -F "defaultValue: '359'" app/lib/main.dart
+
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path('app/lib/main.dart').read_text(encoding='utf-8')
+          settings=Path('app/lib/build258_settings.dart').read_text(encoding='utf-8')
+
+          # Social request bug: no deterministic nonexistent notification doc get().
+          a=s.index('Future<bool> sosyalIstekGonder({')
+          b=s.index('Future<void> sosyalIstekIptalEt',a)
+          social=s[a:b]
+          assert "bildirimler.where('fromUid',isEqualTo:user.uid)" in social
+          assert "bildirimler.where('toUid',isEqualTo:user.uid)" in social
+          assert "await bildirimler.doc().set({" in social
+          assert "final belgeId=ngelxBildirimBelgeId" not in social
+          assert "istekRef.get(" not in social
+          assert "tersRef.get(" not in social
+          assert "'requestKey':'${tur}_${user.uid}_$hedefUid'" in social
+
+          # Profile request streams use single-field owner queries.
+          profile_start=s.index('class _KullaniciProfilPageState extends State<KullaniciProfilPage>')
+          profile_end=s.index('class NgelXVideoKapakOnizleme',profile_start)
+          profile=s[profile_start:profile_end]
+          assert profile.count(".where('fromUid',isEqualTo:me)") >= 2
+          assert ".where('toUid',isEqualTo:uid)" not in profile
+          assert "Takip isteği izni doğrulanamadı" in profile
+          assert "Arkadaşlık isteği izni doğrulanamadı" in profile
+
+          # Activity and inbox layout guards.
+          activity_start=s.index('class _AktivitePageState extends State<AktivitePage>')
+          activity_end=s.index('bool ngelxPresenceOnline',activity_start)
+          activity=s[activity_start:activity_end]
+          assert "padding:const EdgeInsets.fromLTRB(12,7,0,10)" in activity
+          assert "padding:EdgeInsets.fromLTRB(12,14,12,24+MediaQuery.viewPaddingOf(context).bottom)" in activity
+          assert "clipBehavior:Clip.hardEdge" in activity
+
+          inbox_start=s.index('class _MesajPageState extends State<MesajPage>')
+          inbox_end=s.index('class ArsivSohbetlerPage extends StatefulWidget',inbox_start)
+          inbox=s[inbox_start:inbox_end]
+          assert "final altBosluk=26.0+MediaQuery.viewPaddingOf(context).bottom;" in inbox
+          assert "padding:EdgeInsets.only(bottom:altBosluk)" in inbox
+
+          # Settings bottom SafeArea.
+          assert "30+MediaQuery.viewPaddingOf(context).bottom" in settings
+
+          # Message request acceptance is hardened.
+          mr_start=s.index('class MesajIstekleriPage extends StatelessWidget')
+          mr_end=s.index('Future<void> ngelxGrupDavetMetaSenkronla',mr_start)
+          mr=s[mr_start:mr_end]
+          assert "requestAcceptedAt_$uid" in mr
+          assert "Mesaj isteği kabulü zaman aşımına uğradı" in mr
+          assert "Navigator.pushReplacement" in mr
+
+          # Build 358 call/navigation behavior must remain intact.
+          assert 'ngelxArkaPlanAramaSakla(' in s
+          assert 'ngelxArkaPlanAramayiGeriAl(widget.roomName)' in s
+          assert 'final buAramaHalaGuncel=kayitliOda.isEmpty||kayitliOda==widget.roomName;' in s
+          assert "grupAramasi?'Güvenli grup bağlantısı':'Güvenli özel bağlantı'" in s
+          assert 'rotus=widget.goruntulu;' in s
+          assert 'final toplamSaniye=grupAramasi?120:45;' in s
+          assert "callAutoEndedReason':'no_participants_2m'" in s
+
+          print('Build 359 static regression checks OK')
+          PY
+
+      - name: Java 17 kur
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Flutter kur
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Sabit NgelX imza anahtarini geri yukle
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: ngelx-stable-debug-keystore-v1
+          fail-on-cache-miss: true
+
+      - name: Flutter analiz ve test
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter clean
+          flutter pub get
+          flutter analyze --machine > analyze.log 2>&1 || true
+          cat analyze.log
+          if grep -q '^ERROR|' analyze.log; then
+            echo "Flutter analyze ERROR buldu."
+            exit 1
+          fi
+          if [ -d test ]; then
+            flutter test
+          else
+            echo "Test klasoru yok; Flutter test adimi atlandi."
+          fi
+
+      - name: APK olustur ve imzayi dogrula
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter build apk --release
+          APK=build/app/outputs/flutter-apk/app-release.apk
+          test -s "$APK"
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          "$APKSIGNER" verify --print-certs "$APK" | tee build/app/outputs/flutter-apk/apksigner-certs.txt
+          grep -qi 'be20b27f0ba1f4decd2941d410b1536de89e48dc894f04f038f9d26b11ecd6aa' build/app/outputs/flutter-apk/apksigner-certs.txt
+          sha256sum "$APK" > "$APK.sha256"
+
+      - name: APK yukle
+        uses: actions/upload-artifact@v4
+        with:
+          name: NgelX-1.0.138-Build-359-SOCIAL-SAFEAREA
+          path: |
+            app/build/app/outputs/flutter-apk/app-release.apk
+            app/build/app/outputs/flutter-apk/app-release.apk.sha256
+            app/build/app/outputs/flutter-apk/apksigner-certs.txt
+          if-no-files-found: error
+          retention-days: 14
