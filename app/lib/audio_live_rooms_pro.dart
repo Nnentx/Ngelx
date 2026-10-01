@@ -422,6 +422,25 @@ Future<void> ngelxSesliKatilimcilarAc(BuildContext context,String roomId,String 
   );
 }
 
+Future<bool> ngelxSesliMesajSilOnayi(BuildContext context)async{
+  if(!context.mounted)return false;
+  return await showDialog<bool>(
+    context:context,
+    builder:(c)=>AlertDialog(
+      backgroundColor:Colors.white,
+      surfaceTintColor:Colors.white,
+      shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(24)),
+      icon:const Icon(Icons.delete_outline_rounded,color:Colors.redAccent,size:34),
+      title:const Text('Mesaj silinsin mi?',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.w900)),
+      content:const Text('Bu işlem geri alınamaz.',textAlign:TextAlign.center,style:TextStyle(color:Colors.black54)),
+      actions:[
+        TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),
+        FilledButton(style:FilledButton.styleFrom(backgroundColor:Colors.redAccent),onPressed:()=>Navigator.pop(c,true),child:const Text('Sil')),
+      ],
+    ),
+  )??false;
+}
+
 class NgelxSesliSohbetPanel extends StatefulWidget{
   final String roomId;
   final bool yonetici,sahibiyim,bitti;
@@ -494,13 +513,13 @@ class _NgelxSesliSohbetPanelState extends State<NgelxSesliSohbetPanel>{
   Future<void> _mesajIslem(DocumentReference<Map<String,dynamic>> ref,Map<String,dynamic> v)async{
     final ben=FirebaseAuth.instance.currentUser?.uid,benim=(v['userId']??'').toString()==ben;
     final sec=await showModalBottomSheet<String>(context:context,backgroundColor:Colors.white,showDragHandle:true,builder:(c)=>SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
-      if(benim)ListTile(leading:const Icon(Icons.edit_outlined,color:mor),title:const Text('Düzenle',style:TextStyle(fontWeight:FontWeight.w800)),onTap:()=>Navigator.pop(c,'edit')),
+      if(benim)ListTile(leading:const Icon(Icons.edit_outlined,color:mor),title:const Text('Mesajı düzenle',style:TextStyle(color:mor,fontWeight:FontWeight.w900)),onTap:()=>Navigator.pop(c,'edit')),
       if(widget.yonetici&&!benim)ListTile(leading:const Icon(Icons.push_pin_outlined,color:mor),title:Text(v['pinned']==true?'Sabitlemeyi kaldır':'Mesajı sabitle'),onTap:()=>Navigator.pop(c,'pin')),
       if(widget.yonetici&&!benim)ListTile(leading:const Icon(Icons.admin_panel_settings_outlined,color:mor),title:const Text('Kullanıcıyı yönet'),onTap:()=>Navigator.pop(c,'manage')),
       if(widget.yonetici||benim)ListTile(leading:const Icon(Icons.delete_outline,color:Colors.redAccent),title:const Text('Mesajı sil',style:TextStyle(color:Colors.redAccent,fontWeight:FontWeight.w800)),onTap:()=>Navigator.pop(c,'delete')),
     ])));
     if(sec=='edit'&&mounted)await ngelxSesliMesajDuzenle(context,ref,v);
-    if(sec=='delete')await ref.delete();
+    if(sec=='delete'&&await ngelxSesliMesajSilOnayi(context))await ref.delete();
     if(sec=='pin')await ref.set({'pinned':v['pinned']!=true,'updatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
     if(sec=='manage'&&mounted)await ngelxSesliKullaniciMenuAc(context,widget.roomId,(v['userId']??'').toString(),(v['displayName']??'NgelX').toString());
   }
@@ -528,7 +547,7 @@ class _NgelxSesliSohbetPanelState extends State<NgelxSesliSohbetPanel>{
                 padding:const EdgeInsets.symmetric(horizontal:12,vertical:10),
                 itemCount:docs.length,
                 itemBuilder:(_,i){
-                  final d=docs[i],v=d.data(),benim=(v['userId']??'').toString()==ben,pin=v['pinned']==true;
+                  final d=docs[i],v=d.data(),benim=(v['userId']??'').toString()==ben,pin=v['pinned']==true,foto=(v['photoUrl']??'').toString();
                   return Align(
                     alignment:benim?Alignment.centerRight:Alignment.centerLeft,
                     child:GestureDetector(
@@ -541,6 +560,8 @@ class _NgelxSesliSohbetPanelState extends State<NgelxSesliSohbetPanel>{
                         decoration:BoxDecoration(color:benim?const Color(0xFFF0E8FF):const Color(0xFFF4F4F6),borderRadius:BorderRadius.circular(16),border:pin?Border.all(color:mor):null),
                         child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
                           Row(mainAxisSize:MainAxisSize.min,children:[
+                            CircleAvatar(radius:9,backgroundColor:const Color(0xFFF0E8FF),backgroundImage:foto.isEmpty?null:NgelXAgImageProvider(foto),child:foto.isEmpty?const Icon(Icons.person_rounded,size:10,color:mor):null),
+                            const SizedBox(width:5),
                             if(pin)...[const Icon(Icons.push_pin_rounded,size:13,color:mor),const SizedBox(width:3)],
                             Flexible(child:Text((v['displayName']??'NgelX').toString(),style:const TextStyle(color:Colors.black54,fontSize:10.5,fontWeight:FontWeight.w900))),
                             ngelxSesliMesajRolRozeti((v['authorRole']??'').toString()),
@@ -691,14 +712,14 @@ class _NgelxSesliInlineSohbetState extends State<NgelxSesliInlineSohbet>{
       backgroundColor:Colors.white,
       showDragHandle:true,
       builder:(c)=>SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
-        if(benim)ListTile(leading:const Icon(Icons.edit_outlined,color:mor),title:const Text('Düzenle',style:TextStyle(fontWeight:FontWeight.w800)),onTap:()=>Navigator.pop(c,'edit')),
+        if(benim)ListTile(leading:const Icon(Icons.edit_outlined,color:mor),title:const Text('Mesajı düzenle',style:TextStyle(color:mor,fontWeight:FontWeight.w900)),onTap:()=>Navigator.pop(c,'edit')),
         if(widget.yonetici&&!benim)ListTile(leading:const Icon(Icons.push_pin_outlined,color:mor),title:Text(v['pinned']==true?'Sabitlemeyi kaldır':'Mesajı sabitle'),onTap:()=>Navigator.pop(c,'pin')),
         if(widget.yonetici&&!benim)ListTile(leading:const Icon(Icons.admin_panel_settings_outlined,color:mor),title:const Text('Kullanıcıyı yönet'),onTap:()=>Navigator.pop(c,'manage')),
         if(widget.yonetici||benim)ListTile(leading:const Icon(Icons.delete_outline,color:Colors.redAccent),title:const Text('Mesajı sil',style:TextStyle(color:Colors.redAccent,fontWeight:FontWeight.w800)),onTap:()=>Navigator.pop(c,'delete')),
       ])),
     );
     if(sec=='edit'&&mounted)await ngelxSesliMesajDuzenle(context,d.reference,v);
-    if(sec=='delete')await d.reference.delete();
+    if(sec=='delete'&&await ngelxSesliMesajSilOnayi(context))await d.reference.delete();
     if(sec=='pin')await d.reference.set({'pinned':v['pinned']!=true,'updatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
     if(sec=='manage'&&mounted)await ngelxSesliKullaniciMenuAc(context,widget.roomId,(v['userId']??'').toString(),(v['displayName']??'NgelX').toString());
   }
@@ -706,7 +727,7 @@ class _NgelxSesliInlineSohbetState extends State<NgelxSesliInlineSohbet>{
   Widget _mesajBalonu(QueryDocumentSnapshot<Map<String,dynamic>> d){
     final v=d.data(),ben=FirebaseAuth.instance.currentUser?.uid;
     final benim=(v['userId']??'').toString()==ben;
-    final ad=(v['displayName']??'NgelX').toString(),metin=(v['text']??'').toString(),rol=(v['authorRole']??'').toString(),pin=v['pinned']==true;
+    final ad=(v['displayName']??'NgelX').toString(),metin=(v['text']??'').toString(),rol=(v['authorRole']??'').toString(),pin=v['pinned']==true,foto=(v['photoUrl']??'').toString();
     return Align(
       alignment:benim?Alignment.centerRight:Alignment.centerLeft,
       child:GestureDetector(
@@ -723,6 +744,8 @@ class _NgelxSesliInlineSohbetState extends State<NgelxSesliInlineSohbet>{
           ),
           child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
             Row(mainAxisSize:MainAxisSize.min,children:[
+              CircleAvatar(radius:9,backgroundColor:const Color(0xFFF0E8FF),backgroundImage:foto.isEmpty?null:NgelXAgImageProvider(foto),child:foto.isEmpty?const Icon(Icons.person_rounded,size:10,color:mor):null),
+              const SizedBox(width:5),
               if(pin)...[const Icon(Icons.push_pin_rounded,size:12,color:mor),const SizedBox(width:3)],
               Flexible(child:Text(ad,overflow:TextOverflow.ellipsis,style:const TextStyle(color:mor,fontSize:10.5,fontWeight:FontWeight.w900))),
               ngelxSesliMesajRolRozeti(rol),
