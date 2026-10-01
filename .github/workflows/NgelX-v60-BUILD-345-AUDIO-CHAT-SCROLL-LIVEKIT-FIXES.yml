@@ -1,0 +1,113 @@
+name: Ngel X v60 BUILD 345 AUDIO CHAT SCROLL LIVEKIT FIXES
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - work/build345-audio-chat-scroll-livekit-fixes
+    paths:
+      - '.github/workflows/NgelX-v60-BUILD-345-AUDIO-CHAT-SCROLL-LIVEKIT-FIXES.yml'
+      - '.github/scripts/build345_version_patch.py'
+      - 'app/lib/audio_live_rooms.dart'
+      - 'app/lib/audio_live_rooms_pro.dart'
+
+permissions:
+  contents: write
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: work/build345-audio-chat-scroll-livekit-fixes
+          fetch-depth: 0
+
+      - name: Build 345 surumunu uygula ve kontrol et
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile .github/scripts/build345_version_patch.py
+          python3 .github/scripts/build345_version_patch.py
+          git diff --check
+
+          grep -F "version: 1.0.126+345" app/pubspec.yaml
+          grep -F "defaultValue: '1.0.126'" app/lib/main.dart
+          grep -F "defaultValue: '345'" app/lib/main.dart
+          grep -F "class NgelxSesliInlineSohbet" app/lib/audio_live_rooms_pro.dart
+          grep -F "Yeni mesajlar" app/lib/audio_live_rooms_pro.dart
+          ! grep -F "label:const Text('Büyüt'" app/lib/audio_live_rooms_pro.dart
+          grep -F "widget.oda.reconnect()" app/lib/audio_live_rooms.dart
+          grep -F "Sesli odadan ayrılmak istiyor musun?" app/lib/audio_live_rooms.dart
+          grep -F "Oda kapanacak ve odadaki herkes çıkarılacak." app/lib/audio_live_rooms.dart
+          ! grep -F "tooltip:'Söz istekleri'" app/lib/audio_live_rooms.dart
+
+      - name: Build 345 kaynaklarini dala yaz
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- app/lib/main.dart app/pubspec.yaml; then
+            echo "Surum kaynaklari zaten Build 345 seviyesinde."
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add app/lib/main.dart app/pubspec.yaml
+            git commit -m "Build 345: set app version"
+            git push origin HEAD:work/build345-audio-chat-scroll-livekit-fixes
+          fi
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Sabit NgelX imza anahtarini geri yukle
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: ngelx-stable-debug-keystore-v1
+          fail-on-cache-miss: true
+
+      - name: Flutter analiz
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter clean
+          flutter pub get
+          flutter analyze --machine > analyze.log 2>&1 || true
+          cat analyze.log
+          if grep -q '^ERROR|' analyze.log; then
+            echo "Flutter analyze ERROR buldu."
+            exit 1
+          fi
+
+      - name: APK olustur ve imzayi dogrula
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter build apk --release
+          APK=build/app/outputs/flutter-apk/app-release.apk
+          test -s "$APK"
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          "$APKSIGNER" verify --print-certs "$APK" | tee build/app/outputs/flutter-apk/apksigner-certs.txt
+          grep -qi 'be20b27f0ba1f4decd2941d410b1536de89e48dc894f04f038f9d26b11ecd6aa' build/app/outputs/flutter-apk/apksigner-certs.txt
+          sha256sum "$APK" > "$APK.sha256"
+
+      - name: APK yukle
+        uses: actions/upload-artifact@v4
+        with:
+          name: NgelX-1.0.126-Build-345-AUDIO-CHAT-SCROLL-LIVEKIT-FIXES
+          path: |
+            app/build/app/outputs/flutter-apk/app-release.apk
+            app/build/app/outputs/flutter-apk/app-release.apk.sha256
+            app/build/app/outputs/flutter-apk/apksigner-certs.txt
+          if-no-files-found: error
+          retention-days: 14
