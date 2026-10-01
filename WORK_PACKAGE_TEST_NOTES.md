@@ -1670,3 +1670,23 @@ Kullanıcı cihaz testinde mevcut **Ayarlar ve gizlilik** ekranının fazla dağ
 - En sık kullanılan ayarlara 1–2 dokunuşta ulaşılacak.
 - Arama sayesinde kullanıcı kategori yapısını bilmek zorunda kalmayacak.
 - Beyaz NgelX tasarımı korunacak; mevcut mor vurgu kullanılabilir ancak görsel yoğunluk azaltılacak.
+
+
+## 2026-10-02 — Tek hesap davranışı ilkesi: eski/yeni hesap farkı olmayacak
+
+Kullanıcı talebi netleştirildi: NgelX içinde **“eski hesap” ve “yeni hesap” farklı davranış göstermeyecek**. Hesabın ne zaman oluşturulduğu yalnızca veri geçmişini etkileyebilir; özelliklerin çalışması, ayarların görünmesi, mesaj izinleri, bildirimler ve Aktivite davranışı aynı olmak zorunda.
+
+Build 366'da bu ilke için:
+- Her oturum açan kullanıcıda eksik ayar alanlarını yalnızca **eksikse** tamamlayan hesap şeması normalizasyonu eklendi.
+- Mevcut kullanıcının daha önce yaptığı seçimler ezilmiyor.
+- Eski hesaplarda eksik kalabilen gizlilik, mesaj, bildirim, güvenlik, içerik ve medya ayarları standart başlangıç değerleriyle tamamlanıyor.
+- Yeni hesap oluşturma da aynı temel mesaj ayarlarını doğrudan yazıyor.
+- Firestore mesaj kuralları da eksik legacy alan için uygulamayla aynı varsayılanı kullanıyor.
+- Sonuç hedefi: aynı işlemi yapan eski ve yeni iki hesapta aynı ekran, aynı izin sonucu, aynı bildirim ve aynı Aktivite davranışı.
+
+### Aktivite için net kural
+- Hesap yeni olduğu için gerçekten hiç beğeni/yorum/takip/güvenlik vb. aktivitesi yoksa boş liste normaldir; bu durumda sayaç da **0** olmalıdır.
+- Sayaç 1/2/… gösterip listenin boş kalması hatadır ve kabul edilmeyecek.
+- Mesaj bildirimleri Aktivite listesine dahil edilmiyorsa Aktivite sayacına da dahil edilmeyecek.
+- Aynı gerçek Aktivite olayı eski ve yeni hesaplarda aynı kartı üretmeli.
+- Test matrisi: yeni→yeni, yeni→eski, eski→yeni, eski→eski hesap çiftlerinde takip isteği, arkadaşlık isteği, kabul/red, beğeni/yorum, güvenlik bildirimi ve mesaj isteği ayrı ayrı kontrol edilecek.
