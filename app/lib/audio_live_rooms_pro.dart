@@ -1041,10 +1041,7 @@ class _NgelxSesliMuzikKontroluState extends State<NgelxSesliMuzikKontrolu>{
       if(ek>0)hedef+=ek;
     }
     final sure=_oynatici.duration?.inMilliseconds??0;
-    if(sure>0){
-      if(_url.startsWith('ngelx://original/'))hedef=hedef%sure;
-      else hedef=hedef.clamp(0,sure).toInt();
-    }
+    if(sure>0)hedef=hedef.clamp(0,sure).toInt();
     return hedef<0?0:hedef;
   }
 
