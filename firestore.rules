@@ -553,9 +553,15 @@ service cloud.firestore {
         && request.resource.data.get('speakerIds', []).size() <= 12
         && request.resource.data.get('moderatorIds', []).size() <= 3;
       allow update: if signedIn()
-        && resource.data.ownerId == request.auth.uid
         && request.resource.data.get('speakerIds', []).size() <= 12
-        && request.resource.data.get('moderatorIds', []).size() <= 3;
+        && request.resource.data.get('moderatorIds', []).size() <= 3
+        && (
+          resource.data.ownerId == request.auth.uid
+          || (
+            request.auth.uid in resource.data.get('moderatorIds', [])
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['speakerIds', 'speakerCount', 'updatedAt'])
+          )
+        );
       allow delete: if false;
       match /speaker_requests/{uid} {
         allow read: if signedIn() && (
@@ -577,6 +583,53 @@ service cloud.firestore {
         );
         allow delete: if signedIn() && (
           isMe(uid)
+          || get(/databases/$(database)/documents/audio_rooms/$(roomId)).data.get('ownerId', '') == request.auth.uid
+        );
+      }
+      match /participants/{uid} {
+        allow read: if signedIn();
+        allow create: if isMe(uid)
+          && request.resource.data.get('userId', '') == request.auth.uid
+          && (
+            request.resource.data.get('role', 'listener') == 'listener'
+            || get(/databases/$(database)/documents/audio_rooms/$(roomId)).data.get('ownerId', '') == request.auth.uid
+          );
+        allow update: if signedIn() && (
+          (
+            isMe(uid)
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['active', 'lastSeenAt', 'leftAt', 'joinedAt', 'displayName', 'photoUrl'])
+          )
+          || get(/databases/$(database)/documents/audio_rooms/$(roomId)).data.get('ownerId', '') == request.auth.uid
+          || request.auth.uid in get(/databases/$(database)/documents/audio_rooms/$(roomId)).data.get('moderatorIds', [])
+        );
+        allow delete: if false;
+      }
+      match /messages/{messageId} {
+        allow read: if signedIn();
+        allow create: if signedIn()
+          && request.resource.data.get('userId', '') == request.auth.uid
+          && request.resource.data.get('text', '') is string
+          && request.resource.data.get('text', '').size() <= 600;
+        allow update: if signedIn()
+          && (
+            get(/databases/$(database)/documents/audio_rooms/$(roomId)).data.get('ownerId', '') == request.auth.uid
+            || request.auth.uid in get(/databases/$(database)/documents/audio_rooms/$(roomId)).data.get('moderatorIds', [])
+          )
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['pinned', 'updatedAt']);
+        allow delete: if signedIn() && (
+          resource.data.get('userId', '') == request.auth.uid
+          || get(/databases/$(database)/documents/audio_rooms/$(roomId)).data.get('ownerId', '') == request.auth.uid
+          || request.auth.uid in get(/databases/$(database)/documents/audio_rooms/$(roomId)).data.get('moderatorIds', [])
+        );
+      }
+      match /reactions/{reactionId} {
+        allow read: if signedIn();
+        allow create: if signedIn()
+          && request.resource.data.get('userId', '') == request.auth.uid
+          && request.resource.data.get('emoji', '') is string;
+        allow update: if false;
+        allow delete: if signedIn() && (
+          resource.data.get('userId', '') == request.auth.uid
           || get(/databases/$(database)/documents/audio_rooms/$(roomId)).data.get('ownerId', '') == request.auth.uid
         );
       }

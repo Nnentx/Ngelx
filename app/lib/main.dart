@@ -32,6 +32,7 @@ part 'create_music_editor.dart';
 part 'camera_studio.dart';
 part 'live_broadcast_studio.dart';
 part 'audio_live_rooms.dart';
+part 'audio_live_rooms_pro.dart';
 part 'live_feed_card.dart';
 part 'live_pk.dart';
 part 'feed_creator_badge.dart';
@@ -100,8 +101,8 @@ const ngelxPrivateBlueCanvas = Color(0xFFF6FAFF);
 const ngelxPrivateBlueBorder = Color(0xFFD8E8FF);
 const ngelxPrivateBlueInk = Color(0xFF10213A);
 
-const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.122');
-const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '341');
+const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.123');
+const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '342');
 const ngelxGroupBorder = Color(0xFFD9EEE0);
 
 final GlobalKey<NavigatorState> ngelxNavigatorKey=GlobalKey<NavigatorState>();
