@@ -152,7 +152,8 @@ Future<String?> ngelxSesliMesajGonder({
     final oda=(await odaRef.get()).data()??<String,dynamic>{};
     if(oda['active']!=true)return 'Bu sesli oda sona erdi.';
     final susturulan=List<String>.from(oda['chatMutedUserIds']??const[]);
-    if(susturulan.contains(u.uid))return 'Oda sahibi seni sohbetten susturdu.';
+    final katilimci=(await odaRef.collection('participants').doc(u.uid).get()).data()??<String,dynamic>{};
+    if(susturulan.contains(u.uid)||katilimci['chatMuted']==true)return 'ADMIN veya yönetici seni sohbetten susturdu.';
     final owner=(oda['ownerId']??'').toString();
     final mods=List<String>.from(oda['moderatorIds']??const[]);
     final sp=List<String>.from(oda['speakerIds']??const[]);
@@ -266,9 +267,15 @@ Future<void> ngelxSesliRolDegistir({
         tx.update(ref,{'moderatorIds':mods,'updatedAt':FieldValue.serverTimestamp()});
         tx.set(pref,{'role':sp.contains(hedefUid)?'speaker':'listener','updatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
       }else if(islem=='chatmute'){
-        if(chatMuted.contains(hedefUid))chatMuted.remove(hedefUid);else chatMuted.add(hedefUid);
-        tx.update(ref,{'chatMutedUserIds':chatMuted,'updatedAt':FieldValue.serverTimestamp()});
-        tx.set(pref,{'chatMuted':chatMuted.contains(hedefUid),'updatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
+        final participantDoc=await tx.get(pref);
+        final participantMuted=participantDoc.data()?['chatMuted']==true;
+        final yeniMuted=chatMuted.contains(hedefUid)?false:!participantMuted;
+        if(admin){
+          if(yeniMuted&&!chatMuted.contains(hedefUid))chatMuted.add(hedefUid);
+          if(!yeniMuted)chatMuted.remove(hedefUid);
+          tx.update(ref,{'chatMutedUserIds':chatMuted,'updatedAt':FieldValue.serverTimestamp()});
+        }
+        tx.set(pref,{'chatMuted':yeniMuted,'updatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
       }else if(islem=='remove'||islem=='ban'){
         if(islem=='ban'&&!admin)throw StateError('admin_only');
         sp.remove(hedefUid);mods.remove(hedefUid);
