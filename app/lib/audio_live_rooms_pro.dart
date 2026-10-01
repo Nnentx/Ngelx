@@ -109,13 +109,7 @@ class NgelxSesliTepkiAkisi extends StatelessWidget{
 }
 
 Future<void> ngelxSesliPaylas(BuildContext context,String roomId,String baslik)async{
-  final metin="NgelX'te \"$baslik\" sesli odasına katıl.\nOda kodu: $roomId";
-  try{
-    await SharePlus.instance.share(ShareParams(text:metin,subject:'NgelX Sesli Oda'));
-  }catch(_){
-    await Clipboard.setData(ClipboardData(text:metin));
-    if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Davet metni panoya kopyalandı.')));
-  }
+  await ngelxSesliNgelxIcindePaylas(context,roomId,baslik);
 }
 
 String ngelxSesliMesajRolEtiketi(String rol){
