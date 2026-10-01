@@ -545,6 +545,19 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    match /audio_room_owner_locks/{uid} {
+      allow read: if isMe(uid);
+      allow create: if isMe(uid)
+        && request.resource.data.get('ownerId', '') == request.auth.uid
+        && request.resource.data.get('roomId', '') is string
+        && request.resource.data.get('roomId', '').size() > 0;
+      allow update: if isMe(uid)
+        && request.resource.data.get('ownerId', '') == request.auth.uid
+        && request.resource.data.get('roomId', '') is string
+        && request.resource.data.get('roomId', '').size() > 0;
+      allow delete: if isMe(uid);
+    }
+
     match /audio_rooms/{roomId} {
       allow read: if signedIn();
       allow create: if signedIn()
@@ -559,7 +572,11 @@ service cloud.firestore {
           resource.data.ownerId == request.auth.uid
           || (
             request.auth.uid in resource.data.get('moderatorIds', [])
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['speakerIds', 'speakerCount', 'chatMutedUserIds', 'updatedAt'])
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'speakerIds', 'speakerCount', 'chatMutedUserIds', 'updatedAt',
+              'musicUrl', 'musicTitle', 'musicPlaying', 'musicPositionMs',
+              'musicStartedAt', 'musicDurationMs', 'musicAddedBy', 'musicUpdatedAt'
+            ])
           )
         );
       allow delete: if false;
@@ -617,10 +634,20 @@ service cloud.firestore {
           && !(request.auth.uid in get(/databases/$(database)/documents/audio_rooms/$(roomId)).data.get('bannedUserIds', []));
         allow update: if signedIn()
           && (
-            get(/databases/$(database)/documents/audio_rooms/$(roomId)).data.get('ownerId', '') == request.auth.uid
-            || request.auth.uid in get(/databases/$(database)/documents/audio_rooms/$(roomId)).data.get('moderatorIds', [])
-          )
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['pinned', 'updatedAt']);
+            (
+              resource.data.get('userId', '') == request.auth.uid
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text', 'editedAt'])
+              && request.resource.data.get('text', '') is string
+              && request.resource.data.get('text', '').size() <= 600
+            )
+            || (
+              (
+                get(/databases/$(database)/documents/audio_rooms/$(roomId)).data.get('ownerId', '') == request.auth.uid
+                || request.auth.uid in get(/databases/$(database)/documents/audio_rooms/$(roomId)).data.get('moderatorIds', [])
+              )
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['pinned', 'updatedAt'])
+            )
+          );
         allow delete: if signedIn() && (
           resource.data.get('userId', '') == request.auth.uid
           || get(/databases/$(database)/documents/audio_rooms/$(roomId)).data.get('ownerId', '') == request.auth.uid
