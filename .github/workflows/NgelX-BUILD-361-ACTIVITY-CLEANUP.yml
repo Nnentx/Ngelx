@@ -67,7 +67,7 @@ jobs:
 
           # Manuel yenileme fallback.
           assert "get(const GetOptions(source:Source.server))" in s
-          assert "normal Firestore cache/server seçimine düş" in s
+          assert "mevcut Firestore cache/server seçimine düş" in s
 
           # Gerçek cihaz alt alan düzeltmeleri.
           assert s.count("ngelxAltGuvenliBosluk(context,extra:112)") >= 4
