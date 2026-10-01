@@ -820,3 +820,243 @@ class _NgelxSesliInlineSohbetState extends State<NgelxSesliInlineSohbet>{
   }
 }
 
+
+
+class NgelxSesliMuzikKontrolu extends StatefulWidget{
+  final String roomId;
+  final bool yonetici,bitti;
+  const NgelxSesliMuzikKontrolu({super.key,required this.roomId,required this.yonetici,required this.bitti});
+  @override State<NgelxSesliMuzikKontrolu> createState()=>_NgelxSesliMuzikKontroluState();
+}
+
+class _NgelxSesliMuzikKontroluState extends State<NgelxSesliMuzikKontrolu>{
+  final AudioPlayer _oynatici=AudioPlayer();
+  StreamSubscription<DocumentSnapshot<Map<String,dynamic>>>? _odaAboneligi;
+  String _url='',_baslik='';
+  bool _oynuyor=false,_hazirlaniyor=false,_yukleniyor=false;
+  int _konumMs=0;
+  Timestamp? _baslatildi;
+  double _ses=.42;
+
+  @override void initState(){
+    super.initState();
+    unawaited(_oynatici.setVolume(_ses));
+    _odaAboneligi=FirebaseFirestore.instance.collection('audio_rooms').doc(widget.roomId).snapshots().listen((d){
+      final v=d.data()??<String,dynamic>{};
+      unawaited(_durumuUygula(v));
+    });
+  }
+
+  int _hedefKonumMs(){
+    var hedef=_konumMs;
+    if(_oynuyor&&_baslatildi!=null){
+      final ek=DateTime.now().difference(_baslatildi!.toDate()).inMilliseconds;
+      if(ek>0)hedef+=ek;
+    }
+    final sure=_oynatici.duration?.inMilliseconds??0;
+    if(sure>0)hedef=hedef.clamp(0,sure).toInt();
+    return hedef<0?0:hedef;
+  }
+
+  Future<void> _durumuUygula(Map<String,dynamic> v)async{
+    final url=(v['musicUrl']??'').toString();
+    final baslik=(v['musicTitle']??'').toString();
+    final oynuyor=v['musicPlaying']==true&&!widget.bitti;
+    final konum=(v['musicPositionMs'] is num)?(v['musicPositionMs'] as num).toInt():0;
+    final baslatildi=v['musicStartedAt'] is Timestamp?v['musicStartedAt'] as Timestamp:null;
+    if(mounted)setState((){_baslik=baslik;_oynuyor=oynuyor;_konumMs=konum;_baslatildi=baslatildi;});
+    if(url.isEmpty){
+      _url='';
+      try{await _oynatici.stop();}catch(_){}
+      return;
+    }
+    try{
+      if(url!=_url){
+        _url=url;
+        if(mounted)setState(()=>_hazirlaniyor=true);
+        await _oynatici.setUrl(url);
+        await _oynatici.setLoopMode(LoopMode.off);
+        await _oynatici.setVolume(_ses);
+      }
+      final hedef=_hedefKonumMs();
+      final fark=(_oynatici.position.inMilliseconds-hedef).abs();
+      if(fark>1200)await _oynatici.seek(Duration(milliseconds:hedef));
+      if(oynuyor){
+        if(!_oynatici.playing)unawaited(_oynatici.play());
+      }else if(_oynatici.playing){
+        await _oynatici.pause();
+      }
+    }catch(_){
+    }finally{
+      if(mounted)setState(()=>_hazirlaniyor=false);
+    }
+  }
+
+  Future<void> _muzikEkle()async{
+    if(!widget.yonetici||widget.bitti||_yukleniyor)return;
+    final x=await ngelxDosyaSec(tur:const XTypeGroup(label:'Müzik',extensions:['mp3','m4a','aac','wav','ogg']));
+    if(x==null)return;
+    final ad=x.name.trim().isEmpty?'Müzik':x.name.trim();
+    final ext=(ad.contains('.')?ad.split('.').last:'mp3').toLowerCase();
+    final baslik=ad.replaceFirst(RegExp(r'\.[^.]+$'),'').trim();
+    if(mounted)setState(()=>_yukleniyor=true);
+    try{
+      final url=await ngelxMedyaYukleDosya(
+        dosya:x,
+        kind:'music',
+        ext:ext,
+        legacyPath:'audio-rooms/${widget.roomId}/${DateTime.now().millisecondsSinceEpoch}.$ext',
+        contentType:x.mimeType,
+      );
+      int sureMs=0;
+      try{
+        final p=AudioPlayer();
+        final sure=await p.setUrl(url);
+        sureMs=sure?.inMilliseconds??0;
+        await p.dispose();
+      }catch(_){}
+      await FirebaseFirestore.instance.collection('audio_rooms').doc(widget.roomId).set({
+        'musicUrl':url,
+        'musicTitle':baslik.isEmpty?'Müzik':baslik,
+        'musicPlaying':true,
+        'musicPositionMs':0,
+        'musicStartedAt':FieldValue.serverTimestamp(),
+        'musicDurationMs':sureMs,
+        'musicAddedBy':FirebaseAuth.instance.currentUser?.uid??'',
+        'musicUpdatedAt':FieldValue.serverTimestamp(),
+      },SetOptions(merge:true));
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Müzik odaya eklendi.')));
+    }catch(e){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Müzik eklenemedi: ${_ngelxKisaHata(e)}')));
+    }finally{
+      if(mounted)setState(()=>_yukleniyor=false);
+    }
+  }
+
+  Future<void> _oynatDuraklat()async{
+    if(!widget.yonetici||_url.isEmpty||widget.bitti)return;
+    final ref=FirebaseFirestore.instance.collection('audio_rooms').doc(widget.roomId);
+    try{
+      if(_oynuyor){
+        final pos=_oynatici.position.inMilliseconds;
+        await ref.set({
+          'musicPlaying':false,
+          'musicPositionMs':pos,
+          'musicStartedAt':null,
+          'musicUpdatedAt':FieldValue.serverTimestamp(),
+        },SetOptions(merge:true));
+      }else{
+        final pos=_oynatici.position.inMilliseconds;
+        await ref.set({
+          'musicPlaying':true,
+          'musicPositionMs':pos,
+          'musicStartedAt':FieldValue.serverTimestamp(),
+          'musicUpdatedAt':FieldValue.serverTimestamp(),
+        },SetOptions(merge:true));
+      }
+    }catch(_){}
+  }
+
+  Future<void> _muzigiKapat()async{
+    if(!widget.yonetici||widget.bitti)return;
+    try{
+      await FirebaseFirestore.instance.collection('audio_rooms').doc(widget.roomId).set({
+        'musicUrl':'',
+        'musicTitle':'',
+        'musicPlaying':false,
+        'musicPositionMs':0,
+        'musicStartedAt':null,
+        'musicDurationMs':0,
+        'musicAddedBy':'',
+        'musicUpdatedAt':FieldValue.serverTimestamp(),
+      },SetOptions(merge:true));
+    }catch(_){}
+  }
+
+  Future<void> _panelAc()async{
+    if(!mounted)return;
+    await showModalBottomSheet<void>(
+      context:context,
+      backgroundColor:Colors.white,
+      showDragHandle:true,
+      isScrollControlled:true,
+      shape:const RoundedRectangleBorder(borderRadius:BorderRadius.vertical(top:Radius.circular(24))),
+      builder:(c)=>StatefulBuilder(builder:(c,setSheet){
+        return SafeArea(top:false,child:Padding(
+          padding:const EdgeInsets.fromLTRB(18,4,18,20),
+          child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
+            Row(children:[
+              const CircleAvatar(backgroundColor:Color(0xFFF0E8FF),child:Icon(Icons.music_note_rounded,color:mor)),
+              const SizedBox(width:10),
+              Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+                const Text('Oda müziği',style:TextStyle(color:Colors.black87,fontSize:19,fontWeight:FontWeight.w900)),
+                Text(_baslik.isEmpty?'Henüz müzik eklenmedi':_baslik,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black54)),
+              ])),
+            ]),
+            const SizedBox(height:14),
+            Row(children:[
+              const Icon(Icons.volume_down_rounded,color:Colors.black54),
+              Expanded(child:Slider(
+                value:_ses,
+                min:0,max:1,
+                onChanged:(v){setSheet(()=>_ses=v);if(mounted)setState(()=>_ses=v);unawaited(_oynatici.setVolume(v));},
+              )),
+              Text('${(_ses*100).round()}%',style:const TextStyle(color:Colors.black54,fontWeight:FontWeight.w700)),
+            ]),
+            if(widget.yonetici&&!widget.bitti)...[
+              const SizedBox(height:8),
+              Row(children:[
+                Expanded(child:FilledButton.icon(
+                  style:FilledButton.styleFrom(backgroundColor:mor,minimumSize:const Size.fromHeight(46)),
+                  onPressed:_yukleniyor?null:()async{Navigator.pop(c);await _muzikEkle();},
+                  icon:_yukleniyor?const SizedBox(width:17,height:17,child:CircularProgressIndicator(strokeWidth:2,color:Colors.white)):const Icon(Icons.library_music_rounded),
+                  label:Text(_url.isEmpty?'Müzik ekle':'Müziği değiştir',style:const TextStyle(fontWeight:FontWeight.w900)),
+                )),
+                if(_url.isNotEmpty)...[
+                  const SizedBox(width:8),
+                  IconButton.filledTonal(
+                    tooltip:_oynuyor?'Duraklat':'Oynat',
+                    onPressed:()async{await _oynatDuraklat();if(c.mounted)Navigator.pop(c);},
+                    icon:Icon(_oynuyor?Icons.pause_rounded:Icons.play_arrow_rounded),
+                  ),
+                  const SizedBox(width:6),
+                  IconButton.filledTonal(
+                    tooltip:'Müziği kapat',
+                    style:IconButton.styleFrom(foregroundColor:Colors.red),
+                    onPressed:()async{await _muzigiKapat();if(c.mounted)Navigator.pop(c);},
+                    icon:const Icon(Icons.stop_circle_outlined),
+                  ),
+                ],
+              ]),
+            ],
+            if(!widget.yonetici&&_url.isEmpty)
+              const Padding(padding:EdgeInsets.only(top:8),child:Text('ADMIN veya yönetici müzik eklediğinde burada dinleyebilirsin.',style:TextStyle(color:Colors.black45))),
+          ]),
+        ));
+      }),
+    );
+  }
+
+  @override Widget build(BuildContext context){
+    final varMi=_url.isNotEmpty;
+    return OutlinedButton.icon(
+      onPressed:_panelAc,
+      icon:Icon(varMi&&_oynuyor?Icons.music_note_rounded:Icons.music_off_rounded,size:18,color:varMi?mor:Colors.black45),
+      label:ConstrainedBox(
+        constraints:const BoxConstraints(maxWidth:120),
+        child:Text(
+          _hazirlaniyor?'Müzik hazırlanıyor':varMi?(_oynuyor?_baslik:'Müzik duraklatıldı'):'Müzik',
+          maxLines:1,
+          overflow:TextOverflow.ellipsis,
+        ),
+      ),
+    );
+  }
+
+  @override void dispose(){
+    _odaAboneligi?.cancel();
+    unawaited(_oynatici.stop());
+    unawaited(_oynatici.dispose());
+    super.dispose();
+  }
+}
