@@ -1436,3 +1436,13 @@ Bu maddeler Build 359'un çalışan arama/görüntülü arama davranışını bo
 - Aynı anda **“Arkadaşlık isteği bekliyor”** durumu korunmaya devam etti; takip kabulü arkadaşlık isteğini kabul etmedi, iptal etmedi veya sıfırlamadı.
 - Bu adımla Build 360'taki temel bağımsız state hedefi cihazda doğrulandı: takip ve arkadaşlık birbirinden ayrı çalışıyor.
 - Profil ekranının ana eylem alanındaki alt taşma önceki Build 359 görüntüsüne göre düzelmiş görünüyor; yine de scroll'un gerçek en son öğesi ayrı SafeArea testinde kontrol edilmeye devam edecek.
+
+
+## 2026-10-01 — Build 360 arkadaşlık kabul cihaz testi
+
+- Adem hesabında **“Sultan Sultan sana arkadaşlık isteği gönderdi”** kartındaki yeşil onay kullanıldı.
+- Uygulama **“Arkadaşlık isteği kabul edildi.”** mesajını gösterdi; kabul akışında Firestore permission hatası oluşmadı.
+- Takip isteği daha önce kabul edildiği için ilgili kart artık pending eylemleri yerine kabul edilmiş durum ikonu gösteriyor; takip/arkadaşlık state ayrımı korunuyor.
+- Arkadaşlık kabul mesajı çıkmasına rağmen arkadaşlık kartı ekranda hâlâ ✓ / X ile pending gibi görünüyor. Bu, takip kabulünde de görülen **stale Aktivite cache / merge sırası** hatasının arkadaşlık kartını da etkilediğini doğruluyor.
+- Sonraki düzeltmede accepted/rejected sosyal istek kartları canlı stream state'ine göre anında eylemsiz hale getirilecek ve aktif istek sayaçları yalnızca pending kayıtları sayacak.
+- Son cihaz doğrulaması: Sultan hesabına dönüp Adem profilinde **Takip ediyorsun + Arkadaşsınız** durumlarının birlikte ve bağımsız görünmesi kontrol edilecek.
