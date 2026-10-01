@@ -102,8 +102,8 @@ const ngelxPrivateBlueCanvas = Color(0xFFF6FAFF);
 const ngelxPrivateBlueBorder = Color(0xFFD8E8FF);
 const ngelxPrivateBlueInk = Color(0xFF10213A);
 
-const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.137');
-const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '358');
+const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.138');
+const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '359');
 const ngelxGroupBorder = Color(0xFFD9EEE0);
 
 final GlobalKey<NavigatorState> ngelxNavigatorKey=GlobalKey<NavigatorState>();
@@ -20134,7 +20134,11 @@ class _AktivitePageState extends State<AktivitePage> {
             );
           }
 
-          return Column(children:[
+          return SafeArea(
+            top:false,
+            maintainBottomViewPadding:true,
+            minimum:const EdgeInsets.only(bottom:12),
+            child:Column(children:[
             Container(
               color:Colors.white,
               padding:const EdgeInsets.fromLTRB(12,7,0,6),
@@ -20188,7 +20192,7 @@ class _AktivitePageState extends State<AktivitePage> {
             ));
           }),
             ),
-          ]);
+          ]));
         },
       ),
     ));
