@@ -102,8 +102,8 @@ const ngelxPrivateBlueCanvas = Color(0xFFF6FAFF);
 const ngelxPrivateBlueBorder = Color(0xFFD8E8FF);
 const ngelxPrivateBlueInk = Color(0xFF10213A);
 
-const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.135');
-const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '355');
+const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.136');
+const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '357');
 const ngelxGroupBorder = Color(0xFFD9EEE0);
 
 final GlobalKey<NavigatorState> ngelxNavigatorKey=GlobalKey<NavigatorState>();
@@ -13628,6 +13628,20 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
       }catch(_){}
     });
   }
+  void _aramaRotasiniGuvenliKapat([Object? sonuc]){
+    if(!mounted)return;
+    final navigator=Navigator.of(context);
+    final aramaRotasi=ModalRoute.of(context);
+    // Arama geri tusuyla sohbetin altinda canli tutuluyorsa, biten arama
+    // rotasini alttan kaldir. Boylece sohbet kapanmaz ve bitmis arama
+    // ekrani yeniden gorunmez.
+    if(kucultuluyor&&aramaRotasi!=null&&!aramaRotasi.isCurrent){
+      navigator.removeRoute(aramaRotasi);
+      return;
+    }
+    if(navigator.canPop())navigator.pop(sonuc);
+  }
+
   Future<void> _uzaktanBitirildi(String durum)async{
     if(bitiyor)return;
     bitiyor=true;
@@ -13641,15 +13655,22 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
       try{await r.dispose();}catch(_){}
     }
     if(!mounted)return;
-    final belge=await widget.aramaRef.get();
-    final mesajId=(belge.data()?['callMessageId']??'').toString();
-    if(mesajId.isNotEmpty){
-      unawaited(widget.aramaRef.collection('messages').doc(mesajId).set({'callStatus':durum,'callEndedAt':FieldValue.serverTimestamp()},SetOptions(merge:true)).catchError((_){ }));
-    }
+    // Durum mesaji guncellenemese bile kullaniciyi bitmis arama ekraninda
+    // kilitleme. Ag/izin hatasi arama rotasinin kapanmasini engellememeli.
+    try{
+      final belge=await widget.aramaRef.get().timeout(const Duration(seconds:6));
+      final mesajId=(belge.data()?['callMessageId']??'').toString();
+      if(mesajId.isNotEmpty){
+        unawaited(widget.aramaRef.collection('messages').doc(mesajId).set({
+          'callStatus':durum,
+          'callEndedAt':FieldValue.serverTimestamp(),
+        },SetOptions(merge:true)).catchError((_){ }));
+      }
+    }catch(_){}
     if(!mounted)return;
     if(grupAramasi&&durum=='missed'){
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Kimse katılmadığı için grup araması otomatik kapatıldı.')));
-      Navigator.maybePop(context,false);
+      _aramaRotasiniGuvenliKapat(false);
       return;
     }
     if(durum=='missed'||durum=='rejected'){
@@ -13657,7 +13678,7 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
       return;
     }
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Arama sona erdi.')));
-    Navigator.maybePop(context);
+    _aramaRotasiniGuvenliKapat(false);
   }
 
   String _aramaSureYazi(){
@@ -17991,6 +18012,39 @@ class _SohbetPageState extends State<SohbetPage> {
     final odaAdi='chat_${widget.chatId}_${DateTime.now().millisecondsSinceEpoch}';
     final ref=FirebaseFirestore.instance.collection('chats').doc(widget.chatId);
     try{
+      // Mesaj gonderme ile ayni gizlilik/engelleme kontrolunu kullan.
+      // Ayrica mevcut sohbetin members listesini yeniden siralamiyoruz:
+      // Firestore kurallari private chat guncellemesinde listeyi bire bir
+      // koruyor; [A,B] -> [B,A] yazmak aramayi permission-denied ile
+      // baslatamiyordu.
+      final hazirlik=await mesajGonderimHazirligi(zorla:true);
+      if(hazirlik.engel!=null){
+        if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(hazirlik.engel!)));
+        return;
+      }
+      final mevcutUyeler=List<String>.from(hazirlik.sohbet['members']??const[]);
+      if(hazirlik.sohbetMevcut&&(!mevcutUyeler.contains(ben)||!mevcutUyeler.contains(widget.digerUid))){
+        throw StateError('private_chat_members_invalid');
+      }
+
+      // Yeni bir ozel sohbetse once ana sohbet belgesini olustur. Mesaj
+      // alt koleksiyonu kuralinin ayni batch icindeki yeni ust belgeye
+      // bagimli kalmasini onler.
+      if(!hazirlik.sohbetMevcut){
+        await ref.set({
+          'members':<String>[ben,widget.digerUid],
+          'isGroup':false,
+          'lastMessage':'',
+          'updatedAt':FieldValue.serverTimestamp(),
+        },SetOptions(merge:true)).timeout(const Duration(seconds:10));
+        _mesajHazirlikSohbetMevcut=true;
+        _mesajHazirlikSohbet={
+          ...hazirlik.sohbet,
+          'members':<String>[ben,widget.digerUid],
+          'isGroup':false,
+        };
+      }
+
       final mesajRef=ref.collection('messages').doc();
       final aramaVerisi=<String,dynamic>{
         'callStatus':'ringing',
@@ -17998,10 +18052,14 @@ class _SohbetPageState extends State<SohbetPage> {
         'callStartedBy':ben,
         'callVideo':goruntulu,
         'callTitle':widget.ad,
+        'callGroup':false,
         'callParticipants':<String>[ben],
         'callCreatedAt':FieldValue.serverTimestamp(),
+        'callConnectedAt':FieldValue.delete(),
+        'callAnsweredAt':FieldValue.delete(),
+        'callEndedAt':FieldValue.delete(),
+        'callEndedBy':FieldValue.delete(),
         'callMessageId':mesajRef.id,
-        'members':<String>[ben,widget.digerUid],
         'lastMessage':goruntulu?'📹 Görüntülü arama':'📞 Sesli arama',
         'updatedAt':FieldValue.serverTimestamp(),
         'unread_${widget.digerUid}':FieldValue.increment(1),
@@ -18015,6 +18073,7 @@ class _SohbetPageState extends State<SohbetPage> {
         'callVideo':goruntulu,
         'callStatus':'ringing',
         'roomName':odaAdi,
+        'callRoomName':odaAdi,
         'createdAt':FieldValue.serverTimestamp(),
         'clientCreatedAt':Timestamp.now(),
       });
@@ -18030,6 +18089,7 @@ class _SohbetPageState extends State<SohbetPage> {
         tur:'call',
         metin:goruntulu?'Görüntülü arama':'Sesli arama',
         belgeId:widget.chatId,
+        dedupeKey:'private_call_${widget.chatId}_${mesajRef.id}_${widget.digerUid}',
       ).catchError((_){ }));
       setState(()=>aramaBaslatiliyor=false);
       final tekrar=await Navigator.push<bool>(
@@ -18047,10 +18107,21 @@ class _SohbetPageState extends State<SohbetPage> {
       if(!mounted)return;
       setState(()=>aramaBaslatiliyor=false);
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Arama bağlantısı kurulamadı. İnternetini kontrol edip tekrar dene.')));
-    }catch(_){
+    }on FirebaseException catch(e){
       if(!mounted)return;
       setState(()=>aramaBaslatiliyor=false);
+      debugPrint('NgelX private call Firestore error: ${e.code} ${e.message}');
+      final metin=e.code=='permission-denied'
+        ?'Arama izni doğrulanamadı. Sohbet izinlerini kontrol edip tekrar dene.'
+        :'Arama başlatılamadı. Lütfen tekrar dene.';
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(metin)));
+    }catch(e){
+      if(!mounted)return;
+      setState(()=>aramaBaslatiliyor=false);
+      debugPrint('NgelX private call start error: $e');
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Arama başlatılamadı. Lütfen tekrar dene.')));
+    }finally{
+      if(mounted&&aramaBaslatiliyor)setState(()=>aramaBaslatiliyor=false);
     }
   }
 
