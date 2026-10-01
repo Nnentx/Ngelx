@@ -1547,3 +1547,11 @@ Build 362 cihaz ekranlarında alt sistem çubuğunun bazı ekranlarda hâlâ iç
 - Sohbet açılıp geri dönüldükten sonra cihazda sayaç doğru şekilde **5 → 0** düştü.
 - Üstteki **Mesajlar** toplam sayacı da **0** oldu; Sultan satırındaki kırmızı rozet kayboldu.
 - Sonuç: 1:1 sohbet için okundu/unread sıfırlama akışı cihazda çalışıyor; bu konuda ek kod düzeltmesi gerekmiyor.
+
+
+## 2026-10-02 — Build 363 yeni mesaj isteği gönderici tarafı cihaz testi
+
+- Dilek hesabı ile Adem arasında takip/arkadaşlık ilişkisi olmadan Adem profili üzerinden özel sohbet açıldı.
+- Dilek tarafından **“Mesaj isteği test et”** mesajı 00:05'te başarıyla gönderildi.
+- Gönderici tarafında sohbet başlığında **“Özel sohbet”** bilgi kartı görünüyor ve mesaj normal konuşma balonu olarak yerleşiyor.
+- Bu adım yalnızca gönderici tarafını doğrular. Sıradaki kritik kontrol: Adem hesabında bu yeni sohbetin ana Gelen Kutusu listesine değil **Mesaj İstekleri** bölümüne düşmesi ve kabul/red akışının çalışması.
