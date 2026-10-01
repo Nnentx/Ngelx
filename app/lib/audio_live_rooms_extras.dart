@@ -54,8 +54,8 @@ class NgelxSesliMiniGlobalOverlay extends StatelessWidget{
                 child:InkWell(
                   onTap:()=>_odayaDon(d),
                   child:Container(
-                    margin:const EdgeInsets.fromLTRB(10,7,10,0),
-                    padding:const EdgeInsets.fromLTRB(12,9,10,9),
+                    margin:const EdgeInsets.fromLTRB(8,2,8,0),
+                    padding:const EdgeInsets.fromLTRB(10,7,9,7),
                     decoration:BoxDecoration(
                       color:const Color(0xFF211837),
                       borderRadius:BorderRadius.circular(20),
@@ -64,7 +64,7 @@ class NgelxSesliMiniGlobalOverlay extends StatelessWidget{
                     ),
                     child:Row(children:[
                       const CircleAvatar(
-                        radius:20,
+                        radius:18,
                         backgroundColor:mor,
                         child:Icon(Icons.graphic_eq_rounded,color:Colors.white,size:21),
                       ),
@@ -154,7 +154,8 @@ Future<void> _ngelxSesliPaylasGonder({
 })async{
   final v=chat.data(),members=List<String>.from(v['members']??const[]);
   if(!members.contains(uid))return;
-  final grup=v['isGroup']==true||members.length>2;
+  final grup=v['isGroup']==true||members.length!=2;
+  if(grup)return;
   final ref=chat.reference;
   final mesajRef=ref.collection('messages').doc();
   final batch=FirebaseFirestore.instance.batch();
@@ -182,12 +183,12 @@ Future<void> _ngelxSesliPaylasGonder({
       toUid:hedef,
       fromUid:uid,
       tur:'message',
-      metin:grup?'gruba bir sesli oda daveti gönderdi':'sana bir sesli oda daveti gönderdi',
+      metin:'sana bir sesli oda daveti gönderdi',
       belgeId:ref.id,
-      hedefTuru:grup?'group':null,
-      hedefBaslik:grup?(v['groupName']??'Grup').toString():null,
-      hedefFoto:grup?(v['groupPhotoUrl']??'').toString():null,
-      olayTuru:grup?'group_message':null,
+      hedefTuru:null,
+      hedefBaslik:null,
+      hedefFoto:null,
+      olayTuru:null,
       onizleme:'🔊 $baslik',
       eylem:'sesli oda daveti gönderdi',
       dedupeKey:'audio_room_share_${roomId}_${ref.id}_$hedef',
@@ -205,9 +206,18 @@ Future<void> ngelxSesliNgelxIcindePaylas(BuildContext context,String roomId,Stri
     return;
   }
   if(!context.mounted)return;
+  final me=(await FirebaseFirestore.instance.collection('users').doc(u.uid).get()).data()??<String,dynamic>{};
+  final sosyal=<String>{
+    ...List<String>.from(me['friends']??const[]),
+    ...List<String>.from(me['followers']??const[]),
+    ...List<String>.from(me['following']??const[]),
+  }..remove(u.uid);
   final docs=snap.docs.where((d){
-    final v=d.data();
-    return v['groupDeleted']!=true&&!List<String>.from(v['hiddenFor']??const[]).contains(u.uid);
+    final v=d.data(),members=List<String>.from(v['members']??const[]);
+    final grup=v['isGroup']==true||members.length!=2;
+    if(grup||List<String>.from(v['hiddenFor']??const[]).contains(u.uid))return false;
+    final diger=members.firstWhere((x)=>x!=u.uid,orElse:()=>'');
+    return diger.isNotEmpty&&sosyal.contains(diger);
   }).toList();
   if(docs.isEmpty){
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Paylaşabileceğin bir NgelX sohbeti bulunamadı.')));
@@ -234,7 +244,7 @@ Future<void> ngelxSesliNgelxIcindePaylas(BuildContext context,String roomId,Stri
               const SizedBox(width:10),
               const Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
                 Text('NgelX içinde paylaş',style:TextStyle(color:Colors.black87,fontSize:19,fontWeight:FontWeight.w900)),
-                Text('Özel sohbet veya grup seç',style:TextStyle(color:Colors.black45,fontSize:11.5,fontWeight:FontWeight.w600)),
+                Text('Arkadaş, takipçi veya takip ettiğin kişiyi seç',style:TextStyle(color:Colors.black45,fontSize:11.5,fontWeight:FontWeight.w600)),
               ])),
               IconButton(onPressed:gonderiliyor?null:()=>Navigator.pop(sheet),icon:const Icon(Icons.close_rounded,color:Colors.black54)),
             ]),
@@ -253,12 +263,12 @@ Future<void> ngelxSesliNgelxIcindePaylas(BuildContext context,String roomId,Stri
                   return ListTile(
                     onTap:gonderiliyor?null:()=>setSheet(()=>secili?secilen.remove(d.id):secilen.add(d.id)),
                     leading:CircleAvatar(
-                      backgroundColor:grup?ngelxGroupGreenSoft:const Color(0xFFF0E8FF),
+                      backgroundColor:const Color(0xFFF0E8FF),
                       backgroundImage:foto.isEmpty?null:NgelXAgImageProvider(foto),
-                      child:foto.isEmpty?Icon(grup?Icons.groups_rounded:Icons.person_rounded,color:grup?ngelxGroupGreen:mor):null,
+                      child:foto.isEmpty?const Icon(Icons.person_rounded,color:mor):null,
                     ),
                     title:Text(x['ad']??'NgelX sohbeti',maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w800)),
-                    subtitle:Text(grup?'Grup':'Özel sohbet',style:const TextStyle(color:Colors.black45,fontSize:11)),
+                    subtitle:Text('Kişi',style:const TextStyle(color:Colors.black45,fontSize:11)),
                     trailing:Checkbox(value:secili,onChanged:gonderiliyor?null:(v)=>setSheet(()=>v==true?secilen.add(d.id):secilen.remove(d.id)),activeColor:mor),
                   );
                 },
