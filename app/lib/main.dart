@@ -20899,7 +20899,7 @@ class _KullaniciProfilPageState extends State<KullaniciProfilPage> {
                               }
                             },
                             icon:Icon(takipte?Icons.person_remove_outlined:(bekliyor?Icons.schedule_rounded:Icons.person_add_alt_1)),
-                            label:Text(etiket),
+                            label:FittedBox(fit:BoxFit.scaleDown,child:Text(etiket,maxLines:1)),
                           );
                         },
                       );
