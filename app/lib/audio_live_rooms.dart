@@ -352,6 +352,7 @@ class _SesliOdaPageState extends State<SesliOdaPage> with WidgetsBindingObserver
   }
   Future<void> _yetersizKatilimciKapat()async{
     ngelxSesliMiniTemizle(widget.odaId);
+    await ngelxSesliMuzigiYereldeDurdur(widget.odaId);
     if(!sahibiyim||kapatiliyor||bitti||aktifKisiSayisi>=2)return;
     kapatiliyor=true;bitti=true;
     heartbeat?.cancel();yalnizlikTimer?.cancel();
@@ -365,7 +366,11 @@ class _SesliOdaPageState extends State<SesliOdaPage> with WidgetsBindingObserver
         'endedAt':FieldValue.serverTimestamp(),
         'durationSeconds':sure<0?0:sure,
         'endReason':'not_enough_participants',
+        'musicUrl':'',
+        'musicTitle':'',
         'musicPlaying':false,
+        'musicPositionMs':0,
+        'musicStartedAt':FieldValue.delete(),
         'autoClosed':true,
         'minParticipantsRequired':2,
         'autoCloseAfterSeconds':600,
@@ -393,6 +398,7 @@ class _SesliOdaPageState extends State<SesliOdaPage> with WidgetsBindingObserver
 
   Future<void> _odaBittiTemizle()async{
     ngelxSesliMiniTemizle(widget.odaId);
+    await ngelxSesliMuzigiYereldeDurdur(widget.odaId);
     yalnizlikTimer?.cancel();
     if(sahibiyim&&uid!=null)await ngelxSesliSahipKilidiniBirak(uid!,widget.odaId);
     mikrofon=false;mikrofonTercihi=false;
@@ -404,6 +410,7 @@ class _SesliOdaPageState extends State<SesliOdaPage> with WidgetsBindingObserver
   }
   Future<void> odadanCikarildi({bool yasakli=false})async{
     ngelxSesliMiniTemizle(widget.odaId);
+    await ngelxSesliMuzigiYereldeDurdur(widget.odaId);
     if(kapatiliyor)return;
     kapatiliyor=true;
     mikrofon=false;mikrofonTercihi=false;
@@ -601,9 +608,21 @@ class _SesliOdaPageState extends State<SesliOdaPage> with WidgetsBindingObserver
     final ok=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(title:const Text('Sesli odayı bitirmek istiyor musun?'),content:const Text('Oda kapanacak ve odadaki herkes çıkarılacak.'),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),FilledButton(style:FilledButton.styleFrom(backgroundColor:Colors.red),onPressed:()=>Navigator.pop(c,true),child:const Text('Bitir'))]));
     if(ok!=true)return;
     kapatiliyor=true;heartbeat?.cancel();yalnizlikTimer?.cancel();
+    await ngelxSesliMuzigiYereldeDurdur(widget.odaId);
     final bas=veri['startedAt'];
     final sure=bas is Timestamp?DateTime.now().difference(bas.toDate()).inSeconds:0;
-    await FirebaseFirestore.instance.collection('audio_rooms').doc(widget.odaId).set({'active':false,'endedAt':FieldValue.serverTimestamp(),'durationSeconds':sure<0?0:sure,'endReason':'host_ended','musicPlaying':false},SetOptions(merge:true));
+    await FirebaseFirestore.instance.collection('audio_rooms').doc(widget.odaId).set({
+      'active':false,
+      'endedAt':FieldValue.serverTimestamp(),
+      'durationSeconds':sure<0?0:sure,
+      'endReason':'host_ended',
+      'musicUrl':'',
+      'musicTitle':'',
+      'musicPlaying':false,
+      'musicPositionMs':0,
+      'musicStartedAt':FieldValue.delete(),
+      'musicUpdatedAt':FieldValue.serverTimestamp(),
+    },SetOptions(merge:true));
     final ben=uid;
     if(ben!=null){
       await ngelxSesliSahipKilidiniBirak(ben,widget.odaId);
