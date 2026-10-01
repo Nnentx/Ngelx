@@ -46,7 +46,8 @@ jobs:
           s=Path('app/lib/main.dart').read_text(encoding='utf-8')
 
           # Ozel sohbet arama baslatma: mevcut members sirasi degistirilmez.
-          a=s.index('class _SohbetPageState extends State<SohbetPage>')
+          chat_class=s.index('class _SohbetPageState extends State<SohbetPage>')
+          a=s.index('  Future<void> aramaBaslat(bool goruntulu)async{',chat_class)
           b=s.index('  void bilgi()=>',a)
           block=s[a:b]
           assert 'mesajGonderimHazirligi(zorla:true)' in block
