@@ -58,6 +58,92 @@ bool ngelxHiddenWordMatches(String text, Iterable<String> hiddenWords) {
   return false;
 }
 
+Future<void> ngelxKullaniciSemasiniTamamla(User user) async {
+  if(user.isAnonymous)return;
+  try{
+    final ref=FirebaseFirestore.instance.collection('users').doc(user.uid);
+    final doc=await ref.get(const GetOptions(source:Source.server)).timeout(const Duration(seconds:8));
+    if(!doc.exists)return;
+    final v=doc.data()??<String,dynamic>{};
+    final patch=<String,dynamic>{};
+
+    void eksik(String key,dynamic value){
+      if(!v.containsKey(key))patch[key]=value;
+    }
+
+    // İlişki ve moderasyon alanları: tüm hesaplarda aynı veri şekli.
+    eksik('followers',<String>[]);
+    eksik('following',<String>[]);
+    eksik('friends',<String>[]);
+    eksik('blocked',<String>[]);
+    eksik('restrictedUsers',<String>[]);
+    eksik('mutedUsers',<String>[]);
+    eksik('hiddenWords',<String>[]);
+
+    // Gizlilik: mevcut kullanıcının seçimini ASLA ezme; yalnızca eksik alanı tamamla.
+    eksik('privateAccount',false);
+    eksik('profileViewPermission','all');
+    eksik('discoverableProfile',true);
+    eksik('showActivityStatus',true);
+    eksik('profileShareFriendsOnly',false);
+    eksik('friendsOnlyComments',false);
+    eksik('hiddenWordsFilter',true);
+    eksik('friendsOnlyStory',true);
+    eksik('allowStoryScreenshot',false);
+    eksik('defaultAllowDownload',true);
+
+    // Mesaj sistemi: eski/yeni hesap ayrımı olmadan tek varsayılan davranış.
+    final legacyFriendsOnly=v['friendsOnlyMessages']==true;
+    final mevcutMesajIzni=(v['messagePermission']??(legacyFriendsOnly?'friends':'all')).toString();
+    eksik('messagePermission',mevcutMesajIzni);
+    eksik('friendsOnlyMessages',mevcutMesajIzni=='friends');
+    eksik('allowMessageRequests',true);
+    eksik('allowGroupInvites',true);
+    eksik('globalReadReceipts',true);
+
+    // Bildirimler: eksik alan "kapalı" veya "belirsiz" davranmayacak.
+    eksik('notificationsEnabled',true);
+    eksik('messageNotifications',true);
+    eksik('friendNotifications',true);
+    eksik('interactionNotifications',true);
+    eksik('liveNotifications',true);
+    eksik('groupNotifications',true);
+    eksik('callNotifications',true);
+    eksik('quietHoursEnabled',false);
+
+    // İçerik / medya / güvenlik / erişilebilirlik ayarları.
+    eksik('reviewTagsBeforeProfile',false);
+    eksik('offensiveCommentFilter',true);
+    eksik('mentionPermission','all');
+    eksik('tagPermission','all');
+    eksik('sensitiveContentLevel','standard');
+    eksik('allowReelsDownload',true);
+    eksik('allowReelsReshare',true);
+    eksik('allowLiveComments',true);
+    eksik('allowLiveInvites',true);
+    eksik('suspiciousLoginAlerts',true);
+    eksik('dataSaver',false);
+    eksik('autoplayVideos',true);
+    eksik('wifiOnlyHd',false);
+    eksik('autoTranslate',true);
+    eksik('reduceMotion',false);
+    eksik('largeText',false);
+
+    // Bu alan yalnızca veri modelinin hangi tabana tamamlandığını izler.
+    // Kullanıcı tercihlerini temsil etmez.
+    if((v['settingsSchemaVersion'] is! num)||(v['settingsSchemaVersion'] as num).toInt()<366){
+      patch['settingsSchemaVersion']=366;
+    }
+
+    if(patch.isNotEmpty){
+      patch['settingsSchemaUpdatedAt']=FieldValue.serverTimestamp();
+      await ref.set(patch,SetOptions(merge:true)).timeout(const Duration(seconds:10));
+    }
+  }catch(e){
+    debugPrint('Kullanıcı ayar şeması tamamlanamadı: $e');
+  }
+}
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   try {
@@ -3570,10 +3656,10 @@ class NgelXDogrulanmisOturumKapisi extends StatefulWidget{
 class _NgelXDogrulanmisOturumKapisiState extends State<NgelXDogrulanmisOturumKapisi>{
   late Future<DocumentSnapshot<Map<String,dynamic>>> profil;
 
-  @override void initState(){super.initState();_yenile();}
+  @override void initState(){super.initState();unawaited(ngelxKullaniciSemasiniTamamla(widget.user));_yenile();}
   @override void didUpdateWidget(covariant NgelXDogrulanmisOturumKapisi oldWidget){
     super.didUpdateWidget(oldWidget);
-    if(oldWidget.user.uid!=widget.user.uid)_yenile();
+    if(oldWidget.user.uid!=widget.user.uid){unawaited(ngelxKullaniciSemasiniTamamla(widget.user));_yenile();}
   }
 
   Future<DocumentSnapshot<Map<String,dynamic>>> _profilOku()async{
