@@ -906,7 +906,7 @@ class _NgelxSesliMuzikKontroluState extends State<NgelxSesliMuzikKontrolu>{
         kind:'music',
         ext:ext,
         legacyPath:'audio-rooms/${widget.roomId}/${DateTime.now().millisecondsSinceEpoch}.$ext',
-        contentType:x.mimeType,
+        contentType:(x.mimeType??'').trim().isEmpty?null:x.mimeType,
       );
       int sureMs=0;
       try{
@@ -1035,6 +1035,14 @@ class _NgelxSesliMuzikKontroluState extends State<NgelxSesliMuzikKontrolu>{
         ));
       }),
     );
+  }
+
+  @override void didUpdateWidget(covariant NgelxSesliMuzikKontrolu oldWidget){
+    super.didUpdateWidget(oldWidget);
+    if(widget.bitti&&!oldWidget.bitti){
+      _oynuyor=false;
+      unawaited(_oynatici.stop());
+    }
   }
 
   @override Widget build(BuildContext context){
