@@ -144,6 +144,7 @@ Future<String?> ngelxSesliMesajGonder({
   required String ad,
   required String foto,
   required String text,
+  Map<String,String> mentionlar=const <String,String>{},
 })async{
   final u=FirebaseAuth.instance.currentUser,t=text.trim();
   if(u==null||t.isEmpty)return null;
@@ -161,6 +162,12 @@ Future<String?> ngelxSesliMesajGonder({
     final temiz=t.length>600?t.substring(0,600):t;
     final bucket=DateTime.now().millisecondsSinceEpoch~/3000;
     final mesajId='${u.uid}_${bucket}_${ngelxSesliMesajHash(temiz)}';
+    final gecerliMentionlar=<String,String>{};
+    for(final e in mentionlar.entries){
+      if(e.key!=u.uid&&e.key.isNotEmpty&&e.value.trim().isNotEmpty&&temiz.toLowerCase().contains('@${e.value.trim().toLowerCase()}')){
+        gecerliMentionlar[e.key]=e.value.trim();
+      }
+    }
     await odaRef.collection('messages').doc(mesajId).set({
       'userId':u.uid,
       'displayName':ad,
@@ -169,12 +176,69 @@ Future<String?> ngelxSesliMesajGonder({
       'authorRole':rol,
       'createdAt':FieldValue.serverTimestamp(),
       'pinned':false,
+      'mentionedUserIds':gecerliMentionlar.keys.toList(),
       'clientDedupeKey':mesajId,
     });
+    final odaBaslik=(oda['title']??'Sesli oda').toString();
+    for(final hedefUid in gecerliMentionlar.keys){
+      unawaited(uygulamaBildirimiGonder(
+        toUid:hedefUid,
+        fromUid:u.uid,
+        tur:'audio_live',
+        metin:'“$odaBaslik” sesli odasında senden bahsetti.',
+        belgeId:roomId,
+        hedefTuru:'audio_room',
+        hedefBaslik:odaBaslik,
+        olayTuru:'audio_room_mention',
+        onizleme:temiz,
+        eylem:'open_audio_room',
+        dedupeKey:'audio_room_mention_${roomId}_${mesajId}_$hedefUid',
+      ));
+    }
     return null;
   }catch(_){
     return 'Mesaj gönderilemedi.';
   }
+}
+
+Future<void> ngelxSesliMesajDuzenle(BuildContext context,DocumentReference<Map<String,dynamic>> ref,Map<String,dynamic> v)async{
+  final controller=TextEditingController(text:(v['text']??'').toString());
+  final yeni=await showDialog<String>(
+    context:context,
+    builder:(c)=>AlertDialog(
+      title:const Text('Mesajı düzenle'),
+      content:TextField(
+        controller:controller,
+        autofocus:true,
+        maxLength:600,
+        minLines:1,
+        maxLines:5,
+        style:const TextStyle(color:Colors.black87),
+        decoration:const InputDecoration(hintText:'Mesaj'),
+      ),
+      actions:[
+        TextButton(onPressed:()=>Navigator.pop(c),child:const Text('Vazgeç')),
+        FilledButton(onPressed:()=>Navigator.pop(c,controller.text.trim()),child:const Text('Kaydet')),
+      ],
+    ),
+  );
+  controller.dispose();
+  if(yeni==null||yeni.isEmpty||yeni==(v['text']??'').toString().trim())return;
+  try{
+    await ref.update({'text':yeni,'editedAt':FieldValue.serverTimestamp()});
+  }catch(_){
+    if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Mesaj düzenlenemedi.')));
+  }
+}
+
+String? ngelxSesliEtiketAramasi(String text){
+  final i=text.lastIndexOf('@');
+  if(i<0)return null;
+  final once=i==0?' ':text.substring(i-1,i);
+  if(i>0&&!RegExp(r'\s').hasMatch(once))return null;
+  final q=text.substring(i+1);
+  if(q.contains('\n')||q.length>36)return null;
+  return q.trim().toLowerCase();
 }
 
 Future<void> ngelxSesliKullaniciMenuAc(BuildContext context,String roomId,String hedefUid,String ad)async{
@@ -368,7 +432,48 @@ class _NgelxSesliSohbetPanelState extends State<NgelxSesliSohbetPanel>{
   final _mesaj=TextEditingController();
   bool _gonderiyor=false;
   String _ad='NgelX',_foto='';
-  @override void initState(){super.initState();unawaited(_profil());}
+  String? _etiketArama;
+  final Map<String,String> _etiketler=<String,String>{};
+  @override void initState(){super.initState();_mesaj.addListener(_metinDegisti);unawaited(_profil());}
+  void _metinDegisti(){
+    final q=ngelxSesliEtiketAramasi(_mesaj.text);
+    if(q!=_etiketArama&&mounted)setState(()=>_etiketArama=q);
+  }
+  void _etiketSec(String uid,String ad){
+    final t=_mesaj.text,i=t.lastIndexOf('@');if(i<0)return;
+    final yeni=t.substring(0,i)+'@'+ad+' ';
+    _etiketler[uid]=ad;
+    _mesaj.value=TextEditingValue(text:yeni,selection:TextSelection.collapsed(offset:yeni.length));
+    if(mounted)setState(()=>_etiketArama=null);
+  }
+  Widget _etiketOnerileri(){
+    if(_etiketArama==null)return const SizedBox.shrink();
+    final ben=FirebaseAuth.instance.currentUser?.uid,q=_etiketArama!;
+    return StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
+      stream:FirebaseFirestore.instance.collection('audio_rooms').doc(widget.roomId).collection('participants').where('active',isEqualTo:true).limit(20).snapshots(),
+      builder:(_,s){
+        final docs=(s.data?.docs??[]).where((d){
+          final v=d.data(),uid=(v['userId']??d.id).toString(),ad=(v['displayName']??'').toString();
+          return uid!=ben&&ad.isNotEmpty&&(q.isEmpty||ad.toLowerCase().contains(q));
+        }).take(8).toList();
+        if(docs.isEmpty)return const SizedBox.shrink();
+        return SizedBox(height:46,child:ListView.separated(
+          padding:const EdgeInsets.symmetric(horizontal:10,vertical:4),
+          scrollDirection:Axis.horizontal,
+          itemCount:docs.length,
+          separatorBuilder:(_,__)=>const SizedBox(width:5),
+          itemBuilder:(_,i){
+            final v=docs[i].data(),uid=(v['userId']??docs[i].id).toString(),ad=(v['displayName']??'NgelX').toString(),foto=(v['photoUrl']??'').toString();
+            return ActionChip(
+              avatar:CircleAvatar(radius:10,backgroundImage:foto.isEmpty?null:NgelXAgImageProvider(foto),child:foto.isEmpty?const Icon(Icons.person,size:11):null),
+              label:Text('@'+ad,maxLines:1,overflow:TextOverflow.ellipsis),
+              onPressed:()=>_etiketSec(uid,ad),
+            );
+          },
+        ));
+      },
+    );
+  }
   Future<void> _profil()async{
     final u=FirebaseAuth.instance.currentUser;if(u==null)return;
     try{
@@ -380,18 +485,21 @@ class _NgelxSesliSohbetPanelState extends State<NgelxSesliSohbetPanel>{
     final t=_mesaj.text.trim();
     if(t.isEmpty||_gonderiyor||widget.bitti)return;
     setState(()=>_gonderiyor=true);
-    _mesaj.clear();
-    final hata=await ngelxSesliMesajGonder(roomId:widget.roomId,ad:_ad,foto:_foto,text:t);
+    final mentionlar=<String,String>{for(final e in _etiketler.entries)if(t.toLowerCase().contains('@'+e.value.toLowerCase()))e.key:e.value};
+    _mesaj.clear();_etiketler.clear();
+    final hata=await ngelxSesliMesajGonder(roomId:widget.roomId,ad:_ad,foto:_foto,text:t,mentionlar:mentionlar);
     if(hata!=null&&mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(hata)));
     if(mounted)setState(()=>_gonderiyor=false);
   }
   Future<void> _mesajIslem(DocumentReference<Map<String,dynamic>> ref,Map<String,dynamic> v)async{
     final ben=FirebaseAuth.instance.currentUser?.uid,benim=(v['userId']??'').toString()==ben;
     final sec=await showModalBottomSheet<String>(context:context,backgroundColor:Colors.white,showDragHandle:true,builder:(c)=>SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
-      if(widget.yonetici)ListTile(leading:const Icon(Icons.push_pin_outlined,color:mor),title:Text(v['pinned']==true?'Sabitlemeyi kaldır':'Mesajı sabitle'),onTap:()=>Navigator.pop(c,'pin')),
+      if(benim)ListTile(leading:const Icon(Icons.edit_outlined,color:mor),title:const Text('Düzenle',style:TextStyle(fontWeight:FontWeight.w800)),onTap:()=>Navigator.pop(c,'edit')),
+      if(widget.yonetici&&!benim)ListTile(leading:const Icon(Icons.push_pin_outlined,color:mor),title:Text(v['pinned']==true?'Sabitlemeyi kaldır':'Mesajı sabitle'),onTap:()=>Navigator.pop(c,'pin')),
       if(widget.yonetici&&!benim)ListTile(leading:const Icon(Icons.admin_panel_settings_outlined,color:mor),title:const Text('Kullanıcıyı yönet'),onTap:()=>Navigator.pop(c,'manage')),
       if(widget.yonetici||benim)ListTile(leading:const Icon(Icons.delete_outline,color:Colors.redAccent),title:const Text('Mesajı sil',style:TextStyle(color:Colors.redAccent,fontWeight:FontWeight.w800)),onTap:()=>Navigator.pop(c,'delete')),
     ])));
+    if(sec=='edit'&&mounted)await ngelxSesliMesajDuzenle(context,ref,v);
     if(sec=='delete')await ref.delete();
     if(sec=='pin')await ref.set({'pinned':v['pinned']!=true,'updatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
     if(sec=='manage'&&mounted)await ngelxSesliKullaniciMenuAc(context,widget.roomId,(v['userId']??'').toString(),(v['displayName']??'NgelX').toString());
@@ -424,6 +532,7 @@ class _NgelxSesliSohbetPanelState extends State<NgelxSesliSohbetPanel>{
                   return Align(
                     alignment:benim?Alignment.centerRight:Alignment.centerLeft,
                     child:GestureDetector(
+                      onTap:()=>_mesajIslem(d.reference,v),
                       onLongPress:()=>_mesajIslem(d.reference,v),
                       child:Container(
                         constraints:BoxConstraints(maxWidth:MediaQuery.sizeOf(context).width*.78),
@@ -438,6 +547,7 @@ class _NgelxSesliSohbetPanelState extends State<NgelxSesliSohbetPanel>{
                           ]),
                           const SizedBox(height:2),
                           Text((v['text']??'').toString(),style:const TextStyle(color:Colors.black87,fontSize:14.5,height:1.3)),
+                          if(v['editedAt']!=null)const Padding(padding:EdgeInsets.only(top:2),child:Text('düzenlendi',style:TextStyle(color:Colors.black38,fontSize:9,fontStyle:FontStyle.italic))),
                         ]),
                       ),
                     ),
@@ -446,6 +556,7 @@ class _NgelxSesliSohbetPanelState extends State<NgelxSesliSohbetPanel>{
               );
             },
           )),
+          _etiketOnerileri(),
           Container(
             padding:EdgeInsets.fromLTRB(10,8,10,8+MediaQuery.viewInsetsOf(context).bottom),
             decoration:const BoxDecoration(color:Colors.white,border:Border(top:BorderSide(color:Color(0xFFEDE8F2)))),
@@ -466,7 +577,7 @@ class _NgelxSesliSohbetPanelState extends State<NgelxSesliSohbetPanel>{
       ),
     );
   }
-  @override void dispose(){_mesaj.dispose();super.dispose();}
+  @override void dispose(){_mesaj.removeListener(_metinDegisti);_mesaj.dispose();super.dispose();}
 }
 
 Future<void> ngelxSesliSohbetAc(BuildContext context,String roomId,bool yonetici,{required bool sahibiyim,required bool bitti})async{
@@ -492,11 +603,56 @@ class _NgelxSesliInlineSohbetState extends State<NgelxSesliInlineSohbet>{
   final _liste=ScrollController();
   bool _gonderiyor=false,_enYenide=true;
   String _ad='NgelX',_foto='';
+  String? _etiketArama;
+  final Map<String,String> _etiketler=<String,String>{};
 
   @override void initState(){
     super.initState();
     _liste.addListener(_kaydirmaDegisti);
+    _mesaj.addListener(_metinDegisti);
     unawaited(_profil());
+  }
+
+  void _metinDegisti(){
+    final q=ngelxSesliEtiketAramasi(_mesaj.text);
+    if(q!=_etiketArama&&mounted)setState(()=>_etiketArama=q);
+  }
+
+  void _etiketSec(String uid,String ad){
+    final t=_mesaj.text,i=t.lastIndexOf('@');if(i<0)return;
+    final yeni=t.substring(0,i)+'@'+ad+' ';
+    _etiketler[uid]=ad;
+    _mesaj.value=TextEditingValue(text:yeni,selection:TextSelection.collapsed(offset:yeni.length));
+    if(mounted)setState(()=>_etiketArama=null);
+  }
+
+  Widget _etiketOnerileri(){
+    if(_etiketArama==null)return const SizedBox.shrink();
+    final ben=FirebaseAuth.instance.currentUser?.uid,q=_etiketArama!;
+    return StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
+      stream:FirebaseFirestore.instance.collection('audio_rooms').doc(widget.roomId).collection('participants').where('active',isEqualTo:true).limit(20).snapshots(),
+      builder:(_,s){
+        final docs=(s.data?.docs??[]).where((d){
+          final v=d.data(),uid=(v['userId']??d.id).toString(),ad=(v['displayName']??'').toString();
+          return uid!=ben&&ad.isNotEmpty&&(q.isEmpty||ad.toLowerCase().contains(q));
+        }).take(8).toList();
+        if(docs.isEmpty)return const SizedBox.shrink();
+        return SizedBox(height:42,child:ListView.separated(
+          padding:const EdgeInsets.symmetric(horizontal:8,vertical:2),
+          scrollDirection:Axis.horizontal,
+          itemCount:docs.length,
+          separatorBuilder:(_,__)=>const SizedBox(width:4),
+          itemBuilder:(_,i){
+            final v=docs[i].data(),uid=(v['userId']??docs[i].id).toString(),ad=(v['displayName']??'NgelX').toString(),foto=(v['photoUrl']??'').toString();
+            return ActionChip(
+              avatar:CircleAvatar(radius:9,backgroundImage:foto.isEmpty?null:NgelXAgImageProvider(foto),child:foto.isEmpty?const Icon(Icons.person,size:10):null),
+              label:Text('@'+ad,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:11)),
+              onPressed:()=>_etiketSec(uid,ad),
+            );
+          },
+        ));
+      },
+    );
   }
 
   void _kaydirmaDegisti(){
@@ -535,11 +691,13 @@ class _NgelxSesliInlineSohbetState extends State<NgelxSesliInlineSohbet>{
       backgroundColor:Colors.white,
       showDragHandle:true,
       builder:(c)=>SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
-        if(widget.yonetici)ListTile(leading:const Icon(Icons.push_pin_outlined,color:mor),title:Text(v['pinned']==true?'Sabitlemeyi kaldır':'Mesajı sabitle'),onTap:()=>Navigator.pop(c,'pin')),
+        if(benim)ListTile(leading:const Icon(Icons.edit_outlined,color:mor),title:const Text('Düzenle',style:TextStyle(fontWeight:FontWeight.w800)),onTap:()=>Navigator.pop(c,'edit')),
+        if(widget.yonetici&&!benim)ListTile(leading:const Icon(Icons.push_pin_outlined,color:mor),title:Text(v['pinned']==true?'Sabitlemeyi kaldır':'Mesajı sabitle'),onTap:()=>Navigator.pop(c,'pin')),
         if(widget.yonetici&&!benim)ListTile(leading:const Icon(Icons.admin_panel_settings_outlined,color:mor),title:const Text('Kullanıcıyı yönet'),onTap:()=>Navigator.pop(c,'manage')),
         if(widget.yonetici||benim)ListTile(leading:const Icon(Icons.delete_outline,color:Colors.redAccent),title:const Text('Mesajı sil',style:TextStyle(color:Colors.redAccent,fontWeight:FontWeight.w800)),onTap:()=>Navigator.pop(c,'delete')),
       ])),
     );
+    if(sec=='edit'&&mounted)await ngelxSesliMesajDuzenle(context,d.reference,v);
     if(sec=='delete')await d.reference.delete();
     if(sec=='pin')await d.reference.set({'pinned':v['pinned']!=true,'updatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
     if(sec=='manage'&&mounted)await ngelxSesliKullaniciMenuAc(context,widget.roomId,(v['userId']??'').toString(),(v['displayName']??'NgelX').toString());
@@ -552,6 +710,7 @@ class _NgelxSesliInlineSohbetState extends State<NgelxSesliInlineSohbet>{
     return Align(
       alignment:benim?Alignment.centerRight:Alignment.centerLeft,
       child:GestureDetector(
+        onTap:()=>_mesajIslem(d),
         onLongPress:()=>_mesajIslem(d),
         child:Container(
           constraints:BoxConstraints(maxWidth:MediaQuery.sizeOf(context).width*.82),
@@ -570,6 +729,7 @@ class _NgelxSesliInlineSohbetState extends State<NgelxSesliInlineSohbet>{
             ]),
             const SizedBox(height:2),
             Text(metin,style:const TextStyle(color:Colors.black87,fontSize:13.5,height:1.25)),
+            if(v['editedAt']!=null)const Padding(padding:EdgeInsets.only(top:2),child:Text('düzenlendi',style:TextStyle(color:Colors.black38,fontSize:8.8,fontStyle:FontStyle.italic))),
           ]),
         ),
       ),
@@ -619,6 +779,7 @@ class _NgelxSesliInlineSohbetState extends State<NgelxSesliInlineSohbet>{
           },
         ),
       ),
+      _etiketOnerileri(),
       Padding(
         padding:const EdgeInsets.fromLTRB(10,5,10,8),
         child:Row(children:[
@@ -652,6 +813,7 @@ class _NgelxSesliInlineSohbetState extends State<NgelxSesliInlineSohbet>{
 
   @override void dispose(){
     _liste.removeListener(_kaydirmaDegisti);
+    _mesaj.removeListener(_metinDegisti);
     _liste.dispose();
     _mesaj.dispose();
     super.dispose();
