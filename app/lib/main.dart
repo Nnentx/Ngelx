@@ -102,8 +102,8 @@ const ngelxPrivateBlueCanvas = Color(0xFFF6FAFF);
 const ngelxPrivateBlueBorder = Color(0xFFD8E8FF);
 const ngelxPrivateBlueInk = Color(0xFF10213A);
 
-const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.144');
-const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '365');
+const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.145');
+const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '366');
 const ngelxGroupBorder = Color(0xFFD9EEE0);
 
 final GlobalKey<NavigatorState> ngelxNavigatorKey=GlobalKey<NavigatorState>();
@@ -2707,6 +2707,11 @@ Future<void> ngelxCanliYayinaKatil(BuildContext context,String belgeId)async{
   }
 }
 
+bool ngelxAktiviteBildirimiGosterilir(Map<String,dynamic> v){
+  final tur=(v['type']??'').toString();
+  return tur!='message';
+}
+
 String ngelxBildirimBelgeId(String raw){
   final temiz=raw.trim().replaceAll(RegExp(r'[^a-zA-Z0-9_-]'),'_');
   if(temiz.isEmpty)return '';
@@ -4382,6 +4387,9 @@ class _KayitPageState extends State<KayitPage> {
         'phone': telefon.text.trim(),
         'emailVerified': false,
         'emailVerificationRequired': true,
+        'messagePermission': 'all',
+        'friendsOnlyMessages': false,
+        'allowMessageRequests': true,
         'bio': 'NgelX dünyasına yeni katıldı ✦',
         'createdAt': FieldValue.serverTimestamp(),
       });
@@ -9633,7 +9641,7 @@ class _MesajPageState extends State<MesajPage> {
       return StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
         stream:FirebaseFirestore.instance.collection('notifications').where('toUid',isEqualTo:ben).limit(200).snapshots(),
         builder:(_,bildirimSnap){
-          final aktiviteOkunmamis=(bildirimSnap.data?.docs??const <QueryDocumentSnapshot<Map<String,dynamic>>>[]).where((d)=>d.data()['read']!=true).length;
+          final aktiviteOkunmamis=(bildirimSnap.data?.docs??const <QueryDocumentSnapshot<Map<String,dynamic>>>[]).where((d)=>d.data()['read']!=true&&ngelxAktiviteBildirimiGosterilir(d.data())).length;
           return Padding(
             padding:const EdgeInsets.fromLTRB(16,0,16,9),
             child:Row(children:[
@@ -17215,7 +17223,7 @@ class _SohbetPageState extends State<SohbetPage> {
         final arkadaslar=List<String>.from(diger['friends']??const[]);
         final takipEttikleri=List<String>.from(diger['following']??const[]);
         final kabulEdildi=sohbet['requestAccepted_$ben']==true||sohbet['requestAccepted_${widget.digerUid}']==true;
-        final izin=(diger['messagePermission']??(diger['friendsOnlyMessages']!=false?'friends':'all')).toString();
+        final izin=(diger['messagePermission']??(diger['friendsOnlyMessages']==true?'friends':'all')).toString();
         if(!kabulEdildi){
           if(izin=='none')engel='Bu kullanıcı yeni özel mesaj kabul etmiyor.';
           else if(izin=='friends'&&!arkadaslar.contains(ben))engel='Bu kullanıcı yalnızca arkadaşlarından mesaj kabul ediyor.';
@@ -19800,7 +19808,7 @@ class _AktivitePageState extends State<AktivitePage> {
     final tur=(v['type']??'').toString();
     final olay=(v['eventKind']??'').toString();
     final grup=(v['targetKind']??'').toString()=='group'||tur=='group'||olay.startsWith('group_');
-    if(tur=='message')return false;
+    if(!ngelxAktiviteBildirimiGosterilir(v))return false;
     switch(_filtre){
       case 'follow_requests': return tur=='follow_request'&&v['status']=='pending';
       case 'friend_requests': return tur=='friend_request'&&v['status']=='pending';
@@ -20332,7 +20340,7 @@ class _AktivitePageState extends State<AktivitePage> {
           }
           int say(String kod)=>tumDocs.where((d){
             final v=d.data(),tur=(v['type']??'').toString(),olay=(v['eventKind']??'').toString(),grup=grupMu(v);
-            if(tur=='message')return false;
+            if(!ngelxAktiviteBildirimiGosterilir(v))return false;
             switch(kod){
               case 'follow_requests': return tur=='follow_request'&&v['status']=='pending';
               case 'friend_requests': return tur=='friend_request'&&v['status']=='pending';
@@ -22603,7 +22611,7 @@ class _TercihlerPageState extends State<TercihlerPage> {
       yorumArkadas=v['friendsOnlyComments']==true;
       gizliKelimeler=v['hiddenWordsFilter']!=false;
       gizliKelimeListesi=List<String>.from(v['hiddenWords']??const[]);
-      mesajArkadas=v['friendsOnlyMessages']!=false;
+      mesajArkadas=v['friendsOnlyMessages']==true;
       mesajIzni=(v['messagePermission']??(mesajArkadas?'friends':'all')).toString();
       hikayeArkadas=v['friendsOnlyStory']!=false;
       ekranGoruntusu=v['allowStoryScreenshot']==true;
