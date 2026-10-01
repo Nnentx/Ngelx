@@ -1,0 +1,200 @@
+name: Ngel X BUILD 366 SETTINGS ACCOUNT COMPAT
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - work/build366-settings-account-compat
+    paths:
+      - '.github/workflows/NgelX-BUILD-366-SETTINGS-ACCOUNT-COMPAT.yml'
+      - 'app/lib/main.dart'
+      - 'app/lib/build258_settings.dart'
+      - 'app/pubspec.yaml'
+      - 'firestore.rules'
+      - 'WORK_PACKAGE_TEST_NOTES.md'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ngelx-build366-settings-account-compat
+  cancel-in-progress: true
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Kaynaklari al
+        uses: actions/checkout@v4
+        with:
+          ref: work/build366-settings-account-compat
+          fetch-depth: 0
+
+      - name: Build 366 statik regresyon kontrolleri
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          grep -F "version: 1.0.145+366" app/pubspec.yaml
+          grep -F "defaultValue: '1.0.145'" app/lib/main.dart
+          grep -F "defaultValue: '366'" app/lib/main.dart
+          grep -F "hintText:'Ayarlarda ara'" app/lib/build258_settings.dart
+          grep -F "baslik:'Mesajlar ve iletişim'" app/lib/build258_settings.dart
+          grep -F "class EngellenenKisitlananV366Page" app/lib/build258_settings.dart
+          grep -F "class GuvenlikMerkeziV366Page" app/lib/build258_settings.dart
+          grep -F "'messagePermission': 'all'" app/lib/main.dart
+          grep -F "'friendsOnlyMessages': false" app/lib/main.dart
+          grep -F "ngelxAktiviteBildirimiGosterilir" app/lib/main.dart
+          grep -F "target.data.get('friendsOnlyMessages', false)" firestore.rules
+          python3 - <<'PY'
+          from pathlib import Path
+          main=Path('app/lib/main.dart').read_text(encoding='utf-8')
+          settings=Path('app/lib/build258_settings.dart').read_text(encoding='utf-8')
+          rules=Path('firestore.rules').read_text(encoding='utf-8')
+
+          # Build 366: ayarlar sadeleştirme ve arama.
+          assert "class AyarlarV258Page extends StatefulWidget" in settings
+          assert "Ayarlarda ara" in settings
+          assert "GİZLİLİK VE GÜVENLİK" in settings
+          assert "BİLDİRİMLER" in settings
+          assert "İÇERİK VE MEDYA" in settings
+          assert "Engellenen ve kısıtlanan hesaplar" in settings
+          assert "Mesajlar ve iletişim" in settings
+          assert "class MedyaVeriV366Page" in settings
+          assert "class UygulamaTercihleriV366Page" in settings
+
+          # Eski/yeni hesap mesaj varsayılanı aynı.
+          assert "'messagePermission': 'all'" in main
+          assert "'friendsOnlyMessages': false" in main
+          assert "diger['friendsOnlyMessages']==true?'friends':'all'" in main
+          assert "mesajArkadas=v['friendsOnlyMessages']==true;" in main
+          assert "target.data.get('friendsOnlyMessages', false) ? 'friends' : 'all'" in rules
+
+          # Aktivite sayaç/listesi aynı filtreyi kullanıyor.
+          assert "bool ngelxAktiviteBildirimiGosterilir" in main
+          assert "d.data()['read']!=true&&ngelxAktiviteBildirimiGosterilir(d.data())" in main
+          assert main.count("if(!ngelxAktiviteBildirimiGosterilir(v))return false;") >= 2
+
+          # Build 365/364 mesaj isteği davranışları korunmalı.
+          assert "final yeniRef=chats.doc();" in main
+          assert "if(!arkadas)'requestSenderUid':me" in main
+          assert "if(!arkadas)'requestRecipientUid':uid" in main
+          assert "hedef==uid && sonMesaj.isNotEmpty" in main
+          assert "if(gelenIstek)continue;" in main
+          assert "v['requestRejected_$ben']!=true&&!arkadaslar.contains(other);if(gelenIstek)return false;" in main
+
+          print('Build 366 static checks OK')
+          PY
+
+      - name: Java 17 kur
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Flutter kur
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Sabit NgelX imza anahtarini geri yukle
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: ngelx-stable-debug-keystore-v1
+          fail-on-cache-miss: true
+
+      - name: Flutter analiz ve test
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter clean
+          flutter pub get
+          flutter analyze --machine > analyze.log 2>&1 || true
+          cat analyze.log
+          if grep -q '^ERROR|' analyze.log; then
+            echo "Flutter analyze ERROR buldu."
+            exit 1
+          fi
+          if [ -d test ]; then flutter test; else echo "Test klasoru yok."; fi
+
+      - name: APK olustur ve imzayi dogrula
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter build apk --release
+          APK=build/app/outputs/flutter-apk/app-release.apk
+          test -s "$APK"
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          "$APKSIGNER" verify --print-certs "$APK" | tee build/app/outputs/flutter-apk/apksigner-certs.txt
+          grep -qi 'be20b27f0ba1f4decd2941d410b1536de89e48dc894f04f038f9d26b11ecd6aa' build/app/outputs/flutter-apk/apksigner-certs.txt
+          sha256sum "$APK" > "$APK.sha256"
+
+      - name: APK yukle
+        uses: actions/upload-artifact@v4
+        with:
+          name: NgelX-1.0.145-Build-366-SETTINGS-ACCOUNT-COMPAT
+          path: |
+            app/build/app/outputs/flutter-apk/app-release.apk
+            app/build/app/outputs/flutter-apk/app-release.apk.sha256
+            app/build/app/outputs/flutter-apk/apksigner-certs.txt
+          if-no-files-found: error
+          retention-days: 14
+
+  deploy-firestore-rules:
+    needs: build-apk
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Kaynaklari al
+        uses: actions/checkout@v4
+        with:
+          ref: work/build366-settings-account-compat
+
+      - name: Rules degisikligini dogrula
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -F "target.data.get('friendsOnlyMessages', false) ? 'friends' : 'all'" firestore.rules
+          grep -F "function privateChatCreateAllowed()" firestore.rules
+
+      - name: Node kur
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Firebase CLI kur
+        run: npm install --global firebase-tools
+
+      - name: Firestore kurallarini ngelx-44eed projesine yayinla
+        shell: bash
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          FIREBASE_SERVICE_ACCOUNT_NGELX_44EED: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_NGELX_44EED }}
+          GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_JSON }}
+        run: |
+          set -euo pipefail
+          PROJECT_ID="ngelx-44eed"
+          SA="${FIREBASE_SERVICE_ACCOUNT_NGELX_44EED:-${FIREBASE_SERVICE_ACCOUNT:-${GOOGLE_APPLICATION_CREDENTIALS_JSON:-}}}"
+
+          if [ -n "$SA" ]; then
+            if printf '%s' "$SA" | jq -e . >/dev/null 2>&1; then
+              printf '%s' "$SA" > /tmp/ngelx-firebase-sa.json
+            else
+              printf '%s' "$SA" | base64 --decode > /tmp/ngelx-firebase-sa.json
+              jq -e . /tmp/ngelx-firebase-sa.json >/dev/null
+            fi
+            chmod 600 /tmp/ngelx-firebase-sa.json
+            export GOOGLE_APPLICATION_CREDENTIALS=/tmp/ngelx-firebase-sa.json
+            firebase deploy --only firestore:rules --project "$PROJECT_ID" --non-interactive
+          elif [ -n "${FIREBASE_TOKEN:-}" ]; then
+            firebase deploy --only firestore:rules --project "$PROJECT_ID" --token "$FIREBASE_TOKEN" --non-interactive
+          else
+            echo "Firebase deploy kimligi ayarli degil."
+            exit 20
+          fi
