@@ -46,6 +46,8 @@ jobs:
           grep -F "'messagePermission': 'all'" app/lib/main.dart
           grep -F "'friendsOnlyMessages': false" app/lib/main.dart
           grep -F "ngelxAktiviteBildirimiGosterilir" app/lib/main.dart
+          grep -F "ngelxKullaniciSemasiniTamamla" app/lib/main.dart
+          grep -F "settingsSchemaVersion" app/lib/main.dart
           grep -F "target.data.get('friendsOnlyMessages', false)" firestore.rules
           python3 - <<'PY'
           from pathlib import Path
@@ -70,6 +72,9 @@ jobs:
           assert "diger['friendsOnlyMessages']==true?'friends':'all'" in main
           assert "mesajArkadas=v['friendsOnlyMessages']==true;" in main
           assert "target.data.get('friendsOnlyMessages', false) ? 'friends' : 'all'" in rules
+          assert "Future<void> ngelxKullaniciSemasiniTamamla(User user)" in main
+          assert "settingsSchemaVersion" in main
+          assert "unawaited(ngelxKullaniciSemasiniTamamla(widget.user))" in main
 
           # Aktivite sayaç/listesi aynı filtreyi kullanıyor.
           assert "bool ngelxAktiviteBildirimiGosterilir" in main
