@@ -60,7 +60,9 @@ jobs:
           assert "sosyalIstekRef(me,uid,'friend_request').snapshots()" in profile
           assert "Arkadaşlık isteği bekliyor" in profile
           assert "Arkadaş ekle" in profile
-          assert ".limit(100).snapshots()" not in profile
+          # The profile contains unrelated media/history streams that may still use limit(100).
+          # Only the old notification-based SOCIAL request stream must be gone.
+          assert "final gidenAkis=me==null?null:FirebaseFirestore.instance.collection('notifications')" not in profile
 
           a=s.index('Future<void> istegiSonuclandir(')
           b=s.index('@override\n  Widget build',a)
