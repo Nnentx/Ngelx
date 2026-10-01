@@ -43,8 +43,6 @@ jobs:
           grep -F "defaultValue: '352'" app/lib/main.dart
 
           grep -F "NgelX Müzik Kütüphanesi" app/lib/audio_live_rooms_pro.dart
-          grep -F "NgelX Original" app/lib/audio_live_rooms_pro.dart
-          grep -F "ngelx://original/" app/lib/audio_live_rooms_pro.dart
           grep -F "Mesajı düzenle" app/lib/audio_live_rooms_pro.dart
           grep -F "Mesaj silinsin mi?" app/lib/audio_live_rooms_pro.dart
           grep -F "CircleAvatar(radius:9" app/lib/audio_live_rooms_pro.dart
