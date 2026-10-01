@@ -1604,3 +1604,69 @@ Build 365 cihaz testinde mesaj isteği ana akışı doğrulandı:
 - Kabul → normal sohbet, Reddet → iki listeden de çıkarma, unread sıfırlama davranışları korunacak.
 - Eski ve yeni hesaplarda mesaj izni varsayılanı aynı olacak.
 - Aktivite kartındaki sayı ile Aktivite ekranında gösterilebilen okunmamış kayıt sayısı birebir uyumlu olacak.
+
+
+## 2026-10-02 — Ayarlar ve gizlilik sadeleştirme + arama tasarımı
+
+Kullanıcı cihaz testinde mevcut **Ayarlar ve gizlilik** ekranının fazla dağınık olduğunu, “izinler” ve benzeri ayrı ayrı seçeneklerin kafa karıştırdığını belirtti. Ayarlar alanı sonraki paketlerde sadeleştirilecek.
+
+### Üst arama çubuğu
+- Sayfa başlığının hemen altında **“Ayarlarda ara”** arama kutusu olacak.
+- Arama yalnızca başlıkları değil alt açıklamaları ve eş anlamlı anahtar kelimeleri de tarayacak.
+- Sonuca dokununca kullanıcı doğrudan ilgili alt ayara gidecek.
+- Örnek aramalar: “mesaj”, “kim yazabilir”, “şifre”, “cihaz”, “engelle”, “bildirim”, “dil”, “indirme”, “hesap sil”.
+- Arama boşken normal kategoriler gösterilecek; arama sırasında yalnızca eşleşen sonuçlar gösterilecek.
+
+### Ana ekran kategori düzeni — daha az başlık, daha net yapı
+1. **Hesap**
+   - Hesap ve profil bilgileri
+   - Hesap değiştir
+   - Premium ve Cüzdan
+
+2. **Gizlilik ve güvenlik**
+   - Gizlilik
+   - Takip ve arkadaşlık
+   - **Mesajlar ve iletişim** (eski “Mesaj izinleri” adı kullanıcı diliyle sadeleştirilecek)
+   - **Engellenen ve kısıtlanan hesaplar** (iki ayrı üst seviye satır tek başlık altında toplanacak)
+   - Hesap güvenliği
+   - Giriş yapılan cihazlar / şüpheli girişler / kurtarma seçenekleri
+
+3. **Bildirimler**
+   - Tek ana “Bildirimler” ekranı
+   - Mesaj, grup, arama, arkadaşlık, etkileşim ve canlı yayın tercihleri içeride yönetilecek
+   - Aynı bildirime ait tekrar eden seçenekler ana ayar listesinde ayrı satır olmayacak
+
+4. **İçerik ve medya**
+   - Hikâye gizliliği ayrı üst seviye satır olmak yerine ilgili gizlilik/içerik bölümüne taşınacak
+   - İndirme ayarları
+   - İçerik araçları
+   - Dil, çeviri ve altyazı tercihleri
+
+5. **Uygulama**
+   - Uygulama dili
+   - Uygulama güncellemeleri
+   - Sürüm / Build bilgisi
+
+6. **Yardım**
+   - Destek ve hata bildir
+   - NgelX’i paylaş
+   - Gerekli yasal/bilgilendirme bağlantıları
+
+7. **Çıkış ve hesap işlemleri**
+   - Çıkış yap
+   - Hesabı dondur / silme talebi gibi geri dönüşü zor işlemler normal ayarlardan görsel olarak ayrılacak
+
+### Sadeleştirme kuralları
+- Kullanıcıya teknik/soyut **“izin”** terminolojisi yerine sonuç odaklı dil kullanılacak: ör. “Mesaj izinleri” yerine **“Mesajlar ve iletişim”**, içinde “Kim bana mesaj atabilir?”.
+- Bir ayarın üst seviyede ayrı satır olması için günlük kullanımda gerçekten bağımsız bir görev olması gerekecek.
+- Aynı konuya ait alt seçenekler tek ekranda gruplanacak; kullanıcı ana listede 15–20 benzer satır görmek zorunda kalmayacak.
+- **Engellenen hesaplar + Kısıtlanan hesaplar** tek ana giriş altında iki sekme/alt bölüm olarak sunulacak.
+- **Hikâye gizliliği**, **profil görünürlüğü**, **yorum kimliği** gibi görünürlük kontrolleri “Gizlilik” içinde mantıksal alt başlıklara ayrılacak.
+- **Mesaj gizliliği** mesaj isteği sistemiyle aynı davranış modelini kullanacak; eski/yeni hesap varsayılanı Build 366 uyumluluk çalışmasıyla birlikte ele alınacak.
+- Gelişmiş veya nadir kullanılan ayarlar gerektiğinde **“Gelişmiş”** altına taşınacak; ana ekranı kalabalıklaştırmayacak.
+
+### UX hedefi
+- Kullanıcı ayarlar ana ekranında en fazla yaklaşık **6–7 ana kategori** görecek.
+- En sık kullanılan ayarlara 1–2 dokunuşta ulaşılacak.
+- Arama sayesinde kullanıcı kategori yapısını bilmek zorunda kalmayacak.
+- Beyaz NgelX tasarımı korunacak; mevcut mor vurgu kullanılabilir ancak görsel yoğunluk azaltılacak.
