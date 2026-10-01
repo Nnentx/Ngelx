@@ -1753,3 +1753,11 @@ Kod incelemesinde mevcut NgelX efekt sisteminin gerçek zamanlı yüz/AR efekt m
 - Kök neden kodda doğrulandı: üst özet kartı Build 366'da `ngelxAktiviteBildirimiGosterilir` filtresine bağlandı; büyük Aktivite kartı ise hâlâ tüm okunmamış notification kayıtlarını sayıyordu.
 - Build 367 düzeltmesi: büyük Aktivite kartı da aynı ortak helper ile yalnızca Aktivite ekranında gösterilebilen okunmamış bildirimleri sayacak.
 - Beklenen cihaz sonucu: bu mevcut durumda üst **Aktivite 0**, büyük Aktivite kartında da **rozet yok/0**, Aktivite ekranı boş.
+
+
+## 2026-10-02 — Build 367 cihaz testi: Aktivite sayaç tutarlılığı geçti
+
+- Gerçek cihazda Gelen Kutusu üst özetinde **Aktivite 0** görünüyor.
+- Büyük **Aktivite** kısayol kartındaki önceki kırmızı **2** rozeti artık görünmüyor.
+- Böylece Build 366'da kalan ikinci sayaç yolu da Build 367'de ortak aktivite filtresine bağlanmış olarak cihazda doğrulandı.
+- Sonuç: mesaj tipi gizli notification kayıtları Aktivite ekranında gösterilmiyorsa artık ne üst özet ne de büyük Aktivite kartı bunları sayıyor.
