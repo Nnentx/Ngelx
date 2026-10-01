@@ -1,0 +1,113 @@
+name: Ngel X v56 BUILD 341 AUDIO ROOM ACTIVITY FIXES
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - work/build341-audio-room-activity-fixes
+    paths:
+      - '.github/workflows/NgelX-v56-BUILD-341-AUDIO-ROOM-ACTIVITY-FIXES.yml'
+      - '.github/scripts/build341_audio_room_activity_fixes.py'
+
+permissions:
+  contents: write
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: work/build341-audio-room-activity-fixes
+          fetch-depth: 0
+
+      - name: Build 341 duzeltmelerini uygula
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile .github/scripts/build341_audio_room_activity_fixes.py
+          python3 .github/scripts/build341_audio_room_activity_fixes.py
+          git diff --check
+
+          grep -F "version: 1.0.122+341" app/pubspec.yaml
+          grep -F "defaultValue: '1.0.122'" app/lib/main.dart
+          grep -F "defaultValue: '341'" app/lib/main.dart
+
+          grep -F "hintText:'Örn. Akşam sohbeti'" app/lib/audio_live_rooms.dart
+          grep -F "Bekleyen söz isteği yok" app/lib/audio_live_rooms.dart
+          grep -F "Söz istekleri" app/lib/audio_live_rooms.dart
+          grep -F "mikrofonTercihi" app/lib/audio_live_rooms.dart
+          grep -F "Tekrar bağlanılıyor \$i/4" app/lib/audio_live_rooms.dart
+          grep -F "Bağlantı kurulamadı. Tekrar denemek için dokun." app/lib/audio_live_rooms.dart
+          grep -F "bildirimTekrarAnahtari" app/lib/main.dart
+          grep -F "zamanKovasi=ham.millisecondsSinceEpoch~/15000" app/lib/main.dart
+
+      - name: Build 341 kaynaklarini dala yaz
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- app/lib/main.dart app/lib/audio_live_rooms.dart app/pubspec.yaml; then
+            echo "Kaynak zaten Build 341 seviyesinde."
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add app/lib/main.dart app/lib/audio_live_rooms.dart app/pubspec.yaml
+            git commit -m "Build 341: fix audio room UI reconnect and activity duplicates"
+            git push origin HEAD:work/build341-audio-room-activity-fixes
+          fi
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Sabit NgelX imza anahtarini geri yukle
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: ngelx-stable-debug-keystore-v1
+          fail-on-cache-miss: true
+
+      - name: Flutter analiz
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter clean
+          flutter pub get
+          flutter analyze --machine > analyze.log 2>&1 || true
+          cat analyze.log
+          if grep -q '^ERROR|' analyze.log; then
+            echo "Flutter analyze ERROR buldu."
+            exit 1
+          fi
+
+      - name: APK olustur ve imzayi dogrula
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter build apk --release
+          APK=build/app/outputs/flutter-apk/app-release.apk
+          test -s "$APK"
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          "$APKSIGNER" verify --print-certs "$APK" | tee build/app/outputs/flutter-apk/apksigner-certs.txt
+          grep -qi 'be20b27f0ba1f4decd2941d410b1536de89e48dc894f04f038f9d26b11ecd6aa' build/app/outputs/flutter-apk/apksigner-certs.txt
+          sha256sum "$APK" > "$APK.sha256"
+
+      - name: APK yukle
+        uses: actions/upload-artifact@v4
+        with:
+          name: NgelX-1.0.122-Build-341-AUDIO-ROOM-ACTIVITY-FIXES
+          path: |
+            app/build/app/outputs/flutter-apk/app-release.apk
+            app/build/app/outputs/flutter-apk/app-release.apk.sha256
+            app/build/app/outputs/flutter-apk/apksigner-certs.txt
+          if-no-files-found: error
+          retention-days: 14
