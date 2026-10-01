@@ -1343,3 +1343,14 @@ Bu maddeler Build 359'un çalışan arama/görüntülü arama davranışını bo
 - Böylece Build 359'da sorun **reddetme genel izni** değil; özellikle yeşil onay / kabul akışındaki yazma-güncelleme zincirine daraltıldı.
 - Build 360 düzeltmesinde reddetme akışı korunacak, kabul akışı Firestore kuralları ve ilgili belge güncellemeleriyle ayrı olarak düzeltilecek.
 - Ekranın alt kısmında siyah işlem mesajı ve Android 3 tuşlu gezinme çubuğu birlikte görünürken listenin son kartı hâlâ fazla aşağıda kalıyor; Aktivite ekranının bottom SafeArea/padding kontrolü açık kalacak.
+
+
+## 2026-10-01 — Sultan > Adem profilinden Mesaj testi + profil alt taşma doğrulaması
+
+- Sultan hesabından Adem profilindeki **Mesaj** düğmesine basıldığında mevcut bire bir sohbet başarıyla açıldı.
+- Sohbet ekranında hızlı emoji gönderimi ve normal metin gönderimi cihazda çalıştı; örnek olarak 👍 ve **“Selamın aleyküm test”** mesajı sohbet akışına eklendi.
+- Bu nedenle profil > Mesaj yönlendirmesi Build 359 cihaz testinde **çalışıyor** olarak işaretlendi; sonraki pakette gereksiz yere yeniden yazılmayacak.
+- Sohbet yazma alanı bu cihaz görüntüsünde Android 3 tuşlu gezinme çubuğunun üstünde kalıyor; belirgin bir alt taşma görülmedi. Yine de klavye açık/kapalı iki durumda final SafeArea testi korunacak.
+- **Başka kullanıcı profili alt taşması kesin doğrulandı:** ekranın altındaki **Ortak gruplar** butonu Android sistem gezinme alanı tarafından kısmen örtülüyor / kesiliyor.
+- Profil scroll içeriğinin sonuna cihazın gerçek `MediaQuery.viewPadding.bottom` değerine ek yeterli kaydırılabilir boşluk verilecek; yalnızca SafeArea sarmalamakla yetinilmeyecek.
+- Son etkileşimli öğe (Ortak gruplar ve devam eden kartlar) tamamen yukarı taşınabilmeli ve 3 tuşlu gezinme çubuğunun altında kalmamalı.
