@@ -1743,3 +1743,13 @@ Kod incelemesinde mevcut NgelX efekt sisteminin gerçek zamanlı yüz/AR efekt m
 - Sonuç: mesaj gizliliği ayarı Firestore'a kaydoluyor ve ekran yeniden açıldığında doğru state okunuyor.
 - Bu test Ayarlar araması → Mesaj gizliliği yönlendirmesi + ayar kalıcılığı zincirini cihazda doğruladı.
 - Test sonrası normal kullanım tercihi olarak **Herkes** seçeneğine geri dönülebilir.
+
+
+## 2026-10-02 — Build 366 cihaz testi: Aktivite üst sayaç düzeldi, büyük kartta eski sayaç kaldı
+
+- Gelen Kutusu üst özet kartlarında **Aktivite 0** doğru görünüyor.
+- Aynı ekrandaki büyük **Aktivite** kısayol kartında kırmızı **2** rozeti kalmaya devam ediyor.
+- Aktivite > Tümü ekranı **“Bu filtrede yeni aktivite yok.”** gösteriyor.
+- Kök neden kodda doğrulandı: üst özet kartı Build 366'da `ngelxAktiviteBildirimiGosterilir` filtresine bağlandı; büyük Aktivite kartı ise hâlâ tüm okunmamış notification kayıtlarını sayıyordu.
+- Build 367 düzeltmesi: büyük Aktivite kartı da aynı ortak helper ile yalnızca Aktivite ekranında gösterilebilen okunmamış bildirimleri sayacak.
+- Beklenen cihaz sonucu: bu mevcut durumda üst **Aktivite 0**, büyük Aktivite kartında da **rozet yok/0**, Aktivite ekranı boş.
