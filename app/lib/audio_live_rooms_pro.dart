@@ -1008,7 +1008,7 @@ class NgelxSesliMuzikKontrolu extends StatefulWidget{
 class _NgelxSesliMuzikKontroluState extends State<NgelxSesliMuzikKontrolu>{
   final AudioPlayer _oynatici=AudioPlayer();
   StreamSubscription<DocumentSnapshot<Map<String,dynamic>>>? _odaAboneligi;
-  String _url='',_baslik='';
+  String _url='',_baslik='',_sanatci='',_lisans='';
   bool _oynuyor=false,_hazirlaniyor=false,_yukleniyor=false;
   int _konumMs=0;
   Timestamp? _baslatildi;
@@ -1051,10 +1051,12 @@ class _NgelxSesliMuzikKontroluState extends State<NgelxSesliMuzikKontrolu>{
   Future<void> _durumuUygula(Map<String,dynamic> v)async{
     final url=(v['musicUrl']??'').toString();
     final baslik=(v['musicTitle']??'').toString();
+    final sanatci=(v['musicArtist']??'').toString();
+    final lisans=(v['musicLicense']??'').toString();
     final oynuyor=v['musicPlaying']==true&&!widget.bitti;
     final konum=(v['musicPositionMs'] is num)?(v['musicPositionMs'] as num).toInt():0;
     final baslatildi=v['musicStartedAt'] is Timestamp?v['musicStartedAt'] as Timestamp:null;
-    if(mounted)setState((){_baslik=baslik;_oynuyor=oynuyor;_konumMs=konum;_baslatildi=baslatildi;});
+    if(mounted)setState((){_baslik=baslik;_sanatci=sanatci;_lisans=lisans;_oynuyor=oynuyor;_konumMs=konum;_baslatildi=baslatildi;});
     if(url.isEmpty){
       _url='';
       try{await _oynatici.stop();}catch(_){}
@@ -1178,7 +1180,7 @@ class _NgelxSesliMuzikKontroluState extends State<NgelxSesliMuzikKontrolu>{
                   child:Column(mainAxisSize:MainAxisSize.min,children:[
                     const Icon(Icons.library_music_outlined,color:Colors.black26,size:42),
                     const SizedBox(height:8),
-                    Text(kaynak=='NgelX Original'?'Eşleşen müzik yok.':'Bu katalog henüz boş.',textAlign:TextAlign.center,style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w900)),
+                    Text('Bu katalog henüz boş.',textAlign:TextAlign.center,style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w900)),
                     const SizedBox(height:4),
                     Text(ngelxMuzikKaynakAciklama(kaynak),textAlign:TextAlign.center,style:const TextStyle(color:Colors.black54,fontSize:11.5,height:1.35)),
                   ]),
@@ -1298,7 +1300,7 @@ class _NgelxSesliMuzikKontroluState extends State<NgelxSesliMuzikKontrolu>{
               const SizedBox(width:10),
               Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
                 const Text('Oda müziği',style:TextStyle(color:Colors.black87,fontSize:19,fontWeight:FontWeight.w900)),
-                Text(_baslik.isEmpty?'Henüz müzik seçilmedi':(_baslik+' • NgelX Original'),maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black54)),
+                Text(_baslik.isEmpty?'Henüz müzik seçilmedi':((_sanatci.isEmpty?'':_sanatci+' • ')+_baslik+(_lisans.isEmpty?'':' • '+_lisans)),maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black54)),
               ])),
             ]),
             const SizedBox(height:14),
