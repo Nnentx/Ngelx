@@ -12,3 +12,9 @@ FIREBASE_PROJECT_ID = "ngelx-44eed"
 [[r2_buckets]]
 binding = "MEDIA"
 bucket_name = "ngelx-media"
+
+[media]
+binding = "VIDEO_MEDIA"
+
+[ai]
+binding = "AI"
