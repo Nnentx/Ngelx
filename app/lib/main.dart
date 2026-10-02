@@ -8676,6 +8676,330 @@ class _TrendEtiketi extends StatelessWidget {
   );
 }
 
+
+class NgelXFotoKirpmaPage extends StatefulWidget {
+  final XFile dosya;
+  const NgelXFotoKirpmaPage({super.key,required this.dosya});
+  @override State<NgelXFotoKirpmaPage> createState()=>_NgelXFotoKirpmaPageState();
+}
+
+class _NgelXFotoKirpmaPageState extends State<NgelXFotoKirpmaPage>{
+  Uint8List? bytes;
+  Size? kaynakBoyut;
+  Rect kirp=const Rect.fromLTWH(0,0,1,1);
+  int donus=0;
+  double? oran;
+  String surukleme='';
+  bool kaydediliyor=false;
+
+  @override void initState(){super.initState();unawaited(_yukle());}
+
+  Future<void> _yukle()async{
+    try{
+      final data=await widget.dosya.readAsBytes();
+      if(data.isEmpty)throw Exception('Fotoğraf boş.');
+      final codec=await ui.instantiateImageCodec(data);
+      final frame=await codec.getNextFrame();
+      final boyut=Size(frame.image.width.toDouble(),frame.image.height.toDouble());
+      frame.image.dispose();
+      codec.dispose();
+      if(mounted)setState((){bytes=data;kaynakBoyut=boyut;});
+    }catch(e){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Fotoğraf açılamadı: $e')));
+    }
+  }
+
+  Size get donmusBoyut{
+    final s=kaynakBoyut??const Size(1,1);
+    return donus.isOdd?Size(s.height,s.width):s;
+  }
+
+  Rect _goruntuRect(Size alan){
+    final s=donmusBoyut;
+    final olcek=math.min(alan.width/s.width,alan.height/s.height);
+    final w=s.width*olcek,h=s.height*olcek;
+    return Rect.fromLTWH((alan.width-w)/2,(alan.height-h)/2,w,h);
+  }
+
+  Rect _kirpPiksel(Rect resim)=>Rect.fromLTRB(
+    resim.left+kirp.left*resim.width,
+    resim.top+kirp.top*resim.height,
+    resim.left+kirp.right*resim.width,
+    resim.top+kirp.bottom*resim.height,
+  );
+
+  double get _donmusKaynakOrani{
+    final s=donmusBoyut;
+    return s.height<=0?1:s.width/s.height;
+  }
+
+  void _oranUygula(double? yeni){
+    setState((){
+      oran=yeni;
+      if(yeni==null)return;
+      final normOran=yeni/_donmusKaynakOrani;
+      double w=1,h=1;
+      if(normOran>=1){
+        h=(1/normOran).clamp(.08,1).toDouble();
+      }else{
+        w=normOran.clamp(.08,1).toDouble();
+      }
+      kirp=Rect.fromLTWH((1-w)/2,(1-h)/2,w,h);
+    });
+  }
+
+  void _dondur(){
+    setState((){
+      donus=(donus+1)%4;
+      kirp=const Rect.fromLTWH(0,0,1,1);
+    });
+    if(oran!=null)_oranUygula(oran);
+  }
+
+  void _sifirla()=>setState((){
+    donus=0;
+    oran=null;
+    kirp=const Rect.fromLTWH(0,0,1,1);
+    surukleme='';
+  });
+
+  void _suruklemeBasla(DragStartDetails d,Rect resim){
+    final p=d.localPosition,c=_kirpPiksel(resim);
+    const esik=34.0;
+    if((p-c.topLeft).distance<=esik)surukleme='tl';
+    else if((p-c.topRight).distance<=esik)surukleme='tr';
+    else if((p-c.bottomLeft).distance<=esik)surukleme='bl';
+    else if((p-c.bottomRight).distance<=esik)surukleme='br';
+    else if(c.contains(p))surukleme='move';
+    else surukleme='';
+  }
+
+  void _surukle(DragUpdateDetails d,Rect resim){
+    if(surukleme.isEmpty||resim.width<=0||resim.height<=0)return;
+    final dx=d.delta.dx/resim.width,dy=d.delta.dy/resim.height;
+    const min=.08;
+    double l=kirp.left,t=kirp.top,r=kirp.right,b=kirp.bottom;
+    if(surukleme=='move'){
+      final nl=(l+dx).clamp(0.0,1-kirp.width).toDouble();
+      final nt=(t+dy).clamp(0.0,1-kirp.height).toDouble();
+      setState(()=>kirp=Rect.fromLTWH(nl,nt,kirp.width,kirp.height));
+      return;
+    }
+
+    if(oran==null){
+      if(surukleme.contains('l'))l=(l+dx).clamp(0.0,r-min).toDouble();
+      if(surukleme.contains('r'))r=(r+dx).clamp(l+min,1.0).toDouble();
+      if(surukleme.contains('t'))t=(t+dy).clamp(0.0,b-min).toDouble();
+      if(surukleme.contains('b'))b=(b+dy).clamp(t+min,1.0).toDouble();
+      setState(()=>kirp=Rect.fromLTRB(l,t,r,b));
+      return;
+    }
+
+    final hedefNorm=(oran!/_donmusKaynakOrani).clamp(.08,12).toDouble();
+    final eskiW=r-l;
+    double wAday=eskiW;
+    if(surukleme.contains('r'))wAday=(r+dx-l);
+    if(surukleme.contains('l'))wAday=(r-(l+dx));
+    final eskiH=b-t;
+    final hAday=surukleme.contains('b')?(b+dy-t):(surukleme.contains('t')?(b-(t+dy)):eskiH);
+    final wDikey=hAday*hedefNorm;
+    if((wDikey-eskiW).abs()>(wAday-eskiW).abs())wAday=wDikey;
+    wAday=wAday.clamp(min,1.0).toDouble();
+    double hAday2=(wAday/hedefNorm).clamp(min,1.0).toDouble();
+    wAday=hAday2*hedefNorm;
+    if(wAday>1){wAday=1;hAday2=wAday/hedefNorm;}
+
+    if(surukleme=='br'){
+      wAday=math.min(wAday,1-l);hAday2=wAday/hedefNorm;
+      if(t+hAday2>1){hAday2=1-t;wAday=hAday2*hedefNorm;}
+      r=l+wAday;b=t+hAday2;
+    }else if(surukleme=='tr'){
+      wAday=math.min(wAday,1-l);hAday2=wAday/hedefNorm;
+      if(b-hAday2<0){hAday2=b;wAday=hAday2*hedefNorm;}
+      r=l+wAday;t=b-hAday2;
+    }else if(surukleme=='bl'){
+      wAday=math.min(wAday,r);hAday2=wAday/hedefNorm;
+      if(t+hAday2>1){hAday2=1-t;wAday=hAday2*hedefNorm;}
+      l=r-wAday;b=t+hAday2;
+    }else if(surukleme=='tl'){
+      wAday=math.min(wAday,r);hAday2=wAday/hedefNorm;
+      if(b-hAday2<0){hAday2=b;wAday=hAday2*hedefNorm;}
+      l=r-wAday;t=b-hAday2;
+    }
+    setState(()=>kirp=Rect.fromLTRB(
+      l.clamp(0.0,1.0).toDouble(),t.clamp(0.0,1.0).toDouble(),
+      r.clamp(0.0,1.0).toDouble(),b.clamp(0.0,1.0).toDouble(),
+    ));
+  }
+
+  Future<void> _kaydet()async{
+    if(kaydediliyor||bytes==null)return;
+    setState(()=>kaydediliyor=true);
+    try{
+      var kaynak=img.decodeImage(bytes!);
+      if(kaynak==null)throw Exception('Fotoğraf çözülemedi.');
+      img.Image duzenlenmis=kaynak;
+      if(donus!=0)duzenlenmis=img.copyRotate(duzenlenmis,angle:donus*90);
+      final x=(kirp.left*duzenlenmis.width).round().clamp(0,math.max(0,duzenlenmis.width-1)).toInt();
+      final y=(kirp.top*duzenlenmis.height).round().clamp(0,math.max(0,duzenlenmis.height-1)).toInt();
+      final maxW=math.max(1,duzenlenmis.width-x);
+      final maxH=math.max(1,duzenlenmis.height-y);
+      final w=(kirp.width*duzenlenmis.width).round().clamp(1,maxW).toInt();
+      final h=(kirp.height*duzenlenmis.height).round().clamp(1,maxH).toInt();
+      duzenlenmis=img.copyCrop(duzenlenmis,x:x,y:y,width:w,height:h);
+      const maxKenar=2160;
+      if(math.max(duzenlenmis.width,duzenlenmis.height)>maxKenar){
+        duzenlenmis=duzenlenmis.width>=duzenlenmis.height
+          ?img.copyResize(duzenlenmis,width:maxKenar,interpolation:img.Interpolation.linear)
+          :img.copyResize(duzenlenmis,height:maxKenar,interpolation:img.Interpolation.linear);
+      }
+      final jpg=img.encodeJpg(duzenlenmis,quality:92);
+      final dir=await _ngelxKaliciMedyaKlasoru();
+      final file=File('${dir.path}${Platform.pathSeparator}ngelx_crop_${DateTime.now().microsecondsSinceEpoch}.jpg');
+      await file.writeAsBytes(jpg,flush:true);
+      if(!mounted)return;
+      Navigator.pop(context,XFile(file.path,name:file.uri.pathSegments.last,mimeType:'image/jpeg'));
+    }catch(e){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Kırpma kaydedilemedi: $e')));
+    }finally{
+      if(mounted)setState(()=>kaydediliyor=false);
+    }
+  }
+
+  Widget _oranChip(String ad,double? deger){
+    final secili=deger==null?oran==null:(oran!=null&&(oran!-deger).abs()<.001);
+    return ChoiceChip(
+      label:Text(ad),
+      selected:secili,
+      onSelected:kaydediliyor?null:(_)=>_oranUygula(deger),
+      selectedColor:const Color(0xFF7C3AED),
+      backgroundColor:const Color(0xFF24242A),
+      side:BorderSide(color:secili?const Color(0xFF9A78F5):Colors.white12),
+      labelStyle:TextStyle(color:secili?Colors.white:Colors.white70,fontWeight:FontWeight.w800),
+    );
+  }
+
+  @override Widget build(BuildContext context){
+    final data=bytes,size=kaynakBoyut;
+    return Theme(
+      data:ThemeData.dark(),
+      child:Scaffold(
+        backgroundColor:Colors.black,
+        appBar:AppBar(
+          backgroundColor:Colors.black,
+          foregroundColor:Colors.white,
+          title:const Text('Kırp',style:TextStyle(fontWeight:FontWeight.w900)),
+          actions:[
+            TextButton(
+              onPressed:kaydediliyor?null:_kaydet,
+              child:kaydediliyor
+                ?const SizedBox(width:20,height:20,child:CircularProgressIndicator(strokeWidth:2))
+                :const Text('Kaydet',style:TextStyle(color:Color(0xFF22D3EE),fontWeight:FontWeight.w900)),
+            ),
+          ],
+        ),
+        body:SafeArea(
+          top:false,
+          child:data==null||size==null
+            ?const Center(child:CircularProgressIndicator(color:Color(0xFF22D3EE)))
+            :Column(children:[
+                Expanded(child:LayoutBuilder(builder:(_,k){
+                  final alan=Size(k.maxWidth,k.maxHeight);
+                  final resim=_goruntuRect(alan);
+                  return Stack(children:[
+                    Positioned.fromRect(
+                      rect:resim,
+                      child:RotatedBox(
+                        quarterTurns:donus,
+                        child:Image.memory(data,fit:BoxFit.fill,gaplessPlayback:true),
+                      ),
+                    ),
+                    Positioned.fill(child:GestureDetector(
+                      behavior:HitTestBehavior.opaque,
+                      onPanStart:(d)=>_suruklemeBasla(d,resim),
+                      onPanUpdate:(d)=>_surukle(d,resim),
+                      onPanEnd:(_)=>surukleme='',
+                      onPanCancel:()=>surukleme='',
+                      child:CustomPaint(painter:_NgelXKirpmaPainter(imageRect:resim,cropRect:_kirpPiksel(resim))),
+                    )),
+                  ]);
+                })),
+                Container(
+                  width:double.infinity,
+                  padding:const EdgeInsets.fromLTRB(14,12,14,16),
+                  decoration:const BoxDecoration(color:Color(0xFF111114),border:Border(top:BorderSide(color:Colors.white12))),
+                  child:Column(children:[
+                    Row(children:[
+                      Expanded(child:OutlinedButton.icon(
+                        onPressed:kaydediliyor?null:_dondur,
+                        icon:const Icon(Icons.rotate_90_degrees_ccw_rounded),
+                        label:const Text('90° Döndür'),
+                      )),
+                      const SizedBox(width:8),
+                      Expanded(child:OutlinedButton.icon(
+                        onPressed:kaydediliyor?null:_sifirla,
+                        icon:const Icon(Icons.restart_alt_rounded),
+                        label:const Text('Sıfırla'),
+                      )),
+                    ]),
+                    const SizedBox(height:10),
+                    SingleChildScrollView(
+                      scrollDirection:Axis.horizontal,
+                      child:Row(children:[
+                        _oranChip('Serbest',null),
+                        const SizedBox(width:7),
+                        _oranChip('1:1',1),
+                        const SizedBox(width:7),
+                        _oranChip('4:5',4/5),
+                        const SizedBox(width:7),
+                        _oranChip('Dikey 9:16',9/16),
+                        const SizedBox(width:7),
+                        _oranChip('Yatay 16:9',16/9),
+                      ]),
+                    ),
+                    const SizedBox(height:9),
+                    const Text('Çerçevenin köşelerini sürükle • çerçeveyi taşı • oran seç • Kaydet',style:TextStyle(color:Colors.white54,fontSize:11,fontWeight:FontWeight.w700)),
+                  ]),
+                ),
+              ]),
+        ),
+      ),
+    );
+  }
+}
+
+class _NgelXKirpmaPainter extends CustomPainter{
+  final Rect imageRect,cropRect;
+  const _NgelXKirpmaPainter({required this.imageRect,required this.cropRect});
+  @override void paint(Canvas canvas,Size size){
+    final dim=Paint()..color=Colors.black.withValues(alpha:.58);
+    canvas.drawRect(Rect.fromLTRB(imageRect.left,imageRect.top,imageRect.right,cropRect.top),dim);
+    canvas.drawRect(Rect.fromLTRB(imageRect.left,cropRect.bottom,imageRect.right,imageRect.bottom),dim);
+    canvas.drawRect(Rect.fromLTRB(imageRect.left,cropRect.top,cropRect.left,cropRect.bottom),dim);
+    canvas.drawRect(Rect.fromLTRB(cropRect.right,cropRect.top,imageRect.right,cropRect.bottom),dim);
+    final border=Paint()..color=Colors.white..style=PaintingStyle.stroke..strokeWidth=2;
+    canvas.drawRect(cropRect,border);
+    final grid=Paint()..color=Colors.white.withValues(alpha:.45)..strokeWidth=1;
+    for(final f in const [.333333,.666667]){
+      final x=cropRect.left+cropRect.width*f;
+      final y=cropRect.top+cropRect.height*f;
+      canvas.drawLine(Offset(x,cropRect.top),Offset(x,cropRect.bottom),grid);
+      canvas.drawLine(Offset(cropRect.left,y),Offset(cropRect.right,y),grid);
+    }
+    final handle=Paint()..color=const Color(0xFF22D3EE)..strokeWidth=4..strokeCap=StrokeCap.square;
+    const l=18.0;
+    void kose(Offset p,double sx,double sy){
+      canvas.drawLine(p,Offset(p.dx+sx*l,p.dy),handle);
+      canvas.drawLine(p,Offset(p.dx,p.dy+sy*l),handle);
+    }
+    kose(cropRect.topLeft,1,1);
+    kose(cropRect.topRight,-1,1);
+    kose(cropRect.bottomLeft,1,-1);
+    kose(cropRect.bottomRight,-1,-1);
+  }
+  @override bool shouldRepaint(covariant _NgelXKirpmaPainter old)=>old.imageRect!=imageRect||old.cropRect!=cropRect;
+}
+
 class YuklePage extends StatefulWidget {
   const YuklePage({super.key});
 
@@ -9413,9 +9737,34 @@ class _YeniYuklePageState extends State<YuklePage> {
     );
   }
 
+  Future<void> _fotoKirp()async{
+    final secilen=medya;
+    if(yukleniyor||tur!='photo'||secilen==null)return;
+    final sonuc=await Navigator.push<XFile>(context,MaterialPageRoute(builder:(_)=>NgelXFotoKirpmaPage(dosya:secilen)));
+    if(sonuc==null||!mounted)return;
+    setState((){
+      final i=medyalar.indexWhere((x)=>x.path==secilen.path);
+      if(i>=0)medyalar[i]=sonuc;
+      else if(medyalar.isEmpty)medyalar=<XFile>[sonuc];
+      else medyalar[0]=sonuc;
+      medya=sonuc;
+      fotoDonus=0;
+      kareKirp=false;
+    });
+    _taslakDegisti();
+  }
+
   Widget _fotoDuzenleme(){
     if(tur!='photo'||medya==null)return const SizedBox.shrink();
-    return Column(children:[Row(children:[OutlinedButton.icon(onPressed:yukleniyor?null:(){setState(()=>fotoDonus=(fotoDonus+1)%4);_taslakDegisti();},icon:const Icon(Icons.rotate_90_degrees_ccw_rounded,size:18),label:Text(lt('90° Döndür','Rotate 90°'))),const SizedBox(width:8),FilterChip(selected:kareKirp,label:Text(lt('Kare kırp','Square crop')),onSelected:yukleniyor?null:(v){setState(()=>kareKirp=v);_taslakDegisti();})]),SizedBox(height:42,child:ListView(scrollDirection:Axis.horizontal,children:['Yok','Parlak','Sıcak','Soğuk','Siyah Beyaz'].map((e)=>Padding(padding:const EdgeInsets.only(right:7),child:ChoiceChip(label:Text(e=='Yok'?lt('Yok','None'):e=='Parlak'?lt('Parlak','Bright'):e=='Sıcak'?lt('Sıcak','Warm'):e=='Soğuk'?lt('Soğuk','Cool'):lt('Siyah Beyaz','Black & White')),selected:fotoEfekti==e,onSelected:yukleniyor?null:(_){setState(()=>fotoEfekti=e);_taslakDegisti();}))).toList()))]);
+    return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+      OutlinedButton.icon(
+        onPressed:yukleniyor?null:_fotoKirp,
+        icon:const Icon(Icons.crop_rounded,size:19),
+        label:const Text('Kırp / döndür'),
+      ),
+      const SizedBox(height:8),
+      SizedBox(height:42,child:ListView(scrollDirection:Axis.horizontal,children:['Yok','Parlak','Sıcak','Soğuk','Siyah Beyaz'].map((e)=>Padding(padding:const EdgeInsets.only(right:7),child:ChoiceChip(label:Text(e=='Yok'?lt('Yok','None'):e=='Parlak'?lt('Parlak','Bright'):e=='Sıcak'?lt('Sıcak','Warm'):e=='Soğuk'?lt('Soğuk','Cool'):lt('Siyah Beyaz','Black & White')),selected:fotoEfekti==e,onSelected:yukleniyor?null:(_){setState(()=>fotoEfekti=e);_taslakDegisti();}))).toList())),
+    ]);
   }
   Widget _cokluMedyaSirala(){
     if(tur!='photo'||medyalar.length<2)return const SizedBox.shrink();
