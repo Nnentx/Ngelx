@@ -2090,3 +2090,14 @@ Cihazda doğrulanan örnek senaryo:
 - Henüz trim kollarının gerçek başlangıç/bitiş değerini kaydedip **Bitti** sonrası Üret ekranına doğru aktardığı ve yayınlanan videoda uygulandığı doğrulanmadı.
 
 **KORUMA:** Mesajlaşma, Mesaj İstekleri, takip/arkadaşlık istekleri ve sayaç regresyon temeli korunacak.
+
+## 2026-10-02 — Build 369 cihaz testi: video trim ve yazı durumu Üret ekranına dönüyor
+
+- Video editöründe trim aralığı **0:03–0:08** olarak ayarlanabildi.
+- Video üzerine `AYaz aga` metni eklendi; renk/arka plan/boyut kontrolleri çalışıyor ve yazı önizlemede taşınabilir/düzenlenebilir görünüyor.
+- **Bitti** sonrası Üret ekranına dönüş başarılı.
+- Üret ekranında butonlar **Kesimi düzenle** ve **Yazıyı düzenle** durumuna geçti; `Yazı katmanı hazır` bilgisi göründü.
+- Bu, trim ve yazı düzenleme state'inin editörden Üret ekranına aktarıldığını doğruluyor.
+- Henüz yayınlanan/çıktı videoda gerçekten **0:03–0:08 kesiminin uygulanması** ve yazının render edilip edilmediği doğrulanmadı; yayın/çıktı testi gerekli.
+
+**KORUMA:** Mesajlaşma, Mesaj İstekleri, takip/arkadaşlık istekleri ve sayaç regresyon temeli korunacak.
