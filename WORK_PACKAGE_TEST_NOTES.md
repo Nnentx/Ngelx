@@ -2056,3 +2056,14 @@ Cihazda doğrulanan örnek senaryo:
 - Henüz videonun gerçekten oynatılması, hareketin/sesin korunması ve kes/kırp aracının işlevi ayrı ayrı doğrulanmadı.
 
 **KORUMA:** Mesajlaşma, Mesaj İstekleri, takip/arkadaşlık istekleri ve sayaç regresyon temeli korunacak.
+
+## 2026-10-02 — Build 369 cihaz testi: video önizleme oynat butonu çalışmıyor
+
+- Video çekim sonrası Üret ekranında medya `.mp4` ve video kartı olarak doğru sınıflandırılıyor.
+- Ancak kartın ortasındaki **oynat simgesine basılmıyor; video önizleme başlatılamıyor**.
+- Kod incelemesinde `Video seçildi` alanının yalnızca statik `Container + Icon` olduğu, **onTap/GestureDetector ve yerel video player controller bağlantısı bulunmadığı** doğrulandı.
+- Bu nedenle oynat simgesi şu an yalnız görsel; gerçek oynatma işlevi yok.
+- Gereksinim: video kartının tamamı dokunulabilir olmalı; dokununca yerel `.mp4` oynatılmalı, play/pause, süre/progress ve ses kontrolü bulunmalı.
+- **Test sonucu: BAŞARISIZ.** Hareket ve ses doğrulaması oynatma düzeltildikten sonra tekrar yapılacak.
+
+**KORUMA:** Mesajlaşma, Mesaj İstekleri, takip/arkadaşlık istekleri ve sayaç regresyon temeli korunacak.
