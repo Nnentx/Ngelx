@@ -4967,7 +4967,7 @@ class _VideoAkisiState extends State<VideoAkisi> {
 
   void _silmeYenilendi(){if(mounted)setState((){});}
   @override void initState(){super.initState();ngelxIcerikSilmeRevizyonu.addListener(_silmeYenilendi);_profilTakibiniBaslat();_canliTakibiniBaslat();}
-  @override void dispose(){ngelxIcerikSilmeRevizyonu.removeListener(_silmeYenilendi);_profilAboneligi?.cancel();_canliAboneligi?.cancel();akisKontrol.dispose();super.dispose();}
+  @override void dispose(){if(ngelxAkisTemizGorunum.value)ngelxAkisTemizGorunum.value=false;ngelxIcerikSilmeRevizyonu.removeListener(_silmeYenilendi);_profilAboneligi?.cancel();_canliAboneligi?.cancel();akisKontrol.dispose();super.dispose();}
 
   void _canliTakibiniBaslat(){
     _canliAboneligi=FirebaseFirestore.instance.collection('live_streams')
@@ -5215,6 +5215,7 @@ class _VideoAkisiState extends State<VideoAkisi> {
               scrollDirection:Axis.vertical,
               itemCount:videolar.length,
               onPageChanged:(i){
+                if(ngelxAkisTemizGorunum.value)ngelxAkisTemizGorunum.value=false;
                 setState(()=>aktif=i);
                 unawaited(_goruntulemeKaydet(videolar[i]));
               },
@@ -5297,28 +5298,34 @@ class _VideoAkisiState extends State<VideoAkisi> {
           );
         },
       ),
-      SafeArea(
-        child:Padding(
-          padding:const EdgeInsets.all(17),
-          child:Row(children:[
-            const Logo(kucuk:true,koyuZemin:true),
-            const Spacer(),
-            GestureDetector(
-              onTap:()=>_sekmeDegistir(true),
-              child:Text(t('followingTab'),style:TextStyle(color:takipSekmesi?Colors.white:Colors.white60,fontWeight:takipSekmesi?FontWeight.bold:FontWeight.normal,decoration:takipSekmesi?TextDecoration.underline:null,decorationColor:mavi,decorationThickness:3)),
+      ValueListenableBuilder<bool>(
+        valueListenable:ngelxAkisTemizGorunum,
+        builder:(context,temiz,_)=>temiz
+          ?const SizedBox.shrink()
+          :SafeArea(
+              minimum:const EdgeInsets.fromLTRB(14,10,14,0),
+              child:SizedBox(
+                height:48,
+                child:Row(children:[
+                  const Logo(kucuk:true,koyuZemin:true),
+                  const Spacer(),
+                  GestureDetector(
+                    onTap:()=>_sekmeDegistir(true),
+                    child:Text(t('followingTab'),style:TextStyle(color:takipSekmesi?Colors.white:Colors.white60,fontWeight:takipSekmesi?FontWeight.bold:FontWeight.normal,decoration:takipSekmesi?TextDecoration.underline:null,decorationColor:mavi,decorationThickness:3)),
+                  ),
+                  const SizedBox(width:17),
+                  GestureDetector(
+                    onTap:()=>_sekmeDegistir(false),
+                    child:Text(t('forYou'),style:TextStyle(color:takipSekmesi?Colors.white60:Colors.white,fontWeight:takipSekmesi?FontWeight.normal:FontWeight.bold,decoration:takipSekmesi?null:TextDecoration.underline,decorationColor:mor,decorationThickness:3)),
+                  ),
+                  const SizedBox(width:4),
+                  IconButton(
+                    onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const AramaPage())),
+                    icon:const Icon(Icons.search_rounded,size:30),
+                  ),
+                ]),
+              ),
             ),
-            const SizedBox(width:17),
-            GestureDetector(
-              onTap:()=>_sekmeDegistir(false),
-              child:Text(t('forYou'),style:TextStyle(color:takipSekmesi?Colors.white60:Colors.white,fontWeight:takipSekmesi?FontWeight.normal:FontWeight.bold,decoration:takipSekmesi?null:TextDecoration.underline,decorationColor:mor,decorationThickness:3)),
-            ),
-            const SizedBox(width:8),
-            IconButton(
-              onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const AramaPage())),
-              icon:const Icon(Icons.search_rounded,size:31),
-            ),
-          ]),
-        ),
       ),
     ]);
   }
@@ -5973,6 +5980,7 @@ class _GorselYaziKartiState extends State<GorselYaziKarti> with RouteAware {
   String profilCanliId='';
   StreamSubscription<DocumentSnapshot<Map<String,dynamic>>>? _profilCanliAboneligi;
   int medyaSayfasi = 0;
+  bool temizGorunum=false;
   PageRoute<dynamic>? _rota;
   bool _rotaGorunur=true;
 
@@ -6246,6 +6254,7 @@ class _GorselYaziKartiState extends State<GorselYaziKarti> with RouteAware {
 
   @override
   void dispose() {
+    if(temizGorunum&&ngelxAkisTemizGorunum.value)ngelxAkisTemizGorunum.value=false;
     ngelxRouteObserver.unsubscribe(this);
     unawaited(_profilCanliAboneligi?.cancel());
     oynatici?.dispose();
@@ -6296,7 +6305,18 @@ class _GorselYaziKartiState extends State<GorselYaziKarti> with RouteAware {
       }
     }
     return GestureDetector(
-      onLongPress: uzunBasmaMenusu,
+      onLongPressStart:fotoListesi.isEmpty?null:(_){
+        setState(()=>temizGorunum=true);
+        ngelxAkisTemizGorunum.value=true;
+      },
+      onLongPressEnd:fotoListesi.isEmpty?null:(_){
+        if(mounted)setState(()=>temizGorunum=false);
+        ngelxAkisTemizGorunum.value=false;
+      },
+      onLongPressCancel:fotoListesi.isEmpty?null:(){
+        if(mounted)setState(()=>temizGorunum=false);
+        ngelxAkisTemizGorunum.value=false;
+      },
       onDoubleTap: ciftTikBegen,
       child: Container(
         color: const Color(0xFF09090F),
@@ -6333,12 +6353,12 @@ class _GorselYaziKartiState extends State<GorselYaziKarti> with RouteAware {
                 style:const TextStyle(fontSize:29,height:1.3,fontWeight:FontWeight.w800),
               ),
             ),
-          const DecoratedBox(
+          if(!temizGorunum)const DecoratedBox(
             decoration: BoxDecoration(
               gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.black54, Colors.transparent, Colors.black87]),
             ),
           ),
-          if((widget.veri['overlayText']??'').trim().isNotEmpty)
+          if(!temizGorunum&&(widget.veri['overlayText']??'').trim().isNotEmpty)
             Align(
               alignment:Alignment(
                 (double.tryParse(widget.veri['overlayX']??'')??0).clamp(-.95,.95).toDouble(),
@@ -6371,9 +6391,9 @@ class _GorselYaziKartiState extends State<GorselYaziKarti> with RouteAware {
                 ),
               ),
             ),
-          if (kalpAnimasyonu)
+          if (!temizGorunum&&kalpAnimasyonu)
             const Center(child: KalpPatlama()),
-          if(fotoListesi.length>1)
+          if(!temizGorunum&&fotoListesi.length>1)
             Positioned(
               top:78,right:18,
               child:Container(
@@ -6382,7 +6402,7 @@ class _GorselYaziKartiState extends State<GorselYaziKarti> with RouteAware {
                 child:Text('${medyaSayfasi+1}/${fotoListesi.length}',style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w900)),
               ),
             ),
-          Positioned(
+          if(!temizGorunum)Positioned(
             left: 20,
             bottom: 28,
             right: 82,
@@ -6417,7 +6437,7 @@ class _GorselYaziKartiState extends State<GorselYaziKarti> with RouteAware {
     AkisMetaSatiri(icerikId: icerikId, yorumlariAc: yorumlariAc, aktif:widget.aktif),
             ]),
           ),
-          Positioned(
+          if(!temizGorunum)Positioned(
             right: 15,
             bottom: 25,
             child: Column(children: [
@@ -6538,6 +6558,7 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver,Rou
   StreamSubscription<DocumentSnapshot<Map<String,dynamic>>>? _profilCanliAboneligi;
   PageRoute<dynamic>? _rota;
   bool _rotaGorunur=true;
+  bool temizGorunum=false;
 
   String get videoId => widget.videoId;
 
@@ -6861,6 +6882,7 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver,Rou
 
   @override
   void dispose() {
+    if(temizGorunum&&ngelxAkisTemizGorunum.value)ngelxAkisTemizGorunum.value=false;
     WidgetsBinding.instance.removeObserver(this);
     ngelxRouteObserver.unsubscribe(this);
     kontrol.removeListener(_kesimKontrol);
@@ -6895,7 +6917,18 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver,Rou
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onLongPress: uzunBasmaMenusu,
+      onLongPressStart:(_){
+        setState(()=>temizGorunum=true);
+        ngelxAkisTemizGorunum.value=true;
+      },
+      onLongPressEnd:(_){
+        if(mounted)setState(()=>temizGorunum=false);
+        ngelxAkisTemizGorunum.value=false;
+      },
+      onLongPressCancel:(){
+        if(mounted)setState(()=>temizGorunum=false);
+        ngelxAkisTemizGorunum.value=false;
+      },
       onTap: () {
         if (!hazir) return;
 
@@ -6931,7 +6964,7 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver,Rou
             const Center(
               child: CircularProgressIndicator(color: mavi),
             ),
-          const DecoratedBox(
+          if(!temizGorunum)const DecoratedBox(
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
@@ -6944,7 +6977,7 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver,Rou
               ),
             ),
           ),
-if(widget.overlayText.trim().isNotEmpty)
+if(!temizGorunum&&widget.overlayText.trim().isNotEmpty)
   Align(
     alignment:Alignment(widget.overlayX.clamp(-.95,.95).toDouble(),widget.overlayY.clamp(-.95,.95).toDouble()),
     child:Transform.rotate(
@@ -6972,7 +7005,7 @@ if(widget.overlayText.trim().isNotEmpty)
       ),
     ),
   ),
-if(widget.captionText.trim().isNotEmpty||widget.captions.isNotEmpty||widget.captionTranslations.isNotEmpty)
+if(!temizGorunum&&(widget.captionText.trim().isNotEmpty||widget.captions.isNotEmpty||widget.captionTranslations.isNotEmpty))
   Positioned(
     left:42,
     right:42,
@@ -6984,10 +7017,10 @@ if(widget.captionText.trim().isNotEmpty||widget.captions.isNotEmpty||widget.capt
       captionTranslations:widget.captionTranslations,
     ),
   ),
-if (kalpAnimasyonu)
+if (!temizGorunum&&kalpAnimasyonu)
   const Center(child: KalpPatlama()),
 // Build 372: feed sound control intentionally hidden; playback audio state is preserved.
-          if (hazir && duraklatildi)
+          if (!temizGorunum&&hazir && duraklatildi)
             const Center(
               child: Icon(
                 Icons.play_arrow_rounded,
@@ -6995,7 +7028,7 @@ if (kalpAnimasyonu)
                 color: Colors.white70,
               ),
             ),
-          Positioned(
+          if(!temizGorunum)Positioned(
             left: 18,
             right: 85,
             bottom: 25,
@@ -7031,7 +7064,7 @@ if (kalpAnimasyonu)
               ],
             ),
           ),
-          Positioned(
+          if(!temizGorunum)Positioned(
             right: 14,
             bottom: 20,
             child: Column(
@@ -7087,7 +7120,7 @@ if (kalpAnimasyonu)
               ],
             ),
           ),
-          if(hazir)
+          if(!temizGorunum&&hazir)
             Positioned(
               left:0,right:0,bottom:0,
               child:VideoProgressIndicator(
