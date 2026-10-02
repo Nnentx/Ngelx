@@ -545,34 +545,64 @@ class _NgelXCameraStudioPageState extends State<NgelXCameraStudioPage> with Widg
   }
 
   Future<void> _videoBaslat()async{
-    final c=kontrol;if(c==null||!c.value.isInitialized||kayit)return;
+    final c=kontrol;if(c==null||!c.value.isInitialized||kayit||isleniyor)return;
+    setState(()=>isleniyor=true);
     try{
-      await _canliYuzAkisiniDurdur(c);
-      await c.startVideoRecording();
+      await _canliYuzAkisiniDurdur(c).timeout(const Duration(seconds:4));
+      await c.startVideoRecording().timeout(const Duration(seconds:8));
+      if(!mounted)return;
       kayitSure=Duration.zero;
       kayitTimer?.cancel();
+      setState(()=>kayit=true);
       kayitTimer=Timer.periodic(const Duration(seconds:1),(_){
-        if(!mounted)return;
+        if(!mounted||!kayit)return;
         final yeni=kayitSure+const Duration(seconds:1);
         if(yeni>=widget.maxVideo){unawaited(_videoDurdur());return;}
         setState(()=>kayitSure=yeni);
       });
-      setState(()=>kayit=true);
-    }catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Video başlatılamadı: $e')));}
+    }on TimeoutException{
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Kamera video kaydını başlatırken zaman aşımına uğradı. Tekrar dene.')));
+      unawaited(_canliYuzAkisiniGuncelle());
+    }catch(e){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Video başlatılamadı: $e')));
+      unawaited(_canliYuzAkisiniGuncelle());
+    }finally{
+      if(mounted)setState(()=>isleniyor=false);
+    }
   }
 
   Future<void> _videoDurdur()async{
     final c=kontrol;if(c==null||!kayit||isleniyor)return;
+    setState(()=>isleniyor=true);
     try{
-      setState(()=>isleniyor=true);
-      final x=await c.stopVideoRecording();
+      final x=await c.stopVideoRecording().timeout(const Duration(seconds:12));
       kayitTimer?.cancel();
-      if(mounted)Navigator.pop(context,<String,dynamic>{
+      kayitTimer=null;
+      if(!mounted)return;
+      setState(()=>kayit=false);
+      Navigator.pop(context,<String,dynamic>{
         'file':x,'video':true,'filter':ngelxKameraFiltreleri[filtreIndex].ad,'retouch':retus,
         'filterPreviewOnly':filtreIndex!=0||retus>.01,
       });
-    }catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Video tamamlanamadı: $e')));}
-    finally{if(mounted)setState((){kayit=false;isleniyor=false;});}
+    }on TimeoutException{
+      kayitTimer?.cancel();
+      kayitTimer=null;
+      if(mounted){
+        setState(()=>kayit=false);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Video kaydı tamamlanırken zaman aşımına uğradı. Kamerayı yeniden açıp tekrar dene.')));
+      }
+      unawaited(_canliYuzAkisiniGuncelle());
+    }catch(e){
+      kayitTimer?.cancel();
+      kayitTimer=null;
+      if(mounted){
+        setState(()=>kayit=false);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Video tamamlanamadı: $e')));
+      }
+      unawaited(_canliYuzAkisiniGuncelle());
+    }finally{
+      if(mounted)setState(()=>isleniyor=false);
+    }
   }
 
   String get _kayitYazi{
