@@ -1902,3 +1902,12 @@ Cihazda doğrulanan örnek senaryo:
 - **Kare kırp** henüz ayrı test edilmedi; sıradaki kontrol bu olacak.
 
 **KORUMA:** Sosyal istekler, mesajlaşma, Mesaj İstekleri ve sayaç regresyon temeli korunacak.
+
+## 2026-10-02 — Build 368 cihaz testi: Kare kırp tek dokunuş
+
+- Fotoğraf çekim sonrası Üret düzenleme ekranındaki **Kare kırp** butonu cihazda çalışıyor; etkin olduğunda butonda onay işareti çıkıyor ve önizleme kare kadraja alınıyor.
+- Bu özellik şu anda **tek dokunuşla otomatik merkez kare kırpma** şeklinde; ayrı bir sürükle/zoom/kırp alanı açılmıyor.
+- Bu nedenle temel kare kırp işlevi başarılı, ancak tam editör beklentisi için daha sonra **serbest kırpma, sürükleme, yakınlaştırma ve oran seçimi (1:1, 4:5, 9:16 vb.)** eklenmeli.
+- 90° Döndür ile birlikte kullanıldığında fotoğraf medya tipi korunuyor ve uygulama çökmesi görülmedi.
+
+**KORUMA:** Sosyal istekler, mesajlaşma, Mesaj İstekleri ve sayaç regresyon temeli korunacak.
