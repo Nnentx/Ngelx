@@ -2,7 +2,7 @@
 set -euo pipefail
 
 PUB_CACHE_DIR="${PUB_CACHE:-$HOME/.pub-cache}"
-BANUBA_GRADLE="$(find "$PUB_CACHE_DIR" -type f -path '*/banuba_sdk-*/android/build.gradle' | sort | tail -n 1)"
+BANUBA_GRADLE="$(find "$PUB_CACHE_DIR" -type f -path '*/banuba_sdk-*/android/build.gradle' ! -path '*/example/*' | sort | tail -n 1)"
 
 if [[ -z "$BANUBA_GRADLE" || ! -f "$BANUBA_GRADLE" ]]; then
   echo "banuba_sdk android/build.gradle bulunamadi." >&2
