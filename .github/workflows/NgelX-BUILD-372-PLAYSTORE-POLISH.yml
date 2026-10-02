@@ -42,7 +42,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          grep -q '^version: 1.0.151+372
+          grep -Fqx 'version: 1.0.151+372' app/pubspec.yaml
           ! grep -q 'banuba_sdk:' app/pubspec.yaml
           test ! -e app/lib/pro_beauty_camera.dart
           grep -q 'NgelXCameraStudioPage(baslangicVideo:video)' app/lib/main.dart
