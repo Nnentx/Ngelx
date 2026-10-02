@@ -66,6 +66,7 @@ jobs:
           grep -q 'NgelXProBeautyCameraPage.isConfigured' app/lib/main.dart
           grep -q 'minSdk = 26' app/android/app/build.gradle.kts
           grep -q 'com.banuba.sdk:face_tracker' app/android/app/build.gradle.kts
+          grep -q 'banuba_sdk Android compileSdk override method' app/android/build.gradle.kts
 
       - name: Bagimliliklari al
         shell: bash
