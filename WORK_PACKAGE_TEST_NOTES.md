@@ -1814,3 +1814,29 @@ Kod incelemesinde mevcut NgelX efekt sisteminin gerçek zamanlı yüz/AR efekt m
 - **Aktivite 0** olarak kaldı.
 - Sonuç: kabul edilmiş normal sohbetlerde unread artırma + sohbet açılınca sıfırlama cihaz testini geçti.
 - Açık kalan işler: Profil üst zil sayacını ortak Aktivite filtresine bağlamak ve Mesaj İstekleri kartına bağımsız pending sayaç rozeti eklemek.
+
+
+## 2026-10-02 — KORUNACAK REGRESYON TEMELİ: sosyal istekler ve mesajlaşma akışları
+
+Bu bölüm **korunacak çekirdek davranış** olarak işaretlendi. Sonraki Build/Work paketlerinde bu akışlar değiştirilirken aşağıdaki cihazda doğrulanmış davranışlar bozulmayacak; her paket öncesi/sonrası regresyon kontrolü yapılacak.
+
+- **Takip isteği ve arkadaşlık isteği birbirinden bağımsızdır.** Biri kabul/red edilince diğeri otomatik değişmez.
+- Yeni hesap → hedef profil akışında **Takip isteği gönder** ve **Arkadaş ekle** ayrı çalışır; gönderim sonrası ilgili buton kendi bekliyor durumuna geçer.
+- Alıcı **Aktivite** ekranında takip ve arkadaşlık isteklerini iki ayrı kayıt olarak görür; her biri ayrı kabul/red edilebilir.
+- Takip isteği reddedilip arkadaşlık isteği kabul edilirse: **Takipçi sayısı artmaz**, **Arkadaşlar sayısı artar**. Ters ilişki state'leri birbirine karışmaz.
+- Kabul/red sonrası ilgili pending sayaçları düşer; işlenmiş kayıt geçmiş aktivite olarak kalabilir.
+- Profildeki zil okunmamış Aktivite mantığıyla senkron çalışır. **Tüm aktiviteleri okundu yap** sonrası hem Gelen Kutusu **Aktivite** sayacı hem profil zil rozeti sıfırlanır/kaybolur.
+- Arkadaş/takip ilişkisi olmayan temiz bir hesaptan gelen ilk özel mesaj **normal sohbet listesine düşmez**; **Mesaj İstekleri** kartında bağımsız pending sayaç oluşturur.
+- Mesaj isteği ekranında gönderen ve ilk mesaj görünür; **Kabul et** sonrası istek pending listesinden çıkar ve konuşma normal Gelen Kutusu'na taşınır.
+- Kabul edilen konuşmanın geçmiş istek mesajları korunur.
+- Kabul sonrası gelen yeni normal mesaj, Gelen Kutusu üst **Mesajlar** sayacını ve ilgili sohbet satırı unread rozetini artırır.
+- Sohbet açılıp mesaj görüldüğünde sohbet satırı unread rozeti ve üst **Mesajlar** sayacı doğru şekilde azalır/sıfırlanır.
+- **Mesaj İstekleri pending sayacı, Mesajlar unread sayacı ve Aktivite sayacı birbirinden bağımsız tutulacaktır.**
+- Eski ve yeni hesaplar aynı sosyal ilişki / mesaj isteği kurallarını kullanacaktır.
+
+Cihazda doğrulanan örnek senaryo:
+- Dilek → Adem: arkadaşlık kabul, takip red → Adem **Arkadaşlar 2→3**, **Takipçi 2'de kaldı**; Dilek tarafında **Arkadaşsınız** + yeniden **Takip isteği gönder** birlikte doğru göründü.
+- Umay (0 takip / 0 takipçi / 0 arkadaş) → Adem: ilk mesaj **Mesaj İstekleri 1** altında göründü; kabul sonrası normal sohbet listesine taşındı; ikinci mesajda **Mesajlar 0→1**, sohbet açılınca **1→0** oldu.
+- **Tüm aktiviteleri okundu yap** sonrası Gelen Kutusu **Aktivite 20→0** ve profil zil rozeti kayboldu.
+
+**KORUMA KURALI:** Bu akışlardan herhangi birinde regresyon görülürse yeni özellik tamamlanmış sayılmayacak; önce bu temel sosyal/mesajlaşma davranışı geri kazanılacak.
