@@ -70,12 +70,7 @@ jobs:
         run: |
           set -euo pipefail
           cd app
-          flutter analyze --machine > analyze.log 2>&1 || true
-          cat analyze.log
-          if grep -q '^ERROR|' analyze.log; then
-            echo 'Gercek Flutter analiz hatasi bulundu.' >&2
-            exit 1
-          fi
+          flutter analyze --no-fatal-infos --no-fatal-warnings
 
       - name: APK olustur
         shell: bash
