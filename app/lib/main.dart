@@ -8026,6 +8026,7 @@ class _KesfetPageState extends State<KesfetPage> {
             const SizedBox(height:8),
             ...[
               (Icons.live_tv_rounded,t('live')),
+              (Icons.mic_rounded,'Sesli'),
               (Icons.local_fire_department_rounded,t('trend')),
               (Icons.person_rounded,t('people')),
               (Icons.groups_rounded,t('groups')),
@@ -8220,7 +8221,7 @@ class _KesfetPageState extends State<KesfetPage> {
             child:Row(children:[
               Text(t('explore'),style:const TextStyle(color:Colors.black,fontSize:29,fontWeight:FontWeight.w900)),
               const Spacer(),
-              IconButton(tooltip:t('search'),onPressed:_aramaAc,icon:const Icon(Icons.search_rounded,color:Colors.black,size:27)),
+              // Build 372: the large search field below is the single search entry point.
               IconButton(tooltip:t('filter'),onPressed:_filtreAc,icon:const Icon(Icons.tune_rounded,color:Colors.black,size:25)),
             ]),
           )),
