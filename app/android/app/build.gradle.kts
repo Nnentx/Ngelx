@@ -84,23 +84,6 @@ kotlin {
     }
 }
 
-val bnbSdkVersion = rootProject.extra["bnb_sdk_version"] as String
-
-dependencies {
-    implementation("com.banuba.sdk:face_tracker:$bnbSdkVersion")
-    implementation("com.banuba.sdk:background:$bnbSdkVersion")
-    implementation("com.banuba.sdk:lips:$bnbSdkVersion")
-    implementation("com.banuba.sdk:skin:$bnbSdkVersion")
-}
-
-val copyBanubaEffects by tasks.registering(Copy::class) {
-    from(file("../../effects"))
-    into(file("src/main/assets/bnb-resources/effects"))
-}
-
-tasks.named("preBuild") {
-    dependsOn(copyBanubaEffects)
-}
 
 flutter {
     source = "../.."
