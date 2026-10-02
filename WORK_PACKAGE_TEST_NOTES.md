@@ -2026,3 +2026,13 @@ Cihazda doğrulanan örnek senaryo:
 - Kalite eşiği açısından filtrelerin doğal/profesyonel görünümü henüz kabul edilmiş sayılmıyor; TikTok referans seviyesine göre ayrıca kalite değerlendirmesi yapılacak.
 
 **KORUMA:** Mesajlaşma, Mesaj İstekleri, takip/arkadaşlık istekleri ve sayaç regresyon temeli korunacak.
+
+## 2026-10-02 — Build 369 cihaz testi: fotoğraf filtresi kayda uygulanıyor
+
+- Cihaz testinde **HD** filtresi **%100 yoğunlukta** seçildi.
+- Canlı kamera önizlemesinde filtre etkisi görülüyor.
+- Fotoğraf çekiminden sonra Üret ekranına dönen fotoğrafta filtre işleme korunuyor; fotoğraf filtreli çıktı olarak kaydediliyor.
+- Kod tarafında fotoğraf çekimi `_fotoyuIsle` üzerinden seçili filtre ve `filtreYogunluk` ile işlenip yeni JPEG olarak döndürülüyor.
+- Bu sonuç yalnız **fotoğraf** için geçerli; video tarafında filtre şu an `filterPreviewOnly` olarak işaretlenebiliyor ve ayrıca test edilecek.
+
+**KORUMA:** Mesajlaşma, Mesaj İstekleri, takip/arkadaşlık istekleri ve sayaç regresyon temeli korunacak.
