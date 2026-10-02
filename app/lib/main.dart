@@ -6076,7 +6076,10 @@ class _GorselYaziKartiState extends State<GorselYaziKarti> with RouteAware {
       useSafeArea:true,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(25))),
-      builder: (_) => Yorumlar(videoId: icerikId),
+      builder: (_) => Yorumlar(
+        videoId:icerikId,
+        icerikSahibiUid:(widget.veri['ownerId']??'').toString(),
+      ),
     );
   }
 
@@ -6482,13 +6485,21 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver,Rou
       Uri.parse(widget.adres),
     );
 
-    kontrol.addListener(_kesimKontrol);
-        if(widget.aktif){
+    if(widget.trimEndMs>0)kontrol.addListener(_kesimKontrol);
+    if(widget.aktif){
       unawaited(_videoyuHazirla());
       unawaited(_muzigiHazirla());
-      unawaited(etkilesimleriGetir());
-      unawaited(profilFotosunuGetir());
+      unawaited(_ikincilVideoVerileriniHazirla());
     }
+  }
+
+  Future<void> _ikincilVideoVerileriniHazirla()async{
+    // Ilk video frame'i ve decoder acilisi once gelsin. Begeni/kaydet ve
+    // profil-canli sorgulari 220 ms sonra baslar; bunlar oynatmayi bekletmez.
+    await Future<void>.delayed(const Duration(milliseconds:220));
+    if(!mounted||!widget.aktif)return;
+    unawaited(etkilesimleriGetir());
+    unawaited(profilFotosunuGetir());
   }
 
   @override
@@ -6579,18 +6590,25 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver,Rou
     _profilCanliAboneligi=FirebaseFirestore.instance.collection('users').doc(widget.ownerId).snapshots().listen((belge)async{
       if(!mounted)return;
       final v=belge.data()??<String,dynamic>{};
+      final yeniFoto=(v['photoUrl']??'').toString();
       final canliId=(v['currentLiveId']??'').toString();
       final aday=v['isLive']==true&&canliId.isNotEmpty;
-      setState((){
-        profilFoto=(v['photoUrl']??'').toString();
-        profilCanli=false;
-        profilCanliId=canliId;
-      });
-      if(aday){
+      final kimlikDegisti=profilFoto!=yeniFoto||profilCanliId!=canliId;
+      final canliKapandi=!aday&&profilCanli;
+      if(kimlikDegisti||canliKapandi){
+        setState((){
+          profilFoto=yeniFoto;
+          profilCanliId=canliId;
+          if(!aday||kimlikDegisti)profilCanli=false;
+        });
+      }
+      // Presence/lastSeen gibi ilgisiz user alanlari degistiginde yeniden
+      // live_streams okumasi yapma ve video widget'ini rebuild etme.
+      if(aday&&(kimlikDegisti||!profilCanli)){
         try{
           final live=await FirebaseFirestore.instance.collection('live_streams').doc(canliId).get();
           final taze=ngelxCanliKaydiTaze(live.data()??<String,dynamic>{});
-          if(mounted&&profilCanliId==canliId)setState(()=>profilCanli=taze);
+          if(mounted&&profilCanliId==canliId&&profilCanli!=taze)setState(()=>profilCanli=taze);
         }catch(_){}
       }
     });
@@ -6780,8 +6798,7 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver,Rou
     if(widget.aktif&&!oldWidget.aktif){
       unawaited(_videoyuHazirla());
       unawaited(_muzigiHazirla());
-      unawaited(etkilesimleriGetir());
-      unawaited(profilFotosunuGetir());
+      unawaited(_ikincilVideoVerileriniHazirla());
     }
     if(!hazir)return;
     if(widget.aktif){
@@ -6795,7 +6812,7 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver,Rou
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     ngelxRouteObserver.unsubscribe(this);
-    kontrol.removeListener(_kesimKontrol);
+    if(widget.trimEndMs>0)kontrol.removeListener(_kesimKontrol);
     unawaited(_profilCanliAboneligi?.cancel());
     final p=muzikOynatici;
     if(p!=null)unawaited(p.dispose());
@@ -6816,7 +6833,10 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver,Rou
           top: Radius.circular(25),
         ),
       ),
-      builder: (_) => Yorumlar(videoId: videoId),
+      builder: (_) => Yorumlar(
+        videoId:videoId,
+        icerikSahibiUid:widget.ownerId,
+      ),
     );
     if(mounted&&hazir&&widget.aktif&&oynuyordu&&!duraklatildi){
       unawaited(kontrol.play());
@@ -7241,7 +7261,12 @@ class IslemButonu extends StatelessWidget {
 
 class Yorumlar extends StatefulWidget {
   final String videoId;
-  const Yorumlar({super.key, required this.videoId});
+  final String icerikSahibiUid;
+  const Yorumlar({
+    super.key,
+    required this.videoId,
+    this.icerikSahibiUid='',
+  });
 
   @override
   State<Yorumlar> createState() => _YeniYorumlarState();
@@ -7257,7 +7282,6 @@ class _YeniYorumlarState extends State<Yorumlar> {
   final Set<String> acikYanitlar = {};
   bool enCokBegenilen = false;
   Map<String,dynamic> icerikMeta=<String,dynamic>{};
-  List<QueryDocumentSnapshot<Map<String,dynamic>>> yorumOnbellek=<QueryDocumentSnapshot<Map<String,dynamic>>>[];
 
   CollectionReference<Map<String, dynamic>> get ref => FirebaseFirestore.instance.collection('videos').doc(widget.videoId).collection('comments');
 
@@ -7272,12 +7296,10 @@ class _YeniYorumlarState extends State<Yorumlar> {
       gizliKelimeListesi=hamGizli is Iterable?hamGizli.map((e)=>e.toString().trim().toLowerCase()).where((e)=>e.isNotEmpty).toSet().toList():<String>[];
       });
     });
-    unawaited(FirebaseFirestore.instance.collection('videos').doc(widget.videoId).get().then((d){
-      if(mounted)setState(()=>icerikMeta=d.data()??<String,dynamic>{});
-    }).catchError((_){ }));
-    unawaited(ref.limit(80).get(const GetOptions(source:Source.cache)).then((s){
-      if(mounted&&s.docs.isNotEmpty)setState(()=>yorumOnbellek=s.docs.toList());
-    }).catchError((_){ }));
+    // Firestore snapshots zaten yerel cache'i ilk emisyon olarak kullanir.
+    // Ayrica Source.cache + video belge okumasini ayni anda baslatmak panel
+    // acilisinda gereksiz disk/ag ve iki tam liste rebuild'i olusturuyordu.
+    // Icerik metadata'si sadece yorum GONDERILIRKEN gerekiyorsa okunur.
   }
 
   String zamanYaz(dynamic ham) {
@@ -7435,7 +7457,7 @@ class _YeniYorumlarState extends State<Yorumlar> {
           builder: (_, snap) {
             final List<QueryDocumentSnapshot<Map<String, dynamic>>> tumu =
                 snap.data?.docs.toList() ??
-                List<QueryDocumentSnapshot<Map<String,dynamic>>>.from(yorumOnbellek);
+                <QueryDocumentSnapshot<Map<String,dynamic>>>[];
             tumu.sort((a, b) {
               final at = a.data()['createdAt']; final bt = b.data()['createdAt'];
               if (at is! Timestamp) return -1; if (bt is! Timestamp) return 1;
@@ -7473,9 +7495,9 @@ class _YeniYorumlarState extends State<Yorumlar> {
                             itemBuilder: (_, i) {
                               final d = ana[i]; final v = d.data();
                               final yanitlar = yanitHaritasi[d.id] ?? <QueryDocumentSnapshot<Map<String,dynamic>>>[];
-                              return YorumKarti(
+                              return RepaintBoundary(child:YorumKarti(
                                 videoId: widget.videoId,
-                                icerikSahibiUid:(icerikMeta['ownerId']??'').toString(),
+                                icerikSahibiUid:(icerikMeta['ownerId']??widget.icerikSahibiUid).toString(),
                                 id: d.id,
                                 veri: v,
                                 zaman: zamanYaz(v['createdAt']),
@@ -7487,7 +7509,7 @@ class _YeniYorumlarState extends State<Yorumlar> {
                                 yanitlariAc: () => setState(() { acikYanitlar.contains(d.id) ? acikYanitlar.remove(d.id) : acikYanitlar.add(d.id); }),
                                 gizliKelimeFiltresi:gizliKelimeFiltresi,
                                 gizliKelimeListesi:gizliKelimeListesi,
-                              );
+                              ));
                             },
                           ),
               ),
@@ -7521,13 +7543,11 @@ class NgelXYorumYazici extends StatelessWidget{
     required this.onGonder,
   });
   @override Widget build(BuildContext context){
-    // Klavye animasyonu yalnızca bu küçük alanı yeniden kurar; 80 yorumluk
-    // Firestore listesi her tuşta/klavye karesinde tekrar çizilmez.
-    final klavye=MediaQuery.viewInsetsOf(context).bottom;
-    return AnimatedPadding(
-      duration:const Duration(milliseconds:120),
-      curve:Curves.easeOut,
-      padding:EdgeInsets.fromLTRB(12,8,12,klavye+10),
+    // Modal bottom sheet klavye inset'ini zaten yonetiyor. Burada ikinci bir
+    // viewInsets animasyonu yapmak video + yorum katmaninda fazladan layout
+    // ve frame drop uretiyordu.
+    return Padding(
+      padding:const EdgeInsets.fromLTRB(12,8,12,10),
       child:RepaintBoundary(child:Row(children:[
         IconButton(
           onPressed:(){
