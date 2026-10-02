@@ -544,11 +544,18 @@ class NgelXMedyaYaziAyariSheet extends StatefulWidget{
 }
 class _NgelXMedyaYaziAyariSheetState extends State<NgelXMedyaYaziAyariSheet>{
   late final TextEditingController kontrol;
+  late final FocusNode yaziFocus;
   late int renk,arkaPlanRenk;
   late double boyut;
   static const renkler=<int>[0xFFFFFFFF,0xFF111111,0xFFFF3B30,0xFFFFD60A,0xFF0A84FF,0xFF30D158,0xFFBF5AF2,0xFF64D2FF,0xFFFF9F0A,0xFFFF2D55];
-  @override void initState(){super.initState();kontrol=TextEditingController(text:widget.yazi);renk=widget.renk;arkaPlanRenk=widget.arkaPlanRenk;boyut=widget.boyut.clamp(14,54).toDouble();}
-  @override void dispose(){kontrol.dispose();super.dispose();}
+  @override void initState(){
+    super.initState();
+    kontrol=TextEditingController(text:widget.yazi);
+    yaziFocus=FocusNode(debugLabel:'ngelx_media_overlay_text');
+    renk=widget.renk;arkaPlanRenk=widget.arkaPlanRenk;boyut=widget.boyut.clamp(14,54).toDouble();
+    WidgetsBinding.instance.addPostFrameCallback((_){if(mounted)yaziFocus.requestFocus();});
+  }
+  @override void dispose(){yaziFocus.dispose();kontrol.dispose();super.dispose();}
   @override Widget build(BuildContext context){
     final klavye=MediaQuery.viewInsetsOf(context).bottom;
     return Theme(
@@ -556,13 +563,15 @@ class _NgelXMedyaYaziAyariSheetState extends State<NgelXMedyaYaziAyariSheet>{
       child:SafeArea(
         top:false,
         child:SingleChildScrollView(
-          keyboardDismissBehavior:ScrollViewKeyboardDismissBehavior.onDrag,
+          keyboardDismissBehavior:ScrollViewKeyboardDismissBehavior.manual,
           padding:EdgeInsets.fromLTRB(18,16,18,18+klavye),
           child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
             const Text('Yazıyı düzenle',style:TextStyle(fontSize:21,fontWeight:FontWeight.w900)),
             const SizedBox(height:12),
             TextField(
-              controller:kontrol,autofocus:true,maxLength:120,minLines:2,maxLines:3,
+              controller:kontrol,focusNode:yaziFocus,autofocus:true,maxLength:120,minLines:2,maxLines:3,
+              textInputAction:TextInputAction.newline,
+              onTapOutside:(_){},
               scrollPadding:EdgeInsets.only(bottom:klavye+140),
               style:TextStyle(color:Color(renk),fontSize:boyut,fontWeight:FontWeight.w800),
               decoration:InputDecoration(hintText:'Yazını ekle',filled:true,fillColor:const Color(0xFFF3F4F7),border:OutlineInputBorder(borderRadius:BorderRadius.circular(18),borderSide:BorderSide.none)),
@@ -636,8 +645,6 @@ class _NgelXSuruklenebilirYaziKatmaniState extends State<NgelXSuruklenebilirYazi
     final yarimH=math.max(1.0,widget.canvasHeight/2);
     final ns=(basScale*d.scale).clamp(.45,3.2).toDouble();
     final nr=basRotation+d.rotation;
-    // Büyük metinlerde biraz daha güvenli sınır kullanarak katmanın tamamen
-    // ekran dışına kaçmasını engelle.
     final guvenliX=(.90-math.min(.28,(ns-1).abs()*.08)).clamp(.58,.90).toDouble();
     final guvenliY=(.90-math.min(.24,(ns-1).abs()*.07)).clamp(.62,.90).toDouble();
     final nx=(basX+fark.dx/yarimW).clamp(-guvenliX,guvenliX).toDouble();
@@ -654,32 +661,34 @@ class _NgelXSuruklenebilirYaziKatmaniState extends State<NgelXSuruklenebilirYazi
         child:Transform.scale(
           scale:widget.scale.clamp(.45,3.2).toDouble(),
           child:GestureDetector(
-            behavior:HitTestBehavior.translucent,
+            behavior:HitTestBehavior.opaque,
             onTap:widget.onSelect,
             onDoubleTap:widget.onEdit,
             onScaleStart:_basla,
             onScaleUpdate:_guncelle,
-            child:AnimatedContainer(
-              duration:const Duration(milliseconds:120),
-              constraints:BoxConstraints(maxWidth:math.max(90.0,widget.canvasWidth*.74).toDouble()),
-              padding:const EdgeInsets.symmetric(horizontal:12,vertical:7),
-              decoration:BoxDecoration(
-                color:widget.arkaPlanRenk==0?Colors.transparent:Color(widget.arkaPlanRenk),
-                borderRadius:BorderRadius.circular(12),
-                border:widget.secili?Border.all(color:const Color(0xFFB99BFF),width:1.8):null,
-                boxShadow:widget.secili
-                  ?const [BoxShadow(color:Color(0x663F22A8),blurRadius:10,spreadRadius:1)]
-                  :null,
-              ),
-              child:Text(
-                widget.yazi,
-                textAlign:TextAlign.center,
-                softWrap:true,
-                style:TextStyle(
-                  color:Color(widget.renk),
-                  fontSize:widget.boyut,
-                  fontWeight:FontWeight.w900,
-                  shadows:const [Shadow(color:Colors.black45,blurRadius:3,offset:Offset(0,1))],
+            child:Padding(
+              padding:const EdgeInsets.all(18),
+              child:Container(
+                constraints:BoxConstraints(maxWidth:math.max(90.0,widget.canvasWidth*.74).toDouble()),
+                padding:const EdgeInsets.symmetric(horizontal:12,vertical:7),
+                decoration:BoxDecoration(
+                  color:widget.arkaPlanRenk==0?Colors.transparent:Color(widget.arkaPlanRenk),
+                  borderRadius:BorderRadius.circular(12),
+                  border:widget.secili?Border.all(color:const Color(0xFFB99BFF),width:1.8):null,
+                  boxShadow:widget.secili
+                    ?const [BoxShadow(color:Color(0x663F22A8),blurRadius:10,spreadRadius:1)]
+                    :null,
+                ),
+                child:Text(
+                  widget.yazi,
+                  textAlign:TextAlign.center,
+                  softWrap:true,
+                  style:TextStyle(
+                    color:Color(widget.renk),
+                    fontSize:widget.boyut,
+                    fontWeight:FontWeight.w900,
+                    shadows:const [Shadow(color:Colors.black45,blurRadius:3,offset:Offset(0,1))],
+                  ),
                 ),
               ),
             ),
@@ -720,7 +729,9 @@ class NgelXVideoDuzenlemePage extends StatefulWidget {
 class _NgelXVideoDuzenlemePageState extends State<NgelXVideoDuzenlemePage> {
   late final VideoPlayerController kontrol;
   late final TextEditingController yazi;
+  late final FocusNode yaziFocus;
   bool hazir = false;
+  bool videoIslemi=false;
   bool oynuyor = false;
   bool trimOncesiOynuyordu=false;
   bool yaziSecili=false;
@@ -740,6 +751,7 @@ class _NgelXVideoDuzenlemePageState extends State<NgelXVideoDuzenlemePage> {
   void initState() {
     super.initState();
     yazi = TextEditingController(text: widget.yazi);
+    yaziFocus=FocusNode(debugLabel:'ngelx_video_overlay_text');
     yaziRenk=widget.yaziRenk;
     yaziArkaPlanRenk=widget.yaziArkaPlanRenk;
     yaziBoyut=widget.yaziBoyut;
@@ -782,17 +794,22 @@ class _NgelXVideoDuzenlemePageState extends State<NgelXVideoDuzenlemePage> {
   }
 
   Future<void> _oynat() async {
-    if (!hazir) return;
-    if (kontrol.value.isPlaying) {
-      await kontrol.pause();
-    } else {
-      final pos = kontrol.value.position.inMilliseconds / 1000.0;
-      if (pos < bas || pos >= son) {
-        await kontrol.seekTo(Duration(milliseconds: (bas * 1000).round()));
+    if (!hazir||videoIslemi) return;
+    videoIslemi=true;
+    try{
+      if (kontrol.value.isPlaying) {
+        await kontrol.pause().timeout(const Duration(seconds:3));
+      } else {
+        final pos = kontrol.value.position.inMilliseconds / 1000.0;
+        if (pos < bas || pos >= son) {
+          await kontrol.seekTo(Duration(milliseconds: (bas * 1000).round())).timeout(const Duration(seconds:3));
+        }
+        await kontrol.play().timeout(const Duration(seconds:3));
       }
-      await kontrol.play();
+    }finally{
+      videoIslemi=false;
+      if (mounted) setState(() {});
     }
-    if (mounted) setState(() {});
   }
 
   void _trimSeek(double saniye){
@@ -903,6 +920,7 @@ class _NgelXVideoDuzenlemePageState extends State<NgelXVideoDuzenlemePage> {
     seekTimer?.cancel();
     kontrol.removeListener(_konumKontrol);
     kontrol.dispose();
+    yaziFocus.dispose();
     yazi.dispose();
     super.dispose();
   }
@@ -940,6 +958,7 @@ class _NgelXVideoDuzenlemePageState extends State<NgelXVideoDuzenlemePage> {
         body: SafeArea(
           child: hazir
               ? ListView(
+                  keyboardDismissBehavior:ScrollViewKeyboardDismissBehavior.manual,
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 30),
                   children: [
                     AspectRatio(
@@ -1065,8 +1084,10 @@ class _NgelXVideoDuzenlemePageState extends State<NgelXVideoDuzenlemePage> {
                     ),
                     const SizedBox(height:10),
                     TextField(
-                      controller:yazi,maxLength:120,
-                      onTap:()=>setState(()=>yaziSecili=true),
+                      controller:yazi,focusNode:yaziFocus,maxLength:120,
+                      textInputAction:TextInputAction.newline,
+                      onTap:(){yaziFocus.requestFocus();setState(()=>yaziSecili=true);},
+                      onTapOutside:(_){},
                       onChanged:(_)=>setState(()=>yaziSecili=yazi.text.trim().isNotEmpty),
                       decoration:InputDecoration(
                         labelText:'Video üzerine yazı',
