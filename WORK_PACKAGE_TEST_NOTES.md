@@ -1840,3 +1840,14 @@ Cihazda doğrulanan örnek senaryo:
 - **Tüm aktiviteleri okundu yap** sonrası Gelen Kutusu **Aktivite 20→0** ve profil zil rozeti kayboldu.
 
 **KORUMA KURALI:** Bu akışlardan herhangi birinde regresyon görülürse yeni özellik tamamlanmış sayılmayacak; önce bu temel sosyal/mesajlaşma davranışı geri kazanılacak.
+
+## 2026-10-02 — Build 368 cihaz testi: AI yüz efektleri BAŞARISIZ / yeniden yapılacak
+
+- Gerçek cihaz testinde **AI Yüz Rötuşu efektleri çok kötü** bulundu ve kullanıcı değerlendirmesine göre **pratikte düzgün işlemiyor**.
+- Cilt, Göz, Yüz ışığı ve Otomatik doğal portre kontrolleri ekranda mevcut olsa da istenen gerçek yüz-bölgesel kaliteyi vermiyor.
+- Efekt davranışı doğal ve kontrollü değil; yüzü doğru şekilde iyileştiren güvenilir bir sonuç elde edilemedi.
+- Bu nedenle Build 368'deki mevcut yüz efekti uygulaması **başarılı kabul edilmeyecek**.
+- Sonraki Work/Build paketinde efekt motoru **yeniden ele alınacak**: yüz maskesi daha doğru, efekt yalnız ilgili yüz bölgelerine uygulanacak, arka plan/genel kare etkilenmeyecek ve sonuç doğal görünecek.
+- Kamera açılması, ön/arka kamera ve temel kamera akışı ayrı olarak çalışsa da **efekt kalitesi/işleme kısmı açık hata** olarak kalıyor.
+
+**KORUMA:** Daha önce cihazda doğrulanan mesajlaşma, Mesaj İstekleri, takip/arkadaşlık istekleri ve sayaç akışları bu efekt düzeltmesi yapılırken bozulmayacak.
