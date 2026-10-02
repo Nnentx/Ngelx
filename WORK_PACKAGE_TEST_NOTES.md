@@ -2152,3 +2152,15 @@ Cihazda doğrulanan örnek senaryo:
 - TikTok'un özel/proprietary filtreleri kopyalanmayacak; hedef aynı kalite sınıfında doğal ve profesyonel NgelX presetleri.
 
 **KORUMA:** Mesajlaşma, Mesaj İstekleri, takip/arkadaşlık istekleri ve sayaç regresyon temeli korunacak.
+
+## 2026-10-02 — Build 371 — APK boyutunu düşürme / altyapıyı koruma
+
+- Kullanıcının talebi: APK'nın yaklaşık 109 MB seviyesinden 200 MB civarına çıkmasına neden olan başarısız profesyonel kamera denemesini kaldır; **çalışan altyapıyı ve son güncellemeleri bozma**.
+- Boyut artışının ana nedeni Build 369/370 ile eklenen Banuba native SDK paketleri ve Android tarafındaki `face_tracker/background/lips/skin` kütüphaneleriydi.
+- `banuba_sdk`, Banuba Android native bağımlılıkları, Banuba effect-copy görevi, Pro Beauty route'u ve yalnız Banuba için kullanılan dosyalar kaldırıldı.
+- **Build 370 profesyonel filtre preset güncellemeleri `camera_studio.dart` içinde korunuyor.**
+- Kamera/video temel akışı, canlı yayın, Üret ekranı, mesajlaşma, Mesaj İstekleri, takip/arkadaşlık istekleri, unread sayaçları ve diğer uygulama altyapısına dokunulmadı.
+- `minSdk = 26`, sabit imza anahtarı ve mevcut Android altyapısı korunuyor.
+- Yeni sürüm: **1.0.150+371**. APK boyutu CI çıktısı tamamlandığında gerçek cihaz paketi üzerinden doğrulanacak.
+
+**KORUMA KURALI:** Boyut düşürmek için çalışan sosyal/mesajlaşma/yayın altyapısı veya Build 370 filtre güncellemeleri geri alınmayacak.
