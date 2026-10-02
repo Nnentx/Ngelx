@@ -1,0 +1,92 @@
+name: NgelX BUILD 372 PLAYSTORE POLISH
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - work/playstore-polish-372
+    paths:
+      - 'app/**'
+      - '.github/workflows/NgelX-BUILD-372-PLAYSTORE-POLISH.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Kaynaklari al
+        uses: actions/checkout@v4
+      - name: Java 17 kur
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Flutter kur
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Sabit NgelX imza anahtarini geri yukle
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: ngelx-stable-debug-keystore-v1
+          fail-on-cache-miss: true
+      - name: Imza anahtarini dogrula
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s "$HOME/.android/debug.keystore"
+          keytool -list -v -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey | grep -F 'SHA256: BE:20:B2:7F:0B:A1:F4:DE:CD:29:41:D4:10:B1:53:6D:E8:9E:48:DC:89:4F:04:F0:38:F9:D2:6B:11:EC:D6:AA'
+      - name: Build 372 kaynak kontrolu
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q '^version: 1.0.150+371$' app/pubspec.yaml
+          ! grep -q 'banuba_sdk:' app/pubspec.yaml
+          test ! -e app/lib/pro_beauty_camera.dart
+          grep -q 'NgelXCameraStudioPage(baslangicVideo:video)' app/lib/main.dart
+          grep -q 'Build 372: feed sound control intentionally hidden' app/lib/main.dart
+          grep -q 'Draft saved automatically' app/lib/main.dart
+          grep -q 'shared_content' app/lib/main.dart
+          grep -q 'seenBy' app/lib/main.dart
+          grep -q 'minSdk = 26' app/android/app/build.gradle.kts
+      - name: Bagimliliklari al
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter clean
+          flutter pub get
+      - name: Flutter analiz
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter analyze --machine > analyze.log 2>&1 || true
+          cat analyze.log
+          if grep -q '^ERROR|' analyze.log; then
+            echo 'Gercek Flutter analiz hatasi bulundu.' >&2
+            exit 1
+          fi
+      - name: APK olustur
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter build apk --release --build-name=1.0.151 --build-number=372
+          test -s build/app/outputs/flutter-apk/app-release.apk
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          test -n "$APKSIGNER"
+          "$APKSIGNER" verify --verbose --print-certs build/app/outputs/flutter-apk/app-release.apk
+          cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/NgelX-1.0.151-Build-372-PLAYSTORE-POLISH.apk
+          sha256sum build/app/outputs/flutter-apk/NgelX-1.0.151-Build-372-PLAYSTORE-POLISH.apk > build/app/outputs/flutter-apk/NgelX-1.0.151-Build-372-PLAYSTORE-POLISH.apk.sha256
+      - name: APK yukle
+        uses: actions/upload-artifact@v4
+        with:
+          name: NgelX-1.0.151-Build-372-PLAYSTORE-POLISH
+          path: |
+            app/build/app/outputs/flutter-apk/NgelX-1.0.151-Build-372-PLAYSTORE-POLISH.apk
+            app/build/app/outputs/flutter-apk/NgelX-1.0.151-Build-372-PLAYSTORE-POLISH.apk.sha256
+          if-no-files-found: error
+          retention-days: 14
