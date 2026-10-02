@@ -1,0 +1,132 @@
+# Build 370 retry after version-agnostic Banuba patch
+name: NgelX BUILD 370 PRO FILTERS
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - work/build370-pro-filters
+    paths:
+      - 'app/**'
+      - '.github/workflows/NgelX-BUILD-370-PRO-FILTERS.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'app/**'
+      - '.github/workflows/NgelX-BUILD-370-PRO-FILTERS.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Kaynaklari al
+        uses: actions/checkout@v4
+
+      - name: Java 17 kur
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Flutter kur
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Sabit NgelX imza anahtarini geri yukle
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: ngelx-stable-debug-keystore-v1
+          fail-on-cache-miss: true
+
+      - name: Imza anahtarini dogrula
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s "$HOME/.android/debug.keystore"
+          keytool -list -v \
+            -keystore "$HOME/.android/debug.keystore" \
+            -storepass android \
+            -alias androiddebugkey \
+            | grep -F 'SHA256: BE:20:B2:7F:0B:A1:F4:DE:CD:29:41:D4:10:B1:53:6D:E8:9E:48:DC:89:4F:04:F0:38:F9:D2:6B:11:EC:D6:AA'
+
+      - name: Build 370 kaynak kontrolu
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q '^version: 1.0.149+370$' app/pubspec.yaml
+          grep -q 'banuba_sdk:' app/pubspec.yaml
+          grep -q 'BANUBA_CLIENT_TOKEN' app/lib/pro_beauty_camera.dart
+          grep -q 'BANUBA_TOUCHUP_READY' app/lib/pro_beauty_camera.dart
+          grep -q 'FaceMorph.nose' app/lib/pro_beauty_camera.dart
+          grep -q 'Skin.softening' app/lib/pro_beauty_camera.dart
+          grep -q 'NgelXProBeautyCameraPage.isConfigured' app/lib/main.dart
+          grep -q 'varsayilanYogunluk' app/lib/camera_studio.dart
+          grep -q 'kontrast' app/lib/camera_studio.dart
+          grep -q 'gamma' app/lib/camera_studio.dart
+          grep -q 'pozlama' app/lib/camera_studio.dart
+          grep -q 'minSdk = 26' app/android/app/build.gradle.kts
+          grep -q 'com.banuba.sdk:face_tracker' app/android/app/build.gradle.kts
+
+      - name: Bagimliliklari al
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter clean
+          flutter pub get
+
+      - name: Banuba Android uyumluluk yamasi
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          bash tool/patch_banuba_android.sh
+
+      - name: Dart bicim kontrolu
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          dart format --output=none --set-exit-if-changed lib || {
+            echo 'Dart format farki bulundu; analiz sonucu belirleyici olacak.'
+          }
+
+      - name: Flutter analiz
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter analyze --machine > analyze.log 2>&1 || true
+          cat analyze.log
+          if grep -q '^ERROR|' analyze.log; then
+            echo 'Gercek Flutter analiz hatasi bulundu.' >&2
+            exit 1
+          fi
+
+      - name: APK olustur
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter build apk --release --build-name=1.0.149 --build-number=370
+          test -s build/app/outputs/flutter-apk/app-release.apk
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          test -n "$APKSIGNER"
+          "$APKSIGNER" verify --verbose --print-certs build/app/outputs/flutter-apk/app-release.apk
+          cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/NgelX-1.0.149-Build-370-PRO-FILTERS.apk
+          sha256sum build/app/outputs/flutter-apk/NgelX-1.0.149-Build-370-PRO-FILTERS.apk > build/app/outputs/flutter-apk/NgelX-1.0.149-Build-370-PRO-FILTERS.apk.sha256
+
+      - name: APK yukle
+        uses: actions/upload-artifact@v4
+        with:
+          name: NgelX-1.0.149-Build-370-PRO-FILTERS
+          path: |
+            app/build/app/outputs/flutter-apk/NgelX-1.0.149-Build-370-PRO-FILTERS.apk
+            app/build/app/outputs/flutter-apk/NgelX-1.0.149-Build-370-PRO-FILTERS.apk.sha256
+          if-no-files-found: error
+          retention-days: 14
