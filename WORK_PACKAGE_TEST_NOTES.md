@@ -1851,3 +1851,15 @@ Cihazda doğrulanan örnek senaryo:
 - Kamera açılması, ön/arka kamera ve temel kamera akışı ayrı olarak çalışsa da **efekt kalitesi/işleme kısmı açık hata** olarak kalıyor.
 
 **KORUMA:** Daha önce cihazda doğrulanan mesajlaşma, Mesaj İstekleri, takip/arkadaşlık istekleri ve sayaç akışları bu efekt düzeltmesi yapılırken bozulmayacak.
+
+## 2026-10-02 — Build 368 cihaz testi: video kayıt sonrası FOTOĞRAF olarak işleniyor
+
+- Kamera **Video** modunda kayıt başlatma/durdurma çalışıyor; süre sayacı ve kırmızı kayıt durumu görünüyor.
+- Ancak kayıt durdurulduktan sonra Üret ekranına dönen dosya **video olarak değil görsel/fotoğraf olarak ele alınıyor**.
+- Önizleme kartında video oynatıcı/süre/oynat simgesi yerine **görsel simgesi** gösteriliyor.
+- Önizlemeye dokununca video oynatmak yerine **90° Döndür** ve **Kare kırp** fotoğraf düzenleme araçları açılıyor.
+- Bu nedenle kayıt dosyası medya tipi / MIME / uzantı / UI state zincirinde yanlış sınıflandırılıyor veya video state'i Üret ekranına aktarılırken fotoğraf state'ine düşüyor.
+- Beklenen davranış: kayıt sonrası dosya video olarak kalmalı; video küçük resmi + oynat düğmesi + süre görünmeli; dokununca video oynatılmalı; ses ve hareket doğrulanabilmeli.
+- Bu hata düzeltilmeden kamera video akışı tamamlanmış sayılmayacak.
+
+**KORUMA:** Sosyal istekler, mesajlaşma, Mesaj İstekleri ve sayaç regresyon temeli bu kamera/video düzeltmesinde korunacak.
