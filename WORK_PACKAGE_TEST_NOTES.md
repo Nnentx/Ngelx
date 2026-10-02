@@ -1883,3 +1883,13 @@ Cihazda doğrulanan örnek senaryo:
 - Bu adımda henüz **fotoğrafı çekip Üret ekranına dönüş / doğru medya önizlemesi** doğrulanmadı; sıradaki test bu olacak.
 
 **KORUMA:** Sosyal istekler, mesajlaşma, Mesaj İstekleri ve sayaç regresyon temeli korunacak.
+
+## 2026-10-02 — Build 368 cihaz testi: fotoğraf çekim sonrası Üret düzenleme
+
+- Fotoğraf modunda çekim tamamlanıyor ve dosya Üret ekranına **fotoğraf olarak doğru şekilde** geliyor.
+- Önizleme bozulmadan gösteriliyor; medya tipi video ile karışmıyor.
+- Çekim sonrası düzenleme araçlarında **90° Döndür**, **Kare kırp**, temel filtre seçenekleri, **Yazı ekle** ve **NgelX müzik ekle** görünüyor.
+- Kullanıcının daha önce istediği **Güzellik / Rötuş** aracı bu çekim sonrası düzenleme ekranında görünmüyor; eklenecek.
+- Önizleme kartının tamamının dokunulabilir olması ve dokununca medya türüne uygun tam düzenleme ekranı açılması isteği korunuyor.
+
+**KORUMA:** Sosyal istekler, mesajlaşma, Mesaj İstekleri ve sayaç regresyon temeli korunacak.
