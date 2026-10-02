@@ -5937,10 +5937,16 @@ class _GorselYaziKartiState extends State<GorselYaziKarti> with RouteAware {
     super.initState();
     // Trafik tasarrufu: komsu akis kartlarinda medya ve kullanici durumunu onceden indirme.
     if(widget.aktif){
-      unawaited(etkilesimleriGetir());
       unawaited(_aktifSesiHazirla());
-      unawaited(profilFotosunuGetir());
+      unawaited(_ikincilKartVerileriniHazirla());
     }
+  }
+
+  Future<void> _ikincilKartVerileriniHazirla()async{
+    await Future<void>.delayed(const Duration(milliseconds:180));
+    if(!mounted||!widget.aktif)return;
+    unawaited(etkilesimleriGetir());
+    unawaited(profilFotosunuGetir());
   }
 
   @override
@@ -5964,18 +5970,23 @@ class _GorselYaziKartiState extends State<GorselYaziKarti> with RouteAware {
     _profilCanliAboneligi=FirebaseFirestore.instance.collection('users').doc(owner).snapshots().listen((belge)async{
       if(!mounted)return;
       final v=belge.data()??<String,dynamic>{};
+      final yeniFoto=(v['photoUrl']??'').toString().trim();
       final canliId=(v['currentLiveId']??'').toString();
       final aday=v['isLive']==true&&canliId.isNotEmpty;
-      setState((){
-        profilFoto=(v['photoUrl']??'').toString().trim();
-        profilCanli=false;
-        profilCanliId=canliId;
-      });
-      if(aday){
+      final kimlikDegisti=profilFoto!=yeniFoto||profilCanliId!=canliId;
+      final canliKapandi=!aday&&profilCanli;
+      if(kimlikDegisti||canliKapandi){
+        setState((){
+          profilFoto=yeniFoto;
+          profilCanliId=canliId;
+          if(!aday||kimlikDegisti)profilCanli=false;
+        });
+      }
+      if(aday&&(kimlikDegisti||!profilCanli)){
         try{
           final live=await FirebaseFirestore.instance.collection('live_streams').doc(canliId).get();
           final taze=ngelxCanliKaydiTaze(live.data()??<String,dynamic>{});
-          if(mounted&&profilCanliId==canliId)setState(()=>profilCanli=taze);
+          if(mounted&&profilCanliId==canliId&&profilCanli!=taze)setState(()=>profilCanli=taze);
         }catch(_){}
       }
     });
@@ -6170,9 +6181,8 @@ class _GorselYaziKartiState extends State<GorselYaziKarti> with RouteAware {
       return;
     }
     if(widget.aktif&&!oldWidget.aktif){
-      unawaited(etkilesimleriGetir());
       unawaited(_aktifSesiHazirla());
-      unawaited(profilFotosunuGetir());
+      unawaited(_ikincilKartVerileriniHazirla());
     }else if(!widget.aktif&&oldWidget.aktif){
       final p=oynatici;
       if(p!=null)unawaited(p.pause());
@@ -7325,7 +7335,7 @@ class _YeniYorumlarState extends State<Yorumlar> {
       if(vv.isEmpty){
         final video=await FirebaseFirestore.instance.collection('videos').doc(widget.videoId).get().timeout(const Duration(seconds:4));
         vv=video.data()??<String,dynamic>{};
-        if(mounted)setState(()=>icerikMeta=vv);else icerikMeta=vv;
+        icerikMeta=vv;
       }
       icerikSahibi=(vv['ownerId']??'').toString();
       final izin=(vv['commentAudience']??'Herkes').toString();
