@@ -1996,3 +1996,13 @@ Cihazda doğrulanan örnek senaryo:
 - Kaydedilen dosyanın gerçekten seçilen en-boy oranında çıkıp çıkmadığı henüz kesin doğrulanmadı; 1:1 ve 16:9 için ayrı çekim sonucu kontrol edilecek.
 
 **KORUMA:** Mesajlaşma, Mesaj İstekleri, takip/arkadaşlık istekleri ve sayaç regresyon temeli korunacak.
+
+## 2026-10-02 — Build 369 cihaz testi: 1:1 oran kayda uygulanmıyor
+
+- Kamera önizlemesinde **1:1** seçimi ve kare kadraj çerçevesi doğru görünüyor.
+- Ancak çekim sonrası Üret ekranındaki kaydedilmiş fotoğraf **1:1 kare olarak gelmiyor; dikey/portre oranında kalıyor**.
+- Sonuç: oran seçici şu an yalnızca önizleme kadrajını değiştiriyor; gerçek capture/crop çıktısına uygulanmıyor.
+- **1:1 kaydı BAŞARISIZ.** Seçilen oran capture pipeline'a aktarılmalı ve kaydedilen dosyanın gerçek piksel boyutu seçilen oranla eşleşmeli.
+- 16:9 için de aynı davranış olasılığı var; ayrı cihaz testi yapılacak.
+
+**KORUMA:** Mesajlaşma, Mesaj İstekleri, takip/arkadaşlık istekleri ve sayaç regresyon temeli korunacak.
