@@ -513,9 +513,9 @@ class _NgelXCameraStudioPageState extends State<NgelXCameraStudioPage> with Widg
       if(retus>.01||portre){
         g=img.adjustColor(
           g,
-          brightness:1+(retus*.006)+(portre?.008:0),
-          saturation:1+(retus*.006)+(portre?.006:0),
-          contrast:1-(portre?.010:0),
+          brightness:1+(retus*.006)+(portre ? .008 : 0),
+          saturation:1+(retus*.006)+(portre ? .006 : 0),
+          contrast:1-(portre ? .010 : 0),
           amount:1,
         );
       }
