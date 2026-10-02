@@ -1,6 +1,7 @@
 import { AwsClient } from 'aws4fetch';
 import {
   captionMediaCandidates,
+  captionTranscriptionAttempts,
   detectTranslationSource,
   normalizeLanguageCode,
 } from './content_tools.js';
@@ -188,15 +189,18 @@ async function loadCaptionMedia(candidates, requestUrl, env) {
     let target;
     try { target = new URL(mediaUrl); } catch (_) { continue; }
     if (target.protocol !== 'https:') continue;
-    const allowedHost = target.hostname.endsWith('.workers.dev') ||
+    const ngelxMediaHost = target.hostname.endsWith('.workers.dev') ||
+      target.hostname === 'media.ngelxsocial.com' ||
+      target.hostname === 'media2.ngelxsocial.com';
+    const allowedHost = ngelxMediaHost ||
       target.hostname.endsWith('.googleapis.com') ||
       target.hostname.endsWith('.firebasestorage.app') ||
       target.hostname.endsWith('.appspot.com');
     if (!allowedHost) continue;
 
-    // İki NgelX Worker alan adı aynı R2 bucket'ını kullanır. /media/ nesnesini
-    // binding ile okumak, eski alan adı geçişlerindeki yanlış 404'leri önler.
-    if (target.pathname.startsWith('/media/') && target.hostname.endsWith('.workers.dev')) {
+    // NgelX medya alan adları aynı R2 bucket'ını kullanır. /media/ nesnesini
+    // binding ile okumak, alan adı geçişlerindeki yanlış 404'leri önler.
+    if (target.pathname.startsWith('/media/') && ngelxMediaHost) {
       try {
         const key = decodeURIComponent(target.pathname.slice('/media/'.length));
         if (key && !key.includes('..')) {
@@ -225,6 +229,49 @@ async function loadCaptionMedia(candidates, requestUrl, env) {
     }
   }
   throw captionError('media_not_found', 'Videonun kaynak dosyası sunucuda bulunamadı. Yeni yüklenen bir video ile tekrar dene.', 404);
+}
+
+async function extractCaptionAudio(videoBytes, env) {
+  if (!env.VIDEO_MEDIA) return {bytes: videoBytes, extracted: false};
+  try {
+    const stream = new Response(videoBytes).body;
+    if (!stream) return {bytes: videoBytes, extracted: false};
+    const audio = await env.VIDEO_MEDIA
+      .input(stream)
+      .output({mode: 'audio', format: 'm4a'})
+      .response();
+    if (!audio.ok) throw new Error('audio_extract_http_' + audio.status);
+    const bytes = new Uint8Array(await audio.arrayBuffer());
+    if (!bytes.length) throw new Error('audio_extract_empty');
+    return {bytes, extracted: true};
+  } catch (e) {
+    console.warn(JSON.stringify({service:'ngelx-caption',event:'audio_extract_fallback',message:String(e?.message||e)}));
+    return {bytes: videoBytes, extracted: false};
+  }
+}
+
+function bytesToBase64(bytes) {
+  let binary = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) {
+    binary += String.fromCharCode(...bytes.subarray(i, Math.min(i + 0x8000, bytes.length)));
+  }
+  return btoa(binary);
+}
+
+async function transcribeCaptionAudio(bytes, language, env) {
+  const attempts = captionTranscriptionAttempts(language);
+  let lastResult = null;
+  for (const options of attempts) {
+    const result = await env.AI.run('@cf/openai/whisper-large-v3-turbo', {
+      audio: bytesToBase64(bytes),
+      task: 'transcribe',
+      condition_on_previous_text: false,
+      ...options,
+    });
+    lastResult = result;
+    if (String(result?.text || '').trim()) return result;
+  }
+  return lastResult;
 }
 
 
@@ -290,7 +337,7 @@ export default {
     if (request.method === 'GET' && url.pathname === '/health') {
       try {
         await env.MEDIA.head('__ngelx_healthcheck__');
-        return json({ok: true, service: 'ngelx-r2-media', r2: true, ai: Boolean(env.AI), directUpload: directR2Ready(env), protocol: MEDIA_PROTOCOL});
+        return json({ok: true, service: 'ngelx-r2-media', r2: true, ai: Boolean(env.AI), mediaTransform: Boolean(env.VIDEO_MEDIA), directUpload: directR2Ready(env), protocol: MEDIA_PROTOCOL});
       } catch (e) {
         return json({ok: false, service: 'ngelx-r2-media', r2: false, directUpload: directR2Ready(env), protocol: MEDIA_PROTOCOL, message: String(e?.message || e)}, 503);
       }
@@ -319,14 +366,20 @@ export default {
       const mediaUrls=captionMediaCandidates(body),language=normalizeLanguageCode(body?.language);
       if(!mediaUrls.length)return json({error:'invalid_media_url',message:'Altyazı üretilecek video bulunamadı.'},400);
       try{
-        const loaded=await loadCaptionMedia(mediaUrls,request.url,env),bytes=loaded.bytes;
-        let binary='';for(let i=0;i<bytes.length;i+=0x8000)binary+=String.fromCharCode(...bytes.subarray(i,Math.min(i+0x8000,bytes.length)));
-        const result=await env.AI.run('@cf/openai/whisper-large-v3-turbo',{audio:btoa(binary),task:'transcribe',...(language?{language}:{}),vad_filter:true});
+        const loaded=await loadCaptionMedia(mediaUrls,request.url,env);
+        const audio=await extractCaptionAudio(loaded.bytes,env);
+        const result=await transcribeCaptionAudio(audio.bytes,language,env);
         const text=String(result?.text||'').trim(),vtt=String(result?.vtt||'').trim();
-        if(!text)throw new Error('no_speech_detected');
+        if(!text)throw captionError('no_speech_detected','Bu videoda altyazıya çevrilebilecek konuşma algılanamadı.',422);
         const detectedLanguage=normalizeLanguageCode(result?.transcription_info?.language||result?.language||language);
-        return json({ok:true,text,vtt,language:detectedLanguage,mediaSource:loaded.via});
-      }catch(e){return json({error:e?.code||'caption_failed',message:String(e?.message||e)},Number(e?.status)||502);}
+        return json({ok:true,text,vtt,language:detectedLanguage,mediaSource:loaded.via,audioExtracted:audio.extracted});
+      }catch(e){
+        const code=e?.code||'caption_failed';
+        const message=code==='no_speech_detected'
+          ?'Bu videoda altyazıya çevrilebilecek konuşma algılanamadı.'
+          :String(e?.message||e);
+        return json({error:code,message},Number(e?.status)||502);
+      }
     }
 
     if (request.method === 'GET' && url.pathname.startsWith('/media/')) {
