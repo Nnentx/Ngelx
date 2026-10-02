@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   captionMediaCandidates,
+  captionTranscriptionAttempts,
   detectTranslationSource,
   normalizeLanguageCode,
 } from '../src/content_tools.js';
@@ -32,4 +33,16 @@ test('caption media candidates are ordered, unique and bounded', () => {
     'https://ngelx-media.example/video.mp4',
     'https://ngelx-upload.example/video.mp4',
   ]);
+});
+
+
+test('caption transcription retries with a relaxed second pass', () => {
+  const attempts = captionTranscriptionAttempts('tr-TR');
+  assert.equal(attempts.length, 2);
+  assert.equal(attempts[0].language, 'tr');
+  assert.equal(attempts[0].vad_filter, true);
+  assert.equal(attempts[0].no_speech_threshold, 0.80);
+  assert.equal('language' in attempts[1], false);
+  assert.equal(attempts[1].vad_filter, false);
+  assert.equal(attempts[1].no_speech_threshold, 0.95);
 });
