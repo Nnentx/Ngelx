@@ -1,7 +1,7 @@
 name: ngelx_app
 description: "A new Flutter project."
 publish_to: 'none'
-version: 1.0.151+372
+version: 1.0.152+373
 environment:
   sdk: ^3.13.3
 
