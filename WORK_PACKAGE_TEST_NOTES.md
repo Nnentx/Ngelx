@@ -2119,3 +2119,14 @@ Cihazda doğrulanan örnek senaryo:
 - Sonuç: **pinch zoom testi GEÇTİ**.
 
 **KORUMA:** Mesajlaşma, Mesaj İstekleri, takip/arkadaşlık istekleri ve sayaç regresyon temeli korunacak.
+
+## 2026-10-02 — Build 369 cihaz testi: filtre kalitesi yetersiz
+
+- Kullanıcı cihaz testinde mevcut kamera/video filtrelerini **çok yetersiz** buldu.
+- Filtre seçimi ve canlı önizleme teknik olarak çalışsa da kalite seviyesi kabul edilmedi.
+- Özellikle TikTok referansındaki gibi belirgin ama doğal, yüz tonunu bozmayan, dengeli kontrast/renk ve profesyonel LUT görünümü hedefleniyor.
+- Mevcut filtre seti ve yoğunluk davranışı **kalite açısından BAŞARISIZ** kabul edilecek; yalnız çalışıyor olması yeterli değil.
+- Fotoğraf ve video için filtre motoru yeniden ele alınmalı; doğal ten tonu, gölge/parlak alan dengesi, renk sıcaklığı ve aşırı patlama/solma kontrol edilmeli.
+- Video tarafında önizleme ile nihai çıktı arasında aynı görünüm korunmalı.
+
+**KORUMA:** Mesajlaşma, Mesaj İstekleri, takip/arkadaşlık istekleri ve sayaç regresyon temeli korunacak.
