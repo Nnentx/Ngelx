@@ -2109,3 +2109,13 @@ Cihazda doğrulanan örnek senaryo:
 - Video ses testi **GEÇTİ**.
 
 **KORUMA:** Mesajlaşma, Mesaj İstekleri, takip/arkadaşlık istekleri ve sayaç regresyon temeli korunacak.
+
+## 2026-10-02 — Build 369 cihaz testi: pinch zoom video kaydında çalışıyor
+
+- Kamera önizlemesinde iki parmakla yakınlaştırma çalışıyor; cihaz testinde **2.5x** zoom değeri ekranda göründü.
+- Zoom video kaydı sırasında da uygulanabiliyor; kayıt `00:03` sırasında 2.5x aktif olarak görüldü.
+- Kayıt tamamlandıktan sonra medya `.mp4` olarak Üret ekranına doğru döndü.
+- Test görüntülerinde zoom sırasında çökme veya kalıcı donma görülmedi.
+- Sonuç: **pinch zoom testi GEÇTİ**.
+
+**KORUMA:** Mesajlaşma, Mesaj İstekleri, takip/arkadaşlık istekleri ve sayaç regresyon temeli korunacak.
