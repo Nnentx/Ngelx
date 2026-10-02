@@ -158,9 +158,20 @@ class _NgelXCameraStudioPageState extends State<NgelXCameraStudioPage> with Widg
     enableLandmarks:true,
     enableContours:false,
     enableClassification:false,
-    enableTracking:false,
+    enableTracking:true,
   ));
   int _sonYuzSayisi=0;
+  List<Face> _canliYuzler=<Face>[];
+  Size? _canliYuzGoruntuBoyutu;
+  InputImageRotation? _canliYuzRotasyon;
+  DateTime _sonCanliYuzAnalizi=DateTime.fromMillisecondsSinceEpoch(0);
+  bool _canliYuzIsleniyor=false,_canliYuzAkisiAcik=false;
+  static const Map<DeviceOrientation,int> _yuzYonleri=<DeviceOrientation,int>{
+    DeviceOrientation.portraitUp:0,
+    DeviceOrientation.landscapeLeft:90,
+    DeviceOrientation.portraitDown:180,
+    DeviceOrientation.landscapeRight:270,
+  };
   List<CameraDescription> kameralar=<CameraDescription>[];
   CameraController? kontrol;
   int kameraIndex=0;
@@ -200,11 +211,15 @@ class _NgelXCameraStudioPageState extends State<NgelXCameraStudioPage> with Widg
     kontrol=null;
     if(mounted)setState(()=>hazirlaniyor=true);
     if(eski!=null){
+      try{if(eski.value.isStreamingImages)await eski.stopImageStream();}catch(_){}
       try{await eski.dispose();}catch(_){}
+      _canliYuzAkisiAcik=false;
+      _canliYuzler=<Face>[];
       await Future<void>.delayed(const Duration(milliseconds:140));
     }
     final preset=kamera.lensDirection==CameraLensDirection.front?ResolutionPreset.veryHigh:ResolutionPreset.high;
-    final yeni=CameraController(kamera,preset,enableAudio:video,imageFormatGroup:ImageFormatGroup.jpeg);
+    final format=Platform.isAndroid?ImageFormatGroup.nv21:Platform.isIOS?ImageFormatGroup.bgra8888:ImageFormatGroup.jpeg;
+    final yeni=CameraController(kamera,preset,enableAudio:video,imageFormatGroup:format);
     try{
       await yeni.initialize();
       try{await yeni.setFocusMode(FocusMode.auto);}catch(_){}
@@ -223,10 +238,88 @@ class _NgelXCameraStudioPageState extends State<NgelXCameraStudioPage> with Widg
       if(!mounted){await yeni.dispose();return;}
       kontrol=yeni;
       setState(()=>hazirlaniyor=false);
+      unawaited(_canliYuzAkisiniGuncelle());
     }catch(e){
       try{await yeni.dispose();}catch(_){}
       if(mounted)setState(()=>hazirlaniyor=false);
       rethrow;
+    }
+  }
+
+  InputImage? _canliInputImage(CameraImage image,CameraController c){
+    final kamera=c.description;
+    final sensor=kamera.sensorOrientation;
+    InputImageRotation? rotation;
+    if(Platform.isIOS){
+      rotation=InputImageRotationValue.fromRawValue(sensor);
+    }else if(Platform.isAndroid){
+      var komp=_yuzYonleri[c.value.deviceOrientation];
+      if(komp==null)return null;
+      komp=kamera.lensDirection==CameraLensDirection.front
+        ?(sensor+komp)%360
+        :(sensor-komp+360)%360;
+      rotation=InputImageRotationValue.fromRawValue(komp);
+    }
+    if(rotation==null)return null;
+    final format=InputImageFormatValue.fromRawValue(image.format.raw);
+    if(format==null)return null;
+    if(Platform.isAndroid&&format!=InputImageFormat.nv21)return null;
+    if(Platform.isIOS&&format!=InputImageFormat.bgra8888)return null;
+    if(image.planes.length!=1)return null;
+    final plane=image.planes.first;
+    _canliYuzGoruntuBoyutu=Size(image.width.toDouble(),image.height.toDouble());
+    _canliYuzRotasyon=rotation;
+    return InputImage.fromBytes(
+      bytes:plane.bytes,
+      metadata:InputImageMetadata(
+        size:_canliYuzGoruntuBoyutu!,
+        rotation:rotation,
+        format:format,
+        bytesPerRow:plane.bytesPerRow,
+      ),
+    );
+  }
+
+  Future<void> _canliYuzIsle(CameraImage image,CameraController kaynak)async{
+    if(_canliYuzIsleniyor||!mounted||!identical(kontrol,kaynak))return;
+    final simdi=DateTime.now();
+    if(simdi.difference(_sonCanliYuzAnalizi)<const Duration(milliseconds:145))return;
+    _sonCanliYuzAnalizi=simdi;
+    final input=_canliInputImage(image,kaynak);
+    if(input==null)return;
+    _canliYuzIsleniyor=true;
+    try{
+      final yuzler=await _yuzAlgilayici.processImage(input).timeout(const Duration(milliseconds:900));
+      if(!mounted||!identical(kontrol,kaynak))return;
+      _sonYuzSayisi=yuzler.length;
+      setState(()=>_canliYuzler=yuzler.take(3).toList(growable:false));
+    }catch(_){
+      // Canlı akış tek karede hata verirse kamerayı kesme; sonraki kare devam eder.
+    }finally{
+      _canliYuzIsleniyor=false;
+    }
+  }
+
+  Future<void> _canliYuzAkisiniDurdur([CameraController? hedef])async{
+    final c=hedef??kontrol;
+    if(c==null)return;
+    try{if(c.value.isStreamingImages)await c.stopImageStream();}catch(_){}
+    _canliYuzAkisiAcik=false;
+    if(mounted&&_canliYuzler.isNotEmpty)setState(()=>_canliYuzler=<Face>[]);
+  }
+
+  Future<void> _canliYuzAkisiniGuncelle()async{
+    final c=kontrol;
+    if(c==null||!c.value.isInitialized||kayit||isleniyor||video)return;
+    final gerekli=c.description.lensDirection==CameraLensDirection.front&&(otomatikPortre||retus>.01||gozCanlilik>.01||yuzIsigi>.01);
+    if(!gerekli){await _canliYuzAkisiniDurdur(c);return;}
+    if(_canliYuzAkisiAcik||c.value.isStreamingImages)return;
+    try{
+      await c.startImageStream((image)=>unawaited(_canliYuzIsle(image,c)));
+      _canliYuzAkisiAcik=true;
+    }catch(e){
+      debugPrint('Canlı yüz takibi başlatılamadı: $e');
+      _canliYuzAkisiAcik=false;
     }
   }
 
@@ -352,17 +445,19 @@ class _NgelXCameraStudioPageState extends State<NgelXCameraStudioPage> with Widg
     await _sayacCalistir(()async{
       try{
         setState(()=>isleniyor=true);
+        await _canliYuzAkisiniDurdur(c);
         final ham=await c.takePicture();
         final sonuc=await _fotoyuIsle(ham);
         if(mounted)Navigator.pop(context,<String,dynamic>{'file':sonuc,'video':false,'filter':ngelxKameraFiltreleri[filtreIndex].ad,'retouch':retus,'eyeBoost':gozCanlilik,'faceLight':yuzIsigi,'aiFaceRetouch':_sonYuzSayisi>0,'facesDetected':_sonYuzSayisi});
-      }catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Fotoğraf çekilemedi: $e')));}
-      finally{if(mounted)setState(()=>isleniyor=false);}
+      }catch(e){if(mounted){ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Fotoğraf çekilemedi: $e')));setState(()=>isleniyor=false);unawaited(_canliYuzAkisiniGuncelle());}}
+      finally{if(mounted&&isleniyor)setState(()=>isleniyor=false);}
     });
   }
 
   Future<void> _videoBaslat()async{
     final c=kontrol;if(c==null||!c.value.isInitialized||kayit)return;
     try{
+      await _canliYuzAkisiniDurdur(c);
       await c.startVideoRecording();
       kayitSure=Duration.zero;
       kayitTimer?.cancel();
@@ -434,6 +529,29 @@ class _NgelXCameraStudioPageState extends State<NgelXCameraStudioPage> with Widg
       onScaleUpdate:(d){if(d.pointerCount<2)return;final z=(_zoomBaslangic*d.scale).clamp(minZoom,maxZoom).toDouble();zoom=z;unawaited(c.setZoomLevel(z));if(mounted)setState((){});},
       child:Stack(fit:StackFit.expand,children:[
         p,
+        if(onKamera&&_canliYuzler.isNotEmpty&&_canliYuzGoruntuBoyutu!=null&&_canliYuzRotasyon!=null&&(retus>.01||otomatikPortre))
+          Positioned.fill(child:IgnorePointer(child:ClipPath(
+            clipper:_NgelXCanliYuzClipper(
+              yuzler:_canliYuzler,
+              imageSize:_canliYuzGoruntuBoyutu!,
+              rotation:_canliYuzRotasyon!,
+              lensDirection:c.description.lensDirection,
+              ayna:ayna,
+            ),
+            child:BackdropFilter(
+              filter:ui.ImageFilter.blur(sigmaX:1.2+retus*4.2,sigmaY:1.2+retus*4.2),
+              child:ColoredBox(color:Colors.white.withValues(alpha:(.015+retus*.035).clamp(0.0,.05))),
+            ),
+          ))),
+        if(onKamera&&_canliYuzler.isNotEmpty&&_canliYuzGoruntuBoyutu!=null&&_canliYuzRotasyon!=null&&(retus>.01||otomatikPortre))
+          Positioned.fill(child:IgnorePointer(child:CustomPaint(painter:_NgelXCanliYuzGlowPainter(
+            yuzler:_canliYuzler,
+            imageSize:_canliYuzGoruntuBoyutu!,
+            rotation:_canliYuzRotasyon!,
+            lensDirection:c.description.lensDirection,
+            ayna:ayna,
+            yogunluk:retus,
+          )))),
         if(izgara)CustomPaint(painter:_NgelXIzgaraPainter()),
       ]),
     );
@@ -503,7 +621,7 @@ class _NgelXCameraStudioPageState extends State<NgelXCameraStudioPage> with Widg
           Row(children:[const SizedBox(width:78,child:Text('Yüz ışığı',style:TextStyle(color:Colors.white70,fontWeight:FontWeight.w700))),Expanded(child:Slider(value:yuzIsigi,min:0,max:.7,onChanged:(v){setState(()=>yuzIsigi=v);setP((){});})),Text('%${(yuzIsigi*100).round()}',style:const TextStyle(color:Colors.white))]),
           SwitchListTile(
             contentPadding:EdgeInsets.zero,dense:true,value:otomatikPortre,
-            onChanged:(v){setState(()=>otomatikPortre=v);setP((){});},
+            onChanged:(v){setState(()=>otomatikPortre=v);setP((){});unawaited(_canliYuzAkisiniGuncelle());},
             secondary:const Icon(Icons.auto_awesome_rounded,color:Colors.white70),
             title:const Text('Otomatik doğal portre',style:TextStyle(color:Colors.white,fontWeight:FontWeight.w800)),
             subtitle:const Text('Ön kamerada ışık, ten tonu ve sert kontrastı dengeler.',style:TextStyle(color:Colors.white60,fontSize:11)),
@@ -587,6 +705,76 @@ class _NgelXCameraStudioPageState extends State<NgelXCameraStudioPage> with Widg
       ])),
     );
   }
+}
+
+Rect _ngelxCanliYuzRect({
+  required Rect raw,
+  required Size canvas,
+  required Size image,
+  required InputImageRotation rotation,
+  required CameraLensDirection lensDirection,
+  required bool ayna,
+}){
+  Offset donustur(double x,double y){
+    double rx=x,ry=y,rw=image.width,rh=image.height;
+    switch(rotation){
+      case InputImageRotation.rotation90deg:
+        rx=image.height-y;ry=x;rw=image.height;rh=image.width;break;
+      case InputImageRotation.rotation180deg:
+        rx=image.width-x;ry=image.height-y;break;
+      case InputImageRotation.rotation270deg:
+        rx=y;ry=image.width-x;rw=image.height;rh=image.width;break;
+      case InputImageRotation.rotation0deg:
+        break;
+    }
+    if((lensDirection==CameraLensDirection.front)^ayna)rx=rw-rx;
+    final scale=math.max(canvas.width/rw,canvas.height/rh);
+    final dx=(canvas.width-rw*scale)/2,dy=(canvas.height-rh*scale)/2;
+    return Offset(dx+rx*scale,dy+ry*scale);
+  }
+  final p1=donustur(raw.left,raw.top),p2=donustur(raw.right,raw.bottom);
+  var r=Rect.fromLTRB(math.min(p1.dx,p2.dx),math.min(p1.dy,p2.dy),math.max(p1.dx,p2.dx),math.max(p1.dy,p2.dy));
+  final ex=r.width*.10,ey=r.height*.08;
+  r=Rect.fromLTRB(r.left-ex,r.top-ey,r.right+ex,r.bottom+ey);
+  return r.intersect(Offset.zero&canvas);
+}
+
+class _NgelXCanliYuzClipper extends CustomClipper<Path>{
+  final List<Face> yuzler;
+  final Size imageSize;
+  final InputImageRotation rotation;
+  final CameraLensDirection lensDirection;
+  final bool ayna;
+  const _NgelXCanliYuzClipper({required this.yuzler,required this.imageSize,required this.rotation,required this.lensDirection,required this.ayna});
+  @override Path getClip(Size size){
+    final p=Path();
+    for(final f in yuzler){
+      final r=_ngelxCanliYuzRect(raw:f.boundingBox,canvas:size,image:imageSize,rotation:rotation,lensDirection:lensDirection,ayna:ayna);
+      if(r.width>8&&r.height>8)p.addOval(r);
+    }
+    return p;
+  }
+  @override bool shouldReclip(covariant _NgelXCanliYuzClipper old)=>old.yuzler!=yuzler||old.imageSize!=imageSize||old.rotation!=rotation||old.lensDirection!=lensDirection||old.ayna!=ayna;
+}
+
+class _NgelXCanliYuzGlowPainter extends CustomPainter{
+  final List<Face> yuzler;
+  final Size imageSize;
+  final InputImageRotation rotation;
+  final CameraLensDirection lensDirection;
+  final bool ayna;
+  final double yogunluk;
+  const _NgelXCanliYuzGlowPainter({required this.yuzler,required this.imageSize,required this.rotation,required this.lensDirection,required this.ayna,required this.yogunluk});
+  @override void paint(Canvas canvas,Size size){
+    final a=(.018+yogunluk*.032).clamp(0.0,.05).toDouble();
+    for(final f in yuzler){
+      final r=_ngelxCanliYuzRect(raw:f.boundingBox,canvas:size,image:imageSize,rotation:rotation,lensDirection:lensDirection,ayna:ayna);
+      if(r.width<8||r.height<8)continue;
+      final paint=Paint()..shader=RadialGradient(colors:[Colors.white.withValues(alpha:a),Colors.transparent],stops:const [.12,1]).createShader(r);
+      canvas.drawOval(r,paint);
+    }
+  }
+  @override bool shouldRepaint(covariant _NgelXCanliYuzGlowPainter old)=>old.yuzler!=yuzler||old.imageSize!=imageSize||old.rotation!=rotation||old.lensDirection!=lensDirection||old.ayna!=ayna||old.yogunluk!=yogunluk;
 }
 
 class _NgelXIzgaraPainter extends CustomPainter{
