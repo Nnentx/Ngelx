@@ -32,8 +32,8 @@ tasks.register<Delete>("clean") {
  * fork'lamadan, yalnız bu alt projede compileSdk'i 36'ya yükseltiyoruz.
  */
 subprojects {
-    afterEvaluate {
-        if (name == "banuba_sdk") {
+    if (name == "banuba_sdk") {
+        pluginManager.withPlugin("com.android.library") {
             val androidExtension = extensions.findByName("android")
             val compileSdkMethod = androidExtension?.javaClass?.methods?.firstOrNull {
                 it.name == "compileSdkVersion" &&
