@@ -28,7 +28,7 @@ android {
         applicationId = "com.nnentx.ngelx_app"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = 23
+        minSdk = 26
         targetSdk = flutter.targetSdkVersion
         // Uses the version code from pubspec.yaml. When using split APKs, 1000 * ABI_VERSION
         // is added automatically by Flutter. (https://developer.android.com/studio/build/configure-apk-splits#configure-APK-versions)
@@ -36,6 +36,9 @@ android {
         // flag during build.
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        ndk {
+            abiFilters += listOf("armeabi-v7a", "arm64-v8a")
+        }
     }
 
     signingConfigs {
@@ -79,6 +82,24 @@ kotlin {
     compilerOptions {
         jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
     }
+}
+
+val bnbSdkVersion = rootProject.extra["bnb_sdk_version"] as String
+
+dependencies {
+    implementation("com.banuba.sdk:face_tracker:$bnbSdkVersion")
+    implementation("com.banuba.sdk:background:$bnbSdkVersion")
+    implementation("com.banuba.sdk:lips:$bnbSdkVersion")
+    implementation("com.banuba.sdk:skin:$bnbSdkVersion")
+}
+
+val copyBanubaEffects by tasks.registering(Copy::class) {
+    from(file("../../effects"))
+    into(file("src/main/assets/bnb-resources/effects"))
+}
+
+tasks.named("preBuild") {
+    dependsOn(copyBanubaEffects)
 }
 
 flutter {
