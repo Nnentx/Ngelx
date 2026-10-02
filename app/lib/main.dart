@@ -9356,7 +9356,7 @@ class _YeniYuklePageState extends State<YuklePage> {
           padding:const EdgeInsets.fromLTRB(22,22,22,148),
           children:[
             Container(
-              padding:const EdgeInsets.fromLTRB(20,22,20,20),
+              padding:const EdgeInsets.fromLTRB(18,16,18,15),
               decoration:BoxDecoration(
                 gradient:const LinearGradient(colors:[Color(0xFFECFBFF),Color(0xFFF3ECFF)],begin:Alignment.topLeft,end:Alignment.bottomRight),
                 borderRadius:BorderRadius.circular(28),
@@ -9365,12 +9365,12 @@ class _YeniYuklePageState extends State<YuklePage> {
               ),
               child:Column(children:[
                 Container(
-                  width:52,height:52,
+                  width:46,height:46,
                   decoration:const BoxDecoration(shape:BoxShape.circle,gradient:LinearGradient(colors:[Color(0xFF22D3EE),Color(0xFF7C3AED)])),
                   child:const Icon(Icons.auto_awesome_rounded,color:Colors.white,size:28),
                 ),
                 const SizedBox(height:11),
-                Text(t('createNew'),textAlign:TextAlign.center,style:const TextStyle(color:Colors.black,fontSize:27,fontWeight:FontWeight.w900,letterSpacing:-.4)),
+                Text(t('createNew'),textAlign:TextAlign.center,style:const TextStyle(color:Colors.black,fontSize:24,fontWeight:FontWeight.w900,letterSpacing:-.3)),
                 const SizedBox(height:6),
                 Text(t('createSubtitle'),textAlign:TextAlign.center,style:const TextStyle(color:Colors.black54,height:1.3)),
               ]),
@@ -9472,8 +9472,15 @@ class _YeniYuklePageState extends State<YuklePage> {
               onChanged:yukleniyor?null:(v)=>setState(()=>yenidenPaylasimaIzin=v),
             ),
             const SizedBox(height:12),
-            if(!yukleniyor)OutlinedButton.icon(onPressed:()=>_taslagiKaydet(),icon:const Icon(Icons.drafts_outlined),label:Text(lt('Taslağa kaydet','Save draft'))),
-            if(!yukleniyor)const SizedBox(height:8),
+            // Build 372: drafts already autosave after edits; avoid a duplicate manual action.
+            if(!yukleniyor&&taslakVar)Padding(
+              padding:const EdgeInsets.only(bottom:8),
+              child:Row(mainAxisAlignment:MainAxisAlignment.center,children:[
+                const Icon(Icons.cloud_done_outlined,size:17,color:mor),
+                const SizedBox(width:6),
+                Text(lt('Taslak otomatik kaydedildi','Draft saved automatically'),style:const TextStyle(color:Colors.black54,fontSize:12,fontWeight:FontWeight.w700)),
+              ]),
+            ),
             if(yukleniyor)...[
               LinearProgressIndicator(
                 value:yuklemeIlerlemesi>0?yuklemeIlerlemesi.clamp(0.0,1.0).toDouble():null,
