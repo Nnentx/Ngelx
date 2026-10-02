@@ -19547,7 +19547,7 @@ class SohbetBilgiPage extends StatelessWidget{
     await sosyalIstekGonder(hedefUid:uid,tur:'friend_request',metin:'Yeni arkadaşlık isteğin var');
     if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Arkadaşlık isteği gönderildi.')));
   }
-  Future<void> kisiyiPaylas()async{
+  Future<void> kisiyiPaylas(BuildContext context)async{
     final me=FirebaseAuth.instance.currentUser?.uid;
     final hedef=await FirebaseFirestore.instance.collection('users').doc(uid).get(),hv=hedef.data()??<String,dynamic>{};
     if(hv['profileShareFriendsOnly']==true&&me!=uid){
@@ -19571,7 +19571,7 @@ class SohbetBilgiPage extends StatelessWidget{
         title:const Text('Sohbet bilgisi',style:TextStyle(color:ngelxPrivateBlueInk,fontWeight:FontWeight.w900,fontSize:19)),
         actions:[PopupMenuButton<String>(
           icon:const Icon(Icons.more_vert_rounded),
-          onSelected:(v){if(v=='share')kisiyiPaylas();if(v=='report')sikayetEt(context,hedefTuru:'kullanici',hedefId:uid,hedefUid:uid);},
+          onSelected:(v){if(v=='share')kisiyiPaylas(context);if(v=='report')sikayetEt(context,hedefTuru:'kullanici',hedefId:uid,hedefUid:uid);},
           itemBuilder:(_)=>const [
             PopupMenuItem(value:'share',child:Row(children:[Icon(Icons.share_outlined),SizedBox(width:10),Text('Kişiyi paylaş')])),
             PopupMenuItem(value:'report',child:Row(children:[Icon(Icons.flag_outlined),SizedBox(width:10),Text('Şikâyet et')])),
@@ -19638,7 +19638,7 @@ class SohbetBilgiPage extends StatelessWidget{
               _bolum('İşlemler'),
               _satir(Icons.notifications_off_outlined,'Sessize al',()=>sessizeAl(context),alt:'Bu sohbetin bildirimlerini yönet'),
               _satir(Icons.notifications_outlined,'Bildirimler ve sesler',()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const TercihlerPage(baslik:'Bildirimler'))),alt:'Mesaj bildirim ayarları'),
-              _satir(Icons.share_outlined,'Kişiyi paylaş',kisiyiPaylas),
+              _satir(Icons.share_outlined,'Kişiyi paylaş',()=>kisiyiPaylas(context)),
               const SizedBox(height:18),
               _bolum('Gizlilik ve destek'),
               _satir(Icons.shield_outlined,'Mesaj izinleri',()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const TercihlerPage(baslik:'Mesaj izinleri')))),
