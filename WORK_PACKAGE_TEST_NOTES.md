@@ -1863,3 +1863,14 @@ Cihazda doğrulanan örnek senaryo:
 - Bu hata düzeltilmeden kamera video akışı tamamlanmış sayılmayacak.
 
 **KORUMA:** Sosyal istekler, mesajlaşma, Mesaj İstekleri ve sayaç regresyon temeli bu kamera/video düzeltmesinde korunacak.
+
+## 2026-10-02 — Üret medya önizlemesi: dokunma + düzenleme araçları isteği
+
+- Üret ekranındaki seçilen/çekilen medya önizlemesine **dokununca şu an beklenen düzenleme ekranı açılmıyor**.
+- Kullanıcı isteği: önizleme kartının/görselin **tamamı dokunulabilir** olacak.
+- Medyaya dokununca bir **düzenleme ekranı** açılacak.
+- Fotoğraf için en az: **Kırp**, **Döndür**, **Güzellik/Rötuş**, **Filtre**, temel ışık/renk ayarları ve gerekirse oran seçimi bulunacak.
+- Video için dokununca fotoğraf araçları değil, video oynatma ve video düzenleme araçları açılacak; medya türüne göre doğru araç seti gösterilecek.
+- Bu düzenleme akışı Üret ekranındaki mevcut medya kartına entegre edilecek; kullanıcı ayrıca küçük bir buton aramak zorunda kalmayacak.
+
+**KORUMA:** Daha önce doğrulanan mesajlaşma, Mesaj İstekleri, takip/arkadaşlık istekleri ve sayaç akışları korunacak.
