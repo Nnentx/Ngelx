@@ -27,3 +27,19 @@ export function captionMediaCandidates(body) {
   const raw = [body?.mediaUrl, ...(Array.isArray(body?.mediaUrls) ? body.mediaUrls : [])];
   return [...new Set(raw.map((x) => String(x || '').trim()).filter(Boolean))].slice(0, 8);
 }
+
+
+export function captionTranscriptionAttempts(rawLanguage) {
+  const language = normalizeLanguageCode(rawLanguage);
+  return [
+    {
+      ...(language ? {language} : {}),
+      vad_filter: true,
+      no_speech_threshold: 0.80,
+    },
+    {
+      vad_filter: false,
+      no_speech_threshold: 0.95,
+    },
+  ];
+}
