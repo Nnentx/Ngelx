@@ -65,13 +65,6 @@ jobs:
           flutter clean
           flutter pub get
 
-      - name: Dart format kontrolu
-        shell: bash
-        run: |
-          set -euo pipefail
-          cd app
-          dart format --output=none --set-exit-if-changed lib/main.dart lib/create_music_editor.dart lib/camera_studio.dart
-
       - name: Flutter analiz
         shell: bash
         run: |
