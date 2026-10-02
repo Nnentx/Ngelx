@@ -2006,3 +2006,12 @@ Cihazda doğrulanan örnek senaryo:
 - 16:9 için de aynı davranış olasılığı var; ayrı cihaz testi yapılacak.
 
 **KORUMA:** Mesajlaşma, Mesaj İstekleri, takip/arkadaşlık istekleri ve sayaç regresyon temeli korunacak.
+
+## 2026-10-02 — Build 369 cihaz testi: 16:9 oran kayda uygulanmıyor
+
+- Kamera önizlemesinde **16:9** seçimi ve yatay geniş kadraj çerçevesi doğru görünüyor.
+- Ancak çekim sonrası Üret ekranındaki kaydedilmiş fotoğraf **16:9 yatay olarak gelmiyor; yine dikey/portre oranında kalıyor**.
+- Sonuç: oran seçici hem **1:1** hem **16:9** için yalnızca önizleme overlay'ini değiştiriyor; gerçek capture/crop çıktısına uygulanmıyor.
+- **16:9 kaydı BAŞARISIZ.** Seçilen oran capture pipeline'a aktarılmalı ve kaydedilen dosyanın gerçek piksel boyutu seçilen oranla eşleşmeli.
+
+**KORUMA:** Mesajlaşma, Mesaj İstekleri, takip/arkadaşlık istekleri ve sayaç regresyon temeli korunacak.
