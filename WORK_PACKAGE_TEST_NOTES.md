@@ -2164,3 +2164,13 @@ Cihazda doğrulanan örnek senaryo:
 - Yeni sürüm: **1.0.150+371**. APK boyutu CI çıktısı tamamlandığında gerçek cihaz paketi üzerinden doğrulanacak.
 
 **KORUMA KURALI:** Boyut düşürmek için çalışan sosyal/mesajlaşma/yayın altyapısı veya Build 370 filtre güncellemeleri geri alınmayacak.
+
+## 2026-10-02 — Build 371 cihaz testi — video / yorum performans regresyonu
+
+- Gerçek cihaz testinde **video paylaşım ekranı, yorum paneli ve bağlı etkileşimler önceye göre ağır / gecikmeli** hissediliyor.
+- Özellikle video detayından yorumları açma, yorum panelinin yerleşmesi ve klavye ile yanıt alanına geçişte performans düşüşü bildirildi.
+- Bu kayıt şu an **performans regresyonu** olarak tutulacak; neden ölçülmeden sosyal/mesajlaşma/akış altyapısında rastgele geri alma yapılmayacak.
+- Düzeltmede video oynatma, yorum sorguları/rebuild sayısı, bottom-sheet açılışı, klavye açılırken frame drop ve gereksiz Firestore/medya işlemleri profillenecek.
+- **Kullanıcı talebi: şimdi yeni derleme çıkarma; sorunları notlarda biriktir.**
+
+**KORUMA:** Akış, gruplar, profil, mesajlaşma, Mesaj İstekleri, takip/arkadaşlık istekleri, unread sayaçları ve daha önce geçen cihaz testleri korunacak.
