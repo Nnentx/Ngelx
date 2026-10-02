@@ -5,47 +5,119 @@ class NgelXKameraFiltre {
   final List<double> matris;
   final double parlaklik;
   final double doygunluk;
-  final double sicaklik;
-  const NgelXKameraFiltre(this.ad,this.matris,{this.parlaklik=1,this.doygunluk=1,this.sicaklik=0});
+  final double kontrast;
+  final double gamma;
+  final double pozlama;
+  final double hue;
+  final double kirmizi;
+  final double yesil;
+  final double mavi;
+  final double varsayilanYogunluk;
+
+  const NgelXKameraFiltre(
+    this.ad,
+    this.matris,{
+    this.parlaklik=1,
+    this.doygunluk=1,
+    this.kontrast=1,
+    this.gamma=1,
+    this.pozlama=0,
+    this.hue=0,
+    this.kirmizi=0,
+    this.yesil=0,
+    this.mavi=0,
+    this.varsayilanYogunluk=.55,
+  });
 }
 
+/// Build 370 Pro Filters
+///
+/// Bunlar "tam kareyi patlatan" eski parlaklik filtreleri degil.
+/// Canli onizlemede ColorMatrix, fotograf ciktisinda ise ayni preset'in
+/// brightness/saturation/contrast/gamma/exposure/hue + kanal offset ayarlari
+/// kullanilir. Varsayilan yogunluklar bilerek %40-%65 bandinda tutulur;
+/// kullanici isterse %100'e cikabilir.
 const List<NgelXKameraFiltre> ngelxKameraFiltreleri=[
   NgelXKameraFiltre('Doğal',<double>[
     1,0,0,0,0, 0,1,0,0,0, 0,0,1,0,0, 0,0,0,1,0,
-  ]),
+  ],varsayilanYogunluk:0),
+
   NgelXKameraFiltre('Canlı',<double>[
-    1.12,0,0,0,4, 0,1.06,0,0,2, 0,0,1.10,0,2, 0,0,0,1,0,
-  ],doygunluk:1.18),
+    1.07,-.015,-.01,0,2,
+    -.01,1.045,-.005,0,1,
+    -.005,-.01,1.065,0,1,
+    0,0,0,1,0,
+  ],parlaklik:1.008,doygunluk:1.12,kontrast:1.055,gamma:.985,pozlama:.015,varsayilanYogunluk:.58),
+
   NgelXKameraFiltre('Portre',<double>[
-    1.04,0,0,0,5, 0,1.02,0,0,4, 0,0,.98,0,2, 0,0,0,1,0,
-  ],parlaklik:1.04,doygunluk:1.03,sicaklik:.06),
+    1.035,.008,-.012,0,3,
+    .004,1.018,-.008,0,2,
+    -.01,.004,.982,0,1,
+    0,0,0,1,0,
+  ],parlaklik:1.018,doygunluk:1.025,kontrast:.985,gamma:.975,pozlama:.018,hue:1.0,kirmizi:2,yesil:1,mavi:-1,varsayilanYogunluk:.56),
+
   NgelXKameraFiltre('Clean',<double>[
-    1.03,0,0,0,4, 0,1.03,0,0,4, 0,0,1.02,0,3, 0,0,0,1,0,
-  ],parlaklik:1.05,doygunluk:1.02),
+    1.025,-.006,-.006,0,3,
+    -.004,1.022,-.004,0,3,
+    -.004,-.004,1.018,0,2,
+    0,0,0,1,0,
+  ],parlaklik:1.025,doygunluk:1.015,kontrast:1.012,gamma:.965,pozlama:.012,kirmizi:1,yesil:1,mavi:1,varsayilanYogunluk:.50),
+
   NgelXKameraFiltre('Soft',<double>[
-    1.02,0,0,0,7, 0,1.01,0,0,6, 0,0,1.00,0,5, 0,0,0,1,0,
-  ],parlaklik:1.06,doygunluk:.98,sicaklik:.04),
+    .985,.012,.008,0,5,
+    .008,.992,.006,0,4,
+    .008,.010,.985,0,4,
+    0,0,0,1,0,
+  ],parlaklik:1.018,doygunluk:.97,kontrast:.94,gamma:.965,pozlama:.018,kirmizi:2,yesil:1,mavi:1,varsayilanYogunluk:.48),
+
   NgelXKameraFiltre('Glow',<double>[
-    1.05,0,0,0,8, 0,1.03,0,0,6, 0,0,1.01,0,4, 0,0,0,1,0,
-  ],parlaklik:1.07,doygunluk:1.05,sicaklik:.05),
+    1.025,.006,-.008,0,5,
+    .004,1.018,-.004,0,4,
+    -.006,.006,1.006,0,3,
+    0,0,0,1,0,
+  ],parlaklik:1.035,doygunluk:1.035,kontrast:.97,gamma:.945,pozlama:.020,kirmizi:2,yesil:1,mavi:0,varsayilanYogunluk:.46),
+
   NgelXKameraFiltre('HD',<double>[
-    1.06,0,0,0,2, 0,1.05,0,0,2, 0,0,1.06,0,2, 0,0,0,1,0,
-  ],parlaklik:1.02,doygunluk:1.06),
+    1.075,-.025,-.02,0,-1,
+    -.015,1.06,-.015,0,-1,
+    -.015,-.02,1.075,0,-1,
+    0,0,0,1,0,
+  ],parlaklik:1.0,doygunluk:1.035,kontrast:1.10,gamma:1.0,pozlama:0,varsayilanYogunluk:.45),
+
   NgelXKameraFiltre('Sıcak',<double>[
-    1.10,0,0,0,5, 0,1.03,0,0,2, 0,0,.92,0,-2, 0,0,0,1,0,
-  ],sicaklik:.18),
+    1.055,.010,-.010,0,4,
+    .008,1.018,-.006,0,2,
+    -.012,-.006,.955,0,-2,
+    0,0,0,1,0,
+  ],parlaklik:1.008,doygunluk:1.055,kontrast:1.02,gamma:.99,pozlama:.008,hue:1.2,kirmizi:5,yesil:1,mavi:-4,varsayilanYogunluk:.52),
+
   NgelXKameraFiltre('Soğuk',<double>[
-    .94,0,0,0,-2, 0,1.02,0,0,1, 0,0,1.12,0,5, 0,0,0,1,0,
-  ],sicaklik:-.18),
+    .965,-.006,.010,0,-2,
+    -.004,1.008,.008,0,0,
+    .006,.012,1.06,0,4,
+    0,0,0,1,0,
+  ],parlaklik:1.002,doygunluk:1.03,kontrast:1.025,gamma:1.0,pozlama:0,hue:-1.0,kirmizi:-4,yesil:0,mavi:5,varsayilanYogunluk:.50),
+
   NgelXKameraFiltre('Sinematik',<double>[
-    1.08,-.03,-.03,0,-4, -.02,1.03,-.02,0,-1, -.02,-.02,.98,0,3, 0,0,0,1,0,
-  ],doygunluk:.92),
+    1.025,-.035,.010,0,-4,
+    -.020,1.015,.018,0,-1,
+    -.018,.020,1.025,0,4,
+    0,0,0,1,0,
+  ],parlaklik:.995,doygunluk:.89,kontrast:1.115,gamma:1.025,pozlama:-.010,hue:-1.5,kirmizi:1,yesil:0,mavi:3,varsayilanYogunluk:.56),
+
   NgelXKameraFiltre('Retro',<double>[
-    .96,.05,.02,0,5, .02,.91,.02,0,2, .04,.02,.82,0,-2, 0,0,0,1,0,
-  ],doygunluk:.82,sicaklik:.16),
+    1.015,.018,-.012,0,5,
+    .010,.982,.004,0,2,
+    .012,.010,.925,0,-3,
+    0,0,0,1,0,
+  ],parlaklik:1.012,doygunluk:.82,kontrast:.92,gamma:.97,pozlama:.018,hue:2.0,kirmizi:6,yesil:2,mavi:-5,varsayilanYogunluk:.50),
+
   NgelXKameraFiltre('S/B',<double>[
-    .33,.59,.11,0,0, .33,.59,.11,0,0, .33,.59,.11,0,0, 0,0,0,1,0,
-  ],doygunluk:0),
+    .2126,.7152,.0722,0,0,
+    .2126,.7152,.0722,0,0,
+    .2126,.7152,.0722,0,0,
+    0,0,0,1,0,
+  ],parlaklik:1.0,doygunluk:0,kontrast:1.08,gamma:.985,pozlama:0,varsayilanYogunluk:.72),
 ];
 
 
@@ -180,7 +252,7 @@ class _NgelXCameraStudioPageState extends State<NgelXCameraStudioPage> with Widg
   Timer? sayacTimer,kayitTimer;
   Duration kayitSure=Duration.zero;
   FlashMode flash=FlashMode.off;
-  double zoom=1,minZoom=1,maxZoom=1,retus=0,gozCanlilik=0,yuzIsigi=0,filtreYogunluk=1;
+  double zoom=1,minZoom=1,maxZoom=1,retus=0,gozCanlilik=0,yuzIsigi=0,filtreYogunluk=0;
   int filtreIndex=0;
   String oran='9:16';
 
@@ -417,16 +489,34 @@ class _NgelXCameraStudioPageState extends State<NgelXCameraStudioPage> with Widg
         g=img.copyCrop(g,x:x,y:y,width:w,height:h);
       }
       final f=ngelxKameraFiltreleri[filtreIndex];
-      if(f.ad=='S/B'){
-        g=img.adjustColor(g,saturation:(1-filtreYogunluk).clamp(0.0,1.0),brightness:1+(retus*.010)+(portre ? .010 : 0),contrast:1+(retus*.02)-(portre ? .015 : 0));
-      }else if(f.ad=='Retro'&&filtreYogunluk>.55){
-        g=img.sepia(g);
-      }else{
+      final filtreMiktari=filtreIndex==0?0.0:filtreYogunluk.clamp(0.0,1.0).toDouble();
+      if(filtreMiktari>0){
         g=img.adjustColor(
           g,
-          brightness:1+((f.parlaklik-1)*filtreYogunluk)+(retus*.010)+(portre ? .012 : 0),
-          saturation:1+((f.doygunluk-1)*filtreYogunluk)+(retus*.012)+(portre ? .010 : 0),
-          contrast:1+(retus*.006)-(portre ? .010 : 0),
+          brightness:f.parlaklik,
+          saturation:f.doygunluk,
+          contrast:f.kontrast,
+          gamma:f.gamma,
+          exposure:f.pozlama,
+          hue:f.hue,
+          amount:filtreMiktari,
+        );
+        if(f.kirmizi!=0||f.yesil!=0||f.mavi!=0){
+          g=img.colorOffset(
+            g,
+            red:f.kirmizi*filtreMiktari,
+            green:f.yesil*filtreMiktari,
+            blue:f.mavi*filtreMiktari,
+          );
+        }
+      }
+      if(retus>.01||portre){
+        g=img.adjustColor(
+          g,
+          brightness:1+(retus*.006)+(portre?.008:0),
+          saturation:1+(retus*.006)+(portre?.006:0),
+          contrast:1-(portre?.010:0),
+          amount:1,
         );
       }
       final yol='${dir.path}/ngelx_camera_${DateTime.now().microsecondsSinceEpoch}.jpg';
@@ -589,13 +679,13 @@ class _NgelXCameraStudioPageState extends State<NgelXCameraStudioPage> with Widg
           Row(children:[
             const Text('Filtreler',style:TextStyle(color:Colors.white,fontSize:18,fontWeight:FontWeight.w900)),
             const Spacer(),
-            TextButton(onPressed:(){setState(()=>filtreIndex=0);setP((){});},child:const Text('Sıfırla')),
+            TextButton(onPressed:(){setState((){filtreIndex=0;filtreYogunluk=0;});setP((){});},child:const Text('Sıfırla')),
           ]),
           SizedBox(height:92,child:ListView.separated(
             scrollDirection:Axis.horizontal,itemCount:ngelxKameraFiltreleri.length,separatorBuilder:(_,__)=>const SizedBox(width:8),
             itemBuilder:(_,i){
               final secili=i==filtreIndex;
-              return InkWell(onTap:(){setState(()=>filtreIndex=i);setP((){});},child:SizedBox(width:72,child:Column(children:[
+              return InkWell(onTap:(){final f=ngelxKameraFiltreleri[i];setState((){filtreIndex=i;filtreYogunluk=f.varsayilanYogunluk;});setP((){});},child:SizedBox(width:72,child:Column(children:[
                 AnimatedContainer(duration:const Duration(milliseconds:150),width:58,height:58,decoration:BoxDecoration(shape:BoxShape.circle,color:secili?mor:Colors.white12,border:Border.all(color:secili?Colors.white:Colors.white24,width:2)),child:const Icon(Icons.filter_vintage_rounded,color:Colors.white)),
                 const SizedBox(height:5),Text(ngelxKameraFiltreleri[i].ad,maxLines:1,overflow:TextOverflow.ellipsis,style:TextStyle(color:secili?Colors.white:Colors.white70,fontSize:10,fontWeight:secili?FontWeight.w900:FontWeight.w600)),
               ])));
