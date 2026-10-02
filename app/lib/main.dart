@@ -3263,7 +3263,24 @@ Future<Map<String,dynamic>> _ngelxAiPost(String path,Map<String,dynamic> body)as
   final veri=cevap.data;
   final map=veri is Map<String,dynamic>?veri:veri is Map?Map<String,dynamic>.from(veri):<String,dynamic>{};
   final status=cevap.statusCode??0;
-  if(status<200||status>=300)throw Exception((map['message']??map['error']??'AI işlemi tamamlanamadı.').toString());
+  if(status<200||status>=300){
+    final kod=(map['error']??'').toString().trim();
+    final mesaj=(map['message']??'').toString().trim();
+    final teknik=(kod+' '+mesaj).toLowerCase();
+    if(kod=='no_speech_detected'||teknik.contains('no_speech_detected')){
+      throw Exception('Bu videoda altyazıya çevrilebilecek konuşma algılanamadı.');
+    }
+    if(kod=='media_too_large_for_captioning'){
+      throw Exception('Altyazı için video çok büyük. Daha kısa bir video ile tekrar dene.');
+    }
+    if(kod=='media_not_found'){
+      throw Exception('Videonun ses kaynağına ulaşılamadı. Tekrar dene.');
+    }
+    if(kod=='ai_not_configured'){
+      throw Exception('Altyazı servisi şu anda kullanılamıyor. Biraz sonra tekrar dene.');
+    }
+    throw Exception(mesaj.isNotEmpty?mesaj:(kod.isNotEmpty?kod:'AI işlemi tamamlanamadı.'));
+  }
   return map;
 }
 Future<String> ngelxGercekCeviriOlustur({required String metin,required String kaynakDil,required String hedefDil})async{
@@ -24848,7 +24865,37 @@ class KaydedilenlerPage extends StatelessWidget {
                         final url = (veri['mediaUrl'] ?? veri['videoUrl'] ?? '').toString();
                         return GestureDetector(
                           onTap: () { final id=(docs[i].data()['contentId']??docs[i].id).toString(); Navigator.push(context,MaterialPageRoute(builder:(_)=>IcerikBaglantiPage(icerikId:id))); },
-                          onLongPress: () => docs[i].reference.delete(),
+                          onLongPress: () async {
+                            final kaldir=await showModalBottomSheet<bool>(
+                              context:context,
+                              backgroundColor:Colors.white,
+                              showDragHandle:true,
+                              shape:const RoundedRectangleBorder(borderRadius:BorderRadius.vertical(top:Radius.circular(26))),
+                              builder:(sheet)=>SafeArea(child:Padding(
+                                padding:const EdgeInsets.fromLTRB(8,0,8,12),
+                                child:Column(mainAxisSize:MainAxisSize.min,children:[
+                                  const ListTile(
+                                    leading:Icon(Icons.bookmark_rounded,color:mor),
+                                    title:Text('Kaydedilen içerik',style:TextStyle(fontWeight:FontWeight.w900)),
+                                    subtitle:Text('Basılı tutmak içeriği otomatik silmez.'),
+                                  ),
+                                  ListTile(
+                                    leading:const Icon(Icons.bookmark_remove_outlined,color:Colors.redAccent),
+                                    title:const Text('Kaydedilenlerden kaldır',style:TextStyle(color:Colors.redAccent,fontWeight:FontWeight.w800)),
+                                    onTap:()=>Navigator.pop(sheet,true),
+                                  ),
+                                  ListTile(
+                                    leading:const Icon(Icons.close_rounded),
+                                    title:const Text('Vazgeç'),
+                                    onTap:()=>Navigator.pop(sheet,false),
+                                  ),
+                                ]),
+                              )),
+                            )??false;
+                            if(!kaldir)return;
+                            await docs[i].reference.delete();
+                            if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Kaydedilenlerden kaldırıldı.')));
+                          },
                           child: MedyaOnizleme(tur: tur, url: url, thumbnailUrl: (veri['thumbnailUrl'] ?? '').toString(), yazi: (veri['description'] ?? '').toString(), arkaPlan: const Color(0xFFF0F1F4)),
                         );
                       },
