@@ -5640,129 +5640,125 @@ Future<void> ngelxKisiyeIcerikGonder({required User ben,required String hedefUid
   unawaited(uygulamaBildirimiGonder(toUid:hedefUid,fromUid:ben.uid,tur:'message',metin:'Sana bir NgelX paylaşımı gönderdi',belgeId:chatId,dedupeKey:'shared_content_'+mesajRef.id+'_'+hedefUid).catchError((_){ }));
 }
 
-Future<void> ngelxOzeldenPaylas(
-  BuildContext context, {
-  required String icerikId,
-  required String aciklama,
-}) async {
-  if (await misafirEngeli(context)) return;
-  final ben = FirebaseAuth.instance.currentUser;
-  if (ben == null) return;
-
-  final benim = await FirebaseFirestore.instance.collection('users').doc(ben.uid).get();
-  final engellenen = Set<String>.from(List<dynamic>.from(benim.data()?['blocked'] ?? const []));
-  if (!context.mounted) return;
-
-  String sorgu = '';
-  final secilenler=<String>{};
-  bool gonderiliyor=false;
-  await showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.white,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-    ),
-    builder: (sheetContext) => StatefulBuilder(
-      builder: (sheetContext, setSheet) => Theme(
-        data: ThemeData.light(),
-        child: SafeArea(
-          child: SizedBox(
-            height: MediaQuery.of(sheetContext).size.height * .72,
-            child: Column(
-              children: [
-                Container(
-                  width: 42,
-                  height: 4,
-                  margin: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.black26,
-                    borderRadius: BorderRadius.circular(9),
-                  ),
-                ),
-                const Text(
-                  'NgelX içinde özele gönder',
-                  style: TextStyle(
-                    color: Colors.black,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(14),
-                  child: TextField(
-                    onChanged: (v) => setSheet(() => sorgu = v.trim().toLowerCase()),
-                    decoration: InputDecoration(
-                      hintText: 'Kişi ara',
-                      prefixIcon: const Icon(Icons.search),
-                      filled: true,
-                      fillColor: const Color(0xFFF3F4F6),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(22),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
-                  ),
-                ),
-                Expanded(
-                  child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                    stream: FirebaseFirestore.instance.collection('users').limit(100).snapshots(),
-                    builder: (_, snap) {
-                      if (snap.connectionState == ConnectionState.waiting) {
-                        return const Center(child: CircularProgressIndicator(color: mor));
-                      }
-                      final docs = (snap.data?.docs ?? []).where((d) {
-                        if (d.id == ben.uid || engellenen.contains(d.id)) return false;
-                        final v = d.data();
-                        if (v['deactivated'] == true) return false;
-                        if (List<String>.from(v['blocked'] ?? const []).contains(ben.uid)) return false;
-                        final ad = '${v['displayName'] ?? ''} ${v['username'] ?? ''}'.toLowerCase();
-                        return sorgu.isEmpty || ad.contains(sorgu);
-                      }).toList();
-
-                      if (docs.isEmpty) {
-                        return const Center(
-                          child: Text('Kişi bulunamadı.', style: TextStyle(color: Colors.black54)),
-                        );
-                      }
-
-                      return ListView.builder(
-                        itemCount: docs.length,
-                        itemBuilder: (_, i) {
-                          final d = docs[i];
-                          final v = d.data();
-                          final foto = (v['photoUrl'] ?? '').toString();
-                          final ad = (v['displayName'] ?? v['username'] ?? t('user')).toString();
-                          return ListTile(
-                            leading: CircleAvatar(
-                              backgroundImage: foto.isEmpty ? null : NgelXAgImageProvider(foto),
-                              child: foto.isEmpty ? const Icon(Icons.person) : null,
-                            ),
-                            title: Text(ad, style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.w800)),
-                            subtitle: Text('@${v['username'] ?? 'ngelx'}', style: const TextStyle(color: Colors.black54)),
-                            trailing: Checkbox(value:secilenler.contains(d.id),activeColor:mor,onChanged:(_)=>setSheet((){secilenler.contains(d.id)?secilenler.remove(d.id):secilenler.add(d.id);})),
-                            onTap:()=>setSheet((){secilenler.contains(d.id)?secilenler.remove(d.id):secilenler.add(d.id);}),
-                          );
-                        },
-                      );
-                    },
-                  ),
-                ),
-                SafeArea(top:false,child:Padding(padding:const EdgeInsets.fromLTRB(14,8,14,12),child:SizedBox(width:double.infinity,height:52,child:FilledButton.icon(onPressed:secilenler.isEmpty||gonderiliyor?null:()async{setSheet(()=>gonderiliyor=true);try{for(final uid in secilenler){await ngelxKisiyeIcerikGonder(ben:ben,hedefUid:uid,icerikId:icerikId,aciklama:aciklama);}await FirebaseFirestore.instance.collection('videos').doc(icerikId).set({'shareCount':FieldValue.increment(secilenler.length)},SetOptions(merge:true));if(sheetContext.mounted)Navigator.pop(sheetContext);if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('${secilenler.length} kişiye gönderildi ✅')));}catch(e){setSheet(()=>gonderiliyor=false);if(context.mounted){final mesaj=(e is StateError&&(e.message=='message-permission'||e.message=='blocked'||e.message=='target-unavailable'))||(e is FirebaseException&&e.code=='permission-denied')?'Bu kişiye şu anda gönderilemiyor. Mesaj gizliliği ayarlarını kontrol et.':'Gönderilemedi. Bağlantını kontrol edip tekrar dene.';ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(mesaj)));}}},icon:gonderiliyor?const SizedBox(width:20,height:20,child:CircularProgressIndicator(strokeWidth:2)):const Icon(Icons.send_rounded),label:Text(secilenler.isEmpty?'Göndermek için kişi seç':'${secilenler.length} kişiye gönder'))))),
-              ],
-            ),
-          ),
-        ),
-      ),
-    ),
-  );
+String ngelxPaylasimHataNedeni(Object e){
+  if(e is StateError){
+    final kod=e.message.toString();
+    if(kod=='message-permission')return 'mesaj gizliliği';
+    if(kod=='blocked')return 'engelleme';
+    if(kod=='target-unavailable')return 'hesap kullanılamıyor';
+  }
+  if(e is FirebaseException&&e.code=='permission-denied')return 'izin';
+  if(e is TimeoutException)return 'zaman aşımı';
+  return 'bağlantı';
 }
 
-Future<void> ngelxPaylasimMenusu(
-  BuildContext context, {
-  required String icerikId,
-  required String aciklama,
-}) async {
+Future<Map<String,String>> ngelxPaylasimAlicilariniSec(BuildContext context)async{
+  if(await misafirEngeli(context))return <String,String>{};
+  final ben=FirebaseAuth.instance.currentUser;
+  if(ben==null)return <String,String>{};
+  final benim=await FirebaseFirestore.instance.collection('users').doc(ben.uid).get().timeout(const Duration(seconds:8));
+  final veri=benim.data()??<String,dynamic>{};
+  final engellenen=Set<String>.from(List<dynamic>.from(veri['blocked']??const[]));
+  final iliskiUidleri=<String>{
+    ...List<String>.from(veri['friends']??const[]),
+    ...List<String>.from(veri['following']??const[]),
+    ...List<String>.from(veri['followers']??const[]),
+  }..remove(ben.uid)..removeWhere(engellenen.contains);
+  if(iliskiUidleri.isEmpty){
+    if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Paylaşmak için arkadaş veya takip bağlantın olan bir kişi bulunamadı.')));
+    return <String,String>{};
+  }
+  if(!context.mounted)return <String,String>{};
+
+  String sorgu='';
+  final secilenler=<String>{};
+  final adlar=<String,String>{};
+  final sonuc=await showModalBottomSheet<Map<String,String>>(
+    context:context,isScrollControlled:true,backgroundColor:Colors.white,
+    shape:const RoundedRectangleBorder(borderRadius:BorderRadius.vertical(top:Radius.circular(28))),
+    builder:(sheetContext)=>StatefulBuilder(builder:(sheetContext,setSheet)=>Theme(
+      data:ThemeData.light(),
+      child:SafeArea(child:SizedBox(
+        height:MediaQuery.of(sheetContext).size.height*.72,
+        child:Column(children:[
+          Container(width:42,height:4,margin:const EdgeInsets.all(12),decoration:BoxDecoration(color:Colors.black26,borderRadius:BorderRadius.circular(9))),
+          const Text('NgelX içinde özele gönder',style:TextStyle(color:Colors.black,fontSize:20,fontWeight:FontWeight.w900)),
+          const Padding(padding:EdgeInsets.fromLTRB(18,5,18,0),child:Text('Arkadaşların, takip ettiklerin ve takipçilerin arasından seç.',textAlign:TextAlign.center,style:TextStyle(color:Colors.black54,fontSize:12))),
+          Padding(
+            padding:const EdgeInsets.all(14),
+            child:TextField(
+              onChanged:(v)=>setSheet(()=>sorgu=v.trim().toLowerCase()),
+              decoration:InputDecoration(hintText:'Kişi ara',prefixIcon:const Icon(Icons.search),filled:true,fillColor:const Color(0xFFF3F4F6),border:OutlineInputBorder(borderRadius:BorderRadius.circular(22),borderSide:BorderSide.none)),
+            ),
+          ),
+          Expanded(child:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
+            stream:FirebaseFirestore.instance.collection('users').limit(300).snapshots(),
+            builder:(_,snap){
+              if(snap.connectionState==ConnectionState.waiting&&!snap.hasData)return const Center(child:CircularProgressIndicator(color:mor));
+              final docs=(snap.data?.docs??[]).where((d){
+                if(!iliskiUidleri.contains(d.id))return false;
+                final v=d.data();
+                if(v['deactivated']==true)return false;
+                if(List<String>.from(v['blocked']??const[]).contains(ben.uid))return false;
+                final ad='${v['displayName']??''} ${v['username']??''}'.toLowerCase();
+                return sorgu.isEmpty||ad.contains(sorgu);
+              }).toList();
+              if(docs.isEmpty)return const Center(child:Text('Uygun kişi bulunamadı.',style:TextStyle(color:Colors.black54)));
+              return ListView.builder(
+                itemCount:docs.length,
+                itemBuilder:(_,i){
+                  final d=docs[i],v=d.data();
+                  final foto=(v['photoUrl']??'').toString();
+                  final ad=(v['displayName']??v['username']??t('user')).toString();
+                  adlar[d.id]=ad;
+                  return ListTile(
+                    leading:CircleAvatar(backgroundImage:foto.isEmpty?null:NgelXAgImageProvider(foto),child:foto.isEmpty?const Icon(Icons.person):null),
+                    title:Text(ad,style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w800)),
+                    subtitle:Text('@${v['username']??'ngelx'}',style:const TextStyle(color:Colors.black54)),
+                    trailing:Checkbox(value:secilenler.contains(d.id),activeColor:mor,onChanged:(_)=>setSheet((){secilenler.contains(d.id)?secilenler.remove(d.id):secilenler.add(d.id);})),
+                    onTap:()=>setSheet((){secilenler.contains(d.id)?secilenler.remove(d.id):secilenler.add(d.id);}),
+                  );
+                },
+              );
+            },
+          )),
+          SafeArea(top:false,child:Padding(
+            padding:const EdgeInsets.fromLTRB(14,8,14,12),
+            child:SizedBox(width:double.infinity,height:52,child:FilledButton.icon(
+              onPressed:secilenler.isEmpty?null:()=>Navigator.pop(sheetContext,<String,String>{for(final id in secilenler)id:(adlar[id]??'Kullanıcı')}),
+              icon:const Icon(Icons.send_rounded),
+              label:Text(secilenler.isEmpty?'Göndermek için kişi seç':'${secilenler.length} kişiye gönder'),
+            )),
+          )),
+        ]),
+      )),
+    )),
+  );
+  return sonuc??<String,String>{};
+}
+
+Future<void> ngelxOzeldenPaylas(BuildContext context,{required String icerikId,required String aciklama})async{
+  final ben=FirebaseAuth.instance.currentUser;if(ben==null)return;
+  Map<String,String> alicilar;
+  try{alicilar=await ngelxPaylasimAlicilariniSec(context);}
+  catch(_){if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Kişiler yüklenemedi. Bağlantını kontrol edip tekrar dene.')));return;}
+  if(alicilar.isEmpty)return;
+  var basarili=0;final hatalar=<String>[];
+  for(final kayit in alicilar.entries){
+    try{await ngelxKisiyeIcerikGonder(ben:ben,hedefUid:kayit.key,icerikId:icerikId,aciklama:aciklama);basarili++;}
+    catch(e){hatalar.add('${kayit.value} (${ngelxPaylasimHataNedeni(e)})');}
+  }
+  if(basarili>0){try{await FirebaseFirestore.instance.collection('videos').doc(icerikId).set({'shareCount':FieldValue.increment(basarili)},SetOptions(merge:true));}catch(_){}}
+  if(!context.mounted)return;
+  final mesaj=hatalar.isEmpty
+    ?'$basarili kişiye gönderildi ✅'
+    :basarili>0
+      ?'$basarili kişiye gönderildi ✅ • ${hatalar.join(', ')} gönderilemedi.'
+      :'Gönderilemedi: ${hatalar.join(', ')}';
+  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(mesaj),duration:const Duration(seconds:4)));
+}
+
+Future<void> ngelxPaylasimMenusu(BuildContext context,{required String icerikId,required String aciklama})async{
   try{
     final d=await FirebaseFirestore.instance.collection('videos').doc(icerikId).get();
     final v=d.data()??<String,dynamic>{};
@@ -5773,93 +5769,7 @@ Future<void> ngelxPaylasimMenusu(
       return;
     }
   }catch(_){}
-  final link = ngelxIcerikLink(icerikId);
-  final metin = [
-    'NgelX’te bunu gördüm ✨',
-    if (aciklama.trim().isNotEmpty) aciklama.trim(),
-    '',
-    'İçeriğe bak: $link',
-    'NgelX: $ngelxWebAdresi',
-  ].join('\n');
-
-  await showModalBottomSheet<void>(
-    context: context,
-    backgroundColor: Colors.white,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-    ),
-    builder: (c) => Theme(
-      data: ThemeData.light(),
-      child: SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 42,
-              height: 4,
-              margin: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.black26,
-                borderRadius: BorderRadius.circular(9),
-              ),
-            ),
-            const ListTile(
-              title: Text(
-                'Paylaş',
-                style: TextStyle(color: Colors.black, fontSize: 20, fontWeight: FontWeight.w900),
-              ),
-            ),
-            ListTile(
-              leading: const Icon(Icons.forum_rounded, color: mor),
-              title: const Text(
-                'NgelX içinde özele gönder',
-                style: TextStyle(color: Colors.black87, fontWeight: FontWeight.w800),
-              ),
-              onTap: () {
-                Navigator.pop(c);
-                ngelxOzeldenPaylas(context, icerikId: icerikId, aciklama: aciklama);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.share_rounded, color: Color(0xFF20B86A)),
-              title: const Text(
-                'WhatsApp / diğer uygulamalar',
-                style: TextStyle(color: Colors.black87, fontWeight: FontWeight.w800),
-              ),
-              subtitle: const Text(ngelxWebAdresi, style: TextStyle(color: Colors.black54)),
-              onTap: () async {
-                Navigator.pop(c);
-                await SharePlus.instance.share(
-                  ShareParams(text: metin, title: 'NgelX paylaşımı'),
-                );
-                await FirebaseFirestore.instance.collection('videos').doc(icerikId).set(
-                  {'shareCount': FieldValue.increment(1)},
-                  SetOptions(merge: true),
-                );
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.link_rounded, color: Colors.blue),
-              title: const Text(
-                'Bağlantıyı kopyala',
-                style: TextStyle(color: Colors.black87, fontWeight: FontWeight.w800),
-              ),
-              subtitle: Text(link, style: const TextStyle(color: Colors.black54)),
-              onTap: () async {
-                await Clipboard.setData(ClipboardData(text: link));
-                if (c.mounted) Navigator.pop(c);
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('NgelX bağlantısı kopyalandı ✅')),
-                  );
-                }
-              },
-            ),
-          ],
-        ),
-      ),
-    ),
-  );
+  if(context.mounted)await ngelxOzeldenPaylas(context,icerikId:icerikId,aciklama:aciklama);
 }
 
 Future<bool> ngelxBegeniDurumuOku(String contentId,User user) async {
