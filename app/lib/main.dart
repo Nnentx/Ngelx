@@ -3451,7 +3451,7 @@ Future<void> icerikAracMenusu(BuildContext context,String icerikId,{Future<void>
         try{if(x)await altyaziUret(setP);await hafiza.setBool('content_caption_$icerikId',x);setP(()=>altyazi=x);ngelxIcerikDilRevizyonu.value++;}catch(e){if(c.mounted)ScaffoldMessenger.of(c).showSnackBar(SnackBar(content:Text('Altyazı oluşturulamadı: ${_ngelxKisaHata(e)}')));}
       }),
       if(hizDegistir!=null)ListTile(leading:const Icon(Icons.speed_rounded,color:Colors.orange),title:Text(t('playbackSpeed'),style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w700)),subtitle:Wrap(spacing:7,children:[.5,1.0,1.5,2.0].map((x){final secili=(x-mevcutHiz).abs()<.01;return ChoiceChip(label:Text('${x}x'),selected:secili,selectedColor:mor,backgroundColor:const Color(0xFFF1F2F5),side:BorderSide.none,labelStyle:TextStyle(color:secili?Colors.white:Colors.black87,fontWeight:FontWeight.w800),onSelected:(_)async{await hizDegistir(x);if(c.mounted)Navigator.pop(c);});}).toList())),
-      ListTile(leading:const Icon(Icons.info_outline_rounded,color:Colors.black54),title:Text(t('contentInfo'),style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w700)),subtitle:Text(icerikId,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black45))),
+      ListTile(leading:const Icon(Icons.info_outline_rounded,color:Colors.black54),title:Text(t('contentInfo'),style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w700))),
       ListTile(leading:const Icon(Icons.flag_outlined,color:Colors.redAccent),title:Text(t('reportContent'),style:const TextStyle(color:Colors.redAccent,fontWeight:FontWeight.w700)),onTap:(){Navigator.pop(c);sikayetEt(context,hedefTuru:'paylasim',hedefId:icerikId,hedefUid:'');}),
     ])),
   ))));
@@ -5700,7 +5700,7 @@ Future<void> ngelxOzeldenPaylas(
                     },
                   ),
                 ),
-                SafeArea(top:false,child:Padding(padding:const EdgeInsets.fromLTRB(14,8,14,12),child:SizedBox(width:double.infinity,height:52,child:FilledButton.icon(onPressed:secilenler.isEmpty||gonderiliyor?null:()async{setSheet(()=>gonderiliyor=true);try{for(final uid in secilenler){await ngelxKisiyeIcerikGonder(ben:ben,hedefUid:uid,icerikId:icerikId,aciklama:aciklama);}await FirebaseFirestore.instance.collection('videos').doc(icerikId).set({'shareCount':FieldValue.increment(secilenler.length)},SetOptions(merge:true));if(sheetContext.mounted)Navigator.pop(sheetContext);if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('${secilenler.length} kişiye gönderildi ✅')));}catch(e){setSheet(()=>gonderiliyor=false);if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Gönderilemedi, tekrar dene: $e')));}},icon:gonderiliyor?const SizedBox(width:20,height:20,child:CircularProgressIndicator(strokeWidth:2)):const Icon(Icons.send_rounded),label:Text(secilenler.isEmpty?'Göndermek için kişi seç':'${secilenler.length} kişiye gönder'))))),
+                SafeArea(top:false,child:Padding(padding:const EdgeInsets.fromLTRB(14,8,14,12),child:SizedBox(width:double.infinity,height:52,child:FilledButton.icon(onPressed:secilenler.isEmpty||gonderiliyor?null:()async{setSheet(()=>gonderiliyor=true);try{for(final uid in secilenler){await ngelxKisiyeIcerikGonder(ben:ben,hedefUid:uid,icerikId:icerikId,aciklama:aciklama);}await FirebaseFirestore.instance.collection('videos').doc(icerikId).set({'shareCount':FieldValue.increment(secilenler.length)},SetOptions(merge:true));if(sheetContext.mounted)Navigator.pop(sheetContext);if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('${secilenler.length} kişiye gönderildi ✅')));}catch(e){setSheet(()=>gonderiliyor=false);if(context.mounted){final mesaj=e is FirebaseException&&e.code=='permission-denied'?'Bu kişiye şu anda gönderilemiyor. Mesaj gizliliği ayarlarını kontrol et.':'Gönderilemedi. Bağlantını kontrol edip tekrar dene.';ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(mesaj)));}}},icon:gonderiliyor?const SizedBox(width:20,height:20,child:CircularProgressIndicator(strokeWidth:2)):const Icon(Icons.send_rounded),label:Text(secilenler.isEmpty?'Göndermek için kişi seç':'${secilenler.length} kişiye gönder'))))),
               ],
             ),
           ),
@@ -6918,22 +6918,7 @@ if(widget.captionText.trim().isNotEmpty||widget.captions.isNotEmpty||widget.capt
   ),
 if (kalpAnimasyonu)
   const Center(child: KalpPatlama()),
-Positioned(
-  top: 88,
-  right: 16,
-  child: Material(
-    color: Colors.black45,
-    shape: const CircleBorder(),
-    child: IconButton(
-      onPressed: sesiDegistir,
-      icon: Icon(
-        sessiz ? Icons.volume_off_rounded : Icons.volume_up_rounded,
-        color: Colors.white,
-        size: 22,
-      ),
-    ),
-  ),
-),
+// Build 372: feed sound control intentionally hidden; playback audio state is preserved.
           if (hazir && duraklatildi)
             const Center(
               child: Icon(
