@@ -1,4 +1,5 @@
 name: NgelX BUILD 368 BADGES EFFECTS
+# Build 368 final verification: badges + face-aware camera pipeline
 
 on:
   workflow_dispatch:
