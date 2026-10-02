@@ -1978,3 +1978,12 @@ Cihazda doğrulanan örnek senaryo:
 - Sayaçlı çekimde çökme/donma görülmedi.
 
 **KORUMA:** Mesajlaşma, Mesaj İstekleri, takip/arkadaşlık istekleri ve sayaç regresyon temeli korunacak.
+
+## 2026-10-02 — Build 369 cihaz testi: Izgara
+
+- **Izgara** açıldığında kamera önizlemesinde 3x3 kılavuz çizgileri doğru görünüyor.
+- Çekim sonrası Üret ekranındaki kaydedilmiş fotoğrafta ızgara çizgileri bulunmuyor; kılavuz yalnızca önizleme katmanı olarak kalıyor.
+- Ön/arka kamera ile ızgara birlikte çalışıyor.
+- Test sırasında bir karede kısa süreli siyah yükleme/yeniden başlatma ekranı görüldü, sonraki karede kamera görüntüsü geri geldi. Kalıcı donma olarak doğrulanmadı; tekrar ederse ayrıca hata olarak ele alınacak.
+
+**KORUMA:** Mesajlaşma, Mesaj İstekleri, takip/arkadaşlık istekleri ve sayaç regresyon temeli korunacak.
