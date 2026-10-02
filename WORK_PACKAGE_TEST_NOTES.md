@@ -2015,3 +2015,14 @@ Cihazda doğrulanan örnek senaryo:
 - **16:9 kaydı BAŞARISIZ.** Seçilen oran capture pipeline'a aktarılmalı ve kaydedilen dosyanın gerçek piksel boyutu seçilen oranla eşleşmeli.
 
 **KORUMA:** Mesajlaşma, Mesaj İstekleri, takip/arkadaşlık istekleri ve sayaç regresyon temeli korunacak.
+
+## 2026-10-02 — Build 369 cihaz testi: canlı filtre önizlemesi
+
+- Kamera **Filtreler** paneli cihazda açılıyor.
+- Filtre seçenekleri arasında **Doğal, Canlı, Portre, Clean** ve devam seçenekleri görünüyor.
+- Filtre değiştirildiğinde kamera önizlemesi canlı olarak değişiyor; farklı renk/kontrast/aydınlık karakterleri cihazda gözle görülür.
+- **Yoğunluk** slider'ı ve **Sıfırla** kontrolü panelde mevcut.
+- Bu test yalnızca **canlı önizleme davranışını** doğruluyor; seçilen filtrenin kaydedilen fotoğraf/video çıktısına aynı şekilde uygulanıp uygulanmadığı henüz ayrıca doğrulanmadı.
+- Kalite eşiği açısından filtrelerin doğal/profesyonel görünümü henüz kabul edilmiş sayılmıyor; TikTok referans seviyesine göre ayrıca kalite değerlendirmesi yapılacak.
+
+**KORUMA:** Mesajlaşma, Mesaj İstekleri, takip/arkadaşlık istekleri ve sayaç regresyon temeli korunacak.
