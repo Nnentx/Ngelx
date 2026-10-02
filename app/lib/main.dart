@@ -192,12 +192,13 @@ const ngelxPrivateBlueInk = Color(0xFF10213A);
 
 // Build 372: settings/about must reflect the installed build instead of the old 368 fallback.
 // Release builds can still override these with --dart-define.
-const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.152');
-const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '373');
+const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.153');
+const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '374');
 const ngelxGroupBorder = Color(0xFFD9EEE0);
 
 final GlobalKey<NavigatorState> ngelxNavigatorKey=GlobalKey<NavigatorState>();
 final RouteObserver<PageRoute<dynamic>> ngelxRouteObserver=RouteObserver<PageRoute<dynamic>>();
+final ValueNotifier<bool> ngelxAkisTemizGorunum=ValueNotifier<bool>(false);
 
 final Map<String,lk.Room> _ngelxArkaPlanAramaOdalari=<String,lk.Room>{};
 final Map<String,DateTime?> _ngelxArkaPlanAramaBaslangiclari=<String,DateTime?>{};
@@ -4815,69 +4816,106 @@ class _AnaEkranState extends State<AnaEkran> {
   Widget build(BuildContext context) {
     return ValueListenableBuilder<String>(
       valueListenable:uygulamaDili,
-      builder:(context,dil,_)=>Scaffold(
-      body:Stack(children:[
-        Positioned.fill(child:KeyedSubtree(key:ValueKey('ngelx_tab_${secili}_$dil'),child:_aktifSayfa())),
-        Positioned.fill(child:IgnorePointer(
-          ignoring:false,
-          child:gelenAramaKatmani(),
-        )),
-      ]),
-      bottomNavigationBar: Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          border: Border(top: BorderSide(color: Color(0xFFE7E9EE))),
-          boxShadow: [BoxShadow(color: Color(0x1A000000), blurRadius: 18)],
-        ),
-        child: NavigationBarTheme(
-          data:NavigationBarThemeData(
-            height:76,
-            backgroundColor:Colors.white,
-            indicatorColor:const Color(0xFFE9DDFF),
-            indicatorShape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(18)),
-            labelTextStyle:WidgetStateProperty.resolveWith((s)=>TextStyle(color:s.contains(WidgetState.selected)?mor:Colors.black54,fontSize:11,fontWeight:s.contains(WidgetState.selected)?FontWeight.w900:FontWeight.w600)),
-            iconTheme:WidgetStateProperty.resolveWith((s)=>IconThemeData(color:s.contains(WidgetState.selected)?mor:Colors.black54,size:s.contains(WidgetState.selected)?28:25)),
-          ),
-          child:NavigationBar(
-          height: 76,
-          selectedIndex: secili,
-          backgroundColor: Colors.transparent,
-          labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-          onDestinationSelected: (i) async {
-            if(i==secili)return;
-            if(i!=0&&await misafirEngeli(context))return;
-            if(mounted)setState(()=>secili=i);
-          },
-          destinations: [
-            NavigationDestination(icon: const Icon(Icons.play_circle_outline), selectedIcon: const Icon(Icons.play_circle_fill), label: t('flow')),
-            NavigationDestination(icon: const Icon(Icons.explore_outlined), selectedIcon: const Icon(Icons.explore), label: t('explore')),
-            NavigationDestination(
-              icon:Container(
-                width:42,height:34,
-                decoration:BoxDecoration(
-                  gradient:const LinearGradient(colors:[Color(0xFF22D3EE),Color(0xFF7C3AED)]),
-                  borderRadius:BorderRadius.circular(13),
-                  boxShadow:const [BoxShadow(color:Color(0x337C3AED),blurRadius:10,offset:Offset(0,4))],
+      builder:(context,dil,_)=>ValueListenableBuilder<bool>(
+        valueListenable:ngelxAkisTemizGorunum,
+        builder:(context,temizAkis,__) {
+          final akis=secili==0;
+          return AnnotatedRegion<SystemUiOverlayStyle>(
+            value:akis
+              ?const SystemUiOverlayStyle(
+                  statusBarColor:Colors.transparent,
+                  statusBarIconBrightness:Brightness.light,
+                  statusBarBrightness:Brightness.dark,
+                  systemNavigationBarColor:Colors.black,
+                  systemNavigationBarIconBrightness:Brightness.light,
+                )
+              :const SystemUiOverlayStyle(
+                  statusBarColor:Colors.transparent,
+                  statusBarIconBrightness:Brightness.dark,
+                  statusBarBrightness:Brightness.light,
+                  systemNavigationBarColor:Colors.white,
+                  systemNavigationBarIconBrightness:Brightness.dark,
                 ),
-                child:const Icon(Icons.add_rounded,color:Colors.white,size:28),
-              ),
-              selectedIcon:Container(
-                width:48,height:38,
-                decoration:BoxDecoration(
-                  gradient:const LinearGradient(colors:[Color(0xFF14CFE4),Color(0xFF7C3AED)]),
-                  borderRadius:BorderRadius.circular(14),
-                  boxShadow:const [BoxShadow(color:Color(0x557C3AED),blurRadius:14,offset:Offset(0,5))],
+            child:Scaffold(
+              body:Stack(children:[
+                Positioned.fill(child:KeyedSubtree(key:ValueKey('ngelx_tab_${secili}_$dil'),child:_aktifSayfa())),
+                Positioned.fill(child:IgnorePointer(
+                  ignoring:false,
+                  child:gelenAramaKatmani(),
+                )),
+              ]),
+              bottomNavigationBar:akis&&temizAkis
+                ?const SizedBox.shrink()
+                :Container(
+                  decoration:BoxDecoration(
+                    color:akis?Colors.black:Colors.white,
+                    border:Border(top:BorderSide(color:akis?const Color(0xFF161616):const Color(0xFFE7E9EE))),
+                    boxShadow:[BoxShadow(color:akis?const Color(0x66000000):const Color(0x1A000000),blurRadius:18)],
+                  ),
+                  child:NavigationBarTheme(
+                    data:NavigationBarThemeData(
+                      height:76,
+                      backgroundColor:akis?Colors.black:Colors.white,
+                      indicatorColor:akis?Colors.transparent:const Color(0xFFE9DDFF),
+                      indicatorShape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(18)),
+                      labelTextStyle:WidgetStateProperty.resolveWith((s)=>TextStyle(
+                        color:akis
+                          ?(s.contains(WidgetState.selected)?Colors.white:Colors.white60)
+                          :(s.contains(WidgetState.selected)?mor:Colors.black54),
+                        fontSize:11,
+                        fontWeight:s.contains(WidgetState.selected)?FontWeight.w900:FontWeight.w600,
+                      )),
+                      iconTheme:WidgetStateProperty.resolveWith((s)=>IconThemeData(
+                        color:akis
+                          ?(s.contains(WidgetState.selected)?Colors.white:Colors.white60)
+                          :(s.contains(WidgetState.selected)?mor:Colors.black54),
+                        size:s.contains(WidgetState.selected)?28:25,
+                      )),
+                    ),
+                    child:NavigationBar(
+                      height:76,
+                      selectedIndex:secili,
+                      backgroundColor:Colors.transparent,
+                      labelBehavior:NavigationDestinationLabelBehavior.alwaysShow,
+                      onDestinationSelected:(i)async{
+                        if(i==secili)return;
+                        if(i!=0&&await misafirEngeli(context))return;
+                        if(ngelxAkisTemizGorunum.value)ngelxAkisTemizGorunum.value=false;
+                        if(mounted)setState(()=>secili=i);
+                      },
+                      destinations:[
+                        NavigationDestination(icon:const Icon(Icons.play_circle_outline),selectedIcon:const Icon(Icons.play_circle_fill),label:t('flow')),
+                        NavigationDestination(icon:const Icon(Icons.explore_outlined),selectedIcon:const Icon(Icons.explore),label:t('explore')),
+                        NavigationDestination(
+                          icon:Container(
+                            width:42,height:34,
+                            decoration:BoxDecoration(
+                              gradient:const LinearGradient(colors:[Color(0xFF22D3EE),Color(0xFF7C3AED)]),
+                              borderRadius:BorderRadius.circular(13),
+                              boxShadow:const [BoxShadow(color:Color(0x337C3AED),blurRadius:10,offset:Offset(0,4))],
+                            ),
+                            child:const Icon(Icons.add_rounded,color:Colors.white,size:28),
+                          ),
+                          selectedIcon:Container(
+                            width:48,height:38,
+                            decoration:BoxDecoration(
+                              gradient:const LinearGradient(colors:[Color(0xFF14CFE4),Color(0xFF7C3AED)]),
+                              borderRadius:BorderRadius.circular(14),
+                              boxShadow:const [BoxShadow(color:Color(0x557C3AED),blurRadius:14,offset:Offset(0,5))],
+                            ),
+                            child:const Icon(Icons.add_rounded,color:Colors.white,size:31),
+                          ),
+                          label:t('create'),
+                        ),
+                        NavigationDestination(icon:const Badge(child:Icon(Icons.forum_outlined)),selectedIcon:const Icon(Icons.forum),label:t('chat')),
+                        NavigationDestination(icon:const Icon(Icons.person_outline),selectedIcon:const Icon(Icons.person),label:t('me')),
+                      ],
+                    ),
+                  ),
                 ),
-                child:const Icon(Icons.add_rounded,color:Colors.white,size:31),
-              ),
-              label:t('create'),
             ),
-            NavigationDestination(icon: const Badge(child: Icon(Icons.forum_outlined)), selectedIcon: const Icon(Icons.forum), label: t('chat')),
-            NavigationDestination(icon: const Icon(Icons.person_outline), selectedIcon: const Icon(Icons.person), label: t('me')),
-          ],
-        ),
-        ),
-      ),
+          );
+        },
       ),
     );
   }
