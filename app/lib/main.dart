@@ -28,7 +28,6 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:record/record.dart' as rec;
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:google_mlkit_commons/google_mlkit_commons.dart';
-import 'pro_beauty_camera.dart';
 import 'group_quality.dart';
 part 'build258_settings.dart';
 part 'create_music_editor.dart';
@@ -8707,7 +8706,7 @@ class _YeniYuklePageState extends State<YuklePage> {
     if(yukleniyor)return;
     final izin=await Permission.camera.request();
     if(!izin.isGranted){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(lt('Kamerayı kullanmak için kamera izni vermelisin.','Camera permission is required to use the camera.'))));return;}
-    final r=await Navigator.push<Map<String,dynamic>>(context,MaterialPageRoute(builder:(_)=>NgelXProBeautyCameraPage.isConfigured?NgelXProBeautyCameraPage(baslangicVideo:video):NgelXCameraStudioPage(baslangicVideo:video)));
+    final r=await Navigator.push<Map<String,dynamic>>(context,MaterialPageRoute(builder:(_)=>NgelXCameraStudioPage(baslangicVideo:video)));
     final x=r?['file'];
     if(x is! XFile||!mounted)return;
     final v=r?['video']==true,secilenTur=v?'video':'photo';
