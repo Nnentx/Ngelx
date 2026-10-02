@@ -2174,3 +2174,17 @@ Cihazda doğrulanan örnek senaryo:
 - **Kullanıcı talebi: şimdi yeni derleme çıkarma; sorunları notlarda biriktir.**
 
 **KORUMA:** Akış, gruplar, profil, mesajlaşma, Mesaj İstekleri, takip/arkadaşlık istekleri, unread sayaçları ve daha önce geçen cihaz testleri korunacak.
+
+## 2026-10-02 — Build 372 — video / yorum performans düzeltmesi
+
+- Build 371 cihaz testindeki **video + yorum paneli ağırlaşması** için ayrı güvenli performans branch'i açıldı: `work/build372-performance-comments-video`.
+- Yorum paneli açılışında aynı anda yapılan gereksiz `Source.cache` yorum sorgusu ve içerik belge okuması kaldırıldı; Firestore snapshot kendi cache emisyonunu kullanıyor.
+- İçerik sahibi UID yorum paneline çağıran karttan aktarılıyor; tam içerik metadata'si yalnız yorum gönderme anında gerçekten gerekiyorsa okunuyor.
+- Klavye açılırken yorum yazıcısındaki ikinci `viewInsets` animasyonu kaldırıldı; bottom-sheet klavye hareketini tek katman yönetiyor.
+- Yorum kartları `RepaintBoundary` ile ayrıldı; bir satır/klavye değişimi sırasında gereksiz liste repaint'i azaltıldı.
+- Trim olmayan videolarda her video frame'inde çalışan gereksiz `_kesimKontrol` listener'ı artık bağlanmıyor.
+- Video decoder/ilk frame açılışına öncelik verildi; beğeni/kaydet ve profil-canlı Firestore okumaları kısa süre ertelenerek oynatmayı ağ tarafında sıkıştırmıyor.
+- Profil `presence/lastSeen` heartbeat gibi ilgisiz kullanıcı alanları değiştiğinde video/foto kartının tamamını rebuild eden davranış azaltıldı.
+- Aynı ikincil sorgu ertelemesi fotoğraf/yazı kartlarına da uygulandı.
+- **Mesajlaşma, gruplar, takip/arkadaşlık, canlı yayın ve akış veri kuralları değiştirilmedi.**
+- Kullanıcının önceki talebine uygun olarak bu aşamada **yeni APK derlemesi başlatılmadı**; önce kod düzeltmeleri biriktiriliyor.
