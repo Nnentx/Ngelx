@@ -1929,3 +1929,14 @@ Cihazda doğrulanan örnek senaryo:
 - Kullanıcı bu kamera/güzellik tasarımını NgelX için ana kalite referansı olarak belirledi.
 
 **KORUMA:** Daha önce cihazda doğrulanan takip/arkadaşlık istekleri, Mesaj İstekleri, normal mesajlaşma, unread sayaçları ve Aktivite/zil senkronizasyonu bu kamera yeniden çalışılırken bozulmayacak.
+
+## 2026-10-02 — Kamera/güzellik için kalite eşiği: TikTok seviyesi altı kabul edilmeyecek
+
+- Kullanıcının kesin kararı: NgelX kamera/güzellik sistemi **TikTok'taki kullanım kalitesi ve gerçek zamanlı efekt seviyesine ulaşmayacaksa yapılmış sayılmayacak**.
+- Basit slider + tüm kareye blur/ışık veren sahte rötuş kabul edilmeyecek.
+- Yüz landmark/maskesi ile gerçekten bölgesel çalışan, akıcı, doğal ve kayıt çıktısına tutarlı yansıyan efekt motoru zorunlu.
+- Kamera akışı, rötuş paneli, filtreler, fotoğraf/video düzenleme ve kayıt sonrası medya işleme birlikte profesyonel seviyeye getirilecek.
+- TikTok arayüzü birebir kopyalanmayacak; **NgelX'e özgü tasarım** korunacak fakat kullanım akıcılığı, araç derinliği ve efekt kalitesi referans seviyesinde olacak.
+- Bu kalite eşiği sağlanmıyorsa mevcut yarım/kalitesiz efekt sistemi teslim edilmiş özellik olarak kabul edilmeyecek.
+
+**KORUMA:** Mesajlaşma, Mesaj İstekleri, takip/arkadaşlık istekleri, unread sayaçları ve Aktivite/zil senkronizasyonu korunacak.
