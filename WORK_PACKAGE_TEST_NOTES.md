@@ -1874,3 +1874,12 @@ Cihazda doğrulanan örnek senaryo:
 - Bu düzenleme akışı Üret ekranındaki mevcut medya kartına entegre edilecek; kullanıcı ayrıca küçük bir buton aramak zorunda kalmayacak.
 
 **KORUMA:** Daha önce doğrulanan mesajlaşma, Mesaj İstekleri, takip/arkadaşlık istekleri ve sayaç akışları korunacak.
+
+## 2026-10-02 — Build 368 cihaz testi: ön/arka kamera geçişi
+
+- Fotoğraf modunda **ön kamera açılıyor** ve görüntü geliyor.
+- **Çevir** ile arka kameraya geçiş çalışıyor; siyah ekran/donma görülmedi.
+- Kamera seçim modalı (Fotoğraf çek / Video çek) açılıyor.
+- Bu adımda henüz **fotoğrafı çekip Üret ekranına dönüş / doğru medya önizlemesi** doğrulanmadı; sıradaki test bu olacak.
+
+**KORUMA:** Sosyal istekler, mesajlaşma, Mesaj İstekleri ve sayaç regresyon temeli korunacak.
