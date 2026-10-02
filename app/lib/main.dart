@@ -192,8 +192,8 @@ const ngelxPrivateBlueInk = Color(0xFF10213A);
 
 // Build 372: settings/about must reflect the installed build instead of the old 368 fallback.
 // Release builds can still override these with --dart-define.
-const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.151');
-const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '372');
+const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.152');
+const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '373');
 const ngelxGroupBorder = Color(0xFFD9EEE0);
 
 final GlobalKey<NavigatorState> ngelxNavigatorKey=GlobalKey<NavigatorState>();
@@ -3300,10 +3300,19 @@ Future<void> icerikAracMenusu(BuildContext context,String icerikId,{Future<void>
   String captionText=(aracHafiza['captionText']??yerelAltyazi['captionText']??v['captionText']??'').toString().trim();
   final icerikMetni=(v['description']??v['text']??v['content']??'').toString().trim();
   final medyaAdaylari=<dynamic>[medyaUrlOncelikli,v['videoUrl'],v['mediaUrl'],v['playbackUrl'],v['downloadUrl'],v['fileUrl'],v['url'],...((v['mediaUrls'] is Iterable)?List<dynamic>.from(v['mediaUrls'] as Iterable):const <dynamic>[])];
-  final medyaUrlListesi=medyaAdaylari.map((e)=>(e??'').toString().trim()).where((e)=>e.isNotEmpty).toSet().toList();
-  // Eski kayıtlarda contentLanguage alanı yok. Bu durumda sunucu kaynak dili
-  // otomatik belirler; Türkçe varsaymak İngilizce içerikleri çevrilmiş gibi gösteriyordu.
-  final kaynakDil=ngelxDilKodu((v['contentLanguage']??v['language']??'').toString());
+  final medyaUrlListesi=<String>[];
+  for(final ham in medyaAdaylari){
+    final raw=(ham??'').toString().trim();
+    if(raw.isEmpty)continue;
+    final adaylar=ngelxMedyaUrlAdaylari(raw);
+    for(final aday in (adaylar.isEmpty?<String>[raw]:adaylar)){
+      final temiz=aday.trim();
+      if(temiz.isNotEmpty&&!medyaUrlListesi.contains(temiz))medyaUrlListesi.add(temiz);
+    }
+  }
+  // Algılanan kaynak dili kullanıcı-içerik önbelleğinde saklanır. Böylece aynı
+  // videonun araç menüsü her açılışta English/Türkçe arasında değişmez.
+  String kaynakDil=ngelxDilKodu((aracHafiza['sourceLanguage']??yerelAltyazi['sourceLanguage']??v['contentLanguage']??v['language']??'').toString());
   bool altyazi=hafiza.getBool('content_caption_$icerikId')??false,ceviri=hafiza.getBool('content_translate_$icerikId')??(hafiza.getBool('ngelx_auto_translate')??false),islem=false;
   String hedefDil=ngelxDilKodu(hafiza.getString('content_translation_language_$icerikId')??uygulamaDili.value);
   String altyaziDili=ngelxDilKodu(hafiza.getString('ngelx_caption_language')??uygulamaDili.value);
@@ -3328,7 +3337,7 @@ Future<void> icerikAracMenusu(BuildContext context,String icerikId,{Future<void>
         cevrilecekMetin=(altyaziSonucu['text']??'').trim();
         captionText=cevrilecekMetin;
         final algilanan=ngelxDilKodu(altyaziSonucu['language']);
-        if(algilanan.isNotEmpty)gercekKaynakDil=algilanan;
+        if(algilanan.isNotEmpty){gercekKaynakDil=algilanan;kaynakDil=algilanan;}
         if(gercekKaynakDil.isNotEmpty)captions[gercekKaynakDil]=captionText;
         await hafiza.setString('content_caption_cache_$icerikId',jsonEncode({
           'captionText':captionText,
@@ -3347,6 +3356,7 @@ Future<void> icerikAracMenusu(BuildContext context,String icerikId,{Future<void>
       if(icerikMetni.isEmpty)captionTranslations[istenenDil]=sonuc;
       await aracHafizaRef.set({
         'contentId':icerikId,
+        if(gercekKaynakDil.isNotEmpty)'sourceLanguage':gercekKaynakDil,
         'translations':ceviriler,
         if(captionText.isNotEmpty)'captionText':captionText,
         if(captions.isNotEmpty)'captions':captions,
@@ -3366,7 +3376,7 @@ Future<void> icerikAracMenusu(BuildContext context,String icerikId,{Future<void>
         final sonuc=await ngelxGercekAltyaziOlustur(mediaUrls:medyaUrlListesi,kaynakDil:kaynakDil);
         captionText=(sonuc['text']??'').trim();
         final algilanan=ngelxDilKodu(sonuc['language']);
-        if(algilanan.isNotEmpty)gercekKaynakDil=algilanan;
+        if(algilanan.isNotEmpty){gercekKaynakDil=algilanan;kaynakDil=algilanan;}
         if(gercekKaynakDil.isNotEmpty)captions[gercekKaynakDil]=captionText;
         if((sonuc['vtt']??'').isNotEmpty){
           await aracHafizaRef.set({'captionVtt':sonuc['vtt']},SetOptions(merge:true));
@@ -3385,13 +3395,16 @@ Future<void> icerikAracMenusu(BuildContext context,String icerikId,{Future<void>
       }
       await aracHafizaRef.set({
         'contentId':icerikId,
+        if(gercekKaynakDil.isNotEmpty)'sourceLanguage':gercekKaynakDil,
         'captionText':captionText,
+        if(gercekKaynakDil.isNotEmpty)'sourceLanguage':gercekKaynakDil,
         'captions':captions,
         'captionTranslations':captionTranslations,
         'updatedAt':FieldValue.serverTimestamp(),
       },SetOptions(merge:true));
       await hafiza.setString('content_caption_cache_$icerikId',jsonEncode({
         'captionText':captionText,
+        if(gercekKaynakDil.isNotEmpty)'sourceLanguage':gercekKaynakDil,
         'captions':captions,
         'captionTranslations':captionTranslations,
       }));
@@ -3905,7 +3918,12 @@ class IcerikBaglantiPage extends StatelessWidget {
   Widget build(BuildContext context)=>Scaffold(
     backgroundColor:const Color(0xFF09090F),
     appBar:AppBar(title:const Text('NgelX paylaşımı')),
-    body:FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(
+    body:SafeArea(
+      top:false,
+      bottom:true,
+      child:Padding(
+        padding:const EdgeInsets.only(bottom:8),
+        child:FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(
       future:FirebaseFirestore.instance.collection('videos').doc(icerikId).get(),
       builder:(_,s){
         if(s.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator(color:mavi));
@@ -3950,8 +3968,8 @@ class IcerikBaglantiPage extends StatelessWidget {
           aktif:true,
         );
       },
-    ),
-  );
+    )),
+  ));
 }
 
 class UygulamaDurumKapisi extends StatefulWidget {final Widget child;const UygulamaDurumKapisi({super.key,required this.child});@override State<UygulamaDurumKapisi> createState()=>_UygulamaDurumKapisiState();}
@@ -9164,6 +9182,32 @@ class _YeniYuklePageState extends State<YuklePage> {
     }
   }
 
+  Future<void> _fotoOnizlemeyiAc()async{
+    final secilen=medya;
+    if(secilen==null||tur!='photo'||!mounted)return;
+    await Navigator.push<void>(context,MaterialPageRoute(builder:(_)=>Scaffold(
+      backgroundColor:Colors.black,
+      appBar:AppBar(
+        backgroundColor:Colors.black,
+        foregroundColor:Colors.white,
+        title:const Text('Fotoğraf önizleme',style:TextStyle(fontWeight:FontWeight.w800)),
+      ),
+      body:SafeArea(
+        top:false,
+        child:InteractiveViewer(
+          minScale:1,maxScale:4,
+          child:Center(child:Image.file(
+            File(secilen.path),
+            fit:BoxFit.contain,
+            width:double.infinity,
+            height:double.infinity,
+            errorBuilder:(_,__,___)=>const Icon(Icons.broken_image_outlined,size:58,color:Colors.white54),
+          )),
+        ),
+      ),
+    )));
+  }
+
   Widget _medyaOnizleme(){
     final secilen=medya;
     if(secilen==null||tur=='text')return const SizedBox.shrink();
@@ -9186,14 +9230,18 @@ class _YeniYuklePageState extends State<YuklePage> {
                 quarterTurns:fotoDonus%4,
                 child:Image.file(
                   File(secilen.path),
-                  fit:kareKirp?BoxFit.cover:BoxFit.contain,
+                  fit:BoxFit.cover,
                   width:double.infinity,height:double.infinity,
                   errorBuilder:(_,__,___)=>const Center(child:Icon(Icons.broken_image_outlined,size:48,color:Colors.black38)),
                 ),
               );
               if(filtre!=null)gorsel=ColorFiltered(colorFilter:filtre,child:gorsel);
               return Stack(fit:StackFit.expand,children:[
-                ColoredBox(color:Colors.black,child:ClipRect(child:gorsel)),
+                GestureDetector(
+                  behavior:HitTestBehavior.opaque,
+                  onTap:()=>unawaited(_fotoOnizlemeyiAc()),
+                  child:ColoredBox(color:Colors.black,child:ClipRect(child:gorsel)),
+                ),
                 if(medyaYazisi.trim().isNotEmpty)
                   NgelXSuruklenebilirYaziKatmani(
                     yazi:medyaYazisi.trim(),renk:medyaYaziRenk,arkaPlanRenk:medyaYaziArkaPlanRenk,boyut:medyaYaziBoyut,
@@ -9229,19 +9277,25 @@ class _YeniYuklePageState extends State<YuklePage> {
             }),
           )
         else
-          Container(
-            height:170,
-            alignment:Alignment.center,
-            decoration:const BoxDecoration(gradient:LinearGradient(colors:[Color(0xFF171A24),Color(0xFF32234F)])),
-            child:Column(mainAxisSize:MainAxisSize.min,children:[
-              const Icon(Icons.play_circle_fill_rounded,color:Colors.white,size:62),
-              const SizedBox(height:8),
-              Text(t('videoSelected'),style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w900)),
-              if(medyaYazisi.trim().isNotEmpty)...[
-                const SizedBox(height:7),
-                Text('Yazı katmanı hazır',style:TextStyle(color:Color(medyaYaziRenk),fontWeight:FontWeight.w800)),
-              ],
-            ]),
+          GestureDetector(
+            behavior:HitTestBehavior.opaque,
+            onTap:yukleniyor?null:()=>unawaited(_videoDuzenle()),
+            child:Container(
+              height:170,
+              alignment:Alignment.center,
+              decoration:const BoxDecoration(gradient:LinearGradient(colors:[Color(0xFF171A24),Color(0xFF32234F)])),
+              child:Column(mainAxisSize:MainAxisSize.min,children:[
+                const Icon(Icons.play_circle_fill_rounded,color:Colors.white,size:62),
+                const SizedBox(height:8),
+                Text(t('videoSelected'),style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w900)),
+                const SizedBox(height:4),
+                const Text('Önizlemek ve düzenlemek için dokun',style:TextStyle(color:Colors.white60,fontSize:11,fontWeight:FontWeight.w700)),
+                if(medyaYazisi.trim().isNotEmpty)...[
+                  const SizedBox(height:7),
+                  Text('Yazı katmanı hazır',style:TextStyle(color:Color(medyaYaziRenk),fontWeight:FontWeight.w800)),
+                ],
+              ]),
+            ),
           ),
         if(foto&&medyaYazisi.trim().isNotEmpty&&medyaYaziSecili)
           Container(
