@@ -16,3 +16,6 @@ bucket_name = "ngelx-media"
 
 [ai]
 binding = "AI"
+
+[media]
+binding = "VIDEO_MEDIA"
