@@ -2139,3 +2139,16 @@ Cihazda doğrulanan örnek senaryo:
 - Ancak filtrelerin görsel kalitesi ayrı başlıkta hâlâ **YETERSİZ / BAŞARISIZ** kabul ediliyor; TikTok referans seviyesine ulaşmadan tamamlanmış sayılmayacak.
 
 **KORUMA:** Mesajlaşma, Mesaj İstekleri, takip/arkadaşlık istekleri ve sayaç regresyon temeli korunacak.
+
+## 2026-10-02 — Build 370 — profesyonel filtre kalite geçişi
+
+- Kullanıcı mevcut filtreleri TikTok referansına göre **çok yetersiz** buldu; yalnız teknik olarak çalışması kabul kriteri değil.
+- Eski basit parlaklık/doygunluk presetleri yeniden yazılıyor.
+- Yeni filtre motoru; preset bazlı **kontrast, gamma, pozlama, hue, kanal sıcaklığı ve önerilen varsayılan yoğunluk** kullanacak.
+- Filtre seçildiğinde otomatik olarak profesyonel/orta yoğunluk değeri uygulanacak; kullanıcı isterse slider ile artırıp azaltabilecek.
+- **Sıfırla** hem filtreyi Doğal'a hem yoğunluğu sıfıra döndürecek.
+- Fotoğraf çıktısı canlı önizlemedeki preset karakterine daha yakın işlenecek; %100'e zorlanan aşırı parlak/sert sonuç varsayılan olmayacak.
+- Kalite kapısı: cihaz testinde ten tonu, gölge/parlak alan, kontrast ve renk dengesi TikTok referansına yeterince yaklaşmazsa filtre işi **tamamlandı sayılmayacak**.
+- TikTok'un özel/proprietary filtreleri kopyalanmayacak; hedef aynı kalite sınıfında doğal ve profesyonel NgelX presetleri.
+
+**KORUMA:** Mesajlaşma, Mesaj İstekleri, takip/arkadaşlık istekleri ve sayaç regresyon temeli korunacak.
