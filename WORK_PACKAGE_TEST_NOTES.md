@@ -2045,3 +2045,14 @@ Cihazda doğrulanan örnek senaryo:
 - Sonuç: işlevsel reset **geçti**, fakat slider state reseti için küçük UX düzeltmesi gerekli.
 
 **KORUMA:** Mesajlaşma, Mesaj İstekleri, takip/arkadaşlık istekleri ve sayaç regresyon temeli korunacak.
+
+## 2026-10-02 — Build 369 cihaz testi: video medya tipi düzeldi
+
+- Video modunda kayıt cihazda başlıyor; kırmızı durdur düğmesi ve kayıt süresi (`00:05`) doğru görünüyor.
+- Kayıt durdurulduktan sonra Üret ekranına dönüş başarılı.
+- Medya artık **video olarak doğru sınıflandırılıyor**: `Video seçildi` kartı, oynat simgesi ve `.mp4` dosya adı görünüyor.
+- Video için **Kes / kırp**, **Yazı ekle** ve **Müzik ekle** araçları gösteriliyor; önceki fotoğraf araçlarına düşme hatası bu akışta görünmüyor.
+- Önceki **video → fotoğraf olarak işleniyor** hatası bu Build 369 cihaz testinde **düzeldi**.
+- Henüz videonun gerçekten oynatılması, hareketin/sesin korunması ve kes/kırp aracının işlevi ayrı ayrı doğrulanmadı.
+
+**KORUMA:** Mesajlaşma, Mesaj İstekleri, takip/arkadaşlık istekleri ve sayaç regresyon temeli korunacak.
