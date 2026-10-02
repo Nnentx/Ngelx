@@ -1959,3 +1959,12 @@ Cihazda doğrulanan örnek senaryo:
 **Kalite eşiği:** TikTok seviyesine yaklaşmayan basit rötuş 'tamamlandı' olarak işaretlenmeyecek.
 
 **KORUMA:** Mesajlaşma, Mesaj İstekleri, takip/arkadaşlık istekleri, unread sayaçları ve Aktivite/zil senkronizasyonu Build 369 kamera çalışmasında korunacak.
+
+## 2026-10-02 — Build 369 cihaz testi: ön/arka kamera geçişi
+
+- Ön kamera görüntüsü açılıyor; siyah ekran, donma veya çökme görülmedi.
+- **Çevir** ile arka kameraya geçiş cihazda başarılı.
+- Arka kamera görüntüsü normal geliyor; geçiş sırasında çökme/donma görülmedi.
+- Build 369'da Pro Beauty/Rötuş görünmüyor; mevcut ekranda temel kamera yolu aktif.
+
+**KORUMA:** Mesajlaşma, Mesaj İstekleri, takip/arkadaşlık istekleri ve sayaç regresyon temeli korunacak.
