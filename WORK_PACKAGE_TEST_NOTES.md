@@ -2079,3 +2079,14 @@ Cihazda doğrulanan örnek senaryo:
 - **Test sonucu: BAŞARISIZ.** Fotoğraf önizleme tap-to-edit eksik.
 
 **KORUMA:** Mesajlaşma, Mesaj İstekleri, takip/arkadaşlık istekleri ve sayaç regresyon temeli korunacak.
+
+## 2026-10-02 — Build 369 cihaz testi: video Kes / kırp editörü açılıyor
+
+- Üret ekranındaki **Kes / kırp** butonu çalışıyor ve **Videoyu düzenle** ekranı açılıyor.
+- Editörde yerel video görüntüsü geliyor ve üstteki oynat kontrolü çalışıyor; cihaz testinde ilerleme çubuğunun hareket ettiği görüldü.
+- Kesme aralığı için başlangıç/bitiş kolları mevcut (`0:00`–`0:09`).
+- Aynı ekranda video üzerine yazı, yazı rengi, arka planı ve boyutu araçları da görünüyor.
+- Bu durum, ana Üret kartındaki oynat simgesinin bozuk olduğu gerçeğini değiştirmiyor: **ana kartta oynatma yok, editör içinde oynatma var**.
+- Henüz trim kollarının gerçek başlangıç/bitiş değerini kaydedip **Bitti** sonrası Üret ekranına doğru aktardığı ve yayınlanan videoda uygulandığı doğrulanmadı.
+
+**KORUMA:** Mesajlaşma, Mesaj İstekleri, takip/arkadaşlık istekleri ve sayaç regresyon temeli korunacak.
