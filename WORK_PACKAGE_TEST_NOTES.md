@@ -2101,3 +2101,11 @@ Cihazda doğrulanan örnek senaryo:
 - Henüz yayınlanan/çıktı videoda gerçekten **0:03–0:08 kesiminin uygulanması** ve yazının render edilip edilmediği doğrulanmadı; yayın/çıktı testi gerekli.
 
 **KORUMA:** Mesajlaşma, Mesaj İstekleri, takip/arkadaşlık istekleri ve sayaç regresyon temeli korunacak.
+
+## 2026-10-02 — Build 369 cihaz testi: video ses kaydı
+
+- Cihaz testinde çekilen videonun oynatılması sırasında **ortam/konuşma sesi duyuluyor**.
+- Mikrofon kaydı video dosyasına doğru şekilde eklenmiş.
+- Video ses testi **GEÇTİ**.
+
+**KORUMA:** Mesajlaşma, Mesaj İstekleri, takip/arkadaşlık istekleri ve sayaç regresyon temeli korunacak.
