@@ -1987,3 +1987,12 @@ Cihazda doğrulanan örnek senaryo:
 - Test sırasında bir karede kısa süreli siyah yükleme/yeniden başlatma ekranı görüldü, sonraki karede kamera görüntüsü geri geldi. Kalıcı donma olarak doğrulanmadı; tekrar ederse ayrıca hata olarak ele alınacak.
 
 **KORUMA:** Mesajlaşma, Mesaj İstekleri, takip/arkadaşlık istekleri ve sayaç regresyon temeli korunacak.
+
+## 2026-10-02 — Build 369 cihaz testi: kamera oran seçici
+
+- Kamera oran düğmesi cihazda çalışıyor ve **9:16 → 1:1 → 16:9** seçenekleri arasında geçiş yapıyor.
+- **1:1** seçildiğinde kare kadraj çerçevesi, **16:9** seçildiğinde yatay geniş kadraj çerçevesi önizlemede doğru görünüyor.
+- Bu aşamada yalnızca **oran seçimi ve önizleme çerçevesi** doğrulandı.
+- Kaydedilen dosyanın gerçekten seçilen en-boy oranında çıkıp çıkmadığı henüz kesin doğrulanmadı; 1:1 ve 16:9 için ayrı çekim sonucu kontrol edilecek.
+
+**KORUMA:** Mesajlaşma, Mesaj İstekleri, takip/arkadaşlık istekleri ve sayaç regresyon temeli korunacak.
