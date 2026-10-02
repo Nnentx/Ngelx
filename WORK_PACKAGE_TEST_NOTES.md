@@ -2067,3 +2067,15 @@ Cihazda doğrulanan örnek senaryo:
 - **Test sonucu: BAŞARISIZ.** Hareket ve ses doğrulaması oynatma düzeltildikten sonra tekrar yapılacak.
 
 **KORUMA:** Mesajlaşma, Mesaj İstekleri, takip/arkadaşlık istekleri ve sayaç regresyon temeli korunacak.
+
+## 2026-10-02 — Build 369 cihaz testi: fotoğraf önizlemesine dokunulamıyor
+
+- Kullanıcı doğrulaması: Üret ekranındaki **fotoğraf önizlemesine basılmıyor**.
+- Önceki video önizleme oynatma hatasıyla birlikte, medya kartının dokunma davranışı fotoğraf ve video için eksik.
+- Fotoğraf kartının tamamı dokunulabilir olmalı.
+- Fotoğrafa dokununca düzenleme ekranı açılmalı: **kırp, döndür, güzellik/rötuş, filtre, ışık/renk, oran**.
+- Video kartına dokununca gerçek video oynatma/düzenleme ekranı açılmalı; fotoğraf araçlarına düşmemeli.
+- Küçük ayrı düğmeleri aramak gerekmemeli; **önizlemenin kendisi ana giriş noktası** olmalı.
+- **Test sonucu: BAŞARISIZ.** Fotoğraf önizleme tap-to-edit eksik.
+
+**KORUMA:** Mesajlaşma, Mesaj İstekleri, takip/arkadaşlık istekleri ve sayaç regresyon temeli korunacak.
