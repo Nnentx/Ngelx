@@ -1940,3 +1940,22 @@ Cihazda doğrulanan örnek senaryo:
 - Bu kalite eşiği sağlanmıyorsa mevcut yarım/kalitesiz efekt sistemi teslim edilmiş özellik olarak kabul edilmeyecek.
 
 **KORUMA:** Mesajlaşma, Mesaj İstekleri, takip/arkadaşlık istekleri, unread sayaçları ve Aktivite/zil senkronizasyonu korunacak.
+
+## 2026-10-02 — Build 369 kodlama: Pro Beauty motoru için kalite kapısı ve profesyonel SDK yolu
+
+- Kullanıcının kesin kalite şartına göre eski basit blur/parlaklık tabanlı yüz rötuşu **Pro Beauty olarak sunulmayacak**.
+- Yeni çalışma dalı: `work/build369-camera-beauty-v2`.
+- Sürüm tabanı: **1.0.148+369**.
+- Profesyonel yüz motoru için `banuba_sdk` entegrasyon yolu eklendi.
+- Yeni `pro_beauty_camera.dart` ekranı gerçek TouchUp motoruna bağlanacak şekilde kodlandı.
+- Gerçek motor kontrolleri: **Pürüzsüz (Skin.softening), Göz, Burun, Yüz daraltma, Çene, Dudak, Göz ışığı, Diş beyazlatma**.
+- Kamera ekranında ön/arka kamera, flaş, sayaç, oran, pinch zoom, fotoğraf/video çekimi ve gerçek motor rötuş paneli kodlandı.
+- Fotoğraf çıktısı `image/png`, video çıktısı `video/mp4` olarak açık MIME tipiyle döndürülüyor; önceki video→fotoğraf sınıflandırma hatasının aynı yeni motor yolunda tekrarlanmaması hedefleniyor.
+- Pro motor yalnızca hem `BANUBA_CLIENT_TOKEN` hem `BANUBA_TOUCHUP_READY=true` sağlandığında aktif olur.
+- Resmi TouchUp effect paketi/lisansı yoksa sistem **kalitesiz sahte efekt fallback'i göstermeyecek**; temel kamera açılacak ve eski düşük kaliteli rötuş varsayılanları kapalı tutulacak.
+- Android tarafında profesyonel native modüller için minSdk 26 ve Banuba native modül bağımlılıkları bağlandı.
+- Token kaynak koda yazılmayacak; CI secret / `--dart-define` ile verilecek.
+
+**Kalite eşiği:** TikTok seviyesine yaklaşmayan basit rötuş 'tamamlandı' olarak işaretlenmeyecek.
+
+**KORUMA:** Mesajlaşma, Mesaj İstekleri, takip/arkadaşlık istekleri, unread sayaçları ve Aktivite/zil senkronizasyonu Build 369 kamera çalışmasında korunacak.
