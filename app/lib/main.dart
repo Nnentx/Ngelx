@@ -5640,6 +5640,58 @@ Future<void> ngelxKisiyeIcerikGonder({required User ben,required String hedefUid
   unawaited(uygulamaBildirimiGonder(toUid:hedefUid,fromUid:ben.uid,tur:'message',metin:'Sana bir NgelX paylaşımı gönderdi',belgeId:chatId,dedupeKey:'shared_content_'+mesajRef.id+'_'+hedefUid).catchError((_){ }));
 }
 
+Future<void> ngelxKisiyeProfilGonder({
+  required User ben,
+  required String hedefUid,
+  required String profilUid,
+  required String profilAdi,
+})async{
+  final ids=<String>[ben.uid,hedefUid]..sort();
+  final chatId=ids.join('_');
+  final chat=FirebaseFirestore.instance.collection('chats').doc(chatId);
+  final sonuc=await Future.wait([
+    FirebaseFirestore.instance.collection('users').doc(ben.uid).get().timeout(const Duration(seconds:8)),
+    FirebaseFirestore.instance.collection('users').doc(hedefUid).get().timeout(const Duration(seconds:8)),
+    chat.get().timeout(const Duration(seconds:8)),
+  ]);
+  final benim=sonuc[0].data()??<String,dynamic>{};
+  final hedef=sonuc[1].data()??<String,dynamic>{};
+  final sohbet=sonuc[2].data()??<String,dynamic>{};
+  final sohbetMevcut=sonuc[2].exists;
+  if(hedef['deactivated']==true)throw StateError('target-unavailable');
+  if(List<String>.from(benim['blocked']??const[]).contains(hedefUid)||List<String>.from(hedef['blocked']??const[]).contains(ben.uid))throw StateError('blocked');
+  final arkadas=List<String>.from(hedef['friends']??const[]).contains(ben.uid)||List<String>.from(benim['friends']??const[]).contains(hedefUid);
+  final izin=(hedef['messagePermission']??(hedef['friendsOnlyMessages']==true?'friends':'all')).toString();
+  final takipEdiyor=List<String>.from(hedef['following']??const[]).contains(ben.uid);
+  if(!sohbetMevcut&&!(izin=='all'||(izin=='friends'&&arkadas)||(izin=='following'&&takipEdiyor)))throw StateError('message-permission');
+  final istekKabulEdildi=sohbet['requestAccepted_'+ben.uid]==true||sohbet['requestAccepted_'+hedefUid]==true;
+  final istekGerekli=!arkadas&&!istekKabulEdildi;
+  final mevcutIstekGonderen=(sohbet['requestSenderUid']??'').toString();
+  final mevcutIstekAlici=(sohbet['requestRecipientUid']??'').toString();
+  final mesajRef=chat.collection('messages').doc();
+  final metin='NgelX profili ✨\n$profilAdi\n$ngelxWebAdresi/u/$profilUid';
+  final batch=FirebaseFirestore.instance.batch();
+  batch.set(chat,{
+    if(!sohbetMevcut)'members':ids,
+    'lastMessage':'👤 NgelX profili','updatedAt':FieldValue.serverTimestamp(),
+    'unread_'+hedefUid:FieldValue.increment(1),
+    if(istekGerekli&&mevcutIstekGonderen.isEmpty)'requestSenderUid':ben.uid,
+    if(istekGerekli&&mevcutIstekAlici.isEmpty)'requestRecipientUid':hedefUid,
+    if(istekGerekli)'requestRejected_'+hedefUid:false,
+  },SetOptions(merge:true));
+  batch.set(mesajRef,{
+    'senderId':ben.uid,'text':metin,'type':'shared_profile',
+    'profileUid':profilUid,'profileName':profilAdi,
+    'createdAt':FieldValue.serverTimestamp(),'clientCreatedAt':Timestamp.now(),
+  });
+  await ngelxBatchCommitDogrula(batch:batch,marker:mesajRef,timeout:const Duration(seconds:15));
+  unawaited(uygulamaBildirimiGonder(
+    toUid:hedefUid,fromUid:ben.uid,tur:'message',
+    metin:'Sana bir NgelX profili gönderdi',belgeId:chatId,
+    dedupeKey:'shared_profile_'+mesajRef.id+'_'+hedefUid,
+  ).catchError((_){ }));
+}
+
 String ngelxPaylasimHataNedeni(Object e){
   if(e is StateError){
     final kod=e.message.toString();
@@ -5755,6 +5807,26 @@ Future<void> ngelxOzeldenPaylas(BuildContext context,{required String icerikId,r
     :basarili>0
       ?'$basarili kişiye gönderildi ✅ • ${hatalar.join(', ')} gönderilemedi.'
       :'Gönderilemedi: ${hatalar.join(', ')}';
+  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(mesaj),duration:const Duration(seconds:4)));
+}
+
+Future<void> ngelxProfiliOzeldenPaylas(BuildContext context,{required String profilUid,required String profilAdi})async{
+  final ben=FirebaseAuth.instance.currentUser;if(ben==null)return;
+  Map<String,String> alicilar;
+  try{alicilar=await ngelxPaylasimAlicilariniSec(context);}
+  catch(_){if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Kişiler yüklenemedi. Bağlantını kontrol edip tekrar dene.')));return;}
+  if(alicilar.isEmpty)return;
+  var basarili=0;final hatalar=<String>[];
+  for(final kayit in alicilar.entries){
+    try{await ngelxKisiyeProfilGonder(ben:ben,hedefUid:kayit.key,profilUid:profilUid,profilAdi:profilAdi);basarili++;}
+    catch(e){hatalar.add('${kayit.value} (${ngelxPaylasimHataNedeni(e)})');}
+  }
+  if(!context.mounted)return;
+  final mesaj=hatalar.isEmpty
+    ?'$basarili kişiye profil gönderildi ✅'
+    :basarili>0
+      ?'$basarili kişiye profil gönderildi ✅ • ${hatalar.join(', ')} gönderilemedi.'
+      :'Profil gönderilemedi: ${hatalar.join(', ')}';
   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(mesaj),duration:const Duration(seconds:4)));
 }
 
@@ -18256,7 +18328,7 @@ class _SohbetPageState extends State<SohbetPage> {
     final sesliOdaPaylasimi=tur=='audio_room_share'||(v['audioRoomId']??'').toString().trim().isNotEmpty;
     final canliBaslik=(v['liveTitle']??'Canlı yayın').toString().trim();
     final canliKullanici=(v['liveUsername']??'').toString().trim();
-    final photo=tur=='photo',video=tur=='video',shared=tur=='shared_content',audio=tur=='audio',file=tur=='file',location=tur=='location',call=tur=='call',storyReply=tur=='story_reply';
+    final photo=tur=='photo',video=tur=='video',shared=tur=='shared_content',sharedProfile=tur=='shared_profile',audio=tur=='audio',file=tur=='file',location=tur=='location',call=tur=='call',storyReply=tur=='story_reply';
     final medyaUrl=ngelxMesajMedyaUrl(v,video:video);
     final videoKapakUrl=video?ngelxMesajVideoKapagi(v):'';
     final sadeMedya=photo||video;
@@ -18280,6 +18352,8 @@ class _SohbetPageState extends State<SohbetPage> {
           ? ()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>TamEkranMedyaPage(url:medyaUrl)))
           : video
             ? ()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>TamEkranVideoPage(url:medyaUrl)))
+          : sharedProfile
+            ? (){final profilUid=(v['profileUid']??'').toString();if(profilUid.isNotEmpty)Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciProfilPage(uid:profilUid)));}
           : shared
             ? ()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>IcerikBaglantiPage(icerikId:(v['contentId']??'').toString())))
             : file
@@ -19480,8 +19554,7 @@ class SohbetBilgiPage extends StatelessWidget{
       final benim=me==null?null:await FirebaseFirestore.instance.collection('users').doc(me).get();
       if(!List<String>.from(benim?.data()?['friends']??const[]).contains(uid))return;
     }
-    final link='$ngelxWebAdresi/u/$uid';
-    await SharePlus.instance.share(ShareParams(title:'NgelX profili',subject:'NgelX • $ad',text:'NgelX’te $ad profilini görüntüle\n$link'));
+    await ngelxProfiliOzeldenPaylas(context,profilUid:uid,profilAdi:ad);
   }
 
   @override Widget build(BuildContext context)=>Theme(
@@ -21023,8 +21096,7 @@ class _KullaniciProfilPageState extends State<KullaniciProfilPage> {
         }
       }
       final ad=(hv['displayName']??hv['username']??'NgelX kullanıcısı').toString();
-      final link='$ngelxWebAdresi/u/$uid';
-      await SharePlus.instance.share(ShareParams(title:'NgelX profili',subject:'NgelX • $ad',text:'NgelX’te $ad profilini görüntüle\n$link'));
+      await ngelxProfiliOzeldenPaylas(context,profilUid:uid,profilAdi:ad);
     }on TimeoutException{
       if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Profil paylaşım izni kontrolü zaman aşımına uğradı. Tekrar dene.')));
     }catch(_){
