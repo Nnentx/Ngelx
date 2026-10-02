@@ -1911,3 +1911,21 @@ Cihazda doğrulanan örnek senaryo:
 - 90° Döndür ile birlikte kullanıldığında fotoğraf medya tipi korunuyor ve uygulama çökmesi görülmedi.
 
 **KORUMA:** Sosyal istekler, mesajlaşma, Mesaj İstekleri ve sayaç regresyon temeli korunacak.
+
+## 2026-10-02 — TikTok referanslı kamera/güzellik hedefi
+
+- Kullanıcı mevcut NgelX kamera/efekt deneyimi ile TikTok kamera/güzellik deneyimi arasında büyük kalite farkı olduğunu belirtti.
+- Hedef: TikTok benzeri **akıcı, tam ekran, gerçek zamanlı ve profesyonel kamera/güzellik deneyimi**; birebir marka kopyası değil, aynı seviyede kullanım kalitesi ve işlev mantığı.
+- Kamera ana ekranında sade tam ekran önizleme korunacak; sağ tarafta dikey hızlı araçlar bulunacak: **kamera çevir, flaş, sayaç, düzen, mikrofon, oran, rötuş, filtreler** ve gerektiğinde daralt/aç kontrolü.
+- Üst bölümde gerekirse **Ses ekle** gibi içerik üretim kısayolu bulunacak.
+- Alt bölümde belirgin çekim modu şeridi olacak: fotoğraf/video ve diğer üretim modları; çekim düğmesi büyük ve tek bakışta anlaşılır olacak.
+- Rötuş paneli TikTok benzeri ayrı bir alt panel olacak. En az **Yüz / Makyaj** sekmeleri bulunacak.
+- Yüz sekmesinde gerçek çalışan kontroller hedefleniyor: **Açık/aydınlatma, Pürüzsüz, Kontrast, Yüz şekli, Burun** ve sonraki aşamada göz/çene/dudak gibi bölgesel seçenekler.
+- Her güzellik aracı için **0–100 yoğunluk slider'ı**, seçili durum göstergesi ve **Sıfırla** kontrolü olacak.
+- Efektler yalnız UI değişimi olmayacak: yüz landmark/maskesi ile ilgili bölgeye gerçek zamanlı uygulanacak; arka planı/genel kareyi gereksiz yere değiştirmeyecek.
+- Yüksek değerlerde bile görüntü patlamayacak, plastik yüz görünümü oluşmayacak; doğal ten dokusu korunacak.
+- Filtreler ayrı panelde çalışacak ve canlı önizleme ile kaydedilen medya arasında tutarlılık sağlanacak.
+- Fotoğraf ve video için medya türüne uygun düzenleme araçları açılacak; video fotoğraf olarak sınıflandırılmayacak.
+- Kullanıcı bu kamera/güzellik tasarımını NgelX için ana kalite referansı olarak belirledi.
+
+**KORUMA:** Daha önce cihazda doğrulanan takip/arkadaşlık istekleri, Mesaj İstekleri, normal mesajlaşma, unread sayaçları ve Aktivite/zil senkronizasyonu bu kamera yeniden çalışılırken bozulmayacak.
