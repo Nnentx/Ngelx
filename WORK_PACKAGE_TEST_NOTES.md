@@ -2036,3 +2036,12 @@ Cihazda doğrulanan örnek senaryo:
 - Bu sonuç yalnız **fotoğraf** için geçerli; video tarafında filtre şu an `filterPreviewOnly` olarak işaretlenebiliyor ve ayrıca test edilecek.
 
 **KORUMA:** Mesajlaşma, Mesaj İstekleri, takip/arkadaşlık istekleri ve sayaç regresyon temeli korunacak.
+
+## 2026-10-02 — Build 369 cihaz testi: Filtre Sıfırla
+
+- **Sıfırla** sonrası seçili filtre **Doğal** durumuna dönüyor ve canlı görüntü filtre etkisinden çıkıyor.
+- Fotoğraf çekim sonucu da doğal görünüme dönüyor; önceki HD/renk filtresi korunmuyor.
+- Ancak **Yoğunluk slider'ı %100'de kalıyor**. Doğal filtre kimlik matrisi olduğu için görüntüyü değiştirmese de UX açısından Sıfırla işlemi yoğunluğu da varsayılan değere döndürmeli.
+- Sonuç: işlevsel reset **geçti**, fakat slider state reseti için küçük UX düzeltmesi gerekli.
+
+**KORUMA:** Mesajlaşma, Mesaj İstekleri, takip/arkadaşlık istekleri ve sayaç regresyon temeli korunacak.
