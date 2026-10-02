@@ -1968,3 +1968,13 @@ Cihazda doğrulanan örnek senaryo:
 - Build 369'da Pro Beauty/Rötuş görünmüyor; mevcut ekranda temel kamera yolu aktif.
 
 **KORUMA:** Mesajlaşma, Mesaj İstekleri, takip/arkadaşlık istekleri ve sayaç regresyon temeli korunacak.
+
+## 2026-10-02 — Build 369 cihaz testi: 3 saniye sayaç
+
+- Kamera **Sayaç 3s** modu cihazda çalışıyor.
+- Deklanşöre basınca ekranda büyük geri sayım gösteriliyor (cihaz testinde `2` adımı görüntülendi).
+- Geri sayım tamamlandıktan sonra fotoğraf tek seferde çekiliyor.
+- Çekim sonrası Üret ekranına dönülüyor ve fotoğraf `.jpg` olarak doğru önizleniyor.
+- Sayaçlı çekimde çökme/donma görülmedi.
+
+**KORUMA:** Mesajlaşma, Mesaj İstekleri, takip/arkadaşlık istekleri ve sayaç regresyon temeli korunacak.
