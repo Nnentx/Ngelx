@@ -5586,10 +5586,38 @@ Future<void> ngelxKisiyeIcerikGonder({required User ben,required String hedefUid
   final chatId=ids.join('_');
   final chat=FirebaseFirestore.instance.collection('chats').doc(chatId);
   final metin=['NgelX paylaşımı ✨',if(aciklama.trim().isNotEmpty)aciklama.trim(),ngelxIcerikLink(icerikId),'NgelX: $ngelxWebAdresi'].join('\n');
-  await chat.set({'members':ids,'updatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
-  await chat.collection('messages').add({'senderId':ben.uid,'text':metin,'type':'shared_content','contentId':icerikId,'createdAt':FieldValue.serverTimestamp()});
-  await chat.set({'lastMessage':'🔗 NgelX paylaşımı','updatedAt':FieldValue.serverTimestamp(),'unread_$hedefUid':FieldValue.increment(1)},SetOptions(merge:true));
-  await uygulamaBildirimiGonder(toUid:hedefUid,fromUid:ben.uid,tur:'message',metin:'Sana bir NgelX paylaşımı gönderdi',belgeId:chatId);
+  final sonuc=await Future.wait([
+    FirebaseFirestore.instance.collection('users').doc(ben.uid).get().timeout(const Duration(seconds:8)),
+    FirebaseFirestore.instance.collection('users').doc(hedefUid).get().timeout(const Duration(seconds:8)),
+    chat.get().timeout(const Duration(seconds:8)),
+  ]);
+  final benim=sonuc[0].data()??<String,dynamic>{};
+  final hedef=sonuc[1].data()??<String,dynamic>{};
+  final sohbet=sonuc[2].data()??<String,dynamic>{};
+  final sohbetMevcut=sonuc[2].exists;
+  if(hedef['deactivated']==true)throw StateError('target-unavailable');
+  if(List<String>.from(benim['blocked']??const[]).contains(hedefUid)||List<String>.from(hedef['blocked']??const[]).contains(ben.uid))throw StateError('blocked');
+  final arkadas=List<String>.from(hedef['friends']??const[]).contains(ben.uid)||List<String>.from(benim['friends']??const[]).contains(hedefUid);
+  final izin=(hedef['messagePermission']??(hedef['friendsOnlyMessages']==true?'friends':'all')).toString();
+  final takipEdiyor=List<String>.from(hedef['following']??const[]).contains(ben.uid);
+  if(!sohbetMevcut&&!(izin=='all'||(izin=='friends'&&arkadas)||(izin=='following'&&takipEdiyor)))throw StateError('message-permission');
+  final istekKabulEdildi=sohbet['requestAccepted_'+ben.uid]==true||sohbet['requestAccepted_'+hedefUid]==true;
+  final istekGerekli=!arkadas&&!istekKabulEdildi;
+  final mevcutIstekGonderen=(sohbet['requestSenderUid']??'').toString();
+  final mevcutIstekAlici=(sohbet['requestRecipientUid']??'').toString();
+  final mesajRef=chat.collection('messages').doc();
+  final batch=FirebaseFirestore.instance.batch();
+  batch.set(chat,{
+    if(!sohbetMevcut)'members':ids,
+    'lastMessage':'🔗 NgelX paylaşımı','updatedAt':FieldValue.serverTimestamp(),
+    'unread_'+hedefUid:FieldValue.increment(1),
+    if(istekGerekli&&mevcutIstekGonderen.isEmpty)'requestSenderUid':ben.uid,
+    if(istekGerekli&&mevcutIstekAlici.isEmpty)'requestRecipientUid':hedefUid,
+    if(istekGerekli)'requestRejected_'+hedefUid:false,
+  },SetOptions(merge:true));
+  batch.set(mesajRef,{'senderId':ben.uid,'text':metin,'type':'shared_content','contentId':icerikId,'createdAt':FieldValue.serverTimestamp(),'clientCreatedAt':Timestamp.now()});
+  await ngelxBatchCommitDogrula(batch:batch,marker:mesajRef,timeout:const Duration(seconds:15));
+  unawaited(uygulamaBildirimiGonder(toUid:hedefUid,fromUid:ben.uid,tur:'message',metin:'Sana bir NgelX paylaşımı gönderdi',belgeId:chatId,dedupeKey:'shared_content_'+mesajRef.id+'_'+hedefUid).catchError((_){ }));
 }
 
 Future<void> ngelxOzeldenPaylas(
@@ -5700,7 +5728,7 @@ Future<void> ngelxOzeldenPaylas(
                     },
                   ),
                 ),
-                SafeArea(top:false,child:Padding(padding:const EdgeInsets.fromLTRB(14,8,14,12),child:SizedBox(width:double.infinity,height:52,child:FilledButton.icon(onPressed:secilenler.isEmpty||gonderiliyor?null:()async{setSheet(()=>gonderiliyor=true);try{for(final uid in secilenler){await ngelxKisiyeIcerikGonder(ben:ben,hedefUid:uid,icerikId:icerikId,aciklama:aciklama);}await FirebaseFirestore.instance.collection('videos').doc(icerikId).set({'shareCount':FieldValue.increment(secilenler.length)},SetOptions(merge:true));if(sheetContext.mounted)Navigator.pop(sheetContext);if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('${secilenler.length} kişiye gönderildi ✅')));}catch(e){setSheet(()=>gonderiliyor=false);if(context.mounted){final mesaj=e is FirebaseException&&e.code=='permission-denied'?'Bu kişiye şu anda gönderilemiyor. Mesaj gizliliği ayarlarını kontrol et.':'Gönderilemedi. Bağlantını kontrol edip tekrar dene.';ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(mesaj)));}}},icon:gonderiliyor?const SizedBox(width:20,height:20,child:CircularProgressIndicator(strokeWidth:2)):const Icon(Icons.send_rounded),label:Text(secilenler.isEmpty?'Göndermek için kişi seç':'${secilenler.length} kişiye gönder'))))),
+                SafeArea(top:false,child:Padding(padding:const EdgeInsets.fromLTRB(14,8,14,12),child:SizedBox(width:double.infinity,height:52,child:FilledButton.icon(onPressed:secilenler.isEmpty||gonderiliyor?null:()async{setSheet(()=>gonderiliyor=true);try{for(final uid in secilenler){await ngelxKisiyeIcerikGonder(ben:ben,hedefUid:uid,icerikId:icerikId,aciklama:aciklama);}await FirebaseFirestore.instance.collection('videos').doc(icerikId).set({'shareCount':FieldValue.increment(secilenler.length)},SetOptions(merge:true));if(sheetContext.mounted)Navigator.pop(sheetContext);if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('${secilenler.length} kişiye gönderildi ✅')));}catch(e){setSheet(()=>gonderiliyor=false);if(context.mounted){final mesaj=(e is StateError&&(e.message=='message-permission'||e.message=='blocked'||e.message=='target-unavailable'))||(e is FirebaseException&&e.code=='permission-denied')?'Bu kişiye şu anda gönderilemiyor. Mesaj gizliliği ayarlarını kontrol et.':'Gönderilemedi. Bağlantını kontrol edip tekrar dene.';ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(mesaj)));}}},icon:gonderiliyor?const SizedBox(width:20,height:20,child:CircularProgressIndicator(strokeWidth:2)):const Icon(Icons.send_rounded),label:Text(secilenler.isEmpty?'Göndermek için kişi seç':'${secilenler.length} kişiye gönder'))))),
               ],
             ),
           ),
