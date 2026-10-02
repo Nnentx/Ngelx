@@ -2130,3 +2130,12 @@ Cihazda doğrulanan örnek senaryo:
 - Video tarafında önizleme ile nihai çıktı arasında aynı görünüm korunmalı.
 
 **KORUMA:** Mesajlaşma, Mesaj İstekleri, takip/arkadaşlık istekleri ve sayaç regresyon temeli korunacak.
+
+## 2026-10-02 — Build 369 cihaz testi: video filtresi kayda uygulanıyor
+
+- Kullanıcı cihaz testinde seçilen video filtresinin **kayıtlı videoya işlendiğini** doğruladı.
+- Canlı önizlemede görülen filtre etkisi kayıt sonrası videoda da korunuyor.
+- Teknik işlev **GEÇTİ**.
+- Ancak filtrelerin görsel kalitesi ayrı başlıkta hâlâ **YETERSİZ / BAŞARISIZ** kabul ediliyor; TikTok referans seviyesine ulaşmadan tamamlanmış sayılmayacak.
+
+**KORUMA:** Mesajlaşma, Mesaj İstekleri, takip/arkadaşlık istekleri ve sayaç regresyon temeli korunacak.
