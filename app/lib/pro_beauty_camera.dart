@@ -16,7 +16,7 @@ import 'package:permission_handler/permission_handler.dart';
 ///   operatörlerine gider.
 ///
 /// Build:
-/// flutter build apk --dart-define=BANUBA_CLIENT_TOKEN=...
+/// flutter build apk --dart-define=BANUBA_CLIENT_TOKEN=... --dart-define=BANUBA_TOUCHUP_READY=true
 ///
 /// Resmi TouchUp effect paketi app/effects/TouchUp altında bulunmalıdır.
 class NgelXProBeautyCameraPage extends StatefulWidget {
@@ -39,7 +39,13 @@ class NgelXProBeautyCameraPage extends StatefulWidget {
     defaultValue: 'effects/TouchUp',
   );
 
-  static bool get isConfigured => clientToken.trim().isNotEmpty;
+  static const bool effectReady = bool.fromEnvironment(
+    'BANUBA_TOUCHUP_READY',
+    defaultValue: false,
+  );
+
+  static bool get isConfigured =>
+      clientToken.trim().isNotEmpty && effectReady;
 
   @override
   State<NgelXProBeautyCameraPage> createState() =>
