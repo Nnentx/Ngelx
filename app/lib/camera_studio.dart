@@ -175,12 +175,12 @@ class _NgelXCameraStudioPageState extends State<NgelXCameraStudioPage> with Widg
   List<CameraDescription> kameralar=<CameraDescription>[];
   CameraController? kontrol;
   int kameraIndex=0;
-  bool video=false,kayit=false,hazirlaniyor=true,isleniyor=false,ayna=false,izgara=false,otomatikPortre=true;
+  bool video=false,kayit=false,hazirlaniyor=true,isleniyor=false,ayna=false,izgara=false,otomatikPortre=false;
   int sayac=0;
   Timer? sayacTimer,kayitTimer;
   Duration kayitSure=Duration.zero;
   FlashMode flash=FlashMode.off;
-  double zoom=1,minZoom=1,maxZoom=1,retus=.34,gozCanlilik=.22,yuzIsigi=.16,filtreYogunluk=1;
+  double zoom=1,minZoom=1,maxZoom=1,retus=0,gozCanlilik=0,yuzIsigi=0,filtreYogunluk=1;
   int filtreIndex=0;
   String oran='9:16';
 
@@ -665,7 +665,6 @@ class _NgelXCameraStudioPageState extends State<NgelXCameraStudioPage> with Widg
           _yuvarlak(Icons.timer_outlined,(){setState(()=>sayac=sayac==0?3:sayac==3?10:0);},yazi:sayac==0?'Sayaç':'${sayac}s',aktif:sayac>0),const SizedBox(height:10),
           _yuvarlak(Icons.grid_3x3_rounded,()=>setState(()=>izgara=!izgara),yazi:'Izgara',aktif:izgara),const SizedBox(height:10),
           _yuvarlak(Icons.aspect_ratio_rounded,(){setState(()=>oran=oran=='9:16'?'1:1':oran=='1:1'?'16:9':'9:16');},yazi:oran,aktif:oran!='9:16'),const SizedBox(height:10),
-          _yuvarlak(Icons.face_retouching_natural_rounded,()=>unawaited(_retusPaneli()),yazi:'Rötuş',aktif:retus>.01||otomatikPortre),const SizedBox(height:10),
           _yuvarlak(Icons.filter_alt_rounded,()=>unawaited(_filtrePaneli()),yazi:'Filtre',aktif:filtreIndex!=0),
         ])),
         if(oran!='9:16')Positioned.fill(child:IgnorePointer(child:Center(child:AspectRatio(
