@@ -1893,3 +1893,12 @@ Cihazda doğrulanan örnek senaryo:
 - Önizleme kartının tamamının dokunulabilir olması ve dokununca medya türüne uygun tam düzenleme ekranı açılması isteği korunuyor.
 
 **KORUMA:** Sosyal istekler, mesajlaşma, Mesaj İstekleri ve sayaç regresyon temeli korunacak.
+
+## 2026-10-02 — Build 368 cihaz testi: 90° döndür
+
+- Fotoğraf çekim sonrası Üret düzenleme ekranındaki **90° Döndür** butonu cihazda çalışıyor.
+- Ardışık basışlarda fotoğraf yönü değişiyor; görüntü 90° adımlarla dönüyor.
+- Fotoğraf medya tipi korunuyor; döndürme sırasında uygulama çökmesi/donması görülmedi.
+- **Kare kırp** henüz ayrı test edilmedi; sıradaki kontrol bu olacak.
+
+**KORUMA:** Sosyal istekler, mesajlaşma, Mesaj İstekleri ve sayaç regresyon temeli korunacak.
