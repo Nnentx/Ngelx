@@ -4871,22 +4871,22 @@ class _AnaEkranState extends State<AnaEkran> {
                   ),
                   child:NavigationBarTheme(
                     data:NavigationBarThemeData(
-                      height:76,
+                      height:60,
                       backgroundColor:Colors.black,
                       indicatorColor:Colors.transparent,
                       indicatorShape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(18)),
                       labelTextStyle:WidgetStateProperty.resolveWith((s)=>TextStyle(
                         color:s.contains(WidgetState.selected)?Colors.white:Colors.white60,
-                        fontSize:11,
+                        fontSize:10,
                         fontWeight:s.contains(WidgetState.selected)?FontWeight.w900:FontWeight.w600,
                       )),
                       iconTheme:WidgetStateProperty.resolveWith((s)=>IconThemeData(
                         color:s.contains(WidgetState.selected)?Colors.white:Colors.white60,
-                        size:s.contains(WidgetState.selected)?28:25,
+                        size:s.contains(WidgetState.selected)?24:22,
                       )),
                     ),
                     child:NavigationBar(
-                      height:76,
+                      height:60,
                       selectedIndex:secili,
                       backgroundColor:Colors.transparent,
                       labelBehavior:NavigationDestinationLabelBehavior.alwaysShow,
@@ -4901,22 +4901,22 @@ class _AnaEkranState extends State<AnaEkran> {
                         NavigationDestination(icon:const Icon(Icons.explore_outlined),selectedIcon:const Icon(Icons.explore),label:t('explore')),
                         NavigationDestination(
                           icon:Container(
-                            width:42,height:34,
+                            width:38,height:30,
                             decoration:BoxDecoration(
                               gradient:const LinearGradient(colors:[Color(0xFF22D3EE),Color(0xFF7C3AED)]),
-                              borderRadius:BorderRadius.circular(13),
-                              boxShadow:const [BoxShadow(color:Color(0x337C3AED),blurRadius:10,offset:Offset(0,4))],
+                              borderRadius:BorderRadius.circular(11),
+                              boxShadow:const [BoxShadow(color:Color(0x337C3AED),blurRadius:8,offset:Offset(0,3))],
                             ),
-                            child:const Icon(Icons.add_rounded,color:Colors.white,size:28),
+                            child:const Icon(Icons.add_rounded,color:Colors.white,size:24),
                           ),
                           selectedIcon:Container(
-                            width:48,height:38,
+                            width:42,height:32,
                             decoration:BoxDecoration(
                               gradient:const LinearGradient(colors:[Color(0xFF14CFE4),Color(0xFF7C3AED)]),
-                              borderRadius:BorderRadius.circular(14),
-                              boxShadow:const [BoxShadow(color:Color(0x557C3AED),blurRadius:14,offset:Offset(0,5))],
+                              borderRadius:BorderRadius.circular(12),
+                              boxShadow:const [BoxShadow(color:Color(0x557C3AED),blurRadius:10,offset:Offset(0,4))],
                             ),
-                            child:const Icon(Icons.add_rounded,color:Colors.white,size:31),
+                            child:const Icon(Icons.add_rounded,color:Colors.white,size:26),
                           ),
                           label:t('create'),
                         ),
@@ -4947,6 +4947,7 @@ class _VideoAkisiState extends State<VideoAkisi> {
   StreamSubscription<DocumentSnapshot<Map<String,dynamic>>>? _profilAboneligi;
   StreamSubscription<QuerySnapshot<Map<String,dynamic>>>? _canliAboneligi;
   int aktif=0;
+  bool otomatikKaydirma=false;
   bool takipSekmesi=false;
   bool profilHazir=false;
   Set<String> takipEdilenler={};
@@ -5271,6 +5272,13 @@ class _VideoAkisiState extends State<VideoAkisi> {
                     trimStartMs:(item['videoTrimStartMs'] as num?)?.toInt()??0,
                     trimEndMs:(item['videoTrimEndMs'] as num?)?.toInt()??0,
                     indirilebilir:item['allowDownload']!=false&&item['allowDownload'].toString()!='false',
+                    otomatikKaydirma:otomatikKaydirma,
+                    otomatikKaydirmaDegistir:(v){if(mounted)setState(()=>otomatikKaydirma=v);},
+                    sonrakiIcerigeGec:i<videolar.length-1?(){
+                      if(akisKontrol.hasClients){
+                        unawaited(akisKontrol.nextPage(duration:const Duration(milliseconds:280),curve:Curves.easeOutCubic));
+                      }
+                    }:null,
                     aktif:widget.gorunur&&aktif==i,
                   );
                 }
@@ -6233,6 +6241,10 @@ class _GorselYaziKartiState extends State<GorselYaziKarti> with RouteAware {
       context:context,
       isScrollControlled:true,
       backgroundColor:Colors.transparent,
+      barrierColor:const Color(0x73000000),
+      enableDrag:true,
+      isDismissible:true,
+      useSafeArea:false,
       builder:(ctx)=>Theme(
         data:ThemeData.light(),
         child:SafeArea(
@@ -6577,6 +6589,9 @@ class VideoKarti extends StatefulWidget {
   final int trimEndMs;
   final bool aktif;
   final bool indirilebilir;
+  final bool otomatikKaydirma;
+  final ValueChanged<bool>? otomatikKaydirmaDegistir;
+  final VoidCallback? sonrakiIcerigeGec;
 
   const VideoKarti({
     super.key,
@@ -6608,6 +6623,9 @@ class VideoKarti extends StatefulWidget {
     this.trimStartMs = 0,
     this.trimEndMs = 0,
     this.indirilebilir = true,
+    this.otomatikKaydirma = false,
+    this.otomatikKaydirmaDegistir,
+    this.sonrakiIcerigeGec,
   });
 
   @override
@@ -6638,6 +6656,7 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver,Rou
   PageRoute<dynamic>? _rota;
   bool _rotaGorunur=true;
   bool temizGorunum=false;
+  bool _otomatikGecisYapildi=false;
 
   String get videoId => widget.videoId;
 
@@ -6676,7 +6695,9 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver,Rou
     hazirlaniyor=true;
     try{
       await kontrol.initialize();
-      await kontrol.setLooping(widget.trimEndMs<=0);
+      await kontrol.setLooping(
+        widget.trimEndMs<=0&&!(widget.otomatikKaydirma&&widget.sonrakiIcerigeGec!=null),
+      );
       await kontrol.setVolume(widget.audioUrl.isNotEmpty?widget.originalAudioVolume.clamp(0,1).toDouble():1);
       if(widget.trimStartMs>0){
         await kontrol.seekTo(Duration(milliseconds:widget.trimStartMs));
@@ -6709,8 +6730,21 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver,Rou
   }
 
   void _kesimKontrol(){
-    if(!hazir||kesimAtliyor||widget.trimEndMs<=0)return;
-    if(kontrol.value.position.inMilliseconds<widget.trimEndMs)return;
+    if(!hazir||kesimAtliyor)return;
+    final bitisMs=widget.trimEndMs>0
+      ?widget.trimEndMs
+      :kontrol.value.duration.inMilliseconds;
+    if(bitisMs<=0||kontrol.value.position.inMilliseconds<bitisMs-120)return;
+
+    if(widget.otomatikKaydirma&&widget.aktif&&widget.sonrakiIcerigeGec!=null){
+      if(_otomatikGecisYapildi)return;
+      _otomatikGecisYapildi=true;
+      _oynatmalariDuraklat();
+      widget.sonrakiIcerigeGec!();
+      return;
+    }
+
+    if(widget.trimEndMs<=0)return;
     kesimAtliyor=true;
     final hedef=Duration(milliseconds:widget.trimStartMs.clamp(0,widget.trimEndMs).toInt());
     unawaited(kontrol.seekTo(hedef).then((_){
@@ -6927,6 +6961,10 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver,Rou
       context:context,
       isScrollControlled:true,
       backgroundColor:Colors.transparent,
+      barrierColor:const Color(0x73000000),
+      enableDrag:true,
+      isDismissible:true,
+      useSafeArea:false,
       builder:(ctx)=>Theme(
         data:ThemeData.light(),
         child:SafeArea(
@@ -7004,6 +7042,22 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver,Rou
                           Future<void>.delayed(const Duration(milliseconds:100),_temizEkranModunuAc);
                         },
                       ),
+                      SwitchListTile(
+                        secondary:const Icon(Icons.swipe_vertical_rounded,color:Colors.black87),
+                        title:const Text('Otomatik kaydırma',style:TextStyle(fontWeight:FontWeight.w800)),
+                        subtitle:const Text('Video bitince sonraki içeriğe geç'),
+                        value:widget.otomatikKaydirma,
+                        onChanged:widget.otomatikKaydirmaDegistir==null?null:(v){
+                          widget.otomatikKaydirmaDegistir!(v);
+                          _otomatikGecisYapildi=false;
+                          if(hazir){
+                            unawaited(kontrol.setLooping(
+                              widget.trimEndMs<=0&&!(v&&widget.sonrakiIcerigeGec!=null),
+                            ));
+                          }
+                          if(ctx.mounted)setSheet((){});
+                        },
+                      ),
                       ListTile(
                         leading:const Icon(Icons.translate_rounded,color:Colors.black87),
                         title:const Text('Alt yazılar ve çeviri',style:TextStyle(fontWeight:FontWeight.w800)),
@@ -7053,7 +7107,14 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver,Rou
   @override
   void didUpdateWidget(covariant VideoKarti oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if(oldWidget.otomatikKaydirma!=widget.otomatikKaydirma&&hazir){
+      _otomatikGecisYapildi=false;
+      unawaited(kontrol.setLooping(
+        widget.trimEndMs<=0&&!(widget.otomatikKaydirma&&widget.sonrakiIcerigeGec!=null),
+      ));
+    }
     if(widget.aktif&&!oldWidget.aktif){
+      _otomatikGecisYapildi=false;
       unawaited(_videoyuHazirla());
       unawaited(_muzigiHazirla());
       unawaited(etkilesimleriGetir());
