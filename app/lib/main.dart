@@ -6658,6 +6658,7 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver,Rou
   bool temizGorunum=false;
   bool _otomatikGecisYapildi=false;
   late bool _otomatikKaydirmaAktif;
+  Timer? _otomatikKaydirmaTimeri;
 
   String get videoId => widget.videoId;
 
@@ -6708,7 +6709,10 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver,Rou
         await kontrol.play();
         if(muzikOynatici!=null)unawaited(muzikOynatici!.play());
       }
-      if(mounted)setState(()=>hazir=true);
+      if(mounted){
+        setState(()=>hazir=true);
+        _otomatikKaydirmaZamanla();
+      }
     }catch(e){
       if(mounted)setState(()=>medyaHatasi=e.toString());
     }finally{
@@ -6731,24 +6735,76 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver,Rou
     }
   }
 
+  void _otomatikKaydirmaIptal(){
+    _otomatikKaydirmaTimeri?.cancel();
+    _otomatikKaydirmaTimeri=null;
+  }
+
+  void _otomatikSonrakiIcerigeGec(){
+    if(!_otomatikKaydirmaAktif||
+       !widget.aktif||
+       widget.sonrakiIcerigeGec==null||
+       _otomatikGecisYapildi)return;
+    _otomatikGecisYapildi=true;
+    _otomatikKaydirmaIptal();
+    if(hazir)unawaited(kontrol.pause());
+    final p=muzikOynatici;
+    if(p!=null)unawaited(p.pause());
+    WidgetsBinding.instance.addPostFrameCallback((_){
+      if(mounted&&widget.aktif)widget.sonrakiIcerigeGec?.call();
+    });
+  }
+
+  void _otomatikKaydirmaZamanla(){
+    _otomatikKaydirmaIptal();
+    if(!hazir||
+       !_otomatikKaydirmaAktif||
+       !widget.aktif||
+       !_rotaGorunur||
+       duraklatildi||
+       !kontrol.value.isPlaying||
+       widget.sonrakiIcerigeGec==null)return;
+
+    final bitisMs=widget.trimEndMs>0
+      ?widget.trimEndMs
+      :kontrol.value.duration.inMilliseconds;
+    final konumMs=kontrol.value.position.inMilliseconds;
+    if(bitisMs<=0)return;
+    final kalanMs=bitisMs-konumMs;
+    if(kalanMs<=400){
+      scheduleMicrotask(_otomatikSonrakiIcerigeGec);
+      return;
+    }
+
+    final hiz=kontrol.value.playbackSpeed>0?kontrol.value.playbackSpeed:1.0;
+    final beklemeMs=math.max(250,(kalanMs/hiz).ceil()+180);
+    _otomatikKaydirmaTimeri=Timer(Duration(milliseconds:beklemeMs),(){
+      if(!mounted)return;
+      final sonKonum=kontrol.value.position.inMilliseconds;
+      if(sonKonum>=bitisMs-500||!kontrol.value.isPlaying){
+        _otomatikSonrakiIcerigeGec();
+      }else{
+        _otomatikKaydirmaZamanla();
+      }
+    });
+  }
+
   void _kesimKontrol(){
     if(!hazir||kesimAtliyor)return;
     final bitisMs=widget.trimEndMs>0
       ?widget.trimEndMs
       :kontrol.value.duration.inMilliseconds;
-    if(bitisMs<=0||kontrol.value.position.inMilliseconds<bitisMs-350)return;
+    if(bitisMs<=0)return;
 
-    if(_otomatikKaydirmaAktif&&widget.aktif&&widget.sonrakiIcerigeGec!=null){
-      if(_otomatikGecisYapildi)return;
-      _otomatikGecisYapildi=true;
-      _oynatmalariDuraklat();
-      WidgetsBinding.instance.addPostFrameCallback((_){
-        if(mounted&&widget.aktif)widget.sonrakiIcerigeGec?.call();
-      });
+    if(_otomatikKaydirmaAktif&&
+       widget.aktif&&
+       widget.sonrakiIcerigeGec!=null&&
+       (kontrol.value.isCompleted||kontrol.value.position.inMilliseconds>=bitisMs-500)){
+      _otomatikSonrakiIcerigeGec();
       return;
     }
 
-    if(widget.trimEndMs<=0)return;
+    if(widget.trimEndMs<=0||kontrol.value.position.inMilliseconds<bitisMs-350)return;
     kesimAtliyor=true;
     final hedef=Duration(milliseconds:widget.trimStartMs.clamp(0,widget.trimEndMs).toInt());
     unawaited(kontrol.seekTo(hedef).then((_){
@@ -6759,6 +6815,7 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver,Rou
   }
 
   void _oynatmalariDuraklat(){
+    _otomatikKaydirmaIptal();
     if(hazir)unawaited(kontrol.pause());
     final p=muzikOynatici;
     if(p!=null)unawaited(p.pause());
@@ -6766,7 +6823,9 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver,Rou
 
   void _oynatmalariBaslat(){
     if(!hazir||!widget.aktif||!_rotaGorunur||duraklatildi)return;
-    unawaited(kontrol.play());
+    unawaited(kontrol.play().then((_){
+      if(mounted)_otomatikKaydirmaZamanla();
+    }));
     final p=muzikOynatici;
     if(p!=null)unawaited(p.play());
   }
@@ -6961,6 +7020,9 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver,Rou
 
   Future<void> uzunBasmaMenusu() async {
     final sahibi=FirebaseAuth.instance.currentUser?.uid==widget.ownerId;
+    final oynuyordu=hazir&&kontrol.value.isPlaying&&!duraklatildi;
+    var altAracMenusuAciliyor=false;
+    if(oynuyordu)_oynatmalariDuraklat();
     await showModalBottomSheet<void>(
       context:context,
       isScrollControlled:true,
@@ -7030,6 +7092,7 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver,Rou
                                 labelStyle:TextStyle(color:secili?Colors.black:Colors.black45,fontWeight:FontWeight.w800),
                                 onSelected:hazir?(_)async{
                                   await kontrol.setPlaybackSpeed(x);
+                                  _otomatikKaydirmaZamanla();
                                   if(ctx.mounted)setSheet((){});
                                 }:null,
                               ),
@@ -7060,6 +7123,7 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver,Rou
                               widget.trimEndMs<=0&&!(v&&widget.sonrakiIcerigeGec!=null),
                             ));
                           }
+                          if(!v)_otomatikKaydirmaIptal();
                           if(ctx.mounted)setSheet((){});
                         },
                       ),
@@ -7067,15 +7131,22 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver,Rou
                         leading:const Icon(Icons.translate_rounded,color:Colors.black87),
                         title:const Text('Alt yazılar ve çeviri',style:TextStyle(fontWeight:FontWeight.w800)),
                         onTap:()async{
+                          altAracMenusuAciliyor=true;
                           Navigator.pop(ctx);
                           await Future<void>.delayed(const Duration(milliseconds:100));
                           if(mounted)await icerikAracMenusu(
                             context,
                             videoId,
                             mevcutHiz:kontrol.value.playbackSpeed,
-                            hizDegistir:(x)async=>kontrol.setPlaybackSpeed(x),
+                            hizDegistir:(x)async{
+                              await kontrol.setPlaybackSpeed(x);
+                              _otomatikKaydirmaZamanla();
+                            },
                             medyaUrlOncelikli:widget.adres,
                           );
+                          if(mounted&&oynuyordu&&!duraklatildi&&!temizGorunum){
+                            _oynatmalariBaslat();
+                          }
                         },
                       ),
                       ListTile(
@@ -7107,6 +7178,9 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver,Rou
         ),
       ),
     );
+    if(mounted&&oynuyordu&&!altAracMenusuAciliyor&&!duraklatildi&&!temizGorunum){
+      _oynatmalariBaslat();
+    }
   }
 
   @override
@@ -7119,6 +7193,8 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver,Rou
         unawaited(kontrol.setLooping(
           widget.trimEndMs<=0&&!(_otomatikKaydirmaAktif&&widget.sonrakiIcerigeGec!=null),
         ));
+        if(_otomatikKaydirmaAktif)_otomatikKaydirmaZamanla();
+        else _otomatikKaydirmaIptal();
       }
     }
     if(widget.aktif&&!oldWidget.aktif){
@@ -7138,6 +7214,7 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver,Rou
 
   @override
   void dispose() {
+    _otomatikKaydirmaIptal();
     if(temizGorunum&&ngelxAkisTemizGorunum.value)ngelxAkisTemizGorunum.value=false;
     WidgetsBinding.instance.removeObserver(this);
     ngelxRouteObserver.unsubscribe(this);
@@ -7183,11 +7260,12 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver,Rou
 
         setState(() {
           if (kontrol.value.isPlaying) {
+            _otomatikKaydirmaIptal();
             kontrol.pause();
             muzikOynatici?.pause();
             duraklatildi = true;
           } else {
-            kontrol.play();
+            kontrol.play().then((_){if(mounted)_otomatikKaydirmaZamanla();});
             muzikOynatici?.play();
             duraklatildi = false;
           }
