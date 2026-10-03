@@ -127,7 +127,28 @@ Future<void> ngelxCanliPkIstekPaneli(
                     final bv=(b.data()['viewerCount'] as num?)?.toInt()??0;
                     return bv.compareTo(av);
                   });
-                if(docs.isEmpty)return const Center(child:Text('Şu anda PK yapılabilecek başka aktif yayın yok.',textAlign:TextAlign.center,style:TextStyle(color:Colors.black54,fontWeight:FontWeight.w700)));
+                if(docs.isEmpty)return Center(
+                  child:Padding(
+                    padding:const EdgeInsets.symmetric(horizontal:30),
+                    child:Column(mainAxisSize:MainAxisSize.min,children:[
+                      Container(
+                        width:74,height:74,
+                        decoration:const BoxDecoration(color:Color(0xFFFFEDF1),shape:BoxShape.circle),
+                        child:const Icon(Icons.sports_mma_rounded,color:Color(0xFFFF1744),size:36),
+                      ),
+                      const SizedBox(height:14),
+                      const Text('Şu anda uygun PK rakibi yok',textAlign:TextAlign.center,style:TextStyle(color:Colors.black87,fontSize:17,fontWeight:FontWeight.w900)),
+                      const SizedBox(height:6),
+                      const Text('Başka bir yayıncı canlı olduğunda burada otomatik görünecek.',textAlign:TextAlign.center,style:TextStyle(color:Colors.black54,height:1.35)),
+                      const SizedBox(height:16),
+                      OutlinedButton.icon(
+                        onPressed:()=>Navigator.pop(sheetContext),
+                        icon:const Icon(Icons.close_rounded),
+                        label:const Text('Kapat'),
+                      ),
+                    ]),
+                  ),
+                );
                 return ListView.separated(
                   padding:const EdgeInsets.fromLTRB(14,12,14,24),
                   itemCount:docs.length,
