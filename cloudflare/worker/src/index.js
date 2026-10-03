@@ -231,23 +231,36 @@ async function loadCaptionMedia(candidates, requestUrl, env) {
   throw captionError('media_not_found', 'Videonun kaynak dosyası sunucuda bulunamadı. Yeni yüklenen bir video ile tekrar dene.', 404);
 }
 
-async function extractCaptionAudio(videoBytes, env) {
-  if (!env.VIDEO_MEDIA) return {bytes: videoBytes, extracted: false};
-  try {
-    const stream = new Response(videoBytes).body;
-    if (!stream) return {bytes: videoBytes, extracted: false};
-    const audio = await env.VIDEO_MEDIA
-      .input(stream)
-      .output({mode: 'audio', format: 'm4a'})
-      .response();
-    if (!audio.ok) throw new Error('audio_extract_http_' + audio.status);
-    const bytes = new Uint8Array(await audio.arrayBuffer());
-    if (!bytes.length) throw new Error('audio_extract_empty');
-    return {bytes, extracted: true};
-  } catch (e) {
-    console.warn(JSON.stringify({service:'ngelx-caption',event:'audio_extract_fallback',message:String(e?.message||e)}));
-    return {bytes: videoBytes, extracted: false};
+async function extractCaptionAudioCandidates(videoBytes, env) {
+  const candidates = [];
+  if (env.VIDEO_MEDIA) {
+    // Some Android uploads contain audio codecs that Whisper cannot decode after
+    // a single m4a conversion. Try several server-side audio containers before
+    // falling back to the original media bytes.
+    for (const format of ['mp3', 'wav', 'm4a']) {
+      try {
+        const stream = new Response(videoBytes).body;
+        if (!stream) continue;
+        const audio = await env.VIDEO_MEDIA
+          .input(stream)
+          .output({mode: 'audio', format})
+          .response();
+        if (!audio.ok) throw new Error('audio_extract_http_' + audio.status);
+        const bytes = new Uint8Array(await audio.arrayBuffer());
+        if (!bytes.length) throw new Error('audio_extract_empty');
+        candidates.push({bytes, extracted: true, format});
+      } catch (e) {
+        console.warn(JSON.stringify({
+          service:'ngelx-caption',
+          event:'audio_extract_retry',
+          format,
+          message:String(e?.message||e),
+        }));
+      }
+    }
   }
+  candidates.push({bytes: videoBytes, extracted: false, format: 'source'});
+  return candidates;
 }
 
 function bytesToBase64(bytes) {
@@ -272,6 +285,31 @@ async function transcribeCaptionAudio(bytes, language, env) {
     if (String(result?.text || '').trim()) return result;
   }
   return lastResult;
+}
+
+async function transcribeCaptionMedia(videoBytes, language, env) {
+  const audioCandidates = await extractCaptionAudioCandidates(videoBytes, env);
+  let lastError = null;
+  let lastEmpty = null;
+  for (const audio of audioCandidates) {
+    try {
+      const result = await transcribeCaptionAudio(audio.bytes, language, env);
+      if (String(result?.text || '').trim()) return {result, audio};
+      lastEmpty = {result, audio};
+    } catch (e) {
+      lastError = e;
+      console.warn(JSON.stringify({
+        service:'ngelx-caption',
+        event:'transcription_retry',
+        format:audio.format,
+        extracted:audio.extracted,
+        message:String(e?.message||e),
+      }));
+    }
+  }
+  if (lastEmpty) return lastEmpty;
+  if (lastError) throw lastError;
+  return {result:null, audio:{extracted:false, format:'source'}};
 }
 
 
@@ -367,12 +405,20 @@ export default {
       if(!mediaUrls.length)return json({error:'invalid_media_url',message:'Altyazı üretilecek video bulunamadı.'},400);
       try{
         const loaded=await loadCaptionMedia(mediaUrls,request.url,env);
-        const audio=await extractCaptionAudio(loaded.bytes,env);
-        const result=await transcribeCaptionAudio(audio.bytes,language,env);
+        const transcription=await transcribeCaptionMedia(loaded.bytes,language,env);
+        const result=transcription.result;
         const text=String(result?.text||'').trim(),vtt=String(result?.vtt||'').trim();
         if(!text)throw captionError('no_speech_detected','Bu videoda altyazıya çevrilebilecek konuşma algılanamadı.',422);
         const detectedLanguage=normalizeLanguageCode(result?.transcription_info?.language||result?.language||language);
-        return json({ok:true,text,vtt,language:detectedLanguage,mediaSource:loaded.via,audioExtracted:audio.extracted});
+        return json({
+          ok:true,
+          text,
+          vtt,
+          language:detectedLanguage,
+          mediaSource:loaded.via,
+          audioExtracted:transcription.audio.extracted,
+          audioFormat:transcription.audio.format,
+        });
       }catch(e){
         const code=e?.code||'caption_failed';
         const message=code==='no_speech_detected'
