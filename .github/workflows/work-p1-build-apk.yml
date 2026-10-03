@@ -63,6 +63,7 @@ jobs:
         run: flutter analyze --no-fatal-infos --no-fatal-warnings
 
       - name: Paket 1 yan yana test APK olustur
+        id: build_meta
         shell: bash
         env:
           ORG_GRADLE_PROJECT_ngelxP1SideBySide: "true"
@@ -72,6 +73,7 @@ jobs:
           APP_VERSION="$(awk '/^version:/ {print $2}' pubspec.yaml)"
           BUILD_NAME="${APP_VERSION%%+*}"
           BUILD_NUMBER="${APP_VERSION##*+}"
+          echo "build_number=$BUILD_NUMBER" >> "$GITHUB_OUTPUT"
           flutter build apk --release \
             --build-name="$BUILD_NAME" \
             --build-number="$BUILD_NUMBER" \
@@ -92,14 +94,14 @@ jobs:
           APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
           test -n "$APKSIGNER"
           "$APKSIGNER" verify --verbose --print-certs \
-            app/build/app/outputs/flutter-apk/NgelX-Paket1-SideTest-Build-349.apk
+            app/build/app/outputs/flutter-apk/NgelX-Paket1-SideTest-Build-${{ steps.build_meta.outputs.build_number }}.apk
 
       - name: APK artefaktini yukle
         uses: actions/upload-artifact@v4
         with:
-          name: NgelX-Paket1-SideTest-Build-349
+          name: NgelX-Paket1-SideTest-Build-${{ steps.build_meta.outputs.build_number }}
           path: |
-            app/build/app/outputs/flutter-apk/NgelX-Paket1-SideTest-Build-349.apk
-            app/build/app/outputs/flutter-apk/NgelX-Paket1-SideTest-Build-349.apk.sha256
+            app/build/app/outputs/flutter-apk/NgelX-Paket1-SideTest-Build-${{ steps.build_meta.outputs.build_number }}.apk
+            app/build/app/outputs/flutter-apk/NgelX-Paket1-SideTest-Build-${{ steps.build_meta.outputs.build_number }}.apk.sha256
           if-no-files-found: error
           retention-days: 14
