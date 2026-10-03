@@ -17599,7 +17599,38 @@ class SohbetBilgiPage extends StatelessWidget{
               ),
               const SizedBox(height:18),
               _bolum('İşlemler'),
-              _satir(Icons.notifications_off_outlined,'Sessize al',()=>sessizeAl(context),alt:'Bu sohbetin bildirimlerini yönet'),
+              if(me!=null)StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
+                stream:FirebaseFirestore.instance.collection('users').doc(me).snapshots(),
+                builder:(_,u){
+                  final uv=u.data?.data()??<String,dynamic>{};
+                  final sessiz=List<String>.from(uv['mutedChats']??const[]).contains(chatId);
+                  var alt='Bu sohbetin bildirimlerini yönet';
+                  if(sessiz){
+                    final sureler=Map<String,dynamic>.from(uv['mutedChatUntil'] is Map?uv['mutedChatUntil'] as Map:const{});
+                    final bitis=DateTime.tryParse((sureler[chatId]??'').toString());
+                    if(bitis==null){
+                      alt='Süresiz sessize alındı';
+                    }else{
+                      final kalan=bitis.difference(DateTime.now().toUtc());
+                      if(kalan.isNegative){
+                        alt='Sessiz süresi doldu';
+                      }else if(kalan.inHours>=24){
+                        alt='Yaklaşık ${(kalan.inHours/24).ceil()} gün kaldı';
+                      }else if(kalan.inHours>=1){
+                        alt='Yaklaşık ${kalan.inHours} saat kaldı';
+                      }else{
+                        alt='${kalan.inMinutes.clamp(1,59)} dakika kaldı';
+                      }
+                    }
+                  }
+                  return _satir(
+                    sessiz?Icons.notifications_off_rounded:Icons.notifications_off_outlined,
+                    sessiz?'Sessize alındı':'Sessize al',
+                    ()=>sessizeAl(context),
+                    alt:alt,
+                  );
+                },
+              ),
               _satir(Icons.notifications_outlined,'Bildirimler ve sesler',()=>sohbetBildirimAyarlari(context),alt:'Yalnızca bu sohbetin bildirim ayarları'),
               _satir(Icons.share_outlined,'Kişiyi paylaş',kisiyiPaylas),
               const SizedBox(height:18),
