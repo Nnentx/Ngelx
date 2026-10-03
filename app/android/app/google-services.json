@@ -23,6 +23,25 @@
           "other_platform_oauth_client": []
         }
       }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1006140921207:android:f37d8f35bba4cc990e3d72",
+        "android_client_info": {
+          "package_name": "com.nnentx.ngelx_app.p1test"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAUH9L6aihwx2tzwpGXupYg4J6wBRiQ_sw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
     }
   ],
   "configuration_version": "1"
