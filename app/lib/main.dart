@@ -17788,9 +17788,12 @@ class _SohbetMesajAramaPageState extends State<SohbetMesajAramaPage>{
   int filtre=0;
   Set<String> _gizliMesajIdleri=<String>{};
   bool _gizliMesajlarHazir=false,_gizliMesajlarHata=false;
+  String _sonAramaDebugBilgisi='';
 
   @override void initState(){
     super.initState();
+    _sonAramaDebugBilgisi='activeChatId=${widget.chatId}\ngroupMode=${widget.groupMode}\ncurrentUserId=${FirebaseAuth.instance.currentUser?.uid??''}';
+    debugPrint('[CHAT_SEARCH_DEBUG] screen_open activeChatId=${widget.chatId} groupMode=${widget.groupMode} currentUserId=${FirebaseAuth.instance.currentUser?.uid??''}');
     if(widget.groupMode){
       _gizliMesajlarHazir=true;
     }else{
@@ -17815,6 +17818,10 @@ class _SohbetMesajAramaPageState extends State<SohbetMesajAramaPage>{
   }
 
   @override void dispose(){ara.dispose();super.dispose();}
+  Future<void> _debugBilgisiKopyala()async{
+    await Clipboard.setData(ClipboardData(text:_sonAramaDebugBilgisi));
+    if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Debug bilgisi panoya kopyalandı.')));
+  }
   Future<DocumentSnapshot<Map<String,dynamic>>> _profil(String id)=>_profilCache.putIfAbsent(id,()=>FirebaseFirestore.instance.collection('users').doc(id).get());
 
   bool _aramaFiltresineUyar(Map<String,dynamic> v){
@@ -17881,6 +17888,7 @@ class _SohbetMesajAramaPageState extends State<SohbetMesajAramaPage>{
         surfaceTintColor:Colors.transparent,
         elevation:0,
         title:const Text('Sohbette ara',style:TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w900)),
+        actions:[TextButton.icon(onPressed:_debugBilgisiKopyala,icon:const Icon(Icons.copy_rounded,size:16),label:const Text('Debug'))],
         flexibleSpace:Container(decoration:BoxDecoration(gradient:LinearGradient(colors:[const Color(0xFFFFFFFF),widget.groupMode?ngelxGroupGreenSoft:const Color(0xFFF5EFFF)]),borderRadius:const BorderRadius.vertical(bottom:Radius.circular(24)))),
       ),
       body:Column(children:[
@@ -17946,6 +17954,22 @@ class _SohbetMesajAramaPageState extends State<SohbetMesajAramaPage>{
               if(!_aramaFiltresineUyar(v))return false;
               return _aramaMetni(v).toLowerCase().contains(sorgu);
             }).toList();
+            final debugLines=<String>[
+              'activeChatId=${widget.chatId}',
+              'groupMode=${widget.groupMode}',
+              'currentUserId=${FirebaseAuth.instance.currentUser?.uid??''}',
+              'query=$sorgu',
+              'resultCount=${docs.length}',
+            ];
+            for(final d in docs){
+              final v=d.data();
+              final senderId=(v['senderId']??'').toString();
+              final userId=(v['userId']??v['uid']??v['fromUid']??'').toString();
+              final satir='path=${d.reference.path} senderId=$senderId userId=$userId';
+              debugLines.add(satir);
+              debugPrint('[CHAT_SEARCH_DEBUG] activeChatId=${widget.chatId} $satir');
+            }
+            _sonAramaDebugBilgisi=debugLines.join('\n');
             if(docs.isEmpty)return const Center(child:Column(mainAxisSize:MainAxisSize.min,children:[
               Icon(Icons.search_off_rounded,color:Color(0xFFC7B8E7),size:58),
               SizedBox(height:10),
