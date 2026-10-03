@@ -35,6 +35,13 @@ jobs:
               "Mesaj ara",
               "Sohbette ara",
               "GrupMesaj",
+              "GrupBilgiPage",
+              "_grupMesajOnbellek",
+              "_mesajAkisiniYenile",
+              "Widget mesajKarti",
+              "mesajKarti(",
+              "Grup sohbet",
+              "GrupPage",
           ]
           seen = set()
           for term in terms:
