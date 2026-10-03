@@ -15000,11 +15000,11 @@ class _SohbetPageState extends State<SohbetPage> {
       if(!d.exists)return;
       final veri=d.data()??<String,dynamic>{};
       final okunmamis=(veri['unread_$ben'] as num?)?.toInt()??0;
-      if(okunmamis<=0)return;
       final izin=veri['readReceipts_$ben']!=false;
       await ref.set({
-        'unread_$ben':0,
-        if(izin)'lastReadAt_$ben':FieldValue.serverTimestamp(),
+        'lastDeliveredAt_$ben':FieldValue.serverTimestamp(),
+        if(okunmamis>0)'unread_$ben':0,
+        if(okunmamis>0&&izin)'lastReadAt_$ben':FieldValue.serverTimestamp(),
       },SetOptions(merge:true));
     }catch(_){
     }finally{
@@ -15528,7 +15528,9 @@ class _SohbetPageState extends State<SohbetPage> {
     final chat=await FirebaseFirestore.instance.collection('chats').doc(widget.chatId).get();
     final cv=chat.data()??<String,dynamic>{};
     final okundu=cv['readReceipts_${widget.digerUid}']!=false;
+    final sonTeslim=cv['lastDeliveredAt_${widget.digerUid}'];
     final sonOkuma=cv['lastReadAt_${widget.digerUid}'];
+    final teslimEdildi=tarih!=null&&sonTeslim is Timestamp&&!sonTeslim.toDate().isBefore(tarih);
     final goruldu=okundu&&tarih!=null&&sonOkuma is Timestamp&&!sonOkuma.toDate().isBefore(tarih);
     String zaman(DateTime? x){
       if(x==null)return 'Hazırlanıyor';
@@ -15558,6 +15560,12 @@ class _SohbetPageState extends State<SohbetPage> {
                 leading:const Icon(Icons.send_rounded,color:ngelxPrivateBlue),
                 title:const Text('Gönderildi',style:TextStyle(fontWeight:FontWeight.w800)),
                 subtitle:Text(zaman(tarih)),
+              ),
+              const Divider(height:1,indent:58),
+              ListTile(
+                leading:Icon(teslimEdildi?Icons.done_rounded:Icons.schedule_rounded,color:teslimEdildi?ngelxPrivateBlue:Colors.black38),
+                title:Text(teslimEdildi?'Teslim edildi':'Henüz teslim edilmedi',style:const TextStyle(fontWeight:FontWeight.w800)),
+                subtitle:Text(teslimEdildi&&sonTeslim is Timestamp?zaman(sonTeslim.toDate().toLocal()):'Karşı tarafın cihazında sohbet açıldığında burada görünür.'),
               ),
               const Divider(height:1,indent:58),
               ListTile(
@@ -15651,6 +15659,7 @@ class _SohbetPageState extends State<SohbetPage> {
         if(benim&&metin.isNotEmpty)ListTile(leading:const Icon(Icons.edit_outlined,color:ngelxPrivateBlue),title:const Text('Düzenle',style:TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(c,'edit')),
         if(benim)ListTile(leading:const Icon(Icons.info_outline_rounded,color:ngelxPrivateBlue),title:const Text('Mesaj bilgisi',style:TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(c,'info')),
         if(benim)ListTile(leading:const Icon(Icons.delete_outline,color:Colors.red),title:const Text('Herkesten sil',style:TextStyle(color:Colors.red)),onTap:()=>Navigator.pop(c,'delete')),
+        ListTile(leading:const Icon(Icons.visibility_off_outlined,color:Colors.black54),title:const Text('Kendin için sil',style:TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(c,'delete_me')),
         if(!benim)ListTile(leading:const Icon(Icons.flag_outlined),title:const Text('Şikâyet et',style:TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(c,'report')),
       ]))),
     );
@@ -15658,6 +15667,10 @@ class _SohbetPageState extends State<SohbetPage> {
     await Future<void>.delayed(const Duration(milliseconds:100));
     if(!mounted)return;
     if(fazla=='info'){await ozelMesajBilgisi(d);}
+    else if(fazla=='delete_me'){
+      final ben=uid;
+      if(ben!=null)await d.reference.set({'hiddenFor':FieldValue.arrayUnion([ben])},SetOptions(merge:true));
+    }
     else if(fazla=='delete'){
       final ok=await showDialog<bool>(
         context:context,
@@ -16392,7 +16405,10 @@ class _SohbetPageState extends State<SohbetPage> {
           final tumDocs=s.data?.docs??List<QueryDocumentSnapshot<Map<String,dynamic>>>.from(_mesajOnbellek);
           final simdi=DateTime.now();
           final docs=tumDocs.where((d){
-            final x=d.data()['expiresAt'];
+            final v=d.data();
+            final x=v['expiresAt'];
+            final gizli=List<String>.from(v['hiddenFor']??const[]);
+            if(uid!=null&&gizli.contains(uid))return false;
             return x is! Timestamp||x.toDate().isAfter(simdi);
           }).toList();
           sureliMesajTakvimi(docs);
