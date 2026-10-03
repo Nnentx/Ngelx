@@ -1,0 +1,62 @@
+name: Work P1 Media Worker
+
+on:
+  push:
+    branches:
+      - work/final-consolidated-p1
+    paths:
+      - 'cloudflare/worker/**'
+      - '.github/workflows/work-p1-media-deploy.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: work-p1-media-worker
+  cancel-in-progress: true
+
+jobs:
+  deploy-test-workers:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Kaynaklari al
+        uses: actions/checkout@v4
+
+      - name: Worker paketlerini kur
+        working-directory: cloudflare/worker
+        run: npm install
+
+      - name: Paket 1 ana test Worker deploy
+        working-directory: cloudflare/worker
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: cloudflare/worker
+          command: deploy --name ngelx-media-p1test
+
+      - name: Paket 1 yedek test Worker deploy
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: cloudflare/worker
+          command: deploy --name ngelx-upload-p1test
+
+      - name: Test medya servislerini dogrula
+        shell: bash
+        run: |
+          set -euo pipefail
+          sleep 10
+          for url in \
+            "https://ngelx-media-p1test.alihancaglar76.workers.dev/health" \
+            "https://ngelx-upload-p1test.alihancaglar76.workers.dev/health"; do
+            echo "Kontrol: $url"
+            body="$(curl --fail --silent --show-error \
+              --retry 8 --retry-all-errors --retry-delay 3 \
+              --connect-timeout 10 --max-time 20 "$url")"
+            echo "$body"
+            grep -F '"r2":true' <<<"$body"
+          done

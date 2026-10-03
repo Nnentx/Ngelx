@@ -74,7 +74,9 @@ jobs:
           BUILD_NUMBER="${APP_VERSION##*+}"
           flutter build apk --release \
             --build-name="$BUILD_NAME" \
-            --build-number="$BUILD_NUMBER"
+            --build-number="$BUILD_NUMBER" \
+            --dart-define=NGELX_MEDIA_API=https://ngelx-media-p1test.alihancaglar76.workers.dev \
+            --dart-define=NGELX_MEDIA_API_BACKUP=https://ngelx-upload-p1test.alihancaglar76.workers.dev
           test -s build/app/outputs/flutter-apk/app-release.apk
           cp build/app/outputs/flutter-apk/app-release.apk \
             build/app/outputs/flutter-apk/NgelX-Paket1-SideTest-Build-${BUILD_NUMBER}.apk

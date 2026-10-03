@@ -262,7 +262,10 @@ const _ngelxMediaApiBuild = String.fromEnvironment(
   defaultValue: 'https://ngelx-media.alihancaglar76.workers.dev',
 );
 const _ngelxMediaProtocolVersion='upload-r2-243';
-const _ngelxMediaApiBackup='https://ngelx-upload.alihancaglar76.workers.dev';
+const _ngelxMediaApiBackup=String.fromEnvironment(
+  'NGELX_MEDIA_API_BACKUP',
+  defaultValue:'https://ngelx-upload.alihancaglar76.workers.dev',
+);
 String? _ngelxMediaApiCache;
 DateTime? _ngelxMediaApiCacheZamani;
 
