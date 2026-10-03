@@ -14896,6 +14896,7 @@ class _SohbetPageState extends State<SohbetPage> {
   Map<String,dynamic> _mesajHazirlikDiger=<String,dynamic>{};
   bool _mesajHazirlikSohbetMevcut=false;
   bool gonderiliyor=false,aramaBaslatiliyor=false,yaziyorGonderildi=false;
+  bool benimEngelim=false;
   String? medyaIlerlemeEtiket;
   double? medyaIlerleme;
   final rec.AudioRecorder _sesKaydedici=rec.AudioRecorder();
@@ -14944,7 +14945,8 @@ class _SohbetPageState extends State<SohbetPage> {
       String? engel;
       final benimEngellediklerim=List<String>.from(benim['blocked']??const[]);
       final onunEngelledikleri=List<String>.from(diger['blocked']??const[]);
-      if(benimEngellediklerim.contains(widget.digerUid)||onunEngelledikleri.contains(ben))engel='Engellenen hesaplar arasında mesaj gönderilemez.';
+      benimEngelim=benimEngellediklerim.contains(widget.digerUid);
+      if(benimEngelim||onunEngelledikleri.contains(ben))engel='Engellenen hesaplar arasında mesaj gönderilemez.';
       else if(diger['deactivated']==true)engel='Bu hesap şu anda kullanılamıyor.';
       else{
         final arkadaslar=List<String>.from(diger['friends']??const[]);
@@ -16017,6 +16019,64 @@ class _SohbetPageState extends State<SohbetPage> {
     ),
   );
 
+  Future<void> _sohbetEngeliniKaldir()async{
+    final ben=uid;
+    if(ben==null||!benimEngelim)return;
+    try{
+      await FirebaseFirestore.instance.collection('users').doc(ben).set({'blocked':FieldValue.arrayRemove([widget.digerUid])},SetOptions(merge:true));
+      _mesajHazirlikZamani=null;
+      await mesajGonderimHazirligi(zorla:true);
+      if(mounted){
+        setState((){});
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Engel kaldırıldı.')));
+      }
+    }catch(_){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Engel kaldırılamadı. Tekrar dene.')));
+    }
+  }
+
+  Widget _engelliSohbetPaneli()=>SafeArea(
+    top:false,
+    child:Container(
+      width:double.infinity,
+      color:Colors.white,
+      padding:const EdgeInsets.fromLTRB(16,14,16,14),
+      child:Column(mainAxisSize:MainAxisSize.min,children:[
+        Text(
+          benimEngelim?'${widget.ad} kullanıcısını engelledin':'Bu hesapla mesajlaşılamıyor',
+          textAlign:TextAlign.center,
+          style:const TextStyle(color:ngelxPrivateBlueInk,fontSize:15.5,fontWeight:FontWeight.w900),
+        ),
+        const SizedBox(height:5),
+        Text(
+          benimEngelim
+            ?'Bu sohbette birbirinize mesaj veya arama gönderemezsiniz.'
+            :'Engellenen hesaplar arasında mesaj ve arama gönderilemez.',
+          textAlign:TextAlign.center,
+          style:const TextStyle(color:Colors.black54,fontSize:12.5,height:1.3),
+        ),
+        const SizedBox(height:12),
+        if(benimEngelim)SizedBox(
+          width:double.infinity,
+          child:FilledButton.tonal(
+            style:FilledButton.styleFrom(backgroundColor:const Color(0xFFE8EBEF),foregroundColor:Colors.black87,padding:const EdgeInsets.symmetric(vertical:13),shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(18))),
+            onPressed:_sohbetEngeliniKaldir,
+            child:const Text('Engellemeyi Kaldır',style:TextStyle(fontWeight:FontWeight.w900)),
+          ),
+        ),
+        const SizedBox(height:8),
+        SizedBox(
+          width:double.infinity,
+          child:FilledButton.tonal(
+            style:FilledButton.styleFrom(backgroundColor:const Color(0xFFE8EBEF),foregroundColor:Colors.black87,padding:const EdgeInsets.symmetric(vertical:13),shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(18))),
+            onPressed:()=>sikayetEt(context,hedefTuru:'kullanici',hedefId:widget.digerUid,hedefUid:widget.digerUid),
+            child:const Text('Bir sorun var',style:TextStyle(fontWeight:FontWeight.w900)),
+          ),
+        ),
+      ]),
+    ),
+  );
+
   Future<void> emojiSec()async{final e=await showModalBottomSheet<String>(context:context,backgroundColor:Colors.white,showDragHandle:true,builder:(c)=>SafeArea(child:Padding(padding:const EdgeInsets.all(18),child:Wrap(spacing:14,runSpacing:14,children:['😀','😊','😂','😍','🥰','😎','😭','😡','👍','👏','🙏','❤️','🔥','🎉','✨','💯','🤔','😴','🙌','🤝'].map((x)=>InkWell(onTap:()=>Navigator.pop(c,x),child:Text(x,style:const TextStyle(fontSize:30)))).toList()))));if(e!=null){mesaj.text='${mesaj.text}$e';mesaj.selection=TextSelection.collapsed(offset:mesaj.text.length);}}
 
   Future<void> mentionAra(String deger)async{
@@ -16132,7 +16192,7 @@ class _SohbetPageState extends State<SohbetPage> {
         setState((){});
       }
     }));
-    unawaited(mesajGonderimHazirligi());
+    unawaited(mesajGonderimHazirligi().then((_){if(mounted)setState((){});}));
     if(uid!=null){
       unawaited(_okunduGuncelle());
       FirebaseFirestore.instance.collection('users').doc(uid).get().then((d){
@@ -16424,7 +16484,9 @@ class _SohbetPageState extends State<SohbetPage> {
           IconButton(onPressed:()=>setState((){yanitMesajId=null;yanitMetin=null;yanitGonderenUid=null;yanitTur=null;yanitMedyaUrl=null;}),icon:const Icon(Icons.close_rounded,color:Colors.black54)),
         ]),
       ),
-      SafeArea(top:false,child:Container(
+      if(_mesajHazirlikEngeli=='Engellenen hesaplar arasında mesaj gönderilemez.')
+        _engelliSohbetPaneli()
+      else SafeArea(top:false,child:Container(
         decoration:const BoxDecoration(color:Colors.white,border:Border(top:BorderSide(color:ngelxPrivateBlueBorder))),
         child:Padding(
         padding:const EdgeInsets.fromLTRB(5,8,5,9),
