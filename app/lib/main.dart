@@ -5676,10 +5676,12 @@ Future<void> ngelxKisiyeIcerikGonder({required User ben,required String hedefUid
     FirebaseFirestore.instance.collection('users').doc(ben.uid).get().timeout(const Duration(seconds:8)),
     FirebaseFirestore.instance.collection('users').doc(hedefUid).get().timeout(const Duration(seconds:8)),
     chat.get().timeout(const Duration(seconds:8)),
+    FirebaseFirestore.instance.collection('videos').doc(icerikId).get().timeout(const Duration(seconds:8)),
   ]);
   final benim=sonuc[0].data()??<String,dynamic>{};
   final hedef=sonuc[1].data()??<String,dynamic>{};
   final sohbet=sonuc[2].data()??<String,dynamic>{};
+  final icerik=sonuc[3].data()??<String,dynamic>{};
   final sohbetMevcut=sonuc[2].exists;
   if(hedef['deactivated']==true)throw StateError('target-unavailable');
   if(List<String>.from(benim['blocked']??const[]).contains(hedefUid)||List<String>.from(hedef['blocked']??const[]).contains(ben.uid))throw StateError('blocked');
@@ -5701,7 +5703,24 @@ Future<void> ngelxKisiyeIcerikGonder({required User ben,required String hedefUid
     if(istekGerekli&&mevcutIstekAlici.isEmpty)'requestRecipientUid':hedefUid,
     if(istekGerekli)'requestRejected_'+hedefUid:false,
   },SetOptions(merge:true));
-  batch.set(mesajRef,{'senderId':ben.uid,'text':metin,'type':'shared_content','contentId':icerikId,'createdAt':FieldValue.serverTimestamp(),'clientCreatedAt':Timestamp.now()});
+  final paylasilanTur=(icerik['type']??'video').toString();
+  final paylasilanMedya=(icerik['mediaUrl']??icerik['videoUrl']??icerik['imageUrl']??'').toString();
+  final paylasilanKapak=(icerik['thumbnailUrl']??icerik['posterUrl']??icerik['previewUrl']??'').toString();
+  final paylasilanKullanici=(icerik['username']??icerik['creatorUsername']??'NgelX').toString();
+  final paylasilanAciklama=(icerik['description']??aciklama).toString().trim();
+  batch.set(mesajRef,{
+    'senderId':ben.uid,
+    'text':metin,
+    'type':'shared_content',
+    'contentId':icerikId,
+    'sharedType':paylasilanTur,
+    'sharedMediaUrl':paylasilanMedya,
+    'sharedThumbnailUrl':paylasilanKapak,
+    'sharedUsername':paylasilanKullanici,
+    'sharedDescription':paylasilanAciklama,
+    'createdAt':FieldValue.serverTimestamp(),
+    'clientCreatedAt':Timestamp.now(),
+  });
   await ngelxBatchCommitDogrula(batch:batch,marker:mesajRef,timeout:const Duration(seconds:15));
   unawaited(uygulamaBildirimiGonder(toUid:hedefUid,fromUid:ben.uid,tur:'message',metin:'Sana bir NgelX paylaşımı gönderdi',belgeId:chatId,dedupeKey:'shared_content_'+mesajRef.id+'_'+hedefUid).catchError((_){ }));
 }
@@ -5873,7 +5892,29 @@ Future<void> ngelxOzeldenPaylas(BuildContext context,{required String icerikId,r
     :basarili>0
       ?'$basarili kişiye gönderildi ✅ • ${hatalar.join(', ')} gönderilemedi.'
       :'Gönderilemedi: ${hatalar.join(', ')}';
-  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(mesaj),duration:const Duration(seconds:4)));
+  final messenger=ScaffoldMessenger.of(context);
+  messenger.hideCurrentSnackBar();
+  if(hatalar.isEmpty){
+    messenger.showSnackBar(SnackBar(
+      content:Row(mainAxisSize:MainAxisSize.min,children:[
+        const Icon(Icons.check_circle_rounded,color:Colors.white,size:18),
+        const SizedBox(width:7),
+        Flexible(child:Text(mesaj,style:const TextStyle(fontWeight:FontWeight.w800))),
+      ]),
+      behavior:SnackBarBehavior.floating,
+      width:240,
+      duration:const Duration(milliseconds:1400),
+      backgroundColor:const Color(0xFF202124),
+      shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(16)),
+    ));
+  }else{
+    messenger.showSnackBar(SnackBar(
+      content:Text(mesaj),
+      behavior:SnackBarBehavior.floating,
+      duration:const Duration(seconds:4),
+      shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(14)),
+    ));
+  }
 }
 
 Future<void> ngelxProfiliOzeldenPaylas(BuildContext context,{required String profilUid,required String profilAdi})async{
@@ -6659,6 +6700,9 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver,Rou
   bool _otomatikGecisYapildi=false;
   late bool _otomatikKaydirmaAktif;
   Timer? _otomatikKaydirmaTimeri;
+  bool _videoSariliyor=false;
+  bool _videoSarmaOncesiOynuyordu=false;
+  int _videoSarmaMs=0;
 
   String get videoId => widget.videoId;
 
@@ -7212,6 +7256,62 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver,Rou
     }
   }
 
+  String _videoSureMetni(int ms){
+    final toplam=(ms.clamp(0,24*60*60*1000)~/1000);
+    final dakika=toplam~/60;
+    final saniye=(toplam%60).toString().padLeft(2,'0');
+    return '$dakika:$saniye';
+  }
+
+  int _videoSarmaBaslangicMs()=>widget.trimStartMs.clamp(0,kontrol.value.duration.inMilliseconds).toInt();
+
+  int _videoSarmaBitisMs(){
+    final sure=kontrol.value.duration.inMilliseconds;
+    if(sure<=0)return 1;
+    if(widget.trimEndMs>0)return widget.trimEndMs.clamp(_videoSarmaBaslangicMs()+1,sure).toInt();
+    return sure;
+  }
+
+  void _videoSarmayiBaslat(){
+    if(!hazir)return;
+    _otomatikKaydirmaIptal();
+    _videoSarmaOncesiOynuyordu=kontrol.value.isPlaying;
+    _videoSarmaMs=kontrol.value.position.inMilliseconds.clamp(_videoSarmaBaslangicMs(),_videoSarmaBitisMs()).toInt();
+    unawaited(kontrol.pause());
+    final p=muzikOynatici;
+    if(p!=null)unawaited(p.pause());
+    if(mounted)setState(()=>_videoSariliyor=true);
+  }
+
+  void _videoSarmayiGuncelle(double x,double genislik){
+    if(!hazir||genislik<=0)return;
+    final bas=_videoSarmaBaslangicMs(),bit=_videoSarmaBitisMs();
+    if(bit<=bas)return;
+    final oran=(x/genislik).clamp(0.0,1.0);
+    final hedef=(bas+((bit-bas)*oran)).round().clamp(bas,bit).toInt();
+    _videoSarmaMs=hedef;
+    unawaited(kontrol.seekTo(Duration(milliseconds:hedef)));
+    if(mounted)setState((){});
+  }
+
+  Future<void> _videoSarmayiBitir()async{
+    if(!_videoSariliyor||!hazir)return;
+    final hedef=_videoSarmaMs;
+    await kontrol.seekTo(Duration(milliseconds:hedef));
+    if(mounted)setState(()=>_videoSariliyor=false);
+    if(_videoSarmaOncesiOynuyordu&&widget.aktif&&!duraklatildi&&_rotaGorunur){
+      await kontrol.play();
+      final p=muzikOynatici;
+      if(p!=null){
+        final bas=_videoSarmaBaslangicMs();
+        try{await p.seek(Duration(milliseconds:(hedef-bas).clamp(0,1<<31).toInt()));}catch(_){}
+        unawaited(p.play());
+      }
+    }
+    _otomatikGecisYapildi=false;
+    _otomatikKaydirmaZamanla();
+  }
+
   @override
   void dispose() {
     _otomatikKaydirmaIptal();
@@ -7447,18 +7547,49 @@ if (!temizGorunum&&kalpAnimasyonu)
               ],
             ),
           ),
+          if(!temizGorunum&&hazir&&_videoSariliyor)
+            Center(
+              child:Container(
+                padding:const EdgeInsets.symmetric(horizontal:14,vertical:9),
+                decoration:BoxDecoration(color:Colors.black.withValues(alpha:.72),borderRadius:BorderRadius.circular(14)),
+                child:Text(
+                  '${_videoSureMetni(_videoSarmaMs-_videoSarmaBaslangicMs())} / ${_videoSureMetni(_videoSarmaBitisMs()-_videoSarmaBaslangicMs())}',
+                  style:const TextStyle(color:Colors.white,fontSize:16,fontWeight:FontWeight.w900),
+                ),
+              ),
+            ),
           if(!temizGorunum&&hazir)
             Positioned(
               left:0,right:0,bottom:0,
-              child:VideoProgressIndicator(
-                kontrol,
-                allowScrubbing:true,
-                padding:EdgeInsets.zero,
-                colors:const VideoProgressColors(
-                  playedColor:Color(0xFF22D3EE),
-                  bufferedColor:Colors.white38,
-                  backgroundColor:Color(0x2EFFFFFF),
-                ),
+              child:ValueListenableBuilder<VideoPlayerValue>(
+                valueListenable:kontrol,
+                builder:(context,deger,_)=>LayoutBuilder(builder:(context,kisitlar){
+                  final bas=_videoSarmaBaslangicMs(),bit=_videoSarmaBitisMs();
+                  final konum=_videoSariliyor?_videoSarmaMs:deger.position.inMilliseconds;
+                  final oran=bit<=bas?0.0:((konum-bas)/(bit-bas)).clamp(0.0,1.0);
+                  return GestureDetector(
+                    behavior:HitTestBehavior.opaque,
+                    onHorizontalDragStart:(_)=>_videoSarmayiBaslat(),
+                    onHorizontalDragUpdate:(d)=>_videoSarmayiGuncelle(d.localPosition.dx,kisitlar.maxWidth),
+                    onHorizontalDragEnd:(_)=>unawaited(_videoSarmayiBitir()),
+                    onHorizontalDragCancel:()=>unawaited(_videoSarmayiBitir()),
+                    child:SizedBox(
+                      height:28,
+                      child:Align(
+                        alignment:Alignment.bottomCenter,
+                        child:Stack(children:[
+                          Container(height:3,color:const Color(0x42FFFFFF)),
+                          FractionallySizedBox(widthFactor:oran,child:Container(height:3,color:const Color(0xFF22D3EE))),
+                          if(_videoSariliyor)
+                            Align(
+                              alignment:Alignment(oran*2-1,1),
+                              child:Container(width:10,height:10,transform:Matrix4.translationValues(0,-3.5,0),decoration:const BoxDecoration(color:Colors.white,shape:BoxShape.circle)),
+                            ),
+                        ]),
+                      ),
+                    ),
+                  );
+                }),
               ),
             ),
         ],
@@ -18145,6 +18276,135 @@ class _YeniSohbetPageState extends State<YeniSohbetPage>{
 }
 
 class SohbetPage extends StatefulWidget {final String chatId,digerUid,ad,foto;final bool aktifAramadanAcildi;const SohbetPage({super.key,required this.chatId,required this.digerUid,required this.ad,this.foto='',this.aktifAramadanAcildi=false});@override State<SohbetPage> createState()=>_SohbetPageState();}
+class NgelXPaylasilanIcerikKarti extends StatelessWidget{
+  final Map<String,dynamic> mesaj;
+  final bool benim;
+  const NgelXPaylasilanIcerikKarti({super.key,required this.mesaj,required this.benim});
+
+  @override
+  Widget build(BuildContext context){
+    final contentId=(mesaj['contentId']??'').toString();
+    return FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(
+      future:contentId.isEmpty?null:FirebaseFirestore.instance.collection('videos').doc(contentId).get(),
+      builder:(_,snap){
+        final uzak=snap.data?.data()??<String,dynamic>{};
+        final tur=(mesaj['sharedType']??uzak['type']??'video').toString();
+        final medya=(mesaj['sharedMediaUrl']??uzak['mediaUrl']??uzak['videoUrl']??uzak['imageUrl']??'').toString();
+        final kapak=(mesaj['sharedThumbnailUrl']??uzak['thumbnailUrl']??uzak['posterUrl']??uzak['previewUrl']??'').toString();
+        final kullanici=(mesaj['sharedUsername']??uzak['username']??uzak['creatorUsername']??'NgelX').toString();
+        final aciklama=(mesaj['sharedDescription']??uzak['description']??'').toString().trim();
+        final video=tur=='video';
+
+        return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+          ClipRRect(
+            borderRadius:BorderRadius.circular(15),
+            child:Container(
+              color:const Color(0xFF171A20),
+              child:video
+                ?NgelXSohbetVideoOnizleme(url:medya,thumbnailUrl:kapak)
+                :(medya.isNotEmpty
+                  ?NgelXSohbetFotoOnizleme(url:medya)
+                  :SizedBox(
+                    height:118,
+                    child:Center(child:Icon(Icons.auto_awesome_motion_rounded,color:benim?Colors.white70:ngelxPrivateBlue,size:40)),
+                  )),
+            ),
+          ),
+          const SizedBox(height:9),
+          Row(children:[
+            Icon(video?Icons.play_circle_fill_rounded:Icons.photo_library_rounded,color:benim?Colors.white:ngelxPrivateBlue,size:20),
+            const SizedBox(width:7),
+            Expanded(child:Text('NgelX paylaşımı',style:TextStyle(color:benim?Colors.white:Colors.black87,fontWeight:FontWeight.w900))),
+          ]),
+          if(kullanici.isNotEmpty)...[
+            const SizedBox(height:5),
+            Text('@$kullanici',maxLines:1,overflow:TextOverflow.ellipsis,style:TextStyle(color:benim?Colors.white70:Colors.black54,fontSize:11.5,fontWeight:FontWeight.w800)),
+          ],
+          if(aciklama.isNotEmpty)...[
+            const SizedBox(height:4),
+            Text(aciklama,maxLines:2,overflow:TextOverflow.ellipsis,style:TextStyle(color:benim?Colors.white70:Colors.black54,fontSize:12,height:1.25)),
+          ],
+          const SizedBox(height:7),
+          Row(children:[
+            Icon(Icons.touch_app_rounded,color:benim?Colors.white70:ngelxPrivateBlue,size:15),
+            const SizedBox(width:5),
+            Text('Gönderiyi aç',style:TextStyle(color:benim?Colors.white70:ngelxPrivateBlue,fontSize:11.5,fontWeight:FontWeight.w800)),
+          ]),
+        ]);
+      },
+    );
+  }
+}
+
+class NgelXSesliOdaPaylasimKarti extends StatelessWidget{
+  final Map<String,dynamic> mesaj;
+  final bool benim;
+  const NgelXSesliOdaPaylasimKarti({super.key,required this.mesaj,required this.benim});
+
+  @override
+  Widget build(BuildContext context){
+    final roomId=(mesaj['audioRoomId']??'').toString();
+    final mesajBasligi=(mesaj['audioRoomTitle']??'Sesli oda').toString();
+    if(roomId.isEmpty)return Text(mesajBasligi,style:TextStyle(color:benim?Colors.white:Colors.black87,fontWeight:FontWeight.w800));
+    return StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
+      stream:FirebaseFirestore.instance.collection('audio_rooms').doc(roomId).snapshots(),
+      builder:(_,snap){
+        final oda=snap.data?.data()??<String,dynamic>{};
+        final aktif=snap.data?.exists==true&&ngelxSesliOdaTaze(oda);
+        final baslik=(oda['title']??mesajBasligi).toString();
+        final konusmaci=(oda['speakerCount'] as num?)?.toInt()??0;
+        final dinleyici=(oda['listenerCount'] as num?)?.toInt()??0;
+        return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+          Row(children:[
+            Container(
+              width:38,height:38,
+              decoration:BoxDecoration(
+                color:benim?Colors.white.withValues(alpha:.16):const Color(0xFFF0E8FF),
+                shape:BoxShape.circle,
+              ),
+              child:Icon(Icons.graphic_eq_rounded,color:benim?Colors.white:mor,size:22),
+            ),
+            const SizedBox(width:10),
+            Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+              Text('SESLİ ODA',style:TextStyle(color:benim?Colors.white70:mor,fontSize:10.5,fontWeight:FontWeight.w900,letterSpacing:.5)),
+              const SizedBox(height:2),
+              Text(baslik,maxLines:2,overflow:TextOverflow.ellipsis,style:TextStyle(color:benim?Colors.white:Colors.black87,fontSize:15.5,fontWeight:FontWeight.w900)),
+            ])),
+            Container(
+              padding:const EdgeInsets.symmetric(horizontal:8,vertical:4),
+              decoration:BoxDecoration(
+                color:aktif?const Color(0xFF1DBF73).withValues(alpha:(benim ? .24 : .12)):Colors.black12,
+                borderRadius:BorderRadius.circular(999),
+              ),
+              child:Text(aktif?'AKTİF':'SONA ERDİ',style:TextStyle(color:aktif?(benim?Colors.white:const Color(0xFF118650)):(benim?Colors.white60:Colors.black45),fontSize:9,fontWeight:FontWeight.w900)),
+            ),
+          ]),
+          const SizedBox(height:10),
+          Row(children:[
+            Icon(Icons.mic_rounded,color:benim?Colors.white70:Colors.black45,size:15),
+            const SizedBox(width:4),
+            Text('$konusmaci konuşmacı',style:TextStyle(color:benim?Colors.white70:Colors.black54,fontSize:11,fontWeight:FontWeight.w700)),
+            const SizedBox(width:11),
+            Icon(Icons.headphones_rounded,color:benim?Colors.white70:Colors.black45,size:15),
+            const SizedBox(width:4),
+            Text('$dinleyici dinleyici',style:TextStyle(color:benim?Colors.white70:Colors.black54,fontSize:11,fontWeight:FontWeight.w700)),
+          ]),
+          const SizedBox(height:10),
+          Container(
+            height:36,
+            alignment:Alignment.center,
+            decoration:BoxDecoration(
+              color:aktif?(benim?Colors.white:mor):(benim?Colors.white12:Colors.black12),
+              borderRadius:BorderRadius.circular(12),
+            ),
+            child:Text(aktif?'Katıl':'Oda sona erdi',style:TextStyle(color:aktif?(benim?ngelxPrivateBlue:Colors.white):(benim?Colors.white60:Colors.black45),fontWeight:FontWeight.w900)),
+          ),
+        ]);
+      },
+    );
+  }
+}
+
 class _SohbetPageState extends State<SohbetPage> {
   final mesaj=TextEditingController(),liste=ScrollController();
   final List<Map<String,String>> mentionOnerileri=[];
@@ -19136,11 +19396,10 @@ class _SohbetPageState extends State<SohbetPage> {
               IgnorePointer(child:NgelXSohbetFotoOnizleme(url:medyaUrl))
             else if(video)
               IgnorePointer(child:NgelXSohbetVideoOnizleme(url:medyaUrl,thumbnailUrl:videoKapakUrl))
+            else if(sesliOdaPaylasimi)
+              IgnorePointer(child:NgelXSesliOdaPaylasimKarti(mesaj:v,benim:ben))
             else if(shared)
-              IgnorePointer(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-                Row(children:[Icon(Icons.play_circle_fill_rounded,color:ben?Colors.white:mavi),const SizedBox(width:7),Text('NgelX paylaşımı',style:TextStyle(color:ben?Colors.white:Colors.black87,fontWeight:FontWeight.w900))]),
-                const SizedBox(height:8),Text(metin,maxLines:4,overflow:TextOverflow.ellipsis,style:TextStyle(color:ben?Colors.white70:Colors.black54)),
-              ]))
+              IgnorePointer(child:NgelXPaylasilanIcerikKarti(mesaj:v,benim:ben))
             else if(canliPaylasimi)
               Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
                 Row(children:[
