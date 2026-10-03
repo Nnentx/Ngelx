@@ -14899,11 +14899,14 @@ class _SohbetPageState extends State<SohbetPage> {
   bool benimEngelim=false;
   String? medyaIlerlemeEtiket;
   double? medyaIlerleme;
+  DateTime? _sonMedyaIlerlemeGuncelleme;
+  double? _sonMedyaIlerlemeDegeri;
   final rec.AudioRecorder _sesKaydedici=rec.AudioRecorder();
   bool sesKaydediliyor=false,sesKaydiIsleniyor=false;
   int sesKaydiSaniye=0;
   DateTime? sesKaydiBaslangic;
-  Timer? yaziyorZamanlayici,sureliMesajZamanlayici,sesKaydiZamanlayici;
+  Timer? yaziyorZamanlayici,sureliMesajZamanlayici,sesKaydiZamanlayici,mentionZamanlayici;
+  int _mentionAramaNesli=0;
   bool gizliKelimeFiltresi=true;
   List<String> gizliKelimeListesi=[];
   String? yanitMesajId,yanitMetin,yanitGonderenUid,yanitTur,yanitMedyaUrl;
@@ -15011,7 +15014,7 @@ class _SohbetPageState extends State<SohbetPage> {
 
   void mesajDegisti(String deger){
     PrivateDraftStore.schedule(widget.chatId,deger);
-    mentionAra(deger);
+    _mentionAramasiniPlanla(deger);
     final ben=uid;if(ben==null)return;
     final ref=FirebaseFirestore.instance.collection('chats').doc(widget.chatId);
     yaziyorZamanlayici?.cancel();
@@ -15119,17 +15122,31 @@ class _SohbetPageState extends State<SohbetPage> {
 
   void _ozelMedyaIlerlemeBaslat(String etiket){
     if(!mounted)return;
+    _sonMedyaIlerlemeGuncelleme=null;
+    _sonMedyaIlerlemeDegeri=null;
     setState((){medyaIlerlemeEtiket=etiket;medyaIlerleme=null;});
   }
 
   void _ozelMedyaIlerlemeGuncelle(String etiket,int sent,int total){
     if(!mounted)return;
     final oran=total>0?(sent/total).clamp(0.0,1.0).toDouble():null;
+    final simdi=DateTime.now();
+    final oncekiZaman=_sonMedyaIlerlemeGuncelleme;
+    final oncekiOran=_sonMedyaIlerlemeDegeri;
+    if(
+      oran!=null&&oncekiOran!=null&&
+      (oran-oncekiOran).abs()<.025&&
+      oncekiZaman!=null&&simdi.difference(oncekiZaman).inMilliseconds<140
+    )return;
+    _sonMedyaIlerlemeGuncelleme=simdi;
+    _sonMedyaIlerlemeDegeri=oran;
     setState((){medyaIlerlemeEtiket=etiket;medyaIlerleme=oran;});
   }
 
   void _ozelMedyaIlerlemeBitir(){
     if(!mounted)return;
+    _sonMedyaIlerlemeGuncelleme=null;
+    _sonMedyaIlerlemeDegeri=null;
     setState((){medyaIlerlemeEtiket=null;medyaIlerleme=null;});
   }
 
@@ -16079,16 +16096,34 @@ class _SohbetPageState extends State<SohbetPage> {
 
   Future<void> emojiSec()async{final e=await showModalBottomSheet<String>(context:context,backgroundColor:Colors.white,showDragHandle:true,builder:(c)=>SafeArea(child:Padding(padding:const EdgeInsets.all(18),child:Wrap(spacing:14,runSpacing:14,children:['😀','😊','😂','😍','🥰','😎','😭','😡','👍','👏','🙏','❤️','🔥','🎉','✨','💯','🤔','😴','🙌','🤝'].map((x)=>InkWell(onTap:()=>Navigator.pop(c,x),child:Text(x,style:const TextStyle(fontSize:30)))).toList()))));if(e!=null){mesaj.text='${mesaj.text}$e';mesaj.selection=TextSelection.collapsed(offset:mesaj.text.length);}}
 
-  Future<void> mentionAra(String deger)async{
+  void _mentionAramasiniPlanla(String deger){
+    mentionZamanlayici?.cancel();
     final parca=deger.split(RegExp(r'\s+')).last;
-    if(!parca.startsWith('@')){if(mentionOnerileri.isNotEmpty&&mounted)setState(()=>mentionOnerileri.clear());return;}
+    if(!parca.startsWith('@')){
+      _mentionAramaNesli++;
+      if(mentionOnerileri.isNotEmpty&&mounted)setState(()=>mentionOnerileri.clear());
+      return;
+    }
+    final nesil=++_mentionAramaNesli;
+    mentionZamanlayici=Timer(const Duration(milliseconds:260),(){
+      unawaited(mentionAra(deger,nesil:nesil));
+    });
+  }
+
+  Future<void> mentionAra(String deger,{required int nesil})async{
+    final parca=deger.split(RegExp(r'\s+')).last;
+    if(!parca.startsWith('@')||nesil!=_mentionAramaNesli)return;
     final ara=parca.substring(1).toLowerCase(),sonuc=<Map<String,String>>[];
     try{
-      final d=await FirebaseFirestore.instance.collection('users').doc(widget.digerUid).get(),v=d.data()??<String,dynamic>{};
+      Map<String,dynamic> v=_mesajHazirlikDiger;
+      if(v.isEmpty){
+        final hazirlik=await mesajGonderimHazirligi();
+        v=hazirlik.diger;
+      }
       final kullanici=(v['username']??'').toString().trim(),ad=(v['displayName']??kullanici).toString().trim(),aranan='$kullanici $ad'.toLowerCase();
       if(kullanici.isNotEmpty&&(ara.isEmpty||aranan.contains(ara)))sonuc.add({'uid':widget.digerUid,'username':kullanici,'name':ad.isEmpty?kullanici:ad});
     }catch(_){}
-    if(mounted)setState((){mentionOnerileri..clear()..addAll(sonuc.take(5));});
+    if(mounted&&nesil==_mentionAramaNesli)setState((){mentionOnerileri..clear()..addAll(sonuc.take(5));});
   }
   void mentionEkle(String kullanici){final metin=mesaj.text,sonBosluk=metin.lastIndexOf(RegExp(r'\s'));mesaj.text='${sonBosluk<0?'':metin.substring(0,sonBosluk+1)}@$kullanici ';mesaj.selection=TextSelection.collapsed(offset:mesaj.text.length);setState(()=>mentionOnerileri.clear());}
 
@@ -16210,6 +16245,7 @@ class _SohbetPageState extends State<SohbetPage> {
     yaziyorZamanlayici?.cancel();
     sureliMesajZamanlayici?.cancel();
     sesKaydiZamanlayici?.cancel();
+    mentionZamanlayici?.cancel();
     final ben=uid;
     if(ben!=null)unawaited(FirebaseFirestore.instance.collection('chats').doc(widget.chatId).set({'typing_$ben':false},SetOptions(merge:true)));
     if(sesKaydediliyor)unawaited(_sesKaydedici.cancel());
