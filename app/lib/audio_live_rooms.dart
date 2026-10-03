@@ -157,8 +157,12 @@ List<Widget> ngelxSesliKesfetSliverleri(BuildContext context)=>[
 class SesliOdaHazirlikPage extends StatefulWidget{const SesliOdaHazirlikPage({super.key});@override State<SesliOdaHazirlikPage> createState()=>_SesliOdaHazirlikPageState();}
 class _SesliOdaHazirlikPageState extends State<SesliOdaHazirlikPage>{
   final baslik=TextEditingController();String kategori='Sohbet',gizlilik='public';bool baslatiliyor=false;
-  @override void dispose(){baslik.dispose();super.dispose();}
+  @override void initState(){super.initState();baslik.addListener(_baslikUyarisiTemizle);}
+  void _baslikUyarisiTemizle(){if(mounted&&baslik.text.trim().length>=3)ScaffoldMessenger.maybeOf(context)?.hideCurrentSnackBar();}
+  @override void dispose(){baslik.removeListener(_baslikUyarisiTemizle);baslik.dispose();super.dispose();}
   Future<void> baslat()async{
+    FocusManager.instance.primaryFocus?.unfocus();
+    try{await SystemChannels.textInput.invokeMethod<void>('TextInput.hide');}catch(_){}
     final user=FirebaseAuth.instance.currentUser;if(user==null||baslatiliyor)return;
     if(baslik.text.trim().length<3){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('En az 3 karakterlik oda başlığı yaz.')));return;}
     final mevcut=await ngelxSesliSahibinAktifOdaBelgesi(user.uid);
@@ -223,7 +227,10 @@ class _SesliOdaHazirlikPageState extends State<SesliOdaHazirlikPage>{
       }
     }finally{if(mounted)setState(()=>baslatiliyor=false);}
   }
-  @override Widget build(BuildContext context)=>Scaffold(backgroundColor:Colors.white,appBar:AppBar(backgroundColor:Colors.white,foregroundColor:Colors.black,title:const Text('Sesli oda oluştur',style:TextStyle(fontWeight:FontWeight.w900))),body:SafeArea(child:ListView(padding:const EdgeInsets.all(18),children:[
+  @override Widget build(BuildContext context)=>Scaffold(backgroundColor:Colors.white,appBar:AppBar(backgroundColor:Colors.white,foregroundColor:Colors.black,title:const Text('Sesli oda oluştur',style:TextStyle(fontWeight:FontWeight.w900))),body:SafeArea(child:ListView(
+    keyboardDismissBehavior:ScrollViewKeyboardDismissBehavior.onDrag,
+    padding:EdgeInsets.fromLTRB(18,18,18,24+MediaQuery.viewInsetsOf(context).bottom),
+    children:[
     Container(padding:const EdgeInsets.all(18),decoration:BoxDecoration(color:const Color(0xFFF6F0FF),borderRadius:BorderRadius.circular(22)),child:const Row(children:[CircleAvatar(radius:26,backgroundColor:mor,child:Icon(Icons.mic_rounded,color:Colors.white)),SizedBox(width:12),Expanded(child:Text('Kamera yok. Ses odakta.\n12 konuşmacıya kadar sahne hazır.',style:TextStyle(color:Colors.black87,fontWeight:FontWeight.w800,height:1.35)))])),const SizedBox(height:18),
     TextField(controller:baslik,maxLength:80,cursorColor:mor,style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w800),decoration:InputDecoration(labelText:'Oda başlığı',labelStyle:const TextStyle(color:Colors.black54,fontWeight:FontWeight.w700),floatingLabelStyle:const TextStyle(color:mor,fontWeight:FontWeight.w800),hintText:'Örn. Akşam sohbeti',hintStyle:const TextStyle(color:Color(0xFF9A9AA2)),counterStyle:const TextStyle(color:Colors.black45),filled:true,fillColor:const Color(0xFFF5F5F8),enabledBorder:OutlineInputBorder(borderRadius:BorderRadius.circular(18),borderSide:const BorderSide(color:Color(0xFFE5E2EA))),focusedBorder:OutlineInputBorder(borderRadius:BorderRadius.circular(18),borderSide:const BorderSide(color:mor,width:1.5)),border:OutlineInputBorder(borderRadius:BorderRadius.circular(18),borderSide:BorderSide.none))),const SizedBox(height:8),
     Wrap(spacing:8,children:['Sohbet','Müzik','Teknoloji','Spor','Gündem'].map((x)=>ChoiceChip(label:Text(x),selected:kategori==x,onSelected:(_)=>setState(()=>kategori=x))).toList()),const SizedBox(height:16),
@@ -629,6 +636,8 @@ class _SesliOdaPageState extends State<SesliOdaPage> with WidgetsBindingObserver
       await ngelxSesliKatilimciAyril(widget.odaId,ben);
       await FirebaseFirestore.instance.collection('users').doc(ben).set({'isAudioLive':false,'currentAudioRoomId':FieldValue.delete()},SetOptions(merge:true));
     }
+    mikrofon=false;mikrofonTercihi=false;
+    try{await aktifOda.localParticipant?.setMicrophoneEnabled(false);}catch(_){}
     try{await aktifOda.disconnect();}catch(_){}
     if(mounted)Navigator.pop(context);
   }
@@ -772,5 +781,17 @@ class _SesliOdaPageState extends State<SesliOdaPage> with WidgetsBindingObserver
 ),NgelxSesliInlineSohbet(roomId:widget.odaId,yonetici:yoneticiyim,sahibiyim:sahibiyim,bitti:bitti)])));
     return PopScope(canPop:false,onPopInvokedWithResult:(didPop,result){if(!didPop)unawaited(kucult());},child:sayfa);
   }
-  @override void dispose(){WidgetsBinding.instance.removeObserver(this);kapatiliyor=true;heartbeat?.cancel();yalnizlikTimer?.cancel();abonelik?.cancel();katilimAboneligi?.cancel();odaKatilimAboneligi?.cancel();aktifOda.removeListener(odaDegisti);final ben=uid;if(ben!=null&&!bitti)unawaited(ngelxSesliKatilimciAyril(widget.odaId,ben));if(!widget.yayinSahibi)unawaited(aktifOda.disconnect());unawaited(aktifOda.dispose());super.dispose();}
+  @override void dispose(){
+    WidgetsBinding.instance.removeObserver(this);
+    kapatiliyor=true;
+    heartbeat?.cancel();yalnizlikTimer?.cancel();abonelik?.cancel();katilimAboneligi?.cancel();odaKatilimAboneligi?.cancel();
+    aktifOda.removeListener(odaDegisti);
+    final ben=uid;
+    if(ben!=null&&!bitti)unawaited(ngelxSesliKatilimciAyril(widget.odaId,ben));
+    mikrofon=false;mikrofonTercihi=false;
+    unawaited(aktifOda.localParticipant?.setMicrophoneEnabled(false).catchError((_){ }));
+    unawaited(aktifOda.disconnect().catchError((_){ }));
+    unawaited(aktifOda.dispose().catchError((_){ }));
+    super.dispose();
+  }
 }
