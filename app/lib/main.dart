@@ -15638,9 +15638,12 @@ class _SohbetPageState extends State<SohbetPage> {
   Future<void> mesajTepkiDegistir(QueryDocumentSnapshot<Map<String,dynamic>> d,String emoji)async{
     final ben=uid;if(ben==null)return;
     try{
-      final mevcut=Map<String,dynamic>.from(d.data()['reactions']??const{});
-      if((mevcut[ben]??'').toString()==emoji)mevcut.remove(ben);else mevcut[ben]=emoji;
-      await d.reference.update({'reactions':mevcut});
+      final mevcut=(d.data()['reactions'] as Map?)?.cast<String,dynamic>()??const <String,dynamic>{};
+      // Tek kullanici icin tek reaction alani atomik guncellenir; diger kisilerin
+      // ayni anda verdigi tepkiler tam map yazimiyla ezilmez.
+      await d.reference.update({
+        'reactions.$ben':(mevcut[ben]??'').toString()==emoji?FieldValue.delete():emoji,
+      });
     }catch(_){
       if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Tepki eklenemedi. Tekrar dene.')));
     }
@@ -15992,6 +15995,92 @@ class _SohbetPageState extends State<SohbetPage> {
   }
 
 
+  void _ozelMedyaTepkiDetayi(DocumentReference<Map<String,dynamic>> ref){
+    showModalBottomSheet<void>(
+      context:context,
+      backgroundColor:Colors.white,
+      showDragHandle:true,
+      builder:(sheetContext)=>StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
+        stream:ref.snapshots(),
+        builder:(context,snapshot){
+          final reactions=Map<String,dynamic>.from(snapshot.data?.data()?['reactions']??const <String,dynamic>{});
+          final entries=reactions.entries.toList();
+          return SafeArea(child:Padding(
+            padding:const EdgeInsets.fromLTRB(16,0,16,16),
+            child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
+              Padding(
+                padding:const EdgeInsets.only(bottom:10),
+                child:Text('Tepkiler (${entries.length})',style:const TextStyle(fontSize:17,fontWeight:FontWeight.w800)),
+              ),
+              if(snapshot.hasError)
+                const Padding(padding:EdgeInsets.all(12),child:Text('Tepkiler yüklenemedi.'))
+              else if(entries.isEmpty)
+                const Padding(padding:EdgeInsets.all(16),child:Center(child:Text('Henüz tepki yok.')))
+              else
+                SizedBox(
+                  height:MediaQuery.of(sheetContext).size.height*.48,
+                  child:ListView.builder(
+                    itemCount:entries.length,
+                    itemBuilder:(context,index){
+                      final entry=entries[index],reactorId=entry.key,emoji=entry.value.toString();
+                      if(reactorId==uid){
+                        return ListTile(
+                          dense:true,
+                          leading:const CircleAvatar(child:Icon(Icons.person_outline_rounded,size:18)),
+                          title:const Text('Sen',style:TextStyle(fontWeight:FontWeight.w700)),
+                          trailing:Text(emoji,style:const TextStyle(fontSize:21)),
+                        );
+                      }
+                      return FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(
+                        future:FirebaseFirestore.instance.collection('users').doc(reactorId).get(),
+                        builder:(context,userSnapshot){
+                          final profile=userSnapshot.data?.data()??const <String,dynamic>{};
+                          final name=(profile['displayName']??profile['username']??'NgelX kullanıcısı').toString();
+                          return ListTile(
+                            dense:true,
+                            leading:const CircleAvatar(child:Icon(Icons.person_outline_rounded,size:18)),
+                            title:Text(name,maxLines:1,overflow:TextOverflow.ellipsis),
+                            trailing:Text(emoji,style:const TextStyle(fontSize:21)),
+                          );
+                        },
+                      );
+                    },
+                  ),
+                ),
+            ]),
+          ));
+        },
+      ),
+    );
+  }
+
+  Widget _ozelMedyaTepkiBalonu(DocumentReference<Map<String,dynamic>> ref,Map<String,int> counts,int total){
+    final mostUsed=counts.entries.toList()..sort((a,b)=>b.value.compareTo(a.value));
+    final emojis=mostUsed.take(3).map((entry)=>entry.key).join();
+    return Positioned(
+      right:6,
+      bottom:6,
+      child:GestureDetector(
+        behavior:HitTestBehavior.opaque,
+        onTap:()=>_ozelMedyaTepkiDetayi(ref),
+        child:Container(
+          padding:const EdgeInsets.symmetric(horizontal:6,vertical:2),
+          decoration:BoxDecoration(
+            color:Colors.white.withValues(alpha:.94),
+            borderRadius:BorderRadius.circular(13),
+            border:Border.all(color:const Color(0x1F000000)),
+            boxShadow:const [BoxShadow(color:Color(0x22000000),blurRadius:4,offset:Offset(0,1))],
+          ),
+          child:Row(mainAxisSize:MainAxisSize.min,children:[
+            Text(emojis,style:const TextStyle(fontSize:15,height:1.1)),
+            const SizedBox(width:2),
+            Text(total.toString(),style:const TextStyle(fontSize:11,fontWeight:FontWeight.w800,height:1.1,color:Color(0xFF30343B))),
+          ]),
+        ),
+      ),
+    );
+  }
+
   Widget ozelMesajKarti(QueryDocumentSnapshot<Map<String,dynamic>> d,{double fontSize=16,bool goruldu=false,String quickReaction='❤️'}){
     final v=d.data(),ben=v['senderId']==uid,tur=(v['type']??'text').toString(),silinmis=v['deletedForEveryone']==true||tur=='deleted',sistem=tur=='system',vurgulu=_vurgulananMesajId==d.id;
     final photo=tur=='photo',video=tur=='video',shared=tur=='shared_content',audio=tur=='audio',file=tur=='file',location=tur=='location',call=tur=='call',storyReply=tur=='story_reply';
@@ -16123,9 +16212,15 @@ class _SohbetPageState extends State<SohbetPage> {
                 ),
               ),
             if(photo)
-              IgnorePointer(child:ClipRRect(borderRadius:BorderRadius.circular(16),child:CachedNetworkImage(imageUrl:(v['mediaUrl']??'').toString(),width:230,fit:BoxFit.cover,memCacheWidth:720)))
+              Stack(children:[
+                IgnorePointer(child:ClipRRect(borderRadius:BorderRadius.circular(16),child:CachedNetworkImage(imageUrl:(v['mediaUrl']??'').toString(),width:230,fit:BoxFit.cover,memCacheWidth:720))),
+                if(tepkiler.isNotEmpty)_ozelMedyaTepkiBalonu(d.reference,sayilar,tepkiler.length),
+              ])
             else if(video)
-              IgnorePointer(child:ClipRRect(borderRadius:BorderRadius.circular(16),child:NgelXGrupVideoMesaj(url:(v['videoUrl']??v['mediaUrl']??'').toString(),compact:true)))
+              Stack(children:[
+                IgnorePointer(child:ClipRRect(borderRadius:BorderRadius.circular(16),child:NgelXGrupVideoMesaj(url:(v['videoUrl']??v['mediaUrl']??'').toString(),compact:true))),
+                if(tepkiler.isNotEmpty)_ozelMedyaTepkiBalonu(d.reference,sayilar,tepkiler.length),
+              ])
             else if(shared)
               IgnorePointer(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
                 Row(children:[Icon(Icons.play_circle_fill_rounded,color:ben?Colors.white:mavi),const SizedBox(width:7),Text('NgelX paylaşımı',style:TextStyle(color:ben?Colors.white:Colors.black87,fontWeight:FontWeight.w900))]),
@@ -16180,7 +16275,7 @@ class _SohbetPageState extends State<SohbetPage> {
               })
             else Text(gosterilecekMetin.isEmpty?'Mesaj içeriği bulunamadı':gosterilecekMetin,softWrap:true,style:TextStyle(color:ben?Colors.white:Colors.black87,fontSize:fontSize,height:1.3,fontStyle:gizlenecek?FontStyle.italic:FontStyle.normal)),
             if(v['editedAt']!=null)Text('düzenlendi',style:TextStyle(fontSize:9,color:ben?Colors.white60:Colors.black38)),
-            if(sayilar.isNotEmpty)Padding(
+            if(!sadeMedya&&sayilar.isNotEmpty)Padding(
               padding:const EdgeInsets.only(top:7),
               child:Wrap(spacing:5,runSpacing:5,children:sayilar.entries.map((e)=>Container(
                 padding:const EdgeInsets.symmetric(horizontal:7,vertical:3),

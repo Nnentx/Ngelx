@@ -13,10 +13,10 @@ if (keystorePropertiesFile.exists()) {
     keystorePropertiesFile.inputStream().use { keystoreProperties.load(it) }
 }
 
-// Paket 1 test APK can be installed next to the existing NgelX app without
+// Paket 2 test APK can be installed next to the existing NgelX app without
 // replacing/uninstalling it. CI enables this property only for the test build.
-val ngelxP1SideBySide =
-    (project.findProperty("ngelxP1SideBySide") as String?)?.toBoolean() ?: false
+val ngelxP2SideBySide =
+    (project.findProperty("ngelxP2SideBySide") as String?)?.toBoolean() ?: false
 
 android {
     namespace = "com.nnentx.ngelx_app"
@@ -29,13 +29,13 @@ android {
     }
 
     defaultConfig {
-        applicationId = if (ngelxP1SideBySide) {
-            "com.nnentx.ngelx_app.p1test"
+        applicationId = if (ngelxP2SideBySide) {
+            "com.nnentx.ngelx_app.p2test"
         } else {
             "com.nnentx.ngelx_app"
         }
         manifestPlaceholders["appLabel"] =
-            if (ngelxP1SideBySide) "NgelX P1 Test" else "NgelX"
+            if (ngelxP2SideBySide) "NgelX P2 Test" else "NgelX"
 
         minSdk = 23
         targetSdk = flutter.targetSdkVersion
