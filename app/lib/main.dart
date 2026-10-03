@@ -11541,13 +11541,38 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
   int efekt=0,yenidenBaglanmaDenemesi=0;
   String? hata,bitisDurumu;
   String aramaAdminUid='',odaMuzikUrl='',odaMuzikBaslik='',_sonMuzikImza='';
+  String aramaBaslik='',aramaFoto='';
+
+  Future<void> _ozelAramaKimliginiYenile(Map<String,dynamic> veri)async{
+    final me=FirebaseAuth.instance.currentUser?.uid;
+    if(me==null||veri['isGroup']==true)return;
+    final uyeler=List<String>.from(veri['members']??const[]);
+    if(uyeler.length!=2)return;
+    final diger=uyeler.firstWhere((x)=>x!=me,orElse:()=>'');
+    if(diger.isEmpty)return;
+    try{
+      final p=await _aramaProfil(diger);
+      final v=p.data()??<String,dynamic>{};
+      final yeniAd=(v['displayName']??v['username']??aramaBaslik).toString().trim();
+      final yeniFoto=(v['photoUrl']??aramaFoto).toString().trim();
+      if(mounted&&(yeniAd.isNotEmpty||yeniFoto.isNotEmpty)&&(yeniAd!=aramaBaslik||yeniFoto!=aramaFoto)){
+        setState((){
+          if(yeniAd.isNotEmpty)aramaBaslik=yeniAd;
+          if(yeniFoto.isNotEmpty)aramaFoto=yeniFoto;
+        });
+      }
+    }catch(_){}
+  }
 
   @override void initState(){
     super.initState();
+    aramaBaslik=widget.baslik;
+    aramaFoto=widget.foto;
     aramaDurumAboneligi=widget.aramaRef.snapshots().listen((d){
       final veri=d.data()??<String,dynamic>{},durum=(d.data()?['callStatus']??'').toString();
       final yeniAdmin=(veri['callStartedBy']??'').toString();
       if(yeniAdmin!=aramaAdminUid&&mounted)setState(()=>aramaAdminUid=yeniAdmin);
+      unawaited(_ozelAramaKimliginiYenile(veri));
       final me=FirebaseAuth.instance.currentUser?.uid,atilan=List<String>.from(veri['callKickedUids']??const[]);
       if(me!=null&&atilan.contains(me)&&!bitiyor){unawaited(_adminTarafindanAtildi());return;}
       if(!widget.goruntulu)unawaited(_odaMuzikSenkronla(veri));
@@ -11976,22 +12001,56 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
     super.dispose();
   }
 
-  Widget _efektliVideo(lk.VideoTrack track){
-    Widget w=lk.VideoTrackRenderer(track,fit:lk.VideoViewFit.cover);
-    if(efekt==1)w=ColorFiltered(colorFilter:const ColorFilter.mode(Color(0x33FF8A00),BlendMode.softLight),child:w);
-    if(efekt==2)w=ColorFiltered(colorFilter:const ColorFilter.mode(Color(0x332C7BFF),BlendMode.softLight),child:w);
-    if(efekt==3)w=ColorFiltered(
-      colorFilter:const ColorFilter.matrix(<double>[
-        0.2126,0.7152,0.0722,0,0,
-        0.2126,0.7152,0.0722,0,0,
-        0.2126,0.7152,0.0722,0,0,
-        0,0,0,1,0,
-      ]),
-      child:w,
-    );
-    if(rotus)w=ColorFiltered(colorFilter:const ColorFilter.mode(Color(0x22FFFFFF),BlendMode.screen),child:w);
-    if(bulanik)w=ImageFiltered(imageFilter:ui.ImageFilter.blur(sigmaX:5,sigmaY:5),child:w);
-    return w;
+  Widget _efektliVideo(lk.VideoTrack track,{bool uygulaEfekt=true}){
+    Widget stil(Widget w){
+      if(!uygulaEfekt)return w;
+      if(efekt==1)w=ColorFiltered(
+        colorFilter:const ColorFilter.matrix(<double>[
+          1.18,0.06,0,0,12,
+          0,1.07,0,0,3,
+          0,0,0.84,0,-8,
+          0,0,0,1,0,
+        ]),
+        child:w,
+      );
+      if(efekt==2)w=ColorFiltered(
+        colorFilter:const ColorFilter.matrix(<double>[
+          0.86,0,0.04,0,-6,
+          0,1.02,0.04,0,0,
+          0,0.05,1.22,0,10,
+          0,0,0,1,0,
+        ]),
+        child:w,
+      );
+      if(efekt==3)w=ColorFiltered(
+        colorFilter:const ColorFilter.matrix(<double>[
+          0.2126,0.7152,0.0722,0,0,
+          0.2126,0.7152,0.0722,0,0,
+          0.2126,0.7152,0.0722,0,0,
+          0,0,0,1,0,
+        ]),
+        child:w,
+      );
+      if(rotus)w=ColorFiltered(colorFilter:const ColorFilter.mode(Color(0x22FFFFFF),BlendMode.screen),child:w);
+      return w;
+    }
+
+    Widget renderer()=>stil(lk.VideoTrackRenderer(track,fit:lk.VideoViewFit.cover));
+    if(!uygulaEfekt||!bulanik)return renderer();
+
+    // Arka katmanı bulanıklaştırıp merkezdeki kişiyi keskin tut.
+    // Bu, tüm yüzü bulanıklaştıran eski tam-kare filtreden daha doğal bir portre etkisi verir.
+    return Stack(fit:StackFit.expand,children:[
+      ImageFiltered(imageFilter:ui.ImageFilter.blur(sigmaX:10,sigmaY:10),child:renderer()),
+      Align(
+        alignment:const Alignment(0,-.10),
+        child:FractionallySizedBox(
+          widthFactor:.72,
+          heightFactor:.86,
+          child:ClipOval(child:renderer()),
+        ),
+      ),
+    ]);
   }
 
   Future<void> efektSec()async{
@@ -12314,7 +12373,7 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
         boxShadow:const [BoxShadow(color:Color(0x28000000),blurRadius:18,offset:Offset(0,8))],
       ),
       child:Stack(fit:StackFit.expand,children:[
-        if(widget.goruntulu&&track!=null)_efektliVideo(track) else Center(child:_katilimciAvatar(p,yerel:yerel,radius:45)),
+        if(widget.goruntulu&&track!=null)_efektliVideo(track,uygulaEfekt:yerel) else Center(child:_katilimciAvatar(p,yerel:yerel,radius:45)),
         Positioned(
           left:10,right:10,bottom:10,
           child:Container(
@@ -12421,10 +12480,10 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
         margin:const EdgeInsets.fromLTRB(12,8,12,0),
         clipBehavior:Clip.antiAlias,
         decoration:BoxDecoration(color:ngelxCallCard,borderRadius:BorderRadius.circular(28),border:Border.all(color:Colors.white10)),
-        child:ana!=null?_efektliVideo(ana):Center(child:Column(mainAxisSize:MainAxisSize.min,children:[
-          CircleAvatar(radius:52,backgroundColor:const Color(0xFFE9DDFF),backgroundImage:widget.foto.isEmpty?null:CachedNetworkImageProvider(widget.foto),child:widget.foto.isEmpty?const Icon(Icons.person_rounded,color:ngelxPremiumPurple,size:48):null),
+        child:ana!=null?_efektliVideo(ana,uygulaEfekt:identical(ana,yerel)):Center(child:Column(mainAxisSize:MainAxisSize.min,children:[
+          CircleAvatar(radius:52,backgroundColor:const Color(0xFFE9DDFF),backgroundImage:aramaFoto.isEmpty?null:CachedNetworkImageProvider(aramaFoto),child:aramaFoto.isEmpty?const Icon(Icons.person_rounded,color:ngelxPremiumPurple,size:48):null),
           const SizedBox(height:14),
-          Text(baglaniyor?'Bağlanıyor…':'Görüntü bekleniyor…',style:const TextStyle(color:Colors.white70,fontWeight:FontWeight.w700)),
+          Text(baglaniyor?'Bağlanıyor…':!kamera?'Kamera kapalı':'Görüntü bekleniyor…',style:const TextStyle(color:Colors.white70,fontWeight:FontWeight.w700)),
         ])),
       )),
       Positioned(top:18,left:20,child:ngelxCallMiniButton(Icons.settings_rounded,aramaAyarlari)),
@@ -12433,7 +12492,7 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
         padding:const EdgeInsets.symmetric(horizontal:14,vertical:10),
         decoration:BoxDecoration(color:Colors.black.withValues(alpha:.45),borderRadius:BorderRadius.circular(18),border:Border.all(color:Colors.white10)),
         child:Column(children:[
-          Text(widget.baslik,textAlign:TextAlign.center,style:const TextStyle(color:Colors.white,fontSize:22,fontWeight:FontWeight.w900)),
+          Text(aramaBaslik,textAlign:TextAlign.center,style:const TextStyle(color:Colors.white,fontSize:22,fontWeight:FontWeight.w900)),
           Text(yenidenBaglaniyor?'Yeniden bağlanıyor…':baglaniyor?'Aranıyor…':'Görüntülü arama • '+_aramaSureYazi(),style:const TextStyle(color:Colors.white70,fontSize:12,fontWeight:FontWeight.w600)),
         ]),
       )),
@@ -12444,10 +12503,10 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
     Container(
       padding:const EdgeInsets.all(5),
       decoration:const BoxDecoration(shape:BoxShape.circle,gradient:LinearGradient(colors:[Color(0xFFB77BFF),Color(0xFF6F49E8)]),boxShadow:[BoxShadow(color:Color(0x557A50E8),blurRadius:30,spreadRadius:4)]),
-      child:CircleAvatar(radius:66,backgroundColor:const Color(0xFFE9DDFF),backgroundImage:widget.foto.isEmpty?null:CachedNetworkImageProvider(widget.foto),child:widget.foto.isEmpty?const Icon(Icons.call_rounded,color:ngelxPremiumPurple,size:62):null),
+      child:CircleAvatar(radius:66,backgroundColor:const Color(0xFFE9DDFF),backgroundImage:aramaFoto.isEmpty?null:CachedNetworkImageProvider(aramaFoto),child:aramaFoto.isEmpty?const Icon(Icons.call_rounded,color:ngelxPremiumPurple,size:62):null),
     ),
     const SizedBox(height:22),
-    Text(widget.baslik,textAlign:TextAlign.center,style:const TextStyle(color:Colors.white,fontSize:29,fontWeight:FontWeight.w900)),
+    Text(aramaBaslik,textAlign:TextAlign.center,style:const TextStyle(color:Colors.white,fontSize:29,fontWeight:FontWeight.w900)),
     const SizedBox(height:7),
     Text(yenidenBaglaniyor?'Yeniden bağlanıyor…':baglaniyor?'Bağlanıyor…':'Sesli arama • '+_aramaSureYazi(),style:const TextStyle(color:Colors.white70,fontSize:15,fontWeight:FontWeight.w600)),
   ])));
