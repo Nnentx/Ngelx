@@ -6657,12 +6657,14 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver,Rou
   bool _rotaGorunur=true;
   bool temizGorunum=false;
   bool _otomatikGecisYapildi=false;
+  late bool _otomatikKaydirmaAktif;
 
   String get videoId => widget.videoId;
 
   @override
   void initState() {
     super.initState();
+    _otomatikKaydirmaAktif=widget.otomatikKaydirma;
     WidgetsBinding.instance.addObserver(this);
 
     kontrol = VideoPlayerController.networkUrl(
@@ -6696,7 +6698,7 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver,Rou
     try{
       await kontrol.initialize();
       await kontrol.setLooping(
-        widget.trimEndMs<=0&&!(widget.otomatikKaydirma&&widget.sonrakiIcerigeGec!=null),
+        widget.trimEndMs<=0&&!(_otomatikKaydirmaAktif&&widget.sonrakiIcerigeGec!=null),
       );
       await kontrol.setVolume(widget.audioUrl.isNotEmpty?widget.originalAudioVolume.clamp(0,1).toDouble():1);
       if(widget.trimStartMs>0){
@@ -6734,13 +6736,15 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver,Rou
     final bitisMs=widget.trimEndMs>0
       ?widget.trimEndMs
       :kontrol.value.duration.inMilliseconds;
-    if(bitisMs<=0||kontrol.value.position.inMilliseconds<bitisMs-120)return;
+    if(bitisMs<=0||kontrol.value.position.inMilliseconds<bitisMs-350)return;
 
-    if(widget.otomatikKaydirma&&widget.aktif&&widget.sonrakiIcerigeGec!=null){
+    if(_otomatikKaydirmaAktif&&widget.aktif&&widget.sonrakiIcerigeGec!=null){
       if(_otomatikGecisYapildi)return;
       _otomatikGecisYapildi=true;
       _oynatmalariDuraklat();
-      widget.sonrakiIcerigeGec!();
+      WidgetsBinding.instance.addPostFrameCallback((_){
+        if(mounted&&widget.aktif)widget.sonrakiIcerigeGec?.call();
+      });
       return;
     }
 
@@ -7046,8 +7050,9 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver,Rou
                         secondary:const Icon(Icons.swipe_vertical_rounded,color:Colors.black87),
                         title:const Text('Otomatik kaydırma',style:TextStyle(fontWeight:FontWeight.w800)),
                         subtitle:const Text('Video bitince sonraki içeriğe geç'),
-                        value:widget.otomatikKaydirma,
+                        value:_otomatikKaydirmaAktif,
                         onChanged:widget.otomatikKaydirmaDegistir==null?null:(v){
+                          if(mounted)setState(()=>_otomatikKaydirmaAktif=v);
                           widget.otomatikKaydirmaDegistir!(v);
                           _otomatikGecisYapildi=false;
                           if(hazir){
@@ -7107,11 +7112,14 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver,Rou
   @override
   void didUpdateWidget(covariant VideoKarti oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if(oldWidget.otomatikKaydirma!=widget.otomatikKaydirma&&hazir){
+    if(oldWidget.otomatikKaydirma!=widget.otomatikKaydirma){
+      _otomatikKaydirmaAktif=widget.otomatikKaydirma;
       _otomatikGecisYapildi=false;
-      unawaited(kontrol.setLooping(
-        widget.trimEndMs<=0&&!(widget.otomatikKaydirma&&widget.sonrakiIcerigeGec!=null),
-      ));
+      if(hazir){
+        unawaited(kontrol.setLooping(
+          widget.trimEndMs<=0&&!(_otomatikKaydirmaAktif&&widget.sonrakiIcerigeGec!=null),
+        ));
+      }
     }
     if(widget.aktif&&!oldWidget.aktif){
       _otomatikGecisYapildi=false;
