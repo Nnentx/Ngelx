@@ -1,0 +1,52 @@
+name: Work P1 Inspect Source
+
+on:
+  push:
+    branches:
+      - work/final-consolidated-p1
+    paths:
+      - '.github/workflows/work-p1-inspect-source.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Print focused source snippets
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path("app/lib/main.dart")
+          lines = path.read_text(encoding="utf-8").splitlines()
+          terms = [
+              "_aramaSonucuAc",
+              "_yanitlananMesajaGit",
+              "class SohbetMesajAramaPage",
+              "SohbetMesajAramaPage",
+              "hiddenMessageIds_",
+              "_efektliVideo",
+              "bulanik",
+              "Mesaj ara",
+              "Sohbette ara",
+              "GrupMesaj",
+          ]
+          seen = set()
+          for term in terms:
+              hits = [i for i, line in enumerate(lines) if term in line]
+              print(f"\n===== TERM: {term} HITS={len(hits)} =====")
+              for i in hits[:12]:
+                  start=max(0,i-90)
+                  end=min(len(lines),i+130)
+                  key=(start,end)
+                  if key in seen:
+                      continue
+                  seen.add(key)
+                  print(f"\n--- {term} around line {i+1} ({start+1}-{end}) ---")
+                  for n in range(start,end):
+                      print(f"{n+1:06d}: {lines[n]}")
