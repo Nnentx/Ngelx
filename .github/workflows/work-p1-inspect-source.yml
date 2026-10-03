@@ -40,6 +40,12 @@ jobs:
               "_mesajAkisiniYenile",
               "Widget mesajKarti",
               "mesajKarti(",
+              "GrupPage",
+              "GrupBilgiPage",
+              "_grupMesajOnbellek",
+              "_mesajAkisiniYenile",
+              "Widget mesajKarti",
+              "mesajKarti(",
               "Grup sohbet",
               "GrupPage",
           ]
