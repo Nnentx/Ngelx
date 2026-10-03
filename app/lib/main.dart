@@ -192,8 +192,8 @@ const ngelxPrivateBlueInk = Color(0xFF10213A);
 
 // Build 372: settings/about must reflect the installed build instead of the old 368 fallback.
 // Release builds can still override these with --dart-define.
-const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.153');
-const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '374');
+const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.154');
+const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '375');
 const ngelxGroupBorder = Color(0xFFD9EEE0);
 
 final GlobalKey<NavigatorState> ngelxNavigatorKey=GlobalKey<NavigatorState>();
@@ -4850,8 +4850,8 @@ class _AnaEkranState extends State<AnaEkran> {
                   statusBarColor:Colors.transparent,
                   statusBarIconBrightness:Brightness.dark,
                   statusBarBrightness:Brightness.light,
-                  systemNavigationBarColor:Colors.white,
-                  systemNavigationBarIconBrightness:Brightness.dark,
+                  systemNavigationBarColor:Colors.black,
+                  systemNavigationBarIconBrightness:Brightness.light,
                 ),
             child:Scaffold(
               body:Stack(children:[
@@ -4864,28 +4864,24 @@ class _AnaEkranState extends State<AnaEkran> {
               bottomNavigationBar:akis&&temizAkis
                 ?const SizedBox.shrink()
                 :Container(
-                  decoration:BoxDecoration(
-                    color:akis?Colors.black:Colors.white,
-                    border:Border(top:BorderSide(color:akis?const Color(0xFF161616):const Color(0xFFE7E9EE))),
-                    boxShadow:[BoxShadow(color:akis?const Color(0x66000000):const Color(0x1A000000),blurRadius:18)],
+                  decoration:const BoxDecoration(
+                    color:Colors.black,
+                    border:Border(top:BorderSide(color:Color(0xFF161616))),
+                    boxShadow:[BoxShadow(color:Color(0x66000000),blurRadius:18)],
                   ),
                   child:NavigationBarTheme(
                     data:NavigationBarThemeData(
                       height:76,
-                      backgroundColor:akis?Colors.black:Colors.white,
-                      indicatorColor:akis?Colors.transparent:const Color(0xFFE9DDFF),
+                      backgroundColor:Colors.black,
+                      indicatorColor:Colors.transparent,
                       indicatorShape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(18)),
                       labelTextStyle:WidgetStateProperty.resolveWith((s)=>TextStyle(
-                        color:akis
-                          ?(s.contains(WidgetState.selected)?Colors.white:Colors.white60)
-                          :(s.contains(WidgetState.selected)?mor:Colors.black54),
+                        color:s.contains(WidgetState.selected)?Colors.white:Colors.white60,
                         fontSize:11,
                         fontWeight:s.contains(WidgetState.selected)?FontWeight.w900:FontWeight.w600,
                       )),
                       iconTheme:WidgetStateProperty.resolveWith((s)=>IconThemeData(
-                        color:akis
-                          ?(s.contains(WidgetState.selected)?Colors.white:Colors.white60)
-                          :(s.contains(WidgetState.selected)?mor:Colors.black54),
+                        color:s.contains(WidgetState.selected)?Colors.white:Colors.white60,
                         size:s.contains(WidgetState.selected)?28:25,
                       )),
                     ),
@@ -6218,29 +6214,105 @@ class _GorselYaziKartiState extends State<GorselYaziKarti> with RouteAware {
     );
   }
 
+  void _temizEkranModunuAc(){
+    if(!mounted)return;
+    setState(()=>temizGorunum=true);
+    ngelxAkisTemizGorunum.value=true;
+  }
+
+  void _temizEkranModunuKapat(){
+    if(!mounted)return;
+    setState(()=>temizGorunum=false);
+    ngelxAkisTemizGorunum.value=false;
+  }
+
   Future<void> uzunBasmaMenusu() async {
-    final sahibi = FirebaseAuth.instance.currentUser?.uid == widget.veri['ownerId'];
-    await showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      builder: (ctx) => Theme(
-        data: ThemeData.light(),
-        child: SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(width: 42, height: 4, margin: const EdgeInsets.all(12), decoration: BoxDecoration(color: Colors.black26, borderRadius: BorderRadius.circular(9))),
-              if (indirilebilir && (widget.veri['mediaUrl']??'').isNotEmpty) ListTile(leading: const Icon(Icons.download_rounded, color: mavi), title: const Text('İndir'), onTap: () { Navigator.pop(ctx); fotografiKaydet(); }),
-              ListTile(leading: const Icon(Icons.heart_broken_outlined, color: Colors.black87), title: const Text('İlgilenmiyorum'), subtitle: const Text('Benzer içerikleri azalt'), onTap: () { Navigator.pop(ctx); ngelxIcerikGizle(context, icerikId, ilgilenmiyorum: true); }),
-              ListTile(leading: const Icon(Icons.visibility_off_outlined, color: Colors.black87), title: const Text('İçeriği gizle'), onTap: () { Navigator.pop(ctx); ngelxIcerikGizle(context, icerikId); }),
-              ListTile(leading: const Icon(Icons.link_rounded, color: Colors.blue), title: const Text('Bağlantıyı kopyala'), onTap: () async { await Clipboard.setData(ClipboardData(text: ngelxIcerikLink(icerikId))); if (ctx.mounted) Navigator.pop(ctx); }),
-              ListTile(leading: const Icon(Icons.flag_outlined, color: Colors.orange), title: const Text('Bildir / Şikâyet et'), onTap: () { Navigator.pop(ctx); sikayetEt(context, hedefTuru: 'paylasim', hedefId: icerikId, hedefUid: (widget.veri['ownerId'] ?? '').toString()); }),
-              if (!sahibi) ListTile(leading: const Icon(Icons.block, color: Colors.red), title: const Text('Kullanıcıyı engelle', style: TextStyle(color: Colors.red)), onTap: () { Navigator.pop(ctx); kullaniciyiEngelle(context, (widget.veri['ownerId'] ?? '').toString()); }),
-              if (sahibi) ListTile(leading: const Icon(Icons.delete_forever, color: Colors.red), title: const Text('PAYLAŞIMI SİL', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)), onTap: () { Navigator.pop(ctx); kendiPaylasiminiSil(context, icerikId, widget.veri); }),
-            ],
+    final sahibi=FirebaseAuth.instance.currentUser?.uid==widget.veri['ownerId'];
+    final medyaVar=(widget.veri['mediaUrl']??'').toString().trim().isNotEmpty;
+    await showModalBottomSheet<void>(
+      context:context,
+      isScrollControlled:true,
+      backgroundColor:Colors.transparent,
+      builder:(ctx)=>Theme(
+        data:ThemeData.light(),
+        child:SafeArea(
+          top:false,
+          child:Container(
+            constraints:BoxConstraints(maxHeight:MediaQuery.sizeOf(ctx).height*.72),
+            padding:const EdgeInsets.fromLTRB(14,10,14,18),
+            decoration:const BoxDecoration(
+              color:Color(0xFFF7F7F8),
+              borderRadius:BorderRadius.vertical(top:Radius.circular(30)),
+            ),
+            child:SingleChildScrollView(
+              child:Column(mainAxisSize:MainAxisSize.min,children:[
+                Container(width:48,height:5,margin:const EdgeInsets.only(bottom:12),decoration:BoxDecoration(color:Colors.black26,borderRadius:BorderRadius.circular(9))),
+                Container(
+                  decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(22)),
+                  child:Column(children:[
+                    if(indirilebilir&&medyaVar)ListTile(
+                      leading:const Icon(Icons.download_rounded,color:Colors.black87),
+                      title:const Text('İndir',style:TextStyle(fontWeight:FontWeight.w800)),
+                      onTap:(){Navigator.pop(ctx);fotografiKaydet();},
+                    ),
+                    ListTile(
+                      leading:const Icon(Icons.heart_broken_outlined,color:Colors.black87),
+                      title:const Text('İlgilenmiyorum',style:TextStyle(fontWeight:FontWeight.w800)),
+                      onTap:(){Navigator.pop(ctx);ngelxIcerikGizle(context,icerikId,ilgilenmiyorum:true);},
+                    ),
+                    ListTile(
+                      leading:const Icon(Icons.flag_outlined,color:Colors.black87),
+                      title:const Text('Bildir',style:TextStyle(fontWeight:FontWeight.w800)),
+                      onTap:(){Navigator.pop(ctx);sikayetEt(context,hedefTuru:'paylasim',hedefId:icerikId,hedefUid:(widget.veri['ownerId']??'').toString());},
+                    ),
+                  ]),
+                ),
+                const SizedBox(height:12),
+                Container(
+                  decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(22)),
+                  child:Column(children:[
+                    ListTile(
+                      leading:const Icon(Icons.fullscreen_rounded,color:Colors.black87),
+                      title:const Text('Temiz ekran modu',style:TextStyle(fontWeight:FontWeight.w800)),
+                      subtitle:const Text('Tekrar dokununca normal görünüm geri gelir'),
+                      onTap:(){
+                        Navigator.pop(ctx);
+                        Future<void>.delayed(const Duration(milliseconds:100),_temizEkranModunuAc);
+                      },
+                    ),
+                    ListTile(
+                      leading:const Icon(Icons.translate_rounded,color:Colors.black87),
+                      title:const Text('Alt yazılar ve çeviri',style:TextStyle(fontWeight:FontWeight.w800)),
+                      onTap:()async{
+                        Navigator.pop(ctx);
+                        await Future<void>.delayed(const Duration(milliseconds:100));
+                        if(mounted)await icerikAracMenusu(context,icerikId);
+                      },
+                    ),
+                    ListTile(
+                      leading:const Icon(Icons.visibility_off_outlined,color:Colors.black87),
+                      title:const Text('İçeriği gizle',style:TextStyle(fontWeight:FontWeight.w700)),
+                      onTap:(){Navigator.pop(ctx);ngelxIcerikGizle(context,icerikId);},
+                    ),
+                    ListTile(
+                      leading:const Icon(Icons.link_rounded,color:Colors.black87),
+                      title:const Text('Bağlantıyı kopyala',style:TextStyle(fontWeight:FontWeight.w700)),
+                      onTap:()async{await Clipboard.setData(ClipboardData(text:ngelxIcerikLink(icerikId)));if(ctx.mounted)Navigator.pop(ctx);},
+                    ),
+                    if(!sahibi)ListTile(
+                      leading:const Icon(Icons.block,color:Colors.redAccent),
+                      title:const Text('Kullanıcıyı engelle',style:TextStyle(color:Colors.redAccent,fontWeight:FontWeight.w700)),
+                      onTap:(){Navigator.pop(ctx);kullaniciyiEngelle(context,(widget.veri['ownerId']??'').toString());},
+                    ),
+                    if(sahibi)ListTile(
+                      leading:const Icon(Icons.delete_forever,color:Colors.red),
+                      title:const Text('PAYLAŞIMI SİL',style:TextStyle(color:Colors.red,fontWeight:FontWeight.w900)),
+                      onTap:(){Navigator.pop(ctx);kendiPaylasiminiSil(context,icerikId,widget.veri);},
+                    ),
+                  ]),
+                ),
+              ]),
+            ),
           ),
         ),
       ),
@@ -6322,19 +6394,9 @@ class _GorselYaziKartiState extends State<GorselYaziKarti> with RouteAware {
       }
     }
     return GestureDetector(
-      onLongPressStart:fotoListesi.isEmpty?null:(_){
-        setState(()=>temizGorunum=true);
-        ngelxAkisTemizGorunum.value=true;
-      },
-      onLongPressEnd:fotoListesi.isEmpty?null:(_){
-        if(mounted)setState(()=>temizGorunum=false);
-        ngelxAkisTemizGorunum.value=false;
-      },
-      onLongPressCancel:fotoListesi.isEmpty?null:(){
-        if(mounted)setState(()=>temizGorunum=false);
-        ngelxAkisTemizGorunum.value=false;
-      },
-      onDoubleTap: ciftTikBegen,
+      onLongPress:uzunBasmaMenusu,
+      onTap:temizGorunum?_temizEkranModunuKapat:null,
+      onDoubleTap:temizGorunum?null:ciftTikBegen,
       child: Container(
         color: const Color(0xFF09090F),
         child: Stack(
@@ -6847,33 +6909,141 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver,Rou
     if(mounted&&widget.aktif&&!duraklatildi)_oynatmalariBaslat();
   }
 
-  Future<void> uzunBasmaMenusu() async {
-    final sahibi = FirebaseAuth.instance.currentUser?.uid == widget.ownerId;
-    await showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      builder: (ctx) => Theme(
-        data: ThemeData.light(),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(14, 12, 14, 22),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(width: 42, height: 4, margin: const EdgeInsets.only(bottom: 12), decoration: BoxDecoration(color: Colors.black26, borderRadius: BorderRadius.circular(9))),
-                if (widget.indirilebilir || sahibi) ListTile(leading: const Icon(Icons.download_rounded, color: mavi), title: const Text('İndir'), onTap: () { Navigator.pop(ctx); videoyuGaleriyeKaydet(); }),
-                ListTile(leading: const Icon(Icons.heart_broken_outlined, color: Colors.black87), title: const Text('İlgilenmiyorum'), subtitle: const Text('Benzer içerikleri azalt'), onTap: () { Navigator.pop(ctx); ngelxIcerikGizle(context, videoId, ilgilenmiyorum: true); }),
-                ListTile(leading: const Icon(Icons.visibility_off_outlined, color: Colors.black87), title: const Text('İçeriği gizle'), onTap: () { Navigator.pop(ctx); ngelxIcerikGizle(context, videoId); }),
-                ListTile(leading: const Icon(Icons.link_rounded, color: Colors.blue), title: const Text('Bağlantıyı kopyala'), onTap: () async { await Clipboard.setData(ClipboardData(text: ngelxIcerikLink(videoId))); if (ctx.mounted) Navigator.pop(ctx); }),
-                ListTile(leading: const Icon(Icons.flag_outlined, color: Colors.orange), title: const Text('Bildir / Şikâyet et'), onTap: () { Navigator.pop(ctx); sikayetEt(context, hedefTuru: 'video', hedefId: videoId, hedefUid: widget.ownerId); }),
-                if (!sahibi) ListTile(leading: const Icon(Icons.block, color: Colors.red), title: const Text('Kullanıcıyı engelle', style: TextStyle(color: Colors.red)), onTap: () { Navigator.pop(ctx); kullaniciyiEngelle(context, widget.ownerId); }),
-                if (sahibi) ListTile(leading: const Icon(Icons.delete_forever, color: Colors.red), title: const Text('PAYLAŞIMI SİL', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)), onTap: () { Navigator.pop(ctx); kendiPaylasiminiSil(context, videoId, {'ownerId': widget.ownerId, 'videoUrl': widget.adres}); }),
+  void _temizEkranModunuAc(){
+    if(!mounted)return;
+    setState(()=>temizGorunum=true);
+    ngelxAkisTemizGorunum.value=true;
+  }
 
-              ],
+  void _temizEkranModunuKapat(){
+    if(!mounted)return;
+    setState(()=>temizGorunum=false);
+    ngelxAkisTemizGorunum.value=false;
+  }
+
+  Future<void> uzunBasmaMenusu() async {
+    final sahibi=FirebaseAuth.instance.currentUser?.uid==widget.ownerId;
+    await showModalBottomSheet<void>(
+      context:context,
+      isScrollControlled:true,
+      backgroundColor:Colors.transparent,
+      builder:(ctx)=>Theme(
+        data:ThemeData.light(),
+        child:SafeArea(
+          top:false,
+          child:Container(
+            constraints:BoxConstraints(maxHeight:MediaQuery.sizeOf(ctx).height*.78),
+            padding:const EdgeInsets.fromLTRB(14,10,14,18),
+            decoration:const BoxDecoration(
+              color:Color(0xFFF7F7F8),
+              borderRadius:BorderRadius.vertical(top:Radius.circular(30)),
             ),
+            child:StatefulBuilder(builder:(ctx,setSheet){
+              final hiz=hazir?kontrol.value.playbackSpeed:1.0;
+              return SingleChildScrollView(
+                child:Column(mainAxisSize:MainAxisSize.min,children:[
+                  Container(width:48,height:5,margin:const EdgeInsets.only(bottom:12),decoration:BoxDecoration(color:Colors.black26,borderRadius:BorderRadius.circular(9))),
+                  Container(
+                    decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(22)),
+                    child:Column(children:[
+                      if(widget.indirilebilir||sahibi)ListTile(
+                        leading:const Icon(Icons.download_rounded,color:Colors.black87),
+                        title:const Text('İndir',style:TextStyle(fontWeight:FontWeight.w800)),
+                        onTap:(){Navigator.pop(ctx);videoyuGaleriyeKaydet();},
+                      ),
+                      ListTile(
+                        leading:const Icon(Icons.heart_broken_outlined,color:Colors.black87),
+                        title:const Text('İlgilenmiyorum',style:TextStyle(fontWeight:FontWeight.w800)),
+                        onTap:(){Navigator.pop(ctx);ngelxIcerikGizle(context,videoId,ilgilenmiyorum:true);},
+                      ),
+                      ListTile(
+                        leading:const Icon(Icons.flag_outlined,color:Colors.black87),
+                        title:const Text('Bildir',style:TextStyle(fontWeight:FontWeight.w800)),
+                        onTap:(){Navigator.pop(ctx);sikayetEt(context,hedefTuru:'video',hedefId:videoId,hedefUid:widget.ownerId);},
+                      ),
+                    ]),
+                  ),
+                  const SizedBox(height:12),
+                  Container(
+                    decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(22)),
+                    child:Column(children:[
+                      Padding(
+                        padding:const EdgeInsets.fromLTRB(16,10,12,8),
+                        child:Row(children:[
+                          const Icon(Icons.speed_rounded,color:Colors.black87),
+                          const SizedBox(width:12),
+                          const Text('Hız',style:TextStyle(fontSize:16,fontWeight:FontWeight.w800)),
+                          const Spacer(),
+                          ...<double>[.5,1,1.5,2].map((x){
+                            final secili=(hiz-x).abs()<.01;
+                            return Padding(
+                              padding:const EdgeInsets.only(left:5),
+                              child:ChoiceChip(
+                                label:Text('${x}x'),
+                                selected:secili,
+                                showCheckmark:false,
+                                selectedColor:const Color(0xFFF0EBFF),
+                                backgroundColor:const Color(0xFFF1F2F4),
+                                side:BorderSide.none,
+                                labelStyle:TextStyle(color:secili?Colors.black:Colors.black45,fontWeight:FontWeight.w800),
+                                onSelected:hazir?(_)async{
+                                  await kontrol.setPlaybackSpeed(x);
+                                  if(ctx.mounted)setSheet((){});
+                                }:null,
+                              ),
+                            );
+                          }),
+                        ]),
+                      ),
+                      ListTile(
+                        leading:const Icon(Icons.fullscreen_rounded,color:Colors.black87),
+                        title:const Text('Temiz ekran modu',style:TextStyle(fontWeight:FontWeight.w800)),
+                        subtitle:const Text('Tekrar dokununca normal görünüm geri gelir'),
+                        onTap:(){
+                          Navigator.pop(ctx);
+                          Future<void>.delayed(const Duration(milliseconds:100),_temizEkranModunuAc);
+                        },
+                      ),
+                      ListTile(
+                        leading:const Icon(Icons.translate_rounded,color:Colors.black87),
+                        title:const Text('Alt yazılar ve çeviri',style:TextStyle(fontWeight:FontWeight.w800)),
+                        onTap:()async{
+                          Navigator.pop(ctx);
+                          await Future<void>.delayed(const Duration(milliseconds:100));
+                          if(mounted)await icerikAracMenusu(
+                            context,
+                            videoId,
+                            mevcutHiz:kontrol.value.playbackSpeed,
+                            hizDegistir:(x)async=>kontrol.setPlaybackSpeed(x),
+                            medyaUrlOncelikli:widget.adres,
+                          );
+                        },
+                      ),
+                      ListTile(
+                        leading:const Icon(Icons.visibility_off_outlined,color:Colors.black87),
+                        title:const Text('İçeriği gizle',style:TextStyle(fontWeight:FontWeight.w700)),
+                        onTap:(){Navigator.pop(ctx);ngelxIcerikGizle(context,videoId);},
+                      ),
+                      ListTile(
+                        leading:const Icon(Icons.link_rounded,color:Colors.black87),
+                        title:const Text('Bağlantıyı kopyala',style:TextStyle(fontWeight:FontWeight.w700)),
+                        onTap:()async{await Clipboard.setData(ClipboardData(text:ngelxIcerikLink(videoId)));if(ctx.mounted)Navigator.pop(ctx);},
+                      ),
+                      if(!sahibi)ListTile(
+                        leading:const Icon(Icons.block,color:Colors.redAccent),
+                        title:const Text('Kullanıcıyı engelle',style:TextStyle(color:Colors.redAccent,fontWeight:FontWeight.w700)),
+                        onTap:(){Navigator.pop(ctx);kullaniciyiEngelle(context,widget.ownerId);},
+                      ),
+                      if(sahibi)ListTile(
+                        leading:const Icon(Icons.delete_forever,color:Colors.red),
+                        title:const Text('PAYLAŞIMI SİL',style:TextStyle(color:Colors.red,fontWeight:FontWeight.w900)),
+                        onTap:(){Navigator.pop(ctx);kendiPaylasiminiSil(context,videoId,{'ownerId':widget.ownerId,'videoUrl':widget.adres});},
+                      ),
+                    ]),
+                  ),
+                ]),
+              );
+            }),
           ),
         ),
       ),
@@ -6934,19 +7104,12 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver,Rou
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onLongPressStart:(_){
-        setState(()=>temizGorunum=true);
-        ngelxAkisTemizGorunum.value=true;
-      },
-      onLongPressEnd:(_){
-        if(mounted)setState(()=>temizGorunum=false);
-        ngelxAkisTemizGorunum.value=false;
-      },
-      onLongPressCancel:(){
-        if(mounted)setState(()=>temizGorunum=false);
-        ngelxAkisTemizGorunum.value=false;
-      },
+      onLongPress:uzunBasmaMenusu,
       onTap: () {
+        if(temizGorunum){
+          _temizEkranModunuKapat();
+          return;
+        }
         if (!hazir) return;
 
         setState(() {
@@ -6961,7 +7124,7 @@ class _VideoKartiState extends State<VideoKarti> with WidgetsBindingObserver,Rou
           }
         });
       },
-      onDoubleTap: ciftTikBegenVideo,
+      onDoubleTap:temizGorunum?null:ciftTikBegenVideo,
       child: Stack(
         fit: StackFit.expand,
         children: [
@@ -25220,26 +25383,34 @@ class KaydedilenlerPage extends StatelessWidget {
                               backgroundColor:Colors.white,
                               showDragHandle:true,
                               shape:const RoundedRectangleBorder(borderRadius:BorderRadius.vertical(top:Radius.circular(26))),
-                              builder:(sheet)=>SafeArea(child:Padding(
-                                padding:const EdgeInsets.fromLTRB(8,0,8,12),
-                                child:Column(mainAxisSize:MainAxisSize.min,children:[
-                                  const ListTile(
-                                    leading:Icon(Icons.bookmark_rounded,color:mor),
-                                    title:Text('Kaydedilen içerik',style:TextStyle(fontWeight:FontWeight.w900)),
-                                    subtitle:Text('Basılı tutmak içeriği otomatik silmez.'),
-                                  ),
-                                  ListTile(
-                                    leading:const Icon(Icons.bookmark_remove_outlined,color:Colors.redAccent),
-                                    title:const Text('Kaydedilenlerden kaldır',style:TextStyle(color:Colors.redAccent,fontWeight:FontWeight.w800)),
-                                    onTap:()=>Navigator.pop(sheet,true),
-                                  ),
-                                  ListTile(
-                                    leading:const Icon(Icons.close_rounded),
-                                    title:const Text('Vazgeç'),
-                                    onTap:()=>Navigator.pop(sheet,false),
-                                  ),
-                                ]),
-                              )),
+                              builder:(sheet)=>SafeArea(
+                                top:false,
+                                child:Padding(
+                                  padding:const EdgeInsets.fromLTRB(18,0,18,16),
+                                  child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+                                    const Text('Kaydedilen içerik',style:TextStyle(fontSize:18,fontWeight:FontWeight.w900)),
+                                    const SizedBox(height:4),
+                                    const Text('Basılı tutmak içeriği otomatik silmez.',style:TextStyle(color:Colors.black54)),
+                                    const SizedBox(height:12),
+                                    Material(
+                                      color:const Color(0xFFFFF3F4),
+                                      borderRadius:BorderRadius.circular(18),
+                                      child:ListTile(
+                                        leading:const Icon(Icons.bookmark_remove_outlined,color:Colors.redAccent),
+                                        title:const Text('Kaydedilenlerden kaldır',style:TextStyle(color:Colors.redAccent,fontWeight:FontWeight.w800)),
+                                        onTap:()=>Navigator.pop(sheet,true),
+                                      ),
+                                    ),
+                                    const SizedBox(height:10),
+                                    OutlinedButton.icon(
+                                      onPressed:()=>Navigator.pop(sheet,false),
+                                      icon:const Icon(Icons.close_rounded),
+                                      label:const Text('Vazgeç'),
+                                      style:OutlinedButton.styleFrom(minimumSize:const Size.fromHeight(50),foregroundColor:Colors.black87,side:const BorderSide(color:Color(0xFFD9DCE3))),
+                                    ),
+                                  ]),
+                                ),
+                              ),
                             )??false;
                             if(!kaldir)return;
                             await docs[i].reference.delete();
