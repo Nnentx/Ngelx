@@ -13,6 +13,11 @@ if (keystorePropertiesFile.exists()) {
     keystorePropertiesFile.inputStream().use { keystoreProperties.load(it) }
 }
 
+// Paket 1 test APK can be installed next to the existing NgelX app without
+// replacing/uninstalling it. CI enables this property only for the test build.
+val ngelxP1SideBySide =
+    (project.findProperty("ngelxP1SideBySide") as String?)?.toBoolean() ?: false
+
 android {
     namespace = "com.nnentx.ngelx_app"
     compileSdk = flutter.compileSdkVersion
@@ -24,16 +29,16 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.nnentx.ngelx_app"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
+        applicationId = if (ngelxP1SideBySide) {
+            "com.nnentx.ngelx_app.p1test"
+        } else {
+            "com.nnentx.ngelx_app"
+        }
+        manifestPlaceholders["appLabel"] =
+            if (ngelxP1SideBySide) "NgelX P1 Test" else "NgelX"
+
         minSdk = 23
         targetSdk = flutter.targetSdkVersion
-        // Uses the version code from pubspec.yaml. When using split APKs, 1000 * ABI_VERSION
-        // is added automatically by Flutter. (https://developer.android.com/studio/build/configure-apk-splits#configure-APK-versions)
-        // You can force using the value of versionCode by specifying the `-P force-version-code-ignoring-abi=true`
-        // flag during build.
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
@@ -48,8 +53,6 @@ android {
             }
         } else {
             create("ngelxStableTest") {
-                // CI test APK'ları aynı anahtarla imzalansın; rastgele runner
-                // debug anahtarı paket güncellemelerini bozmasın.
                 keyAlias = "androiddebugkey"
                 keyPassword = "android"
                 storeFile = file("${System.getProperty("user.home")}/.android/debug.keystore")
@@ -61,7 +64,6 @@ android {
     buildTypes {
         debug {
             if (!keystorePropertiesFile.exists()) {
-                // CI debug APK'lari da acikca kalici test anahtariyla imzalansin.
                 signingConfig = signingConfigs.getByName("ngelxStableTest")
             }
         }
