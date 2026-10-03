@@ -15621,7 +15621,7 @@ class _SohbetPageState extends State<SohbetPage> {
 
 
   Widget ozelMesajKarti(QueryDocumentSnapshot<Map<String,dynamic>> d,{double fontSize=16,bool goruldu=false,String quickReaction='❤️'}){
-    final v=d.data(),ben=v['senderId']==uid,tur=(v['type']??'text').toString(),silinmis=v['deletedForEveryone']==true||tur=='deleted';
+    final v=d.data(),ben=v['senderId']==uid,tur=(v['type']??'text').toString(),silinmis=v['deletedForEveryone']==true||tur=='deleted',sistem=tur=='system';
     final photo=tur=='photo',video=tur=='video',shared=tur=='shared_content',audio=tur=='audio',file=tur=='file',location=tur=='location',call=tur=='call',storyReply=tur=='story_reply';
     final sadeMedya=photo||video;
     final metin=(v['text']??v['message']??v['content']??'').toString().trim(),saat=mesajSaati(v['createdAt']??v['clientCreatedAt']);
@@ -15630,6 +15630,26 @@ class _SohbetPageState extends State<SohbetPage> {
     final tepkiler=Map<String,dynamic>.from(v['reactions']??{});
     final sayilar=<String,int>{};
     for(final x in tepkiler.values){final e=x.toString();sayilar[e]=(sayilar[e]??0)+1;}
+    if(sistem){
+      return Padding(
+        padding:const EdgeInsets.symmetric(horizontal:18,vertical:8),
+        child:Center(
+          child:Container(
+            padding:const EdgeInsets.symmetric(horizontal:12,vertical:7),
+            decoration:BoxDecoration(
+              color:Colors.white.withValues(alpha:.82),
+              borderRadius:BorderRadius.circular(16),
+              border:Border.all(color:ngelxPrivateBlueBorder),
+            ),
+            child:Text(
+              metin.isEmpty?'Sohbet ayarı değiştirildi':metin,
+              textAlign:TextAlign.center,
+              style:const TextStyle(color:Color(0xFF667085),fontSize:11.5,fontWeight:FontWeight.w700),
+            ),
+          ),
+        ),
+      );
+    }
     if(silinmis){
       return Align(
         alignment:ben?Alignment.centerRight:Alignment.centerLeft,
@@ -16534,6 +16554,32 @@ class SohbetBilgiPage extends StatelessWidget{
   final String uid,ad,foto,chatId;
   const SohbetBilgiPage({super.key,required this.uid,required this.ad,required this.foto,required this.chatId});
 
+  Future<void> _arkaPlanDegisikligiMesaji(DocumentReference<Map<String,dynamic>> ref,String me)async{
+    try{
+      final profil=await FirebaseFirestore.instance.collection('users').doc(me).get();
+      final p=profil.data()??<String,dynamic>{};
+      final auth=FirebaseAuth.instance.currentUser;
+      final adSoyad=(p['displayName']??auth?.displayName??'').toString().trim();
+      final kullanici=(p['username']??'').toString().trim();
+      final gorunen=adSoyad.isNotEmpty?adSoyad:(kullanici.isNotEmpty?kullanici:'Bir kullanıcı');
+      final mesajRef=ref.collection('messages').doc();
+      final batch=FirebaseFirestore.instance.batch();
+      batch.set(mesajRef,{
+        'senderId':me,
+        'type':'system',
+        'systemType':'background_changed',
+        'text':gorunen+' arka planı değiştirdi',
+        'createdAt':FieldValue.serverTimestamp(),
+        'clientCreatedAt':Timestamp.now(),
+      });
+      batch.set(ref,{
+        'lastMessage':gorunen+' arka planı değiştirdi',
+        'updatedAt':FieldValue.serverTimestamp(),
+      },SetOptions(merge:true));
+      await batch.commit().timeout(const Duration(seconds:10));
+    }catch(_){}
+  }
+
   Future<void> takmaAd(BuildContext context)async{
     final me=FirebaseAuth.instance.currentUser?.uid;
     if(me==null)return;
@@ -16645,6 +16691,7 @@ class SohbetBilgiPage extends StatelessWidget{
     }
     if(secim is int){
       await ref.set({'theme_$me':secim},SetOptions(merge:true));
+      await _arkaPlanDegisikligiMesaji(ref,me);
       return;
     }
     if(secim=='removeImage'){
@@ -16663,6 +16710,7 @@ class SohbetBilgiPage extends StatelessWidget{
       ))??false;
       if(!onay)return;
       await ref.set({'backgroundUrl_$me':''},SetOptions(merge:true));
+      await _arkaPlanDegisikligiMesaji(ref,me);
       if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Özel sohbet arka planı kaldırıldı.')));
       return;
     }
@@ -16670,14 +16718,17 @@ class SohbetBilgiPage extends StatelessWidget{
     final kaynak=secim=='camera'?ImageSource.camera:ImageSource.gallery;
     final x=await ngelxResimSec(source:kaynak,imageQuality:76,maxWidth:1280);if(x==null)return;
     try{
-      final yol='chat-backgrounds/'+me+'/'+chatId+'_'+DateTime.now().millisecondsSinceEpoch.toString()+'.jpg';
-      final url=await ngelxMedyaYukleBytes(
-        bytes: await x.readAsBytes(),
-        kind: 'chat-backgrounds',
-        ext: 'jpg',
-        legacyPath: yol,
+      final uzanti=x.name.contains('.')?x.name.split('.').last.toLowerCase():'jpg';
+      final yol='chat-backgrounds/'+me+'/'+chatId+'_'+DateTime.now().millisecondsSinceEpoch.toString()+'.'+uzanti;
+      final url=await ngelxMedyaYukleDosya(
+        dosya:x,
+        kind:'chat-backgrounds',
+        ext:uzanti,
+        legacyPath:yol,
+        contentType:uzanti=='png'?'image/png':uzanti=='webp'?'image/webp':'image/jpeg',
       );
       await ref.set({'backgroundUrl_$me':url},SetOptions(merge:true));
+      await _arkaPlanDegisikligiMesaji(ref,me);
       if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Özel sohbet arka planın kaydedildi.')));
     }catch(e){
       if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Arka plan yüklenemedi: '+e.toString())));
@@ -16836,7 +16887,7 @@ class SohbetBilgiPage extends StatelessWidget{
         builder:(_,s){
           final me=FirebaseAuth.instance.currentUser?.uid,ham=s.data?.data()?['nicknames'],nicks=ham is Map?Map<String,dynamic>.from(ham):<String,dynamic>{},takma=(me==null?'':(nicks[me]??'').toString()).trim(),gorunenAd=takma.isNotEmpty?takma:ad;
           return ListView(
-            padding:const EdgeInsets.fromLTRB(20,8,20,28),
+            padding:const EdgeInsets.fromLTRB(20,8,20,96),
             children:[
               Center(child:Container(
                 padding:const EdgeInsets.all(3),
