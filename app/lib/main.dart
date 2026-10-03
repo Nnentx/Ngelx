@@ -6557,7 +6557,7 @@ class _GorselYaziKartiState extends State<GorselYaziKarti> with RouteAware {
               CanliSayacButonu(ref: FirebaseFirestore.instance.collection('videos').doc(icerikId).collection('comments'), ikon: Icons.mode_comment_outlined, tiklama: yorumlariAc,aktif:widget.aktif),
               IslemButonu(ikon: kaydedildi ? Icons.bookmark : Icons.bookmark_border, yazi: kaydedildi ? 'Kaydedildi' : 'Kaydet', renk: kaydedildi ? mavi : Colors.white, tiklama: icerigiKaydet),
               IslemButonu(ikon: Icons.menu_rounded, yazi: 'Araçlar', tiklama: () => icerikAracMenusu(context,icerikId)),
-              IslemButonu(ikon: Icons.send_outlined, yazi: 'Paylaş', tiklama: paylas),
+              IslemButonu(ikon: Icons.redo_rounded, yazi: 'Paylaş', tiklama: paylas),
             ]),
           ),
           ],
@@ -7440,7 +7440,7 @@ if (!temizGorunum&&kalpAnimasyonu)
                 ),
                 IslemButonu(ikon:Icons.menu_rounded,yazi:'Araçlar',tiklama:()=>icerikAracMenusu(context,videoId,mevcutHiz:kontrol.value.playbackSpeed,hizDegistir:(x)async=>kontrol.setPlaybackSpeed(x),medyaUrlOncelikli:widget.adres)),
                 IslemButonu(
-                  ikon: Icons.send_outlined,
+                  ikon: Icons.redo_rounded,
                   yazi: 'Paylaş',
                   tiklama: videoyuPaylas,
                 ),
