@@ -59,3 +59,74 @@ jobs:
             echo "$body"
             grep -F '"r2":true' <<<"$body"
           done
+
+      - name: Gercek standart medya yukleme testi
+        shell: bash
+        run: |
+          set -euo pipefail
+          API_KEY="$(jq -r '.client[0].api_key[0].current_key' app/android/app/google-services.json)"
+          test -n "$API_KEY"
+          test "$API_KEY" != "null"
+
+          SIGNUP="$(curl --fail-with-body --silent --show-error \
+            -H 'Content-Type: application/json' \
+            -d '{"returnSecureToken":true}' \
+            "https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=$API_KEY" || true)"
+          ID_TOKEN="$(jq -r '.idToken // empty' <<<"$SIGNUP")"
+
+          if [ -z "$ID_TOKEN" ]; then
+            EMAIL="ngelx-p1-ci-$(date +%s)-$RANDOM@example.com"
+            PASSWORD="NgelX-P1-$(date +%s)-A9x!"
+            SIGNUP="$(curl --fail-with-body --silent --show-error \
+              -H 'Content-Type: application/json' \
+              --data "$(jq -nc --arg e "$EMAIL" --arg p "$PASSWORD" '{email:$e,password:$p,returnSecureToken:true}')" \
+              "https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=$API_KEY")"
+            ID_TOKEN="$(jq -r '.idToken // empty' <<<"$SIGNUP")"
+          fi
+
+          test -n "$ID_TOKEN"
+          echo "::add-mask::$ID_TOKEN"
+
+          cleanup_user() {
+            set +e
+            curl --silent --show-error \
+              -H 'Content-Type: application/json' \
+              --data "$(jq -nc --arg t "$ID_TOKEN" '{idToken:$t}')" \
+              "https://identitytoolkit.googleapis.com/v1/accounts:delete?key=$API_KEY" >/dev/null
+          }
+          trap cleanup_user EXIT
+
+          printf 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=' | base64 -d > /tmp/p1-media.png
+          EXPECTED_SHA="$(sha256sum /tmp/p1-media.png | awk '{print $1}')"
+
+          for base in \
+            "https://ngelx-media-p1test.alihancaglar76.workers.dev" \
+            "https://ngelx-upload-p1test.alihancaglar76.workers.dev"; do
+            echo "Upload E2E: $base"
+            RESPONSE="$(curl --fail-with-body --silent --show-error \
+              --retry 3 --retry-all-errors --retry-delay 2 \
+              --connect-timeout 15 --max-time 45 \
+              -X POST \
+              -H "Authorization: Bearer $ID_TOKEN" \
+              -H 'Content-Type: image/png' \
+              --data-binary @/tmp/p1-media.png \
+              "$base/upload?kind=photos&ext=png")"
+            MEDIA_URL="$(jq -r '.url // empty' <<<"$RESPONSE")"
+            KEY="$(jq -r '.key // empty' <<<"$RESPONSE")"
+            test -n "$MEDIA_URL"
+            test -n "$KEY"
+
+            curl --fail-with-body --silent --show-error \
+              --retry 3 --retry-all-errors --retry-delay 2 \
+              --connect-timeout 15 --max-time 30 \
+              "$MEDIA_URL" -o /tmp/p1-media-down.png
+            ACTUAL_SHA="$(sha256sum /tmp/p1-media-down.png | awk '{print $1}')"
+            test "$ACTUAL_SHA" = "$EXPECTED_SHA"
+
+            curl --fail-with-body --silent --show-error \
+              -X DELETE \
+              -H "Authorization: Bearer $ID_TOKEN" \
+              --get --data-urlencode "key=$KEY" \
+              "$base/object" >/dev/null
+            echo "E2E PASS: $base"
+          done
