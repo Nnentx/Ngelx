@@ -14885,6 +14885,8 @@ class _SohbetPageState extends State<SohbetPage> {
   final List<Map<String,String>> mentionOnerileri=[];
   final List<QueryDocumentSnapshot<Map<String,dynamic>>> _mesajOnbellek=<QueryDocumentSnapshot<Map<String,dynamic>>>[];
   final Map<String,GlobalKey> _mesajAnahtarlari=<String,GlobalKey>{};
+  String? _vurgulananMesajId;
+  Timer? _mesajVurguZamanlayici;
   late final Stream<DocumentSnapshot<Map<String,dynamic>>> _chatAkisi;
   late final Stream<QuerySnapshot<Map<String,dynamic>>> _mesajAkisi;
   bool _okunduYaziliyor=false;
@@ -14917,16 +14919,14 @@ class _SohbetPageState extends State<SohbetPage> {
     final hedef=_mesajAnahtarlari[id]?.currentContext;
     if(hedef==null){
       ScaffoldMessenger.of(context).removeCurrentSnackBar();
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Yanıtlanan mesaj şu an ekranda yüklü değil.')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Mesaj şu an ekranda yüklü değil.')));
       return;
     }
-    await Scrollable.ensureVisible(
-      hedef,
-      duration:const Duration(milliseconds:280),
-      curve:Curves.easeOutCubic,
-      alignment:.35,
-    );
+    _mesajVurguZamanlayici?.cancel();
+    setState(()=>_vurgulananMesajId=id);
+    await Scrollable.ensureVisible(hedef,duration:const Duration(milliseconds:320),curve:Curves.easeOutCubic,alignment:.35);
     HapticFeedback.selectionClick();
+    _mesajVurguZamanlayici=Timer(const Duration(seconds:2),(){if(mounted&&_vurgulananMesajId==id)setState(()=>_vurgulananMesajId=null);});
   }
 
   Future<({String? engel,Map<String,dynamic> sohbet,Map<String,dynamic> diger,bool sohbetMevcut})> mesajGonderimHazirligi({bool zorla=false}) async {
@@ -15233,8 +15233,8 @@ class _SohbetPageState extends State<SohbetPage> {
         '🎬 Video',
         bildirim:'Sana bir video gönderdi',
       );
-    }catch(e){
-      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Video gönderilemedi: $e')));
+    }catch(_){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Video gönderilemedi. Bağlantını kontrol edip tekrar dene.')));
     }finally{
       _ozelMedyaIlerlemeBitir();
     }
@@ -15460,19 +15460,17 @@ class _SohbetPageState extends State<SohbetPage> {
 
   Future<void> mesajTepkiDegistir(QueryDocumentSnapshot<Map<String,dynamic>> d,String emoji)async{
     final ben=uid;if(ben==null)return;
-    final mevcut=Map<String,dynamic>.from(d.data()['reactions']??const{});
-    final alan='reactions.'+ben;
-    if((mevcut[ben]??'').toString()==emoji)await d.reference.update({alan:FieldValue.delete()});
-    else await d.reference.set({alan:emoji},SetOptions(merge:true));
+    try{
+      final mevcut=Map<String,dynamic>.from(d.data()['reactions']??const{});
+      if((mevcut[ben]??'').toString()==emoji)mevcut.remove(ben);else mevcut[ben]=emoji;
+      await d.reference.update({'reactions':mevcut});
+    }catch(_){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Tepki eklenemedi. Tekrar dene.')));
+    }
   }
 
   Future<void> mesajKalpBirak(QueryDocumentSnapshot<Map<String,dynamic>> d)async{
-    final ben=uid;if(ben==null)return;
-    try{
-      await d.reference.set({'reactions.$ben':'❤️'},SetOptions(merge:true));
-    }catch(e){
-      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Tepki eklenemedi.')));
-    }
+    await mesajTepkiDegistir(d,'❤️');
   }
 
   Future<String?> mesajTepkisiSec()async=>showModalBottomSheet<String>(
@@ -15558,20 +15556,20 @@ class _SohbetPageState extends State<SohbetPage> {
             child:Column(children:[
               ListTile(
                 leading:const Icon(Icons.send_rounded,color:ngelxPrivateBlue),
-                title:const Text('Gönderildi',style:TextStyle(fontWeight:FontWeight.w800)),
-                subtitle:Text(zaman(tarih)),
+                title:const Text('Gönderildi',style:TextStyle(color:ngelxPrivateBlueInk,fontWeight:FontWeight.w800)),
+                subtitle:Text(zaman(tarih),style:const TextStyle(color:Colors.black54)),
               ),
               const Divider(height:1,indent:58),
               ListTile(
                 leading:Icon(teslimEdildi?Icons.done_rounded:Icons.schedule_rounded,color:teslimEdildi?ngelxPrivateBlue:Colors.black38),
-                title:Text(teslimEdildi?'Teslim edildi':'Henüz teslim edilmedi',style:const TextStyle(fontWeight:FontWeight.w800)),
-                subtitle:Text(teslimEdildi&&sonTeslim is Timestamp?zaman(sonTeslim.toDate().toLocal()):'Karşı tarafın cihazında sohbet açıldığında burada görünür.'),
+                title:Text(teslimEdildi?'Teslim edildi':'Henüz teslim edilmedi',style:const TextStyle(color:ngelxPrivateBlueInk,fontWeight:FontWeight.w800)),
+                subtitle:Text(teslimEdildi&&sonTeslim is Timestamp?zaman(sonTeslim.toDate().toLocal()):'Karşı tarafın cihazında sohbet açıldığında burada görünür.',style:const TextStyle(color:Colors.black54)),
               ),
               const Divider(height:1,indent:58),
               ListTile(
                 leading:Icon(goruldu?Icons.done_all_rounded:Icons.done_rounded,color:goruldu?ngelxPrivateBlue:Colors.black38),
-                title:Text(goruldu?'Görüldü':'Henüz görülmedi',style:const TextStyle(fontWeight:FontWeight.w800)),
-                subtitle:Text(goruldu&&sonOkuma is Timestamp?zaman(sonOkuma.toDate().toLocal()):'Karşı taraf okuduğunda burada görünür.'),
+                title:Text(goruldu?'Görüldü':'Henüz görülmedi',style:const TextStyle(color:ngelxPrivateBlueInk,fontWeight:FontWeight.w800)),
+                subtitle:Text(goruldu&&sonOkuma is Timestamp?zaman(sonOkuma.toDate().toLocal()):'Karşı taraf okuduğunda burada görünür.',style:const TextStyle(color:Colors.black54)),
               ),
             ]),
           ),
@@ -15669,7 +15667,10 @@ class _SohbetPageState extends State<SohbetPage> {
     if(fazla=='info'){await ozelMesajBilgisi(d);}
     else if(fazla=='delete_me'){
       final ben=uid;
-      if(ben!=null)await d.reference.set({'hiddenFor':FieldValue.arrayUnion([ben])},SetOptions(merge:true));
+      if(ben!=null){
+        try{await d.reference.update({'hiddenFor':FieldValue.arrayUnion([ben])});}
+        catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Mesaj yalnızca senden silinemedi. Tekrar dene.')));}
+      }
     }
     else if(fazla=='delete'){
       final ok=await showDialog<bool>(
@@ -15697,7 +15698,7 @@ class _SohbetPageState extends State<SohbetPage> {
               style:TextStyle(color:ngelxPrivateBlueInk,fontWeight:FontWeight.w900,fontSize:20),
             ),
             content:const Text(
-              'Mesaj sohbetten kalıcı olarak kaldırılacak.',
+              'Bu mesaj herkes için silinecek. Mesajın içeriği artık sohbetin iki tarafında da görünmeyecek.',
               textAlign:TextAlign.center,
               style:TextStyle(color:Colors.black54,fontSize:14,height:1.35),
             ),
@@ -15722,28 +15723,19 @@ class _SohbetPageState extends State<SohbetPage> {
       )??false;
       if(ok){
         final eskiTur=(v['type']??'text').toString();
-        await d.reference.set({
-          'deletedForEveryone':true,
-          'deletedAt':FieldValue.serverTimestamp(),
-          'deletedBy':uid,
-          'deletedOriginalType':eskiTur,
-          'type':'deleted',
-          'text':'',
-          'message':FieldValue.delete(),
-          'content':FieldValue.delete(),
-          'mediaUrl':FieldValue.delete(),
-          'videoUrl':FieldValue.delete(),
-          'audioUrl':FieldValue.delete(),
-          'fileUrl':FieldValue.delete(),
-          'fileName':FieldValue.delete(),
-          'locationText':FieldValue.delete(),
-          'storyUrl':FieldValue.delete(),
-          'contentId':FieldValue.delete(),
-          'reactions':<String,dynamic>{},
-          'pinned':FieldValue.delete(),
-          'pinnedAt':FieldValue.delete(),
-          'pinnedBy':FieldValue.delete(),
-        },SetOptions(merge:true));
+        try{
+          await d.reference.set({
+            'deletedForEveryone':true,'deletedAt':FieldValue.serverTimestamp(),'deletedBy':uid,
+            'deletedOriginalType':eskiTur,'type':'deleted','text':'',
+            'message':FieldValue.delete(),'content':FieldValue.delete(),'mediaUrl':FieldValue.delete(),
+            'videoUrl':FieldValue.delete(),'audioUrl':FieldValue.delete(),'fileUrl':FieldValue.delete(),
+            'fileName':FieldValue.delete(),'locationText':FieldValue.delete(),'storyUrl':FieldValue.delete(),
+            'contentId':FieldValue.delete(),'reactions':<String,dynamic>{},
+            'pinned':FieldValue.delete(),'pinnedAt':FieldValue.delete(),'pinnedBy':FieldValue.delete(),
+          },SetOptions(merge:true));
+        }catch(_){
+          if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Mesaj herkesten silinemedi. Tekrar dene.')));
+        }
       }
     }else if(fazla=='report'){
       if(mounted)await sikayetEt(context,hedefTuru:'mesaj',hedefId:widget.chatId+'/'+d.id,hedefUid:widget.digerUid);
@@ -15815,7 +15807,7 @@ class _SohbetPageState extends State<SohbetPage> {
 
 
   Widget ozelMesajKarti(QueryDocumentSnapshot<Map<String,dynamic>> d,{double fontSize=16,bool goruldu=false,String quickReaction='❤️'}){
-    final v=d.data(),ben=v['senderId']==uid,tur=(v['type']??'text').toString(),silinmis=v['deletedForEveryone']==true||tur=='deleted',sistem=tur=='system';
+    final v=d.data(),ben=v['senderId']==uid,tur=(v['type']??'text').toString(),silinmis=v['deletedForEveryone']==true||tur=='deleted',sistem=tur=='system',vurgulu=_vurgulananMesajId==d.id;
     final photo=tur=='photo',video=tur=='video',shared=tur=='shared_content',audio=tur=='audio',file=tur=='file',location=tur=='location',call=tur=='call',storyReply=tur=='story_reply';
     final sadeMedya=photo||video;
     final metin=(v['text']??v['message']??v['content']??'').toString().trim(),saat=mesajSaati(v['createdAt']??v['clientCreatedAt']);
@@ -15896,8 +15888,8 @@ class _SohbetPageState extends State<SohbetPage> {
             color:sadeMedya?Colors.transparent:(ben?null:Colors.white),
             gradient:sadeMedya?null:(ben?const LinearGradient(begin:Alignment.topLeft,end:Alignment.bottomRight,colors:[ngelxPrivateBlue2,ngelxPrivateBlue]):null),
             borderRadius:BorderRadius.circular(20),
-            border:sadeMedya?null:(ben?null:Border.all(color:ngelxPrivateBlueBorder)),
-            boxShadow:sadeMedya?null:const [BoxShadow(color:Color(0x100B5FD7),blurRadius:12,offset:Offset(0,5))],
+            border:vurgulu?Border.all(color:const Color(0xFFFFB300),width:2.2):sadeMedya?null:(ben?null:Border.all(color:ngelxPrivateBlueBorder)),
+            boxShadow:vurgulu?const [BoxShadow(color:Color(0x55FFB300),blurRadius:16,spreadRadius:1)]:sadeMedya?null:const [BoxShadow(color:Color(0x100B5FD7),blurRadius:12,offset:Offset(0,5))],
           ),
           child:Column(crossAxisAlignment:CrossAxisAlignment.end,mainAxisSize:MainAxisSize.min,children:[
             if((v['replyText']??'').toString().trim().isNotEmpty)
@@ -16011,6 +16003,10 @@ class _SohbetPageState extends State<SohbetPage> {
               )).toList()),
             ),
             if(saat.isNotEmpty)Padding(padding:const EdgeInsets.only(top:4),child:Row(mainAxisSize:MainAxisSize.min,children:[
+              if(v['expiresAt'] is Timestamp)...[
+                Icon(Icons.timer_outlined,size:12,color:ben?Colors.white70:Colors.black45),
+                const SizedBox(width:3),
+              ],
               Text(saat,style:TextStyle(fontSize:10,color:ben?Colors.white70:Colors.black45)),
               if(goruldu)...[
                 const SizedBox(width:5),
@@ -16051,15 +16047,25 @@ class _SohbetPageState extends State<SohbetPage> {
 
   Future<void> _sohbetEngeliniKaldir()async{
     final ben=uid;
-    if(ben==null||!benimEngelim)return;
+    if(ben==null||!benimEngelim||!mounted)return;
+    final onay=await showDialog<bool>(
+      context:context,
+      builder:(c)=>Theme(data:ThemeData.light(),child:AlertDialog(
+        backgroundColor:Colors.white,surfaceTintColor:Colors.white,
+        title:const Text('Engellemeyi kaldırmak istiyor musun?',style:TextStyle(color:ngelxPrivateBlueInk,fontWeight:FontWeight.w900)),
+        content:Text('${widget.ad} tekrar sana mesaj gönderebilir ve arama yapabilir.',style:const TextStyle(color:Colors.black54,height:1.35)),
+        actions:[
+          TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),
+          FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('Engellemeyi Kaldır')),
+        ],
+      )),
+    )??false;
+    if(!onay)return;
     try{
       await FirebaseFirestore.instance.collection('users').doc(ben).set({'blocked':FieldValue.arrayRemove([widget.digerUid])},SetOptions(merge:true));
       _mesajHazirlikZamani=null;
       await mesajGonderimHazirligi(zorla:true);
-      if(mounted){
-        setState((){});
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Engel kaldırıldı.')));
-      }
+      if(mounted){setState((){});ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Engel kaldırıldı.')));}
     }catch(_){
       if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Engel kaldırılamadı. Tekrar dene.')));
     }
@@ -16211,10 +16217,14 @@ class _SohbetPageState extends State<SohbetPage> {
   }
 
   Future<void> bilgi()async{
-    await Navigator.push(context,MaterialPageRoute(builder:(_)=>SohbetBilgiPage(uid:widget.digerUid,ad:widget.ad,foto:widget.foto,chatId:widget.chatId)));
+    final hedef=await Navigator.push<String>(context,MaterialPageRoute(builder:(_)=>SohbetBilgiPage(uid:widget.digerUid,ad:widget.ad,foto:widget.foto,chatId:widget.chatId)));
     _mesajHazirlikZamani=null;
     await mesajGonderimHazirligi(zorla:true);
     if(mounted)setState((){});
+    if(hedef!=null&&hedef.isNotEmpty&&mounted){
+      await Future<void>.delayed(const Duration(milliseconds:180));
+      if(mounted)await _yanitlananMesajaGit(hedef);
+    }
   }
 
   @override
@@ -16222,9 +16232,9 @@ class _SohbetPageState extends State<SohbetPage> {
     super.initState();
     final sohbetRef=FirebaseFirestore.instance.collection('chats').doc(widget.chatId);
     _chatAkisi=sohbetRef.snapshots();
-    _mesajAkisi=sohbetRef.collection('messages').orderBy('createdAt').limitToLast(100).snapshots();
+    _mesajAkisi=sohbetRef.collection('messages').orderBy('createdAt').limitToLast(300).snapshots();
     unawaited(
-      sohbetRef.collection('messages').orderBy('createdAt').limitToLast(100).get(const GetOptions(source:Source.cache)).then((s){
+      sohbetRef.collection('messages').orderBy('createdAt').limitToLast(300).get(const GetOptions(source:Source.cache)).then((s){
         if(!mounted||s.docs.isEmpty)return;
         setState((){
           _mesajOnbellek
@@ -16259,6 +16269,7 @@ class _SohbetPageState extends State<SohbetPage> {
     sureliMesajZamanlayici?.cancel();
     sesKaydiZamanlayici?.cancel();
     mentionZamanlayici?.cancel();
+    _mesajVurguZamanlayici?.cancel();
     final ben=uid;
     if(ben!=null)unawaited(FirebaseFirestore.instance.collection('chats').doc(widget.chatId).set({'typing_$ben':false},SetOptions(merge:true)));
     if(sesKaydediliyor)unawaited(_sesKaydedici.cancel());
@@ -16280,30 +16291,38 @@ class _SohbetPageState extends State<SohbetPage> {
 
   String _ozelSohbetGunEtiketi(dynamic raw){
     if(raw is! Timestamp)return '';
+    final d=raw.toDate().toLocal();
+    return '${d.year}-${d.month.toString().padLeft(2,'0')}-${d.day.toString().padLeft(2,'0')}';
+  }
+
+  String _ozelSohbetZamanAyirici(dynamic raw){
+    if(raw is! Timestamp)return '';
     final d=raw.toDate().toLocal(),simdi=DateTime.now();
-    final bugun=DateTime(simdi.year,simdi.month,simdi.day);
-    final gun=DateTime(d.year,d.month,d.day);
+    final bugun=DateTime(simdi.year,simdi.month,simdi.day),gun=DateTime(d.year,d.month,d.day);
     final fark=bugun.difference(gun).inDays;
-    if(fark==0)return 'Bugün';
-    if(fark==1)return 'Dün';
-    final dd=d.day.toString().padLeft(2,'0'),mm=d.month.toString().padLeft(2,'0');
-    return '$dd.$mm.${d.year}';
+    final hh=d.hour.toString().padLeft(2,'0'),mm=d.minute.toString().padLeft(2,'0');
+    if(fark==0)return 'BUGÜN, $hh:$mm';
+    if(fark==1)return 'DÜN, $hh:$mm';
+    const gunler=['PZT','SAL','ÇAR','PER','CUM','CMT','PAZ'];
+    if(fark>1&&fark<7)return '${gunler[d.weekday-1]}, $hh:$mm';
+    const aylar=['OCA','ŞUB','MAR','NİS','MAY','HAZ','TEM','AĞU','EYL','EKİ','KAS','ARA'];
+    return d.year==simdi.year?'${d.day} ${aylar[d.month-1]}, $hh:$mm':'${d.day} ${aylar[d.month-1]} ${d.year}, $hh:$mm';
   }
 
   @override
   Widget build(BuildContext context)=>Theme(
     data:ThemeData.light().copyWith(
-      scaffoldBackgroundColor:ngelxPrivateBlueCanvas,
+      scaffoldBackgroundColor:Colors.white,
       colorScheme:ColorScheme.fromSeed(seedColor:ngelxPrivateBlue),
       appBarTheme:const AppBarTheme(
-        backgroundColor:ngelxPrivateBlueHeader,
+        backgroundColor:Colors.white,
         foregroundColor:ngelxPrivateBlueInk,
         surfaceTintColor:Colors.transparent,
         elevation:0,
       ),
     ),
     child:Scaffold(
-    backgroundColor:ngelxPrivateBlueCanvas,
+    backgroundColor:Colors.white,
     appBar:AppBar(
       leading:const BackButton(color:ngelxPrivateBlue),
       titleSpacing:0,
@@ -16356,7 +16375,7 @@ class _SohbetPageState extends State<SohbetPage> {
         IconButton(tooltip:'Sohbet bilgisi',onPressed:bilgi,icon:const Icon(Icons.info_rounded,color:ngelxPrivateBlue)),
       ],
     ),
-    body:StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(stream:_chatAkisi,builder:(_,tema){final veri=tema.data?.data()??<String,dynamic>{},ham=veri['theme_$uid'];final arkaPlan=ham is int?Color(ham):ngelxPrivateBlueCanvas,arkaPlanUrl=(veri['backgroundUrl_$uid']??'').toString(),hizliEmoji=(veri['quickEmoji_$uid']??'👍').toString(),arkaPlanOpaklik=(veri['backgroundOpacity_$uid'] is num?(veri['backgroundOpacity_$uid'] as num).toDouble():.30).clamp(.05,.85).toDouble(),mesajYaziBoyutu=(veri['messageFontSize_$uid'] is num?(veri['messageFontSize_$uid'] as num).toDouble():16.0).clamp(12.0,22.0).toDouble();return Container(decoration:BoxDecoration(color:arkaPlan,image:arkaPlanUrl.isEmpty?null:DecorationImage(image:CachedNetworkImageProvider(arkaPlanUrl),fit:BoxFit.cover,opacity:arkaPlanOpaklik)),child:Column(children:[
+    body:StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(stream:_chatAkisi,builder:(_,tema){final veri=tema.data?.data()??<String,dynamic>{},ham=veri['theme_$uid'];final arkaPlan=ham is int?Color(ham):Colors.white,arkaPlanUrl=(veri['backgroundUrl_$uid']??'').toString(),hizliEmoji=(veri['quickEmoji_$uid']??'👍').toString(),arkaPlanOpaklik=(veri['backgroundOpacity_$uid'] is num?(veri['backgroundOpacity_$uid'] as num).toDouble():.30).clamp(.05,.85).toDouble(),mesajYaziBoyutu=(veri['messageFontSize_$uid'] is num?(veri['messageFontSize_$uid'] as num).toDouble():16.0).clamp(12.0,22.0).toDouble();return Container(decoration:BoxDecoration(color:arkaPlan,image:arkaPlanUrl.isEmpty?null:DecorationImage(image:CachedNetworkImageProvider(arkaPlanUrl),fit:BoxFit.cover,opacity:arkaPlanOpaklik)),child:Column(children:[
       if(((veri['callStatus']??'').toString()=='ringing'||(veri['callStatus']??'').toString()=='active')&&(veri['callRoomName']??'').toString().isNotEmpty)
         InkWell(
           onTap:()async{
@@ -16448,7 +16467,7 @@ class _SohbetPageState extends State<SohbetPage> {
                         borderRadius:BorderRadius.circular(16),
                         border:Border.all(color:ngelxPrivateBlueBorder),
                       ),
-                      child:Text(gunEtiketi,style:const TextStyle(color:ngelxPrivateBlue,fontSize:11,fontWeight:FontWeight.w800)),
+                      child:Text(_ozelSohbetZamanAyirici(hamGun),style:const TextStyle(color:ngelxPrivateBlue,fontSize:11,fontWeight:FontWeight.w800)),
                     ),
                   ),
                 ozelMesajKarti(d,fontSize:mesajYaziBoyutu,goruldu:goruldu,quickReaction:hizliEmoji),
@@ -16907,13 +16926,19 @@ class SohbetBilgiPage extends StatelessWidget{
       ),
     );
     if(sonuc==null||!context.mounted)return;
+    final mevcut=Map<String,dynamic>.from(chat.data()?['nicknames']??const{});
+    if(sonuc.isEmpty)mevcut.remove(me);else mevcut[me]=sonuc;
     await FirebaseFirestore.instance.collection('chats').doc(chatId).set({
-      'nicknames.$me':sonuc.isEmpty?FieldValue.delete():sonuc,
-      'updatedAt':FieldValue.serverTimestamp(),
+      'nicknames':mevcut,'updatedAt':FieldValue.serverTimestamp(),
     },SetOptions(merge:true));
+    if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Takma ad kaydedildi.')));
   }
   Future<void> ozellestir(BuildContext context)async{
     final me=FirebaseAuth.instance.currentUser?.uid;if(me==null)return;
+    final chatSnap=await FirebaseFirestore.instance.collection('chats').doc(chatId).get();
+    if(!context.mounted)return;
+    final mevcutHam=chatSnap.data()?['theme_$me'];
+    final mevcutRenk=mevcutHam is int?mevcutHam:Colors.white.toARGB32();
     final secim=await showModalBottomSheet<Object>(
       context:context,backgroundColor:Colors.white,showDragHandle:true,isScrollControlled:true,
       builder:(c)=>Theme(data:ThemeData.light(),child:SafeArea(child:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
@@ -16921,7 +16946,7 @@ class SohbetBilgiPage extends StatelessWidget{
         const ListTile(title:Text('Arka plan rengi',style:TextStyle(fontWeight:FontWeight.w700))),
         Wrap(spacing:16,runSpacing:16,children:[
           ngelxPrivateBlueCanvas,Colors.white,const Color(0xFFFFF4F7),const Color(0xFFF4F0FF),const Color(0xFFF1FFF5)
-        ].map((x)=>InkWell(onTap:()=>Navigator.pop(c,x.toARGB32()),child:CircleAvatar(radius:25,backgroundColor:x,child:const Icon(Icons.check,color:Colors.black26)))).toList()),
+        ].map((x)=>InkWell(onTap:()=>Navigator.pop(c,x.toARGB32()),child:CircleAvatar(radius:25,backgroundColor:x,child:x.toARGB32()==mevcutRenk?const Icon(Icons.check_rounded,color:ngelxPrivateBlue):null))).toList()),
         const SizedBox(height:12),
         ListTile(leading:const Icon(Icons.photo_library_outlined,color:ngelxPrivateBlue),title:const Text('Galeriden özel fotoğraf / logo seç'),onTap:()=>Navigator.pop(c,'gallery')),
         ListTile(leading:const Icon(Icons.camera_alt_outlined,color:ngelxPrivateBlue),title:const Text('Kameradan arka plan çek'),onTap:()=>Navigator.pop(c,'camera')),
@@ -17026,8 +17051,8 @@ class SohbetBilgiPage extends StatelessWidget{
       await ref.set({'backgroundUrl_$me':url},SetOptions(merge:true));
       await _arkaPlanDegisikligiMesaji(ref,me);
       if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Özel sohbet arka planın kaydedildi.')));
-    }catch(e){
-      if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Arka plan yüklenemedi: '+e.toString())));
+    }catch(_){
+      if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Arka plan yüklenemedi. Bağlantını kontrol edip tekrar dene.')));
     }
   }
   Future<void> sureliMesajlar(BuildContext context,int mevcut)async{
@@ -17066,19 +17091,53 @@ class SohbetBilgiPage extends StatelessWidget{
     ]))));
     if(secim==null)return;
     if(secim=='unmute'){
-      await ref.set({'mutedChats':FieldValue.arrayRemove([chatId]),'mutedChatUntil':{chatId:FieldValue.delete()}},SetOptions(merge:true));
+      final sureler=Map<String,dynamic>.from(v['mutedChatUntil'] is Map?v['mutedChatUntil'] as Map:const{});
+      sureler.remove(chatId);
+      await ref.set({'mutedChats':FieldValue.arrayRemove([chatId]),'mutedChatUntil':sureler},SetOptions(merge:true));
       if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Sohbet bildirimlerinin sesi açıldı.')));
       return;
     }
+    final sureler=Map<String,dynamic>.from(v['mutedChatUntil'] is Map?v['mutedChatUntil'] as Map:const{});
     final g=<String,dynamic>{'mutedChats':FieldValue.arrayUnion([chatId])};
-    if(secim=='forever')g['mutedChatUntil.$chatId']=FieldValue.delete();
+    if(secim=='forever')sureler.remove(chatId);
     else{
       final sure=secim=='1h'?const Duration(hours:1):secim=='8h'?const Duration(hours:8):const Duration(days:7);
-      g['mutedChatUntil.$chatId']=DateTime.now().add(sure).toUtc().toIso8601String();
+      sureler[chatId]=DateTime.now().add(sure).toUtc().toIso8601String();
     }
+    g['mutedChatUntil']=sureler;
     await ref.set(g,SetOptions(merge:true));
     if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(secim=='forever'?'Sohbet süresiz sessize alındı.':'Sohbet seçilen süre boyunca sessize alındı.')));
   }
+  Future<void> gizliKelimeler(BuildContext context)async{
+    final me=FirebaseAuth.instance.currentUser?.uid;if(me==null)return;
+    final ref=FirebaseFirestore.instance.collection('users').doc(me);
+    final d=await ref.get(),v=d.data()??<String,dynamic>{};
+    var aktif=v['hiddenWordsFilter']!=false;
+    final controller=TextEditingController(text:List<String>.from(v['hiddenWords']??const[]).join(', '));
+    if(!context.mounted){controller.dispose();return;}
+    final kaydet=await showModalBottomSheet<bool>(
+      context:context,backgroundColor:Colors.white,isScrollControlled:true,showDragHandle:true,
+      builder:(sheet)=>StatefulBuilder(builder:(sheet,setSheet)=>SafeArea(child:Padding(
+        padding:EdgeInsets.fromLTRB(18,0,18,18+MediaQuery.viewInsetsOf(sheet).bottom),
+        child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
+          const Text('Gizli kelimeler',style:TextStyle(color:ngelxPrivateBlueInk,fontSize:20,fontWeight:FontWeight.w900)),
+          const SizedBox(height:6),
+          const Text('Bu kelimeleri içeren mesajların metni sende gizlenir. Kelimeleri virgülle ayırabilirsin.',style:TextStyle(color:Colors.black54,height:1.35)),
+          const SizedBox(height:12),
+          SwitchListTile(contentPadding:EdgeInsets.zero,title:const Text('Gizli kelime filtresi',style:TextStyle(color:ngelxPrivateBlueInk,fontWeight:FontWeight.w800)),value:aktif,onChanged:(x)=>setSheet(()=>aktif=x)),
+          TextField(controller:controller,minLines:2,maxLines:4,decoration:InputDecoration(hintText:'örnek: deneme123, istemediğim kelime',filled:true,fillColor:ngelxPrivateBlueSoft,border:OutlineInputBorder(borderRadius:BorderRadius.circular(16),borderSide:BorderSide.none))),
+          const SizedBox(height:14),
+          SizedBox(width:double.infinity,child:FilledButton(onPressed:()=>Navigator.pop(sheet,true),child:const Text('Kaydet'))),
+        ]),
+      ))),
+    )??false;
+    if(!kaydet){controller.dispose();return;}
+    final kelimeler=controller.text.split(RegExp(r'[,\n]')).map((x)=>x.trim()).where((x)=>x.isNotEmpty).toSet().take(100).toList();
+    controller.dispose();
+    await ref.set({'hiddenWordsFilter':aktif,'hiddenWords':kelimeler},SetOptions(merge:true));
+    if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Gizli kelimeler kaydedildi.')));
+  }
+
   Future<void> kisitla(BuildContext context)async{
     final me=FirebaseAuth.instance.currentUser?.uid;if(me==null)return;
     final ref=FirebaseFirestore.instance.collection('users').doc(me),d=await ref.get(),v=d.data()??<String,dynamic>{},kisitli=List<String>.from(v['restrictedUsers']??const[]).contains(uid);
@@ -17339,7 +17398,10 @@ class SohbetBilgiPage extends StatelessWidget{
                     _kisa(arkadas?Icons.people_alt_rounded:Icons.person_add_alt_1_rounded,arkadas?'Arkadaş':'Arkadaş ekle',arkadas?(){}:()=>arkadasEkle(context)),
                     _kisa(Icons.person_rounded,'Profil',()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciProfilPage(uid:uid)))),
                     _kisa(Icons.text_fields_rounded,'Takma ad',()=>takmaAd(context)),
-                    _kisa(Icons.search_rounded,'Arama',()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>SohbetMesajAramaPage(chatId:chatId)))),
+                    _kisa(Icons.search_rounded,'Arama',()async{
+                      final hedef=await Navigator.push<String>(context,MaterialPageRoute(builder:(_)=>SohbetMesajAramaPage(chatId:chatId)));
+                      if(hedef!=null&&hedef.isNotEmpty&&context.mounted)Navigator.pop(context,hedef);
+                    }),
                     _kisa(Icons.palette_rounded,'Özelleştir',()=>ozellestir(context)),
                   ]);
                 },
@@ -17377,7 +17439,14 @@ class SohbetBilgiPage extends StatelessWidget{
               const SizedBox(height:18),
               _bolum('Gizlilik ve destek'),
               _satir(Icons.shield_outlined,'Mesaj izinleri',()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const TercihlerPage(baslik:'Mesaj izinleri')))),
-              _satir(Icons.do_not_disturb_alt_rounded,'Kısıtla',()=>kisitla(context)),
+              _satir(Icons.visibility_off_outlined,'Gizli kelimeler',()=>gizliKelimeler(context),alt:'İstemediğin kelimeleri bu sohbette gizle'),
+              if(me!=null)StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
+                stream:FirebaseFirestore.instance.collection('users').doc(me).snapshots(),
+                builder:(_,u){
+                  final kisitli=List<String>.from(u.data?.data()?['restrictedUsers']??const[]).contains(uid);
+                  return _satir(Icons.do_not_disturb_alt_rounded,kisitli?'Kısıtlamayı kaldır':'Kısıtla',()=>kisitla(context));
+                },
+              ),
               if(me!=null)StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
                 stream:FirebaseFirestore.instance.collection('users').doc(me).snapshots(),
                 builder:(_,u){
@@ -17465,6 +17534,7 @@ class _SohbetMesajAramaPageState extends State<SohbetMesajAramaPage>{
   );
 
   Future<void> _aramaSonucuAc(QueryDocumentSnapshot<Map<String,dynamic>> d)async{
+    if(!widget.groupMode){Navigator.pop(context,d.id);return;}
     final v=d.data(),sender=(v['senderId']??'').toString(),tur=(v['type']??'text').toString();
     Map<String,dynamic> p=<String,dynamic>{};
     if(sender.isNotEmpty&&sender!='system'){

@@ -359,10 +359,16 @@ service cloud.firestore {
               )
               && request.resource.data.get('deletedForEveryone', false) == true
               && onlyChanges([
-                'deletedForEveryone', 'deletedAt', 'deletedBy',
-                'text', 'mediaUrl', 'audioUrl', 'fileUrl', 'fileName',
+                'deletedForEveryone', 'deletedAt', 'deletedBy', 'deletedOriginalType', 'type',
+                'text', 'message', 'content', 'mediaUrl', 'videoUrl', 'audioUrl',
+                'fileUrl', 'fileName', 'locationText', 'storyUrl', 'contentId',
                 'reactions', 'pinned', 'pinnedAt', 'pinnedBy'
               ])
+            )
+            || (
+              onlyChanges(['hiddenFor'])
+              && request.resource.data.get('hiddenFor', []).hasAll(resource.data.get('hiddenFor', []))
+              && request.resource.data.get('hiddenFor', []).removeAll(resource.data.get('hiddenFor', [])).hasOnly([request.auth.uid])
             )
           );
         allow delete: if signedIn() && (
