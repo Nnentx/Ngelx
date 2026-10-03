@@ -8890,11 +8890,11 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
   }
   Future<void> _grupFotografiniGonder(XFile x,ImageSource kaynak)async{
     try{
-      final bytes=await x.readAsBytes();
       final uzanti=x.name.contains('.')?x.name.split('.').last.toLowerCase():'jpg';
       final yol='groups/${widget.chatId}/${DateTime.now().millisecondsSinceEpoch}.$uzanti';
-      final url=await ngelxMedyaYukleBytes(
-        bytes:bytes,kind:'groups',ext:uzanti,legacyPath:yol,
+      final url=await ngelxMedyaYukleDosya(
+        dosya:x,kind:'groups',ext:uzanti,legacyPath:yol,
+        contentType:uzanti=='png'?'image/png':uzanti=='webp'?'image/webp':'image/jpeg',
         onProgress:(sent,total)=>_medyaIlerlemeGuncelle('Fotoğraf yükleniyor',sent,total),
       ).timeout(const Duration(seconds:60));
       final tamam=await payloadGonder({'type':'photo','mediaUrl':url},'📷 Fotoğraf');
@@ -14993,15 +14993,17 @@ class _SohbetPageState extends State<SohbetPage> {
       if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(hazirlik.engel!)));
       return;
     }
-    final x=await ngelxResimSec(source:kaynak,imageQuality:78);
+    final x=await ngelxResimSec(source:kaynak,imageQuality:78,maxWidth:1440);
     if(x==null)return;
     try{
-      final yol='chats/${widget.chatId}/${DateTime.now().millisecondsSinceEpoch}.jpg';
-      final url=await ngelxMedyaYukleBytes(
-        bytes: await x.readAsBytes(),
-        kind: 'chats',
-        ext: 'jpg',
-        legacyPath: yol,
+      final uzanti=x.name.contains('.')?x.name.split('.').last.toLowerCase():'jpg';
+      final yol='chats/${widget.chatId}/${DateTime.now().millisecondsSinceEpoch}.$uzanti';
+      final url=await ngelxMedyaYukleDosya(
+        dosya:x,
+        kind:'chats',
+        ext:uzanti,
+        legacyPath:yol,
+        contentType:uzanti=='png'?'image/png':uzanti=='webp'?'image/webp':'image/jpeg',
       ).timeout(const Duration(seconds:60));
       final ref=FirebaseFirestore.instance.collection('chats').doc(widget.chatId);
       final sureHam=hazirlik.sohbet['disappearingSeconds'];
@@ -16311,7 +16313,7 @@ class _SohbetPageState extends State<SohbetPage> {
                           ),
                         );
                         if(!mounted||secim==null)return;
-                        await Future<void>.delayed(const Duration(milliseconds:320));
+                        await Future<void>.delayed(const Duration(milliseconds:110));
                         if(!mounted)return;
                         if(secim=='camera'||secim=='gallery')await medyaGonder(secim=='camera'?ImageSource.camera:ImageSource.gallery);
                         else if(secim=='video'||secim=='videoCamera')await videoGonder(secim=='videoCamera'?ImageSource.camera:ImageSource.gallery);
