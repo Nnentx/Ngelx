@@ -2162,10 +2162,127 @@ Future<void> sikayetEt(BuildContext context,{required String hedefTuru,required 
 }
 
 Future<void> kullaniciyiEngelle(BuildContext context,String hedefUid) async {
-  final u=FirebaseAuth.instance.currentUser;if(u==null||u.isAnonymous)return;
-  final tamam=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(title:const Text('Kullanıcı engellensin mi?'),content:const Text('Birbirinizin profilini ve içeriklerini göremez, mesaj gönderemezsiniz.'),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:Text(t('cancel'))),FilledButton(onPressed:()=>Navigator.pop(c,true),style:FilledButton.styleFrom(backgroundColor:Colors.red),child:Text(t('block')))]))??false;
-  if(!tamam)return;
-  try{await FirebaseFirestore.instance.collection('users').doc(u.uid).set({'blocked':FieldValue.arrayUnion([hedefUid])},SetOptions(merge:true));if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Kullanıcı engellendi.')));}catch(e){if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Engelleme tamamlanamadı: $e')));}
+  final u=FirebaseAuth.instance.currentUser;
+  if(u==null||u.isAnonymous||hedefUid.isEmpty||hedefUid==u.uid)return;
+  Map<String,dynamic> hedef=<String,dynamic>{},benim=<String,dynamic>{};
+  try{
+    final sonuc=await Future.wait([
+      FirebaseFirestore.instance.collection('users').doc(hedefUid).get(),
+      FirebaseFirestore.instance.collection('users').doc(u.uid).get(),
+    ]);
+    hedef=sonuc[0].data()??<String,dynamic>{};
+    benim=sonuc[1].data()??<String,dynamic>{};
+  }catch(_){}
+  if(List<String>.from(benim['blocked']??const[]).contains(hedefUid)){
+    if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bu kullanıcı zaten engelli.')));
+    return;
+  }
+  final ad=(hedef['displayName']??hedef['username']??'Kullanıcı').toString().trim();
+  final foto=(hedef['photoUrl']??'').toString().trim();
+  final secim=await showModalBottomSheet<String>(
+    context:context,
+    backgroundColor:Colors.white,
+    isScrollControlled:true,
+    showDragHandle:true,
+    shape:const RoundedRectangleBorder(borderRadius:BorderRadius.vertical(top:Radius.circular(30))),
+    builder:(c)=>Theme(
+      data:ThemeData.light().copyWith(colorScheme:ColorScheme.fromSeed(seedColor:ngelxPrivateBlue)),
+      child:SafeArea(
+        child:Padding(
+          padding:const EdgeInsets.fromLTRB(24,4,24,24),
+          child:Column(mainAxisSize:MainAxisSize.min,children:[
+            CircleAvatar(
+              radius:42,
+              backgroundColor:ngelxPrivateBlueSoft,
+              backgroundImage:foto.isEmpty?null:CachedNetworkImageProvider(foto),
+              child:foto.isEmpty?const Icon(Icons.person_rounded,color:ngelxPrivateBlue,size:38):null,
+            ),
+            const SizedBox(height:18),
+            Text('$ad engellensin mi?',textAlign:TextAlign.center,style:const TextStyle(color:Colors.black87,fontSize:24,fontWeight:FontWeight.w900)),
+            const SizedBox(height:12),
+            const Text(
+              'Engellediğinde birbirinizin profillerini ve içeriklerini göremez, mesaj gönderemez ve arama yapamazsınız. Arkadaşsanız arkadaşlık bağlantısı kaldırılır. Engellediğini karşı tarafa bildirmeyiz.',
+              textAlign:TextAlign.center,
+              style:TextStyle(color:Colors.black54,fontSize:14.5,height:1.4),
+            ),
+            const SizedBox(height:22),
+            SizedBox(
+              width:double.infinity,
+              child:FilledButton(
+                style:FilledButton.styleFrom(backgroundColor:ngelxPrivateBlue,foregroundColor:Colors.white,padding:const EdgeInsets.symmetric(vertical:15),shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(18))),
+                onPressed:()=>Navigator.pop(c,'block'),
+                child:Text('$ad kullanıcısını engelle',style:const TextStyle(fontWeight:FontWeight.w900)),
+              ),
+            ),
+            const SizedBox(height:8),
+            TextButton(
+              onPressed:()=>Navigator.pop(c,'block_report'),
+              child:const Text('Engelle ve şikâyet et',style:TextStyle(color:ngelxPrivateBlue,fontWeight:FontWeight.w900)),
+            ),
+          ]),
+        ),
+      ),
+    ),
+  );
+  if(secim==null)return;
+  await ngelxOverlayKapanisiniBekle();
+  if(!context.mounted)return;
+  try{
+    await FirebaseFirestore.instance.collection('users').doc(u.uid).set({
+      'blocked':FieldValue.arrayUnion([hedefUid]),
+      'friends':FieldValue.arrayRemove([hedefUid]),
+      'following':FieldValue.arrayRemove([hedefUid]),
+      'followers':FieldValue.arrayRemove([hedefUid]),
+      'restrictedUsers':FieldValue.arrayRemove([hedefUid]),
+    },SetOptions(merge:true));
+    unawaited(
+      FirebaseFirestore.instance.collection('users').doc(hedefUid).set({
+        'friends':FieldValue.arrayRemove([u.uid]),
+        'following':FieldValue.arrayRemove([u.uid]),
+        'followers':FieldValue.arrayRemove([u.uid]),
+      },SetOptions(merge:true)).catchError((_){ }),
+    );
+  }catch(e){
+    if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Engelleme tamamlanamadı: $e')));
+    return;
+  }
+  if(secim=='block_report'&&context.mounted){
+    await sikayetEt(context,hedefTuru:'kullanici',hedefId:hedefUid,hedefUid:hedefUid);
+  }
+  if(!context.mounted)return;
+  final sonraki=await showModalBottomSheet<String>(
+    context:context,
+    backgroundColor:Colors.white,
+    showDragHandle:true,
+    shape:const RoundedRectangleBorder(borderRadius:BorderRadius.vertical(top:Radius.circular(30))),
+    builder:(c)=>Theme(
+      data:ThemeData.light(),
+      child:SafeArea(child:Padding(
+        padding:const EdgeInsets.fromLTRB(24,2,24,24),
+        child:Column(mainAxisSize:MainAxisSize.min,children:[
+          Container(width:70,height:70,decoration:const BoxDecoration(shape:BoxShape.circle,color:Color(0xFFE8F8EE)),child:const Icon(Icons.check_circle_outline_rounded,color:Color(0xFF20A95A),size:50)),
+          const SizedBox(height:16),
+          Text('$ad kullanıcısını engelledin',textAlign:TextAlign.center,style:const TextStyle(color:Colors.black87,fontSize:21,fontWeight:FontWeight.w900)),
+          const SizedBox(height:7),
+          const Text('İstersen bu hesabı ayrıca şikâyet edebilirsin.',textAlign:TextAlign.center,style:TextStyle(color:Colors.black54,fontSize:13.5,height:1.35)),
+          const SizedBox(height:16),
+          ListTile(
+            contentPadding:EdgeInsets.zero,
+            leading:const Icon(Icons.warning_amber_rounded,color:Colors.black87),
+            title:const Text('Şikâyet Et',style:TextStyle(color:Colors.black87,fontWeight:FontWeight.w800)),
+            trailing:const Icon(Icons.chevron_right_rounded),
+            onTap:()=>Navigator.pop(c,'report'),
+          ),
+          const SizedBox(height:8),
+          SizedBox(width:double.infinity,child:OutlinedButton(onPressed:()=>Navigator.pop(c),child:const Text('Bitti'))),
+        ]),
+      )),
+    ),
+  );
+  await ngelxOverlayKapanisiniBekle();
+  if(sonraki=='report'&&context.mounted){
+    await sikayetEt(context,hedefTuru:'kullanici',hedefId:hedefUid,hedefUid:hedefUid);
+  }
 }
 
 class NgelXAcilisKapisi extends StatefulWidget {
