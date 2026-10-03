@@ -14779,6 +14779,8 @@ class _SohbetPageState extends State<SohbetPage> {
   Map<String,dynamic> _mesajHazirlikDiger=<String,dynamic>{};
   bool _mesajHazirlikSohbetMevcut=false;
   bool gonderiliyor=false,aramaBaslatiliyor=false,yaziyorGonderildi=false;
+  String? medyaIlerlemeEtiket;
+  double? medyaIlerleme;
   final rec.AudioRecorder _sesKaydedici=rec.AudioRecorder();
   bool sesKaydediliyor=false,sesKaydiIsleniyor=false;
   int sesKaydiSaniye=0;
@@ -14996,6 +14998,22 @@ class _SohbetPageState extends State<SohbetPage> {
     }
   }
 
+  void _ozelMedyaIlerlemeBaslat(String etiket){
+    if(!mounted)return;
+    setState((){medyaIlerlemeEtiket=etiket;medyaIlerleme=null;});
+  }
+
+  void _ozelMedyaIlerlemeGuncelle(String etiket,int sent,int total){
+    if(!mounted)return;
+    final oran=total>0?(sent/total).clamp(0.0,1.0).toDouble():null;
+    setState((){medyaIlerlemeEtiket=etiket;medyaIlerleme=oran;});
+  }
+
+  void _ozelMedyaIlerlemeBitir(){
+    if(!mounted)return;
+    setState((){medyaIlerlemeEtiket=null;medyaIlerleme=null;});
+  }
+
   Future<void> medyaGonder(ImageSource kaynak) async {
     final ben=uid;
     if(ben==null)return;
@@ -15006,6 +15024,7 @@ class _SohbetPageState extends State<SohbetPage> {
     }
     final x=await ngelxResimSec(source:kaynak,imageQuality:78,maxWidth:1440);
     if(x==null)return;
+    _ozelMedyaIlerlemeBaslat('Fotoğraf yükleniyor');
     try{
       final uzanti=x.name.contains('.')?x.name.split('.').last.toLowerCase():'jpg';
       final yol='chats/${widget.chatId}/${DateTime.now().millisecondsSinceEpoch}.$uzanti';
@@ -15015,6 +15034,7 @@ class _SohbetPageState extends State<SohbetPage> {
         ext:uzanti,
         legacyPath:yol,
         contentType:uzanti=='png'?'image/png':uzanti=='webp'?'image/webp':'image/jpeg',
+        onProgress:(sent,total)=>_ozelMedyaIlerlemeGuncelle('Fotoğraf yükleniyor',sent,total),
       ).timeout(const Duration(seconds:60));
       final ref=FirebaseFirestore.instance.collection('chats').doc(widget.chatId);
       final sureHam=hazirlik.sohbet['disappearingSeconds'];
@@ -15045,6 +15065,8 @@ class _SohbetPageState extends State<SohbetPage> {
       unawaited(uygulamaBildirimiGonder(toUid:widget.digerUid,fromUid:ben,tur:'message',metin:'Yeni bir fotoğraf mesajın var',belgeId:widget.chatId).catchError((_){ }));
     }catch(_){
       if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Medya hizmeti şu anda kullanılamıyor. Yazılı mesaj göndermeye devam edebilirsin.')));
+    }finally{
+      _ozelMedyaIlerlemeBitir();
     }
   }
 
@@ -15058,6 +15080,7 @@ class _SohbetPageState extends State<SohbetPage> {
     }
     final x=await ngelxVideoSec(source:kaynak,maxDuration:const Duration(minutes:5));
     if(x==null)return;
+    _ozelMedyaIlerlemeBaslat('Video yükleniyor');
     try{
       final boyut=await x.length();
       if(boyut>80*1024*1024)throw Exception('Video 80 MB’den küçük olmalı.');
@@ -15067,6 +15090,7 @@ class _SohbetPageState extends State<SohbetPage> {
         kind:'videos',
         ext:uzanti,
         legacyPath:'chat-videos/${widget.chatId}/${DateTime.now().millisecondsSinceEpoch}.$uzanti',
+        onProgress:(sent,total)=>_ozelMedyaIlerlemeGuncelle('Video yükleniyor',sent,total),
       ).timeout(const Duration(minutes:5));
       await ekMesajGonder(
         {'type':'video','videoUrl':url,'mediaUrl':url},
@@ -15075,6 +15099,8 @@ class _SohbetPageState extends State<SohbetPage> {
       );
     }catch(e){
       if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Video gönderilemedi: $e')));
+    }finally{
+      _ozelMedyaIlerlemeBitir();
     }
   }
 
@@ -15120,6 +15146,7 @@ class _SohbetPageState extends State<SohbetPage> {
   Future<void> dosyaGonder()async{
     final x=await ngelxDosyaSec();
     if(x==null)return;
+    _ozelMedyaIlerlemeBaslat('Dosya yükleniyor');
     try{
       final boyut=await x.length();
       if(boyut>30*1024*1024)throw Exception('Dosya 30 MB’den küçük olmalı.');
@@ -15130,10 +15157,13 @@ class _SohbetPageState extends State<SohbetPage> {
         kind:'chat-files',
         ext:uzanti,
         legacyPath:'chat-files/${widget.chatId}/${DateTime.now().millisecondsSinceEpoch}_$ad',
+        onProgress:(sent,total)=>_ozelMedyaIlerlemeGuncelle('Dosya yükleniyor',sent,total),
       ).timeout(const Duration(minutes:3));
       await ekMesajGonder({'type':'file','fileUrl':url,'fileName':ad,'fileSize':boyut},'📎 $ad',bildirim:'Sana bir dosya gönderdi');
     }catch(e){
       if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Dosya gönderilemedi: $e')));
+    }finally{
+      _ozelMedyaIlerlemeBitir();
     }
   }
 
@@ -15217,6 +15247,7 @@ class _SohbetPageState extends State<SohbetPage> {
   }
 
   Future<void> _ozelSesliMesajiYukle(Uint8List bytes,int sure,File? yerelDosya)async{
+    _ozelMedyaIlerlemeBaslat('Sesli mesaj yükleniyor');
     try{
       final url=await ngelxMedyaYukleBytes(
         bytes:bytes,
@@ -15224,6 +15255,7 @@ class _SohbetPageState extends State<SohbetPage> {
         ext:'m4a',
         legacyPath:'chat-audio/${widget.chatId}/${DateTime.now().millisecondsSinceEpoch}.m4a',
         contentType:'audio/mp4',
+        onProgress:(sent,total)=>_ozelMedyaIlerlemeGuncelle('Sesli mesaj yükleniyor',sent,total),
       ).timeout(const Duration(seconds:45));
       final tamam=await ekMesajGonder(
         {'type':'audio','audioUrl':url,'durationSeconds':sure},
@@ -15240,6 +15272,8 @@ class _SohbetPageState extends State<SohbetPage> {
         content:const Text('Sesli mesaj gönderilemedi.'),
         action:SnackBarAction(label:'Tekrar dene',onPressed:()=>unawaited(_ozelSesliMesajiYukle(bytes,sure,yerelDosya))),
       ));
+    }finally{
+      _ozelMedyaIlerlemeBitir();
     }
   }
 
@@ -15951,7 +15985,12 @@ class _SohbetPageState extends State<SohbetPage> {
     }
   }
 
-  void bilgi()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>SohbetBilgiPage(uid:widget.digerUid,ad:widget.ad,foto:widget.foto,chatId:widget.chatId)));
+  Future<void> bilgi()async{
+    await Navigator.push(context,MaterialPageRoute(builder:(_)=>SohbetBilgiPage(uid:widget.digerUid,ad:widget.ad,foto:widget.foto,chatId:widget.chatId)));
+    _mesajHazirlikZamani=null;
+    await mesajGonderimHazirligi(zorla:true);
+    if(mounted)setState((){});
+  }
 
   @override
   void initState(){
@@ -16221,6 +16260,21 @@ class _SohbetPageState extends State<SohbetPage> {
           onTap:()=>mentionEkle(u['username']??''),
         )).toList()),
       ),
+      if(medyaIlerlemeEtiket!=null)Container(
+        margin:const EdgeInsets.fromLTRB(10,4,10,2),
+        padding:const EdgeInsets.fromLTRB(12,9,12,10),
+        decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(16),border:Border.all(color:ngelxPrivateBlueBorder)),
+        child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+          Row(children:[
+            const Icon(Icons.cloud_upload_outlined,color:ngelxPrivateBlue,size:18),
+            const SizedBox(width:7),
+            Expanded(child:Text(medyaIlerlemeEtiket!,style:const TextStyle(color:ngelxPrivateBlueInk,fontSize:11.5,fontWeight:FontWeight.w800))),
+            if(medyaIlerleme!=null)Text((medyaIlerleme!*100).round().toString()+'%',style:const TextStyle(color:ngelxPrivateBlue,fontSize:11,fontWeight:FontWeight.w900)),
+          ]),
+          const SizedBox(height:7),
+          ClipRRect(borderRadius:BorderRadius.circular(6),child:LinearProgressIndicator(value:medyaIlerleme,minHeight:5,color:ngelxPrivateBlue,backgroundColor:ngelxPrivateBlueSoft)),
+        ]),
+      ),
       if(yanitMetin!=null)Container(
         margin:const EdgeInsets.fromLTRB(10,4,10,2),
         padding:const EdgeInsets.fromLTRB(12,8,4,8),
@@ -16232,7 +16286,7 @@ class _SohbetPageState extends State<SohbetPage> {
             ClipRRect(
               borderRadius:BorderRadius.circular(8),
               child:CachedNetworkImage(
-                imageUrl:yanitMedyaUrl!,width:42,height:42,fit:BoxFit.cover,
+                imageUrl:yanitMedyaUrl!,width:42,height:42,fit:BoxFit.cover,memCacheWidth:160,memCacheHeight:160,
                 errorWidget:(_,__,___)=>const SizedBox(width:42,height:42,child:Icon(Icons.image_outlined,color:Colors.black45)),
               ),
             ),
@@ -16882,7 +16936,6 @@ class SohbetBilgiPage extends StatelessWidget{
           'followers':FieldValue.arrayRemove([me]),
         },SetOptions(merge:true)).catchError((_){ }),
       );
-      _mesajHazirlikYenilemeSinyali();
     }catch(e){
       if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Engelleme tamamlanamadı: $e')));
       return;
@@ -16934,10 +16987,6 @@ class SohbetBilgiPage extends StatelessWidget{
     if(!context.mounted)return;
     if(sonraki=='report')await sikayetEt(context,hedefTuru:'kullanici',hedefId:uid,hedefUid:uid);
     if(sonraki=='delete'&&context.mounted)await sohbetiSil(context);
-  }
-
-  void _mesajHazirlikYenilemeSinyali(){
-    // Sohbet ekranına dönüldüğünde mesaj izni yeni engel durumundan tekrar okunur.
   }
 
   Future<void> engeliKaldir(BuildContext context)async{
