@@ -287,7 +287,22 @@ Future<void> ngelxSesliNgelxIcindePaylas(BuildContext context,String roomId,Stri
                   try{await _ngelxSesliPaylasGonder(chat:d,uid:u.uid,roomId:roomId,baslik:baslik);basarili++;}catch(_){}
                 }
                 if(sheet.mounted)Navigator.pop(sheet);
-                if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('$basarili sohbete gönderildi.')));
+                if(context.mounted){
+                  final messenger=ScaffoldMessenger.of(context);
+                  messenger.hideCurrentSnackBar();
+                  messenger.showSnackBar(SnackBar(
+                    content:Row(mainAxisSize:MainAxisSize.min,children:[
+                      const Icon(Icons.check_circle_rounded,color:Colors.white,size:18),
+                      const SizedBox(width:7),
+                      Flexible(child:Text('$basarili sohbete gönderildi',style:const TextStyle(fontWeight:FontWeight.w800))),
+                    ]),
+                    behavior:SnackBarBehavior.floating,
+                    width:235,
+                    duration:const Duration(milliseconds:1400),
+                    backgroundColor:const Color(0xFF202124),
+                    shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(16)),
+                  ));
+                }
               },
               icon:gonderiliyor?const SizedBox(width:18,height:18,child:CircularProgressIndicator(strokeWidth:2,color:Colors.white)):const Icon(Icons.send_rounded),
               label:Text(secilen.isEmpty?'Sohbet seç':'${secilen.length} sohbete gönder',style:const TextStyle(fontWeight:FontWeight.w900)),
