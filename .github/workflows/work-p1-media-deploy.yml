@@ -29,7 +29,6 @@ jobs:
         run: npm install
 
       - name: Paket 1 ana test Worker deploy
-        working-directory: cloudflare/worker
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
