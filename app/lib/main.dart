@@ -1956,9 +1956,16 @@ Future<void> uygulamaBildirimiGonder({
   if(sosyalBildirimi&&ayar['friendNotifications']==false)return;
   if(etkilesimBildirimi&&ayar['interactionNotifications']==false)return;
   if(aramaBildirimi&&ayar['callNotifications']==false)return;
+  Map<String,dynamic> sohbetBildirimAyari=<String,dynamic>{};
+  if(belgeId!=null&&ayar['chatNotificationSettings'] is Map){
+    final tum=Map<String,dynamic>.from(ayar['chatNotificationSettings'] as Map);
+    final ham=tum[belgeId];
+    if(ham is Map)sohbetBildirimAyari=Map<String,dynamic>.from(ham);
+  }
   // Grup sessize alma yalnızca sohbet/arama trafiğini susturur.
   // Üyeliğe eklenme ve katılma onayı gibi yönetim olayları kaybolmamalı.
   final sessizeBagli=tur=='message'||tur=='call'||olayTuru=='group_message'||olayTuru=='group_mention';
+  if(sessizeBagli&&sohbetBildirimAyari['enabled']==false)return;
   if(sessizeBagli&&belgeId!=null&&List<String>.from(ayar['mutedChats']??const[]).contains(belgeId)){
     final ham=(ayar['mutedChatUntil'] is Map)?(ayar['mutedChatUntil'] as Map)[belgeId]:null;
     final bitis=DateTime.tryParse((ham??'').toString());
@@ -1977,8 +1984,11 @@ Future<void> uygulamaBildirimiGonder({
     if(hedefBaslik!=null&&hedefBaslik.isNotEmpty)'targetTitle':hedefBaslik,
     if(hedefFoto!=null&&hedefFoto.isNotEmpty)'targetPhotoUrl':hedefFoto,
     if(olayTuru!=null&&olayTuru.isNotEmpty)'eventKind':olayTuru,
-    if(onizleme!=null&&onizleme.isNotEmpty)'preview':onizleme,
+    if(onizleme!=null&&onizleme.isNotEmpty&&sohbetBildirimAyari['preview']!=false)'preview':onizleme,
     if(eylem!=null&&eylem.isNotEmpty)'eventAction':eylem,
+    'chatSoundEnabled':sohbetBildirimAyari['sound']!=false,
+    'chatVibrationEnabled':sohbetBildirimAyari['vibration']!=false,
+    'chatPreviewEnabled':sohbetBildirimAyari['preview']!=false,
     'read':false,'createdAt':FieldValue.serverTimestamp(),
   });
 }
@@ -17080,6 +17090,69 @@ class SohbetBilgiPage extends StatelessWidget{
     if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(secim==0?'Süreli mesajlar kapatıldı.':'Süreli mesajlar ayarlandı.')));
   }
 
+  Future<void> sohbetBildirimAyarlari(BuildContext context)async{
+    final me=FirebaseAuth.instance.currentUser?.uid;if(me==null)return;
+    final ref=FirebaseFirestore.instance.collection('users').doc(me);
+    final d=await ref.get(),v=d.data()??<String,dynamic>{};
+    final tum=Map<String,dynamic>.from(v['chatNotificationSettings'] is Map?v['chatNotificationSettings'] as Map:const{});
+    final mevcut=tum[chatId] is Map?Map<String,dynamic>.from(tum[chatId] as Map):<String,dynamic>{};
+    var etkin=mevcut['enabled']!=false;
+    var ses=mevcut['sound']!=false;
+    var titresim=mevcut['vibration']!=false;
+    var onizleme=mevcut['preview']!=false;
+    if(!context.mounted)return;
+    final kaydet=await showModalBottomSheet<bool>(
+      context:context,
+      backgroundColor:Colors.white,
+      isScrollControlled:true,
+      showDragHandle:true,
+      shape:const RoundedRectangleBorder(borderRadius:BorderRadius.vertical(top:Radius.circular(28))),
+      builder:(sheet)=>StatefulBuilder(builder:(sheet,setSheet)=>SafeArea(child:Padding(
+        padding:const EdgeInsets.fromLTRB(12,0,12,18),
+        child:Column(mainAxisSize:MainAxisSize.min,children:[
+          const ListTile(
+            leading:Icon(Icons.notifications_active_outlined,color:ngelxPrivateBlue),
+            title:Text('Bildirimler ve sesler',style:TextStyle(color:ngelxPrivateBlueInk,fontWeight:FontWeight.w900)),
+            subtitle:Text('Yalnızca bu sohbet için bildirim tercihlerini değiştir.',style:TextStyle(color:Colors.black54)),
+          ),
+          SwitchListTile(
+            title:const Text('Bu sohbetin bildirimleri',style:TextStyle(color:ngelxPrivateBlueInk,fontWeight:FontWeight.w800)),
+            subtitle:Text(etkin?'Açık':'Kapalı',style:const TextStyle(color:Colors.black54)),
+            value:etkin,onChanged:(x)=>setSheet(()=>etkin=x),
+          ),
+          SwitchListTile(
+            title:const Text('Bildirim sesi',style:TextStyle(color:ngelxPrivateBlueInk,fontWeight:FontWeight.w800)),
+            value:ses,onChanged:etkin?(x)=>setSheet(()=>ses=x):null,
+          ),
+          SwitchListTile(
+            title:const Text('Titreşim',style:TextStyle(color:ngelxPrivateBlueInk,fontWeight:FontWeight.w800)),
+            value:titresim,onChanged:etkin?(x)=>setSheet(()=>titresim=x):null,
+          ),
+          SwitchListTile(
+            title:const Text('Mesaj önizlemesi',style:TextStyle(color:ngelxPrivateBlueInk,fontWeight:FontWeight.w800)),
+            subtitle:const Text('Bildirimde mesaj içeriğini göster.',style:TextStyle(color:Colors.black54)),
+            value:onizleme,onChanged:etkin?(x)=>setSheet(()=>onizleme=x):null,
+          ),
+          const SizedBox(height:8),
+          SizedBox(width:double.infinity,child:FilledButton(
+            onPressed:()=>Navigator.pop(sheet,true),
+            child:const Text('Kaydet'),
+          )),
+        ]),
+      ))),
+    )??false;
+    if(!kaydet)return;
+    tum[chatId]=<String,dynamic>{
+      'enabled':etkin,
+      'sound':ses,
+      'vibration':titresim,
+      'preview':onizleme,
+      'updatedAt':DateTime.now().toUtc().toIso8601String(),
+    };
+    await ref.set({'chatNotificationSettings':tum},SetOptions(merge:true));
+    if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bu sohbetin bildirim ayarları kaydedildi.')));
+  }
+
   Future<void> sessizeAl(BuildContext context)async{
     final me=FirebaseAuth.instance.currentUser?.uid;if(me==null)return;
     final ref=FirebaseFirestore.instance.collection('users').doc(me),d=await ref.get(),v=d.data()??<String,dynamic>{},sessiz=List<String>.from(v['mutedChats']??const[]).contains(chatId);
@@ -17437,7 +17510,7 @@ class SohbetBilgiPage extends StatelessWidget{
               const SizedBox(height:18),
               _bolum('İşlemler'),
               _satir(Icons.notifications_off_outlined,'Sessize al',()=>sessizeAl(context),alt:'Bu sohbetin bildirimlerini yönet'),
-              _satir(Icons.notifications_outlined,'Bildirimler ve sesler',()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const TercihlerPage(baslik:'Bildirimler'))),alt:'Mesaj bildirim ayarları'),
+              _satir(Icons.notifications_outlined,'Bildirimler ve sesler',()=>sohbetBildirimAyarlari(context),alt:'Yalnızca bu sohbetin bildirim ayarları'),
               _satir(Icons.share_outlined,'Kişiyi paylaş',kisiyiPaylas),
               const SizedBox(height:18),
               _bolum('Gizlilik ve destek'),
