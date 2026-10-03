@@ -16553,14 +16553,21 @@ class _SohbetPageState extends State<SohbetPage> {
               }
               final hamGun=d.data()['createdAt']??d.data()['clientCreatedAt'];
               final gunEtiketi=_ozelSohbetGunEtiketi(hamGun);
-              var gunGoster=i==1;
+              var zamanGoster=i==1;
+              var zamanEtiketi=_ozelSohbetZamanAyirici(hamGun);
               if(i>1){
                 final onceki=docs[i-2].data();
-                final oncekiEtiket=_ozelSohbetGunEtiketi(onceki['createdAt']??onceki['clientCreatedAt']);
-                gunGoster=gunEtiketi.isNotEmpty&&gunEtiketi!=oncekiEtiket;
+                final oncekiHam=onceki['createdAt']??onceki['clientCreatedAt'];
+                final oncekiEtiket=_ozelSohbetGunEtiketi(oncekiHam);
+                final gunDegisti=gunEtiketi.isNotEmpty&&gunEtiketi!=oncekiEtiket;
+                final simdiT=hamGun is Timestamp?hamGun.toDate():null;
+                final oncekiT=oncekiHam is Timestamp?oncekiHam.toDate():null;
+                final uzunAra=!gunDegisti&&simdiT!=null&&oncekiT!=null&&simdiT.difference(oncekiT).inMinutes.abs()>=60;
+                zamanGoster=gunDegisti||uzunAra;
+                if(uzunAra)zamanEtiketi=mesajSaati(hamGun);
               }
               return Column(key:_mesajAnahtarlari.putIfAbsent(d.id,()=>GlobalKey()),children:[
-                if(gunGoster&&gunEtiketi.isNotEmpty)
+                if(zamanGoster&&gunEtiketi.isNotEmpty&&zamanEtiketi.isNotEmpty)
                   Padding(
                     padding:const EdgeInsets.symmetric(vertical:10),
                     child:Container(
@@ -16570,7 +16577,7 @@ class _SohbetPageState extends State<SohbetPage> {
                         borderRadius:BorderRadius.circular(16),
                         border:Border.all(color:ngelxPrivateBlueBorder),
                       ),
-                      child:Text(_ozelSohbetZamanAyirici(hamGun),style:const TextStyle(color:ngelxPrivateBlue,fontSize:11,fontWeight:FontWeight.w800)),
+                      child:Text(zamanEtiketi,style:const TextStyle(color:ngelxPrivateBlue,fontSize:11,fontWeight:FontWeight.w800)),
                     ),
                   ),
                 ozelMesajKarti(d,fontSize:mesajYaziBoyutu,goruldu:goruldu,quickReaction:hizliEmoji),
