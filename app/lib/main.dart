@@ -19499,6 +19499,8 @@ class _SohbetPageState extends State<SohbetPage> {
     final medyaUrl=ngelxMesajMedyaUrl(v,video:video);
     final videoKapakUrl=video?ngelxMesajVideoKapagi(v):'';
     final sadeMedya=photo||video||shared;
+    final yanitli=(v['replyText']??'').toString().trim().isNotEmpty;
+    final benimMaviBalon=ben&&!yanitli;
     final metin=(v['text']??v['message']??v['content']??'').toString().trim(),saat=mesajSaati(v['createdAt']??v['clientCreatedAt']);
     final gizlenecek=gizliKelimeFiltresi&&metin.isNotEmpty&&ngelxHiddenWordMatches(metin,gizliKelimeListesi);
     final gosterilecekMetin=gizlenecek?'Gizli kelime filtresi nedeniyle gizlendi.':metin;
@@ -19533,11 +19535,11 @@ class _SohbetPageState extends State<SohbetPage> {
           margin:const EdgeInsets.symmetric(horizontal:4,vertical:5),
           padding:sadeMedya?EdgeInsets.zero:const EdgeInsets.all(12),
           decoration:BoxDecoration(
-            color:sadeMedya?Colors.transparent:(ben?null:Colors.white),
-            gradient:sadeMedya?null:(ben?const LinearGradient(begin:Alignment.topLeft,end:Alignment.bottomRight,colors:[ngelxPrivateBlue2,ngelxPrivateBlue]):null),
+            color:sadeMedya?Colors.transparent:(benimMaviBalon?null:Colors.white),
+            gradient:sadeMedya?null:(benimMaviBalon?const LinearGradient(begin:Alignment.topLeft,end:Alignment.bottomRight,colors:[ngelxPrivateBlue2,ngelxPrivateBlue]):null),
             borderRadius:BorderRadius.circular(20),
-            border:sadeMedya?null:(ben?null:Border.all(color:ngelxPrivateBlueBorder)),
-            boxShadow:sadeMedya?null:const [BoxShadow(color:Color(0x100B5FD7),blurRadius:12,offset:Offset(0,5))],
+            border:sadeMedya?null:(benimMaviBalon?null:Border.all(color:const Color(0xFFE5E7EB))),
+            boxShadow:sadeMedya?null:const [BoxShadow(color:Color(0x10000000),blurRadius:10,offset:Offset(0,4))],
           ),
           child:Column(crossAxisAlignment:CrossAxisAlignment.end,mainAxisSize:MainAxisSize.min,children:[
             if((v['replyText']??'').toString().trim().isNotEmpty)
@@ -19630,21 +19632,21 @@ class _SohbetPageState extends State<SohbetPage> {
                   FilledButton.tonal(onPressed:()=>aramaBaslat(goruntulu),child:const Text('Geri ara')),
                 ]);
               })
-            else Text(gosterilecekMetin.isEmpty?'Mesaj içeriği bulunamadı':gosterilecekMetin,softWrap:true,style:TextStyle(color:ben?Colors.white:Colors.black87,fontSize:fontSize,height:1.3,fontStyle:gizlenecek?FontStyle.italic:FontStyle.normal)),
-            if(v['editedAt']!=null)Text('düzenlendi',style:TextStyle(fontSize:9,color:ben?Colors.white60:Colors.black38)),
+            else Text(gosterilecekMetin.isEmpty?'Mesaj içeriği bulunamadı':gosterilecekMetin,softWrap:true,style:TextStyle(color:benimMaviBalon?Colors.white:Colors.black87,fontSize:fontSize,height:1.3,fontStyle:gizlenecek?FontStyle.italic:FontStyle.normal)),
+            if(v['editedAt']!=null)Text('düzenlendi',style:TextStyle(fontSize:9,color:benimMaviBalon?Colors.white60:Colors.black38)),
             if(sayilar.isNotEmpty)Padding(
               padding:const EdgeInsets.only(top:7),
               child:Wrap(spacing:5,runSpacing:5,children:sayilar.entries.map((e)=>Container(
                 padding:const EdgeInsets.symmetric(horizontal:7,vertical:3),
-                decoration:BoxDecoration(color:ben?Colors.white.withValues(alpha:.18):Colors.white,borderRadius:BorderRadius.circular(14)),
+                decoration:BoxDecoration(color:benimMaviBalon?Colors.white.withValues(alpha:.18):const Color(0xFFF3F4F6),borderRadius:BorderRadius.circular(14)),
                 child:Text(e.value>1?e.key+' '+e.value.toString():e.key,style:const TextStyle(fontSize:15)),
               )).toList()),
             ),
             if(saat.isNotEmpty)Padding(padding:const EdgeInsets.only(top:4),child:Row(mainAxisSize:MainAxisSize.min,children:[
-              Text(saat,style:TextStyle(fontSize:10,color:ben?Colors.white70:Colors.black45)),
+              Text(saat,style:TextStyle(fontSize:10,color:benimMaviBalon?Colors.white70:Colors.black45)),
               if(goruldu)...[
                 const SizedBox(width:5),
-                Text('Görüldü',style:TextStyle(fontSize:10,color:ben?Colors.white70:Colors.blueGrey)),
+                Text('Görüldü',style:TextStyle(fontSize:10,color:benimMaviBalon?Colors.white70:Colors.blueGrey)),
               ],
             ])),
           ]),
