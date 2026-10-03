@@ -141,12 +141,19 @@ class _CanliHazirlikPageState extends State<CanliHazirlikPage> {
   String? kameraHatasi;
   List<CameraDescription> kameralar = <CameraDescription>[];
   CameraController? onizleme;
+  Uint8List? kameraGecisKaresi;
 
   @override
   void initState() {
     super.initState();
+    baslik.addListener(_baslikDogrulamaTemizle);
     unawaited(_canliTercihleriniYukle());
     unawaited(_onizlemeyiBaslat());
+  }
+
+  void _baslikDogrulamaTemizle(){
+    if(!mounted||baslik.text.trim().length<3)return;
+    ScaffoldMessenger.maybeOf(context)?.hideCurrentSnackBar();
   }
 
   Future<void> _canliTercihleriniYukle() async {
@@ -178,6 +185,7 @@ class _CanliHazirlikPageState extends State<CanliHazirlikPage> {
 
   @override
   void dispose() {
+    baslik.removeListener(_baslikDogrulamaTemizle);
     final controller = onizleme;
     onizleme = null;
     if (controller != null) unawaited(controller.dispose());
@@ -236,9 +244,16 @@ class _CanliHazirlikPageState extends State<CanliHazirlikPage> {
       try { await yeni.setFlashMode(flashAcik ? FlashMode.torch : FlashMode.off); } catch (_) { flashAcik = false; }
       if (!mounted) { await yeni.dispose(); return; }
       onizleme = yeni;
-      setState(() => onizlemeHazirlaniyor = false);
+      if(mounted)setState(() {
+        onizlemeHazirlaniyor = false;
+        kameraGecisKaresi = null;
+      });
     } catch (e) {
-      if (mounted) setState(() { onizlemeHazirlaniyor = false; kameraHatasi = e.toString().replaceFirst('Exception: ', ''); });
+      if (mounted) setState(() {
+        onizlemeHazirlaniyor = false;
+        kameraGecisKaresi = null;
+        kameraHatasi = e.toString().replaceFirst('Exception: ', '');
+      });
     }
   }
 
@@ -257,7 +272,15 @@ class _CanliHazirlikPageState extends State<CanliHazirlikPage> {
 
   Future<void> _kamerayiCevir() async {
     if (baglaniyor || !kamera || onizlemeHazirlaniyor || kameralar.length < 2) return;
-    setState(() { arkaKamera = !arkaKamera; flashAcik = false; });
+    final mevcut=onizleme;
+    if(mevcut!=null&&mevcut.value.isInitialized){
+      try{
+        final kare=await mevcut.takePicture();
+        final bytes=await kare.readAsBytes();
+        if(mounted)setState(()=>kameraGecisKaresi=bytes);
+      }catch(_){}
+    }
+    if(mounted)setState(() { arkaKamera = !arkaKamera; flashAcik = false; });
     await _onizlemeyiBaslat();
   }
 
@@ -282,7 +305,17 @@ class _CanliHazirlikPageState extends State<CanliHazirlikPage> {
   Widget _kameraOnizlemesi() {
     final c = onizleme;
     if (!kamera) return const ColoredBox(color: Color(0xFF151515), child: Center(child: Icon(Icons.videocam_off_rounded, size: 72, color: Colors.white38)));
-    if (onizlemeHazirlaniyor) return const ColoredBox(color: Color(0xFF151515), child: Center(child: CircularProgressIndicator(color: Colors.white)));
+    if (onizlemeHazirlaniyor) {
+      final donmus=kameraGecisKaresi;
+      if(donmus!=null){
+        return Stack(fit:StackFit.expand,children:[
+          Image.memory(donmus,fit:BoxFit.cover,gaplessPlayback:true),
+          const ColoredBox(color:Color(0x33000000)),
+          const Center(child:CircularProgressIndicator(color:Colors.white)),
+        ]);
+      }
+      return const ColoredBox(color: Color(0xFF151515), child: Center(child: CircularProgressIndicator(color: Colors.white)));
+    }
     if (c == null || !c.value.isInitialized) {
       return ColoredBox(color: const Color(0xFF151515), child: Center(child: Padding(padding: const EdgeInsets.all(24), child: Column(mainAxisSize: MainAxisSize.min, children: [
         const Icon(Icons.no_photography_rounded, size: 54, color: Colors.white54),
@@ -356,6 +389,8 @@ class _CanliHazirlikPageState extends State<CanliHazirlikPage> {
   }
 
   Future<void> baslat() async {
+    FocusManager.instance.primaryFocus?.unfocus();
+    await SystemChannels.textInput.invokeMethod<void>('TextInput.hide');
     final user = FirebaseAuth.instance.currentUser;
     if (user == null || user.isAnonymous || baglaniyor) return;
     if (baslik.text.trim().length < 3) {
@@ -953,7 +988,14 @@ class _CanliYayinPageState extends State<CanliYayinPage> {
     }
   }
 
+  Future<void> _klavyeyiKapat()async{
+    FocusManager.instance.primaryFocus?.unfocus();
+    try{await SystemChannels.textInput.invokeMethod<void>('TextInput.hide');}catch(_){}
+    await Future<void>.delayed(const Duration(milliseconds:80));
+  }
+
   Future<void> _bitir({bool geriDon = true}) async {
+    await _klavyeyiKapat();
     if (kapatildi) return;
     kapatildi = true;
     yenidenBaglaniyor=false;
@@ -1013,6 +1055,7 @@ class _CanliYayinPageState extends State<CanliYayinPage> {
   }
 
   Future<bool> _geri() async {
+    await _klavyeyiKapat();
     if (widget.yayinSahibi) {
       final onay = await showDialog<bool>(context: context, builder: (_) => AlertDialog(
         title: const Text('Yayın bitsin mi?'),
@@ -1026,6 +1069,7 @@ class _CanliYayinPageState extends State<CanliYayinPage> {
     }
     await _bitir(geriDon: false);
     if(widget.yayinSahibi&&mounted){
+      await _klavyeyiKapat();
       final dk=saniye~/60;
       final sn=(saniye%60).toString().padLeft(2,'0');
       await showDialog<void>(
