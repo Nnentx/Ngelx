@@ -15681,8 +15681,13 @@ class _SohbetPageState extends State<SohbetPage> {
     else if(fazla=='delete_me'){
       final ben=uid;
       if(ben!=null){
-        try{await d.reference.update({'hiddenFor':FieldValue.arrayUnion([ben])});}
-        catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Mesaj yalnızca senden silinemedi. Tekrar dene.')));}
+        try{
+          await FirebaseFirestore.instance.collection('chats').doc(widget.chatId).set({
+            'hiddenMessageIds_$ben':FieldValue.arrayUnion([d.id]),
+          },SetOptions(merge:true));
+        }catch(_){
+          if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Mesaj yalnızca senden silinemedi. Tekrar dene.')));
+        }
       }
     }
     else if(fazla=='delete'){
@@ -15735,16 +15740,20 @@ class _SohbetPageState extends State<SohbetPage> {
         ),
       )??false;
       if(ok){
-        final eskiTur=(v['type']??'text').toString();
         try{
           await d.reference.set({
-            'deletedForEveryone':true,'deletedAt':FieldValue.serverTimestamp(),'deletedBy':uid,
-            'deletedOriginalType':eskiTur,'type':'deleted','text':'',
-            'message':FieldValue.delete(),'content':FieldValue.delete(),'mediaUrl':FieldValue.delete(),
-            'videoUrl':FieldValue.delete(),'audioUrl':FieldValue.delete(),'fileUrl':FieldValue.delete(),
-            'fileName':FieldValue.delete(),'locationText':FieldValue.delete(),'storyUrl':FieldValue.delete(),
-            'contentId':FieldValue.delete(),'reactions':<String,dynamic>{},
-            'pinned':FieldValue.delete(),'pinnedAt':FieldValue.delete(),'pinnedBy':FieldValue.delete(),
+            'deletedForEveryone':true,
+            'deletedAt':FieldValue.serverTimestamp(),
+            'deletedBy':uid,
+            'text':'',
+            'mediaUrl':FieldValue.delete(),
+            'audioUrl':FieldValue.delete(),
+            'fileUrl':FieldValue.delete(),
+            'fileName':FieldValue.delete(),
+            'reactions':<String,dynamic>{},
+            'pinned':FieldValue.delete(),
+            'pinnedAt':FieldValue.delete(),
+            'pinnedBy':FieldValue.delete(),
           },SetOptions(merge:true));
         }catch(_){
           if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Mesaj herkesten silinemedi. Tekrar dene.')));
@@ -16436,11 +16445,13 @@ class _SohbetPageState extends State<SohbetPage> {
         builder:(_,s){
           final tumDocs=s.data?.docs??List<QueryDocumentSnapshot<Map<String,dynamic>>>.from(_mesajOnbellek);
           final simdi=DateTime.now();
+          final ben=uid;
+          final gizliMesajlar=ben==null?const <String>[]:List<String>.from(veri['hiddenMessageIds_$ben']??const[]);
           final docs=tumDocs.where((d){
             final v=d.data();
             final x=v['expiresAt'];
             final gizli=List<String>.from(v['hiddenFor']??const[]);
-            if(uid!=null&&gizli.contains(uid))return false;
+            if((ben!=null&&gizli.contains(ben))||gizliMesajlar.contains(d.id))return false;
             return x is! Timestamp||x.toDate().isAfter(simdi);
           }).toList();
           sureliMesajTakvimi(docs);
