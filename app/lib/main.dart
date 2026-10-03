@@ -7531,7 +7531,14 @@ class _MesajPageState extends State<MesajPage> {
     final d=await FirebaseFirestore.instance.collection('users').doc(ben).get();
     final veri=d.data()??<String,dynamic>{},sessiz=Set<String>.from(List<dynamic>.from(veri['mutedChats']??const[])),sureler=Map<String,dynamic>.from(veri['mutedChatUntil']??{}),suresiDolan=<String>[];
     for(final id in sessiz){final tarih=DateTime.tryParse((sureler[id]??'').toString());if(tarih!=null&&tarih.isBefore(DateTime.now().toUtc()))suresiDolan.add(id);}
-    if(suresiDolan.isNotEmpty){sessiz.removeAll(suresiDolan);final guncelle=<String,dynamic>{'mutedChats':FieldValue.arrayRemove(suresiDolan)};for(final id in suresiDolan)guncelle['mutedChatUntil.$id']=FieldValue.delete();await d.reference.update(guncelle);}
+    if(suresiDolan.isNotEmpty){
+      sessiz.removeAll(suresiDolan);
+      for(final id in suresiDolan)sureler.remove(id);
+      await d.reference.set({
+        'mutedChats':FieldValue.arrayRemove(suresiDolan),
+        'mutedChatUntil':sureler,
+      },SetOptions(merge:true));
+    }
     if(!mounted)return;
     setState((){
       engellenenler=Set<String>.from(List<dynamic>.from(veri['blocked']??const[]));
@@ -7547,8 +7554,15 @@ class _MesajPageState extends State<MesajPage> {
 
   Future<void> sessizeAl(String chatId,bool sessiz) async {
     final ben=uid;if(ben==null)return;
-    await FirebaseFirestore.instance.collection('users').doc(ben).set({'mutedChats':sessiz?FieldValue.arrayUnion([chatId]):FieldValue.arrayRemove([chatId])},SetOptions(merge:true));
-    if(!sessiz)await FirebaseFirestore.instance.collection('users').doc(ben).update({'mutedChatUntil.$chatId':FieldValue.delete()});
+    final ref=FirebaseFirestore.instance.collection('users').doc(ben);
+    final d=await ref.get();
+    final v=d.data()??<String,dynamic>{};
+    final sureler=Map<String,dynamic>.from(v['mutedChatUntil'] is Map?v['mutedChatUntil'] as Map:const{});
+    if(!sessiz)sureler.remove(chatId);
+    await ref.set({
+      'mutedChats':sessiz?FieldValue.arrayUnion([chatId]):FieldValue.arrayRemove([chatId]),
+      'mutedChatUntil':sureler,
+    },SetOptions(merge:true));
     if(mounted)setState(()=>sessiz?sessizSohbetler.add(chatId):sessizSohbetler.remove(chatId));
   }
 
@@ -7562,8 +7576,14 @@ class _MesajPageState extends State<MesajPage> {
     if(secim==null)return;
     final ben=uid;if(ben==null)return;
     final kullanici=FirebaseFirestore.instance.collection('users').doc(ben);
-    await kullanici.set({'mutedChats':FieldValue.arrayUnion([chatId])},SetOptions(merge:true));
-    await kullanici.update({'mutedChatUntil.$chatId':DateTime.now().add(secim).toUtc().toIso8601String()});
+    final d=await kullanici.get();
+    final v=d.data()??<String,dynamic>{};
+    final sureler=Map<String,dynamic>.from(v['mutedChatUntil'] is Map?v['mutedChatUntil'] as Map:const{});
+    sureler[chatId]=DateTime.now().add(secim).toUtc().toIso8601String();
+    await kullanici.set({
+      'mutedChats':FieldValue.arrayUnion([chatId]),
+      'mutedChatUntil':sureler,
+    },SetOptions(merge:true));
     if(mounted)setState(()=>sessizSohbetler.add(chatId));
   }
 
