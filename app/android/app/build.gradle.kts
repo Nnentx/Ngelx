@@ -13,8 +13,8 @@ if (keystorePropertiesFile.exists()) {
     keystorePropertiesFile.inputStream().use { keystoreProperties.load(it) }
 }
 
-// Paket 2 test APK can be installed next to the existing NgelX app without
-// replacing/uninstalling it. CI enables this property only for the test build.
+// Paket 2 uses Firebase's already-registered Paket 1 test application ID so
+// google-services can configure the APK. Installing it updates the P1 test app.
 val ngelxP2SideBySide =
     (project.findProperty("ngelxP2SideBySide") as String?)?.toBoolean() ?: false
 
@@ -30,7 +30,7 @@ android {
 
     defaultConfig {
         applicationId = if (ngelxP2SideBySide) {
-            "com.nnentx.ngelx_app.p2test"
+            "com.nnentx.ngelx_app.p1test"
         } else {
             "com.nnentx.ngelx_app"
         }
