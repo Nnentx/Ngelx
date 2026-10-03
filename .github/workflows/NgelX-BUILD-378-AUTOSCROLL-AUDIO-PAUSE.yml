@@ -1,0 +1,106 @@
+name: NgelX BUILD 378 AUTOSCROLL AUDIO PAUSE
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - work/build-378-autoscroll-audio-pause
+    paths:
+      - 'app/**'
+      - '.github/workflows/NgelX-BUILD-378-AUTOSCROLL-AUDIO-PAUSE.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Kaynaklari al
+        uses: actions/checkout@v4
+
+      - name: Java 17 kur
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Flutter kur
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Sabit NgelX imza anahtarini geri yukle
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: ngelx-stable-debug-keystore-v1
+          fail-on-cache-miss: true
+
+      - name: Imza anahtarini dogrula
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s "$HOME/.android/debug.keystore"
+          keytool -list -v -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey | grep -F 'SHA256: BE:20:B2:7F:0B:A1:F4:DE:CD:29:41:D4:10:B1:53:6D:E8:9E:48:DC:89:4F:04:F0:38:F9:D2:6B:11:EC:D6:AA'
+
+      - name: Build 378 kaynak kontrolu
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fqx 'version: 1.0.157+378' app/pubspec.yaml
+          grep -q "defaultValue: '378'" app/lib/main.dart
+          grep -q "title:const Text('İndir'" app/lib/main.dart
+          grep -q "title:const Text('İlgilenmiyorum'" app/lib/main.dart
+          grep -q "title:const Text('Bildir'" app/lib/main.dart
+          grep -q "title:const Text('Temiz ekran modu'" app/lib/main.dart
+          grep -q "title:const Text('Alt yazılar ve çeviri'" app/lib/main.dart
+          grep -q "title:const Text('Otomatik kaydırma'" app/lib/main.dart
+          grep -q '_otomatikKaydirmaAktif' app/lib/main.dart
+          grep -q '_otomatikKaydirmaTimeri' app/lib/main.dart
+          grep -q 'kontrol.value.isCompleted' app/lib/main.dart
+          grep -q 'final oynuyordu=hazir&&kontrol.value.isPlaying&&!duraklatildi' app/lib/main.dart
+          grep -q 'height:60' app/lib/main.dart
+          grep -q 'barrierColor:const Color(0x73000000)' app/lib/main.dart
+          grep -q "label:const Text('Vazgeç')" app/lib/main.dart
+          grep -q 'backgroundColor:Colors.black' app/lib/main.dart
+          grep -q 'class NgelXFotoKirpmaPage' app/lib/main.dart
+          grep -q 'altyazıya çevrilebilecek konuşma algılanamadı' app/lib/main.dart
+          grep -q 'startVideoRecording().timeout' app/lib/camera_studio.dart
+
+      - name: Bagimliliklari al
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter clean
+          flutter pub get
+
+      - name: Flutter analiz
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter analyze --no-fatal-infos --no-fatal-warnings
+
+      - name: APK olustur
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter build apk --release --build-name=1.0.157 --build-number=378
+          test -s build/app/outputs/flutter-apk/app-release.apk
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          test -n "$APKSIGNER"
+          "$APKSIGNER" verify --verbose --print-certs build/app/outputs/flutter-apk/app-release.apk
+          cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/NgelX-1.0.157-Build-378-AUTOSCROLL-AUDIO-PAUSE.apk
+          sha256sum build/app/outputs/flutter-apk/NgelX-1.0.157-Build-378-AUTOSCROLL-AUDIO-PAUSE.apk > build/app/outputs/flutter-apk/NgelX-1.0.157-Build-378-AUTOSCROLL-AUDIO-PAUSE.apk.sha256
+
+      - name: APK yukle
+        uses: actions/upload-artifact@v4
+        with:
+          name: NgelX-1.0.157-Build-378-AUTOSCROLL-AUDIO-PAUSE
+          path: |
+            app/build/app/outputs/flutter-apk/NgelX-1.0.157-Build-378-AUTOSCROLL-AUDIO-PAUSE.apk
+            app/build/app/outputs/flutter-apk/NgelX-1.0.157-Build-378-AUTOSCROLL-AUDIO-PAUSE.apk.sha256
+          if-no-files-found: error
+          retention-days: 14
