@@ -7880,6 +7880,21 @@ class _MesajPageState extends State<MesajPage> {
       Expanded(child:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
         stream:ben==null?null:FirebaseFirestore.instance.collection('chats').where('members',arrayContains:ben).limit(60).snapshots(),
         builder:(_,s){
+          if(s.connectionState==ConnectionState.waiting&&!s.hasData){
+            return const Center(child:CircularProgressIndicator(color:mor));
+          }
+          if(s.hasError){
+            return Center(
+              child:Padding(
+                padding:const EdgeInsets.all(24),
+                child:Column(mainAxisSize:MainAxisSize.min,children:[
+                  const Icon(Icons.cloud_off_rounded,color:Colors.black38,size:42),
+                  const SizedBox(height:10),
+                  Text('Sohbetler yüklenemedi. Bağlantını kontrol edip tekrar dene.',textAlign:TextAlign.center,style:TextStyle(color:Colors.black54,fontWeight:FontWeight.w700)),
+                ]),
+              ),
+            );
+          }
           final docs=(s.data?.docs??[]).where((d){final v=d.data();if(List<String>.from(v['hiddenFor']??const[]).contains(ben)||arsivSohbetler.contains(d.id))return false;final members=List<String>.from(v['members']??const[]),grup=v['isGroup']==true||members.length>2;final unread=(v['unread_$ben']??0) as int;if(filtre=='Okunmamış'&&unread==0)return false;if(filtre=='Gruplar'&&!grup)return false;if(!grup){final other=members.firstWhere((x)=>x!=ben,orElse:()=>ben??'');final gelenIstek=v['requestRecipientUid']==ben&&v['requestAccepted_$ben']!=true&&!arkadaslar.contains(other);if(gelenIstek)return false;if(filtre=='Arkadaşlar'&&!arkadaslar.contains(other))return false;}else if(filtre=='Arkadaşlar')return false;final son='${v['groupName']??''} ${v['lastMessage']??''}'.toLowerCase();return sohbetSorgu.isEmpty||son.contains(sohbetSorgu);}).toList()..sort((a,b){final ap=sabitSohbetler.contains(a.id),bp=sabitSohbetler.contains(b.id);if(ap!=bp)return ap?-1:1;final at=a.data()['updatedAt'] as Timestamp?,bt=b.data()['updatedAt'] as Timestamp?;return (bt?.millisecondsSinceEpoch??0).compareTo(at?.millisecondsSinceEpoch??0);});
           if(docs.isEmpty)return Center(child:Text(t('noChats'),textAlign:TextAlign.center,style:const TextStyle(color:Colors.black54)));
           return ListView.builder(itemCount:docs.length,itemBuilder:(_,i){
@@ -8359,7 +8374,13 @@ class _GrupOlusturPageState extends State<GrupOlusturPage>{
     try{
       final d=await FirebaseFirestore.instance.collection('users').doc(u.uid).get().timeout(const Duration(seconds:8));
       final v=d.data()??<String,dynamic>{};
-      final ids=<String>{...List<String>.from(v['following']??const[]),...List<String>.from(v['friends']??const[])}..remove(u.uid);
+      final engellenen=<String>{...List<String>.from(v['blocked']??const[])};
+      final ids=<String>{
+        ...List<String>.from(v['following']??const[]),
+        ...List<String>.from(v['friends']??const[]),
+      }
+        ..remove(u.uid)
+        ..removeAll(engellenen);
       final liste=ids.toList();
       final sorgular=<Future<QuerySnapshot<Map<String,dynamic>>>>[];
       for(int i=0;i<liste.length;i+=30){
@@ -8373,8 +8394,18 @@ class _GrupOlusturPageState extends State<GrupOlusturPage>{
       }
       final sonuclar=await Future.wait(sorgular).timeout(const Duration(seconds:12));
       final bulunan=<QueryDocumentSnapshot<Map<String,dynamic>>>[
-        for(final q in sonuclar)...q.docs.where((x)=>x.data()['deactivated']!=true),
-      ];
+        for(final q in sonuclar)...q.docs.where((x){
+          final pv=x.data();
+          if(pv['deactivated']==true)return false;
+          final hedefEngelleri=List<String>.from(pv['blocked']??const[]);
+          return !hedefEngelleri.contains(u.uid);
+        }),
+      ]..sort((a,b){
+        final av=a.data(),bv=b.data();
+        final aa=(av['displayName']??av['username']??'').toString().toLowerCase();
+        final bb=(bv['displayName']??bv['username']??'').toString().toLowerCase();
+        return aa.compareTo(bb);
+      });
       if(mounted)setState((){adaylar..clear()..addAll(bulunan);izinlerYukleniyor=false;yuklemeHatasi=null;});
     }catch(e){
       if(mounted)setState((){izinlerYukleniyor=false;yuklemeHatasi='Kişiler yüklenemedi. İnternet bağlantını kontrol edip tekrar dene.';});
@@ -8482,6 +8513,15 @@ class _GrupOlusturPageState extends State<GrupOlusturPage>{
         if(fotoAtlandi)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Medya hizmeti kullanılamıyor. Grup fotoğrafsız oluşturuldu.')));
         Navigator.pushReplacement(context,MaterialPageRoute(builder:(_)=>GrupSohbetPage(chatId:ref.id,ad:grupAdi,foto:fotoUrl)));
       }
+    }on FirebaseException catch(e){
+      if(mounted){
+        final mesaj=e.code=='permission-denied'
+          ?'Grup oluşturma izni alınamadı. Hesap ve bağlantı durumunu kontrol et.'
+          :e.code=='unavailable'
+            ?'Sunucuya ulaşılamadı. İnternet bağlantını kontrol edip tekrar dene.'
+            :'Grup oluşturulamadı: '+e.code;
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(mesaj)));
+      }
     }catch(_){
       if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Grup oluşturulamadı. Lütfen tekrar dene.')));
     }finally{
@@ -8490,11 +8530,11 @@ class _GrupOlusturPageState extends State<GrupOlusturPage>{
   }
   @override Widget build(BuildContext context)=>Theme(
     data:ThemeData.light().copyWith(
-      scaffoldBackgroundColor:const Color(0xFFFBF9FF),
-      colorScheme:ColorScheme.fromSeed(seedColor:ngelxPremiumPurple),
+      scaffoldBackgroundColor:Colors.white,
+      colorScheme:ColorScheme.fromSeed(seedColor:ngelxGroupGreen),
     ),
     child:Scaffold(
-      backgroundColor:const Color(0xFFFBF9FF),
+      backgroundColor:Colors.white,
       appBar:AppBar(
         toolbarHeight:64,
         backgroundColor:Colors.transparent,
@@ -8503,7 +8543,7 @@ class _GrupOlusturPageState extends State<GrupOlusturPage>{
         title:const Text('Yeni grup',style:TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w900)),
         flexibleSpace:Container(
           decoration:const BoxDecoration(
-            gradient:LinearGradient(colors:[Color(0xFFFFFFFF),Color(0xFFF5EFFF)]),
+            gradient:LinearGradient(colors:[Color(0xFFFFFFFF),ngelxGroupGreenSoft]),
             borderRadius:BorderRadius.vertical(bottom:Radius.circular(24)),
           ),
         ),
