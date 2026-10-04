@@ -747,11 +747,21 @@ class _VerilerimV258PageState extends State<VerilerimV258Page>{
 class NgelXHakkindaV258Page extends StatelessWidget{
   const NgelXHakkindaV258Page({super.key});
   Future<void> _m(BuildContext c,String a,String b)=>showDialog<void>(context:c,builder:(x)=>AlertDialog(title:Text(a),content:Text(b),actions:[TextButton(onPressed:()=>Navigator.pop(x),child:const Text('Kapat'))]));
+  Widget _web(BuildContext context,IconData icon,String title,String sub,String url)=>ListTile(
+    leading:CircleAvatar(backgroundColor:const Color(0xFFF1E9FF),child:Icon(icon,color:mor)),
+    title:Text(title,style:const TextStyle(fontWeight:FontWeight.w800)),
+    subtitle:Text(sub),
+    trailing:const Icon(Icons.open_in_new_rounded),
+    onTap:()=>ngelxDisBaglantiAc(context,url),
+  );
   @override Widget build(BuildContext context)=>Theme(data:ThemeData.light(),child:Scaffold(backgroundColor:Colors.white,appBar:AppBar(title:const Text('NgelX hakkında')),body:ListView(padding:const EdgeInsets.all(18),children:[
     const Center(child:Logo(kucuk:true)),const SizedBox(height:8),Center(child:Text('v$ngelxVersionName • Yapı $ngelxBuildNumber',style:const TextStyle(color:Colors.black54))),const Divider(height:30),
-    ListTile(title:const Text('Topluluk kuralları'),trailing:const Icon(Icons.chevron_right),onTap:()=>_m(context,'Topluluk kuralları','Taciz, tehdit, dolandırıcılık, yasa dışı içerik ve mahremiyet ihlallerine izin verilmez.')),
-    ListTile(title:const Text('Gizlilik özeti'),trailing:const Icon(Icons.chevron_right),onTap:()=>_m(context,'Gizlilik','Görünürlük, mesaj, hikâye, etiket ve etkinlik tercihlerini Ayarlar ve gizlilik bölümünden yönetebilirsin.')),
-    ListTile(title:const Text('Kullanım koşulları'),trailing:const Icon(Icons.chevron_right),onTap:()=>_m(context,'Kullanım koşulları','NgelX kullanırken yürürlükteki yasalara, topluluk kurallarına ve başkalarının haklarına uymalısın.')),
+    ListTile(title:const Text('Topluluk kuralları'),trailing:const Icon(Icons.chevron_right),onTap:()=>_m(context,'Topluluk kuralları','Taciz, tehdit, dolandırıcılık, yasa dışı içerik, çocukların cinsel istismarı ve sömürüsü, mahremiyet ihlalleri ve zararlı davranışlara izin verilmez.')),
+    _web(context,Icons.privacy_tip_outlined,'Gizlilik Politikası','Toplanan veriler, kullanım amaçları ve hakların',ngelxPrivacyUrl),
+    _web(context,Icons.gavel_outlined,'Kullanım Koşulları','NgelX kullanım ve topluluk koşulları',ngelxTermsUrl),
+    _web(context,Icons.delete_forever_outlined,'Hesap ve veri silme','Uygulama dışından da hesap silme talebi yolu',ngelxDeleteAccountUrl),
+    _web(context,Icons.child_care_rounded,'Çocuk güvenliği','Çocuk güvenliği standartları ve bildirim yolu',ngelxChildSafetyUrl),
+    _web(context,Icons.support_agent_rounded,'Destek','Hata, güvenlik ve hesap işlemleri için destek',ngelxSupportUrl),
     ListTile(title:const Text('Telif hakkı'),trailing:const Icon(Icons.chevron_right),onTap:()=>_m(context,'Telif hakkı','Yalnızca paylaşma hakkına sahip olduğun içerikleri yüklemelisin.')),
     ListTile(title:const Text('Açık kaynak lisansları'),trailing:const Icon(Icons.chevron_right),onTap:()=>showLicensePage(context:context,applicationName:'NgelX',applicationVersion:'$ngelxVersionName+$ngelxBuildNumber')),
   ])));
