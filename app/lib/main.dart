@@ -19097,8 +19097,15 @@ class _SohbetPageState extends State<SohbetPage> {
   }
 
   Future<void> mesajTepkiDegistir(QueryDocumentSnapshot<Map<String,dynamic>> d,String emoji)async{
-    final ben=uid;if(ben==null)return;final ham=d.data()['reactions'],mevcut=<String,dynamic>{};if(ham is Map)for(final e in ham.entries){mevcut[e.key.toString()]=e.value;}
-    if((mevcut[ben]??'').toString()==emoji){mevcut.remove(ben);}else{mevcut[ben]=emoji;}await d.reference.set({'reactions':mevcut},SetOptions(merge:true));
+    final ben=uid;if(ben==null)return;
+    try{
+      final mevcut=(d.data()['reactions'] as Map?)?.cast<String,dynamic>()??const <String,dynamic>{};
+      await d.reference.update({
+        'reactions.$ben':(mevcut[ben]??'').toString()==emoji?FieldValue.delete():emoji,
+      });
+    }catch(_){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Tepki eklenemedi. Tekrar dene.')));
+    }
   }
 
   Future<void> mesajKalpBirak(QueryDocumentSnapshot<Map<String,dynamic>> d)async{
@@ -19489,6 +19496,185 @@ class _SohbetPageState extends State<SohbetPage> {
     }
   }
 
+  Widget _ozelMedyaTepkiVerenSatiri(String reactorId,String emoji){
+    return StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
+      stream:FirebaseFirestore.instance.collection('users').doc(reactorId).snapshots(),
+      builder:(context,userSnapshot){
+        final profile=userSnapshot.data?.data()??const <String,dynamic>{};
+        final displayName=(profile['displayName']??'').toString().trim();
+        final username=(profile['username']??'').toString().trim();
+        final name=displayName.isNotEmpty?displayName:username.isNotEmpty?username:'NgelX kullanıcısı';
+        final photoUrl=(profile['photoUrl']??'').toString().trim();
+        final isCurrentUser=reactorId==uid;
+        final showUsername=username.isNotEmpty&&username.toLowerCase()!=displayName.toLowerCase();
+        final usernameLabel=username.startsWith('@')?username:'@$username';
+        return ListTile(
+          dense:true,
+          visualDensity:const VisualDensity(vertical:-1),
+          contentPadding:const EdgeInsets.symmetric(horizontal:6,vertical:1),
+          minVerticalPadding:3,
+          leading:CircleAvatar(
+            radius:21,
+            backgroundColor:const Color(0xFFEDEFF3),
+            backgroundImage:photoUrl.isEmpty?null:NgelXAgImageProvider(photoUrl),
+            child:photoUrl.isEmpty?Text(name.isEmpty?'N':name.substring(0,1).toUpperCase(),style:const TextStyle(fontWeight:FontWeight.w800,color:Color(0xFF555B66))):null,
+          ),
+          title:Text(isCurrentUser?'Sen · $name':name,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontWeight:FontWeight.w700,fontSize:15)),
+          subtitle:showUsername?Text(usernameLabel,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:11.5)):null,
+          trailing:Text(emoji,style:const TextStyle(fontSize:31)),
+        );
+      },
+    );
+  }
+
+  void _ozelMedyaTepkiDetayi(DocumentReference<Map<String,dynamic>> ref){
+    const tumu='__all__';
+    var seciliFiltre=tumu;
+    showModalBottomSheet<void>(
+      context:context,
+      isScrollControlled:true,
+      backgroundColor:Colors.transparent,
+      barrierColor:Colors.black54,
+      builder:(sheetContext)=>StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
+        stream:ref.snapshots(),
+        builder:(context,snapshot){
+          final reactions=Map<String,dynamic>.from(snapshot.data?.data()?['reactions']??const <String,dynamic>{});
+          final entries=reactions.entries.where((e)=>e.value.toString().trim().isNotEmpty).toList();
+          final sayilar=<String,int>{};
+          for(final entry in entries){
+            final emoji=entry.value.toString();
+            sayilar[emoji]=(sayilar[emoji]??0)+1;
+          }
+          final tepkiler=sayilar.entries.toList()..sort((a,b)=>b.value.compareTo(a.value));
+          final panelHeight=(MediaQuery.of(sheetContext).size.height*.43).clamp(300.0,440.0).toDouble();
+          return StatefulBuilder(builder:(context,setModalState){
+            final gorunenler=seciliFiltre==tumu?entries:entries.where((entry)=>entry.value.toString()==seciliFiltre).toList();
+            Widget filtre(String label,String key,{String? emoji,int? count}){
+              final secili=seciliFiltre==key;
+              return Padding(
+                padding:const EdgeInsets.symmetric(horizontal:3),
+                child:Material(
+                  color:secili?const Color(0xFFF0F1F4):Colors.transparent,
+                  borderRadius:BorderRadius.circular(22),
+                  child:InkWell(
+                    borderRadius:BorderRadius.circular(22),
+                    onTap:()=>setModalState(()=>seciliFiltre=key),
+                    child:Padding(
+                      padding:const EdgeInsets.symmetric(horizontal:14,vertical:8),
+                      child:Row(mainAxisSize:MainAxisSize.min,children:[
+                        if(emoji!=null)Text(emoji,style:const TextStyle(fontSize:19)),
+                        if(emoji!=null&&count!=null)const SizedBox(width:5),
+                        if(count!=null)Text(count.toString(),style:const TextStyle(fontSize:13,fontWeight:FontWeight.w700,color:Color(0xFF545A64))),
+                        if(count==null)Text(label,style:const TextStyle(fontSize:13,fontWeight:FontWeight.w800,color:Color(0xFF252830))),
+                      ]),
+                    ),
+                  ),
+                ),
+              );
+            }
+            return SafeArea(
+              top:false,
+              child:Container(
+                height:panelHeight,
+                margin:const EdgeInsets.fromLTRB(16,0,16,10),
+                decoration:BoxDecoration(
+                  color:Colors.white,
+                  borderRadius:BorderRadius.circular(28),
+                  boxShadow:const [BoxShadow(color:Color(0x24000000),blurRadius:18,offset:Offset(0,-3))],
+                ),
+                child:Column(children:[
+                  Padding(
+                    padding:const EdgeInsets.fromLTRB(20,12,12,6),
+                    child:Row(children:[
+                      const Expanded(child:Text('İfadeler',style:TextStyle(fontSize:18,fontWeight:FontWeight.w800,color:Color(0xFF17191D)))),
+                      IconButton(
+                        tooltip:'Kapat',
+                        onPressed:()=>Navigator.of(sheetContext).pop(),
+                        style:IconButton.styleFrom(backgroundColor:const Color(0xFFF0F1F4),foregroundColor:const Color(0xFF252830),minimumSize:const Size(38,38),padding:EdgeInsets.zero),
+                        icon:const Icon(Icons.close_rounded,size:21),
+                      ),
+                    ]),
+                  ),
+                  const Divider(height:1,color:Color(0xFFECEEF1)),
+                  Expanded(
+                    child:gorunenler.isEmpty
+                      ?const Center(child:Text('Bu filtrede tepki yok.',style:TextStyle(color:Color(0xFF777C84))))
+                      :ListView.separated(
+                        padding:const EdgeInsets.fromLTRB(16,8,16,8),
+                        itemCount:gorunenler.length,
+                        separatorBuilder:(_,__)=>const SizedBox(height:2),
+                        itemBuilder:(context,index){
+                          final entry=gorunenler[index];
+                          return _ozelMedyaTepkiVerenSatiri(entry.key,entry.value.toString());
+                        },
+                      ),
+                  ),
+                  const Divider(height:1,color:Color(0xFFECEEF1)),
+                  Padding(
+                    padding:const EdgeInsets.fromLTRB(12,6,12,8),
+                    child:Center(
+                      child:SingleChildScrollView(
+                        scrollDirection:Axis.horizontal,
+                        child:Row(mainAxisSize:MainAxisSize.min,children:[
+                          filtre('TÜMÜ',tumu),
+                          ...tepkiler.map((entry)=>filtre('',entry.key,emoji:entry.key,count:entry.value)),
+                        ]),
+                      ),
+                    ),
+                  ),
+                ]),
+              ),
+            );
+          });
+        },
+      ),
+    );
+  }
+
+  Widget _ozelMedyaTepkiBalonu(DocumentReference<Map<String,dynamic>> ref,Map<String,int> counts,int total){
+    final mostUsed=counts.entries.toList()..sort((a,b)=>b.value.compareTo(a.value));
+    final emojis=mostUsed.take(3).map((entry)=>entry.key).join();
+    return GestureDetector(
+      behavior:HitTestBehavior.opaque,
+      onTap:()=>_ozelMedyaTepkiDetayi(ref),
+      child:Container(
+        padding:const EdgeInsets.symmetric(horizontal:6,vertical:2),
+        decoration:BoxDecoration(
+          color:Colors.white.withValues(alpha:.94),
+          borderRadius:BorderRadius.circular(13),
+          border:Border.all(color:const Color(0x1F000000)),
+          boxShadow:const [BoxShadow(color:Color(0x22000000),blurRadius:4,offset:Offset(0,1))],
+        ),
+        child:Row(mainAxisSize:MainAxisSize.min,children:[
+          Text(emojis,style:const TextStyle(fontSize:15,height:1.1)),
+          const SizedBox(width:2),
+          Text(total.toString(),style:const TextStyle(fontSize:11,fontWeight:FontWeight.w800,height:1.1,color:Color(0xFF30343B))),
+        ]),
+      ),
+    );
+  }
+
+  Widget _ozelMedyaTepkiAlani(Widget media,DocumentReference<Map<String,dynamic>> ref,Map<String,int> counts,int total){
+    const sagDokunmaAlani=42.0,altDokunmaAlani=13.0;
+    return Stack(clipBehavior:Clip.none,children:[
+      Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
+        Row(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
+          media,
+          const SizedBox(width:sagDokunmaAlani),
+        ]),
+        const SizedBox(height:altDokunmaAlani),
+      ]),
+      if(total>0)Positioned(
+        right:sagDokunmaAlani,
+        bottom:altDokunmaAlani,
+        child:FractionalTranslation(
+          translation:const Offset(.5,.5),
+          child:_ozelMedyaTepkiBalonu(ref,counts,total),
+        ),
+      ),
+    ]);
+  }
+
   Widget ozelMesajKarti(QueryDocumentSnapshot<Map<String,dynamic>> d,{double fontSize=16,bool goruldu=false,String quickReaction='❤️'}){
     final v=d.data(),ben=v['senderId']==uid,tur=(v['type']??'text').toString();
     final canliPaylasimi=v['liveShare']==true||tur=='live_share'||(v['liveId']??'').toString().trim().isNotEmpty;
@@ -19507,6 +19693,7 @@ class _SohbetPageState extends State<SohbetPage> {
     final tepkiler=Map<String,dynamic>.from(v['reactions']??{});
     final sayilar=<String,int>{};
     for(final x in tepkiler.values){final e=x.toString();sayilar[e]=(sayilar[e]??0)+1;}
+    final medyaTepkiKart=photo||video;
     return Align(
       alignment:ben?Alignment.centerRight:Alignment.centerLeft,
       child:GestureDetector(
@@ -19555,9 +19742,15 @@ class _SohbetPageState extends State<SohbetPage> {
                 child:Text((v['replyText']??'').toString(),maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Color(0xFF202124),fontSize:12.5,fontWeight:FontWeight.w600)),
               ),
             if(photo)
-              IgnorePointer(child:NgelXSohbetFotoOnizleme(url:medyaUrl))
+              _ozelMedyaTepkiAlani(
+                IgnorePointer(child:NgelXSohbetFotoOnizleme(url:medyaUrl)),
+                d.reference,sayilar,tepkiler.length,
+              )
             else if(video)
-              IgnorePointer(child:NgelXSohbetVideoOnizleme(url:medyaUrl,thumbnailUrl:videoKapakUrl))
+              _ozelMedyaTepkiAlani(
+                IgnorePointer(child:NgelXSohbetVideoOnizleme(url:medyaUrl,thumbnailUrl:videoKapakUrl)),
+                d.reference,sayilar,tepkiler.length,
+              )
             else if(sesliOdaPaylasimi)
               IgnorePointer(child:NgelXSesliOdaPaylasimKarti(mesaj:v,benim:ben))
             else if(shared)
@@ -19634,7 +19827,7 @@ class _SohbetPageState extends State<SohbetPage> {
               })
             else Text(gosterilecekMetin.isEmpty?'Mesaj içeriği bulunamadı':gosterilecekMetin,softWrap:true,style:TextStyle(color:benimMaviBalon?Colors.white:Colors.black87,fontSize:fontSize,height:1.3,fontStyle:gizlenecek?FontStyle.italic:FontStyle.normal)),
             if(v['editedAt']!=null)Text('düzenlendi',style:TextStyle(fontSize:9,color:benimMaviBalon?Colors.white60:Colors.black38)),
-            if(sayilar.isNotEmpty)Padding(
+            if(!medyaTepkiKart&&sayilar.isNotEmpty)Padding(
               padding:const EdgeInsets.only(top:7),
               child:Wrap(spacing:5,runSpacing:5,children:sayilar.entries.map((e)=>Container(
                 padding:const EdgeInsets.symmetric(horizontal:7,vertical:3),
@@ -21102,6 +21295,11 @@ class _SohbetMesajAramaPageState extends State<SohbetMesajAramaPage>{
             ]));
             final docs=(snap.data?.docs??[]).where((d){
               final v=d.data();
+              if(!widget.groupMode){
+                final me=FirebaseAuth.instance.currentUser?.uid;
+                final hidden=List<String>.from(v['hiddenFor']??const[]);
+                if(me!=null&&hidden.contains(me))return false;
+              }
               if(!_aramaFiltresineUyar(v))return false;
               return _aramaMetni(v).toLowerCase().contains(sorgu);
             }).toList();
@@ -21119,7 +21317,8 @@ class _SohbetMesajAramaPageState extends State<SohbetMesajAramaPage>{
                   future:sender.isEmpty||sender=='system'?null:_profil(sender),
                   builder:(_,u){
                     final p=u.data?.data()??<String,dynamic>{};
-                    final isim=(p['displayName']??p['username']??'Grup üyesi').toString();
+                    final me=FirebaseAuth.instance.currentUser?.uid;
+                    final isim=!widget.groupMode&&sender==me?'Sen':(p['displayName']??p['username']??'Grup üyesi').toString();
                     final foto=(p['photoUrl']??'').toString();
                     return NgelXPremiumCard(
                       margin:const EdgeInsets.only(bottom:9),
