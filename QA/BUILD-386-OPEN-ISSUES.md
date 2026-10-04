@@ -73,9 +73,11 @@ Verified on device:
 - Profile action updates immediately to "Arkadaş ekle".
 - Snackbar confirms "Arkadaşlık kaldırıldı."
 
+Verified:
+- Tapping "Arkadaş ekle" sends a new friendship request.
+- Sender profile immediately changes to "Arkadaşlık isteği bekliyor".
+
 Still to verify:
-- Tap "Arkadaş ekle" and send a new friendship request.
-- Sender profile must change to a pending/request-sent state.
 - Recipient must receive the request/notification.
 - Recipient can accept or reject.
 - After acceptance, both profiles must show the friendship state consistently.
