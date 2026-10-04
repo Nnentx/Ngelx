@@ -244,7 +244,7 @@ const ngelxPrivateBlueInk = Color(0xFF10213A);
 // Build 372: settings/about must reflect the installed build instead of the old 368 fallback.
 // Release builds can still override these with --dart-define.
 const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.162');
-const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '385');
+const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '386');
 const ngelxGroupBorder = Color(0xFFD9EEE0);
 
 final GlobalKey<NavigatorState> ngelxNavigatorKey=GlobalKey<NavigatorState>();
@@ -4611,7 +4611,11 @@ class _SifreYenilePageState extends State<SifreYenilePage> {
     final adres=email.text.trim();
     if(!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(adres)){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Geçerli bir e-posta adresi yaz.')));return;}
     setState(()=>yukleniyor=true);
-    try{await FirebaseAuth.instance.sendPasswordResetEmail(email:adres).timeout(const Duration(seconds:20));if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Şifre yenileme bağlantısı gönderildi. E-posta kutunu kontrol et.')));}
+    try{
+      try{await FirebaseAuth.instance.setLanguageCode(uygulamaDili.value);}catch(_){}
+      await FirebaseAuth.instance.sendPasswordResetEmail(email:adres).timeout(const Duration(seconds:20));
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Şifre yenileme bağlantısı gönderildi. E-posta kutunu kontrol et.')));
+    }
     on TimeoutException{if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('İşlem zaman aşımına uğradı. İnternet bağlantını kontrol et.')));}
     on FirebaseAuthException catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Bağlantı gönderilemedi: ${e.message ?? e.code}')));}
     catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Beklenmeyen bir hata oluştu. Tekrar dene.')));}
@@ -22801,6 +22805,8 @@ class _KullaniciProfilPageState extends State<KullaniciProfilPage> {
   bool get ziyaretciOnizleme=>widget.ziyaretciOnizleme;
   final Set<String> _yerelTakipIstekleri=<String>{};
   final Set<String> _yerelArkadasIstekleri=<String>{};
+  final Map<String,bool> _yerelTakipDurumu=<String,bool>{};
+  int _yerelTakipciDelta=0;
 
   @override
   void initState(){
@@ -23137,7 +23143,7 @@ class _KullaniciProfilPageState extends State<KullaniciProfilPage> {
                   });
                   return Row(mainAxisAlignment:MainAxisAlignment.spaceEvenly,children:[
                     _profilSayac(context,'${List<dynamic>.from(v['following']??const[]).length}',t('following'),()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciListesiPage(uid:uid,alan:'following',baslik:'Takip')))),
-                    _profilSayac(context,'${List<dynamic>.from(v['followers']??const[]).length}',t('followers'),()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciListesiPage(uid:uid,alan:'followers',baslik:'Takipçiler')))),
+                    _profilSayac(context,'${math.max(0,List<dynamic>.from(v['followers']??const[]).length+_yerelTakipciDelta)}',t('followers'),()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciListesiPage(uid:uid,alan:'followers',baslik:'Takipçiler')))),
                     _profilSayac(context,'$toplam',t('interaction'),()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>EtkilesimOzetiPage(uid:uid)))),
                     _profilSayac(context,'${List<dynamic>.from(v['friends']??const[]).length}',t('friends'),()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciListesiPage(uid:uid,alan:'friends',baslik:'Arkadaşlar')))),
                   ]);
@@ -23165,7 +23171,14 @@ class _KullaniciProfilPageState extends State<KullaniciProfilPage> {
                     builder:(_,benSnap){
                       final benimTakipEttiklerim=List<String>.from(benSnap.data?.data()?['following']??const[]);
                       final hedefTakipcileri=List<String>.from(v['followers']??const[]);
-                      final takipte=benimTakipEttiklerim.contains(uid)||(me!=null&&hedefTakipcileri.contains(me));
+                      final sunucuTakipte=benimTakipEttiklerim.contains(uid)||(me!=null&&hedefTakipcileri.contains(me));
+                      final yerelTakipte=_yerelTakipDurumu[uid];
+                      if(yerelTakipte!=null&&yerelTakipte==sunucuTakipte){
+                        WidgetsBinding.instance.addPostFrameCallback((_){
+                          if(mounted&&_yerelTakipDurumu[uid]==sunucuTakipte)setState(()=>_yerelTakipDurumu.remove(uid));
+                        });
+                      }
+                      final takipte=yerelTakipte??sunucuTakipte;
                       final gidenAkis=me==null?null:sosyalIstekRef(me,uid,'follow_request').snapshots();
                       return StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
                         stream:gidenAkis,
@@ -23194,8 +23207,20 @@ class _KullaniciProfilPageState extends State<KullaniciProfilPage> {
                                   ],
                                 ))??false;
                                 if(!onay)return;
-                                await takipDurumuDegistir(uid,true);
-                                if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Takipten çıktın.')));
+                                if(mounted)setState((){
+                                  _yerelTakipDurumu[uid]=false;
+                                  _yerelTakipciDelta--;
+                                });
+                                try{
+                                  await takipDurumuDegistir(uid,true);
+                                  if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Takipten çıktın.')));
+                                }catch(e){
+                                  if(mounted)setState((){
+                                    _yerelTakipDurumu.remove(uid);
+                                    _yerelTakipciDelta++;
+                                  });
+                                  if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Takipten çıkılamadı: $e')));
+                                }
                                 return;
                               }
 
@@ -23236,10 +23261,18 @@ class _KullaniciProfilPageState extends State<KullaniciProfilPage> {
                                 return;
                               }
 
+                              if(mounted)setState((){
+                                _yerelTakipDurumu[uid]=true;
+                                _yerelTakipciDelta++;
+                              });
                               try{
                                 await takipDurumuDegistir(uid,false);
                                 if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Artık bu hesabı takip ediyorsun.')));
                               }catch(e){
+                                if(mounted)setState((){
+                                  _yerelTakipDurumu.remove(uid);
+                                  _yerelTakipciDelta--;
+                                });
                                 if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Takip işlemi tamamlanamadı: $e')));
                               }
                             },
@@ -24838,43 +24871,284 @@ class _TercihlerPageState extends State<TercihlerPage> {
   );
 }
 
-class ArkadaslarPage extends StatelessWidget {
+class ArkadaslarPage extends StatefulWidget {
   const ArkadaslarPage({super.key});
-  @override Widget build(BuildContext context) {
-    final uid=FirebaseAuth.instance.currentUser?.uid;
-    return Theme(
-      data:ThemeData.light().copyWith(scaffoldBackgroundColor:Colors.white,appBarTheme:const AppBarTheme(backgroundColor:Colors.white,foregroundColor:Colors.black,elevation:0)),
-      child:Scaffold(
+  @override State<ArkadaslarPage> createState()=>_ArkadaslarPageState();
+}
+
+class _ArkadaslarPageState extends State<ArkadaslarPage>{
+  final TextEditingController arama=TextEditingController();
+  String sorgu='';
+
+  @override void dispose(){arama.dispose();super.dispose();}
+
+  bool _esles(String id,Map<String,dynamic> v){
+    final q=sorgu.trim().toLowerCase();
+    if(q.isEmpty)return true;
+    final ad=(v['displayName']??'').toString().toLowerCase();
+    final kullanici=(v['username']??'').toString().toLowerCase();
+    return id.toLowerCase().contains(q)||ad.contains(q)||kullanici.contains(q);
+  }
+
+  int _ortakArkadas(Map<String,dynamic> v,Set<String> benimArkadaslarim){
+    final diger=Set<String>.from(List<dynamic>.from(v['friends']??const[]).map((e)=>e.toString()));
+    return diger.intersection(benimArkadaslarim).length;
+  }
+
+  Future<void> _arkadaslikKaldir(String me,String id,String ad)async{
+    final ok=await showDialog<bool>(
+      context:context,
+      builder:(c)=>AlertDialog(
         backgroundColor:Colors.white,
-        appBar:AppBar(title:const Text('Arkadaşlar',style:TextStyle(fontWeight:FontWeight.w900))),
-        body:FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(
-          future:uid==null?null:FirebaseFirestore.instance.collection('users').doc(uid).get(),
-          builder:(_,s){
-            final ids=List<String>.from(s.data?.data()?['friends']??[]);
-            if(ids.isEmpty)return const Center(child:Text('Henüz arkadaşın yok.',style:TextStyle(color:Colors.black54)));
-            return ListView(children:ids.map((id)=>FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(
-              future:FirebaseFirestore.instance.collection('users').doc(id).get(),
-              builder:(_,u){
-                final v=u.data?.data()??<String,dynamic>{},foto=(v['photoUrl']??'').toString();
-                return ListTile(
-                  onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciProfilPage(uid:id))),
-                  onLongPress:()async{
-                    final ok=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(
-                      title:const Text('Arkadaşlıktan çıkarılsın mı?'),
-                      content:Text('${v['displayName']??v['username']??'Bu kişi'} arkadaşlıktan çıkarılsın mı?'),
-                      actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),TextButton(onPressed:()=>Navigator.pop(c,true),child:const Text('ARKADAŞLIKTAN ÇIKAR',style:TextStyle(color:Colors.red,fontWeight:FontWeight.bold)))]));
-                    if(ok==true&&uid!=null){
-                      await FirebaseFirestore.instance.collection('users').doc(uid).update({'friends':FieldValue.arrayRemove([id])});
-                      await FirebaseFirestore.instance.collection('users').doc(id).update({'friends':FieldValue.arrayRemove([uid])});
-                    }
+        title:const Text('Arkadaşlıktan çıkarılsın mı?'),
+        content:Text(ad+' arkadaşlıktan çıkarılsın mı?'),
+        actions:[
+          TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),
+          TextButton(onPressed:()=>Navigator.pop(c,true),child:const Text('Arkadaşlıktan çıkar',style:TextStyle(color:Colors.red,fontWeight:FontWeight.w800))),
+        ],
+      ),
+    )??false;
+    if(!ok)return;
+    final ids=<String>[me,id]..sort();
+    final batch=FirebaseFirestore.instance.batch();
+    batch.set(FirebaseFirestore.instance.collection('users').doc(me),{'friends':FieldValue.arrayRemove([id])},SetOptions(merge:true));
+    batch.set(FirebaseFirestore.instance.collection('users').doc(id),{'friends':FieldValue.arrayRemove([me])},SetOptions(merge:true));
+    batch.set(FirebaseFirestore.instance.collection('friendships').doc(ids.join('_')),{
+      'members':ids,'active':false,'endedAt':FieldValue.serverTimestamp(),
+    },SetOptions(merge:true));
+    await batch.commit();
+    if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Arkadaşlık kaldırıldı.')));
+  }
+
+  Future<void> _islem(
+    String islem,
+    String me,
+    String id,
+    Map<String,dynamic> v,
+    Set<String> benimArkadaslarim,
+    Set<String> benimTakiplerim,
+  )async{
+    final ad=(v['displayName']??v['username']??'NgelX').toString();
+    if(islem=='profil'){
+      if(mounted)await Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciProfilPage(uid:id)));
+      return;
+    }
+    if(islem=='takip'){
+      final takipte=benimTakiplerim.contains(id);
+      try{
+        await takipDurumuDegistir(id,takipte);
+        if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(takipte?'Takipten çıktın.':'Artık bu hesabı takip ediyorsun.')));
+      }catch(_){
+        if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Takip işlemi tamamlanamadı.')));
+      }
+      return;
+    }
+    if(islem=='arkadas'){
+      if(benimArkadaslarim.contains(id)){
+        try{await _arkadaslikKaldir(me,id,ad);}catch(_){
+          if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Arkadaşlık kaldırılamadı.')));
+        }
+      }else{
+        try{
+          final ok=await sosyalIstekGonder(hedefUid:id,tur:'friend_request',metin:'sana arkadaşlık isteği gönderdi');
+          if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(ok?'Arkadaşlık isteği gönderildi.':'Arkadaşlık isteği zaten bekliyor veya zaten arkadaşsınız.')));
+        }catch(_){
+          if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Arkadaşlık isteği gönderilemedi.')));
+        }
+      }
+    }
+  }
+
+  Widget _kisiSatiri({
+    required String me,
+    required String id,
+    required Map<String,dynamic>? bilinen,
+    required Set<String> benimArkadaslarim,
+    required Set<String> benimTakiplerim,
+  }){
+    Widget satir(Map<String,dynamic> v){
+      if(!_esles(id,v))return const SizedBox.shrink();
+      final foto=(v['photoUrl']??'').toString();
+      final ad=(v['displayName']??v['username']??'NgelX').toString();
+      final kullanici=(v['username']??'ngelx').toString();
+      final ortak=_ortakArkadas(v,benimArkadaslarim);
+      final arkadas=benimArkadaslarim.contains(id);
+      final takipte=benimTakiplerim.contains(id);
+      final alt=ortak>0
+        ? ortak.toString()+' ortak arkadaş'
+        : (arkadas?'Arkadaşın':(takipte?'Takip ediyorsun':'NgelX’te keşfet'));
+      return Column(children:[
+        ListTile(
+          contentPadding:const EdgeInsets.symmetric(horizontal:18,vertical:5),
+          onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciProfilPage(uid:id))),
+          leading:CircleAvatar(
+            radius:27,
+            backgroundColor:const Color(0xFFF1EEFF),
+            backgroundImage:foto.isEmpty?null:NgelXAgImageProvider(foto),
+            child:foto.isEmpty?const Icon(Icons.person_rounded,color:mor):null,
+          ),
+          title:Text(ad,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black87,fontSize:16,fontWeight:FontWeight.w850)),
+          subtitle:Text(alt,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black54,fontSize:13)),
+          trailing:PopupMenuButton<String>(
+            tooltip:'İşlemler',
+            color:Colors.white,
+            onSelected:(x)=>unawaited(_islem(x,me,id,v,benimArkadaslarim,benimTakiplerim)),
+            itemBuilder:(_)=>[
+              const PopupMenuItem(value:'profil',child:Text('Profili aç')),
+              PopupMenuItem(value:'takip',child:Text(takipte?'Takipten çık':'Takip et')),
+              PopupMenuItem(value:'arkadas',child:Text(arkadas?'Arkadaşlıktan çıkar':'Arkadaşlık isteği gönder')),
+            ],
+            icon:const Icon(Icons.more_horiz_rounded,color:Colors.black54),
+          ),
+        ),
+        const Divider(height:1,indent:82,endIndent:18),
+      ]);
+    }
+
+    if(bilinen!=null)return satir(bilinen);
+    return FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(
+      future:FirebaseFirestore.instance.collection('users').doc(id).get(),
+      builder:(_,snap){
+        if(snap.connectionState==ConnectionState.waiting)return const SizedBox(height:72,child:Center(child:LinearProgressIndicator(minHeight:1,color:mor)));
+        return satir(snap.data?.data()??<String,dynamic>{});
+      },
+    );
+  }
+
+  Widget _liste({
+    required String me,
+    required String baslik,
+    required List<String> ids,
+    required Map<String,Map<String,dynamic>> kullanicilar,
+    required Set<String> benimArkadaslarim,
+    required Set<String> benimTakiplerim,
+    bool toplamArkadas=false,
+  }){
+    if(ids.isEmpty){
+      return Center(child:Padding(
+        padding:const EdgeInsets.all(28),
+        child:Text(
+          sorgu.trim().isNotEmpty?'Aramana uygun kişi bulunamadı.':(toplamArkadas?'Henüz arkadaşın yok.':'Bu bölümde gösterilecek kişi yok.'),
+          textAlign:TextAlign.center,
+          style:const TextStyle(color:Colors.black54,fontWeight:FontWeight.w600),
+        ),
+      ));
+    }
+    return Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+      Padding(
+        padding:const EdgeInsets.fromLTRB(22,14,22,7),
+        child:Text(toplamArkadas?ids.length.toString()+' Arkadaş':baslik,style:const TextStyle(color:Colors.black87,fontSize:20,fontWeight:FontWeight.w900)),
+      ),
+      Expanded(child:ListView.builder(
+        key:PageStorageKey<String>('arkadaslar_'+baslik),
+        itemCount:ids.length,
+        itemBuilder:(_,i)=>_kisiSatiri(
+          me:me,
+          id:ids[i],
+          bilinen:kullanicilar[ids[i]],
+          benimArkadaslarim:benimArkadaslarim,
+          benimTakiplerim:benimTakiplerim,
+        ),
+      )),
+    ]);
+  }
+
+  @override Widget build(BuildContext context){
+    final uid=FirebaseAuth.instance.currentUser?.uid;
+    return DefaultTabController(
+      length:4,
+      child:Theme(
+        data:ThemeData.light().copyWith(
+          scaffoldBackgroundColor:Colors.white,
+          appBarTheme:const AppBarTheme(backgroundColor:Colors.white,foregroundColor:Colors.black,elevation:0),
+        ),
+        child:Scaffold(
+          backgroundColor:Colors.white,
+          appBar:AppBar(
+            title:const Text('Arkadaşlar',style:TextStyle(fontWeight:FontWeight.w900)),
+            bottom:const TabBar(
+              isScrollable:true,
+              indicatorColor:mor,
+              labelColor:mor,
+              unselectedLabelColor:Colors.black54,
+              labelStyle:TextStyle(fontWeight:FontWeight.w900),
+              tabs:[
+                Tab(text:'Arkadaşlar'),
+                Tab(text:'Takip'),
+                Tab(text:'Önerilenler'),
+                Tab(text:'Ortak noktalar'),
+              ],
+            ),
+          ),
+          body:uid==null
+            ?const Center(child:Text('Oturum bulunamadı.'))
+            :StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
+              stream:FirebaseFirestore.instance.collection('users').doc(uid).snapshots(),
+              builder:(_,benSnap){
+                if(benSnap.connectionState==ConnectionState.waiting&&!benSnap.hasData)return const Center(child:CircularProgressIndicator(color:mor));
+                final benim=benSnap.data?.data()??<String,dynamic>{};
+                final arkadaslar=Set<String>.from(List<dynamic>.from(benim['friends']??const[]).map((e)=>e.toString()));
+                final takip=Set<String>.from(List<dynamic>.from(benim['following']??const[]).map((e)=>e.toString()));
+                return StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
+                  stream:FirebaseFirestore.instance.collection('users').limit(250).snapshots(),
+                  builder:(_,tumSnap){
+                    if(tumSnap.connectionState==ConnectionState.waiting&&!tumSnap.hasData)return const Center(child:CircularProgressIndicator(color:mor));
+                    final docs=tumSnap.data?.docs??const <QueryDocumentSnapshot<Map<String,dynamic>>>[];
+                    final harita=<String,Map<String,dynamic>>{for(final d in docs)d.id:d.data()};
+                    final tumAdaylar=docs.where((d)=>d.id!=uid&&d.data()['deactivated']!=true).toList();
+
+                    final onerilen=tumAdaylar
+                      .where((d)=>!arkadaslar.contains(d.id)&&!takip.contains(d.id))
+                      .toList()
+                      ..sort((a,b)=>_ortakArkadas(b.data(),arkadaslar).compareTo(_ortakArkadas(a.data(),arkadaslar)));
+
+                    final ortak=tumAdaylar.where((d)=>_ortakArkadas(d.data(),arkadaslar)>0).toList()
+                      ..sort((a,b)=>_ortakArkadas(b.data(),arkadaslar).compareTo(_ortakArkadas(a.data(),arkadaslar)));
+
+                    return Column(children:[
+                      Padding(
+                        padding:const EdgeInsets.fromLTRB(18,14,18,8),
+                        child:TextField(
+                          controller:arama,
+                          onChanged:(x)=>setState(()=>sorgu=x),
+                          textInputAction:TextInputAction.search,
+                          decoration:InputDecoration(
+                            hintText:'Arkadaş veya kişi ara',
+                            prefixIcon:const Icon(Icons.search_rounded),
+                            suffixIcon:sorgu.isEmpty?null:IconButton(
+                              tooltip:'Aramayı temizle',
+                              onPressed:(){arama.clear();setState(()=>sorgu='');},
+                              icon:const Icon(Icons.close_rounded),
+                            ),
+                            filled:true,
+                            fillColor:const Color(0xFFF4F5F8),
+                            border:OutlineInputBorder(borderRadius:BorderRadius.circular(20),borderSide:BorderSide.none),
+                          ),
+                        ),
+                      ),
+                      Expanded(child:TabBarView(children:[
+                        _liste(
+                          me:uid,baslik:'Arkadaşlar',ids:arkadaslar.toList(),kullanicilar:harita,
+                          benimArkadaslarim:arkadaslar,benimTakiplerim:takip,toplamArkadas:true,
+                        ),
+                        _liste(
+                          me:uid,baslik:'Takip ettiklerin',ids:takip.toList(),kullanicilar:harita,
+                          benimArkadaslarim:arkadaslar,benimTakiplerim:takip,
+                        ),
+                        _liste(
+                          me:uid,baslik:'Senin için önerilenler',ids:onerilen.map((d)=>d.id).toList(),kullanicilar:harita,
+                          benimArkadaslarim:arkadaslar,benimTakiplerim:takip,
+                        ),
+                        _liste(
+                          me:uid,baslik:'Ortak noktalar',ids:ortak.map((d)=>d.id).toList(),kullanicilar:harita,
+                          benimArkadaslarim:arkadaslar,benimTakiplerim:takip,
+                        ),
+                      ])),
+                    ]);
                   },
-                  leading:CircleAvatar(backgroundImage:foto.isEmpty?null:NgelXAgImageProvider(foto),child:foto.isEmpty?const Icon(Icons.person):null),
-                  title:Text((v['displayName']??v['username']??'NgelX').toString(),style:const TextStyle(fontWeight:FontWeight.w800)),
-                  subtitle:Text('@${v['username']??'ngelx'}'),trailing:const Icon(Icons.chevron_right),
                 );
               },
-            )).toList());
-          },
+            ),
         ),
       ),
     );
