@@ -1,0 +1,35 @@
+name: Work P4 Group Reactions Analyze
+
+on:
+  push:
+    branches:
+      - work/final-consolidated-p4-group-reactions
+    paths:
+      - 'app/**'
+      - '.github/workflows/work-p4-group-reactions-analyze.yml'
+  workflow_dispatch:
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Pub get
+        working-directory: app
+        run: flutter pub get
+      - name: Flutter analyze
+        working-directory: app
+        shell: bash
+        run: |
+          set -euo pipefail
+          flutter analyze --machine > analyze.log 2>&1 || true
+          cat analyze.log
+          if grep -q '^ERROR|' analyze.log; then
+            echo 'Flutter analysis errors found.' >&2
+            exit 1
+          fi
