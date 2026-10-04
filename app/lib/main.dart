@@ -15995,6 +15995,39 @@ class _SohbetPageState extends State<SohbetPage> {
   }
 
 
+  Widget _ozelMedyaTepkiVerenSatiri(String reactorId,String emoji){
+    return StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
+      stream:FirebaseFirestore.instance.collection('users').doc(reactorId).snapshots(),
+      builder:(context,userSnapshot){
+        final profile=userSnapshot.data?.data()??const <String,dynamic>{};
+        final displayName=(profile['displayName']??'').toString().trim();
+        final username=(profile['username']??'').toString().trim();
+        final name=displayName.isNotEmpty?displayName:username.isNotEmpty?username:'NgelX kullanıcısı';
+        final photoUrl=(profile['photoUrl']??'').toString().trim();
+        final initial=name.isNotEmpty?name.substring(0,1).toUpperCase():'N';
+        final isCurrentUser=reactorId==uid;
+        return ListTile(
+          dense:true,
+          leading:CircleAvatar(
+            backgroundColor:const Color(0xFFEDEFF3),
+            child:photoUrl.isEmpty
+              ?Text(initial,style:const TextStyle(fontWeight:FontWeight.w800,color:Color(0xFF555B66)))
+              :ClipOval(child:CachedNetworkImage(
+                imageUrl:photoUrl,
+                width:40,height:40,fit:BoxFit.cover,
+                errorWidget:(_,__,___)=>Center(child:Text(initial,style:const TextStyle(fontWeight:FontWeight.w800,color:Color(0xFF555B66)))),
+              )),
+          ),
+          title:Text(isCurrentUser?'Sen · $name':name,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontWeight:FontWeight.w700)),
+          subtitle:username.isNotEmpty&&username.toLowerCase()!=displayName.toLowerCase()
+            ?Text('@$username',maxLines:1,overflow:TextOverflow.ellipsis)
+            :null,
+          trailing:Text(emoji,style:const TextStyle(fontSize:21)),
+        );
+      },
+    );
+  }
+
   void _ozelMedyaTepkiDetayi(DocumentReference<Map<String,dynamic>> ref){
     showModalBottomSheet<void>(
       context:context,
@@ -16022,28 +16055,8 @@ class _SohbetPageState extends State<SohbetPage> {
                   child:ListView.builder(
                     itemCount:entries.length,
                     itemBuilder:(context,index){
-                      final entry=entries[index],reactorId=entry.key,emoji=entry.value.toString();
-                      if(reactorId==uid){
-                        return ListTile(
-                          dense:true,
-                          leading:const CircleAvatar(child:Icon(Icons.person_outline_rounded,size:18)),
-                          title:const Text('Sen',style:TextStyle(fontWeight:FontWeight.w700)),
-                          trailing:Text(emoji,style:const TextStyle(fontSize:21)),
-                        );
-                      }
-                      return FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(
-                        future:FirebaseFirestore.instance.collection('users').doc(reactorId).get(),
-                        builder:(context,userSnapshot){
-                          final profile=userSnapshot.data?.data()??const <String,dynamic>{};
-                          final name=(profile['displayName']??profile['username']??'NgelX kullanıcısı').toString();
-                          return ListTile(
-                            dense:true,
-                            leading:const CircleAvatar(child:Icon(Icons.person_outline_rounded,size:18)),
-                            title:Text(name,maxLines:1,overflow:TextOverflow.ellipsis),
-                            trailing:Text(emoji,style:const TextStyle(fontSize:21)),
-                          );
-                        },
-                      );
+                      final entry=entries[index];
+                      return _ozelMedyaTepkiVerenSatiri(entry.key,entry.value.toString());
                     },
                   ),
                 ),
@@ -16058,9 +16071,11 @@ class _SohbetPageState extends State<SohbetPage> {
     final mostUsed=counts.entries.toList()..sort((a,b)=>b.value.compareTo(a.value));
     final emojis=mostUsed.take(3).map((entry)=>entry.key).join();
     return Positioned(
-      right:6,
-      bottom:6,
-      child:GestureDetector(
+      right:0,
+      bottom:0,
+      child:FractionalTranslation(
+        translation:const Offset(.5,.5),
+        child:GestureDetector(
         behavior:HitTestBehavior.opaque,
         onTap:()=>_ozelMedyaTepkiDetayi(ref),
         child:Container(
@@ -16077,6 +16092,7 @@ class _SohbetPageState extends State<SohbetPage> {
             Text(total.toString(),style:const TextStyle(fontSize:11,fontWeight:FontWeight.w800,height:1.1,color:Color(0xFF30343B))),
           ]),
         ),
+      ),
       ),
     );
   }
@@ -16212,15 +16228,21 @@ class _SohbetPageState extends State<SohbetPage> {
                 ),
               ),
             if(photo)
-              Stack(children:[
-                IgnorePointer(child:ClipRRect(borderRadius:BorderRadius.circular(16),child:CachedNetworkImage(imageUrl:(v['mediaUrl']??'').toString(),width:230,fit:BoxFit.cover,memCacheWidth:720))),
-                if(tepkiler.isNotEmpty)_ozelMedyaTepkiBalonu(d.reference,sayilar,tepkiler.length),
-              ])
+              Padding(
+                padding:const EdgeInsets.only(bottom:13),
+                child:Stack(clipBehavior:Clip.none,children:[
+                  IgnorePointer(child:ClipRRect(borderRadius:BorderRadius.circular(16),child:CachedNetworkImage(imageUrl:(v['mediaUrl']??'').toString(),width:230,fit:BoxFit.cover,memCacheWidth:720))),
+                  if(tepkiler.isNotEmpty)_ozelMedyaTepkiBalonu(d.reference,sayilar,tepkiler.length),
+                ]),
+              )
             else if(video)
-              Stack(children:[
-                IgnorePointer(child:ClipRRect(borderRadius:BorderRadius.circular(16),child:NgelXGrupVideoMesaj(url:(v['videoUrl']??v['mediaUrl']??'').toString(),compact:true))),
-                if(tepkiler.isNotEmpty)_ozelMedyaTepkiBalonu(d.reference,sayilar,tepkiler.length),
-              ])
+              Padding(
+                padding:const EdgeInsets.only(bottom:13),
+                child:Stack(clipBehavior:Clip.none,children:[
+                  IgnorePointer(child:ClipRRect(borderRadius:BorderRadius.circular(16),child:NgelXGrupVideoMesaj(url:(v['videoUrl']??v['mediaUrl']??'').toString(),compact:true))),
+                  if(tepkiler.isNotEmpty)_ozelMedyaTepkiBalonu(d.reference,sayilar,tepkiler.length),
+                ]),
+              )
             else if(shared)
               IgnorePointer(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
                 Row(children:[Icon(Icons.play_circle_fill_rounded,color:ben?Colors.white:mavi),const SizedBox(width:7),Text('NgelX paylaşımı',style:TextStyle(color:ben?Colors.white:Colors.black87,fontWeight:FontWeight.w900))]),
