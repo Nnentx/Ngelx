@@ -13,7 +13,7 @@ Status: TEST PENDING
 - Verify wrong password / invalid login gives a clear user-facing error.
 
 ## 18 — Password reset
-Status: PARTIAL PASS + BRANDING/LOCALIZATION FIX REQUIRED
+Status: FUNCTIONAL PASS + BRANDING/LOCALIZATION FIX REQUIRED
 
 Verified:
 - "Şifremi unuttum" opens the password reset screen.
@@ -29,5 +29,5 @@ Build 386 fixes required:
 - Turkish users should receive a Turkish NgelX-branded subject and email body instead of the current English/Firebase-default presentation.
 - Keep the secure reset link flow working after branding/localization changes.
 
-Final functional check still pending:
-- Sign in to NgelX with the new password successfully.
+Final functional check:
+- Sign in to NgelX with the new password successfully: PASS.
