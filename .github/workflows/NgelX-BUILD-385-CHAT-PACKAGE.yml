@@ -113,6 +113,14 @@ jobs:
               print(f'{name}: Build 384 parity OK')
           PY
 
+          # 15 - kayit guvenligi, yasal onay ve 13+ yas kapisi
+          grep -Fq 'E-posta adresini tekrar yaz' app/lib/main.dart
+          grep -Fq 'Şifreyi tekrar yaz' app/lib/main.dart
+          grep -Fq 'Doğum tarihi (GG/AA/YYYY)' app/lib/main.dart
+          grep -Fq 'Kullanım Koşulları ve Gizlilik Politikasını kabul ediyorum.' app/lib/main.dart
+          grep -Fq 'Devam etmek için Kullanım Koşulları ve Gizlilik Politikasını kabul et.' app/lib/main.dart
+          grep -Fq 'en az 13 yaşında olmalısın.' app/lib/main.dart
+
           # 16 - Play Store hazirlik kapisi
           grep -Fq 'url_launcher: ^6.3.2' app/pubspec.yaml
           grep -Fq "const ngelxPrivacyUrl='https://ngelxsocial.com/privacy.html';" app/lib/main.dart
