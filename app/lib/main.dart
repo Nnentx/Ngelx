@@ -29,6 +29,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:record/record.dart' as rec;
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:google_mlkit_commons/google_mlkit_commons.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'group_quality.dart';
 part 'build258_settings.dart';
 part 'create_music_editor.dart';
@@ -41,6 +42,55 @@ part 'live_feed_card.dart';
 part 'live_pk.dart';
 part 'feed_creator_badge.dart';
 part 'story_v66.dart';
+
+const ngelxPrivacyUrl='https://ngelxsocial.com/privacy.html';
+const ngelxTermsUrl='https://ngelxsocial.com/terms.html';
+const ngelxDeleteAccountUrl='https://ngelxsocial.com/delete-account.html';
+const ngelxSupportUrl='https://ngelxsocial.com/support.html';
+const ngelxChildSafetyUrl='https://ngelxsocial.com/child-safety.html';
+
+Future<void> ngelxDisBaglantiAc(BuildContext context,String url)async{
+  try{
+    final uri=Uri.parse(url);
+    final ok=await launchUrl(uri,mode:LaunchMode.externalApplication);
+    if(!ok&&context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bağlantı açılamadı.')));
+  }catch(_){
+    if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bağlantı açılamadı.')));
+  }
+}
+
+bool ngelxDeepEquals(dynamic a,dynamic b){
+  if(identical(a,b))return true;
+  if(a is Map&&b is Map){
+    if(a.length!=b.length)return false;
+    for(final k in a.keys){
+      if(!b.containsKey(k)||!ngelxDeepEquals(a[k],b[k]))return false;
+    }
+    return true;
+  }
+  if(a is List&&b is List){
+    if(a.length!=b.length)return false;
+    for(var i=0;i<a.length;i++){
+      if(!ngelxDeepEquals(a[i],b[i]))return false;
+    }
+    return true;
+  }
+  return a==b;
+}
+
+bool ngelxChatSnapshotAyniTypingHaric(
+  DocumentSnapshot<Map<String,dynamic>> onceki,
+  DocumentSnapshot<Map<String,dynamic>> yeni,
+){
+  final a=Map<String,dynamic>.from(onceki.data()??const <String,dynamic>{});
+  final b=Map<String,dynamic>.from(yeni.data()??const <String,dynamic>{});
+  for(final k in <String>[...a.keys,...b.keys].toSet()){
+    if(k.startsWith('typing_')||k.startsWith('typingAt_')){
+      a.remove(k);b.remove(k);
+    }
+  }
+  return ngelxDeepEquals(a,b);
+}
 
 bool ngelxHiddenWordMatches(String text, Iterable<String> hiddenWords) {
   String normalize(String value) => value
@@ -194,7 +244,7 @@ const ngelxPrivateBlueInk = Color(0xFF10213A);
 // Build 372: settings/about must reflect the installed build instead of the old 368 fallback.
 // Release builds can still override these with --dart-define.
 const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.162');
-const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '384');
+const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '385');
 const ngelxGroupBorder = Color(0xFFD9EEE0);
 
 final GlobalKey<NavigatorState> ngelxNavigatorKey=GlobalKey<NavigatorState>();
@@ -11986,6 +12036,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
   final List<QueryDocumentSnapshot<Map<String,dynamic>>> _grupMesajOnbellek=[];
   late Stream<QuerySnapshot<Map<String,dynamic>>> _mesajAkisi;
   late final Stream<DocumentSnapshot<Map<String,dynamic>>> _grupAkisi;
+  late final Stream<DocumentSnapshot<Map<String,dynamic>>> _grupTypingAkisi;
   bool aramaBaslatiliyor=false,mesajGonderiliyor=false,sesKaydediliyor=false,_okunduYaziliyor=false,_ilkMesajKaydirma=true,_mesajBeklemeBitti=false,_enAltta=true,sessizGonder=false;
   int sesKaydiSaniye=0,_acilisOkunmamis=0;
   double? medyaIlerleme;
@@ -12027,7 +12078,8 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
 
   @override void initState(){
     super.initState();
-    _grupAkisi=chatRef.snapshots();
+    _grupTypingAkisi=chatRef.snapshots();
+    _grupAkisi=_grupTypingAkisi.distinct(ngelxChatSnapshotAyniTypingHaric);
     // Bütün grup geçmişini her açılışta indirmek uygulamayı kilitliyordu.
     // En yeni 100 mesaj ilk ekran için yeterli; eski içerikler medya ve arama
     // sayfalarından ayrıca alınır.
@@ -12158,7 +12210,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
       _okunduYaziliyor=false;
     }
   }
-  void sonaGit(){WidgetsBinding.instance.addPostFrameCallback((_){
+  void sonaGit({bool zorla=false}){WidgetsBinding.instance.addPostFrameCallback((_){
     if(!mounted||!liste.hasClients)return;
     final hedef=liste.position.maxScrollExtent;
     if(_ilkMesajKaydirma){
@@ -12166,10 +12218,25 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
       if(hedef>0)liste.jumpTo(hedef);
       return;
     }
-    if(hedef-liste.position.pixels>320)return;
+    if(!zorla&&hedef-liste.position.pixels>320)return;
     if((liste.position.pixels-hedef).abs()<2)return;
-    liste.animateTo(hedef,duration:const Duration(milliseconds:180),curve:Curves.easeOut);
+    liste.animateTo(
+      hedef,
+      duration:Duration(milliseconds:zorla?135:180),
+      curve:Curves.easeOutCubic,
+    );
   });}
+
+  void _gonderimSonrasiEnAltaPlanla(){
+    if(mounted&&!_enAltta)setState(()=>_enAltta=true);
+    sonaGit(zorla:true);
+    Future<void>.delayed(const Duration(milliseconds:90),(){
+      if(mounted)sonaGit(zorla:true);
+    });
+    Future<void>.delayed(const Duration(milliseconds:260),(){
+      if(mounted)sonaGit(zorla:true);
+    });
+  }
 
   Future<Map<String,dynamic>?> mesajGonderimVerisi()async{
     final ben=uid;if(ben==null)return null;
@@ -12297,6 +12364,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
         try{await GroupOfflineQueue.remove(widget.chatId,id);}catch(_){}
         try{await GroupDraftStore.clear(widget.chatId);}catch(_){}
         mesaj.clear();etiketlenenUidler.clear();
+        _gonderimSonrasiEnAltaPlanla();
         _typingZamanlayici?.cancel();
         if(_typingYazildi)unawaited(_typingTemizle());
         if(mounted)setState((){yanitlananMesajId=null;yanitlananMetin=null;yanitlananGonderen=null;yanitlananTur=null;yanitlananMedyaUrl=null;sessizGonder=false;});
@@ -12607,7 +12675,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
       return;
     }
     if(!_typingYazildi&&_typingBaslatZamanlayici==null){
-      _typingBaslatZamanlayici=Timer(const Duration(milliseconds:220),(){
+      _typingBaslatZamanlayici=Timer(const Duration(milliseconds:360),(){
         _typingBaslatZamanlayici=null;
         if(!mounted||mesaj.text.trim().isEmpty||!_typingGostergesiAcik)return;
         _typingYazildi=true;
@@ -14325,54 +14393,58 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
                   }),
                 ),
               ),
-              if(uyeMi)Builder(builder:(_){
-                final yazan=<String>[];
-                final simdi=DateTime.now();
-                tv.forEach((k,val){
-                  if(!k.startsWith('typing_')||val is! Timestamp)return;
-                  final id=k.substring(7);
-                  if(id==uid)return;
-                  if(simdi.difference(val.toDate()).inSeconds<=5)yazan.add(id);
-                });
-                if(yazan.isEmpty)return const SizedBox.shrink();
-                final ilk=yazan.first;
-                return FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(
-                  future:_uyeGetir(ilk),
-                  builder:(_,p){
-                    final veri=p.data?.data()??<String,dynamic>{};
-                    final ad=(veri['displayName']??veri['username']??'Bir üye').toString();
-                    final foto=(veri['photoUrl']??'').toString();
-                    final yazi=yazan.length==1?ad+' yazıyor':yazan.length.toString()+' kişi yazıyor';
-                    return Padding(
-                      padding:const EdgeInsets.fromLTRB(12,4,12,2),
-                      child:Row(crossAxisAlignment:CrossAxisAlignment.end,children:[
-                        CircleAvatar(
-                          radius:13,
-                          backgroundColor:ngelxGroupGreenSoft,
-                          backgroundImage:yazan.length==1&&foto.isNotEmpty?NgelXAgImageProvider(foto):null,
-                          child:yazan.length>1
-                            ?const Icon(Icons.groups_rounded,color:ngelxGroupGreen,size:14)
-                            :foto.isEmpty?const Icon(Icons.person_rounded,color:ngelxGroupGreen,size:14):null,
-                        ),
-                        const SizedBox(width:6),
-                        Container(
-                          padding:const EdgeInsets.fromLTRB(10,6,10,6),
-                          decoration:BoxDecoration(
-                            color:const Color(0xFFF0F2F3),
-                            borderRadius:const BorderRadius.only(topLeft:Radius.circular(15),topRight:Radius.circular(15),bottomRight:Radius.circular(15),bottomLeft:Radius.circular(5)),
-                            border:Border.all(color:const Color(0xFFE2E6E4)),
+              if(uyeMi)StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
+                stream:_grupTypingAkisi,
+                builder:(_,typingSnap){
+                  final typingVeri=typingSnap.data?.data()??const <String,dynamic>{};
+                  final yazan=<String>[];
+                  final simdi=DateTime.now();
+                  typingVeri.forEach((k,val){
+                    if(!k.startsWith('typing_')||val is! Timestamp)return;
+                    final id=k.substring(7);
+                    if(id==uid)return;
+                    if(simdi.difference(val.toDate()).inSeconds<=5)yazan.add(id);
+                  });
+                  if(yazan.isEmpty)return const SizedBox.shrink();
+                  final ilk=yazan.first;
+                  return FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(
+                    future:_uyeGetir(ilk),
+                    builder:(_,p){
+                      final veri=p.data?.data()??<String,dynamic>{};
+                      final ad=(veri['displayName']??veri['username']??'Bir üye').toString();
+                      final foto=(veri['photoUrl']??'').toString();
+                      final yazi=yazan.length==1?ad+' yazıyor':yazan.length.toString()+' kişi yazıyor';
+                      return Padding(
+                        padding:const EdgeInsets.fromLTRB(12,4,12,2),
+                        child:Row(crossAxisAlignment:CrossAxisAlignment.end,children:[
+                          CircleAvatar(
+                            radius:13,
+                            backgroundColor:ngelxGroupGreenSoft,
+                            backgroundImage:yazan.length==1&&foto.isNotEmpty?NgelXAgImageProvider(foto):null,
+                            child:yazan.length>1
+                              ?const Icon(Icons.groups_rounded,color:ngelxGroupGreen,size:14)
+                              :foto.isEmpty?const Icon(Icons.person_rounded,color:ngelxGroupGreen,size:14):null,
                           ),
-                          child:Row(mainAxisSize:MainAxisSize.min,children:[
-                            Text(yazi,style:const TextStyle(color:Color(0xFF686D70),fontSize:10.5,fontWeight:FontWeight.w700)),
-                            const SizedBox(width:7),
-                            const Text('•••',style:TextStyle(color:ngelxGroupGreen,fontSize:11,fontWeight:FontWeight.w900,letterSpacing:1.2)),
-                          ]),
-                        ),
-                      ]),
-                    );
-                  },
-                );
-              }),
+                          const SizedBox(width:6),
+                          Container(
+                            padding:const EdgeInsets.fromLTRB(10,6,10,6),
+                            decoration:BoxDecoration(
+                              color:const Color(0xFFF0F2F3),
+                              borderRadius:const BorderRadius.only(topLeft:Radius.circular(15),topRight:Radius.circular(15),bottomRight:Radius.circular(15),bottomLeft:Radius.circular(5)),
+                              border:Border.all(color:const Color(0xFFE2E6E4)),
+                            ),
+                            child:Row(mainAxisSize:MainAxisSize.min,children:[
+                              Text(yazi,style:const TextStyle(color:Color(0xFF686D70),fontSize:10.5,fontWeight:FontWeight.w700)),
+                              const SizedBox(width:7),
+                              const Text('•••',style:TextStyle(color:ngelxGroupGreen,fontSize:11,fontWeight:FontWeight.w900,letterSpacing:1.2)),
+                            ]),
+                          ),
+                        ]),
+                      );
+                    },
+                  );
+                },
+              ),
               if(sessizGonder)Container(
                 margin:const EdgeInsets.fromLTRB(12,4,12,2),
                 padding:const EdgeInsets.symmetric(horizontal:12,vertical:8),
@@ -14406,17 +14478,27 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
               ),
               if(yanitlananMetin!=null)Container(
                 margin:const EdgeInsets.fromLTRB(12,4,12,2),
-                padding:const EdgeInsets.fromLTRB(12,8,5,8),
-                decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(17),border:Border.all(color:const Color(0xFFE5E7EB))),
+                padding:const EdgeInsets.fromLTRB(11,8,5,8),
+                decoration:BoxDecoration(
+                  color:const Color(0xFFF4FBF6),
+                  borderRadius:BorderRadius.circular(17),
+                  border:Border.all(color:const Color(0xFFBFE8CC)),
+                ),
                 child:Row(children:[
-                  Container(width:4,height:38,decoration:BoxDecoration(color:const Color(0xFF9CA3AF),borderRadius:BorderRadius.circular(4))),
+                  Container(width:4,height:44,decoration:BoxDecoration(color:ngelxGroupGreen,borderRadius:BorderRadius.circular(4))),
                   const SizedBox(width:9),
+                  if(yanitlananMedyaUrl!=null&&yanitlananMedyaUrl!.isNotEmpty&&(yanitlananTur=='photo'||yanitlananTur=='video'||yanitlananTur=='gif'))...[
+                    NgelXReplyMediaPreview(url:yanitlananMedyaUrl!,type:yanitlananTur!),
+                    const SizedBox(width:9),
+                  ],
                   Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-                    Text((yanitlananGonderen??'Mesaj')+' kişisine yanıt veriyorsun',style:const TextStyle(color:Color(0xFF5F6368),fontSize:11,fontWeight:FontWeight.w800)),
+                    const Text('YANIT MODU',style:TextStyle(color:ngelxGroupGreen,fontSize:9.5,fontWeight:FontWeight.w900,letterSpacing:.5)),
+                    const SizedBox(height:1),
+                    Text((yanitlananGonderen??'Mesaj')+' kişisine yanıt veriyorsun',maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Color(0xFF187A3D),fontSize:11.2,fontWeight:FontWeight.w900)),
                     const SizedBox(height:2),
                     Text(yanitlananMetin!,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Color(0xFF202124),fontSize:12.5,fontWeight:FontWeight.w600)),
                   ])),
-                  IconButton(onPressed:()=>setState((){yanitlananMesajId=null;yanitlananMetin=null;yanitlananGonderen=null;yanitlananTur=null;yanitlananMedyaUrl=null;}),icon:const Icon(Icons.close_rounded,size:19,color:Color(0xFF6B7280)),visualDensity:VisualDensity.compact),
+                  IconButton(tooltip:'Yanıtı iptal et',onPressed:()=>setState((){yanitlananMesajId=null;yanitlananMetin=null;yanitlananGonderen=null;yanitlananTur=null;yanitlananMedyaUrl=null;}),icon:const Icon(Icons.close_rounded,size:19,color:Color(0xFF4C6654)),visualDensity:VisualDensity.compact),
                 ]),
               ),
               if(uyeMi)SafeArea(
@@ -18711,6 +18793,7 @@ class _SohbetPageState extends State<SohbetPage> {
   final List<Map<String,String>> mentionOnerileri=[];
   final List<QueryDocumentSnapshot<Map<String,dynamic>>> _mesajOnbellek=<QueryDocumentSnapshot<Map<String,dynamic>>>[];
   late final Stream<DocumentSnapshot<Map<String,dynamic>>> _chatAkisi;
+  late final Stream<DocumentSnapshot<Map<String,dynamic>>> _typingAkisi;
   late final Stream<QuerySnapshot<Map<String,dynamic>>> _mesajAkisi;
   bool _okunduYaziliyor=false;
   bool _ilkMesajKaydirma=true;
@@ -18835,7 +18918,7 @@ class _SohbetPageState extends State<SohbetPage> {
       return;
     }
     if(!yaziyorGonderildi){
-      yaziyorBaslatZamanlayici??=Timer(const Duration(milliseconds:450),(){
+      yaziyorBaslatZamanlayici??=Timer(const Duration(milliseconds:600),(){
         yaziyorBaslatZamanlayici=null;
         if(!mounted||mesaj.text.trim().isEmpty)return;
         yaziyorGonderildi=true;
@@ -20040,13 +20123,27 @@ class _SohbetPageState extends State<SohbetPage> {
               Container(
                 width:double.infinity,
                 margin:const EdgeInsets.only(bottom:8),
-                padding:const EdgeInsets.symmetric(horizontal:10,vertical:8),
+                padding:const EdgeInsets.symmetric(horizontal:9,vertical:7),
                 decoration:BoxDecoration(
-                  color:Colors.white.withValues(alpha:.95),
+                  color:Colors.white.withValues(alpha:.96),
                   borderRadius:BorderRadius.circular(12),
-                  border:const Border(left:BorderSide(color:Color(0xFF9CA3AF),width:3)),
+                  border:const Border(left:BorderSide(color:ngelxPrivateBlue,width:3)),
                 ),
-                child:Text((v['replyText']??'').toString(),maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Color(0xFF202124),fontSize:12.5,fontWeight:FontWeight.w600)),
+                child:Row(children:[
+                  if((v['replyMediaUrl']??'').toString().isNotEmpty&&((v['replyType']??'').toString()=='photo'||(v['replyType']??'').toString()=='video'))...[
+                    NgelXReplyMediaPreview(url:(v['replyMediaUrl']??'').toString(),type:(v['replyType']??'photo').toString()),
+                    const SizedBox(width:8),
+                  ],
+                  Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+                    Text(
+                      (v['replySenderId']??'').toString()==uid?'Senin mesajın':((v['replySenderId']??'').toString()==widget.digerUid?widget.ad:'Yanıtlanan mesaj'),
+                      maxLines:1,overflow:TextOverflow.ellipsis,
+                      style:const TextStyle(color:ngelxPrivateBlue,fontSize:10.5,fontWeight:FontWeight.w900),
+                    ),
+                    const SizedBox(height:1),
+                    Text((v['replyText']??'').toString(),maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Color(0xFF202124),fontSize:12.5,fontWeight:FontWeight.w600)),
+                  ])),
+                ]),
               ),
             if(photo)
               _ozelMedyaTepkiAlani(
@@ -20322,7 +20419,8 @@ class _SohbetPageState extends State<SohbetPage> {
   void initState(){
     super.initState();
     final sohbetRef=FirebaseFirestore.instance.collection('chats').doc(widget.chatId);
-    _chatAkisi=sohbetRef.snapshots();
+    _typingAkisi=sohbetRef.snapshots();
+    _chatAkisi=_typingAkisi.distinct(ngelxChatSnapshotAyniTypingHaric);
     _mesajAkisi=sohbetRef.collection('messages').orderBy('createdAt').limitToLast(100).snapshots();
     unawaited(
       sohbetRef.collection('messages').orderBy('createdAt').limitToLast(100).get(const GetOptions(source:Source.cache)).then((s){
@@ -20576,33 +20674,37 @@ class _SohbetPageState extends State<SohbetPage> {
                       child:Text(gunEtiketi,style:const TextStyle(color:ngelxPrivateBlue,fontSize:11,fontWeight:FontWeight.w800)),
                     ),
                   ),
-                ozelMesajKarti(d,fontSize:mesajYaziBoyutu,goruldu:goruldu,quickReaction:hizliEmoji),
+                RepaintBoundary(key:ValueKey('private_${d.id}'),child:ozelMesajKarti(d,fontSize:mesajYaziBoyutu,goruldu:goruldu,quickReaction:hizliEmoji)),
               ]);
             },
           ));
         },
       )),
-      Builder(builder:(_){
-        final yaziyor=veri['typing_${widget.digerUid}']==true;
-        final at=veri['typingAt_${widget.digerUid}'];
-        final taze=at is Timestamp&&DateTime.now().difference(at.toDate()).inSeconds<6;
-        if(!yaziyor||!taze)return const SizedBox.shrink();
-        return Padding(
-          padding:const EdgeInsets.fromLTRB(14,4,14,4),
-          child:Align(
-            alignment:Alignment.centerLeft,
-            child:Container(
-              padding:const EdgeInsets.symmetric(horizontal:11,vertical:7),
-              decoration:BoxDecoration(color:ngelxPrivateBlueSoft,borderRadius:BorderRadius.circular(16),border:Border.all(color:ngelxPrivateBlueBorder)),
-              child:Row(mainAxisSize:MainAxisSize.min,children:[
-                const Icon(Icons.more_horiz_rounded,color:ngelxPrivateBlue,size:17),
-                const SizedBox(width:5),
-                Text('${widget.ad} yazıyor…',style:const TextStyle(color:ngelxPrivateBlueInk,fontSize:11.5,fontWeight:FontWeight.w700)),
-              ]),
+      StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
+        stream:_typingAkisi,
+        builder:(_,typingSnap){
+          final typingVeri=typingSnap.data?.data()??const <String,dynamic>{};
+          final yaziyor=typingVeri['typing_${widget.digerUid}']==true;
+          final at=typingVeri['typingAt_${widget.digerUid}'];
+          final taze=at is Timestamp&&DateTime.now().difference(at.toDate()).inSeconds<6;
+          if(!yaziyor||!taze)return const SizedBox.shrink();
+          return Padding(
+            padding:const EdgeInsets.fromLTRB(14,4,14,4),
+            child:Align(
+              alignment:Alignment.centerLeft,
+              child:Container(
+                padding:const EdgeInsets.symmetric(horizontal:11,vertical:7),
+                decoration:BoxDecoration(color:ngelxPrivateBlueSoft,borderRadius:BorderRadius.circular(16),border:Border.all(color:ngelxPrivateBlueBorder)),
+                child:Row(mainAxisSize:MainAxisSize.min,children:[
+                  const Icon(Icons.more_horiz_rounded,color:ngelxPrivateBlue,size:17),
+                  const SizedBox(width:5),
+                  Text('${widget.ad} yazıyor…',style:const TextStyle(color:ngelxPrivateBlueInk,fontSize:11.5,fontWeight:FontWeight.w700)),
+                ]),
+              ),
             ),
-          ),
-        );
-      }),
+          );
+        },
+      ),
       if(mentionOnerileri.isNotEmpty)Container(
         margin:const EdgeInsets.fromLTRB(10,4,10,4),
         decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(18),border:Border.all(color:ngelxPrivateBlueBorder),boxShadow:const [BoxShadow(color:Color(0x100B5FD7),blurRadius:12)]),
@@ -20616,17 +20718,23 @@ class _SohbetPageState extends State<SohbetPage> {
       ),
       if(yanitMetin!=null)Container(
         margin:const EdgeInsets.fromLTRB(10,4,10,2),
-        padding:const EdgeInsets.fromLTRB(12,8,4,8),
-        decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(16),border:Border.all(color:const Color(0xFFE5E7EB))),
+        padding:const EdgeInsets.fromLTRB(11,8,4,8),
+        decoration:BoxDecoration(color:const Color(0xFFF3F8FF),borderRadius:BorderRadius.circular(16),border:Border.all(color:ngelxPrivateBlueBorder)),
         child:Row(children:[
-          Container(width:3,height:32,decoration:BoxDecoration(color:const Color(0xFF9CA3AF),borderRadius:BorderRadius.circular(3))),
+          Container(width:4,height:44,decoration:BoxDecoration(color:ngelxPrivateBlue,borderRadius:BorderRadius.circular(4))),
           const SizedBox(width:8),
           if(yanitMedyaUrl!=null&&yanitMedyaUrl!.isNotEmpty&&(yanitTur=='photo'||yanitTur=='video'))...[
             NgelXReplyMediaPreview(url:yanitMedyaUrl!,type:yanitTur!),
             const SizedBox(width:8),
           ],
-          Expanded(child:Text(yanitMetin!,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Color(0xFF202124),fontWeight:FontWeight.w600))),
-          IconButton(onPressed:()=>setState((){yanitMesajId=null;yanitMetin=null;yanitGonderenUid=null;yanitTur=null;yanitMedyaUrl=null;}),icon:const Icon(Icons.close_rounded,color:Colors.black54)),
+          Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+            const Text('YANIT MODU',style:TextStyle(color:ngelxPrivateBlue,fontSize:9.5,fontWeight:FontWeight.w900,letterSpacing:.5)),
+            const SizedBox(height:1),
+            Text(yanitGonderenUid==uid?'Kendine yanıt veriyorsun':'${widget.ad} kişisine yanıt veriyorsun',maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:ngelxPrivateBlue,fontSize:11.2,fontWeight:FontWeight.w900)),
+            const SizedBox(height:2),
+            Text(yanitMetin!,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Color(0xFF202124),fontWeight:FontWeight.w600)),
+          ])),
+          IconButton(tooltip:'Yanıtı iptal et',onPressed:()=>setState((){yanitMesajId=null;yanitMetin=null;yanitGonderenUid=null;yanitTur=null;yanitMedyaUrl=null;}),icon:const Icon(Icons.close_rounded,color:Color(0xFF52647B))),
         ]),
       ),
       if(ekIslemiSuruyor)
@@ -20710,13 +20818,9 @@ class _SohbetPageState extends State<SohbetPage> {
                 ),
               ),
             ])
-          : ValueListenableBuilder<TextEditingValue>(
-              valueListenable:mesaj,
-              builder:(_,v,__){
-                final yaziyor=v.text.isNotEmpty;
-                return Row(
-                  crossAxisAlignment:CrossAxisAlignment.end,
-                  children:[
+          : Row(
+              crossAxisAlignment:CrossAxisAlignment.end,
+              children:[
                     IconButton(
                       tooltip:'Ekle',
                       onPressed:ekIslemiSuruyor?null:()async{
@@ -20768,13 +20872,17 @@ class _SohbetPageState extends State<SohbetPage> {
                       },
                       icon:const Icon(Icons.add_circle,color:ngelxPrivateBlue,size:29),
                     ),
-                    if(!yaziyor)...[
-                      IconButton(
-                        tooltip:'Sesli mesaj',
-                        onPressed:sesKaydiDegistir,
-                        icon:const Icon(Icons.mic_rounded,color:ngelxPrivateBlue),
-                      ),
-                    ],
+                    ValueListenableBuilder<TextEditingValue>(
+                      valueListenable:mesaj,
+                      builder:(_,v,__){
+                        if(v.text.trim().isNotEmpty)return const SizedBox.shrink();
+                        return IconButton(
+                          tooltip:'Sesli mesaj',
+                          onPressed:sesKaydiDegistir,
+                          icon:const Icon(Icons.mic_rounded,color:ngelxPrivateBlue),
+                        );
+                      },
+                    ),
                     Expanded(
                       child:AnimatedSize(
                         duration:const Duration(milliseconds:160),
@@ -20809,24 +20917,27 @@ class _SohbetPageState extends State<SohbetPage> {
                       onPressed:emojiSec,
                       icon:const Icon(Icons.emoji_emotions,color:ngelxPrivateBlue),
                     ),
-                    if(v.text.trim().isEmpty)
-                      IconButton(
-                        tooltip:'Hızlı emoji gönder',
-                        onPressed:(){mesaj.text=hizliEmoji;gonder();},
-                        icon:Text(hizliEmoji,style:const TextStyle(fontSize:27)),
-                      )
-                    else
-                      IconButton(
-                        tooltip:'Gönder',
-                        onPressed:gonderiliyor?null:gonder,
-                        icon:gonderiliyor
-                          ?const SizedBox(width:20,height:20,child:CircularProgressIndicator(strokeWidth:2))
-                          :const Icon(Icons.send,color:ngelxPrivateBlue),
-                      ),
+                    ValueListenableBuilder<TextEditingValue>(
+                      valueListenable:mesaj,
+                      builder:(_,v,__){
+                        if(v.text.trim().isEmpty){
+                          return IconButton(
+                            tooltip:'Hızlı emoji gönder',
+                            onPressed:(){mesaj.text=hizliEmoji;gonder();},
+                            icon:Text(hizliEmoji,style:const TextStyle(fontSize:27)),
+                          );
+                        }
+                        return IconButton(
+                          tooltip:'Gönder',
+                          onPressed:gonderiliyor?null:gonder,
+                          icon:gonderiliyor
+                            ?const SizedBox(width:20,height:20,child:CircularProgressIndicator(strokeWidth:2))
+                            :const Icon(Icons.send,color:ngelxPrivateBlue),
+                        );
+                      },
+                    ),
                   ],
-                );
-              },
-            ),
+                ),
       ))),
     ]));}),
   ));
