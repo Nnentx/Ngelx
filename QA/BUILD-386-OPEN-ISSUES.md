@@ -13,7 +13,7 @@ Status: TEST PENDING
 - Verify wrong password / invalid login gives a clear user-facing error.
 
 ## 18 — Password reset
-Status: FUNCTIONAL PASS + BRANDING/LOCALIZATION FIX REQUIRED
+Status: FUNCTIONAL PASS + APP LOCALIZATION IMPLEMENTED / EXTERNAL FIREBASE BRANDING PENDING
 
 Verified:
 - "Şifremi unuttum" opens the password reset screen.
@@ -34,7 +34,7 @@ Final functional check:
 
 
 ## 19 — Follow / unfollow state refresh
-Status: FAIL / FIX REQUIRED
+Status: IMPLEMENTED / DEVICE QA PENDING
 
 Observed on device:
 - User taps to unfollow from another user's profile.
@@ -90,7 +90,7 @@ Verified:
 
 
 ## 23 — Friends discovery model
-Status: FEATURE REQUEST / BUILD 386
+Status: IMPLEMENTED / DEVICE QA PENDING
 
 Reference: user-provided social friends discovery screen.
 
@@ -113,3 +113,17 @@ Acceptance:
 - Counts and relationship states refresh immediately after follow/friend actions.
 - Search filters the visible list correctly.
 - Opening a person row navigates to the correct NgelX profile.
+
+
+## Build 386 implementation progress
+
+Implemented in code:
+- 18: Firebase Auth language code is set from the NgelX app language before password-reset email delivery.
+- 18: Added a Turkish, NgelX-branded custom password reset web handler at web/reset-password.html.
+- 19: Added optimistic local follow state + follower count delta so follow/unfollow updates immediately without reopening the profile.
+- 23: Rebuilt the Friends page with Arkadaşlar / Takip / Önerilenler / Ortak noktalar tabs, search, mutual-friend context and per-person action menus.
+- 17 and 22 remain functional QA gates; no defect has been confirmed in those flows yet.
+
+External configuration still required for complete item 18 branding:
+- Firebase Authentication email-template sender/project display name must be changed from the raw project id to NgelX.
+- Firebase Authentication custom email action handler/template configuration must point password reset actions to the deployed NgelX reset handler.
