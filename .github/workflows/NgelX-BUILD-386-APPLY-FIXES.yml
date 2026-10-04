@@ -1,5 +1,5 @@
 name: NgelX BUILD 386 APPLY DEVICE FIXES
-# retry 2
+# retry compile repair
 
 on:
   push:
@@ -22,20 +22,13 @@ jobs:
           fetch-depth: 0
 
       - name: Apply consolidated Build 386 fixes
-        run: python3 tools/apply_build386_device_fixes.py
+        run: python3 tools/fix_build386_compile.py
 
       - name: Verify patch markers
         shell: bash
         run: |
           set -euo pipefail
-          grep -q "backgroundUrl':url" app/lib/main.dart
-          grep -q "backgroundOpacity':oran" app/lib/main.dart
-          grep -q "mentionZamanlayici" app/lib/main.dart
-          grep -q "useSafeArea:true" app/lib/main.dart
           grep -q "class EtkilesimDetayPage" app/lib/main.dart
-          grep -q "Hikâye silinsin mi?" app/lib/story_v66.dart
-          grep -q "Öne çıkanlara ekle" app/lib/story_v66.dart
-          grep -q "Arşive taşı" app/lib/story_v66.dart
           git diff --check
 
       - name: Commit consolidated fixes
@@ -44,7 +37,7 @@ jobs:
           set -euo pipefail
           git config user.name "NgelX Build Bot"
           git config user.email "actions@users.noreply.github.com"
-          git add app/lib/main.dart app/lib/story_v66.dart
+          git add app/lib/main.dart
           git diff --cached --quiet && exit 0
-          git commit -m "fix: consolidate Build 386 device findings"
+          git commit -m "fix: repair Build 386 interaction detail compile error"
           git push origin HEAD:work/build-386-open-issues
