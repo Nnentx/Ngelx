@@ -1,0 +1,166 @@
+name: NgelX BUILD 385 CHAT PACKAGE
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - work/build-385-chat-playstore-package
+    paths:
+      - 'app/**'
+      - 'firestore.rules'
+      - 'cloudflare/**'
+      - '.github/workflows/NgelX-BUILD-385-CHAT-PACKAGE.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Kaynaklari al
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Build 384 reaction referansini al
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin work/final-consolidated-p4-group-reactions:refs/remotes/origin/work/final-consolidated-p4-group-reactions --depth=1
+
+      - name: Java 17 kur
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Flutter kur
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Sabit NgelX imza anahtarini geri yukle
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: ngelx-stable-debug-keystore-v1
+          fail-on-cache-miss: true
+
+      - name: Imza anahtarini dogrula
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s "$HOME/.android/debug.keystore"
+          keytool -list -v -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey | grep -F 'SHA256: BE:20:B2:7F:0B:A1:F4:DE:CD:29:41:D4:10:B1:53:6D:E8:9E:48:DC:89:4F:04:F0:38:F9:D2:6B:11:EC:D6:AA'
+
+      - name: Build 385 kapsam ve regresyon kontrolu
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Build 385 surum
+          grep -Fqx 'version: 1.0.162+385' app/pubspec.yaml
+          grep -q "defaultValue: '385'" app/lib/main.dart
+
+          # 11 - mesaj gonderince otomatik en alta kaydirma
+          grep -Fq 'void sonaGit({bool zorla=false})' app/lib/main.dart
+          grep -Fq '_gonderimSonrasiEnAltaPlanla' app/lib/main.dart
+          grep -Fq 'sonaGit(zorla:true)' app/lib/main.dart
+
+          # 12/13 - ozel ve grup sohbetinde yazarken agirlasma
+          grep -Fq 'bool ngelxChatSnapshotAyniTypingHaric' app/lib/main.dart
+          test "$(grep -Fc 'distinct(ngelxChatSnapshotAyniTypingHaric)' app/lib/main.dart)" -ge 2
+          grep -Fq '_grupTypingAkisi' app/lib/main.dart
+          grep -Fq '_typingAkisi' app/lib/main.dart
+          grep -Fq 'Duration(milliseconds:360)' app/lib/main.dart
+          grep -Fq 'Duration(milliseconds:600)' app/lib/main.dart
+
+          # 14 - yanit modu belirginligi
+          test "$(grep -Fc "'YANIT MODU'" app/lib/main.dart)" -ge 2
+          grep -Fq "tooltip:'Yanıtı iptal et'" app/lib/main.dart
+          grep -Fq 'NgelXReplyMediaPreview' app/lib/main.dart
+          grep -Fq 'kişisine yanıt veriyorsun' app/lib/main.dart
+
+          # Build 384'te calisan reaction davranisi korunacak
+          grep -q "isCurrentUser?'Sen · \$name':name" app/lib/main.dart
+          test "$(grep -Fc "filtre('TÜMÜ',tumu)" app/lib/main.dart)" -ge 2
+          grep -q 'Widget _ozelMedyaTepkiVerenSatiri' app/lib/main.dart
+          grep -q 'Widget _grupTepkiVerenSatiri' app/lib/main.dart
+          grep -q '_ozelMedyaTepkiDetayi' app/lib/main.dart
+          grep -q 'grupTepkiDetayi' app/lib/main.dart
+
+          python3 - <<'PY'
+          import subprocess
+          cur=open('app/lib/main.dart',encoding='utf-8').read()
+          ref=subprocess.check_output(
+              ['git','show','origin/work/final-consolidated-p4-group-reactions:app/lib/main.dart'],
+              text=True,encoding='utf-8'
+          )
+          ranges=[
+              ('group detail','  Widget _grupTepkiVerenSatiri','  Widget mesajKarti'),
+              ('private mutation','  Future<void> mesajTepkiDegistir','  Future<void> mesajHatirlat'),
+              ('private media detail','  Widget _ozelMedyaTepkiVerenSatiri','  Widget ozelMesajKarti'),
+          ]
+          for name,a,b in ranges:
+              def cut(s):
+                  i=s.find(a)
+                  j=s.find(b,i+len(a))
+                  if i<0 or j<0:
+                      raise SystemExit(f'{name}: marker missing')
+                  return s[i:j]
+              if cut(cur)!=cut(ref):
+                  raise SystemExit(f'{name}: BUILD 384 REACTION PARITY FAILED')
+              print(f'{name}: Build 384 parity OK')
+          PY
+
+          # 16 - Play Store hazirlik kapisi
+          grep -Fq 'url_launcher: ^6.3.2' app/pubspec.yaml
+          grep -Fq "const ngelxPrivacyUrl='https://ngelxsocial.com/privacy.html';" app/lib/main.dart
+          grep -Fq "const ngelxTermsUrl='https://ngelxsocial.com/terms.html';" app/lib/main.dart
+          grep -Fq "const ngelxDeleteAccountUrl='https://ngelxsocial.com/delete-account.html';" app/lib/main.dart
+          grep -Fq "'Hesap ve veri silme'" app/lib/build258_settings.dart
+          grep -Fq 'match /account_deletion_requests/{uid}' firestore.rules
+          grep -Fq 'compileSdk = 36' app/android/app/build.gradle.kts
+          grep -Fq 'targetSdk = 36' app/android/app/build.gradle.kts
+          if grep -Eq 'READ_MEDIA_IMAGES|READ_MEDIA_VIDEO|READ_EXTERNAL_STORAGE|WRITE_EXTERNAL_STORAGE' app/android/app/src/main/AndroidManifest.xml; then
+            echo 'Gereksiz genis medya izni bulundu.' >&2
+            exit 1
+          fi
+
+      - name: Bagimliliklari al
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter clean
+          flutter pub get
+
+      - name: Flutter analiz
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter analyze --no-fatal-infos --no-fatal-warnings
+
+      - name: Gercek APK olustur
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter build apk --release --build-name=1.0.162 --build-number=385
+          test -s build/app/outputs/flutter-apk/app-release.apk
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          test -n "$APKSIGNER"
+          "$APKSIGNER" verify --verbose --print-certs build/app/outputs/flutter-apk/app-release.apk
+          cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/NgelX-1.0.162-Build-385-CHAT-PACKAGE.apk
+          sha256sum build/app/outputs/flutter-apk/NgelX-1.0.162-Build-385-CHAT-PACKAGE.apk > build/app/outputs/flutter-apk/NgelX-1.0.162-Build-385-CHAT-PACKAGE.apk.sha256
+
+      - name: APK yukle
+        uses: actions/upload-artifact@v4
+        with:
+          name: NgelX-1.0.162-Build-385-CHAT-PACKAGE
+          path: |
+            app/build/app/outputs/flutter-apk/NgelX-1.0.162-Build-385-CHAT-PACKAGE.apk
+            app/build/app/outputs/flutter-apk/NgelX-1.0.162-Build-385-CHAT-PACKAGE.apk.sha256
+          if-no-files-found: error
+          retention-days: 14
