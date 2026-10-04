@@ -3929,12 +3929,30 @@ class _NgelXDogrulanmisOturumKapisiState extends State<NgelXDogrulanmisOturumKap
   );
 }
 
-class IcerikBaglantiPage extends StatelessWidget {
+class IcerikBaglantiPage extends StatefulWidget {
   final String icerikId;
   const IcerikBaglantiPage({super.key,required this.icerikId});
+  @override State<IcerikBaglantiPage> createState()=>_IcerikBaglantiPageState();
+}
 
-  Map<String,String> _gorselKart(Map<String,dynamic> v)=> <String,String>{
-    'id':icerikId,
+class _IcerikBaglantiPageState extends State<IcerikBaglantiPage>{
+  final PageController _sayfa=PageController();
+  List<DocumentSnapshot<Map<String,dynamic>>> _icerikler=<DocumentSnapshot<Map<String,dynamic>>>[];
+  int _aktif=0;
+  bool _yukleniyor=true;
+  String? _hata;
+
+  @override void initState(){super.initState();unawaited(_icerikleriYukle());}
+  @override void dispose(){_sayfa.dispose();super.dispose();}
+
+  int _zaman(dynamic v){
+    if(v is Timestamp)return v.millisecondsSinceEpoch;
+    if(v is DateTime)return v.millisecondsSinceEpoch;
+    return 0;
+  }
+
+  Map<String,String> _gorselKart(Map<String,dynamic> v,String id)=> <String,String>{
+    'id':id,
     'type':(v['type']??'text').toString(),
     'videoUrl':(v['videoUrl']??'').toString(),
     'mediaUrl':(v['mediaUrl']??v['videoUrl']??'').toString(),
@@ -3965,62 +3983,137 @@ class IcerikBaglantiPage extends StatelessWidget {
     'allowDownload':(v['allowDownload']??true).toString(),
   };
 
-  @override
-  Widget build(BuildContext context)=>Scaffold(
+  Future<void> _icerikleriYukle()async{
+    try{
+      final current=await FirebaseFirestore.instance.collection('videos').doc(widget.icerikId).get().timeout(const Duration(seconds:10));
+      if(!current.exists){if(mounted)setState(()=>_hata='Bu içerik artık kullanılamıyor.');return;}
+      final cv=current.data()??<String,dynamic>{};
+      final ownerId=(cv['ownerId']??'').toString();
+      final me=FirebaseAuth.instance.currentUser?.uid??'';
+      if(ownerId.isEmpty){
+        if(mounted)setState(()=>_icerikler=[current]);
+        return;
+      }
+
+      final ownerSnap=await FirebaseFirestore.instance.collection('users').doc(ownerId).get().timeout(const Duration(seconds:8));
+      final owner=ownerSnap.data()??<String,dynamic>{};
+      final meSnap=me.isEmpty?null:await FirebaseFirestore.instance.collection('users').doc(me).get().timeout(const Duration(seconds:8));
+      final mine=meSnap?.data()??<String,dynamic>{};
+      final following=List<String>.from(owner['followers']??const[]).contains(me)||
+        List<String>.from(mine['following']??const[]).contains(ownerId);
+      final friends=List<String>.from(owner['friends']??const[]).contains(me)||
+        List<String>.from(mine['friends']??const[]).contains(ownerId);
+      final permission=(owner['profileViewPermission']??'all').toString();
+      final profileAllowed=permission=='all'||(permission=='followers'&&following)||(permission=='friends'&&friends);
+      final accountAllowed=owner['privateAccount']!=true||following||friends;
+
+      bool canView(Map<String,dynamic> item){
+        if(me==ownerId)return true;
+        if(!profileAllowed||!accountAllowed)return false;
+        if(me.isNotEmpty&&List<String>.from(item['hiddenFor']??const[]).contains(me))return false;
+        final privacy=(item['privacy']??'Herkes').toString();
+        if(privacy=='Yalnızca ben')return false;
+        if(privacy=='Arkadaşlar'&&!friends)return false;
+        if(privacy=='Yakın arkadaşlar'&&(me.isEmpty||!List<String>.from(item['visibleTo']??const[]).contains(me)))return false;
+        return true;
+      }
+
+      final result=await FirebaseFirestore.instance.collection('videos').where('ownerId',isEqualTo:ownerId).limit(100).get().timeout(const Duration(seconds:12));
+      final docs=<DocumentSnapshot<Map<String,dynamic>>>[
+        ...result.docs.where((d)=>d.data()['type']!='story'&&canView(d.data())),
+      ];
+      if(!docs.any((d)=>d.id==current.id)&&canView(cv))docs.add(current);
+      docs.sort((a,b){
+        final ad=a.data()??const <String,dynamic>{},bd=b.data()??const <String,dynamic>{};
+        final at=_zaman(ad['createdAt']??ad['clientCreatedAt']);
+        final bt=_zaman(bd['createdAt']??bd['clientCreatedAt']);
+        return bt.compareTo(at);
+      });
+      final index=docs.indexWhere((d)=>d.id==current.id);
+      if(index<0){if(mounted)setState(()=>_hata='Bu paylaşımı görüntüleme iznin yok.');return;}
+      if(!mounted)return;
+      setState((){_icerikler=docs;_aktif=index;});
+      WidgetsBinding.instance.addPostFrameCallback((_){
+        if(mounted&&_sayfa.hasClients&&index>0)_sayfa.jumpToPage(index);
+      });
+    }on TimeoutException{
+      if(mounted)setState(()=>_hata='İçerikler yüklenirken zaman aşımına uğradı. Tekrar dene.');
+    }catch(_){
+      if(mounted)setState(()=>_hata='İçerik yüklenemedi. İnternet bağlantını kontrol edip tekrar dene.');
+    }finally{
+      if(mounted)setState(()=>_yukleniyor=false);
+    }
+  }
+
+  Widget _icerikOlustur(int index){
+    final belge=_icerikler[index],v=<String,dynamic>{'id':belge.id,...?belge.data()};
+    final tur=(v['type']??'video').toString();
+    if(tur!='video')return GorselYaziKarti(veri:_gorselKart(v,belge.id),aktif:index==_aktif);
+    return VideoKarti(
+      adres:(v['videoUrl']??v['mediaUrl']??'').toString(),
+      videoId:belge.id,
+      kullaniciAdi:(v['username']??'ngelx').toString(),
+      sharedByUsername:(v['sharedByUsername']??'').toString(),
+      ownerId:(v['ownerId']??'').toString(),
+      aciklama:(v['description']??'').toString(),
+      contentLanguage:(v['contentLanguage']??v['language']??'').toString(),
+      translations:ngelxDilMetinHaritasi(v['translations']),
+      captionText:(v['captionText']??'').toString(),
+      captions:ngelxDilMetinHaritasi(v['captions']),
+      captionTranslations:ngelxDilMetinHaritasi(v['captionTranslations']),
+      audioUrl:(v['audioUrl']??'').toString(),
+      originalAudioVolume:(v['originalAudioVolume'] as num?)?.toDouble()??.25,
+      musicVolume:(v['musicVolume'] as num?)?.toDouble()??1,
+      overlayText:(v['overlayText']??'').toString(),
+      overlayColor:(v['overlayColor'] as num?)?.toInt()??0xFFFFFFFF,
+      overlayBackgroundColor:(v['overlayBackgroundColor'] as num?)?.toInt()??0x99000000,
+      overlayFontSize:(v['overlayFontSize'] as num?)?.toDouble()??22,
+      overlayX:(v['overlayX'] as num?)?.toDouble()??0,
+      overlayY:(v['overlayY'] as num?)?.toDouble()??0,
+      overlayScale:(v['overlayScale'] as num?)?.toDouble()??1,
+      overlayRotation:(v['overlayRotation'] as num?)?.toDouble()??0,
+      musicTitle:(v['musicTitle']??'').toString(),
+      musicArtist:(v['musicArtist']??'').toString(),
+      trimStartMs:(v['videoTrimStartMs'] as num?)?.toInt()??0,
+      trimEndMs:(v['videoTrimEndMs'] as num?)?.toInt()??0,
+      indirilebilir:v['allowDownload']!=false&&v['allowDownload'].toString()!='false',
+      aktif:index==_aktif,
+    );
+  }
+
+  @override Widget build(BuildContext context)=>Scaffold(
     backgroundColor:const Color(0xFF09090F),
-    appBar:AppBar(title:const Text('NgelX paylaşımı')),
+    appBar:AppBar(
+      title:const Text('NgelX paylaşımı'),
+      actions:[if(_icerikler.length>1)Center(child:Padding(
+        padding:const EdgeInsets.symmetric(horizontal:14),
+        child:Text('${_aktif+1}/${_icerikler.length}',style:const TextStyle(color:Colors.white70,fontWeight:FontWeight.w700)),
+      ))],
+    ),
     body:SafeArea(
       top:false,
       bottom:true,
-      child:Padding(
-        padding:const EdgeInsets.only(bottom:8),
-        child:FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(
-      future:FirebaseFirestore.instance.collection('videos').doc(icerikId).get(),
-      builder:(_,s){
-        if(s.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator(color:mavi));
-        if(s.hasError)return Center(child:Padding(padding:const EdgeInsets.all(24),child:Column(mainAxisSize:MainAxisSize.min,children:[
-          const Icon(Icons.cloud_off_rounded,size:55,color:Colors.redAccent),
-          const SizedBox(height:12),
-          const Text('İçerik yüklenemedi.'),
-          TextButton(onPressed:()=>Navigator.pop(context),child:const Text('Akışa dön')),
-        ])));
-        if(s.data?.exists!=true)return const Center(child:Text('Bu paylaşım kaldırılmış veya artık kullanılamıyor.'));
-        final v=s.data?.data()??<String,dynamic>{};
-        final tur=(v['type']??'video').toString();
-        if(tur!='video')return GorselYaziKarti(veri:_gorselKart(v),aktif:true);
-        return VideoKarti(
-          adres:(v['videoUrl']??v['mediaUrl']??'').toString(),
-          videoId:icerikId,
-          kullaniciAdi:(v['username']??'ngelx').toString(),
-          sharedByUsername:(v['sharedByUsername']??'').toString(),
-          ownerId:(v['ownerId']??'').toString(),
-          aciklama:(v['description']??'').toString(),
-          contentLanguage:(v['contentLanguage']??v['language']??'').toString(),
-          translations:ngelxDilMetinHaritasi(v['translations']),
-          captionText:(v['captionText']??'').toString(),
-          captions:ngelxDilMetinHaritasi(v['captions']),
-          captionTranslations:ngelxDilMetinHaritasi(v['captionTranslations']),
-          audioUrl:(v['audioUrl']??'').toString(),
-          originalAudioVolume:(v['originalAudioVolume'] as num?)?.toDouble()??.25,
-          musicVolume:(v['musicVolume'] as num?)?.toDouble()??1,
-          overlayText:(v['overlayText']??'').toString(),
-          overlayColor:(v['overlayColor'] as num?)?.toInt()??0xFFFFFFFF,
-          overlayBackgroundColor:(v['overlayBackgroundColor'] as num?)?.toInt()??0x99000000,
-          overlayFontSize:(v['overlayFontSize'] as num?)?.toDouble()??22,
-          overlayX:(v['overlayX'] as num?)?.toDouble()??0,
-          overlayY:(v['overlayY'] as num?)?.toDouble()??0,
-          overlayScale:(v['overlayScale'] as num?)?.toDouble()??1,
-          overlayRotation:(v['overlayRotation'] as num?)?.toDouble()??0,
-          musicTitle:(v['musicTitle']??'').toString(),
-          musicArtist:(v['musicArtist']??'').toString(),
-          trimStartMs:(v['videoTrimStartMs'] as num?)?.toInt()??0,
-          trimEndMs:(v['videoTrimEndMs'] as num?)?.toInt()??0,
-          indirilebilir:v['allowDownload']!=false&&v['allowDownload'].toString()!='false',
-          aktif:true,
-        );
-      },
-    )),
-  ));
+      child:_yukleniyor
+        ?const Center(child:CircularProgressIndicator(color:mavi))
+        :_hata!=null
+          ?Center(child:Padding(padding:const EdgeInsets.all(24),child:Column(mainAxisSize:MainAxisSize.min,children:[
+            const Icon(Icons.cloud_off_rounded,size:55,color:Colors.redAccent),
+            const SizedBox(height:12),
+            Text(_hata!,textAlign:TextAlign.center),
+            TextButton(onPressed:()=>Navigator.pop(context),child:const Text('Akışa dön')),
+          ])))
+          :Padding(
+            padding:const EdgeInsets.only(bottom:8),
+            child:PageView.builder(
+              controller:_sayfa,
+              scrollDirection:Axis.vertical,
+              itemCount:_icerikler.length,
+              onPageChanged:(index)=>setState(()=>_aktif=index),
+              itemBuilder:(_,index)=>_icerikOlustur(index),
+            ),
+          ),
+    ),
+  );
 }
 
 class UygulamaDurumKapisi extends StatefulWidget {final Widget child;const UygulamaDurumKapisi({super.key,required this.child});@override State<UygulamaDurumKapisi> createState()=>_UygulamaDurumKapisiState();}
@@ -7883,26 +7976,40 @@ class _YeniYorumlarState extends State<Yorumlar> {
         if(mounted)setState(()=>icerikMeta=vv);else icerikMeta=vv;
       }
       icerikSahibi=(vv['ownerId']??'').toString();
-      final izin=(vv['commentAudience']??'Herkes').toString();
-      if(user.uid!=icerikSahibi){
-        if(vv['allowComments']==false||izin=='Kimse'){
+      if(user.uid!=icerikSahibi&&icerikSahibi.isNotEmpty){
+        if(vv['allowComments']==false||(vv['commentAudience']??'Herkes').toString()=='Kimse'){
           if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bu gönderide yorumlar kapalı.')));
           return;
         }
-        if(izin!='Herkes'){
-          final sahipBelgesi=await FirebaseFirestore.instance.collection('users').doc(icerikSahibi).get();
-          final sv=sahipBelgesi.data()??<String,dynamic>{};
-          if(izin=='Arkadaşlar'&&!List<String>.from(sv['friends']??const[]).contains(user.uid)){
-            if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bu gönderiye yalnızca arkadaşlar yorum yapabilir.')));
-            return;
-          }
-          if(izin=='Takip ettiklerim'&&!List<String>.from(sv['following']??const[]).contains(user.uid)){
-            if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bu gönderiye yalnızca içerik sahibinin takip ettiği kişiler yorum yapabilir.')));
-            return;
-          }
+        final sahipBelgesi=await FirebaseFirestore.instance.collection('users').doc(icerikSahibi).get().timeout(const Duration(seconds:6));
+        final sv=sahipBelgesi.data()??<String,dynamic>{};
+        final arkadaslar=List<String>.from(sv['friends']??const[]);
+        final takip=List<String>.from(sv['following']??const[]);
+        final izin=(vv['commentAudience']??'Herkes').toString();
+        if(List<String>.from(sv['restrictedUsers']??const[]).contains(user.uid)){
+          if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bu kullanıcı yorumlarını sınırlandırdı.')));
+          return;
+        }
+        if(sv['friendsOnlyComments']==true&&!arkadaslar.contains(user.uid)){
+          if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bu kullanıcının yorum izni yalnızca arkadaşları için açık.')));
+          return;
+        }
+        if(izin=='Arkadaşlar'&&!arkadaslar.contains(user.uid)){
+          if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bu gönderiye yalnızca arkadaşlar yorum yapabilir.')));
+          return;
+        }
+        if(izin=='Takip ettiklerim'&&!takip.contains(user.uid)){
+          if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bu gönderiye yalnızca içerik sahibinin takip ettiği kişiler yorum yapabilir.')));
+          return;
         }
       }
-    }catch(_){}
+    }on TimeoutException{
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Yorum izni doğrulanamadı. İnternet bağlantını kontrol edip tekrar dene.')));
+      return;
+    }catch(_){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Yorum izni doğrulanamadı. Tekrar dene.')));
+      return;
+    }
 
     setState(()=>gonderiliyor=true);
     final yanitId=yanitlananId,yanitKullanici=yanitlananKullanici;
@@ -18486,7 +18593,9 @@ class _SohbetPageState extends State<SohbetPage> {
       String? engel;
       final benimEngellediklerim=List<String>.from(benim['blocked']??const[]);
       final onunEngelledikleri=List<String>.from(diger['blocked']??const[]);
+      final onunKisitladiklari=List<String>.from(diger['restrictedUsers']??const[]);
       if(benimEngellediklerim.contains(widget.digerUid)||onunEngelledikleri.contains(ben))engel='Engellenen hesaplar arasında mesaj gönderilemez.';
+      else if(onunKisitladiklari.contains(ben))engel='Bu kullanıcı mesajlarını sınırlandırdı.';
       else if(diger['deactivated']==true)engel='Bu hesap şu anda kullanılamıyor.';
       else{
         final arkadaslar=List<String>.from(diger['friends']??const[]);
@@ -22411,6 +22520,10 @@ class _KullaniciProfilPageState extends State<KullaniciProfilPage> {
         ||stringList(hedef['blocked']).contains(me);
       if(engelli){
         if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Engellenen hesaplar arasında sohbet açılamaz.')));
+        return;
+      }
+      if(stringList(hedef['restrictedUsers']).contains(me)){
+        if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bu kullanıcı mesajlarını sınırlandırdı.')));
         return;
       }
 
