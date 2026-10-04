@@ -21611,12 +21611,24 @@ class _ProfilPageState extends State<ProfilPage> {
           : 'jpg';
       final yol = 'profiles/${user.uid}/${DateTime.now().millisecondsSinceEpoch}.$uzanti';
       final eski = fotoUrl;
-      final url = await ngelxMedyaYukleBytes(
-        bytes: await dosya.readAsBytes(),
-        kind: 'profiles',
-        ext: uzanti,
-        legacyPath: yol,
-      );
+      final bytes=await dosya.readAsBytes();
+      String? url;
+      Object? sonHata;
+      for(var deneme=1;deneme<=3;deneme++){
+        try{
+          url=await ngelxMedyaYukleBytes(
+            bytes:bytes,
+            kind:'profiles',
+            ext:uzanti,
+            legacyPath:yol,
+          ).timeout(const Duration(minutes:2));
+          break;
+        }catch(e){
+          sonHata=e;
+          if(deneme<3)await Future.delayed(Duration(milliseconds:700*deneme));
+        }
+      }
+      if(url==null)throw sonHata??Exception('Profil fotoğrafı yükleme başarısız.');
       await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
         'photoUrl': url,
         'updatedAt': FieldValue.serverTimestamp(),
@@ -21633,9 +21645,13 @@ class _ProfilPageState extends State<ProfilPage> {
         const SnackBar(content: Text('Profil fotoğrafı kaydedildi.')),
       );
     } catch (e) {
+      debugPrint('Profil fotoğrafı yükleme hatası: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Profil fotoğrafı yüklenemedi: $e')),
+          SnackBar(
+            content:const Text('Profil fotoğrafı yüklenemedi. Bağlantını kontrol edip tekrar dene.'),
+            action:SnackBarAction(label:'Tekrar dene',onPressed:()=>unawaited(fotografYukle())),
+          ),
         );
       }
     } finally {
