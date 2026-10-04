@@ -51,3 +51,14 @@ Expected:
 Build 386 requirement:
 - Fix stale local/profile relationship state after follow/unfollow.
 - Keep backend relationship mutation and UI state synchronized.
+
+
+## 20 — Profile message button / private chat open
+Status: PASS
+
+Verified on device:
+- Tapping "Mesaj" from another user's profile opens the correct 1:1 private conversation.
+- Existing conversation history loads.
+- Custom chat background renders.
+- New messages can be sent successfully.
+- No blank/stuck transition observed.
