@@ -10,6 +10,12 @@ def replace_once(text: str, old: str, new: str, label: str) -> str:
         raise SystemExit(f"{label}: expected exactly 1 match, found {count}")
     return text.replace(old, new, 1)
 
+def replace_exact_count(text: str, old: str, new: str, expected: int, label: str) -> str:
+    count = text.count(old)
+    if count != expected:
+        raise SystemExit(f"{label}: expected exactly {expected} matches, found {count}")
+    return text.replace(old, new)
+
 main = MAIN.read_text(encoding="utf-8")
 
 # 1) Private chat: shared background/theme for both participants.
@@ -24,7 +30,7 @@ main = replace_once(
     "chat customization subtitle",
 )
 main = replace_once(main, "await ref.set({'backgroundOpacity_$me':oran},SetOptions(merge:true));", "await ref.set({'backgroundOpacity':oran,'backgroundUpdatedBy':me,'backgroundUpdatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));", "shared background opacity")
-main = replace_once(main, "final eskiArkaPlan=(onceki.data()?['backgroundUrl_$me']??'').toString();", "final eskiArkaPlan=(onceki.data()?['backgroundUrl']??onceki.data()?['backgroundUrl_$me']??'').toString();", "reset old shared background")
+main = replace_exact_count(main, "final eskiArkaPlan=(onceki.data()?['backgroundUrl_$me']??'').toString();", "final eskiArkaPlan=(onceki.data()?['backgroundUrl']??onceki.data()?['backgroundUrl_$me']??'').toString();", 3, "shared background legacy fallback")
 main = replace_once(
     main,
     """        'theme_$me':ngelxPrivateBlueCanvas.toARGB32(),
@@ -42,9 +48,7 @@ main = replace_once(
     "reset shared background",
 )
 main = replace_once(main, "await ref.set({'theme_$me':secim},SetOptions(merge:true));", "await ref.set({'theme':secim,'backgroundUpdatedBy':me,'backgroundUpdatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));", "shared background color")
-main = replace_once(main, "final eskiArkaPlan=(onceki.data()?['backgroundUrl_$me']??'').toString();", "final eskiArkaPlan=(onceki.data()?['backgroundUrl']??onceki.data()?['backgroundUrl_$me']??'').toString();", "remove old shared background")
 main = replace_once(main, "await ref.set({'backgroundUrl_$me':''},SetOptions(merge:true));", "await ref.set({'backgroundUrl':'','backgroundUpdatedBy':me,'backgroundUpdatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));", "shared remove image")
-main = replace_once(main, "final eskiArkaPlan=(onceki.data()?['backgroundUrl_$me']??'').toString();", "final eskiArkaPlan=(onceki.data()?['backgroundUrl']??onceki.data()?['backgroundUrl_$me']??'').toString();", "upload old shared background")
 main = replace_once(main, "await ref.set({'backgroundUrl_$me':url},SetOptions(merge:true));", "await ref.set({'backgroundUrl':url,'backgroundUpdatedBy':me,'backgroundUpdatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));", "shared upload image")
 main = replace_once(main, "const SnackBar(content:Text('Özel sohbet arka planın kaydedildi.'))", "const SnackBar(content:Text('Sohbet arka planı iki taraf için güncellendi.'))", "shared background snackbar")
 
