@@ -87,3 +87,29 @@ Verified:
 - Recipient profile friendship count updates to 1.
 - Friends list shows the accepted account.
 - Friendship state is consistent after acceptance.
+
+
+## 23 — Friends discovery model
+Status: FEATURE REQUEST / BUILD 386
+
+Reference: user-provided social friends discovery screen.
+
+Add an NgelX-native friends/discovery model with:
+- Top tabs: "Arkadaşlar", "Takip", "Önerilenler", "Ortak noktalar".
+- Search field for people/friends.
+- Visible total friend count.
+- Person rows with avatar, display name and relevant relationship context.
+- Mutual-connection count when available (for example "76 ortak arkadaş").
+- Three-dot overflow menu on each person row for relationship actions.
+- Suggested/discovery emphasis indicator where useful.
+- Fast switching between tabs without losing scroll/search state.
+- White NgelX visual language; use NgelX typography/colors/components rather than copying another app's branding.
+- Keep follow and friendship as separate concepts.
+- "Ortak noktalar" can surface shared groups/interests/mutual connections depending on available data.
+- Mutual-friends display is now explicitly INCLUDED by the user's latest request and supersedes the earlier exclusion.
+
+Acceptance:
+- Lists load without blank states/stuck UI.
+- Counts and relationship states refresh immediately after follow/friend actions.
+- Search filters the visible list correctly.
+- Opening a person row navigates to the correct NgelX profile.
