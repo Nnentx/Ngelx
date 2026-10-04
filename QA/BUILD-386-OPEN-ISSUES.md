@@ -65,7 +65,7 @@ Verified on device:
 
 
 ## 21 — Friendship request flow
-Status: PARTIAL PASS / REQUEST TEST PENDING
+Status: PASS
 
 Verified on device:
 - Removing an existing friendship succeeds.
@@ -81,6 +81,9 @@ Verified:
 - Recipient receives the friendship request in Activity.
 - Request card shows active accept and reject controls.
 
-Still to verify:
+Verified:
 - Recipient can accept the request successfully.
-- After acceptance, both profiles must show the friendship state consistently and friendship counts must update.
+- Activity confirms "Arkadaşlık isteği kabul edildi."
+- Recipient profile friendship count updates to 1.
+- Friends list shows the accepted account.
+- Friendship state is consistent after acceptance.
