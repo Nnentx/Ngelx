@@ -130,7 +130,7 @@ External configuration still required for complete item 18 branding:
 
 
 ## 24 — Consolidated device findings after Build 386 manual QA
-Status: FIXED IN CODE / CI VALIDATION RUNNING
+Status: FIXED IN CODE / CI VALIDATION RE-RUN AFTER COMPILE REPAIR
 
 Consolidated in commit be1972e:
 - Private-chat background/theme is now shared at chat level so either participant's change is visible to both sides.
