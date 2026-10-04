@@ -2002,15 +2002,19 @@ Future<bool> sosyalIstekGonder({
   if(user==null||user.isAnonymous||hedefUid.isEmpty||hedefUid==user.uid)return false;
   if(tur!='follow_request'&&tur!='friend_request')return false;
   final userRef=FirebaseFirestore.instance.collection('users').doc(user.uid);
+  final targetRef=FirebaseFirestore.instance.collection('users').doc(hedefUid);
   final requestId='social_${tur}_${user.uid}_${hedefUid}';
   final requestRef=FirebaseFirestore.instance.collection('notifications').doc(requestId);
   return FirebaseFirestore.instance.runTransaction<bool>((transaction)async{
     final results=await Future.wait([
       transaction.get(userRef),
+      transaction.get(targetRef),
       transaction.get(requestRef),
     ]);
     final profile=results[0].data()??<String,dynamic>{};
-    final existing=results[1].data()??<String,dynamic>{};
+    final target=results[1].data()??<String,dynamic>{};
+    final existing=results[2].data()??<String,dynamic>{};
+    if(List<String>.from(target['restrictedUsers']??const[]).contains(user.uid))return false;
     final relationExists=tur=='follow_request'
       ?List<String>.from(profile['following']??const[]).contains(hedefUid)
       :List<String>.from(profile['friends']??const[]).contains(hedefUid);
@@ -15264,8 +15268,10 @@ class _SohbetPageState extends State<SohbetPage> {
       String? engel;
       final benimEngellediklerim=List<String>.from(benim['blocked']??const[]);
       final onunEngelledikleri=List<String>.from(diger['blocked']??const[]);
+      final kisitlanmisKullanicilar=List<String>.from(diger['restrictedUsers']??const[]);
       benimEngelim=benimEngellediklerim.contains(widget.digerUid);
       if(benimEngelim||onunEngelledikleri.contains(ben))engel='Engellenen hesaplar arasında mesaj gönderilemez.';
+      else if(kisitlanmisKullanicilar.contains(ben))engel='Bu kullanıcı mesajlarını sınırlandırdı.';
       else if(diger['deactivated']==true)engel='Bu hesap şu anda kullanılamıyor.';
       else{
         final arkadaslar=List<String>.from(diger['friends']??const[]);
@@ -19006,10 +19012,11 @@ class _KullaniciProfilPageState extends State<KullaniciProfilPage> {
       final hedefinTakipEttikleri=List<String>.from(hedef['following']??const[]);
       final mesajIzni=(hedef['messagePermission']??(hedef['friendsOnlyMessages']!=false?'friends':'all')).toString();
       final kabulEdildi=sohbet['requestAccepted_$me']==true||sohbet['requestAccepted_$uid']==true;
-      final izinli=kabulEdildi||
+      final kisitlanmis=List<String>.from(hedef['restrictedUsers']??const[]).contains(me);
+      final izinli=!kisitlanmis&&(kabulEdildi||
         mesajIzni=='all'||
         (mesajIzni=='friends'&&arkadaslar.contains(uid))||
-        (mesajIzni=='following'&&hedefinTakipEttikleri.contains(me));
+        (mesajIzni=='following'&&hedefinTakipEttikleri.contains(me)));
       if(!izinli){
         if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(t('messageNotAllowed'))));
         return;
