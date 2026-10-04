@@ -62,3 +62,20 @@ Verified on device:
 - Custom chat background renders.
 - New messages can be sent successfully.
 - No blank/stuck transition observed.
+
+
+## 21 — Friendship request flow
+Status: PARTIAL PASS / REQUEST TEST PENDING
+
+Verified on device:
+- Removing an existing friendship succeeds.
+- Friendship count updates to 0 immediately.
+- Profile action updates immediately to "Arkadaş ekle".
+- Snackbar confirms "Arkadaşlık kaldırıldı."
+
+Still to verify:
+- Tap "Arkadaş ekle" and send a new friendship request.
+- Sender profile must change to a pending/request-sent state.
+- Recipient must receive the request/notification.
+- Recipient can accept or reject.
+- After acceptance, both profiles must show the friendship state consistently.
