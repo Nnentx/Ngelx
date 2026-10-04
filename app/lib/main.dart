@@ -3857,12 +3857,15 @@ class _NgelXDogrulanmisOturumKapisiState extends State<NgelXDogrulanmisOturumKap
 
   Future<void> _geriAc()async{
     try{
-      await FirebaseFirestore.instance.collection('users').doc(widget.user.uid).set({
+      final batch=FirebaseFirestore.instance.batch();
+      batch.set(FirebaseFirestore.instance.collection('users').doc(widget.user.uid),{
         'deactivated':false,
         'deletionRequestedAt':FieldValue.delete(),
         'deletionScheduledFor':FieldValue.delete(),
         'reactivatedAt':FieldValue.serverTimestamp(),
-      },SetOptions(merge:true)).timeout(const Duration(seconds:12));
+      },SetOptions(merge:true));
+      batch.delete(FirebaseFirestore.instance.collection('account_deletion_requests').doc(widget.user.uid));
+      await batch.commit().timeout(const Duration(seconds:12));
       if(mounted)setState(_yenile);
     }on TimeoutException{
       if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Hesap yeniden açma zaman aşımına uğradı.')));
@@ -24381,14 +24384,48 @@ class _HesapGuvenligiPageState extends State<HesapGuvenligiPage>{
   bool yukleniyor=false;
   Future<bool> onay(String baslik,String aciklama,String dugme)async=>await showDialog<bool>(context:context,builder:(c)=>AlertDialog(title:Text(baslik),content:Text(aciklama),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),FilledButton(onPressed:()=>Navigator.pop(c,true),style:FilledButton.styleFrom(backgroundColor:Colors.red),child:Text(dugme))]))??false;
   Future<void> dondur()async{if(!await onay('Hesap dondurulsun mu?','Hesabın geçici olarak kapatılacak. Giriş yaparak hesabını yeniden açabilirsin.','Hesabı dondur'))return;await isle({'deactivated':true,'deactivatedAt':FieldValue.serverTimestamp()});}
-  Future<void> silmeTalebi()async{if(!await onay('Hesap silme talebi oluşturulsun mu?','Hesabın hemen kapanacak ve 30 gün sonra kalıcı silinmek üzere işaretlenecek. Bu sürede giriş yaparak talebi iptal edebilirsin.','Silme talebi oluştur'))return;await isle({'deactivated':true,'deletionRequestedAt':FieldValue.serverTimestamp(),'deletionScheduledFor':Timestamp.fromDate(DateTime.now().add(const Duration(days:30)))});}
+  Future<void> silmeTalebi()async{
+    if(!await onay(
+      'Hesap ve veriler silinsin mi?',
+      'Hesabın hemen devre dışı kalır. 30 gün boyunca geri açabilirsin. Süre dolduğunda profilin, yüklediğin içerikler ve hesabınla ilişkilendirilen kişisel veriler kalıcı silme işlemine alınır.',
+      'Silme talebi oluştur',
+    ))return;
+    final u=FirebaseAuth.instance.currentUser;if(u==null||yukleniyor)return;
+    setState(()=>yukleniyor=true);
+    try{
+      final simdi=DateTime.now().toUtc();
+      final zaman=simdi.add(const Duration(days:30));
+      final batch=FirebaseFirestore.instance.batch();
+      batch.set(FirebaseFirestore.instance.collection('users').doc(u.uid),{
+        'deactivated':true,
+        'deletionRequestedAt':FieldValue.serverTimestamp(),
+        'deletionScheduledFor':Timestamp.fromDate(zaman),
+      },SetOptions(merge:true));
+      batch.set(FirebaseFirestore.instance.collection('account_deletion_requests').doc(u.uid),{
+        'uid':u.uid,
+        'status':'scheduled',
+        'requestedAt':FieldValue.serverTimestamp(),
+        'executeAfter':Timestamp.fromDate(zaman),
+        'source':'android_app',
+        'policyVersion':'play-2026-10',
+      });
+      await batch.commit().timeout(const Duration(seconds:12));
+      await FirebaseAuth.instance.signOut();
+      if(mounted)Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder:(_)=>const GirisPage()),(_)=>false);
+    }catch(e){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Silme talebi oluşturulamadı: $e')));
+    }finally{
+      if(mounted)setState(()=>yukleniyor=false);
+    }
+  }
   Future<void> isle(Map<String,dynamic> veri)async{final u=FirebaseAuth.instance.currentUser;if(u==null)return;setState(()=>yukleniyor=true);try{await FirebaseFirestore.instance.collection('users').doc(u.uid).set(veri,SetOptions(merge:true));await FirebaseAuth.instance.signOut();if(mounted)Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder:(_)=>const GirisPage()),(_)=>false);}catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('İşlem tamamlanamadı: $e')));}finally{if(mounted)setState(()=>yukleniyor=false);}}
   @override Widget build(BuildContext context)=>Theme(data:ThemeData.light().copyWith(scaffoldBackgroundColor:Colors.white,appBarTheme:const AppBarTheme(backgroundColor:Colors.white,foregroundColor:Colors.black,elevation:0)),child:Scaffold(appBar:AppBar(title:const Text('Hesap güvenliği')),body:SafeArea(child:ListView(padding:const EdgeInsets.all(18),children:[
     const ListTile(leading:Icon(Icons.verified_user_outlined,color:Colors.green),title:Text('E-posta doğrulaması'),subtitle:Text('Hesabın doğrulanmış e-posta ile korunur.')),
     ListTile(leading:const Icon(Icons.health_and_safety_outlined,color:mor),title:const Text('Hesap kurtarma seçenekleri'),subtitle:const Text('Kurtarma e-postası, telefon ve şifre yenileme'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const HesapKurtarmaPage()))),
     const Divider(),
     ListTile(enabled:!yukleniyor,leading:const Icon(Icons.pause_circle_outline,color:Colors.orange),title:const Text('Hesabı dondur'),subtitle:const Text('Geri dönene kadar profilini geçici olarak gizle'),onTap:dondur),
-    ListTile(enabled:!yukleniyor,leading:const Icon(Icons.delete_forever_outlined,color:Colors.red),title:const Text('Hesap silme talebi',style:TextStyle(color:Colors.red)),subtitle:const Text('30 günlük geri alma süresiyle kapat'),onTap:silmeTalebi),
+    ListTile(enabled:!yukleniyor,leading:const Icon(Icons.delete_forever_outlined,color:Colors.red),title:const Text('Hesap ve verileri sil',style:TextStyle(color:Colors.red)),subtitle:const Text('30 günlük geri alma süresi; sonra kalıcı silme işlemi'),onTap:silmeTalebi),
+    ListTile(leading:const Icon(Icons.open_in_new_rounded,color:mor),title:const Text('Hesap silme web sayfası'),subtitle:const Text('Uygulamaya erişemediğinde dışarıdan silme talebi yolu'),trailing:const Icon(Icons.chevron_right),onTap:()=>ngelxDisBaglantiAc(context,ngelxDeleteAccountUrl)),
     if(yukleniyor)const Padding(padding:EdgeInsets.all(20),child:Center(child:CircularProgressIndicator())),
   ]))));
 }
