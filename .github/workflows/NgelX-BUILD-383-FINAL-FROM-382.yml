@@ -1,0 +1,113 @@
+name: NgelX BUILD 383 FINAL FROM 382
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - work/final-383-from-382
+    paths:
+      - 'app/**'
+      - '.github/workflows/NgelX-BUILD-383-FINAL-FROM-382.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Kaynaklari al
+        uses: actions/checkout@v4
+
+      - name: Java 17 kur
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Flutter kur
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Sabit NgelX imza anahtarini geri yukle
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: ngelx-stable-debug-keystore-v1
+          fail-on-cache-miss: true
+
+      - name: Imza anahtarini dogrula
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s "$HOME/.android/debug.keystore"
+          keytool -list -v -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey | grep -F 'SHA256: BE:20:B2:7F:0B:A1:F4:DE:CD:29:41:D4:10:B1:53:6D:E8:9E:48:DC:89:4F:04:F0:38:F9:D2:6B:11:EC:D6:AA'
+
+      - name: Build 383 kaynak kontrolu
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fqx 'version: 1.0.162+383' app/pubspec.yaml
+          grep -q "defaultValue: '383'" app/lib/main.dart
+          grep -q "defaultValue: '1.0.162'" app/lib/main.dart
+
+          # Build 382'de çalışan gerçek özellikler korunmalı.
+          grep -q 'Future<void> fotografYukle() async' app/lib/main.dart
+          grep -q 'Future<void> tanitimVideosuYukle()async' app/lib/main.dart
+          grep -q 'Future<void> medyaGonder(ImageSource kaynak)async' app/lib/main.dart
+          grep -q 'Future<void> grupVideoGonder()async' app/lib/main.dart
+          grep -q "if(kind=='videos'&&Platform.isAndroid)" app/lib/main.dart
+          grep -q '_ngelxMultipartDosyaYukleAndroid' app/lib/main.dart
+          grep -q 'class NgelXFotoKirpmaPage' app/lib/main.dart
+          grep -q 'class ProfilTanitimVideoKarti' app/lib/main.dart
+          grep -q 'class GrupOlusturPage' app/lib/main.dart
+          grep -q "final sadeMedya=photo||video||shared;" app/lib/main.dart
+
+          # Paket 1/2/3 ve grup reaction aktarimlari.
+          grep -Fq "final isim=!widget.groupMode&&sender==me?'Sen'" app/lib/main.dart
+          grep -q '_ozelMedyaTepkiDetayi' app/lib/main.dart
+          grep -q '_ozelMedyaTepkiAlani' app/lib/main.dart
+          grep -q "Text('İfadeler'" app/lib/main.dart
+          grep -q '_grupMedyaTepkiAlani' app/lib/main.dart
+          grep -q 'Future<void> grupTepkiDegistir' app/lib/main.dart
+          grep -q "friendsOnlyComments" app/lib/main.dart
+          grep -q "restrictedUsers" app/lib/main.dart
+          grep -q 'class _IcerikBaglantiPageState' app/lib/main.dart
+
+      - name: Bagimliliklari al
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter clean
+          flutter pub get
+
+      - name: Flutter analiz
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter analyze --no-fatal-infos --no-fatal-warnings
+
+      - name: Gercek APK olustur
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter build apk --release --build-name=1.0.162 --build-number=383
+          test -s build/app/outputs/flutter-apk/app-release.apk
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          test -n "$APKSIGNER"
+          "$APKSIGNER" verify --verbose --print-certs build/app/outputs/flutter-apk/app-release.apk
+          cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/NgelX-1.0.162-Build-383-FINAL-FROM-382.apk
+          sha256sum build/app/outputs/flutter-apk/NgelX-1.0.162-Build-383-FINAL-FROM-382.apk > build/app/outputs/flutter-apk/NgelX-1.0.162-Build-383-FINAL-FROM-382.apk.sha256
+
+      - name: APK yukle
+        uses: actions/upload-artifact@v4
+        with:
+          name: NgelX-1.0.162-Build-383-FINAL-FROM-382
+          path: |
+            app/build/app/outputs/flutter-apk/NgelX-1.0.162-Build-383-FINAL-FROM-382.apk
+            app/build/app/outputs/flutter-apk/NgelX-1.0.162-Build-383-FINAL-FROM-382.apk.sha256
+          if-no-files-found: error
+          retention-days: 14
