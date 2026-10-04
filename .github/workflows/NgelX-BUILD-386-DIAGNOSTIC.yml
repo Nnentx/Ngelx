@@ -21,32 +21,43 @@ jobs:
         run: |
           python3 - <<'PY'
           from pathlib import Path
+          import re
           lines=Path('app/lib/main.dart').read_text(encoding='utf-8').splitlines()
-          needles=[
-            'Takip isteği gönderildi.',
-            "tur:'follow_request'",
-            'Takip isteği bekliyor',
-            'Takipçi kaldırıldı.',
-            'Takipçi kaldırılsın mı?',
-            '_yerelTakipciDelta',
-            'Hikâyeyi sil',
-            'İçerik istatistikleri',
-            'Hesabı ekle ve geç',
-            'Aktiviteler yenilendi.',
-            'Gizli hesap',
-            'Gizli kelime filtresi',
-            'Sohbet arka plan',
-            'sohbet arka plan',
-            'arka plan',
-            'Arka plan',
-            'TextEditingController',
+          pats=[
+            r'sosyalIstekGonder',
+            r'sosyalIstek',
+            r'follow_request',
+            r'Takip İstek',
+            r'Takip istek',
+            r'takip istek',
+            r'Activity|Aktivite',
+            r'_yerelTakipciDelta',
+            r'Takipçi kaldır',
+            r'followers',
+            r'class .*Profil',
+            r'İçerik istatistikleri',
+            r'Etkileşim',
+            r'class .*Etk',
+            r'Hikâyeyi sil',
+            r'Hikaye',
+            r'Hikâye',
+            r'Öne Çıkan',
+            r'arşiv',
+            r'Arşiv',
+            r'Hesabı ekle ve geç',
+            r'Hesap değiştir',
+            r'class .*Hesap',
+            r'chat.*background|background.*chat',
+            r'sohbet.*arka|arka.*sohbet',
+            r'conversation',
+            r'custom.*background|background.*custom',
+            r'TextField\(',
+            r'TextFormField\(',
           ]
-          for needle in needles:
-              hits=[i for i,l in enumerate(lines) if needle in l]
-              print(f'=== NEEDLE {needle!r} HITS {len(hits)} ===')
-              for i in hits[:4]:
-                  a=max(0,i-28); b=min(len(lines),i+55)
-                  print(f'--- HIT line {i+1}; context {a+1}-{b} ---')
-                  for n in range(a,b):
-                      print(f'{n+1:06d}: {lines[n]}')
+          for pat in pats:
+              rx=re.compile(pat,re.I)
+              hits=[(i+1,l) for i,l in enumerate(lines) if rx.search(l)]
+              print(f'@@PATTERN {pat} COUNT={len(hits)}')
+              for n,l in hits[:120]:
+                  print(f'{n:06d}: {l}')
           PY
