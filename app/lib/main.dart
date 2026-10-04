@@ -25504,7 +25504,7 @@ class EtkilesimDetayPage extends StatelessWidget{
                 contentPadding:const EdgeInsets.symmetric(horizontal:6,vertical:6),
                 leading:CircleAvatar(backgroundColor:renk.withValues(alpha:.12),child:Icon(ikon,color:renk)),
                 title:Text(aciklama.isEmpty?'Gönderi':aciklama,maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(fontWeight:FontWeight.w800)),
-                subtitle:Text(metric=='posts'?(zaman.isEmpty?'Gönderi':zaman):'$baslik: \${_deger(v)}\${zaman.isEmpty?'':' • $zaman'}'),
+                subtitle:Text(metric=='posts'?(zaman.isEmpty?'Gönderi':zaman):'$baslik: ${_deger(v)}${zaman.isEmpty?'':' • $zaman'}'),
                 trailing:const Icon(Icons.chevron_right_rounded),
                 onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>IcerikBaglantiPage(icerikId:d.id))),
               );
