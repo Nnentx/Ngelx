@@ -1,36 +1,27 @@
 name: NgelX BUILD 386 DIAGNOSTIC
-
 on:
   push:
-    branches:
-      - work/build-386-open-issues
-    paths:
-      - '.github/workflows/NgelX-BUILD-386-DIAGNOSTIC.yml'
-
+    branches: [work/build-386-open-issues]
+    paths: ['.github/workflows/NgelX-BUILD-386-DIAGNOSTIC.yml']
 permissions:
   contents: read
-
 jobs:
   inspect:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
-      - name: Inspect targeted Build 386 source
+      - name: Inspect
         shell: bash
         run: |
           python3 - <<'PY'
           from pathlib import Path
           lines=Path('app/lib/main.dart').read_text(encoding='utf-8').splitlines()
-          ranges=[
-            ('FOLLOWER_INTERACTION',25220,25450),
-            ('ACCOUNT_SWITCH',23835,24040),
-            ('PROFILE_FOLLOW_UI',22790,23370),
-            ('CHAT_CUSTOMIZE_OLD',17480,17620),
-            ('CHAT_BODY_COMPOSER',20480,20980),
-            ('CHAT_CUSTOMIZE_SHARED',21060,21290),
-          ]
-          for name,a,b in ranges:
+          for name,a,b in [
+            ('CHAT_STATE_TYPING',20200,20490),
+            ('SELF_PROFILE_COUNTERS',26050,26750),
+            ('PROFILE_FOLLOW_UI',22780,23420),
+          ]:
               print(f'@@SECTION {name} {a}-{b}')
               for n in range(a-1,min(b,len(lines))):
                   print(f'{n+1:06d}: {lines[n]}')
