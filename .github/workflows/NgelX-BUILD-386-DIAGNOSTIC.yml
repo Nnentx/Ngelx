@@ -1,0 +1,52 @@
+name: NgelX BUILD 386 DIAGNOSTIC
+
+on:
+  push:
+    branches:
+      - work/build-386-open-issues
+    paths:
+      - '.github/workflows/NgelX-BUILD-386-DIAGNOSTIC.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inspect targeted Build 386 source
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          lines=Path('app/lib/main.dart').read_text(encoding='utf-8').splitlines()
+          needles=[
+            'Takip isteği gönderildi.',
+            "tur:'follow_request'",
+            'Takip isteği bekliyor',
+            'Takipçi kaldırıldı.',
+            'Takipçi kaldırılsın mı?',
+            '_yerelTakipciDelta',
+            'Hikâyeyi sil',
+            'İçerik istatistikleri',
+            'Hesabı ekle ve geç',
+            'Aktiviteler yenilendi.',
+            'Gizli hesap',
+            'Gizli kelime filtresi',
+            'Sohbet arka plan',
+            'sohbet arka plan',
+            'arka plan',
+            'Arka plan',
+            'TextEditingController',
+          ]
+          for needle in needles:
+              hits=[i for i,l in enumerate(lines) if needle in l]
+              print(f'=== NEEDLE {needle!r} HITS {len(hits)} ===')
+              for i in hits[:4]:
+                  a=max(0,i-28); b=min(len(lines),i+55)
+                  print(f'--- HIT line {i+1}; context {a+1}-{b} ---')
+                  for n in range(a,b):
+                      print(f'{n+1:06d}: {lines[n]}')
+          PY
