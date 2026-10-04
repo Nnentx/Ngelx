@@ -16006,27 +16006,49 @@ class _SohbetPageState extends State<SohbetPage> {
         final photoUrl=(profile['photoUrl']??'').toString().trim();
         final initial=name.isNotEmpty?name.substring(0,1).toUpperCase():'N';
         final isCurrentUser=reactorId==uid;
-        return ListTile(
-          dense:true,
-          visualDensity:const VisualDensity(vertical:-1),
-          contentPadding:const EdgeInsets.symmetric(horizontal:6,vertical:1),
-          minVerticalPadding:3,
-          leading:CircleAvatar(
-            radius:21,
-            backgroundColor:const Color(0xFFEDEFF3),
-            child:photoUrl.isEmpty
-              ?Text(initial,style:const TextStyle(fontWeight:FontWeight.w800,color:Color(0xFF555B66)))
-              :ClipOval(child:CachedNetworkImage(
-                imageUrl:photoUrl,
-                width:42,height:42,fit:BoxFit.cover,
-                errorWidget:(_,__,___)=>Center(child:Text(initial,style:const TextStyle(fontWeight:FontWeight.w800,color:Color(0xFF555B66)))),
-              )),
+        final showUsername=username.isNotEmpty&&username.toLowerCase()!=displayName.toLowerCase();
+        final usernameLabel=username.startsWith('@')?username:'@$username';
+        return Padding(
+          padding:const EdgeInsets.symmetric(horizontal:12,vertical:6),
+          child:Row(
+            children:[
+              CircleAvatar(
+                radius:21,
+                backgroundColor:const Color(0xFFEDEFF3),
+                child:photoUrl.isEmpty
+                  ?Text(initial,style:const TextStyle(fontWeight:FontWeight.w800,color:Color(0xFF555B66)))
+                  :ClipOval(child:CachedNetworkImage(
+                    imageUrl:photoUrl,
+                    width:42,height:42,fit:BoxFit.cover,
+                    errorWidget:(_,__,___)=>Center(child:Text(initial,style:const TextStyle(fontWeight:FontWeight.w800,color:Color(0xFF555B66)))),
+                  )),
+              ),
+              const SizedBox(width:12),
+              Expanded(
+                child:Column(
+                  mainAxisSize:MainAxisSize.min,
+                  crossAxisAlignment:CrossAxisAlignment.start,
+                  children:[
+                    Text(
+                      isCurrentUser?'Sen · $name':name,
+                      maxLines:1,
+                      overflow:TextOverflow.ellipsis,
+                      style:const TextStyle(fontWeight:FontWeight.w700,fontSize:15,color:Color(0xFF17191D)),
+                    ),
+                    if(showUsername)
+                      Text(
+                        usernameLabel,
+                        maxLines:1,
+                        overflow:TextOverflow.ellipsis,
+                        style:const TextStyle(fontSize:11.5,color:Color(0xFF626873)),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(width:8),
+              Text(emoji,style:const TextStyle(fontSize:31)),
+            ],
           ),
-          title:Text(isCurrentUser?'Sen · $name':name,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontWeight:FontWeight.w700,fontSize:15)),
-          subtitle:username.isNotEmpty&&username.toLowerCase()!=displayName.toLowerCase()
-            ?Text('@$username',maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:11.5))
-            :null,
-          trailing:Text(emoji,style:const TextStyle(fontSize:31)),
         );
       },
     );
