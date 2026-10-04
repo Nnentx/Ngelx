@@ -2665,7 +2665,7 @@ class _IcerikBaglantiPageState extends State<IcerikBaglantiPage>{
       ];
       if(!docs.any((d)=>d.id==current.id)&&canView(cv))docs.add(current);
       docs.sort((a,b){
-        final ad=a.data(),bd=b.data();
+        final ad=a.data()??const <String,dynamic>{},bd=b.data()??const <String,dynamic>{};
         final at=_zaman(ad['createdAt']??ad['clientCreatedAt']);
         final bt=_zaman(bd['createdAt']??bd['clientCreatedAt']);
         return bt.compareTo(at);
