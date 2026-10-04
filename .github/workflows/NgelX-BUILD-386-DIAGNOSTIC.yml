@@ -17,12 +17,12 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           lines=Path('app/lib/main.dart').read_text(encoding='utf-8').splitlines()
-          for name,a,b in [
-            ('CHAT_STATE_TYPING',20200,20490),
-            ('SELF_PROFILE_COUNTERS',26050,26750),
-            ('PROFILE_FOLLOW_UI',22780,23420),
-          ]:
-              print(f'@@SECTION {name} {a}-{b}')
-              for n in range(a-1,min(b,len(lines))):
-                  print(f'{n+1:06d}: {lines[n]}')
+          needles=['mesajDegisti','yaziyorBaslatZamanlayici','yaziyorZamanlayici','PrivateDraftStore.save','class OzelSohbet','class _OzelSohbet','KullaniciListesiPage','_profilSayac(context']
+          for needle in needles:
+              print('@@NEEDLE '+needle)
+              for i,l in enumerate(lines):
+                  if needle in l:
+                      print(f'@@HIT {i+1}')
+                      for n in range(max(0,i-30),min(len(lines),i+55)):
+                          print(f'{n+1:06d}: {lines[n]}')
           PY
