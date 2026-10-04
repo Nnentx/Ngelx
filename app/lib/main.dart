@@ -16,6 +16,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:camera/camera.dart';
 import 'package:image/image.dart' as img;
 import 'package:video_player/video_player.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:gal/gal.dart';
 import 'package:dio/dio.dart';
@@ -193,7 +194,7 @@ const ngelxPrivateBlueInk = Color(0xFF10213A);
 // Build 372: settings/about must reflect the installed build instead of the old 368 fallback.
 // Release builds can still override these with --dart-define.
 const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.162');
-const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '383');
+const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '384');
 const ngelxGroupBorder = Color(0xFFD9EEE0);
 
 final GlobalKey<NavigatorState> ngelxNavigatorKey=GlobalKey<NavigatorState>();
@@ -13305,23 +13306,49 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
         final username=(profile['username']??'').toString().trim();
         final name=displayName.isNotEmpty?displayName:username.isNotEmpty?username:'NgelX kullanıcısı';
         final photoUrl=(profile['photoUrl']??'').toString().trim();
+        final initial=name.isNotEmpty?name.substring(0,1).toUpperCase():'N';
         final isCurrentUser=reactorId==uid;
         final showUsername=username.isNotEmpty&&username.toLowerCase()!=displayName.toLowerCase();
         final usernameLabel=username.startsWith('@')?username:'@$username';
-        return ListTile(
-          dense:true,
-          visualDensity:const VisualDensity(vertical:-1),
-          contentPadding:const EdgeInsets.symmetric(horizontal:6,vertical:1),
-          minVerticalPadding:3,
-          leading:CircleAvatar(
-            radius:21,
-            backgroundColor:ngelxGroupGreenSoft,
-            backgroundImage:photoUrl.isEmpty?null:NgelXAgImageProvider(photoUrl),
-            child:photoUrl.isEmpty?Text(name.isEmpty?'N':name.substring(0,1).toUpperCase(),style:const TextStyle(fontWeight:FontWeight.w800,color:ngelxGroupGreen)):null,
-          ),
-          title:Text(isCurrentUser?'Sen · $name':name,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontWeight:FontWeight.w700,fontSize:15)),
-          subtitle:showUsername?Text(usernameLabel,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:11.5)):null,
-          trailing:Text(emoji,style:const TextStyle(fontSize:31)),
+        return Padding(
+          padding:const EdgeInsets.symmetric(horizontal:12,vertical:6),
+          child:Row(children:[
+            CircleAvatar(
+              radius:21,
+              backgroundColor:const Color(0xFFEDEFF3),
+              child:photoUrl.isEmpty
+                ?Text(initial,style:const TextStyle(fontWeight:FontWeight.w800,color:Color(0xFF555B66)))
+                :ClipOval(child:CachedNetworkImage(
+                  imageUrl:photoUrl,
+                  width:42,height:42,fit:BoxFit.cover,
+                  errorWidget:(_,__,___)=>Center(child:Text(initial,style:const TextStyle(fontWeight:FontWeight.w800,color:Color(0xFF555B66)))),
+                )),
+            ),
+            const SizedBox(width:12),
+            Expanded(
+              child:Column(
+                mainAxisSize:MainAxisSize.min,
+                crossAxisAlignment:CrossAxisAlignment.start,
+                children:[
+                  Text(
+                    isCurrentUser?'Sen · $name':name,
+                    maxLines:1,
+                    overflow:TextOverflow.ellipsis,
+                    style:const TextStyle(fontWeight:FontWeight.w700,fontSize:15,color:Color(0xFF17191D)),
+                  ),
+                  if(showUsername)
+                    Text(
+                      usernameLabel,
+                      maxLines:1,
+                      overflow:TextOverflow.ellipsis,
+                      style:const TextStyle(fontSize:11.5,color:Color(0xFF626873)),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(width:8),
+            Text(emoji,style:const TextStyle(fontSize:31)),
+          ]),
         );
       },
     );
@@ -13348,7 +13375,9 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
           final tepkiler=sayilar.entries.toList()..sort((a,b)=>b.value.compareTo(a.value));
           final panelHeight=(MediaQuery.of(sheetContext).size.height*.43).clamp(300.0,440.0).toDouble();
           return StatefulBuilder(builder:(context,setModalState){
-            final gorunenler=seciliFiltre==tumu?entries:entries.where((entry)=>entry.value.toString()==seciliFiltre).toList();
+            final gorunenler=seciliFiltre==tumu
+              ?entries
+              :entries.where((entry)=>entry.value.toString()==seciliFiltre).toList();
             Widget filtre(String label,String key,{String? emoji,int? count}){
               final secili=seciliFiltre==key;
               return Padding(
@@ -13390,24 +13419,31 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
                       IconButton(
                         tooltip:'Kapat',
                         onPressed:()=>Navigator.of(sheetContext).pop(),
-                        style:IconButton.styleFrom(backgroundColor:const Color(0xFFF0F1F4),foregroundColor:const Color(0xFF252830),minimumSize:const Size(38,38),padding:EdgeInsets.zero),
+                        style:IconButton.styleFrom(
+                          backgroundColor:const Color(0xFFF0F1F4),
+                          foregroundColor:const Color(0xFF252830),
+                          minimumSize:const Size(38,38),
+                          padding:EdgeInsets.zero,
+                        ),
                         icon:const Icon(Icons.close_rounded,size:21),
                       ),
                     ]),
                   ),
                   const Divider(height:1,color:Color(0xFFECEEF1)),
                   Expanded(
-                    child:gorunenler.isEmpty
-                      ?const Center(child:Text('Bu filtrede tepki yok.',style:TextStyle(color:Color(0xFF777C84))))
-                      :ListView.separated(
-                        padding:const EdgeInsets.fromLTRB(16,8,16,8),
-                        itemCount:gorunenler.length,
-                        separatorBuilder:(_,__)=>const SizedBox(height:2),
-                        itemBuilder:(context,index){
-                          final entry=gorunenler[index];
-                          return _grupTepkiVerenSatiri(entry.key,entry.value.toString());
-                        },
-                      ),
+                    child:snapshot.hasError
+                      ?const Center(child:Text('Tepkiler yüklenemedi.',style:TextStyle(color:Color(0xFF666B73))))
+                      :gorunenler.isEmpty
+                        ?const Center(child:Text('Bu filtrede tepki yok.',style:TextStyle(color:Color(0xFF777C84))))
+                        :ListView.separated(
+                          padding:const EdgeInsets.fromLTRB(16,8,16,8),
+                          itemCount:gorunenler.length,
+                          separatorBuilder:(_,__)=>const SizedBox(height:2),
+                          itemBuilder:(context,index){
+                            final entry=gorunenler[index];
+                            return _grupTepkiVerenSatiri(entry.key,entry.value.toString());
+                          },
+                        ),
                   ),
                   const Divider(height:1,color:Color(0xFFECEEF1)),
                   Padding(
@@ -13455,24 +13491,21 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
   }
 
   Widget _grupMedyaTepkiAlani(Widget media,DocumentReference<Map<String,dynamic>> ref,Map<String,int> counts,int total){
-    const sagDokunmaAlani=42.0,altDokunmaAlani=13.0;
-    return Stack(clipBehavior:Clip.none,children:[
-      Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
-        Row(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
-          media,
-          const SizedBox(width:sagDokunmaAlani),
-        ]),
-        const SizedBox(height:altDokunmaAlani),
-      ]),
-      if(total>0)Positioned(
-        right:sagDokunmaAlani,
-        bottom:altDokunmaAlani,
-        child:FractionalTranslation(
-          translation:const Offset(.5,.5),
+    if(total<=0)return media;
+    return Stack(
+      clipBehavior:Clip.none,
+      children:[
+        Padding(
+          padding:const EdgeInsets.only(bottom:12),
+          child:media,
+        ),
+        Positioned(
+          right:8,
+          bottom:2,
           child:_grupMedyaTepkiBalonu(ref,counts,total),
         ),
-      ),
-    ]);
+      ],
+    );
   }
 
   Widget mesajKarti(QueryDocumentSnapshot<Map<String,dynamic>> d,{QueryDocumentSnapshot<Map<String,dynamic>>? onceki,Map<String,dynamic>? grupVerisi,bool sonMesaj=false}){
@@ -19337,6 +19370,8 @@ class _SohbetPageState extends State<SohbetPage> {
     final ben=uid;if(ben==null)return;
     try{
       final mevcut=(d.data()['reactions'] as Map?)?.cast<String,dynamic>()??const <String,dynamic>{};
+      // Tek kullanici icin tek reaction alani atomik guncellenir; diger kisilerin
+      // ayni anda verdigi tepkiler tam map yazimiyla ezilmez.
       await d.reference.update({
         'reactions.$ben':(mevcut[ben]??'').toString()==emoji?FieldValue.delete():emoji,
       });
@@ -19346,11 +19381,7 @@ class _SohbetPageState extends State<SohbetPage> {
   }
 
   Future<void> mesajKalpBirak(QueryDocumentSnapshot<Map<String,dynamic>> d)async{
-    final ben=uid;if(ben==null)return;
-    try{await mesajTepkiDegistir(d,'❤️');
-    }catch(e){
-      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Tepki eklenemedi.')));
-    }
+    await mesajTepkiDegistir(d,'❤️');
   }
 
   Future<String?> mesajTepkisiSec()async=>showModalBottomSheet<String>(
@@ -19742,23 +19773,51 @@ class _SohbetPageState extends State<SohbetPage> {
         final username=(profile['username']??'').toString().trim();
         final name=displayName.isNotEmpty?displayName:username.isNotEmpty?username:'NgelX kullanıcısı';
         final photoUrl=(profile['photoUrl']??'').toString().trim();
+        final initial=name.isNotEmpty?name.substring(0,1).toUpperCase():'N';
         final isCurrentUser=reactorId==uid;
         final showUsername=username.isNotEmpty&&username.toLowerCase()!=displayName.toLowerCase();
         final usernameLabel=username.startsWith('@')?username:'@$username';
-        return ListTile(
-          dense:true,
-          visualDensity:const VisualDensity(vertical:-1),
-          contentPadding:const EdgeInsets.symmetric(horizontal:6,vertical:1),
-          minVerticalPadding:3,
-          leading:CircleAvatar(
-            radius:21,
-            backgroundColor:const Color(0xFFEDEFF3),
-            backgroundImage:photoUrl.isEmpty?null:NgelXAgImageProvider(photoUrl),
-            child:photoUrl.isEmpty?Text(name.isEmpty?'N':name.substring(0,1).toUpperCase(),style:const TextStyle(fontWeight:FontWeight.w800,color:Color(0xFF555B66))):null,
+        return Padding(
+          padding:const EdgeInsets.symmetric(horizontal:12,vertical:6),
+          child:Row(
+            children:[
+              CircleAvatar(
+                radius:21,
+                backgroundColor:const Color(0xFFEDEFF3),
+                child:photoUrl.isEmpty
+                  ?Text(initial,style:const TextStyle(fontWeight:FontWeight.w800,color:Color(0xFF555B66)))
+                  :ClipOval(child:CachedNetworkImage(
+                    imageUrl:photoUrl,
+                    width:42,height:42,fit:BoxFit.cover,
+                    errorWidget:(_,__,___)=>Center(child:Text(initial,style:const TextStyle(fontWeight:FontWeight.w800,color:Color(0xFF555B66)))),
+                  )),
+              ),
+              const SizedBox(width:12),
+              Expanded(
+                child:Column(
+                  mainAxisSize:MainAxisSize.min,
+                  crossAxisAlignment:CrossAxisAlignment.start,
+                  children:[
+                    Text(
+                      isCurrentUser?'Sen · $name':name,
+                      maxLines:1,
+                      overflow:TextOverflow.ellipsis,
+                      style:const TextStyle(fontWeight:FontWeight.w700,fontSize:15,color:Color(0xFF17191D)),
+                    ),
+                    if(showUsername)
+                      Text(
+                        usernameLabel,
+                        maxLines:1,
+                        overflow:TextOverflow.ellipsis,
+                        style:const TextStyle(fontSize:11.5,color:Color(0xFF626873)),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(width:8),
+              Text(emoji,style:const TextStyle(fontSize:31)),
+            ],
           ),
-          title:Text(isCurrentUser?'Sen · $name':name,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontWeight:FontWeight.w700,fontSize:15)),
-          subtitle:showUsername?Text(usernameLabel,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:11.5)):null,
-          trailing:Text(emoji,style:const TextStyle(fontSize:31)),
         );
       },
     );
@@ -19785,7 +19844,9 @@ class _SohbetPageState extends State<SohbetPage> {
           final tepkiler=sayilar.entries.toList()..sort((a,b)=>b.value.compareTo(a.value));
           final panelHeight=(MediaQuery.of(sheetContext).size.height*.43).clamp(300.0,440.0).toDouble();
           return StatefulBuilder(builder:(context,setModalState){
-            final gorunenler=seciliFiltre==tumu?entries:entries.where((entry)=>entry.value.toString()==seciliFiltre).toList();
+            final gorunenler=seciliFiltre==tumu
+              ?entries
+              :entries.where((entry)=>entry.value.toString()==seciliFiltre).toList();
             Widget filtre(String label,String key,{String? emoji,int? count}){
               final secili=seciliFiltre==key;
               return Padding(
@@ -19827,24 +19888,31 @@ class _SohbetPageState extends State<SohbetPage> {
                       IconButton(
                         tooltip:'Kapat',
                         onPressed:()=>Navigator.of(sheetContext).pop(),
-                        style:IconButton.styleFrom(backgroundColor:const Color(0xFFF0F1F4),foregroundColor:const Color(0xFF252830),minimumSize:const Size(38,38),padding:EdgeInsets.zero),
+                        style:IconButton.styleFrom(
+                          backgroundColor:const Color(0xFFF0F1F4),
+                          foregroundColor:const Color(0xFF252830),
+                          minimumSize:const Size(38,38),
+                          padding:EdgeInsets.zero,
+                        ),
                         icon:const Icon(Icons.close_rounded,size:21),
                       ),
                     ]),
                   ),
                   const Divider(height:1,color:Color(0xFFECEEF1)),
                   Expanded(
-                    child:gorunenler.isEmpty
-                      ?const Center(child:Text('Bu filtrede tepki yok.',style:TextStyle(color:Color(0xFF777C84))))
-                      :ListView.separated(
-                        padding:const EdgeInsets.fromLTRB(16,8,16,8),
-                        itemCount:gorunenler.length,
-                        separatorBuilder:(_,__)=>const SizedBox(height:2),
-                        itemBuilder:(context,index){
-                          final entry=gorunenler[index];
-                          return _ozelMedyaTepkiVerenSatiri(entry.key,entry.value.toString());
-                        },
-                      ),
+                    child:snapshot.hasError
+                      ?const Center(child:Text('Tepkiler yüklenemedi.',style:TextStyle(color:Color(0xFF666B73))))
+                      :gorunenler.isEmpty
+                        ?const Center(child:Text('Bu filtrede tepki yok.',style:TextStyle(color:Color(0xFF777C84))))
+                        :ListView.separated(
+                          padding:const EdgeInsets.fromLTRB(16,8,16,8),
+                          itemCount:gorunenler.length,
+                          separatorBuilder:(_,__)=>const SizedBox(height:2),
+                          itemBuilder:(context,index){
+                            final entry=gorunenler[index];
+                            return _ozelMedyaTepkiVerenSatiri(entry.key,entry.value.toString());
+                          },
+                        ),
                   ),
                   const Divider(height:1,color:Color(0xFFECEEF1)),
                   Padding(
@@ -19894,6 +19962,8 @@ class _SohbetPageState extends State<SohbetPage> {
   Widget _ozelMedyaTepkiAlani(Widget media,DocumentReference<Map<String,dynamic>> ref,Map<String,int> counts,int total){
     const sagDokunmaAlani=42.0,altDokunmaAlani=13.0;
     return Stack(clipBehavior:Clip.none,children:[
+      // Boş sağ-alt alan Stack'in gerçek hit-test sınırlarını tepki rozetinin
+      // taşan kısmını da kapsayacak şekilde genişletir.
       Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
         Row(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
           media,
