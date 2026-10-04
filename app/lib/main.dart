@@ -3186,6 +3186,7 @@ Future<void> takipDurumuDegistir(String hedefUid,bool takipte)async{
   batch.set(FirebaseFirestore.instance.collection('users').doc(ben),{'following':takipte?FieldValue.arrayRemove([hedefUid]):FieldValue.arrayUnion([hedefUid])},SetOptions(merge:true));
   batch.set(FirebaseFirestore.instance.collection('users').doc(hedefUid),{'followers':takipte?FieldValue.arrayRemove([ben]):FieldValue.arrayUnion([ben])},SetOptions(merge:true));
   await batch.commit();
+  await FirebaseFirestore.instance.waitForPendingWrites();
   if(!takipte)await uygulamaBildirimiGonder(toUid:hedefUid,fromUid:ben,tur:'friend',metin:'Seni takip etmeye başladı');
 }
 
@@ -18819,7 +18820,7 @@ class _SohbetPageState extends State<SohbetPage> {
   bool sesKaydediliyor=false,sesKaydiIsleniyor=false;
   int sesKaydiSaniye=0;
   DateTime? sesKaydiBaslangic;
-  Timer? yaziyorZamanlayici,yaziyorBaslatZamanlayici,sureliMesajZamanlayici,sesKaydiZamanlayici;
+  Timer? yaziyorZamanlayici,yaziyorBaslatZamanlayici,mentionZamanlayici,sureliMesajZamanlayici,sesKaydiZamanlayici;
   bool gizliKelimeFiltresi=true;
   List<String> gizliKelimeListesi=[];
   String? yanitMesajId,yanitMetin,yanitGonderenUid,yanitTur,yanitMedyaUrl;
@@ -18911,7 +18912,15 @@ class _SohbetPageState extends State<SohbetPage> {
 
   void mesajDegisti(String deger){
     PrivateDraftStore.schedule(widget.chatId,deger);
-    mentionAra(deger);
+    mentionZamanlayici?.cancel();
+    final sonParca=deger.split(RegExp(r'\s+')).last;
+    if(sonParca.startsWith('@')){
+      mentionZamanlayici=Timer(const Duration(milliseconds:220),(){
+        if(mounted)unawaited(mentionAra(mesaj.text));
+      });
+    }else if(mentionOnerileri.isNotEmpty&&mounted){
+      setState(()=>mentionOnerileri.clear());
+    }
     final ben=uid;if(ben==null)return;
     final ref=FirebaseFirestore.instance.collection('chats').doc(widget.chatId);
     yaziyorZamanlayici?.cancel();
@@ -20477,6 +20486,7 @@ class _SohbetPageState extends State<SohbetPage> {
   void dispose(){
     yaziyorZamanlayici?.cancel();
     yaziyorBaslatZamanlayici?.cancel();
+    mentionZamanlayici?.cancel();
     sureliMesajZamanlayici?.cancel();
     sesKaydiZamanlayici?.cancel();
     final ben=uid;
@@ -20580,7 +20590,7 @@ class _SohbetPageState extends State<SohbetPage> {
         IconButton(tooltip:'Sohbet bilgisi',onPressed:bilgi,icon:const Icon(Icons.info_rounded,color:ngelxPrivateBlue)),
       ],
     ),
-    body:StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(stream:_chatAkisi,builder:(_,tema){final veri=tema.data?.data()??<String,dynamic>{},ham=veri['theme_$uid'];final arkaPlan=ham is int?Color(ham):Colors.white,arkaPlanUrl=(veri['backgroundUrl_$uid']??'').toString(),hizliEmoji=(veri['quickEmoji_$uid']??'👍').toString(),arkaPlanOpaklik=(veri['backgroundOpacity_$uid'] is num?(veri['backgroundOpacity_$uid'] as num).toDouble():.30).clamp(.05,.85).toDouble(),mesajYaziBoyutu=(veri['messageFontSize_$uid'] is num?(veri['messageFontSize_$uid'] as num).toDouble():16.0).clamp(12.0,22.0).toDouble();return Container(decoration:BoxDecoration(color:arkaPlan,image:arkaPlanUrl.isEmpty?null:DecorationImage(image:NgelXAgImageProvider(arkaPlanUrl),fit:BoxFit.cover,opacity:arkaPlanOpaklik)),child:Column(children:[
+    body:StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(stream:_chatAkisi,builder:(_,tema){final veri=tema.data?.data()??<String,dynamic>{},ham=veri['theme']??veri['theme_$uid'],arkaPlanHam=veri['backgroundOpacity']??veri['backgroundOpacity_$uid'];final arkaPlan=ham is int?Color(ham):Colors.white,arkaPlanUrl=(veri['backgroundUrl']??veri['backgroundUrl_$uid']??'').toString(),hizliEmoji=(veri['quickEmoji_$uid']??'👍').toString(),arkaPlanOpaklik=(arkaPlanHam is num?arkaPlanHam.toDouble():.30).clamp(.05,.85).toDouble(),mesajYaziBoyutu=(veri['messageFontSize_$uid'] is num?(veri['messageFontSize_$uid'] as num).toDouble():16.0).clamp(12.0,22.0).toDouble();return Container(decoration:BoxDecoration(color:arkaPlan,image:arkaPlanUrl.isEmpty?null:DecorationImage(image:NgelXAgImageProvider(arkaPlanUrl),fit:BoxFit.cover,opacity:arkaPlanOpaklik)),child:Column(children:[
       if(((veri['callStatus']??'').toString()=='ringing'||(veri['callStatus']??'').toString()=='active')&&(veri['callRoomName']??'').toString().isNotEmpty)
         InkWell(
           onTap:()async{
@@ -21137,7 +21147,7 @@ class SohbetBilgiPage extends StatelessWidget{
     final secim=await showModalBottomSheet<Object>(
       context:context,backgroundColor:Colors.white,showDragHandle:true,isScrollControlled:true,
       builder:(c)=>Theme(data:ThemeData.light(),child:SafeArea(child:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
-        const ListTile(title:Text('Sohbeti özelleştir',style:TextStyle(fontWeight:FontWeight.w900)),subtitle:Text('Bu görünüm yalnızca sende görünür.')),
+        const ListTile(title:Text('Sohbeti özelleştir',style:TextStyle(fontWeight:FontWeight.w900)),subtitle:Text('Arka plan değişiklikleri iki tarafta görünür. Yazı boyutu ve hızlı emoji sana özeldir.')),
         const ListTile(title:Text('Arka plan rengi',style:TextStyle(fontWeight:FontWeight.w700))),
         Wrap(spacing:16,runSpacing:16,children:[
           ngelxPrivateBlueCanvas,Colors.white,const Color(0xFFFFF4F7),const Color(0xFFF4F0FF),const Color(0xFFF1FFF5)
@@ -21186,7 +21196,7 @@ class SohbetBilgiPage extends StatelessWidget{
     }
     if(secim is String&&secim.startsWith('opacity:')){
       final oran=(double.tryParse(secim.substring(8))??30)/100;
-      await ref.set({'backgroundOpacity_$me':oran},SetOptions(merge:true));
+      await ref.set({'backgroundOpacity':oran,'backgroundUpdatedBy':me,'backgroundUpdatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
       return;
     }
     if(secim is String&&secim.startsWith('font:')){
@@ -21196,11 +21206,13 @@ class SohbetBilgiPage extends StatelessWidget{
     }
     if(secim=='reset'){
       final onceki=await ref.get();
-      final eskiArkaPlan=(onceki.data()?['backgroundUrl_$me']??'').toString();
+      final eskiArkaPlan=(onceki.data()?['backgroundUrl']??onceki.data()?['backgroundUrl_$me']??'').toString();
       await ref.set({
-        'theme_$me':ngelxPrivateBlueCanvas.toARGB32(),
-        'backgroundUrl_$me':'',
-        'backgroundOpacity_$me':.30,
+        'theme':ngelxPrivateBlueCanvas.toARGB32(),
+        'backgroundUrl':'',
+        'backgroundOpacity':.30,
+        'backgroundUpdatedBy':me,
+        'backgroundUpdatedAt':FieldValue.serverTimestamp(),
         'messageFontSize_$me':16.0,
         'quickEmoji_$me':'👍',
       },SetOptions(merge:true));
@@ -21212,7 +21224,7 @@ class SohbetBilgiPage extends StatelessWidget{
       return;
     }
     if(secim is int){
-      await ref.set({'theme_$me':secim},SetOptions(merge:true));
+      await ref.set({'theme':secim,'backgroundUpdatedBy':me,'backgroundUpdatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
       return;
     }
     if(secim=='removeImage'){
@@ -21231,8 +21243,8 @@ class SohbetBilgiPage extends StatelessWidget{
       ))??false;
       if(!onay)return;
       final onceki=await ref.get();
-      final eskiArkaPlan=(onceki.data()?['backgroundUrl_$me']??'').toString();
-      await ref.set({'backgroundUrl_$me':''},SetOptions(merge:true));
+      final eskiArkaPlan=(onceki.data()?['backgroundUrl']??onceki.data()?['backgroundUrl_$me']??'').toString();
+      await ref.set({'backgroundUrl':'','backgroundUpdatedBy':me,'backgroundUpdatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
       if(eskiArkaPlan.isNotEmpty){
         await ngelxAgResmiOnbelleginiTemizle(eskiArkaPlan);
         unawaited(ngelxMedyaSil(eskiArkaPlan).catchError((_){ }));
@@ -21245,7 +21257,7 @@ class SohbetBilgiPage extends StatelessWidget{
     final x=await ngelxResimSec(source:kaynak,imageQuality:76,maxWidth:1280);if(x==null)return;
     try{
       final onceki=await ref.get();
-      final eskiArkaPlan=(onceki.data()?['backgroundUrl_$me']??'').toString();
+      final eskiArkaPlan=(onceki.data()?['backgroundUrl']??onceki.data()?['backgroundUrl_$me']??'').toString();
       final yol='chat-backgrounds/'+me+'/'+chatId+'_'+DateTime.now().millisecondsSinceEpoch.toString()+'.jpg';
       final url=await ngelxFotografYukle(
         dosya:x,
@@ -21253,12 +21265,12 @@ class SohbetBilgiPage extends StatelessWidget{
         ext:'jpg',
         legacyPath:yol,
       );
-      await ref.set({'backgroundUrl_$me':url},SetOptions(merge:true));
+      await ref.set({'backgroundUrl':url,'backgroundUpdatedBy':me,'backgroundUpdatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
       if(eskiArkaPlan.isNotEmpty&&eskiArkaPlan!=url){
         await ngelxAgResmiOnbelleginiTemizle(eskiArkaPlan);
         unawaited(ngelxMedyaSil(eskiArkaPlan).catchError((_){ }));
       }
-      if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Özel sohbet arka planın kaydedildi.')));
+      if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Sohbet arka planı iki taraf için güncellendi.')));
     }catch(e){
       if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Arka plan yüklenemedi: '+e.toString())));
     }
@@ -23982,10 +23994,10 @@ class _HesapDegistirPageState extends State<HesapDegistirPage> {
     final e=TextEditingController(),p=TextEditingController();
     bool gizli=true;
     final sonuc=await showModalBottomSheet<Map<String,String>>(
-      context:context,isScrollControlled:true,backgroundColor:Colors.white,
+      context:context,isScrollControlled:true,useSafeArea:true,backgroundColor:Colors.white,
       shape:const RoundedRectangleBorder(borderRadius:BorderRadius.vertical(top:Radius.circular(28))),
       builder:(ctx)=>Theme(data:ThemeData.light(),child:StatefulBuilder(builder:(ctx,setP)=>Padding(
-        padding:EdgeInsets.fromLTRB(20,22,20,MediaQuery.of(ctx).viewInsets.bottom+24),
+        padding:EdgeInsets.fromLTRB(20,22,20,MediaQuery.of(ctx).viewInsets.bottom+MediaQuery.of(ctx).viewPadding.bottom+40),
         child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
           const Text('Hesap ekle',style:TextStyle(fontSize:22,fontWeight:FontWeight.w900)),
           const SizedBox(height:5),
@@ -25281,6 +25293,10 @@ class _KullaniciListesiPageState extends State<KullaniciListesiPage>{
     batch.set(FirebaseFirestore.instance.collection('users').doc(benim),{'followers':FieldValue.arrayRemove([hedefUid])},SetOptions(merge:true));
     batch.set(FirebaseFirestore.instance.collection('users').doc(hedefUid),{'following':FieldValue.arrayRemove([benim])},SetOptions(merge:true));
     await batch.commit();
+    await FirebaseFirestore.instance.waitForPendingWrites();
+    try{
+      await FirebaseFirestore.instance.collection('users').doc(benim).get(const GetOptions(source:Source.server));
+    }catch(_){}
     if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Takipçi kaldırıldı.')));
   }
 
@@ -25378,9 +25394,9 @@ class EtkilesimOzetiPage extends StatelessWidget{
           return ListView(padding:const EdgeInsets.all(20),children:[
             const Text('İçerik istatistikleri',style:TextStyle(fontSize:22,fontWeight:FontWeight.w900)),
             const SizedBox(height:18),
-            Row(children:[_kart(Icons.favorite_rounded,'Beğeni',begeni,Colors.red),_kart(Icons.comment_rounded,'Yorum',yorum,Colors.blue)]),
+            Row(children:[_kart(context,Icons.favorite_rounded,'Beğeni',begeni,Colors.red,'likes'),_kart(context,Icons.comment_rounded,'Yorum',yorum,Colors.blue,'comments')]),
             const SizedBox(height:12),
-            Row(children:[_kart(Icons.send_rounded,'Paylaşım',paylasim,mor),_kart(Icons.grid_view_rounded,'Gönderi',d.length,Colors.orange)]),
+            Row(children:[_kart(context,Icons.send_rounded,'Paylaşım',paylasim,mor,'shares'),_kart(context,Icons.grid_view_rounded,'Gönderi',d.length,Colors.orange,'posts')]),
             if(benim)...[
               const SizedBox(height:24),
               ListTile(
@@ -25412,7 +25428,92 @@ class EtkilesimOzetiPage extends StatelessWidget{
       ),
     ),
   );
-  Widget _kart(IconData i,String t,int n,Color c)=>Expanded(child:Container(margin:const EdgeInsets.all(5),padding:const EdgeInsets.all(18),decoration:BoxDecoration(color:c.withValues(alpha:.10),borderRadius:BorderRadius.circular(20)),child:Column(children:[Icon(i,color:c),const SizedBox(height:8),Text(n.toString(),style:const TextStyle(fontSize:24,fontWeight:FontWeight.w900)),Text(t,style:const TextStyle(color:Colors.black54))])));
+  Widget _kart(BuildContext context,IconData i,String t,int n,Color c,String metric)=>Expanded(child:Padding(
+    padding:const EdgeInsets.all(5),
+    child:Material(
+      color:c.withValues(alpha:.10),
+      borderRadius:BorderRadius.circular(20),
+      clipBehavior:Clip.antiAlias,
+      child:InkWell(
+        onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>EtkilesimDetayPage(uid:uid,baslik:t,metric:metric,ikon:i,renk:c))),
+        child:Padding(
+          padding:const EdgeInsets.all(18),
+          child:Column(children:[Icon(i,color:c),const SizedBox(height:8),Text(n.toString(),style:const TextStyle(fontSize:24,fontWeight:FontWeight.w900)),Text(t,style:const TextStyle(color:Colors.black54))]),
+        ),
+      ),
+    ),
+  ));
+}
+
+
+class EtkilesimDetayPage extends StatelessWidget{
+  final String uid,baslik,metric;
+  final IconData ikon;
+  final Color renk;
+  const EtkilesimDetayPage({super.key,required this.uid,required this.baslik,required this.metric,required this.ikon,required this.renk});
+
+  int _deger(Map<String,dynamic> v){
+    switch(metric){
+      case 'likes': return (v['likeCount'] as num?)?.toInt()??0;
+      case 'comments': return (v['commentCount'] as num?)?.toInt()??0;
+      case 'shares': return (v['shareCount'] as num?)?.toInt()??0;
+      default: return 1;
+    }
+  }
+
+  int _zaman(Map<String,dynamic> v){
+    final t=v['createdAt']??v['clientCreatedAt'];
+    return t is Timestamp?t.millisecondsSinceEpoch:0;
+  }
+
+  @override
+  Widget build(BuildContext context)=>Theme(
+    data:ThemeData.light(),
+    child:Scaffold(
+      backgroundColor:Colors.white,
+      appBar:AppBar(title:Text(baslik,style:const TextStyle(fontWeight:FontWeight.w900))),
+      body:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
+        stream:FirebaseFirestore.instance.collection('videos').where('ownerId',isEqualTo:uid).limit(100).snapshots(),
+        builder:(_,s){
+          if(s.connectionState==ConnectionState.waiting&&!s.hasData)return const Center(child:CircularProgressIndicator(color:mor));
+          if(s.hasError)return const Center(child:Text('İstatistik ayrıntıları yüklenemedi.',style:TextStyle(color:Colors.black54)));
+          final docs=(s.data?.docs??const <QueryDocumentSnapshot<Map<String,dynamic>>>[])
+              .where((d)=>d.data()['type']!='story')
+              .where((d)=>metric=='posts'||_deger(d.data())>0)
+              .toList();
+          if(metric=='posts'){
+            docs.sort((a,b)=>_zaman(b.data()).compareTo(_zaman(a.data())));
+          }else{
+            docs.sort((a,b){
+              final k=_deger(b.data()).compareTo(_deger(a.data()));
+              return k!=0?k:_zaman(b.data()).compareTo(_zaman(a.data()));
+            });
+          }
+          if(docs.isEmpty)return Center(child:Column(mainAxisSize:MainAxisSize.min,children:[
+            CircleAvatar(radius:34,backgroundColor:renk.withValues(alpha:.12),child:Icon(ikon,color:renk,size:32)),
+            const SizedBox(height:12),
+            Text(metric=='posts'?'Henüz gönderi yok.':'Bu istatistikte henüz içerik yok.',style:const TextStyle(color:Colors.black54,fontWeight:FontWeight.w700)),
+          ]));
+          return ListView.separated(
+            padding:const EdgeInsets.all(14),
+            itemCount:docs.length,
+            separatorBuilder:(_,__)=>const Divider(height:1),
+            itemBuilder:(_,i){
+              final d=docs[i],v=d.data(),aciklama=(v['description']??'').toString().trim(),zaman=zamanKisa(v['createdAt']??v['clientCreatedAt']);
+              return ListTile(
+                contentPadding:const EdgeInsets.symmetric(horizontal:6,vertical:6),
+                leading:CircleAvatar(backgroundColor:renk.withValues(alpha:.12),child:Icon(ikon,color:renk)),
+                title:Text(aciklama.isEmpty?'Gönderi':aciklama,maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(fontWeight:FontWeight.w800)),
+                subtitle:Text(metric=='posts'?(zaman.isEmpty?'Gönderi':zaman):'$baslik: \${_deger(v)}\${zaman.isEmpty?'':' • $zaman'}'),
+                trailing:const Icon(Icons.chevron_right_rounded),
+                onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>IcerikBaglantiPage(icerikId:d.id))),
+              );
+            },
+          );
+        },
+      ),
+    ),
+  );
 }
 
 class ProfilAramaPage extends StatefulWidget{

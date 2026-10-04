@@ -421,9 +421,26 @@ class _NgelXHikayeSeriPageState extends State<NgelXHikayeSeriPage> with SingleTi
   Future<void> _secenekler()async{
     _duraklat();
     final benim=FirebaseAuth.instance.currentUser?.uid==widget.ownerUid;
+    final oneCikan=veri['highlighted']==true;
     final sec=await showModalBottomSheet<String>(
       context:context,backgroundColor:Colors.white,showDragHandle:true,
       builder:(c)=>SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
+        if(benim)ListTile(
+          leading:const Icon(Icons.share_outlined,color:mor),
+          title:const Text('Hikâyeyi paylaş',style:TextStyle(fontWeight:FontWeight.w800)),
+          onTap:()=>Navigator.pop(c,'share'),
+        ),
+        if(benim)ListTile(
+          leading:Icon(oneCikan?Icons.star_rounded:Icons.star_border_rounded,color:oneCikan?Colors.amber:mor),
+          title:Text(oneCikan?'Öne çıkanlardan kaldır':'Öne çıkanlara ekle',style:const TextStyle(fontWeight:FontWeight.w800)),
+          onTap:()=>Navigator.pop(c,'highlight'),
+        ),
+        if(benim)ListTile(
+          leading:const Icon(Icons.archive_outlined,color:mor),
+          title:const Text('Arşive taşı',style:TextStyle(fontWeight:FontWeight.w800)),
+          subtitle:const Text('Hikâye aktif görünümden kalkar, arşivinde kalır.'),
+          onTap:()=>Navigator.pop(c,'archive'),
+        ),
         if(benim)ListTile(
           leading:const Icon(Icons.delete_outline_rounded,color:Colors.red),
           title:const Text('Hikâyeyi sil',style:TextStyle(color:Colors.red,fontWeight:FontWeight.w800)),
@@ -438,14 +455,79 @@ class _NgelXHikayeSeriPageState extends State<NgelXHikayeSeriPage> with SingleTi
       ])),
     );
     if(!mounted)return;
-    if(sec=='delete'&&storyId.isNotEmpty){
+    final d=belge;
+    if(sec=='share'&&url.isNotEmpty){
       try{
-        await FirebaseFirestore.instance.collection('videos').doc(storyId).delete();
+        await SharePlus.instance.share(ShareParams(text:url));
+      }catch(_){
+        if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Hikâye paylaşılamadı.')));
+      }
+    }else if(sec=='highlight'&&d!=null){
+      try{
+        await d.reference.set({'highlighted':!oneCikan,'updatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
+        if(mounted)setState((){});
+        if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(oneCikan?'Öne çıkanlardan kaldırıldı.':'Öne çıkanlara eklendi.')));
+      }catch(_){
+        if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Öne çıkanlar güncellenemedi.')));
+      }
+    }else if(sec=='archive'&&d!=null){
+      try{
+        await d.reference.set({
+          'expiresAt':Timestamp.now(),
+          'archivedAt':FieldValue.serverTimestamp(),
+          'updatedAt':FieldValue.serverTimestamp(),
+        },SetOptions(merge:true));
         hikayeler.removeAt(aktif);
-        if(hikayeler.isEmpty){if(mounted)Navigator.pop(context);return;}
+        if(hikayeler.isEmpty){
+          if(mounted){
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Hikâye arşive taşındı.')));
+            Navigator.pop(context);
+          }
+          return;
+        }
         if(aktif>=hikayeler.length)aktif=hikayeler.length-1;
         if(mounted)setState((){});
         await _aktifHikayeyiBaslat();
+        if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Hikâye arşive taşındı.')));
+      }catch(_){
+        if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Hikâye arşivlenemedi.')));
+      }
+    }else if(sec=='delete'&&storyId.isNotEmpty){
+      final onay=await showDialog<bool>(
+        context:context,
+        builder:(c)=>AlertDialog(
+          backgroundColor:Colors.white,
+          surfaceTintColor:Colors.white,
+          title:const Text('Hikâye silinsin mi?',style:TextStyle(fontWeight:FontWeight.w900)),
+          content:const Text('Bu hikâye kalıcı olarak silinecek. Bu işlem geri alınamaz.'),
+          actions:[
+            TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),
+            FilledButton(
+              style:FilledButton.styleFrom(backgroundColor:Colors.red,foregroundColor:Colors.white),
+              onPressed:()=>Navigator.pop(c,true),
+              child:const Text('Sil'),
+            ),
+          ],
+        ),
+      )??false;
+      if(!onay){
+        _devam();
+        return;
+      }
+      try{
+        await FirebaseFirestore.instance.collection('videos').doc(storyId).delete();
+        hikayeler.removeAt(aktif);
+        if(hikayeler.isEmpty){
+          if(mounted){
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Hikâye silindi.')));
+            Navigator.pop(context);
+          }
+          return;
+        }
+        if(aktif>=hikayeler.length)aktif=hikayeler.length-1;
+        if(mounted)setState((){});
+        await _aktifHikayeyiBaslat();
+        if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Hikâye silindi.')));
       }catch(_){
         if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Hikâye silinemedi.')));
       }
