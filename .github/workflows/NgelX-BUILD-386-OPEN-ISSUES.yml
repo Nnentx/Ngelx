@@ -1,0 +1,168 @@
+name: NgelX BUILD 386 OPEN ISSUES
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - work/build-386-open-issues
+    paths:
+      - 'app/**'
+      - 'web/**'
+      - 'firestore.rules'
+      - 'QA/**'
+      - '.github/workflows/NgelX-BUILD-386-OPEN-ISSUES.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Kaynaklari al
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Build 384 reaction referansini al
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin work/final-consolidated-p4-group-reactions:refs/remotes/origin/work/final-consolidated-p4-group-reactions --depth=1
+
+      - name: Java 17 kur
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Flutter kur
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Sabit NgelX imza anahtarini geri yukle
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: ngelx-stable-debug-keystore-v1
+          fail-on-cache-miss: true
+
+      - name: Imza anahtarini dogrula
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s "$HOME/.android/debug.keystore"
+          keytool -list -v -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey | grep -F 'SHA256: BE:20:B2:7F:0B:A1:F4:DE:CD:29:41:D4:10:B1:53:6D:E8:9E:48:DC:89:4F:04:F0:38:F9:D2:6B:11:EC:D6:AA'
+
+      - name: Build 386 kapsam ve regresyon kontrolu
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          grep -Fqx 'version: 1.0.162+386' app/pubspec.yaml
+          grep -q "defaultValue: '386'" app/lib/main.dart
+
+          # Build 385 korumasi: 11-16
+          grep -Fq 'void sonaGit({bool zorla=false})' app/lib/main.dart
+          grep -Fq '_gonderimSonrasiEnAltaPlanla' app/lib/main.dart
+          test "$(grep -Fc 'distinct(ngelxChatSnapshotAyniTypingHaric)' app/lib/main.dart)" -ge 2
+          test "$(grep -Fc "'YANIT MODU'" app/lib/main.dart)" -ge 2
+          grep -Fq 'en az 13 yaşında olmalısın.' app/lib/main.dart
+          grep -Fq "const ngelxDeleteAccountUrl='https://ngelxsocial.com/delete-account.html';" app/lib/main.dart
+
+          # Build 384 reaction parity
+          grep -q "isCurrentUser?'Sen · \$name':name" app/lib/main.dart
+          grep -q 'Widget _ozelMedyaTepkiVerenSatiri' app/lib/main.dart
+          grep -q 'Widget _grupTepkiVerenSatiri' app/lib/main.dart
+          python3 - <<'PY'
+          import subprocess
+          cur=open('app/lib/main.dart',encoding='utf-8').read()
+          ref=subprocess.check_output(
+              ['git','show','origin/work/final-consolidated-p4-group-reactions:app/lib/main.dart'],
+              text=True,encoding='utf-8'
+          )
+          ranges=[
+              ('group detail','  Widget _grupTepkiVerenSatiri','  Widget mesajKarti'),
+              ('private mutation','  Future<void> mesajTepkiDegistir','  Future<void> mesajHatirlat'),
+              ('private media detail','  Widget _ozelMedyaTepkiVerenSatiri','  Widget ozelMesajKarti'),
+          ]
+          for name,a,b in ranges:
+              def cut(s):
+                  i=s.find(a); j=s.find(b,i+len(a))
+                  if i<0 or j<0: raise SystemExit(f'{name}: marker missing')
+                  return s[i:j]
+              if cut(cur)!=cut(ref): raise SystemExit(f'{name}: BUILD 384 REACTION PARITY FAILED')
+              print(f'{name}: parity OK')
+          PY
+
+          # 17 - farklı hesap/giriş güvenliği
+          grep -Fq 'signInWithEmailAndPassword' app/lib/main.dart
+          grep -Fq 'E-posta veya şifre yanlış.' app/lib/main.dart
+          grep -Fq 'Giriş zaman aşımına uğradı.' app/lib/main.dart
+          grep -Fq 'user-disabled' app/lib/main.dart
+
+          # 18 - şifre sıfırlama dil + özel NgelX sayfası
+          grep -Fq 'setLanguageCode(uygulamaDili.value)' app/lib/main.dart
+          grep -Fq 'sendPasswordResetEmail' app/lib/main.dart
+          test -s web/reset-password.html
+          grep -Fq '<title>NgelX • Şifreni yenile</title>' web/reset-password.html
+          grep -Fq 'confirmPasswordReset' web/reset-password.html
+          grep -Fq 'Şifren değiştirildi.' web/reset-password.html
+
+          # 19 - takip anlık UI senkronu
+          grep -Fq 'final Map<String,bool> _yerelTakipDurumu' app/lib/main.dart
+          grep -Fq 'int _yerelTakipciDelta=0' app/lib/main.dart
+          grep -Fq 'final sunucuTakipte=' app/lib/main.dart
+          grep -Fq '_yerelTakipDurumu[uid]=false' app/lib/main.dart
+          grep -Fq '_yerelTakipDurumu[uid]=true' app/lib/main.dart
+
+          # 22 - takip isteği/bildirim akışı korunuyor
+          grep -Fq "tur:'follow_request'" app/lib/main.dart
+          grep -Fq 'Takip isteği gönderildi.' app/lib/main.dart
+
+          # 23 - Arkadaşlar/Keşif modeli
+          grep -Fq 'class ArkadaslarPage extends StatefulWidget' app/lib/main.dart
+          grep -Fq "Tab(text:'Arkadaşlar')" app/lib/main.dart
+          grep -Fq "Tab(text:'Takip')" app/lib/main.dart
+          grep -Fq "Tab(text:'Önerilenler')" app/lib/main.dart
+          grep -Fq "Tab(text:'Ortak noktalar')" app/lib/main.dart
+          grep -Fq 'ortak arkadaş' app/lib/main.dart
+          grep -Fq 'Arkadaş veya kişi ara' app/lib/main.dart
+
+      - name: Bagimliliklari al
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter clean
+          flutter pub get
+
+      - name: Flutter analiz
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter analyze --no-fatal-infos --no-fatal-warnings
+
+      - name: Gercek APK olustur
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter build apk --release --build-name=1.0.162 --build-number=386
+          test -s build/app/outputs/flutter-apk/app-release.apk
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          test -n "$APKSIGNER"
+          "$APKSIGNER" verify --verbose --print-certs build/app/outputs/flutter-apk/app-release.apk
+          cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/NgelX-1.0.162-Build-386-OPEN-ISSUES.apk
+          sha256sum build/app/outputs/flutter-apk/NgelX-1.0.162-Build-386-OPEN-ISSUES.apk > build/app/outputs/flutter-apk/NgelX-1.0.162-Build-386-OPEN-ISSUES.apk.sha256
+
+      - name: APK yukle
+        uses: actions/upload-artifact@v4
+        with:
+          name: NgelX-1.0.162-Build-386-OPEN-ISSUES
+          path: |
+            app/build/app/outputs/flutter-apk/NgelX-1.0.162-Build-386-OPEN-ISSUES.apk
+            app/build/app/outputs/flutter-apk/NgelX-1.0.162-Build-386-OPEN-ISSUES.apk.sha256
+          if-no-files-found: error
+          retention-days: 14
