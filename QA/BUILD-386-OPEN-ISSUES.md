@@ -77,7 +77,10 @@ Verified:
 - Tapping "Arkadaş ekle" sends a new friendship request.
 - Sender profile immediately changes to "Arkadaşlık isteği bekliyor".
 
+Verified:
+- Recipient receives the friendship request in Activity.
+- Request card shows active accept and reject controls.
+
 Still to verify:
-- Recipient must receive the request/notification.
-- Recipient can accept or reject.
-- After acceptance, both profiles must show the friendship state consistently.
+- Recipient can accept the request successfully.
+- After acceptance, both profiles must show the friendship state consistently and friendship counts must update.
