@@ -24987,7 +24987,7 @@ class _ArkadaslarPageState extends State<ArkadaslarPage>{
             backgroundImage:foto.isEmpty?null:NgelXAgImageProvider(foto),
             child:foto.isEmpty?const Icon(Icons.person_rounded,color:mor):null,
           ),
-          title:Text(ad,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black87,fontSize:16,fontWeight:FontWeight.w850)),
+          title:Text(ad,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black87,fontSize:16,fontWeight:FontWeight.w800)),
           subtitle:Text(alt,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black54,fontSize:13)),
           trailing:PopupMenuButton<String>(
             tooltip:'İşlemler',
