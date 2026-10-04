@@ -22,42 +22,31 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           import re
-          lines=Path('app/lib/main.dart').read_text(encoding='utf-8').splitlines()
-          pats=[
-            r'sosyalIstekGonder',
-            r'sosyalIstek',
-            r'follow_request',
-            r'Takip İstek',
-            r'Takip istek',
-            r'takip istek',
-            r'Activity|Aktivite',
-            r'_yerelTakipciDelta',
-            r'Takipçi kaldır',
-            r'followers',
-            r'class .*Profil',
-            r'İçerik istatistikleri',
-            r'Etkileşim',
-            r'class .*Etk',
-            r'Hikâyeyi sil',
-            r'Hikaye',
-            r'Hikâye',
-            r'Öne Çıkan',
-            r'arşiv',
-            r'Arşiv',
-            r'Hesabı ekle ve geç',
-            r'Hesap değiştir',
-            r'class .*Hesap',
-            r'chat.*background|background.*chat',
-            r'sohbet.*arka|arka.*sohbet',
-            r'conversation',
-            r'custom.*background|background.*custom',
-            r'TextField\(',
-            r'TextFormField\(',
+          root=Path('app/lib')
+          targets=[
+            'Hikâyeyi sil','İçerik istatistikleri','Beğeni','Paylaşım','Gönderi',
+            'Hesabı ekle ve geç','Sohbet arka planı','backgroundUrl_','quickEmoji_',
+            'messageFontSize_','Takipçi kaldırıldı.','Takipçi kaldırılsın mı?'
           ]
-          for pat in pats:
-              rx=re.compile(pat,re.I)
-              hits=[(i+1,l) for i,l in enumerate(lines) if rx.search(l)]
-              print(f'@@PATTERN {pat} COUNT={len(hits)}')
-              for n,l in hits[:120]:
-                  print(f'{n:06d}: {l}')
+          for target in targets:
+              print(f'@@LOCATE {target!r}')
+              for p in sorted(root.glob('*.dart')):
+                  lines=p.read_text(encoding='utf-8').splitlines()
+                  hits=[(i+1,l) for i,l in enumerate(lines) if target in l]
+                  for n,l in hits[:30]:
+                      print(f'{p}:{n:06d}: {l}')
+          main=(root/'main.dart').read_text(encoding='utf-8').splitlines()
+          ranges=[
+            ('SOCIAL_REQUEST_CORE',2960,3190),
+            ('ACTIVITY_PAGE',21770,22530),
+            ('OTHER_PROFILE',22780,23430),
+            ('ACCOUNT_SWITCH',23820,24060),
+            ('PRIVATE_CHAT_CUSTOMIZE',17440,17630),
+            ('PRIVATE_CHAT_BODY',20480,21320),
+            ('PROFILE_ARCHIVE_AREA',25480,25730),
+          ]
+          for name,a,b in ranges:
+              print(f'@@SECTION {name} {a}-{b}')
+              for n in range(a-1,min(b,len(main))):
+                  print(f'{n+1:06d}: {main[n]}')
           PY
