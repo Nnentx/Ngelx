@@ -13,13 +13,15 @@ if (keystorePropertiesFile.exists()) {
     keystorePropertiesFile.inputStream().use { keystoreProperties.load(it) }
 }
 
-// Paket 2 and Paket 3 use Firebase's registered Paket 1 test application ID
+// Paket 2, Paket 3 and Paket 4 use Firebase's registered Paket 1 test application ID
 // so google-services can configure installable side-test APKs.
 val ngelxP2SideBySide =
     (project.findProperty("ngelxP2SideBySide") as String?)?.toBoolean() ?: false
 val ngelxP3SideBySide =
     (project.findProperty("ngelxP3SideBySide") as String?)?.toBoolean() ?: false
-val ngelxSideBySide = ngelxP2SideBySide || ngelxP3SideBySide
+val ngelxP4SideBySide =
+    (project.findProperty("ngelxP4SideBySide") as String?)?.toBoolean() ?: false
+val ngelxSideBySide = ngelxP2SideBySide || ngelxP3SideBySide || ngelxP4SideBySide
 
 android {
     namespace = "com.nnentx.ngelx_app"
@@ -39,6 +41,7 @@ android {
         }
         manifestPlaceholders["appLabel"] =
             when {
+                ngelxP4SideBySide -> "NgelX P4 Test"
                 ngelxP3SideBySide -> "NgelX P3 Test"
                 ngelxP2SideBySide -> "NgelX P2 Test"
                 else -> "NgelX"
