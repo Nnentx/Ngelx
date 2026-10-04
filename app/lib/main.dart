@@ -16070,31 +16070,47 @@ class _SohbetPageState extends State<SohbetPage> {
   Widget _ozelMedyaTepkiBalonu(DocumentReference<Map<String,dynamic>> ref,Map<String,int> counts,int total){
     final mostUsed=counts.entries.toList()..sort((a,b)=>b.value.compareTo(a.value));
     final emojis=mostUsed.take(3).map((entry)=>entry.key).join();
-    return Positioned(
-      right:0,
-      bottom:0,
-      child:FractionalTranslation(
-        translation:const Offset(.5,.5),
-        child:GestureDetector(
-        behavior:HitTestBehavior.opaque,
-        onTap:()=>_ozelMedyaTepkiDetayi(ref),
-        child:Container(
-          padding:const EdgeInsets.symmetric(horizontal:6,vertical:2),
-          decoration:BoxDecoration(
-            color:Colors.white.withValues(alpha:.94),
-            borderRadius:BorderRadius.circular(13),
-            border:Border.all(color:const Color(0x1F000000)),
-            boxShadow:const [BoxShadow(color:Color(0x22000000),blurRadius:4,offset:Offset(0,1))],
-          ),
-          child:Row(mainAxisSize:MainAxisSize.min,children:[
-            Text(emojis,style:const TextStyle(fontSize:15,height:1.1)),
-            const SizedBox(width:2),
-            Text(total.toString(),style:const TextStyle(fontSize:11,fontWeight:FontWeight.w800,height:1.1,color:Color(0xFF30343B))),
-          ]),
+    return GestureDetector(
+      behavior:HitTestBehavior.opaque,
+      onTap:()=>_ozelMedyaTepkiDetayi(ref),
+      child:Container(
+        padding:const EdgeInsets.symmetric(horizontal:6,vertical:2),
+        decoration:BoxDecoration(
+          color:Colors.white.withValues(alpha:.94),
+          borderRadius:BorderRadius.circular(13),
+          border:Border.all(color:const Color(0x1F000000)),
+          boxShadow:const [BoxShadow(color:Color(0x22000000),blurRadius:4,offset:Offset(0,1))],
         ),
-      ),
+        child:Row(mainAxisSize:MainAxisSize.min,children:[
+          Text(emojis,style:const TextStyle(fontSize:15,height:1.1)),
+          const SizedBox(width:2),
+          Text(total.toString(),style:const TextStyle(fontSize:11,fontWeight:FontWeight.w800,height:1.1,color:Color(0xFF30343B))),
+        ]),
       ),
     );
+  }
+
+  Widget _ozelMedyaTepkiAlani(Widget media,DocumentReference<Map<String,dynamic>> ref,Map<String,int> counts,int total){
+    const sagDokunmaAlani=42.0,altDokunmaAlani=13.0;
+    return Stack(clipBehavior:Clip.none,children:[
+      // Boş sağ-alt alan Stack'in gerçek hit-test sınırlarını tepki rozetinin
+      // taşan kısmını da kapsayacak şekilde genişletir.
+      Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
+        Row(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
+          media,
+          const SizedBox(width:sagDokunmaAlani),
+        ]),
+        const SizedBox(height:altDokunmaAlani),
+      ]),
+      if(total>0)Positioned(
+        right:sagDokunmaAlani,
+        bottom:altDokunmaAlani,
+        child:FractionalTranslation(
+          translation:const Offset(.5,.5),
+          child:_ozelMedyaTepkiBalonu(ref,counts,total),
+        ),
+      ),
+    ]);
   }
 
   Widget ozelMesajKarti(QueryDocumentSnapshot<Map<String,dynamic>> d,{double fontSize=16,bool goruldu=false,String quickReaction='❤️'}){
@@ -16228,20 +16244,14 @@ class _SohbetPageState extends State<SohbetPage> {
                 ),
               ),
             if(photo)
-              Padding(
-                padding:const EdgeInsets.only(bottom:13),
-                child:Stack(clipBehavior:Clip.none,children:[
-                  IgnorePointer(child:ClipRRect(borderRadius:BorderRadius.circular(16),child:CachedNetworkImage(imageUrl:(v['mediaUrl']??'').toString(),width:230,fit:BoxFit.cover,memCacheWidth:720))),
-                  if(tepkiler.isNotEmpty)_ozelMedyaTepkiBalonu(d.reference,sayilar,tepkiler.length),
-                ]),
+              _ozelMedyaTepkiAlani(
+                IgnorePointer(child:ClipRRect(borderRadius:BorderRadius.circular(16),child:CachedNetworkImage(imageUrl:(v['mediaUrl']??'').toString(),width:230,fit:BoxFit.cover,memCacheWidth:720))),
+                d.reference,sayilar,tepkiler.length,
               )
             else if(video)
-              Padding(
-                padding:const EdgeInsets.only(bottom:13),
-                child:Stack(clipBehavior:Clip.none,children:[
-                  IgnorePointer(child:ClipRRect(borderRadius:BorderRadius.circular(16),child:NgelXGrupVideoMesaj(url:(v['videoUrl']??v['mediaUrl']??'').toString(),compact:true))),
-                  if(tepkiler.isNotEmpty)_ozelMedyaTepkiBalonu(d.reference,sayilar,tepkiler.length),
-                ]),
+              _ozelMedyaTepkiAlani(
+                IgnorePointer(child:ClipRRect(borderRadius:BorderRadius.circular(16),child:NgelXGrupVideoMesaj(url:(v['videoUrl']??v['mediaUrl']??'').toString(),compact:true))),
+                d.reference,sayilar,tepkiler.length,
               )
             else if(shared)
               IgnorePointer(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
