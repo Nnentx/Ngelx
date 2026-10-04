@@ -127,3 +127,32 @@ Implemented in code:
 External configuration still required for complete item 18 branding:
 - Firebase Authentication email-template sender/project display name must be changed from the raw project id to NgelX.
 - Firebase Authentication custom email action handler/template configuration must point password reset actions to the deployed NgelX reset handler.
+
+
+## 24 — Consolidated device findings after Build 386 manual QA
+Status: FIXED IN CODE / CI VALIDATION RUNNING
+
+Consolidated in commit be1972e:
+- Private-chat background/theme is now shared at chat level so either participant's change is visible to both sides.
+- Message composer hot path no longer starts mention lookup on every keystroke; mention lookup is debounced.
+- Account-add bottom sheet now respects safe area and keyboard bottom inset.
+- Interaction summary cards (Beğeni / Yorum / Paylaşım / Gönderi) are actionable and open metric detail lists.
+- Story owner menu now includes share, highlight/unhighlight and archive actions.
+- Story deletion now requires explicit confirmation.
+- Follow/unfollow and follower removal wait for pending Firestore writes; follower removal also refreshes the owner document from server to avoid stale count bounce.
+
+Manual QA already passed and must not regress:
+- save/remove saved content,
+- story start/end/remaining time,
+- message send/receive and seen state,
+- message requests,
+- inbox filters,
+- friend request/accept/remove,
+- follower request accept and follower removal,
+- privacy screen,
+- archive/live-history empty states.
+
+CI gate:
+- flutter analyze,
+- Android release APK build,
+- Build 386 source regression markers.
