@@ -20,6 +20,8 @@ Verified:
 - Reset request succeeds.
 - User sees a confirmation message.
 - Firebase reset email is delivered.
+- Reset link opens successfully.
+- New password is accepted and saved successfully by the reset page.
 
 Build 386 fixes required:
 - Password reset email currently exposes the Firebase project name "ngelx-44eed".
@@ -28,6 +30,4 @@ Build 386 fixes required:
 - Keep the secure reset link flow working after branding/localization changes.
 
 Final functional check still pending:
-- Open the reset link.
-- Set a new password.
 - Sign in to NgelX with the new password successfully.
