@@ -54,6 +54,42 @@ jobs:
           test -s "$HOME/.android/debug.keystore"
           keytool -list -v -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey | grep -F 'SHA256: BE:20:B2:7F:0B:A1:F4:DE:CD:29:41:D4:10:B1:53:6D:E8:9E:48:DC:89:4F:04:F0:38:F9:D2:6B:11:EC:D6:AA'
 
+      - name: Build 386 kaynak tanilama
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('app/lib/main.dart')
+          lines=p.read_text(encoding='utf-8').splitlines()
+          needles=[
+            'Takip isteği gönderildi.',
+            "tur:'follow_request'",
+            'Takipçi kaldırıldı.',
+            '_yerelTakipciDelta',
+            'Hikâyeyi sil',
+            'İçerik istatistikleri',
+            'Hesabı ekle ve geç',
+            'Aktiviteler yenilendi.',
+            'Gizli hesap',
+            'Takip isteği bekliyor',
+            'Mesaj',
+            'arka plan',
+            'Arka plan',
+          ]
+          seen=set()
+          for needle in needles:
+              hits=[i for i,l in enumerate(lines) if needle in l]
+              print(f'=== NEEDLE: {needle!r} HITS={len(hits)} ===')
+              for i in hits[:6]:
+                  key=(needle,i)
+                  if key in seen: continue
+                  seen.add(key)
+                  a=max(0,i-45); b=min(len(lines),i+70)
+                  print(f'--- lines {a+1}-{b} around {i+1} ---')
+                  for n in range(a,b):
+                      print(f'{n+1:06d}: {lines[n]}')
+          PY
+
       - name: Build 386 kapsam ve regresyon kontrolu
         shell: bash
         run: |
