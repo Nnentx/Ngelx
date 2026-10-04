@@ -364,6 +364,32 @@ async function presignR2Put(env, key, contentType, expiresIn = 900) {
   return signed.url.toString();
 }
 
+async function deleteR2Prefix(env, prefix) {
+  let cursor;
+  let deleted = 0;
+  do {
+    const listed = await env.MEDIA.list({prefix, cursor, limit: 1000});
+    const keys = (listed.objects || []).map((x) => x.key);
+    if (keys.length) {
+      for (let i = 0; i < keys.length; i += 100) {
+        await env.MEDIA.delete(keys.slice(i, i + 100));
+      }
+      deleted += keys.length;
+    }
+    cursor = listed.truncated ? listed.cursor : undefined;
+  } while (cursor);
+  return deleted;
+}
+
+async function deleteAccountMedia(env, uid) {
+  let deleted = 0;
+  for (const kind of ALLOWED_KINDS) {
+    deleted += await deleteR2Prefix(env, kind + '/' + uid + '/');
+  }
+  deleted += await deleteR2Prefix(env, '__ngelx_chunks/' + uid + '/');
+  return deleted;
+}
+
 export default {
   async fetch(request, env) {
     if (request.method === 'OPTIONS') {
@@ -378,6 +404,26 @@ export default {
         return json({ok: true, service: 'ngelx-r2-media', r2: true, ai: Boolean(env.AI), mediaTransform: Boolean(env.VIDEO_MEDIA), directUpload: directR2Ready(env), protocol: MEDIA_PROTOCOL});
       } catch (e) {
         return json({ok: false, service: 'ngelx-r2-media', r2: false, directUpload: directR2Ready(env), protocol: MEDIA_PROTOCOL, message: String(e?.message || e)}, 503);
+      }
+    }
+
+
+    if (request.method === 'POST' && url.pathname === '/internal/account-media-delete') {
+      const supplied = request.headers.get('x-ngelx-account-delete-secret') || '';
+      if (!env.ACCOUNT_DELETE_SECRET || supplied !== env.ACCOUNT_DELETE_SECRET) {
+        return json({error:'forbidden'},403);
+      }
+      let body;
+      try { body = await request.json(); } catch (_) { return json({error:'invalid_json'},400); }
+      const uid = String(body?.uid || '').trim();
+      if (!/^[A-Za-z0-9:_-]{1,128}$/.test(uid)) return json({error:'invalid_uid'},400);
+      try {
+        const deleted = await deleteAccountMedia(env, uid);
+        uploadLog('account_media_deleted', {uid:uid.slice(0,8), deleted});
+        return json({ok:true, deleted});
+      } catch (e) {
+        uploadLog('account_media_delete_failed', {uid:uid.slice(0,8), message:String(e?.message||e)});
+        return json({error:'account_media_delete_failed',message:String(e?.message||e)},503);
       }
     }
 
