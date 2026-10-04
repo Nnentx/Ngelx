@@ -40,6 +40,8 @@ Observed on device:
 - User taps to unfollow from another user's profile.
 - Snackbar confirms: "Takipten çıktın."
 - Profile action button remains stuck on "Takip ediyorsun" instead of immediately switching back to the follow state.
+- After leaving the profile and reopening it, the state becomes correct: button shows "Takip et" and the follower count reflects the unfollow.
+- This confirms the backend mutation succeeds; the defect is stale in-page/local relationship state refresh.
 
 Expected:
 - After a successful follow/unfollow mutation, the profile UI must update immediately without leaving/reopening the page.
