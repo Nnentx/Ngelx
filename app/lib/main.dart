@@ -16008,60 +16008,138 @@ class _SohbetPageState extends State<SohbetPage> {
         final isCurrentUser=reactorId==uid;
         return ListTile(
           dense:true,
+          visualDensity:const VisualDensity(vertical:-1),
+          contentPadding:const EdgeInsets.symmetric(horizontal:6,vertical:1),
+          minVerticalPadding:3,
           leading:CircleAvatar(
+            radius:21,
             backgroundColor:const Color(0xFFEDEFF3),
             child:photoUrl.isEmpty
               ?Text(initial,style:const TextStyle(fontWeight:FontWeight.w800,color:Color(0xFF555B66)))
               :ClipOval(child:CachedNetworkImage(
                 imageUrl:photoUrl,
-                width:40,height:40,fit:BoxFit.cover,
+                width:42,height:42,fit:BoxFit.cover,
                 errorWidget:(_,__,___)=>Center(child:Text(initial,style:const TextStyle(fontWeight:FontWeight.w800,color:Color(0xFF555B66)))),
               )),
           ),
-          title:Text(isCurrentUser?'Sen · $name':name,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontWeight:FontWeight.w700)),
+          title:Text(isCurrentUser?'Sen · $name':name,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontWeight:FontWeight.w700,fontSize:15)),
           subtitle:username.isNotEmpty&&username.toLowerCase()!=displayName.toLowerCase()
-            ?Text('@$username',maxLines:1,overflow:TextOverflow.ellipsis)
+            ?Text('@$username',maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:11.5))
             :null,
-          trailing:Text(emoji,style:const TextStyle(fontSize:21)),
+          trailing:Text(emoji,style:const TextStyle(fontSize:31)),
         );
       },
     );
   }
 
   void _ozelMedyaTepkiDetayi(DocumentReference<Map<String,dynamic>> ref){
+    const tumu='__all__';
+    var seciliFiltre=tumu;
     showModalBottomSheet<void>(
       context:context,
-      backgroundColor:Colors.white,
-      showDragHandle:true,
+      isScrollControlled:true,
+      backgroundColor:Colors.transparent,
+      barrierColor:Colors.black54,
       builder:(sheetContext)=>StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
         stream:ref.snapshots(),
         builder:(context,snapshot){
           final reactions=Map<String,dynamic>.from(snapshot.data?.data()?['reactions']??const <String,dynamic>{});
-          final entries=reactions.entries.toList();
-          return SafeArea(child:Padding(
-            padding:const EdgeInsets.fromLTRB(16,0,16,16),
-            child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
-              Padding(
-                padding:const EdgeInsets.only(bottom:10),
-                child:Text('Tepkiler (${entries.length})',style:const TextStyle(fontSize:17,fontWeight:FontWeight.w800)),
-              ),
-              if(snapshot.hasError)
-                const Padding(padding:EdgeInsets.all(12),child:Text('Tepkiler yüklenemedi.'))
-              else if(entries.isEmpty)
-                const Padding(padding:EdgeInsets.all(16),child:Center(child:Text('Henüz tepki yok.')))
-              else
-                SizedBox(
-                  height:MediaQuery.of(sheetContext).size.height*.48,
-                  child:ListView.builder(
-                    itemCount:entries.length,
-                    itemBuilder:(context,index){
-                      final entry=entries[index];
-                      return _ozelMedyaTepkiVerenSatiri(entry.key,entry.value.toString());
-                    },
+          final entries=reactions.entries.where((e)=>e.value.toString().trim().isNotEmpty).toList();
+          final sayilar=<String,int>{};
+          for(final entry in entries){
+            final emoji=entry.value.toString();
+            sayilar[emoji]=(sayilar[emoji]??0)+1;
+          }
+          final tepkiler=sayilar.entries.toList()..sort((a,b)=>b.value.compareTo(a.value));
+          final panelHeight=(MediaQuery.of(sheetContext).size.height*.43).clamp(300.0,440.0).toDouble();
+          return StatefulBuilder(builder:(context,setModalState){
+            final gorunenler=seciliFiltre==tumu
+              ?entries
+              :entries.where((entry)=>entry.value.toString()==seciliFiltre).toList();
+            Widget filtre(String label,String key,{String? emoji,int? count}){
+              final secili=seciliFiltre==key;
+              return Padding(
+                padding:const EdgeInsets.symmetric(horizontal:3),
+                child:Material(
+                  color:secili?const Color(0xFFF0F1F4):Colors.transparent,
+                  borderRadius:BorderRadius.circular(22),
+                  child:InkWell(
+                    borderRadius:BorderRadius.circular(22),
+                    onTap:()=>setModalState(()=>seciliFiltre=key),
+                    child:Padding(
+                      padding:const EdgeInsets.symmetric(horizontal:14,vertical:8),
+                      child:Row(mainAxisSize:MainAxisSize.min,children:[
+                        if(emoji!=null)Text(emoji,style:const TextStyle(fontSize:19)),
+                        if(emoji!=null&&count!=null)const SizedBox(width:5),
+                        if(count!=null)Text(count.toString(),style:const TextStyle(fontSize:13,fontWeight:FontWeight.w700,color:Color(0xFF545A64))),
+                        if(count==null)Text(label,style:const TextStyle(fontSize:13,fontWeight:FontWeight.w800,color:Color(0xFF252830))),
+                      ]),
+                    ),
                   ),
                 ),
-            ]),
-          ));
+              );
+            }
+            return SafeArea(
+              top:false,
+              child:Container(
+                height:panelHeight,
+                margin:const EdgeInsets.fromLTRB(16,0,16,10),
+                decoration:BoxDecoration(
+                  color:Colors.white,
+                  borderRadius:BorderRadius.circular(28),
+                  boxShadow:const [BoxShadow(color:Color(0x24000000),blurRadius:18,offset:Offset(0,-3))],
+                ),
+                child:Column(children:[
+                  Padding(
+                    padding:const EdgeInsets.fromLTRB(20,12,12,6),
+                    child:Row(children:[
+                      const Expanded(child:Text('İfadeler',style:TextStyle(fontSize:18,fontWeight:FontWeight.w800,color:Color(0xFF17191D)))),
+                      IconButton(
+                        tooltip:'Kapat',
+                        onPressed:()=>Navigator.of(sheetContext).pop(),
+                        style:IconButton.styleFrom(
+                          backgroundColor:const Color(0xFFF0F1F4),
+                          foregroundColor:const Color(0xFF252830),
+                          minimumSize:const Size(38,38),
+                          padding:EdgeInsets.zero,
+                        ),
+                        icon:const Icon(Icons.close_rounded,size:21),
+                      ),
+                    ]),
+                  ),
+                  const Divider(height:1,color:Color(0xFFECEEF1)),
+                  Expanded(
+                    child:snapshot.hasError
+                      ?const Center(child:Text('Tepkiler yüklenemedi.',style:TextStyle(color:Color(0xFF666B73))))
+                      :gorunenler.isEmpty
+                        ?const Center(child:Text('Bu filtrede tepki yok.',style:TextStyle(color:Color(0xFF777C84))))
+                        :ListView.separated(
+                          padding:const EdgeInsets.fromLTRB(16,8,16,8),
+                          itemCount:gorunenler.length,
+                          separatorBuilder:(_,__)=>const SizedBox(height:2),
+                          itemBuilder:(context,index){
+                            final entry=gorunenler[index];
+                            return _ozelMedyaTepkiVerenSatiri(entry.key,entry.value.toString());
+                          },
+                        ),
+                  ),
+                  const Divider(height:1,color:Color(0xFFECEEF1)),
+                  Padding(
+                    padding:const EdgeInsets.fromLTRB(12,6,12,8),
+                    child:Center(
+                      child:SingleChildScrollView(
+                        scrollDirection:Axis.horizontal,
+                        child:Row(mainAxisSize:MainAxisSize.min,children:[
+                          filtre('TÜMÜ',tumu),
+                          ...tepkiler.map((entry)=>filtre('',entry.key,emoji:entry.key,count:entry.value)),
+                        ]),
+                      ),
+                    ),
+                  ),
+                ]),
+              ),
+            );
+          });
         },
       ),
     );
