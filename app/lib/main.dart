@@ -9015,6 +9015,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
         'senderId':ben,
         'createdAt':FieldValue.serverTimestamp(),
         'clientCreatedAt':Timestamp.now(),
+        'reactions':<String,dynamic>{},
         ...veri,
       });
       final g=<String,dynamic>{'lastMessage':sonMesaj,'updatedAt':FieldValue.serverTimestamp(),'hiddenFor':FieldValue.arrayRemove(uyeler)};
@@ -9140,7 +9141,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
         dosya:x,kind:'groups',ext:uzanti,legacyPath:yol,
         contentType:uzanti=='png'?'image/png':uzanti=='webp'?'image/webp':'image/jpeg',
         onProgress:(sent,total)=>_medyaIlerlemeGuncelle('Fotoğraf yükleniyor',sent,total),
-      ).timeout(const Duration(seconds:60));
+      ).timeout(const Duration(minutes:2));
       final tamam=await payloadGonder({'type':'photo','mediaUrl':url},'📷 Fotoğraf');
       if(!tamam)throw Exception('Mesaj kaydedilemedi');
     }catch(_){
@@ -9156,6 +9157,10 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
   Future<void> grupVideoGonder()async{
     final x=await ngelxVideoSec(source:ImageSource.gallery,maxDuration:const Duration(minutes:3));
     if(x==null)return;
+    await _grupVideosunuGonder(x);
+  }
+
+  Future<void> _grupVideosunuGonder(XFile x)async{
     try{
       final boyut=await x.length();
       if(boyut>80*1024*1024)throw Exception('Video 80 MB’den küçük olmalı.');
@@ -9168,9 +9173,14 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
         contentType:uzanti=='mov'?'video/quicktime':'video/mp4',
         onProgress:(sent,total)=>_medyaIlerlemeGuncelle('Video yükleniyor',sent,total),
       ).timeout(const Duration(minutes:3));
-      await payloadGonder({'type':'video','mediaUrl':url},'🎥 Video');
+      final tamam=await payloadGonder({'type':'video','mediaUrl':url},'🎥 Video');
+      if(!tamam)throw Exception('Mesaj kaydedilemedi');
     }catch(_){
-      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Video gönderilemedi. Tekrar dene.')));
+      if(!mounted)return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content:const Text('Video gönderilemedi.'),
+        action:SnackBarAction(label:'Tekrar dene',onPressed:()=>unawaited(_grupVideosunuGonder(x))),
+      ));
     }finally{
       _medyaIlerlemeBitir();
     }
