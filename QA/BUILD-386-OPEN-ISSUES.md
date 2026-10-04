@@ -31,3 +31,21 @@ Build 386 fixes required:
 
 Final functional check:
 - Sign in to NgelX with the new password successfully: PASS.
+
+
+## 19 — Follow / unfollow state refresh
+Status: FAIL / FIX REQUIRED
+
+Observed on device:
+- User taps to unfollow from another user's profile.
+- Snackbar confirms: "Takipten çıktın."
+- Profile action button remains stuck on "Takip ediyorsun" instead of immediately switching back to the follow state.
+
+Expected:
+- After a successful follow/unfollow mutation, the profile UI must update immediately without leaving/reopening the page.
+- Follower/following counters must refresh consistently with the action.
+- Reopening the profile must show the same final state as the backend.
+
+Build 386 requirement:
+- Fix stale local/profile relationship state after follow/unfollow.
+- Keep backend relationship mutation and UI state synchronized.
