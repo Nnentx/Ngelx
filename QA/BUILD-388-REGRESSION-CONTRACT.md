@@ -43,7 +43,7 @@ The following Build 386/387 flows were already manually verified and are frozen 
 - Saved content: save, open and remove from Saved.
 - Stories: start/publish time, end/remaining time, archive/highlight menu.
 - Private messaging: send/receive and seen state.
-- Message Requests: routing/UI logic remains present; the DİLEK fresh-account scenario is still a pending device test, not declared passed.
+- Message Requests: DEVICE VERIFIED on Build 388 with the fresh Umay → Rojin scenario. A first message from a non-friend/non-following account lands in Message Requests with a badge, Accept removes it from requests, preserves the messages, and moves the conversation into the normal Inbox with the request badge cleared.
 - Inbox filters and conversation list behavior.
 - Friendship request, accept and remove flow.
 - Follow request accept and follower removal flow.
@@ -53,6 +53,17 @@ The following Build 386/387 flows were already manually verified and are frozen 
 - Shared private-chat background behavior from Build 387.
 - Interaction cards remain tappable.
 - Follow/follower counts remain Firestore-driven; no local counter delta is reintroduced.
+
+## Build 388 device verification added on 2026-10-05
+
+- Fresh sender: Umay Umay.
+- Recipient: Rojin Candan.
+- Incoming request appeared under Mesaj İstekleri with “Kabul et”.
+- Inbox showed Mesaj İstekleri badge = 1 before acceptance.
+- After acceptance, Mesaj İstekleri became empty.
+- Existing “Slm” and 👍 messages remained visible.
+- Umay moved into the normal Gelen Kutusu list.
+- Mesaj İstekleri badge cleared.
 
 ## CI gate
 
