@@ -20849,7 +20849,13 @@ class _SohbetPageState extends State<SohbetPage> {
                       child:Center(child:Container(
                         padding:const EdgeInsets.symmetric(horizontal:12,vertical:7),
                         decoration:BoxDecoration(color:Colors.white.withValues(alpha:.90),borderRadius:BorderRadius.circular(18),border:Border.all(color:ngelxPrivateBlueBorder)),
-                        child:Text((d.data()['text']??'Sohbet ayarı güncellendi').toString(),textAlign:TextAlign.center,style:const TextStyle(color:ngelxPrivateBlueInk,fontSize:11.5,fontWeight:FontWeight.w800)),
+                        child:Column(mainAxisSize:MainAxisSize.min,children:[
+                          Text((d.data()['text']??'Sohbet ayarı güncellendi').toString(),textAlign:TextAlign.center,style:const TextStyle(color:ngelxPrivateBlueInk,fontSize:11.5,fontWeight:FontWeight.w800)),
+                          if(mesajSaati(hamGun).isNotEmpty)...[
+                            const SizedBox(height:2),
+                            Text(mesajSaati(hamGun),style:const TextStyle(color:Colors.black45,fontSize:9.5,fontWeight:FontWeight.w600)),
+                          ],
+                        ]),
                       )),
                     )
                     :ozelMesajKarti(d,fontSize:mesajYaziBoyutu,goruldu:goruldu,quickReaction:hizliEmoji),
