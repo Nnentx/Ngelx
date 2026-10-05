@@ -1,0 +1,144 @@
+name: NgelX BUILD 390 FAILED TEST FIXES
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - work/build-390-failed-test-fixes
+    paths:
+      - 'app/**'
+      - 'firestore.rules'
+      - 'QA/**'
+      - '.github/workflows/NgelX-BUILD-390-FAILED-TEST-FIXES.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 70
+    steps:
+      - name: Kaynaklari al
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Java 17 kur
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Flutter kur
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Sabit NgelX imza anahtarini geri yukle
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: ngelx-stable-debug-keystore-v1
+          fail-on-cache-miss: true
+
+      - name: Imza anahtarini dogrula
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s "$HOME/.android/debug.keystore"
+          keytool -list -v -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey | grep -F 'SHA256: BE:20:B2:7F:0B:A1:F4:DE:CD:29:41:D4:10:B1:53:6D:E8:9E:48:DC:89:4F:04:F0:38:F9:D2:6B:11:EC:D6:AA'
+
+      - name: Build 390 duzeltme kapisi
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          grep -Fqx 'version: 1.0.166+390' app/pubspec.yaml
+          grep -Fq "defaultValue: '390'" app/lib/main.dart
+          grep -Fq "defaultValue: '1.0.166'" app/lib/main.dart
+
+          # Build 389'da gecen kritik akislar korunacak.
+          grep -Fq "class MesajIstekleriPage" app/lib/main.dart
+          grep -Fq "'requestRecipientUid':hedefUid" app/lib/main.dart
+          grep -Fq "'lastMessageClientAt':clientCreatedAt" app/lib/main.dart
+          grep -Fq "'lastSenderId':ben" app/lib/main.dart
+          grep -Fq 'ngelxOkunmamisAktiviteSayisi' app/lib/main.dart
+          grep -Fq 'ResizeImage(NgelXAgImageProvider(arkaPlanUrl),width:900)' app/lib/main.dart
+          grep -Fq "class KaydedilenlerPage" app/lib/main.dart
+          grep -Fq "class ArsivSohbetlerPage" app/lib/main.dart
+          grep -Fq "'systemAction':'background_changed'" app/lib/main.dart
+          grep -Fq "SnackBar ngelxDurumSnack" app/lib/main.dart
+
+          # Profil aramasinda gorunurluk ve engel gizliligi.
+          grep -Fq "final aranabilir=d.id==aktifUid||v['discoverableProfile']!=false;" app/lib/main.dart
+          grep -Fq "final beniEngelledi=aktifUid!=null&&List<String>.from(v['blocked']??const[]).contains(aktifUid);" app/lib/main.dart
+
+          # Engelleme: eski sohbet korunur, profil/mesaj/arama kilitlenir, engel kaldirma onaylidir.
+          grep -Fq "Future<bool> ngelxEngeliKaldir" app/lib/main.dart
+          grep -Fq "Engeli kaldırmak istiyor musun?" app/lib/main.dart
+          grep -Fq "Engeli kaldırmadan mesaj veya arama yapamazsın." app/lib/main.dart
+          grep -Fq "Bu hesabı engelledin. Engeli kaldırmadan mesaj gönderemez, arayamaz veya etkileşime geçemezsin." app/lib/main.dart
+          grep -Fq "final benEngelledim=engellenenler.contains(other);" app/lib/main.dart
+          ! grep -Fq "if(engellenenler.contains(other))return const SizedBox.shrink();" app/lib/main.dart
+
+          # Gizli kelime: gonderi sahibinin filtresi ucuncu kiside yorumu tamamen saklar.
+          grep -Fq "icerikSahibiGizliKelimeFiltresi" app/lib/main.dart
+          grep -Fq "if(sahibiFiltreledi&&aktifUid!=icerikSahibiUid&&aktifUid!=profilUid)return const SizedBox.shrink();" app/lib/main.dart
+
+          # Hikaye: video limiti ve NgelX icinde ozel paylasim.
+          grep -Fq "case 'stories':" app/lib/main.dart
+          grep -Fq "Video hikâye en fazla 80 MB olabilir." app/lib/main.dart
+          grep -Fq "NgelX içinde özele gönder" app/lib/main.dart
+          grep -Fq "await ngelxOzeldenPaylas(context,icerikId:widget.storyId" app/lib/main.dart
+
+          # Ozel sohbet klavye/composer artik standart viewport resize kullanir.
+          grep -Fq "resizeToAvoidBottomInset:true" app/lib/main.dart
+
+          # Gecen silme izi davranisi korunur.
+          grep -Fq "'deletedForEveryone':true" app/lib/main.dart
+          grep -Fq "final silinmis=v['deletedForEveryone']==true;" app/lib/main.dart
+
+          # Sosyal istek Activity teslim akisi korunur.
+          grep -Fq "batch.set(bildirimRef" app/lib/main.dart
+          grep -Fq "'type':tur" app/lib/main.dart
+          grep -Fq "'status':'pending'" app/lib/main.dart
+          grep -Fq ".where('toUid',isEqualTo:ben)" app/lib/main.dart
+
+          git diff --check
+
+      - name: Bagimliliklari al
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter clean
+          flutter pub get
+
+      - name: Flutter analiz
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter analyze --no-fatal-infos --no-fatal-warnings
+
+      - name: Gercek APK olustur
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter build apk --release --build-name=1.0.166 --build-number=390
+          test -s build/app/outputs/flutter-apk/app-release.apk
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          test -n "$APKSIGNER"
+          "$APKSIGNER" verify --verbose --print-certs build/app/outputs/flutter-apk/app-release.apk
+          cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/NgelX-1.0.166-Build-390-FAILED-TEST-FIXES.apk
+          sha256sum build/app/outputs/flutter-apk/NgelX-1.0.166-Build-390-FAILED-TEST-FIXES.apk > build/app/outputs/flutter-apk/NgelX-1.0.166-Build-390-FAILED-TEST-FIXES.apk.sha256
+
+      - name: APK yukle
+        uses: actions/upload-artifact@v4
+        with:
+          name: NgelX-1.0.166-Build-390-FAILED-TEST-FIXES
+          path: |
+            app/build/app/outputs/flutter-apk/NgelX-1.0.166-Build-390-FAILED-TEST-FIXES.apk
+            app/build/app/outputs/flutter-apk/NgelX-1.0.166-Build-390-FAILED-TEST-FIXES.apk.sha256
+          if-no-files-found: error
+          retention-days: 14
