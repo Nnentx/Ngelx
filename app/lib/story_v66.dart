@@ -424,35 +424,42 @@ class _NgelXHikayeSeriPageState extends State<NgelXHikayeSeriPage> with SingleTi
     final oneCikan=veri['highlighted']==true;
     final sec=await showModalBottomSheet<String>(
       context:context,backgroundColor:Colors.white,showDragHandle:true,
-      builder:(c)=>SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
-        if(benim)ListTile(
-          leading:const Icon(Icons.share_outlined,color:mor),
-          title:const Text('Hikâyeyi paylaş',style:TextStyle(fontWeight:FontWeight.w800)),
-          onTap:()=>Navigator.pop(c,'share'),
+      builder:(c)=>Theme(
+        data:ThemeData.light().copyWith(
+          scaffoldBackgroundColor:Colors.white,
+          textTheme:ThemeData.light().textTheme.apply(bodyColor:Colors.black87,displayColor:Colors.black87),
+          iconTheme:const IconThemeData(color:Colors.black87),
         ),
-        if(benim)ListTile(
-          leading:Icon(oneCikan?Icons.star_rounded:Icons.star_border_rounded,color:oneCikan?Colors.amber:mor),
-          title:Text(oneCikan?'Öne çıkanlardan kaldır':'Öne çıkanlara ekle',style:const TextStyle(fontWeight:FontWeight.w800)),
-          onTap:()=>Navigator.pop(c,'highlight'),
-        ),
-        if(benim)ListTile(
-          leading:const Icon(Icons.archive_outlined,color:mor),
-          title:const Text('Arşive taşı',style:TextStyle(fontWeight:FontWeight.w800)),
-          subtitle:const Text('Hikâye aktif görünümden kalkar, arşivinde kalır.'),
-          onTap:()=>Navigator.pop(c,'archive'),
-        ),
-        if(benim)ListTile(
-          leading:const Icon(Icons.delete_outline_rounded,color:Colors.red),
-          title:const Text('Hikâyeyi sil',style:TextStyle(color:Colors.red,fontWeight:FontWeight.w800)),
-          onTap:()=>Navigator.pop(c,'delete'),
-        ),
-        if(!benim)ListTile(
-          leading:const Icon(Icons.flag_outlined,color:Colors.redAccent),
-          title:const Text('Hikâyeyi bildir'),
-          onTap:()=>Navigator.pop(c,'report'),
-        ),
-        ListTile(leading:const Icon(Icons.close_rounded),title:const Text('Kapat'),onTap:()=>Navigator.pop(c,'close')),
-      ])),
+        child:SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
+          if(benim)ListTile(
+            leading:const Icon(Icons.share_outlined,color:mor),
+            title:const Text('Hikâyeyi paylaş',style:TextStyle(color:Colors.black87,fontWeight:FontWeight.w800)),
+            onTap:()=>Navigator.pop(c,'share'),
+          ),
+          if(benim)ListTile(
+            leading:Icon(oneCikan?Icons.star_rounded:Icons.star_border_rounded,color:oneCikan?Colors.amber:mor),
+            title:Text(oneCikan?'Öne çıkanlardan kaldır':'Öne çıkanlara ekle',style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w800)),
+            onTap:()=>Navigator.pop(c,'highlight'),
+          ),
+          if(benim)ListTile(
+            leading:const Icon(Icons.archive_outlined,color:mor),
+            title:const Text('Arşive taşı',style:TextStyle(color:Colors.black87,fontWeight:FontWeight.w800)),
+            subtitle:const Text('Hikâye aktif görünümden kalkar, arşivinde kalır.',style:TextStyle(color:Colors.black54)),
+            onTap:()=>Navigator.pop(c,'archive'),
+          ),
+          if(benim)ListTile(
+            leading:const Icon(Icons.delete_outline_rounded,color:Colors.red),
+            title:const Text('Hikâyeyi sil',style:TextStyle(color:Colors.red,fontWeight:FontWeight.w800)),
+            onTap:()=>Navigator.pop(c,'delete'),
+          ),
+          if(!benim)ListTile(
+            leading:const Icon(Icons.flag_outlined,color:Colors.redAccent),
+            title:const Text('Hikâyeyi bildir',style:TextStyle(color:Colors.black87)),
+            onTap:()=>Navigator.pop(c,'report'),
+          ),
+          ListTile(leading:const Icon(Icons.close_rounded,color:Colors.black54),title:const Text('Kapat',style:TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(c,'close')),
+        ])),
+      ),
     );
     if(!mounted)return;
     final d=belge;
@@ -460,15 +467,15 @@ class _NgelXHikayeSeriPageState extends State<NgelXHikayeSeriPage> with SingleTi
       try{
         await SharePlus.instance.share(ShareParams(text:url));
       }catch(_){
-        if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Hikâye paylaşılamadı.')));
+        if(mounted)ngelxDurumMesaji(context,'Hikâye paylaşılamadı.',tip:'hata');
       }
     }else if(sec=='highlight'&&d!=null){
       try{
         await d.reference.set({'highlighted':!oneCikan,'updatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
         if(mounted)setState((){});
-        if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(oneCikan?'Öne çıkanlardan kaldırıldı.':'Öne çıkanlara eklendi.')));
+        if(mounted)ngelxDurumMesaji(context,oneCikan?'Öne çıkanlardan kaldırıldı.':'Öne çıkanlara eklendi.',tip:'basari');
       }catch(_){
-        if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Öne çıkanlar güncellenemedi.')));
+        if(mounted)ngelxDurumMesaji(context,'Öne çıkanlar güncellenemedi.',tip:'hata');
       }
     }else if(sec=='archive'&&d!=null){
       try{
@@ -488,9 +495,9 @@ class _NgelXHikayeSeriPageState extends State<NgelXHikayeSeriPage> with SingleTi
         if(aktif>=hikayeler.length)aktif=hikayeler.length-1;
         if(mounted)setState((){});
         await _aktifHikayeyiBaslat();
-        if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Hikâye arşive taşındı.')));
+        if(mounted)ngelxDurumMesaji(context,'Hikâye arşive taşındı.',tip:'basari');
       }catch(_){
-        if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Hikâye arşivlenemedi.')));
+        if(mounted)ngelxDurumMesaji(context,'Hikâye arşivlenemedi.',tip:'hata');
       }
     }else if(sec=='delete'&&storyId.isNotEmpty){
       final onay=await showDialog<bool>(
@@ -527,7 +534,7 @@ class _NgelXHikayeSeriPageState extends State<NgelXHikayeSeriPage> with SingleTi
         hikayeler.removeAt(aktif);
         if(hikayeler.isEmpty){
           if(mounted){
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Hikâye silindi.')));
+            ngelxDurumMesaji(context,'Hikâye silindi.',tip:'basari');
             Navigator.pop(context);
           }
           return;
@@ -535,9 +542,9 @@ class _NgelXHikayeSeriPageState extends State<NgelXHikayeSeriPage> with SingleTi
         if(aktif>=hikayeler.length)aktif=hikayeler.length-1;
         if(mounted)setState((){});
         await _aktifHikayeyiBaslat();
-        if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Hikâye silindi.')));
+        if(mounted)ngelxDurumMesaji(context,'Hikâye silindi.',tip:'basari');
       }catch(_){
-        if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Hikâye silinemedi.')));
+        if(mounted)ngelxDurumMesaji(context,'Hikâye silinemedi.',tip:'hata');
       }
     }else if(sec=='report'&&storyId.isNotEmpty){
       if(mounted)await sikayetEt(context,hedefTuru:'hikaye',hedefId:storyId,hedefUid:widget.ownerUid);
