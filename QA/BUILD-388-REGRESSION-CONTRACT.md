@@ -204,6 +204,17 @@ Source: user device recording 44176.mp4 (~21.7 s), private chat with a photo bac
 - The wallpaper still visibly re-crops when the keyboard closes; the previously logged wallpaper jump issue remains OPEN.
 - This recording contains only a limited keyboard open/close cycle, so repeated-cycle behavior is not fully verified.
 
+## Build 388 shared background removal attribution — 2026-10-05
+
+### Passed
+- Removing/resetting the shared private-chat background takes effect in the conversation.
+
+### Open UX defect
+- The chat does not show **who removed/reset the shared background**.
+- Expected system event example: “Rojin sohbet arka planını kaldırdı” or “Umay sohbet arka planını sıfırladı”, with timestamp.
+- The same attribution rule should apply to background image change, background color change, opacity change, and reset/remove.
+- Preserve the already verified two-account shared-background synchronization while adding attribution.
+
 ## CI gate
 
 A Build 388 APK is valid only when:
