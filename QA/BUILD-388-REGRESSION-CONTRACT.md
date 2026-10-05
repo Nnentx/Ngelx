@@ -196,6 +196,14 @@ Source: user device recording 44176.mp4 (~21.7 s), private chat with a photo bac
 - Preserve the current follow relationship; friend-request state must remain independent from follow state.
 - After a successful retry, show one pending request only and prevent duplicate active requests.
 
+## Build 388 keyboard performance video check — 2026-10-05
+
+- Device video 44257.mp4 was reviewed.
+- With the photo chat background active, typing remained responsive and the composer expanded normally.
+- No obvious freeze, crash, or message disappearance was visible.
+- The wallpaper still visibly re-crops when the keyboard closes; the previously logged wallpaper jump issue remains OPEN.
+- This recording contains only a limited keyboard open/close cycle, so repeated-cycle behavior is not fully verified.
+
 ## CI gate
 
 A Build 388 APK is valid only when:
