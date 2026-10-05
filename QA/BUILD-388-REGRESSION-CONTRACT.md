@@ -123,6 +123,20 @@ Source: user device recording 44176.mp4 (~21.7 s), private chat with a photo bac
 - No card, text, chevron or interaction row overlaps the system buttons.
 - Result: **DEVICE VERIFIED / PASSED**.
 
+## Build 388 story delete device verification — 2026-10-05
+
+### Passed
+- Story delete confirmation dialog is readable on the dark story viewer.
+- Title, body, “Vazgeç” and “Sil” actions are visible.
+- Delete action completes and the app shows “Hikâye silindi.”
+- Result for the original delete-dialog visibility bug: **DEVICE VERIFIED / PASSED**.
+
+### New defect observed
+- In the story options bottom sheet, the first three owner actions show their purple icons but their text labels are not visible.
+- “Hikâyeyi sil” remains visible in red.
+- Affected actions are the rows for share, highlight and archive.
+- This is tracked as an **OPEN UI defect**. Fix must restore readable labels without breaking the now-verified delete dialog.
+
 ## CI gate
 
 A Build 388 APK is valid only when:
