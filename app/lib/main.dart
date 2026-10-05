@@ -275,8 +275,8 @@ void ngelxDurumMesaji(BuildContext context,String metin,{String tip='bilgi'}){
 
 // Build 372: settings/about must reflect the installed build instead of the old 368 fallback.
 // Release builds can still override these with --dart-define.
-const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.165');
-const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '389');
+const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.166');
+const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '390');
 const ngelxGroupBorder = Color(0xFFD9EEE0);
 
 final GlobalKey<NavigatorState> ngelxNavigatorKey=GlobalKey<NavigatorState>();
@@ -1022,6 +1022,7 @@ Future<XFile> _ngelxGaleridenResmiNormalizeEt(XFile secilen) async {
 int _ngelxMaksimumMedyaBoyutu(String kind) {
   switch (kind) {
     case 'videos':
+    case 'stories':
       return 80 * 1024 * 1024;
     case 'profile-intros':
       return 35 * 1024 * 1024;
@@ -3744,7 +3745,10 @@ Future<void> kullaniciyiEngelle(BuildContext context,String hedefUid) async {
   final u=FirebaseAuth.instance.currentUser;if(u==null||u.isAnonymous)return;
   final tamam=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(title:const Text('Kullanıcı engellensin mi?'),content:const Text('Birbirinizin profilini ve içeriklerini göremez, mesaj gönderemezsiniz.'),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:Text(t('cancel'))),FilledButton(onPressed:()=>Navigator.pop(c,true),style:FilledButton.styleFrom(backgroundColor:Colors.red),child:Text(t('block')))]))??false;
   if(!tamam)return;
-  try{await FirebaseFirestore.instance.collection('users').doc(u.uid).set({'blocked':FieldValue.arrayUnion([hedefUid])},SetOptions(merge:true));if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Kullanıcı engellendi.')));}catch(e){if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Engelleme tamamlanamadı: $e')));}
+  try{
+    await FirebaseFirestore.instance.collection('users').doc(u.uid).set({'blocked':FieldValue.arrayUnion([hedefUid])},SetOptions(merge:true));
+    if(context.mounted)ngelxDurumMesaji(context,'Kullanıcı engellendi.',tip:'basari');
+  }catch(e){if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Engelleme tamamlanamadı: $e')));}
 }
 
 class NgelXAcilisKapisi extends StatefulWidget {
@@ -5716,7 +5720,13 @@ class _AramaPageState extends State<AramaPage> {
               builder: (_, snap) {
                 if (!snap.hasData) return const Center(child: CircularProgressIndicator(color: mavi));
                 bool eslesir(String metin) => metin.toLowerCase().split(RegExp(r'[^a-z0-9ığüşöç]+')).any((kelime) => kelime.startsWith(sorgu));
-                final kullanicilar = snap.data![0].docs.where((d) { final v=d.data(); return !engellenenler.contains(d.id)&&v['deactivated']!=true&&eslesir('${v['username'] ?? ''} ${v['displayName'] ?? ''}'); }).toList();
+                final aktifUid=FirebaseAuth.instance.currentUser?.uid;
+                final kullanicilar = snap.data![0].docs.where((d) {
+                  final v=d.data();
+                  final beniEngelledi=aktifUid!=null&&List<String>.from(v['blocked']??const[]).contains(aktifUid);
+                  final aranabilir=d.id==aktifUid||v['discoverableProfile']!=false;
+                  return aranabilir&&!beniEngelledi&&!engellenenler.contains(d.id)&&v['deactivated']!=true&&eslesir('${v['username'] ?? ''} ${v['displayName'] ?? ''}');
+                }).toList();
                 final icerikler = snap.data![1].docs.where((d) { final v=d.data(); return !engellenenler.contains((v['ownerId']??'').toString())&&v['type'] != 'story' && '${v['description'] ?? ''} ${v['username'] ?? ''}'.toLowerCase().contains(sorgu); }).toList();
                 if (kullanicilar.isEmpty && icerikler.isEmpty) return Center(child: Text(t('noResults')));
                 return ListView(children: [
@@ -11312,10 +11322,12 @@ class _MesajPageState extends State<MesajPage> {
             final grup=v['isGroup']==true||members.length>2;
             if(grup){final ad=(v['groupName']??t('groupChat')).toString(),foto=(v['groupPhotoUrl']??'').toString(),unread=(v['unread_$ben'] as num?)?.toInt()??0;return ListTile(onTap:()=>sohbetiAc(d.id,GrupSohbetPage(chatId:d.id,ad:ad,foto:foto)),onLongPress:()=>sohbetMenusu(context,d.id,grup:true),leading:CircleAvatar(backgroundColor:const Color(0xFFE9DDFF),backgroundImage:foto.isEmpty?null:NgelXAgImageProvider(foto),child:foto.isEmpty?const Icon(Icons.groups,color:mor):null),title:Text(ad,style:TextStyle(color:Colors.black87,fontWeight:unread>0?FontWeight.w900:FontWeight.w700)),subtitle:Text((v['lastMessage']??t('groupCreated')).toString(),maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black54)),trailing:Wrap(crossAxisAlignment:WrapCrossAlignment.center,children:[if(sabitSohbetler.contains(d.id))const Icon(Icons.push_pin,size:16,color:mor),if(sessizSohbetler.contains(d.id))const Icon(Icons.volume_off,size:18,color:Colors.black38),if(unread>0)Badge(label:Text('$unread'))]));}
             final other=members.firstWhere((x)=>x!=ben,orElse:()=>ben??'');
-            if(engellenenler.contains(other))return const SizedBox.shrink();
+            final benEngelledim=engellenenler.contains(other);
             return StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(stream:FirebaseFirestore.instance.collection('users').doc(other).snapshots(),builder:(_,u){
               final p=u.data?.data()??{};
-              if(p['deactivated']==true||List<String>.from(p['blocked']??const[]).contains(ben))return const SizedBox.shrink();
+              if(p['deactivated']==true)return const SizedBox.shrink();
+              final beniEngelledi=ben!=null&&List<String>.from(p['blocked']??const[]).contains(ben);
+              final engelliSohbet=benEngelledim||beniEngelledi;
               final hamTakmalar=v['nicknames'],takmalar=hamTakmalar is Map?Map<String,dynamic>.from(hamTakmalar):<String,dynamic>{},takma=(ben==null?'':(takmalar[ben]??'').toString()).trim(),profilAdi=(p['displayName']??p['username']??'NgelX').toString(),gorunenAd=takma.isNotEmpty?takma:profilAdi;
               final aranan='$gorunenAd ${p['displayName']??''} ${p['username']??''} ${v['lastMessage']??''}'.toLowerCase();
               if(sohbetSorgu.isNotEmpty&&!aranan.contains(sohbetSorgu))return const SizedBox.shrink();
@@ -17809,10 +17821,14 @@ class GrupUyeEngellePage extends StatelessWidget{
 
   Future<void> _degistir(BuildContext context,String hedef,bool engelli)async{
     final me=FirebaseAuth.instance.currentUser?.uid;if(me==null)return;
+    if(engelli){
+      await ngelxEngeliKaldir(context,hedef);
+      return;
+    }
     await FirebaseFirestore.instance.collection('users').doc(me).set({
-      'blocked':engelli?FieldValue.arrayRemove([hedef]):FieldValue.arrayUnion([hedef]),
+      'blocked':FieldValue.arrayUnion([hedef]),
     },SetOptions(merge:true));
-    if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(engelli?'Engel kaldırıldı.':'Üye engellendi.')));
+    if(context.mounted)ngelxDurumMesaji(context,'Üye engellendi.',tip:'basari');
   }
 
   @override Widget build(BuildContext context){
@@ -20685,7 +20701,7 @@ class _SohbetPageState extends State<SohbetPage> {
       ),
     ),
     child:Scaffold(
-    resizeToAvoidBottomInset:false,
+    resizeToAvoidBottomInset:true,
     backgroundColor:Colors.white,
     appBar:AppBar(
       leading:const BackButton(color:ngelxPrivateBlue),
@@ -20740,7 +20756,7 @@ class _SohbetPageState extends State<SohbetPage> {
       ],
     ),
     bottomNavigationBar:SizedBox(height:MediaQuery.viewPaddingOf(context).bottom),
-    body:StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(stream:_chatAkisi,builder:(_,tema){final veri=tema.data?.data()??<String,dynamic>{},ham=veri['theme']??veri['theme_$uid'],arkaPlanHam=veri['backgroundOpacity']??veri['backgroundOpacity_$uid'];final arkaPlan=ham is int?Color(ham):Colors.white,arkaPlanUrl=(veri['backgroundUrl']??veri['backgroundUrl_$uid']??'').toString(),hizliEmoji=(veri['quickEmoji_$uid']??'👍').toString(),arkaPlanOpaklik=(arkaPlanHam is num?arkaPlanHam.toDouble():.30).clamp(.05,.85).toDouble(),mesajYaziBoyutu=(veri['messageFontSize_$uid'] is num?(veri['messageFontSize_$uid'] as num).toDouble():16.0).clamp(12.0,22.0).toDouble();return Container(decoration:BoxDecoration(color:arkaPlan,image:arkaPlanUrl.isEmpty?null:DecorationImage(image:ResizeImage(NgelXAgImageProvider(arkaPlanUrl),width:900),fit:BoxFit.cover,opacity:arkaPlanOpaklik,filterQuality:FilterQuality.low)),child:AnimatedPadding(duration:const Duration(milliseconds:170),curve:Curves.easeOut,padding:EdgeInsets.only(bottom:math.max(0,MediaQuery.viewInsetsOf(context).bottom-MediaQuery.viewPaddingOf(context).bottom)),child:Column(children:[
+    body:StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(stream:_chatAkisi,builder:(_,tema){final veri=tema.data?.data()??<String,dynamic>{},ham=veri['theme']??veri['theme_$uid'],arkaPlanHam=veri['backgroundOpacity']??veri['backgroundOpacity_$uid'];final arkaPlan=ham is int?Color(ham):Colors.white,arkaPlanUrl=(veri['backgroundUrl']??veri['backgroundUrl_$uid']??'').toString(),hizliEmoji=(veri['quickEmoji_$uid']??'👍').toString(),arkaPlanOpaklik=(arkaPlanHam is num?arkaPlanHam.toDouble():.30).clamp(.05,.85).toDouble(),mesajYaziBoyutu=(veri['messageFontSize_$uid'] is num?(veri['messageFontSize_$uid'] as num).toDouble():16.0).clamp(12.0,22.0).toDouble();return Container(decoration:BoxDecoration(color:arkaPlan,image:arkaPlanUrl.isEmpty?null:DecorationImage(image:ResizeImage(NgelXAgImageProvider(arkaPlanUrl),width:900),fit:BoxFit.cover,opacity:arkaPlanOpaklik,filterQuality:FilterQuality.low)),child:AnimatedPadding(duration:const Duration(milliseconds:120),curve:Curves.easeOut,padding:EdgeInsets.zero,child:Column(children:[
       if(((veri['callStatus']??'').toString()=='ringing'||(veri['callStatus']??'').toString()=='active')&&(veri['callRoomName']??'').toString().isNotEmpty)
         InkWell(
           onTap:()async{
@@ -23975,6 +23991,25 @@ class _HikayeGosterPageState extends State<HikayeGosterPage> with SingleTickerPr
                     context:context,backgroundColor:Colors.white,showDragHandle:true,
                     builder:(c)=>SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
                       ListTile(leading:Icon(videoMu?Icons.videocam_outlined:Icons.image_outlined),title:Text(videoMu?'Video hikâye':'Fotoğraf hikâyesi'),subtitle:Text(zamanBilgisi)),
+                      ListTile(
+                        leading:const Icon(Icons.share_outlined,color:mor),
+                        title:const Text('Hikâyeyi paylaş'),
+                        onTap:()async{
+                          Navigator.pop(c);
+                          await Future<void>.delayed(const Duration(milliseconds:160));
+                          if(context.mounted)await SharePlus.instance.share(ShareParams(text:widget.url));
+                        },
+                      ),
+                      ListTile(
+                        leading:const Icon(Icons.send_rounded,color:mor),
+                        title:const Text('NgelX içinde özele gönder'),
+                        subtitle:const Text('Yalnızca seçtiğin kişilere özel mesaj olarak gönderilir.'),
+                        onTap:()async{
+                          Navigator.pop(c);
+                          await Future<void>.delayed(const Duration(milliseconds:180));
+                          if(context.mounted&&widget.storyId.isNotEmpty)await ngelxOzeldenPaylas(context,icerikId:widget.storyId,aciklama:'Hikâye');
+                        },
+                      ),
                       ListTile(leading:const Icon(Icons.close),title:const Text('Kapat'),onTap:()=>Navigator.pop(c)),
                     ])),
                   ).whenComplete(_devam);
@@ -24768,7 +24803,10 @@ class _GirisGecmisiPageState extends State<GirisGecmisiPage>{
 class EngellenenlerPage extends StatefulWidget {const EngellenenlerPage({super.key});@override State<EngellenenlerPage> createState()=>_EngellenenlerPageState();}
 class _EngellenenlerPageState extends State<EngellenenlerPage>{
   Future<List<String>> getir()async{final u=FirebaseAuth.instance.currentUser;if(u==null)return[];final d=await FirebaseFirestore.instance.collection('users').doc(u.uid).get();return List<String>.from(d.data()?['blocked']??const[]);}
-  Future<void> kaldir(String uid)async{final u=FirebaseAuth.instance.currentUser;if(u==null)return;await FirebaseFirestore.instance.collection('users').doc(u.uid).set({'blocked':FieldValue.arrayRemove([uid])},SetOptions(merge:true));if(mounted)setState((){});}
+  Future<void> kaldir(String uid)async{
+    final basarili=await ngelxEngeliKaldir(context,uid);
+    if(basarili&&mounted)setState((){});
+  }
 
   @override
   Widget build(BuildContext context) => Theme(
@@ -25417,7 +25455,7 @@ class TakipIstegiGecmisiPage extends StatelessWidget{
     if(!ok)return;
     try{
       await sosyalIstekIptalEt(d.reference);
-      if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('İstek geri çekildi.')));
+      if(context.mounted)ngelxDurumMesaji(context,'İstek geri çekildi.',tip:'basari');
     }on TimeoutException{
       if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('İstek geri çekme zaman aşımına uğradı.')));
     }catch(e){
@@ -26378,9 +26416,9 @@ class _ProfilPageState extends State<ProfilPage> {
       if(dosya==null||!mounted)return;
 
       final boyut=await dosya.length();
-      final limit=video?50*1024*1024:10*1024*1024;
+      final limit=video?_ngelxMaksimumMedyaBoyutu('stories'):10*1024*1024;
       if(boyut<=0||boyut>limit){
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(video?'Video en fazla 50 MB olabilir.':'Fotoğraf en fazla 10 MB olabilir.')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(video?'Video hikâye en fazla 80 MB olabilir.':'Fotoğraf en fazla 10 MB olabilir.')));
         return;
       }
 
