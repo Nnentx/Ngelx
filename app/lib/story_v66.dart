@@ -495,19 +495,27 @@ class _NgelXHikayeSeriPageState extends State<NgelXHikayeSeriPage> with SingleTi
     }else if(sec=='delete'&&storyId.isNotEmpty){
       final onay=await showDialog<bool>(
         context:context,
-        builder:(c)=>AlertDialog(
-          backgroundColor:Colors.white,
-          surfaceTintColor:Colors.white,
-          title:const Text('Hikâye silinsin mi?',style:TextStyle(fontWeight:FontWeight.w900)),
-          content:const Text('Bu hikâye kalıcı olarak silinecek. Bu işlem geri alınamaz.'),
-          actions:[
-            TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),
-            FilledButton(
-              style:FilledButton.styleFrom(backgroundColor:Colors.red,foregroundColor:Colors.white),
-              onPressed:()=>Navigator.pop(c,true),
-              child:const Text('Sil'),
-            ),
-          ],
+        builder:(c)=>Theme(
+          data:ThemeData.light().copyWith(
+            dialogTheme:const DialogThemeData(backgroundColor:Colors.white,surfaceTintColor:Colors.transparent),
+            textTheme:ThemeData.light().textTheme.apply(bodyColor:Colors.black87,displayColor:Colors.black87),
+          ),
+          child:AlertDialog(
+            backgroundColor:Colors.white,
+            surfaceTintColor:Colors.transparent,
+            shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(26)),
+            icon:const Icon(Icons.delete_outline_rounded,color:Colors.red,size:34),
+            title:const Text('Hikâye silinsin mi?',textAlign:TextAlign.center,style:TextStyle(color:Colors.black87,fontWeight:FontWeight.w900)),
+            content:const Text('Bu hikâye kalıcı olarak silinecek. Bu işlem geri alınamaz.',textAlign:TextAlign.center,style:TextStyle(color:Colors.black87,height:1.35)),
+            actions:[
+              TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç',style:TextStyle(color:mor,fontWeight:FontWeight.w800))),
+              FilledButton(
+                style:FilledButton.styleFrom(backgroundColor:Colors.red,foregroundColor:Colors.white),
+                onPressed:()=>Navigator.pop(c,true),
+                child:const Text('Sil',style:TextStyle(fontWeight:FontWeight.w900)),
+              ),
+            ],
+          ),
         ),
       )??false;
       if(!onay){
