@@ -107,6 +107,14 @@ Source: user device recording 44176.mp4 (~21.7 s), private chat with a photo bac
   - Expected behavior: add a lightweight system event such as “Umay sohbet arka planını değiştirdi” (and equivalent for color/reset), with timestamp.
   - This is tracked as an OPEN UX defect; do not break the now-verified two-account synchronization while adding attribution.
 
+## Build 388 chat info bottom safe-area device verification — 2026-10-05
+
+- Sohbet Bilgisi was scrolled to the bottom on device.
+- The final action, “Sohbeti sil”, remained fully visible.
+- There is clear spacing above the Android system navigation area.
+- No text, icon, chevron or action row overlaps the system buttons.
+- Result: **DEVICE VERIFIED / PASSED**.
+
 ## CI gate
 
 A Build 388 APK is valid only when:
