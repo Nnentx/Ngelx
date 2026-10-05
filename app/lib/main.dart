@@ -16,6 +16,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:camera/camera.dart';
 import 'package:image/image.dart' as img;
 import 'package:video_player/video_player.dart';
+import 'package:video_compress/video_compress.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:gal/gal.dart';
@@ -274,8 +275,8 @@ void ngelxDurumMesaji(BuildContext context,String metin,{String tip='bilgi'}){
 
 // Build 372: settings/about must reflect the installed build instead of the old 368 fallback.
 // Release builds can still override these with --dart-define.
-const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.164');
-const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '388');
+const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.165');
+const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '389');
 const ngelxGroupBorder = Color(0xFFD9EEE0);
 
 final GlobalKey<NavigatorState> ngelxNavigatorKey=GlobalKey<NavigatorState>();
@@ -3091,13 +3092,52 @@ Future<bool> sosyalIstekGonder({
       : List<String>.from(benimVeri['friends']??const[]).contains(hedefUid)
         ||List<String>.from(hedefVeri['friends']??const[]).contains(user.uid);
     if(zatenIliski)return false;
-    if(mevcut.exists&&mevcut.data()?['status']=='pending')return false;
+
+    Future<bool> aktifBekleyenIstek(DocumentSnapshot<Map<String,dynamic>> d)async{
+      if(!d.exists||d.data()?['status']!='pending')return false;
+      final nId=(d.data()?['notificationId']??'').toString();
+      if(nId.isEmpty)return true;
+      try{
+        final n=await firestore.collection('notifications').doc(nId)
+            .get(const GetOptions(source:Source.server))
+            .timeout(const Duration(seconds:6));
+        return n.exists&&n.data()?['status']=='pending';
+      }catch(_){
+        return true;
+      }
+    }
+
+    if(mevcut.exists&&mevcut.data()?['status']=='pending'){
+      if(await aktifBekleyenIstek(mevcut))return false;
+      await istekRef.set({
+        'status':'cancelled',
+        'cancelledAt':FieldValue.serverTimestamp(),
+        'updatedAt':FieldValue.serverTimestamp(),
+      },SetOptions(merge:true)).timeout(const Duration(seconds:8));
+    }
 
     if(tur=='friend_request'){
-      final ters=await sosyalIstekRef(hedefUid,user.uid,tur)
-          .get(const GetOptions(source:Source.server))
+      final tersRef=sosyalIstekRef(hedefUid,user.uid,tur);
+      final ters=await tersRef.get(const GetOptions(source:Source.server))
           .timeout(const Duration(seconds:8));
-      if(ters.exists&&ters.data()?['status']=='pending')return false;
+      if(ters.exists&&ters.data()?['status']=='pending'){
+        if(await aktifBekleyenIstek(ters))return false;
+        await tersRef.set({
+          'status':'rejected',
+          'answeredAt':FieldValue.serverTimestamp(),
+          'updatedAt':FieldValue.serverTimestamp(),
+        },SetOptions(merge:true)).timeout(const Duration(seconds:8));
+        final eskiBildirim=(ters.data()?['notificationId']??'').toString();
+        if(eskiBildirim.isNotEmpty){
+          try{
+            await firestore.collection('notifications').doc(eskiBildirim).set({
+              'status':'superseded',
+              'read':true,
+              'supersededAt':FieldValue.serverTimestamp(),
+            },SetOptions(merge:true)).timeout(const Duration(seconds:6));
+          }catch(_){}
+        }
+      }
     }
 
     final emailAdi=(user.email??'').split('@').first.trim();
@@ -3777,6 +3817,13 @@ class NgelXApp extends StatelessWidget {
         colorScheme: const ColorScheme.dark(
           primary: mor,
           secondary: mavi,
+        ),
+        snackBarTheme:SnackBarThemeData(
+          behavior:SnackBarBehavior.floating,
+          backgroundColor:ngelxPrivateBlue,
+          contentTextStyle:const TextStyle(color:Colors.white,fontWeight:FontWeight.w800,fontSize:15),
+          shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(16)),
+          insetPadding:const EdgeInsets.fromLTRB(16,8,16,18),
         ),
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
@@ -9904,36 +9951,68 @@ class _YeniYuklePageState extends State<YuklePage> {
   Future<void> _hikayePaylas(ImageSource kaynak,{required bool video})async{
     final user=FirebaseAuth.instance.currentUser;
     if(user==null||yukleniyor)return;
+    XFile? geciciSikistirilmis;
     try{
       if(kaynak==ImageSource.camera){
         final izin=await Permission.camera.request();
         if(!izin.isGranted){
-          if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(lt('Hikâye çekmek için kamera izni vermelisin.','Camera permission is required to create a story.'))));
+          if(mounted)ngelxDurumMesaji(context,lt('Hikâye çekmek için kamera izni vermelisin.','Camera permission is required to create a story.'),tip:'uyari');
           return;
         }
         if(video){
           final mikrofon=await Permission.microphone.request();
           if(!mikrofon.isGranted){
-            if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(lt('Videolu hikâye için mikrofon izni vermelisin.','Microphone permission is required for a video story.'))));
+            if(mounted)ngelxDurumMesaji(context,lt('Videolu hikâye için mikrofon izni vermelisin.','Microphone permission is required for a video story.'),tip:'uyari');
             return;
           }
         }
       }
 
-      final XFile? dosya=video
+      final XFile? secilen=video
         ?await ngelxVideoSec(source:kaynak,maxDuration:const Duration(seconds:30))
         :await ngelxResimSec(source:kaynak,imageQuality:84,maxWidth:1600);
-      if(dosya==null||!mounted)return;
-      if(!await _medyaBoyutuUygun(dosya,video?'video':'photo'))return;
+      if(secilen==null||!mounted)return;
+
+      if(!video){
+        if(!await _medyaBoyutuUygun(secilen,'photo'))return;
+      }else{
+        final ilkBoyut=await secilen.length();
+        if(ilkBoyut<=0){
+          ngelxDurumMesaji(context,lt('Seçilen video boş görünüyor.','The selected video appears to be empty.'),tip:'hata');
+          return;
+        }
+      }
 
       setState((){
         yukleniyor=true;
-        yuklemeDurumu=video?'Video hikâye yükleniyor...':'Hikâye yükleniyor...';
+        yuklemeDurumu=video?'Video hikâye hazırlanıyor...':'Hikâye yükleniyor...';
         yuklemeIlerlemesi=0;
       });
 
-      final uzanti=dosya.name.contains('.')
-        ?dosya.name.split('.').last.toLowerCase()
+      XFile yuklenecek=secilen;
+      if(video){
+        final boyut=await secilen.length();
+        if(boyut>45*1024*1024){
+          if(mounted)setState(()=>yuklemeDurumu='Video hikâye sıkıştırılıyor...');
+          final bilgi=await VideoCompress.compressVideo(
+            secilen.path,
+            quality:VideoQuality.Res1280x720Quality,
+            deleteOrigin:false,
+            includeAudio:true,
+          ).timeout(const Duration(minutes:3));
+          final f=bilgi?.file;
+          if(f==null||!await f.exists())throw Exception('Video sıkıştırılamadı.');
+          geciciSikistirilmis=XFile(f.path);
+          yuklenecek=geciciSikistirilmis;
+        }
+        final sonBoyut=await yuklenecek.length();
+        if(sonBoyut<=0)throw Exception('Hazırlanan video boş.');
+        if(sonBoyut>80*1024*1024)throw Exception('Video sıkıştırmadan sonra da 80 MB sınırını aşıyor.');
+        if(mounted)setState(()=>yuklemeDurumu='Video hikâye yükleniyor...');
+      }
+
+      final uzanti=yuklenecek.name.contains('.')
+        ?yuklenecek.name.split('.').last.toLowerCase()
         :(video?'mp4':'jpg');
       final yol='stories/'+user.uid+'/'+DateTime.now().millisecondsSinceEpoch.toString()+'.'+uzanti;
       void ilerleme(int sent,int total){
@@ -9941,8 +10020,8 @@ class _YeniYuklePageState extends State<YuklePage> {
       }
 
       final url=video
-        ?await ngelxMedyaYukleDosya(dosya:dosya,kind:'videos',ext:uzanti,legacyPath:yol,onProgress:ilerleme)
-        :await ngelxFotografYukle(dosya:dosya,kind:'stories',ext:uzanti,legacyPath:yol,onProgress:ilerleme);
+        ?await ngelxMedyaYukleDosya(dosya:yuklenecek,kind:'videos',ext:uzanti,legacyPath:yol,onProgress:ilerleme)
+        :await ngelxFotografYukle(dosya:yuklenecek,kind:'stories',ext:uzanti,legacyPath:yol,onProgress:ilerleme);
 
       final profil=await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
       final adi=(profil.data()?['username']??'ngelx').toString();
@@ -9967,12 +10046,17 @@ class _YeniYuklePageState extends State<YuklePage> {
       });
 
       if(!mounted)return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content:Text(video?lt('Video hikâyen yayınlandı • 24 saat görünür.','Your video story is live • visible for 24 hours.'):lt('Hikâye yayınlandı • 24 saat görünür.','Your story is live • visible for 24 hours.'))
-      ));
+      ngelxDurumMesaji(
+        context,
+        video?lt('Video hikâyen yayınlandı • 24 saat görünür.','Your video story is live • visible for 24 hours.'):lt('Hikâye yayınlandı • 24 saat görünür.','Your story is live • visible for 24 hours.'),
+        tip:'basari',
+      );
     }catch(e){
-      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(lt('Hikâye yayınlanamadı: ','Story could not be published: ')+_dosyaHataMetni(e))));
+      if(mounted)ngelxDurumMesaji(context,lt('Hikâye yayınlanamadı: ','Story could not be published: ')+_dosyaHataMetni(e),tip:'hata');
     }finally{
+      if(geciciSikistirilmis!=null){
+        try{await VideoCompress.deleteAllCache();}catch(_){}
+      }
       if(mounted)setState((){
         yukleniyor=false;
         yuklemeDurumu='';
@@ -20601,6 +20685,7 @@ class _SohbetPageState extends State<SohbetPage> {
       ),
     ),
     child:Scaffold(
+    resizeToAvoidBottomInset:false,
     backgroundColor:Colors.white,
     appBar:AppBar(
       leading:const BackButton(color:ngelxPrivateBlue),
@@ -20655,7 +20740,7 @@ class _SohbetPageState extends State<SohbetPage> {
       ],
     ),
     bottomNavigationBar:MediaQuery.viewInsetsOf(context).bottom>0?null:SizedBox(height:MediaQuery.viewPaddingOf(context).bottom),
-    body:StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(stream:_chatAkisi,builder:(_,tema){final veri=tema.data?.data()??<String,dynamic>{},ham=veri['theme']??veri['theme_$uid'],arkaPlanHam=veri['backgroundOpacity']??veri['backgroundOpacity_$uid'];final arkaPlan=ham is int?Color(ham):Colors.white,arkaPlanUrl=(veri['backgroundUrl']??veri['backgroundUrl_$uid']??'').toString(),hizliEmoji=(veri['quickEmoji_$uid']??'👍').toString(),arkaPlanOpaklik=(arkaPlanHam is num?arkaPlanHam.toDouble():.30).clamp(.05,.85).toDouble(),mesajYaziBoyutu=(veri['messageFontSize_$uid'] is num?(veri['messageFontSize_$uid'] as num).toDouble():16.0).clamp(12.0,22.0).toDouble();return Container(decoration:BoxDecoration(color:arkaPlan,image:arkaPlanUrl.isEmpty?null:DecorationImage(image:ResizeImage(NgelXAgImageProvider(arkaPlanUrl),width:900),fit:BoxFit.cover,opacity:arkaPlanOpaklik,filterQuality:FilterQuality.low)),child:Column(children:[
+    body:StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(stream:_chatAkisi,builder:(_,tema){final veri=tema.data?.data()??<String,dynamic>{},ham=veri['theme']??veri['theme_$uid'],arkaPlanHam=veri['backgroundOpacity']??veri['backgroundOpacity_$uid'];final arkaPlan=ham is int?Color(ham):Colors.white,arkaPlanUrl=(veri['backgroundUrl']??veri['backgroundUrl_$uid']??'').toString(),hizliEmoji=(veri['quickEmoji_$uid']??'👍').toString(),arkaPlanOpaklik=(arkaPlanHam is num?arkaPlanHam.toDouble():.30).clamp(.05,.85).toDouble(),mesajYaziBoyutu=(veri['messageFontSize_$uid'] is num?(veri['messageFontSize_$uid'] as num).toDouble():16.0).clamp(12.0,22.0).toDouble();return Container(decoration:BoxDecoration(color:arkaPlan,image:arkaPlanUrl.isEmpty?null:DecorationImage(image:ResizeImage(NgelXAgImageProvider(arkaPlanUrl),width:900),fit:BoxFit.cover,opacity:arkaPlanOpaklik,filterQuality:FilterQuality.low)),child:AnimatedPadding(duration:const Duration(milliseconds:170),curve:Curves.easeOut,padding:EdgeInsets.only(bottom:MediaQuery.viewInsetsOf(context).bottom),child:Column(children:[
       if(((veri['callStatus']??'').toString()=='ringing'||(veri['callStatus']??'').toString()=='active')&&(veri['callRoomName']??'').toString().isNotEmpty)
         InkWell(
           onTap:()async{
@@ -20717,7 +20802,7 @@ class _SohbetPageState extends State<SohbetPage> {
           if(uid!=null&&s.hasData&&okunmamis>0)unawaited(_okunduGuncelle());
           if(s.hasData)sonaGit();
           QueryDocumentSnapshot<Map<String,dynamic>>? sonBenim;
-          for(final d in docs){if(d.data()['senderId']==uid)sonBenim=d;}
+          for(final d in docs){if(d.data()['senderId']==uid&&d.data()['type']!='system')sonBenim=d;}
           final digerOkuma=veri['readReceipts_${widget.digerUid}']!=false?veri['lastReadAt_${widget.digerUid}']:null;
           return RefreshIndicator(
             color:ngelxPrivateBlue,
@@ -20756,7 +20841,19 @@ class _SohbetPageState extends State<SohbetPage> {
                       child:Text(gunEtiketi,style:const TextStyle(color:ngelxPrivateBlue,fontSize:11,fontWeight:FontWeight.w800)),
                     ),
                   ),
-                RepaintBoundary(key:ValueKey('private_${d.id}'),child:ozelMesajKarti(d,fontSize:mesajYaziBoyutu,goruldu:goruldu,quickReaction:hizliEmoji)),
+                RepaintBoundary(
+                  key:ValueKey('private_${d.id}'),
+                  child:d.data()['type']=='system'
+                    ?Padding(
+                      padding:const EdgeInsets.symmetric(horizontal:18,vertical:5),
+                      child:Center(child:Container(
+                        padding:const EdgeInsets.symmetric(horizontal:12,vertical:7),
+                        decoration:BoxDecoration(color:Colors.white.withValues(alpha:.90),borderRadius:BorderRadius.circular(18),border:Border.all(color:ngelxPrivateBlueBorder)),
+                        child:Text((d.data()['text']??'Sohbet ayarı güncellendi').toString(),textAlign:TextAlign.center,style:const TextStyle(color:ngelxPrivateBlueInk,fontSize:11.5,fontWeight:FontWeight.w800)),
+                      )),
+                    )
+                    :ozelMesajKarti(d,fontSize:mesajYaziBoyutu,goruldu:goruldu,quickReaction:hizliEmoji),
+                ),
               ]);
             },
           ));
@@ -21021,7 +21118,7 @@ class _SohbetPageState extends State<SohbetPage> {
                   ],
                 ),
       ))),
-    ]));}),
+    ])));}),
   ));
 }
 
@@ -21209,115 +21306,134 @@ class SohbetBilgiPage extends StatelessWidget{
   }
   Future<void> ozellestir(BuildContext context)async{
     final me=FirebaseAuth.instance.currentUser?.uid;if(me==null)return;
+    final ref=FirebaseFirestore.instance.collection('chats').doc(chatId);
+    Map<String,dynamic> mevcut=<String,dynamic>{};
+    try{mevcut=(await ref.get()).data()??<String,dynamic>{};}catch(_){}
+    final seciliTema=(mevcut['theme'] as num?)?.toInt()??ngelxPrivateBlueCanvas.toARGB32();
+    final seciliOpaklik=((mevcut['backgroundOpacity'] as num?)?.toDouble()??.30).clamp(.05,.85).toDouble();
+    final seciliFont=((mevcut['messageFontSize_$me'] as num?)?.toDouble()??16.0);
+    final seciliEmoji=(mevcut['quickEmoji_$me']??'👍').toString();
+
+    Widget seciliTik(bool secili)=>secili
+      ?const Icon(Icons.check_circle_rounded,color:ngelxPrivateBlue,size:18)
+      :const SizedBox(width:18,height:18);
+
+    Future<void> sistemOlayi(String eylem,String detay)async{
+      String ad='Bir kullanıcı';
+      try{
+        final p=await FirebaseFirestore.instance.collection('users').doc(me).get();
+        ad=(p.data()?['displayName']??p.data()?['username']??'Bir kullanıcı').toString();
+      }catch(_){}
+      await ref.collection('messages').add({
+        'senderId':me,
+        'actorUid':me,
+        'type':'system',
+        'systemAction':'background_changed',
+        'systemDetail':detay,
+        'text':'$ad $eylem',
+        'createdAt':FieldValue.serverTimestamp(),
+        'clientCreatedAt':Timestamp.now(),
+      });
+    }
+
     final secim=await showModalBottomSheet<Object>(
       context:context,backgroundColor:Colors.white,showDragHandle:true,isScrollControlled:true,
-      builder:(c)=>Theme(data:ThemeData.light(),child:SafeArea(child:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
-        const ListTile(title:Text('Sohbeti özelleştir',style:TextStyle(fontWeight:FontWeight.w900)),subtitle:Text('Arka plan değişiklikleri iki tarafta görünür. Yazı boyutu ve hızlı emoji sana özeldir.')),
-        const ListTile(title:Text('Arka plan rengi',style:TextStyle(fontWeight:FontWeight.w700))),
-        Wrap(spacing:16,runSpacing:16,children:[
-          ngelxPrivateBlueCanvas,Colors.white,const Color(0xFFFFF4F7),const Color(0xFFF4F0FF),const Color(0xFFF1FFF5)
-        ].map((x)=>InkWell(onTap:()=>Navigator.pop(c,x.toARGB32()),child:CircleAvatar(radius:25,backgroundColor:x,child:const Icon(Icons.check,color:Colors.black26)))).toList()),
-        const SizedBox(height:12),
-        ListTile(leading:const Icon(Icons.photo_library_outlined,color:ngelxPrivateBlue),title:const Text('Galeriden özel fotoğraf / logo seç'),onTap:()=>Navigator.pop(c,'gallery')),
-        ListTile(leading:const Icon(Icons.camera_alt_outlined,color:ngelxPrivateBlue),title:const Text('Kameradan arka plan çek'),onTap:()=>Navigator.pop(c,'camera')),
-        ListTile(leading:const Icon(Icons.hide_image_outlined,color:Colors.red),title:const Text('Özel fotoğrafı kaldır',style:TextStyle(color:Colors.red)),onTap:()=>Navigator.pop(c,'removeImage')),
-        const Divider(height:28),
-        const ListTile(leading:Icon(Icons.opacity_rounded,color:ngelxPrivateBlue),title:Text('Arka plan görünürlüğü',style:TextStyle(fontWeight:FontWeight.w800)),subtitle:Text('Fotoğrafın sohbetin arkasında ne kadar belirgin olacağını seç.')),
-        Wrap(spacing:8,children:[
-          ActionChip(label:const Text('Hafif'),onPressed:()=>Navigator.pop(c,'opacity:15')),
-          ActionChip(label:const Text('Normal'),onPressed:()=>Navigator.pop(c,'opacity:30')),
-          ActionChip(label:const Text('Belirgin'),onPressed:()=>Navigator.pop(c,'opacity:50')),
-          ActionChip(label:const Text('Güçlü'),onPressed:()=>Navigator.pop(c,'opacity:70')),
-        ]),
-        const Divider(height:28),
-        const ListTile(leading:Icon(Icons.text_fields_rounded,color:ngelxPrivateBlue),title:Text('Mesaj yazı boyutu',style:TextStyle(fontWeight:FontWeight.w800))),
-        Wrap(spacing:8,children:[
-          ActionChip(label:const Text('Küçük'),onPressed:()=>Navigator.pop(c,'font:14')),
-          ActionChip(label:const Text('Normal'),onPressed:()=>Navigator.pop(c,'font:16')),
-          ActionChip(label:const Text('Büyük'),onPressed:()=>Navigator.pop(c,'font:18')),
-        ]),
-        const Divider(height:28),
-        const ListTile(leading:Icon(Icons.emoji_emotions_outlined,color:ngelxPrivateBlue),title:Text('Hızlı gönderme emojisi',style:TextStyle(fontWeight:FontWeight.w800)),subtitle:Text('Mesaj kutusu boşken sağdaki tek dokunuş emojisini seç.')),
-        Padding(padding:const EdgeInsets.fromLTRB(16,0,16,8),child:Wrap(spacing:12,runSpacing:12,children:
-          ['👍','❤️','😂','😍','🔥','👏','🙏','🎉','😮','😢','😡','💯'].map((e)=>InkWell(
-            onTap:()=>Navigator.pop(c,'quickEmoji:'+e),
-            borderRadius:BorderRadius.circular(28),
-            child:Container(width:48,height:48,alignment:Alignment.center,decoration:BoxDecoration(color:const Color(0xFFF4F4F6),borderRadius:BorderRadius.circular(24)),child:Text(e,style:const TextStyle(fontSize:25))),
-          )).toList(),
-        )),
-        const Divider(height:24),
-        ListTile(leading:const Icon(Icons.restart_alt_rounded,color:Colors.red),title:const Text('Özelleştirmeyi sıfırla',style:TextStyle(color:Colors.red,fontWeight:FontWeight.w800)),subtitle:const Text('Arka plan, yazı boyutu ve hızlı emojiyi varsayılana döndür.'),onTap:()=>Navigator.pop(c,'reset')),
-        const SizedBox(height:10),
-      ])))),
+      builder:(c)=>Theme(
+        data:ThemeData.light().copyWith(
+          colorScheme:ColorScheme.fromSeed(seedColor:ngelxPrivateBlue),
+          textTheme:ThemeData.light().textTheme.apply(bodyColor:Colors.black87,displayColor:Colors.black87),
+        ),
+        child:SafeArea(child:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
+          const ListTile(title:Text('Sohbeti özelleştir',style:TextStyle(color:Colors.black87,fontWeight:FontWeight.w900)),subtitle:Text('Arka plan değişiklikleri iki tarafta görünür. Yazı boyutu ve hızlı emoji sana özeldir.',style:TextStyle(color:Colors.black54))),
+          const ListTile(title:Text('Arka plan rengi',style:TextStyle(color:Colors.black87,fontWeight:FontWeight.w700))),
+          Wrap(spacing:16,runSpacing:16,children:[
+            ngelxPrivateBlueCanvas,Colors.white,const Color(0xFFFFF4F7),const Color(0xFFF4F0FF),const Color(0xFFF1FFF5)
+          ].map((x){
+            final secili=x.toARGB32()==seciliTema;
+            return InkWell(onTap:()=>Navigator.pop(c,x.toARGB32()),borderRadius:BorderRadius.circular(30),child:CircleAvatar(radius:25,backgroundColor:x,child:secili?const Icon(Icons.check_circle_rounded,color:ngelxPrivateBlue,size:24):null));
+          }).toList()),
+          const SizedBox(height:12),
+          ListTile(leading:const Icon(Icons.photo_library_outlined,color:ngelxPrivateBlue),title:const Text('Galeriden özel fotoğraf / logo seç',style:TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(c,'gallery')),
+          ListTile(leading:const Icon(Icons.camera_alt_outlined,color:ngelxPrivateBlue),title:const Text('Kameradan arka plan çek',style:TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(c,'camera')),
+          ListTile(leading:const Icon(Icons.hide_image_outlined,color:Colors.red),title:const Text('Özel fotoğrafı kaldır',style:TextStyle(color:Colors.red)),onTap:()=>Navigator.pop(c,'removeImage')),
+          const Divider(height:28),
+          const ListTile(leading:Icon(Icons.opacity_rounded,color:ngelxPrivateBlue),title:Text('Arka plan görünürlüğü',style:TextStyle(color:Colors.black87,fontWeight:FontWeight.w800)),subtitle:Text('Fotoğrafın sohbetin arkasında ne kadar belirgin olacağını seç.',style:TextStyle(color:Colors.black54))),
+          Wrap(spacing:8,runSpacing:8,children:[
+            (0.15,'Hafif'),(0.30,'Normal'),(0.50,'Belirgin'),(0.70,'Güçlü')
+          ].map((e){
+            final secili=(seciliOpaklik-e.$1).abs()<.03;
+            return ActionChip(avatar:seciliTik(secili),label:Text(e.$2,style:TextStyle(color:Colors.black87,fontWeight:secili?FontWeight.w900:FontWeight.w600)),onPressed:()=>Navigator.pop(c,'opacity:'+(e.$1*100).round().toString()));
+          }).toList()),
+          const Divider(height:28),
+          const ListTile(leading:Icon(Icons.text_fields_rounded,color:ngelxPrivateBlue),title:Text('Mesaj yazı boyutu',style:TextStyle(color:Colors.black87,fontWeight:FontWeight.w800))),
+          Wrap(spacing:8,runSpacing:8,children:[
+            (14.0,'Küçük'),(16.0,'Normal'),(18.0,'Büyük')
+          ].map((e){
+            final secili=(seciliFont-e.$1).abs()<.5;
+            return ActionChip(avatar:seciliTik(secili),label:Text(e.$2,style:TextStyle(color:Colors.black87,fontWeight:secili?FontWeight.w900:FontWeight.w600)),onPressed:()=>Navigator.pop(c,'font:'+e.$1.toInt().toString()));
+          }).toList()),
+          const Divider(height:28),
+          const ListTile(leading:Icon(Icons.emoji_emotions_outlined,color:ngelxPrivateBlue),title:Text('Hızlı gönderme emojisi',style:TextStyle(color:Colors.black87,fontWeight:FontWeight.w800)),subtitle:Text('Mesaj kutusu boşken sağdaki tek dokunuş emojisini seç.',style:TextStyle(color:Colors.black54))),
+          Padding(padding:const EdgeInsets.fromLTRB(16,0,16,8),child:Wrap(spacing:12,runSpacing:12,children:
+            ['👍','❤️','😂','😍','🔥','👏','🙏','🎉','😮','😢','😡','💯'].map((e){
+              final secili=e==seciliEmoji;
+              return InkWell(onTap:()=>Navigator.pop(c,'quickEmoji:'+e),borderRadius:BorderRadius.circular(28),child:Container(width:52,height:52,decoration:BoxDecoration(color:secili?ngelxPrivateBlueSoft:const Color(0xFFF4F4F6),borderRadius:BorderRadius.circular(26),border:Border.all(color:secili?ngelxPrivateBlue:Colors.transparent,width:1.5)),child:Stack(alignment:Alignment.center,children:[Text(e,style:const TextStyle(fontSize:25)),if(secili)const Positioned(right:1,top:1,child:Icon(Icons.check_circle_rounded,color:ngelxPrivateBlue,size:16))])));
+            }).toList(),
+          )),
+          const Divider(height:24),
+          ListTile(leading:const Icon(Icons.restart_alt_rounded,color:Colors.red),title:const Text('Özelleştirmeyi sıfırla',style:TextStyle(color:Colors.red,fontWeight:FontWeight.w800)),subtitle:const Text('Arka plan, yazı boyutu ve hızlı emojiyi varsayılana döndür.',style:TextStyle(color:Colors.black54)),onTap:()=>Navigator.pop(c,'reset')),
+          const SizedBox(height:10),
+        ]))),
+      ),
     );
     if(secim==null)return;
-    final ref=FirebaseFirestore.instance.collection('chats').doc(chatId);
 
     if(secim is String&&secim.startsWith('quickEmoji:')){
       final emoji=secim.substring('quickEmoji:'.length);
       await ref.set({'quickEmoji_$me':emoji},SetOptions(merge:true));
-      if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Hızlı emoji '+emoji+' olarak ayarlandı.')));
+      if(context.mounted)ngelxDurumMesaji(context,'Hızlı emoji $emoji olarak ayarlandı.',tip:'basari');
       return;
     }
     if(secim is String&&secim.startsWith('opacity:')){
       final oran=(double.tryParse(secim.substring(8))??30)/100;
       await ref.set({'backgroundOpacity':oran,'backgroundVersion':FieldValue.increment(1),'backgroundUpdatedBy':me,'backgroundUpdatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
       await FirebaseFirestore.instance.waitForPendingWrites().timeout(const Duration(seconds:8));
+      await sistemOlayi('sohbet arka planının görünürlüğünü değiştirdi','opacity');
+      if(context.mounted)ngelxDurumMesaji(context,'Arka plan görünürlüğü güncellendi.',tip:'basari');
       return;
     }
     if(secim is String&&secim.startsWith('font:')){
       final boyut=double.tryParse(secim.substring(5))??16;
       await ref.set({'messageFontSize_$me':boyut},SetOptions(merge:true));
+      if(context.mounted)ngelxDurumMesaji(context,'Mesaj yazı boyutu güncellendi.',tip:'basari');
       return;
     }
     if(secim=='reset'){
       final onceki=await ref.get();
       final eskiArkaPlan=(onceki.data()?['backgroundUrl']??onceki.data()?['backgroundUrl_$me']??'').toString();
-      await ref.set({
-        'theme':ngelxPrivateBlueCanvas.toARGB32(),
-        'backgroundUrl':'',
-        'backgroundOpacity':.30,
-        'backgroundVersion':FieldValue.increment(1),
-        'backgroundUpdatedBy':me,
-        'backgroundUpdatedAt':FieldValue.serverTimestamp(),
-        'messageFontSize_$me':16.0,
-        'quickEmoji_$me':'👍',
-      },SetOptions(merge:true));
-      if(eskiArkaPlan.isNotEmpty){
-        await ngelxAgResmiOnbelleginiTemizle(eskiArkaPlan);
-        unawaited(ngelxMedyaSil(eskiArkaPlan).catchError((_){ }));
-      }
-      if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Sohbet özelleştirmeleri sıfırlandı.')));
+      await ref.set({'theme':ngelxPrivateBlueCanvas.toARGB32(),'backgroundUrl':'','backgroundOpacity':.30,'backgroundVersion':FieldValue.increment(1),'backgroundUpdatedBy':me,'backgroundUpdatedAt':FieldValue.serverTimestamp(),'messageFontSize_$me':16.0,'quickEmoji_$me':'👍'},SetOptions(merge:true));
+      await sistemOlayi('sohbet özelleştirmelerini sıfırladı','reset');
+      if(eskiArkaPlan.isNotEmpty){await ngelxAgResmiOnbelleginiTemizle(eskiArkaPlan);unawaited(ngelxMedyaSil(eskiArkaPlan).catchError((_){ }));}
+      if(context.mounted)ngelxDurumMesaji(context,'Sohbet özelleştirmeleri sıfırlandı.',tip:'basari');
       return;
     }
     if(secim is int){
       await ref.set({'theme':secim,'backgroundVersion':FieldValue.increment(1),'backgroundUpdatedBy':me,'backgroundUpdatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
       await FirebaseFirestore.instance.waitForPendingWrites().timeout(const Duration(seconds:8));
+      await sistemOlayi('sohbet arka plan rengini değiştirdi','color');
+      if(context.mounted)ngelxDurumMesaji(context,'Sohbet arka plan rengi güncellendi.',tip:'basari');
       return;
     }
     if(secim=='removeImage'){
       if(!context.mounted)return;
-      final onay=await showDialog<bool>(context:context,builder:(d)=>Theme(
-        data:ThemeData.light().copyWith(dialogTheme:const DialogThemeData(backgroundColor:Colors.white)),
-        child:AlertDialog(
-          backgroundColor:Colors.white,surfaceTintColor:Colors.white,
-          title:const Text('Özel fotoğraf kaldırılsın mı?',style:TextStyle(color:Colors.black87,fontWeight:FontWeight.w800)),
-          content:const Text('Sohbet arka planındaki özel fotoğraf kaldırılacak. İstersen daha sonra yeniden seçebilirsin.',style:TextStyle(color:Colors.black87,height:1.35)),
-          actions:[
-            TextButton(onPressed:()=>Navigator.pop(d,false),child:const Text('Vazgeç',style:TextStyle(color:ngelxPrivateBlue))),
-            FilledButton(style:FilledButton.styleFrom(backgroundColor:Colors.red,foregroundColor:Colors.white),onPressed:()=>Navigator.pop(d,true),child:const Text('Kaldır')),
-          ],
-        ),
-      ))??false;
+      final onay=await showDialog<bool>(context:context,builder:(d)=>Theme(data:ThemeData.light().copyWith(dialogTheme:const DialogThemeData(backgroundColor:Colors.white)),child:AlertDialog(backgroundColor:Colors.white,surfaceTintColor:Colors.white,title:const Text('Özel fotoğraf kaldırılsın mı?',style:TextStyle(color:Colors.black87,fontWeight:FontWeight.w800)),content:const Text('Sohbet arka planındaki özel fotoğraf kaldırılacak. İstersen daha sonra yeniden seçebilirsin.',style:TextStyle(color:Colors.black87,height:1.35)),actions:[TextButton(onPressed:()=>Navigator.pop(d,false),child:const Text('Vazgeç',style:TextStyle(color:ngelxPrivateBlue))),FilledButton(style:FilledButton.styleFrom(backgroundColor:Colors.red,foregroundColor:Colors.white),onPressed:()=>Navigator.pop(d,true),child:const Text('Kaldır'))])))??false;
       if(!onay)return;
       final onceki=await ref.get();
       final eskiArkaPlan=(onceki.data()?['backgroundUrl']??onceki.data()?['backgroundUrl_$me']??'').toString();
       await ref.set({'backgroundUrl':'','backgroundVersion':FieldValue.increment(1),'backgroundUpdatedBy':me,'backgroundUpdatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
-      if(eskiArkaPlan.isNotEmpty){
-        await ngelxAgResmiOnbelleginiTemizle(eskiArkaPlan);
-        unawaited(ngelxMedyaSil(eskiArkaPlan).catchError((_){ }));
-      }
-      if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Özel sohbet arka planı kaldırıldı.')));
+      await sistemOlayi('sohbet arka planını kaldırdı','remove');
+      if(eskiArkaPlan.isNotEmpty){await ngelxAgResmiOnbelleginiTemizle(eskiArkaPlan);unawaited(ngelxMedyaSil(eskiArkaPlan).catchError((_){ }));}
+      if(context.mounted)ngelxDurumMesaji(context,'Özel sohbet arka planı kaldırıldı.',tip:'basari');
       return;
     }
 
@@ -21327,23 +21443,17 @@ class SohbetBilgiPage extends StatelessWidget{
       final onceki=await ref.get();
       final eskiArkaPlan=(onceki.data()?['backgroundUrl']??onceki.data()?['backgroundUrl_$me']??'').toString();
       final yol='chat-backgrounds/'+me+'/'+chatId+'_'+DateTime.now().millisecondsSinceEpoch.toString()+'.jpg';
-      final url=await ngelxFotografYukle(
-        dosya:x,
-        kind:'chat-backgrounds',
-        ext:'jpg',
-        legacyPath:yol,
-      );
+      final url=await ngelxFotografYukle(dosya:x,kind:'chat-backgrounds',ext:'jpg',legacyPath:yol);
       await ref.set({'backgroundUrl':url,'backgroundVersion':FieldValue.increment(1),'backgroundUpdatedBy':me,'backgroundUpdatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
       await FirebaseFirestore.instance.waitForPendingWrites().timeout(const Duration(seconds:8));
-      if(eskiArkaPlan.isNotEmpty&&eskiArkaPlan!=url){
-        await ngelxAgResmiOnbelleginiTemizle(eskiArkaPlan);
-        unawaited(ngelxMedyaSil(eskiArkaPlan).catchError((_){ }));
-      }
-      if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Sohbet arka planı iki taraf için güncellendi.')));
+      await sistemOlayi('sohbet arka planını değiştirdi','image');
+      if(eskiArkaPlan.isNotEmpty&&eskiArkaPlan!=url){await ngelxAgResmiOnbelleginiTemizle(eskiArkaPlan);unawaited(ngelxMedyaSil(eskiArkaPlan).catchError((_){ }));}
+      if(context.mounted)ngelxDurumMesaji(context,'Sohbet arka planı iki taraf için güncellendi.',tip:'basari');
     }catch(e){
-      if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Arka plan yüklenemedi: '+e.toString())));
+      if(context.mounted)ngelxDurumMesaji(context,'Arka plan yüklenemedi: '+e.toString(),tip:'hata');
     }
   }
+
   Future<void> sureliMesajlar(BuildContext context,int mevcut)async{
     final secim=await showModalBottomSheet<int>(
       context:context,backgroundColor:Colors.white,showDragHandle:true,
