@@ -177,6 +177,25 @@ Source: user device recording 44176.mp4 (~21.7 s), private chat with a photo bac
 - This still does **not** complete the intended friendship resend test.
 - No incoming friend request from Rojin is visible in these screenshots; only the follow request is present/accepted.
 
+## Build 388 friendship request send/re-send device verification — 2026-10-05
+
+### Failed
+- From Rojin's view of Umay's profile, tapping **Arkadaş ekle** failed.
+- The app showed: “Arkadaşlık isteği gönderilemedi. Tekrar dene.”
+- The profile remained at **Arkadaş ekle** instead of changing to a pending/request-sent state.
+- Result: **DEVICE FAILED / OPEN**.
+- This confirms the previously known friend-request stale/pair-state defect is still reproducible on Build 388.
+
+### Additional UI defect
+- The failure feedback is still shown with the old flat dark snackbar style.
+- This friend-request failure path is not yet using the new colored/modern status feedback component.
+
+### Fix direction
+- Reconcile stale/ended `friend_requests` / friendship-pair state before creating a new request.
+- A completed/cancelled/rejected historical request must not block a new friend request.
+- Preserve the current follow relationship; friend-request state must remain independent from follow state.
+- After a successful retry, show one pending request only and prevent duplicate active requests.
+
 ## CI gate
 
 A Build 388 APK is valid only when:
