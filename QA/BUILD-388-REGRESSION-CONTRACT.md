@@ -115,6 +115,14 @@ Source: user device recording 44176.mp4 (~21.7 s), private chat with a photo bac
 - No text, icon, chevron or action row overlaps the system buttons.
 - Result: **DEVICE VERIFIED / PASSED**.
 
+## Build 388 interaction bottom safe-area device verification — 2026-10-05
+
+- Etkileşim screen was scrolled to the bottom on device.
+- The final “Gönderi / Toplam etkileşim: 0” row remained fully visible.
+- There is clear spacing above the Android system navigation area.
+- No card, text, chevron or interaction row overlaps the system buttons.
+- Result: **DEVICE VERIFIED / PASSED**.
+
 ## CI gate
 
 A Build 388 APK is valid only when:
