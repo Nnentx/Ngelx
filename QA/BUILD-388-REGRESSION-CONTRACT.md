@@ -215,6 +215,15 @@ Source: user device recording 44176.mp4 (~21.7 s), private chat with a photo bac
 - The same attribution rule should apply to background image change, background color change, opacity change, and reset/remove.
 - Preserve the already verified two-account shared-background synchronization while adding attribution.
 
+## Build 388 chat customization selection indicator UX — 2026-10-05
+
+### Open UX improvement
+- In **Sohbeti özelleştir**, the currently active option must be visually obvious.
+- For **Arka plan görünürlüğü** (Hafif / Normal / Belirgin / Güçlü), show a visible check mark directly on the selected button.
+- Apply the same selected-state treatment to **Mesaj yazı boyutu** (Küçük / Normal / Büyük).
+- Apply the same selected-state treatment to **Hızlı gönderme emojisi** so the active emoji is clearly marked.
+- The selected indicator must update immediately after tapping an option and persist when reopening the customization sheet.
+
 ## CI gate
 
 A Build 388 APK is valid only when:
