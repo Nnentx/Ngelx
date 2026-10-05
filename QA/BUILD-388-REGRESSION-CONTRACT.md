@@ -238,6 +238,17 @@ Source: user device recording 44176.mp4 (~21.7 s), private chat with a photo bac
 - Examples covered: follower removed, follow request sent/accepted/rejected, friendship actions, story upload/delete, save/share actions, privacy/settings actions, and other completion/error messages.
 - This is a global consistency requirement; new screens must use the same feedback component.
 
+## Build 388 follow-request resend/dedup device verification — 2026-10-05
+
+### Passed
+- After removing Rojin from Umay's followers, Rojin could send a new follow request.
+- Umay's Activity screen showed exactly **one** current Rojin follow request under **Takip İstekleri 1**.
+- No duplicate/stale Rojin follow request was visible.
+- Result: **DEVICE VERIFIED / PASSED** for follow-request resend and deduplication.
+
+### Existing UI note
+- The sender-side confirmation “Takip isteği gönderildi.” still uses the old dark snackbar; this is already covered by the global bottom-feedback visibility requirement.
+
 ## CI gate
 
 A Build 388 APK is valid only when:
