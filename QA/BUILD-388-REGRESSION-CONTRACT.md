@@ -137,6 +137,20 @@ Source: user device recording 44176.mp4 (~21.7 s), private chat with a photo bac
 - Affected actions are the rows for share, highlight and archive.
 - This is tracked as an **OPEN UI defect**. Fix must restore readable labels without breaking the now-verified delete dialog.
 
+## Build 388 story video upload device verification — 2026-10-05
+
+### Failed
+- A 00:17 video was selected for a story, so the duration is within the intended 30-second story limit.
+- Upload failed with: “Hikâye yüklenemedi: Dosya boyutu bu medya türü için sınırı aşıyor.”
+- Result: **DEVICE FAILED / OPEN**.
+- The Build 388 transport-path change did not fully solve real-device story video uploads.
+- Fix direction: inspect actual selected-file size, then compress/transcode oversized short videos before upload instead of immediately rejecting them; keep the 30-second duration cap and server/storage safeguards.
+
+### Additional UI defect observed
+- The story upload failure is still shown as the old plain light bottom snackbar.
+- It is not using the new colored/modern status feedback style.
+- Result: **OPEN UI defect**.
+
 ## CI gate
 
 A Build 388 APK is valid only when:
