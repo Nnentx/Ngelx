@@ -224,6 +224,20 @@ Source: user device recording 44176.mp4 (~21.7 s), private chat with a photo bac
 - Apply the same selected-state treatment to **Hızlı gönderme emojisi** so the active emoji is clearly marked.
 - The selected indicator must update immediately after tapping an option and persist when reopening the customization sheet.
 
+## Build 388 global bottom-feedback visibility UX — 2026-10-05
+
+### Open UX requirement
+- Bottom feedback messages such as “Takipçi kaldırıldı.” must be visually prominent and easy to notice.
+- Apply this consistently to **all** bottom success / warning / error feedback across the app, not only follow/friend flows.
+- Replace flat low-contrast bars with the shared modern feedback component:
+  - success: green + check icon,
+  - warning: amber/orange + warning icon,
+  - error: red + error icon,
+  - info: blue/purple + info icon.
+- Use stronger text contrast, rounded floating shape, icon + message, and enough bottom margin above Android system navigation.
+- Examples covered: follower removed, follow request sent/accepted/rejected, friendship actions, story upload/delete, save/share actions, privacy/settings actions, and other completion/error messages.
+- This is a global consistency requirement; new screens must use the same feedback component.
+
 ## CI gate
 
 A Build 388 APK is valid only when:
