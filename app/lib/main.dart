@@ -23915,8 +23915,6 @@ class _HesapDegistirPageState extends State<HesapDegistirPage> {
         ]),
       ))),
     );
-      })),
-    );
     c.dispose();
     return sonuc;
   }
