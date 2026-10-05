@@ -95,6 +95,18 @@ Source: user device recording 44176.mp4 (~21.7 s), private chat with a photo bac
 - Two-device / two-account background synchronization cannot be declared passed from this single-side recording alone.
 - Keyboard latency is not marked as a failure from this clip; the clear reproducible issue is the wallpaper reframe/jump.
 
+## Build 388 shared chat background device verification — 2026-10-05
+
+### Passed
+- Shared private-chat photo background synchronization is DEVICE VERIFIED.
+- The background changed on the opposite account too, so the shared chat-level wallpaper sync works across both participants.
+
+### New UX gap
+- **Who changed the shared chat background is not shown in the conversation UI.**
+  - The backend already stores `backgroundUpdatedBy` / `backgroundUpdatedAt`, but the chat does not surface this to users.
+  - Expected behavior: add a lightweight system event such as “Umay sohbet arka planını değiştirdi” (and equivalent for color/reset), with timestamp.
+  - This is tracked as an OPEN UX defect; do not break the now-verified two-account synchronization while adding attribution.
+
 ## CI gate
 
 A Build 388 APK is valid only when:
