@@ -4939,7 +4939,7 @@ class _AnaEkranState extends State<AnaEkran> {
     final ben=FirebaseAuth.instance.currentUser?.uid;
     if(ben==null||FirebaseAuth.instance.currentUser?.isAnonymous==true)return const SizedBox.shrink();
     return StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
-      stream:FirebaseFirestore.instance.collection('chats').where('members',arrayContains:ben).limit(60).snapshots(),
+      stream:FirebaseFirestore.instance.collection('chats').where('members',arrayContains:ben).limit(100).snapshots(),
       builder:(context,s){
         final adaylar=(s.data?.docs??[]).where((d){
           final v=d.data();
@@ -9941,7 +9941,7 @@ class _YeniYuklePageState extends State<YuklePage> {
       }
 
       final url=video
-        ?await ngelxMedyaYukleDosya(dosya:dosya,kind:'stories',ext:uzanti,legacyPath:yol,onProgress:ilerleme)
+        ?await ngelxMedyaYukleDosya(dosya:dosya,kind:'videos',ext:uzanti,legacyPath:yol,onProgress:ilerleme)
         :await ngelxFotografYukle(dosya:dosya,kind:'stories',ext:uzanti,legacyPath:yol,onProgress:ilerleme);
 
       final profil=await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
@@ -11172,7 +11172,7 @@ class _MesajPageState extends State<MesajPage> {
       Padding(padding:const EdgeInsets.symmetric(horizontal:8),child:Row(children:['Tümü','Okunmamış','Arkadaşlar','Gruplar'].map((f)=>Expanded(child:Padding(padding:const EdgeInsets.symmetric(horizontal:2),child:ChoiceChip(labelPadding:const EdgeInsets.symmetric(horizontal:2),label:Center(child:FittedBox(fit:BoxFit.scaleDown,child:Text(sohbetFiltreEtiketi(f),maxLines:1))),selected:filtre==f,selectedColor:mor,labelStyle:TextStyle(color:filtre==f?Colors.white:Colors.black87,fontWeight:FontWeight.w700),backgroundColor:const Color(0xFFF1F2F5),side:BorderSide.none,onSelected:(_)=>setState(()=>filtre=f))))).toList())),
       StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(stream:ben==null?null:FirebaseFirestore.instance.collection('notifications').where('toUid',isEqualTo:ben).limit(200).snapshots(),builder:(_,s){final okunmamis=ngelxOkunmamisAktiviteSayisi(s.data?.docs??const <QueryDocumentSnapshot<Map<String,dynamic>>>[]);return Container(margin:const EdgeInsets.fromLTRB(16,8,16,5),decoration:BoxDecoration(color:const Color(0xFFF5EFFF),borderRadius:BorderRadius.circular(20)),child:ListTile(leading:const CircleAvatar(backgroundColor:Color(0xFFE5D5FF),child:Icon(Icons.favorite,color:mor)),title:Text(t('activity'),style:const TextStyle(color:Colors.black,fontWeight:FontWeight.w900)),subtitle:Text(t('activitySub'),style:const TextStyle(color:Colors.black54)),trailing:okunmamis==0?const Icon(Icons.chevron_right,color:Colors.black45):Badge(label:Text(_sayacEtiketi(okunmamis)),child:const Icon(Icons.chevron_right,color:Colors.black45)),onTap:()async{await Navigator.push(context,MaterialPageRoute(builder:(_)=>const AktivitePage()));if(mounted)setState((){});}));}),
       StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
-        stream:ben==null?null:FirebaseFirestore.instance.collection('chats').where('members',arrayContains:ben).limit(60).snapshots(),
+        stream:ben==null?null:FirebaseFirestore.instance.collection('chats').where('members',arrayContains:ben).limit(100).snapshots(),
         builder:(_,istekSnap){
           var bekleyenIstek=0;
           for(final d in istekSnap.data?.docs??const <QueryDocumentSnapshot<Map<String,dynamic>>>[]){
@@ -11210,9 +11210,9 @@ class _MesajPageState extends State<MesajPage> {
         color:mor,
         onRefresh:_gelenKutusunuYenile,
         child:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
-        stream:ben==null?null:FirebaseFirestore.instance.collection('chats').where('members',arrayContains:ben).limit(60).snapshots(),
+        stream:ben==null?null:FirebaseFirestore.instance.collection('chats').where('members',arrayContains:ben).limit(100).snapshots(),
         builder:(_,s){
-          final docs=(s.data?.docs??[]).where((d){final v=d.data();if(List<String>.from(v['hiddenFor']??const[]).contains(ben)||arsivSohbetler.contains(d.id))return false;final members=List<String>.from(v['members']??const[]),grup=v['isGroup']==true||members.length>2;final unread=(v['unread_$ben']??0) as int;if(filtre=='Okunmamış'&&unread==0)return false;if(filtre=='Gruplar'&&!grup)return false;if(!grup){final other=members.firstWhere((x)=>x!=ben,orElse:()=>ben??'');final gelenIstek=(v['requestRecipientUid']??'').toString()==ben&&v['requestAccepted_$ben']!=true&&v['requestRejected_$ben']!=true&&!arkadaslar.contains(other);if(gelenIstek)return false;if(filtre=='Arkadaşlar'&&!arkadaslar.contains(other))return false;}else if(filtre=='Arkadaşlar')return false;final son='${v['groupName']??''} ${v['lastMessage']??''}'.toLowerCase();return sohbetSorgu.isEmpty||son.contains(sohbetSorgu);}).toList()..sort((a,b){final ap=sabitSohbetler.contains(a.id),bp=sabitSohbetler.contains(b.id);if(ap!=bp)return ap?-1:1;final at=a.data()['updatedAt'] as Timestamp?,bt=b.data()['updatedAt'] as Timestamp?;return (bt?.millisecondsSinceEpoch??0).compareTo(at?.millisecondsSinceEpoch??0);});
+          final docs=(s.data?.docs??[]).where((d){final v=d.data();if(List<String>.from(v['hiddenFor']??const[]).contains(ben)||arsivSohbetler.contains(d.id))return false;final members=List<String>.from(v['members']??const[]),grup=v['isGroup']==true||members.length>2;final unread=(v['unread_$ben'] as num?)?.toInt()??0;if(filtre=='Okunmamış'&&unread==0)return false;if(filtre=='Gruplar'&&!grup)return false;if(!grup){final other=members.firstWhere((x)=>x!=ben,orElse:()=>ben??'');final gelenIstek=(v['requestRecipientUid']??'').toString()==ben&&v['requestAccepted_$ben']!=true&&v['requestRejected_$ben']!=true&&!arkadaslar.contains(other);if(gelenIstek)return false;if(filtre=='Arkadaşlar'&&!arkadaslar.contains(other))return false;}else if(filtre=='Arkadaşlar')return false;final son='${v['groupName']??''} ${v['lastMessage']??''}'.toLowerCase();return sohbetSorgu.isEmpty||son.contains(sohbetSorgu);}).toList()..sort((a,b){final ap=sabitSohbetler.contains(a.id),bp=sabitSohbetler.contains(b.id);if(ap!=bp)return ap?-1:1;final at=a.data()['updatedAt']??a.data()['lastMessageClientAt'],bt=b.data()['updatedAt']??b.data()['lastMessageClientAt'];final am=at is Timestamp?at.millisecondsSinceEpoch:0,bm=bt is Timestamp?bt.millisecondsSinceEpoch:0;return bm.compareTo(am);});
           final altBosluk=ngelxAltGuvenliBosluk(context,extra:72);
           if(docs.isEmpty)return ListView(
             physics:const AlwaysScrollableScrollPhysics(),
@@ -11226,7 +11226,7 @@ class _MesajPageState extends State<MesajPage> {
             itemBuilder:(_,i){
             final d=docs[i],v=d.data(),members=List<String>.from(v['members']??[]);
             final grup=v['isGroup']==true||members.length>2;
-            if(grup){final ad=(v['groupName']??t('groupChat')).toString(),foto=(v['groupPhotoUrl']??'').toString(),unread=(v['unread_$ben']??0) as int;return ListTile(onTap:()=>sohbetiAc(d.id,GrupSohbetPage(chatId:d.id,ad:ad,foto:foto)),onLongPress:()=>sohbetMenusu(context,d.id,grup:true),leading:CircleAvatar(backgroundColor:const Color(0xFFE9DDFF),backgroundImage:foto.isEmpty?null:NgelXAgImageProvider(foto),child:foto.isEmpty?const Icon(Icons.groups,color:mor):null),title:Text(ad,style:TextStyle(color:Colors.black87,fontWeight:unread>0?FontWeight.w900:FontWeight.w700)),subtitle:Text((v['lastMessage']??t('groupCreated')).toString(),maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black54)),trailing:Wrap(crossAxisAlignment:WrapCrossAlignment.center,children:[if(sabitSohbetler.contains(d.id))const Icon(Icons.push_pin,size:16,color:mor),if(sessizSohbetler.contains(d.id))const Icon(Icons.volume_off,size:18,color:Colors.black38),if(unread>0)Badge(label:Text('$unread'))]));}
+            if(grup){final ad=(v['groupName']??t('groupChat')).toString(),foto=(v['groupPhotoUrl']??'').toString(),unread=(v['unread_$ben'] as num?)?.toInt()??0;return ListTile(onTap:()=>sohbetiAc(d.id,GrupSohbetPage(chatId:d.id,ad:ad,foto:foto)),onLongPress:()=>sohbetMenusu(context,d.id,grup:true),leading:CircleAvatar(backgroundColor:const Color(0xFFE9DDFF),backgroundImage:foto.isEmpty?null:NgelXAgImageProvider(foto),child:foto.isEmpty?const Icon(Icons.groups,color:mor):null),title:Text(ad,style:TextStyle(color:Colors.black87,fontWeight:unread>0?FontWeight.w900:FontWeight.w700)),subtitle:Text((v['lastMessage']??t('groupCreated')).toString(),maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black54)),trailing:Wrap(crossAxisAlignment:WrapCrossAlignment.center,children:[if(sabitSohbetler.contains(d.id))const Icon(Icons.push_pin,size:16,color:mor),if(sessizSohbetler.contains(d.id))const Icon(Icons.volume_off,size:18,color:Colors.black38),if(unread>0)Badge(label:Text('$unread'))]));}
             final other=members.firstWhere((x)=>x!=ben,orElse:()=>ben??'');
             if(engellenenler.contains(other))return const SizedBox.shrink();
             return StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(stream:FirebaseFirestore.instance.collection('users').doc(other).snapshots(),builder:(_,u){
@@ -11235,7 +11235,7 @@ class _MesajPageState extends State<MesajPage> {
               final hamTakmalar=v['nicknames'],takmalar=hamTakmalar is Map?Map<String,dynamic>.from(hamTakmalar):<String,dynamic>{},takma=(ben==null?'':(takmalar[ben]??'').toString()).trim(),profilAdi=(p['displayName']??p['username']??'NgelX').toString(),gorunenAd=takma.isNotEmpty?takma:profilAdi;
               final aranan='$gorunenAd ${p['displayName']??''} ${p['username']??''} ${v['lastMessage']??''}'.toLowerCase();
               if(sohbetSorgu.isNotEmpty&&!aranan.contains(sohbetSorgu))return const SizedBox.shrink();
-              final unread=(v['unread_$ben']??0) as int;
+              final unread=(v['unread_$ben'] as num?)?.toInt()??0;
               final sessiz=sessizSohbetler.contains(d.id);
               return ListTile(
                 onTap:()=>sohbetiAc(d.id,SohbetPage(chatId:d.id,digerUid:other,ad:gorunenAd,foto:(p['photoUrl']??'').toString())),
@@ -19050,6 +19050,8 @@ class _SohbetPageState extends State<SohbetPage> {
     batch.set(ref,{
       if(!hazirlik.sohbetMevcut)'members':[ben,widget.digerUid],
       'lastMessage':t,
+      'lastMessageClientAt':clientCreatedAt,
+      'lastSenderId':ben,
       'updatedAt':FieldValue.serverTimestamp(),
       'unread_${widget.digerUid}':FieldValue.increment(1),
       if(istekGerekli&&mevcutIstekGonderen.isEmpty)'requestSenderUid':ben,
@@ -19223,6 +19225,8 @@ class _SohbetPageState extends State<SohbetPage> {
       batch.set(ref,{
         if(!hazirlik.sohbetMevcut)'members':[ben,widget.digerUid],
         'lastMessage':'📷 Fotoğraf',
+        'lastMessageClientAt':clientCreatedAt,
+        'lastSenderId':ben,
         'updatedAt':FieldValue.serverTimestamp(),
         'unread_${widget.digerUid}':FieldValue.increment(1),
         if(istekGerekli&&mevcutIstekGonderen.isEmpty)'requestSenderUid':ben,
@@ -19317,6 +19321,8 @@ class _SohbetPageState extends State<SohbetPage> {
     batch.set(ref,{
       if(!hazirlik.sohbetMevcut)'members':[ben,widget.digerUid],
       'lastMessage':sonMesaj,
+      'lastMessageClientAt':clientCreatedAt,
+      'lastSenderId':ben,
       'updatedAt':FieldValue.serverTimestamp(),
       'unread_${widget.digerUid}':FieldValue.increment(1),
       if(istekGerekli&&mevcutIstekGonderen.isEmpty)'requestSenderUid':ben,
@@ -20421,6 +20427,8 @@ class _SohbetPageState extends State<SohbetPage> {
         'callEndedBy':FieldValue.delete(),
         'callMessageId':mesajRef.id,
         'lastMessage':goruntulu?'📹 Görüntülü arama':'📞 Sesli arama',
+        'lastMessageClientAt':Timestamp.now(),
+        'lastSenderId':ben,
         'updatedAt':FieldValue.serverTimestamp(),
         'unread_${widget.digerUid}':FieldValue.increment(1),
       };
@@ -20646,7 +20654,8 @@ class _SohbetPageState extends State<SohbetPage> {
         IconButton(tooltip:'Sohbet bilgisi',onPressed:bilgi,icon:const Icon(Icons.info_rounded,color:ngelxPrivateBlue)),
       ],
     ),
-    body:StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(stream:_chatAkisi,builder:(_,tema){final veri=tema.data?.data()??<String,dynamic>{},ham=veri['theme']??veri['theme_$uid'],arkaPlanHam=veri['backgroundOpacity']??veri['backgroundOpacity_$uid'];final arkaPlan=ham is int?Color(ham):Colors.white,arkaPlanUrl=(veri['backgroundUrl']??veri['backgroundUrl_$uid']??'').toString(),hizliEmoji=(veri['quickEmoji_$uid']??'👍').toString(),arkaPlanOpaklik=(arkaPlanHam is num?arkaPlanHam.toDouble():.30).clamp(.05,.85).toDouble(),mesajYaziBoyutu=(veri['messageFontSize_$uid'] is num?(veri['messageFontSize_$uid'] as num).toDouble():16.0).clamp(12.0,22.0).toDouble();return Container(decoration:BoxDecoration(color:arkaPlan,image:arkaPlanUrl.isEmpty?null:DecorationImage(image:NgelXAgImageProvider(arkaPlanUrl),fit:BoxFit.cover,opacity:arkaPlanOpaklik)),child:Column(children:[
+    bottomNavigationBar:MediaQuery.viewInsetsOf(context).bottom>0?null:SizedBox(height:MediaQuery.viewPaddingOf(context).bottom),
+    body:StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(stream:_chatAkisi,builder:(_,tema){final veri=tema.data?.data()??<String,dynamic>{},ham=veri['theme']??veri['theme_$uid'],arkaPlanHam=veri['backgroundOpacity']??veri['backgroundOpacity_$uid'];final arkaPlan=ham is int?Color(ham):Colors.white,arkaPlanUrl=(veri['backgroundUrl']??veri['backgroundUrl_$uid']??'').toString(),hizliEmoji=(veri['quickEmoji_$uid']??'👍').toString(),arkaPlanOpaklik=(arkaPlanHam is num?arkaPlanHam.toDouble():.30).clamp(.05,.85).toDouble(),mesajYaziBoyutu=(veri['messageFontSize_$uid'] is num?(veri['messageFontSize_$uid'] as num).toDouble():16.0).clamp(12.0,22.0).toDouble();return Container(decoration:BoxDecoration(color:arkaPlan,image:arkaPlanUrl.isEmpty?null:DecorationImage(image:ResizeImage(NgelXAgImageProvider(arkaPlanUrl),width:900),fit:BoxFit.cover,opacity:arkaPlanOpaklik,filterQuality:FilterQuality.low)),child:Column(children:[
       if(((veri['callStatus']??'').toString()=='ringing'||(veri['callStatus']??'').toString()=='active')&&(veri['callRoomName']??'').toString().isNotEmpty)
         InkWell(
           onTap:()async{
@@ -21252,7 +21261,8 @@ class SohbetBilgiPage extends StatelessWidget{
     }
     if(secim is String&&secim.startsWith('opacity:')){
       final oran=(double.tryParse(secim.substring(8))??30)/100;
-      await ref.set({'backgroundOpacity':oran,'backgroundUpdatedBy':me,'backgroundUpdatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
+      await ref.set({'backgroundOpacity':oran,'backgroundVersion':FieldValue.increment(1),'backgroundUpdatedBy':me,'backgroundUpdatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
+      await FirebaseFirestore.instance.waitForPendingWrites().timeout(const Duration(seconds:8));
       return;
     }
     if(secim is String&&secim.startsWith('font:')){
@@ -21267,6 +21277,7 @@ class SohbetBilgiPage extends StatelessWidget{
         'theme':ngelxPrivateBlueCanvas.toARGB32(),
         'backgroundUrl':'',
         'backgroundOpacity':.30,
+        'backgroundVersion':FieldValue.increment(1),
         'backgroundUpdatedBy':me,
         'backgroundUpdatedAt':FieldValue.serverTimestamp(),
         'messageFontSize_$me':16.0,
@@ -21280,7 +21291,8 @@ class SohbetBilgiPage extends StatelessWidget{
       return;
     }
     if(secim is int){
-      await ref.set({'theme':secim,'backgroundUpdatedBy':me,'backgroundUpdatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
+      await ref.set({'theme':secim,'backgroundVersion':FieldValue.increment(1),'backgroundUpdatedBy':me,'backgroundUpdatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
+      await FirebaseFirestore.instance.waitForPendingWrites().timeout(const Duration(seconds:8));
       return;
     }
     if(secim=='removeImage'){
@@ -21300,7 +21312,7 @@ class SohbetBilgiPage extends StatelessWidget{
       if(!onay)return;
       final onceki=await ref.get();
       final eskiArkaPlan=(onceki.data()?['backgroundUrl']??onceki.data()?['backgroundUrl_$me']??'').toString();
-      await ref.set({'backgroundUrl':'','backgroundUpdatedBy':me,'backgroundUpdatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
+      await ref.set({'backgroundUrl':'','backgroundVersion':FieldValue.increment(1),'backgroundUpdatedBy':me,'backgroundUpdatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
       if(eskiArkaPlan.isNotEmpty){
         await ngelxAgResmiOnbelleginiTemizle(eskiArkaPlan);
         unawaited(ngelxMedyaSil(eskiArkaPlan).catchError((_){ }));
@@ -21310,7 +21322,7 @@ class SohbetBilgiPage extends StatelessWidget{
     }
 
     final kaynak=secim=='camera'?ImageSource.camera:ImageSource.gallery;
-    final x=await ngelxResimSec(source:kaynak,imageQuality:76,maxWidth:1280);if(x==null)return;
+    final x=await ngelxResimSec(source:kaynak,imageQuality:64,maxWidth:1080);if(x==null)return;
     try{
       final onceki=await ref.get();
       final eskiArkaPlan=(onceki.data()?['backgroundUrl']??onceki.data()?['backgroundUrl_$me']??'').toString();
@@ -21321,7 +21333,8 @@ class SohbetBilgiPage extends StatelessWidget{
         ext:'jpg',
         legacyPath:yol,
       );
-      await ref.set({'backgroundUrl':url,'backgroundUpdatedBy':me,'backgroundUpdatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
+      await ref.set({'backgroundUrl':url,'backgroundVersion':FieldValue.increment(1),'backgroundUpdatedBy':me,'backgroundUpdatedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
+      await FirebaseFirestore.instance.waitForPendingWrites().timeout(const Duration(seconds:8));
       if(eskiArkaPlan.isNotEmpty&&eskiArkaPlan!=url){
         await ngelxAgResmiOnbelleginiTemizle(eskiArkaPlan);
         unawaited(ngelxMedyaSil(eskiArkaPlan).catchError((_){ }));
@@ -21478,6 +21491,7 @@ class SohbetBilgiPage extends StatelessWidget{
           ],
         )],
       ),
+      bottomNavigationBar:SizedBox(height:MediaQuery.viewPaddingOf(context).bottom),
       body:StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
         stream:FirebaseFirestore.instance.collection('chats').doc(chatId).snapshots(),
         builder:(_,s){
@@ -25436,6 +25450,7 @@ class EtkilesimOzetiPage extends StatelessWidget{
     child:Scaffold(
       backgroundColor:Colors.white,
       appBar:AppBar(title:const Text('Etkileşim',style:TextStyle(fontWeight:FontWeight.w900))),
+      bottomNavigationBar:SizedBox(height:MediaQuery.viewPaddingOf(context).bottom),
       body:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
         stream:FirebaseFirestore.instance.collection('videos').where('ownerId',isEqualTo:uid).limit(100).snapshots(),
         builder:(_,s){
@@ -25547,6 +25562,7 @@ class EtkilesimDetayPage extends StatelessWidget{
     child:Scaffold(
       backgroundColor:Colors.white,
       appBar:AppBar(title:Text(baslik,style:const TextStyle(fontWeight:FontWeight.w900))),
+      bottomNavigationBar:SizedBox(height:MediaQuery.viewPaddingOf(context).bottom),
       body:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
         stream:FirebaseFirestore.instance.collection('videos').where('ownerId',isEqualTo:uid).limit(100).snapshots(),
         builder:(_,s){
