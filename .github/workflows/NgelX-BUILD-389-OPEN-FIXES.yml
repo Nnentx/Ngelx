@@ -1,0 +1,141 @@
+name: NgelX BUILD 389 OPEN FIXES
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - work/build-389-open-fixes
+    paths:
+      - 'app/**'
+      - 'firestore.rules'
+      - 'QA/**'
+      - '.github/workflows/NgelX-BUILD-389-OPEN-FIXES.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 70
+    steps:
+      - name: Kaynaklari al
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Java 17 kur
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Flutter kur
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Sabit NgelX imza anahtarini geri yukle
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: ngelx-stable-debug-keystore-v1
+          fail-on-cache-miss: true
+
+      - name: Imza anahtarini dogrula
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s "$HOME/.android/debug.keystore"
+          keytool -list -v -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey | grep -F 'SHA256: BE:20:B2:7F:0B:A1:F4:DE:CD:29:41:D4:10:B1:53:6D:E8:9E:48:DC:89:4F:04:F0:38:F9:D2:6B:11:EC:D6:AA'
+
+      - name: Build 389 regression ve duzeltme kapisi
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          grep -Fqx 'version: 1.0.165+389' app/pubspec.yaml
+          grep -Fq "defaultValue: '389'" app/lib/main.dart
+          grep -Fq "defaultValue: '1.0.165'" app/lib/main.dart
+
+          # Build 388'de gecen kritik akislar korunacak.
+          grep -Fq "class MesajIstekleriPage" app/lib/main.dart
+          grep -Fq "'requestRecipientUid':hedefUid" app/lib/main.dart
+          grep -Fq "'lastMessageClientAt':clientCreatedAt" app/lib/main.dart
+          grep -Fq "'lastSenderId':ben" app/lib/main.dart
+          grep -Fq ".collection('chats').where('members',arrayContains:ben).limit(100).snapshots()" app/lib/main.dart
+          grep -Fq 'ngelxOkunmamisAktiviteSayisi' app/lib/main.dart
+          grep -Fq 'ResizeImage(NgelXAgImageProvider(arkaPlanUrl),width:900)' app/lib/main.dart
+          grep -Fq "class KaydedilenlerPage" app/lib/main.dart
+          grep -Fq "class ArsivSohbetlerPage" app/lib/main.dart
+
+          # Arkadaslik istegi stale kayit kurtarma.
+          grep -Fq "if(nId.isEmpty)return false;" app/lib/main.dart
+          grep -Fq "'status':'superseded'" app/lib/main.dart
+          grep -Fq "aktifBekleyenIstek" app/lib/main.dart
+
+          # Hikaye videosu sikistirma + 30 saniye siniri.
+          grep -Fq "video_compress:" app/pubspec.yaml
+          grep -Fq "VideoCompress.compressVideo" app/lib/main.dart
+          grep -Fq "VideoQuality.Res1280x720Quality" app/lib/main.dart
+          grep -Fq "maxDuration:const Duration(seconds:30)" app/lib/main.dart
+
+          # Sohbet arka plani klavye acilirken sabit kalacak.
+          grep -Fq "resizeToAvoidBottomInset:false" app/lib/main.dart
+          grep -Fq "padding:EdgeInsets.only(bottom:MediaQuery.viewInsetsOf(context).bottom)" app/lib/main.dart
+
+          # Arka plan degisikligini yapan kisi sistem mesaji olarak gorunecek.
+          grep -Fq "'systemAction':'background_changed'" app/lib/main.dart
+          grep -Fq "sohbet arka planını değiştirdi" app/lib/main.dart
+          grep -Fq "sohbet arka planını kaldırdı" app/lib/main.dart
+
+          # Secili ozellestirme degerleri belirgin.
+          grep -Fq "Widget seciliTik(bool secili)" app/lib/main.dart
+          grep -Fq "Icons.check_circle_rounded" app/lib/main.dart
+
+          # Hikaye secenek yazilari acik renkte kaybolmayacak.
+          grep -Fq "title:const Text('Hikâyeyi paylaş',style:TextStyle(color:Colors.black87" app/lib/story_v66.dart
+          grep -Fq "title:const Text('Arşive taşı',style:TextStyle(color:Colors.black87" app/lib/story_v66.dart
+
+          # Modern alt durum bildirim sistemi korunacak.
+          grep -Fq "SnackBar ngelxDurumSnack" app/lib/main.dart
+          grep -Fq "Takipçi kaldırıldı.',tip:'uyari'" app/lib/main.dart
+          grep -Fq "Takip isteği gönderildi.',tip:'basari'" app/lib/main.dart
+
+          git diff --check
+
+      - name: Bagimliliklari al
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter clean
+          flutter pub get
+
+      - name: Flutter analiz
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter analyze --no-fatal-infos --no-fatal-warnings
+
+      - name: Gercek APK olustur
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter build apk --release --build-name=1.0.165 --build-number=389
+          test -s build/app/outputs/flutter-apk/app-release.apk
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          test -n "$APKSIGNER"
+          "$APKSIGNER" verify --verbose --print-certs build/app/outputs/flutter-apk/app-release.apk
+          cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/NgelX-1.0.165-Build-389-OPEN-FIXES.apk
+          sha256sum build/app/outputs/flutter-apk/NgelX-1.0.165-Build-389-OPEN-FIXES.apk > build/app/outputs/flutter-apk/NgelX-1.0.165-Build-389-OPEN-FIXES.apk.sha256
+
+      - name: APK yukle
+        uses: actions/upload-artifact@v4
+        with:
+          name: NgelX-1.0.165-Build-389-OPEN-FIXES
+          path: |
+            app/build/app/outputs/flutter-apk/NgelX-1.0.165-Build-389-OPEN-FIXES.apk
+            app/build/app/outputs/flutter-apk/NgelX-1.0.165-Build-389-OPEN-FIXES.apk.sha256
+          if-no-files-found: error
+          retention-days: 14
