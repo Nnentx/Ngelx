@@ -45,6 +45,7 @@ The following Build 386/387 flows were already manually verified and are frozen 
 - Private messaging: send/receive and seen state.
 - Message Requests: DEVICE VERIFIED on Build 388 with the fresh Umay → Rojin scenario. A first message from a non-friend/non-following account lands in Message Requests with a badge, Accept removes it from requests, preserves the messages, and moves the conversation into the normal Inbox with the request badge cleared.
 - Inbox filters and conversation list behavior.
+- Inbox realtime unread flow: DEVICE VERIFIED on Build 388. Rojin → Umay message appeared immediately as the latest preview with unread badge = 1 and top Mesajlar = 1; after opening the chat and returning, the row badge cleared and top Mesajlar returned to 0 while the latest preview stayed intact.
 - Friendship request, accept and remove flow.
 - Follow request accept and follower removal flow.
 - Privacy/settings screen behavior.
@@ -55,6 +56,13 @@ The following Build 386/387 flows were already manually verified and are frozen 
 - Follow/follower counts remain Firestore-driven; no local counter delta is reintroduced.
 
 ## Build 388 device verification added on 2026-10-05
+
+### Rojin → Umay realtime inbox
+- Sent “Testr 388” from Rojin to Umay.
+- Umay inbox immediately showed “Testr 388” as the latest preview.
+- Conversation unread badge = 1 and top Mesajlar counter = 1.
+- After opening the chat and returning, both unread indicators cleared to 0.
+- Latest preview remained “Testr 388”.
 
 - Fresh sender: Umay Umay.
 - Recipient: Rojin Candan.
