@@ -73,6 +73,28 @@ The following Build 386/387 flows were already manually verified and are frozen 
 - Umay moved into the normal Gelen Kutusu list.
 - Mesaj İstekleri badge cleared.
 
+## Build 388 video QA — 2026-10-05
+
+Source: user device recording 44176.mp4 (~21.7 s), private chat with a photo background.
+
+### New defect observed
+- **Chat background jumps/reframes when the keyboard opens or closes.**
+  - With the keyboard closed, the wallpaper is framed one way.
+  - Opening the keyboard changes the available chat height and the `BoxFit.cover` image is visibly re-cropped/shifted.
+  - Closing the keyboard makes the wallpaper jump back again.
+  - This is a visual stability regression and remains **OPEN**.
+  - Fix goal: keep the wallpaper anchored to a stable full-screen canvas while only the message/composer area resizes for IME, so opening/closing the keyboard does not zoom/reframe the background.
+
+### Verified from the same recording
+- Composer stays above the Android system navigation area; no bottom-button overlap was visible.
+- Messages remain readable over the photo background.
+- Text input and send action worked throughout the recording.
+- No obvious message-list disappearance or crash occurred.
+
+### Not proven by this recording
+- Two-device / two-account background synchronization cannot be declared passed from this single-side recording alone.
+- Keyboard latency is not marked as a failure from this clip; the clear reproducible issue is the wallpaper reframe/jump.
+
 ## CI gate
 
 A Build 388 APK is valid only when:
