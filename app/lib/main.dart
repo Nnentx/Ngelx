@@ -244,7 +244,7 @@ const ngelxPrivateBlueInk = Color(0xFF10213A);
 // Build 372: settings/about must reflect the installed build instead of the old 368 fallback.
 // Release builds can still override these with --dart-define.
 const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.162');
-const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '386');
+const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '387');
 const ngelxGroupBorder = Color(0xFFD9EEE0);
 
 final GlobalKey<NavigatorState> ngelxNavigatorKey=GlobalKey<NavigatorState>();
@@ -21427,7 +21427,7 @@ class SohbetBilgiPage extends StatelessWidget{
         builder:(_,s){
           final me=FirebaseAuth.instance.currentUser?.uid,ham=s.data?.data()?['nicknames'],nicks=ham is Map?Map<String,dynamic>.from(ham):<String,dynamic>{},takma=(me==null?'':(nicks[me]??'').toString()).trim(),gorunenAd=takma.isNotEmpty?takma:ad;
           return ListView(
-            padding:const EdgeInsets.fromLTRB(20,8,20,28),
+            padding:EdgeInsets.fromLTRB(20,8,20,ngelxAltGuvenliBosluk(context,extra:28)),
             children:[
               Center(child:Container(
                 padding:const EdgeInsets.all(3),
@@ -22818,7 +22818,6 @@ class _KullaniciProfilPageState extends State<KullaniciProfilPage> {
   final Set<String> _yerelTakipIstekleri=<String>{};
   final Set<String> _yerelArkadasIstekleri=<String>{};
   final Map<String,bool> _yerelTakipDurumu=<String,bool>{};
-  int _yerelTakipciDelta=0;
 
   @override
   void initState(){
@@ -23153,12 +23152,18 @@ class _KullaniciProfilPageState extends State<KullaniciProfilPage> {
                       ((x['commentCount'] as num?)?.toInt()??0)+
                       ((x['shareCount'] as num?)?.toInt()??0);
                   });
-                  return Row(mainAxisAlignment:MainAxisAlignment.spaceEvenly,children:[
-                    _profilSayac(context,'${List<dynamic>.from(v['following']??const[]).length}',t('following'),()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciListesiPage(uid:uid,alan:'following',baslik:'Takip')))),
-                    _profilSayac(context,'${math.max(0,List<dynamic>.from(v['followers']??const[]).length+_yerelTakipciDelta)}',t('followers'),()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciListesiPage(uid:uid,alan:'followers',baslik:'Takipçiler')))),
-                    _profilSayac(context,'$toplam',t('interaction'),()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>EtkilesimOzetiPage(uid:uid)))),
-                    _profilSayac(context,'${List<dynamic>.from(v['friends']??const[]).length}',t('friends'),()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciListesiPage(uid:uid,alan:'friends',baslik:'Arkadaşlar')))),
-                  ]);
+                  return StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
+                    stream:FirebaseFirestore.instance.collection('users').doc(uid).snapshots(),
+                    builder:(_,profilSnap){
+                      final canli=profilSnap.data?.data()??v;
+                      return Row(mainAxisAlignment:MainAxisAlignment.spaceEvenly,children:[
+                        _profilSayac(context,'${List<dynamic>.from(canli['following']??const[]).length}',t('following'),()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciListesiPage(uid:uid,alan:'following',baslik:'Takip')))),
+                        _profilSayac(context,'${List<dynamic>.from(canli['followers']??const[]).length}',t('followers'),()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciListesiPage(uid:uid,alan:'followers',baslik:'Takipçiler')))),
+                        _profilSayac(context,'$toplam',t('interaction'),()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>EtkilesimOzetiPage(uid:uid)))),
+                        _profilSayac(context,'${List<dynamic>.from(canli['friends']??const[]).length}',t('friends'),()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciListesiPage(uid:uid,alan:'friends',baslik:'Arkadaşlar')))),
+                      ]);
+                    },
+                  );
                 },
               ),
               const SizedBox(height: 22),
@@ -23182,8 +23187,7 @@ class _KullaniciProfilPageState extends State<KullaniciProfilPage> {
                     stream:me==null?null:FirebaseFirestore.instance.collection('users').doc(me).snapshots(),
                     builder:(_,benSnap){
                       final benimTakipEttiklerim=List<String>.from(benSnap.data?.data()?['following']??const[]);
-                      final hedefTakipcileri=List<String>.from(v['followers']??const[]);
-                      final sunucuTakipte=benimTakipEttiklerim.contains(uid)||(me!=null&&hedefTakipcileri.contains(me));
+                      final sunucuTakipte=benimTakipEttiklerim.contains(uid);
                       final yerelTakipte=_yerelTakipDurumu[uid];
                       if(yerelTakipte!=null&&yerelTakipte==sunucuTakipte){
                         WidgetsBinding.instance.addPostFrameCallback((_){
@@ -23219,18 +23223,12 @@ class _KullaniciProfilPageState extends State<KullaniciProfilPage> {
                                   ],
                                 ))??false;
                                 if(!onay)return;
-                                if(mounted)setState((){
-                                  _yerelTakipDurumu[uid]=false;
-                                  _yerelTakipciDelta--;
-                                });
+                                if(mounted)setState(()=>_yerelTakipDurumu[uid]=false);
                                 try{
                                   await takipDurumuDegistir(uid,true);
                                   if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Takipten çıktın.')));
                                 }catch(e){
-                                  if(mounted)setState((){
-                                    _yerelTakipDurumu.remove(uid);
-                                    _yerelTakipciDelta++;
-                                  });
+                                  if(mounted)setState(()=>_yerelTakipDurumu.remove(uid));
                                   if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Takipten çıkılamadı: $e')));
                                 }
                                 return;
@@ -23273,18 +23271,12 @@ class _KullaniciProfilPageState extends State<KullaniciProfilPage> {
                                 return;
                               }
 
-                              if(mounted)setState((){
-                                _yerelTakipDurumu[uid]=true;
-                                _yerelTakipciDelta++;
-                              });
+                              if(mounted)setState(()=>_yerelTakipDurumu[uid]=true);
                               try{
                                 await takipDurumuDegistir(uid,false);
                                 if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Artık bu hesabı takip ediyorsun.')));
                               }catch(e){
-                                if(mounted)setState((){
-                                  _yerelTakipDurumu.remove(uid);
-                                  _yerelTakipciDelta--;
-                                });
+                                if(mounted)setState(()=>_yerelTakipDurumu.remove(uid));
                                 if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Takip işlemi tamamlanamadı: $e')));
                               }
                             },
@@ -23900,28 +23892,41 @@ class _HesapDegistirPageState extends State<HesapDegistirPage> {
     final sonuc=await showModalBottomSheet<String>(
       context:context,isScrollControlled:true,backgroundColor:Colors.white,
       shape:const RoundedRectangleBorder(borderRadius:BorderRadius.vertical(top:Radius.circular(28))),
-      builder:(ctx)=>Theme(data:ThemeData.light(),child:StatefulBuilder(builder:(ctx,setP)=>Padding(
-        padding:EdgeInsets.fromLTRB(20,22,20,MediaQuery.of(ctx).viewInsets.bottom+24),
-        child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-          const Text('Hesaba geç',style:TextStyle(fontSize:22,fontWeight:FontWeight.w900)),
-          const SizedBox(height:5),
-          Text(email,style:const TextStyle(color:Colors.black54)),
-          const SizedBox(height:16),
-          TextField(
-            controller:c,obscureText:gizli,autofocus:true,
-            decoration:InputDecoration(
-              labelText:'Şifre',prefixIcon:const Icon(Icons.lock_outline_rounded),
-              suffixIcon:IconButton(onPressed:()=>setP(()=>gizli=!gizli),icon:Icon(gizli?Icons.visibility_off_outlined:Icons.visibility_outlined)),
+      builder:(ctx)=>Theme(data:ThemeData.light(),child:StatefulBuilder(builder:(ctx,setP){
+        final klavye=MediaQuery.viewInsetsOf(ctx).bottom;
+        return Padding(
+          padding:EdgeInsets.only(bottom:klavye),
+          child:SafeArea(
+            top:false,
+            minimum:const EdgeInsets.only(bottom:20),
+            child:SingleChildScrollView(
+              padding:EdgeInsets.fromLTRB(20,22,20,ngelxAltSistemRezervi(ctx,minimum:88)),
+              child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+                const Text('Hesap ekle',style:TextStyle(fontSize:22,fontWeight:FontWeight.w900)),
+                const SizedBox(height:5),
+                Text(hesaplar.length.toString()+'/5 hesap kullanılıyor',style:const TextStyle(color:Colors.black54)),
+                const SizedBox(height:16),
+                TextField(controller:e,keyboardType:TextInputType.emailAddress,autocorrect:false,decoration:const InputDecoration(labelText:'E-posta adresi',prefixIcon:Icon(Icons.alternate_email_rounded))),
+                const SizedBox(height:10),
+                TextField(controller:p,obscureText:gizli,decoration:InputDecoration(labelText:'Şifre',prefixIcon:const Icon(Icons.lock_outline_rounded),suffixIcon:IconButton(onPressed:()=>setP(()=>gizli=!gizli),icon:Icon(gizli?Icons.visibility_off_outlined:Icons.visibility_outlined)))),
+                const SizedBox(height:16),
+                FilledButton(
+                  style:FilledButton.styleFrom(backgroundColor:ngelxPremiumPurple,padding:const EdgeInsets.symmetric(vertical:14)),
+                  onPressed:(){
+                    final email=e.text.trim(),sifre=p.text;
+                    if(!email.contains('@')||sifre.length<6){
+                      ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content:Text('Geçerli e-posta ve şifre gir.')));
+                      return;
+                    }
+                    Navigator.pop(ctx,{'email':email,'password':sifre});
+                  },
+                  child:const Text('Hesabı ekle ve geç',style:TextStyle(fontWeight:FontWeight.w800)),
+                ),
+              ]),
             ),
           ),
-          const SizedBox(height:16),
-          FilledButton(
-            style:FilledButton.styleFrom(backgroundColor:ngelxPremiumPurple,padding:const EdgeInsets.symmetric(vertical:14)),
-            onPressed:()=>Navigator.pop(ctx,c.text),
-            child:const Text('Devam et',style:TextStyle(fontWeight:FontWeight.w800)),
-          ),
-        ]),
-      ))),
+        );
+      })),
     );
     c.dispose();
     return sonuc;
@@ -25391,7 +25396,7 @@ class EtkilesimOzetiPage extends StatelessWidget{
           for(final x in d){final v=x.data();begeni+=((v['likeCount'] as num?)?.toInt()??0);yorum+=((v['commentCount'] as num?)?.toInt()??0);paylasim+=((v['shareCount'] as num?)?.toInt()??0);}
           final benim=FirebaseAuth.instance.currentUser?.uid==uid;
           final top=[...d]..sort((a,b)=>puan(b.data()).compareTo(puan(a.data())));
-          return ListView(padding:const EdgeInsets.all(20),children:[
+          return ListView(padding:EdgeInsets.fromLTRB(20,20,20,ngelxAltGuvenliBosluk(context,extra:32)),children:[
             const Text('İçerik istatistikleri',style:TextStyle(fontSize:22,fontWeight:FontWeight.w900)),
             const SizedBox(height:18),
             Row(children:[_kart(context,Icons.favorite_rounded,'Beğeni',begeni,Colors.red,'likes'),_kart(context,Icons.comment_rounded,'Yorum',yorum,Colors.blue,'comments')]),
@@ -25430,14 +25435,15 @@ class EtkilesimOzetiPage extends StatelessWidget{
   );
   Widget _kart(BuildContext context,IconData i,String t,int n,Color c,String metric)=>Expanded(child:Padding(
     padding:const EdgeInsets.all(5),
-    child:Material(
-      color:c.withValues(alpha:.10),
-      borderRadius:BorderRadius.circular(20),
-      clipBehavior:Clip.antiAlias,
-      child:InkWell(
-        onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>EtkilesimDetayPage(uid:uid,baslik:t,metric:metric,ikon:i,renk:c))),
-        child:Padding(
+    child:Semantics(
+      button:true,
+      label:'$t detayları',
+      child:GestureDetector(
+        behavior:HitTestBehavior.opaque,
+        onTap:()=>Navigator.of(context).push(MaterialPageRoute(builder:(_)=>EtkilesimDetayPage(uid:uid,baslik:t,metric:metric,ikon:i,renk:c))),
+        child:Container(
           padding:const EdgeInsets.all(18),
+          decoration:BoxDecoration(color:c.withValues(alpha:.10),borderRadius:BorderRadius.circular(20)),
           child:Column(children:[Icon(i,color:c),const SizedBox(height:8),Text(n.toString(),style:const TextStyle(fontSize:24,fontWeight:FontWeight.w900)),Text(t,style:const TextStyle(color:Colors.black54))]),
         ),
       ),
@@ -26714,12 +26720,21 @@ class _ProfilPageState extends State<ProfilPage> {
                     builder:(_,s){
                       final paylasimlar=(s.data?.docs??[]).where((d)=>d.data()['type']!='story');
                       final etkilesim=paylasimlar.fold<int>(0,(toplam,d){final v=d.data();return toplam+((v['likeCount'] as num?)?.toInt()??0)+((v['commentCount'] as num?)?.toInt()??0)+((v['shareCount'] as num?)?.toInt()??0);});
-                      return Row(mainAxisAlignment:MainAxisAlignment.spaceEvenly,children:[
-                        _beyazIstatistik('$takipSayisi',t('following'),()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciListesiPage(uid:aktifKullanici!.uid,alan:'following',baslik:'Takip')))),
-                        _beyazIstatistik('$takipciSayisi',t('followers'),()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciListesiPage(uid:aktifKullanici!.uid,alan:'followers',baslik:'Takipçiler')))),
-                        _beyazIstatistik('$etkilesim',t('interaction'),()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>EtkilesimOzetiPage(uid:aktifKullanici!.uid)))),
-                        _beyazIstatistik('$arkadasSayisi',t('friends'),()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const ArkadaslarPage()))),
-                      ]);
+                      return StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
+                        stream:aktifKullanici==null?null:FirebaseFirestore.instance.collection('users').doc(aktifKullanici!.uid).snapshots(),
+                        builder:(_,profilSnap){
+                          final canli=profilSnap.data?.data()??const <String,dynamic>{};
+                          final canliTakip=List<dynamic>.from(canli['following']??const[]).length;
+                          final canliTakipci=List<dynamic>.from(canli['followers']??const[]).length;
+                          final canliArkadas=List<dynamic>.from(canli['friends']??const[]).length;
+                          return Row(mainAxisAlignment:MainAxisAlignment.spaceEvenly,children:[
+                            _beyazIstatistik('$canliTakip',t('following'),()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciListesiPage(uid:aktifKullanici!.uid,alan:'following',baslik:'Takip')))),
+                            _beyazIstatistik('$canliTakipci',t('followers'),()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciListesiPage(uid:aktifKullanici!.uid,alan:'followers',baslik:'Takipçiler')))),
+                            _beyazIstatistik('$etkilesim',t('interaction'),()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>EtkilesimOzetiPage(uid:aktifKullanici!.uid)))),
+                            _beyazIstatistik('$canliArkadas',t('friends'),()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const ArkadaslarPage()))),
+                          ]);
+                        },
+                      );
                     },
                   ),
                   const SizedBox(height: 17),
