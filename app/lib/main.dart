@@ -3751,6 +3751,38 @@ Future<void> kullaniciyiEngelle(BuildContext context,String hedefUid) async {
   }catch(e){if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Engelleme tamamlanamadı: $e')));}
 }
 
+Future<bool> ngelxEngeliKaldir(BuildContext context,String hedefUid,{String hedefAdi='Bu kullanıcı'})async{
+  final u=FirebaseAuth.instance.currentUser;
+  if(u==null||u.isAnonymous||hedefUid.isEmpty)return false;
+  final tamam=await showDialog<bool>(
+    context:context,
+    builder:(c)=>Theme(
+      data:ThemeData.light().copyWith(colorScheme:ColorScheme.fromSeed(seedColor:mor)),
+      child:AlertDialog(
+        backgroundColor:Colors.white,
+        surfaceTintColor:Colors.white,
+        shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(26)),
+        icon:const CircleAvatar(backgroundColor:Color(0xFFF1E9FF),child:Icon(Icons.lock_open_rounded,color:mor)),
+        title:const Text('Engeli kaldırmak istiyor musun?',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.w900)),
+        content:Text('$hedefAdi profilini yeniden görebilir ve gizlilik ayarlarına göre sana yeniden mesaj gönderebilir.',textAlign:TextAlign.center,style:const TextStyle(color:Colors.black54,height:1.35)),
+        actions:[
+          TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),
+          FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('Engeli kaldır')),
+        ],
+      ),
+    ),
+  )??false;
+  if(!tamam)return false;
+  try{
+    await FirebaseFirestore.instance.collection('users').doc(u.uid).set({'blocked':FieldValue.arrayRemove([hedefUid])},SetOptions(merge:true));
+    if(context.mounted)ngelxDurumMesaji(context,'Engel kaldırıldı.',tip:'basari');
+    return true;
+  }catch(e){
+    if(context.mounted)ngelxDurumMesaji(context,'Engel kaldırılamadı. Tekrar dene.',tip:'hata');
+    return false;
+  }
+}
+
 class NgelXAcilisKapisi extends StatefulWidget {
   final Widget child;
   const NgelXAcilisKapisi({super.key,required this.child});
@@ -8094,6 +8126,8 @@ class _YeniYorumlarState extends State<Yorumlar> {
   bool gonderiliyor = false;
   bool gizliKelimeFiltresi=true;
   List<String> gizliKelimeListesi=[];
+  bool icerikSahibiGizliKelimeFiltresi=false;
+  List<String> icerikSahibiGizliKelimeListesi=[];
   String? yanitlananId;
   String? yanitlananKullanici;
   final Set<String> acikYanitlar = {};
@@ -8114,8 +8148,21 @@ class _YeniYorumlarState extends State<Yorumlar> {
       gizliKelimeListesi=hamGizli is Iterable?hamGizli.map((e)=>e.toString().trim().toLowerCase()).where((e)=>e.isNotEmpty).toSet().toList():<String>[];
       });
     });
-    unawaited(FirebaseFirestore.instance.collection('videos').doc(widget.videoId).get().then((d){
-      if(mounted)setState(()=>icerikMeta=d.data()??<String,dynamic>{});
+    unawaited(FirebaseFirestore.instance.collection('videos').doc(widget.videoId).get().then((d)async{
+      final meta=d.data()??<String,dynamic>{};
+      if(mounted)setState(()=>icerikMeta=meta);else icerikMeta=meta;
+      final owner=(meta['ownerId']??'').toString();
+      if(owner.isEmpty)return;
+      try{
+        final od=await FirebaseFirestore.instance.collection('users').doc(owner).get();
+        final ov=od.data()??<String,dynamic>{};
+        final ham=ov['hiddenWords'];
+        final kelimeler=ham is Iterable?ham.map((e)=>e.toString().trim().toLowerCase()).where((e)=>e.isNotEmpty).toSet().toList():<String>[];
+        if(mounted)setState((){
+          icerikSahibiGizliKelimeFiltresi=ov['hiddenWordsFilter']!=false;
+          icerikSahibiGizliKelimeListesi=kelimeler;
+        });
+      }catch(_){}
     }).catchError((_){ }));
     unawaited(ref.limit(80).get(const GetOptions(source:Source.cache)).then((s){
       if(mounted&&s.docs.isNotEmpty)setState(()=>yorumOnbellek=s.docs.toList());
@@ -8343,6 +8390,8 @@ class _YeniYorumlarState extends State<Yorumlar> {
                                 yanitlariAc: () => setState(() { acikYanitlar.contains(d.id) ? acikYanitlar.remove(d.id) : acikYanitlar.add(d.id); }),
                                 gizliKelimeFiltresi:gizliKelimeFiltresi,
                                 gizliKelimeListesi:gizliKelimeListesi,
+                                icerikSahibiGizliKelimeFiltresi:icerikSahibiGizliKelimeFiltresi,
+                                icerikSahibiGizliKelimeListesi:icerikSahibiGizliKelimeListesi,
                               );
                             },
                           ),
@@ -8433,6 +8482,8 @@ class YorumKarti extends StatelessWidget {
   final VoidCallback yanitlariAc;
   final bool gizliKelimeFiltresi;
   final List<String> gizliKelimeListesi;
+  final bool icerikSahibiGizliKelimeFiltresi;
+  final List<String> icerikSahibiGizliKelimeListesi;
 
   const YorumKarti({
     super.key,
@@ -8449,6 +8500,8 @@ class YorumKarti extends StatelessWidget {
     required this.yanitlariAc,
     this.gizliKelimeFiltresi=true,
     this.gizliKelimeListesi=const[],
+    this.icerikSahibiGizliKelimeFiltresi=false,
+    this.icerikSahibiGizliKelimeListesi=const[],
   });
 
   Widget satir(
@@ -8460,11 +8513,14 @@ class YorumKarti extends StatelessWidget {
   }) {
     final ad = (v['username'] ?? 'ngelx').toString();
     final metin = (v['text'] ?? v['message'] ?? v['content'] ?? '').toString().trim();
-    final gizlenecek=gizliKelimeFiltresi&&metin.isNotEmpty&&ngelxHiddenWordMatches(metin,gizliKelimeListesi);
-    final gosterilecekMetin=gizlenecek?'Gizli kelime filtresi nedeniyle gizlendi.':metin;
     final foto = (v['photoUrl'] ?? '').toString();
     final profilUid = (v['userId'] ?? '').toString();
     final aktifUid = FirebaseAuth.instance.currentUser?.uid;
+    final sahibiFiltreledi=icerikSahibiGizliKelimeFiltresi&&metin.isNotEmpty&&ngelxHiddenWordMatches(metin,icerikSahibiGizliKelimeListesi);
+    if(sahibiFiltreledi&&aktifUid!=icerikSahibiUid&&aktifUid!=profilUid)return const SizedBox.shrink();
+    final yerelFiltreledi=gizliKelimeFiltresi&&metin.isNotEmpty&&ngelxHiddenWordMatches(metin,gizliKelimeListesi);
+    final sahibiIcinGizli=sahibiFiltreledi&&aktifUid==icerikSahibiUid&&aktifUid!=profilUid;
+    final gosterilecekMetin=(sahibiIcinGizli||yerelFiltreledi)?'Gizli kelime filtresi nedeniyle gizlendi.':metin;
 
     Future<void> yorumMenusu() async {
       final benim = aktifUid == profilUid;
@@ -19002,7 +19058,8 @@ class _SohbetPageState extends State<SohbetPage> {
       final benimEngellediklerim=List<String>.from(benim['blocked']??const[]);
       final onunEngelledikleri=List<String>.from(diger['blocked']??const[]);
       final onunKisitladiklari=List<String>.from(diger['restrictedUsers']??const[]);
-      if(benimEngellediklerim.contains(widget.digerUid)||onunEngelledikleri.contains(ben))engel='Engellenen hesaplar arasında mesaj gönderilemez.';
+      if(benimEngellediklerim.contains(widget.digerUid))engel='Bu hesabı engelledin. Engeli kaldırmadan mesaj veya arama yapamazsın.';
+      else if(onunEngelledikleri.contains(ben))engel='Bu kullanıcıya şu anda mesaj veya arama gönderemezsin.';
       else if(onunKisitladiklari.contains(ben))engel='Bu kullanıcı mesajlarını sınırlandırdı.';
       else if(diger['deactivated']==true)engel='Bu hesap şu anda kullanılamıyor.';
       else{
@@ -23164,8 +23221,18 @@ class _KullaniciProfilPageState extends State<KullaniciProfilPage> {
     try{
       final hedef=await FirebaseFirestore.instance.collection('users').doc(uid).get().timeout(const Duration(seconds:8));
       final hv=hedef.data()??<String,dynamic>{};
+      DocumentSnapshot<Map<String,dynamic>>? benim;
+      if(me!=null&&me!=uid){
+        benim=await FirebaseFirestore.instance.collection('users').doc(me).get().timeout(const Duration(seconds:8));
+        final benEngelledim=List<String>.from(benim.data()?['blocked']??const[]).contains(uid);
+        final oBeniEngelledi=List<String>.from(hv['blocked']??const[]).contains(me);
+        if(benEngelledim||oBeniEngelledi){
+          if(context.mounted)ngelxDurumMesaji(context,'Engellenen hesaplar arasında profil paylaşılamaz.',tip:'uyari');
+          return;
+        }
+      }
       if(hv['profileShareFriendsOnly']==true&&me!=uid){
-        final benim=me==null?null:await FirebaseFirestore.instance.collection('users').doc(me).get().timeout(const Duration(seconds:8));
+        benim??=me==null?null:await FirebaseFirestore.instance.collection('users').doc(me).get().timeout(const Duration(seconds:8));
         final arkadaslar=List<String>.from(benim?.data()?['friends']??const[]);
         if(!arkadaslar.contains(uid)){
           if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bu kullanıcı profilinin yalnızca arkadaşları tarafından paylaşılmasına izin veriyor.')));
@@ -23286,6 +23353,36 @@ class _KullaniciProfilPageState extends State<KullaniciProfilPage> {
           if (!s.hasData) return const Center(child: CircularProgressIndicator(color: mavi));
           final v = s.data![0]?.data() ?? <String, dynamic>{};
           final benimVerim = s.data![1]?.data() ?? <String, dynamic>{};
+          final benEngelledim=me!=null&&List<String>.from(benimVerim['blocked']??const[]).contains(uid);
+          final oBeniEngelledi=me!=null&&List<String>.from(v['blocked']??const[]).contains(me);
+          if(me!=uid&&(benEngelledim||oBeniEngelledi)){
+            if(oBeniEngelledi){
+              return const Center(child:Padding(
+                padding:EdgeInsets.all(28),
+                child:Column(mainAxisSize:MainAxisSize.min,children:[
+                  CircleAvatar(radius:34,backgroundColor:Color(0xFFF3F4F7),child:Icon(Icons.person_off_outlined,color:Colors.black45,size:34)),
+                  SizedBox(height:14),
+                  Text('Bu profile erişilemiyor.',style:TextStyle(fontSize:20,fontWeight:FontWeight.w900)),
+                  SizedBox(height:7),
+                  Text('Bu hesap arama, profil ve iletişim alanlarında kullanılamıyor.',textAlign:TextAlign.center,style:TextStyle(color:Colors.black54)),
+                ]),
+              ));
+            }
+            final engelliAd=(v['displayName']??v['username']??'Bu kullanıcı').toString();
+            return Center(child:SingleChildScrollView(padding:const EdgeInsets.all(28),child:Column(mainAxisSize:MainAxisSize.min,children:[
+              const CircleAvatar(radius:38,backgroundColor:Color(0xFFF1E9FF),child:Icon(Icons.block_rounded,color:mor,size:38)),
+              const SizedBox(height:14),
+              Text(engelliAd,style:const TextStyle(fontSize:23,fontWeight:FontWeight.w900)),
+              const SizedBox(height:8),
+              const Text('Bu hesabı engelledin. Engeli kaldırmadan mesaj gönderemez, arayamaz veya etkileşime geçemezsin.',textAlign:TextAlign.center,style:TextStyle(color:Colors.black54,height:1.4)),
+              const SizedBox(height:18),
+              FilledButton.icon(
+                onPressed:()async{final ok=await ngelxEngeliKaldir(context,uid,hedefAdi:engelliAd);if(ok&&mounted)setState((){});},
+                icon:const Icon(Icons.lock_open_rounded),
+                label:const Text('Engellemeyi kaldır'),
+              ),
+            ])));
+          }
           final foto = (v['photoUrl'] ?? '').toString();
           final canli=v['isLive']==true&&(v['currentLiveId']??'').toString().isNotEmpty;
           final canliId=(v['currentLiveId']??'').toString();
