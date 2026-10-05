@@ -80,7 +80,8 @@ jobs:
 
           # Sohbet arka plani klavye acilirken sabit kalacak.
           grep -Fq "resizeToAvoidBottomInset:false" app/lib/main.dart
-          grep -Fq "padding:EdgeInsets.only(bottom:MediaQuery.viewInsetsOf(context).bottom)" app/lib/main.dart
+          ( grep -Fq "bottomNavigationBar:SizedBox(height:MediaQuery.viewPaddingOf(context).bottom)" app/lib/main.dart || grep -Fq "bottomNavigationBar:MediaQuery.viewInsetsOf(context).bottom>0?null:SizedBox(height:MediaQuery.viewPaddingOf(context).bottom)" app/lib/main.dart )
+          ( grep -Fq "math.max(0,MediaQuery.viewInsetsOf(context).bottom-MediaQuery.viewPaddingOf(context).bottom)" app/lib/main.dart || grep -Fq "padding:EdgeInsets.only(bottom:MediaQuery.viewInsetsOf(context).bottom)" app/lib/main.dart )
 
           # Arka plan degisikligini yapan kisi sistem mesaji olarak gorunecek.
           grep -Fq "'systemAction':'background_changed'" app/lib/main.dart
