@@ -23892,40 +23892,29 @@ class _HesapDegistirPageState extends State<HesapDegistirPage> {
     final sonuc=await showModalBottomSheet<String>(
       context:context,isScrollControlled:true,backgroundColor:Colors.white,
       shape:const RoundedRectangleBorder(borderRadius:BorderRadius.vertical(top:Radius.circular(28))),
-      builder:(ctx)=>Theme(data:ThemeData.light(),child:StatefulBuilder(builder:(ctx,setP){
-        final klavye=MediaQuery.viewInsetsOf(ctx).bottom;
-        return Padding(
-          padding:EdgeInsets.only(bottom:klavye),
-          child:SafeArea(
-            top:false,
-            minimum:const EdgeInsets.only(bottom:20),
-            child:SingleChildScrollView(
-              padding:EdgeInsets.fromLTRB(20,22,20,ngelxAltSistemRezervi(ctx,minimum:88)),
-              child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-                const Text('Hesap ekle',style:TextStyle(fontSize:22,fontWeight:FontWeight.w900)),
-                const SizedBox(height:5),
-                Text(hesaplar.length.toString()+'/5 hesap kullanılıyor',style:const TextStyle(color:Colors.black54)),
-                const SizedBox(height:16),
-                TextField(controller:e,keyboardType:TextInputType.emailAddress,autocorrect:false,decoration:const InputDecoration(labelText:'E-posta adresi',prefixIcon:Icon(Icons.alternate_email_rounded))),
-                const SizedBox(height:10),
-                TextField(controller:p,obscureText:gizli,decoration:InputDecoration(labelText:'Şifre',prefixIcon:const Icon(Icons.lock_outline_rounded),suffixIcon:IconButton(onPressed:()=>setP(()=>gizli=!gizli),icon:Icon(gizli?Icons.visibility_off_outlined:Icons.visibility_outlined)))),
-                const SizedBox(height:16),
-                FilledButton(
-                  style:FilledButton.styleFrom(backgroundColor:ngelxPremiumPurple,padding:const EdgeInsets.symmetric(vertical:14)),
-                  onPressed:(){
-                    final email=e.text.trim(),sifre=p.text;
-                    if(!email.contains('@')||sifre.length<6){
-                      ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content:Text('Geçerli e-posta ve şifre gir.')));
-                      return;
-                    }
-                    Navigator.pop(ctx,{'email':email,'password':sifre});
-                  },
-                  child:const Text('Hesabı ekle ve geç',style:TextStyle(fontWeight:FontWeight.w800)),
-                ),
-              ]),
+      builder:(ctx)=>Theme(data:ThemeData.light(),child:StatefulBuilder(builder:(ctx,setP)=>Padding(
+        padding:EdgeInsets.fromLTRB(20,22,20,MediaQuery.of(ctx).viewInsets.bottom+24),
+        child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+          const Text('Hesaba geç',style:TextStyle(fontSize:22,fontWeight:FontWeight.w900)),
+          const SizedBox(height:5),
+          Text(email,style:const TextStyle(color:Colors.black54)),
+          const SizedBox(height:16),
+          TextField(
+            controller:c,obscureText:gizli,autofocus:true,
+            decoration:InputDecoration(
+              labelText:'Şifre',prefixIcon:const Icon(Icons.lock_outline_rounded),
+              suffixIcon:IconButton(onPressed:()=>setP(()=>gizli=!gizli),icon:Icon(gizli?Icons.visibility_off_outlined:Icons.visibility_outlined)),
             ),
           ),
-        );
+          const SizedBox(height:16),
+          FilledButton(
+            style:FilledButton.styleFrom(backgroundColor:ngelxPremiumPurple,padding:const EdgeInsets.symmetric(vertical:14)),
+            onPressed:()=>Navigator.pop(ctx,c.text),
+            child:const Text('Devam et',style:TextStyle(fontWeight:FontWeight.w800)),
+          ),
+        ]),
+      ))),
+    );
       })),
     );
     c.dispose();
@@ -24001,31 +23990,41 @@ class _HesapDegistirPageState extends State<HesapDegistirPage> {
     final sonuc=await showModalBottomSheet<Map<String,String>>(
       context:context,isScrollControlled:true,useSafeArea:true,backgroundColor:Colors.white,
       shape:const RoundedRectangleBorder(borderRadius:BorderRadius.vertical(top:Radius.circular(28))),
-      builder:(ctx)=>Theme(data:ThemeData.light(),child:StatefulBuilder(builder:(ctx,setP)=>Padding(
-        padding:EdgeInsets.fromLTRB(20,22,20,MediaQuery.of(ctx).viewInsets.bottom+MediaQuery.of(ctx).viewPadding.bottom+40),
-        child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-          const Text('Hesap ekle',style:TextStyle(fontSize:22,fontWeight:FontWeight.w900)),
-          const SizedBox(height:5),
-          Text(hesaplar.length.toString()+'/5 hesap kullanılıyor',style:const TextStyle(color:Colors.black54)),
-          const SizedBox(height:16),
-          TextField(controller:e,keyboardType:TextInputType.emailAddress,autocorrect:false,decoration:const InputDecoration(labelText:'E-posta adresi',prefixIcon:Icon(Icons.alternate_email_rounded))),
-          const SizedBox(height:10),
-          TextField(controller:p,obscureText:gizli,decoration:InputDecoration(labelText:'Şifre',prefixIcon:const Icon(Icons.lock_outline_rounded),suffixIcon:IconButton(onPressed:()=>setP(()=>gizli=!gizli),icon:Icon(gizli?Icons.visibility_off_outlined:Icons.visibility_outlined)))),
-          const SizedBox(height:16),
-          FilledButton(
-            style:FilledButton.styleFrom(backgroundColor:ngelxPremiumPurple,padding:const EdgeInsets.symmetric(vertical:14)),
-            onPressed:(){
-              final email=e.text.trim(),sifre=p.text;
-              if(!email.contains('@')||sifre.length<6){
-                ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content:Text('Geçerli e-posta ve şifre gir.')));
-                return;
-              }
-              Navigator.pop(ctx,{'email':email,'password':sifre});
-            },
-            child:const Text('Hesabı ekle ve geç',style:TextStyle(fontWeight:FontWeight.w800)),
+      builder:(ctx)=>Theme(data:ThemeData.light(),child:StatefulBuilder(builder:(ctx,setP){
+        final klavye=MediaQuery.viewInsetsOf(ctx).bottom;
+        return Padding(
+          padding:EdgeInsets.only(bottom:klavye),
+          child:SafeArea(
+            top:false,
+            minimum:const EdgeInsets.only(bottom:20),
+            child:SingleChildScrollView(
+              padding:EdgeInsets.fromLTRB(20,22,20,ngelxAltSistemRezervi(ctx,minimum:88)),
+              child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+                const Text('Hesap ekle',style:TextStyle(fontSize:22,fontWeight:FontWeight.w900)),
+                const SizedBox(height:5),
+                Text(hesaplar.length.toString()+'/5 hesap kullanılıyor',style:const TextStyle(color:Colors.black54)),
+                const SizedBox(height:16),
+                TextField(controller:e,keyboardType:TextInputType.emailAddress,autocorrect:false,decoration:const InputDecoration(labelText:'E-posta adresi',prefixIcon:Icon(Icons.alternate_email_rounded))),
+                const SizedBox(height:10),
+                TextField(controller:p,obscureText:gizli,decoration:InputDecoration(labelText:'Şifre',prefixIcon:const Icon(Icons.lock_outline_rounded),suffixIcon:IconButton(onPressed:()=>setP(()=>gizli=!gizli),icon:Icon(gizli?Icons.visibility_off_outlined:Icons.visibility_outlined)))),
+                const SizedBox(height:16),
+                FilledButton(
+                  style:FilledButton.styleFrom(backgroundColor:ngelxPremiumPurple,padding:const EdgeInsets.symmetric(vertical:14)),
+                  onPressed:(){
+                    final email=e.text.trim(),sifre=p.text;
+                    if(!email.contains('@')||sifre.length<6){
+                      ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content:Text('Geçerli e-posta ve şifre gir.')));
+                      return;
+                    }
+                    Navigator.pop(ctx,{'email':email,'password':sifre});
+                  },
+                  child:const Text('Hesabı ekle ve geç',style:TextStyle(fontWeight:FontWeight.w800)),
+                ),
+              ]),
+            ),
           ),
-        ]),
-      ))),
+        );
+      })),
     );
     e.dispose();p.dispose();
     if(sonuc==null||!mounted)return;
