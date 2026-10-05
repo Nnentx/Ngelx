@@ -165,6 +165,18 @@ Source: user device recording 44176.mp4 (~21.7 s), private chat with a photo bac
 - The intended friendship resend test has **not started yet** in these screenshots.
 - “Arkadaş ekle” is still visible and has not been pressed, so no friend request was created in this step.
 
+## Build 388 follow-request acceptance device verification — 2026-10-05
+
+### Passed
+- Rojin's follow request appeared in Umay's Activity screen under Follow Requests.
+- Accepting the request completed successfully.
+- The Activity screen showed the modern green success feedback: “Takip isteği kabul edildi.”
+- Result: **DEVICE VERIFIED / PASSED** for follow-request acceptance and the modern success snackbar on this path.
+
+### Important
+- This still does **not** complete the intended friendship resend test.
+- No incoming friend request from Rojin is visible in these screenshots; only the follow request is present/accepted.
+
 ## CI gate
 
 A Build 388 APK is valid only when:
