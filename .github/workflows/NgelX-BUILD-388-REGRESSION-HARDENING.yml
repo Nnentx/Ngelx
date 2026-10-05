@@ -1,0 +1,159 @@
+name: NgelX BUILD 388 REGRESSION HARDENING
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - work/build-388-regression-hardening
+    paths:
+      - 'app/**'
+      - 'firestore.rules'
+      - 'QA/**'
+      - '.github/workflows/NgelX-BUILD-388-REGRESSION-HARDENING.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Kaynaklari al
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Java 17 kur
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Flutter kur
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Sabit NgelX imza anahtarini geri yukle
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: ngelx-stable-debug-keystore-v1
+          fail-on-cache-miss: true
+
+      - name: Imza anahtarini dogrula
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s "$HOME/.android/debug.keystore"
+          keytool -list -v -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey | grep -F 'SHA256: BE:20:B2:7F:0B:A1:F4:DE:CD:29:41:D4:10:B1:53:6D:E8:9E:48:DC:89:4F:04:F0:38:F9:D2:6B:11:EC:D6:AA'
+
+      - name: Build 388 regression koruma kapisi
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Paket kimligi.
+          grep -Fqx 'version: 1.0.164+388' app/pubspec.yaml
+          grep -Fq "defaultValue: '388'" app/lib/main.dart
+          grep -Fq "defaultValue: '1.0.164'" app/lib/main.dart
+
+          # Daha once gecen mesaj yazma performansi korunacak.
+          grep -Fq 'mentionZamanlayici' app/lib/main.dart
+          grep -Fq "final sonParca=deger.split(RegExp(r'\\s+')).last;" app/lib/main.dart
+
+          # Mesaj istekleri akisi korunacak.
+          grep -Fq "'requestRecipientUid':hedefUid" app/lib/main.dart
+          grep -Fq "class MesajIstekleriPage" app/lib/main.dart
+          grep -Fq "requestAccepted_\$uid" app/lib/main.dart
+          grep -Fq "requestRejected_\$uid" app/lib/main.dart
+
+          # Arkadas/takip istegi tekrarlarinda stale bildirim korunmasi.
+          grep -Fq "'requestGeneration':istekNesli" app/lib/main.dart
+          grep -Fq "'status':'superseded'" app/lib/main.dart
+          grep -Fq "requestKey.isNotEmpty?'request|'+requestKey" app/lib/main.dart
+          grep -Fq 'ngelxOkunmamisAktiviteSayisi' app/lib/main.dart
+
+          # Gelen Kutusu son mesaj/sayac gercek zamanli metadata.
+          grep -Fq "'lastMessageClientAt':clientCreatedAt" app/lib/main.dart
+          grep -Fq "'lastSenderId':ben" app/lib/main.dart
+          grep -Fq "a.data()['updatedAt']??a.data()['lastMessageClientAt']" app/lib/main.dart
+          grep -Fq ".collection('chats').where('members',arrayContains:ben).limit(100).snapshots()" app/lib/main.dart
+
+          # Ortak sohbet arka plani + performans korumasi.
+          grep -Fq "arkaPlanUrl=(veri['backgroundUrl']??veri['backgroundUrl_\$uid']??'').toString()" app/lib/main.dart
+          grep -Fq "'backgroundVersion':FieldValue.increment(1)" app/lib/main.dart
+          grep -Fq 'ResizeImage(NgelXAgImageProvider(arkaPlanUrl),width:900)' app/lib/main.dart
+          grep -Fq "imageQuality:64,maxWidth:1080" app/lib/main.dart
+          grep -Fq 'Sohbet arka planı iki taraf için güncellendi.' app/lib/main.dart
+
+          # Android alt safe-area korumalari.
+          grep -Fq "bottomNavigationBar:MediaQuery.viewInsetsOf(context).bottom>0?null:SizedBox(height:MediaQuery.viewPaddingOf(context).bottom)" app/lib/main.dart
+          grep -Fq "padding:EdgeInsets.fromLTRB(20,8,20,ngelxAltGuvenliBosluk(context,extra:28))" app/lib/main.dart
+          grep -Fq "ngelxAltGuvenliBosluk(context,extra:32)" app/lib/main.dart
+
+          # Etkilesim kartlari hala tiklanabilir.
+          grep -Fq "label:'\$t detayları'" app/lib/main.dart
+          grep -Fq 'behavior:HitTestBehavior.opaque' app/lib/main.dart
+          grep -Fq 'EtkilesimDetayPage(uid:uid' app/lib/main.dart
+
+          # Hikaye zaman/menusu/silme metni + video yukleme limiti.
+          grep -Fq 'Hikâyeyi paylaş' app/lib/story_v66.dart
+          grep -Fq 'Öne çıkanlara ekle' app/lib/story_v66.dart
+          grep -Fq 'Arşive taşı' app/lib/story_v66.dart
+          grep -Fq "title:const Text('Hikâye silinsin mi?',textAlign:TextAlign.center,style:TextStyle(color:Colors.black87" app/lib/story_v66.dart
+          grep -Fq "?await ngelxMedyaYukleDosya(dosya:dosya,kind:'videos'" app/lib/main.dart
+
+          # Takip/takipci sayaclari sunucu streaminden gelir.
+          ! grep -Fq '_yerelTakipciDelta' app/lib/main.dart
+          grep -Fq "collection('users').doc(uid).snapshots()" app/lib/main.dart
+          grep -Fq "final canliTakipci=List<dynamic>.from(canli['followers']??const[]).length;" app/lib/main.dart
+
+          # Kaydedilenler ve onceki gecen temel ekranlar korunacak.
+          grep -Fq "class KaydedilenlerPage" app/lib/main.dart
+          grep -Fq "collection('saved')" app/lib/main.dart
+          grep -Fq "class ArsivSohbetlerPage" app/lib/main.dart
+
+          # Modern durum mesaji marker'i.
+          grep -Fq 'SnackBar ngelxDurumSnack' app/lib/main.dart
+          grep -Fq "tip:'uyari'" app/lib/main.dart
+
+          test -s QA/BUILD-388-REGRESSION-CONTRACT.md
+          git diff --check
+
+      - name: Bagimliliklari al
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter clean
+          flutter pub get
+
+      - name: Flutter analiz
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter analyze --no-fatal-infos --no-fatal-warnings
+
+      - name: Gercek APK olustur
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter build apk --release --build-name=1.0.164 --build-number=388
+          test -s build/app/outputs/flutter-apk/app-release.apk
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          test -n "$APKSIGNER"
+          "$APKSIGNER" verify --verbose --print-certs build/app/outputs/flutter-apk/app-release.apk
+          cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/NgelX-1.0.164-Build-388-REGRESSION-HARDENING.apk
+          sha256sum build/app/outputs/flutter-apk/NgelX-1.0.164-Build-388-REGRESSION-HARDENING.apk > build/app/outputs/flutter-apk/NgelX-1.0.164-Build-388-REGRESSION-HARDENING.apk.sha256
+
+      - name: APK yukle
+        uses: actions/upload-artifact@v4
+        with:
+          name: NgelX-1.0.164-Build-388-REGRESSION-HARDENING
+          path: |
+            app/build/app/outputs/flutter-apk/NgelX-1.0.164-Build-388-REGRESSION-HARDENING.apk
+            app/build/app/outputs/flutter-apk/NgelX-1.0.164-Build-388-REGRESSION-HARDENING.apk.sha256
+          if-no-files-found: error
+          retention-days: 14
