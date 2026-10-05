@@ -241,10 +241,41 @@ const ngelxPrivateBlueCanvas = Color(0xFFF6FAFF);
 const ngelxPrivateBlueBorder = Color(0xFFD8E8FF);
 const ngelxPrivateBlueInk = Color(0xFF10213A);
 
+SnackBar ngelxDurumSnack(String metin,{String tip='bilgi'}){
+  Color renk=ngelxPrivateBlue;
+  IconData ikon=Icons.info_rounded;
+  switch(tip){
+    case 'basari':
+      renk=const Color(0xFF16A765);ikon=Icons.check_circle_rounded;break;
+    case 'uyari':
+      renk=const Color(0xFFF59E0B);ikon=Icons.warning_amber_rounded;break;
+    case 'hata':
+      renk=const Color(0xFFE5484D);ikon=Icons.error_rounded;break;
+  }
+  return SnackBar(
+    content:Row(children:[
+      Icon(ikon,color:Colors.white,size:20),
+      const SizedBox(width:9),
+      Expanded(child:Text(metin,style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w800))),
+    ]),
+    behavior:SnackBarBehavior.floating,
+    backgroundColor:renk,
+    duration:const Duration(milliseconds:1900),
+    shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(16)),
+    margin:const EdgeInsets.fromLTRB(16,8,16,16),
+  );
+}
+
+void ngelxDurumMesaji(BuildContext context,String metin,{String tip='bilgi'}){
+  final messenger=ScaffoldMessenger.of(context);
+  messenger.hideCurrentSnackBar();
+  messenger.showSnackBar(ngelxDurumSnack(metin,tip:tip));
+}
+
 // Build 372: settings/about must reflect the installed build instead of the old 368 fallback.
 // Release builds can still override these with --dart-define.
-const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.162');
-const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '387');
+const ngelxVersionName = String.fromEnvironment('NGELX_VERSION_NAME', defaultValue: '1.0.164');
+const ngelxBuildNumber = String.fromEnvironment('NGELX_BUILD_NUMBER', defaultValue: '388');
 const ngelxGroupBorder = Color(0xFFD9EEE0);
 
 final GlobalKey<NavigatorState> ngelxNavigatorKey=GlobalKey<NavigatorState>();
@@ -2887,6 +2918,28 @@ bool ngelxAktiviteBildirimiGosterilir(Map<String,dynamic> v){
   return tur!='message';
 }
 
+int ngelxOkunmamisAktiviteSayisi(Iterable<QueryDocumentSnapshot<Map<String,dynamic>>> docs){
+  final secilen=<String,QueryDocumentSnapshot<Map<String,dynamic>>>{};
+  int zaman(QueryDocumentSnapshot<Map<String,dynamic>> d){
+    final v=d.data(),ham=v['createdAt']??v['clientCreatedAt'];
+    return ham is Timestamp?ham.millisecondsSinceEpoch:0;
+  }
+  for(final d in docs){
+    final v=d.data();
+    if(v['read']==true||!ngelxAktiviteBildirimiGosterilir(v))continue;
+    final tur=(v['type']??'').toString();
+    String anahtar='doc|'+d.id;
+    if(tur=='follow_request'||tur=='friend_request'){
+      final requestKey=(v['requestKey']??'').toString();
+      final from=(v['fromUid']??'').toString(),to=(v['toUid']??'').toString();
+      anahtar=requestKey.isNotEmpty?'request|'+requestKey:'request|'+tur+'|'+from+'|'+to;
+    }
+    final onceki=secilen[anahtar];
+    if(onceki==null||zaman(d)>=zaman(onceki))secilen[anahtar]=d;
+  }
+  return secilen.length;
+}
+
 String ngelxBildirimBelgeId(String raw){
   final temiz=raw.trim().replaceAll(RegExp(r'[^a-zA-Z0-9_-]'),'_');
   if(temiz.isEmpty)return '';
@@ -3051,6 +3104,7 @@ Future<bool> sosyalIstekGonder({
     final ad=(benimVeri['displayName']??benimVeri['username']??user.displayName??(emailAdi.isNotEmpty?emailAdi:'NgelX kullanıcısı')).toString();
     final foto=(benimVeri['photoUrl']??user.photoURL??'').toString();
     final bildirimRef=firestore.collection('notifications').doc();
+    final istekNesli=DateTime.now().microsecondsSinceEpoch.toString();
     final batch=firestore.batch();
 
     batch.set(istekRef,{
@@ -3059,6 +3113,7 @@ Future<bool> sosyalIstekGonder({
       'type':tur,
       'status':'pending',
       'notificationId':bildirimRef.id,
+      'requestGeneration':istekNesli,
       'createdAt':FieldValue.serverTimestamp(),
       'updatedAt':FieldValue.serverTimestamp(),
     },SetOptions(merge:true));
@@ -3078,6 +3133,7 @@ Future<bool> sosyalIstekGonder({
       'eventKind':tur,
       'requestPath':istekRef.path,
       'requestKey':'${tur}_${user.uid}_$hedefUid',
+      'requestGeneration':istekNesli,
     });
 
     await batch.commit().timeout(const Duration(seconds:12));
@@ -10909,7 +10965,7 @@ class _MesajPageState extends State<MesajPage> {
       return StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
         stream:FirebaseFirestore.instance.collection('notifications').where('toUid',isEqualTo:ben).limit(200).snapshots(),
         builder:(_,bildirimSnap){
-          final aktiviteOkunmamis=(bildirimSnap.data?.docs??const <QueryDocumentSnapshot<Map<String,dynamic>>>[]).where((d)=>d.data()['read']!=true&&ngelxAktiviteBildirimiGosterilir(d.data())).length;
+          final aktiviteOkunmamis=ngelxOkunmamisAktiviteSayisi(bildirimSnap.data?.docs??const <QueryDocumentSnapshot<Map<String,dynamic>>>[]);
           return Padding(
             padding:const EdgeInsets.fromLTRB(16,0,16,9),
             child:Row(children:[
@@ -11114,7 +11170,7 @@ class _MesajPageState extends State<MesajPage> {
       Padding(padding:const EdgeInsets.fromLTRB(16,4,16,10),child:TextField(controller:sohbetAra,onChanged:(v)=>setState(()=>sohbetSorgu=v.trim().toLowerCase()),style:const TextStyle(color:Colors.black87),decoration:InputDecoration(hintText:t('searchChats'),hintStyle:const TextStyle(color:Colors.black45),prefixIcon:const Icon(Icons.search,color:Colors.black45),filled:true,fillColor:const Color(0xFFF3F4F7),border:OutlineInputBorder(borderRadius:BorderRadius.circular(24),borderSide:BorderSide.none)))),
       if(ben!=null)_canliGelenKutusuSayaclari(ben),
       Padding(padding:const EdgeInsets.symmetric(horizontal:8),child:Row(children:['Tümü','Okunmamış','Arkadaşlar','Gruplar'].map((f)=>Expanded(child:Padding(padding:const EdgeInsets.symmetric(horizontal:2),child:ChoiceChip(labelPadding:const EdgeInsets.symmetric(horizontal:2),label:Center(child:FittedBox(fit:BoxFit.scaleDown,child:Text(sohbetFiltreEtiketi(f),maxLines:1))),selected:filtre==f,selectedColor:mor,labelStyle:TextStyle(color:filtre==f?Colors.white:Colors.black87,fontWeight:FontWeight.w700),backgroundColor:const Color(0xFFF1F2F5),side:BorderSide.none,onSelected:(_)=>setState(()=>filtre=f))))).toList())),
-      StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(stream:ben==null?null:FirebaseFirestore.instance.collection('notifications').where('toUid',isEqualTo:ben).limit(200).snapshots(),builder:(_,s){final okunmamis=(s.data?.docs??[]).where((d)=>d.data()['read']!=true&&ngelxAktiviteBildirimiGosterilir(d.data())).length;return Container(margin:const EdgeInsets.fromLTRB(16,8,16,5),decoration:BoxDecoration(color:const Color(0xFFF5EFFF),borderRadius:BorderRadius.circular(20)),child:ListTile(leading:const CircleAvatar(backgroundColor:Color(0xFFE5D5FF),child:Icon(Icons.favorite,color:mor)),title:Text(t('activity'),style:const TextStyle(color:Colors.black,fontWeight:FontWeight.w900)),subtitle:Text(t('activitySub'),style:const TextStyle(color:Colors.black54)),trailing:okunmamis==0?const Icon(Icons.chevron_right,color:Colors.black45):Badge(label:Text(_sayacEtiketi(okunmamis)),child:const Icon(Icons.chevron_right,color:Colors.black45)),onTap:()async{await Navigator.push(context,MaterialPageRoute(builder:(_)=>const AktivitePage()));if(mounted)setState((){});}));}),
+      StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(stream:ben==null?null:FirebaseFirestore.instance.collection('notifications').where('toUid',isEqualTo:ben).limit(200).snapshots(),builder:(_,s){final okunmamis=ngelxOkunmamisAktiviteSayisi(s.data?.docs??const <QueryDocumentSnapshot<Map<String,dynamic>>>[]);return Container(margin:const EdgeInsets.fromLTRB(16,8,16,5),decoration:BoxDecoration(color:const Color(0xFFF5EFFF),borderRadius:BorderRadius.circular(20)),child:ListTile(leading:const CircleAvatar(backgroundColor:Color(0xFFE5D5FF),child:Icon(Icons.favorite,color:mor)),title:Text(t('activity'),style:const TextStyle(color:Colors.black,fontWeight:FontWeight.w900)),subtitle:Text(t('activitySub'),style:const TextStyle(color:Colors.black54)),trailing:okunmamis==0?const Icon(Icons.chevron_right,color:Colors.black45):Badge(label:Text(_sayacEtiketi(okunmamis)),child:const Icon(Icons.chevron_right,color:Colors.black45)),onTap:()async{await Navigator.push(context,MaterialPageRoute(builder:(_)=>const AktivitePage()));if(mounted)setState((){});}));}),
       StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
         stream:ben==null?null:FirebaseFirestore.instance.collection('chats').where('members',arrayContains:ben).limit(60).snapshots(),
         builder:(_,istekSnap){
@@ -21910,6 +21966,11 @@ class _AktivitePageState extends State<AktivitePage> {
     final olay=(v['eventKind']??'').toString();
     final kaynak=(v['sourceId']??v['belgeId']??'').toString();
     final from=(v['fromUid']??v['senderId']??v['senderUid']??'').toString();
+    if(tur=='follow_request'||tur=='friend_request'){
+      final requestKey=(v['requestKey']??'').toString();
+      final to=(v['toUid']??'').toString();
+      return requestKey.isNotEmpty?'request|'+requestKey:'request|'+tur+'|'+from+'|'+to;
+    }
     final genelCanli=olay=='live_started'||olay=='live_share'||(tur=='live'&&!olay.startsWith('live_pk_'));
     if(genelCanli&&kaynak.isNotEmpty)return 'live|'+kaynak+'|'+from;
     return 'doc|'+d.id;
@@ -22223,12 +22284,22 @@ class _AktivitePageState extends State<AktivitePage> {
     final istekRef=sosyalIstekRef(gonderen,ben,istekTuru);
     try{
       istekSnap=await istekRef.get(const GetOptions(source:Source.server)).timeout(const Duration(seconds:7));
-      if(istekSnap.exists&&istekSnap.data()?['status']!='pending'){
-        if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content:Text('Bu istek daha önce sonuçlandırılmış.'),
-          behavior:SnackBarBehavior.floating,
-        ));
-        return;
+      if(istekSnap.exists){
+        final iv=istekSnap.data()??<String,dynamic>{};
+        final aktifBildirimId=(iv['notificationId']??'').toString();
+        final eskiVeyaSonuclanmis=iv['status']!='pending'
+          ||(aktifBildirimId.isNotEmpty&&aktifBildirimId!=belge.id);
+        if(eskiVeyaSonuclanmis){
+          try{
+            await belge.reference.set({
+              'status':'superseded',
+              'read':true,
+              'supersededAt':FieldValue.serverTimestamp(),
+            },SetOptions(merge:true));
+          }catch(_){}
+          if(mounted)setState(()=>_sunucuAktiviteleri.removeWhere((d)=>d.id==belge.id));
+          return;
+        }
       }
     }catch(_){}
 
@@ -22296,7 +22367,12 @@ class _AktivitePageState extends State<AktivitePage> {
     try{
       await toplu.commit().timeout(const Duration(seconds:12));
       if(mounted){
-        setState(()=>_sunucuAktiviteleri.removeWhere((d)=>d.id==belge.id));
+        final requestKey=(veri['requestKey']??'').toString();
+        setState(()=>_sunucuAktiviteleri.removeWhere((d){
+          if(d.id==belge.id)return true;
+          if(requestKey.isEmpty)return false;
+          return (d.data()['requestKey']??'').toString()==requestKey;
+        }));
       }
       if(kabul){
         unawaited(uygulamaBildirimiGonder(
@@ -22311,11 +22387,7 @@ class _AktivitePageState extends State<AktivitePage> {
 
       if(context.mounted){
         final ad=takipIstegi?'Takip isteği':'Arkadaşlık isteği';
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content:Text(kabul?'$ad kabul edildi.':'$ad reddedildi.'),
-          behavior:SnackBarBehavior.floating,
-          margin:EdgeInsets.fromLTRB(16,8,16,ngelxAltGuvenliBosluk(context,extra:8)),
-        ));
+        ngelxDurumMesaji(context,kabul?'$ad kabul edildi.':'$ad reddedildi.',tip:kabul?'basari':'uyari');
       }
     }on TimeoutException{
       if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -23038,7 +23110,7 @@ class _KullaniciProfilPageState extends State<KullaniciProfilPage> {
       await batch.commit().timeout(const Duration(seconds:12));
       if(!mounted)return;
       setState((){});
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Arkadaşlık kaldırıldı.')));
+      ngelxDurumMesaji(context,'Arkadaşlık kaldırıldı.',tip:'uyari');
     }on TimeoutException{
       if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Arkadaşlık işlemi zaman aşımına uğradı.')));
     }catch(_){
@@ -23226,7 +23298,7 @@ class _KullaniciProfilPageState extends State<KullaniciProfilPage> {
                                 if(mounted)setState(()=>_yerelTakipDurumu[uid]=false);
                                 try{
                                   await takipDurumuDegistir(uid,true);
-                                  if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Takipten çıktın.')));
+                                  if(context.mounted)ngelxDurumMesaji(context,'Takipten çıktın.',tip:'uyari');
                                 }catch(e){
                                   if(mounted)setState(()=>_yerelTakipDurumu.remove(uid));
                                   if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Takipten çıkılamadı: $e')));
@@ -24931,7 +25003,7 @@ class _ArkadaslarPageState extends State<ArkadaslarPage>{
       'members':ids,'active':false,'endedAt':FieldValue.serverTimestamp(),
     },SetOptions(merge:true));
     await batch.commit();
-    if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Arkadaşlık kaldırıldı.')));
+    if(mounted)ngelxDurumMesaji(context,'Arkadaşlık kaldırıldı.',tip:'uyari');
   }
 
   Future<void> _islem(
@@ -24951,7 +25023,7 @@ class _ArkadaslarPageState extends State<ArkadaslarPage>{
       final takipte=benimTakiplerim.contains(id);
       try{
         await takipDurumuDegistir(id,takipte);
-        if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(takipte?'Takipten çıktın.':'Artık bu hesabı takip ediyorsun.')));
+        if(mounted)ngelxDurumMesaji(context,takipte?'Takipten çıktın.':'Artık bu hesabı takip ediyorsun.',tip:takipte?'uyari':'basari');
       }catch(_){
         if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Takip işlemi tamamlanamadı.')));
       }
