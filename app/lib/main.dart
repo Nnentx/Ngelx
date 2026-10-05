@@ -3096,7 +3096,7 @@ Future<bool> sosyalIstekGonder({
     Future<bool> aktifBekleyenIstek(DocumentSnapshot<Map<String,dynamic>> d)async{
       if(!d.exists||d.data()?['status']!='pending')return false;
       final nId=(d.data()?['notificationId']??'').toString();
-      if(nId.isEmpty)return true;
+      if(nId.isEmpty)return false;
       try{
         final n=await firestore.collection('notifications').doc(nId)
             .get(const GetOptions(source:Source.server))
@@ -8947,11 +8947,11 @@ class _KesfetPageState extends State<KesfetPage> {
               }
               return;
             }
-            if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Takip isteği gönderildi.')));
+            if(mounted)ngelxDurumMesaji(context,'Takip isteği gönderildi.',tip:'basari');
           }catch(e){
             if(mounted){
               setState(()=>gonderilenTakipIstekleri.remove(hedefUid));
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Takip isteği gönderilemedi: $e')));
+              ngelxDurumMesaji(context,'Takip isteği gönderilemedi: $e',tip:'hata');
             }
           }
           return;
@@ -9006,7 +9006,7 @@ class _KesfetPageState extends State<KesfetPage> {
         return;
       }
       if(!mounted)return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Arkadaşlık isteği gönderildi.')));
+      ngelxDurumMesaji(context,'Arkadaşlık isteği gönderildi.',tip:'basari');
     }catch(e){
       if(mounted){
         setState(()=>gonderilenArkadaslikIstekleri.remove(hedefUid));
@@ -21567,8 +21567,12 @@ class SohbetBilgiPage extends StatelessWidget{
     if(arkadaslar.contains(uid)){if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Zaten arkadaşsınız.')));return;}
     final giden=await FirebaseFirestore.instance.collection('notifications').where('fromUid',isEqualTo:me).limit(100).get();
     if(gidenSosyalIstekBekliyor(giden,uid,'friend_request')){if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Arkadaşlık isteğin zaten bekliyor.')));return;}
-    await sosyalIstekGonder(hedefUid:uid,tur:'friend_request',metin:'Yeni arkadaşlık isteğin var');
-    if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Arkadaşlık isteği gönderildi.')));
+    final gonderildi=await sosyalIstekGonder(hedefUid:uid,tur:'friend_request',metin:'Yeni arkadaşlık isteğin var');
+    if(context.mounted)ngelxDurumMesaji(
+      context,
+      gonderildi?'Arkadaşlık isteği gönderildi.':'Arkadaşlık isteği zaten bekliyor veya zaten arkadaşsınız.',
+      tip:gonderildi?'basari':'uyari',
+    );
   }
   Future<void> kisiyiPaylas(BuildContext context)async{
     final me=FirebaseAuth.instance.currentUser?.uid;
@@ -23450,19 +23454,19 @@ class _KullaniciProfilPageState extends State<KullaniciProfilPage> {
                                 try{
                                   final gonderildi=await sosyalIstekGonder(hedefUid:uid,tur:'follow_request',metin:'seni takip etmek istiyor');
                                   if(!gonderildi&&mounted)setState(()=>_yerelTakipIstekleri.remove(uid));
-                                  if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(gonderildi?'Takip isteği gönderildi.':'Takip isteği zaten bekliyor veya bu hesabı takip ediyorsun.')));
+                                  if(context.mounted)ngelxDurumMesaji(context,gonderildi?'Takip isteği gönderildi.':'Takip isteği zaten bekliyor veya bu hesabı takip ediyorsun.',tip:gonderildi?'basari':'uyari');
                                 }on TimeoutException{
                                   if(mounted)setState(()=>_yerelTakipIstekleri.remove(uid));
-                                  if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Takip isteği zaman aşımına uğradı. Tekrar dene.')));
+                                  if(context.mounted)ngelxDurumMesaji(context,'Takip isteği zaman aşımına uğradı. Tekrar dene.',tip:'hata');
                                 }on FirebaseException catch(e){
                                   if(mounted)setState(()=>_yerelTakipIstekleri.remove(uid));
                                   final mesaj=e.code=='permission-denied'
                                     ?'Takip isteği için güncel Firestore kuralları gerekli.'
                                     :'Takip isteği gönderilemedi. Tekrar dene.';
-                                  if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(mesaj)));
+                                  if(context.mounted)ngelxDurumMesaji(context,mesaj,tip:'hata');
                                 }catch(_){
                                   if(mounted)setState(()=>_yerelTakipIstekleri.remove(uid));
-                                  if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Takip isteği gönderilemedi. Tekrar dene.')));
+                                  if(context.mounted)ngelxDurumMesaji(context,'Takip isteği gönderilemedi. Tekrar dene.',tip:'hata');
                                 }
                                 return;
                               }
@@ -23537,19 +23541,19 @@ class _KullaniciProfilPageState extends State<KullaniciProfilPage> {
                             try{
                               final gonderildi=await sosyalIstekGonder(hedefUid:uid,tur:'friend_request',metin:'sana arkadaşlık isteği gönderdi');
                               if(!gonderildi&&mounted)setState(()=>_yerelArkadasIstekleri.remove(uid));
-                              if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(gonderildi?'Arkadaşlık isteği gönderildi.':'Arkadaşlık isteği zaten bekliyor veya zaten arkadaşsınız.')));
+                              if(context.mounted)ngelxDurumMesaji(context,gonderildi?'Arkadaşlık isteği gönderildi.':'Arkadaşlık isteği zaten bekliyor veya zaten arkadaşsınız.',tip:gonderildi?'basari':'uyari');
                             }on TimeoutException{
                               if(mounted)setState(()=>_yerelArkadasIstekleri.remove(uid));
-                              if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Arkadaşlık isteği zaman aşımına uğradı. Tekrar dene.')));
+                              if(context.mounted)ngelxDurumMesaji(context,'Arkadaşlık isteği zaman aşımına uğradı. Tekrar dene.',tip:'hata');
                             }on FirebaseException catch(e){
                               if(mounted)setState(()=>_yerelArkadasIstekleri.remove(uid));
                               final mesaj=e.code=='permission-denied'
                                 ?'Arkadaşlık isteği için güncel Firestore kuralları gerekli.'
                                 :'Arkadaşlık isteği gönderilemedi. Tekrar dene.';
-                              if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(mesaj)));
+                              if(context.mounted)ngelxDurumMesaji(context,mesaj,tip:'hata');
                             }catch(_){
                               if(mounted)setState(()=>_yerelArkadasIstekleri.remove(uid));
-                              if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Arkadaşlık isteği gönderilemedi. Tekrar dene.')));
+                              if(context.mounted)ngelxDurumMesaji(context,'Arkadaşlık isteği gönderilemedi. Tekrar dene.',tip:'hata');
                             }
                           },
                           icon:Icon(arkadas?Icons.people_alt_rounded:(bekliyor?Icons.schedule_rounded:Icons.person_add_alt_1_rounded)),
@@ -25161,9 +25165,9 @@ class _ArkadaslarPageState extends State<ArkadaslarPage>{
       }else{
         try{
           final ok=await sosyalIstekGonder(hedefUid:id,tur:'friend_request',metin:'sana arkadaşlık isteği gönderdi');
-          if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(ok?'Arkadaşlık isteği gönderildi.':'Arkadaşlık isteği zaten bekliyor veya zaten arkadaşsınız.')));
+          if(mounted)ngelxDurumMesaji(context,ok?'Arkadaşlık isteği gönderildi.':'Arkadaşlık isteği zaten bekliyor veya zaten arkadaşsınız.',tip:ok?'basari':'uyari');
         }catch(_){
-          if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Arkadaşlık isteği gönderilemedi.')));
+          if(mounted)ngelxDurumMesaji(context,'Arkadaşlık isteği gönderilemedi.',tip:'hata');
         }
       }
     }
@@ -25495,7 +25499,7 @@ class _KullaniciListesiPageState extends State<KullaniciListesiPage>{
     try{
       await FirebaseFirestore.instance.collection('users').doc(benim).get(const GetOptions(source:Source.server));
     }catch(_){}
-    if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Takipçi kaldırıldı.')));
+    if(mounted)ngelxDurumMesaji(context,'Takipçi kaldırıldı.',tip:'uyari');
   }
 
   @override Widget build(BuildContext context)=>Theme(
