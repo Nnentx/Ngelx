@@ -151,6 +151,20 @@ Source: user device recording 44176.mp4 (~21.7 s), private chat with a photo bac
 - It is not using the new colored/modern status feedback style.
 - Result: **OPEN UI defect**.
 
+## Build 388 follow-request profile check — 2026-10-05
+
+### Passed
+- From Rojin's view of Umay's profile, tapping the follow-request action changes the button to “Takip isteği bekliyor”.
+- The pending follow-request state is reflected immediately on the profile.
+
+### Open UI defect
+- The success feedback still appears as the old flat dark snackbar: “Takip isteği gönderildi.”
+- This profile follow-request path is not yet using the new colored/modern status feedback component.
+
+### Test status
+- The intended friendship resend test has **not started yet** in these screenshots.
+- “Arkadaş ekle” is still visible and has not been pressed, so no friend request was created in this step.
+
 ## CI gate
 
 A Build 388 APK is valid only when:
