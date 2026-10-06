@@ -11,6 +11,10 @@ on:
       - 'QA/**'
       - '.github/workflows/NgelX-BUILD-392-CHAT-SAFETY-LINKS-PERFORMANCE.yml'
 
+concurrency:
+  group: ngelx-build392-apk
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
