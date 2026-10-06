@@ -5811,45 +5811,6 @@ class _AramaPageState extends State<AramaPage> {
     setState(()=>sorgu=yeni);
   }
 
-  Future<void> _grupEngelKontrolu()async{
-    final me=uid;
-    if(me==null)return;
-    try{
-      final sonuc=await Future.wait([
-        FirebaseFirestore.instance.collection('users').doc(me).get(),
-        chatRef.get(),
-      ]);
-      final benim=sonuc[0].data()??<String,dynamic>{};
-      final grup=sonuc[1].data()??<String,dynamic>{};
-      final blocked=Set<String>.from(List<String>.from(benim['blocked']??const[]));
-      final members=Set<String>.from(List<String>.from(grup['members']??const[]));
-      final ortak=blocked.intersection(members)..remove(me);
-      if(!mounted)return;
-      setState((){_engellenenGrupUyeleri..clear()..addAll(ortak);});
-      if(ortak.isEmpty||_engelUyarisiGosterildi)return;
-      _engelUyarisiGosterildi=true;
-      WidgetsBinding.instance.addPostFrameCallback((_)async{
-        if(!mounted)return;
-        final gir=await showDialog<bool>(
-          context:context,
-          builder:(d)=>Theme(data:ThemeData.light(),child:AlertDialog(
-            backgroundColor:Colors.white,
-            surfaceTintColor:Colors.white,
-            shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(24)),
-            icon:const Icon(Icons.warning_amber_rounded,color:Colors.orange,size:36),
-            title:Text(ortak.length==1?'Bu grupta engellediğin bir kişi var':'Bu grupta engellediğin kişiler var',style:const TextStyle(fontWeight:FontWeight.w900)),
-            content:const Text('Engellediğin kişilerin mesajları gizli gösterilecek. Özel mesaj ve arama engeli devam eder. Yine de gruba girmek istiyor musun?',style:TextStyle(height:1.4)),
-            actions:[
-              TextButton(onPressed:()=>Navigator.pop(d,false),child:const Text('Geri dön')),
-              FilledButton(onPressed:()=>Navigator.pop(d,true),child:const Text('Gruba gir')),
-            ],
-          )),
-        )??false;
-        if(!gir&&mounted)Navigator.maybePop(context);
-      });
-    }catch(_){}
-  }
-
   @override void initState(){
     super.initState();
     final ilk=widget.baslangicSorgu.trim();
@@ -12440,6 +12401,45 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
     }catch(_){
       return <String,dynamic>{};
     }
+  }
+
+  Future<void> _grupEngelKontrolu()async{
+    final me=uid;
+    if(me==null)return;
+    try{
+      final sonuc=await Future.wait([
+        FirebaseFirestore.instance.collection('users').doc(me).get(),
+        chatRef.get(),
+      ]);
+      final benim=sonuc[0].data()??<String,dynamic>{};
+      final grup=sonuc[1].data()??<String,dynamic>{};
+      final blocked=Set<String>.from(List<String>.from(benim['blocked']??const[]));
+      final members=Set<String>.from(List<String>.from(grup['members']??const[]));
+      final ortak=blocked.intersection(members)..remove(me);
+      if(!mounted)return;
+      setState((){_engellenenGrupUyeleri..clear()..addAll(ortak);});
+      if(ortak.isEmpty||_engelUyarisiGosterildi)return;
+      _engelUyarisiGosterildi=true;
+      WidgetsBinding.instance.addPostFrameCallback((_)async{
+        if(!mounted)return;
+        final gir=await showDialog<bool>(
+          context:context,
+          builder:(d)=>Theme(data:ThemeData.light(),child:AlertDialog(
+            backgroundColor:Colors.white,
+            surfaceTintColor:Colors.white,
+            shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(24)),
+            icon:const Icon(Icons.warning_amber_rounded,color:Colors.orange,size:36),
+            title:Text(ortak.length==1?'Bu grupta engellediğin bir kişi var':'Bu grupta engellediğin kişiler var',style:const TextStyle(fontWeight:FontWeight.w900)),
+            content:const Text('Engellediğin kişilerin mesajları gizli gösterilecek. Özel mesaj ve arama engeli devam eder. Yine de gruba girmek istiyor musun?',style:TextStyle(height:1.4)),
+            actions:[
+              TextButton(onPressed:()=>Navigator.pop(d,false),child:const Text('Geri dön')),
+              FilledButton(onPressed:()=>Navigator.pop(d,true),child:const Text('Gruba gir')),
+            ],
+          )),
+        )??false;
+        if(!gir&&mounted)Navigator.maybePop(context);
+      });
+    }catch(_){}
   }
 
   @override void initState(){
