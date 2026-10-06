@@ -15446,13 +15446,13 @@ class _GrupMedyaPageState extends State<GrupMedyaPage>{
                       },
                       icon:const Icon(Icons.copy_rounded,color:ngelxGroupGreen,size:20),
                     ),
-                    onTap:url.isEmpty?null:()async{
+                    onTap:((t=='shared_content'&&(data['contentId']??'').toString().isNotEmpty)||url.isNotEmpty)?()async{
                       if(t=='shared_content'&&(data['contentId']??'').toString().isNotEmpty){
                         Navigator.push(context,MaterialPageRoute(builder:(_)=>IcerikBaglantiPage(icerikId:(data['contentId']??'').toString())));
                       }else{
                         await ngelxDisBaglantiAc(context,url);
                       }
-                    },
+                    }:null,
                   ),
                 );
               },
