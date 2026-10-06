@@ -19170,7 +19170,8 @@ class _SohbetPageState extends State<SohbetPage> {
   final List<QueryDocumentSnapshot<Map<String,dynamic>>> _mesajOnbellek=<QueryDocumentSnapshot<Map<String,dynamic>>>[];
   late final Stream<DocumentSnapshot<Map<String,dynamic>>> _chatAkisi;
   late final Stream<DocumentSnapshot<Map<String,dynamic>>> _typingAkisi;
-  late final Stream<QuerySnapshot<Map<String,dynamic>>> _mesajAkisi;
+  late Stream<QuerySnapshot<Map<String,dynamic>>> _mesajAkisi;
+  int _ozelMesajLimiti=70;
   bool _okunduYaziliyor=false;
   bool _ilkMesajKaydirma=true;
   DateTime? _sonYaziyorGonderim;
@@ -20955,9 +20956,9 @@ class _SohbetPageState extends State<SohbetPage> {
     final sohbetRef=FirebaseFirestore.instance.collection('chats').doc(widget.chatId);
     _typingAkisi=sohbetRef.snapshots();
     _chatAkisi=_typingAkisi.distinct(ngelxChatSnapshotAyniTypingHaric);
-    _mesajAkisi=sohbetRef.collection('messages').orderBy('createdAt').limitToLast(70).snapshots();
+    _ozelMesajAkisiniYenile();
     unawaited(
-      sohbetRef.collection('messages').orderBy('createdAt').limitToLast(70).get(const GetOptions(source:Source.cache)).then((s){
+      sohbetRef.collection('messages').orderBy('createdAt').limitToLast(_ozelMesajLimiti).get(const GetOptions(source:Source.cache)).then((s){
         if(!mounted||s.docs.isEmpty)return;
         setState((){
           _mesajOnbellek
@@ -20986,12 +20987,28 @@ class _SohbetPageState extends State<SohbetPage> {
     }
   }
 
+  void _ozelMesajAkisiniYenile(){
+    _mesajAkisi=FirebaseFirestore.instance
+        .collection('chats').doc(widget.chatId)
+        .collection('messages').orderBy('createdAt')
+        .limitToLast(_ozelMesajLimiti).snapshots();
+  }
+
+  void _dahaEskiOzelMesajlariYukle(){
+    if(_ozelMesajLimiti>=350)return;
+    setState((){
+      _ozelMesajLimiti=(_ozelMesajLimiti+70).clamp(70,350);
+      _ozelMesajAkisiniYenile();
+      _ilkMesajKaydirma=false;
+    });
+  }
+
   Future<void> _ozelSohbetiYenile()async{
     final ref=FirebaseFirestore.instance.collection('chats').doc(widget.chatId);
     try{
       final sonuc=await Future.wait([
         ref.get(const GetOptions(source:Source.server)),
-        ref.collection('messages').orderBy('createdAt').limitToLast(70).get(const GetOptions(source:Source.server)),
+        ref.collection('messages').orderBy('createdAt').limitToLast(_ozelMesajLimiti).get(const GetOptions(source:Source.server)),
         FirebaseFirestore.instance.collection('users').doc(widget.digerUid).get(const GetOptions(source:Source.server)),
       ]).timeout(const Duration(seconds:10));
       final m=sonuc[1] as QuerySnapshot<Map<String,dynamic>>;_mesajHazirlikZamani=null;
@@ -21188,7 +21205,18 @@ class _SohbetPageState extends State<SohbetPage> {
             padding:const EdgeInsets.all(12),
             itemCount:docs.length+1,
             itemBuilder:(_,i){
-              if(i==0)return sohbetUstBilgi();
+              if(i==0)return Column(mainAxisSize:MainAxisSize.min,children:[
+                sohbetUstBilgi(),
+                if(tumDocs.length>=_ozelMesajLimiti&&_ozelMesajLimiti<350)
+                  Padding(
+                    padding:const EdgeInsets.only(bottom:8),
+                    child:TextButton.icon(
+                      onPressed:_dahaEskiOzelMesajlariYukle,
+                      icon:const Icon(Icons.history_rounded,size:18),
+                      label:const Text('Daha eski mesajları yükle'),
+                    ),
+                  ),
+              ]);
               final d=docs[i-1];
               bool goruldu=false;
               if(sonBenim?.id==d.id&&digerOkuma is Timestamp&&d.data()['createdAt'] is Timestamp){
