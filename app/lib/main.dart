@@ -12410,10 +12410,12 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
       final sonuc=await Future.wait([
         FirebaseFirestore.instance.collection('users').doc(me).get(),
         chatRef.get(),
+        FirebaseFirestore.instance.collection('users').where('blocked',arrayContains:me).limit(100).get(),
       ]);
-      final benim=sonuc[0].data()??<String,dynamic>{};
-      final grup=sonuc[1].data()??<String,dynamic>{};
-      final blocked=Set<String>.from(List<String>.from(benim['blocked']??const[]));
+      final benim=(sonuc[0] as DocumentSnapshot<Map<String,dynamic>>).data()??<String,dynamic>{};
+      final grup=(sonuc[1] as DocumentSnapshot<Map<String,dynamic>>).data()??<String,dynamic>{};
+      final banaEngelKoyanlar=(sonuc[2] as QuerySnapshot<Map<String,dynamic>>).docs.map((d)=>d.id);
+      final blocked=Set<String>.from(List<String>.from(benim['blocked']??const[]))..addAll(banaEngelKoyanlar);
       final members=Set<String>.from(List<String>.from(grup['members']??const[]));
       final ortak=blocked.intersection(members)..remove(me);
       if(!mounted)return;
@@ -13502,17 +13504,9 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
             Row(children:[
               Expanded(child:_ekSecenek(c,Icons.video_library_rounded,'Video','video')),
               const SizedBox(width:10),
-              Expanded(child:_ekSecenek(c,Icons.insert_drive_file_rounded,'Dosya','file')),
-              const SizedBox(width:10),
               Expanded(child:_ekSecenek(c,Icons.location_on_rounded,'Konum','location')),
-            ]),
-            const SizedBox(height:10),
-            Row(children:[
+              const SizedBox(width:10),
               Expanded(child:_ekSecenek(c,Icons.emoji_emotions_rounded,'Çıkartma','sticker')),
-              const SizedBox(width:10),
-              const Expanded(child:SizedBox()),
-              const SizedBox(width:10),
-              const Expanded(child:SizedBox()),
             ]),
           ]),
         ))),
@@ -13525,7 +13519,6 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
     else if(secim=='gallery')await medyaGonder(ImageSource.gallery);
     else if(secim=='gif')await gifGonder();
     else if(secim=='video')await grupVideoGonder();
-    else if(secim=='file')await grupDosyaGonder();
     else if(secim=='location')await grupKonumGonder();
     else if(secim=='sticker')await stickerGonder();
   }
@@ -13948,7 +13941,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
     final metin=(v['text']??v['message']??v['content']??'').toString(),tur=(v['type']??'text').toString();
     final sesliOdaPaylasimi=tur=='audio_room_share'||(v['audioRoomId']??'').toString().trim().isNotEmpty;
     final media=ngelxMesajMedyaUrl(v,video:tur=='video'),videoKapak=ngelxMesajVideoKapagi(v),audio=(v['audioUrl']??'').toString();
-    final sticker=(v['sticker']??'').toString(),linkUrl=(v['linkUrl']??'').toString(),linkHost=(v['linkHost']??'').toString(),linkTitle=(v['linkTitle']??'').toString(),linkDesc=(v['linkDescription']??'').toString(),linkImage=(v['linkImage']??'').toString();
+    final sticker=(v['sticker']??'').toString(),kayitliLink=(v['linkUrl']??'').toString(),linkUrl=kayitliLink.isNotEmpty?kayitliLink:ngelxIlkWebBaglantisi(metin),linkHost=(v['linkHost']??'').toString(),linkTitle=(v['linkTitle']??'').toString(),linkDesc=(v['linkDescription']??'').toString(),linkImage=(v['linkImage']??'').toString();
     final silinmis=v['deletedForEveryone']==true;
     final engelliMesaji=_engellenenGrupUyeleri.contains(gonderen)&&!_geciciAcikEngelliMesajlar.contains(d.id);
     if(engelliMesaji)return Align(
@@ -14137,10 +14130,7 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
                 : tur=='location'
                   ? ()async{await Clipboard.setData(ClipboardData(text:locationText));if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Konum metni kopyalandı.')));}
                   : linkUrl.isNotEmpty
-                    ? ()async{
-                        await Clipboard.setData(ClipboardData(text:linkUrl));
-                        if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bağlantı kopyalandı.')));
-                      }
+                    ? ()=>ngelxDisBaglantiAc(context,linkUrl)
                     : null,
             child:Container(
               constraints:BoxConstraints(maxWidth:MediaQuery.sizeOf(context).width*.72),
