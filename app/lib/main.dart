@@ -3809,6 +3809,10 @@ Future<void> kullaniciyiEngelle(BuildContext context,String hedefUid) async {
   if(!tamam)return;
   try{
     final firestore=FirebaseFirestore.instance;
+    final ids=<String>[u.uid,hedefUid]..sort();
+    final arkadaslikRef=firestore.collection('friendships').doc(ids.join('_'));
+    DocumentSnapshot<Map<String,dynamic>>? arkadaslik;
+    try{arkadaslik=await arkadaslikRef.get().timeout(const Duration(seconds:6));}catch(_){}
     final batch=firestore.batch();
     batch.set(firestore.collection('users').doc(u.uid),{
       'blocked':FieldValue.arrayUnion([hedefUid]),
@@ -3821,10 +3825,11 @@ Future<void> kullaniciyiEngelle(BuildContext context,String hedefUid) async {
       'followers':FieldValue.arrayRemove([u.uid]),
       'friends':FieldValue.arrayRemove([u.uid]),
     },SetOptions(merge:true));
-    final ids=<String>[u.uid,hedefUid]..sort();
-    batch.set(firestore.collection('friendships').doc(ids.join('_')),{
-      'members':ids,'active':false,'endedAt':FieldValue.serverTimestamp(),
-    },SetOptions(merge:true));
+    if(arkadaslik?.exists==true){
+      batch.set(arkadaslikRef,{
+        'active':false,'endedAt':FieldValue.serverTimestamp(),
+      },SetOptions(merge:true));
+    }
     await batch.commit().timeout(const Duration(seconds:12));
     if(context.mounted)ngelxDurumMesaji(context,'Kullanıcı engellendi. Takip ve arkadaşlık ilişkileri kaldırıldı.',tip:'basari');
   }catch(e){if(context.mounted)ngelxDurumMesaji(context,'Engelleme tamamlanamadı. Tekrar dene.',tip:'hata');}
