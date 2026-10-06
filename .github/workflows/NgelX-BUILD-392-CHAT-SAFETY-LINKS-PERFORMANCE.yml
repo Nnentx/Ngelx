@@ -1,0 +1,122 @@
+name: NgelX BUILD 392 CHAT SAFETY LINKS PERFORMANCE
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - work/build-392-chat-safety-links-performance
+    paths:
+      - 'app/**'
+      - 'firestore.rules'
+      - 'QA/**'
+      - '.github/workflows/NgelX-BUILD-392-CHAT-SAFETY-LINKS-PERFORMANCE.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 70
+    steps:
+      - name: Kaynaklari al
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Java 17 kur
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Flutter kur
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Sabit NgelX imza anahtarini geri yukle
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: ngelx-stable-debug-keystore-v1
+          fail-on-cache-miss: true
+
+      - name: Imza anahtarini dogrula
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s "$HOME/.android/debug.keystore"
+          keytool -list -v -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey | grep -F 'SHA256: BE:20:B2:7F:0B:A1:F4:DE:CD:29:41:D4:10:B1:53:6D:E8:9E:48:DC:89:4F:04:F0:38:F9:D2:6B:11:EC:D6:AA'
+
+      - name: Build 392 regresyon kapisi
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fqx 'version: 1.0.168+392' app/pubspec.yaml
+          grep -Fq "defaultValue: '392'" app/lib/main.dart
+          grep -Fq "defaultValue: '1.0.168'" app/lib/main.dart
+
+          # Build 391 korunan davranislar.
+          grep -Fq "Daha önceki sohbet geçmişi silinmez." app/lib/main.dart
+          grep -Fq "Engellemeyi Kaldır" app/lib/main.dart
+          grep -Fq "_engelDurumuDinle" app/lib/main.dart
+          grep -Fq "if(bitis!=null)'expiresAt':bitis" app/lib/main.dart
+          grep -Fq "NgelXSesliMesaj" app/lib/main.dart
+          grep -Fq "TamEkranVideoPage" app/lib/main.dart
+
+          # Build 392 yeni davranislar.
+          grep -Fq "'following':FieldValue.arrayRemove([hedefUid])" app/lib/main.dart
+          grep -Fq "'followers':FieldValue.arrayRemove([hedefUid])" app/lib/main.dart
+          grep -Fq "'friends':FieldValue.arrayRemove([hedefUid])" app/lib/main.dart
+          grep -Fq "NgelX içinde paylaş" app/lib/main.dart
+          grep -Fq "Diğer uygulamalarda paylaş" app/lib/main.dart
+          grep -Fq "Diğer işlemler" app/lib/main.dart
+          grep -Fq "Bu grupta engellediğin bir kişi var" app/lib/main.dart
+          grep -Fq "Engellediğin kişinin mesajı gizlendi" app/lib/main.dart
+          grep -Fq "participantName" app/lib/main.dart
+          grep -Fq "ngelxIlkWebBaglantisi" app/lib/main.dart
+          grep -Fq "ngelxMesajBaglantilariniAyir" app/lib/main.dart
+          grep -Fq "Bu mesajı sildin" app/lib/main.dart
+          grep -Fq "Medya ve bağlantılar" app/lib/main.dart
+          grep -Fq "Text('Süreli'" app/lib/main.dart
+          ! grep -Fq "_satir(Icons.push_pin_outlined,'Sabitlenmiş mesajlar'" app/lib/main.dart
+          ! grep -Fq "title:const Text('Dosyalar'" app/lib/main.dart
+
+          git diff --check
+
+      - name: Bagimliliklari al
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter clean
+          flutter pub get
+
+      - name: Flutter analiz
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter analyze --no-fatal-infos --no-fatal-warnings
+
+      - name: Gercek APK olustur
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter build apk --release --build-name=1.0.168 --build-number=392
+          test -s build/app/outputs/flutter-apk/app-release.apk
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          test -n "$APKSIGNER"
+          "$APKSIGNER" verify --verbose --print-certs build/app/outputs/flutter-apk/app-release.apk
+          cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/NgelX-1.0.168-Build-392-CHAT-SAFETY-LINKS-PERFORMANCE.apk
+          sha256sum build/app/outputs/flutter-apk/NgelX-1.0.168-Build-392-CHAT-SAFETY-LINKS-PERFORMANCE.apk > build/app/outputs/flutter-apk/NgelX-1.0.168-Build-392-CHAT-SAFETY-LINKS-PERFORMANCE.apk.sha256
+
+      - name: APK yukle
+        uses: actions/upload-artifact@v4
+        with:
+          name: NgelX-1.0.168-Build-392-CHAT-SAFETY-LINKS-PERFORMANCE
+          path: |
+            app/build/app/outputs/flutter-apk/NgelX-1.0.168-Build-392-CHAT-SAFETY-LINKS-PERFORMANCE.apk
+            app/build/app/outputs/flutter-apk/NgelX-1.0.168-Build-392-CHAT-SAFETY-LINKS-PERFORMANCE.apk.sha256
+          if-no-files-found: error
+          retention-days: 14
