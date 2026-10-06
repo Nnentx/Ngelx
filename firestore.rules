@@ -384,7 +384,7 @@ service cloud.firestore {
               && request.resource.data.get('deletedForEveryone', false) == true
               && onlyChanges([
                 'deletedForEveryone', 'deletedAt', 'deletedBy',
-                'text', 'mediaUrl', 'audioUrl', 'fileUrl', 'fileName',
+                'text', 'mediaUrl', 'videoUrl', 'audioUrl', 'fileUrl', 'fileName', 'linkUrl',
                 'reactions', 'pinned', 'pinnedAt', 'pinnedBy'
               ])
             )
