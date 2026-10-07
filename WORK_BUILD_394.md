@@ -28,3 +28,5 @@
 5. Mesaj yazarken klavye: sohbet gereksiz yukarı fırlamamalı.
 6. DİLEK/Rojin arka planı iki hesapta aynı görünmeli.
 7. Takip/Takipçi/Arkadaşlar aramasına uzun isim yaz: klavye ve metin korunmalı; sonuç sayısı doğru olmalı.
+
+Build workflow trigger: source fixes ready for CI validation.
