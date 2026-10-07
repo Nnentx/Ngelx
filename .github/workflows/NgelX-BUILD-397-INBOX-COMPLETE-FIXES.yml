@@ -1,0 +1,149 @@
+name: NgelX BUILD 397 INBOX COMPLETE FIXES
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - work/build-397-inbox-complete-fixes
+    paths:
+      - 'app/**'
+      - 'tools/apply_build395_final_login_inbox_ui.py'
+      - 'tools/apply_build396_inbox_final_polish.py'
+      - 'tools/apply_build397_inbox_complete_fixes.py'
+      - '.github/workflows/NgelX-BUILD-397-INBOX-COMPLETE-FIXES.yml'
+
+concurrency:
+  group: ngelx-build397-apk
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 70
+    steps:
+      - name: Kaynaklari al
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Java 17 kur
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Flutter kur
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Sabit NgelX imza anahtarini geri yukle
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: ngelx-stable-debug-keystore-v1
+          fail-on-cache-miss: true
+
+      - name: Imza anahtarini dogrula
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s "$HOME/.android/debug.keystore"
+          keytool -list -v -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey | grep -F 'SHA256: BE:20:B2:7F:0B:A1:F4:DE:CD:29:41:D4:10:B1:53:6D:E8:9E:48:DC:89:4F:04:F0:38:F9:D2:6B:11:EC:D6:AA'
+
+      - name: Build 395 final referans tasarimini uygula
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/apply_build395_final_login_inbox_ui.py
+
+      - name: Build 396 gelen kutusu duzeltmelerini uygula
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/apply_build396_inbox_final_polish.py
+
+      - name: Build 397 gelen kutusu tamamlama duzeltmelerini uygula
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/apply_build397_inbox_complete_fixes.py
+
+      - name: Build 397 regresyon kapisi
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fqx 'version: 1.0.173+397' app/pubspec.yaml
+          grep -Fq "defaultValue: '397'" app/lib/main.dart
+          grep -Fq "defaultValue: '1.0.173'" app/lib/main.dart
+
+          # Gecen altyapi korunuyor.
+          grep -Fq "Daha önceki sohbet geçmişi silinmez." app/lib/main.dart
+          grep -Fq "Engellemeyi Kaldır" app/lib/main.dart
+          grep -Fq "Bu grupta engellediğin bir kişi var" app/lib/main.dart
+          grep -Fq "Engellediğin kişinin mesajı gizlendi" app/lib/main.dart
+          grep -Fq "Bu gruba mesaj gönderemezsin" app/lib/main.dart
+          grep -Fq "private_chat_" app/lib/main.dart
+          grep -Fq "_ozelSohbetArkaPlanUrl" app/lib/main.dart
+
+          # Final login gorunumu korunuyor.
+          grep -Fq "ngelxsocial.com" app/lib/main.dart
+          grep -Fq "Tekrar hoş geldin" app/lib/main.dart
+
+          # Build 396 davranislari korunuyor.
+          grep -Fq "_yeniOlusturMenusu" app/lib/main.dart
+          grep -Fq "Grup Kur +" app/lib/main.dart
+          grep -Fq "Arşivlediğin sohbet ve gruplar" app/lib/main.dart
+          grep -Fq "sekme('Tümü')" app/lib/main.dart
+          grep -Fq "sekme('Mesajlar')" app/lib/main.dart
+          grep -Fq "sekme('Gruplar')" app/lib/main.dart
+          grep -Fq "sekme('Bildirimler')" app/lib/main.dart
+          grep -Fq "sekme('İstekler')" app/lib/main.dart
+
+          # Build 397 yeni hedefler.
+          grep -Fq "Widget tumIcerigi()" app/lib/main.dart
+          grep -Fq "gelenKutusuIsteginiSonuclandir" app/lib/main.dart
+          grep -Fq "grupGorunenAdi" app/lib/main.dart
+          grep -Fq "Kabul Et" app/lib/main.dart
+          grep -Fq "Reddet" app/lib/main.dart
+          grep -Fq "İsteklerde ara" app/lib/main.dart
+          echo "Build 397 regression markers OK"
+
+      - name: Bagimliliklari al
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter clean
+          flutter pub get
+
+      - name: Flutter analiz
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter analyze --no-fatal-infos --no-fatal-warnings
+
+      - name: Gercek APK olustur
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter build apk --release --build-name=1.0.173 --build-number=397
+          test -s build/app/outputs/flutter-apk/app-release.apk
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          test -n "$APKSIGNER"
+          "$APKSIGNER" verify --verbose --print-certs build/app/outputs/flutter-apk/app-release.apk
+          cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/NgelX-1.0.173-Build-397-INBOX-COMPLETE-FIXES.apk
+          sha256sum build/app/outputs/flutter-apk/NgelX-1.0.173-Build-397-INBOX-COMPLETE-FIXES.apk > build/app/outputs/flutter-apk/NgelX-1.0.173-Build-397-INBOX-COMPLETE-FIXES.apk.sha256
+
+      - name: APK yukle
+        uses: actions/upload-artifact@v4
+        with:
+          name: NgelX-1.0.173-Build-397-INBOX-COMPLETE-FIXES
+          path: |
+            app/build/app/outputs/flutter-apk/NgelX-1.0.173-Build-397-INBOX-COMPLETE-FIXES.apk
+            app/build/app/outputs/flutter-apk/NgelX-1.0.173-Build-397-INBOX-COMPLETE-FIXES.apk.sha256
+          if-no-files-found: error
+          retention-days: 14
