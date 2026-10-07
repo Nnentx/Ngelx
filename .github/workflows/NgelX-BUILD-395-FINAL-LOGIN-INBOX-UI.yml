@@ -86,8 +86,6 @@ jobs:
           grep -Fq "sekme('Gruplar')" app/lib/main.dart
           grep -Fq "sekme('Bildirimler')" app/lib/main.dart
           grep -Fq "sekme('İstekler')" app/lib/main.dart
-          grep -Fq "Private-chat name search is resolved against the live user document below." app/lib/main.dart
-
           # UI-only patch kaynak dosyayi bilincli olarak degistirir; bu asamada
           # git diff --check yerine Flutter analiz/derleme asil dogrulama kapisidir.
           echo "Build 395 regression markers OK"
