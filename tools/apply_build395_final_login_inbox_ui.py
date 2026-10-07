@@ -261,7 +261,7 @@ src = src.replace(
 
 msg_class = src.index("class _MesajPageState extends State<MesajPage>")
 msg_build_start = src.index("  @override Widget build(BuildContext context){", msg_class)
-msg_build_end = src.index("\n  }\n}\n\nclass ArsivSohbetlerPage", msg_build_start)
+msg_build_end = src.index("\n}\n\nclass ArsivSohbetlerPage", msg_build_start)
 
 msg_build = r'''  @override Widget build(BuildContext context){
     final ben=uid;
@@ -275,7 +275,7 @@ msg_build = r'''  @override Widget build(BuildContext context){
       }
       final dun=DateTime(n.year,n.month,n.day).subtract(const Duration(days:1));
       if(d.year==dun.year&&d.month==dun.month&&d.day==dun.day)return lt('Dün','Yesterday');
-      return '\${d.day.toString().padLeft(2,'0')}.\${d.month.toString().padLeft(2,'0')}';
+      return '${d.day.toString().padLeft(2,'0')}.${d.month.toString().padLeft(2,'0')}';
     }
 
     Widget sekme(String ad){
@@ -366,7 +366,7 @@ msg_build = r'''  @override Widget build(BuildContext context){
                 child:ListTile(
                   leading:const CircleAvatar(backgroundColor:Color(0xFFE9E3FF),child:Icon(Icons.person_add_alt_1_rounded,color:mor)),
                   title:Text(lt('Takip ve arkadaşlık istekleri','Follow & friend requests'),style:const TextStyle(fontWeight:FontWeight.w900)),
-                  subtitle:Text(sosyal.isEmpty?lt('Bekleyen istek yok','No pending requests'):lt('\${sosyal.length} bekleyen istek','\${sosyal.length} pending requests')),
+                  subtitle:Text(sosyal.isEmpty?lt('Bekleyen istek yok','No pending requests'):lt('${sosyal.length} bekleyen istek','${sosyal.length} pending requests')),
                   trailing:sosyal.isEmpty?const Icon(Icons.chevron_right_rounded):Badge(label:Text(_sayacEtiketi(sosyal.length)),child:const Icon(Icons.chevron_right_rounded)),
                   onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const AktivitePage())),
                 ),
@@ -425,7 +425,7 @@ msg_build = r'''  @override Widget build(BuildContext context){
               if(gelenIstek)return false;
               return true;
             }
-            final grupArama='\${v['groupName']??''} \${v['lastMessage']??''}'.toLowerCase();
+            final grupArama='${v['groupName']??''} ${v['lastMessage']??''}'.toLowerCase();
             return sohbetSorgu.isEmpty||grupArama.contains(sohbetSorgu);
           }).toList()..sort((a,b){
             final ap=sabitSohbetler.contains(a.id),bp=sabitSohbetler.contains(b.id);
@@ -517,7 +517,7 @@ msg_build = r'''  @override Widget build(BuildContext context){
                       if(p['deactivated']==true)return const SizedBox.shrink();
                       final hamTakmalar=v['nicknames'],takmalar=hamTakmalar is Map?Map<String,dynamic>.from(hamTakmalar):<String,dynamic>{};
                       final takma=(ben==null?'':(takmalar[ben]??'').toString()).trim(),profilAdi=(p['displayName']??p['username']??'NgelX').toString(),gorunenAd=takma.isNotEmpty?takma:profilAdi;
-                      final aranan='$gorunenAd \${p['displayName']??''} \${p['username']??''} \${v['lastMessage']??''}'.toLowerCase();
+                      final aranan='$gorunenAd ${p['displayName']??''} ${p['username']??''} ${v['lastMessage']??''}'.toLowerCase();
                       if(sohbetSorgu.isNotEmpty&&!aranan.contains(sohbetSorgu))return const SizedBox.shrink();
                       final foto=(p['photoUrl']??'').toString();
                       final sessiz=sessizSohbetler.contains(d.id);
