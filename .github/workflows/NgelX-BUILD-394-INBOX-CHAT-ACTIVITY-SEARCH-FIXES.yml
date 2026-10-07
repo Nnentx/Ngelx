@@ -67,7 +67,7 @@ jobs:
           grep -Fq "Engellediğin kişinin mesajı gizlendi" app/lib/main.dart
           grep -Fq "Bu gruba mesaj gönderemezsin" app/lib/main.dart
           grep -Fq "final ad=takipIstegi?'Takip isteği':'Arkadaşlık isteği';" app/lib/main.dart
-          grep -Fq "kabul?'$ad kabul edildi.':'$ad reddedildi.'" app/lib/main.dart
+          grep -Fq "tip:kabul?'basari':'uyari'" app/lib/main.dart
 
           # Build 394.
           grep -Fq "inbox_merged_" app/lib/main.dart
