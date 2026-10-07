@@ -118,6 +118,9 @@ class _NgelXHikayeSeriPageState extends State<NgelXHikayeSeriPage> with SingleTi
   bool videoHata=false;
   int medyaNesli=0;
   VideoPlayerController? videoKontrol;
+  VideoPlayerController? sonrakiVideoKontrol;
+  int sonrakiVideoIndex=-1;
+  String sonrakiVideoUrl='';
 
   QueryDocumentSnapshot<Map<String,dynamic>>? get belge=>
       hikayeler.isEmpty||aktif<0||aktif>=hikayeler.length?null:hikayeler[aktif];
@@ -128,10 +131,67 @@ class _NgelXHikayeSeriPageState extends State<NgelXHikayeSeriPage> with SingleTi
   ].map((e)=>(e??'').toString().trim()).firstWhere((e)=>e.isNotEmpty,orElse:()=>'');
   String get mediaType=>(veri['storyMediaType']??veri['mediaType']??'photo').toString().toLowerCase();
 
-  bool get videoMu{
-    if(mediaType=='video')return true;
-    final temiz=url.split('?').first.toLowerCase();
+  bool get videoMu=>_videoMu(veri,url);
+
+  bool _videoMu(Map<String,dynamic> v,String adres){
+    final tur=(v['storyMediaType']??v['mediaType']??'photo').toString().toLowerCase();
+    if(tur=='video')return true;
+    final temiz=adres.split('?').first.toLowerCase();
     return temiz.endsWith('.mp4')||temiz.endsWith('.mov')||temiz.endsWith('.m4v')||temiz.endsWith('.webm');
+  }
+
+  String _hikayeUrl(QueryDocumentSnapshot<Map<String,dynamic>> d){
+    final v=d.data();
+    return <dynamic>[
+      v['mediaUrl'],v['videoUrl'],v['playbackUrl'],v['downloadUrl'],v['url'],
+    ].map((e)=>(e??'').toString().trim()).firstWhere((e)=>e.isNotEmpty,orElse:()=>'');
+  }
+
+  Future<void> _sonrakiniHazirla()async{
+    final index=aktif+1;
+    if(index>=hikayeler.length){
+      final eski=sonrakiVideoKontrol;
+      sonrakiVideoKontrol=null;
+      sonrakiVideoIndex=-1;
+      sonrakiVideoUrl='';
+      if(eski!=null)unawaited(eski.dispose());
+      return;
+    }
+    final d=hikayeler[index],v=d.data(),adres=_hikayeUrl(d);
+    if(adres.isEmpty||Uri.tryParse(adres)?.hasScheme!=true||!_videoMu(v,adres)){
+      final eski=sonrakiVideoKontrol;
+      sonrakiVideoKontrol=null;
+      sonrakiVideoIndex=-1;
+      sonrakiVideoUrl='';
+      if(eski!=null)unawaited(eski.dispose());
+      return;
+    }
+    if(sonrakiVideoIndex==index&&sonrakiVideoUrl==adres&&sonrakiVideoKontrol?.value.isInitialized==true)return;
+
+    final eski=sonrakiVideoKontrol;
+    sonrakiVideoKontrol=null;
+    sonrakiVideoIndex=index;
+    sonrakiVideoUrl=adres;
+    if(eski!=null)unawaited(eski.dispose());
+
+    final x=VideoPlayerController.networkUrl(Uri.parse(adres));
+    sonrakiVideoKontrol=x;
+    try{
+      await x.initialize();
+      if(!mounted||sonrakiVideoKontrol!=x||sonrakiVideoIndex!=index){
+        await x.dispose();
+        return;
+      }
+      await x.setLooping(false);
+      await x.setVolume(sessiz?0:1);
+    }catch(_){
+      if(sonrakiVideoKontrol==x){
+        sonrakiVideoKontrol=null;
+        sonrakiVideoIndex=-1;
+        sonrakiVideoUrl='';
+      }
+      try{await x.dispose();}catch(_){}
+    }
   }
 
   @override
@@ -178,29 +238,59 @@ class _NgelXHikayeSeriPageState extends State<NgelXHikayeSeriPage> with SingleTi
     sure.reset();
     videoHazir=false;
     videoHata=false;
+
     final onceki=videoKontrol;
     videoKontrol=null;
-    if(onceki!=null)unawaited(onceki.dispose());
 
     final d=belge;
-    if(d==null)return;
+    if(d==null){
+      if(onceki!=null)unawaited(onceki.dispose());
+      return;
+    }
     final medyaAdresi=url;
     if(medyaAdresi.isEmpty||Uri.tryParse(medyaAdresi)?.hasScheme!=true){
+      if(onceki!=null)unawaited(onceki.dispose());
       videoHata=true;
       sure.duration=const Duration(seconds:7);
       if(mounted)setState((){});
       sure.forward(from:0);
+      unawaited(_sonrakiniHazirla());
       return;
     }
     unawaited(_gorulduKaydet(d));
 
     if(!videoMu){
+      if(onceki!=null)unawaited(onceki.dispose());
       sure.duration=const Duration(seconds:7);
       if(mounted)setState((){});
       sure.forward(from:0);
+      unawaited(_sonrakiniHazirla());
       return;
     }
 
+    // Build 398: if the next story was already initialized, reuse it instantly.
+    final hazirSiradaki=sonrakiVideoIndex==aktif&&sonrakiVideoUrl==medyaAdresi&&sonrakiVideoKontrol?.value.isInitialized==true
+      ?sonrakiVideoKontrol
+      :null;
+    if(hazirSiradaki!=null){
+      videoKontrol=hazirSiradaki;
+      sonrakiVideoKontrol=null;
+      sonrakiVideoIndex=-1;
+      sonrakiVideoUrl='';
+      if(onceki!=null&&onceki!=hazirSiradaki)unawaited(onceki.dispose());
+      final ms=math.max(1000,hazirSiradaki.value.duration.inMilliseconds).toInt();
+      sure.duration=Duration(milliseconds:ms);
+      await hazirSiradaki.setVolume(sessiz?0:1);
+      if(!mounted||nesil!=medyaNesli)return;
+      setState(()=>videoHazir=true);
+      sure.forward(from:0);
+      await hazirSiradaki.seekTo(Duration.zero);
+      await hazirSiradaki.play();
+      unawaited(_sonrakiniHazirla());
+      return;
+    }
+
+    if(onceki!=null)unawaited(onceki.dispose());
     try{
       final x=VideoPlayerController.networkUrl(Uri.parse(medyaAdresi));
       videoKontrol=x;
@@ -213,11 +303,13 @@ class _NgelXHikayeSeriPageState extends State<NgelXHikayeSeriPage> with SingleTi
       setState(()=>videoHazir=true);
       sure.forward(from:0);
       await x.play();
+      unawaited(_sonrakiniHazirla());
     }catch(_){
       if(!mounted||nesil!=medyaNesli)return;
       setState(()=>videoHata=true);
       sure.duration=const Duration(seconds:7);
       sure.forward(from:0);
+      unawaited(_sonrakiniHazirla());
     }
   }
 
@@ -280,24 +372,31 @@ class _NgelXHikayeSeriPageState extends State<NgelXHikayeSeriPage> with SingleTi
     setState(()=>sessiz=yeni);
     final x=videoKontrol;
     if(x?.value.isInitialized==true)await x!.setVolume(yeni?0:1);
+    final sonraki=sonrakiVideoKontrol;
+    if(sonraki?.value.isInitialized==true)await sonraki!.setVolume(yeni?0:1);
   }
 
-  String _saat(DateTime x)=>'${x.hour.toString().padLeft(2,'0')}:${x.minute.toString().padLeft(2,'0')}';
-  String _tarihSaat(DateTime x)=>'${x.day.toString().padLeft(2,'0')}.${x.month.toString().padLeft(2,'0')} ${_saat(x)}';
+  DateTime? get _olusmaZamani=>veri['createdAt'] is Timestamp
+    ?(veri['createdAt'] as Timestamp).toDate()
+    :(veri['clientCreatedAt'] is Timestamp?(veri['clientCreatedAt'] as Timestamp).toDate():null);
 
   String get zamanBilgisi{
-    final olusma=veri['createdAt'] is Timestamp?(veri['createdAt'] as Timestamp).toDate():
-        (veri['clientCreatedAt'] is Timestamp?(veri['clientCreatedAt'] as Timestamp).toDate():null);
-    final bitis=veri['expiresAt'] is Timestamp?(veri['expiresAt'] as Timestamp).toDate():null;
+    final olusma=_olusmaZamani;
     if(olusma==null)return 'Az önce';
-    if(bitis==null)return 'Başladı: ${_saat(olusma)}';
+    final fark=DateTime.now().difference(olusma);
+    if(fark.isNegative||fark.inMinutes<1)return 'Az önce';
+    if(fark.inHours<1)return '${fark.inMinutes} dk önce';
+    if(fark.inHours<24)return '${fark.inHours} sa önce';
+    return '${fark.inDays} gün önce';
+  }
+
+  String get sonaErmeBilgisi{
+    final bitis=veri['expiresAt'] is Timestamp?(veri['expiresAt'] as Timestamp).toDate():null;
+    if(bitis==null)return '';
     final kalan=bitis.difference(DateTime.now());
-    final kalanYazi=kalan.isNegative
-      ?'süresi doldu'
-      :kalan.inHours>=1
-        ?'${kalan.inHours} sa kaldı'
-        :'${kalan.inMinutes.clamp(1,59)} dk kaldı';
-    return 'Başladı: ${_saat(olusma)} • Biter: ${_tarihSaat(bitis)} • $kalanYazi';
+    if(kalan.isNegative)return 'Süresi doldu';
+    if(kalan.inHours>=1)return '${kalan.inHours} saat sonra sona erecek';
+    return '${kalan.inMinutes.clamp(1,59)} dk sonra sona erecek';
   }
 
   Future<void> _yanitGonder(String ham,{bool tepki=false})async{
@@ -431,6 +530,11 @@ class _NgelXHikayeSeriPageState extends State<NgelXHikayeSeriPage> with SingleTi
           iconTheme:const IconThemeData(color:Colors.black87),
         ),
         child:SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
+          ListTile(
+            leading:Icon(videoMu?Icons.videocam_outlined:Icons.auto_stories_outlined,color:mor),
+            title:Text(videoMu?'Video hikâye':'Fotoğraf hikâyesi',style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w800)),
+            subtitle:Text(sonaErmeBilgisi.isEmpty?zamanBilgisi:'$zamanBilgisi • $sonaErmeBilgisi',style:const TextStyle(color:Colors.black54)),
+          ),
           if(benim)ListTile(
             leading:const Icon(Icons.share_outlined,color:mor),
             title:const Text('Hikâyeyi paylaş',style:TextStyle(color:Colors.black87,fontWeight:FontWeight.w800)),
@@ -558,7 +662,9 @@ class _NgelXHikayeSeriPageState extends State<NgelXHikayeSeriPage> with SingleTi
     cevap.dispose();
     sure.dispose();
     final x=videoKontrol;
+    final sonraki=sonrakiVideoKontrol;
     if(x!=null)unawaited(x.dispose());
+    if(sonraki!=null&&sonraki!=x)unawaited(sonraki.dispose());
     super.dispose();
   }
 
