@@ -134,13 +134,17 @@ if old_tabs not in src:
     raise SystemExit("Tab row anchor not found")
 src = src.replace(old_tabs, new_tabs, 1)
 
-src = src.replace("padding:const EdgeInsets.only(right:7),","padding:const EdgeInsets.symmetric(horizontal:2),",1)
-src = src.replace("padding:const EdgeInsets.symmetric(horizontal:15,vertical:9),","padding:const EdgeInsets.symmetric(horizontal:4,vertical:9),",1)
-src = src.replace(
+sekme_start = src.index("    Widget sekme(String ad){")
+sekme_end = src.index("\n    Widget bildirimlerIcerigi()", sekme_start)
+sekme_block = src[sekme_start:sekme_end]
+sekme_block = sekme_block.replace("padding:const EdgeInsets.only(right:7),","padding:const EdgeInsets.symmetric(horizontal:2),",1)
+sekme_block = sekme_block.replace("padding:const EdgeInsets.symmetric(horizontal:15,vertical:9),","padding:const EdgeInsets.symmetric(horizontal:4,vertical:9),",1)
+sekme_block = sekme_block.replace(
     "child:Text(ad,style:TextStyle(color:secili?Colors.white:const Color(0xFF6F7891),fontSize:12.5,fontWeight:secili?FontWeight.w900:FontWeight.w700)),",
     "child:FittedBox(fit:BoxFit.scaleDown,child:Text(ad,maxLines:1,style:TextStyle(color:secili?Colors.white:const Color(0xFF6F7891),fontSize:11.5,fontWeight:secili?FontWeight.w900:FontWeight.w700))),",
     1,
 )
+src = src[:sekme_start] + sekme_block + src[sekme_end:]
 
 src = src.replace(
     "onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const YeniSohbetPage())),\n                  icon:const Icon(Icons.add_rounded,color:Color(0xFF07142E),size:32),",
