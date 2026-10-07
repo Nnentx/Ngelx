@@ -11476,52 +11476,6 @@ class _MesajPageState extends State<MesajPage> {
           );
         },
       ),
-      if(ben!=null)StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
-        stream:FirebaseFirestore.instance.collection('group_archives').doc(ben).collection('items').limit(30).snapshots(),
-        builder:(_,eskiSnap){
-          if(filtre=='Arkadaşlar'||filtre=='Okunmamış')return const SizedBox.shrink();
-          final eski=(eskiSnap.data?.docs??const <QueryDocumentSnapshot<Map<String,dynamic>>>[]).where((d){
-            final v=d.data(),ad=(v['groupName']??t('groupChat')).toString();
-            return sohbetSorgu.isEmpty||ad.toLowerCase().contains(sohbetSorgu);
-          }).toList()..sort((a,b){
-            final at=a.data()['updatedAt']??a.data()['archivedAt'],bt=b.data()['updatedAt']??b.data()['archivedAt'];
-            final am=at is Timestamp?at.millisecondsSinceEpoch:0,bm=bt is Timestamp?bt.millisecondsSinceEpoch:0;
-            return bm.compareTo(am);
-          });
-          if(eski.isEmpty)return const SizedBox.shrink();
-          final h=math.min(216.0,eski.length*72.0).toDouble();
-          return SizedBox(
-            height:h,
-            child:ListView.builder(
-              padding:const EdgeInsets.fromLTRB(8,2,8,4),
-              physics:const ClampingScrollPhysics(),
-              itemCount:eski.length,
-              itemBuilder:(_,i){
-                final d=eski[i],v=d.data();
-                final chatId=(v['chatId']??d.id).toString();
-                final ad=(v['groupName']??t('groupChat')).toString();
-                final foto=(v['groupPhotoUrl']??'').toString();
-                final tur=(v['exitType']??'removed').toString();
-                final aktor=(v['actorName']??'').toString().trim();
-                final durum=tur=='left'
-                  ?'Gruptan ayrıldın.'
-                  :(aktor.isEmpty?'Bu gruptan çıkarıldın.':aktor+' seni gruptan çıkardı.');
-                return ListTile(
-                  onTap:chatId.isEmpty?null:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupSohbetPage(chatId:chatId,ad:ad,foto:foto))),
-                  leading:CircleAvatar(
-                    backgroundColor:ngelxGroupGreenSoft,
-                    backgroundImage:foto.isEmpty?null:NgelXAgImageProvider(foto),
-                    child:foto.isEmpty?const Icon(Icons.groups_rounded,color:ngelxGroupGreen):null,
-                  ),
-                  title:Text(ad,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w800)),
-                  subtitle:Text(durum,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Color(0xFF6B7280),fontWeight:FontWeight.w700)),
-                  trailing:const Icon(Icons.lock_outline_rounded,color:Color(0xFF9B949E),size:20),
-                );
-              },
-            ),
-          );
-        },
-      ),
       Expanded(child:RefreshIndicator(
         color:mor,
         onRefresh:_gelenKutusunuYenile,
@@ -11530,17 +11484,58 @@ class _MesajPageState extends State<MesajPage> {
         builder:(_,s){
           final docs=(s.data?.docs??[]).where((d){final v=d.data();if(List<String>.from(v['hiddenFor']??const[]).contains(ben)||arsivSohbetler.contains(d.id))return false;final members=List<String>.from(v['members']??const[]),grup=v['isGroup']==true||members.length>2;final unread=(v['unread_$ben'] as num?)?.toInt()??0;if(filtre=='Okunmamış'&&unread==0)return false;if(filtre=='Gruplar'&&!grup)return false;if(!grup){final other=members.firstWhere((x)=>x!=ben,orElse:()=>ben??'');final gelenIstek=(v['requestRecipientUid']??'').toString()==ben&&v['requestAccepted_$ben']!=true&&v['requestRejected_$ben']!=true&&!arkadaslar.contains(other);if(gelenIstek)return false;if(filtre=='Arkadaşlar'&&!arkadaslar.contains(other))return false;}else if(filtre=='Arkadaşlar')return false;final son='${v['groupName']??''} ${v['lastMessage']??''}'.toLowerCase();return sohbetSorgu.isEmpty||son.contains(sohbetSorgu);}).toList()..sort((a,b){final ap=sabitSohbetler.contains(a.id),bp=sabitSohbetler.contains(b.id);if(ap!=bp)return ap?-1:1;final at=a.data()['updatedAt']??a.data()['lastMessageClientAt'],bt=b.data()['updatedAt']??b.data()['lastMessageClientAt'];final am=at is Timestamp?at.millisecondsSinceEpoch:0,bm=bt is Timestamp?bt.millisecondsSinceEpoch:0;return bm.compareTo(am);});
           final altBosluk=ngelxAltGuvenliBosluk(context,extra:72);
-          if(docs.isEmpty)return ListView(
-            physics:const AlwaysScrollableScrollPhysics(),
-            padding:EdgeInsets.only(bottom:altBosluk),
-            children:[SizedBox(height:220,child:Center(child:Text(t('noChats'),textAlign:TextAlign.center,style:const TextStyle(color:Colors.black54))))],
-          );
-          return ListView.builder(
-            physics:const AlwaysScrollableScrollPhysics(),
-            padding:EdgeInsets.only(bottom:altBosluk),
-            itemCount:docs.length,
-            itemBuilder:(_,i){
-            final d=docs[i],v=d.data(),members=List<String>.from(v['members']??[]);
+          return StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
+            stream:ben==null?null:FirebaseFirestore.instance.collection('group_archives').doc(ben).collection('items').limit(30).snapshots(),
+            builder:(_,eskiSnap){
+              final eski=(filtre=='Arkadaşlar'||filtre=='Okunmamış')
+                ?<QueryDocumentSnapshot<Map<String,dynamic>>>[]
+                :(eskiSnap.data?.docs??const <QueryDocumentSnapshot<Map<String,dynamic>>>[]).where((d){
+                    final v=d.data(),ad=(v['groupName']??t('groupChat')).toString().toLowerCase();
+                    return (filtre=='Tümü'||filtre=='Gruplar')&&(sohbetSorgu.isEmpty||ad.contains(sohbetSorgu));
+                  }).toList();
+              int zaman(dynamic ham)=>ham is Timestamp?ham.millisecondsSinceEpoch:0;
+              final satirlar=<({bool eski,QueryDocumentSnapshot<Map<String,dynamic>> d,bool sabit,int zaman})>[
+                ...docs.map((d)=>(eski:false,d:d,sabit:sabitSohbetler.contains(d.id),zaman:zaman(d.data()['updatedAt']??d.data()['lastMessageClientAt']))),
+                ...eski.map((d)=>(eski:true,d:d,sabit:false,zaman:zaman(d.data()['updatedAt']??d.data()['archivedAt']))),
+              ]..sort((a,b){
+                if(a.sabit!=b.sabit)return a.sabit?-1:1;
+                return b.zaman.compareTo(a.zaman);
+              });
+              if(satirlar.isEmpty)return ListView(
+                physics:const AlwaysScrollableScrollPhysics(),
+                padding:EdgeInsets.only(bottom:altBosluk),
+                children:[SizedBox(height:220,child:Center(child:Text(t('noChats'),textAlign:TextAlign.center,style:const TextStyle(color:Colors.black54))))],
+              );
+              return ListView.builder(
+                key:PageStorageKey<String>('inbox_merged_'+filtre),
+                physics:const AlwaysScrollableScrollPhysics(),
+                padding:EdgeInsets.only(bottom:altBosluk),
+                itemCount:satirlar.length,
+                itemBuilder:(_,i){
+                  final satir=satirlar[i];
+                  if(satir.eski){
+                    final v=satir.d.data();
+                    final chatId=(v['chatId']??satir.d.id).toString();
+                    final ad=(v['groupName']??t('groupChat')).toString();
+                    final foto=(v['groupPhotoUrl']??'').toString();
+                    final tur=(v['exitType']??'removed').toString();
+                    final aktor=(v['actorName']??'').toString().trim();
+                    final durum=tur=='left'
+                      ?'Gruptan ayrıldın.'
+                      :(aktor.isEmpty?'Bu gruptan çıkarıldın.':aktor+' seni gruptan çıkardı.');
+                    return ListTile(
+                      onTap:chatId.isEmpty?null:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupSohbetPage(chatId:chatId,ad:ad,foto:foto))),
+                      leading:CircleAvatar(
+                        backgroundColor:ngelxGroupGreenSoft,
+                        backgroundImage:foto.isEmpty?null:NgelXAgImageProvider(foto),
+                        child:foto.isEmpty?const Icon(Icons.groups_rounded,color:ngelxGroupGreen):null,
+                      ),
+                      title:Text(ad,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w800)),
+                      subtitle:Text(durum,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Color(0xFF6B7280),fontWeight:FontWeight.w700)),
+                      trailing:const Icon(Icons.lock_outline_rounded,color:Color(0xFF9B949E),size:20),
+                    );
+                  }
+                  final d=satir.d,v=d.data(),members=List<String>.from(v['members']??[]);
             final grup=v['isGroup']==true||members.length>2;
             if(grup){final ad=(v['groupName']??t('groupChat')).toString(),foto=(v['groupPhotoUrl']??'').toString(),unread=(v['unread_$ben'] as num?)?.toInt()??0;return ListTile(onTap:()=>sohbetiAc(d.id,GrupSohbetPage(chatId:d.id,ad:ad,foto:foto)),onLongPress:()=>sohbetMenusu(context,d.id,grup:true),leading:CircleAvatar(backgroundColor:const Color(0xFFE9DDFF),backgroundImage:foto.isEmpty?null:NgelXAgImageProvider(foto),child:foto.isEmpty?const Icon(Icons.groups,color:mor):null),title:Text(ad,style:TextStyle(color:Colors.black87,fontWeight:unread>0?FontWeight.w900:FontWeight.w700)),subtitle:Text((v['lastMessage']??t('groupCreated')).toString(),maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black54)),trailing:Wrap(crossAxisAlignment:WrapCrossAlignment.center,children:[if(sabitSohbetler.contains(d.id))const Icon(Icons.push_pin,size:16,color:mor),if(sessizSohbetler.contains(d.id))const Icon(Icons.volume_off,size:18,color:Colors.black38),if(unread>0)Badge(label:Text('$unread'))]));}
             final other=members.firstWhere((x)=>x!=ben,orElse:()=>ben??'');
@@ -11571,7 +11566,9 @@ class _MesajPageState extends State<MesajPage> {
                 trailing:Wrap(crossAxisAlignment:WrapCrossAlignment.center,children:[if(sabitSohbetler.contains(d.id))const Icon(Icons.push_pin,size:16,color:mor),if(sessiz)const Icon(Icons.volume_off,size:18,color:Colors.black38),if(unread>0)Badge(label:Text('$unread'))]),
               );
             });
-          });
+              });
+            },
+          );
         },
       ))),
     ]))));
