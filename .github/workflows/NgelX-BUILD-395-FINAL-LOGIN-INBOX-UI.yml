@@ -1,0 +1,131 @@
+name: NgelX BUILD 395 FINAL LOGIN INBOX UI
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - work/build-395-final-login-inbox-ui
+    paths:
+      - 'app/**'
+      - 'tools/apply_build395_final_login_inbox_ui.py'
+      - 'QA/**'
+      - 'WORK_BUILD_395.md'
+      - '.github/workflows/NgelX-BUILD-395-FINAL-LOGIN-INBOX-UI.yml'
+
+concurrency:
+  group: ngelx-build395-apk
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 70
+    steps:
+      - name: Kaynaklari al
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Java 17 kur
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Flutter kur
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Sabit NgelX imza anahtarini geri yukle
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: ngelx-stable-debug-keystore-v1
+          fail-on-cache-miss: true
+
+      - name: Imza anahtarini dogrula
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s "$HOME/.android/debug.keystore"
+          keytool -list -v -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey | grep -F 'SHA256: BE:20:B2:7F:0B:A1:F4:DE:CD:29:41:D4:10:B1:53:6D:E8:9E:48:DC:89:4F:04:F0:38:F9:D2:6B:11:EC:D6:AA'
+
+      - name: Final login ve gelen kutusu tasarimini uygula
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/apply_build395_final_login_inbox_ui.py
+
+      - name: Build 395 regresyon kapisi
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fqx 'version: 1.0.171+395' app/pubspec.yaml
+          grep -Fq "defaultValue: '395'" app/lib/main.dart
+          grep -Fq "defaultValue: '1.0.171'" app/lib/main.dart
+
+          # Kullanici verileri ve Build 392-394'te gecen davranislar korunacak.
+          grep -Fq "Daha önceki sohbet geçmişi silinmez." app/lib/main.dart
+          grep -Fq "Engellemeyi Kaldır" app/lib/main.dart
+          grep -Fq "Bu grupta engellediğin bir kişi var" app/lib/main.dart
+          grep -Fq "Engellediğin kişinin mesajı gizlendi" app/lib/main.dart
+          grep -Fq "Bu gruba mesaj gönderemezsin" app/lib/main.dart
+          grep -Fq "final ad=takipIstegi?'Takip isteği':'Arkadaşlık isteği';" app/lib/main.dart
+          grep -Fq "tip:kabul?'basari':'uyari'" app/lib/main.dart
+          grep -Fq "inbox_merged_" app/lib/main.dart
+          grep -Fq "group_removed" app/lib/main.dart
+          grep -Fq "_ozelSohbetArkaPlanUrl" app/lib/main.dart
+          grep -Fq "private_chat_" app/lib/main.dart
+
+          # Build 395 final referanslari.
+          grep -Fq "ngelxsocial.com" app/lib/main.dart
+          grep -Fq "sekme('Tümü')" app/lib/main.dart
+          grep -Fq "sekme('Mesajlar')" app/lib/main.dart
+          grep -Fq "sekme('Gruplar')" app/lib/main.dart
+          grep -Fq "sekme('Bildirimler')" app/lib/main.dart
+          grep -Fq "sekme('İstekler')" app/lib/main.dart
+          grep -Fq "Private-chat name search is resolved against the live user document below." app/lib/main.dart
+          grep -Fq "Google ile giriş bağlantısı hazırlanıyor." app/lib/main.dart
+          grep -Fq "Apple ile giriş bağlantısı hazırlanıyor." app/lib/main.dart
+
+          git diff --check
+
+      - name: Bagimliliklari al
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter clean
+          flutter pub get
+
+      - name: Flutter analiz
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter analyze --no-fatal-infos --no-fatal-warnings
+
+      - name: Gercek APK olustur
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter build apk --release --build-name=1.0.171 --build-number=395
+          test -s build/app/outputs/flutter-apk/app-release.apk
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          test -n "$APKSIGNER"
+          "$APKSIGNER" verify --verbose --print-certs build/app/outputs/flutter-apk/app-release.apk
+          cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/NgelX-1.0.171-Build-395-FINAL-LOGIN-INBOX-UI.apk
+          sha256sum build/app/outputs/flutter-apk/NgelX-1.0.171-Build-395-FINAL-LOGIN-INBOX-UI.apk > build/app/outputs/flutter-apk/NgelX-1.0.171-Build-395-FINAL-LOGIN-INBOX-UI.apk.sha256
+
+      - name: APK yukle
+        uses: actions/upload-artifact@v4
+        with:
+          name: NgelX-1.0.171-Build-395-FINAL-LOGIN-INBOX-UI
+          path: |
+            app/build/app/outputs/flutter-apk/NgelX-1.0.171-Build-395-FINAL-LOGIN-INBOX-UI.apk
+            app/build/app/outputs/flutter-apk/NgelX-1.0.171-Build-395-FINAL-LOGIN-INBOX-UI.apk.sha256
+          if-no-files-found: error
+          retention-days: 14
