@@ -2989,7 +2989,9 @@ Future<void> uygulamaBildirimiGonder({
   final aramaBildirimi=tur=='call';
   final canliBaslangicBildirimi=olayTuru=='live_started';
   if(grupBildirimi){
-    if(ayar['groupNotifications']==false)return;
+    // Gruptan çıkarılma, sıradan grup mesajı değil üyelik/güvenlik olayıdır.
+    // Kullanıcı grup mesaj bildirimlerini kapatsa da bu değişiklik Aktivite'de görünür.
+    if(olayTuru!='group_removed'&&ayar['groupNotifications']==false)return;
   }else if(tur=='message'&&ayar['messageNotifications']==false){
     return;
   }
@@ -3831,6 +3833,11 @@ Future<void> kullaniciyiEngelle(BuildContext context,String hedefUid) async {
       },SetOptions(merge:true));
     }
     await batch.commit().timeout(const Duration(seconds:12));
+    // Engel sonrası eski "istek bekliyor" kayıtları kalmasın.
+    for(final tur in const <String>['follow_request','friend_request']){
+      try{await sosyalIstekIptalEt(sosyalIstekRef(u.uid,hedefUid,tur));}catch(_){}
+      try{await sosyalIstekIptalEt(sosyalIstekRef(hedefUid,u.uid,tur));}catch(_){}
+    }
     if(context.mounted)ngelxDurumMesaji(context,'Kullanıcı engellendi. Takip ve arkadaşlık ilişkileri kaldırıldı.',tip:'basari');
   }catch(e){if(context.mounted)ngelxDurumMesaji(context,'Engelleme tamamlanamadı. Tekrar dene.',tip:'hata');}
 }
@@ -11469,6 +11476,52 @@ class _MesajPageState extends State<MesajPage> {
           );
         },
       ),
+      if(ben!=null)StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
+        stream:FirebaseFirestore.instance.collection('group_archives').doc(ben).collection('items').limit(30).snapshots(),
+        builder:(_,eskiSnap){
+          if(filtre=='Arkadaşlar'||filtre=='Okunmamış')return const SizedBox.shrink();
+          final eski=(eskiSnap.data?.docs??const <QueryDocumentSnapshot<Map<String,dynamic>>>[]).where((d){
+            final v=d.data(),ad=(v['groupName']??t('groupChat')).toString();
+            return sohbetSorgu.isEmpty||ad.toLowerCase().contains(sohbetSorgu);
+          }).toList()..sort((a,b){
+            final at=a.data()['updatedAt']??a.data()['archivedAt'],bt=b.data()['updatedAt']??b.data()['archivedAt'];
+            final am=at is Timestamp?at.millisecondsSinceEpoch:0,bm=bt is Timestamp?bt.millisecondsSinceEpoch:0;
+            return bm.compareTo(am);
+          });
+          if(eski.isEmpty)return const SizedBox.shrink();
+          final h=math.min(216.0,eski.length*72.0).toDouble();
+          return SizedBox(
+            height:h,
+            child:ListView.builder(
+              padding:const EdgeInsets.fromLTRB(8,2,8,4),
+              physics:const ClampingScrollPhysics(),
+              itemCount:eski.length,
+              itemBuilder:(_,i){
+                final d=eski[i],v=d.data();
+                final chatId=(v['chatId']??d.id).toString();
+                final ad=(v['groupName']??t('groupChat')).toString();
+                final foto=(v['groupPhotoUrl']??'').toString();
+                final tur=(v['exitType']??'removed').toString();
+                final aktor=(v['actorName']??'').toString().trim();
+                final durum=tur=='left'
+                  ?'Gruptan ayrıldın.'
+                  :(aktor.isEmpty?'Bu gruptan çıkarıldın.':aktor+' seni gruptan çıkardı.');
+                return ListTile(
+                  onTap:chatId.isEmpty?null:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupSohbetPage(chatId:chatId,ad:ad,foto:foto))),
+                  leading:CircleAvatar(
+                    backgroundColor:ngelxGroupGreenSoft,
+                    backgroundImage:foto.isEmpty?null:NgelXAgImageProvider(foto),
+                    child:foto.isEmpty?const Icon(Icons.groups_rounded,color:ngelxGroupGreen):null,
+                  ),
+                  title:Text(ad,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w800)),
+                  subtitle:Text(durum,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Color(0xFF6B7280),fontWeight:FontWeight.w700)),
+                  trailing:const Icon(Icons.lock_outline_rounded,color:Color(0xFF9B949E),size:20),
+                );
+              },
+            ),
+          );
+        },
+      ),
       Expanded(child:RefreshIndicator(
         color:mor,
         onRefresh:_gelenKutusunuYenile,
@@ -13987,10 +14040,21 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
         ]),
       ),
     );
-    if(tur=='system')return Center(child:Padding(
-      padding:const EdgeInsets.symmetric(horizontal:18,vertical:6),
-      child:Text(metin,maxLines:3,textAlign:TextAlign.center,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Color(0xFF6B7280),fontSize:11.2,fontWeight:FontWeight.w600)),
-    ));
+    if(tur=='system'){
+      var sistemMetni=metin;
+      final sistemEylemi=(v['systemAction']??'').toString();
+      final hedefler=List<String>.from(v['targetUids']??const[]);
+      final me=uid??'';
+      if(sistemEylemi=='member_removed'&&me.isNotEmpty&&hedefler.contains(me)){
+        final aktor=(grupVerisi?['exitActorName_'+me]??'').toString().trim();
+        final grupAdi=(grupVerisi?['groupName']??widget.ad).toString();
+        sistemMetni=aktor.isEmpty?'$grupAdi grubundan çıkarıldın.':'$aktor seni $grupAdi grubundan çıkardı.';
+      }
+      return Center(child:Padding(
+        padding:const EdgeInsets.symmetric(horizontal:18,vertical:6),
+        child:Text(sistemMetni,maxLines:3,textAlign:TextAlign.center,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Color(0xFF6B7280),fontSize:11.2,fontWeight:FontWeight.w600)),
+      ));
+    }
     if(tur=='call'){
       final goruntulu=v['callVideo']==true;
       final durum=(v['callStatus']??'ringing').toString();
@@ -14355,6 +14419,12 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
     final ben=uid;if(ben==null)return;
     try{
       await chatRef.set({'hiddenFor':FieldValue.arrayUnion([ben])},SetOptions(merge:true));
+      await ngelxClearGroupArchive(ben,widget.chatId);
+      await FirebaseFirestore.instance.collection('users').doc(ben).set({
+        'archivedChats':FieldValue.arrayRemove([widget.chatId]),
+        'pinnedChats':FieldValue.arrayRemove([widget.chatId]),
+        'mutedChats':FieldValue.arrayRemove([widget.chatId]),
+      },SetOptions(merge:true));
       if(mounted)Navigator.maybePop(context);
     }catch(_){
       if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Konuşma kaldırılamadı. Tekrar dene.')));
@@ -14366,19 +14436,30 @@ class _GrupSohbetPageState extends State<GrupSohbetPage>{
     final tur=(tv['exitType_'+ben]??'removed').toString();
     final aktor=(tv['exitActorName_'+ben]??'').toString().trim();
     final grupAd=(tv['groupName']??widget.ad).toString();
-    final baslik=tur=='left'?'Gruptan ayrıldın':'Bu gruptan çıkarıldın';
-    final aciklama=tur=='left'
-      ?grupAd+' grubu arşivde kalır. Tekrar eklenene kadar yeni mesaj gönderemezsin.'
-      :(aktor.isEmpty?'Artık '+grupAd+' grubunun üyesi değilsin.':aktor+' seni '+grupAd+' grubundan çıkardı.');
+    final olay=tur=='left'
+      ?'Gruptan ayrıldın.'
+      :(aktor.isEmpty?'$grupAd grubundan çıkarıldın.':'$aktor seni $grupAd grubundan çıkardı.');
     return SafeArea(
       top:false,
       child:Container(
-        color:ngelxGroupGreenHeader,
+        color:const Color(0xFFFFF4F5),
         padding:const EdgeInsets.fromLTRB(14,13,14,14),
         child:Column(mainAxisSize:MainAxisSize.min,children:[
-          Text(baslik,textAlign:TextAlign.center,style:const TextStyle(color:Color(0xFF5D555F),fontSize:16,fontWeight:FontWeight.w900)),
+          Container(
+            width:42,height:42,
+            decoration:const BoxDecoration(color:Color(0xFFFFE4E8),shape:BoxShape.circle),
+            child:const Icon(Icons.group_off_rounded,color:Color(0xFFE52335),size:24),
+          ),
+          const SizedBox(height:8),
+          const Text('Bu gruba mesaj gönderemezsin',textAlign:TextAlign.center,style:TextStyle(color:Color(0xFF252328),fontSize:17,fontWeight:FontWeight.w900)),
+          const SizedBox(height:5),
+          Text(olay,textAlign:TextAlign.center,style:const TextStyle(color:Color(0xFF5F5963),fontSize:12.5,height:1.3,fontWeight:FontWeight.w800)),
           const SizedBox(height:4),
-          Text(aciklama,textAlign:TextAlign.center,style:const TextStyle(color:Color(0xFF746F78),fontSize:12.5,height:1.3,fontWeight:FontWeight.w600)),
+          const Text(
+            'Artık bu grupta değilsin. Tekrar ekleninceye kadar mesaj gönderemez, arama yapamaz ve yeni grup mesajlarını alamazsın.',
+            textAlign:TextAlign.center,
+            style:TextStyle(color:Color(0xFF746F78),fontSize:12.2,height:1.32,fontWeight:FontWeight.w600),
+          ),
           const SizedBox(height:12),
           SizedBox(width:double.infinity,child:FilledButton.icon(
             style:FilledButton.styleFrom(backgroundColor:const Color(0xFFE52335),foregroundColor:Colors.white,padding:const EdgeInsets.symmetric(vertical:13),shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(18))),
@@ -17055,6 +17136,11 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
     )??false;
     if(!ok)return;
     final yapanAd=await ngelxCurrentDisplayName();
+    final grupAdi=(sv['groupName']??gv['groupName']??'Grup').toString();
+    final grupFoto=(sv['groupPhotoUrl']??gv['groupPhotoUrl']??'').toString();
+    // Sistem satırını üyelik kesilmeden önce yaz: çıkarılan kullanıcı geçmişinde
+    // bu olay satırını görebilsin, ancak bundan sonraki yeni grup mesajlarını almasın.
+    await sistemMesaji(yapanAd+', '+isim+' adlı üyeyi gruptan çıkardı.',action:'member_removed',targetUids:[id]);
     await ref.update({
       'members':FieldValue.arrayRemove([id]),
       'admins':FieldValue.arrayRemove([id]),
@@ -17067,10 +17153,24 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
     });
     await ngelxRecordGroupArchive(
       chatId:widget.chatId,targetUid:id,exitType:'removed',actorUid:benUid,actorName:yapanAd,
-      groupName:(sv['groupName']??gv['groupName']??'Grup').toString(),groupPhotoUrl:(sv['groupPhotoUrl']??gv['groupPhotoUrl']??'').toString(),
+      groupName:grupAdi,groupPhotoUrl:grupFoto,
     );
+    try{
+      await uygulamaBildirimiGonder(
+        toUid:id,
+        fromUid:benUid,
+        tur:'group',
+        metin:'seni '+grupAdi+' grubundan çıkardı',
+        belgeId:widget.chatId,
+        hedefTuru:'group',
+        hedefBaslik:grupAdi,
+        hedefFoto:grupFoto,
+        olayTuru:'group_removed',
+        eylem:'gruptan çıkardı',
+        dedupeKey:'group_removed_'+widget.chatId+'_'+id+'_'+DateTime.now().microsecondsSinceEpoch.toString(),
+      ).timeout(const Duration(seconds:10));
+    }catch(_){}
     await ngelxGrupDavetMetaSenkronla(ref);
-    await sistemMesaji(yapanAd+', '+isim+' adlı üyeyi gruptan çıkardı.',action:'member_removed',targetUids:[id]);
   }
   Future<void> uyeEkle(List<String> mevcut)async{
     final me=ben;
@@ -21988,8 +22088,6 @@ class SohbetBilgiPage extends StatelessWidget{
     final benim=await FirebaseFirestore.instance.collection('users').doc(me).get();
     final arkadaslar=List<String>.from(benim.data()?['friends']??const[]);
     if(arkadaslar.contains(uid)){if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Zaten arkadaşsınız.')));return;}
-    final giden=await FirebaseFirestore.instance.collection('notifications').where('fromUid',isEqualTo:me).limit(100).get();
-    if(gidenSosyalIstekBekliyor(giden,uid,'friend_request')){if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Arkadaşlık isteğin zaten bekliyor.')));return;}
     final gonderildi=await sosyalIstekGonder(hedefUid:uid,tur:'friend_request',metin:'Yeni arkadaşlık isteğin var');
     if(context.mounted)ngelxDurumMesaji(
       context,
@@ -22574,6 +22672,14 @@ class _AktivitePageState extends State<AktivitePage> {
         TextSpan(text:' grubuna ekledi.',style:normal),
       ]),style:const TextStyle(color:Colors.black87));
     }
+    if(olay=='group_removed'&&grup.isNotEmpty){
+      return Text.rich(TextSpan(children:[
+        TextSpan(text:ad.isEmpty?'Bir yönetici':ad,style:kalin),
+        const TextSpan(text:' seni '),
+        TextSpan(text:grup,style:grupStil),
+        TextSpan(text:' grubundan çıkardı.',style:normal),
+      ]),style:const TextStyle(color:Colors.black87));
+    }
     if(olay=='group_message'&&grup.isNotEmpty){
       return Text.rich(TextSpan(children:[
         TextSpan(text:grup,style:grupStil),
@@ -22686,7 +22792,10 @@ class _AktivitePageState extends State<AktivitePage> {
         final cv=chat.data();
         final ben=FirebaseAuth.instance.currentUser?.uid;
         final uyeler=List<String>.from(cv?['members']??const[]);
-        if(cv==null||cv['isGroup']!=true||ben==null||!uyeler.contains(ben)){
+        final eskiUyeler=List<String>.from(cv?['formerMembers']??const[]);
+        final gizlenenler=List<String>.from(cv?['hiddenFor']??const[]);
+        final erisebilir=ben!=null&&(uyeler.contains(ben)||eskiUyeler.contains(ben))&&!gizlenenler.contains(ben);
+        if(cv==null||cv['isGroup']!=true||!erisebilir){
           if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bu grup artık erişilebilir değil.')));
           return;
         }
@@ -22708,7 +22817,10 @@ class _AktivitePageState extends State<AktivitePage> {
         if(grup){
           final ben=FirebaseAuth.instance.currentUser?.uid;
           final uyeler=List<String>.from(cv?['members']??const[]);
-          if(ben==null||!uyeler.contains(ben)){
+          final eskiUyeler=List<String>.from(cv?['formerMembers']??const[]);
+          final gizlenenler=List<String>.from(cv?['hiddenFor']??const[]);
+          final erisebilir=ben!=null&&(uyeler.contains(ben)||eskiUyeler.contains(ben))&&!gizlenenler.contains(ben);
+          if(!erisebilir){
             if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bu grup artık erişilebilir değil.')));
             return;
           }
@@ -22996,7 +23108,7 @@ class _AktivitePageState extends State<AktivitePage> {
           if(s.hasError&&_sunucuAktiviteleri.isEmpty)return Center(child:Column(mainAxisSize:MainAxisSize.min,children:[const Icon(Icons.cloud_off_rounded,color:Colors.redAccent,size:52),const SizedBox(height:10),Text(t('activityLoadFailed'),style:const TextStyle(color:Colors.black,fontWeight:FontWeight.w800)),Text(t('checkConnectionRetry'),style:const TextStyle(color:Colors.black54))]));
           if(s.connectionState==ConnectionState.waiting&&_sunucuAktiviteleri.isEmpty)return const Center(child:CircularProgressIndicator(color:mor));
           int bildirimZamani(QueryDocumentSnapshot<Map<String,dynamic>> d){
-            final ham=d.data()['createdAt'];
+            final v=d.data(),ham=v['createdAt']??v['clientCreatedAt'];
             return ham is Timestamp?ham.millisecondsSinceEpoch:0;
           }
           String bildirimTekrarAnahtari(QueryDocumentSnapshot<Map<String,dynamic>> d){
