@@ -29,3 +29,10 @@ Kaynak: 2026-10-08 Build 401 gerçek cihaz video incelemesi (`docs/qa/2026-10-08
 - Kod düzeltmesi: `tools/apply_build402_profile_reference_polish.py`
 - Koruma testi: `tools/check_build402_profile_regression.py`
 - CI workflow: `.github/workflows/NgelX-BUILD-402-PROFILE-REFERENCE-POLISH.yml`
+
+## CI teslim doğrulaması
+- GitHub Actions: https://github.com/Nnentx/Ngelx/actions/runs/37753310805
+- Sonuç: **success**. Eski ve yeni regresyon kontrolleri, Flutter analizi, imzalı release APK, artifact yükleme başarılı.
+- Artifact: https://github.com/Nnentx/Ngelx/actions/runs/37753310805/artifacts/11539377038
+- Paket: NgelX 1.0.178 (Build 402). APK ZIP açıldıktan sonra 144216562 byte; SHA-256 checksum tutarlı.
+- Kullanıcının cihazında ana profil hizası, arkadaş kısayolları, gerçek tanıtım video oynatma ve Üret butonu test edilene kadar «cihazda doğrulandı» sayılmayacak.
