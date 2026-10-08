@@ -50,9 +50,13 @@ def owner(s):
       "owner edit action")
     # Only replace the top of the owner's profile; all lower widgets keep
     # their existing functionality: stats, shortcut actions, stories and grids.
-    s=one(s,"                   SizedBox(\n                     height:265,\n                     child:Stack(clipBehavior:Clip.none,children:[",
-      "                   if(profilGorunumu=='coverless'||kapakUrl.isEmpty)\n                     _onayliKapaksizBaslik()\n                   else SizedBox(\n                     height:265,\n                     child:Stack(clipBehavior:Clip.none,children:[",
-      "owner alternate coverless header")
+    import re
+    s,count=re.subn(
+      r"(?m)^([ \t]*)SizedBox\(\s*\n[ \t]*height:265,\s*\n[ \t]*child:Stack\(clipBehavior:Clip\.none,children:\[",
+      lambda m:m.group(1)+"if(profilGorunumu=='coverless'||kapakUrl.isEmpty)\n"+m.group(1)+"  _onayliKapaksizBaslik()\n"+m.group(1)+"else SizedBox(\n"+m.group(1)+"  height:265,\n"+m.group(1)+"  child:Stack(clipBehavior:Clip.none,children:[",
+      s
+    )
+    if count!=1:raise SystemExit(f"owner alternate coverless header: expected one, found {count}")
     # Avoid duplicating real data and media widgets. The coverless avatar stays
     # centered; tapping avatar/story and editing photo use existing callbacks.
     helper="""  Widget _onayliKapaksizBaslik()=>Column(
