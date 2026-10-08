@@ -43,7 +43,7 @@ new=r'''            Row(children:[
                 Row(children:[
                   const CircleAvatar(radius:23,backgroundColor:Color(0xFFF1ECFF),child:Icon(Icons.person_rounded,color:mor)),
                   const SizedBox(width:10),
-                  Expanded(child:TextField(controller:aciklama,enabled:!yukleniyor,maxLines:3,minLines:1,decoration:const InputDecoration(hintText:'Ne paylaşmak istersin?',filled:true,fillColor:Color(0xFFF8F9FC),border:OutlineInputBorder(borderSide:BorderSide.none,borderRadius:BorderRadius.all(Radius.circular(18))))),
+                  Expanded(child:TextField(controller:aciklama,enabled:!yukleniyor,maxLines:3,minLines:1,decoration:const InputDecoration(hintText:'Ne paylaşmak istersin?',filled:true,fillColor:Color(0xFFF8F9FC),border:OutlineInputBorder(borderSide:BorderSide.none,borderRadius:BorderRadius.all(Radius.circular(18)))))),
                   const Icon(Icons.emoji_emotions_outlined,color:Color(0xFF7C8396)),
                 ]),
                 const SizedBox(height:10),
