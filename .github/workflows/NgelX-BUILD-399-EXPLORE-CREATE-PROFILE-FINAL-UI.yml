@@ -15,6 +15,7 @@ on:
       - 'tools/apply_build399_explore_reference_ui.py'
       - 'tools/apply_build399_create_reference_ui.py'
       - 'tools/apply_build399_profile_reference_ui.py'
+      - 'tools/check_build399_regression.py'
       - '.github/workflows/NgelX-BUILD-399-EXPLORE-CREATE-PROFILE-FINAL-UI.yml'
 
 concurrency:
@@ -85,47 +86,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python3 - <<'PY'
-          from pathlib import Path
-          main=Path('app/lib/main.dart').read_text(encoding='utf-8')
-          story=Path('app/lib/story_v66.dart').read_text(encoding='utf-8')
-          pub=Path('app/pubspec.yaml').read_text(encoding='utf-8')
-          checks=[
-            ('pubspec version','version: 1.0.175+399',pub),
-            ('build number',"defaultValue: '399'",main),
-            ('build name',"defaultValue: '1.0.175'",main),
-            ('inbox all content','Widget tumIcerigi()',main),
-            ('request resolver','gelenKutusuIsteginiSonuclandir',main),
-            ('group create label','Grup Kur +',main),
-            ('group display name','grupGorunenAdi',main),
-            ('login domain','ngelxsocial.com',main),
-            ('story preload','sonrakiVideoKontrol',story),
-            ('story relative time','dk önce',story),
-            ('username no spaces','Boşluk kullanılamaz',main),
-            ('username formatter','FilteringTextInputFormatter.allow',main),
-            ('explore subtitle','Yeni insanları, içerikleri ve grupları keşfet',main),
-            ('explore all tab',"_kesfetSekmesi(Icons.grid_view_rounded,'Tümü',-1)",main),
-            ('explore live','Canlı Yayınlar',main),
-            ('create subtitle','Paylaş, keşfet, ilham ver',main),
-            ('create cards','_finalUretKart',main),
-            ('create tools','_finalUretArac',main),
-            ('profile cover field','coverPhotoUrl',main),
-            ('profile cover editor','NgelXKapakKonumlandirPage',main),
-            ('profile cover button','Kapak Fotoğrafını',main),
-            ('profile top icons','_profilKapakIkon',main),
-            ('message history lock','Daha önceki sohbet geçmişi silinmez.',main),
-            ('blocked group warning','Bu grupta engellediğin bir kişi var',main),
-            ('private chat ids','private_chat_',main),
-          ]
-          missing=[]
-          for name,needle,hay in checks:
-            ok=needle in hay
-            print(('OK   ' if ok else 'MISS ')+name+' -> '+needle)
-            if not ok: missing.append(name)
-          if missing:
-            raise SystemExit('Missing regression markers: '+', '.join(missing))
-          print('Build 399 regression markers OK')
-          PY
+          python3 -u tools/check_build399_regression.py
 
       - name: Bagimliliklari al
         shell: bash
