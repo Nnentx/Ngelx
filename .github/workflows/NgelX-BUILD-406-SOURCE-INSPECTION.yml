@@ -1,0 +1,44 @@
+name: NgelX BUILD 406 SOURCE INSPECTION
+on:
+  push:
+    branches: [work/build-406-final-eight-fixes]
+    paths: ['.github/workflows/NgelX-BUILD-406-SOURCE-INSPECTION.yml']
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Print bounded source anchors for final fixes
+      shell: bash
+      run: |
+        python3 - <<'PY'
+        import pathlib,re
+        p=pathlib.Path("app/lib/main.dart")
+        lines=p.read_text(encoding="utf-8").splitlines()
+        groups={
+          'NOTIFICATION':['sana arkadaşlık isteği gönderdi','seni takip etmek istiyor','seni takip etti','class Bildirim','class _Bildirim','fromUid','senderId'],
+          'JOIN':['class GrubaKatil','class _GrubaKatil','Davetle gruba katıl','Davet bağlantısı / kod','Katılma isteğin','joinCode','inviteCode','joinToken','joinApproval','requiresApproval','joinRequests'],
+          'INTRO':['class _ProfilTanitimVideoKartiState','tanitimVideosuYukle','tanitimVideoUrl','Profil tanıtım videosu kaydedildi'],
+          'PROFILE':['class _ProfilPageState','_profilKisayol','NgelXAgImageProvider(kapakUrl)','profilPhotoUrl','profilFoto','avatarUrl'],
+          'FEED':['class _NgelXVideoKapakOnizlemeState','class _HikayeGosterPageState','Video hazırlanıyor'],
+          'PRIVACY':['Profilimi kimler görüntüleyebilir?','Gizli hesap','privateAccount','profileVisibility','profileViewPermission']
+        }
+        print("TOTAL LINES",len(lines))
+        for name,keys in groups.items():
+          matches=[(n,l.strip()) for n,l in enumerate(lines) if any(x.casefold() in l.casefold() for x in keys)]
+          print("\n===== MATCHES",name, len(matches),"=====")
+          for n,l in matches[:130]:print(f"{n+1}: {l[:190]}")
+        targets={
+           'JOIN_SCREEN':['class _GrubaKatil','class GrubaKatil','Davetle gruba katıl'],
+           'NOTIFICATION_RENDER':['sana arkadaşlık isteği gönderdi','seni takip etmek istiyor'],
+           'INTRO_SAVE':['Profil tanıtım videosu kaydedildi'],
+           'PRIVACY_VISIBILITY':['Profilimi kimler görüntüleyebilir?'],
+           'SHORTCUT':['Widget _profilKisayol'],
+        }
+        for name,keys in targets.items():
+          hits=[n for n,l in enumerate(lines) if any(x.casefold() in l.casefold() for x in keys)]
+          for n in hits[:3]:
+            start=max(0,n-22);end=min(len(lines),n+35)
+            print(f"\n==== DETAIL {name} line {n+1} ====")
+            for k in range(start,end):print(f"{k+1}: {lines[k][:220]}")
+        PY
