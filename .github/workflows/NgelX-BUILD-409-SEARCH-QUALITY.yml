@@ -1,0 +1,53 @@
+name: NgelX BUILD 409 SEARCH QUALITY
+on:
+  push:
+    branches: [work/build-409-functional-backlog]
+    paths:
+      - 'tools/apply_build406_final_eight.py'
+      - 'tools/apply_build407_consolidated.py'
+      - 'tools/apply_build408_defects_first.py'
+      - 'tools/apply_build409_search_relevance.py'
+      - 'tools/check_build409_search_relevance.py'
+      - 'tools/check_build408_defects_first.py'
+      - 'tools/check_build407_regression.py'
+      - 'tools/check_build406_regression.py'
+      - '.github/workflows/NgelX-BUILD-409-SEARCH-QUALITY.yml'
+jobs:
+  patch-test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Apply Build 395-406 and test source preservation
+      shell: bash
+      run: |
+        set -euo pipefail
+        python3 -u tools/apply_build395_final_login_inbox_ui.py
+        python3 -u tools/apply_build396_inbox_final_polish.py
+        python3 -u tools/apply_build397_inbox_complete_fixes.py
+        python3 -u tools/apply_build398_login_story_polish.py
+        python3 -u tools/apply_build399_registration_profile_cover.py
+        python3 -u tools/apply_build399_explore_reference_ui.py
+        python3 -u tools/apply_build399_create_reference_ui.py
+        python3 -u tools/apply_build399_profile_reference_ui.py
+        python3 -u tools/check_build399_regression.py
+        python3 -u tools/apply_build400_cover_upload_hotfix.py
+        python3 -u tools/check_build400_cover_upload.py
+        python3 -u tools/apply_build401_profile_stability.py
+        python3 -u tools/check_build401_profile_regression.py
+        python3 -u tools/apply_build402_profile_reference_polish.py
+        python3 -u tools/check_build402_profile_regression.py
+        python3 -u tools/apply_build403_profile_live_audio.py
+        python3 -u tools/check_build403_regression.py
+        python3 -u tools/apply_build404_profile_live_voice_fixes.py
+        python3 -u tools/check_build404_regression.py
+        python3 -u tools/apply_build405_single_device_final.py
+        python3 -u tools/check_build405_regression.py
+        python3 -u tools/apply_build406_final_eight.py
+        python3 -u tools/check_build406_regression.py
+        python3 -u tools/apply_build407_consolidated.py
+        python3 -u tools/check_build407_regression.py
+        python3 -u tools/apply_build408_defects_first.py
+        python3 -u tools/check_build408_defects_first.py
+        python3 -u tools/apply_build409_search_relevance.py
+        python3 -u tools/check_build409_search_relevance.py
+        python3 -m py_compile tools/apply_build407_consolidated.py tools/check_build407_regression.py tools/apply_build408_defects_first.py
