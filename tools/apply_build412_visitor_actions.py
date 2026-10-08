@@ -13,7 +13,7 @@ def one(old,new,label):
   v=v.replace(old,new,1)
   return
  import re
- pattern=r'[ \\t]*'+r'\\n[ \\t]*'.join(re.escape(line.lstrip()) for line in old.split('\\n'))
+ pattern=r'[ \t]*'+r'\n[ \t]*'.join(re.escape(line.lstrip()) for line in old.split('\n'))
  hits=list(re.finditer(pattern,v))
  if len(hits)!=1:raise SystemExit(f'Build 412 {label}: expected 1 anchor, got {n} exact and {len(hits)} flexible')
  hit=hits[0]
