@@ -15,6 +15,7 @@ tests={
 "content navigation preserved":"IcerikBaglantiPage(icerikId:d.id)" in p,
 "video edit flow unaffected":"_finalUretArac(Icons.videocam_rounded" in s and "_cokluMedyaSirala()" in s,
 "build 408 priority fixes preserved":"ngelx_group_block_dialog_" in s and "ngelxCanliKaydiTaze(yayinSnap.data!" in s,
+"group approval result reads eventKind":"if(tur==\'group_join_request\'||(v[\'eventKind\']??\'\')==\'group_join_request\')" in s,
 }
 for k,v in tests.items():print(("PASS " if v else "FAIL ")+k,flush=True)
 if not all(tests.values()):raise SystemExit("Search quality regression failed")
