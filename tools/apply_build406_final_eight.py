@@ -24,9 +24,9 @@ write("app/pubspec.yaml",pub)
 import re
 def notifications(src):
  left=src.index("Widget _bildirimBasligi(Map<String,dynamic>")
- right=src.index("\\nclass AktiflikDurumuYazisi",left)
+ right=src.index("\nclass AktiflikDurumuYazisi",left)
  part=src[left:right]
- pattern=r"itemBuilder:\\s*\\(_,i\\)\\s*\\{\\s*final d\\s*=\\s*docs\\[i\\];\\s*final v\\s*=\\s*d\\.data\\(\\);"
+ pattern=r"itemBuilder:\s*\(_,i\)\s*\{\s*final d\s*=\s*docs\[i\];\s*final v\s*=\s*d\.data\(\);"
  match=re.search(pattern,part)
  if match is None:
   at=part.find("itemBuilder:")
