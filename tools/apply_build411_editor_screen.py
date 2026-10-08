@@ -7,12 +7,12 @@ anchor="class ProfilPage extends StatefulWidget {"
 if src.count(anchor)!=1:raise SystemExit("Missing profile page injection point")
 widget=r"""
 class NgelXOnayliProfilDuzenlePage extends StatefulWidget {
-  final String uid, ilkAd, ilkKullanici, ilkBio, ilkKonum, katilma, ilkGorunum;
+  final String uid, ilkAd, ilkKullanici, ilkBio, ilkKonum, katilma, ilkGorunum, ilkKapakUrl;
   final Future<void> Function() onKapak,onFoto,onTanitim;
   const NgelXOnayliProfilDuzenlePage({
     super.key,required this.uid,required this.ilkAd,required this.ilkKullanici,
     required this.ilkBio,required this.ilkKonum,required this.katilma,
-    required this.ilkGorunum,required this.onKapak,required this.onFoto,required this.onTanitim,
+    required this.ilkGorunum,required this.ilkKapakUrl,required this.onKapak,required this.onFoto,required this.onTanitim,
   });
   @override State<NgelXOnayliProfilDuzenlePage> createState()=>_NgelXOnayliProfilDuzenlePageState();
 }
@@ -26,7 +26,7 @@ class _NgelXOnayliProfilDuzenlePageState extends State<NgelXOnayliProfilDuzenleP
     _kullanici=TextEditingController(text:widget.ilkKullanici.replaceFirst('@',''));
     _bio=TextEditingController(text:widget.ilkBio);
     _konum=TextEditingController(text:widget.ilkKonum);
-    _gorunum=widget.ilkGorunum=='coverless'?'coverless':'cover';
+    _gorunum=widget.ilkGorunum=='coverless'||widget.ilkKapakUrl.isEmpty?'coverless':'cover';
   }
   @override void dispose(){
     _ad.dispose();_kullanici.dispose();_bio.dispose();_konum.dispose();
@@ -294,6 +294,6 @@ class _NgelXOnayliProfilDuzenlePageState extends State<NgelXOnayliProfilDuzenleP
 """
 src=src.replace(anchor,widget+anchor,1)
 src=src.replace("        ilkBio:bio,\n        ilkKonum:konum=='Konum eklenmedi'?'':konum,",
-                "        ilkBio:bio,\n        ilkGorunum:profilGorunumu,\n        ilkKonum:konum=='Konum eklenmedi'?'':konum,",1)
+                "        ilkBio:bio,\n        ilkGorunum:profilGorunumu,\n        ilkKapakUrl:kapakUrl,\n        ilkKonum:konum=='Konum eklenmedi'?'':konum,",1)
 p.write_text(src,encoding="utf-8")
 print("Build 411 approved edit page: cover/photo actions, coverless choice, edit fields, live preview, safe profile mode saving.")
