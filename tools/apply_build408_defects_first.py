@@ -155,7 +155,7 @@ def fix_inbox(s):
       );
     }"""
     return one(s,old,replacement,"inbox Tümü/Bildirimler group request status")
-m=section(m,"class _GelenKutusuPageState", "class ",fix_inbox) if "class _GelenKutusuPageState" in m else m
+m=fix_inbox(m)
 
 write('app/lib/main.dart',m)
 p=one(read('app/pubspec.yaml'),"version: 1.0.183+407","version: 1.0.184+408","pubspec version")
