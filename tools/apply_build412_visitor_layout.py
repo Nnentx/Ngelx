@@ -115,8 +115,6 @@ one("""  Widget _profilSayac(BuildContext context,String sayi,String baslik,Void
         ]),
       ),
     ));""","four purple stats")
-import re
-intro_pat=r"(?m)^[ \\t]*if\\(\\(v\\['introVideoUrl'\\]\\?\\?''\\)\\.toString\\(\\)\\.isNotEmpty\\) \\.\\.\\.\\[[ \\t]*\\n[ \\t]*const SizedBox\\(height:14\\),[ \\t]*\\n[ \\t]*ProfilTanitimVideoKarti\\(url:\\(v\\['introVideoUrl'\\]\\?\\?''\\)\\.toString\\(\\)\\),[ \\t]*\\n[ \\t]*\\],[ \\t]*"
 intro_new="""               if((v['introVideoUrl']??'').toString().isNotEmpty) ...[
                  const SizedBox(height:15),
                  Container(
@@ -143,8 +141,11 @@ intro_new="""               if((v['introVideoUrl']??'').toString().isNotEmpty) .
                    ]),
                  ),
                ],"""
-v,n=re.subn(intro_pat,intro_new,v)
-if n!=1:raise SystemExit(f"intro media preserved: expected 1 match, got {n}")
+intro_anchor="if((v['introVideoUrl']??'').toString().isNotEmpty) ...["
+if v.count(intro_anchor)!=1:raise SystemExit("intro media preserved: wrong anchor count")
+start_intro=v.index(intro_anchor)
+end_intro=v.index("],",start_intro)+2
+v=v[:start_intro]+intro_new+v[end_intro:]
 helper=r"""
   Widget _ziyaretciReferansAvatar(String foto,String handle,bool canli,bool erisimVar,double radius)=>
     Stack(clipBehavior:Clip.none,alignment:Alignment.center,children:[
