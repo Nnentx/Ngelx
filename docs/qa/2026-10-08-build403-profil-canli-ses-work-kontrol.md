@@ -44,3 +44,14 @@ Kaynak: 2026-10-08 telefon kayıtları; `docs/qa/2026-10-08-build402-cihaz-video
 - **Açık P2:** Tanıtım videosunda kısa yeniden başlatma/yükleme spinner; referanstaki süre etiketi yerleşimi ve kısayol etiket yazı boyutu küçük tasarım farkları.
 - **Test edilmedi:** Canlı Yayın, Sesli Oda, karşı hesapta mesaj/izin/arkadaşlık, Premium satın alma ve beş profil sekmesinin tümü. Kullanıcı bu kaydı özellikle profil videosu olarak gönderdi.
 - Sadece QA notu kaydedildi; yeni APK ve uygulama kod değişikliği yapılmadı.
+
+## Build 403 Sesli Odalar telefon testi — 45084.mp4
+
+- Kullanıcının yaklaşık 2:23 dakikalık Sesli Odalar ekran kaydı incelendi. Ayrıntı: [Sesli Odalar Build 403 QA](./2026-10-08-build403-sesli-odalar-telefon-video-incelemesi.md).
+- **Gözlenen ve korunacak:** Keşfet/Sesli, gerçek oda oluşturma, başlık/kategori/erişim seçimi, 1/12 konuşmacı ve 2. kişi bekleniyor, kişiler/tepki, odada sohbet mesajı, mikrofon açık/kapalı, 3 sohbet seçip davet gönderme ve onayı, müzik kütüphanesinden parça seçme, oynatıcı kontrolü/duraklatma, Akış/Keşfet/Sohbet/Ben üzerinde aktif oda mini barı, odaya dönme/bitirme.
+- **Öncelikli gerçek görsel hata:** `Sesli oda oluştur` ekranında **seçili olmayan kategori ChoiceChip'leri siyah zeminde siyah/koyu yazılı ve okunamıyor.** Kontrast ve tema arka planını düzelt, oda oluşturma değerlerini ve işlevlerini koru.
+- **Söz istekleri henüz doğrulanmadı:** Video boyunca `İstekler` düğmesi var ancak alt panel açılmadı. Build 403 yükleme/yeniden dene değişikliğinin çalıştığı bu kayıttan çıkarılamaz.
+- **Akış medya notu:** Oda sürerken ilk video kısa siyah spinner gösteriyor, sonra videolar oynuyor; eski 'kalıcı açılmama' bu kayıtta doğrulanmadı. Geçiş süresi/performance ölçümü açık.
+- **Test edilmedi:** İkinci telefonun odayı canlıyken Keşfet/Sesli'de bulması, davetlerin karşı kişiye teslimi, sesli sohbetin/oda müziğinin ikinci cihazda duyulması, söz isteğinin alınması/ kabul/red.
+- Boş oda listesi kayıt başında/oda bitince normal; hata sayılmayacak.
+- **Durum:** Gözlem ve Work kaydı. Kod değişmedi, Build 404 APK üretilmedi. Kullanıcıdan şimdi sıradaki Canlı Yayın videosu bekleniyor.
