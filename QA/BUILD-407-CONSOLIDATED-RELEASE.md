@@ -49,3 +49,24 @@
 **QA kararı:** **Build 407 video ileri sarma için tek cihaz smoke — OLUMLU; önceki uzun donma tekrar etmedi.** Ancak cihazın gerçek `seekTo` tamamlanma zamanını ölçen telemetri ve farklı ağ/video kodlayıcılarında tekrar test olmadığı için her koşulda kesin kapandı iddiası yok. **Ayrı P2 açık performans rötuşu:** yeni videoya geçişte yaklaşık 1–3 saniyelik siyah ekran/spinner görülebiliyor; poster/buffer göstergesi ve medya ön yükleme iyileştirmesi sonraki toplu paket için kayıtlı. TikTok outro, kullanıcının yüklediği kaynak medyanın kendisidir.
 
 **Bu işlem:** QA notu; **mevcut Build 407 kaynak kodu/APK ve canlı Firebase kuralları değiştirilmedi**. İkinci telefon testleri kullanıcı isteğiyle beklemede kalır.
+
+## Build 407 gerçek cihaz / Gelen Kutusu gönderen adı ve yönetici onaylı grup daveti — 45216.mp4 (2026-10-08)
+
+**Kaynak:** Kullanıcının paylaştığı **174,44 saniyelik / 1080×2392** Android ekran kaydı, daha önce ekrandan **v1.0.183 / Yapı 407** doğrulandı. Bu kayıtta birden çok hesap arasında geçiş, grup daveti başvurusu ve yönetici onayı tek cihazda gösteriliyor. Test sonucu yalnız gözlenmiş davranışa dayanır.
+
+### Doğrulanan olumlu sonuçlar
+- **00–24 sn:** Gelen Kutusu `Tümü`, `Mesajlar`, `Gruplar`, `Bildirimler` sekmeleri açılıyor ve bildirimler yükleniyor. `Bildirimler` sekmesinde **Umay Umay seni takip etmek istiyor**, **Alperen Yarbay sana arkadaşlık isteği gönderdi**, **Alperen Yarbay seni takip etmek istiyor**, **Rojin Candan** ile başlayan canlı yayın/bildirim satırları gerçek adlarla görüntüleniyor; bazı satırlarda gerçek avatar var. Build 406'daki isimsiz `seni takip etmek istiyor` ve `sana arkadaşlık isteği gönderdi` şikâyeti bu kayıtta **tekrarlanmadı**.
+- **24–29 sn:** `İstekler` sekmesi açılıyor; istek kategorileri gösteriliyor. `+` menüsünden `Gruba katıl` sayfası açılıyor.
+- **42–65 sn:** Mevcut grup sohbeti, **Grup ayarları**, **Davet bağlantısı** ve `Davetler / Katılma istekleri` alanı görüntüleniyor. Gerçek grup davet bağlantısı oluşturulabiliyor/kopyalanabiliyor; grup gizlilik ve katılma isteğini onaylama ayarı mevcut.
+- **76–95 sn:** Hesap değiştirme üzerinden başvuran hesapta `Gruba katıl` alanına davet bağlantısı giriliyor. `Gruba katıl` seçilince **`Katılma isteğin kurucu veya yönetici onayına gönderildi.`** bildirimi görünüyor ve doğrudan grup sohbeti açılmıyor. **İlk adım geçti**: davet linki kendiliğinden üyelik yaratmıyor.
+- **110–140 sn:** Yönetici/kurucu tarafında `Aktivite` ve grup sohbetinde **`Rojin Candan ALE YNA AŞK grubuna katılmak istiyor`** bildirimi görünüyor. Grup sohbetinde üstte **`1 katılma isteği var`** uyarısı, `Davetler ve istekler` sayfasında **Rojin Candan** gerçek adı/avatarsıyla `Onayla` ve `Reddet` eylemleri var. Kullanıcı **Onayla** seçeneğine dokunuyor, istek sayfadan kayboluyor ve **`İstek onaylandı.`** bildirimi gösteriliyor. **Yöneticiye ulaşma ve onaylama tek cihazlı hesaplar arası test geçti**.
+- **144–168 sn:** Grup sohbetine geri dönüş ve mesaj / etiketleme denemeleri var; uygulama çökmesi veya kalıcı bloke görünmüyor.
+- **170–174 sn:** Gelen Kutusu `Tümü` yeniden açılıyor; gönderen isimleri görünür.
+
+### Sınırlar ve küçük takip
+1. **P1 bildirimlerde gönderen adları:** Bu kayıtta `Tümü` ve `Bildirimler` isimli satırları doğru gösteriyor; **tek cihaz smoke geçti**. Silinmiş hesap, eski UID'siz arşiv kaydı ve tüm fotoğraflar ayrı denenmediğinden evrensel doğrulama sayılmaz.
+2. **Grup davet yönetici onayı:** Başvuru `pending` akışı ve onay butonunun sonucu görülüyor. **Başvuran hesaba tekrar dönüp yeni üyelik kaydı, grup mesajlarına erişim ve onay bildirimi açıkça doğrulanmadı**; grup onayı E2E'nin bu son adımı için hedefli kontrol gerekir.
+3. **P3 bildirim durumu metni:** Onaydan sonra, son `Tümü` listesinde önceki bildirim **`Rojin Candan ALE YNA AŞK grubuna katılmak istiyor`** olarak duruyor. Bu yalnız geçmiş başvuru bildirimi olabilir; **isteğin hâlâ pending olduğunu kanıtlamaz**. İyi UX için sonuçlanmış istekte geçmiş bildirimi `gruba katılma isteği onaylandı` gibi güncelleme veya durum rozeti gösterme incelensin. Eski bildirim silinmesin.
+4. Bildirimlerdeki bazı mesaj/istek türleri ile grup yöneticisi rolünü değiştirme ve gerçek ikinci cihaz teslimi bu kayıtla tamamen doğrulanmadı.
+
+**QA kararı:** Build 407 **gönderen adları gerçek telefon testinde GEÇTİ**. **Davet linkiyle yöneticiye istek gönderme ve yöneticinin isteği onaylaması GEÇTİ**. **Onaylanmış başvuranın yeni grup üyeliğine erişimi — ayrı kısa doğrulama bekliyor**. Toplu geri kalan düzeltmelere dokunulmadı; QA raporu güncellendi, **APK/kod/Firebase değiştirilmedi**.
