@@ -76,3 +76,11 @@
 - Sonuç: **success** — Build 399/400/401 regresyonları, Flutter analizi, release APK, imza doğrulaması ve artifact yükleme başarılı.
 - Artifact: NgelX-1.0.177-Build-401-PROFILE-STABILITY-REFERENCE (GitHub artifact 11533242546).
 - **Gerçek cihaz görsel ve işlev testi bekleniyor; Build 401’in menü kontrastı, beyaz navigasyon ve profil kartı sonuçları kullanıcı cihazında tekrar görülmeden cihazda doğrulandı denmeyecek.**
+
+## Build 401 cihaz tekrar testi — 2026-10-08
+
+- Kullanıcının 03:52 ekran videosu ayrıntılı incelendi. Tam rapor: [Build 401 gerçek cihaz incelemesi](./2026-10-08-build401-cihaz-video-incelemesi.md).
+- Kapak menüsündeki ve hikâye menüsündeki yazılar görünür; kapak seçme/kadraj/kaydetme, profil biyografi kaydetme, hikâye yayınlama ve arşivleme, kaydedilenlerden kaldırma (3→2), Üret fotoğraf paylaşımı ve Akış'ta yeni fotoğrafın görünmesi cihazda gözlendi.
+- Referansa göre avatar/isim yatay yerleşimi, bölücülü istatistik kartı, öne çıkan albümler, tanıtım videosunun yatay düzen/süre etiketi, büyük Üret butonu ve kesilen Arkadaş Ekle/Kaydedilenler yazıları hâlâ eksik.
+- Kısa avatar yükleme spinner'ı ve medya/yorumların ilk açılış beklemesi performans notuna eklendi.
+- Çalışan özellikleri ve gerçek kullanıcı verilerini koru; yeni APK çıkarılmadı. Sonraki birleştirilmiş Work paketine aktar.
