@@ -39,8 +39,8 @@ on:
       - '.github/workflows/NgelX-BUILD-406-FINAL-EIGHT-FIXES.yml'
 
 concurrency:
-  group: ngelx-build406-apk
-  cancel-in-progress: true
+  group: ngelx-build406-apk-validated-release
+  cancel-in-progress: false
 
 jobs:
   build:
