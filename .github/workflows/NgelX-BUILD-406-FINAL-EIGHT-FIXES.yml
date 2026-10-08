@@ -1,0 +1,259 @@
+name: NgelX BUILD 406 FINAL EIGHT FIXES
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - work/build-406-final-eight-fixes
+    paths:
+      - 'app/**'
+      - 'tools/apply_build395_final_login_inbox_ui.py'
+      - 'tools/apply_build396_inbox_final_polish.py'
+      - 'tools/apply_build397_inbox_complete_fixes.py'
+      - 'tools/apply_build398_login_story_polish.py'
+      - 'tools/apply_build399_registration_profile_cover.py'
+      - 'tools/apply_build399_explore_reference_ui.py'
+      - 'tools/apply_build399_create_reference_ui.py'
+      - 'tools/apply_build399_profile_reference_ui.py'
+      - 'tools/apply_build400_cover_upload_hotfix.py'
+      - 'tools/check_build400_cover_upload.py'
+      - 'tools/apply_build401_profile_stability.py'
+      - 'tools/check_build401_profile_regression.py'
+      - 'tools/apply_build402_profile_reference_polish.py'
+      - 'tools/check_build402_profile_regression.py'
+      - 'tools/apply_build403_profile_live_audio.py'
+      - 'tools/check_build403_regression.py'
+      - 'tools/apply_build404_profile_live_voice_fixes.py'
+      - 'tools/check_build404_regression.py'
+      - 'tools/apply_build405_single_device_final.py'
+      - 'tools/check_build405_regression.py'
+      - 'tools/apply_build406_final_eight.py'
+      - 'tools/check_build406_regression.py'
+      - 'tools/firestore_rules_test.mjs'
+      - 'firestore.rules'
+      - 'app/lib/audio_live_rooms.dart'
+      - 'app/lib/build258_settings.dart'
+      - 'app/lib/live_broadcast_studio.dart'
+      - 'tools/check_build399_regression.py'
+      - 'tools/check_build399_regression.py'
+      - '.github/workflows/NgelX-BUILD-406-FINAL-EIGHT-FIXES.yml'
+
+concurrency:
+  group: ngelx-build406-apk
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - name: Kaynaklari al
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Java 17 kur
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Flutter kur
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Sabit NgelX imza anahtarini geri yukle
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: ngelx-stable-debug-keystore-v1
+          fail-on-cache-miss: true
+
+      - name: Imza anahtarini dogrula
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s "$HOME/.android/debug.keystore"
+          keytool -list -v -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey | grep -F 'SHA256: BE:20:B2:7F:0B:A1:F4:DE:CD:29:41:D4:10:B1:53:6D:E8:9E:48:DC:89:4F:04:F0:38:F9:D2:6B:11:EC:D6:AA'
+
+      - name: Build 395 final referans tasarimini uygula
+        run: python3 tools/apply_build395_final_login_inbox_ui.py
+
+      - name: Build 396 gelen kutusu duzeltmelerini uygula
+        run: python3 tools/apply_build396_inbox_final_polish.py
+
+      - name: Build 397 gelen kutusu tamamlamasini uygula
+        run: python3 tools/apply_build397_inbox_complete_fixes.py
+
+      - name: Build 398 giris ve hikaye duzeltmelerini uygula
+        run: python3 tools/apply_build398_login_story_polish.py
+
+      - name: Build 399 kayit ve profil kapak altyapisini uygula
+        run: python3 tools/apply_build399_registration_profile_cover.py
+
+      - name: Build 399 Kesfet tasarimini uygula
+        run: python3 tools/apply_build399_explore_reference_ui.py
+
+      - name: Build 399 Uret tasarimini uygula
+        run: python3 tools/apply_build399_create_reference_ui.py
+
+      - name: Build 399 Ben tasarimini uygula
+        run: python3 tools/apply_build399_profile_reference_ui.py
+
+      - name: Build 399 regresyon kapisi
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -u tools/check_build399_regression.py
+
+      - name: Build 400 kapak yukleme duzeltmesini uygula
+        run: python3 tools/apply_build400_cover_upload_hotfix.py
+
+      - name: Build 400 kapak yukleme regresyonu
+        run: python3 -u tools/check_build400_cover_upload.py
+
+      - name: Build 401 profil ve hikaye arayuz duzeltmelerini uygula
+        run: python3 -u tools/apply_build401_profile_stability.py
+
+      - name: Build 401 koruma ve gorunurluk regresyonu
+        run: python3 -u tools/check_build401_profile_regression.py
+
+      - name: Build 402 profil referans tasarimini uygula
+        run: python3 -u tools/apply_build402_profile_reference_polish.py
+
+      - name: Build 402 profil tasarim ve koruma testi
+        run: python3 -u tools/check_build402_profile_regression.py
+
+      - name: Build 403 sesli canli profil ve premium duzeltmelerini uygula
+        run: python3 -u tools/apply_build403_profile_live_audio.py
+
+      - name: Build 403 koruma ve arayuz regresyonu
+        run: python3 -u tools/check_build403_regression.py
+
+      - name: Build 404 profil sesli ve canli yukleme duzeltmelerini uygula
+        run: python3 -u tools/apply_build404_profile_live_voice_fixes.py
+
+      - name: Build 404 koruma ve ekran kontrast regresyonu
+        run: python3 -u tools/check_build404_regression.py
+
+      - name: Build 405 canli hikaye ve profil son duzeltmelerini uygula
+        run: python3 -u tools/apply_build405_single_device_final.py
+
+      - name: Build 405 kaynak ve koruma regresyonu
+        run: python3 -u tools/check_build405_regression.py
+
+      - name: Build 406 sekiz son duzeltmeyi ve guvenli davet kurallarini uygula
+        run: python3 -u tools/apply_build406_final_eight.py
+
+      - name: Build 406 kaynak ve guvenlik regresyonu
+        run: python3 -u tools/check_build406_regression.py
+
+      - name: Firestore kurallari emulator test bagimliliklari
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save --no-package-lock firebase @firebase/rules-unit-testing firebase-tools
+
+      - name: Guvenli davet ve grup Firestore kurallarini emulator ile test et
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx firebase emulators:exec --project demo-ngelx --only firestore --non-interactive "node tools/firestore_rules_test.mjs"
+
+      - name: Dogrulanan Build 406 Firestore kurallarini kaydet
+        uses: actions/upload-artifact@v4
+        with:
+          name: NgelX-1.0.182-Build-406-FIRESTORE-RULES
+          path: firestore.rules
+          if-no-files-found: error
+
+      - name: Bagimliliklari al
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter clean
+          flutter pub get
+
+      - name: Flutter analiz
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          nl -ba lib/main.dart | sed -n '10972,11002p'
+          flutter analyze --no-fatal-infos --no-fatal-warnings
+
+      - name: Gercek APK olustur
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter build apk --release --build-name=1.0.182 --build-number=406
+          test -s build/app/outputs/flutter-apk/app-release.apk
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          test -n "$APKSIGNER"
+          "$APKSIGNER" verify --verbose --print-certs build/app/outputs/flutter-apk/app-release.apk
+          cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/NgelX-1.0.182-Build-406-FINAL-EIGHT-FIXES.apk
+          sha256sum build/app/outputs/flutter-apk/NgelX-1.0.182-Build-406-FINAL-EIGHT-FIXES.apk > build/app/outputs/flutter-apk/NgelX-1.0.182-Build-406-FINAL-EIGHT-FIXES.apk.sha256
+
+      - name: APK yukle
+        uses: actions/upload-artifact@v4
+        with:
+          name: NgelX-1.0.182-Build-406-FINAL-EIGHT-FIXES
+          path: |
+            app/build/app/outputs/flutter-apk/NgelX-1.0.182-Build-406-FINAL-EIGHT-FIXES.apk
+            app/build/app/outputs/flutter-apk/NgelX-1.0.182-Build-406-FINAL-EIGHT-FIXES.apk.sha256
+          if-no-files-found: error
+          retention-days: 14
+
+  deploy-rules:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Kaynaklari al
+        uses: actions/checkout@v4
+
+      - name: Emulator ile test edilmis Build 406 kurallarini indir
+        uses: actions/download-artifact@v4
+        with:
+          name: NgelX-1.0.182-Build-406-FIRESTORE-RULES
+          path: .
+
+      - name: Node kur
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Firebase CLI kur
+        run: npm install --global firebase-tools
+
+      - name: Guvenli davet Firestore kurallarini canli projeye yayinla
+        shell: bash
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          FIREBASE_SERVICE_ACCOUNT_NGELX_44EED: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_NGELX_44EED }}
+          GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_JSON }}
+        run: |
+          set -euo pipefail
+          PROJECT_ID="ngelx-44eed"
+          SA="${FIREBASE_SERVICE_ACCOUNT_NGELX_44EED:-${FIREBASE_SERVICE_ACCOUNT:-${GOOGLE_APPLICATION_CREDENTIALS_JSON:-}}}"
+          if [ -n "$SA" ]; then
+            if printf '%s' "$SA" | jq -e . >/dev/null 2>&1; then
+              printf '%s' "$SA" > /tmp/ngelx-firebase-406.json
+            else
+              printf '%s' "$SA" | base64 --decode > /tmp/ngelx-firebase-406.json
+              jq -e . /tmp/ngelx-firebase-406.json >/dev/null
+            fi
+            chmod 600 /tmp/ngelx-firebase-406.json
+            export GOOGLE_APPLICATION_CREDENTIALS=/tmp/ngelx-firebase-406.json
+            firebase deploy --only firestore:rules --project "$PROJECT_ID" --non-interactive
+          elif [ -n "${FIREBASE_TOKEN:-}" ]; then
+            firebase deploy --only firestore:rules --project "$PROJECT_ID" --token "$FIREBASE_TOKEN" --non-interactive
+          else
+            echo "Firebase deployment credentials missing; rules were NOT published."
+            exit 20
+          fi
