@@ -22,3 +22,14 @@
 4. Tek telefon kısa smoke: Ayarlar 407, Akış yeni başlıklar ve seek, Bildirimler gerçek gönderen, Üret etiket, aramada çok kelimeli sorgu. İkinci telefona ihtiyaç olmayanlar bile test edilmeden onaylı sayılmaz.
 
 **Durum:** GitHub Work çalışma dalında kodlama ve CI devam ediyor. Kullanıcı kayıtları silinmeyecek, Build 406 telefon APK'si uzaktan güncellenmiş sayılmaz.
+
+## Build 407 otomatik teslim ve Firebase güvenlik dağıtımı SONUÇ (2026-10-08)
+
+- Workflow: https://github.com/Nnentx/Ngelx/actions/runs/37834541785
+- **Build job: SUCCESS; deploy-rules job: SUCCESS**.
+- Sürüm: **1.0.183+407**. Python 395–407 koruma testleri, Build 407 kod uygulama/özellik kontrolleri, Firebase emülatör güvenlik testleri, Flutter analyze, imzalı APK build/apksigner, SHA256 ve GitHub artifact upload başarılı.
+- APK ZIP: https://github.com/Nnentx/Ngelx/actions/runs/37834541785/artifacts/11575562209 — `NgelX-1.0.183-Build-407-CONSOLIDATED`. ZIP içindeki APK ve .sha256 dosyasını telefonda kullan.
+- Emülatörden geçmiş güvenlik kuralları artifact: https://github.com/Nnentx/Ngelx/actions/runs/37834541785/artifacts/11574807049.
+- **Canlı Firebase güvenlik dağıtımı DOĞRULANDI:** `deploy-rules` GitHub Actions logları `Deploying to 'ngelx-44eed'`, `rules file firestore.rules compiled successfully`, `released rules firestore.rules to cloud.firestore`, `Deploy complete!` çıktılarını doğruladı. Böylece Build406'da izin verilen özel link `autojoin` yolu üretim Firestore kurallarında kapatıldı; davet linkiyle katılım için `pending` ve kurucu/yönetici onayı beklenir. Bağımsız keşfedilebilir/açık gruplarda izinli genel katılım kuralları kapsam dışında korunmuştur.
+- **Telefon testi sınırı:** APK CI başarıyla üretildi, ama bu Build407 APK'nin gerçek Android cihazda kurulduğu ve sekme/tarih/seek/bildirim davranışlarının telefonda geçtiği henüz kanıtlanmadı. İkinci telefon testleri ertelendi. Karmaşık anket oluşturma/oylama özellikleri ve tüm ölçekli indeksli arama halen yapılmadı; **22 başlığın tamamı bitmiş** denmeyecek.
+- **Kısa doğrulama:** v1.0.183 Yapı 407, `NgelX | Çevrem | Radar`, süre etiketi, manuel video ileri sarma, Bildirimler ve Tümü gerçek gönderen adları, Üret kart etiketleri, başarılı paylaşım toast; daha sonra geçerli linki olan başvuranın yönetici onayına düşmesi (özel güvenlik kuralları üretime dağıtıldı, iki hesap E2E beklemede).
