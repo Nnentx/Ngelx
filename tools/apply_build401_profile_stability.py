@@ -46,8 +46,8 @@ story=exactly(story,
     'builder:(c)=>Theme(data:ThemeData.light(),child:SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[',
     'story sheet light theme')
 for old,new in [
-    ("title:Text(videoMu?'Video hikâye':'Fotoğraf hikâyesi'),subtitle:Text(zamanBilgisi)",
-     "title:Text(videoMu?'Video hikâye':'Fotoğraf hikâyesi',style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w800)),subtitle:Text(zamanBilgisi,style:const TextStyle(color:Colors.black54))"),
+    ("title:Text(videoMu?'Video hikâye':'Fotoğraf hikâyesi'),subtitle:Text(sonaErmeBilgisi.isEmpty?zamanBilgisi:'$zamanBilgisi • $sonaErmeBilgisi')",
+     "title:Text(videoMu?'Video hikâye':'Fotoğraf hikâyesi',style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.w800)),subtitle:Text(sonaErmeBilgisi.isEmpty?zamanBilgisi:'$zamanBilgisi • $sonaErmeBilgisi',style:const TextStyle(color:Colors.black54))"),
     ("title:const Text('Hikâyeyi paylaş')","title:const Text('Hikâyeyi paylaş',style:TextStyle(color:Colors.black87,fontWeight:FontWeight.w700))"),
     ("title:const Text('NgelX içinde özele gönder')","title:const Text('NgelX içinde özele gönder',style:TextStyle(color:Colors.black87,fontWeight:FontWeight.w700))"),
     ("subtitle:const Text('Yalnızca seçtiğin kişilere özel mesaj olarak gönderilir.')",
