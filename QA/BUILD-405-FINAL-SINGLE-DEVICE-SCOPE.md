@@ -56,3 +56,26 @@ Kullanıcı verisi, yüklenen medya, takipçi/arkadaş bağlantıları, mesajlar
 - **Kapsam dışı ve hâlâ test edilmemiş:** Kaydedilenler videosunu aç/kaldır, 4+ Hikâyede siyah spinner ve hata yeniden dene, Canlı Yayın **sonlandır > tek ve kalıcı özet > Keşfet** sıralaması, sesli oda söz istekleri. Bu videodan geçmiş sayılmayacaklar.
 - **Ertelenen:** İkinci telefon, ikinci hesap, PK karşı kullanıcı, canlı ses ve davet teslimi.
 - **Not:** Bu ekleme QA kaydıdır; yeni kod/Build 406/APK üretimi yapılmış değildir. Uzun tekrar testleri istememek kullanıcının kabul edilmiş tercihidir.
+
+## Gelen Kutusu / Bildirimler — gönderen adı görünmüyor (45118.jpg, 2026-10-08)
+
+**Kullanıcının isteği:** Bildirimi kimin gönderdiği her zaman belli olsun; "seni takip etti", "sana arkadaşlık isteği gönderdi", "seni takip etmek istiyor" gibi genel ifadelerin başında gerçek gönderenin adı veya kullanıcı adı yer alsın.
+
+**P1/P2 görsel-işlevsel eksiklik (Build 405 gerçek telefon ekranı):**
+- Gelen Kutusu > **Bildirimler** sekmesindeki en üstteki arkadaşlık isteği satırında sadece **"sana arkadaşlık isteği gönderdi"**, altındaki takip isteği satırında sadece **"seni takip etmek istiyor"** yazıyor. Gönderen adı görünmüyor ve jenerik kişi ekle avatarı var. Bu nedenle kimin istek gönderdiği anlaşılmıyor.
+- Aynı listede **"Alperen Yarbay Sana bir canlı yayın gönderdi"**, **"ADEM baykar seni ... grubuna ekledi"** ve **"Rojin Candan Gönderine yorum yaptı"** gibi gönderen adı bulunan olaylar görünüyor. Görüntülenen iki istek türünün tutarsız biçimi düzeltilmeli.
+
+**Beklenen yazım örnekleri (isimler temsili; gerçek değerlerden üret):**
+- `[Gönderenin görünen adı] sana arkadaşlık isteği gönderdi`.
+- `[Gönderenin görünen adı] seni takip etmek istiyor` (**bekleyen takip isteği**).
+- `[Gönderenin görünen adı] seni takip etti` (**gerçekleşmiş takip**).
+- Diğer bildirim türlerinde de varsa gönderen adı ve avatarı doğru kullanıcıdan gelmeli; kullanıcı adına dokununca gönderen profili açılmalı.
+
+**Teknik kabul şartları:**
+1. Olaydaki gerçek `fromUid` / gönderici kimliği üzerinden güncel kullanıcı profili / `displayName` veya `username` çöz; yalnız sabit olay metninden ad çıkarma. Farklı bildirimin adı başka bildirimde görünmemeli.
+2. Ad bulunamazsa hatalı veya uydurma isim gösterme; kullanıcı adı varsa onu kullan, hesap silinmiş/erişim yoksa açık ve tarafsız durum metni kullan. Boş başlık bırakma.
+3. Gönderenin gerçek profil fotoğrafı varsa kullan; profil fotoğrafı yoksa varsayılan simge doğru bir yedek olabilir.
+4. Bekleyen takip isteği ile tamamlanmış takibi karıştırma; kabul/ret eylemleri, okundu durumu, zaman bilgisi, bildirim sıralaması, sohbet / aktivite teslimi ve gizlilik kuralları korunmalı.
+5. Tek cihazda eski/yeni arkadaşlık ve takip bildirimi örnekleriyle başlıkların görüntülenmesi doğrulanmalı; iki hesaplı uçtan uca senaryo kullanıcı isteği üzerine ayrıca **ertelendi**.
+
+**Durum:** GitHub QA/Work notuna alındı; **kod henüz değiştirilmedi, yeni APK üretilmedi**. Bir sonraki toplu düzeltmeye dahil edilecek.
