@@ -54,7 +54,7 @@ jobs:
            matches=[i for i,line in enumerate(s) if any(v.casefold() in line.casefold() for v in needles)]
            print("SECTION",section,"COUNT",len(matches))
            for i in matches[:90]:print(str(i+1)+": "+s[i][:195])
-          ranges=[("INBOX",11870,12020),("NOTIF_CORE",23390,23495),("FEED_HEADER",25870,25915),("FEED_SEEK",7838,7905),("CREATE_MAIN",10943,10985),("CREATE_WIDGETS",11080,11150),("SEARCH",5955,6025),("POST_META",9500,9650)]
+          ranges=[("INBOX_2",12015,12265),("INBOX_3",12265,12355),("FEED_3",8070,8185),("FEED_4",7740,7885),("CREATE_WIDGETS",11150,11205),("SEARCH",5930,5955),("META",7040,7180)]
           for label,start,end in ranges:
            print("DETAIL",label)
            for i in range(start-1,end):
