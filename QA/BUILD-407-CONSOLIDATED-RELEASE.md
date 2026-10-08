@@ -70,3 +70,25 @@
 4. Bildirimlerdeki bazı mesaj/istek türleri ile grup yöneticisi rolünü değiştirme ve gerçek ikinci cihaz teslimi bu kayıtla tamamen doğrulanmadı.
 
 **QA kararı:** Build 407 **gönderen adları gerçek telefon testinde GEÇTİ**. **Davet linkiyle yöneticiye istek gönderme ve yöneticinin isteği onaylaması GEÇTİ**. **Onaylanmış başvuranın yeni grup üyeliğine erişimi — ayrı kısa doğrulama bekliyor**. Toplu geri kalan düzeltmelere dokunulmadı; QA raporu güncellendi, **APK/kod/Firebase değiştirilmedi**.
+
+## Gerçek Android / 45219.mp4 — ALEYNA AŞK grup sohbeti ve renkli Grup etiketi talebi (2026-10-08)
+
+**Kaynak:** Kullanıcının yaklaşık **54,1 saniyelik** Android ekran videosu. Kullanıcı bu videonun incelenip incelenmediğini tekrar sordu; önceki cevapta yalnızca "Grup" rozeti tasarımı konuşulmuş, videonun somut test sonucu verilmemişti.
+
+**Gözlemlenenler:**
+- Gelen Kutusu > Tümü listesinde **ALEYNA AŞK** sohbeti ve diğer özel/grup sohbetleri birlikte görünüyor (ilk 0–3 sn).
+- Sohbete girildiğinde **ALEYNA AŞK** üst başlığı, grup mesaj geçmişi, yazma alanı, kalp/mesaj ve grup işlemleri görünür; kayıt içinde kısa metin yazma/gönderme denemeleri ve gruptaki mesajlar bulunuyor (yaklaşık 6–16 sn ve 24–27 sn). Bu kayıtla grup ekranının **açıldığı ve sohbet içeriğinin göründüğü** doğrulandı.
+- **Gruba üye ekle** seçiminde kullanıcıları seçme ekranı açılıyor; ardından **"3 üye ekleme isteği yönetici onayına gönderildi"** başarı bildirimi gösteriliyor (18–25 sn). Bu işlem başvuruların gerçekten yönetici tarafından sonuçlandırıldığını tek başına kanıtlamaz.
+- Grup bilgi kartı ve grup seçeneklerinde **4 üye**, **Sohbet üyelerini gör**, **Davetler ve istekler** alanları görünüyor (yaklaşık 20–23 ve 42–44 sn).
+- Aynı video içinde Gelen Kutusu > Gruplar filtresi, diğer grup listeleri açılıp yenilenebiliyor.
+- **Uyarı/UX konusu:** **"Bu grupta engellediğin bir kişi var"** başlıklı güvenlik diyaloğu ALEYNA AŞK'a girişte ve başka bir grup geçişinde tekrar ortaya çıkıyor (yaklaşık 6, 33 ve 39 sn). Uyarı güvenlik için gerekli olabilir; engelleme/gizlilik koruması kaldırılmadan, tekrar sıklığı, dokunma akışı ve ilgili grup özelinde doğru tetiklenip tetiklenmediği incelensin. Engellenen hesabın bilgisi ifşa edilmesin.
+- **Test sınırı:** Kayıt, yönetici onayından sonra *özellikle Rojin Candan hesabının* yeni üyelik kazandığını hesap kimliği ekranıyla kesin olarak eşleştirmiyor. Grup ekranına erişim **geçti**, ancak "Rojin'in onay sonrası erişimi uçtan uca tam kanıtlandı" iddiası yapılmayacak.
+
+**Kullanıcının kesin yeni tasarım isteği: Gelen Kutusu / grup etiketi**
+- **ALEYNA AŞK** gibi grup konuşmaları, **Gelen Kutusu > Tümü** listesindeyken normal özel mesajlarla karışmasın diye sohbet satırının **sol altındaki mesaj önizlemesi yakınına**, örneğin küçük ve yumuşak mor/mavi arka planlı **"Grup"** rozeti/etiketi gösterilecek.
+- Yalnız veritabanındaki gerçek grup türüne göre göster; başlıkta "grup" kelimesi geçmesine veya kişi adına göre kestirim yapma. Grup adları, mesaj önizlemesi, son mesaj saati, okunmamış sayaç, grup fotoğrafı ve sohbeti açma davranışı korunacak.
+- Normal 1:1 özel sohbetler **etiketsiz** kalacak; `Gruplar` sekmesinde aynı rozet gereksiz tekrar etmeyecekse özel olarak değerlendirilip tek biçim seçilecek.
+- Küçük ekranda metin taşması ve erişilebilirlik kontrastı kontrol edilecek. Koyu büyük rozet değil, **küçük renkli "Grup" etiketi**.
+- **Durum:** Kullanıcı tarafından istenmiş UI rötuşu olarak not edildi; **henüz uygulama koduna işlenmedi, yeni APK çıkarılmadı**.
+
+**QA kararı:** ALEYNA AŞK sohbet ekranına geçiş ve grup bilgilerinin açılması tek cihaz kaydında **olumlu**. Uyarının tekrar etmesi için **küçük UX kontrol maddesi**; renkli Grup rozeti için **açık UI geliştirmesi**. Kullanıcı hesap kimliği doğrulaması ve gerçek çok cihaz testi önceki sınırlara tabidir.
