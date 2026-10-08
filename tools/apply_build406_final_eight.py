@@ -73,8 +73,8 @@ m=notifications(m)
 def join(src):
  src=one(src,"final onayGerekli=iv['joinApproval']==true;","// The current invitation code authorizes direct admission.","invite no approval wait")
  src=one(src,"'status':onayGerekli?'pending':'autojoin',","'status':'autojoin',","join request state")
- start=src.index("       if(onayGerekli){")
- end=src.index("       await chat.update({",start)
+ start=src.index("if(onayGerekli){")
+ end=src.index("await chat.update({",start)
  if "group_join_request" not in src[start:end]:raise SystemExit("invite-approval block unexpectedly changed")
  src=src[:start]+src[end:]
  src=one(src,
