@@ -118,3 +118,13 @@ Referans resimleri: kullanıcı konuşmasındaki `45247.png` (kapaksız ziyaret�
 **Koruma şartı:** Mevcut `Kaydet`, `Önizleme aç`, kapaklı/kapaksız tercih kaydı, fotoğraf/intro videosu, Firestore güvenliği ve referans tasarım aynı kalacak. Bu, çalışan profil işlemlerine dokunmadan yalnızca **responsive / alt güvenli alan (safe area)** hatası olarak çözülecek.
 
 **Durum:** Kullanıcı ekran görüntüsüyle **tespit edildi ve Work QA listesine kaydedildi**. Henüz kodda düzeltilmiş / cihazda yeniden test edilmiş değildir.
+
+## Telefon UI isteği — 2026-10-09 01:35, 45274.jpg — Uyarı mesajına renk
+
+**Kullanıcı talebi:** "En alttaki uyarı yazısında renkli yap not et."
+
+- `Profili Düzenle` ekranında `Kapaklı görünüm` seçilip hesapta henüz kapak fotoğrafı yokken altta görünen `Kapaklı görünüm için önce bir kapak fotoğrafı ekle.` uyarısı mevcut koyu gri/siyah Snackbar, beyaz metin yerine **görünür, modern renkli bir uyarı** olmalı. Mor NgelX paletine uygun ikon/vurgu; dikkat gerektiren koşul için sıcak turuncu/amber tonlu açık bir arka plan ve koyu okunaklı yazı veya eşdeğer erişilebilir belirgin kombinasyon tercih edilebilir. Metin kontrastı yüksek olmalı; yalnız yazıyı değiştirmek yeterli değil.
+- Bu bir **tasarım/geri bildirim renk değişikliği talebi**; mevcut doğrulama şartını kaldırma. Kapak fotoğrafı eklenmeden kapaklı modun kaydedilmesine izin verme.
+- `_hata('Kapaklı görünüm için önce bir kapak fotoğrafı ekle.')` bildirimi için UI değişikliği; diğer hata ve başarı geri bildirimleriyle tutarlı, erişilebilir, güvenli alana yerleşen renkli Snackbar / uyarı bileşeni.
+- Daha önce 45271.jpg ile kaydedilmiş **en alttaki Kaydet / Önizleme aç taşma hatası** ayrı ve açık bug: ikisini de alt safe area düzenlemesiyle sonraki konsolide tasarım paketinde çöz. Uyarı Snackbar'ı bu butonları örtememeli veya Android üç tuşlu gezinmeye binmemeli.
+- **Durum:** Kullanıcı isteği Work QA listesine kaydedildi. Henüz tasarım koduna uygulanmadı / telefonda test edilmedi.
