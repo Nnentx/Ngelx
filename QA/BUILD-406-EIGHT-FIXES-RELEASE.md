@@ -153,3 +153,15 @@ Başlangıç kaydı: Kod yaması ve otomasyon pipeline'ı oluşturuldu, CI sonu�
 - **Kabul:** Akış üstünde renkli N logosu görünmez, yalnız NgelX metni düzgün sola hizalanır; dar ekranlarda çakışma yaşanmaz.
 
 **Durum:** Bu talepler şimdi GitHub Work QA kaydında; kodlanmadı, Build 406 APK değişmedi. `Gelen Kutusu gönderici isimleri`, `Üret` ve diğer `Akış` rötuşları ile birleştirilecek. İkinci telefon testleri ertelenmiş kalır.
+
+## Akış — zaman/tarih etiketini kısaltma (2026-10-08, @dilekizmmz örneği)
+
+**Kullanıcı isteği:** Akış'ta kullanıcı adı/açıklama yakınındaki `12 dk önce • 08.10.2026 • 21:56` satırı fazla uzun görünüyor. Özellikle video üstündeki metin kalabalığı azaltılsın, ama gerçek paylaşım tarihi kaybolmasın. Kullanıcı öneri de istedi.
+
+**Önerilen UX / sonraki toplu düzeltmeye kayıt (P3):**
+- Akış'ta yalnız kısa göreli zaman: `12 dk önce`, `3 sa önce`, `2 gün önce` vb. gösterilsin. Gereksiz tekrar edilen `08.10.2026 • 21:56` aynı satırda yer almasın.
+- Kullanıcı kısa zamana dokunduğunda bilgi balonu/alt pencere ya da gönderi ayrıntısında `08.10.2026 • 21:56` tam tarih ve saat gösterilsin. Etkin olmayan dekoratif simge yerine erişilebilir tıklanabilir tarih sunulsun.
+- Yerel saat dilimi kullan, oluşturulma zamanı `createdAt` ve sıralama verileri değiştirilmesin; zaman hesabı geçmiş/future, yeni paylaşım, 1 gün ve yıl sınırlarında doğru kalsın. Uzun kullanıcı adı veya büyük fontta satır taşmasın.
+- Paylaşım yazısı, kullanıcı adı, video ve diğer aksiyonlar korunacak. Üstteki büyük N logosunu kaldırma ve `seekTo` gecikmesini giderme notlarıyla **tek Akış tasarım/performans paketinde** ele alınsın.
+
+**Durum:** Kullanıcıya öneri olarak sunuldu, GitHub QA/Work notlarına kaydedildi; **kod değiştirilmedi / yeni APK oluşturulmadı**.
