@@ -122,8 +122,8 @@ m=replace_in(m,"class _ProfilPageState extends State<ProfilPage>","\nclass _Prof
 
 # 8. The two privacy conditions are cumulative; clarify effective visibility without modifying access.
 def privacy(src):
- old="""           Padding(padding:const EdgeInsets.fromLTRB(22,14,22,4),child:Text(t('profileViewWho'),style:const TextStyle(fontWeight:FontWeight.w900))),"""
- new="""           Padding(padding:const EdgeInsets.fromLTRB(22,14,22,4),child:Text(t('profileViewWho'),style:const TextStyle(fontWeight:FontWeight.w900))),
+ old="""Padding(padding:const EdgeInsets.fromLTRB(22,14,22,4),child:Text(t('profileViewWho'),style:const TextStyle(fontWeight:FontWeight.w900))),"""
+ new="""Padding(padding:const EdgeInsets.fromLTRB(22,14,22,4),child:Text(t('profileViewWho'),style:const TextStyle(fontWeight:FontWeight.w900))),
            Padding(padding:const EdgeInsets.fromLTRB(22,0,22,8),child:Text(
              hesapGizli
                ?'Gizli hesap açık: yeni takipçiler onay bekler. Profil görünürlüğü seçimi de uygulanır; “Herkes” seçilse bile onaylanmamış kişiler özel alanları göremez.'
