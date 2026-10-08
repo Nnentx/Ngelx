@@ -7,7 +7,7 @@
 1. **Build 402 yeni Profil tasarımı (24–60sn):** Kapak fotoğrafı, büyük avatar + kamera düğmesi, ad/@kullanıcı adı avatarın sağında, biyografi/konum/katılım, dört mor ikonlu ve dikey ayırıcılı istatistik kartı, iki eylem butonu, beş kısayol, öne çıkan gerçek hikâyeler, 3 sütun gönderiler ve beyaz alt menü görünür. Orta mor-mavi Üret belirginleşmiş.
 2. **Aktivite bildirimleri (4–8sn):** Aktivite sayfası açılır; istek ve etkileşim kalemleri listelenir. İsteği kabul/ret düğmelerinin sunucu sonucu bu kayıtta test edilmedi.
 3. **Profil menüsü ve ziyaretçi önizleme (8–18sn):** 3 nokta menüsü; Profil önizleme, Arşiv, Ayarlar ve gizlilik seçenekleri açılır. Önizlemede tanıtım videosu/istatistikler ve 'Bu profil sınırlı' gizlilik paneli görünüyor; kapalı profil davranışıyla ayrıca sınanmalı.
-4. **Profil bağlantısını NgelX özel mesajla paylaşma (20–25sn):** Kişi seçme alt paneli, canlı seçim sayacı ve gönderme tuşu açılır; bir kişi seçilerek Gönder'e basılır, ardından '2 kişiye profil gönderildi' bildirimi gösterilir. **Bu bir tutarsızlık olarak B'de kayıtlı; gerçekten kaç mesaj teslim edildiği bilinmiyor.**
+4. **Profil bağlantısını NgelX özel mesajla paylaşma (20–25sn):** Kişi seçme alt paneli, canlı seçim sayacı ve gönderme tuşu açılır; önce bir kişi, hemen ardından ikinci kişi de seçiliyor (yaklaşık 22.3sn); buton **'2 kişiye gönder'** oluyor. Sonuç ekranında **'2 kişiye profil gönderildi'** mesajı gösteriliyor. Seçim ile bildirim tutarlı; karşı hesap teslimi ayrıca test edilmedi.
 5. **Hikâyeyi izleme/oluşturma ve paylaşma (26–100sn):** Hikâye video izleyicisi açılır, oynatma, menü ve 'Hikâyeyi paylaş / Öne çıkanlara ekle / Arşive taşı / Hikâyeyi sil / Kapat' görünür. Yeni video hikâye 24 saat boyunca yayında bilgisiyle yayınlanır. Harici paylaşma menüsünden WhatsApp seçilir; bağlantı WhatsApp sohbetine yapıştırılıp karşı sohbette görünür. Mesaj içeriklerini veya karşı tarafın kişisel bilgilerini kaydetme.
 6. **Tanıtım videosu (30–107sn):** Gerçek video oynatma/önizleme kartı ve değiştir/kaldır seçenekli menüsü çalışıyor. **Yaklaşık 106sn'de kullanıcının 'Tanıtım videosunu kaldır' işlemi sonrasında profil boş tanıtım videosu durumuna dönüyor. Bu beklenen davranış; kaybolma bug'ı diye raporlama.**
 7. **Arkadaşlar (108–134sn):** İki arkadaş listesi, arama filtresi (hedef isim yazınca sonuç azalıyor), kişi üç nokta menüsü, diğer kullanıcının profiline geçiş. 'Takipten çık' onayı ardından diğer profilin takipçi sayısı azalıyor ve 'Takipten çıktın' bildirimi geliyor; arkadaşlık durumu ayrı kalıyor. Ardından takip etme/yeniden takip göstergesi gözleniyor. Geri dönüşler çalışıyor.
@@ -18,10 +18,9 @@
 
 ## B. Yeni veya süren kusur/riske göre iş listesi
 
-### P1 — Profil paylaşım sayısı uyuşmazlığı (22–24sn)
-- Kişi seçme ekranında **yalnız bir kutu işaretli**, alt buton **'1 kişiye gönder'**; dönüşteki mavi snackbar **'2 kişiye profil gönderildi'** diyor.
-- **Risk:** Yanlış sayaç veya birden fazla kişiye istem dışı iletim. Karşı hesabın gelen kutusundan teslimat sayısı henüz bilinmiyor; veri koruma nedeniyle doğrulamadan '2 kişiye gitti' deme.
-- Geliştirme/test: Seçilen UID kümesini göndermeye basıldığı anda değişmez snapshot olarak al, izin verilen UID'ler dışına gönderme yapılmadığını test et; başarılı kayıt sayısını gerçek başarılı Firestore batch sonuçlarından üret; tek alıcıyla uçtan uca iki hesaplı regresyon testi.
+### Düzeltme — Profil paylaşım sayısı tutarlı (21.5–24sn)
+- Yüksek frekanslı kare kontrolünde önce bir kişi işaretli, hemen sonra ikinci kişi de işaretleniyor ve buton **'2 kişiye gönder'** oluyor (22.3sn). Sonuç mesajı da **'2 kişiye profil gönderildi'**. İlk kareden çıkarılan '1 seçilmiş ama 2 gönderilmiş' iddiası **yanlıştı ve geri çekildi**.
+- Sunucuya gerçekten kaç mesaj düştüğünü bu tek cihaz videosu göstermez. Gönderilenler/karşı sohbet testi ileride yapılabilir, ama görüntüde sayı uyuşmazlığı yok. Gereksiz paylaşım kodu değiştirilmesin.
 
 ### P1 — Kaydedilenler boş/gri video kapağı (154–159sn)
 - Bir video küçük resmi yaklaşık 5 saniye boyunca tek renk gri + oynat simgesi halinde kalıyor. Yanındaki video gerçek kapak görseliyle açılıyor.
@@ -49,7 +48,7 @@
 - Dış paylaşımda yalnızca seçilen kişilere gönder, izin/engelleme kontrollerini koru. Kullanıcının WhatsApp konuşmalarının metnini, kişilerinin adını veya sohbet görüntülerini GitHub'a kopyalama.
 
 ## D. Test edilmemiş/yapıldı sanılmayacak
-- Karşı alıcının profil bağlantısını gerçekten **1 defa** alıp almadığı.
+- Seçilen iki alıcının her birinin profil bağlantısını gerçekten **birer kez** alıp almadığı.
 - Kaldırılan tanıtım videosunun medya depodan gerçekten temizlenmesi.
 - Kaydedilenler'deki gri videonun dokunulunca tam oynayıp oynamadığı.
 - Gizli hesap/görünürlük politikalarının ikinci test hesabına nasıl uygulandığı.
@@ -57,7 +56,7 @@
 - Bu kayıt yalnız QA bulgusudur; kod değişikliği veya Build 403 APK'si değildir.
 
 ## E. Öncelikli sonraki kod akışı
-1. Paylaşımda seçim sayısı vs teslim sayısı mismatch kök nedenini enstrümante/test et, kullanıcı onayı olmadan ikinci alıcıya içerik gönderme.
-2. Kaydedilenler gridinde medya önizleme fallback'ini, içeriklerin açılmasını ve thumb loading'i düzelt.
-3. Kalan profil tasarım incelikleri + profil görüntüleme gizlilik açıklamasını tamamla.
+1. Kaydedilenler gridindeki gri video kapağının kök nedenini bul; gerçek medya erişimini koruyarak önizleme fallback/timeout iyileştir.
+2. Profil gizlilik açıklamasını iki hesapta doğrula ve kalan küçük tasarım farklarını tamamla.
+3. Paylaşım seçimi/sayacı tutarlı, mevcut çalışan paylaşımı bozma; yalnız iki hesapla teslimat regresyonu yap.
 4. Regresyon + Flutter analyze + sabit imzalı release + gerçek cihaz testleri; Build 402'de çalışan ekranları bozma.
