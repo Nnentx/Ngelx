@@ -27,22 +27,22 @@ def fix_other_profile(s):
       "final canli=v['isLive']==true&&(v['currentLiveId']??'').toString().isNotEmpty;",
       "final canliAday=v['isLive']==true&&(v['currentLiveId']??'').toString().isNotEmpty;",
       "remove false live user flag from other profile")
-    opening="""           final altGuvenliAlan=36.0;
-           return ListView(
-"""
-    replacement="""           final altGuvenliAlan=36.0;
+    import re
+    open_pat=r"final altGuvenliAlan=36\.0;\s*return ListView\("
+    replacement="""final altGuvenliAlan=36.0;
            return StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
              stream:canliAday
                ? FirebaseFirestore.instance.collection('live_streams').doc(canliId).snapshots()
                : null,
-             builder:(_,yayınSnap){
+             builder:(_,yayinSnap){
                final canli=canliAday
-                 && yayınSnap.hasData
-                 && yayınSnap.data!.exists
-                 && ngelxCanliKaydiTaze(yayınSnap.data!.data()??<String,dynamic>{});
-               return ListView(
-"""
-    s=one(s,opening,replacement,"live stream profile builder")
+                 && yayinSnap.hasData
+                 && yayinSnap.data!.exists
+                 && ngelxCanliKaydiTaze(yayinSnap.data!.data()??<String,dynamic>{});
+               return ListView("""
+    s,count=re.subn(open_pat,replacement,s)
+    if count!=1:raise SystemExit(f"live stream builder: expected one anchor, found {count}")
+
     closing="""             ],
            );
          },
