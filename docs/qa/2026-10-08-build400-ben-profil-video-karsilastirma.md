@@ -52,3 +52,21 @@
 - Reels, Hikâyeler, Kaydedilenler, Etiketlenenler tablarını gerçek veriye bağla; çalışan ekranları silme.
 - Değişiklikler tek konsolide Work paketinde, önce kod analizi ve test, sonra release APK + imza doğrulama, ardından gerçek cihaz testi ile teslim edilmeli.
 - Bu belge gözlem/not kaydıdır, kod veya yeni APK düzeltmesi değildir.
+
+## E — 2026-10-08 / Build 401 uygulama durumu (cihazda henüz yeniden test edilmedi)
+- Kod yaması: `tools/apply_build401_profile_stability.py`.
+- P0 kapak eylemleri alt panelinde açık `Colors.black87/black54` metin ve açık `ThemeData.light()` uygulandı. Galeri seçme / kadraj değiştirme / silme işlemleri korunmuştur.
+- P0 eski `HikayeGosterPage` seçenek panelinde metin renkleri ve açık tema eklendi; mevcut `SharePlus` ve `ngelxOzeldenPaylas` çağrıları korunmuştur. Yeni `NgelXHikayeSeriPage` panelindeki mevcut kontrast ayarlarına dokunulmadı.
+- Dört profil sayacına mor ikon eklendi; Firestore sayaç sorguları ve tap rotaları değişmedi.
+- Profil sekme sırası: Gönderiler / Reels / Hikâyeler / Kaydedilenler / Etiketlenenler. Mevcut ekran işleyicileri kullanılıyor.
+- Tanıtım videosu için veri yokken boş kart, varsa gerçek oynatıcı kartı gösteriliyor; video seçme/değiştirme kodu korundu.
+- Ana beşli navigasyon çubuğu beyaz zemine/mor seçili renge geçirildi; navigasyon callback'leri korunmuştur.
+- `Arkadaş Ekle` etiketine tek satırda kesme koruması eklendi.
+- `tools/check_build401_profile_regression.py` statik koruma kontrollerini gerçekleştirdi; GitHub Actions kod ve Flutter analiz sonucuna göre statü ayrıca belirlenecek.
+
+### Henüz çözülmemiş / ayrıca ele alınacak
+- Referanstaki isim/avatara göre yatay hizalama ve kapak yerleşimi birebir tamamlanmadı.
+- Referanstaki öne çıkan hikâye albümleri yalnız gerçek kullanıcının kayıtlarından oluşturulabilir; olmayan veriler sahte görsellerle doldurulmayacak.
+- Kapak görselinde yükleme anında görülen geçici boşluk/titreme hâlâ gerçek cihazda izlenecek.
+- Hikâye menüsünün kullanıcı tarafından seçilmesi, paylaşma işleminin tamamlanması, profil verisini kaydetme, arkadaş kaldırma, bütün içerik sekmeleri ve beyaz alt navigasyon cihazda yeniden doğrulanmalıdır.
+- Kodun geçirilmesi `gerçek cihazda doğrulandı` anlamına gelmez.
