@@ -108,3 +108,13 @@ Referans resimleri: kullanıcı konuşmasındaki `45247.png` (kapaksız ziyaret�
 7. **Sadece görüntü düzenini değiştir**; gerçek kullanıcı adı, resimler, takip/arkadaşlık sayıları, etkinlik, canlı yayın rozeti mantığı, profil gizliliği, arkadaşlığı kaldırma, takip isteği ve mevcut intro video oynatma bozulmayacak.
 
 **Sonuç: İşlevsel iki görünümün karşı hesaba yansıması doğrulandı. Eksik olan yalnızca onaylanmış iki ziyaretçi görünümüne bire bir görsel uyarlama ve sonraki sürümde gerçek cihaz kontrolü.**
+
+## Yeni gerçek telefon hata bildirimi — 2026-10-09 01:31, 45271.jpg
+
+**AÇIK HATA / görsel taşma — `Profili Düzenle` ekranının en altı.** Kullanıcının gerçek Android ekran görüntüsünde, `Profili önizle` bölümünün altındaki **`Kaydet`** ve **`Önizleme aç`** yan yana işlem butonları ekranın alt kenarına fazla yakın. Butonların alt tarafı yarı saydam/soluk bir alana ve Android sistem gezinme çubuğuna doğru taşıyor; tamamı rahatça görünmüyor. Bu `Kapaksız sade görünüm` seçiliyken gözlendi. Kullanıcı açıkça “düzenle girince en altta taşma var not et” dedi.
+
+**Gereken düzeltme (sonraki UI paketi):** `NgelXOnayliProfilDuzenlePage` içinde `Scaffold` / `SafeArea` ve `SingleChildScrollView` alt boşluğunu doğru ayarla. Cihazın gerçek `MediaQuery.viewPadding.bottom`, `viewInsets.bottom` ve klavye durumunu hesaba kat. `Kaydet` ve `Önizleme aç` düğmelerinin **tam yüksekliği, gölgeleri ve etiketleri** her ekranda görünmeli, telefonun sistem gezinme düğmelerine binmemeli. Gerekirse alt eylemleri ekranın güvenli bölgesindeki ayrı sabit bir alana koy veya kaydırılabilir içerikte yeterli alt tampon ekle. Küçük ekran, Android 3 tuşlu gezinme ve klavye açık/kapalı hallerini kontrol et.
+
+**Koruma şartı:** Mevcut `Kaydet`, `Önizleme aç`, kapaklı/kapaksız tercih kaydı, fotoğraf/intro videosu, Firestore güvenliği ve referans tasarım aynı kalacak. Bu, çalışan profil işlemlerine dokunmadan yalnızca **responsive / alt güvenli alan (safe area)** hatası olarak çözülecek.
+
+**Durum:** Kullanıcı ekran görüntüsüyle **tespit edildi ve Work QA listesine kaydedildi**. Henüz kodda düzeltilmiş / cihazda yeniden test edilmiş değildir.
