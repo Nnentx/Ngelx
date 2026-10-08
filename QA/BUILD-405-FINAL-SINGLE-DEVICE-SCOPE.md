@@ -79,3 +79,19 @@ Kullanıcı verisi, yüklenen medya, takipçi/arkadaş bağlantıları, mesajlar
 5. Tek cihazda eski/yeni arkadaşlık ve takip bildirimi örnekleriyle başlıkların görüntülenmesi doğrulanmalı; iki hesaplı uçtan uca senaryo kullanıcı isteği üzerine ayrıca **ertelendi**.
 
 **Durum:** GitHub QA/Work notuna alındı; **kod henüz değiştirilmedi, yeni APK üretilmedi**. Bir sonraki toplu düzeltmeye dahil edilecek.
+
+## Grup davet bağlantısı ile yönetici onayı olmadan katılım — yeni kullanıcı talebi (45119.jpg, 45120.jpg)
+
+**Kullanıcının isteği (2026-10-08):** Sohbet > '+' > Gruba katıl ekranında, geçerli bir grup davet linkini veya kodunu yapıştırıp **Gruba katıl** seçilince **yönetici onayı beklemeden doğrudan gruba katılabilsin**. Kullanıcının özellikle istediği davranış davet linkinin yetkilendirme kabul edilmesidir; normal 'katılma isteği gönder → yönetici onayı' kuyruğuna sokulmaması gerekir.
+
+**Ekran referansı:** 'Davetle gruba katıl', link/kod alanı, mor 'Gruba katıl' butonu. Alt bilgi kartı şu anda 'Grup yöneticisi onay istiyorsa önce katılma isteğin gönderilir. Onaylandığında bildirim alırsın.' diyor; yeni davet-linki akışıyla tutarlı olarak metin de güncellenmeli.
+
+**İstenen kabul kriterleri (önce kodda incelenecek):**
+1. Yalnız **grup yöneticisi/kurucusu tarafından oluşturulan aktif, geçerli, iptal edilmemiş** link/kod kullanıcıya doğrudan üyelik yetkisi versin; link geçersiz, süresi dolmuş veya iptal edilmişse açıklayıcı hata çıksın. Normal keşiften onaylı katılma yolu ayrı kalsın.
+2. Davet linki doğrulanıp kullanıcı **Gruba katıl** dediğinde üyelik sunucu tarafında tek işlemle oluşturulsun; ayrıca yönetici onay kuyruğu oluşmasın. Üyelik gerçekleştiyse doğrudan grup ekranına git, zaten üyeyse mevcut grubu aç. Çift dokunma yinelenen üyelik üretmesin.
+3. Yönetici tarafından engellenmiş kullanıcılar, silinmiş/kapalı grup, kullanıcı kısıtları ve mevcut **60 kişilik grup kapasitesi** gibi güvenlik kuralları **atlanmasın**. Başarısız doğrulamada üyelik eklenmesin.
+4. Grup yöneticisi davet linkini devre dışı bırakabilsin. Yöneticinin ayrıca linkle katılımı sınırlandırabileceği ayar mevcutsa silinmesin; geçerli yönetici bağlantısı için onaysız katılım yetkisinin kapsamı açıkça tanımlansın.
+5. 'Grup yöneticisi onay istiyorsa ...' yardım metni bu yeni geçerli bağlantı davranışına göre yeniden yazılsın; geçerli bağlantı ile direkt katılım ve diğer katılma talepleri ayrıştırılsın.
+6. Mevcut grup sohbeti, üye izinleri, gruptan ayrılma, bildirimler ve davet akışları korunacak; **ikinci telefon testi şu an ertelenmiş** durumda.
+
+**Durum:** GitHub QA/Work notlarına alındı. **Kodlanmadı; Build 405 APK değiştirilmedi.** Sonraki toplu düzeltme paketine dahil edilecek.
