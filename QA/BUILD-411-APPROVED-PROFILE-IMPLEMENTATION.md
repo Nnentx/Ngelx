@@ -25,3 +25,13 @@ Kullanıcının görsel olarak onayladığı dört ekran baz alınır:
 
 ## Durum
 **Kod kaynak yamaları eklendi ve hızlı kaynak uygulama testi geçti.** Tam derleme ve gerçek telefon görsel doğrulaması sonuçlarına göre devam edilecek. Onaylı ekranlarla telefon ekranındaki ince farklar ayrıca rötuşlanacak. Test yapılmadan birebir piksel sonucu veya sorunsuz entegrasyon iddia edilmez.
+
+## Devam kodlaması — görsel faz / güncel düzeltmeler
+- Profili Düzenle'den geri çıkınca `profiliGetir()` yeniden çalışır. Kapak kaldırma, fotoğraf/video değiştirme gibi **hemen kaydedilen** işlemler de görünür olur; yalnız `Kaydet` basılması şart değildir.
+- `coverPhotoUrl` boş kullanıcıda editor başlangıç seçimi **kapaksız** olur. Fotoğraf eklenmeden kapaklı moda yanlışlıkla kaydetmeye izin verilmez.
+- Başka kişinin profilinde intro-video aynı oynatma bileşeniyle takip/mesaj/arkadaş eylemlerinden **sonra** gösterilir.
+- Kaynak patch testi geçti: <https://github.com/Nnentx/Ngelx/actions/runs/37850523721>.
+- Son değişiklikler için bağımsız Flutter analizi: <https://github.com/Nnentx/Ngelx/actions/runs/37850586007> (sonuç gelmeden geçti sayılmaz).
+- APK üretimi bağımsız olarak devam ediyor; <https://github.com/Nnentx/Ngelx/actions/runs/37850523831>. Telefon üstü görsel karşılaştırma hâlâ bekleniyor.
+
+**Güvenli teslim:** Onaylı referans görsellerdeki piksel, boyut, sıralama ve üst menü ayrıntılarını ancak Build 411 kurulup gerçek ekran görüntüleri geldikten sonra kesinleştir. Bu aşamada yalnız kaynak kodu ve CI doğrulaması vardır; gerçek cihazda "birebir aynısı doğrulandı" deme.
