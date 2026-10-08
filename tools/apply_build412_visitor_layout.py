@@ -13,7 +13,7 @@ one("           final canliAday=v['isLive']==true",
 """           final katilimHam=v['createdAt']??v['joinedAt'];
            const aylar=['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
            final katilim=katilimHam is Timestamp
-             ?'\${aylar[katilimHam.toDate().month-1]} \${katilimHam.toDate().year}’te katıldı'
+             ?'${aylar[katilimHam.toDate().month-1]} ${katilimHam.toDate().year}’te katıldı'
              :'';
            final canliAday=v['isLive']==true""","join date")
 a=v.index("               if(!kapaksiz)...[")
