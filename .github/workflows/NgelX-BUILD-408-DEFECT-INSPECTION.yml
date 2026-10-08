@@ -65,4 +65,8 @@ jobs:
             print('FROM',i+1)
             for k in range(max(0,i+pre),min(len(s),i+post)):
               print(f'{k+1}: {s[k][:350]}')
+        ranges=[('PROFILE',24725,24845),('PROFILE_END',25075,25150),('LIVE_TTL',2850,2864),('GROUP_STATE',13170,13220),('GROUP_APPROVE',19654,19720),('GROUP_ACTIVITY',23524,23563)]
+        for name,a,b in ranges:
+          print('RANGE',name)
+          for i in range(a-1,b): print(f'{i+1}: {s[i][:330]}')
         PY
