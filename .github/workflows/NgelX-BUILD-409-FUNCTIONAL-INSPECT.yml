@@ -1,0 +1,64 @@
+name: NgelX BUILD 409 FUNCTIONAL INSPECT
+on:
+  push:
+    branches: [work/build-409-functional-backlog]
+    paths:
+      - 'tools/apply_build406_final_eight.py'
+      - 'tools/apply_build407_consolidated.py'
+      - 'tools/apply_build408_defects_first.py'
+      - 'tools/check_build408_defects_first.py'
+      - 'tools/check_build407_regression.py'
+      - 'tools/check_build406_regression.py'
+      - '.github/workflows/NgelX-BUILD-409-FUNCTIONAL-INSPECT.yml'
+jobs:
+  patch-test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Apply Build 395-406 and test source preservation
+      shell: bash
+      run: |
+        set -euo pipefail
+        python3 -u tools/apply_build395_final_login_inbox_ui.py
+        python3 -u tools/apply_build396_inbox_final_polish.py
+        python3 -u tools/apply_build397_inbox_complete_fixes.py
+        python3 -u tools/apply_build398_login_story_polish.py
+        python3 -u tools/apply_build399_registration_profile_cover.py
+        python3 -u tools/apply_build399_explore_reference_ui.py
+        python3 -u tools/apply_build399_create_reference_ui.py
+        python3 -u tools/apply_build399_profile_reference_ui.py
+        python3 -u tools/check_build399_regression.py
+        python3 -u tools/apply_build400_cover_upload_hotfix.py
+        python3 -u tools/check_build400_cover_upload.py
+        python3 -u tools/apply_build401_profile_stability.py
+        python3 -u tools/check_build401_profile_regression.py
+        python3 -u tools/apply_build402_profile_reference_polish.py
+        python3 -u tools/check_build402_profile_regression.py
+        python3 -u tools/apply_build403_profile_live_audio.py
+        python3 -u tools/check_build403_regression.py
+        python3 -u tools/apply_build404_profile_live_voice_fixes.py
+        python3 -u tools/check_build404_regression.py
+        python3 -u tools/apply_build405_single_device_final.py
+        python3 -u tools/check_build405_regression.py
+        python3 -u tools/apply_build406_final_eight.py
+        python3 -u tools/check_build406_regression.py
+        python3 -u tools/apply_build407_consolidated.py
+        python3 -u tools/check_build407_regression.py
+        python3 -u tools/apply_build408_defects_first.py
+        python3 -u tools/check_build408_defects_first.py
+        python3 -m py_compile tools/apply_build407_consolidated.py tools/check_build407_regression.py tools/apply_build408_defects_first.py
+
+    - name: Inspect remaining functional backlog
+      run: |
+        python3 - <<'PY'
+        from pathlib import Path
+        s=Path('app/lib/main.dart').read_text(encoding='utf-8').splitlines()
+        names=['SEARCH_CLASS','SEARCH_RESULTS','SEARCH_FILTER','VIDEO_PLAYER','VIDEO_NEXT','CREATE_POLLS','CREATE_EDITOR']
+        keywords=[('SEARCH_CLASS','class AramaPage'),('SEARCH_RESULTS','final icerikler = snap.data!'),('SEARCH_FILTER','bool eslesir('),('VIDEO_PLAYER','class _NgelX'),('VIDEO_NEXT','void _videoSarmayiGuncelle'),('CREATE_POLLS','Anket'),('CREATE_EDITOR','class _Uret')]
+        for name,needle in keywords:
+          hits=[i for i,x in enumerate(s) if needle.lower() in x.lower()]
+          print('HITS',name,len(hits),[i+1 for i in hits[:25]])
+          for i in hits[:4]:
+            print('BEGIN',name,i+1)
+            for k in range(max(0,i-38),min(len(s),i+94)):print(str(k+1)+': '+s[k][:325])
+        PY
