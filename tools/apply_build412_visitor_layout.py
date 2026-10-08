@@ -16,8 +16,8 @@ one("final canliAday=v['isLive']==true",
              ?'${aylar[katilimHam.toDate().month-1]} ${katilimHam.toDate().year}’te katıldı'
              :'';
            final canliAday=v['isLive']==true""","join date")
-a=v.index("               if(!kapaksiz)...[")
-b=v.index("               if(canli&&canliId.isNotEmpty)...[",a)
+a=v.index("if(!kapaksiz)...[")
+b=v.index("if(canli&&canliId.isNotEmpty)...[",a)
 header=r"""               if(kapaksiz)...[
                  const SizedBox(height:8),
                  Center(child:SizedBox(height:182,width:230,child:Stack(
