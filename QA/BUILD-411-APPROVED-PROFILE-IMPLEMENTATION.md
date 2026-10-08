@@ -35,3 +35,25 @@ Kullanıcının görsel olarak onayladığı dört ekran baz alınır:
 - APK üretimi bağımsız olarak devam ediyor; <https://github.com/Nnentx/Ngelx/actions/runs/37850523831>. Telefon üstü görsel karşılaştırma hâlâ bekleniyor.
 
 **Güvenli teslim:** Onaylı referans görsellerdeki piksel, boyut, sıralama ve üst menü ayrıntılarını ancak Build 411 kurulup gerçek ekran görüntüleri geldikten sonra kesinleştir. Bu aşamada yalnız kaynak kodu ve CI doğrulaması vardır; gerçek cihazda "birebir aynısı doğrulandı" deme.
+
+## Gerçek telefon QA — 2026-10-09, kullanıcı videosu 45266.mp4 (102 saniye)
+
+**Telefondan görülenler (görsel kanıt):**
+- 00:00 Ayarlar uygulama sürümü: **v1.0.186 / Yapı 411**.
+- ~00:04–00:12 Rojin Candan'ın kendi **kapaksız** profili görüntüleniyor; ortalı avatar, dört sayaç, içerik grid'i, alt navigasyon var. Profili Düzenle tam sayfa açılıyor.
+- ~00:16–00:36 `Profil görünümü` altında **kapaklı / kapaksız** seçenekleri ve alt önizleme kartları görünüyor; kullanıcı seçenekleri değiştiriyor. Gerçek kapak yokken kapaklı modda **“Kapaklı görünüm için önce bir kapak fotoğrafı ekle”** geri bildirimi gösteriliyor.
+- ~00:44–01:00 galeri ve kadraj düzenleyici açılıp bir kapak seçiliyor; resim **Profili Düzenle** üzerinde görülüyor. ~01:08–01:16 ana profilde yeni kapak fotoğrafı görünüyor; mevcut arkadaşlar listesi de açılıyor.
+- ~01:20–01:36 hesap değişimi / arama ile aynı kişi başka hesap üzerinden ziyaret ediliyor; **diğer kullanıcı profilinde gerçek kapak fotoğrafı** yüklü, dört sayaç, mesaj / takip / arkadaşlık / ortak gruplar ve intro-video görünüyor.
+- Ekran kaydında gözle görülür uygulama çökmesi yok.
+
+**Onaylanan görsellerle hâlâ uyuşmayan detaylar (tasarım borcu; düzeltilmeden birebir sayılmayacak):**
+1. **Diğer kullanıcı profili**: dört sayı hâlâ ayrı düz yazılar; onaylı görseldeki mor ikonlu, ayıraçlı, tek yuvarlak lavanta kart değil.
+2. **Diğer kullanıcı profili**: takip, mesaj, arkadaşlık ve ortak gruplar ayrı iki/üç satıra yayılıyor; onaylı görselde aynı görsel aksiyon barında, daha derli toplu düzen var. Gizlilik/takip/arkadaşlık callbacks *değiştirilmemeli*.
+3. **Diğer kullanıcı profili**: tanıtım videosu kartı gerçek olsa da onaylı yan yana açıklama/thumbnail kart görünümünden farklı; oynatma callback'ini koru.
+4. **Kapaklı kendi profili**: avatar/ad/kapak geçişi ve üstteki düğmeler referansın aralık ve hizasına tamamen eş değil.
+5. **Profili Düzenle**: genel düzen/doğru kontrol alanları mevcut ama üst resim, avatar çakışması, seçim kartları ve önizleme kartlarında ince ölçü / görsel kalite rötuşu gerekiyor.
+6. **Fotoğraf ve kullanıcı verileri** dinamik kalmalı; örnek Dilek ekranındaki metin/sayılar koda yazılmamalı.
+
+**Doğrulanmayan noktalar:** kapaksız moda geçilip *kaydedildikten sonra diğer hesaptan* yeniden açıldığında kapak gizlendiği, tüm butonların aksiyonlarının doğru tamamlandığı ve piksel-birebir eşleşme videoda eksiksiz test edilmedi. Bunları geçti diye raporlama. Mor spinner hakkında önceki kullanıcı açıklaması geçerlidir: **bu alanda sorun yok, değiştirme**.
+
+**Takip:** Build 411 işlevsel temel geçti; tasarım ince uyumu için yeni bir Work değişiklik paketi ve yeni APK/telefon testi gerekir.
