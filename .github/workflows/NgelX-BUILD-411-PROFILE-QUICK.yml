@@ -11,6 +11,7 @@ on:
       - 'tools/check_build409_search_relevance.py'
       - 'tools/apply_build411_profile_appearance.py'
       - 'tools/apply_build411_editor_screen.py'
+      - 'tools/check_build411_profile.py'
       - 'tools/check_build408_defects_first.py'
       - 'tools/check_build407_regression.py'
       - 'tools/check_build406_regression.py'
@@ -56,4 +57,5 @@ jobs:
         python3 -u tools/check_build409_search_relevance.py
         python3 -u tools/apply_build411_profile_appearance.py
         python3 -u tools/apply_build411_editor_screen.py
+        python3 -u tools/check_build411_profile.py
         python3 -m py_compile tools/apply_build411_profile_appearance.py tools/apply_build411_editor_screen.py
