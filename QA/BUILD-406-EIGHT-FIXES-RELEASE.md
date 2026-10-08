@@ -196,3 +196,20 @@ Başlangıç kaydı: Kod yaması ve otomasyon pipeline'ı oluşturuldu, CI sonu�
 **Kabul:** Akış başlığı **`NgelX      Çevrem    Radar    [arama]`** anlamını verecek; aktif sekme vurgusu yerinde, iki sekme tıklanınca sırasıyla takip edilenler ve önerilenler açılacak. `Takip | Sana Özel` üst sekme yazıları artık görünmeyecek.
 
 **Durum:** GitHub Work QA notuna **kullanıcı onaylı** olarak eklendi. **Henüz kod değişmedi; Build 406 APK aynı.** Bildirimler, Üret ve Akış'ın kalan işleriyle sonraki tek düzeltme paketinde kodlanacak.
+
+## ONAYLANMIŞ KAPSAM DEĞİŞİKLİĞİ — davet bağlantısı ile katılımda kurucu/yönetici onayı zorunlu (2026-10-08)
+
+**En son kullanıcı kararı (önceki kararın yerini alır):** Kullanıcı geçerli grup davet bağlantısı/koduyla başvursa **bile otomatik üye yapılmayacak**. Talep önce **grup kurucusu veya yetkili yöneticinin onayına** düşecek. Bu, daha önceki "davet koduyla yönetici onayı olmadan doğrudan katıl" isteğini **iptal eder**; nihai ürün gereksinimi budur.
+
+### Beklenen akış
+1. Kullanıcı aktif/geçerli davet bağlantısı ya da kodunu girer, **Gruba katıl** seçer. Sistem gerçek üyelik oluşturmak yerine `pending` **katılma isteği** üretir ve kullanıcıya **"Katılma isteğin yönetici onayına gönderildi"** geri bildirimi verir.
+2. Grup **kurucusu veya yetkili yöneticileri**, bekleyen isteği bildirimler/katılma istekleri ekranında gerçek gönderen adı ve avatarıyla görür. **Kabul et / Reddet** eylemleri çalışır.
+3. Yalnız sunucu tarafında doğrulanmış yetkili kurucu/yönetici onayı sonrasında kullanıcı `members` listesine eklenir, grup sohbeti açılır; onaydan önce özel grup mesajları ve üye verilerine erişim verilmez.
+4. Reddedilen istek üyelik yaratmaz; başvuran doğru sonuç bildirimi alır. Zaten üye olan kişi yeniden istek göndermeden grubu açabilir; çift tıklama yinelenen `pending` kayıtları oluşturmaz.
+5. Silinmiş, iptal edilmiş veya süresi dolmuş davet; engellenen kişi; kapalı/silinmiş grup ve **grup kapasite limiti** mevcut güvenlik kurallarına tabidir. Kurucu/yönetici dışındaki kullanıcılar kendilerini veya başkalarını onaylayamaz.
+
+### Kritik kod ve sunucu işi
+- **Build 406'da doğrudan katılım (`autojoin`) uygulandı ve `ngelx-44eed` canlı Firestore kuralları yayımlandı.** Yalnızca ekrandaki metni değiştirmek YETERLİ DEĞİL. **Gelecek tek paket düzeltmede uygulama akışıyla birlikte Firestore `validSelfJoin` ve `joinRequests` yetki kurallarında davet koduna dayanarak onaysız `autojoin` yetkisini kaldır/güvenli şekilde sınırla.** Sunucu tarafı kısıt geçerli olmadan "onay zorunlu" tamamlandı sayılmayacak.
+- Bekleyen istek `pending` yönetici onayı, kullanıcı yetkisi, bildirimler ve reddetme işlemleri gerçek Firestore emülatör testlerinden geçmeli; özellikle **geçerli link sahibi kullanıcı doğrudan `members` dizisine kendini ekleyememeli** testi zorunlu.
+- Bu yeni karar, önceki QA notları veya önceki Build 406 uygulamasıyla çelişirse **bu en son kullanıcı kararı önceliklidir**. Daha önce yazılı "davetle direkt katılım" maddeleri artık uygulanacak hedef değildir.
+- **Durum:** En son onaylı gereksinim olarak Work notuna kaydedildi; henüz kod/kurallar değiştirilmedi. **Mevcut Build 406'da davetle onaysız katılım mümkün olabilir.** Sonraki toplu düzeltme paketinde güvenli şekilde yeniden kodlanmalı ve canlı Firebase kuralları yeniden dağıtılmalı. İkinci telefon senaryoları kullanıcının isteği üzerine ertelenmiştir.
