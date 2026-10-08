@@ -59,6 +59,11 @@ jobs:
            print("DETAIL",label)
            for i in range(start-1,end):
             print(str(i+1)+": "+s[i][:340])
+          print("TIME_AND_POLL_ANCHORS")
+          for i,line in enumerate(s):
+           if "class AkisMetaSatiri" in line or "Widget _finalUretKart" in line or "taslakVar" in line and 10200<i<11200:
+            print("ANCHOR",i+1)
+            for k in range(max(0,i-4),min(len(s),i+65)):print(str(k+1)+": "+s[k][:300])
           print("DYNAMIC HEADERS")
           for i,line in enumerate(s):
            if "followingTab" in line or "forYou" in line or "NgelXLogo" in line or "Image.asset(" in line and (6200<i<10000):
