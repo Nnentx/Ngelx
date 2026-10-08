@@ -92,3 +92,20 @@
 - **Durum:** Kullanıcı tarafından istenmiş UI rötuşu olarak not edildi; **henüz uygulama koduna işlenmedi, yeni APK çıkarılmadı**.
 
 **QA kararı:** ALEYNA AŞK sohbet ekranına geçiş ve grup bilgilerinin açılması tek cihaz kaydında **olumlu**. Uyarının tekrar etmesi için **küçük UX kontrol maddesi**; renkli Grup rozeti için **açık UI geliştirmesi**. Kullanıcı hesap kimliği doğrulaması ve gerçek çok cihaz testi önceki sınırlara tabidir.
+
+## Build 407 gerçek Android — bitmiş canlı yayın profilde CANLI kalıyor (45218.mp4, 2026-10-08)
+
+**Gözlenen doğrulanmış hata (P1/P2):** Kullanıcının gönderdiği yaklaşık **40,2 saniyelik / 1080×2392** Android ekran kaydında Akış'tan **DİLEK Akçay / @dilekizmmz** profiline geçiliyor. Profil avatarı çevresinde kırmızı canlı halkası, avatarın altında **CANLI** etiketi ve **Canlı yayını izle** butonu görünmeye devam ediyor. Butona dokununca **`Bu canlı yayın bitti.`** mesajı çıkıyor; buna rağmen kullanıcı aynı profile döndüğünde buton ve etiket hâlâ canlıymış gibi görünür durumda (ilk 0–12 sn). Bu **bitmiş yayın durumunun profil UI'ında bayat kalması / yanlış canlı ilanı**. Üstteki yeşil **Çevrimiçi** hesabın aktiflik durumudur, yayının sürdüğünün kanıtı değildir.
+
+**Kullanıcı isteği:** Daha önce Dilek hesabında yapılan canlı yayın bitmesine rağmen profilinde canlı görünüyor; biten yayının kalıcı aktifmiş gibi gösterilmesi düzeltilecek. Mevcut çalışan profil, medya kartı, tanıtım videosu, paylaşım ve gizlilik bozulmayacak.
+
+**Sonraki toplu düzeltme / teknik kabul:**
+1. Profilde `CANLI` halkası/rozeti ve `Canlı yayını izle` butonu **yalnız sunucuda halen aktif/doğrulanmış yayın oturumu varsa** çizilsin. Profil sahibinin çevrimiçi olması veya geçmişte yayın açmış olması yeterli olmasın.
+2. Yayını normal `Bitir` ile bitirme, uygulama kapanışı/bağlantı kopması, oda kapatılması ve oturumun zaman aşımı durumlarında sunucudaki `live` statüsü/oturum referansı tutarlı şekilde kapanmalı; gerekiyorsa yetkili backend TTL/cleanup ile hayalet canlı kayıtları temizlemeli.
+3. Başkasının profilindeki canlıya dokununca sunucu **yayın bitti** cevabı dönüyorsa, sadece snackbar gösterip eski `CANLI` durumu bırakılmamalı: gerçek yayın durumu yeniden okunmalı ve canlı buton/rozet **hemen gizlenmeli**; yeniden profile girince de kapalı kalmalı.
+4. Oturumun gerçek sahibi/yayının aktifliği doğrulanmadan izleyici ekranı açılmasın. `Çevrimiçi` bağımsız kalsın. Aynı hesap bir sonraki canlı yayını başlatırsa yeni geçerli oturum için CANLI rozeti yeniden görünebilmeli.
+5. Kısa telefon testleri: yayını başlat → profilde CANLI görünür → bitir → yeniden profile girince CANLI yok; eski linki açınca doğru durum; kopan/çöken canlı oturumu makul sürede pasifleşir. İkinci telefon uçtan uca testleri kullanıcı tercihiyle ertelendiğinden, farklı hesaplar arasında **aynı telefonda** gerçekleştirilebilen doğrulamalar ayrıca işaretlenecek.
+
+**Diğer video bulgusu:** Profil paylaşma menüleri açılıyor, gönderilerden bir video görüntüleyicisi de açılıyor; mevcut sorunla doğrudan ilişkili değiller. Profilden gönderi silme vb. işlemler için bu video kesin doğrulama sağlamaz.
+
+**QA kararı:** **AÇIK / gerçek telefon videosuyla tekrar üretildi.** Bu ekleme GitHub Work QA notudur; **kod ve Firebase kuralları değiştirilmedi, Build 408 APK üretilmedi**. Önceden istenen gelen kutusu grup rozeti, bildirimlerde kişi/grup adlarının ayrı renkte gösterilmesi ve diğer kayıtlı küçük eksiklerle sonraki toplu pakette ele alınabilir.
