@@ -180,3 +180,19 @@ Başlangıç kaydı: Kod yaması ve otomasyon pipeline'ı oluşturuldu, CI sonu�
 7. **Önemli ayrım:** Kullanıcı örnek olarak **TikTok** videosu verdi. Bu kayıt, NgelX'in gerçek arama sonuçları için bir hata teşhisi değil; **ürün davranışı/arama kalitesi geliştirme isteği**dir. Kod ve Firestore dizin/query/index yapısı incelenmeden hazır/bozuk denemez.
 
 **Durum:** Work QA'da **kayıtlı**, henüz kodlanmadı / yeni APK oluşturulmadı. Kullanıcının kabul ettiği tek toplu düzeltme paketinde `Gelen Kutusu gönderen adları`, `Üret` ve `Akış` eksikleriyle birleştir.
+
+## Akış üst sekmeleri — kullanıcı tarafından onaylanan özgün isimler (2026-10-08)
+
+**Kesin kullanıcı kararı:** NgelX Akış üstündeki TikTok'u çağrıştıran `Takip | Sana Özel` sekme başlıklarının yerine **`Çevrem | Radar`** kullanılacak. Bu isimler artık bir öneri değil, **onaylanmış tasarım gereksinimi**.
+
+**Anlamı ve fonksiyon koruma:**
+- **Çevrem** = önceki `Takip` sekmesi; kullanıcının takip ettiği hesapların içerikleri. Var olan takip-akışı veri sorgusu ve hesap/gizlilik filtreleri korunacak.
+- **Radar** = önceki `Sana Özel` sekmesi; ilgi alanlarına/önerilere dayalı içerik akışı. Mevcut öneri, sıralama, sayfalama ve oynatma mantığı korunacak.
+- Başlangıçtaki seçili sekme ve alt çizgi/aktif renk tasarımı mevcut davranışla aynı kalsın; sadece görünen metinler değişsin. Başlıklar dar ekran ve büyük fontta taşmadan yan yana sığmalı.
+- Akış üst solundaki **büyük renkli N logosu kaldırılacak, yalnız `NgelX` yazısı kalacak** (önceden kayıtlı onay); arama ikonu korunacak.
+- Seçili sekme, takip etme durumu, video ileri sarma ve diğer Akış davranışları etkilenmemeli. Metin değişikliği backend veri yapısı/sekme anahtarlarını gereksiz yere değiştirmemeli.
+- Sekme adları uygulamanın diğer yerlerinde kullanıcıya gösteriliyorsa tutarlı dil kullan; farklı veri filtrelerinin semantiğini yanlışlıkla birleştirme.
+
+**Kabul:** Akış başlığı **`NgelX      Çevrem    Radar    [arama]`** anlamını verecek; aktif sekme vurgusu yerinde, iki sekme tıklanınca sırasıyla takip edilenler ve önerilenler açılacak. `Takip | Sana Özel` üst sekme yazıları artık görünmeyecek.
+
+**Durum:** GitHub Work QA notuna **kullanıcı onaylı** olarak eklendi. **Henüz kod değişmedi; Build 406 APK aynı.** Bildirimler, Üret ve Akış'ın kalan işleriyle sonraki tek düzeltme paketinde kodlanacak.
