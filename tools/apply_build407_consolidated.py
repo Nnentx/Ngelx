@@ -179,13 +179,13 @@ def repair_inbox(src):
     "final d=docs[i],v=d.data(),okundu=v['read']==true;",
     "final d=docs[i];\n              return bildirimGonderenIle(d.data(),(v){\n               final okundu=v['read']==true;",
     "inbox notifications profile resolution")
-  original="""                );
-              },
-            );"""
-  updated="""                );
-              });
-              },
-            );"""
+  original="""if(context.mounted)await Navigator.push(context,MaterialPageRoute(builder:(_)=>const AktivitePage()));
+                },
+              );"""
+  updated="""if(context.mounted)await Navigator.push(context,MaterialPageRoute(builder:(_)=>const AktivitePage()));
+                },
+              );
+              });"""
   return one(s,original,updated,"inbox notifications builder closure")
  src=region(src,"    Widget bildirimlerIcerigi(){","    Widget isteklerIcerigi(){",notif_widget)
  def all_widget(s):
