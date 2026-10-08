@@ -1,0 +1,24 @@
+# NgelX Build 407 — Tek Paket Çalışma ve Teslim Kontrolü
+
+**Temel kaynak:** `QA/BUILD-406-EIGHT-FIXES-RELEASE.md` ve kullanıcının en son kararı: **geçerli grup daveti de kurucu/yönetici onayı bekleyecek**. Mevcut Build 406 fotoğraf/video paylaşımı, sohbet, canlı yayın, sesli oda, profil, hikâye, kaydedilenler ve Firebase verileri korunacak.
+
+## Kodlanan işlerin kapsamı (telefon testi henüz yapılmadı)
+- **P1 / Grup güvenliği:** davet kodu sadece `pending` katılma isteği oluşturur, `chats.members` alanına başvuran kendini ekleyemez, kullanıcıya bekleme mesajı gösterilir. Kurucu/yöneticiye best-effort bildirim; yönetici listesinde bekleyen kayıt görünürlüğü korunur. Eski Build 406 `autojoin` başvurularını güvenle `pending` durumuna yenileme. Onay ve ret yalnız kurucu/yönetici yetkisinde. **App kodu + Firestore kuralları birlikte**.
+- **P1 / Bildirimler:** Gelen Kutusu `Tümü` ve `Bildirimler` satırlarında gerçek gönderen UID→user profilinden ad ve avatar çözümü (Build 406 yalnız `Aktivite` satırında çözmüştü). Eski bildirimler ve silinen hesabın açık yedek metni. İstekler/Aktivite akışları korunur.
+- **P2 / Akış:** `Çevrem | Radar` onaylı sekme adları, Akış'a özgü büyük renkli N ikonunu kaldırıp `NgelX` yazısını koruma, sadece kısa göreli zaman (`12 dk önce`) ve dokunmayla gerçek tarih tooltip'i, video seek esnasında çoklu yarışan `seekTo` isteklerini kaldırma.
+- **P2 / Üret:** Dar kartta tam kelimeli başlık/alt metin için ölçekli yerleşim; `Canlı Yayın` sekme adının kesilmesini azaltma; yayınlanma sonrası kısa 3 saniyelik floating snackbar.
+- **P2 / Arama:** İki sözcüklü Türkçe ad/konu (`Cemil Tugay`) eşleşmesi, başlık/açıklama/etiket/kullanıcı adı ve yerel alaka sıralaması. Kaynak sorgu ilk 100 kayıtla sınırlı kalabilir; tüm ölçekli dizin araması henüz bu değişiklikle tamamlandı sayılmaz.
+
+## Açık kalan / tam yapılmadığı için tamamlandı denmeyecek işler
+- Tam işleyen **Anket** oluşturma, oy verme, oy sayımı ve Firestore kuralları (önce mevcut model ve içerik sayfalarıyla uyumlu tasarlanmalı; yarım sahte anket teslim edilmeyecek).
+- Akış Araçlar menüsü bölümlemeleri, `İlgilenmiyorum` ile `İçeriği gizle` açıklamaları ve video geçişlerinin tüm ağlarda sıfır bekleme garantisi.
+- Profil medya cache yükleme sorunları, Kaydedilenler ve gizlilik açıklamalarının yeni telefonda son kontrolü.
+- Gerçek uçtan uca grup davetinin karşı yönetici tarafından alınması, ses, PK, alıcı bildirimleri gibi **ikinci telefon testleri kullanıcının kararıyla ertelendi**.
+
+## Build 407 teslim güvenlik kapıları
+1. Mevcut 395–406 koruma betikleri ve `tools/apply_build407_consolidated.py`, `tools/check_build407_regression.py`.
+2. Firestore emulator: geçerli davette `pending` başarılı, `autojoin` ve kendi `members` listesine yazma **reddedilir**; yalnız yetkili admin ekleyip isteği kabul edebilir; diğer admin olmayan işlem başarısız.
+3. Flutter analyze, imzalı release APK `1.0.183+407`, sha256 ve GitHub artifact; ardından doğrulanmış `firestore.rules` dosyasını `ngelx-44eed` projesine dağıt. Dağıtım başarılı olmadan admin onayı zorunlu canlı sistem olarak duyurulmayacak.
+4. Tek telefon kısa smoke: Ayarlar 407, Akış yeni başlıklar ve seek, Bildirimler gerçek gönderen, Üret etiket, aramada çok kelimeli sorgu. İkinci telefona ihtiyaç olmayanlar bile test edilmeden onaylı sayılmaz.
+
+**Durum:** GitHub Work çalışma dalında kodlama ve CI devam ediyor. Kullanıcı kayıtları silinmeyecek, Build 406 telefon APK'si uzaktan güncellenmiş sayılmaz.
