@@ -42,6 +42,7 @@ newchips="""              children:[
 if oldchips not in src: raise SystemExit("explore chips anchor missing")
 src=src.replace(oldchips,newchips,1)
 src=src.replace("          if(kategori==0)..._canliSliverleri(),","          if(kategori==-1)..._trendSliverleri(),\n          if(kategori==0)..._canliSliverleri(),",1)
+src=src.replace("child:Text(trend?'Trend canlı yayınlar':t('liveStreams'),","child:Text(trend?'Trend canlı yayınlar':'Canlı Yayınlar',",1)
 
 # Match approved purple-blue selected chip.
 src=src.replace("gradient:kategori==index?const LinearGradient(colors:[Color(0xFF7C3AED),Color(0xFFA855F7)]):null,","gradient:kategori==index?const LinearGradient(colors:[Color(0xFF9B3EFF),Color(0xFF365BFF)]):null,",1)
