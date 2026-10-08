@@ -65,7 +65,7 @@ jobs:
             print('FROM',i+1)
             for k in range(max(0,i+pre),min(len(s),i+post)):
               print(f'{k+1}: {s[k][:350]}')
-        ranges=[('PROFILE',24725,24845),('PROFILE_END',25075,25150),('LIVE_TTL',2850,2864),('GROUP_STATE',13170,13220),('GROUP_APPROVE',19654,19720),('GROUP_ACTIVITY',23524,23563)]
+        ranges=[('PROFILE',24725,24845),('PROFILE_END',25075,25150),('LIVE_TTL',2850,2864),('GROUP_STATE',13170,13220),('GROUP_APPROVE',19654,19720),('GROUP_ACTIVITY',23524,23563),('PROFILE_CLOSE',25165,25275),('GROUP_FLAGS',13215,13252),('LIVE_FRESHNESS',280,335),('GROUP_REQUEST',19605,19655),('ACTIVITY_STATUS',23476,23520)]
         for name,a,b in ranges:
           print('RANGE',name)
           for i in range(a-1,b): print(f'{i+1}: {s[i][:330]}')
