@@ -136,7 +136,7 @@ class _NgelXKapakKonumlandirPageState extends State<NgelXKapakKonumlandirPage>{
           decoration:BoxDecoration(color:const Color(0xFFF0F1F5),borderRadius:BorderRadius.circular(22)),
           child:widget.localFile!=null
             ?Image.file(widget.localFile!,fit:BoxFit.cover,alignment:Alignment(0,y))
-            :NgelXAgResmi(url:widget.imageUrl,fit:BoxFit.cover,alignment:Alignment(0,y)),
+            :Image(image:NgelXAgImageProvider(widget.imageUrl),fit:BoxFit.cover,alignment:Alignment(0,y)),
         ),
       ),
       const SizedBox(height:16),
