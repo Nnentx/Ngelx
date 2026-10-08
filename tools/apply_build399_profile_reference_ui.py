@@ -62,7 +62,7 @@ new=r'''                  SizedBox(
                         borderRadius:const BorderRadius.vertical(bottom:Radius.circular(28)),
                         child:kapakUrl.isEmpty
                           ?Container(decoration:const BoxDecoration(gradient:LinearGradient(colors:[Color(0xFFE6EDFF),Color(0xFFF0E3FF)])),child:const Center(child:Icon(Icons.landscape_outlined,color:Color(0xFF9589C8),size:56)))
-                          :NgelXAgResmi(url:kapakUrl,fit:BoxFit.cover,alignment:Alignment(0,kapakY)),
+                          :Image(image:NgelXAgImageProvider(kapakUrl),fit:BoxFit.cover,alignment:Alignment(0,kapakY)),
                       )),
                       Positioned(left:0,right:0,top:2,child:Row(mainAxisAlignment:MainAxisAlignment.end,children:[
                         _profilKapakIkon(Icons.search_rounded,()=>aktifKullanici==null?null:Navigator.push(context,MaterialPageRoute(builder:(_)=>ProfilAramaPage(uid:aktifKullanici!.uid)))),
