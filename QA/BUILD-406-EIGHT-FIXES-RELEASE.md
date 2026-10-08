@@ -81,3 +81,28 @@ Başlangıç kaydı: Kod yaması ve otomasyon pipeline'ı oluşturuldu, CI sonu�
 5. **Retest:** Tek cihazla Gelen Kutusu > Tümü ve Bildirimler eski istekler / İstekler / Aktivite satırları gösterilsin; ayrı test için ikinci telefona gerek yok. İkinci telefon uçtan uca teslim senaryoları **ertelendi**.
 
 **QA kararı:** **Build 406 "Bildirimlerde kim gönderdiği görünsün" P1 maddesi gerçek telefonda kısmen çalışıyor fakat **GEÇMEDİ / AÇIK**. Kodun tüm ilgili ekranlarda çalıştığı doğrulanmadı. Bu not, mevcut Build 406 APK veya Firebase kurallarını değiştirmez; yeni APK oluşturulmadı.
+
+## Build 406 gerçek Android / Üret ve paylaşım testi — 45179.mp4 (2026-10-08)
+
+**Kaynak ve kapsam:** Kullanıcının gönderdiği yaklaşık **99,9 saniyelik**, **1080×2392** Android ekran videosu. `Üret` sayfasından galeriden fotoğraf, kırpma/filtre/açıklama/paylaşım; Akış'ta gönderi yorum akışı; uygulama kamera ekranı; ikinci fotoğraf paylaşımı; Üret'te metin, anket, hikâye menüleri görünüyor. `Video kaydetme / Reels yükleme / canlı yayın / müzik / efekt` seçeneklerinin tamamı bu kayıtta sonuçlanmış uçtan uca test değil.
+
+### Bu videoda çalışan, korunması gereken işlemler
+- **00–17 sn:** `Üret` ekranı açılıyor. Galeri alt sayfası (`Fotoğraflar / Koleksiyonlar`) üzerinden fotoğraf seçiliyor. Siyah medya kırpma editöründe `Kırp`, serbest oran, 1:1 / 4:5 / dikey 9:16, döndürme/sıfırlama seçenekleri görünüyor; kullanıcı kırpma çerçevesini değiştirip `Kaydet` ile dönüyor.
+- **17–28 sn:** Fotoğraf post hazırlığında gerçek görsel, kırp/döndür, filtreler (`Yok / Parlak / Sıcak / Soğuk`), açıklama, konum/etiket, görünürlük, indirme/yorum/yeniden paylaşım izinleri görünüyor. Açıklama alanına `teknik` yazılıyor; `Paylaş` ile `Fotoğraf 1/1 yükleniyor` ilerlemesi ve ardından **`Paylaşım yayınlandı ✅ Akışta ve profilinde görünecek.`** onayı çıkıyor.
+- **28–47 sn:** `Akışa git` bağlantısıyla gönderi Akış'ta gösteriliyor. Kullanıcı yorum çekmecesini açıyor, yorum gönderiyor, ikinci yorum yazıyor, kalp ve `Düzenle` menüsüne giriyor; yorum düzenleme modalı görünüyor. Paylaşılan fotoğrafı bu testte Akış'ta görmek önemli.
+- **48–69 sn:** Üret'teki kamera açılıyor. Fotoğraf/video modları ve kamera kontrolleri görünür. Kameradan alınan görüntü post önizlemesine geliyor; ikinci fotoğraf paylaşımı için `Fotoğraf 1/1 yükleniyor` ve yayın başarı bildirimi görülüyor. Video modundaki klibin gerçek kaydedilip yayımlandığı kanıtlanmıyor.
+- **70–100 sn:** `Üret` ana ekranı, galeri düğmeleri, metin alanı, `Anket` eylemi ve hikâye oluşturma alt menüsü açılıyor. Hikâye menüsünde galeriden fotoğraf/video, fotoğraf/video çekme seçenekleri var. Metin postunun yayımlandığı, anketin oluşturulduğu veya Reels'in yüklenip oynatıldığı görülmüyor.
+- Kayıt boyunca görünür uygulama çökmesi veya kalıcı boş ekranda takılma yok.
+
+### Kalan açık UI / işlev eksikleri (sonraki tek düzeltme paketine)
+1. **P2 — Üret ana kartlarında kelimenin kötü bölünmesi.** `Fotoğraf` etiketi **`Fotoğ / raf`**, `Efektler` etiketi **`Efektl / er`** şeklinde bölünüyor; yardımcı yazılarda da `Düşüncel / erini` gibi doğallıktan uzak kırılmalar var (0, 48, 70, 85–99 sn). Dört kartı dar ekran ve dinamik yazı ölçeğine uygun, tam sözcüklü başlıklarla hizala. İkon, eylem ve amaçları korunmalı.
+2. **P2/P3 — Kalıcı başarı bildirimi ekranı kapatıyor.** İkinci yayın sonrası mavi `Paylaşım yayınlandı` çubuğu, Üret'e dönüldükten sonra yaklaşık **67–89. saniyeler boyunca** ekranın alt bölümünü kaplıyor; anket eylemi başka bildirim üretince kayboluyor gibi görünüyor. `Akışa git` eylemini koruyarak başarılı snackbar'ı makul sürede otomatik kapat, tekrar eden snack'leri sırala/değiştir, form alanlarına dokunmayı engellemesin.
+3. **P2 — Anket düğmesi sadece hazırlık mesajı gösteriyor.** `Anket` seçildiğinde `Anket aracı hazırlanıyor.` bildirimi çıkıyor (yaklaşık 89–91 sn), anket sorusu/şıklarını girecek çalışır düzenleyici görülmüyor. Bu bir **özellik eksikliği**: kullanıcıya eylem sunuluyorsa anket oluşturma ve yayımlama akışı tamamlanmalı veya hazır olmayana kadar açıkça `yakında`/pasif gösterilmeli; sahte başarılı işlem izlenimi verilmemeli.
+4. **P3 — Sekme/etiket dar alanda kısalıyor.** Hızlı yayın şeridinde `Canlı Ya...` kırpılmış; erişilebilir/açılır okunur tam etiket veya daha iyi düzen sağlanmalı. Başka metin taşmaları için küçük telefon / yazı ölçeği regresyon kontrolü.
+5. **P3 — Başarılı paylaşım sonrası taslak/yeniden giriş mesajlarının netliği.** `Taslak otomatik kaydedildi` yazısı boş Üret formuna dönüşte görülebiliyor. Her başarılı gönderimden sonra form state sıfırlama, taslak durumunun gerçeği yansıtması ve önceki medyanın yanlışlıkla yeniden gönderilmemesi kontrol edilmeli. Bu videoda çift gönderi hatası **kanıtlanmadı**; koruma testi olarak not.
+ 
+### Kapsam dışı / doğrulanmayanlar
+- Video çekip post yapma, reels, efekti video/foto üstünde işleyip yayımlama, müzik lisans/oynatma, metin postunu yayınlama, anket yayınlama, hikâyeyi bu ekrandan sonuna kadar yayımlama ayrı uçtan uca onaylı sayılmayacak.
+- Diğer kullanıcıda postun gösterimi/yorum eşzamanlaması gibi ikinci telefon/hesap işlemleri **kullanıcının isteğiyle ertelenmiş**.
+
+**QA kararı:** **Üret: fotoğraf ekleme, kırpma, post hazırlama/yayınlama, Akış'ta görünme, yorum menüsü ve kamera fotoğrafı paylaşımı gerçek telefonda GEÇTİ.** Yukarıdaki 3 belirgin UI/özellik noktası ve 2 P3 kontrol notu **açık**; komple Üret modülü “tümü bitti” ilan edilmez. Bu yalnızca QA kaydıdır; **Build 406 APK ve Firebase değiştirilmedi**, Build 407 oluşturulmadı.
