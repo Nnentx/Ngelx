@@ -103,7 +103,7 @@ def owner(s):
 src=in_class(src,"class _ProfilPageState extends State<ProfilPage>","\nclass _ProfilEtkilesimRozeti",owner)
 
 def other(s):
-    s=one(s,"           final foto = (v['photoUrl'] ?? '').toString();",
+    s=one(s,"final foto = (v['photoUrl'] ?? '').toString();",
       """           final foto = (v['photoUrl'] ?? '').toString();
            final profilKapak=(v['coverPhotoUrl']??'').toString();
            final gorunum=(v['profileViewMode']??'').toString();
