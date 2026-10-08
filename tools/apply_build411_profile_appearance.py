@@ -127,8 +127,26 @@ def other(s):
                    Positioned(right:-19,bottom:14,child:Container(width:48,height:48,decoration:const BoxDecoration(color:Color(0xFFF6F0FF),shape:BoxShape.circle))),
                  ],""",
       "visitor cover/coverless header")
-    # Preserve the existing follow/friend/message controls and intro video.
-    # Their layout can be polished once cover display and mode persistence pass.
+    # Approved order: profile identity, four counters, relationship actions,
+    # introduction media, then post sections. Keep the exact original widget
+    # with its playback logic; only move its position in the ListView.
+    import re
+    intro_pat=r"(?m)^[ \t]*if\(\(v\['introVideoUrl'\]\?\?''\)\.toString\(\)\.isNotEmpty\) \.\.\.\[\s*\n[ \t]*const SizedBox\(height:14\),\s*\n[ \t]*ProfilTanitimVideoKarti\(url:\(v\['introVideoUrl'\]\?\?''\)\.toString\(\)\),\s*\n[ \t]*\],\s*\n"
+    s,n=re.subn(intro_pat,"",s)
+    if n!=1:raise SystemExit(f"move visitor intro from original area: expected 1, found {n}")
+    insert_pat=r"(?m)^([ \t]*)const SizedBox\(height: 20\),\s*\n[ \t]*if \(!erisimVar\)"
+    def put_intro(m):
+        indent=m.group(1)
+        return (
+           indent+"if((v['introVideoUrl']??'').toString().isNotEmpty) ...[\n"
+           +indent+"  const SizedBox(height:14),\n"
+           +indent+"  ProfilTanitimVideoKarti(url:(v['introVideoUrl']??'').toString()),\n"
+           +indent+"],\n"
+           +indent+"const SizedBox(height: 20),\n"
+           +indent+"if (!erisimVar)"
+        )
+    s,n=re.subn(insert_pat,put_intro,s)
+    if n!=1:raise SystemExit(f"move visitor intro after actions: expected 1, found {n}")
     return s
 src=in_class(src,"class _KullaniciProfilPageState extends State<KullaniciProfilPage>","\nclass NgelXVideoKapakOnizleme",other)
 
