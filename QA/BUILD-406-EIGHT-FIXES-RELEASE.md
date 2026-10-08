@@ -56,3 +56,28 @@ Başlangıç kaydı: Kod yaması ve otomasyon pipeline'ı oluşturuldu, CI sonu�
 **Test kararı:** **Canlı Yayın bitiş özeti yazıları/sayıları görünmüyor P1 maddesi — gerçek telefonda GÖRSEL OLARAK GEÇTİ / KAPATILDI.** Canlı başlatma, kamera kapat/aç, filtre paneli, kapanış onayı, tek özet ve Keşfet dönüşü tek telefon smoke geçti. Sayıların gerçek başka kullanıcı etkileşimleriyle doğru artması, paylaşımın alıcıya teslimi, canlı ses, PK karşılaşması, hediyeler iki hesaplı testler olduğundan halen **ertelendi/doğrulanmadı**. Video tek başına diğer 7 Build 406 maddesinin cihaz testini tamamlamaz.
 
 **İşlem:** QA kaydı güncellendi; yeni kod, Build 407 veya APK oluşturulmadı.
+
+## Build 406 gerçek Android / Gelen Kutusu isimleri — 45178.mp4 (2026-10-08)
+
+**Kaynak:** Kullanıcının gönderdiği ~31,6 sn 1080×2392 Android ekran videosu. Kullanıcı Build 406 yüklemesini daha önce Ayarlar ekranında `v1.0.182 • Yapı 406` olarak doğruladı. Kapsam: `Sohbet → Gelen Kutusu` sekmeleri, İstekler, ayrı Aktivite ekranı ve Grup/Sohbet açılması.
+
+### Olumlu tek-telefon gözlemleri
+- **00–03 sn:** Profil → Gelen Kutusu açılıyor; `Tümü` sekmesinde mesajlar, gruplar, bildirimler görünüyor.
+- **08–12 sn:** `İstekler` sekmesi açılıyor; bekleyen takip isteği **Umay Umay** gerçek görünen ismi ve profil fotoğrafıyla görüntüleniyor, kabul/ret tuşları mevcut.
+- **12–15 sn:** `Aktivite` ayrı sayfasında **Umay Umay seni takip etmek istiyor**, **Alperen Yarbay sana arkadaşlık isteği gönderdi**, **Alperen Yarbay seni takip etmek istiyor** satırlarında gönderen isimleri okunuyor. Kullanıcı takip isteğini kabul ediyor, **`Takip isteği kabul edildi.`** yeşil bildirimi görünüyor.
+- **20–26 sn:** Gelen Kutusu → Gruplar listesi açılıyor; kullanıcı grup sohbetini görüntülüyor (canlı sohbet mesajlaşma uçtan uca bu videoyla kanıtlanmaz).
+- **28–31 sn:** Profil, avatar/istatistik/kısayollar ve tanıtım videosu görünür.
+
+### Açık hata — Build 406 / P1 gönderen adı düzeltmesi tam sonuç vermedi
+- **01–07 sn:** `Gelen Kutusu → Tümü` bölümünde takip bildirimine ait üst satır **`seni takip etmek istiyor`** yazıyor; ismin gelmesini beklerken spinner da görünüyor, fakat videonun bu bölümünde gönderen adı görünür olmuyor.
+- **16–19 sn:** `Gelen Kutusu → Bildirimler` bölümünde **`sana arkadaşlık isteği gönderdi`** ve **`seni takip etmek istiyor`** (yaklaşık altı saat önce) bildirimleri **adı olmadan** ve jenerik kullanıcı avatarlarıyla duruyor. `Gelen Kutusu yenilendi` bildirimi görünmesine rağmen eksik isimler giderilmiyor.
+- **Aynı uygulamadaki ayrı `Aktivite` ekranında** bazı istekler düzgün gönderici adıyla gösteriliyor. Bu, bildirimleri gösteren **birden fazla UI/render akışının tutarsızlığını** düşündürüyor. Farklı eski bildirimlerin `fromUid` alanı var mı, veritabanında gerçekte gönderen profili erişilebilir mi henüz doğrulanmadı. Aynı kişinin iki farklı bildirim olduğu varsayılmamalı.
+
+### Teknik takip / kabul
+1. `Gelen Kutusu → Tümü`, `Gelen Kutusu → Bildirimler`, `İstekler` ve ayrı `Aktivite` ekranı **aynı gerçek gönderen kimlik çözümleme mantığını** kullanmalı. Build 406 yaması, ayrı Aktivite liste satırını ele almış olabilir; Gelen Kutusu iç listelerini de kapsayacak şekilde doğrula.
+2. Mevcut bildirimlerde `fromUid` / `senderId` / `senderUid` / varsa `actorUid` / `userId` gibi farklı alanların doğruluğunu güvenli biçimde çöz. Kullanıcı profilindeki `displayName`, `username`, `photoUrl` alanlarını kullan; yanlış/farklı bildirimden isim taşınmasın.
+3. Gönderen kaydı silinmiş veya adı erişilemiyorsa uydurma isim verme; **`Gönderenin hesabı kullanılamıyor`** gibi açık bir fallback kullan. Sonsuz spinner yerine bekleme/zaman aşımı ve erişim hata durumu sun.
+4. Gönderen profiline dokunma, takip/arkadaşlık isteği kabul-ret, zaman/okunma, gizlilik, etkileşim sıralaması ve gruplar **korunmalı**.
+5. **Retest:** Tek cihazla Gelen Kutusu > Tümü ve Bildirimler eski istekler / İstekler / Aktivite satırları gösterilsin; ayrı test için ikinci telefona gerek yok. İkinci telefon uçtan uca teslim senaryoları **ertelendi**.
+
+**QA kararı:** **Build 406 "Bildirimlerde kim gönderdiği görünsün" P1 maddesi gerçek telefonda kısmen çalışıyor fakat **GEÇMEDİ / AÇIK**. Kodun tüm ilgili ekranlarda çalıştığı doğrulanmadı. Bu not, mevcut Build 406 APK veya Firebase kurallarını değiştirmez; yeni APK oluşturulmadı.
