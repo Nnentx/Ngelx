@@ -42,9 +42,9 @@ jobs:
             print(f"\n==== DETAIL {name} line {n+1} ====")
             for k in range(start,end):print(f"{k+1}: {lines[k][:220]}")
         slices=[
-          ('JOIN_FLOW',11839,11960),('ACTIVITY_LIST',22625,22840),('NOTIFICATION_ROW',22940,23130),('NOTIFICATION_HELPERS',23110,23235),
-          ('INTRO_CARD',23390,23560),('INTRO_OWNER_STATE',26840,26945),('PROFILE_HEADER',27600,27765),
-          ('PRIVACY',25645,25750),('FEED_MEDIA_WIDGET',24180,24420),('PROFILE_DRAW',27920,27930)
+          ('NOTIF_TITLE',22685,22820),('NOTIF_AVATAR',22765,22940),('NOTIF_ITEM',23230,23395),
+          ('INTRO_CARD',23395,23495),('INTRO_OWNER_STATE',26880,26925),('PROFILE_HEADER',27700,27735),
+          ('PRIVACY',25645,25750),('FEED_MEDIA_WIDGET',24330,24425),('PROFILE_DRAW',27924,27927)
         ]
         for label,start,end in slices:
           print('\\n======== FULL SLICE',label,'========')
