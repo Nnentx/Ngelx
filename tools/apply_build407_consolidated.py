@@ -202,6 +202,31 @@ def repair_inbox(src):
  return region(src,"    Widget tumIcerigi(){","    Widget sohbetlerIcerigi(){",all_widget)
 m=repair_inbox(m)
 
+# Approved NgelX identity: remove only the oversized feed logo, keep the wordmark.
+m=one(m,"const Logo(kucuk:true,koyuZemin:true),",
+      "const Text('NgelX',style:TextStyle(color:Colors.white,fontSize:21,fontWeight:FontWeight.w900)),",
+      "Akış removes large N logo but retains brand text")
+
+# Feed caption displays one short relative timestamp. Full timestamp remains
+# accessible via a TAP tooltip; source createdAt and sorting are unchanged.
+def short_time(s):
+ old="""            Text(
+              tam.isEmpty?zaman:'$zaman • $tam',
+              style: const TextStyle(
+                color: Colors.white60,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+              ),
+            ),"""
+ new="""            Tooltip(
+              message:tam.isEmpty?zaman:tam,
+              triggerMode:TooltipTriggerMode.tap,
+              child:Text(zaman,
+                style:const TextStyle(color:Colors.white60,fontSize:11,fontWeight:FontWeight.w700)),
+            ),"""
+ return one(s,old,new,"short relative time only")
+m=region(m,"class AkisMetaSatiri extends StatelessWidget","class CanliSayacButonu",short_time)
+
 wr("app/lib/main.dart",m)
 
 # Security rules: a link is only a right to REQUEST; it cannot grant membership.
