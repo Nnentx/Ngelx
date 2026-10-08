@@ -40,3 +40,19 @@ Başlangıç kaydı: Kod yaması ve otomasyon pipeline'ı oluşturuldu, CI sonu�
 - **CANLI FIREBASE YAYINI BAŞARILI:** `deploy-rules` loglarında `Deploying to 'ngelx-44eed'`, `rules file firestore.rules compiled successfully`, `released rules firestore.rules to cloud.firestore`, `Deploy complete!` satırları doğrulandı. Bu, değişen `validInvite` + `validSelfJoin` yetkilendirmesinin NgelX Firebase projesine yayımlandığını gösterir.
 - **Güvenli doğrulama sınırı:** CI/Firestore emulator testinin başarılı olması, gerçek telefonda tüm sekiz başlık için kusursuz deneyimi kanıtlamaz. İkinci telefon E2E hâlâ kullanıcı isteğiyle beklemede. Özellikle feed medya ilk kare performansı görsel düzenlemeyle iyileştirilmeye çalışıldı, bütün cihaz/ağ koşullarında tamamen çözülmüş sayılmaz.
 - **Telefon hızlı son kontrol:** Ayarlar'da 1.0.182/Yapı 406 görünsün; Canlı son özetinin 5 satırı okunabilsin; bildirimlerde eski istekler gerçek profil adını göstersin; geçerli linkle direkt gruba katılım; profil videosunu bir kez değiştirince yeni görüntü; Kaydedilenler kısayolu tek satır. Gerekirse yalnız sorun görülen kısmın kısa videosu yeterli. Yeni büyük test turu istenmiyor.
+
+## Build 406 gerçek Android / Canlı Yayın son kontrol — 45176.mp4 (2026-10-08)
+
+**Kaynak:** Kullanıcının yüklediği yaklaşık 43,6 saniyelik 1080×2392 Android ekran kaydı; hemen önce telefondaki Ayarlar ekranında `v1.0.182 • Yapı 406` doğrulandı. Kapsam: tek telefonla canlı yayın başlatma, paylaşım, kamera/filtre, yayını bitirme, kalıcı özet ve Keşfet dönüşü.
+
+**Görüntüde doğrulanan işlemler:**
+- Yaklaşık 0–11 sn: Canlı yayın hazırlama, başlık (`cvcc`), kamera önizlemesi, görüntü kalite 720p / 30 FPS, gizlilik ve `Canlı yayına başla` çalışıyor. Uygulama birkaç saniye içinde yayını başlatıyor.
+- 11–21 sn: Canlı oturum sayacı ilerliyor. `Canlı yayını NgelX'te paylaş` kişi listesinde iki kişi seçiliyor ve mavi onay bildirimi `Canlı yayını 2 kişiye Aktivite ve Sohbet üzerinden gönderildi.` gösteriyor. **Bu yalnız gönderici tarafı bildirimi**; karşı taraf teslimi (ikinci telefon testi) hâlâ ertelendi.
+- 22–35 sn: Kamera kapatılıp `Kamera kapalı` mesajı gösteriliyor, tekrar açılınca canlı görüntü geri geliyor; Canlı Yayın araçlarındaki filtre/güzellik/görüntü kontrolleri açılıyor.
+- 35–42 sn: `Yayın bitsin mi?` onay penceresi açılıyor; yayın sona erdikten sonra `CANLI YAYIN SONA ERDİ` ve **tek kalıcı beyaz `Canlı yayın özeti`** kartı düzgün görüntüleniyor. **Önceki Build 405'te eksik görünen beş başlık ve sayıları artık görünür**: Süre `00:26`, En yüksek izleyici `0`, Beğeni `0`, Yorum `0`, Hediye puanı `0`. İkonlar, etiketler ve değerler okunuyor. `Keşfet'e dön` tıklanınca Keşfet > Canlı ekranına geçiliyor.
+- 37 sn civarında yayın sonlandırma/oda bağlantısı kapanırken **kısa yükleme spinner'ı** gözleniyor, ardından özet açılıyor; uzun süren takılma veya çökme görünmüyor.
+- Yayın başlığının `cvcc` şeklinde görünmesi, yorum gönderilmiş olduğu anlamına gelmez. Dolayısıyla `Yorum 0` sayısının yanlış olduğu bu video ile kanıtlanmıyor.
+
+**Test kararı:** **Canlı Yayın bitiş özeti yazıları/sayıları görünmüyor P1 maddesi — gerçek telefonda GÖRSEL OLARAK GEÇTİ / KAPATILDI.** Canlı başlatma, kamera kapat/aç, filtre paneli, kapanış onayı, tek özet ve Keşfet dönüşü tek telefon smoke geçti. Sayıların gerçek başka kullanıcı etkileşimleriyle doğru artması, paylaşımın alıcıya teslimi, canlı ses, PK karşılaşması, hediyeler iki hesaplı testler olduğundan halen **ertelendi/doğrulanmadı**. Video tek başına diğer 7 Build 406 maddesinin cihaz testini tamamlamaz.
+
+**İşlem:** QA kaydı güncellendi; yeni kod, Build 407 veya APK oluşturulmadı.
