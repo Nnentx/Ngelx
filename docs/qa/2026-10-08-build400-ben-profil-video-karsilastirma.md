@@ -70,3 +70,9 @@
 - Kapak görselinde yükleme anında görülen geçici boşluk/titreme hâlâ gerçek cihazda izlenecek.
 - Hikâye menüsünün kullanıcı tarafından seçilmesi, paylaşma işleminin tamamlanması, profil verisini kaydetme, arkadaş kaldırma, bütün içerik sekmeleri ve beyaz alt navigasyon cihazda yeniden doğrulanmalıdır.
 - Kodun geçirilmesi `gerçek cihazda doğrulandı` anlamına gelmez.
+
+### Build 401 CI teslim doğrulaması
+- GitHub Actions run: https://github.com/Nnentx/Ngelx/actions/runs/37738991907
+- Sonuç: **success** — Build 399/400/401 regresyonları, Flutter analizi, release APK, imza doğrulaması ve artifact yükleme başarılı.
+- Artifact: NgelX-1.0.177-Build-401-PROFILE-STABILITY-REFERENCE (GitHub artifact 11533242546).
+- **Gerçek cihaz görsel ve işlev testi bekleniyor; Build 401’in menü kontrastı, beyaz navigasyon ve profil kartı sonuçları kullanıcı cihazında tekrar görülmeden cihazda doğrulandı denmeyecek.**
