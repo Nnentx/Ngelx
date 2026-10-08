@@ -34,3 +34,13 @@ Kaynak: 2026-10-08 telefon kayıtları; `docs/qa/2026-10-08-build402-cihaz-video
 - APK: **NgelX 1.0.179 (Build 403)**. Artifact: https://github.com/Nnentx/Ngelx/actions/runs/37762165024/artifacts/11543391577
 - APK ZIP'ten çıkarıldı; SHA-256 değeri checksum dosyasıyla eşleşti. Android'de canlı/oda işlemlerinin gerçek sonuçları ayrıca cihazda test edilmeli.
 - Not: Mevcut sesli oda açılışı/yayın akışı zaten çalışıyordu; Build 403 yeni medya transfer protokolü/LiveKit sunucu değişikliği değildir.
+
+## Build 403 gerçek cihaz: Profil/Ayarlar video QA — 45082.mp4
+
+- Video süresi 61,33 sn; tam rapor: [Build 403 profil telefon testi](./2026-10-08-build403-profil-gercek-cihaz-video-incelemesi.md).
+- **Cihazda gözlenen geçişler başarılı:** Premium ve Cüzdan satırının yalnız mavi vurgusu; profil kapak/avatar/ad/sayaçlar; tanıtım videosu `00:40` süre; okunur video değiştirme/kaldırma alt menüsü; gerçek hikâyeler ve seçenek menüsü; Kaydedilenler'de videoyu açma, 2 kayıttan 1 kayda kaldırma ve başarı bildirimi; beyaz beşli alt navigasyon.
+- **Açık P1:** Kaydedilmiş video thumbnail'leri bazı tekrar girişlerde önce gri, sonra yükleniyor. Medya gerçekten açılıp oynadığı için kaynak dosyanın tamamen bozuk olduğu söylenemez. Önizleme/cache ve gerçek hata/timeout ayrımı ölçülecek.
+- **Açık P1/P2:** Hikâye, video ve Akış geçişlerinde zaman zaman siyah spinner ile bekleme. Süre/tekrar sayısı ve cihaz ağ koşullarını ölçmeden çözüldü denmeyecek.
+- **Açık P2:** Tanıtım videosunda kısa yeniden başlatma/yükleme spinner; referanstaki süre etiketi yerleşimi ve kısayol etiket yazı boyutu küçük tasarım farkları.
+- **Test edilmedi:** Canlı Yayın, Sesli Oda, karşı hesapta mesaj/izin/arkadaşlık, Premium satın alma ve beş profil sekmesinin tümü. Kullanıcı bu kaydı özellikle profil videosu olarak gönderdi.
+- Sadece QA notu kaydedildi; yeni APK ve uygulama kod değişikliği yapılmadı.
