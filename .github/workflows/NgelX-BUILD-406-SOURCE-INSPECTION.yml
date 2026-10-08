@@ -41,4 +41,12 @@ jobs:
             start=max(0,n-22);end=min(len(lines),n+35)
             print(f"\n==== DETAIL {name} line {n+1} ====")
             for k in range(start,end):print(f"{k+1}: {lines[k][:220]}")
+        slices=[
+          ('JOIN_FLOW',11839,11960),('ACTIVITY_LIST',22625,22840),('NOTIFICATION_ROW',22940,23130),('NOTIFICATION_HELPERS',23110,23235),
+          ('INTRO_CARD',23390,23560),('INTRO_OWNER_STATE',26840,26945),('PROFILE_HEADER',27600,27765),
+          ('PRIVACY',25645,25750),('FEED_MEDIA_WIDGET',24180,24420),('PROFILE_DRAW',27920,27930)
+        ]
+        for label,start,end in slices:
+          print('\\n======== FULL SLICE',label,'========')
+          for k in range(start-1,min(end,len(lines))):print(f"{k+1}: {lines[k][:350]}")
         PY
