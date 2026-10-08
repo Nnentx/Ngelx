@@ -7,6 +7,9 @@ b=s.index('\nclass NgelXVideoKapakOnizleme',a);v=s[a:b]
 def one(old,new,label):
  global v
  n=v.count(old)
+ if n==0 and v.count(old.strip())==1:
+  old=old.strip()
+  n=1
  if n!=1:raise SystemExit(f'Build 412 {label}: expected one anchor, got {n}')
  v=v.replace(old,new,1)
 one("childAspectRatio: .72, crossAxisSpacing: 6, mainAxisSpacing: 6",
