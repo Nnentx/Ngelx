@@ -53,15 +53,19 @@ def notifications(src):
                     sender.connectionState==ConnectionState.waiting?'Gönderen yükleniyor':'Kullanıcı';
                 }""","notifications sender join")
  src=src[:left]+part+src[right:]
- src=one(src,
-"""               onTap:()=>_secimModu?_bildirimSec(d.id):_aktiviteAc(context,d),
-             ));
-          }),""",
-"""               onTap:()=>_secimModu?_bildirimSec(d.id):_aktiviteAc(context,d),
+ part=src[left:src.index("\nclass AktiflikDurumuYazisi",left)]
+ close_re=r"onTap:\s*\(\)=>_secimModu\?_bildirimSec\(d\.id\):_aktiviteAc\(context,d\),\s*\)\);\s*\}\),"
+ end_match=re.search(close_re,part)
+ if end_match is None:
+  p=part.find("onTap:()=>_secimModu")
+  raise SystemExit("notification close unmatched: "+repr(part[p:p+380]))
+ replacement="""onTap:()=>_secimModu?_bildirimSec(d.id):_aktiviteAc(context,d),
              ));
               },
             );
-          }),""","notifications row close")
+          }),"""
+ part=part[:end_match.start()]+replacement+part[end_match.end():]
+ src=src[:left]+part+src[src.index("\nclass AktiflikDurumuYazisi",left):]
  return src
 m=notifications(m)
 
