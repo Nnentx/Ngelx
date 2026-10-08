@@ -78,3 +78,14 @@ jobs:
         dump('visitor stats helper','Widget _profilSayac(',3,5)
         dump('editor scaffold','class NgelXOnayliProfilDuzenlePage',0,5)
         PY
+
+    - name: Print actual visitor name and cover area
+      shell: bash
+      run: |
+        python3 - <<'PY'
+        from pathlib import Path
+        s=Path('app/lib/main.dart').read_text().splitlines()
+        start=next(i for i,v in enumerate(s) if v.startswith('class _KullaniciProfilPageState'))
+        for i in range(start+330,min(start+530,len(s))):
+          print(f'PROFILE|{i+1}|{s[i]}')
+        PY
