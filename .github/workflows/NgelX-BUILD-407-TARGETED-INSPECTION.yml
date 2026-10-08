@@ -54,18 +54,9 @@ jobs:
            matches=[i for i,line in enumerate(s) if any(v.casefold() in line.casefold() for v in needles)]
            print("SECTION",section,"COUNT",len(matches))
            for i in matches[:90]:print(str(i+1)+": "+s[i][:195])
-          wanted=[
-            ("JOIN",["class _GrubaKatilPageState"],0,115),
-            ("INBOX_1",["sana arkadaşlık isteği gönderdi"],-13,35),
-            ("INBOX_2",["seni takip etmek istiyor"],-13,40),
-            ("FEED_TABS",["Sana Özel"],-12,23),
-            ("FEED_SEEK",["seekTo("],-12,22),
-            ("CREATE_POLL",["Anket aracı hazırlanıyor"],-22,35),
-            ("CREATE_SUCCESS",["Paylaşım yayınlandı"],-9,19),
-          ]
-          for section,needles,before,after in wanted:
-           found=[i for i,line in enumerate(s) if any(v in line for v in needles)]
-           print("DETAIL",section,"TOTAL",len(found))
-           for i in found[:3]:
-            for k in range(max(0,i+before),min(len(s),i+after)):print(str(k+1)+": "+s[k][:300])
+          ranges=[("INBOX",11870,12020),("NOTIF_CORE",23390,23495),("FEED_HEADER",25870,25915),("FEED_SEEK",7838,7905),("CREATE_MAIN",10943,10985),("CREATE_WIDGETS",11080,11150),("SEARCH",5955,6025),("POST_META",9500,9650)]
+          for label,start,end in ranges:
+           print("DETAIL",label)
+           for i in range(start-1,end):
+            print(str(i+1)+": "+s[i][:340])
           PY
