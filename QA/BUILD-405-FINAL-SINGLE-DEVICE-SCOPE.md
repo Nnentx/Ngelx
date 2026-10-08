@@ -95,3 +95,24 @@ Kullanıcı verisi, yüklenen medya, takipçi/arkadaş bağlantıları, mesajlar
 6. Mevcut grup sohbeti, üye izinleri, gruptan ayrılma, bildirimler ve davet akışları korunacak; **ikinci telefon testi şu an ertelenmiş** durumda.
 
 **Durum:** GitHub QA/Work notlarına alındı. **Kodlanmadı; Build 405 APK değiştirilmedi.** Sonraki toplu düzeltme paketine dahil edilecek.
+
+## Build 405 Hikâyeler / Kaydedilenler gerçek telefon videosu — 45121.mp4 (2026-10-08)
+
+**Kaynak:** Kullanıcının gönderdiği yaklaşık 57,7 saniyelik 1080×2392 Android ekran kaydı. Video depoya yüklenmedi. Bu kayıt Profil > Yeni Hikâye > kamera ve mevcut hikâyeler > Kaydedilenler içeriği senaryosunu gösteriyor. Kullanıcı, ikinci telefon / iki hesap testlerini erteleme kararını koruyor.
+
+### Cihazda gözlenen başarılı işlemler
+- **00–11 sn:** Ben/Profil görünümü, hikâye ekleme menüsü ve mevcut hikâye görüntüleyicisi açılıyor. Fotoğraf ve video hikâyelerinden **2/3 ve 3/3** görüntüleri arasında ilerleniyor; içerikler gerçek görselleri gösteriyor. 10. saniye civarındaki dikey ses kontrolü Android sistem katmanıdır; uygulama bug'ı sayılmaz.
+- **12–21 sn:** Profildeki **Yeni hikâye** menüsünden **Fotoğraf çek** açılıyor; yerel kamera fotoğraf önizlemesini gösteriyor, çekilen fotoğrafın onay ekranı beliriyor. Sistem kamera UI görünümü uygulamanın teması olmak zorunda değildir.
+- **21–34 sn:** Profil üzerinde işlem tamamlanıyor, **Hikâyen 24 saat boyunca yayında ✨** onayı görünüyor. Yeni hikâyenin yükleme işlemi kalıcı kilitlenme göstermiyor.
+- **33–42 sn:** Hikâye görüntüleyicisi bu kez 4 öğe gösteriyor; yeni ve mevcut içerikler fotoğraf olarak görünüyor, **4/4** yeni çekilen görsel açılıyor. Dört hikâye arasında bu videoda önceki Build 404'teki **uzun siyah ekran + beyaz spinner** davranışı tekrarlanmıyor.
+- **45–50 sn:** **Kaydedilenler** açılıyor; gerçek video kapağı görünüyor. Kaydedilmiş videoya dokununca **NgelX paylaşımı** görüntüleyicisi açılıyor; ilk kısa yüklemenin ardından gerçek video içeriği ekranda beliriyor. Silme/kaydetme yeniden yapılmadı.
+- **51–58 sn:** Profil görünümü ve kısa hikâye geri dönüşü mevcut; telefon navigasyonunda kalıcı boş ekran veya uygulama çökmesi görülmüyor.
+
+### Sınırlar ve korunacaklar
+- **Hikâyeler P1 / tek cihaz:** Önceki uzun siyah spinner sorunu, bu kayıt kapsamında **tekrarlanmadı**; tek telefon smoke **geçti**. Zayıf bağlantıda, farklı uzun videolarda ve arka arkaya çok sayıda hikâyede hiçbir zaman olmayacağı sonucu çıkarılmamalı. 12 sn medya timeout/yeniden dene kodu korunacak; bu kayıtta hata tetiklenmediği için `Tekrar dene` butonu fiilen test edilmedi.
+- **Kaydedilenler:** Video önizleme ve içerik açılma **geçti**; kaydet/çıkar işlemleri yeniden sınanmadı. Kısayol etiketindeki mekanik kelime kırılması önceki 45115.mp4 bulgusu olarak açık kalıyor.
+- **Diğer açık tek cihaz kontrol:** Canlı Yayın bitiş kartında ikonlar göründüğü halde süre/izleyici/beğeni/yorum/hediye **metin ve değerleri görünmüyor** (45117.mp4); kod düzeltmesi ve sadece kapanış özeti retesti gerekiyor. Yeni canlı yayın tam turu istemeye gerek yok.
+- **Önceki Work notları:** Takip/arkadaşlık bildirimlerinde gönderen adının eksikliği ve geçerli yetkili grup davet linkiyle onaysız doğrudan katılma istekleri ayrı açık iş kalemleridir.
+- **İkinci telefon / iki hesap:** Kullanıcının isteği üzerine ertelendi ve başarılı olarak işaretlenmedi.
+- **Durum:** QA notu eklendi; **bu işlem uygulama kodunu değiştirmez, Build 406 veya yeni APK oluşturmaz**.
+
