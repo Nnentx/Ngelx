@@ -32,3 +32,27 @@ Kullanıcı verisi, yüklenen medya, takipçi/arkadaş bağlantıları, mesajlar
 - APK ZIP / GitHub artifact: https://github.com/Nnentx/Ngelx/actions/runs/37798305369/artifacts/11560465680
 - Artifact etiketi: `NgelX-1.0.181-Build-405-FINAL-SINGLE-DEVICE` (APK ve .sha256 içerir).
 - Bu CI başarısı Android gerçek cihaz smoke veya ertelenmiş iki-kullanıcı bağlantı testinin yerine geçmez. Kullanıcı artık çoklu uzun test turu istemediğinden kalan tek-telefon doğrulamaları kısa ve hedefli tutulacak.
+
+## Build 405 gerçek Android Profil video QA — 45115.mp4 (2026-10-08)
+
+**Kaynak:** Bu sohbetten gönderilen yaklaşık 58,5 saniyelik 1080×2392 Android ekran videosu. Bundan hemen önceki Ayarlar ekranında NgelX **v1.0.181 / Yapı 405** doğrulandı. Video sadece **Ben/Profil ve tanıtım videosu değiştirme** akışını kapsıyor; hikâyeler, canlı yayın, Kaydedilenler içeriğini açma ve ikinci kullanıcı akışı test edilmedi.
+
+### Gözlemlenen / korunacak çalışan akışlar
+- **00–05 sn:** Beyaz profil sayfası, gerçek kapak ve avatar, profil düzenleme, yeni doğru isimli **Arkadaşlar** butonu; Takip 2 / Takipçi 3 / Etkileşim 21 / Arkadaşlar 3 istatistikleri (yalnız görüntülendi; sunucu değer doğrulaması yapılmadı). Gerçek tanıtım video kartında `00:34` etiket ve oynatıcı görülüyor. Beşli alt navigasyon yerinde.
+- **05–08 sn:** `Tanıtım videosunu değiştir` alt menüsü açılıyor. Android sistem video seçicisinde video seçilip `Bitti` ile onaylanıyor. Galerinin arayüzü Android'e ait.
+- **08–33 sn:** Profile dönülüyor; kapak, avatar, istatistikler ve tanıtım video kartı yerinde kalıyor; video kartı oynatılıyor. **31–34 sn** civarında `Profil tanıtım videosu kaydedildi` bildirimi görülüyor. Görünür klip/kapak bazı anlarda önceki görüntüyü göstermeye devam ediyor.
+- **34–43 sn:** Video kartında `00:34` etiketi korunuyor, bir ara TikTok logolu siyah kare görünüyor (bu kaynak videonun karesi olabilir; NgelX kaynaklı marka overlay veya medya kaybı kanıtı değil). Tanıtım videosu menüsü yeniden açılabiliyor.
+- **43–54 sn:** Kullanıcı Android son uygulamalar/ana ekranına çıkıp NgelX'i yeniden başlatıyor. Bu bir **manuel** uygulamadan çıkış; uygulama çökmesi olarak kaydedilmeyecek.
+- **50–58 sn:** Uygulamaya dönüşte profil görünür, ilk karede kapak/avatar ve video için kısa yükleme/boş yerler var. Tanıtım kartı `Video hazırlanıyor / Tanıtım videosu oynat` konumundan kısa dönen spinner'a geçiyor, **56–58 sn** civarında seçilen `BE HERE` videonun gerçek posterini/önizlemesini ve `00:34` süre etiketini gösteriyor. Kaydın telefon yeniden başlatılması sonrasında kalıcı görünmesi olumlu; bu kayıt yeni videonun bütün 34 saniyesinin oynatıldığını kanıtlamaz.
+
+### Kalan, derleme döngüsü açmadan kayıt altına alınan küçük kusurlar
+1. **P2 — Profil medya cache/refresh:** Video seçimi ve başarılı kaydetme bildirimi sonrası bir süre eski kaynak kareleri görünmeye devam edebiliyor; yeni postere dönüş uygulama yeniden açıldıktan sonra net biçimde görünüyor. Öncelikli teknik kontrol: kaydetme tamamlanınca video URL/generation değişimini dinleme, önceki `VideoPlayerController` ve thumbnail cache geçersizleştirme, bekleyen async sonuçların eski görüntüyü geri yazmaması. Gerçek video dosyasına dokunma.
+2. **P2 — Gereksiz avatar/kapak loader:** 14–27 sn video kartıyla uğraşılırken avatar üstünde beyaz spinner tekrarlıyor, profil kısa süre boş kalabiliyor. Girişte son bitmap'i tutup görsel kaynak değişmedikçe refetch etme; yüklemeyi daha sakin göster.
+3. **P3 — `Kaydedilenler` kısayolunun kelime kırılması:** Kısayol iki satıra mekanik olarak (`Kaydedilenl` / `er`) bölünüyor. Build 405 satır yüksekliği hizalaması tek başına tipografiyi düzeltmemiş. Dar ekran için anlamı korunmuş tek satır ölçekli veya doğal hece ayarlı metin planlanmalı.
+4. **Performans gözlemi, tek başına P1 değil:** 44–46 sn dolaylarında Akış'a geçişte siyah spinner çok kısa görülüyor; başka ekranlar ve video sonradan geliyor. Kalıcı açılmama kanıtı yok. 52–56 sn soğuk başlangıçta tanıtım video hazırlama durumu mevcut ve sonunda görüntü geliyor.
+
+### Kapanış değerlendirmesi
+- **Ben / Profil: temel tek-cihaz smoke geçti; P2/P3 görsel/performance notları açık.** Yeni kullanıcı/medya kaydı kaybolma, veri sıfırlanması veya uygulama çökmesi bu videoda kanıtlanmadı. `Arkadaşlar` etiket düzeltmesi telefonda doğrulandı.
+- **Kapsam dışı ve hâlâ test edilmemiş:** Kaydedilenler videosunu aç/kaldır, 4+ Hikâyede siyah spinner ve hata yeniden dene, Canlı Yayın **sonlandır > tek ve kalıcı özet > Keşfet** sıralaması, sesli oda söz istekleri. Bu videodan geçmiş sayılmayacaklar.
+- **Ertelenen:** İkinci telefon, ikinci hesap, PK karşı kullanıcı, canlı ses ve davet teslimi.
+- **Not:** Bu ekleme QA kaydıdır; yeni kod/Build 406/APK üretimi yapılmış değildir. Uzun tekrar testleri istememek kullanıcının kabul edilmiş tercihidir.
