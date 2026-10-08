@@ -26,3 +26,11 @@
 - Üret tam anket sistemi, gelişmiş arama indeksleri, Akış Araçlar menüsü ve diğer birikmiş tasarım/ürün işleri
 
 **Durum:** Kod GitHub dalında; otomatik test ve APK sonucu için CI takip edilir. Kaynak testleri geçmeden veya APK kurulmadan "tamamlandı" denmeyecek.
+
+## Gerçek telefon QA — 2026-10-09 00:32–00:33, 45244.jpg / 45245.jpg
+
+- **Kurulum doğrulandı:** 45244.jpg Ayarlar > Uygulama güncellemeleri: `v1.0.184 · Yapı 408`.
+- **GEÇTİ / canlı yayın hatası:** 45245.jpg DİLEK Akçay (@dilekizmmz) diğer kullanıcı profilinde, eski bitmiş yayından kalan kırmızı `CANLI` halkası/rozeti ve `Canlı yayını izle` butonu artık görünmüyor. Avatar, ad, biyografi ve tanıtım videosu yerinde. Eski hayalet CANLI hatası bu telefon testinde **tekrarlanmadı**.
+- **Yükleme simgesi:** Tek fotoğrafta istatistikler bölgesinde mor spinner görünüyor. Kullanıcı hemen ardından açıkça **"Yok sorun yok başka test yoksa"** dedi; bunu bug olarak işaretleme, **kullanıcı sorun bildirmedi**.
+- **Henüz gerçek telefonda ayrıca doğrulanmayan Build 408 değişiklikleri:** grupta engellenen kişi uyarısının aynı koşulda ikinci girişte yinelenmemesi; onay/ret sonrası eski istek bildirim metninin duruma dönüşmesi. Kullanıcı bu aşamada başka test istemediğinden **telefon testlerini zorlamadan beklemeye al**; geçti diye raporlama.
+- **Canlı yeni yayın lifecycle testi:** Yeni yayını başlat/bitir çevrimi kayıtta yok; sadece eski bitmiş yayının yanlış görünmemesi doğrulandı.
