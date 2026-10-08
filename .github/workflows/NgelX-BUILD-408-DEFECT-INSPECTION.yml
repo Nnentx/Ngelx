@@ -1,0 +1,68 @@
+name: NgelX BUILD 408 DEFECT INSPECTION
+on:
+  push:
+    branches: [work/build-408-defects-first]
+    paths:
+      - 'tools/apply_build406_final_eight.py'
+      - 'tools/apply_build407_consolidated.py'
+      - 'tools/check_build407_regression.py'
+      - 'tools/check_build406_regression.py'
+      - '.github/workflows/NgelX-BUILD-408-DEFECT-INSPECTION.yml'
+jobs:
+  patch-test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Apply Build 395-406 and test source preservation
+      shell: bash
+      run: |
+        set -euo pipefail
+        python3 -u tools/apply_build395_final_login_inbox_ui.py
+        python3 -u tools/apply_build396_inbox_final_polish.py
+        python3 -u tools/apply_build397_inbox_complete_fixes.py
+        python3 -u tools/apply_build398_login_story_polish.py
+        python3 -u tools/apply_build399_registration_profile_cover.py
+        python3 -u tools/apply_build399_explore_reference_ui.py
+        python3 -u tools/apply_build399_create_reference_ui.py
+        python3 -u tools/apply_build399_profile_reference_ui.py
+        python3 -u tools/check_build399_regression.py
+        python3 -u tools/apply_build400_cover_upload_hotfix.py
+        python3 -u tools/check_build400_cover_upload.py
+        python3 -u tools/apply_build401_profile_stability.py
+        python3 -u tools/check_build401_profile_regression.py
+        python3 -u tools/apply_build402_profile_reference_polish.py
+        python3 -u tools/check_build402_profile_regression.py
+        python3 -u tools/apply_build403_profile_live_audio.py
+        python3 -u tools/check_build403_regression.py
+        python3 -u tools/apply_build404_profile_live_voice_fixes.py
+        python3 -u tools/check_build404_regression.py
+        python3 -u tools/apply_build405_single_device_final.py
+        python3 -u tools/check_build405_regression.py
+        python3 -u tools/apply_build406_final_eight.py
+        python3 -u tools/check_build406_regression.py
+        python3 -u tools/apply_build407_consolidated.py
+        python3 -u tools/check_build407_regression.py
+        python3 -m py_compile tools/apply_build407_consolidated.py tools/check_build407_regression.py
+
+    - name: Print ghost live, group-warning and invite completion source slices
+      shell: bash
+      run: |
+        python3 - <<'PY'
+        from pathlib import Path
+        s=Path('app/lib/main.dart').read_text(encoding='utf-8').splitlines()
+        pats=['Bu canlı yayın bitti','Canlı yayını izle','Bu grupta engellediğin','engellediğin bir kişi','CANLI','liveBroadcast','liveSessionId','isLive','isBroadcasting','_grupKatilmaIsteginiOnayla','İstek onaylandı','group_join_request','_gelenKutusuBildirim','joinRequests','class KullaniciProfilPage','_KullaniciProfilPageState','class _ProfilPageState','_bildirim']
+        print('MAIN-LINES',len(s))
+        hits=[]
+        for i,line in enumerate(s):
+          if any(p.lower() in line.lower() for p in pats):hits.append(i)
+        print('TOTAL-HITS',len(hits))
+        for i in hits[:200]:print('MATCH',i+1,s[i][:270])
+        areas=[('LIVE_ENDED','Bu canlı yayın bitti',-26,27),('LIVE_PROFILE','Canlı yayını izle',-38,36),('BLOCK_WARNING','Bu grupta engellediğin',-48,65),('APPROVAL','İstek onaylandı',-47,40),('NOTIFY','group_join_request',-24,42),('LIVE_FIELD','isLive',-20,35)]
+        for name,term,pre,post in areas:
+          indexes=[i for i,line in enumerate(s) if term.lower() in line.lower()]
+          print('SECTION',name,len(indexes))
+          for i in indexes[:3]:
+            print('FROM',i+1)
+            for k in range(max(0,i+pre),min(len(s),i+post)):
+              print(f'{k+1}: {s[k][:350]}')
+        PY
