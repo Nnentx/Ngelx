@@ -7,6 +7,7 @@ on:
       - 'tools/apply_build407_consolidated.py'
       - 'tools/apply_build408_defects_first.py'
       - 'tools/apply_build409_search_relevance.py'
+      - 'tools/apply_build409_group_notice_fix.py'
       - 'tools/check_build409_search_relevance.py'
       - 'tools/check_build408_defects_first.py'
       - 'tools/check_build407_regression.py'
@@ -48,6 +49,7 @@ jobs:
         python3 -u tools/check_build407_regression.py
         python3 -u tools/apply_build408_defects_first.py
         python3 -u tools/check_build408_defects_first.py
+        python3 -u tools/apply_build409_group_notice_fix.py
         python3 -u tools/apply_build409_search_relevance.py
         python3 -u tools/check_build409_search_relevance.py
         python3 -m py_compile tools/apply_build407_consolidated.py tools/check_build407_regression.py tools/apply_build408_defects_first.py
