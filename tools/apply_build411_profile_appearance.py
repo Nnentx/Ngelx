@@ -126,47 +126,8 @@ def other(s):
                    Positioned(right:-19,bottom:14,child:Container(width:48,height:48,decoration:const BoxDecoration(color:Color(0xFFF6F0FF),shape:BoxShape.circle))),
                  ],""",
       "visitor cover/coverless header")
-    # Put existing safe intro card after interaction controls, matching the
-    # approved profile structure without rebuilding follow/friend operations.
-    old="""               if((v['introVideoUrl']??'').toString().isNotEmpty) ...[
-                 const SizedBox(height:14),
-                 ProfilTanitimVideoKarti(url:(v['introVideoUrl']??'').toString()),
-               ],
-"""
-    s=one(s,old,"","move visitor intro")
-    where="""               const SizedBox(height: 20),
-               if (!erisimVar)"""
-    s=one(s,where,"""               if((v['introVideoUrl']??'').toString().isNotEmpty) ...[
-                 const SizedBox(height:14),
-                 ProfilTanitimVideoKarti(url:(v['introVideoUrl']??'').toString()),
-               ],
-               const SizedBox(height: 20),
-               if (!erisimVar)""","visitor intro below relationship actions")
-    # Rounded stats card and purple accents matching NgelX approved palette.
-    s=one(s,"return Row(mainAxisAlignment:MainAxisAlignment.spaceEvenly,children:[",
-      """return Container(
-                         padding:const EdgeInsets.symmetric(vertical:9,horizontal:4),
-                         decoration:BoxDecoration(
-                           color:const Color(0xFFF7F2FF),
-                           borderRadius:BorderRadius.circular(20),
-                           border:Border.all(color:const Color(0xFFE8DDF9)),
-                         ),
-                         child:Row(mainAxisAlignment:MainAxisAlignment.spaceEvenly,children:[""","visitor stats opening")
-    s=one(s,"""                       ]);
-                     },
-                   );
-                 },
-               ),
-               const SizedBox(height: 22),""",
-      """                       ]));
-                     },
-                   );
-                 },
-               ),
-               const SizedBox(height: 15),""","visitor stats closure")
-    s=one(s,"Widget _profilSayac(BuildContext context,String sayi,String baslik,VoidCallback tiklama)=>InkWell(onTap:tiklama,borderRadius:BorderRadius.circular(12),child:Padding(padding:const EdgeInsets.symmetric(horizontal:6,vertical:8),child:Column(children:[Text(sayi,style:const TextStyle(fontSize:20,fontWeight:FontWeight.w900)),Text(ba",
-      "Widget _profilSayac(BuildContext context,String sayi,String baslik,VoidCallback tiklama)=>InkWell(onTap:tiklama,borderRadius:BorderRadius.circular(12),child:Padding(padding:const EdgeInsets.symmetric(horizontal:6,vertical:8),child:Column(children:[Text(sayi,style:const TextStyle(fontSize:20,fontWeight:FontWeight.w900)),Text(ba",
-      "no-op stats invariant") if False else s
+    # Preserve the existing follow/friend/message controls and intro video.
+    # Their layout can be polished once cover display and mode persistence pass.
     return s
 src=in_class(src,"class _KullaniciProfilPageState extends State<KullaniciProfilPage>","\nclass NgelXVideoKapakOnizleme",other)
 
