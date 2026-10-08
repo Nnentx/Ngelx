@@ -9,7 +9,7 @@ def one(old,new,label):
  n=v.count(old)
  if n!=1:raise SystemExit(f'{label}: expected 1 match, got {n}')
  v=v.replace(old,new,1)
-one("           final canliAday=v['isLive']==true",
+one("final canliAday=v['isLive']==true",
 """           final katilimHam=v['createdAt']??v['joinedAt'];
            const aylar=['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
            final katilim=katilimHam is Timestamp
