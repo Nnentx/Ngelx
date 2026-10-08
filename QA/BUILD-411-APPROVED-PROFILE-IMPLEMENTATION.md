@@ -76,3 +76,35 @@ Kullanıcının görsel olarak onayladığı dört ekran baz alınır:
 **Referans tasarım farkı:** Rojin'in ziyaretçi profilini oluşturan ekranında sayaçlar hâlâ düz sayısal satır; onaylı diğer-profil görselindeki mor ikonlu lavanta stats kartı yok. Bu **görsel eksik**; gerçek verileri, gizliliği ve mevcut buton işlevlerini bozmadan tasarım fazında ele alınmalı. Gerçek kullanıcı fotoğrafları/sayıları referans görselden kopyalanmamalı.
 
 **QA sınıflaması:** `Dilek kendi profilinde kapaksız kaydetme: GEÇTİ`; `Rojin kendi profilinde kapaklı görünüm: GÖRÜLDÜ`; `Kapaksız görünümün diğer hesapta gösterimi: TEST EDİLMEDİ`; `Profil paylaş seçenekleri: GÖRÜLDÜ (paylaşım tamamlanmadı)`.
+
+## Cross-account profile choice VERİFİKASYONU — 45268.mp4, 2026-10-09, 78.95 s
+
+**Bu test, 45267.mp4 için yazılan "başka hesaptan kapaksız görünüm test edilmedi" notunu günceller: ARTIK TEST EDİLDİ.**
+
+- ~00:00: ADEM baykar kendi profili kapaksız, mor istatistik kartı ve çalışan alt navigasyon görülüyor.
+- ~00:03–00:09: Adem hesabından kullanıcı aramasında **DİLEK Akçay** seçiliyor.
+- **~00:10–00:22: Adem (ziyaretçi) → Dilek kapaksız profil GERÇEKTEN açılıyor.** Üstte fotoğraf banner'ı yok; avatar ortada. Gönderiler sekmesi ve 3 sütunlu gerçek paylaşımlar kaydırılıyor. Takip / Mesaj / Arkadaşsınız / Ortak gruplar kontrolü görünüyor. Bu işlemlerin tamamı tıklanıp test edilmiş sayılmaz.
+- ~00:25–00:31: Hesap değiştirici ile Adem'den **DİLEK Akçay** hesabına geçiliyor.
+- ~00:32–00:45: Dilek kendi profili kapaksız. Profili Düzenle'de görünüm seçimi **Kapaksız sade görünüm → Kapaklı görünüm** yapılıyor, Kaydet seçiliyor.
+- ~00:46–00:56: Dilek kendi kapaklı profilini, mevcut fotoğrafları, sayaçları ve intro videosunu görüyor. Ekran görüntüsü paylaşımı Android sistemi üzerinden deneniyor; gerçek sosyal paylaşıma dair kanıt değil.
+- ~00:59–01:03: Hesap değiştirme ile **Adem** hesabına dönülüyor; arama Dilek profiline yöneliyor.
+- **~01:06–01:19 / SON KARE: Adem (ziyaretçi) → Dilek artık kapaklı olarak açılıyor.** Kapak gerçek fotoğrafla gösteriliyor. Hızlı açılışta gösterilen kısa yükleme animasyonu birkaç saniye sonra kayboluyor; bu konuda kullanıcı daha önce 'mor sorun yok, dokunma' dedi. **Hata sayılmayacak.**
+
+### Build 411 çapraz hesap sonuçları
+- Ziyaretçi hesabında kapaksız görünümün yansıması: **GEÇTİ / kullanıcı video doğrulaması**.
+- Görünüm kapaklıya değiştirildikten sonra başka hesabın kapak fotoğrafını göstermesi: **GEÇTİ / kullanıcı video doğrulaması**.
+- Canlı hesabın profil sahibinin tercihini kullanması: **görsel kanıtla doğrulandı**; Firestore altyapısını değiştirme.
+- Bekleyen konu: **piksel/yerleşim bire bir referans uyumu henüz GEÇMEDİ**.
+
+### Kaydedilen tasarım farkları ve kesin gereksinim
+Referans resimleri: kullanıcı konuşmasındaki `45247.png` (kapaksız ziyaretçi profil) ve `45230.png` (kapaklı ziyaretçi profil). Bunlar örnek düzen, örnek kullanıcı/avatar ve sayaç verisi gerçeğe kopyalanmayacak.
+
+1. **Kapaksız ziyaretçi:** Avatar daha büyük ve dekoratif mor halka/balonlarla ortalanmalı; isim, bio, aktiflik ve profil bilgisi aynı hiyerarşide.
+2. **Kapaklı ziyaretçi:** Profil fotoğrafı kapağın **sol-altını örtecek biçimde taşmalı**; isim/@bilgisi fotoğrafın **sağında** ve bio/tarih aşağıdaki hizada olmalı. Şu anda fotoğraf kapağın altında ortada ve içerik çok aşağı kayıyor; gerçek video bunu gösteriyor.
+3. **Her ikisinde** `Takip / Takipçi / Etkileşim / Arkadaşlar` değerleri **mor ikonlu dört bölmeli lavanta kartta**, aynı yükseklik/boşluk ile gösterilmeli. Mevcutta yalnız çıplak 4 sayı ve etiket var; eksik tasarım.
+4. **Her ikisinde** takip / mesaj / arkadaşlık / ortak gruplar **tek hizalı aksiyon satırına** göre yerleşmeli; mevcut iki yarım + iki tam satır tasarımla uyuşmuyor. Ancak küçük ekranlarda okunabilirlik ve mevcut çalışan eylemler/gizlilik/engel kuralları korunmalı.
+5. Kullanıcının onayladığı görseldeki gibi **Tanıtım videosu açıklaması solda, küçük kapak/oynatıcı sağda tek kart**, ardından sekmeler `Gönderiler | Reels | Etiketlenenler`, gerçek içerik grid'i.
+6. Önceden ziyaretçi profilinde bulunan büyük açıklama kartı (`Takip, içerikleri Akışında gösterir...`) referans ziyaretçi görselinde yok; görsel sadeleştirmede mümkünse bu alanda gösterilmemeli, fakat takip/arkadaşlık/gizlilik davranışları silinmemeli.
+7. **Sadece görüntü düzenini değiştir**; gerçek kullanıcı adı, resimler, takip/arkadaşlık sayıları, etkinlik, canlı yayın rozeti mantığı, profil gizliliği, arkadaşlığı kaldırma, takip isteği ve mevcut intro video oynatma bozulmayacak.
+
+**Sonuç: İşlevsel iki görünümün karşı hesaba yansıması doğrulandı. Eksik olan yalnızca onaylanmış iki ziyaretçi görünümüne bire bir görsel uyarlama ve sonraki sürümde gerçek cihaz kontrolü.**
