@@ -130,3 +130,26 @@ Başlangıç kaydı: Kod yaması ve otomasyon pipeline'ı oluşturuldu, CI sonu�
 - Dikey kaydırma, `Sana Özel` oynatımı, son paylaşımın görünmesi, iki zaman biçimi, `Kaydet/Kaydedildi` göstergesi, 5'li alt nav, `Araçlar` açılması ve otomatik kaydırma anahtarının durum değiştirmesi **görsel smoke geçti**.
 - Akış ana ekranında videoların karanlık zeminde gösterilmesi tek başına tema hatası sayılmasın; kullanıcının genel beyaz tema talebi için navigasyon ve beyaz alt paneli korumak yeterli olabilir.
 - **QA kararı:** Akış temel dikey gösterim/gezinti **GEÇTİ**. Kalıcı çökmeye rastlanmadı. **Bir hafif medya geçişi gözlemi, iki menü kullanılabilirliği/karması ve iki güvenlik/tasarım kontrolü açık**. Yeni başlıkları, hâlâ açık `Gelen Kutusu gönderen isimleri` ve `Üret` eksikleriyle sonraki toplu düzeltmede birleştir. **İkinci telefon testleri beklemede**.
+
+## Build 406 / Akış — elle ileri sarma takılması + üst N logosu (45187.mp4, 45186.jpg, 2026-10-08)
+
+**Kullanıcı talebi:** "Sol üstte büyük N logosu kaldır sadece NgelX kalsın" ve "Videoda elle ileri alınca videoyu çok geç düşüyor, onu da hallet, not et." İki kayıt da Akış'ın sonraki **tek toplu düzeltme paketine** dahil.
+
+### A. P1/P2 — Video manuel ileri sarma / seek gecikmesi (45187.mp4)
+- Yaklaşık **21,7 saniyelik Android ekran videosunda**, Akış'ta oynayan yüklenmiş kısa videonun zaman çizgisinden elle ileri alma işlemi sonrasında görüntü yeni konuma hemen geçmiyor. Yaklaşık **8–20. saniyeler boyunca içerik aynı karede kalıyor**, 21. saniye civarında görüntü değişiyor. Bu aralıkta statik kamera sahnesi ihtimali olsa da tekrarlanan kareler ve kullanıcının doğrudan geri bildirimi önemli bir seek/decoder gecikmesine işaret ediyor. Görünür uygulama çökmesi yok.
+- İlk 0–3 saniyede de yeni video yükleme spinner'ı görünüyor; onu **manuel seek gecikmesiyle aynı hata sanma**. Yüklenmiş kaynak videonun TikTok filigranı veya içeriğini uygulama marka hatası diye etiketleme.
+
+**Teknik inceleme / yapılacaklar:**
+1. Akış `VideoPlayerController.seekTo` ve zaman çubuğu gesture kodundaki `seekTo` çağrılarını incele. Sürükleme boyunca ağ/decoder için çok sayıda yarışan istek göndermek yerine önizleme/progress'i kullanıcıya anlık göster, `onChangeEnd` sonrası son konuma tek asıl seek çağrısı yap; gerekiyorsa 100–200 ms debounce/throttle kullan.
+2. Eski seek istekleri yeni seçilen konumu geri yazmasın (nesil/token kontrolü); oynatıcı yeniden kurulmasın; kullanıcı ileri aldığında son kare veya küçük, anlaşılır `Video hazırlanıyor` göstergesi ile ekran donmuş gibi kalmasın. Seek tamamlandığı gerçek medya pozisyonunda gösterilsin, oynatma durumu ve ses korunarak devam etsin.
+3. Uzak video `Range`/CDN keyframe/codec desteğini ve buffering state'ini denetle; çok uzun keyframe aralığı veya `seekTo` sonrası network yeniden doldurma ihtimalini araştır. Başka kullanıcı videolarını/kaliteyi silme veya değiştirme.
+4. **Kabul:** Tek cihazda aynı tür 30–60 sn videoyu üç farklı konuma (ör. ortası, sonuna yakın, geriye) sürüklediğinde gösterge yeni konuma anında tepki versin, kare kabul edilebilir kısa sürede güncellensin; donma 10+ sn sürmesin. Ağ/cihaz kaynaklı bekleme durumunda spinner/açık hata gösterilsin. Önceki oynatma, otomatik kaydırma, 0.5x–2x hız, pause/play, Kaydet/Araçlar/Paylaş işlevleri korunacak.
+
+**Durum:** Gerçek telefon video gözlemiyle **AÇIK, henüz düzeltilmedi**. Sonraki toplu yamada öncelikli; yeni APK üretimi yok.
+
+### B. P3 — Sol üstte büyük N logo fazlalığı (45186.jpg)
+- Kullanıcı Akış ekranının en üst solunda görünen **büyük renkli N logosunu kaldırmak**, yanında yalnız **`NgelX` yazısını korumak** istiyor.
+- Sadece **Akış AppBar/üst başlığı** kapsamda. Takip / Sana Özel sekmeleri, arama ikonu, üst güvenli alan, alt navigasyon ve marka yazısının mevcut konumu/dengesi korunacak. Profil/Üret/diğer sayfalardaki logolara gereksiz yan etki yapma.
+- **Kabul:** Akış üstünde renkli N logosu görünmez, yalnız NgelX metni düzgün sola hizalanır; dar ekranlarda çakışma yaşanmaz.
+
+**Durum:** Bu talepler şimdi GitHub Work QA kaydında; kodlanmadı, Build 406 APK değişmedi. `Gelen Kutusu gönderici isimleri`, `Üret` ve diğer `Akış` rötuşları ile birleştirilecek. İkinci telefon testleri ertelenmiş kalır.
