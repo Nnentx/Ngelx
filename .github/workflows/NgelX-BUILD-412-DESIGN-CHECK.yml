@@ -14,6 +14,7 @@ on:
       - 'tools/check_build411_profile.py'
       - 'tools/apply_build412_visitor_layout.py'
       - 'tools/apply_build412_visitor_actions.py'
+      - 'tools/apply_build412_visitor_grid.py'
       - 'tools/apply_build412_editor_safe_area.py'
       - 'tools/check_build412_profile_ui.py'
       - 'tools/check_build408_defects_first.py'
@@ -69,6 +70,7 @@ jobs:
         python3 -u tools/check_build411_profile.py
         python3 -u tools/apply_build412_visitor_layout.py
         python3 -u tools/apply_build412_visitor_actions.py
+        python3 -u tools/apply_build412_visitor_grid.py
         python3 -u tools/apply_build412_editor_safe_area.py
         python3 -u tools/check_build412_profile_ui.py
         python3 -m py_compile tools/apply_build412_visitor_layout.py tools/apply_build412_visitor_actions.py tools/apply_build412_editor_safe_area.py tools/check_build412_profile_ui.py
