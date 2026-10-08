@@ -80,8 +80,9 @@ m=one(m,"'forYou': {'tr':'Sana Özel'","'forYou': {'tr':'Radar'","feed Radar tab
 
 # Seeking: do NOT submit one remote seek for each onPointerMove gesture.
 # Retain immediate scrub thumb update; perform the seek once, on release.
-needle="    unawaited(kontrol.seekTo(Duration(milliseconds:hedef)));\n    if(mounted)setState((){});"
-m=one(m,needle,"    if(mounted)setState((){});","fast seek gesture without overlapping decoder requests")
+needle=r"(?m)^[ \\t]*unawaited\\(kontrol\\.seekTo\\(Duration\\(milliseconds:hedef\\)\\)\\);\\n(?=[ \\t]*if\\(mounted\\)setState\\(\\(\\)\\{\\}\\);)"
+m,count=re.subn(needle,"",m)
+if count!=1:raise SystemExit(f"fast seek gesture anchor: {count}")
 
 # Reduce multiple sticky snackbars without changing success payload or navigation.
 needle="""      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
