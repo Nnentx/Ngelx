@@ -19,8 +19,8 @@ def in_class(s,begin,end,fn):
 
 def owner(s):
     s=one(s,"  String kapakUrl = '';","  String kapakUrl = '';\n  String profilGorunumu = '';","owner mode field")
-    s=one(s,"           kapakUrl = (veri['coverPhotoUrl'] ?? '').toString();",
-      "           kapakUrl = (veri['coverPhotoUrl'] ?? '').toString();\n           profilGorunumu = (veri['profileViewMode'] ?? '').toString();","owner load mode")
+    s=one(s,"kapakUrl = (veri['coverPhotoUrl'] ?? '').toString();",
+      "kapakUrl = (veri['coverPhotoUrl'] ?? '').toString();\n           profilGorunumu = (veri['profileViewMode'] ?? '').toString();","owner load mode")
     # Retain the old profile editor for compatibility; the prominent Edit action
     # opens the approved full-screen editor and asks the old owner state to reload.
     start="  Future<void> duzenle() async {"
