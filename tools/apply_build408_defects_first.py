@@ -64,7 +64,7 @@ def fix_repeated_block_dialog(s):
        }"""
     s=one(s,old,new,"block-warning repeated on every group reopen")
     s=one(s,
-      "         if(!gir&&mounted)Navigator.maybePop(context);",
+      "if(!gir&&mounted)Navigator.maybePop(context);",
       """         if(gir)await prefs.setString(anahtar,imza);
          if(!gir&&mounted)Navigator.maybePop(context);""",
       "remember acceptance only, preserve cancel action")
