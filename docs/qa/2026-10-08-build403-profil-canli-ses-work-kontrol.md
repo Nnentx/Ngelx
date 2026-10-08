@@ -27,3 +27,10 @@ Kaynak: 2026-10-08 telefon kayıtları; `docs/qa/2026-10-08-build402-cihaz-video
 ## Uygulama/teslim ölçütleri
 `tools/apply_build403_profile_live_audio.py` ardından `tools/check_build403_regression.py` → Flutter analizi → sabit imzalı release APK 1.0.179+403 → artifact. Sonrasında gerçek cihaz görüntüsü ve iki hesapla bağlantı testleri.
 **Bu not, tek başına telefon testinin geçtiğine ilişkin kanıt değildir.**
+
+## CI ve teslim sonucu — 2026-10-08
+- GitHub Actions: https://github.com/Nnentx/Ngelx/actions/runs/37762165024
+- Sonuç: **success**. Build 399–403 regresyonları, Flutter analizi, imzalı release APK ve artifact yükleme başarılı.
+- APK: **NgelX 1.0.179 (Build 403)**. Artifact: https://github.com/Nnentx/Ngelx/actions/runs/37762165024/artifacts/11543391577
+- APK ZIP'ten çıkarıldı; SHA-256 değeri checksum dosyasıyla eşleşti. Android'de canlı/oda işlemlerinin gerçek sonuçları ayrıca cihazda test edilmeli.
+- Not: Mevcut sesli oda açılışı/yayın akışı zaten çalışıyordu; Build 403 yeni medya transfer protokolü/LiveKit sunucu değişikliği değildir.
