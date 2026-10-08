@@ -77,18 +77,15 @@ def join(src):
  end=src.index("await chat.update({",start)
  if "group_join_request" not in src[start:end]:raise SystemExit("invite-approval block unexpectedly changed")
  src=src[:start]+src[end:]
- src=one(src,
-"""       final iv=inviteSnap.data()??<String,dynamic>{};
-       final chatId=(iv['chatId']??'').toString();""",
-"""       final iv=inviteSnap.data()??<String,dynamic>{};
+ src=one(src,"final iv=inviteSnap.data()??<String,dynamic>{};",
+"""final iv=inviteSnap.data()??<String,dynamic>{};
        final expires=iv['expiresAt'];
        if(iv['revoked']==true||iv['active']==false||
            (expires is Timestamp&&expires.toDate().isBefore(DateTime.now()))){
          if(mounted)ScaffoldMessenger.of(context).showSnackBar(
            const SnackBar(content:Text('Bu grup daveti artık geçerli değil.')));
          return;
-       }
-       final chatId=(iv['chatId']??'').toString();""","invite expiry/revocation")
+       }""","invite expiry/revocation")
  src=one(src,
 """'Grup yöneticisi onay istiyorsa önce katılma isteğin gönderilir. Onaylandığında bildirim alırsın.'""",
 """'Geçerli davet bağlantısı veya kodu ile yönetici onayı beklemeden katılabilirsin. Üyelik sınırı ve grup güvenliği kuralları geçerlidir.'""","invite help text")
