@@ -33,3 +33,19 @@
 - **Canlı Firebase güvenlik dağıtımı DOĞRULANDI:** `deploy-rules` GitHub Actions logları `Deploying to 'ngelx-44eed'`, `rules file firestore.rules compiled successfully`, `released rules firestore.rules to cloud.firestore`, `Deploy complete!` çıktılarını doğruladı. Böylece Build406'da izin verilen özel link `autojoin` yolu üretim Firestore kurallarında kapatıldı; davet linkiyle katılım için `pending` ve kurucu/yönetici onayı beklenir. Bağımsız keşfedilebilir/açık gruplarda izinli genel katılım kuralları kapsam dışında korunmuştur.
 - **Telefon testi sınırı:** APK CI başarıyla üretildi, ama bu Build407 APK'nin gerçek Android cihazda kurulduğu ve sekme/tarih/seek/bildirim davranışlarının telefonda geçtiği henüz kanıtlanmadı. İkinci telefon testleri ertelendi. Karmaşık anket oluşturma/oylama özellikleri ve tüm ölçekli indeksli arama halen yapılmadı; **22 başlığın tamamı bitmiş** denmeyecek.
 - **Kısa doğrulama:** v1.0.183 Yapı 407, `NgelX | Çevrem | Radar`, süre etiketi, manuel video ileri sarma, Bildirimler ve Tümü gerçek gönderen adları, Üret kart etiketleri, başarılı paylaşım toast; daha sonra geçerli linki olan başvuranın yönetici onayına düşmesi (özel güvenlik kuralları üretime dağıtıldı, iki hesap E2E beklemede).
+
+## Build 407 gerçek cihaz / Akış manuel ileri sarma kontrolü — 45215.mp4 (2026-10-08)
+
+**Kaynak:** Kullanıcının gönderdiği yaklaşık **41,9 saniyelik 1080×2392** Android ekran kaydı. Daha önce Ayarlar'da **v1.0.183 / Yapı 407** ve Akış'ta **NgelX | Çevrem | Radar** görünümü telefon ekranıyla doğrulandı.
+
+**Gözlemler:**
+- **0–9 sn:** `Radar` akışında 34 saniyelik video oynuyor. Kullanıcının video zaman çubuğuyla etkileşimi sırasında **`00:07 / 00:34`** önizleme göstergesi beliriyor; ilerleme çizgisi ve videodaki görüntü daha ileri sahnelere geçiyor. Önceki Build 406 videosunda iletilen yaklaşık 10 saniyeyi aşan aynı karede kalma davranışı **bu kayıtta tekrarlanmıyor**.
+- **9–14 sn:** Görüntü `TikTok` yazılı outro'ya geliyor; bu yazı **yüklenen videonun içeriği**, NgelX tarafından yeni eklenen uygulama logosu olarak değerlendirilmemeli.
+- **14–17 sn:** Bir sonraki videoya geçerken kısa siyah ekran ve turkuaz spinner görünüyor; ardından `selam yazii` videonun içeriği açılıyor. **Başka videoya ilk girişte kısa medya yükleme**, manuel seek donmasıyla karıştırılmamalı.
+- **18–24 sn:** `Çevrem` sekmesine geçiş, kısa yükleme ve paylaşımlar gözleniyor; ardından profil/arama açılıyor. Bu bölüm video ileri sarma testinin kapsamına girmez.
+- **34–42 sn:** `Radar` fotoğraf içerikleri kaydırılıyor; sabit fotoğraflardaki değişmeyen sahneler seek gecikmesi sayılmamalı.
+- Kayıt boyunca uygulama çökmesi veya uzun süre boyunca kilitlenmiş ekran görünmüyor.
+
+**QA kararı:** **Build 407 video ileri sarma için tek cihaz smoke — OLUMLU; önceki uzun donma tekrar etmedi.** Ancak cihazın gerçek `seekTo` tamamlanma zamanını ölçen telemetri ve farklı ağ/video kodlayıcılarında tekrar test olmadığı için her koşulda kesin kapandı iddiası yok. **Ayrı P2 açık performans rötuşu:** yeni videoya geçişte yaklaşık 1–3 saniyelik siyah ekran/spinner görülebiliyor; poster/buffer göstergesi ve medya ön yükleme iyileştirmesi sonraki toplu paket için kayıtlı. TikTok outro, kullanıcının yüklediği kaynak medyanın kendisidir.
+
+**Bu işlem:** QA notu; **mevcut Build 407 kaynak kodu/APK ve canlı Firebase kuralları değiştirilmedi**. İkinci telefon testleri kullanıcı isteğiyle beklemede kalır.
