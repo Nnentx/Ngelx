@@ -24,8 +24,8 @@ m=one(m,"defaultValue: '1.0.183'","defaultValue: '1.0.184'","settings semantic v
 # missing and stale sessions, without overwriting user/profile documents.
 def fix_other_profile(s):
     s=one(s,
-      "           final canli=v['isLive']==true&&(v['currentLiveId']??'').toString().isNotEmpty;",
-      "           final canliAday=v['isLive']==true&&(v['currentLiveId']??'').toString().isNotEmpty;",
+      "final canli=v['isLive']==true&&(v['currentLiveId']??'').toString().isNotEmpty;",
+      "final canliAday=v['isLive']==true&&(v['currentLiveId']??'').toString().isNotEmpty;",
       "remove false live user flag from other profile")
     opening="""           final altGuvenliAlan=36.0;
            return ListView(
