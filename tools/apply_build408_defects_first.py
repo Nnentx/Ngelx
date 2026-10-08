@@ -75,10 +75,8 @@ m=section(m,"class _GrupSohbetPageState extends State<GrupSohbetPage>","class ",
 # should stop saying "wants to join" after founder/admin accepts or rejects it.
 # Resolve its status from the pending request document, not message text.
 def fix_activity(s):
-    start="""   Widget _bildirimBasligiDurumlu(Map<String,dynamic> v,bool okundu){
-     if(!_canliAktivitesi(v))return _bildirimBasligi(v,okundu);"""
-    new="""   Widget _bildirimBasligiDurumlu(Map<String,dynamic> v,bool okundu){
-     final tur=(v['type']??v['eventKind']??'').toString();
+    start="if(!_canliAktivitesi(v))return _bildirimBasligi(v,okundu);"
+    new="""final tur=(v['type']??v['eventKind']??'').toString();
      if(tur=='group_join_request'||(v['eventKind']??'')=='group_join_request'){
        final chatId=(v['chatId']??v['groupId']??v['sourceId']??'').toString();
        final memberId=(v['fromUid']??v['senderUid']??v['senderId']??'').toString();
