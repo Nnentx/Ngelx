@@ -193,8 +193,8 @@ def repair_inbox(src):
     "final d=item['doc'] as QueryDocumentSnapshot<Map<String,dynamic>>,v=d.data();",
     "final d=item['doc'] as QueryDocumentSnapshot<Map<String,dynamic>>;\n                   return bildirimGonderenIle(d.data(),(v){",
     "inbox all identity resolution")
-  branch=s.index("if(kind=='notification'){")
-  branch_end=s.index("final d=item['doc']",branch)
+  branch=s.index("return bildirimGonderenIle(d.data(),(v){")
+  branch_end=s.index("final d=item['doc']",branch+len("return bildirimGonderenIle(d.data(),(v){"))
   close=s.rfind(");",branch,branch_end)
   if close<0:raise SystemExit("inbox all ListTile closure not found")
   return s[:close+2]+"\n                   });"+s[close+2:]
