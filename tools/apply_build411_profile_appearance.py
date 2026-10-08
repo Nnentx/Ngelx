@@ -40,7 +40,8 @@ def owner(s):
         onTanitim:tanitimVideosuYukle,
       ),
     ));
-    if(mounted&&degisti==true)await profiliGetir();
+    // Media and cover removal save immediately, even when the editor is closed without form Save.
+    if(mounted)await profiliGetir();
   }
 
 """
