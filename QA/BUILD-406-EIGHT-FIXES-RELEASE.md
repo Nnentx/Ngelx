@@ -165,3 +165,18 @@ Başlangıç kaydı: Kod yaması ve otomasyon pipeline'ı oluşturuldu, CI sonu�
 - Paylaşım yazısı, kullanıcı adı, video ve diğer aksiyonlar korunacak. Üstteki büyük N logosunu kaldırma ve `seekTo` gecikmesini giderme notlarıyla **tek Akış tasarım/performans paketinde** ele alınsın.
 
 **Durum:** Kullanıcıya öneri olarak sunuldu, GitHub QA/Work notlarına kaydedildi; **kod değiştirilmedi / yeni APK oluşturulmadı**.
+
+## NgelX arama alaka düzeyi — TikTok örnek videosu 45185.mp4 (2026-10-08)
+
+**Kullanıcı isteği:** "Arama kısmına örneğin Cemil Tugay yazdım bak aynı Cemil Tugay videoları çıkıyor onu da not et." Bu yaklaşık **40,5 saniyelik referans video**, **TikTok uygulaması** içindeki arama örneğini gösteriyor; doğrudan NgelX'in çalışmadığına veya NgelX'te mükerrer kayıt üretildiğine dair ekran kanıtı **değil**. Kullanıcının örneği özellikle **aranan ad/konuyla ilgili videoların sonuçlarda görünmesi** beklentisine işaret ediyor. Video sonuçları içinde aynı kişi hakkında farklı klipler görülebiliyor; aynı video dosyasının birebir kopya olarak listelendiği bu videodan kesin çıkarılamaz.
+
+**Sonraki toplu arama geliştirmesi (Keşfet / Akış arama) kabul kriterleri:**
+1. `Cemil Tugay` gibi iki sözcüklü kişi/konu sorgusunda adı, video başlığı, açıklaması, hashtag'leri ve kullanıcı adı gibi arama alanlarından **gerçekten alakalı** eşleşen videolar göster. Hem tam ifade hem kelimelere ayrılmış eşleşmeleri dengeli sırala; harf büyüklüğü, Türkçe karakterler ve yazım varyantlarını doğru normalize et.
+2. **Alaka düzeyi önce:** tam isim ve başlık eşleşmesi, konu/etiket eşleşmesi, sonra metin içindeki zayıf eşleşmeler. Güncellik ve etkileşimi yardımcı sinyal yap; yalnız popüler olduğu için alakasız videoları üste çıkarma.
+3. Aynı kişinin/konunun **farklı videoları ayrı sonuçlar** olarak kalmalı. Yalnız aynı **gönderi/video kimliği** arama sonucu sorgu birleşiminde birden çok kez geliyorsa sonuç listesindeki tekrarları temizle; yanlışlıkla ilgili videoları silme.
+4. `Videolar` sekmesi varsa klipler orada listelensin; arama tipi `Kullanıcılar / Videolar / Fotoğraflar / Canlı` ayrımında filtreler doğru çalışsın. İçerik gizliliği, engellenen hesaplar, silinmiş içerikler ve moderasyon filtreleri korunmalı.
+5. Arama sonuç kartında açıklama, hesap adı, mümkünse gerçek video posteri göster; karta dokununca **doğru video** açılıp oynasın. Sonuç sayfalandırma/pagination ve boş/az sonuç durumları test edilsin. Metin aynı olsa bile farklı UID/post id'leri yanlış birleştirilmesin.
+6. Küçük kapsamlı telefon testi: `Cemil Tugay`, daha uzun `Cemil Tugay konuşması`, kısmi/yanlış yazım ve alakasız sorguda beklenen sıralama/kapsam; yeniden aramada aynı post çoğalmamalı.
+7. **Önemli ayrım:** Kullanıcı örnek olarak **TikTok** videosu verdi. Bu kayıt, NgelX'in gerçek arama sonuçları için bir hata teşhisi değil; **ürün davranışı/arama kalitesi geliştirme isteği**dir. Kod ve Firestore dizin/query/index yapısı incelenmeden hazır/bozuk denemez.
+
+**Durum:** Work QA'da **kayıtlı**, henüz kodlanmadı / yeni APK oluşturulmadı. Kullanıcının kabul ettiği tek toplu düzeltme paketinde `Gelen Kutusu gönderen adları`, `Üret` ve `Akış` eksikleriyle birleştir.
