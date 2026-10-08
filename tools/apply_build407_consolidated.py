@@ -137,6 +137,75 @@ new="""final icerikler = snap.data![1].docs.where((d){
                  });"""
 m=one(m,old,new,"rank video search for the multiword topic")
 
+
+# Fix BOTH inbox filters. Build 406 resolved only the separate Activity page;
+# the in-box Tümü/Bildirimler lists rendered raw text and lost sender identity.
+def repair_inbox(src):
+ anchor="    Widget bildirimlerIcerigi(){"
+ helper="""    Widget bildirimGonderenIle(Map<String,dynamic> ham,
+      Widget Function(Map<String,dynamic>) goster){
+      final from=(ham['fromUid']??ham['senderUid']??ham['senderId']??ham['actorUid']??'').toString();
+      return StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
+        stream:from.isEmpty?null:FirebaseFirestore.instance.collection('users').doc(from).snapshots(),
+        builder:(_,snap){
+          final profil=snap.data?.data()??<String,dynamic>{};
+          final v=<String,dynamic>{...ham};
+          final tur=(v['type']??'').toString();
+          final istek=tur=='follow_request'||tur=='friend_request'||tur=='friend';
+          final ad=(profil['displayName']??profil['username']??v['senderName']??v['fromName']??'').toString().trim();
+          final foto=(profil['photoUrl']??v['photoUrl']??v['senderPhotoUrl']??'').toString().trim();
+          if(foto.isNotEmpty)v['photoUrl']=foto;
+          if(ad.isNotEmpty)v['senderName']=ad;
+          if(istek){
+            final metin=(ham['text']??ham['message']??ham['content']??'').toString().trim();
+            if(ad.isEmpty){
+              v['text']=snap.connectionState==ConnectionState.waiting
+                ?'Gönderen yükleniyor • $metin'
+                :'Gönderen hesabı kullanılamıyor • $metin';
+            }else{
+              v['text']=metin.toLowerCase().startsWith(ad.toLowerCase())?metin:'$ad $metin';
+            }
+          }
+          return goster(v);
+        },
+      );
+    }
+
+"""
+ if src.count(anchor)!=1:raise SystemExit("inbox helper insertion anchor count drift")
+ src=src.replace(anchor,helper+anchor,1)
+ def notif_widget(s):
+  s=one(s,
+    "final d=docs[i],v=d.data(),okundu=v['read']==true;",
+    "final d=docs[i];\n              return bildirimGonderenIle(d.data(),(v){\n               final okundu=v['read']==true;",
+    "inbox notifications profile resolution")
+  original="""                );
+              },
+            );"""
+  updated="""                );
+              });
+              },
+            );"""
+  return one(s,original,updated,"inbox notifications builder closure")
+ src=region(src,"    Widget bildirimlerIcerigi(){","    Widget isteklerIcerigi(){",notif_widget)
+ def all_widget(s):
+  s=one(s,
+    "final d=item['doc'] as QueryDocumentSnapshot<Map<String,dynamic>>,v=d.data();",
+    "final d=item['doc'] as QueryDocumentSnapshot<Map<String,dynamic>>;\n                   return bildirimGonderenIle(d.data(),(v){",
+    "inbox all identity resolution")
+  old="""                   );
+                 }
+
+                 final d=item['doc']"""
+  new="""                   );
+                   });
+                 }
+
+                 final d=item['doc']"""
+  return one(s,old,new,"inbox all notification closure")
+ return region(src,"    Widget tumIcerigi(){","    Widget sohbetlerIcerigi(){",all_widget)
+m=repair_inbox(m)
+
 wr("app/lib/main.dart",m)
 
 # Security rules: a link is only a right to REQUEST; it cannot grant membership.
