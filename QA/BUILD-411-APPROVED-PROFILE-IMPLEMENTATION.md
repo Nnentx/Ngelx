@@ -57,3 +57,22 @@ Kullanıcının görsel olarak onayladığı dört ekran baz alınır:
 **Doğrulanmayan noktalar:** kapaksız moda geçilip *kaydedildikten sonra diğer hesaptan* yeniden açıldığında kapak gizlendiği, tüm butonların aksiyonlarının doğru tamamlandığı ve piksel-birebir eşleşme videoda eksiksiz test edilmedi. Bunları geçti diye raporlama. Mor spinner hakkında önceki kullanıcı açıklaması geçerlidir: **bu alanda sorun yok, değiştirme**.
 
 **Takip:** Build 411 işlevsel temel geçti; tasarım ince uyumu için yeni bir Work değişiklik paketi ve yeni APK/telefon testi gerekir.
+
+## Kapaksız görünüm son-kare telefon testi — 45267.mp4 (~49.96 s)
+
+**Video baştan sona, son kareye kadar incelendi.**
+- **00:00–00:07 Dilek Akçay kendi profili:** `Profili Düzenle` içinde `Kapaksız sade görünüm` seçildi. Önizleme kartında kapaksız seçenek de seçili görünüyor; kullanıcı `Kaydet` tuşuna bastı, `Kaydediliyor...` geri bildirimi gösterildi.
+- **00:08–00:09:** Dilek'in **kendi kapaksız profili** gerçekten görünüyor. Kapak banner'ı yok; ortalı avatar, kullanıcı adı, bio/konum/katılma bilgisi, dört mor ikonlu sayaç (2/4/26/3), Profili Düzenle, Arkadaşlar ve tanıtım videosu kartı var. **Kendi hesapta kapaksız kaydetme/açma GEÇTİ.**
+- **00:10–00:14, 00:21–00:24:** Hikâye görüntüleme açılıyor, kısa yüklemeden sonra video hikâye görüntüleniyor ve profile dönüş çalışıyor. Geçici yükleme gösterimini veya eski kullanıcının mor spinner notunu hata diye etiketleme.
+- **00:18–00:27:** Kaydedilenler, Arşiv, Hikâyeler, Gizlilik, Ayarlar kısayolları; öne çıkanlar ve üç sütunlu gönderi grid'i kapaksız profil altında görünüyor. Kısayollara tek tek basılıp işlevleri sınanmadı.
+- **00:28–00:31:** Hesap değiştirme ekranından Dilek hesabı yerine **Rojin Candan** hesabına geçildi; Rojin satırı `Bu hesap` durumuna geldi. Başka kullanıcıların e-posta adreslerini QA'ya kopyalama.
+- **00:32–00:44:** Rojin hesabındayken `r` aramasıyla **Rojin'in kendi** profiline gidildi, profilin **kapaklı** hali ve gerçek fotoğrafları görüntülendi; grid aşağı kaydırıldı. Rojin'in kendi hesabı olduğu için takip/mesaj/arkadaşlık eylemlerinin çıkmaması bu videoda **hata kanıtı değil**.
+- **00:45–00:47:** Profil paylaş menüsü açıldı, NgelX içi / diğer uygulamalarda paylaş seçenekleri görüntülendi. Paylaşımın tamamlandığı test edilmedi.
+- **00:48–video bitişi (~00:49.96):** Paylaş menüsü kapatıldı, Rojin'in kapaklı profil ekranına dönüldü. **Son kare kontrol edildi.**
+- **Gözlenen cihaz sonucu:** Görünür uygulama çökmesi yok, ama kullanıcı işlemlerinin yalnız göründüğü ölçüde doğrulandığını belirt.
+
+**Açık doğrulama:** Rojin hesabından **Dilek Akçay'ın kapaksız profiline** girilmedi. Dolayısıyla **kapaksız görünümün başka hesaba yansıması bu videoda doğrulanmadı**. Sonradan yapılacak çapraz hesap testi: Rojin aktifken Dilek'i arayıp aç; kapağın görünmemesini, fotoğrafın ortalanmasını ve yalnızca ziyaretçiye ait işlem butonlarını doğrula. Şimdilik kullanıcıdan ek test istemek zorunda değiliz.
+
+**Referans tasarım farkı:** Rojin'in ziyaretçi profilini oluşturan ekranında sayaçlar hâlâ düz sayısal satır; onaylı diğer-profil görselindeki mor ikonlu lavanta stats kartı yok. Bu **görsel eksik**; gerçek verileri, gizliliği ve mevcut buton işlevlerini bozmadan tasarım fazında ele alınmalı. Gerçek kullanıcı fotoğrafları/sayıları referans görselden kopyalanmamalı.
+
+**QA sınıflaması:** `Dilek kendi profilinde kapaksız kaydetme: GEÇTİ`; `Rojin kendi profilinde kapaklı görünüm: GÖRÜLDÜ`; `Kapaksız görünümün diğer hesapta gösterimi: TEST EDİLMEDİ`; `Profil paylaş seçenekleri: GÖRÜLDÜ (paylaşım tamamlanmadı)`.
