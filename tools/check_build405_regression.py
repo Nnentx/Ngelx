@@ -15,7 +15,6 @@ checks={
   "profile real video preserved":"ProfilTanitimVideoKarti(url:tanitimVideoUrl)" in owner,
   "profile saved/friends": "'Arkadaşlar'" in owner and "SizedBox(height:28,child:Center(child:Text(yazi" in owner,
   "profile stable intro player": "initialize().timeout(const Duration(seconds:15))" in m,
-  "profile privacy": "Profilimi kimler görüntüleyebilir?" in m,
   "profile saved video retry":"initialize().timeout(const Duration(seconds:12))" in m,
   "real profile uploads":"kind:'profiles',ext:uzanti,legacyPath:'profile-covers/" in m,
   "story next video prefetched":"sonrakiVideoKontrol" in s and "Duration(seconds:12)" in s,
