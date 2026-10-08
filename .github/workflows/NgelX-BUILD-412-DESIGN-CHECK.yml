@@ -1,0 +1,87 @@
+name: NgelX BUILD 412 DESIGN CHECK
+on:
+  push:
+    branches: [work/build-412-profile-design-fixes]
+    paths:
+      - 'tools/apply_build406_final_eight.py'
+      - 'tools/apply_build407_consolidated.py'
+      - 'tools/apply_build408_defects_first.py'
+      - 'tools/apply_build409_search_relevance.py'
+      - 'tools/apply_build409_group_notice_fix.py'
+      - 'tools/check_build409_search_relevance.py'
+      - 'tools/apply_build411_profile_appearance.py'
+      - 'tools/apply_build411_editor_screen.py'
+      - 'tools/check_build411_profile.py'
+      - 'tools/apply_build412_visitor_layout.py'
+      - 'tools/apply_build412_visitor_actions.py'
+      - 'tools/apply_build412_editor_safe_area.py'
+      - 'tools/check_build412_profile_ui.py'
+      - 'tools/check_build408_defects_first.py'
+      - 'tools/check_build407_regression.py'
+      - 'tools/check_build406_regression.py'
+      - '.github/workflows/NgelX-BUILD-412-DESIGN-CHECK.yml'
+jobs:
+  patch-test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Flutter stable setup
+      uses: subosito/flutter-action@v2
+      with:
+        channel: stable
+        cache: true
+    - name: Apply Build 395-406 and test source preservation
+      shell: bash
+      run: |
+        set -euo pipefail
+        python3 -u tools/apply_build395_final_login_inbox_ui.py
+        python3 -u tools/apply_build396_inbox_final_polish.py
+        python3 -u tools/apply_build397_inbox_complete_fixes.py
+        python3 -u tools/apply_build398_login_story_polish.py
+        python3 -u tools/apply_build399_registration_profile_cover.py
+        python3 -u tools/apply_build399_explore_reference_ui.py
+        python3 -u tools/apply_build399_create_reference_ui.py
+        python3 -u tools/apply_build399_profile_reference_ui.py
+        python3 -u tools/check_build399_regression.py
+        python3 -u tools/apply_build400_cover_upload_hotfix.py
+        python3 -u tools/check_build400_cover_upload.py
+        python3 -u tools/apply_build401_profile_stability.py
+        python3 -u tools/check_build401_profile_regression.py
+        python3 -u tools/apply_build402_profile_reference_polish.py
+        python3 -u tools/check_build402_profile_regression.py
+        python3 -u tools/apply_build403_profile_live_audio.py
+        python3 -u tools/check_build403_regression.py
+        python3 -u tools/apply_build404_profile_live_voice_fixes.py
+        python3 -u tools/check_build404_regression.py
+        python3 -u tools/apply_build405_single_device_final.py
+        python3 -u tools/check_build405_regression.py
+        python3 -u tools/apply_build406_final_eight.py
+        python3 -u tools/check_build406_regression.py
+        python3 -u tools/apply_build407_consolidated.py
+        python3 -u tools/check_build407_regression.py
+        python3 -u tools/apply_build408_defects_first.py
+        python3 -u tools/check_build408_defects_first.py
+        python3 -u tools/apply_build409_group_notice_fix.py
+        python3 -u tools/apply_build409_search_relevance.py
+        python3 -u tools/check_build409_search_relevance.py
+        python3 -u tools/apply_build411_profile_appearance.py
+        python3 -u tools/apply_build411_editor_screen.py
+        python3 -u tools/check_build411_profile.py
+        python3 -u tools/apply_build412_visitor_layout.py
+        python3 -u tools/apply_build412_visitor_actions.py
+        python3 -u tools/apply_build412_editor_safe_area.py
+        python3 -u tools/check_build412_profile_ui.py
+        python3 -m py_compile tools/apply_build412_visitor_layout.py tools/apply_build412_visitor_actions.py tools/apply_build412_editor_safe_area.py tools/check_build412_profile_ui.py
+
+    - name: Resolve Flutter dependencies
+      shell: bash
+      run: |
+        set -euo pipefail
+        cd app
+        flutter pub get
+    - name: Flutter static analysis for final profile screens
+      shell: bash
+      run: |
+        set -euo pipefail
+        cd app
+        flutter analyze --no-fatal-infos --no-fatal-warnings
