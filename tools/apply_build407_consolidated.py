@@ -193,16 +193,12 @@ def repair_inbox(src):
     "final d=item['doc'] as QueryDocumentSnapshot<Map<String,dynamic>>,v=d.data();",
     "final d=item['doc'] as QueryDocumentSnapshot<Map<String,dynamic>>;\n                   return bildirimGonderenIle(d.data(),(v){",
     "inbox all identity resolution")
-  old="""                   );
-                 }
+  branch=s.index("if(kind=='notification'){")
+  branch_end=s.index("\n                 }",branch)
+  close=s.rfind(");",branch,branch_end)
+  if close<0:raise SystemExit("inbox all ListTile closure not found")
+  return s[:close+2]+"\n                   });"+s[close+2:]
 
-                 final d=item['doc']"""
-  new="""                   );
-                   });
-                 }
-
-                 final d=item['doc']"""
-  return one(s,old,new,"inbox all notification closure")
  return region(src,"    Widget tumIcerigi(){","    Widget sohbetlerIcerigi(){",all_widget)
 m=repair_inbox(m)
 
