@@ -13,7 +13,7 @@ tests={
 "distinct posts never merged based on title":"gorulenMedya.add('post:'+d.id)" in p,
 "sort by relevance then recency":"return bMs.compareTo(aMs);" in p,
 "content navigation preserved":"IcerikBaglantiPage(icerikId:d.id)" in p,
-"video edit flow unaffected":"class _Uret" in s or "class UretPage" in s,
+"video edit flow unaffected":"_finalUretArac(Icons.videocam_rounded" in s and "_cokluMedyaSirala()" in s,
 "build 408 priority fixes preserved":"ngelx_group_block_dialog_" in s and "ngelxCanliKaydiTaze(yayinSnap.data!" in s,
 }
 for k,v in tests.items():print(("PASS " if v else "FAIL ")+k,flush=True)
