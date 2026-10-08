@@ -9,25 +9,24 @@ b=s.index('\nclass NgelXVideoKapakOnizleme',a);v=s[a:b]
 def one(old,new,label):
  global v
  n=v.count(old)
- if n!=1:raise SystemExit(f'Build 412 {label}: expected 1 match, got {n}')
- v=v.replace(old,new,1)
+ if n==1:
+  v=v.replace(old,new,1)
+  return
+ import re
+ pattern=r'[ \\t]*'+r'\\n[ \\t]*'.join(re.escape(line.lstrip()) for line in old.split('\\n'))
+ hits=list(re.finditer(pattern,v))
+ if len(hits)!=1:raise SystemExit(f'Build 412 {label}: expected 1 anchor, got {n} exact and {len(hits)} flexible')
+ hit=hits[0]
+ v=v[:hit.start()]+new+v[hit.end():]
 
-notice="""                 Container(
-                   width:double.infinity,
-                   padding:const EdgeInsets.fromLTRB(14,12,14,12),
-                   margin:const EdgeInsets.only(bottom:12),
-                   decoration:BoxDecoration(color:const Color(0xFFF7F4FF),borderRadius:BorderRadius.circular(16)),
-                   child:const Row(crossAxisAlignment:CrossAxisAlignment.start,children:[
-                     Icon(Icons.hub_outlined,color:mor,size:21),
-                     SizedBox(width:9),
-                     Expanded(child:Text(
-                       'Takip, içerikleri Akışında gösterir. Arkadaşlık karşılıklı onaydır. Mesaj izni ise hesabın gizlilik ayarına göre çalışır.',
-                       style:TextStyle(color:Colors.black54,fontSize:12.5,height:1.35,fontWeight:FontWeight.w600),
-                     )),
-                   ]),
-                 ),
-"""
-one(notice,"","approved reference hides explanatory-only block")
+marker="'Takip, içerikleri Akışında gösterir."
+if v.count(marker)!=1:raise SystemExit("Explanation callout marker changed")
+notice_idx=v.index(marker)
+notice_start=v.rfind('Container(',0,notice_idx)
+notice_end=v.index('Row(children:[',notice_idx)
+if notice_start<0 or notice_end<notice_start:raise SystemExit("Explanation card limits changed")
+v=v[:notice_start]+v[notice_end:]
+
 one("""                 Row(children:[
                    Expanded(child:StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(""",
 """                 SizedBox(height:51,child:Row(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
