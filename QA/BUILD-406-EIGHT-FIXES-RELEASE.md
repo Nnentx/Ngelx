@@ -26,3 +26,17 @@
 
 ## Durum
 Başlangıç kaydı: Kod yaması ve otomasyon pipeline'ı oluşturuldu, CI sonuçları takip ediliyor. Derleme başarılı olmadan hiçbir maddeye telefonda tamamlandı statüsü verilmeyecek.
+
+## Build 406 CI ve Firebase dağıtım sonucu (2026-10-08)
+
+- **GitHub Actions:** https://github.com/Nnentx/Ngelx/actions/runs/37821753988
+- **CI:** Hem `build` hem `deploy-rules` job'ları **SUCCESS**.
+- **Sürüm:** **NgelX 1.0.182+406**.
+- **Kaynak regresyon:** Build 399–406 Python koruma kontrolleri başarılı.
+- **Firestore güvenlik:** Firebase emulator suite başarıyla çalıştı (onaylı gruba geçerli linkle `autojoin`, yalnız bekleyen istekle izin atlatma engeli); doğrulanmış kurallar paketlendi.
+- **Flutter:** Analyze başarılı; imzalı release APK oluşturuldu, imza ve SHA256 adımları başarılı, artifact yükleme başarılı.
+- **Build 406 APK:** https://github.com/Nnentx/Ngelx/actions/runs/37821753988/artifacts/11570322092 (`NgelX-1.0.182-Build-406-FINAL-EIGHT-FIXES`).
+- **Test edilmiş kurallar artifact:** https://github.com/Nnentx/Ngelx/actions/runs/37821753988/artifacts/11569875934.
+- **CANLI FIREBASE YAYINI BAŞARILI:** `deploy-rules` loglarında `Deploying to 'ngelx-44eed'`, `rules file firestore.rules compiled successfully`, `released rules firestore.rules to cloud.firestore`, `Deploy complete!` satırları doğrulandı. Bu, değişen `validInvite` + `validSelfJoin` yetkilendirmesinin NgelX Firebase projesine yayımlandığını gösterir.
+- **Güvenli doğrulama sınırı:** CI/Firestore emulator testinin başarılı olması, gerçek telefonda tüm sekiz başlık için kusursuz deneyimi kanıtlamaz. İkinci telefon E2E hâlâ kullanıcı isteğiyle beklemede. Özellikle feed medya ilk kare performansı görsel düzenlemeyle iyileştirilmeye çalışıldı, bütün cihaz/ağ koşullarında tamamen çözülmüş sayılmaz.
+- **Telefon hızlı son kontrol:** Ayarlar'da 1.0.182/Yapı 406 görünsün; Canlı son özetinin 5 satırı okunabilsin; bildirimlerde eski istekler gerçek profil adını göstersin; geçerli linkle direkt gruba katılım; profil videosunu bir kez değiştirince yeni görüntü; Kaydedilenler kısayolu tek satır. Gerekirse yalnız sorun görülen kısmın kısa videosu yeterli. Yeni büyük test turu istenmiyor.
