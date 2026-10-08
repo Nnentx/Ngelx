@@ -94,6 +94,49 @@ replacement="""      ScaffoldMessenger.of(context).hideCurrentSnackBar();
         content:Text(lt('Paylaşım yayınlandı ✅','Post published ✅')),"""
 m=one(m,needle,replacement,"Create snackbar lifetime")
 
+
+# Keep existing Üret layout; make long labels scale without splitting mid-word.
+m=one(m,
+    "Text(baslik,style:const TextStyle(color:Colors.white,fontSize:17,fontWeight:FontWeight.w900))",
+    "FittedBox(fit:BoxFit.scaleDown,alignment:Alignment.centerLeft,child:Text(baslik,maxLines:1,softWrap:false,style:const TextStyle(color:Colors.white,fontSize:17,fontWeight:FontWeight.w900)))",
+    "Create card title fits one line")
+m=one(m,
+    "Text(alt,style:const TextStyle(color:Colors.white70,fontSize:11.5,height:1.2))",
+    "FittedBox(fit:BoxFit.scaleDown,alignment:Alignment.centerLeft,child:Text(alt,maxLines:2,style:const TextStyle(color:Colors.white70,fontSize:11.5,height:1.2)))",
+    "Create subtitle stays readable")
+m=one(m,
+    "Flexible(child:Text(yazi,maxLines:1,overflow:TextOverflow.ellipsis,style:TextStyle(color:secili?Colors.white:Colors.black,fontWeight:FontWeight.w800,fontSize:11)))",
+    "Flexible(child:FittedBox(fit:BoxFit.scaleDown,child:Text(yazi,maxLines:1,softWrap:false,style:TextStyle(color:secili?Colors.white:Colors.black,fontWeight:FontWeight.w800,fontSize:11))))",
+    "Create tabs no ellipsis")
+
+# Search full multiword names (including Turkish characters) across video title,
+# description, tags and uploader; de-duplicate the same Firestore post ID only.
+old="bool eslesir(String metin) => metin.toLowerCase().split(RegExp(r'[^a-z0-9ığüşöç]+')).any((kelime) => kelime.startsWith(sorgu));"
+new="""bool eslesir(String metin){
+                   final kelimeler=metin.toLowerCase().split(RegExp(r'[^a-z0-9ığüşöç]+')).where((e)=>e.isNotEmpty).toList();
+                   final aranan=sorgu.toLowerCase().split(RegExp(r'[^a-z0-9ığüşöç]+')).where((e)=>e.isNotEmpty).toList();
+                   return aranan.isNotEmpty&&aranan.every((q)=>kelimeler.any((k)=>k.startsWith(q)));
+                 }"""
+m=one(m,old,new,"multiword search")
+old="final icerikler = snap.data![1].docs.where((d) { final v=d.data(); return !engellenenler.contains((v['ownerId']??'').toString())&&v['type'] != 'story' && '${v['description'] ?? ''} ${v['username'] ?? ''}'.toLowerCase().contains(sorgu); }).toList();"
+new="""final icerikler = snap.data![1].docs.where((d){
+                   final v=d.data();
+                   final gizlilik=(v['visibility']??v['privacy']??'public').toString().toLowerCase();
+                   if(v['deleted']==true||v['isDeleted']==true||v['type']=='story'||gizlilik=='private')return false;
+                   if(engellenenler.contains((v['ownerId']??'').toString()))return false;
+                   return eslesir('${v['title']??''} ${v['description']??''} ${v['hashtags']??''} ${v['username']??''}');
+                 }).toList()..sort((a,b){
+                   int puan(Map<String,dynamic> v){
+                     final q=sorgu.toLowerCase();
+                     final ad=(v['title']??'').toString().toLowerCase();
+                     final aciklama=(v['description']??'').toString().toLowerCase();
+                     final etiket=(v['hashtags']??'').toString().toLowerCase();
+                     return (ad.contains(q)?100:0)+(aciklama.contains(q)?50:0)+(etiket.contains(q)?20:0);
+                   }
+                   return puan(b.data()).compareTo(puan(a.data()));
+                 });"""
+m=one(m,old,new,"rank video search for the multiword topic")
+
 wr("app/lib/main.dart",m)
 
 # Security rules: a link is only a right to REQUEST; it cannot grant membership.
