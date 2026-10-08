@@ -152,6 +152,10 @@ path="app/lib/live_broadcast_studio.dart"
 live=read(path)
 live=one(live,"  bool yayinBitti=false;","  bool yayinBitti=false;\n  bool bitisOzetiHazir=false;","live end-ready state")
 live=one(live,
+    "if(mounted)setState(()=>yayinBitti=true);\n    try{await widget.oda.disconnect();}catch(_){}",
+    "if(mounted)setState((){yayinBitti=true;bitisOzetiHazir=true;});\n    try{await widget.oda.disconnect();}catch(_){}",
+    "remote viewer receives stable end screen")
+live=one(live,
 """    await widget.oda.disconnect();
     await widget.oda.dispose();
     if (geriDon && mounted) Navigator.pop(context);""",
