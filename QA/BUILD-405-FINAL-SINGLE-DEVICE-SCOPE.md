@@ -24,3 +24,11 @@
 
 ## Koruma
 Kullanıcı verisi, yüklenen medya, takipçi/arkadaş bağlantıları, mesajlar, hikâye veya kaydedilenler silinmez. Mevcut işlevleri sıfırdan tasarlamak yerine son kalan bariz UI/medya hataları hedeflenir. Üretilen APK gerçek telefonda otomatik çalıştırılmış sayılmaz.
+
+## Build 405 CI / teslim sonucu (2026-10-08)
+- GitHub Actions run: https://github.com/Nnentx/Ngelx/actions/runs/37798305369
+- Version: **1.0.181+405**.
+- 399–405 kaynak koruma/regresyon, Flutter analiz, imzalı release APK oluşturma ve artifact upload adımları: **success**.
+- APK ZIP / GitHub artifact: https://github.com/Nnentx/Ngelx/actions/runs/37798305369/artifacts/11560465680
+- Artifact etiketi: `NgelX-1.0.181-Build-405-FINAL-SINGLE-DEVICE` (APK ve .sha256 içerir).
+- Bu CI başarısı Android gerçek cihaz smoke veya ertelenmiş iki-kullanıcı bağlantı testinin yerine geçmez. Kullanıcı artık çoklu uzun test turu istemediğinden kalan tek-telefon doğrulamaları kısa ve hedefli tutulacak.
