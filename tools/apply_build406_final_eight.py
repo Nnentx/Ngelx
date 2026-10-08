@@ -136,10 +136,8 @@ m=replace_in(m,"class _TercihlerPageState extends State<TercihlerPage>","\nclass
 # 6. Keep an explanatory poster/loading state in media previews rather than a blank/dark cell;
 # do not claim this fixes every decoder/network stall in the full-screen Feed player.
 def preview(src):
- old="""       } else if (url.isNotEmpty) {
-         kapak = NgelXVideoKapakOnizleme(url: url);"""
- new="""       } else if (url.isNotEmpty) {
-         kapak = ColoredBox(color:const Color(0xFFF0EDFA),child:Stack(
+ old="""kapak = NgelXVideoKapakOnizleme(url: url);"""
+ new="""kapak = ColoredBox(color:const Color(0xFFF0EDFA),child:Stack(
            fit:StackFit.expand,
            children:[
              NgelXVideoKapakOnizleme(url:url),
