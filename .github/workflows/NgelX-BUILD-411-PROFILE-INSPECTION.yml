@@ -91,3 +91,14 @@ jobs:
             for n in range(max(0,i+before),min(len(s),i+after)):
               print(f'{n+1}: {s[n][:330]}')
         PY
+
+    - name: Inspect exact profile widget ranges
+      shell: bash
+      run: |
+        python3 - <<'PY'
+        from pathlib import Path
+        s=Path('app/lib/main.dart').read_text(encoding='utf-8').splitlines()
+        for tag,a,b in [('VISITOR_CARD',24715,24965),('VISITOR_ACTIONS',24965,25120),('OWNER_TOOLS',28175,28370),('OWNER_BODY',28430,28715),('OWNER_TAIL',28715,28817)]:
+          print('RANGE',tag,a,b)
+          for i in range(a-1,min(b,len(s))):print(str(i+1)+': '+s[i][:380])
+        PY
