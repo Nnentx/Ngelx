@@ -8,11 +8,11 @@ m=p.read_text(encoding="utf-8")
 start=m.index("class _AramaPageState extends State<AramaPage>")
 end=m.index("\nclass HikayeSeridi",start)
 s=m[start:end]
-old="""                 final icerikler = snap.data![1].docs.where((d){"""
-new="""                 final adayIcerikler = snap.data![1].docs.where((d){"""
+old="""final icerikler = snap.data![1].docs.where((d){"""
+new="""final adayIcerikler = snap.data![1].docs.where((d){"""
 if s.count(old)!=1:raise SystemExit("Search content source anchor drifted")
 s=s.replace(old,new,1)
-needle="""                   return puan(b.data()).compareTo(puan(a.data()));
+needle="""return puan(b.data()).compareTo(puan(a.data()));
                  });
                  if (kullanicilar.isEmpty && icerikler.isEmpty)"""
 replace="""                   final karsilastir=puan(b.data()).compareTo(puan(a.data()));
