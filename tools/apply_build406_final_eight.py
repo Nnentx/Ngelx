@@ -21,10 +21,18 @@ write("app/pubspec.yaml",pub)
 
 # 2. Show authenticated sender identity on *all* activity rows, including legacy follow/friend requests.
 # The extra listener is local to a lazily constructed ListView row and uses Firestore's cache.
+import re
 def notifications(src):
- src=one(src,
-"""                 itemBuilder:(_,i){final d=docs[i];
-            final v = d.data();""",
+ left=src.index("Widget _bildirimBasligi(Map<String,dynamic>")
+ right=src.index("\\nclass AktiflikDurumuYazisi",left)
+ part=src[left:right]
+ pattern=r"itemBuilder:\\s*\\(_,i\\)\\s*\\{\\s*final d\\s*=\\s*docs\\[i\\];\\s*final v\\s*=\\s*d\\.data\\(\\);"
+ match=re.search(pattern,part)
+ if match is None:
+  at=part.find("itemBuilder:")
+  raise SystemExit("notifications sender row unmatched. Actual snippet: "+repr(part[at:at+450]))
+ before=part[match.start():match.end()]
+ part=one(part,before,
 """                 itemBuilder:(_,i){final d=docs[i];
             final saved=d.data();
             final fromUid=(saved['fromUid']??saved['senderId']??saved['senderUid']??'').toString();
@@ -44,6 +52,7 @@ def notifications(src):
                   v['senderName']=fromUid.isEmpty?'Gönderen bilinmiyor':
                     sender.connectionState==ConnectionState.waiting?'Gönderen yükleniyor':'Kullanıcı';
                 }""","notifications sender join")
+ src=src[:left]+part+src[right:]
  src=one(src,
 """               onTap:()=>_secimModu?_bildirimSec(d.id):_aktiviteAc(context,d),
              ));
