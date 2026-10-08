@@ -53,19 +53,15 @@ m=section(m,"class _KullaniciProfilPageState extends State<KullaniciProfilPage>"
 # A change to the group's blocking relationships restores the warning.
 # The blocked-message rendering and private-call guard remain untouched.
 def fix_repeated_block_dialog(s):
-    old="""       if(ortak.isEmpty||_engelUyarisiGosterildi)return;
-       _engelUyarisiGosterildi=true;
-       WidgetsBinding.instance.addPostFrameCallback((_)async{"""
-    new="""       if(ortak.isEmpty||_engelUyarisiGosterildi)return;
+    old="if(ortak.isEmpty||_engelUyarisiGosterildi)return;"
+    new="""if(ortak.isEmpty||_engelUyarisiGosterildi)return;
        final prefs=await SharedPreferences.getInstance();
        final anahtar='ngelx_group_block_dialog_'+me+'_'+widget.chatId;
        final imza=(ortak.toList()..sort()).join('|');
        if(prefs.getString(anahtar)==imza){
          _engelUyarisiGosterildi=true;
          return;
-       }
-       _engelUyarisiGosterildi=true;
-       WidgetsBinding.instance.addPostFrameCallback((_)async{"""
+       }"""
     s=one(s,old,new,"block-warning repeated on every group reopen")
     s=one(s,
       "         if(!gir&&mounted)Navigator.maybePop(context);",
