@@ -28,3 +28,9 @@
 Build 399→404 regresyon kapıları → flutter analyze → imzalı release APK → artifact checksum → Android telefonda kullanıcı videosu. Profil/kaydedilenler ve canlı/sesli işlevler baştan sona cihazda denenmeden "tamamı sorunsuz" demeyin.
 
 **Değişikliklerin uygulama kodu doğrudan depoda değil**, CI tarafından sırasıyla uygulanan `tools/apply_build404_profile_live_voice_fixes.py` betiğinde olduğu unutulmasın; önceki 395–403 yamaları her build'de korunur.
+
+## Build 404 CI sonucu
+- GitHub Actions: https://github.com/Nnentx/Ngelx/actions/runs/37781202533
+- Durum: **success**. Build 399–404 kontrol testleri, Flutter analizi, release APK oluşturma, sabit anahtar imza doğrulaması ve artifact yükleme başarılı.
+- Artifact: https://github.com/Nnentx/Ngelx/actions/runs/37781202533/artifacts/11552857080
+- Sürüm: **1.0.180+404**. Cihazda görsel/işlev testleri henüz tamamlanmadı; bu durumun altı çizilir.
