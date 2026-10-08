@@ -43,25 +43,9 @@ def fix_other_profile(s):
     s,count=re.subn(open_pat,replacement,s)
     if count!=1:raise SystemExit(f"live stream builder: expected one anchor, found {count}")
 
-    closing="""             ],
-           );
-         },
-       ),
-     ));
-   }
-
-   Widget _profilSayac"""
-    new_closing="""             ],
-           );
-             },
-           );
-         },
-       ),
-     ));
-   }
-
-   Widget _profilSayac"""
-    s=one(s,closing,new_closing,"close live builder before profile future builder")
+    close_pat=r"(\n[ \t]*\],\n[ \t]*\);\n)([ \t]*\},\n[ \t]*\),\n[ \t]*\)\);\n[ \t]*\}\n\n[ \t]*Widget _profilSayac)"
+    s,count=re.subn(close_pat,r"\1             },\n           );\n\2",s)
+    if count!=1:raise SystemExit(f"close live builder: expected one anchor, found {count}")
     return s
 m=section(m,"class _KullaniciProfilPageState extends State<KullaniciProfilPage>","class NgelXVideoKapakOnizleme",fix_other_profile)
 
