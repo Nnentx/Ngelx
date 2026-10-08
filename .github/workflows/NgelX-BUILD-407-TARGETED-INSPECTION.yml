@@ -54,9 +54,14 @@ jobs:
            matches=[i for i,line in enumerate(s) if any(v.casefold() in line.casefold() for v in needles)]
            print("SECTION",section,"COUNT",len(matches))
            for i in matches[:90]:print(str(i+1)+": "+s[i][:195])
-          ranges=[("INBOX_2",12015,12265),("INBOX_3",12265,12355),("FEED_3",8070,8185),("FEED_4",7740,7885),("CREATE_WIDGETS",11150,11205),("SEARCH",5930,5955),("META",7040,7180)]
+          ranges=[("INBOX_NOTIF",11675,11875),("FEED_EARLY",6420,6560),("FEED_HEADER",8080,8160),("POST_TIME",6840,6980)]
           for label,start,end in ranges:
            print("DETAIL",label)
            for i in range(start-1,end):
             print(str(i+1)+": "+s[i][:340])
+          print("DYNAMIC HEADERS")
+          for i,line in enumerate(s):
+           if "followingTab" in line or "forYou" in line or "NgelXLogo" in line or "Image.asset(" in line and (6200<i<10000):
+            print("ANCHOR",i+1,line[:220])
+            for k in range(max(0,i-6),min(len(s),i+7)): print(str(k+1)+": "+s[k][:260])
           PY
