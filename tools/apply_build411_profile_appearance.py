@@ -110,9 +110,8 @@ def other(s):
            final kapaksiz=gorunum=='coverless'||profilKapak.isEmpty;
            final kapakKonum=((v['coverPhotoY'] as num?)?.toDouble()??0).clamp(-1.0,1.0);""",
       "other user cover fields")
-    s=one(s,"             children: [\n               Center(child:Stack(clipBehavior:Clip.none,alignment:Alignment.center,children:[",
-      """             children: [
-               if(!kapaksiz)...[
+    s=one(s,"Center(child:Stack(clipBehavior:Clip.none,alignment:Alignment.center,children:[",
+      """if(!kapaksiz)...[
                  ClipRRect(
                    borderRadius:BorderRadius.circular(22),
                    child:SizedBox(height:165,width:double.infinity,
