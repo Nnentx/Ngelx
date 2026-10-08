@@ -150,6 +150,17 @@ jobs:
       - name: Build 406 kaynak ve guvenlik regresyonu
         run: python3 -u tools/check_build406_regression.py
 
+      - name: Node 24 Firebase test ortami
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Java 21 Firebase emulator ortami
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
       - name: Firestore kurallari emulator test bagimliliklari
         shell: bash
         run: |
@@ -168,6 +179,12 @@ jobs:
           name: NgelX-1.0.182-Build-406-FIRESTORE-RULES
           path: firestore.rules
           if-no-files-found: error
+
+      - name: Java 17 Android build ortamini geri yukle
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
 
       - name: Bagimliliklari al
         shell: bash
