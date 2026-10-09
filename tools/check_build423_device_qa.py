@@ -13,6 +13,7 @@ checks={
     'green group kind label':"const Text('Grup',style:TextStyle(color:Color(0xFF138A55)" in inbox,
     'notification red live label':"const Color(0xFFDA233B)" in inbox,
     'notification purple voice label':"const Color(0xFF844AED)" in inbox,
+    'real live five tab red badges':"_bildirimAkisi(ben,200)" in inbox and "_sohbetAkisi(ben,200)" in inbox and "const Color(0xFFE62D48)" in inbox,
     'friendship request dialog explicit light theme':"showModalBottomSheet<bool>(" in visitor and visitor.count('builder:(c)=>Theme(data:ThemeData.light(),child:SafeArea(')>=2,
     'accept and reject buttons visible':visitor.count("title:const Text('Kabul et',style:TextStyle(color:Colors.black87")>=2 and visitor.count("title:const Text('Reddet',style:TextStyle(color:Colors.black87")>=2,
     'keeps story reply and feed':"class _HikayeGosterPageState" in s and 'class _VideoAkisiState' in s,
