@@ -13,6 +13,7 @@ import {
   doc,
   getDoc,
   getDocs,
+  increment,
   serverTimestamp,
   setDoc,
   updateDoc,
@@ -656,6 +657,57 @@ try {
     formerMembers: arrayUnion('founder'),
     removedAt_founder: serverTimestamp(),
     updatedAt: serverTimestamp(),
+  }));
+
+
+  // Build 424: independently committed story reply works for an authorized DM.
+  // Denied chat metadata and closed-message preferences must not be bypassed.
+  await env.withSecurityRulesDisabled(async (ctx)=>{
+    const db=ctx.firestore();
+    await setDoc(doc(db,'users/bob'),{
+      messagePermission:'all', friends:[], following:[],
+    });
+    await setDoc(doc(db,'videos/story_reply_owner_test'),{
+      ownerId:'alice', type:'story', mediaUrl:'https://example.test/photo.jpg',
+    });
+  });
+  const storyOwner=await assertSucceeds(getDoc(doc(bob,'videos/story_reply_owner_test')));
+  assert.equal(storyOwner.data().ownerId,'alice');
+  await assertSucceeds(setDoc(doc(bob,'chats/story_bob_alice'),{
+    members:['alice','bob'],
+    isGroup:false,
+    peerA:'alice',
+    peerB:'bob',
+    requestSenderUid:'bob',
+    requestRecipientUid:'alice',
+    requestRejected_alice:false,
+    updatedAt:serverTimestamp(),
+  }));
+  await assertSucceeds(setDoc(doc(bob,'chats/story_bob_alice/messages/story_reply_1'),{
+    senderId:'bob',
+    text:'Merhaba',
+    type:'story_reply',
+    storyId:'story_reply_owner_test',
+    storyOwnerId:'alice',
+    storyMediaType:'photo',
+    reaction:false,
+    createdAt:serverTimestamp(),
+  }));
+  const delivered=await assertSucceeds(getDoc(doc(alice,'chats/story_bob_alice/messages/story_reply_1')));
+  assert.equal(delivered.data().text,'Merhaba');
+  // Preview is non-essential and runs after message creation.
+  await assertSucceeds(updateDoc(doc(bob,'chats/story_bob_alice'),{
+    lastMessage:'Hikâye yanıtı: Merhaba',
+    lastSenderId:'bob',
+    unread_alice:increment(1),
+    updatedAt:serverTimestamp(),
+  }));
+  await assertFails(setDoc(doc(bob,'chats/story_bob_closed'),{
+    members:['bob','closed_target'],isGroup:false,
+  }));
+  await assertFails(setDoc(doc(outsider,'chats/story_bob_alice/messages/unauthorized'),{
+    senderId:'outsider', text:'unsafe', type:'story_reply',
+    createdAt:serverTimestamp(),
   }));
 
   console.log('Firestore rules testleri başarılı.');
