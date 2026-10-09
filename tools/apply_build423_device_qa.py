@@ -78,9 +78,9 @@ helper="""    Widget ngelxRenkliBildirim(Map<String,dynamic> v,String metin,bool
         fontWeight:okundu?FontWeight.w600:FontWeight.w800);
       for(final match in r.allMatches(kalan)){
         if(match.start>bas)spans.add(TextSpan(text:kalan.substring(bas,match.start),style:normal));
-        final canlı=match.group(0)!.toLowerCase().contains('canlı');
+        final canli=match.group(0)!.toLowerCase().contains('canlı');
         spans.add(TextSpan(text:kalan.substring(match.start,match.end),
-          style:TextStyle(color:canlı?const Color(0xFFDA233B):const Color(0xFF844AED),
+          style:TextStyle(color:canli?const Color(0xFFDA233B):const Color(0xFF844AED),
             fontSize:13.5,fontWeight:FontWeight.w900)));
         bas=match.end;
       }
