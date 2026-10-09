@@ -2011,19 +2011,39 @@ Future<bool> sosyalIstekGonder({
     final emailAdi=(user.email??'').split('@').first.trim();
     final ad=(p['displayName']??p['username']??user.displayName??(emailAdi.isNotEmpty?emailAdi:'NgelX kullanıcısı')).toString();
     final foto=(p['photoUrl']??user.photoURL??'').toString();
-    await FirebaseFirestore.instance.collection('notifications').add({
-      'toUid':hedefUid,
-      'fromUid':user.uid,
-      'type':tur,
-      'senderName':ad,
-      'photoUrl':foto,
-      'text':metin,
-      'status':'pending',
-      'read':false,
-      'createdAt':FieldValue.serverTimestamp(),
-      'clientCreatedAt':Timestamp.now(),
-    }).timeout(const Duration(seconds:10));
-    return true;
+    // Eski rastgele kimlikli kayıtları da kontrol et; önceden bekleyen
+    // bir isteği ikinci kez göndermeye izin verme.
+    final eski=await FirebaseFirestore.instance.collection('notifications')
+      .where('fromUid',isEqualTo:user.uid).limit(200).get()
+      .timeout(const Duration(seconds:10));
+    if(eski.docs.any((d){
+      final v=d.data();
+      return v['toUid']==hedefUid&&v['type']==tur&&v['status']=='pending';
+    }))return false;
+    // Aynı gün aynı tür/alıcı için sabit ID; çift cihaz ve çift dokunma
+    // işlemleri tek bir kayıt oluşturabilir. Ertesi gün yeni istek
+    // ancak bekleyen istek yoksa mümkündür.
+    final simdi=DateTime.now().toUtc();
+    final gun='${simdi.year}${simdi.month.toString().padLeft(2,"0")}${simdi.day.toString().padLeft(2,"0")}';
+    final ref=FirebaseFirestore.instance.collection('notifications')
+      .doc('request_${tur}_${user.uid}_${hedefUid}_$gun');
+    return await FirebaseFirestore.instance.runTransaction<bool>((tx)async{
+      final bulunan=await tx.get(ref);
+      if(bulunan.exists)return false;
+      tx.set(ref,{
+        'toUid':hedefUid,
+        'fromUid':user.uid,
+        'type':tur,
+        'senderName':ad,
+        'photoUrl':foto,
+        'text':metin,
+        'status':'pending',
+        'read':false,
+        'createdAt':FieldValue.serverTimestamp(),
+        'clientCreatedAt':Timestamp.now(),
+      });
+      return true;
+    }).timeout(const Duration(seconds:12));
   }finally{
     _sosyalIstekIslemleri.remove(kilit);
   }
@@ -7735,7 +7755,10 @@ class _MesajPageState extends State<MesajPage> {
           return ListView.builder(itemCount:docs.length,itemBuilder:(_,i){
             final d=docs[i],v=d.data(),members=List<String>.from(v['members']??[]);
             final grup=v['isGroup']==true||members.length>2;
-            if(grup){final ad=(v['groupName']??t('groupChat')).toString(),foto=(v['groupPhotoUrl']??'').toString(),unread=(v['unread_$ben']??0) as int;return ListTile(onTap:()=>sohbetiAc(d.id,GrupSohbetPage(chatId:d.id,ad:ad,foto:foto)),onLongPress:()=>sohbetMenusu(context,d.id,grup:true),leading:CircleAvatar(backgroundColor:const Color(0xFFE9DDFF),backgroundImage:foto.isEmpty?null:CachedNetworkImageProvider(foto),child:foto.isEmpty?const Icon(Icons.groups,color:mor):null),title:Text(ad,style:TextStyle(color:Colors.black87,fontWeight:unread>0?FontWeight.w900:FontWeight.w700)),subtitle:Text((v['lastMessage']??t('groupCreated')).toString(),maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black54)),trailing:Wrap(crossAxisAlignment:WrapCrossAlignment.center,children:[if(sabitSohbetler.contains(d.id))const Icon(Icons.push_pin,size:16,color:mor),if(sessizSohbetler.contains(d.id))const Icon(Icons.volume_off,size:18,color:Colors.black38),if(unread>0)Badge(label:Text('$unread'))]));}
+            if(grup){final ad=(v['groupName']??t('groupChat')).toString(),foto=(v['groupPhotoUrl']??'').toString(),unread=(v['unread_$ben']??0) as int;return ListTile(onTap:()=>sohbetiAc(d.id,GrupSohbetPage(chatId:d.id,ad:ad,foto:foto)),onLongPress:()=>sohbetMenusu(context,d.id,grup:true),leading:CircleAvatar(backgroundColor:const Color(0xFFE9DDFF),backgroundImage:foto.isEmpty?null:CachedNetworkImageProvider(foto),child:foto.isEmpty?const Icon(Icons.groups,color:mor):null),title:Text(ad,style:TextStyle(color:Colors.black87,fontWeight:unread>0?FontWeight.w900:FontWeight.w700)),subtitle:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisSize:MainAxisSize.min,children:[
+              const Text('Grup',style:TextStyle(color:Color(0xFF188B54),fontSize:11,fontWeight:FontWeight.w800)),
+              Text((v['lastMessage']??t('groupCreated')).toString(),maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black54)),
+            ]),trailing:Wrap(crossAxisAlignment:WrapCrossAlignment.center,children:[if(sabitSohbetler.contains(d.id))const Icon(Icons.push_pin,size:16,color:mor),if(sessizSohbetler.contains(d.id))const Icon(Icons.volume_off,size:18,color:Colors.black38),if(unread>0)Badge(label:Text('$unread'))]));}
             final other=members.firstWhere((x)=>x!=ben,orElse:()=>ben??'');
             if(engellenenler.contains(other))return const SizedBox.shrink();
             return FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(future:_kullaniciGetir(other),builder:(_,u){
@@ -17093,7 +17116,7 @@ class _AktivitePageState extends State<AktivitePage> {
     final onizleme=(v['preview']??'').toString().trim();
     final grupEylem=(v['eventAction']??'mesaj gönderdi').toString().trim();
     final normal=TextStyle(fontWeight:okundu?FontWeight.w400:FontWeight.w600);
-    const kalin=TextStyle(fontWeight:FontWeight.w900);
+    final kalin=TextStyle(color:mor,fontWeight:FontWeight.w900);
     const grupStil=TextStyle(color:ngelxGroupGreen,fontWeight:FontWeight.w900);
 
     if(olay=='group_added'&&ad.isNotEmpty&&grup.isNotEmpty){
@@ -17155,7 +17178,20 @@ class _AktivitePageState extends State<AktivitePage> {
       eylem=tam.substring(gonderen.length).trimLeft();
     }
     if(gonderen.isEmpty)return Text(tam,style:TextStyle(color:Colors.black87,fontWeight:okundu?FontWeight.w500:FontWeight.w700));
-    return Text.rich(TextSpan(children:[TextSpan(text:'$gonderen ',style:kalin),TextSpan(text:eylem,style:normal)]),style:const TextStyle(color:Colors.black87));
+    final vurgular=RegExp(r'canlı yayın|sesli oda',caseSensitive:false);
+    final parcalar=<TextSpan>[TextSpan(text:'$gonderen ',style:kalin)];
+    var konum=0;
+    for(final eslesme in vurgular.allMatches(eylem)){
+      if(eslesme.start>konum)parcalar.add(TextSpan(text:eylem.substring(konum,eslesme.start),style:normal));
+      final yayin=eslesme.group(0)!.toLowerCase().contains('canlı');
+      parcalar.add(TextSpan(
+        text:eylem.substring(eslesme.start,eslesme.end),
+        style:TextStyle(color:yayin?const Color(0xFFD92734):const Color(0xFF8B4DEC),fontWeight:FontWeight.w900),
+      ));
+      konum=eslesme.end;
+    }
+    if(konum<eylem.length)parcalar.add(TextSpan(text:eylem.substring(konum),style:normal));
+    return Text.rich(TextSpan(children:parcalar),style:const TextStyle(color:Colors.black87));
   }
 
   Future<void> _aktiviteAc(BuildContext context, QueryDocumentSnapshot<Map<String,dynamic>> d)async{
@@ -17315,7 +17351,23 @@ class _AktivitePageState extends State<AktivitePage> {
       benimFoto=(bv['photoUrl']??'').toString();
     }catch(_){}
 
+    // Daha önceki sürümlerde bir göndericiden birden fazla bekleyen
+    // bildirim oluşmuş olabilir: hepsini aynı kararda sonlandır.
+    final esler=await FirebaseFirestore.instance.collection('notifications')
+      .where('toUid',isEqualTo:ben).limit(200).get()
+      .timeout(const Duration(seconds:10));
     final toplu=FirebaseFirestore.instance.batch();
+    for(final d in esler.docs){
+      if(d.id==belge.id)continue;
+      final v=d.data();
+      if(v['fromUid']==gonderen&&v['type']==tur&&v['status']=='pending'){
+        toplu.update(d.reference,{
+          'status':kabul?'accepted':'rejected',
+          'read':true,
+          'answeredAt':FieldValue.serverTimestamp(),
+        });
+      }
+    }
     toplu.update(belge.reference,{
       'status':kabul?'accepted':'rejected',
       'read':true,
@@ -18243,14 +18295,24 @@ class _HikayeGosterPageState extends State<HikayeGosterPage> with SingleTickerPr
       final ids=<String>[ben.uid,hedef]..sort();
       final chatId=ids.join('_');
       final chat=FirebaseFirestore.instance.collection('chats').doc(chatId);
+      // Mesaj güvenlik kuralı sohbet belgesini okur. Yeni sohbeti ve mesajı
+      // aynı batch'te yaratmak get() kuralında bulunamayan belgeye yol açar.
+      final mevcutSohbet=await chat.get().timeout(const Duration(seconds:8));
+      if(!mevcutSohbet.exists){
+        await chat.set({
+          'members':ids,
+          'isGroup':false,
+          'createdAt':FieldValue.serverTimestamp(),
+          'updatedAt':FieldValue.serverTimestamp(),
+        }).timeout(const Duration(seconds:10));
+      }
       final mesajRef=chat.collection('messages').doc();
       final batch=FirebaseFirestore.instance.batch();
-      batch.set(chat,{
-        'members':ids,
+      batch.update(chat,{
         'lastMessage':tepki?'$metin Hikâye tepkisi':'↩ Hikâye yanıtı: $metin',
         'updatedAt':FieldValue.serverTimestamp(),
         'unread_$hedef':FieldValue.increment(1),
-      },SetOptions(merge:true));
+      });
       batch.set(mesajRef,{
         'senderId':ben.uid,
         'text':metin,
@@ -18263,14 +18325,14 @@ class _HikayeGosterPageState extends State<HikayeGosterPage> with SingleTickerPr
         'createdAt':FieldValue.serverTimestamp(),
         'clientCreatedAt':Timestamp.now(),
       });
+      // Yanıtın gönderilmesi hikâye sayacı izninden bağımsız olmalı.
+      await batch.commit().timeout(const Duration(seconds:12));
       if(widget.storyId.isNotEmpty){
-        final story=FirebaseFirestore.instance.collection('videos').doc(widget.storyId);
-        batch.set(story,{
+        unawaited(FirebaseFirestore.instance.collection('videos').doc(widget.storyId).update({
           'replyCount':FieldValue.increment(1),
           if(tepki)'reactionCount':FieldValue.increment(1),
-        },SetOptions(merge:true));
+        }).timeout(const Duration(seconds:6)).catchError((_){ }));
       }
-      await batch.commit().timeout(const Duration(seconds:12));
       unawaited(uygulamaBildirimiGonder(
         toUid:hedef,fromUid:ben.uid,tur:'message',
         metin:tepki?'$metin hikâyene tepki verdi':'Hikâyene yanıt verdi',
@@ -18278,8 +18340,11 @@ class _HikayeGosterPageState extends State<HikayeGosterPage> with SingleTickerPr
       ).catchError((_){ }));
       cevap.clear();
       if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(tepki?'Tepkin gönderildi.':'Yanıtın gönderildi.')));
-    }catch(_){
-      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Hikâye yanıtı gönderilemedi. Tekrar dene.')));
+    }catch(e){
+      final izinHatasi=e is FirebaseException&&e.code=='permission-denied';
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(
+        izinHatasi?'Bu kullanıcıya mesaj göndermeye iznin yok.':'Hikâye yanıtı gönderilemedi. Bağlantını kontrol edip tekrar dene.',
+      )));
     }finally{
       if(mounted){
         setState(()=>gonderiliyor=false);
