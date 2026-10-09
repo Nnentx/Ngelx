@@ -187,7 +187,10 @@ new="""Column(children:[
                         softWrap:true,style:const TextStyle(color:Colors.black54))),
                     ]),
                   ])"""
-if owner.count(old)!=1:raise SystemExit('Build422 full join date layout drift')
+if owner.count(old)!=1:
+    k=owner.find('Text(katilim')
+    print('Build422 owner date source nearby:',repr(owner[max(0,k-650):k+260]),flush=True)
+    raise SystemExit('Build422 full join date layout drift')
 owner=owner.replace(old,new,1)
 s=s[:a]+owner+s[b:]
 
