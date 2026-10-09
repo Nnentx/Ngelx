@@ -18,17 +18,17 @@ old=old.replace("if(me==null)return;",
                               if(gelenTakipBekliyor&&!takipte){
                                 final secim=await showModalBottomSheet<bool>(
                                   context:context,backgroundColor:Colors.white,
-                                  showDragHandle:true,builder:(c)=>SafeArea(
+                                  showDragHandle:true,builder:(c)=>Theme(data:ThemeData.light(),child:SafeArea(
                                     child:Column(mainAxisSize:MainAxisSize.min,children:[
                                       const ListTile(title:Text('Takip isteğini yanıtla',
-                                        style:TextStyle(fontWeight:FontWeight.w900))),
+                                        style:TextStyle(color:Colors.black87,fontWeight:FontWeight.w900))),
                                       ListTile(leading:const Icon(Icons.check_circle,color:mor),
-                                        title:const Text('Kabul et'),
+                                        title:const Text('Kabul et',style:TextStyle(color:Colors.black87,fontWeight:FontWeight.w700)),
                                         onTap:()=>Navigator.pop(c,true)),
                                       ListTile(leading:const Icon(Icons.close_rounded),
-                                        title:const Text('Reddet'),
+                                        title:const Text('Reddet',style:TextStyle(color:Colors.black87,fontWeight:FontWeight.w700)),
                                         onTap:()=>Navigator.pop(c,false)),
-                                    ])));
+                                    ]))));
                                 if(secim!=null){
                                   try{
                                     await ngelxGelenSosyalIstekCevapla(
