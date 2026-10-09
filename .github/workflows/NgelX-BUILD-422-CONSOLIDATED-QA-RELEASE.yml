@@ -389,7 +389,7 @@ jobs:
       - name: Build 427 hikaye takip dugmesi ust alanda
         run: python3 -u tools/apply_build427_story_header.py
 
-      - name: Build 428 hikaye video yukleme kurtarma (hedefli)
+      - name: Build 428 hikaye video yukleme kurtarma (kaynak uyumlu)
         run: python3 -u tools/apply_build428_story_video_recovery.py
 
       - name: Node 24 Firebase test ortami
