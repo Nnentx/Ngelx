@@ -1,10 +1,10 @@
-name: NgelX BUILD 427 STORY HEADER QA
+name: NgelX BUILD 428 STORY VIDEO RECOVERY QA
 
 on:
   workflow_dispatch:
   push:
     branches:
-      - work/build-427-performance-fixes
+      - work/build-428-story-inbox-fixes
     paths:
       - 'app/**'
       - 'tools/apply_build395_final_login_inbox_ui.py'
@@ -98,7 +98,7 @@ on:
       - '.github/workflows/NgelX-BUILD-422-CONSOLIDATED-QA-RELEASE.yml'
 
 concurrency:
-  group: ngelx-build427-story-header
+  group: ngelx-build428-story-video-recovery
   cancel-in-progress: false
 
 jobs:
@@ -389,6 +389,9 @@ jobs:
       - name: Build 427 hikaye takip dugmesi ust alanda
         run: python3 -u tools/apply_build427_story_header.py
 
+      - name: Build 428 hikaye video yukleme kurtarma
+        run: python3 -u tools/apply_build428_story_video_recovery.py
+
       - name: Node 24 Firebase test ortami
         uses: actions/setup-node@v4
         with:
@@ -415,7 +418,7 @@ jobs:
       - name: Dogrulanan Build 406 Firestore kurallarini kaydet
         uses: actions/upload-artifact@v4
         with:
-          name: NgelX-1.0.202-Build-427-FIRESTORE-RULES
+          name: NgelX-1.0.203-Build-428-FIRESTORE-RULES
           path: firestore.rules
           if-no-files-found: error
 
@@ -446,21 +449,21 @@ jobs:
         run: |
           set -euo pipefail
           cd app
-          flutter build apk --release --build-name=1.0.202 --build-number=427
+          flutter build apk --release --build-name=1.0.203 --build-number=428
           test -s build/app/outputs/flutter-apk/app-release.apk
           APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
           test -n "$APKSIGNER"
           "$APKSIGNER" verify --verbose --print-certs build/app/outputs/flutter-apk/app-release.apk
-          cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/NgelX-1.0.202-Build-427-CONSOLIDATED-QA-RELEASE.apk
-          sha256sum build/app/outputs/flutter-apk/NgelX-1.0.202-Build-427-CONSOLIDATED-QA-RELEASE.apk > build/app/outputs/flutter-apk/NgelX-1.0.202-Build-427-CONSOLIDATED-QA-RELEASE.apk.sha256
+          cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/NgelX-1.0.203-Build-428-CONSOLIDATED-QA-RELEASE.apk
+          sha256sum build/app/outputs/flutter-apk/NgelX-1.0.203-Build-428-CONSOLIDATED-QA-RELEASE.apk > build/app/outputs/flutter-apk/NgelX-1.0.203-Build-428-CONSOLIDATED-QA-RELEASE.apk.sha256
 
       - name: APK yukle
         uses: actions/upload-artifact@v4
         with:
-          name: NgelX-1.0.202-Build-427-CONSOLIDATED-QA-RELEASE
+          name: NgelX-1.0.203-Build-428-CONSOLIDATED-QA-RELEASE
           path: |
-            app/build/app/outputs/flutter-apk/NgelX-1.0.202-Build-427-CONSOLIDATED-QA-RELEASE.apk
-            app/build/app/outputs/flutter-apk/NgelX-1.0.202-Build-427-CONSOLIDATED-QA-RELEASE.apk.sha256
+            app/build/app/outputs/flutter-apk/NgelX-1.0.203-Build-428-CONSOLIDATED-QA-RELEASE.apk
+            app/build/app/outputs/flutter-apk/NgelX-1.0.203-Build-428-CONSOLIDATED-QA-RELEASE.apk.sha256
           if-no-files-found: error
           retention-days: 14
 
