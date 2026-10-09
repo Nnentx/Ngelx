@@ -171,7 +171,7 @@ s=s[:a]+v+s[b:]
 a=s.index('class _ProfilPageState extends State<ProfilPage>')
 b=s.index('\nclass _ProfilEtkilesimRozeti',a)
 owner=s[a:b]
-old="""Row(mainAxisAlignment:MainAxisAlignment.center,children:[const Icon(Icons.location_on_outlined,color:Colors.black54,size:18),const SizedBox(width:4),Flexible(child:Text(konum,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black54))),const SizedBox(width:13),const Icon(Icons.calendar_month_outlined,color:Colors.black54,size:18),const SizedBox(width:4),Flexible(child:Text(katilim,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black54)))])"""
+old="""Row(mainAxisAlignment:MainAxisAlignment.start,children:[const Icon(Icons.location_on_outlined,color:Colors.black54,size:18),const SizedBox(width:4),Flexible(child:Text(konum,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black54))),const SizedBox(width:13),const Icon(Icons.calendar_month_outlined,color:Colors.black54,size:18),const SizedBox(width:4),Flexible(child:Text(katilim,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black54)))])"""
 new="""Column(children:[
                     Row(mainAxisAlignment:MainAxisAlignment.center,children:[
                       const Icon(Icons.location_on_outlined,color:Colors.black54,size:18),
