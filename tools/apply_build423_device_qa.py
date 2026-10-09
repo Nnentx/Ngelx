@@ -51,13 +51,15 @@ inbox=inbox[:rs]+requests+inbox[re:]
 once("Text(ad,maxLines:1,overflow:TextOverflow.ellipsis,\n                                  style:const TextStyle(fontSize:15,fontWeight:FontWeight.w900))",
      "Text(ad,maxLines:1,overflow:TextOverflow.ellipsis,\n                                  style:const TextStyle(color:Color(0xFF142138),fontSize:15,fontWeight:FontWeight.w900))",
      'sender name legibility')
-once("subtitle:Text((v['lastMessage']??t('groupCreated')).toString(),maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Color(0xFF7C86A0),fontSize:13)),",
-     """subtitle:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
+groupOriginal="subtitle:Text((v['lastMessage']??t('groupCreated')).toString(),maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Color(0xFF7C86A0),fontSize:13)),"
+groupNew="""subtitle:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
                       const Text('Grup',style:TextStyle(color:Color(0xFF138A55),fontSize:10.5,fontWeight:FontWeight.w800)),
                       Text((v['lastMessage']??t('groupCreated')).toString(),maxLines:1,
                         overflow:TextOverflow.ellipsis,style:const TextStyle(color:Color(0xFF7C86A0),fontSize:13)),
-                    ]),""",
-     'green group subtitle')
+                    ]),"""
+if inbox.count(groupOriginal)!=2:
+    raise SystemExit('Build423 group subtitle drift: '+str(inbox.count(groupOriginal)))
+inbox=inbox.replace(groupOriginal,groupNew)
 
 # Notifications emphasize the sender, live broadcast (red), and voice room
 # (purple) without recoloring unrelated content or showing double sender names.
