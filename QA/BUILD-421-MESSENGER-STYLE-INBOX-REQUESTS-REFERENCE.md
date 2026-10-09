@@ -32,4 +32,21 @@ Mevcut **Tümü / Mesajlar / Gruplar / Bildirimler / İstekler** üst sekmeleri 
 - Onay gerektirmeyen takip bildirimi → profil açılır, gereksiz onay gösterilmez.
 - Diğer Bildirimler/Mesajlar/Gruplar ekranları ve önceki başarılı Build421 özellikleri korunur.
 
-**Not:** Ayaz Atabey ve “127 ortak arkadaş” yalnızca kullanıcı tarafından paylaşılan üçüncü taraf arayüzünün görsel örneğidir; NgelX verisi değildir. 
+**Not:** Ayaz Atabey ve “127 ortak arkadaş” yalnızca kullanıcı tarafından paylaşılan üçüncü taraf arayüzünün görsel örneğidir; NgelX verisi değildir.
+
+## Ekran örneği 45388.jpg / 45386.jpg — bildirimden direkt profil, “Yanıtla” durumu
+
+Kullanıcının istediği tam akış:
+
+1. **Gelen Kutusu > Tümü/Bildirimler** satırı: **“Umay Umay sana arkadaşlık isteği gönderdi”**. Satıra veya Umay'ın fotoğrafına basılınca **yeni Aktivite ekranı açma**; doğrudan **Umay'ın ziyaretçi profiline git**. Bildirim içindeki `fromUid` / güvenilir gönderen UID'sini kullan, ad üzerinden profil tahmini yapma.
+2. Profilde gerçek **gelen arkadaşlık isteği durumu `pending` ise**, ekrandaki arkadaşlık eyleminin yerinde **“Yanıtla”** düğmesi olsun. Basınca **“Kabul et” / “Reddet”** alt menüsü/diyaloğu gösterilsin. Kullanıcının ayrıca Aktivite'ye dönmesi gerekmesin.
+3. **İstek zaten kabul edilmiş ve kişiler arkadaşsa**, mevcut **“Arkadaşsınız”** etiketi ve arkadaşlığı yönetme davranışı kalsın; **tekrar “Kabul et” sunulmasın**. Kullanıcının örneğindeki ekran “Arkadaşsınız” gösteriyor; bu durum yeniden onay gerektiren istek değildir.
+4. **İstek reddedilmiş, geri çekilmiş veya silinmişse**, profil artık “Yanıtla” göstermemeli. Canlı Firestore `friend_requests`/istek belgesi durumu ve `users.friends` ile tutarlılık kontrol edilmeli; yalnızca eski bildirim metnine göre buton çizilmemeli.
+5. **“Umay seni takip etmeye başladı”** satırı da Umay profiline gitmeli. Bu *tamamlanmış takip* bildirimi için “Yanıtla / Kabul et” gösterme; kullanıcı profilden isteğe bağlı karşı takip edebilir.
+6. **Gerçek gizli-hesap “takip isteği”** bildirimi ayrı olaydır. Gelen `follow_request` hâlâ bekliyorsa profilde **“Yanıtla → Kabul et / Reddet”** kullanılabilir.
+7. Kabul/ret sunucu işlemi onaylanınca Gelen Kutusu > İstekler sayacı ve iki taraftaki ilgili profil durumları **canlı güncellensin**. Hata veya bekleme varken işlemin tamamlandığı yazılmasın.
+8. **Doğrudan profil açılması ve bekleyen istek düğmesi**, profil gizliliği, engelleme, oturum sahipliği ve Firestore erişim kurallarını bypass etmemeli.
+
+**Görüntü referansı:** Kullanıcının `45388.jpg` profil ekranında “Arkadaşsınız” düğmesi; `45386.jpg` Gelen Kutusu ekranında Umay'ın takip ve arkadaşlık bildirimi. Yalnızca istek gerçekten beklemedeyken o düğmenin yerini “Yanıtla” alması isteniyor.
+
+**QA:** Yeni, henüz arkadaş olmayan hesap A → B arkadaşlık isteği gönder; B'nin Gelen Kutusu bildirimine bas → A profili → Yanıtla → Kabul et veya Reddet; sonuç her iki profilde ve gelen kutusunda güncellenmeli. Zaten arkadaş olan Umay/Adem çiftinde “Arkadaşsınız” korunmalı.
