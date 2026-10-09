@@ -50,3 +50,17 @@ Kullanıcının istediği tam akış:
 **Görüntü referansı:** Kullanıcının `45388.jpg` profil ekranında “Arkadaşsınız” düğmesi; `45386.jpg` Gelen Kutusu ekranında Umay'ın takip ve arkadaşlık bildirimi. Yalnızca istek gerçekten beklemedeyken o düğmenin yerini “Yanıtla” alması isteniyor.
 
 **QA:** Yeni, henüz arkadaş olmayan hesap A → B arkadaşlık isteği gönder; B'nin Gelen Kutusu bildirimine bas → A profili → Yanıtla → Kabul et veya Reddet; sonuç her iki profilde ve gelen kutusunda güncellenmeli. Zaten arkadaş olan Umay/Adem çiftinde “Arkadaşsınız” korunmalı.
+
+## EK TALEP — Takip istekleri de aynı Messenger tipi model olsun
+
+**Kullanıcı talebi:** “Takip içinde öyle model istiyorum.”
+
+- **Gelen Kutusu > İstekler** bölümünde ayrı **Takip istekleri** alt başlığı; arkadaşlık istekleriyle aynı satır düzeni: solda yuvarlak fotoğraf, ad, isteğin zamanı, gerçekten varsa görünürlüğü izinli **N ortak arkadaş** ve 2–3 küçük profil fotoğrafı. Sabit sayı veya sahte kişi kullanılmaz.
+- **Gizli hesaba gelen, hâlâ bekleyen takip isteği** satırında **Onayla / Sil** düğmeleri; “Sil” yalnız isteği reddeder, hesabı/mesajı silmez. Satıra dokununca direkt gönderen profiline gidilir, burada **Yanıtla → Kabul et / Reddet** seçenekleri gösterilir.
+- **Herkese açık hesapta “X seni takip etmeye başladı”** olayı *takip isteği değildir*; **Bildirimler** sekmesinde görünür ve satıra basınca kişinin profili açılır. **Onayla/Sil veya Yanıtla** gösterilmez. İstenirse karşı takip normal “Takip et” ile yapılabilir.
+- **Takip isteği kabul edilince** iki hesapta gerçek takip/takipçi sayaçları ve düğmeleri doğru güncellenir; listeden bekleyen istek kaldırılır. **Reddedilince** takip ilişkisi oluşmaz; bekleyen kayıt/sayaç düşer.
+- Aynı kişiden birden fazla bildirim, eski isteğin kabul edilmiş/reddedilmiş/geri çekilmiş hâli veya gizlilik değişikliği varsa **gerçek güncel Firestore durumuna göre** eylem gösterilir. Okunmamış durum ve bildirim geçmişi silinmez.
+- **Bildirimden veya istek satırından tekrar ayrı Aktivite ekranına yönlendirme yapılmaz.** Profil gizliliği, karşılıklı engel, veri okuma yetkileri ve mevcut mesaj/grup yolları korunur.
+- Test: gizli hesap A'ya B'den takip isteği → A'nın Gelen Kutusu/İstekler bölümünde B fotoğrafı, gerçek varsa ortak arkadaş metni, Onayla/Sil → satıra basınca B profili ve Yanıtla → kabul/ret → hem A hem B'de bekleyen/takip durumları tutarlı. Açık hesaba doğrudan takip ayrıca test edilir.
+
+**Durum:** Work tasarım notudur; henüz kodlama veya canlı hesaplara değişiklik uygulanmadı.
