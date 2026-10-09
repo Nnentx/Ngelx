@@ -102,7 +102,7 @@ s=s[:start]+editor+s[end:]
 # not among the current loaded batch.
 old="""? ids.length.toString()+' Arkadaş'+(sorgu.trim().isNotEmpty?' · Arama sonuçları':'')
           : baslik"""
-new="""? (sorgu.trim().isNotEmpty?'Arkadaş arama sonuçları':ids.length.toString()+' Arkadaş')
+new="""? (sorgu.trim().isNotEmpty?'Arkadaş · Arama sonuçları':ids.length.toString()+' Arkadaş')
           : baslik"""
 if s.count(old)!=1:raise SystemExit("Build 415 friends header anchor drift")
 s=s.replace(old,new,1)
