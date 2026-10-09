@@ -94,6 +94,71 @@ once("title:Text(metin,maxLines:2,overflow:TextOverflow.ellipsis,style:TextStyle
      "title:ngelxRenkliBildirim(v,metin,okundu),",
      'notification title')
 
+# Five red unread/pending count badges are live and derived from real
+# Firestore streams. A hidden archived chat is not counted as unread.
+once("    Widget sekme(String ad){","    Widget sekme(String ad,int sayi){","counted tabs")
+once("child:Text(ad,style:TextStyle(color:secili?Colors.white:const Color(0xFF6F7891),fontSize:12.5,fontWeight:secili?FontWeight.w900:FontWeight.w700)),",
+     """child:Row(mainAxisSize:MainAxisSize.min,children:[
+              Text(ad,style:TextStyle(color:secili?Colors.white:const Color(0xFF6F7891),
+                fontSize:12.5,fontWeight:secili?FontWeight.w900:FontWeight.w700)),
+              if(sayi>0)Container(
+                margin:const EdgeInsets.only(left:5),padding:const EdgeInsets.symmetric(horizontal:5,vertical:2),
+                decoration:BoxDecoration(color:const Color(0xFFE62D48),borderRadius:BorderRadius.circular(20)),
+                child:Text(_sayacEtiketi(sayi),style:const TextStyle(
+                  color:Colors.white,fontSize:9.5,fontWeight:FontWeight.w900))),
+            ]),""",
+     'small red badges')
+
+counterWidget="""    Widget ngelxSekmeliSayaclar(){
+      if(ben==null)return ListView(scrollDirection:Axis.horizontal,
+        children:[sekme('Tümü',0),sekme('Mesajlar',0),sekme('Gruplar',0),
+          sekme('Bildirimler',0),sekme('İstekler',0)]);
+      return StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
+        stream:_bildirimAkisi(ben,200),
+        builder:(_,ns)=>StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
+          stream:_sohbetAkisi(ben,200),
+          builder:(_,cs){
+            var bildirimler=0,istekler=0,mesajlar=0,gruplar=0;
+            final bekleyen=<String>{};
+            for(final d in ns.data?.docs??<QueryDocumentSnapshot<Map<String,dynamic>>>[]){
+              final v=d.data(),tur=(v['type']??'').toString();
+              if((tur=='follow_request'||tur=='friend_request')&&v['status']=='pending'){
+                final from=(v['fromUid']??'').toString();
+                if(from.isNotEmpty&&bekleyen.add(from+'|'+tur))istekler++;
+              }else if(v['read']!=true){
+                bildirimler++;
+              }
+            }
+            for(final d in cs.data?.docs??<QueryDocumentSnapshot<Map<String,dynamic>>>[]){
+              final v=d.data();
+              if((v['hiddenFor'] is Iterable&&(v['hiddenFor'] as Iterable).contains(ben))||
+                  arsivSohbetler.contains(d.id))continue;
+              final n=(v['unread_$ben'] as num?)?.toInt()??0;
+              if(n<=0)continue;
+              final members=v['members'] is Iterable?(v['members'] as Iterable).length:0;
+              if(v['isGroup']==true||members>2)gruplar+=n;
+              else mesajlar+=n;
+            }
+            return ListView(scrollDirection:Axis.horizontal,children:[
+              sekme('Tümü',bildirimler+istekler+mesajlar+gruplar),
+              sekme('Mesajlar',mesajlar),
+              sekme('Gruplar',gruplar),
+              sekme('Bildirimler',bildirimler),
+              sekme('İstekler',istekler),
+            ]);
+          }));
+    }
+
+"""
+once('    Widget bildirimlerIcerigi(){',counterWidget+'    Widget bildirimlerIcerigi(){','live badge counters')
+once("""child:ListView(
+                  scrollDirection:Axis.horizontal,
+                  children:[sekme('Tümü'),sekme('Mesajlar'),sekme('Gruplar'),sekme('Bildirimler'),sekme('İstekler')],
+                ),""",
+     "child:ngelxSekmeliSayaclar(),",
+     "tab count source")
+
+
 s=s[:a]+inbox+s[b:]
 p.write_text(s,encoding='utf-8')
 
