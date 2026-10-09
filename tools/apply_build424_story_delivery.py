@@ -120,7 +120,7 @@ new=r'''  Future<void> _yanitGonder(String ham,{bool tepki=false})async{
       // Core reply is committed BEFORE the non-essential chat preview.
       // A bad metadata write must no longer roll back the message.
       asama='mesaj-gonderimi';
-      final chat=sohbet;
+      final chat=sohbet!;
       await chat.collection('messages').doc().set({
         'senderId':ben.uid,'text':metin,'type':'story_reply',
         'storyId':widget.storyId,'storyUrl':widget.url,
