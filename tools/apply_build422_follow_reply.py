@@ -11,7 +11,7 @@ if v.count(anchor)!=1:raise SystemExit('Build422 follow label drift')
 start=v.index('return OutlinedButton.icon(',v.index(anchor))
 end=v.index('\n                        },',start)
 old=v[start:end]
-for key in ["onPressed:()async{", "if(me==null)return;", "Text(etiket,maxLines:1)"]:
+for key in ["onPressed:()async{", "if(me==null)return;", "Text(etiket,maxLines:1,"]:
     if key not in old:raise SystemExit('Build422 follow action missing '+key)
 old=old.replace("if(me==null)return;",
 """if(me==null)return;
@@ -44,7 +44,7 @@ old=old.replace("if(me==null)return;",
                                 }
                                 return;
                               }""",1)
-old=old.replace('Text(etiket,maxLines:1)',"Text(gelenTakipBekliyor&&!takipte?'Yanıtla':etiket,maxLines:1)",1)
+old=old.replace('Text(etiket,maxLines:1,',"Text(gelenTakipBekliyor&&!takipte?'Yanıtla':etiket,maxLines:1,",1)
 old=old.replace("takipte?Icons.person_remove_outlined:(bekliyor?Icons.schedule_rounded:Icons.person_add_alt_1)",
                 "takipte?Icons.person_remove_outlined:(gelenTakipBekliyor?Icons.mark_email_unread_rounded:(bekliyor?Icons.schedule_rounded:Icons.person_add_alt_1))",1)
 wrapped="""return StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
