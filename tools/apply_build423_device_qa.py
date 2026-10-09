@@ -125,22 +125,24 @@ inbox=inbox[:fnStart]+handler+inbox[fnEnd:]
 # Five red unread/pending count badges are live and derived from real
 # Firestore streams. A hidden archived chat is not counted as unread.
 once("    Widget sekme(String ad){","    Widget sekme(String ad,int sayi){","counted tabs")
-once("child:Text(ad,style:TextStyle(color:secili?Colors.white:const Color(0xFF6F7891),fontSize:12.5,fontWeight:secili?FontWeight.w900:FontWeight.w700)),",
-     """child:Row(mainAxisSize:MainAxisSize.min,children:[
-              Text(ad,style:TextStyle(color:secili?Colors.white:const Color(0xFF6F7891),
-                fontSize:12.5,fontWeight:secili?FontWeight.w900:FontWeight.w700)),
-              if(sayi>0)Container(
-                margin:const EdgeInsets.only(left:5),padding:const EdgeInsets.symmetric(horizontal:5,vertical:2),
+once("child:FittedBox(fit:BoxFit.scaleDown,child:Text(ad,maxLines:1,style:TextStyle(color:secili?Colors.white:const Color(0xFF6F7891),fontSize:11.5,fontWeight:secili?FontWeight.w900:FontWeight.w700))),",
+     """child:Stack(clipBehavior:Clip.none,children:[
+              FittedBox(fit:BoxFit.scaleDown,child:Text(ad,maxLines:1,
+                style:TextStyle(color:secili?Colors.white:const Color(0xFF6F7891),
+                fontSize:11.5,fontWeight:secili?FontWeight.w900:FontWeight.w700))),
+              if(sayi>0)Positioned(right:-3,top:-8,child:Container(
+                padding:const EdgeInsets.symmetric(horizontal:4,vertical:1),
                 decoration:BoxDecoration(color:const Color(0xFFE62D48),borderRadius:BorderRadius.circular(20)),
                 child:Text(_sayacEtiketi(sayi),style:const TextStyle(
-                  color:Colors.white,fontSize:9.5,fontWeight:FontWeight.w900))),
+                  color:Colors.white,fontSize:9,fontWeight:FontWeight.w900)))),
             ]),""",
      'small red badges')
 
 counterWidget="""    Widget ngelxSekmeliSayaclar(){
-      if(ben==null)return ListView(scrollDirection:Axis.horizontal,
-        children:[sekme('Tümü',0),sekme('Mesajlar',0),sekme('Gruplar',0),
-          sekme('Bildirimler',0),sekme('İstekler',0)]);
+      if(ben==null)return Row(children:[
+        Expanded(child:sekme('Tümü',0)),Expanded(child:sekme('Mesajlar',0)),
+        Expanded(child:sekme('Gruplar',0)),Expanded(child:sekme('Bildirimler',0)),
+        Expanded(child:sekme('İstekler',0))]);
       return StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
         stream:_bildirimAkisi(ben,200),
         builder:(_,ns)=>StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
@@ -167,22 +169,25 @@ counterWidget="""    Widget ngelxSekmeliSayaclar(){
               if(v['isGroup']==true||members>2)gruplar+=n;
               else mesajlar+=n;
             }
-            return ListView(scrollDirection:Axis.horizontal,children:[
-              sekme('Tümü',bildirimler+istekler+mesajlar+gruplar),
-              sekme('Mesajlar',mesajlar),
-              sekme('Gruplar',gruplar),
-              sekme('Bildirimler',bildirimler),
-              sekme('İstekler',istekler),
+            return Row(children:[
+              Expanded(child:sekme('Tümü',bildirimler+istekler+mesajlar+gruplar)),
+              Expanded(child:sekme('Mesajlar',mesajlar)),
+              Expanded(child:sekme('Gruplar',gruplar)),
+              Expanded(child:sekme('Bildirimler',bildirimler)),
+              Expanded(child:sekme('İstekler',istekler)),
             ]);
           }));
     }
 
 """
 once('    Widget bildirimlerIcerigi(){',counterWidget+'    Widget bildirimlerIcerigi(){','live badge counters')
-once("""child:ListView(
-                  scrollDirection:Axis.horizontal,
-                  children:[sekme('Tümü'),sekme('Mesajlar'),sekme('Gruplar'),sekme('Bildirimler'),sekme('İstekler')],
-                ),""",
+once("""child:Row(children:[
+                Expanded(child:sekme('Tümü')),
+                Expanded(child:sekme('Mesajlar')),
+                Expanded(child:sekme('Gruplar')),
+                Expanded(child:sekme('Bildirimler')),
+                Expanded(child:sekme('İstekler')),
+              ]),""",
      "child:ngelxSekmeliSayaclar(),",
      "tab count source")
 
