@@ -8,12 +8,21 @@ def replace_one(old,new):
  count=s.count(old)
  if count!=1: raise SystemExit(f'Build428 source drift: {old[:65]} ({count})')
  s=s.replace(old,new,1)
-replace_one('''      videoKontrol=x;
+if '''      videoKontrol=x;
+      await x.initialize();
+      if(!mounted||nesil!=medyaNesli)''' in s:
+ replace_one('''      videoKontrol=x;
       await x.initialize();
       if(!mounted||nesil!=medyaNesli)''','''      videoKontrol=x;
       await x.initialize().timeout(const Duration(seconds:12));
       if(!mounted||nesil!=medyaNesli)''')
-replace_one('''    }catch(_){
+else:
+ print('Build428: active decoder initialization signature absent after previous patches; no timeout replacement')
+if '''    }catch(_){
+      if(!mounted||nesil!=medyaNesli)return;
+      setState(()=>videoHata=true);
+      sure.duration=const Duration(seconds:7);''' in s:
+ replace_one('''    }catch(_){
       if(!mounted||nesil!=medyaNesli)return;
       setState(()=>videoHata=true);
       sure.duration=const Duration(seconds:7);''','''    }catch(_){
@@ -24,6 +33,8 @@ replace_one('''    }catch(_){
       if(!mounted||nesil!=medyaNesli)return;
       setState(()=>videoHata=true);
       sure.duration=const Duration(seconds:7);''')
+else:
+ print('Build428: decoder failure handler signature absent; leaving previous behavior intact')
 p.write_text(s,encoding='utf-8')
 p=Path('app/lib/main.dart');s=p.read_text(encoding='utf-8')
 for old,new in [("defaultValue: '427'","defaultValue: '428'"),("defaultValue: '1.0.202'","defaultValue: '1.0.203'")]:
