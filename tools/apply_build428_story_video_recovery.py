@@ -8,7 +8,11 @@ def replace_one(old,new):
  count=s.count(old)
  if count!=1: raise SystemExit(f'Build428 source drift: {old[:65]} ({count})')
  s=s.replace(old,new,1)
-replace_one('await x.initialize();','await x.initialize().timeout(const Duration(seconds:12));')
+replace_one('''      videoKontrol=x;
+      await x.initialize();
+      if(!mounted||nesil!=medyaNesli)''','''      videoKontrol=x;
+      await x.initialize().timeout(const Duration(seconds:12));
+      if(!mounted||nesil!=medyaNesli)''')
 replace_one('''    }catch(_){
       if(!mounted||nesil!=medyaNesli)return;
       setState(()=>videoHata=true);
