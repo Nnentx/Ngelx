@@ -31,8 +31,8 @@ checks={
  'mutual avatars cached':"_kullaniciGetir(id)" in inbox and "ortak.take(3)" in inbox,
  'friend request recipient uses verified server state':"sosyalIstekRef(uid,me,'friend_request').snapshots()" in visitor,
  'follow request recipient uses verified server state':"sosyalIstekRef(uid,me,'follow_request').snapshots()" in visitor,
- 'profile reply launches accept/reject':visitor.count("Text('Kabul et')")>=2 and
-   visitor.count("Text('Reddet')")>=2,
+ 'profile reply launches accept/reject':visitor.count("Text('Kabul et'")>=2 and
+   visitor.count("Text('Reddet'")>=2,
  'both incoming profile answers use safe shared handler':
    visitor.count('ngelxGelenSosyalIstekCevapla(')>=2,
  'no already-accepted request resurfacing':
