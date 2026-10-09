@@ -94,6 +94,34 @@ once("title:Text(metin,maxLines:2,overflow:TextOverflow.ellipsis,style:TextStyle
      "title:ngelxRenkliBildirim(v,metin,okundu),",
      'notification title')
 
+# Keep old pending notifications consistent after accepting/rejecting a request.
+fnStart=inbox.index('    Future<void> gelenKutusuIsteginiSonuclandir(')
+fnEnd=inbox.index('    Widget ',fnStart)
+handler=inbox[fnStart:fnEnd]
+batchLine="      final batch=FirebaseFirestore.instance.batch();"
+if handler.count(batchLine)!=1:raise SystemExit('Build423 request handler drift')
+handler=handler.replace(batchLine,"""      final batch=FirebaseFirestore.instance.batch();
+      // Older builds may have created four random-ID notifications for the
+      // same sender and request type. Finish those in this same batch.
+      try{
+        final duplicates=await FirebaseFirestore.instance.collection('notifications')
+          .where('toUid',isEqualTo:benUid).limit(200).get()
+          .timeout(const Duration(seconds:10));
+        for(final item in duplicates.docs){
+          if(item.id==belge.id)continue;
+          final v=item.data();
+          if(v['fromUid']==gonderen&&v['type']==istekTuru&&v['status']=='pending'){
+            batch.update(item.reference,{
+              'status':kabul?'accepted':'rejected',
+              'read':true,'answeredAt':FieldValue.serverTimestamp(),
+            });
+          }
+        }
+      }catch(_){
+        // Never block a legitimate accept/reject due to cleanup failure.
+      }""",1)
+inbox=inbox[:fnStart]+handler+inbox[fnEnd:]
+
 # Five red unread/pending count badges are live and derived from real
 # Firestore streams. A hidden archived chat is not counted as unread.
 once("    Widget sekme(String ad){","    Widget sekme(String ad,int sayi){","counted tabs")
