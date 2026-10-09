@@ -37,3 +37,17 @@
 Bu beşinci kayıtta yeni bir **Bildirim/Gelen Kutusu akış tasarımı** isteği vardır. Önceki kayıtlardaki açık P1 hikâye yanıtı gönderme hatası, katılım tarihi kırpılması, uzun açılış yüklemesi ve kapak değiştirme düğmesi ayrı maddeler olarak durur; yeni tek Work paketiyle birleştirilecektir.
 
 **Üretim hesapları, Firebase/Firestore kayıtları veya uygulama kodu bu QA raporuyla değiştirilmedi.**
+
+## KALDIRMA KARARI — gereksiz ikinci Aktivite ekranı
+
+**09.10.2026 kullanıcı onayı:** “Tamam gereksiz aktivite bölümünü sil istersen not et.”
+
+- **Bağımsız/tekrar eden “Aktivite” sayfası, yeni tasarımdaki gezinmeden kaldırılacak.** Gelen Kutusu'nda Bildirimler ve İstekler zaten olduğundan kullanıcı tekrar aynı bildirimleri ayrı ekranlarda dolaşmayacak.
+- **Gelen Kutusu → Tümü / Mesajlar / Gruplar / Bildirimler / İstekler** korunacak; Bildirimler/İstekler içerikleri *aynı ekran içinde* gösterilecek, ikinci Aktivite sayfası açılmayacak.
+- Üst menü/bildirim zili gibi eski **Aktivite** girişleri uygun **Gelen Kutusu → Bildirimler** sekmesine yönlenecek. Eski deeplink veya kaydedilmiş bildirim tıklamaları çökmeyecek.
+- **Silinecek şey yalnız gereksiz ekran ve tekrar eden navigasyon.** Mevcut bildirim kayıtları, takip/arkadaşlık/grup istekleri, okundu bilgileri, geçmiş, sayaçlar, canlı güncellemeler **kesinlikle silinmeyecek**.
+- “Umay seni takip etmeye başladı” gibi tamamlanmış takip bildiriminde gönderenin profiline gidilecek; sırf bunun için onay istenmeyecek.
+- Bekleyen **arkadaşlık veya gizli hesap takip isteğinde** istek gönderenin profiline gidilecek; yalnızca `pending` durumunda **Yanıtla → Kabul et / Reddet**. İstekler listesinde **Onayla / Sil**, gerçek ortak arkadaş sayısı (varsa) ve küçük profil fotoğrafları gösterilecek.
+- Değişiklikten sonra mevcut çalışan sohbet/grup/arkadaşlık/takip ve Firebase yetkileri korunmalı; canlı bildirim teslimi ve okundu durumu uçtan uca test edilmeli.
+
+**Durum:** Bu bir **Work kapsam/ürün kararı**dır. Kod şu anda silinmedi veya değiştirilmedi. Silme sırasında veri temizliği yapılmayacak.
