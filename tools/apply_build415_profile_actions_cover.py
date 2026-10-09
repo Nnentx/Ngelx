@@ -25,9 +25,10 @@ vreplace("SizedBox(height:51,child:Row(crossAxisAlignment:CrossAxisAlignment.str
          "Column(children:[\n"
          "                 SizedBox(height:52,child:Row(crossAxisAlignment:CrossAxisAlignment.stretch,children:[",
          "start first row")
-vreplace("Expanded(flex:3,child:StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(",
-         "Expanded(child:StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(",
-         "follow flex")
+old="Expanded(flex:3,child:StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>("
+if visitor.count(old)!=2:
+    raise SystemExit("Build 415 follow/friend pair shape drift")
+visitor=visitor.replace(old,"Expanded(child:StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(",1)
 vreplace("Expanded(flex:2,child:OutlinedButton.icon(",
          "Expanded(child:OutlinedButton.icon(",
          "message flex")
