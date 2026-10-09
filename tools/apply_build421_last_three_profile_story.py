@@ -16,9 +16,17 @@ def modify_between(start_marker,end_marker,changes):
     part=s[a:b]
     for label,old,new in changes:
         n=part.count(old)
-        if n!=1:
-            raise SystemExit(f'Build421 {label}: expected 1 anchor, got {n}')
-        part=part.replace(old,new,1)
+        if n==1:
+            part=part.replace(old,new,1)
+            continue
+        import re
+        rows=old.splitlines()
+        pat=r'[ \t]*\n[ \t]*'.join(re.escape(x.strip()) for x in rows)
+        hits=list(re.finditer(pat,part))
+        if len(hits)!=1:
+            raise SystemExit(f'Build421 {label}: expected one source anchor, got {n} exact and {len(hits)} flexible')
+        hit=hits[0]
+        part=part[:hit.start()]+new+part[hit.end():]
     s=s[:a]+part+s[b:]
 
 # (1) Narrow the header only when coverless, not the approved covered view.
