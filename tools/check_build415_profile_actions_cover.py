@@ -29,7 +29,7 @@ checks={
     and "errorBuilder:(ctx,error,stack)" in e,
   'cover editor actions and mode unchanged':"onPressed:_kaydediliyor?null:widget.onKapak" in e
     and "'profileViewMode':_gorunum" in e,
-  'friend search title no false total':"Arkadaş arama sonuçları" in f
+  'friend search title no false total':"Arkadaş · Arama sonuçları" in f
     and "ids.length.toString()+' Arkadaş'" in f,
   'search privacy preserved':"discoverableProfile" in s and "blocked" in s,
   'story reply safety kept':"batch.set(story," not in
