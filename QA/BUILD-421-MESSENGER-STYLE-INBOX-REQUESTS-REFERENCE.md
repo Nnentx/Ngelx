@@ -64,3 +64,14 @@ Kullanıcının istediği tam akış:
 - Test: gizli hesap A'ya B'den takip isteği → A'nın Gelen Kutusu/İstekler bölümünde B fotoğrafı, gerçek varsa ortak arkadaş metni, Onayla/Sil → satıra basınca B profili ve Yanıtla → kabul/ret → hem A hem B'de bekleyen/takip durumları tutarlı. Açık hesaba doğrudan takip ayrıca test edilir.
 
 **Durum:** Work tasarım notudur; henüz kodlama veya canlı hesaplara değişiklik uygulanmadı.
+
+## KALDIRMA KARARI — ayrı Aktivite sayfasına son ver
+
+**09.10.2026 kesin onay:** Kullanıcı gereksiz tekrar eden **Aktivite ekranının kaldırılmasını** istedi.
+
+- Gelen Kutusu → **Bildirimler** ve **İstekler**, aktivitelerin tek UI kaynağı olacak. **Aktivite adındaki ikinci/tekrar ekran uygulama navigasyonundan çıkarılacak.**
+- Önceden Aktivite'ye götüren bildirim zili, menü ve eski bağlantılar **Gelen Kutusu → ilgili sekmeye** yönlenecek.
+- Bildirim/istek satırına basınca doğrudan kişinin profiline gidilecek; gönderen UID'sine dayalı rota kullanılacak.
+- Sadece **bekleyen** gizli takip veya arkadaşlık isteği profilde **Yanıtla → Kabul et / Reddet** açacak; tamamlanmış takip ve “Arkadaşsınız” durumu olduğu gibi korunacak.
+- **Sakın bildirim veya isteği veritabanından silme:** Aktivite sayfasının kaldırılması sadece fazladan ekran/navigasyon kaldırmadır. Okundu, tarih, grup bildirimleri, sayaçlar ve mevcut sohbet işlevleri korunur.
+- Yalnız Work notuna eklendi; kod henüz değiştirilmedi.
