@@ -16,10 +16,11 @@ if "import 'package:firebase_storage/firebase_storage.dart';" not in s:
     s=s.replace(part,"import 'package:firebase_storage/firebase_storage.dart';\n\n"+part,1)
 old="""          final docs=(s.data?.docs??[]).toList()
             ..sort((a,b){"""
-new="""          final simdi=DateTime.now();
-          final docs=(s.data?.docs??[]).where((d){
+new="""          final docs=(s.data?.docs??[]).where((d){
             final v=d.data();
-            return v['type']=='story'&&
+            final hidden=List<String>.from(v['hiddenFor']??const[]);
+            return v['type']=='story'&&v['deleted']!=true&&v['isDeleted']!=true&&
+              !hidden.contains(uid)&&
               (v['archivedAt'] is Timestamp||v['highlighted']==true);
           }).toList()
             ..sort((a,b){"""
