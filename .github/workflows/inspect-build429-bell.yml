@@ -9,27 +9,28 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Print relevant existing code blocks
+      - name: Print history, notification and message delete paths
         run: |
           python3 - <<'PY'
           from pathlib import Path
           p=Path('app/lib/main.dart')
           lines=p.read_text(encoding='utf-8').splitlines()
-          targets=['class AktivitePage','bool ngelxPresenceOnline','class HikayeArsiviPage','class CanliYayinGecmisiPage','class NgelXArsivMerkeziPage','class _ProfilPageState']
+          targets=[
+            'class _AktivitePageState',
+            'class CanliYayinGecmisiPage',
+            'class HikayeArsiviPage',
+            'Future<void> ngelxMedyaSil',
+            'class _MesajPageState',
+            'class _GrupSohbetPageState',
+            'class _YeniYorumlarState',
+          ]
           for target in targets:
               i=next((i for i,l in enumerate(lines) if target in l),None)
               print('BLOCK',target,'LINE',i+1 if i is not None else 'missing')
               if i is None: continue
-              end=min(len(lines),i+65)
+              length=190 if target=='class _AktivitePageState' else 145 if target=='class CanliYayinGecmisiPage' else 85
+              end=min(len(lines),i+length)
               for j in range(i,end):
                   if j>i+6 and lines[j].startswith('class '): break
                   print(f'{j+1}: {lines[j]}')
-          for p in [Path('app/lib/live_broadcast_studio.dart')]:
-              lines=p.read_text(encoding='utf-8').splitlines()
-              for target in ['class _CanliYayinPageState','Future<void>','async{']:
-                  pass
-              i=next(i for i,l in enumerate(lines) if 'Future<void> _bitir' in l or 'Future<void> canliyiBitir' in l) if any('Future<void> _bitir' in l or 'Future<void> canliyiBitir' in l for l in lines) else None
-              print('LIVE_END',i+1 if i is not None else 'inspect lines 1000-1070')
-              if i is not None:
-                  for j in range(i,min(i+75,len(lines))):print(f'{j+1}: {lines[j]}')
           PY
