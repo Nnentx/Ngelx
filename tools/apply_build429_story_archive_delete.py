@@ -32,7 +32,7 @@ p.write_text(s,encoding='utf-8')
 p=Path('app/lib/main.dart')
 s=p.read_text(encoding='utf-8')
 a=s.index('class _ProfilPageState extends State<ProfilPage>')
-b=s.index('\\nclass _ProfilEtkilesimRozeti',a)
+b=s.index('\nclass _ProfilEtkilesimRozeti',a)
 owner=s[a:b]
 old="onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const MesajPage(initialFilter:'Bildirimler'))),icon:sayi==0?"
 new="onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const AktivitePage())),icon:sayi==0?"
