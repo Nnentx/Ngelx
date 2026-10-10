@@ -39,6 +39,17 @@ jobs:
                       env.write('GOOGLE_APPLICATION_CREDENTIALS='+str(p)+'\n')
                   print('Existing Firebase Admin credential is available; read-only preview enabled.')
           PY
+      - name: Check R2 cleanup credential availability
+        env:
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          python - <<'PYCODE'
+          import os
+          ready=all(os.environ.get(k) for k in ['R2_ACCESS_KEY_ID','R2_SECRET_ACCESS_KEY','CLOUDFLARE_ACCOUNT_ID'])
+          print('R2 cleanup credentials configured: '+str(ready))
+          PYCODE
       - name: Install preview dependency
         if: steps.auth.outputs.available == 'true'
         run: python -m pip install firebase-admin
