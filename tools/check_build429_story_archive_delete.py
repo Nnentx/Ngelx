@@ -11,7 +11,7 @@ checks={
   'Build428 story reply still reaches private chat': "'type':'story_reply'" in story and "'storyOwnerId':hedef" in story,
   'Story reply preview card still opens story': '_hikayeYanitKartiAc(v)' in main,
   'Story series timeout remains bounded': 'initialize().timeout(const Duration(seconds:12))' in story,
-  'Story archive excludes active unsaved stories': "v['archivedAt'] is Timestamp||suresiDolmus||v['highlighted']==true" in main,
+  'Story archive keeps only explicitly archived/highlighted, non-deleted owner stories': "v['archivedAt'] is Timestamp||v['highlighted']==true" in main and "v['deleted']!=true&&v['isDeleted']!=true" in main and '!hidden.contains(uid)' in main,
   'Archive remains owner scoped': "where('ownerId',isEqualTo:uid)" in main and "where('type',isEqualTo:'story')" in main,
   'Permanent story deletion validates signed-in owner': "veri['ownerId']" in story and 'Yalnızca kendi hikâyeni silebilirsin.' in story,
   'Firebase Storage media deletion checks owner path': 'dosya.fullPath.startsWith('stories/'+uid+'/')' in story and 'await dosya.delete()' in story,
