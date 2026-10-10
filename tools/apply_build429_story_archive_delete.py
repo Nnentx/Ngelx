@@ -10,6 +10,10 @@ def one(s, old, new, label):
 
 p=Path('app/lib/main.dart')
 s=p.read_text(encoding='utf-8')
+if "import 'package:firebase_storage/firebase_storage.dart';" not in s:
+    part="part 'story_v66.dart';"
+    if s.count(part)!=1: raise SystemExit('Build429 main.dart part anchor drift')
+    s=s.replace(part,"import 'package:firebase_storage/firebase_storage.dart';\\n\\n"+part,1)
 old="""          final docs=(s.data?.docs??[]).toList()
             ..sort((a,b){"""
 new="""          final simdi=DateTime.now();
@@ -89,6 +93,10 @@ p.write_text(s,encoding='utf-8')
 
 p=Path('app/pubspec.yaml')
 s=p.read_text(encoding='utf-8')
+if '  firebase_storage: ^13.6.0\\n' not in s:
+    anchor='  firebase_auth: ^6.7.0\\n'
+    if s.count(anchor)!=1: raise SystemExit('Build429 pubspec Firebase dependency anchor drift')
+    s=s.replace(anchor,anchor+'  firebase_storage: ^13.6.0\\n',1)
 s=one(s,'version: 1.0.203+428','version: 1.0.204+429','pubspec version')
 p.write_text(s,encoding='utf-8')
 print('Build429 archive filtering, guarded story media deletion and version applied')
