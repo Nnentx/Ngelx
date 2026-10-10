@@ -12,7 +12,7 @@ p=Path('app/lib/main.dart')
 s=p.read_text(encoding='utf-8')
 if "import 'package:firebase_storage/firebase_storage.dart';" not in s:
     import_line="import 'package:firebase_storage/firebase_storage.dart';\n"
-    first_part=__import__('re').search(r'^part\\s',s,__import__('re').M)
+    first_part=__import__('re').search(r'^part\s',s,__import__('re').M)
     if first_part is None: raise SystemExit('Build429 main.dart part anchor drift')
     s=s[:first_part.start()]+import_line+s[first_part.start():]
 old="""          final docs=(s.data?.docs??[]).toList()
