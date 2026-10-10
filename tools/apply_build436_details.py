@@ -20,6 +20,7 @@ rep("  String hedefAd='Bu kullanıcı',hedefFoto='';","""  final mine=await Fire
   String hedefAd='Bu kullanıcı',hedefFoto='';""")
 # A tombstone stays in its original position with sender-specific text in groups.
 rep("Text('Bu mesaj silindi',style:TextStyle(color:Color(0xFF777B80)","Text((v['deletedBy']??'')==uid?'Bu mesajı sildin':'Bu mesaj silindi',style:TextStyle(color:Color(0xFF777B80)")
+rep("child:const Row(mainAxisSize:MainAxisSize.min,children:[\n          Icon(Icons.block_rounded,color:Color(0xFF8A8D91),size:15),\n          SizedBox(width:6),\n          Text((v['deletedBy']??'')", "child:Row(mainAxisSize:MainAxisSize.min,children:[\n          const Icon(Icons.block_rounded,color:Color(0xFF8A8D91),size:15),\n          const SizedBox(width:6),\n          Text((v['deletedBy']??'')")
 # Eligibility has the same three relationship routes for profile, info and list labels.
 rep("final etiket=_etiket(v);","final etiket=_etiket(v);")
 rep("return Ngelx436BlockView(other:widget.uid,builder:(mine,theirs)=>(mine||theirs)?const SizedBox.shrink():Text(","return Ngelx436PresenceAccess(other:widget.uid,target:v,child:Text(")

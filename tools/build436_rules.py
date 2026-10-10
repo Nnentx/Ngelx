@@ -28,4 +28,7 @@ def patch_rules(s):
  assert anchor in s;s=s.replace(anchor,anchor+'\n        && pairOpen(fromUid, toUid)',1)
  anchor="            && request.resource.data.get('status', '') in ['pending', 'cancelled']"
  assert anchor in s;s=s.replace(anchor,anchor+"\n            && (request.resource.data.get('status', '') == 'cancelled' || pairOpen(fromUid, toUid))",1)
+ anchor="            && request.resource.data.get('status', '') in ['accepted', 'rejected']"
+ assert anchor in s
+ s=s.replace(anchor,"            && request.resource.data.get('status', '') in ['accepted', 'rejected', 'cancelled']\n            && (request.resource.data.get('status', '') != 'accepted' || pairOpen(fromUid, toUid))\n            && (request.resource.data.get('status', '') != 'cancelled' || !pairOpen(fromUid, toUid))",1)
  return s

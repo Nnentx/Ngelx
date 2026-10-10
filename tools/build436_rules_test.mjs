@@ -19,6 +19,8 @@
   await assertFails(updateDoc(doc(a436,'chats/qa436'),{nicknames:{qa436b:'Blocked nickname'}}));
   await assertFails(setDoc(doc(b436,'chats/qa436/messages/blocked-system'),{senderId:'qa436b',actorUid:'qa436b',type:'system',systemAction:'background_changed',text:'changed'}));
   await assertFails(setDoc(doc(b436,'friend_requests/qa436b/outgoing/qa436a'),{fromUid:'qa436b',toUid:'qa436a',type:'friend_request',status:'pending'}));
+  await assertFails(updateDoc(doc(b436,'friend_requests/qa436a/outgoing/qa436b'),{status:'accepted'}));
+  await assertSucceeds(updateDoc(doc(b436,'follow_requests/qa436a/outgoing/qa436b'),{status:'cancelled'}));
   await assertSucceeds(updateDoc(doc(a436,'friend_requests/qa436a/outgoing/qa436b'),{status:'cancelled'}));
   await env.withSecurityRulesDisabled(async(ctx)=>{await updateDoc(doc(ctx.firestore(),'users/qa436a'),{blocked:[]});});
   await assertSucceeds(updateDoc(doc(b436,'chats/qa436'),{backgroundUrl:'https://example.test/restored.jpg'}));
