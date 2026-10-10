@@ -9,3 +9,7 @@ Kalan iki cihaz bulgusu: Bildirimler sekmesinde Yeni bildirim / Şimdi satırlar
 ## Doğrulama
 
 GitHub Actions 38042908726 başarılı: Build395–430 üretim/koruma zinciri, Build431 Flutter analizi, 12 davranış testi, Firestore emulator testleri, APK derlemesi ve v2 imza doğrulaması geçti. Sürüm 1.0.206+431. Telefon üzerinde yeni paketin kontrolü henüz yapılmadı.
+
+## Sonraki cihaz sonucu: 45651.mp4
+
+Build431 cihaz testi başarısız: Bildirimler sekmesi ve mesaj isteği kartı kalıcı yüklemede kaldı. Takip kabulü ve ayrı istek kartları göründü. Build432 ortak snapshot replay, ilk sonuç zaman aşımı ve retry ile bu regresyonu ele alır; cihaz doğrulaması hâlâ gerekli.
