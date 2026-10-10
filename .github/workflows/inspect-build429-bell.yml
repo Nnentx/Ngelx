@@ -1,0 +1,26 @@
+name: Inspect Build429 profile activity button
+on:
+  push:
+    branches: [work/build-429-46-fixes]
+    paths:
+      - '.github/workflows/inspect-build429-bell.yml'
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Print profile activity references
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path('app/lib/main.dart').read_text()
+          terms=['AktivitePage','Bildirimler','ngelxOkunmamisAktiviteSayisi','Badge(label:Text']
+          lines=s.splitlines()
+          for term in terms:
+              hits=[i for i,line in enumerate(lines) if term in line]
+              print('TERM',term,'HITS',len(hits))
+              for i in hits[-12:]:
+                  print(f'--- {i+1} ---')
+                  for j in range(max(0,i-3),min(len(lines),i+4)):
+                      print(f'{j+1}: {lines[j]}')
+          PY
