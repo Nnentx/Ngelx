@@ -41,7 +41,7 @@ Durumlar: **Kodlandı** = yeni düzeltme mevcut, CI/telefon doğrulaması gereki
 |33|Aktiflik gizliliği|Kodlandı: shared online helper showActivityStatus=false durumunu gizler|
 |34|Kalıcı hikâye silme|Build429 kodlandı; telefon doğrulaması gerekli|
 |35|Hikâye videosunun medya temizliği|Kodlandı: gerçek videos/uid R2 yolu desteklenir|
-|36|Süresi dolan kaydedilmemiş hikâyenin temizlenmesi|Açık: güvenli sunucu bakım mekanizması gerekir|
+|36|Süresi dolan kaydedilmemiş hikâyenin temizlenmesi|Sunucu kodu hazır: retention_cleanup.py; yetkiler/kurulum ve entegrasyon testi açık|
 |37|Kaydedilmemiş canlı yayın geçmişinin tutulmaması|Açık|
 |38|Silinen canlı yayın kaydı ve medya temizliği|Açık|
 |39|Silinen gönderi ve ilişkili medya|Kodlandı: güncel sahip + medya temizliği tamamlanmadan kayıt kaldırılmaz|
