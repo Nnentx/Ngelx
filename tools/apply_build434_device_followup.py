@@ -15,6 +15,7 @@ rep("return Text(ad+' adlı kullanıcının '+grup+' grubuna katılma isteği '+
 # duplicates in the same commit, without touching a newer request generation.
 anchor="    final toplu=FirebaseFirestore.instance.batch();\n    toplu.update(belge.reference,{"
 rep(anchor,"""    final toplu=FirebaseFirestore.instance.batch();
+    try{
     final copies=await FirebaseFirestore.instance.collection('notifications').where('toUid',isEqualTo:ben).limit(200).get().timeout(const Duration(seconds:10));
     final generation=(veri['requestGeneration']??'').toString();
     final created=veri['createdAt'];
@@ -25,6 +26,7 @@ rep(anchor,"""    final toplu=FirebaseFirestore.instance.batch();
       final older=stamp is Timestamp&&created is Timestamp&&stamp.compareTo(created)<=0;
       if(same||older)toplu.update(copy.reference,{'status':kabul?'accepted':'rejected','read':true,'answeredAt':FieldValue.serverTimestamp()});
     }
+    }catch(_){/* Old copies retry on refresh; legitimate answer still proceeds. */}
     toplu.update(belge.reference,{""")
 # Resolve legacy pending rows against the sender relationship and canonical
 # request before displaying them. A failed read never invents an outcome.
