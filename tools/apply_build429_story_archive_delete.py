@@ -74,6 +74,29 @@ helper="""Future<void> ngelxHikayeKaliciSil(
       if(e.code!='object-not-found')rethrow;
     }
   }
+  Future<void> purgeLikes(CollectionReference<Map<String,dynamic>> col)async{
+    while(true){
+      final page=await col.limit(400).get();
+      if(page.docs.isEmpty)return;
+      final batch=FirebaseFirestore.instance.batch();
+      for(final d in page.docs){batch.delete(d.reference);}
+      await batch.commit();
+      if(page.docs.length<400)return;
+    }
+  }
+  final comments=ref.collection('comments');
+  while(true){
+    final page=await comments.limit(200).get();
+    if(page.docs.isEmpty)break;
+    for(final comment in page.docs){
+      await purgeLikes(comment.reference.collection('likes'));
+    }
+    final batch=FirebaseFirestore.instance.batch();
+    for(final comment in page.docs){batch.delete(comment.reference);}
+    await batch.commit();
+    if(page.docs.length<200)break;
+  }
+  await purgeLikes(ref.collection('likes'));
   await ref.delete();
 }
 
