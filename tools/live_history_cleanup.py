@@ -51,7 +51,13 @@ def main():
     for d in candidates:
         current=d.reference.get();v=current.to_dict() or {};uid=v.get('ownerId')
         if not eligible(v,dt.datetime.now(UTC)):continue
-        media=urls(v);keys=[verify(raw,uid) for raw in media]
+        media=urls(v)
+        def shared(raw):
+            for coll,fields in {'users':['photoUrl','coverUrl','introVideoUrl'],'videos':['mediaUrl','videoUrl','thumbnailUrl','posterUrl'],'live_streams':['mediaUrl','videoUrl','recordingUrl','thumbnailUrl','posterUrl','coverUrl']}.items():
+                for field in fields:
+                    if any(coll!='live_streams' or other.id!=d.id for other in db.collection(coll).where(field,'==',raw).limit(2).stream()):return True
+            return False
+        keys=[verify(raw,uid) for raw in media if not shared(raw)]
         if any(k is None for k in keys):skipped+=1;continue
         # A durable job atomically owns the exact unchanged record before deletion.
         job=db.collection('_live_cleanup_jobs').document(d.id)

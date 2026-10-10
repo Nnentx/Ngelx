@@ -73,10 +73,10 @@ class _CanliYayinGecmisiPageState extends State<CanliYayinGecmisiPage>{
   final Set<String> _pending={};
   String? _error;
   @override void dispose(){_cache.dispose();super.dispose();}
-  Future<void> _delete(String id)async{
+  Future<void> _delete(String id,{bool automatic=false})async{
     if(!_pending.add(id))return;
     if(mounted)setState(()=>_error=null);
-    try{await ngelx433CanliSil(id);}catch(_){if(mounted)setState(()=>_error='Yayın temizlenemedi. Yenile ile tekrar deneyebilirsin.');}
+    try{await ngelx433CanliSil(id,automatic:automatic);}catch(_){if(mounted)setState(()=>_error='Yayın temizlenemedi. Yenile ile tekrar deneyebilirsin.');}
     finally{_pending.remove(id);if(mounted)setState((){});}
   }
   Future<void> _refresh()async{
@@ -84,7 +84,7 @@ class _CanliYayinGecmisiPageState extends State<CanliYayinGecmisiPage>{
     if(_uid==null)return;
     try{
       final q=await FirebaseFirestore.instance.collection('live_streams').where('ownerId',isEqualTo:_uid).limit(100).get(const GetOptions(source:Source.server)).timeout(const Duration(seconds:12));
-      for(final d in q.docs){if(ngelx433CanliTemizlenir(d.data(),DateTime.now()))await _delete(d.id);}
+      for(final d in q.docs){if(ngelx433CanliTemizlenir(d.data(),DateTime.now()))await _delete(d.id,automatic:true);}
     }catch(_){if(mounted)setState(()=>_error='Geçmiş yenilenemedi. Tekrar dene.');}
   }
   @override Widget build(BuildContext context)=>Theme(data:ThemeData.light(),child:Scaffold(
@@ -121,7 +121,7 @@ class _CanliYayinGecmisiPageState extends State<CanliYayinGecmisiPage>{
     ),
   ));
   String _cleanupSignature='';
-  Future<void> _cleanup(List<QueryDocumentSnapshot<Map<String,dynamic>>> docs)async{for(final d in docs){if(!mounted)return;await _delete(d.id);}}
+  Future<void> _cleanup(List<QueryDocumentSnapshot<Map<String,dynamic>>> docs)async{for(final d in docs){if(!mounted)return;await _delete(d.id,automatic:true);}}
 }
 
 '''+s[b:];p.write_text(s)
@@ -131,7 +131,7 @@ r=r.replace(anchor,anchor+'''\n    if(widget.yayinSahibi){
       unawaited(()async{
         try{
           final snap=await FirebaseFirestore.instance.collection('live_streams').doc(widget.belgeId).get(const GetOptions(source:Source.server));
-          if(snap.exists&&ngelx433CanliTemizlenir(snap.data()!,DateTime.now()))await ngelx433CanliSil(widget.belgeId);
+          if(snap.exists&&ngelx433CanliTemizlenir(snap.data()!,DateTime.now()))await ngelx433CanliSil(widget.belgeId,automatic:true);
         }catch(_){/* Durable deleting marker is retried by history refresh. */}
       }());
     }''',1);f.write_text(r)

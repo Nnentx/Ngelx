@@ -7,7 +7,7 @@ checks={
  'counter and page share newest request state':s.count('ngelx433SosyalIstekler(')>=3,
  'inbox names use rich colored text':'title:ngelx433RenkliBildirim(v)' in s,
  'live cleanup requires owner and rejects active':"v['ownerId']!=uid" in s and "Devam eden yayın silinemez" in s,
- 'media cleaned before root record':s.index('for(final url in urls){await ngelxMedyaSil(url);}',s.index('Future<void> ngelx433CanliSil'))<s.index('await ref.delete()',s.index('Future<void> ngelx433CanliSil')),
+ 'media cleaned before root record':s.index('for(final url in urls){if(!await ngelx433MedyaKullaniliyor(url,id))await ngelxMedyaSil(url);}',s.index('Future<void> ngelx433CanliSil'))<s.index('await ref.delete()',s.index('Future<void> ngelx433CanliSil')),
  'live child cleanup authorized for host':r.count('get(/databases/$(database)/documents/live_streams/$(streamId)).data.ownerId == request.auth.uid')==3,
  'working story source unchanged':"label:const Text('Tekrar dene')" in Path('app/lib/story_v66.dart').read_text(),
  'release version':'version: 1.0.208+433' in Path('app/pubspec.yaml').read_text(),

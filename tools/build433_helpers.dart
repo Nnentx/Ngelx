@@ -28,17 +28,20 @@ Widget ngelx433RenkliBildirim(Map<String,dynamic> v,{int maxLines=2}){
     TextSpan(text:text.substring(pos+name.length)),
   ]),maxLines:maxLines,overflow:TextOverflow.ellipsis,style:TextStyle(color:const Color(0xFF111827),fontWeight:v['read']==true?FontWeight.w600:FontWeight.w900));
 }
-Future<void> ngelx433CanliSil(String id)async{
+Future<void> ngelx433CanliSil(String id,{bool automatic=false})async{
   final uid=FirebaseAuth.instance.currentUser?.uid;
   if(uid==null)throw StateError('Oturum gerekli.');
   final ref=FirebaseFirestore.instance.collection('live_streams').doc(id);
-  await FirebaseFirestore.instance.runTransaction((tx)async{
+  final claimed=await FirebaseFirestore.instance.runTransaction<bool>((tx)async{
     final snap=await tx.get(ref),v=snap.data();
-    if(v==null)return;
+    if(v==null)return false;
     if(v['ownerId']!=uid)throw StateError('Yalnız yayın sahibi silebilir.');
     if(ngelxCanliKaydiTaze(v)||v['active']==true)throw StateError('Devam eden yayın silinemez.');
+    if(automatic&&!ngelx433CanliTemizlenir(v,DateTime.now()))return false;
     tx.update(ref,{'deleting':true,'deleteRequestedAt':FieldValue.serverTimestamp()});
+    return true;
   }).timeout(const Duration(seconds:12));
+  if(!claimed)return;
   final snap=await ref.get(const GetOptions(source:Source.server)).timeout(const Duration(seconds:12));
   final v=snap.data();if(v==null)return;
   if(v['ownerId']!=uid||v['active']==true||v['deleting']!=true)throw StateError('Silme durumu değişti.');
@@ -46,7 +49,7 @@ Future<void> ngelx433CanliSil(String id)async{
   for(final field in ['mediaUrl','videoUrl','recordingUrl','audioUrl','thumbnailUrl','posterUrl','coverUrl']){
     final value=(v[field]??'').toString().trim();if(value.isNotEmpty)urls.add(value);
   }
-  for(final url in urls){await ngelxMedyaSil(url);}
+  for(final url in urls){if(!await ngelx433MedyaKullaniliyor(url,id))await ngelxMedyaSil(url);}
   for(final name in ['comments','reactions','viewers']){
     while(true){
       final q=await ref.collection(name).limit(200).get().timeout(const Duration(seconds:12));
@@ -56,4 +59,19 @@ Future<void> ngelx433CanliSil(String id)async{
     }
   }
   await ref.delete().timeout(const Duration(seconds:12));
+}
+
+Future<bool> ngelx433MedyaKullaniliyor(String url,String liveId)async{
+  final db=FirebaseFirestore.instance;
+  for(final entry in <String,List<String>>{
+    'users':['photoUrl','coverUrl','introVideoUrl'],
+    'videos':['mediaUrl','videoUrl','thumbnailUrl','posterUrl'],
+    'live_streams':['mediaUrl','videoUrl','recordingUrl','thumbnailUrl','posterUrl','coverUrl'],
+  }.entries){
+    for(final field in entry.value){
+      final q=await db.collection(entry.key).where(field,isEqualTo:url).limit(2).get(const GetOptions(source:Source.server)).timeout(const Duration(seconds:10));
+      if(q.docs.any((d)=>entry.key!='live_streams'||d.id!=liveId))return true;
+    }
+  }
+  return false;
 }
