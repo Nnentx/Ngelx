@@ -16,5 +16,5 @@ jobs:
           set -euo pipefail
           for file in app/lib/main.dart app/lib/story_v66.dart firestore.rules; do
             echo "===== $file ====="
-            rg -n -i "bildirim|notification|istek|unread|okunm|hikaye|story|last.?seen|son.?gor|son.?gör|cevrimici|çevrimiçi|FirebaseStorage|deleteObject|\.delete\(" "$file" | head -n 220 || true
+            grep -nEi "bildirim|notification|istek|unread|okunm|hikaye|story|last.?seen|son.?gor|son.?gör|cevrimici|çevrimiçi|FirebaseStorage|deleteObject|\.delete\(" "$file" | head -n 220 || true
           done
