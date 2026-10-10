@@ -16,6 +16,14 @@ def patch_rules(s):
  anchor="            resource.data.get('isGroup', false) != true\n            && request.resource.data.members == resource.data.members"
  assert anchor in s
  s=s.replace(anchor,anchor+"\n            && (chatPairOpen(chatId) || onlyChanges(['hiddenFor', 'readReceipts_' + request.auth.uid, 'typingIndicator_' + request.auth.uid, 'typing_' + request.auth.uid]))",1)
+ # Apply the private block guard to every update branch, including metadata-only edits.
+ a=s.index('    match /chats/{chatId}')
+ b=s.index('      match /messages/{messageId} {',a)
+ block=s[a:b]
+ anchor='      allow update: if ('
+ assert anchor in block
+ block=block.replace(anchor,"      allow update: if (resource.data.get('isGroup', false) == true || chatPairOpen(chatId) || onlyChanges(['hiddenFor', 'readReceipts_' + request.auth.uid, 'typingIndicator_' + request.auth.uid, 'typing_' + request.auth.uid])) && (",1)
+ s=s[:a]+block+s[b:]
  a=s.index('      match /messages/{messageId} {',s.index('    match /chats/{chatId}'))
  b=s.index('      match /joinRequests/',a)
  block=s[a:b]
