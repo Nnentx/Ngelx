@@ -24,6 +24,10 @@ jobs:
           for a,b in [(1305,1450),(1450,1530),(2470,2525),(6020,6040)]:
               print(f'===== SOURCE {a}-{b} =====')
               for n in range(a,min(b,len(lines))+1): print(f'{n}: {lines[n-1]}')
+          print('===== LEGACY PATH REFERENCES =====')
+          for i,line in enumerate(lines,1):
+              if 'legacyPath' in line or 'legacy_path' in line:
+                  print(f'{i}: {line[:240]}')
           print('===== MEDIA DELETE CALLS =====')
           for i,line in enumerate(lines,1):
               if 'ngelxMedyaSil(' in line: print(f'{i}: {line[:240]}')
