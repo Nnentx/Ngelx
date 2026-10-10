@@ -58,15 +58,27 @@ helper="""Future<void> ngelxHikayeKaliciSil(
   }
 
   final storage=FirebaseStorage.instance;
+  final current=await ref.get();
+  final actual=current.data();
+  if(actual==null)return;
+  if(actual['type']!='story'||(actual['ownerId']??'').toString()!=uid){
+    throw StateError('Yalnızca kendi hikâyeni silebilirsin.');
+  }
   final api=await ngelxMediaApiAdresi();
+  bool ownR2Key(String key){
+    final segments=key.split('/');
+    return segments.length>=3&&
+      (segments.first=='stories'||segments.first=='videos')&&
+      segments[1]==uid&&!segments.contains('..')&&!segments.contains('.');
+  }
   final kaynaklar=<String,Reference>{};
   final r2Anahtarlari=<String>{};
   for(final key in ['storagePath','mediaPath','storageRef','mediaUrl','videoUrl','playbackUrl','downloadUrl','url']){
-    final raw=(veri[key]??'').toString().trim();
+    final raw=(actual[key]??'').toString().trim();
     if(raw.isEmpty)continue;
     if(raw.startsWith('gs://')||raw.contains('firebasestorage.googleapis.com')){
       final dosya=storage.refFromURL(raw);
-      if(!dosya.fullPath.startsWith('stories/'+uid+'/')){
+      if(dosya.bucket!=storage.ref().bucket||!dosya.fullPath.startsWith('stories/'+uid+'/')){
         throw StateError('Hikâye medya yolu sahibiyle eşleşmiyor.');
       }
       kaynaklar[dosya.fullPath]=dosya;
@@ -78,14 +90,14 @@ helper="""Future<void> ngelxHikayeKaliciSil(
       }
       final uri=Uri.parse(raw);
       final keyPath=Uri.decodeComponent(uri.path.substring('/media/'.length));
-      if(!keyPath.startsWith('stories/'+uid+'/')){
+      if(!ownR2Key(keyPath)){
         throw StateError('Hikâye medya yolu sahibiyle eşleşmiyor.');
       }
       r2Anahtarlari.add(keyPath);
       continue;
     }
     if(!raw.startsWith('http')&&raw.contains('/')){
-      if(!raw.startsWith('stories/'+uid+'/')){
+      if(!ownR2Key(raw)){
         throw StateError('Hikâye medya yolu sahibiyle eşleşmiyor.');
       }
       r2Anahtarlari.add(raw);
