@@ -21,7 +21,7 @@ jobs:
               if re.search(r'\.delete\(\)|\.delete\(\)|\.delete\s*\(',line):
                   print(f'===== {i} =====')
                   for n in range(max(1,i-4),min(len(lines),i+3)+1): print(f'{n}: {lines[n-1]}')
-          for a,b in [(1305,1450),(1450,1530),(2470,2525),(6020,6040)]:
+          for a,b in [(10190,10220),(27020,27095),(27135,27170),(1305,1367),(2470,2525)]:
               print(f'===== SOURCE {a}-{b} =====')
               for n in range(a,min(b,len(lines))+1): print(f'{n}: {lines[n-1]}')
           print('===== LEGACY PATH REFERENCES =====')
