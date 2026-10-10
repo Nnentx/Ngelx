@@ -41,6 +41,13 @@ for cls in ['class _GrupSohbetPageState extends State<GrupSohbetPage>{','class _
  anchor='super.dispose();';assert anchor in part
  part=part.replace(anchor,'_cleanup435Timer?.cancel();super.dispose();',1)
  s=s[:a]+part+s[b:]
+# Media and search views must honor both kinds of deletion, including groups.
+rep("              final t=(d.data()['type']??'').toString();\n              if(sekme==0)","              if(!ngelx435MesajErisilebilir(d.data(),FirebaseAuth.instance.currentUser?.uid))return false;\n              final t=(d.data()['type']??'').toString();\n              if(sekme==0)",1)
+rep("              final v=d.data();\n              if(!widget.groupMode){","              final v=d.data();\n              if(!ngelx435MesajErisilebilir(v,FirebaseAuth.instance.currentUser?.uid))return false;\n              if(!widget.groupMode){",1)
+for url in ['media','medyaUrl','medya']:
+ for kind in ['TamEkranMedyaPage','TamEkranVideoPage']:
+  old=f'builder:(_)=>{kind}(url:{url})'
+  rep(old,f'builder:(_)=>Ngelx435MedyaKaynagi(ref:d.reference,child:{kind}(url:{url}))',1)
 s+='\n'+Path('tools/build435_message_cleanup.dart').read_text();p.write_text(s)
 p=Path('app/pubspec.yaml');p.write_text(p.read_text().replace('version: 1.0.209+434','version: 1.0.210+435'))
 p.write_text(p.read_text().replace('  cached_network_image:', '  crypto: ^3.0.6\n  cached_network_image:'))

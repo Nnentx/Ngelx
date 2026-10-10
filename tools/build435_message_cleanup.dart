@@ -1,6 +1,7 @@
 const ngelx435MedyaAlanlari=<String>['mediaUrl','videoUrl','audioUrl','fileUrl','thumbnailUrl','posterUrl','coverUrl','imageUrl'];
 List<String> ngelx435MedyaListesi(Map<String,dynamic> v)=>ngelx435MedyaAlanlari.map((k)=>(v[k]??'').toString()).toList();
 bool ngelx435BendenGizli(Map<String,dynamic> v,String? uid)=>uid!=null&&v['hiddenFor'] is Iterable&&(v['hiddenFor'] as Iterable).contains(uid);
+bool ngelx435MesajErisilebilir(Map<String,dynamic> v,String? uid)=>v['deletedForEveryone']!=true&&!ngelx435BendenGizli(v,uid);
 final _ngelx435SilmeKilidi=<String>{};
 Future<void> _ngelx435QueueTail=Future<void>.value();
 Future<void> _ngelx435QueueChange(String key,String path,{required bool add}){
@@ -95,4 +96,21 @@ class _Ngelx435MesajGorunumuState extends State<Ngelx435MesajGorunumu>{
   @override void initState(){super.initState();_sync();}
   @override void didUpdateWidget(covariant Ngelx435MesajGorunumu old){super.didUpdateWidget(old);_sync();}
   @override Widget build(BuildContext context)=>ngelx435BendenGizli(widget.data,FirebaseAuth.instance.currentUser?.uid)?const SizedBox.shrink():widget.builder();
+}
+class Ngelx435MedyaKaynagi extends StatefulWidget{
+  final DocumentReference<Map<String,dynamic>> ref;final Widget child;
+  const Ngelx435MedyaKaynagi({super.key,required this.ref,required this.child});
+  @override State<Ngelx435MedyaKaynagi> createState()=>_Ngelx435MedyaKaynagiState();
+}
+class _Ngelx435MedyaKaynagiState extends State<Ngelx435MedyaKaynagi>{
+  late final _stream=widget.ref.snapshots();
+  @override Widget build(BuildContext context)=>StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
+    stream:_stream,builder:(_,snap){
+      final data=snap.data?.data();
+      if(snap.hasData&&(data==null||!ngelx435MesajErisilebilir(data,FirebaseAuth.instance.currentUser?.uid))){
+        return Scaffold(backgroundColor:Colors.white,appBar:AppBar(),body:const Center(child:Text('Bu mesaj artık kullanılamıyor.')));
+      }
+      return widget.child;
+    },
+  );
 }

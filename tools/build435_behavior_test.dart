@@ -8,6 +8,9 @@ void main(){
   expect(ngelx435BendenGizli(v,null),isFalse);
   expect(v['mediaUrl'],'shared-photo');
   expect(v['deletedForEveryone'],isNull);
+  expect(ngelx435MesajErisilebilir(v,'bob'),isFalse);
+  expect(ngelx435MesajErisilebilir(v,'alice'),isTrue);
+  expect(ngelx435MesajErisilebilir({...v,'deletedForEveryone':true},'alice'),isFalse);
  });
  test('durable media manifest includes thumbnail audio file and poster',(){
   final v={'mediaUrl':'photo','videoUrl':'video','audioUrl':'audio','fileUrl':'file','thumbnailUrl':'thumb','posterUrl':'poster','coverUrl':'cover','imageUrl':'image'};
