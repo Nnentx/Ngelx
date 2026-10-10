@@ -16,6 +16,12 @@ s=one(s,"bool ngelxPresenceOnline(Map<String,dynamic> v){","bool ngelxPresenceOn
 s=one(s,"return '${fark.inMinutes} dk önce aktifti';","return '${fark.inMinutes}d';",'minutes')
 s=one(s,"return '${fark.inHours} saat önce aktifti';","return '${fark.inHours}s';",'hours')
 s=one(s,"return '${fark.inDays} gün önce aktifti';","return '${fark.inDays}g';",'days')
+# Read state on the newest duplicate supersedes old unread copies.
+a=s.index('int ngelxOkunmamisAktiviteSayisi(');b=s.index('String ngelxBildirimBelgeId',a)
+part=s[a:b]
+part=one(part,"if(v['read']==true||!ngelxAktiviteBildirimiGosterilir(v))continue;","if(!ngelxAktiviteBildirimiGosterilir(v))continue;",'include newest read version')
+part=one(part,'return secilen.length;',"return secilen.values.where((d)=>d.data()['read']!=true).length;",'count newest unread only')
+s=s[:a]+part+s[b:]
 # Cache search stream instead of restarting a query on every keystroke.
 s=one(s,"class _ProfilAramaPageState extends State<ProfilAramaPage>{","class _ProfilAramaPageState extends State<ProfilAramaPage>{\n  late final _paylasimAkisi=FirebaseFirestore.instance.collection('videos').where('ownerId',isEqualTo:widget.uid).limit(100).snapshots();",'profile search stream')
 a=s.index('class _ProfilAramaPageState');b=s.index('class HikayeArsiviPage',a)
@@ -40,6 +46,7 @@ part=one(part,'              return ListTile(\n                contentPadding:co
 part=one(part,'              );\n              });\n            },\n          );\n        },\n      );\n    }\n\n    Widget isteklerIcerigi()', '              ));\n              });\n            },\n          );\n        },\n      );\n    }\n\n    Widget isteklerIcerigi()', 'close viewed inbox wrapper')
 needle='          if(snap.connectionState==ConnectionState.waiting&&docs.isEmpty)return const Center(child:CircularProgressIndicator(color:mor));'
 part=one(part,needle,needle+"\n          if(snap.hasError&&docs.isEmpty)return Center(child:TextButton(onPressed:_gelenKutusunuYenile,child:const Text('Bildirimler yüklenemedi • Tekrar dene')));",'notification error state')
+part=one(part,'            istekler+=mesajIstekleri;',"            bildirimler=ngelxOkunmamisAktiviteSayisi((ns.data?.docs??<QueryDocumentSnapshot<Map<String,dynamic>>>[]).where((d){\n              final v=d.data();\n              return !((v['type']=='follow_request'||v['type']=='friend_request')&&v['status']=='pending');\n            }));\n            istekler+=mesajIstekleri;",'deduplicated tab unread count')
 s=s[:a]+part+s[b:]
 # Purple sender names on dedicated notification screen.
 a=s.index('class _AktivitePageState');b=s.index('bool ngelxPresenceOnline',a)

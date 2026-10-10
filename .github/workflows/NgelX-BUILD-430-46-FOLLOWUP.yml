@@ -107,7 +107,7 @@ on:
 
 concurrency:
   group: ngelx-build430-46-followup
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   build:
@@ -412,6 +412,26 @@ jobs:
       - name: Build 430 source preservation checks
         run: python3 -u tools/check_build430.py
 
+      - name: Bagimliliklari al
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter clean
+          flutter pub get
+
+      - name: Flutter analiz
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          nl -ba lib/main.dart | sed -n '10972,11002p'
+          flutter analyze --no-fatal-infos --no-fatal-warnings
+
+      - name: Build 430 presence behavior tests
+        working-directory: app
+        run: flutter test test/build430_presence_test.dart
+
       - name: Node 24 Firebase test ortami
         uses: actions/setup-node@v4
         with:
@@ -447,26 +467,6 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-
-      - name: Bagimliliklari al
-        shell: bash
-        run: |
-          set -euo pipefail
-          cd app
-          flutter clean
-          flutter pub get
-
-      - name: Flutter analiz
-        shell: bash
-        run: |
-          set -euo pipefail
-          cd app
-          nl -ba lib/main.dart | sed -n '10972,11002p'
-          flutter analyze --no-fatal-infos --no-fatal-warnings
-
-      - name: Build 430 presence behavior tests
-        working-directory: app
-        run: flutter test test/build430_presence_test.dart
 
       - name: Gercek APK olustur
         shell: bash
