@@ -16,12 +16,12 @@ if sys.argv[-1]=='prepare':
  canonical=Path('firestore.rules').read_text()
  for f in source:
   if 'match /chats/{chatId}' not in f['content']:continue
-  text=cleanup(f['content'])
+  text=patch_rules(cleanup(f['content']))
   # Replace only canonical social request functions/routes. Existing unrelated rules survive.
   start=text.index('    function validSocialRequestCreate(');end=text.index('    match /notifications/',start)
   cs=canonical.index('    function validSocialRequestCreate(');ce=canonical.index('    match /notifications/',cs)
   text=text[:start]+canonical[cs:ce]+text[end:]
-  f['content']=patch_rules(text)
+  f['content']=text
   Path('firestore.rules').write_text(f['content'])
  Path('rules436-staged.json').write_text(json.dumps({'original':release['rulesetName'],'files':source}))
  print('Exact production rule patch staged for emulator checks.')
