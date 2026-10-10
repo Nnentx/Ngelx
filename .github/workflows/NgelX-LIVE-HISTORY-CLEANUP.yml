@@ -1,0 +1,97 @@
+name: NgelX Build433 live cleanup
+on:
+  workflow_dispatch:
+  push:
+    branches: [work/build-430-46-followup]
+    paths: [.github/workflows/NgelX-LIVE-HISTORY-CLEANUP.yml]
+permissions:
+  contents: read
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Retention safety tests
+        run: python -m unittest discover -s tools -p test_live_history_cleanup.py
+      - name: Check existing server credential availability
+        id: auth
+        env:
+          NGELX_SERVICE_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_NGELX_44EED || secrets.FIREBASE_SERVICE_ACCOUNT || secrets.GOOGLE_APPLICATION_CREDENTIALS_JSON }}
+        run: |
+          python - <<'PY'
+          import os,json,base64,pathlib
+          raw=os.environ.get('NGELX_SERVICE_JSON','')
+          with open(os.environ['GITHUB_OUTPUT'],'a') as out:
+              if not raw:
+                  out.write('available=false\n')
+                  print('Firebase Admin credential is not configured; server preview is blocked.')
+              else:
+                  try: data=json.loads(raw)
+                  except json.JSONDecodeError: data=json.loads(base64.b64decode(raw))
+                  p=pathlib.Path(os.environ['RUNNER_TEMP'])/'ngelx-retention-credential.json'
+                  p.write_text(json.dumps(data));p.chmod(0o600)
+                  out.write('available=true\n')
+                  with open(os.environ['GITHUB_ENV'],'a') as env:
+                      env.write('GOOGLE_APPLICATION_CREDENTIALS='+str(p)+'\n')
+                  print('Existing Firebase Admin credential is available; live cleanup enabled.')
+          PY
+      - name: Check R2 cleanup credential availability
+        env:
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          python - <<'PYCODE'
+          import os
+          ready=all(os.environ.get(k) for k in ['R2_ACCESS_KEY_ID','R2_SECRET_ACCESS_KEY','CLOUDFLARE_ACCOUNT_ID'])
+          print('R2 cleanup credentials configured: '+str(ready))
+          PYCODE
+      - name: Resolve deployed R2 credential derivation
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          python - <<'PYCODE'
+          import os,json,urllib.request,hashlib
+          token=os.environ['CLOUDFLARE_API_TOKEN']
+          account=os.environ['CLOUDFLARE_ACCOUNT_ID']
+          token_id=None
+          for path in ['accounts/'+account+'/tokens/verify','user/tokens/verify']:
+              req=urllib.request.Request('https://api.cloudflare.com/client/v4/'+path,headers={'Authorization':'Bearer '+token})
+              try:
+                  result=json.load(urllib.request.urlopen(req,timeout=20))
+                  token_id=result.get('result',{}).get('id')
+              except urllib.error.HTTPError: continue
+              if token_id:break
+          if not token_id:raise RuntimeError('R2 deployed token identity unavailable')
+          secret=hashlib.sha256(token.encode()).hexdigest()
+          print('::add-mask::'+token_id)
+          print('::add-mask::'+secret)
+          with open(os.environ['GITHUB_ENV'],'a') as env:
+              env.write('NGELX_R2_ACCESS_KEY_ID='+token_id+'\n')
+              env.write('NGELX_R2_SECRET_ACCESS_KEY='+secret+'\n')
+          print('Resolved the same R2 credential derivation used by deployed Worker.')
+          PYCODE
+      - name: Install preview dependency
+        if: steps.auth.outputs.available == 'true'
+        run: python -m pip install firebase-admin boto3
+      - name: Deploy scoped live cleanup permissions
+        if: steps.auth.outputs.available == 'true'
+        run: python tools/deploy_live_cleanup_rules.py
+      - name: Preview and clean ended live history
+        if: steps.auth.outputs.available == 'true'
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          NGELX_MEDIA_ORIGIN: https://media.ngelxsocial.com
+          NGELX_R2_BUCKET: ngelx-media
+        run: |
+          export NGELX_R2_ENDPOINT="https://${CLOUDFLARE_ACCOUNT_ID}.r2.cloudflarestorage.com"
+          python tools/live_history_cleanup.py --limit 100
+          python tools/live_history_cleanup.py --apply --limit 100
+      - name: Remove temporary credential
+        if: always()
+        run: rm -f "$RUNNER_TEMP/ngelx-retention-credential.json"
