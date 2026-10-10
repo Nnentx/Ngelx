@@ -1,0 +1,50 @@
+name: NgelX retention preview (read only)
+on:
+  workflow_dispatch:
+  push:
+    branches: [work/build-430-46-followup]
+    paths: [.github/workflows/NgelX-RETENTION-PREVIEW.yml]
+permissions:
+  contents: read
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Retention safety tests
+        run: python -m unittest discover -s tools -p test_retention_cleanup.py
+      - name: Check existing server credential availability
+        id: auth
+        env:
+          NGELX_SERVICE_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_NGELX_44EED || secrets.FIREBASE_SERVICE_ACCOUNT || secrets.GOOGLE_APPLICATION_CREDENTIALS_JSON }}
+        run: |
+          python - <<'PY'
+          import os,json,base64,pathlib
+          raw=os.environ.get('NGELX_SERVICE_JSON','')
+          with open(os.environ['GITHUB_OUTPUT'],'a') as out:
+              if not raw:
+                  out.write('available=false\n')
+                  print('Firebase Admin credential is not configured; server preview is blocked.')
+              else:
+                  try: data=json.loads(raw)
+                  except json.JSONDecodeError: data=json.loads(base64.b64decode(raw))
+                  p=pathlib.Path(os.environ['RUNNER_TEMP'])/'ngelx-retention-credential.json'
+                  p.write_text(json.dumps(data));p.chmod(0o600)
+                  out.write('available=true\n')
+                  with open(os.environ['GITHUB_ENV'],'a') as env:
+                      env.write('GOOGLE_APPLICATION_CREDENTIALS='+str(p)+'\n')
+                  print('Existing Firebase Admin credential is available; read-only preview enabled.')
+          PY
+      - name: Install preview dependency
+        if: steps.auth.outputs.available == 'true'
+        run: python -m pip install firebase-admin
+      - name: Read-only expired unsaved story preview
+        if: steps.auth.outputs.available == 'true'
+        run: python tools/retention_cleanup.py --limit 100
+      - name: Remove temporary credential
+        if: always()
+        run: rm -f "$RUNNER_TEMP/ngelx-retention-credential.json"
