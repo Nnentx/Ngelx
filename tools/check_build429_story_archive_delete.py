@@ -13,6 +13,7 @@ checks={
   'Permanent story deletion validates signed-in owner': "veri['ownerId']" in story and 'Yalnızca kendi hikâyeni silebilirsin.' in story,
   'Firebase Storage media deletion checks owner path': 'dosya.fullPath.split(\'/\').contains(uid)' in story and 'await dosya.delete()' in story,
   'Firestore story record deleted only after media cleanup': story.index('await dosya.delete()') < story.index('await ref.delete()'),
+  'Firebase Storage dependency and import': "import 'package:firebase_storage/firebase_storage.dart';" in main and 'firebase_storage: ^13.6.0' in Path('app/pubspec.yaml').read_text(encoding='utf-8'),
   'Build429 version': "defaultValue: '429'" in main and "defaultValue: '1.0.204'" in main and 'version: 1.0.204+429' in Path('app/pubspec.yaml').read_text(encoding='utf-8'),
 }
 failed=[name for name,ok in checks.items() if not ok]
