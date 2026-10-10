@@ -1,0 +1,28 @@
+name: Build429 delete path inspection
+on:
+  push:
+    branches:
+      - work/build-429-46-fixes
+    paths:
+      - .github/workflows/inspect-build429-delete-paths.yml
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Locate content deletion and storage paths
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          p=Path('app/lib/main.dart'); lines=p.read_text(encoding='utf-8').splitlines()
+          for i,line in enumerate(lines,1):
+              if re.search(r'\.delete\(\)|\.delete\(\)|\.delete\s*\(',line):
+                  print(f'===== {i} =====')
+                  for n in range(max(1,i-4),min(len(lines),i+3)+1): print(f'{n}: {lines[n-1]}')
+          print('===== STORAGE UPLOADS =====')
+          for i,line in enumerate(lines,1):
+              if re.search(r'putFile|putData|putString|FirebaseStorage|refFromURL',line):
+                  print(f'{i}: {line[:240]}')
+          PY
