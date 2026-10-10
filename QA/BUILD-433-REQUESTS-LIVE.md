@@ -15,4 +15,4 @@ Build432 video45659 displayed inbox, notifications and requests without prior en
 - Owner-checked deletion marks durable deleting state, awaits verified media cleanup, clears comments/reactions/viewers in batches, deletes root last. Failed cleanup retains retry state. Host end triggers unsaved cleanup after existing summary metrics and disconnect, history/manual refresh retries.
 
 ## Validation
-Pending Flutter analysis, behavior/rules tests and signed APK. Automatic server sweep is not enabled by this APK; offline/stale historical records require history refresh or server cleanup follow-up. No46/46 claim.
+Pending Flutter analysis, behavior/rules tests and signed APK. Server live cleanup workflow verifies media ownership, atomically queues unchanged eligible ended records, recursively cleans child records and retains retry jobs. Deployment/production cleanup results pending. Crash-stale active records are conservatively protected. No46/46 claim.

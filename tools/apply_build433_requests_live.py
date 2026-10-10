@@ -139,3 +139,9 @@ f=Path('app/pubspec.yaml');r=f.read_text();r=r.replace('version: 1.0.207+432','v
 print('Build433 dedicated requests, notifications, and live history applied')
 f=Path('tools/firestore_rules_test.mjs');r=f.read_text();anchor="  console.log('Firestore rules testleri başarılı.');";assert anchor in r
 f.write_text(r.replace(anchor,Path('tools/build433_rules_test.mjs').read_text()+'\n'+anchor))
+# In-flight heartbeat/PK writes must not recreate a record after cleanup.
+f=Path('app/lib/live_broadcast_studio.dart');r=f.read_text()
+r=r.replace('unawaited(ngelxCanliPkYayindanCik(widget.belgeId));','try{await ngelxCanliPkYayindanCik(widget.belgeId).timeout(const Duration(seconds:10));}catch(_){}')
+r=r.replace("      await FirebaseFirestore.instance.collection('live_streams').doc(widget.belgeId).set(yama,SetOptions(merge:true));","      if(kapatildi)return;\n      await FirebaseFirestore.instance.collection('live_streams').doc(widget.belgeId).update(yama);")
+f.write_text(r)
+f=Path('app/lib/live_pk.dart');r=f.read_text().replace('await liveRef.set(_ngelxPkTemizleAlanlari(),SetOptions(merge:true));','await liveRef.update(_ngelxPkTemizleAlanlari());');f.write_text(r)
