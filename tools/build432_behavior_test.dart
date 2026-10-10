@@ -25,7 +25,7 @@ void main(){
     source.add(0);await tester.pump();expect(events,[0]);
     final late=<int>[];final second=cache.stream.listen(late.add,onError:errors.add);
     await tester.pump();expect(late,[0]);expect(errors.length,1);
-    cache.dispose();await first.cancel();await second.cancel();await source.close();
+    cache.dispose();unawaited(first.cancel());unawaited(second.cancel());unawaited(source.close());await tester.pump();
   });
   testWidgets('upstream error replays and explicit retry reconnects',(tester)async{
     final sources=<StreamController<int>>[];
@@ -35,7 +35,7 @@ void main(){
     sources.first.addError(StateError('offline'));await tester.pump();
     final second=cache.stream.listen(values.add,onError:errors.add);await tester.pump();expect(errors.length,2);
     cache.retry();expect(sources.length,2);sources.last.add(2);await tester.pump();expect(values,[2,2]);
-    cache.dispose();await first.cancel();await second.cancel();for(final c in sources){await c.close();}
+    cache.dispose();unawaited(first.cancel());unawaited(second.cancel());for(final c in sources){unawaited(c.close());}await tester.pump();
   });
   testWidgets('dispose cancels upstream and closes all panes',(tester)async{
     var canceled=0,closed=0;
@@ -44,7 +44,7 @@ void main(){
     cache.stream.listen((_){},onDone:(){closed++;});cache.stream.listen((_){},onDone:(){closed++;});
     cache.dispose();await tester.pump();expect(canceled,1);expect(closed,2);
     var after=false;cache.stream.listen((_){},onDone:(){after=true;});await tester.pump();expect(after,true);
-    await source.close();
+    unawaited(source.close());await tester.pump();
   });
   test('archive excludes other owner, hidden, deleted and unsaved expired story',(){
     final saved=<String,dynamic>{'ownerId':'me','type':'story','archivedAt':Timestamp.now()};
