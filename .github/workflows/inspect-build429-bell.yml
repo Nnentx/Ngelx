@@ -9,25 +9,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Print source anchors for the 46 item audit
+      - name: Print source anchors for archives, presence and deletes
         run: |
           python3 - <<'PY'
           from pathlib import Path
           import re
-          terms=re.compile(r"(?i)class .*?(?:Arsiv|Archive|Activity|Aktivite|Live|Yayin)|collection\(['\"](?:live|lives|broadcasts|streams|videos|posts|comments|messages|notifications)|lastSeenAt|showActivityStatus|deleteForEveryone|deletedFor|hiddenFor|FirebaseStorage|ngelxMedyaSil|purge|retention|archive")
-          roots=[Path('app/lib')]
-          count=0
-          for root in roots:
-              for p in sorted(root.rglob('*.dart')):
-                  try: lines=p.read_text(encoding='utf-8').splitlines()
-                  except Exception: continue
-                  context=''
+          root=Path('app/lib')
+          for p in [root/'main.dart',root/'live_broadcast_studio.dart',root/'live_feed_card.dart',root/'story_v66.dart']:
+              lines=p.read_text(encoding='utf-8').splitlines()
+              print('FILE',p)
+              patterns=[r'^class .*?(?:Profil|Hikaye|Story|Arsiv|Aktivite|Yayin|Live|Presence)',
+                        r'(?i)lastSeenAt|showActivityStatus|ngelxPresenceOnline|presence',
+                        r"(?i)collection\(['\"]live_streams['\"]\)|collection\(['\"]videos['\"]\).*delete|\.delete\(\)|ngelxMedyaSil|FirebaseStorage|deletedForEveryone|deletedFor|hiddenFor",
+                        r'(?i)arsiv|archive|retention|saklama']
+              hits=[]
+              for pat in patterns:
                   for i,line in enumerate(lines):
-                      if line.lstrip().startswith('class '): context=line.strip()[:150]
-                      if terms.search(line):
-                          print(f'{p}:{i+1} [{context}] {line.strip()[:500]}')
-                          count+=1
-                          if count>=220: break
-                  if count>=220: break
-          print('TOTAL_MATCHES_PRINTED',count)
+                      if re.search(pat,line):
+                          hits.append(i)
+              for i in sorted(set(hits)):
+                  print(f'{i+1}: {lines[i].strip()[:750]}')
           PY
