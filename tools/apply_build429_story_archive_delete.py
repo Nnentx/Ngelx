@@ -18,10 +18,9 @@ old="""          final docs=(s.data?.docs??[]).toList()
             ..sort((a,b){"""
 new="""          final simdi=DateTime.now();
           final docs=(s.data?.docs??[]).where((d){
-            final v=d.data(),bitis=v['expiresAt'];
-            final suresiDolmus=bitis is Timestamp&&!bitis.toDate().isAfter(simdi);
+            final v=d.data();
             return v['type']=='story'&&
-              (v['archivedAt'] is Timestamp||suresiDolmus||v['highlighted']==true);
+              (v['archivedAt'] is Timestamp||v['highlighted']==true);
           }).toList()
             ..sort((a,b){"""
 s=one(s,old,new,'archive only saved/expired stories')
@@ -34,12 +33,20 @@ s=p.read_text(encoding='utf-8')
 a=s.index('class _ProfilPageState extends State<ProfilPage>')
 b=s.index('class _ProfilEtkilesimRozeti',a)
 owner=s[a:b]
-old="onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const MesajPage(initialFilter:'Bildirimler'))),icon:sayi==0?"
-new="onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const AktivitePage())),icon:sayi==0?"
-if old in owner:
-    owner=one(owner,old,new,'profile notification bell destination')
-elif "onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const AktivitePage()))" not in owner:
-    raise SystemExit('Build429 source drift (profile notification bell destination)')
+import re
+lines=owner.splitlines()
+bell=[i for i,line in enumerate(lines) if 'IconButton' in line and 'notifications_none_rounded' in line]
+if len(bell)!=1:
+    raise SystemExit(f'Build429 source drift (profile notification bell destination): {len(bell)} bell lines')
+line=lines[bell[0]]
+line,n=re.subn(
+    r"onPressed:.*?icon:sayi==0\\?",
+    "onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const AktivitePage())),icon:sayi==0?",
+    line,count=1)
+if n!=1:
+    raise SystemExit('Build429 source drift (profile notification bell callback)')
+lines[bell[0]]=line
+owner='\\n'.join(lines)
 old="final sayi=(s.data?.docs??[]).where((d)=>d.data()['read']!=true&&ngelxAktiviteBildirimiGosterilir(d.data())).length;"
 new="final sayi=ngelxOkunmamisAktiviteSayisi(s.data?.docs??const <QueryDocumentSnapshot<Map<String,dynamic>>>[]);"
 owner=one(owner,old,new,'deduplicated profile notification badge')
