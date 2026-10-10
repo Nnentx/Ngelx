@@ -8,7 +8,7 @@ void main(){
   expect(ngelx436Blocked({'blocked':['c']},{},'a','b'),isFalse);
  });
  test('permanent permission failures never claim a network retry',(){
-  expect(ngelx436Error(FirebaseException(plugin:'cloud_firestore',code:'permission-denied')),contains('izin'));
+  expect(ngelx436Error(FirebaseException(plugin:'cloud_firestore',code:'permission-denied')),contains('izni'));
   expect(ngelx436Error(FirebaseException(plugin:'cloud_firestore',code:'permission-denied')),isNot(contains('Bağlantı')));
   expect(ngelx436Error(FirebaseException(plugin:'cloud_firestore',code:'resource-exhausted')),contains('sınır'));
   expect(ngelx436Error(StateError('Engel varken istek gönderilemez.')),contains('Engel'));

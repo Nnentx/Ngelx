@@ -4,6 +4,12 @@ def rep(a,b,n=1):
  global s
  assert s.count(a)==n,(a[:120],s.count(a));s=s.replace(a,b)
 rep("takma=(uid==null?'':(nicks[uid]??'').toString()).trim(),","takma=(nicks[widget.digerUid]??'').toString().trim(),")
+rep("    await FirebaseFirestore.instance.collection('chats').doc(chatId).set({\n      'nicknames':{uid:sonuc.isEmpty?FieldValue.delete():sonuc},", "    final actor=await FirebaseFirestore.instance.collection('users').doc(me).get();\n    final actorName=(actor.data()?['displayName']??actor.data()?['username']??'Bir kullanıcı').toString();\n    final batch=FirebaseFirestore.instance.batch();\n    final ref=FirebaseFirestore.instance.collection('chats').doc(chatId);\n    batch.set(ref,{\n      'nicknames':{uid:sonuc.isEmpty?FieldValue.delete():sonuc},")
+rep("    await FirebaseFirestore.instance.collection('chats').doc(chatId).collection('messages').add({\n      'senderId':me,'actorUid':me,'type':'system','systemAction':'nickname_changed',", "    batch.set(ref.collection('messages').doc(),{\n      'senderId':me,'actorUid':me,'type':'system','systemAction':'nickname_changed',")
+rep("'text':sonuc.isEmpty?'$ad için takma ad kaldırıldı':'$ad için takma ad \"$sonuc\" olarak değiştirildi',", "'text':sonuc.isEmpty?'$actorName, $ad için takma adı kaldırdı':'$actorName, $ad için takma adı \"$sonuc\" olarak değiştirdi',")
+rep("    });\n  }\n  Future<void> ozellestir(BuildContext context)async{", "    });\n    await batch.commit().timeout(const Duration(seconds:12));\n  }\n  Future<void> ozellestir(BuildContext context)async{")
+# Both visitor layouts must show permitted presence.
+rep("                   ],\n                 ]),\n               ],\nif(canli&&canliId.isNotEmpty)", "                   ],\n                   AktiflikDurumuYazisi(uid:uid),\n                 ]),\n               ],\nif(canli&&canliId.isNotEmpty)")
 rep("return p>0?'Sen'+raw.substring(p):raw;","return p>0?('Sen'+raw.substring(p)).replaceFirst(' değiştirdi',' değiştirdin').replaceFirst(' kaldırdı',' kaldırdın').replaceFirst(' sıfırladı',' sıfırladın'):raw;")
 # Block again must be idempotent, including other entry points.
 rep("  String hedefAd='Bu kullanıcı',hedefFoto='';","""  final mine=await FirebaseFirestore.instance.collection('users').doc(u.uid).get(const GetOptions(source:Source.server));
