@@ -62,3 +62,9 @@ Mesaj gönderme/alma, hikâye yanıtının DM'e gitmesi, kartın storyId'yi açm
 Build395–429 kaynak oluşturma ve koruma zinciri yerel olarak geçti. Build430 kaynak kontratı geçti. GitHub Actions 38029954325 başarılı: Flutter analizi, 8 davranış testi, Firestore emulator testleri ve imzalı Build430 APK geçti. APK SHA256 ve artifact SHA256 doğrulandı. Gerçek cihaz sonuçları henüz yok. **46/46 tamamlandı iddiası yok.**
 
 Sunucu read-only preview 38030838672 başarılı: 50 süresi dolmuş kaydedilmemiş hikâye adayı; medya sahipliği doğrulanmış 0, tanımlanamayan 50. Silinen kayıt/dosya 0. Otomatik silme etkin değil.
+
+## Build430 cihaz kontrolü / Build431 takip
+
+45636–45648 görüntülerinde Yapı430 kuruldu; profil zili ayrı Aktivite ekranını açtı ve kırmızı 2 sayacı okumadan sonra kayboldu. Gelen Kutusu gri ekranda kalmadan, mesaj ve grup listeleriyle açıldı. Mesaj istekleri boş durum ekranı açıldı. Bu tek deneme, aralıklı performans/gri ekran sorununun tamamen kapandığını kanıtlamaz.
+
+Bildirimler sekmesindeki Yeni bildirim / Şimdi satırları ve sosyal istek sayısının mesaj kartıyla karışması Build431 paketinde düzeltildi. Analiz, 12 davranış testi, Firestore emulator ve imzalı APK üretimi geçti (Actions 38042908726). Üç ayrı istek kartı ve bildirim içeriklerinin cihaz testi açık.
