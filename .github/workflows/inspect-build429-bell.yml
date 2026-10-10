@@ -9,18 +9,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Print profile activity references
+      - name: Print source anchors for the 46 item audit
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          s=Path('app/lib/main.dart').read_text()
-          terms=['AktivitePage','Bildirimler','ngelxOkunmamisAktiviteSayisi','Badge(label:Text']
-          lines=s.splitlines()
-          for term in terms:
-              hits=[i for i,line in enumerate(lines) if term in line]
-              print('TERM',term,'HITS',len(hits))
-              for i in hits[-12:]:
-                  print(f'--- {i+1} ---')
-                  for j in range(max(0,i-3),min(len(lines),i+4)):
-                      print(f'{j+1}: {lines[j]}')
+          import re
+          terms=re.compile(r"(?i)class .*?(?:Arsiv|Archive|Activity|Aktivite|Live|Yayin)|collection\(['\"](?:live|lives|broadcasts|streams|videos|posts|comments|messages|notifications)|lastSeenAt|showActivityStatus|deleteForEveryone|deletedFor|hiddenFor|FirebaseStorage|ngelxMedyaSil|purge|retention|archive")
+          roots=[Path('app/lib')]
+          count=0
+          for root in roots:
+              for p in sorted(root.rglob('*.dart')):
+                  try: lines=p.read_text(encoding='utf-8').splitlines()
+                  except Exception: continue
+                  context=''
+                  for i,line in enumerate(lines):
+                      if line.lstrip().startswith('class '): context=line.strip()[:150]
+                      if terms.search(line):
+                          print(f'{p}:{i+1} [{context}] {line.strip()[:500]}')
+                          count+=1
+                          if count>=220: break
+                  if count>=220: break
+          print('TOTAL_MATCHES_PRINTED',count)
           PY
