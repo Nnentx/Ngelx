@@ -12,6 +12,7 @@ checks={
   'Story reply preview card still opens story': '_hikayeYanitKartiAc(v)' in main,
   'Story series timeout remains bounded': 'initialize().timeout(const Duration(seconds:12))' in story,
   'Story archive keeps only explicitly archived/highlighted, non-deleted owner stories': "v['archivedAt'] is Timestamp||v['highlighted']==true" in main and "v['deleted']!=true&&v['isDeleted']!=true" in main and '!hidden.contains(uid)' in main,
+  'Story archive shows loading and recoverable error states': 'if(s.connectionState==ConnectionState.waiting)' in main and 'Hikâye arşivi yüklenemedi.' in main and 'Tekrar dene' in main,
   'Archive remains owner scoped': "where('ownerId',isEqualTo:uid)" in main and "where('type',isEqualTo:'story')" in main,
   'Permanent story deletion validates signed-in owner': "veri['ownerId']" in story and 'Yalnızca kendi hikâyeni silebilirsin.' in story,
   'Firebase Storage media deletion checks owner path': 'dosya.fullPath.startsWith('stories/'+uid+'/')' in story and 'await dosya.delete()' in story,
