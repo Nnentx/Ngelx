@@ -31,7 +31,7 @@ rep(anchor,"""    final toplu=FirebaseFirestore.instance.batch();
 # Resolve legacy pending rows against the sender relationship and canonical
 # request before displaying them. A failed read never invents an outcome.
 anchor="          return goster(v);\n        },\n      );\n    }\n\n    Widget ngelxSekmeliSayaclar()"
-rep(anchor,"""          if(tur=='friend_request'||tur=='follow_request'){
+rep(anchor,"""          if((tur=='friend_request'||tur=='follow_request')&&v['status']=='pending'){
             final target=(v['toUid']??ben??'').toString();
             return StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
               stream:from.isEmpty?null:sosyalIstekRef(from,target,tur).snapshots(),
@@ -68,7 +68,7 @@ a="""          leading:CircleAvatar(
             child:foto.isEmpty?const Icon(Icons.person_rounded,color:mor):null,
           ),"""
 rep(a,"          leading:Ngelx434AktifAvatar(uid:id,photo:foto,initial:v),")
-rep("subtitle:Text(alt,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black54,fontSize:13)),","subtitle:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(alt,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black54,fontSize:13)),AktiflikDurumuYazisi(uid:id)]),")
+rep("subtitle:Text(alt,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black54,fontSize:13)),","subtitle:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(alt,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black54,fontSize:13)),AktiflikDurumuYazisi(key:ValueKey('friend-activity-'+id),uid:id)]),")
 a=s.index('  String _etiket(Map<String,dynamic> v){',s.index('class _AktiflikDurumuYazisiState'));b=s.index('  @override Widget build',a)
 s=s[:a]+"  String _etiket(Map<String,dynamic> v)=>ngelx434Aktiflik(v);\n"+s[b:]
 rep('  @override void initState(){super.initState();tercihleriGetir();}',"  @override void initState(){super.initState();tercihleriGetir();final me=uid;if(me!=null)unawaited(ngelx434EskiIstekleriUzlastir(me));}")
