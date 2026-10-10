@@ -21,9 +21,12 @@ jobs:
               if re.search(r'\.delete\(\)|\.delete\(\)|\.delete\s*\(',line):
                   print(f'===== {i} =====')
                   for n in range(max(1,i-4),min(len(lines),i+3)+1): print(f'{n}: {lines[n-1]}')
-          for a,b in [(2470,2525),(1290,1335),(6020,6040)]:
+          for a,b in [(1170,1305),(2470,2525),(6020,6040)]:
               print(f'===== SOURCE {a}-{b} =====')
               for n in range(a,min(b,len(lines))+1): print(f'{n}: {lines[n-1]}')
+          print('===== MEDIA DELETE CALLS =====')
+          for i,line in enumerate(lines,1):
+              if 'ngelxMedyaSil(' in line: print(f'{i}: {line[:240]}')
           print('===== STORAGE UPLOADS =====')
           for i,line in enumerate(lines,1):
               if re.search(r'putFile|putData|putString|FirebaseStorage|refFromURL',line):
