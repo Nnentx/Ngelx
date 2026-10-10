@@ -35,13 +35,13 @@ b=s.index('class _ProfilEtkilesimRozeti',a)
 owner='\n'.join(lines)
 import re
 lines=owner.splitlines()
-bell=[i for i,line in enumerate(lines) if 'IconButton' in line and 'notifications_none_rounded' in line]
+bell=[i for i,line in enumerate(lines) if 'IconButton' in line and 'notification' in line.lower()]
 if len(bell)!=1:
     raise SystemExit(f'Build429 source drift (profile notification bell destination): {len(bell)} bell lines')
 line=lines[bell[0]]
 line,n=re.subn(
-    r"onPressed:.*?icon:sayi==0\?",
-    "onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const AktivitePage())),icon:sayi==0?",
+    r"onPressed:.*?,icon:",
+    "onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const AktivitePage())),icon:",
     line,count=1)
 if n!=1:
     raise SystemExit('Build429 source drift (profile notification bell callback)')
