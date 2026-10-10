@@ -10,28 +10,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Locate existing implementations
+      - name: Print relevant implementation blocks
         shell: bash
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          import re
-          for name in ['app/lib/main.dart', 'app/lib/story_v66.dart', 'firestore.rules']:
-              p=Path(name); lines=p.read_text(encoding='utf-8').splitlines()
-              print('===== '+name+' lines='+str(len(lines))+' =====')
-              if name.endswith('main.dart'):
-                  for i,line in enumerate(lines,1):
-                      if re.search(r'^(class |Future<.*>|Widget .*\(|int .*\()',line) and re.search(r'Mesaj|Bildirim|Aktivite|Arsiv|SonGor|Presence|Profil|Hikaye|Hikâye',line,re.I):
-                          print(f'{i}:{line[:200]}')
-                  for i,line in enumerate(lines,1):
-                      if re.search(r'FirebaseStorage|storage\.ref|\.ref\(\)|refFromURL|lastSeenAt|lastSeen|Son görül|son görül|arsiv|arşiv|unreadCount',line,re.I):
-                          print(f'{i}:{line[:220]}')
-              elif name.endswith('story_v66.dart'):
-                  for i,line in enumerate(lines,1):
-                      if re.search(r'FirebaseStorage|storage\.ref|\.ref\(\)|refFromURL|delete\(|archive|expiresAt|mediaUrl|storyUrl',line,re.I):
-                          print(f'{i}:{line[:220]}')
-              else:
-                  for i,line in enumerate(lines,1):
-                      if re.search(r'match /(videos|notifications|users|posts|comments|chats|messages)',line):
-                          print(f'{i}:{line[:200]}')
+          def show(path, ranges):
+              lines=Path(path).read_text(encoding='utf-8').splitlines()
+              for a,b in ranges:
+                  print(f'===== {path}:{a}-{b} =====')
+                  for n in range(a,min(b,len(lines))+1): print(f'{n}: {lines[n-1]}')
+          show('app/lib/main.dart',[(2928,3050),(23288,23332),(26610,26706),(26490,26590)])
+          show('firestore.rules',[(211,263),(731,743)])
+          p=Path('app/lib/main.dart'); lines=p.read_text(encoding='utf-8').splitlines()
+          for i,line in enumerate(lines,1):
+              if 'FirebaseStorage' in line or 'refFromURL' in line or 'storage.ref' in line:
+                  print(f'STORAGE {i}: {line[:200]}')
           PY
