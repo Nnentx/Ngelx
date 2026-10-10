@@ -49,7 +49,7 @@ p=Path('app/lib/main.dart')
 s=p.read_text(encoding='utf-8')
 a=s.index('class _ProfilPageState extends State<ProfilPage>')
 b=s.index('class _ProfilEtkilesimRozeti',a)
-owner='\n'.join(lines)
+owner=s[a:b]
 import re
 lines=owner.splitlines()
 bell=[i for i,line in enumerate(lines) if 'IconButton' in line and 'notification' in line.lower()]
@@ -63,7 +63,7 @@ line,n=re.subn(
 if n!=1:
     raise SystemExit('Build429 source drift (profile notification bell callback)')
 lines[bell[0]]=line
-owner='\\n'.join(lines)
+owner='\n'.join(lines)
 old="final sayi=(s.data?.docs??[]).where((d)=>d.data()['read']!=true&&ngelxAktiviteBildirimiGosterilir(d.data())).length;"
 new="final sayi=ngelxOkunmamisAktiviteSayisi(s.data?.docs??const <QueryDocumentSnapshot<Map<String,dynamic>>>[]);"
 owner=one(owner,old,new,'deduplicated profile notification badge')
