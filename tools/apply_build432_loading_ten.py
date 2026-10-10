@@ -130,6 +130,14 @@ v=replace(v,'      setState(()=>videoHata=true);\n      sure.stop();', '''      
       if(failed!=null)unawaited(failed.dispose());
       setState(()=>videoHata=true);
       sure.stop();''')
+# Playback commands can fail even for an already initialized preloaded controller.
+a=v.index('    if(hazirSiradaki!=null){');b=v.index('\n    if(onceki!=null)unawaited(onceki.dispose());',a)
+part=v[a:b]
+part=part.replace('      videoKontrol=hazirSiradaki;','      try{\n      videoKontrol=hazirSiradaki;')
+part=part.replace('      return;\n    }','      }catch(_){if(mounted&&nesil==medyaNesli)_videoBasarisiz(hazirSiradaki);else unawaited(hazirSiradaki.dispose());}\n      return;\n    }')
+v=v[:a]+part+v[b:]
+v=v.replace('await hazirSiradaki.play();','await hazirSiradaki.play().timeout(const Duration(seconds:8));').replace('await hazirSiradaki.seekTo(Duration.zero);','await hazirSiradaki.seekTo(Duration.zero).timeout(const Duration(seconds:8));')
+v=v.replace('await x.play();','await x.play().timeout(const Duration(seconds:8));',1)
 v=replace(v,'  void _duraklat(){','''  void _videoIzle(VideoPlayerController x,int nesil){
     _videoListener=(){
       if(!mounted||nesil!=medyaNesli||videoKontrol!=x)return;
