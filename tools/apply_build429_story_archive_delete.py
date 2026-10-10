@@ -11,9 +11,10 @@ def one(s, old, new, label):
 p=Path('app/lib/main.dart')
 s=p.read_text(encoding='utf-8')
 if "import 'package:firebase_storage/firebase_storage.dart';" not in s:
-    part="part 'story_v66.dart';"
-    if s.count(part)!=1: raise SystemExit('Build429 main.dart part anchor drift')
-    s=s.replace(part,"import 'package:firebase_storage/firebase_storage.dart';\n\n"+part,1)
+    import_line="import 'package:firebase_storage/firebase_storage.dart';\n"
+    first_part=__import__('re').search(r'^part\\s',s,__import__('re').M)
+    if first_part is None: raise SystemExit('Build429 main.dart part anchor drift')
+    s=s[:first_part.start()]+import_line+s[first_part.start():]
 old="""          final docs=(s.data?.docs??[]).toList()
             ..sort((a,b){"""
 new="""          final docs=(s.data?.docs??[]).where((d){
