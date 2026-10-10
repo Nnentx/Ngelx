@@ -24,7 +24,23 @@ new="""          final docs=(s.data?.docs??[]).where((d){
               (v['archivedAt'] is Timestamp||v['highlighted']==true);
           }).toList()
             ..sort((a,b){"""
-s=one(s,old,new,'archive only saved/expired stories')
+s=one(s,old,new,'archive only saved stories and hide deleted items')
+archiveStart=s.index('class HikayeArsiviPage extends StatelessWidget{')
+archiveEnd=s.index('class NgelXArsivMerkeziPage',archiveStart)
+archive=s[archiveStart:archiveEnd]
+oldError="          if(s.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator(color:mor));"
+newError=oldError+"""
+          if(s.hasError)return Center(child:Column(mainAxisSize:MainAxisSize.min,children:[
+            const Icon(Icons.cloud_off_rounded,color:Color(0xFF8A93A8),size:34),
+            const SizedBox(height:10),
+            const Text('Hikâye arşivi yüklenemedi.',style:TextStyle(color:Colors.black54)),
+            TextButton(
+              onPressed:()=>Navigator.pushReplacement(context,MaterialPageRoute(builder:(_)=>const HikayeArsiviPage())),
+              child:const Text('Tekrar dene',style:TextStyle(color:mor,fontWeight:FontWeight.w800)),
+            ),
+          ]));"""
+archive=one(archive,oldError,newError,'story archive error and retry state')
+s=s[:archiveStart]+archive+s[archiveEnd:]
 p.write_text(s,encoding='utf-8')
 
 # Build 429: keep the profile bell on the dedicated Activity screen and reuse
