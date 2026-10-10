@@ -6,15 +6,15 @@ Durumlar: **Kodlandı** = yeni düzeltme mevcut; CI geçti, telefon doğrulamas�
 
 | No | İş | Durum / kanıt |
 |---|---|---|
-|1|Gelen Kutusu gri ekran / yükleme|Build432 kodlandı: geç açılan sekmelere snapshot replay, 15 saniye ilk sonuç sınırı ve retry. Cihaz testi açık|
-|2|Bildirimler listesinin görünmesi|Build431 metin/tarih ve koleksiyon doğrulaması + Build432 replay düzeltmesi. 45651 cihaz regresyonu sonrası yeni test gerekli|
+|1|Gelen Kutusu gri ekran / yükleme|Build432 yükleme/replay korundu. 45675/45677/45692 videolarında Gelen Kutusu ve sekmeler açıldı; yeni regresyon yok.|
+|2|Bildirimler listesinin görünmesi|45675/45677/45678/45692: bildirim içerikleri görünüyor ve liste yenileniyor.|
 |3|Bildirim sayacının 32'de kalması|Kodlandı: görünür satırların backend read güncellemesi|
 |4|Tümü sayacının tutarlılığı|Kodlandı: mesaj istekleri ve bildirim uygunluğu ayrımı|
 |5|Mesaj isteği sayısının tutarlılığı|Kodlandı: pending sohbetler ayrı sayılır; eski mükerrer sohbetler ayrıca incelenmeli|
 |6|Mesaj isteği sayfasındaki boşluk|Build432 kodlandı: canlı kullanıcı/sohbet stream, açıklamalı boş durum ve aynı ekranda retry; cihaz yerleşimi testi açık|
 |7|Yinelenen takip isteği|Kodlandı: transaction içinde güncel pending kontrolü|
 |8|Yinelenen arkadaşlık isteği|Kodlandı: aynı transaction kontrolü|
-|9|Bildirim gönderen isimlerinin mor olması|Build433: Gelen Kutusu Tümü bildirimlerinde kişi adı mor; telefon testi gerekli.|
+|9|Bildirim gönderen isimlerinin mor olması|Normal aktör isimleri cihazda mor. Canlı bitiş/grup sonuç isimlerinin kalan hatası Build434 kodlandı; yeni telefon testi açık.|
 |10|Sohbet işlemlerindeki gereksiz yükleme|Build432 kodlandı: sayaç/liste/kart tek 200 kayıt sorgusu; hata veren kullanıcı cache kaydı atılır. Telefon performans ölçümü açık|
 |11|Video hikâye yanıtı küçük önizlemesi|Kodlandı: video URL artık resim decoder'ına verilmez|
 |12|Uzun video hikâye yükleme|Kullanıcı 2026-10-10 Build432 telefon testinde tamamlandı dedi; çalışan davranış korunur.|
@@ -24,21 +24,21 @@ Durumlar: **Kodlandı** = yeni düzeltme mevcut; CI geçti, telefon doğrulamas�
 |16|Süresi dolan hikâyelerin otomatik arşivlenmemesi|Build429 filtre kodlandı; kalıcı server temizliği açık|
 |17|Silinen hikâyenin medya ve kayıt temizliği|Build429 + owner/r2-video yolu düzeltmesi; cihaz testi gerekli|
 |18|Hikâye videolarının tekrar yüklemesini azaltma|Build432 tekrar yükleme azaltma kodu mevcut; kullanıcı video akışını onayladı.|
-|19|Profil zilinin yalnız Bildirimler'e açılması|Build433: Profil zili sekmesiz Bildirimler listesi açar, mor ikon beyaz yuvarlak içinde. Telefon testi gerekli.|
-|20|Bildirim ekranında sohbet sekmeleri olmaması|Build433: Bildirimler ekranında kategori/Activity sekmeleri kaldırıldı; telefon testi gerekli.|
-|21|Profil zilinde kırmızı okunmamış sayaç|Kodlandı: ortak unread helper ile badge|
-|22|Okunanların backend ve sayaçtan düşmesi|Kodlandı: read update, silinen kayıt yeniden yaratılmaz|
-|23|Sıfır sayacın gizlenmesi|Kodlandı: count>0 şartı|
+|19|Profil zilinin yalnız Bildirimler'e açılması|45678: Profil zili beyaz daire/mor ikon; doğrudan sekmesiz Bildirimler açılıyor. Geçti.|
+|20|Bildirim ekranında sohbet sekmeleri olmaması|45678: Profil Bildirimler ekranında Activity/kategori sekmeleri yok. Geçti.|
+|21|Profil zilinde kırmızı okunmamış sayaç|45678: Profil zilindeki okunmamış rozet görüldü ve okundu sonrası gizlendi. Geçti.|
+|22|Okunanların backend ve sayaçtan düşmesi|45678: Tümünü okundu işlemi ve rozetin düşmesi geçti. Satır metnindeki sosyal sonuç ayrıca Build434 düzeltmesi.|
+|23|Sıfır sayacın gizlenmesi|45678: Sıfır okunmamışta zil rozeti gizleniyor. Geçti.|
 |24|Bildirim listesinin yükleme/hata durumu|Mevcut Activity; Inbox hata/yenileme eklendi|
 |25|Profil içi arama performansı|Kullanıcı Build432 profil araması hızını tamamlandı olarak doğruladı.|
 |26|Hikâye arşivi yükleme göstergesi/sorgusu|Kullanıcı Build432 arşiv hızını tamamlandı olarak doğruladı.|
 |27|Canlı geçmişinde eski kayıtlara saklama kuralı|Build433: Kaydedilmiş bitmiş yayınlar 30 gün, kaydedilmemiş yayınlar tutulmaz. Sunucu/live cleanup çalıştı; cihaz testi açık.|
 |28|Arşivde silinmiş içeriklerin gizlenmesi|Build432 kodlandı: owner/deleted/isDeleted/removed/hiddenFor ve yerel silme ID filtresi; eski snapshot da silineni gizler. Cihaz testi açık|
 |29|Yavaş profil geçişleri|Kullanıcı Build432 profil geçişi hızını tamamlandı olarak doğruladı.|
-|30|Yeşil noktanın gerçek aktifliğe bağlı olması|Mevcut: heartbeat / 120 saniye sınırı|
-|31|Son görülme|Mevcut; 16d/1s/2g formatı kodlandı|
-|32|Son görülme süresinin güncellenmesi|Mevcut: 30 saniye timer / heartbeat; cihaz testi gerekli|
-|33|Aktiflik gizliliği|Kodlandı: shared online helper showActivityStatus=false durumunu gizler|
+|30|Yeşil noktanın gerçek aktifliğe bağlı olması|Build434: Mesajlar/Tümü/Arkadaşlar avatarda yeşil nokta, 120 saniye taze heartbeat şartı; CI davranış testi geçti, iki cihaz testi açık.|
+|31|Son görülme|Build434: avatarda 37 dk/2 sa gibi etiket, Arkadaşlar’da tam aktiflik metni. Telefon testi açık.|
+|32|Son görülme süresinin güncellenmesi|Build434: 30 saniyede aktiflik yaşı yenilenir; kaynak ve davranış testi, cihaz doğrulaması açık.|
+|33|Aktiflik gizliliği|Build434: gizleyen kullanıcıda online/lastSeen tamamen gizli; davranış testi geçti. Cihaz testi açık.|
 |34|Kalıcı hikâye silme|Build429 kodlandı; telefon doğrulaması gerekli|
 |35|Hikâye videosunun medya temizliği|Kodlandı: gerçek videos/uid R2 yolu desteklenir|
 |36|Süresi dolan kaydedilmemiş hikâyenin temizlenmesi|Sunucu kodu hazır; Firebase önizleme 50 aday buldu, medya sahipliği doğrulanamadığı için 50 aday atlandı; zamanlanmış silme açık|

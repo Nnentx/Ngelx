@@ -21,4 +21,10 @@ Kullanıcı hikâye video/retry/doğru hikâye, arşiv, profil araması/geçiş 
 
 Yeni mesaj isteği sayaç/kabul/sil cihaz testi, ret sonrası sayaç testi, presence iki cihaz/gizlilik testi ve canlı geçmiş/silme testi açık.
 36 otomatik eski hikâye temizliği, 44 mesaj medyası retry, 45 mesaj medya cache, 46 sahipsiz medya taraması tamamlanmış sayılmaz. 46/46 iddiası yok.
-CI sonucu daha sonra kaydedilir; APK hazır varsayılmaz.
+CI 38061499114 başarılı: Build395–434 kaynak/koruma zinciri, Flutter analizi (835 uyarı/bilgi; fatal hata yok), 26 davranış testi, Firestore emulator ve release APK üretimi geçti. APK imzası v2 doğrulandı. Test edilen kaynak: 7a3e1b392283fa1f981527ac31d642be9f263d69. APK/ZIP hash doğrulaması ve dosya kaydı aşağıya eklenir.
+
+Aktiflik satırı kullanıcı değiştirdiğinde önceki snapshot silinir; geçmişte sonuçlanmış bir isteğin sonucu yeni istek gönderilince ezilmez.
+
+APK: NgelX-Build434.apk, 145085322 bytes. Native manifest versionName=1.0.209, versionCode=434; arm64 AOT includes Ngelx434AktifAvatar.
+SHA256: 1eed8ae3f3d9c1fcff0bb473f63a647578b38258ec5261ee8b7cfc249f25979c
+Artifact ZIP SHA256: 51aa65c2a77249b03a792a37b69a1abba7b8480c84cfc3293da015a726d58a80
