@@ -9,28 +9,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Print history, notification and message delete paths
+      - name: Print delete actions and activity UI
         run: |
           python3 - <<'PY'
           from pathlib import Path
           p=Path('app/lib/main.dart')
           lines=p.read_text(encoding='utf-8').splitlines()
-          targets=[
-            'class _AktivitePageState',
-            'class CanliYayinGecmisiPage',
-            'class HikayeArsiviPage',
-            'Future<void> ngelxMedyaSil',
-            'class _MesajPageState',
-            'class _GrupSohbetPageState',
-            'class _YeniYorumlarState',
-          ]
+          targets=['class _AktivitePageState','class _VideoKartiState','class _GorselYaziKartiState','class _ProfilSekme','class _MesajPageState','class _GrupSohbetPageState']
           for target in targets:
               i=next((i for i,l in enumerate(lines) if target in l),None)
               print('BLOCK',target,'LINE',i+1 if i is not None else 'missing')
               if i is None: continue
-              length=190 if target=='class _AktivitePageState' else 145 if target=='class CanliYayinGecmisiPage' else 85
-              end=min(len(lines),i+length)
-              for j in range(i,end):
-                  if j>i+6 and lines[j].startswith('class '): break
-                  print(f'{j+1}: {lines[j]}')
+              end=min(len(lines),i+(360 if target=='class _AktivitePageState' else 650 if target=='class _GrupSohbetPageState' else 260))
+              if target in ('class _VideoKartiState','class _GorselYaziKartiState','class _ProfilSekme','class _MesajPageState','class _GrupSohbetPageState'):
+                  for j in range(i,end):
+                      if j>i+6 and lines[j].startswith('class '): break
+                      if any(x in lines[j].lower() for x in ['delete','sil','deleted','hiddenfor','medyasil']):
+                          print(f'{j+1}: {lines[j]}')
+              else:
+                  for j in range(i,end):
+                      if j>i+6 and lines[j].startswith('class '): break
+                      print(f'{j+1}: {lines[j]}')
           PY
