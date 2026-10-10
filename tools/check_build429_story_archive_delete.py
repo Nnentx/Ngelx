@@ -4,7 +4,10 @@ from pathlib import Path
 
 main=Path('app/lib/main.dart').read_text(encoding='utf-8')
 story=Path('app/lib/story_v66.dart').read_text(encoding='utf-8')
+owner=main[main.index('class _ProfilPageState extends State<ProfilPage>'):main.index('class _ProfilEtkilesimRozeti')]
 checks={
+  'Profile bell opens dedicated Activity page': "const AktivitePage()" in owner and "const MesajPage(initialFilter:'Bildirimler')" not in owner,
+  'Profile bell badge uses deduplicated Firebase unread count': 'ngelxOkunmamisAktiviteSayisi(' in owner and 'Badge(label:Text(sayi>99?' in owner,
   'Build428 story reply still reaches private chat': "'type':'story_reply'" in story and "'storyOwnerId':hedef" in story,
   'Story reply preview card still opens story': '_hikayeYanitKartiAc(v)' in main,
   'Story series timeout remains bounded': 'initialize().timeout(const Duration(seconds:12))' in story,
