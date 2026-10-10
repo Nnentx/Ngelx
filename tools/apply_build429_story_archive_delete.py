@@ -27,6 +27,22 @@ new="""          final simdi=DateTime.now();
 s=one(s,old,new,'archive only saved/expired stories')
 p.write_text(s,encoding='utf-8')
 
+# Build 429: the profile bell must open the dedicated activity screen, not the
+# Messenger inbox. Reuse the same deduplicated unread count shown on Activity.
+p=Path('app/lib/main.dart')
+s=p.read_text(encoding='utf-8')
+a=s.index('class _ProfilPageState extends State<ProfilPage>')
+b=s.index('\\nclass _ProfilEtkilesimRozeti',a)
+owner=s[a:b]
+old="onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const MesajPage(initialFilter:'Bildirimler'))),icon:sayi==0?"
+new="onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const AktivitePage())),icon:sayi==0?"
+owner=one(owner,old,new,'profile notification bell destination')
+old="final sayi=(s.data?.docs??[]).where((d)=>d.data()['read']!=true&&ngelxAktiviteBildirimiGosterilir(d.data())).length;"
+new="final sayi=ngelxOkunmamisAktiviteSayisi(s.data?.docs??const <QueryDocumentSnapshot<Map<String,dynamic>>>[]);"
+owner=one(owner,old,new,'deduplicated profile notification badge')
+s=s[:a]+owner+s[b:]
+p.write_text(s,encoding='utf-8')
+
 p=Path('app/lib/story_v66.dart')
 s=p.read_text(encoding='utf-8')
 anchor="class NgelXHikayeSeriPage extends StatefulWidget{"
