@@ -115,7 +115,7 @@ v=replace(v,'  String sonrakiVideoUrl=\'\';',"  String sonrakiVideoUrl='';\n  Fu
 v=v.replace('sonrakiVideoKontrol?.value.isInitialized==true)return;','sonrakiVideoKontrol!=null)return;')
 v=v.replace('      await x.initialize().timeout(const Duration(seconds:12));','      final pending=x.initialize().timeout(const Duration(seconds:30));\n      sonrakiVideoHazirlama=pending;\n      await pending;',1)
 v=v.replace(".limit(100).get();",".limit(100).get().timeout(const Duration(seconds:15));")
-v=v.replace("return v['type']=='story'&&bitis is Timestamp&&bitis.toDate().isAfter(simdi);","return v['type']=='story'&&ngelx432IcerikGorunur(d.id,v,widget.ownerUid)&&bitis is Timestamp&&bitis.toDate().isAfter(simdi);")
+v=v.replace("return v['type']=='story'&&bitis is Timestamp&&bitis.toDate().isAfter(simdi);","return v['type']=='story'&&ngelx432IcerikGorunur(d.id,v,FirebaseAuth.instance.currentUser?.uid??'')&&bitis is Timestamp&&bitis.toDate().isAfter(simdi);")
 v=replace(v,'    final nesil=++medyaNesli;', '    final nesil=++medyaNesli;\n    _bufferTimer?.cancel();_userPaused=false;\n    if(videoKontrol!=null&&_videoListener!=null)videoKontrol!.removeListener(_videoListener!);\n    _videoListener=null;')
 v=replace(v,'    // Build 398: if the next story was already initialized, reuse it instantly.', '''    // Await a matching preload already in flight; do not start a second request.
     if(sonrakiVideoIndex==aktif&&sonrakiVideoUrl==medyaAdresi&&sonrakiVideoKontrol!=null){
