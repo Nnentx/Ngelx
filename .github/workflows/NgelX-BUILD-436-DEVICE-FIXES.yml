@@ -364,7 +364,7 @@ jobs:
           cp ../tools/build432_behavior_test.dart test/build432_behavior_test.dart
           cp ../tools/build433_behavior_test.dart test/build433_behavior_test.dart
           cp ../tools/build434_behavior_test.dart test/build434_behavior_test.dart
-          cp ../tools/build435_behavior_test.dart test/build435_behavior_test.dart test/build436_behavior_test.dart
+          cp ../tools/build435_behavior_test.dart test/build435_behavior_test.dart
           cp ../tools/build436_behavior_test.dart test/build436_behavior_test.dart
           timeout 300s flutter test --reporter expanded --timeout 60s test/build430_presence_test.dart test/build431_notification_test.dart test/build432_behavior_test.dart test/build433_behavior_test.dart test/build434_behavior_test.dart test/build435_behavior_test.dart test/build436_behavior_test.dart
 
