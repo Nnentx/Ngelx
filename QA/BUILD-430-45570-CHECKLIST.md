@@ -14,27 +14,27 @@ Durumlar: **Kodlandı** = yeni düzeltme mevcut; CI geçti, telefon doğrulamas�
 |6|Mesaj isteği sayfasındaki boşluk|Build432 kodlandı: canlı kullanıcı/sohbet stream, açıklamalı boş durum ve aynı ekranda retry; cihaz yerleşimi testi açık|
 |7|Yinelenen takip isteği|Kodlandı: transaction içinde güncel pending kontrolü|
 |8|Yinelenen arkadaşlık isteği|Kodlandı: aynı transaction kontrolü|
-|9|Bildirim gönderen isimlerinin mor olması|Mevcut Inbox; Activity kalın isimleri de mor yapıldı|
+|9|Bildirim gönderen isimlerinin mor olması|Build433: Gelen Kutusu Tümü bildirimlerinde kişi adı mor; telefon testi gerekli.|
 |10|Sohbet işlemlerindeki gereksiz yükleme|Build432 kodlandı: sayaç/liste/kart tek 200 kayıt sorgusu; hata veren kullanıcı cache kaydı atılır. Telefon performans ölçümü açık|
 |11|Video hikâye yanıtı küçük önizlemesi|Kodlandı: video URL artık resim decoder'ına verilmez|
-|12|Uzun video hikâye yükleme|Build432 kodlandı: 30 saniye initialization, devam eden preload bekleme, 15 saniye kayıt sorgusu sınırı. Uzun video cihaz testi açık|
-|13|Başarısız videoda sonsuz yükleme|Build432 kodlandı: runtime video hatası, 20 saniye buffering sınırı, controller kapatma ve retry. Telefon testi açık|
-|14|Hikâye kartının doğru içeriği açması|Mevcut: storyId bağlantısı; iki hesap testi gerekli|
-|15|Arşiv ilk açılış yüklemesi|Build429 kodlandı: yükleme / hata / yeniden dene|
+|12|Uzun video hikâye yükleme|Kullanıcı 2026-10-10 Build432 telefon testinde tamamlandı dedi; çalışan davranış korunur.|
+|13|Başarısız videoda sonsuz yükleme|Kullanıcı Build432 telefon testinde yeniden denemeyi doğruladı; tekrar test istenmez.|
+|14|Hikâye kartının doğru içeriği açması|Kullanıcı Build432 telefon testinde doğru hikâyenin açıldığını doğruladı.|
+|15|Arşiv ilk açılış yüklemesi|Kullanıcı Build432 arşiv açılışını tamamlandı olarak doğruladı.|
 |16|Süresi dolan hikâyelerin otomatik arşivlenmemesi|Build429 filtre kodlandı; kalıcı server temizliği açık|
 |17|Silinen hikâyenin medya ve kayıt temizliği|Build429 + owner/r2-video yolu düzeltmesi; cihaz testi gerekli|
-|18|Hikâye videolarının tekrar yüklemesini azaltma|Build432 kodlandı: aynı preload tamamlanmadan yeniden kurulmaz; aktif video aynı hazırlığı kullanır. Ölçüm açık|
-|19|Profil zilinin yalnız Bildirimler'e açılması|Kodlandı: iki gerçek profil düzeni de AktivitePage açar|
-|20|Bildirim ekranında sohbet sekmeleri olmaması|Kodlandı: bağımsız AktivitePage|
+|18|Hikâye videolarının tekrar yüklemesini azaltma|Build432 tekrar yükleme azaltma kodu mevcut; kullanıcı video akışını onayladı.|
+|19|Profil zilinin yalnız Bildirimler'e açılması|Build433: Profil zili sekmesiz Bildirimler listesi açar, mor ikon beyaz yuvarlak içinde. Telefon testi gerekli.|
+|20|Bildirim ekranında sohbet sekmeleri olmaması|Build433: Bildirimler ekranında kategori/Activity sekmeleri kaldırıldı; telefon testi gerekli.|
 |21|Profil zilinde kırmızı okunmamış sayaç|Kodlandı: ortak unread helper ile badge|
 |22|Okunanların backend ve sayaçtan düşmesi|Kodlandı: read update, silinen kayıt yeniden yaratılmaz|
 |23|Sıfır sayacın gizlenmesi|Kodlandı: count>0 şartı|
 |24|Bildirim listesinin yükleme/hata durumu|Mevcut Activity; Inbox hata/yenileme eklendi|
-|25|Profil içi arama performansı|Build432 kodlandı: retained replay stream, 220ms debounce ve retry; telefon performans ölçümü açık|
-|26|Hikâye arşivi yükleme göstergesi/sorgusu|Build432 kodlandı: stateful retained arşiv sorgusu, bounded yükleme ve yerinde retry. Telefon ölçümü açık|
-|27|Canlı geçmişinde eski kayıtlara saklama kuralı|Açık|
+|25|Profil içi arama performansı|Kullanıcı Build432 profil araması hızını tamamlandı olarak doğruladı.|
+|26|Hikâye arşivi yükleme göstergesi/sorgusu|Kullanıcı Build432 arşiv hızını tamamlandı olarak doğruladı.|
+|27|Canlı geçmişinde eski kayıtlara saklama kuralı|Build433: Kaydedilmiş bitmiş yayınlar 30 gün, kaydedilmemiş yayınlar tutulmaz. Sunucu/live cleanup çalıştı; cihaz testi açık.|
 |28|Arşivde silinmiş içeriklerin gizlenmesi|Build432 kodlandı: owner/deleted/isDeleted/removed/hiddenFor ve yerel silme ID filtresi; eski snapshot da silineni gizler. Cihaz testi açık|
-|29|Yavaş profil geçişleri|Build432 kodlandı: birleşik profil future yeniden buildlerde korunur; işlem/UID/oturum değişiminde temizlenir. Telefon ölçümü açık|
+|29|Yavaş profil geçişleri|Kullanıcı Build432 profil geçişi hızını tamamlandı olarak doğruladı.|
 |30|Yeşil noktanın gerçek aktifliğe bağlı olması|Mevcut: heartbeat / 120 saniye sınırı|
 |31|Son görülme|Mevcut; 16d/1s/2g formatı kodlandı|
 |32|Son görülme süresinin güncellenmesi|Mevcut: 30 saniye timer / heartbeat; cihaz testi gerekli|
@@ -42,8 +42,8 @@ Durumlar: **Kodlandı** = yeni düzeltme mevcut; CI geçti, telefon doğrulamas�
 |34|Kalıcı hikâye silme|Build429 kodlandı; telefon doğrulaması gerekli|
 |35|Hikâye videosunun medya temizliği|Kodlandı: gerçek videos/uid R2 yolu desteklenir|
 |36|Süresi dolan kaydedilmemiş hikâyenin temizlenmesi|Sunucu kodu hazır; Firebase önizleme 50 aday buldu, medya sahipliği doğrulanamadığı için 50 aday atlandı; zamanlanmış silme açık|
-|37|Kaydedilmemiş canlı yayın geçmişinin tutulmaması|Açık|
-|38|Silinen canlı yayın kaydı ve medya temizliği|Açık|
+|37|Kaydedilmemiş canlı yayın geçmişinin tutulmaması|Build433 sunucu temizliği: uygun30 bitmiş kayıt temizlendi; aktif yayınlar korunur. Yeni host end sonrası uygulama temizliği cihaz testi açık.|
+|38|Silinen canlı yayın kaydı ve medya temizliği|Build433: sahibi doğrulanmış medya + comments/reactions/viewers, root en son; kalıcı retry. Yetki emulator testi geçti; cihaz testi açık.|
 |39|Silinen gönderi ve ilişkili medya|Kodlandı: güncel sahip + medya temizliği tamamlanmadan kayıt kaldırılmaz|
 |40|Silinen fotoğraf dosyası|Kodlandı: gönderi helper'ında beklenen güvenli R2/Firebase silme|
 |41|Silinen video dosyası|Kodlandı: aynı helper; hata kaybolmaz|

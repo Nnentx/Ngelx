@@ -16,3 +16,9 @@ Build432 video45659 displayed inbox, notifications and requests without prior en
 
 ## Validation
 Pending Flutter analysis, behavior/rules tests and signed APK. Server live cleanup workflow verifies media ownership, atomically queues unchanged eligible ended records, recursively cleans child records and retains retry jobs. Deployment/production cleanup results pending. Crash-stale active records are conservatively protected. No46/46 claim.
+
+Server run38054945244 succeeded: existing deployed rules changed only live child delete permissions; preview30 eligible ended records, queued30/cleaned30, unverifiable0. No scheduled global sweep is enabled; immediate host end and history refresh handle new owner records. Production records marked active are protected even after a crash.
+
+Final source3137f47d6f84c139cc61db5e6f9ad077368b3c34, CI38055242305 passed: full Build395–433 chain, Flutter analysis with831 existing warnings/info (no fatal errors),23 behavior tests, live host/outsider Firestore emulator tests, signed release APK verified v2. New device tests remain open.
+
+APK145085310bytes SHA256c4c592f4fdda71f497aed04631eaaeffac30b3de43a884b386c6b6e538d44dc0. Artifact ZIP SHA256d3ba0891f891641880cf054db0b45e589b4c68ca7240c9106fc0b56752c3b620. Download hashes verified.
