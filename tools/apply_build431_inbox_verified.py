@@ -44,14 +44,17 @@ s=s[:a]+part+s[b:]
 # Route the category cards directly to their existing Activity filters.
 one('const AktivitePage({super.key});',"final String initialFilter;\n  const AktivitePage({super.key,this.initialFilter='all'});")
 one("String _filtre='all';","late String _filtre=widget.initialFilter;")
+# Ignore legacy read-only shells; they are not activities.
+one("return tur!='message';","return tur!='message'&&(tur.isNotEmpty||(v['eventKind']??'').toString().isNotEmpty||['text','message','content'].any((k)=>(v[k]??'').toString().trim().isNotEmpty));")
 # Match request eligibility and query window in the list and badge.
 a=s.index('class MesajIstekleriPage');b=s.index('class MesajIstegiOnizlemePage',a)
 part=s[a:b].replace('.limit(60).snapshots()', '.limit(200).snapshots()')
+part=part.replace('          final arkadaslar =',"          if(!me.hasData&&!me.hasError)return const Center(child:CircularProgressIndicator(color:mor));\n          if(me.hasError)return const Center(child:Text('İstekler yüklenemedi. Geri dönüp tekrar dene.'));\n          final archived=Set<String>.from(List<dynamic>.from(me.data?.data()?['archivedChats']??const[]));\n          final arkadaslar =")
 start=part.index('              final docs = ');end=part.index('              if(docs.isEmpty)',start)
 part=part[:start]+'''              if(s.connectionState==ConnectionState.waiting&&!s.hasData)return const Center(child:CircularProgressIndicator(color:mor));
               if(s.hasError)return const Center(child:Text('Mesaj istekleri yüklenemedi. Geri dönüp tekrar dene.'));
               final docs=(s.data?.docs??<QueryDocumentSnapshot<Map<String,dynamic>>>[])
-                .where((d)=>ngelxBekleyenMesajIstegi(d.data(),uid,arkadaslar)).toList();
+                .where((d)=>!archived.contains(d.id)&&ngelxBekleyenMesajIstegi(d.data(),uid,arkadaslar)).toList();
 '''+part[end:]
 s=s[:a]+part+s[b:]
 s+='\n'+Path('tools/build431_notification_helpers.dart').read_text()
