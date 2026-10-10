@@ -43,33 +43,6 @@ archive=one(archive,oldError,newError,'story archive error and retry state')
 s=s[:archiveStart]+archive+s[archiveEnd:]
 p.write_text(s,encoding='utf-8')
 
-# Build 429: keep the profile bell on the dedicated Activity screen and reuse
-# the deduplicated unread count. Build 428 already routes the bell correctly.
-p=Path('app/lib/main.dart')
-s=p.read_text(encoding='utf-8')
-a=s.index('class _ProfilPageState extends State<ProfilPage>')
-b=s.index('class _ProfilEtkilesimRozeti',a)
-owner=s[a:b]
-import re
-lines=owner.splitlines()
-bell=[i for i,line in enumerate(lines) if 'IconButton' in line and 'notification' in line.lower()]
-if len(bell)!=1:
-    raise SystemExit(f'Build429 source drift (profile notification bell destination): {len(bell)} bell lines')
-line=lines[bell[0]]
-line,n=re.subn(
-    r"onPressed:.*?,icon:",
-    "onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const AktivitePage())),icon:",
-    line,count=1)
-if n!=1:
-    raise SystemExit('Build429 source drift (profile notification bell callback)')
-lines[bell[0]]=line
-owner='\n'.join(lines)
-old="final sayi=(s.data?.docs??[]).where((d)=>d.data()['read']!=true&&ngelxAktiviteBildirimiGosterilir(d.data())).length;"
-new="final sayi=ngelxOkunmamisAktiviteSayisi(s.data?.docs??const <QueryDocumentSnapshot<Map<String,dynamic>>>[]);"
-owner=one(owner,old,new,'deduplicated profile notification badge')
-s=s[:a]+owner+s[b:]
-p.write_text(s,encoding='utf-8')
-
 p=Path('app/lib/story_v66.dart')
 s=p.read_text(encoding='utf-8')
 anchor="class NgelXHikayeSeriPage extends StatefulWidget{"
