@@ -3,7 +3,7 @@ import os,uuid
 import firebase_admin,boto3
 from firebase_admin import firestore
 import media_cleanup_backend
-from media_cleanup435 import inventory,reference_keys,remove_media
+from media_cleanup435 import collect_keys,remove_media
 firebase_admin.initialize_app();db=firestore.client()
 r2=boto3.client('s3',endpoint_url=os.environ['NGELX_R2_ENDPOINT'],aws_access_key_id=os.environ['NGELX_R2_ACCESS_KEY_ID'],aws_secret_access_key=os.environ['NGELX_R2_SECRET_ACCESS_KEY'],region_name='auto')
 bucket=os.environ['NGELX_R2_BUCKET'];owner='__ngelx_qa435__';ident=uuid.uuid4().hex
@@ -19,14 +19,16 @@ def delete(k):
 try:
  r2.put_object(Bucket=bucket,Key=key,Body=b'Private NgelX cleanup integration fixture',ContentType='text/plain',Metadata={'uid':owner})
  ref.set({'fixture':True,'mediaUrl':'https://media.ngelxsocial.com/media/'+key})
- scan=lambda:reference_keys(inventory(db))
+ # This unpublished random object can only be referenced by our private fixture.
+ # Test storage semantics without repeatedly scanning the user's whole database.
+ scan=lambda:collect_keys(ref.get(retry=None,timeout=20).to_dict() or {})
  assert remove_media(key,owner,head,scan,delete)=='shared'
  assert head(key) is not None
  ref.delete()
  assert remove_media(key,owner,head,scan,delete)=='deleted'
  assert head(key) is None
  assert remove_media(key,owner,head,scan,delete)=='missing'
- print('Real R2 ownership, full Firestore shared-reference protection and idempotent deletion integration passed.')
+ print('Real R2 ownership, private Firestore shared-reference protection and idempotent deletion integration passed.')
 finally:
  ref.delete()
  delete(key)

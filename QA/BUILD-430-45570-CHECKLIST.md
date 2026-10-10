@@ -41,7 +41,7 @@ Durumlar: **Kodlandı** = yeni düzeltme mevcut; CI geçti, telefon doğrulamas�
 |33|Aktiflik gizliliği|Build434: gizleyen kullanıcıda online/lastSeen tamamen gizli; davranış testi geçti. Cihaz testi açık.|
 |34|Kalıcı hikâye silme|Build429 kodlandı; telefon doğrulaması gerekli|
 |35|Hikâye videosunun medya temizliği|Kodlandı: gerçek videos/uid R2 yolu desteklenir|
-|36|Süresi dolan kaydedilmemiş hikâyenin temizlenmesi|Sunucu kodu hazır; Firebase önizleme 50 aday buldu, medya sahipliği doğrulanamadığı için 50 aday atlandı; zamanlanmış silme açık|
+|36|Süresi dolan kaydedilmemiş hikâyenin temizlenmesi|Build435: sürüm kontrollü kalıcı sunucu kuyruğu, kaydedilmiş/arşiv/öne çıkan koruması ve yeniden deneme eklendi. Gerçek sunucu ve telefon sonucu ayrı doğrulanır.|
 |37|Kaydedilmemiş canlı yayın geçmişinin tutulmaması|Build433 sunucu temizliği: uygun30 bitmiş kayıt temizlendi; aktif yayınlar korunur. Yeni host end sonrası uygulama temizliği cihaz testi açık.|
 |38|Silinen canlı yayın kaydı ve medya temizliği|Build433: sahibi doğrulanmış medya + comments/reactions/viewers, root en son; kalıcı retry. Yetki emulator testi geçti; cihaz testi açık.|
 |39|Silinen gönderi ve ilişkili medya|Kodlandı: güncel sahip + medya temizliği tamamlanmadan kayıt kaldırılmaz|
@@ -49,9 +49,9 @@ Durumlar: **Kodlandı** = yeni düzeltme mevcut; CI geçti, telefon doğrulamas�
 |41|Silinen video dosyası|Kodlandı: aynı helper; hata kaybolmaz|
 |42|Silinen yorum kaydı|Mevcut: gönderi alt kayıt temizliği; tek yorum davranışı doğrulanmalı|
 |43|Silinen tepki kaydı|Mevcut: likes/yorum likes temizliği; tek tepki davranışı doğrulanmalı|
-|44|Benden sil / herkesten sil ayrımı|Mevcut: message hidden/deletedForEveryone; medya retry eksik|
-|45|Silinen içerik önbelleği|Build430 medya eviction + Build432 arşiv/arama silme revizyonu; eski query satırı anında gizlenir. Mesaj medyası cache kontrolü açık|
-|46|Sahipsiz medya güvenli temizliği|Açık: sunucu sahiplik/referans taraması gerekir|
+|44|Benden sil / herkesten sil ayrımı|Build435: yalnız kendine gizleme; atomik medya manifesti; hesap bazlı kalıcı intent ve sunucu retry. Üçüncü kişiye ait veya paylaşılan medya korunur. Telefon testi bekliyor.|
+|45|Silinen içerik önbelleği|Build435: mesaj satırı/medya/arama gizleme, alıcı-gönderen bellek ve disk görsel eviction, URL bazlı geçici dosya temizliği ve açık görüntüleyicide kaynak kontrolü. Telefon testi bekliyor.|
+|46|Sahipsiz medya güvenli temizliği|Build435: tam Firestore referans taraması, doğrulanmış R2 UID, 7 gün yaş + 24 saat ikinci tarama, ETag ve yeniden kullanılan dosya koruması. Sunucu zamanlayıcısı ayrıca doğrulanır.|
 
 ## Koruma
 
@@ -74,3 +74,6 @@ Bildirimler sekmesindeki Yeni bildirim / Şimdi satırları ve sosyal istek say�
 45651 cihaz regresyonu + 6, 10, 12, 13, 18, 25, 26, 28, 29, 45 numaralı 10 ek maddede kod değişikliği. Ayrıntılar QA/BUILD-432-TEN-FOLLOWUPS.md. Kod/CI ile telefon doğrulaması ayrı tutulur; kapalı madde sayısı uydurulmaz.
 
 Build432 CI 38047626631 başarılı: üretim/koruma zinciri, Flutter analizi, 18 davranış testi, Firestore emulator, imzalı APK ve hash doğrulaması geçti. Telefon testi açık.
+
+## Build434 telefon kanıtı — 45705/45718
+45705 sürüm 1.0.209/434 doğru. 45718: Mesajlar son aktiflik süreleri, mor aktörler, kabul/geri çekme metinleri ve elle yenileme görüldü. Çevrimiçi nokta, Arkadaşlar, gizlilik, yeni mesaj isteği sayacı ve canlı geçmiş cihaz kontrolleri hâlâ ayrı açık.

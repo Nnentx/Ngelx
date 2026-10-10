@@ -7,7 +7,9 @@ Version: 1.0.210+435. Preserve all Build395–434 source-generation checks and b
 - 45: sender/recipient row observers evict original/tombstone URL images from memory and disk caches; shared-file exports now use URL-specific app temporary directories. No unrelated download is touched. Old manually exported device/gallery files are not controlled by the app.
 - 46: complete recursive Firestore inventory protects references in users, posts, chats, replies, nested payloads, text links and raw storage keys. Verified R2 UID must match key owner; recent objects, unknown metadata, changed ETags, read failures and restored content are preserved. Orphan deletion requires age >=7 days and two observations >=24h apart.
 
-Local: 395–435 preservation chain and 22 Python safety tests passed. Flutter behavior, emulator permissions, signed APK and real server job pending at initial commit.
+Validation: 395–435 preservation chain, 28 Flutter behavior tests, emulator permissions, and signed APK build passed. Latest backend safety suite: 26 tests passed. Flutter analysis has 843 warning/info findings, no fatal build error. APK source b629fca1def34dfde717e16dbaa9e82d6bd9a0d1; SHA256 6fbbbe2088408a55bb9325c98397f668c793ab1ebe8fcc5ae6a7f165ff6152a3.
+
+Scoped production message rules deployed successfully. Live backend fixture validation stopped with Firestore 429 quota exceeded; its private fixture was cleaned up. Live cleanup is NOT verified. Subsequent backend changes enforce a process-wide 10000 read budget, immediate quota deferral, and a private fixture scan instead of repeated full production scans. Push validation does not run production cleanup; manual validation performs one apply pass. Automatic production scheduling remains pending live verification.
 
 Device evidence inherited: 45705 confirms Build434 settings version. 45718 shows last-active labels, purple actors, answered/cancelled request wording and manual refresh. Online green dot / friends / privacy still need device evidence.
 

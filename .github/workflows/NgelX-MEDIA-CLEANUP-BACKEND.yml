@@ -108,8 +108,8 @@ jobs:
       - name: Install preview dependency
         if: steps.auth.outputs.available == 'true'
         run: python -m pip install firebase-admin boto3
-      - name: Preview and apply verified media cleanup
-        if: steps.auth.outputs.available == 'true'
+      - name: Apply verified media cleanup on manual validation
+        if: steps.auth.outputs.available == 'true' && github.event_name == 'workflow_dispatch'
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           NGELX_MEDIA_ORIGIN: https://media.ngelxsocial.com
@@ -117,7 +117,6 @@ jobs:
         run: |
           export NGELX_R2_ENDPOINT="https://${CLOUDFLARE_ACCOUNT_ID}.r2.cloudflarestorage.com"
           python tools/check_media_cleanup_backend.py
-          python tools/media_cleanup_backend.py --limit 10
           python tools/media_cleanup_backend.py --apply --limit 10
       - name: Remove temporary credential
         if: always()
