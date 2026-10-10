@@ -33,6 +33,7 @@ def media_urls(data):
 def main():
     args=argparse.ArgumentParser(description=__doc__)
     args.add_argument('--apply',action='store_true')
+    args.add_argument('--verify-media',action='store_true',help='Read R2 ownership metadata without deleting anything')
     args.add_argument('--limit',type=int,default=100)
     cfg=args.parse_args()
     if cfg.limit<1 or cfg.limit>500:args.error('limit must be 1–500')
@@ -46,13 +47,32 @@ def main():
         if expires_unsaved(doc.to_dict(),now):candidates.append(doc)
         if len(candidates)>=cfg.limit:break
     print(f'{len(candidates)} expired, unsaved stories; mode={"apply" if cfg.apply else "preview"}')
-    if not cfg.apply:return
+    if not cfg.apply and not cfg.verify_media:return
     import boto3
     media_origin=os.environ['NGELX_MEDIA_ORIGIN'].rstrip('/')
     bucket=os.environ['NGELX_R2_BUCKET']
     r2=boto3.client('s3',endpoint_url=os.environ['NGELX_R2_ENDPOINT'],
         aws_access_key_id=os.environ['NGELX_R2_ACCESS_KEY_ID'],
         aws_secret_access_key=os.environ['NGELX_R2_SECRET_ACCESS_KEY'],region_name='auto')
+    if cfg.verify_media and not cfg.apply:
+        verified=missing=unverifiable=0
+        for candidate in candidates:
+            data=candidate.to_dict() or {}
+            uid=data.get('ownerId')
+            for raw in media_urls(data):
+                key=own_media_key(raw,uid)
+                if key is None or urlparse(raw).netloc!=urlparse(media_origin).netloc:
+                    unverifiable+=1;continue
+                try:
+                    metadata=r2.head_object(Bucket=bucket,Key=key).get('Metadata',{})
+                except r2.exceptions.ClientError as error:
+                    if error.response['Error']['Code'] in ('404','NoSuchKey','NotFound'):
+                        missing+=1;continue
+                    raise
+                if metadata.get('uid')==uid:verified+=1
+                else:unverifiable+=1
+        print(f'Read-only R2 ownership: verified={verified}, missing={missing}, unverifiable={unverifiable}; deleted=0')
+        return
     def purge(ref):
         for collection in ref.collections():
             for child in collection.stream():purge(child.reference)

@@ -52,10 +52,18 @@ jobs:
           PYCODE
       - name: Install preview dependency
         if: steps.auth.outputs.available == 'true'
-        run: python -m pip install firebase-admin
+        run: python -m pip install firebase-admin boto3
       - name: Read-only expired unsaved story preview
         if: steps.auth.outputs.available == 'true'
-        run: python tools/retention_cleanup.py --limit 100
+        env:
+          NGELX_R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          NGELX_R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          NGELX_MEDIA_ORIGIN: https://media.ngelxsocial.com
+          NGELX_R2_BUCKET: ngelx-media
+        run: |
+          export NGELX_R2_ENDPOINT="https://${CLOUDFLARE_ACCOUNT_ID}.r2.cloudflarestorage.com"
+          python tools/retention_cleanup.py --verify-media --limit 100
       - name: Remove temporary credential
         if: always()
         run: rm -f "$RUNNER_TEMP/ngelx-retention-credential.json"
