@@ -53,6 +53,14 @@ rep("title:Text(metin,maxLines:2,overflow:TextOverflow.ellipsis,style:TextStyle(
 a=s.index('          final hamSosyal=',s.index('    Widget isteklerIcerigi()'));b=s.index('          return ListView(',a)
 s=s[:a]+"          final sosyal=ngelx433SosyalIstekler(snap.data?.docs??const <QueryDocumentSnapshot<Map<String,dynamic>>>[],ben);\n"+s[b:]
 rep("for(final d in q.docs){b.set(d.reference,{'read':true},SetOptions(merge:true));}","for(final d in q.docs){b.update(d.reference,{'read':true});}")
+a=s.index('class _AktivitePageState');b=s.index('bool ngelxPresenceOnline',a)
+activity=s[a:b]
+activity=activity.replace("lt('Aktiviteler yenilendi.','Activity refreshed.')","_sayfaBasligi+' yenilendi.'")
+activity=activity.replace("lt('Aktiviteler yenilenemedi. Bağlantıyı kontrol edip tekrar dene.','Activity could not be refreshed. Check your connection and try again.')","'Yenilenemedi. Bağlantıyı kontrol edip tekrar dene.'")
+activity=activity.replace("t('noActivity')","(_istekSayfasi?'Bekleyen istek yok.':'Yeni bildirim yok.')").replace("t('noActivitySub')","(_istekSayfasi?'Yeni istekler burada görünecek.':'Yeni bildirimler burada görünecek.')")
+activity=activity.replace("t('activityLoadFailed')","'Liste yüklenemedi.'")
+activity=activity.replace('Tüm aktiviteler okundu olarak işaretlendi.','Tüm bildirimler okundu olarak işaretlendi.').replace('Aktiviteler güncellenemedi. Tekrar dene.','Bildirimler güncellenemedi. Tekrar dene.')
+s=s[:a]+activity+s[b:]
 s+='\n'+Path('tools/build433_helpers.dart').read_text()
 p.write_text(s)
 # Child cleanup by the authenticated host, without weakening unrelated collections.
