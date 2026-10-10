@@ -1,0 +1,513 @@
+name: NgelX BUILD 432 INBOX QA
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - work/build-430-46-followup
+    paths:
+      - 'tools/apply_build432_loading_ten.py'
+      - 'tools/build432_snapshot_cache.dart'
+      - 'tools/build432_behavior_test.dart'
+      - 'tools/check_build432.py'
+      - 'tools/apply_build431_inbox_verified.py'
+      - 'tools/build431_notification_helpers.dart'
+      - 'tools/build431_notification_test.dart'
+      - '.github/workflows/NgelX-BUILD-432-TEN-FOLLOWUPS.yml'
+      - 'tools/apply_build430_verified_fixes.py'
+      - 'tools/build430_notification_widgets.dart'
+      - 'tools/build430_media_delete.dart'
+      - 'tools/check_build430.py'
+      - '.github/workflows/NgelX-BUILD-430-46-FOLLOWUP.yml'
+      - 'tools/apply_build395_final_login_inbox_ui.py'
+      - 'tools/apply_build396_inbox_final_polish.py'
+      - 'tools/apply_build397_inbox_complete_fixes.py'
+      - 'tools/apply_build398_login_story_polish.py'
+      - 'tools/apply_build399_registration_profile_cover.py'
+      - 'tools/apply_build399_explore_reference_ui.py'
+      - 'tools/apply_build399_create_reference_ui.py'
+      - 'tools/apply_build399_profile_reference_ui.py'
+      - 'tools/apply_build400_cover_upload_hotfix.py'
+      - 'tools/check_build400_cover_upload.py'
+      - 'tools/apply_build401_profile_stability.py'
+      - 'tools/check_build401_profile_regression.py'
+      - 'tools/apply_build402_profile_reference_polish.py'
+      - 'tools/check_build402_profile_regression.py'
+      - 'tools/apply_build403_profile_live_audio.py'
+      - 'tools/check_build403_regression.py'
+      - 'tools/apply_build404_profile_live_voice_fixes.py'
+      - 'tools/check_build404_regression.py'
+      - 'tools/apply_build405_single_device_final.py'
+      - 'tools/check_build405_regression.py'
+      - 'tools/apply_build406_final_eight.py'
+      - 'tools/check_build406_regression.py'
+      - 'tools/apply_build407_consolidated.py'
+      - 'tools/check_build407_regression.py'
+      - 'tools/apply_build408_defects_first.py'
+      - 'tools/check_build408_defects_first.py'
+      - 'tools/apply_build409_group_notice_fix.py'
+      - 'tools/apply_build409_search_relevance.py'
+      - 'tools/apply_build409_version.py'
+      - 'tools/check_build409_search_relevance.py'
+      - 'tools/apply_build411_profile_appearance.py'
+      - 'tools/apply_build411_editor_screen.py'
+      - 'tools/check_build411_profile.py'
+      - 'tools/apply_build411_version.py'
+      - 'tools/apply_build412_visitor_layout.py'
+      - 'tools/apply_build412_visitor_actions.py'
+      - 'tools/apply_build412_visitor_grid.py'
+      - 'tools/apply_build412_editor_safe_area.py'
+      - 'tools/apply_build412_version.py'
+      - 'tools/check_build412_profile_ui.py'
+      - 'tools/firestore_rules_test.mjs'
+      - 'firestore.rules'
+      - 'app/lib/audio_live_rooms.dart'
+      - 'app/lib/build258_settings.dart'
+      - 'app/lib/live_broadcast_studio.dart'
+      - 'tools/check_build399_regression.py'
+      - 'tools/check_build399_regression.py'
+      - 'tools/apply_build413_social_search_story.py'
+      - 'tools/apply_build413_version.py'
+      - 'tools/check_build413_social_search_story.py'
+      - 'tools/apply_build414_profile_polish.py'
+      - 'tools/apply_build414_version.py'
+      - 'tools/check_build414_profile_polish.py'
+      - 'tools/apply_build415_profile_actions_cover.py'
+      - 'tools/apply_build415_version.py'
+      - 'tools/check_build415_profile_actions_cover.py'
+      - 'tools/apply_build416_profile_people_search.py'
+      - 'tools/apply_build416_version.py'
+      - 'tools/check_build416_profile_people_search.py'
+      - 'tools/apply_build417_account_avatar_sync.py'
+      - 'tools/apply_build417_version.py'
+      - 'tools/check_build417_account_avatar_sync.py'
+      - 'tools/apply_build418_credential_recovery.py'
+      - 'tools/apply_build418_version.py'
+      - 'tools/check_build418_credential_recovery.py'
+      - 'tools/apply_build419_follow_notification_state.py'
+      - 'tools/apply_build419_version.py'
+      - 'tools/check_build419_social_notification_state.py'
+      - 'tools/apply_build420_request_cancel_reliability.py'
+      - 'tools/apply_build420_version.py'
+      - 'tools/check_build420_request_cancel_reliability.py'
+      - 'tools/apply_build421_last_three_profile_story.py'
+      - 'tools/apply_build421_version.py'
+      - 'tools/check_build421_last_three_profile_story.py'
+      - 'tools/apply_build422_story_delivery.py'
+      - 'tools/apply_build422_inbox_requests.py'
+      - 'tools/apply_build422_profile_request_and_speed.py'
+      - 'tools/apply_build422_follow_reply.py'
+      - 'tools/apply_build422_version.py'
+      - 'tools/check_build422_consolidated.py'
+      - 'tools/apply_build423_device_qa.py'
+      - 'tools/check_build423_device_qa.py'
+      - 'tools/apply_build424_story_delivery.py'
+      - 'tools/check_build424_story_delivery.py'
+      - 'tools/apply_build425_active_story_viewer.py'
+      - 'tools/check_build425_active_story_viewer.py'
+      - 'tools/apply_build426_story_cards_header_perf.py'
+      - 'tools/check_build426_story_cards_header_perf.py'
+      - 'tools/apply_build429_story_archive_delete.py'
+      - 'tools/check_build429_story_archive_delete.py'
+      - '.github/workflows/NgelX-BUILD-429-46-FIXES-QA-RELEASE.yml'
+      - '.github/workflows/NgelX-BUILD-422-CONSOLIDATED-QA-RELEASE.yml'
+
+concurrency:
+  group: ngelx-build432-inbox-qa
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - name: Kaynaklari al
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Java 17 kur
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Flutter kur
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Sabit NgelX imza anahtarini geri yukle
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: ngelx-stable-debug-keystore-v1
+          fail-on-cache-miss: true
+
+      - name: Imza anahtarini dogrula
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s "$HOME/.android/debug.keystore"
+          keytool -list -v -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey | grep -F 'SHA256: BE:20:B2:7F:0B:A1:F4:DE:CD:29:41:D4:10:B1:53:6D:E8:9E:48:DC:89:4F:04:F0:38:F9:D2:6B:11:EC:D6:AA'
+
+      - name: Build 395 final referans tasarimini uygula
+        run: python3 tools/apply_build395_final_login_inbox_ui.py
+
+      - name: Build 396 gelen kutusu duzeltmelerini uygula
+        run: python3 tools/apply_build396_inbox_final_polish.py
+
+      - name: Build 397 gelen kutusu tamamlamasini uygula
+        run: python3 tools/apply_build397_inbox_complete_fixes.py
+
+      - name: Build 398 giris ve hikaye duzeltmelerini uygula
+        run: python3 tools/apply_build398_login_story_polish.py
+
+      - name: Build 399 kayit ve profil kapak altyapisini uygula
+        run: python3 tools/apply_build399_registration_profile_cover.py
+
+      - name: Build 399 Kesfet tasarimini uygula
+        run: python3 tools/apply_build399_explore_reference_ui.py
+
+      - name: Build 399 Uret tasarimini uygula
+        run: python3 tools/apply_build399_create_reference_ui.py
+
+      - name: Build 399 Ben tasarimini uygula
+        run: python3 tools/apply_build399_profile_reference_ui.py
+
+      - name: Build 399 regresyon kapisi
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -u tools/check_build399_regression.py
+
+      - name: Build 400 kapak yukleme duzeltmesini uygula
+        run: python3 tools/apply_build400_cover_upload_hotfix.py
+
+      - name: Build 400 kapak yukleme regresyonu
+        run: python3 -u tools/check_build400_cover_upload.py
+
+      - name: Build 401 profil ve hikaye arayuz duzeltmelerini uygula
+        run: python3 -u tools/apply_build401_profile_stability.py
+
+      - name: Build 401 koruma ve gorunurluk regresyonu
+        run: python3 -u tools/check_build401_profile_regression.py
+
+      - name: Build 402 profil referans tasarimini uygula
+        run: python3 -u tools/apply_build402_profile_reference_polish.py
+
+      - name: Build 402 profil tasarim ve koruma testi
+        run: python3 -u tools/check_build402_profile_regression.py
+
+      - name: Build 403 sesli canli profil ve premium duzeltmelerini uygula
+        run: python3 -u tools/apply_build403_profile_live_audio.py
+
+      - name: Build 403 koruma ve arayuz regresyonu
+        run: python3 -u tools/check_build403_regression.py
+
+      - name: Build 404 profil sesli ve canli yukleme duzeltmelerini uygula
+        run: python3 -u tools/apply_build404_profile_live_voice_fixes.py
+
+      - name: Build 404 koruma ve ekran kontrast regresyonu
+        run: python3 -u tools/check_build404_regression.py
+
+      - name: Build 405 canli hikaye ve profil son duzeltmelerini uygula
+        run: python3 -u tools/apply_build405_single_device_final.py
+
+      - name: Build 405 kaynak ve koruma regresyonu
+        run: python3 -u tools/check_build405_regression.py
+
+      - name: Build 406 sekiz son duzeltmeyi ve guvenli davet kurallarini uygula
+        run: python3 -u tools/apply_build406_final_eight.py
+
+      - name: Build 406 kaynak ve guvenlik regresyonu
+        run: python3 -u tools/check_build406_regression.py
+
+      - name: Build 407 admin onayi bildirimler akis ve Uret kodunu uygula
+        run: python3 -u tools/apply_build407_consolidated.py
+
+      - name: Build 407 kaynak ve guvenlik kontrolu
+        run: python3 -u tools/check_build407_regression.py
+
+      - name: Build 408 oncelikli hatalari uygula
+        run: python3 -u tools/apply_build408_defects_first.py
+
+      - name: Build 408 oncelikli hata regresyonu
+        run: python3 -u tools/check_build408_defects_first.py
+
+      - name: Build 409 group notification stale-state fix
+        run: python3 -u tools/apply_build409_group_notice_fix.py
+
+      - name: Build 409 identical media search dedup
+        run: python3 -u tools/apply_build409_search_relevance.py
+
+      - name: Build 409 release version
+        run: python3 -u tools/apply_build409_version.py
+
+      - name: Build 409 regression checks
+        run: python3 -u tools/check_build409_search_relevance.py
+
+      - name: Build 411 cover and coverless owner and visitor profile
+        run: python3 -u tools/apply_build411_profile_appearance.py
+
+      - name: Build 411 approved full-screen profile editor
+        run: python3 -u tools/apply_build411_editor_screen.py
+
+      - name: Build 411 version
+        run: python3 -u tools/apply_build411_version.py
+
+      - name: Build 411 layout functional safeguards
+        run: python3 -u tools/check_build411_profile.py
+
+      - name: Build 412 ziyaretci profil basligi ve mor istatistik karti
+        run: python3 -u tools/apply_build412_visitor_layout.py
+
+      - name: Build 412 dort ziyaretci profil dugmesi
+        run: python3 -u tools/apply_build412_visitor_actions.py
+
+      - name: Build 412 paylasim grid gostergeleri
+        run: python3 -u tools/apply_build412_visitor_grid.py
+
+      - name: Build 412 duzenle alt tasma ve renkli uyari
+        run: python3 -u tools/apply_build412_editor_safe_area.py
+
+      - name: Build 412 Android surumu
+        run: python3 -u tools/apply_build412_version.py
+
+      - name: Build 412 profil koruma testleri
+        run: python3 -u tools/check_build412_profile_ui.py
+
+      - name: Build 413 sosyal iliskiler arama hikaye duzeltmeleri
+        run: python3 -u tools/apply_build413_social_search_story.py
+
+      - name: Build 413 surum numarasi
+        run: python3 -u tools/apply_build413_version.py
+
+      - name: Build 413 geriye donuk koruma testi
+        run: python3 -u tools/check_build413_social_search_story.py
+
+      - name: Build 414 profil ve arkadaslar gorunumu
+        run: python3 -u tools/apply_build414_profile_polish.py
+
+      - name: Build 414 surum
+        run: python3 -u tools/apply_build414_version.py
+
+      - name: Build 414 koruma testi
+        run: python3 -u tools/check_build414_profile_polish.py
+
+      - name: Build 415 okunabilir profil dugmeleri kapak kadraji ve arama
+        run: python3 -u tools/apply_build415_profile_actions_cover.py
+
+      - name: Build 415 surum
+        run: python3 -u tools/apply_build415_version.py
+
+      - name: Build 415 koruma testi
+        run: python3 -u tools/check_build415_profile_actions_cover.py
+
+      - name: Build 416 profil aramasina Kisiler secenegi
+        run: python3 -u tools/apply_build416_profile_people_search.py
+
+      - name: Build 416 surum
+        run: python3 -u tools/apply_build416_version.py
+
+      - name: Build 416 koruma testi
+        run: python3 -u tools/check_build416_profile_people_search.py
+
+      - name: Build 417 hesap gecisi ve arkadas profili yukleme
+        run: python3 -u tools/apply_build417_account_avatar_sync.py
+
+      - name: Build 417 surum
+        run: python3 -u tools/apply_build417_version.py
+
+      - name: Build 417 koruma testi
+        run: python3 -u tools/check_build417_account_avatar_sync.py
+
+      - name: Build 418 hesap sifre yeniden giris iyilestirmesi
+        run: python3 -u tools/apply_build418_credential_recovery.py
+
+      - name: Build 418 surum
+        run: python3 -u tools/apply_build418_version.py
+
+      - name: Build 418 koruma testi
+        run: python3 -u tools/check_build418_credential_recovery.py
+
+      - name: Build 419 takip kaydi ve bildirim guvenli ayrimi
+        run: python3 -u tools/apply_build419_follow_notification_state.py
+
+      - name: Build 419 surum
+        run: python3 -u tools/apply_build419_version.py
+
+      - name: Build 419 koruma testi
+        run: python3 -u tools/check_build419_social_notification_state.py
+
+      - name: Build 420 takip arkadaslik istek iptal dogrulamasi
+        run: python3 -u tools/apply_build420_request_cancel_reliability.py
+
+      - name: Build 420 surum
+        run: python3 -u tools/apply_build420_version.py
+
+      - name: Build 420 koruma testi
+        run: python3 -u tools/check_build420_request_cancel_reliability.py
+
+      - name: Build 421 son uc profil hikaye duzeltmesi
+        run: python3 -u tools/apply_build421_last_three_profile_story.py
+
+      - name: Build 421 surum
+        run: python3 -u tools/apply_build421_version.py
+
+      - name: Build 421 koruma testi
+        run: python3 -u tools/check_build421_last_three_profile_story.py
+
+      - name: Build 422 hikaye yaniti sohbet teslimi
+        run: python3 -u tools/apply_build422_story_delivery.py
+
+      - name: Build 422 gelen kutusu tek Aktivite ve Messenger istekleri
+        run: python3 -u tools/apply_build422_inbox_requests.py
+
+      - name: Build 422 profil yanit tarih ve performans
+        run: python3 -u tools/apply_build422_profile_request_and_speed.py
+
+      - name: Build 422 gizli takip istegi profilden yanit
+        run: python3 -u tools/apply_build422_follow_reply.py
+
+      - name: Build 422 surum
+        run: python3 -u tools/apply_build422_version.py
+
+      - name: Build 422 koruma testi
+        run: python3 -u tools/check_build422_consolidated.py
+      
+      - name: Build 423 cihaz QA metin, grup ve istek duzeltmeleri
+        run: python3 -u tools/apply_build423_device_qa.py
+
+      - name: Build 423 kaynak koruma testi
+        run: python3 -u tools/check_build423_device_qa.py
+
+      - name: Build 424 hikaye yanitini guvenli sohbete dogrudan gonder
+        run: python3 -u tools/apply_build424_story_delivery.py
+
+      - name: Build 424 hikaye koruma ve mesaj teslim testi
+        run: python3 -u tools/check_build424_story_delivery.py
+
+      - name: Build 425 gercek hikaye seri ekraninda dogrudan ozel mesaja yanit
+        run: python3 -u tools/apply_build425_active_story_viewer.py
+
+      - name: Build 425 aktif hikaye seri ekraninda mesaj testi
+        run: python3 -u tools/check_build425_active_story_viewer.py
+
+      - name: Build 426 hikaye kartina tikla kullanici adi ve hiz
+        run: python3 -u tools/apply_build426_story_cards_header_perf.py
+
+      - name: Build 426 hikaye karti header ve performans koruma testi
+        run: python3 -u tools/check_build426_story_cards_header_perf.py
+
+      - name: Build 427 hikaye takip dugmesi ust alanda
+        run: python3 -u tools/apply_build427_story_header.py
+
+      - name: Build 428 hikaye video yukleme kurtarma (kaynak uyumlu)
+        run: python3 -u tools/apply_build428_story_video_recovery.py
+
+      - name: Build 429 hikaye arsivi ve guvenli medya silme
+        run: python3 -u tools/apply_build429_story_archive_delete.py
+
+      - name: Build 429 kaynak ve Build428 koruma testleri
+        run: python3 -u tools/check_build429_story_archive_delete.py
+
+      - name: Build 430 verified follow-up
+        run: python3 -u tools/apply_build430_verified_fixes.py
+
+      - name: Build 430 source preservation checks
+        run: python3 -u tools/check_build430.py
+
+      - name: Build 432 inbox device QA follow-up
+        run: python3 tools/apply_build431_inbox_verified.py
+
+      - name: Build 432 replay loading and ten follow-ups
+        run: |
+          python3 tools/apply_build432_loading_ten.py
+          python3 tools/check_build432.py
+
+      - name: Bagimliliklari al
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter clean
+          flutter pub get
+
+      - name: Flutter analiz
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          nl -ba lib/main.dart | sed -n '10972,11002p'
+          flutter analyze --no-fatal-infos --no-fatal-warnings
+
+      - name: Build 430 presence behavior tests
+        working-directory: app
+        run: |
+          cp ../tools/build431_notification_test.dart test/build431_notification_test.dart
+          cp ../tools/build432_behavior_test.dart test/build432_behavior_test.dart
+          flutter test test/build430_presence_test.dart test/build431_notification_test.dart test/build432_behavior_test.dart
+
+      - name: Node 24 Firebase test ortami
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Java 21 Firebase emulator ortami
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Firestore kurallari emulator test bagimliliklari
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save --no-package-lock firebase @firebase/rules-unit-testing firebase-tools
+
+      - name: Guvenli davet ve grup Firestore kurallarini emulator ile test et
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx firebase emulators:exec --project demo-ngelx --only firestore --non-interactive "node tools/firestore_rules_test.mjs"
+
+      - name: Dogrulanan Build 406 Firestore kurallarini kaydet
+        uses: actions/upload-artifact@v4
+        with:
+          name: NgelX-1.0.207-Build-432-FIRESTORE-RULES
+          path: firestore.rules
+          if-no-files-found: error
+
+      - name: Java 17 Android build ortamini geri yukle
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Gercek APK olustur
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter build apk --release --build-name=1.0.207 --build-number=432
+          test -s build/app/outputs/flutter-apk/app-release.apk
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          test -n "$APKSIGNER"
+          "$APKSIGNER" verify --verbose --print-certs build/app/outputs/flutter-apk/app-release.apk
+          cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/NgelX-1.0.207-Build-432-CONSOLIDATED-QA-RELEASE.apk
+          sha256sum build/app/outputs/flutter-apk/NgelX-1.0.207-Build-432-CONSOLIDATED-QA-RELEASE.apk > build/app/outputs/flutter-apk/NgelX-1.0.207-Build-432-CONSOLIDATED-QA-RELEASE.apk.sha256
+
+      - name: APK yukle
+        uses: actions/upload-artifact@v4
+        with:
+          name: NgelX-1.0.207-Build-432-CONSOLIDATED-QA-RELEASE
+          path: |
+            app/build/app/outputs/flutter-apk/NgelX-1.0.207-Build-432-CONSOLIDATED-QA-RELEASE.apk
+            app/build/app/outputs/flutter-apk/NgelX-1.0.207-Build-432-CONSOLIDATED-QA-RELEASE.apk.sha256
+          if-no-files-found: error
+          retention-days: 14
+
+  # No changes to Firestore rules in Build 408: keep the currently deployed and
+  # emulator-tested administrator-approval permissions unchanged.
