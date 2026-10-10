@@ -9,24 +9,27 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Print source anchors for archives, presence and deletes
+      - name: Print relevant existing code blocks
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          import re
-          root=Path('app/lib')
-          for p in [root/'main.dart',root/'live_broadcast_studio.dart',root/'live_feed_card.dart',root/'story_v66.dart']:
+          p=Path('app/lib/main.dart')
+          lines=p.read_text(encoding='utf-8').splitlines()
+          targets=['class AktivitePage','bool ngelxPresenceOnline','class HikayeArsiviPage','class CanliYayinGecmisiPage','class NgelXArsivMerkeziPage','class _ProfilPageState']
+          for target in targets:
+              i=next((i for i,l in enumerate(lines) if target in l),None)
+              print('BLOCK',target,'LINE',i+1 if i is not None else 'missing')
+              if i is None: continue
+              end=min(len(lines),i+65)
+              for j in range(i,end):
+                  if j>i+6 and lines[j].startswith('class '): break
+                  print(f'{j+1}: {lines[j]}')
+          for p in [Path('app/lib/live_broadcast_studio.dart')]:
               lines=p.read_text(encoding='utf-8').splitlines()
-              print('FILE',p)
-              patterns=[r'^class .*?(?:Profil|Hikaye|Story|Arsiv|Aktivite|Yayin|Live|Presence)',
-                        r'(?i)lastSeenAt|showActivityStatus|ngelxPresenceOnline|presence',
-                        r"(?i)collection\(['\"]live_streams['\"]\)|collection\(['\"]videos['\"]\).*delete|\.delete\(\)|ngelxMedyaSil|FirebaseStorage|deletedForEveryone|deletedFor|hiddenFor",
-                        r'(?i)arsiv|archive|retention|saklama']
-              hits=[]
-              for pat in patterns:
-                  for i,line in enumerate(lines):
-                      if re.search(pat,line):
-                          hits.append(i)
-              for i in sorted(set(hits)):
-                  print(f'{i+1}: {lines[i].strip()[:750]}')
+              for target in ['class _CanliYayinPageState','Future<void>','async{']:
+                  pass
+              i=next(i for i,l in enumerate(lines) if 'Future<void> _bitir' in l or 'Future<void> canliyiBitir' in l) if any('Future<void> _bitir' in l or 'Future<void> canliyiBitir' in l for l in lines) else None
+              print('LIVE_END',i+1 if i is not None else 'inspect lines 1000-1070')
+              if i is not None:
+                  for j in range(i,min(i+75,len(lines))):print(f'{j+1}: {lines[j]}')
           PY
