@@ -10,7 +10,7 @@ on:
       - '.github/workflows/NgelX-MEDIA-CLEANUP-BACKEND.yml'
 permissions:
   contents: read
-  actions: read
+  actions: write
 concurrency:
   group: ngelx-production-media-cleanup
   cancel-in-progress: true
@@ -23,16 +23,24 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            for (let attempt=0; attempt<80; attempt++) {
-              const {data:run}=await github.rest.actions.getWorkflowRun({owner:context.repo.owner,repo:context.repo.repo,run_id:38072266858});
-              if(run.head_sha !== 'b629fca1def34dfde717e16dbaa9e82d6bd9a0d1')throw new Error('Unexpected release source');
-              if(run.status === 'completed') {
-                if(run.conclusion !== 'success')throw new Error('Build435 release validation failed');
-                core.info('Exact Build435 release validated.');return;
+            const request={owner:context.repo.owner,repo:context.repo.repo,run_id:38072266858};
+            const {data:run}=await github.rest.actions.getWorkflowRun(request);
+            if(run.head_sha !== 'b629fca1def34dfde717e16dbaa9e82d6bd9a0d1')throw new Error('Unexpected release source');
+            const jobs=await github.paginate(github.rest.actions.listJobsForWorkflowRun,request);
+            if(!jobs.some(job=>job.name==='build'&&job.conclusion==='success'))throw new Error('APK and emulator validation must pass first');
+            const cleanup=jobs.find(job=>job.name==='cleanup');
+            if(!cleanup?.steps?.some(step=>step.name==='Deploy tested scoped message cleanup permissions'&&step.conclusion==='success'))throw new Error('Validated production permissions must be deployed first');
+            if(run.status !== 'completed') {
+              core.info('Stopping only the obsolete serial cleanup attempt after successful APK and rule validation. Durable jobs resume in this worker.');
+              await github.rest.actions.cancelWorkflowRun(request);
+              for(let attempt=0;attempt<40;attempt++) {
+                const {data:status}=await github.rest.actions.getWorkflowRun(request);
+                if(status.status==='completed'){core.info('Prior worker stopped; no concurrent cleanup.');return;}
+                await new Promise(resolve=>setTimeout(resolve,5000));
               }
-              await new Promise(resolve=>setTimeout(resolve,30000));
+              throw new Error('Prior worker did not stop');
             }
-            throw new Error('Build435 validation wait timed out');
+            core.info('Prior worker completed; validated APK and permissions confirmed.');
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
