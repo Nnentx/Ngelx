@@ -1,5 +1,8 @@
 name: NgelX approved daily retention
 on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/NgelX-APPROVED-DAILY-RETENTION.yml']
   workflow_dispatch:
   schedule:
     - cron: '15 8 * * *'
@@ -34,6 +37,17 @@ jobs:
               if(jobs.data.jobs.some(x=>x.name==='build'&&x.conclusion==='success')){verified=true;break;}
             }
             if(!verified)throw new Error('The checked-out revision has not passed signed Build437 release validation.');
+      - name: Firestore SDK import compatibility
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('tools/retention437_cleanup.py')
+          old='from google.cloud.firestore_v1 import FieldPath'
+          new='from google.cloud.firestore_v1.field_path import FieldPath'
+          source=p.read_text()
+          assert source.count(old)==1, 'Unexpected cleanup source; refuse patch'
+          p.write_text(source.replace(old,new))
+          PY
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -99,7 +113,9 @@ jobs:
           PYCODE
       - name: Install preview dependency
         if: steps.auth.outputs.available == 'true'
-        run: python -m pip install firebase-admin boto3
+        run: |
+          python -m pip install firebase-admin boto3
+          python -c 'from google.cloud.firestore_v1.field_path import FieldPath; assert FieldPath.document_id()'
       - name: Apply approved record retention and verified media cleanup
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
