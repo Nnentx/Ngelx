@@ -57,33 +57,63 @@ helper="""Future<void> ngelxHikayeKaliciSil(
   }
 
   final storage=FirebaseStorage.instance;
-  final kaynaklar=<String>{};
+  final api=await ngelxMediaApiAdresi();
+  final kaynaklar=<String,Reference>{};
+  final r2Anahtarlari=<String>{};
   for(final key in ['storagePath','mediaPath','storageRef','mediaUrl','videoUrl','playbackUrl','downloadUrl','url']){
     final raw=(veri[key]??'').toString().trim();
-    if(raw.isNotEmpty)kaynaklar.add(raw);
-  }
-  final silinecek=<String,Reference>{};
-  for(final raw in kaynaklar){
-    try{
-      Reference? dosya;
-      if(raw.startsWith('gs://')||raw.contains('firebasestorage.googleapis.com')){
-        dosya=storage.refFromURL(raw);
-      }else if(!raw.startsWith('http')&&
-          (raw.contains('/')||raw.startsWith('stories/'))){
-        dosya=storage.ref(raw);
-      }
-      if(dosya==null)continue;
-      // Never follow an arbitrary URL/path to another user's object.
-      if(!dosya.fullPath.split('/').contains(uid)){
+    if(raw.isEmpty)continue;
+    if(raw.startsWith('gs://')||raw.contains('firebasestorage.googleapis.com')){
+      final dosya=storage.refFromURL(raw);
+      if(!dosya.fullPath.startsWith('stories/'+uid+'/')){
         throw StateError('Hikâye medya yolu sahibiyle eşleşmiyor.');
       }
-      silinecek[dosya.fullPath]=dosya;
-    }on FirebaseException catch(e){
-      if(e.code=='object-not-found')continue;
-      rethrow;
+      kaynaklar[dosya.fullPath]=dosya;
+      continue;
+    }
+    if(raw.contains('/media/')){
+      if(api.isEmpty||!raw.startsWith(api+'/media/')){
+        throw StateError('Hikâye medya sunucusu doğrulanamadı.');
+      }
+      final uri=Uri.parse(raw);
+      final keyPath=Uri.decodeComponent(uri.path.substring('/media/'.length));
+      if(!keyPath.startsWith('stories/'+uid+'/')){
+        throw StateError('Hikâye medya yolu sahibiyle eşleşmiyor.');
+      }
+      r2Anahtarlari.add(keyPath);
+      continue;
+    }
+    if(!raw.startsWith('http')&&raw.contains('/')){
+      if(!raw.startsWith('stories/'+uid+'/')){
+        throw StateError('Hikâye medya yolu sahibiyle eşleşmiyor.');
+      }
+      r2Anahtarlari.add(raw);
     }
   }
-  for(final dosya in silinecek.values){
+
+  if(r2Anahtarlari.isNotEmpty){
+    final user=FirebaseAuth.instance.currentUser;
+    final token=await user?.getIdToken();
+    if(api.isEmpty||token==null||token.isEmpty){
+      throw StateError('Hikâye medyası güvenli biçimde silinemedi.');
+    }
+    for(final key in r2Anahtarlari){
+      try{
+        await Dio().delete(
+          api+'/object',
+          queryParameters:{'key':key},
+          options:Options(
+            headers:{'Authorization':'Bearer '+token},
+            sendTimeout:const Duration(seconds:12),
+            receiveTimeout:const Duration(seconds:12),
+          ),
+        );
+      }on DioException catch(e){
+        if(e.response?.statusCode!=404)rethrow;
+      }
+    }
+  }
+  for(final dosya in kaynaklar.values){
     try{
       await dosya.delete();
     }on FirebaseException catch(e){
