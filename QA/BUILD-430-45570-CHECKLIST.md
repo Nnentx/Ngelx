@@ -2,7 +2,7 @@
 
 Kaynak: Kullanıcının 51.28 saniyelik 45570.mp4 videosu. Videodaki maddeler aşağıdaki sırayla yazıldı. Kodda bir davranışın bulunması, cihaz testinden geçtiği anlamına gelmez.
 
-Durumlar: **Kodlandı** = yeni düzeltme mevcut, CI/telefon doğrulaması gerekiyor. **Mevcut** = önceki kaynakta davranış mevcut, yeni cihaz testi gerekiyor. **Açık** = tamamlanmış sayılmıyor.
+Durumlar: **Kodlandı** = yeni düzeltme mevcut; CI geçti, telefon doğrulaması gerekiyor. **Mevcut** = önceki kaynakta davranış mevcut, yeni cihaz testi gerekiyor. **Açık** = tamamlanmış sayılmıyor.
 
 | No | İş | Durum / kanıt |
 |---|---|---|
@@ -41,7 +41,7 @@ Durumlar: **Kodlandı** = yeni düzeltme mevcut, CI/telefon doğrulaması gereki
 |33|Aktiflik gizliliği|Kodlandı: shared online helper showActivityStatus=false durumunu gizler|
 |34|Kalıcı hikâye silme|Build429 kodlandı; telefon doğrulaması gerekli|
 |35|Hikâye videosunun medya temizliği|Kodlandı: gerçek videos/uid R2 yolu desteklenir|
-|36|Süresi dolan kaydedilmemiş hikâyenin temizlenmesi|Sunucu kodu hazır: retention_cleanup.py; yetkiler/kurulum ve entegrasyon testi açık|
+|36|Süresi dolan kaydedilmemiş hikâyenin temizlenmesi|Sunucu kodu hazır; Firebase önizleme 50 aday buldu, medya sahipliği doğrulanamadığı için 50 aday atlandı; zamanlanmış silme açık|
 |37|Kaydedilmemiş canlı yayın geçmişinin tutulmaması|Açık|
 |38|Silinen canlı yayın kaydı ve medya temizliği|Açık|
 |39|Silinen gönderi ve ilişkili medya|Kodlandı: güncel sahip + medya temizliği tamamlanmadan kayıt kaldırılmaz|
@@ -59,4 +59,6 @@ Mesaj gönderme/alma, hikâye yanıtının DM'e gitmesi, kartın storyId'yi açm
 
 ## Doğrulama
 
-Build395–429 kaynak oluşturma ve koruma zinciri yerel olarak geçti. Build430 kaynak kontratı geçti. Flutter davranış testleri, analiz ve APK için ayrı GitHub Actions workflow hazırlandı. Gerçek cihaz sonuçları henüz yok. **46/46 tamamlandı iddiası yok.**
+Build395–429 kaynak oluşturma ve koruma zinciri yerel olarak geçti. Build430 kaynak kontratı geçti. GitHub Actions 38029954325 başarılı: Flutter analizi, 8 davranış testi, Firestore emulator testleri ve imzalı Build430 APK geçti. APK SHA256 ve artifact SHA256 doğrulandı. Gerçek cihaz sonuçları henüz yok. **46/46 tamamlandı iddiası yok.**
+
+Sunucu read-only preview 38030838672 başarılı: 50 süresi dolmuş kaydedilmemiş hikâye adayı; medya sahipliği doğrulanmış 0, tanımlanamayan 50. Silinen kayıt/dosya 0. Otomatik silme etkin değil.
