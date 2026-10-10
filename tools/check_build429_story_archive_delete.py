@@ -15,7 +15,7 @@ checks={
   'Story archive shows loading and recoverable error states': 'if(s.connectionState==ConnectionState.waiting)' in main and 'Hikâye arşivi yüklenemedi.' in main and 'Tekrar dene' in main,
   'Archive remains owner scoped': "where('ownerId',isEqualTo:uid)" in main and "where('type',isEqualTo:'story')" in main,
   'Permanent story deletion validates signed-in owner': "veri['ownerId']" in story and 'Yalnızca kendi hikâyeni silebilirsin.' in story,
-  'Firebase Storage media deletion checks owner path': 'dosya.fullPath.startsWith('stories/'+uid+'/')' in story and 'await dosya.delete()' in story,
+  'Firebase Storage media deletion checks owner path': "dosya.fullPath.startsWith('stories/'+uid+'/')" in story and 'await dosya.delete()' in story,
   'Story cleanup uses authenticated R2 key and rejects cross-user paths': "api+'/object'" in story and "'Bearer '+token" in story and "keyPath.startsWith('stories/'+uid+'/')" in story and "raw.startsWith('stories/'+uid+'/')" in story,
   'Story deletion cleans comments, reactions and nested likes': 'ref.collection(\'comments\')' in story and 'comment.reference.collection(\'likes\')' in story and 'ref.collection(\'likes\')' in story,
   'Firestore story record deleted only after media cleanup': story.index('await dosya.delete()') < story.index('await ref.delete()'),
