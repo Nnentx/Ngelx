@@ -46,3 +46,36 @@ String? ngelx434IstekSonucu(Map<String,dynamic> v){
   final name=(v['senderName']??v['fromName']??'Kullanıcı').toString();
   return '$name adlı kişinin ${kind=='friend_request'?'arkadaşlık':'takip'} isteği $result.';
 }
+Future<void> ngelx434EskiIstekleriUzlastir(String uid)async{
+  try{
+    final db=FirebaseFirestore.instance;
+    final q=await db.collection('notifications').where('toUid',isEqualTo:uid).limit(200).get(const GetOptions(source:Source.server)).timeout(const Duration(seconds:10));
+    final groups=<String,List<QueryDocumentSnapshot<Map<String,dynamic>>>>{};
+    for(final d in q.docs){final v=d.data(),kind=v['type'],from=(v['fromUid']??'').toString();
+      if(v['status']=='pending'&&(kind=='follow_request'||kind=='friend_request')&&from.isNotEmpty)(groups['$kind|$from']??=[]).add(d);
+    }
+    final entries=groups.values.toList();
+    // Bound concurrency, preserve the current request, and never infer a result
+    // from a missing document or failed server read.
+    for(var i=0;i<entries.length;i+=5){
+      await Future.wait(entries.skip(i).take(5).map((docs)async{
+        try{
+          final v=docs.first.data(),kind=v['type'].toString(),from=v['fromUid'].toString();
+          final canonical=await sosyalIstekRef(from,uid,kind).get(const GetOptions(source:Source.server)).timeout(const Duration(seconds:8));
+          final state=canonical.data();if(state==null)return;
+          final status=state['status'],current=(state['notificationId']??'').toString();
+          if(status==null||status=='pending'&&current.isEmpty)return;
+          final batch=db.batch();var count=0;
+          for(final d in docs){
+            if(status=='pending'&&d.id==current)continue;
+            final stamp=d.data()['createdAt'],requestStamp=state['createdAt'];
+            // Do not alter a notification newer than the canonical snapshot.
+            if(stamp is Timestamp&&requestStamp is Timestamp&&stamp.compareTo(requestStamp)>0)continue;
+            batch.update(d.reference,{'status':status=='pending'?'superseded':status,'read':true});count++;
+          }
+          if(count>0)await batch.commit().timeout(const Duration(seconds:10));
+        }catch(_){/* Retried next route entry/refresh. */}
+      }));
+    }
+  }catch(_){/* The normal cached list remains available during network errors. */}
+}
