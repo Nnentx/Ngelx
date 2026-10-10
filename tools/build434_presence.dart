@@ -24,7 +24,7 @@ class _Ngelx434AktifAvatarState extends State<Ngelx434AktifAvatar>{
   @override void initState(){super.initState();_connect();_timer=Timer.periodic(const Duration(seconds:30),(_){if(mounted)setState((){});});}
   @override void didUpdateWidget(covariant Ngelx434AktifAvatar old){super.didUpdateWidget(old);if(old.uid!=widget.uid)_connect();}
   @override void dispose(){_timer?.cancel();super.dispose();}
-  @override Widget build(BuildContext context)=>StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(stream:_stream,builder:(_,snap){
+  @override Widget build(BuildContext context)=>StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(key:ValueKey(widget.uid),stream:_stream,builder:(_,snap){
     final v=snap.data?.data()??widget.initial??<String,dynamic>{};
     final label=ngelx434Aktiflik(v),online=label=='Çevrimiçi';
     final photo=(v['photoUrl']??widget.photo).toString();
