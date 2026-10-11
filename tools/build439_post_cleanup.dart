@@ -1,7 +1,9 @@
 // The queue contains only server-read media of the currently authenticated owner.
 Future<void> ngelx439RememberPostCleanup(String uid,String id,Set<String> urls)async{
   final prefs=await SharedPreferences.getInstance();
-  await prefs.setString('post_cleanup439_${uid}_$id',jsonEncode(urls.toList()));
+  if(FirebaseAuth.instance.currentUser?.uid!=uid)throw StateError('Oturum değişti.');
+  final saved=await prefs.setString('post_cleanup439_${uid}_$id',jsonEncode(urls.toList()));
+  if(!saved)throw StateError('Silme isteği kaydedilemedi.');
 }
 bool _ngelx439CleanupRunning=false;
 Future<void> ngelx439RetryPostCleanup(String uid)async{

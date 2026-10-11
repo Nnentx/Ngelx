@@ -14,14 +14,14 @@ void main(){
     current=null;
     await tester.pumpWidget(gate(const ValueKey(2)));
     expect(find.text('login'),findsOneWidget);
-    events.add('old-account');await tester.pump();
+    events.add('old-account');await tester.pumpAndSettle();
     expect(find.text('login'),findsOneWidget);
-    current='new-account';events.add(null);await tester.pump();
+    current='new-account';events.add(null);await tester.pumpAndSettle();
     expect(find.text('new-account'),findsOneWidget);
-    current=null;events.add(null);await tester.pump();
+    current=null;events.add(null);await tester.pumpAndSettle();
     expect(find.text('login'),findsOneWidget);
     await tester.pumpWidget(const SizedBox());
-    events.add('old-account');await tester.pump();
+    events.add('old-account');await tester.pumpAndSettle();
     expect(tester.takeException(),isNull);
     await events.close();
   });

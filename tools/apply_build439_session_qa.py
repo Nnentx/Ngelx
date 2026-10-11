@@ -4,7 +4,23 @@ import shutil
 def apply():
  p=Path('app/lib/main.dart');s=p.read_text()
  if '// Build439 session QA' in s:return
- s="import 'build439_session_gate.dart';\n"+s
+ s="import 'build439_session_gate.dart';\nimport 'build439_auth_operations.dart';\n"+s
+ s=s.replace('FirebaseAuth.instance.signInWithEmailAndPassword(', 'ngelx439EmailSignIn(')
+ s=s.replace('FirebaseAuth.instance.signOut()', 'ngelx439SignOut()')
+ s+='''
+final _ngelx439AuthOperations=NgelXAuthOperations<UserCredential>();
+Future<UserCredential> ngelx439EmailSignIn({required String email,required String password})=>
+  _ngelx439AuthOperations.signIn(()=>FirebaseAuth.instance.signInWithEmailAndPassword(email:email,password:password));
+Future<void> ngelx439SignOut()=>_ngelx439AuthOperations.signOut(()async{
+  await FirebaseAuth.instance.signOut();
+  ngelxKokRotayaDon();
+});
+'''
+ settings=Path('app/lib/build258_settings.dart')
+ settings.write_text(settings.read_text().replace('FirebaseAuth.instance.signOut()', 'ngelx439SignOut()'))
+
+ s=s.replace('void ngelxKokRotayaDon(){',"bool _ngelx439RootScheduled=false;\nvoid ngelxKokRotayaDon(){\n  if(_ngelx439RootScheduled)return;\n  _ngelx439RootScheduled=true;",1)
+ s=s.replace("WidgetsBinding.instance.addPostFrameCallback((_){\n    ngelxNavigatorKey.currentState?.pushNamedAndRemoveUntil('/',(route)=>false);", "WidgetsBinding.instance.addPostFrameCallback((_){\n    _ngelx439RootScheduled=false;\n    ngelxNavigatorKey.currentState?.pushNamedAndRemoveUntil('/',(route)=>false);",1)
  old="""child:StreamBuilder<User?>(
           stream:FirebaseAuth.instance.userChanges(),
           initialData:FirebaseAuth.instance.currentUser,
@@ -59,6 +75,31 @@ def apply():
       await batch.commit().timeout(const Duration(seconds:12));"""
  assert old in s;s=s.replace(old,new,1)
  s=s.replace("if(!mounted)return;\n    setState((){\n      engellenenler=", "if(!mounted||uid!=ben)return;\n    setState((){\n      engellenenler=",1)
+ # Archive restore is one acknowledged write; the old helper swallowed failures.
+ a=s.index('class _ArsivSohbetlerPageState')
+ b=s.index('class MesajIstekleriPage',a)
+ block=s[a:b].replace(".doc(widget.uid).get();",".doc(widget.uid).get(const GetOptions(source:Source.server)).timeout(const Duration(seconds:10));",1)
+ x=block.index('  Future<void> geriAl(String id) async {')
+ y=block.index('  Future<void> eskiSohbetiSil',x)
+ block=block[:x]+"""  Future<void> geriAl(String id) async {
+    if(FirebaseAuth.instance.currentUser?.uid!=widget.uid)return;
+    try{
+      final batch=FirebaseFirestore.instance.batch();
+      batch.set(FirebaseFirestore.instance.collection('users').doc(widget.uid),
+        {'archivedChats':FieldValue.arrayRemove([id])},SetOptions(merge:true));
+      batch.delete(ngelxGroupArchiveRef(widget.uid,id));
+      await batch.commit().timeout(const Duration(seconds:12));
+      if(mounted&&FirebaseAuth.instance.currentUser?.uid==widget.uid)_arsivYenile();
+    }catch(_){
+      if(mounted)ngelxDurumMesaji(context,_ngelx438Ui('Arşivden çıkarılamadı. Bağlantını kontrol edip tekrar dene.'),tip:'hata');
+    }
+  }
+
+"""+block[y:]
+ s=s[:a]+block+s[b:]
+ # Apply the same username policy to the older edit dialog too.
+ s=s.replace(".trim()\n                          .replaceAll(' ', '');", ".trim();")
+ s=s.replace('yeniKullanici.length < 3',"!RegExp(r'^[a-zA-Z0-9._]{3,20}$').hasMatch(yeniKullanici)")
  # Server reads and child deletion are bounded; media failure no longer prevents
  # deleting the owned database record. Persist cleanup before any irreversible work.
  a=s.index('Future<void> ngelxPaylasimVeAltKayitlariniSil(')
@@ -82,4 +123,5 @@ def apply():
  s+='\n// Build439 session QA\n'
  p.write_text(s)
  shutil.copy('tools/build439_session_gate.dart','app/lib/build439_session_gate.dart')
+ shutil.copy('tools/build439_auth_operations.dart','app/lib/build439_auth_operations.dart')
 if __name__=='__main__':apply()
