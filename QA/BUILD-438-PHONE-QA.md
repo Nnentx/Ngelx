@@ -278,3 +278,18 @@ A separate candidate workflow builds 1.0.213+438 with the exact existing
 install-compatible test certificate, after all checks. It contains no production
 rules, server or website deployment. Candidate APK is not a claim of full
 uncatalogued-screen translation or phone confirmation of archive/unmute/focus.
+
+
+### Build438 candidate artifact — 2026-10-11 17:19 UTC
+
+CI 38158230552 succeeded on b4afc2673ddddad241c55d9c931b3b00314a8a82.
+All catalog checks, Flutter analysis, 33 app tests and full Firestore tests passed
+before Android release-mode compilation. APK version/build: 1.0.213 / 438.
+APK size: 145,576,802 bytes.
+APK SHA-256: e99cecf04fb7da78178def16baaaf93110b0a1c3c7b975d4f2a813ecb4bb6de2.
+Verified V2 certificate SHA-256:
+be20b27f0ba1f4decd2941d410b1536de89e48dc894f04f038f9d26b11ecd6aa.
+This matches the installed Build437 test certificate. Downloaded archive and APK
+checksums verified locally. No production deployment occurred. Current language
+coverage extends the existing keyed catalog; uncatalogued hardcoded texts remain.
+The user's closed Build437 test round stays closed.
