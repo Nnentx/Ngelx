@@ -40,17 +40,28 @@ the generated working tree predates this task and is not committed wholesale.
   requests can be resubmitted. This requires coordinated client/rules deployment.
   Added emulator cases for outsider access, overwrite denial and concurrent sends.
 
+- Follow/friend transaction timeouts now reconcile the exact request generation
+  and notification ID with a bounded server read. Confirmed requests report
+  success; offline/uncertain results stay uncertain. Atomic request/notification
+  writes and blocked-pair checks remain. This does not establish the root cause
+  of the earlier phone request failures.
+
 ## Validation so far
 
 - Dart parser/formatter (`--output=none`) accepted both changed Dart files.
 - Reapplying the patch yields identical file hashes.
 - Successor selection passed five standalone Dart scenarios: administrator
   priority, oldest member fallback, last member, stale admin and multiple admins.
-- Full analysis **not passed**: installed package config references absent
-  dependencies. Flutter tooling was separately stopped by automatic approval
-  review for a metadata endpoint request; that request was not retried.
-- No APK generated, workflow dispatched, backend deployed, or phone regression
-  executed for these changes yet.
+- First isolated CI run 38120291868 passed on commit
+  7e0a4c3f8c0d85c10bdff3e7f27e3f84a6fae626: Flutter analysis had no fatal
+  errors (840 warning/info findings retained), all 33 app tests passed, and the
+  full Firestore emulator suite including concurrent requests passed.
+- Six standalone asynchronous confirmation scenarios passed: immediate success,
+  already pending, confirmed timeout, unconfirmed timeout, offline confirmation,
+  and original failure propagation. Latest social patch awaits CI rerun.
+- Local Flutter analysis remains unavailable because dependencies are absent;
+  a metadata endpoint request rejected by automatic approval was not retried.
+- No new APK, production backend deployment or phone regression yet.
 
 ## Remaining approved work
 
