@@ -442,3 +442,14 @@ specific items. Preserve their working behavior. Do not request another phone
 test or claim a new code change from this confirmation. Other remaining issues
 (language completion, profile post deletion, partial archive loading, unified
 All-tab pin ordering and unmute sound recovery) are not closed by this message.
+
+
+### User-confirmed overflow closure — 2026-10-11 21:05 Europe/Istanbul
+
+User confirmed "Taşma sorunuda tamamdir" with screenshot 46265.jpg.
+The feed header and controls visibly remain below the system status bar; the
+bottom navigation is separately visible. Close the reported feed/status-bar
+overflow issue and remove it from active remaining defects. Preserve this working
+layout and safe-area behavior. This is user-confirmed phone evidence for the
+reported issue, not a claim covering every device/screen or a new implementation.
+The closed phone test round stays closed; no retest requested.
