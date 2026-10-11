@@ -14,6 +14,9 @@ on:
       - 'tools/apply_build438_locales.py'
       - 'tools/build438_locales.tsv'
       - 'tools/check_build438_locales.py'
+      - 'tools/apply_build438_screen_locales.py'
+      - 'tools/build438_screen_locales.tsv'
+      - 'tools/check_build438_screen_locales.py'
 
 concurrency:
   group: ngelx-build438-phone-review
@@ -367,6 +370,8 @@ jobs:
         run: |
           python3 tools/apply_build438_locales.py
           python3 tools/check_build438_locales.py
+          python3 tools/apply_build438_screen_locales.py
+          python3 tools/check_build438_screen_locales.py
 
       - name: Flutter analiz
         shell: bash

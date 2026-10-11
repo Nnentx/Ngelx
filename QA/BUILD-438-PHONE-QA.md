@@ -293,3 +293,27 @@ This matches the installed Build437 test certificate. Downloaded archive and APK
 checksums verified locally. No production deployment occurred. Current language
 coverage extends the existing keyed catalog; uncatalogued hardcoded texts remain.
 The user's closed Build437 test round stays closed.
+
+### Screen localization follow-up — 2026-10-11
+
+Attachment 46247.mp4 shows mixed-language UI: the French login retains a Turkish
+welcome title, and the Kurmanci profile retains Turkish friends/intro/highlights,
+story tab and post-menu labels. This is localization evidence only; the closed
+phone QA round remains closed.
+
+`apply_build438_screen_locales.py`, applied after `apply_build438_locales.py`,
+connects 235 presentation literals to the existing catalog or 46 additional
+12-language screen rows (including two spelling/capitalization aliases). It
+localizes Text data and selected display-only properties/helpers; storage values,
+Firestore field names, routes and user content are not rewritten. Constant
+ancestors of runtime translations are removed selectively. The welcome widget
+is no longer const, so selecting another language rebuilds its split title.
+Existing Arabic direction handling and Kurmanci LTR remain unchanged.
+
+Both validation and candidate workflows apply this reproducible patch. Local
+Python checks confirm idempotence and separation of display literals from stored
+values. Dart/Flutter are absent locally; CI compilation and app/security checks
+are required before marking this patch validated. The previous candidate APK
+and its checksum are unchanged. Additional uncatalogued screens, interpolated
+status text and inline `lt` strings outside this catalog remain localization work;
+this is not a claim of complete app-wide translation or a new delivered APK.
