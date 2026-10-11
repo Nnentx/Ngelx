@@ -4,6 +4,7 @@ s=Path('app/lib/main.dart').read_text()
 a=s.index('class _ArsivSohbetlerPageState');b=s.index('class MesajIstekleriPage',a);archive=s[a:b]
 assert "'dismissedArchiveChats':FieldValue.arrayUnion([id])" in archive
 assert ".collection('chats').doc(id).set(" not in archive
+assert "dismissed.contains(id)&&!manuel.contains(id)" in archive
 assert ".where('highlighted',isEqualTo:true).limit(30)" in s
 assert "if(ngelxPlayRelease441)throw StateError" in s
 for p in Path('app/lib').glob('*.dart'):

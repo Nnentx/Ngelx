@@ -7,7 +7,7 @@ v=s[start:end]
 v=v.replace('List<DocumentSnapshot<Map<String,dynamic>>>','List<NgelXArchiveRecord441>').replace('<DocumentSnapshot<Map<String,dynamic>>>[]','<NgelXArchiveRecord441>[]')
 v=v.replace("final ids=<String>{...manuel};", "final ids=<String>{...manuel};\n    final dismissed=Set<String>.from(List<String>.from(user.data()?['dismissedArchiveChats']??const[]));\n    final metadata=<String,Map<String,dynamic>>{};")
 v=v.replace("ids.addAll(kayitlar.docs.map((e)=>(e.data()['chatId']??e.id).toString()).where((e)=>e.isNotEmpty));", "for(final e in kayitlar.docs){final id=(e.data()['chatId']??e.id).toString();if(id.isNotEmpty){ids.add(id);metadata[id]=e.data();}}")
-v=v.replace('final docs=<NgelXArchiveRecord441>[];', 'ids.removeAll(dismissed);\n    final docs=<NgelXArchiveRecord441>[];')
+v=v.replace('final docs=<NgelXArchiveRecord441>[];', 'ids.removeWhere((id)=>dismissed.contains(id)&&!manuel.contains(id));\n    final docs=<NgelXArchiveRecord441>[];')
 v=v.replace('docs.add(d);', "docs.add(NgelXArchiveRecord441(id,d.exists?d.data()??{}:metadata[id]??{},available:d.exists));")
 v=v.replace('}catch(_){_arsivKismi=true;}\n    }));', "}on FirebaseException catch(e){\n        if(e.code=='permission-denied'){docs.add(NgelXArchiveRecord441(id,metadata[id]??{},available:false));}\n        else{_arsivKismi=true;}\n      }catch(_){_arsivKismi=true;}\n    }));")
 v=v.replace('if(!d.exists)return false;', 'if(!d.available)return true;')
