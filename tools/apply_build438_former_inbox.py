@@ -51,6 +51,17 @@ def apply():
     s=s.replace("set({'archivedChats':FieldValue.arrayUnion([widget.chatId])},SetOptions(merge:true));", "set({'archivedChats':FieldValue.arrayRemove([widget.chatId])},SetOptions(merge:true));")
     s=s.replace("set({'archivedChats':FieldValue.arrayUnion([chatId])},SetOptions(merge:true));", "set({'archivedChats':FieldValue.arrayRemove([chatId])},SetOptions(merge:true));")
     p.write_text(s)
+    # Comparing every protected metadata field twice exhausted the emulator's
+    # expression budget in a multi-document approval. Diff protects the same
+    # field set without permitting any metadata edits through this fallback.
+    p=Path('firestore.rules');s=p.read_text()
+    a=s.index('    function groupMetadataUnchanged() {');b=s.index('\n    // Build436',a)
+    if 'affectedKeys().hasAny' not in s[a:b]:
+        import re
+        fields=list(dict.fromkeys(re.findall(r"request\.resource\.data\.get\('([^']+)'",s[a:b])))
+        assert len(fields)>=18
+        body="    function groupMetadataUnchanged() {\n      return !request.resource.data.diff(resource.data).affectedKeys().hasAny([\n        "+', '.join(repr(x) for x in fields)+"\n      ]);\n    }\n"
+        s=s[:a]+body+s[b:];p.write_text(s)
     p=Path('tools/firestore_rules_test.mjs');s=p.read_text()
     if '// Closed phone round: former members' not in s:
         marker="  console.log('Firestore rules testleri başarılı.');"
