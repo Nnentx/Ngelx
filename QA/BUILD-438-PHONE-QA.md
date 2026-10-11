@@ -340,3 +340,23 @@ Interpolated/helper-fed/plain-Latin Turkish strings are not included in that
 count. Full app localization remains unfinished. No updated APK covering the
 expanded settings patch has been delivered; the candidate workflow started on
 713eb4f is an earlier intermediate screen-localization revision.
+
+
+### Additional phone observation — 2026-10-11 20:50 Europe/Istanbul
+
+User requested recording screenshots 46257.jpg, 46258.jpg and 46259.jpg.
+This supplements the deletion failure already visible at the end of 46247.mp4;
+it does not reopen the closed phone QA round.
+
+Observed sequence:
+- Profile > Posts > post actions shows DELETE POST.
+- The white confirmation dialog opens with Cancel and Delete buttons.
+- After Delete, the profile grid still contains the post and displays:
+  "Paylaşım silinemedi. Yetkini ve bağlantını kontrol edip tekrar dene."
+
+Record as an unresolved profile post deletion defect, not merely an untranslated
+message. Opening the menu/confirmation works; completing deletion fails in this
+observed attempt. The screenshot does not establish whether permission,
+connectivity, quota or media cleanup caused the failure; do not mark it fixed or
+assume a root cause. Include diagnosis/fix in the consolidated work while
+preserving existing behavior. No additional phone test was requested.
