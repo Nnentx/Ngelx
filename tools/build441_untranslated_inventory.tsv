@@ -1,0 +1,945 @@
+file	text	occurrences
+audio_live_rooms.dart	10 dakika boyunca odada en az 2 kişi olmadığı için sesli oda otomatik kapatıldı.	1
+audio_live_rooms.dart	2. kişi bekleniyor • Davet edebilirsin	1
+audio_live_rooms.dart	ADMIN bu odaya tekrar girişini engelledi.	2
+audio_live_rooms.dart	ADMIN veya yönetici seni odadan çıkardı.	1
+audio_live_rooms.dart	Ayrıl	2
+audio_live_rooms.dart	Ayrılırsan ses bağlantın kesilecek. Daha sonra oda açıksa tekrar katılabilirsin.	1
+audio_live_rooms.dart	Bağlantı yavaş olabilir. Söz istekleri silinmedi.	1
+audio_live_rooms.dart	Bağlantını kontrol edip tekrar dene.	1
+audio_live_rooms.dart	Bir dinleyici söz istediğinde burada görünecek.	1
+audio_live_rooms.dart	Bitir ve yeni oda aç	1
+audio_live_rooms.dart	Boş	1
+audio_live_rooms.dart	Bu oda takipçilerin için görünür.	1
+audio_live_rooms.dart	Bu oda yalnız arkadaşların için görünür.	1
+audio_live_rooms.dart	Bu odayı herkes Keşfet üzerinden bulabilir.	1
+audio_live_rooms.dart	Bu sesli odaya katılma iznin yok.	1
+audio_live_rooms.dart	En az 3 karakterlik oda başlığı yaz.	1
+audio_live_rooms.dart	Henüz söz isteği yok	1
+audio_live_rooms.dart	Konuşmacı olmak istiyor	1
+audio_live_rooms.dart	Küçült	1
+audio_live_rooms.dart	Oda açılıyor...	1
+audio_live_rooms.dart	Oda başlığı	1
+audio_live_rooms.dart	Oda kapanacak ve odadaki herkes çıkarılacak.	1
+audio_live_rooms.dart	Odaya dön	1
+audio_live_rooms.dart	SESLİ CANLI	1
+audio_live_rooms.dart	SONA ERDİ	1
+audio_live_rooms.dart	Ses bağlantısı yok. Yeniden bağlanılıyor...	1
+audio_live_rooms.dart	Sesli oda başlatılamadı.	1
+audio_live_rooms.dart	Sesli oda kapandı	1
+audio_live_rooms.dart	Sesli oda oluştur	1
+audio_live_rooms.dart	Sesli odadan ayrılmak istiyor musun?	1
+audio_live_rooms.dart	Sesli odaya bağlanılamadı.	1
+audio_live_rooms.dart	Sesli odayı başlat	1
+audio_live_rooms.dart	Sesli odayı bitirmek istiyor musun?	1
+audio_live_rooms.dart	Söz iste	1
+audio_live_rooms.dart	Söz istekleri	1
+audio_live_rooms.dart	Söz istekleri yükleniyor...	1
+audio_live_rooms.dart	Söz isteğin gönderildi.	1
+audio_live_rooms.dart	Tepki gönder	1
+audio_live_rooms.dart	Zaten açık bir sesli odan var	1
+audio_live_rooms.dart	Zaten açık bir sesli odan var. Önce onu bitir.	1
+audio_live_rooms.dart	Örn. Akşam sohbeti	1
+audio_live_rooms.dart	İlk sesli odayı sen başlatabilirsin.	1
+audio_live_rooms.dart	İstekler hâlâ yükleniyor	1
+audio_live_rooms.dart	İstekler yüklenemedi.	1
+audio_live_rooms_extras.dart	Arkadaş, takipçi veya takip ettiğin kişiyi seç	1
+audio_live_rooms_extras.dart	Kişi	1
+audio_live_rooms_extras.dart	NgelX içinde paylaş	1
+audio_live_rooms_extras.dart	Paylaşabileceğin bir NgelX sohbeti bulunamadı.	1
+audio_live_rooms_extras.dart	Sesli oda açılamadı.	1
+audio_live_rooms_extras.dart	Sohbet seç	1
+audio_live_rooms_extras.dart	Sohbetler yüklenemedi.	1
+audio_live_rooms_pro.dart	ADMIN hesabı yönetilemez.	1
+audio_live_rooms_pro.dart	ADMIN veya yönetici NgelX kütüphanesinden müzik seçtiğinde burada dinleyebilirsin.	1
+audio_live_rooms_pro.dart	Bu işlem geri alınamaz.	1
+audio_live_rooms_pro.dart	Bu işlem için yönetici yetkisi gerekiyor.	1
+audio_live_rooms_pro.dart	Bu katalog henüz boş.	1
+audio_live_rooms_pro.dart	Hak durumuna göre ayrılmış güvenli müzik kataloğu	1
+audio_live_rooms_pro.dart	Henüz mesaj yok	1
+audio_live_rooms_pro.dart	Henüz mesaj yok • Mesajlar burada akış gibi görünecek.	1
+audio_live_rooms_pro.dart	Henüz müzik seçilmedi	1
+audio_live_rooms_pro.dart	Katılımcılar yüklenemedi.	1
+audio_live_rooms_pro.dart	Konuşmacı yap	1
+audio_live_rooms_pro.dart	Kullanıcıyı yönet	3
+audio_live_rooms_pro.dart	Kütüphaneyi aç	1
+audio_live_rooms_pro.dart	Mesaj düzenlenemedi.	1
+audio_live_rooms_pro.dart	Mesajı düzenle	3
+audio_live_rooms_pro.dart	Mesajı sabitle	2
+audio_live_rooms_pro.dart	Mesajı sil	2
+audio_live_rooms_pro.dart	Müzik	1
+audio_live_rooms_pro.dart	Müzik ara	1
+audio_live_rooms_pro.dart	Müzik hazırlanıyor	1
+audio_live_rooms_pro.dart	Müziği değiştir	1
+audio_live_rooms_pro.dart	Müziği kapat	1
+audio_live_rooms_pro.dart	NgelX Müzik Kütüphanesi	1
+audio_live_rooms_pro.dart	Oda müziği	1
+audio_live_rooms_pro.dart	Odadaki kişiler	1
+audio_live_rooms_pro.dart	Odadan çıkar	1
+audio_live_rooms_pro.dart	Odadan çıkar ve tekrar girişini engelle	1
+audio_live_rooms_pro.dart	Seç	1
+audio_live_rooms_pro.dart	Sohbet susturmasını kaldır	1
+audio_live_rooms_pro.dart	Telefon dosyaları açılmaz. Hak durumu doğrulanmamış harici müzik yüklenmez.	1
+audio_live_rooms_pro.dart	Tür	1
+audio_live_rooms_pro.dart	Yönetici yap	1
+audio_live_rooms_pro.dart	Yöneticiler birbirini yönetemez.	1
+audio_live_rooms_pro.dart	Yöneticiliği kaldır	1
+audio_live_rooms_pro.dart	düzenlendi	2
+audio_live_rooms_pro.dart	İlk mesajı sen yazabilirsin.	1
+audio_live_rooms_pro.dart	Şu anda aktif katılımcı yok.	1
+build258_settings.dart	Adı ve kullanıcı adını kontrol et.	1
+build258_settings.dart	Aktif cihazları gör ve uzaktan çıkış yap	1
+build258_settings.dart	Arama geçmişini temizle	1
+build258_settings.dart	Aramayı temizle	1
+build258_settings.dart	Ayar bulunamadı.	1
+build258_settings.dart	Açık kaynak lisansları	1
+build258_settings.dart	Başka bir kelimeyle ara. Örnek: mesaj, şifre, cihaz, bildirim.	1
+build258_settings.dart	Bu kullanıcı adı kullanılıyor.	1
+build258_settings.dart	Değişiklikleri kaydet	1
+build258_settings.dart	Doğum tarihi	1
+build258_settings.dart	Engellenen ve kısıtlananlar	1
+build258_settings.dart	Geçmiş temizlendi.	1
+build258_settings.dart	Herkes / Takip ettiklerim / Arkadaşlar / Kimse	1
+build258_settings.dart	Hesap kurtarma seçenekleri	1
+build258_settings.dart	NgelX açık olan diğer cihazlara çıkış talimatı gönderilecek ve bu cihazdaki oturum da kapanacak.	1
+build258_settings.dart	NgelX verilerimi dışa aktar	1
+build258_settings.dart	Profil bilgilerin ve kendi paylaşımların JSON dosyası olarak hazırlanır.	1
+build258_settings.dart	Sesi aç	1
+build258_settings.dart	Sonuç bulunamadı	1
+build258_settings.dart	Telif hakkı	1
+build258_settings.dart	Topluluk kuralları	1
+build258_settings.dart	Tüm cihazlardan çıkış yap	1
+build258_settings.dart	Tüm cihazlardan çıkış yapılsın mı?	1
+build258_settings.dart	Tümünden çık	1
+build258_settings.dart	Çıkış zaman aşımına uğradı. Tekrar dene.	1
+build258_settings.dart	İzleme geçmişini temizle	1
+build258_settings.dart	Şifre değiştirme bağlantısı e-postana gönderildi.	1
+build258_settings.dart	Şifremi değiştir	1
+build258_settings.dart	“İlgilenmiyorum” geçmişini temizle	1
+camera_studio.dart	AI Yüz Rötuşu	1
+camera_studio.dart	AI yüz algılama cildi bölgesel işler; göz, ağız ve yüz detaylarını mümkün olduğunca korur.	1
+camera_studio.dart	Bu cihaz seçilen flaş modunu desteklemiyor.	1
+camera_studio.dart	FOTOĞRAF	1
+camera_studio.dart	Flaş	1
+camera_studio.dart	Göz	1
+camera_studio.dart	Kamera değiştirilemedi. Tekrar dene.	1
+camera_studio.dart	Kamera video kaydını başlatırken zaman aşımına uğradı. Tekrar dene.	1
+camera_studio.dart	Otomatik doğal portre	1
+camera_studio.dart	Sesli video için mikrofon izni vermelisin.	1
+camera_studio.dart	Sıfırla	2
+camera_studio.dart	Video kaydı tamamlanırken zaman aşımına uğradı. Kamerayı yeniden açıp tekrar dene.	1
+camera_studio.dart	VİDEO	1
+camera_studio.dart	Yoğunluk	1
+camera_studio.dart	Yüz ışığı	1
+camera_studio.dart	Ön kamerada donanım flaşı yok. Arka kameraya geçince flaş kullanılabilir.	1
+camera_studio.dart	Ön kamerada ışık, ten tonu ve sert kontrastı dengeler.	1
+create_music_editor.dart	Bu bölümde kullanım hakkı uygun müzik bulunamadı.	1
+create_music_editor.dart	Büyüt	1
+create_music_editor.dart	Cihazımdan müzik ekle	2
+create_music_editor.dart	Değişiklikleri uygula	1
+create_music_editor.dart	Döndür	1
+create_music_editor.dart	Düzenlemeden çıkılsın mı?	1
+create_music_editor.dart	Kaydetmeden çık	1
+create_music_editor.dart	Kendi ses dosyanı ekle	1
+create_music_editor.dart	Kes / kırp	1
+create_music_editor.dart	Kolları sürüklediğinde video seçtiğin zamana gider.	1
+create_music_editor.dart	Kullanım hakkı kullanıcı tarafından onaylandı	1
+create_music_editor.dart	Küçült	1
+create_music_editor.dart	Lisansı uygun NgelX müzik kataloğu	1
+create_music_editor.dart	Müzik kataloğu şu anda yüklenemedi.	1
+create_music_editor.dart	Müzik sesi	1
+create_music_editor.dart	Müzik önizlemesi açılamadı.	1
+create_music_editor.dart	Müziği kaldır	1
+create_music_editor.dart	NgelX Müzik	1
+create_music_editor.dart	NgelX müziklerinde ara	1
+create_music_editor.dart	Onaylıyorum	1
+create_music_editor.dart	Ses dosyası 15 MB’den küçük olmalı.	1
+create_music_editor.dart	Sıfırla	1
+create_music_editor.dart	Video düzenleme önizlemesi açılamadı.	1
+create_music_editor.dart	Video üzerine yazı	1
+create_music_editor.dart	Videoyu düzenle	1
+create_music_editor.dart	Yalnızca lisanslı, izinli veya telifsiz parçalar gösterilir.	1
+create_music_editor.dart	Yalnızca sana ait, kullanım iznin olan veya telifsiz bir ses dosyası seçmelisin.	1
+create_music_editor.dart	Yaptığın değişiklikleri uygulayabilir veya kaydetmeden çıkabilirsin.	1
+create_music_editor.dart	Yazı arka planı	2
+create_music_editor.dart	Yazı boyutu	1
+create_music_editor.dart	Yazı rengi	2
+create_music_editor.dart	Yazını ekle	1
+create_music_editor.dart	Yazıya dokun: seç • sürükle: taşı • iki parmak: büyüt/döndür • çift dokun: düzenle.	1
+create_music_editor.dart	Yazıyı düzenle	1
+create_music_editor.dart	Yazıyı sil	1
+live_broadcast_studio.dart	Arkadaş veya kullanıcı seç • aynı anda birden fazla kişiye gönderebilirsin.	1
+live_broadcast_studio.dart	Bağlantı kopyalandı.	1
+live_broadcast_studio.dart	Bağlantı yeniden kuruluyor…	1
+live_broadcast_studio.dart	Bu cihaz canlı önizlemede flaşı desteklemiyor.	1
+live_broadcast_studio.dart	Bu yayında yorum yapman susturuldu.	1
+live_broadcast_studio.dart	Canlı izleyicileri	1
+live_broadcast_studio.dart	Canlı yayın araçları	1
+live_broadcast_studio.dart	Canlı yayın ses ve yorumlarla devam ediyor.	1
+live_broadcast_studio.dart	Canlı yayın seçenekleri	1
+live_broadcast_studio.dart	Canlı yayın tepkisi gönderilemedi.	1
+live_broadcast_studio.dart	Canlı yayın tüm izleyiciler için sona erecek.	1
+live_broadcast_studio.dart	Canlı yayında	1
+live_broadcast_studio.dart	Canlı yayını NgelX’te paylaş	1
+live_broadcast_studio.dart	Canlı yayını destekle • hediyeler N-Puan kazandırır	1
+live_broadcast_studio.dart	Canlı yayını şikâyet et	1
+live_broadcast_studio.dart	Düşük ışık	1
+live_broadcast_studio.dart	Engellediğinde içerikleri ve mesajları da gizlenir.	1
+live_broadcast_studio.dart	Flaş	1
+live_broadcast_studio.dart	Gönderilemedi • tekrar deneyebilirsin.	1
+live_broadcast_studio.dart	Görüntü ve yorum ayarlarını yayın kapanmadan değiştirebilirsin.	1
+live_broadcast_studio.dart	Hediye gönderilemedi.	1
+live_broadcast_studio.dart	Henüz izleyici yok.	1
+live_broadcast_studio.dart	Kamera değiştirilemedi; yayın bağlantısı korunuyor.	1
+live_broadcast_studio.dart	Kamera kapalı	1
+live_broadcast_studio.dart	Kamera önizlemesi açılamadı.	1
+live_broadcast_studio.dart	Kapalı	1
+live_broadcast_studio.dart	Keşfet’e dön	1
+live_broadcast_studio.dart	Kişi seç	1
+live_broadcast_studio.dart	Kullanıcı bulunamadı.	1
+live_broadcast_studio.dart	Mikrofon açık başlayacaksa mikrofon izni vermelisin.	1
+live_broadcast_studio.dart	NgelX’te kişi ara	1
+live_broadcast_studio.dart	Otomatik iyileştirme	1
+live_broadcast_studio.dart	Parlak bölgeleri koruyup kontrastı dengeler.	1
+live_broadcast_studio.dart	Sıfırla	1
+live_broadcast_studio.dart	Tekrar bağlan	1
+live_broadcast_studio.dart	Yavaş mod	1
+live_broadcast_studio.dart	Yayın bağlantısı kesildi	1
+live_broadcast_studio.dart	Yayın bağlantısı korunuyor.	1
+live_broadcast_studio.dart	Yayın bitsin mi?	1
+live_broadcast_studio.dart	Yayın görüntüsü alınamadı. Bağlantı sürüyorsa kamerayı yeniden açmayı dene.	1
+live_broadcast_studio.dart	Yayın görüntüsü hazırlanıyor…	1
+live_broadcast_studio.dart	Yayıncı yorumları kapattı.	1
+live_broadcast_studio.dart	Yayıncıyı engelle	1
+live_broadcast_studio.dart	Yayından çıkar	1
+live_broadcast_studio.dart	Yayını bitir	1
+live_broadcast_studio.dart	Yayını paylaş	1
+live_broadcast_studio.dart	Yorumlarını sustur	1
+live_broadcast_studio.dart	Ön/arka kamerayı çevir	2
+live_broadcast_studio.dart	İpucu: Bir yoruma uzun basarak sabitleyebilir, silebilir veya kullanıcıyı susturabilirsin.	1
+live_broadcast_studio.dart	İzleyici canlı yayından çıkarıldı.	1
+live_broadcast_studio.dart	İzleyici yönetimi	1
+live_feed_card.dart	Bu canlı yayın sona erdi.	1
+live_feed_card.dart	Canlı yayın sona erdi	1
+live_feed_card.dart	SONA ERDİ	1
+live_feed_card.dart	Yayına dokun ve katıl	1
+live_pk.dart	3 dakikalık canlı yayın yarışı	1
+live_pk.dart	Aktif bir yayıncıya 3 dakikalık yarış isteği gönder.	1
+live_pk.dart	Başka bir yayıncı canlı olduğunda burada otomatik görünecek.	1
+live_pk.dart	Bu yayıncıyla zaten açık bir PK isteği var.	1
+live_pk.dart	Canlı Yayın PK	1
+live_pk.dart	Canlı yayın aktif değil.	1
+live_pk.dart	PK / Canlı Yayın Maçı	1
+live_pk.dart	PK isteği gönderildi.	1
+live_pk.dart	Rakip görüntüsü bağlanıyor…	1
+live_pk.dart	Rakip görüntüsü bekleniyor	1
+live_pk.dart	Zaten aktif bir PK yarışındasın.	1
+live_pk.dart	Şu anda uygun PK rakibi yok	1
+main.dart	 adlı üyeye devredilsin mi?	1
+main.dart	 arkadaşlıktan çıkarılsın mı?	1
+main.dart	 bekleyen mesaj gönderildi.	1
+main.dart	 bu kişiyi eklemek istiyor	1
+main.dart	 cihazı NgelX yeniden açıldığında oturumdan çıkarılacak.	1
+main.dart	 gruptan çıkarılsın mı?	2
+main.dart	 için kaydedilen hızlı giriş bilgileri silinecek. Hesabın NgelX’ten silinmez.	1
+main.dart	 için takma ad	1
+main.dart	 kişi	4
+main.dart	 kişisine yanıt veriyorsun	1
+main.dart	 listesi boş.	1
+main.dart	 satın alımı Google Play ödeme entegrasyonu bağlandığında aktif olacak.	1
+main.dart	 seni artık takip etmeyecek. Bu kişiye bildirim gönderilmez.	1
+main.dart	 üye	3
+main.dart	/5 hesap kullanılıyor	1
+main.dart	30 günlük geri alma süresi; sonra kalıcı silme işlemi	1
+main.dart	5 hesap sınırına ulaştın	1
+main.dart	90° Döndür	1
+main.dart	@herkes yalnızca yöneticiler tarafından kullanılabilir.	1
+main.dart	AKTİF	2
+main.dart	Adsız paylaşım	1
+main.dart	Aktif aramaya katılınamadı.	1
+main.dart	Akış hazırlanıyor...	1
+main.dart	Akışa dön	1
+main.dart	Alt yazılar ve çeviri	2
+main.dart	Altyazı dili	2
+main.dart	Anket aracı hazırlanıyor.	1
+main.dart	Arama ayarları	1
+main.dart	Arama açılamadı.	1
+main.dart	Arama bağlantısı kurulamadı	1
+main.dart	Arama bağlantısı kurulamadı. İnternetini kontrol edip tekrar dene.	1
+main.dart	Arama başlatılamadı.	1
+main.dart	Arama başlatılamadı. Lütfen tekrar dene.	1
+main.dart	Arama bilgisi açılamadı.	1
+main.dart	Arama cevaplanmadı	1
+main.dart	Arama devam ediyor • Aramaya dön	1
+main.dart	Arama devam ediyor • Katılmak için dokun	1
+main.dart	Aramak istediğin kelimeyi yaz.	1
+main.dart	Aramaya dönmek için dokun	1
+main.dart	Aramaya katılmak için dokun	1
+main.dart	Aramayı temizle	1
+main.dart	Aranıyor…	1
+main.dart	Arka plan değişiklikleri iki tarafta görünür. Yazı boyutu ve hızlı emoji sana özeldir.	1
+main.dart	Arka plan görünürlüğü	2
+main.dart	Arka plan görünürlüğü kaydedilemedi.	1
+main.dart	Arka plan, yazı boyutu ve hızlı emojiyi varsayılana döndür.	1
+main.dart	Arka planı kaldır	1
+main.dart	Arkadaş profili yüklenemedi.	1
+main.dart	Arkadaş veya kişi ara	1
+main.dart	Arkadaşların, takip ettiklerin ve takipçilerin arasından seç.	1
+main.dart	Arkadaşlık durumu alınamadı.	1
+main.dart	Arkadaşlık isteklerini Aktivite ekranından yönet.	1
+main.dart	Arkadaşlık isteği geri çekildi.	1
+main.dart	Arkadaşlık isteği geri çekilemedi.	1
+main.dart	Arkadaşlık isteği gönder	1
+main.dart	Arkadaşlık isteğin zaten bekliyor.	1
+main.dart	Arkadaşlık isteğin zaten gönderildi.	1
+main.dart	Arkadaşlık isteğini yanıtla	1
+main.dart	Arkadaşlık işlemi zaman aşımına uğradı.	1
+main.dart	Arkadaşlık kabul edildi.	1
+main.dart	Arkadaşlık kaldırılamadı.	1
+main.dart	Arkadaşlık kaldırılamadı. Tekrar dene.	1
+main.dart	Arkadaşlıktan çıkar	3
+main.dart	Arkadaşlıktan çıkarılsın mı?	2
+main.dart	Arkadaşlığınız bugün başladı	1
+main.dart	Arkadaşsınız	1
+main.dart	Artık bu grubun üyesi değilsin.	3
+main.dart	Artık bu grupta değilsin. Tekrar ekleninceye kadar mesaj gönderemez, arama yapamaz ve yeni grup mesajlarını alamazsın.	1
+main.dart	Artık bu hesabı takip ediyorsun.	1
+main.dart	Arşivde	1
+main.dart	Ayrıl	3
+main.dart	Az önce aktif	1
+main.dart	Açık olan hesabı cihazdan kaldıramazsın. Önce başka hesaba geç.	1
+main.dart	Açıklama güncellendi.	1
+main.dart	Açıklama güncellenemedi. Bağlantını kontrol edip tekrar dene.	1
+main.dart	Açıklama yaz…	1
+main.dart	Açınca videonun konuşmalarından altyazı oluşturulur	1
+main.dart	Basılı tutmak içeriği otomatik silmez.	1
+main.dart	Bağlantı	1
+main.dart	Bağlantı gönderilemedi: 	1
+main.dart	Bağlantı kopyalandı.	2
+main.dart	Bağlantını kontrol edip yeniden deneyebilirsin.	1
+main.dart	Bağlantıyı kopyala	3
+main.dart	Bağlantıyı paylaşarak gruba davet et.	1
+main.dart	Bağlantıyı yeniden gönder	1
+main.dart	Bağlanıyor…	3
+main.dart	Bağlı	1
+main.dart	Bağlı • mikrofon açık	1
+main.dart	Başka hesapla giriş yap	1
+main.dart	Başvur	1
+main.dart	Beklenmeyen bir hata oluştu. Tekrar dene.	1
+main.dart	Benzer içerikler azaltılacak.	1
+main.dart	Beyaz NgelX arka planı	1
+main.dart	Beğeni şu anda kaydedilemedi. Tekrar dene.	2
+main.dart	Bildirimler güncellenemedi. Tekrar dene.	1
+main.dart	Bildirimler yüklenemedi • Tekrar dene	1
+main.dart	Bir grupta en fazla 10 yönetici olabilir.	2
+main.dart	Bir yöneticiyi yalnızca grup kurucusu gruptan çıkarabilir.	2
+main.dart	Bir üyeyi engelle	1
+main.dart	Birbirinizin profilini ve içeriklerini göremez, yeni mesaj veya arama gönderemezsiniz. Daha önceki sohbet geçmişi silinmez.	1
+main.dart	Bu arama sona ermiş.	2
+main.dart	Bu canlı yayın bitti.	3
+main.dart	Bu cihazda en fazla 5 hesap arasında hızlı geçiş yapabilirsin.	1
+main.dart	Bu cihazdaki oturum kapatılsın mı?	1
+main.dart	Bu cihazdan kaldır	1
+main.dart	Bu grup 60 üyelik üst sınıra ulaştı.	1
+main.dart	Bu grup artık erişilebilir değil.	2
+main.dart	Bu grup daveti artık geçerli değil.	1
+main.dart	Bu grupta engellediğin bir kişi var	1
+main.dart	Bu grupta engellediğin kişiler var	1
+main.dart	Bu grupta yalnızca yöneticiler mesaj gönderebilir.	1
+main.dart	Bu gruptaki yeni mesajları artık göremeyeceksin.	1
+main.dart	Bu gönderide yorumlar kapalı.	1
+main.dart	Bu gönderiye yalnızca arkadaşlar yorum yapabilir.	1
+main.dart	Bu gönderiye yalnızca içerik sahibinin takip ettiği kişiler yorum yapabilir.	1
+main.dart	Bu hesabı cihazdan kaldır?	1
+main.dart	Bu hesabı engelledin. Engeli kaldırmadan mesaj gönderemez, arayamaz veya etkileşime geçemezsin.	1
+main.dart	Bu hesabı zaten takip ediyorsun.	1
+main.dart	Bu hesap arama, profil ve iletişim alanlarında kullanılamıyor.	1
+main.dart	Bu hesap e-posta doğrulaması gerektiriyor. Bağlantıya dokunduktan sonra buradan tekrar kontrol edebilirsin.	1
+main.dart	Bu hesap zaten açık.	1
+main.dart	Bu hesap şu anda kullanılamıyor.	1
+main.dart	Bu hesapla sohbet açılamıyor.	1
+main.dart	Bu hikâye silinmiş veya süresi dolmuş.	1
+main.dart	Bu istatistikte henüz içerik yok.	1
+main.dart	Bu içerik yeniden paylaşıma kapalı.	1
+main.dart	Bu işlem geri alınamaz.	1
+main.dart	Bu işlem geri alınamaz. Paylaşım profilinden ve akıştan tamamen kaldırılır.	1
+main.dart	Bu işlem için yönetici yetkisi gerekiyor.	1
+main.dart	Bu işlem yalnızca arkadaşlığı kaldırır. İstersen daha sonra tekrar arkadaşlık isteği gönderebilirsin.	1
+main.dart	Bu işlemden sonra kullanıcı gruba mesaj gönderemez.	1
+main.dart	Bu işlemden sonra yeni kurucu korunur. Sen yönetici olarak kalırsın.	1
+main.dart	Bu kategoride paylaşım yok.	1
+main.dart	Bu kişiden gelen etkileşim ve mesaj bildirimleri sessizce kısıtlanır. Engelleme değildir; sohbet tamamen kapanmaz.	1
+main.dart	Bu kişinin bildirimleri tekrar normal şekilde gelebilir.	1
+main.dart	Bu kişiye mesaj gönderemez ve arayamazsın; onun yeni mesaj ve aramalarını da alamazsın. Eski sohbet geçmişin burada kalır.	1
+main.dart	Bu kullanıcı adı alınmış. Başka bir kullanıcı adı seç.	1
+main.dart	Bu kullanıcı mesaj gizliliği nedeniyle yeni sohbet kabul etmiyor.	1
+main.dart	Bu kullanıcı profilinin yalnızca arkadaşları tarafından paylaşılmasına izin veriyor.	1
+main.dart	Bu kullanıcı sana mesaj gönderemez ve profilini göremez.	1
+main.dart	Bu kullanıcı yorumlarını sınırlandırdı.	1
+main.dart	Bu kullanıcının profil görüntüleme veya gizlilik ayarları nedeniyle paylaşımlar görünmüyor.	1
+main.dart	Bu kullanıcının yorum izni yalnızca arkadaşları için açık.	1
+main.dart	Bu kullanıcıyla şu anda iletişim kuramazsın.	1
+main.dart	Bu mesaj artık kullanılamıyor.	1
+main.dart	Bu mesaj için bildirim gönderilmeyecek.	1
+main.dart	Bu mesajı sildin	2
+main.dart	Bu mesajın hikâye bağlantısı bulunamadı.	1
+main.dart	Bu paylaşımı silmek istiyor musun?	1
+main.dart	Bu profil sınırlı	1
+main.dart	Bu profile erişilemiyor.	1
+main.dart	Bu seçim profilini kimlerin görebileceğini sınırlar. Gizli hesabı açarsan takip onayı da gerekir.	1
+main.dart	Bu sohbet yalnızca senin sohbet listenden kaldırılacak. Karşı tarafın sohbeti silinmeyecek.	1
+main.dart	Bu sohbette görünecek ad	1
+main.dart	Bu yazı Kaydet düğmesiyle koleksiyonuna eklenebilir.	1
+main.dart	Bu önizleme henüz kaydedilmemiş değişikliklerini gösterir.	1
+main.dart	Bu özelliği kullanabilmek için ücretsiz hesap oluşturman gerekiyor.	1
+main.dart	Bu üyeye yönetici yetkisi ver	2
+main.dart	Bu üyeyi grubun yeni kurucusu yap.	1
+main.dart	Büyüt	1
+main.dart	Canlı yayın	1
+main.dart	Canlı yayın açılamadı. Bağlantını kontrol edip tekrar dene.	1
+main.dart	Canlı yayın bağlantısı bulunamadı.	1
+main.dart	Canlı yayın kontrolü zaman aşımına uğradı. Tekrar dene.	1
+main.dart	Canlı yayına şu anda bağlanılamadı.	1
+main.dart	Canlı yayında hediye gönder	1
+main.dart	Canlı yayını izle	1
+main.dart	Cihaza çıkış talimatı gönderildi.	1
+main.dart	Cihazdan kaldır	1
+main.dart	Daha eski mesajları yükle	1
+main.dart	Daha fazla kişiye ulaş	1
+main.dart	Daha yumuşak ve doğal görünüm için bir filtre seç.	1
+main.dart	Davet bağlantısı	3
+main.dart	Davet bağlantısı / kodu	1
+main.dart	Davet bağlantısı geçersiz veya süresi dolmuş.	1
+main.dart	Davet bağlantısı kullanılamıyor.	1
+main.dart	Davet bağlantısı veya kodunu gir.	1
+main.dart	Davet bağlantısı yenilensin mi?	1
+main.dart	Davet bağlantısını önce bir grup yöneticisi oluşturmalı.	1
+main.dart	Davet edilecek başka üye yok.	1
+main.dart	Davet gönderildi	1
+main.dart	Davet gönderilemedi.	1
+main.dart	Davetle gruba katıl	1
+main.dart	Destek talebin gönderildi.	1
+main.dart	Değişiklik kaydedilemedi.	2
+main.dart	Değişiklikleri kaydetmeden önce nasıl görüneceğini incele.	1
+main.dart	Diğer işlemler	1
+main.dart	Diğer uygulamalarda paylaş	1
+main.dart	Dokun: aç / paylaş	2
+main.dart	Dokununca gerçek çeviri oluşturulur	1
+main.dart	Dosya açılamadı.	2
+main.dart	Dosya gönderilemedi. Tekrar dene.	1
+main.dart	Doğrula	1
+main.dart	Doğruladım, tekrar kontrol et	1
+main.dart	Doğrulama bağlantısı e-posta adresine gönderildi. E-postanı doğruladıktan sonra giriş yapabilirsin.	1
+main.dart	Doğrulama bağlantısı gönderme zaman aşımına uğradı.	1
+main.dart	Doğrulama bağlantısı yeniden gönderildi. E-posta kutunu kontrol et.	1
+main.dart	Doğrulama başarısız: 	1
+main.dart	Doğrulama kontrolü zaman aşımına uğradı. Tekrar dene.	1
+main.dart	Doğrulandı	1
+main.dart	Doğrulanmış Mavi Tik	1
+main.dart	Doğrulanıyor...	1
+main.dart	Döndür	1
+main.dart	Düzenleme kaydedilemedi. Tekrar dene.	1
+main.dart	Düzenleme zaman aşımına uğradı. Tekrar dene.	1
+main.dart	E-posta doğrulaması	1
+main.dart	E-posta doğrulandı. NgelX açılıyor.	1
+main.dart	E-posta henüz doğrulanmamış görünüyor. Bağlantıya dokunduktan sonra tekrar kontrol et.	1
+main.dart	E-postanı doğrula	1
+main.dart	Eklemek istediğin kişileri seç.	1
+main.dart	Eklenebilecek arkadaş veya takip edilen kişi bulunamadı.	1
+main.dart	Eklenebilecek kişi bulunamadı.	1
+main.dart	Ekleyebileceğin kişi bulunamadı.	1
+main.dart	Ekran donmaz; bağlantı kurulunca mesajlar otomatik görünecek.	1
+main.dart	Ekran görüntüsü ekle	1
+main.dart	Ekran görüntüsü seçildi	1
+main.dart	Emoji seç	2
+main.dart	En çok beğenilen	1
+main.dart	En çok etkileşim alan gönderiler	1
+main.dart	Engeli kaldırmak bu kişiyi otomatik olarak arkadaşın yapmaz. Gizlilik ayarlarına göre yeniden mesajlaşabilir veya arama yapabilirsiniz.	1
+main.dart	Engellediğin hesapları yönet	1
+main.dart	Engellediğin kişilerin mesajları gizli gösterilecek. Özel mesaj ve arama engeli devam eder. Yine de gruba girmek istiyor musun?	1
+main.dart	Engellediğin kişinin mesajı gizlendi • görmek için dokun	1
+main.dart	Engellenebilecek başka üye yok.	1
+main.dart	Eski bağlantı artık kullanılamayacak. Yeni bağlantıyı tekrar paylaşman gerekir.	1
+main.dart	Eski hikâyelerin ve öne çıkanların	1
+main.dart	Eski mesajların görünmeye devam eder; yeni mesaj ve aramalar kapalıdır.	1
+main.dart	Eşleşen mesaj bulunamadı.	1
+main.dart	Eşleşen paylaşım bulunamadı.	1
+main.dart	Favori içerik üreticilerini destekle	1
+main.dart	Fotoğraf en fazla 10 MB olabilir.	1
+main.dart	Fotoğraf galeriye kaydedildi ✅	1
+main.dart	Fotoğraf gönderilemedi.	1
+main.dart	Fotoğraf hikâyesi	1
+main.dart	Fotoğraf kaydedilemedi. Galeri iznini aç.	1
+main.dart	Fotoğraf veya 30 saniyeye kadar video • 24 saat görünür	1
+main.dart	Fotoğraf yüklenemedi	1
+main.dart	Fotoğraf önizleme	1
+main.dart	Fotoğrafı seçtikten sonra parmağınla sürükleyerek kadrajı ayarla.	1
+main.dart	Fotoğrafı yukarı-aşağı sürükle. Kapak yüksekliği sabit kalır; sadece görünen kadraj değişir.	1
+main.dart	Fotoğrafın sohbetin arkasında ne kadar belirgin olacağını seç.	1
+main.dart	GIF gönderilemedi.	1
+main.dart	Galeriden arka plan seç	1
+main.dart	Galeriden özel fotoğraf / logo seç	1
+main.dart	Gelen görüntülü arama	1
+main.dart	Geri dön	1
+main.dart	Geri dönene kadar profilini geçici olarak gizle	1
+main.dart	Geç	1
+main.dart	Geçerli bir e-posta adresi yaz.	1
+main.dart	Geçerli bir kurtarma e-postası yaz.	1
+main.dart	Geçerli davet bağlantısıyla isteğin kurucu veya yöneticinin onayına gönderilir. Onaylanana kadar gruba katılamazsın.	1
+main.dart	Geçerli e-posta ve şifre gir.	1
+main.dart	Giriş yap	1
+main.dart	Gizleyebileceğin arkadaş veya takipçi yok.	1
+main.dart	Gizli hesap açık: yeni takipçiler onay bekler. Profil görünürlüğü seçimi de uygulanır; “Herkes” seçilse bile onaylanmamış kişiler özel alanları göremez.	1
+main.dart	Gruba bir şey paylaş.	1
+main.dart	Gruba katıldın ✅	1
+main.dart	Gruba katılma işlemi tamamlanamadı.	1
+main.dart	Gruba üye ekle	1
+main.dart	Grubu oluştur	1
+main.dart	Grubu şikayet et	1
+main.dart	Grubun amacını kısaca anlat...	1
+main.dart	Grubun profil görselini değiştir.	1
+main.dart	Grubunu veya profilini öne çıkar	1
+main.dart	Grup adı	1
+main.dart	Grup adı 2–16 karakter arasında olmalı.	1
+main.dart	Grup adı boş olamaz.	1
+main.dart	Grup adı en fazla 40 karakter olabilir.	1
+main.dart	Grup adını düzenle	1
+main.dart	Grup aramasına bağlanılıyor…	1
+main.dart	Grup aramasına davet et	1
+main.dart	Grup arka planını yalnızca kurucu ve yöneticiler değiştirebilir.	4
+main.dart	Grup açıklaması	1
+main.dart	Grup bilgileri yüklenemedi.	1
+main.dart	Grup bilgileri yükleniyor…	1
+main.dart	Grup fotoğrafı	1
+main.dart	Grup fotoğrafı kaldırıldı.	1
+main.dart	Grup fotoğrafı kaydedildi.	1
+main.dart	Grup için en az 1 kişi seç.	1
+main.dart	Grup kurucusu gruptan çıkarılamaz veya yöneticilikten düşürülemez.	1
+main.dart	Grup kurucusu gruptan çıkarılamaz.	1
+main.dart	Grup mesajları yüklenemedi.	1
+main.dart	Grup oluşturulamadı. Lütfen tekrar dene.	1
+main.dart	Grup oluşturuluyor...	1
+main.dart	Grup üyeleri yüklenemedi.	1
+main.dart	Grup üyesi	1
+main.dart	Grup şu anda açılamadı. Bağlantını kontrol edip tekrar dene.	2
+main.dart	Grupta en fazla 60 üye olabilir.	1
+main.dart	Grupta yalnızca sen kaldın. Grup kapatılacak.	2
+main.dart	Grupta yalnızca sen kaldın. Grup sohbeti listenden kaldırılacak.	1
+main.dart	Grupta üye yok.	1
+main.dart	Gruptan ayrıldıktan sonra yeni mesaj alamazsın.	1
+main.dart	Gruptan ayrılmadan önce başka bir üyeyi yönetici yapmalısın.	3
+main.dart	Gruptan ayrılmak istiyor musun?	2
+main.dart	Gruptan çıkar	2
+main.dart	Gönderi	2
+main.dart	Gönderi kaydedilemedi. Bağlantını kontrol edip tekrar dene.	1
+main.dart	Gönderi profilde sabitlendi.	1
+main.dart	Gönderildi	3
+main.dart	Gönderilemedi. Bağlantını kontrol edip tekrar dene.	1
+main.dart	Gönderilmiş takip veya arkadaşlık isteğin yok.	1
+main.dart	Gönderimden kaldır	1
+main.dart	Gönderini öne çıkar	1
+main.dart	Gönderiyi aç	1
+main.dart	Göndermek için kişi seç	1
+main.dart	Görüldü	2
+main.dart	Görünen ad	1
+main.dart	Görüntü bekleniyor…	1
+main.dart	Görüntülü arama	2
+main.dart	Görüntülü arama devam ediyor	1
+main.dart	Görüntülü arama • 	1
+main.dart	Görüntülü görüşme	1
+main.dart	Günlük ziyaret sayılarındaki değişimi gör	1
+main.dart	Güvenli grup bağlantısı	1
+main.dart	Güvenli özel bağlantı	1
+main.dart	Hatırlatma ayarla	1
+main.dart	Hatırlatma kaydedildi.	1
+main.dart	Hediyeler, öne çıkarma ve topluluk özellikleri	1
+main.dart	Henüz aramaya katılmayan grup üyeleri	1
+main.dart	Henüz arşivlenmiş hikâyen yok.	1
+main.dart	Henüz bağlantı yok.	1
+main.dart	Henüz cihaz kaydı yok.	1
+main.dart	Henüz gönderi yok.	2
+main.dart	Henüz görülmedi	1
+main.dart	Henüz kaydedilen içerik yok	1
+main.dart	Henüz medya yok.	1
+main.dart	Henüz profil ziyaret verisi yok.	1
+main.dart	Henüz sabitlenen mesaj yok.	1
+main.dart	Henüz ses kaydı yok.	1
+main.dart	Hesaba geç	1
+main.dart	Hesabı dondur	1
+main.dart	Hesabı ekle ve geç	1
+main.dart	Hesabı geri aç	1
+main.dart	Hesabın dondurulmuş	1
+main.dart	Hesabın doğrulanmış e-posta ile korunur.	1
+main.dart	Hesabın doğrulanmış.	1
+main.dart	Hesabın silme sürecinde. Devam etmek için hesabı yeniden açabilirsin.	1
+main.dart	Hesap e-postası	2
+main.dart	Hesap geçişi zaman aşımına uğradı. İnternetini kontrol edip tekrar dene.	1
+main.dart	Hesap kurtarma seçenekleri	1
+main.dart	Hesap silme web sayfası	1
+main.dart	Hesap yeniden açma zaman aşımına uğradı.	1
+main.dart	Hikâye arşivi yüklenemedi.	1
+main.dart	Hikâye açılamadı. Tekrar dene.	1
+main.dart	Hikâye açılırken bağlantı zaman aşımına uğradı.	1
+main.dart	Hikâye bağlantısı doğrulanamadı.	1
+main.dart	Hikâye seçenekleri	1
+main.dart	Hikâye yanıtı	1
+main.dart	Hikâye yanıtı tamamlanamadı (	1
+main.dart	Hikâye yanıtı zaman aşımı: 	1
+main.dart	Hikâye yanıtı: 	1
+main.dart	Hikâye yüklenemedi: 	1
+main.dart	Hikâye şu anda açılamıyor.	1
+main.dart	Hikâyen 24 saat boyunca yayında ✨	1
+main.dart	Hikâyeye yanıt verdi	1
+main.dart	Hikâyeyi paylaş	1
+main.dart	Hız	1
+main.dart	Hızlı emoji gönder	2
+main.dart	Hızlı gönderme emojisi	2
+main.dart	Jeton Cüzdanı	1
+main.dart	Jeton Satın Al	1
+main.dart	KURUCU • Yönetici	1
+main.dart	Kalıcı sil	1
+main.dart	Kamera / mikrofon izinlerini aç	1
+main.dart	Kamera değiştirilemedi. Kamera iznini kontrol et.	1
+main.dart	Kamera izni verilmedi. Ayarlardan kamera iznini açıp tekrar dene.	1
+main.dart	Kamera yönü değiştirilemedi.	1
+main.dart	Kameradan arka plan çek	1
+main.dart	Kapak fotoğrafı	1
+main.dart	Kapak fotoğrafını değiştir	1
+main.dart	Kapak fotoğrafını kaldır	1
+main.dart	Kapak fotoğrafını kaldır?	1
+main.dart	Kapaklı görünüm	1
+main.dart	Kapaksız sade görünüm	1
+main.dart	Kapağı ayarla	1
+main.dart	Kapağı yeniden konumlandır	1
+main.dart	Karşı taraf aramayı reddetti.	1
+main.dart	Karşı taraf artık bu bekleyen isteği kabul veya reddedemez.	1
+main.dart	Karşı taraf okuduğunda burada görünür.	1
+main.dart	Katılma isteğin kurucu veya yönetici onayına gönderildi.	1
+main.dart	Katılma isteğin zaten kurucu/yönetici onayını bekliyor.	1
+main.dart	Katılma onayı açıksa, bağlantıyla gelen kişiler yönetici onayından sonra gruba eklenir.	1
+main.dart	Katılımcılar bekleniyor…	3
+main.dart	Kaydedilen içerik	1
+main.dart	Kaydedilenlerden kaldır	1
+main.dart	Kaydedilenlerden kaldırıldı.	3
+main.dart	Kaydedilenleri görmek için giriş yap.	1
+main.dart	Kaydedilmiş canlı yayın geçmişin yok.	1
+main.dart	Kaydedilmiş yayınlar 30 gün saklanır. Kaydedilmemiş yayınlar geçmişte tutulmaz.	1
+main.dart	Kaydetme işlemi zaman aşımına uğradı. Tekrar dene.	2
+main.dart	Kaydı gönder	2
+main.dart	Kaydı iptal et	2
+main.dart	Kendine yanıt veriyorsun	1
+main.dart	Kes / kırp	1
+main.dart	Kesimi düzenle	1
+main.dart	Kimlik veya marka doğrulaması için başvur.	1
+main.dart	Kimliğini doğrula	1
+main.dart	Kimse aramaya katılmadı. İstersen tekrar arayabilirsin.	1
+main.dart	Kişi ara	3
+main.dart	Kişi seç	1
+main.dart	Kişiler yüklenemedi. Bağlantını kontrol edip tekrar dene.	2
+main.dart	Kişiler yükleniyor...	1
+main.dart	Kişilerde ara	1
+main.dart	Kişiyi paylaş	1
+main.dart	Konum metni kopyalandı.	2
+main.dart	Konum paylaş	2
+main.dart	Konuşma kaldırılamadı. Tekrar dene.	1
+main.dart	Kullanıcı artık bu grupta mesaj gönderemez veya arama yapamaz.	1
+main.dart	Kullanıcı bulunamadı.	1
+main.dart	Kurtarma e-postası	1
+main.dart	Kurtarma e-postası, telefon ve şifre yenileme	1
+main.dart	Kurucu gruptan çıkarılamaz ve yöneticilikten düşürülemez.	1
+main.dart	Kuruculuğu devret	1
+main.dart	Küçült	1
+main.dart	Kırp	1
+main.dart	Kırp / döndür	1
+main.dart	Kısa bir bakımdayız	1
+main.dart	Kısıtla	1
+main.dart	Kısıtlamayı kaldır	2
+main.dart	Liste yüklenemedi.	1
+main.dart	Lütfen tekrar denemeden önce 10 saniye bekle.	1
+main.dart	Mavi tik başvuru formu sonraki ödeme/doğrulama paketinde aktif olacak.	1
+main.dart	Medya açılamadı.	1
+main.dart	Medya hizmeti kullanılamıyor. Grup fotoğrafsız oluşturuldu.	1
+main.dart	Mesaj bağlantısı yavaş.	1
+main.dart	Mesaj beklemeye alındı. Bağlantı gelince otomatik gönderilecek.	1
+main.dart	Mesaj düzenlenemedi. Tekrar dene.	1
+main.dart	Mesaj ekranı açılamadı. Tekrar dene.	1
+main.dart	Mesaj ekranı hazırlanamadı. Tekrar dene.	1
+main.dart	Mesaj geçmişine erişimin sona erecek.	1
+main.dart	Mesaj gruptan kalıcı olarak kaldırılacak.	1
+main.dart	Mesaj gönder	1
+main.dart	Mesaj gönderilemedi.	1
+main.dart	Mesaj gönderilemedi. Bağlantını kontrol edip tekrar dene.	1
+main.dart	Mesaj gönderimi tamamlanamadı. Tekrar dene.	1
+main.dart	Mesaj isteği kabul edilemedi.	1
+main.dart	Mesaj isteği kabul edilemedi. Tekrar dene.	1
+main.dart	Mesaj isteği kabulü zaman aşımına uğradı.	1
+main.dart	Mesaj isteği kabulü zaman aşımına uğradı. Tekrar dene.	1
+main.dart	Mesaj içeriği bulunamadı	2
+main.dart	Mesaj işlemleri	2
+main.dart	Mesaj kopyalanamadı.	1
+main.dart	Mesaj kutusu boşken sağdaki tek dokunuş emojisini seç.	1
+main.dart	Mesaj kutusu boşken ve bir mesaja çift dokununca kullanılacak ortak emojiyi seç. Bu seçim gruptaki herkeste aynıdır.	1
+main.dart	Mesaj panoya kopyalandı ✅	1
+main.dart	Mesaj seçenekleri	1
+main.dart	Mesaj sohbetten kalıcı olarak kaldırılacak.	1
+main.dart	Mesaj ve medya yalnızca bu sohbetin katılımcıları içindir.	1
+main.dart	Mesaj yazı boyutu	1
+main.dart	Mesaja bırakmak istediğin emojiyi seç.	1
+main.dart	Mesajlar gelmeye devam eder; yalnızca bu sohbetin bildirimi kapanır.	1
+main.dart	Mesajlar ve aktiviteler okundu olarak işaretlendi.	1
+main.dart	Mesajı düzenle	2
+main.dart	Mesajına hızlıca emoji ekle.	1
+main.dart	Mesajını düzenle	1
+main.dart	Mevcut fotoğrafı kaldır	1
+main.dart	Mevcut şifre	1
+main.dart	Mikrofon değiştirilemedi.	1
+main.dart	Müzik eklendi	1
+main.dart	Müzikli fotoğraf	1
+main.dart	Müziği değiştir	1
+main.dart	Ne paylaşmak istersin?	1
+main.dart	Ngel X’e katıl ✨	1
+main.dart	NgelX hesapların	1
+main.dart	NgelX içinde paylaş	1
+main.dart	NgelX içinde veya diğer uygulamalarda paylaş.	1
+main.dart	NgelX içinde özele gönder	2
+main.dart	NgelX kullanıcısı	1
+main.dart	NgelX paylaşımı	2
+main.dart	NgelX topluluğu	1
+main.dart	NgelX’e devam etmek için hesabını yeniden etkinleştir.	1
+main.dart	Okundu durumu güncellenemedi. Tekrar dene.	1
+main.dart	Okundu işlemi zaman aşımına uğradı. Tekrar dene.	1
+main.dart	Otomatik kaydırma	1
+main.dart	PREMIUM AKTİF	1
+main.dart	Paylaş, keşfet, ilham ver	1
+main.dart	Paylaşmak için arkadaş veya takip bağlantın olan bir kişi bulunamadı.	1
+main.dart	Paylaşım ara veya Kişiler seç	1
+main.dart	Paylaşım profilinden, Akıştan ve Keşfetten tamamen kaldırılacak.	1
+main.dart	Paylaşım silindi.	1
+main.dart	Paylaşım tamamen silindi ✅	1
+main.dart	Paylaşımı düzenle	1
+main.dart	Paylaşımı sil?	1
+main.dart	Premium Ayrıcalıkları	1
+main.dart	Premium ayrıcalıkların aktif	1
+main.dart	Premium ayrıcalıkların açık	1
+main.dart	Premium ile öne çık	1
+main.dart	Premium ve jeton alımlarını görüntüle	1
+main.dart	Premium’a Geç	1
+main.dart	Premium’dan ayrı doğrulama sistemidir.	1
+main.dart	Profil açılamadı.	1
+main.dart	Profil bilgisini yeniden yükle	1
+main.dart	Profil fotoğrafı	1
+main.dart	Profil fotoğrafı kaldırıldı.	1
+main.dart	Profil fotoğrafı kaydedildi.	1
+main.dart	Profil fotoğrafını değiştirmek için hesabınla giriş yapmalısın.	1
+main.dart	Profil fotoğrafını kaldır	1
+main.dart	Profil görünümü	1
+main.dart	Profil paylaşım izni kontrolü zaman aşımına uğradı. Tekrar dene.	1
+main.dart	Profil tanıtım videosu kaydedildi.	1
+main.dart	Profil yükleniyor...	1
+main.dart	Profil şu anda paylaşılamadı. Tekrar dene.	1
+main.dart	Profilde en fazla 3 gönderi sabitleyebilirsin. Önce bir sabitlemeyi kaldır.	1
+main.dart	Profili gör	1
+main.dart	Profili kaydetmek için normal hesap oluşturmalısın.	1
+main.dart	Profili önizle	1
+main.dart	Profilin güncellendi ✓	1
+main.dart	Profilin sade kapaksız görünüme geçecek. İstersen yeniden kapak ekleyebilirsin.	1
+main.dart	Profilini düzenle	1
+main.dart	Profilinin nasıl görüneceğini seç. Bu tercih herkese görünür.	1
+main.dart	SESLİ ODA	1
+main.dart	SONA ERDİ	1
+main.dart	Sabitleme işlemi tamamlanamadı. Tekrar dene.	1
+main.dart	Sabitleme işlemi zaman aşımına uğradı. Tekrar dene.	1
+main.dart	Sabitleme kaldırıldı.	1
+main.dart	Sabitlenen mesajlar yüklenemedi.	1
+main.dart	Sana gönderilen NgelX grup bağlantısını veya davet kodunu aşağıya yapıştır.	1
+main.dart	Satın Alma Geçmişi	1
+main.dart	Satın alma geçmişi mağaza entegrasyonuyla burada listelenecek.	1
+main.dart	Senin mesajın	1
+main.dart	Ses kaydı başlatılamadı.	2
+main.dart	Ses kaydı iptal edildi.	2
+main.dart	Ses kaydı • 	1
+main.dart	Ses çıkışı	1
+main.dart	Ses çıkışı değiştirilemedi.	1
+main.dart	Sesli mesaj gönderilemedi.	2
+main.dart	Sesli mesaj için mikrofon izni gerekli.	1
+main.dart	Sesli mesaj oynatılamadı.	1
+main.dart	Sessiz gönderim	1
+main.dart	Seçimi kapat	1
+main.dart	Sohbet arka planı	1
+main.dart	Sohbet arka planı değiştirildi.	1
+main.dart	Sohbet arka planındaki özel fotoğraf kaldırılacak. İstersen daha sonra yeniden seçebilirsin.	1
+main.dart	Sohbet bildirimlerinin sesi açıldı.	1
+main.dart	Sohbet hazırlanamadı. Tekrar dene.	1
+main.dart	Sohbet seçilen süre boyunca sessize alındı.	1
+main.dart	Sohbet süresiz sessize alındı.	1
+main.dart	Sohbet yalnızca senin sohbet listenden kaldırılacak.	1
+main.dart	Sohbet üyeleri	1
+main.dart	Sohbete dön	1
+main.dart	Sohbeti özelleştir	1
+main.dart	Sohbetten arkadaşlarına gönder.	1
+main.dart	Sohbetten ayrıl?	1
+main.dart	Son 48 saat · Medya ve bağlantılar	1
+main.dart	Sorunu en az 10 karakterle açıkla.	1
+main.dart	Sorunu veya isteğini anlat	1
+main.dart	Soğuk	1
+main.dart	Süre, izleyici, beğeni, yorum, paylaşım ve hediye istatistikleri	1
+main.dart	Süreli	1
+main.dart	Süreli mesajlar	1
+main.dart	Süreli mesajlar ayarlandı.	1
+main.dart	Süreli mesajlar kapatıldı.	1
+main.dart	Sıcak	1
+main.dart	Sıfırla	1
+main.dart	Takip durumu alınamadı.	1
+main.dart	Takip isteği geri çekildi.	1
+main.dart	Takip isteği geri çekilemedi.	1
+main.dart	Takip isteği işlenemedi.	1
+main.dart	Takip isteği kabul edildi.	1
+main.dart	Takip isteği reddedildi.	1
+main.dart	Takip isteğin zaten bekliyor.	2
+main.dart	Takip isteğini yanıtla	1
+main.dart	Takip işlemi tamamlanamadı.	1
+main.dart	Takip ve arkadaşlık isteklerinin durumunu yönet	1
+main.dart	Takipten çık	2
+main.dart	Takipten çıkılsın mı?	1
+main.dart	Takipçi kaldırılsın mı?	1
+main.dart	Takma ad kaldırıldı.	1
+main.dart	Tanıtım videosu hazırlanıyor	1
+main.dart	Tanıtım videosu yüklenemedi. 	1
+main.dart	Tekrar dokununca normal görünüm geri gelir	2
+main.dart	Telefonundaki paylaşım menüsünü aç.	1
+main.dart	Tepki ver veya mesaj üzerinde işlem yap.	1
+main.dart	Tepkiler yüklenemedi.	2
+main.dart	Tepkin gönderildi.	1
+main.dart	Toplam etkileşim: 	1
+main.dart	Topluluğunu büyüt	1
+main.dart	Tüm bildirimler okundu olarak işaretlendi.	1
+main.dart	Uygulamaya erişemediğinde dışarıdan silme talebi yolu	1
+main.dart	Uygun kişi bulunamadı.	1
+main.dart	Video açılamadı	1
+main.dart	Video bitince sonraki içeriğe geç	1
+main.dart	Video gönderilemedi. Bağlantını kontrol edip tekrar dene.	1
+main.dart	Video gönderilemedi. Tekrar dene.	1
+main.dart	Video hazırlanıyor	1
+main.dart	Video hikâye açılamadı	1
+main.dart	Video hikâyen 24 saat boyunca yayında ✨	1
+main.dart	Video kaydedilemedi. Bağlantını kontrol edip tekrar dene.	1
+main.dart	Video kaydedilemedi. Fotoğraf ve video iznini aç.	1
+main.dart	Video yüklenemedi • Tekrar dene	1
+main.dart	Video yüklenemedi.	1
+main.dart	Video çekmek için mikrofon izni vermelisin.	2
+main.dart	Video önizlemesi	1
+main.dart	Yalnızca seçtiğin kişilere özel mesaj olarak gönderilir.	1
+main.dart	Yanıt	1
+main.dart	Yanıtları gizle	1
+main.dart	Yanıtı iptal et	2
+main.dart	Yanıtın gönderildi.	1
+main.dart	Yapıştır	1
+main.dart	Yayın kaydı silinsin mi?	1
+main.dart	Yayın kaydı, ilişkili medya ve yorumlar kalıcı olarak silinecek.	1
+main.dart	Yayına gitmek için dokun	1
+main.dart	Yazı ekle	1
+main.dart	Yazı katmanı hazır	1
+main.dart	Yazıya dokun • sürükle • iki parmakla büyüt/döndür • çift dokun düzenle	1
+main.dart	Yazıyı düzenle	1
+main.dart	Yazıyı sil	1
+main.dart	Yeni insanları, içerikleri ve grupları keşfet	1
+main.dart	Yeni mesaj istekleri burada görünür.	1
+main.dart	Yeni mesajlar seçilen sürenin sonunda sohbet görünümünden kaybolur.	1
+main.dart	Yeniden bağlanıyor…	4
+main.dart	Yenilenemedi. Bağlantıyı kontrol edip tekrar dene.	1
+main.dart	Yorum gönderimi zaman aşımına uğradı. İnterneti kontrol edip tekrar dene.	1
+main.dart	Yorum güncelleme zaman aşımına uğradı.	1
+main.dart	Yorum izni doğrulanamadı. Tekrar dene.	1
+main.dart	Yorum izni doğrulanamadı. İnternet bağlantını kontrol edip tekrar dene.	1
+main.dart	Yorum kopyalanamadı.	1
+main.dart	Yorum panoya kopyalandı ✅	1
+main.dart	Yorum seçenekleri	1
+main.dart	Yorum sıralaması	1
+main.dart	Yorumu düzenle	1
+main.dart	Yorumu gör	1
+main.dart	Yönetici	1
+main.dart	Yönetici dahil en fazla 60 üye eklenebilir.	1
+main.dart	Yönetici dahil grupta en fazla 60 üye olabilir.	1
+main.dart	Yönetici yap	2
+main.dart	Yönetici yetkilerini kaldır	2
+main.dart	Yöneticilikten çıkar	2
+main.dart	Yükleniyor...	1
+main.dart	Zaten arkadaşsınız.	3
+main.dart	düzenlendi	1
+main.dart	Çerçevenin köşelerini sürükle • çerçeveyi taşı • oran seç • Kaydet	1
+main.dart	Çevrimiçi	1
+main.dart	Çıkar	2
+main.dart	Çıkış zaman aşımına uğradı. Tekrar dene.	1
+main.dart	Önce yönetici belirle	3
+main.dart	Öne çıkanlarda gösteriliyor	1
+main.dart	Önemli mesajlara buradan hızlıca ulaşabilirsin.	1
+main.dart	Önizleme aç	1
+main.dart	Önizlemek ve düzenlemek için dokun	1
+main.dart	Özel arama	1
+main.dart	Özel ayrıcalıklar • Jetonlar • Rozetler	1
+main.dart	Özel ayrıcalıklar, jetonlar ve daha fazla görünürlük.	1
+main.dart	Özel fotoğraf kaldırılsın mı?	1
+main.dart	Özel fotoğrafı kaldır	1
+main.dart	Özel sohbet	1
+main.dart	Özelleştir	1
+main.dart	Özelleştirmeyi sıfırla	1
+main.dart	Üye ara	1
+main.dart	Üye ekleme isteği	1
+main.dart	Üye talepleri kontrol edildi. Yeni talepler yönetici onayına gönderildi.	1
+main.dart	Üye yönetimi	1
+main.dart	Üyeler	1
+main.dart	Üyeleri seç	1
+main.dart	İfadeler	2
+main.dart	İletildi	1
+main.dart	İlgilenmiyorum	2
+main.dart	İlk mesajı yaz.	1
+main.dart	İlk yorumu sen yaz ✨	1
+main.dart	İstatistik ayrıntıları yüklenemedi.	1
+main.dart	İstek geri çekme zaman aşımına uğradı.	1
+main.dart	İstek geçmişi yüklenemedi.	1
+main.dart	İstek işlemi zaman aşımına uğradı. Tekrar dene.	1
+main.dart	İstek işlenemedi.	1
+main.dart	İstek kaydediliyor. Bir saniye sonra tekrar dene.	2
+main.dart	İstek onaylandı.	1
+main.dart	İstek reddedildi.	2
+main.dart	İstek sayısı yüklenemedi	1
+main.dart	İstekler yükleniyor…	1
+main.dart	İçerik akışından gizlendi.	1
+main.dart	İçeriği gizle	2
+main.dart	İçeriği kimlerden gizle?	1
+main.dart	İşlem devam ediyor...	1
+main.dart	İşlem zaman aşımına uğradı. İnternet bağlantını kontrol edip tekrar dene.	1
+main.dart	İşlem zaman aşımına uğradı. İnternet bağlantını kontrol et.	1
+main.dart	İşlemler	2
+main.dart	Şifre doğrulanamadı.	1
+main.dart	Şifre yenileme bağlantısı gönder	1
+main.dart	Şifre yenileme bağlantısı gönderildi. E-posta kutunu kontrol et.	1
+main.dart	Şifre yenileme bağlantısı hesap e-postana gönderildi.	1
+main.dart	Şikayet nedenini yaz	1
+main.dart	Şikayetin gönderildi.	1
+main.dart	Şikâyet gönderilemedi. Tekrar dene.	1
+main.dart	Şikâyet nedenini seç	1
+main.dart	Şikâyetin incelemeye gönderildi.	1
+main.dart	Şimdi	1
+main.dart	Şimdi kayıt ol	1
+main.dart	Şimdi yeniden dene	1
+main.dart	’a yanıt verdi	1
+story_v66.dart	Arşive taşı	1
+story_v66.dart	Bu hikâye kalıcı olarak silinecek. Bu işlem geri alınamaz.	1
+story_v66.dart	Fotoğraf hikâye açılamadı	1
+story_v66.dart	Fotoğraf hikâyesi	1
+story_v66.dart	Hikâye aktif görünümden kalkar, arşivinde kalır.	1
+story_v66.dart	Hikâye arşive taşındı.	1
+story_v66.dart	Hikâye medyası bulunamadı	1
+story_v66.dart	Hikâye yanıtı tamamlanamadı (	1
+story_v66.dart	Hikâye yanıtı zaman aşımı: 	1
+story_v66.dart	Hikâye yanıtı: 	1
+story_v66.dart	Hikâye yükleniyor...	1
+story_v66.dart	Hikâyeler yüklenemedi.	1
+story_v66.dart	Hikâyeyi paylaş	1
+story_v66.dart	Tepkin gönderildi.	1
+story_v66.dart	Video hazırlanıyor...	1
+story_v66.dart	Video hikâye açılamadı	1
+story_v66.dart	Yanıtın gönderildi.	1
+story_v66.dart	Öne çıkanlara ekle	1
+story_v66.dart	Öne çıkanlardan kaldır	1
