@@ -360,3 +360,55 @@ observed attempt. The screenshot does not establish whether permission,
 connectivity, quota or media cleanup caused the failure; do not mark it fixed or
 assume a root cause. Include diagnosis/fix in the consolidated work while
 preserving existing behavior. No additional phone test was requested.
+
+
+### Supplied video evidence — 46252.mp4 and 46256.mp4
+
+User supplied these as recordings of the tests already performed and language
+checks. Reviewed screen sequences on 2026-10-11. This adds evidence to the closed
+round; it does not start another phone test or supersede existing automated CI.
+
+46252.mp4 (approximately 148 seconds; phone time 20:32–20:34):
+- The selector lists all twelve requested languages. Switching languages changes
+  catalog-backed login labels and the welcome title in some subsequent views.
+  Selected language persists into signed-in views, where English navigation is
+  visible. This does not prove full translation coverage in all twelve languages.
+- Mixed-language UI remains visible: login feature chips (Share/Connect), Explore
+  descriptions/audio-room labels, room creation form, Create controls/placeholder
+  messages, inbox filters and notification text, profile editor labels, settings
+  section headings/descriptions and sign-out dialog. Keep these in localization
+  scope. Treat this recording as installed-app evidence, not proof that the latest
+  source-only localization changes have been installed.
+- Explore categories, group discovery, audio-room creation form, camera preview,
+  Create, inbox, profile editor and settings routes visibly open. A camera preview
+  is not proof of upload/delivery. The poll action reports it is being prepared;
+  it is not a completed poll feature. No active live/audio room is shown, so live
+  operation cannot be marked passed from this recording.
+
+46256.mp4 (approximately 200 seconds; phone time 20:41–20:44):
+- Inbox menus and archive route open. After an initial loading view, archive rows
+  appear. The warning "Bazı arşiv kayıtları yüklenemedi" remains, with Retry.
+  Therefore the archive is no longer wholly empty in this recording, but complete
+  loading remains unresolved.
+- Former-group history opens with a visible leave explanation, no-message-send
+  panel and delete-conversation action. This is evidence of the read-only UI;
+  it does not independently prove server cutoff, future-message or call denial.
+- Group chat history, group information, customization, notification controls
+  and member list visibly open. Changing the group background as a non-admin
+  displays the founder/admin-only message. Member list shows current roles.
+- A pin action changes the menu to Unpin; ERTAN is above ALEYNA in the Groups
+  view before the leave confirmation. This supports the observed group-tab pin
+  behavior only; do not generalize it to Selma in the unified All tab.
+- ERTAN leave confirmation is followed by "Gruptan ayrıldın" in the inbox.
+  The former group remains accessible as intended. Its post-leave menu still
+  offers "Gruptan ayrıl": record this redundant action for review, without
+  assuming another leave attempt succeeds.
+- At the end, archive contains ERTAN (former-group delete icon) and "selam test"
+  (restore icon), alongside the partial-load warning. This is evidence of archive
+  visibility; end-to-end restore is not proven by these frames.
+- Mute/unmute controls are visible, but sound/vibration recovery is not confirmed
+  by this visual review. Do not convert control visibility into a delivery pass.
+
+Keep the screenshot-confirmed profile-post deletion failure unresolved.
+No production write, new implementation or new APK delivery is claimed by this
+evidence entry. Preserve the closed tests and existing working structure.
