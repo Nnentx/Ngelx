@@ -6,11 +6,10 @@ on:
     branches:
       - work/build-438-phone-qa
     paths:
-      - 'tools/*438*'
       - '.github/workflows/NgelX-BUILD-438-VALIDATION.yml'
 
 concurrency:
-  group: ngelx-build438-validation
+  group: ngelx-build438-phone-review
   cancel-in-progress: true
 
 jobs:
