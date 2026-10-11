@@ -1,0 +1,260 @@
+key	ku	zh	hi	fr	es	it	pt
+welcome	Bi xêr hatî dîsa	欢迎回来	फिर से स्वागत है	Bon retour	Bienvenido de nuevo	Bentornato	Bem-vindo de volta
+tagline	Temaşe bike, keşf bike û cîhana xwe parve bike.	观看、探索并分享你的世界。	देखें, खोजें और अपनी दुनिया साझा करें।	Regardez, découvrez et partagez votre univers.	Mira, descubre y comparte tu mundo.	Guarda, scopri e condividi il tuo mondo.	Assista, descubra e compartilhe seu mundo.
+email	Navnîşana e-nameyê	电子邮箱	ईमेल पता	Adresse e-mail	Correo electrónico	Indirizzo e-mail	Endereço de e-mail
+password	Şîfre	密码	पासवर्ड	Mot de passe	Contraseña	Password	Senha
+remember	Min bi bîr bîne	记住我	मुझे याद रखें	Se souvenir de moi	Recordarme	Ricordami	Lembrar de mim
+forgot	Min şîfreya xwe ji bîr kir	忘记密码	पासवर्ड भूल गए	Mot de passe oublié	Olvidé mi contraseña	Password dimenticata	Esqueci minha senha
+login	Têkeve	登录	लॉग इन करें	Se connecter	Iniciar sesión	Accedi	Entrar
+noAccount	Hesabê te tune ye?	还没有账号？	खाता नहीं है?	Pas encore de compte ?	¿No tienes cuenta?	Non hai un account?	Não tem uma conta?
+createAccount	Hesab biafirîne	创建账号	खाता बनाएँ	Créer un compte	Crear cuenta	Crea un account	Criar conta
+resetTitle	Şîfreya xwe nû bike	重置密码	पासवर्ड रीसेट करें	Réinitialiser votre mot de passe	Restablece tu contraseña	Reimposta la password	Redefinir sua senha
+resetInfo	E-nameya xwe binivîse. Em ê girêdaneke ewle ji bo nûkirina şîfreyê bişînin.	输入邮箱，我们将发送安全的密码重置链接。	अपना ईमेल दर्ज करें। हम पासवर्ड रीसेट करने का सुरक्षित लिंक भेजेंगे।	Saisissez votre e-mail. Nous vous enverrons un lien sécurisé de réinitialisation.	Introduce tu correo. Te enviaremos un enlace seguro para restablecer la contraseña.	Inserisci la tua e-mail. Ti invieremo un link sicuro per reimpostare la password.	Digite seu e-mail. Enviaremos um link seguro para redefinir sua senha.
+sendReset	Girêdanê bişîne	发送重置链接	रीसेट लिंक भेजें	Envoyer le lien	Enviar enlace	Invia il link	Enviar link
+backLogin	Vegere ekranê têketinê	返回登录	लॉग इन पर वापस जाएँ	Retour à la connexion	Volver al inicio de sesión	Torna all'accesso	Voltar ao login
+newAccount	Hesabê nû	新账号	नया खाता	Nouveau compte	Nueva cuenta	Nuovo account	Nova conta
+fullName	Nav û paşnav	姓名	पूरा नाम	Nom complet	Nombre completo	Nome completo	Nome completo
+username	Navê bikarhêner	用户名	उपयोगकर्ता नाम	Nom d'utilisateur	Nombre de usuario	Nome utente	Nome de usuário
+emailAgain	E-nameyê dîsa binivîse	再次输入邮箱	ईमेल फिर से दर्ज करें	Confirmer l'e-mail	Repite el correo	Ripeti l'e-mail	Repita o e-mail
+password8	Şîfre (herî kêm 8 tîp)	密码（至少8个字符）	पासवर्ड (कम से कम 8 अक्षर)	Mot de passe (8 caractères minimum)	Contraseña (mínimo 8 caracteres)	Password (almeno 8 caratteri)	Senha (mínimo de 8 caracteres)
+passwordAgain	Şîfreyê dîsa binivîse	再次输入密码	पासवर्ड फिर से दर्ज करें	Confirmer le mot de passe	Repite la contraseña	Ripeti la password	Repita a senha
+birthDate	Dîroka jidayikbûnê (roj/meh/sal)	出生日期（日/月/年）	जन्म तिथि (दिन/माह/वर्ष)	Date de naissance (JJ/MM/AAAA)	Fecha de nacimiento (DD/MM/AAAA)	Data di nascita (GG/MM/AAAA)	Data de nascimento (DD/MM/AAAA)
+phone	Hejmara telefonê	电话号码	फ़ोन नंबर	Numéro de téléphone	Número de teléfono	Numero di telefono	Número de telefone
+phoneOptional	Niha ne mecbûrî ye; dikarî vala bihêlî.	暂时为选填，可以留空。	अभी वैकल्पिक है; खाली छोड़ सकते हैं।	Facultatif pour le moment ; vous pouvez laisser ce champ vide.	Opcional por ahora; puedes dejarlo vacío.	Per ora è facoltativo; puoi lasciarlo vuoto.	Opcional por enquanto; pode deixar em branco.
+terms	Ez şertên bikaranînê û siyaseta taybetiyê qebûl dikim.	我同意使用条款和隐私政策。	मैं उपयोग की शर्तें और गोपनीयता नीति स्वीकार करता/करती हूँ।	J'accepte les conditions d'utilisation et la politique de confidentialité.	Acepto los términos de uso y la política de privacidad.	Accetto i termini di utilizzo e l'informativa sulla privacy.	Aceito os termos de uso e a política de privacidade.
+creating	Hesab tê afirandin...	正在创建账号…	खाता बनाया जा रहा है…	Création du compte…	Creando cuenta…	Creazione dell'account…	Criando conta…
+weak	Lawaz	弱	कमज़ोर	Faible	Débil	Debole	Fraca
+medium	Navîn	中等	मध्यम	Moyen	Media	Media	Média
+strong	Xurt	强	मज़बूत	Fort	Fuerte	Forte	Forte
+flow	Herikîn	动态	फ़ीड	Fil	Inicio	Feed	Feed
+explore	Keşf bike	探索	खोजें	Explorer	Explorar	Esplora	Explorar
+create	Biafirîne	创作	बनाएँ	Créer	Crear	Crea	Criar
+chat	Sohbet	聊天	चैट	Discussion	Chat	Chat	Conversa
+me	Ez	我	मैं	Moi	Yo	Io	Eu
+settingsTitle	Mîheng û taybetî	设置与隐私	सेटिंग्स और गोपनीयता	Paramètres et confidentialité	Configuración y privacidad	Impostazioni e privacy	Configurações e privacidade
+privacy	Taybetî	隐私	गोपनीयता	Confidentialité	Privacidad	Privacy	Privacidade
+privacySub	Hilbijêre ka kî weşan û hesabê te bibîne	选择谁能查看你的帖子和账号	चुनें कि आपकी पोस्ट और खाता कौन देख सकता है	Choisissez qui peut voir vos publications et votre compte	Elige quién puede ver tus publicaciones y tu cuenta	Scegli chi può vedere i tuoi post e il tuo account	Escolha quem pode ver suas publicações e conta
+followFriends	Şopandin û heval	关注与好友	फ़ॉलो और दोस्त	Abonnements et amis	Seguimientos y amigos	Seguiti e amici	Seguindo e amigos
+followFriendsSub	Daxwazan qebûl an red bike û hevalan birêve bibe	接受或拒绝请求并管理好友	अनुरोध स्वीकार या अस्वीकार करें और दोस्तों को प्रबंधित करें	Acceptez ou refusez les demandes et gérez vos amis	Acepta o rechaza solicitudes y gestiona amigos	Accetta o rifiuta le richieste e gestisci gli amici	Aceite ou recuse solicitações e gerencie amigos
+blockedAccounts	Hesabên astengkirî	已屏蔽账号	ब्लॉक किए गए खाते	Comptes bloqués	Cuentas bloqueadas	Account bloccati	Contas bloqueadas
+blockedAccountsSub	Kesên astengkirî bibîne û astengiyê rake	查看已屏蔽的人并解除屏蔽	ब्लॉक किए गए लोगों को देखें और अनब्लॉक करें	Voir les personnes bloquées et les débloquer	Ver personas bloqueadas y desbloquearlas	Visualizza le persone bloccate e sbloccale	Veja pessoas bloqueadas e desbloqueie
+messagePermissions	Destûrên peyaman	消息权限	संदेश अनुमतियाँ	Autorisations des messages	Permisos de mensajes	Permessi dei messaggi	Permissões de mensagens
+messagePermissionsSub	Hilbijêre ka kî peyaman ji te re bişîne	选择谁能给你发消息	चुनें कि आपको संदेश कौन भेज सकता है	Choisissez qui peut vous envoyer des messages	Elige quién puede enviarte mensajes	Scegli chi può inviarti messaggi	Escolha quem pode enviar mensagens
+storyPrivacy	Taybetiya çîrokê	故事隐私	स्टोरी की गोपनीयता	Confidentialité des stories	Privacidad de historias	Privacy delle storie	Privacidade dos stories
+storyPrivacySub	Destûrên temaşekirin û wêneyê ekranê	查看与截屏权限	देखने और स्क्रीनशॉट की अनुमतियाँ	Autorisations de visionnage et de capture d'écran	Permisos de visualización y captura de pantalla	Permessi di visualizzazione e screenshot	Permissões de visualização e captura de tela
+notifications	Agahdarî	通知	सूचनाएँ	Notifications	Notificaciones	Notifiche	Notificações
+notificationsSub	Agahdariyên çalakî û peyaman	活动和消息通知	गतिविधि और संदेश सूचनाएँ	Notifications d'activité et de messages	Notificaciones de actividad y mensajes	Notifiche di attività e messaggi	Notificações de atividade e mensagens
+accountSecurity	Ewlehiya hesabê	账号安全	खाते की सुरक्षा	Sécurité du compte	Seguridad de la cuenta	Sicurezza dell'account	Segurança da conta
+accountSecuritySub	Hesabê rawestîne an jêbirinê bixwaze	停用账号或申请删除	खाता निष्क्रिय करें या हटाने का अनुरोध करें	Désactiver le compte ou demander sa suppression	Desactiva la cuenta o solicita su eliminación	Disattiva l'account o richiedine l'eliminazione	Desative a conta ou solicite a exclusão
+devices	Amûrên têketî	已登录设备	लॉग इन किए गए उपकरण	Appareils connectés	Dispositivos conectados	Dispositivi connessi	Dispositivos conectados
+devicesSub	Têketinên dawî û agahiyên amûran bibîne	查看近期登录和设备信息	हाल के लॉग इन और उपकरण जानकारी देखें	Voir les connexions récentes et les appareils	Ver accesos recientes e información de dispositivos	Visualizza gli accessi recenti e i dispositivi	Veja acessos recentes e informações dos dispositivos
+support	Piştgirî û ragihandina pirsgirêkê	帮助与报告问题	सहायता और समस्या रिपोर्ट करें	Assistance et signalement d'un problème	Ayuda y reportar un problema	Assistenza e segnalazione di problemi	Suporte e relatar um problema
+supportSub	Danasîn û wêneyê ekranê bişîne	发送说明和截图	विवरण और स्क्रीनशॉट भेजें	Envoyer une description et une capture d'écran	Envía una descripción y captura de pantalla	Invia una descrizione e uno screenshot	Envie uma descrição e captura de tela
+downloadPermissions	Destûrên daxistinê	下载权限	डाउनलोड अनुमतियाँ	Autorisations de téléchargement	Permisos de descarga	Permessi di download	Permissões de download
+downloadPermissionsSub	Mîhenga daxistinê ya standard ji bo weşanan	帖子的默认下载设置	पोस्ट की डिफ़ॉल्ट डाउनलोड सेटिंग	Réglage de téléchargement par défaut des publications	Configuración predeterminada de descarga de publicaciones	Impostazione predefinita di download dei post	Configuração padrão de download das publicações
+appUpdates	Nûkirinên sepanê	应用更新	ऐप अपडेट	Mises à jour de l'application	Actualizaciones de la aplicación	Aggiornamenti dell'app	Atualizações do aplicativo
+build	Avakirin	版本	बिल्ड	Version	Versión	Versione	Versão
+contentTools	Amûrên naverokê	内容工具	सामग्री उपकरण	Outils de contenu	Herramientas de contenido	Strumenti per i contenuti	Ferramentas de conteúdo
+languageTranslate	Ziman û werger	语言与翻译	भाषा और अनुवाद	Langue et traduction	Idioma y traducción	Lingua e traduzione	Idioma e tradução
+appLanguage	Zimanê sepanê	应用语言	ऐप की भाषा	Langue de l'application	Idioma de la aplicación	Lingua dell'app	Idioma do aplicativo
+autoPostTranslation	Wergera otomatîk a weşanan	自动翻译帖子	पोस्ट का स्वचालित अनुवाद	Traduction automatique des publications	Traducción automática de publicaciones	Traduzione automatica dei post	Tradução automática de publicações
+autoPostTranslationSub	Wergera nivîsên bi zimanên din nîşan bide	显示其他语言文本的翻译	अन्य भाषाओं के पाठ का अनुवाद दिखाएँ	Afficher la traduction des textes dans d'autres langues	Mostrar traducciones de textos en otros idiomas	Mostra la traduzione dei testi in altre lingue	Mostrar a tradução de textos em outros idiomas
+defaultCaptionLanguage	Zimanê standard ê binnivîsan	默认字幕语言	डिफ़ॉल्ट उपशीर्षक भाषा	Langue des sous-titres par défaut	Idioma predeterminado de subtítulos	Lingua predefinita dei sottotitoli	Idioma padrão das legendas
+translationTarget	Zimanê wergerê	翻译语言	अनुवाद की भाषा	Langue de traduction	Idioma de traducción	Lingua di traduzione	Idioma de tradução
+translationReady	Werger heye	有可用翻译	अनुवाद उपलब्ध है	Traduction disponible	Traducción disponible	Traduzione disponibile	Tradução disponível
+translationUnavailable	Hê wergera rastîn ji bo vî zimanî tune ye	此语言暂时没有可用的真实翻译	इस भाषा के लिए अभी वास्तविक अनुवाद उपलब्ध नहीं है	Aucune traduction réelle n'est encore disponible pour cette langue	Aún no hay una traducción real disponible para este idioma	Non è ancora disponibile una traduzione reale per questa lingua	Ainda não há tradução real disponível para este idioma
+showTranslation	Wergerê nîşan bide	显示翻译	अनुवाद दिखाएँ	Afficher la traduction	Mostrar traducción	Mostra traduzione	Mostrar tradução
+captionsLabel	Binnivîs	字幕	उपशीर्षक	Sous-titres	Subtítulos	Sottotitoli	Legendas
+captionsShow	Axaftinê wek nivîs nîşan bide	将语音显示为文字	बोली को पाठ में दिखाएँ	Afficher la parole sous forme de texte	Mostrar el habla como texto	Mostra il parlato come testo	Mostrar a fala como texto
+captionsUnavailable	Hê binnivîsên rastîn ji bo vê naverokê tune ne	此内容暂时没有真实字幕	इस सामग्री के लिए अभी वास्तविक उपशीर्षक उपलब्ध नहीं हैं	Aucun sous-titre réel n'est encore disponible pour ce contenu	Aún no hay subtítulos reales para este contenido	Non sono ancora disponibili sottotitoli reali per questo contenuto	Ainda não há legendas reais para este conteúdo
+playbackSpeed	Leza lêdanê	播放速度	प्लेबैक गति	Vitesse de lecture	Velocidad de reproducción	Velocità di riproduzione	Velocidade de reprodução
+contentInfo	Agahiyên naverokê	内容信息	सामग्री की जानकारी	Informations du contenu	Información del contenido	Informazioni sul contenuto	Informações do conteúdo
+reportContent	Naverokê ragihîne	举报内容	सामग्री की रिपोर्ट करें	Signaler le contenu	Reportar contenido	Segnala contenuto	Denunciar conteúdo
+shareNgelx	Ngel X parve bike	分享 Ngel X	Ngel X साझा करें	Partager Ngel X	Compartir Ngel X	Condividi Ngel X	Compartilhar Ngel X
+shareNgelxSub	Girêdana sepanê parve an kopî bike	分享或复制应用链接	ऐप लिंक साझा या कॉपी करें	Partager ou copier le lien de l'application	Comparte o copia el enlace de la aplicación	Condividi o copia il link dell'app	Compartilhe ou copie o link do aplicativo
+logout	Derkeve	退出登录	लॉग आउट करें	Se déconnecter	Cerrar sesión	Esci	Sair
+logoutQuestion	Derkevî?	退出登录？	लॉग आउट करें?	Se déconnecter ?	¿Cerrar sesión?	Vuoi uscire?	Sair?
+logoutInfo	Divê tu dîsa têkevî.	你需要重新登录。	आपको फिर से लॉग इन करना होगा।	Vous devrez vous reconnecter.	Tendrás que iniciar sesión de nuevo.	Dovrai accedere di nuovo.	Você precisará entrar novamente.
+cancel	Betal bike	取消	रद्द करें	Annuler	Cancelar	Annulla	Cancelar
+following	Yên dişopînim	关注	फ़ॉलो किए गए	Abonnements	Siguiendo	Seguiti	Seguindo
+followers	Şopîner	粉丝	फ़ॉलोअर्स	Abonnés	Seguidores	Follower	Seguidores
+interaction	Têkilî	互动	सहभागिता	Interactions	Interacciones	Interazioni	Interações
+friends	Heval	好友	दोस्त	Amis	Amigos	Amici	Amigos
+editProfile	Profîlê biguherîne	编辑资料	प्रोफ़ाइल संपादित करें	Modifier le profil	Editar perfil	Modifica profilo	Editar perfil
+saved	Tomarkirî	已收藏	सहेजा गया	Enregistrés	Guardados	Salvati	Salvos
+archive	Arşîv	归档	संग्रह	Archives	Archivo	Archivio	Arquivo
+stories	Çîrok	故事	स्टोरीज़	Stories	Historias	Storie	Stories
+events	Bûyer	活动	कार्यक्रम	Événements	Eventos	Eventi	Eventos
+addIntroVideo	Vîdyoya danasîna profîlê lê zêde bike	添加个人介绍视频	प्रोफ़ाइल परिचय वीडियो जोड़ें	Ajouter une vidéo de présentation	Añadir vídeo de presentación	Aggiungi un video di presentazione	Adicionar vídeo de apresentação
+changeIntroVideo	Vîdyoya danasînê biguherîne	更换介绍视频	परिचय वीडियो बदलें	Changer la vidéo de présentation	Cambiar vídeo de presentación	Cambia il video di presentazione	Alterar vídeo de apresentação
+searchExplore	Kes, kom an naverokê bigere	搜索用户、群组或内容	लोग, समूह या सामग्री खोजें	Rechercher des personnes, groupes ou contenus	Buscar personas, grupos o contenido	Cerca persone, gruppi o contenuti	Buscar pessoas, grupos ou conteúdo
+live	Zindî	直播	लाइव	En direct	En vivo	In diretta	Ao vivo
+trend	Trend	热门	ट्रेंडिंग	Tendances	Tendencias	Tendenze	Em alta
+people	Kes	用户	लोग	Personnes	Personas	Persone	Pessoas
+groups	Kom	群组	समूह	Groupes	Grupos	Gruppi	Grupos
+liveStreams	Weşanên zindî	直播	लाइव स्ट्रीम	Diffusions en direct	Transmisiones en vivo	Dirette	Transmissões ao vivo
+seeAll	Hemûyan bibîne ›	查看全部 ›	सभी देखें ›	Tout voir ›	Ver todo ›	Vedi tutto ›	Ver tudo ›
+noLive	Niha weşana zindî tune ye. Yekemîn dest pê bike ✨	目前没有直播，来开启第一场吧 ✨	अभी कोई लाइव स्ट्रीम नहीं है। पहली शुरू करें ✨	Aucun direct pour le moment. Lancez le premier ✨	No hay directos ahora. Inicia el primero ✨	Nessuna diretta ora. Inizia la prima ✨	Nenhuma transmissão agora. Comece a primeira ✨
+trends	Trend	热门趋势	रुझान	Tendances	Tendencias	Tendenze	Tendências
+trendContent	Naveroka trend	热门内容	ट्रेंडिंग सामग्री	Contenus tendance	Contenido en tendencia	Contenuti di tendenza	Conteúdo em alta
+discoverPeople	Kesan keşf bike	发现用户	लोगों को खोजें	Découvrir des personnes	Descubrir personas	Scopri persone	Descobrir pessoas
+discoverGroups	Koman keşf bike	发现群组	समूह खोजें	Découvrir des groupes	Descubrir grupos	Scopri gruppi	Descobrir grupos
+startLive	Weşana zindî dest pê bike	开始直播	लाइव स्ट्रीम शुरू करें	Lancer un direct	Iniciar transmisión	Avvia una diretta	Iniciar transmissão
+follow	Bişopîne	关注	फ़ॉलो करें	Suivre	Seguir	Segui	Seguir
+join	Tevlî bibe	加入	जुड़ें	Rejoindre	Unirse	Unisciti	Participar
+settings	Mîheng	设置	सेटिंग्स	Paramètres	Configuración	Impostazioni	Configurações
+posts	Weşan	帖子	पोस्ट	Publications	Publicaciones	Post	Publicações
+reels	Vîdyoyên kurt	短视频	रील्स	Reels	Reels	Reel	Reels
+tagged	Nîşankirî	被标记	टैग किए गए	Identifications	Etiquetados	Taggati	Marcados
+liked	Hezkirî	已点赞	पसंद किए गए	J'aime	Me gusta	Mi piace	Curtidos
+profilePreview	Pêşdîtina profîlê	资料预览	प्रोफ़ाइल पूर्वावलोकन	Aperçu du profil	Vista previa del perfil	Anteprima del profilo	Prévia do perfil
+profile	Profîl	个人资料	प्रोफ़ाइल	Profil	Perfil	Profilo	Perfil
+createAccountShort	Hesab biafirîne	创建账号	खाता बनाएँ	Créer un compte	Crear cuenta	Crea account	Criar conta
+liveLabel	● ZINDÎ	● 直播	● लाइव	● EN DIRECT	● EN VIVO	● IN DIRETTA	● AO VIVO
+trendingEmpty	Naveroka trend dê li vir xuya bibe ✨	热门内容将显示在这里 ✨	ट्रेंडिंग सामग्री यहाँ दिखाई देगी ✨	Les contenus tendance apparaîtront ici ✨	El contenido en tendencia aparecerá aquí ✨	I contenuti di tendenza appariranno qui ✨	O conteúdo em alta aparecerá aqui ✨
+user	Bikarhêner	用户	उपयोगकर्ता	Utilisateur	Usuario	Utente	Usuário
+createNew	Naveroka nû biafirîne	创作新内容	नई सामग्री बनाएँ	Créer un nouveau contenu	Crear contenido nuevo	Crea nuovi contenuti	Criar novo conteúdo
+createSubtitle	Wêne, vîdyo an nivîs hilbijêre û parve bike.	选择照片、视频或文字并分享。	फ़ोटो, वीडियो या पाठ चुनें और साझा करें।	Choisissez une photo, une vidéo ou un texte et partagez-le.	Elige una foto, vídeo o texto y compártelo.	Scegli una foto, un video o un testo e condividilo.	Escolha uma foto, vídeo ou texto e compartilhe.
+video	Vîdyo	视频	वीडियो	Vidéo	Vídeo	Video	Vídeo
+photo	Wêne	照片	फ़ोटो	Photo	Foto	Foto	Foto
+text	Nivîs	文字	पाठ	Texte	Texto	Testo	Texto
+camera	Kamera	相机	कैमरा	Caméra	Cámara	Fotocamera	Câmera
+story	Çîrok	故事	स्टोरी	Story	Historia	Storia	Story
+selectGallery	Ji galeriyê hilbijêre	从相册选择	गैलरी से चुनें	Choisir dans la galerie	Elegir de la galería	Scegli dalla galleria	Escolher na galeria
+selectAnother	Dosyeyeke din hilbijêre	选择其他文件	दूसरी फ़ाइल चुनें	Choisir un autre fichier	Elegir otro archivo	Scegli un altro file	Escolher outro arquivo
+takeVideo	Vîdyo tomar bike	录制视频	वीडियो रिकॉर्ड करें	Enregistrer une vidéo	Grabar vídeo	Registra video	Gravar vídeo
+takePhoto	Wêne bigire	拍照	फ़ोटो लें	Prendre une photo	Tomar foto	Scatta foto	Tirar foto
+thought	Tu li çi difikirî?	你在想什么？	आप क्या सोच रहे हैं?	À quoi pensez-vous ?	¿Qué estás pensando?	A cosa stai pensando?	No que você está pensando?
+descriptionOptional	Danasîn (ne mecbûrî)	描述（选填）	विवरण (वैकल्पिक)	Description (facultative)	Descripción (opcional)	Descrizione (facoltativa)	Descrição (opcional)
+location	Cih	位置	स्थान	Lieu	Ubicación	Posizione	Localização
+tagPerson	#Nîşan / kes	#标签 / 用户	#टैग / व्यक्ति	#Tag / personne	#Etiqueta / persona	#Tag / persona	#Tag / pessoa
+publishSettings	Mîhengên weşandinê	发布设置	प्रकाशन सेटिंग्स	Paramètres de publication	Configuración de publicación	Impostazioni di pubblicazione	Configurações de publicação
+whoCanSee	Kî dikare vê bibîne?	谁可以查看？	इसे कौन देख सकता है?	Qui peut voir ceci ?	¿Quién puede ver esto?	Chi può vedere questo?	Quem pode ver isto?
+everyone	Herkes	所有人	सभी	Tout le monde	Todos	Tutti	Todos
+closeFriends	Hevalên nêzîk	密友	करीबी दोस्त	Amis proches	Amigos cercanos	Amici stretti	Amigos próximos
+onlyMe	Tenê ez	仅自己	केवल मैं	Moi uniquement	Solo yo	Solo io	Somente eu
+allowDownload	Destûra daxistinê bide	允许下载	डाउनलोड की अनुमति दें	Autoriser les téléchargements	Permitir descargas	Consenti download	Permitir downloads
+allowDownloadSub	Ger girtî be, kesên din nikarin medyayê daxînin ser amûra xwe.	关闭后，其他人无法将媒体下载到设备。	बंद होने पर अन्य लोग मीडिया अपने उपकरण पर डाउनलोड नहीं कर सकते।	Si désactivé, les autres ne peuvent pas télécharger le média sur leur appareil.	Si se desactiva, otros no podrán descargar el archivo a su dispositivo.	Se disattivato, gli altri non possono scaricare i media sul dispositivo.	Se desativado, outras pessoas não poderão baixar a mídia no dispositivo.
+allowComments	Destûra şîroveyan bide	允许评论	टिप्पणियों की अनुमति दें	Autoriser les commentaires	Permitir comentarios	Consenti commenti	Permitir comentários
+whoCanComment	Kî dikare şîrove bike?	谁可以评论？	कौन टिप्पणी कर सकता है?	Qui peut commenter ?	¿Quién puede comentar?	Chi può commentare?	Quem pode comentar?
+followingPeople	Kesên ez dişopînim	我关注的人	जिन लोगों को मैं फ़ॉलो करता/करती हूँ	Personnes que je suis	Personas que sigo	Persone che seguo	Pessoas que sigo
+nobody	Tu kes	无人	कोई नहीं	Personne	Nadie	Nessuno	Ninguém
+allowReshare	Destûra dîsa parvekirinê bide	允许转发	दोबारा साझा करने की अनुमति दें	Autoriser le repartage	Permitir compartir de nuevo	Consenti ricondivisione	Permitir recompartilhamento
+publishOnNgelx	Li NgelX biweşîne	发布到 NgelX	NgelX पर प्रकाशित करें	Publier sur NgelX	Publicar en NgelX	Pubblica su NgelX	Publicar no NgelX
+mediaLimits	Wêne heta 10 MB • Vîdyo heta 50 MB	照片最多10 MB • 视频最多50 MB	फ़ोटो 10 MB तक • वीडियो 50 MB तक	Photo jusqu'à 10 Mo • Vidéo jusqu'à 50 Mo	Foto hasta 10 MB • Vídeo hasta 50 MB	Foto fino a 10 MB • Video fino a 50 MB	Foto até 10 MB • Vídeo até 50 MB
+videoSelected	Vîdyo hat hilbijartin	已选择视频	वीडियो चुना गया	Vidéo sélectionnée	Vídeo seleccionado	Video selezionato	Vídeo selecionado
+removeSelection	Hilbijartinê rake	取消选择	चयन हटाएँ	Retirer la sélection	Quitar selección	Rimuovi selezione	Remover seleção
+createWithCamera	Bi kamerayê biafirîne	用相机创作	कैमरे से बनाएँ	Créer avec la caméra	Crear con la cámara	Crea con la fotocamera	Criar com a câmera
+createStory	Çîrok biafirîne	创建故事	स्टोरी बनाएँ	Créer une story	Crear historia	Crea storia	Criar story
+story24h	Çîroka wêneyê te 24 saetan xuya ye.	你的照片故事将在24小时内可见。	आपकी फ़ोटो स्टोरी 24 घंटे तक दिखाई देगी।	Votre story photo est visible pendant 24 heures.	Tu historia de foto estará visible durante 24 horas.	La tua storia fotografica è visibile per 24 ore.	Seu story de foto fica visível por 24 horas.
+galleryPhoto	Ji galeriyê wêne hilbijêre	从相册选择照片	गैलरी से फ़ोटो चुनें	Choisir une photo dans la galerie	Elegir foto de la galería	Scegli foto dalla galleria	Escolher foto na galeria
+cameraPhoto	Bi kamerayê wêne bigire	用相机拍照	कैमरे से फ़ोटो लें	Prendre une photo avec la caméra	Tomar foto con la cámara	Scatta foto con la fotocamera	Tirar foto com a câmera
+community	Civak	社区	समुदाय	Communauté	Comunidad	Comunità	Comunidade
+inbox	Qutiya hatî	收件箱	इनबॉक्स	Boîte de réception	Bandeja de entrada	Posta in arrivo	Caixa de entrada
+markAllRead	Hemûyan wek xwendî nîşan bike	全部标为已读	सभी को पढ़ा हुआ चिह्नित करें	Tout marquer comme lu	Marcar todo como leído	Segna tutto come letto	Marcar tudo como lido
+createGroup	Kom biafirîne	创建群组	समूह बनाएँ	Créer un groupe	Crear grupo	Crea gruppo	Criar grupo
+joinGroup	Tevlî komê bibe	加入群组	समूह में जुड़ें	Rejoindre un groupe	Unirse a un grupo	Unisciti a un gruppo	Participar de um grupo
+newChat	Sohbeta nû	新聊天	नई चैट	Nouvelle discussion	Nuevo chat	Nuova chat	Nova conversa
+searchChats	Sohbetan bigere	搜索聊天	चैट खोजें	Rechercher des discussions	Buscar chats	Cerca chat	Buscar conversas
+all	Hemû	全部	सभी	Tout	Todos	Tutti	Todos
+unread	Nexwendî	未读	अपठित	Non lus	No leídos	Non letti	Não lidos
+notificationMessages	Peyam	消息	संदेश	Messages	Mensajes	Messaggi	Mensagens
+notificationRequests	Daxwaz	请求	अनुरोध	Demandes	Solicitudes	Richieste	Solicitações
+noActivityInFilter	Di vê parzûnê de çalakiyeke nû tune ye.	此筛选下没有新动态。	इस फ़िल्टर में कोई नई गतिविधि नहीं है।	Aucune nouvelle activité dans ce filtre.	No hay actividad nueva en este filtro.	Nessuna nuova attività con questo filtro.	Nenhuma atividade nova neste filtro.
+activity	Çalakî	动态	गतिविधि	Activité	Actividad	Attività	Atividade
+activitySub	Hezkirin, şîrove û agahdariyên ewlehiyê	点赞、评论和安全通知	पसंद, टिप्पणियाँ और सुरक्षा सूचनाएँ	J'aime, commentaires et notifications de sécurité	Me gusta, comentarios y notificaciones de seguridad	Mi piace, commenti e notifiche di sicurezza	Curtidas, comentários e notificações de segurança
+messageRequests	Daxwazên peyaman	消息请求	संदेश अनुरोध	Demandes de messages	Solicitudes de mensajes	Richieste di messaggi	Solicitações de mensagens
+followRequests	Daxwazên şopandinê	关注请求	फ़ॉलो अनुरोध	Demandes d'abonnement	Solicitudes de seguimiento	Richieste di seguire	Solicitações para seguir
+friendRequests	Daxwazên hevaltiyê	好友请求	दोस्ती के अनुरोध	Demandes d'amis	Solicitudes de amistad	Richieste di amicizia	Solicitações de amizade
+messageRequestsSub	Peyamên kesên te naşopînin	未关注你的用户发来的消息	जो आपको फ़ॉलो नहीं करते उनके संदेश	Messages des personnes qui ne vous suivent pas	Mensajes de personas que no te siguen	Messaggi di persone che non ti seguono	Mensagens de pessoas que não seguem você
+noChats	Hê li vir sohbet tune ne.	这里还没有聊天。	यहाँ अभी कोई चैट नहीं है।	Aucune discussion ici pour le moment.	Aún no hay chats aquí.	Non ci sono ancora chat qui.	Ainda não há conversas aqui.
+groupChat	Sohbeta komê	群聊	समूह चैट	Discussion de groupe	Chat de grupo	Chat di gruppo	Conversa em grupo
+groupCreated	Kom hat afirandin	群组已创建	समूह बनाया गया	Groupe créé	Grupo creado	Gruppo creato	Grupo criado
+pinChat	Sohbetê sabît bike	置顶聊天	चैट पिन करें	Épingler la discussion	Fijar chat	Fissa chat	Fixar conversa
+unpinChat	Sabîtkirina sohbetê rake	取消置顶	चैट अनपिन करें	Désépingler la discussion	Desfijar chat	Sblocca chat fissata	Desafixar conversa
+archiveChat	Arşîv bike	归档	संग्रहीत करें	Archiver	Archivar	Archivia	Arquivar
+muteChat	Bêdeng bike	静音	म्यूट करें	Mettre en sourdine	Silenciar	Silenzia	Silenciar
+unmuteChat	Bêdengiyê rake	取消静音	अनम्यूट करें	Réactiver le son	Activar sonido	Riattiva audio	Ativar som
+markRead	Wek xwendî nîşan bike	标为已读	पढ़ा हुआ चिह्नित करें	Marquer comme lu	Marcar como leído	Segna come letto	Marcar como lido
+leaveGroup	Ji komê derkeve	退出群组	समूह छोड़ें	Quitter le groupe	Salir del grupo	Esci dal gruppo	Sair do grupo
+removeFromInbox	Sohbetê ji lîsteya min rake	从我的列表移除聊天	मेरी सूची से चैट हटाएँ	Retirer la discussion de ma liste	Quitar chat de mi lista	Rimuovi chat dalla mia lista	Remover conversa da minha lista
+removeChatQuestion	Vê sohbetê rakî?	移除此聊天？	यह चैट हटाएँ?	Retirer cette discussion ?	¿Quitar este chat?	Rimuovere questa chat?	Remover esta conversa?
+removeChatInfo	Ev sohbet dê tenê ji qutiya hatî ya te bê rakirin.	此聊天只会从你的收件箱移除。	यह चैट केवल आपके इनबॉक्स से हटाई जाएगी।	Cette discussion sera retirée uniquement de votre boîte de réception.	Este chat solo se quitará de tu bandeja de entrada.	Questa chat sarà rimossa solo dalla tua posta in arrivo.	Esta conversa será removida apenas da sua caixa de entrada.
+remove	RAKE	移除	हटाएँ	RETIRER	QUITAR	RIMUOVI	REMOVER
+archivedChats	Sohbetên arşîvkirî	已归档聊天	संग्रहीत चैट	Discussions archivées	Chats archivados	Chat archiviate	Conversas arquivadas
+noArchivedChats	Sohbetên te yên arşîvkirî tune ne.	你没有已归档的聊天。	आपकी कोई संग्रहीत चैट नहीं है।	Vous n'avez aucune discussion archivée.	No tienes chats archivados.	Non hai chat archiviate.	Você não tem conversas arquivadas.
+unarchive	Ji arşîvê derxe	取消归档	संग्रह से निकालें	Désarchiver	Desarchivar	Rimuovi dall'archivio	Desarquivar
+noMessageRequests	Daxwazên peyamên nû tune ne.	你没有新的消息请求。	कोई नया संदेश अनुरोध नहीं है।	Vous n'avez aucune nouvelle demande de message.	No tienes solicitudes de mensajes nuevas.	Non hai nuove richieste di messaggi.	Você não tem novas solicitações de mensagens.
+messageRequest	Daxwaza peyamê	消息请求	संदेश अनुरोध	Demande de message	Solicitud de mensaje	Richiesta di messaggio	Solicitação de mensagem
+accept	Qebûl bike	接受	स्वीकार करें	Accepter	Aceptar	Accetta	Aceitar
+reject	Red bike	拒绝	अस्वीकार करें	Refuser	Rechazar	Rifiuta	Recusar
+noBlockedAccounts	Hesabên astengkirî yên te tune ne.	你没有已屏蔽的账号。	कोई ब्लॉक किया गया खाता नहीं है।	Vous n'avez aucun compte bloqué.	No tienes cuentas bloqueadas.	Non hai account bloccati.	Você não tem contas bloqueadas.
+message	Peyam	消息	संदेश	Message	Mensaje	Messaggio	Mensagem
+searchPeople	Kes an navê bikarhêner bigere	搜索用户或用户名	लोग या उपयोगकर्ता नाम खोजें	Rechercher une personne ou un nom d'utilisateur	Buscar personas o nombre de usuario	Cerca persone o nome utente	Buscar pessoas ou nome de usuário
+whoCanMessage	Kî dikare peyamê ji te re bişîne?	谁可以给你发消息？	आपको संदेश कौन भेज सकता है?	Qui peut vous envoyer des messages ?	¿Quién puede enviarte mensajes?	Chi può inviarti messaggi?	Quem pode enviar mensagens para você?
+messageEveryoneDesc	Herkes dikare peyamê bişîne, daxwazên peyaman jî tê de ne	所有人都可以发消息，包括消息请求	संदेश अनुरोध सहित कोई भी आपको संदेश भेज सकता है	Tout le monde peut vous écrire, y compris par demande de message	Cualquiera puede escribirte, incluidas solicitudes de mensajes	Chiunque può scriverti, comprese le richieste di messaggi	Qualquer pessoa pode enviar mensagens, incluindo solicitações
+messageFollowingDesc	Tenê hesabên tu dişopînî	仅你关注的账号	केवल वे खाते जिन्हें आप फ़ॉलो करते हैं	Uniquement les comptes que vous suivez	Solo cuentas que sigues	Solo gli account che segui	Somente contas que você segue
+messageFriendsDesc	Tenê hevalên te	仅你的好友	केवल आपके दोस्त	Uniquement vos amis	Solo tus amigos	Solo i tuoi amici	Somente seus amigos
+messageNoneDesc	Peyamên taybet ên nû qebûl neke	不接受新的私信	नए निजी संदेश स्वीकार न करें	Ne pas accepter de nouveaux messages privés	No aceptar nuevos mensajes privados	Non accettare nuovi messaggi privati	Não aceitar novas mensagens privadas
+activityLoadFailed	Çalakî nehat barkirin	无法加载动态	गतिविधि लोड नहीं हो सकी	Impossible de charger l'activité	No se pudo cargar la actividad	Impossibile caricare l'attività	Não foi possível carregar a atividade
+checkConnectionRetry	Girêdana înternetê kontrol bike û dîsa biceribîne.	检查网络连接后重试。	इंटरनेट कनेक्शन जाँचें और फिर कोशिश करें।	Vérifiez votre connexion Internet et réessayez.	Comprueba tu conexión y vuelve a intentarlo.	Controlla la connessione e riprova.	Verifique sua conexão e tente novamente.
+noActivity	Hê çalakiyeke nû tune ye	暂无新动态	अभी कोई नई गतिविधि नहीं है	Aucune nouvelle activité	Aún no hay actividad nueva	Nessuna nuova attività	Nenhuma atividade nova
+noActivitySub	Hezkirin, şîrove û agahdariyên ewlehiyê li vir xuya dibin.	点赞、评论和安全通知会显示在这里。	पसंद, टिप्पणियाँ और सुरक्षा सूचनाएँ यहाँ दिखाई देंगी।	Les J'aime, commentaires et notifications de sécurité apparaissent ici.	Los me gusta, comentarios y avisos de seguridad aparecen aquí.	Mi piace, commenti e notifiche di sicurezza appaiono qui.	Curtidas, comentários e notificações de segurança aparecem aqui.
+noPeopleFound	Tu kes bi lêgerîna te re li hev nehat.	没有匹配的用户。	आपकी खोज से कोई व्यक्ति नहीं मिला।	Aucune personne ne correspond à votre recherche.	Ninguna persona coincide con tu búsqueda.	Nessuna persona corrisponde alla ricerca.	Nenhuma pessoa corresponde à sua busca.
+messageNotAllowed	Ji ber mîhengên taybetiyê ev hesab peyamên nû ji te qebûl nake.	由于隐私设置，此账号不接受你的新消息。	गोपनीयता सेटिंग्स के कारण यह खाता आपके नए संदेश स्वीकार नहीं कर रहा है।	Les paramètres de confidentialité de ce compte empêchent vos nouveaux messages.	La privacidad de esta cuenta no permite recibir nuevos mensajes tuyos.	Le impostazioni di privacy di questo account impediscono i tuoi nuovi messaggi.	As configurações de privacidade desta conta não permitem novas mensagens suas.
+unblock	Astengiyê rake	解除屏蔽	अनब्लॉक करें	Débloquer	Desbloquear	Sblocca	Desbloquear
+block	Asteng bike	屏蔽	ब्लॉक करें	Bloquer	Bloquear	Blocca	Bloquear
+member	endam	成员	सदस्य	membres	miembros	membri	membros
+followingTab	Yên dişopînim	关注	फ़ॉलो किए गए	Abonnements	Siguiendo	Seguiti	Seguindo
+forYou	Ji bo te	推荐	आपके लिए	Pour vous	Para ti	Per te	Para você
+search	Lêgerîn	搜索	खोजें	Rechercher	Buscar	Cerca	Buscar
+filter	Parzûn	筛选	फ़िल्टर	Filtrer	Filtrar	Filtra	Filtrar
+exploreView	Dîtina keşfê	探索视图	खोज दृश्य	Vue Explorer	Vista de exploración	Vista Esplora	Visualização Explorar
+liveLoadError	Niha weşanên zindî nayên dîtin.	暂时无法查看直播。	अभी लाइव स्ट्रीम उपलब्ध नहीं हैं।	Les directs sont indisponibles pour le moment.	Los directos no están disponibles ahora.	Le dirette non sono disponibili ora.	As transmissões não estão disponíveis agora.
+trendLoadError	Naveroka trend nehat barkirin.	无法加载热门内容。	ट्रेंडिंग सामग्री लोड नहीं हो सकी।	Impossible de charger les contenus tendance.	No se pudo cargar el contenido en tendencia.	Impossibile caricare i contenuti di tendenza.	Não foi possível carregar o conteúdo em alta.
+peopleLoadError	Kes nehatin barkirin.	无法加载用户。	लोग लोड नहीं हो सके।	Impossible de charger les personnes.	No se pudieron cargar las personas.	Impossibile caricare le persone.	Não foi possível carregar as pessoas.
+peopleEmpty	Kesên nû ji bo keşfkirinê tune ne.	没有新的用户可发现。	खोजने के लिए कोई नए लोग नहीं हैं।	Aucune nouvelle personne à découvrir.	No hay personas nuevas por descubrir.	Nessuna nuova persona da scoprire.	Nenhuma pessoa nova para descobrir.
+groupsLoadError	Kom nehatin barkirin.	无法加载群组。	समूह लोड नहीं हो सके।	Impossible de charger les groupes.	No se pudieron cargar los grupos.	Impossibile caricare i gruppi.	Não foi possível carregar os grupos.
+groupsEmpty	Komên keşfkirinê tune ne.	没有可发现的群组。	खोजने के लिए कोई समूह नहीं हैं।	Aucun groupe à découvrir.	No hay grupos por descubrir.	Nessun gruppo da scoprire.	Nenhum grupo para descobrir.
+followingActive	Dişopînî	已关注	फ़ॉलो कर रहे हैं	Abonné	Siguiendo	Segui già	Seguindo
+requestSent	Daxwaz hat şandin	请求已发送	अनुरोध भेजा गया	Demande envoyée	Solicitud enviada	Richiesta inviata	Solicitação enviada
+friend	Heval	好友	दोस्त	Ami	Amigo	Amico	Amigo
+addFriend	Heval lê zêde bike	添加好友	दोस्त जोड़ें	Ajouter un ami	Añadir amigo	Aggiungi amico	Adicionar amigo
+open	Veke	打开	खोलें	Ouvrir	Abrir	Apri	Abrir
+feedLoadError	Herikîn nehat barkirin. Girêdana înternetê kontrol bike.	无法加载动态，请检查网络连接。	फ़ीड लोड नहीं हो सकी। इंटरनेट कनेक्शन जाँचें।	Impossible de charger le fil. Vérifiez votre connexion.	No se pudo cargar el inicio. Comprueba tu conexión.	Impossibile caricare il feed. Controlla la connessione.	Não foi possível carregar o feed. Verifique sua conexão.
+feedFollowingEmpty	Weşanên nû yên hesabên tu dişopînî dê li vir xuya bibin.	你关注的账号发布的新帖子会显示在这里。	आप जिन खातों को फ़ॉलो करते हैं उनकी नई पोस्ट यहाँ दिखेंगी।	Les nouvelles publications des comptes suivis apparaîtront ici.	Aquí aparecerán publicaciones nuevas de las cuentas que sigues.	I nuovi post degli account che segui appariranno qui.	Novas publicações das contas que você segue aparecerão aqui.
+feedEmpty	Hê weşanên nîşandanê tune ne.	暂无可显示的帖子。	फ़ीड में दिखाने के लिए अभी कोई पोस्ट नहीं है।	Aucune publication à afficher pour le moment.	Aún no hay publicaciones que mostrar.	Non ci sono ancora post da mostrare.	Ainda não há publicações para mostrar.
+searchHintAll	Bikarhêner, vîdyo û nîşanan bigere	搜索用户、视频、标签	उपयोगकर्ता, वीडियो, टैग खोजें	Rechercher utilisateurs, vidéos, tags	Buscar usuarios, vídeos y etiquetas	Cerca utenti, video, tag	Buscar usuários, vídeos e tags
+searchIntro	Li NgelX her tiştî bigere	在 NgelX 搜索任何内容	NgelX पर कुछ भी खोजें	Recherchez tout sur NgelX	Busca cualquier cosa en NgelX	Cerca qualsiasi cosa su NgelX	Busque qualquer coisa no NgelX
+searchIntroSub	Bikarhêner, danasîn û nîşan	用户、描述和标签	उपयोगकर्ता, विवरण और टैग	Utilisateurs, descriptions et tags	Usuarios, descripciones y etiquetas	Utenti, descrizioni e tag	Usuários, descrições e tags
+noResults	Encam nehat dîtin.	未找到结果。	कोई परिणाम नहीं मिला।	Aucun résultat trouvé.	No se encontraron resultados.	Nessun risultato trovato.	Nenhum resultado encontrado.
+usersLabel	Bikarhêner	用户	उपयोगकर्ता	Utilisateurs	Usuarios	Utenti	Usuários
+postsLabel	Weşan	帖子	पोस्ट	Publications	Publicaciones	Post	Publicações
+hiddenWordsTitle	Peyvên veşartî	隐藏词语	छिपाए गए शब्द	Mots masqués	Palabras ocultas	Parole nascoste	Palavras ocultas
+hiddenWordsInfo	Şîrove û peyamên taybet ên bi van peyvan ji te re tên veşartin.	含有这些词语的评论和私信将对你隐藏。	इन शब्दों वाली टिप्पणियाँ और निजी संदेश आपसे छिपाए जाएँगे।	Les commentaires et messages privés contenant ces mots seront masqués pour vous.	Se te ocultarán los comentarios y mensajes privados que contengan estas palabras.	Commenti e messaggi privati contenenti queste parole saranno nascosti per te.	Comentários e mensagens privadas com estas palavras ficarão ocultos para você.
+hiddenWordHint	Peyvek an gotinekê lê zêde bike	添加词语或短语	शब्द या वाक्यांश जोड़ें	Ajouter un mot ou une expression	Añadir palabra o frase	Aggiungi parola o frase	Adicionar palavra ou frase
+add	Lê zêde bike	添加	जोड़ें	Ajouter	Añadir	Aggiungi	Adicionar
+hiddenWordsFilter	Parzûna peyvên veşartî	隐藏词语筛选	छिपाए गए शब्दों का फ़िल्टर	Filtre des mots masqués	Filtro de palabras ocultas	Filtro delle parole nascoste	Filtro de palavras ocultas
+hiddenWordsFilterSub	Şîrove û peyamên bi peyvên hilbijartî veşêre	隐藏含有你所选词语的评论和消息	चुने गए शब्दों वाली टिप्पणियाँ और संदेश छिपाएँ	Masquer les commentaires et messages contenant les mots choisis	Ocultar comentarios y mensajes con las palabras elegidas	Nascondi commenti e messaggi con le parole scelte	Ocultar comentários e mensagens com palavras escolhidas
+manageHiddenWords	Peyvên veşartî birêve bibe	管理隐藏词语	छिपाए गए शब्द प्रबंधित करें	Gérer les mots masqués	Gestionar palabras ocultas	Gestisci parole nascoste	Gerenciar palavras ocultas
+noHiddenWords	Hê peyv nehatine zêdekirin	尚未添加词语	अभी कोई शब्द नहीं जोड़ा गया	Aucun mot ajouté	Aún no hay palabras añadidas	Nessuna parola aggiunta	Nenhuma palavra adicionada
+privateAccount	Hesabê taybet	私密账号	निजी खाता	Compte privé	Cuenta privada	Account privato	Conta privada
+privateAccountSub	Şopînerên nû pêdivî bi pejirandinê hene	新粉丝需要批准	नए फ़ॉलोअर्स को मंज़ूरी चाहिए	Les nouveaux abonnés nécessitent une approbation	Los nuevos seguidores requieren aprobación	I nuovi follower richiedono approvazione	Novos seguidores precisam de aprovação
+profileViewWho	Kî dikare profîla te bibîne?	谁能查看你的资料？	आपकी प्रोफ़ाइल कौन देख सकता है?	Qui peut voir votre profil ?	¿Quién puede ver tu perfil?	Chi può vedere il tuo profilo?	Quem pode ver seu perfil?
+myFollowers	Şopînerên min	我的粉丝	मेरे फ़ॉलोअर्स	Mes abonnés	Mis seguidores	I miei follower	Meus seguidores
+myFriends	Hevalên min	我的好友	मेरे दोस्त	Mes amis	Mis amigos	I miei amici	Meus amigos
+discoverableProfile	Di lêgerîna profîlan de xuya bibe	在资料搜索中显示	प्रोफ़ाइल खोज में दिखाई दें	Apparaître dans la recherche de profils	Aparecer en búsquedas de perfiles	Appari nella ricerca profili	Aparecer na busca de perfis
+discoverableProfileSub	Bihêle kes bi navê te te bibînin	允许用户通过姓名找到你	लोगों को आपके नाम से आपको खोजने दें	Permettre aux personnes de vous trouver par votre nom	Permite que te encuentren por tu nombre	Consenti di trovarti tramite il tuo nome	Permita que encontrem você pelo nome
+activityStatus	Rewşa çalakiyê nîşan bide	显示在线状态	सक्रियता स्थिति दिखाएँ	Afficher le statut d'activité	Mostrar estado de actividad	Mostra stato di attività	Mostrar status de atividade
+activityStatusSub	Bihêle heval rewşa dîtina dawî bibînin	允许好友查看你的最后在线时间	दोस्तों को आपका आख़िरी बार देखा गया समय देखने दें	Permettre aux amis de voir votre dernière présence	Permite que tus amigos vean tu última conexión	Consenti agli amici di vedere il tuo ultimo accesso	Permita que amigos vejam seu último acesso
+profileShareFriendsOnly	Parvekirina profîlê tenê ji hevalan re bihêle	仅允许好友分享资料	प्रोफ़ाइल साझा करना दोस्तों तक सीमित रखें	Limiter le partage du profil aux amis	Limitar el perfil compartido a amigos	Limita la condivisione del profilo agli amici	Limitar compartilhamento do perfil a amigos
+profileShareFriendsOnlySub	Tenê heval dikarin girêdana profîla te parve bikin	只有好友可以分享你的资料链接	केवल दोस्त आपकी प्रोफ़ाइल का लिंक साझा कर सकते हैं	Seuls les amis peuvent partager votre lien de profil	Solo tus amigos pueden compartir el enlace de tu perfil	Solo gli amici possono condividere il link del tuo profilo	Somente amigos podem compartilhar o link do seu perfil
+commentsFriendsOnly	Şîroveyan tenê ji hevalan re bihêle	仅允许好友评论	टिप्पणियाँ दोस्तों तक सीमित रखें	Limiter les commentaires aux amis	Limitar comentarios a amigos	Limita i commenti agli amici	Limitar comentários a amigos
+commentsFriendsOnlySub	Tenê heval dikarin şîrove bikin	只有好友可以评论	केवल दोस्त टिप्पणी कर सकते हैं	Seuls les amis peuvent commenter	Solo tus amigos pueden comentar	Solo gli amici possono commentare	Somente amigos podem comentar
+premiumWallet	Premium û cizdan	高级会员与钱包	प्रीमियम और वॉलेट	Premium et portefeuille	Premium y cartera	Premium e portafoglio	Premium e carteira
+premiumWalletSub	Premium, pere, pejirandin û kirîn	高级会员、金币、认证与购买	प्रीमियम, कॉइन, सत्यापन और खरीदारी	Premium, pièces, vérification et achats	Premium, monedas, verificación y compras	Premium, monete, verifica e acquisti	Premium, moedas, verificação e compras
+switchAccount	Hesabê biguherîne	切换账号	खाता बदलें	Changer de compte	Cambiar cuenta	Cambia account	Trocar conta
+switchAccountSub	Li ser vê amûrê heta 5 hesaban bi kar bîne	在此设备上最多使用5个账号	इस उपकरण पर अधिकतम 5 खाते इस्तेमाल करें	Utiliser jusqu'à 5 comptes sur cet appareil	Usa hasta 5 cuentas en este dispositivo	Usa fino a 5 account su questo dispositivo	Use até 5 contas neste dispositivo
+profileLoadError	Weşanên te nehatin barkirin. Dîsa biceribîne.	无法加载你的帖子，请重试。	आपकी पोस्ट लोड नहीं हो सकीं। फिर कोशिश करें।	Impossible de charger vos publications. Réessayez.	No se pudieron cargar tus publicaciones. Inténtalo de nuevo.	Impossibile caricare i tuoi post. Riprova.	Não foi possível carregar suas publicações. Tente novamente.
+noVideosYet	Hê tu vîdyo parve nekiriye.	你还没有分享视频。	आपने अभी कोई वीडियो साझा नहीं किया है।	Vous n'avez pas encore partagé de vidéo.	Aún no has compartido vídeos.	Non hai ancora condiviso video.	Você ainda não compartilhou vídeos.
+noPostsYet	Hê weşanên te tune ne. Ji Biafirîne yekemîn biweşîne ✨	你还没有帖子，点击创作发布第一条吧 ✨	आपकी अभी कोई पोस्ट नहीं है। बनाएँ से पहली पोस्ट प्रकाशित करें ✨	Vous n'avez pas encore de publication. Publiez la première depuis Créer ✨	Aún no tienes publicaciones. Publica la primera desde Crear ✨	Non hai ancora post. Pubblica il primo da Crea ✨	Você ainda não tem publicações. Publique a primeira em Criar ✨
