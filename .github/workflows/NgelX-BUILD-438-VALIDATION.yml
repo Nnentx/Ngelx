@@ -11,6 +11,9 @@ on:
       - 'tools/apply_build438_message_round.py'
       - 'tools/apply_build438_former_inbox.py'
       - 'tools/build438_closed_round_rules.mjs'
+      - 'tools/apply_build438_locales.py'
+      - 'tools/build438_locales.tsv'
+      - 'tools/check_build438_locales.py'
 
 concurrency:
   group: ngelx-build438-phone-review
@@ -359,6 +362,11 @@ jobs:
           cd app
           flutter clean
           flutter pub get
+
+      - name: Twelve-language catalog and persistence-compatible integration
+        run: |
+          python3 tools/apply_build438_locales.py
+          python3 tools/check_build438_locales.py
 
       - name: Flutter analiz
         shell: bash
