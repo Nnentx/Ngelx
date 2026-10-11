@@ -388,6 +388,7 @@ jobs:
       - name: Build441 archive, highlights and Play preparation
         run: |
           python3 tools/apply_build441_play_readiness.py
+          python3 tools/apply_build441_safety_report.py
           python3 tools/apply_build441_locales.py
           python3 tools/check_build441.py
 
