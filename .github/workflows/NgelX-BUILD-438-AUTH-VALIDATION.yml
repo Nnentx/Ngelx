@@ -11,7 +11,7 @@ permissions:
 jobs:
   auth-unit:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -19,3 +19,11 @@ jobs:
           node-version: '24'
       - name: Server auth tests (mock upstream, no production operations)
         run: node --test server/auth/test/*.test.mjs
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Emulator dependencies
+        run: npm install --prefix server/auth --no-save firebase-admin firebase-tools
+      - name: Concurrent limiter test (local emulator only)
+        run: npx --prefix server/auth firebase emulators:exec --project demo-ngelx-auth --config server/auth/emulator/firebase.json --only firestore "node server/auth/emulator/rate-limit.mjs"
