@@ -158,6 +158,73 @@ the generated working tree predates this task and is not committed wholesale.
 
 ## Remaining approved work
 
+### Closed phone test round — 2026-10-11, 19:20 Europe/Istanbul
+
+`apply_build438_message_round.py`: pinned rows return message IDs to the existing
+chat jump (including group-info route); video previews use the bounded video
+preview/thumbnail resolver rather than treating video URLs as images. Private
+forwarded bubbles display a marker. Both approval paths now commit request state,
+membership and one system event atomically, checking current admin role/capacity;
+each invocation allocates its own event ID before the transaction; request-state retries ensure one winner without attempting to overwrite another invocation’s immutable system event.
+CI 38156090812 passed on cd300b1f5d817586e8d7f019e51939092d4811f3:
+Flutter analysis, existing app tests and full emulator suite succeeded.
+
+`apply_build438_former_inbox.py`: former groups join inbox results; previews and
+sorting freeze at exit rather than displaying future lastMessage/update time.
+Voluntary leave no longer auto-archives. Existing read-only panel and server
+message cutoff remain. New emulator cases cover pre/post-exit reads, denied
+send/call and concurrent approval. Earlier closed-round CI runs failed the concurrent approval case; diagnostic single writes passed. The latest event-ID correction is undergoing full CI.
+The twelve-language catalog now contains all 259 existing keys in every language; no new signed APK or production
+deployment is claimed.
+
+Follow-up patch `tools/apply_build438_inbox_round.py` now applies pinned-first
+sorting to the unified All inbox, bounds preference writes and reports failures.
+Mute membership/deadline changes are atomic; nested deadline maps replace dotted
+keys used with set(merge) in chat-info controls. This repairs concrete code issues,
+but does not prove the phone unmute symptom is resolved.
+Archive loading retains one future across rebuilds, isolates failed legacy group
+queries/inaccessible records from manual archives, exposes partial-result warnings
+and retries, and never labels load failures as an empty archive. Archive write and
+restore still need emulator/phone confirmation. Dart parsing and repeated patch
+idempotence pass; full Flutter analysis is still pending. No APK or deployment.
+
+User closed the Build437 phone round; do not request further baseline tests.
+Confirmed by screenshots/report: read receipts, private/group search and reply
+jumps, shared emoji, media, edits, forwarding delivery, block/unblock with old
+history retained, restriction, follow/friend acceptance, group removal, member
+search, founder transfer, shared-profile navigation, reset/verification emails,
+mark-read counters, follower filtering/clear and removal (2 -> 1), typing.
+These are phone observations, not proof of new Build438 code or all security paths.
+
+Consolidated remaining defects/requests:
+- Archive action leaves archive list empty; restore must be verified after fix.
+- Pinning Selma does not move her above notifications/newer chats in All inbox.
+- Mute suppresses sound; unmute does not restore it. Another never-muted chat
+  produces sound/vibration, isolating the observed symptom to the muted chat.
+- Follower search filters correctly, but keyboard intermittently loses focus.
+- Group pinned-message rows do not jump; video preview fails; top bar occasionally
+  becomes inconsistent after unpinning, then recovers.
+- Approved member joins can send, but member-added system event is missing.
+- Removed AND voluntarily departing members retain inbox entry and pre-exit
+  history. Show removal actor or leave event and read-only explanation with
+  delete-conversation action. Deny all future messages and calls until re-added;
+  enforce history cutoff server-side. Preserve existing retention policy.
+- Forwarded media arrives and opens; add forwarded marker inside message bubble.
+- Keep all controls below status bar/notch, preserving feed layout.
+- User requested 12 total languages: tr, en, de, ar, ru, ku (Kurmanci),
+  zh (Simplified), hi, fr, es, it, pt. Preserve Arabic RTL and Kurmanci LTR.
+  All 259 existing keyed UI strings now have seven new translations, the animated
+  welcome is translated, and existing preference persistence is retained.
+  Local Dart compilation, all-language catalog checks and patch idempotence pass.
+  Existing uncatalogued/hardcoded screens still require localization work; no
+  claim that every app string or user-generated content has been translated.
+  Firebase Kurmanci emails explicitly use English; Chinese maps to zh-CN,
+  Portuguese to pt-BR. No provider-side email template was changed.
+- Investigate seen=1/delivered=0 semantics before calling it a counter defect.
+
+Preserve deleted-message tombstones (explicitly approved), current themes,
+working behavior and existing pending changes. No new APK is delivered yet.
+
 - Follow/friend phone regression: active-rule atomic writes passed the isolated
   diagnostic. Actual-account state, connectivity/quota and notification delivery
   still need diagnosis; protected blocked pairs remain unchanged.
@@ -185,3 +252,29 @@ blocking and two-way delivery after unblock, restriction-list persistence and
 delivery after removing restriction all have phone evidence. Calls, background
 push, remote logout, real recovery, permanent deletion and cleanup remain
 unverified; they must not be marked passed.
+
+
+### Current validation gate
+
+CI 38157314387 passed analysis/app tests but failed concurrent approval after all
+three isolated admin writes succeeded. Unique event document IDs per invocation
+now prevent concurrent attempts from being evaluated as forbidden updates to an
+existing system event, while request/version checks retain atomicity. This is
+still a hypothesis until the updated concurrent emulator case passes. The
+metadata comparison optimizer protects the same field set, with stricter
+missing-vs-explicit-default handling. No production rules deployment.
+
+The exact 12-language request overrides an earlier 14-language planning note.
+Language catalog source lives in tools/build438_locales.tsv; the reproducible
+patch preserves the original five translations. Full app CI is running on
+91c8b0b1d3a362fccb87000809726372aa3fc8cf. No new APK delivered yet.
+
+
+Full validation CI 38157978969 succeeded on 91c8b0b1d3a362fccb87000809726372aa3fc8cf:
+12-language catalog compile/coverage, Flutter analysis, 33 app tests and full
+Firestore suite including concurrent approval and former-member cutoff passed.
+The event ID correction is validated; no security permission was widened.
+A separate candidate workflow builds 1.0.213+438 with the exact existing
+install-compatible test certificate, after all checks. It contains no production
+rules, server or website deployment. Candidate APK is not a claim of full
+uncatalogued-screen translation or phone confirmation of archive/unmute/focus.
