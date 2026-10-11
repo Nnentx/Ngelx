@@ -401,5 +401,6 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          npx firebase emulators:exec --project demo-ngelx --only firestore --non-interactive "node tools/firestore_rules_test.mjs"
+          nl -ba firestore.rules | sed -n '260,310p;420,435p'
+          npx firebase emulators:exec --project demo-ngelx --only firestore --non-interactive "node tools/firestore_rules_test.mjs" || { tail -100 firestore-debug.log; exit 1; }
 
