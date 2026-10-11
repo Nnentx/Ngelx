@@ -453,3 +453,25 @@ overflow issue and remove it from active remaining defects. Preserve this workin
 layout and safe-area behavior. This is user-confirmed phone evidence for the
 reported issue, not a claim covering every device/screen or a new implementation.
 The closed phone test round stays closed; no retest requested.
+
+
+### Consolidated implementation authorization — 2026-10-11 21:07 Europe/Istanbul
+
+User authorized starting the remaining profile-post deletion, partial archive
+loading/restore, unified All-tab pin ordering and unmute sound-recovery work as
+one package, preserving working behavior and the closed phone round.
+
+User also added email, username and phone login to the same package and asked
+about the username length/spacing rule. Interpret the stated maximum of 20 as
+20 characters (not 20 words), with a minimum of 3 and no spaces, consistent with
+the current server/auth identifier parser and standalone Dart parser:
+ASCII letters, digits, dot and underscore; lowercase canonical identity.
+Keep validation and uniqueness consistent across registration/profile edits,
+the secure server index and login. Do not silently truncate names.
+
+Current truth: existing app email login works; username/verified-phone resolver,
+username ownership and throttling groundwork have tests, but the endpoint is not
+deployed or connected to Flutter. Three-method login is authorized work, not yet
+a delivered feature. Phone identity must come from verified Auth credentials,
+not a publicly editable profile phone number. Preserve email login during the
+migration and avoid public email resolution or weakened access rules.
