@@ -66,13 +66,13 @@ def apply():
     source=source[:start]+block+source[end:]
     # The compact approval path had no system message at all. Both paths now
     # commit membership, request decision and a deterministic event together.
-    start=source.index('  static Future<void> kararHizli(')
+    start=source.index('  static Future<bool> kararHizli(') if '  static Future<bool> kararHizli(' in source else source.index('  static Future<void> kararHizli(')
     end=source.index('  const GrupKatilmaIstekleriPage(',start)
     if 'join_decision438_' not in source[start:end]:
-        source=source[:start]+'''  static Future<void> kararHizli(String chatId,QueryDocumentSnapshot<Map<String,dynamic>> d,bool onay)async{
+        source=source[:start]+'''  static Future<bool> kararHizli(String chatId,QueryDocumentSnapshot<Map<String,dynamic>> d,bool onay)async{
     final uid=(d.data()['targetUid']??d.data()['uid']??d.id).toString();
     final me=FirebaseAuth.instance.currentUser?.uid;
-    if(uid.isEmpty||me==null)return;
+    if(uid.isEmpty||me==null)return false;
     final chat=FirebaseFirestore.instance.collection('chats').doc(chatId);
     final profiles=await Future.wait([
       FirebaseFirestore.instance.collection('users').doc(me).get(),
@@ -84,9 +84,9 @@ def apply():
     final event=requested.isNotEmpty&&requested!=actor
       ?actor+', '+requested+' tarafından istenen '+target+' adlı üyeyi gruba ekledi.'
       :actor+', '+target+' adlı üyeyi gruba ekledi.';
-    await FirebaseFirestore.instance.runTransaction((tx)async{
+    final changed=await FirebaseFirestore.instance.runTransaction<bool>((tx)async{
       final request=await tx.get(d.reference),group=await tx.get(chat);
-      if(request.data()?['status']!='pending')return;
+      if(request.data()?['status']!='pending')return false;
       final gv=group.data()??<String,dynamic>{};
       if(gv['createdBy']!=me&&!List<String>.from(gv['admins']??const[]).contains(me))throw StateError('Yönetici yetkisi gerekli.');
       final members=List<String>.from(gv['members']??const[]);
@@ -107,8 +107,10 @@ def apply():
           'targetUids':<String>[uid],'text':event,'createdAt':FieldValue.serverTimestamp(),
         });
       }
+      return true;
     }).timeout(const Duration(seconds:12));
-    if(onay){await ngelxClearGroupArchive(uid,chatId);await ngelxGrupDavetMetaSenkronla(chat);}
+    if(changed&&onay){await ngelxClearGroupArchive(uid,chatId);await ngelxGrupDavetMetaSenkronla(chat);}
+    return changed;
   }
 ''' + source[end:]
     start=source.index('  Future<void> _karar(BuildContext context,QueryDocumentSnapshot<Map<String,dynamic>> d,bool onay)')
@@ -117,8 +119,19 @@ def apply():
     if 'await kararHizli(chatId,d,onay);' not in block:
         a=block.index('    final batch=')
         b=block.index('      unawaited(chat.get().then',a)
-        block=block[:a]+"    await kararHizli(chatId,d,onay);\n    if(onay){\n"+block[b:]
+        block=block[:a]+"    final changed=await kararHizli(chatId,d,onay);\n    if(!changed){if(context.mounted)ngelxDurumMesaji(context,'İstek zaten işlenmiş.',tip:'uyari');return;}\n    if(onay){\n"+block[b:]
         source=source[:start]+block+source[end:]
+    source=source.replace('static Future<void> kararHizli(', 'static Future<bool> kararHizli(')
+    a=source.index('  static Future<bool> kararHizli(');b=source.index('  const GrupKatilmaIstekleriPage(',a)
+    part=source[a:b]
+    part=part.replace('if(uid.isEmpty||me==null)return;','if(uid.isEmpty||me==null)return false;')
+    part=part.replace('    await FirebaseFirestore.instance.runTransaction((tx)async{','    final changed=await FirebaseFirestore.instance.runTransaction<bool>((tx)async{')
+    part=part.replace("if(request.data()?['status']!='pending')return;","if(request.data()?['status']!='pending')return false;")
+    if 'return changed;' not in part:
+        part=part.replace('    }).timeout(const Duration(seconds:12));','      return true;\n    }).timeout(const Duration(seconds:12));')
+        part=part.replace('    if(onay){await ngelxClearGroupArchive(uid,chatId);await ngelxGrupDavetMetaSenkronla(chat);}', '    if(changed&&onay){await ngelxClearGroupArchive(uid,chatId);await ngelxGrupDavetMetaSenkronla(chat); }\n    return changed;')
+    source=source[:a]+part+source[b:]
+    source=source.replace('    await kararHizli(chatId,d,onay);', "    final changed=await kararHizli(chatId,d,onay);\n    if(!changed){if(context.mounted)ngelxDurumMesaji(context,'İstek zaten işlenmiş.',tip:'uyari');return;}")
     path.write_text(source)
 
 
