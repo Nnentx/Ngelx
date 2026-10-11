@@ -52,6 +52,11 @@ the generated working tree predates this task and is not committed wholesale.
   messages fall back to their stored name/avatar placeholder. Tap still opens
   the existing profile route and its access checks. Phone layout needs testing.
 
+- All four verification/reset email send paths explicitly set the selected app
+  language (Turkish when the app is Turkish), with bounded calls. Previously only
+  the forgot-password page set it. Firebase template branding, sender domain,
+  deliverability and custom repeat-password web page still require separate work.
+
 ## Validation so far
 
 - Dart parser/formatter (`--output=none`) accepted both changed Dart files.
