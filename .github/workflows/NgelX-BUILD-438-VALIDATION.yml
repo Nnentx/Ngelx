@@ -1,4 +1,4 @@
-name: NgelX BUILD 438 VALIDATION
+name: NgelX BUILD 438 PHONE VALIDATION
 
 on:
   workflow_dispatch:
