@@ -475,3 +475,31 @@ deployed or connected to Flutter. Three-method login is authorized work, not yet
 a delivered feature. Phone identity must come from verified Auth credentials,
 not a publicly editable profile phone number. Preserve email login during the
 migration and avoid public email resolution or weakened access rules.
+
+
+### Priority auth/session observation — 2026-10-11 21:09 Europe/Istanbul
+
+User supplied 46266.mp4 (37 seconds; phone time 21:08) and reported that logout
+and login do not work correctly and that restarting the app changes the result.
+Observed frames show:
+- Feed initially renders, then Profile displays a black loading panel with the
+  bottom navigation still visible.
+- Login screen appears; the Login button displays a loading spinner.
+- User visits Android recent apps/reopens the app; a signed-in profile and feed
+  then render.
+
+Treat this as an unresolved priority auth/session transition/loading defect.
+The recording does not expose the exact logout invocation, Firebase response,
+error code or elapsed request deadline. Do not assume incorrect credentials,
+successful logout, token corruption or a proven root cause.
+Investigate auth-event/root-route coordination, bounded profile loading, in-flight
+login/logout completion and lifecycle resumption. Verify consistency of visible
+route and authoritative Auth state, and ensure errors/timeouts leave usable
+controls. Preserve working credentials, language/preferences and account data.
+Do not use restarting the app as the intended solution.
+
+This newly reported failure is part of the consolidated authorized package and
+takes priority over cosmetic localization. Earlier closed phone tests remain
+closed; no baseline retest is requested. Existing passing automated tests do not
+establish that this actual phone transition is fixed. No fix/new APK is claimed
+by this observation entry.
