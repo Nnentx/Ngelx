@@ -1,7 +1,11 @@
 # Build438 identifier login — server core, not deployed
 
-Run `node --test server/auth/test/identifier-login.test.mjs`.
-The 15 dependency-injected tests do not call production Auth or sign anyone in.
+Run `node --test server/auth/test/*.test.mjs`.
+The 28 dependency-injected tests do not call production Auth or sign anyone in.
+`firebase-adapters.mjs` implements the Admin Auth/App Check/private username
+lookup interfaces and the bounded Firebase REST password verifier. The REST
+endpoint is fixed server-side; redirect following is disabled. The 8-second
+deadline covers both request and response parsing, with generic failures.
 
 This module returns only a custom token after Firebase password verification
 returns the same UID as the private lookup. It never returns a resolved email.
@@ -11,7 +15,7 @@ The existing email login is unchanged.
 
 Before enabling any endpoint, implement and integration-test all adapters:
 
-- Verify Firebase App Check before identity lookup.
+- Configure Admin Auth, Firestore and allowed App Check app IDs on the server.
 - Enforce distributed network and hashed identifier rate limits with expiry;
   neither raw passwords nor account identifiers belong in logs.
 - Resolve username through a server-owned unique index. Existing usernameLower
@@ -19,8 +23,8 @@ Before enabling any endpoint, implement and integration-test all adapters:
   coordinate registration/rename ownership transactions with server permissions.
 - Resolve phone using Admin Auth and require a linked phone provider; do not
   query profile recovery phone fields. Phone provider linking needs SMS proof.
-- Verify passwords with the Firebase Auth REST signInWithPassword endpoint;
-  check localId, MFA responses and timeouts without exposing provider errors.
+- Integration-test the implemented Firebase Auth REST signInWithPassword adapter
+  using the project's configured API key; test localId, MFA and timeouts.
 - Load current Admin Auth user before and after password verification, then
   mint a Firebase custom token. Do not persist password or provider refresh token.
 - Use bounded upstream calls, generic public failures, no response caching,
