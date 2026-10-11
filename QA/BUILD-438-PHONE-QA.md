@@ -59,6 +59,14 @@ the generated working tree predates this task and is not committed wholesale.
   web/reset-password.html already asks for the new password twice; its production
   hosting and Firebase email action URL remain unverified.
 
+- Group pin menu defaults now match server permissions: missing setting means
+  admins only. Menu refreshes group data with a bounded server read, using the
+  existing cache offline. Pin/unpin writes read current role and message state in
+  a transaction; removed admins cannot act on cached roles and simultaneous
+  toggles retry against current state. Deleted messages cannot be newly pinned.
+  Both menu and pinned-message page use the same transaction. Success uses green
+  feedback and failures preserve permission/quota/uncertain-result information.
+
 ## Validation so far
 
 - Dart parser/formatter (`--output=none`) accepted both changed Dart files.
@@ -85,9 +93,8 @@ the generated working tree predates this task and is not committed wholesale.
   request/notification creation and protect blocked pairs.
 - Diagnose server quota errors in delete-for-everyone; do not promise removal of
   a provider quota and do not authorize billing changes.
-- Group message pinning visibility investigation (current source already offers
-  it to permitted members). Pending deduplication is implemented locally; the
-  new emulator cases and coordinated deployment remain pending.
+- Phone regression for updated group pin visibility and transactions. Pending
+  request emulator cases passed; coordinated production deployment remains pending.
 - Phone regression for founder transfer and follower search and shared-profile card layout.
 - Other success/error/warning colors and timeout/error feedback.
 - Email/username/verified-phone login with a secure identifier resolver. Do not
