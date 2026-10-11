@@ -367,6 +367,7 @@ jobs:
         run: |
           python3 tools/apply_build439_session_qa.py
           python3 tools/apply_build439_locales.py
+          python3 tools/check_build439_locales.py
           cp tools/test_build439_session_gate.dart app/test/build439_session_gate_test.dart
           cp tools/test_build439_auth_operations.dart app/test/build439_auth_operations_test.dart
           cd app

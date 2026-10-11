@@ -97,6 +97,8 @@ Future<void> ngelx439SignOut()=>_ngelx439AuthOperations.signOut(()async{
 
 """+block[y:]
  s=s[:a]+block+s[b:]
+ s=s.replace("'displayName':ad,'username':kullanici,", "'displayName':ad,'username':kullanici,'usernameLower':kullanici.toLowerCase(),")
+ s=s.replace("'username': yeniKullanici,", "'username': yeniKullanici,'usernameLower':yeniKullanici.toLowerCase(),")
  # Apply the same username policy to the older edit dialog too.
  s=s.replace(".trim()\n                          .replaceAll(' ', '');", ".trim();")
  s=s.replace('yeniKullanici.length < 3',"!RegExp(r'^[a-zA-Z0-9._]{3,20}$').hasMatch(yeniKullanici)")
