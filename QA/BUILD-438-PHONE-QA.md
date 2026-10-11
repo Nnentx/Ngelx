@@ -89,6 +89,14 @@ the generated working tree predates this task and is not committed wholesale.
 
 ## Validation so far
 
+- Login groundwork now has 16 standalone Dart input cases and 28 server unit
+  tests. Server core and Firebase Admin/REST adapters are committed separately
+  under server/auth. Tests use fake adapters/upstream responses, not real
+  accounts. App Check, private active username index, UID matching, linked phone
+  provider, MFA/tenant rejection and password request/body deadlines are covered.
+  No endpoint is deployed or connected to Flutter. Distributed throttling,
+  server configuration, username migration/ownership and integration QA remain.
+
 - Dart parser/formatter (`--output=none`) accepted both changed Dart files.
 - Reapplying the patch yields identical file hashes.
 - Successor selection passed five standalone Dart scenarios: administrator
