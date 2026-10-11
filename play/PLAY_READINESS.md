@@ -24,6 +24,8 @@ Durum: İnceleme ve kapalı test hazırlığı. Üretime hazır sürüm beyanı 
 | Çocuk güvenliği | child-safety.html hazır; web deposuna yazma yetkisi olmadığı için henüz yayımlanmadı |
 | Mağaza metinleri | metadata/listings.json: 12 dil taslağı; Kürtçe için Console'un desteklediği yerel ayar ayrıca kontrol edilmeli |
 | Uygulama erişimi | İnceleme için geliştiriciye ait demo hesap ve erişim talimatı gerekli; gerçek kullanıcı parolaları kullanılmamalı |
+| Mağaza ikonu | Mevcut kaynak ikon 220×220; 512×512 yüksek çözünürlüklü mağaza ikonu henüz hazırlanmadı |
+| Tanıtım grafiği | 1024×500 PNG taslağı hazır; ekran görüntüsü yerine geçmez |
 | Ekran görüntüleri | Temiz demo verileriyle gerçek uygulamadan çekilmeli; kişisel test videolarındaki kullanıcılar mağaza görseli olarak kullanılmadı |
 | İçerik derecelendirmesi | Kullanıcı içeriği, mesajlaşma, canlı özellikler ve moderasyon durumuyla tutarlı yanıtlar gerekli; derecelendirme uydurulmadı |
 | Hedef kitle | Gerçek yaş kabul politikasıyla seçilmeli; yaş grubu geliştirici adına varsayılmadı |
@@ -61,6 +63,10 @@ Bu bir kod envanteridir; tamamlanmış Console beyanı değildir. SDK'ların ger
 - Bildirim sesinin sessizlik kaldırılınca gerçek cihazda dönmesi ve iki cihazlı ses/video görüşmesi açık doğrulamalardır.
 - Yeni hikâyenin 24 saat sınırı otomatik testte kontrol edildi; gerçek süre testi tamamlanmış olarak işaretlenmedi. Süresi biten hikâye aktif bölümden çıkar; arşiv/öne çıkanların ayrı saklama işlevi korunur.
 - Hesap silme zamanlanmış temizliğinin gerçek üretim ortamında çalışması doğrulanmadan Play veri silme uygunluğu tamamlandı sayılmaz.
+
+## Console erişim durumu
+
+Play Console tarayıcı açma isteği otomatik onay incelemesi tarafından reddedildi: istek play.google.com adresine olmasına rağmen inceleme hedefi google.play olarak değerlendirdi ve yetki kapsamının belirsiz olduğunu bildirdi. Console girişi, uygulama oluşturma veya paket yükleme yapılmadı. Web deposuna GitHub yazma isteği de entegrasyon yetkisi nedeniyle 403 döndü; çocuk güvenliği sayfası ayrı teslim dosyasıdır.
 
 ## Kapalı test akışı
 
