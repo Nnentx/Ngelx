@@ -343,6 +343,7 @@ jobs:
           python3 tools/apply_build438_delete_feedback.py
           python3 tools/apply_build438_inbox_round.py
           python3 tools/apply_build438_message_round.py
+          python3 tools/apply_build438_former_inbox.py
           dart tools/test_build438_pin_permission.dart
           dart tools/test_build438_group_successor.dart
           dart tools/test_build438_request_confirmation.dart
