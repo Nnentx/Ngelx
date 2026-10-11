@@ -46,6 +46,12 @@ the generated working tree predates this task and is not committed wholesale.
   writes and blocked-pair checks remain. This does not establish the root cause
   of the earlier phone request failures.
 
+- Private shared-profile messages now render a white avatar/name/username card.
+  New sends capture public identity fields after a server permission check;
+  deactivated/blocked profiles and friends-only sharing remain guarded. Old
+  messages fall back to their stored name/avatar placeholder. Tap still opens
+  the existing profile route and its access checks. Phone layout needs testing.
+
 ## Validation so far
 
 - Dart parser/formatter (`--output=none`) accepted both changed Dart files.
@@ -72,7 +78,7 @@ the generated working tree predates this task and is not committed wholesale.
 - Group message pinning visibility investigation (current source already offers
   it to permitted members). Pending deduplication is implemented locally; the
   new emulator cases and coordinated deployment remain pending.
-- Phone regression for founder transfer and follower search; rich shared-profile cards.
+- Phone regression for founder transfer and follower search and shared-profile card layout.
 - Other success/error/warning colors and timeout/error feedback.
 - Email/username/verified-phone login with a secure identifier resolver. Do not
   expose account emails or trust unverified profile phone fields as credentials.
