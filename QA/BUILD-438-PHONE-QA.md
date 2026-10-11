@@ -426,3 +426,19 @@ be recorded. This governs the consolidated package:
   Keep the closed phone round closed; do not request baseline retests.
 - Do not mark a feature strengthened or fixed merely because this requirement
   was recorded. This entry records intent, not an implementation or test result.
+
+
+### User-confirmed closure — 2026-10-11 21:04 Europe/Istanbul
+
+User quoted the complete minor-behavior item and confirmed "Buda tamdir".
+Treat the following as closed by the user's phone confirmation and remove them
+from the active remaining-defects list:
+- Follower search keyboard focus.
+- Group pinned-message jump and video preview.
+- Repeated Leave Group option for an already departed group.
+
+This latest confirmation supersedes the earlier unresolved notes for these
+specific items. Preserve their working behavior. Do not request another phone
+test or claim a new code change from this confirmation. Other remaining issues
+(language completion, profile post deletion, partial archive loading, unified
+All-tab pin ordering and unmute sound recovery) are not closed by this message.
