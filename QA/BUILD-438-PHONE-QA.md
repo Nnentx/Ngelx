@@ -55,7 +55,9 @@ the generated working tree predates this task and is not committed wholesale.
 - All four verification/reset email send paths explicitly set the selected app
   language (Turkish when the app is Turkish), with bounded calls. Previously only
   the forgot-password page set it. Firebase template branding, sender domain,
-  deliverability and custom repeat-password web page still require separate work.
+  deliverability and email action routing still require separate work. The existing
+  web/reset-password.html already asks for the new password twice; its production
+  hosting and Firebase email action URL remain unverified.
 
 ## Validation so far
 
@@ -69,7 +71,10 @@ the generated working tree predates this task and is not committed wholesale.
   full Firestore emulator suite including concurrent requests passed.
 - Six standalone asynchronous confirmation scenarios passed: immediate success,
   already pending, confirmed timeout, unconfirmed timeout, offline confirmation,
-  and original failure propagation. Latest social patch awaits CI rerun.
+  and original failure propagation. Final isolated CI run 38120975605 passed on
+  commit 54d69949adbdcb871ca52ce1903bc64b4ca18467, including social confirmation,
+  profile cards and account email language. All 33 app tests and the Firestore
+  emulator suite passed again; analysis produced no fatal errors.
 - Local Flutter analysis remains unavailable because dependencies are absent;
   a metadata endpoint request rejected by automatic approval was not retried.
 - No new APK, production backend deployment or phone regression yet.
