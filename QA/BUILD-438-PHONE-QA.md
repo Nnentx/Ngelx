@@ -94,10 +94,24 @@ the generated working tree predates this task and is not committed wholesale.
   a metadata endpoint request rejected by automatic approval was not retried.
 - No new APK, production backend deployment or phone regression yet.
 
+- Latest full CI run 38122742003 passed on commit
+  66dfcdf772b4c65ae81232326d75ab9c29fb64fc: all 33 app tests, 19 standalone
+  scenarios (including 8 pin permission cases), analysis with no fatal errors
+  (845 warnings/info) and full Firestore emulator suite passed. Pin tests include
+  concurrent toggles, revoked-admin denial, default permissions and outsider denial.
+- Read-only diagnostic run 38122837410 passed against the active production
+  rule snapshot SHA256 08dcd247ef3fc1087e238594993c53f5dd595ad8ea844cce89899cbaa6036493.
+  Exact atomic social request/notification payloads work; recipient access,
+  duplicate suppression and blocked-pair rollback passed in the emulator.
+  No production account data read/written, rule deployment or cleanup occurred.
+  This narrows the phone issue; actual account data, quotas and delivery remain
+  unverified and the phone failure is not marked fixed.
+
 ## Remaining approved work
 
-- Diagnose follow/friend request failures against deployed rules; preserve atomic
-  request/notification creation and protect blocked pairs.
+- Follow/friend phone regression: active-rule atomic writes passed the isolated
+  diagnostic. Actual-account state, connectivity/quota and notification delivery
+  still need diagnosis; protected blocked pairs remain unchanged.
 - Diagnose server quota errors in delete-for-everyone; do not promise removal of
   a provider quota and do not authorize billing changes.
 - Phone regression for updated group pin visibility and transactions. Pending
