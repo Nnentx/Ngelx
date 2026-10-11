@@ -89,6 +89,14 @@ the generated working tree predates this task and is not committed wholesale.
 
 ## Validation so far
 
+- Server username ownership now uses a shared transaction for index and profile,
+  protects legacy unindexed owners, rejects conflicts, supports same-owner retry
+  and retires previous names after rename. Read-only migration planning reports
+  duplicate/invalid names without selecting an owner. 40 unit cases pass locally;
+  concurrent ownership cases added to emulator CI, result pending. This is not
+  yet routed from registration; direct username writes in existing rules require
+  a coordinated migration/client/rules deployment. No production profile changed.
+
 - Login groundwork now has 16 standalone Dart input cases and 28 server unit
   tests. Server core and Firebase Admin/REST adapters are committed separately
   under server/auth. Tests use fake adapters/upstream responses, not real
