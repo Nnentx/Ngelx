@@ -326,3 +326,17 @@ covered. The screen patch remains idempotent across all Dart parts.
 At the end of 46247.mp4, post deletion reports a permission/connection failure.
 Record this as a new observation; do not reopen the closed baseline phone test
 round or claim that deletion succeeded. The localized error keeps its meaning.
+
+Screen-localization validation CI 38160357378 succeeded on
+713eb4f404bfdcc31a670b86c3bf2006bf4b51f5. Expanded settings/inbox/part-file
+validation CI 38160799580 succeeded on a798e8bf8183df8e13e7e9b5048c2145d59943d4:
+all-language screen/catalog checks, Flutter analysis, 33 app tests and the full
+Firestore emulator suite passed. This validation does not request a phone retest.
+
+`python3 tools/audit_build438_screen_locales.py` inventories remaining direct
+Text literals after generation. Its current lower-bound audit still finds 779
+occurrences with Turkish-specific characters across main and part files.
+Interpolated/helper-fed/plain-Latin Turkish strings are not included in that
+count. Full app localization remains unfinished. No updated APK covering the
+expanded settings patch has been delivered; the candidate workflow started on
+713eb4f is an earlier intermediate screen-localization revision.
