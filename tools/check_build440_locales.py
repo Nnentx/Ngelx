@@ -29,3 +29,5 @@ studio=Path('app/lib/live_broadcast_studio.dart').read_text()
 assert '_ngelx438Ui("Canlı yayın hazırla")' in studio
 assert '_ngelx438Ui("Yayın başlığı yaz")' in studio
 print('Build440 inbox, Explore, settings and live-studio display integration passed.')
+
+assert s.count('Text(_ngelx438Ui(ad),maxLines:1')==1, 'User names must not be localized'

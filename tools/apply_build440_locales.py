@@ -1,6 +1,6 @@
 import json,re
 from pathlib import Path
-from apply_build438_screen_locales import localize,literal
+from apply_build438_screen_locales import localize,literal,tokens
 langs='tr en de ar ru ku zh hi fr es it pt'.split()
 rows=[line.split('|') for line in Path('tools/build440_locales.txt').read_text().splitlines() if line]
 assert all(len(row)==12 and all(row) for row in rows)
@@ -26,7 +26,21 @@ for name in ['etiket','follow?\'Takip istekleri\':\'Arkadaşlık istekleri\'']:
 # Wrap only known presentation helper variables; never user names, posts or messages.
 for anchor in ['Widget _kesfetSekmesi(', 'Widget _aramaKontrol(', 'Widget _efektChip(', 'Widget sekme(']:
  if anchor in s:
-  a=s.index(anchor);matches=list(re.finditer(r'\n  (?:Widget|Future|List|void|String|bool|int) ',s[a+len(anchor):]));b=a+len(anchor)+matches[0].start() if matches else len(s)
+  a=s.index(anchor)
+  ts=tokens(s[a:]);pairs={};stack=[]
+  for i,(token,_,_) in enumerate(ts):
+   if token in ('(','[','{'):stack.append(i)
+   elif token in (')',']','}'):
+    if stack:opened=stack.pop();pairs[opened]=i
+  formal=next(i for i,t in enumerate(ts) if t[0]=='(')
+  j=pairs[formal]+1
+  if ts[j][0]=='{':b=a+ts[pairs[j]][2]
+  else:
+   assert ts[j][0]=='=' and ts[j+1][0]=='>'
+   j+=2
+   while ts[j][0]!=';':
+    j=pairs[j]+1 if ts[j][0] in ('(','[','{') else j+1
+   b=a+ts[j][2]
   if b>0:
    part=s[a:b]
    for var in (['ad'] if anchor=='Widget sekme(' else ['etiket','yazi','label']):
