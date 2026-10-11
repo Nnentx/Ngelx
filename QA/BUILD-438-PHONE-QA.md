@@ -93,7 +93,10 @@ the generated working tree predates this task and is not committed wholesale.
   protects legacy unindexed owners, rejects conflicts, supports same-owner retry
   and retires previous names after rename. Read-only migration planning reports
   duplicate/invalid names without selecting an owner. 40 unit cases pass locally;
-  concurrent ownership cases added to emulator CI, result pending. This is not
+  emulator run 38137418637 passed on commit
+  53fa7d4baa326fc843f2aa0c4af9a7271100cb9d: 10 concurrent claimants produce
+  one owner; retry, atomic rename, retired-name protection, legacy owner
+  protection and duplicate rejection passed. This is not
   yet routed from registration; direct username writes in existing rules require
   a coordinated migration/client/rules deployment. No production profile changed.
 
