@@ -130,6 +130,9 @@ def apply():
     if 'return changed;' not in part:
         part=part.replace('    }).timeout(const Duration(seconds:12));','      return true;\n    }).timeout(const Duration(seconds:12));')
         part=part.replace('    if(onay){await ngelxClearGroupArchive(uid,chatId);await ngelxGrupDavetMetaSenkronla(chat);}', '    if(changed&&onay){await ngelxClearGroupArchive(uid,chatId);await ngelxGrupDavetMetaSenkronla(chat); }\n    return changed;')
+    if 'final eventRef438=' not in part:
+        part=part.replace("    final chat=FirebaseFirestore.instance.collection('chats').doc(chatId);", "    final chat=FirebaseFirestore.instance.collection('chats').doc(chatId);\n    final eventRef438=chat.collection('messages').doc();")
+        part=part.replace("        final generation=request.data()?['createdAt'];\n        final suffix=generation is Timestamp?generation.microsecondsSinceEpoch.toString():'legacy';\n        if(!members.contains(uid))tx.set(chat.collection('messages').doc('join_decision438_'+d.id+'_'+suffix),{", "        if(!members.contains(uid))tx.set(eventRef438,{")
     source=source[:a]+part+source[b:]
     source=source.replace('    await kararHizli(chatId,d,onay);', "    final changed=await kararHizli(chatId,d,onay);\n    if(!changed){if(context.mounted)ngelxDurumMesaji(context,'İstek zaten işlenmiş.',tip:'uyari');return;}")
     path.write_text(source)
