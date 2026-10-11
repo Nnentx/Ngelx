@@ -53,6 +53,24 @@ Future<bool> ngelx438SetGroupPin(
 '''
     p.write_text(s)
 
+
+# The transaction already reads current roles; remove the old unbounded pre-read.
+p=Path('app/lib/main.dart');s=p.read_text()
+old="""                          final chat=await FirebaseFirestore.instance.collection('chats').doc(chatId).get();
+                          final data=chat.data()??<String,dynamic>{};
+                          final me=FirebaseAuth.instance.currentUser?.uid;
+                          final admins=List<String>.from(data['admins']??const[]);
+                          final owner=(data['createdBy']??'').toString();
+                          final onlyAdmins=data['onlyAdminsCanPin']!=false;
+                          if(me==null||(onlyAdmins&&!admins.contains(me)&&owner!=me)){
+                            if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bu mesajı sabitlemeden kaldırma yetkin yok.')));
+                            return;
+                          }
+"""
+if old in s:
+    assert s.count(old)==1
+    p.write_text(s.replace(old,''))
+
 p=Path('tools/firestore_rules_test.mjs');s=p.read_text()
 marker='  // Build438 transactional pin coverage.'
 if marker in s:
