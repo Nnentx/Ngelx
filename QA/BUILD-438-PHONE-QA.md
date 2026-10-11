@@ -302,7 +302,7 @@ story tab and post-menu labels. This is localization evidence only; the closed
 phone QA round remains closed.
 
 `apply_build438_screen_locales.py`, applied after `apply_build438_locales.py`,
-connects 235 presentation literals to the existing catalog or 46 additional
+connects 300 presentation literals to the existing catalog or 80 additional
 12-language screen rows (including two spelling/capitalization aliases). It
 localizes Text data and selected display-only properties/helpers; storage values,
 Firestore field names, routes and user content are not rewritten. Constant
@@ -317,3 +317,12 @@ are required before marking this patch validated. The previous candidate APK
 and its checksum are unchanged. Additional uncatalogued screens, interpolated
 status text and inline `lt` strings outside this catalog remain localization work;
 this is not a claim of complete app-wide translation or a new delivered APK.
+
+Settings headings/descriptions and translated settings search are included;
+Turkish internal section/filter IDs stay unchanged. Inbox tabs localize at render
+time. Matching catalog-backed display literals in main.dart part files are also
+covered. The screen patch remains idempotent across all Dart parts.
+
+At the end of 46247.mp4, post deletion reports a permission/connection failure.
+Record this as a new observation; do not reopen the closed baseline phone test
+round or claim that deletion succeeded. The localized error keeps its meaning.

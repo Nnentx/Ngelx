@@ -18,13 +18,19 @@ assert "const Padding" not in changed and 'const [' not in changed
 assert "Text('${user.name}')" in changed
 assert localize(changed,{'Arkadaşlar','Sil','Kaydet'})==(changed,0)
 source=Path('app/lib/main.dart').read_text()
-before=hashlib.sha256(source.encode()).digest()
+before={str(p):hashlib.sha256(p.read_bytes()).digest() for p in Path('app/lib').glob('*.dart')}
 apply()
-assert hashlib.sha256(Path('app/lib/main.dart').read_bytes()).digest()==before
+assert {str(p):hashlib.sha256(p.read_bytes()).digest() for p in Path('app/lib').glob('*.dart')}==before
 assert 'const _NgelXRenkliBaslik()' not in source
 assert "_oneCikan(Icons.add,_ngelx438Ui(\"Yeni\")" in source
 assert "_ProfilSekme(_ngelx438Ui(\"Hikayeler\")" in source
 assert "Text(_ngelx438Ui(\"Öne çıkan hikâyelerin burada görünecek\")" in source
+settings=Path('app/lib/build258_settings.dart').read_text()
+assert "bolum:'HESAP',baslik:'Hesap ve profil bilgileri'" in settings
+assert "title:Text(_ngelx438Ui(e.baslik)" in settings
+assert "${_ngelx438Ui(e.aciklama)} ${_ngelx438Ui(e.bolum)}').contains(q)" in settings
+assert "onTap:()=>setState(()=>filtre=ad)" in source
+assert "Text(_ngelx438Ui(ad),maxLines:1," in source
 start=source.index('const dilAdlari =')
 end=source.index('String tercihBasligi',start)
 test='''
@@ -42,6 +48,8 @@ void main(){
   uygulamaDili.value='fr';
   assert(lt('Paylaş','Share')=='Partager');
   assert(lt('Bağlan','Connect')=='Se connecter');
+  assert(_ngelx438Ui('Ayarlarda ara')=='Rechercher dans les paramètres');
+  assert(_ngelx438Ui('Kapak Fotoğrafını\\nDeğiştir')=='Changer la photo\\nde couverture');
   uygulamaDili.value='ku';
   assert(_ngelx438Ui('Hikayeler')=='Çîrok');
   assert(_ngelx438Ui('Yeni')=='Nû');

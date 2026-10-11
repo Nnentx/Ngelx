@@ -86,7 +86,7 @@ def localize(source, mapping):
                 if ts[j][0] in ('(','[','{'):
                     j=pairs[j]+1; continue
                 display.add(j); j+=1
-        if token in {'hintText','labelText','tooltip','semanticLabel'} and ts[i+1][0]==':':
+        if token in {'hintText','labelText','tooltip','semanticLabel','yazi'} and ts[i+1][0]==':':
             display.add(i+2)
         # These helper arguments are presentation text, not database values.
         if token in {'_ProfilSekme','_oneCikan'} and ts[i+1][0]=='(':
@@ -117,6 +117,7 @@ def localize(source, mapping):
 
 def apply():
     rows=list(csv.DictReader(Path('tools/build438_screen_locales.tsv').open(),delimiter='\t'))
+    rows=[{k:v.replace(r'\n','\n') for k,v in row.items()} for row in rows]
     assert rows and all(set(row)==LANGUAGES and all(row.values()) for row in rows)
     assert len({row['tr'] for row in rows})==len(rows)
     path=Path('app/lib/main.dart'); source=path.read_text()
@@ -155,7 +156,26 @@ def apply():
   final screen=_ngelx438ScreenTranslations[tr]?[uygulamaDili.value];
   if(screen!=null)return screen;
 ''',1)
+    # Inbox tab IDs continue to control filters; translate their label only.
+    x=body.index('    Widget sekme(String ad,int sayi){')
+    y=body.index('\n    Widget ',x+20)
+    block=body[x:y].replace('Text(ad,maxLines:1,','Text(_ngelx438Ui(ad),maxLines:1,')
+    body=body[:x]+block+body[y:]
     path.write_text(head+extra+body)
+    for part in Path('app/lib').glob('*.dart'):
+        if not part.read_text().startswith("part of 'main.dart';"): continue
+        text=part.read_text()
+        if part.name=='build258_settings.dart':
+            text=text.replace('Text(x,style:', 'Text(_ngelx438Ui(x),style:')
+            text=text.replace('Text(e.baslik,style:', 'Text(_ngelx438Ui(e.baslik),style:')
+            text=text.replace("aramaSonucu?'${e.bolum} • ${e.aciklama}':e.aciklama,",
+                              "aramaSonucu?'${_ngelx438Ui(e.bolum)} • ${_ngelx438Ui(e.aciklama)}':_ngelx438Ui(e.aciklama),")
+            text=text.replace("${e.anahtarlar} ${e.bolum}').contains(q)",
+                              "${e.anahtarlar} ${e.bolum} ${_ngelx438Ui(e.baslik)} ${_ngelx438Ui(e.aciklama)} ${_ngelx438Ui(e.bolum)}').contains(q)")
+            text=text.replace('title:Text(_baslik)', 'title:Text(_ngelx438Ui(_baslik))')
+        text,part_count=localize(text,mapping)
+        part.write_text(text)
+        count+=part_count
     print(f'Localized {count} presentation literals; {len(rows)} additional complete 12-language rows.')
 
 
