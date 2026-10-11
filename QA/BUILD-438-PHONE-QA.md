@@ -67,6 +67,13 @@ the generated working tree predates this task and is not committed wholesale.
   Both menu and pinned-message page use the same transaction. Success uses green
   feedback and failures preserve permission/quota/uncertain-result information.
 
+- Delete-for-everyone keeps the existing durable retry queue and exact media
+  cleanup manifest required by rules. A second foreground attempt now reports
+  that deletion is already running instead of falsely showing success. A session
+  switch aborts that attempt. Successful deletions use green feedback; provider
+  quota failures show an amber explanation that the pending request is retained
+  on this device. Permission/other failures use red. This does not change quotas.
+
 ## Validation so far
 
 - Dart parser/formatter (`--output=none`) accepted both changed Dart files.
