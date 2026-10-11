@@ -19,9 +19,18 @@ def apply():
         "_grupSatir(Icons.push_pin_outlined,lt('Sabitlenen mesajlar','Pinned messages'),lt('Önemli mesajlara hızlı ulaş','Quickly access important messages'),()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>SabitlenenGrupMesajlariPage(chatId:widget.chatId))))",
         "_grupSatir(Icons.push_pin_outlined,lt('Sabitlenen mesajlar','Pinned messages'),lt('Önemli mesajlara hızlı ulaş','Quickly access important messages'),()async{final result=await Navigator.push<String>(context,MaterialPageRoute(builder:(_)=>SabitlenenGrupMesajlariPage(chatId:widget.chatId)));if(context.mounted&&result!=null)Navigator.pop(context,result);})",
     )
+    replace(
+        "stream:chatRef.collection('messages').where('pinned',isEqualTo:true).limit(1).snapshots(),",
+        "stream:chatRef.collection('messages').where('pinned',isEqualTo:true).limit(50).snapshots(),",
+    )
+    replace(
+        'final pins=pinSnap.data?.docs??[];',
+        "final pins=(pinSnap.data?.docs??[]).where((d)=>d.data()['deletedForEveryone']!=true&&!ngelx437MessageExpired(d.data()['createdAt'],DateTime.now())).toList()..sort((a,b)=>a.id.compareTo(b.id));",
+    )
     start=source.index('class SabitlenenGrupMesajlariPage ')
     end=source.index('\nclass ',start+1)
     block=source[start:end]
+    block=block.replace('final docs=snap.data?.docs??[];',"if(snap.hasError)return const Center(child:Text('Sabitlenen mesajlar yüklenemedi.'));\n          final docs=(snap.data?.docs??[]).where((d)=>d.data()['deletedForEveryone']!=true&&!ngelx437MessageExpired(d.data()['createdAt'],DateTime.now())).toList()..sort((a,b)=>a.id.compareTo(b.id));")
     if 'Navigator.pop(context,d.id)' not in block:
         block=block.replace('return NgelXPremiumCard(',"return GestureDetector(\n                  behavior:HitTestBehavior.opaque,\n                  onTap:()=>Navigator.pop(context,d.id),\n                  child:NgelXPremiumCard(",1)
         block=block.replace('''                  ]),
