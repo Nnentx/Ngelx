@@ -24,7 +24,7 @@ start=s.index('String tercihBasligi');body,count=localize(s[start:],known);s=s[:
 for name in ['etiket','follow?\'Takip istekleri\':\'Arkadaşlık istekleri\'']:
  pass
 # Wrap only known presentation helper variables; never user names, posts or messages.
-for anchor in ['Widget _kesfetSekmesi(', 'Widget _aramaKontrol(', 'Widget sekme(']:
+for anchor in ['Widget _kesfetSekmesi(', 'Widget _aramaKontrol(', 'Widget _efektChip(', 'Widget sekme(']:
  if anchor in s:
   a=s.index(anchor);matches=list(re.finditer(r'\n  (?:Widget|Future|List|void|String|bool|int) ',s[a+len(anchor):]));b=a+len(anchor)+matches[0].start() if matches else len(s)
   if b>0:
@@ -33,7 +33,9 @@ for anchor in ['Widget _kesfetSekmesi(', 'Widget _aramaKontrol(', 'Widget sekme(
     part=part.replace('Text('+var+',','Text(_ngelx438Ui('+var+'),')
    s=s[:a]+part+s[b:]
 a=s.index("if(tur=='call'){");b=s.find("if(tur==",a+20);part=s[a:b].replace('Text(baslik,','Text(_ngelx438Ui(baslik),');s=s[:a]+part+s[b:]
-s+='\n// Build440 locales\nconst _ngelx440Translations=<String,Map<String,String>>'+literal(data)+';\n'
+s=s.replace("Text('$count bekleyen istek')","Text(_ngelx440Format('{count} bekleyen istek',{'count':count}))")
+s=s.replace("Text('$mesajIstek bekleyen mesaj isteği')","Text(_ngelx440Format('{count} bekleyen mesaj isteği',{'count':mesajIstek}))")
+s+='\n// Build440 locales\nconst _ngelx440Translations=<String,Map<String,String>>'+literal(data)+';\nString _ngelx440Format(String key,Map<String,Object> values){var text=_ngelx438Ui(key);for(final entry in values.entries){text=text.replaceAll(\"{${entry.key}}\",entry.value.toString());}return text;}\n'
 p.write_text(s)
 counts={'main.dart':count}
 for p in Path('app/lib').glob('*.dart'):
@@ -43,6 +45,6 @@ for p in Path('app/lib').glob('*.dart'):
   for var in ['title','sub','widget.bosMetin','widget.buton']:
    source=source.replace('Text('+var+',','Text(_ngelx438Ui('+var+'),').replace('Text('+var+')','Text(_ngelx438Ui('+var+'))')
  if p.name=='live_broadcast_studio.dart':
-  source=source.replace('Text(gizlilik,','Text(_ngelx438Ui(gizlilik),').replace('Text(etiket,','Text(_ngelx438Ui(etiket),').replace('child:Text(e,','child:Text(_ngelx438Ui(e),')
+  source=source.replace('labelText:etiket,','labelText:_ngelx438Ui(etiket),').replace('Text(gizlilik,','Text(_ngelx438Ui(gizlilik),').replace('Text(etiket,','Text(_ngelx438Ui(etiket),').replace('child:Text(e,','child:Text(_ngelx438Ui(e),')
  p.write_text(source);counts[p.name]=n
 print('Build440: localized presentation literals across',counts)

@@ -23,7 +23,7 @@ void main(){
   expect(find.text('story'),findsOneWidget);
   now=now.add(const Duration(seconds:1));await tester.pump(const Duration(milliseconds:1010));await tester.pump();
   expect(find.text('empty'),findsOneWidget);
-  await tester.pumpWidget(const SizedBox());await stream.close();await tester.pump(const Duration(hours:1));
+  await tester.pumpWidget(const SizedBox());unawaited(stream.close());await tester.pump(const Duration(hours:1));
  });
  test('new pin wins over older pins and newer unpinned messages after reload',(){
   final pins={'rojin','selma','group'},times={'rojin':1,'group':2,'selma':3};

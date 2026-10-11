@@ -35,7 +35,7 @@ part=part[:start]+'''            await FirebaseFirestore.instance.runTransaction
               if(latest.data()?['callRoomName']!=widget.roomName)return;
               tx.set(widget.aramaRef,{'callStatus':finalDurum,'callVideo':widget.goruntulu,'callParticipants':FieldValue.arrayRemove([me]),'callEndedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
               final id=(latest.data()?['callMessageId']??'').toString();
-              if(id.isNotEmpty)tx.set(widget.aramaRef.collection('messages').doc(id),{'callStatus':finalDurum,'callVideo':widget.goruntulu,'callEndedAt':FieldValue.serverTimestamp(),'durationSeconds':sureSaniye},SetOptions(merge:true));
+              if(id.isNotEmpty&&latest.data()?['callStartedBy']==me)tx.set(widget.aramaRef.collection('messages').doc(id),{'callStatus':finalDurum,'callVideo':widget.goruntulu,'callEndedAt':FieldValue.serverTimestamp(),'durationSeconds':sureSaniye},SetOptions(merge:true));
             }).timeout(const Duration(seconds:10));
 '''+part[end:]
 part=part.replace('final d=await widget.aramaRef.get();','final d=await widget.aramaRef.get().timeout(const Duration(seconds:8));')
@@ -43,7 +43,7 @@ part=part.replace('}catch(_){}\n\n    await ngelxArkaPlanAramayiTemizle',"}catch
 s=s[:a]+part+s[b:]
 # Heartbeat while connected, stop with existing duration timer on disposal.
 replace('if(mounted)setState((){});\n    });\n  }\n\n  Future<void> _izinleriIste()', "if(mounted)setState((){});\n      if(DateTime.now().second%30==0&&!bitiyor)unawaited(FirebaseFirestore.instance.runTransaction((tx)async{final d=await tx.get(widget.aramaRef);if(d.data()?['callRoomName']==widget.roomName&&const {'ringing','active'}.contains(d.data()?['callStatus']))tx.set(widget.aramaRef,{'callHeartbeatAt':FieldValue.serverTimestamp()},SetOptions(merge:true));}).timeout(const Duration(seconds:8)).catchError((_){ }));\n    });\n  }\n\n  Future<void> _izinleriIste()")
-s=s.replace("final goruntulu=v['callVideo']==true;\n      final durum=","final goruntulu=v['callVideo']==true||(v['text']??'').toString().startsWith('Görüntülü');\n      final durum=")
+s=s.replace("final goruntulu=v['callVideo']==true;\n      final durum=(v['callStatus']??'ringing').toString();", "final sameCall=grupVerisi?['callRoomName']==v['callRoomName']&&v['callRoomName']!=null;\n      final goruntulu=(sameCall?grupVerisi?['callVideo']:v['callVideo'])==true||(v['text']??'').toString().startsWith('Görüntülü');\n      final storedStatus=(v['callStatus']??'ringing').toString();\n      final durum=sameCall?(grupVerisi?['callStatus']??storedStatus).toString():const {'ringing','active'}.contains(storedStatus)?'ended':storedStatus;")
 s+='\n// Build440 device QA\n';p.write_text(s)
 Path('app/lib/build440_behavior.dart').write_text(Path('tools/build440_behavior.dart').read_text())
 print('Build440 device fixes applied')

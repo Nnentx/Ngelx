@@ -1,3 +1,4 @@
+# Device QA revision: member exit and extended screen translations
 name: NgelX BUILD 440 CANDIDATE APK
 
 on:
@@ -380,7 +381,7 @@ jobs:
           python3 tools/check_build440_locales.py
           cp tools/test_build440_behavior.dart app/test/build440_behavior_test.dart
           cd app
-          flutter test test/build440_behavior_test.dart
+          timeout 180s flutter test --reporter expanded --timeout 60s test/build440_behavior_test.dart
 
       - name: Flutter analiz
         shell: bash
