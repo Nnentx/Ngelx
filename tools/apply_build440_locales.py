@@ -1,0 +1,48 @@
+import json,re
+from pathlib import Path
+from apply_build438_screen_locales import localize,literal
+langs='tr en de ar ru ku zh hi fr es it pt'.split()
+rows=[line.split('|') for line in Path('tools/build440_locales.txt').read_text().splitlines() if line]
+assert all(len(row)==12 and all(row) for row in rows)
+data={row[0]:dict(zip(langs[1:],row[1:])) for row in rows}
+# Case variants are visual labels, not stored filters or enum values.
+for row in rows:
+ for name in [row[0].lower(),row[0].upper()]:
+  if name not in data:data[name]=data[row[0]]
+data['Görüntülü grup araması']=data['Görüntülü Grup Araması']
+data['NgelX Görüntü Stüdyosu']={k:'NgelX '+v for k,v in data['Görüntü Stüdyosu'].items()}
+p=Path('app/lib/main.dart');s=p.read_text()
+if '// Build440 locales' in s:raise SystemExit('Build440 locales already applied')
+a=s.index('const ceviriler =');b=s.index('String t(String',a)
+known=set(re.findall(r"'tr'\s*:\s*'((?:\\.|[^'\\])*)'",s[a:b]));known={v.replace("\\'","'").replace('\\n','\n') for v in known}
+known.update(data)
+known.update(json.loads(s[s.index('const _ngelx438ScreenTranslations'):].split('>>',1)[1].split(';',1)[0]))
+s=s.replace("final newer=_ngelx439Translations[text]?[language];","final device=_ngelx440Translations[text]?[language];\n  if(device!=null)return device;\n  final newer=_ngelx439Translations[text]?[language];")
+s=s.replace("// Build438 extra inline translations","final device=_ngelx440Translations[tr]?[uygulamaDili.value];\n  if(device!=null)return device;\n  // Build438 extra inline translations",1)
+start=s.index('String tercihBasligi');body,count=localize(s[start:],known);s=s[:start]+body
+# Helpers receive untranslated labels because their values also select routes/filters.
+for name in ['etiket','follow?\'Takip istekleri\':\'Arkadaşlık istekleri\'']:
+ pass
+# Wrap only known presentation helper variables; never user names, posts or messages.
+for anchor in ['Widget _kesfetSekmesi(', 'Widget _aramaKontrol(', 'Widget sekme(']:
+ if anchor in s:
+  a=s.index(anchor);matches=list(re.finditer(r'\n  (?:Widget|Future|List|void|String|bool|int) ',s[a+len(anchor):]));b=a+len(anchor)+matches[0].start() if matches else len(s)
+  if b>0:
+   part=s[a:b]
+   for var in (['ad'] if anchor=='Widget sekme(' else ['etiket','yazi','label']):
+    part=part.replace('Text('+var+',','Text(_ngelx438Ui('+var+'),')
+   s=s[:a]+part+s[b:]
+a=s.index("if(tur=='call'){");b=s.find("if(tur==",a+20);part=s[a:b].replace('Text(baslik,','Text(_ngelx438Ui(baslik),');s=s[:a]+part+s[b:]
+s+='\n// Build440 locales\nconst _ngelx440Translations=<String,Map<String,String>>'+literal(data)+';\n'
+p.write_text(s)
+counts={'main.dart':count}
+for p in Path('app/lib').glob('*.dart'):
+ if p.name=='main.dart' or not p.read_text().startswith("part of 'main.dart';"):continue
+ source,n=localize(p.read_text(),known)
+ if p.name=='build258_settings.dart':
+  for var in ['title','sub','widget.bosMetin','widget.buton']:
+   source=source.replace('Text('+var+',','Text(_ngelx438Ui('+var+'),').replace('Text('+var+')','Text(_ngelx438Ui('+var+'))')
+ if p.name=='live_broadcast_studio.dart':
+  source=source.replace('Text(gizlilik,','Text(_ngelx438Ui(gizlilik),').replace('Text(etiket,','Text(_ngelx438Ui(etiket),').replace('child:Text(e,','child:Text(_ngelx438Ui(e),')
+ p.write_text(source);counts[p.name]=n
+print('Build440: localized presentation literals across',counts)
