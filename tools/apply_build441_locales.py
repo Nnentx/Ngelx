@@ -18,6 +18,7 @@ for p in Path('app/lib').glob('*.dart'):
  src,n=localize(p.read_text(),known)
  if p.name=='build258_settings.dart':
   src=src.replace('title:Text(a,','title:Text(_ngelx438Ui(a),').replace('subtitle:Text(s)','subtitle:Text(_ngelx438Ui(s))').replace('title:Text(e.$2)','title:Text(_ngelx438Ui(e.$2))').replace('Text(widget.baslik)','Text(_ngelx438Ui(widget.baslik))')
+  src=src.replace("bottom:const TabBar(","bottom:TabBar(").replace("Tab(text:'Engellenen')","Tab(text:_ngelx438Ui('Engellenen'))").replace("Tab(text:'Kısıtlanan')","Tab(text:_ngelx438Ui('Kısıtlanan'))")
   src=src.replace('^[a-z0-9_.]{3,30}$','^[a-z0-9_.]{3,20}$').replace('controller:kullanici,maxLength:30','controller:kullanici,maxLength:20')
  p.write_text(src)
 print('Build441 added',len(rows),'complete twelve-language rows; translated presentation only')

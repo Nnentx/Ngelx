@@ -53,7 +53,7 @@ Bu bir kod envanteridir; tamamlanmış Console beyanı değildir. SDK'ların ger
 
 - Arşiv: erişilemeyen eski kimlikler kişinin kendi arşiv kaydı olarak gösterilir; kaldırma yalnızca kendi kullanıcı tercihi ve arşiv kaydını değiştirir. Ağ hatalarında yeniden deneme korunur.
 - Öne çıkan: ownerId + highlighted sorgusu yeni hikâyeyi eski 100 normal hikâyenin sınırından kurtarır. Başarı mesajı sunucu teyidinden sonra gösterilir.
-- Diller: 88 yeni satırın tümü 12 dilde. Ayar gösterim yardımcıları çeviriye bağlandı. `tools/build441_untranslated_inventory.tsv` hâlâ kapsamlı kalan metinler içerir; tüm ekranlar bitmiş değildir.
+- Diller: 119 yeni satırın tümü 12 dilde. Ayar gösterim yardımcıları çeviriye bağlandı. CI çıktısındaki `build441-untranslated.tsv` hâlâ kapsamlı kalan metinler içerir; tüm ekranlar bitmiş değildir.
 - Kullanıcı adı: eski ayar ekranındaki 30 karakter sınırı da 3–20 karaktere indirildi.
 - Çocuk güvenliği: uygulama rapor menüsünde kategori eklendi. Sunucu moderasyon kuyruğunu izleyen kişi, kaldırma ve bölgesel bildirim operasyonu ayrıca kurulmalı/doğrulanmalı.
 - Görüşmeler: Play build test token sunucusuna dönemez. Sunucu token çekirdeği 11 testle doğrulandı; gerçek Firebase Admin/oda yetkilendirme/rate limiter adaptörleri ve HTTPS dağıtımı henüz kurulmadı.
