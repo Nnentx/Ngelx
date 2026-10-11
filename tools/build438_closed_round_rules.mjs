@@ -23,17 +23,22 @@
   console.log('Closed438: checking administrator request update');
   await assertSucceeds(updateDoc(doc(approvalClosed438,'chats/closed438/joinRequests/closed438target'),{status:'pending'}));
   console.log('Closed438: checking atomic approval race');
-  const approveClosed438=()=>runTransaction(approvalClosed438,async tx=>{
+  const approvalEvents438=[];
+  const approveClosed438=()=>{
+    const event=doc(collection(approvalClosed438,'chats/closed438/messages'));
+    approvalEvents438.push(event);
+    return runTransaction(approvalClosed438,async tx=>{
     const request=doc(approvalClosed438,'chats/closed438/joinRequests/closed438target');
     const chat=doc(approvalClosed438,'chats/closed438');
     const state=await tx.get(request);await tx.get(chat);
     if(state.data().status!=='pending')return false;
     tx.update(request,{status:'accepted',decidedBy:'closed438owner',decidedAt:serverTimestamp()});
     tx.update(chat,{members:arrayUnion('closed438target'),lastMessage:'member added',updatedAt:serverTimestamp()});
-    tx.set(doc(approvalClosed438,'chats/closed438/messages/join_decision438_target'),{senderId:'closed438owner',type:'system',systemAction:'member_added',actorUid:'closed438owner',targetUids:['closed438target'],text:'member added',createdAt:serverTimestamp()});
+    tx.set(event,{senderId:'closed438owner',type:'system',systemAction:'member_added',actorUid:'closed438owner',targetUids:['closed438target'],text:'member added',createdAt:serverTimestamp()});
     return true;
-  });
+  });};
   const closedRace438=await Promise.all([approveClosed438(),approveClosed438()]);
   assert.equal(closedRace438.filter(Boolean).length,1);
   assert.equal((await getDoc(doc(approvalClosed438,'chats/closed438/joinRequests/closed438target'))).data().status,'accepted');
-  await assertSucceeds(getDoc(doc(approvalClosed438,'chats/closed438/messages/join_decision438_target')));
+  const eventResults438=await Promise.all(approvalEvents438.map(r=>getDoc(r)));
+  assert.equal(eventResults438.filter(d=>d.exists()).length,1);
