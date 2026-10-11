@@ -1,7 +1,7 @@
 # Build438 identifier login — server core, not deployed
 
 Run `node --test server/auth/test/*.test.mjs`.
-The 28 dependency-injected tests do not call production Auth or sign anyone in.
+The 36 dependency-injected tests do not call production Auth or sign anyone in.
 `firebase-adapters.mjs` implements the Admin Auth/App Check/private username
 lookup interfaces and the bounded Firebase REST password verifier. The REST
 endpoint is fixed server-side; redirect following is disabled. The 8-second
@@ -16,8 +16,15 @@ The existing email login is unchanged.
 Before enabling any endpoint, implement and integration-test all adapters:
 
 - Configure Admin Auth, Firestore and allowed App Check app IDs on the server.
-- Enforce distributed network and hashed identifier rate limits with expiry;
-  neither raw passwords nor account identifiers belong in logs.
+- Configure the implemented Firestore transaction limiter with a server secret
+  of at least 32 bytes and a trusted deployment remote address. Defaults are 5
+  attempts per identifier and 30 per IP in a 60-second window. All attempts count,
+  including successful ones. Missing counter storage fails closed. Records use
+  domain-separated HMAC keys and contain no raw identifiers or IPs. Expiry is
+  enforced by timestamps; TTL cleanup is optional and not enabled here. IPv6
+  spelling and IPv4-mapped IPv6 are normalized. No raw X-Forwarded-For is trusted.
+  CI also runs a real local Firestore emulator concurrency test with a demo
+  project, denied client rules and no production credentials.
 - Resolve username through a server-owned unique index. Existing usernameLower
   queries alone do not enforce uniqueness. Migration must reject conflicts and
   coordinate registration/rename ownership transactions with server permissions.
