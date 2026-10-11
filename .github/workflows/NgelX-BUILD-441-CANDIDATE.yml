@@ -391,6 +391,7 @@ jobs:
           python3 tools/apply_build441_safety_report.py
           python3 tools/apply_build441_locales.py
           python3 tools/check_build441.py
+          python3 tools/audit_build441_locales.py build441-untranslated.tsv
 
       - name: Flutter analiz
         shell: bash
@@ -416,6 +417,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '24'
+
+      - name: Production token authorization tests
+        run: node --test server/livekit441/token-endpoint.test.mjs
 
       - name: Java 21 Firebase emulator ortami
         uses: actions/setup-java@v4
@@ -485,6 +489,7 @@ jobs:
             app/build/app/outputs/flutter-apk/NgelX-1.0.216-Build-441-CANDIDATE.apk
             app/build/app/outputs/flutter-apk/NgelX-1.0.216-Build-441-CANDIDATE.apk.sha256
             app/build/app/outputs/bundle/release/NgelX-1.0.216-Build-441-PLAY-PREPARATION.aab
+            build441-untranslated.tsv
             firestore.rules
           if-no-files-found: error
           retention-days: 14
