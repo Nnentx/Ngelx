@@ -74,6 +74,19 @@ the generated working tree predates this task and is not committed wholesale.
   quota failures show an amber explanation that the pending request is retained
   on this device. Permission/other failures use red. This does not change quotas.
 
+- Added authenticated external account deletion and support forms. Deletion uses
+  the existing user + account_deletion_requests records in one transaction,
+  preserves an existing scheduled deadline, and supports a new request after
+  cancellation. Support uses existing support_requests and returns a request ID.
+  Passwords are not stored in request payloads; sign-in is kept in memory. These
+  web forms currently require an email/password account session; no unauthenticated
+  support channel or provider/SMS sign-in is claimed.
+- Both forms use white styling, explicit deletion consent, colored status messages,
+  disabled submission when the SDK fails, and no success before server confirmation.
+- Actual website source is Nnentx/ngelx-web (CNAME ngelxsocial.com), separate from
+  app repository. All six publish writes returned integration FORBIDDEN/403; no
+  live website files changed. Repository access must be extended to publish.
+
 ## Validation so far
 
 - Dart parser/formatter (`--output=none`) accepted both changed Dart files.
@@ -107,6 +120,14 @@ the generated working tree predates this task and is not committed wholesale.
   This narrows the phone issue; actual account data, quotas and delivery remain
   unverified and the phone failure is not marked fixed.
 
+- Web validation run 38128327785 passed on commit
+  fe7b191f4c754b5a613b5e2f9d8583ab4014ddae, using the active production rule
+  snapshot in an emulator: atomic deletion, preserved repeated-request deadline,
+  cancelled requeue, concurrent requests, owner-only writes and support privacy.
+- Browser tests passed at 360px and 1280px with fake SDK modules: no horizontal
+  overflow, mandatory deletion consent, cleared password input, success states
+  and disabled form on SDK load failure. These were not live-account browser tests.
+
 ## Remaining approved work
 
 - Follow/friend phone regression: active-rule atomic writes passed the isolated
@@ -122,8 +143,9 @@ the generated working tree predates this task and is not committed wholesale.
   expose account emails or trust unverified profile phone fields as credentials.
 - Turkish branded verification/reset emails and repeat-password reset page;
   investigate deliverability without promising spam elimination.
-- Actual external deletion request/support channel and correct website route
-  instructions. No invented support address.
+- Publish tested external deletion/support forms to Nnentx/ngelx-web once the
+  connected GitHub integration can write that repository; then live-account
+  regression. A channel for users unable to authenticate still needs configuration.
 - Full build/regression checks and signed consolidated APK after remaining fixes.
 
 ## Phone regression baseline to preserve
