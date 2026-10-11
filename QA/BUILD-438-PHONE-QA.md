@@ -412,3 +412,17 @@ round; it does not start another phone test or supersede existing automated CI.
 Keep the screenshot-confirmed profile-post deletion failure unresolved.
 No production write, new implementation or new APK delivery is claimed by this
 evidence entry. Preserve the closed tests and existing working structure.
+
+
+### User preservation requirement — 2026-10-11 21:01 Europe/Istanbul
+
+User explicitly instructed: "Çalışanları koru sağlamlaştır" and requested that this
+be recorded. This governs the consolidated package:
+- Preserve the working behavior established by the closed phone round and the
+  passing automated checks while fixing remaining defects and localization.
+- Strengthen reliability within that existing structure; avoid unrelated redesigns
+  or rewrites, loss of data/history/preferences, and weaker access permissions.
+- Use relevant automated regression and security checks for implementation changes.
+  Keep the closed phone round closed; do not request baseline retests.
+- Do not mark a feature strengthened or fixed merely because this requirement
+  was recorded. This entry records intent, not an implementation or test result.
