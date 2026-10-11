@@ -1,0 +1,21 @@
+name: NgelX Build438 identifier auth validation
+on:
+  push:
+    branches: [work/build-438-phone-qa]
+    paths:
+      - '.github/workflows/NgelX-BUILD-438-AUTH-VALIDATION.yml'
+      - 'server/auth/**'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  auth-unit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Server auth tests (mock upstream, no production operations)
+        run: node --test server/auth/test/*.test.mjs
