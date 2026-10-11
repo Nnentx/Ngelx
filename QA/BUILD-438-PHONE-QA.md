@@ -96,6 +96,12 @@ the generated working tree predates this task and is not committed wholesale.
   provider, MFA/tenant rejection and password request/body deadlines are covered.
   No endpoint is deployed or connected to Flutter. Distributed throttling,
   server configuration, username migration/ownership and integration QA remain.
+- Added distributed Firestore login counters: HMAC identifier/network keys,
+  atomic all-or-none increments, 5/30 attempts per 60-second window, explicit
+  trusted remote address, IPv6 normalization and failure-closed storage errors.
+  All 36 server unit cases pass locally. Real emulator concurrency added to
+  auth CI; its result must be checked before marking it passed. No production
+  counters, TTL policy, secret installation or endpoint deployment occurred.
 
 - Dart parser/formatter (`--output=none`) accepted both changed Dart files.
 - Reapplying the patch yields identical file hashes.
