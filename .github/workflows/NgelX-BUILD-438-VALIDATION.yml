@@ -341,6 +341,7 @@ jobs:
           python3 tools/apply_build438_profile_cards.py
           python3 tools/apply_build438_email_language.py
           python3 tools/apply_build438_group_pin.py
+          python3 tools/apply_build438_delete_feedback.py
           dart tools/test_build438_pin_permission.dart
           dart tools/test_build438_group_successor.dart
           dart tools/test_build438_request_confirmation.dart
