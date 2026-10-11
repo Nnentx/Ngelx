@@ -1,7 +1,7 @@
 # Build438 identifier login — server core, not deployed
 
 Run `node --test server/auth/test/*.test.mjs`.
-The 36 dependency-injected tests do not call production Auth or sign anyone in.
+The 40 dependency-injected tests do not call production Auth or sign anyone in.
 `firebase-adapters.mjs` implements the Admin Auth/App Check/private username
 lookup interfaces and the bounded Firebase REST password verifier. The REST
 endpoint is fixed server-side; redirect following is disabled. The 8-second
@@ -28,6 +28,13 @@ Before enabling any endpoint, implement and integration-test all adapters:
 - Resolve username through a server-owned unique index. Existing usernameLower
   queries alone do not enforce uniqueness. Migration must reject conflicts and
   coordinate registration/rename ownership transactions with server permissions.
+  `username-ownership.mjs` implements existing-profile claim/rename in an Admin
+  transaction, protects unindexed legacy owners and retires old names. Its
+  migration planner is read-only and never chooses between duplicate owners.
+  The claim function is NOT a public endpoint. Before enabling it, freeze direct
+  username edits in rules, migrate with server revalidation, and route registration
+  through trusted Auth/App Check and the server transaction. Old APK compatibility
+  must be coordinated. No accounts have been migrated and no rules changed here.
 - Resolve phone using Admin Auth and require a linked phone provider; do not
   query profile recovery phone fields. Phone provider linking needs SMS proof.
 - Integration-test the implemented Firebase Auth REST signInWithPassword adapter
