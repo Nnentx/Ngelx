@@ -100,7 +100,10 @@ the generated working tree predates this task and is not committed wholesale.
   atomic all-or-none increments, 5/30 attempts per 60-second window, explicit
   trusted remote address, IPv6 normalization and failure-closed storage errors.
   All 36 server unit cases pass locally. Real emulator concurrency added to
-  auth CI; its result must be checked before marking it passed. No production
+  auth CI run 38132186576 passed on commit
+  879034d668a657c81c69a188f4790252037a03af: simultaneous 20 requests admit
+  exactly 5, cross-account network limit admits 3 of 10, expiry and hashed
+  record privacy pass. These tests used demo-ngelx-auth, not production. No production
   counters, TTL policy, secret installation or endpoint deployment occurred.
 
 - Dart parser/formatter (`--output=none`) accepted both changed Dart files.
