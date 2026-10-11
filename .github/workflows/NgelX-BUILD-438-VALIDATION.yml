@@ -337,7 +337,9 @@ jobs:
         run: |
           python3 tools/apply_build438_qa_fixes.py
           python3 tools/apply_build438_pending_requests.py
+          python3 tools/apply_build438_social_confirmation.py
           dart tools/test_build438_group_successor.dart
+          dart tools/test_build438_request_confirmation.dart
 
       - name: Bagimliliklari al
         shell: bash
