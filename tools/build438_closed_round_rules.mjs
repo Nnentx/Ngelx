@@ -16,6 +16,13 @@
   await assertFails(setDoc(doc(formerClosed438,'chats/closed438/messages/send'),{senderId:'closed438former',type:'text',text:'denied',createdAt:serverTimestamp()}));
   await assertFails(updateDoc(doc(formerClosed438,'chats/closed438'),{callStatus:'ringing',callStartedBy:'closed438former'}));
   const approvalClosed438=env.authenticatedContext('closed438owner').firestore();
+  console.log('Closed438: checking administrator chat update');
+  await assertSucceeds(updateDoc(doc(approvalClosed438,'chats/closed438'),{lastMessage:'diagnostic'}));
+  console.log('Closed438: checking administrator system event');
+  await assertSucceeds(setDoc(doc(approvalClosed438,'chats/closed438/messages/diagnostic'),{senderId:'closed438owner',type:'system',systemAction:'member_added',actorUid:'closed438owner',text:'diagnostic',createdAt:serverTimestamp()}));
+  console.log('Closed438: checking administrator request update');
+  await assertSucceeds(updateDoc(doc(approvalClosed438,'chats/closed438/joinRequests/closed438target'),{status:'pending'}));
+  console.log('Closed438: checking atomic approval race');
   const approveClosed438=()=>runTransaction(approvalClosed438,async tx=>{
     const request=doc(approvalClosed438,'chats/closed438/joinRequests/closed438target');
     const chat=doc(approvalClosed438,'chats/closed438');
