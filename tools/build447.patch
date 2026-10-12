@@ -1,0 +1,629 @@
+--- a/app/lib/main.dart
++++ b/app/lib/main.dart
+@@ -13,6 +13,7 @@
+ import 'dart:typed_data';
+ import 'dart:ui' as ui;
+ import 'package:flutter/material.dart';
++import 'package:flutter/foundation.dart' show defaultTargetPlatform, TargetPlatform, kIsWeb;
+ import 'package:flutter/services.dart';
+ import 'package:firebase_core/firebase_core.dart';
+ import 'package:firebase_auth/firebase_auth.dart';
+@@ -53,6 +54,7 @@
+ part 'feed_creator_badge.dart';
+ part 'story_v66.dart';
+ part 'build445_inbox_model.dart';
++part 'build446_call_lifecycle.dart';
+ 
+ const ngelxPrivacyUrl='https://ngelxsocial.com/privacy.html';
+ const ngelxTermsUrl='https://ngelxsocial.com/terms.html';
+@@ -337,7 +339,7 @@
+ }
+ Future<void> ngelx444CloseRoom(lk.Room r)async{
+   // Disconnect closes incoming audio immediately, independently of Firestore.
+-  try{await r.disconnect();}catch(_){}
++  try{await ngelx446Calls.detach(r);await r.disconnect();}catch(_){}
+   try{await r.dispose();}catch(_){}
+ }
+ 
+@@ -357,7 +359,7 @@
+   _ngelxArkaPlanAramaBaslangiclari.remove(roomName);
+   final room=_ngelxArkaPlanAramaOdalari.remove(roomName);
+   if(room!=null){
+-    try{await room.disconnect();}catch(_){}
++    try{await ngelx446Calls.detach(room);await room.disconnect();}catch(_){}
+     try{await room.dispose();}catch(_){}
+     ngelxCallSession444.release(roomName);
+   }
+@@ -16945,6 +16947,7 @@
+ }
+ class _NgelXAramaPageState extends State<NgelXAramaPage>{
+   lk.Room? oda;
++  bool _isAdmin446=false;
+   lk.Room? _connecting444;
+   bool _connectInFlight444=false;
+   bool _owns444=false;
+@@ -17013,6 +17016,11 @@
+ 
+     rotus=widget.goruntulu;
+     aramaDurumAboneligi=widget.aramaRef.snapshots().listen((d){
++      final status446=d.data()??<String,dynamic>{};
++      final me446=FirebaseAuth.instance.currentUser?.uid;
++      final admin446=status446['createdBy']==me446||List<String>.from(status446['admins']??const[]).contains(me446);
++      if(mounted)setState((){_isAdmin446=admin446;if(status446['callModerationRoom']==widget.roomName&&List<String>.from(status446['callMutedUids']??const[]).contains(me446))mikrofon=false;});
++      if(status446['callRoomName']==widget.roomName&&status446['callModerationRoom']==widget.roomName&&List<String>.from(status446['callKickedUids']??const[]).contains(FirebaseAuth.instance.currentUser?.uid)){unawaited(_uzaktanBitirildi('ended'));return;}
+       final durum=(d.data()?['callStatus']??'').toString();
+       if(durum=='active'||durum=='ended'||durum=='rejected'||durum=='missed')unawaited(_tone444(false));
+       final kayitliOda=(d.data()?['callRoomName']??'').toString();
+@@ -17027,8 +17035,9 @@
+     final arkaPlan=ngelxArkaPlanAramayiGeriAl(widget.roomName);
+     if(arkaPlan!=null){
+       oda=arkaPlan.room;
++      unawaited(ngelx446Calls.show(widget.roomName));
+       mikrofon=arkaPlan.room.localParticipant?.isMicrophoneEnabled()??true;
+-      kamera=arkaPlan.room.localParticipant?.isCameraEnabled()??widget.goruntulu;
++      kamera=widget.goruntulu&&(ngelx446Calls._calls[widget.roomName]?.restoreCamera==true||arkaPlan.room.localParticipant?.isCameraEnabled()==true);
+       hoparlor=lk.AudioManager.instance.isSpeakerOutputPreferred;
+       baglaniyor=false;
+       final r=arkaPlan.room;
+@@ -17241,7 +17250,7 @@
+         odaOlaylari?.dispose();odaOlaylari=null;
+         if(eski!=null){
+           eski.removeListener(_odaDegisti);
+-          try{await eski.disconnect();}catch(_){}
++          try{await ngelx446Calls.detach(eski);await eski.disconnect();}catch(_){}
+           try{await eski.dispose();}catch(_){}
+         }
+       }
+@@ -17267,9 +17276,11 @@
+       oda=r;
+       final yerel=r.localParticipant;
+       if(yerel==null)throw Exception('Arama katılımcısı hazırlanamadı.');
+-      await yerel.setMicrophoneEnabled(mikrofon);
++      await ngelx446Calls.attach(widget.roomName,r,widget.aramaRef,cameraWanted:widget.goruntulu&&kamera);
+       if(!_alive444){await ngelx444CloseRoom(r);return;}
+-      if(widget.goruntulu)await yerel.setCameraEnabled(kamera,cameraCaptureOptions:const lk.CameraCaptureOptions(params:lk.VideoParametersPresets.h360_169,maxFrameRate:20.0,stopCameraCaptureOnMute:true));
++      await yerel.setMicrophoneEnabled(mikrofon&&!ngelx446Calls.muted(widget.roomName));
++      if(!_alive444){await ngelx444CloseRoom(r);return;}
++      if(widget.goruntulu)await yerel.setCameraEnabled(kamera&&WidgetsBinding.instance.lifecycleState==AppLifecycleState.resumed,cameraCaptureOptions:const lk.CameraCaptureOptions(params:lk.VideoParametersPresets.h360_169,maxFrameRate:20.0,stopCameraCaptureOnMute:true));
+       if(!_alive444){await ngelx444CloseRoom(r);return;}
+       await lk.AudioManager.instance.setSpeakerOutputPreferred(hoparlor);
+       final oncekiArama=await widget.aramaRef.get();
+@@ -17333,7 +17344,7 @@
+     }catch(e){
+       if(r!=null){
+         r.removeListener(_odaDegisti);
+-        try{await r.disconnect();}catch(_){}
++        try{await ngelx446Calls.detach(r);await r.disconnect();}catch(_){}
+         try{await r.dispose();}catch(_){}
+       }
+       oda=null;
+@@ -17367,6 +17378,9 @@
+ 
+   Future<void> mikrofonDegistir()async{
+     final yeni=!mikrofon;
++    if(yeni&&ngelx446Calls.muted(widget.roomName)){
++      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Yönetici mikrofonunu susturdu.')));return;
++    }
+     try{await oda?.localParticipant?.setMicrophoneEnabled(yeni);if(mounted)setState(()=>mikrofon=yeni);}
+     catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Mikrofon değiştirilemedi.')));}
+   }
+@@ -17746,18 +17760,21 @@
+ 
+   Widget _katilimciKutusu(lk.Participant p,{bool yerel=false}){
+     final ad=_katilimciAdi(p,yerel:yerel),track=_katilimciVideosu(p);
+-    return Container(
++    final mic446=yerel?mikrofon:p.audioTrackPublications.any((publication)=>!publication.muted);
++    return GestureDetector(onTap:yerel?null:()=>ngelx446MuteMenu(context,widget.aramaRef,widget.roomName,p.identity.toString()),child:Container(
+       clipBehavior:Clip.antiAlias,
+       decoration:BoxDecoration(
+-        color:ngelxCallCard,
++        color:widget.goruntulu?ngelxCallCard:const Color(0xFF302047),
+         borderRadius:BorderRadius.circular(24),
+-        border:Border.all(color:Colors.white.withValues(alpha:.08)),
++        border:Border.all(color:!widget.goruntulu&&mic446?const Color(0xFFB88BFF):Colors.white.withValues(alpha:.12),width:widget.goruntulu?1:2),
+         boxShadow:const [BoxShadow(color:Color(0x28000000),blurRadius:18,offset:Offset(0,8))],
+       ),
+       child:Stack(fit:StackFit.expand,children:[
+         if(widget.goruntulu&&track!=null)
+           (yerel?_efektliVideo(track):lk.VideoTrackRenderer(track,fit:lk.VideoViewFit.cover))
+-        else Center(child:_katilimciAvatar(p,yerel:yerel,radius:45)),
++        else Center(child:Ngelx446SpeakingRing(participant:p,child:_katilimciAvatar(p,yerel:yerel,radius:oda!.remoteParticipants.length>=6?18:45))),
++        if(widget.goruntulu&&track!=null)Positioned(left:8,top:8,child:Ngelx446SpeakingRing(participant:p,child:_katilimciAvatar(p,yerel:yerel,radius:16))),
++        if(_isAdmin446&&!yerel)Positioned(top:2,right:2,child:IconButton(icon:const Icon(Icons.more_vert,color:Colors.white),onPressed:()=>ngelx446MuteMenu(context,widget.aramaRef,widget.roomName,p.identity.toString()))),
+         Positioned(
+           left:10,right:10,bottom:10,
+           child:Container(
+@@ -17765,18 +17782,18 @@
+             decoration:BoxDecoration(color:Colors.black.withValues(alpha:.48),borderRadius:BorderRadius.circular(14),border:Border.all(color:Colors.white10)),
+             child:Row(children:[
+               Expanded(child:Text(ad,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.white,fontSize:12.5,fontWeight:FontWeight.w800))),
+-              Icon(yerel&&mikrofon?Icons.graphic_eq_rounded:Icons.mic_off_rounded,color:yerel&&mikrofon?const Color(0xFFB88BFF):Colors.white60,size:18),
++              Icon(mic446?Icons.graphic_eq_rounded:Icons.mic_off_rounded,color:mic446?const Color(0xFFB88BFF):Colors.white60,size:18),
+             ]),
+           ),
+         ),
+       ]),
+-    );
++    ));
+   }
+ 
+   Widget _grupSesliKatilimci(lk.Participant p,{bool yerel=false}){
+     final ad=_katilimciAdi(p,yerel:yerel);
+     final aktif=yerel&&mikrofon;
+-    return SizedBox(
++    return GestureDetector(onTap:yerel?null:()=>ngelx446MuteMenu(context,widget.aramaRef,widget.roomName,p.identity.toString()),child:SizedBox(
+       width:126,
+       child:Column(mainAxisSize:MainAxisSize.min,children:[
+         Container(
+@@ -17789,13 +17806,14 @@
+           ),
+           child:Stack(clipBehavior:Clip.none,children:[
+             _katilimciAvatar(p,yerel:yerel,radius:43),
++            if(_isAdmin446&&!yerel)Positioned(top:-8,right:-10,child:IconButton(icon:const Icon(Icons.more_vert,color:Colors.white),onPressed:()=>ngelx446MuteMenu(context,widget.aramaRef,widget.roomName,p.identity.toString()))),
+             Positioned(right:-2,bottom:2,child:CircleAvatar(radius:13,backgroundColor:aktif?ngelxPremiumPurple:const Color(0xFF272036),child:Icon(aktif?Icons.graphic_eq_rounded:Icons.mic_off_rounded,color:Colors.white,size:14))),
+           ]),
+         ),
+         const SizedBox(height:9),
+         Text(ad,maxLines:1,overflow:TextOverflow.ellipsis,textAlign:TextAlign.center,style:const TextStyle(color:Colors.white,fontSize:13,fontWeight:FontWeight.w800)),
+       ]),
+-    );
++    ));
+   }
+ 
+   Widget _grupAramaAlani(){
+@@ -17812,43 +17830,24 @@
+       if(yerel!=null)(p:yerel,yerel:true),
+       ...r.remoteParticipants.values.map((p)=>(p:p,yerel:false)),
+     ];
+-    if(!widget.goruntulu){
+-      return Expanded(child:Column(children:[
+-        Padding(
+-          padding:const EdgeInsets.fromLTRB(22,18,22,8),
+-          child:Row(children:[
+-            Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+-              Text(widget.baslik,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.white,fontSize:29,fontWeight:FontWeight.w900,letterSpacing:-.5)),
+-              const SizedBox(height:5),
+-              Row(children:[const Icon(Icons.graphic_eq_rounded,color:Color(0xFFB88BFF),size:20),const SizedBox(width:7),Text(yenidenBaglaniyor?'Yeniden bağlanıyor…':baglaniyor?'Bağlanıyor…':r.remoteParticipants.isEmpty?'Katılımcılar bekleniyor…':_ngelx438Ui("Sesli grup araması"),style:const TextStyle(color:Colors.white70,fontSize:13,fontWeight:FontWeight.w700))]),
+-            ])),
+-            Container(padding:const EdgeInsets.symmetric(horizontal:13,vertical:9),decoration:BoxDecoration(color:Colors.white10,borderRadius:BorderRadius.circular(18),border:Border.all(color:Colors.white10)),child:Text(katilimcilar.length.toString()+' kişi',style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w800))),
+-          ]),
+-        ),
+-        Expanded(child:Center(child:SingleChildScrollView(
+-          padding:const EdgeInsets.symmetric(horizontal:18,vertical:14),
+-          child:Wrap(alignment:WrapAlignment.center,spacing:18,runSpacing:24,children:katilimcilar.map((x)=>_grupSesliKatilimci(x.p,yerel:x.yerel)).toList()),
+-        ))),
+-      ]));
+-    }
+-    final sutun=katilimcilar.length<=1?1:2;
++    final sutun=katilimcilar.length<=1?1:katilimcilar.length>=7?3:2;
+     return Expanded(child:Column(children:[
+       Padding(
+         padding:const EdgeInsets.fromLTRB(18,14,18,9),
+         child:Row(children:[
+           Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+             Text(widget.baslik,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.white,fontSize:22,fontWeight:FontWeight.w900)),
+-            Text(yenidenBaglaniyor?'Yeniden bağlanıyor…':baglaniyor?'Görüntülü görüşme':r.remoteParticipants.isEmpty?'Katılımcılar bekleniyor…':_ngelx438Ui("Görüntülü grup araması"),style:const TextStyle(color:Colors.white60,fontSize:12,fontWeight:FontWeight.w700)),
++            Text(yenidenBaglaniyor?'Yeniden bağlanıyor…':baglaniyor?'Bağlanıyor…':r.remoteParticipants.isEmpty?'Katılımcılar bekleniyor…':widget.goruntulu?_ngelx438Ui("Görüntülü grup araması"):_ngelx438Ui("Sesli grup araması"),style:const TextStyle(color:Colors.white60,fontSize:12,fontWeight:FontWeight.w700)),
+           ])),
+           Container(padding:const EdgeInsets.symmetric(horizontal:12,vertical:8),decoration:BoxDecoration(color:Colors.white10,borderRadius:BorderRadius.circular(16)),child:Text(katilimcilar.length.toString()+' kişi',style:const TextStyle(color:Colors.white70,fontWeight:FontWeight.w800))),
+         ]),
+       ),
+-      Expanded(child:GridView.builder(
++      Expanded(child:LayoutBuilder(builder:(_,constraints)=>GridView.builder(
+         padding:const EdgeInsets.fromLTRB(12,6,12,12),
+         itemCount:katilimcilar.length,
+-        gridDelegate:SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount:sutun,crossAxisSpacing:10,mainAxisSpacing:10,childAspectRatio:katilimcilar.length<=2?1.02:.82),
++        gridDelegate:SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount:sutun,crossAxisSpacing:10,mainAxisSpacing:10,mainAxisExtent:katilimcilar.length>=7?((constraints.maxHeight-42)/4).clamp(88.0,140.0).toDouble():null,childAspectRatio:katilimcilar.length<=2?1.02:.82),
+         itemBuilder:(_,i)=>_katilimciKutusu(katilimcilar[i].p,yerel:katilimcilar[i].yerel),
+-      )),
++      ))),
+     ]));
+   }
+ 
+@@ -17897,6 +17896,8 @@
+   Future<void> _aramaEkraniniKucult()async{
+     if(kucultuluyor||!mounted)return;
+     if(oda==null||_connectInFlight444){await bitir();return;}
++    await ngelx446Calls.hide(widget.roomName);
++    if(!mounted)return;
+     kucultuluyor=true;
+     unawaited(_tone444(false));
+     ngelxCallSession444.minimize(widget.roomName);
+@@ -18493,8 +18494,11 @@
+       return;
+     }
+     final p=await FirebaseFirestore.instance.collection('users').doc(me).get().timeout(const Duration(seconds:10));
+-    final pending438=await ref.collection('joinRequests').where('status',isEqualTo:'pending').get(const GetOptions(source:Source.server)).timeout(const Duration(seconds:8));
+-    final pendingTargets438=pending438.docs.map((d)=>(d.data()['targetUid']??d.data()['uid']??d.id).toString()).toSet();
++    final pendingTargets438=<String>{};
++    if(yonetici){
++      final pending438=await ref.collection('joinRequests').where('status',isEqualTo:'pending').get(const GetOptions(source:Source.server)).timeout(const Duration(seconds:8));
++      pendingTargets438.addAll(pending438.docs.map((d)=>(d.data()['targetUid']??d.data()['uid']??d.id).toString()));
++    }
+     final izinli=<String>{...List<String>.from(p.data()?['friends']??const[]),...List<String>.from(p.data()?['following']??const[])}..removeAll(mevcut)..removeAll(pendingTargets438);
+     if(izinli.isEmpty){
+       if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Eklenebilecek arkadaş veya takip edilen kişi bulunamadı.')));
+--- a/app/lib/story_v66.dart
++++ b/app/lib/story_v66.dart
+@@ -99,106 +99,24 @@
+     throw StateError('Yalnızca kendi hikâyeni silebilirsin.');
+   }
+ 
+-  final storage=FirebaseStorage.instance;
+   final current=await ref.get().timeout(const Duration(seconds:10));
+   final actual=current.data();
+   if(actual==null)return;
+   if(actual['type']!='story'||(actual['ownerId']??'').toString()!=uid){
+     throw StateError('Yalnızca kendi hikâyeni silebilirsin.');
+   }
+-  final api=await ngelxMediaApiAdresi();
+-  bool ownR2Key(String key){
+-    final segments=key.split('/');
+-    return segments.length>=3&&
+-      (segments.first=='stories'||segments.first=='videos'||segments.first=='photos')&&
+-      segments[1]==uid&&!segments.contains('..')&&!segments.contains('.');
+-  }
+-  final kaynaklar=<String,Reference>{};
+-  final r2Anahtarlari=<String>{};
+-  for(final key in ['storagePath','mediaPath','storageRef','mediaUrl','videoUrl','playbackUrl','downloadUrl','url']){
+-    final raw=(actual[key]??'').toString().trim();
+-    if(raw.isEmpty)continue;
+-    if(raw.startsWith('gs://')||raw.contains('firebasestorage.googleapis.com')){
+-      final dosya=storage.refFromURL(raw);
+-      if(dosya.bucket!=storage.ref().bucket||!ownR2Key(dosya.fullPath)){
+-        throw StateError('Hikâye medya yolu sahibiyle eşleşmiyor.');
+-      }
+-      kaynaklar[dosya.fullPath]=dosya;
+-      continue;
+-    }
+-    if(raw.contains('/media/')){
+-      if(api.isEmpty||!{Uri.parse(api).origin,Uri.parse(_ngelxMediaApiBuild).origin,Uri.parse(_ngelxMediaApiBackup).origin,Uri.parse(_ngelxMediaApiLegacyPrimary).origin,Uri.parse(_ngelxMediaApiLegacyBackup).origin}.contains(Uri.parse(raw).origin)){
+-        throw StateError('Hikâye medya sunucusu doğrulanamadı.');
+-      }
+-      final uri=Uri.parse(raw);
+-      final keyPath=Uri.decodeComponent(uri.path.substring('/media/'.length));
+-      if(!ownR2Key(keyPath)){
+-        throw StateError('Hikâye medya yolu sahibiyle eşleşmiyor.');
+-      }
+-      r2Anahtarlari.add(keyPath);
+-      continue;
+-    }
+-    if(!raw.startsWith('http')&&raw.contains('/')){
+-      if(!ownR2Key(raw)){
+-        throw StateError('Hikâye medya yolu sahibiyle eşleşmiyor.');
+-      }
+-      r2Anahtarlari.add(raw);
+-    }
+-  }
+-
+-  if(r2Anahtarlari.isNotEmpty){
+-    final user=FirebaseAuth.instance.currentUser;
+-    final token=await user?.getIdToken();
+-    if(api.isEmpty||token==null||token.isEmpty){
+-      throw StateError('Hikâye medyası güvenli biçimde silinemedi.');
+-    }
+-    for(final key in r2Anahtarlari){
+-      try{
+-        await Dio().delete(
+-          api+'/object',
+-          queryParameters:{'key':key},
+-          options:Options(
+-            headers:{'Authorization':'Bearer '+token},
+-            sendTimeout:const Duration(seconds:12),
+-            receiveTimeout:const Duration(seconds:12),
+-          ),
+-        );
+-      }on DioException catch(e){
+-        if(e.response?.statusCode!=404)rethrow;
+-      }
+-    }
+-  }
+-  for(final dosya in kaynaklar.values){
+-    try{
+-      await dosya.delete().timeout(const Duration(seconds:12));
+-    }on FirebaseException catch(e){
+-      if(e.code!='object-not-found')rethrow;
+-    }
+-  }
+-  Future<void> purgeLikes(CollectionReference<Map<String,dynamic>> col)async{
+-    while(true){
+-      final page=await col.limit(400).get();
+-      if(page.docs.isEmpty)return;
+-      final batch=FirebaseFirestore.instance.batch();
+-      for(final d in page.docs){batch.delete(d.reference);}
+-      await batch.commit();
+-      if(page.docs.length<400)return;
+-    }
+-  }
+-  final comments=ref.collection('comments');
+-  while(true){
+-    final page=await comments.limit(200).get();
+-    if(page.docs.isEmpty)break;
+-    for(final comment in page.docs){
+-      await purgeLikes(comment.reference.collection('likes'));
+-    }
+-    final batch=FirebaseFirestore.instance.batch();
+-    for(final comment in page.docs){batch.delete(comment.reference);}
+-    await batch.commit();
+-    if(page.docs.length<200)break;
+-  }
+-  await purgeLikes(ref.collection('likes'));
+-  await ref.delete();
++  // The approved resumable backend removes owned, unreferenced media.
++  // Queue cleanup and delete the story atomically; a media outage must not
++  // prevent the owner removing their story from the app.
++  final job=FirebaseFirestore.instance.collection('_media_cleanup435').doc('story_'+ref.id);
++  final batch=FirebaseFirestore.instance.batch();
++  batch.set(job,{
++    'sourcePath':ref.path,'storyId':ref.id,'ownerId':uid,'kind':'story',
++    'urls':[for(final key in const ['mediaUrl','videoUrl','audioUrl','fileUrl','thumbnailUrl','posterUrl','coverUrl','imageUrl'])(actual[key]??'').toString()],
++    'createdAt':FieldValue.serverTimestamp(),'lastAttemptAt':Timestamp.fromMillisecondsSinceEpoch(0),
++  });
++  batch.delete(ref);
++  await batch.commit().timeout(const Duration(seconds:12));
+ }
+ 
+ class NgelXHikayeSeriPage extends StatefulWidget{
+@@ -221,6 +139,7 @@
+ class _NgelXHikayeSeriPageState extends State<NgelXHikayeSeriPage> with SingleTickerProviderStateMixin{
+   late final AnimationController sure;
+   final cevap=TextEditingController();
++  final _replyFocus446=FocusNode();
+   List<QueryDocumentSnapshot<Map<String,dynamic>>> hikayeler=<QueryDocumentSnapshot<Map<String,dynamic>>>[];
+   int aktif=0;
+   final Map<String,bool> _highlight441={};
+@@ -319,6 +238,7 @@
+   @override
+   void initState(){
+     super.initState();
++    _replyFocus446.addListener((){if(_replyFocus446.hasFocus){_duraklat();}else{_devam();}});
+     sure=AnimationController(vsync:this,duration:const Duration(seconds:7))
+       ..addStatusListener((s){
+         if(s==AnimationStatus.completed&&mounted)_sonraki();
+@@ -506,6 +426,7 @@
+   }
+ 
+   void _devam(){
++    if(_replyFocus446.hasFocus||gonderiliyor)return;
+     _userPaused=false;
+     if(!mounted||yukleniyor||belge==null)return;
+     if(videoHata||(videoMu&&!videoHazir))return;
+@@ -617,7 +538,19 @@
+       // Looking up old random-ID chats is optional: unavailable or denied
+       // queries must not prevent a permitted deterministic DM creation.
+       asama='sohbet-arama';
++      final pair446=<String>[ben.uid,hedef]..sort();
+       try{
++        final direct=await chats.doc(pair446.join('_')).get().timeout(const Duration(seconds:4));
++        final data=direct.data();
++        if(direct.exists&&data?['isGroup']!=true){
++          final rejected=data?['requestRejected_'+hedef]==true;
++          final accepted=data?['requestAccepted_'+hedef]==true||data?['requestAccepted_'+ben.uid]==true;
++          final friends=liste(benim['friends']).contains(hedef)||liste(diger['friends']).contains(ben.uid);
++          if(rejected&&!accepted&&!friends)throw StateError('Mesaj isteğin reddedildi. Yanıt gönderilemiyor.');
++          sohbet=direct.reference;
++        }
++      }on FirebaseException catch(_){ }on TimeoutException catch(_){ }
++      if(sohbet==null)try{
+         final mevcut=await chats.where('members',arrayContains:ben.uid)
+           .limit(200).get(const GetOptions(source:Source.server))
+           .timeout(const Duration(seconds:9));
+@@ -706,6 +639,7 @@
+         belgeId:chat.id,
+       ).catchError((_){ }));
+       cevap.clear();
++      _replyFocus446.unfocus();
+       if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+         content:Text(tepki?'Tepkin gönderildi.':'Yanıtın gönderildi.')));
+     }on StateError catch(e){
+@@ -827,6 +761,8 @@
+ 
+   Future<void> _secenekler()async{
+     _duraklat();
++    final selected446=belge;
++    if(selected446==null)return;
+     final benim=FirebaseAuth.instance.currentUser?.uid==widget.ownerUid;
+     final oneCikan=_highlight441[storyId]??(veri['highlighted']==true);
+     final sec=await showModalBottomSheet<String>(
+@@ -899,7 +835,7 @@
+           'archivedAt':FieldValue.serverTimestamp(),
+           'updatedAt':FieldValue.serverTimestamp(),
+         },SetOptions(merge:true));
+-        hikayeler.removeAt(aktif);
++        hikayeler.removeWhere((item)=>item.id==selected446.id);
+         if(hikayeler.isEmpty){
+           if(mounted){
+             ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Hikâye arşive taşındı.')));
+@@ -945,9 +881,8 @@
+         return;
+       }
+       try{
+-        final silinecekRef=FirebaseFirestore.instance.collection('videos').doc(storyId);
+-        await ngelxHikayeKaliciSil(silinecekRef,veri);
+-        hikayeler.removeAt(aktif);
++        await ngelxHikayeKaliciSil(selected446.reference,selected446.data());
++        hikayeler.removeWhere((item)=>item.id==selected446.id);
+         if(hikayeler.isEmpty){
+           if(mounted){
+             ngelxDurumMesaji(context,'Hikâye silindi.',tip:'basari');
+@@ -973,6 +908,7 @@
+     medyaNesli++;
+     _bufferTimer?.cancel();
+     if(videoKontrol!=null&&_videoListener!=null)videoKontrol!.removeListener(_videoListener!);
++    _replyFocus446.dispose();
+     cevap.dispose();
+     sure.dispose();
+     final x=videoKontrol;
+@@ -990,7 +926,7 @@
+       body:yukleniyor
+         ?const Center(child:CircularProgressIndicator(color:Colors.white))
+         :Stack(fit:StackFit.expand,children:[
+-          _medya(),
++          RepaintBoundary(child:_medya()),
+           Positioned.fill(child:IgnorePointer(child:DecoratedBox(decoration:BoxDecoration(
+             gradient:LinearGradient(begin:Alignment.topCenter,end:Alignment.bottomCenter,colors:[Colors.black54,Colors.transparent,Colors.black54],stops:[0,.38,1]),
+           )))),
+@@ -1042,6 +978,7 @@
+                 Row(children:[
+                   Expanded(child:TextField(
+                     controller:cevap,
++                    focusNode:_replyFocus446,
+                     onTap:_duraklat,
+                     onSubmitted:(v)=>_yanitGonder(v),
+                     style:const TextStyle(color:Colors.white),
+--- a/app/lib/build445_inbox_model.dart
++++ b/app/lib/build445_inbox_model.dart
+@@ -133,7 +133,7 @@
+ }
+ class _Ngelx445CallOverlayState extends State<Ngelx445CallOverlay>{
+   Timer? _tick;StreamSubscription<User?>? _auth;
+-  double? _left,_top;
++  final _position446=ValueNotifier<Offset?>(null);
+   @override void initState(){super.initState();
+     _tick=Timer.periodic(const Duration(seconds:1),(_){
+       if(mounted&&_ngelxArkaPlanAramaOdalari.isNotEmpty)setState((){});
+@@ -155,7 +155,7 @@
+       }
+     });
+   }
+-  @override void dispose(){_tick?.cancel();_auth?.cancel();super.dispose();}
++  @override void dispose(){_position446.dispose();_tick?.cancel();_auth?.cancel();super.dispose();}
+   @override Widget build(BuildContext context)=>ValueListenableBuilder<int>(valueListenable:ngelx445CallRevision,builder:(_,rev,__){
+     final name=ngelxCallSession444.room,detail=ngelx445CallDetails[name];
+     final room=_ngelxArkaPlanAramaOdalari[name];
+@@ -164,16 +164,23 @@
+     final start=_ngelxArkaPlanAramaBaslangiclari[name];
+     final seconds=start==null?null:DateTime.now().difference(start).inSeconds.clamp(0,359999);
+     final duration=seconds==null?_ngelx438Ui('Aranıyor…'):'${(seconds~/60).toString().padLeft(2,'0')}:${(seconds%60).toString().padLeft(2,'0')}';
+-    final x=(_left??screen.width-128).clamp(8.0,(screen.width-120).clamp(8.0,double.infinity)).toDouble();
+-    final y=(_top??screen.height-padding.bottom-224).clamp(padding.top+56,(screen.height-padding.bottom-180).clamp(padding.top+56,double.infinity)).toDouble();
+-    return Positioned(left:x,top:y,width:112,child:Material(color:Colors.transparent,child:GestureDetector(
+-      onPanUpdate:(delta)=>setState((){_left=x+delta.delta.dx;_top=y+delta.delta.dy;}),
++    final width=(screen.width-16).clamp(112.0,156.0).toDouble();
++    Offset bounded(Offset p)=>Offset(
++      p.dx.clamp(8.0,(screen.width-width-8).clamp(8.0,double.infinity)).toDouble(),
++      p.dy.clamp(padding.top+8,(screen.height-padding.bottom-220).clamp(padding.top+8,double.infinity)).toDouble());
++    final initial=bounded(Offset(screen.width-width-16,screen.height-padding.bottom-270));
++    return ValueListenableBuilder<Offset?>(valueListenable:_position446,builder:(_,position,card){
++      final p=bounded(position??initial);
++      return Positioned(left:p.dx,top:p.dy,width:width,child:card!);
++    },child:RepaintBoundary(child:Material(color:Colors.transparent,child:GestureDetector(
++      behavior:HitTestBehavior.opaque,
++      onPanUpdate:(delta){_position446.value=bounded((_position446.value??initial)+delta.delta);},
+       child:Container(padding:const EdgeInsets.all(10),decoration:BoxDecoration(color:const Color(0xFF39206F),borderRadius:BorderRadius.circular(18),boxShadow:const[BoxShadow(color:Color(0x33000000),blurRadius:15)]),
+         child:Column(mainAxisSize:MainAxisSize.min,children:[
+           InkWell(onTap:()=>ngelx445ReturnCall(name),child:Column(children:[
+             Text(detail.title,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.white,fontSize:11,fontWeight:FontWeight.w800)),
+             const SizedBox(height:7),
+-            CircleAvatar(radius:20,backgroundColor:const Color(0xFF6F4AB2),backgroundImage:detail.photo.isEmpty?null:NgelXAgImageProvider(detail.photo),child:detail.photo.isEmpty?Icon(detail.video?Icons.videocam:Icons.call,color:Colors.white,size:20):null),
++            CircleAvatar(radius:28,backgroundColor:const Color(0xFF6F4AB2),backgroundImage:detail.photo.isEmpty?null:NgelXAgImageProvider(detail.photo),child:detail.photo.isEmpty?Icon(detail.video?Icons.videocam:Icons.call,color:Colors.white,size:20):null),
+             const SizedBox(height:7),Text(duration,style:const TextStyle(color:Colors.white,fontSize:11)),
+           ])),
+           Ngelx445CallControls(
+@@ -181,14 +188,14 @@
+             speaker:lk.AudioManager.instance.isSpeakerOutputPreferred,
+             onMicrophone:()async{
+               final local=room.localParticipant;if(local==null)return;
+-              try{await local.setMicrophoneEnabled(!local.isMicrophoneEnabled());if(mounted)setState((){});}catch(_){}
++              try{if(ngelx446Calls.muted(name))return;await local.setMicrophoneEnabled(!local.isMicrophoneEnabled());if(mounted)setState((){});}catch(_){}
+             },
+             onSpeaker:()async{try{await lk.AudioManager.instance.setSpeakerOutputPreferred(!lk.AudioManager.instance.isSpeakerOutputPreferred);if(mounted)setState((){});}catch(_){} },
+             onEnd:()=>ngelx445EndBackground(name),
+           ),
+         ]),
+       ),
+-    )));
++    ))));
+   });
+ }
+ class Ngelx445InboxCallBanner extends StatelessWidget{
+--- a/app/android/app/src/main/AndroidManifest.xml
++++ b/app/android/app/src/main/AndroidManifest.xml
+@@ -10,10 +10,14 @@
+     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
+     <uses-permission android:name="android.permission.INTERNET" />
++    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
++    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
++    <uses-permission android:name="android.permission.WAKE_LOCK" />
+     <application
+         android:label="NgelX"
+         android:name="${applicationName}"
+         android:icon="@drawable/ngelx_launcher_mark">
++        <service android:name=".CallAudioService" android:exported="false" android:foregroundServiceType="microphone" />
+         <activity
+             android:name=".MainActivity"
+             android:exported="true"
+--- a/app/android/app/src/main/kotlin/com/nnentx/ngelx_app/MainActivity.kt
++++ b/app/android/app/src/main/kotlin/com/nnentx/ngelx_app/MainActivity.kt
+@@ -42,6 +42,17 @@
+ 
+     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
+         super.configureFlutterEngine(flutterEngine)
++        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.nnentx.ngelx_app/call")
++            .setMethodCallHandler { call, result ->
++                try {
++                    val intent = Intent(this, CallAudioService::class.java)
++                    when (call.method) {
++                        "start" -> { if (Build.VERSION.SDK_INT >= 26) startForegroundService(intent) else startService(intent); result.success(null) }
++                        "stop" -> { stopService(intent); result.success(null) }
++                        else -> result.notImplemented()
++                    }
++                } catch (error: Exception) { result.error("CALL_SERVICE", error.message, null) }
++            }
+         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.nnentx.ngelx_app/capture")
+             .setMethodCallHandler { call, result ->
+                 if (call.method != "setCaptureLease") {
+--- a/firestore.rules
++++ b/firestore.rules
+@@ -206,6 +206,29 @@
+       match /content_tools/{contentId} { allow read, write: if isMe(uid); }
+     }
+ 
++    match /_media_cleanup435/{jobId} {
++      allow create: if signedIn()
++        && request.resource.data.keys().hasOnly(['sourcePath','storyId','ownerId','kind','urls','createdAt','lastAttemptAt'])
++        && request.resource.data.kind == 'story'
++        && request.resource.data.ownerId == request.auth.uid
++        && request.resource.data.storyId is string
++        && request.resource.data.storyId.matches('[^/]+')
++        && jobId == 'story_' + request.resource.data.storyId
++        && request.resource.data.sourcePath == 'videos/' + request.resource.data.storyId
++        && get(/databases/$(database)/documents/videos/$(request.resource.data.storyId)).data.ownerId == request.auth.uid
++        && get(/databases/$(database)/documents/videos/$(request.resource.data.storyId)).data.type == 'story'
++        && !existsAfter(/databases/$(database)/documents/videos/$(request.resource.data.storyId))
++        && request.resource.data.urls == [
++          get(/databases/$(database)/documents/videos/$(request.resource.data.storyId)).data.get('mediaUrl',''),
++          get(/databases/$(database)/documents/videos/$(request.resource.data.storyId)).data.get('videoUrl',''),
++          get(/databases/$(database)/documents/videos/$(request.resource.data.storyId)).data.get('audioUrl',''),
++          get(/databases/$(database)/documents/videos/$(request.resource.data.storyId)).data.get('fileUrl',''),
++          get(/databases/$(database)/documents/videos/$(request.resource.data.storyId)).data.get('thumbnailUrl',''),
++          get(/databases/$(database)/documents/videos/$(request.resource.data.storyId)).data.get('posterUrl',''),
++          get(/databases/$(database)/documents/videos/$(request.resource.data.storyId)).data.get('coverUrl',''),
++          get(/databases/$(database)/documents/videos/$(request.resource.data.storyId)).data.get('imageUrl','')];
++      allow read, update, delete: if false;
++    }
+     match /videos/{videoId} {
+       allow read: if true;
+       allow create: if signedIn() && request.resource.data.ownerId == request.auth.uid;
+@@ -266,7 +289,10 @@
+         && resource.data.get('isGroup', false) == true
+         && resource.data.get('discoverable', false) == true
+       );
+-      allow update: if (resource.data.get('isGroup', false) == true || chatPairOpen(chatId) || onlyChanges(['hiddenFor', 'readReceipts_' + request.auth.uid, 'typingIndicator_' + request.auth.uid, 'typing_' + request.auth.uid])) && (
++      allow update: if (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['callMutedUids','callKickedUids','callModerationRoom']) || (isGroupAdmin(chatId)
++        && request.resource.data.get('callModerationRoom','') == resource.data.get('callRoomName','')
++        && !(resource.data.get('createdBy','') in request.resource.data.get('callMutedUids',[]))
++        && !(resource.data.get('createdBy','') in request.resource.data.get('callKickedUids',[])))) && ((resource.data.get('isGroup', false) == true || chatPairOpen(chatId) || onlyChanges(['hiddenFor', 'readReceipts_' + request.auth.uid, 'typingIndicator_' + request.auth.uid, 'typing_' + request.auth.uid])) && (
+         chatMember() && (
+           (
+             resource.data.get('isGroup', false) != true
+@@ -285,7 +311,7 @@
+             )
+           )
+         )
+-      ) || validPublicSelfJoin() || validFormerHide() || validFounderClose();
++      ) || validPublicSelfJoin() || validFormerHide() || validFounderClose());
+       allow delete: if false;
+       match /messages/{messageId} {
+         allow read: if signedIn() && (

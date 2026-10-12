@@ -1,0 +1,76 @@
+--- a/build447-deployed.rules
++++ b/build447-deployed.rules
+@@ -223,6 +223,29 @@
+       match /content_tools/{contentId} { allow read, write: if isMe(uid); }
+     }
+ 
++    match /_media_cleanup435/{jobId} {
++      allow create: if signedIn()
++        && request.resource.data.keys().hasOnly(['sourcePath','storyId','ownerId','kind','urls','createdAt','lastAttemptAt'])
++        && request.resource.data.kind == 'story'
++        && request.resource.data.ownerId == request.auth.uid
++        && request.resource.data.storyId is string
++        && request.resource.data.storyId.matches('[^/]+')
++        && jobId == 'story_' + request.resource.data.storyId
++        && request.resource.data.sourcePath == 'videos/' + request.resource.data.storyId
++        && get(/databases/$(database)/documents/videos/$(request.resource.data.storyId)).data.ownerId == request.auth.uid
++        && get(/databases/$(database)/documents/videos/$(request.resource.data.storyId)).data.type == 'story'
++        && !existsAfter(/databases/$(database)/documents/videos/$(request.resource.data.storyId))
++        && request.resource.data.urls == [
++          get(/databases/$(database)/documents/videos/$(request.resource.data.storyId)).data.get('mediaUrl',''),
++          get(/databases/$(database)/documents/videos/$(request.resource.data.storyId)).data.get('videoUrl',''),
++          get(/databases/$(database)/documents/videos/$(request.resource.data.storyId)).data.get('audioUrl',''),
++          get(/databases/$(database)/documents/videos/$(request.resource.data.storyId)).data.get('fileUrl',''),
++          get(/databases/$(database)/documents/videos/$(request.resource.data.storyId)).data.get('thumbnailUrl',''),
++          get(/databases/$(database)/documents/videos/$(request.resource.data.storyId)).data.get('posterUrl',''),
++          get(/databases/$(database)/documents/videos/$(request.resource.data.storyId)).data.get('coverUrl',''),
++          get(/databases/$(database)/documents/videos/$(request.resource.data.storyId)).data.get('imageUrl','')];
++      allow read, update, delete: if false;
++    }
+     match /videos/{videoId} {
+       allow read: if true;
+       allow create: if signedIn() && request.resource.data.ownerId == request.auth.uid;
+@@ -283,7 +306,7 @@
+         && resource.data.get('isGroup', false) == true
+         && resource.data.get('discoverable', false) == true
+       );
+-      allow update: if (resource.data.get('isGroup', false) == true || chatPairOpen(chatId) || onlyChanges(['hiddenFor', 'readReceipts_' + request.auth.uid, 'typingIndicator_' + request.auth.uid, 'typing_' + request.auth.uid])) && (
++      allow update: if (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['callMutedUids','callKickedUids','callModerationRoom']) || (isGroupAdmin(chatId) && request.resource.data.get('callModerationRoom','') == resource.data.get('callRoomName','') && !(resource.data.get('createdBy','') in request.resource.data.get('callMutedUids',[])) && !(resource.data.get('createdBy','') in request.resource.data.get('callKickedUids',[])))) && ((resource.data.get('isGroup', false) == true || chatPairOpen(chatId) || onlyChanges(['hiddenFor', 'readReceipts_' + request.auth.uid, 'typingIndicator_' + request.auth.uid, 'typing_' + request.auth.uid])) && (
+         chatMember() && (
+           (
+             resource.data.get('isGroup', false) != true
+@@ -302,7 +325,7 @@
+             )
+           )
+         )
+-      ) || validPublicSelfJoin() || validFormerHide() || validFounderClose();
++      ) || validPublicSelfJoin() || validFormerHide() || validFounderClose());
+       allow delete: if false;
+       match /messages/{messageId} {
+         allow read: if signedIn() && (
+@@ -434,12 +457,25 @@
+           && request.resource.data.get('status', '') == 'pending'
+         );
+         allow get: if signedIn() && (
++          request.auth.uid in groupDoc(chatId).data.get('members', [])
++          ||
+           request.auth.uid == requestUid
+           || resource.data.get('requestedBy', '') == request.auth.uid
+           || isGroupAdmin(chatId)
+         );
+         allow list: if isGroupAdmin(chatId);
+         allow update: if isGroupAdmin(chatId) || (
++          signedIn()
++          && request.auth.uid in groupDoc(chatId).data.get('members', [])
++          && resource.data.get('status','') in ['rejected','cancelled']
++          && request.resource.data.get('type','') == 'member_add'
++          && requestUid == request.resource.data.get('targetUid','')
++          && request.resource.data.get('uid','') == requestUid
++          && request.resource.data.get('requestedBy','') == request.auth.uid
++          && request.resource.data.get('status','') == 'pending'
++          && !(requestUid in groupDoc(chatId).data.get('members', []))
++          && request.resource.data.keys().hasOnly(['type','uid','targetUid','targetName','targetPhoto','requestedBy','requestedByName','requestedByPhoto','status','createdAt','updatedAt'])
++        ) || (
+           signedIn()
+           && (request.auth.uid == requestUid || resource.data.get('requestedBy', '') == request.auth.uid)
+           && onlyChanges(['status', 'updatedAt'])
