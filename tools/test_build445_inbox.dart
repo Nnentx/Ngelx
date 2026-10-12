@@ -3,6 +3,18 @@ import 'package:flutter/material.dart';
 import '../lib/main.dart' as app;
 import '../lib/build445_inbox_policy.dart';
 void main(){
+ testWidgets('three call controls fit the compact card and respond to taps',(tester)async{
+   var mic=0,speaker=0,end=0;
+   await tester.pumpWidget(MaterialApp(home:Scaffold(body:Center(child:SizedBox(width:112,child:Material(color:Colors.purple,child:Padding(padding:const EdgeInsets.all(10),child:app.Ngelx445CallControls(
+     microphone:true,speaker:true,onMicrophone:()=>mic++,onSpeaker:()=>speaker++,onEnd:()=>end++,
+   ))))))));
+   expect(tester.takeException(),isNull);
+   await tester.tap(find.byIcon(Icons.mic));
+   await tester.tap(find.byIcon(Icons.volume_up));
+   await tester.tap(find.byIcon(Icons.call_end));
+   expect([mic,speaker,end],[1,1,1]);
+   expect(tester.takeException(),isNull);
+ });
  testWidgets('call changes during route build notify overlay safely on next frame',(tester)async{
    final initial=app.ngelx445CallRevision.value;
    var requested=false;

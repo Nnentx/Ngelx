@@ -1,3 +1,4 @@
+# Verify all three call controls fit the compact card
 # Live return button for the currently owned minimized conversation
 # Reuse existing private-chat IDs and original permission checks
 # Keep minimized-call duration and active heartbeat synchronized

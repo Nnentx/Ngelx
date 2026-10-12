@@ -152,15 +152,16 @@ class _Ngelx445CallOverlayState extends State<Ngelx445CallOverlay>{
             CircleAvatar(radius:20,backgroundColor:const Color(0xFF6F4AB2),backgroundImage:detail.photo.isEmpty?null:NgelXAgImageProvider(detail.photo),child:detail.photo.isEmpty?Icon(detail.video?Icons.videocam:Icons.call,color:Colors.white,size:20):null),
             const SizedBox(height:7),Text(duration,style:const TextStyle(color:Colors.white,fontSize:11)),
           ])),
-          Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[
-            IconButton(tooltip:_ngelx438Ui('Mikrofon'),constraints:const BoxConstraints.tightFor(width:28,height:30),padding:EdgeInsets.zero,visualDensity:VisualDensity.compact,icon:Icon(room.localParticipant?.isMicrophoneEnabled()==true?Icons.mic:Icons.mic_off,color:Colors.white,size:18),onPressed:()async{
+          Ngelx445CallControls(
+            microphone:room.localParticipant?.isMicrophoneEnabled()==true,
+            speaker:lk.AudioManager.instance.isSpeakerOutputPreferred,
+            onMicrophone:()async{
               final local=room.localParticipant;if(local==null)return;
-              final enabled=local.isMicrophoneEnabled();
-              try{await local.setMicrophoneEnabled(!enabled);if(mounted)setState((){});}catch(_){}
-            }),
-            IconButton(tooltip:_ngelx438Ui('Hoparlör'),constraints:const BoxConstraints.tightFor(width:28,height:30),padding:EdgeInsets.zero,icon:Icon(lk.AudioManager.instance.isSpeakerOutputPreferred?Icons.volume_up:Icons.volume_off,color:Colors.white,size:17),onPressed:()async{try{await lk.AudioManager.instance.setSpeakerOutputPreferred(!lk.AudioManager.instance.isSpeakerOutputPreferred);if(mounted)setState((){});}catch(_){} }),
-            IconButton(tooltip:_ngelx438Ui('Aramayı bitir'),constraints:const BoxConstraints.tightFor(width:28,height:30),padding:EdgeInsets.zero,visualDensity:VisualDensity.compact,style:IconButton.styleFrom(backgroundColor:const Color(0xFFFF414A)),icon:const Icon(Icons.call_end,color:Colors.white,size:18),onPressed:()=>ngelx445EndBackground(name)),
-          ]),
+              try{await local.setMicrophoneEnabled(!local.isMicrophoneEnabled());if(mounted)setState((){});}catch(_){}
+            },
+            onSpeaker:()async{try{await lk.AudioManager.instance.setSpeakerOutputPreferred(!lk.AudioManager.instance.isSpeakerOutputPreferred);if(mounted)setState((){});}catch(_){} },
+            onEnd:()=>ngelx445EndBackground(name),
+          ),
         ]),
       ),
     )));
@@ -214,3 +215,22 @@ Widget ngelx445CallTrailing(Map<String,dynamic> chat,Widget usual)=>ValueListena
       child:FittedBox(fit:BoxFit.scaleDown,child:Text(_ngelx438Ui('Aramaya dön'),style:const TextStyle(fontSize:11,fontWeight:FontWeight.w800))),
     ));
   });
+
+/// Exact compact layout, independent of platform IconButton minimum tap padding.
+class Ngelx445CallControls extends StatelessWidget{
+  final bool microphone,speaker;
+  final VoidCallback onMicrophone,onSpeaker,onEnd;
+  const Ngelx445CallControls({super.key,required this.microphone,required this.speaker,required this.onMicrophone,required this.onSpeaker,required this.onEnd});
+  Widget _control(String label,IconData icon,VoidCallback action,{bool end=false})=>Tooltip(message:label,child:Semantics(label:label,button:true,child:InkWell(
+    onTap:action,borderRadius:BorderRadius.circular(18),
+    child:SizedBox(width:28,height:32,child:Center(child:Container(
+      width:28,height:28,decoration:end?const BoxDecoration(color:Color(0xFFFF414A),shape:BoxShape.circle):null,
+      child:Icon(icon,color:Colors.white,size:18),
+    ))),
+  )));
+  @override Widget build(BuildContext context)=>Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[
+    _control(_ngelx438Ui('Mikrofon'),microphone?Icons.mic:Icons.mic_off,onMicrophone),
+    _control(_ngelx438Ui('Hoparlör'),speaker?Icons.volume_up:Icons.volume_off,onSpeaker),
+    _control(_ngelx438Ui('Aramayı bitir'),Icons.call_end,onEnd,end:true),
+  ]);
+}
