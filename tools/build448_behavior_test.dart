@@ -13,6 +13,15 @@ void main(){
   await expectLater(ngelx448MediaSession(ctx,'failure',()async{throw StateError('failed');}),throwsStateError);
   await ngelx448MediaSession(ctx,'third',()async{second=true;});expect(second,true);
  });
+ testWidgets('route exit holds the audio lease until local media stops',(tester)async{
+  late BuildContext ctx;await tester.pumpWidget(MaterialApp(home:Scaffold(body:Builder(builder:(c){ctx=c;return const SizedBox();}))));
+  final stop=Completer<void>();var exited=false,second=false;
+  final exit=ngelx448MediaSession(ctx,'stopping',()async{ngelx448HoldMediaUntil(stop.future);}).then((_){exited=true;});
+  await tester.pump();expect(exited,false);
+  await ngelx448MediaSession(ctx,'blocked',()async{second=true;});expect(second,false);
+  stop.complete();await exit;expect(exited,true);
+  await ngelx448MediaSession(ctx,'allowed',()async{second=true;});expect(second,true);
+ });
  test('recent group activity sorts before older messages',(){
   final now=DateTime.now();expect(ngelx448GroupCompare({'updatedAt':Timestamp.fromDate(now)},{'updatedAt':Timestamp.fromDate(now.subtract(const Duration(hours:1)))},now),lessThan(0));
  });
