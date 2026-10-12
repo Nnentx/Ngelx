@@ -1,3 +1,4 @@
+# Keep minimized-call duration and active heartbeat synchronized
 # Coalesce overlay changes safely after route construction
 # Call notification cards open conversations without joining
 # Guard nullable signed-in UID in the shared chat filter

@@ -99,7 +99,7 @@ Future<void> ngelx445EndBackground(String name)async{
   try{
     await FirebaseFirestore.instance.runTransaction((tx)async{
       final doc=await tx.get(detail.ref),v=doc.data()??<String,dynamic>{};
-      if(v['callRoomName']!=name||!['ringing','active'].contains(v['callStatus']))return;
+      if(FirebaseAuth.instance.currentUser?.uid!=me||v['callRoomName']!=name||!['ringing','active'].contains(v['callStatus']))return;
       final participants=List<String>.from(v['callParticipants']??const[]).where((x)=>x!=me).toList();
       final ended=!name.startsWith('group_')||v['callStartedBy']==me||participants.isEmpty;
       tx.set(detail.ref,{'callParticipants':FieldValue.arrayRemove([me]),if(ended)'callStatus':'ended',if(ended)'callEndedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
@@ -116,7 +116,20 @@ class _Ngelx445CallOverlayState extends State<Ngelx445CallOverlay>{
   Timer? _tick;StreamSubscription<User?>? _auth;
   double? _left,_top;
   @override void initState(){super.initState();
-    _tick=Timer.periodic(const Duration(seconds:1),(_){if(mounted&&_ngelxArkaPlanAramaOdalari.isNotEmpty)setState((){});});
+    _tick=Timer.periodic(const Duration(seconds:1),(_){
+      if(mounted&&_ngelxArkaPlanAramaOdalari.isNotEmpty)setState((){});
+      if(DateTime.now().second%30==0){
+        final name=ngelxCallSession444.room,detail=ngelx445CallDetails[name];
+        if(name!=null&&detail!=null&&ngelxCallSession444.background&&FirebaseAuth.instance.currentUser?.uid==detail.uid){
+          unawaited(FirebaseFirestore.instance.runTransaction((tx)async{
+            final d=await tx.get(detail.ref);
+            if(FirebaseAuth.instance.currentUser?.uid==detail.uid&&_ngelxArkaPlanAramaOdalari.containsKey(name)&&d.data()?['callRoomName']==name&&d.data()?['callStatus']=='active'){
+              tx.set(detail.ref,{'callHeartbeatAt':FieldValue.serverTimestamp()},SetOptions(merge:true));
+            }
+          }).timeout(const Duration(seconds:8)).catchError((_){ }));
+        }
+      }
+    });
     _auth=FirebaseAuth.instance.authStateChanges().listen((user){
       for(final e in ngelx445CallDetails.entries.toList()){
         if(user?.uid!=e.value.uid)unawaited(ngelxArkaPlanAramayiTemizle(e.key));
