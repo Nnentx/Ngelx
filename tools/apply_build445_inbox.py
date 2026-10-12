@@ -17,7 +17,7 @@ region=region.replace('sohbetAra.dispose();super.dispose();','sohbetAra.dispose(
 region=region.replace("sekme('Tümü',bildirimler+istekler+mesajlar+gruplar)","sekme('Tümü',ngelx445AllUnread(mesajlar,gruplar))",1)
 region=region.replace("      ?tumIcerigi()","      ?sohbetlerIcerigi()",1)
 # Existing helper hides pending requests based on the application's privacy model.
-region=region.replace("            if(filtre=='Mesajlar'&&grup)return false;\n            if(filtre=='Gruplar'&&!grup)return false;", "            if(!ngelx445ChatFilter(filtre,group:grup,pending:ngelxBekleyenMesajIstegi(v,ben,arkadaslar),hidden:false))return false;",1)
+region=region.replace("            if(filtre=='Mesajlar'&&grup)return false;\n            if(filtre=='Gruplar'&&!grup)return false;", "            if(!ngelx445ChatFilter(filtre,group:grup,pending:ngelxBekleyenMesajIstegi(v,ben??'',arkadaslar),hidden:false))return false;",1)
 region=region.replace('fontSize:30,fontWeight:FontWeight.w900','fontSize:30,fontWeight:FontWeight.w900',1)
 region=region.replace('onPressed:()=>setState(()=>_aramaAcik=!_aramaAcik),','onPressed:()=>_search445.requestFocus(),',1)
 region=region.replace('icon:Icon(_aramaAcik?Icons.close_rounded:Icons.search_rounded,color:const Color(0xFF07142E),size:29),','icon:const Icon(Icons.search_rounded,color:mor,size:27),',1)
