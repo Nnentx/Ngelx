@@ -6,6 +6,7 @@ class Ngelx448IncomingCalls {
   StreamSubscription<QuerySnapshot<Map<String,dynamic>>>? _calls;
   String? _ringing,_handling;
   bool _started=false;
+  int _epoch448=0;
   void start(){
     if(_started||kIsWeb||defaultTargetPlatform!=TargetPlatform.android)return;_started=true;
     channel.setMethodCallHandler((call)async{if(call.method=='callAction')await _action(Map<String,dynamic>.from(call.arguments as Map));});
@@ -26,17 +27,20 @@ class Ngelx448IncomingCalls {
         final d=active.first,v=d.data(),room=(v['callRoomName']??'').toString();
         if(room.isEmpty||ngelxCallSession444.busy||_media448!=null){unawaited(_stop());return;}
         if(_ringing==room)return;
-        unawaited(_ring(d.id,room,(v['callTitle']??v['groupName']??'NgelX araması').toString(),v['callVideo']==true));
+        unawaited(_ring(d.id,room,(v['callTitle']??v['groupName']??'NgelX araması').toString(),v['callVideo']==true,caller:v['isGroup']==true?'':(v['callStartedBy']??'').toString()));
       });
       try{final pending=await channel.invokeMapMethod<String,dynamic>('pendingAction');if(pending!=null)await _action(pending);}catch(_){}
     });
   }
-  Future<void> _stop()async{
+  Future<void> _stop({bool invalidate=true})async{
+    if(invalidate)_epoch448++;
     final room=_ringing;_ringing=null;
     if(room!=null){try{await channel.invokeMethod<void>('cancel',{'room':room});}catch(_){} }
   }
-  Future<void> _ring(String chat,String room,String title,bool video)async{
-    await _stop();_ringing=room;
+  Future<void> _ring(String chat,String room,String title,bool video,{String caller=''})async{
+    final epoch=++_epoch448;await _stop(invalidate:false);if(epoch!=_epoch448)return;_ringing=room;
+    if(caller.isNotEmpty){try{final p=await FirebaseFirestore.instance.collection('users').doc(caller).get().timeout(const Duration(seconds:2));title=(p.data()?['displayName']??p.data()?['username']??title).toString();}catch(_){} }
+    if(epoch!=_epoch448)return;
     try{await channel.invokeMethod<void>('show',{'chat':chat,'room':room,'title':title,'video':video});}catch(_){}
     Future<void>.delayed(const Duration(seconds:60),(){if(_ringing==room)unawaited(_stop());});
   }

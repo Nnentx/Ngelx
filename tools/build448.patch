@@ -401,7 +401,7 @@
    bool uzakKameraAcik=true;
    bool pkAktifYerel=false;
 +  StreamSubscription<DocumentSnapshot<Map<String,dynamic>>>? _guestSub448;
-+  bool _guestActive448=false,_guestConnecting448=false;
++  bool _guestActive448=false,_guestConnecting448=false,_guestWanted448=false;
    int heartbeatTik=0;
    int yenidenBaglanmaDenemesi=0;
    String bitisMesaji='Canlı yayın sona erdi.';
@@ -409,7 +409,7 @@
      mikrofonAcik = widget.ilkMikrofonAcik;
      kameraAcik = widget.ilkKameraAcik;
      uzakKameraAcik=widget.ilkKameraAcik;
-+    _liveStream448=FirebaseFirestore.instance.collection('live_streams').doc(widget.belgeId).snapshots().asBroadcastStream();
++    _liveStream448=FirebaseFirestore.instance.collection('live_streams').doc(widget.belgeId).snapshots().asBroadcastStream(onCancel:(subscription)=>subscription.cancel());
 +    _comments448=FirebaseFirestore.instance.collection('live_streams').doc(widget.belgeId).collection('comments').orderBy('createdAt',descending:true).limit(35).snapshots();
      widget.oda.addListener(_yenile);
      canliDurumAboneligi=FirebaseFirestore.instance.collection('live_streams').doc(widget.belgeId).snapshots().listen((snap){
@@ -423,7 +423,7 @@
        unawaited(_katildimKaydet());
      } else {
        unawaited(_heartbeatYaz());
-@@ -842,13 +853,35 @@
+@@ -842,13 +853,36 @@
      sayac = Timer.periodic(const Duration(seconds: 1), (_) {
        final izleyici = widget.oda.remoteParticipants.length;
        if (izleyici > maxIzleyici) maxIzleyici = izleyici;
@@ -433,6 +433,7 @@
    }
  
 +  Future<void> _guestSync448(bool accepted)async{
++    _guestWanted448=accepted;
 +    if(_guestConnecting448||!mounted||kapatildi||yayinBitti||accepted==_guestActive448)return;
 +    _guestConnecting448=true;
 +    try{
@@ -450,7 +451,7 @@
 +      }
 +      if(mounted)setState(()=>_guestActive448=accepted);
 +    }catch(_){if(mounted)ngelxDurumMesaji(context,'Yayına katılım bağlantısı kurulamadı. Tekrar dene.',tip:'hata');}
-+    finally{_guestConnecting448=false;}
++    finally{_guestConnecting448=false;if(mounted&&!kapatildi&&!yayinBitti&&_guestWanted448!=accepted)unawaited(_guestSync448(_guestWanted448));}
 +  }
 +
    void _yenile() {
@@ -462,7 +463,7 @@
        unawaited(_otomatikYenidenBaglan());
      }
    }
-@@ -946,7 +979,7 @@
+@@ -946,7 +980,7 @@
          if (!p.muted && p.track is lk.VideoTrack) return p.track as lk.VideoTrack;
        }
      } else {
@@ -471,7 +472,7 @@
          for (final p in katilimci.videoTrackPublications) {
            if (p.subscribed && !p.muted && p.track is lk.VideoTrack) return p.track as lk.VideoTrack;
          }
-@@ -1081,7 +1114,7 @@
+@@ -1081,7 +1115,7 @@
  
    Future<bool> _geri() async {
      // After the stream ends, only the explicit return button may dismiss summary.
@@ -480,7 +481,7 @@
      await _klavyeyiKapat();
      if(widget.yayinSahibi){
        final onay=await showDialog<bool>(
-@@ -1252,6 +1285,7 @@
+@@ -1252,6 +1286,7 @@
                                if(mounted)Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciProfilPage(uid:uid)));
                                return;
                              }
@@ -488,7 +489,7 @@
                              if(secim=='mute'){
                                await FirebaseFirestore.instance.collection('live_streams').doc(widget.belgeId).set({
                                  'mutedUsers':FieldValue.arrayUnion([uid]),
-@@ -1267,6 +1301,7 @@
+@@ -1267,6 +1302,7 @@
                              }
                            },
                            itemBuilder:(_)=> [
@@ -496,7 +497,7 @@
                              PopupMenuItem(value:'profile',child:ListTile(contentPadding:EdgeInsets.zero,leading:Icon(Icons.person_outline_rounded),title:Text(_ngelx438Ui("Profili aç")))),
                              PopupMenuItem(value:'mute',child:ListTile(contentPadding:EdgeInsets.zero,leading:Icon(Icons.volume_off_rounded),title:Text('Yorumlarını sustur'))),
                              PopupMenuItem(value:'remove',child:ListTile(contentPadding:EdgeInsets.zero,leading:Icon(Icons.block_rounded,color:Colors.redAccent),title:Text('Yayından çıkar',style:TextStyle(color:Colors.redAccent)))),
-@@ -1444,7 +1479,7 @@
+@@ -1444,7 +1480,7 @@
            },
          ),
          Flexible(child:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
@@ -505,7 +506,7 @@
            builder:(_,snap){
              final yorumlar=snap.data?.docs??[];
              if(yorumlar.isEmpty)return Text(widget.baslik,style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w800));
-@@ -1501,7 +1536,7 @@
+@@ -1501,7 +1537,7 @@
    Widget _yorumGirisAlani(){
      final uid=FirebaseAuth.instance.currentUser?.uid??'';
      return StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
@@ -514,7 +515,7 @@
        builder:(_,snap){
          final v=snap.data?.data()??<String,dynamic>{};
          final acik=v['commentsEnabled']!=false||widget.yayinSahibi;
-@@ -2063,6 +2098,8 @@
+@@ -2063,6 +2099,8 @@
      sayac?.cancel();
      heartbeat?.cancel();
      canliDurumAboneligi?.cancel();
@@ -523,7 +524,7 @@
      yorum.dispose();
      widget.oda.removeListener(_yenile);
      if (!kapatildi) _bitir(geriDon: false);
-@@ -2107,7 +2144,7 @@
+@@ -2107,7 +2145,7 @@
            FilledButton.icon(
              style:FilledButton.styleFrom(backgroundColor:Colors.white,
                foregroundColor:Colors.black,minimumSize:const Size(220,50)),
@@ -532,7 +533,7 @@
              icon:const Icon(Icons.explore_rounded),
              label:const Text('Keşfet’e dön',style:TextStyle(fontWeight:FontWeight.w900)),
            ),
-@@ -2119,27 +2156,26 @@
+@@ -2119,27 +2157,26 @@
    @override
    Widget build(BuildContext context) {
      final track = _goruntu();
@@ -564,7 +565,7 @@
            Positioned.fill(child:DecoratedBox(decoration:BoxDecoration(gradient:LinearGradient(begin:Alignment.topCenter,end:Alignment.bottomCenter,colors:[Colors.black54,Colors.transparent,Colors.black.withOpacity(.8)])))),
            if(!yayinBitti&&!kapatildi&&widget.oda.connectionState==lk.ConnectionState.reconnecting)
              Positioned(
-@@ -2160,7 +2196,7 @@
+@@ -2160,7 +2197,7 @@
                Row(children: [
                  Container(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8), decoration: BoxDecoration(color: const Color(0xFFFF1744), borderRadius: BorderRadius.circular(14)), child:  Text(_ngelx438Ui("● CANLI"), style: TextStyle(fontWeight: FontWeight.w900))),
                  const SizedBox(width: 8),
@@ -573,7 +574,7 @@
                  const SizedBox(width: 8),
                  InkWell(
                    onTap:_izleyiciListesiniAc,
-@@ -2184,6 +2220,7 @@
+@@ -2184,6 +2221,7 @@
                const SizedBox(height:8),
                NgelXCanliPkKatmani(liveId:widget.belgeId,yayinSahibi:widget.yayinSahibi),
                const Spacer(),
