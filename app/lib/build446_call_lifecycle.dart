@@ -94,11 +94,11 @@ Future<void> ngelx446MuteMenu(BuildContext context,DocumentReference<Map<String,
     if(owner!=me&&!List<String>.from(v['admins']??const[]).contains(me))return;
     if(owner==target||v['callRoomName']!=name||!context.mounted)return;
     final isMuted=v['callModerationRoom']==name&&List<String>.from(v['callMutedUids']??const[]).contains(target);
-    final action=await showModalBottomSheet<String>(context:context,backgroundColor:Colors.white,showDragHandle:true,builder:(c)=>SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
+    final action=await showModalBottomSheet<String>(context:context,backgroundColor:Colors.white,showDragHandle:true,builder:(c)=>Theme(data:ThemeData.light(),child:SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
       ListTile(leading:const Icon(Icons.more_horiz),title:const Text('Katılımcı işlemleri')),
       ListTile(leading:Icon(isMuted?Icons.mic:Icons.mic_off),title:Text(isMuted?'Mikrofon iznini geri ver':'Mikrofonunu sustur'),onTap:()=>Navigator.pop(c,isMuted?'allow':'mute')),
       ListTile(leading:const Icon(Icons.call_end,color:Colors.red),title:const Text('Sesli görüşmeden çıkar'),subtitle:const Text('Grup üyeliği devam eder'),onTap:()=>Navigator.pop(c,'kick')),
-    ])));
+    ]))));
     if(action==null)return;
     await FirebaseFirestore.instance.runTransaction((tx)async{
       final current=await tx.get(ref),data=current.data()??<String,dynamic>{};

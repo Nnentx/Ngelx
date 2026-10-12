@@ -50,3 +50,11 @@ test('host prefix selects only fresh own reservations',()=>{
  assert.equal(hostRequestKind('alice',`ngelx_audio_alice_${now-60001}`,now),null);
  assert.equal(hostRequestKind('alice','ngelx_audio_alice_fake',now),null);
 });
+
+test('live guest publishing needs host/guest consent for that account',()=>{
+ const args={kind:'live',uid:'guest',viewer:{},owner:{},now,room:{ownerId:'host',active:true,lastHeartbeatAt:new Date(now),visibility:'public'}};
+ assert.equal(roomPermission(args).canPublish,false);
+ for(const status of ['pending','invited','rejected'])assert.equal(roomPermission({...args,room:{...args.room,guestRequest:{status,hostUid:'host',guestUid:'guest'}}}).canPublish,false);
+ assert.equal(roomPermission({...args,room:{...args.room,guestRequest:{status:'accepted',hostUid:'host',guestUid:'guest'}}}).canPublish,true);
+ assert.equal(roomPermission({...args,room:{...args.room,guestRequest:{status:'accepted',hostUid:'attacker',guestUid:'guest'}}}).canPublish,false);
+});

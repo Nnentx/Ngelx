@@ -1,0 +1,681 @@
+--- a/app/lib/main.dart
++++ b/app/lib/main.dart
+@@ -51,6 +51,8 @@
+ part 'audio_live_rooms_extras.dart';
+ part 'live_feed_card.dart';
+ part 'live_pk.dart';
++part 'build448_live_guests.dart';
++part 'build448_incoming_calls.dart';
+ part 'feed_creator_badge.dart';
+ part 'story_v66.dart';
+ part 'build445_inbox_model.dart';
+@@ -235,6 +237,7 @@
+     final hafiza = await SharedPreferences.getInstance();
+     uygulamaDili.value = hafiza.getString('uygulama_dili') ?? 'tr';
+     runApp(const NgelXApp());
++    WidgetsBinding.instance.addPostFrameCallback((_)=>ngelx448Incoming.start());
+   } catch (e) {
+     runApp(BaslangicHataApp(hata: e.toString()));
+   }
+@@ -327,7 +330,20 @@
+   }
+   try{await player.play();}finally{if(player is! VideoPlayerController)_ngelx444MediaPlayers.remove(player);}
+ }
++int ngelx448GroupCompare(Map<String,dynamic> a,Map<String,dynamic> b,DateTime now){
++  final ac=ngelx440CallJoinable(a,now),bc=ngelx440CallJoinable(b,now);
++  if(ac!=bc)return bc?1:-1;
++  int activity(Map<String,dynamic> v){var best=0;for(final key in ['lastMessageAt','lastMessageTime','updatedAt','callCreatedAt','callEndedAt']){final t=v[key];if(t is Timestamp&&t.millisecondsSinceEpoch>best)best=t.millisecondsSinceEpoch;}return best;}
++  return activity(b).compareTo(activity(a));
++}
++String? _media448;
++Future<void> ngelx448MediaSession(BuildContext context,String name,Future<void> Function() action)async{
++  if(_media448!=null||ngelxCallSession444.busy){ngelxDurumMesaji(context,'Önce devam eden aramayı veya yayını bitir.',tip:'uyari');return;}
++  _media448=name;
++  try{await action();}finally{if(_media448==name)_media448=null;}
++}
+ bool ngelx444ReserveCall(BuildContext context,String name){
++  if(_media448!=null){ngelxDurumMesaji(context,'Önce devam eden yayını veya sesli odayı bitir.',tip:'uyari');return false;}
+   if(!ngelxCallSession444.reserve(name)){
+     ngelxDurumMesaji(context,_ngelx438Ui('Önce devam eden aramayı bitir.'),tip:'uyari');
+     return false;
+@@ -2996,7 +3012,8 @@
+   }
+ }
+ 
+-Future<void> ngelxCanliYayinaKatil(BuildContext context,String belgeId)async{
++Future<void> ngelxCanliYayinaKatil(BuildContext context,String belgeId)=>ngelx448MediaSession(context,'live:$belgeId',()=>_ngelxCanliYayinaKatil448(context,belgeId));
++Future<void> _ngelxCanliYayinaKatil448(BuildContext context,String belgeId)async{
+   if(belgeId.isEmpty||await misafirEngeli(context))return;
+   final user=FirebaseAuth.instance.currentUser;
+   if(user==null)return;
+@@ -3028,7 +3045,7 @@
+       await oda.dispose();
+       return;
+     }
+-    Navigator.push(context,MaterialPageRoute(builder:(_)=>CanliYayinPage(
++    await Navigator.push(context,MaterialPageRoute(builder:(_)=>CanliYayinPage(
+       oda:oda!,
+       belgeId:belgeId,
+       baslik:(veri['title']??'NgelX canlı yayını').toString(),
+@@ -9489,37 +9506,7 @@
+     super.dispose();
+   }
+ 
+-  Future<void> _yayinIzle(BuildContext context, Map<String, dynamic> veri, String belgeId) async {
+-    if (await misafirEngeli(context)) return;
+-    final user = FirebaseAuth.instance.currentUser;
+-    if (user == null) return;
+-    try {
+-      final kaynak = NgelXLiveKitSource441();
+-      final kimlik = '${user.uid}-${DateTime.now().millisecondsSinceEpoch}';
+-      final cevap = await kaynak.fetch(lk.TokenRequestOptions(
+-        roomName: (veri['roomName'] ?? '').toString(),
+-        participantIdentity: kimlik,
+-        participantName: (user.displayName?.isNotEmpty == true ? user.displayName : 'NgelX izleyicisi'),
+-      ));
+-      final oda = lk.Room(roomOptions: lk.RoomOptions(adaptiveStream: true, dynacast: true));
+-      await oda.connect(cevap.serverUrl, cevap.participantToken);
+-      if (!context.mounted) {
+-        await oda.disconnect();
+-        await oda.dispose();
+-        return;
+-      }
+-      Navigator.push(context, MaterialPageRoute(builder: (_) => CanliYayinPage(
+-        oda: oda,
+-        belgeId: belgeId,
+-        baslik: (veri['title'] ?? 'NgelX canlı yayını').toString(),
+-        yayinSahibi: false,
+-      )));
+-    } catch (e) {
+-      if (context.mounted) {
+-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Canlı yayına bağlanılamadı: $e')));
+-      }
+-    }
+-  }
++  Future<void> _yayinIzle(BuildContext context, Map<String, dynamic> veri, String belgeId)=>ngelxCanliYayinaKatil(context,belgeId);
+ 
+   void _aramaAc(){
+     Navigator.push(context,MaterialPageRoute(builder:(_)=>const AramaPage()));
+@@ -9688,32 +9675,17 @@
+       return;
+     }
+     try{
++      final ref=FirebaseFirestore.instance.collection('chats').doc(id);
++      final profile=(await FirebaseFirestore.instance.collection('users').doc(uid).get()).data()??<String,dynamic>{};
+       await FirebaseFirestore.instance.runTransaction((tx)async{
+-        final ref=FirebaseFirestore.instance.collection('chats').doc(id);
+-        final d=await tx.get(ref);
+-        final v=d.data()??<String,dynamic>{};
+-        if(v['isGroup']!=true||v['discoverable']!=true)throw Exception('Bu grup keşfete açık değil.');
+-        if(v['joinApproval']==true)throw Exception('Bu grup katılma onayı istiyor.');
+-        final uyeler=List<String>.from(v['members']??const[]);
+-        final max=(v['maxMembers'] as num?)?.toInt()??60;
+-        if(uyeler.contains(uid))return;
+-        if(uyeler.length>=max)throw Exception('Grup üye sınırına ulaştı.');
+-        final eski=List<String>.from(v['formerMembers']??const[])..remove(uid);
+-        final gizli=List<String>.from(v['hiddenFor']??const[])..remove(uid);
+-        uyeler.add(uid);
+-        tx.update(ref,{
+-          'members':uyeler,
+-          'formerMembers':eski,
+-          'hiddenFor':gizli,
+-          'updatedAt':FieldValue.serverTimestamp(),
+-        });
++        final group=await tx.get(ref),request=await tx.get(ref.collection('joinRequests').doc(uid));
++        final v=group.data()??<String,dynamic>{};
++        if(v['isGroup']!=true||v['discoverable']!=true)throw StateError('Grup keşfete açık değil.');
++        if(List<String>.from(v['members']??const[]).contains(uid)||request.data()?['status']=='pending')return;
++        tx.set(ref.collection('joinRequests').doc(uid),{'uid':uid,'type':'discovery_join','targetName':profile['displayName']??profile['username']??'Kullanıcı','targetPhoto':profile['photoUrl']??'','status':'pending','createdAt':FieldValue.serverTimestamp(),'updatedAt':FieldValue.serverTimestamp()});
+       });
+-      if(!mounted)return;
+-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Gruba katıldın ✅')));
+-      Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupSohbetPage(chatId:id,ad:ad,foto:foto)));
+-    }catch(e){
+-      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Gruba katılınamadı: $e')));
+-    }
++      if(mounted)ngelxDurumMesaji(context,'Katılma isteğin yönetici onayına gönderildi.',tip:'basari');
++    }catch(_){if(mounted)ngelxDurumMesaji(context,'Katılma isteği gönderilemedi.',tip:'hata');}
+   }
+ 
+   Future<void> _kesfetiYenile() async {
+@@ -9942,7 +9914,7 @@
+       builder:(_,snap){
+         if(snap.connectionState==ConnectionState.waiting)return const SliverToBoxAdapter(child:Padding(padding:EdgeInsets.all(35),child:Center(child:CircularProgressIndicator(color:mor))));
+         if(snap.hasError)return SliverToBoxAdapter(child:Padding(padding:const EdgeInsets.all(28),child:Center(child:Text(t('groupsLoadError'),style:const TextStyle(color:Colors.black54)))));
+-        final gruplar=(snap.data?.docs??[]).where((d){final ad=(d.data()['groupName']??'').toString().toLowerCase();return d.data()['groupDeleted']!=true&&!ad.contains('oyun')&&!ad.contains('game');}).toList();
++        final gruplar=(snap.data?.docs??[]).where((d){final ad=(d.data()['groupName']??'').toString().toLowerCase();return d.data()['groupDeleted']!=true&&!ad.contains('oyun')&&!ad.contains('game');}).toList()..sort((a,b)=>ngelx448GroupCompare(a.data(),b.data(),DateTime.now()));
+         if(gruplar.isEmpty)return SliverToBoxAdapter(child:Padding(padding:const EdgeInsets.all(28),child:Center(child:Text(t('groupsEmpty'),style:const TextStyle(color:Colors.black54)))));
+         return SliverList(delegate:SliverChildBuilderDelegate((_,i)=>_grupSatiri(gruplar[i].id,gruplar[i].data()),childCount:gruplar.length));
+       },
+@@ -10050,10 +10022,13 @@
+               Text('$sayi ${t('member')}',style:const TextStyle(color:Colors.black45,fontSize:12)),
+             ])),
+             const SizedBox(width:8),
+-            FilledButton(
+-              onPressed:()=>_grupDurumuDegistir(id,katildi,ad:ad,foto:foto),
+-              style:FilledButton.styleFrom(backgroundColor:katildi?const Color(0xFFECECF2):mor,foregroundColor:katildi?Colors.black87:Colors.white,padding:const EdgeInsets.symmetric(horizontal:13)),
+-              child:Text(katildi?t('open'):t('join'),style:const TextStyle(fontWeight:FontWeight.w800,fontSize:12)),
++            StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
++              stream:ben==null||katildi?null:FirebaseFirestore.instance.collection('chats').doc(id).collection('joinRequests').doc(ben).snapshots(),
++              builder:(_,request){final pending=request.data?.data()?['status']=='pending';return FilledButton(
++                onPressed:pending&&!katildi?null:()=>_grupDurumuDegistir(id,katildi,ad:ad,foto:foto),
++                style:FilledButton.styleFrom(backgroundColor:katildi?const Color(0xFFECECF2):mor,foregroundColor:katildi?Colors.black87:Colors.white,padding:const EdgeInsets.symmetric(horizontal:13)),
++                child:Text(katildi?t('open'):pending?'İstek gönderildi':t('join'),style:const TextStyle(fontWeight:FontWeight.w800,fontSize:12)),
++              );},
+             ),
+           ]),
+         ),
+@@ -14364,7 +14339,8 @@
+ 
+   Future<void> mentionAra(String deger)async{
+     mentionZamanlayici?.cancel();
+-    final parca=deger.split(RegExp(r'\s+')).last;
++    final caret=mesaj.selection.isValid?mesaj.selection.baseOffset.clamp(0,deger.length):deger.length;
++    final parca=deger.substring(0,caret).split(RegExp(r'\s+')).last;
+     if(!parca.startsWith('@')){
+       _mentionAramaSurumu++;
+       if(mentionOnerileri.isNotEmpty&&mounted)setState(()=>mentionOnerileri.clear());
+@@ -14380,13 +14356,14 @@
+         final herkesYetkisi=yonetici||grupData['onlyAdminsCanMentionAll']!=true;
+         var uyeler=_mentionUyeleri;
+         if(uyeler==null){
+-          final ids=List<String>.from(grupData['members']??const[]).take(60).toList();
+-          final belgeler=await Future.wait(ids.map(_uyeGetir));
++          final ids=List<String>.from(grupData['members']??const[]).toList();
++          final belgeler=await Future.wait(ids.map((id)async{try{return (await _uyeGetir(id).timeout(const Duration(seconds:4))).data()??<String,dynamic>{};}catch(_){_uyeProfilCache.remove(id);return <String,dynamic>{};}}));
+           if(!mounted||surum!=_mentionAramaSurumu)return;
+           uyeler=<Map<String,String>>[];
+           for(int i=0;i<belgeler.length;i++){
+-            final v=belgeler[i].data()??<String,dynamic>{};
+-            final kullanici=(v['username']??'').toString().trim();
++            final v=belgeler[i];
++            final raw=(v['username']??v['displayName']??'').toString().trim();
++            final kullanici=raw.isEmpty?'uye_${ids[i].substring(0,ids[i].length.clamp(0,6))}':raw.replaceAll(RegExp(r'\s+'),'_');
+             final ad=(v['displayName']??kullanici).toString().trim();
+             final foto=(v['photoUrl']??'').toString().trim();
+             if(kullanici.isNotEmpty)uyeler.add({'uid':ids[i],'username':kullanici,'name':ad.isEmpty?kullanici:ad,'photo':foto,'kind':'person'});
+@@ -14416,16 +14393,19 @@
+     });
+   }
+   Future<void> mentionEkle(String kullanici,String? hedefUid)async{
+-    final metin=mesaj.text,sonBosluk=metin.lastIndexOf(RegExp(r'\s'));
++    final metin=mesaj.text;
++    final caret=mesaj.selection.isValid?mesaj.selection.baseOffset.clamp(0,metin.length):metin.length;
++    final sonBosluk=metin.substring(0,caret).lastIndexOf(RegExp(r'\s'));
+     final once=sonBosluk<0?'':metin.substring(0,sonBosluk+1);
++    final after=metin.substring(caret);
+     if(hedefUid=='silent'){
+       mesaj.text=once;
+       mesaj.selection=TextSelection.collapsed(offset:mesaj.text.length);
+       if(mounted)setState((){sessizGonder=true;mentionOnerileri.clear();});
+       return;
+     }
+-    mesaj.text='${once}@$kullanici ';
+-    mesaj.selection=TextSelection.collapsed(offset:mesaj.text.length);
++    mesaj.text='${once}@$kullanici $after';
++    mesaj.selection=TextSelection.collapsed(offset:once.length+kullanici.length+2);
+     if(hedefUid=='all'){
+       final veri=await _grupVerisiHizli();
+       final yonetici=List<String>.from(veri['admins']??const[]).contains(uid)||(veri['createdBy']??'').toString()==uid;
+@@ -15799,7 +15779,7 @@
+             ?chatRef.collection('messages').where('createdAt',isLessThanOrEqualTo:cikisZamani).orderBy('createdAt').limitToLast(100).snapshots()
+             :_mesajAkisi;
+           _typingGostergesiAcik=true;
+-          final opaklik=(tv['backgroundOpacity'] is num?(tv['backgroundOpacity'] as num).toDouble():.26).clamp(.10,.55).toDouble();
++          final opaklik=(tv['backgroundOpacity'] is num?(tv['backgroundOpacity'] as num).toDouble():.30).clamp(.05,.85).toDouble();
+           return Container(
+             decoration:BoxDecoration(
+               color:Colors.white,
+@@ -16034,7 +16014,7 @@
+               ),
+               if(uyeMi&&mentionOnerileri.isNotEmpty)Container(
+                 margin:const EdgeInsets.fromLTRB(8,0,8,6),
+-                constraints:BoxConstraints(maxHeight:MediaQuery.viewInsetsOf(context).bottom>0?170:300),
++                constraints:const BoxConstraints(maxHeight:170),
+                 decoration:BoxDecoration(
+                   color:Colors.white,
+                   borderRadius:BorderRadius.circular(22),
+@@ -17893,6 +17873,7 @@
+     Text(yenidenBaglaniyor?'Yeniden bağlanıyor…':baglaniyor?'Bağlanıyor…':'Sesli arama • '+_aramaSureYazi(),style:const TextStyle(color:Colors.white70,fontSize:15,fontWeight:FontWeight.w600)),
+   ])));
+ 
++  double _swipeDown448=0;
+   Future<void> _aramaEkraniniKucult()async{
+     if(kucultuluyor||!mounted)return;
+     if(oda==null||_connectInFlight444){await bitir();return;}
+@@ -17901,6 +17882,7 @@
+     kucultuluyor=true;
+     unawaited(_tone444(false));
+     ngelxCallSession444.minimize(widget.roomName);
++    ngelx448HideCallCard(widget.roomName);
+     final r=oda;
+     if(r!=null){
+       r.removeListener(_odaDegisti);
+@@ -17925,7 +17907,11 @@
+     },
+     child:Scaffold(
+       backgroundColor:widget.goruntulu?Colors.black:ngelxCallBg,
+-      body:Container(
++      body:GestureDetector(
++        onVerticalDragStart:(_)=>_swipeDown448=0,
++        onVerticalDragUpdate:(d)=>_swipeDown448+=d.delta.dy,
++        onVerticalDragEnd:(d){if(_swipeDown448>100||d.primaryVelocity!=null&&d.primaryVelocity!>800)unawaited(_aramaEkraniniKucult());},
++        child:Container(
+         decoration:widget.goruntulu
+           ?const BoxDecoration(color:Colors.black)
+           :const BoxDecoration(gradient:RadialGradient(center:Alignment(0,-.35),radius:1.25,colors:[Color(0xFF2A1550),ngelxCallBg])),
+@@ -17998,7 +17984,7 @@
+           const SizedBox(height:22),
+         ])),
+       ),
+-    ),
++    )),
+   );
+ 
+   Widget ngelxCallMiniButton(IconData icon,VoidCallback onTap)=>InkWell(
+@@ -19341,9 +19327,9 @@
+         builder:(_,snap){
+           final v=snap.data?.data()??<String,dynamic>{},uid=me!;
+           final url=(v['backgroundUrl']??'').toString();
+-          final opacity=(v['backgroundOpacity'] is num?(v['backgroundOpacity'] as num).toDouble():.35).clamp(.10,.55).toDouble();
++          final opacity=(v['backgroundOpacity'] is num?(v['backgroundOpacity'] as num).toDouble():.30).clamp(.05,.85).toDouble();
+           final canManage=List<String>.from(v['admins']??const[]).contains(uid)||(v['createdBy']??'').toString()==uid;
+-          var sliderOpacity=opacity;
++
+           return ListView(
+             padding:const EdgeInsets.fromLTRB(18,14,18,30),
+             children:[
+@@ -19399,31 +19385,15 @@
+               if(url.isNotEmpty)...[
+                 const SizedBox(height:12),
+                 const Text('Arka plan görünürlüğü',style:TextStyle(fontWeight:FontWeight.w800)),
+-                StatefulBuilder(
+-                  builder:(context,setSliderState)=>Slider(
+-                    value:sliderOpacity,min:.10,max:.55,
+-                    onChanged:(x){
+-                      if(!canManage)return;
+-                      setSliderState(()=>sliderOpacity=x);
+-                    },
+-                    onChangeEnd:(x)async{
+-                      if(!canManage){
+-                        if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Grup arka planını yalnızca kurucu ve yöneticiler değiştirebilir.')));
+-                        return;
+-                      }
+-                      try{
+-                        final kaydedilecek=(x*100).round()/100.0;
+-                        await ref.set({
+-                          'backgroundOpacity':kaydedilecek,
+-                          'backgroundVersion':FieldValue.increment(1),
+-                          'backgroundChangedAt':FieldValue.serverTimestamp(),
+-                        },SetOptions(merge:true));
+-                      }catch(_){
+-                        if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Arka plan görünürlüğü kaydedilemedi.')));
+-                      }
+-                    },
+-                  ),
+-                ),
++                const SizedBox(height:10),
++                Wrap(spacing:10,runSpacing:10,children:const[(.15,'Hafif'),(.30,'Normal'),(.50,'Belirgin'),(.70,'Güçlü')].map((preset)=>ChoiceChip(
++                  label:Text(preset.$2),selected:(opacity-preset.$1).abs()<.025,
++                  onSelected:!canManage?null:(_)async{
++                    try{await ref.set({'backgroundOpacity':preset.$1,'backgroundVersion':FieldValue.increment(1),'backgroundChangedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));}
++                    catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Arka plan görünürlüğü kaydedilemedi.')));}
++                  },
++                )).toList()),
++                const SizedBox(height:12),
+                 OutlinedButton.icon(
+                   onPressed:()=>_arkaPlanKaldir(url),
+                   icon:const Icon(Icons.delete_outline_rounded,color:Colors.red),
+--- a/app/lib/build445_inbox_model.dart
++++ b/app/lib/build445_inbox_model.dart
+@@ -127,12 +127,16 @@
+     }).timeout(const Duration(seconds:8));
+   }catch(_){}
+ }
++final ngelx448HiddenCallCard=ValueNotifier<String?>(null);
++void ngelx448HideCallCard(String name){ngelx448HiddenCallCard.value=name;ngelx445CallChanged();}
++
+ class Ngelx445CallOverlay extends StatefulWidget{
+   const Ngelx445CallOverlay({super.key});
+   @override State<Ngelx445CallOverlay> createState()=>_Ngelx445CallOverlayState();
+ }
+ class _Ngelx445CallOverlayState extends State<Ngelx445CallOverlay>{
+   Timer? _tick;StreamSubscription<User?>? _auth;
++  double _dragDown448=0;
+   final _position446=ValueNotifier<Offset?>(null);
+   @override void initState(){super.initState();
+     _tick=Timer.periodic(const Duration(seconds:1),(_){
+@@ -160,6 +164,7 @@
+     final name=ngelxCallSession444.room,detail=ngelx445CallDetails[name];
+     final room=_ngelxArkaPlanAramaOdalari[name];
+     if(name==null||detail==null||room==null||!ngelxCallSession444.background||FirebaseAuth.instance.currentUser?.uid!=detail.uid)return const SizedBox.shrink();
++    if(ngelx448HiddenCallCard.value==name)return const SizedBox.shrink();
+     final screen=MediaQuery.sizeOf(context),padding=MediaQuery.paddingOf(context);
+     final start=_ngelxArkaPlanAramaBaslangiclari[name];
+     final seconds=start==null?null:DateTime.now().difference(start).inSeconds.clamp(0,359999);
+@@ -174,7 +179,9 @@
+       return Positioned(left:p.dx,top:p.dy,width:width,child:card!);
+     },child:RepaintBoundary(child:Material(color:Colors.transparent,child:GestureDetector(
+       behavior:HitTestBehavior.opaque,
+-      onPanUpdate:(delta){_position446.value=bounded((_position446.value??initial)+delta.delta);},
++      onPanStart:(_)=>_dragDown448=0,
++      onPanUpdate:(delta){_dragDown448+=delta.delta.dy;_position446.value=bounded((_position446.value??initial)+delta.delta);},
++      onPanEnd:(end){if(_dragDown448>90||end.velocity.pixelsPerSecond.dy>700)ngelx448HideCallCard(name);},
+       child:Container(padding:const EdgeInsets.all(10),decoration:BoxDecoration(color:const Color(0xFF39206F),borderRadius:BorderRadius.circular(18),boxShadow:const[BoxShadow(color:Color(0x33000000),blurRadius:15)]),
+         child:Column(mainAxisSize:MainAxisSize.min,children:[
+           InkWell(onTap:()=>ngelx445ReturnCall(name),child:Column(children:[
+--- a/app/lib/live_broadcast_studio.dart
++++ b/app/lib/live_broadcast_studio.dart
+@@ -394,7 +394,8 @@
+     }
+   }
+ 
+-  Future<void> baslat() async {
++  Future<void> baslat()=>ngelx448MediaSession(context,'live-host',_baslat448);
++  Future<void> _baslat448() async {
+     FocusManager.instance.primaryFocus?.unfocus();
+     await SystemChannels.textInput.invokeMethod<void>('TextInput.hide');
+     final user = FirebaseAuth.instance.currentUser;
+@@ -545,7 +546,7 @@
+         }));
+       }
+       if (!mounted) return;
+-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => CanliYayinPage(
++      await Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => CanliYayinPage(
+         oda: oda!,
+         belgeId: belge.id,
+         baslik: baslik.text.trim(),
+@@ -786,6 +787,10 @@
+   Timer? heartbeat;
+   StreamSubscription<DocumentSnapshot<Map<String,dynamic>>>? canliDurumAboneligi;
+   int saniye = 0;
++  String _roomSignature448='';
++  late final Stream<DocumentSnapshot<Map<String,dynamic>>> _liveStream448;
++  late final Stream<QuerySnapshot<Map<String,dynamic>>> _comments448;
++  final _clock448=ValueNotifier<int>(0);
+   bool mikrofonAcik = true;
+   bool kameraAcik = true;
+   bool kapatildi = false;
+@@ -799,6 +804,8 @@
+   bool yenidenBaglaniyor=false;
+   bool uzakKameraAcik=true;
+   bool pkAktifYerel=false;
++  StreamSubscription<DocumentSnapshot<Map<String,dynamic>>>? _guestSub448;
++  bool _guestActive448=false,_guestConnecting448=false;
+   int heartbeatTik=0;
+   int yenidenBaglanmaDenemesi=0;
+   String bitisMesaji='Canlı yayın sona erdi.';
+@@ -816,6 +823,8 @@
+     mikrofonAcik = widget.ilkMikrofonAcik;
+     kameraAcik = widget.ilkKameraAcik;
+     uzakKameraAcik=widget.ilkKameraAcik;
++    _liveStream448=FirebaseFirestore.instance.collection('live_streams').doc(widget.belgeId).snapshots().asBroadcastStream();
++    _comments448=FirebaseFirestore.instance.collection('live_streams').doc(widget.belgeId).collection('comments').orderBy('createdAt',descending:true).limit(35).snapshots();
+     widget.oda.addListener(_yenile);
+     canliDurumAboneligi=FirebaseFirestore.instance.collection('live_streams').doc(widget.belgeId).snapshots().listen((snap){
+       final v=snap.data()??<String,dynamic>{};
+@@ -834,6 +843,8 @@
+       }
+     });
+     if (!widget.yayinSahibi) {
++      final me=FirebaseAuth.instance.currentUser?.uid;
++      if(me!=null)_guestSub448=ngelx448GuestRef(widget.belgeId,me).snapshots().listen((s){unawaited(_guestSync448(s.data()?['status']=='accepted'));});
+       unawaited(_katildimKaydet());
+     } else {
+       unawaited(_heartbeatYaz());
+@@ -842,13 +853,35 @@
+     sayac = Timer.periodic(const Duration(seconds: 1), (_) {
+       final izleyici = widget.oda.remoteParticipants.length;
+       if (izleyici > maxIzleyici) maxIzleyici = izleyici;
+-      if (mounted) setState(() => saniye++);
++      if (mounted) _clock448.value=++saniye;
+     });
+   }
+ 
++  Future<void> _guestSync448(bool accepted)async{
++    if(_guestConnecting448||!mounted||kapatildi||yayinBitti||accepted==_guestActive448)return;
++    _guestConnecting448=true;
++    try{
++      if(!accepted){await widget.oda.localParticipant?.setCameraEnabled(false);await widget.oda.localParticipant?.setMicrophoneEnabled(false);}
++      else{
++        final me=FirebaseAuth.instance.currentUser?.uid;if(me==null)return;
++        final d=await FirebaseFirestore.instance.collection('live_streams').doc(widget.belgeId).get();
++        final token=await NgelXLiveKitSource441().fetch(lk.TokenRequestOptions(roomName:(d.data()?['roomName']??'').toString(),participantIdentity:me));
++        if(!mounted||kapatildi||yayinBitti)return;
++        await widget.oda.disconnect();await widget.oda.connect(token.serverUrl,token.participantToken);
++        final current=await ngelx448GuestRef(widget.belgeId,me).get();
++        if(!mounted||kapatildi||yayinBitti||current.data()?['status']!='accepted')return;
++        await widget.oda.localParticipant?.setMicrophoneEnabled(true);
++        await widget.oda.localParticipant?.setCameraEnabled(true,cameraCaptureOptions:const lk.CameraCaptureOptions(params:lk.VideoParametersPresets.h360_169,maxFrameRate:20.0));
++      }
++      if(mounted)setState(()=>_guestActive448=accepted);
++    }catch(_){if(mounted)ngelxDurumMesaji(context,'Yayına katılım bağlantısı kurulamadı. Tekrar dene.',tip:'hata');}
++    finally{_guestConnecting448=false;}
++  }
++
+   void _yenile() {
+-    if (mounted) setState(() {});
+-    if(widget.oda.connectionState==lk.ConnectionState.disconnected&&!kapatildi&&!yayinBitti){
++    final signature='${widget.oda.connectionState}|${widget.oda.remoteParticipants.values.map((p)=>'${p.identity}:${p.videoTrackPublications.map((t)=>'${t.sid}:${t.muted}').join(',')}').join('|')}|${widget.oda.localParticipant?.videoTrackPublications.map((t)=>'${t.sid}:${t.muted}').join(',')}';
++    if(mounted&&signature!=_roomSignature448){_roomSignature448=signature;setState((){});}
++    if(widget.oda.connectionState==lk.ConnectionState.disconnected&&!kapatildi&&!yayinBitti&&!_guestConnecting448){
+       unawaited(_otomatikYenidenBaglan());
+     }
+   }
+@@ -946,7 +979,7 @@
+         if (!p.muted && p.track is lk.VideoTrack) return p.track as lk.VideoTrack;
+       }
+     } else {
+-      for (final katilimci in widget.oda.remoteParticipants.values) {
++      for (final katilimci in widget.oda.remoteParticipants.values.where((p)=>widget.ownerId.isEmpty||p.identity==widget.ownerId)) {
+         for (final p in katilimci.videoTrackPublications) {
+           if (p.subscribed && !p.muted && p.track is lk.VideoTrack) return p.track as lk.VideoTrack;
+         }
+@@ -1081,7 +1114,7 @@
+ 
+   Future<bool> _geri() async {
+     // After the stream ends, only the explicit return button may dismiss summary.
+-    if(kapatildi||yayinBitti)return false;
++    if(kapatildi||yayinBitti)return true;
+     await _klavyeyiKapat();
+     if(widget.yayinSahibi){
+       final onay=await showDialog<bool>(
+@@ -1252,6 +1285,7 @@
+                               if(mounted)Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciProfilPage(uid:uid)));
+                               return;
+                             }
++                            if(secim=='invite'){await ngelx448GuestAction(sheetContext,widget.belgeId,widget.ownerId,uid,'invite');return;}
+                             if(secim=='mute'){
+                               await FirebaseFirestore.instance.collection('live_streams').doc(widget.belgeId).set({
+                                 'mutedUsers':FieldValue.arrayUnion([uid]),
+@@ -1267,6 +1301,7 @@
+                             }
+                           },
+                           itemBuilder:(_)=> [
++                            const PopupMenuItem(value:'invite',child:ListTile(contentPadding:EdgeInsets.zero,leading:Icon(Icons.video_call),title:Text('Yayına çağır'))),
+                             PopupMenuItem(value:'profile',child:ListTile(contentPadding:EdgeInsets.zero,leading:Icon(Icons.person_outline_rounded),title:Text(_ngelx438Ui("Profili aç")))),
+                             PopupMenuItem(value:'mute',child:ListTile(contentPadding:EdgeInsets.zero,leading:Icon(Icons.volume_off_rounded),title:Text('Yorumlarını sustur'))),
+                             PopupMenuItem(value:'remove',child:ListTile(contentPadding:EdgeInsets.zero,leading:Icon(Icons.block_rounded,color:Colors.redAccent),title:Text('Yayından çıkar',style:TextStyle(color:Colors.redAccent)))),
+@@ -1444,7 +1479,7 @@
+           },
+         ),
+         Flexible(child:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
+-          stream:ref.collection('comments').orderBy('createdAt',descending:true).limit(30).snapshots(),
++          stream:_comments448,
+           builder:(_,snap){
+             final yorumlar=snap.data?.docs??[];
+             if(yorumlar.isEmpty)return Text(widget.baslik,style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w800));
+@@ -1501,7 +1536,7 @@
+   Widget _yorumGirisAlani(){
+     final uid=FirebaseAuth.instance.currentUser?.uid??'';
+     return StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
+-      stream:FirebaseFirestore.instance.collection('live_streams').doc(widget.belgeId).snapshots(),
++      stream:_liveStream448,
+       builder:(_,snap){
+         final v=snap.data?.data()??<String,dynamic>{};
+         final acik=v['commentsEnabled']!=false||widget.yayinSahibi;
+@@ -2063,6 +2098,8 @@
+     sayac?.cancel();
+     heartbeat?.cancel();
+     canliDurumAboneligi?.cancel();
++    _clock448.dispose();
++    _guestSub448?.cancel();
+     yorum.dispose();
+     widget.oda.removeListener(_yenile);
+     if (!kapatildi) _bitir(geriDon: false);
+@@ -2107,7 +2144,7 @@
+           FilledButton.icon(
+             style:FilledButton.styleFrom(backgroundColor:Colors.white,
+               foregroundColor:Colors.black,minimumSize:const Size(220,50)),
+-            onPressed:bitisOzetiHazir?()=>Navigator.pop(context):null,
++            onPressed:()=>Navigator.pop(context),
+             icon:const Icon(Icons.explore_rounded),
+             label:const Text('Keşfet’e dön',style:TextStyle(fontWeight:FontWeight.w900)),
+           ),
+@@ -2119,27 +2156,26 @@
+   @override
+   Widget build(BuildContext context) {
+     final track = _goruntu();
+-    final dakika = (saniye ~/ 60).toString().padLeft(2, '0');
+-    final sn = (saniye % 60).toString().padLeft(2, '0');
+     return WillPopScope(
+       onWillPop: _geri,
+       child: Scaffold(
+         backgroundColor: Colors.black,
+         body: Stack(children: [
+           Positioned.fill(
+-            child:NgelXCanliPkGoruntuKatmani(
++            child:RepaintBoundary(child:NgelXCanliPkGoruntuKatmani(
+               liveId:widget.belgeId,
+               child:track==null
+                 ?_goruntuYokEkrani()
+                 :StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
+-                  stream:FirebaseFirestore.instance.collection('live_streams').doc(widget.belgeId).snapshots(),
++                  stream:_liveStream448,
+                   builder:(_,snap){
+                     final veri=snap.data?.data()??<String,dynamic>{};
+                     return ngelxCanliEfektKatmani(veri:veri,child:lk.VideoTrackRenderer(track,fit:lk.VideoViewFit.cover));
+                   },
+                 ),
+-            ),
++            )),
+           ),
++          if(widget.oda.remoteParticipants.values.where((p)=>p.videoTrackPublications.any((t)=>t.track!=null&&!t.muted)).length>(widget.yayinSahibi?0:1))Positioned(top:160,right:12,width:120,height:260,child:RepaintBoundary(child:ListView(children:widget.oda.remoteParticipants.values.where((p)=>p.identity!=widget.ownerId).expand((p)=>p.videoTrackPublications.where((t)=>t.track!=null&&!t.muted).map((t)=>SizedBox(height:150,child:lk.VideoTrackRenderer(t.track!,fit:lk.VideoViewFit.cover)))).toList()))),
+           Positioned.fill(child:DecoratedBox(decoration:BoxDecoration(gradient:LinearGradient(begin:Alignment.topCenter,end:Alignment.bottomCenter,colors:[Colors.black54,Colors.transparent,Colors.black.withOpacity(.8)])))),
+           if(!yayinBitti&&!kapatildi&&widget.oda.connectionState==lk.ConnectionState.reconnecting)
+             Positioned(
+@@ -2160,7 +2196,7 @@
+               Row(children: [
+                 Container(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8), decoration: BoxDecoration(color: const Color(0xFFFF1744), borderRadius: BorderRadius.circular(14)), child:  Text(_ngelx438Ui("● CANLI"), style: TextStyle(fontWeight: FontWeight.w900))),
+                 const SizedBox(width: 8),
+-                Container(padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8), decoration: BoxDecoration(color: Colors.black45, borderRadius: BorderRadius.circular(14)), child: Text('$dakika:$sn')),
++                Container(padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8), decoration: BoxDecoration(color: Colors.black45, borderRadius: BorderRadius.circular(14)), child: ValueListenableBuilder<int>(valueListenable:_clock448,builder:(_,n,__)=>Text('${(n~/60).toString().padLeft(2,'0')}:${(n%60).toString().padLeft(2,'0')}'))),
+                 const SizedBox(width: 8),
+                 InkWell(
+                   onTap:_izleyiciListesiniAc,
+@@ -2184,6 +2220,7 @@
+               const SizedBox(height:8),
+               NgelXCanliPkKatmani(liveId:widget.belgeId,yayinSahibi:widget.yayinSahibi),
+               const Spacer(),
++              Ngelx448GuestControls(liveId:widget.belgeId,ownerUid:widget.ownerId,host:widget.yayinSahibi),
+               Align(alignment:Alignment.centerLeft,child:_yorumPaneli()),
+               const SizedBox(height: 10),
+               Row(children: [
+--- a/app/lib/audio_live_rooms.dart
++++ b/app/lib/audio_live_rooms.dart
+@@ -78,7 +78,8 @@
+   return s>=-30&&s<=45;
+ }
+ 
+-Future<void> ngelxSesliOdayaKatil(BuildContext context,String odaId)async{
++Future<void> ngelxSesliOdayaKatil(BuildContext context,String odaId)=>ngelx448MediaSession(context,'audio:$odaId',()=>_ngelxSesliOdayaKatil448(context,odaId));
++Future<void> _ngelxSesliOdayaKatil448(BuildContext context,String odaId)async{
+   if(odaId.isEmpty||await misafirEngeli(context))return;
+   final user=FirebaseAuth.instance.currentUser;if(user==null)return;
+   lk.Room? oda;
+@@ -160,7 +161,8 @@
+   @override void initState(){super.initState();baslik.addListener(_baslikUyarisiTemizle);}
+   void _baslikUyarisiTemizle(){if(mounted&&baslik.text.trim().length>=3)ScaffoldMessenger.maybeOf(context)?.hideCurrentSnackBar();}
+   @override void dispose(){baslik.removeListener(_baslikUyarisiTemizle);baslik.dispose();super.dispose();}
+-  Future<void> baslat()async{
++  Future<void> baslat()=>ngelx448MediaSession(context,'audio-host',_baslat448);
++  Future<void> _baslat448()async{
+     FocusManager.instance.primaryFocus?.unfocus();
+     try{await SystemChannels.textInput.invokeMethod<void>('TextInput.hide');}catch(_){}
+     final user=FirebaseAuth.instance.currentUser;if(user==null||baslatiliyor)return;
+@@ -214,7 +216,7 @@
+       await ngelxSesliKatilimciYaz(roomId:yeniOdaRef!.id,uid:user.uid,ad:ad,foto:foto,rol:'speaker');
+       await db.collection('users').doc(user.uid).set({'isAudioLive':true,'currentAudioRoomId':yeniOdaRef!.id,'audioRoomTitle':baslik.text.trim()},SetOptions(merge:true));
+       unawaited(ngelxSesliOdaBaslangicBildirimi(roomId:yeniOdaRef!.id,baslik:baslik.text.trim()));
+-      if(!mounted)return;Navigator.pushReplacement(context,MaterialPageRoute(settings:RouteSettings(name:'/audio_room/'+yeniOdaRef!.id),builder:(_)=>SesliOdaPage(oda:oda!,odaId:yeniOdaRef!.id,ownerId:user.uid,baslik:baslik.text.trim(),yayinSahibi:true,serverUrl:cevap.serverUrl,participantToken:cevap.participantToken)));
++      if(!mounted)return;await Navigator.pushReplacement(context,MaterialPageRoute(settings:RouteSettings(name:'/audio_room/'+yeniOdaRef!.id),builder:(_)=>SesliOdaPage(oda:oda!,odaId:yeniOdaRef!.id,ownerId:user.uid,baslik:baslik.text.trim(),yayinSahibi:true,serverUrl:cevap.serverUrl,participantToken:cevap.participantToken)));
+     }catch(e){
+       if(kayitAcildi&&yeniOdaRef!=null){
+         try{await yeniOdaRef!.set({'active':false,'endedAt':FieldValue.serverTimestamp(),'endReason':'create_failed'},SetOptions(merge:true));}catch(_){}
+--- a/app/android/app/build.gradle.kts
++++ b/app/android/app/build.gradle.kts
+@@ -85,6 +85,12 @@
+ }
+ 
+ 
++dependencies {
++    implementation(platform("com.google.firebase:firebase-bom:34.6.0"))
++    implementation("com.google.firebase:firebase-messaging")
++    implementation("com.google.firebase:firebase-auth")
++}
++
+ flutter {
+     source = "../.."
+ }
+--- a/app/android/app/src/main/AndroidManifest.xml
++++ b/app/android/app/src/main/AndroidManifest.xml
+@@ -18,6 +18,9 @@
+         android:name="${applicationName}"
+         android:icon="@drawable/ngelx_launcher_mark">
+         <service android:name=".CallAudioService" android:exported="false" android:foregroundServiceType="microphone" />
++        <service android:name=".IncomingCallService" android:exported="false">
++            <intent-filter><action android:name="com.google.firebase.MESSAGING_EVENT" /></intent-filter>
++        </service>
+         <activity
+             android:name=".MainActivity"
+             android:exported="true"
+--- a/app/android/app/src/main/kotlin/com/nnentx/ngelx_app/MainActivity.kt
++++ b/app/android/app/src/main/kotlin/com/nnentx/ngelx_app/MainActivity.kt
+@@ -31,6 +31,19 @@
+         private const val REQUEST_PICK = 3061
+     }
+ 
++    private var incomingChannel448: MethodChannel? = null
++    private fun pendingCall448(): Map<String, String>? {
++        val chat = intent.getStringExtra("callChat448") ?: return null
++        val room = intent.getStringExtra("callRoom448") ?: return null
++        val action = intent.getStringExtra("callAction448") ?: "open"
++        intent.removeExtra("callChat448"); intent.removeExtra("callRoom448"); intent.removeExtra("callAction448")
++        IncomingCallService.cancel(this, room)
++        return mapOf("chat" to chat, "room" to room, "action" to action)
++    }
++    override fun onNewIntent(intent: Intent) {
++        super.onNewIntent(intent); setIntent(intent)
++        pendingCall448()?.let { incomingChannel448?.invokeMethod("callAction", it) }
++    }
+     private val captureLeases = mutableSetOf<String>()
+ 
+     private val mediaChannel = "com.nnentx.ngelx_app/media"
+@@ -42,6 +55,17 @@
+ 
+     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
+         super.configureFlutterEngine(flutterEngine)
++        incomingChannel448 = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.nnentx.ngelx_app/incoming").also { channel ->
++            channel.setMethodCallHandler { call, result ->
++                when(call.method) {
++                    "getPushToken" -> com.google.firebase.messaging.FirebaseMessaging.getInstance().token.addOnSuccessListener { result.success(it) }.addOnFailureListener { result.error("PUSH_TOKEN", "Token unavailable", null) }
++                    "pendingAction" -> result.success(pendingCall448())
++                    "cancel" -> { call.argument<String>("room")?.let { IncomingCallService.cancel(this,it) }; result.success(null) }
++                    "show" -> { IncomingCallService.show(this,call.argument<String>("chat") ?: "",call.argument<String>("room") ?: "",call.argument<String>("title") ?: "NgelX",call.argument<Boolean>("video") == true); result.success(null) }
++                    else -> result.notImplemented()
++                }
++            }
++        }
+         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.nnentx.ngelx_app/call")
+             .setMethodCallHandler { call, result ->
+                 try {

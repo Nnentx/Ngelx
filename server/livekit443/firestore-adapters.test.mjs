@@ -7,7 +7,7 @@ const now=1800000000000;
 // transaction does; production emulator/device verification remains required.
 function database(initial={}) {
  const records=new Map(Object.entries(initial)); let tail=Promise.resolve();
- const snap=key=>({exists:records.has(key),data:()=>records.get(key)});
+ const snap=key=>({exists:records.has(key),data:()=>records.get(key),ref:{collection(name){return {doc(id){return {get:async()=>snap(key+'/'+name+'/'+id)};}};}}});
  const db={records,collection(name){return {
   doc(id){const key=name+'/'+id;return {key,get:async()=>snap(key)};},
   where(field,op,expected){assert.equal(op,'==');return {limit(limit){return {get:async()=>{
@@ -70,4 +70,13 @@ test('quota resets at the next minute and separates UID/IP scopes',async()=>{
  let time=now;const db=database();const limit=createFirestoreRateLimiter({db,now:()=>time});
  assert.equal(await limit('uid:alice',1),true);assert.equal(await limit('uid:alice',1),false);
  assert.equal(await limit('ip:example',1),true);time+=60000;assert.equal(await limit('uid:alice',1),true);
+});
+
+
+test('live guest token is authorized from only the current guest request',async()=>{
+ const db=database({'users/alice':user,'users/host':user,'live_streams/live':{ownerId:'host',roomName:'live448',active:true,lastHeartbeatAt:new Date(now),visibility:'public'},'live_streams/live/guest_requests/alice':{hostUid:'host',guestUid:'alice',status:'accepted'}});
+ const auth=createFirestoreRoomAuthorizer({db,now:()=>now});
+ assert.equal((await auth({uid:'alice',roomName:'live448'})).canPublish,true);
+ db.records.get('live_streams/live/guest_requests/alice').status='rejected';
+ assert.equal((await auth({uid:'alice',roomName:'live448'})).canPublish,false);
 });
