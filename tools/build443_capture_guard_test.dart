@@ -12,7 +12,6 @@ void main() {
   late List<MethodCall> calls;
   late StreamController<bool> privacy;
   setUp(() {
-    debugDefaultTargetPlatformOverride = TargetPlatform.android;
     leases = {}; calls = []; privacy = StreamController<bool>();
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(channel, (call) async {
@@ -32,7 +31,15 @@ void main() {
       NgelxProfileCaptureGuard(uid:uid, privacyStream:stream??privacy.stream,
           child:child??const Text('private profile')));
 
-  testWidgets('content waits for native protection acknowledgement', (tester) async {
+  void captureTest(String name, Future<void> Function(WidgetTester) body) {
+    testWidgets(name, (tester) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      try { await body(tester); }
+      finally { debugDefaultTargetPlatformOverride = null; }
+    });
+  }
+
+  captureTest('content waits for native protection acknowledgement', (tester) async {
     final ack = Completer<void>();
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(channel, (_) async { await ack.future; return null; });
@@ -43,7 +50,7 @@ void main() {
     await tester.pumpWidget(const SizedBox()); await tester.pump();
   });
 
-  testWidgets('only explicit allow releases protection; errors restore protection', (tester) async {
+  captureTest('only explicit allow releases protection; errors restore protection', (tester) async {
     await tester.pumpWidget(profile()); await tester.pump();
     expect(leases.length, 1);
     privacy.add(true); await tester.pump(); await tester.pump();
@@ -56,7 +63,7 @@ void main() {
     expect(leases, isEmpty);
   });
 
-  testWidgets('nested profile removal cannot release its parent lease', (tester) async {
+  captureTest('nested profile removal cannot release its parent lease', (tester) async {
     final nestedPrivacy = StreamController<bool>();
     final nested = NgelxProfileCaptureGuard(uid:'bob', privacyStream:nestedPrivacy.stream,
         child:const Text('nested media'));
@@ -66,10 +73,10 @@ void main() {
     expect(leases.length, 1);
     await tester.pumpWidget(const SizedBox()); await tester.pump();
     expect(leases, isEmpty);
-    await nestedPrivacy.close();
+    unawaited(nestedPrivacy.close());
   });
 
-  testWidgets('native failure never exposes profile content', (tester) async {
+  captureTest('native failure never exposes profile content', (tester) async {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(channel,
         (_) async => throw PlatformException(code:'SECURE_UNAVAILABLE'));
     await tester.pumpWidget(profile()); await tester.pump();
@@ -78,7 +85,7 @@ void main() {
     await tester.pumpWidget(const SizedBox()); await tester.pump();
   });
 
-  testWidgets('old acknowledgement cannot reveal content after new privacy request', (tester) async {
+  captureTest('old acknowledgement cannot reveal content after new privacy request', (tester) async {
     await tester.pumpWidget(profile()); await tester.pump();
     final first = Completer<void>(), second = Completer<void>();
     var request = 0;

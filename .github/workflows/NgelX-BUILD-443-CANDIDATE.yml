@@ -436,7 +436,7 @@ jobs:
           node-version: '24'
 
       - name: Production token authorization tests
-        run: node --test server/livekit441/token-endpoint.test.mjs
+        run: node --test server/livekit441/token-endpoint.test.mjs server/livekit443/*.test.mjs
 
       - name: Java 21 Firebase emulator ortami
         uses: actions/setup-java@v4

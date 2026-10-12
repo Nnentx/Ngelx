@@ -83,9 +83,13 @@ class _ProfileCaptureGuardState extends State<NgelxProfileCaptureGuard> {
 
   @override
   Widget build(BuildContext context) {
-    if (_ready) return widget.child;
-    return ColoredBox(color: Colors.white, child: Center(child: _failed
-        ? IconButton(icon: const Icon(Icons.refresh), onPressed: _start)
-        : const CircularProgressIndicator()));
+    // Preserve descendants and their leases during asynchronous policy changes.
+    // Offstage content cannot paint, receive taps or contribute capture pixels.
+    return Stack(fit: StackFit.expand, children: [
+      Offstage(offstage: !_ready, child: widget.child),
+      if (!_ready) ColoredBox(color: Colors.white, child: Center(child: _failed
+          ? IconButton(icon: const Icon(Icons.refresh), onPressed: _start)
+          : const CircularProgressIndicator())),
+    ]);
   }
 }

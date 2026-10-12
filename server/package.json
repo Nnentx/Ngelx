@@ -1,0 +1,9 @@
+{
+  "name": "ngelx-production-functions",
+  "private": true,
+  "type": "module",
+  "main": "livekit443/index.mjs",
+  "engines": {"node": "22"},
+  "scripts": {"test": "node --test livekit441/token-endpoint.test.mjs livekit443/*.test.mjs"},
+  "dependencies": {"firebase-admin": "^13.6.0", "firebase-functions": "^6.4.0"}
+}
