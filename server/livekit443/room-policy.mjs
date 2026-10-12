@@ -33,7 +33,8 @@ export function roomPermission({kind, room, uid, viewer, owner, peerId, now}) {
       (['friends', 'Arkadaşlar'].includes(visibility) && list(owner.friends).includes(uid)) ||
       (['followers', 'Takipçiler'].includes(visibility) && list(owner.followers).includes(uid));
   if (!visible) return null;
-  const speaker = kind === 'audio' && list(room.speakerIds).includes(uid);
+  const guest=room.guestRequest;
+  const speaker = kind === 'audio' && list(room.speakerIds).includes(uid) || kind==='live' && guest?.status==='accepted' && guest.hostUid===ownerId && guest.guestUid===uid;
   return {allowed:true, role:speaker ? 'speaker' : 'listener', displayName,
     canPublish:speaker, canPublishData:true};
 }

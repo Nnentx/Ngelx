@@ -13,6 +13,7 @@ export function createFirestoreRoomAuthorizer({db, now=()=>Date.now()}) {
       if (matches.size > 1) return null;
       if (matches.empty) continue;
       const room = matches.docs[0].data();
+      if(kind==='live')room.guestRequest=value(await matches.docs[0].ref.collection('guest_requests').doc(uid).get());
       const peerId = kind === 'call' && room.isGroup !== true
         ? room.members?.find(id=>id!==uid) : undefined;
       const ownerId = kind === 'call' ? peerId??room.callStartedBy : room.ownerId;
