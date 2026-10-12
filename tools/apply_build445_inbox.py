@@ -84,5 +84,14 @@ s=s.replace(marker,"""    if(tur=='call'&&kaynak.isNotEmpty&&hedefTuru!='group')
 # Resuming one's minimized group call must not emit a second join event.
 s=s.replace("    final oda=(v['callRoomName']??'').toString();\n    if(ben==null||oda.isEmpty)return;","    final oda=(v['callRoomName']??'').toString();\n    if(ben==null||oda.isEmpty)return;\n    if(ngelxCallSession444.room==oda&&ngelxCallSession444.background){await ngelx445ReturnCall(oda);return;}",1)
 s=s.replace('child: Text(_ngelx438Ui("Katıl"),style:TextStyle(color:Colors.white,fontSize:10,fontWeight:FontWeight.w900)),', """child: Text(_ngelx438Ui(ngelxCallSession444.room==(tv['callRoomName']??'')&&ngelxCallSession444.background?"Aramaya dön":"Katıl"),style:TextStyle(color:Colors.white,fontSize:10,fontWeight:FontWeight.w900)),""",1)
+# Reuse the established profile-to-chat preparation path, including existing IDs,
+# message permissions and deterministic-ID collision recovery. Do not invent a
+# second empty conversation when the user already has a chat with this contact.
+signature='  Future<void> profildenMesajAc(BuildContext context,{required String ad,required String foto})async{'
+start=s.index(signature);end=s.index('  Future<void> profiliPaylas(',start)
+method=s[start:end]
+helper=method.replace(signature,'Future<void> ngelx445OpenPrivateChat(BuildContext context,{required String uid,required String ad,required String foto})async{',1)
+s=s[:start]+'  Future<void> profildenMesajAc(BuildContext context,{required String ad,required String foto})=>ngelx445OpenPrivateChat(context,uid:uid,ad:ad,foto:foto);\n\n'+s[end:]
+s+='\n'+helper
 p.write_text(s)
 print('Build445 approved inbox integration applied; existing backend and conversations preserved')

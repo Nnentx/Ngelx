@@ -28,12 +28,7 @@ class _Ngelx445FriendsStripState extends State<Ngelx445FriendsStrip>{
     if(id==widget.uid){await Navigator.push(context,MaterialPageRoute(builder:(_)=>const YuklePage()));return;}
     setState(()=>_opening=id);
     try{
-      final members=[widget.uid,id]..sort();
-      await Navigator.push(context,MaterialPageRoute(builder:(_)=>SohbetPage(
-        chatId:members.join('_'),digerUid:id,
-        ad:(profile['displayName']??profile['username']??'').toString(),
-        foto:(profile['photoUrl']??'').toString(),
-      )));
+      await ngelx445OpenPrivateChat(context,uid:id,ad:(profile['displayName']??profile['username']??'').toString(),foto:(profile['photoUrl']??'').toString());
     }finally{if(mounted)setState(()=>_opening=null);}
   }
   @override Widget build(BuildContext context)=>StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
