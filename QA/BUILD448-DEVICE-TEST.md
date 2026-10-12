@@ -16,3 +16,5 @@ Keep Build447's approved inbox, group member-add approval and own-story deletion
 12. Explore ordering: ongoing voice/video group first, then recent messages/call activity; stale ended calls lose priority.
 
 Automated validation: Flutter analysis, call/overlay/session tests, inherited preservation checks, Firestore emulator consent/approval/device-token access tests, server call-push and LiveKit authorization tests. Actual hardware remains necessary for notification delivery, recording indicators, Android microphone background behavior and frame timing.
+
+Deployment: app candidate run 38302110094 passed. Production rules readback SHA256 10b9955aeed10cf4fedfef9ee2cabde9532bf8b3e2fddd2828d1533939b57620. Incoming-call Cloud Function could not deploy because the existing credential cannot enable cloudbuild.googleapis.com (and required Cloud Functions/Artifact Registry APIs). Foreground ringtone/UI are available; terminated-app FCM delivery remains blocked until project owner enables required APIs and deployment permission is available.

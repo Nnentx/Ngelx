@@ -1,0 +1,38 @@
+name: Publish verified NgelX Build448 APK
+on:
+  push:
+    branches: [work/build-448-device-live-fixes]
+    paths: ['.github/workflows/NgelX-BUILD448-PUBLISH-APK.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          repository: Nnentx/Ngelx
+          run-id: 38302110094
+          github-token: ${{ github.token }}
+          name: NgelX-1.0.223-Build-448-CANDIDATE
+          path: release448
+      - name: Verify exact approved APK and publish test download
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          task_apk=$(find release448 -type f -name 'NgelX-1.0.223-Build-448-CANDIDATE.apk')
+          test -n "$task_apk"
+          task_sha=$(sha256sum "$task_apk" | cut -d ' ' -f 1)
+          test "$task_sha" = '0506471df4c3c65313087cc814633779c01b983ac90d123d47d07e0b24e5203d'
+          cat > release448-notes.txt <<'NOTES'
+          Android test sürümü: v1.0.223 / Build448.
+          Mevcut NgelX üzerine güncelleme olarak kurulabilir.
+          Gelen Kutusu, Ekle ve hikâye silme korunmuştur. Arama gizleme/geri dönüş, beyaz menü, üye etiketleri, grup arka planı, keşfet grup onayı/sıralaması ve canlı yayın katılım ve performans düzenlemelerini içerir.
+          Uygulama içi arama zili/bildirimi ve Android Yanıtla/Reddet arayüzü eklendi. Uygulama kapalıyken push araması sunucu API yetkisi bekliyor; henüz etkin değil. Kamera/mikrofon, klavye performansı ve canlı konuk/PK davranışı iki telefonda doğrulanmalıdır.
+          NOTES
+          gh release create v1.0.223-build448-test "$task_apk" --repo Nnentx/Ngelx --target efeb67ca7f65529f17a46cb97bc7ef9d38365cd9 --title 'NgelX 1.0.223 • Build448 — Android test' --notes-file release448-notes.txt --prerelease
