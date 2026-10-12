@@ -15,3 +15,5 @@ test('rate limit enforced before issuing token',async()=>assert.equal((await cre
 test('lookup failure does not disclose details',async()=>{const r=await createTokenEndpoint({...config,authorizeRoom:async()=>{throw Error('private record');}})(req);assert.equal(r.status,503);assert.equal(JSON.stringify(r).includes('private'),false);});
 test('HTTP method rejected',async()=>assert.equal((await createTokenEndpoint(config)({...req,method:'GET'})).status,405));
 test('cannot initialize without authorization or rate limiting',()=>assert.throws(()=>createTokenEndpoint({...config,authorizeRoom:undefined})));
+
+test('rate-limit datastore failure returns a generic unavailable response',async()=>{const r=await createTokenEndpoint({...config,rateLimit:async()=>{throw Error('private database details');}})(req);assert.equal(r.status,503);assert.equal(JSON.stringify(r).includes('private'),false);});

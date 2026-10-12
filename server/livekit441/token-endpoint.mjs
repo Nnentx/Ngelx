@@ -18,7 +18,8 @@ export function createTokenEndpoint({verifyFirebaseToken,authorizeRoom,rateLimit
   if(!body||typeof body.room_name!=='string'||body.room_name.length<1||body.room_name.length>160||!/^[\w-]+$/.test(body.room_name))return response(400,{error:'invalid_room'});
   if(body.participant_identity&&body.participant_identity!==uid)return response(403,{error:'identity_mismatch'});
   if(body.room_config||body.agent_name||body.participant_metadata)return response(400,{error:'unsupported_options'});
-  if(!await rateLimit(uid))return response(429,{error:'rate_limited'});
+  try{if(!await rateLimit(uid))return response(429,{error:'rate_limited'});}
+  catch{return response(503,{error:'temporarily_unavailable'});}
   let permission;
   try{permission=await authorizeRoom({uid,roomName:body.room_name});}catch{return response(503,{error:'temporarily_unavailable'});}
   if(!permission?.allowed||!['host','speaker','listener','caller'].includes(permission.role))return response(403,{error:'forbidden'});
