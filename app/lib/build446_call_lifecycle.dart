@@ -19,14 +19,14 @@ class Ngelx446CallLifecycle with WidgetsBindingObserver {
     _serial=next.catchError((Object e){debugPrint('call lifecycle: $e');});
     return next;
   }
-  Future<void> attach(String name,lk.Room room,DocumentReference<Map<String,dynamic>> ref)async{
+  Future<void> attach(String name,lk.Room room,DocumentReference<Map<String,dynamic>> ref,{bool cameraWanted=false})async{
     if(!_observing){WidgetsBinding.instance.addObserver(this);_observing=true;}
     _foreground=WidgetsBinding.instance.lifecycleState==null||WidgetsBinding.instance.lifecycleState==AppLifecycleState.resumed;
     final current=await ref.get().timeout(const Duration(seconds:6));
     final data=current.data()??<String,dynamic>{};
     final me=FirebaseAuth.instance.currentUser?.uid;
     if(data['callModerationRoom']==name&&List<String>.from(data['callKickedUids']??const[]).contains(me))throw StateError('Bu görüşmeden çıkarıldın.');
-    final entry=_Call446(room,ref);
+    final entry=_Call446(room,ref)..restoreCamera=cameraWanted&&!_foreground;
     entry.muted=data['callModerationRoom']==name&&List<String>.from(data['callMutedUids']??const[]).contains(me);
     _calls[name]=entry;
     entry.subscription=ref.snapshots().listen((snapshot){

@@ -30,6 +30,7 @@ class CallAudioService : Service() {
             .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "NgelX:CallAudio").apply { acquire(12 * 60 * 60 * 1000L) }
     }
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int = START_NOT_STICKY
+    override fun onTaskRemoved(rootIntent: Intent?) { stopSelf(); super.onTaskRemoved(rootIntent) }
     override fun onBind(intent: Intent?): IBinder? = null
     override fun onDestroy() {
         wakeLock?.let { if (it.isHeld) it.release() }; wakeLock = null

@@ -20,6 +20,10 @@ on:
       - work/build-447-story-call-fixes
     paths:
       - '.github/workflows/NgelX-BUILD-447-CANDIDATE.yml'
+      - 'tools/build447.patch'
+      - 'tools/build446*'
+      - 'app/lib/build446_call_lifecycle.dart'
+      - 'app/android/app/src/main/kotlin/com/nnentx/ngelx_app/CallAudioService.kt'
 
 concurrency:
   group: ngelx-build447-candidate

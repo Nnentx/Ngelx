@@ -65,20 +65,21 @@
        hoparlor=lk.AudioManager.instance.isSpeakerOutputPreferred;
        baglaniyor=false;
        final r=arkaPlan.room;
-@@ -17267,9 +17276,10 @@
+@@ -17267,9 +17276,11 @@
        oda=r;
        final yerel=r.localParticipant;
        if(yerel==null)throw Exception('Arama katılımcısı hazırlanamadı.');
 -      await yerel.setMicrophoneEnabled(mikrofon);
-+      await ngelx446Calls.attach(widget.roomName,r,widget.aramaRef);
-+      await yerel.setMicrophoneEnabled(mikrofon&&!ngelx446Calls.muted(widget.roomName));
++      await ngelx446Calls.attach(widget.roomName,r,widget.aramaRef,cameraWanted:widget.goruntulu&&kamera);
        if(!_alive444){await ngelx444CloseRoom(r);return;}
 -      if(widget.goruntulu)await yerel.setCameraEnabled(kamera,cameraCaptureOptions:const lk.CameraCaptureOptions(params:lk.VideoParametersPresets.h360_169,maxFrameRate:20.0,stopCameraCaptureOnMute:true));
++      await yerel.setMicrophoneEnabled(mikrofon&&!ngelx446Calls.muted(widget.roomName));
++      if(!_alive444){await ngelx444CloseRoom(r);return;}
 +      if(widget.goruntulu)await yerel.setCameraEnabled(kamera&&WidgetsBinding.instance.lifecycleState==AppLifecycleState.resumed,cameraCaptureOptions:const lk.CameraCaptureOptions(params:lk.VideoParametersPresets.h360_169,maxFrameRate:20.0,stopCameraCaptureOnMute:true));
        if(!_alive444){await ngelx444CloseRoom(r);return;}
        await lk.AudioManager.instance.setSpeakerOutputPreferred(hoparlor);
        final oncekiArama=await widget.aramaRef.get();
-@@ -17333,7 +17343,7 @@
+@@ -17333,7 +17344,7 @@
      }catch(e){
        if(r!=null){
          r.removeListener(_odaDegisti);
@@ -87,7 +88,7 @@
          try{await r.dispose();}catch(_){}
        }
        oda=null;
-@@ -17367,6 +17377,9 @@
+@@ -17367,6 +17378,9 @@
  
    Future<void> mikrofonDegistir()async{
      final yeni=!mikrofon;
@@ -97,7 +98,7 @@
      try{await oda?.localParticipant?.setMicrophoneEnabled(yeni);if(mounted)setState(()=>mikrofon=yeni);}
      catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Mikrofon değiştirilemedi.')));}
    }
-@@ -17746,18 +17759,21 @@
+@@ -17746,18 +17760,21 @@
  
    Widget _katilimciKutusu(lk.Participant p,{bool yerel=false}){
      final ad=_katilimciAdi(p,yerel:yerel),track=_katilimciVideosu(p);
@@ -123,7 +124,7 @@
          Positioned(
            left:10,right:10,bottom:10,
            child:Container(
-@@ -17765,18 +17781,18 @@
+@@ -17765,18 +17782,18 @@
              decoration:BoxDecoration(color:Colors.black.withValues(alpha:.48),borderRadius:BorderRadius.circular(14),border:Border.all(color:Colors.white10)),
              child:Row(children:[
                Expanded(child:Text(ad,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.white,fontSize:12.5,fontWeight:FontWeight.w800))),
@@ -145,7 +146,7 @@
        width:126,
        child:Column(mainAxisSize:MainAxisSize.min,children:[
          Container(
-@@ -17789,13 +17805,14 @@
+@@ -17789,13 +17806,14 @@
            ),
            child:Stack(clipBehavior:Clip.none,children:[
              _katilimciAvatar(p,yerel:yerel,radius:43),
@@ -161,7 +162,7 @@
    }
  
    Widget _grupAramaAlani(){
-@@ -17812,43 +17829,24 @@
+@@ -17812,43 +17830,24 @@
        if(yerel!=null)(p:yerel,yerel:true),
        ...r.remoteParticipants.values.map((p)=>(p:p,yerel:false)),
      ];
@@ -210,7 +211,7 @@
      ]));
    }
  
-@@ -17897,6 +17895,8 @@
+@@ -17897,6 +17896,8 @@
    Future<void> _aramaEkraniniKucult()async{
      if(kucultuluyor||!mounted)return;
      if(oda==null||_connectInFlight444){await bitir();return;}
@@ -219,7 +220,7 @@
      kucultuluyor=true;
      unawaited(_tone444(false));
      ngelxCallSession444.minimize(widget.roomName);
-@@ -18493,8 +18493,11 @@
+@@ -18493,8 +18494,11 @@
        return;
      }
      final p=await FirebaseFirestore.instance.collection('users').doc(me).get().timeout(const Duration(seconds:10));
