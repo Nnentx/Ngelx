@@ -46,6 +46,8 @@ region=region.replace(marker,'''            Padding(padding:const EdgeInsets.fro
 '''+marker+'''
             if(ben!=null)Ngelx445FriendsStrip(key:ValueKey('inbox-friends445-'+ben),uid:ben),
             const Ngelx445InboxCallBanner(),''',1)
+# Inline notification cards also route call events to the chat, without joining.
+region=region.replace("                  try{await d.reference.update({'read':true,'readAt':FieldValue.serverTimestamp()});}catch(_){}\n                  final from=(v['fromUid']??'').toString();","                  unawaited(d.reference.update({'read':true,'readAt':FieldValue.serverTimestamp()}).timeout(const Duration(seconds:5)).catchError((_){ }));\n                  final event=(v['eventKind']??'').toString();\n                  if(tur=='call'||event=='group_audio_call'||event=='group_video_call'){if(context.mounted)await ngelx445OpenCallChat(context,v);return;}\n                  final from=(v['fromUid']??'').toString();",1)
 # Rows retain tap/long-press/archive/mute and unread behavior, with approved colors and spacing.
 region=region.replace('Color(0xFF1678F4),shape:BoxShape.circle','Color(0xFF8249ED),shape:BoxShape.circle')
 region=region.replace('EdgeInsets.symmetric(horizontal:4,vertical:5)','EdgeInsets.symmetric(horizontal:4,vertical:8)')

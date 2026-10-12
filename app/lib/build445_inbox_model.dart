@@ -163,3 +163,25 @@ class Ngelx445InboxCallBanner extends StatelessWidget{
     )));
   });
 }
+
+Future<void> ngelx445OpenCallChat(BuildContext context,Map<String,dynamic> v)async{
+  final me=FirebaseAuth.instance.currentUser?.uid;
+  final source=(v['sourceId']??v['chatId']??v['belgeId']??'').toString();
+  if(me==null||source.isEmpty)return;
+  try{
+    final chat=await FirebaseFirestore.instance.collection('chats').doc(source).get().timeout(const Duration(seconds:8));
+    final data=chat.data()??<String,dynamic>{};
+    final group=data['isGroup']==true;
+    final members=List<String>.from(data['members']??const[]);
+    final former=List<String>.from(data['formerMembers']??const[]);
+    if((!members.contains(me)&&!(group&&former.contains(me)))||List<String>.from(data['hiddenFor']??const[]).contains(me))return;
+    if(group){
+      if(context.mounted)await Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupSohbetPage(chatId:source,ad:(data['groupName']??v['targetTitle']??'').toString(),foto:(data['groupPhotoUrl']??'').toString())));
+    }else{
+      final other=members.firstWhere((x)=>x!=me,orElse:()=> '');if(other.isEmpty)return;
+      final user=await FirebaseFirestore.instance.collection('users').doc(other).get().timeout(const Duration(seconds:8));
+      final profile=user.data()??<String,dynamic>{};
+      if(context.mounted)await Navigator.push(context,MaterialPageRoute(builder:(_)=>SohbetPage(chatId:source,digerUid:other,ad:(profile['displayName']??profile['username']??'').toString(),foto:(profile['photoUrl']??'').toString())));
+    }
+  }catch(_){if(context.mounted)ngelxDurumMesaji(context,lt('Sohbet açılamadı. Tekrar dene.','Could not open chat. Try again.'),tip:'hata');}
+}
