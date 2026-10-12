@@ -26,6 +26,7 @@ class Ngelx446CallLifecycle with WidgetsBindingObserver {
     final data=current.data()??<String,dynamic>{};
     final me=FirebaseAuth.instance.currentUser?.uid;
     if(data['callModerationRoom']==name&&List<String>.from(data['callKickedUids']??const[]).contains(me))throw StateError('Bu görüşmeden çıkarıldın.');
+    await _calls.remove(name)?.subscription?.cancel();
     final entry=_Call446(room,ref)..restoreCamera=cameraWanted&&!_foreground;
     entry.muted=data['callModerationRoom']==name&&List<String>.from(data['callMutedUids']??const[]).contains(me);
     _calls[name]=entry;
@@ -42,7 +43,7 @@ class Ngelx446CallLifecycle with WidgetsBindingObserver {
         }));
       }
     });
-    if(defaultTargetPlatform==TargetPlatform.android){
+    if(!kIsWeb&&defaultTargetPlatform==TargetPlatform.android){
       await _native.invokeMethod<void>('start');
     }
   }
