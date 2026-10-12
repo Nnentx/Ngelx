@@ -1,17 +1,24 @@
-name: NgelX Build448 verified call and live backend
+name: NgelX Build448 verified incoming calls backend
 on:
   workflow_dispatch:
   push:
     branches: [work/build-448-device-live-fixes]
     paths: ['.github/workflows/NgelX-BUILD448-BACKEND.yml']
 concurrency:
-  group: ngelx448-backend
+  group: ngelx448-backend-v2
   cancel-in-progress: false
+permissions:
+  contents: read
+  actions: write
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
+      - name: Cancel superseded backend attempt before any deployment
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh run cancel 38300744858 --repo Nnentx/Ngelx || true
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:

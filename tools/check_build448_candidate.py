@@ -1,6 +1,6 @@
 import os,json,urllib.request,time
 base='https://api.github.com/repos/Nnentx/Ngelx/actions/workflows/NgelX-BUILD-448-CANDIDATE.yml/runs?branch=work/build-448-device-live-fixes&per_page=1'
-for i in range(40):
+for i in range(60):
  req=urllib.request.Request(base,headers={'Authorization':'Bearer '+os.environ['GH_TOKEN'],'Accept':'application/vnd.github+json'})
  with urllib.request.urlopen(req,timeout=30)as response:r=json.load(response)['workflow_runs']
  if r and r[0]['status']=='completed':
