@@ -202,3 +202,15 @@ Future<void> ngelx445OpenCallChat(BuildContext context,Map<String,dynamic> v)asy
     }
   }catch(_){if(context.mounted)ngelxDurumMesaji(context,lt('Sohbet açılamadı. Tekrar dene.','Could not open chat. Try again.'),tip:'hata');}
 }
+
+Widget ngelx445CallTrailing(Map<String,dynamic> chat,Widget usual)=>ValueListenableBuilder<int>(
+  valueListenable:ngelx445CallRevision,builder:(_,revision,__){
+    final name=(chat['callRoomName']??'').toString();
+    final detail=ngelx445CallDetails[name];
+    if(name.isEmpty||ngelxCallSession444.room!=name||!ngelxCallSession444.background||detail?.uid!=FirebaseAuth.instance.currentUser?.uid)return usual;
+    return SizedBox(width:104,child:TextButton(
+      style:TextButton.styleFrom(backgroundColor:const Color(0xFF25B85E),foregroundColor:Colors.white,shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(20)),padding:const EdgeInsets.symmetric(horizontal:10,vertical:9)),
+      onPressed:()=>ngelx445ReturnCall(name),
+      child:FittedBox(fit:BoxFit.scaleDown,child:Text(_ngelx438Ui('Aramaya dön'),style:const TextStyle(fontSize:11,fontWeight:FontWeight.w800))),
+    ));
+  });

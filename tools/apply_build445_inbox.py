@@ -57,6 +57,28 @@ region=region.replace('fontSize:15.5,fontWeight:unread','fontSize:16,fontWeight:
 start=region.index('    Widget sohbetlerIcerigi(){');end=region.index('    Widget govde=',start)
 rows=region[start:end].replace('return ListView.builder(', 'return ListView.separated(',1)
 rows=rows.replace('itemCount:satirlar.length,','itemCount:satirlar.length,\n                separatorBuilder:(_,__)=>const Divider(height:1,thickness:.7,indent:68,color:Color(0xFFEDEAF5)),',1)
+# Wrap unread/time trailing widgets with a live return action only for the
+# currently owned minimized call; the conversation row still opens the chat.
+position=0
+while True:
+ found=rows.find('trailing:SizedBox(',position)
+ if found<0:break
+ opening=rows.index('(',found);depth=0;quote=None;i=opening
+ while i<len(rows):
+  char=rows[i]
+  if quote:
+   if char=='\\':i+=2;continue
+   if char==quote:quote=None
+  elif char in ["'",'"']:quote=char
+  elif char=='(':depth+=1
+  elif char==')':
+   depth-=1
+   if depth==0:break
+  i+=1
+ assert depth==0
+ widget=rows[found+len('trailing:'):i+1]
+ replacement='trailing:ngelx445CallTrailing(v,'+widget+')'
+ rows=rows[:found]+replacement+rows[i+1:];position=found+len(replacement)
 region=region[:start]+rows+region[end:]
 # Delete the obsolete merged renderer so notifications cannot accidentally return to All.
 start=region.index('    Widget tumIcerigi(){');end=region.index('    Widget sohbetlerIcerigi(){',start)
