@@ -12,7 +12,7 @@ void main() {
   late List<MethodCall> calls;
   late StreamController<bool> privacy;
   setUp(() {
-    leases = {}; calls = []; privacy = StreamController<bool>();
+    leases = {}; calls = []; privacy = StreamController<bool>.broadcast();
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(channel, (call) async {
       calls.add(call);
@@ -64,7 +64,7 @@ void main() {
   });
 
   captureTest('nested profile removal cannot release its parent lease', (tester) async {
-    final nestedPrivacy = StreamController<bool>();
+    final nestedPrivacy = StreamController<bool>.broadcast();
     final nested = NgelxProfileCaptureGuard(uid:'bob', privacyStream:nestedPrivacy.stream,
         child:const Text('nested media'));
     await tester.pumpWidget(profile(child:nested)); await tester.pump(); await tester.pump();

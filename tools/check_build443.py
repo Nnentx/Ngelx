@@ -4,7 +4,7 @@ from apply_build438_screen_locales import tokens
 s=Path('app/lib/main.dart').read_text()
 for p in Path('app/lib').glob('*.dart'):tokens(p.read_text())
 data=json.loads(re.search(r'const _ngelx443Translations=.*?(\{.*\});',s)[1].replace(r'\$','$'))
-assert len(data)==10
+assert len(data)==23
 assert all(set(v)==set('en de ar ru ku zh hi fr es it pt'.split()) and all(v.values()) for v in data.values())
 assert s.count('child:_buildProfile(context)')==2
 assert "set({'allowProfileCapture':value},SetOptions(merge:true))" in s

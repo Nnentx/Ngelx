@@ -18,6 +18,7 @@ known.update(x.replace("\\'","'").replace(r'\n','\n') for x in re.findall(r"'tr'
 a=s.index('String tercihBasligi');body,count=localize(s[a:],known);s=s[:a]+body
 s=s.replace('title:Text(t,style:TextStyle(color:etkin?', 'title:Text(_ngelx438Ui(t),style:TextStyle(color:etkin?')
 s=s.replace('subtitle:Text(s,style:TextStyle(color:etkin?', 'subtitle:Text(_ngelx438Ui(s),style:TextStyle(color:etkin?')
+s=s.replace("Text('${tumu.length} yorum',", "Text(_ngelx438Ui('{count} yorum').replaceAll('{count}',tumu.length.toString()),")
 # Locale date order/month names come from Flutter, never from a Turkish month list.
 s=s.replace("'${aylar[katilimHam.toDate().month-1]} ${katilimHam.toDate().year} tarihinde katıldı'", 'ngelx443JoinDate(context,katilimHam.toDate())')
 s=s.replace("katilim = '${aylar[d.month-1]} ${d.year} tarihinde katıldı';", 'katilim = ngelx443JoinDate(context,d);')
