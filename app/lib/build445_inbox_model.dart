@@ -1,7 +1,16 @@
 part of 'main.dart';
 
 final ngelx445CallRevision=ValueNotifier<int>(0);
-void ngelx445CallChanged()=>ngelx445CallRevision.value++;
+bool _ngelx445CallFrameQueued=false;
+void ngelx445CallChanged(){
+  if(_ngelx445CallFrameQueued)return;
+  _ngelx445CallFrameQueued=true;
+  WidgetsBinding.instance.addPostFrameCallback((_){
+    _ngelx445CallFrameQueued=false;
+    ngelx445CallRevision.value++;
+  });
+  WidgetsBinding.instance.scheduleFrame();
+}
 final Map<String,({String title,String photo,String uid,bool video,DocumentReference<Map<String,dynamic>> ref})> ngelx445CallDetails={};
 
 class Ngelx445FriendsStrip extends StatefulWidget{
