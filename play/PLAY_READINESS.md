@@ -1,10 +1,12 @@
-# NgelX — Play Store hazırlığı, Build441
+# NgelX — Play Store hazırlık durumu, Build443
 
-Durum: İnceleme ve kapalı test hazırlığı. Üretime hazır sürüm beyanı değildir.
+Durum: İnceleme ve test hazırlığı. Üretime hazır sürüm beyanı değildir.
+
+Güncel takip: Build443 adayında Android profil ekran kaydı/görüntüsü gizliliği, 48 yeni çok dilli metin ve görüşme sunucusu adaptör adayları eklendi. Ayrıntı ve test kanıtları: QA/BUILD-443-FOLLOWUP.md. Sitedeki doğrulanmış indirme Build442; Build443 cihaz kabulü bekler. Tüm uygulama çevirileri ve canlı sunucu kurulumu tamamlanmış değildir.
 
 ## Paket ve dağıtım
 
-- Uygulama kimliği: `com.nnentx.ngelx_app`; sürüm 1.0.216, versionCode 441.
+- Uygulama kimliği: `com.nnentx.ngelx_app`; yeni aday sürüm 1.0.218, versionCode 443.
 - Android minSdk 26, compileSdk/targetSdk 36. Kamera ve otomatik odak donanımı zorunlu değildir; izinler ihtiyaç anında istenir.
 - Test APK'sı mevcut test anahtarını korur. Play için ayrı upload anahtarıyla imzalanmış AAB gerekir. Test/debug imzalı AAB mağazaya yüklenmemeli.
 - Play App Signing sertifikasının SHA-1/SHA-256 değerleri Console'dan alındıktan sonra Firebase/Google giriş ve Android App Links yapılandırmasına eklenmelidir. Upload sertifikası bunun yerine geçmez.
@@ -21,7 +23,7 @@ Durum: İnceleme ve kapalı test hazırlığı. Üretime hazır sürüm beyanı 
 | Web sitesi | https://ngelxsocial.com |
 | Gizlilik | https://ngelxsocial.com/privacy.html — gerçek veri akışı ve saklama politikasıyla eşleşmeli |
 | Hesap silme | https://ngelxsocial.com/delete-account.html — dışarıdan talep erişimi ve sunucu temizliği uçtan uca doğrulanmalı |
-| Çocuk güvenliği | child-safety.html hazır; web deposuna yazma yetkisi olmadığı için henüz yayımlanmadı |
+| Çocuk güvenliği | https://ngelxsocial.com/child-safety.html yayımlandı; operasyonel moderasyon sorumluluğu ayrıca doğrulanmalı |
 | Mağaza metinleri | metadata/listings.json: 12 dil taslağı; Kürtçe için Console'un desteklediği yerel ayar ayrıca kontrol edilmeli |
 | Uygulama erişimi | İnceleme için geliştiriciye ait demo hesap ve erişim talimatı gerekli; gerçek kullanıcı parolaları kullanılmamalı |
 | Mağaza ikonu | Mevcut kaynak ikon 220×220; 512×512 yüksek çözünürlüklü mağaza ikonu henüz hazırlanmadı |
@@ -58,7 +60,7 @@ Bu bir kod envanteridir; tamamlanmış Console beyanı değildir. SDK'ların ger
 - Diller: 119 yeni satırın tümü 12 dilde. Ayar gösterim yardımcıları çeviriye bağlandı. CI çıktısındaki `build441-untranslated.tsv` hâlâ kapsamlı kalan metinler içerir; tüm ekranlar bitmiş değildir.
 - Kullanıcı adı: eski ayar ekranındaki 30 karakter sınırı da 3–20 karaktere indirildi.
 - Çocuk güvenliği: uygulama rapor menüsünde kategori eklendi. Sunucu moderasyon kuyruğunu izleyen kişi, kaldırma ve bölgesel bildirim operasyonu ayrıca kurulmalı/doğrulanmalı.
-- Görüşmeler: Play build test token sunucusuna dönemez. Sunucu token çekirdeği 11 testle doğrulandı; gerçek Firebase Admin/oda yetkilendirme/rate limiter adaptörleri ve HTTPS dağıtımı henüz kurulmadı.
+- Görüşmeler: Play build test token sunucusuna dönemez. Token çekirdeği ve adaptör/politika adayları 31 Node testiyle kontrol edildi. Firebase Admin/oda yetkilendirme/rate limiter için aday kod mevcut; gerçek dağıtım, moderasyon/temizleme, emulator ve canlı ortam doğrulamaları tamamlanmadı.
 - Kullanıcı adı ve doğrulanmış telefonla giriş bağlantısı tamamlanmadı. Çalıştığı doğrulanan e-posta oturumu korunur.
 - Bildirim sesinin sessizlik kaldırılınca gerçek cihazda dönmesi ve iki cihazlı ses/video görüşmesi açık doğrulamalardır.
 - Yeni hikâyenin 24 saat sınırı otomatik testte kontrol edildi; gerçek süre testi tamamlanmış olarak işaretlenmedi. Süresi biten hikâye aktif bölümden çıkar; arşiv/öne çıkanların ayrı saklama işlevi korunur.
@@ -66,7 +68,7 @@ Bu bir kod envanteridir; tamamlanmış Console beyanı değildir. SDK'ların ger
 
 ## Console erişim durumu
 
-Play Console tarayıcı açma isteği otomatik onay incelemesi tarafından reddedildi: istek play.google.com adresine olmasına rağmen inceleme hedefi google.play olarak değerlendirdi ve yetki kapsamının belirsiz olduğunu bildirdi. Console girişi, uygulama oluşturma veya paket yükleme yapılmadı. Web deposuna GitHub yazma isteği de entegrasyon yetkisi nedeniyle 403 döndü; çocuk güvenliği sayfası ayrı teslim dosyasıdır.
+Play Console tarayıcı açma isteği otomatik onay incelemesi tarafından reddedildi: istek play.google.com adresine olmasına rağmen inceleme hedefi google.play olarak değerlendirdi ve yetki kapsamının belirsiz olduğunu bildirdi. Console girişi, uygulama oluşturma veya paket yükleme yapılmadı. Web deposu için entegrasyon yazması 403 döndü; mevcut tarayıcı erişimiyle politika, hesap silme, destek ve çocuk güvenliği sayfaları daha sonra yayımlandı. Build442 doğrudan APK düğmesi de yayımlandı.
 
 ## Kapalı test akışı
 
