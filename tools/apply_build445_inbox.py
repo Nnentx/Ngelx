@@ -50,6 +50,11 @@ region=region.replace(marker,'''            Padding(padding:const EdgeInsets.fro
 region=region.replace('Color(0xFF1678F4),shape:BoxShape.circle','Color(0xFF8249ED),shape:BoxShape.circle')
 region=region.replace('EdgeInsets.symmetric(horizontal:4,vertical:5)','EdgeInsets.symmetric(horizontal:4,vertical:8)')
 region=region.replace('fontSize:15.5,fontWeight:unread','fontSize:16,fontWeight:unread')
+# Thin separators preserve the approved conversation list geometry.
+start=region.index('    Widget sohbetlerIcerigi(){');end=region.index('    Widget govde=',start)
+rows=region[start:end].replace('return ListView.builder(', 'return ListView.separated(',1)
+rows=rows.replace('itemCount:satirlar.length,','itemCount:satirlar.length,\n                separatorBuilder:(_,__)=>const Divider(height:1,thickness:.7,indent:68,color:Color(0xFFEDEAF5)),',1)
+region=region[:start]+rows+region[end:]
 # Delete the obsolete merged renderer so notifications cannot accidentally return to All.
 start=region.index('    Widget tumIcerigi(){');end=region.index('    Widget sohbetlerIcerigi(){',start)
 region=region[:start]+region[end:]
@@ -75,5 +80,6 @@ s=s.replace(marker,"""    if(tur=='call'&&kaynak.isNotEmpty&&hedefTuru!='group')
 """+marker,1)
 # Resuming one's minimized group call must not emit a second join event.
 s=s.replace("    final oda=(v['callRoomName']??'').toString();\n    if(ben==null||oda.isEmpty)return;","    final oda=(v['callRoomName']??'').toString();\n    if(ben==null||oda.isEmpty)return;\n    if(ngelxCallSession444.room==oda&&ngelxCallSession444.background){await ngelx445ReturnCall(oda);return;}",1)
+s=s.replace('child: Text(_ngelx438Ui("Katıl"),style:TextStyle(color:Colors.white,fontSize:10,fontWeight:FontWeight.w900)),', """child: Text(_ngelx438Ui(ngelxCallSession444.room==(tv['callRoomName']??'')&&ngelxCallSession444.background?"Aramaya dön":"Katıl"),style:TextStyle(color:Colors.white,fontSize:10,fontWeight:FontWeight.w900)),""",1)
 p.write_text(s)
 print('Build445 approved inbox integration applied; existing backend and conversations preserved')
