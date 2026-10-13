@@ -26,6 +26,8 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:record/record.dart' as rec;
 import 'group_quality.dart';
 import 'live_actions.dart';
+import 'call_background.dart';
+import 'call_camera_lifecycle.dart';
 part 'build258_settings.dart';
 
 bool ngelxHiddenWordMatches(String text, Iterable<String> hiddenWords) {
@@ -11464,8 +11466,26 @@ class NgelXAramaPage extends StatefulWidget{
   const NgelXAramaPage({super.key,required this.roomName,required this.baslik,this.foto='',required this.goruntulu,required this.aramaRef});
   @override State<NgelXAramaPage> createState()=>_NgelXAramaPageState();
 }
-class _NgelXAramaPageState extends State<NgelXAramaPage>{
+class _NgelXAramaPageState extends State<NgelXAramaPage> with WidgetsBindingObserver{
   lk.Room? oda;
+  late final BackgroundCall _backgroundCall;
+  late final CallCameraLifecycle _cameraLifecycle;
+  bool _backgroundStarted = false;
+  Route<dynamic>? _callRoute;
+  Future<void> _startBackgroundCall() async {
+    if (!mounted || bitiyor || oda == null || _backgroundStarted || WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed) return;
+    _backgroundStarted = await _backgroundCall.start();
+  }
+  void _returnToCall() {
+    if (!mounted || bitiyor || _callRoute == null) return;
+    Navigator.of(context).popUntil((route) => route == _callRoute);
+  }
+  @override void didChangeDependencies() { super.didChangeDependencies(); _callRoute ??= ModalRoute.of(context); }
+  @override void didChangeAppLifecycleState(AppLifecycleState state) {
+    final resumed = state == AppLifecycleState.resumed;
+    if (widget.goruntulu) unawaited(_cameraLifecycle.setForeground(resumed).catchError((_) {}));
+    if (resumed) unawaited(_startBackgroundCall());
+  }
   final AudioPlayer odaMuzikOynatici=AudioPlayer();
   final Map<String,Future<DocumentSnapshot<Map<String,dynamic>>>> _aramaProfilCache={};
   StreamSubscription<DocumentSnapshot<Map<String,dynamic>>>? aramaDurumAboneligi;
@@ -11480,6 +11500,17 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
 
   @override void initState(){
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _backgroundCall = BackgroundCall(widget.roomName,onReturn:_returnToCall,onUnavailable:() {
+      _backgroundStarted = false;
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Arka plan arama desteği başlatılamadı. Arama ekranını açık tut.')));
+    });
+    _cameraLifecycle = CallCameraLifecycle((enabled) async {
+      final participant = oda?.localParticipant;
+      if (participant == null || bitiyor) throw StateError('Arama hazır değil');
+      await participant.setCameraEnabled(enabled,cameraCaptureOptions:const lk.CameraCaptureOptions(params:lk.VideoParametersPresets.h360_169,maxFrameRate:20.0,stopCameraCaptureOnMute:true));
+    });
+    _cameraLifecycle.foreground = WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed;
     aramaDurumAboneligi=widget.aramaRef.snapshots().listen((d){
       final veri=d.data()??<String,dynamic>{},durum=(d.data()?['callStatus']??'').toString();
       final yeniAdmin=(veri['callStartedBy']??'').toString();
@@ -11591,7 +11622,7 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
     }catch(_){if(mounted)setState(()=>odaMuzikCalisiyor=false);}
   }
   Future<void> _adminTarafindanAtildi()async{
-    if(bitiyor)return;bitiyor=true;
+    if(bitiyor)return;bitiyor=true;unawaited(_backgroundCall.stop());
     aramaSureZamanlayici?.cancel();cevapsizZamanlayici?.cancel();yenidenBaglanmaZamanlayici?.cancel();
     await ngelxAramaKilidiBirak(widget.roomName);try{await odaMuzikOynatici.stop();}catch(_){}
     final r=oda;oda=null;if(r!=null){r.removeListener(_odaDegisti);try{await r.disconnect();}catch(_){}try{await r.dispose();}catch(_){}}
@@ -11600,7 +11631,7 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
 
   Future<void> _uzaktanBitirildi(String durum)async{
     if(bitiyor)return;
-    bitiyor=true;
+    bitiyor=true;unawaited(_backgroundCall.stop());
     aramaSureZamanlayici?.cancel();
     cevapsizZamanlayici?.cancel();
     yenidenBaglanmaZamanlayici?.cancel();
@@ -11684,11 +11715,16 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
       r.addListener(_odaDegisti);
       _aramaOlaylariniBagla(r);
       await r.connect(cevap.serverUrl,cevap.participantToken).timeout(const Duration(seconds:18));
+      if (!mounted || bitiyor) { await disposeLiveRoom(r); return; }
       oda=r;
       final yerel=r.localParticipant;
       if(yerel==null)throw Exception('Arama katılımcısı hazırlanamadı.');
-      await yerel.setMicrophoneEnabled(true);
-      if(widget.goruntulu)await yerel.setCameraEnabled(true,cameraCaptureOptions:const lk.CameraCaptureOptions(params:lk.VideoParametersPresets.h360_169,maxFrameRate:20.0,stopCameraCaptureOnMute:true));
+      await yerel.setMicrophoneEnabled(mikrofon);
+      if(widget.goruntulu)await _cameraLifecycle.sync(force:true);
+      if(Platform.isAndroid && WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed) {
+        await Permission.notification.request();
+        await _startBackgroundCall();
+      }
       await lk.AudioManager.instance.setSpeakerOutputPreferred(true,force:widget.goruntulu);
       hoparlor=true;
       final oncekiArama=await widget.aramaRef.get();
@@ -11783,7 +11819,7 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
   }
   Future<void> kameraDegistir()async{
     final yeni=!kamera;
-    try{await oda?.localParticipant?.setCameraEnabled(yeni,cameraCaptureOptions:const lk.CameraCaptureOptions(params:lk.VideoParametersPresets.h360_169,maxFrameRate:20.0,stopCameraCaptureOnMute:true));if(mounted)setState(()=>kamera=yeni);}
+    try{await _cameraLifecycle.setCameraWanted(yeni);if(mounted)setState(()=>kamera=yeni);}
     catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Kamera değiştirilemedi. Kamera iznini kontrol et.')));}
   }
   Future<void> kameraCevir()async{
@@ -11807,7 +11843,7 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
 
   Future<void> bitir({bool geriDon=true})async{
     if(bitiyor)return;
-    bitiyor=true;
+    bitiyor=true;unawaited(_backgroundCall.stop());
     aramaSureZamanlayici?.cancel();
     cevapsizZamanlayici?.cancel();
     yenidenBaglanmaZamanlayici?.cancel();
@@ -11901,17 +11937,21 @@ class _NgelXAramaPageState extends State<NgelXAramaPage>{
   }
 
   @override void dispose(){
+    WidgetsBinding.instance.removeObserver(this);
+    _cameraLifecycle.stop();
+    unawaited(_backgroundCall.stop());
     aramaSureZamanlayici?.cancel();
     cevapsizZamanlayici?.cancel();
     yenidenBaglanmaZamanlayici?.cancel();
     odaOlaylari?.dispose();
     aramaDurumAboneligi?.cancel();
     unawaited(odaMuzikOynatici.dispose());
-    final r=oda;
+    final r=oda;oda=null;
     if(r!=null){
       r.removeListener(_odaDegisti);
-      if(!bitiyor){unawaited(r.disconnect());unawaited(r.dispose());}
+      if(!bitiyor){unawaited(disposeLiveRoom(r));}
     }
+    if(!bitiyor)unawaited(bitir(geriDon:false).catchError((_){}));
     super.dispose();
   }
 

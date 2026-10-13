@@ -58,9 +58,9 @@ jobs:
       - name: Analyze
         working-directory: app
         run: flutter analyze --no-pub --no-fatal-infos --no-fatal-warnings
-      - name: Test live endpoint configuration
+      - name: Test app configuration and lifecycle
         working-directory: app
-        run: flutter test test/live_config_test.dart
+        run: flutter test
       - name: Create disposable build verification key
         shell: bash
         run: |
