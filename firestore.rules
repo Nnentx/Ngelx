@@ -544,12 +544,33 @@ service cloud.firestore {
       }
       match /comments/{commentId} {
         allow read: if true;
-        allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
-        allow update, delete: if signedIn() && resource.data.userId == request.auth.uid;
+        allow create: if signedIn()
+          && get(/databases/$(database)/documents/live_streams/$(streamId)).data.active == true
+          && request.resource.data.keys().hasOnly(['userId', 'uid', 'username', 'text', 'createdAt'])
+          && request.resource.data.userId == request.auth.uid
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.username is string
+          && request.resource.data.username.size() <= 50
+          && request.resource.data.text is string
+          && request.resource.data.text.size() > 0
+          && request.resource.data.text.size() <= 500
+          && request.resource.data.createdAt == request.time;
+        allow update: if signedIn() && resource.data.userId == request.auth.uid
+          && onlyChanges(['text', 'editedAt'])
+          && request.resource.data.text is string
+          && request.resource.data.text.size() > 0
+          && request.resource.data.text.size() <= 500
+          && request.resource.data.editedAt == request.time;
+        allow delete: if signedIn() && resource.data.userId == request.auth.uid;
       }
       match /reactions/{uid} {
         allow read: if true;
-        allow create, update: if isMe(uid) && request.resource.data.uid == request.auth.uid;
+        allow create, update: if isMe(uid)
+          && get(/databases/$(database)/documents/live_streams/$(streamId)).data.active == true
+          && request.resource.data.keys().hasOnly(['uid', 'type', 'createdAt'])
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.type == 'heart'
+          && request.resource.data.createdAt == request.time;
         allow delete: if isMe(uid);
       }
     }

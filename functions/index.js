@@ -3,12 +3,13 @@ import {getAuth} from 'firebase-admin/auth';
 import {getFirestore, Timestamp} from 'firebase-admin/firestore';
 import {onRequest} from 'firebase-functions/v2/https';
 import {onSchedule} from 'firebase-functions/v2/scheduler';
+import {sendLiveGift} from './live-gifts.js';
 import {authorizePublish,reconcileJoinedPublisher} from './live-permissions.js';
 import {finalizeDeadline, endStream, departureChanges, joinedSessionChanges} from './live-lifecycle.js';
 import {defineSecret, defineString} from 'firebase-functions/params';
 import {AccessToken, RoomServiceClient, WebhookReceiver} from 'livekit-server-sdk';
 import {randomUUID} from 'node:crypto';
-import {LiveError, gifts, giftCost, giftReceipt, requireActive, validRecipient, pkLive, finishPK, validId} from './live-domain.js';
+import {LiveError, gifts, requireActive, validRecipient, pkLive, finishPK, validId} from './live-domain.js';
 initializeApp();
 const db = getFirestore();
 const apiKey = defineSecret('LIVEKIT_API_KEY');
@@ -127,32 +128,7 @@ async function dispatch(action, uid, data) {
     });
     return {ok:true};
   }
-  if (action === 'gift') {
-    const cost = giftCost(data.giftId, data.quantity), target = validId(data.targetUid);
-    const eventRef = ref.collection('gifts').doc(`${uid}_${validId(data.requestId)}`);
-    const senderRef = db.collection('wallets').doc(uid), recipientRef = db.collection('wallets').doc(target);
-    await transaction(ref, async (tx, stream) => {
-      const previous = await tx.get(eventRef);
-      if (previous.exists) {
-        const old = previous.data();
-        if (old.giftId !== data.giftId || old.quantity !== data.quantity || old.recipientUid !== target) throw new LiveError(409, 'Gönderim kimliği başka bir işlemde kullanıldı.');
-        return;
-      }
-      if (target === uid || !validRecipient(stream, target)) throw new LiveError(400, 'Hediye alıcısı yayında değil.');
-      const sender = (await tx.get(senderRef)).data() || {}, recipient = (await tx.get(recipientRef)).data() || {};
-      if (!Number.isSafeInteger(sender.coins) || sender.coins < cost) throw new LiveError(409, 'Jeton bakiyen yetersiz.');
-      const earned = recipient.earnedCoins || 0;
-      if (!Number.isSafeInteger(earned) || !Number.isSafeInteger(earned + cost)) throw new LiveError(409,'Cüzdan güncellenemedi.');
-      tx.set(senderRef, {coins:sender.coins-cost, updatedAt:Timestamp.now()}, {merge:true});
-      tx.set(recipientRef, {earnedCoins:earned+cost, updatedAt:Timestamp.now()}, {merge:true});
-      tx.create(eventRef, {senderUid:uid, recipientUid:target, createdAt:Timestamp.now(), ...giftReceipt(data.giftId,data.quantity)});
-      if (pkLive(stream.pk, Date.now())) {
-        const field = target === stream.ownerId ? 'hostScore' : 'guestScore';
-        tx.update(ref, {pk:{...stream.pk,[field]:stream.pk[field]+cost}});
-      }
-    });
-    return {ok:true, coins:cost};
-  }
+  if (action === 'gift') return sendLiveGift(db,ref,uid,data,()=>Timestamp.now());
   if (action === 'leave') {
     const stream = (await ref.get()).data();
     if (!stream) return {ok:true};

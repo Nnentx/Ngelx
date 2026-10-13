@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import {testLiveRules} from './live_rules_test.mjs';
 import assert from 'node:assert/strict';
 import {
   initializeTestEnvironment,
@@ -607,6 +608,7 @@ try {
     updatedAt: serverTimestamp(),
   }));
 
+  await testLiveRules(env);
   console.log('Firestore rules testleri başarılı.');
 } finally {
   await env.cleanup();
