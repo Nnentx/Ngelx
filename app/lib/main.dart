@@ -5821,6 +5821,7 @@ class _KesfetPageState extends State<KesfetPage> {
       final cevap = await LiveApi.call('token', {'streamId': belgeId});
       oda = lk.Room(roomOptions: lk.RoomOptions(adaptiveStream: true, dynacast: true));
       await oda.connect(cevap['serverUrl'] as String, cevap['participantToken'] as String);
+      if (veri['ownerId'] == user.uid) await LiveApi.call('publish', {'streamId': belgeId});
       if (!context.mounted) {
         await disposeLiveRoom(oda);
         return;
@@ -6379,6 +6380,7 @@ class _CanliHazirlikPageState extends State<CanliHazirlikPage> {
       final cevap = await LiveApi.call('start', {'requestId': belgeId, 'title': baslik.text.trim()});
       oda = lk.Room(roomOptions: lk.RoomOptions(adaptiveStream: true, dynacast: true));
       await oda.connect(cevap['serverUrl'] as String, cevap['participantToken'] as String);
+      await LiveApi.call('publish', {'streamId': belgeId});
       final yerelKatilimci = oda.localParticipant;
       if (yerelKatilimci == null) throw Exception('Canlı yayın katılımcısı hazırlanamadı.');
       if (kamera) await yerelKatilimci.setCameraEnabled(true);

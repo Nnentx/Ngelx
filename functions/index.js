@@ -3,7 +3,8 @@ import {getAuth} from 'firebase-admin/auth';
 import {getFirestore, Timestamp} from 'firebase-admin/firestore';
 import {onRequest} from 'firebase-functions/v2/https';
 import {onSchedule} from 'firebase-functions/v2/scheduler';
-import {finalizeDeadline, endStream, departureChanges, participantSession, joinedSessionChanges} from './live-lifecycle.js';
+import {authorizePublish,reconcileJoinedPublisher} from './live-permissions.js';
+import {finalizeDeadline, endStream, departureChanges, joinedSessionChanges} from './live-lifecycle.js';
 import {defineSecret, defineString} from 'firebase-functions/params';
 import {AccessToken, RoomServiceClient, WebhookReceiver} from 'livekit-server-sdk';
 import {randomUUID} from 'node:crypto';
@@ -21,8 +22,8 @@ function actorName(user) { return String(user.username || user.displayName || 'N
 async function token(stream, uid) {
   requireActive(stream);
   const profile = (await db.collection('users').doc(uid).get()).data() || {};
-  // Guest tokens remain read-only; acceptance is checked on the publish endpoint.
-  const canPublish = stream.ownerId === uid;
+  // Every fresh token is read-only. The publish endpoint authorizes the live session.
+  const canPublish = false;
   const access = new AccessToken(apiKey.value(), apiSecret.value(), {
     identity: uid, name: actorName(profile), ttl: '15m',
     attributes: {role: stream.ownerId === uid ? 'host' : stream.guestUid === uid ? 'guest' : 'viewer'},
@@ -55,27 +56,7 @@ async function dispatch(action, uid, data) {
   if (action === 'catalog') return {gifts};
   const ref = streamRef(data.streamId);
   if (action === 'token') return token((await ref.get()).data(), uid);
-  if (action === 'publish') {
-    const stream = (await ref.get()).data();
-    requireActive(stream);
-    if (!validRecipient(stream, uid)) throw new LiveError(403, 'Yayıncı iznin yok.');
-    const service = roomService();
-    const participant = await service.getParticipant(stream.roomName, uid);
-    const session = participantSession(participant);
-    if (!session) throw new LiveError(409, 'Yayın bağlantısı hazır değil.');
-    await service.updateParticipant(stream.roomName, uid, {permission: {canPublish:true, canSubscribe:true, canPublishData:false}});
-    try {
-      await transaction(ref, (tx,current) => {
-        if (!validRecipient(current, uid)) throw new LiveError(403, 'Yayıncı iznin sona erdi.');
-        tx.update(ref,{[current.ownerId === uid ? 'hostSession' : 'guestSession']:session});
-      });
-    } catch (error) {
-      try { await service.updateParticipant(stream.roomName,uid,{permission:{canPublish:false}}); }
-      catch (revokeError) { console.error('Publish revocation failed',revokeError.message); }
-      throw error;
-    }
-    return {ok:true};
-  }
+  if (action === 'publish') return authorizePublish(db,ref,roomService(),uid);
   if (action === 'request' || action === 'invite') {
     const target = action === 'invite' ? validId(data.targetUid) : uid;
     const targetProfile = await db.collection('users').doc(target).get();
@@ -100,7 +81,7 @@ async function dispatch(action, uid, data) {
       if (stream.guestUid === target && request?.status === 'accepted') return;
       if (stream.guestUid) throw new LiveError(409, 'Yayındaki ikinci yer dolu.');
       if (!request || request.status !== (action === 'approve' ? 'pending' : 'invited')) throw new LiveError(409, 'Bu istek artık geçerli değil.');
-      tx.update(ref, {guestUid: target, guestName: request.name, guestSession:null, pk: null});
+      tx.update(ref, {guestUid: target, guestName: request.name, guestSlotId:randomUUID(), guestSession:null, pk: null});
       tx.update(requestRef, {status: 'accepted', updatedAt: Timestamp.now()});
     });
     // The server grants publishing through the publish endpoint after acceptance.
@@ -182,14 +163,17 @@ async function dispatch(action, uid, data) {
       });
       // Throw on cleanup failure so a retry can close the media room as well.
       try { await roomService().deleteRoom(stream.roomName); } catch (e) { if (e.status !== 404 && e.code !== 'not_found') throw e; }
-    } else if (stream.guestUid === uid) {
-      // Revoke publishing first so a former guest cannot retain a publish-capable connection.
-      try { await roomService().removeParticipant(stream.roomName,uid); } catch (e) { if (e.status !== 404 && e.code !== 'not_found') throw e; }
-      await transaction(ref, (tx,current) => {
-        if (current.guestUid !== uid) return;
-        tx.update(ref,{guestUid:'',guestName:'',pk:current.pk?.status==='active'?{...finishPK(current.pk),reason:'guest_left'}:null});
+    } else {
+      // Clear the role before media revocation; concurrent publish must recheck it.
+      await db.runTransaction(async tx => {
+        const current = (await tx.get(ref)).data();
+        if (!current?.active || current.guestUid !== uid) return;
+        tx.update(ref,{guestUid:'',guestName:'',guestSlotId:'',guestSession:null,pk:current.pk?.status==='active'?{...finishPK(current.pk),reason:'guest_left'}:current.pk?.status==='pending'?{...current.pk,status:'cancelled'}:current.pk??null});
         tx.set(ref.collection('join_requests').doc(uid),{status:'left',updatedAt:Timestamp.now()},{merge:true});
       });
+      // Remove this identity even on retry after the role was already cleared.
+      try { await roomService().removeParticipant(stream.roomName,uid); }
+      catch (e) { if (e.status !== 404 && e.code !== 'not_found') throw e; }
     }
     return {ok:true};
   }
@@ -220,6 +204,7 @@ export const ngelxLiveWebhook = onRequest(options, async (req,res) => {
     if (!roomName.startsWith('live_')) return res.sendStatus(200);
     const ref = streamRef(roomName.slice(5));
     if (event.event === 'participant_joined') {
+      await reconcileJoinedPublisher(ref,roomService(),roomName,event.participant);
       await db.runTransaction(async tx => {
         const stream = (await tx.get(ref)).data();
         const changes = joinedSessionChanges(stream,event.participant,event.createdAt);
