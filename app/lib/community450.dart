@@ -1794,3 +1794,67 @@ class _NgelXCommunityAdmin450State extends State<NgelXCommunityAdmin450> {
     ),
   );
 }
+
+class NgelXDiscoveryTabs450 extends StatelessWidget {
+  final int selected;
+  final ValueChanged<int> onSelected;
+  const NgelXDiscoveryTabs450({
+    super.key,
+    required this.selected,
+    required this.onSelected,
+  });
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 12),
+    child: Row(
+      children: [
+        ...[
+          (0, 'Canlı'),
+          (2, 'Trend'),
+          (3, 'Kişiler'),
+          (4, 'Gruplar'),
+          (5, 'Topluluk'),
+        ].map(
+          (item) => Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 3),
+              child: Semantics(
+                button: true,
+                selected: selected == item.$1,
+                label: item.$2,
+                child: InkWell(
+                  onTap: () => onSelected(item.$1),
+                  borderRadius: BorderRadius.circular(14),
+                  child: Container(
+                    height: 42,
+                    padding: const EdgeInsets.symmetric(horizontal: 3),
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: selected == item.$1
+                          ? mor
+                          : const Color(0xFFF3F4F7),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        item.$2,
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w800,
+                          color: selected == item.$1
+                              ? Colors.white
+                              : Colors.black87,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
