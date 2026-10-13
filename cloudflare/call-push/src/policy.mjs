@@ -6,7 +6,7 @@ export function eventFor(uid, chat, room, now){
  const incoming=chat.callStatus==='ringing';
  if(incoming&&(uid!==chat.callStartedBy||!fresh(chat.callCreatedAt,now)))return null;
  const cancelActor=chat.callStatus==='active'?chat.callAnsweredBy??list(chat.callParticipants).find(x=>x!==chat.callStartedBy):chat.callEndedBy??chat.callStartedBy;
- if(!incoming&&uid!==cancelActor)return null;
+ if(!incoming&&uid!==cancelActor&&uid!==chat.callStartedBy)return null;
  if(!incoming&&(!['active','ended','rejected','missed'].includes(chat.callStatus)||!fresh(chat.callStatus==='active'?chat.callAnsweredAt:chat.callEndedAt,now)))return null;
  return {kind:incoming?'incoming_call':'call_end',roomName:room,video:String(chat.callVideo===true),
   expiresAt:String(incoming?Math.min(now+60000,chat.callCreatedAt+60000):now+60000),

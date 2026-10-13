@@ -22,4 +22,4 @@ test('Firestore REST values preserve false, zero, timestamps and arrays',()=>{as
 
 test('oversized body is rejected before authentication even without content-length',async()=>{const f=fixture({authenticate:async()=>{throw Error('must not authenticate');}});assert.equal((await f.handler(new Request('https://example.test/call',{method:'POST',body:'x'.repeat(4096)}))).status,413);});
 
-test('other group members cannot fan out duplicate cancellation requests',()=>{const c={...chat(),members:['a','b','c'],isGroup:true,callStatus:'active',callAnsweredAt:now};assert.equal(eventFor('c',c,'private_452',now),null);assert.equal(eventFor('b',c,'private_452',now).kind,'call_end');});
+test('other group members cannot fan out duplicate cancellation requests',()=>{const c={...chat(),members:['a','b','c'],isGroup:true,callStatus:'active',callAnsweredAt:now};assert.equal(eventFor('c',c,'private_452',now),null);assert.equal(eventFor('b',c,'private_452',now).kind,'call_end');assert.equal(eventFor('a',c,'private_452',now).kind,'call_end');});
