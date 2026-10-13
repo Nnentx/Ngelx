@@ -18,11 +18,11 @@ class IncomingCallService : FirebaseMessagingService() {
     override fun onMessageReceived(message: RemoteMessage) {
         val d = message.data
         if (d["recipientUid"] != FirebaseAuth.getInstance().currentUser?.uid) return
+        val room = d["roomName"] ?: return
+        if (d["kind"] == "call_end") { cancel(this, room); return }
         val expires = d["expiresAt"]?.toLongOrNull() ?: return
         if (expires <= System.currentTimeMillis()) return
         val chat = d["chatId"] ?: return
-        val room = d["roomName"] ?: return
-        if (d["kind"] == "call_end") { cancel(this, room); return }
         if (d["kind"] != "incoming_call") return
         show(this, chat, room, d["title"] ?: "NgelX araması", d["video"] == "true")
     }
@@ -33,10 +33,14 @@ class IncomingCallService : FirebaseMessagingService() {
         }
         fun show(context: Context, chat: String, room: String, title: String, video: Boolean) {
             val manager = context.getSystemService(NotificationManager::class.java)
+            val ringtone = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
+                ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+            if (Build.VERSION.SDK_INT >= 26) {
             val channel = NotificationChannel(CHANNEL, "Gelen aramalar", NotificationManager.IMPORTANCE_HIGH)
             channel.enableVibration(true)
-            channel.setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE), AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE).build())
+            channel.setSound(ringtone, AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE).build())
             manager.createNotificationChannel(channel)
+            }
             fun action(value: String): PendingIntent {
                 val intent = Intent(context, MainActivity::class.java).apply {
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
@@ -45,11 +49,18 @@ class IncomingCallService : FirebaseMessagingService() {
                 return PendingIntent.getActivity(context, (room+value).hashCode(), intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
             }
             val answer = action("answer"); val reject = action("reject")
-            val builder = Notification.Builder(context, CHANNEL)
+            val builder = if (Build.VERSION.SDK_INT >= 26) Notification.Builder(context, CHANNEL) else Notification.Builder(context)
+            builder
                 .setSmallIcon(android.R.drawable.sym_call_incoming).setContentTitle(title)
                 .setContentText(if(video) "Gelen görüntülü arama" else "Gelen sesli arama")
                 .setCategory(Notification.CATEGORY_CALL).setOngoing(true).setAutoCancel(false)
-                .setContentIntent(action("open")).setOnlyAlertOnce(true).setTimeoutAfter(60000)
+                .setContentIntent(action("open")).setOnlyAlertOnce(true)
+            if (Build.VERSION.SDK_INT >= 26) builder.setTimeoutAfter(60000)
+            if (Build.VERSION.SDK_INT < 26) {
+                builder.setPriority(Notification.PRIORITY_MAX)
+                    .setSound(ringtone, AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE).build())
+                    .setVibrate(longArrayOf(0, 500, 500))
+            }
             if (Build.VERSION.SDK_INT >= 31) {
                 builder.setStyle(Notification.CallStyle.forIncomingCall(Person.Builder().setName(title).setImportant(true).build(), reject, answer))
             } else {
