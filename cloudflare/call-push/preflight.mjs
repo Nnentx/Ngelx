@@ -2,11 +2,6 @@ import fs from 'node:fs';import {accessToken} from './src/google.mjs';
 const token=process.env.CLOUDFLARE_API_TOKEN,account=process.env.CLOUDFLARE_ACCOUNT_ID;
 if(!token||!account)throw Error('Existing Cloudflare deployment credentials unavailable');
 async function cf(path){const r=await fetch(`https://api.cloudflare.com/client/v4/accounts/${account}/${path}`,{headers:{authorization:'Bearer '+token}});if(!r.ok)throw Error('Cloudflare read permission missing for '+path.split('/')[0]);const v=await r.json();if(!v.success)throw Error('Cloudflare lookup failed');return v.result;}
-const subscriptions=await cf('subscriptions');
-for(const s of subscriptions){const text=JSON.stringify(s.rate_plan??{}).toLowerCase();if(text.includes('worker')&&!text.includes('free'))throw Error('Workers Free plan could not be confirmed; paid deployment refused');}
-const settings=await cf('workers/account-settings');
-if(['standard','unbound'].includes(settings.default_usage_model))throw Error('Paid Workers usage model detected; deployment refused');
-const sub=await cf('workers/subdomain');if(!sub.subdomain)throw Error('Existing workers.dev subdomain unavailable');
 const raw=process.env.FIREBASE_SERVICE_ACCOUNT_NGELX_44EED||process.env.FIREBASE_SERVICE_ACCOUNT||process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
 if(!raw)throw Error('Existing Firebase server credentials unavailable');
 let service;try{service=JSON.parse(raw);}catch{service=JSON.parse(Buffer.from(raw,'base64').toString());}
@@ -19,6 +14,12 @@ const deleted=await fetch(db,{method:'DELETE',headers});if(!deleted.ok)throw Err
 const lookup=await fetch('https://identitytoolkit.googleapis.com/v1/projects/ngelx-44eed/accounts:lookup',{method:'POST',headers,body:JSON.stringify({localId:['__ngelx_preflight_no_such_user__']})});if(!lookup.ok)throw Error('Firebase Authentication user lookup permission unavailable');
 const push=await fetch('https://fcm.googleapis.com/v1/projects/ngelx-44eed/messages:send',{method:'POST',headers,body:JSON.stringify({validate_only:true,message:{token:'__invalid_preflight_token_no_device__',data:{kind:'preflight'}}})});
 if(![200,400,404].includes(push.status))throw Error('FCM API or Firebase Messaging permission unavailable (HTTP '+push.status+')');
+console.log('Firebase data access, authentication lookup and FCM dry-run verified');
+const subscriptions=await cf('subscriptions');
+for(const s of subscriptions){const text=JSON.stringify(s.rate_plan??{}).toLowerCase();if(text.includes('worker')&&!text.includes('free'))throw Error('Workers Free plan could not be confirmed; paid deployment refused');}
+const settings=await cf('workers/account-settings');
+if(['standard','unbound'].includes(settings.default_usage_model))throw Error('Paid Workers usage model detected; deployment refused');
+const sub=await cf('workers/subdomain');if(!sub.subdomain)throw Error('Existing workers.dev subdomain unavailable');
 fs.writeFileSync('backend452-preflight.json',JSON.stringify({freePlanVerified:true,workerUrl:`https://ngelx-call-push.${sub.subdomain}.workers.dev`,firebaseAccessVerified:true,checkedAt:new Date().toISOString()},null,2));
 // Secret is only staged for wrangler, never printed or uploaded as an artifact.
 fs.writeFileSync('cloudflare/call-push/.secrets452.json',JSON.stringify({GOOGLE_SERVICE_ACCOUNT:JSON.stringify(service)}),{mode:0o600});
