@@ -29,8 +29,9 @@ try{
   planVerification='owner-dashboard-2026-10-14';
   console.log('Subscriptions permission unavailable; using owner-verified Free plan for matched workers.dev account');
 }
-const settings=await cf('workers/account-settings');
-if(['standard','unbound'].includes(settings.default_usage_model))throw Error('Unexpected Workers usage model; deployment refused pending verification');
+// usage_model is deprecated and does not determine the account's subscription.
+// https://developers.cloudflare.com/workers/wrangler/deprecations/#the-usage_model-config-file-property
+// Deploy uses the verified existing plan; no subscription or billing mutation.
 fs.writeFileSync('backend452-preflight.json',JSON.stringify({freePlanVerified:true,planVerification,workerUrl:`https://ngelx-call-push.${sub.subdomain}.workers.dev`,firebaseAccessVerified:true,checkedAt:new Date().toISOString()},null,2));
 // Secret is only staged for wrangler, never printed or uploaded as an artifact.
 fs.writeFileSync('cloudflare/call-push/.secrets452.json',JSON.stringify({GOOGLE_SERVICE_ACCOUNT:JSON.stringify(service)}),{mode:0o600});
