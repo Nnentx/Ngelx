@@ -1,7 +1,7 @@
 import fs from 'node:fs';import {accessToken} from './src/google.mjs';
 const token=process.env.CLOUDFLARE_API_TOKEN,account=process.env.CLOUDFLARE_ACCOUNT_ID;
 if(!token||!account)throw Error('Existing Cloudflare deployment credentials unavailable');
-async function cf(path){const r=await fetch(`https://api.cloudflare.com/client/v4/accounts/${account}/${path}`,{headers:{authorization:'Bearer '+token}});if(!r.ok)throw Error('Cloudflare plan read failed (HTTP '+r.status+') for '+path.split('/')[0]);const v=await r.json();if(!v.success)throw Error('Cloudflare lookup failed');return v.result;}
+async function cf(path){const r=await fetch(`https://api.cloudflare.com/client/v4/accounts/${account}/${path}`,{headers:{authorization:'Bearer '+token}});if(!r.ok){const e=Error('Cloudflare read failed (HTTP '+r.status+') for '+path.split('/')[0]);e.status=r.status;throw e;}const v=await r.json();if(!v.success)throw Error('Cloudflare lookup failed');return v.result;}
 const raw=process.env.FIREBASE_SERVICE_ACCOUNT_NGELX_44EED||process.env.FIREBASE_SERVICE_ACCOUNT||process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
 if(!raw)throw Error('Existing Firebase server credentials unavailable');
 let service;try{service=JSON.parse(raw);}catch{service=JSON.parse(Buffer.from(raw,'base64').toString());}
@@ -15,12 +15,23 @@ const lookup=await fetch('https://identitytoolkit.googleapis.com/v1/projects/nge
 const push=await fetch('https://fcm.googleapis.com/v1/projects/ngelx-44eed/messages:send',{method:'POST',headers,body:JSON.stringify({validate_only:true,message:{token:'__invalid_preflight_token_no_device__',data:{kind:'preflight'}}})});
 if(![200,400,404].includes(push.status))throw Error('FCM API or Firebase Messaging permission unavailable (HTTP '+push.status+')');
 console.log('Firebase data access, authentication lookup and FCM dry-run verified');
-const subscriptions=await cf('subscriptions');
-for(const s of subscriptions){const text=JSON.stringify(s.rate_plan??{}).toLowerCase();if(text.includes('worker')&&!text.includes('free'))throw Error('Workers Free plan could not be confirmed; paid deployment refused');}
+// Owner supplied account UI evidence: 47117.jpg, 2026-10-14 Europe/Istanbul,
+// Workers plans: Free / $0 / Current plan. Earlier account screenshot 47115.jpg
+// identifies alihancaglar76.workers.dev. Never apply this evidence to another account.
+const sub=await cf('workers/subdomain');
+if(sub.subdomain!=='alihancaglar76')throw Error('Account does not match owner-verified Free plan; deployment refused');
+let planVerification='cloudflare-subscriptions';
+try{
+  const subscriptions=await cf('subscriptions');
+  for(const s of subscriptions){const text=JSON.stringify(s.rate_plan??{}).toLowerCase();if(text.includes('worker')&&!text.includes('free'))throw Error('Workers Free plan could not be confirmed; paid deployment refused');}
+}catch(e){
+  if(e.status!==403)throw e;
+  planVerification='owner-dashboard-2026-10-14';
+  console.log('Subscriptions permission unavailable; using owner-verified Free plan for matched workers.dev account');
+}
 const settings=await cf('workers/account-settings');
-if(['standard','unbound'].includes(settings.default_usage_model))throw Error('Paid Workers usage model detected; deployment refused');
-const sub=await cf('workers/subdomain');if(!sub.subdomain)throw Error('Existing workers.dev subdomain unavailable');
-fs.writeFileSync('backend452-preflight.json',JSON.stringify({freePlanVerified:true,workerUrl:`https://ngelx-call-push.${sub.subdomain}.workers.dev`,firebaseAccessVerified:true,checkedAt:new Date().toISOString()},null,2));
+if(['standard','unbound'].includes(settings.default_usage_model))throw Error('Unexpected Workers usage model; deployment refused pending verification');
+fs.writeFileSync('backend452-preflight.json',JSON.stringify({freePlanVerified:true,planVerification,workerUrl:`https://ngelx-call-push.${sub.subdomain}.workers.dev`,firebaseAccessVerified:true,checkedAt:new Date().toISOString()},null,2));
 // Secret is only staged for wrangler, never printed or uploaded as an artifact.
 fs.writeFileSync('cloudflare/call-push/.secrets452.json',JSON.stringify({GOOGLE_SERVICE_ACCOUNT:JSON.stringify(service)}),{mode:0o600});
 console.log('Workers Free and required Firebase permissions verified; no message sent');
