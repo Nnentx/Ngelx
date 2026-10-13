@@ -10,6 +10,7 @@ const server = createServer(async (req,res) => {
   };
   if (path === '/health' && req.method === 'GET') return response.json({ok:true});
   const webhook = path === '/webhook';
+  if (webhook) res.once('finish',()=>console.info(`Live webhook HTTP ${res.statusCode}`));
   if (!webhook && !/^\/live\/[a-z-]+$/.test(path)) return response.sendStatus(404);
   if (req.method !== 'POST') return response.sendStatus(405);
   try {
