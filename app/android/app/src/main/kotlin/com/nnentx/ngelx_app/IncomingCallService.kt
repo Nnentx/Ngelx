@@ -10,6 +10,8 @@ import android.content.Intent
 import android.media.AudioAttributes
 import android.media.RingtoneManager
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
@@ -28,7 +30,10 @@ class IncomingCallService : FirebaseMessagingService() {
     }
     companion object {
         const val CHANNEL = "ngelx_incoming_calls448"
+        private val timer = Handler(Looper.getMainLooper())
+        private val alerts = java.util.concurrent.ConcurrentHashMap<String, Runnable>()
         fun cancel(context: Context, room: String) {
+            alerts.remove(room)?.let { timer.removeCallbacks(it) }
             context.getSystemService(NotificationManager::class.java).cancel(room.hashCode())
         }
         fun show(context: Context, chat: String, room: String, title: String, video: Boolean) {
@@ -70,6 +75,10 @@ class IncomingCallService : FirebaseMessagingService() {
             val notification = builder.build()
             notification.flags = notification.flags or Notification.FLAG_INSISTENT
             manager.notify(room.hashCode(), notification)
+            val application = context.applicationContext
+            val timeout = Runnable { cancel(application, room) }
+            alerts.put(room, timeout)?.let { timer.removeCallbacks(it) }
+            timer.postDelayed(timeout, 60000)
         }
     }
 }
