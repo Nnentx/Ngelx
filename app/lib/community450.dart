@@ -702,6 +702,7 @@ class NgelXCommunityDetail450 extends StatefulWidget {
 
 class _NgelXCommunityDetail450State extends State<NgelXCommunityDetail450> {
   String tab = 'Gönderiler', search = '';
+  int postLimit = 40;
   Future<void> invite(Map<String, dynamic> v) async {
     try {
       final ref = FirebaseFirestore.instance
@@ -913,7 +914,8 @@ class _NgelXCommunityDetail450State extends State<NgelXCommunityDetail450> {
                     .doc(widget.id)
                     .collection('posts')
                     .where('status', isEqualTo: 'approved')
-                    .limit(40)
+                    .orderBy('createdAt', descending: true)
+                    .limit(postLimit)
                     .snapshots(),
                 builder: (c, p) {
                   if (p.hasError)
@@ -957,6 +959,11 @@ class _NgelXCommunityDetail450State extends State<NgelXCommunityDetail450> {
                           admin: admin,
                         ),
                       ),
+                      if ((p.data?.docs.length ?? 0) >= postLimit)
+                        TextButton(
+                          onPressed: () => setState(() => postLimit += 40),
+                          child: const Text('Daha fazla gönderi'),
+                        ),
                     ],
                   );
                 },
