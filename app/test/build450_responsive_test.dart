@@ -48,7 +48,7 @@ void main() {
         const MaterialApp(home: NgelXCommunityCreate450()),
       );
       expect(tester.takeException(), isNull);
-      await tester.scrollUntilVisible(find.text('Özel topluluk'), 200);
+      await tester.scrollUntilVisible(find.text('Özel topluluk'), 200, scrollable:find.byType(Scrollable).first);
       await tester.tap(find.text('Özel topluluk'));
       await tester.pump();
       expect(
