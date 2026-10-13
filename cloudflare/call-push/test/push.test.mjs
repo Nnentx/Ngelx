@@ -1,7 +1,7 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {createHandler} from '../src/handler.mjs';import {eventFor,validBody} from '../src/policy.mjs';import {decode,document} from '../src/google.mjs';
 const now=1700000000000;
-const chat=()=>({members:['a','b','b'],callStartedBy:'a',callRoomName:'private_452',callStatus:'ringing',callCreatedAt:now,isGroup:false});
+const chat=()=>({members:['a','b','b'],callStartedBy:'a',callRoomName:'private_452',callStatus:'ringing',callCreatedAt:now,callParticipants:['a','b'],isGroup:false});
 function fixture(extra={}){let sends=[],claims=new Set();const io={now:()=>now,authenticate:async()=> 'a',getChat:async()=>chat(),rateLimit:async()=>true,getUser:async uid=>({uid,displayName:uid,blocked:[]}),tokens:async()=>['valid_device_token_1234567890'],claim:async(c,r,k,u)=>{const key=c+r+k+u;if(claims.has(key))return null;claims.add(key);return key;},complete:async()=>{},send:async(token,data)=>{sends.push({token,data});return true;},...extra};return {io,sends,handler:createHandler(io)};}
 const req=(body={chatId:'chat',roomName:'private_452',offset:0})=>new Request('https://example.test/call',{method:'POST',body:JSON.stringify(body)});
 test('only unique recipients receive trusted server-derived data',async()=>{const f=fixture();assert.equal((await f.handler(req())).status,200);assert.equal(f.sends.length,1);assert.equal(f.sends[0].data.recipientUid,'b');assert.equal(f.sends[0].data.title,'a');});
@@ -21,3 +21,5 @@ test('health is public and write paths require POST',async()=>{const f=fixture()
 test('Firestore REST values preserve false, zero, timestamps and arrays',()=>{assert.equal(decode({booleanValue:false}),false);assert.equal(decode({integerValue:'0'}),0);assert.deepEqual(decode({arrayValue:{values:[{stringValue:'a'}]}}),['a']);assert.equal(document({fields:{at:{timestampValue:'2023-11-14T22:13:20Z'}}}).at,now);});
 
 test('oversized body is rejected before authentication even without content-length',async()=>{const f=fixture({authenticate:async()=>{throw Error('must not authenticate');}});assert.equal((await f.handler(new Request('https://example.test/call',{method:'POST',body:'x'.repeat(4096)}))).status,413);});
+
+test('other group members cannot fan out duplicate cancellation requests',()=>{const c={...chat(),members:['a','b','c'],isGroup:true,callStatus:'active',callAnsweredAt:now};assert.equal(eventFor('c',c,'private_452',now),null);assert.equal(eventFor('b',c,'private_452',now).kind,'call_end');});

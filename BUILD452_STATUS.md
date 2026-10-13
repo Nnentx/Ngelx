@@ -8,14 +8,14 @@ This Worker sends FCM data notifications after an app has committed its call rec
 - The persisted chat record determines caller, room, current status and recipients. Client-supplied tokens, recipients and titles are rejected.
 - Both block directions, account state and notification preferences are enforced.
 - Four recipients per request, two most recently registered devices per recipient; at most 60 chat members.
-- Each authenticated account gets at most 24 requests per minute. A stored compare-and-set counter fails closed on concurrent updates.
+- Each authenticated account gets at most 40 requests per minute. A stored compare-and-set counter fails closed on concurrent updates.
 - Server-only leases suppress concurrent/replayed dispatches. Lease documents are reused per chat/recipient/event rather than growing per call. Transient retries occur after 15 seconds; FCM is an external service, so delivery is not an exactly-once guarantee.
 - The request has a bounded external-call budget compatible with the Workers Free 50-subrequest limit. Network waiting is excluded from CPU time, but the real Free CPU limit must still be measured with authenticated requests after deployment.
 - The Google service account is an encrypted Worker secret; it is never included in the APK or repository.
 
 ## Status
 
-18 unit tests pass, including real RSA signature verification and tampered token rejection. Firebase data read/write, Authentication lookup and FCM validate-only access have passed the deployment preflight. No test message was delivered to a person.
+21 unit tests pass, including real RSA signature verification and tampered token rejection. Firebase data read/write, Authentication lookup and FCM validate-only access have passed the deployment preflight. No test message was delivered to a person.
 
 Deployment is blocked: the existing Cloudflare token cannot read account subscriptions. The preflight deliberately refuses deployment when it cannot confirm Workers Free. No paid plan or billing account was activated. Required next access: a read-only verification of the account's Workers plan, or a Cloudflare token that can read subscriptions (Billing Read).
 

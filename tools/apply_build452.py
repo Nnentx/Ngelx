@@ -15,6 +15,10 @@ s=s[:pos]+'''  final Set<String> _dispatch452=<String>{};
     if(status=='ringing'){
       if(value['callStartedBy']!=uid||created is! Timestamp||DateTime.now().difference(created.toDate()).inSeconds>=60)return;
     }else{
+      final participants=List<String>.from(value['callParticipants']??const[]);
+      final answerer=value['callAnsweredBy']??(participants.where((x)=>x!=value['callStartedBy']).isEmpty?null:participants.firstWhere((x)=>x!=value['callStartedBy']));
+      final actor=status=='active'?answerer:value['callEndedBy']??value['callStartedBy'];
+      if(actor!=uid)return;
       if(!const ['active','ended','rejected','missed'].contains(status)||changed is! Timestamp||DateTime.now().difference(changed.toDate()).inSeconds>=60)return;
     }
     final key='$uid:$chat:$room:$status';
