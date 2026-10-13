@@ -30,6 +30,8 @@ jobs:
   verify-and-build:
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    env:
+      NGELX_LIVE_API_URL: ${{ vars.NGELX_LIVE_API_URL }}
     steps:
       - name: Kaynaklari al
         uses: actions/checkout@v4
@@ -136,7 +138,9 @@ jobs:
           APP_VERSION="$(awk '/^version:/ {print $2}' pubspec.yaml)"
           BUILD_NAME="${APP_VERSION%%+*}"
           BUILD_NUMBER="${APP_VERSION##*+}"
+          test "$NGELX_LIVE_API_URL" = "https://ngelx-live-test.onrender.com/live"
           flutter build apk --debug \
+            --dart-define=NGELX_LIVE_API_URL="$NGELX_LIVE_API_URL" \
             --dart-define=NGELX_VERSION_NAME="$BUILD_NAME" \
             --dart-define=NGELX_BUILD_NUMBER="$BUILD_NUMBER"
 
