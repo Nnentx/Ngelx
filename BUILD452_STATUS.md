@@ -22,3 +22,6 @@ Deployment is blocked: the existing Cloudflare token cannot read account subscri
 `tools/apply_build452.py` integrates outgoing ringing and cancellation events into the existing Android call observer. The app requires a confirmed deployed HTTPS URL via `NGELX_CALL_PUSH_URL`; the default is empty and performs no push requests. Build451 APK does not include this integration. A new APK must be built after deployment and tested on two devices, including background, screen-off, cancellation, group calls and notification permissions. Android force-stop restrictions remain a platform constraint.
 
 Firestore indexes remain a separate permission issue. This Worker does not change security rules, create indexes, or weaken the approved-post query.
+
+
+Application verification completed successfully after replacing the unavailable HTTP client with the existing Dio client and bounding group cancellation dispatch: https://github.com/Nnentx/Ngelx/actions/runs/38464121891 . No new APK with a live Worker endpoint has been produced.
