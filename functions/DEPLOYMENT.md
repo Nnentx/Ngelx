@@ -71,3 +71,28 @@ Test amaçlı geçici anahtarla oluşturulan CI APK'sını güncelleme paketi ol
 8. Sunucu scheduler'ının ekranlar kapalıyken PK sonuçlandırdığı ve webhook retry'larının sonucu bozmadığı kontrol edilir.
 
 Referans: https://docs.livekit.io/reference/developer-tools/livekit-cli/ (Project URL bilgisi).
+
+## Kartsız test alternatifi: Render Free
+
+Firebase Functions dağıtımı yerine `render.yaml` içindeki Free web service kullanılabilir.
+Kod `live-backend.js` içinde ortak; Firebase adapteri ve Node HTTP adapteri aynı işlemleri kullanır.
+Kullanıcı hesapları, yayınlar ve cüzdanlar mevcut Firestore'da kalır; yeni veritabanı oluşturulmaz.
+
+Render'da GitHub repository/branch kaynağını bağlayın, rootDir `functions`, build `npm ci`,
+start `npm start`, health `/health`, instance **Free** seçin. Kart veya paid plan eklemeyin.
+LIVEKIT_URL dosyada doğrulanmış public adresi içerir. LIVEKIT_API_KEY, LIVEKIT_API_SECRET ve
+FIREBASE_SERVICE_ACCOUNT_JSON yalnızca Render'ın secret environment alanında tutulmalıdır;
+sohbete, git'e veya APK'ya konmaz. Firebase servis hesabı ngelx-44eed projesinden olmalıdır.
+Bu kimlik bilgisinin Render'a aktarımı ayrı erişim onayı ve güvenli kullanıcı girişi gerektirir.
+
+Gerçek HTTPS service URL oluştuktan sonra uygulama NGELX_LIVE_API_URL değeri `SERVICE_URL/live`,
+LiveKit webhook hedefi `SERVICE_URL/webhook` olur. Bu adresleri dağıtım çıktısından alın.
+Firestore kuralları ayrı ve APK geçişiyle koordineli yayımlanır; Spark'ta kalabilir.
+
+Free servis 15 dakika trafik yoksa uyur; ilk açılış yaklaşık bir dakika sürebilir.
+PK sweep sadece süreç çalışırken dakika başı çalışır, uyanınca gecikmiş kayıtları işler.
+Sunucu uyurken kapalı ekran PK sonucu kesin zamanında kaydedilmez. Yapay keep-alive ile
+ücretsiz planın uyku davranışı aşılmaz. Webhook gecikmesi ve cold-start gerçek cihazda test edilmelidir.
+Bu test/hobi dağıtımıdır; üretimde sürekli çalışabilirlik garantisi değildir.
+
+Kaynak: https://render.com/docs/free ve https://render.com/docs/your-first-deploy

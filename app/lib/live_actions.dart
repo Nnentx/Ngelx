@@ -14,7 +14,7 @@ class LiveApi {
     final token = await FirebaseAuth.instance.currentUser?.getIdToken();
     if (token == null) throw Exception('Oturum açmalısın.');
     try {
-      final response = await Dio(BaseOptions(connectTimeout: const Duration(seconds: 15), receiveTimeout: const Duration(seconds: 30)))
+      final response = await Dio(BaseOptions(connectTimeout: const Duration(seconds: 15), receiveTimeout: const Duration(seconds: 90)))
           .post('${endpoint.replaceFirst(RegExp(r'/+$'), '')}/$action', data: data, options: Options(headers: {'Authorization': 'Bearer $token'}));
       return Map<String, dynamic>.from(response.data as Map);
     } on DioException catch (e) {

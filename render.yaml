@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: ngelx-live-test
+    runtime: node
+    plan: free
+    branch: codex/live-call-cleanup
+    rootDir: functions
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: 22
+      - key: LIVEKIT_URL
+        value: wss://ngelx-4gz3quoe.livekit.cloud
+      - key: LIVEKIT_API_KEY
+        sync: false
+      - key: LIVEKIT_API_SECRET
+        sync: false
+      - key: FIREBASE_SERVICE_ACCOUNT_JSON
+        sync: false
