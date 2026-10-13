@@ -22,3 +22,9 @@ body = body.replace('controller:yorum,enabled:etkin', 'textInputAction:TextInput
 body = body.replace('hintText:hint,hintStyle:', 'isDense:true,contentPadding:const EdgeInsets.symmetric(horizontal:12,vertical:10),hintText:hint,hintStyle:', 1)
 p.write_text(head+body)
 print('Build451 compact live overlay applied')
+
+# Keep discovery category filters consistent with the approved white/purple UI.
+p=Path('app/lib/main.dart')
+s=p.read_text();start=s.index('class _KesfetPageState');end=s.index('class _TrendEtiketi',start)
+section=s[start:end].replace('ChoiceChip(', 'ChoiceChip(selectedColor:const Color(0xFFF0E8FF),backgroundColor:Colors.white,checkmarkColor:mor,labelStyle:const TextStyle(color:mor,fontWeight:FontWeight.w700),')
+p.write_text(s[:start]+section+s[end:])
