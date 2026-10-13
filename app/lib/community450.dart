@@ -1478,6 +1478,36 @@ class NgelXCommunityAdmin450 extends StatefulWidget {
 
 class _NgelXCommunityAdmin450State extends State<NgelXCommunityAdmin450> {
   String section = 'Üyelik istekleri';
+  bool bulkBusy451 = false;
+  Future<void> moderateAll451(List<QueryDocumentSnapshot<Map<String,dynamic>>> docs, bool approve) async {
+    if (bulkBusy451 || docs.isEmpty) return;
+    final membership = section == 'Üyelik istekleri';
+    final confirmed = await showDialog<bool>(context:context,builder:(c)=>AlertDialog(
+      title:Text(approve?'Toplu onay':'Toplu ret'),
+      content:Text('${docs.length} kayda işlem uygulanacak. Devam edilsin mi?'),
+      actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('İptal')),
+        FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('Uygula'))]));
+    if(confirmed!=true || !mounted)return;
+    setState(()=>bulkBusy451=true);
+    try {
+      final root = _communities450.doc(widget.id);
+      await FirebaseFirestore.instance.runTransaction((tx) async {
+        final community = await tx.get(root);
+        final current = <DocumentSnapshot<Map<String,dynamic>>>[];
+        for(final d in docs)current.add(await tx.get(d.reference));
+        final pending=current.where((d)=>d.exists&&d.data()?['status']=='pending').toList();
+        if(membership&&approve){
+          final members=Set<String>.from(community.data()?['members']??const[]);
+          members.addAll(pending.map((d)=>d.id));
+          if(members.length>500)throw StateError('Topluluk 500 üye sınırına ulaşıyor. Daha az isteği onayla.');
+          if(pending.isNotEmpty)tx.update(root,{'members':FieldValue.arrayUnion(pending.map((d)=>d.id).toList())});
+        }
+        for(final d in pending)tx.update(d.reference,{'status':approve?'approved':'rejected'});
+      });
+    }catch(e){if(mounted)_communityError450(context,e);}
+    finally{if(mounted)setState(()=>bulkBusy451=false);}
+  }
+
   Future<void> edit450(Map<String, dynamic> v) async {
     final n = TextEditingController(text: v['name']),
         d = TextEditingController(text: v['description']),
@@ -1727,6 +1757,10 @@ class _NgelXCommunityAdmin450State extends State<NgelXCommunityAdmin450> {
                           padding: EdgeInsets.all(24),
                           child: Text('Bekleyen kayıt yok.'),
                         ),
+                      if(ds.isNotEmpty&&section!='Şikâyetler')Wrap(spacing:8,children:[
+                        FilledButton(onPressed:bulkBusy451?null:()=>moderateAll451(ds,true),child:Text('Tümünü onayla (${ds.length})')),
+                        OutlinedButton(onPressed:bulkBusy451?null:()=>moderateAll451(ds,false),child:const Text('Tümünü reddet')),
+                      ]),
                       ...ds.map(
                         (d) => Card(
                           color: Colors.white,
