@@ -15,27 +15,28 @@ def current():
  r=http.get(base+r.json()['rulesetName'],timeout=30);r.raise_for_status();files=r.json()['source']['files']
  if len(files)!=1:raise RuntimeError('Unexpected rules source')
  return files[0]['content']
-# Create only the additive index required by the chronological community feed.
-indexbase='https://firestore.googleapis.com/v1/projects/ngelx-44eed/databases/(default)/collectionGroups/posts/indexes'
-indexes=[];page=None
-while True:
- r=http.get(indexbase,params={'pageToken':page} if page else {},timeout=30);r.raise_for_status();body=r.json();indexes.extend(body.get('indexes',[]));page=body.get('nextPageToken')
- if not page:break
-fields=[{'fieldPath':'status','order':'ASCENDING'},{'fieldPath':'createdAt','order':'DESCENDING'}]
-def matching(i):return i.get('queryScope')=='COLLECTION' and [f for f in i.get('fields',[]) if f.get('fieldPath')!='__name__']==fields
-found=next((i for i in indexes if matching(i)),None)
-if not found:
- r=http.post(indexbase,json={'queryScope':'COLLECTION','fields':fields},timeout=30);r.raise_for_status();print('Community chronological feed index creation requested')
-for attempt in range(120):
- if found:
-  r=http.get('https://firestore.googleapis.com/v1/'+found['name'],timeout=30);r.raise_for_status();found=r.json()
- else:
-  r=http.get(indexbase,timeout=30);r.raise_for_status();found=next((i for i in r.json().get('indexes',[]) if matching(i)),None)
- if found and found.get('state')=='READY':break
- if found and found.get('state')=='NEEDS_REPAIR':raise RuntimeError('Community feed index requires repair')
- time.sleep(10)
-else:raise RuntimeError('Community feed index is not ready yet')
-print('Community chronological feed index ready')
+if os.environ.get('BUILD450_SKIP_INDEX') != '1':
+ # Create only the additive index required by the chronological community feed.
+ indexbase='https://firestore.googleapis.com/v1/projects/ngelx-44eed/databases/(default)/collectionGroups/posts/indexes'
+ indexes=[];page=None
+ while True:
+  r=http.get(indexbase,params={'pageToken':page} if page else {},timeout=30);r.raise_for_status();body=r.json();indexes.extend(body.get('indexes',[]));page=body.get('nextPageToken')
+  if not page:break
+ fields=[{'fieldPath':'status','order':'ASCENDING'},{'fieldPath':'createdAt','order':'DESCENDING'}]
+ def matching(i):return i.get('queryScope')=='COLLECTION' and [f for f in i.get('fields',[]) if f.get('fieldPath')!='__name__']==fields
+ found=next((i for i in indexes if matching(i)),None)
+ if not found:
+  r=http.post(indexbase,json={'queryScope':'COLLECTION','fields':fields},timeout=30);r.raise_for_status();print('Community chronological feed index creation requested')
+ for attempt in range(120):
+  if found:
+   r=http.get('https://firestore.googleapis.com/v1/'+found['name'],timeout=30);r.raise_for_status();found=r.json()
+  else:
+   r=http.get(indexbase,timeout=30);r.raise_for_status();found=next((i for i in r.json().get('indexes',[]) if matching(i)),None)
+  if found and found.get('state')=='READY':break
+  if found and found.get('state')=='NEEDS_REPAIR':raise RuntimeError('Community feed index requires repair')
+  time.sleep(10)
+ else:raise RuntimeError('Community feed index is not ready yet')
+ print('Community chronological feed index ready')
 original=current();before=hashlib.sha256(original.encode()).hexdigest();fragment=Path('tools/community450.rules.fragment').read_text()
 if 'match /communities450/' in original:
  if fragment.strip() not in original:raise RuntimeError('Different community rules already deployed; review required')
