@@ -6435,10 +6435,11 @@ class _CanliHazirlikPageState extends State<CanliHazirlikPage> {
             const SizedBox(height: 16),
             FilledButton.icon(
               style: FilledButton.styleFrom(backgroundColor: const Color(0xFFFF1744), minimumSize: const Size.fromHeight(58), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22))),
-              onPressed: baglaniyor ? null : baslat,
+              onPressed: baglaniyor || !LiveApi.configured ? null : baslat,
               icon: baglaniyor ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.sensors_rounded),
               label: Text(baglaniyor ? 'Bağlanıyor...' : 'Canlı yayına başla', style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
             ),
+            if (!LiveApi.configured) const Padding(padding: EdgeInsets.only(top: 12), child: Text('Canlı yayın şu anda kullanılamıyor. Daha sonra tekrar dene.', textAlign: TextAlign.center)),
             const SizedBox(height: 10),
             const Text('İlk kullanımda kamera ve mikrofon izni istenir.', textAlign: TextAlign.center, style: TextStyle(color: Colors.black54)),
           ],

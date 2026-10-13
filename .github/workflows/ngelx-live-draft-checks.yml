@@ -1,0 +1,77 @@
+name: NgelX live draft checks
+
+on:
+  pull_request:
+    paths:
+      - 'app/**'
+      - 'functions/**'
+      - 'firestore.rules'
+      - '.github/workflows/ngelx-live-draft-checks.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: live-draft-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  server:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: functions/package-lock.json
+      - run: npm ci
+        working-directory: functions
+      - run: npm run check && npm test
+        working-directory: functions
+
+  flutter:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      NGELX_LIVE_API_URL: ${{ vars.NGELX_LIVE_API_URL }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.2'
+          channel: stable
+          cache: true
+      - name: Resolve packages
+        working-directory: app
+        run: flutter pub get
+      - name: Analyze
+        working-directory: app
+        run: flutter analyze --no-pub --no-fatal-infos --no-fatal-warnings
+      - name: Test live endpoint configuration
+        working-directory: app
+        run: flutter test test/live_config_test.dart
+      - name: Create disposable build verification key
+        shell: bash
+        run: |
+          mkdir -p "$HOME/.android"
+          keytool -genkeypair -keystore "$HOME/.android/debug.keystore" -alias androiddebugkey \
+            -storepass android -keypass android -keyalg RSA -keysize 2048 -validity 10000 \
+            -dname 'CN=Android Debug,O=Android,C=US' -noprompt
+      - name: Verify APK compilation (not a release)
+        working-directory: app
+        shell: bash
+        run: |
+          set -euo pipefail
+          flutter build apk --debug --dart-define="NGELX_LIVE_API_URL=$NGELX_LIVE_API_URL"
+          test -s build/app/outputs/flutter-apk/app-debug.apk

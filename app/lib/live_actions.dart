@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'live_config.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -7,10 +8,9 @@ import 'package:livekit_client/livekit_client.dart' as lk;
 
 class LiveApi {
   static const endpoint = String.fromEnvironment('NGELX_LIVE_API_URL');
+  static bool get configured => validLiveEndpoint(endpoint);
   static Future<Map<String, dynamic>> call(String action, Map<String, dynamic> data) async {
-    if (endpoint.isEmpty) throw Exception('Canlı yayın sunucusu henüz yapılandırılmadı.');
-    final uri = Uri.parse(endpoint);
-    if (uri.scheme != 'https' || uri.host.isEmpty) throw Exception('Canlı yayın sunucu adresi geçersiz.');
+    if (!configured) throw Exception('Canlı yayın şu anda kullanılamıyor. Daha sonra tekrar dene.');
     final token = await FirebaseAuth.instance.currentUser?.getIdToken();
     if (token == null) throw Exception('Oturum açmalısın.');
     try {
