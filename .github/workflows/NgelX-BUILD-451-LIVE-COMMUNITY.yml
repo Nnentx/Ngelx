@@ -11,7 +11,7 @@
 # Translation boundary: presentation labels only, preserve user names
 # Correct guarded call-history rendering
 # Device QA revision: member exit and extended screen translations
-name: NgelX BUILD 450 APPROVED DISCOVERY COMMUNITY
+name: NgelX BUILD 451 LIVE COMMUNITY FIXES
 
 on:
   workflow_dispatch:
@@ -19,7 +19,7 @@ on:
     branches:
       - work/build-451-live-community-fixes
     paths:
-      - '.github/workflows/NgelX-BUILD-450-APPROVED-COMMUNITY.yml'
+      - '.github/workflows/NgelX-BUILD-451-LIVE-COMMUNITY.yml'
       - 'tools/apply_build451.py'
       - 'tools/build450*'
       - 'tools/apply_build450.py'
