@@ -25,6 +25,7 @@ import 'package:device_info_plus/device_info_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:record/record.dart' as rec;
 import 'group_quality.dart';
+import 'live_actions.dart';
 part 'build258_settings.dart';
 
 bool ngelxHiddenWordMatches(String text, Iterable<String> hiddenWords) {
@@ -5816,15 +5817,9 @@ class _KesfetPageState extends State<KesfetPage> {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
     try {
-      final kaynak = lk.DevelopmentTokenSource(id: liveKitTestSunucuId);
-      final kimlik = '${user.uid}-${DateTime.now().millisecondsSinceEpoch}';
-      final cevap = await kaynak.fetch(lk.TokenRequestOptions(
-        roomName: (veri['roomName'] ?? '').toString(),
-        participantIdentity: kimlik,
-        participantName: (user.displayName?.isNotEmpty == true ? user.displayName : 'NgelX izleyicisi'),
-      ));
+      final cevap = await LiveApi.call('token', {'streamId': belgeId});
       final oda = lk.Room(roomOptions: lk.RoomOptions(adaptiveStream: true, dynacast: true));
-      await oda.connect(cevap.serverUrl, cevap.participantToken);
+      await oda.connect(cevap['serverUrl'] as String, cevap['participantToken'] as String);
       if (!context.mounted) {
         await oda.disconnect();
         await oda.dispose();
@@ -6371,34 +6366,23 @@ class _CanliHazirlikPageState extends State<CanliHazirlikPage> {
     setState(() => baglaniyor = true);
     lk.Room? oda;
     try {
-      final odaAdi = 'ngelx_${user.uid}_${DateTime.now().millisecondsSinceEpoch}';
-      final profil = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
-      final ad = (profil.data()?['username'] ?? user.displayName ?? 'ngelx').toString();
-      final kaynak = lk.DevelopmentTokenSource(id: liveKitTestSunucuId);
-      final cevap = await kaynak.fetch(lk.TokenRequestOptions(
-        roomName: odaAdi,
-        participantIdentity: user.uid,
-        participantName: ad,
-        participantAttributes: const {'role': 'host'},
-      ));
+      final belgeId = FirebaseFirestore.instance.collection('live_streams').doc().id;
+      final cevap = await LiveApi.call('start', {'requestId': belgeId, 'title': baslik.text.trim()});
       oda = lk.Room(roomOptions: lk.RoomOptions(adaptiveStream: true, dynacast: true));
-      await oda.connect(cevap.serverUrl, cevap.participantToken);
+      await oda.connect(cevap['serverUrl'] as String, cevap['participantToken'] as String);
       final yerelKatilimci = oda.localParticipant;
       if (yerelKatilimci == null) throw Exception('Canlı yayın katılımcısı hazırlanamadı.');
       if (kamera) await yerelKatilimci.setCameraEnabled(true);
       if (mikrofon) await yerelKatilimci.setMicrophoneEnabled(true);
-      final belge = await FirebaseFirestore.instance.collection('live_streams').add({
-        'roomName': odaAdi,
-        'ownerId': user.uid,
-        'username': ad,
-        'title': baslik.text.trim(),
-        'active': true,
-        'startedAt': FieldValue.serverTimestamp(),
-      });
-      if (!mounted) return;
+      if (!mounted) {
+        await LiveApi.call('leave', {'streamId': belgeId});
+        await oda.disconnect();
+        await oda.dispose();
+        return;
+      }
       Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => CanliYayinPage(
         oda: oda!,
-        belgeId: belge.id,
+        belgeId: belgeId,
         baslik: baslik.text.trim(),
         yayinSahibi: true,
       )));
@@ -6487,26 +6471,29 @@ class _CanliYayinPageState extends State<CanliYayinPage> {
     if (mounted) setState(() {});
   }
 
-  lk.VideoTrack? _goruntu() {
-    if (widget.yayinSahibi) {
-      for (final p in widget.oda.localParticipant?.videoTrackPublications ?? <lk.LocalTrackPublication>[]) {
-        if (!p.muted && p.track is lk.VideoTrack) return p.track as lk.VideoTrack;
-      }
-    } else {
-      for (final katilimci in widget.oda.remoteParticipants.values) {
-        for (final p in katilimci.videoTrackPublications) {
-          if (p.subscribed && !p.muted && p.track is lk.VideoTrack) return p.track as lk.VideoTrack;
-        }
+  Widget _videolar() {
+    final tracks = <lk.VideoTrack>[];
+    for (final p in widget.oda.localParticipant?.videoTrackPublications ?? <lk.LocalTrackPublication>[]) {
+      if (!p.muted && p.track is lk.VideoTrack) tracks.add(p.track as lk.VideoTrack);
+    }
+    for (final participant in widget.oda.remoteParticipants.values) {
+      for (final p in participant.videoTrackPublications) {
+        if (p.subscribed && !p.muted && p.track is lk.VideoTrack) tracks.add(p.track as lk.VideoTrack);
       }
     }
-    return null;
+    if (tracks.isEmpty) return const Center(child: Text('Kamera kapalı veya yayıncı bağlanıyor…', style: TextStyle(color: Colors.white)));
+    return Row(children: tracks.take(2).map((track) => Expanded(child: lk.VideoTrackRenderer(track, fit: lk.VideoViewFit.cover))).toList());
   }
 
   Future<void> _bitir({bool geriDon = true}) async {
     if (kapatildi) return;
     kapatildi = true;
-    if (widget.yayinSahibi) {
-      await FirebaseFirestore.instance.collection('live_streams').doc(widget.belgeId).set({'active': false, 'endedAt': FieldValue.serverTimestamp()}, SetOptions(merge: true));
+    try {
+      await LiveApi.call('leave', {'streamId': widget.belgeId});
+    } catch (_) {
+      kapatildi = false;
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Yayından çıkış kaydedilemedi. Tekrar dene.')));
+      rethrow;
     }
     await widget.oda.disconnect();
     await widget.oda.dispose();
@@ -6578,37 +6565,37 @@ class _CanliYayinPageState extends State<CanliYayinPage> {
     sure.dispose();
     yorum.dispose();
     widget.oda.removeListener(_yenile);
-    if (!kapatildi) _bitir(geriDon: false);
+    if (!kapatildi) {
+      unawaited(LiveApi.call('leave', {'streamId': widget.belgeId}).catchError((_) => <String, dynamic>{}));
+      unawaited(widget.oda.disconnect().then((_) => widget.oda.dispose()));
+    }
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final track = _goruntu();
     return WillPopScope(
       onWillPop: _geri,
-      child: Scaffold(
-        backgroundColor: Colors.black,
-        body: Stack(children: [
-          Positioned.fill(child: track == null ? const Center(child: CircularProgressIndicator()) : lk.VideoTrackRenderer(track, fit: lk.VideoViewFit.cover)),
-          Positioned.fill(child: DecoratedBox(decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.black54, Colors.transparent, Colors.black.withOpacity(.8)])))),
-          SafeArea(child: Padding(
+      child: Theme(data: ThemeData.light(useMaterial3: true), child: Scaffold(
+        backgroundColor: Colors.white,
+        body: SafeArea(child: SingleChildScrollView(child: Padding(
             padding: const EdgeInsets.all(14),
             child: Column(children: [
               Row(children: [
-                Container(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8), decoration: BoxDecoration(color: const Color(0xFFFF1744), borderRadius: BorderRadius.circular(14)), child: const Text('● CANLI', style: TextStyle(fontWeight: FontWeight.w900))),
+                Container(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8), decoration: BoxDecoration(color: const Color(0xFFFF1744), borderRadius: BorderRadius.circular(14)), child: const Text('● CANLI', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900))),
                 const SizedBox(width: 8),
-                Container(padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8), decoration: BoxDecoration(color: Colors.black45, borderRadius: BorderRadius.circular(14)), child: ValueListenableBuilder<int>(valueListenable: sure, builder: (_, s, __) => Text('${(s ~/ 60).toString().padLeft(2, '0')}:${(s % 60).toString().padLeft(2, '0')}'))),
+                Container(padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8), decoration: BoxDecoration(color: const Color(0xFFF1F3F5), borderRadius: BorderRadius.circular(14)), child: ValueListenableBuilder<int>(valueListenable: sure, builder: (_, s, __) => Text('${(s ~/ 60).toString().padLeft(2, '0')}:${(s % 60).toString().padLeft(2, '0')}'))),
                 const SizedBox(width: 8),
-                Container(padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8), decoration: BoxDecoration(color: Colors.black45, borderRadius: BorderRadius.circular(14)), child: Text('👁 ${widget.oda.remoteParticipants.length}')),
+                Container(padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8), decoration: BoxDecoration(color: const Color(0xFFF1F3F5), borderRadius: BorderRadius.circular(14)), child: Text('👁 ${widget.oda.remoteParticipants.length}')),
                 const Spacer(),
                 IconButton(onPressed: () async { if (await _geri() && mounted) Navigator.pop(context); }, icon: const Icon(Icons.close_rounded, size: 31)),
               ]),
-              const Spacer(),
+              SizedBox(height: MediaQuery.sizeOf(context).height * .4, child: Container(color: Colors.black, child: _videolar())),
+              const SizedBox(height: 8),
               if (!mesajlarGizli) Align(alignment: Alignment.centerLeft, child: Container(
                 constraints: const BoxConstraints(maxWidth: 330, maxHeight: 105),
                 padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(color: Colors.black38, borderRadius: BorderRadius.circular(18)),
+                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18)),
                 child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                   stream: yorumAkisi,
                   builder: (_, snap) {
@@ -6616,7 +6603,7 @@ class _CanliYayinPageState extends State<CanliYayinPage> {
                     if (yorumlar.isEmpty) return Text(widget.baslik, style: const TextStyle(fontWeight: FontWeight.w800));
                     return ListView.builder(reverse: true, shrinkWrap: true, itemCount: yorumlar.length, itemBuilder: (_, i) {
                       final y = yorumlar[i].data();
-                      return Padding(padding: const EdgeInsets.symmetric(vertical: 3), child: Text('@${y['username'] ?? 'ngelx'}  ${y['text'] ?? ''}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white)));
+                      return Padding(padding: const EdgeInsets.symmetric(vertical: 3), child: Text('@${y['username'] ?? 'ngelx'}  ${y['text'] ?? ''}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.black87)));
                     });
                   },
                 ),
@@ -6624,13 +6611,14 @@ class _CanliYayinPageState extends State<CanliYayinPage> {
               Align(alignment: Alignment.centerRight, child: IconButton(
                 tooltip: mesajlarGizli ? 'Mesajları göster' : 'Mesajları gizle',
                 onPressed: () => setState(() => mesajlarGizli = !mesajlarGizli),
-                icon: Icon(mesajlarGizli ? Icons.visibility_off : Icons.visibility, color: Colors.white),
+                icon: Icon(mesajlarGizli ? Icons.visibility_off : Icons.visibility, color: Colors.black87),
               )),
               const SizedBox(height: 10),
               Row(children: [
-                Expanded(child: TextField(controller: yorum, onSubmitted: (_) => _yorumGonder(), decoration: InputDecoration(hintText: 'Yorum yaz...', filled: true, fillColor: Colors.black54, suffixIcon: IconButton(onPressed: _yorumGonder, icon: const Icon(Icons.send_rounded))))),
+                Expanded(child: TextField(controller: yorum, onSubmitted: (_) => _yorumGonder(), decoration: InputDecoration(hintText: 'Yorum yaz...', filled: true, fillColor: Colors.white, suffixIcon: IconButton(onPressed: _yorumGonder, icon: const Icon(Icons.send_rounded))))),
               ]),
               const SizedBox(height: 8),
+              Container(decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)), child: LiveActions(streamId: widget.belgeId, room: widget.oda)),
               Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
                 if (widget.yayinSahibi) ...[
                   IconButton.filled(onPressed: () async { mikrofonAcik = !mikrofonAcik; await widget.oda.localParticipant?.setMicrophoneEnabled(mikrofonAcik); if (mounted) setState(() {}); }, icon: Icon(mikrofonAcik ? Icons.mic : Icons.mic_off)),
@@ -6654,9 +6642,8 @@ class _CanliYayinPageState extends State<CanliYayinPage> {
                   ),
               ]),
             ]),
-          )),
-        ]),
-      ),
+          ))),
+      )),
     );
   }
 }
