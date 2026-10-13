@@ -216,6 +216,10 @@ class _NgelXCommunityDirectory450State
                 (v) => Padding(
                   padding: const EdgeInsets.only(right: 6),
                   child: ChoiceChip(
+                    selectedColor:const Color(0xFFF0E8FF),
+                    backgroundColor:Colors.white,
+                    checkmarkColor:mor,
+                    labelStyle:const TextStyle(color:mor,fontWeight:FontWeight.w700),
                     label: Text(v),
                     selected: category == v,
                     onSelected: (_) => setState(() => category = v),
@@ -1606,6 +1610,10 @@ class _NgelXCommunityAdmin450State extends State<NgelXCommunityAdmin450> {
                       ]
                       .map(
                         (x) => ChoiceChip(
+                    selectedColor:const Color(0xFFF0E8FF),
+                    backgroundColor:Colors.white,
+                    checkmarkColor:mor,
+                    labelStyle:const TextStyle(color:mor,fontWeight:FontWeight.w700),
                           label: Text(x),
                           selected: section == x,
                           onSelected: (_) => setState(() => section = x),
