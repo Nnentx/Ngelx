@@ -107,7 +107,7 @@ class _LiveActionsState extends State<LiveActions> {
     final host = data['ownerId'] == uid, guest = data['guestUid'] == uid;
     final pk = Map<String, dynamic>.from(data['pk'] as Map? ?? {});
     return Column(mainAxisSize: MainAxisSize.min, children: [
-      if (pk.isNotEmpty) _PkStatus(pk: pk),
+      if (pk.isNotEmpty) _PkStatus(pk: pk, streamId: widget.streamId),
       if (guest && pk['status'] == 'pending') Wrap(children: [TextButton(onPressed: busy ? null : () => run('pk-accept'), child: const Text('PK kabul et')), TextButton(onPressed: busy ? null : () => run('pk-reject'), child: const Text('Reddet'))]),
       if (!host && !guest) StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(stream: ref.collection('join_requests').doc(uid).snapshots(), builder: (_, request) {
         final status = request.data?.data()?['status'];
@@ -118,7 +118,6 @@ class _LiveActionsState extends State<LiveActions> {
         if (host) ...[TextButton(onPressed: busy ? null : requests, child: const Text('İstekler')), TextButton(onPressed: busy ? null : invite, child: const Text('Davet et')),
           PopupMenuButton<int>(enabled: !busy && '${data['guestUid'] ?? ''}'.isNotEmpty && !['active', 'pending'].contains(pk['status']), onSelected: (s) => run('pk-propose', {'seconds': s}), itemBuilder: (_) => [60,180,300].map((s) => PopupMenuItem(value: s, child: Text('${s ~/ 60} dakika PK'))).toList(), child: const Padding(padding: EdgeInsets.all(12), child: Text('PK')))],
         if (!host || '${data['guestUid'] ?? ''}'.isNotEmpty) TextButton.icon(onPressed: busy ? null : () => gift(data), icon: const Icon(Icons.card_giftcard), label: const Text('Hediye')),
-        if (pk['status'] == 'active') TextButton(onPressed: busy ? null : () => run('pk-finish'), child: const Text('PK sonucunu getir')),
       ]),
       if (busy) const LinearProgressIndicator(),
     ]);
@@ -127,14 +126,32 @@ class _LiveActionsState extends State<LiveActions> {
 
 class _PkStatus extends StatefulWidget {
   final Map<String, dynamic> pk;
-  const _PkStatus({required this.pk});
+  final String streamId;
+  const _PkStatus({required this.pk, required this.streamId});
   @override
   State<_PkStatus> createState() => _PkStatusState();
 }
 class _PkStatusState extends State<_PkStatus> {
   Timer? timer;
+  bool finalizing = false;
+  DateTime? lastAttempt;
+  String? attemptedPk;
+  Future<void> finalize() async {
+    if (finalizing || widget.pk['status'] != 'active') return;
+    final endsAt = (widget.pk['endsAtMs'] as num?)?.toInt();
+    final now = DateTime.now();
+    if (endsAt == null || endsAt > now.millisecondsSinceEpoch) return;
+    final id = '${widget.pk['id']}';
+    if (attemptedPk == id && lastAttempt != null && now.difference(lastAttempt!).inSeconds < 5) return;
+    finalizing = true;
+    attemptedPk = id;
+    lastAttempt = now;
+    try { await LiveApi.call('pk-finish', {'streamId': widget.streamId}); }
+    catch (_) { /* The server scheduler also finalizes expired matches. */ }
+    finally { finalizing = false; }
+  }
   @override
-  void initState() { super.initState(); timer = Timer.periodic(const Duration(seconds: 1), (_) { if (mounted && widget.pk['status'] == 'active') setState(() {}); }); }
+  void initState() { super.initState(); timer = Timer.periodic(const Duration(seconds: 1), (_) { if (mounted && widget.pk['status'] == 'active') { setState(() {}); unawaited(finalize()); } }); }
   @override
   void dispose() { timer?.cancel(); super.dispose(); }
   @override
