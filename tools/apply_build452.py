@@ -26,10 +26,10 @@ s=s[:pos]+'''  final Set<String> _dispatch452=<String>{};
       for(var chunk=0;chunk<15;chunk++){
         final user=FirebaseAuth.instance.currentUser;if(user?.uid!=uid)return true;
         final token=await user!.getIdToken();
-        final response=await http.post(Uri.parse('$endpoint/call'),headers:{'Authorization':'Bearer $token','Content-Type':'application/json'},body:jsonEncode({'chatId':chat,'roomName':room,'offset':offset})).timeout(const Duration(seconds:12));
-        if(response.statusCode>=500)return false;
+        final response=await Dio(BaseOptions(connectTimeout:const Duration(seconds:8),receiveTimeout:const Duration(seconds:12),sendTimeout:const Duration(seconds:8),validateStatus:(s)=>s!=null)).post('$endpoint/call',options:Options(headers:{'Authorization':'Bearer $token','Content-Type':'application/json'}),data:{'chatId':chat,'roomName':room,'offset':offset});
+        if((response.statusCode??503)>=500)return false;
         if(response.statusCode!=200)return true;
-        final body=jsonDecode(response.body) as Map<String,dynamic>;
+        final body=Map<String,dynamic>.from(response.data as Map);
         final next=body['nextOffset'];if(next==null)return true;
         if(next is! int||next<=offset)return true;offset=next;
       }
