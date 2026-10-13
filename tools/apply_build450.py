@@ -36,6 +36,13 @@ x=x[:start]+'''  List<Widget> _canliSliverleri({bool trend=false})=>[
 x=x.replace('    ..._canliSliverleri(trend:true),','')
 start=x.index('          return SliverGrid(',x.index('  List<Widget> _trendSliverleri'));end=x.index('\n        },',start)
 x=x[:start]+'''          return SliverList(delegate:SliverChildBuilderDelegate((c,i){final v=belgeler[i].data();final tur=(v['type']??'video').toString(),url=(v['mediaUrl']??v['videoUrl']??'').toString();return Container(margin:const EdgeInsets.symmetric(horizontal:10,vertical:7),decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(18),border:Border.all(color:const Color(0xFFE7E7ED))),child:InkWell(onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>IcerikBaglantiPage(icerikId:belgeler[i].id))),onLongPress:()=>kendiPaylasimMenusu(context,belgeler[i].id,v),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[ClipRRect(borderRadius:const BorderRadius.vertical(top:Radius.circular(18)),child:SizedBox(height:200,width:double.infinity,child:MedyaOnizleme(tur:tur,url:url,thumbnailUrl:(v['thumbnailUrl']??'').toString(),yazi:(v['description']??'').toString(),arkaPlan:const Color(0xFF292348)))),Padding(padding:const EdgeInsets.all(12),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text((v['description']??'').toString(),maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black,fontWeight:FontWeight.w800)),const SizedBox(height:6),Text('@${v['username']??'ngelx'}   ♡ ${v['likeCount']??0}   ◉ ${v['viewCount']??0}',style:const TextStyle(color:Colors.black54,fontSize:12))]))])));},childCount:belgeler.length));''' +x[end:]
+
+x=x.replace('class _KesfetPageState extends State<KesfetPage> {',"class _KesfetPageState extends State<KesfetPage> {\n  String _groupCategory450='Tümü'; bool _newPeople450=false;")
+x=x.replace('  List<Widget> _grupSliverleri()=>[',"  List<Widget> _grupSliverleri()=>[\n    SliverToBoxAdapter(child:SingleChildScrollView(scrollDirection:Axis.horizontal,padding:const EdgeInsets.fromLTRB(16,12,16,0),child:Row(children:['Tümü','Sohbet','Müzik','Spor','Teknoloji'].map((c)=>Padding(padding:const EdgeInsets.only(right:6),child:ChoiceChip(label:Text(c),selected:_groupCategory450==c,onSelected:(_)=>setState(()=>_groupCategory450=c)))).toList()))),")
+x=x.replace("return d.data()['groupDeleted']!=true&&!ad.contains('oyun')&&!ad.contains('game');","return d.data()['groupDeleted']!=true&&!ad.contains('oyun')&&!ad.contains('game')&&(_groupCategory450=='Tümü'||(d.data()['groupCategory']??'Sohbet')==_groupCategory450);")
+x=x.replace('  List<Widget> _kisiSliverleri()=>[',"  List<Widget> _kisiSliverleri()=>[\n    SliverToBoxAdapter(child:Padding(padding:const EdgeInsets.fromLTRB(16,12,16,0),child:Row(children:[ChoiceChip(label:const Text('Önerilen'),selected:!_newPeople450,onSelected:(_)=>setState(()=>_newPeople450=false)),const SizedBox(width:8),ChoiceChip(label:const Text('Yeni katılanlar'),selected:_newPeople450,onSelected:(_)=>setState(()=>_newPeople450=true))]))),")
+x=x.replace("if(kisiler.isEmpty)return SliverToBoxAdapter", "if(_newPeople450)kisiler.sort((a,b)=>((b.data()['createdAt'] as Timestamp?)?.millisecondsSinceEpoch??0).compareTo((a.data()['createdAt'] as Timestamp?)?.millisecondsSinceEpoch??0));\n        if(kisiler.isEmpty)return SliverToBoxAdapter")
+
 s=s[:a]+x+s[b:];p.write_text(s)
 # Shared host/viewer control panel preserves media, guests, PK and lifecycle callbacks.
 p=Path('app/lib/live_broadcast_studio.dart');s=p.read_text();s=s.replace('    final c = onizleme;','    if(baglaniyor)return const ColoredBox(color:Color(0xFF151515),child:Center(child:Column(mainAxisSize:MainAxisSize.min,children:[CircularProgressIndicator(color:Colors.white),SizedBox(height:12),Text(\'Yayın hazırlanıyor…\',style:TextStyle(color:Colors.white))])));\n    final c = onizleme;',1)
@@ -45,7 +52,7 @@ s=s[:start]+v+s[end:]
 start=s.index('              Row(children: [\n                Expanded(child:_yorumGirisAlani()),',s.index('  Widget build(BuildContext context)',s.index('class CanliYayinPage')))
 end=s.index('\n            ]),\n          )),',start)
 s=s[:start]+'''              Container(padding:const EdgeInsets.fromLTRB(12,12,12,8),decoration:const BoxDecoration(color:Colors.white,borderRadius:BorderRadius.vertical(top:Radius.circular(26))),child:Theme(data:ThemeData.light().copyWith(colorScheme:ColorScheme.fromSeed(seedColor:mor)),child:Column(mainAxisSize:MainAxisSize.min,children:[
-                _yorumGirisAlani(),
+                Ngelx448GuestControls(liveId:widget.belgeId,ownerUid:widget.ownerId,host:widget.yayinSahibi),\n                _yorumGirisAlani(),
                 const SizedBox(height:10),
                 if(widget.yayinSahibi)Row(mainAxisAlignment:MainAxisAlignment.spaceEvenly,children:[
                   _control450(mikrofonAcik?Icons.mic:Icons.mic_off,'Mikrofon',_yayinMikrofonunuDegistir),
@@ -66,6 +73,8 @@ s=s[:pos]+'''  Widget _control450(IconData icon,String label,VoidCallback? actio
 ''' +s[pos:]
 # Compact neutral comments; badges remain to distinguish moderators/host.
 s=s.replace("color:yayinci?const Color(0xCCB00020):const Color(0x665D5FEF)","color:const Color(0xAA222222)").replace("color:hostMesaji?const Color(0xCCB00020):const Color(0x77000000)","color:const Color(0x99222222)")
+s=s.replace('              Ngelx448GuestControls(liveId:widget.belgeId,ownerUid:widget.ownerId,host:widget.yayinSahibi),\n','',1)
 p.write_text(s)
+p=Path('app/lib/build448_live_guests.dart');g=p.read_text().replace("'Yayına katılma isteği'","'Konuk ol'");p.write_text(g)
 p=Path('firestore.rules');r=p.read_text();fragment=Path('tools/community450.rules.fragment').read_text();pos=r.index('    match /');r=r[:pos]+fragment+'\n'+r[pos:];p.write_text(r)
 print('Build450 approved discovery, shared live panel, community module and rules applied')
