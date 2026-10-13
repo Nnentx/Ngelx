@@ -1,0 +1,48 @@
+name: NgelX Build452 free call push
+on:
+  push:
+    branches: [work/build-452-free-call-push]
+    paths: ['cloudflare/call-push/**', '.github/workflows/NgelX-BUILD452-FREE-PUSH.yml']
+  workflow_dispatch:
+concurrency:
+  group: ngelx452-free-push
+  cancel-in-progress: false
+permissions:
+  contents: read
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: node --test cloudflare/call-push/test/*.test.mjs
+      - name: Verify Free plan and server permissions without changing billing
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          FIREBASE_SERVICE_ACCOUNT_NGELX_44EED: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_NGELX_44EED }}
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_JSON }}
+        run: node cloudflare/call-push/preflight.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Build452-public-preflight
+          path: backend452-preflight.json
+          retention-days: 14
+      - name: Install isolated Worker deployment tool
+        working-directory: cloudflare/call-push
+        run: npm install --no-package-lock
+      - name: Deploy isolated free Worker and encrypted secret
+        working-directory: cloudflare/call-push
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          npx wrangler deploy
+          npx wrangler secret bulk .secrets452.json
+      - name: Remove temporary credential file
+        if: always()
+        run: python3 -c "from pathlib import Path; Path('cloudflare/call-push/.secrets452.json').unlink(missing_ok=True)"
