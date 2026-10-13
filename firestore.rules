@@ -331,6 +331,13 @@ service cloud.firestore {
               resource.data.senderId == request.auth.uid
               && onlyChanges(['callStatus', 'callAnsweredAt', 'callConnectedAt', 'callEndedAt', 'durationSeconds'])
             )
+            || (
+              resource.data.get('type', '') == 'call'
+              && getAfter(/databases/$(database)/documents/chats/$(chatId)).data.get('callMessageId', '') == messageId
+              && request.resource.data.get('callStatus', '') in ['ended', 'missed']
+              && request.resource.data.callStatus == getAfter(/databases/$(database)/documents/chats/$(chatId)).data.get('callStatus', '')
+              && onlyChanges(['callStatus', 'callEndedAt', 'durationSeconds'])
+            )
             || onlyChanges(['reactions'])
             || (
               onlyChanges(['deliveredTo', 'seenBy'])
