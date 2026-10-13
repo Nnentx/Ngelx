@@ -6,7 +6,9 @@ export function createHandler(io){return async (request)=>{
  if(url.pathname!=='/call' || request.method!=='POST')return json({error:'not_found'},404);
  if(Number(request.headers.get('content-length')??0)>2048)return json({error:'too_large'},413);
  try{
-  const raw=await request.text();if(raw.length>2048)return json({error:'too_large'},413);
+  const reader=request.body?.getReader();if(!reader)return json({error:'bad_request'},400);
+  const chunks=[];let size=0;while(true){const part=await reader.read();if(part.done)break;size+=part.value.byteLength;if(size>2048){await reader.cancel();return json({error:'too_large'},413);}chunks.push(part.value);}
+  const bytes=new Uint8Array(size);let position=0;for(const chunk of chunks){bytes.set(chunk,position);position+=chunk.byteLength;}const raw=new TextDecoder().decode(bytes);
   let body;try{body=JSON.parse(raw);}catch{return json({error:'bad_request'},400);}
   if(!validBody(body))return json({error:'bad_request'},400);
   let uid;try{uid=await io.authenticate(request);}catch{return json({error:'unauthorized'},401);}

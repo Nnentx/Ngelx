@@ -36,6 +36,7 @@ export async function verifyFirebaseIdToken(request, env) {
   if (!auth.startsWith('Bearer ')) throw new Error('Missing Firebase token');
 
   const token = auth.slice(7).trim();
+  if(token.length>8192)throw new Error('Invalid token size');
   const parts = token.split('.');
   if (parts.length !== 3) throw new Error('Invalid Firebase token');
 
