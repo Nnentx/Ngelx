@@ -1,0 +1,31 @@
+name: NgelX community feed index only
+on:
+  workflow_dispatch:
+  push:
+    branches: [work/build-452-free-call-push]
+    paths: ['tools/ensure_community_index452.mjs', '.github/workflows/NgelX-BUILD452-INDEX.yml']
+permissions:
+  contents: read
+concurrency:
+  group: ngelx-community-index
+  cancel-in-progress: false
+jobs:
+  index:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Ensure only chronological approved community posts index
+        env:
+          FIREBASE_SERVICE_ACCOUNT_NGELX_44EED: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_NGELX_44EED }}
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_JSON }}
+        run: node tools/ensure_community_index452.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Community-index-ready
+          path: community-index-status.json
+          if-no-files-found: error
