@@ -5816,22 +5816,25 @@ class _KesfetPageState extends State<KesfetPage> {
     if (await misafirEngeli(context)) return;
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
+    lk.Room? oda;
     try {
       final cevap = await LiveApi.call('token', {'streamId': belgeId});
-      final oda = lk.Room(roomOptions: lk.RoomOptions(adaptiveStream: true, dynacast: true));
+      oda = lk.Room(roomOptions: lk.RoomOptions(adaptiveStream: true, dynacast: true));
       await oda.connect(cevap['serverUrl'] as String, cevap['participantToken'] as String);
       if (!context.mounted) {
-        await oda.disconnect();
-        await oda.dispose();
+        await disposeLiveRoom(oda);
         return;
       }
       Navigator.push(context, MaterialPageRoute(builder: (_) => CanliYayinPage(
-        oda: oda,
+        oda: oda!,
         belgeId: belgeId,
         baslik: (veri['title'] ?? 'NgelX canlı yayını').toString(),
-        yayinSahibi: false,
+        yayinSahibi: veri['ownerId'] == user.uid,
       )));
     } catch (e) {
+      if (oda != null) {
+        await disposeLiveRoom(oda);
+      }
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Canlı yayına bağlanılamadı: $e')));
       }
@@ -6347,6 +6350,7 @@ class CanliHazirlikPage extends StatefulWidget {
 class _CanliHazirlikPageState extends State<CanliHazirlikPage> {
   final baslik = TextEditingController();
   bool baglaniyor = false;
+  String? bekleyenYayinId;
   bool mikrofon = true;
   bool kamera = true;
 
@@ -6366,7 +6370,12 @@ class _CanliHazirlikPageState extends State<CanliHazirlikPage> {
     setState(() => baglaniyor = true);
     lk.Room? oda;
     try {
+      if (bekleyenYayinId != null) {
+        await LiveApi.call('leave', {'streamId': bekleyenYayinId});
+        bekleyenYayinId = null;
+      }
       final belgeId = FirebaseFirestore.instance.collection('live_streams').doc().id;
+      bekleyenYayinId = belgeId;
       final cevap = await LiveApi.call('start', {'requestId': belgeId, 'title': baslik.text.trim()});
       oda = lk.Room(roomOptions: lk.RoomOptions(adaptiveStream: true, dynacast: true));
       await oda.connect(cevap['serverUrl'] as String, cevap['participantToken'] as String);
@@ -6376,10 +6385,10 @@ class _CanliHazirlikPageState extends State<CanliHazirlikPage> {
       if (mikrofon) await yerelKatilimci.setMicrophoneEnabled(true);
       if (!mounted) {
         await LiveApi.call('leave', {'streamId': belgeId});
-        await oda.disconnect();
-        await oda.dispose();
+        await disposeLiveRoom(oda);
         return;
       }
+      bekleyenYayinId = null;
       Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => CanliYayinPage(
         oda: oda!,
         belgeId: belgeId,
@@ -6387,9 +6396,14 @@ class _CanliHazirlikPageState extends State<CanliHazirlikPage> {
         yayinSahibi: true,
       )));
     } catch (e) {
+      if (bekleyenYayinId != null) {
+        try {
+          await LiveApi.call('leave', {'streamId': bekleyenYayinId});
+          bekleyenYayinId = null;
+        } catch (_) { /* Retry cleanup before starting another broadcast. */ }
+      }
       if (oda != null) {
-        await oda.disconnect();
-        await oda.dispose();
+        await disposeLiveRoom(oda);
       }
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Yayın başlatılamadı: $e')));
     } finally {
@@ -6399,7 +6413,7 @@ class _CanliHazirlikPageState extends State<CanliHazirlikPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return Theme(data: ThemeData.light(useMaterial3: true), child: Scaffold(
       appBar: AppBar(title: const Text('Canlı yayın hazırla')),
       body: SafeArea(
         child: ListView(
@@ -6426,11 +6440,11 @@ class _CanliHazirlikPageState extends State<CanliHazirlikPage> {
               label: Text(baglaniyor ? 'Bağlanıyor...' : 'Canlı yayına başla', style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
             ),
             const SizedBox(height: 10),
-            const Text('İlk kullanımda kamera ve mikrofon izni istenir.', textAlign: TextAlign.center, style: TextStyle(color: Colors.white54)),
+            const Text('İlk kullanımda kamera ve mikrofon izni istenir.', textAlign: TextAlign.center, style: TextStyle(color: Colors.black54)),
           ],
         ),
       ),
-    );
+    ));
   }
 }
 
@@ -6455,15 +6469,28 @@ class _CanliYayinPageState extends State<CanliYayinPage> {
   bool kameraAcik = true;
   bool kapatildi = false;
   bool kalpIsleniyor = false;
+  bool yayinBitti = false;
+  Map<String, dynamic> yayinVerisi = {};
+  StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? yayinAboneligi;
 
   @override
   void initState() {
     super.initState();
     widget.oda.addListener(_yenile);
+    yayinAboneligi = FirebaseFirestore.instance.collection('live_streams').doc(widget.belgeId).snapshots().listen((snapshot) {
+      if (!mounted) return;
+      final data = snapshot.data();
+      if (data == null) return;
+      setState(() { yayinVerisi = data; yayinBitti = data['active'] != true; });
+    }, onError: (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Yayın durumu güncellenemedi. Bağlantını kontrol et.')));
+    });
+    mikrofonAcik = widget.oda.localParticipant?.audioTrackPublications.any((p) => !p.muted) ?? false;
+    kameraAcik = widget.oda.localParticipant?.videoTrackPublications.any((p) => !p.muted) ?? false;
     yorumAkisi = FirebaseFirestore.instance.collection('live_streams').doc(widget.belgeId)
         .collection('comments').orderBy('createdAt', descending: true).limit(3).snapshots();
     sayac = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted) sure.value++;
+      if (mounted && !yayinBitti) sure.value++;
     });
   }
 
@@ -6472,36 +6499,45 @@ class _CanliYayinPageState extends State<CanliYayinPage> {
   }
 
   Widget _videolar() {
-    final tracks = <lk.VideoTrack>[];
-    for (final p in widget.oda.localParticipant?.videoTrackPublications ?? <lk.LocalTrackPublication>[]) {
-      if (!p.muted && p.track is lk.VideoTrack) tracks.add(p.track as lk.VideoTrack);
-    }
-    for (final participant in widget.oda.remoteParticipants.values) {
-      for (final p in participant.videoTrackPublications) {
-        if (p.subscribed && !p.muted && p.track is lk.VideoTrack) tracks.add(p.track as lk.VideoTrack);
+    if (yayinBitti) return const Center(child: Text('Yayın sona erdi', style: TextStyle(color: Colors.white)));
+    final ids = <String>[
+      (yayinVerisi['ownerId'] ?? '').toString(),
+      if ((yayinVerisi['guestUid'] ?? '').toString().isNotEmpty) yayinVerisi['guestUid'].toString(),
+    ];
+    if (ids.first.isEmpty) return const Center(child: CircularProgressIndicator());
+    return Row(children: ids.map((id) {
+      final me = FirebaseAuth.instance.currentUser?.uid;
+      final lk.Participant? participant = id == me ? widget.oda.localParticipant : widget.oda.remoteParticipants[id];
+      lk.VideoTrack? track;
+      for (final publication in participant?.videoTrackPublications ?? []) {
+        if (!publication.muted && publication.track is lk.VideoTrack) { track = publication.track as lk.VideoTrack; break; }
       }
-    }
-    if (tracks.isEmpty) return const Center(child: Text('Kamera kapalı veya yayıncı bağlanıyor…', style: TextStyle(color: Colors.white)));
-    return Row(children: tracks.take(2).map((track) => Expanded(child: lk.VideoTrackRenderer(track, fit: lk.VideoViewFit.cover))).toList());
+      final name = id == ids.first ? '${yayinVerisi['username'] ?? 'Yayıncı'}' : '${yayinVerisi['guestName'] ?? 'Konuk'}';
+      return Expanded(child: Stack(fit: StackFit.expand, children: [
+        if (track != null) lk.VideoTrackRenderer(track, fit: lk.VideoViewFit.cover)
+        else const Center(child: Icon(Icons.videocam_off, color: Colors.white54, size: 40)),
+        Positioned(left: 8, right: 8, bottom: 8, child: Container(padding: const EdgeInsets.all(6), color: Colors.black54, child: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white)))),
+      ]));
+    }).toList());
   }
 
-  Future<void> _bitir({bool geriDon = true}) async {
-    if (kapatildi) return;
+  Future<bool> _bitir({bool geriDon = true}) async {
+    if (kapatildi) return true;
     kapatildi = true;
     try {
-      await LiveApi.call('leave', {'streamId': widget.belgeId});
+      if (!yayinBitti) await LiveApi.call('leave', {'streamId': widget.belgeId});
     } catch (_) {
       kapatildi = false;
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Yayından çıkış kaydedilemedi. Tekrar dene.')));
-      rethrow;
+      return false;
     }
-    await widget.oda.disconnect();
-    await widget.oda.dispose();
+    await disposeLiveRoom(widget.oda);
     if (geriDon && mounted) Navigator.pop(context);
+    return true;
   }
 
   Future<bool> _geri() async {
-    if (widget.yayinSahibi) {
+    if (widget.yayinSahibi && !yayinBitti) {
       final onay = await showDialog<bool>(context: context, builder: (_) => AlertDialog(
         title: const Text('Yayın bitsin mi?'),
         content: const Text('Canlı yayın tüm izleyiciler için kapanacak.'),
@@ -6512,8 +6548,7 @@ class _CanliYayinPageState extends State<CanliYayinPage> {
       )) ?? false;
       if (!onay) return false;
     }
-    await _bitir(geriDon: false);
-    return true;
+    return _bitir(geriDon: false);
   }
 
   Future<void> _kalpDegistir() async {
@@ -6539,7 +6574,7 @@ class _CanliYayinPageState extends State<CanliYayinPage> {
   Future<void> _yorumGonder() async {
     final metin = yorum.text.trim();
     final user = FirebaseAuth.instance.currentUser;
-    if (metin.isEmpty || user == null) return;
+    if (metin.isEmpty || user == null || yayinBitti) return;
     if (yorumIsleniyor) return;
     yorumIsleniyor = true;
     try {
@@ -6562,12 +6597,13 @@ class _CanliYayinPageState extends State<CanliYayinPage> {
   @override
   void dispose() {
     sayac?.cancel();
+    yayinAboneligi?.cancel();
     sure.dispose();
     yorum.dispose();
     widget.oda.removeListener(_yenile);
     if (!kapatildi) {
       unawaited(LiveApi.call('leave', {'streamId': widget.belgeId}).catchError((_) => <String, dynamic>{}));
-      unawaited(widget.oda.disconnect().then((_) => widget.oda.dispose()));
+      unawaited(disposeLiveRoom(widget.oda));
     }
     super.dispose();
   }
@@ -6582,11 +6618,11 @@ class _CanliYayinPageState extends State<CanliYayinPage> {
             padding: const EdgeInsets.all(14),
             child: Column(children: [
               Row(children: [
-                Container(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8), decoration: BoxDecoration(color: const Color(0xFFFF1744), borderRadius: BorderRadius.circular(14)), child: const Text('● CANLI', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900))),
+                Container(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8), decoration: BoxDecoration(color: const Color(0xFFFF1744), borderRadius: BorderRadius.circular(14)), child: Text(yayinBitti ? 'BİTTİ' : '● CANLI', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900))),
                 const SizedBox(width: 8),
                 Container(padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8), decoration: BoxDecoration(color: const Color(0xFFF1F3F5), borderRadius: BorderRadius.circular(14)), child: ValueListenableBuilder<int>(valueListenable: sure, builder: (_, s, __) => Text('${(s ~/ 60).toString().padLeft(2, '0')}:${(s % 60).toString().padLeft(2, '0')}'))),
                 const SizedBox(width: 8),
-                Container(padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8), decoration: BoxDecoration(color: const Color(0xFFF1F3F5), borderRadius: BorderRadius.circular(14)), child: Text('👁 ${widget.oda.remoteParticipants.length}')),
+                Container(padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8), decoration: BoxDecoration(color: const Color(0xFFF1F3F5), borderRadius: BorderRadius.circular(14)), child: Text('👁 ${widget.oda.remoteParticipants.values.where((p) => p.identity != yayinVerisi['ownerId'] && p.identity != yayinVerisi['guestUid']).length}')),
                 const Spacer(),
                 IconButton(onPressed: () async { if (await _geri() && mounted) Navigator.pop(context); }, icon: const Icon(Icons.close_rounded, size: 31)),
               ]),
@@ -6615,18 +6651,18 @@ class _CanliYayinPageState extends State<CanliYayinPage> {
               )),
               const SizedBox(height: 10),
               Row(children: [
-                Expanded(child: TextField(controller: yorum, onSubmitted: (_) => _yorumGonder(), decoration: InputDecoration(hintText: 'Yorum yaz...', filled: true, fillColor: Colors.white, suffixIcon: IconButton(onPressed: _yorumGonder, icon: const Icon(Icons.send_rounded))))),
+                Expanded(child: TextField(controller: yorum, enabled: !yayinBitti, onSubmitted: (_) => _yorumGonder(), decoration: InputDecoration(hintText: 'Yorum yaz...', filled: true, fillColor: Colors.white, suffixIcon: IconButton(onPressed: _yorumGonder, icon: const Icon(Icons.send_rounded))))),
               ]),
               const SizedBox(height: 8),
               Container(decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)), child: LiveActions(streamId: widget.belgeId, room: widget.oda)),
               Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
-                if (widget.yayinSahibi) ...[
+                if (widget.yayinSahibi && !yayinBitti) ...[
                   IconButton.filled(onPressed: () async { mikrofonAcik = !mikrofonAcik; await widget.oda.localParticipant?.setMicrophoneEnabled(mikrofonAcik); if (mounted) setState(() {}); }, icon: Icon(mikrofonAcik ? Icons.mic : Icons.mic_off)),
                   const SizedBox(width: 6),
                   IconButton.filled(onPressed: () async { kameraAcik = !kameraAcik; await widget.oda.localParticipant?.setCameraEnabled(kameraAcik); if (mounted) setState(() {}); }, icon: Icon(kameraAcik ? Icons.videocam : Icons.videocam_off)),
                   const SizedBox(width: 6),
                   FilledButton(style: FilledButton.styleFrom(backgroundColor: const Color(0xFFFF1744)), onPressed: () async { if (await _geri() && mounted) Navigator.pop(context); }, child: const Text('Bitir')),
-                ] else
+                ] else if (!yayinBitti)
                   StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
                     stream:FirebaseFirestore.instance.collection('live_streams').doc(widget.belgeId).collection('reactions').snapshots(),
                     builder:(_,s){

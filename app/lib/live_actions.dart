@@ -23,6 +23,11 @@ class LiveApi {
   }
 }
 
+Future<void> disposeLiveRoom(lk.Room room) async {
+  try { await room.disconnect(); } catch (_) { debugPrint('Canlı yayın bağlantısı kapatılırken hata oluştu.'); }
+  try { await room.dispose(); } catch (_) { debugPrint('Canlı yayın kaynakları temizlenirken hata oluştu.'); }
+}
+
 class LiveActions extends StatefulWidget {
   final String streamId;
   final lk.Room room;
@@ -34,34 +39,58 @@ class LiveActions extends StatefulWidget {
 class _LiveActionsState extends State<LiveActions> {
   bool busy = false;
   bool publishing = false;
+  bool mediaBusy = false;
+  bool guestCamera = false;
+  bool guestMicrophone = false;
+  Map<String, dynamic> latestStream = {};
   StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? subscription;
   String get uid => FirebaseAuth.instance.currentUser?.uid ?? '';
   DocumentReference<Map<String, dynamic>> get ref => FirebaseFirestore.instance.collection('live_streams').doc(widget.streamId);
   @override
   void initState() {
     super.initState();
-    subscription = ref.snapshots().listen((snapshot) async {
-      final data = snapshot.data();
-      if (data == null || data['active'] != true || data['guestUid'] != uid || publishing) return;
-      publishing = true;
-      try {
-        await LiveApi.call('publish', {'streamId': widget.streamId});
-        if (!mounted) return;
-        await widget.room.localParticipant?.setCameraEnabled(true);
-        await widget.room.localParticipant?.setMicrophoneEnabled(true);
-      } catch (e) {
-        publishing = false;
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
-      }
+    subscription = ref.snapshots().listen((snapshot) {
+      latestStream = snapshot.data() ?? {};
+      if (latestStream['active'] == true && latestStream['guestUid'] == uid && !publishing) unawaited(enableGuest());
+    }, onError: (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Katılım durumu yüklenemedi.')));
     });
+  }
+  Future<void> enableGuest() async {
+    if (!mounted || mediaBusy || publishing || latestStream['guestUid'] != uid || latestStream['active'] != true) return;
+    setState(() => mediaBusy = true);
+    try {
+      await LiveApi.call('publish', {'streamId': widget.streamId});
+      if (!mounted || latestStream['guestUid'] != uid || latestStream['active'] != true) return;
+      final participant = widget.room.localParticipant;
+      if (participant == null) throw Exception('Yayın bağlantısı hazır değil.');
+      await participant.setCameraEnabled(true);
+      if (!mounted || latestStream['guestUid'] != uid) return;
+      await participant.setMicrophoneEnabled(true);
+      if (mounted) setState(() { publishing = true; guestCamera = true; guestMicrophone = true; });
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Konuk kamerası/mikrofonu açılamadı: $e')));
+    } finally { if (mounted) setState(() => mediaBusy = false); }
+  }
+  Future<void> toggleGuestMedia(bool camera) async {
+    if (mediaBusy || !publishing) return;
+    setState(() => mediaBusy = true);
+    try {
+      final participant = widget.room.localParticipant;
+      if (participant == null) throw Exception('Yayın bağlantısı hazır değil.');
+      if (camera) await participant.setCameraEnabled(!guestCamera);
+      else await participant.setMicrophoneEnabled(!guestMicrophone);
+      if (mounted) setState(() { if (camera) guestCamera = !guestCamera; else guestMicrophone = !guestMicrophone; });
+    } catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Kontrol uygulanamadı: $e'))); }
+    finally { if (mounted) setState(() => mediaBusy = false); }
   }
   @override
   void dispose() { subscription?.cancel(); super.dispose(); }
-  Future<void> run(String action, [Map<String, dynamic> extra = const {}]) async {
-    if (busy) return;
+  Future<bool> run(String action, [Map<String, dynamic> extra = const {}]) async {
+    if (busy) return false;
     setState(() => busy = true);
-    try { await LiveApi.call(action, {'streamId': widget.streamId, ...extra}); }
-    catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e'))); }
+    try { await LiveApi.call(action, {'streamId': widget.streamId, ...extra}); return true; }
+    catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e'))); return false; }
     finally { if (mounted) setState(() => busy = false); }
   }
   Future<void> requests() async {
@@ -119,7 +148,13 @@ class _LiveActionsState extends State<LiveActions> {
           PopupMenuButton<int>(enabled: !busy && '${data['guestUid'] ?? ''}'.isNotEmpty && !['active', 'pending'].contains(pk['status']), onSelected: (s) => run('pk-propose', {'seconds': s}), itemBuilder: (_) => [60,180,300].map((s) => PopupMenuItem(value: s, child: Text('${s ~/ 60} dakika PK'))).toList(), child: const Padding(padding: EdgeInsets.all(12), child: Text('PK')))],
         if (!host || '${data['guestUid'] ?? ''}'.isNotEmpty) TextButton.icon(onPressed: busy ? null : () => gift(data), icon: const Icon(Icons.card_giftcard), label: const Text('Hediye')),
       ]),
-      if (busy) const LinearProgressIndicator(),
+      if (guest) Wrap(alignment: WrapAlignment.center, children: [
+        if (!publishing) TextButton(onPressed: mediaBusy ? null : enableGuest, child: const Text('Kamera/mikrofonu tekrar aç')),
+        IconButton(tooltip: guestMicrophone ? 'Mikrofonu kapat' : 'Mikrofonu aç', onPressed: mediaBusy || !publishing ? null : () => toggleGuestMedia(false), icon: Icon(guestMicrophone ? Icons.mic : Icons.mic_off)),
+        IconButton(tooltip: guestCamera ? 'Kamerayı kapat' : 'Kamerayı aç', onPressed: mediaBusy || !publishing ? null : () => toggleGuestMedia(true), icon: Icon(guestCamera ? Icons.videocam : Icons.videocam_off)),
+        TextButton(onPressed: busy || mediaBusy ? null : () async { if (await run('leave') && mounted) Navigator.pop(context); }, child: const Text('Konuk yayından ayrıl')),
+      ]),
+      if (busy || mediaBusy) const LinearProgressIndicator(),
     ]);
   });
 }

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {giftCost, validRecipient, pkLive, finishPK, requireActive, validId} from '../live-domain.js';
+import {giftCost, giftReceipt, validRecipient, pkLive, finishPK, requireActive, validId} from '../live-domain.js';
 test('gift quantities reject negative, fractional, huge and unknown inputs',()=>{
  for(const [id,n] of [['rose',0],['rose',-1],['rose',1.5],['rose',100],['__proto__',1],['unknown',1]])assert.throws(()=>giftCost(id,n));
  assert.equal(giftCost('rocket',99),49500);
@@ -22,4 +22,11 @@ test('PK winner and draw use authoritative scores',()=>{
 test('closed streams and invalid document paths are rejected',()=>{
  assert.throws(()=>requireActive(null));assert.throws(()=>requireActive({active:false}));
  assert.throws(()=>validId('../wallet'));assert.throws(()=>validId('a/b'));assert.equal(validId('live-123_abc'),'live-123_abc');
+});
+
+test('multi-gift ledger records total debit and unit price separately',()=>{
+ const receipt=giftReceipt('rocket',10);
+ assert.equal(receipt.coins,5000);assert.equal(receipt.unitCoins,500);assert.equal(receipt.quantity,10);
+ assert.equal(receipt.coins,giftCost(receipt.giftId,receipt.quantity));
+ assert.equal(giftReceipt('rose',1).coins,10);assert.throws(()=>giftReceipt('rose',0));
 });

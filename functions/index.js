@@ -7,7 +7,7 @@ import {finalizeDeadline, endStream, departureChanges, participantSession, joine
 import {defineSecret, defineString} from 'firebase-functions/params';
 import {AccessToken, RoomServiceClient, WebhookReceiver} from 'livekit-server-sdk';
 import {randomUUID} from 'node:crypto';
-import {LiveError, gifts, giftCost, requireActive, validRecipient, pkLive, finishPK, validId} from './live-domain.js';
+import {LiveError, gifts, giftCost, giftReceipt, requireActive, validRecipient, pkLive, finishPK, validId} from './live-domain.js';
 initializeApp();
 const db = getFirestore();
 const apiKey = defineSecret('LIVEKIT_API_KEY');
@@ -164,7 +164,7 @@ async function dispatch(action, uid, data) {
       if (!Number.isSafeInteger(earned) || !Number.isSafeInteger(earned + cost)) throw new LiveError(409,'Cüzdan güncellenemedi.');
       tx.set(senderRef, {coins:sender.coins-cost, updatedAt:Timestamp.now()}, {merge:true});
       tx.set(recipientRef, {earnedCoins:earned+cost, updatedAt:Timestamp.now()}, {merge:true});
-      tx.create(eventRef, {senderUid:uid, recipientUid:target, giftId:data.giftId, quantity:data.quantity, coins:cost, createdAt:Timestamp.now(), ...gifts[data.giftId]});
+      tx.create(eventRef, {senderUid:uid, recipientUid:target, createdAt:Timestamp.now(), ...giftReceipt(data.giftId,data.quantity)});
       if (pkLive(stream.pk, Date.now())) {
         const field = target === stream.ownerId ? 'hostScore' : 'guestScore';
         tx.update(ref, {pk:{...stream.pk,[field]:stream.pk[field]+cost}});

@@ -32,3 +32,8 @@ export function validId(value, label = 'Kimlik') {
   if (typeof value !== 'string' || !/^[a-zA-Z0-9_-]{1,128}$/.test(value)) throw new LiveError(400, `${label} geçersiz.`);
   return value;
 }
+
+export function giftReceipt(giftId, quantity) {
+  const cost = giftCost(giftId, quantity), gift = gifts[giftId];
+  return {name:gift.name,emoji:gift.emoji,giftId,quantity,unitCoins:gift.coins,coins:cost};
+}
