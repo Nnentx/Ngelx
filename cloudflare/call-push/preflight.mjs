@@ -1,7 +1,7 @@
 import fs from 'node:fs';import {accessToken} from './src/google.mjs';
 const token=process.env.CLOUDFLARE_API_TOKEN,account=process.env.CLOUDFLARE_ACCOUNT_ID;
 if(!token||!account)throw Error('Existing Cloudflare deployment credentials unavailable');
-async function cf(path){const r=await fetch(`https://api.cloudflare.com/client/v4/accounts/${account}/${path}`,{headers:{authorization:'Bearer '+token}});if(!r.ok)throw Error('Cloudflare read permission missing for '+path.split('/')[0]);const v=await r.json();if(!v.success)throw Error('Cloudflare lookup failed');return v.result;}
+async function cf(path){const r=await fetch(`https://api.cloudflare.com/client/v4/accounts/${account}/${path}`,{headers:{authorization:'Bearer '+token}});if(!r.ok)throw Error('Cloudflare plan read failed (HTTP '+r.status+') for '+path.split('/')[0]);const v=await r.json();if(!v.success)throw Error('Cloudflare lookup failed');return v.result;}
 const raw=process.env.FIREBASE_SERVICE_ACCOUNT_NGELX_44EED||process.env.FIREBASE_SERVICE_ACCOUNT||process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
 if(!raw)throw Error('Existing Firebase server credentials unavailable');
 let service;try{service=JSON.parse(raw);}catch{service=JSON.parse(Buffer.from(raw,'base64').toString());}
