@@ -52,3 +52,13 @@ Bu maddeler öneri ve kontrol kapsamıdır; kod incelemesi/cihaz testi yapılmad
 - İzleyicinin çıkması yayını bitirmemeli; konuk ayrılınca yayıncı devam etmeli.
 - Hediye işlevi hazır değilse çalışır gibi sunulmamalı.
 Öncelik: Klavye hatası, onaylı tasarım ve kalp animasyonu; ardından konuk akışı, bağlantı ve gerçek cihaz ses testleri.
+
+## 01:13 Konuk ekle zorunlu işlevi
+Kullanıcı Konuk ekle düğmesinin çalışmasını istedi. Toplu düzeltme paketinin zorunlu kabul ölçütü:
+- Yayıncı düğmeye dokununca mevcut izleyiciler ve bekleyen konuk istekleri görünmeli; boş durum açıkça gösterilmeli.
+- Yayıncı mevcut izleyiciyi davet edebilmeli; davet izleyici ekranında görünmeli.
+- İzleyici daveti kabul veya reddedebilmeli; Konuk ol üzerinden istek gönderebilmeli; yayıncı kabul veya reddedebilmeli.
+- Kabul, gerekli mikrofon/kamera izinleriyle gerçek konuk bağlantısına dönüşmeli; durum göstergesi yalnızca bağlantı kurulunca bağlı olmalı.
+- Yayıncı ve konuğun görüntü/sesi iki gerçek cihazda doğrulanmalı.
+- Konuk ayrılabilmeli veya yayıncı konuğu çıkarabilmeli; ana yayın devam etmeli.
+Bu işlevin şu an tamamlandığı veya testten geçtiği iddia edilmedi.
