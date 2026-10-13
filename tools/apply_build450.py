@@ -45,7 +45,7 @@ x=x.replace("if(kisiler.isEmpty)return SliverToBoxAdapter", "if(_newPeople450)ki
 
 s=s[:a]+x+s[b:];p.write_text(s)
 # Shared host/viewer control panel preserves media, guests, PK and lifecycle callbacks.
-p=Path('app/lib/live_broadcast_studio.dart');s=p.read_text();s=s.replace('    final c = onizleme;','    if(baglaniyor)return const ColoredBox(color:Color(0xFF151515),child:Center(child:Column(mainAxisSize:MainAxisSize.min,children:[CircularProgressIndicator(color:Colors.white),SizedBox(height:12),Text(\'Yayın hazırlanıyor…\',style:TextStyle(color:Colors.white))])));\n    final c = onizleme;',1)
+p=Path('app/lib/live_broadcast_studio.dart');s=p.read_text();s=s.replace('  Widget _kameraOnizlemesi() {\n    final c = onizleme;','  Widget _kameraOnizlemesi() {\n    if(baglaniyor)return const ColoredBox(color:Color(0xFF151515),child:Center(child:Column(mainAxisSize:MainAxisSize.min,children:[CircularProgressIndicator(color:Colors.white),SizedBox(height:12),Text(\'Yayın hazırlanıyor…\',style:TextStyle(color:Colors.white))])));\n    final c = onizleme;',1)
 start=s.index('  Widget _yorumGirisAlani()');end=s.index('  Future<void> _goruntuStudyoPaneli()',start);v=s[start:end]
 v=v.replace('controller:yorum,enabled:etkin','style:const TextStyle(color:Colors.black87),controller:yorum,enabled:etkin').replace('hintText:hint,filled:true,fillColor:Colors.black54','hintText:hint,hintStyle:const TextStyle(color:Colors.black45),filled:true,fillColor:const Color(0xFFF3F4F7),border:OutlineInputBorder(borderSide:BorderSide.none,borderRadius:BorderRadius.circular(24))').replace('Icon(Icons.send_rounded)','Icon(Icons.send_rounded,color:Color(0xFF00BFCB))')
 s=s[:start]+v+s[end:]
