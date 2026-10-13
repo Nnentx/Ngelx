@@ -23,7 +23,7 @@ try{
  const unsigned=b64({alg:'RS256',typ:'JWT'})+'.'+b64({iss:account.client_email,sub:account.client_email,aud:'https://identitytoolkit.googleapis.com/google.identity.identitytoolkit.v1.IdentityToolkit',iat:now,exp:now+600,uid:id});
  const custom=unsigned+'.'+sign('RSA-SHA256',Buffer.from(unsigned),account.private_key).toString('base64url');
  login=await call('https://identitytoolkit.googleapis.com/v1/accounts:signInWithCustomToken?key='+apiKey,{token:custom,returnSecureToken:true});
- if(login.localId!==id)throw Error('Synthetic probe identity mismatch');
+ if(JSON.parse(Buffer.from(login.idToken.split('.')[1],'base64url').toString()).sub!==id)throw Error('Synthetic probe identity mismatch');
  const payloads=[{displayName:'Internal call probe',discoverable:false,testAccount:true},{displayName:'Internal no-device probe',discoverable:false,testAccount:true},{members:[id,peer],isGroup:true,callGroup:true,callStartedBy:id,callRoomName:id,callStatus:'ringing',callCreatedAt:new Date(),callTitle:'Internal probe',callVideo:false}];
  for(let n=0;n<paths.length;n++){
   const r=await fetch(base+paths[n]+'?currentDocument.exists=false',{method:'PATCH',headers:adminHeaders,body:JSON.stringify({fields:Object.fromEntries(Object.entries(payloads[n]).map(([k,v])=>[k,encode(v)]))})});
