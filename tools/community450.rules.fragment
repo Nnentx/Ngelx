@@ -1,0 +1,118 @@
+    // Build450 communities are isolated from existing chats, users and live data.
+    function communitySigned450() { return signedIn() && request.auth.token.get('firebase', {}).get('sign_in_provider', '') != 'anonymous'; }
+    function community450(cid) { return get(/databases/$(database)/documents/communities450/$(cid)).data; }
+    function communityMember450(cid) { return communitySigned450() && request.auth.uid in community450(cid).members; }
+    function communityAdmin450(cid) { return communitySigned450() && request.auth.uid in community450(cid).admins; }
+    function communityVisible450(cid) { return signedIn() && (community450(cid).visibility == 'public' || request.auth.uid in community450(cid).members); }
+    function communityInvite450(cid, code) {
+      return code is string && code.size() > 0 && code.size() < 100
+        && exists(/databases/$(database)/documents/communityInvites450/$(code))
+        && get(/databases/$(database)/documents/communityInvites450/$(code)).data.communityId == cid
+        && get(/databases/$(database)/documents/communityInvites450/$(code)).data.expiresAt > request.time;
+    }
+    function communityValid450(v) {
+      return v.keys().hasOnly(['name','description','rules','category','photoUrl','coverUrl','founderId','members','admins','visibility','joinApproval','postApproval','lastJoinCode','createdAt'])
+        && v.name is string && v.name.size() >= 3 && v.name.size() <= 60
+        && v.description is string && v.description.size() > 0 && v.description.size() <= 240
+        && v.rules is string && v.rules.size() <= 2000 && v.category is string && v.category.size() <= 50
+        && v.photoUrl is string && v.photoUrl.size() <= 2048 && v.coverUrl is string && v.coverUrl.size() <= 2048
+        && v.members is list && v.members.size() >= 1 && v.members.size() <= 500
+        && v.admins is list && v.admins.size() >= 1 && v.admins.size() <= 10
+        && v.members.toSet().size() == v.members.size() && v.admins.toSet().size() == v.admins.size()
+        && v.admins.toSet().difference(v.members.toSet()).size() == 0
+        && v.founderId in v.members && v.founderId in v.admins
+        && v.visibility in ['public','private'] && v.joinApproval is bool && v.postApproval is bool
+        && v.createdAt is timestamp && v.lastJoinCode is string;
+    }
+    match /communities450/{cid} {
+      allow read: if signedIn() && (resource.data.visibility == 'public' || request.auth.uid in resource.data.members);
+      allow create: if communitySigned450() && communityValid450(request.resource.data)
+        && request.resource.data.founderId == request.auth.uid
+        && request.resource.data.members == [request.auth.uid] && request.resource.data.admins == [request.auth.uid]
+        && request.resource.data.lastJoinCode == '' && request.resource.data.createdAt == request.time;
+      allow update: if communitySigned450() && communityValid450(request.resource.data)
+        && request.resource.data.founderId == resource.data.founderId && request.resource.data.createdAt == resource.data.createdAt
+        && (
+          (request.auth.uid in resource.data.admins
+            && (request.resource.data.admins == resource.data.admins || request.auth.uid == resource.data.founderId))
+          || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['members','lastJoinCode'])
+            && resource.data.joinApproval == false && !(request.auth.uid in resource.data.members)
+            && (resource.data.visibility == 'public' || communityInvite450(cid,request.resource.data.lastJoinCode))
+            && request.resource.data.members.toSet() == resource.data.members.toSet().union([request.auth.uid].toSet()))
+          || (request.auth.uid != resource.data.founderId && request.auth.uid in resource.data.members
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['members','admins'])
+            && request.resource.data.members.toSet() == resource.data.members.toSet().difference([request.auth.uid].toSet())
+            && request.resource.data.admins.toSet() == resource.data.admins.toSet().difference([request.auth.uid].toSet()))
+        );
+      allow delete: if false;
+      match /requests/{uid} {
+        function validRequest450() { return request.resource.data.keys().hasOnly(['uid','status','inviteCode','createdAt'])
+          && request.resource.data.uid == uid && uid == request.auth.uid
+          && request.resource.data.status == 'pending' && request.resource.data.createdAt == request.time
+          && (community450(cid).visibility == 'public' || communityInvite450(cid,request.resource.data.inviteCode)); }
+        allow get: if communitySigned450() && (uid == request.auth.uid || communityAdmin450(cid));
+        allow list: if communityAdmin450(cid);
+        allow create: if communitySigned450() && validRequest450() && community450(cid).joinApproval == true;
+        allow update: if (communityAdmin450(cid) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+          && request.resource.data.status in ['approved','rejected']
+          && (request.resource.data.status != 'approved' || uid in getAfter(/databases/$(database)/documents/communities450/$(cid)).data.members))
+          || (communitySigned450() && resource.data.status == 'rejected' && validRequest450());
+        allow delete: if communitySigned450() && uid == request.auth.uid && resource.data.status in ['pending','rejected'];
+      }
+      match /posts/{pid} {
+        function approved450() { return resource.data.status == 'approved'; }
+        function validPost450() { let v=request.resource.data;return v.keys().hasOnly(['authorId','authorName','authorPhoto','text','mediaUrl','mediaType','status','pinned','createdAt'])
+          && v.authorId == request.auth.uid && v.authorName is string && v.authorName.size() <= 100
+          && v.authorPhoto is string && v.authorPhoto.size() <= 2048
+          && v.text is string && v.text.size() <= 3000 && v.mediaUrl is string && v.mediaUrl.size() <= 2048
+          && (v.text.size() > 0 || v.mediaUrl.size() > 0) && v.mediaType in ['','image','video']
+          && v.pinned == false && v.createdAt == request.time; }
+        allow read: if communityVisible450(cid) && (approved450() || communityAdmin450(cid) || resource.data.authorId == request.auth.uid);
+        allow create: if communityMember450(cid) && validPost450()
+          && request.resource.data.status == (community450(cid).postApproval == true && !communityAdmin450(cid) ? 'pending' : 'approved');
+        allow update: if (communityAdmin450(cid) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','pinned'])
+          && request.resource.data.status in ['approved','rejected','deleted'] && request.resource.data.pinned is bool)
+          || (communityMember450(cid) && resource.data.authorId == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']) && request.resource.data.status == 'deleted');
+        allow delete: if false;
+        match /likes/{uid} {
+          allow read: if communityVisible450(cid) && get(/databases/$(database)/documents/communities450/$(cid)/posts/$(pid)).data.status == 'approved';
+          allow create: if communityMember450(cid) && uid == request.auth.uid
+            && get(/databases/$(database)/documents/communities450/$(cid)/posts/$(pid)).data.status == 'approved'
+            && request.resource.data.keys().hasOnly(['uid','createdAt']) && request.resource.data.uid == uid && request.resource.data.createdAt == request.time;
+          allow delete: if communityMember450(cid) && uid == request.auth.uid;
+          allow update: if false;
+        }
+        match /comments/{commentId} {
+          allow read: if communityVisible450(cid) && get(/databases/$(database)/documents/communities450/$(cid)/posts/$(pid)).data.status == 'approved';
+          allow create: if communityMember450(cid)
+            && get(/databases/$(database)/documents/communities450/$(cid)/posts/$(pid)).data.status == 'approved'
+            && request.resource.data.keys().hasOnly(['uid','name','text','createdAt']) && request.resource.data.uid == request.auth.uid
+            && request.resource.data.name is string && request.resource.data.name.size() <= 100
+            && request.resource.data.text is string && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 500 && request.resource.data.createdAt == request.time;
+          allow delete: if communityMember450(cid) && (resource.data.uid == request.auth.uid || communityAdmin450(cid));
+          allow update: if false;
+        }
+      }
+      match /reports/{reportId} {
+        allow read: if communityAdmin450(cid);
+        allow create: if communityMember450(cid) && request.resource.data.keys().hasOnly(['uid','postId','status','createdAt'])
+          && request.resource.data.uid == request.auth.uid && request.resource.data.postId is string
+          && reportId == request.resource.data.postId + '_' + request.auth.uid
+          && request.resource.data.status == 'open' && request.resource.data.createdAt == request.time;
+        allow update: if communityAdmin450(cid) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']) && request.resource.data.status == 'closed';
+        allow delete: if false;
+      }
+    }
+    match /communityInvites450/{code} {
+      allow get: if communitySigned450() && resource.data.expiresAt > request.time;
+      allow list: if false;
+      allow create: if communityAdmin450(request.resource.data.communityId)
+        && request.resource.data.keys().hasOnly(['communityId','name','joinApproval','createdBy','expiresAt'])
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.name == community450(request.resource.data.communityId).name
+        && request.resource.data.joinApproval == community450(request.resource.data.communityId).joinApproval
+        && request.resource.data.expiresAt > request.time && request.resource.data.expiresAt <= request.time + duration.value(7,'d');
+      allow update: if false;
+      allow delete: if communityAdmin450(resource.data.communityId);
+    }
