@@ -2,7 +2,7 @@ name: NgelX authenticated call Worker integration probe
 on:
   push:
     branches: [work/build-453-consolidated-device-fixes]
-    paths: ['tools/probe_call_worker453.mjs', '.github/workflows/NgelX-PROBE453.yml']
+    paths: ['tools/probe_call_worker453.mjs', 'tools/diagnose_call_delivery453.mjs', '.github/workflows/NgelX-PROBE453.yml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -21,3 +21,9 @@ jobs:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_JSON }}
         run: node tools/probe_call_worker453.mjs
+      - name: Inspect only aggregate recent call delivery readiness
+        env:
+          FIREBASE_SERVICE_ACCOUNT_NGELX_44EED: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_NGELX_44EED }}
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_JSON }}
+        run: node tools/diagnose_call_delivery453.mjs
