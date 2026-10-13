@@ -5758,6 +5758,7 @@ class _KesfetPageState extends State<KesfetPage> {
   Set<String> arkadaslar=<String>{};
   Set<String> gonderilenArkadaslikIstekleri=<String>{};
   bool hesapYukleniyor=true;
+  final Set<String> grupIslemleri=<String>{};
   StreamSubscription<DocumentSnapshot<Map<String,dynamic>>>? _hesapAboneligi;
   StreamSubscription<QuerySnapshot<Map<String,dynamic>>>? _gidenIstekAboneligi;
 
@@ -5972,38 +5973,57 @@ class _KesfetPageState extends State<KesfetPage> {
   Future<void> _grupDurumuDegistir(String id,bool katildi,{required String ad,String foto=''})async{
     if(await misafirEngeli(context))return;
     final uid=ben;
-    if(uid==null)return;
+    if(uid==null||grupIslemleri.contains(id))return;
     if(katildi){
       if(mounted)Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupSohbetPage(chatId:id,ad:ad,foto:foto)));
       return;
     }
+    setState(()=>grupIslemleri.add(id));
     try{
-      await FirebaseFirestore.instance.runTransaction((tx)async{
+      final sonuc=await FirebaseFirestore.instance.runTransaction<Map<String,dynamic>>((tx)async{
         final ref=FirebaseFirestore.instance.collection('chats').doc(id);
         final d=await tx.get(ref);
         final v=d.data()??<String,dynamic>{};
-        if(v['isGroup']!=true||v['discoverable']!=true)throw Exception('Bu grup keşfete açık değil.');
-        if(v['joinApproval']==true)throw Exception('Bu grup katılma onayı istiyor.');
+        if(v['isGroup']!=true||v['discoverable']!=true||v['groupDeleted']==true)throw Exception('Bu grup keşfete açık değil.');
         final uyeler=List<String>.from(v['members']??const[]);
+        if(uyeler.contains(uid))return {'status':'joined'};
+        if(v['joinApproval']==true){
+          final req=ref.collection('joinRequests').doc(uid);
+          final mevcut=await tx.get(req);
+          if(mevcut.data()?['status']=='pending'){
+            tx.update(req,{'status':'cancelled','updatedAt':FieldValue.serverTimestamp()});
+            return {'status':'cancelled'};
+          }
+          if(mevcut.data()?['status']=='accepted')throw Exception('Onayın tamamlanması bekleniyor.');
+          final max=(v['maxMembers'] as num?)?.toInt()??60;
+          if(uyeler.length>=max)throw Exception('Grup üye sınırına ulaştı.');
+          tx.set(req,{'uid':uid,'status':'pending','source':'discover','createdAt':FieldValue.serverTimestamp(),'updatedAt':FieldValue.serverTimestamp()});
+          return {'status':'pending','admins':<String>{...List<String>.from(v['admins']??const[]),if((v['createdBy']??'').toString().isNotEmpty)v['createdBy'].toString()}.toList()};
+        }
         final max=(v['maxMembers'] as num?)?.toInt()??60;
-        if(uyeler.contains(uid))return;
         if(uyeler.length>=max)throw Exception('Grup üye sınırına ulaştı.');
         final eski=List<String>.from(v['formerMembers']??const[])..remove(uid);
         final gizli=List<String>.from(v['hiddenFor']??const[])..remove(uid);
         uyeler.add(uid);
-        tx.update(ref,{
-          'members':uyeler,
-          'formerMembers':eski,
-          'hiddenFor':gizli,
-          'updatedAt':FieldValue.serverTimestamp(),
-        });
+        tx.update(ref,{'members':uyeler,'formerMembers':eski,'hiddenFor':gizli,'updatedAt':FieldValue.serverTimestamp()});
+        return {'status':'joined'};
       });
       if(!mounted)return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Gruba katıldın ✅')));
-      Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupSohbetPage(chatId:id,ad:ad,foto:foto)));
+      if(sonuc['status']=='pending'){
+        for(final admin in List<String>.from(sonuc['admins']??const[])){
+          if(admin==uid)continue;
+          unawaited(uygulamaBildirimiGonder(toUid:admin,fromUid:uid,tur:'group',metin:ad+' grubuna katılma isteği gönderdi',belgeId:id,hedefTuru:'group',hedefBaslik:ad,hedefFoto:foto,olayTuru:'group_join_request').catchError((_){ }));
+        }
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Katılma isteğin gönderildi. Yönetici onayı bekleniyor.')));
+      }else if(sonuc['status']=='cancelled'){
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Katılma isteğin iptal edildi.')));
+      }else{
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Gruba katıldın ✅')));
+        Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupSohbetPage(chatId:id,ad:ad,foto:foto)));
+      }
     }catch(e){
       if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Gruba katılınamadı: $e')));
-    }
+    }finally{if(mounted)setState(()=>grupIslemleri.remove(id));}
   }
 
   @override
@@ -6195,7 +6215,11 @@ class _KesfetPageState extends State<KesfetPage> {
       builder:(_,snap){
         if(snap.connectionState==ConnectionState.waiting)return const SliverToBoxAdapter(child:Padding(padding:EdgeInsets.all(35),child:Center(child:CircularProgressIndicator(color:mor))));
         if(snap.hasError)return SliverToBoxAdapter(child:Padding(padding:const EdgeInsets.all(28),child:Center(child:Text(t('groupsLoadError'),style:const TextStyle(color:Colors.black54)))));
-        final gruplar=(snap.data?.docs??[]).where((d){final ad=(d.data()['groupName']??'').toString().toLowerCase();return d.data()['groupDeleted']!=true&&!ad.contains('oyun')&&!ad.contains('game');}).toList();
+        final gruplar=(snap.data?.docs??[]).where((d){final ad=(d.data()['groupName']??'').toString().toLowerCase();return d.data()['groupDeleted']!=true&&!ad.contains('oyun')&&!ad.contains('game');}).toList()..sort((a,b){
+          int zaman(Map<String,dynamic> v){final t=v['updatedAt']??v['createdAt'];return t is Timestamp?t.millisecondsSinceEpoch:0;}
+          final siralama=zaman(b.data()).compareTo(zaman(a.data()));
+          return siralama!=0?siralama:a.id.compareTo(b.id);
+        });
         if(gruplar.isEmpty)return SliverToBoxAdapter(child:Padding(padding:const EdgeInsets.all(28),child:Center(child:Text(t('groupsEmpty'),style:const TextStyle(color:Colors.black54)))));
         return SliverList(delegate:SliverChildBuilderDelegate((_,i)=>_grupSatiri(gruplar[i].id,gruplar[i].data()),childCount:gruplar.length));
       },
@@ -6303,10 +6327,17 @@ class _KesfetPageState extends State<KesfetPage> {
               Text('$sayi ${t('member')}',style:const TextStyle(color:Colors.black45,fontSize:12)),
             ])),
             const SizedBox(width:8),
-            FilledButton(
-              onPressed:()=>_grupDurumuDegistir(id,katildi,ad:ad,foto:foto),
-              style:FilledButton.styleFrom(backgroundColor:katildi?const Color(0xFFECECF2):mor,foregroundColor:katildi?Colors.black87:Colors.white,padding:const EdgeInsets.symmetric(horizontal:13)),
-              child:Text(katildi?t('open'):t('join'),style:const TextStyle(fontWeight:FontWeight.w800,fontSize:12)),
+            StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
+              stream:!katildi&&ben!=null&&v['joinApproval']==true?FirebaseFirestore.instance.collection('chats').doc(id).collection('joinRequests').doc(ben).snapshots():null,
+              builder:(_,istek){
+                final bekliyor=istek.data?.data()?['status']=='pending';
+                final isleniyor=grupIslemleri.contains(id);
+                return FilledButton(
+                  onPressed:isleniyor||istek.hasError||(!katildi&&v['joinApproval']==true&&istek.connectionState==ConnectionState.waiting)?null:()=>_grupDurumuDegistir(id,katildi,ad:ad,foto:foto),
+                  style:FilledButton.styleFrom(backgroundColor:katildi?const Color(0xFFECECF2):mor,foregroundColor:katildi?Colors.black87:Colors.white,padding:const EdgeInsets.symmetric(horizontal:13)),
+                  child:Text(isleniyor?'Bekle…':istek.hasError?'Yüklenemedi':katildi?t('open'):bekliyor?'İsteği iptal et':v['joinApproval']==true?'İstek gönder':t('join'),style:const TextStyle(fontWeight:FontWeight.w800,fontSize:12)),
+                );
+              },
             ),
           ]),
         ),

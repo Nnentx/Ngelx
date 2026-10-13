@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import {testLiveRules} from './live_rules_test.mjs';
+import {testDiscoveryGroupRules} from './discovery_group_rules_test.mjs';
 import assert from 'node:assert/strict';
 import {
   initializeTestEnvironment,
@@ -609,6 +610,7 @@ try {
   }));
 
   await testLiveRules(env);
+  await testDiscoveryGroupRules(env);
   console.log('Firestore rules testleri başarılı.');
 } finally {
   await env.cleanup();
