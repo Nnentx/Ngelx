@@ -1,0 +1,23 @@
+name: NgelX authenticated call Worker integration probe
+on:
+  push:
+    branches: [work/build-453-consolidated-device-fixes]
+    paths: ['tools/probe_call_worker453.mjs', '.github/workflows/NgelX-PROBE453.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Exercise deployed Worker with disposable synthetic fixture and no device
+        env:
+          FIREBASE_SERVICE_ACCOUNT_NGELX_44EED: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_NGELX_44EED }}
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_JSON }}
+        run: node tools/probe_call_worker453.mjs

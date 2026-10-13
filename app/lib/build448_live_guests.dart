@@ -27,31 +27,42 @@ Future<void> ngelx448GuestAction(BuildContext context,String live,String owner,S
 }
 
 class Ngelx448GuestControls extends StatelessWidget{
-  final String liveId,ownerUid;final bool host;
-  const Ngelx448GuestControls({super.key,required this.liveId,required this.ownerUid,required this.host});
+  final String liveId,ownerUid;final bool host;final List<String> viewerUids;
+  const Ngelx448GuestControls({super.key,required this.liveId,required this.ownerUid,required this.host,this.viewerUids=const[]});
   Future<void> _panel(BuildContext context)async{
-    await showModalBottomSheet<void>(context:context,isScrollControlled:true,backgroundColor:Colors.white,builder:(c)=>Theme(data:ThemeData.light(),child:SafeArea(child:SizedBox(height:MediaQuery.sizeOf(c).height*.65,child:Column(children:[
-      const ListTile(title:Text('Yayına katılım istekleri',style:TextStyle(fontWeight:FontWeight.w800))),
-      Expanded(child:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(stream:FirebaseFirestore.instance.collection('live_streams').doc(liveId).collection('guest_requests').snapshots(),builder:(_,snap){
-        final docs=(snap.data?.docs??[]).where((d)=>['pending','invited','accepted'].contains(d.data()['status'])).toList();
-        if(docs.isEmpty)return const Center(child:Text('Henüz katılım isteği yok. İzleyici listesinden davet edebilirsin.'));
-        return ListView.builder(itemCount:docs.length,itemBuilder:(_,i){final d=docs[i],v=d.data();return FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(future:FirebaseFirestore.instance.collection('users').doc(d.id).get(),builder:(_,p){
-          final name=(p.data?.data()?['displayName']??p.data?.data()?['username']??'İzleyici').toString();
-          return ListTile(title:Text(name),subtitle:Text(v['status']=='accepted'?'Yayında':v['status']=='invited'?'Davet gönderildi':'Katılmak istiyor'),trailing:Row(mainAxisSize:MainAxisSize.min,children:[
-            if(v['status']=='pending')IconButton(tooltip:'Yayına al',icon:const Icon(Icons.check,color:Colors.green),onPressed:()=>ngelx448GuestAction(c,liveId,ownerUid,d.id,'accept')),
-            IconButton(tooltip:'Reddet / yayından indir',icon:const Icon(Icons.close,color:Colors.red),onPressed:()=>ngelx448GuestAction(c,liveId,ownerUid,d.id,'reject')),
+    final stream=FirebaseFirestore.instance.collection('live_streams').doc(liveId).collection('guest_requests').snapshots();
+    final profiles=<String,Future<DocumentSnapshot<Map<String,dynamic>>>>{};
+    final pending=<String>{};
+    await showModalBottomSheet<void>(context:context,isScrollControlled:true,showDragHandle:true,backgroundColor:Colors.white,builder:(c)=>Theme(data:ThemeData.light(),child:SafeArea(child:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(stream:stream,builder:(_,snap){
+      if(snap.hasError)return const Padding(padding:EdgeInsets.all(24),child:Text('Konuk listesi yüklenemedi. Yeniden açmayı dene.'));
+      if(snap.connectionState==ConnectionState.waiting)return const SizedBox(height:150,child:Center(child:CircularProgressIndicator()));
+      final requests=(snap.data?.docs??[]).where((d)=>['pending','invited','accepted'].contains(d.data()['status'])).toList();
+      final ids=<String>{...requests.map((d)=>d.id),...viewerUids.where((id)=>id!=ownerUid)}.toList();
+      final states={for(final d in requests)d.id:d.data()['status']};
+      if(ids.isEmpty)return const Padding(padding:EdgeInsets.fromLTRB(24,8,24,28),child:Column(mainAxisSize:MainAxisSize.min,children:[Text('Konuk ekle',style:TextStyle(fontSize:20,fontWeight:FontWeight.w800)),SizedBox(height:14),Text('Henüz izleyici veya konuk isteği yok.',textAlign:TextAlign.center)]));
+      return SizedBox(height:math.min(MediaQuery.sizeOf(c).height*.6,100.0+ids.length*82.0),child:Column(children:[
+        const ListTile(title:Text('Konuk ekle',style:TextStyle(fontSize:20,fontWeight:FontWeight.w800)),subtitle:Text('İzleyici davet et veya katılım isteğini yönet')),
+        Expanded(child:ListView.builder(itemCount:ids.length,itemBuilder:(_,i){final id=ids[i],status=states[id];return FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(future:profiles.putIfAbsent(id,()=>FirebaseFirestore.instance.collection('users').doc(id).get()),builder:(_,p){
+          final person=p.data?.data()??<String,dynamic>{},photo=(person['photoUrl']??'').toString();
+          final name=(person['displayName']??person['username']??'İzleyici').toString();
+          Future<void> act(String action)async{if(!pending.add(id))return;try{await ngelx448GuestAction(c,liveId,ownerUid,id,action);}finally{pending.remove(id);}}
+          return ListTile(leading:CircleAvatar(backgroundImage:photo.isEmpty?null:NgelXAgImageProvider(photo),child:photo.isEmpty?const Icon(Icons.person):null),title:Text(name,maxLines:1,overflow:TextOverflow.ellipsis),subtitle:Text(status=='accepted'?'Kabul edildi':status=='invited'?'Davet gönderildi':status=='pending'?'Katılmak istiyor':'Canlı izleyicisi'),trailing:Row(mainAxisSize:MainAxisSize.min,children:[
+            if(status==null)TextButton(onPressed:()=>act('invite'),child:const Text('Davet et')),
+            if(status=='pending')IconButton(tooltip:'Kabul et',icon:const Icon(Icons.check,color:Colors.green),onPressed:()=>act('accept')),
+            if(status!=null)IconButton(tooltip:status=='accepted'?'Konuk bağlantısını sonlandır':'Reddet / iptal et',icon:const Icon(Icons.close,color:Colors.red),onPressed:()=>act('reject')),
           ]));
-        });});
-      })),
-    ])))));
+        });})),
+      ]));
+    }))));
   }
   @override Widget build(BuildContext context){
-    if(host)return IconButton.filledTonal(tooltip:'Yayına katılım istekleri',onPressed:()=>_panel(context),icon:const Icon(Icons.person_add_alt_1));
+    if(host)return FilledButton.icon(style:FilledButton.styleFrom(backgroundColor:const Color(0xFF20C5CA),foregroundColor:Colors.white),onPressed:()=>_panel(context),icon:const Icon(Icons.person_add_alt_1),label:const Text('Konuk ekle'));
     final uid=FirebaseAuth.instance.currentUser?.uid;if(uid==null||ownerUid.isEmpty)return const SizedBox.shrink();
     return StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(stream:ngelx448GuestRef(liveId,uid).snapshots(),builder:(_,s){
       final status=s.data?.data()?['status'];
-      if(status=='invited')return Wrap(spacing:8,children:[FilledButton.icon(onPressed:()=>ngelx448GuestAction(context,liveId,ownerUid,uid,'accept'),icon:const Icon(Icons.videocam),label:const Text('Yayın davetini kabul et')),TextButton(onPressed:()=>ngelx448GuestAction(context,liveId,ownerUid,uid,'reject'),child:const Text('Reddet'))]);
-      return TextButton.icon(onPressed:()=>ngelx448GuestAction(context,liveId,ownerUid,uid,status=='pending'||status=='accepted'?'reject':'request'),icon:Icon(status=='accepted'?Icons.logout:Icons.pan_tool_alt),label:Text(status=='accepted'?'Yayından in':status=='pending'?'İsteği iptal et':'Yayına katılma isteği'));
+      if(status=='invited')return Column(mainAxisSize:MainAxisSize.min,children:[IconButton.filledTonal(tooltip:'Yayın davetini kabul et',onPressed:()=>ngelx448GuestAction(context,liveId,ownerUid,uid,'accept'),icon:const Icon(Icons.check)),TextButton(onPressed:()=>ngelx448GuestAction(context,liveId,ownerUid,uid,'reject'),child:const Text('Reddet'))]);
+      final label=status=='accepted'?'Yayından in':status=='pending'?'İptal et':'Konuk ol';
+      return Column(mainAxisSize:MainAxisSize.min,children:[IconButton.filledTonal(tooltip:label,style:IconButton.styleFrom(backgroundColor:const Color(0xFFF0E8FF),foregroundColor:mor,minimumSize:const Size(48,48)),onPressed:()=>ngelx448GuestAction(context,liveId,ownerUid,uid,status=='pending'||status=='accepted'?'reject':'request'),icon:Icon(status=='accepted'?Icons.logout:Icons.person_add_alt_1,size:25)),const SizedBox(height:4),Text(label,style:const TextStyle(color:Colors.black87,fontSize:11.5,fontWeight:FontWeight.w700))]);
     });
   }
 }

@@ -1,0 +1,5 @@
+  Widget _control450(IconData icon,String label,VoidCallback? action,{bool active=true})=>Expanded(child:Column(mainAxisSize:MainAxisSize.min,children:[
+    IconButton.filledTonal(tooltip:label,style:IconButton.styleFrom(backgroundColor:active?const Color(0xFFE4F7F8):const Color(0xFFFFE6EB),foregroundColor:active?const Color(0xFF078FA1):const Color(0xFFE53357),minimumSize:const Size(48,48)),onPressed:action,icon:Icon(icon,size:25)),
+    const SizedBox(height:4),Text(label,style:const TextStyle(color:Colors.black87,fontSize:11.5,fontWeight:FontWeight.w700))]));
+  Widget _guestControl453(bool host)=>Ngelx448GuestControls(liveId:widget.belgeId,ownerUid:widget.ownerId,host:host,viewerUids:host?_aktifIzleyiciler().map(_izleyiciUid).where((x)=>x.isNotEmpty).toList():const[]);
+

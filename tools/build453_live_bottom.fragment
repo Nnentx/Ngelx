@@ -1,0 +1,22 @@
+              Align(alignment:Alignment.centerLeft,child:_yorumPaneli()),
+              if(widget.yayinSahibi&&MediaQuery.of(context).viewInsets.bottom==0)Align(alignment:Alignment.centerRight,child:_guestControl453(true)),
+              const SizedBox(height:8),
+              Container(key:const ValueKey('live-controls-panel453'),padding:const EdgeInsets.fromLTRB(10,12,10,10),decoration:const BoxDecoration(color:Colors.white,borderRadius:BorderRadius.vertical(top:Radius.circular(26))),child:Theme(data:ThemeData.light().copyWith(colorScheme:ColorScheme.fromSeed(seedColor:mor)),child:Column(mainAxisSize:MainAxisSize.min,children:[
+                _yorumGirisAlani(),
+                if(MediaQuery.of(context).viewInsets.bottom==0)...[
+                  const SizedBox(height:12),
+                  if(widget.yayinSahibi)Row(crossAxisAlignment:CrossAxisAlignment.start,children:[
+                    _control450(mikrofonAcik?Icons.mic:Icons.mic_off,'Mikrofon',_yayinMikrofonunuDegistir,active:mikrofonAcik),
+                    _control450(kameraAcik?Icons.videocam:Icons.videocam_off,'Kamera',_yayinKamerasiniAcKapat,active:kameraAcik),
+                    Expanded(child:Column(mainAxisSize:MainAxisSize.min,children:[NgelXCanliPkButonu(liveId:widget.belgeId,ownerUid:widget.ownerId),const Text('PK',style:TextStyle(color:Colors.black87,fontSize:11.5,fontWeight:FontWeight.w700))])),
+                    _control450(Icons.tune,'Efektler',_goruntuStudyoPaneli),_control450(Icons.share,'Paylaş',_paylas),
+                  ])else Row(crossAxisAlignment:CrossAxisAlignment.start,children:[
+                    _control450(Icons.favorite,'Beğen',_kalpDegistir),
+                    _control450(Icons.card_giftcard,'Hediye',hediyeGonderiliyor?null:_hediyePaneli),
+                    Expanded(child:_guestControl453(false)),_control450(Icons.share,'Paylaş',_paylas),
+                  ]),
+                  const SizedBox(height:10),
+                  if(widget.yayinSahibi)SizedBox(width:double.infinity,child:FilledButton.icon(style:FilledButton.styleFrom(backgroundColor:const Color(0xFFFF2851),foregroundColor:Colors.white,minimumSize:const Size(0,42)),onPressed:()async{if(await _geri()&&mounted)Navigator.pop(context);},icon:const Icon(Icons.stop_circle_outlined),label:const Text('Yayını bitir',style:TextStyle(fontWeight:FontWeight.w800))))
+                  else const Text('Konuk olmak için yayıncıya istek gönder',style:TextStyle(color:Colors.black45,fontSize:11)),
+                ],
+              ]))),
