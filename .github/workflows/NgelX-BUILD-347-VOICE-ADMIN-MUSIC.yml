@@ -12,6 +12,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    env:
+      NGELX_LIVE_API_URL: ${{ vars.NGELX_LIVE_API_URL }}
 
     steps:
       - name: Kaynaklari al
@@ -100,7 +102,7 @@ jobs:
         run: |
           set -euo pipefail
           cd app
-          flutter build apk --release --build-name=1.0.128 --build-number=347
+          flutter build apk --release --build-name=1.0.128 --build-number=347 --dart-define="NGELX_LIVE_API_URL=$NGELX_LIVE_API_URL"
           test -s build/app/outputs/flutter-apk/app-release.apk
           APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
           test -n "$APKSIGNER"
