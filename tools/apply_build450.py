@@ -4,9 +4,7 @@ a=s.index('class _KesfetPageState');b=s.index('class _TrendEtiketi',a);x=s[a:b]
 x=x.replace('int kategori=-1;','int kategori=0;').replace('int kategori = -1;','int kategori = 0;')
 x=x.replace("IconButton(tooltip:t('search'),onPressed:_aramaAc,icon:const Icon(Icons.search_rounded,color:Colors.black,size:28)),","IconButton(tooltip:'Topluluk oluştur',onPressed:()async{if(await misafirEngeli(context))return;if(context.mounted)Navigator.push(context,MaterialPageRoute(builder:(_)=>const NgelXCommunityCreate450()));},icon:const Icon(Icons.add_circle_outline_rounded,color:mor,size:28)),")
 start=x.index('          SliverToBoxAdapter(child:SizedBox(\n            height:52,');end=x.index('          if(kategori==-1)',start)
-x=x[:start]+'''          SliverToBoxAdapter(child:Padding(padding:const EdgeInsets.symmetric(horizontal:12),child:Row(children:[
-            ...[(0,'Canlı'),(2,'Trend'),(3,'Kişiler'),(4,'Gruplar'),(5,'Topluluk')].map((v)=>Expanded(child:Padding(padding:const EdgeInsets.symmetric(horizontal:3),child:InkWell(onTap:()=>setState(()=>kategori=v.$1),borderRadius:BorderRadius.circular(14),child:Container(height:42,alignment:Alignment.center,decoration:BoxDecoration(color:kategori==v.$1?mor:const Color(0xFFF3F4F7),borderRadius:BorderRadius.circular(14)),child:Text(v.$2,maxLines:1,style:TextStyle(fontSize:11.5,fontWeight:FontWeight.w800,color:kategori==v.$1?Colors.white:Colors.black87))))))),
-          ]))),
+x=x[:start]+'''          SliverToBoxAdapter(child:NgelXDiscoveryTabs450(selected:kategori,onSelected:(value)=>setState(()=>kategori=value))),
           if(kategori==0)SliverToBoxAdapter(child:Padding(padding:const EdgeInsets.fromLTRB(16,8,16,0),child:Align(alignment:Alignment.centerLeft,child:ActionChip(avatar:const Icon(Icons.mic,size:16),label:const Text('Sesli odalar'),onPressed:()=>setState(()=>kategori=1))))),
           if(kategori==5)const SliverToBoxAdapter(child:NgelXCommunityDirectory450()),
 ''' +x[end:]
