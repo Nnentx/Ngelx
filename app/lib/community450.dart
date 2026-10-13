@@ -703,6 +703,7 @@ class NgelXCommunityDetail450 extends StatefulWidget {
 class _NgelXCommunityDetail450State extends State<NgelXCommunityDetail450> {
   String tab = 'Gönderiler', search = '';
   int postLimit = 40;
+  int feedRetry451 = 0;
   Future<void> invite(Map<String, dynamic> v) async {
     try {
       final ref = FirebaseFirestore.instance
@@ -910,6 +911,7 @@ class _NgelXCommunityDetail450State extends State<NgelXCommunityDetail450> {
             ),
             if (member || v['visibility'] == 'public')
               StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                key:ValueKey('community-feed-$feedRetry451'),
                 stream: _communities450
                     .doc(widget.id)
                     .collection('posts')
@@ -918,11 +920,14 @@ class _NgelXCommunityDetail450State extends State<NgelXCommunityDetail450> {
                     .limit(postLimit)
                     .snapshots(),
                 builder: (c, p) {
-                  if (p.hasError)
-                    return const Padding(
-                      padding: EdgeInsets.all(20),
-                      child: Text('Gönderiler yüklenemedi.'),
-                    );
+                  if (p.hasError) {
+                    final preparing=p.error is FirebaseException&&(p.error as FirebaseException).code=='failed-precondition';
+                    return Padding(padding:const EdgeInsets.all(20),child:Column(children:[
+                      Text(preparing?'Gönderi akışı henüz hazır değil. Biraz sonra yeniden dene.':'Gönderiler yüklenemedi.'),
+                      TextButton.icon(onPressed:()=>setState(()=>feedRetry451++),icon:const Icon(Icons.refresh),label:const Text('Tekrar dene')),
+                    ]));
+                  }
+                  if(!p.hasData)return const Padding(padding:EdgeInsets.all(24),child:Center(child:CircularProgressIndicator()));
                   final ds =
                       (p.data?.docs ?? []).where((d) {
                         final a = d.data();
@@ -1776,7 +1781,7 @@ class _NgelXCommunityAdmin450State extends State<NgelXCommunityAdmin450> {
                             subtitle: Row(
                               children: [
                                 TextButton(
-                                  onPressed: () async {
+                                  onPressed: bulkBusy451 ? null : () async {
                                     try {
                                       if (section == 'Üyelik istekleri') {
                                         final batch = FirebaseFirestore.instance
@@ -1809,7 +1814,7 @@ class _NgelXCommunityAdmin450State extends State<NgelXCommunityAdmin450> {
                                 ),
                                 if (section != 'Şikâyetler')
                                   TextButton(
-                                    onPressed: () async {
+                                    onPressed: bulkBusy451 ? null : () async {
                                       try {
                                         await d.reference.update({
                                           'status': 'rejected',
