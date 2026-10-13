@@ -1,0 +1,29 @@
+name: Build450 verify production community rules independently
+on:
+  push:
+    branches: [work/build-450-approved-discovery-community]
+    paths: ['.github/workflows/NgelX-BUILD-450-RULES-ONLY.yml']
+permissions:
+  contents: read
+jobs:
+  rules:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: pip install google-auth requests
+      - run: npm install --no-save --no-package-lock firebase @firebase/rules-unit-testing firebase-tools
+      - name: Test actual production baseline and add only community rules
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          FIREBASE_SERVICE_ACCOUNT_NGELX_44EED: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_NGELX_44EED }}
+          GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_JSON }}
+          BUILD450_SKIP_INDEX: '1'
+        run: python3 tools/deploy_build450_community_rules.py
