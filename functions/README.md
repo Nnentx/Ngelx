@@ -27,4 +27,6 @@ Yayın yetkisi: yeni tokenlar yayıncı dahil salt izleyici izniyle üretilir. K
 
 Hediye tekrar denemesinde önce sunucu işlem makbuzu okunur: aynı işlem yayın kapandıktan sonra da başarıyla doğrulanır, yeni işlem kapalı yayına gönderilemez. Değişmiş alıcı/adet aynı requestId ile kullanılamaz. Yedi ek gift transaction akışı testi toplam 33 Node testine dahildir; bu testlerin transaction adapteri bellektedir, gerçek Firestore transaction yük/yarış testi yerine geçmez.
 
-Canlı yayın Firestore kuralları mevcut `tools/firestore_rules_test.mjs` emülatör akışına bağlandı. `tools/live_rules_test.mjs` cüzdan mahremiyetini, istemcinin jeton/PK/hediye/kabul kaydı yazamamasını, istek görünürlüğünü, yorum kimliği ve uzunluk denetimini, kapalı yayına yorum/tepki engelini test eder. Yorumlar en fazla 500 karakterdir; serverTimestamp zorunludur. Yeni emülatör testlerinin GitHub sonucu ayrıca takip edilmelidir.
+Canlı yayın Firestore kuralları mevcut `tools/firestore_rules_test.mjs` emülatör akışına bağlandı. `tools/live_rules_test.mjs` cüzdan mahremiyetini, istemcinin jeton/PK/hediye/kabul kaydı yazamamasını, istek görünürlüğünü, yorum kimliği ve uzunluk denetimini, kapalı yayına yorum/tepki engelini test eder. Yorumlar en fazla 500 karakterdir; serverTimestamp zorunludur. 407faf4 için GitHub run 38355373976 üzerinde yeni canlı yayın kuralları emulator adımı geçti.
+
+Gerçek proje bağlantısı, secret kurulumu, eski APK geçişi ve iki cihaz adımları: [DEPLOYMENT.md](DEPLOYMENT.md).
