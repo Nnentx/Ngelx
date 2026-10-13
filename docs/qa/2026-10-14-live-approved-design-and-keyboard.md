@@ -36,3 +36,19 @@ Yayıncı olarak yorum yazarken klavye beklenmedik şekilde kapanıyor ve yazmay
 - Karşı cihaz sesi, konuk kabulü, PK ve yayın sonlandırma henüz bu kayıtla doğrulanmadı.
 
 Bu belge yalnızca kabul edilen referansı ve eksikleri kaydeder. Uygulamaya bu tasarım henüz uygulanmadı; toplu düzeltme paketine dahil edilecek.
+
+## 01:13 kullanıcı eklemesi: kalp animasyonu
+Kullanıcı kalbe basınca referans görseldeki gibi kalplerin çoğalıp yükselerek kaybolmadığını bildirdi. Bu, kullanıcı tarafından bildirilen açık hatadır; henüz düzeltilmedi.
+Kabul ölçütü: Her beğeni dokunuşunda sağ tarafta yeni kalp oluşmalı; seri dokunuşlarda birden fazla kalp eşzamanlı görünmeli; kalpler yukarı hareket ederken saydamlaşıp kaldırılmalı. Yorum girişi ve yayın kontrollerinin dokunmasını engellememeli; biten animasyonlar temizlenmeli.
+
+## Kullanıcının not edilmesini onayladığı ek öneriler
+Bu maddeler öneri ve kontrol kapsamıdır; kod incelemesi/cihaz testi yapılmadan doğrulanmış hata veya tamamlanmış iş sayılmaz.
+- Yorum yazılırken metin, taslak ve odak korunmalı; yeni yorum/panel değişikliği klavyeyi kapatmamalı.
+- Konuk isteğinde gönderildi, bekliyor, kabul edildi, reddedildi durumları ve iptal işlemi.
+- Bağlantı koptuğunda yeniden bağlanıyor durumu; yanlışlıkla yayın sonlandırmama.
+- Mikrofon/kamera açık-kapalı durumlarının ikonlarda belirgin gösterimi.
+- Yayını bitirme onayı; bitişte süre ve izleyici özeti.
+- Yayıncı için yorum silme, kullanıcı susturma ve engelleme.
+- İzleyicinin çıkması yayını bitirmemeli; konuk ayrılınca yayıncı devam etmeli.
+- Hediye işlevi hazır değilse çalışır gibi sunulmamalı.
+Öncelik: Klavye hatası, onaylı tasarım ve kalp animasyonu; ardından konuk akışı, bağlantı ve gerçek cihaz ses testleri.
