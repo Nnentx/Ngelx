@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import {initializeTestEnvironment,assertSucceeds,assertFails} from '@firebase/rules-unit-testing';
-import {doc,setDoc,updateDoc,getDoc,getDocs,collection,query,where,arrayUnion,arrayRemove,serverTimestamp,Timestamp,writeBatch,deleteDoc} from 'firebase/firestore';
+import {doc,setDoc,updateDoc,getDoc,getDocs,collection,query,where,arrayUnion,arrayRemove,serverTimestamp,Timestamp,writeBatch,deleteDoc,runTransaction} from 'firebase/firestore';
 const env=await initializeTestEnvironment({projectId:'demo-ngelx',firestore:{host:'127.0.0.1',port:8080,rules:fs.readFileSync('firestore.rules','utf8')}});
 const owner=env.authenticatedContext('owner').firestore(),member=env.authenticatedContext('member').firestore(),stranger=env.authenticatedContext('stranger').firestore();
 const community=(extra={})=>({name:'Doğa sohbeti',description:'Doğa tutkunları',rules:'Saygılı paylaş',category:'Sohbet',photoUrl:'',coverUrl:'',founderId:'owner',members:['owner'],admins:['owner'],visibility:'public',joinApproval:false,postApproval:true,lastJoinCode:'',createdAt:serverTimestamp(),...extra});
@@ -48,5 +48,23 @@ try{
  await assertFails(updateDoc(doc(member,'communities450/public'),{admins:arrayRemove('owner')}));
  await assertSucceeds(updateDoc(doc(member,'communities450/public'),{members:arrayRemove('member'),admins:arrayRemove('member')}));
  await assertFails(setDoc(doc(member,'communities450/public/posts/late'),post()));
+
+ await assertSucceeds(setDoc(doc(owner,'communities450/bulk451'),community({joinApproval:true})));
+ for(const uid of ['member','stranger']){
+  const db=uid==='member'?member:stranger;
+  await assertSucceeds(setDoc(doc(db,`communities450/bulk451/requests/${uid}`),{uid,status:'pending',inviteCode:'',createdAt:serverTimestamp()}));
+ }
+ await assertFails(updateDoc(doc(member,'communities450/bulk451/requests/member'),{status:'approved'}));
+ await assertSucceeds(runTransaction(owner,async tx=>{
+  const root=doc(owner,'communities450/bulk451');await tx.get(root);
+  const refs=['member','stranger'].map(uid=>doc(owner,`communities450/bulk451/requests/${uid}`));
+  for(const ref of refs)await tx.get(ref);
+  tx.update(root,{members:arrayUnion('member','stranger')});
+  for(const ref of refs)tx.update(ref,{status:'approved'});
+ }));
+ for(const uid of ['member','stranger']){
+  const result=await getDoc(doc(owner,`communities450/bulk451/requests/${uid}`));
+  if(result.data().status!=='approved')throw new Error('Bulk approval did not commit');
+ }
  console.log('Build450: community privacy, membership approval, post moderation, reactions, reports and immutable owner checks passed');
 }finally{await env.cleanup();}
