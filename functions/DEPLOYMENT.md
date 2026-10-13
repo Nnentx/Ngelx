@@ -5,14 +5,15 @@ Bu belge uygulanacak adımları tarif eder; dağıtım yapıldığı anlamına g
 
 ## Yapılandırma
 
-LiveKit Cloud projesinin Project URL değerini kullanın (örnek biçim: `wss://PROJE.livekit.cloud`).
+LiveKit Cloud panelinde doğrulanan NgelX projesi: `p_3zky94n7qs3`.
+Project URL: `wss://ngelx-4gz3quoe.livekit.cloud` (13 Ekim 2026 tarihinde proje ayarlarından doğrulandı).
 Uygulamadaki DevelopmentTokenSource test kimliği bu adresin veya API anahtarlarının yerine geçmez.
 LiveKit API key/secret aynı LiveKit projesine ait olmalıdır.
 
 `functions/.env.ngelx-44eed` yerel dosyasına yalnızca public adresi yazın:
 
 ```dotenv
-LIVEKIT_URL=wss://GERCEK-PROJE.livekit.cloud
+LIVEKIT_URL=wss://ngelx-4gz3quoe.livekit.cloud
 ```
 
 Dosya git tarafından yok sayılır. API anahtarları Firebase Secret Manager'a interaktif olarak girilir:
