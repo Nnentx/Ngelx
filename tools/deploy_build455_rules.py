@@ -19,9 +19,9 @@ def current():
     if len(files)!=1: raise RuntimeError('Unexpected production rules source')
     return files[0]['content']
 original=current()
-if 'reactionVisible455' in original:
-    print('Build455 community reaction rules already present');raise SystemExit(0)
 proposed=transform(original)
+if proposed == original:
+    print('Exact Build455 community rules already present and verified');raise SystemExit(0)
 Path('build455-production-before.rules').write_text(original)
 Path('firestore.rules').write_text(proposed)
 subprocess.run(['npx','firebase','emulators:exec','--project','demo-ngelx','--only','firestore','--non-interactive','node tools/build450_rules_test.mjs && node tools/build455_rules_test.mjs'],check=True)
