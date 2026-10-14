@@ -2,12 +2,30 @@
 from pathlib import Path
 
 def transform(source):
+    metrics = ''
+    for collection in ('views', 'shares'):
+        metrics += '''        match /COLLECTION/{uid} {
+          allow read: if communityVisible450(cid) && get(/databases/$(database)/documents/communities450/$(cid)/posts/$(pid)).data.status == 'approved';
+          allow create, update: if communitySigned450() && communityVisible450(cid) && uid == request.auth.uid
+            && get(/databases/$(database)/documents/communities450/$(cid)/posts/$(pid)).data.status == 'approved'
+            && request.resource.data.keys().hasOnly(['uid','createdAt'])
+            && request.resource.data.uid == uid && request.resource.data.createdAt == request.time;
+          allow delete: if false;
+        }
+'''.replace('COLLECTION', collection)
+    if 'reactionVisible455' in source:
+        community = source[source.index('match /communities450/'):source.index('match /communityInvites450/')]
+        if metrics.strip() in community: return source
+        if 'match /views/' in community or 'match /shares/' in community:
+            raise RuntimeError('Different community metric rules already present')
+        return source.replace('        match /comments/{commentId} {', metrics+'        match /comments/{commentId} {',1)
     like_start = source.index('        match /likes/{uid} {', source.index('match /communities450/'))
     like_end = source.index('        match /comments/{commentId}', like_start)
     likes = source[like_start:like_end]
     likes = likes.replace("keys().hasOnly(['uid','createdAt'])", "keys().hasOnly(['uid','createdAt','emoji']) && request.resource.data.get('emoji','❤️') in ['❤️','👍','😂','😮','😢','😡']")
     likes = likes.replace('allow create:', 'allow create, update:').replace('          allow update: if false;\n', '')
     source = source[:like_start]+likes+source[like_end:]
+    source = source.replace('        match /comments/{commentId} {', metrics+'        match /comments/{commentId} {',1)
     old = "request.resource.data.keys().hasOnly(['uid','name','text','createdAt'])"
     new = """request.resource.data.keys().hasOnly(['uid','name','text','createdAt','photoUrl','replyTo','replyName'])
             && request.resource.data.get('photoUrl','') is string && request.resource.data.get('photoUrl','').size() <= 2048
