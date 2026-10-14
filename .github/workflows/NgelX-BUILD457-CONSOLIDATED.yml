@@ -506,6 +506,11 @@ jobs:
           python3 tools/apply_build457_live_recovery.py
           python3 -m unittest discover -s tools -p 'test_build457_live_recovery.py'
 
+      - name: Build457 community avatar placeholder and retry regression
+        run: |
+          python3 tools/apply_build457_community_images.py
+          python3 -m unittest discover -s tools -p 'test_build457_community_images.py'
+
       - name: Build457 isolate chat identity and test UID-bound rows
         run: |
           python3 tools/apply_build457_inbox_identity.py
