@@ -15,3 +15,9 @@ Build456 onaylanmış başarı SHA: `3e8ff6cfc52a99e27fc060f8670d01017333a03e`; 
 - 47456.mp4: kapak kadrajı kurucu için bile izinsiz; sohbet fotoğraf %100 sonrası mesaj görünürlüğü; geri dönüşlerde siyah ekran / tekrar yükleme.
 
 **Önemli:** Kodun başarılı derlenmesi kamera/RTC görüntüsünün gerçekten geldiğini kanıtlamaz; siyah görüntü devam ediyorsa ayrıca sunucu ve cihaz loglarıyla teşhis gerekir. Hesaplar/veriler silinmez, ücretli Cloud Functions/Firestore canlı kuralları izinsiz dağıtılmaz. PR inceleme taslağıdır.
+
+## Gelen Kutusu kişi kimliği düzeltme aşaması
+- Birebir sohbet satırlarında sohbetin karşı üyeleri arasında **kendi hesabın dışında UID yoksa** satır artık mevcut kullanıcı profili gibi gösterilmez.
+- Profil dinleyicileri kullanıcı UID'siyle sabitlenir, her sohbet satırı `chatId + karşı taraf UID` ile anahtarlanır; sıralama veya filtrelemede eski satırın profilinin gösterilmesi engellenir.
+- Dinleyiciden gelen belge UID'si beklenen karşı üye UID'siyle eşleşmezse isim ve görsel gösterilmez. Hata durumunda yeniden dene sunulur.
+- Sohbetin kimliği, kayıtlı mesajlar, karşı tarafın bilerek tanımlanmış takma adı ve grup sohbetleri korunur. Bu değişiklik **yanlış kişiye mesaj teslim edildiği kanıtı değildir**; #52 cihaz testi gerekir.

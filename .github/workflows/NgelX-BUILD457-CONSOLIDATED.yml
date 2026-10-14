@@ -501,6 +501,11 @@ jobs:
           node --check server/community456/index.mjs
           node tools/build456_policy_test.mjs
 
+      - name: Build457 isolate chat identity and test UID-bound rows
+        run: |
+          python3 tools/apply_build457_inbox_identity.py
+          python3 -m unittest discover -s tools -p 'test_build457_inbox_identity.py'
+
       - name: Test Build457 live-video recovery and missing-track retry
         run: |
           cp tools/build457_live_test.dart app/test/build457_live_test.dart
