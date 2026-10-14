@@ -28,6 +28,11 @@ section = section[:last] + '});}),' + section[last+3:]
 path.write_text(source[:start]+section+source[end:])
 replace('app/lib/main.dart', 'class _SohbetPageState extends State<SohbetPage> with Ngelx437MessageJump<SohbetPage> {', "class _SohbetPageState extends State<SohbetPage> with Ngelx437MessageJump<SohbetPage> {\n  late final Stream<DocumentSnapshot<Map<String,dynamic>>> _peerProfile455=FirebaseFirestore.instance.collection('users').doc(widget.digerUid).snapshots();")
 replace('app/lib/main.dart', "stream:FirebaseFirestore.instance.collection('users').doc(widget.digerUid).snapshots(),builder:(_,profile455)", "stream:_peerProfile455,builder:(_,profile455)")
+replace('app/lib/build445_inbox_model.dart', 'SizedBox(height:132,child:ListView.builder(', 'SizedBox(height:148,child:ListView.builder(')
+replace('app/lib/build445_inbox_model.dart', 'itemExtent:84,', 'itemExtent:104,')
+replace('app/lib/build445_inbox_model.dart', "name=self?_ngelx438Ui('Sen'):(p['displayName']??p['username']??'').toString().split(' ').first", "name=self?_ngelx438Ui('Sen'):ngelx455ProfileName(p,fallback:'Kişi').split(' ').first")
+replace('app/lib/build445_inbox_model.dart', 'fontSize:13,fontWeight:FontWeight.w700', 'fontSize:15,fontWeight:FontWeight.w700')
+replace('app/lib/build445_inbox_model.dart', "if(!self)Ngelx436PresenceAccess(other:id,target:p,child:Text(ngelx434Aktiflik(p),maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Color(0xFF52735F),fontSize:11,fontWeight:FontWeight.w600)))", "if(!self)SizedBox(width:92,child:Ngelx436PresenceAccess(other:id,target:p,child:Text(ngelx434Aktiflik(p),maxLines:2,overflow:TextOverflow.ellipsis,textAlign:TextAlign.center,style:const TextStyle(color:Color(0xFF52735F),fontSize:12,height:1.1,fontWeight:FontWeight.w600))))")
 
 replace('app/lib/community450.dart', 'fontSize: 11)', 'fontSize: 13)')
 replace('app/lib/community450.dart', 'fontSize: 11,', 'fontSize: 13,')
