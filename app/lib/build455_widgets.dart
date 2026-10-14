@@ -172,6 +172,11 @@ class _Ngelx455ReactionsState extends State<Ngelx455Reactions> {
   });
 }
 
+bool ngelx455PostVisible(Rect bounds, Rect viewport) {
+  final visible = bounds.intersect(viewport);
+  return !visible.isEmpty && visible.height >= bounds.height.clamp(0, viewport.height) * .5;
+}
+
 class Ngelx455PostView extends StatefulWidget {
   final DocumentReference<Map<String, dynamic>> ref;
   final Widget child;
@@ -182,10 +187,11 @@ class _Ngelx455PostViewState extends State<Ngelx455PostView> {
   Timer? timer;
   DateTime? visibleSince;
   bool recorded = false;
-  @override void initState() { super.initState(); timer = Timer.periodic(const Duration(milliseconds: 500), (_) => check()); }
+  void schedule() { timer?.cancel(); timer = Timer.periodic(const Duration(milliseconds: 500), (_) => check()); }
+  @override void initState() { super.initState(); schedule(); }
   @override void didUpdateWidget(covariant Ngelx455PostView oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.ref.path != oldWidget.ref.path) { recorded = false; visibleSince = null; }
+    if (widget.ref.path != oldWidget.ref.path) { recorded = false; visibleSince = null; schedule(); }
   }
   void check() {
     if (!mounted || recorded || FirebaseAuth.instance.currentUser?.isAnonymous != false || _communityUid450.isEmpty) return;
@@ -198,15 +204,16 @@ class _Ngelx455PostViewState extends State<Ngelx455PostView> {
     final screen = MediaQuery.sizeOf(context);
     final viewport = Rect.fromLTWH(0, MediaQuery.paddingOf(context).top + kToolbarHeight,
         screen.width, screen.height - MediaQuery.paddingOf(context).vertical - kToolbarHeight);
-    final intersection = bounds.intersect(viewport);
-    final visible = !intersection.isEmpty && intersection.height >= bounds.height.clamp(0, screen.height) * .5;
+    final visible = ngelx455PostVisible(bounds, viewport);
     if (!visible) { visibleSince = null; return; }
     visibleSince ??= DateTime.now();
     if (DateTime.now().difference(visibleSince!).inSeconds < 2) return;
     final me = _communityUid450;
     recorded = true;
+    timer?.cancel();
     widget.ref.collection('views').doc(me).set({'uid': me, 'createdAt': FieldValue.serverTimestamp()})
-      .catchError((Object _) { if (mounted) recorded = false; });
+      .catchError((Object _) { if (mounted) { recorded = false; visibleSince = null;
+        timer = Timer(const Duration(seconds: 30), () { if (mounted) schedule(); }); } });
   }
   @override void dispose() { timer?.cancel(); super.dispose(); }
   @override Widget build(BuildContext context) => widget.child;
