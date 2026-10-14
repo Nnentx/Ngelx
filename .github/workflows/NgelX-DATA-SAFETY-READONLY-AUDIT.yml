@@ -1,0 +1,46 @@
+name: NgelX READ ONLY backup and R2 metadata audit
+
+on:
+  push:
+    branches:
+      - work/data-safety-readonly-audit
+    paths:
+      - tools/backup_metadata_readonly_audit.py
+      - tools/test_backup_metadata_readonly_audit.py
+      - .github/workflows/NgelX-DATA-SAFETY-READONLY-AUDIT.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ngelx-safety-backup-metadata-audit
+  cancel-in-progress: false
+
+jobs:
+  backup-metadata:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout audit branch
+        uses: actions/checkout@v4
+      - name: Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Pure offline audit regression tests
+        run: python3 -m unittest discover -s tools -p 'test_backup_metadata_readonly_audit.py'
+      - name: Read-only authentication dependency
+        run: python3 -m pip install 'google-auth>=2.30,<3' 'requests>=2.32,<3'
+      - name: Read backup metadata and lifecycle rules only
+        env:
+          FIREBASE_SERVICE_ACCOUNT_NGELX_44EED: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_NGELX_44EED }}
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_JSON }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          python3 tools/backup_metadata_readonly_audit.py
+
+# Intentionally NO firebase deploy, no data export, no --apply, no delete,
+# no R2 object enumeration, no Flutter build, and no automatic schedule.
