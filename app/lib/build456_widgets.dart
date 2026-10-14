@@ -795,11 +795,12 @@ class Ngelx456ChatPicker extends StatefulWidget {
 }
 
 class _Ngelx456ChatPickerState extends State<Ngelx456ChatPicker> {
-  late final stream = FirebaseFirestore.instance
+  late final chatQuery = FirebaseFirestore.instance
       .collection('chats')
       .where('members', arrayContains: _communityUid450)
-      .limit(100)
-      .snapshots();
+      .limit(100);
+  late Stream<QuerySnapshot<Map<String, dynamic>>> stream =
+      chatQuery.snapshots();
   final profiles = <String, Future<DocumentSnapshot<Map<String, dynamic>>>>{},
       selected = <String>{};
   String search = '';
@@ -831,7 +832,28 @@ class _Ngelx456ChatPickerState extends State<Ngelx456ChatPicker> {
               stream: stream,
               builder: (c, s) {
                 if (s.hasError)
-                  return const Center(child: Text('Sohbetler yüklenemedi.'));
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text(
+                            'Sohbetler yüklenemedi. Bağlantını kontrol edip yeniden dene.',
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 12),
+                          OutlinedButton.icon(
+                            onPressed: () => setState(
+                              () => stream = chatQuery.snapshots(),
+                            ),
+                            icon: const Icon(Icons.refresh),
+                            label: const Text('Yeniden dene'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
                 if (!s.hasData)
                   return const Center(child: CircularProgressIndicator());
                 final ids = <String>{};
@@ -868,6 +890,18 @@ class _Ngelx456ChatPickerState extends State<Ngelx456ChatPicker> {
                             .get(),
                       ),
                       builder: (c, u) {
+                        if (u.hasError)
+                          return ListTile(
+                            leading: const Icon(Icons.error_outline, color: mor),
+                            title: const Text('Kişi bilgisi yüklenemedi'),
+                            trailing: IconButton(
+                              tooltip: 'Kişiyi yeniden yükle',
+                              icon: const Icon(Icons.refresh),
+                              onPressed: () => setState(() {
+                                profiles.remove(uid);
+                              }),
+                            ),
+                          );
                         final p = u.data?.data() ?? {},
                             name = ngelx455ProfileName(p);
                         if (search.isNotEmpty &&
