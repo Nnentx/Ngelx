@@ -4,6 +4,7 @@ Applied only after the existing Build445/Build456 patch pipeline.
 No Firestore writes and no change to group or media upload flows.
 """
 from pathlib import Path
+import re
 
 SOURCE=Path("app/lib/main.dart")
 
@@ -60,7 +61,42 @@ def transform(source: str) -> str:
     b=source.index("\nclass ArsivSohbetlerPage",a)
     region=source[a:b]
     region=exactly_once(region,FIELD_OLD,FIELD_NEW,"profile cache")
-    region=exactly_once(region,ROW_OLD,ROW_NEW,"private chat row")
+    marker="final benEngelledim=engellenenler.contains(other);"
+    if region.count(marker)!=1:
+        raise ValueError("Private-chat identity marker missing/ambiguous")
+    pos=region.index(marker)
+    # Legacy UI patches may change whitespace and the builder's formatting.
+    prev=region.rfind("final other=",0,pos)
+    if prev<0 or pos-prev>600:
+        raise ValueError("Cannot locate the private chat's recipient UID")
+    preceding=region[prev:pos].replace("orElse:()=>ben??''","orElse:()=>''")
+    region=region[:prev]+preceding+"if(other.isEmpty||other==ben)return const SizedBox.shrink();\n            "+region[pos:]
+    pos=region.index(marker)
+    m=re.search(
+        r"return\s+(?:StreamBuilder|FutureBuilder)<DocumentSnapshot<Map<String,dynamic>>>\s*\(",
+        region[pos:pos+1100])
+    if m is None:
+        raise ValueError("Unexpected private chat profile builder: "+repr(region[pos:pos+900]))
+    open_paren=pos+m.end()
+    region=(
+        region[:open_paren]
+        + "key:ValueKey<String>('inbox-person-' + d.id + '-' + other),"
+        + region[open_paren:]
+    )
+    target="stream:FirebaseFirestore.instance.collection('users').doc(other).snapshots()"
+    at=region.find(target,open_paren)
+    if at<0 or at-open_paren>400:
+        raise ValueError("Unexpected participant stream: "+repr(region[open_paren:open_paren+400]))
+    region=region[:at]+"stream:_inbox457Profile(other)"+region[at+len(target):]
+    pos=region.index(marker)
+    m=re.search(r"final\s+p\s*=\s*u\.data\?\.data\(\)\s*\?\?\s*\{\};",region[pos:pos+2200])
+    if m is None:
+        raise ValueError("Profile rendering anchor missing: "+repr(region[pos:pos+900]))
+    at=pos+m.start()
+    region=region[:at]+"""if(u.hasError)return const ListTile(title:Text('Kişi bilgisi yüklenemedi'));
+              if(!u.hasData)return const ListTile(title:Text('Kişi bilgisi yükleniyor…'));
+              if(u.data!.id!=other)return const SizedBox.shrink();
+              """+region[at:]
     return source[:a]+region+source[b:]
 
 def main():
