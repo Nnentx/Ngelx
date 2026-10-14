@@ -509,7 +509,8 @@ class Ngelx456Members extends StatefulWidget {
 
 class _Ngelx456MembersState extends State<Ngelx456Members> {
   String search = '', role = 'Tümü';
-  late final stream = _communities450.doc(widget.id).snapshots();
+  late Stream<DocumentSnapshot<Map<String, dynamic>>> stream =
+      _communities450.doc(widget.id).snapshots();
   final profiles = <String, Future<DocumentSnapshot<Map<String, dynamic>>>>{};
   @override
   Widget build(BuildContext c) => _communitySurface450(
@@ -517,8 +518,38 @@ class _Ngelx456MembersState extends State<Ngelx456Members> {
     body: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
       stream: stream,
       builder: (c, s) {
-        final v = s.data?.data();
-        if (v == null) return const Center(child: CircularProgressIndicator());
+        if (s.hasError) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'Üyeler yüklenemedi. Bağlantını kontrol edip yeniden dene.',
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: () => setState(() {
+                      profiles.clear();
+                      stream = _communities450.doc(widget.id).snapshots();
+                    }),
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Yeniden dene'),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+        if (!s.hasData)
+          return const Center(child: CircularProgressIndicator());
+        if (s.data?.exists != true)
+          return const Center(child: Text('Topluluk bulunamadı.'));
+        final v = s.data!.data();
+        if (v == null)
+          return const Center(child: Text('Üye bilgileri yüklenemedi.'));
         final ids = List<String>.from(v['members'] ?? const [])
             .where((id) => role == 'Tümü' || ngelx456Role(v, id) == role)
             .toList();
@@ -991,8 +1022,10 @@ class Ngelx456InviteCard extends StatelessWidget {
   final bool own;
   const Ngelx456InviteCard({super.key, required this.text, required this.own});
   @override
-  Widget build(BuildContext c) => InkWell(
-    onTap: () => ngelx456OpenInvite(c, ngelx456InviteCode(text)!),
+  Widget build(BuildContext c) {
+    final code = ngelx456InviteCode(text);
+    return InkWell(
+    onTap: code == null ? null : () => ngelx456OpenInvite(c, code),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1023,12 +1056,13 @@ class Ngelx456InviteCard extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Text(
-          'Daveti aç →',
+          code == null ? 'Davet bağlantısı geçersiz' : 'Daveti aç →',
           style: TextStyle(color: own ? Colors.white70 : mor, fontSize: 13),
         ),
       ],
     ),
-  );
+    );
+  }
 }
 
 Future<void> ngelx456OpenInvite(BuildContext c, String code) async {
