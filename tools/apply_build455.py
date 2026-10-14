@@ -98,4 +98,9 @@ replace('app/lib/build446_call_lifecycle.dart', '  bool _observing=false,_foregr
     if(pending!=null)ngelxCallSession444.release(pending);
   }''')
 replace('app/lib/build448_incoming_calls.dart', '      await _stop();\n      if(epoch!=_authEpoch454)return;', '      await _stop();\n      await ngelx446Calls.clearForAccount455();\n      if(epoch!=_authEpoch454)return;')
+replace('app/lib/build448_incoming_calls.dart', "final ref=FirebaseFirestore.instance.collection('chats').doc(chat),d=await ref.get();", "final ref=FirebaseFirestore.instance.collection('chats').doc(chat),d=await ref.get(const GetOptions(source:Source.server)).timeout(const Duration(seconds:8));\n      if(FirebaseAuth.instance.currentUser?.uid!=me)return;")
+replace('app/lib/main.dart', '      await kontrol.initialize();', '      await kontrol.initialize().timeout(const Duration(seconds:15));')
+replace('app/lib/community450.dart', '      await p.initialize();', '      await p.initialize().timeout(const Duration(seconds:15));')
+replace('app/lib/main.dart', "          final docs=_inboxBelgeleri438(s.data?.docs??[]).where((d){", "          if(!s.hasData&&!s.hasError)return const Center(child:CircularProgressIndicator(color:mor));\n          final docs=_inboxBelgeleri438(s.data?.docs??[]).where((d){")
+replace('app/lib/main.dart', '              if(satirlar.isEmpty)return ListView(', "              if(satirlar.isEmpty&&s.data?.metadata.isFromCache==true)return const Center(child:Text('Sohbetler eşitleniyor…',style:TextStyle(color:mor,fontSize:14)));\n              if(satirlar.isEmpty)return ListView(")
 print('Build455 profile names, comments, counters and compact upload presentation applied')
