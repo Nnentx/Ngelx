@@ -1,0 +1,1 @@
+Final acceptance checkpoint includes visible-post counter tests and completed counter tracking cleanup. Deliver only this full workflow's verified signed APK or a later verified correction.
