@@ -39,3 +39,10 @@ Sunucu sayaçları/abonelik/planlama yeni servislerin başarılı kurulmasına b
 - Kapak kadrajı kaydedilince başarı mesajı editör ekranından ayrılmadan önce gönderilir. Kapak değiştirme ve yetki doğrulaması korunur.
 
 **Doğrulama sınırı:** Önceki Build456 koşusu (38613058472) test, imzalı APK ve artefakt yayımlamada başarılıdır. Yukarıdaki koruyucu düzeltmeler daha sonraki commitlerde yer aldığı için bu önceki APK'nın içinde değildir. Güncel kodun GitHub Actions kontrolü ve yeni APK çıkışı ayrı takip edilir. Firebase Functions ve üretim kurallarının kullanıcı izni olmadan dağıtılması hâlâ kapalıdır. Cihazda hızlanma ölçülmeden performansın çözüldüğü iddia edilmemelidir.
+
+## Build456 son güvenilirlik düzeltmeleri
+
+- Kaydedilen gönderilerin **Kaydı kaldır** işlemi artık izin/ağ hatasını yakalayıp kullanıcıya gösterir; başarısız işlemi tamamlanmış gibi bildirmez.
+- Gönderi için **Görüş bildir** penceresi kapatılırken bir `TextEditingController` çok erken dispose edilmez; kısa geri bildirim metni dialog kapanma animasyonunda güvenli biçimde tutulur.
+- Son başarılı tam CI: **38620595962**, Build 456 imzalı APK ve artifact doğrulanmıştır (commit `51852fe6aef9a165c1a868c82f71056b964bd825`).
+- Bu iki son düzeltme `7e024264409c9698f4c2db7fce1d2a918ccda0d0` commitindedir ve **ayrı sonraki CI koşusunda** doğrulanacaktır. Yeni koşu başarılı olmadan bu değişiklikleri önceki APK'ya mal etme.
