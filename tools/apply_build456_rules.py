@@ -34,7 +34,7 @@ def transform(source):
  block=block.replace("&& request.resource.data.status == 'pending' && request.resource.data.createdAt == request.time","&& !(uid in community450(cid).get('banned',[])) && request.resource.data.status == 'pending' && request.resource.data.createdAt == request.time",1)
  block=block.replace("'pinned','createdAt'])","'pinned','createdAt','publishAt'])",1)
  block=block.replace('allow create: if communityMember450(cid) && validPost450()', 'allow create: if communityPosting456(cid) && validPost450()')
- block=block.replace("&& request.resource.data.status == (community450(cid).postApproval == true && !communityAdmin450(cid) ? 'pending' : 'approved');", "&& (request.resource.data.status == ((community450(cid).postApproval == true || request.auth.uid in community450(cid).get('approvalMembers',[])) && !communityAdmin450(cid) ? 'pending' : 'approved')\n          || (communityAdmin450(cid) && request.resource.data.status == 'scheduled' && request.resource.data.publishAt is timestamp && request.resource.data.publishAt > request.time));")
+ block=block.replace("&& request.resource.data.status == (community450(cid).postApproval == true && !communityAdmin450(cid) ? 'pending' : 'approved');", "&& (request.resource.data.status == ((community450(cid).postApproval == true || request.auth.uid in community450(cid).get('approvalMembers',[])) && !communityAdmin450(cid) ? 'pending' : 'approved')\n          || (communityAdmin450(cid) && request.resource.data.status == 'scheduled' && request.resource.data.publishAt is timestamp && request.resource.data.publishAt > request.time && request.resource.data.publishAt <= request.time + duration.value(30,'d')));")
  block=block.replace("(communityAdmin450(cid) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','pinned'])", "(communityModerator456(cid) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','pinned','commentsClosed','slowSeconds'])")
  block=block.replace("&& request.resource.data.status in ['approved','rejected','deleted'] && request.resource.data.pinned is bool)","&& request.resource.data.status in ['approved','rejected','deleted'] && request.resource.data.pinned is bool\n          && request.resource.data.get('commentsClosed',false) is bool && request.resource.data.get('slowSeconds',0) in [0,300])")
  # Comments enforce pause/mute/closed/cooldown on server; reaction collection reads are bounded by parent visibility.
@@ -43,7 +43,13 @@ def transform(source):
  block=block.replace('resource.data.uid == request.auth.uid || communityAdmin450(cid)','resource.data.uid == request.auth.uid || communityModerator456(cid)')
  block=block.replace("allow read: if reactionVisible455();", "allow read: if communityVisible450(cid) && get(/databases/$(database)/documents/communities450/$(cid)/posts/$(pid)).data.status == 'approved';")
  marker='        match /likes/{uid} {'
- extras='''        match /commentLimits456/{uid} {
+ extras='''        match /subscribers456/{uid} {
+          allow get: if communityMember450(cid) && uid == request.auth.uid;
+          allow create, update: if communityMember450(cid) && uid == request.auth.uid
+            && request.resource.data.keys().hasOnly(['uid','enabled']) && request.resource.data.uid == uid && request.resource.data.enabled is bool;
+          allow delete: if uid == request.auth.uid;
+        }
+        match /commentLimits456/{uid} {
           allow get: if communityMember450(cid) && uid == request.auth.uid;
           allow create, update: if communityPosting456(cid) && uid == request.auth.uid
             && request.resource.data.keys().hasOnly(['uid','commentId','at'])

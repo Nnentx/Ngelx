@@ -1087,7 +1087,7 @@ Future<DocumentSnapshot<Map<String, dynamic>>> ngelx456Profile(String uid) {
   );
 }
 
-final ngelx456CountRevision = ValueNotifier<int>(0);
+final ngelx456CountRevision = ValueNotifier<String>('');
 bool ngelx456DnsFailure(Object error) {
   final e = error.toString().toLowerCase();
   return e.contains('unknownhost') ||
@@ -1754,16 +1754,11 @@ Future<void> ngelx456PostMenu(
       await batch.commit();
     }
     if (action == 'notify') {
-      final saved = FirebaseFirestore.instance
-          .collection('users')
-          .doc(me)
-          .collection('communityPreferences456')
-          .doc('${cid}_$pid');
-      final current = await saved.get();
+      final saved = ref.collection('subscribers456').doc(me),
+          current = await saved.get();
       await saved.set({
-        'communityId': cid,
-        'postId': pid,
-        'notifications': current.data()?['notifications'] != true,
+        'uid': me,
+        'enabled': current.data()?['enabled'] != true,
       });
     }
     if (action == 'feedback') {

@@ -12,7 +12,7 @@ index de4e820..6b9a8d4 100644
    @override Widget build(BuildContext c){final v=_video;
      return ClipRRect(borderRadius:BorderRadius.circular(20),child:Container(color:const Color(0xFFF3F4F7),constraints:const BoxConstraints(maxHeight:280),child:widget.video
 diff --git a/app/lib/build455_widgets.dart b/app/lib/build455_widgets.dart
-index ff34848..807765a 100644
+index ff34848..b00d49f 100644
 --- a/app/lib/build455_widgets.dart
 +++ b/app/lib/build455_widgets.dart
 @@ -4,17 +4,34 @@ class Ngelx455WhiteDialog extends StatelessWidget {
@@ -59,7 +59,7 @@ index ff34848..807765a 100644
    for (final key in ['displayName', 'name', 'fullName', 'username']) {
      final value = (profile[key] ?? '').toString().trim();
      if (value.isNotEmpty && value != 'NgelX') return value;
-@@ -22,247 +39,741 @@ String ngelx455ProfileName(Map<String, dynamic> profile,
+@@ -22,247 +39,765 @@ String ngelx455ProfileName(Map<String, dynamic> profile,
    return fallback;
  }
  
@@ -199,7 +199,10 @@ index ff34848..807765a 100644
 -      if (mounted) setState(() { input.clear(); replyId = ''; replyName = ''; });
 -    } catch (e) { if (mounted) _communityError450(context, e); }
 -    finally { if (mounted) setState(() => sending = false); }
-+      ngelx456CountRevision.value++;
++      ngelx456CountRevision.value =
++          widget.post.path +
++          '|' +
++          DateTime.now().microsecondsSinceEpoch.toString();
 +      if (mounted)
 +        setState(() {
 +          input.clear();
@@ -626,7 +629,10 @@ index ff34848..807765a 100644
 +          'createdAt': FieldValue.serverTimestamp(),
 +        });
 +      }
-+      ngelx456CountRevision.value++;
++      ngelx456CountRevision.value =
++          widget.ref.parent!.path +
++          '|' +
++          DateTime.now().microsecondsSinceEpoch.toString();
 +    } catch (e) {
 +      if (mounted) _communityError450(context, e);
 +    } finally {
@@ -835,8 +841,14 @@ index ff34848..807765a 100644
  
  class Ngelx455PostCounts extends StatefulWidget {
    final DocumentReference<Map<String, dynamic>> ref;
-   const Ngelx455PostCounts({super.key, required this.ref});
+-  const Ngelx455PostCounts({super.key, required this.ref});
 -  @override State<Ngelx455PostCounts> createState() => _Ngelx455PostCountsState();
++  final Map<String, dynamic> liveCounts;
++  const Ngelx455PostCounts({
++    super.key,
++    required this.ref,
++    this.liveCounts = const {},
++  });
 +  @override
 +  State<Ngelx455PostCounts> createState() => _Ngelx455PostCountsState();
  }
@@ -851,6 +863,16 @@ index ff34848..807765a 100644
 -    if (widget.ref.path != oldWidget.ref.path) streams = create();
 +  late Future<Map<String, int>> counts = load();
 +  Future<Map<String, int>> load() async {
++    if ([
++      'likes',
++      'comments',
++      'shares',
++      'views',
++    ].every(widget.liveCounts.containsKey))
++      return {
++        for (final e in widget.liveCounts.entries)
++          e.key: (e.value as num).toInt(),
++      };
 +    final keys = ['likes', 'comments', 'shares', 'views'];
 +    final values = await Future.wait(
 +      keys.map((k) => widget.ref.collection(k).count().get()),
@@ -867,7 +889,7 @@ index ff34848..807765a 100644
 +  }
 +
 +  @override
-+  Widget build(BuildContext c) => ValueListenableBuilder<int>(
++  Widget build(BuildContext c) => ValueListenableBuilder<String>(
 +    valueListenable: ngelx456CountRevision,
 +    builder: (c, revision, _) => FutureBuilder<Map<String, int>>(
 +      future: counts,
@@ -889,7 +911,7 @@ index ff34848..807765a 100644
 +                  Icon(item.$2, size: 14, color: Colors.black45),
 +                  const SizedBox(width: 4),
 +                  Text(
-+                    '${s.hasError ? '—' : s.data?[item.$1] ?? '…'} ${item.$3}',
++                    '${s.hasError ? '—' : widget.liveCounts[item.$1] ?? s.data?[item.$1] ?? '…'} ${item.$3}',
 +                    style: const TextStyle(fontSize: 11, color: Colors.black54),
 +                  ),
 +                ],
@@ -906,7 +928,9 @@ index ff34848..807765a 100644
 +  }
 +
 +  void refresh() {
-+    if (mounted) setState(() => counts = load());
++    if (mounted &&
++        ngelx456CountRevision.value.split('|').first == widget.ref.path)
++      setState(() => counts = load());
 +  }
 +
 +  @override
@@ -950,7 +974,8 @@ index ff34848..807765a 100644
 +        'uid': me,
 +        'createdAt': FieldValue.serverTimestamp(),
 +      });
-+      ngelx456CountRevision.value++;
++      ngelx456CountRevision.value =
++          ref.path + '|' + DateTime.now().microsecondsSinceEpoch.toString();
      }
 -  } catch (e) { if (context.mounted) _communityError450(context, e); }
 +  } catch (e) {
@@ -958,7 +983,7 @@ index ff34848..807765a 100644
 +  }
  }
 diff --git a/app/lib/community450.dart b/app/lib/community450.dart
-index 7e6097f..21a72f7 100644
+index 7e6097f..53a94e7 100644
 --- a/app/lib/community450.dart
 +++ b/app/lib/community450.dart
 @@ -6,8 +6,8 @@ bool _communityAdmin450(Map<String, dynamic> v) =>
@@ -1396,6 +1421,21 @@ index 7e6097f..21a72f7 100644
 +                MaterialPageRoute(
 +                  builder: (_) => NgelXCommunityAdmin450(id: widget.id),
 +                ),
++              ),
++            ),
++            Padding(
++              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
++              child: TextField(
++                onChanged: (x) {
++                  searchTimer?.cancel();
++                  searchTimer = Timer(const Duration(milliseconds: 250), () {
++                    if (mounted) setState(() => search = x.toLowerCase());
++                  });
++                },
++                decoration: const InputDecoration(
++                  prefixIcon: Icon(Icons.search),
++                  hintText: 'Topluluk içinde ara',
++                ),
                ),
 +            ),
              Padding(
@@ -1416,21 +1456,6 @@ index 7e6097f..21a72f7 100644
 -                              style: const TextStyle(
 -                                fontSize: 21,
 -                                fontWeight: FontWeight.w900,
-+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-+              child: TextField(
-+                onChanged: (x) {
-+                  searchTimer?.cancel();
-+                  searchTimer = Timer(const Duration(milliseconds: 250), () {
-+                    if (mounted) setState(() => search = x.toLowerCase());
-+                  });
-+                },
-+                decoration: const InputDecoration(
-+                  prefixIcon: Icon(Icons.search),
-+                  hintText: 'Topluluk içinde ara',
-+                ),
-+              ),
-+            ),
-+            Padding(
 +              padding: const EdgeInsets.symmetric(horizontal: 8),
 +              child: Row(
 +                children:
@@ -1597,7 +1622,8 @@ index 7e6097f..21a72f7 100644
 -                    decoration: const InputDecoration(
 -                      prefixIcon: Icon(Icons.search),
 -                      hintText: 'Topluluk içinde ara',
--                    ),
++                      ],
+                     ),
 -                  ),
 -                  SingleChildScrollView(
 -                    scrollDirection: Axis.horizontal,
@@ -1622,8 +1648,7 @@ index 7e6097f..21a72f7 100644
 -                                ),
 -                              )
 -                              .toList(),
-+                      ],
-                     ),
+-                    ),
 -                  ),
 -                  if (member)
 -                    OutlinedButton.icon(
@@ -1797,7 +1822,7 @@ index 7e6097f..21a72f7 100644
          );
        },
      ),
-@@ -1023,70 +1112,325 @@ class NgelXCommunityCompose450 extends StatefulWidget {
+@@ -1023,70 +1112,385 @@ class NgelXCommunityCompose450 extends StatefulWidget {
  }
  
  class _NgelXCommunityCompose450State extends State<NgelXCommunityCompose450> {
@@ -1822,16 +1847,12 @@ index 7e6097f..21a72f7 100644
 -    setState((){_sent454=sent;_total454=total;_stage454='Medya yükleniyor';});
 +  DocumentReference<Map<String, dynamic>>? _draft454;
 +  String _uploaded454 = '';
++  DateTime? publishAt456;
 +  @override
 +  void dispose() {
 +    text.dispose();
 +    super.dispose();
-   }
--  Future<void> pick(bool video)async{
--    if(busy)return;
--    try{final x=video?await ImagePicker().pickVideo(source:ImageSource.gallery):await ImagePicker().pickImage(source:ImageSource.gallery);
--      if(x!=null&&mounted)setState((){media=x;type=video?'video':'image';_uploaded454='';_draft454=null;});
--    }catch(e){if(mounted)_communityError450(context,e);}
++  }
 +
 +  void _progress454(int sent, int total) {
 +    if (!mounted) return;
@@ -1847,16 +1868,11 @@ index 7e6097f..21a72f7 100644
 +      _stage454 = 'Medya yükleniyor';
 +    });
    }
--  Future<void> publish()async{
--    if(busy||(text.text.trim().isEmpty&&media==null))return;
--    final me=_communityUid450;if(me.isEmpty)return;
--    setState((){busy=true;_sent454=0;_total454=0;_stage454=media==null?'Gönderi hazırlanıyor':'Medya hazırlanıyor';});
--    final ref=_draft454??=_communities450.doc(widget.id).collection('posts').doc();
--    try{
--      if(media!=null&&_uploaded454.isEmpty){
--        _uploaded454=type=='image'
--          ?await ngelxFotografYukle(dosya:media!,kind:'photos',legacyPath:'communities/${widget.id}/${ref.id}.jpg',onProgress:_progress454)
--          :await ngelxMedyaYukleDosya(dosya:media!,kind:'videos',ext:'mp4',legacyPath:'communities/${widget.id}/${ref.id}.mp4',onProgress:_progress454);
+-  Future<void> pick(bool video)async{
+-    if(busy)return;
+-    try{final x=video?await ImagePicker().pickVideo(source:ImageSource.gallery):await ImagePicker().pickImage(source:ImageSource.gallery);
+-      if(x!=null&&mounted)setState((){media=x;type=video?'video':'image';_uploaded454='';_draft454=null;});
+-    }catch(e){if(mounted)_communityError450(context,e);}
 +
 +  Future<void> pick(bool video) async {
 +    if (busy) return;
@@ -1874,7 +1890,17 @@ index 7e6097f..21a72f7 100644
 +    } catch (e) {
 +      if (mounted) _communityError450(context, e);
 +    }
-+  }
+   }
+-  Future<void> publish()async{
+-    if(busy||(text.text.trim().isEmpty&&media==null))return;
+-    final me=_communityUid450;if(me.isEmpty)return;
+-    setState((){busy=true;_sent454=0;_total454=0;_stage454=media==null?'Gönderi hazırlanıyor':'Medya hazırlanıyor';});
+-    final ref=_draft454??=_communities450.doc(widget.id).collection('posts').doc();
+-    try{
+-      if(media!=null&&_uploaded454.isEmpty){
+-        _uploaded454=type=='image'
+-          ?await ngelxFotografYukle(dosya:media!,kind:'photos',legacyPath:'communities/${widget.id}/${ref.id}.jpg',onProgress:_progress454)
+-          :await ngelxMedyaYukleDosya(dosya:media!,kind:'videos',ext:'mp4',legacyPath:'communities/${widget.id}/${ref.id}.mp4',onProgress:_progress454);
 +
 +  Future<void> publish() async {
 +    if (busy || (text.text.trim().isEmpty && media == null)) return;
@@ -1944,7 +1970,13 @@ index 7e6097f..21a72f7 100644
 +              'text': text.text.trim(),
 +              'mediaUrl': _uploaded454,
 +              'mediaType': type,
-+              'status': pending ? 'pending' : 'approved',
++              'status': publishAt456 != null
++                  ? 'scheduled'
++                  : pending
++                  ? 'pending'
++                  : 'approved',
++              if (publishAt456 != null)
++                'publishAt': Timestamp.fromDate(publishAt456!),
 +              'pinned': false,
 +              'createdAt': FieldValue.serverTimestamp(),
 +            })
@@ -1973,7 +2005,9 @@ index 7e6097f..21a72f7 100644
 +      if (mounted && _communityUid450 == me) {
 +        ngelx455Status(
 +          context,
-+          pending
++          publishAt456 != null
++              ? 'Gönderi planlandı'
++              : pending
 +              ? 'Yönetici onayına gönderildi'
 +              : type == 'video'
 +              ? 'Video paylaşıldı'
@@ -2155,6 +2189,57 @@ index 7e6097f..21a72f7 100644
 +                ],
 +              ),
 +            ),
++          if (_communityAdmin450(widget.value))
++            ListTile(
++              leading: const Icon(Icons.schedule, color: mor),
++              title: Text(
++                publishAt456 == null
++                    ? 'Gönderiyi planla'
++                    : '${publishAt456!.day}.${publishAt456!.month} · ${publishAt456!.hour.toString().padLeft(2, '0')}:${publishAt456!.minute.toString().padLeft(2, '0')}',
++              ),
++              subtitle: const Text('En fazla 30 gün ileriye planlayabilirsin.'),
++              trailing: publishAt456 == null
++                  ? const Icon(Icons.chevron_right)
++                  : IconButton(
++                      icon: const Icon(Icons.close),
++                      onPressed: busy
++                          ? null
++                          : () => setState(() => publishAt456 = null),
++                    ),
++              onTap: busy
++                  ? null
++                  : () async {
++                      final now = DateTime.now();
++                      final date = await showDatePicker(
++                        context: c,
++                        initialDate: now,
++                        firstDate: now,
++                        lastDate: now.add(const Duration(days: 29)),
++                      );
++                      if (date == null || !c.mounted) return;
++                      final time = await showTimePicker(
++                        context: c,
++                        initialTime: TimeOfDay.now(),
++                      );
++                      if (time == null || !mounted) return;
++                      final chosen = DateTime(
++                        date.year,
++                        date.month,
++                        date.day,
++                        time.hour,
++                        time.minute,
++                      );
++                      if (!chosen.isAfter(DateTime.now())) {
++                        ngelx455Status(
++                          c,
++                          'Gelecekteki bir zaman seç.',
++                          error: true,
++                        );
++                        return;
++                      }
++                      setState(() => publishAt456 = chosen);
++                    },
++            ),
 +          FilledButton(
 +            onPressed: busy ? null : publish,
 +            child: Padding(
@@ -2178,7 +2263,7 @@ index 7e6097f..21a72f7 100644
  class NgelXCommunityVideo450 extends StatefulWidget {
    final String url;
    const NgelXCommunityVideo450({super.key, required this.url});
-@@ -1107,7 +1451,7 @@ class _NgelXCommunityVideo450State extends State<NgelXCommunityVideo450> {
+@@ -1107,7 +1511,7 @@ class _NgelXCommunityVideo450State extends State<NgelXCommunityVideo450> {
      try {
        final p = VideoPlayerController.networkUrl(Uri.parse(widget.url));
        player = p;
@@ -2187,7 +2272,7 @@ index 7e6097f..21a72f7 100644
        if (mounted) setState(() {});
      } catch (_) {
        if (mounted) setState(() => failed = true);
-@@ -1166,159 +1510,119 @@ class NgelXCommunityPost450 extends StatelessWidget {
+@@ -1166,159 +1570,124 @@ class NgelXCommunityPost450 extends StatelessWidget {
    DocumentReference<Map<String, dynamic>> get ref =>
        _communities450.doc(communityId).collection('posts').doc(id);
    Future<void> comments(BuildContext c) async {
@@ -2400,7 +2485,12 @@ index 7e6097f..21a72f7 100644
 -                  style: TextStyle(fontSize: 13),
 +          if (value['mediaType'] == 'video' && value['mediaUrl'] != '')
 +            NgelXCommunityVideo450(url: value['mediaUrl']),
-+          Ngelx455PostCounts(ref: ref),
++          Ngelx455PostCounts(
++            ref: ref,
++            liveCounts: value['counts456'] is Map
++                ? Map<String, dynamic>.from(value['counts456'])
++                : const {},
++          ),
 +          const Divider(),
 +          Row(
 +            children: [
@@ -2447,7 +2537,7 @@ index 7e6097f..21a72f7 100644
  }
  
  class NgelXCommunityAdmin450 extends StatefulWidget {
-@@ -1329,35 +1633,70 @@ class NgelXCommunityAdmin450 extends StatefulWidget {
+@@ -1329,35 +1698,70 @@ class NgelXCommunityAdmin450 extends StatefulWidget {
  }
  
  class _NgelXCommunityAdmin450State extends State<NgelXCommunityAdmin450> {
@@ -2538,7 +2628,7 @@ index 7e6097f..21a72f7 100644
    }
  
    Future<void> edit450(Map<String, dynamic> v) async {
-@@ -1366,7 +1705,8 @@ class _NgelXCommunityAdmin450State extends State<NgelXCommunityAdmin450> {
+@@ -1366,7 +1770,8 @@ class _NgelXCommunityAdmin450State extends State<NgelXCommunityAdmin450> {
          r = TextEditingController(text: v['rules']);
      final save = await showDialog<bool>(
        context: context,
@@ -2548,7 +2638,7 @@ index 7e6097f..21a72f7 100644
          title: const Text('Topluluk bilgileri'),
          content: SingleChildScrollView(
            child: Column(
-@@ -1400,7 +1740,7 @@ class _NgelXCommunityAdmin450State extends State<NgelXCommunityAdmin450> {
+@@ -1400,7 +1805,7 @@ class _NgelXCommunityAdmin450State extends State<NgelXCommunityAdmin450> {
              onPressed: n.text.trim().length < 3
                  ? null
                  : () => Navigator.pop(c, true),
@@ -2557,7 +2647,7 @@ index 7e6097f..21a72f7 100644
            ),
          ],
        ),
-@@ -1425,16 +1765,35 @@ class _NgelXCommunityAdmin450State extends State<NgelXCommunityAdmin450> {
+@@ -1425,16 +1830,35 @@ class _NgelXCommunityAdmin450State extends State<NgelXCommunityAdmin450> {
    Widget build(BuildContext c) => _communitySurface450(
      title: 'Topluluğu yönet',
      body: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
@@ -2595,7 +2685,7 @@ index 7e6097f..21a72f7 100644
              Text(
                v['name'],
                style: const TextStyle(fontSize: 23, fontWeight: FontWeight.w900),
-@@ -1444,19 +1803,22 @@ class _NgelXCommunityAdmin450State extends State<NgelXCommunityAdmin450> {
+@@ -1444,19 +1868,22 @@ class _NgelXCommunityAdmin450State extends State<NgelXCommunityAdmin450> {
                spacing: 6,
                children:
                    [
@@ -2624,7 +2714,7 @@ index 7e6097f..21a72f7 100644
                            label: Text(x),
                            selected: section == x,
                            onSelected: (_) => setState(() => section = x),
-@@ -1467,6 +1829,12 @@ class _NgelXCommunityAdmin450State extends State<NgelXCommunityAdmin450> {
+@@ -1467,6 +1894,12 @@ class _NgelXCommunityAdmin450State extends State<NgelXCommunityAdmin450> {
              if (section == 'İstatistikler') ...[
                ListTile(
                  title: const Text('Üyeler'),
@@ -2637,7 +2727,7 @@ index 7e6097f..21a72f7 100644
                  trailing: Text('${(v['members'] as List).length}'),
                ),
                ...[
-@@ -1476,13 +1844,30 @@ class _NgelXCommunityAdmin450State extends State<NgelXCommunityAdmin450> {
+@@ -1476,13 +1909,30 @@ class _NgelXCommunityAdmin450State extends State<NgelXCommunityAdmin450> {
                  ('reports', 'open', 'Açık şikâyetler'),
                ].map(
                  (x) => FutureBuilder<AggregateQuerySnapshot>(
@@ -2673,7 +2763,7 @@ index 7e6097f..21a72f7 100644
                      trailing: Text(
                        s.hasError ? 'Yüklenemedi' : '${s.data?.count ?? '…'}',
                      ),
-@@ -1538,49 +1923,15 @@ class _NgelXCommunityAdmin450State extends State<NgelXCommunityAdmin450> {
+@@ -1538,49 +1988,15 @@ class _NgelXCommunityAdmin450State extends State<NgelXCommunityAdmin450> {
                ),
              ],
              if (section == 'Üyeler')
@@ -2732,7 +2822,7 @@ index 7e6097f..21a72f7 100644
                  ),
                ),
              if ([
-@@ -1613,10 +1964,24 @@ class _NgelXCommunityAdmin450State extends State<NgelXCommunityAdmin450> {
+@@ -1613,10 +2029,24 @@ class _NgelXCommunityAdmin450State extends State<NgelXCommunityAdmin450> {
                            padding: EdgeInsets.all(24),
                            child: Text('Bekleyen kayıt yok.'),
                          ),
@@ -2761,7 +2851,7 @@ index 7e6097f..21a72f7 100644
                        ...ds.map(
                          (d) => Card(
                            color: Colors.white,
-@@ -1632,31 +1997,37 @@ class _NgelXCommunityAdmin450State extends State<NgelXCommunityAdmin450> {
+@@ -1632,31 +2062,37 @@ class _NgelXCommunityAdmin450State extends State<NgelXCommunityAdmin450> {
                              subtitle: Row(
                                children: [
                                  TextButton(
@@ -2824,7 +2914,7 @@ index 7e6097f..21a72f7 100644
                                    child: Text(
                                      section == 'Şikâyetler'
                                          ? 'İncelendi'
-@@ -1665,15 +2036,18 @@ class _NgelXCommunityAdmin450State extends State<NgelXCommunityAdmin450> {
+@@ -1665,15 +2101,18 @@ class _NgelXCommunityAdmin450State extends State<NgelXCommunityAdmin450> {
                                  ),
                                  if (section != 'Şikâyetler')
                                    TextButton(
@@ -2853,7 +2943,7 @@ index 7e6097f..21a72f7 100644
                                    ),
                                ],
 diff --git a/app/lib/main.dart b/app/lib/main.dart
-index 7cee90a..0fded07 100644
+index 7cee90a..efedc2c 100644
 --- a/app/lib/main.dart
 +++ b/app/lib/main.dart
 @@ -58,6 +58,7 @@ part 'build448_incoming_calls.dart';
@@ -2864,7 +2954,65 @@ index 7cee90a..0fded07 100644
  part 'feed_creator_badge.dart';
  part 'story_v66.dart';
  part 'build445_inbox_model.dart';
-@@ -2206,7 +2207,7 @@ Future<String> _ngelxDirectR2BytesYukle({
+@@ -662,9 +663,25 @@ List<String> ngelxMedyaUrlAdaylari(String rawUrl){
+   return sonuc;
+ }
+ final Map<String,Uint8List> _ngelxAgResmiBellek=<String,Uint8List>{};
+-const int _ngelxAgResmiBellekSiniri=96;
+-
+-Future<Uint8List> _ngelxAgResmiBaytlari(String rawUrl) async {
++const int _ngelxAgResmiBellekSiniri=48;
++const int _ngelx456ImageBudget=24*1024*1024;
++final _ngelx456ImageRequests=<String,Future<Uint8List>>{};
++void _ngelx456CacheImage(String key,Uint8List bytes){
++ if(bytes.lengthInBytes>_ngelx456ImageBudget)return;
++ _ngelxAgResmiBellek.remove(key);
++ var size=_ngelxAgResmiBellek.values.fold<int>(0,(sum,x)=>sum+x.lengthInBytes);
++ while(_ngelxAgResmiBellek.isNotEmpty&&(_ngelxAgResmiBellek.length>=_ngelxAgResmiBellekSiniri||size+bytes.lengthInBytes>_ngelx456ImageBudget)){
++  final old=_ngelxAgResmiBellek.remove(_ngelxAgResmiBellek.keys.first);size-=old?.lengthInBytes??0;
++ }
++ _ngelxAgResmiBellek[key]=bytes;
++}
++
++Future<Uint8List> _ngelxAgResmiBaytlari(String rawUrl){
++ final key=rawUrl.trim(),cached=_ngelxAgResmiBellek[rawUrl.trim()];
++ if(cached!=null)return Future.value(cached);
++ return _ngelx456ImageRequests.putIfAbsent(key,()=>_ngelxAgResmiBaytlari456(key).whenComplete(()=>_ngelx456ImageRequests.remove(key)));
++}
++Future<Uint8List> _ngelxAgResmiBaytlari456(String rawUrl) async {
+   final temiz=rawUrl.trim();
+   if(temiz.isEmpty)throw Exception('Fotoğraf adresi boş.');
+   final hazir=_ngelxAgResmiBellek[temiz];
+@@ -718,16 +735,13 @@ Future<Uint8List> _ngelxAgResmiBaytlari(String rawUrl) async {
+         if(ham.length>12*1024*1024)throw Exception('Fotoğraf çok büyük.');
+         final bytes=Uint8List.fromList(ham);
+ 
+-        final codec=await ui.instantiateImageCodec(bytes);
++        final codec=await ui.instantiateImageCodec(bytes,targetWidth:32);
+         final frame=await codec.getNextFrame();
+         frame.image.dispose();
+         codec.dispose();
+ 
+-        if(_ngelxAgResmiBellek.length>=_ngelxAgResmiBellekSiniri){
+-          _ngelxAgResmiBellek.remove(_ngelxAgResmiBellek.keys.first);
+-        }
+-        _ngelxAgResmiBellek[temiz]=bytes;
+-        _ngelxAgResmiBellek[aday]=bytes;
++        _ngelx456CacheImage(temiz,bytes);
++        if(aday!=temiz)_ngelx456CacheImage(aday,bytes);
+         return bytes;
+       }catch(e){
+         sonHata=e;
+@@ -925,7 +939,7 @@ class _NgelXAgResmiState extends State<NgelXAgResmi>{
+     if(temiz.isEmpty)return _error(context,StateError('Fotoğraf adresi boş.'));
+     return Image(
+       key:ValueKey('ngelx-direct-$temiz-$_yenileme'),
+-      image:NgelXAgImageProvider(temiz),
++      image:ResizeImage(NgelXAgImageProvider(temiz),width:((widget.width?.isFinite==true?widget.width!:MediaQuery.sizeOf(context).width)*MediaQuery.devicePixelRatioOf(context)).clamp(64,1440).round()),
+       fit:widget.fit,
+       width:widget.width,
+       height:widget.height,
+@@ -2206,7 +2220,7 @@ Future<String> _ngelxDirectR2BytesYukle({
    }on DioException catch(e){
      final durum=e.response?.statusCode;
      final govde=e.response?.data;
@@ -2873,7 +3021,7 @@ index 7cee90a..0fded07 100644
        try{
          await _ngelxAndroidNativeR2Put(
            hedef:upload,
-@@ -2268,7 +2269,7 @@ Future<String> _ngelxDirectR2DosyaYukle({
+@@ -2268,7 +2282,7 @@ Future<String> _ngelxDirectR2DosyaYukle({
    }on DioException catch(e){
      final durum=e.response?.statusCode;
      final govde=e.response?.data;
@@ -2882,7 +3030,7 @@ index 7cee90a..0fded07 100644
        try{
          await _ngelxAndroidNativeR2Put(
            hedef:upload,
-@@ -22031,6 +22032,7 @@ class _SohbetPageState extends State<SohbetPage> with Ngelx437MessageJump<Sohbet
+@@ -22031,6 +22045,7 @@ class _SohbetPageState extends State<SohbetPage> with Ngelx437MessageJump<Sohbet
                    FilledButton.tonal(onPressed:()=>aramaBaslat(goruntulu),child:const Text('Geri ara')),
                  ]);
                })
@@ -2890,7 +3038,15 @@ index 7cee90a..0fded07 100644
              else Text(
                gosterilecekMetin.isEmpty?'Mesaj içeriği bulunamadı':gosterilecekMetin,
                softWrap:true,
-@@ -30252,7 +30254,7 @@ class KaydedilenlerPage extends StatelessWidget {
+@@ -23937,6 +23952,7 @@ class _AktivitePageState extends State<AktivitePage> {
+     final kaynak=(v['sourceId']??v['chatId']??v['belgeId']??v['postId']??v['contentId']??'').toString();
+     final hedefTuru=(v['targetKind']??'').toString();
+     final olay=(v['eventKind']??'').toString();
++    if(hedefTuru=='community'&&kaynak.isNotEmpty){Navigator.push(context,MaterialPageRoute(builder:(_)=>NgelXCommunityDetail450(id:kaynak)));return;}
+     final canliHedefi=tur=='live'||hedefTuru=='live'||olay=='live_started'||olay=='live_share';
+     final sesliHedefi=tur=='audio_live'||hedefTuru=='audio_room'||olay=='audio_room_started';
+ 
+@@ -30252,7 +30268,7 @@ class KaydedilenlerPage extends StatelessWidget {
        data: ThemeData.light(),
        child: Scaffold(
          backgroundColor: Colors.white,
@@ -2900,7 +3056,7 @@ index 7cee90a..0fded07 100644
              ? const Center(child: Text('Kaydedilenleri görmek için giriş yap.'))
              : StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
 diff --git a/firestore.rules b/firestore.rules
-index e8cb0fd..6cf1641 100644
+index e8cb0fd..7c9ae9c 100644
 --- a/firestore.rules
 +++ b/firestore.rules
 @@ -176,6 +176,12 @@ service cloud.firestore {
@@ -2969,7 +3125,7 @@ index e8cb0fd..6cf1641 100644
            && (community450(cid).visibility == 'public' || communityInvite450(cid,request.resource.data.inviteCode)); }
          allow get: if communitySigned450() && (uid == request.auth.uid || communityAdmin450(cid));
          allow list: if communityAdmin450(cid);
-@@ -234,20 +253,35 @@ service cloud.firestore {
+@@ -234,20 +253,41 @@ service cloud.firestore {
        }
        match /posts/{pid} {
          function approved450() { return resource.data.status == 'approved'; }
@@ -2980,21 +3136,26 @@ index e8cb0fd..6cf1641 100644
            && v.text is string && v.text.size() <= 3000 && v.mediaUrl is string && v.mediaUrl.size() <= 2048
            && (v.text.size() > 0 || v.mediaUrl.size() > 0) && v.mediaType in ['','image','video']
            && v.pinned == false && v.createdAt == request.time; }
--        allow read: if communityVisible450(cid) && (approved450() || communityAdmin450(cid) || resource.data.authorId == request.auth.uid);
+         allow read: if communityVisible450(cid) && (approved450() || communityAdmin450(cid) || resource.data.authorId == request.auth.uid);
 -        allow create: if communityMember450(cid) && validPost450()
 -          && request.resource.data.status == (community450(cid).postApproval == true && !communityAdmin450(cid) ? 'pending' : 'approved');
 -        allow update: if (communityAdmin450(cid) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','pinned'])
 -          && request.resource.data.status in ['approved','rejected','deleted'] && request.resource.data.pinned is bool)
-+        allow read: if communityVisible450(cid) && (approved450() || communityModerator456(cid) || resource.data.authorId == request.auth.uid);
 +        allow create: if communityPosting456(cid) && validPost450()
 +          && (request.resource.data.status == ((community450(cid).postApproval == true || request.auth.uid in community450(cid).get('approvalMembers',[])) && !communityAdmin450(cid) ? 'pending' : 'approved')
-+          || (communityAdmin450(cid) && request.resource.data.status == 'scheduled' && request.resource.data.publishAt is timestamp && request.resource.data.publishAt > request.time));
++          || (communityAdmin450(cid) && request.resource.data.status == 'scheduled' && request.resource.data.publishAt is timestamp && request.resource.data.publishAt > request.time && request.resource.data.publishAt <= request.time + duration.value(30,'d')));
 +        allow update: if (communityModerator456(cid) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','pinned','commentsClosed','slowSeconds'])
 +          && request.resource.data.status in ['approved','rejected','deleted'] && request.resource.data.pinned is bool
 +          && request.resource.data.get('commentsClosed',false) is bool && request.resource.data.get('slowSeconds',0) in [0,300])
            || (communityMember450(cid) && resource.data.authorId == request.auth.uid
            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']) && request.resource.data.status == 'deleted');
          allow delete: if false;
++        match /subscribers456/{uid} {
++          allow get: if communityMember450(cid) && uid == request.auth.uid;
++          allow create, update: if communityMember450(cid) && uid == request.auth.uid
++            && request.resource.data.keys().hasOnly(['uid','enabled']) && request.resource.data.uid == uid && request.resource.data.enabled is bool;
++          allow delete: if uid == request.auth.uid;
++        }
 +        match /commentLimits456/{uid} {
 +          allow get: if communityMember450(cid) && uid == request.auth.uid;
 +          allow create, update: if communityPosting456(cid) && uid == request.auth.uid
@@ -3011,7 +3172,7 @@ index e8cb0fd..6cf1641 100644
          match /likes/{uid} {
            allow read: if communityVisible450(cid) && get(/databases/$(database)/documents/communities450/$(cid)/posts/$(pid)).data.status == 'approved';
            allow create, update: if communityMember450(cid) && uid == request.auth.uid
-@@ -273,8 +307,12 @@ service cloud.firestore {
+@@ -273,8 +313,12 @@ service cloud.firestore {
          }
          match /comments/{commentId} {
            allow read: if communityVisible450(cid) && get(/databases/$(database)/documents/communities450/$(cid)/posts/$(pid)).data.status == 'approved';
@@ -3025,7 +3186,7 @@ index e8cb0fd..6cf1641 100644
              && request.resource.data.keys().hasOnly(['uid','name','text','createdAt','photoUrl','replyTo','replyName'])
              && request.resource.data.get('photoUrl','') is string && request.resource.data.get('photoUrl','').size() <= 2048
              && request.resource.data.get('replyName','') is string && request.resource.data.get('replyName','').size() <= 100
-@@ -283,7 +321,7 @@ service cloud.firestore {
+@@ -283,7 +327,7 @@ service cloud.firestore {
                exists(/databases/$(database)/documents/communities450/$(cid)/posts/$(pid)/comments/$(request.resource.data.replyTo))) && request.resource.data.uid == request.auth.uid
              && request.resource.data.name is string && request.resource.data.name.size() <= 100
              && request.resource.data.text is string && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 500 && request.resource.data.createdAt == request.time;
@@ -3034,7 +3195,7 @@ index e8cb0fd..6cf1641 100644
            allow update: if false;
            match /reactions/{uid} {
              function reactionVisible455() { return communityVisible450(cid)
-@@ -293,20 +331,26 @@ service cloud.firestore {
+@@ -293,20 +337,26 @@ service cloud.firestore {
                && request.resource.data.uid == request.auth.uid
                && request.resource.data.emoji in ['❤️','👍','😂','😮','😢','😡']
                && request.resource.data.createdAt == request.time; }
@@ -3064,7 +3225,7 @@ index e8cb0fd..6cf1641 100644
          allow delete: if false;
        }
      }
-@@ -341,6 +385,7 @@ service cloud.firestore {
+@@ -341,6 +391,7 @@ service cloud.firestore {
        allow read: if signedIn();
        allow create, delete: if isMe(uid);
        allow update: if isMe(uid) || relationshipUpdate();

@@ -22,6 +22,7 @@ on:
       - '.github/workflows/NgelX-BUILD456-CONSOLIDATED.yml'
       - 'tools/*456*'
       - 'app/lib/build456_widgets.dart'
+      - 'server/community456/**'
       - 'app/lib/build455_widgets.dart'
 
 concurrency:
@@ -487,6 +488,8 @@ jobs:
         run: |
           git apply --check tools/build456.patch
           git apply tools/build456.patch
+          node --check server/community456/index.mjs
+          node tools/build456_policy_test.mjs
 
       - name: Test Build456 relative times, short errors and small-screen UI
         working-directory: app
@@ -607,6 +610,12 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
+
+      - name: Deploy isolated community notification, counter and scheduled publishing services
+        env:
+          FIREBASE_SERVICE_ACCOUNT_NGELX_44EED: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_NGELX_44EED }}
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: python3 tools/deploy_build456_functions.py
 
       - name: Deploy verified additive community comment rules
         env:
