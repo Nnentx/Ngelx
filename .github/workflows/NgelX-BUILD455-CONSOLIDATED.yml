@@ -590,6 +590,20 @@ jobs:
           cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/NgelX-1.0.230-Build-455-CONSOLIDATED-DEVICE-FIXES.apk
           sha256sum build/app/outputs/flutter-apk/NgelX-1.0.230-Build-455-CONSOLIDATED-DEVICE-FIXES.apk > build/app/outputs/flutter-apk/NgelX-1.0.230-Build-455-CONSOLIDATED-DEVICE-FIXES.apk.sha256
 
+      - name: Java 21 for production rules verification
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Deploy verified additive community comment rules
+        env:
+          FIREBASE_SERVICE_ACCOUNT_NGELX_44EED: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_NGELX_44EED }}
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          python3 -m pip install google-auth requests
+          python3 tools/deploy_build455_rules.py
+
       - name: Upload signed candidate and tested rules for review
         uses: actions/upload-artifact@v4
         with:
