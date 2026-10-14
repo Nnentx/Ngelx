@@ -41,6 +41,7 @@ class _Ngelx455CommentsState extends State<Ngelx455Comments> {
   late final comments = widget.post.collection('comments').orderBy('createdAt').snapshots();
   String replyId = '', replyName = '';
   bool sending = false;
+  final expandedReplies = <String>{};
   @override void dispose() { input.dispose(); super.dispose(); }
   Future<void> send() async {
     final body = input.text.trim(), me = _communityUid450;
@@ -59,12 +60,12 @@ class _Ngelx455CommentsState extends State<Ngelx455Comments> {
     } catch (e) { if (mounted) _communityError450(context, e); }
     finally { if (mounted) setState(() => sending = false); }
   }
-  Widget comment(QueryDocumentSnapshot<Map<String, dynamic>> doc) {
+  Widget comment(QueryDocumentSnapshot<Map<String, dynamic>> doc, {int replyCount = 0, bool isReply = false}) {
     final v = doc.data(), uid = (doc.data()['uid'] ?? '').toString();
     final name = (v['name'] ?? 'Üye').toString();
     final timestamp = v['createdAt'];
     final date = timestamp is Timestamp ? timestamp.toDate().toLocal().toString().substring(0, 16) : 'Gönderiliyor…';
-    return Padding(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+    return Padding(padding: EdgeInsets.fromLTRB(isReply ? 48 : 16, 6, 16, 6),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
         InkWell(onTap: uid.isEmpty ? null : () => Navigator.push(context,
           MaterialPageRoute(builder: (_) => KullaniciProfilPage(uid: uid))),
@@ -91,8 +92,11 @@ class _Ngelx455CommentsState extends State<Ngelx455Comments> {
             ])),
           Wrap(crossAxisAlignment: WrapCrossAlignment.center, spacing: 8, children: [
             Text(date, style: const TextStyle(fontSize: 11, color: Color(0xFF697386))),
-            if (widget.member) TextButton(onPressed: () => setState(() { replyId = doc.id; replyName = name; }), child: const Text('Yanıtla')),
+            if (widget.member) TextButton(onPressed: () => setState(() { replyId = isReply ? (v['replyTo'] ?? doc.id).toString() : doc.id; replyName = name; }), child: const Text('Yanıtla')),
             Ngelx455Reactions(ref: doc.reference.collection('reactions'), enabled: widget.member),
+            if (replyCount > 0) TextButton(onPressed: () => setState(() {
+              expandedReplies.contains(doc.id) ? expandedReplies.remove(doc.id) : expandedReplies.add(doc.id);
+            }), child: Text(expandedReplies.contains(doc.id) ? 'Yanıtları gizle' : '$replyCount yanıtı gör')),
           ]),
         ])),
       ]));
@@ -105,9 +109,18 @@ class _Ngelx455CommentsState extends State<Ngelx455Comments> {
           if (s.hasError) return const Center(child: Text('Yorumlar yüklenemedi. Yeniden açmayı dene.'));
           if (!s.hasData) return const Center(child: CircularProgressIndicator());
           final docs = s.data!.docs;
+          final ids = docs.map((d) => d.id).toSet();
+          final roots = docs.where((d) => !ids.contains((d.data()['replyTo'] ?? '').toString())).toList();
+          // Replies always target the original root so nested responses remain visible.
+          final rows = <Widget>[];
+          for (final root in roots) {
+            final replies = docs.where((d) => d.data()['replyTo'] == root.id).toList();
+            rows.add(comment(root, replyCount: replies.length));
+            if (expandedReplies.contains(root.id)) rows.addAll(replies.map((d) => comment(d, isReply: true)));
+          }
           return Column(children: [
             Padding(padding: const EdgeInsets.all(12), child: Text('Yorumlar (${docs.length})', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800))),
-            Expanded(child: docs.isEmpty ? const Center(child: Text('İlk yorumu sen yaz.')) : ListView(children: docs.map(comment).toList())),
+            Expanded(child: docs.isEmpty ? const Center(child: Text('İlk yorumu sen yaz.')) : ListView(children: rows)),
           ]);
         })),
         if (replyId.isNotEmpty) ListTile(dense: true, title: Text('$replyName kişisine yanıt'), trailing: IconButton(
