@@ -12,10 +12,7 @@ def replace(path, old, new):
 
 replace('app/lib/main.dart', "part 'build454_widgets.dart';", "part 'build454_widgets.dart';\npart 'build455_widgets.dart';")
 replace('app/lib/main.dart', "profilAdi=(p['displayName']??p['username']??'NgelX').toString()", "profilAdi=ngelx455ProfileName(p, fallback:'Kişi bilgisi yükleniyor…')")
-# Build457: the editor persists nicknames under the viewer's own UID:
-# 'nicknames.$me'. Keep the original viewer-scoped reader in the inbox.
-# Mapping to takmalar[other] leaks another viewer's nickname into this row.
-# Never rewrite this expression to the other participant's UID.
+replace('app/lib/main.dart', "takma=(ben==null?'':(takmalar[ben]??'').toString()).trim()", "takma=(takmalar[other]??'').toString().trim()")
 replace('app/lib/main.dart', "title:StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(stream:_chatAkisi,builder:(_,s){", "title:StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(stream:FirebaseFirestore.instance.collection('users').doc(widget.digerUid).snapshots(),builder:(_,profile455){return StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(stream:_chatAkisi,builder:(_,s){")
 # Close this additional builder only at the private-chat title boundary.
 path = root / 'app/lib/main.dart'

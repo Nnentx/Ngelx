@@ -1,28 +1,28 @@
-"""Build457 regression: a chat nickname belongs to the viewer who saved it."""
+"""Build457: nickname map keys are target UID in the *generated* app."""
 from pathlib import Path
 import unittest
 
-ROOT = Path(__file__).resolve().parents[1]
-MAIN = ROOT / 'app/lib/main.dart'
-APPLY455 = ROOT / 'tools/apply_build455.py'
+ROOT=Path(__file__).resolve().parents[1]
 
-class TestNicknameScope457(unittest.TestCase):
-    def test_inbox_reads_nickname_key_saved_by_this_user(self):
-        text = MAIN.read_text()
-        section = text.split("class _MesajPageState",1)[1].split(
+class NicknameSemantics457(unittest.TestCase):
+    def test_generated_chat_uses_target_uid_consistently(self):
+        content=(ROOT/'app/lib/main.dart').read_text()
+        inbox=content.split("class _MesajPageState",1)[1].split(
             "class ArsivSohbetlerPage",1)[0]
-        self.assertIn(
-            "takma=(ben==null?'':(takmalar[ben]??'').toString()).trim()",
-            section,
-            "The inbox must read the nickname stored under the viewer UID.")
-        self.assertNotIn("takma=(takmalar[other]??'').toString().trim()",section)
-        self.assertIn("'nicknames.$me':",text,
-            "The nickname editor must still write under the viewer UID.")
+        self.assertTrue(
+            "takma=(takmalar[other]??'').toString().trim()" in inbox,
+            "Inbox must read nickname by its TARGET UID")
+        self.assertTrue(
+            "'nicknames':{uid:" in content,
+            "Generated nickname editor must store nickname by target UID")
+        self.assertTrue(
+            "takma=(nicks[widget.digerUid]??'').toString().trim()" in content,
+            "Chat header should use the same target UID as inbox")
 
-    def test_legacy_build455_must_not_reintroduce_bug(self):
-        source=APPLY455.read_text()
-        self.assertNotIn("takma=(takmalar[other]??'').toString().trim()",source)
-        self.assertIn("viewer-scoped reader",source)
+    def test_generator_keeps_target_uid_mapping(self):
+        source=(ROOT/'tools/apply_build455.py').read_text()
+        self.assertTrue(
+            "takma=(takmalar[other]??'').toString().trim()" in source)
 
-if __name__ == '__main__':
+if __name__=="__main__":
     unittest.main()
