@@ -16,13 +16,13 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh run watch 38521044774 --repo Nnentx/Ngelx --exit-status --interval 20
-          test "$(gh api repos/Nnentx/Ngelx/actions/runs/38521044774 --jq .head_sha)" = "966d48e05048c25588f585681fbe644edf91478d"
-          test "$(gh api repos/Nnentx/Ngelx/actions/runs/38521044774 --jq .conclusion)" = "success"
+          gh run watch 38521285091 --repo Nnentx/Ngelx --exit-status --interval 20
+          test "$(gh api repos/Nnentx/Ngelx/actions/runs/38521285091 --jq .head_sha)" = "a556df09ea156e51e2838d4e84cbe859b29360c3"
+          test "$(gh api repos/Nnentx/Ngelx/actions/runs/38521285091 --jq .conclusion)" = "success"
       - name: Download exact successfully tested artifact
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh run download 38521044774 --repo Nnentx/Ngelx --name NgelX-1.0.228-Build-453-CONSOLIDATED-DEVICE-FIXES --dir release453
+        run: gh run download 38521285091 --repo Nnentx/Ngelx --name NgelX-1.0.228-Build-453-CONSOLIDATED-DEVICE-FIXES --dir release453
       - name: Validate published APK bytes
         run: |
           python3 - <<'PY'
@@ -40,4 +40,4 @@ jobs:
       - name: Publish exact test release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create v1.0.228-build453-test NgelX-1.0.228-Build-453.apk NgelX-1.0.228-Build-453.apk.sha256 --repo Nnentx/Ngelx --target 966d48e05048c25588f585681fbe644edf91478d --prerelease --title "NgelX 1.0.228 / Build 453 test" --notes-file release-notes453.md
+        run: gh release create v1.0.228-build453-test NgelX-1.0.228-Build-453.apk NgelX-1.0.228-Build-453.apk.sha256 --repo Nnentx/Ngelx --target a556df09ea156e51e2838d4e84cbe859b29360c3 --prerelease --title "NgelX 1.0.228 / Build 453 test" --notes-file release-notes453.md
