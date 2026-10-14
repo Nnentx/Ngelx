@@ -117,16 +117,19 @@ source=source[:error_start]+'''void _communityError450(BuildContext c,Object e){
 path.write_text(source)
 replace('app/lib/build446_call_lifecycle.dart', '  bool _observing=false,_foreground=true;', '''  bool _observing=false,_foreground=true;
   Future<void> clearForAccount455()async{
+    final pending=ngelxCallSession444.room;
     for(final item in _calls.entries.toList()){
       await detach(item.value.room);
       try{await item.value.room.disconnect();}catch(_){}
       if(_ngelxArkaPlanAramaOdalari.containsKey(item.key))await ngelxArkaPlanAramayiTemizle(item.key);
       ngelxCallSession444.release(item.key);
     }
-    final pending=ngelxCallSession444.room;
     if(pending!=null)ngelxCallSession444.release(pending);
   }''')
 replace('app/lib/build448_incoming_calls.dart', '      await _stop();\n      if(epoch!=_authEpoch454)return;', '      await _stop();\n      await ngelx446Calls.clearForAccount455();\n      if(epoch!=_authEpoch454)return;')
+replace('app/lib/build448_incoming_calls.dart', '  String? _ringing,_handling;', '  String? _ringing,_handling,_account455;')
+replace('app/lib/build448_incoming_calls.dart', '      final epoch=++_authEpoch454;', '      final epoch=++_authEpoch454;\n      final accountChanged455=_account455!=user?.uid;_account455=user?.uid;')
+replace('app/lib/build448_incoming_calls.dart', '      await ngelx446Calls.clearForAccount455();', '      if(accountChanged455)await ngelx446Calls.clearForAccount455();')
 replace('app/lib/build448_incoming_calls.dart', "final ref=FirebaseFirestore.instance.collection('chats').doc(chat),d=await ref.get();", "final ref=FirebaseFirestore.instance.collection('chats').doc(chat),d=await ref.get(const GetOptions(source:Source.server)).timeout(const Duration(seconds:8));\n      if(FirebaseAuth.instance.currentUser?.uid!=me)return;")
 replace('app/lib/main.dart', '      await kontrol.initialize();', '      await kontrol.initialize().timeout(const Duration(seconds:15));')
 replace('app/lib/main.dart', 'final Expando<bool> _ngelx444Watched=Expando<bool>();', 'final Expando<bool> _ngelx444Watched=Expando<bool>();\nfinal Expando<double> _ngelx455CallVideoVolume=Expando<double>();')
