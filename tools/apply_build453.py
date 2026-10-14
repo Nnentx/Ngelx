@@ -50,25 +50,49 @@ a=s.index('      try{\n        await Permission.notification.request();');b=s.in
 s=s[:a]+"      unawaited(registerDevice453());\n"+s[b:]
 pos=s.index('  final Set<String> _dispatch452=')
 s=s[:pos]+"""  bool _registering453=false;\n  bool _warnedNotifications453=false;
+  Timer? _registrationRetry453;
   @override void didChangeAppLifecycleState(AppLifecycleState state){if(state==AppLifecycleState.resumed)unawaited(registerDevice453());}
-  Future<void> registerDevice453()async{
+  Future<void> registerDevice453({int retryRound=0})async{
     final user=FirebaseAuth.instance.currentUser;if(user==null||user.isAnonymous||_registering453)return;
+    _registrationRetry453?.cancel();_registrationRetry453=null;
     _registering453=true;
+    var registered=false;
     try{
       await Permission.notification.request();
       for(var n=0;n<3;n++){
         if(FirebaseAuth.instance.currentUser?.uid!=user.uid)return;
         try{
-          final token=await channel.invokeMethod<String>('getPushToken');
+          final token=await channel.invokeMethod<String>('getPushToken').timeout(const Duration(seconds:8));
           if(token==null||token.isEmpty)throw StateError('token_not_ready');
           if(FirebaseAuth.instance.currentUser?.uid!=user.uid)return;
           await FirebaseFirestore.instance.collection('_call_devices').doc(user.uid).collection('tokens').doc(token.hashCode.toUnsigned(32).toString()).set({'token':token,'uid':user.uid,'updatedAt':FieldValue.serverTimestamp()}).timeout(const Duration(seconds:8));
-          final status=await channel.invokeMapMethod<String,dynamic>('callNotificationStatus453');
-          if(!_warnedNotifications453&&status!=null&&status.values.any((v)=>v==false)){final context=ngelxNavigatorKey.currentContext;if(context!=null&&context.mounted){_warnedNotifications453=true;ngelxDurumMesaji(context,'Bu telefonda arama bildirimi veya zil sesi kapalı. Telefonun bildirim ve ses ayarlarını kontrol et.',tip:'uyari');}}
+          registered=true;
+          try{
+            final status=await channel.invokeMapMethod<String,dynamic>('callNotificationStatus453').timeout(const Duration(seconds:3));
+            if(!_warnedNotifications453&&status!=null&&status.values.any((v)=>v==false)){final context=ngelxNavigatorKey.currentContext;if(context!=null&&context.mounted){_warnedNotifications453=true;ngelxDurumMesaji(context,'Bu telefonda arama bildirimi veya zil sesi kapalı. Telefonun bildirim ve ses ayarlarını kontrol et.',tip:'uyari');}}
+          }catch(_){}
           return;
         }catch(_){if(n<2)await Future<void>.delayed(Duration(seconds:n+1));}
       }
-    }finally{_registering453=false;}
+    }catch(_){
+      // A denied or temporarily unavailable notification permission must not
+      // prevent registering the next signed-in account.
+    }finally{
+      _registering453=false;
+      final current=FirebaseAuth.instance.currentUser;
+      if(current!=null&&!current.isAnonymous){
+        if(current.uid!=user.uid){
+          unawaited(registerDevice453());
+        }else if(!registered&&retryRound<2){
+          _registrationRetry453=Timer(const Duration(seconds:30),(){
+            _registrationRetry453=null;
+            if(FirebaseAuth.instance.currentUser?.uid==user.uid&&WidgetsBinding.instance.lifecycleState==AppLifecycleState.resumed){
+              unawaited(registerDevice453(retryRound:retryRound+1));
+            }
+          });
+        }
+      }
+    }
   }
   Future<void> dispatchCommitted453(DocumentReference<Map<String,dynamic>> ref)async{
     final uid=FirebaseAuth.instance.currentUser?.uid;if(uid==null)return;
