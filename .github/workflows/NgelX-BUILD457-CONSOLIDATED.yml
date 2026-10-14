@@ -530,6 +530,11 @@ jobs:
         run: |
           python3 -m unittest discover -s tools -p 'test_build457_nickname_scope.py'
 
+      - name: Build457 chat photo save-state and retry UI regression
+        run: |
+          python3 tools/apply_build457_chat_photo.py
+          python3 -m unittest discover -s tools -p 'test_build457_chat_photo.py'
+
       - name: Test Build457 cover permissions and minimal update payload
         run: |
           cp tools/build457_cover_test.dart app/test/build457_cover_test.dart
