@@ -100,6 +100,22 @@ replace('app/lib/build446_call_lifecycle.dart', '  bool _observing=false,_foregr
 replace('app/lib/build448_incoming_calls.dart', '      await _stop();\n      if(epoch!=_authEpoch454)return;', '      await _stop();\n      await ngelx446Calls.clearForAccount455();\n      if(epoch!=_authEpoch454)return;')
 replace('app/lib/build448_incoming_calls.dart', "final ref=FirebaseFirestore.instance.collection('chats').doc(chat),d=await ref.get();", "final ref=FirebaseFirestore.instance.collection('chats').doc(chat),d=await ref.get(const GetOptions(source:Source.server)).timeout(const Duration(seconds:8));\n      if(FirebaseAuth.instance.currentUser?.uid!=me)return;")
 replace('app/lib/main.dart', '      await kontrol.initialize();', '      await kontrol.initialize().timeout(const Duration(seconds:15));')
+replace('app/lib/main.dart', 'final Expando<bool> _ngelx444Watched=Expando<bool>();', 'final Expando<bool> _ngelx444Watched=Expando<bool>();\nfinal Expando<double> _ngelx455CallVideoVolume=Expando<double>();')
+replace('app/lib/main.dart', '  if(ngelxCallSession444.busy){try{await player.pause();}catch(_){}return;}', '''  if(ngelxCallSession444.busy&&player is! VideoPlayerController){try{await player.pause();}catch(_){}return;}
+  if(player is VideoPlayerController){
+    if(ngelxCallSession444.busy){
+      _ngelx455CallVideoVolume[player]??=player.value.volume;
+      await player.setVolume(0);
+    }else if(_ngelx455CallVideoVolume[player]!=null){
+      final previous=_ngelx455CallVideoVolume[player]!;_ngelx455CallVideoVolume[player]=null;
+      await player.setVolume(previous);
+    }
+  }''')
+replace('app/lib/main.dart', '      if(ngelxCallSession444.busy){unawaited(player.pause());}', '''      if(ngelxCallSession444.busy){
+        if(player.value.volume>0){_ngelx455CallVideoVolume[player]??=player.value.volume;unawaited(player.setVolume(0));}
+      }else if(_ngelx455CallVideoVolume[player]!=null){
+        final previous=_ngelx455CallVideoVolume[player]!;_ngelx455CallVideoVolume[player]=null;unawaited(player.setVolume(previous));
+      }''')
 replace('app/lib/community450.dart', '      await p.initialize();', '      await p.initialize().timeout(const Duration(seconds:15));')
 replace('app/lib/main.dart', "          final docs=_inboxBelgeleri438(s.data?.docs??[]).where((d){", "          if(!s.hasData&&!s.hasError)return const Center(child:CircularProgressIndicator(color:mor));\n          final docs=_inboxBelgeleri438(s.data?.docs??[]).where((d){")
 replace('app/lib/main.dart', '              if(satirlar.isEmpty)return ListView(', "              if(satirlar.isEmpty&&s.data?.metadata.isFromCache==true)return const Center(child:Text('Sohbetler eşitleniyor…',style:TextStyle(color:mor,fontSize:14)));\n              if(satirlar.isEmpty)return ListView(")
