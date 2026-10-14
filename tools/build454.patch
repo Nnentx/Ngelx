@@ -1,0 +1,798 @@
+--- a/app/android/app/src/main/kotlin/com/nnentx/ngelx_app/CallAudioService.kt
++++ b/app/android/app/src/main/kotlin/com/nnentx/ngelx_app/CallAudioService.kt
+@@ -18,7 +18,7 @@
+         val manager = getSystemService(NotificationManager::class.java)
+         if (Build.VERSION.SDK_INT >= 26) manager.createNotificationChannel(
+             NotificationChannel("ngelx_call", "Devam eden görüşme", NotificationManager.IMPORTANCE_LOW))
+-        val intent = Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
++        val intent = Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP).putExtra("callReturn454", true)
+         val pending = PendingIntent.getActivity(this, 446, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+         val builder = if (Build.VERSION.SDK_INT >= 26) Notification.Builder(this, "ngelx_call") else Notification.Builder(this)
+         val notification = builder.setContentTitle("NgelX görüşmesi devam ediyor")
+--- a/app/android/app/src/main/kotlin/com/nnentx/ngelx_app/IncomingCallService.kt
++++ b/app/android/app/src/main/kotlin/com/nnentx/ngelx_app/IncomingCallService.kt
+@@ -7,6 +7,8 @@
+ import android.app.Person
+ import android.content.Context
+ import android.content.Intent
++import android.media.AudioManager
++import android.media.Ringtone
+ import android.media.AudioAttributes
+ import android.media.RingtoneManager
+ import android.os.Build
+@@ -31,9 +33,12 @@
+     companion object {
+         const val CHANNEL = "ngelx_incoming_calls448"
+         private val timer = Handler(Looper.getMainLooper())
++        private val ringing = java.util.concurrent.ConcurrentHashMap<String, Ringtone>()
++        fun cancelAll(context: Context) { alerts.keys.toList().forEach { cancel(context, it) } }
+         private val alerts = java.util.concurrent.ConcurrentHashMap<String, Runnable>()
+         fun cancel(context: Context, room: String) {
+             alerts.remove(room)?.let { timer.removeCallbacks(it) }
++            ringing.remove(room)?.let { sound -> timer.post { try { sound.stop() } catch(_: Exception) {} } }
+             context.getSystemService(NotificationManager::class.java).cancel(room.hashCode())
+         }
+         fun show(context: Context, chat: String, room: String, title: String, video: Boolean) {
+@@ -79,6 +84,23 @@
+             val application = context.applicationContext
+             val timeout = Runnable { cancel(application, room) }
+             alerts.put(room, timeout)?.let { timer.removeCallbacks(it) }
++            timer.post {
++                if(!alerts.containsKey(room)) return@post
++                val audio = application.getSystemService(AudioManager::class.java)
++                val channel = if(Build.VERSION.SDK_INT >= 26) manager.getNotificationChannel(CHANNEL) else null
++                val allowed = (Build.VERSION.SDK_INT < 24 || manager.areNotificationsEnabled()) &&
++                    (channel == null || (channel.importance > 0 && channel.sound != null)) &&
++                    audio.ringerMode == AudioManager.RINGER_MODE_NORMAL &&
++                    audio.getStreamVolume(AudioManager.STREAM_RING) > 0 &&
++                    (Build.VERSION.SDK_INT < 23 || manager.currentInterruptionFilter == NotificationManager.INTERRUPTION_FILTER_ALL)
++                if(allowed) try {
++                    val sound = RingtoneManager.getRingtone(application, ringtone)
++                    sound.audioAttributes = AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE).setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build()
++                    if(Build.VERSION.SDK_INT >= 28) sound.isLooping = true
++                    ringing.put(room, sound)?.stop()
++                    sound.play()
++                } catch(_: Exception) {}
++            }
+             timer.postDelayed(timeout, 60000)
+         }
+     }
+--- a/app/android/app/src/main/kotlin/com/nnentx/ngelx_app/MainActivity.kt
++++ b/app/android/app/src/main/kotlin/com/nnentx/ngelx_app/MainActivity.kt
+@@ -33,11 +33,15 @@
+ 
+     private var incomingChannel448: MethodChannel? = null
+     private fun pendingCall448(): Map<String, String>? {
++        if(intent.getBooleanExtra("callReturn454", false)) {
++            intent.removeExtra("callReturn454")
++            return mapOf("chat" to "", "room" to "", "action" to "resume")
++        }
+         val chat = intent.getStringExtra("callChat448") ?: return null
+         val room = intent.getStringExtra("callRoom448") ?: return null
+         val action = intent.getStringExtra("callAction448") ?: "open"
+         intent.removeExtra("callChat448"); intent.removeExtra("callRoom448"); intent.removeExtra("callAction448")
+-        IncomingCallService.cancel(this, room)
++        if(action == "answer" || action == "reject") IncomingCallService.cancel(this, room)
+         return mapOf("chat" to chat, "room" to room, "action" to action)
+     }
+     override fun onNewIntent(intent: Intent) {
+@@ -66,6 +70,7 @@
+                     }
+                     "getPushToken" -> com.google.firebase.messaging.FirebaseMessaging.getInstance().token.addOnSuccessListener { result.success(it) }.addOnFailureListener { result.error("PUSH_TOKEN", "Token unavailable", null) }
+                     "pendingAction" -> result.success(pendingCall448())
++                    "cancelAll454" -> { IncomingCallService.cancelAll(this); result.success(null) }
+                     "cancel" -> { call.argument<String>("room")?.let { IncomingCallService.cancel(this,it) }; result.success(null) }
+                     "show" -> { IncomingCallService.show(this,call.argument<String>("chat") ?: "",call.argument<String>("room") ?: "",call.argument<String>("title") ?: "NgelX",call.argument<Boolean>("video") == true); result.success(null) }
+                     else -> result.notImplemented()
+--- a/app/lib/build445_inbox_model.dart
++++ b/app/lib/build445_inbox_model.dart
+@@ -65,7 +65,7 @@
+       return StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(stream:_stories,builder:(_,stories){
+         final owners=(stories.data?.docs??[]).where((d)=>ngelxHikayeAktif(d.data())&&d.data()['archived']!=true)
+           .map((d)=>(d.data()['ownerId']??'').toString()).toSet();
+-        return SizedBox(height:86,child:ListView.builder(
++        return SizedBox(height:132,child:ListView.builder(
+           key:PageStorageKey('inbox-friends-'+widget.uid),scrollDirection:Axis.horizontal,
+           padding:const EdgeInsets.symmetric(horizontal:12),itemExtent:84,itemCount:ids.length,
+           itemBuilder:(_,index){
+@@ -95,7 +95,8 @@
+                     if(!self&&ngelx434Aktiflik(p)=='Çevrimiçi')Positioned(right:0,bottom:0,child:Ngelx436PresenceAccess(other:id,target:p,child:Container(width:17,height:17,decoration:BoxDecoration(color:const Color(0xFF28B76B),shape:BoxShape.circle,border:Border.all(color:Colors.white,width:2))))),
+                   ]),
+                   const SizedBox(height:4),
+-                  Text(name,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Color(0xFF101827),fontSize:12.5,fontWeight:FontWeight.w600)),
++                  Text(name,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Color(0xFF101827),fontSize:13,fontWeight:FontWeight.w700)),
++                  if(!self)Ngelx436PresenceAccess(other:id,target:p,child:Text(ngelx434Aktiflik(p),maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Color(0xFF52735F),fontSize:11,fontWeight:FontWeight.w600))),
+                 ]),
+               ));
+             });
+--- a/app/lib/build446_call_lifecycle.dart
++++ b/app/lib/build446_call_lifecycle.dart
+@@ -5,6 +5,7 @@
+   final lk.Room room;
+   final DocumentReference<Map<String,dynamic>> ref;
+   bool hidden=false,restoreCamera=false,muted=false;
++  Route<dynamic>? route;
+   StreamSubscription<DocumentSnapshot<Map<String,dynamic>>>? subscription;
+   _Call446(this.room,this.ref);
+ }
+@@ -19,7 +20,7 @@
+     _serial=next.catchError((Object e){debugPrint('call lifecycle: $e');});
+     return next;
+   }
+-  Future<void> attach(String name,lk.Room room,DocumentReference<Map<String,dynamic>> ref,{bool cameraWanted=false})async{
++  Future<void> attach(String name,lk.Room room,DocumentReference<Map<String,dynamic>> ref,{bool cameraWanted=false,Route<dynamic>? route})async{
+     if(!_observing){WidgetsBinding.instance.addObserver(this);_observing=true;}
+     _foreground=WidgetsBinding.instance.lifecycleState==null||WidgetsBinding.instance.lifecycleState==AppLifecycleState.resumed;
+     final current=await ref.get().timeout(const Duration(seconds:6));
+@@ -27,7 +28,7 @@
+     final me=FirebaseAuth.instance.currentUser?.uid;
+     if(data['callModerationRoom']==name&&List<String>.from(data['callKickedUids']??const[]).contains(me))throw StateError('Bu görüşmeden çıkarıldın.');
+     await _calls.remove(name)?.subscription?.cancel();
+-    final entry=_Call446(room,ref)..restoreCamera=cameraWanted&&!_foreground;
++    final entry=_Call446(room,ref)..restoreCamera=cameraWanted&&!_foreground;entry.route=route;
+     entry.muted=data['callModerationRoom']==name&&List<String>.from(data['callMutedUids']??const[]).contains(me);
+     _calls[name]=entry;
+     entry.subscription=ref.snapshots().listen((snapshot){
+@@ -46,6 +47,13 @@
+     if(!kIsWeb&&defaultTargetPlatform==TargetPlatform.android){
+       await _native.invokeMethod<void>('start');
+     }
++  }
++  Future<void> returnTo454()async{
++    if(_calls.isEmpty)return;
++    final item=_calls.entries.first;
++    if(_ngelxArkaPlanAramaOdalari.containsKey(item.key)){await ngelx445ReturnCall(item.key);return;}
++    final route=item.value.route;
++    if(route!=null&&route.isActive)ngelxNavigatorKey.currentState?.popUntil((r)=>identical(r,route));
+   }
+   Future<void> detach(lk.Room room)async{
+     final names=_calls.entries.where((e)=>identical(e.value.room,room)).map((e)=>e.key).toList();
+--- a/app/lib/build448_incoming_calls.dart
++++ b/app/lib/build448_incoming_calls.dart
+@@ -6,13 +6,18 @@
+   StreamSubscription<QuerySnapshot<Map<String,dynamic>>>? _calls;
+   String? _ringing,_handling;
+   bool _started=false;
+-  int _epoch448=0;
++  int _epoch448=0,_authEpoch454=0;
+   void start(){
+     if(_started||kIsWeb||defaultTargetPlatform!=TargetPlatform.android)return;_started=true;WidgetsBinding.instance.addObserver(this);
+-    channel.setMethodCallHandler((call)async{if(call.method=='callAction')await _action(Map<String,dynamic>.from(call.arguments as Map));});
++    channel.setMethodCallHandler((call)async{if(call.method=='returnCall454'){await ngelx446Calls.returnTo454();return;}if(call.method=='callAction')await _action(Map<String,dynamic>.from(call.arguments as Map));});
+     _auth=FirebaseAuth.instance.authStateChanges().listen((user)async{
+-      await _calls?.cancel();_calls=null;await _stop();
+-      if(user==null||user.isAnonymous)return;
++      final epoch=++_authEpoch454;
++      final previous=_calls;_calls=null;await previous?.cancel();
++      if(epoch!=_authEpoch454)return;
++      await _stop();
++      if(epoch!=_authEpoch454)return;
++      try{await channel.invokeMethod<void>('cancelAll454');}catch(_){}
++      if(epoch!=_authEpoch454||user==null||user.isAnonymous)return;
+       unawaited(registerDevice453());
+       if(FirebaseAuth.instance.currentUser?.uid!=user.uid)return;
+       _calls=FirebaseFirestore.instance.collection('chats').where('members',arrayContains:user.uid).limit(100).snapshots().listen((s){
+@@ -132,8 +137,10 @@
+   }
+   Future<void> _action(Map<String,dynamic> args)async{
+     final chat=(args['chat']??'').toString(),room=(args['room']??'').toString(),action=args['action'];
++    if(action=='resume'){await ngelx446Calls.returnTo454();return;}
+     final me=FirebaseAuth.instance.currentUser?.uid;
+     if(me==null||chat.isEmpty||room.isEmpty||_handling==room)return;
++    if(action=='open'){await ngelx454OpenIncoming(chat,room);return;}
+     _handling=room;await _stop();try{await channel.invokeMethod<void>('cancel',{'room':room});}catch(_){}
+     try{
+       final ref=FirebaseFirestore.instance.collection('chats').doc(chat),d=await ref.get();
+--- a/app/lib/build453_widgets.dart
++++ b/app/lib/build453_widgets.dart
+@@ -19,16 +19,16 @@
+ }
+ 
+ class Ngelx453Photo extends StatelessWidget {
+-  final String url;
+-  const Ngelx453Photo({super.key,required this.url});
++  final String url;final ImageProvider? provider;
++  const Ngelx453Photo({super.key,required this.url,this.provider});
+   @override Widget build(BuildContext context){
+-    final width=math.min(320.0,MediaQuery.sizeOf(context).width*.72);
+-    return ClipRRect(borderRadius:BorderRadius.circular(18),child:Image(
+-      image:ResizeImage(NgelXAgImageProvider(url),width:(width*MediaQuery.devicePixelRatioOf(context)).ceil()),
++    final bounds=ngelx454PhotoBounds(MediaQuery.sizeOf(context));final width=bounds.width;
++    return ClipRRect(borderRadius:BorderRadius.circular(18),child:ConstrainedBox(constraints:BoxConstraints(maxWidth:width,maxHeight:bounds.height),child:Image(
++      image:ResizeImage(provider??NgelXAgImageProvider(url),width:(width*MediaQuery.devicePixelRatioOf(context)).ceil()),
+       width:width,fit:BoxFit.contain,gaplessPlayback:true,
+       frameBuilder:(_,child,frame,sync)=>frame!=null||sync?child:SizedBox(width:width,height:width*1.2,child:const Center(child:CircularProgressIndicator(strokeWidth:2))),
+       errorBuilder:(_,__,___)=>SizedBox(width:width,height:160,child:const Center(child:Icon(Icons.broken_image_outlined))),
+-    ));
++    )));
+   }
+ }
+ 
+--- a/app/lib/community450.dart
++++ b/app/lib/community450.dart
+@@ -194,10 +194,12 @@
+       Padding(
+         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+         child: TextField(
++          style:const TextStyle(color:Color(0xFF202124),fontSize:16),cursorColor:mor,
+           onChanged: (v) => setState(() => search = v.toLowerCase()),
+           decoration: InputDecoration(
+             hintText: 'Topluluk ara',
+-            prefixIcon: const Icon(Icons.search),
++            hintStyle:const TextStyle(color:Color(0xFF606875)),
++            prefixIcon: const Icon(Icons.search,color:Color(0xFF606875)),
+             filled: true,
+             fillColor: const Color(0xFFF4F5F8),
+             border: OutlineInputBorder(
+@@ -708,6 +710,19 @@
+   String tab = 'Gönderiler', search = '';
+   int postLimit = 40;
+   int feedRetry451 = 0;
++  final Map<String,Stream<QuerySnapshot<Map<String,dynamic>>>> _feeds454={};
++  Stream<QuerySnapshot<Map<String,dynamic>>> _feed454()=>_feeds454.putIfAbsent('$feedRetry451|$postLimit',()=>_loadFeed454());
++  Stream<QuerySnapshot<Map<String,dynamic>>> _loadFeed454()async*{
++    final approved=_communities450.doc(widget.id).collection('posts').where('status',isEqualTo:'approved');
++    try{await for(final snapshot in approved.orderBy('createdAt',descending:true).limit(postLimit).snapshots()){yield snapshot;}}
++    on FirebaseException catch(e){
++      if(e.code!='failed-precondition')rethrow;
++      // Approved-only fallback until the chronological composite index is ready.
++      // Client sorting preserves chronological display and the visible page limit.
++      yield* approved.snapshots();
++    }
++  }
++
+   Future<void> invite(Map<String, dynamic> v) async {
+     try {
+       final ref = FirebaseFirestore.instance
+@@ -916,13 +931,7 @@
+             if (member || v['visibility'] == 'public')
+               StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                 key:ValueKey('community-feed-$feedRetry451'),
+-                stream: _communities450
+-                    .doc(widget.id)
+-                    .collection('posts')
+-                    .where('status', isEqualTo: 'approved')
+-                    .orderBy('createdAt', descending: true)
+-                    .limit(postLimit)
+-                    .snapshots(),
++                stream: _feed454(),
+                 builder: (c, p) {
+                   if (p.hasError) {
+                     final preparing=p.error is FirebaseException&&(p.error as FirebaseException).code=='failed-precondition';
+@@ -959,7 +968,7 @@
+                           padding: EdgeInsets.all(24),
+                           child: Text('Henüz gönderi yok.'),
+                         ),
+-                      ...ds.map(
++                      ...ds.take(postLimit).map(
+                         (d) => NgelXCommunityPost450(
+                           communityId: widget.id,
+                           id: d.id,
+@@ -998,136 +1007,69 @@
+ }
+ 
+ class _NgelXCommunityCompose450State extends State<NgelXCommunityCompose450> {
+-  final text = TextEditingController();
+-  XFile? media;
+-  String type = '';
+-  bool busy = false;
+-  @override
+-  void dispose() {
+-    text.dispose();
+-    super.dispose();
+-  }
+-
+-  Future<void> pick(bool video) async {
+-    final x = video
+-        ? await ImagePicker().pickVideo(source: ImageSource.gallery)
+-        : await ImagePicker().pickImage(source: ImageSource.gallery);
+-    if (x != null && mounted)
+-      setState(() {
+-        media = x;
+-        type = video ? 'video' : 'image';
+-      });
+-  }
+-
+-  Future<void> publish() async {
+-    if (text.text.trim().isEmpty && media == null) return;
+-    setState(() => busy = true);
+-    try {
+-      final ref = _communities450.doc(widget.id).collection('posts').doc();
+-      String url = '';
+-      if (media != null) {
+-        url = type == 'image'
+-            ? await ngelxFotografYukle(
+-                dosya: media!,
+-                kind: type == 'video' ? 'videos' : 'photos',
+-                legacyPath: 'communities/${widget.id}/${ref.id}.jpg',
+-              )
+-            : await ngelxMedyaYukleDosya(
+-                dosya: media!,
+-                kind: type == 'video' ? 'videos' : 'photos',
+-                ext: 'mp4',
+-                legacyPath: 'communities/${widget.id}/${ref.id}.mp4',
+-              );
++  final text=TextEditingController();
++  XFile? media;String type='';bool busy=false;
++  int _sent454=0,_total454=0;String _stage454='';
++  DateTime? _progressAt454;
++  DocumentReference<Map<String,dynamic>>? _draft454;
++  String _uploaded454='';
++  @override void dispose(){text.dispose();super.dispose();}
++  void _progress454(int sent,int total){
++    if(!mounted)return;
++    final now=DateTime.now();
++    if(sent<total&&_progressAt454!=null&&now.difference(_progressAt454!).inMilliseconds<150)return;
++    _progressAt454=now;
++    setState((){_sent454=sent;_total454=total;_stage454='Medya yükleniyor';});
++  }
++  Future<void> pick(bool video)async{
++    if(busy)return;
++    try{final x=video?await ImagePicker().pickVideo(source:ImageSource.gallery):await ImagePicker().pickImage(source:ImageSource.gallery);
++      if(x!=null&&mounted)setState((){media=x;type=video?'video':'image';_uploaded454='';_draft454=null;});
++    }catch(e){if(mounted)_communityError450(context,e);}
++  }
++  Future<void> publish()async{
++    if(busy||(text.text.trim().isEmpty&&media==null))return;
++    final me=_communityUid450;if(me.isEmpty)return;
++    setState((){busy=true;_sent454=0;_total454=0;_stage454=media==null?'Gönderi hazırlanıyor':'Medya hazırlanıyor';});
++    final ref=_draft454??=_communities450.doc(widget.id).collection('posts').doc();
++    try{
++      if(media!=null&&_uploaded454.isEmpty){
++        _uploaded454=type=='image'
++          ?await ngelxFotografYukle(dosya:media!,kind:'photos',legacyPath:'communities/${widget.id}/${ref.id}.jpg',onProgress:_progress454)
++          :await ngelxMedyaYukleDosya(dosya:media!,kind:'videos',ext:'mp4',legacyPath:'communities/${widget.id}/${ref.id}.mp4',onProgress:_progress454);
+       }
+-      final user = await FirebaseFirestore.instance
+-          .collection('users')
+-          .doc(_communityUid450)
+-          .get();
+-      final u = user.data() ?? {};
+-      final pending =
+-          widget.value['postApproval'] == true &&
+-          !_communityAdmin450(widget.value);
+-      await ref.set({
+-        'authorId': _communityUid450,
+-        'authorName': (u['displayName'] ?? u['username'] ?? 'Üye').toString(),
+-        'authorPhoto': (u['photoUrl'] ?? '').toString(),
+-        'text': text.text.trim(),
+-        'mediaUrl': url,
+-        'mediaType': type,
+-        'status': pending ? 'pending' : 'approved',
+-        'pinned': false,
+-        'createdAt': FieldValue.serverTimestamp(),
+-      });
+-      if (mounted) {
+-        ScaffoldMessenger.of(context).showSnackBar(
+-          SnackBar(
+-            content: Text(
+-              pending
+-                  ? 'Gönderin yönetici onayına gönderildi.'
+-                  : 'Gönderin paylaşıldı.',
+-            ),
+-          ),
+-        );
+-        Navigator.pop(context);
++      if(!mounted||_communityUid450!=me){if(_uploaded454.isNotEmpty)unawaited(ngelxMedyaSil(_uploaded454).catchError((_){ }));return;}
++      setState(()=>_stage454='Gönderi kaydediliyor');
++      final user=await FirebaseFirestore.instance.collection('users').doc(me).get().timeout(const Duration(seconds:8));
++      if(!mounted||_communityUid450!=me)return;
++      final u=user.data()??<String,dynamic>{};
++      final pending=widget.value['postApproval']==true&&!_communityAdmin450(widget.value);
++      try{
++        await ref.set({'authorId':me,'authorName':(u['displayName']??u['username']??'Üye').toString(),'authorPhoto':(u['photoUrl']??'').toString(),'text':text.text.trim(),'mediaUrl':_uploaded454,'mediaType':type,'status':pending?'pending':'approved','pinned':false,'createdAt':FieldValue.serverTimestamp()}).timeout(const Duration(seconds:12));
++      }catch(_){
++        final saved=await ref.get(const GetOptions(source:Source.server)).timeout(const Duration(seconds:8));
++        if(!saved.exists||saved.data()?['authorId']!=me||saved.data()?['mediaUrl']!=_uploaded454||saved.data()?['text']!=text.text.trim())rethrow;
+       }
+-    } catch (e) {
+-      if (mounted) _communityError450(context, e);
+-    } finally {
+-      if (mounted) setState(() => busy = false);
+-    }
+-  }
+-
+-  @override
+-  Widget build(BuildContext c) => _communitySurface450(
+-    title: 'Toplulukta paylaş',
+-    body: ListView(
+-      padding: const EdgeInsets.all(20),
+-      children: [
+-        TextField(
+-          controller: text,
+-          maxLength: 3000,
+-          maxLines: 7,
+-          decoration: const InputDecoration(hintText: 'Bir şey paylaş…'),
+-        ),
+-        Wrap(
+-          spacing: 8,
+-          children: [
+-            OutlinedButton.icon(
+-              onPressed: busy ? null : () => pick(false),
+-              icon: const Icon(Icons.photo),
+-              label: Text(_ngelx438Ui("Fotoğraf")),
+-            ),
+-            OutlinedButton.icon(
+-              onPressed: busy ? null : () => pick(true),
+-              icon: const Icon(Icons.video_library),
+-              label: Text(_ngelx438Ui("Video")),
+-            ),
+-          ],
+-        ),
+-        if (media != null)
+-          ListTile(
+-            title: Text(media!.name),
+-            trailing: IconButton(
+-              onPressed: busy
+-                  ? null
+-                  : () => setState(() {
+-                      media = null;
+-                      type = '';
+-                    }),
+-              icon: const Icon(Icons.close),
+-            ),
+-          ),
+-        if (widget.value['postApproval'] == true &&
+-            !_communityAdmin450(widget.value))
+-          const Text('Bu toplulukta gönderiler yönetici onayından geçer.'),
+-        FilledButton(
+-          onPressed: busy ? null : publish,
+-          child: Text(busy ? 'Yükleniyor…' : _ngelx438Ui("Paylaş")),
+-        ),
+-      ],
+-    ),
+-  );
++      if(mounted&&_communityUid450==me){ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(pending?'Gönderin yönetici onayına gönderildi.':'Gönderin paylaşıldı.')));Navigator.pop(context);}
++    }catch(e){if(mounted)_communityError450(context,e);}
++    finally{if(mounted)setState(()=>busy=false);}
++  }
++  @override Widget build(BuildContext c){
++    final fraction=ngelx454UploadFraction(_sent454,_total454);
++    return _communitySurface450(title:'Toplulukta paylaş',body:ListView(padding:const EdgeInsets.all(20),children:[
++      Container(padding:const EdgeInsets.all(16),decoration:BoxDecoration(color:const Color(0xFFF6F3FB),borderRadius:BorderRadius.circular(20)),child:Row(children:[_communityImage450((widget.value['photoUrl']??'').toString(),size:44,circle:true),const SizedBox(width:12),Expanded(child:Text((widget.value['name']??'Topluluk').toString(),style:const TextStyle(color:Colors.black87,fontSize:18,fontWeight:FontWeight.w800)))])),
++      const SizedBox(height:16),
++      TextField(controller:text,enabled:!busy,maxLength:3000,minLines:3,maxLines:8,style:const TextStyle(color:Colors.black87,fontSize:16,height:1.35),decoration:InputDecoration(hintText:'Bir şey paylaş…',hintStyle:const TextStyle(color:Color(0xFF6B7280)),filled:true,fillColor:const Color(0xFFF4F5F8),border:OutlineInputBorder(borderSide:BorderSide.none,borderRadius:BorderRadius.circular(20)))),
++      const SizedBox(height:12),
++      Wrap(spacing:12,children:[OutlinedButton.icon(onPressed:busy?null:()=>pick(false),icon:const Icon(Icons.photo,color:mor),label:const Text('Fotoğraf')),OutlinedButton.icon(onPressed:busy?null:()=>pick(true),icon:const Icon(Icons.video_library,color:mor),label:const Text('Video'))]),
++      if(media!=null)...[const SizedBox(height:16),Ngelx454LocalMedia(key:ValueKey(media!.path),file:media!,video:type=='video'),ListTile(contentPadding:EdgeInsets.zero,title:Text(media!.name,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black87)),trailing:IconButton(tooltip:'Medyayı kaldır',onPressed:busy?null:()=>setState((){media=null;type='';_uploaded454='';_draft454=null;}),icon:const Icon(Icons.close)))],
++      if(widget.value['postApproval']==true&&!_communityAdmin450(widget.value))const Padding(padding:EdgeInsets.symmetric(vertical:12),child:Text('Bu toplulukta gönderiler yönetici onayından geçer.',style:TextStyle(color:Colors.black54))),
++      if(busy)Container(padding:const EdgeInsets.all(16),margin:const EdgeInsets.only(bottom:16),decoration:BoxDecoration(color:const Color(0xFFF0E9FF),borderRadius:BorderRadius.circular(16)),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(_stage454,style:const TextStyle(color:Color(0xFF43326C),fontWeight:FontWeight.w700)),const SizedBox(height:10),LinearProgressIndicator(value:_stage454=='Medya yükleniyor'?fraction:null),const SizedBox(height:8),Text(fraction==null?'Bağlantı ve dosya hazırlanıyor…':'${(fraction*100).floor()}% • ${(_sent454/1048576).toStringAsFixed(1)} / ${(_total454/1048576).toStringAsFixed(1)} MB',style:const TextStyle(color:Color(0xFF43326C)))])),
++      FilledButton(onPressed:busy?null:publish,child:Padding(padding:const EdgeInsets.symmetric(vertical:12),child:Text(busy?'İşlem sürüyor…':'Paylaş',style:const TextStyle(fontSize:16,fontWeight:FontWeight.w700)))),
++    ]));
++  }
+ }
++
+ 
+ class NgelXCommunityVideo450 extends StatefulWidget {
+   final String url;
+--- a/app/lib/live_broadcast_studio.dart
++++ b/app/lib/live_broadcast_studio.dart
+@@ -586,7 +586,7 @@
+           padding: const EdgeInsets.fromLTRB(18, 8, 18, 28),
+           children: [
+             Center(child: ConstrainedBox(
+-              constraints: const BoxConstraints(maxHeight: 430),
++              constraints: BoxConstraints(maxWidth:MediaQuery.sizeOf(context).width-36),
+               child: AspectRatio(
+                 aspectRatio: onizlemeOrani,
+                 child: ClipRRect(
+--- a/app/lib/main.dart
++++ b/app/lib/main.dart
+@@ -56,6 +56,7 @@
+ part 'build448_live_guests.dart';
+ part 'build448_incoming_calls.dart';
+ part 'build453_widgets.dart';
++part 'build454_widgets.dart';
+ part 'feed_creator_badge.dart';
+ part 'story_v66.dart';
+ part 'build445_inbox_model.dart';
+@@ -5503,18 +5504,22 @@
+ class _AnaEkranState extends State<AnaEkran> {
+   int secili = 0;
+   String? acilanAramaId;
++  String? _callUid454;
++  Stream<QuerySnapshot<Map<String,dynamic>>>? _callStream454;
++  final Map<String,Future<DocumentSnapshot<Map<String,dynamic>>>> _callProfiles454={};
+ 
+   Widget gelenAramaKatmani(){
+     final ben=FirebaseAuth.instance.currentUser?.uid;
+     if(ben==null||FirebaseAuth.instance.currentUser?.isAnonymous==true)return const SizedBox.shrink();
++    if(_callUid454!=ben){_callUid454=ben;_callProfiles454.clear();_callStream454=FirebaseFirestore.instance.collection('chats').where('members',arrayContains:ben).limit(100).snapshots();}
+     return StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
+-      stream:FirebaseFirestore.instance.collection('chats').where('members',arrayContains:ben).limit(100).snapshots(),
++      stream:_callStream454,
+       builder:(context,s){
+         final adaylar=(s.data?.docs??[]).where((d){
+           final v=d.data();
+           if((v['callStartedBy']??'').toString()==ben||v['callStatus']!='ringing')return false;
+           final t=v['callCreatedAt'];
+-          if(t is Timestamp&&DateTime.now().difference(t.toDate()).inMinutes>3)return false;
++          if(t is! Timestamp||DateTime.now().difference(t.toDate()).inSeconds>=60)return false;
+           return (v['callRoomName']??'').toString().isNotEmpty;
+         }).toList()
+           ..sort((a,b){
+@@ -5525,7 +5530,7 @@
+         if(adaylar.isEmpty)return const SizedBox.shrink();
+         final d=adaylar.first,v=d.data(),from=(v['callStartedBy']??'').toString(),grup=v['isGroup']==true,goruntulu=v['callVideo']==true;
+         return FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(
+-          future:grup||from.isEmpty?null:FirebaseFirestore.instance.collection('users').doc(from).get(),
++          future:grup||from.isEmpty?null:_callProfiles454.putIfAbsent(from,()=>FirebaseFirestore.instance.collection('users').doc(from).get()),
+           builder:(_,u){
+             final p=u.data?.data()??<String,dynamic>{};
+             final baslik=grup?(v['callTitle']??v['groupName']??'Grup araması').toString():(p['displayName']??p['username']??'NgelX kullanıcısı').toString();
+@@ -5542,7 +5547,7 @@
+                     border:Border.all(color:Colors.white10),
+                     boxShadow:const [BoxShadow(color:Color(0x55000000),blurRadius:28,offset:Offset(0,10))],
+                   ),
+-                  child:Row(children:[
++                  child:GestureDetector(behavior:HitTestBehavior.opaque,onTap:()=>ngelx454OpenIncoming(d.id,(v['callRoomName']??'').toString()),child:Row(children:[
+                     Stack(clipBehavior:Clip.none,children:[
+                       Container(
+                         padding:const EdgeInsets.all(2),
+@@ -5608,7 +5613,7 @@
+                         }
+                       },
+                     ),
+-                  ]),
++                  ])),
+                 ),
+               ),
+             );
+@@ -11748,7 +11753,7 @@
+         ),
+         const SizedBox(width:8),
+         Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisSize:MainAxisSize.min,children:[
+-          Text(etiket,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black54,fontSize:10.5,fontWeight:FontWeight.w700)),
++          Text(etiket,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black54,fontSize:12.5,fontWeight:FontWeight.w700)),
+           Text(_sayacEtiketi(sayi),style:TextStyle(color:renk,fontSize:18,fontWeight:FontWeight.w900,height:1.1)),
+         ])),
+       ]),
+@@ -12190,7 +12195,7 @@
+             child:Stack(clipBehavior:Clip.none,children:[
+               FittedBox(fit:BoxFit.scaleDown,child:Text(_ngelx438Ui(ad),maxLines:1,
+                 style:TextStyle(color:secili?Colors.white:const Color(0xFF6F7891),
+-                fontSize:11.5,fontWeight:secili?FontWeight.w900:FontWeight.w700))),
++                fontSize:12.5.5,fontWeight:secili?FontWeight.w900:FontWeight.w700))),
+               if(sayi>0)Positioned(right:-3,top:-8,child:Container(
+                 padding:const EdgeInsets.symmetric(horizontal:4,vertical:1),
+                 decoration:BoxDecoration(color:const Color(0xFFE62D48),borderRadius:BorderRadius.circular(20)),
+@@ -12355,7 +12360,7 @@
+                   if(!okundu)const Positioned(right:-1,top:-1,child:CircleAvatar(radius:5,backgroundColor:Color(0xFFFF3B73))),
+                 ]),
+                 title:ngelxRenkliBildirim(v,metin,okundu),
+-                subtitle:Text(ngelxBildirimTarihi(v)==null?'Tarih bilgisi yok':zamanKisa(ngelxBildirimTarihi(v)),style:const TextStyle(color:Color(0xFF8A93A8),fontSize:11.5)),
++                subtitle:Text(ngelxBildirimTarihi(v)==null?'Tarih bilgisi yok':zamanKisa(ngelxBildirimTarihi(v)),style:const TextStyle(color:Color(0xFF606875),fontSize:12.5.5)),
+                 onTap:()async{
+                   unawaited(d.reference.update({'read':true,'readAt':FieldValue.serverTimestamp()}).timeout(const Duration(seconds:5)).catchError((_){ }));
+                   final event=(v['eventKind']??'').toString();
+@@ -12472,7 +12477,7 @@
+                     CircleAvatar(
+                       radius:34,
+                       backgroundColor:const Color(0xFFF1F5FB),
+-                      child:Icon(filtre=='Gruplar'?Icons.groups_outlined:Icons.chat_bubble_outline_rounded,color:const Color(0xFF7C86A0),size:34),
++                      child:Icon(filtre=='Gruplar'?Icons.groups_outlined:Icons.chat_bubble_outline_rounded,color:const Color(0xFF606875),size:34),
+                     ),
+                     const SizedBox(height:12),
+                     Text(
+@@ -12483,7 +12488,7 @@
+                     Text(
+                       filtre==_ngelx438Ui("Gruplar")?lt('Yeni bir grup kurabilir veya bir gruba katılabilirsin.','Create a group or join one.'):t('noChats'),
+                       textAlign:TextAlign.center,
+-                      style:const TextStyle(color:Color(0xFF8A93A8),fontSize:12.5),
++                      style:const TextStyle(color:Color(0xFF606875),fontSize:12.5),
+                     ),
+                   ])),
+                 )],
+@@ -12523,11 +12528,11 @@
+                       leading:CircleAvatar(radius:27,backgroundColor:const Color(0xFFE9F7FF),backgroundImage:foto.isEmpty?null:NgelXAgImageProvider(foto),child:foto.isEmpty?const Icon(Icons.groups_rounded,color:Color(0xFF237BEF),size:28):null),
+                       title:grupBasligi(v,members,TextStyle(color:const Color(0xFF101827),fontSize:16,fontWeight:unread>0?FontWeight.w800:FontWeight.w500)),
+                       subtitle:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
+-                      const Text('Grup',style:TextStyle(color:Color(0xFF138A55),fontSize:10.5,fontWeight:FontWeight.w800)),
++                      const Text('Grup',style:TextStyle(color:Color(0xFF138A55),fontSize:12.5,fontWeight:FontWeight.w800)),
+                       Ngelx453InboxPreview(chat:v,me:ben??'',unread:unread>0),
+                     ]),
+                       trailing:ngelx445CallTrailing(v,SizedBox(width:64,child:Column(mainAxisAlignment:MainAxisAlignment.center,crossAxisAlignment:CrossAxisAlignment.end,children:[
+-                        if(zamanYazi.isNotEmpty)Text(zamanYazi,style:const TextStyle(color:Color(0xFF8A93A8),fontSize:11.5)),
++                        if(zamanYazi.isNotEmpty)Text(zamanYazi,style:const TextStyle(color:Color(0xFF606875),fontSize:12.5.5)),
+                         if(unread>0)...[
+                           const SizedBox(height:5),
+                           Container(
+@@ -12535,7 +12540,7 @@
+                             padding:const EdgeInsets.symmetric(horizontal:7),
+                             alignment:Alignment.center,
+                             decoration:const BoxDecoration(color:Color(0xFF8249ED),shape:BoxShape.circle),
+-                            child:Text(_sayacEtiketi(unread),style:const TextStyle(color:Colors.white,fontSize:11,fontWeight:FontWeight.w900)),
++                            child:Text(_sayacEtiketi(unread),style:const TextStyle(color:Colors.white,fontSize:12.5,fontWeight:FontWeight.w900)),
+                           ),
+                         ]else if(sessizSohbetler.contains(d.id))const Padding(padding:EdgeInsets.only(top:5),child:Icon(Icons.notifications_off_outlined,color:Color(0xFF9AA2B4),size:18)),
+                       ]))),
+@@ -12562,7 +12567,7 @@
+                         title:Text(gorunenAd,maxLines:1,overflow:TextOverflow.ellipsis,style:TextStyle(color:const Color(0xFF101827),fontSize:16,fontWeight:unread>0?FontWeight.w800:FontWeight.w500)),
+                         subtitle:Text((v['lastMessage']??t('newChat')).toString(),maxLines:1,overflow:TextOverflow.ellipsis,style:TextStyle(color:unread>0?const Color(0xFF252B36):const Color(0xFF727886),fontSize:14,fontWeight:unread>0?FontWeight.w700:FontWeight.w400)),
+                         trailing:ngelx445CallTrailing(v,SizedBox(width:64,child:Column(mainAxisAlignment:MainAxisAlignment.center,crossAxisAlignment:CrossAxisAlignment.end,children:[
+-                          if(zamanYazi.isNotEmpty)Text(zamanYazi,style:const TextStyle(color:Color(0xFF8A93A8),fontSize:11.5)),
++                          if(zamanYazi.isNotEmpty)Text(zamanYazi,style:const TextStyle(color:Color(0xFF606875),fontSize:12.5.5)),
+                           if(unread>0)...[
+                             const SizedBox(height:5),
+                             Container(
+@@ -12570,7 +12575,7 @@
+                               padding:const EdgeInsets.symmetric(horizontal:7),
+                               alignment:Alignment.center,
+                               decoration:const BoxDecoration(color:Color(0xFF8249ED),shape:BoxShape.circle),
+-                              child:Text(_sayacEtiketi(unread),style:const TextStyle(color:Colors.white,fontSize:11,fontWeight:FontWeight.w900)),
++                              child:Text(_sayacEtiketi(unread),style:const TextStyle(color:Colors.white,fontSize:12.5,fontWeight:FontWeight.w900)),
+                             ),
+                           ]else if(sessiz)const Padding(padding:EdgeInsets.only(top:5),child:Icon(Icons.notifications_off_outlined,color:Color(0xFF9AA2B4),size:18)),
+                         ]))),
+@@ -14898,7 +14903,7 @@
+     if(sadeceEmoji)return Text(metin,style:const TextStyle(fontSize:36,height:1.12));
+     final re=RegExp(r'(@[^\s]+)');
+     final eslesmeler=re.allMatches(metin).toList();
+-    final temel=TextStyle(color:benim?Colors.white:const Color(0xFF211B2C),fontSize:14.6,height:1.24,fontWeight:FontWeight.w500);
++    final temel=TextStyle(color:benim?Colors.white:const Color(0xFF211B2C),fontSize:16,height:1.32,fontWeight:FontWeight.w500);
+     if(eslesmeler.isEmpty)return Text(metin,style:temel);
+     final spans=<InlineSpan>[];
+     var son=0;
+@@ -15104,7 +15109,7 @@
+       child:Container(
+         padding:const EdgeInsets.symmetric(horizontal:6,vertical:2),
+         decoration:BoxDecoration(
+-          color:Colors.white.withValues(alpha:.94),
++          color:const Color(0xFFE5E7EB).withValues(alpha:.65),
+           borderRadius:BorderRadius.circular(13),
+           border:Border.all(color:const Color(0x1F000000)),
+           boxShadow:const [BoxShadow(color:Color(0x22000000),blurRadius:4,offset:Offset(0,1))],
+@@ -15323,7 +15328,7 @@
+               const SizedBox(width:4),
+               Text(
+                 ben?(yanitGonderen=='Sen'?'Kendine yanıt verdin':yanitGonderen+'’a yanıt verdin'):yanitGonderen+'’a yanıt verdi',
+-                style:TextStyle(color:ben?ngelxPremiumMuted:ngelxGroupGreen,fontSize:10.8,fontWeight:FontWeight.w700),
++                style:TextStyle(color:ben?ngelxPremiumMuted:ngelxGroupGreen,fontSize:12.5,fontWeight:FontWeight.w600),
+               ),
+             ]),
+           ),
+@@ -15354,14 +15359,14 @@
+               padding:sadeceEmoji?const EdgeInsets.symmetric(horizontal:3,vertical:2):(sadeMedya?EdgeInsets.zero:const EdgeInsets.all(9)),
+               decoration:BoxDecoration(
+                 gradient:(sadeceEmoji||sadeMedya)?null:(ben?const LinearGradient(colors:[Color(0xFF14AE52),Color(0xFF078B3B)],begin:Alignment.topLeft,end:Alignment.bottomRight):null),
+-                color:(sadeceEmoji||sadeMedya)?Colors.transparent:(ben?null:const Color(0xFFDDF3E4).withValues(alpha:.98)),
++                color:(sadeceEmoji||sadeMedya)?Colors.transparent:(ben?null:const Color(0xFFF1F2F5)),
+                 borderRadius:BorderRadius.only(
+                   topLeft:Radius.circular(yeniBlok?18:12),
+                   topRight:Radius.circular(yeniBlok?18:12),
+                   bottomLeft:Radius.circular(ben?18:6),
+                   bottomRight:Radius.circular(ben?6:18),
+                 ),
+-                border:(sadeceEmoji||sadeMedya)?null:(ben?null:Border.all(color:const Color(0xFFCBE7D4))),
++                border:(sadeceEmoji||sadeMedya)?null:(ben?null:Border.all(color:const Color(0xFFE8E9ED))),
+                 boxShadow:(sadeceEmoji||sadeMedya)?null:(yeniBlok?const [BoxShadow(color:Color(0x0C000000),blurRadius:8,offset:Offset(0,3))]:null),
+               ),
+               child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
+@@ -15370,7 +15375,7 @@
+                   child:Container(
+                   width:double.infinity,margin:const EdgeInsets.only(bottom:7),padding:const EdgeInsets.symmetric(horizontal:9,vertical:7),
+                   decoration:BoxDecoration(
+-                    color:Colors.white.withValues(alpha:.94),
++                    color:const Color(0xFFE5E7EB).withValues(alpha:.65),
+                     borderRadius:BorderRadius.circular(12),
+                     border:Border.all(color:const Color(0xFFE5E7EB)),
+                   ),
+@@ -15382,8 +15387,8 @@
+                     Container(width:3,height:30,decoration:BoxDecoration(color:const Color(0xFF9CA3AF),borderRadius:BorderRadius.circular(4))),
+                     const SizedBox(width:8),
+                     Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+-                      Text(yanitGonderen.isEmpty?'Yanıt':yanitGonderen,style:const TextStyle(color:Color(0xFF5F6368),fontSize:10.5,fontWeight:FontWeight.w800)),
+-                      Text(yanit,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Color(0xFF202124),fontSize:12.1,fontWeight:FontWeight.w600)),
++                      Text(yanitGonderen.isEmpty?'Yanıt':yanitGonderen,style:const TextStyle(color:Color(0xFF5F6368),fontSize:12,fontWeight:FontWeight.w600)),
++                      Text(yanit,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Color(0xFF202124),fontSize:15,fontWeight:FontWeight.w400)),
+                     ])),
+                   ]),
+                 )),
+@@ -15781,7 +15786,7 @@
+                         Expanded(child:InkWell(
+                           onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupKatilmaIstekleriPage(chatId:widget.chatId))),
+                           child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+-                            const Text('Üye ekleme isteği',style:TextStyle(color:Color(0xFF5F6368),fontSize:10.5,fontWeight:FontWeight.w800)),
++                            const Text('Üye ekleme isteği',style:TextStyle(color:Color(0xFF5F6368),fontSize:12,fontWeight:FontWeight.w600)),
+                             Text(aciklama,maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black87,fontSize:12.5,fontWeight:FontWeight.w900)),
+                           ]),
+                         )),
+@@ -16188,7 +16193,7 @@
+                       icon:Icon(sesKaydediliyor?Icons.stop_circle_rounded:Icons.mic_rounded,color:sesKaydediliyor?Colors.red:ngelxGroupGreen,size:26),
+                     ),
+                     Expanded(child:TextField(
+-                      controller:mesaj,onChanged:_mesajAlanDegisti,keyboardType:TextInputType.multiline,textInputAction:TextInputAction.newline,minLines:1,maxLines:6,scrollPadding:const EdgeInsets.only(bottom:120),
++                      style:const TextStyle(color:Color(0xFF202124),fontSize:16,height:1.3),controller:mesaj,onChanged:_mesajAlanDegisti,keyboardType:TextInputType.multiline,textInputAction:TextInputAction.newline,minLines:1,maxLines:6,scrollPadding:const EdgeInsets.only(bottom:120),
+                       maxLength:2000,
+                       buildCounter:(_, {required currentLength,required isFocused,maxLength})=>null,
+                       decoration:InputDecoration(
+@@ -17151,7 +17156,7 @@
+       oda=r;
+       final yerel=r.localParticipant;
+       if(yerel==null)throw Exception('Arama katılımcısı hazırlanamadı.');
+-      await ngelx446Calls.attach(widget.roomName,r,widget.aramaRef,cameraWanted:widget.goruntulu&&kamera);
++      await ngelx446Calls.attach(widget.roomName,r,widget.aramaRef,cameraWanted:widget.goruntulu&&kamera,route:ModalRoute.of(context));
+       if(!_alive444){await ngelx444CloseRoom(r);return;}
+       await yerel.setMicrophoneEnabled(mikrofon&&!ngelx446Calls.muted(widget.roomName));
+       if(!_alive444){await ngelx444CloseRoom(r);return;}
+@@ -21837,7 +21842,7 @@
+     final videoKapakUrl=video?ngelxMesajVideoKapagi(v):'';
+     final sadeMedya=photo||video||shared;
+     final yanitli=(v['replyText']??'').toString().trim().isNotEmpty;
+-    final benimMaviBalon=ben&&!yanitli;
++    final benimMaviBalon=ben;
+     final metin=(v['text']??v['message']??v['content']??'').toString().trim(),saat=mesajSaati(v['createdAt']??v['clientCreatedAt']);
+     final linkUrl=((v['linkUrl']??'').toString().trim().isNotEmpty?(v['linkUrl']??'').toString().trim():ngelxIlkWebBaglantisi(metin));
+     final sureli=v['expiresAt'] is Timestamp;
+@@ -21879,13 +21884,14 @@
+           margin:const EdgeInsets.symmetric(horizontal:4,vertical:5),
+           padding:sadeMedya?EdgeInsets.zero:const EdgeInsets.all(12),
+           decoration:BoxDecoration(
+-            color:sadeMedya?Colors.transparent:(benimMaviBalon?null:Colors.white),
++            color:sadeMedya?Colors.transparent:(benimMaviBalon?null:const Color(0xFFF1F2F5)),
+             gradient:sadeMedya?null:(benimMaviBalon?const LinearGradient(begin:Alignment.topLeft,end:Alignment.bottomRight,colors:[ngelxPrivateBlue2,ngelxPrivateBlue]):null),
+             borderRadius:BorderRadius.circular(20),
+             border:sadeMedya?null:(benimMaviBalon?null:Border.all(color:const Color(0xFFE5E7EB))),
+             boxShadow:sadeMedya?null:const [BoxShadow(color:Color(0x10000000),blurRadius:10,offset:Offset(0,4))],
+           ),
+           child:Column(crossAxisAlignment:CrossAxisAlignment.end,mainAxisSize:MainAxisSize.min,children:[
++            if(yanitli)Padding(padding:const EdgeInsets.only(bottom:7),child:Row(mainAxisSize:MainAxisSize.min,children:[Icon(Icons.reply_rounded,size:16,color:ben?Colors.white70:Colors.black54),const SizedBox(width:4),Flexible(child:Text(ben?'Yanıt verdin':'${widget.ad} yanıt verdi',maxLines:1,overflow:TextOverflow.ellipsis,style:TextStyle(color:ben?Colors.white70:Colors.black54,fontSize:12.5,fontWeight:FontWeight.w600)))])),
+             if(v['forwarded']==true)Padding(
+               padding:const EdgeInsets.fromLTRB(8,6,8,4),
+               child:Row(mainAxisSize:MainAxisSize.min,children:[
+@@ -21902,7 +21908,7 @@
+                 margin:const EdgeInsets.only(bottom:8),
+                 padding:const EdgeInsets.symmetric(horizontal:9,vertical:7),
+                 decoration:BoxDecoration(
+-                  color:Colors.white.withValues(alpha:.96),
++                  color:const Color(0xFFE5E7EB).withValues(alpha:.8),
+                   borderRadius:BorderRadius.circular(12),
+                   border:const Border(left:BorderSide(color:ngelxPrivateBlue,width:3)),
+                 ),
+@@ -21915,10 +21921,10 @@
+                     Text(
+                       (v['replySenderId']??'').toString()==uid?'Senin mesajın':((v['replySenderId']??'').toString()==widget.digerUid?widget.ad:'Yanıtlanan mesaj'),
+                       maxLines:1,overflow:TextOverflow.ellipsis,
+-                      style:const TextStyle(color:ngelxPrivateBlue,fontSize:10.5,fontWeight:FontWeight.w900),
++                      style:const TextStyle(color:ngelxPrivateBlue,fontSize:12,fontWeight:FontWeight.w700),
+                     ),
+                     const SizedBox(height:1),
+-                    Text((v['replyText']??'').toString(),maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Color(0xFF202124),fontSize:12.5,fontWeight:FontWeight.w600)),
++                    Text((v['replyText']??'').toString(),maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Color(0xFF202124),fontSize:15,fontWeight:FontWeight.w400)),
+                   ])),
+                 ]),
+               )),
+@@ -21948,7 +21954,7 @@
+                   ),
+                   const SizedBox(width:10),
+                   Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+-                    Text('CANLI',style:TextStyle(color:ben?Colors.white70:const Color(0xFFFF1744),fontSize:10.5,fontWeight:FontWeight.w900,letterSpacing:.4)),
++                    Text('CANLI',style:TextStyle(color:ben?Colors.white70:const Color(0xFFFF1744),fontSize:12,fontWeight:FontWeight.w700,letterSpacing:.4)),
+                     const SizedBox(height:2),
+                     Text(canliBaslik.isEmpty?'Canlı yayın':canliBaslik,maxLines:2,overflow:TextOverflow.ellipsis,style:TextStyle(color:ben?Colors.white:Colors.black87,fontSize:fontSize,fontWeight:FontWeight.w900)),
+                     if(canliKullanici.isNotEmpty)Text('@'+canliKullanici,maxLines:1,overflow:TextOverflow.ellipsis,style:TextStyle(color:ben?Colors.white70:Colors.black54,fontSize:11.5,fontWeight:FontWeight.w700)),
+@@ -22826,7 +22832,7 @@
+                             hintText:_ngelx438Ui("Mesaj"),
+                             hintMaxLines:1,
+                             isDense:true,
+-                            hintStyle:const TextStyle(fontSize:14.5,height:1.0,color:Colors.black45),
++                            hintStyle:const TextStyle(fontSize:16,height:1.0,color:Color(0xFF6B7280)),
+                             filled:true,
+                             fillColor:ngelxPrivateBlueSoft,
+                             contentPadding:const EdgeInsets.symmetric(horizontal:10,vertical:10),
+@@ -26161,6 +26167,7 @@
+                           if(context.mounted&&widget.storyId.isNotEmpty)await ngelxOzeldenPaylas(context,icerikId:widget.storyId,aciklama:'Hikâye');
+                         },
+                       ),
++                      if(benim&&widget.storyId.isNotEmpty)ListTile(leading:const Icon(Icons.star_border,color:Colors.red),title:const Text('Öne çıkandan kaldır',style:TextStyle(color:Colors.red)),subtitle:const Text('Hikâye arşivinde kalır'),onTap:()async{Navigator.pop(c);await ngelx454RemoveHighlight(context,widget.storyId);}),
+                       ListTile(leading:const Icon(Icons.close),title: Text(_ngelx438Ui("Kapat"),style:TextStyle(color:Colors.black87)),onTap:()=>Navigator.pop(c)),
+                     ]))),
+                   ).whenComplete(_devam);
+@@ -29888,6 +29895,7 @@
+                           return Padding(
+                             padding:const EdgeInsets.only(right:10),
+                             child:InkWell(
++                              onLongPress:()=>ngelx454RemoveHighlight(context,d.id),
+                               onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>HikayeGosterPage(
+                                 url:url,mediaType:medyaTuru,kullanici:kullanici,fotoUrl:fotoUrl,
+                                 ownerUid:aktifKullanici?.uid??'',storyId:d.id,createdAt:v['createdAt'],expiresAt:v['expiresAt'],

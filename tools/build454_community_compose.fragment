@@ -1,0 +1,63 @@
+class _NgelXCommunityCompose450State extends State<NgelXCommunityCompose450> {
+  final text=TextEditingController();
+  XFile? media;String type='';bool busy=false;
+  int _sent454=0,_total454=0;String _stage454='';
+  DateTime? _progressAt454;
+  DocumentReference<Map<String,dynamic>>? _draft454;
+  String _uploaded454='';
+  @override void dispose(){text.dispose();super.dispose();}
+  void _progress454(int sent,int total){
+    if(!mounted)return;
+    final now=DateTime.now();
+    if(sent<total&&_progressAt454!=null&&now.difference(_progressAt454!).inMilliseconds<150)return;
+    _progressAt454=now;
+    setState((){_sent454=sent;_total454=total;_stage454='Medya yükleniyor';});
+  }
+  Future<void> pick(bool video)async{
+    if(busy)return;
+    try{final x=video?await ImagePicker().pickVideo(source:ImageSource.gallery):await ImagePicker().pickImage(source:ImageSource.gallery);
+      if(x!=null&&mounted)setState((){media=x;type=video?'video':'image';_uploaded454='';_draft454=null;});
+    }catch(e){if(mounted)_communityError450(context,e);}
+  }
+  Future<void> publish()async{
+    if(busy||(text.text.trim().isEmpty&&media==null))return;
+    final me=_communityUid450;if(me.isEmpty)return;
+    setState((){busy=true;_sent454=0;_total454=0;_stage454=media==null?'Gönderi hazırlanıyor':'Medya hazırlanıyor';});
+    final ref=_draft454??=_communities450.doc(widget.id).collection('posts').doc();
+    try{
+      if(media!=null&&_uploaded454.isEmpty){
+        _uploaded454=type=='image'
+          ?await ngelxFotografYukle(dosya:media!,kind:'photos',legacyPath:'communities/${widget.id}/${ref.id}.jpg',onProgress:_progress454)
+          :await ngelxMedyaYukleDosya(dosya:media!,kind:'videos',ext:'mp4',legacyPath:'communities/${widget.id}/${ref.id}.mp4',onProgress:_progress454);
+      }
+      if(!mounted||_communityUid450!=me){if(_uploaded454.isNotEmpty)unawaited(ngelxMedyaSil(_uploaded454).catchError((_){ }));return;}
+      setState(()=>_stage454='Gönderi kaydediliyor');
+      final user=await FirebaseFirestore.instance.collection('users').doc(me).get().timeout(const Duration(seconds:8));
+      if(!mounted||_communityUid450!=me)return;
+      final u=user.data()??<String,dynamic>{};
+      final pending=widget.value['postApproval']==true&&!_communityAdmin450(widget.value);
+      try{
+        await ref.set({'authorId':me,'authorName':(u['displayName']??u['username']??'Üye').toString(),'authorPhoto':(u['photoUrl']??'').toString(),'text':text.text.trim(),'mediaUrl':_uploaded454,'mediaType':type,'status':pending?'pending':'approved','pinned':false,'createdAt':FieldValue.serverTimestamp()}).timeout(const Duration(seconds:12));
+      }catch(_){
+        final saved=await ref.get(const GetOptions(source:Source.server)).timeout(const Duration(seconds:8));
+        if(!saved.exists||saved.data()?['authorId']!=me||saved.data()?['mediaUrl']!=_uploaded454)rethrow;
+      }
+      if(mounted&&_communityUid450==me){ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(pending?'Gönderin yönetici onayına gönderildi.':'Gönderin paylaşıldı.')));Navigator.pop(context);}
+    }catch(e){if(mounted)_communityError450(context,e);}
+    finally{if(mounted)setState(()=>busy=false);}
+  }
+  @override Widget build(BuildContext c){
+    final fraction=ngelx454UploadFraction(_sent454,_total454);
+    return _communitySurface450(title:'Toplulukta paylaş',body:ListView(padding:const EdgeInsets.all(20),children:[
+      Container(padding:const EdgeInsets.all(16),decoration:BoxDecoration(color:const Color(0xFFF6F3FB),borderRadius:BorderRadius.circular(20)),child:Row(children:[_communityImage450((widget.value['photoUrl']??'').toString(),size:44,circle:true),const SizedBox(width:12),Expanded(child:Text((widget.value['name']??'Topluluk').toString(),style:const TextStyle(color:Colors.black87,fontSize:18,fontWeight:FontWeight.w800)))])),
+      const SizedBox(height:16),
+      TextField(controller:text,enabled:!busy,maxLength:3000,minLines:3,maxLines:8,style:const TextStyle(color:Colors.black87,fontSize:16,height:1.35),decoration:InputDecoration(hintText:'Bir şey paylaş…',hintStyle:const TextStyle(color:Color(0xFF6B7280)),filled:true,fillColor:const Color(0xFFF4F5F8),border:OutlineInputBorder(borderSide:BorderSide.none,borderRadius:BorderRadius.circular(20)))),
+      const SizedBox(height:12),
+      Wrap(spacing:12,children:[OutlinedButton.icon(onPressed:busy?null:()=>pick(false),icon:const Icon(Icons.photo,color:mor),label:const Text('Fotoğraf')),OutlinedButton.icon(onPressed:busy?null:()=>pick(true),icon:const Icon(Icons.video_library,color:mor),label:const Text('Video'))]),
+      if(media!=null)...[const SizedBox(height:16),Ngelx454LocalMedia(key:ValueKey(media!.path),file:media!,video:type=='video'),ListTile(contentPadding:EdgeInsets.zero,title:Text(media!.name,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black87)),trailing:IconButton(tooltip:'Medyayı kaldır',onPressed:busy?null:()=>setState((){media=null;type='';_uploaded454='';_draft454=null;}),icon:const Icon(Icons.close)))],
+      if(widget.value['postApproval']==true&&!_communityAdmin450(widget.value))const Padding(padding:EdgeInsets.symmetric(vertical:12),child:Text('Bu toplulukta gönderiler yönetici onayından geçer.',style:TextStyle(color:Colors.black54))),
+      if(busy)Container(padding:const EdgeInsets.all(16),margin:const EdgeInsets.only(bottom:16),decoration:BoxDecoration(color:const Color(0xFFF0E9FF),borderRadius:BorderRadius.circular(16)),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(_stage454,style:const TextStyle(color:Color(0xFF43326C),fontWeight:FontWeight.w700)),const SizedBox(height:10),LinearProgressIndicator(value:_stage454=='Medya yükleniyor'?fraction:null),const SizedBox(height:8),Text(fraction==null?'Bağlantı ve dosya hazırlanıyor…':'${(fraction*100).floor()}% • ${(_sent454/1048576).toStringAsFixed(1)} / ${(_total454/1048576).toStringAsFixed(1)} MB',style:const TextStyle(color:Color(0xFF43326C)))])),
+      FilledButton(onPressed:busy?null:publish,child:Padding(padding:const EdgeInsets.symmetric(vertical:12),child:Text(busy?'İşlem sürüyor…':'Paylaş',style:const TextStyle(fontSize:16,fontWeight:FontWeight.w700)))),
+    ]));
+  }
+}
