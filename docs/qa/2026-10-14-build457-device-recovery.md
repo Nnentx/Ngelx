@@ -21,3 +21,6 @@ Build456 onaylanmış başarı SHA: `3e8ff6cfc52a99e27fc060f8670d01017333a03e`; 
 - Profil dinleyicileri kullanıcı UID'siyle sabitlenir, her sohbet satırı `chatId + karşı taraf UID` ile anahtarlanır; sıralama veya filtrelemede eski satırın profilinin gösterilmesi engellenir.
 - Dinleyiciden gelen belge UID'si beklenen karşı üye UID'siyle eşleşmezse isim ve görsel gösterilmez. Hata durumunda yeniden dene sunulur.
 - Sohbetin kimliği, kayıtlı mesajlar, karşı tarafın bilerek tanımlanmış takma adı ve grup sohbetleri korunur. Bu değişiklik **yanlış kişiye mesaj teslim edildiği kanıtı değildir**; #52 cihaz testi gerekir.
+
+## Derleme sırası düzeltmesi
+İlk Build 457 koşusu #53 commit `a5f55fb`, eski `tools/build448.patch` canlı yayın kaynağına uygulanamadığından başarısız oldu. Bu, **APK oluşturulmadan** gerçekleşen CI yama çakışmasıdır. Orijinal canlı yayın kaynak dosyası geri konularak Build448 önce uygulanır; yeni Build457 video toparlama kodu **Build456 yamalarından sonra** güvenli, tek seferlik kaynak dönüştürmesiyle eklenir. Build448'in zaten var olan `_liveStream448` ve `_clock448` optimizasyonları tekrar oluşturulmaz; video kurtarma düğmesi için saniyelik `ValueListenableBuilder` kullanılır. Yeni CI sonucu bekleniyor.

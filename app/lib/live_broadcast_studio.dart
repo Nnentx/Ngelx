@@ -766,18 +766,7 @@ class CanliYayinPage extends StatefulWidget {
   State<CanliYayinPage> createState() => _CanliYayinPageState();
 }
 
-// A missing camera track is a recoverable state, not an endless loader.
-bool ngelx457CanRetryLiveVideo({
-  required bool cameraEnabled,
-  required bool reconnecting,
-  required int elapsedWithoutVideoSeconds,
-}) => cameraEnabled && !reconnecting && elapsedWithoutVideoSeconds >= 10;
-
 class _CanliYayinPageState extends State<CanliYayinPage> {
-  late final Stream<DocumentSnapshot<Map<String,dynamic>>> liveVisualStream =
-      FirebaseFirestore.instance.collection('live_streams').doc(widget.belgeId).snapshots();
-  int _lastVisibleVideoSecond = 0;
-  bool _recoveringVideo = false;
   final yorum = TextEditingController();
   Timer? sayac;
   Timer? heartbeat;
@@ -1873,42 +1862,6 @@ class _CanliYayinPageState extends State<CanliYayinPage> {
   }
 
 
-  Future<void> _recoverLiveVideo() async {
-    if (_recoveringVideo || kapatildi || yayinBitti) return;
-    _recoveringVideo = true;
-    if (mounted) setState(() {});
-    try {
-      if (widget.yayinSahibi) {
-        if (!kameraAcik) return;
-        final local = widget.oda.localParticipant;
-        if (local == null) throw StateError('Kamera katılımcısı bulunamadı');
-        await local.setCameraEnabled(false);
-        await Future<void>.delayed(const Duration(milliseconds: 180));
-        if (kapatildi || yayinBitti) return;
-        await local.setCameraEnabled(true,
-          cameraCaptureOptions: widget.kameraAyarlari.copyWith(
-            cameraPosition: arkaKamera ? lk.CameraPosition.back : lk.CameraPosition.front,
-          ),
-        );
-      } else {
-        // A connected room with no subscribed video may need a fresh join.
-        await widget.oda.disconnect();
-        if (kapatildi || yayinBitti) return;
-        await _otomatikYenidenBaglan();
-      }
-    } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Yayın görüntüsü yenilenemedi. Tekrar dene.')),
-        );
-      }
-    } finally {
-      _lastVisibleVideoSecond = saniye;
-      _recoveringVideo = false;
-      if (mounted) setState(() {});
-    }
-  }
-
   Widget _goruntuYokEkrani(){
     final kameraKapali=widget.yayinSahibi?!kameraAcik:!uzakKameraAcik;
     if(kameraKapali){
@@ -1947,41 +1900,11 @@ class _CanliYayinPageState extends State<CanliYayinPage> {
         ])),
       );
     }
-    final canRetry = ngelx457CanRetryLiveVideo(
-      cameraEnabled: true,
-      reconnecting: _recoveringVideo,
-      elapsedWithoutVideoSeconds: saniye - _lastVisibleVideoSecond,
-    );
-    return ColoredBox(
-      color: Colors.black,
-      child: Center(child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 30),
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          if (!canRetry)
-            const CircularProgressIndicator(color: Colors.white)
-          else
-            const Icon(Icons.videocam_off_outlined, color: Colors.white70, size: 48),
-          const SizedBox(height: 12),
-          Text(
-            canRetry
-                ? 'Yayın görüntüsü alınamadı. Bağlantıyı ve kamera izinlerini kontrol et.'
-                : 'Yayın görüntüsü hazırlanıyor…',
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.w700),
-          ),
-          if (canRetry) ...[
-            const SizedBox(height: 12),
-            OutlinedButton.icon(
-              onPressed: _recoverLiveVideo,
-              icon: const Icon(Icons.refresh_rounded),
-              label: Text(widget.yayinSahibi
-                  ? 'Kamerayı yeniden başlat'
-                  : 'Yayına yeniden bağlan'),
-            ),
-          ],
-        ]),
-      )),
-    );
+    return Center(child:Column(mainAxisSize:MainAxisSize.min,children:[
+      const CircularProgressIndicator(color:Colors.white),
+      const SizedBox(height:12),
+      Text(saniye<8?'Yayın görüntüsü hazırlanıyor…':'Yayın görüntüsü alınamadı. Bağlantı sürüyorsa kamerayı yeniden açmayı dene.',textAlign:TextAlign.center,style:const TextStyle(color:Colors.white70,fontWeight:FontWeight.w700)),
+    ]));
   }
 
   Future<void> _hediyeGonder(String ad, String emoji, int puan) async {
@@ -2139,7 +2062,6 @@ class _CanliYayinPageState extends State<CanliYayinPage> {
   @override
   Widget build(BuildContext context) {
     final track = _goruntu();
-    if (track != null) _lastVisibleVideoSecond = saniye;
     final dakika = (saniye ~/ 60).toString().padLeft(2, '0');
     final sn = (saniye % 60).toString().padLeft(2, '0');
     return WillPopScope(
@@ -2153,7 +2075,7 @@ class _CanliYayinPageState extends State<CanliYayinPage> {
               child:track==null
                 ?_goruntuYokEkrani()
                 :StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
-                  stream:liveVisualStream,
+                  stream:FirebaseFirestore.instance.collection('live_streams').doc(widget.belgeId).snapshots(),
                   builder:(_,snap){
                     final veri=snap.data?.data()??<String,dynamic>{};
                     return ngelxCanliEfektKatmani(veri:veri,child:lk.VideoTrackRenderer(track,fit:lk.VideoViewFit.cover));

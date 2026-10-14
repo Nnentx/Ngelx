@@ -501,6 +501,11 @@ jobs:
           node --check server/community456/index.mjs
           node tools/build456_policy_test.mjs
 
+      - name: Apply and guard Build457 live video recovery after older patches
+        run: |
+          python3 tools/apply_build457_live_recovery.py
+          python3 -m unittest discover -s tools -p 'test_build457_live_recovery.py'
+
       - name: Build457 isolate chat identity and test UID-bound rows
         run: |
           python3 tools/apply_build457_inbox_identity.py
