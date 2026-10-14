@@ -15,6 +15,14 @@ Temel: Build455 commit 74dc45b. Kullanıcının 47319–47355 cihaz bulguları v
 - Fotoğraf önizlemesi yükleme boyunca korunur. Teknik hata yerine kısa mesaj; DNS hatasında aynı hosta ikinci native PUT atlanır ve mevcut Worker/multipart alternatifleri korunur.
 - Lazy SliverList, sabit streamler, önbelleğe alınmış kurucu bilgisi/istatistik sorguları, daha az sayaç okuması; 24 MiB ham fotoğraf bellek bütçesi, eş zamanlı indirme birleştirme ve ekrana uygun çözümleme.
 
+## 14 Ekim devam — ücretsiz test adayı ve dağıtım engeli
+
+Son Build456 CI koşusunda Flutter analizleri, Flutter ekran testleri, Firestore emülatör testleri, Android imza/versiyon doğrulaması ve APK derleme geçti. İş akışı üretim Cloud Functions dağıtımında durdu: `cloudfunctions.googleapis.com` API'sini açmaya çalışan dağıtım kimliğine izin verilmedi. Bu, derleme veya kaynak kod test hatası değildir.
+
+Kullanıcının ücretli hizmet istememe/kullanamama kısıtı nedeniyle CI düzenlendi: her push'ta aynı imzalı APK ve onay bekleyen kurallar test artefaktı olarak yayımlanır; Google Cloud Functions ve canlı Firestore kuralları **varsayılan olarak dağıtılmaz**. Yalnızca proje sahibinin gerekli izinleri ve maliyetleri ayrıca onaylayıp GitHub Actions üzerinde workflow_dispatch `deploy_backend=true` seçmesiyle ayrı üretim dağıtımı denenebilir.
+
+**Dağıtılmayan backend bağımlılıkları:** zamanlanmış gönderilerin sunucuda yayımlanması, yeni bildirim abonelikleri, canlı sunucu sayaçları ve yeni moderasyon/yavaş mod Firestore izinleri, üretim kuralları ve Functions gerçekten kurulmadan doğrulanmış/etkin kabul edilemez. APK **cihaz testi adayıdır**, tamamlanmış canlı sürüm değildir. Mevcut sohbet kimlikleri, kimlik doğrulama ve eski işlevler korunur. Hiçbir üretim verisi silinmedi ve canlıya otomatik kurallar uygulanmadı.
+
 ## Doğrulama ve sınırlar
 Yeni Dart parser/analiz kontrolleri ve sunucu planlama politika testleri geçmiştir. İlk CI'da yeni/önceki UI testleri ve Flutter analizi geçti; ilk ek Firestore testinde test bağlantısı referansı düzeltildi. İkinci CI'da tüm Firestore testleri geçti. Nihai baş için aynı kontroller, imza/sürüm doğrulaması ve sunucu kuralları read-back tamamlanmadan APK hazır sayılmaz.
 
