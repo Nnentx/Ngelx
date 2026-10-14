@@ -1,0 +1,1 @@
+Final theme correction checkpoint: community dialogs explicitly inherit a light theme even though the app root is dark. Run all UI, behavior, security, signing and backend read-back gates before delivering.
