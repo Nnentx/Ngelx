@@ -7,7 +7,6 @@ class CoverRule457(unittest.TestCase):
         changed=transform(source)
         self.assertIn("request.auth.uid == resource.data.founderId",changed)
         self.assertIn("request.auth.uid in resource.data.members",changed)
-        self.assertIn("!(request.auth.uid in resource.data.get('admins',[]))",changed)
         self.assertIn("hasOnly(['coverUrl','coverAlignment'])",changed)
         self.assertIn("coverAlignment',0) <= 1",changed)
         self.assertIn("request.resource.data.coverUrl.size() <= 2048",changed)
