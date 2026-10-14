@@ -19,8 +19,8 @@ export const publishCommunity456=onTaskDispatched({region,memory:'256MiB',timeou
 });
 export const communityCounters456=onDocumentWritten({...base,document:'communities450/{cid}/posts/{pid}/{metric}/{item}'},async e=>{
  if(!['likes','comments','views','shares'].includes(e.params.metric))return;
- const post=getFirestore().collection('communities450').doc(e.params.cid).collection('posts').doc(e.params.pid);if(!(await post.get()).exists)return;
- const count=await post.collection(e.params.metric).count().get();await post.update({[`counts456.${e.params.metric}`]:count.data().count});
+ const post=getFirestore().collection('communities450').doc(e.params.cid).collection('posts').doc(e.params.pid);
+ for(let attempt=0;attempt<5;attempt++){const snapshot=await post.get();if(!snapshot.exists)return;const count=await post.collection(e.params.metric).count().get();try{await post.update({[`counts456.${e.params.metric}`]:count.data().count},{lastUpdateTime:snapshot.updateTime});return;}catch(error){if(error.code!==9&&error.code!=='failed-precondition')throw error;}}throw Error('counter-contention');
 });
 export const communityCommentNotify456=onDocumentCreated({...base,document:'communities450/{cid}/posts/{pid}/comments/{commentId}'},async e=>{
  const comment=e.data?.data();if(!comment)return;

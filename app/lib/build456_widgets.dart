@@ -714,7 +714,7 @@ Future<void> ngelx456Invite(
   final me = FirebaseAuth.instance.currentUser;
   if (me == null || me.isAnonymous) return;
   try {
-    final targets = await showModalBottomSheet<List<String>>(
+    final targets = await showModalBottomSheet<List<(String, String)>>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.white,
@@ -737,7 +737,13 @@ Future<void> ngelx456Invite(
     var sent = 0;
     for (final target in targets) {
       try {
-        await ngelx456SendInvite(me, target, ref.id, value['name'].toString());
+        await ngelx456SendInvite(
+          me,
+          target.$1,
+          ref.id,
+          value['name'].toString(),
+          chatId: target.$2,
+        );
         sent++;
       } catch (e) {
         if (context.mounted) _communityError450(context, e);
@@ -765,6 +771,7 @@ class _Ngelx456ChatPickerState extends State<Ngelx456ChatPicker> {
   final profiles = <String, Future<DocumentSnapshot<Map<String, dynamic>>>>{},
       selected = <String>{};
   String search = '';
+  final chatIds = <String, String>{};
   @override
   Widget build(BuildContext c) => SafeArea(
     child: SizedBox(
@@ -796,11 +803,18 @@ class _Ngelx456ChatPickerState extends State<Ngelx456ChatPicker> {
                 if (!s.hasData)
                   return const Center(child: CircularProgressIndicator());
                 final ids = <String>{};
+                chatIds.clear();
                 for (final doc in s.data!.docs) {
                   final v = doc.data(),
                       members = List<String>.from(v['members'] ?? const []);
-                  if (v['isGroup'] != true && members.length == 2)
-                    ids.addAll(members.where((x) => x != _communityUid450));
+                  if (v['isGroup'] != true && members.length == 2) {
+                    for (final uid in members.where(
+                      (x) => x != _communityUid450,
+                    )) {
+                      ids.add(uid);
+                      chatIds.putIfAbsent(uid, () => doc.id);
+                    }
+                  }
                 }
                 final list = ids.toList();
                 if (list.isEmpty)
@@ -861,7 +875,10 @@ class _Ngelx456ChatPickerState extends State<Ngelx456ChatPicker> {
               child: FilledButton.icon(
                 onPressed: selected.isEmpty
                     ? null
-                    : () => Navigator.pop(c, selected.toList()),
+                    : () => Navigator.pop(c, <(String, String)>[
+                        for (final uid in selected)
+                          if (chatIds.containsKey(uid)) (uid, chatIds[uid]!),
+                      ]),
                 icon: const Icon(Icons.send_outlined),
                 label: Text('${selected.length} sohbete gönder'),
               ),
@@ -877,12 +894,10 @@ Future<void> ngelx456SendInvite(
   User me,
   String target,
   String code,
-  String name,
-) async {
-  final ids = [me.uid, target]..sort();
-  final chat = FirebaseFirestore.instance
-      .collection('chats')
-      .doc(ids.join('_'));
+  String name, {
+  required String chatId,
+}) async {
+  final chat = FirebaseFirestore.instance.collection('chats').doc(chatId);
   final docs = await Future.wait([
     FirebaseFirestore.instance.collection('users').doc(me.uid).get(),
     FirebaseFirestore.instance.collection('users').doc(target).get(),
@@ -1836,8 +1851,10 @@ class _Ngelx456SavedState extends State<Ngelx456Saved> {
               onTap: () => Navigator.push(
                 c,
                 MaterialPageRoute(
-                  builder: (_) =>
-                      NgelXCommunityDetail450(id: v['communityId'].toString()),
+                  builder: (_) => Ngelx456PostPage(
+                    cid: v['communityId'].toString(),
+                    pid: v['postId'].toString(),
+                  ),
                 ),
               ),
               trailing: IconButton(
@@ -1845,6 +1862,70 @@ class _Ngelx456SavedState extends State<Ngelx456Saved> {
                 onPressed: () => d.reference.delete(),
                 icon: const Icon(Icons.bookmark_remove_outlined),
               ),
+            );
+          },
+        );
+      },
+    ),
+  );
+}
+
+class Ngelx456PostPage extends StatefulWidget {
+  final String cid, pid;
+  const Ngelx456PostPage({super.key, required this.cid, required this.pid});
+  @override
+  State<Ngelx456PostPage> createState() => _Ngelx456PostPageState();
+}
+
+class _Ngelx456PostPageState extends State<Ngelx456PostPage> {
+  late final community = _communities450.doc(widget.cid).snapshots();
+  late final post = _communities450
+      .doc(widget.cid)
+      .collection('posts')
+      .doc(widget.pid)
+      .snapshots();
+  @override
+  Widget build(BuildContext c) => _communitySurface450(
+    title: 'Topluluk gönderisi',
+    body: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      stream: community,
+      builder: (c, s) {
+        if (s.hasError)
+          return const Center(child: Text('Bu topluluğa artık erişimin yok.'));
+        if (!s.hasData) return const Center(child: CircularProgressIndicator());
+        final root = s.data?.data() ?? {};
+        return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+          stream: post,
+          builder: (c, p) {
+            if (p.hasError ||
+                p.hasData &&
+                    (p.data?.exists != true ||
+                        p.data?.data()?['status'] == 'deleted'))
+              return const Center(child: Text('Gönderi artık kullanılamıyor.'));
+            if (!p.hasData)
+              return const Center(child: CircularProgressIndicator());
+            return ListView(
+              children: [
+                ListTile(
+                  title: Text(
+                    (root['name'] ?? 'Topluluk').toString(),
+                    style: const TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                  onTap: () => Navigator.push(
+                    c,
+                    MaterialPageRoute(
+                      builder: (_) => NgelXCommunityDetail450(id: widget.cid),
+                    ),
+                  ),
+                ),
+                NgelXCommunityPost450(
+                  communityId: widget.cid,
+                  id: widget.pid,
+                  value: p.data!.data()!,
+                  member: _communityMember450(root),
+                  admin: ngelx456Moderator(root),
+                ),
+              ],
             );
           },
         );
