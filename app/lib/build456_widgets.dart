@@ -1818,25 +1818,30 @@ Future<void> ngelx456PostMenu(
       });
     }
     if (action == 'feedback') {
-      final input = TextEditingController();
+      // Keep draft text in the dialog closure: no controller is disposed
+      // before the route's closing transition has finished.
+      var draft = '';
       final text = await showDialog<String>(
         context: context,
         builder: (c) => Ngelx455WhiteDialog(
           title: const Text('Gönderiye görüş bildir'),
-          content: TextField(controller: input, maxLength: 500, maxLines: 3),
+          content: TextField(
+            onChanged: (value) => draft = value,
+            maxLength: 500,
+            maxLines: 3,
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(c),
               child: const Text('Vazgeç'),
             ),
             FilledButton(
-              onPressed: () => Navigator.pop(c, input.text.trim()),
+              onPressed: () => Navigator.pop(c, draft.trim()),
               child: const Text('Gönder'),
             ),
           ],
         ),
       );
-      input.dispose();
       if (text == null || text.isEmpty) return;
       await ref.collection('feedback456').add({
         'uid': me,
@@ -1921,7 +1926,14 @@ class _Ngelx456SavedState extends State<Ngelx456Saved> {
               ),
               trailing: IconButton(
                 tooltip: 'Kaydı kaldır',
-                onPressed: () => d.reference.delete(),
+                onPressed: () async {
+                  try {
+                    await d.reference.delete();
+                    if (c.mounted) ngelx455Status(c, 'Kayıt kaldırıldı');
+                  } catch (error) {
+                    if (c.mounted) _communityError450(c, error);
+                  }
+                },
                 icon: const Icon(Icons.bookmark_remove_outlined),
               ),
             );
