@@ -68,19 +68,37 @@ def fetch_json(url, bearer):
         return None, "BAD_RESPONSE"
 
 
+
+def summarize_pitr(database):
+    enabled = database.get("pointInTimeRecoveryEnablement") == "POINT_IN_TIME_RECOVERY_ENABLED"
+    start = database.get("earliestVersionTime")
+    target = dt.datetime(2026, 10, 14, 13, 46, tzinfo=UTC)
+    inside = False
+    if start:
+        try:
+            inside = dt.datetime.fromisoformat(start.replace("Z", "+00:00")) <= target
+        except (ValueError, TypeError):
+            pass
+    return {
+        "state": "ENABLED" if enabled else "DISABLED",
+        "pre_cleanup_read_time_in_window": bool(enabled and inside),
+        "note": "Historical-read window is not proof the specific deleted records exist.",
+    }
+
+
 def firebase_backup_status():
     raw = (os.getenv("FIREBASE_SERVICE_ACCOUNT_NGELX_44EED") or
            os.getenv("FIREBASE_SERVICE_ACCOUNT") or
            os.getenv("GOOGLE_APPLICATION_CREDENTIALS_JSON"))
     if not raw:
-        return {"state": "NO_CREDENTIAL"}, {"state": "NO_CREDENTIAL"}
+        return {"state": "NO_CREDENTIAL"}, {"state": "NO_CREDENTIAL"}, {"state": "NO_CREDENTIAL"}
     try:
         try:
             info = json.loads(raw)
         except (ValueError, TypeError):
             info = json.loads(base64.b64decode(raw, validate=True))
         if info.get("project_id") != PROJECT:
-            return {"state": "PROJECT_MISMATCH"}, {"state": "PROJECT_MISMATCH"}
+            return {"state": "PROJECT_MISMATCH"}, {"state": "PROJECT_MISMATCH"}, {"state": "PROJECT_MISMATCH"}
         from google.oauth2 import service_account
         from google.auth.transport.requests import Request as GoogleRequest
         creds = service_account.Credentials.from_service_account_info(
@@ -88,7 +106,7 @@ def firebase_backup_status():
         creds.refresh(GoogleRequest())
     except Exception:
         # Do not leak credentials, token endpoints or exception content to public logs.
-        return {"state": "AUTH_UNAVAILABLE"}, {"state": "AUTH_UNAVAILABLE"}
+        return {"state": "AUTH_UNAVAILABLE"}, {"state": "AUTH_UNAVAILABLE"}, {"state": "AUTH_UNAVAILABLE"}
     base = "https://firestore.googleapis.com/v1/projects/" + PROJECT
     listed, error = fetch_json(base + "/locations/-/backups", creds.token)
     if error:
@@ -103,7 +121,9 @@ def firebase_backup_status():
             "state": "READ",
             "schedule_count": len(schedules.get("backupSchedules") or []),
         }
-    return backup_status, schedule_status
+    database, error = fetch_json(base + '/databases/(default)', creds.token)
+    pitr_status = {'state': error} if error else summarize_pitr(database)
+    return backup_status, schedule_status, pitr_status
 
 
 def r2_lifecycle_status():
@@ -124,12 +144,13 @@ def r2_lifecycle_status():
 
 
 def main():
-    backups, schedules = firebase_backup_status()
+    backups, schedules, pitr = firebase_backup_status()
     lifecycle = r2_lifecycle_status()
     result = {
         "mode": "READ_ONLY_NO_USER_DATA",
         "firestore_backups": backups,
         "firestore_backup_schedules": schedules,
+        "firestore_pitr": pitr,
         "r2_lifecycle": lifecycle,
         "note": "Existence of a Firestore backup does not verify restore or independent R2 backup.",
     }
@@ -139,6 +160,7 @@ def main():
             out.write("## NgelX read-only backup inventory\n")
             out.write("- Firestore backup metadata: **" + backups["state"] + "**\n")
             out.write("- Firestore backup schedule metadata: **" + schedules["state"] + "**\n")
+            out.write("- Firestore PITR metadata: **" + pitr["state"] + "**\n")
             out.write("- R2 lifecycle metadata: **" + lifecycle["state"] + "**\n")
             out.write("- This is not a backup restore test; no user data or objects were accessed.\n")
     return 0 if backups["state"] == "READY" and schedules["state"] == "READ" and lifecycle["state"] == "READ" else 2
