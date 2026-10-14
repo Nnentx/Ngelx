@@ -118,13 +118,14 @@ path.write_text(source)
 replace('app/lib/build446_call_lifecycle.dart', '  bool _observing=false,_foreground=true;', '''  bool _observing=false,_foreground=true;
   Future<void> clearForAccount455()async{
     final pending=ngelxCallSession444.room;
+    final generation455=ngelxCallSession444.generation;
     for(final item in _calls.entries.toList()){
       await detach(item.value.room);
       try{await item.value.room.disconnect();}catch(_){}
-      if(_ngelxArkaPlanAramaOdalari.containsKey(item.key))await ngelxArkaPlanAramayiTemizle(item.key);
-      ngelxCallSession444.release(item.key);
+      if(ngelxCallSession444.current(item.key,generation455)&&_ngelxArkaPlanAramaOdalari.containsKey(item.key))await ngelxArkaPlanAramayiTemizle(item.key);
+      if(ngelxCallSession444.current(item.key,generation455))ngelxCallSession444.release(item.key);
     }
-    if(pending!=null)ngelxCallSession444.release(pending);
+    if(pending!=null&&ngelxCallSession444.current(pending,generation455))ngelxCallSession444.release(pending);
   }''')
 replace('app/lib/build448_incoming_calls.dart', '      await _stop();\n      if(epoch!=_authEpoch454)return;', '      await _stop();\n      await ngelx446Calls.clearForAccount455();\n      if(epoch!=_authEpoch454)return;')
 replace('app/lib/build448_incoming_calls.dart', '  String? _ringing,_handling;', '  String? _ringing,_handling,_account455;')
