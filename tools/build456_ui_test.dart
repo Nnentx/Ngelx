@@ -46,6 +46,36 @@ void main() {
     expect(ngelx456InviteCode('Hello\nngelx://community/AbC_123'), 'AbC_123');
     expect(ngelx456InviteCode('https://example.com'), isNull);
   });
+  testWidgets('malformed invite never crashes on tap', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: Ngelx456InviteCard(
+            text: 'Bozuk bağlantı',
+            own: false,
+          ),
+        ),
+      ),
+    );
+    expect(find.text('Davet bağlantısı geçersiz'), findsOneWidget);
+    await tester.tap(find.text('Davet bağlantısı geçersiz'));
+    await tester.pump();
+    expect(tester.takeException(), isNull);
+  });
+  testWidgets('valid invite remains visibly actionable', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: Ngelx456InviteCard(
+            text: 'Davetin hazır\\nngelx://community/AbC_123',
+            own: false,
+          ),
+        ),
+      ),
+    );
+    expect(find.text('Daveti aç →'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
   for (final size in [const Size(320, 640), const Size(390, 844)])
     testWidgets('empty state fits ${size.width}', (tester) async {
       tester.view.physicalSize = size;
