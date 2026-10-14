@@ -141,7 +141,11 @@ class Ngelx455Reactions extends StatefulWidget {
   @override State<Ngelx455Reactions> createState() => _Ngelx455ReactionsState();
 }
 class _Ngelx455ReactionsState extends State<Ngelx455Reactions> {
-  late final stream = widget.ref.snapshots();
+  late Stream<QuerySnapshot<Map<String, dynamic>>> stream = widget.ref.snapshots();
+  @override void didUpdateWidget(covariant Ngelx455Reactions oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.ref.path != widget.ref.path) stream = widget.ref.snapshots();
+  }
   bool busy = false;
   Future<void> setReaction(String emoji, String selected) async {
     if (busy || !widget.enabled || _communityUid450.isEmpty) return;
