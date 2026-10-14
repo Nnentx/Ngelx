@@ -1,7 +1,7 @@
 # Build 454 / 1.0.229 — yapı korunarak birleşik takip paketi
 
-Test adayı kaynak: `0f65286aa68526b38b40f91587b7a98724e90ea1`.
-CI: https://github.com/Nnentx/Ngelx/actions/runs/38533484975
+Test adayı kaynak: `bb3812282ce1189390dbc7ea3d3983b660c48e09`.
+CI: https://github.com/Nnentx/Ngelx/actions/runs/38534413889
 
 Mevcut Flutter, Firebase, LiveKit, Android bildirim servisleri, beyaz tema, mesaj teslim/izin kuralları ve onaylanan sayfa yapısı korunur. Build453 uygulama zincirinin sonunda küçük takip yaması uygulanır; uygulama yeniden yazılmadı.
 
@@ -21,9 +21,15 @@ Mevcut Flutter, Firebase, LiveKit, Android bildirim servisleri, beyaz tema, mesa
 
 ## Doğrulama ve açık işler
 
-- Yerel 60 sunucu/arama/bildirim yetkilendirme testi geçti; yeni uygulama kodunun Flutter ve imzalı APK kontrolleri CI'da sürüyor.
+- Yerel 60 sunucu/arama/bildirim yetkilendirme testi geçti; yeni uygulama kodunun Flutter, davranış, güvenlik ve imzalı APK kontrolleri CI'da başarılı.
 - Yeni arayüz testi küçük ekranda çok dik fotoğrafın sınırını ve oran korunmasını; birim testi bilinmeyen toplam boyut/yeniden denemede gerçek yükleme yüzdesini kontrol eder.
 - Önceki canlı taslak/kalp, küçük ekran, davranış ve Firestore güvenlik testleri tekrar çalışır.
 - Fiziksel iki telefonda sesli/görüntülü ve grup çağrısı, hesap değiştirme, ekran kilidi, ret/kabul/zaman aşımı, kart/bildirimden dönüş ayrıca denenmeli. Otomatik testler gerçek zil sesini kanıtlamaz.
 - Gerçek cihazda topluluk medya seçimi/yükleme, başarısız bağlantıdan tekrar deneme ve gönderinin akışta görünmesi kontrol edilmeli.
 - Hikâye kaldırma sahibinde görünmeli, iptal arşivi/öne çıkanı değiştirmemeli, ziyaretçi işlem yapamamalı.
+
+## Teslim doğrulaması
+
+Derleme başarılı: 38534413889. APK sürümü 1.0.229 / 454; önceki kurulumla uyumlu imza doğrulandı. GitHub artifact ZIP özeti ve içindeki APK özeti yerel indirmede tekrar doğrulandı.
+APK SHA256: `76d9e5a34665f73bf32309dc1207df0e2c3e3584608f39986dc60d570fea97a7`.
+APK boyutu: 147464133 bayt.
