@@ -47,3 +47,13 @@
 - [ ] İki hesapla izinli davet, chat, etkileşim akışları.
 - [ ] Eski kullanıcı verisi kaybı yok; mevcut imzayla yükseltme.
 - [ ] Sunucuya bağlı özellikler ayrı etkinleşme onayına kadar bekliyor.
+
+## Ekran videosundan yeni hata kaydı — 47442.mp4
+
+**Takip:** [GitHub #47 — Akış medyası siyah ekranda ve yüklemede kalıyor](https://github.com/Nnentx/Ngelx/issues/47). Kullanıcı tarafından çekilen yaklaşık 71 saniyelik Build 456 videosu incelendi.
+
+- 00:00–00:07, 00:22–00:27 ve 01:08–01:11: Akış yeniden açıldığında siyah medya zemini + devam eden mavi spinner; içerik görüntülenmiyor.
+- Profil gönderi ızgarasında en az bir küçük resim gecikmeli/spinner durumunda; bazı tanıtım videolarının önizlemesi gri kalıp daha sonra görünüyor.
+- Profil fotoğrafı menüsü, galeri, kapak kadrajı, ayarlar ve en az bir gönderinin tam ekran açılması videoda çalışıyor; bu yüzden bu akışlar yanlışlıkla "açılmıyor" diye işaretlenmemeli.
+- **Kök neden yalnız video ile kesinleşmez**: medya URL/CDN ve bağlantı hataları, video controller yaşam döngüsü, timeout ve yükleme-state temizliği kontrol edilmeli.
+- Bir sonraki toplu cihaz düzeltme paketinde yüksek öncelik. **Bu not, çözümün uygulandığını veya cihaz testinden geçtiğini göstermez.** Cihazdaki kişisel medya/video GitHub'a yüklenmedi.
