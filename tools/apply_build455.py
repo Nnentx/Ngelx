@@ -101,6 +101,7 @@ close = post.rfind('  );')
 if close < 0: raise RuntimeError('Community post closure missing')
 post = post[:close]+'  ));'+post[close+4:]
 source = source[:start]+post+source[end:]
+source = source.replace('AlertDialog(', 'Ngelx455WhiteDialog(')
 path.write_text(source)
 replace('app/lib/build446_call_lifecycle.dart', '  bool _observing=false,_foreground=true;', '''  bool _observing=false,_foreground=true;
   Future<void> clearForAccount455()async{
