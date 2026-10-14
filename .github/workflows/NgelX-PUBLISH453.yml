@@ -1,0 +1,43 @@
+name: Publish verified Build453 test APK
+on:
+  push:
+    branches: [work/build-453-consolidated-device-fixes]
+    paths: ['.github/workflows/NgelX-PUBLISH453.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Require the exact candidate build to pass
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh run watch 38521044774 --repo Nnentx/Ngelx --exit-status --interval 20
+          test "$(gh api repos/Nnentx/Ngelx/actions/runs/38521044774 --jq .head_sha)" = "966d48e05048c25588f585681fbe644edf91478d"
+          test "$(gh api repos/Nnentx/Ngelx/actions/runs/38521044774 --jq .conclusion)" = "success"
+      - name: Download exact successfully tested artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh run download 38521044774 --repo Nnentx/Ngelx --name NgelX-1.0.228-Build-453-CONSOLIDATED-DEVICE-FIXES --dir release453
+      - name: Validate published APK bytes
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib, shutil
+          name='NgelX-1.0.228-Build-453-CONSOLIDATED-DEVICE-FIXES.apk'
+          apk=next(Path('release453').rglob(name))
+          expected=next(Path('release453').rglob(name+'.sha256')).read_text().split()[0]
+          assert len(expected)==64
+          assert hashlib.sha256(apk.read_bytes()).hexdigest()==expected
+          shutil.copyfile(apk,'NgelX-1.0.228-Build-453.apk')
+          Path('NgelX-1.0.228-Build-453.apk.sha256').write_text(expected+'  NgelX-1.0.228-Build-453.apk\n')
+          Path('release-notes453.md').write_text('Android test sürümü 1.0.228 / Build 453.\n\nMevcut yapı korunarak canlı yayın yorum klavyesi, yayıncı/izleyici düzeni, konuk daveti ve yeniden bağlantısı, yükselip kaybolan kalpler, kırpılmayan sohbet fotoğrafları ve gelen kutusu okunabilirliği düzenlendi. Tekrarlanan sorgular ve fotoğraf bellek yükü azaltıldı. Özel/grup araması bildirim gönderimi ve cihaz kaydı iyileştirildi; ücretsiz sunucu güncellendi.\n\nDerleme, analiz, davranış ve güvenlik testleri ile mevcut kurulumla uyumlu imza doğrulandı. Gerçek iki telefonda zil sesi, konuk ses/görüntüsü ve performans testi gerekiyor. Alıcıların yeni sürümü kurup açması ve arama bildirimlerinin etkin olması gerekir. Topluluk gönderi indeksi Firebase yetkisi/giriş erişimi nedeniyle henüz tamamlanamadı.\n')
+          PY
+      - name: Publish exact test release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create v1.0.228-build453-test NgelX-1.0.228-Build-453.apk NgelX-1.0.228-Build-453.apk.sha256 --repo Nnentx/Ngelx --target 966d48e05048c25588f585681fbe644edf91478d --prerelease --title "NgelX 1.0.228 / Build 453 test" --notes-file release-notes453.md
