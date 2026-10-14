@@ -226,8 +226,9 @@ class _Ngelx456CoverEditorState extends State<Ngelx456CoverEditor> {
             );
       await ref.update({'coverUrl': url, 'coverAlignment': alignment});
       if (mounted) {
-        Navigator.pop(context);
+        // Show feedback while the editor route still owns a mounted context.
         ngelx455Status(context, 'Kapak güncellendi');
+        Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) _communityError450(context, e);
@@ -1609,7 +1610,13 @@ Future<void> ngelx456PostMenu(
   final root = _communities450.doc(cid),
       ref = root.collection('posts').doc(pid),
       me = _communityUid450;
-  final v = (await root.get()).data() ?? {};
+  Map<String, dynamic> v;
+  try {
+    v = (await root.get()).data() ?? {};
+  } catch (e) {
+    if (context.mounted) _communityError450(context, e);
+    return;
+  }
   if (!context.mounted) return;
   final admin = _communityAdmin450(v),
       author = (post['authorId'] ?? '').toString();
@@ -1850,19 +1857,40 @@ class Ngelx456Saved extends StatefulWidget {
 }
 
 class _Ngelx456SavedState extends State<Ngelx456Saved> {
-  late final stream = FirebaseFirestore.instance
+  late final query = FirebaseFirestore.instance
       .collection('users')
       .doc(_communityUid450)
       .collection('saved')
       .orderBy('savedAt', descending: true)
-      .limit(100)
-      .snapshots();
+      .limit(100);
+  late Stream<QuerySnapshot<Map<String, dynamic>>> stream = query.snapshots();
   @override
   Widget build(BuildContext c) => _communitySurface450(
     title: 'Kaydedilen topluluk gönderileri',
     body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
       stream: stream,
       builder: (c, s) {
+        if (s.hasError)
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'Kaydedilenler yüklenemedi. Bağlantını kontrol edip yeniden dene.',
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: () => setState(() => stream = query.snapshots()),
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Yeniden dene'),
+                  ),
+                ],
+              ),
+            ),
+          );
         if (!s.hasData) return const Center(child: CircularProgressIndicator());
         final docs = s.data!.docs
             .where((d) => d.data()['type'] == 'community')
