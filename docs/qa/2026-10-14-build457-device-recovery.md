@@ -39,3 +39,6 @@ Asıl güvenlik/karışma riski: birebir Gelen Kutusu satırında karşı taraf 
 
 ## Build457 — Topluluk kapak yetkisi ve gereksiz yazma (#54)
 Kurucu `founderId` alanıyla doğrulanır; eski toplulukta `admins` eksikse sadece istemci yanlışlıkla `yetki` demesin. Ancak Firebase sunucu kuralları hâlâ son yetkili mercidir; kurucu istemcide kabul edilse bile eski dağıtılmış kural reddederse **sunucu güvenlik kuralları kontrol edilmeli** uyarısı gösterilir, kural atlatılmaz. Kadraj tek başına değiştiğinde `coverUrl` gönderilmez ve değişiklik yoksa belgeye boş yere yazılmaz. Çalışan topluluk video/fotoğraf yüklemeleri, hesaplar ve izinler korunur; sunucu kuralları otomatik dağıtılmaz. Flutter saf fonksiyon testi eklenir; gerçek cihaz kaydı hâlâ kabul testi bekler.
+
+## Eski topluluk kurucusunun yalnız kapak yetkisi — sunucu kuralı (#54)
+Build456 sonrası Firestore kurallarına yalnızca eski toplulukta `founderId` ile eşleşen kullanıcının **`coverUrl` ve `coverAlignment` alanlarını değiştirmesine** izin veren dar koşul eklenir. Diğer yönetim, üye, görünürlük ve moderasyon alanlarına bu istisna uygulanmaz. Firebase emülatör testleri kurucu/admin/üye/yabancı hesaplarını ve sınırları kontrol eder. **CI'daki kurallar sadece emülatöre uygulanır, canlı üretim Firestore kuralları dağıtılmaz**; dağıtım ayrı kullanıcı onayı gerektirir.
