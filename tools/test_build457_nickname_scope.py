@@ -21,10 +21,7 @@ class TestNicknameScope457(unittest.TestCase):
 
     def test_legacy_build455_must_not_reintroduce_bug(self):
         source=APPLY455.read_text()
-        self.assertNotIn(
-            'takma=(takmalar[other]??\\'\\').toString().trim()',
-            source.split("replace('app/lib/main.dart', \"title:StreamBuilder",1)[0].split("\\n")[0]
-        )
+        self.assertNotIn("takma=(takmalar[other]??'').toString().trim()",source)
         self.assertIn("viewer-scoped reader",source)
 
 if __name__ == '__main__':
