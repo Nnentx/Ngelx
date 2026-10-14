@@ -494,6 +494,8 @@ jobs:
         run: |
           git apply --check tools/build456.patch
           git apply tools/build456.patch
+          python3 tools/apply_build456_feed_fallback.py
+          python3 -m unittest discover -s tools -p 'test_build456_feed_fallback.py'
           node --check server/community456/index.mjs
           node tools/build456_policy_test.mjs
 

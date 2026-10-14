@@ -46,3 +46,13 @@ Sunucu sayaçları/abonelik/planlama yeni servislerin başarılı kurulmasına b
 - Gönderi için **Görüş bildir** penceresi kapatılırken bir `TextEditingController` çok erken dispose edilmez; kısa geri bildirim metni dialog kapanma animasyonunda güvenli biçimde tutulur.
 - Son başarılı tam CI: **38620595962**, Build 456 imzalı APK ve artifact doğrulanmıştır (commit `51852fe6aef9a165c1a868c82f71056b964bd825`).
 - Bu iki son düzeltme `7e024264409c9698f4c2db7fce1d2a918ccda0d0` commitindedir ve **ayrı sonraki CI koşusunda** doğrulanacaktır. Yeni koşu başarılı olmadan bu değişiklikleri önceki APK'ya mal etme.
+
+
+## Build456 — eksik Firestore indeksi için sınırlı akış geri dönüşü
+
+Önceki kaynakta Firestore `failed-precondition` / eksik bileşik indeks durumunda akış boş kalabiliyordu. Yeni kaynak üretimi sırasında:
+
+- Normal yolda **tarihe göre sıralı** ve **20 gönderiden başlayan sınırlı sorgu** korunur.
+- Sadece indeks eksikliği halinde onaylı gönderilerden en fazla **120 belge** içeren geçici, sınırlı yedek sorguya geçilir. Gelen belgeler tarihine göre ekranda sıralanır. Yetki/ağ hataları indeks sorunu gibi gizlenmez.
+- Yedek sorgu arşivdeki **bütün** gönderileri kapsamayabilir; bu yüzden kesin kronolojik doğruluk ve tüm gönderilerin erişimi için uygun Firestore indeksi hâlâ gereklidir.
+- Sunucu dağıtımı, ücretli bulut hizmeti veya canlı Firestore kural değişikliği yapılmaz. Python kaynak koruma testi ve Flutter CI ile doğrulanmadan teslim edilmiş kabul edilmez.
