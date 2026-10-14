@@ -133,20 +133,31 @@
      entry.muted=data['callModerationRoom']==name&&List<String>.from(data['callMutedUids']??const[]).contains(me);
      _calls[name]=entry;
      entry.subscription=ref.snapshots().listen((snapshot){
-@@ -46,6 +47,13 @@
-     if(!kIsWeb&&defaultTargetPlatform==TargetPlatform.android){
+@@ -47,6 +48,13 @@
        await _native.invokeMethod<void>('start');
      }
-+  }
+   }
 +  Future<void> returnTo454()async{
 +    if(_calls.isEmpty)return;
 +    final item=_calls.entries.first;
 +    if(_ngelxArkaPlanAramaOdalari.containsKey(item.key)){await ngelx445ReturnCall(item.key);return;}
 +    final route=item.value.route;
 +    if(route!=null&&route.isActive)ngelxNavigatorKey.currentState?.popUntil((r)=>identical(r,route));
-   }
++  }
    Future<void> detach(lk.Room room)async{
      final names=_calls.entries.where((e)=>identical(e.value.room,room)).map((e)=>e.key).toList();
+     for(final name in names){await _calls.remove(name)?.subscription?.cancel();}
+@@ -64,8 +72,8 @@
+   Future<void> hide(String name)=>_enqueue(()async{
+     final entry=_calls[name];if(entry==null)return;entry.hidden=true;await _camera(entry,false);
+   });
+-  Future<void> show(String name)=>_enqueue(()async{
+-    final entry=_calls[name];if(entry==null)return;entry.hidden=false;await _camera(entry,_foreground);
++  Future<void> show(String name,{Route<dynamic>? route})=>_enqueue(()async{
++    final entry=_calls[name];if(entry==null)return;if(route!=null)entry.route=route;entry.hidden=false;await _camera(entry,_foreground);
+   });
+   @override void didChangeAppLifecycleState(AppLifecycleState state){
+     _foreground=state==AppLifecycleState.resumed;
 --- a/app/lib/build448_incoming_calls.dart
 +++ b/app/lib/build448_incoming_calls.dart
 @@ -6,13 +6,18 @@
@@ -706,6 +717,15 @@
                        maxLength:2000,
                        buildCounter:(_, {required currentLength,required isFocused,maxLength})=>null,
                        decoration:InputDecoration(
+@@ -16910,7 +16915,7 @@
+     final arkaPlan=ngelxArkaPlanAramayiGeriAl(widget.roomName);
+     if(arkaPlan!=null){
+       oda=arkaPlan.room;
+-      unawaited(ngelx446Calls.show(widget.roomName));
++      unawaited(ngelx446Calls.show(widget.roomName,route:ModalRoute.of(context)));
+       mikrofon=arkaPlan.room.localParticipant?.isMicrophoneEnabled()??true;
+       kamera=widget.goruntulu&&(ngelx446Calls._calls[widget.roomName]?.restoreCamera==true||arkaPlan.room.localParticipant?.isCameraEnabled()==true);
+       hoparlor=lk.AudioManager.instance.isSpeakerOutputPreferred;
 @@ -17151,7 +17156,7 @@
        oda=r;
        final yerel=r.localParticipant;
