@@ -482,6 +482,12 @@ jobs:
           python3 tools/apply_build455.py
           python3 tools/apply_build455_rules.py
 
+      - name: Test profile identity fallbacks
+        working-directory: app
+        run: |
+          cp ../tools/build455_ui_test.dart test/build455_ui_test.dart
+          flutter test --timeout 60s test/build455_ui_test.dart
+
       - name: Verify bounded chat photos and honest upload progress
         working-directory: app
         run: |
@@ -543,7 +549,7 @@ jobs:
         run: |
           set -euo pipefail
           nl -ba firestore.rules | sed -n '260,310p;420,435p'
-          npx firebase emulators:exec --project demo-ngelx --only firestore --non-interactive "node tools/firestore_rules_test.mjs && node tools/build439_preferences_rules_test.mjs && node tools/build440_rules_test.mjs && node tools/build441_rules_test.mjs && node tools/build446_rules_test.mjs && node tools/build448_rules_test.mjs && node tools/build450_rules_test.mjs" || { tail -100 firestore-debug.log; exit 1; }
+          npx firebase emulators:exec --project demo-ngelx --only firestore --non-interactive "node tools/firestore_rules_test.mjs && node tools/build439_preferences_rules_test.mjs && node tools/build440_rules_test.mjs && node tools/build441_rules_test.mjs && node tools/build446_rules_test.mjs && node tools/build448_rules_test.mjs && node tools/build450_rules_test.mjs && node tools/build455_rules_test.mjs" || { tail -100 firestore-debug.log; exit 1; }
 
 
       - name: Restore Android Java 17
