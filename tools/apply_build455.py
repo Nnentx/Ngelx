@@ -87,6 +87,20 @@ end = source.index('    if (confirmed != true',start)
 segment=source[start:end]
 segment=segment.replace('children: [', "children: [\n            if(cover!=null)Ngelx454LocalMedia(file:cover!,video:false),\n            if(photo!=null)Padding(padding:const EdgeInsets.symmetric(vertical:12),child:SizedBox(height:80,width:80,child:Ngelx454LocalMedia(file:photo!,video:false))),",1)
 source=source[:start]+segment+source[end:]
+start = source.index('class NgelXCommunityPost450')
+end = source.index('class NgelXCommunityAdmin450', start)
+post = source[start:end]
+count_start = post.index('        Padding(padding:const EdgeInsets.only(top:10),child:Wrap(')
+count_end = post.index('        const Divider(),', count_start)
+post = post[:count_start] + '        Ngelx455PostCounts(ref:ref),\n' + post[count_end:]
+share_start = post.index('                onPressed: () => SharePlus.instance.share(')
+share_end = post.index('                icon: const Icon(Icons.share_outlined', share_start)
+post = post[:share_start] + '                onPressed:()=>ngelx455SharePost(c,ref,value),\n' + post[share_end:]
+post = post.replace('Widget build(BuildContext c) => Container(', 'Widget build(BuildContext c) => Ngelx455PostView(ref:ref,child:Container(',1)
+close = post.rfind('  );')
+if close < 0: raise RuntimeError('Community post closure missing')
+post = post[:close]+'  ));'+post[close+4:]
+source = source[:start]+post+source[end:]
 path.write_text(source)
 replace('app/lib/build446_call_lifecycle.dart', '  bool _observing=false,_foreground=true;', '''  bool _observing=false,_foreground=true;
   Future<void> clearForAccount455()async{
