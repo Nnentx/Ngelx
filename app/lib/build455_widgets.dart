@@ -1,5 +1,18 @@
 part of 'main.dart';
 
+class Ngelx455WhiteDialog extends StatelessWidget {
+  final Widget? title, content, icon;
+  final List<Widget>? actions;
+  final Color? backgroundColor;
+  const Ngelx455WhiteDialog({super.key, this.title, this.content, this.icon,
+    this.actions, this.backgroundColor});
+  @override Widget build(BuildContext context) => Theme(
+    data: ThemeData.light().copyWith(colorScheme: ColorScheme.fromSeed(seedColor: mor)),
+    child: AlertDialog(backgroundColor: backgroundColor ?? Colors.white,
+      surfaceTintColor: Colors.transparent, title: title, content: content,
+      icon: icon, actions: actions));
+}
+
 String ngelx455ProfileName(Map<String, dynamic> profile,
     {String fallback = 'Üye'}) {
   for (final key in ['displayName', 'name', 'fullName', 'username']) {
@@ -78,7 +91,7 @@ class _Ngelx455CommentsState extends State<Ngelx455Comments> {
               Row(children: [Expanded(child: Text(name, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800))),
                 if (widget.member && (uid == _communityUid450 || widget.admin))
                   PopupMenuButton<String>(onSelected: (_) async {
-                    final yes = await showDialog<bool>(context: context, builder: (c) => AlertDialog(
+                    final yes = await showDialog<bool>(context: context, builder: (c) => Ngelx455WhiteDialog(
                       title: const Text('Yorumu sil?'), actions: [
                         TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Vazgeç')),
                         FilledButton(onPressed: () => Navigator.pop(c, true), child: const Text('Sil'))]));
