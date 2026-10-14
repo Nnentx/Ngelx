@@ -14,10 +14,10 @@ class TestInbox457(unittest.TestCase):
         self.assertIn("_inbox457Profiles.putIfAbsent(uid",changed)
         self.assertEqual(transform(changed),changed)
 
-    def test_abort_if_missing_anchor(self):
-        with self.assertRaises((ValueError,IndexError)):
-            transform("class _MesajPageState extends State<MesajPage> {\n"
-                      +FIELD_OLD+"\n}\nclass ArsivSohbetlerPage\n")
+    def test_unknown_legacy_renderer_is_not_modified(self):
+        source=("class _MesajPageState extends State<MesajPage> {\n"
+                +FIELD_OLD+"\n}\nclass ArsivSohbetlerPage\n")
+        self.assertEqual(transform(source),source)
 
 if __name__=="__main__":
     unittest.main()
