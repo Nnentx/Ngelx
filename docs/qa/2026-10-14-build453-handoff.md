@@ -22,7 +22,7 @@ Derleme: https://github.com/Nnentx/Ngelx/actions/runs/38521285091
 - Flutter analiz, canlı yorum/kalp, küçük ekran ve mevcut davranış testleri geçti.
 - Sunucu token yetkilendirme ve Firestore kural testleri geçti.
 - Güncel ücretsiz arama bildirim sunucusunun 23 testi yerel olarak geçti; dağıtım CI'da başarılı.
-- Mevcut Android imza anahtarı doğrulandı. APK üretimi ve çıktı imza/sürüm doğrulaması bu kayıt oluşturulduğunda sürüyor.
+- Mevcut Android imza anahtarı, APK çıktısının imzası ve 1.0.228 / 453 sürümü doğrulandı. Derleme 38521285091 başarılı. İndirilen APK ayrıca SHA256 ile doğrulandı: `26bb70f762b36a98c2f995af0674e5970435f4fcdc816cfefa06a3446f0e973a` (147447625 bayt). Dosya kullanıcıya doğrudan teslim edildi. GitHub release oluşturma adımı HTTP 403 (Resource not accessible by integration) nedeniyle başarısız; bu, başarılı derleme çıktısını etkilemedi.
 
 ## Açık işler ve cihaz kabulü
 
