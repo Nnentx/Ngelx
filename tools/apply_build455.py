@@ -26,6 +26,8 @@ last = section.rfind('}),')
 if last < 0: raise RuntimeError('Build455 private title closure missing')
 section = section[:last] + '});}),' + section[last+3:]
 path.write_text(source[:start]+section+source[end:])
+replace('app/lib/main.dart', 'class _SohbetPageState extends State<SohbetPage> with Ngelx437MessageJump<SohbetPage> {', "class _SohbetPageState extends State<SohbetPage> with Ngelx437MessageJump<SohbetPage> {\n  late final Stream<DocumentSnapshot<Map<String,dynamic>>> _peerProfile455=FirebaseFirestore.instance.collection('users').doc(widget.digerUid).snapshots();")
+replace('app/lib/main.dart', "stream:FirebaseFirestore.instance.collection('users').doc(widget.digerUid).snapshots(),builder:(_,profile455)", "stream:_peerProfile455,builder:(_,profile455)")
 
 replace('app/lib/community450.dart', 'fontSize: 11)', 'fontSize: 13)')
 replace('app/lib/community450.dart', 'fontSize: 11,', 'fontSize: 13,')
