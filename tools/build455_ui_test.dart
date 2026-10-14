@@ -13,6 +13,15 @@ class LocalVideo455 extends VideoPlayerController {
 }
 
 void main() {
+  testWidgets('white community dialogs retain dark text under the dark root theme', (tester) async {
+    await tester.pumpWidget(MaterialApp(theme: ThemeData.dark(), home: const Scaffold(
+      body: Ngelx455WhiteDialog(title: Text('Topluluk'), content: Text('Açıklama')))));
+    final context = tester.element(find.text('Açıklama'));
+    expect(Theme.of(context).brightness, Brightness.light);
+    expect(tester.widget<AlertDialog>(find.byType(AlertDialog)).backgroundColor, Colors.white);
+    expect(DefaultTextStyle.of(context).style.color, isNot(Colors.white));
+    expect(tester.takeException(), isNull);
+  });
   test('offscreen and barely visible posts do not count as viewed', () {
     const viewport = Rect.fromLTWH(0, 50, 320, 600);
     expect(ngelx455PostVisible(const Rect.fromLTWH(0, 700, 320, 200), viewport), isFalse);
