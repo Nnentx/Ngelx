@@ -516,6 +516,10 @@ jobs:
           python3 tools/apply_build457_inbox_identity.py
           python3 -m unittest discover -s tools -p 'test_build457_inbox_identity.py'
 
+      - name: Test Build457 inbox nickname uses viewer UID
+        run: |
+          python3 -m unittest discover -s tools -p 'test_build457_nickname_scope.py'
+
       - name: Test Build457 live-video recovery and missing-track retry
         run: |
           cp tools/build457_live_test.dart app/test/build457_live_test.dart

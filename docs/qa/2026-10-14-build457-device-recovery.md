@@ -30,3 +30,6 @@ Topluluk kartlarının görsel yüklemesi süresince dönen gösterge yerine yer
 
 ## Kimlik koruması üretim zinciri notu
 Üçüncü CI denemesinde canlı kurtarma ve Keşfet görsel düzeltmesi test adımlarına kadar ilerledi; ancak eski Gelen Kutusu üretimi beklenen sohbet satırını içermediğinden kimlik yaması güvenli biçimde uygulanamadı. Yeni adım eşleşmeyen kodu değiştirmez, yalnız derleme kaydında kullanıcı verisi içermeyen kaynak bölümünü gösterir. #52 **çözülmüş kabul edilmeyecek**; kimlik eşlemesi gerçek kod üzerinde ayrıca test edilecek. Diğer düzeltmelerin derlemesini bu ayrı teşhis aşaması engellemez.
+
+## Bulunan gerçek isim karışması — takma ad okuma anahtarı (#52)
+Mevcut sohbet takma ad kaydedicisi `nicknames.$me` alanına, yani **takma adı belirleyen kullanıcının UID'sine** yazıyor. Ancak Build455 oluşturucusunun Gelen Kutusu satırında bunu `nicknames[other]` alanından okuduğu belirlendi. Bu, karşı kişinin kendisi için oluşturduğu takma adı başka kullanıcının ekranında gösterebilir. Build457'de bu gereksiz dönüşüm kaldırılıyor; oluşturulan Gelen Kutusu kaynak dosyasında `takmalar[ben]` kullanıldığını denetleyen regresyon testi ekleniyor. Bu değişiklik sohbet kimliklerini, gerçek `displayName` değerlerini veya mesajları değiştirmiyor. İki hesapla gerçek cihaz testi sonuçlanmadan #52 kapatılmayacak.
