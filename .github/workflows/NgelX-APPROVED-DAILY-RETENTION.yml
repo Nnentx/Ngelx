@@ -1,11 +1,8 @@
 name: NgelX approved daily retention
 on:
-  push:
-    branches: [main]
-    paths: ['.github/workflows/NgelX-APPROVED-DAILY-RETENTION.yml']
+  # PAUSED 2026-10-15 at owner's request while verifying user-data safety.
+  # Deliberately no schedule or push trigger. Manual runs skip the job.
   workflow_dispatch:
-  schedule:
-    - cron: '15 8 * * *'
 permissions:
   contents: read
   actions: read
@@ -15,6 +12,7 @@ concurrency:
 jobs:
 
   retention:
+    if: ${{ false }} # Protective fail-closed guard; no cleanup is allowed.
     runs-on: ubuntu-latest
     timeout-minutes: 25
     concurrency:
