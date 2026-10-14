@@ -1,0 +1,3 @@
+Complete application and security source: a34fe291680ccd5161cfb3a94017c7546bdaf4c3
+Includes all four real community counters, comments/replies/reactions, shared white design, compact upload states, account call cleanup, live profile metadata and silent call-time feed playback.
+Only deliver an artifact from this checkpoint or a later explicitly verified correction.
