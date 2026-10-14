@@ -21,22 +21,23 @@ export function createHandler(io){return async (request)=>{
   const actor=uid===chat.callStartedBy?sender:await io.getUser(uid);
   if(!actor||actor.deleted||actor.deactivated||!sender||sender.deleted||sender.deactivated)return json({error:'forbidden'},403);
   if(chat.isGroup!==true)event.title=String(sender.displayName??sender.username??'NgelX araması').slice(0,100);
-  let sent=0;const offset=body.offset??0;
+  let sent=0,missingDevices=0,invalidDevices=0;const offset=body.offset??0;
   for(const target of event.recipients.slice(offset,offset+CHUNK)){
    const peer=await io.getUser(target);
    if(!eligible({...sender,uid:chat.callStartedBy},peer,target))continue;
    const tokens=await io.tokens(target);
-   if(!tokens.length)continue;
+   if(!tokens.length){missingDevices++;continue;}
    const latest=await io.getChat(body.chatId);
    if(latest?.callRoomName!==chat.callRoomName||latest?.callStatus!==chat.callStatus)break;
    const lease=await io.claim(body.chatId,event.roomName,event.kind,target,now);
    if(!lease)continue;
    try{
     const {recipients,...data}=event;
-    for(const token of tokens.slice(0,2)){if(await io.send(token,{...data,recipientUid:target,chatId:body.chatId}))sent++;}
-    await io.complete(lease,true);
+    let accepted=0;
+    for(const token of tokens.slice(0,2)){if(await io.send(token,{...data,recipientUid:target,chatId:body.chatId})){sent++;accepted++;}else{invalidDevices++;if(io.discardToken)await io.discardToken(target,token);}}
+    await io.complete(lease,accepted>0);
    }catch(e){await io.complete(lease,false);throw e;}
   }
-  return json({sent,nextOffset:offset+CHUNK<event.recipients.length?offset+CHUNK:null});
+  return json({sent,missingDevices,invalidDevices,nextOffset:offset+CHUNK<event.recipients.length?offset+CHUNK:null});
  }catch{return json({error:'temporarily_unavailable'},503);}
 };}

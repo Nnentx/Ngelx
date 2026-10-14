@@ -49,7 +49,7 @@ s=replace_once(s,'_started=true;','_started=true;WidgetsBinding.instance.addObse
 a=s.index('      try{\n        await Permission.notification.request();');b=s.index('      if(FirebaseAuth.instance.currentUser?.uid!=user.uid)return;',a)
 s=s[:a]+"      unawaited(registerDevice453());\n"+s[b:]
 pos=s.index('  final Set<String> _dispatch452=')
-s=s[:pos]+"""  bool _registering453=false;
+s=s[:pos]+"""  bool _registering453=false;\n  bool _warnedNotifications453=false;
   @override void didChangeAppLifecycleState(AppLifecycleState state){if(state==AppLifecycleState.resumed)unawaited(registerDevice453());}
   Future<void> registerDevice453()async{
     final user=FirebaseAuth.instance.currentUser;if(user==null||user.isAnonymous||_registering453)return;
@@ -63,6 +63,8 @@ s=s[:pos]+"""  bool _registering453=false;
           if(token==null||token.isEmpty)throw StateError('token_not_ready');
           if(FirebaseAuth.instance.currentUser?.uid!=user.uid)return;
           await FirebaseFirestore.instance.collection('_call_devices').doc(user.uid).collection('tokens').doc(token.hashCode.toUnsigned(32).toString()).set({'token':token,'uid':user.uid,'updatedAt':FieldValue.serverTimestamp()}).timeout(const Duration(seconds:8));
+          final status=await channel.invokeMapMethod<String,dynamic>('callNotificationStatus453');
+          if(!_warnedNotifications453&&status!=null&&status.values.any((v)=>v==false)){final context=ngelxNavigatorKey.currentContext;if(context!=null&&context.mounted){_warnedNotifications453=true;ngelxDurumMesaji(context,'Bu telefonda arama bildirimi veya zil sesi kapalı. Telefonun bildirim ve ses ayarlarını kontrol et.',tip:'uyari');}}
           return;
         }catch(_){if(n<2)await Future<void>.delayed(Duration(seconds:n+1));}
       }
@@ -73,7 +75,22 @@ s=s[:pos]+"""  bool _registering453=false;
     try{final doc=await ref.get(const GetOptions(source:Source.server)).timeout(const Duration(seconds:8));await _pushOutgoing452(ref.id,doc.data()??<String,dynamic>{},uid);}catch(_){}
   }
 """+s[pos:]
+s=replace_once(s,'_handling=room;await _stop();',"_handling=room;await _stop();try{await channel.invokeMethod<void>('cancel',{'room':room});}catch(_){}")
 s=s.replace("if((response.statusCode??503)>=500)return false;","if((response.statusCode??503)>=500||response.statusCode==429)return false;")
+s=replace_once(s,"final next=body['nextOffset'];","if(((body['missingDevices'] as num?)?.toInt()??0)>0&&!_warnedNotifications453){final context=ngelxNavigatorKey.currentContext;if(context!=null&&context.mounted){_warnedNotifications453=true;ngelxDurumMesaji(context,'Bazı alıcılar arama bildirimi alamıyor. Diğer telefonlarda uygulamayı güncelleyip açın.',tip:'uyari');}}\n        final next=body['nextOffset'];")
+p.write_text(s)
+
+p=Path('app/android/app/src/main/kotlin/com/nnentx/ngelx_app/MainActivity.kt');s=p.read_text()
+s=replace_once(s,'                    "getPushToken" ->',"""                    "callNotificationStatus453" -> {
+                        val manager = getSystemService(android.app.NotificationManager::class.java)
+                        val audio = getSystemService(android.media.AudioManager::class.java)
+                        val channel = if(android.os.Build.VERSION.SDK_INT >= 26) manager.getNotificationChannel(IncomingCallService.CHANNEL) else null
+                        result.success(mapOf("enabled" to (android.os.Build.VERSION.SDK_INT < 24 || manager.areNotificationsEnabled()), "audible" to (channel == null || (channel.importance > 0 && channel.sound != null)), "ringer" to (audio.ringerMode == android.media.AudioManager.RINGER_MODE_NORMAL), "interruptions" to (android.os.Build.VERSION.SDK_INT < 23 || manager.currentInterruptionFilter == android.app.NotificationManager.INTERRUPTION_FILTER_ALL)))
+                    }
+                    "getPushToken" ->""")
+p.write_text(s)
+p=Path('app/android/app/src/main/kotlin/com/nnentx/ngelx_app/IncomingCallService.kt');s=p.read_text()
+s=replace_once(s,'            val manager = context.getSystemService(NotificationManager::class.java)', '            if(alerts.containsKey(room)) return // Do not replace an already ringing notification from the Firestore observer.\n            val manager = context.getSystemService(NotificationManager::class.java)')
 p.write_text(s)
 
 p=Path('app/lib/build445_inbox_model.dart');s=p.read_text()
@@ -106,6 +123,35 @@ body=replace_once(body,'    widget.oda.addListener(_yenile);',"""    widget.oda.
     },onError:(_){ });
 """)
 body=replace_once(body,'    yorum.dispose();',"    _reactionSub453?.cancel();\n    _hearts453.dispose();\n    _commentFocus453.dispose();\n    yorum.dispose();")
+body=replace_once(body,"  final _commentFocus453=FocusNode();", "  final _commentFocus453=FocusNode();\n  late String _liveServer453,_liveToken453;\n  late final Stream<DocumentSnapshot<Map<String,dynamic>>> _ownerProfile453,_selfProfile453;")
+body=replace_once(body,'    arkaKamera = widget.ilkArkaKamera;', "    _liveServer453=widget.serverUrl;_liveToken453=widget.participantToken;\n    _ownerProfile453=FirebaseFirestore.instance.collection('users').doc(widget.ownerId).snapshots();\n    final self=FirebaseAuth.instance.currentUser?.uid;\n    _selfProfile453=self==null?const Stream<DocumentSnapshot<Map<String,dynamic>>>.empty():FirebaseFirestore.instance.collection('users').doc(self).snapshots();\n    arkaKamera = widget.ilkArkaKamera;")
+body=body.replace("stream:FirebaseFirestore.instance.collection('users').doc(widget.ownerId).snapshots(),",'stream:_ownerProfile453,').replace("stream:FirebaseFirestore.instance.collection('users').doc(ben).snapshots(),",'stream:_selfProfile453,')
+a=body.index('  Future<void> _guestSync448(');b=body.index('  void _yenile()',a)
+body=body[:a]+Path('tools/build453_guest_sync.fragment').read_text()+body[b:]
+body=body.replace('widget.serverUrl.isEmpty||widget.participantToken.isEmpty','_liveServer453.isEmpty||_liveToken453.isEmpty').replace('widget.oda.connect(widget.serverUrl,widget.participantToken)','widget.oda.connect(_liveServer453,_liveToken453)')
+body=replace_once(body,'            unawaited(_heartbeatYaz());\n          }\n          yenidenBaglaniyor=false;', '''            unawaited(_heartbeatYaz());
+          }else if(_guestActive448){
+            final me=FirebaseAuth.instance.currentUser?.uid;
+            final current=me==null?null:await ngelx448GuestRef(widget.belgeId,me).get(const GetOptions(source:Source.server));
+            final accepted=current?.data()?['status']=='accepted';
+            _guestWanted448=accepted;_guestActive448=accepted;
+            await widget.oda.localParticipant?.setMicrophoneEnabled(accepted);
+            await widget.oda.localParticipant?.setCameraEnabled(accepted,cameraCaptureOptions:const lk.CameraCaptureOptions(params:lk.VideoParametersPresets.h360_169,maxFrameRate:20.0));
+          }
+          yenidenBaglaniyor=false;''')
+
+a=body.index('    if(pkAktifYerel||heartbeatTik%3==0){');b=body.index('    try{\n      if(kapatildi)return;',a)
+body=body[:a]+"""    if(pkAktifYerel||heartbeatTik%3==0){
+      try{
+        final ref=FirebaseFirestore.instance.collection('live_streams').doc(widget.belgeId);
+        final count=await ref.collection('comments').where('kind',isEqualTo:'comment').count().get();
+        final gifts=await ref.collection('comments').where('kind',isEqualTo:'gift').get();
+        if(_reactionsReady453)yama['likeCount']=_reactionCounts453.values.fold<int>(0,(a,b)=>a+b);
+        yama['commentCount']=count.count??0;
+        yama['giftPoints']=gifts.docs.fold<int>(0,(a,d)=>a+((d.data()['points'] as num?)?.toInt()??0));
+      }catch(_){}
+    }
+"""+body[b:]
 a=body.index('  Widget _yorumPaneli(){');b=body.index('  Future<void> _goruntuStudyoPaneli()',a)
 body=body[:a]+Path('tools/build453_live_comments.fragment').read_text()+body[b:]
 a=body.index('  Future<void> _kalpDegistir()');b=body.index('  Future<void> _yorumGonder()',a)
@@ -137,6 +183,10 @@ body=body.replace("foregroundColor:Colors.white,backgroundColor:takipte?Colors.w
 body=body.replace('fontSize:12.5,fontWeight:FontWeight.w900','fontSize:16,fontWeight:FontWeight.w800')
 body=body.replace('fontSize:10.5,fontWeight:FontWeight.w600','fontSize:12,fontWeight:FontWeight.w600')
 body=body.replace('CircleAvatar(radius:18,backgroundImage:foto', 'CircleAvatar(radius:24,backgroundImage:foto')
+# Restore pinned comment management and match the host's connected badge placement.
+body=body.replace("            if(ben.isNotEmpty&&ben!=widget.ownerId)StreamBuilder", "            if(widget.yayinSahibi)_baglantiRozeti(),\n            if(ben.isNotEmpty&&ben!=widget.ownerId)StreamBuilder",1)
+body=body.replace("                const SizedBox(width:7),\n                _baglantiRozeti(),",'')
+body=body.replace("    }else if(kalite==lk.ConnectionQuality.good){\n      yazi='İyi';\n    }else if(kalite==lk.ConnectionQuality.excellent){\n      yazi='Çok iyi';",'')
 a=body.index('  bool _liveTools451=false;');b=body.index('  @override\n  Widget build(BuildContext context)',a)
 body=body[:a]+Path('tools/build453_live_controls.fragment').read_text()+body[b:]
 body=replace_once(body,"          if(yayinBitti)Positioned.fill", "          if(!yayinBitti)Positioned(right:12,bottom:MediaQuery.of(context).viewInsets.bottom+(widget.yayinSahibi?220:172),child:Ngelx453Hearts(pulses:_hearts453)),\n          if(yayinBitti)Positioned.fill")

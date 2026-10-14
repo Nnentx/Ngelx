@@ -1,0 +1,25 @@
+  Future<void> _guestSync448(bool accepted)async{
+    _guestWanted448=accepted;
+    if(_guestConnecting448||!mounted||kapatildi||yayinBitti||accepted==_guestActive448)return;
+    _guestConnecting448=true;
+    try{
+      // Stop publishing immediately on rejection, before any token/network request.
+      if(!accepted){await widget.oda.localParticipant?.setCameraEnabled(false);await widget.oda.localParticipant?.setMicrophoneEnabled(false);if(mounted)setState(()=>_guestActive448=false);}
+      final me=FirebaseAuth.instance.currentUser?.uid;if(me==null)return;
+      final d=await FirebaseFirestore.instance.collection('live_streams').doc(widget.belgeId).get();
+      final token=await NgelXLiveKitSource441().fetch(lk.TokenRequestOptions(roomName:(d.data()?['roomName']??'').toString(),participantIdentity:me));
+      if(!mounted||kapatildi||yayinBitti)return;
+      _liveServer453=token.serverUrl;_liveToken453=token.participantToken;
+      await widget.oda.disconnect();await widget.oda.connect(_liveServer453,_liveToken453);
+      final current=await ngelx448GuestRef(widget.belgeId,me).get();
+      final stillAccepted=current.data()?['status']=='accepted';
+      if(!mounted||kapatildi||yayinBitti)return;
+      _guestWanted448=stillAccepted;
+      if(stillAccepted!=accepted)return;
+      await widget.oda.localParticipant?.setMicrophoneEnabled(accepted);
+      await widget.oda.localParticipant?.setCameraEnabled(accepted,cameraCaptureOptions:const lk.CameraCaptureOptions(params:lk.VideoParametersPresets.h360_169,maxFrameRate:20.0));
+      if(mounted)setState(()=>_guestActive448=accepted);
+    }catch(_){try{await widget.oda.localParticipant?.setCameraEnabled(false);await widget.oda.localParticipant?.setMicrophoneEnabled(false);}catch(_){}if(mounted)setState(()=>_guestActive448=false);if(mounted)ngelxDurumMesaji(context,'Konuk bağlantısı kurulamadı. Yeniden katılım isteği gönderebilirsin.',tip:'hata');}
+    finally{_guestConnecting448=false;if(mounted&&!kapatildi&&!yayinBitti&&_guestWanted448!=accepted)unawaited(_guestSync448(_guestWanted448));}
+  }
+
