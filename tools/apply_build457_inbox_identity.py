@@ -63,7 +63,15 @@ def transform(source: str) -> str:
     region=exactly_once(region,FIELD_OLD,FIELD_NEW,"profile cache")
     marker="final benEngelledim=engellenenler.contains(other);"
     if region.count(marker)!=1:
-        raise ValueError("Private-chat identity marker missing/ambiguous")
+        # Historical inbox generators can replace the whole row renderer.
+        # Never guess a UID or modify chats when the expected UI no longer
+        # exists. Capture only source-code context (no customer data).
+        print("Build457: INBOX IDENTITY FIX NOT APPLIED — generated widget differs", flush=True)
+        for needle in ("SohbetPage(chatId:", "digerUid:", "sohbetiAc(", "ListView.separated(", "FutureBuilder<DocumentSnapshot"):
+            index=region.rfind(needle)
+            if index>=0:
+                print("Generated inbox snippet ["+needle+"]: "+repr(region[max(0,index-850):index+320]), flush=True)
+        return source
     pos=region.index(marker)
     # Legacy UI patches may change whitespace and the builder's formatting.
     prev=region.rfind("final other=",0,pos)

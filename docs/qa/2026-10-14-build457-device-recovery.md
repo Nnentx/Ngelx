@@ -27,3 +27,6 @@ Build456 onaylanmış başarı SHA: `3e8ff6cfc52a99e27fc060f8670d01017333a03e`; 
 
 ## Keşfet avatar görüntüleme (#50)
 Topluluk kartlarının görsel yüklemesi süresince dönen gösterge yerine yer tutucu grup ikonu; URL başarısız olduğunda **yeniden dene** ikonuyla kullanıcı etkileşimi. Mevcut `NgelXAgResmi`/kimlikli URL çözümlemesi ve çalışan video yükleme akışı korunur. Bu görüntüleme UX düzeltmesi, ağdaki gerçek erişim sorununu çözdüğü anlamına gelmez.
+
+## Kimlik koruması üretim zinciri notu
+Üçüncü CI denemesinde canlı kurtarma ve Keşfet görsel düzeltmesi test adımlarına kadar ilerledi; ancak eski Gelen Kutusu üretimi beklenen sohbet satırını içermediğinden kimlik yaması güvenli biçimde uygulanamadı. Yeni adım eşleşmeyen kodu değiştirmez, yalnız derleme kaydında kullanıcı verisi içermeyen kaynak bölümünü gösterir. #52 **çözülmüş kabul edilmeyecek**; kimlik eşlemesi gerçek kod üzerinde ayrıca test edilecek. Diğer düzeltmelerin derlemesini bu ayrı teşhis aşaması engellemez.
