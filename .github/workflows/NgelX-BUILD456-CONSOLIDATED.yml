@@ -15,6 +15,12 @@ name: NgelX BUILD 456 COMMUNITY POLISH AND PERFORMANCE
 
 on:
   workflow_dispatch:
+    inputs:
+      deploy_backend:
+        description: 'OPTIONAL: deploy paid-capable Firebase Functions and production rules; requires project owner permission'
+        type: boolean
+        required: false
+        default: false
   push:
     branches:
       - work/build-456-community-polish
@@ -605,26 +611,8 @@ jobs:
           cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/NgelX-1.0.231-Build-456-CONSOLIDATED-DEVICE-FIXES.apk
           sha256sum build/app/outputs/flutter-apk/NgelX-1.0.231-Build-456-CONSOLIDATED-DEVICE-FIXES.apk > build/app/outputs/flutter-apk/NgelX-1.0.231-Build-456-CONSOLIDATED-DEVICE-FIXES.apk.sha256
 
-      - name: Java 21 for production rules verification
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '21'
-
-      - name: Deploy isolated community notification, counter and scheduled publishing services
-        env:
-          FIREBASE_SERVICE_ACCOUNT_NGELX_44EED: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_NGELX_44EED }}
-          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-        run: python3 tools/deploy_build456_functions.py
-
-      - name: Deploy verified additive community comment rules
-        env:
-          FIREBASE_SERVICE_ACCOUNT_NGELX_44EED: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_NGELX_44EED }}
-          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-        run: |
-          python3 -m pip install google-auth requests
-          python3 tools/deploy_build456_rules.py
-
+      # Publish the signed, locally tested APK before any optional cloud deployment.
+      # The owner can test the app even when Google Cloud API activation is not permitted.
       - name: Upload signed candidate and tested rules for review
         uses: actions/upload-artifact@v4
         with:
@@ -639,4 +627,33 @@ jobs:
             firestore.rules
           if-no-files-found: error
           retention-days: 14
+
+      - name: Report optional backend status
+        if: ${{ github.event_name != 'workflow_dispatch' || !inputs.deploy_backend }}
+        run: echo 'TEST CANDIDATE ONLY — Firebase Functions and new production Firestore rules were NOT deployed. Cloud-backed Build456 features remain pending.'
+
+      - name: Java 21 for production rules verification
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.deploy_backend }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Deploy isolated community notification, counter and scheduled publishing services
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.deploy_backend }}
+        env:
+          FIREBASE_SERVICE_ACCOUNT_NGELX_44EED: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_NGELX_44EED }}
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: python3 tools/deploy_build456_functions.py
+
+      - name: Deploy verified additive community comment rules
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.deploy_backend }}
+        env:
+          FIREBASE_SERVICE_ACCOUNT_NGELX_44EED: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_NGELX_44EED }}
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          python3 -m pip install google-auth requests
+          python3 tools/deploy_build456_rules.py
+
+
 
