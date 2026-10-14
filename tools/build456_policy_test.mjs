@@ -1,0 +1,11 @@
+import assert from 'node:assert/strict';
+import {scheduledOutcome} from '../server/community456/policy.mjs';
+const community={members:['owner'],admins:['owner']},post={status:'scheduled',authorId:'owner',publishAt:100};
+assert.equal(scheduledOutcome(community,post,100),'publish');
+assert.equal(scheduledOutcome(community,{...post,publishAt:10000},100),'retry');
+assert.equal(scheduledOutcome({...community,paused:true},post,100),'reject');
+assert.equal(scheduledOutcome({...community,admins:[]},post,100),'reject');
+assert.equal(scheduledOutcome({...community,banned:['owner']},post,100),'reject');
+assert.equal(scheduledOutcome(community,{...post,status:'deleted'},100),'ignore');
+assert.equal(scheduledOutcome(community,{...post,publishAt:undefined},100),'retry');
+console.log('Scheduled publishing rechecks time, membership, role, pause and bans');

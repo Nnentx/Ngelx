@@ -1,0 +1,3235 @@
+diff --git a/app/lib/build454_widgets.dart b/app/lib/build454_widgets.dart
+index de4e820..6b9a8d4 100644
+--- a/app/lib/build454_widgets.dart
++++ b/app/lib/build454_widgets.dart
+@@ -43,7 +43,7 @@ class Ngelx454LocalMedia extends StatefulWidget{
+ }
+ class _Ngelx454LocalMediaState extends State<Ngelx454LocalMedia>{
+   VideoPlayerController? _video;bool _error=false;
+-  @override void initState(){super.initState();if(widget.video){final v=kIsWeb?VideoPlayerController.networkUrl(Uri.parse(widget.file.path)):VideoPlayerController.file(File(widget.file.path));_video=v;v.initialize().then((_){if(mounted)setState((){});}).catchError((_){if(mounted)setState(()=>_error=true);});}}
++  @override void initState(){super.initState();if(widget.video){final v=kIsWeb?VideoPlayerController.networkUrl(Uri.parse(widget.file.path)):VideoPlayerController.file(File(widget.file.path));_video=v;v.initialize().timeout(const Duration(seconds:12)).then((_){if(mounted)setState((){});}).catchError((_){if(mounted)setState(()=>_error=true);});}}
+   @override void dispose(){_video?.dispose();super.dispose();}
+   @override Widget build(BuildContext c){final v=_video;
+     return ClipRRect(borderRadius:BorderRadius.circular(20),child:Container(color:const Color(0xFFF3F4F7),constraints:const BoxConstraints(maxHeight:280),child:widget.video
+diff --git a/app/lib/build455_widgets.dart b/app/lib/build455_widgets.dart
+index ff34848..b00d49f 100644
+--- a/app/lib/build455_widgets.dart
++++ b/app/lib/build455_widgets.dart
+@@ -4,17 +4,34 @@ class Ngelx455WhiteDialog extends StatelessWidget {
+   final Widget? title, content, icon;
+   final List<Widget>? actions;
+   final Color? backgroundColor;
+-  const Ngelx455WhiteDialog({super.key, this.title, this.content, this.icon,
+-    this.actions, this.backgroundColor});
+-  @override Widget build(BuildContext context) => Theme(
+-    data: ThemeData.light().copyWith(colorScheme: ColorScheme.fromSeed(seedColor: mor)),
+-    child: AlertDialog(backgroundColor: backgroundColor ?? Colors.white,
+-      surfaceTintColor: Colors.transparent, title: title, content: content,
+-      icon: icon, actions: actions));
++  const Ngelx455WhiteDialog({
++    super.key,
++    this.title,
++    this.content,
++    this.icon,
++    this.actions,
++    this.backgroundColor,
++  });
++  @override
++  Widget build(BuildContext context) => Theme(
++    data: ThemeData.light().copyWith(
++      colorScheme: ColorScheme.fromSeed(seedColor: mor),
++    ),
++    child: AlertDialog(
++      backgroundColor: backgroundColor ?? Colors.white,
++      surfaceTintColor: Colors.transparent,
++      title: title,
++      content: content,
++      icon: icon,
++      actions: actions,
++    ),
++  );
+ }
+ 
+-String ngelx455ProfileName(Map<String, dynamic> profile,
+-    {String fallback = 'Üye'}) {
++String ngelx455ProfileName(
++  Map<String, dynamic> profile, {
++  String fallback = 'Üye',
++}) {
+   for (final key in ['displayName', 'name', 'fullName', 'username']) {
+     final value = (profile[key] ?? '').toString().trim();
+     if (value.isNotEmpty && value != 'NgelX') return value;
+@@ -22,247 +39,765 @@ String ngelx455ProfileName(Map<String, dynamic> profile,
+   return fallback;
+ }
+ 
+-void ngelx455Status(BuildContext context, String message, {bool error = false}) {
++void ngelx455Status(
++  BuildContext context,
++  String message, {
++  bool error = false,
++}) {
+   if (!context.mounted) return;
+   final messenger = ScaffoldMessenger.of(context);
+   messenger.hideCurrentSnackBar();
+-  messenger.showSnackBar(SnackBar(
+-    behavior: SnackBarBehavior.floating,
+-    backgroundColor: error ? const Color(0xFFB42335) : const Color(0xFF6744C8),
+-    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+-    content: Row(children: [
+-      Icon(error ? Icons.error_outline : Icons.check_circle_outline,
+-          size: 18, color: Colors.white),
+-      const SizedBox(width: 8),
+-      Expanded(child: Text(message,
+-          style: const TextStyle(fontSize: 13, color: Colors.white))),
+-    ]),
+-  ));
++  messenger.showSnackBar(
++    SnackBar(
++      behavior: SnackBarBehavior.floating,
++      backgroundColor: error
++          ? const Color(0xFFB42335)
++          : const Color(0xFF6744C8),
++      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
++      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
++      content: Row(
++        children: [
++          Icon(
++            error ? Icons.error_outline : Icons.check_circle_outline,
++            size: 18,
++            color: Colors.white,
++          ),
++          const SizedBox(width: 8),
++          Expanded(
++            child: Text(
++              message,
++              style: const TextStyle(fontSize: 13, color: Colors.white),
++            ),
++          ),
++        ],
++      ),
++    ),
++  );
+ }
+ 
+ class Ngelx455Comments extends StatefulWidget {
+   final DocumentReference<Map<String, dynamic>> post;
+   final bool member, admin;
+-  const Ngelx455Comments({super.key, required this.post,
+-    required this.member, required this.admin});
+-  @override State<Ngelx455Comments> createState() => _Ngelx455CommentsState();
++  const Ngelx455Comments({
++    super.key,
++    required this.post,
++    required this.member,
++    required this.admin,
++  });
++  @override
++  State<Ngelx455Comments> createState() => _Ngelx455CommentsState();
+ }
+ 
+ class _Ngelx455CommentsState extends State<Ngelx455Comments> {
+   final input = TextEditingController();
+-  late final comments = widget.post.collection('comments').orderBy('createdAt').snapshots();
++  late final comments = widget.post
++      .collection('comments')
++      .orderBy('createdAt', descending: true)
++      .limit(100)
++      .snapshots();
+   String replyId = '', replyName = '';
+   bool sending = false;
+   final expandedReplies = <String>{};
+-  @override void dispose() { input.dispose(); super.dispose(); }
++  @override
++  void dispose() {
++    input.dispose();
++    super.dispose();
++  }
++
+   Future<void> send() async {
+     final body = input.text.trim(), me = _communityUid450;
+     if (body.isEmpty || me.isEmpty || sending) return;
+     setState(() => sending = true);
+     try {
+-      final user = await FirebaseFirestore.instance.collection('users').doc(me).get();
++      final user = await FirebaseFirestore.instance
++          .collection('users')
++          .doc(me)
++          .get();
+       if (_communityUid450 != me) return;
+-      await widget.post.collection('comments').add({
+-        'uid': me, 'name': ngelx455ProfileName(user.data() ?? {}),
+-        'photoUrl': (user.data()?['photoUrl'] ?? '').toString(),
+-        'text': body, 'replyTo': replyId, 'replyName': replyName,
+-        'createdAt': FieldValue.serverTimestamp(),
++      final commentRef = widget.post.collection('comments').doc(),
++          limitRef = widget.post.collection('commentLimits456').doc(me);
++      await FirebaseFirestore.instance.runTransaction((tx) async {
++        final post = await tx.get(widget.post),
++            community = await tx.get(widget.post.parent.parent!),
++            limit = await tx.get(limitRef);
++        final value = post.data() ?? {}, root = community.data() ?? {};
++        if (value['commentsClosed'] == true ||
++            root['paused'] == true ||
++            List<String>.from(root['muted'] ?? const []).contains(me))
++          throw StateError('yetki');
++        final slow = (value['slowSeconds'] as num?)?.toInt() ?? 0,
++            last = limit.data()?['at'];
++        if (slow > 0 &&
++            last is Timestamp &&
++            DateTime.now().difference(last.toDate()).inSeconds < slow)
++          throw StateError('Yavaş yorum modu: 5 dakika bekle.');
++        tx.set(commentRef, {
++          'uid': me,
++          'name': ngelx455ProfileName(user.data() ?? {}),
++          'photoUrl': (user.data()?['photoUrl'] ?? '').toString(),
++          'text': body,
++          'replyTo': replyId,
++          'replyName': replyName,
++          'createdAt': FieldValue.serverTimestamp(),
++        });
++        if (slow > 0)
++          tx.set(limitRef, {
++            'uid': me,
++            'commentId': commentRef.id,
++            'at': FieldValue.serverTimestamp(),
++          });
+       });
+-      if (mounted) setState(() { input.clear(); replyId = ''; replyName = ''; });
+-    } catch (e) { if (mounted) _communityError450(context, e); }
+-    finally { if (mounted) setState(() => sending = false); }
++      ngelx456CountRevision.value =
++          widget.post.path +
++          '|' +
++          DateTime.now().microsecondsSinceEpoch.toString();
++      if (mounted)
++        setState(() {
++          input.clear();
++          replyId = '';
++          replyName = '';
++        });
++    } catch (e) {
++      if (mounted) _communityError450(context, e);
++    } finally {
++      if (mounted) setState(() => sending = false);
++    }
+   }
+-  Widget comment(QueryDocumentSnapshot<Map<String, dynamic>> doc, {int replyCount = 0, bool isReply = false}) {
++
++  Widget comment(
++    QueryDocumentSnapshot<Map<String, dynamic>> doc, {
++    int replyCount = 0,
++    bool isReply = false,
++  }) {
+     final v = doc.data(), uid = (doc.data()['uid'] ?? '').toString();
+     final name = (v['name'] ?? 'Üye').toString();
+     final timestamp = v['createdAt'];
+-    final date = timestamp is Timestamp ? timestamp.toDate().toLocal().toString().substring(0, 16) : 'Gönderiliyor…';
+-    return Padding(padding: EdgeInsets.fromLTRB(isReply ? 48 : 16, 6, 16, 6),
+-      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+-        InkWell(onTap: uid.isEmpty ? null : () => Navigator.push(context,
+-          MaterialPageRoute(builder: (_) => KullaniciProfilPage(uid: uid))),
+-          child: _communityImage450((v['photoUrl'] ?? '').toString(), size: 36, circle: true)),
+-        const SizedBox(width: 10),
+-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+-          Container(width: double.infinity, padding: const EdgeInsets.all(12),
+-            decoration: BoxDecoration(color: const Color(0xFFF4F3F8), borderRadius: BorderRadius.circular(16)),
+-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+-              Row(children: [Expanded(child: Text(name, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800))),
+-                if (widget.member && (uid == _communityUid450 || widget.admin))
+-                  PopupMenuButton<String>(onSelected: (_) async {
+-                    final yes = await showDialog<bool>(context: context, builder: (c) => Ngelx455WhiteDialog(
+-                      title: const Text('Yorumu sil?'), actions: [
+-                        TextButton(onPressed: () => Navigator.pop(c, false), child:  Text(_ngelx438Ui("Vazgeç"))),
+-                        FilledButton(onPressed: () => Navigator.pop(c, true), child:  Text(_ngelx438Ui("Sil")))]));
+-                    if (yes == true) { try { await doc.reference.delete(); } catch (e) { if (mounted) _communityError450(context, e); } }
+-                  }, itemBuilder: (_) => [ PopupMenuItem(value: 'delete', child: Text(_ngelx438Ui("Sil")))]),
+-              ]),
+-              if ((v['replyTo'] ?? '').toString().isNotEmpty)
+-                Padding(padding: const EdgeInsets.only(bottom: 6), child: Text('${v['replyName'] ?? 'Üye'} kişisine yanıt',
+-                  style: const TextStyle(fontSize: 12, color: Color(0xFF6744C8)))),
+-              Text((v['text'] ?? '').toString(), style: const TextStyle(fontSize: 15, height: 1.35)),
+-            ])),
+-          Wrap(crossAxisAlignment: WrapCrossAlignment.center, spacing: 8, children: [
+-            Text(date, style: const TextStyle(fontSize: 11, color: Color(0xFF697386))),
+-            if (widget.member) TextButton(onPressed: () => setState(() { replyId = isReply ? (v['replyTo'] ?? doc.id).toString() : doc.id; replyName = name; }), child:  Text(_ngelx438Ui("Yanıtla"))),
+-            Ngelx455Reactions(ref: doc.reference.collection('reactions'), enabled: widget.member),
+-            if (replyCount > 0) TextButton(onPressed: () => setState(() {
+-              expandedReplies.contains(doc.id) ? expandedReplies.remove(doc.id) : expandedReplies.add(doc.id);
+-            }), child: Text(expandedReplies.contains(doc.id) ? 'Yanıtları gizle' : '$replyCount yanıtı gör')),
+-          ]),
+-        ])),
+-      ]));
++    final date = ngelx456Time(timestamp);
++    return Padding(
++      padding: EdgeInsets.fromLTRB(isReply ? 48 : 16, 6, 16, 6),
++      child: Row(
++        crossAxisAlignment: CrossAxisAlignment.start,
++        children: [
++          InkWell(
++            onTap: uid.isEmpty
++                ? null
++                : () => Navigator.push(
++                    context,
++                    MaterialPageRoute(
++                      builder: (_) => KullaniciProfilPage(uid: uid),
++                    ),
++                  ),
++            child: _communityImage450(
++              (v['photoUrl'] ?? '').toString(),
++              size: 36,
++              circle: true,
++            ),
++          ),
++          const SizedBox(width: 10),
++          Expanded(
++            child: Column(
++              crossAxisAlignment: CrossAxisAlignment.start,
++              children: [
++                Container(
++                  width: double.infinity,
++                  padding: const EdgeInsets.symmetric(vertical: 2),
++                  decoration: const BoxDecoration(color: Colors.white),
++                  child: Column(
++                    crossAxisAlignment: CrossAxisAlignment.start,
++                    children: [
++                      Row(
++                        children: [
++                          Expanded(
++                            child: Text(
++                              name,
++                              style: const TextStyle(
++                                fontSize: 14,
++                                fontWeight: FontWeight.w800,
++                              ),
++                            ),
++                          ),
++                          Text(
++                            date,
++                            style: const TextStyle(
++                              fontSize: 11,
++                              color: Colors.black54,
++                            ),
++                          ),
++                          if (widget.member &&
++                              (uid == _communityUid450 || widget.admin))
++                            PopupMenuButton<String>(
++                              onSelected: (_) async {
++                                final yes = await showDialog<bool>(
++                                  context: context,
++                                  builder: (c) => Ngelx455WhiteDialog(
++                                    title: const Text('Yorumu sil?'),
++                                    actions: [
++                                      TextButton(
++                                        onPressed: () =>
++                                            Navigator.pop(c, false),
++                                        child: Text(_ngelx438Ui("Vazgeç")),
++                                      ),
++                                      FilledButton(
++                                        onPressed: () => Navigator.pop(c, true),
++                                        child: Text(_ngelx438Ui("Sil")),
++                                      ),
++                                    ],
++                                  ),
++                                );
++                                if (yes == true) {
++                                  try {
++                                    await doc.reference.delete();
++                                  } catch (e) {
++                                    if (mounted) _communityError450(context, e);
++                                  }
++                                }
++                              },
++                              itemBuilder: (_) => [
++                                PopupMenuItem(
++                                  value: 'delete',
++                                  child: Text(_ngelx438Ui("Sil")),
++                                ),
++                              ],
++                            ),
++                        ],
++                      ),
++                      if ((v['replyTo'] ?? '').toString().isNotEmpty)
++                        Padding(
++                          padding: const EdgeInsets.only(bottom: 6),
++                          child: Text(
++                            '${v['replyName'] ?? 'Üye'} kişisine yanıt',
++                            style: const TextStyle(
++                              fontSize: 12,
++                              color: Color(0xFF6744C8),
++                            ),
++                          ),
++                        ),
++                      Text(
++                        (v['text'] ?? '').toString(),
++                        style: const TextStyle(fontSize: 15, height: 1.35),
++                      ),
++                    ],
++                  ),
++                ),
++                Wrap(
++                  crossAxisAlignment: WrapCrossAlignment.center,
++                  spacing: 8,
++                  children: [
++                    if (widget.member)
++                      TextButton(
++                        style: TextButton.styleFrom(
++                          padding: EdgeInsets.zero,
++                          minimumSize: const Size(48, 36),
++                        ),
++                        onPressed: () => setState(() {
++                          replyId = isReply
++                              ? (v['replyTo'] ?? doc.id).toString()
++                              : doc.id;
++                          replyName = name;
++                        }),
++                        child: Text(_ngelx438Ui("Yanıtla")),
++                      ),
++                    Ngelx455Reactions(
++                      ref: doc.reference.collection('reactions'),
++                      enabled: widget.member,
++                    ),
++                    if (replyCount > 0)
++                      TextButton(
++                        onPressed: () => setState(() {
++                          expandedReplies.contains(doc.id)
++                              ? expandedReplies.remove(doc.id)
++                              : expandedReplies.add(doc.id);
++                        }),
++                        child: Text(
++                          expandedReplies.contains(doc.id)
++                              ? 'Yanıtları gizle'
++                              : '$replyCount yanıtı gör',
++                        ),
++                      ),
++                  ],
++                ),
++              ],
++            ),
++          ),
++        ],
++      ),
++    );
+   }
+-  @override Widget build(BuildContext context) => SafeArea(child: Padding(
+-    padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+-    child: SizedBox(height: MediaQuery.sizeOf(context).height * .72,
+-      child: Column(children: [
+-        Expanded(child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(stream: comments, builder: (c, s) {
+-          if (s.hasError) return const Center(child: Text('Yorumlar yüklenemedi. Yeniden açmayı dene.'));
+-          if (!s.hasData) return const Center(child: CircularProgressIndicator());
+-          final docs = s.data!.docs;
+-          final ids = docs.map((d) => d.id).toSet();
+-          final roots = docs.where((d) => !ids.contains((d.data()['replyTo'] ?? '').toString())).toList();
+-          // Replies always target the original root so nested responses remain visible.
+-          final rows = <Widget>[];
+-          for (final root in roots) {
+-            final replies = docs.where((d) => d.data()['replyTo'] == root.id).toList();
+-            rows.add(comment(root, replyCount: replies.length));
+-            if (expandedReplies.contains(root.id)) rows.addAll(replies.map((d) => comment(d, isReply: true)));
+-          }
+-          return Column(children: [
+-            Padding(padding: const EdgeInsets.all(12), child: Text('Yorumlar (${docs.length})', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800))),
+-            Expanded(child: docs.isEmpty ? const Center(child: Text('İlk yorumu sen yaz.')) : ListView(children: rows)),
+-          ]);
+-        })),
+-        if (replyId.isNotEmpty) ListTile(dense: true, title: Text('$replyName kişisine yanıt'), trailing: IconButton(
+-          onPressed: () => setState(() { replyId = ''; replyName = ''; }), icon: const Icon(Icons.close))),
+-        if (widget.member) Padding(padding: const EdgeInsets.fromLTRB(16, 8, 12, 12), child: Row(children: [
+-          Expanded(child: TextField(controller: input, enabled: !sending, minLines: 1, maxLines: 4, maxLength: 500,
+-            style: const TextStyle(fontSize: 15), decoration: InputDecoration(hintText: 'Yorum yaz…',
+-              filled: true, fillColor: const Color(0xFFF4F3F8), border: OutlineInputBorder(borderSide: BorderSide.none, borderRadius: BorderRadius.circular(24))))),
+-          IconButton(onPressed: sending ? null : send, tooltip: 'Yorumu gönder', icon: sending ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.send_rounded, color: mor)),
+-        ])),
+-      ]))));
++
++  @override
++  Widget build(BuildContext context) => SafeArea(
++    child: Padding(
++      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
++      child: SizedBox(
++        height: MediaQuery.sizeOf(context).height * .72,
++        child: Column(
++          children: [
++            Expanded(
++              child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
++                stream: comments,
++                builder: (c, s) {
++                  if (s.hasError)
++                    return const Center(
++                      child: Text('Yorumlar yüklenemedi. Yeniden açmayı dene.'),
++                    );
++                  if (!s.hasData)
++                    return const Center(child: CircularProgressIndicator());
++                  final docs = s.data!.docs;
++                  final ids = docs.map((d) => d.id).toSet();
++                  final roots = docs
++                      .where(
++                        (d) => !ids.contains(
++                          (d.data()['replyTo'] ?? '').toString(),
++                        ),
++                      )
++                      .toList();
++                  // Replies always target the original root so nested responses remain visible.
++                  final byRoot =
++                      <
++                        String,
++                        List<QueryDocumentSnapshot<Map<String, dynamic>>>
++                      >{};
++                  for (final d in docs) {
++                    byRoot
++                        .putIfAbsent(
++                          (d.data()['replyTo'] ?? '').toString(),
++                          () => [],
++                        )
++                        .add(d);
++                  }
++                  final rows =
++                      <
++                        (QueryDocumentSnapshot<Map<String, dynamic>>, int, bool)
++                      >[];
++                  for (final root in roots) {
++                    final replies = byRoot[root.id] ?? [];
++                    rows.add((root, replies.length, false));
++                    if (expandedReplies.contains(root.id))
++                      rows.addAll(replies.map((d) => (d, 0, true)));
++                  }
++                  return Column(
++                    children: [
++                      Padding(
++                        padding: const EdgeInsets.all(12),
++                        child: Text(
++                          'Yorumlar (${docs.length})',
++                          style: const TextStyle(
++                            fontSize: 20,
++                            fontWeight: FontWeight.w800,
++                          ),
++                        ),
++                      ),
++                      Expanded(
++                        child: docs.isEmpty
++                            ? const Center(child: Text('İlk yorumu sen yaz.'))
++                            : ListView.builder(
++                                itemCount: rows.length,
++                                itemBuilder: (c, i) {
++                                  final row = rows[i];
++                                  return comment(
++                                    row.$1,
++                                    replyCount: row.$2,
++                                    isReply: row.$3,
++                                  );
++                                },
++                              ),
++                      ),
++                    ],
++                  );
++                },
++              ),
++            ),
++            if (replyId.isNotEmpty)
++              ListTile(
++                dense: true,
++                title: Text('$replyName kişisine yanıt'),
++                trailing: IconButton(
++                  onPressed: () => setState(() {
++                    replyId = '';
++                    replyName = '';
++                  }),
++                  icon: const Icon(Icons.close),
++                ),
++              ),
++            if (widget.member)
++              Padding(
++                padding: const EdgeInsets.fromLTRB(16, 8, 12, 12),
++                child: Row(
++                  children: [
++                    Expanded(
++                      child: TextField(
++                        controller: input,
++                        enabled: !sending,
++                        minLines: 1,
++                        maxLines: 4,
++                        maxLength: 500,
++                        style: const TextStyle(fontSize: 15),
++                        decoration: InputDecoration(
++                          hintText: 'Yorum yaz…',
++                          counterText: '',
++                          filled: true,
++                          fillColor: const Color(0xFFF4F3F8),
++                          border: OutlineInputBorder(
++                            borderSide: BorderSide.none,
++                            borderRadius: BorderRadius.circular(24),
++                          ),
++                        ),
++                      ),
++                    ),
++                    IconButton(
++                      onPressed: sending ? null : send,
++                      tooltip: 'Yorumu gönder',
++                      icon: sending
++                          ? const SizedBox(
++                              width: 20,
++                              height: 20,
++                              child: CircularProgressIndicator(strokeWidth: 2),
++                            )
++                          : const Icon(Icons.send_rounded, color: mor),
++                    ),
++                  ],
++                ),
++              ),
++          ],
++        ),
++      ),
++    ),
++  );
+ }
+ 
+ class Ngelx455Reactions extends StatefulWidget {
+   final CollectionReference<Map<String, dynamic>> ref;
+   final bool enabled;
+-  const Ngelx455Reactions({super.key, required this.ref, required this.enabled});
+-  @override State<Ngelx455Reactions> createState() => _Ngelx455ReactionsState();
++  const Ngelx455Reactions({
++    super.key,
++    required this.ref,
++    required this.enabled,
++  });
++  @override
++  State<Ngelx455Reactions> createState() => _Ngelx455ReactionsState();
+ }
++
+ class _Ngelx455ReactionsState extends State<Ngelx455Reactions> {
+-  late Stream<QuerySnapshot<Map<String, dynamic>>> stream = widget.ref.snapshots();
+-  @override void didUpdateWidget(covariant Ngelx455Reactions oldWidget) {
++  late Stream<QuerySnapshot<Map<String, dynamic>>> stream = widget.ref
++      .snapshots();
++  @override
++  void didUpdateWidget(covariant Ngelx455Reactions oldWidget) {
+     super.didUpdateWidget(oldWidget);
+     if (oldWidget.ref.path != widget.ref.path) stream = widget.ref.snapshots();
+   }
++
+   bool busy = false;
+   Future<void> setReaction(String emoji, String selected) async {
+     if (busy || !widget.enabled || _communityUid450.isEmpty) return;
+     setState(() => busy = true);
+     try {
+       final doc = widget.ref.doc(_communityUid450);
+-      if (selected == emoji) { await doc.delete(); }
+-      else { await doc.set({'uid': _communityUid450, 'emoji': emoji, 'createdAt': FieldValue.serverTimestamp()}); }
+-    } catch (e) { if (mounted) _communityError450(context, e); }
+-    finally { if (mounted) setState(() => busy = false); }
++      if (selected == emoji) {
++        await doc.delete();
++      } else {
++        await doc.set({
++          'uid': _communityUid450,
++          'emoji': emoji,
++          'createdAt': FieldValue.serverTimestamp(),
++        });
++      }
++      ngelx456CountRevision.value =
++          widget.ref.parent!.path +
++          '|' +
++          DateTime.now().microsecondsSinceEpoch.toString();
++    } catch (e) {
++      if (mounted) _communityError450(context, e);
++    } finally {
++      if (mounted) setState(() => busy = false);
++    }
+   }
+-  @override Widget build(BuildContext context) => StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(stream: stream, builder: (c, s) {
+-    final docs = s.data?.docs ?? [], counts = <String, int>{};
+-    var selected = '';
+-    for (final doc in docs) { final emoji = (doc.data()['emoji'] ?? '❤️').toString(); counts[emoji] = (counts[emoji] ?? 0) + 1; if (doc.id == _communityUid450) selected = emoji; }
+-    return InkWell(onTap: !widget.enabled || busy ? null : () => setReaction('❤️', selected),
+-      onLongPress: !widget.enabled || busy ? null : () async {
+-        final choice = await showModalBottomSheet<String>(context: context, backgroundColor: Colors.white, builder: (b) => SafeArea(child: Padding(
+-          padding: const EdgeInsets.all(20), child: Wrap(spacing: 12, children: ['❤️','👍','😂','😮','😢','😡'].map((e) => IconButton(
+-            onPressed: () => Navigator.pop(b, e), icon: Text(e, style: const TextStyle(fontSize: 26)))).toList()))));
+-        if (choice != null && mounted) await setReaction(choice, selected);
+-      }, child: Padding(padding: const EdgeInsets.all(8), child: Text(s.hasError ? 'Tepkiler yüklenemedi' : counts.isEmpty ? '♡ Beğen' : counts.entries.map((e) => '${e.key} ${e.value}').join('  '),
+-        style: TextStyle(fontSize: 13, color: selected.isEmpty ? const Color(0xFF697386) : mor, fontWeight: FontWeight.w600))));
+-  });
++
++  @override
++  Widget build(BuildContext context) =>
++      StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
++        stream: stream,
++        builder: (c, s) {
++          final docs = s.data?.docs ?? [], counts = <String, int>{};
++          var selected = '';
++          for (final doc in docs) {
++            final emoji = (doc.data()['emoji'] ?? '❤️').toString();
++            counts[emoji] = (counts[emoji] ?? 0) + 1;
++            if (doc.id == _communityUid450) selected = emoji;
++          }
++          return InkWell(
++            onTap: busy
++                ? null
++                : s.hasError
++                ? () => setState(() => stream = widget.ref.snapshots())
++                : !widget.enabled
++                ? null
++                : () => setReaction('❤️', selected),
++            onLongPress: !widget.enabled || busy
++                ? null
++                : () async {
++                    final choice = await showModalBottomSheet<String>(
++                      context: context,
++                      backgroundColor: Colors.white,
++                      builder: (b) => SafeArea(
++                        child: Padding(
++                          padding: const EdgeInsets.all(20),
++                          child: Wrap(
++                            spacing: 12,
++                            children: ['❤️', '👍', '😂', '😮', '😢', '😡']
++                                .map(
++                                  (e) => IconButton(
++                                    onPressed: () => Navigator.pop(b, e),
++                                    icon: Text(
++                                      e,
++                                      style: const TextStyle(fontSize: 26),
++                                    ),
++                                  ),
++                                )
++                                .toList(),
++                          ),
++                        ),
++                      ),
++                    );
++                    if (choice != null && mounted)
++                      await setReaction(choice, selected);
++                  },
++            child: Padding(
++              padding: const EdgeInsets.all(8),
++              child: Text(
++                s.hasError
++                    ? '↻ Tekrar dene'
++                    : counts.isEmpty
++                    ? '♡ Beğen'
++                    : counts.entries
++                          .map((e) => '${e.key} ${e.value}')
++                          .join('  '),
++                style: TextStyle(
++                  fontSize: 13,
++                  color: selected.isEmpty ? const Color(0xFF697386) : mor,
++                  fontWeight: FontWeight.w600,
++                ),
++              ),
++            ),
++          );
++        },
++      );
+ }
+ 
+ bool ngelx455PostVisible(Rect bounds, Rect viewport) {
+   final visible = bounds.intersect(viewport);
+-  return !visible.isEmpty && visible.height >= bounds.height.clamp(0, viewport.height) * .5;
++  return !visible.isEmpty &&
++      visible.height >= bounds.height.clamp(0, viewport.height) * .5;
+ }
+ 
+ class Ngelx455PostView extends StatefulWidget {
+   final DocumentReference<Map<String, dynamic>> ref;
+   final Widget child;
+   const Ngelx455PostView({super.key, required this.ref, required this.child});
+-  @override State<Ngelx455PostView> createState() => _Ngelx455PostViewState();
++  @override
++  State<Ngelx455PostView> createState() => _Ngelx455PostViewState();
+ }
++
+ class _Ngelx455PostViewState extends State<Ngelx455PostView> {
+   Timer? timer;
+   DateTime? visibleSince;
+   bool recorded = false;
+-  void schedule() { timer?.cancel(); timer = Timer.periodic(const Duration(milliseconds: 500), (_) => check()); }
+-  @override void initState() { super.initState(); schedule(); }
+-  @override void didUpdateWidget(covariant Ngelx455PostView oldWidget) {
++  void schedule() {
++    timer?.cancel();
++    timer = Timer.periodic(const Duration(milliseconds: 500), (_) => check());
++  }
++
++  @override
++  void initState() {
++    super.initState();
++    schedule();
++  }
++
++  @override
++  void didUpdateWidget(covariant Ngelx455PostView oldWidget) {
+     super.didUpdateWidget(oldWidget);
+-    if (widget.ref.path != oldWidget.ref.path) { recorded = false; visibleSince = null; schedule(); }
++    if (widget.ref.path != oldWidget.ref.path) {
++      recorded = false;
++      visibleSince = null;
++      schedule();
++    }
+   }
++
+   void check() {
+-    if (!mounted || recorded || FirebaseAuth.instance.currentUser?.isAnonymous != false || _communityUid450.isEmpty) return;
++    if (!mounted ||
++        recorded ||
++        FirebaseAuth.instance.currentUser?.isAnonymous != false ||
++        _communityUid450.isEmpty)
++      return;
+     final box = context.findRenderObject();
+     final route = ModalRoute.of(context);
+     final lifecycle = WidgetsBinding.instance.lifecycleState;
+-    if (box is! RenderBox || !box.hasSize || route?.isCurrent != true ||
+-        (lifecycle != null && lifecycle != AppLifecycleState.resumed)) { visibleSince = null; return; }
++    if (box is! RenderBox ||
++        !box.hasSize ||
++        route?.isCurrent != true ||
++        (lifecycle != null && lifecycle != AppLifecycleState.resumed)) {
++      visibleSince = null;
++      return;
++    }
+     final bounds = box.localToGlobal(Offset.zero) & box.size;
+     final screen = MediaQuery.sizeOf(context);
+-    final viewport = Rect.fromLTWH(0, MediaQuery.paddingOf(context).top + kToolbarHeight,
+-        screen.width, screen.height - MediaQuery.paddingOf(context).vertical - kToolbarHeight);
++    final viewport = Rect.fromLTWH(
++      0,
++      MediaQuery.paddingOf(context).top + kToolbarHeight,
++      screen.width,
++      screen.height - MediaQuery.paddingOf(context).vertical - kToolbarHeight,
++    );
+     final visible = ngelx455PostVisible(bounds, viewport);
+-    if (!visible) { visibleSince = null; return; }
++    if (!visible) {
++      visibleSince = null;
++      return;
++    }
+     visibleSince ??= DateTime.now();
+     if (DateTime.now().difference(visibleSince!).inSeconds < 2) return;
+     final me = _communityUid450;
+     recorded = true;
+     timer?.cancel();
+-    widget.ref.collection('views').doc(me).set({'uid': me, 'createdAt': FieldValue.serverTimestamp()})
+-      .catchError((Object _) { if (mounted) { recorded = false; visibleSince = null;
+-        timer = Timer(const Duration(seconds: 30), () { if (mounted) schedule(); }); } });
++    widget.ref
++        .collection('views')
++        .doc(me)
++        .set({'uid': me, 'createdAt': FieldValue.serverTimestamp()})
++        .catchError((Object _) {
++          if (mounted) {
++            recorded = false;
++            visibleSince = null;
++            timer = Timer(const Duration(seconds: 30), () {
++              if (mounted) schedule();
++            });
++          }
++        });
+   }
+-  @override void dispose() { timer?.cancel(); super.dispose(); }
+-  @override Widget build(BuildContext context) => widget.child;
++
++  @override
++  void dispose() {
++    timer?.cancel();
++    super.dispose();
++  }
++
++  @override
++  Widget build(BuildContext context) => widget.child;
+ }
+ 
+ class Ngelx455PostCounts extends StatefulWidget {
+   final DocumentReference<Map<String, dynamic>> ref;
+-  const Ngelx455PostCounts({super.key, required this.ref});
+-  @override State<Ngelx455PostCounts> createState() => _Ngelx455PostCountsState();
++  final Map<String, dynamic> liveCounts;
++  const Ngelx455PostCounts({
++    super.key,
++    required this.ref,
++    this.liveCounts = const {},
++  });
++  @override
++  State<Ngelx455PostCounts> createState() => _Ngelx455PostCountsState();
+ }
++
+ class _Ngelx455PostCountsState extends State<Ngelx455PostCounts> {
+-  late Map<String, Stream<QuerySnapshot<Map<String, dynamic>>>> streams = create();
+-  Map<String, Stream<QuerySnapshot<Map<String, dynamic>>>> create() => {
+-    for (final key in ['likes','comments','shares','views']) key: widget.ref.collection(key).snapshots(),
+-  };
+-  @override void didUpdateWidget(covariant Ngelx455PostCounts oldWidget) {
+-    super.didUpdateWidget(oldWidget);
+-    if (widget.ref.path != oldWidget.ref.path) streams = create();
++  late Future<Map<String, int>> counts = load();
++  Future<Map<String, int>> load() async {
++    if ([
++      'likes',
++      'comments',
++      'shares',
++      'views',
++    ].every(widget.liveCounts.containsKey))
++      return {
++        for (final e in widget.liveCounts.entries)
++          e.key: (e.value as num).toInt(),
++      };
++    final keys = ['likes', 'comments', 'shares', 'views'];
++    final values = await Future.wait(
++      keys.map((k) => widget.ref.collection(k).count().get()),
++    );
++    return {
++      for (var i = 0; i < keys.length; i++) keys[i]: values[i].count ?? 0,
++    };
++  }
++
++  @override
++  void didUpdateWidget(covariant Ngelx455PostCounts old) {
++    super.didUpdateWidget(old);
++    if (old.ref.path != widget.ref.path) counts = load();
++  }
++
++  @override
++  Widget build(BuildContext c) => ValueListenableBuilder<String>(
++    valueListenable: ngelx456CountRevision,
++    builder: (c, revision, _) => FutureBuilder<Map<String, int>>(
++      future: counts,
++      builder: (c, s) => Padding(
++        padding: const EdgeInsets.only(top: 10),
++        child: Wrap(
++          spacing: 12,
++          runSpacing: 6,
++          children: [
++            for (final item in [
++              ('likes', Icons.favorite_outline, 'tepki'),
++              ('comments', Icons.chat_bubble_outline, 'yorum'),
++              ('shares', Icons.share_outlined, 'paylaşım'),
++              ('views', Icons.visibility_outlined, 'görüntülenme'),
++            ])
++              Row(
++                mainAxisSize: MainAxisSize.min,
++                children: [
++                  Icon(item.$2, size: 14, color: Colors.black45),
++                  const SizedBox(width: 4),
++                  Text(
++                    '${s.hasError ? '—' : widget.liveCounts[item.$1] ?? s.data?[item.$1] ?? '…'} ${item.$3}',
++                    style: const TextStyle(fontSize: 11, color: Colors.black54),
++                  ),
++                ],
++              ),
++          ],
++        ),
++      ),
++    ),
++  );
++  @override
++  void initState() {
++    super.initState();
++    ngelx456CountRevision.addListener(refresh);
++  }
++
++  void refresh() {
++    if (mounted &&
++        ngelx456CountRevision.value.split('|').first == widget.ref.path)
++      setState(() => counts = load());
++  }
++
++  @override
++  void dispose() {
++    ngelx456CountRevision.removeListener(refresh);
++    super.dispose();
+   }
+-  @override Widget build(BuildContext context) => Padding(padding: const EdgeInsets.only(top: 10),
+-    child: Wrap(spacing: 14, runSpacing: 6, children: [
+-      for (final entry in {'likes':'tepki','comments':'yorum','shares':'paylaşan','views':'kişi gördü'}.entries)
+-        StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(stream: streams[entry.key], builder: (_, s) => Text(
+-          '${s.hasError ? '—' : s.hasData ? s.data!.size : '…'} ${entry.value}',
+-          style: const TextStyle(fontSize: 12, color: Color(0xFF697386)))),
+-    ]));
+ }
+ 
+-Future<void> ngelx455SharePost(BuildContext context, DocumentReference<Map<String, dynamic>> ref,
+-    Map<String, dynamic> value) async {
++Future<void> ngelx455SharePost(
++  BuildContext context,
++  DocumentReference<Map<String, dynamic>> ref,
++  Map<String, dynamic> value,
++) async {
+   final me = _communityUid450;
+   try {
+-    final result = await SharePlus.instance.share(ShareParams(
+-      text: '${value['text'] ?? ''}\n${value['mediaUrl'] ?? ''}\nNgelX gönderi: ${ref.path}'));
+-    if (result.status == ShareResultStatus.success && FirebaseAuth.instance.currentUser?.isAnonymous == false && me.isNotEmpty && _communityUid450 == me) {
+-      await ref.collection('shares').doc(me).set({'uid': me, 'createdAt': FieldValue.serverTimestamp()});
++    final result = await SharePlus.instance.share(
++      ShareParams(
++        text:
++            '${value['text'] ?? ''}\n${value['mediaUrl'] ?? ''}\nNgelX gönderi: ${ref.path}',
++      ),
++    );
++    if (result.status == ShareResultStatus.success &&
++        FirebaseAuth.instance.currentUser?.isAnonymous == false &&
++        me.isNotEmpty &&
++        _communityUid450 == me) {
++      await ref.collection('shares').doc(me).set({
++        'uid': me,
++        'createdAt': FieldValue.serverTimestamp(),
++      });
++      ngelx456CountRevision.value =
++          ref.path + '|' + DateTime.now().microsecondsSinceEpoch.toString();
+     }
+-  } catch (e) { if (context.mounted) _communityError450(context, e); }
++  } catch (e) {
++    if (context.mounted) _communityError450(context, e);
++  }
+ }
+diff --git a/app/lib/community450.dart b/app/lib/community450.dart
+index 7e6097f..53a94e7 100644
+--- a/app/lib/community450.dart
++++ b/app/lib/community450.dart
+@@ -6,8 +6,8 @@ bool _communityAdmin450(Map<String, dynamic> v) =>
+     List<String>.from(v['admins'] ?? []).contains(_communityUid450);
+ bool _communityMember450(Map<String, dynamic> v) =>
+     List<String>.from(v['members'] ?? []).contains(_communityUid450);
+-void _communityError450(BuildContext c,Object e){
+-  ngelx455Status(c,'İşlem tamamlanamadı. ${_ngelxKisaHata(e)}',error:true);
++void _communityError450(BuildContext c, Object e) {
++  ngelx455Status(c, ngelx456Error(e), error: true);
+ }
+ 
+ Widget _communityImage450(
+@@ -43,23 +43,52 @@ Widget _communitySurface450({
+   data: ThemeData.light().copyWith(
+     colorScheme: ColorScheme.fromSeed(seedColor: mor),
+     scaffoldBackgroundColor: Colors.white,
+-    textTheme:ThemeData.light().textTheme.copyWith(
+-      bodyMedium:const TextStyle(fontSize:15,height:1.4,color:Color(0xFF172033)),
+-      bodyLarge:const TextStyle(fontSize:16,height:1.4,color:Color(0xFF172033)),
+-      titleMedium:const TextStyle(fontSize:17,fontWeight:FontWeight.w700,color:Color(0xFF172033)),
+-      labelLarge:const TextStyle(fontSize:14,fontWeight:FontWeight.w700),
++    textTheme: ThemeData.light().textTheme.copyWith(
++      bodyMedium: const TextStyle(
++        fontSize: 15,
++        height: 1.4,
++        color: Color(0xFF172033),
++      ),
++      bodyLarge: const TextStyle(
++        fontSize: 16,
++        height: 1.4,
++        color: Color(0xFF172033),
++      ),
++      titleMedium: const TextStyle(
++        fontSize: 17,
++        fontWeight: FontWeight.w700,
++        color: Color(0xFF172033),
++      ),
++      labelLarge: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
++    ),
++    inputDecorationTheme: InputDecorationTheme(
++      filled: true,
++      fillColor: const Color(0xFFF5F4F9),
++      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
++      border: OutlineInputBorder(
++        borderSide: BorderSide.none,
++        borderRadius: BorderRadius.circular(16),
++      ),
++      hintStyle: const TextStyle(fontSize: 14, color: Color(0xFF697386)),
++    ),
++    outlinedButtonTheme: OutlinedButtonThemeData(
++      style: OutlinedButton.styleFrom(
++        minimumSize: const Size(48, 44),
++        side: const BorderSide(color: Color(0xFFE2D9F3)),
++        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
++      ),
++    ),
++    filledButtonTheme: FilledButtonThemeData(
++      style: FilledButton.styleFrom(
++        minimumSize: const Size(48, 44),
++        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
++      ),
++    ),
++    chipTheme: ChipThemeData(
++      backgroundColor: const Color(0xFFF5F4F9),
++      selectedColor: const Color(0xFFEDE4FF),
++      labelStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+     ),
+-    inputDecorationTheme:InputDecorationTheme(filled:true,fillColor:const Color(0xFFF5F4F9),
+-      contentPadding:const EdgeInsets.symmetric(horizontal:16,vertical:14),
+-      border:OutlineInputBorder(borderSide:BorderSide.none,borderRadius:BorderRadius.circular(16)),
+-      hintStyle:const TextStyle(fontSize:14,color:Color(0xFF697386))),
+-    outlinedButtonTheme:OutlinedButtonThemeData(style:OutlinedButton.styleFrom(
+-      minimumSize:const Size(48,44),side:const BorderSide(color:Color(0xFFE2D9F3)),
+-      shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(16)))),
+-    filledButtonTheme:FilledButtonThemeData(style:FilledButton.styleFrom(
+-      minimumSize:const Size(48,44),shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(16)))),
+-    chipTheme:ChipThemeData(backgroundColor:const Color(0xFFF5F4F9),selectedColor:const Color(0xFFEDE4FF),
+-      labelStyle:const TextStyle(fontSize:14,fontWeight:FontWeight.w600)),
+   ),
+   child: Scaffold(
+     backgroundColor: Colors.white,
+@@ -81,7 +110,7 @@ class NgelXFounder450 extends StatelessWidget {
+   Widget build(BuildContext c) {
+     if (uid.isEmpty) return const SizedBox.shrink();
+     return FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+-      future: FirebaseFirestore.instance.collection('users').doc(uid).get(),
++      future: ngelx456Profile(uid),
+       builder: (c, s) {
+         final v = s.data?.data() ?? {};
+         final name = (v['displayName'] ?? v['username'] ?? 'Kurucu').toString();
+@@ -140,7 +169,8 @@ class _NgelXCommunityDirectory450State
+     final field = TextEditingController();
+     final code = await showDialog<String>(
+       context: context,
+-      builder: (c) => Ngelx455WhiteDialog(backgroundColor:Colors.white,
++      builder: (c) => Ngelx455WhiteDialog(
++        backgroundColor: Colors.white,
+         title: const Text('Davet koduyla katıl'),
+         content: TextField(
+           controller: field,
+@@ -208,12 +238,13 @@ class _NgelXCommunityDirectory450State
+       Padding(
+         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+         child: TextField(
+-          style:const TextStyle(color:Color(0xFF202124),fontSize:16),cursorColor:mor,
++          style: const TextStyle(color: Color(0xFF202124), fontSize: 16),
++          cursorColor: mor,
+           onChanged: (v) => setState(() => search = v.toLowerCase()),
+           decoration: InputDecoration(
+             hintText: 'Topluluk ara',
+-            hintStyle:const TextStyle(color:Color(0xFF606875)),
+-            prefixIcon: const Icon(Icons.search,color:Color(0xFF606875)),
++            hintStyle: const TextStyle(color: Color(0xFF606875)),
++            prefixIcon: const Icon(Icons.search, color: Color(0xFF606875)),
+             filled: true,
+             fillColor: const Color(0xFFF4F5F8),
+             border: OutlineInputBorder(
+@@ -232,10 +263,13 @@ class _NgelXCommunityDirectory450State
+                 (v) => Padding(
+                   padding: const EdgeInsets.only(right: 6),
+                   child: ChoiceChip(
+-                    selectedColor:const Color(0xFFF0E8FF),
+-                    backgroundColor:Colors.white,
+-                    checkmarkColor:mor,
+-                    labelStyle:const TextStyle(color:mor,fontWeight:FontWeight.w700),
++                    selectedColor: const Color(0xFFF0E8FF),
++                    backgroundColor: Colors.white,
++                    checkmarkColor: mor,
++                    labelStyle: const TextStyle(
++                      color: mor,
++                      fontWeight: FontWeight.w700,
++                    ),
+                     label: Text(v),
+                     selected: category == v,
+                     onSelected: (_) => setState(() => category = v),
+@@ -522,32 +556,66 @@ class _NgelXCommunityCreate450State extends State<NgelXCommunityCreate450> {
+     if (!form.currentState!.validate() || await misafirEngeli(context)) return;
+     final confirmed = await showDialog<bool>(
+       context: context,
+-      builder: (c) => Ngelx455WhiteDialog(backgroundColor:Colors.white,
++      builder: (c) => Ngelx455WhiteDialog(
++        backgroundColor: Colors.white,
+         title: const Text('Topluluk önizlemesi'),
+-        content: Column(
+-          mainAxisSize: MainAxisSize.min,
+-          crossAxisAlignment: CrossAxisAlignment.start,
+-          children: [
+-            if(cover!=null)Ngelx454LocalMedia(file:cover!,video:false),
+-            if(photo!=null)Padding(padding:const EdgeInsets.symmetric(vertical:12),child:SizedBox(height:80,width:80,child:Ngelx454LocalMedia(file:photo!,video:false))),
+-            Text(
+-              name.text.trim(),
+-              style: const TextStyle(fontWeight: FontWeight.w900),
+-            ),
+-            Text(desc.text.trim()),
+-            const SizedBox(height: 12),
+-            Text(
+-              private
+-                  ? 'Özel · Gönderiler yalnızca üyelere görünür'
+-                  : 'Herkese açık · Keşfet’te görünecek',
+-            ),
+-            Text(joinApproval ? 'Üyelik onaylı' : 'Doğrudan katılım'),
+-            Text(
+-              postApproval
+-                  ? 'Gönderiler onaylı'
+-                  : 'Üyeler doğrudan paylaşabilir',
+-            ),
+-          ],
++        content: SingleChildScrollView(
++          child: Column(
++            mainAxisSize: MainAxisSize.min,
++            crossAxisAlignment: CrossAxisAlignment.start,
++            children: [
++              if (cover != null)
++                SizedBox(
++                  height: 150,
++                  width: double.infinity,
++                  child: ClipRRect(
++                    borderRadius: BorderRadius.circular(16),
++                    child: kIsWeb
++                        ? Image.network(cover!.path, fit: BoxFit.cover)
++                        : Image.file(
++                            File(cover!.path),
++                            fit: BoxFit.cover,
++                            cacheWidth: 1000,
++                          ),
++                  ),
++                ),
++              if (photo != null)
++                Padding(
++                  padding: const EdgeInsets.symmetric(vertical: 12),
++                  child: SizedBox(
++                    height: 80,
++                    width: 80,
++                    child: ClipRRect(
++                      borderRadius: BorderRadius.circular(14),
++                      child: kIsWeb
++                          ? Image.network(photo!.path, fit: BoxFit.cover)
++                          : Image.file(
++                              File(photo!.path),
++                              fit: BoxFit.cover,
++                              cacheWidth: 240,
++                            ),
++                    ),
++                  ),
++                ),
++              Text(
++                name.text.trim(),
++                style: const TextStyle(fontWeight: FontWeight.w900),
++              ),
++              Text(desc.text.trim()),
++              const SizedBox(height: 12),
++              Text(
++                private
++                    ? 'Özel · Gönderiler yalnızca üyelere görünür'
++                    : 'Herkese açık · Keşfet’te görünecek',
++              ),
++              Text(joinApproval ? 'Üyelik onaylı' : 'Doğrudan katılım'),
++              Text(
++                postApproval
++                    ? 'Gönderiler onaylı'
++                    : 'Üyeler doğrudan paylaşabilir',
++              ),
++            ],
++          ),
+         ),
+         actions: [
+           TextButton(
+@@ -642,25 +710,69 @@ class _NgelXCommunityCreate450State extends State<NgelXCommunityCreate450> {
+               ),
+             ],
+           ),
++          if (cover != null)
++            Padding(
++              padding: const EdgeInsets.only(top: 12),
++              child: SizedBox(
++                height: 130,
++                width: double.infinity,
++                child: kIsWeb
++                    ? Image.network(cover!.path, fit: BoxFit.cover)
++                    : Image.file(
++                        File(cover!.path),
++                        fit: BoxFit.cover,
++                        cacheWidth: 900,
++                      ),
++              ),
++            ),
++          if (photo != null)
++            Padding(
++              padding: const EdgeInsets.only(top: 8),
++              child: SizedBox(
++                height: 64,
++                width: 64,
++                child: kIsWeb
++                    ? Image.network(photo!.path, fit: BoxFit.cover)
++                    : Image.file(
++                        File(photo!.path),
++                        fit: BoxFit.cover,
++                        cacheWidth: 200,
++                      ),
++              ),
++            ),
++          const SizedBox(height: 16),
++          const Text(
++            'Topluluk adı',
++            style: TextStyle(fontWeight: FontWeight.w700),
++          ),
++          const SizedBox(height: 8),
+           TextFormField(
+             controller: name,
+             maxLength: 60,
+-            decoration: const InputDecoration(labelText: 'Topluluk adı'),
++            decoration: const InputDecoration(
++              hintText: 'Topluluğuna bir ad ver',
++            ),
+             validator: (v) => v == null || v.trim().length < 3
+                 ? 'En az 3 karakter gir.'
+                 : null,
+           ),
++          const Text('Açıklama', style: TextStyle(fontWeight: FontWeight.w700)),
++          const SizedBox(height: 8),
+           TextFormField(
+             controller: desc,
+             maxLength: 240,
+             maxLines: 2,
+-            decoration: const InputDecoration(labelText: 'Açıklama'),
++            decoration: const InputDecoration(
++              hintText: 'Topluluğunu kısaca tanıt',
++            ),
+             validator: (v) =>
+                 v == null || v.trim().isEmpty ? 'Açıklama gir.' : null,
+           ),
++          const Text('Kategori', style: TextStyle(fontWeight: FontWeight.w700)),
++          const SizedBox(height: 8),
+           DropdownButtonFormField<String>(
+             initialValue: category,
+-            decoration: InputDecoration(labelText: _ngelx438Ui("Kategori")),
++            decoration: const InputDecoration(),
+             items: [
+               'Sohbet',
+               'Müzik',
+@@ -670,12 +782,18 @@ class _NgelXCommunityCreate450State extends State<NgelXCommunityCreate450> {
+             ].map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(),
+             onChanged: busy ? null : (v) => setState(() => category = v!),
+           ),
++          const SizedBox(height: 16),
++          const Text(
++            'Topluluk kuralları',
++            style: TextStyle(fontWeight: FontWeight.w700),
++          ),
++          const SizedBox(height: 8),
+           TextFormField(
+             controller: rules,
+             maxLength: 2000,
+             maxLines: 3,
+             decoration: InputDecoration(
+-              labelText: _ngelx438Ui("Topluluk kuralları"),
++              hintText: 'Topluluğunun kurallarını yaz',
+             ),
+           ),
+           SwitchListTile(
+@@ -692,12 +810,14 @@ class _NgelXCommunityCreate450State extends State<NgelXCommunityCreate450> {
+           SwitchListTile(
+             contentPadding: EdgeInsets.zero,
+             title: const Text('Üyelik onayı'),
++            subtitle: const Text('Yeni üyeleri yönetim onaylar.'),
+             value: joinApproval,
+             onChanged: busy ? null : (v) => setState(() => joinApproval = v),
+           ),
+           SwitchListTile(
+             contentPadding: EdgeInsets.zero,
+             title: const Text('Gönderi onayı'),
++            subtitle: const Text('Gönderiler onaylandıktan sonra görünür.'),
+             value: postApproval,
+             onChanged: busy ? null : (v) => setState(() => postApproval = v),
+           ),
+@@ -724,51 +844,36 @@ class NgelXCommunityDetail450 extends StatefulWidget {
+ 
+ class _NgelXCommunityDetail450State extends State<NgelXCommunityDetail450> {
+   String tab = 'Gönderiler', search = '';
+-  int postLimit = 40;
+-  int feedRetry451 = 0;
+-  final Map<String,Stream<QuerySnapshot<Map<String,dynamic>>>> _feeds454={};
+-  Stream<QuerySnapshot<Map<String,dynamic>>> _feed454()=>_feeds454.putIfAbsent('$feedRetry451|$postLimit',()=>_loadFeed454());
+-  Stream<QuerySnapshot<Map<String,dynamic>>> _loadFeed454()async*{
+-    final approved=_communities450.doc(widget.id).collection('posts').where('status',isEqualTo:'approved');
+-    try{await for(final snapshot in approved.orderBy('createdAt',descending:true).limit(postLimit).snapshots()){yield snapshot;}}
+-    on FirebaseException catch(e){
+-      if(e.code!='failed-precondition')rethrow;
+-      // Approved-only fallback until the chronological composite index is ready.
+-      // Client sorting preserves chronological display and the visible page limit.
+-      yield* approved.snapshots();
+-    }
+-  }
+-
+-  Future<void> invite(Map<String, dynamic> v) async {
+-    try {
+-      final ref = FirebaseFirestore.instance
+-          .collection('communityInvites450')
+-          .doc();
+-      await ref.set({
+-        'communityId': widget.id,
+-        'name': v['name'],
+-        'joinApproval': v['joinApproval'],
+-        'createdBy': _communityUid450,
+-        'expiresAt': Timestamp.fromDate(
+-          DateTime.now().add(const Duration(days: 6, hours: 23)),
+-        ),
+-      });
+-      await SharePlus.instance.share(
+-        ShareParams(
+-          text:
+-              '${v['name']} topluluğuna davetlisin. NgelX → Keşfet → Topluluk → Davet kodu: ${ref.id}',
+-        ),
+-      );
+-    } catch (e) {
+-      if (mounted) _communityError450(context, e);
+-    }
++  int postLimit = 20, feedRetry451 = 0;
++  late final communityStream = _communities450.doc(widget.id).snapshots();
++  late Stream<QuerySnapshot<Map<String, dynamic>>> feed = feedStream();
++  Timer? searchTimer;
++  Stream<QuerySnapshot<Map<String, dynamic>>> feedStream() => _communities450
++      .doc(widget.id)
++      .collection('posts')
++      .where('status', isEqualTo: 'approved')
++      .orderBy('createdAt', descending: true)
++      .limit(postLimit)
++      .snapshots();
++  @override
++  void dispose() {
++    searchTimer?.cancel();
++    super.dispose();
+   }
+ 
++  Future<void> invite(Map<String, dynamic> v) =>
++      ngelx456Invite(context, widget.id, v);
++  void compose(Map<String, dynamic> v) => Navigator.push(
++    context,
++    MaterialPageRoute(
++      builder: (_) => NgelXCommunityCompose450(id: widget.id, value: v),
++    ),
++  );
+   @override
+   Widget build(BuildContext c) => _communitySurface450(
+     title: 'Topluluk',
+     body: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+-      stream: _communities450.doc(widget.id).snapshots(),
++      stream: communityStream,
+       builder: (c, s) {
+         if (s.hasError)
+           return const Center(
+@@ -777,232 +882,216 @@ class _NgelXCommunityDetail450State extends State<NgelXCommunityDetail450> {
+         if (!s.hasData) return const Center(child: CircularProgressIndicator());
+         final v = s.data!.data();
+         if (v == null) return const Center(child: Text('Topluluk bulunamadı.'));
+-        final member = _communityMember450(v), admin = _communityAdmin450(v);
+-        return ListView(
++        final member = _communityMember450(v), admin = ngelx456Moderator(v);
++        final header = Column(
+           children: [
+-            if ((v['coverUrl'] ?? '').toString().isNotEmpty)
+-              NgelXAgResmi(
+-                imageUrl: v['coverUrl'],
+-                height: 150,
+-                width: double.infinity,
+-                fit: BoxFit.cover,
++            Ngelx456Header(
++              id: widget.id,
++              value: v,
++              invite: () => invite(v),
++              compose: () => compose(v),
++              manage: () => Navigator.push(
++                c,
++                MaterialPageRoute(
++                  builder: (_) => NgelXCommunityAdmin450(id: widget.id),
++                ),
++              ),
++            ),
++            Padding(
++              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
++              child: TextField(
++                onChanged: (x) {
++                  searchTimer?.cancel();
++                  searchTimer = Timer(const Duration(milliseconds: 250), () {
++                    if (mounted) setState(() => search = x.toLowerCase());
++                  });
++                },
++                decoration: const InputDecoration(
++                  prefixIcon: Icon(Icons.search),
++                  hintText: 'Topluluk içinde ara',
++                ),
+               ),
++            ),
+             Padding(
+-              padding: const EdgeInsets.all(16),
+-              child: Column(
+-                crossAxisAlignment: CrossAxisAlignment.start,
+-                children: [
+-                  Row(
+-                    children: [
+-                      _communityImage450(v['photoUrl'].toString(), size: 64),
+-                      const SizedBox(width: 12),
+-                      Expanded(
+-                        child: Column(
+-                          crossAxisAlignment: CrossAxisAlignment.start,
+-                          children: [
+-                            Text(
+-                              v['name'],
+-                              style: const TextStyle(
+-                                fontSize: 21,
+-                                fontWeight: FontWeight.w900,
++              padding: const EdgeInsets.symmetric(horizontal: 8),
++              child: Row(
++                children:
++                    ['Gönderiler', 'Öne çıkanlar', 'Videolar', 'Fotoğraflar']
++                        .map(
++                          (x) => Expanded(
++                            child: TextButton(
++                              style: TextButton.styleFrom(
++                                padding: const EdgeInsets.symmetric(
++                                  horizontal: 2,
++                                ),
++                                minimumSize: const Size(0, 44),
++                              ),
++                              onPressed: () => setState(() => tab = x),
++                              child: Column(
++                                mainAxisSize: MainAxisSize.min,
++                                children: [
++                                  FittedBox(
++                                    child: Text(
++                                      x,
++                                      maxLines: 1,
++                                      style: TextStyle(
++                                        color: tab == x ? mor : Colors.black54,
++                                        fontSize: 12,
++                                        fontWeight: FontWeight.w700,
++                                      ),
++                                    ),
++                                  ),
++                                  const SizedBox(height: 7),
++                                  Container(
++                                    height: 3,
++                                    width: 30,
++                                    color: tab == x ? mor : Colors.transparent,
++                                  ),
++                                ],
+                               ),
+                             ),
+-                            Text(
+-                              '${(v['members'] as List).length} üye · ${v['visibility'] == 'public' ? 'Herkese açık' : 'Özel'}',
+-                            ),
+-                            NgelXFounder450(uid: v['founderId']),
+-                          ],
+-                        ),
++                          ),
++                        )
++                        .toList(),
++              ),
++            ),
++            if (member && v['paused'] != true)
++              Container(
++                margin: const EdgeInsets.all(16),
++                decoration: BoxDecoration(
++                  border: Border.all(color: ngelx456Border),
++                  borderRadius: BorderRadius.circular(18),
++                ),
++                child: Column(
++                  children: [
++                    ListTile(
++                      leading: const Icon(Icons.edit_note_outlined, color: mor),
++                      title: const Text(
++                        'Bir şeyler paylaş…',
++                        style: TextStyle(fontSize: 14, color: Colors.black54),
+                       ),
+-                    ],
+-                  ),
+-                  Text(v['description']),
+-                  if (v['rules'].toString().isNotEmpty)
+-                    ExpansionTile(
+-                      tilePadding: EdgeInsets.zero,
+-                      title: Text(_ngelx438Ui("Topluluk kuralları")),
+-                      children: [Text(v['rules'])],
++                      onTap: () => compose(v),
+                     ),
+-                  Wrap(
+-                    spacing: 8,
+-                    children: [
+-                      if (!member)
+-                        NgelXCommunityJoin450(id: widget.id, value: v)
+-                      else
+-                        OutlinedButton(
+-                          onPressed: v['founderId'] == _communityUid450
+-                              ? null
+-                              : () async {
+-                                  final ok = await showDialog<bool>(
+-                                    context: c,
+-                                    builder: (d) => Ngelx455WhiteDialog(
+-                                      title: const Text('Topluluktan ayrıl?'),
+-                                      actions: [
+-                                        TextButton(
+-                                          onPressed: () =>
+-                                              Navigator.pop(d, false),
+-                                          child: const Text('İptal'),
+-                                        ),
+-                                        FilledButton(
+-                                          onPressed: () =>
+-                                              Navigator.pop(d, true),
+-                                          child: Text(_ngelx438Ui("Ayrıl")),
+-                                        ),
+-                                      ],
+-                                    ),
+-                                  );
+-                                  if (ok == true) {
+-                                    try {
+-                                      await _communities450
+-                                          .doc(widget.id)
+-                                          .update({
+-                                            'members': FieldValue.arrayRemove([
+-                                              _communityUid450,
+-                                            ]),
+-                                            'admins': FieldValue.arrayRemove([
+-                                              _communityUid450,
+-                                            ]),
+-                                          });
+-                                      if (mounted &&
+-                                          v['visibility'] == 'private')
+-                                        Navigator.pop(context);
+-                                    } catch (e) {
+-                                      if (mounted)
+-                                        _communityError450(context, e);
+-                                    }
+-                                  }
+-                                },
+-                          child: const Text('Katıldın'),
+-                        ),
+-                      if (admin)
+-                        OutlinedButton.icon(
+-                          onPressed: () => invite(v),
+-                          icon: const Icon(Icons.person_add),
+-                          label: Text(_ngelx438Ui("Davet et")),
+-                        ),
+-                      if (admin)
+-                        OutlinedButton.icon(
+-                          onPressed: () => Navigator.push(
+-                            c,
+-                            MaterialPageRoute(
+-                              builder: (_) =>
+-                                  NgelXCommunityAdmin450(id: widget.id),
++                    const Divider(height: 1),
++                    Row(
++                      children: [
++                        for (final item in [
++                          (Icons.photo_outlined, 'Fotoğraf'),
++                          (Icons.videocam_outlined, 'Video'),
++                          (Icons.notes_outlined, 'Yazı'),
++                        ])
++                          Expanded(
++                            child: TextButton.icon(
++                              onPressed: () => compose(v),
++                              icon: Icon(item.$1, size: 18),
++                              label: Text(
++                                item.$2,
++                                style: const TextStyle(fontSize: 12),
++                              ),
+                             ),
+                           ),
+-                          icon: const Icon(Icons.settings),
+-                          label: const Text('Yönet'),
+-                        ),
+-                    ],
+-                  ),
+-                  const Divider(),
+-                  TextField(
+-                    onChanged: (x) => setState(() => search = x.toLowerCase()),
+-                    decoration: const InputDecoration(
+-                      prefixIcon: Icon(Icons.search),
+-                      hintText: 'Topluluk içinde ara',
++                      ],
+                     ),
+-                  ),
+-                  SingleChildScrollView(
+-                    scrollDirection: Axis.horizontal,
+-                    child: Row(
+-                      children:
+-                          [
+-                                'Gönderiler',
+-                                'Öne çıkanlar',
+-                                'Videolar',
+-                                'Fotoğraflar',
+-                              ]
+-                              .map(
+-                                (x) => TextButton(
+-                                  onPressed: () => setState(() => tab = x),
+-                                  child: Text(
+-                                    x,
+-                                    style: TextStyle(
+-                                      color: tab == x ? mor : Colors.black54,
+-                                      fontWeight: FontWeight.w800,
+-                                    ),
+-                                  ),
+-                                ),
+-                              )
+-                              .toList(),
+-                    ),
+-                  ),
+-                  if (member)
+-                    OutlinedButton.icon(
+-                      onPressed: () => Navigator.push(
+-                        c,
+-                        MaterialPageRoute(
+-                          builder: (_) =>
+-                              NgelXCommunityCompose450(id: widget.id, value: v),
+-                        ),
++                  ],
++                ),
++              ),
++            if (!member && v['visibility'] == 'private')
++              const Padding(
++                padding: EdgeInsets.all(20),
++                child: Text('Gönderiler yalnızca üyelere görünür.'),
++              ),
++          ],
++        );
++        if (!member && v['visibility'] == 'private')
++          return ListView(children: [header]);
++        return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
++          stream: feed,
++          builder: (c, p) {
++            final docs = (p.data?.docs ?? []).where((d) {
++              final a = d.data();
++              return (a['text'] ?? '').toString().toLowerCase().contains(
++                    search,
++                  ) &&
++                  (tab != 'Öne çıkanlar' || a['pinned'] == true) &&
++                  (tab != 'Videolar' || a['mediaType'] == 'video') &&
++                  (tab != 'Fotoğraflar' || a['mediaType'] == 'image');
++            }).toList();
++            return CustomScrollView(
++              key: PageStorageKey('community-${widget.id}'),
++              cacheExtent: 250,
++              slivers: [
++                SliverToBoxAdapter(child: header),
++                if (p.hasError)
++                  SliverToBoxAdapter(
++                    child: Padding(
++                      padding: const EdgeInsets.all(20),
++                      child: Column(
++                        children: [
++                          const Text('Gönderiler yüklenemedi.'),
++                          TextButton.icon(
++                            onPressed: () => setState(() {
++                              feedRetry451++;
++                              feed = feedStream();
++                            }),
++                            icon: const Icon(Icons.refresh),
++                            label: const Text('Tekrar dene'),
++                          ),
++                        ],
+                       ),
+-                      icon: const Icon(Icons.edit),
+-                      label: const Text('Toplulukla bir şey paylaş…'),
+                     ),
+-                  if (!member && v['visibility'] == 'private')
+-                    const Text('Gönderiler yalnızca üyelere görünür.'),
+-                ],
+-              ),
+-            ),
+-            if (member || v['visibility'] == 'public')
+-              StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+-                key:ValueKey('community-feed-$feedRetry451'),
+-                stream: _feed454(),
+-                builder: (c, p) {
+-                  if (p.hasError) {
+-                    final preparing=p.error is FirebaseException&&(p.error as FirebaseException).code=='failed-precondition';
+-                    return Padding(padding:const EdgeInsets.all(20),child:Column(children:[
+-                      Text(preparing?'Gönderi akışı henüz hazır değil. Biraz sonra yeniden dene.':'Gönderiler yüklenemedi.'),
+-                      TextButton.icon(onPressed:()=>setState(()=>feedRetry451++),icon:const Icon(Icons.refresh),label: Text(_ngelx438Ui("Tekrar dene"))),
+-                    ]));
+-                  }
+-                  if(!p.hasData)return const Padding(padding:EdgeInsets.all(24),child:Center(child:CircularProgressIndicator()));
+-                  final ds =
+-                      (p.data?.docs ?? []).where((d) {
+-                        final a = d.data();
+-                        return a['text'].toString().toLowerCase().contains(
+-                              search,
+-                            ) &&
+-                            (tab != 'Öne çıkanlar' || a['pinned'] == true) &&
+-                            (tab != 'Videolar' || a['mediaType'] == 'video') &&
+-                            (tab != 'Fotoğraflar' || a['mediaType'] == 'image');
+-                      }).toList()..sort(
+-                        (a, b) =>
+-                            ((b.data()['createdAt'] as Timestamp?)
+-                                        ?.millisecondsSinceEpoch ??
+-                                    0)
+-                                .compareTo(
+-                                  (a.data()['createdAt'] as Timestamp?)
+-                                          ?.millisecondsSinceEpoch ??
+-                                      0,
+-                                ),
+-                      );
+-                  return Column(
+-                    children: [
+-                      if (ds.isEmpty)
+-                        const Padding(
+-                          padding: EdgeInsets.all(24),
+-                          child: Text('Henüz gönderi yok.'),
+-                        ),
+-                      ...ds.take(postLimit).map(
+-                        (d) => NgelXCommunityPost450(
++                  )
++                else if (!p.hasData)
++                  const SliverToBoxAdapter(
++                    child: Center(child: CircularProgressIndicator()),
++                  )
++                else if (docs.isEmpty)
++                  SliverToBoxAdapter(
++                    child: search.isNotEmpty || tab != 'Gönderiler'
++                        ? const Padding(
++                            padding: EdgeInsets.all(24),
++                            child: Text(
++                              'Bu seçimde gönderi bulunamadı.',
++                              textAlign: TextAlign.center,
++                            ),
++                          )
++                        : Ngelx456Empty(
++                            onCreate: member && v['paused'] != true
++                                ? () => compose(v)
++                                : null,
++                          ),
++                  )
++                else
++                  SliverList(
++                    delegate: SliverChildBuilderDelegate(
++                      (c, i) {
++                        final d = docs[i];
++                        return NgelXCommunityPost450(
++                          key: ValueKey(d.id),
+                           communityId: widget.id,
+                           id: d.id,
+                           value: d.data(),
+                           member: member,
+                           admin: admin,
+-                        ),
+-                      ),
+-                      if ((p.data?.docs.length ?? 0) >= postLimit)
+-                        TextButton(
+-                          onPressed: () => setState(() => postLimit += 40),
+-                          child: const Text('Daha fazla gönderi'),
+-                        ),
+-                    ],
+-                  );
+-                },
+-              ),
+-          ],
++                        );
++                      },
++                      childCount: docs.length,
++                      addAutomaticKeepAlives: false,
++                    ),
++                  ),
++                if (p.hasData && p.data!.docs.length >= postLimit)
++                  SliverToBoxAdapter(
++                    child: TextButton(
++                      onPressed: () => setState(() {
++                        postLimit += 20;
++                        feed = feedStream();
++                      }),
++                      child: const Text('Daha fazla gönderi'),
++                    ),
++                  ),
++                const SliverToBoxAdapter(child: SizedBox(height: 24)),
++              ],
++            );
++          },
+         );
+       },
+     ),
+@@ -1023,70 +1112,385 @@ class NgelXCommunityCompose450 extends StatefulWidget {
+ }
+ 
+ class _NgelXCommunityCompose450State extends State<NgelXCommunityCompose450> {
+-  final text=TextEditingController();
+-  XFile? media;String type='';bool busy=false;
+-  int _sent454=0,_total454=0;String _stage454='';
++  final text = TextEditingController();
++  XFile? media;
++  String type = '';
++  bool busy = false;
++  int _sent454 = 0, _total454 = 0;
++  String _stage454 = '';
+   DateTime? _progressAt454;
+-  DocumentReference<Map<String,dynamic>>? _draft454;
+-  String _uploaded454='';
+-  @override void dispose(){text.dispose();super.dispose();}
+-  void _progress454(int sent,int total){
+-    if(!mounted)return;
+-    final now=DateTime.now();
+-    if(sent<total&&_progressAt454!=null&&now.difference(_progressAt454!).inMilliseconds<150)return;
+-    _progressAt454=now;
+-    setState((){_sent454=sent;_total454=total;_stage454='Medya yükleniyor';});
++  DocumentReference<Map<String, dynamic>>? _draft454;
++  String _uploaded454 = '';
++  DateTime? publishAt456;
++  @override
++  void dispose() {
++    text.dispose();
++    super.dispose();
++  }
++
++  void _progress454(int sent, int total) {
++    if (!mounted) return;
++    final now = DateTime.now();
++    if (sent < total &&
++        _progressAt454 != null &&
++        now.difference(_progressAt454!).inMilliseconds < 150)
++      return;
++    _progressAt454 = now;
++    setState(() {
++      _sent454 = sent;
++      _total454 = total;
++      _stage454 = 'Medya yükleniyor';
++    });
+   }
+-  Future<void> pick(bool video)async{
+-    if(busy)return;
+-    try{final x=video?await ImagePicker().pickVideo(source:ImageSource.gallery):await ImagePicker().pickImage(source:ImageSource.gallery);
+-      if(x!=null&&mounted)setState((){media=x;type=video?'video':'image';_uploaded454='';_draft454=null;});
+-    }catch(e){if(mounted)_communityError450(context,e);}
++
++  Future<void> pick(bool video) async {
++    if (busy) return;
++    try {
++      final x = video
++          ? await ImagePicker().pickVideo(source: ImageSource.gallery)
++          : await ImagePicker().pickImage(source: ImageSource.gallery);
++      if (x != null && mounted)
++        setState(() {
++          media = x;
++          type = video ? 'video' : 'image';
++          _uploaded454 = '';
++          _draft454 = null;
++        });
++    } catch (e) {
++      if (mounted) _communityError450(context, e);
++    }
+   }
+-  Future<void> publish()async{
+-    if(busy||(text.text.trim().isEmpty&&media==null))return;
+-    final me=_communityUid450;if(me.isEmpty)return;
+-    setState((){busy=true;_sent454=0;_total454=0;_stage454=media==null?'Gönderi hazırlanıyor':'Medya hazırlanıyor';});
+-    final ref=_draft454??=_communities450.doc(widget.id).collection('posts').doc();
+-    try{
+-      if(media!=null&&_uploaded454.isEmpty){
+-        _uploaded454=type=='image'
+-          ?await ngelxFotografYukle(dosya:media!,kind:'photos',legacyPath:'communities/${widget.id}/${ref.id}.jpg',onProgress:_progress454)
+-          :await ngelxMedyaYukleDosya(dosya:media!,kind:'videos',ext:'mp4',legacyPath:'communities/${widget.id}/${ref.id}.mp4',onProgress:_progress454);
++
++  Future<void> publish() async {
++    if (busy || (text.text.trim().isEmpty && media == null)) return;
++    final me = _communityUid450;
++    if (me.isEmpty) return;
++    setState(() {
++      busy = true;
++      _sent454 = 0;
++      _total454 = 0;
++      _stage454 = media == null ? 'Gönderi hazırlanıyor' : 'Medya hazırlanıyor';
++    });
++    final ref = _draft454 ??= _communities450
++        .doc(widget.id)
++        .collection('posts')
++        .doc();
++    try {
++      if (media != null && _uploaded454.isEmpty) {
++        _uploaded454 = type == 'image'
++            ? await ngelxFotografYukle(
++                dosya: media!,
++                kind: 'photos',
++                legacyPath: 'communities/${widget.id}/${ref.id}.jpg',
++                onProgress: _progress454,
++              )
++            : await ngelxMedyaYukleDosya(
++                dosya: media!,
++                kind: 'videos',
++                ext: 'mp4',
++                legacyPath: 'communities/${widget.id}/${ref.id}.mp4',
++                onProgress: _progress454,
++              );
++      }
++      if (!mounted || _communityUid450 != me) {
++        if (_uploaded454.isNotEmpty)
++          unawaited(ngelxMedyaSil(_uploaded454).catchError((_) {}));
++        return;
++      }
++      setState(() => _stage454 = 'Gönderi kaydediliyor');
++      final user = await FirebaseFirestore.instance
++          .collection('users')
++          .doc(me)
++          .get()
++          .timeout(const Duration(seconds: 8));
++      if (!mounted || _communityUid450 != me) return;
++      final u = user.data() ?? <String, dynamic>{};
++      final current =
++          (await _communities450
++                  .doc(widget.id)
++                  .get(const GetOptions(source: Source.server)))
++              .data() ??
++          {};
++      if (current['paused'] == true ||
++          List<String>.from(current['muted'] ?? const []).contains(me))
++        throw StateError('yetki');
++      final pending =
++          (current['postApproval'] == true ||
++              List<String>.from(current['approvalMembers'] ?? const [])
++                  .contains(me)) &&
++          !_communityAdmin450(current);
++      try {
++        await ref
++            .set({
++              'authorId': me,
++              'authorName': (u['displayName'] ?? u['username'] ?? 'Üye')
++                  .toString(),
++              'authorPhoto': (u['photoUrl'] ?? '').toString(),
++              'text': text.text.trim(),
++              'mediaUrl': _uploaded454,
++              'mediaType': type,
++              'status': publishAt456 != null
++                  ? 'scheduled'
++                  : pending
++                  ? 'pending'
++                  : 'approved',
++              if (publishAt456 != null)
++                'publishAt': Timestamp.fromDate(publishAt456!),
++              'pinned': false,
++              'createdAt': FieldValue.serverTimestamp(),
++            })
++            .timeout(const Duration(seconds: 12));
++      } catch (_) {
++        final saved = await ref
++            .get(const GetOptions(source: Source.server))
++            .timeout(const Duration(seconds: 8));
++        if (!saved.exists ||
++            saved.data()?['authorId'] != me ||
++            saved.data()?['mediaUrl'] != _uploaded454 ||
++            saved.data()?['text'] != text.text.trim())
++          rethrow;
+       }
+-      if(!mounted||_communityUid450!=me){if(_uploaded454.isNotEmpty)unawaited(ngelxMedyaSil(_uploaded454).catchError((_){ }));return;}
+-      setState(()=>_stage454='Gönderi kaydediliyor');
+-      final user=await FirebaseFirestore.instance.collection('users').doc(me).get().timeout(const Duration(seconds:8));
+-      if(!mounted||_communityUid450!=me)return;
+-      final u=user.data()??<String,dynamic>{};
+-      final pending=widget.value['postApproval']==true&&!_communityAdmin450(widget.value);
+-      try{
+-        await ref.set({'authorId':me,'authorName':(u['displayName']??u['username']??'Üye').toString(),'authorPhoto':(u['photoUrl']??'').toString(),'text':text.text.trim(),'mediaUrl':_uploaded454,'mediaType':type,'status':pending?'pending':'approved','pinned':false,'createdAt':FieldValue.serverTimestamp()}).timeout(const Duration(seconds:12));
+-      }catch(_){
+-        final saved=await ref.get(const GetOptions(source:Source.server)).timeout(const Duration(seconds:8));
+-        if(!saved.exists||saved.data()?['authorId']!=me||saved.data()?['mediaUrl']!=_uploaded454||saved.data()?['text']!=text.text.trim())rethrow;
++      if (mounted && _communityUid450 == me) {
++        ngelx455Status(
++          context,
++          publishAt456 != null
++              ? 'Gönderi planlandı'
++              : pending
++              ? 'Yönetici onayına gönderildi'
++              : type == 'video'
++              ? 'Video paylaşıldı'
++              : type == 'image'
++              ? 'Fotoğraf paylaşıldı'
++              : 'Gönderi paylaşıldı',
++        );
++        Navigator.pop(context);
+       }
+-      if(mounted&&_communityUid450==me){ngelx455Status(context,pending?'Yönetici onayına gönderildi':type=='video'?'Video paylaşıldı':type=='image'?'Fotoğraf paylaşıldı':'Gönderi paylaşıldı');Navigator.pop(context);}
+-    }catch(e){if(mounted)_communityError450(context,e);}
+-    finally{if(mounted)setState(()=>busy=false);}
++    } catch (e) {
++      if (mounted) _communityError450(context, e);
++    } finally {
++      if (mounted) setState(() => busy = false);
++    }
+   }
+-  @override Widget build(BuildContext c){
+-    final fraction=ngelx454UploadFraction(_sent454,_total454);
+-    return _communitySurface450(title:'Toplulukta paylaş',body:ListView(padding:const EdgeInsets.all(20),children:[
+-      Container(padding:const EdgeInsets.all(16),decoration:BoxDecoration(color:const Color(0xFFF6F3FB),borderRadius:BorderRadius.circular(20)),child:Row(children:[_communityImage450((widget.value['photoUrl']??'').toString(),size:44,circle:true),const SizedBox(width:12),Expanded(child:Text((widget.value['name']??'Topluluk').toString(),style:const TextStyle(color:Colors.black87,fontSize:18,fontWeight:FontWeight.w800)))])),
+-      const SizedBox(height:16),
+-      TextField(controller:text,enabled:!busy,maxLength:3000,minLines:3,maxLines:8,style:const TextStyle(color:Colors.black87,fontSize:16,height:1.35),decoration:InputDecoration(hintText:'Bir şey paylaş…',hintStyle:const TextStyle(color:Color(0xFF6B7280)),filled:true,fillColor:const Color(0xFFF4F5F8),border:OutlineInputBorder(borderSide:BorderSide.none,borderRadius:BorderRadius.circular(20)))),
+-      const SizedBox(height:12),
+-      Wrap(spacing:12,children:[OutlinedButton.icon(onPressed:busy?null:()=>pick(false),icon:const Icon(Icons.photo,color:mor),label:const Text('Fotoğraf')),OutlinedButton.icon(onPressed:busy?null:()=>pick(true),icon:const Icon(Icons.video_library,color:mor),label:const Text('Video'))]),
+-      if(media!=null)...[const SizedBox(height:16),Ngelx454LocalMedia(key:ValueKey(media!.path),file:media!,video:type=='video'),ListTile(contentPadding:EdgeInsets.zero,title:Text(media!.name,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black87)),trailing:IconButton(tooltip:'Medyayı kaldır',onPressed:busy?null:()=>setState((){media=null;type='';_uploaded454='';_draft454=null;}),icon:const Icon(Icons.close)))],
+-      if(widget.value['postApproval']==true&&!_communityAdmin450(widget.value))const Padding(padding:EdgeInsets.symmetric(vertical:12),child:Text('Bu toplulukta gönderiler yönetici onayından geçer.',style:TextStyle(color:Colors.black54))),
+-      if(busy)Container(padding:const EdgeInsets.symmetric(horizontal:12,vertical:9),margin:const EdgeInsets.only(bottom:10),decoration:BoxDecoration(color:const Color(0xFFF0E9FF),borderRadius:BorderRadius.circular(16)),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(_stage454,style:const TextStyle(color:Color(0xFF6744C8),fontSize:12,fontWeight:FontWeight.w700)),const SizedBox(height:6),LinearProgressIndicator(value:_stage454=='Medya yükleniyor'?fraction:null),const SizedBox(height:8),Text(fraction==null?'Bağlantı ve dosya hazırlanıyor…':'${(fraction*100).floor()}% • ${(_sent454/1048576).toStringAsFixed(1)} / ${(_total454/1048576).toStringAsFixed(1)} MB',style:const TextStyle(color:Color(0xFF6744C8),fontSize:12,fontWeight:FontWeight.w600))])),
+-      FilledButton(onPressed:busy?null:publish,child:Padding(padding:const EdgeInsets.symmetric(vertical:12),child:Text(busy?'İşlem sürüyor…':'Paylaş',style:const TextStyle(fontSize:16,fontWeight:FontWeight.w700)))),
+-    ]));
++
++  @override
++  Widget build(BuildContext c) {
++    final fraction = ngelx454UploadFraction(_sent454, _total454);
++    return _communitySurface450(
++      title: 'Toplulukta paylaş',
++      body: ListView(
++        padding: const EdgeInsets.all(20),
++        children: [
++          Container(
++            padding: const EdgeInsets.all(16),
++            decoration: BoxDecoration(
++              color: const Color(0xFFF6F3FB),
++              borderRadius: BorderRadius.circular(20),
++            ),
++            child: Row(
++              children: [
++                _communityImage450(
++                  (widget.value['photoUrl'] ?? '').toString(),
++                  size: 44,
++                  circle: true,
++                ),
++                const SizedBox(width: 12),
++                Expanded(
++                  child: Text(
++                    (widget.value['name'] ?? 'Topluluk').toString(),
++                    style: const TextStyle(
++                      color: Colors.black87,
++                      fontSize: 18,
++                      fontWeight: FontWeight.w800,
++                    ),
++                  ),
++                ),
++              ],
++            ),
++          ),
++          const SizedBox(height: 16),
++          TextField(
++            controller: text,
++            enabled: !busy,
++            maxLength: 3000,
++            minLines: 3,
++            maxLines: 8,
++            style: const TextStyle(
++              color: Colors.black87,
++              fontSize: 16,
++              height: 1.35,
++            ),
++            decoration: InputDecoration(
++              hintText: 'Bir şey paylaş…',
++              hintStyle: const TextStyle(color: Color(0xFF6B7280)),
++              filled: true,
++              fillColor: const Color(0xFFF4F5F8),
++              border: OutlineInputBorder(
++                borderSide: BorderSide.none,
++                borderRadius: BorderRadius.circular(20),
++              ),
++            ),
++          ),
++          const SizedBox(height: 12),
++          Wrap(
++            spacing: 12,
++            children: [
++              OutlinedButton.icon(
++                onPressed: busy ? null : () => pick(false),
++                icon: const Icon(Icons.photo, color: mor),
++                label: const Text('Fotoğraf'),
++              ),
++              OutlinedButton.icon(
++                onPressed: busy ? null : () => pick(true),
++                icon: const Icon(Icons.video_library, color: mor),
++                label: const Text('Video'),
++              ),
++            ],
++          ),
++          if (media != null) ...[
++            const SizedBox(height: 16),
++            Ngelx454LocalMedia(
++              key: ValueKey(media!.path),
++              file: media!,
++              video: type == 'video',
++            ),
++            ListTile(
++              contentPadding: EdgeInsets.zero,
++              title: Text(
++                media!.name,
++                maxLines: 1,
++                overflow: TextOverflow.ellipsis,
++                style: const TextStyle(color: Colors.black87),
++              ),
++              trailing: IconButton(
++                tooltip: 'Medyayı kaldır',
++                onPressed: busy
++                    ? null
++                    : () => setState(() {
++                        media = null;
++                        type = '';
++                        _uploaded454 = '';
++                        _draft454 = null;
++                      }),
++                icon: const Icon(Icons.close),
++              ),
++            ),
++          ],
++          if (widget.value['postApproval'] == true &&
++              !_communityAdmin450(widget.value))
++            const Padding(
++              padding: EdgeInsets.symmetric(vertical: 12),
++              child: Text(
++                'Bu toplulukta gönderiler yönetici onayından geçer.',
++                style: TextStyle(color: Colors.black54),
++              ),
++            ),
++          if (busy)
++            Container(
++              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
++              margin: const EdgeInsets.only(bottom: 10),
++              decoration: BoxDecoration(
++                color: const Color(0xFFF0E9FF),
++                borderRadius: BorderRadius.circular(16),
++              ),
++              child: Column(
++                crossAxisAlignment: CrossAxisAlignment.start,
++                children: [
++                  Text(
++                    _stage454,
++                    style: const TextStyle(
++                      color: Color(0xFF6744C8),
++                      fontSize: 12,
++                      fontWeight: FontWeight.w700,
++                    ),
++                  ),
++                  const SizedBox(height: 6),
++                  LinearProgressIndicator(
++                    value: _stage454 == 'Medya yükleniyor' ? fraction : null,
++                  ),
++                  const SizedBox(height: 8),
++                  Text(
++                    fraction == null
++                        ? 'Bağlantı ve dosya hazırlanıyor…'
++                        : '${(fraction * 100).floor()}% • ${(_sent454 / 1048576).toStringAsFixed(1)} / ${(_total454 / 1048576).toStringAsFixed(1)} MB',
++                    style: const TextStyle(
++                      color: Color(0xFF6744C8),
++                      fontSize: 12,
++                      fontWeight: FontWeight.w600,
++                    ),
++                  ),
++                ],
++              ),
++            ),
++          if (_communityAdmin450(widget.value))
++            ListTile(
++              leading: const Icon(Icons.schedule, color: mor),
++              title: Text(
++                publishAt456 == null
++                    ? 'Gönderiyi planla'
++                    : '${publishAt456!.day}.${publishAt456!.month} · ${publishAt456!.hour.toString().padLeft(2, '0')}:${publishAt456!.minute.toString().padLeft(2, '0')}',
++              ),
++              subtitle: const Text('En fazla 30 gün ileriye planlayabilirsin.'),
++              trailing: publishAt456 == null
++                  ? const Icon(Icons.chevron_right)
++                  : IconButton(
++                      icon: const Icon(Icons.close),
++                      onPressed: busy
++                          ? null
++                          : () => setState(() => publishAt456 = null),
++                    ),
++              onTap: busy
++                  ? null
++                  : () async {
++                      final now = DateTime.now();
++                      final date = await showDatePicker(
++                        context: c,
++                        initialDate: now,
++                        firstDate: now,
++                        lastDate: now.add(const Duration(days: 29)),
++                      );
++                      if (date == null || !c.mounted) return;
++                      final time = await showTimePicker(
++                        context: c,
++                        initialTime: TimeOfDay.now(),
++                      );
++                      if (time == null || !mounted) return;
++                      final chosen = DateTime(
++                        date.year,
++                        date.month,
++                        date.day,
++                        time.hour,
++                        time.minute,
++                      );
++                      if (!chosen.isAfter(DateTime.now())) {
++                        ngelx455Status(
++                          c,
++                          'Gelecekteki bir zaman seç.',
++                          error: true,
++                        );
++                        return;
++                      }
++                      setState(() => publishAt456 = chosen);
++                    },
++            ),
++          FilledButton(
++            onPressed: busy ? null : publish,
++            child: Padding(
++              padding: const EdgeInsets.symmetric(vertical: 12),
++              child: Text(
++                busy ? 'İşlem sürüyor…' : 'Paylaş',
++                style: const TextStyle(
++                  fontSize: 16,
++                  fontWeight: FontWeight.w700,
++                ),
++              ),
++            ),
++          ),
++        ],
++      ),
++    );
+   }
+ }
+ 
+-
+ class NgelXCommunityVideo450 extends StatefulWidget {
+   final String url;
+   const NgelXCommunityVideo450({super.key, required this.url});
+@@ -1107,7 +1511,7 @@ class _NgelXCommunityVideo450State extends State<NgelXCommunityVideo450> {
+     try {
+       final p = VideoPlayerController.networkUrl(Uri.parse(widget.url));
+       player = p;
+-      await p.initialize().timeout(const Duration(seconds:15));
++      await p.initialize().timeout(const Duration(seconds: 15));
+       if (mounted) setState(() {});
+     } catch (_) {
+       if (mounted) setState(() => failed = true);
+@@ -1166,159 +1570,124 @@ class NgelXCommunityPost450 extends StatelessWidget {
+   DocumentReference<Map<String, dynamic>> get ref =>
+       _communities450.doc(communityId).collection('posts').doc(id);
+   Future<void> comments(BuildContext c) async {
+-    await showModalBottomSheet(context:c,isScrollControlled:true,
+-      backgroundColor:Colors.white,showDragHandle:true,
+-      builder:(_)=>Ngelx455Comments(post:ref,member:member,admin:admin));
++    await showModalBottomSheet(
++      context: c,
++      isScrollControlled: true,
++      backgroundColor: Colors.white,
++      showDragHandle: true,
++      builder: (_) => Ngelx455Comments(post: ref, member: member, admin: admin),
++    );
+   }
+ 
+   @override
+-  Widget build(BuildContext c) => Ngelx455PostView(ref:ref,child:Container(
+-    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+-    padding: const EdgeInsets.all(12),
+-    decoration: BoxDecoration(
+-      color: Colors.white,
+-      border: Border.all(color: const Color(0xFFE7E7ED)),
+-      borderRadius: BorderRadius.circular(18),
+-    ),
+-    child: Column(
+-      crossAxisAlignment: CrossAxisAlignment.start,
+-      children: [
+-        Row(
+-          children: [
+-            _communityImage450(
+-              value['authorPhoto'].toString(),
+-              size: 36,
+-              circle: true,
+-            ),
+-            const SizedBox(width: 8),
+-            Expanded(
+-              child: Column(
+-                crossAxisAlignment: CrossAxisAlignment.start,
+-                children: [
+-                  Text(
+-                    value['authorName'],
+-                    style: const TextStyle(fontWeight: FontWeight.w800),
+-                  ),
+-                  Text(
+-                    value['createdAt'] is Timestamp
+-                        ? (value['createdAt'] as Timestamp)
+-                              .toDate()
+-                              .toLocal()
+-                              .toString()
+-                              .substring(0, 16)
+-                        : 'Gönderiliyor…',
+-                    style: const TextStyle(color: Colors.black54, fontSize: 13),
+-                  ),
+-                ],
++  Widget build(BuildContext c) => Ngelx455PostView(
++    ref: ref,
++    child: Container(
++      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
++      padding: const EdgeInsets.all(12),
++      decoration: BoxDecoration(
++        color: Colors.white,
++        border: Border.all(color: const Color(0xFFE7E7ED)),
++        borderRadius: BorderRadius.circular(18),
++      ),
++      child: Column(
++        crossAxisAlignment: CrossAxisAlignment.start,
++        children: [
++          Row(
++            children: [
++              _communityImage450(
++                value['authorPhoto'].toString(),
++                size: 36,
++                circle: true,
+               ),
+-            ),
+-            PopupMenuButton<String>(
+-              onSelected: (x) async {
+-                try {
+-                  if (x == 'delete') {
+-                    final yes = await showDialog<bool>(
+-                      context: c,
+-                      builder: (d) => Ngelx455WhiteDialog(
+-                        title: const Text('Gönderiyi sil?'),
+-                        actions: [
+-                          TextButton(
+-                            onPressed: () => Navigator.pop(d, false),
+-                            child: const Text('İptal'),
+-                          ),
+-                          FilledButton(
+-                            onPressed: () => Navigator.pop(d, true),
+-                            child: Text(_ngelx438Ui("Sil")),
+-                          ),
+-                        ],
++              const SizedBox(width: 8),
++              Expanded(
++                child: Column(
++                  crossAxisAlignment: CrossAxisAlignment.start,
++                  children: [
++                    Text(
++                      value['authorName'],
++                      style: const TextStyle(fontWeight: FontWeight.w800),
++                    ),
++                    Text(
++                      ngelx456Time(value['createdAt']),
++                      style: const TextStyle(
++                        color: Colors.black54,
++                        fontSize: 13,
+                       ),
+-                    );
+-                    if (yes == true) await ref.update({'status': 'deleted'});
+-                  }
+-                  if (x == 'pin')
+-                    await ref.update({'pinned': value['pinned'] != true});
+-                  if (x == 'report')
+-                    await _communities450
+-                        .doc(communityId)
+-                        .collection('reports')
+-                        .doc('${id}_$_communityUid450')
+-                        .set({
+-                          'uid': _communityUid450,
+-                          'postId': id,
+-                          'status': 'open',
+-                          'createdAt': FieldValue.serverTimestamp(),
+-                        });
+-                } catch (e) {
+-                  if (c.mounted) _communityError450(c, e);
+-                }
+-              },
+-              itemBuilder: (_) => [
+-                if (member)
+-                  PopupMenuItem(
+-                    value: 'report',
+-                    child: Text(_ngelx438Ui("Şikâyet et")),
+-                  ),
+-                if (admin)
+-                  PopupMenuItem(
+-                    value: 'pin',
+-                    child: Text(
+-                      value['pinned'] == true
+-                          ? 'Öne çıkarmayı kaldır'
+-                          : 'Öne çıkar',
+                     ),
+-                  ),
+-                if (admin || value['authorId'] == _communityUid450)
+-                  PopupMenuItem(
+-                    value: 'delete',
+-                    child: Text(_ngelx438Ui("Sil")),
+-                  ),
+-              ],
+-            ),
+-          ],
+-        ),
+-        const SizedBox(height: 10),
+-        Text(value['text'] ?? ''),
+-        if (value['mediaType'] == 'image' && value['mediaUrl'] != '')
+-          Padding(
+-            padding: const EdgeInsets.only(top: 10),
+-            child: ClipRRect(
+-              borderRadius: BorderRadius.circular(14),
+-              child: NgelXAgResmi(
+-                imageUrl: value['mediaUrl'],
+-                width: double.infinity,
+-                height: 230,
+-                fit: BoxFit.cover,
++                  ],
++                ),
+               ),
+-            ),
++              IconButton(
++                tooltip: 'Gönderi seçenekleri',
++                onPressed: () =>
++                    ngelx456PostMenu(c, communityId, id, value, member, admin),
++                icon: const Icon(Icons.more_vert),
++              ),
++            ],
+           ),
+-        if (value['mediaType'] == 'video' && value['mediaUrl'] != '')
+-          NgelXCommunityVideo450(url: value['mediaUrl']),
+-        Ngelx455PostCounts(ref:ref),
+-        const Divider(),
+-        Row(
+-          children: [
+-            Expanded(child:Ngelx455Reactions(ref:ref.collection('likes'),enabled:member)),
+-            Expanded(
+-              child: TextButton.icon(
+-                onPressed: () => comments(c),
+-                icon: const Icon(Icons.chat_bubble_outline, size: 19),
+-                label: const Text('Yorum yap', style: TextStyle(fontSize: 13)),
++          const SizedBox(height: 10),
++          Text(value['text'] ?? ''),
++          if (value['mediaType'] == 'image' && value['mediaUrl'] != '')
++            Padding(
++              padding: const EdgeInsets.only(top: 10),
++              child: ClipRRect(
++                borderRadius: BorderRadius.circular(14),
++                child: NgelXAgResmi(
++                  imageUrl: value['mediaUrl'],
++                  width: double.infinity,
++                  height: 230,
++                  fit: BoxFit.cover,
++                ),
+               ),
+             ),
+-            Expanded(
+-              child: TextButton.icon(
+-                onPressed:()=>ngelx455SharePost(c,ref,value),
+-                icon: const Icon(Icons.share_outlined, size: 19),
+-                label: Text(
+-                  _ngelx438Ui("Paylaş"),
+-                  style: TextStyle(fontSize: 13),
++          if (value['mediaType'] == 'video' && value['mediaUrl'] != '')
++            NgelXCommunityVideo450(url: value['mediaUrl']),
++          Ngelx455PostCounts(
++            ref: ref,
++            liveCounts: value['counts456'] is Map
++                ? Map<String, dynamic>.from(value['counts456'])
++                : const {},
++          ),
++          const Divider(),
++          Row(
++            children: [
++              Expanded(
++                child: Ngelx455Reactions(
++                  ref: ref.collection('likes'),
++                  enabled: member,
+                 ),
+               ),
+-            ),
+-          ],
+-        ),
+-      ],
++              Expanded(
++                child: TextButton.icon(
++                  onPressed: () => comments(c),
++                  icon: const Icon(Icons.chat_bubble_outline, size: 19),
++                  label: const FittedBox(
++                    child: Text(
++                      'Yorum Yap',
++                      maxLines: 1,
++                      style: TextStyle(fontSize: 12),
++                    ),
++                  ),
++                ),
++              ),
++              Expanded(
++                child: TextButton.icon(
++                  onPressed: () => ngelx455SharePost(c, ref, value),
++                  icon: const Icon(Icons.share_outlined, size: 19),
++                  label: Text(
++                    _ngelx438Ui("Paylaş"),
++                    style: TextStyle(fontSize: 13),
++                  ),
++                ),
++              ),
++            ],
++          ),
++        ],
++      ),
+     ),
+-  ));
++  );
+ }
+ 
+ class NgelXCommunityAdmin450 extends StatefulWidget {
+@@ -1329,35 +1698,70 @@ class NgelXCommunityAdmin450 extends StatefulWidget {
+ }
+ 
+ class _NgelXCommunityAdmin450State extends State<NgelXCommunityAdmin450> {
+-  String section = 'Üyelik istekleri';
++  String section = 'Genel bakış';
++  late final communityStream456 = _communities450.doc(widget.id).snapshots();
++  final stats456 = <String, Future<AggregateQuerySnapshot>>{};
+   bool bulkBusy451 = false;
+-  Future<void> moderateAll451(List<QueryDocumentSnapshot<Map<String,dynamic>>> docs, bool approve) async {
++  Future<void> moderateAll451(
++    List<QueryDocumentSnapshot<Map<String, dynamic>>> docs,
++    bool approve,
++  ) async {
+     if (bulkBusy451 || docs.isEmpty) return;
+     final membership = section == 'Üyelik istekleri';
+-    final confirmed = await showDialog<bool>(context:context,builder:(c)=>Ngelx455WhiteDialog(
+-      title:Text(approve?'Toplu onay':'Toplu ret'),
+-      content:Text('${docs.length} kayda işlem uygulanacak. Devam edilsin mi?'),
+-      actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('İptal')),
+-        FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('Uygula'))]));
+-    if(confirmed!=true || !mounted)return;
+-    setState(()=>bulkBusy451=true);
++    final confirmed = await showDialog<bool>(
++      context: context,
++      builder: (c) => Ngelx455WhiteDialog(
++        title: Text(approve ? 'Toplu onay' : 'Toplu ret'),
++        content: Text(
++          '${docs.length} kayda işlem uygulanacak. Devam edilsin mi?',
++        ),
++        actions: [
++          TextButton(
++            onPressed: () => Navigator.pop(c, false),
++            child: const Text('İptal'),
++          ),
++          FilledButton(
++            onPressed: () => Navigator.pop(c, true),
++            child: const Text('Uygula'),
++          ),
++        ],
++      ),
++    );
++    if (confirmed != true || !mounted) return;
++    setState(() => bulkBusy451 = true);
+     try {
+       final root = _communities450.doc(widget.id);
+       await FirebaseFirestore.instance.runTransaction((tx) async {
+         final community = await tx.get(root);
+-        final current = <DocumentSnapshot<Map<String,dynamic>>>[];
+-        for(final d in docs)current.add(await tx.get(d.reference));
+-        final pending=current.where((d)=>d.exists&&d.data()?['status']=='pending').toList();
+-        if(membership&&approve){
+-          final members=Set<String>.from(community.data()?['members']??const[]);
+-          members.addAll(pending.map((d)=>d.id));
+-          if(members.length>500)throw StateError('Topluluk 500 üye sınırına ulaşıyor. Daha az isteği onayla.');
+-          if(pending.isNotEmpty)tx.update(root,{'members':FieldValue.arrayUnion(pending.map((d)=>d.id).toList())});
++        final current = <DocumentSnapshot<Map<String, dynamic>>>[];
++        for (final d in docs) current.add(await tx.get(d.reference));
++        final pending = current
++            .where((d) => d.exists && d.data()?['status'] == 'pending')
++            .toList();
++        if (membership && approve) {
++          final members = Set<String>.from(
++            community.data()?['members'] ?? const [],
++          );
++          members.addAll(pending.map((d) => d.id));
++          if (members.length > 500)
++            throw StateError(
++              'Topluluk 500 üye sınırına ulaşıyor. Daha az isteği onayla.',
++            );
++          if (pending.isNotEmpty)
++            tx.update(root, {
++              'members': FieldValue.arrayUnion(
++                pending.map((d) => d.id).toList(),
++              ),
++            });
+         }
+-        for(final d in pending)tx.update(d.reference,{'status':approve?'approved':'rejected'});
++        for (final d in pending)
++          tx.update(d.reference, {'status': approve ? 'approved' : 'rejected'});
+       });
+-    }catch(e){if(mounted)_communityError450(context,e);}
+-    finally{if(mounted)setState(()=>bulkBusy451=false);}
++    } catch (e) {
++      if (mounted) _communityError450(context, e);
++    } finally {
++      if (mounted) setState(() => bulkBusy451 = false);
++    }
+   }
+ 
+   Future<void> edit450(Map<String, dynamic> v) async {
+@@ -1366,7 +1770,8 @@ class _NgelXCommunityAdmin450State extends State<NgelXCommunityAdmin450> {
+         r = TextEditingController(text: v['rules']);
+     final save = await showDialog<bool>(
+       context: context,
+-      builder: (c) => Ngelx455WhiteDialog(backgroundColor:Colors.white,
++      builder: (c) => Ngelx455WhiteDialog(
++        backgroundColor: Colors.white,
+         title: const Text('Topluluk bilgileri'),
+         content: SingleChildScrollView(
+           child: Column(
+@@ -1400,7 +1805,7 @@ class _NgelXCommunityAdmin450State extends State<NgelXCommunityAdmin450> {
+             onPressed: n.text.trim().length < 3
+                 ? null
+                 : () => Navigator.pop(c, true),
+-            child:  Text(_ngelx438Ui("Kaydet")),
++            child: Text(_ngelx438Ui("Kaydet")),
+           ),
+         ],
+       ),
+@@ -1425,16 +1830,35 @@ class _NgelXCommunityAdmin450State extends State<NgelXCommunityAdmin450> {
+   Widget build(BuildContext c) => _communitySurface450(
+     title: 'Topluluğu yönet',
+     body: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+-      stream: _communities450.doc(widget.id).snapshots(),
++      stream: communityStream456,
+       builder: (c, s) {
+         final v = s.data?.data();
+         if (v == null) return const Center(child: CircularProgressIndicator());
+-        if (!_communityAdmin450(v))
++        if (!ngelx456Moderator(v))
+           return const Center(child: Text('Yönetici yetkisi gerekli.'));
+         final root = _communities450.doc(widget.id);
++        if (section == 'Genel bakış')
++          return ListView(
++            padding: const EdgeInsets.all(16),
++            children: [
++              Ngelx456Dashboard(
++                id: widget.id,
++                value: v,
++                open: (x) => setState(() => section = x),
++              ),
++            ],
++          );
+         return ListView(
+           padding: const EdgeInsets.all(16),
+           children: [
++            Align(
++              alignment: Alignment.centerLeft,
++              child: TextButton.icon(
++                onPressed: () => setState(() => section = 'Genel bakış'),
++                icon: const Icon(Icons.arrow_back),
++                label: const Text('Yönetim paneli'),
++              ),
++            ),
+             Text(
+               v['name'],
+               style: const TextStyle(fontSize: 23, fontWeight: FontWeight.w900),
+@@ -1444,19 +1868,22 @@ class _NgelXCommunityAdmin450State extends State<NgelXCommunityAdmin450> {
+               spacing: 6,
+               children:
+                   [
+-                        'Üyelik istekleri',
++                        if (_communityAdmin450(v)) 'Üyelik istekleri',
+                         'Bekleyen gönderiler',
+                         'Şikâyetler',
+                         'İstatistikler',
+                         'Üyeler',
+-                        'Ayarlar',
++                        if (_communityAdmin450(v)) 'Ayarlar',
+                       ]
+                       .map(
+                         (x) => ChoiceChip(
+-                    selectedColor:const Color(0xFFF0E8FF),
+-                    backgroundColor:Colors.white,
+-                    checkmarkColor:mor,
+-                    labelStyle:const TextStyle(color:mor,fontWeight:FontWeight.w700),
++                          selectedColor: const Color(0xFFF0E8FF),
++                          backgroundColor: Colors.white,
++                          checkmarkColor: mor,
++                          labelStyle: const TextStyle(
++                            color: mor,
++                            fontWeight: FontWeight.w700,
++                          ),
+                           label: Text(x),
+                           selected: section == x,
+                           onSelected: (_) => setState(() => section = x),
+@@ -1467,6 +1894,12 @@ class _NgelXCommunityAdmin450State extends State<NgelXCommunityAdmin450> {
+             if (section == 'İstatistikler') ...[
+               ListTile(
+                 title: const Text('Üyeler'),
++                onTap: () => Navigator.push(
++                  c,
++                  MaterialPageRoute(
++                    builder: (_) => Ngelx456Members(id: widget.id),
++                  ),
++                ),
+                 trailing: Text('${(v['members'] as List).length}'),
+               ),
+               ...[
+@@ -1476,13 +1909,30 @@ class _NgelXCommunityAdmin450State extends State<NgelXCommunityAdmin450> {
+                 ('reports', 'open', 'Açık şikâyetler'),
+               ].map(
+                 (x) => FutureBuilder<AggregateQuerySnapshot>(
+-                  future: root
+-                      .collection(x.$1)
+-                      .where('status', isEqualTo: x.$2)
+-                      .count()
+-                      .get(),
++                  future: stats456.putIfAbsent(
++                    x.$3,
++                    () => root
++                        .collection(x.$1)
++                        .where('status', isEqualTo: x.$2)
++                        .count()
++                        .get(),
++                  ),
+                   builder: (c, s) => ListTile(
+                     title: Text(x.$3),
++                    onTap: () => x.$2 == 'approved'
++                        ? Navigator.push(
++                            c,
++                            MaterialPageRoute(
++                              builder: (_) => Ngelx456PostList(id: widget.id),
++                            ),
++                          )
++                        : setState(
++                            () => section = x.$1 == 'requests'
++                                ? 'Üyelik istekleri'
++                                : x.$1 == 'reports'
++                                ? 'Şikâyetler'
++                                : 'Bekleyen gönderiler',
++                          ),
+                     trailing: Text(
+                       s.hasError ? 'Yüklenemedi' : '${s.data?.count ?? '…'}',
+                     ),
+@@ -1538,49 +1988,15 @@ class _NgelXCommunityAdmin450State extends State<NgelXCommunityAdmin450> {
+               ),
+             ],
+             if (section == 'Üyeler')
+-              ...List<String>.from(v['members']).map(
+-                (uid) => ListTile(
+-                  title: NgelXFounder450(uid: uid, label: 'Üye'),
+-                  trailing:
+-                      v['founderId'] == _communityUid450 &&
+-                          uid != v['founderId']
+-                      ? PopupMenuButton<String>(
+-                          onSelected: (a) async {
+-                            try {
+-                              if (a == 'admin') {
+-                                await root.update({
+-                                  'admins':
+-                                      List<String>.from(v['admins'])
+-                                          .contains(uid)
+-                                      ? FieldValue.arrayRemove([uid])
+-                                      : FieldValue.arrayUnion([uid]),
+-                                });
+-                              }
+-                              if (a == 'remove')
+-                                await root.update({
+-                                  'members': FieldValue.arrayRemove([uid]),
+-                                  'admins': FieldValue.arrayRemove([uid]),
+-                                });
+-                            } catch (e) {
+-                              if (c.mounted) _communityError450(c, e);
+-                            }
+-                          },
+-                          itemBuilder: (_) => [
+-                            PopupMenuItem(
+-                              value: 'admin',
+-                              child: Text(
+-                                List<String>.from(v['admins']).contains(uid)
+-                                    ? 'Yöneticiliği kaldır'
+-                                    : 'Yönetici yap',
+-                              ),
+-                            ),
+-                            const PopupMenuItem(
+-                              value: 'remove',
+-                              child: Text('Üyeyi çıkar'),
+-                            ),
+-                          ],
+-                        )
+-                      : null,
++              ListTile(
++                leading: const Icon(Icons.people_outline),
++                title: const Text('Üyeler ve roller'),
++                trailing: const Icon(Icons.chevron_right),
++                onTap: () => Navigator.push(
++                  c,
++                  MaterialPageRoute(
++                    builder: (_) => Ngelx456Members(id: widget.id),
++                  ),
+                 ),
+               ),
+             if ([
+@@ -1613,10 +2029,24 @@ class _NgelXCommunityAdmin450State extends State<NgelXCommunityAdmin450> {
+                           padding: EdgeInsets.all(24),
+                           child: Text('Bekleyen kayıt yok.'),
+                         ),
+-                      if(ds.isNotEmpty&&section!='Şikâyetler')Wrap(spacing:8,children:[
+-                        FilledButton(onPressed:bulkBusy451?null:()=>moderateAll451(ds,true),child:Text('Tümünü onayla (${ds.length})')),
+-                        OutlinedButton(onPressed:bulkBusy451?null:()=>moderateAll451(ds,false),child:const Text('Tümünü reddet')),
+-                      ]),
++                      if (ds.isNotEmpty && section != 'Şikâyetler')
++                        Wrap(
++                          spacing: 8,
++                          children: [
++                            FilledButton(
++                              onPressed: bulkBusy451
++                                  ? null
++                                  : () => moderateAll451(ds, true),
++                              child: Text('Tümünü onayla (${ds.length})'),
++                            ),
++                            OutlinedButton(
++                              onPressed: bulkBusy451
++                                  ? null
++                                  : () => moderateAll451(ds, false),
++                              child: const Text('Tümünü reddet'),
++                            ),
++                          ],
++                        ),
+                       ...ds.map(
+                         (d) => Card(
+                           color: Colors.white,
+@@ -1632,31 +2062,37 @@ class _NgelXCommunityAdmin450State extends State<NgelXCommunityAdmin450> {
+                             subtitle: Row(
+                               children: [
+                                 TextButton(
+-                                  onPressed: bulkBusy451 ? null : () async {
+-                                    try {
+-                                      if (section == 'Üyelik istekleri') {
+-                                        final batch = FirebaseFirestore.instance
+-                                            .batch();
+-                                        batch.update(root, {
+-                                          'members': FieldValue.arrayUnion([
+-                                            d.id,
+-                                          ]),
+-                                        });
+-                                        batch.update(d.reference, {
+-                                          'status': 'approved',
+-                                        });
+-                                        await batch.commit();
+-                                      } else {
+-                                        await d.reference.update({
+-                                          'status': section == 'Şikâyetler'
+-                                              ? 'closed'
+-                                              : 'approved',
+-                                        });
+-                                      }
+-                                    } catch (e) {
+-                                      if (c.mounted) _communityError450(c, e);
+-                                    }
+-                                  },
++                                  onPressed: bulkBusy451
++                                      ? null
++                                      : () async {
++                                          try {
++                                            if (section == 'Üyelik istekleri') {
++                                              final batch = FirebaseFirestore
++                                                  .instance
++                                                  .batch();
++                                              batch.update(root, {
++                                                'members':
++                                                    FieldValue.arrayUnion([
++                                                      d.id,
++                                                    ]),
++                                              });
++                                              batch.update(d.reference, {
++                                                'status': 'approved',
++                                              });
++                                              await batch.commit();
++                                            } else {
++                                              await d.reference.update({
++                                                'status':
++                                                    section == 'Şikâyetler'
++                                                    ? 'closed'
++                                                    : 'approved',
++                                              });
++                                            }
++                                          } catch (e) {
++                                            if (c.mounted)
++                                              _communityError450(c, e);
++                                          }
++                                        },
+                                   child: Text(
+                                     section == 'Şikâyetler'
+                                         ? 'İncelendi'
+@@ -1665,15 +2101,18 @@ class _NgelXCommunityAdmin450State extends State<NgelXCommunityAdmin450> {
+                                 ),
+                                 if (section != 'Şikâyetler')
+                                   TextButton(
+-                                    onPressed: bulkBusy451 ? null : () async {
+-                                      try {
+-                                        await d.reference.update({
+-                                          'status': 'rejected',
+-                                        });
+-                                      } catch (e) {
+-                                        if (c.mounted) _communityError450(c, e);
+-                                      }
+-                                    },
++                                    onPressed: bulkBusy451
++                                        ? null
++                                        : () async {
++                                            try {
++                                              await d.reference.update({
++                                                'status': 'rejected',
++                                              });
++                                            } catch (e) {
++                                              if (c.mounted)
++                                                _communityError450(c, e);
++                                            }
++                                          },
+                                     child: Text(_ngelx438Ui("Reddet")),
+                                   ),
+                               ],
+diff --git a/app/lib/main.dart b/app/lib/main.dart
+index 7cee90a..efedc2c 100644
+--- a/app/lib/main.dart
++++ b/app/lib/main.dart
+@@ -58,6 +58,7 @@ part 'build448_incoming_calls.dart';
+ part 'build453_widgets.dart';
+ part 'build454_widgets.dart';
+ part 'build455_widgets.dart';
++part 'build456_widgets.dart';
+ part 'feed_creator_badge.dart';
+ part 'story_v66.dart';
+ part 'build445_inbox_model.dart';
+@@ -662,9 +663,25 @@ List<String> ngelxMedyaUrlAdaylari(String rawUrl){
+   return sonuc;
+ }
+ final Map<String,Uint8List> _ngelxAgResmiBellek=<String,Uint8List>{};
+-const int _ngelxAgResmiBellekSiniri=96;
+-
+-Future<Uint8List> _ngelxAgResmiBaytlari(String rawUrl) async {
++const int _ngelxAgResmiBellekSiniri=48;
++const int _ngelx456ImageBudget=24*1024*1024;
++final _ngelx456ImageRequests=<String,Future<Uint8List>>{};
++void _ngelx456CacheImage(String key,Uint8List bytes){
++ if(bytes.lengthInBytes>_ngelx456ImageBudget)return;
++ _ngelxAgResmiBellek.remove(key);
++ var size=_ngelxAgResmiBellek.values.fold<int>(0,(sum,x)=>sum+x.lengthInBytes);
++ while(_ngelxAgResmiBellek.isNotEmpty&&(_ngelxAgResmiBellek.length>=_ngelxAgResmiBellekSiniri||size+bytes.lengthInBytes>_ngelx456ImageBudget)){
++  final old=_ngelxAgResmiBellek.remove(_ngelxAgResmiBellek.keys.first);size-=old?.lengthInBytes??0;
++ }
++ _ngelxAgResmiBellek[key]=bytes;
++}
++
++Future<Uint8List> _ngelxAgResmiBaytlari(String rawUrl){
++ final key=rawUrl.trim(),cached=_ngelxAgResmiBellek[rawUrl.trim()];
++ if(cached!=null)return Future.value(cached);
++ return _ngelx456ImageRequests.putIfAbsent(key,()=>_ngelxAgResmiBaytlari456(key).whenComplete(()=>_ngelx456ImageRequests.remove(key)));
++}
++Future<Uint8List> _ngelxAgResmiBaytlari456(String rawUrl) async {
+   final temiz=rawUrl.trim();
+   if(temiz.isEmpty)throw Exception('Fotoğraf adresi boş.');
+   final hazir=_ngelxAgResmiBellek[temiz];
+@@ -718,16 +735,13 @@ Future<Uint8List> _ngelxAgResmiBaytlari(String rawUrl) async {
+         if(ham.length>12*1024*1024)throw Exception('Fotoğraf çok büyük.');
+         final bytes=Uint8List.fromList(ham);
+ 
+-        final codec=await ui.instantiateImageCodec(bytes);
++        final codec=await ui.instantiateImageCodec(bytes,targetWidth:32);
+         final frame=await codec.getNextFrame();
+         frame.image.dispose();
+         codec.dispose();
+ 
+-        if(_ngelxAgResmiBellek.length>=_ngelxAgResmiBellekSiniri){
+-          _ngelxAgResmiBellek.remove(_ngelxAgResmiBellek.keys.first);
+-        }
+-        _ngelxAgResmiBellek[temiz]=bytes;
+-        _ngelxAgResmiBellek[aday]=bytes;
++        _ngelx456CacheImage(temiz,bytes);
++        if(aday!=temiz)_ngelx456CacheImage(aday,bytes);
+         return bytes;
+       }catch(e){
+         sonHata=e;
+@@ -925,7 +939,7 @@ class _NgelXAgResmiState extends State<NgelXAgResmi>{
+     if(temiz.isEmpty)return _error(context,StateError('Fotoğraf adresi boş.'));
+     return Image(
+       key:ValueKey('ngelx-direct-$temiz-$_yenileme'),
+-      image:NgelXAgImageProvider(temiz),
++      image:ResizeImage(NgelXAgImageProvider(temiz),width:((widget.width?.isFinite==true?widget.width!:MediaQuery.sizeOf(context).width)*MediaQuery.devicePixelRatioOf(context)).clamp(64,1440).round()),
+       fit:widget.fit,
+       width:widget.width,
+       height:widget.height,
+@@ -2206,7 +2220,7 @@ Future<String> _ngelxDirectR2BytesYukle({
+   }on DioException catch(e){
+     final durum=e.response?.statusCode;
+     final govde=e.response?.data;
+-    if(Platform.isAndroid){
++    if(Platform.isAndroid&&!ngelx456DnsFailure(e)){
+       try{
+         await _ngelxAndroidNativeR2Put(
+           hedef:upload,
+@@ -2268,7 +2282,7 @@ Future<String> _ngelxDirectR2DosyaYukle({
+   }on DioException catch(e){
+     final durum=e.response?.statusCode;
+     final govde=e.response?.data;
+-    if(Platform.isAndroid){
++    if(Platform.isAndroid&&!ngelx456DnsFailure(e)){
+       try{
+         await _ngelxAndroidNativeR2Put(
+           hedef:upload,
+@@ -22031,6 +22045,7 @@ class _SohbetPageState extends State<SohbetPage> with Ngelx437MessageJump<Sohbet
+                   FilledButton.tonal(onPressed:()=>aramaBaslat(goruntulu),child:const Text('Geri ara')),
+                 ]);
+               })
++            else if(ngelx456InviteCode(gosterilecekMetin)!=null)Ngelx456InviteCard(text:gosterilecekMetin,own:ben)
+             else Text(
+               gosterilecekMetin.isEmpty?'Mesaj içeriği bulunamadı':gosterilecekMetin,
+               softWrap:true,
+@@ -23937,6 +23952,7 @@ class _AktivitePageState extends State<AktivitePage> {
+     final kaynak=(v['sourceId']??v['chatId']??v['belgeId']??v['postId']??v['contentId']??'').toString();
+     final hedefTuru=(v['targetKind']??'').toString();
+     final olay=(v['eventKind']??'').toString();
++    if(hedefTuru=='community'&&kaynak.isNotEmpty){Navigator.push(context,MaterialPageRoute(builder:(_)=>NgelXCommunityDetail450(id:kaynak)));return;}
+     final canliHedefi=tur=='live'||hedefTuru=='live'||olay=='live_started'||olay=='live_share';
+     final sesliHedefi=tur=='audio_live'||hedefTuru=='audio_room'||olay=='audio_room_started';
+ 
+@@ -30252,7 +30268,7 @@ class KaydedilenlerPage extends StatelessWidget {
+       data: ThemeData.light(),
+       child: Scaffold(
+         backgroundColor: Colors.white,
+-        appBar: AppBar(title:  Text(_ngelx438Ui("Kaydedilenler"), style: TextStyle(fontWeight: FontWeight.w900))),
++        appBar: AppBar(actions:[IconButton(tooltip:'Topluluk gönderileri',onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const Ngelx456Saved())),icon:const Icon(Icons.groups_outlined,color:mor))],title:  Text(_ngelx438Ui("Kaydedilenler"), style: TextStyle(fontWeight: FontWeight.w900))),
+         body: uid == null
+             ? const Center(child: Text('Kaydedilenleri görmek için giriş yap.'))
+             : StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+diff --git a/firestore.rules b/firestore.rules
+index e8cb0fd..7c9ae9c 100644
+--- a/firestore.rules
++++ b/firestore.rules
+@@ -176,6 +176,12 @@ service cloud.firestore {
+     function community450(cid) { return get(/databases/$(database)/documents/communities450/$(cid)).data; }
+     function communityMember450(cid) { return communitySigned450() && request.auth.uid in community450(cid).members; }
+     function communityAdmin450(cid) { return communitySigned450() && request.auth.uid in community450(cid).admins; }
++    // Build456 community moderation
++    function communityModerator456(cid) { return communitySigned450() &&
++      (request.auth.uid in community450(cid).admins || request.auth.uid in community450(cid).get('moderators',[])); }
++    function communityPosting456(cid) { return communityMember450(cid)
++      && community450(cid).get('paused',false) == false
++      && !(request.auth.uid in community450(cid).get('muted',[])); }
+     function communityVisible450(cid) { return signedIn() && (community450(cid).visibility == 'public' || request.auth.uid in community450(cid).members); }
+     function communityInvite450(cid, code) {
+       return code is string && code.size() > 0 && code.size() < 100
+@@ -184,7 +190,18 @@ service cloud.firestore {
+         && get(/databases/$(database)/documents/communityInvites450/$(code)).data.expiresAt > request.time;
+     }
+     function communityValid450(v) {
+-      return v.keys().hasOnly(['name','description','rules','category','photoUrl','coverUrl','founderId','members','admins','visibility','joinApproval','postApproval','lastJoinCode','createdAt'])
++      return v.keys().hasOnly(['name','description','rules','category','photoUrl','coverUrl','founderId','members','admins','visibility','joinApproval','postApproval','lastJoinCode','createdAt','coverAlignment','moderators','muted','banned','approvalMembers','paused'])
++        && v.get('moderators',[]) is list && v.get('moderators',[]).size() <= 30
++        && v.get('moderators',[]).toSet().difference(v.members.toSet()).size() == 0
++        && v.get('moderators',[]).toSet().intersection(v.admins.toSet()).size() == 0
++        && v.get('muted',[]) is list && v.get('muted',[]).size() <= 500
++        && v.get('muted',[]).toSet().difference(v.members.toSet()).size() == 0
++        && v.get('muted',[]).toSet().intersection(v.admins.toSet()).size() == 0
++        && v.get('banned',[]) is list && v.get('banned',[]).size() <= 500
++        && v.get('banned',[]).toSet().intersection(v.members.toSet()).size() == 0
++        && v.get('approvalMembers',[]) is list && v.get('approvalMembers',[]).size() <= 500
++        && v.get('paused',false) is bool && v.get('coverAlignment',0) is number
++        && v.get('coverAlignment',0) >= -1 && v.get('coverAlignment',0) <= 1
+         && v.name is string && v.name.size() >= 3 && v.name.size() <= 60
+         && v.description is string && v.description.size() > 0 && v.description.size() <= 240
+         && v.rules is string && v.rules.size() <= 2000 && v.category is string && v.category.size() <= 50
+@@ -202,6 +219,7 @@ service cloud.firestore {
+       allow create: if communitySigned450() && communityValid450(request.resource.data)
+         && request.resource.data.founderId == request.auth.uid
+         && request.resource.data.members == [request.auth.uid] && request.resource.data.admins == [request.auth.uid]
++        && request.resource.data.get('moderators',[]) == [] && request.resource.data.get('muted',[]) == [] && request.resource.data.get('banned',[]) == [] && request.resource.data.get('approvalMembers',[]) == []
+         && request.resource.data.lastJoinCode == '' && request.resource.data.createdAt == request.time;
+       allow update: if communitySigned450() && communityValid450(request.resource.data)
+         && request.resource.data.founderId == resource.data.founderId && request.resource.data.createdAt == resource.data.createdAt
+@@ -209,19 +227,20 @@ service cloud.firestore {
+           (request.auth.uid in resource.data.admins
+             && (request.resource.data.admins == resource.data.admins || request.auth.uid == resource.data.founderId))
+           || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['members','lastJoinCode'])
+-            && resource.data.joinApproval == false && !(request.auth.uid in resource.data.members)
++            && resource.data.joinApproval == false && !(request.auth.uid in resource.data.members) && !(request.auth.uid in resource.data.get('banned',[]))
+             && (resource.data.visibility == 'public' || communityInvite450(cid,request.resource.data.lastJoinCode))
+             && request.resource.data.members.toSet() == resource.data.members.toSet().union([request.auth.uid].toSet()))
+           || (request.auth.uid != resource.data.founderId && request.auth.uid in resource.data.members
+-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['members','admins'])
++            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['members','admins','moderators'])
+             && request.resource.data.members.toSet() == resource.data.members.toSet().difference([request.auth.uid].toSet())
+-            && request.resource.data.admins.toSet() == resource.data.admins.toSet().difference([request.auth.uid].toSet()))
++            && request.resource.data.admins.toSet() == resource.data.admins.toSet().difference([request.auth.uid].toSet())
++            && request.resource.data.get('moderators',[]).toSet() == resource.data.get('moderators',[]).toSet().difference([request.auth.uid].toSet()))
+         );
+       allow delete: if false;
+       match /requests/{uid} {
+         function validRequest450() { return request.resource.data.keys().hasOnly(['uid','status','inviteCode','createdAt'])
+           && request.resource.data.uid == uid && uid == request.auth.uid
+-          && request.resource.data.status == 'pending' && request.resource.data.createdAt == request.time
++          && !(uid in community450(cid).get('banned',[])) && request.resource.data.status == 'pending' && request.resource.data.createdAt == request.time
+           && (community450(cid).visibility == 'public' || communityInvite450(cid,request.resource.data.inviteCode)); }
+         allow get: if communitySigned450() && (uid == request.auth.uid || communityAdmin450(cid));
+         allow list: if communityAdmin450(cid);
+@@ -234,20 +253,41 @@ service cloud.firestore {
+       }
+       match /posts/{pid} {
+         function approved450() { return resource.data.status == 'approved'; }
+-        function validPost450() { let v=request.resource.data;return v.keys().hasOnly(['authorId','authorName','authorPhoto','text','mediaUrl','mediaType','status','pinned','createdAt'])
++        function validPost450() { let v=request.resource.data;return v.keys().hasOnly(['authorId','authorName','authorPhoto','text','mediaUrl','mediaType','status','pinned','createdAt','publishAt'])
+           && v.authorId == request.auth.uid && v.authorName is string && v.authorName.size() <= 100
+           && v.authorPhoto is string && v.authorPhoto.size() <= 2048
+           && v.text is string && v.text.size() <= 3000 && v.mediaUrl is string && v.mediaUrl.size() <= 2048
+           && (v.text.size() > 0 || v.mediaUrl.size() > 0) && v.mediaType in ['','image','video']
+           && v.pinned == false && v.createdAt == request.time; }
+         allow read: if communityVisible450(cid) && (approved450() || communityAdmin450(cid) || resource.data.authorId == request.auth.uid);
+-        allow create: if communityMember450(cid) && validPost450()
+-          && request.resource.data.status == (community450(cid).postApproval == true && !communityAdmin450(cid) ? 'pending' : 'approved');
+-        allow update: if (communityAdmin450(cid) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','pinned'])
+-          && request.resource.data.status in ['approved','rejected','deleted'] && request.resource.data.pinned is bool)
++        allow create: if communityPosting456(cid) && validPost450()
++          && (request.resource.data.status == ((community450(cid).postApproval == true || request.auth.uid in community450(cid).get('approvalMembers',[])) && !communityAdmin450(cid) ? 'pending' : 'approved')
++          || (communityAdmin450(cid) && request.resource.data.status == 'scheduled' && request.resource.data.publishAt is timestamp && request.resource.data.publishAt > request.time && request.resource.data.publishAt <= request.time + duration.value(30,'d')));
++        allow update: if (communityModerator456(cid) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','pinned','commentsClosed','slowSeconds'])
++          && request.resource.data.status in ['approved','rejected','deleted'] && request.resource.data.pinned is bool
++          && request.resource.data.get('commentsClosed',false) is bool && request.resource.data.get('slowSeconds',0) in [0,300])
+           || (communityMember450(cid) && resource.data.authorId == request.auth.uid
+           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']) && request.resource.data.status == 'deleted');
+         allow delete: if false;
++        match /subscribers456/{uid} {
++          allow get: if communityMember450(cid) && uid == request.auth.uid;
++          allow create, update: if communityMember450(cid) && uid == request.auth.uid
++            && request.resource.data.keys().hasOnly(['uid','enabled']) && request.resource.data.uid == uid && request.resource.data.enabled is bool;
++          allow delete: if uid == request.auth.uid;
++        }
++        match /commentLimits456/{uid} {
++          allow get: if communityMember450(cid) && uid == request.auth.uid;
++          allow create, update: if communityPosting456(cid) && uid == request.auth.uid
++            && request.resource.data.keys().hasOnly(['uid','commentId','at'])
++            && request.resource.data.uid == uid && request.resource.data.commentId is string && request.resource.data.at == request.time
++            && (!exists(/databases/$(database)/documents/communities450/$(cid)/posts/$(pid)/commentLimits456/$(uid)) ||
++              resource.data.at + duration.value(get(/databases/$(database)/documents/communities450/$(cid)/posts/$(pid)).data.get('slowSeconds',0),'s') <= request.time);
++        }
++        match /feedback456/{id} {
++          allow read: if communityModerator456(cid) || request.auth.uid == get(/databases/$(database)/documents/communities450/$(cid)/posts/$(pid)).data.authorId;
++          allow create: if communityModerator456(cid) && request.resource.data.keys().hasOnly(['uid','text','createdAt'])
++            && request.resource.data.uid == request.auth.uid && request.resource.data.text is string && request.resource.data.text.size() <= 500 && request.resource.data.createdAt == request.time;
++        }
+         match /likes/{uid} {
+           allow read: if communityVisible450(cid) && get(/databases/$(database)/documents/communities450/$(cid)/posts/$(pid)).data.status == 'approved';
+           allow create, update: if communityMember450(cid) && uid == request.auth.uid
+@@ -273,8 +313,12 @@ service cloud.firestore {
+         }
+         match /comments/{commentId} {
+           allow read: if communityVisible450(cid) && get(/databases/$(database)/documents/communities450/$(cid)/posts/$(pid)).data.status == 'approved';
+-          allow create: if communityMember450(cid)
++          allow create: if communityPosting456(cid)
+             && get(/databases/$(database)/documents/communities450/$(cid)/posts/$(pid)).data.status == 'approved'
++            && get(/databases/$(database)/documents/communities450/$(cid)/posts/$(pid)).data.get('commentsClosed',false) == false
++            && (get(/databases/$(database)/documents/communities450/$(cid)/posts/$(pid)).data.get('slowSeconds',0) == 0 ||
++              (getAfter(/databases/$(database)/documents/communities450/$(cid)/posts/$(pid)/commentLimits456/$(request.auth.uid)).data.at == request.time
++              && getAfter(/databases/$(database)/documents/communities450/$(cid)/posts/$(pid)/commentLimits456/$(request.auth.uid)).data.commentId == commentId))
+             && request.resource.data.keys().hasOnly(['uid','name','text','createdAt','photoUrl','replyTo','replyName'])
+             && request.resource.data.get('photoUrl','') is string && request.resource.data.get('photoUrl','').size() <= 2048
+             && request.resource.data.get('replyName','') is string && request.resource.data.get('replyName','').size() <= 100
+@@ -283,7 +327,7 @@ service cloud.firestore {
+               exists(/databases/$(database)/documents/communities450/$(cid)/posts/$(pid)/comments/$(request.resource.data.replyTo))) && request.resource.data.uid == request.auth.uid
+             && request.resource.data.name is string && request.resource.data.name.size() <= 100
+             && request.resource.data.text is string && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 500 && request.resource.data.createdAt == request.time;
+-          allow delete: if communityMember450(cid) && (resource.data.uid == request.auth.uid || communityAdmin450(cid));
++          allow delete: if communityMember450(cid) && (resource.data.uid == request.auth.uid || communityModerator456(cid));
+           allow update: if false;
+           match /reactions/{uid} {
+             function reactionVisible455() { return communityVisible450(cid)
+@@ -293,20 +337,26 @@ service cloud.firestore {
+               && request.resource.data.uid == request.auth.uid
+               && request.resource.data.emoji in ['❤️','👍','😂','😮','😢','😡']
+               && request.resource.data.createdAt == request.time; }
+-            allow read: if reactionVisible455();
++            allow read: if communityVisible450(cid) && get(/databases/$(database)/documents/communities450/$(cid)/posts/$(pid)).data.status == 'approved';
+             allow create, update: if communityMember450(cid) && uid == request.auth.uid && reactionVisible455() && validReaction455();
+             allow delete: if communityMember450(cid) && uid == request.auth.uid;
+           }
+ 
+         }
+       }
++      match /audit456/{id} {
++        allow read: if communityModerator456(cid);
++        allow create: if communityModerator456(cid) && request.resource.data.keys().hasOnly(['actor','target','action','createdAt'])
++          && request.resource.data.actor == request.auth.uid && request.resource.data.target is string
++          && request.resource.data.action in ['admin','moderator','mute','remove','ban','delete'] && request.resource.data.createdAt == request.time;
++      }
+       match /reports/{reportId} {
+-        allow read: if communityAdmin450(cid);
++        allow read: if communityModerator456(cid);
+         allow create: if communityMember450(cid) && request.resource.data.keys().hasOnly(['uid','postId','status','createdAt'])
+           && request.resource.data.uid == request.auth.uid && request.resource.data.postId is string
+           && reportId == request.resource.data.postId + '_' + request.auth.uid
+           && request.resource.data.status == 'open' && request.resource.data.createdAt == request.time;
+-        allow update: if communityAdmin450(cid) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']) && request.resource.data.status == 'closed';
++        allow update: if communityModerator456(cid) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']) && request.resource.data.status == 'closed';
+         allow delete: if false;
+       }
+     }
+@@ -341,6 +391,7 @@ service cloud.firestore {
+       allow read: if signedIn();
+       allow create, delete: if isMe(uid);
+       allow update: if isMe(uid) || relationshipUpdate();
++      match /communityPreferences456/{id} { allow read, write: if isMe(uid); }
+       match /saved/{contentId} { allow read, write: if isMe(uid); }
+       // AI translation/caption results are private per-user cache entries.
+       // Viewers never need permission to mutate another creator's video document.
