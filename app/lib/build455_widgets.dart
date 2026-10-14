@@ -171,3 +171,78 @@ class _Ngelx455ReactionsState extends State<Ngelx455Reactions> {
         style: TextStyle(fontSize: 13, color: selected.isEmpty ? const Color(0xFF697386) : mor, fontWeight: FontWeight.w600))));
   });
 }
+
+class Ngelx455PostView extends StatefulWidget {
+  final DocumentReference<Map<String, dynamic>> ref;
+  final Widget child;
+  const Ngelx455PostView({super.key, required this.ref, required this.child});
+  @override State<Ngelx455PostView> createState() => _Ngelx455PostViewState();
+}
+class _Ngelx455PostViewState extends State<Ngelx455PostView> {
+  Timer? timer;
+  DateTime? visibleSince;
+  bool recorded = false;
+  @override void initState() { super.initState(); timer = Timer.periodic(const Duration(milliseconds: 500), (_) => check()); }
+  @override void didUpdateWidget(covariant Ngelx455PostView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.ref.path != oldWidget.ref.path) { recorded = false; visibleSince = null; }
+  }
+  void check() {
+    if (!mounted || recorded || FirebaseAuth.instance.currentUser?.isAnonymous != false || _communityUid450.isEmpty) return;
+    final box = context.findRenderObject();
+    final route = ModalRoute.of(context);
+    final lifecycle = WidgetsBinding.instance.lifecycleState;
+    if (box is! RenderBox || !box.hasSize || route?.isCurrent != true ||
+        (lifecycle != null && lifecycle != AppLifecycleState.resumed)) { visibleSince = null; return; }
+    final bounds = box.localToGlobal(Offset.zero) & box.size;
+    final screen = MediaQuery.sizeOf(context);
+    final viewport = Rect.fromLTWH(0, MediaQuery.paddingOf(context).top + kToolbarHeight,
+        screen.width, screen.height - MediaQuery.paddingOf(context).vertical - kToolbarHeight);
+    final intersection = bounds.intersect(viewport);
+    final visible = !intersection.isEmpty && intersection.height >= bounds.height.clamp(0, screen.height) * .5;
+    if (!visible) { visibleSince = null; return; }
+    visibleSince ??= DateTime.now();
+    if (DateTime.now().difference(visibleSince!).inSeconds < 2) return;
+    final me = _communityUid450;
+    recorded = true;
+    widget.ref.collection('views').doc(me).set({'uid': me, 'createdAt': FieldValue.serverTimestamp()})
+      .catchError((Object _) { if (mounted) recorded = false; });
+  }
+  @override void dispose() { timer?.cancel(); super.dispose(); }
+  @override Widget build(BuildContext context) => widget.child;
+}
+
+class Ngelx455PostCounts extends StatefulWidget {
+  final DocumentReference<Map<String, dynamic>> ref;
+  const Ngelx455PostCounts({super.key, required this.ref});
+  @override State<Ngelx455PostCounts> createState() => _Ngelx455PostCountsState();
+}
+class _Ngelx455PostCountsState extends State<Ngelx455PostCounts> {
+  late Map<String, Stream<QuerySnapshot<Map<String, dynamic>>>> streams = create();
+  Map<String, Stream<QuerySnapshot<Map<String, dynamic>>>> create() => {
+    for (final key in ['likes','comments','shares','views']) key: widget.ref.collection(key).snapshots(),
+  };
+  @override void didUpdateWidget(covariant Ngelx455PostCounts oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.ref.path != oldWidget.ref.path) streams = create();
+  }
+  @override Widget build(BuildContext context) => Padding(padding: const EdgeInsets.only(top: 10),
+    child: Wrap(spacing: 14, runSpacing: 6, children: [
+      for (final entry in {'likes':'tepki','comments':'yorum','shares':'paylaşan','views':'kişi gördü'}.entries)
+        StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(stream: streams[entry.key], builder: (_, s) => Text(
+          '${s.hasError ? '—' : s.hasData ? s.data!.size : '…'} ${entry.value}',
+          style: const TextStyle(fontSize: 12, color: Color(0xFF697386)))),
+    ]));
+}
+
+Future<void> ngelx455SharePost(BuildContext context, DocumentReference<Map<String, dynamic>> ref,
+    Map<String, dynamic> value) async {
+  final me = _communityUid450;
+  try {
+    final result = await SharePlus.instance.share(ShareParams(
+      text: '${value['text'] ?? ''}\n${value['mediaUrl'] ?? ''}\nNgelX gönderi: ${ref.path}'));
+    if (result.status == ShareResultStatus.success && FirebaseAuth.instance.currentUser?.isAnonymous == false && me.isNotEmpty && _communityUid450 == me) {
+      await ref.collection('shares').doc(me).set({'uid': me, 'createdAt': FieldValue.serverTimestamp()});
+    }
+  } catch (e) { if (context.mounted) _communityError450(context, e); }
+}
