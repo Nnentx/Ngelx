@@ -15,16 +15,18 @@ OLD="""        );
 NEW="""        );
       // Build457 legacy founder cover-only repair (does NOT grant admin rights).
       // Normal validated updates already work for founders listed in admins.
-      // Debug temporarily reports which legacy-only expression denies.
-      allow update: if debug(communitySigned450())
-        && debug(request.auth.uid == resource.data.founderId)
-        && debug(request.auth.uid in resource.data.members)
-        && debug(request.resource.data.diff(resource.data).affectedKeys().hasOnly(['coverUrl','coverAlignment']))
-        && debug(request.resource.data.coverUrl is string)
-        && debug(request.resource.data.coverUrl.size() <= 2048)
-        && debug(request.resource.data.get('coverAlignment',0) is number)
-        && debug(request.resource.data.get('coverAlignment',0) >= -1)
-        && debug(request.resource.data.get('coverAlignment',0) <= 1);
+      // Legacy records may omit the founder from admins; preserve only
+      // cover edits for the original founder or an already-listed admin.
+      allow update: if communitySigned450()
+        && (request.auth.uid == resource.data.founderId
+            || request.auth.uid in resource.data.get('admins',[]))
+        && request.auth.uid in resource.data.members
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['coverUrl','coverAlignment'])
+        && request.resource.data.coverUrl is string
+        && request.resource.data.coverUrl.size() <= 2048
+        && request.resource.data.get('coverAlignment',0) is number
+        && request.resource.data.get('coverAlignment',0) >= -1
+        && request.resource.data.get('coverAlignment',0) <= 1;
       allow delete: if false;
       match /requests/{uid} {"""
 

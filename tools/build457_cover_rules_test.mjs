@@ -17,12 +17,15 @@ try {
   // A legacy dataset may be missing the founder in its admins array.
   await env.withSecurityRulesDisabled(async ctx=>
     setDoc(doc(ctx.firestore(),community),fixture));
+  console.log('Build457 cover-rule stage 1: founder alignment');
   await assertSucceeds(updateDoc(doc(db('owner'),community),{coverAlignment:.35}));
+  console.log('Build457 cover-rule stage 2: founder image');
   await assertSucceeds(updateDoc(doc(db('owner'),community),{coverUrl:'https://example.com/cover.jpg'}));
+  console.log('Build457 cover-rule stage 3: existing admin alignment');
   await assertSucceeds(updateDoc(doc(db('admin'),community),{coverAlignment:.45}));
   await assertFails(updateDoc(doc(db('owner'),community),{admins:['owner','admin']}));
   await assertFails(updateDoc(doc(db('owner'),community),{visibility:'private'}));
   await assertFails(updateDoc(doc(db('member'),community),{coverAlignment:.15}));
   await assertFails(updateDoc(doc(db('outsider'),community),{coverAlignment:.2}));
-  console.log('Build457: legacy founder can edit cover only, not members or visibility');
+  console.log('Build457: legacy founder or existing admin edits cover only; member/visibility denied');
 }finally{await env.cleanup();}
