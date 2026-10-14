@@ -48,3 +48,17 @@
 - [ ] Silme kuralının sadece doğru verileri etkileyeceği test edildi; proje sahibi yeniden etkinleştirmeyi açıkça onayladı.
 
 Bu doküman bir **hazırlık/kayıt dosyasıdır**, gerçek yedek alındığının kanıtı değildir.
+
+
+## 15 Ekim: canlı metadata güvenlik denetimi (salt okunur)
+
+Kaynak çalışma: [38648404931](https://github.com/Nnentx/Ngelx/actions/runs/38648404931).
+GitHub'daki ayrılmış \`work/data-safety-readonly-audit\` dalındaki araç, Google Firestore Admin ve Cloudflare R2 API'lerinden **sadece metadata** okudu; kullanıcı belgelerini ve R2 nesnelerini açmadı, yazmadı, dışa aktarmadı veya silmedi. Saf offline testler (6) geçti. Audit, güvenlik kontrolü nedeniyle kasıtlı olarak exit code 2 ile tamamlandı.
+
+- Firestore \`ngelx-44eed/(default)\` tamamlanmış READY backup: **0**.
+- Firestore otomatik backupSchedule: **0**.
+- Firestore point-in-time recovery (PITR): **DISABLED**. 14 Ekim retention işlemi öncesi zamanı kapsayan tarihsel okuma yok. Özelliği şimdi etkinleştirmek geçmiş sürümleri geri getirmez.
+- R2 \`ngelx-media\`: etkin lifecycle kuralı **1**, bunlardan otomatik nesne silen kural **0**. Bu sadece lifecycle metadata kontrolüdür; 11 kuyruktaki medya için başka süreçleri veya ayrı medya yedeğini doğrulamaz.
+- GitHub günlük retention işinin durdurulması **devam ediyor**; başka tüm canlı silme kaynaklarının olmadığı kanıtlanmış değil.
+- **Acil karar:** Firestore için ücretli olabilen scheduled backup/PITR kurulumu ve R2 bağımsız medya kopyası, proje sahibinin maliyet ve saklama süresi onayıyla yapılmalı. Bedel/yeniden başlatma onayı olmadan backup schedule veya ücretli PITR etkinleştirmesi başlatma.
+- 85 silinen Firestore kaydı için mevcut backup ve PITR üzerinden geri dönüş yolu bulunmadı; eski harici export/üçüncü taraf yedekleri mevcutsa ayrı incelenmelidir.
