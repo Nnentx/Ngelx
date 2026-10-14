@@ -525,6 +525,12 @@ jobs:
         run: |
           python3 -m unittest discover -s tools -p 'test_build457_nickname_scope.py'
 
+      - name: Test Build457 cover permissions and minimal update payload
+        run: |
+          cp tools/build457_cover_test.dart app/test/build457_cover_test.dart
+          cd app
+          flutter test --timeout 60s test/build457_cover_test.dart
+
       - name: Test Build457 live-video recovery and missing-track retry
         run: |
           cp tools/build457_live_test.dart app/test/build457_live_test.dart

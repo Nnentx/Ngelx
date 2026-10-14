@@ -123,6 +123,23 @@ class Ngelx456Cover extends StatelessWidget {
   );
 }
 
+// Build457: the founder can be authoritative even in old communities whose
+// admins array was populated incompletely. Server security still decides writes.
+bool ngelx457CanEditCover(Map<String, dynamic> community, String me) {
+  if (me.isEmpty) return false;
+  return community['founderId'] == me ||
+      List<String>.from(community['admins'] ?? const []).contains(me);
+}
+
+// Do not rewrite the cover URL when only its framing was adjusted.
+Map<String, dynamic> ngelx457CoverChanges({
+  required double alignment,
+  String? replacementUrl,
+}) => {
+  'coverAlignment': alignment,
+  if (replacementUrl != null) 'coverUrl': replacementUrl,
+};
+
 class Ngelx456CoverEditor extends StatefulWidget {
   final String id;
   final Map<String, dynamic> value;
@@ -215,16 +232,46 @@ class _Ngelx456CoverEditorState extends State<Ngelx456CoverEditor> {
     try {
       final ref = _communities450.doc(widget.id),
           current = await ref.get(const GetOptions(source: Source.server));
-      if (!_communityAdmin450(current.data() ?? {})) throw StateError('yetki');
-      final url = file == null
-          ? (current.data()?['coverUrl'] ?? '').toString()
+      final value = current.data() ?? <String, dynamic>{};
+      if (!ngelx457CanEditCover(value, _communityUid450)) {
+        throw StateError('yetki');
+      }
+      // No edit means no write. Old community records may have different
+      // optional fields; updating unrelated cover data is avoidable.
+      final previous = (value['coverAlignment'] as num?)?.toDouble() ?? 0;
+      if (file == null && previous == alignment) {
+        if (mounted) {
+          ngelx455Status(context, 'Kapak kadrajı zaten güncel.');
+          Navigator.pop(context);
+        }
+        return;
+      }
+      final replacementUrl = file == null
+          ? null
           : await ngelxFotografYukle(
               dosya: file!,
               kind: 'groups',
               legacyPath:
                   'communities/${widget.id}/cover_${DateTime.now().millisecondsSinceEpoch}.jpg',
             );
-      await ref.update({'coverUrl': url, 'coverAlignment': alignment});
+      try {
+        await ref.update(ngelx457CoverChanges(
+          alignment: alignment,
+          replacementUrl: replacementUrl,
+        ));
+      } on FirebaseException catch (e) {
+        if (e.code != 'permission-denied') rethrow;
+        // A valid local founder/admin may still be denied by *deployed*
+        // Firestore rules, which are not automatically deployed with the APK.
+        if (mounted) {
+          ngelx455Status(
+            context,
+            'Sunucu kapak güncellemesine izin vermedi. Topluluk güvenlik kuralları kontrol edilmeli.',
+            error: true,
+          );
+        }
+        return;
+      }
       if (mounted) {
         // Show feedback while the editor route still owns a mounted context.
         ngelx455Status(context, 'Kapak güncellendi');
