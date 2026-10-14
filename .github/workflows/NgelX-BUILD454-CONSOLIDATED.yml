@@ -481,7 +481,7 @@ jobs:
         working-directory: app
         run: |
           cp ../tools/build454_ui_test.dart test/build454_ui_test.dart
-          flutter test test/build454_ui_test.dart
+          timeout 180s flutter test --timeout 60s test/build454_ui_test.dart
 
       - name: Test stable live keyboard and transient hearts
         working-directory: app
