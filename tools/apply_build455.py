@@ -102,6 +102,13 @@ if close < 0: raise RuntimeError('Community post closure missing')
 post = post[:close]+'  ));'+post[close+4:]
 source = source[:start]+post+source[end:]
 source = source.replace('AlertDialog(', 'Ngelx455WhiteDialog(')
+error_start=source.index('void _communityError450(')
+error_end=source.index('Widget _communityImage450(',error_start)
+source=source[:error_start]+'''void _communityError450(BuildContext c,Object e){
+  ngelx455Status(c,'İşlem tamamlanamadı. ${_ngelxKisaHata(e)}',error:true);
+}
+
+'''+source[error_end:]
 path.write_text(source)
 replace('app/lib/build446_call_lifecycle.dart', '  bool _observing=false,_foreground=true;', '''  bool _observing=false,_foreground=true;
   Future<void> clearForAccount455()async{
