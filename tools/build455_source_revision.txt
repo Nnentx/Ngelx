@@ -1,0 +1,2 @@
+Final application source revision: e10f255eb19d2143cc46d3c1e864df1b8f7a9027
+Run the complete workflow on this checkpoint commit; do not deliver earlier cancelled or intermediate artifacts.
