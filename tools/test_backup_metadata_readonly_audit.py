@@ -1,6 +1,6 @@
 import datetime as dt
 import unittest
-from backup_metadata_readonly_audit import summarize_backups, summarize_lifecycle, PROJECT
+from backup_metadata_readonly_audit import summarize_backups, summarize_lifecycle, summarize_pitr, PROJECT
 
 UTC = dt.timezone.utc
 
@@ -27,6 +27,20 @@ class BackupMetadataSafetyTests(unittest.TestCase):
         result = summarize_backups(payload)
         self.assertEqual(result["state"], "PARTIAL")
         self.assertEqual(result["unreachable_location_count"], 1)
+
+    def test_pitr_enabled_can_cover_previous_cleanup_time(self):
+        self.assertEqual(summarize_pitr({
+            "pointInTimeRecoveryEnablement": "POINT_IN_TIME_RECOVERY_ENABLED",
+            "earliestVersionTime": "2026-10-10T00:00:00Z",
+        })["pre_cleanup_read_time_in_window"], True)
+
+    def test_pitr_disabled_never_reports_recovery(self):
+        result = summarize_pitr({
+            "pointInTimeRecoveryEnablement": "POINT_IN_TIME_RECOVERY_DISABLED",
+            "earliestVersionTime": "2026-10-10T00:00:00Z",
+        })
+        self.assertEqual(result["state"], "DISABLED")
+        self.assertFalse(result["pre_cleanup_read_time_in_window"])
 
     def test_no_backups_is_not_a_success(self):
         self.assertEqual(summarize_backups({})["state"], "NONE")
