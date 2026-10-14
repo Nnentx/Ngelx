@@ -13,6 +13,13 @@ class LocalVideo455 extends VideoPlayerController {
 }
 
 void main() {
+  test('offscreen and barely visible posts do not count as viewed', () {
+    const viewport = Rect.fromLTWH(0, 50, 320, 600);
+    expect(ngelx455PostVisible(const Rect.fromLTWH(0, 700, 320, 200), viewport), isFalse);
+    expect(ngelx455PostVisible(const Rect.fromLTWH(0, 600, 320, 200), viewport), isFalse);
+    expect(ngelx455PostVisible(const Rect.fromLTWH(0, 100, 320, 200), viewport), isTrue);
+    expect(ngelx455PostVisible(const Rect.fromLTWH(0, 50, 320, 1400), viewport), isTrue);
+  });
   test('empty and brand placeholders fall through to the actual person name', () {
     expect(ngelx455ProfileName({'displayName':'', 'name':'Asya Sever'}), 'Asya Sever');
     expect(ngelx455ProfileName({'displayName':'NgelX','username':'ahsen'}), 'ahsen');
