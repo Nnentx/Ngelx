@@ -29,3 +29,13 @@ Yeni Dart parser/analiz kontrolleri ve sunucu planlama politika testleri geçmi�
 Cihazda akıcılık, galeri/kapak sürükleme, yükleme bağlantı alternatifleri, gerçek iki hesap davet/yanıt/tepki teslimi ayrıca test edilecektir. Kasma ölçümü fiziksel cihazda henüz yapılmadı; yüzde hızlanma iddiası yok. DNS sunucusunun cihazdaki erişilebilirliği garanti edilmez.
 
 Sunucu sayaçları/abonelik/planlama yeni servislerin başarılı kurulmasına bağlıdır. Hiçbir hesap/kayıt silinmez; eski uygulama özelliklerini kaldıran bir değişiklik yapılmaz. PR taslak; otomatik merge yok.
+
+## Build456 devam — koruyucu istemci düzeltmeleri
+
+- Topluluk davet kartında bozuk `ngelx://community/` kodu artık null değerle zorla açılmaz; geçersiz davet mesajı gösterilir. Geçerli bağlantı açma akışı korunur.
+- Üyeler ekranı Firestore dinleyicisi hata verirse sonsuz yüklemede kalmaz: hata açıklaması ve yeniden deneme sunar.
+- Kaydedilen topluluk gönderileri ekranında aynı güvenli hata / yeniden deneme deneyimi eklendi. Kaydedilen kayıtlar silinmez.
+- Gönderi üç-nokta menüsü topluluk bilgisi sorgusu başarısız olduğunda kullanıcıya hata bildirip işlemi güvenle sonlandırır.
+- Kapak kadrajı kaydedilince başarı mesajı editör ekranından ayrılmadan önce gönderilir. Kapak değiştirme ve yetki doğrulaması korunur.
+
+**Doğrulama sınırı:** Önceki Build456 koşusu (38613058472) test, imzalı APK ve artefakt yayımlamada başarılıdır. Yukarıdaki koruyucu düzeltmeler daha sonraki commitlerde yer aldığı için bu önceki APK'nın içinde değildir. Güncel kodun GitHub Actions kontrolü ve yeni APK çıkışı ayrı takip edilir. Firebase Functions ve üretim kurallarının kullanıcı izni olmadan dağıtılması hâlâ kapalıdır. Cihazda hızlanma ölçülmeden performansın çözüldüğü iddia edilmemelidir.
