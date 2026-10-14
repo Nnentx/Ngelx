@@ -27,5 +27,10 @@ try {
   await assertSucceeds(deleteDoc(doc(other,path)));
   await assertSucceeds(setDoc(doc(other,`${base}/likes/other`),reaction));
   await assertFails(setDoc(doc(member,`${base}/likes/other`),reaction));
+  for (const metric of ['views','shares']) {
+    await assertSucceeds(setDoc(doc(guest,`${base}/${metric}/guest`),{uid:'guest',createdAt:serverTimestamp()}));
+    await assertFails(setDoc(doc(member,`${base}/${metric}/guest`),{uid:'guest',createdAt:serverTimestamp()}));
+    await assertFails(setDoc(doc(guest,`${base}/${metric}/guest`),{uid:'guest',createdAt:serverTimestamp(),count:99}));
+  }
   console.log('Build455: replies and reactions enforce membership, ownership and valid targets');
 } finally { await env.cleanup(); }
