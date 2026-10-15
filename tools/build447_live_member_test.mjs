@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import {initializeTestEnvironment,assertSucceeds,assertFails} from '@firebase/rules-unit-testing';
-import {doc,setDoc,getDoc,getDocsFromServer,collection,updateDoc,runTransaction,serverTimestamp} from 'firebase/firestore';
+import {doc,setDoc,getDoc,getDocsFromServer,collection,query,where,updateDoc,runTransaction,serverTimestamp} from 'firebase/firestore';
 const env=await initializeTestEnvironment({projectId:'demo-ngelx',firestore:{host:'127.0.0.1',port:8080,rules:fs.readFileSync('firestore.rules','utf8')}});
 try{
  await env.clearFirestore();
@@ -13,7 +13,7 @@ try{
  // Query with an independent authenticated client and force a server read;
  // the mutation client already holds locally cached join request data.
  const memberRead=env.authenticatedContext('member').firestore();
- await assertFails(getDocsFromServer(collection(memberRead,'chats/member447/joinRequests')));
+ await assertFails(getDocsFromServer(query(collection(memberRead,'chats/member447/joinRequests'),where('status','==','pending'))));
  await assertSucceeds(getDocsFromServer(collection(owner,'chats/member447/joinRequests')));
  await assertFails(getDoc(doc(outside,'chats/member447/joinRequests/target')));
  await assertSucceeds(updateDoc(doc(owner,'chats/member447/joinRequests/target'),{status:'rejected'}));
