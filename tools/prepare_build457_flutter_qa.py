@@ -29,7 +29,12 @@ for line in prefix.splitlines():
 assert len(commands)>=70, f"Unexpected release source generation count: {len(commands)}"
 assert sum(cmd[0]=="git" for cmd in commands)==4, "Expected four local patch application steps"
 assert commands[0][1].endswith("apply_build395_final_login_inbox_ui.py")
-assert commands[-1][1].endswith("apply_build457_inbox_rows.py")
+assert any(cmd[-1].endswith("apply_build457_inbox_rows.py") for cmd in commands), (
+    "Inbox recipient identity guard must be generated"
+)
+assert commands[-1][1].endswith(
+    ("apply_build457_inbox_rows.py", "apply_build457_avatar_http.py")
+), "Unexpected last Build457 generator"
 for index,cmd in enumerate(commands,1):
     print(f"[QA {index}/{len(commands)}] {' '.join(cmd)}",flush=True)
     subprocess.run(cmd,cwd=root,check=True,timeout=180)
