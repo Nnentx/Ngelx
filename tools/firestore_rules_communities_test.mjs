@@ -104,13 +104,31 @@ try {
     text: 'Reply', replyTo: 'accepted', replyName: 'Member',
     createdAt: serverTimestamp(),
   }));
-  await assertSucceeds(setDoc(doc(member, post + '/reactions/member'), {
+  // Posts store emoji in /likes; replies store emoji in
+  // /comments/{id}/reactions. Both support owner-only selection changes.
+  await assertSucceeds(setDoc(doc(member, post + '/likes/member'), {
     uid: 'member', emoji: '❤️', createdAt: serverTimestamp(),
   }));
-  await assertFails(setDoc(doc(guest, post + '/reactions/member'), {
+  await assertSucceeds(setDoc(doc(member, post + '/likes/member'), {
+    uid: 'member', emoji: '👍', createdAt: serverTimestamp(),
+  }));
+  await assertSucceeds(setDoc(doc(member, post + '/comments/accepted/reactions/member'), {
+    uid: 'member', emoji: '😂', createdAt: serverTimestamp(),
+  }));
+  await assertSucceeds(setDoc(doc(member, post + '/comments/accepted/reactions/member'), {
+    uid: 'member', emoji: '😮', createdAt: serverTimestamp(),
+  }));
+  await assertFails(setDoc(doc(guest, post + '/likes/member'), {
     uid: 'guest', emoji: '😡', createdAt: serverTimestamp(),
   }));
-  await assertSucceeds(getDocs(collection(publicDb, post + '/reactions')));
+  await assertFails(setDoc(doc(guest, post + '/comments/accepted/reactions/member'), {
+    uid: 'guest', emoji: '😡', createdAt: serverTimestamp(),
+  }));
+  await assertFails(setDoc(doc(member, post + '/reactions/member'), {
+    uid: 'member', emoji: '❤️', createdAt: serverTimestamp(),
+  }));
+  await assertSucceeds(getDocs(collection(publicDb, post + '/likes')));
+  await assertSucceeds(getDocs(collection(publicDb, post + '/comments/accepted/reactions')));
   await assertFails(setDoc(doc(guest, post + '/comments/fake'), {
     uid: 'member', name: 'Member', text: 'Impersonation', createdAt: serverTimestamp(),
   }));
