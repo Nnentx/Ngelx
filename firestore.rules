@@ -752,6 +752,18 @@ service cloud.firestore {
       return community450(cid).data.get('visibility', 'public') == 'public'
         || community450Member(cid);
     }
+    // Hide reactions/comments on unpublished or removed posts.
+    function community450PostView(cid, pid) {
+      return community450View(cid)
+        && (
+          get(/databases/$(database)/documents/communities450/$(cid)/posts/$(pid)).data.get('status', '') == 'approved'
+          || (
+            signedIn()
+            && get(/databases/$(database)/documents/communities450/$(cid)/posts/$(pid)).data.get('authorId', '') == request.auth.uid
+          )
+          || community450Manager(cid)
+        );
+    }
     function community450InviteValid(cid, code) {
       return code is string
         && code.size() > 0
@@ -880,7 +892,7 @@ service cloud.firestore {
         allow delete: if false;
 
         match /comments/{commentId} {
-          allow read: if community450View(cid);
+          allow read: if community450PostView(cid, pid);
           allow create: if community450Member(cid)
             && request.resource.data.get('uid', '') == request.auth.uid
             && request.resource.data.get('text', '') is string
@@ -896,7 +908,7 @@ service cloud.firestore {
             || (signedIn() && resource.data.get('uid', '') == request.auth.uid);
         }
         match /reactions/{reactionUid} {
-          allow read: if community450View(cid);
+          allow read: if community450PostView(cid, pid);
           allow create, update: if community450Member(cid)
             && isMe(reactionUid)
             && request.resource.data.get('uid', '') == reactionUid
@@ -907,7 +919,7 @@ service cloud.firestore {
           allow delete: if isMe(reactionUid);
         }
         match /likes/{likeUid} {
-          allow read: if community450View(cid);
+          allow read: if community450PostView(cid, pid);
           allow create: if community450Member(cid) && isMe(likeUid)
             && request.resource.data.get('uid', '') == likeUid;
           allow update: if false;
@@ -919,6 +931,23 @@ service cloud.firestore {
           allow create, update: if community450Member(cid) && isMe(subscriberUid)
             && request.resource.data.get('uid', '') == subscriberUid;
           allow delete: if isMe(subscriberUid);
+        }
+        // A view/share record is per viewer. A client cannot forge other users.
+        match /views/{viewerUid} {
+          allow read: if community450PostView(cid,pid);
+          allow create: if signedIn() && isMe(viewerUid)
+            && community450PostView(cid,pid)
+            && request.resource.data.get('uid', '') == viewerUid
+            && request.resource.data.keys().hasOnly(['uid','createdAt']);
+          allow update, delete: if false;
+        }
+        match /shares/{sharerUid} {
+          allow read: if community450PostView(cid,pid);
+          allow create: if signedIn() && isMe(sharerUid)
+            && community450PostView(cid,pid)
+            && request.resource.data.get('uid', '') == sharerUid
+            && request.resource.data.keys().hasOnly(['uid','createdAt']);
+          allow update, delete: if false;
         }
         match /feedback456/{feedbackId} {
           allow read: if community450Manager(cid)
