@@ -82,3 +82,8 @@ jobs:
         run: |
           set -euo pipefail
           npx firebase emulators:exec --project demo-ngelx-community450 --only firestore --non-interactive "node tools/firestore_rules_communities_test.mjs"
+      - name: Audit older NgelX Firestore and community clients
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx firebase emulators:exec --project demo-ngelx --only firestore --non-interactive "bash tools/run_legacy_community_rules_qa.sh"
