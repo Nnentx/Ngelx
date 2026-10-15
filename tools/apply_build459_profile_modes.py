@@ -21,7 +21,7 @@ def patch(s):
     b=s.index("\nclass _ProfilEtkilesimRozeti",a)
     owner=s[a:b]
     original="if(true) // Build458 owner coverless rendering"
-    actual="if(profilGorunumu=='coverless'||kapakUrl.isEmpty) // Build459 saved profile mode"
+    actual="if(ngelx459KapaksizGorunum(profilGorunumu,kapakUrl)) // Build459 saved profile mode"
     owner=replace_once(owner,original,actual,"owner mode not forced")
     s=s[:a]+owner+s[b:]
 
@@ -62,8 +62,14 @@ def patch(s):
             +"              ],\n")
     editor=editor[:i]+branch+editor[j:]
     s=s[:a]+editor+s[b:]
-    # A stale cover URL may fail; display an explicit safe fallback rather than
-    # showing a spinner forever. Data and permissions are left unchanged.
+    # A pure, testable rendering decision; no backend writes or media updates.
+    helper="""bool ngelx459KapaksizGorunum(String profilGorunumu,String kapakUrl) =>
+  profilGorunumu=='coverless'||kapakUrl.isEmpty;
+
+"""
+    needle="class _ProfilPageState extends State<ProfilPage>"
+    if s.count(needle)!=1:raise ValueError("Build459 pure mode predicate injection anchor")
+    s=s.replace(needle,helper+needle,1)
     return s
 
 def main():
