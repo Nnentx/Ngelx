@@ -45,10 +45,13 @@ String ngelx461VideoHataKodu(Object hata) {
     // Errors may arrive after initialize() succeeded. Previous versions
     // ignored these listener errors, showing a black frame indefinitely.
     if(kontrol.value.hasError&&medyaHatasi==null&&mounted){
+      final hataliKontrol=kontrol;
       final kod=ngelx461VideoHataKodu(
-        kontrol.value.errorDescription??'unknown');
+        hataliKontrol.value.errorDescription??'unknown');
       WidgetsBinding.instance.addPostFrameCallback((_){
-        if(mounted&&medyaHatasi==null)setState(()=>medyaHatasi=kod);
+        if(mounted&&medyaHatasi==null&&identical(kontrol,hataliKontrol)){
+          setState(()=>medyaHatasi=kod);
+        }
       });
       return;
     }""",
