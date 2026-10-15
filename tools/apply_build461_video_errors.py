@@ -19,9 +19,9 @@ def patch(s):
     a=s.index("class _VideoKartiState extends State<VideoKarti>")
     b=s.index("\nclass ",a+len("class _VideoKartiState"))
     player=s[a:b]
-    helper="""  // Build461 video error report: only non-sensitive categories are shown.
+    helper="""// Build461 video error report: only non-sensitive categories are shown.
   // Never include signed URLs, personal IDs or raw platform exception strings.
-  String _ngelx461VideoHataKodu(Object hata) {
+String ngelx461VideoHataKodu(Object hata) {
     final t=hata.toString().toLowerCase();
     if(t.contains('403')||t.contains('unauthorized')||t.contains('permission')){
       return 'V461-403: Video erişim izni reddedildi.';
@@ -41,11 +41,11 @@ def patch(s):
 
 """
     player=one(player,"  void _kesimKontrol(){",
-      helper+"""  void _kesimKontrol(){
+      """"""  void _kesimKontrol(){
     // Errors may arrive after initialize() succeeded. Previous versions
     // ignored these listener errors, showing a black frame indefinitely.
     if(kontrol.value.hasError&&medyaHatasi==null&&mounted){
-      final kod=_ngelx461VideoHataKodu(
+      final kod=ngelx461VideoHataKodu(
         kontrol.value.errorDescription??'unknown');
       WidgetsBinding.instance.addPostFrameCallback((_){
         if(mounted&&medyaHatasi==null)setState(()=>medyaHatasi=kod);
@@ -63,6 +63,9 @@ def patch(s):
                "medyaHatasi='V461-KARE: Video görüntüsü gelmedi.';",
                "first frame timeout category")
     result=s[:a]+player+s[b:]
+    marker="class VideoKarti extends StatefulWidget"
+    if result.count(marker)!=1:raise ValueError("Build461 video pure-category anchor")
+    result=result.replace(marker,helper+marker,1)
     return result
 
 
