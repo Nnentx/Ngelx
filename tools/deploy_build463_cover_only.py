@@ -17,7 +17,7 @@ from pathlib import Path
 
 import google.oauth2.service_account
 import google.auth.transport.requests
-from apply_build457_cover_rules import transform as cover_only
+from apply_build457_cover_rules import transform as cover_only, OLD as OLD_RULE_BLOCK, NEW as NEW_RULE_BLOCK
 
 PROJECT="ngelx-44eed"
 API="https://firebaserules.googleapis.com/v1/"
@@ -66,12 +66,9 @@ def main():
     # Check preserved untouched sections and absence of broad rule edits.
     if "// Build456 community moderation" in candidate and "// Build456 community moderation" not in original:
         raise RuntimeError("Unexpected broad Build456 rules included")
-    # The original-to-candidate change must be ONLY the narrow rule fragment.
-    import difflib
-    delta=list(difflib.SequenceMatcher(None,original,candidate,autojunk=False).get_opcodes())
-    modifications=[(tag,original[i:j],candidate[k:l]) for tag,i,j,k,l in delta if tag!="equal"]
-    if len(modifications)!=1 or modifications[0][0]!="insert" or "Build457 legacy founder cover-only repair" not in modifications[0][2]:
-        raise RuntimeError("Expected exactly one additive cover-only insertion")
+    # Exact textual replacement guard: absolutely no other rules change.
+    if original.count(OLD_RULE_BLOCK)!=1 or candidate!=original.replace(OLD_RULE_BLOCK,NEW_RULE_BLOCK,1):
+        raise RuntimeError("Expected exactly one approved cover-only rule insertion")
     if len(candidate)-len(original)>1600:
         raise RuntimeError("Rule patch unexpectedly large")
     # Confirm production hasn't been changed by another administrator since tests.
