@@ -662,7 +662,7 @@ class _Ngelx456MembersState extends State<Ngelx456Members> {
                       () => FirebaseFirestore.instance
                           .collection('users')
                           .doc(uid)
-                          .get(),
+                          .get().timeout(const Duration(seconds:8)),
                     ),
                     builder: (c, u) {
                       final p = u.data?.data() ?? <String,dynamic>{},
@@ -997,7 +997,7 @@ class _Ngelx456ChatPickerState extends State<Ngelx456ChatPicker> {
                         () => FirebaseFirestore.instance
                             .collection('users')
                             .doc(uid)
-                            .get(),
+                            .get().timeout(const Duration(seconds:8)),
                       ),
                       builder: (c, u) {
                         if (u.hasError)
