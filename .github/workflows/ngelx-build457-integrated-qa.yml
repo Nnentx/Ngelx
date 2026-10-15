@@ -21,6 +21,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Verify security regression fixtures before source generation
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          legacy = Path('tools/build450_rules_test.mjs').read_text()
+          cover = Path('tools/build457_cover_rules_test.mjs').read_text()
+          rules = Path('firestore.rules').read_text()
+          assert "inviteCode:'wrong'" in legacy
+          assert "community450InviteValid(cid, request.resource.data.get('inviteCode', ''))" in rules
+          assert "await assertSucceeds(updateDoc(doc(db('owner'),community),{admins:['owner','admin']}))" in cover
+          assert "await assertFails(updateDoc(doc(db('admin'),community),{admins:['admin']}))" in cover
+          print('Current security regression fixtures and rules are present.')
+          PY
+
       - name: Unit test fail-closed postbuild source transformations
         run: |
           python3 -m unittest discover -s tools -p 'test_build457_community_runtime_fixes.py'
