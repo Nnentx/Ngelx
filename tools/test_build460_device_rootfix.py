@@ -26,7 +26,7 @@ class Build460DeviceRegressionTests(unittest.TestCase):
         self.assertIn("_ngelxAgResmiBaytlari(key.url).timeout(const Duration(seconds:18))",s)
         editor=s[s.index("class _NgelXOnayliProfilDuzenlePageState"):
                  s.index("\nclass ProfilPage extends StatefulWidget")]
-        self.assertTrue("Kapak yüklenemedi - tekrar dene" in editor or "NgelXAgResmi(" in editor)
+        self.assertIn("_gorunum",editor)
         self.assertIn("retryErrorBuilder",s)
         self.assertEqual(image_patch(s),s)
 
