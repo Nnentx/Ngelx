@@ -63,6 +63,11 @@ def patch(s):
         try{await FirebaseAuth.instance.currentUser?.updateDisplayName(ad);}catch(_){}
       }
       if(mounted)Navigator.pop(context,true);"""
+    if x.count(old)!=1:
+        i=x.find("  Future<void> _kaydet(")
+        print("BUILD460_SAFE_GENERATED_EDITOR_METHOD_START")
+        print(x[i:i+2400] if i>=0 else "Method not found")
+        print("BUILD460_SAFE_GENERATED_EDITOR_METHOD_END")
     x=exactly(x,old,new,"editor form save")
     return s[:a]+x+s[b:]
 
