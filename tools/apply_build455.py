@@ -64,8 +64,8 @@ source = source.replace(anchor, count_ui)
 start = source.index('            Expanded(\n              child: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(', source.index('class NgelXCommunityPost450'))
 # Build450 used a plain comment button; newer layouts use the bounded
 # count widget. Keep either version, instead of breaking the build chain.
-old_comment = '            Expanded(\\n              child: TextButton.icon(\\n                onPressed: () => comments(c)'
-count_comment = '            Expanded(\\n              child: NgelXCommunityCommentCount450('
+old_comment = '            Expanded(\n              child: TextButton.icon(\n                onPressed: () => comments(c)'
+count_comment = '            Expanded(\n              child: NgelXCommunityCommentCount450('
 if old_comment in source:
     end = source.index(old_comment, start)
 elif count_comment in source:
