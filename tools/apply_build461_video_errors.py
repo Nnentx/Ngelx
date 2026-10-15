@@ -41,7 +41,7 @@ String ngelx461VideoHataKodu(Object hata) {
 
 """
     player=one(player,"  void _kesimKontrol(){",
-      """"""  void _kesimKontrol(){
+      """  void _kesimKontrol(){
     // Errors may arrive after initialize() succeeded. Previous versions
     // ignored these listener errors, showing a black frame indefinitely.
     if(kontrol.value.hasError&&medyaHatasi==null&&mounted){
@@ -57,7 +57,7 @@ String ngelx461VideoHataKodu(Object hata) {
     old="""if(mounted)setState(()=>medyaHatasi=e is TimeoutException ? 'Video yüklemesi zaman aşımına uğradı.' : 'Video oynatılamadı.');"""
     new="""if(mounted)setState(()=>medyaHatasi=e is TimeoutException
         ? 'V461-SURE: Video yüklemesi zaman aşımı.'
-        : _ngelx461VideoHataKodu(e));"""
+        : ngelx461VideoHataKodu(e));"""
     player=one(player,old,new,"typed video initialization error")
     player=one(player,"medyaHatasi='Video görüntüsü yüklenemedi.';",
                "medyaHatasi='V461-KARE: Video görüntüsü gelmedi.';",
