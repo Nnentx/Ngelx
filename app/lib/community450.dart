@@ -1193,6 +1193,56 @@ class _NgelXCommunityVideo450State extends State<NgelXCommunityVideo450> {
   }
 }
 
+// Aggregate queries avoid loading every comment for every feed card.
+class NgelXCommunityCommentCount450 extends StatefulWidget {
+  final DocumentReference<Map<String, dynamic>> post;
+  final Future<void> Function() openComments;
+  const NgelXCommunityCommentCount450({
+    super.key,
+    required this.post,
+    required this.openComments,
+  });
+  @override
+  State<NgelXCommunityCommentCount450> createState() =>
+      _NgelXCommunityCommentCount450State();
+}
+
+class _NgelXCommunityCommentCount450State extends State<NgelXCommunityCommentCount450> {
+  late Future<AggregateQuerySnapshot> count;
+  Future<AggregateQuerySnapshot> _fetch() =>
+      widget.post.collection('comments').count().get();
+
+  @override
+  void initState() {
+    super.initState();
+    count = _fetch();
+  }
+
+  @override
+  void didUpdateWidget(covariant NgelXCommunityCommentCount450 old) {
+    super.didUpdateWidget(old);
+    if (old.post.path != widget.post.path) count = _fetch();
+  }
+
+  Future<void> _open() async {
+    await widget.openComments();
+    if (mounted) setState(() => count = _fetch());
+  }
+
+  @override
+  Widget build(BuildContext context) => FutureBuilder<AggregateQuerySnapshot>(
+    future: count,
+    builder: (_, snapshot) => TextButton.icon(
+      onPressed: _open,
+      icon: const Icon(Icons.chat_bubble_outline, size: 19),
+      label: Text(
+        snapshot.hasData ? '${snapshot.data!.count} yorum' : 'Yorumlar',
+        style: const TextStyle(fontSize: 11),
+      ),
+    ),
+  );
+}
+
 class NgelXCommunityPost450 extends StatelessWidget {
   final String communityId, id;
   final Map<String, dynamic> value;
@@ -1451,10 +1501,10 @@ class NgelXCommunityPost450 extends StatelessWidget {
               ),
             ),
             Expanded(
-              child: TextButton.icon(
-                onPressed: () => comments(c),
-                icon: const Icon(Icons.chat_bubble_outline, size: 19),
-                label: const Text('Yorum yap', style: TextStyle(fontSize: 11)),
+              child: NgelXCommunityCommentCount450(
+                key: ValueKey('community-comment-count-$communityId-$id'),
+                post: ref,
+                openComments: () => comments(c),
               ),
             ),
             Expanded(
