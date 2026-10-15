@@ -13,23 +13,13 @@ def one(src,old,new,label):
 
 def community(src):
     if '// Build463 normalized community gallery' not in src:
-        old="""  Future<void> pick(bool video)async{
-    if(busy)return;
-    try{final x=video?await ImagePicker().pickVideo(source:ImageSource.gallery):await ImagePicker().pickImage(source:ImageSource.gallery);
-      if(x!=null&&mounted)setState((){media=x;type=video?'video':'image';_uploaded454='';_draft454=null;});
-    }catch(e){if(mounted)_communityError450(context,e);}
-  }"""
-        new="""  // Build463 normalized community gallery: preserve Build454 draft staging.
-  Future<void> pick(bool video)async{
-    if(busy)return;
-    try{
-      final x=video?await ngelxVideoSec(source:ImageSource.gallery)
-        :await ngelxResimSec(source:ImageSource.gallery);
-      if(x!=null&&mounted)setState((){
-        media=x;type=video?'video':'image';_uploaded454='';_draft454=null;
-      });
-    }catch(e){if(mounted)_communityError450(context,e);}
-  }"""
+        old="""      final x = video
+          ? await ImagePicker().pickVideo(source: ImageSource.gallery)
+          : await ImagePicker().pickImage(source: ImageSource.gallery);"""
+        new="""      // Build463 normalized community gallery: keep Build454 draft state.
+      final x = video
+          ? await ngelxVideoSec(source: ImageSource.gallery)
+          : await ngelxResimSec(source: ImageSource.gallery);"""
         src=one(src,old,new,'community publish gallery')
         old="""  Future<void> image(bool isCover) async {
     final x = await ImagePicker().pickImage(source: ImageSource.gallery);
@@ -50,8 +40,8 @@ def community(src):
 def comments(src):
     if '// Build463 comment approve-safe' in src:return src
     src=one(src,
-        '  final bool member, admin;\n  const Ngelx455Comments({super.key, required this.post,\n    required this.member, required this.admin});',
-        '  final bool member, admin, approved;\n  const Ngelx455Comments({super.key, required this.post,\n    required this.member, required this.admin, required this.approved});',
+        '  final bool member, admin;\n  const Ngelx455Comments({\n    super.key,\n    required this.post,\n    required this.member,\n    required this.admin,\n  });',
+        '  final bool member, admin, approved;\n  const Ngelx455Comments({\n    super.key,\n    required this.post,\n    required this.member,\n    required this.admin,\n    required this.approved,\n  });',
         'comments constructor')
     a=src.index('  Future<void> send() async {',src.index('class _Ngelx455CommentsState'))
     b=src.index('  Widget comment(',a)
@@ -100,8 +90,8 @@ def comments(src):
   }
 """+src[b:]
     src=one(src,
-        '        if (widget.member) Padding(padding: const EdgeInsets.fromLTRB(16, 8, 12, 12), child: Row(children: [',
-        "        if(widget.member&&!widget.approved)const Padding(padding:EdgeInsets.all(14),child:Text('Bu gönderi onay bekliyor. Yorumlar yayımlanınca açılır.')),\n        if(widget.member&&widget.approved) Padding(padding: const EdgeInsets.fromLTRB(16, 8, 12, 12), child: Row(children: [",
+        '            if (widget.member)\n              Padding(\n                padding: const EdgeInsets.fromLTRB(16, 8, 12, 12),',
+        "            if (widget.member && !widget.approved)\n              const Padding(padding: EdgeInsets.all(14), child: Text('Bu gönderi onay bekliyor. Yorumlar yayımlanınca açılır.')),\n            if (widget.member && widget.approved)\n              Padding(\n                padding: const EdgeInsets.fromLTRB(16, 8, 12, 12),",
         'pending comment UI')
     return src
 
