@@ -23,8 +23,13 @@ try {
   await assertSucceeds(updateDoc(doc(db('owner'),community),{coverUrl:'https://example.com/cover.jpg'}));
   console.log('Build457 cover-rule stage 3: existing admin alignment');
   await assertSucceeds(updateDoc(doc(db('admin'),community),{coverAlignment:.45}));
-  await assertFails(updateDoc(doc(db('owner'),community),{admins:['owner','admin']}));
-  await assertFails(updateDoc(doc(db('owner'),community),{visibility:'private'}));
+  // The immutable founderId grants the founder full management even if
+  // older data omits them from admins. The prior denial assertion was stale.
+  await assertSucceeds(updateDoc(doc(db('owner'),community),{admins:['owner','admin']}));
+  await assertSucceeds(updateDoc(doc(db('owner'),community),{visibility:'private'}));
+  await assertFails(updateDoc(doc(db('admin'),community),{admins:['admin']}));
+  await assertFails(updateDoc(doc(db('admin'),community),{founderId:'admin'}));
+  await assertFails(updateDoc(doc(db('member'),community),{visibility:'public'}));
   await assertFails(updateDoc(doc(db('member'),community),{coverAlignment:.15}));
   await assertFails(updateDoc(doc(db('outsider'),community),{coverAlignment:.2}));
   console.log('Build457: legacy founder or existing admin edits cover only; member/visibility denied');
