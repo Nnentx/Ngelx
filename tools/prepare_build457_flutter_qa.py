@@ -12,6 +12,17 @@ import subprocess
 import sys
 
 root=Path(__file__).resolve().parents[1]
+# The verified Build456 patch can only run on untouched Build457 inputs.
+# Save the candidate security rules in memory and reapply AFTER the legacy
+# generators finish. Never generate an extra Firestore allow block.
+restore_hardened=os.environ.get("NGELX_QA_RESTORE_HARDENED_RULES")=="1"
+hardened_rules=None
+if restore_hardened:
+    hardened_rules=(root/"firestore.rules").read_bytes()
+    assert hardened_rules.count(b"match /communities450/{cid} {")==1
+    assert b"function community450PostView(cid, pid)" in hardened_rules
+    assert os.environ.get("NGELX_QA_BASELINE_COMMUNITY")=="1"
+
 # Build456 applies large diffs to generated community files. For UI-only
 # compilation, replay from an untouched release baseline; the hardened
 # Firestore rules are tested separately in the emulator job. No deployment.
@@ -57,4 +68,13 @@ required=[
 ]
 missing=[entry for entry in required if entry not in main]
 assert not missing, f"Build457 source parts not linked: {missing}"
+if hardened_rules is not None:
+    rules_path=root/"firestore.rules"
+    rules_path.write_bytes(hardened_rules)
+    generated=rules_path.read_bytes()
+    assert generated == hardened_rules
+    assert generated.count(b"match /communities450/{cid} {")==1
+    assert generated.count(b"match /communityInvites450/{code} {")==1
+    print("QA: hardened candidate Firestore rules restored after the full Build457 generator; no overlapping legacy community rules.",flush=True)
+
 print("Build457 Flutter QA preparation finished without deploying anything.")
