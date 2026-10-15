@@ -1,7 +1,4 @@
-"""Build460 regression after 459 build transformations.
-
-Tests guard the targeted fixes and prevent deleting/changing user data paths.
-"""
+"""Build460 regression after all prior transforms, no user-data mutations."""
 import unittest
 from pathlib import Path
 from apply_build460_profile_save import patch as profile_patch
@@ -9,16 +6,21 @@ from apply_build460_image_status import patch as image_patch
 from apply_build460_video_fallback import patch as video_patch
 
 class Build460DeviceRegressionTests(unittest.TestCase):
-    def test_profile_appearance_saves_without_rewriting_identity(self):
+    def test_legacy_turkish_username_does_not_block_profile_mode(self):
         s=Path("app/lib/main.dart").read_text(encoding="utf-8")
-        self.assertIn("// Build460 save only fields actually edited",s)
-        self.assertIn("if(ad!=priorAd)kayit['displayName']=ad;",s)
-        self.assertIn("if(kullanici!=priorUsername)kayit['username']=kullanici;",s)
-        self.assertIn("'profileViewMode':_gorunum,",s)
-        self.assertIn("SetOptions(merge:true)",s)
+        a=s.index("  Future<void> _kaydet(String kapak)async{")
+        b=s.index("  Future<void> _kapagiKaldir()async{",a)
+        method=s[a:b]
+        self.assertIn("// Build460 identity-preserving mode save",method)
+        self.assertIn("final changeUsername=kullanici!=priorUsername;",method)
+        self.assertIn("if(changeUsername){",method)
+        self.assertIn("kayit['usernameLower']=kullanici.toLowerCase();",method)
+        self.assertIn("'profileViewMode':_gorunum,",method)
+        self.assertIn("SetOptions(merge:true)",method)
+        self.assertNotIn("if(ad.length<2||!RegExp",method)
         self.assertEqual(profile_patch(s),s)
 
-    def test_cover_error_has_finite_wait_and_retry(self):
+    def test_cover_error_has_finite_wait_and_safe_retry(self):
         s=Path("app/lib/main.dart").read_text(encoding="utf-8")
         self.assertIn("// Build460 bounded remote image",s)
         self.assertIn("_ngelxAgResmiBaytlari(key.url).timeout(const Duration(seconds:18))",s)
@@ -26,7 +28,7 @@ class Build460DeviceRegressionTests(unittest.TestCase):
         self.assertIn("retryErrorBuilder:(ctx,error,retry)",s)
         self.assertEqual(image_patch(s),s)
 
-    def test_video_retry_uses_alternative_saved_media_and_host(self):
+    def test_video_retry_can_rotate_legacy_media_urls(self):
         s=Path("app/lib/main.dart").read_text(encoding="utf-8")
         self.assertIn("// Build460 video fallback URLs",s)
         self.assertIn("final String alternatifAdres;",s)
@@ -38,7 +40,7 @@ class Build460DeviceRegressionTests(unittest.TestCase):
         self.assertIn("Video görüntüsü yüklenemedi.",s)
         self.assertEqual(video_patch(s),s)
 
-    def test_unchanged_features_are_still_in_code(self):
+    def test_build458_and_459_integrations_preserved(self):
         s=Path("app/lib/main.dart").read_text(encoding="utf-8")
         live=Path("app/lib/live_broadcast_studio.dart").read_text(encoding="utf-8")
         self.assertIn("part 'community450.dart';",s)
