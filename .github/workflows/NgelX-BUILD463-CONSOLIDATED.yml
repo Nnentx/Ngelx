@@ -649,7 +649,7 @@ jobs:
           grep -Fq "Build463 normalized community gallery" app/lib/community450.dart
           grep -Fq "Build463 comment approve-safe" app/lib/build455_widgets.dart
           grep -Fq "Build463 group media diagnostic" app/lib/main.dart
-          grep -Fq "approved:value['status']=='approved'" app/lib/community450.dart
+          grep -Fq "approved: value['status'] == 'approved'" app/lib/community450.dart
 
       - name: Flutter analiz
         shell: bash
