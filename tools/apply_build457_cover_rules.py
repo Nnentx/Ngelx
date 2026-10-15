@@ -31,6 +31,12 @@ NEW="""        );
       match /requests/{uid} {"""
 
 def transform(source):
+    # Hardened role rules explicitly support founder cover updates already.
+    # Their field invariants must not be weakened by an extra legacy OR.
+    if 'function community450PostView(cid, pid)' in source:
+        if 'function community450FounderUpdate()' not in source:
+            raise RuntimeError('Hardened community founder guard missing')
+        return source
     if '// Build457 legacy founder cover-only repair' in source:
         return source
     start=source.find("match /communities450/{cid} {")
