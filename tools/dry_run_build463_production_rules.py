@@ -5,7 +5,6 @@ Fetches only rule text (no app records); never deploys or prints rule contents.
 import os, json, base64, hashlib
 from pathlib import Path
 import google.oauth2.service_account,google.auth.transport.requests
-from apply_build456_rules import transform as rules456
 from apply_build457_cover_rules import transform as rules457
 
 def main():
@@ -32,10 +31,8 @@ def main():
         raise RuntimeError('Markers changed unexpectedly; require manual review')
     if original.count('    // Build450 communities')!=1:
         raise RuntimeError('Expected single Build450 community block')
-    updated=rules457(rules456(original))
-    for marker in ('// Build456 community moderation',
-                   '// Build457 legacy founder cover-only repair',
-                   'match /commentLimits456/{uid}'):
+    updated=rules457(original)
+    for marker in ('// Build457 legacy founder cover-only repair',):
         if updated.count(marker)!=1:raise RuntimeError('Missing expected new marker: '+marker)
     # Critical invariants: no rewriting unrelated auth/chat/user read/update rules.
     for segment in ('    match /chats/{chatId} {', '    match /videos/{videoId} {',
@@ -50,10 +47,10 @@ def main():
         if not entire(start,stop):
             raise RuntimeError('Unrelated production video rules would change')
     Path('firestore.rules').write_text(updated,encoding='utf-8')
-    print('DRY463_STATUS=PROPOSAL_GENERATED_NO_DEPLOY')
+    print('DRY463_STATUS=MINIMAL_COVER_ONLY_PROPOSAL_NO_DEPLOY')
     print('DRY463_BASE_HASH='+hashlib.sha256(original.encode()).hexdigest()[:16])
     print('DRY463_PATCH_HASH='+hashlib.sha256(updated.encode()).hexdigest()[:16])
-    print('DRY463_PATCH_BYTES='+str(len(updated)-len(original)))
+    print('DRY463_COVER_ONLY_PATCH_BYTES='+str(len(updated)-len(original)))
     print('DRY463_AUTH_CHAT_VIDEO_RULES=PRESERVED')
 
 if __name__=='__main__':main()
