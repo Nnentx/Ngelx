@@ -157,6 +157,10 @@ Future<Uint8List> _ngelx464ResmiGetir(String url)async{
 
 '''
     s=s[:a]+new+s[b:]
+    s=one(s,
+        "final bytes=await _ngelxAgResmiBaytlari(key.url).timeout(const Duration(seconds:18));",
+        "final bytes=await _ngelxAgResmiBaytlari(key.url).timeout(const Duration(seconds:40));",
+        'align widget timeout with bounded queued network download')
     s=one(s,"  _ngelxAgResmiBellek.remove(temiz);\n  for(final aday in ngelxMedyaUrlAdaylari(temiz)){",
         "  _ngelxAgResmiBellek.remove(temiz);\n  try{await _ngelx464GenelResimCache.removeFile(temiz);}catch(_){}\n  for(final aday in ngelxMedyaUrlAdaylari(temiz)){",
         'per-url cache invalidation')
