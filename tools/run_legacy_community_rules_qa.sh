@@ -5,6 +5,12 @@ set -u
 failed=0
 for script in \
   tools/firestore_rules_test.mjs \
+  tools/build439_preferences_rules_test.mjs \
+  tools/build440_rules_test.mjs \
+  tools/build441_rules_test.mjs \
+  tools/build446_rules_test.mjs \
+  tools/build447_live_member_test.mjs \
+  tools/build448_rules_test.mjs \
   tools/build450_rules_test.mjs \
   tools/build455_rules_test.mjs \
   tools/build456_rules_test.mjs \
