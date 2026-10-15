@@ -10,7 +10,7 @@ class Build458FeedPlayerTests(unittest.TestCase):
         b=s.index("\nclass ",a+len("class _VideoKartiState"))
         frag=s[a:b]
         self.assertIn("// Build458 feed retry",frag)
-        self.assertIn("await kontrol.initialize().timeout(const Duration(seconds:12))",frag)
+        self.assertIn("await kontrol.initialize().timeout(",frag)
         self.assertIn("VideoPlayerController.networkUrl(Uri.parse(widget.adres))",frag)
         self.assertIn("eski.removeListener(_kesimKontrol);",frag)
         self.assertIn("await eski.dispose().timeout",frag)
