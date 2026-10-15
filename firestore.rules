@@ -891,6 +891,9 @@ service cloud.firestore {
         );
         allow delete: if false;
 
+        // Posts use /likes/{uid} for emoji reactions; comments use
+        // /comments/{commentId}/reactions/{uid}. Never grant a stale
+        // post-level /reactions wildcard.
         match /comments/{commentId} {
           allow read: if community450PostView(cid, pid);
           allow create: if community450Member(cid)
@@ -906,23 +909,29 @@ service cloud.firestore {
           allow update: if false;
           allow delete: if community450Moderator(cid)
             || (signedIn() && resource.data.get('uid', '') == request.auth.uid);
-        }
-        match /reactions/{reactionUid} {
-          allow read: if community450PostView(cid, pid);
-          allow create, update: if community450Member(cid)
-            && isMe(reactionUid)
-            && request.resource.data.get('uid', '') == reactionUid
-            && request.resource.data.get('emoji', '') is string
-            && request.resource.data.get('emoji', '').size() > 0
-            && request.resource.data.get('emoji', '').size() <= 8
-            && request.resource.data.keys().hasOnly(['uid','emoji','createdAt']);
-          allow delete: if isMe(reactionUid);
+          match /reactions/{reactionUid} {
+            allow read: if community450PostView(cid, pid)
+              && exists(/databases/$(database)/documents/communities450/$(cid)/posts/$(pid)/comments/$(commentId));
+            allow create, update: if community450Member(cid)
+              && community450PostView(cid, pid)
+              && exists(/databases/$(database)/documents/communities450/$(cid)/posts/$(pid)/comments/$(commentId))
+              && isMe(reactionUid)
+              && request.resource.data.get('uid', '') == reactionUid
+              && request.resource.data.get('emoji', '') in ['❤️','👍','😂','😮','😢','😡']
+              && request.resource.data.get('createdAt', request.time) == request.time
+              && request.resource.data.keys().hasOnly(['uid','emoji','createdAt']);
+            allow delete: if isMe(reactionUid);
+          }
         }
         match /likes/{likeUid} {
           allow read: if community450PostView(cid, pid);
-          allow create: if community450Member(cid) && isMe(likeUid)
-            && request.resource.data.get('uid', '') == likeUid;
-          allow update: if false;
+          allow create, update: if community450Member(cid)
+            && community450PostView(cid, pid)
+            && isMe(likeUid)
+            && request.resource.data.get('uid', '') == likeUid
+            && request.resource.data.get('emoji', '') in ['❤️','👍','😂','😮','😢','😡']
+            && request.resource.data.get('createdAt', request.time) == request.time
+            && request.resource.data.keys().hasOnly(['uid','emoji','createdAt']);
           allow delete: if isMe(likeUid);
         }
         match /subscribers456/{subscriberUid} {
