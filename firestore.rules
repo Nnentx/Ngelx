@@ -786,6 +786,16 @@ service cloud.firestore {
         && request.resource.data.get('members', []).size() == resource.data.get('members', []).size() + 1
         && request.resource.data.get('members', []).size() <= 500;
     }
+    function community450SelfLeave() {
+      return signedIn()
+        && request.auth.uid != resource.data.get('founderId', '')
+        && request.auth.uid in resource.data.get('members', [])
+        && onlyChanges(['members', 'admins'])
+        && request.resource.data.get('members', []).toSet()
+          == resource.data.get('members', []).toSet().difference([request.auth.uid].toSet())
+        && request.resource.data.get('admins', []).toSet()
+          == resource.data.get('admins', []).toSet().difference([request.auth.uid].toSet());
+    }
     function community450FounderUpdate() {
       return signedIn()
         && request.auth.uid == resource.data.get('founderId', '')
@@ -842,7 +852,8 @@ service cloud.firestore {
         ]);
       allow update: if community450FounderUpdate()
         || community450AdminUpdate()
-        || community450SelfJoin(cid);
+        || community450SelfJoin(cid)
+        || community450SelfLeave();
       // No client-side hard deletes until backup/restore is verified.
       allow delete: if false;
 
@@ -867,6 +878,7 @@ service cloud.firestore {
             || community450Manager(cid)
           );
         allow create: if community450Member(cid)
+          && community450(cid).data.get('paused', false) == false
           && request.resource.data.get('authorId', '') == request.auth.uid
           && request.resource.data.get('text', '') is string
           && request.resource.data.get('text', '').size() <= 3000
@@ -900,6 +912,7 @@ service cloud.firestore {
         match /comments/{commentId} {
           allow read: if community450PostView(cid, pid);
           allow create: if community450Member(cid)
+            && community450(cid).data.get('paused', false) == false
             && request.resource.data.get('uid', '') == request.auth.uid
             && request.resource.data.get('text', '') is string
             && request.resource.data.get('text', '').size() > 0
