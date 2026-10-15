@@ -62,7 +62,16 @@ count_ui = '''        Padding(padding:const EdgeInsets.only(top:10),child:Wrap(s
 if anchor not in source: raise RuntimeError('Build455 community post actions anchor missing')
 source = source.replace(anchor, count_ui)
 start = source.index('            Expanded(\n              child: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(', source.index('class NgelXCommunityPost450'))
-end = source.index('            Expanded(\n              child: TextButton.icon(\n                onPressed: () => comments(c)', start)
+# Build450 used a plain comment button; newer layouts use the bounded
+# count widget. Keep either version, instead of breaking the build chain.
+old_comment = '            Expanded(\n              child: TextButton.icon(\n                onPressed: () => comments(c)'
+count_comment = '            Expanded(\n              child: NgelXCommunityCommentCount450('
+if old_comment in source:
+    end = source.index(old_comment, start)
+elif count_comment in source:
+    end = source.index(count_comment, start)
+else:
+    raise RuntimeError('Build455 community comment action anchor missing')
 source = source[:start] + "            Expanded(child:Ngelx455Reactions(ref:ref.collection('likes'),enabled:member)),\n" + source[end:]
 source = source.replace("text: '${value['text']}\\nNgelX topluluk: $communityId'", "text: '${value['text']}\\n${value['mediaUrl']??''}\\nNgelX gönderi: $communityId/$id'")
 source = source.replace('    scaffoldBackgroundColor: Colors.white,', '''    scaffoldBackgroundColor: Colors.white,
