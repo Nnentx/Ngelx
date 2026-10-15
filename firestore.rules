@@ -809,6 +809,9 @@ service cloud.firestore {
         && request.resource.data.get('admins', []) == resource.data.get('admins', [])
         && request.resource.data.get('members', []).hasAll(resource.data.get('admins', []))
         && resource.data.get('founderId', '') in request.resource.data.get('members', [])
+        // An administrator must not silence or ban the founder.
+        && !(resource.data.get('founderId', '') in request.resource.data.get('muted', []))
+        && !(resource.data.get('founderId', '') in request.resource.data.get('banned', []))
         && request.resource.data.get('members', []).size() <= 500
         && onlyChanges([
           'name', 'description', 'rules', 'category', 'photoUrl', 'coverUrl',
@@ -901,6 +904,11 @@ service cloud.firestore {
             && request.resource.data.get('text', '') is string
             && request.resource.data.get('text', '').size() > 0
             && request.resource.data.get('text', '').size() <= 500
+            && request.resource.data.get('replyTo', '') is string
+            && (
+              request.resource.data.get('replyTo', '') == ''
+              || exists(/databases/$(database)/documents/communities450/$(cid)/posts/$(pid)/comments/$(request.resource.data.replyTo))
+            )
             && !(request.auth.uid in community450(cid).data.get('muted', []))
             && get(/databases/$(database)/documents/communities450/$(cid)/posts/$(pid)).data.get('commentsClosed', false) != true
             && request.resource.data.keys().hasOnly([
@@ -929,7 +937,7 @@ service cloud.firestore {
             && community450PostView(cid, pid)
             && isMe(likeUid)
             && request.resource.data.get('uid', '') == likeUid
-            && request.resource.data.get('emoji', '') in ['❤️','👍','😂','😮','😢','😡']
+            && request.resource.data.get('emoji', '❤️') in ['❤️','👍','😂','😮','😢','😡']
             && request.resource.data.get('createdAt', request.time) == request.time
             && request.resource.data.keys().hasOnly(['uid','emoji','createdAt']);
           allow delete: if isMe(likeUid);
