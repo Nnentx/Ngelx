@@ -10,6 +10,11 @@ on:
       - 'firestore.rules'
       - 'tools/firestore_rules_communities_test.mjs'
       - 'tools/verify_community_invite_ui.py'
+      - 'tools/prepare_build457_flutter_qa.py'
+      - 'tools/apply_build450.py'
+      - 'tools/apply_build455.py'
+      - 'tools/apply_build455_rules.py'
+      - 'tools/apply_build457_cover_rules.py'
       - '.github/workflows/community-fixes-qa.yml'
 
 permissions:
@@ -68,6 +73,16 @@ jobs:
         run: flutter pub get
       - name: Prepare Build457 generated Flutter sources (local only)
         run: python3 tools/prepare_build457_flutter_qa.py
+      - name: Ensure generated community rules stay unique
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          rules = Path('firestore.rules').read_text()
+          assert rules.count('match /communities450/{cid} {') == 1
+          assert rules.count('match /communityInvites450/{code} {') == 1
+          assert 'function community450PostView(cid, pid)' in rules
+          print('Generated rules contain a single hardened community namespace.')
+          PY
       - name: Analyze Flutter sources
         working-directory: app
         run: flutter analyze --no-fatal-infos --no-fatal-warnings
