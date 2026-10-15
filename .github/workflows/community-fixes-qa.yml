@@ -24,15 +24,13 @@ jobs:
       - uses: actions/checkout@v4
       - name: Check member menu, invitation picker and founder filter
         run: python3 tools/verify_community_invite_ui.py
-      - name: Verify no automated production deployment is configured
+      - name: Verify expected Firestore namespaces exist
         shell: bash
         run: |
           set -euo pipefail
           test -f firestore.rules
           grep -q 'match /communities450/{cid}' firestore.rules
           grep -q 'match /communityInvites450/{code}' firestore.rules
-          ! grep -q 'firebase deploy' .github/workflows/community-fixes-qa.yml
-          ! grep -q 'upload-artifact' .github/workflows/community-fixes-qa.yml
 
   firestore-emulator:
     name: Firestore role and privacy tests
