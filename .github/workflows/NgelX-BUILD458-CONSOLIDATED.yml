@@ -526,6 +526,11 @@ jobs:
           python3 tools/apply_build458_camera_profile.py
           python3 -m unittest discover -s tools -p 'test_build458_device_regression.py'
 
+      - name: Build458 Akis video finite wait and retry
+        run: |
+          python3 tools/apply_build458_feed_recovery.py
+          python3 -m unittest discover -s tools -p 'test_build458_feed_recovery.py'
+
       - name: Build458 safe generated feed player inspection
         run: |
           python3 - <<'PY'
