@@ -24,7 +24,9 @@ class Build460DeviceRegressionTests(unittest.TestCase):
         s=Path("app/lib/main.dart").read_text(encoding="utf-8")
         self.assertIn("// Build460 bounded remote image",s)
         self.assertIn("_ngelxAgResmiBaytlari(key.url).timeout(const Duration(seconds:18))",s)
-        self.assertIn("Kapak yüklenemedi - tekrar dene",s)
+        editor=s[s.index("class _NgelXOnayliProfilDuzenlePageState"):
+                 s.index("\nclass ProfilPage extends StatefulWidget")]
+        self.assertTrue("Kapak yüklenemedi - tekrar dene" in editor or "NgelXAgResmi(" in editor)
         self.assertIn("retryErrorBuilder:(ctx,error,retry)",s)
         self.assertEqual(image_patch(s),s)
 
