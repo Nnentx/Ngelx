@@ -70,7 +70,28 @@ def patch(s):
               ])),
             ])""",
          "visible real retry")
-    return s[:a]+frag+s[b:]
+    result=s[:a]+frag+s[b:]
+    # Blank legacy videoUrl must not hide an existing usable mediaUrl.
+    # Keep old URL values unchanged; only choose first nonempty field.
+    helper="""String ngelx458VideoUrl(dynamic primary, dynamic alternate) {
+  final first=(primary??'').toString().trim();
+  if(first.isNotEmpty)return first;
+  return (alternate??'').toString().trim();
+}
+
+"""
+    anchor="class VideoKarti extends StatefulWidget"
+    if result.count(anchor)!=1:raise ValueError("Build458 video widget anchor missing")
+    result=result.replace(anchor,helper+anchor,1)
+    for old,new in [
+      ("adres:(v['videoUrl']??v['mediaUrl']??'').toString()",
+       "adres:ngelx458VideoUrl(v['videoUrl'],v['mediaUrl'])"),
+      ("adres:(item['videoUrl']??item['mediaUrl']??'').toString()",
+       "adres:ngelx458VideoUrl(item['videoUrl'],item['mediaUrl'])"),
+    ]:
+        if result.count(old)!=1:raise ValueError(f"Build458 video URL anchor {old}: {result.count(old)}")
+        result=result.replace(old,new,1)
+    return result
 
 def main():
     before=SOURCE.read_text(encoding="utf-8")
