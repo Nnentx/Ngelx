@@ -47,6 +47,15 @@ try {
       text: 'Hello', mediaType: '', mediaUrl: '', status: 'approved',
       pinned: false, commentsClosed: false,
     });
+    await setDoc(doc(db, 'communities450/public/posts/pending1'), {
+      authorId: 'member', authorName: 'Member', authorPhoto: '',
+      text: 'Not published', mediaType: '', mediaUrl: '',
+      status: 'pending', pinned: false,
+    });
+    await setDoc(doc(db, 'communities450/public/posts/pending1/comments/hidden1'), {
+      uid: 'member', name: 'Member', text: 'Private draft comment',
+      createdAt: serverTimestamp(),
+    });
     await setDoc(doc(db, 'communityInvites450/TESTCODE'), {
       communityId: 'private', name: 'Example community',
       joinApproval: false, createdBy: 'founder',
@@ -76,6 +85,9 @@ try {
   await assertFails(updateDoc(doc(admin, publicRoot), { admins: arrayUnion('guest') }));
   await assertFails(updateDoc(doc(founder, publicRoot), { founderId: 'guest' }));
   await assertFails(deleteDoc(doc(founder, publicRoot)));
+  await assertFails(updateDoc(doc(admin, publicRoot), {
+    members: ['admin', 'member'],
+  }));
 
   await assertSucceeds(updateDoc(doc(admin, post), { commentsClosed: true }));
   await assertFails(updateDoc(doc(guest, post), { commentsClosed: false }));
@@ -84,13 +96,37 @@ try {
   }));
   await assertSucceeds(updateDoc(doc(admin, post), { commentsClosed: false }));
   await assertSucceeds(setDoc(doc(member, post + '/comments/accepted'), {
-    uid: 'member', name: 'Member', text: 'Allowed', createdAt: serverTimestamp(),
+    uid: 'member', name: 'Member', photoUrl: '',
+    text: 'Allowed', replyTo: '', replyName: '', createdAt: serverTimestamp(),
   }));
+  await assertSucceeds(setDoc(doc(member, post + '/comments/reply'), {
+    uid: 'member', name: 'Member', photoUrl: '',
+    text: 'Reply', replyTo: 'accepted', replyName: 'Member',
+    createdAt: serverTimestamp(),
+  }));
+  await assertSucceeds(setDoc(doc(member, post + '/reactions/member'), {
+    uid: 'member', emoji: '❤️', createdAt: serverTimestamp(),
+  }));
+  await assertFails(setDoc(doc(guest, post + '/reactions/member'), {
+    uid: 'guest', emoji: '😡', createdAt: serverTimestamp(),
+  }));
+  await assertSucceeds(getDocs(collection(publicDb, post + '/reactions')));
   await assertFails(setDoc(doc(guest, post + '/comments/fake'), {
     uid: 'member', name: 'Member', text: 'Impersonation', createdAt: serverTimestamp(),
   }));
   await assertSucceeds(updateDoc(doc(moderator, post), { slowSeconds: 300 }));
   await assertSucceeds(getDocs(collection(publicDb, post + '/comments')));
+  await assertFails(getDocs(collection(guest, publicRoot + '/posts/pending1/comments')));
+  await assertSucceeds(getDocs(collection(admin, publicRoot + '/posts/pending1/comments')));
+  await assertSucceeds(setDoc(doc(member, post + '/views/member'), {
+    uid: 'member', createdAt: serverTimestamp(),
+  }));
+  await assertSucceeds(setDoc(doc(member, post + '/shares/member'), {
+    uid: 'member', createdAt: serverTimestamp(),
+  }));
+  await assertFails(setDoc(doc(guest, post + '/views/member'), {
+    uid: 'guest', createdAt: serverTimestamp(),
+  }));
 
   await assertSucceeds(setDoc(doc(member, privateRoot + '/requests/member'), {
     uid: 'member', status: 'pending', inviteCode: '', createdAt: serverTimestamp(),
