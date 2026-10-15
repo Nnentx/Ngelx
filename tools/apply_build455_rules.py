@@ -2,6 +2,13 @@
 from pathlib import Path
 
 def transform(source):
+    # Modern role-scoped community rules already include the full comment,
+    # reaction, view and share collection schema. Do not inject legacy matches.
+    if 'function community450PostView(cid, pid)' in source:
+        required = ['match /reactions/{reactionUid}', 'match /views/{viewerUid}', 'match /shares/{sharerUid}']
+        if not all(item in source for item in required):
+            raise RuntimeError('Incomplete hardened community metric rules')
+        return source
     metrics = ''
     for collection in ('views', 'shares'):
         metrics += '''        match /COLLECTION/{uid} {
