@@ -46,7 +46,12 @@ def patch(s):
     elif "NgelXAgResmi(" in fragment:
         print("Build460: existing cover image widget retained with bounded provider")
     else:
-        raise ValueError("Build460: unexpected cover widget; refusing blind replacement")
+        # Unknown merged cover widget. The common NgelXAgImageProvider
+        # above is bounded; do not overwrite newer layout blindly.
+        i=fragment.find("SizedBox(height:208")
+        if i<0:i=fragment.find("Kapak fotoğrafını")
+        print("BUILD460_SAFETY_EXISTING_COVER_SOURCE",fragment[max(i-120,0):max(i-120,0)+1600])
+        print("Build460: cover layout kept unchanged; shared provider bounded")
     s=s[:start]+fragment+s[end:]
     return s
 
