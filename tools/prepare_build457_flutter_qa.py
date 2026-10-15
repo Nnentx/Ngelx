@@ -10,6 +10,7 @@ import os
 import re
 import subprocess
 import sys
+from merge_build457_community_rules import merge_hardened_community
 
 root=Path(__file__).resolve().parents[1]
 # The verified Build456 patch can only run on untouched Build457 inputs.
@@ -70,11 +71,13 @@ missing=[entry for entry in required if entry not in main]
 assert not missing, f"Build457 source parts not linked: {missing}"
 if hardened_rules is not None:
     rules_path=root/"firestore.rules"
-    rules_path.write_bytes(hardened_rules)
-    generated=rules_path.read_bytes()
-    assert generated == hardened_rules
-    assert generated.count(b"match /communities450/{cid} {")==1
-    assert generated.count(b"match /communityInvites450/{code} {")==1
-    print("QA: hardened candidate Firestore rules restored after the full Build457 generator; no overlapping legacy community rules.",flush=True)
+    original_generated=rules_path.read_text(encoding="utf-8")
+    hardened=hardened_rules.decode("utf-8")
+    merged=merge_hardened_community(original_generated,hardened)
+    rules_path.write_text(merged,encoding="utf-8")
+    assert rules_path.read_text(encoding="utf-8")==merged
+    assert merged.count("match /communities450/{cid} {")==1
+    assert merged.count("match /communityInvites450/{code} {")==1
+    print("QA: only community permissions updated; noncommunity Build457 privacy rules are unchanged.",flush=True)
 
 print("Build457 Flutter QA preparation finished without deploying anything.")
