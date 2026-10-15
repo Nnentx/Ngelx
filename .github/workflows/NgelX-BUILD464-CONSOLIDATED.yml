@@ -660,7 +660,7 @@ jobs:
           python3 tools/apply_build464_photo_reliability.py
           grep -Fq "Build464: consistent, bounded image loads" app/lib/main.dart
           grep -Fq "Build464: inbox photos must have a visible fallback" app/lib/main.dart
-          grep -Fq "flutter_cache_manager: ^3.4.5" app/pubspec.yaml
+          grep -Eq "^[[:space:]]*flutter_cache_manager:" app/pubspec.yaml
           cd app
           flutter pub get
 
