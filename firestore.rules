@@ -869,6 +869,13 @@ service cloud.firestore {
           && request.resource.data.get('uid', '') == requestUid
           && request.resource.data.get('status', '') == 'pending'
           && !(requestUid in community450(cid).data.get('banned', []))
+          // Private communities require a valid invite from nonmembers.
+          // Existing members retain the legacy ability to open a request.
+          && (
+            community450(cid).data.get('visibility', 'public') == 'public'
+            || community450Member(cid)
+            || community450InviteValid(cid, request.resource.data.get('inviteCode', ''))
+          )
           && request.resource.data.keys().hasOnly(['uid', 'status', 'inviteCode', 'createdAt']);
         allow update: if community450Manager(cid)
           && onlyChanges(['status'])
