@@ -76,5 +76,15 @@ s=s.replace("color:yayinci?const Color(0xCCB00020):const Color(0x665D5FEF)","col
 s=s.replace('              Ngelx448GuestControls(liveId:widget.belgeId,ownerUid:widget.ownerId,host:widget.yayinSahibi),\n','',1)
 p.write_text(s)
 p=Path('app/lib/build448_live_guests.dart');g=p.read_text().replace("'Yayına katılma isteği'","'Konuk ol'");p.write_text(g)
-p=Path('firestore.rules');r=p.read_text();fragment=Path('tools/community450.rules.fragment').read_text();pos=r.index('    match /');r=r[:pos]+fragment+'\n'+r[pos:];p.write_text(r)
+p=Path('firestore.rules')
+r=p.read_text()
+if 'match /communities450/{cid} {' not in r:
+    fragment=Path('tools/community450.rules.fragment').read_text()
+    pos=r.index('    match /')
+    r=r[:pos]+fragment+'\n'+r[pos:]
+    p.write_text(r)
+elif 'function community450PostView(cid, pid)' not in r:
+    raise RuntimeError('Community450 rules already exist in unrecognized form; no overlapping rules allowed')
+# Existing hardened role/visibility rules must not be overlapped by an
+# older community fragment. Firestore ORs permissions from duplicate matches.
 print('Build450 approved discovery, shared live panel, community module and rules applied')
