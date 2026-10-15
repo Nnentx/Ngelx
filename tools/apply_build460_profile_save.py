@@ -17,8 +17,174 @@ def patch(s):
     a=s.index("class _NgelXOnayliProfilDuzenlePageState")
     b=s.index("\nclass ProfilPage extends StatefulWidget",a)
     x=s[a:b]
-    old="""    final ad=_ad.text.trim(),kullanici=_kullanici.text.trim().replaceFirst('@','').replaceAll(' ','');
-    if(ad.length<2||kullanici.length<3){_hata('Geçerli ad ve kullanıcı adı gir.');return;}
+    old="""    final ad=_ad.text.trim(),kullanici=_kullanici.text.trim().replaceFirst('@','');
+    if(ad.length<2||!RegExp(r'^[a-zA-Z0-9._]{3,20}
+    if(_gorunum=='cover'&&kapak.isEmpty){_hata('Kapaklı görünüm için önce bir kapak fotoğrafı ekle.',kapakUyarisi:true);return;}
+    setState(()=>_kaydediliyor=true);
+    try{
+      await FirebaseFirestore.instance.collection('users').doc(widget.uid).set({
+        'displayName':ad,'username':kullanici,'usernameLower':kullanici.toLowerCase(),
+        'bio':_bio.text.trim(),'location':_konum.text.trim(),
+        'profileViewMode':_gorunum,
+        'updatedAt':FieldValue.serverTimestamp(),
+      },SetOptions(merge:true)).timeout(const Duration(seconds:15));
+      try{await FirebaseAuth.instance.currentUser?.updateDisplayName(ad);}catch(_){}
+      if(mounted)Navigator.pop(context,true);"""
+    new="""    // Build460 save only fields actually edited. A cover-mode change must never
+    // rewrite or revalidate an unchanged legacy username/display name.
+    final typedAd=_ad.text.trim();
+    final typedUsername=_kullanici.text.trim().replaceFirst('@','').replaceAll(' ','');
+    final priorAd=widget.ilkAd.trim();
+    final priorUsername=widget.ilkKullanici.trim().replaceFirst('@','').replaceAll(' ','');
+    final ad=typedAd.isEmpty?priorAd:typedAd;
+    final kullanici=typedUsername.isEmpty?priorUsername:typedUsername;
+    final identityChanged=ad!=priorAd||kullanici!=priorUsername;
+    if(identityChanged&&(ad.length<2||
+        (kullanici!=priorUsername && !RegExp(r'^[a-zA-Z0-9._]{3,20}
+      _hata('Ad en az 2, kullanıcı adı en az 3 karakter olmalı.');
+      return;
+    }
+    if(_gorunum=='cover'&&kapak.isEmpty){
+      _hata('Kapaklı görünüm için önce bir kapak fotoğrafı ekle.');
+      return;
+    }
+    final kayit=<String,dynamic>{
+      'profileViewMode':_gorunum,
+      'updatedAt':FieldValue.serverTimestamp(),
+    };
+    if(ad!=priorAd)kayit['displayName']=ad;
+    if(kullanici!=priorUsername){
+      kayit['username']=kullanici;
+      kayit['usernameLower']=kullanici.toLowerCase();
+    }
+    if(_bio.text.trim()!=widget.ilkBio.trim())kayit['bio']=_bio.text.trim();
+    if(_konum.text.trim()!=widget.ilkKonum.trim())kayit['location']=_konum.text.trim();
+    setState(()=>_kaydediliyor=true);
+    try{
+      await FirebaseFirestore.instance.collection('users').doc(widget.uid)
+        .set(kayit,SetOptions(merge:true)).timeout(const Duration(seconds:15));
+      if(ad!=priorAd){
+        try{await FirebaseAuth.instance.currentUser?.updateDisplayName(ad);}catch(_){}
+      }
+      if(mounted)Navigator.pop(context,true);"""
+    if x.count(old)!=1:
+        i=x.find("  Future<void> _kaydet(")
+        print("BUILD460_SAFE_GENERATED_EDITOR_METHOD_START")
+        print(x[i:i+2400] if i>=0 else "Method not found")
+        print("BUILD460_SAFE_GENERATED_EDITOR_METHOD_END")
+    x=exactly(x,old,new,"editor form save")
+    return s[:a]+x+s[b:]
+
+def main():
+    before=SOURCE.read_text(encoding="utf-8")
+    after=patch(before)
+    if after!=before:SOURCE.write_text(after,encoding="utf-8")
+    print("Build460: profile display modes can save without rewriting unchanged identity.")
+
+if __name__=="__main__": main()
+).hasMatch(kullanici)){_hata('Geçerli ad ve kullanıcı adı gir.');return;}
+    if(_gorunum=='cover'&&kapak.isEmpty){_hata('Kapaklı görünüm için önce bir kapak fotoğrafı ekle.');return;}
+    setState(()=>_kaydediliyor=true);
+    try{
+      await FirebaseFirestore.instance.collection('users').doc(widget.uid).set({
+        'displayName':ad,'username':kullanici,
+        'bio':_bio.text.trim(),'location':_konum.text.trim(),
+        'profileViewMode':_gorunum,
+        'updatedAt':FieldValue.serverTimestamp(),
+      },SetOptions(merge:true)).timeout(const Duration(seconds:15));
+      try{await FirebaseAuth.instance.currentUser?.updateDisplayName(ad);}catch(_){}
+      if(mounted)Navigator.pop(context,true);"""
+    new="""    // Build460 save only fields actually edited. A cover-mode change must never
+    // rewrite or revalidate an unchanged legacy username/display name.
+    final typedAd=_ad.text.trim();
+    final typedUsername=_kullanici.text.trim().replaceFirst('@','').replaceAll(' ','');
+    final priorAd=widget.ilkAd.trim();
+    final priorUsername=widget.ilkKullanici.trim().replaceFirst('@','').replaceAll(' ','');
+    final ad=typedAd.isEmpty?priorAd:typedAd;
+    final kullanici=typedUsername.isEmpty?priorUsername:typedUsername;
+    final identityChanged=ad!=priorAd||kullanici!=priorUsername;
+    if(identityChanged&&(ad.length<2||kullanici.length<3)){
+      _hata('Ad en az 2, kullanıcı adı en az 3 karakter olmalı.');
+      return;
+    }
+    if(_gorunum=='cover'&&kapak.isEmpty){
+      _hata('Kapaklı görünüm için önce bir kapak fotoğrafı ekle.');
+      return;
+    }
+    final kayit=<String,dynamic>{
+      'profileViewMode':_gorunum,
+      'updatedAt':FieldValue.serverTimestamp(),
+    };
+    if(ad!=priorAd)kayit['displayName']=ad;
+    if(kullanici!=priorUsername)kayit['username']=kullanici;
+    if(_bio.text.trim()!=widget.ilkBio.trim())kayit['bio']=_bio.text.trim();
+    if(_konum.text.trim()!=widget.ilkKonum.trim())kayit['location']=_konum.text.trim();
+    setState(()=>_kaydediliyor=true);
+    try{
+      await FirebaseFirestore.instance.collection('users').doc(widget.uid)
+        .set(kayit,SetOptions(merge:true)).timeout(const Duration(seconds:15));
+      if(ad!=priorAd){
+        try{await FirebaseAuth.instance.currentUser?.updateDisplayName(ad);}catch(_){}
+      }
+      if(mounted)Navigator.pop(context,true);"""
+    if x.count(old)!=1:
+        i=x.find("  Future<void> _kaydet(")
+        print("BUILD460_SAFE_GENERATED_EDITOR_METHOD_START")
+        print(x[i:i+2400] if i>=0 else "Method not found")
+        print("BUILD460_SAFE_GENERATED_EDITOR_METHOD_END")
+    x=exactly(x,old,new,"editor form save")
+    return s[:a]+x+s[b:]
+
+def main():
+    before=SOURCE.read_text(encoding="utf-8")
+    after=patch(before)
+    if after!=before:SOURCE.write_text(after,encoding="utf-8")
+    print("Build460: profile display modes can save without rewriting unchanged identity.")
+
+if __name__=="__main__": main()
+).hasMatch(kullanici)))){
+      _hata('Ad en az 2, kullanıcı adı en az 3 karakter olmalı.');
+      return;
+    }
+    if(_gorunum=='cover'&&kapak.isEmpty){
+      _hata('Kapaklı görünüm için önce bir kapak fotoğrafı ekle.');
+      return;
+    }
+    final kayit=<String,dynamic>{
+      'profileViewMode':_gorunum,
+      'updatedAt':FieldValue.serverTimestamp(),
+    };
+    if(ad!=priorAd)kayit['displayName']=ad;
+    if(kullanici!=priorUsername){
+      kayit['username']=kullanici;
+      kayit['usernameLower']=kullanici.toLowerCase();
+    }
+    if(_bio.text.trim()!=widget.ilkBio.trim())kayit['bio']=_bio.text.trim();
+    if(_konum.text.trim()!=widget.ilkKonum.trim())kayit['location']=_konum.text.trim();
+    setState(()=>_kaydediliyor=true);
+    try{
+      await FirebaseFirestore.instance.collection('users').doc(widget.uid)
+        .set(kayit,SetOptions(merge:true)).timeout(const Duration(seconds:15));
+      if(ad!=priorAd){
+        try{await FirebaseAuth.instance.currentUser?.updateDisplayName(ad);}catch(_){}
+      }
+      if(mounted)Navigator.pop(context,true);"""
+    if x.count(old)!=1:
+        i=x.find("  Future<void> _kaydet(")
+        print("BUILD460_SAFE_GENERATED_EDITOR_METHOD_START")
+        print(x[i:i+2400] if i>=0 else "Method not found")
+        print("BUILD460_SAFE_GENERATED_EDITOR_METHOD_END")
+    x=exactly(x,old,new,"editor form save")
+    return s[:a]+x+s[b:]
+
+def main():
+    before=SOURCE.read_text(encoding="utf-8")
+    after=patch(before)
+    if after!=before:SOURCE.write_text(after,encoding="utf-8")
+    print("Build460: profile display modes can save without rewriting unchanged identity.")
+
+if __name__=="__main__": main()
+).hasMatch(kullanici)){_hata('Geçerli ad ve kullanıcı adı gir.');return;}
     if(_gorunum=='cover'&&kapak.isEmpty){_hata('Kapaklı görünüm için önce bir kapak fotoğrafı ekle.');return;}
     setState(()=>_kaydediliyor=true);
     try{
