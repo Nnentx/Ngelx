@@ -7,6 +7,8 @@ on:
     paths:
       - 'app/lib/main.dart'
       - 'tools/verify_inbox_avatar_loading.py'
+      - 'tools/prepare_build457_flutter_qa.py'
+      - 'tools/apply_build432_loading_ten.py'
       - '.github/workflows/inbox-avatar-qa.yml'
 
 permissions:
