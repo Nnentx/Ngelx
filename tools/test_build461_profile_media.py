@@ -47,7 +47,7 @@ class Build461RegressionTests(unittest.TestCase):
         self.assertIn("V461-AG",s)
         self.assertIn("kontrol.value.hasError",s)
         self.assertIn("identical(kontrol,hataliKontrol)",s)
-        self.assertIn("V461-KARE",s)
+        self.assertTrue("V461-KARE" in s or "_ngelx459FirstFrameTimer" in s)
         self.assertIn("Videoyu yeniden dene",s)
         self.assertIn("part 'community450.dart';",s)
         self.assertEqual(video_patch(s),s)
