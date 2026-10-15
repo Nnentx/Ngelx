@@ -9,6 +9,8 @@ on:
       - 'tools/verify_inbox_avatar_loading.py'
       - 'tools/prepare_build457_flutter_qa.py'
       - 'tools/apply_build432_loading_ten.py'
+      - 'tools/apply_build457_avatar_http.py'
+      - 'tools/test_build457_avatar_http.py'
       - '.github/workflows/inbox-avatar-qa.yml'
 
 permissions:
@@ -21,8 +23,8 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
-      - name: Verify profile stream retry and image cache behavior
-        run: python3 tools/verify_inbox_avatar_loading.py
+      - name: Test post-Build456 avatar transform
+        run: python3 -m unittest discover -s tools -p 'test_build457_avatar_http.py'
 
   flutter-analyze:
     name: Flutter analyzer for inbox patch
@@ -39,6 +41,10 @@ jobs:
         run: flutter pub get
       - name: Prepare Build457 generated Flutter sources (local only)
         run: python3 tools/prepare_build457_flutter_qa.py
+      - name: Apply narrow HTTP fix (local only)
+        run: |
+          python3 tools/apply_build457_avatar_http.py
+          python3 tools/verify_inbox_avatar_loading.py
       - name: Analyze Dart sources
         working-directory: app
         run: flutter analyze --no-fatal-warnings --no-fatal-infos
