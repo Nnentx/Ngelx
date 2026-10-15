@@ -781,6 +781,7 @@ service cloud.firestore {
         && request.auth.uid in request.resource.data.get('admins', [])
         && request.auth.uid in request.resource.data.get('members', [])
         && request.resource.data.get('members', []).hasAll(request.resource.data.get('admins', []))
+        && request.auth.uid in request.resource.data.get('members', [])
         && request.resource.data.get('members', []).size() <= 500
         && onlyChanges([
           'name', 'description', 'rules', 'category', 'photoUrl', 'coverUrl',
@@ -795,6 +796,7 @@ service cloud.firestore {
         && request.resource.data.get('founderId', '') == resource.data.get('founderId', '')
         && request.resource.data.get('admins', []) == resource.data.get('admins', [])
         && request.resource.data.get('members', []).hasAll(resource.data.get('admins', []))
+        && resource.data.get('founderId', '') in request.resource.data.get('members', [])
         && request.resource.data.get('members', []).size() <= 500
         && onlyChanges([
           'name', 'description', 'rules', 'category', 'photoUrl', 'coverUrl',
@@ -886,10 +888,23 @@ service cloud.firestore {
             && request.resource.data.get('text', '').size() <= 500
             && !(request.auth.uid in community450(cid).data.get('muted', []))
             && get(/databases/$(database)/documents/communities450/$(cid)/posts/$(pid)).data.get('commentsClosed', false) != true
-            && request.resource.data.keys().hasOnly(['uid','name','text','createdAt']);
+            && request.resource.data.keys().hasOnly([
+              'uid','name','photoUrl','text','replyTo','replyName','createdAt'
+            ]);
           allow update: if false;
           allow delete: if community450Moderator(cid)
             || (signedIn() && resource.data.get('uid', '') == request.auth.uid);
+        }
+        match /reactions/{reactionUid} {
+          allow read: if community450View(cid);
+          allow create, update: if community450Member(cid)
+            && isMe(reactionUid)
+            && request.resource.data.get('uid', '') == reactionUid
+            && request.resource.data.get('emoji', '') is string
+            && request.resource.data.get('emoji', '').size() > 0
+            && request.resource.data.get('emoji', '').size() <= 8
+            && request.resource.data.keys().hasOnly(['uid','emoji','createdAt']);
+          allow delete: if isMe(reactionUid);
         }
         match /likes/{likeUid} {
           allow read: if community450View(cid);
