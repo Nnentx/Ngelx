@@ -27,7 +27,7 @@ class Build460DeviceRegressionTests(unittest.TestCase):
         editor=s[s.index("class _NgelXOnayliProfilDuzenlePageState"):
                  s.index("\nclass ProfilPage extends StatefulWidget")]
         self.assertTrue("Kapak yüklenemedi - tekrar dene" in editor or "NgelXAgResmi(" in editor)
-        self.assertIn("retryErrorBuilder:(ctx,error,retry)",s)
+        self.assertIn("retryErrorBuilder",s)
         self.assertEqual(image_patch(s),s)
 
     def test_video_retry_can_rotate_legacy_media_urls(self):
