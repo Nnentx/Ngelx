@@ -71,17 +71,18 @@ jobs:
       - name: Fetch Dart packages
         working-directory: app
         run: flutter pub get
-      - name: Prepare Build457 generated Flutter sources (local only)
+      - name: Prepare baseline-compatible Build457 UI sources (local only)
+        env:
+          NGELX_QA_BASELINE_COMMUNITY: '1'
         run: python3 tools/prepare_build457_flutter_qa.py
-      - name: Ensure generated community rules stay unique
+      - name: Check generated baseline rules have a single community scope
         run: |
           python3 - <<'PY'
           from pathlib import Path
           rules = Path('firestore.rules').read_text()
           assert rules.count('match /communities450/{cid} {') == 1
           assert rules.count('match /communityInvites450/{code} {') == 1
-          assert 'function community450PostView(cid, pid)' in rules
-          print('Generated rules contain a single hardened community namespace.')
+          print('Baseline compilation rules are unique; hardened PR rules are tested separately.')
           PY
       - name: Analyze Flutter sources
         working-directory: app
