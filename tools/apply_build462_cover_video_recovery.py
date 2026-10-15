@@ -160,7 +160,14 @@ def intro_player(src):
         ])),
       ),
     );"""
-        p=only(p,old,new,"real intro player retry affordance")
+        # Prior UI patches may restyle this error tile. Change only the
+        # failure branch, keeping the successful player rendering untouched.
+        start_error=p.index("    if(hata)return")
+        end_error=p.index("    if(!hazir||x==null)return",start_error)
+        current_error=p[start_error:end_error]
+        if "videocam_off" not in current_error and "hata" not in current_error:
+            raise ValueError("Build462 intro error branch changed unexpectedly")
+        p=p[:start_error]+new+"\n"+p[end_error:]
         return p
     return part(src,"class _ProfilTanitimVideoKartiState",
                 "\nclass ",edit)
