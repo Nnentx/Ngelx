@@ -66,6 +66,8 @@ jobs:
       - name: Fetch Dart packages
         working-directory: app
         run: flutter pub get
+      - name: Prepare Build457 generated Flutter sources (local only)
+        run: python3 tools/prepare_build457_flutter_qa.py
       - name: Analyze Flutter sources
         working-directory: app
         run: flutter analyze --no-fatal-infos --no-fatal-warnings
