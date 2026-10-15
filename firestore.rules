@@ -744,7 +744,7 @@ service cloud.firestore {
     function community450Moderator(cid) {
       return community450Manager(cid)
         || (
-          signedIn()
+          community450Member(cid)
           && request.auth.uid in community450(cid).data.get('moderators', [])
         );
     }
