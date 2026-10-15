@@ -47,6 +47,15 @@ try {
       text: 'Hello', mediaType: '', mediaUrl: '', status: 'approved',
       pinned: false, commentsClosed: false,
     });
+    await setDoc(doc(db, 'communities450/public/posts/pending1'), {
+      authorId: 'member', authorName: 'Member', authorPhoto: '',
+      text: 'Not published', mediaType: '', mediaUrl: '',
+      status: 'pending', pinned: false,
+    });
+    await setDoc(doc(db, 'communities450/public/posts/pending1/comments/hidden1'), {
+      uid: 'member', name: 'Member', text: 'Private draft comment',
+      createdAt: serverTimestamp(),
+    });
     await setDoc(doc(db, 'communityInvites450/TESTCODE'), {
       communityId: 'private', name: 'Example community',
       joinApproval: false, createdBy: 'founder',
@@ -107,6 +116,17 @@ try {
   }));
   await assertSucceeds(updateDoc(doc(moderator, post), { slowSeconds: 300 }));
   await assertSucceeds(getDocs(collection(publicDb, post + '/comments')));
+  await assertFails(getDocs(collection(guest, publicRoot + '/posts/pending1/comments')));
+  await assertSucceeds(getDocs(collection(admin, publicRoot + '/posts/pending1/comments')));
+  await assertSucceeds(setDoc(doc(member, post + '/views/member'), {
+    uid: 'member', createdAt: serverTimestamp(),
+  }));
+  await assertSucceeds(setDoc(doc(member, post + '/shares/member'), {
+    uid: 'member', createdAt: serverTimestamp(),
+  }));
+  await assertFails(setDoc(doc(guest, post + '/views/member'), {
+    uid: 'guest', createdAt: serverTimestamp(),
+  }));
 
   await assertSucceeds(setDoc(doc(member, privateRoot + '/requests/member'), {
     uid: 'member', status: 'pending', inviteCode: '', createdAt: serverTimestamp(),
