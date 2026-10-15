@@ -18,7 +18,14 @@ def inbox(p):
 '''+p[b:]
  p=replace(p,"()=>FirebaseFirestore.instance.collection('users').doc(id).get());","()=>FirebaseFirestore.instance.collection('users').doc(id).get().timeout(const Duration(seconds:12)).then((v)=>v,onError:(Object error,StackTrace trace){_kullaniciCache.remove(id);Error.throwWithStackTrace(error,trace);}));")
  p=p.replace('      _kullaniciCache.clear();','      _kullaniciCache.clear();\n      for(final cache in _akislari.values){cache.retry();}')
- p=replace(p,'@override void dispose(){sohbetAra.dispose();super.dispose();}','@override void dispose(){for(final cache in _akislari.values){cache.dispose();}sohbetAra.dispose();super.dispose();}')
+ # The inbox/avatar fix already clears its profile streams. Preserve that
+ # cleanup while adding the Build432 snapshot-cache disposal.
+ existing='@override void dispose(){_profilAkislari.clear();sohbetAra.dispose();super.dispose();}'
+ older='@override void dispose(){sohbetAra.dispose();super.dispose();}'
+ if existing in p:
+  p=replace(p,existing,'@override void dispose(){for(final cache in _akislari.values){cache.dispose();}_profilAkislari.clear();sohbetAra.dispose();super.dispose();}')
+ else:
+  p=replace(p,older,'@override void dispose(){for(final cache in _akislari.values){cache.dispose();}sohbetAra.dispose();super.dispose();}')
  a=p.index('    Widget isteklerIcerigi()');b=p.index('          final hamSosyal',a)
  p=p[:b]+"          if(snap.hasError)return ngelx432YuklemeHatasi(()=>unawaited(_gelenKutusunuYenile()),'İstekler yüklenemedi.');\n          if(!snap.hasData)return const Center(child:CircularProgressIndicator(color:mor));\n"+p[b:]
  return p

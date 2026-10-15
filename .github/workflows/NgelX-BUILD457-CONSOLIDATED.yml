@@ -526,6 +526,12 @@ jobs:
           python3 tools/apply_build457_inbox_rows.py
           python3 -m unittest discover -s tools -p 'test_build457_inbox_rows.py'
 
+      - name: Build457 bounded avatar HTTP reuse after Build456 source generation
+        run: |
+          python3 tools/apply_build457_avatar_http.py
+          python3 -m unittest discover -s tools -p 'test_build457_avatar_http.py'
+          python3 tools/verify_inbox_avatar_loading.py
+
       - name: Test Build457 inbox nickname uses target UID
         run: |
           python3 -m unittest discover -s tools -p 'test_build457_nickname_scope.py'
