@@ -3,7 +3,9 @@ part of 'main.dart';
 final _communities450 = FirebaseFirestore.instance.collection('communities450');
 String get _communityUid450 => FirebaseAuth.instance.currentUser?.uid ?? '';
 bool _communityAdmin450(Map<String, dynamic> v) =>
-    List<String>.from(v['admins'] ?? []).contains(_communityUid450);
+    _communityUid450.isNotEmpty &&
+    ((v['founderId'] ?? '').toString() == _communityUid450 ||
+        List<String>.from(v['admins'] ?? []).contains(_communityUid450));
 bool _communityMember450(Map<String, dynamic> v) =>
     List<String>.from(v['members'] ?? []).contains(_communityUid450);
 void _communityError450(BuildContext c, Object e) {
