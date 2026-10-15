@@ -62,9 +62,11 @@ String ngelx461VideoHataKodu(Object hata) {
         ? 'V461-SURE: Video yüklemesi zaman aşımı.'
         : ngelx461VideoHataKodu(e));"""
     player=one(player,old,new,"typed video initialization error")
-    player=one(player,"medyaHatasi='Video görüntüsü yüklenemedi.';",
-               "medyaHatasi='V461-KARE: Video görüntüsü gelmedi.';",
-               "first frame timeout category")
+    if "Video görüntüsü yüklenemedi." in player:
+        player=player.replace("Video görüntüsü yüklenemedi.",
+                              "V461-KARE: Video görüntüsü gelmedi.",1)
+    elif "_ngelx459FirstFrameTimer" not in player:
+        raise ValueError("Build461: missing bounded first-frame detection")
     result=s[:a]+player+s[b:]
     marker="class VideoKarti extends StatefulWidget"
     if result.count(marker)!=1:raise ValueError("Build461 video pure-category anchor")
