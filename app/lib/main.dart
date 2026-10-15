@@ -568,8 +568,33 @@ List<String> ngelxMedyaUrlAdaylari(String rawUrl){
 }
 final Map<String,Uint8List> _ngelxAgResmiBellek=<String,Uint8List>{};
 const int _ngelxAgResmiBellekSiniri=96;
+final Map<String,Future<Uint8List>> _ngelxAgResmiBekleyen=<String,Future<Uint8List>>{};
+final Dio _ngelxAgResmiHttp=Dio(BaseOptions(
+  connectTimeout:const Duration(seconds:12),
+  receiveTimeout:const Duration(seconds:45),
+  validateStatus:(s)=>s!=null,
+));
 
-Future<Uint8List> _ngelxAgResmiBaytlari(String rawUrl) async {
+// Reuse in-flight requests for identical avatars; clear after success or error.
+Future<Uint8List> _ngelxAgResmiBaytlari(String rawUrl){
+  final url=rawUrl.trim();
+  if(url.isEmpty)return Future<Uint8List>.error(StateError('Fotoğraf adresi boş.'));
+  final cached=_ngelxAgResmiBellek[url];
+  if(cached!=null&&cached.isNotEmpty)return Future<Uint8List>.value(cached);
+  final pending=_ngelxAgResmiBekleyen[url];
+  if(pending!=null)return pending;
+  final request=_ngelxAgResmiBaytlariAgdan(url);
+  _ngelxAgResmiBekleyen[url]=request;
+  unawaited(request.then<void>(
+    (_){if(identical(_ngelxAgResmiBekleyen[url],request))_ngelxAgResmiBekleyen.remove(url);},
+    onError:(Object error,StackTrace stackTrace){
+      if(identical(_ngelxAgResmiBekleyen[url],request))_ngelxAgResmiBekleyen.remove(url);
+    },
+  ));
+  return request;
+}
+
+Future<Uint8List> _ngelxAgResmiBaytlariAgdan(String rawUrl) async {
   final temiz=rawUrl.trim();
   if(temiz.isEmpty)throw Exception('Fotoğraf adresi boş.');
   final hazir=_ngelxAgResmiBellek[temiz];
@@ -578,18 +603,12 @@ Future<Uint8List> _ngelxAgResmiBaytlari(String rawUrl) async {
   Object? sonHata;
   String? kimlikTokeni;
   Future<Response<List<int>>> indir(Uri uri,{String? token}) {
-    return Dio(BaseOptions(
-      connectTimeout:const Duration(seconds:12),
-      receiveTimeout:const Duration(seconds:45),
-      validateStatus:(s)=>s!=null,
-    )).getUri<List<int>>(
+    return _ngelxAgResmiHttp.getUri<List<int>>(
       uri,
       options:Options(
         responseType:ResponseType.bytes,
         headers:<String,String>{
           'Accept':'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
-          'Cache-Control':'no-cache, no-store, max-age=0',
-          'Pragma':'no-cache',
           'X-NgelX-Client':'android-image-build333',
           if(token!=null&&token.isNotEmpty)HttpHeaders.authorizationHeader:'Bearer $token',
         },
@@ -11068,6 +11087,17 @@ class _MesajPageState extends State<MesajPage> {
   Set<String> arkadaslar={};
   final sohbetAra=TextEditingController();
   final Map<String,Future<DocumentSnapshot<Map<String,dynamic>>>> _kullaniciCache={};
+  final Map<String,Stream<DocumentSnapshot<Map<String,dynamic>>>> _profilAkislari={};
+  String? _profilHesabi;
+  Stream<DocumentSnapshot<Map<String,dynamic>>> _profilAkisi(String hedefUid){
+    if(_profilHesabi!=uid){
+      _profilHesabi=uid;
+      _profilAkislari.clear();
+    }
+    return _profilAkislari.putIfAbsent(
+      hedefUid,()=>FirebaseFirestore.instance.collection('users').doc(hedefUid).snapshots(),
+    );
+  }
   Future<DocumentSnapshot<Map<String,dynamic>>> _kullaniciGetir(String id)=>
       _kullaniciCache.putIfAbsent(id,()=>FirebaseFirestore.instance.collection('users').doc(id).get());
   String sohbetSorgu='';
@@ -11105,6 +11135,7 @@ class _MesajPageState extends State<MesajPage> {
       ]);
       if(basarili==0)throw StateError('inbox_refresh_all_failed');
       _kullaniciCache.clear();
+      _profilAkislari.clear();
       try{await tercihleriGetir();}catch(_){}
       if(mounted){
         setState((){});
@@ -11121,7 +11152,7 @@ class _MesajPageState extends State<MesajPage> {
   }
 
   @override void initState(){super.initState();tercihleriGetir();}
-  @override void dispose(){sohbetAra.dispose();super.dispose();}
+  @override void dispose(){_profilAkislari.clear();sohbetAra.dispose();super.dispose();}
 
   Future<void> sessizeAl(String chatId,bool sessiz) async {
     final ben=uid;if(ben==null)return;
@@ -11540,8 +11571,22 @@ class _MesajPageState extends State<MesajPage> {
             if(grup){final ad=(v['groupName']??t('groupChat')).toString(),foto=(v['groupPhotoUrl']??'').toString(),unread=(v['unread_$ben'] as num?)?.toInt()??0;return ListTile(onTap:()=>sohbetiAc(d.id,GrupSohbetPage(chatId:d.id,ad:ad,foto:foto)),onLongPress:()=>sohbetMenusu(context,d.id,grup:true),leading:CircleAvatar(backgroundColor:const Color(0xFFE9DDFF),backgroundImage:foto.isEmpty?null:NgelXAgImageProvider(foto),child:foto.isEmpty?const Icon(Icons.groups,color:mor):null),title:Text(ad,style:TextStyle(color:Colors.black87,fontWeight:unread>0?FontWeight.w900:FontWeight.w700)),subtitle:Text((v['lastMessage']??t('groupCreated')).toString(),maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.black54)),trailing:Wrap(crossAxisAlignment:WrapCrossAlignment.center,children:[if(sabitSohbetler.contains(d.id))const Icon(Icons.push_pin,size:16,color:mor),if(sessizSohbetler.contains(d.id))const Icon(Icons.volume_off,size:18,color:Colors.black38),if(unread>0)Badge(label:Text('$unread'))]));}
             final other=members.firstWhere((x)=>x!=ben,orElse:()=>ben??'');
             final benEngelledim=engellenenler.contains(other);
-            return StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(stream:FirebaseFirestore.instance.collection('users').doc(other).snapshots(),builder:(_,u){
-              final p=u.data?.data()??{};
+            return StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
+              key:ValueKey('inbox-profile-${d.id}-$other'),
+              stream:_profilAkisi(other),
+              builder:(_,u){
+              final p=u.data?.data()??<String,dynamic>{};
+              if(u.hasError&&!u.hasData){
+                return ListTile(
+                  leading:const CircleAvatar(
+                    backgroundColor:Color(0xFFE9DDFF),
+                    child:Icon(Icons.person_outline_rounded,color:mor),
+                  ),
+                  title:const Text('Kişi bilgisi alınamadı',style:TextStyle(fontWeight:FontWeight.w700)),
+                  subtitle:const Text('Tekrar denemek için dokun'),
+                  onTap:()=>setState(()=>_profilAkislari.remove(other)),
+                );
+              }
               if(p['deactivated']==true)return const SizedBox.shrink();
               final beniEngelledi=ben!=null&&List<String>.from(p['blocked']??const[]).contains(ben);
               final engelliSohbet=benEngelledim||beniEngelledi;
