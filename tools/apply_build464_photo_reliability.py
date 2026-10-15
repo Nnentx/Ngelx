@@ -12,6 +12,13 @@ def one(s,old,new,name):
     if count!=1:raise RuntimeError(f'Build464 {name}: anchor count {count}')
     return s.replace(old,new,1)
 
+def optional(s,old,new,name):
+    count=s.count(old)
+    if count==1:return s.replace(old,new,1)
+    if count>1:raise RuntimeError(f'Build464 {name}: ambiguous {count} matches')
+    print(f'Build464 inbox markup changed; guarded direct match skipped: {name}')
+    return s
+
 def patch(s):
     s=one(s,"import 'package:cached_network_image/cached_network_image.dart';",
         "import 'package:cached_network_image/cached_network_image.dart';\nimport 'package:flutter_cache_manager/flutter_cache_manager.dart';",
@@ -199,18 +206,24 @@ class NgelXGuvenliAvatar extends StatelessWidget{
 
 '''
     s=s[:a]+ '\n'+fallback+s[a:]
-    s=one(s,
+    s=optional(s,
         "leading:CircleAvatar(backgroundColor:const Color(0xFFE9DDFF),backgroundImage:foto.isEmpty?null:NgelXAgImageProvider(foto),child:foto.isEmpty?const Icon(Icons.groups,color:mor):null)",
         "leading:NgelXGuvenliAvatar(url:foto,backgroundColor:const Color(0xFFE9DDFF),icon:Icons.groups_rounded)",
         'inbox group photo')
-    s=one(s,
+    s=optional(s,
         "child:CircleAvatar(backgroundImage:(p['photoUrl']??'').toString().isEmpty?null:NgelXAgImageProvider(p['photoUrl']))",
         "child:NgelXGuvenliAvatar(url:(p['photoUrl']??'').toString())",
         'inbox person photo')
-    s=one(s,
+    s=optional(s,
         "leading:CircleAvatar(\n                        backgroundColor:ngelxGroupGreenSoft,\n                        backgroundImage:foto.isEmpty?null:NgelXAgImageProvider(foto),\n                        child:foto.isEmpty?const Icon(Icons.groups_rounded,color:ngelxGroupGreen):null,\n                      )",
         "leading:NgelXGuvenliAvatar(url:foto,backgroundColor:ngelxGroupGreenSoft,iconColor:ngelxGroupGreen,icon:Icons.groups_rounded)",
         'archived group photo')
+    # Inspect only code formatting, never user records or private media URLs.
+    left=s.index('class _MesajPageState')
+    right=s.index('class ArsivSohbetlerPage',left)
+    region=s[left:right]
+    for key in ['NgelXAgImageProvider(foto)','NgelXAgImageProvider(p[','CircleAvatar(','NgelXGuvenliAvatar(']:
+        print('Build464 inbox source token '+key+' count='+str(region.count(key)))
     return s
 
 def run():
