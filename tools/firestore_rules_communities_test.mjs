@@ -35,7 +35,7 @@ try {
         rules: '',
         founderId: 'founder',
         admins: ['founder', 'admin'],
-        members: ['founder', 'admin', 'member'],
+        members: ['founder', 'admin', 'member', 'moderator'],
         moderators: ['moderator'],
         visibility,
         joinApproval: false,
