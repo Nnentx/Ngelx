@@ -697,11 +697,13 @@ Future<void> ngelxAgResmiOnbelleginiTemizle([String? rawUrl]) async {
   final temiz=(rawUrl??'').trim();
   if(temiz.isEmpty){
     _ngelxAgResmiBellek.clear();
+    _ngelxAgResmiBekleyen.clear();
     PaintingBinding.instance.imageCache.clear();
     PaintingBinding.instance.imageCache.clearLiveImages();
     return;
   }
   _ngelxAgResmiBellek.remove(temiz);
+  _ngelxAgResmiBekleyen.remove(temiz);
   for(final aday in ngelxMedyaUrlAdaylari(temiz)){
     _ngelxAgResmiBellek.remove(aday);
     await PaintingBinding.instance.imageCache.evict(NgelXAgImageProvider(aday),includeLive:true);
@@ -11583,8 +11585,13 @@ class _MesajPageState extends State<MesajPage> {
                     child:Icon(Icons.person_outline_rounded,color:mor),
                   ),
                   title:const Text('Kişi bilgisi alınamadı',style:TextStyle(fontWeight:FontWeight.w700)),
-                  subtitle:const Text('Tekrar denemek için dokun'),
-                  onTap:()=>setState(()=>_profilAkislari.remove(other)),
+                  subtitle:const Text('Sohbeti açabilir veya profil bilgisini yenileyebilirsin'),
+                  trailing:IconButton(
+                    tooltip:'Kişi bilgisini yeniden yükle',
+                    icon:const Icon(Icons.refresh_rounded,color:mor),
+                    onPressed:()=>setState(()=>_profilAkislari.remove(other)),
+                  ),
+                  onTap:()=>sohbetiAc(d.id,SohbetPage(chatId:d.id,digerUid:other,ad:'Kullanıcı',foto:'')),
                 );
               }
               if(p['deactivated']==true)return const SizedBox.shrink();
