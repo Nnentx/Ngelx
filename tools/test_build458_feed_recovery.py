@@ -15,6 +15,9 @@ class Build458FeedPlayerTests(unittest.TestCase):
         self.assertIn("eski.removeListener(_kesimKontrol);",frag)
         self.assertIn("await eski.dispose().timeout",frag)
         self.assertIn("Videoyu yeniden dene",frag)
+        self.assertIn("adres:ngelx458VideoUrl(v['videoUrl'],v['mediaUrl'])",s)
+        self.assertIn("adres:ngelx458VideoUrl(item['videoUrl'],item['mediaUrl'])",s)
+        self.assertIn("final first=(primary??'').toString().trim();",s)
         self.assertIn("_videoyuTekrarDene()",frag)
         self.assertEqual(patch(s),s)
 
