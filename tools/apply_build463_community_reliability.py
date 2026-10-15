@@ -13,24 +13,21 @@ def one(src,old,new,label):
 
 def community(src):
     if '// Build463 normalized community gallery' not in src:
-        old="""  Future<void> pick(bool video) async {
-    final x = video
-        ? await ImagePicker().pickVideo(source: ImageSource.gallery)
-        : await ImagePicker().pickImage(source: ImageSource.gallery);
-    if (x != null && mounted)
-      setState(() {
-        media = x;
-        type = video ? 'video' : 'image';
-      });
+        old="""  Future<void> pick(bool video)async{
+    if(busy)return;
+    try{final x=video?await ImagePicker().pickVideo(source:ImageSource.gallery):await ImagePicker().pickImage(source:ImageSource.gallery);
+      if(x!=null&&mounted)setState((){media=x;type=video?'video':'image';_uploaded454='';_draft454=null;});
+    }catch(e){if(mounted)_communityError450(context,e);}
   }"""
-        new="""  // Build463 normalized community gallery: stable local media staging.
-  Future<void> pick(bool video) async {
+        new="""  // Build463 normalized community gallery: preserve Build454 draft staging.
+  Future<void> pick(bool video)async{
     if(busy)return;
     try{
-      final x=video
-        ?await ngelxVideoSec(source:ImageSource.gallery)
+      final x=video?await ngelxVideoSec(source:ImageSource.gallery)
         :await ngelxResimSec(source:ImageSource.gallery);
-      if(x!=null&&mounted)setState((){media=x;type=video?'video':'image';});
+      if(x!=null&&mounted)setState((){
+        media=x;type=video?'video':'image';_uploaded454='';_draft454=null;
+      });
     }catch(e){if(mounted)_communityError450(context,e);}
   }"""
         src=one(src,old,new,'community publish gallery')
