@@ -734,6 +734,11 @@ service cloud.firestore {
       return signedIn()
         && request.auth.uid in community450(cid).data.get('members', []);
     }
+    function community450Posting(cid) {
+      return community450Member(cid)
+        && community450(cid).data.get('paused', false) == false
+        && !(request.auth.uid in community450(cid).data.get('muted', []));
+    }
     function community450Manager(cid) {
       return signedIn()
         && (
@@ -877,17 +882,26 @@ service cloud.firestore {
             || (signedIn() && resource.data.get('authorId', '') == request.auth.uid)
             || community450Manager(cid)
           );
-        allow create: if community450Member(cid)
-          && community450(cid).data.get('paused', false) == false
+        allow create: if community450Posting(cid)
           && request.resource.data.get('authorId', '') == request.auth.uid
           && request.resource.data.get('text', '') is string
           && request.resource.data.get('text', '').size() <= 3000
-          && request.resource.data.get('status', '') ==
-            ((community450(cid).data.get('postApproval', false) == true
-              && !community450Manager(cid)) ? 'pending' : 'approved')
+          && (
+            request.resource.data.get('status', '') ==
+              (((community450(cid).data.get('postApproval', false) == true
+                || request.auth.uid in community450(cid).data.get('approvalMembers', []))
+                && !community450Manager(cid)) ? 'pending' : 'approved')
+            || (
+              community450Manager(cid)
+              && request.resource.data.get('status', '') == 'scheduled'
+              && request.resource.data.get('publishAt', request.time) is timestamp
+              && request.resource.data.get('publishAt', request.time) > request.time
+              && request.resource.data.get('publishAt', request.time) <= request.time + duration.value(30, 'd')
+            )
+          )
           && request.resource.data.keys().hasOnly([
             'authorId', 'authorName', 'authorPhoto', 'text', 'mediaUrl',
-            'mediaType', 'status', 'pinned', 'createdAt'
+            'mediaType', 'status', 'pinned', 'createdAt', 'publishAt'
           ]);
         allow update: if (
           community450Manager(cid)
@@ -905,14 +919,31 @@ service cloud.firestore {
           && request.resource.data.get('status', '') == 'deleted'
         );
         allow delete: if false;
+        match /commentLimits456/{limitUid} {
+          allow get: if community450Member(cid) && isMe(limitUid);
+          allow create, update: if community450Posting(cid)
+            && isMe(limitUid)
+            && request.resource.data.keys().hasOnly(['uid','commentId','at'])
+            && request.resource.data.get('uid', '') == limitUid
+            && request.resource.data.get('commentId', '') is string
+            && request.resource.data.get('at', request.time) == request.time
+            && (
+              !exists(/databases/$(database)/documents/communities450/$(cid)/posts/$(pid)/commentLimits456/$(limitUid))
+              || resource.data.get('at', request.time)
+                + duration.value(
+                  get(/databases/$(database)/documents/communities450/$(cid)/posts/$(pid)).data.get('slowSeconds', 0),
+                  's'
+                ) <= request.time
+            );
+          allow delete: if false;
+        }
 
         // Posts use /likes/{uid} for emoji reactions; comments use
         // /comments/{commentId}/reactions/{uid}. Never grant a stale
         // post-level /reactions wildcard.
         match /comments/{commentId} {
           allow read: if community450PostView(cid, pid);
-          allow create: if community450Member(cid)
-            && community450(cid).data.get('paused', false) == false
+          allow create: if community450Posting(cid)
             && request.resource.data.get('uid', '') == request.auth.uid
             && request.resource.data.get('text', '') is string
             && request.resource.data.get('text', '').size() > 0
@@ -921,6 +952,13 @@ service cloud.firestore {
             && (
               request.resource.data.get('replyTo', '') == ''
               || exists(/databases/$(database)/documents/communities450/$(cid)/posts/$(pid)/comments/$(request.resource.data.replyTo))
+            )
+            && (
+              get(/databases/$(database)/documents/communities450/$(cid)/posts/$(pid)).data.get('slowSeconds', 0) == 0
+              || (
+                getAfter(/databases/$(database)/documents/communities450/$(cid)/posts/$(pid)/commentLimits456/$(request.auth.uid)).data.get('at', request.time) == request.time
+                && getAfter(/databases/$(database)/documents/communities450/$(cid)/posts/$(pid)/commentLimits456/$(request.auth.uid)).data.get('commentId', '') == commentId
+              )
             )
             && !(request.auth.uid in community450(cid).data.get('muted', []))
             && get(/databases/$(database)/documents/communities450/$(cid)/posts/$(pid)).data.get('commentsClosed', false) != true
