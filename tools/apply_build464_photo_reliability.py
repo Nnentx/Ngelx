@@ -3,6 +3,7 @@
 Client-only; no data/rules/production deployment.
 """
 from pathlib import Path
+import re
 
 MAIN=Path('app/lib/main.dart')
 PUB=Path('app/pubspec.yaml')
@@ -224,11 +225,18 @@ class NgelXGuvenliAvatar extends StatelessWidget{
     region=s[left:right]
     for key in ['NgelXAgImageProvider(foto)','NgelXAgImageProvider(p[','CircleAvatar(','NgelXGuvenliAvatar(']:
         print('Build464 inbox source token '+key+' count='+str(region.count(key)))
+    marker='NgelXAgImageProvider('
+    pos=0
+    for _ in range(8):
+        at=region.find(marker,pos)
+        if at<0:break
+        print('Build464 inbox source-only avatar markup: '+repr(region[max(0,at-210):at+230]))
+        pos=at+len(marker)
     return s
 
 def run():
     yaml=PUB.read_text(encoding='utf-8')
-    if '  flutter_cache_manager: ^3.4.5' not in yaml:
+    if not re.search(r'(?m)^\s*flutter_cache_manager\s*:',yaml):
         yaml=one(yaml,'  cached_network_image: ^4.0.0',
             '  cached_network_image: ^4.0.0\n  flutter_cache_manager: ^3.4.5',
             'existing lock-compatible cache dependency')
