@@ -1,0 +1,733 @@
+# Verify all three call controls fit the compact card
+# Live return button for the currently owned minimized conversation
+# Reuse existing private-chat IDs and original permission checks
+# Keep minimized-call duration and active heartbeat synchronized
+# Coalesce overlay changes safely after route construction
+# Call notification cards open conversations without joining
+# Guard nullable signed-in UID in the shared chat filter
+# Approved thin separators and correct minimized-call return label
+# Profile capture lease tests and 48 complete locale rows
+# Final119-language-row verification and manual rearchive precedence
+# Translation boundary: presentation labels only, preserve user names
+# Correct guarded call-history rendering
+# Device QA revision: member exit and extended screen translations
+name: NgelX BUILD 461 COVER MODE AND VIDEO DIAG
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - work/build-461-device-profile-media-diagnostics
+    paths:
+      - '.github/workflows/NgelX-BUILD461-CONSOLIDATED.yml'
+      - 'app/lib/live_broadcast_studio.dart'
+      - 'tools/*457*'
+      - 'tools/*458*'
+      - 'tools/*459*'
+      - 'tools/*460*'
+      - 'tools/*461*'
+      - 'tools/*456*'
+      - 'app/lib/build456_widgets.dart'
+      - 'server/community456/**'
+      - 'app/lib/build455_widgets.dart'
+
+concurrency:
+  group: ngelx-build461-app
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - name: Kaynaklari al
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Java 17 kur
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Flutter kur
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Build 395 final referans tasarimini uygula
+        run: python3 tools/apply_build395_final_login_inbox_ui.py
+
+      - name: Build 396 gelen kutusu duzeltmelerini uygula
+        run: python3 tools/apply_build396_inbox_final_polish.py
+
+      - name: Build 397 gelen kutusu tamamlamasini uygula
+        run: python3 tools/apply_build397_inbox_complete_fixes.py
+
+      - name: Build 398 giris ve hikaye duzeltmelerini uygula
+        run: python3 tools/apply_build398_login_story_polish.py
+
+      - name: Build 399 kayit ve profil kapak altyapisini uygula
+        run: python3 tools/apply_build399_registration_profile_cover.py
+
+      - name: Build 399 Kesfet tasarimini uygula
+        run: python3 tools/apply_build399_explore_reference_ui.py
+
+      - name: Build 399 Uret tasarimini uygula
+        run: python3 tools/apply_build399_create_reference_ui.py
+
+      - name: Build 399 Ben tasarimini uygula
+        run: python3 tools/apply_build399_profile_reference_ui.py
+
+      - name: Build 399 regresyon kapisi
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -u tools/check_build399_regression.py
+
+      - name: Build 400 kapak yukleme duzeltmesini uygula
+        run: python3 tools/apply_build400_cover_upload_hotfix.py
+
+      - name: Build 400 kapak yukleme regresyonu
+        run: python3 -u tools/check_build400_cover_upload.py
+
+      - name: Build 401 profil ve hikaye arayuz duzeltmelerini uygula
+        run: python3 -u tools/apply_build401_profile_stability.py
+
+      - name: Build 401 koruma ve gorunurluk regresyonu
+        run: python3 -u tools/check_build401_profile_regression.py
+
+      - name: Build 402 profil referans tasarimini uygula
+        run: python3 -u tools/apply_build402_profile_reference_polish.py
+
+      - name: Build 402 profil tasarim ve koruma testi
+        run: python3 -u tools/check_build402_profile_regression.py
+
+      - name: Build 403 sesli canli profil ve premium duzeltmelerini uygula
+        run: python3 -u tools/apply_build403_profile_live_audio.py
+
+      - name: Build 403 koruma ve arayuz regresyonu
+        run: python3 -u tools/check_build403_regression.py
+
+      - name: Build 404 profil sesli ve canli yukleme duzeltmelerini uygula
+        run: python3 -u tools/apply_build404_profile_live_voice_fixes.py
+
+      - name: Build 404 koruma ve ekran kontrast regresyonu
+        run: python3 -u tools/check_build404_regression.py
+
+      - name: Build 405 canli hikaye ve profil son duzeltmelerini uygula
+        run: python3 -u tools/apply_build405_single_device_final.py
+
+      - name: Build 405 kaynak ve koruma regresyonu
+        run: python3 -u tools/check_build405_regression.py
+
+      - name: Build 406 sekiz son duzeltmeyi ve guvenli davet kurallarini uygula
+        run: python3 -u tools/apply_build406_final_eight.py
+
+      - name: Build 406 kaynak ve guvenlik regresyonu
+        run: python3 -u tools/check_build406_regression.py
+
+      - name: Build 407 admin onayi bildirimler akis ve Uret kodunu uygula
+        run: python3 -u tools/apply_build407_consolidated.py
+
+      - name: Build 407 kaynak ve guvenlik kontrolu
+        run: python3 -u tools/check_build407_regression.py
+
+      - name: Build 408 oncelikli hatalari uygula
+        run: python3 -u tools/apply_build408_defects_first.py
+
+      - name: Build 408 oncelikli hata regresyonu
+        run: python3 -u tools/check_build408_defects_first.py
+
+      - name: Build 409 group notification stale-state fix
+        run: python3 -u tools/apply_build409_group_notice_fix.py
+
+      - name: Build 409 identical media search dedup
+        run: python3 -u tools/apply_build409_search_relevance.py
+
+      - name: Build 409 release version
+        run: python3 -u tools/apply_build409_version.py
+
+      - name: Build 409 regression checks
+        run: python3 -u tools/check_build409_search_relevance.py
+
+      - name: Build 411 cover and coverless owner and visitor profile
+        run: python3 -u tools/apply_build411_profile_appearance.py
+
+      - name: Build 411 approved full-screen profile editor
+        run: python3 -u tools/apply_build411_editor_screen.py
+
+      - name: Build 411 version
+        run: python3 -u tools/apply_build411_version.py
+
+      - name: Build 411 layout functional safeguards
+        run: python3 -u tools/check_build411_profile.py
+
+      - name: Build 412 ziyaretci profil basligi ve mor istatistik karti
+        run: python3 -u tools/apply_build412_visitor_layout.py
+
+      - name: Build 412 dort ziyaretci profil dugmesi
+        run: python3 -u tools/apply_build412_visitor_actions.py
+
+      - name: Build 412 paylasim grid gostergeleri
+        run: python3 -u tools/apply_build412_visitor_grid.py
+
+      - name: Build 412 duzenle alt tasma ve renkli uyari
+        run: python3 -u tools/apply_build412_editor_safe_area.py
+
+      - name: Build 412 Android surumu
+        run: python3 -u tools/apply_build412_version.py
+
+      - name: Build 412 profil koruma testleri
+        run: python3 -u tools/check_build412_profile_ui.py
+
+      - name: Build 413 sosyal iliskiler arama hikaye duzeltmeleri
+        run: python3 -u tools/apply_build413_social_search_story.py
+
+      - name: Build 413 surum numarasi
+        run: python3 -u tools/apply_build413_version.py
+
+      - name: Build 413 geriye donuk koruma testi
+        run: python3 -u tools/check_build413_social_search_story.py
+
+      - name: Build 414 profil ve arkadaslar gorunumu
+        run: python3 -u tools/apply_build414_profile_polish.py
+
+      - name: Build 414 surum
+        run: python3 -u tools/apply_build414_version.py
+
+      - name: Build 414 koruma testi
+        run: python3 -u tools/check_build414_profile_polish.py
+
+      - name: Build 415 okunabilir profil dugmeleri kapak kadraji ve arama
+        run: python3 -u tools/apply_build415_profile_actions_cover.py
+
+      - name: Build 415 surum
+        run: python3 -u tools/apply_build415_version.py
+
+      - name: Build 415 koruma testi
+        run: python3 -u tools/check_build415_profile_actions_cover.py
+
+      - name: Build 416 profil aramasina Kisiler secenegi
+        run: python3 -u tools/apply_build416_profile_people_search.py
+
+      - name: Build 416 surum
+        run: python3 -u tools/apply_build416_version.py
+
+      - name: Build 416 koruma testi
+        run: python3 -u tools/check_build416_profile_people_search.py
+
+      - name: Build 417 hesap gecisi ve arkadas profili yukleme
+        run: python3 -u tools/apply_build417_account_avatar_sync.py
+
+      - name: Build 417 surum
+        run: python3 -u tools/apply_build417_version.py
+
+      - name: Build 417 koruma testi
+        run: python3 -u tools/check_build417_account_avatar_sync.py
+
+      - name: Build 418 hesap sifre yeniden giris iyilestirmesi
+        run: python3 -u tools/apply_build418_credential_recovery.py
+
+      - name: Build 418 surum
+        run: python3 -u tools/apply_build418_version.py
+
+      - name: Build 418 koruma testi
+        run: python3 -u tools/check_build418_credential_recovery.py
+
+      - name: Build 419 takip kaydi ve bildirim guvenli ayrimi
+        run: python3 -u tools/apply_build419_follow_notification_state.py
+
+      - name: Build 419 surum
+        run: python3 -u tools/apply_build419_version.py
+
+      - name: Build 419 koruma testi
+        run: python3 -u tools/check_build419_social_notification_state.py
+
+      - name: Build 420 takip arkadaslik istek iptal dogrulamasi
+        run: python3 -u tools/apply_build420_request_cancel_reliability.py
+
+      - name: Build 420 surum
+        run: python3 -u tools/apply_build420_version.py
+
+      - name: Build 420 koruma testi
+        run: python3 -u tools/check_build420_request_cancel_reliability.py
+
+      - name: Build 421 son uc profil hikaye duzeltmesi
+        run: python3 -u tools/apply_build421_last_three_profile_story.py
+
+      - name: Build 421 surum
+        run: python3 -u tools/apply_build421_version.py
+
+      - name: Build 421 koruma testi
+        run: python3 -u tools/check_build421_last_three_profile_story.py
+
+      - name: Build 422 hikaye yaniti sohbet teslimi
+        run: python3 -u tools/apply_build422_story_delivery.py
+
+      - name: Build 422 gelen kutusu tek Aktivite ve Messenger istekleri
+        run: python3 -u tools/apply_build422_inbox_requests.py
+
+      - name: Build 422 profil yanit tarih ve performans
+        run: python3 -u tools/apply_build422_profile_request_and_speed.py
+
+      - name: Build 422 gizli takip istegi profilden yanit
+        run: python3 -u tools/apply_build422_follow_reply.py
+
+      - name: Build 422 surum
+        run: python3 -u tools/apply_build422_version.py
+
+      - name: Build 422 koruma testi
+        run: python3 -u tools/check_build422_consolidated.py
+
+      - name: Build 423 cihaz QA metin, grup ve istek duzeltmeleri
+        run: python3 -u tools/apply_build423_device_qa.py
+
+      - name: Build 423 kaynak koruma testi
+        run: python3 -u tools/check_build423_device_qa.py
+
+      - name: Build 424 hikaye yanitini guvenli sohbete dogrudan gonder
+        run: python3 -u tools/apply_build424_story_delivery.py
+
+      - name: Build 424 hikaye koruma ve mesaj teslim testi
+        run: python3 -u tools/check_build424_story_delivery.py
+
+      - name: Build 425 gercek hikaye seri ekraninda dogrudan ozel mesaja yanit
+        run: python3 -u tools/apply_build425_active_story_viewer.py
+
+      - name: Build 425 aktif hikaye seri ekraninda mesaj testi
+        run: python3 -u tools/check_build425_active_story_viewer.py
+
+      - name: Build 426 hikaye kartina tikla kullanici adi ve hiz
+        run: python3 -u tools/apply_build426_story_cards_header_perf.py
+
+      - name: Build 426 hikaye karti header ve performans koruma testi
+        run: python3 -u tools/check_build426_story_cards_header_perf.py
+
+      - name: Build 427 hikaye takip dugmesi ust alanda
+        run: python3 -u tools/apply_build427_story_header.py
+
+      - name: Build 428 hikaye video yukleme kurtarma (kaynak uyumlu)
+        run: python3 -u tools/apply_build428_story_video_recovery.py
+
+      - name: Build 429 hikaye arsivi ve guvenli medya silme
+        run: python3 -u tools/apply_build429_story_archive_delete.py
+
+      - name: Build 429 kaynak ve Build428 koruma testleri
+        run: python3 -u tools/check_build429_story_archive_delete.py
+
+      - name: Build 430 verified follow-up
+        run: python3 -u tools/apply_build430_verified_fixes.py
+
+      - name: Build 430 source preservation checks
+        run: python3 -u tools/check_build430.py
+
+      - name: Build 433 inbox device QA follow-up
+        run: python3 tools/apply_build431_inbox_verified.py
+
+      - name: Build 433 replay loading and ten follow-ups
+        run: |
+          python3 tools/apply_build432_loading_ten.py
+          python3 tools/check_build432.py
+      - name: Build433 request pages and live history
+        run: |
+          python3 tools/apply_build433_requests_live.py
+          python3 tools/check_build433.py
+
+      - name: Build434 request outcomes presence and displayed version
+        run: python3 tools/apply_build434_device_followup.py
+
+      - name: Build435 durable message and server cleanup
+        run: |
+          python3 tools/apply_build435_cleanup.py
+          python3 -m unittest discover -s tools -p 'test_*cleanup*.py'
+
+      - name: Apply consolidated device fixes
+        run: |
+          python3 tools/apply_build436_test_fixes.py
+          python3 tools/apply_build436_details.py
+
+      - name: Build437 approved consolidated decisions
+        run: |
+          python3 tools/apply_build437_consolidated.py
+          python3 tools/check_build437.py
+          python3 -m unittest discover -s tools -p 'test_retention437_cleanup.py'
+
+      - name: Apply Build438 phone fixes
+        run: |
+          python3 tools/apply_build438_qa_fixes.py
+          python3 tools/apply_build438_pending_requests.py
+          python3 tools/apply_build438_social_confirmation.py
+          python3 tools/apply_build438_profile_cards.py
+          python3 tools/apply_build438_email_language.py
+          python3 tools/apply_build438_group_pin.py
+          python3 tools/apply_build438_delete_feedback.py
+          python3 tools/apply_build438_inbox_round.py
+          python3 tools/apply_build438_message_round.py
+          python3 tools/apply_build438_former_inbox.py
+          dart tools/test_build438_pin_permission.dart
+          dart tools/test_build438_group_successor.dart
+          dart tools/test_build438_request_confirmation.dart
+
+      - name: Bagimliliklari al
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter clean
+          flutter pub get
+
+      - name: Twelve-language catalog and persistence-compatible integration
+        run: |
+          python3 tools/apply_build438_locales.py
+          python3 tools/check_build438_locales.py
+          python3 tools/apply_build438_screen_locales.py
+          python3 tools/check_build438_screen_locales.py
+
+      - name: Apply session, bounded profile and post cleanup fixes
+        run: |
+          python3 tools/apply_build439_session_qa.py
+          python3 tools/apply_build439_locales.py
+          python3 tools/check_build439_locales.py
+          cp tools/test_build439_session_gate.dart app/test/build439_session_gate_test.dart
+          cp tools/test_build439_auth_operations.dart app/test/build439_auth_operations_test.dart
+          cd app
+          flutter test test/build439_session_gate_test.dart test/build439_auth_operations_test.dart
+
+      - name: Apply Build440 device QA and verify expiry, pin and call behavior
+        run: |
+          python3 tools/apply_build440_device_qa.py
+          python3 tools/apply_build440_locales.py
+          python3 tools/check_build440_locales.py
+          cp tools/test_build440_behavior.dart app/test/build440_behavior_test.dart
+          cd app
+          timeout 180s flutter test --reporter expanded --timeout 60s test/build440_behavior_test.dart
+
+      - name: Build441 archive, highlights and Play preparation
+        run: |
+          python3 tools/apply_build441_play_readiness.py
+          python3 tools/apply_build441_safety_report.py
+          python3 tools/apply_build441_locales.py
+          python3 tools/check_build441.py
+          python3 tools/audit_build441_locales.py build441-untranslated.tsv
+
+      - name: Build442 video localization and presentation boundaries
+        run: |
+          python3 tools/apply_build442_locales.py
+          python3 tools/check_build442_locales.py
+          python3 tools/audit_build441_locales.py build442-untranslated.tsv
+
+      - name: Build443 profile capture privacy and follow-up translations
+        run: |
+          python3 tools/apply_build443_capture.py
+          python3 tools/apply_build443_locales.py
+          python3 tools/check_build443.py
+          python3 tools/audit_build441_locales.py build443-untranslated.tsv
+          cp tools/build443_capture_guard_test.dart app/test/build443_capture_guard_test.dart
+          cd app
+          timeout 180s flutter test --reporter expanded --timeout 60s test/build443_capture_guard_test.dart
+
+      - name: Build444 call lifecycle and audio ownership
+        run: |
+          python3 tools/apply_build444_calls.py
+          cp tools/test_build444_call_session.dart app/test/build444_call_session_test.dart
+          cd app
+          timeout 180s flutter test --reporter expanded --timeout 60s test/build444_call_session_test.dart
+
+      - name: Build445 approved inbox model and strict filters
+        run: |
+          python3 tools/apply_build445_inbox.py
+          cp tools/test_build445_inbox.dart app/test/build445_inbox_test.dart
+          cd app
+          timeout 180s flutter test --reporter expanded --timeout 60s test/build445_inbox_test.dart
+
+      - name: Build446 final device feedback and preserved group calls
+        run: |
+          python3 tools/apply_build446_device_fixes.py
+          python3 tools/check_build446_device_fixes.py
+          cd app
+          timeout 180s flutter test --reporter expanded --timeout 60s test/build444_call_session_test.dart test/build445_inbox_test.dart
+
+      - name: Build447 story calls and preserve approved inbox
+        run: |
+          git apply --check tools/build447.patch
+          git apply tools/build447.patch
+          cp tools/build446_speaking_test.dart app/test/build446_speaking_test.dart
+          cd app
+          flutter test test/build446_speaking_test.dart
+
+      - name: Build448 device feedback and incoming call notifications
+        run: |
+          git apply --check tools/build448.patch
+          git apply tools/build448.patch
+          python3 tools/apply_build448_rules.py
+          python3 tools/apply_build448_tests.py
+          cp tools/build448_behavior_test.dart app/test/build448_behavior_test.dart
+          cd app
+          flutter test test/build448_behavior_test.dart
+
+      - name: Apply approved Build450 discovery and community UI
+        run: python3 tools/apply_build450.py
+
+      - name: Apply compact live overlay
+        run: python3 tools/apply_build451.py
+
+      - name: Integrate caller-triggered free push
+        run: python3 tools/apply_build452.py
+
+      - name: Apply consolidated device fixes
+        run: python3 tools/apply_build453.py
+
+      - name: Apply consolidated Build454 follow-up without replacing app architecture
+        run: |
+          git apply --check tools/build454.patch
+          git apply tools/build454.patch
+
+      - name: Apply consolidated Build455 changes
+        run: |
+          python3 tools/apply_build455.py
+          python3 tools/apply_build455_rules.py
+
+      - name: Apply Build456 consolidated community and performance package
+        run: |
+          git apply --check tools/build456.patch
+          git apply tools/build456.patch
+          python3 tools/apply_build456_feed_fallback.py
+          python3 -m unittest discover -s tools -p 'test_build456_feed_fallback.py'
+          node --check server/community456/index.mjs
+          node tools/build456_policy_test.mjs
+
+      - name: Build457 prepare narrow legacy founder cover rule for emulator
+        run: |
+          python3 tools/apply_build457_cover_rules.py
+          python3 -m unittest discover -s tools -p 'test_build457_cover_rules.py'
+
+      - name: Apply and guard Build457 live video recovery after older patches
+        run: |
+          python3 tools/apply_build457_live_recovery.py
+          python3 -m unittest discover -s tools -p 'test_build457_live_recovery.py'
+
+      - name: Build457 community avatar placeholder and retry regression
+        run: |
+          python3 tools/apply_build457_community_images.py
+          python3 -m unittest discover -s tools -p 'test_build457_community_images.py'
+
+      - name: Build457 isolate chat identity and test UID-bound rows
+        run: |
+          python3 tools/apply_build457_inbox_identity.py
+          python3 -m unittest discover -s tools -p 'test_build457_inbox_identity.py'
+
+      - name: Build457 verify private chat identity and retry
+        run: |
+          python3 tools/apply_build457_inbox_rows.py
+          python3 -m unittest discover -s tools -p 'test_build457_inbox_rows.py'
+
+      - name: Build458 bounded camera init and coverless owner profile
+        run: |
+          python3 tools/apply_build458_camera_profile.py
+          python3 -m unittest discover -s tools -p 'test_build458_device_regression.py'
+
+      - name: Build458 Akis video finite wait and retry
+        run: |
+          python3 tools/apply_build458_feed_recovery.py
+          python3 -m unittest discover -s tools -p 'test_build458_feed_recovery.py'
+
+      - name: Build459 restore real profile mode choice and stop stuck video
+        run: |
+          python3 tools/apply_build459_profile_modes.py
+          python3 tools/apply_build459_feed_watchdog.py
+          python3 -m unittest discover -s tools -p 'test_build459_profile_feed.py'
+
+      - name: Build459 test both profile modes in Flutter
+        run: |
+          cp tools/build459_profile_modes_test.dart app/test/build459_profile_modes_test.dart
+          cd app
+          flutter test --timeout 60s test/build459_profile_modes_test.dart
+
+      - name: Build460 fix profile mode save without rewriting account identity
+        run: |
+          python3 tools/apply_build460_profile_save.py
+          python3 tools/apply_build460_image_status.py
+          python3 tools/apply_build460_video_fallback.py
+          python3 -m unittest discover -s tools -p 'test_build460_device_rootfix.py'
+
+      - name: Build461 cover state and real photo retry
+        run: |
+          python3 -m py_compile tools/apply_build461_cover_state.py tools/apply_build461_video_errors.py
+          python3 tools/apply_build461_cover_state.py
+          python3 tools/apply_build461_video_errors.py
+          python3 -m unittest discover -s tools -p 'test_build461_profile_media.py'
+
+      - name: Build461 Flutter cover choice and redacted video errors
+        run: |
+          cp tools/build461_profile_media_test.dart app/test/build461_profile_media_test.dart
+          cd app
+          flutter test --timeout 60s test/build461_profile_media_test.dart
+
+      - name: Build458 safe generated feed player inspection
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path("app/lib/main.dart").read_text()
+          for token in ["class NgelXVideoKapakOnizleme", "class _Akis", "VideoPlayerController.networkUrl", "VideoPlayerController.network("]:
+              start=0
+              for n in range(5):
+                  i=s.find(token,start)
+                  if i<0:break
+                  print("PLAYER_MARKER",token,"position",i)
+                  print(s[max(0,i-300):i+1250])
+                  start=i+len(token)
+          PY
+
+      - name: Test Build457 inbox nickname uses target UID
+        run: |
+          python3 -m unittest discover -s tools -p 'test_build457_nickname_scope.py'
+
+      - name: Test Build457 cover permissions and minimal update payload
+        run: |
+          cp tools/build457_cover_test.dart app/test/build457_cover_test.dart
+          cd app
+          flutter test --timeout 60s test/build457_cover_test.dart
+
+      - name: Test Build457 live-video recovery and missing-track retry
+        run: |
+          cp tools/build457_live_test.dart app/test/build457_live_test.dart
+          cd app
+          flutter test --timeout 60s test/build457_live_test.dart
+
+      - name: Test Build456 relative times, short errors and small-screen UI
+        working-directory: app
+        run: |
+          cp ../tools/build456_ui_test.dart test/build456_ui_test.dart
+          flutter test --timeout 60s test/build456_ui_test.dart
+
+      - name: Test profile identity fallbacks
+        working-directory: app
+        run: |
+          cp ../tools/build455_ui_test.dart test/build455_ui_test.dart
+          flutter test --timeout 60s test/build455_ui_test.dart
+
+      - name: Verify bounded chat photos and honest upload progress
+        working-directory: app
+        run: |
+          cp ../tools/build454_ui_test.dart test/build454_ui_test.dart
+          timeout 180s flutter test --timeout 60s test/build454_ui_test.dart
+
+      - name: Test stable live keyboard and transient hearts
+        working-directory: app
+        run: |
+          cp ../tools/build453_ui_test.dart test/build453_ui_test.dart
+          flutter test test/build453_ui_test.dart
+
+      - name: Test small-screen community and discovery behavior
+        working-directory: app
+        run: flutter test test/build450_responsive_test.dart
+
+      - name: Flutter analiz
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          nl -ba lib/main.dart | sed -n '10972,11002p'
+          flutter analyze --no-fatal-infos --no-fatal-warnings
+
+      - name: Build 430 presence behavior tests
+        working-directory: app
+        run: |
+          cp ../tools/build431_notification_test.dart test/build431_notification_test.dart
+          cp ../tools/build432_behavior_test.dart test/build432_behavior_test.dart
+          cp ../tools/build433_behavior_test.dart test/build433_behavior_test.dart
+          cp ../tools/build434_behavior_test.dart test/build434_behavior_test.dart
+          cp ../tools/build435_behavior_test.dart test/build435_behavior_test.dart
+          cp ../tools/build436_behavior_test.dart test/build436_behavior_test.dart
+          cp ../tools/build437_behavior_test.dart test/build437_behavior_test.dart
+          timeout 300s flutter test --reporter expanded --timeout 60s test/build430_presence_test.dart test/build431_notification_test.dart test/build432_behavior_test.dart test/build433_behavior_test.dart test/build434_behavior_test.dart test/build435_behavior_test.dart test/build436_behavior_test.dart test/build437_behavior_test.dart
+
+      - name: Node 24 Firebase test ortami
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Production token authorization tests
+        run: node --test server/livekit441/token-endpoint.test.mjs server/livekit443/*.test.mjs server/calls448/*.test.mjs
+
+      - name: Java 21 Firebase emulator ortami
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Firestore kurallari emulator test bagimliliklari
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save --no-package-lock firebase @firebase/rules-unit-testing firebase-tools
+
+      - name: Guvenli davet ve grup Firestore kurallarini emulator ile test et
+        shell: bash
+        run: |
+          set -euo pipefail
+          nl -ba firestore.rules | sed -n '260,310p;420,435p'
+          npx firebase emulators:exec --project demo-ngelx --only firestore --non-interactive "node tools/firestore_rules_test.mjs && node tools/build439_preferences_rules_test.mjs && node tools/build440_rules_test.mjs && node tools/build441_rules_test.mjs && node tools/build446_rules_test.mjs && node tools/build448_rules_test.mjs && node tools/build450_rules_test.mjs && node tools/build455_rules_test.mjs && node tools/build456_rules_test.mjs && node tools/build457_cover_rules_test.mjs" || { tail -100 firestore-debug.log; exit 1; }
+
+
+      - name: Restore Android Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Restore existing install-compatible signing key
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: ngelx-stable-debug-keystore-v1
+          fail-on-cache-miss: true
+
+      - name: Verify existing signing certificate
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s "$HOME/.android/debug.keystore"
+          keytool -list -v -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey | grep -F 'SHA256: BE:20:B2:7F:0B:A1:F4:DE:CD:29:41:D4:10:B1:53:6D:E8:9E:48:DC:89:4F:04:F0:38:F9:D2:6B:11:EC:D6:AA'
+
+      - name: Build signed APK with verified free call push URL
+        shell: bash
+        working-directory: app
+        run: |
+          set -euo pipefail
+          flutter build apk --release --build-name=1.0.236 --build-number=461 --dart-define=NGELX_VERSION_NAME=1.0.236 --dart-define=NGELX_BUILD_NUMBER=461 --dart-define=NGELX_CALL_PUSH_URL=https://ngelx-call-push.alihancaglar76.workers.dev
+          test -s build/app/outputs/flutter-apk/app-release.apk
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          test -n "$APKSIGNER"
+          "$APKSIGNER" verify --verbose --print-certs build/app/outputs/flutter-apk/app-release.apk | tee apk-signature.txt
+          grep -qi "be20b27f0ba1f4decd2941d410b1536de89e48dc894f04f038f9d26b11ecd6aa" apk-signature.txt
+          AAPT="$(dirname "$APKSIGNER")/aapt"
+          "$AAPT" dump badging build/app/outputs/flutter-apk/app-release.apk | tee apk-manifest.txt
+          grep -q "versionCode='461'" apk-manifest.txt
+          grep -q "versionName='1.0.236'" apk-manifest.txt
+          cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/NgelX-1.0.236-Build-461-PROFILE-VIDEO-DIAGNOSTICS.apk
+          sha256sum build/app/outputs/flutter-apk/NgelX-1.0.236-Build-461-PROFILE-VIDEO-DIAGNOSTICS.apk > build/app/outputs/flutter-apk/NgelX-1.0.236-Build-461-PROFILE-VIDEO-DIAGNOSTICS.apk.sha256
+
+      # Publish the signed, locally tested APK before any optional cloud deployment.
+      # The owner can test the app even when Google Cloud API activation is not permitted.
+      - name: Upload signed candidate and tested rules for review
+        uses: actions/upload-artifact@v4
+        with:
+          name: NgelX-1.0.236-Build-461-PROFILE-VIDEO-DIAGNOSTICS
+          path: |
+            app/build/app/outputs/flutter-apk/NgelX-1.0.236-Build-461-PROFILE-VIDEO-DIAGNOSTICS.apk
+            app/build/app/outputs/flutter-apk/NgelX-1.0.236-Build-461-PROFILE-VIDEO-DIAGNOSTICS.apk.sha256
+            app/build/app/outputs/bundle/release/NgelX-1.0.223-Build-446-PLAY-PREPARATION.aab
+            build441-untranslated.tsv
+            build442-untranslated.tsv
+            build443-untranslated.tsv
+            firestore.rules
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Confirm no production deployment
+        run: echo 'Build458 TEST APK only; no paid services, no production Firebase rules or cloud functions deployed.'
+
