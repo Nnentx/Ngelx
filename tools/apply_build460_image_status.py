@@ -39,7 +39,14 @@ def patch(s):
                             style:TextStyle(fontSize:12,color:Color(0xFF7C3AED))),
                         ])))),
                   ):"""
-    fragment=one(fragment,target,replacement,"cover loader fallback")
+    # Recent Build456/457 may already replace this bare image with
+    # NgelXAgResmi. Preserve that component and bound its shared provider.
+    if fragment.count(target)==1:
+        fragment=one(fragment,target,replacement,"cover loader fallback")
+    elif "NgelXAgResmi(" in fragment:
+        print("Build460: existing cover image widget retained with bounded provider")
+    else:
+        raise ValueError("Build460: unexpected cover widget; refusing blind replacement")
     s=s[:start]+fragment+s[end:]
     return s
 
