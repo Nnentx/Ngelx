@@ -25,6 +25,7 @@ jobs:
         run: |
           python3 -m unittest discover -s tools -p 'test_build457_community_runtime_fixes.py'
           python3 -m unittest discover -s tools -p 'test_build457_avatar_http.py'
+          python3 -m unittest discover -s tools -p 'test_merge_build457_community_rules.py'
 
       - uses: subosito/flutter-action@v2
         with:
@@ -51,6 +52,8 @@ jobs:
           rules=Path('firestore.rules').read_text()
           community=Path('app/lib/community450.dart').read_text()
           counts=Path('app/lib/build455_widgets.dart').read_text()
+          assert "match /chats/{chatId} {" in rules
+          assert "match /users/{uid} {" in rules
           assert rules.count('match /communities450/{cid} {')==1
           assert rules.count('match /communityInvites450/{code} {')==1
           assert "v['founderId'] == _communityUid450" in community
