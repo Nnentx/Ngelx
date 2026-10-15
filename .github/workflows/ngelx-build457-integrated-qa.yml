@@ -63,6 +63,9 @@ jobs:
           print('All fixes are present together with one hardened rule namespace.')
           PY
 
+      - name: Run all Python regression unit tests on generated QA sources
+        run: python3 -m unittest discover -s tools -p 'test_*.py'
+
       - name: Analyze integrated Flutter code
         working-directory: app
         run: flutter analyze --no-fatal-warnings --no-fatal-infos
