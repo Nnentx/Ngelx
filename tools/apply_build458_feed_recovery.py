@@ -46,9 +46,17 @@ def patch(s):
   Future<void> _videoyuHazirla() async {""",
          "retry controller method")
 
-    once("await kontrol.initialize();",
-         "await kontrol.initialize().timeout(const Duration(seconds:12));",
-         "bounded video init")
+    if "await kontrol.initialize();" in frag:
+        once("await kontrol.initialize();",
+             "await kontrol.initialize().timeout(const Duration(seconds:12));",
+             "bounded video init")
+    elif "await kontrol.initialize().timeout(" in frag:
+        # Historical patches may already have added a finite wait: preserve
+        # its existing duration rather than patching the same statement twice.
+        pass
+    else:
+        snippet=frag[frag.find("kontrol.initialize")-60:frag.find("kontrol.initialize")+140]
+        raise ValueError("Build458: unknown video initialization structure: "+snippet)
 
     once("if(mounted)setState(()=>medyaHatasi=e.toString());",
          "if(mounted)setState(()=>medyaHatasi=e is TimeoutException ? 'Video yüklemesi zaman aşımına uğradı.' : 'Video oynatılamadı.');",
