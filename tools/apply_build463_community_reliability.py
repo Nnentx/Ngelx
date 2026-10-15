@@ -32,8 +32,8 @@ def community(src):
     }catch(e){if(mounted)_communityError450(context,e);}
   }"""
         src=one(src,old,new,'community cover gallery')
-    src=one(src,'Ngelx455Comments(post:ref,member:member,admin:admin)',
-               "Ngelx455Comments(post:ref,member:member,admin:admin,approved:value['status']=='approved')",
+    src=one(src,'Ngelx455Comments(post: ref, member: member, admin: admin)',
+               "Ngelx455Comments(post: ref, member: member, admin: admin, approved: value['status'] == 'approved')",
                'community comment status')
     return src
 
