@@ -42,6 +42,13 @@ try {
         postApproval: false,
       });
     }
+    // Older communities may retain founderId but omit founder from admins.
+    await setDoc(doc(db, 'communities450/legacyFounder'), {
+      name: 'Original community', founderId: 'founder',
+      admins: ['admin'], members: ['founder','admin','member'],
+      visibility: 'private', joinApproval: true, postApproval: true,
+      description: '', rules: '', coverUrl: '',
+    });
     await setDoc(doc(db, 'communities450/public/posts/post1'), {
       authorId: 'member', authorName: 'Member', authorPhoto: '',
       text: 'Hello', mediaType: '', mediaUrl: '', status: 'approved',
@@ -85,6 +92,21 @@ try {
   await assertFails(updateDoc(doc(admin, publicRoot), { admins: arrayUnion('guest') }));
   await assertFails(updateDoc(doc(founder, publicRoot), { founderId: 'guest' }));
   await assertFails(deleteDoc(doc(founder, publicRoot)));
+  // Verified founders can update legacy settings and cover without
+  // being in the admins list, while ordinary members still cannot.
+  await assertSucceeds(updateDoc(doc(founder, 'communities450/legacyFounder'), {
+    name: 'Updated original community', coverUrl: 'https://example.com/cover.jpg',
+    joinApproval: false,
+  }));
+  await assertFails(updateDoc(doc(member, 'communities450/legacyFounder'), {
+    name: 'Unauthorized edit',
+  }));
+  await assertFails(updateDoc(doc(admin, 'communities450/legacyFounder'), {
+    founderId: 'admin',
+  }));
+  await assertFails(updateDoc(doc(admin, 'communities450/legacyFounder'), {
+    members: ['admin','member'],
+  }));
   await assertFails(updateDoc(doc(admin, publicRoot), {
     members: ['admin', 'member'],
   }));
