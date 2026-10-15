@@ -56,6 +56,7 @@ def patch(s):
     old="    final sonraki=VideoPlayerController.networkUrl(Uri.parse(widget.adres));"
     new="""    final candidates=_ngelx460MedyaAdaylari;
     if(candidates.isEmpty){
+      eski.addListener(_kesimKontrol);
       if(mounted)setState(()=>medyaHatasi='Video bağlantısı bulunamadı.');
       return;
     }
