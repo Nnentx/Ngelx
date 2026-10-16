@@ -37,6 +37,8 @@ on:
     paths:
       - '.github/workflows/NgelX-BUILD465-INSTALL-QA.yml'
       - 'tools/*465*'
+      - 'tools/*467*'
+      - 'tools/*468*'
       - 'tools/apply_build457_community_runtime_fixes.py'
       - 'tools/test_build457_community_runtime_fixes.py'
       - 'tools/verify_community_invite_ui.py'
