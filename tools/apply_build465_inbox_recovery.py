@@ -6,6 +6,7 @@ No Firestore writes, rule changes, migration or production service calls.
 Fail closed if the generated inbox structure has changed.
 """
 from pathlib import Path
+import re
 
 MAIN = Path("app/lib/main.dart")
 STATE = "class _MesajPageState extends State<MesajPage> {"
@@ -95,12 +96,18 @@ def transform(source: str) -> str:
         raise RuntimeError("Expected existing UID-bound profile stream not found")
     region=replace_one(region,FIELD,WATCHDOG+FIELD,"state field")
     region=replace_one(region,OLD,NEW,"Build457 error/loading guard")
-    region=replace_one(region,DISPOSE,
-        "  @override void dispose(){\n"
-        "    for(final t in _ngelx465ProfileRetryTimers.values){t.cancel();}\n"
-        "    _ngelx465ProfileRetryTimers.clear();\n"
-        "    sohbetAra.dispose();super.dispose();\n"
-        "  }", "inbox dispose")
+    dispose=list(re.finditer(r"@override\\s+void\\s+dispose\\s*\\(\\s*\\)\\s*\\{",region))
+    if len(dispose)!=1:
+        raise RuntimeError(
+            "Build465 inbox recovery: expected one inbox dispose, found "
+            +str(len(dispose))+"; occurrences of dispose: "
+            +str(region.count("dispose("))
+        )
+    pos=dispose[0].end()
+    region=region[:pos]+"""
+    for(final t in _ngelx465ProfileRetryTimers.values){t.cancel();}
+    _ngelx465ProfileRetryTimers.clear();
+    """+region[pos:]
     return source[:begin]+region+source[end:]
 
 def main():
