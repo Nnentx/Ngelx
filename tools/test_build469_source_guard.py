@@ -14,7 +14,7 @@ class Build469Tests(unittest.TestCase):
         s=MAIN.read_text(encoding='utf-8')
         self.assertEqual(call_fix(s),s)
         self.assertIn('// Build469: every participant has one scoped actions menu',s)
-        self.assertEqual(s.count('child:_ngelx469ParticipantMenu(p,yerel:yerel)'),1)
+        self.assertEqual(s.count('child:_ngelx469ParticipantMenu(p,yerel:yerel)'),2)  # video and voice tiles
         self.assertIn('Positioned(right:-10,top:-14,child:_ngelx469ParticipantMenu(p,yerel:yerel))',s)
         self.assertIn('p.isSpeaking&&mic446',s)
         self.assertIn("p.isSpeaking&&(yerel?mikrofon",s)
