@@ -20,6 +20,14 @@ class PhotoReplyLayout(unittest.TestCase):
         self.assertIn("width:60,height:60",result)
         self.assertIn("ClipRRect(",result)
         self.assertEqual(result,transform(result))
+    def test_build453_existing_ratio_is_preserved(self):
+        old=self.source()
+        a=old.index(START);b=old.index(END,a)
+        newer=old[:a]+START+"final String url;@override Widget build(BuildContext context)=>Ngelx453Photo(url:url);}\n"+old[b:]
+        result=transform(newer)
+        self.assertIn("via Ngelx453Photo",result)
+        self.assertIn("width:60,height:60",result)
+        self.assertEqual(result,transform(result))
     def test_changed_image_markup_fails_closed(self):
         with self.assertRaises(RuntimeError):
             transform(self.source().replace("fit:BoxFit.cover","fit:BoxFit.fitWidth"))
