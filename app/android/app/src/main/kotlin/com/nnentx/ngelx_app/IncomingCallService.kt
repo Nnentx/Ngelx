@@ -29,7 +29,7 @@ class IncomingCallService : FirebaseMessagingService() {
         show(this, chat, room, d["title"] ?: "NgelX araması", d["video"] == "true")
     }
     companion object {
-        const val CHANNEL = "ngelx_incoming_calls448"
+        const val CHANNEL = "ngelx_incoming_calls465"
         private val timer = Handler(Looper.getMainLooper())
         private val alerts = java.util.concurrent.ConcurrentHashMap<String, Runnable>()
         fun cancel(context: Context, room: String) {
