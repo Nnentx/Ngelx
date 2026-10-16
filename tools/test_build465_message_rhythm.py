@@ -44,6 +44,7 @@ PRIVATE="""  Widget ozelMesajKarti(QueryDocumentSnapshot<Map<String,dynamic>> d,
                   borderRadius:BorderRadius.circular(12),
                   border:const Border(left:BorderSide(color:ngelxPrivateBlue,width:3)),
                 ),
+                child:Row(children:[Text('Reply')]),
               ),
       ]),
     );
