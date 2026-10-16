@@ -173,7 +173,17 @@ jobs:
           aapt="$(dirname "$signer")/aapt"
           "$aapt" dump badging "$apk" | tee apk-manifest.txt
           grep -q "package: name='com.nnentx.ngelx_app'" apk-manifest.txt
-          grep -q "versionCode='457'" apk-manifest.txt
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          manifest = Path('apk-manifest.txt').read_text()
+          match = re.search(r"versionCode='(\\d+)'", manifest)
+          assert match, 'APK versionCode missing'
+          code = int(match.group(1))
+          # Flutter's --split-per-abi can add an ABI prefix (1000 * ABI id).
+          assert code >= 457 and code % 1000 == 457, f'Unexpected Build457 versionCode: {code}'
+          print(f'Install-compatible Build457 versionCode: {code}')
+          PY
           grep -q "versionName='1.0.232'" apk-manifest.txt
           sha256sum "$apk"
 
