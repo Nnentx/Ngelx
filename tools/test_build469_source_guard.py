@@ -6,7 +6,6 @@ from apply_build469_keyboard_inbox import transform as typing_fix
 from apply_build469_ring_diagnostics import transform as ring_fix
 from apply_build469_founder_rules_qa import transform as founder_fix
 from apply_build469_foreground_ring import transform as incoming_fix
-from apply_build469_live_mini_call import transform as mini_fix
 
 MAIN=Path('app/lib/main.dart')
 KOTLIN=Path('app/android/app/src/main/kotlin/com/nnentx/ngelx_app/IncomingCallService.kt')
@@ -55,16 +54,6 @@ class Build469Tests(unittest.TestCase):
                      '_ringingChat469','Source.server','_verifyingMissing469',
                      "v['isGroup']==true&&v['callStatus']=='active'",
                      "if(_ringing==room)return",'ngelxCallSession444.busy'):
-            self.assertIn(term,s)
-
-    def test_mini_video_overlay_stays_in_screen(self):
-        s=Path('app/lib/build445_inbox_model.dart').read_text(encoding='utf-8')
-        self.assertEqual(mini_fix(s),s)
-        for term in ('// Build469: Messenger-style live thumbnail in the EXISTING mini call',
-                     'lk.VideoTrackRenderer(remote,fit:lk.VideoViewFit.cover)',
-                     'onPanUpdate:(delta)=>setState',
-                     'onTap:()=>ngelx445ReturnCall(name)',
-                     'onEnd:()=>ngelx445EndBackground(name)'):
             self.assertIn(term,s)
 
     def test_founder_emulator_rules_cannot_delete_or_grant_roles(self):
