@@ -107,12 +107,22 @@ jobs:
         run: |
           set -euo pipefail
           npx firebase emulators:exec --project demo-ngelx --only firestore --non-interactive "bash tools/run_legacy_community_rules_qa.sh"
-      # Create a disposable local Android debug keystore on the ephemeral CI runner.
-      # This is not a release credential and never touches Firebase.
-      - name: Provision ephemeral Android debug keystore
+      # Recover the exact existing Build456/Build457 install-compatible QA key.
+      # Never generate a new key: a new signer causes INSTALL_FAILED_UPDATE_INCOMPATIBLE.
+      # This only reads GitHub's encrypted runner cache; no production Firebase calls.
+      - name: Restore existing install-compatible signing key
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: ngelx-stable-debug-keystore-v1
+          fail-on-cache-miss: true
+
+      - name: Verify restored install-compatible signing certificate
+        shell: bash
         run: |
-          mkdir -p "$HOME/.android"
-          keytool -genkeypair -v -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 3650 -dname "CN=Android Debug,O=Android,C=US" -noprompt
+          set -euo pipefail
+          test -s "$HOME/.android/debug.keystore"
+          keytool -list -v -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey | grep -F 'SHA256: BE:20:B2:7F:0B:A1:F4:DE:CD:29:41:D4:10:B1:53:6D:E8:9E:48:DC:89:4F:04:F0:38:F9:D2:6B:11:EC:D6:AA'
       # Optimize for physical ARM64 Android phones. "release" here is only
       # Flutter's AOT compilation mode: the APK is QA/debug-key signed and is
       # never deployed or signed with production release credentials.
@@ -132,7 +142,7 @@ jobs:
           assert before.count(old) == 1, 'Expected Build457 native ABI configuration changed'
           gradle.write_text(before.replace(old, '// QA: Flutter ABI splits select only ARM64'))
           PY
-          flutter build apk --release --split-per-abi --target-platform android-arm64 --no-pub
+          flutter build apk --release --split-per-abi --target-platform android-arm64 --no-pub --build-name=1.0.232 --build-number=457 --dart-define=NGELX_VERSION_NAME=1.0.232 --dart-define=NGELX_BUILD_NUMBER=457 --dart-define=NGELX_CALL_PUSH_URL=https://ngelx-call-push.alihancaglar76.workers.dev
 
       - name: Verify ARM64 APK contents, size and Android signature
         shell: bash
@@ -158,13 +168,19 @@ jobs:
           PY
           signer="$(find "${ANDROID_HOME:-/usr/local/lib/android/sdk}/build-tools" -mindepth 2 -maxdepth 2 -type f -name apksigner | sort -V | tail -n 1)"
           test -x "$signer"
-          "$signer" verify --verbose --print-certs "$apk"
+          "$signer" verify --verbose --print-certs "$apk" | tee apk-signature.txt
+          grep -qi 'be20b27f0ba1f4decd2941d410b1536de89e48dc894f04f038f9d26b11ecd6aa' apk-signature.txt
+          aapt="$(dirname "$signer")/aapt"
+          "$aapt" dump badging "$apk" | tee apk-manifest.txt
+          grep -q "package: name='com.nnentx.ngelx_app'" apk-manifest.txt
+          grep -q "versionCode='457'" apk-manifest.txt
+          grep -q "versionName='1.0.232'" apk-manifest.txt
           sha256sum "$apk"
 
       - name: Attach optimized ARM64 QA test APK to this workflow run
         uses: actions/upload-artifact@v4
         with:
-          name: ngelx-build457-qa-arm64-test-apk
+          name: ngelx-build457-install-compatible-arm64-apk
           path: app/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
           if-no-files-found: error
           retention-days: 7
