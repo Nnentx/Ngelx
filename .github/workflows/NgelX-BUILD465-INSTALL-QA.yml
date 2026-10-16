@@ -14,6 +14,13 @@
 name: NgelX Build465 Install-Compatible QA (no deploy)
 
 on:
+  pull_request:
+    branches:
+      - work/build-464-photo-reliability
+    paths:
+      - '.github/workflows/NgelX-BUILD465-INSTALL-QA.yml'
+      - 'tools/*465*'
+      - 'tools/apply_build457_community_runtime_fixes.py'
   workflow_dispatch:
   push:
     branches:
