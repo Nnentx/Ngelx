@@ -33,6 +33,7 @@ class TamEkranMedyaPage{}
 PRIVATE="""  Widget ozelMesajKarti(QueryDocumentSnapshot<Map<String,dynamic>> d,){
     child:Container(
       margin:const EdgeInsets.symmetric(horizontal:4,vertical:5),
+          padding:sadeMedya?EdgeInsets.zero:const EdgeInsets.all(12),
       child:Column(children:[
               Container(
                 width:double.infinity,
@@ -61,6 +62,7 @@ class MessageRhythmTests(unittest.TestCase):
         self.assertNotIn("Kendine yanıt verdin",actual)
         self.assertIn("onDoubleTap:()=>grupKalpBirak(d)",actual)
         self.assertIn("width:math.min(264.0",actual)
+        self.assertIn("margin:const EdgeInsets.symmetric(horizontal:4,vertical:3)",actual)
         self.assertIn("Color(0xFFF3F5FA)",actual)
         self.assertEqual(actual,transform(actual))
     def test_fails_if_group_profile_layout_changed(self):
