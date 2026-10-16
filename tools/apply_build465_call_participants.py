@@ -112,15 +112,15 @@ def transform(src):
     begin=src.index(VIDEO)
     end=src.index(VOICE,begin)
     region=src[begin:end]
-    region=once(region,
-      "       child:Stack(fit:StackFit.expand,children:[",
-      "       child:Stack(fit:StackFit.expand,children:[",
-      "video stack")
-    region=once(region,
-      "         Positioned(\n           left:10,right:10,bottom:10,",
-      "         if(!yerel)Positioned(right:2,top:3,child:_ngelx465RemoteAudioMenu(p)),\n"
-      "         Positioned(\n           left:10,right:10,bottom:10,",
-      "video menu")
+    # Generated video-call markup may be restructured by later call patches.
+    # Keep the voice-call menu (the reported defect) and add to video only
+    # when the known participant caption anchor is present.
+    caption="         Positioned(\\n           left:10,right:10,bottom:10,"
+    if region.count(caption)==1:
+        region=region.replace(caption,
+          "         if(!yerel)Positioned(right:2,top:3,child:_ngelx465RemoteAudioMenu(p)),\\n"+caption,1)
+    else:
+        print("Build465 group call: video caption differs; no unsafe video-menu edit")
     src=src[:begin]+region+src[end:]
     return src
 
