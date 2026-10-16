@@ -110,7 +110,7 @@ def transform(src):
         "child:ListView.builder(\n                    controller:liste,","group",
     )
     src=patch_state(
-        src,"class _SohbetPageState","class NgelXGrupVideoMesaj",
+        src,"class _SohbetPageState","class NgelXSesliMesaj",
         "if(s.hasData)sonaGit();",
         "child:ListView.builder(\n            key:PageStorageKey<String>('private_chat_'+widget.chatId),",
         "private",
