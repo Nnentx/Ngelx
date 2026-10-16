@@ -1,0 +1,284 @@
+diff --git a/app/lib/build456_widgets.dart b/app/lib/build456_widgets.dart
+--- a/app/lib/build456_widgets.dart
++++ b/app/lib/build456_widgets.dart
+@@ -42,6 +42,17 @@ String ngelx456Role(Map<String, dynamic> v, String uid) => v['founderId'] == uid
+     : List<String>.from(v['moderators'] ?? const []).contains(uid)
+     ? 'Moderatör'
+     : 'Üye';
++int ngelx456RoleOrder(Map<String,dynamic> v,String uid) {
++  final r=ngelx456Role(v,uid);
++  return r=='Kurucu'?0:r=='Yönetici'?1:r=='Moderatör'?2:3;
++}
++bool ngelx456MatchesRole(Map<String,dynamic> v,String uid,String filter) {
++  final r=ngelx456Role(v,uid);
++  return filter=='Tümü'
++    ||(filter=='Kurucu/Yönetici'&&(r=='Kurucu'||r=='Yönetici'))
++    ||(filter=='Üyeler'&&r=='Üye')
++    ||filter==r;
++}
+ Widget ngelx456Pill(String label, {IconData? icon}) => Container(
+   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+   decoration: BoxDecoration(
+@@ -599,8 +610,9 @@ class _Ngelx456MembersState extends State<Ngelx456Members> {
+         if (v == null)
+           return const Center(child: Text('Üye bilgileri yüklenemedi.'));
+         final ids = List<String>.from(v['members'] ?? const [])
+-            .where((id) => role == 'Tümü' || ngelx456Role(v, id) == role)
+-            .toList();
++            .where((id) => ngelx456MatchesRole(v,id,role))
++            .toList()
++          ..sort((a,b)=>ngelx456RoleOrder(v,a).compareTo(ngelx456RoleOrder(v,b)));
+         return Column(
+           children: [
+             Padding(
+@@ -613,22 +625,31 @@ class _Ngelx456MembersState extends State<Ngelx456Members> {
+                 ),
+               ),
+             ),
+-            SingleChildScrollView(
+-              scrollDirection: Axis.horizontal,
+-              child: Row(
+-                children: ['Tümü', 'Kurucu', 'Yönetici', 'Moderatör', 'Üye']
+-                    .map(
+-                      (x) => Padding(
+-                        padding: const EdgeInsets.only(right: 6),
+-                        child: ChoiceChip(
+-                          label: Text(x),
+-                          selected: role == x,
+-                          onSelected: (_) => setState(() => role = x),
+-                        ),
++            Padding(
++              padding:const EdgeInsets.symmetric(horizontal:8,vertical:4),
++              child:Row(children:[
++                for(final x in const ['Tümü','Kurucu/Yönetici','Moderatör','Üyeler'])
++                  Expanded(child:Padding(
++                    padding:const EdgeInsets.symmetric(horizontal:2),
++                    child:Material(
++                      color:role==x?const Color(0xFFF0E8FF):const Color(0xFFF7F5FA),
++                      borderRadius:BorderRadius.circular(12),
++                      child:InkWell(
++                        borderRadius:BorderRadius.circular(12),
++                        onTap:()=>setState(()=>role=x),
++                        child:SizedBox(height:48,child:Center(child:Padding(
++                          padding:const EdgeInsets.symmetric(horizontal:2),
++                          child:FittedBox(fit:BoxFit.scaleDown,child:Text(
++                            x=='Kurucu/Yönetici'?'Kurucu /\nYönetici':x,
++                            textAlign:TextAlign.center,
++                            style:TextStyle(color:role==x?mor:ngelx456Ink,
++                              fontSize:12,fontWeight:FontWeight.w800),
++                          )),
++                        ))),
+                       ),
+-                    )
+-                    .toList(),
+-              ),
++                    ),
++                  )),
++              ]),
+             ),
+             Expanded(
+               child: ListView.builder(
+@@ -641,14 +662,22 @@ class _Ngelx456MembersState extends State<Ngelx456Members> {
+                       () => FirebaseFirestore.instance
+                           .collection('users')
+                           .doc(uid)
+-                          .get(),
++                          .get().timeout(const Duration(seconds:8)),
+                     ),
+                     builder: (c, u) {
+-                      final p = u.data?.data() ?? {},
+-                          name = ngelx455ProfileName(
+-                            p,
+-                            fallback: 'Üye bilgisi yükleniyor…',
+-                          );
++                      final p = u.data?.data() ?? <String,dynamic>{},
++                          name = ngelx455ProfileName(p,
++                            fallback:u.hasError?'Üye bilgisi alınamadı':'Üye bilgisi yükleniyor…');
++                      if(u.hasError&&!u.hasData)return ListTile(
++                        leading:const Icon(Icons.error_outline,color:mor),
++                        title:const Text('Üye bilgisi alınamadı',
++                          style:TextStyle(color:ngelx456Ink,fontWeight:FontWeight.w700)),
++                        trailing:IconButton(
++                          tooltip:'Üyeyi yeniden yükle',
++                          icon:const Icon(Icons.refresh_rounded,color:mor),
++                          onPressed:()=>setState(()=>profiles.remove(uid)),
++                        ),
++                      );
+                       if (search.isNotEmpty &&
+                           !name.toLowerCase().contains(search))
+                         return const SizedBox.shrink();
+@@ -693,6 +722,8 @@ class _Ngelx456MembersState extends State<Ngelx456Members> {
+     final isFounder = v['founderId'] == _communityUid450,
+         isAdmin = List<String>.from(v['admins'] ?? const []).contains(uid);
+     final options = <String, String>{
++      'profile':'Profili gör',
++      'message':'Mesaj gönder',
+       if (isFounder) 'admin': isAdmin ? 'Yöneticiliği kaldır' : 'Yönetici yap',
+       if (!isAdmin)
+         'moderator':
+@@ -707,34 +738,57 @@ class _Ngelx456MembersState extends State<Ngelx456Members> {
+       if (!isAdmin || isFounder) 'ban': 'Topluluktan engelle',
+     };
+     final action = await showModalBottomSheet<String>(
+-      context: context,
+-      backgroundColor: Colors.white,
+-      showDragHandle: true,
+-      builder: (c) => SafeArea(
+-        child: Column(
+-          mainAxisSize: MainAxisSize.min,
+-          children: [
+-            ListTile(
+-              title: Text(
+-                name,
+-                style: const TextStyle(fontWeight: FontWeight.w800),
+-              ),
+-            ),
+-            ...options.entries.map(
+-              (e) => ListTile(
+-                title: Text(e.value),
+-                trailing: const Icon(Icons.chevron_right),
+-                onTap: () => Navigator.pop(c, e.key),
++      context:context,
++      backgroundColor:Colors.white,
++      showDragHandle:true,
++      isScrollControlled:true,
++      shape:const RoundedRectangleBorder(
++        borderRadius:BorderRadius.vertical(top:Radius.circular(22))),
++      builder:(sheet)=>Theme(
++        data:ThemeData.light().copyWith(colorScheme:ColorScheme.fromSeed(seedColor:mor)),
++        child:SafeArea(child:ConstrainedBox(
++          constraints:BoxConstraints(maxHeight:MediaQuery.sizeOf(sheet).height*.8),
++          child:ListView(
++            shrinkWrap:true,
++            padding:const EdgeInsets.fromLTRB(16,6,16,18),
++            children:[
++              ListTile(
++                title:const Text('Üye işlemleri',style:TextStyle(
++                  color:ngelx456Ink,fontSize:19,fontWeight:FontWeight.w900)),
++                subtitle:Text(name,maxLines:1,overflow:TextOverflow.ellipsis,
++                  style:const TextStyle(color:Colors.black54,fontSize:14)),
+               ),
+-            ),
+-          ],
+-        ),
++              const Divider(),
++              ...options.entries.map((e)=>ListTile(
++                leading:Icon(
++                  e.key=='profile'?Icons.person_outline_rounded:
++                  e.key=='message'?Icons.message_outlined:
++                  e.key=='admin'?Icons.admin_panel_settings_outlined:
++                  e.key=='moderator'?Icons.shield_outlined:
++                  e.key=='mute'?Icons.volume_off_outlined:
++                  e.key=='ban'?Icons.block_outlined:Icons.person_remove_outlined,
++                  color:e.key=='ban'||e.key=='remove'?Colors.redAccent:mor),
++                title:Text(e.value,style:TextStyle(
++                  color:e.key=='ban'||e.key=='remove'?Colors.red.shade700:ngelx456Ink,
++                  fontSize:15,fontWeight:FontWeight.w700)),
++                trailing:const Icon(Icons.chevron_right,color:Colors.black38),
++                onTap:()=>Navigator.pop(sheet,e.key),
++              )),
++            ],
++          ),
++        )),
+       ),
+     );
+-    if (action == null ||
+-        !mounted ||
+-        !await ngelx456Confirm(context, options[action]!, name))
++    if(action==null||!mounted)return;
++    if(action=='profile'){
++      await Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciProfilPage(uid:uid)));
++      return;
++    }
++    if(action=='message'){
++      await ngelx445OpenPrivateChat(context,uid:uid,ad:name,foto:'');
+       return;
++    }
++    if(!await ngelx456Confirm(context,options[action]!,name))return;
+     try {
+       final root = _communities450.doc(widget.id);
+       await FirebaseFirestore.instance.runTransaction((tx) async {
+@@ -798,7 +852,10 @@ Future<void> ngelx456Invite(
+       isScrollControlled: true,
+       backgroundColor: Colors.white,
+       showDragHandle: true,
+-      builder: (c) => const Ngelx456ChatPicker(),
++      builder:(c)=>Theme(
++        data:ThemeData.light().copyWith(colorScheme:ColorScheme.fromSeed(seedColor:mor)),
++        child:const Ngelx456ChatPicker(),
++      ),
+     );
+     if (targets == null || targets.isEmpty) return;
+     final ref = FirebaseFirestore.instance
+@@ -860,17 +917,23 @@ class _Ngelx456ChatPickerState extends State<Ngelx456ChatPicker> {
+         children: [
+           const ListTile(
+             title: Text(
+-              'NgelX özel sohbetlerine davet et',
+-              style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
++              'Topluluğa davet et',
++              style: TextStyle(color:ngelx456Ink,fontWeight:FontWeight.w900,fontSize:20),
+             ),
+           ),
+           Padding(
+             padding: const EdgeInsets.symmetric(horizontal: 16),
+             child: TextField(
+               onChanged: (x) => setState(() => search = x.toLowerCase()),
+-              decoration: const InputDecoration(
+-                hintText: 'Sohbetlerde ara',
+-                prefixIcon: Icon(Icons.search),
++              style:const TextStyle(color:ngelx456Ink,fontSize:15),
++              decoration:InputDecoration(
++                hintText:'Kişi veya sohbet ara',
++                hintStyle:const TextStyle(color:Colors.black54,fontSize:14),
++                prefixIcon:const Icon(Icons.search,color:mor),
++                filled:true,fillColor:ngelx456Soft,
++                border:OutlineInputBorder(
++                  borderRadius:BorderRadius.circular(14),
++                  borderSide:BorderSide.none),
+               ),
+             ),
+           ),
+@@ -934,7 +997,7 @@ class _Ngelx456ChatPickerState extends State<Ngelx456ChatPicker> {
+                         () => FirebaseFirestore.instance
+                             .collection('users')
+                             .doc(uid)
+-                            .get(),
++                            .get().timeout(const Duration(seconds:8)),
+                       ),
+                       builder: (c, u) {
+                         if (u.hasError)
+@@ -949,12 +1012,15 @@ class _Ngelx456ChatPickerState extends State<Ngelx456ChatPicker> {
+                               }),
+                             ),
+                           );
+-                        final p = u.data?.data() ?? {},
+-                            name = ngelx455ProfileName(p);
++                        final p = u.data?.data() ?? <String,dynamic>{},
++                            name=ngelx455ProfileName(p,
++                              fallback:u.connectionState==ConnectionState.waiting
++                                ?'Kişi bilgisi yükleniyor…':'NgelX kullanıcısı');
+                         if (search.isNotEmpty &&
+                             !name.toLowerCase().contains(search))
+                           return const SizedBox.shrink();
+                         return CheckboxListTile(
++                          activeColor:mor,checkColor:Colors.white,
+                           value: selected.contains(uid),
+                           onChanged: u.hasData
+                               ? (_) => setState(
+@@ -968,11 +1034,10 @@ class _Ngelx456ChatPickerState extends State<Ngelx456ChatPicker> {
+                             size: 40,
+                             circle: true,
+                           ),
+-                          title: Text(name),
+-                          subtitle: const Text(
+-                            'Özel sohbet',
+-                            style: TextStyle(fontSize: 12),
+-                          ),
++                          title:Text(name,style:const TextStyle(
++                            color:ngelx456Ink,fontSize:15,fontWeight:FontWeight.w800)),
++                          subtitle:const Text('Özel sohbet',
++                            style:TextStyle(color:Colors.black54,fontSize:12)),
+                         );
+                       },
+                     );
