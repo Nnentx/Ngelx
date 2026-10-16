@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - qa/ngelx-build465-feedback-fixes-20261016
+      - qa/ngelx-build465-messenger-ui-next-20261016
     paths:
       - 'tools/*465*'
       - 'app/lib/build448_incoming_calls.dart'
@@ -20,6 +21,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Compile device follow-up Python patches
-        run: python3 -m py_compile tools/apply_build465_inbox_recovery.py tools/apply_build465_safe_media.py tools/apply_build465_reaction_alignment.py tools/apply_build465_ringtone_channel.py tools/apply_build465_chat_initial_scroll.py tools/apply_build465_private_composer.py
+        run: python3 -m py_compile tools/apply_build465_inbox_recovery.py tools/apply_build465_safe_media.py tools/apply_build465_reaction_alignment.py tools/apply_build465_ringtone_channel.py tools/apply_build465_chat_initial_scroll.py tools/apply_build465_private_composer.py tools/apply_build465_message_rhythm.py
       - name: Run synthetic layout and notification regression tests
         run: python3 -m unittest discover -s tools -p 'test_build465_*.py' -v
