@@ -145,7 +145,8 @@ jobs:
           # Flutter normally prefixes split-APK version codes with ABI offsets.
           # Preserve EXACT versionCode=457 so future NgelX builds can update
           # this install normally (e.g. Build458) without forced uninstalls.
-          printf '\\nforce-version-code-ignoring-abi=true\\n' >> android/gradle.properties
+          echo >> android/gradle.properties
+          echo 'force-version-code-ignoring-abi=true' >> android/gradle.properties
           flutter build apk --release --split-per-abi --target-platform android-arm64 --no-pub --build-name=1.0.232 --build-number=457 --dart-define=NGELX_VERSION_NAME=1.0.232 --dart-define=NGELX_BUILD_NUMBER=457 --dart-define=NGELX_CALL_PUSH_URL=https://ngelx-call-push.alihancaglar76.workers.dev
 
       - name: Verify ARM64 APK contents, size and Android signature
