@@ -774,6 +774,7 @@ jobs:
           path: |
             app/lib/main.dart
             app/lib/build448_incoming_calls.dart
+            app/lib/build445_inbox_model.dart
             app/lib/build456_widgets.dart
             app/lib/build455_widgets.dart
             app/android/app/src/main/kotlin/com/nnentx/ngelx_app/IncomingCallService.kt
@@ -811,7 +812,6 @@ jobs:
           python3 tools/apply_build469_group_call_grid.py
           python3 tools/apply_build469_keyboard_inbox.py
           python3 tools/apply_build469_foreground_ring.py
-          python3 tools/apply_build469_live_mini_call.py
           python3 tools/apply_build469_ring_diagnostics.py
           python3 tools/apply_build469_founder_rules_qa.py
           python3 -m unittest discover -s tools -p 'test_build469_*.py' -v
