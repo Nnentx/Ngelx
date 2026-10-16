@@ -723,11 +723,13 @@ jobs:
           python3 -m unittest discover -s tools -p 'test_build465_call_ringtone.py'
           python3 -m unittest discover -s tools -p 'test_build465_chat_initial_scroll.py'
           python3 -m unittest discover -s tools -p 'test_build465_private_composer.py'
+          python3 -m unittest discover -s tools -p 'test_build465_call_participants.py'
           python3 tools/apply_build465_inbox_recovery.py
           python3 tools/apply_build465_safe_media.py
           python3 tools/apply_build465_reaction_alignment.py
           python3 tools/apply_build465_chat_initial_scroll.py
           python3 tools/apply_build465_private_composer.py
+          python3 tools/apply_build465_call_participants.py
           python3 tools/apply_build465_ringtone_channel.py
           python3 tools/apply_build465_ringtone_channel.py
           python3 tools/apply_build465_inbox_recovery.py
@@ -738,6 +740,7 @@ jobs:
           grep -Fq 'Build465: badge is anchored to media bounds' app/lib/main.dart
           grep -Fq 'Build465: do not restore stale message-list offsets' app/lib/main.dart
           grep -Fq 'Build465: one-tap camera and gallery' app/lib/main.dart
+          grep -Fq 'Build465: only this listener can mute' app/lib/main.dart
           grep -Fq 'ngelx_incoming_calls465' app/android/app/src/main/kotlin/com/nnentx/ngelx_app/IncomingCallService.kt
 
       - name: Flutter analiz
