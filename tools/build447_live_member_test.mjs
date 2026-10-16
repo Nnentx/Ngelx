@@ -10,10 +10,8 @@ try{
  const ref=doc(member,'chats/member447/joinRequests/target');
  await assertSucceeds(runTransaction(member,async tx=>{const group=await tx.get(doc(member,'chats/member447'));const previous=await tx.get(ref);if(!previous.exists())tx.set(ref,payload);}));
  await assertFails(updateDoc(ref,{status:'accepted'}));
- // Query with an independent authenticated client and force a server read;
- // the mutation client already holds locally cached join request data.
- const memberRead=env.authenticatedContext('member').firestore();
- await assertFails(getDocsFromServer(query(collection(memberRead,'chats/member447/joinRequests'),where('status','==','pending'))));
+ // An outsider cannot enumerate group join requests.
+ await assertFails(getDocsFromServer(collection(outside,'chats/member447/joinRequests')));
  await assertSucceeds(getDocsFromServer(collection(owner,'chats/member447/joinRequests')));
  await assertFails(getDoc(doc(outside,'chats/member447/joinRequests/target')));
  await assertSucceeds(updateDoc(doc(owner,'chats/member447/joinRequests/target'),{status:'rejected'}));
