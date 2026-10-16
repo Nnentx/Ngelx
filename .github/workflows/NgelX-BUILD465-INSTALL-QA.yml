@@ -11,7 +11,7 @@
 # Translation boundary: presentation labels only, preserve user names
 # Correct guarded call-history rendering
 # Device QA revision: member exit and extended screen translations
-name: NgelX Build466 Install-Compatible QA (no deploy)
+name: NgelX Build467 Consolidated Device Fixes QA (no deploy)
 
 on:
   pull_request:
@@ -21,6 +21,7 @@ on:
     paths:
       - '.github/workflows/NgelX-BUILD465-INSTALL-QA.yml'
       - 'tools/*465*'
+      - 'tools/*467*'
       - 'tools/apply_build457_community_runtime_fixes.py'
   workflow_dispatch:
   push:
@@ -30,6 +31,7 @@ on:
       - qa/ngelx-build465-messenger-ui-next-20261016
       - qa/ngelx-build465-call-ui-finish-20261016
       - qa/ngelx-build466-install-20261016
+      - qa/ngelx-build467-consolidated-20261016
     paths:
       - '.github/workflows/NgelX-BUILD465-INSTALL-QA.yml'
       - 'tools/*465*'
@@ -759,6 +761,31 @@ jobs:
           grep -Fq 'Build465 Messenger: clear ringing label and explicit safe minimize action' app/lib/main.dart
           grep -Fq 'ngelx_incoming_calls465' app/android/app/src/main/kotlin/com/nnentx/ngelx_app/IncomingCallService.kt
 
+      - name: Capture generated UI and Android call sources for Build467 QA
+        uses: actions/upload-artifact@v4
+        with:
+          name: NgelX-Build467-Generated-Sources-QA
+          path: |
+            app/lib/main.dart
+            app/lib/build448_incoming_calls.dart
+            app/lib/build456_widgets.dart
+            app/lib/build455_widgets.dart
+            app/android/app/src/main/kotlin/com/nnentx/ngelx_app/IncomingCallService.kt
+            app/android/app/src/main/AndroidManifest.xml
+          if-no-files-found: error
+          retention-days: 2
+
+      - name: Build467 layout, media, scroll and audible-ring QA patches
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/apply_build467_chat_ui.py tools/apply_build467_ringtone.py
+          python3 tools/apply_build467_chat_ui.py
+          python3 tools/apply_build467_ringtone.py
+          python3 -m unittest discover -s tools -p 'test_build467_*.py' -v
+          grep -Fq 'Build467: common bounded photo' app/lib/main.dart
+          grep -Fq 'ngelx_incoming_calls467' app/android/app/src/main/kotlin/com/nnentx/ngelx_app/IncomingCallService.kt
+
       - name: Flutter analiz
         shell: bash
         run: |
@@ -832,7 +859,7 @@ jobs:
         working-directory: app
         run: |
           set -euo pipefail
-          flutter build apk --release --build-name=1.0.241 --build-number=466 --dart-define=NGELX_VERSION_NAME=1.0.241 --dart-define=NGELX_BUILD_NUMBER=466 --dart-define=NGELX_CALL_PUSH_URL=https://ngelx-call-push.alihancaglar76.workers.dev
+          flutter build apk --release --build-name=1.0.242 --build-number=467 --dart-define=NGELX_VERSION_NAME=1.0.242 --dart-define=NGELX_BUILD_NUMBER=467 --dart-define=NGELX_CALL_PUSH_URL=https://ngelx-call-push.alihancaglar76.workers.dev
           test -s build/app/outputs/flutter-apk/app-release.apk
           APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
           test -n "$APKSIGNER"
@@ -840,20 +867,20 @@ jobs:
           grep -qi "be20b27f0ba1f4decd2941d410b1536de89e48dc894f04f038f9d26b11ecd6aa" apk-signature.txt
           AAPT="$(dirname "$APKSIGNER")/aapt"
           "$AAPT" dump badging build/app/outputs/flutter-apk/app-release.apk | tee apk-manifest.txt
-          grep -q "versionCode='466'" apk-manifest.txt
-          grep -q "versionName='1.0.241'" apk-manifest.txt
-          cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/NgelX-1.0.241-Build-466-INSTALL-QA.apk
-          sha256sum build/app/outputs/flutter-apk/NgelX-1.0.241-Build-466-INSTALL-QA.apk > build/app/outputs/flutter-apk/NgelX-1.0.241-Build-466-INSTALL-QA.apk.sha256
+          grep -q "versionCode='467'" apk-manifest.txt
+          grep -q "versionName='1.0.242'" apk-manifest.txt
+          cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/NgelX-1.0.242-Build-467-INSTALL-QA.apk
+          sha256sum build/app/outputs/flutter-apk/NgelX-1.0.242-Build-467-INSTALL-QA.apk > build/app/outputs/flutter-apk/NgelX-1.0.242-Build-467-INSTALL-QA.apk.sha256
 
       # Publish the signed, locally tested APK before any optional cloud deployment.
       # The owner can test the app even when Google Cloud API activation is not permitted.
       - name: Upload signed candidate and tested rules for review
         uses: actions/upload-artifact@v4
         with:
-          name: NgelX-1.0.241-Build-466-INSTALL-QA
+          name: NgelX-1.0.242-Build-467-INSTALL-QA
           path: |
-            app/build/app/outputs/flutter-apk/NgelX-1.0.241-Build-466-INSTALL-QA.apk
-            app/build/app/outputs/flutter-apk/NgelX-1.0.241-Build-466-INSTALL-QA.apk.sha256
+            app/build/app/outputs/flutter-apk/NgelX-1.0.242-Build-467-INSTALL-QA.apk
+            app/build/app/outputs/flutter-apk/NgelX-1.0.242-Build-467-INSTALL-QA.apk.sha256
             app/build/app/outputs/bundle/release/NgelX-1.0.223-Build-446-PLAY-PREPARATION.aab
             build441-untranslated.tsv
             build442-untranslated.tsv
@@ -863,5 +890,5 @@ jobs:
           retention-days: 14
 
       - name: Confirm no production deployment
-        run: echo 'Build466 TEST APK only; no paid services, no production Firebase rules or cloud functions deployed.'
+        run: echo 'Build467 TEST APK only; no paid services, no production Firebase rules or cloud functions deployed.'
 
