@@ -46,6 +46,7 @@ on:
       - 'app/lib/build456_widgets.dart'
       - 'server/community456/**'
       - 'app/lib/build455_widgets.dart'
+      - 'app/lib/build454_widgets.dart'
       - 'app/android/app/src/main/AndroidManifest.xml'
       - 'app/android/app/src/main/kotlin/com/nnentx/ngelx_app/IncomingCallService.kt'
 
@@ -727,6 +728,8 @@ jobs:
           python3 tools/apply_build465_reaction_alignment.py
           python3 tools/apply_build465_chat_initial_scroll.py
           python3 tools/apply_build465_private_composer.py
+          python3 tools/apply_build465_ringtone_channel.py
+          python3 tools/apply_build465_ringtone_channel.py
           python3 tools/apply_build465_inbox_recovery.py
           python3 tools/apply_build465_safe_media.py
           grep -Fq "Build466 inbox retry watchdog" app/lib/main.dart
@@ -735,6 +738,7 @@ jobs:
           grep -Fq 'Build465: badge is anchored to media bounds' app/lib/main.dart
           grep -Fq 'Build465: do not restore stale message-list offsets' app/lib/main.dart
           grep -Fq 'Build465: one-tap camera and gallery' app/lib/main.dart
+          grep -Fq 'ngelx_incoming_calls465' app/android/app/src/main/kotlin/com/nnentx/ngelx_app/IncomingCallService.kt
 
       - name: Flutter analiz
         shell: bash
