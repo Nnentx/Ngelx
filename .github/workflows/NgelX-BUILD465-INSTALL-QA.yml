@@ -810,6 +810,8 @@ jobs:
           python3 -m py_compile tools/apply_build469_*.py tools/test_build469_source_guard.py
           python3 tools/apply_build469_group_call_grid.py
           python3 tools/apply_build469_keyboard_inbox.py
+          python3 tools/apply_build469_foreground_ring.py
+          python3 tools/apply_build469_live_mini_call.py
           python3 tools/apply_build469_ring_diagnostics.py
           python3 tools/apply_build469_founder_rules_qa.py
           python3 -m unittest discover -s tools -p 'test_build469_*.py' -v
