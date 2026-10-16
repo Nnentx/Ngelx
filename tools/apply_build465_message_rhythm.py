@@ -64,9 +64,9 @@ def transform(src):
     end=src.index(PRIVATE_END,start)
     dm=src[start:end]
     dm=replace_one(dm,
-        "margin:const EdgeInsets.symmetric(horizontal:4,vertical:5),",
-        "margin:const EdgeInsets.symmetric(horizontal:4,vertical:3),",
-        "private message gap")
+        "margin:const EdgeInsets.symmetric(horizontal:4,vertical:5),\n          padding:sadeMedya?EdgeInsets.zero:",
+        "margin:const EdgeInsets.symmetric(horizontal:4,vertical:3),\n          padding:sadeMedya?EdgeInsets.zero:",
+        "private message gap, excluding deleted-message notices")
     dm=replace_one(dm,
         "width:double.infinity,\n                margin:const EdgeInsets.only(bottom:8),",
         "width:math.min(264.0,MediaQuery.sizeOf(context).width*.68),\n"
