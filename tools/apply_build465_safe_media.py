@@ -57,7 +57,16 @@ def transform(source):
     end=source.index("class GrupMedyaPage",start)
     region=once(source[start:end],OLD_VIDEO,NEW_VIDEO,"video viewer")
     source=source[:start]+region+source[end:]
-    source=once(source,OLD_HEIGHT,NEW_HEIGHT,"video dimensions")
+    # Older source stages differ in their inline video-height expression.
+    # SafeArea + the new full-screen LayoutBuilder constrain the player even
+    # when Build456 has already changed the height expression.
+    occurrences=source.count(OLD_HEIGHT)
+    if occurrences==1:
+        source=source.replace(OLD_HEIGHT,NEW_HEIGHT,1)
+    elif occurrences==0:
+        print("Build465 safe media: generated video height differs, keeping it; safe viewport remains enforced")
+    else:
+        raise RuntimeError("Build465 safe media: ambiguous video height")
     start=source.index("class _NgelXMedyaGaleriPageState")
     end=source.index("class SabitlenenGrupMesajlariPage",start)
     region=source[start:end]
