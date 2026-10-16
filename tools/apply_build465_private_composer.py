@@ -60,8 +60,24 @@ def transform(source):
     a=source.index(START);b=source.index(END,a)
     target=source[a:b]
     target=exactly_once(target,ADD_BUTTON,DIRECT_BUTTONS,"group-like attachments")
+    # Later Build455/457 stages reformat the input decoration, so locate
+    # it from the unique composer controller rather than an exact hint label.
+    textfield="controller:mesaj,"
+    if target.count(textfield)!=1:
+        raise RuntimeError("Build465 private composer: expected one composer TextField")
+    origin=target.index(textfield)
+    decoration="decoration:InputDecoration("
+    pos=target.find(decoration,origin)
+    if pos<0 or pos-origin>1200:
+        raise RuntimeError("Build465 private composer: message input decoration changed")
     target=exactly_once(target,EMOJI_EXTERNAL,"","move emoji into input")
-    target=exactly_once(target,EMOJI_SUFFIX,EMOJI_SUFFIX_NEW,"input suffix")
+    suffix="""decoration:InputDecoration(
+                            suffixIcon:IconButton(
+                              tooltip:'Emoji seç',
+                              onPressed:emojiSec,
+                              icon:const Icon(Icons.emoji_emotions_rounded,color:ngelxPrivateBlue,size:22),
+                            ),"""
+    target=target[:pos]+suffix+target[pos+len(decoration):]
     target=exactly_once(target,DOUBLE_INSET,SINGLE_INSET,"remove doubled nav inset")
     return source[:a]+target+source[b:]
 
