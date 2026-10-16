@@ -130,15 +130,15 @@ jobs:
           before = gradle.read_text()
           old = 'abiFilters += listOf("armeabi-v7a", "arm64-v8a")'
           assert before.count(old) == 1, 'Expected Build457 native ABI configuration changed'
-          gradle.write_text(before.replace(old, 'abiFilters += listOf("arm64-v8a")'))
+          gradle.write_text(before.replace(old, '// QA: Flutter ABI splits select only ARM64'))
           PY
-          flutter build apk --release --target-platform android-arm64 --no-pub
+          flutter build apk --release --split-per-abi --target-platform android-arm64 --no-pub
 
       - name: Verify ARM64 APK contents, size and Android signature
         shell: bash
         run: |
           set -euo pipefail
-          apk=app/build/app/outputs/flutter-apk/app-release.apk
+          apk=app/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
           test -s "$apk"
           unzip -tqq "$apk"
           python3 - "$apk" <<'PY'
@@ -165,6 +165,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ngelx-build457-qa-arm64-test-apk
-          path: app/build/app/outputs/flutter-apk/app-release.apk
+          path: app/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
           if-no-files-found: error
           retention-days: 7
