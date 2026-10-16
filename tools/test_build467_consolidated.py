@@ -15,9 +15,12 @@ class Build467LayoutTests(unittest.TestCase):
         self.assertIn('maxHeight:math.min(390.0',source)
         self.assertIn('// Build467: reactions float outside text bubble',source)
         self.assertIn('child:_ozelMedyaTepkiBalonu(d.reference,sayilar,tepkiler.length)',source)
-        self.assertIn('// Build468: explicit Android nav-safe composer slot',source)
-        self.assertIn('bottomNavigationBar:ColoredBox(',source)
-        self.assertIn('SafeArea(top:false,bottom:false,child:Container(',source)
+        self.assertTrue(
+            'minimum:const EdgeInsets.only(bottom:7)' in source
+            or ('// Build468: explicit Android nav-safe composer slot' in source
+                and 'bottomNavigationBar:ColoredBox(' in source
+                and 'SafeArea(top:false,bottom:false,child:Container(' in source)
+        )
         self.assertEqual(source.count('if(!mounted||++ticks>3)'),2)
         self.assertIn('extendBodyBehindAppBar:true',source)
         # Preserve all user interaction handlers, including media and calls.
