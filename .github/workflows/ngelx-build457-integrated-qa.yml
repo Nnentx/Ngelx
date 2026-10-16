@@ -215,8 +215,11 @@ jobs:
           with ZipFile(apk) as z:
               paths = set(z.namelist())
               abis = {name.split('/')[1] for name in paths if name.startswith('lib/') and name.endswith('.so')}
-              assert abis == {'armeabi-v7a', 'arm64-v8a'}, f'Unexpected architectures: {abis}'
-              for abi in abis:
+              # Recent Flutter tooling may also bundle x86_64 runtime libraries;
+              # the universal phone APK must include complete ARM32 and ARM64 app binaries.
+              required = {'armeabi-v7a', 'arm64-v8a'}
+              assert required.issubset(abis), f'Missing phone architectures: {required - abis}'
+              for abi in required:
                   assert f'lib/{abi}/libflutter.so' in paths, f'Missing Flutter engine: {abi}'
                   assert f'lib/{abi}/libapp.so' in paths, f'Missing compiled app: {abi}'
               assert 'assets/flutter_assets/kernel_blob.bin' not in paths
