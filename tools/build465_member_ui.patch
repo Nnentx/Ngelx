@@ -198,18 +198,6 @@ diff --git a/app/lib/build456_widgets.dart b/app/lib/build456_widgets.dart
      try {
        final root = _communities450.doc(widget.id);
        await FirebaseFirestore.instance.runTransaction((tx) async {
-@@ -798,7 +852,10 @@ Future<void> ngelx456Invite(
-       isScrollControlled: true,
-       backgroundColor: Colors.white,
-       showDragHandle: true,
--      builder: (c) => const Ngelx456ChatPicker(),
-+      builder:(c)=>Theme(
-+        data:ThemeData.light().copyWith(colorScheme:ColorScheme.fromSeed(seedColor:mor)),
-+        child:const Ngelx456ChatPicker(),
-+      ),
-     );
-     if (targets == null || targets.isEmpty) return;
-     final ref = FirebaseFirestore.instance
 @@ -860,17 +917,23 @@ class _Ngelx456ChatPickerState extends State<Ngelx456ChatPicker> {
          children: [
            const ListTile(
