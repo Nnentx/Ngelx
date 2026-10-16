@@ -54,18 +54,6 @@ class Ngelx448IncomingCalls {
       final v=d.data()??<String,dynamic>{},t=v['callCreatedAt'];
       if(v['callRoomName']!=room||v['callStatus']!='ringing'||!List<String>.from(v['members']??const[]).contains(me)||t is! Timestamp||DateTime.now().difference(t.toDate()).inSeconds>60)return;
       if(action=='reject'){await ref.set({'callStatus':'rejected','callEndedBy':me,'callEndedAt':FieldValue.serverTimestamp()},SetOptions(merge:true));return;}
-      // Build465 device QA: tapping the notification title opens the chat.
-      // Never interpret the title tap as consent to answer a voice/video call.
-      if(action=='open'){
-        final navigationContext=ngelxNavigatorKey.currentContext;
-        if(navigationContext!=null&&navigationContext.mounted){
-          await ngelx445OpenCallChat(navigationContext,{
-            'sourceId':chat,
-            'targetTitle':(v['callTitle']??v['groupName']??'').toString(),
-          });
-        }
-        return;
-      }
       if(action!='answer')return;
       final context=ngelxNavigatorKey.currentContext;if(context==null||!ngelx444ReserveCall(context,room))return;
       try{
