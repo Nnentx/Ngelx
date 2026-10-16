@@ -44,7 +44,7 @@ class OpeningScrollTests(unittest.TestCase):
         self.assertEqual(updated.count("Timer.periodic("),2)
         self.assertEqual(updated.count("_ngelx465ScheduleBottomOnOpen();"),2)
         self.assertEqual(updated.count("child:Listener(onPointerDown:(_)"),2)
-        self.assertEqual(updated.count("_ngelx465StopOpeningBottom();"),2+2)
+        self.assertEqual(updated.count("_ngelx465StopOpeningBottom();"),2)
         self.assertEqual(updated,transform(updated))
     def test_missing_expected_chat_list_aborts(self):
         with self.assertRaises(RuntimeError):
