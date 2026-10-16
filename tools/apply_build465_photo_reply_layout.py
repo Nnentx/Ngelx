@@ -79,7 +79,7 @@ def transform(s):
     elif "Ngelx453Photo(url:url)" in photo:
         # Build453+ already uses an intrinsically sized 320px photo with
         # BoxFit.contain. Do not regress it to a fixed crop or duplicate it.
-        s=s[:a]+"// Build465: retain the image's natural width/height ratio via Ngelx453Photo.\\n"+s[a:]
+        s=s[:a]+"// Build465: retain the image's natural width/height ratio via Ngelx453Photo."+chr(10)+s[a:]
     else:
         raise RuntimeError("Build465 photo reply: unknown generated photo implementation")
     s=section(s,REPLY_START,REPLY_END,lambda r:once(r,OLD_REPLY,NEW_REPLY,"reply thumbnail"))
