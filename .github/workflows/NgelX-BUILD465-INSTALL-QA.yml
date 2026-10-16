@@ -17,6 +17,7 @@ on:
   pull_request:
     branches:
       - work/build-464-photo-reliability
+      - qa/ngelx-build465-install-20261016
     paths:
       - '.github/workflows/NgelX-BUILD465-INSTALL-QA.yml'
       - 'tools/*465*'
@@ -25,6 +26,7 @@ on:
   push:
     branches:
       - qa/ngelx-build465-install-20261016
+      - qa/ngelx-build465-feedback-fixes-20261016
     paths:
       - '.github/workflows/NgelX-BUILD465-INSTALL-QA.yml'
       - 'tools/*465*'
@@ -706,6 +708,20 @@ jobs:
           python3 tools/apply_build457_community_runtime_fixes.py
           grep -Fq "v['founderId'] == _communityUid450" app/lib/community450.dart
           grep -Fq 's.data?[item.$1] ?? widget.liveCounts[item.$1]' app/lib/build455_widgets.dart
+
+      - name: Build465 inbox retry and media safe-area regression tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tools -p 'test_build465_inbox_recovery.py'
+          python3 -m unittest discover -s tools -p 'test_build465_safe_media.py'
+          python3 tools/apply_build465_inbox_recovery.py
+          python3 tools/apply_build465_safe_media.py
+          python3 tools/apply_build465_inbox_recovery.py
+          python3 tools/apply_build465_safe_media.py
+          grep -Fq "Build466 inbox retry watchdog" app/lib/main.dart
+          grep -Fq "Build465 device QA: media never enters" app/lib/main.dart
+          grep -Fq "body:SafeArea(child:LayoutBuilder" app/lib/main.dart
 
       - name: Flutter analiz
         shell: bash
