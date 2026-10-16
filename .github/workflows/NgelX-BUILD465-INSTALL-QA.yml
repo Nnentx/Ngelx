@@ -681,7 +681,22 @@ jobs:
           set -euo pipefail
           git apply --check tools/build465_member_ui.patch
           git apply tools/build465_member_ui.patch
-          python3 tools/verify_community_invite_ui.py
+          python3 - <<'PY'
+          from pathlib import Path
+          ui = Path('app/lib/build456_widgets.dart').read_text()
+          members = ui.split('class _Ngelx456MembersState',1)[1].split('Future<void> ngelx456Invite(',1)[0]
+          picker = ui.split('class _Ngelx456ChatPickerState',1)[1]
+          for required in [
+            "Kurucu/Yönetici", "ngelx456RoleOrder(v,a).compareTo(ngelx456RoleOrder(v,b))",
+            "'profile':'Profili gör'", "'message':'Mesaj gönder'",
+            "'Üye işlemleri'", "ThemeData.light()", "Üyeyi yeniden yükle",
+          ]:
+            assert required in members or required in ui, f'Missing PR62 member fix: {required}'
+          # Keep Build464's native invite-picker implementation unchanged.
+          assert 'CheckboxListTile(' in picker
+          assert 'selected.contains(uid)' in picker
+          print('Verified Build465 member UX and preserved Build464 invite picker.')
+          PY
 
       - name: Port PR63 founder and counters with fail-closed tests
         shell: bash
