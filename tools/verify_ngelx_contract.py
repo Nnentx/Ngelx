@@ -417,7 +417,7 @@ for token in required_group_tokens:
 
 # Consolidated group hardening must stay intact.
 for token in (
-    "KURUCU • Yönetici",
+    "(hedefKurucu||admin)?'Admin'",
     "formerMembers",
     "removedAt_",
     "quickEmoji':'👍'",

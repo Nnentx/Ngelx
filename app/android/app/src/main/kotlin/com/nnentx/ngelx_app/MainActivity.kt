@@ -7,6 +7,7 @@ import android.database.Cursor
 import android.net.Uri
 import android.provider.OpenableColumns
 import java.io.FileOutputStream
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import io.flutter.embedding.android.FlutterActivity
@@ -24,6 +25,8 @@ class MainActivity : FlutterActivity() {
         private const val REQUEST_PICK = 3061
     }
 
+    private var appVisible = false
+    private var activeCallChannel: MethodChannel? = null
     private val mediaChannel = "com.nnentx.ngelx_app/media"
     private var pendingPickerResult: MethodChannel.Result? = null
     private var pickerAllowMultiple = false
@@ -32,6 +35,34 @@ class MainActivity : FlutterActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        val channel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.nnentx.ngelx_app/active_call")
+        activeCallChannel = channel
+        NgelXCallService.onFailure = { session -> channel.invokeMethod("unavailable", mapOf("sessionId" to session)) }
+        channel.setMethodCallHandler { call, result ->
+            val session = call.argument<String>("sessionId")
+            when (call.method) {
+                "start" -> {
+                    if (!appVisible || session.isNullOrBlank()) { result.success(false); return@setMethodCallHandler }
+                    try {
+                        NgelXCallService.requestedSession = session
+                        val service = Intent(this, NgelXCallService::class.java).putExtra(NgelXCallService.SESSION, session)
+                        if (Build.VERSION.SDK_INT >= 26) startForegroundService(service) else startService(service)
+                        result.success(true)
+                    } catch (_: Exception) {
+                        if (NgelXCallService.requestedSession == session) NgelXCallService.requestedSession = null
+                        result.success(false)
+                    }
+                }
+                "stop" -> {
+                    if (session != null && NgelXCallService.requestedSession == session) {
+                        NgelXCallService.requestedSession = null
+                        stopService(Intent(this, NgelXCallService::class.java))
+                    }
+                    result.success(null)
+                }
+                else -> result.notImplemented()
+            }
+        }
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, mediaChannel)
             .setMethodCallHandler { call, result ->
                 when (call.method) {
@@ -359,9 +390,26 @@ class MainActivity : FlutterActivity() {
         }
     }
 
+
+    override fun onResume() { appVisible = true; super.onResume() }
+    override fun onPause() { appVisible = false; super.onPause() }
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        intent.getStringExtra(NgelXCallService.SESSION)?.let { session ->
+            activeCallChannel?.invokeMethod("returnToCall", mapOf("sessionId" to session))
+        }
+    }
+
     override fun onDestroy() {
         pendingPickerResult?.error("PICKER_DESTROYED", "Medya seçici kapatıldı.", null)
         pendingPickerResult = null
+        if (isFinishing) {
+            NgelXCallService.requestedSession = null
+            stopService(Intent(this, NgelXCallService::class.java))
+        }
+        NgelXCallService.onFailure = null
+        activeCallChannel = null
         executor.shutdownNow()
         super.onDestroy()
     }

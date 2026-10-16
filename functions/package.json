@@ -1,0 +1,19 @@
+{
+  "name": "ngelx-live-backend",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": "22"
+  },
+  "main": "index.js",
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "check": "node --check index.js && node --check live-backend.js && node --check server.js && node --check live-http.js",
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "firebase-admin": "^13.0.0",
+    "firebase-functions": "^6.0.0",
+    "livekit-server-sdk": "^2.19.1"
+  }
+}

@@ -1,0 +1,14 @@
+import {initializeApp} from 'firebase-admin/app';
+import {onRequest} from 'firebase-functions/v2/https';
+import {onSchedule} from 'firebase-functions/v2/scheduler';
+import {defineSecret, defineString} from 'firebase-functions/params';
+import {createLiveBackend} from './live-backend.js';
+initializeApp();
+const apiKey = defineSecret('LIVEKIT_API_KEY');
+const apiSecret = defineSecret('LIVEKIT_API_SECRET');
+const liveUrl = defineString('LIVEKIT_URL');
+const backend = createLiveBackend({apiKey,apiSecret,liveUrl});
+const options = {region:'europe-west1',secrets:[apiKey,apiSecret],maxInstances:10,timeoutSeconds:30};
+export const ngelxLive = onRequest({...options,cors:true},backend.live);
+export const ngelxLiveWebhook = onRequest(options,backend.webhook);
+export const ngelxFinishExpiredPK = onSchedule({region:'europe-west1',schedule:'every 1 minutes',timeZone:'UTC',maxInstances:1,timeoutSeconds:120,retryCount:3},backend.finishExpiredPK);

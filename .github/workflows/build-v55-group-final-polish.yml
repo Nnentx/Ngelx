@@ -30,6 +30,8 @@ jobs:
   verify-and-build:
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    env:
+      NGELX_LIVE_API_URL: ${{ vars.NGELX_LIVE_API_URL }}
     steps:
       - name: Kaynaklari al
         uses: actions/checkout@v4
@@ -117,26 +119,21 @@ jobs:
           npx firebase emulators:exec --only firestore --project demo-ngelx "node tools/firestore_rules_test.mjs"
 
       - name: Sabit debug imzasini geri yukle
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         with:
           path: ~/.android/debug.keystore
           key: ngelx-stable-debug-keystore-v1
+          fail-on-cache-miss: true
 
-      - name: Sabit debug anahtari yoksa olustur
-        run: |
-          mkdir -p "$HOME/.android"
-          if [ ! -f "$HOME/.android/debug.keystore" ]; then
-            keytool -genkeypair -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey -keypass android -dname "CN=Android Debug,O=Android,C=US" -keyalg RSA -keysize 2048 -validity 10000
-          fi
-          keytool -list -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey
-
-      - name: Debug APK derle
+      - name: Release APK derle
         working-directory: app
         run: |
           APP_VERSION="$(awk '/^version:/ {print $2}' pubspec.yaml)"
           BUILD_NAME="${APP_VERSION%%+*}"
           BUILD_NUMBER="${APP_VERSION##*+}"
-          flutter build apk --debug \
+          test "$NGELX_LIVE_API_URL" = "https://ngelx-live-test.onrender.com/live"
+          flutter build apk --release \
+            --dart-define=NGELX_LIVE_API_URL="$NGELX_LIVE_API_URL" \
             --dart-define=NGELX_VERSION_NAME="$BUILD_NAME" \
             --dart-define=NGELX_BUILD_NUMBER="$BUILD_NUMBER"
 
@@ -144,12 +141,17 @@ jobs:
         run: |
           APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
           test -n "$APKSIGNER"
-          "$APKSIGNER" verify --print-certs app/build/app/outputs/flutter-apk/app-debug.apk
+          "$APKSIGNER" verify --verbose --print-certs app/build/app/outputs/flutter-apk/app-release.apk | tee apk-signature.txt
+          grep -qi "be20b27f0ba1f4decd2941d410b1536de89e48dc894f04f038f9d26b11ecd6aa" apk-signature.txt
+          AAPT="$(dirname "$APKSIGNER")/aapt"
+          "$AAPT" dump badging app/build/app/outputs/flutter-apk/app-release.apk | tee apk-manifest.txt
+          grep -q "versionCode='349'" apk-manifest.txt
+          if grep -q "application-debuggable" apk-manifest.txt; then exit 1; fi
 
       - name: APK yukle
         uses: actions/upload-artifact@v4
         with:
-          name: NgelX-V64-APP-QUALITY-PERFORMANCE-APK
-          path: app/build/app/outputs/flutter-apk/app-debug.apk
+          name: NgelX-BUILD-349-RELEASE-APK
+          path: app/build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
           retention-days: 14

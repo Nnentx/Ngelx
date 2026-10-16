@@ -123,10 +123,27 @@ service cloud.firestore {
         && groupDoc(chatId).data.get('inviteCode', '') == code
         && groupDoc(chatId).data.get('groupDeleted', false) != true;
     }
+    function validDiscoverJoinRequest(chatId, requestUid) {
+      let group = groupDoc(chatId).data;
+      return signedIn() && request.auth.uid == requestUid
+        && group.get('isGroup', false) == true
+        && group.get('discoverable', false) == true
+        && group.get('groupDeleted', false) != true
+        && group.get('joinApproval', false) == true
+        && !(request.auth.uid in group.get('members', []))
+        && group.get('members', []).size() < group.get('maxMembers', 60)
+        && request.resource.data.keys().hasOnly(['uid','status','source','createdAt','updatedAt'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.status == 'pending'
+        && request.resource.data.source == 'discover'
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+    }
     function validPublicSelfJoin() {
       return signedIn()
         && resource.data.get('isGroup', false) == true
         && resource.data.get('discoverable', false) == true
+        && resource.data.get('groupDeleted', false) != true
         && resource.data.get('joinApproval', false) != true
         && !(request.auth.uid in resource.data.get('members', []))
         && resource.data.get('members', []).size() < resource.data.get('maxMembers', 60)
@@ -331,6 +348,13 @@ service cloud.firestore {
               resource.data.senderId == request.auth.uid
               && onlyChanges(['callStatus', 'callAnsweredAt', 'callConnectedAt', 'callEndedAt', 'durationSeconds'])
             )
+            || (
+              resource.data.get('type', '') == 'call'
+              && getAfter(/databases/$(database)/documents/chats/$(chatId)).data.get('callMessageId', '') == messageId
+              && request.resource.data.get('callStatus', '') in ['ended', 'missed']
+              && request.resource.data.callStatus == getAfter(/databases/$(database)/documents/chats/$(chatId)).data.get('callStatus', '')
+              && onlyChanges(['callStatus', 'callEndedAt', 'durationSeconds'])
+            )
             || onlyChanges(['reactions'])
             || (
               onlyChanges(['deliveredTo', 'seenBy'])
@@ -373,7 +397,7 @@ service cloud.firestore {
       }
 
       match /joinRequests/{requestUid} {
-        allow create: if (
+        allow create: if validDiscoverJoinRequest(chatId,requestUid) || (
           signedIn()
           && request.auth.uid == requestUid
           && request.resource.data.get('uid', '') == request.auth.uid
@@ -395,7 +419,8 @@ service cloud.firestore {
           || isGroupAdmin(chatId)
         );
         allow list: if isGroupAdmin(chatId);
-        allow update: if isGroupAdmin(chatId) || (
+        allow update: if isGroupAdmin(chatId)
+          || (resource.data.get('status','') in ['cancelled','rejected'] && validDiscoverJoinRequest(chatId,requestUid)) || (
           signedIn()
           && (request.auth.uid == requestUid || resource.data.get('requestedBy', '') == request.auth.uid)
           && onlyChanges(['status', 'updatedAt'])
@@ -520,18 +545,50 @@ service cloud.firestore {
       allow read: if signedIn() && resource.data.uid == request.auth.uid;
       allow update, delete: if false;
     }
+    match /wallets/{uid} {
+      allow read: if isMe(uid);
+      allow write: if false;
+    }
     match /live_streams/{streamId} {
       allow read: if true;
-      allow create: if signedIn() && request.resource.data.ownerId == request.auth.uid;
-      allow update, delete: if signedIn() && resource.data.ownerId == request.auth.uid;
+      allow create, update, delete: if false;
+      match /join_requests/{uid} {
+        allow read: if isMe(uid) || (signedIn() && get(/databases/$(database)/documents/live_streams/$(streamId)).data.ownerId == request.auth.uid);
+        allow write: if false;
+      }
+      match /gifts/{giftId} {
+        allow read: if signedIn();
+        allow write: if false;
+      }
       match /comments/{commentId} {
         allow read: if true;
-        allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
-        allow update, delete: if signedIn() && resource.data.userId == request.auth.uid;
+        allow create: if signedIn()
+          && get(/databases/$(database)/documents/live_streams/$(streamId)).data.active == true
+          && request.resource.data.keys().hasOnly(['userId', 'uid', 'username', 'text', 'createdAt'])
+          && request.resource.data.userId == request.auth.uid
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.username is string
+          && request.resource.data.username.size() <= 50
+          && request.resource.data.text is string
+          && request.resource.data.text.size() > 0
+          && request.resource.data.text.size() <= 500
+          && request.resource.data.createdAt == request.time;
+        allow update: if signedIn() && resource.data.userId == request.auth.uid
+          && onlyChanges(['text', 'editedAt'])
+          && request.resource.data.text is string
+          && request.resource.data.text.size() > 0
+          && request.resource.data.text.size() <= 500
+          && request.resource.data.editedAt == request.time;
+        allow delete: if signedIn() && resource.data.userId == request.auth.uid;
       }
       match /reactions/{uid} {
         allow read: if true;
-        allow create, update: if isMe(uid) && request.resource.data.uid == request.auth.uid;
+        allow create, update: if isMe(uid)
+          && get(/databases/$(database)/documents/live_streams/$(streamId)).data.active == true
+          && request.resource.data.keys().hasOnly(['uid', 'type', 'createdAt'])
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.type == 'heart'
+          && request.resource.data.createdAt == request.time;
         allow delete: if isMe(uid);
       }
     }
