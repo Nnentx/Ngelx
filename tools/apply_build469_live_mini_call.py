@@ -4,6 +4,7 @@ No new LiveKit session, no camera permission changes and no call transport chang
 Keep panel draggable and clamp to visible Android safe width.
 """
 from pathlib import Path
+import re
 FILE=Path('app/lib/build445_inbox_model.dart')
 START='class _Ngelx445CallOverlayState extends State<Ngelx445CallOverlay>{'
 END='class Ngelx445InboxCallBanner extends StatelessWidget'
@@ -42,16 +43,17 @@ def transform(src):
     r=once(r,
       '  Timer? _tick;StreamSubscription<User?>? _auth;',
       METHOD+'  Timer? _tick;StreamSubscription<User?>? _auth;','preview helper')
-    r=once(r,
-      'final x=(_left??screen.width-128).clamp(8.0,(screen.width-120).clamp(8.0,double.infinity)).toDouble();',
-      '''// Keep the whole mini call panel inside the actual screen width.
-    final maxX=math.max(8.0,screen.width-152.0);
-    final x=(_left??screen.width-152).clamp(8.0,maxX).toDouble();''',
-      'safe draggable x clamp')
-    r=once(r,
-      'return Positioned(left:x,top:y,width:112,child:Material(',
-      'return Positioned(left:x,top:y,width:144,child:Material(',
-      'bounded mini call width')
+    # Older widget patches may have changed the panel's initial width.
+    # Match only the existing one-line draggable x-position expression.
+    matches=list(re.finditer(r"    final x=([^\\n]+);",r))
+    if len(matches)!=1 or '_left??' not in matches[0].group(1) or 'screen.width' not in matches[0].group(1):
+      raise RuntimeError('Build469 mini overlay: unexpected drag bound')
+    r=r[:matches[0].start()]+"""    // Keep the whole mini call panel inside the actual screen width.
+    final maxX=(screen.width-152).clamp(8.0,double.infinity).toDouble();
+    final x=(_left??screen.width-152).clamp(8.0,maxX).toDouble();"""+r[matches[0].end():]
+    widths=list(re.finditer(r"return Positioned\\(left:x,top:y,width:(\\d+),child:Material\\(",r))
+    if len(widths)!=1:raise RuntimeError('Build469 mini overlay: unexpected panel dimensions')
+    r=r[:widths[0].start()]+widths[0].group(0).replace('width:'+widths[0].group(1),'width:144')+r[widths[0].end():]
     r=once(r,
       '''CircleAvatar(radius:20,backgroundColor:const Color(0xFF6F4AB2),backgroundImage:detail.photo.isEmpty?null:NgelXAgImageProvider(detail.photo),child:detail.photo.isEmpty?Icon(detail.video?Icons.videocam:Icons.call,color:Colors.white,size:20):null),''',
       '''if(detail.video)_ngelx469Preview(room,detail.photo)
