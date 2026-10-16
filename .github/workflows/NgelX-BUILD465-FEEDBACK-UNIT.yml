@@ -6,6 +6,7 @@ on:
     paths:
       - 'tools/*465*'
       - 'app/lib/build448_incoming_calls.dart'
+      - 'app/lib/build454_widgets.dart'
       - '.github/workflows/NgelX-BUILD465-FEEDBACK-UNIT.yml'
   workflow_dispatch:
 
@@ -20,5 +21,5 @@ jobs:
       - uses: actions/checkout@v4
       - name: Compile device follow-up Python patches
         run: python3 -m py_compile tools/apply_build465_inbox_recovery.py tools/apply_build465_safe_media.py tools/apply_build465_reaction_alignment.py
-      - name: Run synthetic layout and notification regression tests
+ tools/apply_build465_ringtone_channel.py      - name: Run synthetic layout and notification regression tests
         run: python3 -m unittest discover -s tools -p 'test_build465_*.py' -v
