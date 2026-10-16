@@ -25,10 +25,11 @@ class CallRingtoneTests(unittest.TestCase):
         self.assertIn('action("answer")',kotlin)
         self.assertIn('action("reject")',kotlin)
     def test_notification_title_does_not_join_call(self):
-        dart=Path("app/lib/build448_incoming_calls.dart").read_text(encoding="utf-8")
-        navigation=dart.split("if(action=='open'){",1)[1].split("if(action!='answer')",1)[0]
-        self.assertIn('ngelx445OpenCallChat',navigation)
-        self.assertNotIn("callParticipants",navigation)
+        call_ui=Path("app/lib/build454_widgets.dart").read_text(encoding="utf-8")
+        block=call_ui.split("Future<void> ngelx454OpenIncoming(",1)[1].split("Future<void> ngelx454RemoveHighlight(",1)[0]
+        self.assertIn("ngelx445OpenCallChat",block)
+        self.assertNotIn("showModalBottomSheet",block)
+        self.assertNotIn("callParticipants",block)
 
 if __name__=="__main__":
     unittest.main()
