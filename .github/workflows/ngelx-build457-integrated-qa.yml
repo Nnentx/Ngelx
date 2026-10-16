@@ -122,13 +122,23 @@ jobs:
         run: |
           set -euo pipefail
           test ! -e android/key.properties
-          flutter build apk --release --split-per-abi --target-platform android-arm64 --no-pub
+          # Restrict native libraries on this disposable QA runner only.
+          # Existing app/Gradle settings on other branches remain untouched.
+          python3 - <<'PY'
+          from pathlib import Path
+          gradle = Path('android/app/build.gradle.kts')
+          before = gradle.read_text()
+          old = 'abiFilters += listOf("armeabi-v7a", "arm64-v8a")'
+          assert before.count(old) == 1, 'Expected Build457 native ABI configuration changed'
+          gradle.write_text(before.replace(old, 'abiFilters += listOf("arm64-v8a")'))
+          PY
+          flutter build apk --release --target-platform android-arm64 --no-pub
 
       - name: Verify ARM64 APK contents, size and Android signature
         shell: bash
         run: |
           set -euo pipefail
-          apk=app/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+          apk=app/build/app/outputs/flutter-apk/app-release.apk
           test -s "$apk"
           unzip -tqq "$apk"
           python3 - "$apk" <<'PY'
@@ -155,6 +165,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ngelx-build457-qa-arm64-test-apk
-          path: app/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+          path: app/build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
           retention-days: 7
