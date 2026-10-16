@@ -2,6 +2,7 @@
 
 **Referans kurulum:** v1.0.240, Build465, PR #64, `qa/ngelx-build465-install-20261016`.
 **Temel düzeltme QA dalı:** `qa/ngelx-build465-feedback-fixes-20261016`.\n**Messenger görünüm devam dalı:** `qa/ngelx-build465-messenger-ui-next-20261016`.
+**Arama durum / küçültme QA dalı:** `qa/ngelx-build465-call-ui-finish-20261016`.
 **Durum:** QA taslağı; üretim yayını yapılmadı. **Kodlandı ≠ cihazda doğrulandı.**
 
 | # | Kullanıcı isteği | QA dalındaki durum | Doğrulama |
@@ -17,7 +18,7 @@
 | 9 | Grup mesaj/emojisi/profil boşlukları Messenger gibi | Grup başlık/avatarı mesaj balonuna yaklaştırılıyor; özel mesaj boşluğu ve alıntı ölçüleri düzeltildi | Dar ekran/cihaz testi bekleniyor |
 | 10 | Özel sohbetin alt alanı gruptaki gibi olsun | Kamera/galeri doğrudan, emoji alanı içte, alt boşluk tek kez olacak şekilde patch hazır | Dar ekran/klavye testi bekliyor |
 | 11 | Gelen arama zili ve yinelenen Reddet/Cevapla paneli | Android bildirim izni + yeni zil kanalı; başlık tıklaması doğrulanmış sohbete gidiyor, tekrarlı sheet kaldırıldı | Android 13+/izin/sessiz mod/ses testi bekliyor |
-| 12 | Arama ekranları Messenger videosunu referans alsın | Kontrol düğmeleri dar ekranlarda saran Wrap; kırmızı sonlandırma yuvarlak olarak kontrol grubuna alındı; kare grup avatarları. Yüzen pencere ve diğer akışlar henüz açık | Yeni Flutter/cihaz testi bekleniyor |
+| 12 | Arama ekranları Messenger videosunu referans alsın | Kontroller dar ekrana uyumlu, kırmızı yuvarlak bitir tuşu, grup kare avatarları. Son QA'da gerçek cevap öncesi **Aranıyor…** durumu ve güvenli **Küçült** düğmesi eklendi; arka plan arama altyapısı korunuyor | Yeni tam CI ve Android cihaz testi bekleniyor |
 | 13 | Büyütülen video alt sistem çubuğuna taşmasın | SafeArea/boyut patch'i hazır | Dikey/yatay video cihaz testi bekliyor |
 | 14 | Grup/özel sohbete girince son mesajlar altta görünsün | Eski scroll offset korunmuyor; açılış sonuna yerleştiriliyor; kullanıcı dokununca bırakıyor | Cihaz ve Flutter bekliyor |
 | 15 | Gelen Kutusu “Kişi bilgisi yükleniyor…” takılmasın (Issue #65) | Per-UID sınırlı zamanlayıcıyla yeniden deneme + manuel yenileme patch'i hazır | Gerçek kopma/geri gelme testi bekliyor |
@@ -33,6 +34,7 @@
 - `tools/apply_build465_ringtone_channel.py`
 - `tools/apply_build465_message_rhythm.py`
 - `tools/apply_build465_messenger_call_controls.py`
+- `tools/apply_build465_call_status_minimize.py`
 - `app/lib/build454_widgets.dart` (ikinci yanıt panelini kaldıran chat açılışı)
 - `app/android/app/src/main/AndroidManifest.xml` (Android 13+ bildirim izni)
 - `.github/workflows/NgelX-BUILD465-INSTALL-QA.yml` ve `NgelX-BUILD465-FEEDBACK-UNIT.yml`.
@@ -43,3 +45,7 @@
 3. Build465 kurulum kimliği/imzası korunmalı; üretim verisi/kuralları değiştirilmemeli.
 4. Android cihazda grup ve özel sohbet, dikey/yatay fotoğraf/video, zayıf ağ, zil izni, 2+ kişilik sesli arama senaryoları tamamlanmalı.
 5. **CI veya APK çıktı diye kullanıcıya hatanın kesin düzeldiği söylenmemeli**; cihaz onayı ve ekran görüntüsü/test kaydı gerekli.
+
+## Başarılı önceki derleme
+- Yeni Messenger mesaj/arama düğmeleri bulunan **1.0.240 / Build465** tam QA koşusu: https://github.com/Nnentx/Ngelx/actions/runs/38903249213 (başarılı, imzalı APK artifact'i mevcut)
+- Güncel **arama durumu ve küçültme** devam dalı ayrıca sınanır; CI geçmeden yeni APK tamamlandı sayılmaz.
