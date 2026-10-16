@@ -54,7 +54,7 @@ def transform(src):
       'bounded mini call width')
     r=once(r,
       '''CircleAvatar(radius:20,backgroundColor:const Color(0xFF6F4AB2),backgroundImage:detail.photo.isEmpty?null:NgelXAgImageProvider(detail.photo),child:detail.photo.isEmpty?Icon(detail.video?Icons.videocam:Icons.call,color:Colors.white,size:20):null),''',
-      '''if(detail.video)_ngelx469Preview(room.room,detail.photo)
+      '''if(detail.video)_ngelx469Preview(room,detail.photo)
             else CircleAvatar(radius:20,backgroundColor:const Color(0xFF6F4AB2),backgroundImage:detail.photo.isEmpty?null:NgelXAgImageProvider(detail.photo),child:detail.photo.isEmpty?const Icon(Icons.call,color:Colors.white,size:20):null),''',
       'live video in minimized call')
     for guard in ("onTap:()=>ngelx445ReturnCall(name)",
