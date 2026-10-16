@@ -11,7 +11,7 @@ class PrivateComposerTests(unittest.TestCase):
           "  Widget build(){\n"
           +DOUBLE_INSET+"\n"
           +ADD_BUTTON+"\n"
-          +EMOJI_SUFFIX+"\n"
+          +"controller:mesaj,\n"+EMOJI_SUFFIX+"\n"
           +EMOJI_EXTERNAL+"\n"
           "  }\n}\nclass NgelXSesliMesaj {}"
         )
