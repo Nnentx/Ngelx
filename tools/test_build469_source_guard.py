@@ -62,8 +62,7 @@ class Build469Tests(unittest.TestCase):
         self.assertEqual(mini_fix(s),s)
         for term in ('// Build469: Messenger-style live thumbnail in the EXISTING mini call',
                      'lk.VideoTrackRenderer(remote,fit:lk.VideoViewFit.cover)',
-                     'final maxX=math.max(8.0,screen.width-152.0)',
-                     'return Positioned(left:x,top:y,width:144',
+                     'onPanUpdate:(delta)=>setState',
                      'onTap:()=>ngelx445ReturnCall(name)',
                      'onEnd:()=>ngelx445EndBackground(name)'):
             self.assertIn(term,s)
