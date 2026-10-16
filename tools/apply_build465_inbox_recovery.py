@@ -96,7 +96,7 @@ def transform(source: str) -> str:
         raise RuntimeError("Expected existing UID-bound profile stream not found")
     region=replace_one(region,FIELD,WATCHDOG+FIELD,"state field")
     region=replace_one(region,OLD,NEW,"Build457 error/loading guard")
-    dispose=list(re.finditer(r"@override\\s+void\\s+dispose\\s*\\(\\s*\\)\\s*\\{",region))
+    dispose=list(re.finditer(r"@override\s+void\s+dispose\s*\(\s*\)\s*\{",region))
     if len(dispose)!=1:
         raise RuntimeError(
             "Build465 inbox recovery: expected one inbox dispose, found "
