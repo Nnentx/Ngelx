@@ -11,7 +11,7 @@
 # Translation boundary: presentation labels only, preserve user names
 # Correct guarded call-history rendering
 # Device QA revision: member exit and extended screen translations
-name: NgelX Build468 Private Composer Navigation QA (no deploy)
+name: NgelX Build469 Call Grid Performance and Founder QA (no deploy)
 
 on:
   pull_request:
@@ -34,11 +34,13 @@ on:
       - qa/ngelx-build466-install-20261016
       - qa/ngelx-build467-consolidated-20261016
       - qa/ngelx-build468-private-composer-nav-20261016
+      - qa/ngelx-build469-call-permissions-performance-20261016
     paths:
       - '.github/workflows/NgelX-BUILD465-INSTALL-QA.yml'
       - 'tools/*465*'
       - 'tools/*467*'
       - 'tools/*468*'
+      - 'tools/*469*'
       - 'tools/apply_build457_community_runtime_fixes.py'
       - 'tools/test_build457_community_runtime_fixes.py'
       - 'tools/verify_community_invite_ui.py'
@@ -801,6 +803,20 @@ jobs:
           grep -Fq 'Build468: explicit Android nav-safe composer slot' app/lib/main.dart
           grep -Fq 'bottomNavigationBar:ColoredBox(' app/lib/main.dart
 
+      - name: Build469 bounded UI voice and authorizations QA
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/apply_build469_*.py tools/test_build469_source_guard.py
+          python3 tools/apply_build469_group_call_grid.py
+          python3 tools/apply_build469_keyboard_inbox.py
+          python3 tools/apply_build469_ring_diagnostics.py
+          python3 tools/apply_build469_founder_rules_qa.py
+          python3 -m unittest discover -s tools -p 'test_build469_*.py' -v
+          grep -Fq 'Build469: every participant has one scoped actions menu' app/lib/main.dart
+          grep -Fq 'Build469 incoming-ring QA' app/android/app/src/main/kotlin/com/nnentx/ngelx_app/IncomingCallService.kt
+          grep -Fq 'Build469: legacy verified founder limited-settings compatibility' firestore.rules
+
       - name: Flutter analiz
         shell: bash
         run: |
@@ -846,7 +862,7 @@ jobs:
         run: |
           set -euo pipefail
           nl -ba firestore.rules | sed -n '260,310p;420,435p'
-          npx firebase emulators:exec --project demo-ngelx --only firestore --non-interactive "node tools/firestore_rules_test.mjs && node tools/build439_preferences_rules_test.mjs && node tools/build440_rules_test.mjs && node tools/build441_rules_test.mjs && node tools/build446_rules_test.mjs && node tools/build448_rules_test.mjs && node tools/build450_rules_test.mjs && node tools/build455_rules_test.mjs && node tools/build456_rules_test.mjs && node tools/build457_cover_rules_test.mjs" || { tail -100 firestore-debug.log; exit 1; }
+          npx firebase emulators:exec --project demo-ngelx --only firestore --non-interactive "node tools/firestore_rules_test.mjs && node tools/build439_preferences_rules_test.mjs && node tools/build440_rules_test.mjs && node tools/build441_rules_test.mjs && node tools/build446_rules_test.mjs && node tools/build448_rules_test.mjs && node tools/build450_rules_test.mjs && node tools/build455_rules_test.mjs && node tools/build456_rules_test.mjs && node tools/build457_cover_rules_test.mjs && node tools/build469_legacy_founder_rules_test.mjs" || { tail -100 firestore-debug.log; exit 1; }
 
 
       - name: Restore Android Java 17
@@ -874,7 +890,7 @@ jobs:
         working-directory: app
         run: |
           set -euo pipefail
-          flutter build apk --release --build-name=1.0.243 --build-number=468 --dart-define=NGELX_VERSION_NAME=1.0.243 --dart-define=NGELX_BUILD_NUMBER=468 --dart-define=NGELX_CALL_PUSH_URL=https://ngelx-call-push.alihancaglar76.workers.dev
+          flutter build apk --release --build-name=1.0.244 --build-number=469 --dart-define=NGELX_VERSION_NAME=1.0.244 --dart-define=NGELX_BUILD_NUMBER=469 --dart-define=NGELX_CALL_PUSH_URL=https://ngelx-call-push.alihancaglar76.workers.dev
           test -s build/app/outputs/flutter-apk/app-release.apk
           APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
           test -n "$APKSIGNER"
@@ -882,20 +898,20 @@ jobs:
           grep -qi "be20b27f0ba1f4decd2941d410b1536de89e48dc894f04f038f9d26b11ecd6aa" apk-signature.txt
           AAPT="$(dirname "$APKSIGNER")/aapt"
           "$AAPT" dump badging build/app/outputs/flutter-apk/app-release.apk | tee apk-manifest.txt
-          grep -q "versionCode='468'" apk-manifest.txt
-          grep -q "versionName='1.0.243'" apk-manifest.txt
-          cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/NgelX-1.0.243-Build-468-INSTALL-QA.apk
-          sha256sum build/app/outputs/flutter-apk/NgelX-1.0.243-Build-468-INSTALL-QA.apk > build/app/outputs/flutter-apk/NgelX-1.0.243-Build-468-INSTALL-QA.apk.sha256
+          grep -q "versionCode='469'" apk-manifest.txt
+          grep -q "versionName='1.0.244'" apk-manifest.txt
+          cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/NgelX-1.0.244-Build-469-INSTALL-QA.apk
+          sha256sum build/app/outputs/flutter-apk/NgelX-1.0.244-Build-469-INSTALL-QA.apk > build/app/outputs/flutter-apk/NgelX-1.0.244-Build-469-INSTALL-QA.apk.sha256
 
       # Publish the signed, locally tested APK before any optional cloud deployment.
       # The owner can test the app even when Google Cloud API activation is not permitted.
       - name: Upload signed candidate and tested rules for review
         uses: actions/upload-artifact@v4
         with:
-          name: NgelX-1.0.243-Build-468-INSTALL-QA
+          name: NgelX-1.0.244-Build-469-INSTALL-QA
           path: |
-            app/build/app/outputs/flutter-apk/NgelX-1.0.243-Build-468-INSTALL-QA.apk
-            app/build/app/outputs/flutter-apk/NgelX-1.0.243-Build-468-INSTALL-QA.apk.sha256
+            app/build/app/outputs/flutter-apk/NgelX-1.0.244-Build-469-INSTALL-QA.apk
+            app/build/app/outputs/flutter-apk/NgelX-1.0.244-Build-469-INSTALL-QA.apk.sha256
             app/build/app/outputs/bundle/release/NgelX-1.0.223-Build-446-PLAY-PREPARATION.aab
             build441-untranslated.tsv
             build442-untranslated.tsv
@@ -905,5 +921,5 @@ jobs:
           retention-days: 14
 
       - name: Confirm no production deployment
-        run: echo 'Build468 TEST APK only; no paid services, no production Firebase rules or cloud functions deployed.'
+        run: echo 'Build469 TEST APK only; no paid services, no production Firebase rules or cloud functions deployed.'
 
