@@ -107,6 +107,12 @@ jobs:
         run: |
           set -euo pipefail
           npx firebase emulators:exec --project demo-ngelx --only firestore --non-interactive "bash tools/run_legacy_community_rules_qa.sh"
+      # Create a disposable local Android debug keystore on the ephemeral CI runner.
+      # This is not a release credential and never touches Firebase.
+      - name: Provision ephemeral Android debug keystore
+        run: |
+          mkdir -p "$HOME/.android"
+          keytool -genkeypair -v -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 3650 -dname "CN=Android Debug,O=Android,C=US" -noprompt
       # Compile only. Do not install, launch, sign for release, or deploy.
       - name: Build non-release QA debug APK after all tests pass
         working-directory: app
