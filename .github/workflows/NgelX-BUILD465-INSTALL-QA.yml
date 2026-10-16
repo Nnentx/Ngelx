@@ -46,6 +46,8 @@ on:
       - 'app/lib/build456_widgets.dart'
       - 'server/community456/**'
       - 'app/lib/build455_widgets.dart'
+      - 'app/android/app/src/main/AndroidManifest.xml'
+      - 'app/android/app/src/main/kotlin/com/nnentx/ngelx_app/IncomingCallService.kt'
 
 concurrency:
   group: ngelx-build465-install-qa
@@ -717,15 +719,19 @@ jobs:
           python3 -m unittest discover -s tools -p 'test_build465_safe_media.py'
           python3 -m unittest discover -s tools -p 'test_build465_reaction_alignment.py'
           python3 -m unittest discover -s tools -p 'test_build465_call_open.py'
+          python3 -m unittest discover -s tools -p 'test_build465_call_ringtone.py'
+          python3 -m unittest discover -s tools -p 'test_build465_chat_initial_scroll.py'
           python3 tools/apply_build465_inbox_recovery.py
           python3 tools/apply_build465_safe_media.py
           python3 tools/apply_build465_reaction_alignment.py
+          python3 tools/apply_build465_chat_initial_scroll.py
           python3 tools/apply_build465_inbox_recovery.py
           python3 tools/apply_build465_safe_media.py
           grep -Fq "Build466 inbox retry watchdog" app/lib/main.dart
           grep -Fq "Build465 device QA: media never enters" app/lib/main.dart
           grep -Fq "body:SafeArea(child:LayoutBuilder" app/lib/main.dart
           grep -Fq 'Build465: badge is anchored to media bounds' app/lib/main.dart
+          grep -Fq 'Build465: do not restore stale message-list offsets' app/lib/main.dart
 
       - name: Flutter analiz
         shell: bash
