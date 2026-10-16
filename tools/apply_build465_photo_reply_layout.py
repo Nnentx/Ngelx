@@ -72,7 +72,16 @@ def section(s,start,end,fn):
 
 def transform(s):
     if "// Build465: retain the image's natural width/height ratio" in s:return s
-    s=section(s,START,END,lambda r:once(r,OLD_PHOTO_LAYOUT,NEW_PHOTO_LAYOUT,"photo layout"))
+    a=s.index(START);b=s.index(END,a)
+    photo=s[a:b]
+    if photo.count(OLD_PHOTO_LAYOUT)==1:
+        s=s[:a]+once(photo,OLD_PHOTO_LAYOUT,NEW_PHOTO_LAYOUT,"photo layout")+s[b:]
+    elif "Ngelx453Photo(url:url)" in photo:
+        # Build453+ already uses an intrinsically sized 320px photo with
+        # BoxFit.contain. Do not regress it to a fixed crop or duplicate it.
+        s=s[:a]+"// Build465: retain the image's natural width/height ratio via Ngelx453Photo.\\n"+s[a:]
+    else:
+        raise RuntimeError("Build465 photo reply: unknown generated photo implementation")
     s=section(s,REPLY_START,REPLY_END,lambda r:once(r,OLD_REPLY,NEW_REPLY,"reply thumbnail"))
     return s
 
