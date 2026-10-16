@@ -11,7 +11,7 @@
 # Translation boundary: presentation labels only, preserve user names
 # Correct guarded call-history rendering
 # Device QA revision: member exit and extended screen translations
-name: NgelX Build465 Install-Compatible QA (no deploy)
+name: NgelX Build466 Install-Compatible QA (no deploy)
 
 on:
   pull_request:
@@ -29,6 +29,7 @@ on:
       - qa/ngelx-build465-feedback-fixes-20261016
       - qa/ngelx-build465-messenger-ui-next-20261016
       - qa/ngelx-build465-call-ui-finish-20261016
+      - qa/ngelx-build466-install-20261016
     paths:
       - '.github/workflows/NgelX-BUILD465-INSTALL-QA.yml'
       - 'tools/*465*'
@@ -831,7 +832,7 @@ jobs:
         working-directory: app
         run: |
           set -euo pipefail
-          flutter build apk --release --build-name=1.0.240 --build-number=465 --dart-define=NGELX_VERSION_NAME=1.0.240 --dart-define=NGELX_BUILD_NUMBER=465 --dart-define=NGELX_CALL_PUSH_URL=https://ngelx-call-push.alihancaglar76.workers.dev
+          flutter build apk --release --build-name=1.0.241 --build-number=466 --dart-define=NGELX_VERSION_NAME=1.0.241 --dart-define=NGELX_BUILD_NUMBER=466 --dart-define=NGELX_CALL_PUSH_URL=https://ngelx-call-push.alihancaglar76.workers.dev
           test -s build/app/outputs/flutter-apk/app-release.apk
           APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
           test -n "$APKSIGNER"
@@ -839,20 +840,20 @@ jobs:
           grep -qi "be20b27f0ba1f4decd2941d410b1536de89e48dc894f04f038f9d26b11ecd6aa" apk-signature.txt
           AAPT="$(dirname "$APKSIGNER")/aapt"
           "$AAPT" dump badging build/app/outputs/flutter-apk/app-release.apk | tee apk-manifest.txt
-          grep -q "versionCode='465'" apk-manifest.txt
-          grep -q "versionName='1.0.240'" apk-manifest.txt
-          cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/NgelX-1.0.240-Build-465-INSTALL-QA.apk
-          sha256sum build/app/outputs/flutter-apk/NgelX-1.0.240-Build-465-INSTALL-QA.apk > build/app/outputs/flutter-apk/NgelX-1.0.240-Build-465-INSTALL-QA.apk.sha256
+          grep -q "versionCode='466'" apk-manifest.txt
+          grep -q "versionName='1.0.241'" apk-manifest.txt
+          cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/NgelX-1.0.241-Build-466-INSTALL-QA.apk
+          sha256sum build/app/outputs/flutter-apk/NgelX-1.0.241-Build-466-INSTALL-QA.apk > build/app/outputs/flutter-apk/NgelX-1.0.241-Build-466-INSTALL-QA.apk.sha256
 
       # Publish the signed, locally tested APK before any optional cloud deployment.
       # The owner can test the app even when Google Cloud API activation is not permitted.
       - name: Upload signed candidate and tested rules for review
         uses: actions/upload-artifact@v4
         with:
-          name: NgelX-1.0.240-Build-465-INSTALL-QA
+          name: NgelX-1.0.241-Build-466-INSTALL-QA
           path: |
-            app/build/app/outputs/flutter-apk/NgelX-1.0.240-Build-465-INSTALL-QA.apk
-            app/build/app/outputs/flutter-apk/NgelX-1.0.240-Build-465-INSTALL-QA.apk.sha256
+            app/build/app/outputs/flutter-apk/NgelX-1.0.241-Build-466-INSTALL-QA.apk
+            app/build/app/outputs/flutter-apk/NgelX-1.0.241-Build-466-INSTALL-QA.apk.sha256
             app/build/app/outputs/bundle/release/NgelX-1.0.223-Build-446-PLAY-PREPARATION.aab
             build441-untranslated.tsv
             build442-untranslated.tsv
@@ -862,5 +863,5 @@ jobs:
           retention-days: 14
 
       - name: Confirm no production deployment
-        run: echo 'Build465 TEST APK only; no paid services, no production Firebase rules or cloud functions deployed.'
+        run: echo 'Build466 TEST APK only; no paid services, no production Firebase rules or cloud functions deployed.'
 
