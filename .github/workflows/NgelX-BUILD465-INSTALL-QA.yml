@@ -28,6 +28,7 @@ on:
       - qa/ngelx-build465-install-20261016
       - qa/ngelx-build465-feedback-fixes-20261016
       - qa/ngelx-build465-messenger-ui-next-20261016
+      - qa/ngelx-build465-call-ui-finish-20261016
     paths:
       - '.github/workflows/NgelX-BUILD465-INSTALL-QA.yml'
       - 'tools/*465*'
@@ -728,6 +729,7 @@ jobs:
           python3 -m unittest discover -s tools -p 'test_build465_photo_reply_layout.py'
           python3 -m unittest discover -s tools -p 'test_build465_message_rhythm.py'
           python3 -m unittest discover -s tools -p 'test_build465_messenger_call_controls.py'
+          python3 -m unittest discover -s tools -p 'test_build465_call_status_minimize.py'
           python3 tools/apply_build465_inbox_recovery.py
           python3 tools/apply_build465_safe_media.py
           python3 tools/apply_build465_reaction_alignment.py
@@ -737,6 +739,7 @@ jobs:
           python3 tools/apply_build465_photo_reply_layout.py
           python3 tools/apply_build465_message_rhythm.py
           python3 tools/apply_build465_messenger_call_controls.py
+          python3 tools/apply_build465_call_status_minimize.py
           python3 tools/apply_build465_message_rhythm.py
           python3 tools/apply_build465_ringtone_channel.py
           python3 tools/apply_build465_ringtone_channel.py
@@ -752,6 +755,7 @@ jobs:
           grep -Fq "Build465: retain the image's natural width/height ratio" app/lib/main.dart
           grep -Fq 'Build465 Messenger quote presentation and tight avatar alignment' app/lib/main.dart
           grep -Fq 'Build465 Messenger call controls: responsive wrap and in-row hang-up' app/lib/main.dart
+          grep -Fq 'Build465 Messenger: clear ringing label and explicit safe minimize action' app/lib/main.dart
           grep -Fq 'ngelx_incoming_calls465' app/android/app/src/main/kotlin/com/nnentx/ngelx_app/IncomingCallService.kt
 
       - name: Flutter analiz
