@@ -29,7 +29,10 @@ try {
   await assertSucceeds(updateDoc(doc(founder,id),{postApproval:true}));
   await assertSucceeds(updateDoc(doc(founder,id),{joinApproval:true}));
   await assertSucceeds(updateDoc(doc(founder,id),{paused:true}));
+  // Preserve the earlier safe cover-only legacy fallback.
+  await assertSucceeds(updateDoc(doc(founder,id),{coverAlignment:.35}));
   await assertFails(updateDoc(doc(member,id),{paused:false}));
+  await assertFails(updateDoc(doc(member,id),{coverAlignment:.2}));
   await assertFails(updateDoc(doc(outsider,id),{paused:false}));
   await assertFails(updateDoc(doc(admin,id),{paused:false}));
   // Not a backdoor to add admins, remove members or delete whole community.
