@@ -32,7 +32,7 @@ PRIVATE="""class _SohbetPageState extends State<SohbetPage>{
     );
   }
 }
-class NgelXGrupVideoMesaj {}
+class NgelXSesliMesaj {}
 """
 
 class OpeningScrollTests(unittest.TestCase):
