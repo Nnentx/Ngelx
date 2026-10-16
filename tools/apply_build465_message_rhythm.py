@@ -81,9 +81,9 @@ def transform(src):
     if quote_end<0 or quote_end-quote_at>1100:
         raise RuntimeError("Build465 quote: reply card boundary unavailable")
     quote=dm[quote_at:quote_end]
-    match=re.search(r"(?m)^(\\s*)color:[^\\n]*,\\s*\\n(\\s*)borderRadius:BorderRadius\\.circular\\(12\\),",quote)
+    match=re.search(r"(?m)^(\s*)color:[^\n]*,\s*\n(\s*)borderRadius:BorderRadius\.circular\(12\),",quote)
     if match:
-        quote=quote[:match.start()]+match.group(1)+"color:const Color(0xFFF3F5FA),\\n"+match.group(2)+"borderRadius:BorderRadius.circular(12),"+quote[match.end():]
+        quote=quote[:match.start()]+match.group(1)+"color:const Color(0xFFF3F5FA),\n"+match.group(2)+"borderRadius:BorderRadius.circular(12),"+quote[match.end():]
     else:
         print("Build465 quote: retaining generated private reply background")
     dm=dm[:quote_at]+quote+dm[quote_end:]
