@@ -734,6 +734,11 @@ service cloud.firestore {
       return signedIn()
         && request.auth.uid in community450(cid).data.get('members', []);
     }
+    function community450Posting(cid) {
+      return community450Member(cid)
+        && community450(cid).data.get('paused', false) == false
+        && !(request.auth.uid in community450(cid).data.get('muted', []));
+    }
     function community450Manager(cid) {
       return signedIn()
         && (
@@ -786,6 +791,16 @@ service cloud.firestore {
         && request.resource.data.get('members', []).size() == resource.data.get('members', []).size() + 1
         && request.resource.data.get('members', []).size() <= 500;
     }
+    function community450SelfLeave() {
+      return signedIn()
+        && request.auth.uid != resource.data.get('founderId', '')
+        && request.auth.uid in resource.data.get('members', [])
+        && onlyChanges(['members', 'admins'])
+        && request.resource.data.get('members', []).toSet()
+          == resource.data.get('members', []).toSet().difference([request.auth.uid].toSet())
+        && request.resource.data.get('admins', []).toSet()
+          == resource.data.get('admins', []).toSet().difference([request.auth.uid].toSet());
+    }
     function community450FounderUpdate() {
       return signedIn()
         && request.auth.uid == resource.data.get('founderId', '')
@@ -809,6 +824,9 @@ service cloud.firestore {
         && request.resource.data.get('admins', []) == resource.data.get('admins', [])
         && request.resource.data.get('members', []).hasAll(resource.data.get('admins', []))
         && resource.data.get('founderId', '') in request.resource.data.get('members', [])
+        // An administrator must not silence or ban the founder.
+        && !(resource.data.get('founderId', '') in request.resource.data.get('muted', []))
+        && !(resource.data.get('founderId', '') in request.resource.data.get('banned', []))
         && request.resource.data.get('members', []).size() <= 500
         && onlyChanges([
           'name', 'description', 'rules', 'category', 'photoUrl', 'coverUrl',
@@ -839,7 +857,8 @@ service cloud.firestore {
         ]);
       allow update: if community450FounderUpdate()
         || community450AdminUpdate()
-        || community450SelfJoin(cid);
+        || community450SelfJoin(cid)
+        || community450SelfLeave();
       // No client-side hard deletes until backup/restore is verified.
       allow delete: if false;
 
@@ -850,6 +869,13 @@ service cloud.firestore {
           && request.resource.data.get('uid', '') == requestUid
           && request.resource.data.get('status', '') == 'pending'
           && !(requestUid in community450(cid).data.get('banned', []))
+          // Private communities require a valid invite from nonmembers.
+          // Existing members retain the legacy ability to open a request.
+          && (
+            community450(cid).data.get('visibility', 'public') == 'public'
+            || community450Member(cid)
+            || community450InviteValid(cid, request.resource.data.get('inviteCode', ''))
+          )
           && request.resource.data.keys().hasOnly(['uid', 'status', 'inviteCode', 'createdAt']);
         allow update: if community450Manager(cid)
           && onlyChanges(['status'])
@@ -863,16 +889,26 @@ service cloud.firestore {
             || (signedIn() && resource.data.get('authorId', '') == request.auth.uid)
             || community450Manager(cid)
           );
-        allow create: if community450Member(cid)
+        allow create: if community450Posting(cid)
           && request.resource.data.get('authorId', '') == request.auth.uid
           && request.resource.data.get('text', '') is string
           && request.resource.data.get('text', '').size() <= 3000
-          && request.resource.data.get('status', '') ==
-            ((community450(cid).data.get('postApproval', false) == true
-              && !community450Manager(cid)) ? 'pending' : 'approved')
+          && (
+            request.resource.data.get('status', '') ==
+              (((community450(cid).data.get('postApproval', false) == true
+                || request.auth.uid in community450(cid).data.get('approvalMembers', []))
+                && !community450Manager(cid)) ? 'pending' : 'approved')
+            || (
+              community450Manager(cid)
+              && request.resource.data.get('status', '') == 'scheduled'
+              && request.resource.data.get('publishAt', request.time) is timestamp
+              && request.resource.data.get('publishAt', request.time) > request.time
+              && request.resource.data.get('publishAt', request.time) <= request.time + duration.value(30, 'd')
+            )
+          )
           && request.resource.data.keys().hasOnly([
             'authorId', 'authorName', 'authorPhoto', 'text', 'mediaUrl',
-            'mediaType', 'status', 'pinned', 'createdAt'
+            'mediaType', 'status', 'pinned', 'createdAt', 'publishAt'
           ]);
         allow update: if (
           community450Manager(cid)
@@ -890,17 +926,47 @@ service cloud.firestore {
           && request.resource.data.get('status', '') == 'deleted'
         );
         allow delete: if false;
+        match /commentLimits456/{limitUid} {
+          allow get: if community450Member(cid) && isMe(limitUid);
+          allow create, update: if community450Posting(cid)
+            && isMe(limitUid)
+            && request.resource.data.keys().hasOnly(['uid','commentId','at'])
+            && request.resource.data.get('uid', '') == limitUid
+            && request.resource.data.get('commentId', '') is string
+            && request.resource.data.get('at', request.time) == request.time
+            && (
+              !exists(/databases/$(database)/documents/communities450/$(cid)/posts/$(pid)/commentLimits456/$(limitUid))
+              || resource.data.get('at', request.time)
+                + duration.value(
+                  get(/databases/$(database)/documents/communities450/$(cid)/posts/$(pid)).data.get('slowSeconds', 0),
+                  's'
+                ) <= request.time
+            );
+          allow delete: if false;
+        }
 
         // Posts use /likes/{uid} for emoji reactions; comments use
         // /comments/{commentId}/reactions/{uid}. Never grant a stale
         // post-level /reactions wildcard.
         match /comments/{commentId} {
           allow read: if community450PostView(cid, pid);
-          allow create: if community450Member(cid)
+          allow create: if community450Posting(cid)
             && request.resource.data.get('uid', '') == request.auth.uid
             && request.resource.data.get('text', '') is string
             && request.resource.data.get('text', '').size() > 0
             && request.resource.data.get('text', '').size() <= 500
+            && request.resource.data.get('replyTo', '') is string
+            && (
+              request.resource.data.get('replyTo', '') == ''
+              || exists(/databases/$(database)/documents/communities450/$(cid)/posts/$(pid)/comments/$(request.resource.data.replyTo))
+            )
+            && (
+              get(/databases/$(database)/documents/communities450/$(cid)/posts/$(pid)).data.get('slowSeconds', 0) == 0
+              || (
+                getAfter(/databases/$(database)/documents/communities450/$(cid)/posts/$(pid)/commentLimits456/$(request.auth.uid)).data.get('at', request.time) == request.time
+                && getAfter(/databases/$(database)/documents/communities450/$(cid)/posts/$(pid)/commentLimits456/$(request.auth.uid)).data.get('commentId', '') == commentId
+              )
+            )
             && !(request.auth.uid in community450(cid).data.get('muted', []))
             && get(/databases/$(database)/documents/communities450/$(cid)/posts/$(pid)).data.get('commentsClosed', false) != true
             && request.resource.data.keys().hasOnly([
@@ -929,7 +995,7 @@ service cloud.firestore {
             && community450PostView(cid, pid)
             && isMe(likeUid)
             && request.resource.data.get('uid', '') == likeUid
-            && request.resource.data.get('emoji', '') in ['❤️','👍','😂','😮','😢','😡']
+            && request.resource.data.get('emoji', '❤️') in ['❤️','👍','😂','😮','😢','😡']
             && request.resource.data.get('createdAt', request.time) == request.time
             && request.resource.data.keys().hasOnly(['uid','emoji','createdAt']);
           allow delete: if isMe(likeUid);

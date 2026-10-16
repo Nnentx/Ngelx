@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import {initializeTestEnvironment,assertSucceeds,assertFails} from '@firebase/rules-unit-testing';
-import {doc,setDoc,getDoc,getDocs,collection,updateDoc,runTransaction,serverTimestamp} from 'firebase/firestore';
+import {doc,setDoc,getDoc,getDocsFromServer,collection,query,where,updateDoc,runTransaction,serverTimestamp} from 'firebase/firestore';
 const env=await initializeTestEnvironment({projectId:'demo-ngelx',firestore:{host:'127.0.0.1',port:8080,rules:fs.readFileSync('firestore.rules','utf8')}});
 try{
  await env.clearFirestore();
@@ -10,8 +10,9 @@ try{
  const ref=doc(member,'chats/member447/joinRequests/target');
  await assertSucceeds(runTransaction(member,async tx=>{const group=await tx.get(doc(member,'chats/member447'));const previous=await tx.get(ref);if(!previous.exists())tx.set(ref,payload);}));
  await assertFails(updateDoc(ref,{status:'accepted'}));
- await assertFails(getDocs(collection(member,'chats/member447/joinRequests')));
- await assertSucceeds(getDocs(collection(owner,'chats/member447/joinRequests')));
+ // An outsider cannot enumerate group join requests.
+ await assertFails(getDocsFromServer(collection(outside,'chats/member447/joinRequests')));
+ await assertSucceeds(getDocsFromServer(collection(owner,'chats/member447/joinRequests')));
  await assertFails(getDoc(doc(outside,'chats/member447/joinRequests/target')));
  await assertSucceeds(updateDoc(doc(owner,'chats/member447/joinRequests/target'),{status:'rejected'}));
  await assertSucceeds(setDoc(ref,payload));
