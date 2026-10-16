@@ -142,6 +142,10 @@ jobs:
           assert before.count(old) == 1, 'Expected Build457 native ABI configuration changed'
           gradle.write_text(before.replace(old, '// QA: Flutter ABI splits select only ARM64'))
           PY
+          # Flutter normally prefixes split-APK version codes with ABI offsets.
+          # Preserve EXACT versionCode=457 so future NgelX builds can update
+          # this install normally (e.g. Build458) without forced uninstalls.
+          printf '\\nforce-version-code-ignoring-abi=true\\n' >> android/gradle.properties
           flutter build apk --release --split-per-abi --target-platform android-arm64 --no-pub --build-name=1.0.232 --build-number=457 --dart-define=NGELX_VERSION_NAME=1.0.232 --dart-define=NGELX_BUILD_NUMBER=457 --dart-define=NGELX_CALL_PUSH_URL=https://ngelx-call-push.alihancaglar76.workers.dev
 
       - name: Verify ARM64 APK contents, size and Android signature
@@ -173,17 +177,7 @@ jobs:
           aapt="$(dirname "$signer")/aapt"
           "$aapt" dump badging "$apk" | tee apk-manifest.txt
           grep -q "package: name='com.nnentx.ngelx_app'" apk-manifest.txt
-          python3 - <<'PY'
-          from pathlib import Path
-          import re
-          manifest = Path('apk-manifest.txt').read_text()
-          match = re.search(r"versionCode='(\\d+)'", manifest)
-          assert match, 'APK versionCode missing'
-          code = int(match.group(1))
-          # Flutter's --split-per-abi can add an ABI prefix (1000 * ABI id).
-          assert code >= 457 and code % 1000 == 457, f'Unexpected Build457 versionCode: {code}'
-          print(f'Install-compatible Build457 versionCode: {code}')
-          PY
+          grep -q "versionCode='457'" apk-manifest.txt
           grep -q "versionName='1.0.232'" apk-manifest.txt
           sha256sum "$apk"
 
