@@ -25,6 +25,6 @@ class PrivateComposerTests(unittest.TestCase):
         self.assertEqual(result,transform(result))
     def test_modified_ui_anchor_refuses_guessing(self):
         with self.assertRaises(RuntimeError):
-            transform(self.template().replace("hintText:'Mesaj'","hintText:'Message'"))
+            transform(self.template().replace("controller:mesaj,","controller:changed,"))
 
 if __name__=="__main__":unittest.main()
