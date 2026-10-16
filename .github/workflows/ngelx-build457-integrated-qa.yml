@@ -189,3 +189,54 @@ jobs:
           path: app/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
           if-no-files-found: error
           retention-days: 7
+
+      # Produce a second standalone option for legacy 32-bit and modern 64-bit phones.
+      # Uses the same restored Build456 signing key and the same versionCode.
+      - name: Build universal ARM32 and ARM64 test APK
+        working-directory: app
+        shell: bash
+        run: |
+          set -euo pipefail
+          test ! -e android/key.properties
+          flutter build apk --release --no-pub --target-platform android-arm,android-arm64 --build-name=1.0.232 --build-number=457 --dart-define=NGELX_VERSION_NAME=1.0.232 --dart-define=NGELX_BUILD_NUMBER=457 --dart-define=NGELX_CALL_PUSH_URL=https://ngelx-call-push.alihancaglar76.workers.dev
+
+      - name: Verify universal APK architecture, manifest, certificate and integrity
+        shell: bash
+        run: |
+          set -euo pipefail
+          apk=app/build/app/outputs/flutter-apk/app-release.apk
+          test -s "$apk"
+          unzip -tqq "$apk"
+          python3 - "$apk" <<'PY'
+          import sys
+          from pathlib import Path
+          from zipfile import ZipFile
+          apk = Path(sys.argv[1])
+          with ZipFile(apk) as z:
+              paths = set(z.namelist())
+              abis = {name.split('/')[1] for name in paths if name.startswith('lib/') and name.endswith('.so')}
+              assert abis == {'armeabi-v7a', 'arm64-v8a'}, f'Unexpected architectures: {abis}'
+              for abi in abis:
+                  assert f'lib/{abi}/libflutter.so' in paths, f'Missing Flutter engine: {abi}'
+                  assert f'lib/{abi}/libapp.so' in paths, f'Missing compiled app: {abi}'
+              assert 'assets/flutter_assets/kernel_blob.bin' not in paths
+          assert apk.stat().st_size < 250 * 1024 * 1024
+          print(f'Universal APK contains ARM32 + ARM64: {apk.stat().st_size / 1024 / 1024:.1f} MiB')
+          PY
+          signer="$(find "${ANDROID_HOME:-/usr/local/lib/android/sdk}/build-tools" -mindepth 2 -maxdepth 2 -type f -name apksigner | sort -V | tail -n 1)"
+          "$signer" verify --verbose --print-certs "$apk" | tee universal-signature.txt
+          grep -qi 'be20b27f0ba1f4decd2941d410b1536de89e48dc894f04f038f9d26b11ecd6aa' universal-signature.txt
+          aapt="$(dirname "$signer")/aapt"
+          "$aapt" dump badging "$apk" > universal-manifest.txt
+          grep -q "package: name='com.nnentx.ngelx_app'" universal-manifest.txt
+          grep -q "versionCode='457'" universal-manifest.txt
+          grep -q "versionName='1.0.232'" universal-manifest.txt
+          sha256sum "$apk"
+
+      - name: Attach universal ARM32 and ARM64 test APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: ngelx-build457-install-compatible-universal-apk
+          path: app/build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+          retention-days: 7
