@@ -113,14 +113,48 @@ jobs:
         run: |
           mkdir -p "$HOME/.android"
           keytool -genkeypair -v -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 3650 -dname "CN=Android Debug,O=Android,C=US" -noprompt
-      # Compile only. Do not install, launch, sign for release, or deploy.
-      - name: Build non-release QA debug APK after all tests pass
+      # Optimize for physical ARM64 Android phones. "release" here is only
+      # Flutter's AOT compilation mode: the APK is QA/debug-key signed and is
+      # never deployed or signed with production release credentials.
+      - name: Build smaller ARM64-only QA test APK after all tests pass
         working-directory: app
-        run: flutter build apk --debug --no-pub
-      - name: Attach QA debug APK to this workflow run
+        shell: bash
+        run: |
+          set -euo pipefail
+          test ! -e android/key.properties
+          flutter build apk --release --split-per-abi --target-platform android-arm64 --no-pub
+
+      - name: Verify ARM64 APK contents, size and Android signature
+        shell: bash
+        run: |
+          set -euo pipefail
+          apk=app/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+          test -s "$apk"
+          unzip -tqq "$apk"
+          python3 - "$apk" <<'PY'
+          import sys
+          from pathlib import Path
+          from zipfile import ZipFile
+          apk = Path(sys.argv[1])
+          with ZipFile(apk) as z:
+              paths = set(z.namelist())
+              abis = {name.split('/')[1] for name in paths if name.startswith('lib/') and name.endswith('.so')}
+              assert abis == {'arm64-v8a'}, f'Unexpected native architectures: {abis}'
+              assert 'lib/arm64-v8a/libflutter.so' in paths
+              assert 'lib/arm64-v8a/libapp.so' in paths
+              assert 'assets/flutter_assets/kernel_blob.bin' not in paths, 'Debug kernel must not ship in optimized APK'
+          assert apk.stat().st_size < 160 * 1024 * 1024, f'APK unexpectedly large: {apk.stat().st_size}'
+          print(f'Validated ARM64-only QA APK: {apk.stat().st_size / 1024 / 1024:.1f} MiB')
+          PY
+          signer="$(find "${ANDROID_HOME:-/usr/local/lib/android/sdk}/build-tools" -mindepth 2 -maxdepth 2 -type f -name apksigner | sort -V | tail -n 1)"
+          test -x "$signer"
+          "$signer" verify --verbose --print-certs "$apk"
+          sha256sum "$apk"
+
+      - name: Attach optimized ARM64 QA test APK to this workflow run
         uses: actions/upload-artifact@v4
         with:
-          name: ngelx-build457-qa-debug-apk
-          path: app/build/app/outputs/flutter-apk/app-debug.apk
+          name: ngelx-build457-qa-arm64-test-apk
+          path: app/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
           if-no-files-found: error
           retention-days: 7
