@@ -716,6 +716,7 @@ jobs:
           python3 -m unittest discover -s tools -p 'test_build465_inbox_recovery.py'
           python3 -m unittest discover -s tools -p 'test_build465_safe_media.py'
           python3 -m unittest discover -s tools -p 'test_build465_reaction_alignment.py'
+          python3 -m unittest discover -s tools -p 'test_build465_call_open.py'
           python3 tools/apply_build465_inbox_recovery.py
           python3 tools/apply_build465_safe_media.py
           python3 tools/apply_build465_reaction_alignment.py
