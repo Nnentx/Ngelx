@@ -14,16 +14,12 @@ Future<void> ngelx454OpenIncoming(String chat,String room)async{
     final doc=await ref.get(const GetOptions(source:Source.server)).timeout(const Duration(seconds:8));
     final v=doc.data()??<String,dynamic>{},stamp=v['callCreatedAt'];
     if(!context.mounted||FirebaseAuth.instance.currentUser?.uid!=me||v['callRoomName']!=room||v['callStatus']!='ringing'||stamp is! Timestamp||DateTime.now().difference(stamp.toDate()).inSeconds>=60||!List<String>.from(v['members']??const[]).contains(me))return;
-    await showModalBottomSheet<void>(context:context,isScrollControlled:true,backgroundColor:Colors.white,showDragHandle:true,builder:(c)=>StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(stream:ref.snapshots(),builder:(_,snapshot){
-      final data=snapshot.data?.data()??v;
-      final active=data['callRoomName']==room&&data['callStatus']=='ringing';
-      return SafeArea(child:Padding(padding:const EdgeInsets.all(24),child:Column(mainAxisSize:MainAxisSize.min,children:[
-        const Icon(Icons.call_rounded,color:mor,size:52),const SizedBox(height:16),
-        Text((data['callTitle']??data['groupName']??'Gelen arama').toString(),style:const TextStyle(color:Colors.black87,fontSize:22,fontWeight:FontWeight.w800)),
-        const SizedBox(height:12),Text(active?(data['callVideo']==true?'Gelen görüntülü arama':'Gelen sesli arama'):'Bu arama sona erdi.',style:const TextStyle(color:Colors.black54,fontSize:16)),const SizedBox(height:24),
-        Row(children:[Expanded(child:OutlinedButton.icon(onPressed:active?()async{Navigator.pop(c);await ngelx448Incoming._action({'chat':chat,'room':room,'action':'reject'});}:()=>Navigator.pop(c),icon:const Icon(Icons.call_end,color:Colors.red),label:Text(active?'Reddet':'Kapat'))),const SizedBox(width:12),if(active)Expanded(child:FilledButton.icon(onPressed:()async{Navigator.pop(c);await ngelx448Incoming._action({'chat':chat,'room':room,'action':'answer'});},icon:const Icon(Icons.call),label:const Text('Cevapla')))]),
-      ])));
-    }));
+    // Build465: a title tap opens the verified group/private chat immediately.
+    // Answer/reject remain on the separate incoming notification controls.
+    await ngelx445OpenCallChat(context,{
+      'sourceId':chat,
+      'targetTitle':(v['callTitle']??v['groupName']??'').toString(),
+    });
   }catch(_){if(context.mounted)ngelxDurumMesaji(context,'Arama ekranı açılamadı. Tekrar dene.',tip:'hata');}
   finally{_openingIncoming454=false;}
 }
