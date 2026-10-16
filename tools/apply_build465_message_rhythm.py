@@ -72,14 +72,21 @@ def transform(src):
         "width:math.min(264.0,MediaQuery.sizeOf(context).width*.68),\n"
         "                margin:const EdgeInsets.only(bottom:7),",
         "quoted DM width")
-    dm=replace_one(dm,
-        "color:Colors.white.withValues(alpha:.96),\n                  borderRadius:BorderRadius.circular(12),",
-        "color:const Color(0xFFF3F5FA),\n                  borderRadius:BorderRadius.circular(12),",
-        "quoted DM soft background")
-    dm=replace_one(dm,
-        "border:const Border(left:BorderSide(color:ngelxPrivateBlue,width:3)),",
-        "border:const Border(left:BorderSide(color:ngelxPrivateBlue,width:3)),",
-        "quoted DM left accent")
+    # Build455+ can restyle the quote colour before this patch runs. Locate
+    # only the known quoted-reply container, and keep its existing decoration
+    # if colour formatting is different rather than changing unrelated bubbles.
+    quote_anchor="width:math.min(264.0,MediaQuery.sizeOf(context).width*.68),"
+    quote_at=dm.index(quote_anchor)
+    quote_end=dm.find("child:Row(children:[",quote_at)
+    if quote_end<0 or quote_end-quote_at>1100:
+        raise RuntimeError("Build465 quote: reply card boundary unavailable")
+    quote=dm[quote_at:quote_end]
+    match=re.search(r"(?m)^(\\s*)color:[^\\n]*,\\s*\\n(\\s*)borderRadius:BorderRadius\\.circular\\(12\\),",quote)
+    if match:
+        quote=quote[:match.start()]+match.group(1)+"color:const Color(0xFFF3F5FA),\\n"+match.group(2)+"borderRadius:BorderRadius.circular(12),"+quote[match.end():]
+    else:
+        print("Build465 quote: retaining generated private reply background")
+    dm=dm[:quote_at]+quote+dm[quote_end:]
     src=src[:start]+dm+src[end:]
     return src.replace(GROUP_START,TAG+"\n"+GROUP_START,1)
 
