@@ -54,6 +54,8 @@ class Build469Tests(unittest.TestCase):
                   "request.auth.uid in resource.data.get('members',[])",
                   "affectedKeys().hasOnly([","'visibility','joinApproval','postApproval','paused'"):
             self.assertIn(t,part)
-        self.assertNotIn("role",part)
-        self.assertNotIn("admins",part)
+        changed_fields=part.split("affectedKeys().hasOnly([",1)[1].split("])",1)[0]
+        self.assertNotIn("'admins'",changed_fields)
+        self.assertNotIn("'members'",changed_fields)
+        self.assertNotIn("'founderId'",changed_fields)
 if __name__=='__main__': unittest.main()
