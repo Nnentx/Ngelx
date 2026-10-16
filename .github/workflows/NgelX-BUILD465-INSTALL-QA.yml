@@ -30,6 +30,7 @@ on:
       - qa/ngelx-build465-messenger-ui-next-20261016
       - qa/ngelx-build465-call-ui-finish-20261016
       - qa/ngelx-build466-install-20261016
+      - qa/ngelx-build467-consolidated-20261016
     paths:
       - '.github/workflows/NgelX-BUILD465-INSTALL-QA.yml'
       - 'tools/*465*'
@@ -758,6 +759,20 @@ jobs:
           grep -Fq 'Build465 Messenger call controls: responsive wrap and in-row hang-up' app/lib/main.dart
           grep -Fq 'Build465 Messenger: clear ringing label and explicit safe minimize action' app/lib/main.dart
           grep -Fq 'ngelx_incoming_calls465' app/android/app/src/main/kotlin/com/nnentx/ngelx_app/IncomingCallService.kt
+
+      - name: Capture generated UI and Android call sources for Build467 QA
+        uses: actions/upload-artifact@v4
+        with:
+          name: NgelX-Build467-Generated-Sources-QA
+          path: |
+            app/lib/main.dart
+            app/lib/build448_incoming_calls.dart
+            app/lib/build456_widgets.dart
+            app/lib/build455_widgets.dart
+            app/android/app/src/main/kotlin/com/nnentx/ngelx_app/IncomingCallService.kt
+            app/android/app/src/main/AndroidManifest.xml
+          if-no-files-found: error
+          retention-days: 2
 
       - name: Flutter analiz
         shell: bash
