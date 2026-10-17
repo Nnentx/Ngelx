@@ -11,7 +11,7 @@
 # Translation boundary: presentation labels only, preserve user names
 # Correct guarded call-history rendering
 # Device QA revision: member exit and extended screen translations
-name: NgelX Build473 Community Permission Reporting QA (no deploy)
+name: NgelX Build474 Private Wallpaper Removal and Composer Layout QA (no deploy)
 
 on:
   pull_request:
@@ -39,6 +39,7 @@ on:
       - qa/ngelx-build471-incoming-designs-20261017
       - qa/ngelx-build472-wallpaper-permissions-callclose-20261017
       - qa/ngelx-build473-community-authorization-20261017
+      - qa/ngelx-build474-private-wallpaper-composer-20261017
     paths:
       - '.github/workflows/NgelX-BUILD465-INSTALL-QA.yml'
       - 'tools/*465*'
@@ -49,6 +50,7 @@ on:
       - 'tools/*471*'
       - 'tools/*472*'
       - 'tools/*473*'
+      - 'tools/*474*'
       - 'app/lib/community450.dart'
       - 'app/android/app/src/main/kotlin/com/nnentx/ngelx_app/IncomingCallActivity470.kt'
       - 'cloudflare/call-push/src/policy.mjs'
@@ -873,6 +875,16 @@ jobs:
           python3 -m unittest discover -s tools -p 'test_build473_*.py' -v
           grep -Fq 'Build473: explicit Firestore permission denial' app/lib/community450.dart
 
+      - name: Build474 private chat wallpaper removal, scroll and composer regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/apply_build474_private_chat_stability.py tools/test_build474_private_chat_stability.py
+          python3 tools/apply_build474_private_chat_stability.py
+          python3 -m unittest discover -s tools -p 'test_build474_*.py' -v
+          grep -Fq "if(veri.containsKey('backgroundUrl'))" app/lib/main.dart
+          grep -Fq 'ngelxAltSistemRezervi(context,minimum:82)' app/lib/main.dart
+
       - name: Flutter analiz
         shell: bash
         run: |
@@ -946,7 +958,7 @@ jobs:
         working-directory: app
         run: |
           set -euo pipefail
-          flutter build apk --release --build-name=1.0.248 --build-number=473 --dart-define=NGELX_VERSION_NAME=1.0.248 --dart-define=NGELX_BUILD_NUMBER=473 --dart-define=NGELX_CALL_PUSH_URL=https://ngelx-call-push.alihancaglar76.workers.dev
+          flutter build apk --release --build-name=1.0.249 --build-number=474 --dart-define=NGELX_VERSION_NAME=1.0.249 --dart-define=NGELX_BUILD_NUMBER=474 --dart-define=NGELX_CALL_PUSH_URL=https://ngelx-call-push.alihancaglar76.workers.dev
           test -s build/app/outputs/flutter-apk/app-release.apk
           APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
           test -n "$APKSIGNER"
@@ -954,20 +966,20 @@ jobs:
           grep -qi "be20b27f0ba1f4decd2941d410b1536de89e48dc894f04f038f9d26b11ecd6aa" apk-signature.txt
           AAPT="$(dirname "$APKSIGNER")/aapt"
           "$AAPT" dump badging build/app/outputs/flutter-apk/app-release.apk | tee apk-manifest.txt
-          grep -q "versionCode='473'" apk-manifest.txt
-          grep -q "versionName='1.0.248'" apk-manifest.txt
-          cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/NgelX-1.0.248-Build-473-INSTALL-QA.apk
-          sha256sum build/app/outputs/flutter-apk/NgelX-1.0.248-Build-473-INSTALL-QA.apk > build/app/outputs/flutter-apk/NgelX-1.0.248-Build-473-INSTALL-QA.apk.sha256
+          grep -q "versionCode='474'" apk-manifest.txt
+          grep -q "versionName='1.0.249'" apk-manifest.txt
+          cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/NgelX-1.0.249-Build-474-INSTALL-QA.apk
+          sha256sum build/app/outputs/flutter-apk/NgelX-1.0.249-Build-474-INSTALL-QA.apk > build/app/outputs/flutter-apk/NgelX-1.0.249-Build-474-INSTALL-QA.apk.sha256
 
       # Publish the signed, locally tested APK before any optional cloud deployment.
       # The owner can test the app even when Google Cloud API activation is not permitted.
       - name: Upload signed candidate and tested rules for review
         uses: actions/upload-artifact@v4
         with:
-          name: NgelX-1.0.248-Build-473-INSTALL-QA
+          name: NgelX-1.0.249-Build-474-INSTALL-QA
           path: |
-            app/build/app/outputs/flutter-apk/NgelX-1.0.248-Build-473-INSTALL-QA.apk
-            app/build/app/outputs/flutter-apk/NgelX-1.0.248-Build-473-INSTALL-QA.apk.sha256
+            app/build/app/outputs/flutter-apk/NgelX-1.0.249-Build-474-INSTALL-QA.apk
+            app/build/app/outputs/flutter-apk/NgelX-1.0.249-Build-474-INSTALL-QA.apk.sha256
             app/build/app/outputs/bundle/release/NgelX-1.0.223-Build-446-PLAY-PREPARATION.aab
             build441-untranslated.tsv
             build442-untranslated.tsv
