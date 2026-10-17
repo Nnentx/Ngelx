@@ -11,14 +11,7 @@ MARK = "// Build484: legacy communities can have a verified founder"
 OLD = """bool _communityAdmin450(Map<String, dynamic> v) =>
     List<String>.from(v['admins'] ?? []).contains(_communityUid450);"""
 NEW = """// Build484: legacy communities can have a verified founder who is not in
-// admins. Match the server's founder path without promoting ordinary members.
-bool ngelx484CommunityManager(Map<String, dynamic> v, String uid) {
-  if (uid.isEmpty) return false;
-  final members = List<String>.from(v['members'] ?? const []);
-  if (!members.contains(uid)) return false;
-  return v['founderId'] == uid ||
-      List<String>.from(v['admins'] ?? const []).contains(uid);
-}
+// admins. The shared helper also requires verified community membership.
 bool _communityAdmin450(Map<String, dynamic> v) =>
     ngelx484CommunityManager(v, _communityUid450);"""
 
