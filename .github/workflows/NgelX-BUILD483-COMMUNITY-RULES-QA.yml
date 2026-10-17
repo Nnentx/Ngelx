@@ -34,7 +34,7 @@ jobs:
       - name: Validate patch source
         run: |
           set -euo pipefail
-          python3 -m py_compile tools/apply_build483_community_permissions.py tools/prepare_build483_live_rules_qa.py
+          python3 -m py_compile tools/apply_build483_community_permissions.py tools/prepare_build483_live_rules_qa.py tools/release_build483_production_rules.py
           node --check tools/build483_community_permissions_rules_test.mjs
           test -s tools/build483_community_permissions_rules_test.mjs
 
