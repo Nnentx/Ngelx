@@ -52,25 +52,24 @@ class NgelXSohbetFotoOnizleme extends StatelessWidget{
 }"""
 
 COMMUNITY_ANCHOR="""        final root = _communities450.doc(widget.id);
-        return ListView(
-          padding: const EdgeInsets.all(16),"""
-
+        if (section == 'Genel bakış')"""
 COMMUNITY_REPLACEMENT="""        final root = _communities450.doc(widget.id);
         // Build481: distinguish legacy founder permission from moderator rights.
-        // Do not silently promote anyone or bypass Firestore security rules.
+        // This only explains known legacy permission mismatches; no role writes.
         final legacyFounder481 = v['founderId'] == _communityUid450
           && !List<String>.from(v['admins'] ?? const []).contains(_communityUid450);
-        return ListView(
-          padding: const EdgeInsets.all(16),"""
+        if (section == 'Genel bakış')"""
 
-COMMUNITY_CHILD_ANCHOR="""        return ListView(
-          padding: const EdgeInsets.all(16),
-          children: ["""
-
-COMMUNITY_CHILD_NEW="""        return ListView(
+COMMUNITY_DASHBOARD_ANCHOR="""        if (section == 'Genel bakış')
+          return ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              Ngelx456Dashboard("""
+COMMUNITY_DETAILS_ANCHOR="""        return ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            if(legacyFounder481)
+            Align("""
+COMMUNITY_WARNING="""if(legacyFounder481)
               Padding(
                 padding:const EdgeInsets.only(bottom:12),
                 child:Material(
@@ -79,12 +78,13 @@ COMMUNITY_CHILD_NEW="""        return ListView(
                   child:Padding(
                     padding:const EdgeInsets.all(12),
                     child:Text(
-                      'Bu topluluğun kurucusu olarak görünüyorsun ancak eski yönetici listesinde hesabın yok. Bazı işlemlerin reddedilmesi sunucudaki topluluk güvenlik kurallarından kaynaklanabilir. Üye veya yönetici yetkilerini otomatik değiştirmiyoruz.',
+                      'Bu topluluğun kurucusu olarak görünüyorsun ancak eski yönetici listesinde hesabın yok. Bazı işlemler canlı Firebase kuralları nedeniyle reddedilebilir. Üye veya yönetici yetkilerini otomatik değiştirmiyoruz.',
                       style:const TextStyle(color:Color(0xFF654B11),fontSize:12,fontWeight:FontWeight.w600),
                     ),
                   ),
                 ),
-              ),"""
+              ),
+            """
 
 def replace_once(src,old,new,label):
     count=src.count(old)
@@ -109,12 +109,19 @@ def community(src):
     if COMMUNITY_MARK in src:
         return src
     start=src.index("class _NgelXCommunityAdmin450State")
-    # Only edit the administrator page, not chat groups or public directory.
     section=src[start:]
     section=replace_once(section,COMMUNITY_ANCHOR,COMMUNITY_REPLACEMENT,
-                         "administrator role marker")
-    section=replace_once(section,COMMUNITY_CHILD_ANCHOR,COMMUNITY_CHILD_NEW,
-                         "legacy founder explanation")
+                         "generated administrator role marker")
+    section=replace_once(
+        section,COMMUNITY_DASHBOARD_ANCHOR,
+        COMMUNITY_DASHBOARD_ANCHOR.replace("              Ngelx456Dashboard(",
+            "              "+COMMUNITY_WARNING+"Ngelx456Dashboard("),
+        "generated moderator dashboard")
+    section=replace_once(
+        section,COMMUNITY_DETAILS_ANCHOR,
+        COMMUNITY_DETAILS_ANCHOR.replace("            Align(",
+            "            "+COMMUNITY_WARNING+"Align("),
+        "generated moderator details")
     return src[:start]+section
 
 def main():
