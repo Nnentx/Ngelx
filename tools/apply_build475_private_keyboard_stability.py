@@ -52,24 +52,24 @@ def transform(src):
         stream:_ngelx475PeerBlockStream,""",
         'stable block widget subscriptions')
 
-    body=once(body,
-        """    // Build465: the composer already has SafeArea(top:false) at the bottom.
-    bottomNavigationBar:ColoredBox(
-      color:Colors.white,
-      child:SizedBox(
-        height:MediaQuery.viewInsetsOf(context).bottom>0
-          ?0
-          :ngelxAltSistemRezervi(context,minimum:82), // Build474: keep composer clear of Android bottom controls
-      ),
-    ),""",
-        """    // Build475: prevent a second composer resize during Android IME animation.
+    # Build468 and Build474 own this property. Preserve the body below it
+    # and require their essential guards instead of assuming a comment layout.
+    slot_start=body.index('    bottomNavigationBar:ColoredBox(')
+    slot_stop=body.index('    body:StreamBuilder',slot_start)
+    previous_slot=body[slot_start:slot_stop]
+    if ('MediaQuery.viewInsetsOf(context).bottom>0' not in previous_slot
+        or 'ngelxAltSistemRezervi(context,minimum:82)' not in previous_slot):
+        raise RuntimeError('Build475 unexpected private keyboard reservation')
+    body=(body[:slot_start]
+        + """    // Build475: prevent a second composer resize during Android IME animation.
     // Android adjustResize + Scaffold already avoid the keyboard. The old
     // 82dp-to-zero bottom bar made the input move twice, and too late.
-    bottomNavigationBar:const SizedBox.shrink(),""",
-        'remove double-resize bar')
+    bottomNavigationBar:const SizedBox.shrink(),
+"""
+        + body[slot_stop:])
 
     body=once(body,
-        """:SafeArea(top:false,child:Container(
+        """:SafeArea(top:false,bottom:false,child:Container(
         decoration:const BoxDecoration(color:Colors.white,border:Border(top:BorderSide(color:ngelxPrivateBlueBorder))),""",
         """:SafeArea(
         top:false,
@@ -79,7 +79,7 @@ def transform(src):
         'single navigation safe area')
 
     body=once(body,
-        """        padding:const EdgeInsets.fromLTRB(5,8,5,9),
+        """        padding:const EdgeInsets.fromLTRB(4,7,4,8),
         child:sesKaydediliyor""",
         """        padding:const EdgeInsets.fromLTRB(5,6,5,6),
         child:sesKaydediliyor""",
