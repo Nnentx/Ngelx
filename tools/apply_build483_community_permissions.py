@@ -10,50 +10,48 @@ from pathlib import Path
 MARK = "// Build483 legacy community management and avatar compatibility"
 ANCHOR = "      allow delete: if false;\n      match /requests/{uid} {"
 
-INSERT = """      // Build483 legacy community management and avatar compatibility.
-      // Firestore remains authoritative: existing verified founder ID, current
-      // membership and the already-approved admin list are the only roots of trust.
-      // No client can modify a community founder ID, creation time or join code.
+INSERT = """      // Build483 legacy founder/admin photo-only patch. No role promotion.
       allow update: if communitySigned450()
         && request.auth.uid in resource.data.get('members', [])
-        && (
-          request.auth.uid == resource.data.get('founderId', '')
-          || (request.auth.uid in resource.data.get('admins', [])
-              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['photoUrl']))
-        )
+        && (request.auth.uid == resource.data.get('founderId', '')
+           || request.auth.uid in resource.data.get('admins', []))
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['photoUrl'])
+        && request.resource.data.get('photoUrl', '') is string
+        && request.resource.data.get('photoUrl', '').size() <= 2048;
+
+      // Build483: legacy founder role permissions are independent from the
+      // old validator requiring the founder to be listed in 'admins'.
+      // Normal members and moderators never receive these extra rights.
+      function communityLegacyRoles483() {
+        let v = request.resource.data;
+        let members = v.get('members', []);
+        let admins = v.get('admins', []);
+        let mods = v.get('moderators', []);
+        let muted = v.get('muted', []);
+        let banned = v.get('banned', []);
+        let approval = v.get('approvalMembers', []);
+        return members is list && members.size() >= 1 && members.size() <= 500
+          && members.toSet().size() == members.size()
+          && resource.data.get('founderId', '') in members
+          && admins is list && admins.size() <= 10
+          && admins.toSet().size() == admins.size()
+          && admins.toSet().difference(members.toSet()).size() == 0
+          && mods is list && mods.size() <= 30
+          && mods.toSet().difference(members.toSet()).size() == 0
+          && mods.toSet().intersection(admins.toSet()).size() == 0
+          && muted is list && muted.size() <= 500
+          && muted.toSet().difference(members.toSet()).size() == 0
+          && banned is list && banned.size() <= 500
+          && banned.toSet().intersection(members.toSet()).size() == 0
+          && approval is list && approval.size() <= 500;
+      }
+      allow update: if communitySigned450()
+        && request.auth.uid == resource.data.get('founderId', '')
+        && request.auth.uid in resource.data.get('members', [])
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          'photoUrl','members','admins','moderators','muted','banned','approvalMembers'
-        ])
-        && request.resource.data.get('photoUrl','') is string
-        && request.resource.data.get('photoUrl','').size() <= 2048
-        && request.resource.data.get('members',[]) is list
-        && request.resource.data.get('members',[]).size() >= 1
-        && request.resource.data.get('members',[]).size() <= 500
-        && resource.data.get('founderId','') in request.resource.data.get('members',[])
-        && request.resource.data.get('members',[]).toSet().size()
-           == request.resource.data.get('members',[]).size()
-        && request.resource.data.get('admins',[]) is list
-        && request.resource.data.get('admins',[]).size() <= 10
-        && request.resource.data.get('admins',[]).toSet().size()
-           == request.resource.data.get('admins',[]).size()
-        && request.resource.data.get('admins',[]).toSet()
-          .difference(request.resource.data.get('members',[]).toSet()).size() == 0
-        && request.resource.data.get('moderators',[]) is list
-        && request.resource.data.get('moderators',[]).size() <= 30
-        && request.resource.data.get('moderators',[]).toSet()
-          .difference(request.resource.data.get('members',[]).toSet()).size() == 0
-        && request.resource.data.get('moderators',[]).toSet()
-          .intersection(request.resource.data.get('admins',[]).toSet()).size() == 0
-        && request.resource.data.get('muted',[]) is list
-        && request.resource.data.get('muted',[]).size() <= 500
-        && request.resource.data.get('muted',[]).toSet()
-          .difference(request.resource.data.get('members',[]).toSet()).size() == 0
-        && request.resource.data.get('banned',[]) is list
-        && request.resource.data.get('banned',[]).size() <= 500
-        && request.resource.data.get('banned',[]).toSet()
-          .intersection(request.resource.data.get('members',[]).toSet()).size() == 0
-        && request.resource.data.get('approvalMembers',[]) is list
-        && request.resource.data.get('approvalMembers',[]).size() <= 500;
+             'members','admins','moderators','muted','banned','approvalMembers'
+           ])
+        && communityLegacyRoles483();
 """
 
 def transform(source: str) -> str:
