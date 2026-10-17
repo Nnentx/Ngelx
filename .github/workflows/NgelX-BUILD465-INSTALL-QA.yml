@@ -11,7 +11,7 @@
 # Translation boundary: presentation labels only, preserve user names
 # Correct guarded call-history rendering
 # Device QA revision: member exit and extended screen translations
-name: NgelX Build469 Call Grid Performance and Founder QA (no deploy)
+name: NgelX Build470 Native Incoming Calls and Smooth Chat QA (no deploy)
 
 on:
   pull_request:
@@ -35,12 +35,14 @@ on:
       - qa/ngelx-build467-consolidated-20261016
       - qa/ngelx-build468-private-composer-nav-20261016
       - qa/ngelx-build469-call-permissions-performance-20261016
+      - qa/ngelx-build470-native-incoming-call-20261017
     paths:
       - '.github/workflows/NgelX-BUILD465-INSTALL-QA.yml'
       - 'tools/*465*'
       - 'tools/*467*'
       - 'tools/*468*'
       - 'tools/*469*'
+      - 'tools/*470*'
       - 'tools/apply_build457_community_runtime_fixes.py'
       - 'tools/test_build457_community_runtime_fixes.py'
       - 'tools/verify_community_invite_ui.py'
@@ -819,6 +821,18 @@ jobs:
           grep -Fq 'Build469 incoming-ring QA' app/android/app/src/main/kotlin/com/nnentx/ngelx_app/IncomingCallService.kt
           grep -Fq 'Build469: legacy verified founder limited-settings compatibility' firestore.rules
 
+      - name: Build470 real Android incoming call and private chat jank QA
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/apply_build470_*.py tools/test_build470_device_contract.py
+          python3 tools/apply_build470_native_incoming.py
+          python3 tools/apply_build470_chat_performance.py
+          python3 -m unittest discover -s tools -p 'test_build470_*.py' -v
+          grep -Fq 'IncomingCallActivity470' app/android/app/src/main/AndroidManifest.xml
+          grep -Fq '.setFullScreenIntent(fullScreenCall, true)' app/android/app/src/main/kotlin/com/nnentx/ngelx_app/IncomingCallService.kt
+          grep -Fq '_ngelx470ComposerTick' app/lib/main.dart
+
       - name: Flutter analiz
         shell: bash
         run: |
@@ -892,7 +906,7 @@ jobs:
         working-directory: app
         run: |
           set -euo pipefail
-          flutter build apk --release --build-name=1.0.244 --build-number=469 --dart-define=NGELX_VERSION_NAME=1.0.244 --dart-define=NGELX_BUILD_NUMBER=469 --dart-define=NGELX_CALL_PUSH_URL=https://ngelx-call-push.alihancaglar76.workers.dev
+          flutter build apk --release --build-name=1.0.245 --build-number=470 --dart-define=NGELX_VERSION_NAME=1.0.245 --dart-define=NGELX_BUILD_NUMBER=470 --dart-define=NGELX_CALL_PUSH_URL=https://ngelx-call-push.alihancaglar76.workers.dev
           test -s build/app/outputs/flutter-apk/app-release.apk
           APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
           test -n "$APKSIGNER"
@@ -900,20 +914,20 @@ jobs:
           grep -qi "be20b27f0ba1f4decd2941d410b1536de89e48dc894f04f038f9d26b11ecd6aa" apk-signature.txt
           AAPT="$(dirname "$APKSIGNER")/aapt"
           "$AAPT" dump badging build/app/outputs/flutter-apk/app-release.apk | tee apk-manifest.txt
-          grep -q "versionCode='469'" apk-manifest.txt
-          grep -q "versionName='1.0.244'" apk-manifest.txt
-          cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/NgelX-1.0.244-Build-469-INSTALL-QA.apk
-          sha256sum build/app/outputs/flutter-apk/NgelX-1.0.244-Build-469-INSTALL-QA.apk > build/app/outputs/flutter-apk/NgelX-1.0.244-Build-469-INSTALL-QA.apk.sha256
+          grep -q "versionCode='470'" apk-manifest.txt
+          grep -q "versionName='1.0.245'" apk-manifest.txt
+          cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/NgelX-1.0.245-Build-470-INSTALL-QA.apk
+          sha256sum build/app/outputs/flutter-apk/NgelX-1.0.245-Build-470-INSTALL-QA.apk > build/app/outputs/flutter-apk/NgelX-1.0.245-Build-470-INSTALL-QA.apk.sha256
 
       # Publish the signed, locally tested APK before any optional cloud deployment.
       # The owner can test the app even when Google Cloud API activation is not permitted.
       - name: Upload signed candidate and tested rules for review
         uses: actions/upload-artifact@v4
         with:
-          name: NgelX-1.0.244-Build-469-INSTALL-QA
+          name: NgelX-1.0.245-Build-470-INSTALL-QA
           path: |
-            app/build/app/outputs/flutter-apk/NgelX-1.0.244-Build-469-INSTALL-QA.apk
-            app/build/app/outputs/flutter-apk/NgelX-1.0.244-Build-469-INSTALL-QA.apk.sha256
+            app/build/app/outputs/flutter-apk/NgelX-1.0.245-Build-470-INSTALL-QA.apk
+            app/build/app/outputs/flutter-apk/NgelX-1.0.245-Build-470-INSTALL-QA.apk.sha256
             app/build/app/outputs/bundle/release/NgelX-1.0.223-Build-446-PLAY-PREPARATION.aab
             build441-untranslated.tsv
             build442-untranslated.tsv
@@ -923,5 +937,5 @@ jobs:
           retention-days: 14
 
       - name: Confirm no production deployment
-        run: echo 'Build469 TEST APK only; no paid services, no production Firebase rules or cloud functions deployed.'
+        run: echo 'Build470 TEST APK only; no paid services, no production Firebase rules or cloud functions deployed.'
 
