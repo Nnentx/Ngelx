@@ -11,7 +11,7 @@
 # Translation boundary: presentation labels only, preserve user names
 # Correct guarded call-history rendering
 # Device QA revision: member exit and extended screen translations
-name: NgelX Build479 Gallery Return Route Protection QA (no deploy)
+name: NgelX Build480 Android System Photo Picker QA (no deploy)
 
 on:
   pull_request:
@@ -45,6 +45,7 @@ on:
       - qa/ngelx-build477-gallery-document-picker-20261017
       - qa/ngelx-build478-keyboard-tail-contrast-20261017
       - qa/ngelx-build479-gallery-return-guard-20261017
+      - qa/ngelx-build480-photo-picker-20261017
     paths:
       - '.github/workflows/NgelX-BUILD465-INSTALL-QA.yml'
       - 'tools/*465*'
@@ -61,6 +62,7 @@ on:
       - 'tools/*477*'
       - 'tools/*478*'
       - 'tools/*479*'
+      - 'tools/*480*'
       - 'app/android/app/src/main/kotlin/com/nnentx/ngelx_app/MainActivity.kt'
       - 'app/lib/community450.dart'
       - 'app/android/app/src/main/kotlin/com/nnentx/ngelx_app/IncomingCallActivity470.kt'
@@ -945,6 +947,15 @@ jobs:
           python3 -m unittest discover -s tools -p 'test_build479_*.py' -v
           grep -Fq 'Build479: protect private chat navigation during gallery return' app/lib/main.dart
 
+      - name: Build480 real photo picker rather than Android Files or Drive
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/apply_build480_photo_picker.py tools/test_build480_photo_picker.py
+          python3 tools/apply_build480_photo_picker.py
+          python3 -m unittest discover -s tools -p 'test_build480_*.py' -v
+          grep -Fq 'Build480: image-only selection uses Android Photo Picker instead of Files' app/android/app/src/main/kotlin/com/nnentx/ngelx_app/MainActivity.kt
+
       - name: Flutter analiz
         shell: bash
         run: |
@@ -1018,7 +1029,7 @@ jobs:
         working-directory: app
         run: |
           set -euo pipefail
-          flutter build apk --release --build-name=1.0.254 --build-number=479 --dart-define=NGELX_VERSION_NAME=1.0.254 --dart-define=NGELX_BUILD_NUMBER=479 --dart-define=NGELX_CALL_PUSH_URL=https://ngelx-call-push.alihancaglar76.workers.dev
+          flutter build apk --release --build-name=1.0.255 --build-number=480 --dart-define=NGELX_VERSION_NAME=1.0.255 --dart-define=NGELX_BUILD_NUMBER=480 --dart-define=NGELX_CALL_PUSH_URL=https://ngelx-call-push.alihancaglar76.workers.dev
           test -s build/app/outputs/flutter-apk/app-release.apk
           APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
           test -n "$APKSIGNER"
@@ -1026,20 +1037,20 @@ jobs:
           grep -qi "be20b27f0ba1f4decd2941d410b1536de89e48dc894f04f038f9d26b11ecd6aa" apk-signature.txt
           AAPT="$(dirname "$APKSIGNER")/aapt"
           "$AAPT" dump badging build/app/outputs/flutter-apk/app-release.apk | tee apk-manifest.txt
-          grep -q "versionCode='479'" apk-manifest.txt
-          grep -q "versionName='1.0.254'" apk-manifest.txt
-          cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/NgelX-1.0.254-Build-479-INSTALL-QA.apk
-          sha256sum build/app/outputs/flutter-apk/NgelX-1.0.254-Build-479-INSTALL-QA.apk > build/app/outputs/flutter-apk/NgelX-1.0.254-Build-479-INSTALL-QA.apk.sha256
+          grep -q "versionCode='480'" apk-manifest.txt
+          grep -q "versionName='1.0.255'" apk-manifest.txt
+          cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/NgelX-1.0.255-Build-480-INSTALL-QA.apk
+          sha256sum build/app/outputs/flutter-apk/NgelX-1.0.255-Build-480-INSTALL-QA.apk > build/app/outputs/flutter-apk/NgelX-1.0.255-Build-480-INSTALL-QA.apk.sha256
 
       # Publish the signed, locally tested APK before any optional cloud deployment.
       # The owner can test the app even when Google Cloud API activation is not permitted.
       - name: Upload signed candidate and tested rules for review
         uses: actions/upload-artifact@v4
         with:
-          name: NgelX-1.0.254-Build-479-INSTALL-QA
+          name: NgelX-1.0.255-Build-480-INSTALL-QA
           path: |
-            app/build/app/outputs/flutter-apk/NgelX-1.0.254-Build-479-INSTALL-QA.apk
-            app/build/app/outputs/flutter-apk/NgelX-1.0.254-Build-479-INSTALL-QA.apk.sha256
+            app/build/app/outputs/flutter-apk/NgelX-1.0.255-Build-480-INSTALL-QA.apk
+            app/build/app/outputs/flutter-apk/NgelX-1.0.255-Build-480-INSTALL-QA.apk.sha256
             app/build/app/outputs/bundle/release/NgelX-1.0.223-Build-446-PLAY-PREPARATION.aab
             build441-untranslated.tsv
             build442-untranslated.tsv
