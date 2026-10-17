@@ -49,6 +49,34 @@ def transform(source: str) -> str:
     if icons.count('constraints:const BoxConstraints.tightFor(width:31,height:44)')!=2:
         raise RuntimeError('Build476 camera/gallery width constraints drifted')
     chat=chat[:begin]+icons+chat[stop:]
+    # Keep a usable text field when +, camera, gallery, mic and reactions
+    # share a 320dp/360dp composer row. Never hide an action to gain width.
+    def compact_action(old,new,label):
+        nonlocal chat
+        count=chat.count(old)
+        if count!=1:
+            raise RuntimeError(f'Build476 {label}: expected one control, got {count}')
+        chat=chat.replace(old,new,1)
+    compact_action(
+      '                      icon:const Icon(Icons.add_circle,color:ngelxPrivateBlue,size:29),\n                    ),',
+      '                      icon:const Icon(Icons.add_circle,color:ngelxPrivateBlue,size:27),\n                      padding:EdgeInsets.zero,\n                      constraints:const BoxConstraints.tightFor(width:36,height:44),\n                    ),',
+      'small add button')
+    compact_action(
+      '                          icon:const Icon(Icons.mic_rounded,color:ngelxPrivateBlue),\n                        );',
+      '                          icon:const Icon(Icons.mic_rounded,color:ngelxPrivateBlue,size:23),\n                          padding:EdgeInsets.zero,\n                          constraints:const BoxConstraints.tightFor(width:34,height:44),\n                        );',
+      'small microphone')
+    compact_action(
+      '                            icon:Text(hizliEmoji,style:const TextStyle(fontSize:27)),\n                          );',
+      '                            icon:Text(hizliEmoji,style:const TextStyle(fontSize:25)),\n                            padding:EdgeInsets.zero,\n                            constraints:const BoxConstraints.tightFor(width:36,height:44),\n                          );',
+      'small quick-emoji')
+    compact_action(
+      '                            :const Icon(Icons.send,color:ngelxPrivateBlue),\n                        );',
+      '                            :const Icon(Icons.send,color:ngelxPrivateBlue),\n                          padding:EdgeInsets.zero,\n                          constraints:const BoxConstraints.tightFor(width:36,height:44),\n                        );',
+      'small send button')
+    compact_action(
+      "                            suffixIcon:IconButton(\n                              tooltip:'Emoji seç',",
+      "                            suffixIconConstraints:const BoxConstraints(minWidth:36,minHeight:40),\n                            suffixIcon:IconButton(\n                              tooltip:'Emoji seç',\n                              padding:EdgeInsets.zero,\n                              constraints:const BoxConstraints.tightFor(width:36,height:42),",
+      'small emoji inside text field')
     for term in (
       'height:math.max(54.0,MediaQuery.viewPaddingOf(context).bottom)',
       'minimum:const EdgeInsets.only(bottom:10)',
