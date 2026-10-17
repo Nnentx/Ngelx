@@ -5,6 +5,8 @@ No network, credentials, Firestore documents or live rules are accessed.
 These tests validate the release script's abort, verify and rollback paths.
 """
 import sys
+import os
+import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -123,6 +125,73 @@ class Build483ReleaseSafetyTests(unittest.TestCase):
                 release.publish()
         self.assertEqual(fake.current, OLD)
         self.assertEqual(fake.patch_calls, [NEW, OLD])
+
+    def test_read_only_stage_saves_exact_rollback_and_candidate(self):
+        fake = FakeRules(old="production rules", new="candidate rules")
+        with tempfile.TemporaryDirectory() as temp:
+            previous = os.getcwd()
+            os.chdir(temp)
+            try:
+                bundle = Path("build483-rollback")
+                with (
+                    patch.object(release, "session", return_value=fake),
+                    patch.object(release, "read_release",
+                                 return_value={"name": release.RELEASE,
+                                               "rulesetName": OLD}),
+                    patch.object(release, "read_ruleset",
+                                 return_value=fake.previous),
+                    patch.object(release, "prepare_production_candidate",
+                                 return_value=fake.candidate),
+                    patch.object(release, "BASE_HASH",
+                                 release.digest(fake.previous)[:16]),
+                    patch.object(release, "QA_HASH",
+                                 release.digest(fake.candidate)[:16]),
+                ):
+                    release.stage()
+                    self.assertEqual(
+                        (bundle / "previous.rules").read_text(),
+                        fake.previous,
+                    )
+                    self.assertEqual(
+                        (bundle / "candidate.rules").read_text(),
+                        fake.candidate,
+                    )
+                    self.assertEqual(Path("firestore.rules").read_text(),
+                                     fake.candidate)
+                    release.validate_bundle()
+                    (bundle / "candidate.rules").write_text("tampered")
+                    with self.assertRaisesRegex(
+                        RuntimeError, "checksum mismatch"
+                    ):
+                        release.validate_bundle()
+                self.assertEqual(fake.post_calls, 0)
+                self.assertEqual(fake.patch_calls, [])
+            finally:
+                os.chdir(previous)
+
+    def test_read_only_stage_aborts_when_live_hash_changed(self):
+        fake = FakeRules(old="unexpected production rules")
+        with tempfile.TemporaryDirectory() as temp:
+            previous = os.getcwd()
+            os.chdir(temp)
+            try:
+                with (
+                    patch.object(release, "session", return_value=fake),
+                    patch.object(release, "read_release",
+                                 return_value={"name": release.RELEASE,
+                                               "rulesetName": OLD}),
+                    patch.object(release, "read_ruleset",
+                                 return_value=fake.previous),
+                ):
+                    with self.assertRaisesRegex(
+                        RuntimeError, "Production rules changed"
+                    ):
+                        release.stage()
+                self.assertFalse(Path("build483-rollback").exists())
+                self.assertEqual(fake.post_calls, 0)
+                self.assertEqual(fake.patch_calls, [])
+            finally:
+                os.chdir(previous)
 
     def test_rejects_cross_project_ruleset(self):
         class Http:
