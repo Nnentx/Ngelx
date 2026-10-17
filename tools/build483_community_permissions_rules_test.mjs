@@ -84,7 +84,7 @@ try {
   // Managers may update the community avatar but must not silently change
   // its banner, owner, security settings or other unrelated fields.
   await assertFails(updateDoc(root('admin'),{
-    photoUrl:'https://images.example.com/admin.jpg',coverUrl:'https://images.example.com/new-banner.jpg'
+    photoUrl:'https://images.example.com/admin-new.jpg',coverUrl:'https://images.example.com/new-banner.jpg'
   }));
 
   // Production role change + matching audit event should commit atomically.
