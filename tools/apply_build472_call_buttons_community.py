@@ -8,7 +8,7 @@ COMMUNITY=Path('app/lib/community450.dart')
 TAG='// Build472: show a permission-denied backend response truthfully'
 def once(s,a,b,why):
     n=s.count(a)
-    if n!=1:raise RuntimeError(f'Build472 ${why}: expected one anchor, got ${n}')
+    if n!=1:raise RuntimeError(f'Build472 {why}: expected one anchor, got {n}')
     return s.replace(a,b,1)
 def patch_activity(s):
     if 'dp(42))) // Build472: move call actions safely above the system navigation bar' in s:return s
@@ -18,12 +18,11 @@ def patch_activity(s):
       'call answer/reject vertical alignment')
 def patch_community(s):
     if TAG in s:return s
-    old="""void _communityError450(BuildContext c, Object e) {
-  if (c.mounted)
-    ScaffoldMessenger.of(c).showSnackBar(
-      SnackBar(content: Text('İşlem tamamlanamadı. ${_ngelxKisaHata(e)}')),
-    );
-}"""
+    start=s.index('void _communityError450(BuildContext c, Object e) {')
+    stop=s.index('\nWidget _communityImage450',start)
+    original=s[start:stop]
+    if 'ScaffoldMessenger' not in original or '_ngelxKisaHata' not in original:
+        raise RuntimeError('Community error function changed; refuse replacement')
     new="""// Build472: show a permission-denied backend response truthfully.
 // Device shows local founder powers, but deployed Firestore rules may lag.
 void _communityError450(BuildContext c, Object e) {
@@ -36,7 +35,7 @@ void _communityError450(BuildContext c, Object e) {
       + (e is FirebaseException ? ' / ${e.code}' : ''));
   ScaffoldMessenger.of(c).showSnackBar(SnackBar(content:Text(message)));
 }"""
-    return once(s,old,new,'accurate permission feedback')
+    return s[:start]+new+'\n'+s[stop:]
 if __name__=='__main__':
     for path,fn in ((ACTIVITY,patch_activity),(COMMUNITY,patch_community)):
       before=path.read_text(encoding='utf-8')
