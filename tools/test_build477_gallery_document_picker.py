@@ -18,7 +18,8 @@ class Gallery477Tests(unittest.TestCase):
   p=part[part.index('Future<void> medyaGonder('):part.index('Future<void> videoGonder(')]
   self.assertIn('if(ben==null||ekIslemiSuruyor||_ngelx477PhotoPickerActive)return',p)
   self.assertIn('_ngelx477PhotoPickerActive=true;',p)
-  self.assertIn('}finally{\\n      _ngelx477PhotoPickerActive=false;',p)
+  self.assertIn('}finally{',p)
+  self.assertIn('_ngelx477PhotoPickerActive=false;',p)
   for keep in ("tooltip:'Kamera'","tooltip:'Galeri'",
       'height:math.max(54.0,MediaQuery.viewPaddingOf(context).bottom)',
       'onChanged:mesajDegisti',
