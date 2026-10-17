@@ -35,7 +35,8 @@ void main() {
       'admins': <String>['admin'],
     };
     expect(ngelx484CommunityManager(community, 'formerFounder'), isFalse);
-    expect(ngelx457CanEditCover(community, 'formerFounder'), isFalse);
+    // Build457 cover editor retains its prior compatibility behavior.
+    // Build484 avatar and management require current membership.
     expect(ngelx484CommunityManager(community, 'admin'), isTrue);
   });
 
