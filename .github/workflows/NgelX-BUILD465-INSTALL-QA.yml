@@ -11,7 +11,7 @@
 # Translation boundary: presentation labels only, preserve user names
 # Correct guarded call-history rendering
 # Device QA revision: member exit and extended screen translations
-name: NgelX Build470 Native Incoming Calls and Smooth Chat QA (no deploy)
+name: NgelX Build471 Distinct Group and Private Incoming Designs QA (no deploy)
 
 on:
   pull_request:
@@ -36,6 +36,7 @@ on:
       - qa/ngelx-build468-private-composer-nav-20261016
       - qa/ngelx-build469-call-permissions-performance-20261016
       - qa/ngelx-build470-native-incoming-call-20261017
+      - qa/ngelx-build471-incoming-designs-20261017
     paths:
       - '.github/workflows/NgelX-BUILD465-INSTALL-QA.yml'
       - 'tools/*465*'
@@ -43,6 +44,9 @@ on:
       - 'tools/*468*'
       - 'tools/*469*'
       - 'tools/*470*'
+      - 'tools/*471*'
+      - 'app/android/app/src/main/kotlin/com/nnentx/ngelx_app/IncomingCallActivity470.kt'
+      - 'cloudflare/call-push/src/policy.mjs'
       - 'tools/apply_build457_community_runtime_fixes.py'
       - 'tools/test_build457_community_runtime_fixes.py'
       - 'tools/verify_community_invite_ui.py'
@@ -833,6 +837,17 @@ jobs:
           grep -Fq '.setFullScreenIntent(fullScreenCall, true)' app/android/app/src/main/kotlin/com/nnentx/ngelx_app/IncomingCallService.kt
           grep -Fq '_ngelx470ComposerTick' app/lib/main.dart
 
+      - name: Build471 distinct group and private incoming call QA
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/apply_build471_incoming_routing.py tools/test_build471_incoming_designs.py
+          python3 tools/apply_build471_incoming_routing.py
+          python3 -m unittest discover -s tools -p 'test_build471_*.py' -v
+          (cd cloudflare/call-push && node --test test/push.test.mjs)
+          grep -Fq 'Build471: distinguish group vs private native incoming designs' app/android/app/src/main/kotlin/com/nnentx/ngelx_app/IncomingCallService.kt
+          grep -Fq 'val group = intent.getBooleanExtra("callGroup471", false)' app/android/app/src/main/kotlin/com/nnentx/ngelx_app/IncomingCallActivity470.kt
+
       - name: Flutter analiz
         shell: bash
         run: |
@@ -906,7 +921,7 @@ jobs:
         working-directory: app
         run: |
           set -euo pipefail
-          flutter build apk --release --build-name=1.0.245 --build-number=470 --dart-define=NGELX_VERSION_NAME=1.0.245 --dart-define=NGELX_BUILD_NUMBER=470 --dart-define=NGELX_CALL_PUSH_URL=https://ngelx-call-push.alihancaglar76.workers.dev
+          flutter build apk --release --build-name=1.0.246 --build-number=471 --dart-define=NGELX_VERSION_NAME=1.0.246 --dart-define=NGELX_BUILD_NUMBER=471 --dart-define=NGELX_CALL_PUSH_URL=https://ngelx-call-push.alihancaglar76.workers.dev
           test -s build/app/outputs/flutter-apk/app-release.apk
           APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
           test -n "$APKSIGNER"
@@ -914,20 +929,20 @@ jobs:
           grep -qi "be20b27f0ba1f4decd2941d410b1536de89e48dc894f04f038f9d26b11ecd6aa" apk-signature.txt
           AAPT="$(dirname "$APKSIGNER")/aapt"
           "$AAPT" dump badging build/app/outputs/flutter-apk/app-release.apk | tee apk-manifest.txt
-          grep -q "versionCode='470'" apk-manifest.txt
-          grep -q "versionName='1.0.245'" apk-manifest.txt
-          cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/NgelX-1.0.245-Build-470-INSTALL-QA.apk
-          sha256sum build/app/outputs/flutter-apk/NgelX-1.0.245-Build-470-INSTALL-QA.apk > build/app/outputs/flutter-apk/NgelX-1.0.245-Build-470-INSTALL-QA.apk.sha256
+          grep -q "versionCode='471'" apk-manifest.txt
+          grep -q "versionName='1.0.246'" apk-manifest.txt
+          cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/NgelX-1.0.246-Build-471-INSTALL-QA.apk
+          sha256sum build/app/outputs/flutter-apk/NgelX-1.0.246-Build-471-INSTALL-QA.apk > build/app/outputs/flutter-apk/NgelX-1.0.246-Build-471-INSTALL-QA.apk.sha256
 
       # Publish the signed, locally tested APK before any optional cloud deployment.
       # The owner can test the app even when Google Cloud API activation is not permitted.
       - name: Upload signed candidate and tested rules for review
         uses: actions/upload-artifact@v4
         with:
-          name: NgelX-1.0.245-Build-470-INSTALL-QA
+          name: NgelX-1.0.246-Build-471-INSTALL-QA
           path: |
-            app/build/app/outputs/flutter-apk/NgelX-1.0.245-Build-470-INSTALL-QA.apk
-            app/build/app/outputs/flutter-apk/NgelX-1.0.245-Build-470-INSTALL-QA.apk.sha256
+            app/build/app/outputs/flutter-apk/NgelX-1.0.246-Build-471-INSTALL-QA.apk
+            app/build/app/outputs/flutter-apk/NgelX-1.0.246-Build-471-INSTALL-QA.apk.sha256
             app/build/app/outputs/bundle/release/NgelX-1.0.223-Build-446-PLAY-PREPARATION.aab
             build441-untranslated.tsv
             build442-untranslated.tsv
