@@ -25,28 +25,29 @@ def transform(source: str) -> str:
         height:math.max(54.0,MediaQuery.viewPaddingOf(context).bottom),
       ),
     ),''',1)
-    begin=chat.index('                    // Build474: compact composer on narrow devices;')
+    # Select by the executable conditional, not the comments: earlier
+    # generated UI patches may rewrite explanatory comments.
+    begin=chat.index('if(MediaQuery.sizeOf(context).width>=430)...[')
     stop=chat.index('                    ValueListenableBuilder<TextEditingValue>(',begin)
     icons=chat[begin:stop]
-    for term in (
-      'if(MediaQuery.sizeOf(context).width>=430)...[',
-      'onPressed:ekIslemiSuruyor?null:()=>medyaGonder(ImageSource.camera)',
-      'onPressed:ekIslemiSuruyor?null:()=>medyaGonder(ImageSource.gallery)',
-      "tooltip:'Kamera'", "tooltip:'Galeri'",
-    ):
-        if term not in icons:raise RuntimeError('Build476: attachment controls changed: '+term)
-    if icons.count('                    ],\n')!=1:
-        raise RuntimeError('Build476: attachment scope not unique')
-    header=('                    // Build474: compact composer on narrow devices;\n'
-            '                    // camera and gallery remain available under Ekle.\n'
-            '                    if(MediaQuery.sizeOf(context).width>=430)...[\n')
-    if icons.count(header)!=1:raise RuntimeError('Build476: narrow layout header changed')
-    icons=icons.replace(header,
-      '                    // Build476: camera and gallery visible next to Ekle on every phone.\n',1)
-    icons=icons.replace('                    ],\n','',1)
-    old_size='constraints:const BoxConstraints.tightFor(width:36,height:44)'
-    if icons.count(old_size)!=2:raise RuntimeError('Build476: icon sizing drifted')
-    icons=icons.replace(old_size,'constraints:const BoxConstraints.tightFor(width:31,height:44)')
+    for term in ('medyaGonder(ImageSource.camera)',
+                 'medyaGonder(ImageSource.gallery)',
+                 "tooltip:'Kamera'","tooltip:'Galeri'"):
+        if term not in icons:
+            raise RuntimeError('Build476 missing original camera/gallery '+term)
+    branch_prefix='if(MediaQuery.sizeOf(context).width>=430)...['
+    icons=icons.replace(branch_prefix,
+      '// Build476: camera and gallery remain directly visible at every width',1)
+    pos=icons.rfind('                    ],')
+    if pos<0 or icons[pos+len('                    ],'):].strip():
+        raise RuntimeError('Build476 camera/gallery group close not unique')
+    icons=icons[:pos]+icons[pos:].replace('                    ],','',1)
+    for width in ('36','33'):
+        icons=icons.replace(
+          'constraints:const BoxConstraints.tightFor(width:'+width+',height:44)',
+          'constraints:const BoxConstraints.tightFor(width:31,height:44)')
+    if icons.count('constraints:const BoxConstraints.tightFor(width:31,height:44)')!=2:
+        raise RuntimeError('Build476 camera/gallery width constraints drifted')
     chat=chat[:begin]+icons+chat[stop:]
     for term in (
       'height:math.max(54.0,MediaQuery.viewPaddingOf(context).bottom)',
