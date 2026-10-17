@@ -11,7 +11,7 @@
 # Translation boundary: presentation labels only, preserve user names
 # Correct guarded call-history rendering
 # Device QA revision: member exit and extended screen translations
-name: NgelX Build475 Private Keyboard Smooth Composer QA (no deploy)
+name: NgelX Build476 Private Keyboard Nav and One Tap Media QA (no deploy)
 
 on:
   pull_request:
@@ -41,6 +41,7 @@ on:
       - qa/ngelx-build473-community-authorization-20261017
       - qa/ngelx-build474-private-wallpaper-composer-20261017
       - qa/ngelx-build475-private-keyboard-stability-20261017
+      - qa/ngelx-build476-composer-controls-nav-20261017
     paths:
       - '.github/workflows/NgelX-BUILD465-INSTALL-QA.yml'
       - 'tools/*465*'
@@ -53,6 +54,7 @@ on:
       - 'tools/*473*'
       - 'tools/*474*'
       - 'tools/*475*'
+      - 'tools/*476*'
       - 'app/lib/community450.dart'
       - 'app/android/app/src/main/kotlin/com/nnentx/ngelx_app/IncomingCallActivity470.kt'
       - 'cloudflare/call-push/src/policy.mjs'
@@ -896,6 +898,17 @@ jobs:
           python3 -m unittest discover -s tools -p 'test_build475_*.py' -v
           grep -Fq 'Build475: prevent a second composer resize during Android IME animation' app/lib/main.dart
 
+      - name: Build476 direct camera and gallery with stable Android navigation
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/apply_build476_private_composer_nav.py tools/test_build476_private_composer_nav.py
+          python3 tools/apply_build476_private_composer_nav.py
+          python3 tools/apply_build476_message_bubble_times.py
+          python3 -m unittest discover -s tools -p 'test_build476_*.py' -v
+          grep -Fq 'Build476: stable bottom navigation reservation for all IME states' app/lib/main.dart
+          grep -Fq 'height:math.max(54.0,MediaQuery.viewPaddingOf(context).bottom)' app/lib/main.dart
+
       - name: Flutter analiz
         shell: bash
         run: |
@@ -969,7 +982,7 @@ jobs:
         working-directory: app
         run: |
           set -euo pipefail
-          flutter build apk --release --build-name=1.0.250 --build-number=475 --dart-define=NGELX_VERSION_NAME=1.0.250 --dart-define=NGELX_BUILD_NUMBER=475 --dart-define=NGELX_CALL_PUSH_URL=https://ngelx-call-push.alihancaglar76.workers.dev
+          flutter build apk --release --build-name=1.0.251 --build-number=476 --dart-define=NGELX_VERSION_NAME=1.0.251 --dart-define=NGELX_BUILD_NUMBER=476 --dart-define=NGELX_CALL_PUSH_URL=https://ngelx-call-push.alihancaglar76.workers.dev
           test -s build/app/outputs/flutter-apk/app-release.apk
           APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
           test -n "$APKSIGNER"
@@ -977,20 +990,20 @@ jobs:
           grep -qi "be20b27f0ba1f4decd2941d410b1536de89e48dc894f04f038f9d26b11ecd6aa" apk-signature.txt
           AAPT="$(dirname "$APKSIGNER")/aapt"
           "$AAPT" dump badging build/app/outputs/flutter-apk/app-release.apk | tee apk-manifest.txt
-          grep -q "versionCode='475'" apk-manifest.txt
-          grep -q "versionName='1.0.250'" apk-manifest.txt
-          cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/NgelX-1.0.250-Build-475-INSTALL-QA.apk
-          sha256sum build/app/outputs/flutter-apk/NgelX-1.0.250-Build-475-INSTALL-QA.apk > build/app/outputs/flutter-apk/NgelX-1.0.250-Build-475-INSTALL-QA.apk.sha256
+          grep -q "versionCode='476'" apk-manifest.txt
+          grep -q "versionName='1.0.251'" apk-manifest.txt
+          cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/NgelX-1.0.251-Build-476-INSTALL-QA.apk
+          sha256sum build/app/outputs/flutter-apk/NgelX-1.0.251-Build-476-INSTALL-QA.apk > build/app/outputs/flutter-apk/NgelX-1.0.251-Build-476-INSTALL-QA.apk.sha256
 
       # Publish the signed, locally tested APK before any optional cloud deployment.
       # The owner can test the app even when Google Cloud API activation is not permitted.
       - name: Upload signed candidate and tested rules for review
         uses: actions/upload-artifact@v4
         with:
-          name: NgelX-1.0.250-Build-475-INSTALL-QA
+          name: NgelX-1.0.251-Build-476-INSTALL-QA
           path: |
-            app/build/app/outputs/flutter-apk/NgelX-1.0.250-Build-475-INSTALL-QA.apk
-            app/build/app/outputs/flutter-apk/NgelX-1.0.250-Build-475-INSTALL-QA.apk.sha256
+            app/build/app/outputs/flutter-apk/NgelX-1.0.251-Build-476-INSTALL-QA.apk
+            app/build/app/outputs/flutter-apk/NgelX-1.0.251-Build-476-INSTALL-QA.apk.sha256
             app/build/app/outputs/bundle/release/NgelX-1.0.223-Build-446-PLAY-PREPARATION.aab
             build441-untranslated.tsv
             build442-untranslated.tsv
