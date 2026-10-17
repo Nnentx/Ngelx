@@ -1,7 +1,7 @@
 // Build483 Firestore emulator-only rights regression. Never touches live Firebase.
 import fs from 'node:fs';
 import {initializeTestEnvironment, assertSucceeds, assertFails} from '@firebase/rules-unit-testing';
-import {doc, setDoc, updateDoc, deleteDoc, Timestamp, serverTimestamp} from 'firebase/firestore';
+import {doc, setDoc, updateDoc, deleteDoc, Timestamp, serverTimestamp, writeBatch, arrayRemove, arrayUnion} from 'firebase/firestore';
 
 const env=await initializeTestEnvironment({
   projectId:'demo-ngelx',
@@ -65,5 +65,47 @@ try {
   await assertSucceeds(setDoc(doc(db('ordinary'),post+'/comments/open'),comment));
   await assertSucceeds(updateDoc(item('founder'),{slowSeconds:300}));
   await assertSucceeds(updateDoc(item('founder'),{slowSeconds:0}));
+  // Real member management writes a community update AND an audit log
+  // atomically. A permission rule for only one of these writes is insufficient.
+  const auditedFounder = writeBatch(db('founder'));
+  auditedFounder.update(root('founder'), {
+    'moderators': arrayRemove('mod'),
+  });
+  auditedFounder.set(doc(db('founder'),path+'/audit456/role-483'), {
+    actor:'founder',target:'mod',action:'moderator',
+    createdAt:serverTimestamp(),
+  });
+  await assertSucceeds(auditedFounder.commit());
+
+  // An ordinary member must never be able to manipulate roles by pairing
+  // their write with a forged audit record in a batch.
+  const forged = writeBatch(db('ordinary'));
+  forged.update(root('ordinary'), {
+    'admins': arrayUnion('ordinary'),
+  });
+  forged.set(doc(db('ordinary'),path+'/audit456/forged-483'), {
+    actor:'founder',target:'ordinary',action:'admin',
+    createdAt:serverTimestamp(),
+  });
+  await assertFails(forged.commit());
+
+  // A verified founder may revoke membership and ban that member, with an
+  // audit record, without accidentally changing the cover or other settings.
+  const auditedBan = writeBatch(db('founder'));
+  auditedBan.update(root('founder'), {
+    members:arrayRemove('ordinary'),
+    admins:arrayRemove('ordinary'),
+    moderators:arrayRemove('ordinary'),
+    muted:arrayRemove('ordinary'),
+    banned:arrayUnion('ordinary'),
+  });
+  auditedBan.set(doc(db('founder'),path+'/audit456/ban-483'), {
+    actor:'founder',target:'ordinary',action:'ban',
+    createdAt:serverTimestamp(),
+  });
+  await assertSucceeds(auditedBan.commit());
+  await assertFails(updateDoc(root('ordinary'),{photoUrl:'https://images.example.com/unauthorized.jpg'}));
+  await assertFails(updateDoc(root('ordinary'),{admins:['admin','ordinary']}));
+
   console.log('Build483 legacy founder/member roles, avatar, moderation and negative permission tests PASS');
 } finally { await env.cleanup(); }
