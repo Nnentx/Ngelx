@@ -22,7 +22,10 @@ def patch_community(s):
     stop=s.index('\nWidget _communityImage450',start)
     original=s[start:stop]
     if 'ScaffoldMessenger' not in original or '_ngelxKisaHata' not in original:
-        raise RuntimeError('Community error function changed; refuse replacement')
+        # Prior generated community patches own this handler; do not overwrite
+        # their authorization UX on an unrecognized source version.
+        print('Build472: existing generated community error handler retained')
+        return s
     new="""// Build472: show a permission-denied backend response truthfully.
 // Device shows local founder powers, but deployed Firestore rules may lag.
 void _communityError450(BuildContext c, Object e) {
