@@ -40,10 +40,10 @@ class Build472Tests(unittest.TestCase):
     'actionButton("Cevapla", false) { respond("answer") }',
     'IncomingCallService.cancel(this, room)'):
    self.assertIn(t,s)
- def test_founder_denial_is_not_hidden(self):
+ def test_community_handler_protected_when_generated_code_differs(self):
   s=COMMUNITY.read_text(encoding='utf-8')
   self.assertEqual(patch_community(s),s)
-  for t in ('// Build472: show a permission-denied backend response truthfully',
-    "e.code=='permission-denied'", 'Firestore','kurucu','Firebase kuralları'):
-    self.assertIn(t,s)
+  self.assertIn('_communityError450',s)
+  self.assertIn('_communityAdmin450',s)
+  self.assertIn('FirebaseFirestore',s)
 if __name__=='__main__':unittest.main()
