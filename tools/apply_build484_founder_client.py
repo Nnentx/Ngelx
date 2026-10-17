@@ -9,7 +9,9 @@ from pathlib import Path
 FILE = Path("app/lib/community450.dart")
 MARK = "// Build484: legacy communities can have a verified founder"
 OLD = """bool _communityAdmin450(Map<String, dynamic> v) =>
-    List<String>.from(v['admins'] ?? []).contains(_communityUid450);"""
+    _communityUid450.isNotEmpty &&
+    (v['founderId'] == _communityUid450 ||
+        List<String>.from(v['admins'] ?? []).contains(_communityUid450));"""
 NEW = """// Build484: legacy communities can have a verified founder who is not in
 // admins. The shared helper also requires verified community membership.
 bool _communityAdmin450(Map<String, dynamic> v) =>
