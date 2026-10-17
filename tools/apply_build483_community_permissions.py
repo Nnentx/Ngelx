@@ -10,7 +10,8 @@ from pathlib import Path
 MARK = "// Build483 legacy community management and avatar compatibility"
 ANCHOR = "      allow delete: if false;\n      match /requests/{uid} {"
 
-INSERT = """      // Build483 legacy community management and avatar compatibility.\n      // Build483 legacy founder/admin photo-only patch. No role promotion.
+INSERT = """      // Build483 legacy community management and avatar compatibility.
+      // Build483 legacy founder/admin photo-only patch. No role promotion.
       allow update: if communitySigned450()
         && request.auth.uid in resource.data.get('members', [])
         && (request.auth.uid == resource.data.get('founderId', '')
