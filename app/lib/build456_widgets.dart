@@ -123,6 +123,16 @@ class Ngelx456Cover extends StatelessWidget {
   );
 }
 
+// Build484: verified legacy founders remain managers even if omitted from
+// the old admins list; membership is still mandatory for any management UI.
+bool ngelx484CommunityManager(Map<String, dynamic> v, String uid) {
+  if (uid.isEmpty) return false;
+  final members = List<String>.from(v['members'] ?? const []);
+  if (!members.contains(uid)) return false;
+  return v['founderId'] == uid ||
+      List<String>.from(v['admins'] ?? const []).contains(uid);
+}
+
 // Build457: the founder can be authoritative even in old communities whose
 // admins array was populated incompletely. Server security still decides writes.
 bool ngelx457CanEditCover(Map<String, dynamic> community, String me) {
