@@ -37,7 +37,15 @@ class Build482CommunityTests(unittest.TestCase):
         self.assertIn("ngelxFotografYukle(", editor)
         self.assertIn("kind: 'groups'", editor)
         self.assertIn("GetOptions(source: Source.server)", editor)
-        self.assertIn("ngelx457CanEditCover(current, uid)", editor)
+        # Build482 used the cover guard. Build484 uses a stricter member-
+        # verified community manager for new avatar uploads while the cover
+        # editor keeps its original behavior.
+        self.assertTrue(
+            "ngelx457CanEditCover(current, uid)" in editor
+            or "ngelx484CommunityManager(current, uid)" in editor
+        )
+        if "ngelx484CommunityManager(current, uid)" in editor:
+            self.assertIn("if (!members.contains(uid)) return false;", source)
         self.assertIn("await root.update({'photoUrl': url})", editor)
         self.assertNotIn("delete(", editor)
         self.assertNotIn("FieldValue.array", editor)
