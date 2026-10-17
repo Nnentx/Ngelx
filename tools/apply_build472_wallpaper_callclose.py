@@ -50,11 +50,14 @@ def transform(src):
         raise RuntimeError('Build470 typing controls lost')
     if 'bottomNavigationBar:ColoredBox(' not in part:
         raise RuntimeError('Build468 Android nav-safe composer lost')
-    part=once(part,
+    src=src[:start]+part+src[stop:]
+    # The call page is a DIFFERENT state class from the private chat.
+    # Do not let a receiver modify the caller-authored call history event.
+    src=once(src,
       "if(mesajId.isNotEmpty){\n            await widget.aramaRef.collection('messages').doc(mesajId).set({",
       "if(mesajId.isNotEmpty && data['callStartedBy']==me){\n            await widget.aramaRef.collection('messages').doc(mesajId).set({",
       'private call message ownership')
-    return src[:start]+part+src[stop:]
+    return src
 if __name__=='__main__':
     before=MAIN.read_text(encoding='utf-8')
     after=transform(before)
