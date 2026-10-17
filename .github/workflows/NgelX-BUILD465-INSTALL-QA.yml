@@ -998,7 +998,7 @@ jobs:
         run: |
           set -euo pipefail
           grep -Fq 'Build484: legacy communities can have a verified founder' lib/community450.dart
-          grep -Fq 'return ngelx484CommunityManager(community, me);' lib/build456_widgets.dart
+          grep -Fq '!ngelx484CommunityManager(current, uid)' lib/build456_widgets.dart
           timeout 180s flutter test --reporter expanded --timeout 60s test/build484_legacy_founder_test.dart
 
       - name: Flutter analiz
