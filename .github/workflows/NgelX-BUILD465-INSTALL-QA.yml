@@ -47,7 +47,7 @@ on:
       - qa/ngelx-build479-gallery-return-guard-20261017
       - qa/ngelx-build480-photo-picker-20261017
       - qa/ngelx-build481-photo-community-20261017
-      - qa/ngelx-build484-community-invite-avatar-20261017
+      - qa/ngelx-build482-community-invite-avatar-20261017
       - qa/ngelx-build484-community-founder-client-20261017
     paths:
       - '.github/workflows/NgelX-BUILD465-INSTALL-QA.yml'
@@ -67,6 +67,7 @@ on:
       - 'tools/*479*'
       - 'tools/*480*'
       - 'tools/*481*'
+      - 'tools/*482*'
       - 'tools/*484*'
       - 'app/test/build484_legacy_founder_test.dart'
       - 'app/android/app/src/main/kotlin/com/nnentx/ngelx_app/MainActivity.kt'
