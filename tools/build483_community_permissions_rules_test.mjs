@@ -9,7 +9,8 @@ const env=await initializeTestEnvironment({
 });
 const path='communities450/legacy-483';
 const post=path+'/posts/post';
-const db=(uid)=>env.authenticatedContext(uid).firestore();
+const authenticated=new Map();
+const db=(uid)=>{if(!authenticated.has(uid))authenticated.set(uid,env.authenticatedContext(uid).firestore());return authenticated.get(uid);};
 const root=(uid)=>doc(db(uid),path);
 const item=(uid)=>doc(db(uid),post);
 const community={
