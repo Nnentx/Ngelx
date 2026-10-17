@@ -47,6 +47,8 @@ try {
   await assertFails(updateDoc(root('ordinary'),{muted:['founder']}));
   await assertFails(updateDoc(root('founder'),{members:['admin','ordinary']}));
   await assertFails(deleteDoc(root('founder')));
+  // Restore ordinary-member role after the legitimate promotion scenario.
+  await assertSucceeds(updateDoc(root('founder'),{admins:['admin']}));
   await assertSucceeds(updateDoc(root('founder'),{postApproval:true}));
   await assertSucceeds(updateDoc(root('founder'),{paused:true}));
   await assertFails(updateDoc(root('ordinary'),{paused:false}));
