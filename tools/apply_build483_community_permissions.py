@@ -79,6 +79,13 @@ def prepare_production_candidate(live: str) -> str:
     from apply_build456_rules import transform as add456
     from apply_build469_founder_rules_qa import transform as add469
     newer = add456(live)
+    # Build456's original transform adds a per-user preference subcollection.
+    # Community permissions deployment must NOT alter users, chats or any
+    # other rules outside the community section.
+    extra_user_rule = "      match /communityPreferences456/{id} { allow read, write: if isMe(uid); }\n"
+    if newer.count(extra_user_rule) != 1:
+        raise ValueError("Expected one Build456 preference entry")
+    newer = newer.replace(extra_user_rule, "", 1)
     if "Build469:" not in newer:
         newer = add469(newer)
     newer = transform(newer)
@@ -87,6 +94,16 @@ def prepare_production_candidate(live: str) -> str:
                  "commentLimits456", MARK):
         if name not in newer:
             raise ValueError("Missing expected rules section: " + name)
+    anchor = "    // Build450 communities"
+    after_end = "    match /users/{uid} {"
+    if live.count(anchor) != 1 or newer.count(anchor) != 1:
+        raise ValueError("Community scope boundary ambiguous")
+    if live.count(after_end) != 1 or newer.count(after_end) != 1:
+        raise ValueError("User section boundary ambiguous")
+    if live.split(anchor, 1)[0] != newer.split(anchor, 1)[0]:
+        raise ValueError("Unexpected non-community changes before community rules")
+    if live.split(after_end, 1)[1] != newer.split(after_end, 1)[1]:
+        raise ValueError("User, chat or unrelated rules changed; refusing")
     if "allow write: if true" in newer:
         raise ValueError("Unsafe unconditional write detected")
     return newer
