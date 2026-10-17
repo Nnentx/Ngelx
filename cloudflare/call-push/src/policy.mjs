@@ -8,7 +8,7 @@ export function eventFor(uid, chat, room, now){
  const cancelActor=chat.callStatus==='active'?chat.callAnsweredBy??list(chat.callParticipants).find(x=>x!==chat.callStartedBy):chat.callEndedBy??chat.callStartedBy;
  if(!incoming&&uid!==cancelActor&&uid!==chat.callStartedBy)return null;
  if(!incoming&&(!['active','ended','rejected','missed'].includes(chat.callStatus)||!fresh(chat.callStatus==='active'?chat.callAnsweredAt:chat.callEndedAt,now)))return null;
- return {kind:incoming?'incoming_call':'call_end',roomName:room,video:String(chat.callVideo===true),
+ return {kind:incoming?'incoming_call':'call_end',roomName:room,video:String(chat.callVideo===true),group:String(chat.isGroup===true),
   expiresAt:String(incoming?Math.min(now+60000,chat.callCreatedAt+60000):now+60000),
   title:String(chat.callTitle??chat.groupName??'NgelX araması').slice(0,100),
   recipients:[...new Set(chat.members)].filter(x=>typeof x==='string'&&x&&x!==chat.callStartedBy&&!x.includes('/'))};
