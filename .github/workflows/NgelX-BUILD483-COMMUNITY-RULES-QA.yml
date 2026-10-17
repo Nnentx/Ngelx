@@ -1,0 +1,99 @@
+name: NgelX Build483 Community Permissions QA - no deployment
+
+on:
+  push:
+    branches:
+      - qa/ngelx-build483-community-permissions-20261017
+    paths:
+      - '.github/workflows/NgelX-BUILD483-COMMUNITY-RULES-QA.yml'
+      - 'tools/*483*'
+      - 'tools/apply_build456_rules.py'
+      - 'tools/apply_build469_founder_rules_qa.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ngelx-build483-qa-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  emulator-security:
+    name: Read-only live policy comparison and isolated Firestore emulator
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python and compile check
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Validate patch source
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/apply_build483_community_permissions.py tools/prepare_build483_live_rules_qa.py tools/release_build483_production_rules.py
+          node --check tools/build483_community_permissions_rules_test.mjs
+          test -s tools/build483_community_permissions_rules_test.mjs
+
+      - name: Set up Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Set up Java 21 for Firebase emulator
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Install emulator dependencies
+        run: npm install --no-save --no-package-lock firebase @firebase/rules-unit-testing firebase-tools
+
+      - name: Audit deployed policy read-only and prepare candidate
+        shell: bash
+        env:
+          FIREBASE_SERVICE_ACCOUNT_NGELX_44EED: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_NGELX_44EED }}
+        run: |
+          set -euo pipefail
+          python3 -m pip install --quiet google-auth requests
+          python3 -m unittest discover -s tools -p 'test_build483_release_safety.py' -v
+          python3 tools/prepare_build483_live_rules_qa.py
+          grep -Fq 'Build483 legacy community management' firestore.rules
+          grep -Fq 'communityModerator456' firestore.rules
+          grep -Fq 'commentLimits456' firestore.rules
+          test "$(grep -Ec 'allow delete: if false;' firestore.rules)" -gt 2
+
+      # The historical Build469 suite intentionally rejected legacy role edits.
+      # Build483 replaces that specific expectation with founder-only positive
+      # tests and unauthorized-member negative tests.
+      - name: Test owner/admin/moderator/member with Firestore emulator
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx firebase emulators:exec --project demo-ngelx --only firestore --non-interactive "node tools/build450_rules_test.mjs && node tools/build455_rules_test.mjs && node tools/build456_rules_test.mjs && node tools/build472_community_permissions_rules_test.mjs && node tools/build483_community_permissions_rules_test.mjs"
+
+      - name: Save exact live rules rollback and tested candidate without publishing
+        shell: bash
+        env:
+          FIREBASE_SERVICE_ACCOUNT_NGELX_44EED: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_NGELX_44EED }}
+        run: |
+          set -euo pipefail
+          python3 tools/release_build483_production_rules.py stage
+          test -s build483-rollback/previous.rules
+          test -s build483-rollback/candidate.rules
+          test -s build483-rollback/release-metadata.json
+          echo "The immutable previous ruleset and checksums are recorded."
+
+      - name: Archive private rollback bundle for authorized maintainers only
+        uses: actions/upload-artifact@v4
+        with:
+          name: NgelX-Build483-READ-ONLY-Rollback-Backup
+          path: build483-rollback/
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Confirm no production deployment or data mutation
+        run: echo 'Build483 backed up and tested rules only; production release and user documents were not modified.'
