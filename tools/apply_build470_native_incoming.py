@@ -63,10 +63,18 @@ def patch_service(s):
     s=exactly(s,
         '        private val timer = Handler(Looper.getMainLooper())',
         owner+'        private val timer = Handler(Looper.getMainLooper())','owner + visible ringing')
-    s=exactly(s,
-        '        if (d["recipientUid"] != FirebaseAuth.getInstance().currentUser?.uid) return',
-        '        if (d["recipientUid"] != currentRecipient470(this)) return',
-        'cold-start account gate')
+    # Build469 already introduced explicit diagnostic signedIn checks;
+    # keep its logs and permission-denied branches as-is.
+    if '        if (d["recipientUid"] != FirebaseAuth.getInstance().currentUser?.uid) return' in s:
+        s=exactly(s,
+            '        if (d["recipientUid"] != FirebaseAuth.getInstance().currentUser?.uid) return',
+            '        if (d["recipientUid"] != currentRecipient470(this)) return',
+            'old cold-start account gate')
+    else:
+        s=exactly(s,
+            '        val signedIn = FirebaseAuth.getInstance().currentUser?.uid',
+            '        val signedIn = currentRecipient470(this)',
+            'Build469 diagnostic cold-start gate')
     needle='''            val answer = action("answer"); val reject = action("reject")'''
     replacement='''            val answer = action("answer"); val reject = action("reject")
             // For a real telephone-like incoming call, Android itself owns
