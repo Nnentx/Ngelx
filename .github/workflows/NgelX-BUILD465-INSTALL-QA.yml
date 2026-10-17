@@ -11,7 +11,7 @@
 # Translation boundary: presentation labels only, preserve user names
 # Correct guarded call-history rendering
 # Device QA revision: member exit and extended screen translations
-name: NgelX Build482 Community Invite + Avatar QA (no deploy)
+name: NgelX Build484 Verified Legacy Founder Client QA (no deploy)
 
 on:
   pull_request:
@@ -47,7 +47,8 @@ on:
       - qa/ngelx-build479-gallery-return-guard-20261017
       - qa/ngelx-build480-photo-picker-20261017
       - qa/ngelx-build481-photo-community-20261017
-      - qa/ngelx-build482-community-invite-avatar-20261017
+      - qa/ngelx-build484-community-invite-avatar-20261017
+      - qa/ngelx-build484-community-founder-client-20261017
     paths:
       - '.github/workflows/NgelX-BUILD465-INSTALL-QA.yml'
       - 'tools/*465*'
@@ -66,7 +67,8 @@ on:
       - 'tools/*479*'
       - 'tools/*480*'
       - 'tools/*481*'
-      - 'tools/*482*'
+      - 'tools/*484*'
+      - 'app/test/build484_legacy_founder_test.dart'
       - 'app/android/app/src/main/kotlin/com/nnentx/ngelx_app/MainActivity.kt'
       - 'app/lib/community450.dart'
       - 'app/android/app/src/main/kotlin/com/nnentx/ngelx_app/IncomingCallActivity470.kt'
@@ -981,6 +983,15 @@ jobs:
           grep -Fq 'Build482: keep the existing white invite sheet' app/lib/build456_widgets.dart
           grep -Fq 'class Ngelx482CommunityAvatarEditor' app/lib/build456_widgets.dart
 
+      - name: Build484 verified legacy founder, removed founder and normal-member roles
+        working-directory: app
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fq 'Build484: legacy communities can have a verified founder' lib/community450.dart
+          grep -Fq 'return ngelx484CommunityManager(community, me);' lib/build456_widgets.dart
+          timeout 180s flutter test --reporter expanded --timeout 60s test/build484_legacy_founder_test.dart
+
       - name: Flutter analiz
         shell: bash
         run: |
@@ -1054,7 +1065,7 @@ jobs:
         working-directory: app
         run: |
           set -euo pipefail
-          flutter build apk --release --build-name=1.0.257 --build-number=482 --dart-define=NGELX_VERSION_NAME=1.0.257 --dart-define=NGELX_BUILD_NUMBER=482 --dart-define=NGELX_CALL_PUSH_URL=https://ngelx-call-push.alihancaglar76.workers.dev
+          flutter build apk --release --build-name=1.0.259 --build-number=484 --dart-define=NGELX_VERSION_NAME=1.0.259 --dart-define=NGELX_BUILD_NUMBER=484 --dart-define=NGELX_CALL_PUSH_URL=https://ngelx-call-push.alihancaglar76.workers.dev
           test -s build/app/outputs/flutter-apk/app-release.apk
           APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
           test -n "$APKSIGNER"
@@ -1062,20 +1073,20 @@ jobs:
           grep -qi "be20b27f0ba1f4decd2941d410b1536de89e48dc894f04f038f9d26b11ecd6aa" apk-signature.txt
           AAPT="$(dirname "$APKSIGNER")/aapt"
           "$AAPT" dump badging build/app/outputs/flutter-apk/app-release.apk | tee apk-manifest.txt
-          grep -q "versionCode='482'" apk-manifest.txt
-          grep -q "versionName='1.0.257'" apk-manifest.txt
-          cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/NgelX-1.0.257-Build-482-COMMUNITY-QA.apk
-          sha256sum build/app/outputs/flutter-apk/NgelX-1.0.257-Build-482-COMMUNITY-QA.apk > build/app/outputs/flutter-apk/NgelX-1.0.257-Build-482-COMMUNITY-QA.apk.sha256
+          grep -q "versionCode='484'" apk-manifest.txt
+          grep -q "versionName='1.0.259'" apk-manifest.txt
+          cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/NgelX-1.0.259-Build-484-COMMUNITY-QA.apk
+          sha256sum build/app/outputs/flutter-apk/NgelX-1.0.259-Build-484-COMMUNITY-QA.apk > build/app/outputs/flutter-apk/NgelX-1.0.259-Build-484-COMMUNITY-QA.apk.sha256
 
       # Publish the signed, locally tested APK before any optional cloud deployment.
       # The owner can test the app even when Google Cloud API activation is not permitted.
       - name: Upload signed candidate and tested rules for review
         uses: actions/upload-artifact@v4
         with:
-          name: NgelX-1.0.257-Build-482-COMMUNITY-QA
+          name: NgelX-1.0.259-Build-484-COMMUNITY-QA
           path: |
-            app/build/app/outputs/flutter-apk/NgelX-1.0.257-Build-482-COMMUNITY-QA.apk
-            app/build/app/outputs/flutter-apk/NgelX-1.0.257-Build-482-COMMUNITY-QA.apk.sha256
+            app/build/app/outputs/flutter-apk/NgelX-1.0.259-Build-484-COMMUNITY-QA.apk
+            app/build/app/outputs/flutter-apk/NgelX-1.0.259-Build-484-COMMUNITY-QA.apk.sha256
             app/build/app/outputs/bundle/release/NgelX-1.0.223-Build-446-PLAY-PREPARATION.aab
             build441-untranslated.tsv
             build442-untranslated.tsv
@@ -1094,5 +1105,5 @@ jobs:
           python3 tools/diagnose_build463_production_rules.py
 
       - name: Confirm no production deployment
-        run: echo 'Build482 TEST APK only; no paid services, no production Firebase rules or cloud functions deployed.'
+        run: echo 'Build484 TEST APK only; no paid services, no production Firebase rules or cloud functions deployed.'
 
