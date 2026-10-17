@@ -66,6 +66,42 @@ try {
   await assertSucceeds(setDoc(doc(db('ordinary'),post+'/comments/open'),comment));
   await assertSucceeds(updateDoc(item('founder'),{slowSeconds:300}));
   await assertSucceeds(updateDoc(item('founder'),{slowSeconds:0}));
+  // Match the production settings toggles exactly: each write changes one
+  // community field and must preserve the creator and unrelated fields.
+  await assertSucceeds(updateDoc(root('founder'),{visibility:'private'}));
+  await assertSucceeds(updateDoc(root('founder'),{joinApproval:true}));
+  await assertSucceeds(updateDoc(root('founder'),{postApproval:false}));
+  await assertSucceeds(updateDoc(root('founder'),{name:'Legacy updated community'}));
+  await assertSucceeds(updateDoc(root('founder'),{description:'Updated description'}));
+  await assertSucceeds(updateDoc(root('founder'),{rules:'Updated community rules'}));
+  await assertFails(updateDoc(root('ordinary'),{visibility:'public'}));
+  await assertFails(updateDoc(root('mod'),{joinApproval:false}));
+  await assertFails(updateDoc(root('stranger'),{postApproval:true}));
+  // Revert to the original public state for the remaining scenarios.
+  await assertSucceeds(updateDoc(root('founder'),{visibility:'public'}));
+  await assertSucceeds(updateDoc(root('founder'),{joinApproval:false}));
+
+  // Managers may update the community avatar but must not silently change
+  // its banner, owner, security settings or other unrelated fields.
+  await assertFails(updateDoc(root('admin'),{
+    photoUrl:'https://images.example.com/admin.jpg',coverUrl:'https://images.example.com/new-banner.jpg'
+  }));
+
+  // Production role change + matching audit event should commit atomically.
+  // Admins cannot promote another admin even if they add a matching audit log.
+  const adminPromote = writeBatch(db('admin'));
+  adminPromote.update(root('admin'),{admins:arrayUnion('mod')});
+  adminPromote.set(doc(db('admin'),path+'/audit456/invalid-admin-483'),{
+    actor:'admin',target:'mod',action:'admin',createdAt:serverTimestamp(),
+  });
+  await assertFails(adminPromote.commit());
+
+  // Moderators may close comments on approved posts but not change community
+  // membership, founder, or role arrays.
+  await assertSucceeds(updateDoc(item('mod'),{commentsClosed:true}));
+  await assertSucceeds(updateDoc(item('mod'),{commentsClosed:false}));
+  await assertFails(updateDoc(root('mod'),{admins:arrayUnion('mod')}));
+
   // Real member management writes a community update AND an audit log
   // atomically. A permission rule for only one of these writes is insufficient.
   const auditedFounder = writeBatch(db('founder'));
