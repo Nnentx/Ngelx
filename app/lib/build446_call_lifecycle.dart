@@ -1,10 +1,35 @@
 part of 'main.dart';
 
 final ngelx446Calls=Ngelx446CallLifecycle();
+// Build485: a moderator kick is an event counter scoped to the live room.
+// Unlike callKickedUids, the counter can change again after rejoining.
+int ngelx485KickEpoch(Map<String,dynamic> data,String? uid){
+  if(uid==null)return 0;
+  final epochs=data['callKickEpochs'];
+  if(epochs is! Map)return 0;
+  final number=epochs[uid];
+  return number is num?number.toInt():0;
+}
+// A participant may explicitly rejoin; only a kick issued during this
+// attachment may forcibly disconnect them.
+bool ngelx485FreshKick(Map<String,dynamic> data,String room,String? uid,
+    {required int initialEpoch,required bool legacyAtJoin}){
+  if(uid==null||data['callModerationRoom']!=room)return false;
+  if(ngelx485KickEpoch(data,uid)>initialEpoch)return true;
+  return !legacyAtJoin&&List<String>.from(data['callKickedUids']??const[]).contains(uid);
+}
+Map<String,dynamic> ngelx485NextKickEpochs(Map<String,dynamic> data,String room,String target){
+  final old=data['callKickEpochs'];
+  final epochs=data['callModerationRoom']==room&&old is Map
+      ?Map<String,dynamic>.from(old):<String,dynamic>{};
+  epochs[target]=ngelx485KickEpoch({'callKickEpochs':epochs},target)+1;
+  return epochs;
+}
 class _Call446 {
   final lk.Room room;
   final DocumentReference<Map<String,dynamic>> ref;
-  bool hidden=false,restoreCamera=false,muted=false;
+  bool hidden=false,restoreCamera=false,muted=false,legacyKickedAtJoin=false,kickedNow=false;
+  int kickEpochAtJoin=0;
   StreamSubscription<DocumentSnapshot<Map<String,dynamic>>>? subscription;
   _Call446(this.room,this.ref);
 }
@@ -22,12 +47,20 @@ class Ngelx446CallLifecycle with WidgetsBindingObserver {
   Future<void> attach(String name,lk.Room room,DocumentReference<Map<String,dynamic>> ref,{bool cameraWanted=false})async{
     if(!_observing){WidgetsBinding.instance.addObserver(this);_observing=true;}
     _foreground=WidgetsBinding.instance.lifecycleState==null||WidgetsBinding.instance.lifecycleState==AppLifecycleState.resumed;
-    final current=await ref.get().timeout(const Duration(seconds:6));
+    // Build485: an explicit new Join is a new call session, not a lifetime ban.
+    // A server read avoids treating a cached previous kick as a fresh event.
+    final current=await ref.get(const GetOptions(source:Source.server)).timeout(const Duration(seconds:6));
     final data=current.data()??<String,dynamic>{};
+    if(data['callRoomName']!=name||data['callStatus']=='ended')throw StateError('Arama sona erdi.');
     final me=FirebaseAuth.instance.currentUser?.uid;
-    if(data['callModerationRoom']==name&&List<String>.from(data['callKickedUids']??const[]).contains(me))throw StateError('Bu görüşmeden çıkarıldın.');
+    final sameModerationRoom=data['callModerationRoom']==name;
+    final legacyKickedAtJoin=sameModerationRoom&&List<String>.from(data['callKickedUids']??const[]).contains(me);
+    final kickEpochAtJoin=sameModerationRoom?ngelx485KickEpoch(data,me):0;
     await _calls.remove(name)?.subscription?.cancel();
-    final entry=_Call446(room,ref)..restoreCamera=cameraWanted&&!_foreground;
+    final entry=_Call446(room,ref)
+      ..restoreCamera=cameraWanted&&!_foreground
+      ..legacyKickedAtJoin=legacyKickedAtJoin
+      ..kickEpochAtJoin=kickEpochAtJoin;
     entry.muted=data['callModerationRoom']==name&&List<String>.from(data['callMutedUids']??const[]).contains(me);
     _calls[name]=entry;
     entry.subscription=ref.snapshots().listen((snapshot){
@@ -36,8 +69,15 @@ class Ngelx446CallLifecycle with WidgetsBindingObserver {
       final me=FirebaseAuth.instance.currentUser?.uid;
       entry.muted=v['callModerationRoom']==name&&List<String>.from(v['callMutedUids']??const[]).contains(me);
       if(entry.muted)unawaited(_enqueue(()async{await room.localParticipant?.setMicrophoneEnabled(false);}));
-      if(v['callModerationRoom']==name&&List<String>.from(v['callKickedUids']??const[]).contains(me)){
+      // Build485: act on a NEW moderator kick, not the stored old kick.
+      // Legacy array changes are still honored for Build484 moderators.
+      if(!entry.kickedNow&&ngelx485FreshKick(v,name,me,
+          initialEpoch:entry.kickEpochAtJoin,legacyAtJoin:entry.legacyKickedAtJoin)){
+        entry.kickedNow=true;
         unawaited(_enqueue(()async{
+          if(!identical(_calls[name],entry))return;
+          // Only this person's local audio session ends; do not end the
+          // shared group call or remove the person's group membership.
           await detach(room);await room.disconnect();
           if(_ngelxArkaPlanAramaOdalari.containsKey(name))await ngelxArkaPlanAramayiTemizle(name);
         }));
@@ -105,8 +145,13 @@ Future<void> ngelx446MuteMenu(BuildContext context,DocumentReference<Map<String,
       if(data['callRoomName']!=name||data['createdBy']==target||
          (data['createdBy']!=me&&!List<String>.from(data['admins']??const[]).contains(me)))throw StateError('İşlem yetkisi değişti.');
       final sameRoom=data['callModerationRoom']==name;
+      // Build485: bump every time, including a second kick after rejoin.
+      // Only existing moderators can execute this transaction.
+      final epochs=action=='kick'?ngelx485NextKickEpochs(data,name,target):<String,dynamic>{};
       tx.update(ref,{
         'callModerationRoom':name,
+        if(action=='kick')'callKickEpochs':epochs,
+        if(!sameRoom&&action!='kick')'callKickEpochs':<String,dynamic>{},
         if(action=='kick')'callKickedUids':sameRoom?FieldValue.arrayUnion([target]):[target],
         if(!sameRoom&&action!='kick')'callKickedUids':<String>[],
         if(action=='kick')'callParticipants':FieldValue.arrayRemove([target]),
