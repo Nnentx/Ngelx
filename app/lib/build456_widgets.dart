@@ -136,9 +136,9 @@ bool ngelx484CommunityManager(Map<String, dynamic> v, String uid) {
 // Build457: the founder can be authoritative even in old communities whose
 // admins array was populated incompletely. Server security still decides writes.
 bool ngelx457CanEditCover(Map<String, dynamic> community, String me) {
-  // Build484: check membership before gallery/upload, matching server rules.
-  // This also includes legacy founders missing from the admin list.
-  return ngelx484CommunityManager(community, me);
+  if (me.isEmpty) return false;
+  return community['founderId'] == me ||
+      List<String>.from(community['admins'] ?? const []).contains(me);
 }
 
 // Do not rewrite the cover URL when only its framing was adjusted.
@@ -334,7 +334,7 @@ class _Ngelx482CommunityAvatarEditorState
         const GetOptions(source: Source.server),
       )).data();
       if (uid.isEmpty || current == null ||
-          !ngelx457CanEditCover(current, uid)) {
+          !ngelx484CommunityManager(current, uid)) {
         throw StateError('Topluluk fotoğrafını değiştirmek için yönetici yetkisi gerekli.');
       }
       // No old image deletion; preserve all existing user media.
