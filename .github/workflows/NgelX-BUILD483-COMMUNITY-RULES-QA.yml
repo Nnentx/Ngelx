@@ -59,6 +59,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 -m pip install --quiet google-auth requests
+          python3 -m unittest discover -s tools -p 'test_build483_release_safety.py' -v
           python3 tools/prepare_build483_live_rules_qa.py
           grep -Fq 'Build483 legacy community management' firestore.rules
           grep -Fq 'communityModerator456' firestore.rules
