@@ -11,7 +11,7 @@
 # Translation boundary: presentation labels only, preserve user names
 # Correct guarded call-history rendering
 # Device QA revision: member exit and extended screen translations
-name: NgelX Build471 Distinct Group and Private Incoming Designs QA (no deploy)
+name: NgelX Build472 Wallpaper Chat CallClose Community Permissions QA (no deploy)
 
 on:
   pull_request:
@@ -37,6 +37,7 @@ on:
       - qa/ngelx-build469-call-permissions-performance-20261016
       - qa/ngelx-build470-native-incoming-call-20261017
       - qa/ngelx-build471-incoming-designs-20261017
+      - qa/ngelx-build472-wallpaper-permissions-callclose-20261017
     paths:
       - '.github/workflows/NgelX-BUILD465-INSTALL-QA.yml'
       - 'tools/*465*'
@@ -45,6 +46,8 @@ on:
       - 'tools/*469*'
       - 'tools/*470*'
       - 'tools/*471*'
+      - 'tools/*472*'
+      - 'app/lib/community450.dart'
       - 'app/android/app/src/main/kotlin/com/nnentx/ngelx_app/IncomingCallActivity470.kt'
       - 'cloudflare/call-push/src/policy.mjs'
       - 'tools/apply_build457_community_runtime_fixes.py'
@@ -848,6 +851,17 @@ jobs:
           grep -Fq 'Build471: distinguish group vs private native incoming designs' app/android/app/src/main/kotlin/com/nnentx/ngelx_app/IncomingCallService.kt
           grep -Fq 'val group = intent.getBooleanExtra("callGroup471", false)' app/android/app/src/main/kotlin/com/nnentx/ngelx_app/IncomingCallActivity470.kt
 
+      - name: Build472 private wallpaper call close and community permission QA
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/apply_build472_*.py tools/test_build472_*.py
+          python3 tools/apply_build472_wallpaper_callclose.py
+          python3 tools/apply_build472_call_buttons_community.py
+          python3 -m unittest discover -s tools -p 'test_build472_*.py' -v
+          grep -Fq 'memoize the private wallpaper decoration' app/lib/main.dart
+          grep -Fq "data['callStartedBy']==me" app/lib/main.dart
+
       - name: Flutter analiz
         shell: bash
         run: |
@@ -893,7 +907,7 @@ jobs:
         run: |
           set -euo pipefail
           nl -ba firestore.rules | sed -n '260,310p;420,435p'
-          npx firebase emulators:exec --project demo-ngelx --only firestore --non-interactive "node tools/firestore_rules_test.mjs && node tools/build439_preferences_rules_test.mjs && node tools/build440_rules_test.mjs && node tools/build441_rules_test.mjs && node tools/build446_rules_test.mjs && node tools/build448_rules_test.mjs && node tools/build450_rules_test.mjs && node tools/build455_rules_test.mjs && node tools/build456_rules_test.mjs && node tools/build469_legacy_founder_rules_test.mjs" || { tail -100 firestore-debug.log; exit 1; }
+          npx firebase emulators:exec --project demo-ngelx --only firestore --non-interactive "node tools/firestore_rules_test.mjs && node tools/build439_preferences_rules_test.mjs && node tools/build440_rules_test.mjs && node tools/build441_rules_test.mjs && node tools/build446_rules_test.mjs && node tools/build448_rules_test.mjs && node tools/build450_rules_test.mjs && node tools/build455_rules_test.mjs && node tools/build456_rules_test.mjs && node tools/build469_legacy_founder_rules_test.mjs && node tools/build472_community_permissions_rules_test.mjs" || { tail -100 firestore-debug.log; exit 1; }
 
 
       - name: Restore Android Java 17
@@ -921,7 +935,7 @@ jobs:
         working-directory: app
         run: |
           set -euo pipefail
-          flutter build apk --release --build-name=1.0.246 --build-number=471 --dart-define=NGELX_VERSION_NAME=1.0.246 --dart-define=NGELX_BUILD_NUMBER=471 --dart-define=NGELX_CALL_PUSH_URL=https://ngelx-call-push.alihancaglar76.workers.dev
+          flutter build apk --release --build-name=1.0.247 --build-number=472 --dart-define=NGELX_VERSION_NAME=1.0.247 --dart-define=NGELX_BUILD_NUMBER=472 --dart-define=NGELX_CALL_PUSH_URL=https://ngelx-call-push.alihancaglar76.workers.dev
           test -s build/app/outputs/flutter-apk/app-release.apk
           APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
           test -n "$APKSIGNER"
@@ -929,20 +943,20 @@ jobs:
           grep -qi "be20b27f0ba1f4decd2941d410b1536de89e48dc894f04f038f9d26b11ecd6aa" apk-signature.txt
           AAPT="$(dirname "$APKSIGNER")/aapt"
           "$AAPT" dump badging build/app/outputs/flutter-apk/app-release.apk | tee apk-manifest.txt
-          grep -q "versionCode='471'" apk-manifest.txt
-          grep -q "versionName='1.0.246'" apk-manifest.txt
-          cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/NgelX-1.0.246-Build-471-INSTALL-QA.apk
-          sha256sum build/app/outputs/flutter-apk/NgelX-1.0.246-Build-471-INSTALL-QA.apk > build/app/outputs/flutter-apk/NgelX-1.0.246-Build-471-INSTALL-QA.apk.sha256
+          grep -q "versionCode='472'" apk-manifest.txt
+          grep -q "versionName='1.0.247'" apk-manifest.txt
+          cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/NgelX-1.0.247-Build-472-INSTALL-QA.apk
+          sha256sum build/app/outputs/flutter-apk/NgelX-1.0.247-Build-472-INSTALL-QA.apk > build/app/outputs/flutter-apk/NgelX-1.0.247-Build-472-INSTALL-QA.apk.sha256
 
       # Publish the signed, locally tested APK before any optional cloud deployment.
       # The owner can test the app even when Google Cloud API activation is not permitted.
       - name: Upload signed candidate and tested rules for review
         uses: actions/upload-artifact@v4
         with:
-          name: NgelX-1.0.246-Build-471-INSTALL-QA
+          name: NgelX-1.0.247-Build-472-INSTALL-QA
           path: |
-            app/build/app/outputs/flutter-apk/NgelX-1.0.246-Build-471-INSTALL-QA.apk
-            app/build/app/outputs/flutter-apk/NgelX-1.0.246-Build-471-INSTALL-QA.apk.sha256
+            app/build/app/outputs/flutter-apk/NgelX-1.0.247-Build-472-INSTALL-QA.apk
+            app/build/app/outputs/flutter-apk/NgelX-1.0.247-Build-472-INSTALL-QA.apk.sha256
             app/build/app/outputs/bundle/release/NgelX-1.0.223-Build-446-PLAY-PREPARATION.aab
             build441-untranslated.tsv
             build442-untranslated.tsv
