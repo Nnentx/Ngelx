@@ -24,7 +24,7 @@ class Build481Tests(unittest.TestCase):
         self.assertIn("legacyFounder481",src)
         self.assertIn("Üye veya yönetici yetkilerini otomatik değiştirmiyoruz",src)
         self.assertNotIn("FieldValue.arrayUnion([_communityUid450])",src[src.index(COMMUNITY_MARK):src.index("return ListView(",src.index(COMMUNITY_MARK))])
-        self.assertIn("if (!_communityAdmin450(v))",src)
+        self.assertIn("if (!ngelx456Moderator(v))",src)
         self.assertIn("permission-denied",src)
 
     def test_existing_guardrails_unchanged(self):
