@@ -798,7 +798,13 @@ Future<void> ngelx456Invite(
       isScrollControlled: true,
       backgroundColor: Colors.white,
       showDragHandle: true,
-      builder: (c) => const Ngelx456ChatPicker(),
+      // Build482: keep the existing white invite sheet's names readable.
+      builder: (c) => Theme(
+        data: ThemeData.light().copyWith(
+          colorScheme: ColorScheme.fromSeed(seedColor: mor),
+        ),
+        child: const Ngelx456ChatPicker(),
+      ),
     );
     if (targets == null || targets.isEmpty) return;
     final ref = FirebaseFirestore.instance
@@ -968,10 +974,21 @@ class _Ngelx456ChatPickerState extends State<Ngelx456ChatPicker> {
                             size: 40,
                             circle: true,
                           ),
-                          title: Text(name),
+                          title: Text(
+                             name,
+                             maxLines: 1,
+                             overflow: TextOverflow.ellipsis,
+                             style: const TextStyle(
+                               fontSize: 15,
+                               fontWeight: FontWeight.w700,
+                               color: ngelx456Ink,
+                             ),
+                           ),
+                           activeColor: mor,
+                           tileColor: Colors.white,
                           subtitle: const Text(
                             'Özel sohbet',
-                            style: TextStyle(fontSize: 12),
+                            style: TextStyle(fontSize: 12, color: Colors.black54),
                           ),
                         );
                       },
