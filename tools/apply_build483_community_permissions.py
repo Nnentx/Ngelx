@@ -60,7 +60,7 @@ def transform(source: str) -> str:
     if MARK in source:
         return source
     start = source.index("    match /communities450/{cid} {")
-    end = source.index("      match /requests/{uid} {", start)
+    end = source.index("      match /requests/{uid} {", start) + len("      match /requests/{uid} {")
     before, region, after = source[:start], source[start:end], source[end:]
     if region.count(ANCHOR) != 1:
         raise ValueError("Build483 refuses unexpected community root boundary")
