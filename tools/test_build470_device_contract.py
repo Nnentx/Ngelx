@@ -30,7 +30,7 @@ class Build470CallAndPerformanceTests(unittest.TestCase):
         s=SERVICE.read_text()
         self.assertEqual(patch_service(s),s)
         for guard in ('// Build470: Android platform incoming call UI and owner fallback',
-          'd["recipientUid"] != currentRecipient470(this)', 
+          'val signedIn = currentRecipient470(this)', 
           'FirebaseAuth.getInstance().currentUser?.uid',
           'age > 72L*60L*60L*1000L',
           'IncomingCallActivity470::class.java',
