@@ -34,7 +34,7 @@ class Build471DesignTests(unittest.TestCase):
   for term in ('setFullScreenIntent(fullScreenCall, true)',
     'IncomingCallActivity470::class.java', 'putExtra("callGroup471", group || isGroupChat471(context, chat))',
     'd["group"] == "true"', 'currentRecipient470(context)', 'GROUP_PREFS471',
-    'room.isEmpty()', 'timer.postDelayed(timeout, 60000)',
+    'isStillRinging470(room: String)', 'timer.postDelayed(timeout, 60000)',
     'ring_blocked settings:', 'RingtoneManager.getRingtone',
     'AudioManager.RINGER_MODE_NORMAL', 'manager.currentInterruptionFilter',
     'manager.notify(room.hashCode(), notification)', 'ringing.remove(room)'):
