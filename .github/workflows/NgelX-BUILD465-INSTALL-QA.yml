@@ -984,6 +984,14 @@ jobs:
           grep -Fq 'Build482: keep the existing white invite sheet' app/lib/build456_widgets.dart
           grep -Fq 'class Ngelx482CommunityAvatarEditor' app/lib/build456_widgets.dart
 
+      - name: Apply Build484 legacy founder client patch after all older source patches
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/apply_build484_founder_client.py
+          python3 tools/apply_build484_founder_client.py
+          python3 tools/apply_build484_founder_client.py
+
       - name: Build484 verified legacy founder, removed founder and normal-member roles
         working-directory: app
         shell: bash
