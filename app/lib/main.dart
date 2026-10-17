@@ -17547,7 +17547,7 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
         ],
         flexibleSpace:Container(decoration:const BoxDecoration(gradient:LinearGradient(colors:[Color(0xFFFFFFFF),ngelxGroupGreenSoft]),borderRadius:BorderRadius.vertical(bottom:Radius.circular(24)))),
       ),
-      body:StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
+      body:SafeArea(top:false,child:StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
         stream:ref.snapshots(),
         builder:(_,snap){
           if(!snap.hasData)return const Center(child:CircularProgressIndicator(color:ngelxGroupGreen));
@@ -17560,7 +17560,7 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
           final foto=(v['groupPhotoUrl']??'').toString();
           final ad=(v['groupName']??lt('Grup','Group')).toString();
           return ListView(
-            padding:EdgeInsets.fromLTRB(14,16,14,32+MediaQuery.paddingOf(context).bottom),
+            padding:const EdgeInsets.fromLTRB(14,16,14,32),
             children:[
               NgelXPremiumCard(
                 padding:const EdgeInsets.fromLTRB(14,18,14,16),
@@ -17820,7 +17820,7 @@ class _GrupBilgiPageState extends State<GrupBilgiPage>{
             ],
           );
         },
-      ),
+      )),
     ),
   );
 
@@ -18590,7 +18590,7 @@ class _GrupUyeleriPageState extends State<GrupUyeleriPage>{
         title:const Text('Üyeler',style:TextStyle(fontWeight:FontWeight.w900,color:ngelxPremiumInk)),
         flexibleSpace:Container(decoration:const BoxDecoration(gradient:LinearGradient(colors:[Color(0xFFFFFFFF),Color(0xFFF5EFFF)]),borderRadius:BorderRadius.vertical(bottom:Radius.circular(24)))),
       ),
-      body:StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
+      body:SafeArea(top:false,child:StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
         stream:ref.snapshots(),
         builder:(_,snap){
           if(!snap.hasData)return const Center(child:CircularProgressIndicator(color:ngelxGroupGreen));
@@ -18653,7 +18653,7 @@ class _GrupUyeleriPageState extends State<GrupUyeleriPage>{
             )),
           ]);
         },
-      ),
+      )),
     ),
   );
 }
