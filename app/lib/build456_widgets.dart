@@ -285,6 +285,117 @@ class _Ngelx456CoverEditorState extends State<Ngelx456CoverEditor> {
   }
 }
 
+// Build482: independent profile image editor; cover photo remains unchanged.
+class Ngelx482CommunityAvatarEditor extends StatefulWidget {
+  final String id;
+  final Map<String, dynamic> value;
+  const Ngelx482CommunityAvatarEditor({
+    super.key, required this.id, required this.value,
+  });
+  @override
+  State<Ngelx482CommunityAvatarEditor> createState() =>
+      _Ngelx482CommunityAvatarEditorState();
+}
+
+class _Ngelx482CommunityAvatarEditorState
+    extends State<Ngelx482CommunityAvatarEditor> {
+  XFile? file;
+  bool saving = false;
+
+  Future<void> choose() async {
+    if (saving) return;
+    try {
+      final selected = await ngelxResimSec(
+        source: ImageSource.gallery, imageQuality: 85, maxWidth: 1200,
+      );
+      if (selected != null && mounted) setState(() => file = selected);
+    } catch (e) {
+      if (mounted) _communityError450(context, e);
+    }
+  }
+
+  Future<void> save() async {
+    if (file == null || saving) return;
+    setState(() => saving = true);
+    try {
+      final uid = _communityUid450;
+      final root = _communities450.doc(widget.id);
+      final current = (await root.get(
+        const GetOptions(source: Source.server),
+      )).data();
+      if (uid.isEmpty || current == null ||
+          !ngelx457CanEditCover(current, uid)) {
+        throw StateError('Topluluk fotoğrafını değiştirmek için yönetici yetkisi gerekli.');
+      }
+      // No old image deletion; preserve all existing user media.
+      final url = await ngelxFotografYukle(
+        dosya: file!,
+        kind: 'groups',
+        legacyPath:
+            'communities/${widget.id}/avatar_${DateTime.now().millisecondsSinceEpoch}.jpg',
+      );
+      if (_communityUid450 != uid) throw StateError('Oturum değişti.');
+      // Firestore server permissions remain authoritative.
+      await root.update({'photoUrl': url});
+      if (mounted) {
+        ngelx455Status(context, 'Topluluk profil fotoğrafı güncellendi');
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted) _communityError450(context, e);
+    } finally {
+      if (mounted) setState(() => saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext c) => _communitySurface450(
+    title: 'Topluluk profil fotoğrafı',
+    body: ListView(
+      padding: const EdgeInsets.all(20),
+      children: [
+        const Text(
+          'Bu fotoğraf topluluk adının yanında görünür. Kapak fotoğrafı değişmez.',
+          style: TextStyle(color: ngelx456Ink, fontSize: 14),
+        ),
+        const SizedBox(height: 20),
+        Center(
+          child: file == null
+              ? _communityImage450(
+                  (widget.value['photoUrl'] ?? '').toString(), size: 120,
+                )
+              : ClipRRect(
+                  borderRadius: BorderRadius.circular(18),
+                  child: kIsWeb
+                      ? Image.network(
+                          file!.path, width: 120, height: 120, fit: BoxFit.cover,
+                        )
+                      : Image.file(
+                          File(file!.path), width: 120, height: 120,
+                          fit: BoxFit.cover, cacheWidth: 480,
+                        ),
+                ),
+        ),
+        const SizedBox(height: 22),
+        OutlinedButton.icon(
+          onPressed: saving ? null : choose,
+          icon: const Icon(Icons.photo_library_outlined),
+          label: const Text('Galeriden fotoğraf seç'),
+        ),
+        const SizedBox(height: 12),
+        FilledButton.icon(
+          onPressed: saving || file == null ? null : save,
+          icon: saving
+              ? const SizedBox(width: 18, height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2))
+              : const Icon(Icons.check),
+          label: Text(saving ? 'Kaydediliyor…' : 'Profil fotoğrafını kaydet'),
+        ),
+      ],
+    ),
+  );
+}
+
 class Ngelx456Header extends StatelessWidget {
   final String id;
   final Map<String, dynamic> value;
@@ -1476,6 +1587,18 @@ class _Ngelx456DashboardState extends State<Ngelx456Dashboard> {
                   MaterialPageRoute(
                     builder: (_) =>
                         Ngelx456CoverEditor(id: widget.id, value: v),
+                  ),
+                ),
+              ),
+              row(
+                Icons.account_circle_outlined,
+                'Topluluk profil fotoğrafını değiştir',
+                onTap: () => Navigator.push(
+                  c,
+                  MaterialPageRoute(
+                    builder: (_) => Ngelx482CommunityAvatarEditor(
+                      id: widget.id, value: v,
+                    ),
                   ),
                 ),
               ),
