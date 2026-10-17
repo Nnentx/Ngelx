@@ -65,7 +65,10 @@ jobs:
           grep -Fq 'commentLimits456' firestore.rules
           test "$(grep -Ec 'allow delete: if false;' firestore.rules)" -gt 2
 
-      # The historical Build469 suite intentionally rejected legacy role edits.\n      # Build483 replaces that specific expectation with founder-only positive\n      # tests and unauthorized-member negative tests.\n      - name: Test owner/admin/moderator/member with Firestore emulator
+      # The historical Build469 suite intentionally rejected legacy role edits.
+      # Build483 replaces that specific expectation with founder-only positive
+      # tests and unauthorized-member negative tests.
+      - name: Test owner/admin/moderator/member with Firestore emulator
         shell: bash
         run: |
           set -euo pipefail
