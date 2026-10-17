@@ -25,6 +25,9 @@ class Build476ComposerTests(unittest.TestCase):
   self.assertNotIn('height:MediaQuery.viewInsetsOf(context).bottom>0',p)
   self.assertNotIn('bottomNavigationBar:const SizedBox.shrink()',p)
   self.assertEqual(p.count('constraints:const BoxConstraints.tightFor(width:31,height:44)'),2)
+  for width in (34,36):
+   self.assertIn(f'constraints:const BoxConstraints.tightFor(width:{width},height:44)',p)
+  self.assertIn('suffixIconConstraints:const BoxConstraints(minWidth:36,minHeight:40)',p)
   self.assertEqual(p.count("tooltip:'Kamera'"),1)
   self.assertEqual(p.count("tooltip:'Galeri'"),1)
  def test_scoped_and_idempotent(self):
