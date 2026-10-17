@@ -126,9 +126,9 @@ class Ngelx456Cover extends StatelessWidget {
 // Build457: the founder can be authoritative even in old communities whose
 // admins array was populated incompletely. Server security still decides writes.
 bool ngelx457CanEditCover(Map<String, dynamic> community, String me) {
-  if (me.isEmpty) return false;
-  return community['founderId'] == me ||
-      List<String>.from(community['admins'] ?? const []).contains(me);
+  // Build484: check membership before gallery/upload, matching server rules.
+  // This also includes legacy founders missing from the admin list.
+  return ngelx484CommunityManager(community, me);
 }
 
 // Do not rewrite the cover URL when only its framing was adjusted.
