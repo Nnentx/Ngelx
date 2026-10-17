@@ -904,6 +904,7 @@ jobs:
           set -euo pipefail
           python3 -m py_compile tools/apply_build476_private_composer_nav.py tools/test_build476_private_composer_nav.py
           python3 tools/apply_build476_private_composer_nav.py
+          python3 tools/apply_build476_message_bubble_times.py
           python3 -m unittest discover -s tools -p 'test_build476_*.py' -v
           grep -Fq 'Build476: stable bottom navigation reservation for all IME states' app/lib/main.dart
           grep -Fq 'height:math.max(54.0,MediaQuery.viewPaddingOf(context).bottom)' app/lib/main.dart
