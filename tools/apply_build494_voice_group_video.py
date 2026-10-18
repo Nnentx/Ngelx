@@ -59,8 +59,10 @@ def transform(source):
     voice_start=body.index("  Widget _grupSesliKatilimci(lk.Participant p,{bool yerel=false}){")
     voice_end=body.index("  Widget _grupAramaAlani(){",voice_start)
     voice=body[voice_start:voice_end]
-    avatar_return="    return SizedBox("
-    if voice.count(avatar_return)!=1:raise RuntimeError("Build494 voice participant markup changed")
+    # Build465/469 may wrap the original voice tile in different widgets.
+    # The participant name still uniquely precedes every original tile.
+    avatar_return="    final ad=_katilimciAdi(p,yerel:yerel);"
+    if voice.count(avatar_return)!=1:raise RuntimeError("Build494 voice participant identity changed")
     video_preview="""    final track=_katilimciVideosu(p);
     if(track!=null){
       return SizedBox(width:126,child:Column(mainAxisSize:MainAxisSize.min,children:[
@@ -76,7 +78,7 @@ def transform(source):
       ]));
     }
 """
-    voice=voice.replace(avatar_return,video_preview+avatar_return,1)
+    voice=voice.replace(avatar_return,avatar_return+"\n"+video_preview,1)
     body=body[:voice_start]+voice+body[voice_end:]
     a=body.index("  Widget _grupAramaAlani(){")
     b=body.index("  Widget _videoAlani(){",a)
