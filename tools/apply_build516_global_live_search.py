@@ -19,6 +19,7 @@ def once(src,old,new,where):
 
 def transform(src):
     if MARK in src:return src
+    original=src
     if 'part \'live_feed_card.dart\';' not in src:
         raise RuntimeError('Build516 requires existing searchable Keşfet live_feed_card part')
     if "void _aramaAc(){" not in src or "List<Widget> _canliSliverleri(" not in src:
@@ -104,17 +105,24 @@ def transform(src):
         # insert a guessed join into an unknown or unrelated card.
         if 'yayinlar[i].id' in src:
             raise RuntimeError('Build516 Keşfet category card join changed; manual QA required')
+    # UI generations can remove entire old categories. Verify the new
+    # actions are present and any pre-existing navigation controls remain.
     for needed in (
       MARK,
       "tooltip:'Canlı yayın ara'",
       "onPressed:()=>ngelxCanliAramaAc(context)",
       "label:const Text('Canlı ara')",
+    ):
+        if needed not in src:
+            raise RuntimeError('Build516 missing global Keşfet live search '+needed)
+    for preserved in (
       "onTap:_aramaAc,",
       "onPressed:_filtreAc",
       "_kesfetSekmesi(Icons.live_tv_rounded,t('live'),0)",
       "if(kategori==0)..._canliSliverleri()",
     ):
-        if needed not in src:raise RuntimeError('Build516 lost Keşfet/legacy control '+needed)
+        if preserved in original and preserved not in src:
+            raise RuntimeError('Build516 changed existing Keşfet action '+preserved)
     # If a generated Keşfet layout still contains its legacy live card,
     # that card must route through the existing authorized join. Other
     # generated layouts may no longer contain this category card at all.
