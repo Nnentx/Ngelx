@@ -120,17 +120,29 @@ def transform(source):
     likeWidget=r"""StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
                   stream:FirebaseFirestore.instance.collection('live_streams').doc(widget.belgeId).snapshots(),
                   builder:(_,likesSnap){
-                    final likes=(likesSnap.data?.data()?['likeCount'] as num?)?.toInt()??0;
-                    final display=likes>=1000
-                      ?(likes/1000).toStringAsFixed(1).replaceAll('.',',')+' B'
-                      :likes.toString();
-                    return Row(mainAxisSize:MainAxisSize.min,children:[
-                      const Icon(Icons.favorite_rounded,color:Color(0xFFFF5578),size:13),
-                      const SizedBox(width:4),
-                      Text(display,style:const TextStyle(color:Colors.white70,fontSize:11,fontWeight:FontWeight.w700)),
-                    ]);
+                    final storedLikes=(likesSnap.data?.data()?['likeCount'] as num?)?.toInt()??0;
+                    // The stored likeCount is updated by the host heartbeat,
+                    // not on every reaction. Listen to the original reaction
+                    // documents so the count updates immediately while live.
+                    return StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
+                      stream:FirebaseFirestore.instance.collection('live_streams').doc(widget.belgeId).collection('reactions').snapshots(),
+                      builder:(_,reactionSnap){
+                        final liveLikes=reactionSnap.data?.docs.fold<int>(0,
+                          (sum,d)=>sum+((d.data()['count'] as num?)?.toInt()??1));
+                        final likes=liveLikes??storedLikes;
+                        final display=likes>=1000
+                          ?(likes/1000).toStringAsFixed(1).replaceAll('.',',')+' B'
+                          :likes.toString();
+                        return Row(mainAxisSize:MainAxisSize.min,children:[
+                          const Icon(Icons.favorite_rounded,color:Color(0xFFFF5578),size:13),
+                          const SizedBox(width:4),
+                          Text(display,style:const TextStyle(color:Colors.white70,fontSize:11,fontWeight:FontWeight.w700)),
+                        ]);
+                      },
+                    );
                   },
                 ),"""
+
     # The displayed name is a single Text(ad,..) statement; unlike @username
     # the host displayName has remained stable across historical builds.
     namePattern=r"Text\(ad,maxLines:1,overflow:TextOverflow\.ellipsis,[^\n]*\),"
