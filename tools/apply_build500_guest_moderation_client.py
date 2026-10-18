@@ -36,7 +36,7 @@ NEW_METHOD = r"""  // Build500: authenticated LiveKit guest moderation; no clien
       final user=FirebaseAuth.instance.currentUser;
       if(user==null||user.uid!=widget.ownerId)throw StateError('auth_required');
       final idToken=await user.getIdToken();
-      if(idToken.isEmpty||FirebaseAuth.instance.currentUser?.uid!=widget.ownerId){
+      if(idToken==null||idToken.isEmpty||FirebaseAuth.instance.currentUser?.uid!=widget.ownerId){
         throw StateError('auth_expired');
       }
       final response=await Dio(BaseOptions(
