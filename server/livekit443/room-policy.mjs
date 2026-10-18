@@ -35,8 +35,14 @@ export function roomPermission({kind, room, uid, viewer, owner, peerId, now}) {
   if (!visible) return null;
   const guest=room.guestRequest;
   const speaker = kind === 'audio' && list(room.speakerIds).includes(uid) || kind==='live' && guest?.status==='accepted' && guest.hostUid===ownerId && guest.guestUid===uid;
+  // A host-moderated guest may keep the camera while the microphone
+  // publication source is denied on a fresh/reconnected LiveKit token.
+  // This is not a substitute for server-side muting of existing audio tracks.
+  const microphoneBlocked = kind === 'live' && speaker &&
+    list(room.guestAudioMutedUids).includes(uid);
   return {allowed:true, role:speaker ? 'speaker' : 'listener', displayName,
-    canPublish:speaker, canPublishData:true};
+    canPublish:speaker, canPublishData:true,
+    ...(microphoneBlocked ? {canPublishSources:['camera']} : {})};
 }
 
 export function hostRequestKind(uid, roomName, now) {
