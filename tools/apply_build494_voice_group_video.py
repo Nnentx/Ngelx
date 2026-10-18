@@ -53,26 +53,31 @@ def transform(source):
       "same-room camera toggle")
     # Audio-only group call participant with a published video gets a thumbnail;
     # others retain the microphone/avatar card. Never auto-open someone else's camera.
-    needle="""  Widget _grupSesliKatilimci(lk.Participant p,{bool yerel=false}){
-    final ad=_katilimciAdi(p,yerel:yerel);
-    final aktif=yerel&&mikrofon;
-    return SizedBox("""
-    replacement="""  Widget _grupSesliKatilimci(lk.Participant p,{bool yerel=false}){
-    final ad=_katilimciAdi(p,yerel:yerel);
-    final aktif=yerel&&mikrofon;
-    final track=_katilimciVideosu(p);
+    # Build469 rewrites the speaker animation state and adds a host-scoped
+    # participant popup. Keep those changes; inject video preview only before
+    # the generated voice/avatar return widget.
+    voice_start=body.index("  Widget _grupSesliKatilimci(lk.Participant p,{bool yerel=false}){")
+    voice_end=body.index("  Widget _grupAramaAlani(){",voice_start)
+    voice=body[voice_start:voice_end]
+    avatar_return="    return SizedBox("
+    if voice.count(avatar_return)!=1:raise RuntimeError("Build494 voice participant markup changed")
+    video_preview="""    final track=_katilimciVideosu(p);
     if(track!=null){
       return SizedBox(width:126,child:Column(mainAxisSize:MainAxisSize.min,children:[
-        ClipRRect(borderRadius:BorderRadius.circular(16),
-          child:SizedBox(width:126,height:148,
-            child:lk.VideoTrackRenderer(track,fit:lk.VideoViewFit.cover))),
+        Stack(children:[
+          ClipRRect(borderRadius:BorderRadius.circular(16),
+            child:SizedBox(width:126,height:148,
+              child:lk.VideoTrackRenderer(track,fit:lk.VideoViewFit.cover))),
+          Positioned(right:0,top:0,child:_ngelx469ParticipantMenu(p,yerel:yerel)),
+        ]),
         const SizedBox(height:7),
         Text(ad,maxLines:1,overflow:TextOverflow.ellipsis,textAlign:TextAlign.center,
           style:const TextStyle(color:Colors.white,fontSize:12.5,fontWeight:FontWeight.w800)),
       ]));
     }
-    return SizedBox("""
-    body=once(body,needle,replacement,"group audio participant preview")
+"""
+    voice=voice.replace(avatar_return,video_preview+avatar_return,1)
+    body=body[:voice_start]+voice+body[voice_end:]
     a=body.index("  Widget _grupAramaAlani(){")
     b=body.index("  Widget _videoAlani(){",a)
     group=body[a:b]
