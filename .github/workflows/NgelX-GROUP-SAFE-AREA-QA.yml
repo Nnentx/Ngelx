@@ -1,0 +1,35 @@
+name: NgelX Group Bottom Safe Area QA (no deploy)
+
+on:
+  push:
+    branches:
+      - fix/group-bottom-safe-area-20261018
+    paths:
+      - 'app/lib/main.dart'
+      - 'tools/test_group_bottom_safe_area.py'
+      - '.github/workflows/NgelX-GROUP-SAFE-AREA-QA.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  source-qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout NgelX source
+        uses: actions/checkout@v4
+      - name: Run scoped Android bottom SafeArea regression check
+        run: python3 tools/test_group_bottom_safe_area.py
+      - name: Install Dart via Flutter stable
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Parse existing Flutter source without reformatting it
+        run: |
+          set -euo pipefail
+          dart format --output=none app/lib/main.dart
+      - name: Confirm no production deployment
+        run: echo 'Issue 104 QA only; does not publish an APK or change live Firebase rules.'
