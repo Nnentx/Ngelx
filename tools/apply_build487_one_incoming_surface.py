@@ -90,7 +90,7 @@ def patch_service(src):
         "ringing.remove(room)",
         "setFullScreenIntent(fullScreenCall, true)",
         "rememberOwner470",
-        "isStillRinging470(room)",
+        "fun isStillRinging470(room:",
         "manager.notify(room.hashCode(), notification)",
     ):
         if token not in src:
