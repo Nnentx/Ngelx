@@ -56,7 +56,7 @@ assert live.count('void _showNextGift513(){')==1
 assert live.count('snap.docChanges.reversed')==1
 assert 'if(change.type==DocumentChangeType.added)continue;' not in patch.NEW_LOOP
 assert 'FirebaseFirestore' not in patch.FIELDS and 'FirebaseFirestore' not in patch.NEW_LOOP
-for forbidden in ('.set(','.add(','.update(','.delete(','.runTransaction('):
+for forbidden in ('.set(','.update(','.delete(','.runTransaction(','.collection('):
     assert forbidden not in patch.FIELDS and forbidden not in patch.NEW_LOOP, 'Queue may not write backend'
 assert 'NGELX_VIRTUAL_GIFT_STAGING' not in patch.FIELDS and 'NGELX_VIRTUAL_GIFT_STAGING' not in patch.NEW_LOOP
 assert 'int sonHediyeAdedi511=0;' in live
