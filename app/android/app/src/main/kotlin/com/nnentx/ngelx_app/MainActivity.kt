@@ -9,6 +9,7 @@ import android.graphics.BitmapFactory
 import android.graphics.ImageDecoder
 import android.os.Build
 import android.net.Uri
+import android.provider.Settings
 import android.provider.OpenableColumns
 import android.util.Size
 import java.io.FileOutputStream
@@ -31,6 +32,7 @@ class MainActivity : FlutterActivity() {
     }
 
     private val mediaChannel = "com.nnentx.ngelx_app/media"
+    private val floatingChannel509 = "com.nnentx.ngelx_app/call_overlay_509"
     private var pendingPickerResult: MethodChannel.Result? = null
     private var pickerAllowMultiple = false
     private var pickerRequestedImage = false
@@ -39,6 +41,49 @@ class MainActivity : FlutterActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        // Build509: permission is always granted manually in Android Settings.
+        val overlay509 = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, floatingChannel509)
+        Ngelx509FlutterEvents.methodChannel = overlay509
+        overlay509.setMethodCallHandler { call, result ->
+            when (call.method) {
+                "allowed" -> result.success(android.os.Build.VERSION.SDK_INT >= 26 && Settings.canDrawOverlays(this))
+                "request" -> {
+                    try {
+                        startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                            Uri.parse("package:$packageName")))
+                        result.success(true) // Settings launched, NOT permission granted.
+                    } catch (e: Exception) {
+                        result.error("OVERLAY_SETTINGS", "Android pencere izni ayarları açılamadı.", null)
+                    }
+                }
+                "show" -> {
+                    if (!CallAudioService.active || android.os.Build.VERSION.SDK_INT < 26 ||
+                        !Settings.canDrawOverlays(this)) {
+                        result.success(false)
+                    } else {
+                        val roomTitle = call.argument<String>("title")?.take(64) ?: "Görüşme sürüyor"
+                        try {
+                            startService(Intent(this, CallAudioService::class.java).apply {
+                                action = CallAudioService.SHOW_FLOATING_509
+                                putExtra("callName", roomTitle)
+                            })
+                            result.success(true)
+                        } catch (e: Exception) { result.success(false) }
+                    }
+                }
+                "hide" -> {
+                    if (CallAudioService.active) {
+                        try {
+                            startService(Intent(this, CallAudioService::class.java).apply {
+                                action = CallAudioService.HIDE_FLOATING_509
+                            })
+                        } catch (_: Exception) {}
+                    }
+                    result.success(null)
+                }
+                else -> result.notImplemented()
+            }
+        }
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, mediaChannel)
             .setMethodCallHandler { call, result ->
                 when (call.method) {
