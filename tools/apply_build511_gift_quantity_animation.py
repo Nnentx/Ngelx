@@ -127,9 +127,13 @@ def transform(src):
              '  Future<void> _hediyeGonder(String ad, String emoji, int puan,{int adet=1}) async {','gift amount')
     part=one(part,'    if (hediyeGonderiliyor) return;',
              '    if (hediyeGonderiliyor||adet<1||adet>10) return;','send bounds')
-    part=one(part,"      await FirebaseFirestore.instance.collection('live_streams').doc(widget.belgeId).collection('comments').add({",
+    gift_start=part.index('  Future<void> _hediyeGonder(')
+    gift_end=part.index('  Future<void> _hediyePaneli() async {',gift_start)
+    sending=part[gift_start:gift_end]
+    sending=one(sending,"      await FirebaseFirestore.instance.collection('live_streams').doc(widget.belgeId).collection('comments').add({",
              """      final giftDoc=FirebaseFirestore.instance.collection('live_streams').doc(widget.belgeId).collection('comments').doc();
       await giftDoc.set({""",'unique id per gift send')
+    part=part[:gift_start]+sending+part[gift_end:]
     part=one(part,"        'text': '$emoji $ad',",
              "        'text': '$emoji $ad ×$adet',",'gift text')
     part=one(part,"        'giftEmoji': emoji,\n        'points': puan,",
@@ -148,7 +152,7 @@ def transform(src):
       isScrollControlled:true,
       backgroundColor: const Color(0xFF15151B),""",'gift sheet amount')
     part=one(part,'      builder: (c) => SafeArea(child: Padding(',
-             '      builder: (c) => StatefulBuilder(builder:(c,setGiftAmount)=>SafeArea(child: Padding(','stateful count selector')
+             '      builder: (c) => StatefulBuilder(builder:(c,setGiftAmount)=>SafeArea(child: SingleChildScrollView(child:Padding(','stateful count selector')
     part=one(part,"          const Text('Canlı yayını destekle • hediyeler N-Puan kazandırır', style: TextStyle(color: Colors.white60)),",
              """          const Text('QA sanal hediye · gerçek para/coin ödemesi yok',style:TextStyle(color:Colors.white60)),
           Row(children:[
@@ -164,7 +168,7 @@ def transform(src):
              "await _hediyeGonder(h['ad'] as String, h['emoji'] as String, h['puan'] as int,adet:amount511);",'send selected amount')
     a=part.index('  Future<void> _hediyePaneli() async {')
     b=part.index('  Future<void> _kalpDegistir() async {',a)
-    sheet=one(part[a:b],"      )),\n    );\n  }","      ))),\n    );\n  }",'StatefulBuilder close')
+    sheet=one(part[a:b],"      )),\n    );\n  }","      )))),\n    );\n  }",'StatefulBuilder close')
     part=part[:a]+sheet+part[b:]
     # Keep Dart's interpolation in the existing comment renderer.
     dollar=chr(36)
