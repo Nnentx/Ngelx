@@ -124,39 +124,32 @@ def transform(src:str)->str:
         raise RuntimeError("Build510 comment panel closing method boundary missing")
     b=a+len("  Widget _yorumPaneli(){")+next_method.start()
     pre,comments,post=part[:a],part[a:b],part[b:]
-    comments=once(comments,
-        "        Flexible(child:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(",
-        "        Flexible(child:Stack(children:[\n          StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(",
-        "comment stack")
-    comments=once(comments,
-        ".orderBy('createdAt',descending:true).limit(30).snapshots(),",
-        ".orderBy('createdAt',descending:true).limit(100).snapshots(),",
-        "bounded live comment history")
-    comments=once(comments,
-        "            final yorumlar=snap.data?.docs??[];",
-        "            final yorumlar=snap.data?.docs??[];\n            _observeComments510(yorumlar);",
-        "observe incoming comments")
-    comments=once(comments,
-        "return ListView.builder(reverse:true,shrinkWrap:true,itemCount:yorumlar.length,itemBuilder:(_,i){",
-        "return ListView.builder(controller:_commentScroll510,reverse:true,shrinkWrap:true,itemCount:yorumlar.length,itemBuilder:(_,i){",
-        "manual scroll controller")
-    tail="""          },
-        )),
-      ]),
-    );
-  }
+    # Place the return-to-latest chip below Build490's comments Offstage
+    # surface. No assumption about Build453's StreamBuilder/Flexible nesting.
+    pre=once(pre,
+        "Offstage(offstage:_commentsHidden490,child:_yorumPaneli()),",
+        "Offstage(offstage:_commentsHidden490,child:_yorumPaneli()),\n        if(!_commentsHidden490)_newCommentChip510(),",
+        "independent chip in Build490 comments section")
 
-"""
-    replacement="""          },
-          ),
-          Positioned(right:5,bottom:5,child:_newCommentChip510()),
-        ])),
-      ]),
-    );
-  }
-
-"""
-    comments=once(comments,tail,replacement,"new comment return chip")
+    # Only mutate the current comment stream, never pinned messages, LiveKit
+    # or the caller's existing list layout. The generated versions may use
+    # different whitespace and Flutter widget nesting.
+    import re
+    matchedLimits=re.findall(r"\.limit\(\d+\)\.snapshots\(\)",comments)
+    if len(matchedLimits)!=1:
+        raise RuntimeError(f"Build510 comment history query: expected 1 limit, got {len(matchedLimits)}")
+    comments=comments.replace(matchedLimits[0],".limit(100).snapshots()",1)
+    comments,observed=re.subn(
+        r"(final yorumlar\s*=\s*[^\n;]+;)",
+        r"\1\n            _observeComments510(yorumlar);",
+        comments,count=1)
+    if observed!=1:
+        raise RuntimeError("Build510 comment docs observer: no unique declaration")
+    matches=len(re.findall(r"ListView\.builder\(",comments))
+    if matches!=1:
+        raise RuntimeError(f"Build510 comment ListView.builder count: {matches}")
+    comments=comments.replace("ListView.builder(",
+        "ListView.builder(controller:_commentScroll510,",1)
     for guard in (
         "_yorumYonet(d.id,y)",
         "if(kind=='gift')",
