@@ -40,7 +40,7 @@ class Ngelx448GuestControls extends StatelessWidget{
       final ids=<String>{...requests.map((d)=>d.id),...viewerUids.where((id)=>id!=ownerUid)}.toList();
       final states={for(final d in requests)d.id:d.data()['status']};
       if(ids.isEmpty)return const Padding(padding:EdgeInsets.fromLTRB(24,8,24,28),child:Column(mainAxisSize:MainAxisSize.min,children:[Text('Konuk ekle',style:TextStyle(fontSize:20,fontWeight:FontWeight.w800)),SizedBox(height:14),Text('Henüz izleyici veya konuk isteği yok.',textAlign:TextAlign.center)]));
-      return SizedBox(height:math.min(MediaQuery.sizeOf(c).height*.6,100.0+ids.length*82.0),child:Column(children:[
+      return SizedBox(height:math.min(MediaQuery.sizeOf(c).height*.48,100.0+ids.length*78.0),child:Column(children:[
         const ListTile(title:Text('Konuk ekle',style:TextStyle(fontSize:20,fontWeight:FontWeight.w800)),subtitle:Text('İzleyici davet et veya katılım isteğini yönet')),
         Expanded(child:ListView.builder(itemCount:ids.length,itemBuilder:(_,i){final id=ids[i],status=states[id];return FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(future:profiles.putIfAbsent(id,()=>FirebaseFirestore.instance.collection('users').doc(id).get()),builder:(_,p){
           final person=p.data?.data()??<String,dynamic>{},photo=(person['photoUrl']??'').toString();
@@ -55,14 +55,74 @@ class Ngelx448GuestControls extends StatelessWidget{
       ]));
     }))));
   }
+  // Build497: compact viewer-only join sheet. This never enumerates the
+  // host-only guest_requests collection; its state comes from the viewer's
+  // own guest_requests/{uid} stream. Original transition guards remain intact.
+  Future<void> _viewerJoinPanel497(BuildContext context,String uid,String? status)async{
+    final invited=status=='invited';
+    final pending=status=='pending';
+    final joined=status=='accepted';
+    final mainAction=invited?'accept':pending||joined?'reject':'request';
+    final mainLabel=invited?'Daveti kabul et':joined?'Yayından ayrıl':pending?'İsteği iptal et':'Katılma isteği gönder';
+    final detail=invited?'Yayıncı seni canlı yayına davet etti.':
+      joined?'Şu anda konuk olarak yayındasın. Ayrılınca kamera ve mikrofon yayınlanmaz.':
+      pending?'İsteğin yayıncıya gönderildi. Onaylanmasını bekleyebilir veya iptal edebilirsin.':
+      'Katılma isteği göndermek için kamera ve mikrofon izni gerekir. Yayıncı onayladığında yayına bağlanabilirsin.';
+    await showModalBottomSheet<void>(
+      context:context,isScrollControlled:true,useSafeArea:true,showDragHandle:true,
+      backgroundColor:const Color(0xFF211D2F),
+      shape:const RoundedRectangleBorder(borderRadius:BorderRadius.vertical(top:Radius.circular(24))),
+      builder:(sheetContext)=>SingleChildScrollView(
+        child:Padding(
+          padding:EdgeInsets.fromLTRB(22,8,22,24+MediaQuery.viewInsetsOf(sheetContext).bottom),
+          child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+            const Row(children:[
+              Icon(Icons.video_call_rounded,color:Color(0xFF8CE8E6),size:25),
+              SizedBox(width:10),
+              Expanded(child:Text('Canlı yayına katıl',style:TextStyle(
+                color:Colors.white,fontSize:19,fontWeight:FontWeight.w800))),
+            ]),
+            const SizedBox(height:12),
+            Text(detail,style:const TextStyle(color:Colors.white70,fontSize:13.5,height:1.4)),
+            const SizedBox(height:16),
+            FilledButton.icon(
+              style:FilledButton.styleFrom(
+                backgroundColor:pending||joined?const Color(0xFF5D526A):const Color(0xFF20B9BD),
+                foregroundColor:Colors.white,minimumSize:const Size.fromHeight(48)),
+              onPressed:(){
+                Navigator.of(sheetContext).pop();
+                unawaited(ngelx448GuestAction(context,liveId,ownerUid,uid,mainAction));
+              },
+              icon:Icon(invited?Icons.check_rounded:joined||pending?Icons.close_rounded:Icons.person_add_alt_1_rounded),
+              label:Text(mainLabel),
+            ),
+            if(invited)...[
+              const SizedBox(height:6),
+              TextButton(
+                onPressed:(){
+                  Navigator.of(sheetContext).pop();
+                  unawaited(ngelx448GuestAction(context,liveId,ownerUid,uid,'reject'));
+                },
+                child:const Text('Daveti reddet',style:TextStyle(color:Colors.white70)),
+              ),
+            ],
+          ]),
+        ),
+      ),
+    );
+  }
+
   @override Widget build(BuildContext context){
     if(host)return FilledButton.icon(style:FilledButton.styleFrom(backgroundColor:const Color(0xFF20C5CA),foregroundColor:Colors.white),onPressed:()=>_panel(context),icon:const Icon(Icons.person_add_alt_1),label:const Text('Konuk ekle'));
     final uid=FirebaseAuth.instance.currentUser?.uid;if(uid==null||ownerUid.isEmpty)return const SizedBox.shrink();
     return StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(stream:ngelx448GuestRef(liveId,uid).snapshots(),builder:(_,s){
       final status=s.data?.data()?['status'];
-      if(status=='invited')return Column(mainAxisSize:MainAxisSize.min,children:[IconButton.filledTonal(tooltip:'Yayın davetini kabul et',onPressed:()=>ngelx448GuestAction(context,liveId,ownerUid,uid,'accept'),icon:const Icon(Icons.check)),TextButton(onPressed:()=>ngelx448GuestAction(context,liveId,ownerUid,uid,'reject'),child:const Text('Reddet'))]);
+      if(status=='invited')return IconButton.filledTonal(
+        tooltip:'Yayın davetini görüntüle',
+        onPressed:()=>_viewerJoinPanel497(context,uid,'invited'),
+        icon:const Icon(Icons.mark_email_unread_rounded));
       final label=status=='accepted'?'Yayından in':status=='pending'?'İptal et':'Konuk ol';
-      return Column(mainAxisSize:MainAxisSize.min,children:[IconButton.filledTonal(tooltip:label,style:IconButton.styleFrom(backgroundColor:const Color(0xFFF0E8FF),foregroundColor:mor,minimumSize:const Size(48,48)),onPressed:()=>ngelx448GuestAction(context,liveId,ownerUid,uid,status=='pending'||status=='accepted'?'reject':'request'),icon:Icon(status=='accepted'?Icons.logout:Icons.person_add_alt_1,size:25)),const SizedBox(height:4),Text(label,style:const TextStyle(color:Colors.black87,fontSize:11.5,fontWeight:FontWeight.w700))]);
+      return Column(mainAxisSize:MainAxisSize.min,children:[IconButton.filledTonal(tooltip:label,style:IconButton.styleFrom(backgroundColor:const Color(0xFFF0E8FF),foregroundColor:mor,minimumSize:const Size(48,48)),onPressed:()=>_viewerJoinPanel497(context,uid,status is String ? status : null),icon:Icon(status=='accepted'?Icons.logout:Icons.person_add_alt_1,size:25)),const SizedBox(height:4),Text(label,style:const TextStyle(color:Colors.black87,fontSize:11.5,fontWeight:FontWeight.w700))]);
     });
   }
 }
