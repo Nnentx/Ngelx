@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ngelx_app/main.dart' as ngelx;
+import 'package:ngelx_app/build485_kick_policy_test_api.dart' as ngelx;
 
 void main() {
   const room='group_active_485';
