@@ -50,8 +50,15 @@ export function createGuestModeration({
     try {
       room=await getRoom(liveId);
       // The stored server-side room owner is the ONLY moderation authority.
+      // Firestore live_streams can be edited by the room owner. Never let an
+      // owner point their document to ANOTHER owner's LiveKit room and run
+      // server-admin actions there. Names are created as ngelx_<uid>_<ms>.
+      const ownedPrefix=`ngelx_${uid}_`;
+      const roomName=room?.roomName;
+      const suffix=typeof roomName==='string' && roomName.startsWith(ownedPrefix)
+        ? roomName.slice(ownedPrefix.length) : '';
       if (!room || room.ownerId!==uid || !activeRoom(room,now()) ||
-          typeof room.roomName!=='string' || !/^[\w-]{1,160}$/.test(room.roomName))
+          !/^\d{13}$/.test(suffix) || roomName.length>160)
         return response(403,{error:'forbidden'});
       guest=await getGuest(liveId,guestUid);
     } catch { return response(503,{error:'temporarily_unavailable'}); }
