@@ -115,6 +115,8 @@ def transform(source):
                 ],
               ]))),
 """
+    tail=tail.rstrip("\n")
+    amended=amended.rstrip("\n")
     if original.count(tail)!=1:raise RuntimeError("Build490 dock closing structure changed unexpectedly")
     original=original.replace(tail,amended,1)
     body=body[:a]+original+body[b:]
