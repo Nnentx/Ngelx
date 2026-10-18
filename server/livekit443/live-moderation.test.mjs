@@ -37,7 +37,9 @@ test('host mute restricts future microphone tracks and mutes remaining current a
  assert.equal(result.status,200);
  assert.equal(result.body.ok,true);
  assert.deepEqual(events.filter(x=>Array.isArray(x)&&x[0]==='permission')[0],
-  ['permission','trusted_live_room','alice',{permission:{canPublishSources:[1]}}]);
+  ['permission','trusted_live_room','alice',{permission:{
+    canSubscribe:true,canPublish:true,canPublishData:true,
+    canUpdateMetadata:false,canPublishSources:[1]}}]);
  assert.deepEqual(events.filter(x=>Array.isArray(x)&&x[0]==='mute'),
   [['mute','trusted_live_room','alice','audio_1',true]]);
  assert.equal(events.filter(x=>Array.isArray(x)&&x[0]==='saved').length,1);
@@ -48,7 +50,9 @@ test('unmute restores publishing permission, never forces a microphone to enable
  const r=await run({...request,body:{...request.body,action:'unmute'}});
  assert.equal(r.status,200);
  assert.deepEqual(events.find(x=>Array.isArray(x)&&x[0]==='permission')[3],
-  {permission:{canPublishSources:[1,2]}});
+  {permission:{
+    canSubscribe:true,canPublish:true,canPublishData:true,
+    canUpdateMetadata:false,canPublishSources:[1,2]}});
  assert.equal(events.some(x=>Array.isArray(x)&&x[0]==='mute'),false);
 });
 test('kick removes the connected participant before marking the guest rejected',async()=>{
