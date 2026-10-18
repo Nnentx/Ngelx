@@ -55,6 +55,22 @@ def transform(src):
       ]),
     )),"""
     src=once(src,head,headNext,'live section header search (also shown for empty results)')
+    # Neutralize the old Keşfet join helper's DevelopmentTokenSource path.
+    # Even if another legacy caller reuses it, the authenticated shared join
+    # performs the same server-authorized LiveKit token and session checks.
+    old_start='  Future<void> _yayinIzle(BuildContext context, Map<String, dynamic> veri, String belgeId) async {'
+    start=src.find(old_start)
+    end=src.find('  void _aramaAc(){',start)
+    if start<0 or end<=start:
+        raise RuntimeError('Build516 cannot isolate legacy Keşfet LiveKit join method')
+    old_method=src[start:end]
+    if old_method.count('lk.DevelopmentTokenSource(')!=1:
+        raise RuntimeError('Build516 legacy DevelopmentTokenSource changed; manual security review required')
+    src=src[:start]+"""  Future<void> _yayinIzle(BuildContext context, Map<String, dynamic> veri, String belgeId) async {
+    await ngelxCanliYayinaKatil(context,belgeId);
+  }
+
+"""+src[end:]
     # The existing category grid used _yayinIzle with a DevelopmentTokenSource.
     # This card now reuses the authenticated join helper the video/feed uses.
     src=once(src,
