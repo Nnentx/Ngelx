@@ -52,6 +52,10 @@ def transform(source):
     start=source.index("  Widget _kameraOnizlemesi()")
     end=source.index("  Future<void> _geriSayimCalistir()",start)
     a,b,c=source[:start],source[start:end],source[end:]
+    a=once(a,
+      "if (mounted) setState(() { onizlemeHazirlaniyor = true; kameraHatasi = null; });",
+      "if (mounted) setState(() { onizlemeHazirlaniyor = true; kameraHatasi = null; _onizlemeOdak496=null; ++_odakSirasi496; });",
+      "clear old focus marker on camera restart")
     a+=ADDITION
     b=once(b,
       """      child:Stack(fit:StackFit.expand,children:[
