@@ -67,7 +67,7 @@ class Ngelx448GuestControls extends StatelessWidget{
     final detail=invited?'Yayıncı seni canlı yayına davet etti.':
       joined?'Şu anda konuk olarak yayındasın. Ayrılınca kamera ve mikrofon yayınlanmaz.':
       pending?'İsteğin yayıncıya gönderildi. Onaylanmasını bekleyebilir veya iptal edebilirsin.':
-      'Yayıncı onayladığında kamera ve mikrofon iznin alınarak konuk olabilirsin.';
+      'Katılma isteği göndermek için kamera ve mikrofon izni gerekir. Yayıncı onayladığında yayına bağlanabilirsin.';
     await showModalBottomSheet<void>(
       context:context,isScrollControlled:true,useSafeArea:true,showDragHandle:true,
       backgroundColor:const Color(0xFF211D2F),
