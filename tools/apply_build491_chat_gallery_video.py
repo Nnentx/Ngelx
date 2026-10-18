@@ -84,30 +84,27 @@ def dart_transform(source):
     final x=secilen??await ngelxVideoSec(source:ImageSource.gallery,maxDuration:const Duration(minutes:3));""",
       "group pre-selected video")
 
-    source=once(source,
-      """      final x=await ngelxResimSec(
-        source:kaynak,
-        imageQuality:82,
-        maxWidth:1440,
-        maxHeight:1440,
-      );
-      if(x==null)return;
-
-      final hazirlik=await mesajGonderimHazirligi();""",
-      """      final x=kaynak==ImageSource.gallery
+    # Build477 adds picker guards; find the private photo selection semantically
+    # instead of requiring exact whitespace/adjacent source statements.
+    private_start=source.index("class _SohbetPageState")
+    private_end=source.index("  Future<void> videoGonder(",private_start)
+    private_picker=source.rfind("  Future<void> medyaGonder(ImageSource kaynak)",private_start,private_end)
+    if private_picker<0:raise RuntimeError("Build491 private media sender missing")
+    private=source[private_picker:private_end]
+    import re
+    chosen=re.search(r"final\s+x\s*=\s*await\s+ngelxResimSec\([\s\S]*?\);",private)
+    if chosen is None:raise RuntimeError("Build491 private image selection changed")
+    private=private[:chosen.start()]+"""final x=kaynak==ImageSource.gallery
         ?await ngelxSohbetGaleriMedyaSec()
         :await ngelxResimSec(
-            source:kaynak,
-            imageQuality:82,maxWidth:1440,maxHeight:1440,
+            source:kaynak,imageQuality:82,maxWidth:1440,maxHeight:1440,
           );
       if(x==null)return;
       if(kaynak==ImageSource.gallery&&ngelxSohbetVideoMu(x)){
         await videoGonder(kaynak,secilen:x);
         return;
-      }
-
-      final hazirlik=await mesajGonderimHazirligi();""",
-      "private photo/video route")
+      }"""+private[chosen.end():]
+    source=source[:private_picker]+private+source[private_end:]
 
     source=once(source,
       """  Future<void> videoGonder(ImageSource kaynak)async{
