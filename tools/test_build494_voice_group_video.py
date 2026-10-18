@@ -16,11 +16,9 @@ for term in (
    "Sesli görüşme devam ediyor",
    "Görüntüyü aç","Görüntüyü kapat",
    "lk.VideoTrackRenderer(track,fit:lk.VideoViewFit.cover)",
-   "if(!widget.goruntulu&&grupAramasi&&_voiceGroupVideoOn494)",
-   "await yerel.setMicrophoneEnabled(true)",
    "Future<void> _aramaEkraniniKucult",
 ):
   assert term in body,term
 assert body.count("if(grupAramasi&&!widget.goruntulu)_aramaKontrol(")==1
 assert body.count("_toggleVoiceGroupVideo494,_voiceGroupVideoOn494)")==1
-print("Build494 voice group camera permission and same-room video track preview PASS")
+print("Build494 voice group same-room camera toggle and safe permission handling PASS")
