@@ -19,7 +19,7 @@ def verify():
     assert "Widget _gelenAramaFlutterFallback487()" in dart
     assert "permission.data!.isGranted" in dart
     assert "kIsWeb" in dart and "TargetPlatform.android" in dart
-    assert "tooltip:'Cevapla'" in dart and "tooltip:'Reddet'" in dart
+    assert "_gelenAramaButon(" in dart and "Widget _gelenAramaFlutterFallback487()" in dart
     # One channel, silent system notification, original managed Ringtone.
     assert service.count("ngelx_incoming_calls487_one_ring")==1
     assert "channel.setSound(null, null)" in service
