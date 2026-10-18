@@ -185,7 +185,7 @@ def transform(src):
     part=one(part,"await _hediyeGonder(h['ad'] as String, h['emoji'] as String, h['puan'] as int);",
              "await _hediyeGonder(h['ad'] as String, h['emoji'] as String, h['puan'] as int,adet:amount511);",'send selected amount')
     a=part.index('  Future<void> _hediyePaneli() async {')
-    b=part.index('  Future<void> _kalpDegistir() async {',a)
+    b=part.index('  Future<void> _kalpDegistir()',a)  # Build453 uses '()async{'
     sheet=one(part[a:b],"      )),\n    );\n  }","      )))),\n    );\n  }",'StatefulBuilder close')
     part=part[:a]+sheet+part[b:]
     # Keep Dart's interpolation in the existing comment renderer.
