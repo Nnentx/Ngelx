@@ -211,8 +211,11 @@ def transform(source):
       final muted=flags is List && flags.contains(uid);
       final changed=muted!=_guestAudioMuted489;
       _guestAudioMuted489=muted;
-      if(changed&&_guestActive448){
-        unawaited(widget.oda.localParticipant?.setMicrophoneEnabled(!muted) ?? Future<void>.value());
+      // Build502: a host may revoke microphone publishing, but lifting
+      // the restriction must never remotely enable the guest's microphone.
+      // The guest controls when to unmute on their own device.
+      if(changed&&muted&&_guestActive448){
+        unawaited(widget.oda.localParticipant?.setMicrophoneEnabled(false) ?? Future<void>.value());
       }
     },onError:(_){});
     _reactionSub453=FirebaseFirestore.instance.collection('live_streams')""",
