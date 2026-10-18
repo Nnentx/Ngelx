@@ -64,4 +64,17 @@ for label,header in variants.items():
     assert "onTap:_aramaAc" in result
     assert "onPressed:_filtreAc" in result
     print('Build516 fixture PASS:',label)
+# Some generated UIs have already removed the old test-token method.
+# Do not reinsert it or leave a dangling onTap handler behind.
+without_legacy=fixture(variants["generated alternate title"])
+st=without_legacy.index('  Future<void> _yayinIzle(')
+ed=without_legacy.index('  void _aramaAc(){',st)
+without_legacy=without_legacy[:st]+without_legacy[ed:]
+fixed=patch.transform(without_legacy)
+assert patch.transform(fixed)==fixed
+assert "lk.DevelopmentTokenSource(" not in fixed
+assert "onTap:()=>ngelxCanliYayinaKatil(context,yayinlar[i].id)," in fixed
+assert "onTap:()=>_yayinIzle(context,y,yayinlar[i].id)," not in fixed
+assert fixed.count("onPressed:()=>ngelxCanliAramaAc(context)")==2
+print('Build516 fixture PASS: generated UI with previously removed legacy join')
 print('Build516 preflight PASS: old and generated layouts, empty live card, secure shared join')
