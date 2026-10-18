@@ -54,16 +54,19 @@ def flutter_transform(src):
       "  Widget _efektliVideo(lk.VideoTrack track)",
       METHOD+"  Widget _efektliVideo(lk.VideoTrack track)",
       "scoped native bridge")
-    # Actual call-screen route may be minimized but underlying LiveKit room
-    # remains in the app, so clear FLAG_KEEP_SCREEN_ON on minimization.
-    chunk=once(chunk,
-      "  Future<void> _aramaEkraniniKucult()async{\n    if(kucultuluyor||!mounted)return;\n    kucultuluyor=true;",
-      "  Future<void> _aramaEkraniniKucult()async{\n    if(kucultuluyor||!mounted)return;\n    kucultuluyor=true;\n    await _videoCallKeepScreen492(false);",
-      "call minimized")
-    chunk=once(chunk,
-      "  @override void dispose(){\n    aramaSureZamanlayici?.cancel();",
-      "  @override void dispose(){\n    WidgetsBinding.instance.removeObserver(this);\n    unawaited(_videoCallKeepScreen492(false));\n    aramaSureZamanlayici?.cancel();",
-      "call route cleanup")
+    # Build465/487 may add guards at the beginning of this method.
+    # Entering the minimization path must always clear the video wake flag.
+    minimize_pattern=r"(Future<void>\s+_aramaEkraniniKucult\(\)\s*async\s*\{)"
+    if len(re.findall(minimize_pattern,chunk))!=1:
+        raise RuntimeError("Build492 video-call minimization method missing")
+    chunk=re.sub(minimize_pattern,lambda m:m.group(0)+"\n    await _videoCallKeepScreen492(false);",chunk,count=1)
+    # Keep existing disconnect/timeouts and other dispose operations untouched.
+    dispose_pattern=r"(@override\s+void\s+dispose\(\)\s*\{)"
+    if len(re.findall(dispose_pattern,chunk))!=1:
+        raise RuntimeError("Build492 expected one call-screen dispose")
+    chunk=re.sub(dispose_pattern,
+      lambda m:m.group(0)+"\n    WidgetsBinding.instance.removeObserver(this);\n    unawaited(_videoCallKeepScreen492(false));",
+      chunk,count=1)
     return head+chunk+tail
 
 
