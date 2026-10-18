@@ -31,6 +31,7 @@ for token in (
     "result['kind']=='last'",
     "result['kind']=='stale'",
     "'systemAction':'call_leave'",
+    "Build517 call receipt update denied or unavailable",
 ):
     assert token in helper, 'atomic leave missing '+token
 for unsafe in ('room.disconnect(', 'deleteRoom(', 'DeleteRoom', 'remoteParticipant.disconnect'):
