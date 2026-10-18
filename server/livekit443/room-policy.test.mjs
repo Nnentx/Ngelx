@@ -58,3 +58,25 @@ test('live guest publishing needs host/guest consent for that account',()=>{
  assert.equal(roomPermission({...args,room:{...args.room,guestRequest:{status:'accepted',hostUid:'host',guestUid:'guest'}}}).canPublish,true);
  assert.equal(roomPermission({...args,room:{...args.room,guestRequest:{status:'accepted',hostUid:'attacker',guestUid:'guest'}}}).canPublish,false);
 });
+
+test('host-muted accepted live guest keeps camera but loses microphone on new tokens',()=>{
+ const args={kind:'live',uid:'guest',viewer:{},owner:{},now,room:{
+  ownerId:'host',active:true,lastHeartbeatAt:new Date(now),visibility:'public',
+  guestRequest:{status:'accepted',hostUid:'host',guestUid:'guest'},
+ }};
+ const allowed=roomPermission(args);
+ assert.equal(allowed.canPublish,true);
+ assert.equal(allowed.canPublishSources,undefined);
+ const muted=roomPermission({...args,room:{...args.room,guestAudioMutedUids:['guest']}});
+ assert.equal(muted.role,'speaker');
+ assert.equal(muted.canPublish,true);
+ assert.deepEqual(muted.canPublishSources,['camera']);
+ assert.equal(roomPermission({...args,room:{...args.room,guestAudioMutedUids:[]}}).canPublishSources,undefined);
+ assert.equal(roomPermission({...args,room:{...args.room,guestAudioMutedUids:['other']}}).canPublishSources,undefined);
+});
+test('microphone moderation does not turn an unaccepted viewer into a speaker',()=>{
+ const p=permission({kind:'live',room:{...room,guestAudioMutedUids:['alice']}});
+ assert.equal(p.role,'listener');
+ assert.equal(p.canPublish,false);
+ assert.equal(p.canPublishSources,undefined);
+});
