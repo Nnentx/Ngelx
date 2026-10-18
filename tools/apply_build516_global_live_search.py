@@ -109,13 +109,19 @@ def transform(src):
       "tooltip:'Canlı yayın ara'",
       "onPressed:()=>ngelxCanliAramaAc(context)",
       "label:const Text('Canlı ara')",
-      "onTap:()=>ngelxCanliYayinaKatil(context,yayinlar[i].id)",
       "onTap:_aramaAc,",
       "onPressed:_filtreAc",
       "_kesfetSekmesi(Icons.live_tv_rounded,t('live'),0)",
       "if(kategori==0)..._canliSliverleri()",
     ):
         if needed not in src:raise RuntimeError('Build516 lost Keşfet/legacy control '+needed)
+    # If a generated Keşfet layout still contains its legacy live card,
+    # that card must route through the existing authorized join. Other
+    # generated layouts may no longer contain this category card at all.
+    if old_tap in src:
+        raise RuntimeError('Build516 legacy card still points at obsolete join')
+    if 'yayinlar[i].id' in src and new_tap not in src:
+        raise RuntimeError('Build516 generated live card has no verified secure join')
     if src.count(MARK)!=1:
         raise RuntimeError('Build516 marker should only appear once')
     return src
