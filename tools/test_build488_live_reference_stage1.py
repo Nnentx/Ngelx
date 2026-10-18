@@ -15,7 +15,7 @@ def main():
     section=s[s.index("class _CanliYayinPageState"):]
     assert section.count(mod.MARKER)==1
     for token in (
-        "takipte?'Takiptesin':'Takip et'",
+        "takipte?'Takiptesin':_ngelx438Ui(\"Takip et\")",
         "stream:FirebaseFirestore.instance.collection('live_streams').doc(widget.belgeId).snapshots(),",
         "likeCount", "Icons.favorite_rounded",
         "Widget _guestRail488()", "Icons.add_rounded",
