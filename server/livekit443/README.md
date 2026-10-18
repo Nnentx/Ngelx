@@ -32,3 +32,29 @@ existing client-only mute controls are insufficient for authoritative live
 moderation. The candidate makes no claim that production token services or
 room-admin actions are already deployed. Run real device and real LiveKit
 server tests before release.
+
+## Build499 QA: server-only guest mute / unmute / kick candidate
+
+The separate `livekitGuestModeration` HTTPS function validates a **revocation-
+aware Firebase identity**, refuses anonymous callers, checks that the caller
+is the fresh room's actual Firestore owner, and verifies the target is the
+**accepted guest in this same live session**. The room's LiveKit name is
+read from server Firestore, never selected by the requester. Shared IP/UID
+rate limits and strict request validation apply.
+
+A server `roomAdmin` SDK call reduces a connected guest's publishing sources
+to camera only for `mute`; any remaining audio tracks are muted. `unmute`
+restores future microphone publication permission **without forcing the
+remote microphone to switch itself on**. `kick` disconnects the guest if
+present. A server-only Firestore transaction then records the mute state or
+rejects an expelled guest, rechecking ownership, active heartbeat and accepted
+membership. Offline guests still have their server-side state changed.
+Remote actions and Firestore commits are not globally atomic; failures
+return an error and need operational retry/reconciliation before release.
+
+**Not deployed**. Current Flutter Build489 moderation buttons still update
+Firestore directly and do not call this endpoint. Do not claim immediate
+server-enforced moderation works end to end until the Flutter caller is
+migrated, production SDK/function configuration is approved, emulator rules
+and LiveKit SDK are exercised, and two physical Android devices verify all
+accepted/rejected/rejoined guest cases. Build484/main/download site untouched.
