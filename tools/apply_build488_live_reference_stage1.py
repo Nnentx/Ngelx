@@ -102,20 +102,20 @@ def transform(source):
     if "_hearts453" not in region or "_guestControl453" not in region:
         raise RuntimeError("Build488 requires preserved Build453 live controls and hearts")
     region=one(region,"  Widget _yorumPaneli(){",METHOD+"\n  Widget _yorumPaneli(){","guest rail declaration")
-    # Shrink the existing follow-state label without changing its real relation checks.
-    region=one(region,"takipte?'Takipte':'Takip et'","takipte?'Takiptesin':'Takip et'","follow state")
-    # Change the subheading directly below the streamer name to the true live likeCount.
-    username="Text('@$username',maxLines:1,overflow:TextOverflow.ellipsis,"
-    if region.count(username)!=1:
-        raise RuntimeError("Build488 username heading anchor drifted")
-    begin=region.index(username)
-    finish=region.find("\n",begin)
-    if finish<0:
-        raise RuntimeError("Build488 username heading no line break")
-    old=region[begin:finish].rstrip()
-    if not old.endswith(")),") and not old.endswith("),"):
-        raise RuntimeError("Build488 username is not a complete widget")
-    new=r"""StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
+    # Live header varies slightly after historical UI passes. Keep the current
+    # follow relationship callback; change only its already-following label.
+    import re
+    hstart=region.index("  Widget _yayinBasligi(){")
+    hend=region.index("  Future<void> _yorumYonet(",hstart)
+    header=region[hstart:hend]
+    followPattern=r"takipte\s*\?\s*'[^']+'\s*:\s*'Takip et'"
+    matches=list(re.finditer(followPattern,header))
+    if len(matches)==1:
+        header=re.sub(followPattern,"takipte?'Takiptesin':'Takip et'",header,count=1)
+    elif "Takiptesin" not in header:
+        raise RuntimeError("Build488: existing follow-state expression drifted")
+    # Show the live like counter directly below the host name.
+    likeWidget=r"""StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
                   stream:FirebaseFirestore.instance.collection('live_streams').doc(widget.belgeId).snapshots(),
                   builder:(_,likesSnap){
                     final likes=(likesSnap.data?.data()?['likeCount'] as num?)?.toInt()??0;
@@ -129,9 +129,22 @@ def transform(source):
                     ]);
                   },
                 ),"""
-    region=region[:begin]+new+region[finish:]
-    # Fit the header with a small already-following state.
-    region=one(region,"CircleAvatar(radius:24,backgroundImage:foto","CircleAvatar(radius:17,backgroundImage:foto","compact avatar")
+    # The displayed name is a single Text(ad,..) statement; unlike @username
+    # the host displayName has remained stable across historical builds.
+    namePattern=r"Text\(ad,maxLines:1,overflow:TextOverflow\.ellipsis,[^\n]*\),"
+    names=list(re.finditer(namePattern,header))
+    if len(names)!=1:
+        raise RuntimeError("Build488: unique display-name label not found")
+    hostName=names[0].group(0)
+    header=header.replace(hostName,hostName+"\n              "+likeWidget,1)
+    # Shrink the owner avatar only in the header, not chat/guest avatars.
+    avatarPattern=r"CircleAvatar\(radius:\d+,backgroundImage:foto"
+    avatars=list(re.finditer(avatarPattern,header))
+    if len(avatars)==1:
+        header=header.replace(avatars[0].group(0),"CircleAvatar(radius:17,backgroundImage:foto",1)
+    else:
+        raise RuntimeError("Build488: unique owner avatar not found")
+    region=region[:hstart]+header+region[hend:]
     # The + and its vertical panel live down the right side, away from the host head.
     old="          if(yayinBitti)Positioned.fill"
     new="          if(!yayinBitti)Positioned(right:9,bottom:MediaQuery.viewInsetsOf(context).bottom+(widget.yayinSahibi?270:225),child:_guestRail488()),\n          if(yayinBitti)Positioned.fill"
