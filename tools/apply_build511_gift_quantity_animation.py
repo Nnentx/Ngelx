@@ -103,21 +103,28 @@ def transform(src):
              '    super.initState();\n    _watchGifts511();','init gift subscription')
     part=one(part,'    yorum.dispose();',
              '    _gifts511?.cancel();\n    _giftTimer511?.cancel();\n    yorum.dispose();','cleanup')
-    part=one(part,'        var kalp=0,hediye=0,yorumSayisi=0;',
-             '        var kalp=0,hediye=0,yorumSayisi=0,hediyeAdedi511=0;','live count')
-    part=one(part,"          if(v['kind']=='gift')hediye+=(v['points'] as num?)?.toInt()??0;",
-             """          if(v['kind']=='gift'){
+    if "yama['giftPoints']=gifts.docs.fold<int>(" in part:
+        # Build453 replaces the heartbeat counters with aggregate gift docs.
+        # Count their quantity separately from N-Puan; do not count animations.
+        oldStats="yama['giftPoints']=gifts.docs.fold<int>(0,(a,d)=>a+((d.data()['points'] as num?)?.toInt()??0));"
+        newStats=oldStats+"\n        yama['giftCount']=gifts.docs.fold<int>(0,(a,d)=>a+(((d.data()['quantity'] as num?)?.toInt()??1).clamp(1,10).toInt()));"
+        part=one(part,oldStats,newStats,'Build453 counted virtual gifts')
+    else:
+        part=one(part,'        var kalp=0,hediye=0,yorumSayisi=0;',
+                 '        var kalp=0,hediye=0,yorumSayisi=0,hediyeAdedi511=0;','legacy live count')
+        part=one(part,"          if(v['kind']=='gift')hediye+=(v['points'] as num?)?.toInt()??0;",
+                 """          if(v['kind']=='gift'){
             hediye+=(v['points'] as num?)?.toInt()??0;
-            hediyeAdedi511+=((v['quantity'] as num?)?.toInt()??1).clamp(1,10);
-          }""",'count event quantity')
-    part=one(part,"        yama['giftPoints']=hediye;",
-             "        yama['giftPoints']=hediye;\n        yama['giftCount']=hediyeAdedi511;",'live document tally')
+            hediyeAdedi511+=((v['quantity'] as num?)?.toInt()??1).clamp(1,10).toInt();
+          }""",'legacy count event quantity')
+        part=one(part,"        yama['giftPoints']=hediye;",
+                 "        yama['giftPoints']=hediye;\n        yama['giftCount']=hediyeAdedi511;",'legacy live document tally')
     part=one(part,'      var hediyePuani = 0;',
              '      var hediyePuani = 0;\n      var hediyeAdedi511=0;','end count')
     part=one(part,"          if (data['kind'] == 'gift') hediyePuani += (data['points'] as num?)?.toInt() ?? 0;",
              """          if (data['kind'] == 'gift'){
             hediyePuani+=(data['points'] as num?)?.toInt()??0;
-            hediyeAdedi511+=((data['quantity'] as num?)?.toInt()??1).clamp(1,10);
+            hediyeAdedi511+=((data['quantity'] as num?)?.toInt()??1).clamp(1,10).toInt();
           }""",'end count events')
     part=one(part,'      sonHediyePuani=hediyePuani;',
              '      sonHediyePuani=hediyePuani;\n      sonHediyeAdedi511=hediyeAdedi511;','end count state')
@@ -185,7 +192,10 @@ def transform(src):
     dollar=chr(36)
     old=dollar+"{y['giftName']??'N-Hediye'} +"+dollar+"{y['points']??0} N"
     new=dollar+"{y['giftName']??'N-Hediye'} ×"+dollar+"{y['quantity']??1}"
-    part=one(part,old,new,'comment gift quantities')
+    if old in part:
+        part=one(part,old,new,'legacy comment gift quantities')
+    elif "final message=y['kind']=='join'" not in part:
+        raise RuntimeError("Build511 generated comment text for virtual gifts missing")
     part=one(part,'          if(yayinBitti)Positioned.fill(child:ColoredBox(',
              '          if(!yayinBitti)Positioned.fill(child:Center(child:_giftScreen511())),\n          if(yayinBitti)Positioned.fill(child:ColoredBox(','gift overlay')
     part=one(part,"                const Spacer(),\n                if(!widget.yayinSahibi)IconButton(",
