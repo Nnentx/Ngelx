@@ -1,0 +1,33 @@
+name: NgelX Build504 LiveKit Room Owner Isolation QA (no deploy)
+
+on:
+  push:
+    branches:
+      - qa/ngelx-build504-livekit-room-ownership-20261018
+    paths:
+      - 'server/livekit443/live-moderation.mjs'
+      - 'server/livekit443/live-moderation.test.mjs'
+      - 'server/livekit443/README.md'
+      - '.github/workflows/NgelX-BUILD504-LIVEKIT-ROOM-OWNER-QA.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  room-owner-isolation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check moderation JavaScript syntax
+        run: |
+          node --check server/livekit443/live-moderation.mjs
+          node --check server/livekit443/live-moderation.test.mjs
+      - name: Test room owner isolation, JWT and moderation policy
+        run: npm --prefix server test
+      - name: No production operation
+        run: echo 'Source-level security tests only; no Firebase/LiveKit API calls, no deploy, no Android APK or site update.'
