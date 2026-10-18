@@ -122,7 +122,7 @@ class Ngelx448GuestControls extends StatelessWidget{
         onPressed:()=>_viewerJoinPanel497(context,uid,'invited'),
         icon:const Icon(Icons.mark_email_unread_rounded));
       final label=status=='accepted'?'Yayından in':status=='pending'?'İptal et':'Konuk ol';
-      return Column(mainAxisSize:MainAxisSize.min,children:[IconButton.filledTonal(tooltip:label,style:IconButton.styleFrom(backgroundColor:const Color(0xFFF0E8FF),foregroundColor:mor,minimumSize:const Size(48,48)),onPressed:()=>_viewerJoinPanel497(context,uid,status is String?status:null),icon:Icon(status=='accepted'?Icons.logout:Icons.person_add_alt_1,size:25)),const SizedBox(height:4),Text(label,style:const TextStyle(color:Colors.black87,fontSize:11.5,fontWeight:FontWeight.w700))]);
+      return Column(mainAxisSize:MainAxisSize.min,children:[IconButton.filledTonal(tooltip:label,style:IconButton.styleFrom(backgroundColor:const Color(0xFFF0E8FF),foregroundColor:mor,minimumSize:const Size(48,48)),onPressed:()=>_viewerJoinPanel497(context,uid,status is String ? status : null),icon:Icon(status=='accepted'?Icons.logout:Icons.person_add_alt_1,size:25)),const SizedBox(height:4),Text(label,style:const TextStyle(color:Colors.black87,fontSize:11.5,fontWeight:FontWeight.w700))]);
     });
   }
 }
