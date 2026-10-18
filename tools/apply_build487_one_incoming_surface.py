@@ -74,7 +74,7 @@ def patch_service(src):
     # preferences; FLAG_INSISTENT supplies the telephone-like repeating ring.
     # The historical manual RingtoneManager timer is the second ring: remove
     # only that callback after all older Build454..Build471 transformations.
-    anchor="            alerts.put(room, timeout)?.let { timer.removeCallbacks(it) }\\n"
+    anchor="            alerts.put(room, timeout)?.let { timer.removeCallbacks(it) }\n"
     tail="            timer.postDelayed(timeout, 60000)"
     if src.count(anchor)!=1 or src.count(tail)!=1:
         raise RuntimeError("Build487 native notification lifecycle anchors drifted")
@@ -86,7 +86,7 @@ def patch_service(src):
         if token not in second:
             raise RuntimeError("Build487 native manual ringing source drifted: "+token)
     assert second.rstrip().endswith("}")
-    src=src[:begin]+"            "+marker+"\\n"+src[finish:]
+    src=src[:begin]+"            "+marker+"\n"+src[finish:]
     for token in (
         'const val CHANNEL = "ngelx_incoming_calls467"',
         "channel.enableVibration(true)",
