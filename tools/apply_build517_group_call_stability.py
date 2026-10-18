@@ -110,14 +110,16 @@ def transform(src):
     start=body.index('  Future<void> baglan(')
     stop=body.index('  lk.VideoTrack? _katilimciVideosu(',start)
     conn=body[start:stop]
-    anchor='      await yerel.setMicrophoneEnabled(true);'
-    conn=once(conn,anchor,anchor+"""
-      if(!widget.goruntulu&&grupAramasi&&_voiceGroupVideoOn494){
+    # Build507 rewrote the reconnect camera branch. Insert immediately
+    # before that existing branch instead of assuming a historical mic line.
+    anchor='      if(widget.goruntulu||(!grupAramasi&&_privateVoiceCameraOn507)){'
+    conn=once(conn,anchor,"""      if(!widget.goruntulu&&grupAramasi&&_voiceGroupVideoOn494){
         await yerel.setCameraEnabled(true,
           cameraCaptureOptions:const lk.CameraCaptureOptions(
             params:lk.VideoParametersPresets.h360_169,
             maxFrameRate:20.0,stopCameraCaptureOnMute:true));
-      }""",'restore opted-in group camera on reconnect')
+      }
+"""+anchor,'restore opted-in group camera on reconnect')
     body=body[:start]+conn+body[stop:]
 
     # Existing video-call tap-to-hide was restricted to calls STARTED as
