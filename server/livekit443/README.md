@@ -68,3 +68,15 @@ while modifying `canPublishSources`. Otherwise a camera-only mute
 could unexpectedly remove all publishing or subscription permissions.
 Server tests assert the full permission record on mute and unmute.
 This is still a QA-only change requiring live server verification.
+
+## Build504 QA: bind LiveKit room name to verified owner UID
+
+`live_streams/{id}` can be updated by the owner in legacy Firestore rules,
+so a document's `roomName` is **not sufficient** proof of LiveKit room
+ownership. The moderator now requires the stored name to match the app's
+`ngelx_<verified-host-uid>_<13-digit-ms>` naming convention. Client-provided
+room names are never accepted. This blocks an owner from retargeting a
+server-admin mute/kick command to another owner's named LiveKit room.
+The expected naming scheme was inspected in the current Flutter live
+creation code. This is a source-level guard and requires emulator plus
+live production-permission review before rollout.
