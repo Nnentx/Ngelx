@@ -1151,6 +1151,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 -m py_compile tools/apply_build469_live_mini_call.py tools/apply_build508_mini_call_swipe_collapse.py tools/test_build508_mini_call_swipe_collapse.py
+          python3 tools/test_build508_mini_preview_radius.py
           python3 tools/apply_build469_live_mini_call.py
           python3 tools/apply_build469_live_mini_call.py
           python3 tools/apply_build508_mini_call_swipe_collapse.py
