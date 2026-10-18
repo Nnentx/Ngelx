@@ -108,7 +108,7 @@ def transform(src):
     transformed=pattern.sub(protect,existing)
     if found.count('create')!=1 or not any('update' in v for v in found):
         raise RuntimeError('Build511 missing unique create or prior update permission: '+str(found))
-    if transformed.count('validVirtualGift511()')!=1:
+    if transformed.count('|| validVirtualGift511()')!=1:
         raise RuntimeError('Build511 gift validation insertion failed')
     return src[:start]+transformed+src[stop:]
 if __name__=='__main__':
