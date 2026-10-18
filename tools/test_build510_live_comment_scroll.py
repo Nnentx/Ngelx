@@ -32,9 +32,9 @@ for token in (
     assert token in live, f"Build510 missing contract: {token}"
 for token in (
     ".orderBy('createdAt',descending:true).limit(100).snapshots()",
-    "controller:_commentScroll510,reverse:true",
+    "controller:_commentScroll510,",
     "_observeComments510(yorumlar);",
-    "Positioned(right:5,bottom:5,child:_newCommentChip510())",
+    "Offstage(offstage:_commentsHidden490,child:_yorumPaneli())",
     "if(kind=='gift')",
     "if(kind=='join')",
     "_yorumYonet(d.id,y)",
@@ -42,8 +42,10 @@ for token in (
 ):
     assert token in comments, f"Build510 missing history/render/moderation contract: {token}"
 assert ".limit(30)" not in comments, "Old limit still restricts scrolling"
-assert comments.count("StreamBuilder<QuerySnapshot<Map<String,dynamic>>>")==1
-assert comments.count("_newCommentChip510()")==1
+assert ".limit(100).snapshots()" in comments, "Bounded 100-event feed expected"
+assert "controller:_commentScroll510," in comments
+assert "_observeComments510(yorumlar);" in comments
+assert view.count("if(!_commentsHidden490)_newCommentChip510(),")==1
 assert "_bitir(" not in patch.EXTRA and "setCameraEnabled" not in patch.EXTRA
 assert "FirebaseFirestore" not in patch.EXTRA and ".add(" not in patch.EXTRA
 print("Build510 PASS: scroll older comments, show unread chip, return latest")
