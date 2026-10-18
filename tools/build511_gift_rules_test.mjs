@@ -41,6 +41,10 @@ try {
     uid:'guest',userId:'guest',kind:'comment',text:'Merhaba',
     createdAt:serverTimestamp()
   }));
+  // A legitimate editable comment must never become a fake gift by update.
+  await assertFails(updateDoc(gift('regularComment'),{
+    kind:'gift',giftName:'Galaksi',giftEmoji:'🌌',quantity:10,points:999999
+  }));
   await assertSucceeds(deleteDoc(gift('regularComment')));
   console.log('Build511 PASS: gift quantity bounds, price catalog, owner, immutability, ended room and ordinary comments');
 } finally {
