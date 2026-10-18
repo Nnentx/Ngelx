@@ -1,0 +1,102 @@
+#!/usr/bin/env python3
+"""Build492 QA: foreground video calls request Android screen-on temporarily.
+
+Applies after prior Build491 Flutter/native transformations. Does not change
+global brightness, proximity behavior on voice-only calls, or OS power key.
+"""
+from pathlib import Path
+
+FLUTTER=Path("app/lib/main.dart")
+ANDROID=Path("app/android/app/src/main/kotlin/com/nnentx/ngelx_app/MainActivity.kt")
+MARK="// Build492: keep foreground video-call screen awake only"
+
+METHOD=r"""
+  // Build492: keep foreground video-call screen awake only.
+  Future<void> _videoCallKeepScreen492(bool enabled)async{
+    if(!Platform.isAndroid||!widget.goruntulu)return;
+    try{
+      await const MethodChannel('com.nnentx.ngelx_app/call_screen')
+        .invokeMethod<void>('keepScreenOn',<String,bool>{'enabled':enabled});
+    }catch(_){}
+  }
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state){
+    unawaited(_videoCallKeepScreen492(
+      state==AppLifecycleState.resumed&&!kucultuluyor&&!bitiyor&&bitisDurumu==null));
+  }
+
+"""
+
+
+def once(s,a,b,label):
+    count=s.count(a)
+    if count!=1:raise RuntimeError(f"Build492 {label}: expected 1, got {count}")
+    return s.replace(a,b,1)
+
+
+def flutter_transform(src):
+    if MARK in src:return src
+    begin=src.index("class _NgelXAramaPageState extends State<NgelXAramaPage>")
+    end=src.index("class GrupBilgiPage",begin)
+    head,chunk,tail=src[:begin],src[begin:end],src[end:]
+    chunk=once(chunk,
+      "class _NgelXAramaPageState extends State<NgelXAramaPage>{",
+      "class _NgelXAramaPageState extends State<NgelXAramaPage> with WidgetsBindingObserver{",
+      "video call route lifecycle observer")
+    import re
+    init_pattern=r"@override\s+void initState\(\)\s*\{\s*super\.initState\(\);"
+    if len(re.findall(init_pattern,chunk))!=1:
+        raise RuntimeError("Build492 expected one video-call initState")
+    chunk=re.sub(init_pattern,
+      lambda m:m.group(0)+"\n    WidgetsBinding.instance.addObserver(this);\n    unawaited(_videoCallKeepScreen492(true));",
+      chunk,count=1)
+    chunk=once(chunk,
+      "  Widget _efektliVideo(lk.VideoTrack track)",
+      METHOD+"  Widget _efektliVideo(lk.VideoTrack track)",
+      "scoped native bridge")
+    # Build465/487 may add guards at the beginning of this method.
+    # Entering the minimization path must always clear the video wake flag.
+    minimize_pattern=r"(Future<void>\s+_aramaEkraniniKucult\(\)\s*async\s*\{)"
+    if len(re.findall(minimize_pattern,chunk))!=1:
+        raise RuntimeError("Build492 video-call minimization method missing")
+    chunk=re.sub(minimize_pattern,lambda m:m.group(0)+"\n    await _videoCallKeepScreen492(false);",chunk,count=1)
+    # Keep existing disconnect/timeouts and other dispose operations untouched.
+    dispose_pattern=r"(@override\s+void\s+dispose\(\)\s*\{)"
+    if len(re.findall(dispose_pattern,chunk))!=1:
+        raise RuntimeError("Build492 expected one call-screen dispose")
+    chunk=re.sub(dispose_pattern,
+      lambda m:m.group(0)+"\n    WidgetsBinding.instance.removeObserver(this);\n    unawaited(_videoCallKeepScreen492(false));",
+      chunk,count=1)
+    return head+chunk+tail
+
+
+def native_transform(src):
+    if MARK in src:return src
+    anchor="        super.configureFlutterEngine(flutterEngine)"
+    bridge="""        // Build492: keep foreground video-call screen awake only.
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.nnentx.ngelx_app/call_screen")
+            .setMethodCallHandler { call, result ->
+                if (call.method != "keepScreenOn") {
+                    result.notImplemented()
+                } else {
+                    val enabled = call.argument<Boolean>("enabled") == true
+                    runOnUiThread {
+                        if (enabled) window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                        else window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                        result.success(null)
+                    }
+                }
+            }
+"""
+    return once(src,anchor,anchor+"\n"+bridge,"native video call screen-on bridge")
+
+
+def main():
+    for file,fn in ((FLUTTER,flutter_transform),(ANDROID,native_transform)):
+        src=file.read_text(encoding="utf-8")
+        out=fn(src)
+        if out!=src:file.write_text(out,encoding="utf-8")
+    print("Build492 video-call screen on/off lifecycle guarded; brightness and audio-only unchanged")
+
+
+if __name__=="__main__":main()
