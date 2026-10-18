@@ -39,7 +39,8 @@ if legacy_match:
     if end<0:
         end=len(following)
     legacy=following[:end]
-    assert 'await ngelxCanliYayinaKatil(context,belgeId);' in legacy
+    assert 'ngelxCanliYayinaKatil(context,belgeId)' in legacy, (
+        'Keşfet legacy join must delegate to the authorized shared route')
     assert 'lk.DevelopmentTokenSource(' not in legacy, 'Old Keşfet route must not issue development tokens'
 else:
     legacy=''
