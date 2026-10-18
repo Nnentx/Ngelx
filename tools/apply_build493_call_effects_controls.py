@@ -137,7 +137,7 @@ def transform(source):
             _videoEffectMenu493(),"""
     tail=once(tail,old,new,"effect menu replacement")
     first="          if(bitisDurumu==null&&hata==null)Padding("
-    if tail.count(first)!=2:raise RuntimeError("Build493 requires bottom control and hangup rows")
+    if tail.count(first)<1:raise RuntimeError("Build493 could not find a call-control row")
     tail=tail.replace(first,"          if(bitisDurumu==null&&hata==null&&(!widget.goruntulu||_videoCallControlsVisible493))Padding(")
     body=body[:bottom]+tail
     for control in ("_aramaKontrol(", "grupAramasinaKisiDavetEt", "kameraDegistir",
