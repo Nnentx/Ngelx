@@ -58,3 +58,13 @@ server-enforced moderation works end to end until the Flutter caller is
 migrated, production SDK/function configuration is approved, emulator rules
 and LiveKit SDK are exercised, and two physical Android devices verify all
 accepted/rejected/rejoined guest cases. Build484/main/download site untouched.
+
+## Build501 permission-preservation review
+
+LiveKit's `RoomServiceClient.updateParticipant` **replaces** participant
+permission values. A moderation call therefore explicitly preserves
+`canSubscribe:true`, `canPublish:true` and `canPublishData:true`
+while modifying `canPublishSources`. Otherwise a camera-only mute
+could unexpectedly remove all publishing or subscription permissions.
+Server tests assert the full permission record on mute and unmute.
+This is still a QA-only change requiring live server verification.
