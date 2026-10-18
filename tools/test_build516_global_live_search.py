@@ -28,9 +28,20 @@ for needed in (
     "if(yayinlar.isEmpty)return _bosKart(t('noLive'),Icons.live_tv_outlined);",
 ):
     assert needed in explore,'Build516 lost existing Keşfet feature: '+needed
-legacy=src[src.index('  Future<void> _yayinIzle('):src.index('  void _aramaAc(){')]
-assert 'await ngelxCanliYayinaKatil(context,belgeId);' in legacy
-assert 'lk.DevelopmentTokenSource(' not in legacy, 'Old Keşfet route must not issue development tokens'
+import re
+legacy_match=re.search(r'(?m)^  Future<void> _yayinIzle\\(',src)
+if legacy_match:
+    following=src[legacy_match.start():]
+    end=following.find('  void _aramaAc(){')
+    if end<0:
+        end=len(following)
+    legacy=following[:end]
+    assert 'await ngelxCanliYayinaKatil(context,belgeId);' in legacy
+    assert 'lk.DevelopmentTokenSource(' not in legacy, 'Old Keşfet route must not issue development tokens'
+else:
+    legacy=''
+    assert '_yayinIzle(context,y,yayinlar[i].id)' not in explore, (
+        'A removed legacy handler cannot be referenced by the live card')
 assert explore.count('onPressed:()=>ngelxCanliAramaAc(context)')==2
 assert 'onTap:()=>_yayinIzle(context,y,yayinlar[i].id),' not in explore
 assert explore.index("tooltip:'Canlı yayın ara'")<explore.index("if(kategori==0)..._canliSliverleri()")
