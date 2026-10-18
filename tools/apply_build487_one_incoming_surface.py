@@ -56,9 +56,10 @@ def patch_dart(src):
     # No changes to Flutter's existing call answer/reject implementation:
     # when native notifications are denied, that legacy UI still works.
     for token in (
-        "tooltip:'Reddet'","tooltip:'Cevapla'",
-        "callParticipants':FieldValue.arrayUnion([ben])",
-        "callEndedBy':ben","Navigator.push(context"
+        "StreamBuilder<QuerySnapshot<Map<String,dynamic>>>",
+        "callRoomName",
+        "_gelenAramaButon(",
+        "Navigator.push(context",
     ):
         if token not in segment:
             raise RuntimeError("Build487: missing original Flutter fallback contract: "+token)
