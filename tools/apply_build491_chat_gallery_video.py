@@ -69,15 +69,12 @@ def dart_transform(source):
         raise RuntimeError("Build491 group gallery image chooser changed: "+repr(group[:1600]))
     group=group[:selection.start()]+"""final x=kaynak==ImageSource.gallery
       ?await ngelxSohbetGaleriMedyaSec()
-      :await ngelxResimSec(source:kaynak,imageQuality:76,maxWidth:1280);"""+group[selection.end():]
-    group=once(group,
-      "    if(x==null)return;",
-      """    if(x==null)return;
+      :await ngelxResimSec(source:kaynak,imageQuality:76,maxWidth:1280);
+    if(x==null)return;
     if(kaynak==ImageSource.gallery&&ngelxSohbetVideoMu(x)){
       await grupVideoGonder(secilen:x);
       return;
-    }""",
-      "group media dispatch")
+    }"""+group[selection.end():]
     source=source[:group_start]+group+source[group_end:]
 
     source=once(source,
