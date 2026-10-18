@@ -43,10 +43,13 @@ def flutter_transform(src):
       "class _NgelXAramaPageState extends State<NgelXAramaPage>{",
       "class _NgelXAramaPageState extends State<NgelXAramaPage> with WidgetsBindingObserver{",
       "video call route lifecycle observer")
-    chunk=once(chunk,
-      "  @override void initState(){\n    super.initState();\n    rotus=widget.goruntulu;",
-      "  @override void initState(){\n    super.initState();\n    WidgetsBinding.instance.addObserver(this);\n    unawaited(_videoCallKeepScreen492(true));\n    rotus=widget.goruntulu;",
-      "foreground video screen on")
+    import re
+    init_pattern=r"@override\s+void initState\(\)\s*\{\s*super\.initState\(\);"
+    if len(re.findall(init_pattern,chunk))!=1:
+        raise RuntimeError("Build492 expected one video-call initState")
+    chunk=re.sub(init_pattern,
+      lambda m:m.group(0)+"\n    WidgetsBinding.instance.addObserver(this);\n    unawaited(_videoCallKeepScreen492(true));",
+      chunk,count=1)
     chunk=once(chunk,
       "  Widget _efektliVideo(lk.VideoTrack track)",
       METHOD+"  Widget _efektliVideo(lk.VideoTrack track)",
