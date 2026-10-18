@@ -72,10 +72,8 @@ def flutter_transform(src):
 
 def native_transform(src):
     if MARK in src:return src
-    needle="""        super.configureFlutterEngine(flutterEngine)
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, mediaChannel)"""
-    injected="""        super.configureFlutterEngine(flutterEngine)
-        // Build492: keep foreground video-call screen awake only.
+    anchor="        super.configureFlutterEngine(flutterEngine)"
+    bridge="""        // Build492: keep foreground video-call screen awake only.
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.nnentx.ngelx_app/call_screen")
             .setMethodCallHandler { call, result ->
                 if (call.method != "keepScreenOn") {
@@ -89,8 +87,8 @@ def native_transform(src):
                     }
                 }
             }
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, mediaChannel)"""
-    return once(src,needle,injected,"native foreground window flag bridge")
+"""
+    return once(src,anchor,anchor+"\n"+bridge,"native video call screen-on bridge")
 
 
 def main():
