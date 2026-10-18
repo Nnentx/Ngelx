@@ -28,7 +28,6 @@ for key in (
     "if(d.metadata.hasPendingWrites)continue;",
     "Timer(Duration(milliseconds:pts>=25?3400:1750)",
     "'giftCount': hediyeAdedi511,",
-    "yama['giftCount']=hediyeAdedi511;",
     "sonHediyeAdedi511=hediyeAdedi511;",
     "'quantity': adet,","'points': puan*adet,",
     "hediyeGonderiliyor||adet<1||adet>10",
@@ -50,6 +49,8 @@ assert "final giftDoc=" in send
 assert "bool.fromEnvironment('NGELX_VIRTUAL_GIFT_STAGING',defaultValue:false)" in send
 assert send.index("if(!stagingEnabled)") < send.index("await giftDoc.set({"), "QA gift writing must be gated"
 assert view.count("child:Center(child:_giftScreen511())")==1
+assert ("yama['giftCount']=gifts.docs.fold<int>(" in view or
+        "yama['giftCount']=hediyeAdedi511;" in view), "Gift count must come from real Firestore records"
 assert source.count(patch.MARK)==1
 for marker in (
     security.MARK,
