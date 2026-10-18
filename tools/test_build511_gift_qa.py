@@ -47,6 +47,8 @@ end=view.index("  Future<void> _hediyePaneli()",start)
 send=view[start:end]
 assert "collection('comments').add(" not in send
 assert "final giftDoc=" in send
+assert "bool.fromEnvironment('NGELX_VIRTUAL_GIFT_STAGING',defaultValue:false)" in send
+assert send.index("if(!stagingEnabled)") < send.index("await giftDoc.set({"), "QA gift writing must be gated"
 assert view.count("child:Center(child:_giftScreen511())")==1
 assert source.count(patch.MARK)==1
 for marker in (
