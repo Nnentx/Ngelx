@@ -136,6 +136,7 @@ def transform(src):
     group_a=body.index('  Widget _grupAramaAlani(){')
     group_b=body.index('  Widget _videoAlani(){',group_a)
     group=body[group_a:group_b]
+    print('Build517 generated group layout diagnostic:',repr(group[:4500]),flush=True)
     group=once(group,'if(!widget.goruntulu){\n      return Expanded(child:Column(children:[\n        Padding(',
       'if(!widget.goruntulu){\n      return Expanded(child:Column(children:[\n        if(_videoCallControlsVisible493)Padding(',
       'hide group voice title')
