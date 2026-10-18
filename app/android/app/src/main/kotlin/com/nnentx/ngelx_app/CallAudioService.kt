@@ -12,9 +12,17 @@ import android.os.IBinder
 import android.os.PowerManager
 
 class CallAudioService : Service() {
+    companion object {
+        const val SHOW_FLOATING_509 = "com.nnentx.ngelx_app.SHOW_FLOATING_509"
+        const val HIDE_FLOATING_509 = "com.nnentx.ngelx_app.HIDE_FLOATING_509"
+        @Volatile var active = false
+            private set
+    }
+    private var floating509: Ngelx509FloatingCallWindow? = null
     private var wakeLock: PowerManager.WakeLock? = null
     override fun onCreate() {
         super.onCreate()
+        active = true
         val manager = getSystemService(NotificationManager::class.java)
         if (Build.VERSION.SDK_INT >= 26) manager.createNotificationChannel(
             NotificationChannel("ngelx_call", "Devam eden görüşme", NotificationManager.IMPORTANCE_LOW))
@@ -29,10 +37,25 @@ class CallAudioService : Service() {
         wakeLock = (getSystemService(POWER_SERVICE) as PowerManager)
             .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "NgelX:CallAudio").apply { acquire(12 * 60 * 60 * 1000L) }
     }
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int = START_NOT_STICKY
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        when (intent?.action) {
+            SHOW_FLOATING_509 -> {
+                val name = intent.getStringExtra("callName") ?: "Görüşme sürüyor"
+                if (active) {
+                    if (floating509 == null) floating509 = Ngelx509FloatingCallWindow(this)
+                    floating509?.show(name)
+                }
+            }
+            HIDE_FLOATING_509 -> { floating509?.remove(); floating509 = null }
+        }
+        return START_NOT_STICKY
+    }
     override fun onTaskRemoved(rootIntent: Intent?) { stopSelf(); super.onTaskRemoved(rootIntent) }
     override fun onBind(intent: Intent?): IBinder? = null
     override fun onDestroy() {
+        floating509?.remove()
+        floating509 = null
+        active = false
         wakeLock?.let { if (it.isHeld) it.release() }; wakeLock = null
         stopForeground(STOP_FOREGROUND_REMOVE)
         super.onDestroy()
