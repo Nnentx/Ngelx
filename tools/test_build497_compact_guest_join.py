@@ -21,9 +21,15 @@ for expected in (
  "if(host)return FilledButton.icon",
  ".collection('guest_requests').snapshots()",
  "if(status=='pending')IconButton",
- "if(status!=null)IconButton",
+ "if(status=='pending'||status=='invited')IconButton",
+ "if(status=='accepted')const Tooltip",
  "MediaQuery.sizeOf(c).height*.48",
 ):assert expected in src,expected
+# Build503: only pending/invited are rejected through client transactions.
+# Accepted guest removal MUST use the server-admin live card menu.
+assert "Konuk bağlantısını sonlandır" not in src
+assert "if(status=='pending'||status=='invited')IconButton" in src
+assert "if(status=='accepted')const Tooltip" in src
 # Distinguish host-only collection enumeration from viewer-only doc subscription.
 host_start=src.index("  Future<void> _panel(BuildContext context)async{")
 viewer_start=src.index("  Future<void> _viewerJoinPanel497(",host_start)
