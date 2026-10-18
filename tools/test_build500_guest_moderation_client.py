@@ -26,6 +26,7 @@ def main():
         "FirebaseAuth.instance.currentUser?.uid!=widget.ownerId",
         "_guestModerationPending500.contains(uid)",
         "final idToken=await user.getIdToken();",
+        "idToken==null||idToken.isEmpty",
         "'Authorization':'Bearer $idToken'",
         "'Content-Type':'application/json'",
         "'liveId':widget.belgeId,'guestUid':uid,'action':action",
