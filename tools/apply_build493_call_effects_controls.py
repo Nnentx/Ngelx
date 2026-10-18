@@ -84,15 +84,19 @@ def transform(source):
       "group tile title hide")
     body=body[:begin]+sect+body[end:]
     # Hide video-call group title, preserve audio-only header.
-    begin=body.index("    final sutun=katilimcilar.length<=1?1:2;")
+    # The older Build469 generated grid may change the column-count
+    # expression. Match the final video branch of _grupAramaAlani instead.
+    begin=body.index("  Widget _grupAramaAlani(){")
     end=body.index("  Widget _videoAlani(){",begin)
     sect=body[begin:end]
-    sect=once(sect,
+    heading="""    return Expanded(child:Column(children:[
+      Padding("""
+    if heading not in sect:
+        raise RuntimeError("Build493 group video heading is missing")
+    pos=sect.rfind(heading)
+    sect=sect[:pos]+sect[pos:].replace(heading,
       """    return Expanded(child:Column(children:[
-      Padding(""",
-      """    return Expanded(child:Column(children:[
-      if(_videoCallControlsVisible493)Padding(""",
-      "group video heading hide")
+      if(_videoCallControlsVisible493)Padding(""",1)
     body=body[:begin]+sect+body[end:]
     # Private video surface remains tappable while the overlays are hidden.
     begin=body.index("  Widget _videoAlani(){")
