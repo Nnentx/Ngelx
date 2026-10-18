@@ -196,8 +196,8 @@ def transform(src):
         part=one(part,old,new,'legacy comment gift quantities')
     elif "final message=y['kind']=='join'" not in part:
         raise RuntimeError("Build511 generated comment text for virtual gifts missing")
-    part=one(part,'          if(yayinBitti)Positioned.fill(child:ColoredBox(',
-             '          if(!yayinBitti)Positioned.fill(child:Center(child:_giftScreen511())),\n          if(yayinBitti)Positioned.fill(child:ColoredBox(','gift overlay')
+    part=one(part,'          if(yayinBitti)Positioned.fill',
+             '          if(!yayinBitti)Positioned.fill(child:Center(child:_giftScreen511())),\n          if(yayinBitti)Positioned.fill','gift overlay before end-of-live layer')
     part=one(part,"                const Spacer(),\n                if(!widget.yayinSahibi)IconButton(",
              """                StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
                   stream:FirebaseFirestore.instance.collection('live_streams').doc(widget.belgeId).snapshots(),
