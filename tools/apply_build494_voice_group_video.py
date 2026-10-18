@@ -80,28 +80,16 @@ def transform(source):
 """
     voice=voice.replace(avatar_return,avatar_return+"\n"+video_preview,1)
     body=body[:voice_start]+voice+body[voice_end:]
-    a=body.index("  Widget _grupAramaAlani(){")
-    b=body.index("  Widget _videoAlani(){",a)
-    group=body[a:b]
-    # The Build469 audio-group tile layout may have a GridView instead of
-    # the original Center/SingleChildScrollView. Insert at the *start*
-    # of only the audio-only Column, not near its changing body children.
-    voice_branch=group.index("    if(!widget.goruntulu){")
-    column_start=group.index("      return Expanded(child:Column(children:[",voice_branch)
-    video_branch=group.index("    final sutun=",voice_branch)
-    if column_start>=video_branch:
-        raise RuntimeError("Build494 audio-only group column missing")
-    insertion=column_start+len("      return Expanded(child:Column(children:[")
-    camera_button="""
-        Padding(padding:const EdgeInsets.fromLTRB(14,4,14,2),
-          child:FilledButton.tonalIcon(
-            onPressed:_toggleVoiceGroupVideo494,
-            icon:Icon(_voiceGroupVideoOn494?Icons.videocam_off_rounded:Icons.videocam_rounded),
-            label:Text(_voiceGroupVideoOn494?'Görüntüyü kapat':'Görüntüyü aç'),
-          ),
-        ),"""
-    group=group[:insertion]+camera_button+group[insertion:]
-    body=body[:a]+group+body[b:]
+    # Build465/469 can rewrite the entire voice group participant layout.
+    # Put camera control with the existing call mic/speaker/invite buttons,
+    # where it remains visible only in voice GROUP calls.
+    row_control="""              _aramaKontrol(mikrofon?Icons.mic_rounded:Icons.mic_off_rounded,'Mikrofon',mikrofonDegistir,mikrofon),"""
+    row_new="""              if(grupAramasi&&!widget.goruntulu)_aramaKontrol(
+                _voiceGroupVideoOn494?Icons.videocam_off_rounded:Icons.videocam_rounded,
+                _voiceGroupVideoOn494?'Görüntüyü kapat':'Görüntüyü aç',
+                _toggleVoiceGroupVideo494,_voiceGroupVideoOn494),
+              _aramaKontrol(mikrofon?Icons.mic_rounded:Icons.mic_off_rounded,'Mikrofon',mikrofonDegistir,mikrofon),"""
+    body=once(body,row_control,row_new,"group voice control in existing actions row")
     body=once(body,
       "      oda=arkaPlan.room;\n      baglaniyor=false;",
       """      oda=arkaPlan.room;
