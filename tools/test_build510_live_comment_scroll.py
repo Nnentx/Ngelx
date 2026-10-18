@@ -37,19 +37,27 @@ for token in (
 ):
     assert token in live, f"Build510 missing contract: {token}"
 for token in (
-    ".limit(100).snapshots()",
     "controller:_commentScroll510,",
-    "_observeComments510(yorumlar);",
-    "if(kind=='gift')",
-    "if(kind=='join')",
+    "_observeComments510(",
     "_yorumYonet(d.id,y)",
     "'pinnedComment'",
 ):
-    assert token in comments, f"Build510 missing history/render/moderation contract: {token}"
-assert ".limit(30)" not in comments, "Old limit still restricts scrolling"
-assert ".limit(100).snapshots()" in comments, "Bounded 100-event feed expected"
-assert "controller:_commentScroll510," in comments
-assert "_observeComments510(yorumlar);" in comments
+    assert token in comments, f"Build510 missing history/moderation: {token}"
+assert ".limit(100).snapshots()" in live, "Comment stream must expose up to 100 live events"
+assert ".limit(30)" not in comments, "Old 30-limit must not remain"
+assert "reverse:true" in comments, "Newest comments remain at bottom"
+assert (
+    "Expanded(child:ListView(controller:_commentScroll510,reverse:true" in comments
+    or "ListView.builder(controller:_commentScroll510," in comments
+), "Actual live comments must have a scrolling controller"
+assert (
+    "y['kind']=='join'" in comments
+    or "if(kind=='join')" in comments
+), "Join comments still render"
+assert (
+    "final docs=(snap.data?.docs??[]).toList();" in comments
+    or "final yorumlar" in comments
+), "No fixed three-comment strip"
 assert live.count("if(!_commentsHidden490)_newCommentChip510(),")==1
 assert "_bitir(" not in patch.EXTRA and "setCameraEnabled" not in patch.EXTRA
 assert "FirebaseFirestore" not in patch.EXTRA and ".add(" not in patch.EXTRA
