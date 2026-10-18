@@ -129,7 +129,15 @@ def transform(src):
     part=one(part,'  Future<void> _hediyeGonder(String ad, String emoji, int puan) async {',
              '  Future<void> _hediyeGonder(String ad, String emoji, int puan,{int adet=1}) async {','gift amount')
     part=one(part,'    if (hediyeGonderiliyor) return;',
-             '    if (hediyeGonderiliyor||adet<1||adet>10) return;','send bounds')
+             '''    if (hediyeGonderiliyor||adet<1||adet>10) return;
+    // Stage-only gate: the QA APK must never write a new gift event to
+    // production Firestore unless an explicitly isolated test setup enables it.
+    const stagingEnabled=bool.fromEnvironment('NGELX_VIRTUAL_GIFT_STAGING',defaultValue:false);
+    if(!stagingEnabled){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content:Text('Sanal hediyeler yalnız test ortamında kullanılabilir.')));
+      return;
+    }''','send bounds and stage-only safety gate')
     gift_start=part.index('  Future<void> _hediyeGonder(')
     gift_end=part.index('  Future<void> _hediyePaneli() async {',gift_start)
     sending=part[gift_start:gift_end]
