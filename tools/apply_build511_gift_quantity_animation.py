@@ -25,10 +25,13 @@ METHOD=r"""
         return;
       }
       for(final change in snap.docChanges){
-        if(change.type!=DocumentChangeType.added)continue;
+        // A local gift appears with pending writes first and is confirmed
+        // as modified when the server acknowledges it. Show it after ack
+        // on both sender and viewer devices.
+        if(change.type==DocumentChangeType.removed)continue;
         final d=change.doc;
-        if(!_knownGiftIds511.add(d.id))continue;
         if(d.metadata.hasPendingWrites)continue;
+        if(!_knownGiftIds511.add(d.id))continue;
         final event=d.data();
         if(event==null||event['kind']!='gift')continue;
         final pts=(event['points'] as num?)?.toInt()??0;
