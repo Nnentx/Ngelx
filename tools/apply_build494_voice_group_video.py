@@ -101,27 +101,9 @@ def transform(source):
         _voiceGroupVideoOn494=arkaPlan.room.localParticipant?.videoTrackPublications
           .any((p)=>!p.muted&&p.track is lk.VideoTrack)??false;
       }""",body,count=1)
-    # Earlier versions may move or reformat the default video camera
-    # enablement. The existing microphone activation still defines the
-    # unique point after the LiveKit local participant connects. Add the
-    # optional group-camera restoration after that, leaving video calls and
-    # their capture configuration untouched.
-    import re
-    mic_pattern=r"await\s+yerel\.setMicrophoneEnabled\(true\);"
-    if len(re.findall(mic_pattern,body))!=1:
-        raise RuntimeError("Build494 expected one local call microphone activation")
-    reconnect=""" 
-      // An audio-only group's camera choice survives a room reconnect.
-      if(!widget.goruntulu&&grupAramasi&&_voiceGroupVideoOn494){
-        if(await Permission.camera.isGranted){
-          try{
-            await yerel.setCameraEnabled(true,cameraCaptureOptions:const lk.CameraCaptureOptions(
-              params:lk.VideoParametersPresets.h360_169,maxFrameRate:20.0,stopCameraCaptureOnMute:true));
-          }catch(_){_voiceGroupVideoOn494=false;}
-        }else{_voiceGroupVideoOn494=false;}
-      }"""
-    body=re.sub(mic_pattern,lambda m:m.group(0)+reconnect,body,count=1)
-    for token in ("await yerel.setMicrophoneEnabled(true)","hoparlorDegistir",
+    # Room reconnection remains owned by the existing audio-call lifecycle;
+    # only a deliberate camera tap changes video publishing in this QA step.
+    for token in ("mikrofonDegistir","hoparlorDegistir",
                   "grupAramasinaKisiDavetEt","_aramaEkraniniKucult",
                   "Widget _videoAlani()"):
         if token not in body:raise RuntimeError("Build494 missing preserved call feature "+token)
