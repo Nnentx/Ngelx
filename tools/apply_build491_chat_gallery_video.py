@@ -29,7 +29,8 @@ Future<XFile?> ngelxSohbetGaleriMedyaSec() async {
     }on MissingPluginException{
       media=await ImagePicker().pickMedia();
     }on PlatformException{
-      media=await ImagePicker().pickMedia();
+      // Picker failure must not launch a second picker over the first.
+      return null;
     }
   }else{
     media=await ImagePicker().pickMedia();
@@ -128,7 +129,7 @@ def dart_transform(source):
 
 
 def native_transform(source):
-    if MARK in source:return source
+    if "// Build491: chat media accepts image AND video from Android Photo Picker." in source:return source
     condition="""        if (pickerRequestedImage &&
             cleanTypes.all { it.startsWith("image/") } &&
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {"""
