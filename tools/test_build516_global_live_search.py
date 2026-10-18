@@ -29,7 +29,7 @@ for needed in (
 ):
     assert needed in explore,'Build516 lost existing Keşfet feature: '+needed
 import re
-legacy_match=re.search(r'(?m)^  Future<void> _yayinIzle\\(',src)
+legacy_match=re.search(r'(?m)^  Future<void> _yayinIzle\(',src)
 if legacy_match:
     following=src[legacy_match.start():]
     end=following.find('  void _aramaAc(){')
