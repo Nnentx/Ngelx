@@ -24,7 +24,7 @@ for key in (
     "_giftTimer511?.cancel();","_gifts511?.cancel();",
     "snapshots(includeMetadataChanges:true)",
     "if(snap.metadata.isFromCache)return;",
-    "if(change.type!=DocumentChangeType.added)continue;",
+    "if(change.type==DocumentChangeType.removed)continue;",
     "if(d.metadata.hasPendingWrites)continue;",
     "Timer(Duration(milliseconds:pts>=25?3400:1750)",
     "'giftCount': hediyeAdedi511,",
