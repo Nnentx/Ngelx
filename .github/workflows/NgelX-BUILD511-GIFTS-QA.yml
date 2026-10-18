@@ -26,6 +26,11 @@ on:
       - 'tools/*467*'
       - 'tools/*468*'
       - 'tools/apply_build457_community_runtime_fixes.py'
+      - '.github/workflows/NgelX-BUILD511-GIFTS-QA.yml'
+      - 'tools/apply_build511_gift_quantity_animation.py'
+      - 'tools/apply_build511_gift_rules.py'
+      - 'tools/test_build511_gift_qa.py'
+      - 'tools/build511_gift_rules_test.mjs'
   workflow_dispatch:
   push:
     branches:
