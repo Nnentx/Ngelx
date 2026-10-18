@@ -10,7 +10,7 @@ const request={method:'POST',authorization:'Bearer valid',body:{
 function setup(overrides={}) {
  const events=[];
  const participants=overrides.participants??[{
-  identity:'alice',tracks:[{sid:'audio_1',type:1},{sid:'video_1',type:2}]
+  identity:'alice',tracks:[{sid:'audio_1',type:0},{sid:'video_1',type:1}]
  }];
  const service={
   listParticipants:async()=>{events.push('list');return participants;},
@@ -26,7 +26,7 @@ function setup(overrides={}) {
   getRoom:async()=>room,getGuest:async()=>guest,
   saveAction:async args=>{events.push(['saved',args]);},
   rateLimit:async()=>true,roomService:service,
-  cameraSource:1,microphoneSource:2,audioTrackType:1,now:()=>clock,
+  cameraSource:1,microphoneSource:2,audioTrackType:0,now:()=>clock,
   ...overrides
  };
  return {run:createGuestModeration(deps),events,service};
