@@ -46,11 +46,25 @@ def transform(src):
     # Keep the proven Build468 drag bounds and mini-call dimensions intact.
     # Previous UI generations use different x/width geometry; avoid forcing
     # a new size that could place the call panel outside the screen.
-    r=once(r,
-      '''CircleAvatar(radius:20,backgroundColor:const Color(0xFF6F4AB2),backgroundImage:detail.photo.isEmpty?null:NgelXAgImageProvider(detail.photo),child:detail.photo.isEmpty?Icon(detail.video?Icons.videocam:Icons.call,color:Colors.white,size:20):null),''',
-      '''if(detail.video)_ngelx469Preview(room,detail.photo)
-            else CircleAvatar(radius:20,backgroundColor:const Color(0xFF6F4AB2),backgroundImage:detail.photo.isEmpty?null:NgelXAgImageProvider(detail.photo),child:detail.photo.isEmpty?const Icon(Icons.call,color:Colors.white,size:20):null),''',
-      'live video in minimized call')
+    # Build448's generated UI can use radius:28 while older branches use
+    # radius:20. Match only this authenticated mini-call avatar; preserve
+    # the exact generated styling instead of assuming an old radius.
+    avatar_re = re.compile(
+        r'CircleAvatar\(radius:(?:20|28),[^\n]*?detail\.video\?Icons\.videocam:Icons\.call[^\n]*?\),'
+    )
+    avatars = avatar_re.findall(r)
+    if len(avatars) != 1:
+        raise RuntimeError(
+            f'Build469 mini overlay live video anchor: expected 1, found {len(avatars)}'
+        )
+    avatar = avatars[0]
+    fallback = avatar.replace('detail.video?Icons.videocam:Icons.call', 'Icons.call', 1)
+    r = once(
+        r, avatar,
+        'if(detail.video)_ngelx469Preview(room,detail.photo)\n'
+        '            else ' + fallback,
+        'live video in minimized call'
+    )
     for guard in ("onTap:()=>ngelx445ReturnCall(name)",
                   "onEnd:()=>ngelx445EndBackground(name)",
                   "onPanUpdate:(delta)=>setState",
