@@ -49,7 +49,10 @@ class Ngelx448GuestControls extends StatelessWidget{
           return ListTile(leading:CircleAvatar(backgroundImage:photo.isEmpty?null:NgelXAgImageProvider(photo),child:photo.isEmpty?const Icon(Icons.person):null),title:Text(name,maxLines:1,overflow:TextOverflow.ellipsis),subtitle:Text(status=='accepted'?'Kabul edildi':status=='invited'?'Davet gönderildi':status=='pending'?'Katılmak istiyor':'Canlı izleyicisi'),trailing:Row(mainAxisSize:MainAxisSize.min,children:[
             if(status==null)TextButton(onPressed:()=>act('invite'),child:const Text('Davet et')),
             if(status=='pending')IconButton(tooltip:'Kabul et',icon:const Icon(Icons.check,color:Colors.green),onPressed:()=>act('accept')),
-            if(status!=null)IconButton(tooltip:status=='accepted'?'Konuk bağlantısını sonlandır':'Reddet / iptal et',icon:const Icon(Icons.close,color:Colors.red),onPressed:()=>act('reject')),
+            if(status=='pending'||status=='invited')IconButton(tooltip:'Reddet / iptal et',icon:const Icon(Icons.close,color:Colors.red),onPressed:()=>act('reject')),
+            // Build503: accepted guests must be removed through the server-admin
+            // moderation menu on their live guest video card, not client Firestore.
+            if(status=='accepted')const Tooltip(message:'Konuğu çıkarmak için canlı yayın konuk kartındaki üç nokta menüsünü kullan.',child:Icon(Icons.more_horiz_rounded,color:Colors.deepPurple)),
           ]));
         });})),
       ]));
