@@ -18,6 +18,7 @@ def main():
         "takipte?'Takiptesin':_ngelx438Ui(\"Takip et\")",
         "stream:FirebaseFirestore.instance.collection('live_streams').doc(widget.belgeId).snapshots(),",
         "likeCount", "Icons.favorite_rounded",
+        ".collection('reactions').snapshots()", "liveLikes??storedLikes",
         "Widget _guestRail488()", "Icons.add_rounded",
         "guest_requests", "d.data()['status']=='accepted'",
         ".take(10).toList()",
