@@ -28,12 +28,15 @@ for needed in (
     "if(yayinlar.isEmpty)return _bosKart(t('noLive'),Icons.live_tv_outlined);",
 ):
     assert needed in explore,'Build516 lost existing Keşfet feature: '+needed
+legacy=src[src.index('  Future<void> _yayinIzle('):src.index('  void _aramaAc(){')]
+assert 'await ngelxCanliYayinaKatil(context,belgeId);' in legacy
+assert 'lk.DevelopmentTokenSource(' not in legacy, 'Old Keşfet route must not issue development tokens'
 assert explore.count('onPressed:()=>ngelxCanliAramaAc(context)')==2
 assert 'onTap:()=>_yayinIzle(context,y,yayinlar[i].id),' not in explore
 assert explore.index("tooltip:'Canlı yayın ara'")<explore.index("if(kategori==0)..._canliSliverleri()")
 assert explore.index("label:const Text('Canlı ara')")<explore.index("if(yayinlar.isEmpty)return _bosKart")
-for forbid in (".runTransaction(", ".set(", ".update(", ".delete(", "lk.DevelopmentTokenSource("):
-    assert forbid not in patch.transform.__code__.co_consts,'Transform should not inject token or writes'
+for forbidden in ('.runTransaction(', '.set(', '.update(', '.delete('):
+    assert forbidden not in legacy,'Legacy join delegate must not write server state'
 source=Path('app/lib/live_feed_card.dart').read_text(encoding='utf-8')
 assert "class _NgelxCanliAramaSheet515State" in source
 assert "where('active',isEqualTo:true).limit(60).snapshots()" in source
