@@ -1,6 +1,7 @@
 package com.nnentx.ngelx_app
 
 import android.content.Context
+import android.content.Intent
 import android.graphics.Color
 import android.graphics.PixelFormat
 import android.graphics.drawable.GradientDrawable
@@ -98,7 +99,15 @@ class Ngelx509FloatingCallWindow(private val owner: Context) {
         panel.addView(label("●",38f),LinearLayout.LayoutParams(-1,dp(56)))
         panel.addView(label("Sen · Görüşme sürüyor",11f),LinearLayout.LayoutParams(-1,dp(40)))
         if (mode == Mode.EXPANDED) {
-            panel.addView(action("⛶  Tam ekran") { Ngelx509FlutterEvents.send("fullscreen") },
+            panel.addView(action("⛶  Tam ekran") {
+                try {
+                    owner.startActivity(Intent(owner, MainActivity::class.java).apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or
+                            Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+                    })
+                } catch (_: Exception) {}
+                handler.postDelayed({ Ngelx509FlutterEvents.send("fullscreen") }, 350)
+            },
                 LinearLayout.LayoutParams(-1,dp(35)))
             val row = LinearLayout(owner)
             row.addView(action("Mik") { Ngelx509FlutterEvents.send("microphone") },
