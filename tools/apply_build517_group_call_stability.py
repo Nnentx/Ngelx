@@ -136,30 +136,25 @@ def transform(src):
     group_a=body.index('  Widget _grupAramaAlani(){')
     group_b=body.index('  Widget _videoAlani(){',group_a)
     group=body[group_a:group_b]
-    print('Build517 generated group layout diagnostic:',repr(group[:4500]),flush=True)
-    group=once(group,'if(!widget.goruntulu){\n      return Expanded(child:Column(children:[\n        Padding(',
-      'if(!widget.goruntulu){\n      return Expanded(child:Column(children:[\n        if(_videoCallControlsVisible493)Padding(',
-      'hide group voice title')
-    group=once(group,'padding:const EdgeInsets.fromLTRB(22,18,22,8)',
-      'padding:const EdgeInsets.fromLTRB(16,4,16,4)',
-      'move voice title upward')
-    group=once(group,'fontSize:29,fontWeight:FontWeight.w900',
-      'fontSize:20,fontWeight:FontWeight.w800',
-      'smaller group voice title')
-    # Tapping vacant space toggles controls; a drag still scrolls members.
-    group=once(group,'Expanded(child:Center(child:SingleChildScrollView(',
-      'Expanded(child:GestureDetector(behavior:HitTestBehavior.translucent,\n          onTap:_toggleVideoCallControls493,child:Center(child:SingleChildScrollView(',
-      'group voice background tap')
-    group=once(group,'child:Wrap(alignment:WrapAlignment.center,spacing:18,runSpacing:24,children:katilimcilar.map((x)=>_grupSesliKatilimci(x.p,yerel:x.yerel)).toList()),\n        ))),',
-      'child:Wrap(alignment:WrapAlignment.center,spacing:12,runSpacing:14,children:katilimcilar.map((x)=>_grupSesliKatilimci(x.p,yerel:x.yerel)).toList()),\n        )))),',
-      'compact participant cards and close tap wrapper')
-    # Group-video grid consumes taps on cards; background taps still work.
-    group=once(group,'Expanded(child:GridView.builder(',
-      'Expanded(child:GestureDetector(behavior:HitTestBehavior.translucent,\n          onTap:_toggleVideoCallControls493,child:GridView.builder(',
-      'group video background tap')
-    group=once(group,'itemBuilder:(_,i)=>_katilimciKutusu(katilimcilar[i].p,yerel:katilimcilar[i].yerel),\n      )),',
+    # The last generated QA stage uses ONE responsive video-tile grid for
+    # both audio and video group calls (no separate voice Wrap branch).
+    # Build493 already hides its group heading on tap; preserve this guard.
+    if 'if(_videoCallControlsVisible493)Padding(' not in group:
+        raise RuntimeError('Build517 requires group title hide guard')
+    group=once(group,'padding:const EdgeInsets.fromLTRB(18,14,18,9)',
+      'padding:const EdgeInsets.fromLTRB(14,4,14,5)',
+      'move group title upward')
+    group=once(group,'fontSize:22,fontWeight:FontWeight.w900',
+      'fontSize:19,fontWeight:FontWeight.w800',
+      'compact group title')
+    group=once(group,'Expanded(child:LayoutBuilder(builder:(_,constraints)=>GridView.builder(',
+      'Expanded(child:GestureDetector(behavior:HitTestBehavior.translucent,\n'
+      '        onTap:_toggleVideoCallControls493,child:LayoutBuilder(builder:(_,constraints)=>GridView.builder(',
+      'group grid empty-space tap')
+    group=once(group,
       'itemBuilder:(_,i)=>_katilimciKutusu(katilimcilar[i].p,yerel:katilimcilar[i].yerel),\n      ))),',
-      'group video tap wrapper close')
+      'itemBuilder:(_,i)=>_katilimciKutusu(katilimcilar[i].p,yerel:katilimcilar[i].yerel),\n      )))),',
+      'close tap wrapper around responsive grid')
     body=body[:group_a]+group+body[group_b:]
     # Ensure the system back/minimize button is hidden with other chrome.
     header='if(bitisDurumu==null&&hata==null&&oda!=null)Padding('
