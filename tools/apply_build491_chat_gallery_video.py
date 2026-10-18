@@ -92,18 +92,23 @@ def dart_transform(source):
     if private_picker<0:raise RuntimeError("Build491 private media sender missing")
     private=source[private_picker:private_end]
     import re
-    chosen=re.search(r"final\s+x\s*=\s*await\s+ngelxResimSec\([\s\S]*?\);",private)
+    # Build477/479 wraps selection in try/finally to release the
+    # picker on cancel. Keep that structure and its single-flight guard.
+    chosen=re.search(r"(?<![\w])x\s*=\s*await\s+ngelxResimSec\([\s\S]*?\);",private)
     if chosen is None:raise RuntimeError("Build491 private image selection changed: "+repr(private[:2400]))
-    private=private[:chosen.start()]+"""final x=kaynak==ImageSource.gallery
-        ?await ngelxSohbetGaleriMedyaSec()
-        :await ngelxResimSec(
-            source:kaynak,imageQuality:82,maxWidth:1440,maxHeight:1440,
-          );
-      if(x==null)return;
+    private=private[:chosen.start()]+"""x=kaynak==ImageSource.gallery
+          ?await ngelxSohbetGaleriMedyaSec()
+          :await ngelxResimSec(
+              source:kaynak,imageQuality:82,maxWidth:1440,maxHeight:1440,
+            );"""+private[chosen.end():]
+    beforeCheck="      if(x==null)return;"
+    if private.count(beforeCheck)!=1:
+        raise RuntimeError("Build491 private media null-check changed")
+    private=private.replace(beforeCheck,"""      if(x==null)return;
       if(kaynak==ImageSource.gallery&&ngelxSohbetVideoMu(x)){
         await videoGonder(kaynak,secilen:x);
         return;
-      }"""+private[chosen.end():]
+      }""",1)
     source=source[:private_picker]+private+source[private_end:]
 
     source=once(source,
