@@ -20,18 +20,18 @@ def verify():
     assert "permission.data!.isGranted" in dart
     assert "kIsWeb" in dart and "TargetPlatform.android" in dart
     assert "_gelenAramaButon(" in dart and "Widget _gelenAramaFlutterFallback487()" in dart
-    # One channel, silent system notification, original managed Ringtone.
-    assert service.count("ngelx_incoming_calls487_one_ring")==1
-    assert "channel.setSound(null, null)" in service
-    assert "channel.enableVibration(false)" in service
-    assert ".setSound(null)" in service
-    assert ".setSound(ringtone" not in service
-    assert "channel.setSound(ringtone" not in service
-    assert "notification.flags = notification.flags or Notification.FLAG_INSISTENT" not in service
-    for guard in ("sound.play()", "if(alerts.containsKey(room))", "ringing.remove(room)",
-                  "setFullScreenIntent(fullScreenCall, true)", "fun isStillRinging470(room:",
+    # Existing Android notification channel owns the audible ringtone.
+    # Keep the user's persisted sound/vibrate settings; no second player.
+    assert service.count("ngelx_incoming_calls467")==1
+    assert "channel.setSound(ringtone, AudioAttributes.Builder()" in service
+    assert "channel.enableVibration(true)" in service
+    assert ".setSound(ringtone, AudioAttributes.Builder()" in service
+    assert "notification.flags = notification.flags or Notification.FLAG_INSISTENT" in service
+    assert "// Build487: notification channel is the sole audible ringtone." in service
+    assert "sound.play()" not in service
+    for guard in ("ringing.remove(room)", "setFullScreenIntent(fullScreenCall, true)",
+                  "fun isStillRinging470(room:",
                   "manager.notify(room.hashCode(), notification)",
-                  "manager.currentInterruptionFilter",
                   "cancel(application, room)"):
         assert guard in service, "call system guard was lost: "+guard
     # The existing mini-call overlay must remain and must not be implemented
