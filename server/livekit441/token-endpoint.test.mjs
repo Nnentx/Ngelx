@@ -17,3 +17,27 @@ test('HTTP method rejected',async()=>assert.equal((await createTokenEndpoint(con
 test('cannot initialize without authorization or rate limiting',()=>assert.throws(()=>createTokenEndpoint({...config,authorizeRoom:undefined})));
 
 test('rate-limit datastore failure returns a generic unavailable response',async()=>{const r=await createTokenEndpoint({...config,rateLimit:async()=>{throw Error('private database details');}})(req);assert.equal(r.status,503);assert.equal(JSON.stringify(r).includes('private'),false);});
+
+test('server-issued live guest token restricts microphone but preserves camera',async()=>{
+ const auth=async()=>({allowed:true,role:'speaker',displayName:'Guest',canPublish:true,
+   canPublishData:true,canPublishSources:['camera']});
+ const r=await createTokenEndpoint({...config,authorizeRoom:auth})(req);
+ assert.equal(r.status,200);
+ const payload=JSON.parse(Buffer.from(r.body.participant_token.split('.')[1],'base64url'));
+ assert.equal(payload.video.canPublish,true);
+ assert.deepEqual(payload.video.canPublishSources,['camera']);
+});
+test('caller-supplied publish sources cannot replace the trusted room policy',async()=>{
+ const r=await createTokenEndpoint(config)({...req,body:{...req.body,
+   canPublishSources:['microphone'],participant_metadata:undefined}});
+ assert.equal(r.status,200);
+ const payload=JSON.parse(Buffer.from(r.body.participant_token.split('.')[1],'base64url'));
+ assert.equal(payload.video.canPublish,false);
+ assert.equal(payload.video.canPublishSources,undefined);
+});
+test('malformed server publication policy fails closed',async()=>{
+ const r=await createTokenEndpoint({...config,authorizeRoom:async()=>({
+   allowed:true,role:'speaker',displayName:'x',canPublish:true,canPublishSources:['microphone','forged']
+ })})(req);
+ assert.equal(r.status,503);
+});
