@@ -49,7 +49,12 @@ NEW="""      match /comments/{commentId} {
               || validVirtualGift511());
         // Gifts are append-only; recreating/update/deleting an old gift cannot
         // double count or rewrite a virtual points total.
-        allow update, delete: if signedIn()
+        allow update: if signedIn()
+          && resource.data.get('kind', '') != 'gift'
+          && request.resource.data.get('kind', '') != 'gift'
+          && (resource.data.userId == request.auth.uid
+              || resource.data.uid == request.auth.uid);
+        allow delete: if signedIn()
           && resource.data.get('kind', '') != 'gift'
           && (resource.data.userId == request.auth.uid
               || resource.data.uid == request.auth.uid);
