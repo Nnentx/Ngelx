@@ -48,6 +48,11 @@ def main():
     assert ".collection('guest_requests').snapshots()" in body[i:j]
     assert ".collection('guest_requests')" not in body[j:body.index("  Widget _yorumPaneli(){",j)]
     assert body.count("await widget.oda.localParticipant?.setMicrophoneEnabled(accepted&&!_guestAudioMuted489);")>=2
+    # Build502: remote permission unmute NEVER turns on another person's mic.
+    assert "if(changed&&muted&&_guestActive448){" in body
+    assert "setMicrophoneEnabled(false) ?? Future<void>.value()" in body
+    assert "setMicrophoneEnabled(!muted)" not in body
+    assert "The guest controls when to unmute" in body
     print("Build489 B2 guards: real video, host-only guest list, scoped mute/kick and 10-tile layout PASS")
 
 
