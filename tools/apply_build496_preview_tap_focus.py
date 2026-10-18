@@ -52,7 +52,7 @@ def transform(source):
     start=source.index("  Widget _kameraOnizlemesi()")
     end=source.index("  Future<void> _geriSayimCalistir()",start)
     a,b,c=source[:start],source[start:end],source[end:]
-    a=once(a,"  Widget _kameraOnizlemesi()",ADDITION+"  Widget _kameraOnizlemesi()","focus method")
+    a+=ADDITION
     b=once(b,
       """      child:Stack(fit:StackFit.expand,children:[
         FittedBox(fit:BoxFit.cover,""",
