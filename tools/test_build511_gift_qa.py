@@ -26,7 +26,7 @@ for key in (
     "if(snap.metadata.isFromCache)return;",
     "if(change.type==DocumentChangeType.removed)continue;",
     "if(d.metadata.hasPendingWrites)continue;",
-    "Timer(Duration(milliseconds:pts>=25?3400:1750)",
+    "_giftTimer511=Timer(Duration(milliseconds:score>=25?3400:1750)",
     "'giftCount': hediyeAdedi511,",
     "sonHediyeAdedi511=hediyeAdedi511;",
     "'quantity': adet,","'points': puan*adet,",
