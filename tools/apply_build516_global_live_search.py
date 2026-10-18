@@ -23,38 +23,53 @@ def transform(src):
         raise RuntimeError('Build516 requires existing searchable Keşfet live_feed_card part')
     if "void _aramaAc(){" not in src or "List<Widget> _canliSliverleri(" not in src:
         raise RuntimeError('Build516 existing Keşfet controls missing')
-    old="""              Text(t('explore'),style:const TextStyle(color:Colors.black,fontSize:29,fontWeight:FontWeight.w900)),
-              const Spacer(),
-              // Build 372: the large search field below is the single search entry point.
-              IconButton(tooltip:t('filter'),onPressed:_filtreAc,icon:const Icon(Icons.tune_rounded,color:Colors.black,size:25)),"""
-    new="""              Text(t('explore'),style:const TextStyle(color:Colors.black,fontSize:29,fontWeight:FontWeight.w900)),
-              const Spacer(),
-              // Build516: always-available Keşfet live search.
+    # Earlier generated Keşfet layouts vary in whitespace, title widgets
+    # and top-row controls. Scope to Keşfet instead of matching a long
+    # legacy text fragment that can be rewritten by prior build patches.
+    import re
+    a=src.index('  void _aramaAc(){')
+    b=src.index('  List<Widget> _canliSliverleri(',a)
+    keşfet=src[a:b]
+    title=re.search(r"(?m)^[ \t]*Text\(t\('explore'\)[^\n]*\),[ \t]*$",keşfet)
+    headAction="""              // Build516: always-available Keşfet live search.
               IconButton(
                 tooltip:'Canlı yayın ara',
                 onPressed:()=>ngelxCanliAramaAc(context),
                 icon:const Icon(Icons.live_tv_rounded,color:Color(0xFFFF1744),size:24)),
-              // Keep the existing general search field and filter untouched.
-              IconButton(tooltip:t('filter'),onPressed:_filtreAc,icon:const Icon(Icons.tune_rounded,color:Colors.black,size:25)),"""
-    src=once(src,old,new,'always-visible top right live discovery action')
-    head="""    SliverToBoxAdapter(child:Padding(
-      padding:const EdgeInsets.fromLTRB(16,18,16,10),
-      child:Text(trend?'Trend canlı yayınlar':t('liveStreams'),style:const TextStyle(color:Colors.black,fontSize:21,fontWeight:FontWeight.w900)),
-    )),"""
-    headNext="""    SliverToBoxAdapter(child:Padding(
-      padding:const EdgeInsets.fromLTRB(16,18,16,10),
-      child:Row(children:[
-        Expanded(child:Text(trend?'Trend canlı yayınlar':t('liveStreams'),
-          style:const TextStyle(color:Colors.black,fontSize:21,fontWeight:FontWeight.w900))),
-        TextButton.icon(
-          onPressed:()=>ngelxCanliAramaAc(context),
-          icon:const Icon(Icons.search_rounded,size:17),
-          label:const Text('Canlı ara'),
-          style:TextButton.styleFrom(foregroundColor:const Color(0xFFFF1744)),
-        ),
-      ]),
-    )),"""
-    src=once(src,head,headNext,'live section header search (also shown for empty results)')
+"""
+    if title is not None:
+        after=keşfet[title.end():]
+        spacer=re.search(r"(?m)^[ \t]*const Spacer\(\),[ \t]*$",after)
+        if spacer is not None and spacer.start()<500:
+            at=title.end()+spacer.end()
+            keşfet=keşfet[:at]+"\n"+headAction.rstrip('\n')+keşfet[at:]
+        else:
+            title=None
+    if title is None:
+        # Safe fallback: a standalone sliver in the Keşfet header area. It
+        # stays reachable even when the live list has zero cards.
+        old="          if(kategori==0)..._canliSliverleri(),"
+        extra="""          // Build516: always-available Keşfet live search.
+          SliverToBoxAdapter(child:Align(alignment:Alignment.centerRight,
+            child:IconButton(
+              tooltip:'Canlı yayın ara',
+              onPressed:()=>ngelxCanliAramaAc(context),
+              icon:const Icon(Icons.live_tv_rounded,color:Color(0xFFFF1744),size:24)))),
+"""
+        keşfet=once(keşfet,old,extra+old,'fallback Keşfet search action')
+    src=src[:a]+keşfet+src[b:]
+    # Insert the section action at the beginning of the live sliver list.
+    # This avoids assuming its title or row layout survived earlier patches.
+    liveHeader='  List<Widget> _canliSliverleri({bool trend=false})=>['
+    src=once(src,liveHeader,liveHeader+"""
+    SliverToBoxAdapter(child:Align(alignment:Alignment.centerRight,
+      child:TextButton.icon(
+        onPressed:()=>ngelxCanliAramaAc(context),
+        icon:const Icon(Icons.search_rounded,size:17),
+        label:const Text('Canlı ara'),
+        style:TextButton.styleFrom(foregroundColor:const Color(0xFFFF1744)),
+      ))),
+""",'live section search before results')
     # Neutralize the old Keşfet join helper's DevelopmentTokenSource path.
     # Even if another legacy caller reuses it, the authenticated shared join
     # performs the same server-authorized LiveKit token and session checks.
