@@ -34,6 +34,9 @@ class _NgelxCanliAramaSheet515 extends StatefulWidget{
 
 class _NgelxCanliAramaSheet515State extends State<_NgelxCanliAramaSheet515>{
   final TextEditingController _search515=TextEditingController();
+  late final Stream<QuerySnapshot<Map<String,dynamic>>> _activeRooms515=
+    FirebaseFirestore.instance.collection('live_streams')
+      .where('active',isEqualTo:true).limit(60).snapshots();
   @override void dispose(){
     _search515.dispose();
     super.dispose();
@@ -82,8 +85,7 @@ class _NgelxCanliAramaSheet515State extends State<_NgelxCanliAramaSheet515>{
             style:TextStyle(color:Colors.white60,fontSize:11)),
           const SizedBox(height:10),
           Expanded(child:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
-            stream:FirebaseFirestore.instance.collection('live_streams')
-              .where('active',isEqualTo:true).limit(60).snapshots(),
+            stream:_activeRooms515,
             builder:(_,snapshot){
               if(snapshot.hasError){
                 return const Center(child:Text(
