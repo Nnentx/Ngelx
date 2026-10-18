@@ -1,0 +1,45 @@
+name: NgelX Build503 Accepted Guest Removal Guard QA (no deploy)
+
+on:
+  push:
+    branches:
+      - qa/ngelx-build503-host-panel-guest-removal-guard-20261018
+    paths:
+      - app/lib/build448_live_guests.dart
+      - tools/test_build497_compact_guest_join.py
+      - .github/workflows/NgelX-BUILD503-GUEST-REMOVE-GUARD-QA.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  host-panel-guard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Assert role-safe guest panel behavior
+        run: |
+          python3 -m py_compile tools/test_build497_compact_guest_join.py
+          python3 tools/test_build497_compact_guest_join.py
+      - name: Verify no direct host removal of accepted guest remains
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          src=Path('app/lib/build448_live_guests.dart').read_text()
+          section=src[src.index('  Future<void> _panel(BuildContext context)async{'):src.index('  Future<void> _viewerJoinPanel497(')]
+          assert "if(status=='accepted')const Tooltip" in section
+          assert "if(status=='pending'||status=='invited')IconButton" in section
+          assert "if(status!=null)IconButton" not in section
+          assert "Konuk bağlantısını sonlandır" not in section
+          assert "act('reject')" in section
+          print('Accepted guest cannot be kicked through a client-only Firestore action')
+          PY
+      - name: Preserve server authorization and token tests
+        run: npm --prefix server test
+      - name: Confirm isolation
+        run: echo 'Source and policy QA only; no Firebase or LiveKit calls, no production deployment, no APK publication.'
