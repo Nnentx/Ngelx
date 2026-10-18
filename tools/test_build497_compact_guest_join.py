@@ -39,4 +39,9 @@ for expected in (
  "me==owner||me==guest",
  "v['active']!=true||v['ownerId']!=owner||guest==owner",
 ): assert expected in src,expected
+# Only the invited/requesting GUEST needs device permissions. A host who
+# approves a pending guest must not be blocked by local camera/microphone.
+assert "if(me==guest&&(action=='request'||action=='accept')){" in src
+assert "if(action=='request'||action=='accept'){" not in src
+print("Build497: guest-only permission prompt and host approval guard PASS")
 print("Build497: compact role-safe join panel; unchanged Firestore transition checks PASS")
