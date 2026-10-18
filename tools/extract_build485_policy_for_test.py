@@ -17,7 +17,7 @@ def main():
     code=src[start:end]
     for marker in ("int ngelx485KickEpoch(","bool ngelx485FreshKick(","Map<String,dynamic> ngelx485NextKickEpochs("):
         if code.count(marker)!=1:raise RuntimeError("Build485 logic absent or duplicated "+marker)
-    DEST.write_text("// GENERATED TEST-ONLY. Extracted from production Build485 part.\\n"+code,encoding="utf-8")
+    DEST.write_text("// GENERATED TEST-ONLY. Extracted from production Build485 part.\n"+code,encoding="utf-8")
     print("Build495: extracted exact Build485 event counter and replay-safe kick policy")
 
 
