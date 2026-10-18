@@ -56,24 +56,29 @@ def dart_transform(source):
     if MARK in source:return source
     source=once(source,"Future<XFile?> ngelxResimSec({",DART+"\nFuture<XFile?> ngelxResimSec({","photo/video chat picker helper")
 
-    source=once(source,
-      """  Future<void> medyaGonder(ImageSource kaynak)async{
-    final x=await ngelxResimSec(source:kaynak,imageQuality:76,maxWidth:1280);
-    if(x==null)return;
-    await _grupFotografiniGonder(x,kaynak);
-  }""",
-      """  Future<void> medyaGonder(ImageSource kaynak)async{
-    final x=kaynak==ImageSource.gallery
+    # Older UI generators may insert guards/formatting into this method.
+    # Anchor to the existing group photo sender, not to exact whitespace.
+    import re
+    group_end=source.index("  Future<void> _grupFotografiniGonder(")
+    group_start=source.rfind("  Future<void> medyaGonder(ImageSource kaynak)",0,group_end)
+    if group_start<0:
+        raise RuntimeError("Build491 group gallery method not found")
+    group=source[group_start:group_end]
+    selection=re.search(r"final\s+x\s*=\s*await\s+ngelxResimSec\([^;]+\);",group,re.S)
+    if selection is None:
+        raise RuntimeError("Build491 group gallery image chooser changed: "+repr(group[:1600]))
+    group=group[:selection.start()]+"""final x=kaynak==ImageSource.gallery
       ?await ngelxSohbetGaleriMedyaSec()
-      :await ngelxResimSec(source:kaynak,imageQuality:76,maxWidth:1280);
-    if(x==null)return;
+      :await ngelxResimSec(source:kaynak,imageQuality:76,maxWidth:1280);"""+group[selection.end():]
+    group=once(group,
+      "    if(x==null)return;",
+      """    if(x==null)return;
     if(kaynak==ImageSource.gallery&&ngelxSohbetVideoMu(x)){
       await grupVideoGonder(secilen:x);
       return;
-    }
-    await _grupFotografiniGonder(x,kaynak);
-  }""",
-      "group photo/video route")
+    }""",
+      "group media dispatch")
+    source=source[:group_start]+group+source[group_end:]
 
     source=once(source,
       """  Future<void> grupVideoGonder()async{
