@@ -77,4 +77,18 @@ assert "onTap:()=>ngelxCanliYayinaKatil(context,yayinlar[i].id)," in fixed
 assert "onTap:()=>_yayinIzle(context,y,yayinlar[i].id)," not in fixed
 assert fixed.count("onPressed:()=>ngelxCanliAramaAc(context)")==2
 print('Build516 fixture PASS: generated UI with previously removed legacy join')
+# Generated stages can already have a safe, non-await shared join wrapper.
+# The UI patch must accept that implementation without rewriting its control
+# flow or demanding a redundant "await".
+existing_safe=fixture(variants["old title and spacer"])
+old="""    final source = lk.DevelopmentTokenSource(id: 'not-for-production');"""
+assert existing_safe.count(old)==1
+already_safe=existing_safe.replace(old,
+    "    ngelxCanliYayinaKatil(context,belgeId);")
+safe_after=patch.transform(already_safe)
+assert patch.transform(safe_after)==safe_after
+assert "    ngelxCanliYayinaKatil(context,belgeId);" in safe_after
+assert "lk.DevelopmentTokenSource(" not in safe_after
+assert "onTap:()=>ngelxCanliYayinaKatil(context,yayinlar[i].id)," in safe_after
+print('Build516 fixture PASS: existing authorized live join without await')
 print('Build516 preflight PASS: old and generated layouts, empty live card, secure shared join')
