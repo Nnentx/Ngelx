@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {createGuestModeration} from './live-moderation.mjs';
 const clock=1800000000000;
-const room={ownerId:'host',active:true,lastHeartbeatAt:new Date(clock),roomName:'trusted_live_room'};
+const room={ownerId:'host',active:true,lastHeartbeatAt:new Date(clock),roomName:'ngelx_host_1800000000000'};
 const guest={hostUid:'host',guestUid:'alice',status:'accepted'};
 const request={method:'POST',authorization:'Bearer valid',body:{
   liveId:'live1',guestUid:'alice',action:'mute'
@@ -37,11 +37,11 @@ test('host mute restricts future microphone tracks and mutes remaining current a
  assert.equal(result.status,200);
  assert.equal(result.body.ok,true);
  assert.deepEqual(events.filter(x=>Array.isArray(x)&&x[0]==='permission')[0],
-  ['permission','trusted_live_room','alice',{permission:{
+  ['permission','ngelx_host_1800000000000','alice',{permission:{
     canSubscribe:true,canPublish:true,canPublishData:true,
     canUpdateMetadata:false,canPublishSources:[1]}}]);
  assert.deepEqual(events.filter(x=>Array.isArray(x)&&x[0]==='mute'),
-  [['mute','trusted_live_room','alice','audio_1',true]]);
+  [['mute','ngelx_host_1800000000000','alice','audio_1',true]]);
  assert.equal(events.filter(x=>Array.isArray(x)&&x[0]==='saved').length,1);
  assert.equal(events.at(-1)[0],'saved');
 });
@@ -59,7 +59,7 @@ test('kick removes the connected participant before marking the guest rejected',
  const {run,events}=setup();
  assert.equal((await run({...request,body:{...request.body,action:'kick'}})).status,200);
  assert.deepEqual(events.filter(x=>Array.isArray(x)&&x[0]==='kick'),
-  [['kick','trusted_live_room','alice']]);
+  [['kick','ngelx_host_1800000000000','alice']]);
  assert.equal(events.at(-1)[0],'saved');
 });
 test('offline accepted guest can be muted or kicked in trusted Firestore without live API operations',async()=>{
@@ -127,4 +127,20 @@ test('method validation, rate limiting, remote errors, and database failures are
 });
 test('untrusted dependency injection is rejected at setup',()=>{
  assert.throws(()=>createGuestModeration({}),/Trusted/);
+});
+
+test('Firestore owner cannot target another hosts LiveKit room by editing roomName',async()=>{
+ const other='ngelx_victim_1800000000000';
+ const {run,events}=setup({getRoom:async()=>({...room,roomName:other})});
+ const result=await run(request);
+ assert.equal(result.status,403);
+ assert.equal(events.length,0);
+});
+test('owner prefix must contain exactly a 13-digit millisecond timestamp',async()=>{
+ for (const invalid of ['arbitrary_live_room','ngelx_host_notatime','ngelx_host_0123',
+   'ngelx_host_1800000000000_extra','ngelx_host_1800000000000/other']) {
+  const {run,events}=setup({getRoom:async()=>({...room,roomName:invalid})});
+  assert.equal((await run(request)).status,403,invalid);
+  assert.equal(events.length,0);
+ }
 });
