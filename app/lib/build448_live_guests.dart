@@ -3,7 +3,7 @@ part of 'main.dart';
 DocumentReference<Map<String,dynamic>> ngelx448GuestRef(String live,String uid)=>FirebaseFirestore.instance.collection('live_streams').doc(live).collection('guest_requests').doc(uid);
 Future<void> ngelx448GuestAction(BuildContext context,String live,String owner,String guest,String action)async{
   final me=FirebaseAuth.instance.currentUser?.uid;if(me==null)return;
-  if(action=='request'||action=='accept'){
+  if(me==guest&&(action=='request'||action=='accept')){
     final permissions=await [Permission.microphone,Permission.camera].request();
     if(permissions.values.any((p)=>!p.isGranted)){if(context.mounted)ngelxDurumMesaji(context,'Yayına katılmak için kamera ve mikrofon izni gerekli.',tip:'uyari');return;}
   }

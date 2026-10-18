@@ -52,6 +52,7 @@ on:
       - fix/group-bottom-safe-area-20261018
       - qa/ngelx-build487-incoming-one-ui-one-ring-20261018
       - qa/ngelx-build497-compact-guest-join-panel-20261018
+      - qa/ngelx-build497-host-accept-permission-fix-20261018
     paths:
       - '.github/workflows/NgelX-BUILD465-INSTALL-QA.yml'
       - 'tools/*465*'
