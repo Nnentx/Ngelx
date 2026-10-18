@@ -70,28 +70,40 @@ def transform(src):
         style:TextButton.styleFrom(foregroundColor:const Color(0xFFFF1744)),
       ))),
 """,'live section search before results')
-    # Neutralize the old Keşfet join helper's DevelopmentTokenSource path.
-    # Even if another legacy caller reuses it, the authenticated shared join
-    # performs the same server-authorized LiveKit token and session checks.
-    old_start='  Future<void> _yayinIzle(BuildContext context, Map<String, dynamic> veri, String belgeId) async {'
-    start=src.find(old_start)
-    end=src.find('  void _aramaAc(){',start)
-    if start<0 or end<=start:
-        raise RuntimeError('Build516 cannot isolate legacy Keşfet LiveKit join method')
-    old_method=src[start:end]
-    if old_method.count('lk.DevelopmentTokenSource(')!=1:
-        raise RuntimeError('Build516 legacy DevelopmentTokenSource changed; manual security review required')
-    src=src[:start]+"""  Future<void> _yayinIzle(BuildContext context, Map<String, dynamic> veri, String belgeId) async {
+    # Legacy Keşfet versions may already have removed _yayinIzle, or
+    # reformatted its signature. Never create an untrusted token path.
+    # If present and unsafe, replace only this method with the shared
+    # authorized join. If absent, upgrade the visible card's onTap only.
+    import re
+    match=re.search(r"(?m)^  Future<void>\s+_yayinIzle\s*\([^\n]*\)\s*async\s*\{",src)
+    if match:
+        after=src[match.end():]
+        next_method=re.search(
+            r"(?m)^  (?:Future<[^>\n]+>|void|Widget|List<Widget>|bool)\s+[_a-zA-Z]\w*\s*\(",
+            after)
+        if next_method is None:
+            raise RuntimeError('Build516 legacy join method boundary missing')
+        start=match.start()
+        stop=match.end()+next_method.start()
+        old_method=src[start:stop]
+        if 'lk.DevelopmentTokenSource(' in old_method:
+            src=src[:start]+"""  Future<void> _yayinIzle(BuildContext context, Map<String, dynamic> veri, String belgeId) async {
     await ngelxCanliYayinaKatil(context,belgeId);
   }
 
-"""+src[end:]
-    # The existing category grid used _yayinIzle with a DevelopmentTokenSource.
-    # This card now reuses the authenticated join helper the video/feed uses.
-    src=once(src,
-      "onTap:()=>_yayinIzle(context,y,yayinlar[i].id),",
-      "onTap:()=>ngelxCanliYayinaKatil(context,yayinlar[i].id),",
-      'live list tap uses existing authenticated LiveKit join guard')
+"""+src[stop:]
+        elif 'ngelxCanliYayinaKatil(context,belgeId)' not in old_method:
+            raise RuntimeError('Build516 unexpected existing Keşfet live join; manual review required')
+    # The generated category UI can already call the shared join.
+    old_tap="onTap:()=>_yayinIzle(context,y,yayinlar[i].id),"
+    new_tap="onTap:()=>ngelxCanliYayinaKatil(context,yayinlar[i].id),"
+    if old_tap in src:
+        src=once(src,old_tap,new_tap,'Keşfet uses authorized shared live join')
+    elif new_tap not in src:
+        # Some previous UI patches rebuilt the entire section; do not
+        # insert a guessed join into an unknown or unrelated card.
+        if 'yayinlar[i].id' in src:
+            raise RuntimeError('Build516 Keşfet category card join changed; manual QA required')
     for needed in (
       MARK,
       "tooltip:'Canlı yayın ara'",
