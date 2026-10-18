@@ -21,5 +21,6 @@ for term in (
    "Future<void> _aramaEkraniniKucult",
 ):
   assert term in body,term
-assert body.count("onPressed:_toggleVoiceGroupVideo494")==1
+assert body.count("if(grupAramasi&&!widget.goruntulu)_aramaKontrol(")==1
+assert body.count("_toggleVoiceGroupVideo494,_voiceGroupVideoOn494)")==1
 print("Build494 voice group camera permission and same-room video track preview PASS")
