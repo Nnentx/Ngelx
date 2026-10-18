@@ -18,6 +18,7 @@ on:
     branches:
       - work/build-464-photo-reliability
       - qa/ngelx-build465-install-20261016
+      - qa/ngelx-build509-android-cross-app-call-window-20261018
     paths:
       - '.github/workflows/NgelX-BUILD465-INSTALL-QA.yml'
       - 'tools/*465*'
