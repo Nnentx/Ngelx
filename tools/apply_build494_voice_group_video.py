@@ -90,15 +90,17 @@ def transform(source):
                 _toggleVoiceGroupVideo494,_voiceGroupVideoOn494),
               _aramaKontrol(mikrofon?Icons.mic_rounded:Icons.mic_off_rounded,'Mikrofon',mikrofonDegistir,mikrofon),"""
     body=once(body,row_control,row_new,"group voice control in existing actions row")
-    body=once(body,
-      "      oda=arkaPlan.room;\n      baglaniyor=false;",
-      """      oda=arkaPlan.room;
+    # Earlier call-routing fixes add state updates between restoring the
+    # background room and clearing the loading indicator. Do not remove them.
+    import re
+    restore=r"(?m)^(\s*)oda=arkaPlan\.room;"
+    if len(re.findall(restore,body))!=1:
+        raise RuntimeError("Build494 expected one minimized call restoration")
+    body=re.sub(restore,lambda m:m.group(0)+"""
       if(!widget.goruntulu&&grupAramasi){
         _voiceGroupVideoOn494=arkaPlan.room.localParticipant?.videoTrackPublications
           .any((p)=>!p.muted&&p.track is lk.VideoTrack)??false;
-      }
-      baglaniyor=false;""",
-      "restore camera state from minimized call")
+      }""",body,count=1)
     body=once(body,
       """      if(widget.goruntulu)await yerel.setCameraEnabled(true,cameraCaptureOptions:const lk.CameraCaptureOptions(params:lk.VideoParametersPresets.h360_169,maxFrameRate:20.0,stopCameraCaptureOnMute:true));""",
       """      if(widget.goruntulu)await yerel.setCameraEnabled(true,cameraCaptureOptions:const lk.CameraCaptureOptions(params:lk.VideoParametersPresets.h360_169,maxFrameRate:20.0,stopCameraCaptureOnMute:true));
