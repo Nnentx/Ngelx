@@ -99,6 +99,21 @@ try{
   state=await read(host,'group517_concurrent');
   if(state.callStatus!=='ended'||state.callParticipants.length!==0)
     throw Error('Concurrent final participants must close correctly');
+  // A non-owner cannot update the call message created by the initiator.
+  // The final member must still be able to publish the call-end notice.
+  await env.withSecurityRulesDisabled(async ctx=>{
+    await setDoc(doc(ctx.firestore(),'chats/group517/messages/call_original'),{
+      senderId:'host',type:'call',callStatus:'active',
+      callRoomName:'group_517',createdAt:Timestamp.fromMillis(1760000000000),
+    });
+  });
+  await assertFails(updateDoc(doc(beta,'chats/group517/messages/call_original'),{
+    callStatus:'ended',
+  }));
+  await assertSucceeds(setDoc(doc(beta,'chats/group517/messages/call_end_group_517'),{
+    senderId:'beta',actorUid:'beta',type:'system',systemAction:'call_end',
+    callVideo:true,text:'Arama sona erdi.',createdAt:serverTimestamp(),
+  },{merge:true}));
   await assertFails(updateDoc(doc(stranger,'chats/group517'),{callStatus:'active'}));
   console.log('Build517 FIRESTORE EMULATOR PASS: host leave 3→2 and admin kick 2→1 keep call active');
   console.log('Build517 FIRESTORE EMULATOR PASS: stale removals ignored, last leave closes once');
