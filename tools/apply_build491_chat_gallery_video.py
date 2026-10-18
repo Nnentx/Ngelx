@@ -93,7 +93,7 @@ def dart_transform(source):
     private=source[private_picker:private_end]
     import re
     chosen=re.search(r"final\s+x\s*=\s*await\s+ngelxResimSec\([\s\S]*?\);",private)
-    if chosen is None:raise RuntimeError("Build491 private image selection changed")
+    if chosen is None:raise RuntimeError("Build491 private image selection changed: "+repr(private[:2400]))
     private=private[:chosen.start()]+"""final x=kaynak==ImageSource.gallery
         ?await ngelxSohbetGaleriMedyaSec()
         :await ngelxResimSec(
