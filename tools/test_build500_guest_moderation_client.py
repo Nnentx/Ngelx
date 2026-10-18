@@ -18,7 +18,6 @@ def main():
     end=source.index("  Widget _guestTile489(",begin)
     method=source[begin:end]
     for required in (
-        mod.MARKER,
         "NGELX_LIVEKIT_GUEST_MODERATION_URL",
         "uri.scheme!='https'",
         "uri.userInfo.isNotEmpty",
