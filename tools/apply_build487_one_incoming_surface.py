@@ -8,9 +8,9 @@ Android's native CALL notification/full-screen activity owns incoming call UI
 when notification permission is granted. Only when it is denied does Flutter
 show its original in-app incoming banner as a fallback.
 
-Android's manually guarded RingtoneManager owns the audible ringing. The CALL
-notification channel is intentionally SILENT (new ID needed because Android
-never edits an existing channel's sound after creation).
+Android's CALL notification channel owns the audible ringing and preserves
+existing per-channel mute/DND settings. The extra manually started ringtone
+callback is removed; the original channel ID remains unchanged.
 """
 from pathlib import Path
 
@@ -67,34 +67,41 @@ def patch_dart(src):
 
 
 def patch_service(src):
-    channel_old='const val CHANNEL = "ngelx_incoming_calls467"'
-    channel_new='const val CHANNEL = "ngelx_incoming_calls487_one_ring"'
-    if channel_new in src:return src
-    src=replace_one(src,channel_old,channel_new,"fresh silent notification channel")
-    src=replace_one(src,"channel.enableVibration(true)","channel.enableVibration(false)","one notification vibration policy")
-    src=replace_one(src,
-        "channel.setSound(ringtone, AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE).build())",
-        """// Build487: notification is the visual surface, NOT a second ringtone.
-            // Manually guarded RingtoneManager below is the single audio owner.
-            channel.setSound(null, null)""","channel sound")
-    src=replace_one(src,
-        ".setSound(ringtone, AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE).build())",
-        ".setSound(null)","pre Android 8 notification sound")
-    src=replace_one(src,
-        "notification.flags = notification.flags or Notification.FLAG_INSISTENT",
-        "// Build487: do not trigger an insistent second system notification ring.","old insistent flag")
+    marker="// Build487: notification channel is the sole audible ringtone."
+    if marker in src:return src
+    # Android notification is the one visual AND audible call owner. Keep its
+    # original persisted channel ID and the user's sound, vibration and DND
+    # preferences; FLAG_INSISTENT supplies the telephone-like repeating ring.
+    # The historical manual RingtoneManager timer is the second ring: remove
+    # only that callback after all older Build454..Build471 transformations.
+    anchor="            alerts.put(room, timeout)?.let { timer.removeCallbacks(it) }\\n"
+    tail="            timer.postDelayed(timeout, 60000)"
+    if src.count(anchor)!=1 or src.count(tail)!=1:
+        raise RuntimeError("Build487 native notification lifecycle anchors drifted")
+    begin=src.index(anchor)+len(anchor)
+    finish=src.index(tail,begin)
+    second=src[begin:finish]
+    for token in ("timer.post {","sound.play()","ringing.put(room, sound)",
+                  "AudioManager.RINGER_MODE_NORMAL","ring_blocked settings:"):
+        if token not in second:
+            raise RuntimeError("Build487 native manual ringing source drifted: "+token)
+    assert second.rstrip().endswith("}")
+    src=src[:begin]+"            "+marker+"\\n"+src[finish:]
     for token in (
-        "if(alerts.containsKey(room))",
-        "sound.play()",
-        "AudioManager.RINGER_MODE_NORMAL",
-        "ringing.remove(room)",
+        'const val CHANNEL = "ngelx_incoming_calls467"',
+        "channel.enableVibration(true)",
+        "channel.setSound(ringtone, AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE).build())",
         "setFullScreenIntent(fullScreenCall, true)",
-        "rememberOwner470",
+        "Notification.FLAG_INSISTENT",
+        "ringing.remove(room)",
         "fun isStillRinging470(room:",
         "manager.notify(room.hashCode(), notification)",
+        "cancel(application, room)",
     ):
         if token not in src:
-            raise RuntimeError("Build487: missing retained native call contract: "+token)
+            raise RuntimeError("Build487 native system ringtone policy drifted: "+token)
+    if "sound.play()" in src:
+        raise RuntimeError("Build487: second ringtone source remained")
     return src
 
 
