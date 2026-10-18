@@ -108,15 +108,14 @@ def transform(source):
     hstart=region.index("  Widget _yayinBasligi(){")
     hend=region.index("  Future<void> _yorumYonet(",hstart)
     header=region[hstart:hend]
-    followPattern=r"takipte\s*\?\s*'[^']+'\s*:\s*'Takip et'"
+    # Old Build453 may localize the unfollowed label with _ngelx438Ui.
+    # Replace ONLY the already-followed text; preserve the existing callback,
+    # Firestore follow check and the localized "Takip et" label.
+    followPattern=r"(takipte\\s*\\?\\s*)'Takipte'(\\s*:\\s*(?:'Takip et'|_ngelx438Ui\\(\"Takip et\"\\)))"
     matches=list(re.finditer(followPattern,header))
-    if len(matches)==1:
-        header=re.sub(followPattern,"takipte?'Takiptesin':'Takip et'",header,count=1)
-    elif "Takiptesin" not in header:
-        # Previous UI steps may have replaced the label/widget entirely.
-        # Retain working follow logic rather than risk changing Firestore state.
-        print("Build488: original follow presentation retained; new label pending")
-        print("Build488 header structure:",repr(header[:3000]))
+    if len(matches)!=1:
+        raise RuntimeError(f"Build488 follow header: expected one known follow widget, got {len(matches)}")
+    header=re.sub(followPattern,r"\\1'Takiptesin'\\2",header,count=1)
     # Show the live like counter directly below the host name.
     likeWidget=r"""StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
                   stream:FirebaseFirestore.instance.collection('live_streams').doc(widget.belgeId).snapshots(),
