@@ -12,7 +12,13 @@ assert patch.transform(src)==src, "Build510 must be idempotent"
 start=src.index("class _CanliYayinPageState")
 end=src.index("class _CanliOzetSatiri",start)
 live=src[start:end]
-comments=live[live.index("  Widget _yorumPaneli(){"):live.index("  Widget _yorumGirisAlani(){")]
+import re
+start_panel=live.index("  Widget _yorumPaneli(){")
+remaining=live[start_panel+len("  Widget _yorumPaneli(){"):]
+boundary=re.search(r"(?m)^  (?:Widget|Future|void|bool|int)\s+[_a-zA-Z]",remaining)
+assert boundary is not None,"Comment panel method boundary lost"
+stop_panel=start_panel+len("  Widget _yorumPaneli(){")+boundary.start()
+comments=live[start_panel:stop_panel]
 for token in (
     patch.MARK,
     "final ScrollController _commentScroll510=ScrollController();",
@@ -34,7 +40,6 @@ for token in (
     ".orderBy('createdAt',descending:true).limit(100).snapshots()",
     "controller:_commentScroll510,",
     "_observeComments510(yorumlar);",
-    "Offstage(offstage:_commentsHidden490,child:_yorumPaneli())",
     "if(kind=='gift')",
     "if(kind=='join')",
     "_yorumYonet(d.id,y)",
@@ -45,7 +50,7 @@ assert ".limit(30)" not in comments, "Old limit still restricts scrolling"
 assert ".limit(100).snapshots()" in comments, "Bounded 100-event feed expected"
 assert "controller:_commentScroll510," in comments
 assert "_observeComments510(yorumlar);" in comments
-assert view.count("if(!_commentsHidden490)_newCommentChip510(),")==1
+assert live.count("if(!_commentsHidden490)_newCommentChip510(),")==1
 assert "_bitir(" not in patch.EXTRA and "setCameraEnabled" not in patch.EXTRA
 assert "FirebaseFirestore" not in patch.EXTRA and ".add(" not in patch.EXTRA
 print("Build510 PASS: scroll older comments, show unread chip, return latest")
