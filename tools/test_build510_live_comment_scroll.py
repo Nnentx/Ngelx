@@ -37,7 +37,7 @@ for token in (
 ):
     assert token in live, f"Build510 missing contract: {token}"
 for token in (
-    ".orderBy('createdAt',descending:true).limit(100).snapshots()",
+    ".limit(100).snapshots()",
     "controller:_commentScroll510,",
     "_observeComments510(yorumlar);",
     "if(kind=='gift')",
