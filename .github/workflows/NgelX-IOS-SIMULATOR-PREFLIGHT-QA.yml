@@ -1,0 +1,83 @@
+# Separate iOS investigation only; never uploads to TestFlight or changes Android/prod.
+name: NgelX iOS Simulator Preflight QA (NO IPA / NO DEPLOY)
+
+on:
+  push:
+    branches:
+      - qa/ngelx-ios-test-bootstrap-20261019
+  pull_request:
+    branches:
+      - qa/ngelx-build514-old-comments-history-20261019
+    paths:
+      - 'tools/prepare_ios_qa.py'
+      - '.github/workflows/NgelX-IOS-SIMULATOR-PREFLIGHT-QA.yml'
+      - 'docs/ios-test-qa.md'
+      - 'app/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ngelx-ios-preflight-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  simulator-preflight:
+    name: Unsigned iOS Simulator / source compatibility
+    runs-on: macos-15
+    timeout-minutes: 65
+    env:
+      COCOAPODS_DISABLE_STATS: 'true'
+      CI: 'true'
+    steps:
+      - name: Checkout isolated QA branch
+        uses: actions/checkout@v4
+
+      - name: Install Flutter SDK
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Capture Xcode and Flutter versions
+        run: |
+          xcodebuild -version
+          flutter --version
+          pod --version
+
+      - name: Resolve Flutter dependencies
+        working-directory: app
+        run: flutter pub get
+
+      - name: Generate missing Flutter iOS runner in temporary workspace
+        working-directory: app
+        run: |
+          set -euo pipefail
+          test ! -e ios
+          flutter create --platforms=ios --org com.nnentx --project-name ngelx_app .
+          test -f ios/Runner/Info.plist
+
+      - name: Configure iOS permissions and static checks
+        run: |
+          set -euo pipefail
+          python3 tools/prepare_ios_qa.py --apply
+          python3 tools/prepare_ios_qa.py --check
+
+      - name: Dart static analysis
+        working-directory: app
+        run: flutter analyze --no-fatal-infos
+
+      - name: Unsigned iOS Simulator build (not installable on iPhones)
+        working-directory: app
+        run: |
+          set -euo pipefail
+          flutter build ios --simulator --debug --no-codesign
+
+      - name: Record preflight scope
+        if: always()
+        run: |
+          echo "This QA workflow produces NO signed IPA and does NOT upload to TestFlight."
+          echo "A simulator build never proves physical iPhone functionality."
+          echo "Firebase iOS registration/GoogleService-Info.plist, Apple signing, APNs, CallKit,"
+          echo "LiveKit real-device validation and complete Build514 runtime parity remain open."
