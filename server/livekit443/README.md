@@ -15,3 +15,20 @@ Required rollout checks: legitimate private/group calls; both-direction blocks; 
 Reservations authorize a first token for 2 minutes; tokens expire after 5 minutes. Active media transport is not terminated by this module when a user is later banned or a database room ends. LiveKit server moderation/webhook/cleanup operations and reconnect behavior must be integrated and verified before public production media. A prefix alone does not grant a host token: current account checks, existing active profile pointers and the atomic owner lock are required.
 
 Only after deployed verification, build the Play AAB with `NGELX_PLAY_RELEASE=true` and the real HTTPS `NGELX_LIVEKIT_TOKEN_URL`. Existing APK/AAB defaults remain unchanged by this candidate. Production hosting/project access and real LiveKit secrets are still needed; no endpoint is claimed deployed.
+
+## Build498 QA: reconnect-token microphone moderation (not deployed)
+
+For an **accepted live guest** whose UID appears in the live room's
+`guestAudioMutedUids`, the token policy now issues
+`canPublishSources: ['camera']`. This denies *new microphone publications*
+while retaining camera/video, using only the trusted Firestore room state.
+Malformed server permission output fails closed. No caller-controlled
+publication-source field is honored.
+
+**Limitations:** This only applies when the token service is actually
+deployed and the guest obtains a new token. Previously published microphone
+tracks must still be forcibly muted server-side using a room-admin operation;
+existing client-only mute controls are insufficient for authoritative live
+moderation. The candidate makes no claim that production token services or
+room-admin actions are already deployed. Run real device and real LiveKit
+server tests before release.

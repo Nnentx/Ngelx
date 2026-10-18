@@ -23,12 +23,21 @@ export function createTokenEndpoint({verifyFirebaseToken,authorizeRoom,rateLimit
   let permission;
   try{permission=await authorizeRoom({uid,roomName:body.room_name});}catch{return response(503,{error:'temporarily_unavailable'});}
   if(!permission?.allowed||!['host','speaker','listener','caller'].includes(permission.role))return response(403,{error:'forbidden'});
+  // Only the trusted room policy may restrict publication sources. Reject
+  // malformed policy output rather than silently issuing unrestricted audio.
+  const sources=permission.canPublishSources;
+  if(sources!==undefined &&
+    (permission.canPublish!==true || !Array.isArray(sources) || !sources.length ||
+      sources.some(source=>source!=='camera' && source!=='microphone'))) {
+    return response(503,{error:'temporarily_unavailable'});
+  }
   const seconds=Math.floor(now()/1000);
   const header=encode({alg:'HS256',typ:'JWT'});
   // Name, role and publish rights originate exclusively from trusted server records.
   const payload=encode({iss:apiKey,sub:uid,iat:seconds,nbf:seconds-5,exp:seconds+300,
    name:String(permission.displayName??uid).slice(0,80),attributes:{role:permission.role},
-   video:{room:body.room_name,roomJoin:true,canSubscribe:true,canPublish:permission.canPublish===true,canPublishData:permission.canPublishData===true}});
+   video:{room:body.room_name,roomJoin:true,canSubscribe:true,canPublish:permission.canPublish===true,canPublishData:permission.canPublishData===true,
+    ...(sources===undefined?{}:{canPublishSources:sources})}});
   const signature=createHmac('sha256',apiSecret).update(header+'.'+payload).digest('base64url');
   return response(200,{server_url:serverUrl,participant_token:header+'.'+payload+'.'+signature,room_name:body.room_name,participant_name:String(permission.displayName??uid).slice(0,80)});
  };

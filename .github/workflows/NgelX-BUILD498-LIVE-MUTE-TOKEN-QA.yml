@@ -1,0 +1,42 @@
+name: NgelX Build498 LiveKit Guest Microphone Token QA (no deploy)
+
+on:
+  push:
+    branches:
+      - qa/ngelx-build498-livekit-mute-token-20261018
+    paths:
+      - 'server/livekit441/token-endpoint.mjs'
+      - 'server/livekit441/token-endpoint.test.mjs'
+      - 'server/livekit443/room-policy.mjs'
+      - 'server/livekit443/room-policy.test.mjs'
+      - 'server/livekit443/firestore-adapters.mjs'
+      - 'server/livekit443/firestore-adapters.test.mjs'
+      - '.github/workflows/NgelX-BUILD498-LIVE-MUTE-TOKEN-QA.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ngelx-build498-livekit-token-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  token-policy:
+    name: Pure policy and JWT security tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: JS syntax
+        run: |
+          node --check server/livekit443/room-policy.mjs
+          node --check server/livekit441/token-endpoint.mjs
+      - name: Pure LiveKit token, room and Firestore-adapter tests
+        run: npm --prefix server test
+      - name: Confirm isolated QA only
+        run: |
+          echo 'Token policy tests only: no secrets read, no Firebase deployment, no LiveKit API operation, no APK or website publication.'

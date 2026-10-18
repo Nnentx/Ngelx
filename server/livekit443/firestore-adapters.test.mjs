@@ -80,3 +80,16 @@ test('live guest token is authorized from only the current guest request',async(
  db.records.get('live_streams/live/guest_requests/alice').status='rejected';
  assert.equal((await auth({uid:'alice',roomName:'live448'})).canPublish,false);
 });
+
+test('live guest token reads host moderation state from the matched room document',async()=>{
+ const db=database({'users/alice':user,'users/host':user,
+  'live_streams/live':{ownerId:'host',roomName:'live448',active:true,lastHeartbeatAt:new Date(now),
+    visibility:'public',guestAudioMutedUids:['alice']},
+  'live_streams/live/guest_requests/alice':{hostUid:'host',guestUid:'alice',status:'accepted'}});
+ const auth=createFirestoreRoomAuthorizer({db,now:()=>now});
+ const muted=await auth({uid:'alice',roomName:'live448'});
+ assert.equal(muted.canPublish,true);
+ assert.deepEqual(muted.canPublishSources,['camera']);
+ db.records.get('live_streams/live').guestAudioMutedUids=[];
+ assert.equal((await auth({uid:'alice',roomName:'live448'})).canPublishSources,undefined);
+});
