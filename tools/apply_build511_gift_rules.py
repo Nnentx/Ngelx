@@ -62,9 +62,10 @@ NEW="""      match /comments/{commentId} {
 """
 def transform(src):
     if MARK in src:return src
-    # Prior QA transformations may add other comment matches or change
-    # nearby whitespace. Never replace an unscoped comments rule: target
-    # only the live_streams/{streamId}/comments/{commentId} block.
+    # Transform only the existing live-stream comment rule. Preserve all
+    # earlier read/create/moderation rules and AND safety requirements onto
+    # each write permission rather than replacing the authorization logic.
+    import re
     root=src.find('    match /live_streams/{streamId} {')
     if root<0:raise RuntimeError('Build511 live stream rules missing')
     start=src.find('      match /comments/{commentId} {',root)
@@ -72,18 +73,44 @@ def transform(src):
     if start<0 or stop<0 or stop<=start:
         raise RuntimeError('Build511 cannot bound exact live comments rule')
     existing=src[start:stop]
-    allowed=(
-        'allow read: if true;',
-        'allow create: if signedIn() && request.resource.data.userId == request.auth.uid;',
-        'allow update, delete: if signedIn() && (resource.data.userId == request.auth.uid || resource.data.uid == request.auth.uid);',
-    )
-    for condition in allowed:
-        if existing.count(condition)!=1:
-            raise RuntimeError('Build511 unexpected live comment authorization; refuse unsafe overwrite: '+condition)
-    if existing.count('match /')!=1:
-        raise RuntimeError('Build511 nested live comment rules changed; manual security review needed')
-    # Ensure we replace no unrelated match (community, group, call, etc.).
-    return src[:start]+NEW+src[stop:]
+    if existing.count('match /')!=1 or 'allow write:' in existing:
+        raise RuntimeError('Build511 refuse unknown nested/broad live comment rule')
+    if existing.count('allow read: if true;')!=1:
+        raise RuntimeError('Build511 unexpected live comment read policy')
+    # Require existing identity guard before adding gift validation.
+    if existing.count('request.resource.data.userId == request.auth.uid')<1:
+        raise RuntimeError('Build511 live comment owner/create guard missing')
+    declaration='      match /comments/{commentId} {'
+    prefix=NEW[NEW.index(declaration)+len(declaration):NEW.index('        allow read: if true;')]
+    position=existing.index(declaration)+len(declaration)
+    existing=existing[:position]+prefix+existing[position:]
+    pattern=re.compile(r'(?m)^([ \t]*)allow[ \t]+(create|update,[ \t]*delete|update|delete):[ \t]*if[ \t]*(.*?);',re.DOTALL)
+    found=[]
+    def protect(m):
+        indent,action,auth=m.group(1),m.group(2).replace(' ',''),m.group(3).strip()
+        found.append(action)
+        # Parenthesize original authorization: no existing permission is
+        # weakened, including any earlier added host/moderation checks.
+        if action=='create':
+            return (indent+"allow create: if ("+auth+")"
+              + " && (request.resource.data.get('kind', 'comment') != 'gift'"
+              + " || validVirtualGift511());")
+        old="resource.data.get('kind', '') != 'gift'"
+        incoming="request.resource.data.get('kind', '') != 'gift'"
+        if action=='update':
+            return indent+"allow update: if ("+auth+") && "+old+" && "+incoming+";"
+        if action=='delete':
+            return indent+"allow delete: if ("+auth+") && "+old+";"
+        if action=='update,delete':
+            return (indent+"allow update: if ("+auth+") && "+old+" && "+incoming+";\n"
+              +indent+"allow delete: if ("+auth+") && "+old+";")
+        raise RuntimeError('Build511 unexpected permission '+action)
+    transformed=pattern.sub(protect,existing)
+    if found.count('create')!=1 or not any('update' in v for v in found):
+        raise RuntimeError('Build511 missing unique create or prior update permission: '+str(found))
+    if transformed.count('validVirtualGift511()')!=1:
+        raise RuntimeError('Build511 gift validation insertion failed')
+    return src[:start]+transformed+src[stop:]
 if __name__=='__main__':
     original=FILE.read_text(encoding='utf-8')
     transformed=transform(original)
