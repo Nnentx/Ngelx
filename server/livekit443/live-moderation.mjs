@@ -68,8 +68,16 @@ export function createGuestModeration({
         if (connected) await roomService.removeParticipant(room.roomName,guestUid);
       } else if (connected) {
         await roomService.updateParticipant(room.roomName,guestUid,{
-          permission:{canPublishSources: action==='mute'
-            ? [cameraSource] : [cameraSource,microphoneSource]}
+          permission:{
+            // LiveKit applies permission updates as a complete replacement,
+            // not a patch. Keep existing essential subscribe/data/publish rights.
+            canSubscribe:true,
+            canPublish:true,
+            canPublishData:true,
+            canUpdateMetadata:false,
+            canPublishSources:action==='mute'
+              ? [cameraSource] : [cameraSource,microphoneSource],
+          }
         });
         if (action==='mute') {
           const updated=await roomService.listParticipants(room.roomName);
