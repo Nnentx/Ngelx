@@ -115,7 +115,14 @@ def transform(src:str)->str:
     yorum.dispose();""",
         "dispose scrolling state")
     a=part.index("  Widget _yorumPaneli(){")
-    b=part.index("  Widget _yorumGirisAlani(){",a)
+    # Older Build453/490 generated sources can rename/move the comment input
+    # method; stop at the NEXT top-level State method, not one exact name.
+    import re
+    following=part[a+len("  Widget _yorumPaneli(){"):]
+    next_method=re.search(r"(?m)^  (?:Widget|Future|void|bool|int)\s+[_a-zA-Z]",following)
+    if next_method is None:
+        raise RuntimeError("Build510 comment panel closing method boundary missing")
+    b=a+len("  Widget _yorumPaneli(){")+next_method.start()
     pre,comments,post=part[:a],part[a:b],part[b:]
     comments=once(comments,
         "        Flexible(child:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(",
