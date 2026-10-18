@@ -56,11 +56,19 @@ Future<void> ngelx517LeaveGroupCall(
     final status=result['missed']==true?'missed':'ended';
     final messageId=result['messageId'] as String;
     if (messageId.isNotEmpty) {
-      await ref.collection('messages').doc(messageId).set(<String,dynamic>{
-        'callStatus':status,
-        'callEndedAt':FieldValue.serverTimestamp(),
-        'durationSeconds':result['seconds'],
-      },SetOptions(merge:true));
+      // The call message belongs to its ORIGINAL sender. If another member
+      // leaves last, Firestore may reject that user's edit under message ACLs.
+      // The authoritative call record was already closed atomically; do not
+      // skip the separately authorized call_end system notice.
+      try {
+        await ref.collection('messages').doc(messageId).set(<String,dynamic>{
+          'callStatus':status,
+          'callEndedAt':FieldValue.serverTimestamp(),
+          'durationSeconds':result['seconds'],
+        },SetOptions(merge:true));
+      }catch(_){
+        debugPrint('Build517 call receipt update denied or unavailable');
+      }
     }
     await ref.collection('messages').doc('call_end_$roomName').set(<String,dynamic>{
       'senderId':uid,
