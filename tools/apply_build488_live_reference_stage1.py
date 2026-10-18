@@ -111,7 +111,7 @@ def transform(source):
     # Old Build453 may localize the unfollowed label with _ngelx438Ui.
     # Replace ONLY the already-followed text; preserve the existing callback,
     # Firestore follow check and the localized "Takip et" label.
-    followPattern=r"(takipte\s*\?\s*)'Takipte'(\s*:\s*(?:'Takip et'|_ngelx438Ui\("Takip et"\)))"
+    followPattern=r"""(takipte\s*\?\s*)'Takipte'(\s*:\s*(?:'Takip et'|_ngelx438Ui\("Takip et"\)))"""
     matches=list(re.finditer(followPattern,header))
     if len(matches)!=1:
         raise RuntimeError(f"Build488 follow header: expected one known follow widget, got {len(matches)}")
