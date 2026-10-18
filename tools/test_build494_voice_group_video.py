@@ -18,7 +18,7 @@ for term in (
    "lk.VideoTrackRenderer(track,fit:lk.VideoViewFit.cover)",
    "if(!widget.goruntulu&&grupAramasi&&_voiceGroupVideoOn494)",
    "await yerel.setMicrophoneEnabled(true)",
-   "void _aramaEkraniniKucult",
+   "Future<void> _aramaEkraniniKucult",
 ):
   assert term in body,term
 assert body.count("onPressed:_toggleVoiceGroupVideo494")==1
