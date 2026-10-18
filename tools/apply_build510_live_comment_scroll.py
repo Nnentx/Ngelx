@@ -131,31 +131,53 @@ def transform(src:str)->str:
         "Offstage(offstage:_commentsHidden490,child:_yorumPaneli()),\n        if(!_commentsHidden490)_newCommentChip510(),",
         "independent chip in Build490 comments section")
 
-    # Only mutate the current comment stream, never pinned messages, LiveKit
-    # or the caller's existing list layout. The generated versions may use
-    # different whitespace and Flutter widget nesting.
-    import re
-    matchedLimits=re.findall(r"\.limit\(\d+\)\.snapshots\(\)",comments)
-    if len(matchedLimits)!=1:
-        raise RuntimeError(f"Build510 comment history query: expected 1 limit, got {len(matchedLimits)}")
-    comments=comments.replace(matchedLimits[0],".limit(100).snapshots()",1)
-    comments,observed=re.subn(
-        r"(final yorumlar\s*=\s*[^\n;]+;)",
-        r"\1\n            _observeComments510(yorumlar);",
-        comments,count=1)
-    if observed!=1:
-        raise RuntimeError("Build510 comment docs observer: no unique declaration")
-    matches=len(re.findall(r"ListView\.builder\(",comments))
-    if matches!=1:
-        raise RuntimeError(f"Build510 comment ListView.builder count: {matches}")
-    comments=comments.replace("ListView.builder(",
-        "ListView.builder(controller:_commentScroll510,",1)
+    # Build453 replaced the original history ListView with a fixed three-row
+    # strip and moved the 35-event limit to the shared _comments448 stream.
+    # Restore a bounded, independently scrollable history in that actual UI.
+    if "final docs=(snap.data?.docs??[]).take(keyboard?1:3).toList().reversed.toList();" in comments:
+        pre=once(pre,
+            ".orderBy('createdAt',descending:true).limit(35).snapshots();",
+            ".orderBy('createdAt',descending:true).limit(100).snapshots();",
+            "Build448 broadcast comment stream cap")
+        comments=once(comments,
+            "final docs=(snap.data?.docs??[]).take(keyboard?1:3).toList().reversed.toList();",
+            """final docs=(snap.data?.docs??[]).toList();
+      _observeComments510(snap.data?.docs??[]);""",
+            "Build453 static comment strip to history")
+        comments=once(comments,
+            "constraints:BoxConstraints(maxWidth:MediaQuery.sizeOf(context).width*.72)",
+            "constraints:BoxConstraints(maxWidth:MediaQuery.sizeOf(context).width*.72,maxHeight:keyboard?82:224)",
+            "bounded comment panel height")
+        comments=once(comments,
+            "...docs.map((d){",
+            "Expanded(child:ListView(controller:_commentScroll510,reverse:true,children:docs.map((d){",
+            "live manually scrollable list")
+        comments=once(comments,
+            "      }).toList()]));",
+            "      }).toList()))]));",
+            "close Build453 list and Expanded")
+    else:
+        # Older layouts already have an in-panel ListView; preserve it and
+        # just attach the controller/observer with a bounded query.
+        import re
+        matchedLimits=re.findall(r"\.limit\(\d+\)\.snapshots\(\)",comments)
+        if len(matchedLimits)!=1:
+            raise RuntimeError(f"Build510 comment history query: expected 1 limit, got {len(matchedLimits)}")
+        comments=comments.replace(matchedLimits[0],".limit(100).snapshots()",1)
+        comments,observed=re.subn(
+            r"(final yorumlar\s*=\s*[^\n;]+;)",
+            r"\1\n            _observeComments510(yorumlar);",
+            comments,count=1)
+        if observed!=1:
+            raise RuntimeError("Build510 comment docs observer: no unique declaration")
+        matches=len(re.findall(r"ListView\.builder\(",comments))
+        if matches!=1:
+            raise RuntimeError(f"Build510 comment ListView.builder count: {matches}")
+        comments=comments.replace("ListView.builder(",
+            "ListView.builder(controller:_commentScroll510,",1)
     for guard in (
         "_yorumYonet(d.id,y)",
-        "if(kind=='gift')",
-        "if(kind=='join')",
         "'pinnedComment'",
-        "stream:ref.collection('comments')",
         "controller:_commentScroll510",
         "reverse:true",
         "Yeni yorumlar ($count) · En alta dön",
