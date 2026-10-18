@@ -51,7 +51,7 @@ def main():
     assert source.count(mod.MARKER)==1
     assert "_guestAudioPolicySub489" in source
     assert "_guestRail488()" in source
-    assert "Ngelx448GuestControls" in source
+    assert "_hostGuestAction489" in source
     # Fail-fast guard against a changed original guest moderation block.
     try:
         mod.transform_live(source.replace(mod.MARKER,"// other marker"))
