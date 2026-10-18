@@ -29,7 +29,7 @@ def verify():
     assert "channel.setSound(ringtone" not in service
     assert "notification.flags = notification.flags or Notification.FLAG_INSISTENT" not in service
     for guard in ("sound.play()", "if(alerts.containsKey(room))", "ringing.remove(room)",
-                  "setFullScreenIntent(fullScreenCall, true)", "currentRecipient470(this)",
+                  "setFullScreenIntent(fullScreenCall, true)", "fun isStillRinging470(room:",
                   "manager.notify(room.hashCode(), notification)",
                   "manager.currentInterruptionFilter",
                   "cancel(application, room)"):
