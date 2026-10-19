@@ -803,11 +803,25 @@ jobs:
           python3 tools/apply_build469_keyboard_inbox.py
           python3 tools/apply_build469_foreground_ring.py
           python3 tools/apply_build469_ring_diagnostics.py
-          python3 tools/apply_build469_founder_rules_qa.py
-          python3 -m unittest discover -s tools -p 'test_build469_*.py' -v
+          # Build469 founder migration expects the old Build456 community
+          # ruleset, which is intentionally NOT grafted over modern Build535
+          # authorization. Run only its actual Flutter/Android source tests.
+          python3 - <<'PY'
+          import sys,unittest
+          sys.path.insert(0,'tools')
+          from test_build469_source_guard import Build469Tests
+          names=(
+            'test_voice_and_video_call_grids',
+            'test_typing_is_local_and_cached_ids_preserved',
+            'test_native_ring_security_checks_are_unchanged',
+            'test_foreground_incoming_group_call_safe_cache',
+          )
+          suite=unittest.TestSuite(Build469Tests(name) for name in names)
+          if not unittest.TextTestRunner(verbosity=2).run(suite).wasSuccessful():
+              raise SystemExit(1)
+          PY
           grep -Fq 'Build469: every participant has one scoped actions menu' app/lib/main.dart
           grep -Fq 'Build469 incoming-ring QA' app/android/app/src/main/kotlin/com/nnentx/ngelx_app/IncomingCallService.kt
-          grep -Fq 'Build469: legacy verified founder limited-settings compatibility' firestore.rules
 
       - name: Build470 real Android incoming call and private chat jank QA
         shell: bash
