@@ -1332,13 +1332,16 @@ jobs:
           # Do not use --split-per-abi: Flutter adds ABI prefixes to versionCode,
           # which can block future ordinary 540+ in-place upgrade attempts.
           # These Gradle packaging edits exist ONLY in the disposable CI runner.
+          # Keep the manifest versionCode 539; filter all JNI libs using Gradle ABI filters.
           python3 - <<'PY'
           from pathlib import Path
           gradle=Path('android/app/build.gradle.kts')
           old=gradle.read_text(encoding='utf-8')
           abi='        ndk {\n            abiFilters += listOf("armeabi-v7a", "arm64-v8a")\n        }\n'
           assert old.count(abi)==1, 'Unexpected native ABI Gradle layout'
-          new=old.replace(abi,'        // Build539 temporary ARM64-only build\n',1)
+          # Restrict Android native dependencies too (Flutter --target-platform alone
+          # does not guarantee third-party .so files are ARM64-only).
+          new=old.replace(abi,'        ndk {\n            abiFilters += listOf("arm64-v8a")\n        }\n',1)
           assert new.count('    buildTypes {')==1
           new=new.replace('    buildTypes {','    packaging { jniLibs { useLegacyPackaging = true } }\n\n    buildTypes {',1)
           gradle.write_text(new,encoding='utf-8')
