@@ -55,16 +55,18 @@ for phrase in (
   "call['callRoomName']!=widget.roomName",
   "call['callExitedRoomName']==widget.roomName",
   "List<String>.from(call['callExitedUids']",
-  'if(yeniden)throw StateError(',
+  'rejoinBlocked535=true;',
   'await ngelx534ConfirmAndRejoinGroupCall(',
   'cancelled:()=>bitiyor||!_alive444',
   "hata='Yeniden katılım iptal edildi veya izin verilmedi.'",
   'bool rejoinApproved535=false;',
   'bool rtcConnected535=false;',
+  'bool rejoinBlocked535=false;',
   'rtcConnected535=true;',
   'if(rejoinApproved535&&!rtcConnected535&&mounted&&!bitiyor)',
   'final discard=await showDialog<bool>(',
   'if(discard&&!bitiyor){',
+  'if(yeniden&&!rejoinBlocked535&&',
   'await ngelx517LeaveGroupCall(',
 ):
     assert phrase in connect, 'missing guarded call screen step: '+phrase
@@ -77,7 +79,7 @@ approval=connect.index('rejoinApproved535=true;')
 catch=connect.index('}catch(e){')
 revert=connect.index('await ngelx517LeaveGroupCall(')
 assert pre<approval<permissions<rtc<setConnected<catch<revert
-assert 'if(yeniden)throw StateError(' in connect[pre:approval]
+assert 'rejoinBlocked535=true;' in connect[pre:approval]
 assert 'if(discard&&!bitiyor)' in connect[catch:revert]
 assert 'await ngelx517LeaveGroupCall(' not in connect[:catch]
 assert "call['callStatus']" in connect[pre:permissions]
