@@ -9,6 +9,9 @@ on:
     paths:
       - 'firestore.rules'
       - 'tools/build533_group_terminal_rules_test.mjs'
+      - 'tools/test_build533_concurrent_helpers.py'
+      - 'app/lib/build517_group_leave.dart'
+      - 'app/lib/build526_atomic_group_timeout.dart'
       - '.github/workflows/NgelX-BUILD533-GROUP-TERMINAL-QA.yml'
   workflow_dispatch:
 permissions:
@@ -32,6 +35,9 @@ jobs:
           set -euo pipefail
           node --check tools/build533_group_terminal_rules_test.mjs
           python3 tools/test_build530_group_exit_guard.py
+          python3 tools/test_build533_concurrent_helpers.py
+          node --check tools/build517_group_leave_rules_test.mjs
+          node --check tools/build526_atomic_group_timeout_rules_test.mjs
           node --test server/livekit443/room-policy.test.mjs
       - name: Local Firestore emulator dependencies
         run: npm install --no-save --no-package-lock firebase @firebase/rules-unit-testing firebase-tools
