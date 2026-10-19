@@ -1321,8 +1321,14 @@ jobs:
           original=gradle.read_text(encoding='utf-8')
           legacy='        ndk {\n            abiFilters += listOf("armeabi-v7a", "arm64-v8a")\n        }\n'
           assert original.count(legacy)==1, 'Unexpected Android Gradle ABI config'
-          gradle.write_text(original.replace(legacy, '        // Build536 temporary split-ABI QA override\n',1),encoding='utf-8')
-          print('Build536: temporary, non-committed ndk ABI override for Flutter split APK')
+          patched=original.replace(legacy, '        // Build536 temporary split-ABI QA override\n',1)
+          # Compress native .so files within the APK. Android extracts them
+          # during install. QA workspace only; production code unchanged.
+          anchor='    buildTypes {'
+          assert patched.count(anchor)==1, 'Unexpected Android buildTypes layout'
+          patched=patched.replace(anchor, '    packaging { jniLibs { useLegacyPackaging = true } }\n\n'+anchor,1)
+          gradle.write_text(patched,encoding='utf-8')
+          print('Build536: temporary ARM64 split and compressed JNI QA packaging')
           PY
           flutter build apk --debug --target-platform android-arm64 --split-per-abi --build-name=1.0.308 --build-number=536 --dart-define=NGELX_VERSION_NAME=1.0.308 --dart-define=NGELX_BUILD_NUMBER=536
           apk=build/app/outputs/flutter-apk/app-arm64-v8a-debug.apk
@@ -1332,6 +1338,17 @@ jobs:
             echo 'ERROR: non-ARM64 native libraries found in split QA APK' >&2
             exit 1
           fi
+          # Verify compressed native libraries and target <142 decimal MB.
+          python3 - "$apk" <<'PY'
+          import sys,zipfile
+          from pathlib import Path
+          path=Path(sys.argv[1])
+          with zipfile.ZipFile(path) as z:
+              libs=[i for i in z.infolist() if i.filename.startswith('lib/arm64-v8a/') and i.filename.endswith('.so')]
+              assert libs and all(i.compress_type==zipfile.ZIP_DEFLATED for i in libs), 'JNI compression not applied'
+          print('Build536 QA ARM64 compressed APK bytes:',path.stat().st_size)
+          assert path.stat().st_size<142_000_000, 'QA APK exceeds 142 MB target'
+          PY
           wc -c "$apk"
           sha256sum "$apk" > "$apk.sha256"
           cat "$apk.sha256"
