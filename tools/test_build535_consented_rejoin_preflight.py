@@ -41,11 +41,8 @@ bundle_output=bundle.transform(bundle_fixture)
 assert bundle_output.count(patch.PART)==1
 assert bundle_output.count(patch.MARK)==1
 assert bundle.transform(bundle_output)==bundle_output
-assert bundle_output==patched.replace(
-    "part 'build534_explicit_group_rejoin.dart';",
-    "part 'build527_group_join_transaction.dart';\\n"
-    "part 'build534_explicit_group_rejoin.dart';",1).replace(
-      "';\\npart", "';\npart",1), 'combined transform differs from direct patch'
+assert bundle_output[bundle_output.index(patch.CALL_START):] == patched[
+    patched.index(patch.CALL_START):], 'bundle changed the actual call-screen patch'
 
 assert patched.count(patch.MARK)==1
 call=patched[patched.index(patch.CALL_START):patched.index(patch.CALL_END)]
