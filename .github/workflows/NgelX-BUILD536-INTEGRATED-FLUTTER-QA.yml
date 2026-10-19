@@ -1284,6 +1284,26 @@ jobs:
           set -euo pipefail
           flutter analyze --no-fatal-infos --no-fatal-warnings
 
+      - name: Provision disposable Build536 QA debug keystore (no production keys)
+        shell: bash
+        run: |
+          set -euo pipefail
+          # The Gradle QA fallback uses ~/.android/debug.keystore with the
+          # androiddebugkey/android alias. Fresh runners do not supply it.
+          # Never create/read android/key.properties (production signing).
+          test ! -e app/android/key.properties
+          install -d -m 0700 "$HOME/.android"
+          test ! -e "$HOME/.android/debug.keystore"
+          keytool -genkeypair -noprompt \
+            -keystore "$HOME/.android/debug.keystore" \
+            -storetype JKS -storepass android -keypass android \
+            -alias androiddebugkey -keyalg RSA -keysize 2048 \
+            -validity 30 -dname "CN=NgelX Build536 QA Debug, O=NgelX, C=TR"
+          test -s "$HOME/.android/debug.keystore"
+          # New disposable key on every run: QA installation is not
+          # signature-compatible with production or previous QA installs.
+          echo 'Ephemeral internal debug signature ready; not an upgrade key.'
+
       - name: Compile Build536 development-only debug APK
         shell: bash
         working-directory: app
