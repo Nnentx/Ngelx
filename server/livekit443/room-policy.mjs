@@ -20,6 +20,15 @@ export function roomPermission({kind, room, uid, viewer, owner, peerId, now}) {
     if (!members.includes(uid) || !members.includes(room.callStartedBy) ||
         !['ringing', 'active'].includes(room.callStatus) ||
         !fresh(room.callCreatedAt, now, room.callStatus === 'ringing' ? 120_000 : 12 * 3600_000)) return null;
+    if (room.isGroup === true) {
+      // Build517: leaving and moderation must be participant-scoped. Chat
+      // membership alone must not let an explicitly removed caller obtain
+      // a fresh LiveKit token for the same current call.
+      const moderationRoom = room.callModerationRoom;
+      const currentRoom = room.callRoomName;
+      if (list(room.callKickedUids).includes(uid) &&
+          (!moderationRoom || moderationRoom === currentRoom)) return null;
+    }
     if (room.isGroup !== true && (members.length !== 2 || !peerId || !members.includes(peerId) ||
         peerId === uid || blocked(uid, peerId, viewer, owner))) return null;
     return {allowed:true, role:'caller', displayName, canPublish:true, canPublishData:true};
@@ -34,7 +43,9 @@ export function roomPermission({kind, room, uid, viewer, owner, peerId, now}) {
       (['followers', 'Takipçiler'].includes(visibility) && list(owner.followers).includes(uid));
   if (!visible) return null;
   const guest=room.guestRequest;
-  const speaker = kind === 'audio' && list(room.speakerIds).includes(uid) || kind==='live' && guest?.status==='accepted' && guest.hostUid===ownerId && guest.guestUid===uid;
+  const speaker = kind === 'audio' && list(room.speakerIds).includes(uid) ||
+    kind==='live' && guest?.status==='accepted' && guest.hostUid===ownerId &&
+    guest.guestUid===uid && room.guestCapacityAllowed!==false;
   // A host-moderated guest may keep the camera while the microphone
   // publication source is denied on a fresh/reconnected LiveKit token.
   // This is not a substitute for server-side muting of existing audio tracks.
