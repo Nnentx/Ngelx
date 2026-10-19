@@ -452,7 +452,7 @@ service cloud.firestore {
             )
           )
         )
-      ) || validSelfJoin(chatId) || validPublicSelfJoin() || validFormerHide() || validFounderClose();
+      )) || validSelfJoin(chatId) || validPublicSelfJoin() || validFormerHide() || validFounderClose();
       allow delete: if false;
       match /messages/{messageId} {
         allow read: if signedIn() && (
