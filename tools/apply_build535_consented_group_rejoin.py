@@ -117,8 +117,8 @@ def transform(src: str) -> str:
     connect=once(connect, '      oda=null;\n      if(yeniden&&',
       '      oda=null;\n'+FAILURE_OPTIONS+'      if(yeniden&&',
       'explicit post-failure voluntary exit option')
-    if connect.index(MARK)>connect.index('final kaynak='):
-        raise RuntimeError('Build535 consent must precede token fetch')
+    if connect.index(MARK)>connect.index('await _izinleriIste();'):
+        raise RuntimeError('Build535 consent must precede call permissions/token fetch')
     if connect.index('rtcConnected535=true;') < connect.index('await r.connect('):
         raise RuntimeError('Build535 success flag must follow RTC handshake')
     call=call[:start]+connect+call[end:]
