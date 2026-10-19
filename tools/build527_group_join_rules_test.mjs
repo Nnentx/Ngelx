@@ -71,11 +71,16 @@ try{
     throw Error('Historical kick incorrectly blocked new room');
   // The original caller's async remote callback cannot re-open room after
   // the last participant has ended it in a competing transaction.
-  await seed('last527',base('group_527_last','active',['host']));
+  await seed('last527',{...base('group_527_last','active',['host']),
+    callConnectedAt:Timestamp.fromMillis(Date.now()-10_000)});
   await assertSucceeds(runTransaction(host,async tx=>{
     const ref=doc(host,'chats/last527'),snap=await tx.get(ref);
     if(snap.data().callStatus!=='active')throw Error('Bad fixture');
-    tx.update(ref,{callStatus:'ended',callParticipants:[],callEndedAt:serverTimestamp()});
+    // Build530+531: the last participant exits with an atomic own-room
+    // marker. The async callback must not revive the ended room.
+    tx.update(ref,{callStatus:'ended',callParticipants:[],
+      callExitedRoomName:'group_527_last',callExitedUids:['host'],
+      callEndedAt:serverTimestamp()});
   }));
   if(await assertSucceeds(join(host,'last527','group_527_last','host')))
     throw Error('Last member departed but async callback revived room');
