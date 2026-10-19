@@ -35,10 +35,13 @@ for guard in (
     'if(yorum.text.trim()==metin)yorum.clear()',
     'Yorum doğrulanamadı. Metin korundu',
     'if(mounted)setState(()=>_sendingComment524=false)',
-    'onSubmitted:etkin&&!_sendingComment524?',
-    'onPressed:etkin&&!_sendingComment524?',
 ):
     assert guard in live,'Build524 missing required behavior: '+guard
+# Some generated layouts route Enter and button through distinct wrappers.
+# Both must converge on _yorumGonder(), whose synchronous guard protects
+# repeated taps even when the UI does not expose a disabled visual state.
+assert live.count('Future<void> _yorumGonder() async')==1
+assert send.index('if(_sendingComment524)return;')<send.index('await ref.get(')
 assert send.index('tx.set(event,')<send.index('if(yorum.text.trim()==metin)yorum.clear()')
 assert "ref.collection('comments').add(" not in send
 assert send.count('tx.set(event,')==1
