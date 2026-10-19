@@ -1304,23 +1304,33 @@ jobs:
           # signature-compatible with production or previous QA installs.
           echo 'Ephemeral internal debug signature ready; not an upgrade key.'
 
-      - name: Compile Build536 development-only debug APK
+      - name: Compile Build536 ARM64-only compact debug APK (no deploy)
         shell: bash
         working-directory: app
         timeout-minutes: 35
         run: |
           set -euo pipefail
-          flutter build apk --debug --build-name=1.0.308 --build-number=536 --dart-define=NGELX_VERSION_NAME=1.0.308 --dart-define=NGELX_BUILD_NUMBER=536
-          test -s build/app/outputs/flutter-apk/app-debug.apk
-          sha256sum build/app/outputs/flutter-apk/app-debug.apk > build/app/outputs/flutter-apk/app-debug.apk.sha256
+          # Keep all app features, LiveKit and WebRTC. Exclude unused x86_64
+          # and 32-bit ARM native libraries for physical 64-bit Android QA.
+          flutter build apk --debug --target-platform android-arm64 --split-per-abi --build-name=1.0.308 --build-number=536 --dart-define=NGELX_VERSION_NAME=1.0.308 --dart-define=NGELX_BUILD_NUMBER=536
+          apk=build/app/outputs/flutter-apk/app-arm64-v8a-debug.apk
+          test -s "$apk"
+          unzip -Z -1 "$apk" | grep -q '^lib/arm64-v8a/'
+          if unzip -Z -1 "$apk" | grep -Eq '^lib/(armeabi-v7a|x86|x86_64)/'; then
+            echo 'ERROR: non-ARM64 native libraries found in split QA APK' >&2
+            exit 1
+          fi
+          wc -c "$apk"
+          sha256sum "$apk" > "$apk.sha256"
+          cat "$apk.sha256"
 
-      - name: Retain debug APK for private QA review only
+      - name: Retain ARM64-only debug APK for private QA review only
         uses: actions/upload-artifact@v4
         with:
-          name: NgelX-Build536-INTERNAL-DEBUG-NO-DEPLOY
+          name: NgelX-Build536-ARM64-COMPACT-DEBUG-NO-DEPLOY
           path: |
-            app/build/app/outputs/flutter-apk/app-debug.apk
-            app/build/app/outputs/flutter-apk/app-debug.apk.sha256
+            app/build/app/outputs/flutter-apk/app-arm64-v8a-debug.apk
+            app/build/app/outputs/flutter-apk/app-arm64-v8a-debug.apk.sha256
           if-no-files-found: error
           retention-days: 4
 
