@@ -513,8 +513,10 @@ jobs:
 
       - name: Apply Build456 consolidated community and performance package
         run: |
-          git apply --check tools/build456.patch
-          git apply tools/build456.patch
+          # Build456 also bundles legacy rules. Keep only source changes
+          # during Build536's isolated Android compilation.
+          git apply --check --exclude=firestore.rules tools/build456.patch
+          git apply --exclude=firestore.rules tools/build456.patch
           python3 tools/apply_build456_feed_fallback.py
           python3 -m unittest discover -s tools -p 'test_build456_feed_fallback.py'
           node --check server/community456/index.mjs
