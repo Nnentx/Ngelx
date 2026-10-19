@@ -1,0 +1,10 @@
+{
+  "build": 541,
+  "version": "1.0.311",
+  "package": "com.nnentx.ngelx_app",
+  "apkSha256": "171522b360ee4f75e484545edf576da56dbb328193fb59b5cf0726eec9b22206",
+  "candidateCommit": "d2d5ce1906bc1a8379091ded5231b29f4df50c62",
+  "verifiedRun": 39317293792,
+  "defaultWorkflowTree": "097102c0a68a0161f87410c61d5706c0baeab51d",
+  "sourceExport": "Application code and tests match the verified candidate. Workflow files match repository default and are not part of the APK runtime."
+}
