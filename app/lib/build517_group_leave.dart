@@ -33,8 +33,18 @@ Future<void> ngelx517LeaveGroupCall(
     final connected=data['callConnectedAt'] is Timestamp;
     final missed=isLast&&!connected;
     final finalStatus=missed?'missed':'ended';
+    // Build530: a voluntary exit must outlive delayed RTC reconnects for
+    // this exact call room. A later room has a different name, so historical
+    // exits cannot prevent a new call. Transaction retries preserve exits
+    // from concurrent participants.
+    final previousExitRoom=(data['callExitedRoomName']??'').toString();
+    final exits=previousExitRoom==roomName
+        ?FieldValue.arrayUnion([uid])
+        :<String>[uid];
     tx.update(ref,<String,dynamic>{
       'callParticipants':FieldValue.arrayRemove([uid]),
+      'callExitedRoomName':roomName,
+      'callExitedUids':exits,
       // Starting the call never implies ownership over the other members'
       // active LiveKit media; even the original caller can safely leave.
       'callStatus':isLast?finalStatus:'active',
