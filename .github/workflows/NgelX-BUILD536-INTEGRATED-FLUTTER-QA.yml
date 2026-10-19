@@ -1312,6 +1312,18 @@ jobs:
           set -euo pipefail
           # Keep all app features, LiveKit and WebRTC. Exclude unused x86_64
           # and 32-bit ARM native libraries for physical 64-bit Android QA.
+          # The checked-in Gradle config sets two ndk abiFilters, which
+          # conflicts with Flutter's split ABI filter. Isolate this edit to
+          # this ephemeral CI workspace; do not change committed Android code.
+          python3 - <<'PY'
+          from pathlib import Path
+          gradle=Path('android/app/build.gradle.kts')
+          original=gradle.read_text(encoding='utf-8')
+          legacy='        ndk {\n            abiFilters += listOf("armeabi-v7a", "arm64-v8a")\n        }\n'
+          assert original.count(legacy)==1, 'Unexpected Android Gradle ABI config'
+          gradle.write_text(original.replace(legacy, '        // Build536 temporary split-ABI QA override\n',1),encoding='utf-8')
+          print('Build536: temporary, non-committed ndk ABI override for Flutter split APK')
+          PY
           flutter build apk --debug --target-platform android-arm64 --split-per-abi --build-name=1.0.308 --build-number=536 --dart-define=NGELX_VERSION_NAME=1.0.308 --dart-define=NGELX_BUILD_NUMBER=536
           apk=build/app/outputs/flutter-apk/app-arm64-v8a-debug.apk
           test -s "$apk"
