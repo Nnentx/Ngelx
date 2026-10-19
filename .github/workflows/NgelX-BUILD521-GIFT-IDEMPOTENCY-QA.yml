@@ -1358,7 +1358,8 @@ jobs:
           python3 tools/apply_build521_idempotent_gifts.py
           python3 tools/apply_build521_idempotent_gifts.py
           python3 tools/test_build521_idempotent_gifts.py
-          python3 tools/test_build511_gift_qa.py
+          # Build511 Firestore rules are applied near the emulator phase;
+          # their full QA test runs there, not before the rules transformation.
           node --check tools/build521_gift_idempotency_rules_test.mjs
 
       - name: Flutter analiz
