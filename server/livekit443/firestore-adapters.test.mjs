@@ -1,6 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {createFirestoreRoomAuthorizer,createFirestoreRateLimiter} from './firestore-adapters.mjs';
+import {roomPermission} from './room-policy.mjs';
 const now=1800000000000;
 
 // Transaction harness serializes concurrent writers, just as a retried Firestore
@@ -112,4 +113,48 @@ test('live guest token reads host moderation state from the matched room documen
  assert.deepEqual(muted.canPublishSources,['camera']);
  db.records.get('live_streams/live').guestAudioMutedUids=[];
  assert.equal((await auth({uid:'alice',roomName:'live448'})).canPublishSources,undefined);
+});
+
+test('Build522 never issues publish rights to an 11th accepted live guest',async()=>{
+ const guests=Array.from({length:11},(_,i)=>'guest'+String(i).padStart(2,'0'));
+ const initial={
+  'users/host':user,
+  'live_streams/live522':{ownerId:'host',roomName:'live522',
+    active:true,lastHeartbeatAt:new Date(now),visibility:'public'},
+ };
+ for(const uid of guests){
+  initial['users/'+uid]={displayName:uid,blocked:[]};
+  initial['live_streams/live522/guest_requests/'+uid]={
+    hostUid:'host',guestUid:uid,status:'accepted'};
+ }
+ const db=database(initial),authorize=createFirestoreRoomAuthorizer({db,now:()=>now});
+ for(const uid of guests.slice(0,10)){
+  const p=await authorize({uid,roomName:'live522'});
+  assert.equal(p.allowed,true,uid);
+  assert.equal(p.role,'speaker',uid);
+  assert.equal(p.canPublish,true,uid);
+ }
+ const overflow=await authorize({uid:'guest10',roomName:'live522'});
+ assert.equal(overflow.allowed,true,'public viewer remains allowed');
+ assert.equal(overflow.role,'listener','no eleventh publisher');
+ assert.equal(overflow.canPublish,false);
+ const host=await authorize({uid:'host',roomName:'live522'});
+ assert.equal(host.role,'host');
+ assert.equal(host.canPublish,true);
+ // Revoke one of the ten accepted requests: one waiting guest takes the
+ // vacated server slot, without trusting any client-side counter.
+ db.records.get('live_streams/live522/guest_requests/guest02').status='rejected';
+ const promoted=await authorize({uid:'guest10',roomName:'live522'});
+ assert.equal(promoted.canPublish,true);
+ const removed=await authorize({uid:'guest02',roomName:'live522'});
+ assert.equal(removed.canPublish,false);
+});
+
+test('Build522 capacity policy cannot be bypassed by a client-supplied slot',()=>{
+ const live={ownerId:'host',active:true,lastHeartbeatAt:new Date(now),
+  visibility:'public',guestRequest:{hostUid:'host',guestUid:'guest',status:'accepted'},
+  guestCapacityAllowed:false,guestSlot:1,guestCount:0};
+ const p=roomPermission({kind:'live',uid:'guest',viewer:user,owner:user,room:live,now});
+ assert.equal(p.role,'listener');
+ assert.equal(p.canPublish,false);
 });
