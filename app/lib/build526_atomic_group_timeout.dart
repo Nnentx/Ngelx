@@ -19,12 +19,17 @@ Future<bool> ngelx526ExpireUnansweredGroupCall(
     final participants=List<String>.from(
       data['callParticipants']??const <String>[]);
     if(participants.length>1)return null;
+    // Build528: fail closed if the call's server-side creation time is
+    // missing. Missing metadata must never make a 2-minute timer immediate.
+    // A LiveKit acknowledgement can have stamped callConnectedAt while
+    // callStatus is still ringing due to a delayed cross-client update.
+    if(data['callConnectedAt'] is Timestamp)return null;
     final createdAt=data['callCreatedAt'];
-    // An early local timer or clock correction should not mark a group
-    // call missed before its full 120-second unanswered window.
-    if(createdAt is Timestamp &&
-       DateTime.now().difference(createdAt.toDate())<
-           const Duration(seconds:120))return null;
+    if(createdAt is! Timestamp)return null;
+    // Never expire before 120 seconds according to the recorded timestamp.
+    // Client clock skew still needs multi-device acceptance testing.
+    if(DateTime.now().toUtc().difference(createdAt.toDate().toUtc())<
+        const Duration(seconds:120))return null;
     tx.update(ref,<String,dynamic>{
       'callStatus':'missed',
       'callEndedAt':FieldValue.serverTimestamp(),
