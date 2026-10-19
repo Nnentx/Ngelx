@@ -51,6 +51,20 @@ jobs:
           python3 tools/test_build534_explicit_rejoin.py
           python3 tools/test_build533_concurrent_helpers.py
 
+      - name: Isolate modern QA Firestore rules from legacy Flutter generation
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Historic Build436 rule-string migration assumes the Build484 base.
+          # Keep Build535 security rules untouched and restore them after the
+          # old source generator; this checkout is ephemeral and cannot deploy.
+          cp firestore.rules "$RUNNER_TEMP/build536-modern-qa-firestore.rules"
+          git fetch --no-tags --depth=1 origin main
+          test "$(git rev-parse FETCH_HEAD)" = "bf50f9cf28fbebc39e5dcc079237e6172f4e527f"
+          git show FETCH_HEAD:firestore.rules > firestore.rules
+          test -s firestore.rules
+          echo 'Historical Firestore fixture isolated from candidate Build535 rules.'
+
       - name: Build 395 final referans tasarimini uygula
         run: python3 tools/apply_build395_final_login_inbox_ui.py
 
@@ -1197,6 +1211,16 @@ jobs:
           python3 tools/test_build528_group_timeout_age.py
           node --check tools/build528_group_timeout_age_rules_test.mjs
 
+
+      - name: Restore full Build535 QA rules after historical source transforms
+        shell: bash
+        run: |
+          set -euo pipefail
+          cmp "$RUNNER_TEMP/build536-modern-qa-firestore.rules" <(git show HEAD:firestore.rules)
+          cp "$RUNNER_TEMP/build536-modern-qa-firestore.rules" firestore.rules
+          grep -Fq 'function validGroupExplicitSelfRejoin()' firestore.rules
+          grep -Fq 'function validGroupUnansweredTimeout()' firestore.rules
+          echo 'Modern staged Firestore security preserved; legacy rules never exported.'
 
       - name: Apply Build534 and Build535 to actual fully generated Flutter source
         shell: bash
