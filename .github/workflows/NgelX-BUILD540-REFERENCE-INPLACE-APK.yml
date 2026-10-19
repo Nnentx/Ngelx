@@ -1322,7 +1322,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p "$BUILD540_BASELINE"
-          cp app/lib/main.dart app/lib/live_broadcast_studio.dart app/lib/build445_inbox_model.dart app/lib/build448_live_guests.dart app/lib/build453_widgets.dart "$BUILD540_BASELINE/"
+          cp app/lib/main.dart app/lib/live_broadcast_studio.dart app/lib/build445_inbox_model.dart app/lib/build448_live_guests.dart app/lib/build453_widgets.dart app/lib/live_pk.dart "$BUILD540_BASELINE/"
           python3 tools/test_build540_reference_ui.py
           python3 tools/apply_build540_reference_ui.py
           python3 tools/apply_build540_reference_ui.py

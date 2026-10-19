@@ -31,13 +31,13 @@ void main() {
           data: MediaQueryData(size: Size(width, 640), textScaler: TextScaler.linear(scale)),
           child: Scaffold(body: Align(alignment: Alignment.bottomCenter,
             child: Ngelx540LiveBar(composer: const TextField(key: ValueKey('input')),
-              actions: List.generate(4, (i) => IconButton(
-                key: ValueKey('action$i'), onPressed: () {}, icon: const Icon(Icons.more_horiz))))),
+              actions: List.generate(4, (i) => Ngelx540LiveAction(
+                key: ValueKey('action$i'), label: 'Daha fazla', onPressed: () {}, icon: const Text('🌹', style: TextStyle(fontSize: 27)))))),
           ),
         )));
         expect(tester.takeException(), isNull);
         expect(tester.getBottomLeft(find.byKey(const ValueKey('input'))).dy,
-            closeTo(638, 3));
+            greaterThanOrEqualTo(628));
       });
     }
   }

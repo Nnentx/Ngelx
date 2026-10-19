@@ -20,6 +20,7 @@ def live_transform(s):
     dock = once(dock, '                _yorumGirisAlani(),\n', '')
     dock = once(dock, '                  if(widget.yayinSahibi)_hostDockHandle490(),\n', '')
     dock = once(dock, 'child:(!widget.yayinSahibi||_hostDockOpen490)', 'child:true')
+    dock = once(dock, "Expanded(child:_guestControl453(false)),_control450(Icons.share,'Paylaş',_paylas),", "Expanded(child:_guestControl453(false)),_control450(Icons.share,'Paylaş',_paylas),_control450(Icons.shield_outlined,'Güvenlik',_izleyiciGuvenlikMenusu),")
     methods = r'''
   // Build540: reference live bar and call presentation
   bool _toolsOpen540=false;
@@ -155,6 +156,10 @@ def guest_transform(s):
       "    "+MARK+"\n    if(host&&compact)return Ngelx540LiveAction(label:'+Konuk',icon:const Icon(Icons.group_add_outlined,color:Color(0xFFEC8AFF),size:29),onPressed:()=>_panel(context));\n    if(host)return FilledButton.icon(")
     s=once(s,"      if(status=='invited')return IconButton.filledTonal(",
       "      if(compact)return Ngelx540LiveAction(label:status=='pending'?'Bekliyor':status=='accepted'?'Ayrıl':'+Konuk',icon:Icon(status=='invited'?Icons.mark_email_unread_rounded:Icons.group_add_outlined,color:const Color(0xFFEC8AFF),size:29),onPressed:()=>_viewerJoinPanel497(context,uid,status is String?status:null));\n      if(status=='invited')return IconButton.filledTonal(")
+    a=s.index('  Future<void> _panel(BuildContext context)async{')
+    b=s.index('  // Build497:',a)
+    panel=s[a:b].replace('backgroundColor:Colors.white','backgroundColor:const Color(0xFF211D2F)').replace('ThemeData.light()','ThemeData.dark()')
+    s=s[:a]+panel+s[b:]
     return s
 
 def composer_transform(s):
@@ -179,13 +184,30 @@ def composer_transform(s):
     ))"""+s[b:]
     return s
 
+def pk_transform(s):
+    if MARK in s:return s
+    a=s.index('Future<void> ngelxCanliPkIstekPaneli(')
+    b=s.index('class NgelXCanliPkKatmani',a)
+    body=s[a:b]
+    body=once(body,'backgroundColor:Colors.white,','backgroundColor:const Color(0xFF211D2F),')
+    body=once(body,"height:MediaQuery.sizeOf(sheetContext).height*.68,", "height:MediaQuery.sizeOf(sheetContext).height*.48,")
+    body=body.replace('Colors.black87','Colors.white').replace('Colors.black54','Colors.white60')
+    body=once(body,"Text('Canlı Yayın PK'","Text('PK Daveti'")
+    body=once(body,"label:const Text('PK'","label:const Text('Davet et'")
+    # Inherit a dark theme so profile rows and buttons retain readable defaults.
+    body=once(body,'builder:(sheetContext)=>SafeArea(',
+      'builder:(sheetContext)=>Theme(data:ThemeData.dark(),child:SafeArea(')
+    body=once(body,'    ),\n  );\n}\n\n','    )),\n  );\n}\n\n')
+    return s[:a]+MARK+'\n'+body+s[b:]
+
 if __name__=='__main__':
     changes=[]
     for p,fn in [('app/lib/main.dart',main_transform),
                  ('app/lib/live_broadcast_studio.dart',live_transform),
                  ('app/lib/build445_inbox_model.dart',model_transform),
                  ('app/lib/build448_live_guests.dart',guest_transform),
-                 ('app/lib/build453_widgets.dart',composer_transform)]:
+                 ('app/lib/build453_widgets.dart',composer_transform),
+                 ('app/lib/live_pk.dart',pk_transform)]:
         path=Path(p);old=path.read_text();new=fn(old)
         assert fn(new)==new
         changes.append((path,new))

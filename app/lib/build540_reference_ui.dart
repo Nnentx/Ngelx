@@ -32,7 +32,7 @@ class Ngelx540LiveAction extends StatelessWidget {
       borderRadius: BorderRadius.circular(22),
       child: Padding(padding: const EdgeInsets.symmetric(vertical: 4),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          SizedBox(height: 32, child: Center(child: icon)),
+          SizedBox(height: 32, child: Center(child: FittedBox(fit: BoxFit.scaleDown, child: icon))),
           SizedBox(height: 18, child: FittedBox(fit: BoxFit.scaleDown,
             child: Text(label, style: const TextStyle(color: Colors.white, fontSize: 10)))),
         ])),

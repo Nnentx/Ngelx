@@ -2,7 +2,7 @@ import os
 import re
 import unittest
 from pathlib import Path
-from apply_build540_reference_ui import live_transform, main_transform, model_transform
+from apply_build540_reference_ui import live_transform, main_transform, model_transform, guest_transform, composer_transform, pk_transform
 
 class Build540Tests(unittest.TestCase):
     def baseline(self, filename):
@@ -46,6 +46,28 @@ class Build540Tests(unittest.TestCase):
         self.assertIn('ngelx540SnapMini',new)
         self.assertIn('MediaQuery.viewInsetsOf(context).bottom',new)
         self.assertEqual(model_transform(new),new)
+
+    def test_guest_and_pk_permissions_preserved(self):
+        old=self.baseline('build448_live_guests.dart');new=guest_transform(old)
+        self.assertEqual(old[:old.index('class Ngelx448GuestControls')],new[:new.index('class Ngelx448GuestControls')])
+        self.assertIn("if(host&&compact)",new)
+        self.assertIn("_viewerJoinPanel497(context,uid,status is String?status:null)",new)
+        self.assertEqual(guest_transform(new),new)
+        old=self.baseline('live_pk.dart');new=pk_transform(old)
+        for token in ["if(user==null||user.uid!=ownerUid)return;", "if(mv['pkActive']==true)",
+                      "'requestExpiresAt'", "'status':'pending'", "'members':<String>[ownerUid,hedefUid]"]:
+            self.assertIn(token,new)
+        a=old.index('                              final id=ngelxCanliPkBelgeId');b=old.index("                            icon:const Icon(Icons.flash_on_rounded",a)
+        x=new.index('                              final id=ngelxCanliPkBelgeId');y=new.index("                            icon:const Icon(Icons.flash_on_rounded",x)
+        self.assertEqual(old[a:b],new[x:y])
+        self.assertEqual(pk_transform(new),new)
+
+    def test_composer_retains_draft_send_and_muting(self):
+        old=self.baseline('build453_widgets.dart');new=composer_transform(old)
+        for token in ['widget.controller','widget.focus','widget.send()',"v['commentsEnabled']!=false&&!muted",'onSubmitted:enabled?(_)=>_send():null']:
+            self.assertIn(token,new)
+        self.assertIn('valueListenable:widget.controller',new)
+        self.assertEqual(composer_transform(new),new)
 
     def test_unknown_input_is_rejected(self):
         for transform in [main_transform,live_transform,model_transform]:
