@@ -1337,7 +1337,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p "$BUILD541_BASELINE"
-          cp app/lib/main.dart app/lib/live_broadcast_studio.dart app/lib/build445_inbox_model.dart app/lib/audio_live_rooms.dart app/lib/audio_live_rooms_pro.dart "$BUILD541_BASELINE/"
+          cp app/lib/main.dart app/lib/live_broadcast_studio.dart app/lib/build445_inbox_model.dart app/lib/audio_live_rooms.dart app/lib/audio_live_rooms_pro.dart app/lib/build448_live_guests.dart "$BUILD541_BASELINE/"
           python3 tools/test_build541_continuity.py
           python3 tools/apply_build541_continuity.py
           python3 tools/apply_build541_continuity.py

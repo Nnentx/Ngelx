@@ -6,6 +6,13 @@ def once(s,a,b):
     if s.count(a)!=1:raise RuntimeError('Build541 anchor mismatch: '+a[:90])
     return s.replace(a,b,1)
 def live(s):
+    s=once(s,'  int heartbeatTik=0;', '  StreamSubscription<User?>? _auth541;\n  int heartbeatTik=0;')
+    s=once(s,'    _watchGifts511();', '''    final ownerSession541=FirebaseAuth.instance.currentUser?.uid;
+    _auth541=FirebaseAuth.instance.authStateChanges().listen((user){
+      if(user?.uid!=ownerSession541&&!kapatildi)unawaited(_bitir(geriDon:false));
+    });
+    _watchGifts511();''')
+    s=once(s,'    sayac?.cancel();\n    heartbeat?.cancel();\n    canliDurumAboneligi?.cancel();', '    _auth541?.cancel();\n    sayac?.cancel();\n    heartbeat?.cancel();\n    canliDurumAboneligi?.cancel();')
     s=once(s,"const Text('● CANLI',style:TextStyle(color:Color(0xFFFF2851),fontWeight:FontWeight.w800,fontSize:11))", "Container(padding:const EdgeInsets.symmetric(horizontal:9,vertical:5),decoration:BoxDecoration(color:const Color(0xFFE91948),borderRadius:BorderRadius.circular(7)),child:const Text('● CANLI',style:TextStyle(color:Colors.white,fontWeight:FontWeight.w800,fontSize:11)))")
     s=once(s,"String yazi='Bağlı';", "String yazi=_goruntu()==null?'Görüntü bekleniyor':'Bağlı';")
     s=once(s,"Color renk=const Color(0xFF27D17F);", "Color renk=_goruntu()==null?const Color(0xFFFFB020):const Color(0xFF27D17F);")
@@ -83,7 +90,18 @@ def chat(s):
     body=body.replace('Color(0xFFF0E8FF)','Color(0x332A3949)').replace('Color(0xFFF5F5F7)','Color(0x222A3949)').replace('Color(0xFFF5F5F8)','Color(0xFF233441)')
     body=body.replace('Colors.black87','Colors.white').replace('Colors.black38','Colors.white60')
     return s[:a]+body+s[b:]
-TRANSFORMS={'live_broadcast_studio.dart':live,'main.dart':main,'build445_inbox_model.dart':model,'audio_live_rooms.dart':audio,'audio_live_rooms_pro.dart':chat}
+def guests(s):
+    old="if(host&&compact)return Ngelx540LiveAction(label:'+Konuk',icon:const Icon(Icons.group_add_outlined,color:Color(0xFFEC8AFF),size:29),onPressed:()=>_panel(context));"
+    new="""if(host&&compact)return StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
+      stream:FirebaseFirestore.instance.collection('live_streams').doc(liveId).collection('guest_requests').snapshots(),
+      builder:(_,snapshot){
+        final pending=(snapshot.data?.docs??[]).where((d)=>d.data()['status']=='pending').length;
+        return Ngelx540LiveAction(label:pending==0?'+Konuk':'İstekler ($pending)',
+          icon:Badge(isLabelVisible:pending>0,label:Text('$pending'),child:const Icon(Icons.group_add_outlined,color:Color(0xFFEC8AFF),size:29)),
+          onPressed:()=>_panel(context));
+      });"""
+    return once(s,old,new)
+TRANSFORMS={'build448_live_guests.dart':guests,'live_broadcast_studio.dart':live,'main.dart':main,'build445_inbox_model.dart':model,'audio_live_rooms.dart':audio,'audio_live_rooms_pro.dart':chat}
 def transform(s,fn):return s if MARK in s else fn(s)+'\n'+MARK+'\n'
 if __name__=='__main__':
     changes=[]
