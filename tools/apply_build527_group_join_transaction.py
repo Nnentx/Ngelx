@@ -17,10 +17,7 @@ def transform(src):
     a=src.index('class _NgelXAramaPageState')
     b=src.index('class GrupBilgiPage',a)
     call=src[a:b]
-    old="""        unawaited(widget.aramaRef.set({
-          'callStatus':'active',
-          'callConnectedAt':FieldValue.serverTimestamp(),
-        },SetOptions(merge:true)).catchError((_){ }));
+    old="""        unawaited(_writeCurrent444({'callStatus':'active','callConnectedAt':FieldValue.serverTimestamp()}).catchError((_){ }));
         unawaited(widget.aramaRef.get().then((d){
           final id=(d.data()?['callMessageId']??'').toString();
           if(id.isNotEmpty)return widget.aramaRef.collection('messages').doc(id).set({
@@ -32,7 +29,7 @@ def transform(src):
         if(grupAramasi){
           unawaited(ngelx527ConfirmGroupRemoteTrack(
             widget.aramaRef,widget.roomName,
-            cancelled:()=>bitiyor||!identical(oda,r)));
+            cancelled:()=>bitiyor||!_alive444||!identical(oda,r)));
         }else{
           unawaited(widget.aramaRef.set({
             'callStatus':'active',
@@ -46,20 +43,16 @@ def transform(src):
             },SetOptions(merge:true));
           }).catchError((_){ }));
         }"""
-    if call.count(old)!=1:
-        start=call.index('  void _odaDegisti(){')
-        end=call.index('  void _aramaOlaylariniBagla(',start)
-        print('Build527 generated room callback diagnostic:',repr(call[start:end][:5000]),flush=True)
     call=once(call,old,new,'remote track must not blindly reactivate group')
-    old_join="""      unawaited(widget.aramaRef.set(durumGuncelleme,SetOptions(merge:true)).timeout(const Duration(seconds:10)).catchError((_){ }));
+    old_join="""      unawaited(_writeCurrent444(durumGuncelleme).timeout(const Duration(seconds:10)).catchError((_){ }));
       if(widget.roomName.startsWith('group_')){"""
     new_join="""      if(grupAramasi){
         final accepted=await ngelx527RegisterGroupParticipant(
           widget.aramaRef,widget.roomName,u.uid,activate:aktif,
-          cancelled:()=>bitiyor||!identical(oda,r));
+          cancelled:()=>bitiyor||!_alive444||!identical(oda,r));
         if(!accepted)throw StateError('Grup görüşmesi bitti veya katılım izni değişti.');
       }else{
-        unawaited(widget.aramaRef.set(durumGuncelleme,SetOptions(merge:true)).timeout(const Duration(seconds:10)).catchError((_){ }));
+        unawaited(_writeCurrent444(durumGuncelleme).timeout(const Duration(seconds:10)).catchError((_){ }));
       }
       if(widget.roomName.startsWith('group_')){"""
     call=once(call,old_join,new_join,'group participant join transaction')
