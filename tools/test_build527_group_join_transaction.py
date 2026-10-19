@@ -16,7 +16,7 @@ b=src.index('class GrupBilgiPage',a)
 call=src[a:b]
 for term in (
   'if(grupAramasi){\n          unawaited(ngelx527ConfirmGroupRemoteTrack(',
-  'cancelled:()=>bitiyor||!identical(oda,r)',
+  'cancelled:()=>bitiyor||!_alive444||!identical(oda,r)',
   'final accepted=await ngelx527RegisterGroupParticipant(',
   'if(!accepted)throw StateError(',
   'if(aktif&&!grupAramasi)',
