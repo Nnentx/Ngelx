@@ -43,35 +43,31 @@ service cloud.firestore {
     // Only the current caller may append their own UID while atomically
     // removing themself from callParticipants for this unchanged room.
     function validGroupCallExitMarkerWrite() {
-      let changed = request.resource.data.diff(resource.data).affectedKeys();
+      let changes = request.resource.data.diff(resource.data).affectedKeys();
       let room = resource.data.get('callRoomName', '');
-      let participants = resource.data.get('callParticipants', []);
-      let remaining = participants.removeAll([request.auth.uid]);
+      let members = resource.data.get('callParticipants', []);
+      let remaining = members.removeAll([request.auth.uid]);
       let oldExitRoom = resource.data.get('callExitedRoomName', '');
       let oldExits = resource.data.get('callExitedUids', []);
       let newExits = request.resource.data.get('callExitedUids', []);
+      // changed.hasOnly also guarantees the chat members, room identity,
+      // other participants' metadata, and all unrelated fields are untouched.
+      // List equality is cheaper and stricter than independent size,
+      // containment and set-subtraction comparisons.
       return signedIn()
         && resource.data.get('isGroup', false) == true
         && resource.data.get('callStatus', '') in ['ringing', 'active']
-        && room is string && room.size() > 0 && room.matches('^group_.*')
-        && request.resource.data.get('callRoomName', '') == room
-        && changed.hasOnly([
+        && room is string && room.matches('^group_.*')
+        && changes.hasOnly([
           'callParticipants', 'callExitedRoomName', 'callExitedUids',
           'callStatus', 'callEndedAt'
         ])
-        && request.resource.data.members == resource.data.members
-        && participants is list && request.auth.uid in participants
+        && members is list && request.auth.uid in members
         && request.resource.data.get('callParticipants', []) == remaining
         && request.resource.data.get('callExitedRoomName', '') == room
-        && oldExits is list && newExits is list
-        && (
-          (oldExitRoom == room
-            && !(request.auth.uid in oldExits)
-            && newExits.hasAll(oldExits)
-            && newExits.size() == oldExits.size() + 1
-            && newExits.removeAll(oldExits) == [request.auth.uid])
-          || (oldExitRoom != room && newExits == [request.auth.uid])
-        )
+        && oldExits is list
+        && newExits == (oldExitRoom == room
+          ? oldExits.concat([request.auth.uid]) : [request.auth.uid])
         && request.resource.data.get('callStatus', '') ==
           (remaining.size() == 0
             ? (resource.data.get('callConnectedAt', null) is timestamp
