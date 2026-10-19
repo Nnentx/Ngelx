@@ -1329,6 +1329,8 @@ jobs:
         run: |
           set -euo pipefail
           # Use the proven Build536 Flutter app, not the separate Build538 offline entrypoint.
+          # Do not use --split-per-abi: Flutter adds ABI prefixes to versionCode,
+          # which can block future ordinary 540+ in-place upgrade attempts.
           # These Gradle packaging edits exist ONLY in the disposable CI runner.
           python3 - <<'PY'
           from pathlib import Path
@@ -1336,16 +1338,16 @@ jobs:
           old=gradle.read_text(encoding='utf-8')
           abi='        ndk {\n            abiFilters += listOf("armeabi-v7a", "arm64-v8a")\n        }\n'
           assert old.count(abi)==1, 'Unexpected native ABI Gradle layout'
-          new=old.replace(abi,'        // Build539 temporary ARM64 split-ABI build\n',1)
+          new=old.replace(abi,'        // Build539 temporary ARM64-only build\n',1)
           assert new.count('    buildTypes {')==1
           new=new.replace('    buildTypes {','    packaging { jniLibs { useLegacyPackaging = true } }\n\n    buildTypes {',1)
           gradle.write_text(new,encoding='utf-8')
           PY
-          flutter build apk --release --target-platform android-arm64 --split-per-abi \
+          flutter build apk --release --target-platform android-arm64 \
             --build-name=1.0.309 --build-number=539 \
             --dart-define=NGELX_VERSION_NAME=1.0.309 --dart-define=NGELX_BUILD_NUMBER=539 \
             --dart-define=NGELX_CALL_PUSH_URL=https://ngelx-call-push.alihancaglar76.workers.dev
-          apk=build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+          apk=build/app/outputs/flutter-apk/app-release.apk
           test -s "$apk"
           APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
           test -n "$APKSIGNER"
@@ -1360,7 +1362,7 @@ jobs:
           m=re.search(r"package: name='([^']+)' versionCode='(\d+)' versionName='([^']+)'",b)
           assert m, 'Android manifest badging missing'
           assert m.group(1)=='com.nnentx.ngelx_app', 'Wrong package — would not update real NgelX'
-          assert int(m.group(2))>=539, 'Version code not higher than baseline'
+          assert int(m.group(2))==539, 'APK versionCode must be exactly 539 (no ABI offset)'
           assert m.group(3)=='1.0.309', 'VersionName mismatch'
           assert "com.nnentx.ngelx_app.qa" not in b
           print('Real NgelX Android package/version verified:',m.groups())
