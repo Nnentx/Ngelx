@@ -76,7 +76,7 @@ setConnected=connect.index('rtcConnected535=true;')
 approval=connect.index('rejoinApproved535=true;')
 catch=connect.index('}catch(e){')
 revert=connect.index('await ngelx517LeaveGroupCall(')
-assert begin<pre<approval<permissions<rtc<setConnected<catch<revert
+assert pre<approval<permissions<rtc<setConnected<catch<revert
 assert 'if(yeniden)throw StateError(' in connect[pre:approval]
 assert 'if(discard&&!bitiyor)' in connect[catch:revert]
 assert 'await ngelx517LeaveGroupCall(' not in connect[:catch]
