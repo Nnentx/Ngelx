@@ -77,10 +77,15 @@ try{
      after.callExitedUids.length!==0)throw Error('Self rejoin disrupted active peer call');
   if(authorization(after,'host')?.role!=='caller')
     throw Error('Fresh RTC token remains blocked after authorized rejoin');
-  // An old confirmation cannot add the same UID twice.
-  await assertFails(updateDoc(ref(host,'rejoin534'),{
+  // Firestore allows an idempotent arrayUnion/arrayRemove no-op. Replayed
+  // confirmations must never duplicate a participant or mutate peer state.
+  await assertSucceeds(updateDoc(ref(host,'rejoin534'),{
     callParticipants:arrayUnion('host'),callExitedUids:arrayRemove('host')
   }));
+  const replay=await state('rejoin534');
+  if(replay.callParticipants.join(',')!=='beta,gamma,host' ||
+     replay.callExitedUids.length!==0)
+    throw Error('Idempotent replay changed group participation');
 
   await seed('peers534',base('group_peers534',{
     callExitedUids:['host','delta'],callParticipants:['beta','gamma']
