@@ -103,6 +103,7 @@ class _Ngelx541AudioPkState extends State<Ngelx541AudioPk> {
         }
         if(mounted)setState((){});return;
       }
+      if(_stoppedSessions.contains(id)){await _drop();return;}
       if(_peerName!=other['roomName']&&DateTime.now().isAfter(_retry)){
         await _drop();final generation=_generation;
         final roomName=(other['roomName']??'').toString();if(roomName.isEmpty)return;
@@ -112,7 +113,7 @@ class _Ngelx541AudioPkState extends State<Ngelx541AudioPk> {
         try{
           await room.connect(token.serverUrl,token.participantToken).timeout(const Duration(seconds:18));
           await room.localParticipant?.setMicrophoneEnabled(false);
-          if(_disposed||generation!=_generation||FirebaseAuth.instance.currentUser?.uid!=_sessionUid){await room.disconnect();await room.dispose();return;}
+          if(_disposed||generation!=_generation||_stoppedSessions.contains(id)||!_validEnd(own['pkEndsAt'])||FirebaseAuth.instance.currentUser?.uid!=_sessionUid){await room.disconnect();await room.dispose();return;}
           _peer=room;_peerName=roomName;_message='Karşı odanın sesi bağlı';
         }catch(_){try{await room.disconnect();await room.dispose();}catch(_){}rethrow;}
       }
