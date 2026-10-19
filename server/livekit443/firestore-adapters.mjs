@@ -13,7 +13,23 @@ export function createFirestoreRoomAuthorizer({db, now=()=>Date.now()}) {
       if (matches.size > 1) return null;
       if (matches.empty) continue;
       const room = matches.docs[0].data();
-      if(kind==='live')room.guestRequest=value(await matches.docs[0].ref.collection('guest_requests').doc(uid).get());
+      if(kind==='live'){
+        const requests=matches.docs[0].ref.collection('guest_requests');
+        room.guestRequest=value(await requests.doc(uid).get());
+        const guest=room.guestRequest;
+        if(guest?.status==='accepted'&&guest?.hostUid===room.ownerId&&
+           guest?.guestUid===uid){
+          // Build522: only ten accepted users may receive publish rights.
+          // A deterministic document-id order makes repeated tokens stable
+          // without trusting a client-supplied slot, role or guest count.
+          // Query eleven to detect over-capacity records, never stream the
+          // entire guest request collection to a viewer.
+          const accepted=await requests.where('status','==','accepted')
+            .orderBy('__name__').limit(11).get();
+          room.guestCapacityAllowed=accepted.docs.slice(0,10)
+            .some(record=>record.id===uid);
+        }
+      }
       const peerId = kind === 'call' && room.isGroup !== true
         ? room.members?.find(id=>id!==uid) : undefined;
       const ownerId = kind === 'call' ? peerId??room.callStartedBy : room.ownerId;
