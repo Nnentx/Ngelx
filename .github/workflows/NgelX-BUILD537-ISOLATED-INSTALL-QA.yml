@@ -1,5 +1,5 @@
 # Build536: no-production, no-signing, no-deploy integrated Flutter QA.
-name: NgelX Build537 Separate Offline QA Install (no deploy)
+name: NgelX Build538 Offline Launch Smoke Test (no deploy)
 on:
   pull_request:
     branches:
@@ -1304,7 +1304,7 @@ jobs:
           # signature-compatible with production or previous QA installs.
           echo 'Ephemeral internal debug signature ready; not an upgrade key.'
 
-      - name: Compile Build537 isolated offline ARM64 debug APK (no deploy)
+      - name: Compile Build538 standalone offline ARM64 debug APK (no deploy)
         shell: bash
         working-directory: app
         timeout-minutes: 35
@@ -1392,7 +1392,21 @@ jobs:
               ot.write(overlay,encoding='utf-8',xml_declaration=True)
           print('Build537: isolated QA package, offline Firebase placeholder, no network or production deep links')
           PY
-          flutter build apk --debug --target-platform android-arm64 --split-per-abi --build-name=1.0.308 --build-number=536 --dart-define=NGELX_VERSION_NAME=1.0.308 --dart-define=NGELX_BUILD_NUMBER=536
+          # User device reported Build537 native crash after briefly showing
+          # the production login screen. Only launch this offline entrypoint;
+          # never execute production main(), FirebaseAuth or LiveKit on device.
+          test -s lib/qa_offline_smoke_main.dart
+          python3 - <<'PY'
+          from pathlib import Path
+          source=Path('lib/qa_offline_smoke_main.dart').read_text(encoding='utf-8')
+          imports=[line.strip() for line in source.splitlines() if line.strip().startswith('import ')]
+          assert imports==["import 'package:flutter/material.dart';"], 'Offline smoke test imports backend code'
+          assert 'runApp(const NgelXQaSmokeApp())' in source
+          assert 'NgelX QA açıldı' in source
+          print('Build538 standalone offline startup source gate PASS')
+          PY
+          flutter analyze --no-fatal-infos --no-fatal-warnings lib/qa_offline_smoke_main.dart
+          flutter build apk --debug --target lib/qa_offline_smoke_main.dart --target-platform android-arm64 --split-per-abi --build-name=1.0.308 --build-number=538 --dart-define=NGELX_VERSION_NAME=1.0.308 --dart-define=NGELX_BUILD_NUMBER=538
           apk=build/app/outputs/flutter-apk/app-arm64-v8a-debug.apk
           test -s "$apk"
           unzip -Z -1 "$apk" | grep -q '^lib/arm64-v8a/'
@@ -1423,10 +1437,10 @@ jobs:
           sha256sum "$apk" > "$apk.sha256"
           cat "$apk.sha256"
 
-      - name: Retain Build537 isolated offline QA APK for installation test
+      - name: Retain Build538 offline launch smoke APK for installation test
         uses: actions/upload-artifact@v4
         with:
-          name: NgelX-Build537-OFFLINE-SIDEBYSIDE-ARM64-NO-DEPLOY
+          name: NgelX-Build538-OFFLINE-SMOKE-ARM64-NO-DEPLOY
           path: |
             app/build/app/outputs/flutter-apk/app-arm64-v8a-debug.apk
             app/build/app/outputs/flutter-apk/app-arm64-v8a-debug.apk.sha256
@@ -1434,4 +1448,4 @@ jobs:
           retention-days: 4
 
       - name: Confirm production and cloud remain unchanged
-        run: echo 'Build537 offline QA installation smoke test only; no production backend connection, credentials, main branch merge or deploy.'
+        run: echo 'Build538 standalone offline QA launch smoke test only; no production backend connection, credentials, main branch merge or deploy.'
