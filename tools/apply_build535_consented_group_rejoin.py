@@ -32,8 +32,11 @@ PRE_FLIGHT="""      // Build535: self-rejoin preflight before LiveKit token acqu
             List<String>.from(call['callExitedUids']??const <String>[])
                 .contains(u.uid));
         if(exited){
-          if(yeniden)throw StateError(
-            'Ayrıldığın grup görüşmesine otomatik bağlanılamaz.');
+          if(yeniden){
+            rejoinBlocked535=true;
+            throw StateError(
+              'Ayrıldığın grup görüşmesine otomatik bağlanılamaz.');
+          }
           final accepted=await ngelx534ConfirmAndRejoinGroupCall(
             context,widget.aramaRef,widget.roomName,
             cancelled:()=>bitiyor||!_alive444);
@@ -105,7 +108,8 @@ def transform(src: str) -> str:
     connect=call[start:end]
     connect=once(connect, '    lk.Room? r;\n    try{',
       '    lk.Room? r;\n    bool rejoinApproved535=false;\n'
-      '    bool rtcConnected535=false;\n    try{',
+      '    bool rtcConnected535=false;\n'
+      '    bool rejoinBlocked535=false;\n    try{',
       'per-attempt RTC state flags')
     connect=once(connect, '      await _izinleriIste();',
       PRE_FLIGHT+'      await _izinleriIste();',
@@ -115,7 +119,7 @@ def transform(src: str) -> str:
     connect=once(connect,anchor,AFTER_CONNECT+anchor,
       'LiveKit connected flag')
     connect=once(connect, '      oda=null;\n      if(yeniden&&',
-      '      oda=null;\n'+FAILURE_OPTIONS+'      if(yeniden&&',
+      '      oda=null;\n'+FAILURE_OPTIONS+'      if(yeniden&&!rejoinBlocked535&&',
       'explicit post-failure voluntary exit option')
     if connect.index(MARK)>connect.index('await _izinleriIste();'):
         raise RuntimeError('Build535 consent must precede call permissions/token fetch')
