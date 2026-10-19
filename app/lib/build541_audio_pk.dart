@@ -15,7 +15,7 @@ class _Ngelx541AudioPkState extends State<Ngelx541AudioPk> {
   lk.Room? _peer;
   String? _peerName,_sessionUid;
   String _message='';
-  bool _syncing=false,_busy=false,_disposed=false;
+  bool _syncing=false,_busy=false,_disposed=false,_picking=false;
   int _generation=0;
   DateTime _retry=DateTime.fromMillisecondsSinceEpoch(0);
   Map<String,dynamic> _own={},_request={};
@@ -61,7 +61,7 @@ class _Ngelx541AudioPkState extends State<Ngelx541AudioPk> {
       }
       // Read only this account's invitations. Viewers never read host call docs.
       if(_host){
-        final q=await _db.collection('calls').where('members',arrayContains:_sessionUid).limit(50).get(const GetOptions(source:Source.server));
+        final q=await _db.collection('calls').where('members',arrayContains:_sessionUid).get(const GetOptions(source:Source.server));
         final candidates=q.docs.where((d){final v=d.data();return v['type']=='audio_pk'&&
           (v['inviterRoomId']==widget.roomId||v['inviteeRoomId']==widget.roomId)&&
           ((v['status']=='pending'&&v['requestExpiresAt'] is Timestamp&&(v['requestExpiresAt'] as Timestamp).toDate().isAfter(DateTime.now()))||v['status']=='accepted');}).toList();
@@ -132,11 +132,15 @@ class _Ngelx541AudioPkState extends State<Ngelx541AudioPk> {
     await _sync();
   }
   Future<void> _invite()async{
-    if(!_host||_busy)return;
-    final q=await _db.collection('audio_rooms').where('active',isEqualTo:true).limit(40).get(const GetOptions(source:Source.server));
+    if(!_host||_busy||_picking)return;
+    _picking=true;
+    QuerySnapshot<Map<String,dynamic>> q;
+    try{q=await _db.collection('audio_rooms').where('active',isEqualTo:true).limit(40).get(const GetOptions(source:Source.server));}
+    catch(_){_picking=false;if(mounted)setState(()=>_message='Açık odalar alınamadı. Tekrar dene.');return;}
     if(!mounted)return;
     final rooms=q.docs.where((d)=>d.id!=widget.roomId&&d.data()['ownerId']!=_sessionUid&&_active(d.data())&&d.data()['pkActive']!=true).toList();
     final target=await showModalBottomSheet<String>(context:context,backgroundColor:const Color(0xFF102B39),builder:(c)=>SafeArea(child:ListView(shrinkWrap:true,children:[const ListTile(title:Text('Sesli PK daveti',style:TextStyle(color:Colors.white,fontWeight:FontWeight.bold)),subtitle:Text('İki yayıncı onayladığında odalar birbirini duyar. Mikrofonun kendi odanda kalır.',style:TextStyle(color:Colors.white70))),if(rooms.isEmpty)const ListTile(title:Text('Uygun açık oda yok',style:TextStyle(color:Colors.white70))),...rooms.map((d)=>ListTile(title:Text((d.data()['title']??'Sesli oda').toString(),style:const TextStyle(color:Colors.white)),trailing:const Icon(Icons.chevron_right,color:Colors.white),onTap:()=>Navigator.pop(c,d.id)))])));
+    _picking=false;
     if(target==null||!mounted)return;setState(()=>_busy=true);
     try{
       final ref=_db.collection('calls').doc();
