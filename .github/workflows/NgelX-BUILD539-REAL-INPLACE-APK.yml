@@ -41,6 +41,43 @@ jobs:
           channel: stable
           cache: true
 
+      - name: Confirm authentic NgelX Android identity and Firebase configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          # No QA suffix, no placeholder Firebase setup, no production mutation.
+          test ! -f app/android/key.properties
+          test -s app/android/app/google-services.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          gradle=Path('app/android/app/build.gradle.kts').read_text()
+          assert 'applicationId = "com.nnentx.ngelx_app"' in gradle
+          assert 'applicationIdSuffix' not in gradle
+          cfg=json.loads(Path('app/android/app/google-services.json').read_text())
+          ids=[x.get('client_info',{}).get('android_client_info',{}).get('package_name') for x in cfg.get('client',[])]
+          assert 'com.nnentx.ngelx_app' in ids, 'Firebase Android client for real app is missing'
+          assert cfg.get('project_info',{}).get('project_id') not in ('demo-project','fake','qa-placeholder','test-project',''), 'Placeholder Firebase project'
+          assert Path('app/lib/main.dart').is_file()
+          print('Existing Android app identity and real-app Firebase config are present (values not displayed).')
+          PY
+
+      - name: Restore verified existing NgelX update signing certificate
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: ngelx-stable-debug-keystore-v1
+          fail-on-cache-miss: true
+
+      - name: Gate signing certificate against Build470 in-place updater
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s "$HOME/.android/debug.keystore"
+          keytool -list -v -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey \
+            | grep -F 'SHA256: BE:20:B2:7F:0B:A1:F4:DE:CD:29:41:D4:10:B1:53:6D:E8:9E:48:DC:89:4F:04:F0:38:F9:D2:6B:11:EC:D6:AA'
+          echo 'Expected Build470 signing identity present.'
+
       - name: Build536 approved source contracts before full regeneration
         shell: bash
         run: |
@@ -1284,43 +1321,6 @@ jobs:
         run: |
           set -euo pipefail
           flutter analyze --no-fatal-infos --no-fatal-warnings
-
-      - name: Confirm authentic NgelX Android identity and Firebase configuration
-        shell: bash
-        run: |
-          set -euo pipefail
-          # No QA suffix, no placeholder Firebase setup, no production mutation.
-          test ! -f app/android/key.properties
-          test -s app/android/app/google-services.json
-          python3 - <<'PY'
-          import json
-          from pathlib import Path
-          gradle=Path('app/android/app/build.gradle.kts').read_text()
-          assert 'applicationId = "com.nnentx.ngelx_app"' in gradle
-          assert 'applicationIdSuffix' not in gradle
-          cfg=json.loads(Path('app/android/app/google-services.json').read_text())
-          ids=[x.get('client_info',{}).get('android_client_info',{}).get('package_name') for x in cfg.get('client',[])]
-          assert 'com.nnentx.ngelx_app' in ids, 'Firebase Android client for real app is missing'
-          assert cfg.get('project_info',{}).get('project_id') not in ('demo-project','fake','qa-placeholder','test-project',''), 'Placeholder Firebase project'
-          assert Path('app/lib/main.dart').is_file()
-          print('Existing Android app identity and real-app Firebase config are present (values not displayed).')
-          PY
-
-      - name: Restore verified existing NgelX update signing certificate
-        uses: actions/cache/restore@v4
-        with:
-          path: ~/.android/debug.keystore
-          key: ngelx-stable-debug-keystore-v1
-          fail-on-cache-miss: true
-
-      - name: Gate signing certificate against Build470 in-place updater
-        shell: bash
-        run: |
-          set -euo pipefail
-          test -s "$HOME/.android/debug.keystore"
-          keytool -list -v -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey \
-            | grep -F 'SHA256: BE:20:B2:7F:0B:A1:F4:DE:CD:29:41:D4:10:B1:53:6D:E8:9E:48:DC:89:4F:04:F0:38:F9:D2:6B:11:EC:D6:AA'
-          echo 'Expected Build470 signing identity present.'
 
       - name: Compile NgelX real-app release APK for ARM64 update
         shell: bash
