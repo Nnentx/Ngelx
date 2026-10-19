@@ -64,5 +64,7 @@ jobs:
           PR #172 üzerine canlı yayın, arama küçültme/geri dönüş ve sesli oda geliştirmeleri. Mevcut paket kimliği ve güncelleme imzası korunmuştur. Kaynak koruma testleri, Flutter testleri, analiz, APK sürüm ve imza kontrolleri başarılı derleme 39317293792 içinde doğrulanmıştır.
 
           İki gerçek cihazda medya davranışı ayrıca test edilmelidir. Sanal hediyeler mevcut test ortamı sınırını korur. Firebase/LiveKit sunucularına production dağıtımı yapılmamıştır. Önceki Build539/540 dosyaları değiştirilmemiştir.
+          Kaynak adayı d2d5ce1906bc1a8379091ded5231b29f4df50c62; yayın kaynak dışa aktarımı 380af7eccc61cd384520b495cbcc78b529644329. Uygulama kodu/testler aynıdır; yayın kaynak dalında CI iş akışları varsayılan dal ile aynen korunur.
           EOF
-          gh release create v1.0.311-build541-test NgelX-1.0.311-Build-541.apk NgelX-1.0.311-Build-541.apk.sha256 --repo Nnentx/Ngelx --target d2d5ce1906bc1a8379091ded5231b29f4df50c62 --prerelease --title 'NgelX 1.0.311 / Build541 test' --notes-file notes.md
+          test "$(gh api 'repos/Nnentx/Ngelx/git/trees/380af7eccc61cd384520b495cbcc78b529644329?recursive=1' --jq '.tree[] | select(.path==".github/workflows") | .sha')" = 097102c0a68a0161f87410c61d5706c0baeab51d
+          gh release create v1.0.311-build541-test NgelX-1.0.311-Build-541.apk NgelX-1.0.311-Build-541.apk.sha256 --repo Nnentx/Ngelx --target 380af7eccc61cd384520b495cbcc78b529644329 --prerelease --title 'NgelX 1.0.311 / Build541 test' --notes-file notes.md
