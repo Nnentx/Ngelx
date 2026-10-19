@@ -83,10 +83,13 @@ def dart_transform(src):
     body=once(body,'  Widget _efektliVideo(lk.VideoTrack track)',
       METHOD+'  Widget _efektliVideo(lk.VideoTrack track)',
       'media-backed mini surface')
-    body=once(body,'      body:Container(',
-      '''      body:Ngelx520PipBridge.active.value
-        ?_ngelx520PipVideo()
-        :Container(''','PiP replaces call chrome only while OS in PiP')
+    # Generated call screens may use a Container, Stack or custom Builder
+    # for Scaffold.body. Wrap the stable Scaffold itself instead of relying
+    # on an older body's exact widget type.
+    body=once(body,'    child:Scaffold(',
+      '''    child:Ngelx520PipBridge.active.value
+      ?Scaffold(backgroundColor:Colors.black,body:_ngelx520PipVideo())
+      :Scaffold(''','PiP replaces call chrome only while OS in PiP')
     anchor="""              IconButton(
                 tooltip:'Diğer uygulamaların üzerinde göster',"""
     extra="""              // Build520: system PiP uses the existing LiveKit renderer.
