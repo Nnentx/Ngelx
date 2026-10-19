@@ -118,8 +118,25 @@ def transform(src: str) -> str:
     anchor="      oda=r;\n      final yerel=r.localParticipant;"
     connect=once(connect,anchor,AFTER_CONNECT+anchor,
       'LiveKit connected flag')
-    connect=once(connect, '      oda=null;\n      if(yeniden&&',
-      '      oda=null;\n'+FAILURE_OPTIONS+'      if(yeniden&&!rejoinBlocked535&&',
+    # Build444 already adds _alive444 to the reconnect guard in the real
+    # generated app. Earlier source fixtures can still carry the legacy
+    # guard, so accept exactly ONE known shape and fail closed otherwise.
+    recovery_shapes=(
+      ('      oda=null;\n      if(_alive444&&yeniden&&',
+       '      if(_alive444&&yeniden&&!rejoinBlocked535&&'),
+      ('      oda=null;\n      if(yeniden&&',
+       '      if(yeniden&&!rejoinBlocked535&&'),
+    )
+    matched=[(old,new) for old,new in recovery_shapes
+             if connect.count(old)==1]
+    if len(matched)!=1:
+        raise RuntimeError(
+          'Build535 explicit post-failure voluntary exit option: '
+          'expected exactly one supported reconnect guard, got '
+          +str([(old,connect.count(old)) for old,_ in recovery_shapes]))
+    old,reconnect=matched[0]
+    connect=once(connect,old,
+      '      oda=null;\n'+FAILURE_OPTIONS+'      '+reconnect,
       'explicit post-failure voluntary exit option')
     if connect.index(MARK)>connect.index('await _izinleriIste();'):
         raise RuntimeError('Build535 consent must precede call permissions/token fetch')
