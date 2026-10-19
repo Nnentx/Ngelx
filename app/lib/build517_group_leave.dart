@@ -15,7 +15,14 @@ Future<void> ngelx517LeaveGroupCall(
   if (!roomName.startsWith('group_') || uid.isEmpty) {
     throw ArgumentError('Expected an authenticated group call member');
   }
-  final result=await FirebaseFirestore.instance.runTransaction<Map<String,dynamic>>((tx) async {
+  // Firestore clients can observe a concurrent same-document transaction as
+  // permission-denied instead of a retriable ABORTED response when security
+  // rules validate the post-commit participant list. Retry only if another
+  // participant actually changed that list and this caller is still eligible.
+  // Never retry a genuine ACL rejection or attempt to revive an ended room.
+  List<String>? observedParticipants;
+  Future<Map<String,dynamic>> attemptLeave()=>FirebaseFirestore.instance
+      .runTransaction<Map<String,dynamic>>((tx) async {
     final snapshot=await tx.get(ref);
     final data=snapshot.data()??<String,dynamic>{};
     if (data['callRoomName']!=roomName ||
@@ -23,6 +30,7 @@ Future<void> ngelx517LeaveGroupCall(
       return <String,dynamic>{'kind':'stale'};
     }
     final participants=List<String>.from(data['callParticipants']??const <String>[]);
+    observedParticipants=participants;
     // Do not close a room if this device's membership has already been
     // removed by a moderator, another session, or a concurrent operation.
     if (!participants.contains(uid)) {
@@ -61,6 +69,26 @@ Future<void> ngelx517LeaveGroupCall(
       'seconds':elapsed,
     };
   });
+  Map<String,dynamic> result;
+  for(var retry=0;;retry++){
+    try{
+      result=await attemptLeave();
+      break;
+    }on FirebaseException catch(error){
+      if(error.code!='permission-denied'||retry>=4||
+         observedParticipants==null)rethrow;
+      // Only a demonstrated concurrent participant change warrants a fresh
+      // transaction. This read is not a write and never authorizes itself.
+      final current=(await ref.get()).data();
+      if(current==null||current['callRoomName']!=roomName||
+         const {'ended','missed','rejected'}.contains(current['callStatus']))return;
+      final nowParticipants=List<String>.from(
+        current['callParticipants']??const <String>[]);
+      if(!nowParticipants.contains(uid))return;
+      if(listEquals(nowParticipants,observedParticipants))rethrow;
+      debugPrint('Build533: group member changed during leave; retrying');
+    }
+  }
   if (result['kind']=='stale') return;
   if (result['kind']=='last') {
     final status=result['missed']==true?'missed':'ended';

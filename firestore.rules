@@ -43,41 +43,38 @@ service cloud.firestore {
     // Only the current caller may append their own UID while atomically
     // removing themself from callParticipants for this unchanged room.
     function validGroupCallExitMarkerWrite() {
-      let changed = request.resource.data.diff(resource.data).affectedKeys();
+      let changes = request.resource.data.diff(resource.data).affectedKeys();
       let room = resource.data.get('callRoomName', '');
-      let participants = resource.data.get('callParticipants', []);
-      let remaining = participants.removeAll([request.auth.uid]);
+      let members = resource.data.get('callParticipants', []);
+      let remaining = members.removeAll([request.auth.uid]);
       let oldExitRoom = resource.data.get('callExitedRoomName', '');
       let oldExits = resource.data.get('callExitedUids', []);
       let newExits = request.resource.data.get('callExitedUids', []);
+      // changed.hasOnly also guarantees the chat members, room identity,
+      // other participants' metadata, and all unrelated fields are untouched.
+      // List equality is cheaper and stricter than independent size,
+      // containment and set-subtraction comparisons.
       return signedIn()
         && resource.data.get('isGroup', false) == true
-        && room is string && room.size() > 0 && room.matches('^group_.*')
-        && request.resource.data.get('callRoomName', '') == room
-        && changed.hasOnly([
+        && resource.data.get('callStatus', '') in ['ringing', 'active']
+        && room is string && room.matches('^group_.*')
+        && changes.hasOnly([
           'callParticipants', 'callExitedRoomName', 'callExitedUids',
           'callStatus', 'callEndedAt'
         ])
-        && request.resource.data.members == resource.data.members
-        && participants is list && request.auth.uid in participants
+        && members is list && request.auth.uid in members
         && request.resource.data.get('callParticipants', []) == remaining
         && request.resource.data.get('callExitedRoomName', '') == room
-        && oldExits is list && newExits is list
-        && (
-          (oldExitRoom == room
-            && !(request.auth.uid in oldExits)
-            && newExits.hasAll(oldExits)
-            && newExits.size() == oldExits.size() + 1
-            && newExits.removeAll(oldExits) == [request.auth.uid])
-          || (oldExitRoom != room && newExits == [request.auth.uid])
-        )
+        && oldExits is list
+        && newExits == (oldExitRoom == room
+          ? oldExits.concat([request.auth.uid]) : [request.auth.uid])
         && request.resource.data.get('callStatus', '') ==
           (remaining.size() == 0
             ? (resource.data.get('callConnectedAt', null) is timestamp
                 ? 'ended' : 'missed')
             : 'active')
         && (remaining.size() == 0
-          ? request.resource.data.get('callEndedAt', null) is timestamp
+          ? request.resource.data.get('callEndedAt', null) == request.time
           : request.resource.data.get('callEndedAt', null) ==
             resource.data.get('callEndedAt', null));
     }
@@ -110,6 +107,77 @@ service cloud.firestore {
             && !nextParticipants.hasAny(exitedUids))
         )
       );
+    }
+    // Build533 QA: one member must not terminate or revive the peers'
+    // current group call using the broad legacy chat update allowance.
+    // A legitimate terminal transition is either Build517's *last self*
+    // departure or Build526's time-validated, never-connected missed timer.
+    function validGroupUnansweredTimeout() {
+      let changed = request.resource.data.diff(resource.data).affectedKeys();
+      let participants = resource.data.get('callParticipants', []);
+      let createdAt = resource.data.get('callCreatedAt', null);
+      let room = resource.data.get('callRoomName', '');
+      return signedIn()
+        && request.auth.uid in resource.data.get('members', [])
+        && resource.data.get('isGroup', false) == true
+        && room is string && room.matches('^group_.*')
+        && request.resource.data.get('callRoomName', '') == room
+        && resource.data.get('callStatus', '') == 'ringing'
+        && resource.data.get('callConnectedAt', null) == null
+        && participants is list && participants.size() <= 1
+        && createdAt is timestamp
+        && request.time >= createdAt + duration.value(120, 's')
+        && request.resource.data.get('callStatus', '') == 'missed'
+        && request.resource.data.get('callAutoEnded', false) == true
+        && request.resource.data.get('callAutoEndedReason', '') == 'no_participants_2m'
+        && request.resource.data.get('callEndedAt', null) == request.time
+        && changed.hasOnly([
+          'callStatus', 'callEndedAt', 'callAutoEnded', 'callAutoEndedReason'
+        ]);
+    }
+    // Keep the costly timeout predicate lazy: Firestore enforces a strict
+    // rule-expression budget and ordinary chat writes should be cheap.
+    // The preceding groupCallExitMarkersSafe() already validates an exit
+    // marker mutation as this caller's own atomic last departure.
+    function groupCallTerminalStateSafe() {
+      let oldStatus = resource.data.get('callStatus', '');
+      let nextStatus = request.resource.data.get('callStatus', '');
+      let oldRoom = resource.data.get('callRoomName', '');
+      let newRoom = request.resource.data.get('callRoomName', '');
+      let changed = request.resource.data.diff(resource.data).affectedKeys();
+      let terminalFields = ['callStatus', 'callEndedAt',
+        'callAutoEnded', 'callAutoEndedReason'];
+      let endMetadata = ['callEndedAt', 'callAutoEnded',
+        'callAutoEndedReason'];
+      return resource.data.get('isGroup', false) != true
+        || !(oldRoom is string && oldRoom.matches('^group_.*'))
+        || (
+          (
+            // Most chat edits do not touch the call lifecycle at all.
+            !changed.hasAny(terminalFields)
+            // Keeping the same state or acknowledging ringing->active may
+            // not forge end receipts or auto-expiry markers.
+            || (!changed.hasAny(endMetadata) && (
+              nextStatus == oldStatus
+              || (oldStatus == 'ringing' && nextStatus == 'active')
+            ))
+            // If markers changed, Build531's preceding guard validates
+            // EXACT self departure, remaining participants, and final status.
+            || (oldStatus in ['ringing','active']
+              && changed.hasAny(['callExitedRoomName', 'callExitedUids'])
+              && nextStatus in ['ended', 'missed'])
+            // If no member left, only Build526's exact unanswered timeout
+            // may close a ringing call; run this expensive check only here.
+            || (oldStatus == 'ringing' && nextStatus == 'missed'
+              && validGroupUnansweredTimeout())
+            // A completed call can initialize a different, fresh room.
+            || (oldStatus in ['ended', 'missed', 'rejected']
+              && newRoom != oldRoom)
+          )
+          // The same room must not revive a terminal call.
+          && (!(oldStatus in ['ended','missed','rejected'])
+            || newRoom != oldRoom || nextStatus == oldStatus)
+        );
     }
     function founderProtected() {
       let founder = resource.data.get('createdBy', '');
@@ -351,8 +419,18 @@ service cloud.firestore {
         && resource.data.get('isGroup', false) == true
         && resource.data.get('discoverable', false) == true
       );
-      allow update: if groupCallExitMarkersSafe()
-        && groupCallRoomParticipantsSafe() && (
+      // Build533: bounded, complete self-exit fast path. Do not evaluate
+      // every unrelated legacy group-edit rule during concurrent departures.
+      // The helper permits only own UID removal + scoped marker + status,
+      // checks immutable room/members, and validates last-call timestamp.
+      allow update: if (
+        chatMember()
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasAny(['callExitedRoomName', 'callExitedUids'])
+        && validGroupCallExitMarkerWrite()
+      ) || (groupCallExitMarkersSafe()
+        && groupCallRoomParticipantsSafe()
+        && groupCallTerminalStateSafe() && (
         chatMember() && (
           (
             resource.data.get('isGroup', false) != true
@@ -370,7 +448,7 @@ service cloud.firestore {
             )
           )
         )
-      ) || validSelfJoin(chatId) || validPublicSelfJoin() || validFormerHide() || validFounderClose();
+      )) || validSelfJoin(chatId) || validPublicSelfJoin() || validFormerHide() || validFounderClose();
       allow delete: if false;
       match /messages/{messageId} {
         allow read: if signedIn() && (

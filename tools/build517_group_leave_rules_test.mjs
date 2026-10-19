@@ -28,21 +28,53 @@ const initial=(room)=>({
   callConnectedAt:Timestamp.fromMillis(1760000000000),
 });
 async function leave(db,chat,room,user) {
-  return runTransaction(db,async tx=>{
+  let observed=null;
+  // Model the Flutter Build533 bounded conflict recovery. A permission
+  // rejection alone NEVER grants a retry: the participant list must have
+  // really changed after this transaction's read.
+  for(let retry=0;retry<5;retry++){
+    try{
+      return await runTransaction(db,async tx=>{
     const d=await tx.get(doc(db,'chats',chat));
     const data=d.data()??{};
     if(data.callRoomName!==room||
        ['ended','rejected','missed'].includes(data.callStatus)) return 'stale';
     const participants=data.callParticipants??[];
+    observed=[...participants];
     if(!participants.includes(user))return 'stale';
     const isLast=participants.filter(p=>p!==user).length===0;
+    if(chat==='group517_concurrent')console.log('Build517 tx read',JSON.stringify({
+      user,participants,exits:data.callExitedUids,exitRoom:data.callExitedRoomName,
+      status:data.callStatus,isLast
+    }));
+    // Build530+531: the current client records its own same-room exit
+    // marker atomically. Test the integrated behavior, not the pre-530 one.
     tx.update(doc(db,'chats',chat),{
       callParticipants:arrayRemove(user),
+      callExitedRoomName:room,
+      callExitedUids:data.callExitedRoomName===room
+        ?arrayUnion(user):[user],
       callStatus:isLast?'ended':'active',
       ...(isLast?{callEndedAt:serverTimestamp()}:{})
     });
     return isLast?'last':'left';
-  });
+      });
+    }catch(error){
+      if(error.code!=='permission-denied'||retry>=4||observed==null)
+        throw error;
+      const fresh=(await getDoc(doc(db,'chats',chat))).data();
+      if(!fresh||fresh.callRoomName!==room||
+         ['ended','missed','rejected'].includes(fresh.callStatus)||
+         !(fresh.callParticipants??[]).includes(user))return 'stale';
+      if(JSON.stringify(fresh.callParticipants)===JSON.stringify(observed))
+        throw error;
+      console.log('Build517 tx retry concurrent change',user,{
+        prior:observed,current:fresh.callParticipants,
+        attempt:retry+1
+      });
+    }
+  }
+  throw Error('Concurrent leave retry exhausted');
 }
 async function seed(chat,room) {
   await env.withSecurityRulesDisabled(async ctx=>{
@@ -60,12 +92,14 @@ try{
   const gamma=env.authenticatedContext('gamma').firestore();
   const stranger=env.authenticatedContext('stranger').firestore();
   await seed('group517','group_517');
+  console.log('Build517 integrated stage: host first departure');
   // The original caller leaving must never terminate the peers' call.
   if(await assertSucceeds(leave(host,'group517','group_517','host'))!=='left')
     throw Error('Initiator must leave without global termination');
   let state=await read(beta,'group517');
   if(state.callStatus!=='active'||state.callParticipants.join(',')!=='beta,gamma')
     throw Error('B/C must remain connected when host leaves');
+  console.log('Build517 integrated stage: moderator removes gamma');
   // Moderation removes only the nominated member, preserving call state.
   await assertSucceeds(updateDoc(doc(host,'chats/group517'),{
     callModerationRoom:'group_517',
@@ -79,6 +113,7 @@ try{
     throw Error('Removed member should not end peer call');
   if((await read(beta,'group517')).callStatus!=='active')
     throw Error('A stale client ended beta call');
+  console.log('Build517 integrated stage: beta final departure');
   if(await assertSucceeds(leave(beta,'group517','group_517','beta'))!=='last')
     throw Error('Only beta should be last');
   state=await read(beta,'group517');
@@ -86,19 +121,32 @@ try{
      !state.callEndedAt)
     throw Error('Last member must close call exactly once');
 
+  console.log('Build517 integrated stage: concurrent exits');
   await seed('group517_concurrent','group_517_concurrent');
   await assertSucceeds(leave(host,'group517_concurrent','group_517_concurrent','host'));
   // Firestore retries optimistic conflicting transactions. One of these
   // must observe the other's leave and close only after the second leaves.
+  const concurrentLeave=async (db,uid)=>{
+    try{
+      const result=await assertSucceeds(leave(db,'group517_concurrent',
+        'group_517_concurrent',uid));
+      console.log('Build517 tx success',uid,result);
+      return result;
+    }catch(error){
+      console.error('Build517 tx FAIL',uid,String(error));
+      throw error;
+    }
+  };
   const results=await Promise.all([
-    assertSucceeds(leave(beta,'group517_concurrent','group_517_concurrent','beta')),
-    assertSucceeds(leave(gamma,'group517_concurrent','group_517_concurrent','gamma')),
+    concurrentLeave(beta,'beta'),
+    concurrentLeave(gamma,'gamma'),
   ]);
   if(results.filter(x=>x==='last').length!==1)
     throw Error('Concurrent departure must have precisely one last member');
   state=await read(host,'group517_concurrent');
   if(state.callStatus!=='ended'||state.callParticipants.length!==0)
     throw Error('Concurrent final participants must close correctly');
+  console.log('Build517 integrated stage: call end notice and ACL');
   // A non-owner cannot update the call message created by the initiator.
   // The final member must still be able to publish the call-end notice.
   await env.withSecurityRulesDisabled(async ctx=>{
