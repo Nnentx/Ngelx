@@ -28,12 +28,19 @@ const initial=(room)=>({
   callConnectedAt:Timestamp.fromMillis(1760000000000),
 });
 async function leave(db,chat,room,user) {
-  return runTransaction(db,async tx=>{
+  let observed=null;
+  // Model the Flutter Build533 bounded conflict recovery. A permission
+  // rejection alone NEVER grants a retry: the participant list must have
+  // really changed after this transaction's read.
+  for(let retry=0;retry<5;retry++){
+    try{
+      return await runTransaction(db,async tx=>{
     const d=await tx.get(doc(db,'chats',chat));
     const data=d.data()??{};
     if(data.callRoomName!==room||
        ['ended','rejected','missed'].includes(data.callStatus)) return 'stale';
     const participants=data.callParticipants??[];
+    observed=[...participants];
     if(!participants.includes(user))return 'stale';
     const isLast=participants.filter(p=>p!==user).length===0;
     if(chat==='group517_concurrent')console.log('Build517 tx read',JSON.stringify({
@@ -51,7 +58,23 @@ async function leave(db,chat,room,user) {
       ...(isLast?{callEndedAt:serverTimestamp()}:{})
     });
     return isLast?'last':'left';
-  });
+      });
+    }catch(error){
+      if(error.code!=='permission-denied'||retry>=4||observed==null)
+        throw error;
+      const fresh=(await getDoc(doc(db,'chats',chat))).data();
+      if(!fresh||fresh.callRoomName!==room||
+         ['ended','missed','rejected'].includes(fresh.callStatus)||
+         !(fresh.callParticipants??[]).includes(user))return 'stale';
+      if(JSON.stringify(fresh.callParticipants)===JSON.stringify(observed))
+        throw error;
+      console.log('Build517 tx retry concurrent change',user,{
+        prior:observed,current:fresh.callParticipants,
+        attempt:retry+1
+      });
+    }
+  }
+  throw Error('Concurrent leave retry exhausted');
 }
 async function seed(chat,room) {
   await env.withSecurityRulesDisabled(async ctx=>{
