@@ -7,7 +7,27 @@ const now=1800000000000;
 // transaction does; production emulator/device verification remains required.
 function database(initial={}) {
  const records=new Map(Object.entries(initial)); let tail=Promise.resolve();
- const snap=key=>({exists:records.has(key),data:()=>records.get(key),ref:{collection(name){return {doc(id){return {get:async()=>snap(key+'/'+name+'/'+id)};}};}}});
+ const snap=key=>({
+  id:key.split('/').at(-1),exists:records.has(key),data:()=>records.get(key),
+  ref:{collection(name){
+   const prefix=key+'/'+name+'/';
+   return {
+    doc(id){return {get:async()=>snap(prefix+id)};},
+    where(field,op,expected){
+     assert.equal(op,'==');
+     return {orderBy(order){
+      assert.equal(order,'__name__');
+      return {limit(limit){return {get:async()=>{
+       const docs=[...records].filter(([k,v])=>k.startsWith(prefix)&&
+         !k.slice(prefix.length).includes('/')&&v[field]===expected)
+         .sort(([a],[b])=>a.localeCompare(b)).slice(0,limit)
+         .map(([k])=>snap(k));
+       return {docs,empty:docs.length===0,size:docs.length};
+      }};}};}
+    }
+   };
+  }}
+ });
  const db={records,collection(name){return {
   doc(id){const key=name+'/'+id;return {key,get:async()=>snap(key)};},
   where(field,op,expected){assert.equal(op,'==');return {limit(limit){return {get:async()=>{
