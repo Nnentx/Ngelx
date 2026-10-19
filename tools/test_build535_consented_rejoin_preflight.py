@@ -29,6 +29,24 @@ fixture=("part 'build534_explicit_group_rejoin.dart';\n"+
     "  Future<void> baglan({bool yeniden=false})async{",1))
 patched=patch.transform(fixture)
 assert patch.transform(patched)==patched, 'repeat patch must be idempotent'
+bundle_spec=importlib.util.spec_from_file_location(
+    'build535_bundle','tools/apply_build535_rejoin_bundle.py')
+assert bundle_spec and bundle_spec.loader
+bundle=importlib.util.module_from_spec(bundle_spec)
+bundle_spec.loader.exec_module(bundle)
+bundle_fixture=fixture.replace(
+    "part 'build534_explicit_group_rejoin.dart';",
+    "part 'build527_group_join_transaction.dart';",1)
+bundle_output=bundle.transform(bundle_fixture)
+assert bundle_output.count(patch.PART)==1
+assert bundle_output.count(patch.MARK)==1
+assert bundle.transform(bundle_output)==bundle_output
+assert bundle_output==patched.replace(
+    "part 'build534_explicit_group_rejoin.dart';",
+    "part 'build527_group_join_transaction.dart';\\n"
+    "part 'build534_explicit_group_rejoin.dart';",1).replace(
+      "';\\npart", "';\npart",1), 'combined transform differs from direct patch'
+
 assert patched.count(patch.MARK)==1
 call=patched[patched.index(patch.CALL_START):patched.index(patch.CALL_END)]
 begin=call.index('  Future<void> baglan({bool yeniden=false})async{')
