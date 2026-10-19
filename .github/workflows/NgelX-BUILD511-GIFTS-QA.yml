@@ -1367,5 +1367,6 @@ jobs:
           python3 tools/diagnose_build463_production_rules.py
 
       - name: Confirm no production deployment
-        run: echo 'Build511 virtual gifting and animations staging QA only: no coin charge, no prod deployment, no Build484 changes.'
+        run: |
+          echo 'Build511 virtual gifting and animations staging QA only: no coin charge, no prod deployment, no Build484 changes.'
 

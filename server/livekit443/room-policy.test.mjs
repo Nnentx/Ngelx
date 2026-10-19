@@ -42,6 +42,23 @@ test('private call checks current membership and the opposite account block list
  assert.equal(roomPermission({...args,room:{...call,callStatus:'ended'}}),null);
  assert.equal(roomPermission({...args,room:{...call,callStartedBy:'outsider'}}),null);
 });
+test('Build517 group kick blocks only removed member token in active room',()=>{
+  const group={...call,isGroup:true,members:['alice','bob','charlie'],
+    callParticipants:['alice','bob'],callRoomName:'group_live_517',
+    callModerationRoom:'group_live_517',callKickedUids:['charlie']};
+  const args={kind:'call',viewer,owner,now,room:group};
+  assert.equal(roomPermission({...args,uid:'charlie'}),null);
+  assert.equal(roomPermission({...args,uid:'alice'}).role,'caller');
+  assert.equal(roomPermission({...args,uid:'bob'}).role,'caller');
+  // Historical kick lists must not poison a separate newly started room.
+  const newer={...group,callRoomName:'group_new_517'};
+  assert.equal(roomPermission({...args,room:newer,uid:'charlie'}).role,'caller');
+  // Some older moderation records omit their room marker: fail closed.
+  const legacy={...group,callModerationRoom:undefined};
+  assert.equal(roomPermission({...args,room:legacy,uid:'charlie'}),null);
+  assert.equal(roomPermission({...args,room:{...group,callKickedUids:[]},uid:'charlie'}).role,'caller');
+});
+
 test('ringing call expiry is bounded',()=>assert.equal(roomPermission({kind:'call',uid:'alice',peerId:'bob',room:{...call,callStatus:'ringing',callCreatedAt:new Date(now-120001)},viewer,owner,now}),null));
 test('host prefix selects only fresh own reservations',()=>{
  assert.equal(hostRequestKind('alice',`ngelx_audio_alice_${now}`,now),'audio');

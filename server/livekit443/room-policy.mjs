@@ -20,6 +20,15 @@ export function roomPermission({kind, room, uid, viewer, owner, peerId, now}) {
     if (!members.includes(uid) || !members.includes(room.callStartedBy) ||
         !['ringing', 'active'].includes(room.callStatus) ||
         !fresh(room.callCreatedAt, now, room.callStatus === 'ringing' ? 120_000 : 12 * 3600_000)) return null;
+    if (room.isGroup === true) {
+      // Build517: leaving and moderation must be participant-scoped. Chat
+      // membership alone must not let an explicitly removed caller obtain
+      // a fresh LiveKit token for the same current call.
+      const moderationRoom = room.callModerationRoom;
+      const currentRoom = room.callRoomName;
+      if (list(room.callKickedUids).includes(uid) &&
+          (!moderationRoom || moderationRoom === currentRoom)) return null;
+    }
     if (room.isGroup !== true && (members.length !== 2 || !peerId || !members.includes(peerId) ||
         peerId === uid || blocked(uid, peerId, viewer, owner))) return null;
     return {allowed:true, role:'caller', displayName, canPublish:true, canPublishData:true};
