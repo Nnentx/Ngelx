@@ -65,12 +65,14 @@ try{
   const gamma=env.authenticatedContext('gamma').firestore();
   const stranger=env.authenticatedContext('stranger').firestore();
   await seed('group517','group_517');
+  console.log('Build517 integrated stage: host first departure');
   // The original caller leaving must never terminate the peers' call.
   if(await assertSucceeds(leave(host,'group517','group_517','host'))!=='left')
     throw Error('Initiator must leave without global termination');
   let state=await read(beta,'group517');
   if(state.callStatus!=='active'||state.callParticipants.join(',')!=='beta,gamma')
     throw Error('B/C must remain connected when host leaves');
+  console.log('Build517 integrated stage: moderator removes gamma');
   // Moderation removes only the nominated member, preserving call state.
   await assertSucceeds(updateDoc(doc(host,'chats/group517'),{
     callModerationRoom:'group_517',
@@ -84,6 +86,7 @@ try{
     throw Error('Removed member should not end peer call');
   if((await read(beta,'group517')).callStatus!=='active')
     throw Error('A stale client ended beta call');
+  console.log('Build517 integrated stage: beta final departure');
   if(await assertSucceeds(leave(beta,'group517','group_517','beta'))!=='last')
     throw Error('Only beta should be last');
   state=await read(beta,'group517');
@@ -91,6 +94,7 @@ try{
      !state.callEndedAt)
     throw Error('Last member must close call exactly once');
 
+  console.log('Build517 integrated stage: concurrent exits');
   await seed('group517_concurrent','group_517_concurrent');
   await assertSucceeds(leave(host,'group517_concurrent','group_517_concurrent','host'));
   // Firestore retries optimistic conflicting transactions. One of these
@@ -104,6 +108,7 @@ try{
   state=await read(host,'group517_concurrent');
   if(state.callStatus!=='ended'||state.callParticipants.length!==0)
     throw Error('Concurrent final participants must close correctly');
+  console.log('Build517 integrated stage: call end notice and ACL');
   // A non-owner cannot update the call message created by the initiator.
   // The final member must still be able to publish the call-end notice.
   await env.withSecurityRulesDisabled(async ctx=>{
