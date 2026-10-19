@@ -343,13 +343,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python3 tools/apply_build433_requests_live.py
-          # This historic guard checks modern already-authorized stream-child
-          # rules, while Build436 later expects the *old* migration inputs.
-          # Do not weaken or reapply either ruleset: inspect the secure QA
-          # snapshot here, then restore the working legacy generator copy.
+          # Build433 both *writes* and validates owner cleanup rules.
+          # Run its historic migration against the secure QA snapshot, then
+          # resume the independent pre-Build436 legacy generator rules.
           cp firestore.rules "$RUNNER_TEMP/build536-legacy-after-433.rules"
           cp "$RUNNER_TEMP/build536-modern-qa-firestore.rules" firestore.rules
+          python3 tools/apply_build433_requests_live.py
           python3 tools/check_build433.py
           cp "$RUNNER_TEMP/build536-legacy-after-433.rules" firestore.rules
 
