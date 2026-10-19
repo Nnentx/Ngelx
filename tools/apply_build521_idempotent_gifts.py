@@ -46,7 +46,7 @@ def transform(src):
     new="""      // One user intention retains one unique document ID after an ambiguous
       // network failure. Same action can be retried without double-counting.
       // A deliberate new send after success receives a NEW random ID.
-      final signature='\${widget.belgeId}|\${user.uid}|$ad|$adet';
+      final signature='${widget.belgeId}|${user.uid}|$ad|$adet';
       final gifts=FirebaseFirestore.instance.collection('live_streams')
           .doc(widget.belgeId).collection('comments');
       final reusable=_pendingGiftSignature521==signature?_pendingGiftId521:null;
