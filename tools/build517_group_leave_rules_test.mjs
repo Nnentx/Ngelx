@@ -36,8 +36,13 @@ async function leave(db,chat,room,user) {
     const participants=data.callParticipants??[];
     if(!participants.includes(user))return 'stale';
     const isLast=participants.filter(p=>p!==user).length===0;
+    // Build530+531: the current client records its own same-room exit
+    // marker atomically. Test the integrated behavior, not the pre-530 one.
     tx.update(doc(db,'chats',chat),{
       callParticipants:arrayRemove(user),
+      callExitedRoomName:room,
+      callExitedUids:data.callExitedRoomName===room
+        ?arrayUnion(user):[user],
       callStatus:isLast?'ended':'active',
       ...(isLast?{callEndedAt:serverTimestamp()}:{})
     });
