@@ -29,6 +29,25 @@ fixture=("part 'build534_explicit_group_rejoin.dart';\n"+
     "  Future<void> baglan({bool yeniden=false})async{",1))
 patched=patch.transform(fixture)
 assert patch.transform(patched)==patched, 'repeat patch must be idempotent'
+
+# Build444 changes the real generated reconnect guard to _alive444.
+# Both accepted layouts must receive the same explicit voluntary exit
+# choice, without permitting a retry to bypass the blocked-rejoin flag.
+guarded_fixture=fixture.replace(
+    '      if(yeniden&&yenidenBaglanmaDenemesi<3){',
+    '      if(_alive444&&yeniden&&yenidenBaglanmaDenemesi<3){',1)
+assert guarded_fixture!=fixture, 'original RTC retry guard missing'
+guarded_patch=patch.transform(guarded_fixture)
+assert 'if(_alive444&&yeniden&&!rejoinBlocked535&&' in guarded_patch
+assert guarded_patch.count('final discard=await showDialog<bool>(')==1
+assert patch.transform(guarded_patch)==guarded_patch
+try:
+    patch.transform(guarded_fixture.replace(
+        'if(_alive444&&yeniden&&yenidenBaglanmaDenemesi<3)',
+        'if(unknownGuard&&yeniden&&yenidenBaglanmaDenemesi<3)'))
+    raise AssertionError('Unknown reconnect guard must fail closed')
+except RuntimeError:
+    pass
 bundle_spec=importlib.util.spec_from_file_location(
     'build535_bundle','tools/apply_build535_rejoin_bundle.py')
 assert bundle_spec and bundle_spec.loader
