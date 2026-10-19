@@ -111,6 +111,63 @@ service cloud.firestore {
         )
       );
     }
+    // Build533 QA: one member must not terminate or revive the peers'
+    // current group call using the broad legacy chat update allowance.
+    // A legitimate terminal transition is either Build517's *last self*
+    // departure or Build526's time-validated, never-connected missed timer.
+    function validGroupUnansweredTimeout() {
+      let changed = request.resource.data.diff(resource.data).affectedKeys();
+      let participants = resource.data.get('callParticipants', []);
+      let createdAt = resource.data.get('callCreatedAt', null);
+      let room = resource.data.get('callRoomName', '');
+      return signedIn()
+        && request.auth.uid in resource.data.get('members', [])
+        && resource.data.get('isGroup', false) == true
+        && room is string && room.matches('^group_.*')
+        && request.resource.data.get('callRoomName', '') == room
+        && resource.data.get('callStatus', '') == 'ringing'
+        && resource.data.get('callConnectedAt', null) == null
+        && participants is list && participants.size() <= 1
+        && createdAt is timestamp
+        && request.time >= createdAt + duration.value(120, 's')
+        && request.resource.data.get('callStatus', '') == 'missed'
+        && request.resource.data.get('callAutoEnded', false) == true
+        && request.resource.data.get('callAutoEndedReason', '') == 'no_participants_2m'
+        && request.resource.data.get('callEndedAt', null) == request.time
+        && changed.hasOnly([
+          'callStatus', 'callEndedAt', 'callAutoEnded', 'callAutoEndedReason'
+        ]);
+    }
+    function groupCallTerminalStateSafe() {
+      let oldStatus = resource.data.get('callStatus', '');
+      let nextStatus = request.resource.data.get('callStatus', '');
+      let oldRoom = resource.data.get('callRoomName', '');
+      let newRoom = request.resource.data.get('callRoomName', '');
+      let changed = request.resource.data.diff(resource.data).affectedKeys();
+      let legitimateEnd = validGroupCallExitMarkerWrite()
+        || validGroupUnansweredTimeout();
+      return resource.data.get('isGroup', false) != true
+        || !(oldRoom is string && oldRoom.matches('^group_.*'))
+        || (
+          // An active room cannot be downgraded to ringing, cancelled,
+          // rejected, or ended while another caller remains.
+          (!(oldStatus in ['ringing', 'active'])
+            || nextStatus == oldStatus
+            || (oldStatus == 'ringing' && nextStatus == 'active')
+            || legitimateEnd)
+          // An old terminal room may only become callable again when it
+          // actually rotates to a different room name.
+          && (!(oldStatus in ['ended', 'missed', 'rejected'])
+            || newRoom != oldRoom || nextStatus == oldStatus)
+          // Do not forge end receipts / auto-expiry metadata while keeping
+          // the same callStatus, or scrub it to bypass future checks.
+          && (!changed.hasAny([
+              'callEndedAt', 'callAutoEnded', 'callAutoEndedReason'
+            ]) || legitimateEnd
+            || (oldStatus in ['ended', 'missed', 'rejected']
+              && newRoom != oldRoom))
+        );
+    }
     function founderProtected() {
       let founder = resource.data.get('createdBy', '');
       return resource.data.get('isGroup', false) != true
@@ -352,7 +409,8 @@ service cloud.firestore {
         && resource.data.get('discoverable', false) == true
       );
       allow update: if groupCallExitMarkersSafe()
-        && groupCallRoomParticipantsSafe() && (
+        && groupCallRoomParticipantsSafe()
+        && groupCallTerminalStateSafe() && (
         chatMember() && (
           (
             resource.data.get('isGroup', false) != true
