@@ -86,6 +86,31 @@ service cloud.firestore {
           .hasAny(['callExitedRoomName', 'callExitedUids'])
         || validGroupCallExitMarkerWrite();
     }
+    // Build532: while a group call is in progress, a member cannot
+    // silently rename the current LiveKit room to evade room-scoped exits.
+    // Also prevent a raw participant-list write from restoring an exited UID
+    // without going through an explicit, separately authorized rejoin flow.
+    // Legitimate new calls after an ended/missed room may rotate room names.
+    function groupCallRoomParticipantsSafe() {
+      let changed = request.resource.data.diff(resource.data).affectedKeys();
+      let oldRoom = resource.data.get('callRoomName', '');
+      let newRoom = request.resource.data.get('callRoomName', '');
+      let status = resource.data.get('callStatus', '');
+      let exitedRoom = resource.data.get('callExitedRoomName', '');
+      let exitedUids = resource.data.get('callExitedUids', []);
+      let nextParticipants = request.resource.data.get('callParticipants', []);
+      return resource.data.get('isGroup', false) != true || (
+        !(changed.hasAny(['callRoomName'])
+          && (status == 'ringing' || status == 'active'))
+        && (
+          !changed.hasAny(['callParticipants'])
+          || oldRoom != newRoom
+          || exitedRoom != oldRoom
+          || (exitedUids is list && nextParticipants is list
+            && !nextParticipants.hasAny(exitedUids))
+        )
+      );
+    }
     function founderProtected() {
       let founder = resource.data.get('createdBy', '');
       return resource.data.get('isGroup', false) != true
@@ -326,7 +351,8 @@ service cloud.firestore {
         && resource.data.get('isGroup', false) == true
         && resource.data.get('discoverable', false) == true
       );
-      allow update: if groupCallExitMarkersSafe() && (
+      allow update: if groupCallExitMarkersSafe()
+        && groupCallRoomParticipantsSafe() && (
         chatMember() && (
           (
             resource.data.get('isGroup', false) != true
