@@ -20,6 +20,7 @@ class _Ngelx541AudioPkState extends State<Ngelx541AudioPk> {
   DateTime _retry=DateTime.fromMillisecondsSinceEpoch(0);
   Map<String,dynamic> _own={},_request={};
   String? _requestId;
+  final Set<String> _stoppedSessions={};
   bool get _host=>FirebaseAuth.instance.currentUser?.uid==widget.ownerUid;
   DocumentReference<Map<String,dynamic>> get _ref=>_db.collection('audio_rooms').doc(widget.roomId);
   @override void initState(){
@@ -39,8 +40,13 @@ class _Ngelx541AudioPkState extends State<Ngelx541AudioPk> {
   Future<void> _stop()async{
     if(!_host||_busy)return;setState(()=>_busy=true);
     try{
+      final cached=(_own['pkSessionId']??'').toString();
+      if(cached.isNotEmpty)_stoppedSessions.add(cached);
+      await _drop();
       final own=(await _ref.get(const GetOptions(source:Source.server))).data()??{};
       final id=(own['pkSessionId']??'').toString();
+      if(id.isNotEmpty)_stoppedSessions.add(id);
+      await _drop();
       await _ref.update(_clear());
       if(id.isNotEmpty)await _db.collection('calls').doc(id).update({'status':'ended','endedAt':FieldValue.serverTimestamp()});
       await _drop();
@@ -57,12 +63,14 @@ class _Ngelx541AudioPkState extends State<Ngelx541AudioPk> {
       _own=own;
       if(widget.ended||!_active(own)){await _drop();if(mounted)setState((){});return;}
       if(_host&&own['pkActive']==true&&!_validEnd(own['pkEndsAt'])){
-        await _ref.update(_clear());await _drop();return;
+        final expired=(own['pkSessionId']??'').toString();
+        if(expired.isNotEmpty)_stoppedSessions.add(expired);
+        await _drop();await _ref.update(_clear());return;
       }
       // Read only this account's invitations. Viewers never read host call docs.
       if(_host){
         final q=await _db.collection('calls').where('members',arrayContains:_sessionUid).get(const GetOptions(source:Source.server));
-        final candidates=q.docs.where((d){final v=d.data();return v['type']=='audio_pk'&&
+        final candidates=q.docs.where((d){final v=d.data();return !_stoppedSessions.contains(d.id)&&v['type']=='audio_pk'&&
           (v['inviterRoomId']==widget.roomId||v['inviteeRoomId']==widget.roomId)&&
           ((v['status']=='pending'&&v['requestExpiresAt'] is Timestamp&&(v['requestExpiresAt'] as Timestamp).toDate().isAfter(DateTime.now()))||v['status']=='accepted');}).toList();
         candidates.sort((a,b){final x=a.data()['createdAt'],y=b.data()['createdAt'];return (y is Timestamp?y.millisecondsSinceEpoch:0).compareTo(x is Timestamp?x.millisecondsSinceEpoch:0);});
@@ -81,6 +89,7 @@ class _Ngelx541AudioPkState extends State<Ngelx541AudioPk> {
         }
       }
       final id=(own['pkSessionId']??'').toString(),target=(own['pkOpponentRoomId']??'').toString();
+      if(_stoppedSessions.contains(id)){await _drop();return;}
       if(own['pkActive']!=true||id.isEmpty||target.isEmpty||!_validEnd(own['pkEndsAt'])){await _drop();if(mounted)setState((){});return;}
       final other=(await _db.collection('audio_rooms').doc(target).get(const GetOptions(source:Source.server))).data()??{};
       final mutual=ngelx541PkMutual(_policyRoom(widget.roomId,own),_policyRoom(target,other),DateTime.now().millisecondsSinceEpoch);
@@ -94,6 +103,7 @@ class _Ngelx541AudioPkState extends State<Ngelx541AudioPk> {
         }
         if(mounted)setState((){});return;
       }
+      if(_stoppedSessions.contains(id)){await _drop();return;}
       if(_peerName!=other['roomName']&&DateTime.now().isAfter(_retry)){
         await _drop();final generation=_generation;
         final roomName=(other['roomName']??'').toString();if(roomName.isEmpty)return;
@@ -103,7 +113,7 @@ class _Ngelx541AudioPkState extends State<Ngelx541AudioPk> {
         try{
           await room.connect(token.serverUrl,token.participantToken).timeout(const Duration(seconds:18));
           await room.localParticipant?.setMicrophoneEnabled(false);
-          if(_disposed||generation!=_generation||FirebaseAuth.instance.currentUser?.uid!=_sessionUid){await room.disconnect();await room.dispose();return;}
+          if(_disposed||generation!=_generation||_stoppedSessions.contains(id)||!_validEnd(own['pkEndsAt'])||FirebaseAuth.instance.currentUser?.uid!=_sessionUid){await room.disconnect();await room.dispose();return;}
           _peer=room;_peerName=roomName;_message='Karşı odanın sesi bağlı';
         }catch(_){try{await room.disconnect();await room.dispose();}catch(_){}rethrow;}
       }

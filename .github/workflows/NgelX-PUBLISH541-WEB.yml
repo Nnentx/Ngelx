@@ -17,9 +17,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          test "$(gh api repos/Nnentx/Ngelx/actions/runs/39315784594 --jq .head_sha)" = "df4f19b27d5b2d937add9c35e203c949f821e5fa"
-          gh run watch 39315784594 --repo Nnentx/Ngelx --interval 20 --exit-status
-          test "$(gh api repos/Nnentx/Ngelx/actions/runs/39315784594 --jq .conclusion)" = success
+          test "$(gh api repos/Nnentx/Ngelx/actions/runs/39317293792 --jq .head_sha)" = "d2d5ce1906bc1a8379091ded5231b29f4df50c62"
+          gh run watch 39317293792 --repo Nnentx/Ngelx --interval 20 --exit-status
+          test "$(gh api repos/Nnentx/Ngelx/actions/runs/39317293792 --jq .conclusion)" = success
           if gh release view v1.0.311-build541-test --repo Nnentx/Ngelx >/dev/null 2>&1; then
             echo 'Refusing to replace an existing release.'
             exit 1
@@ -29,7 +29,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          gh run download 39315784594 --repo Nnentx/Ngelx --name NgelX-Build541-REAL-INPLACE-SIGNED-REVIEW-ONLY --dir candidate
+          gh run download 39317293792 --repo Nnentx/Ngelx --name NgelX-Build541-REAL-INPLACE-SIGNED-REVIEW-ONLY --dir candidate
       - name: Verify checksum, package, version and original update signer
         shell: bash
         run: |
@@ -61,8 +61,8 @@ jobs:
           cat > notes.md <<'EOF'
           NgelX 1.0.311 / Build541 Android test sürümü.
 
-          PR #172 üzerine canlı yayın, arama küçültme/geri dönüş ve sesli oda geliştirmeleri. Mevcut paket kimliği ve güncelleme imzası korunmuştur. Kaynak koruma testleri, Flutter testleri, analiz, APK sürüm ve imza kontrolleri başarılı derleme 39315784594 içinde doğrulanmıştır.
+          PR #172 üzerine canlı yayın, arama küçültme/geri dönüş ve sesli oda geliştirmeleri. Mevcut paket kimliği ve güncelleme imzası korunmuştur. Kaynak koruma testleri, Flutter testleri, analiz, APK sürüm ve imza kontrolleri başarılı derleme 39317293792 içinde doğrulanmıştır.
 
           İki gerçek cihazda medya davranışı ayrıca test edilmelidir. Sanal hediyeler mevcut test ortamı sınırını korur. Firebase/LiveKit sunucularına production dağıtımı yapılmamıştır. Önceki Build539/540 dosyaları değiştirilmemiştir.
           EOF
-          gh release create v1.0.311-build541-test NgelX-1.0.311-Build-541.apk NgelX-1.0.311-Build-541.apk.sha256 --repo Nnentx/Ngelx --target df4f19b27d5b2d937add9c35e203c949f821e5fa --prerelease --title 'NgelX 1.0.311 / Build541 test' --notes-file notes.md
+          gh release create v1.0.311-build541-test NgelX-1.0.311-Build-541.apk NgelX-1.0.311-Build-541.apk.sha256 --repo Nnentx/Ngelx --target d2d5ce1906bc1a8379091ded5231b29f4df50c62 --prerelease --title 'NgelX 1.0.311 / Build541 test' --notes-file notes.md
