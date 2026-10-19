@@ -141,9 +141,15 @@ try{
   await seed('notExited534',base('group_notExited534',{
     callExitedUids:['delta']
   }));
-  await assertFails(updateDoc(ref(host,'notExited534'),{
+  // A non-exited member remains eligible for the ordinary Build527 join.
+  // His idempotent removal of an absent marker must not erase delta's exit.
+  await assertSucceeds(updateDoc(ref(host,'notExited534'),{
     callExitedUids:arrayRemove('host'),callParticipants:arrayUnion('host')
   }));
+  const ordinary=await state('notExited534');
+  if(ordinary.callExitedUids.join(',')!=='delta' ||
+      !ordinary.callParticipants.includes('host'))
+    throw Error('Ordinary member join damaged another exit marker');
   await seed('memberGone534',base('group_memberGone534',{
     members:['beta','gamma','delta']
   }));
