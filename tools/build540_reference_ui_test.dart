@@ -29,7 +29,7 @@ void main() {
         addTearDown(() => tester.binding.setSurfaceSize(null));
         await tester.pumpWidget(MaterialApp(home: MediaQuery(
           data: MediaQueryData(size: Size(width, 640), textScaler: TextScaler.linear(scale)),
-          child: Scaffold(body: Align(alignment: Alignment.bottomCenter,
+          child: Scaffold(resizeToAvoidBottomInset: false, body: Align(alignment: Alignment.bottomCenter,
             child: Ngelx540LiveBar(composer: const TextField(key: ValueKey('input')),
               actions: List.generate(4, (i) => Ngelx540LiveAction(
                 key: ValueKey('action$i'), label: 'Daha fazla', onPressed: () {}, icon: const Text('🌹', style: TextStyle(fontSize: 27)))))),
@@ -47,7 +47,7 @@ void main() {
     addTearDown(controller.dispose);
     Widget page(double keyboard) => MaterialApp(home: MediaQuery(
       data: MediaQueryData(viewInsets: EdgeInsets.only(bottom: keyboard)),
-      child: Scaffold(body: Ngelx540LiveBar(composer: TextField(controller: controller),
+      child: Scaffold(resizeToAvoidBottomInset: false, body: Ngelx540LiveBar(composer: TextField(controller: controller),
         actions: [IconButton(key: const ValueKey('gift'), onPressed: () {}, icon: const Icon(Icons.card_giftcard))])),
     ));
     await tester.pumpWidget(page(0));
