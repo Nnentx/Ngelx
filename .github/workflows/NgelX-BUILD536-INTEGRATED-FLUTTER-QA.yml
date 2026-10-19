@@ -360,10 +360,12 @@ jobs:
           python3 tools/apply_build435_cleanup.py
           python3 -m unittest discover -s tools -p 'test_*cleanup*.py'
 
-      - name: Apply consolidated device fixes
+      - name: Apply Build436 Flutter fixes without replaying legacy Firestore migration
+        shell: bash
         run: |
+          set -euo pipefail
           python3 tools/apply_build436_test_fixes.py
-          python3 tools/apply_build436_details.py
+          python3 tools/apply_build536_source_only_436.py
 
       - name: Build437 approved consolidated decisions
         run: |
