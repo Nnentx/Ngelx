@@ -1,9 +1,6 @@
 # Build536: no-production, no-signing, no-deploy integrated Flutter QA.
 name: NgelX Build536 Integrated Flutter Debug APK QA (no deploy)
 on:
-  push:
-    branches:
-      - qa/ngelx-build536-integrated-flutter-debug-20261019
   pull_request:
     branches:
       - qa/ngelx-build535-consented-rejoin-preflight-20261019
