@@ -22,7 +22,7 @@ for k in (
   'Ngelx520PipBridge.install()',
   'Ngelx520PipBridge.active.addListener',
   'Ngelx520PipBridge.active.removeListener',
-  '?_ngelx520PipVideo()',
+  '?Scaffold(backgroundColor:Colors.black,body:_ngelx520PipVideo())',
   'lk.VideoTrackRenderer(primary,fit:lk.VideoViewFit.cover)',
   'lk.VideoTrackRenderer(local,fit:lk.VideoViewFit.cover)',
   'for(final p in room.remoteParticipants.values)',
