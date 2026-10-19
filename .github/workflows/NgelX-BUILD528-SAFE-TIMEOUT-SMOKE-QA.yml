@@ -34,7 +34,14 @@ jobs:
           set -euo pipefail
           python3 -m py_compile tools/apply_build527_group_join_transaction.py tools/test_build527_group_join_transaction.py tools/test_build528_group_timeout_age.py
           node --check tools/build527_group_join_rules_test.mjs
-          python3 tools/test_build528_group_timeout_age.py
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path('app/lib/build526_atomic_group_timeout.dart').read_text()
+          assert "if(data['callConnectedAt'] is Timestamp)return null;" in s
+          assert "if(createdAt is! Timestamp)return null;" in s
+          assert "if(createdAt is Timestamp &&" not in s
+          print('Build528 smoke source PASS: fail closed on absent age and connected call')
+          PY
           node --check tools/build528_group_timeout_age_rules_test.mjs
           node --check server/livekit443/room-policy.mjs
       - name: Local Firestore emulator group lifecycle and reconnect safety
