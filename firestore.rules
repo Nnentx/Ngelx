@@ -38,6 +38,54 @@ service cloud.firestore {
     function onlyChanges(fields) {
       return request.resource.data.diff(resource.data).affectedKeys().hasOnly(fields);
     }
+    // Build531 (QA): the broad legacy group-chat update rule must not let
+    // another member forge, erase or reset Build530's same-room exit markers.
+    // Only the current caller may append their own UID while atomically
+    // removing themself from callParticipants for this unchanged room.
+    function validGroupCallExitMarkerWrite() {
+      let changed = request.resource.data.diff(resource.data).affectedKeys();
+      let room = resource.data.get('callRoomName', '');
+      let participants = resource.data.get('callParticipants', []);
+      let remaining = participants.removeAll([request.auth.uid]);
+      let oldExitRoom = resource.data.get('callExitedRoomName', '');
+      let oldExits = resource.data.get('callExitedUids', []);
+      let newExits = request.resource.data.get('callExitedUids', []);
+      return signedIn()
+        && resource.data.get('isGroup', false) == true
+        && room is string && room.size() > 0 && room.matches('^group_.*')
+        && request.resource.data.get('callRoomName', '') == room
+        && changed.hasOnly([
+          'callParticipants', 'callExitedRoomName', 'callExitedUids',
+          'callStatus', 'callEndedAt'
+        ])
+        && request.resource.data.members == resource.data.members
+        && participants is list && request.auth.uid in participants
+        && request.resource.data.get('callParticipants', []) == remaining
+        && request.resource.data.get('callExitedRoomName', '') == room
+        && oldExits is list && newExits is list
+        && (
+          (oldExitRoom == room
+            && !(request.auth.uid in oldExits)
+            && newExits.hasAll(oldExits)
+            && newExits.size() == oldExits.size() + 1
+            && newExits.removeAll(oldExits) == [request.auth.uid])
+          || (oldExitRoom != room && newExits == [request.auth.uid])
+        )
+        && request.resource.data.get('callStatus', '') ==
+          (remaining.size() == 0
+            ? (resource.data.get('callConnectedAt', null) is timestamp
+                ? 'ended' : 'missed')
+            : 'active')
+        && (remaining.size() == 0
+          ? request.resource.data.get('callEndedAt', null) is timestamp
+          : request.resource.data.get('callEndedAt', null) ==
+            resource.data.get('callEndedAt', null));
+    }
+    function groupCallExitMarkersSafe() {
+      return !request.resource.data.diff(resource.data).affectedKeys()
+          .hasAny(['callExitedRoomName', 'callExitedUids'])
+        || validGroupCallExitMarkerWrite();
+    }
     function founderProtected() {
       let founder = resource.data.get('createdBy', '');
       return resource.data.get('isGroup', false) != true
@@ -278,7 +326,7 @@ service cloud.firestore {
         && resource.data.get('isGroup', false) == true
         && resource.data.get('discoverable', false) == true
       );
-      allow update: if (
+      allow update: if groupCallExitMarkersSafe() && (
         chatMember() && (
           (
             resource.data.get('isGroup', false) != true
