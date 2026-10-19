@@ -43,7 +43,9 @@ export function roomPermission({kind, room, uid, viewer, owner, peerId, now}) {
       (['followers', 'Takipçiler'].includes(visibility) && list(owner.followers).includes(uid));
   if (!visible) return null;
   const guest=room.guestRequest;
-  const speaker = kind === 'audio' && list(room.speakerIds).includes(uid) || kind==='live' && guest?.status==='accepted' && guest.hostUid===ownerId && guest.guestUid===uid;
+  const speaker = kind === 'audio' && list(room.speakerIds).includes(uid) ||
+    kind==='live' && guest?.status==='accepted' && guest.hostUid===ownerId &&
+    guest.guestUid===uid && room.guestCapacityAllowed!==false;
   // A host-moderated guest may keep the camera while the microphone
   // publication source is denied on a fresh/reconnected LiveKit token.
   // This is not a substitute for server-side muting of existing audio tracks.
