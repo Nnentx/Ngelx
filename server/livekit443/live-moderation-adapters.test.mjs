@@ -14,7 +14,25 @@ function database(){
   serverTimestamp:()=>new Date(now)
  };
  const makeRef=key=>({
-  key,collection:name=>({doc:uid=>makeRef(key+'/'+name+'/'+uid)}),
+  key,
+  collection:name=>({
+    doc:uid=>makeRef(key+'/'+name+'/'+uid),
+    where:(field,op,wanted)=>{
+      assert.equal(field,'status');
+      assert.equal(op,'==');
+      return {orderBy:order=>{
+        assert.equal(order,'__name__');
+        return {limit:max=>({get:async()=>({
+          docs:[...records.entries()]
+            .filter(([path,v])=>path.startsWith(key+'/'+name+'/') &&
+              !path.slice((key+'/'+name+'/').length).includes('/') &&
+              v[field]===wanted)
+            .sort(([a],[b])=>a.localeCompare(b))
+            .slice(0,max).map(([path])=>({id:path.split('/').at(-1)})),
+        })})};
+      }};
+    }
+  }),
   get:async()=>snapshot(key)
  });
  const snapshot=key=>({exists:records.has(key),data:()=>records.get(key)});
@@ -81,4 +99,33 @@ test('reject invalid server admin fields',async()=>{
  const d=database(),a=createGuestModerationStorage({...d,now:()=>now});
  await assert.rejects(a.saveAction({...action,action:'invented'}));
  await assert.rejects(a.saveAction({...action,ownerUid:'attacker',action:'mute'}));
+});
+
+test('Build529 accepted guest moderation query respects first-ten document IDs',async()=>{
+ const d=database();
+ d.records.delete('live_streams/live1/guest_requests/alice');
+ for(let n=0;n<11;n++){
+  const uid='guest'+String(n).padStart(2,'0');
+  d.records.set('live_streams/live1/guest_requests/'+uid,{guestUid:uid,
+    hostUid:'host',status:'accepted',guestCapacityAllowed:true});
+ }
+ const storage=createGuestModerationStorage({...d,now:()=>now});
+ for(let n=0;n<10;n++){
+  const uid='guest'+String(n).padStart(2,'0');
+  assert.equal((await storage.getGuest('live1',uid)).guestCapacityAllowed,true,uid);
+ }
+ assert.equal((await storage.getGuest('live1','guest10')).guestCapacityAllowed,false);
+ // A forged stored guestCapacityAllowed flag is never trusted over the
+ // indexed server query result.
+ d.records.get('live_streams/live1/guest_requests/guest10').guestCapacityAllowed=true;
+ assert.equal((await storage.getGuest('live1','guest10')).guestCapacityAllowed,false);
+ d.records.get('live_streams/live1/guest_requests/guest02').status='rejected';
+ assert.equal((await storage.getGuest('live1','guest10')).guestCapacityAllowed,true);
+});
+
+test('Build529 unaccepted guest does not trigger capacity query',async()=>{
+ const d=database(),storage=createGuestModerationStorage({...d,now:()=>now});
+ d.records.get('live_streams/live1/guest_requests/alice').status='rejected';
+ assert.equal((await storage.getGuest('live1','alice')).status,'rejected');
+ assert.equal(await storage.getGuest('live1','missing'),null);
 });
