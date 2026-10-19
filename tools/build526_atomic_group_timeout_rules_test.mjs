@@ -21,7 +21,8 @@ async function seed(name,data){
     setDoc(doc(c.firestore(),'chats',name),data));
 }
 async function expire(db,name,expectedRoom){
-  return runTransaction(db,async tx=>{
+  try{
+    return await runTransaction(db,async tx=>{
     const ref=doc(db,'chats',name),snap=await tx.get(ref);
     const data=snap.data();
     if(!data||data.callRoomName!==expectedRoom||data.callStatus!=='ringing'||
@@ -32,7 +33,23 @@ async function expire(db,name,expectedRoom){
       callStatus:'missed',callEndedAt:serverTimestamp(),
       callAutoEnded:true,callAutoEndedReason:'no_participants_2m'});
     return true;
-  },{maxAttempts:5});
+    },{maxAttempts:5});
+  }catch(error){
+    if(error.code!=='permission-denied')throw error;
+    // Another concurrent timer, a joining peer, or room replacement may
+    // have made this attempt obsolete. It is only safe to ignore the denial
+    // if an authoritative new snapshot proves the predicate changed.
+    const current=(await getDoc(doc(db,'chats',name))).data();
+    if(!current||current.callRoomName!==expectedRoom||
+       current.callStatus!=='ringing'||
+       current.callConnectedAt instanceof Timestamp||
+       (current.callParticipants??[]).length>1){
+      console.log('Build526 tx collision resolved as stale',name,
+        current?.callStatus??'missing');
+      return false;
+    }
+    throw error;
+  }
 }
 try{
   await env.clearFirestore();
