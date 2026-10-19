@@ -23,7 +23,10 @@ def live(s):
     part=s[a:b].rstrip();assert part.endswith('),')
     part=part[:-2]+')),'
     part=part.replace('color:Colors.white','color:const Color(0xDD151C2B)').replace('Colors.black87','Colors.white').replace('Colors.black54','Colors.white70')
+    part=part.replace('ThemeData.light().copyWith','ThemeData.dark().copyWith').replace('Colors.black45','Colors.white60').replace('ColorScheme.fromSeed(seedColor:mor)','ColorScheme.fromSeed(seedColor:mor,brightness:Brightness.dark)')
     s=s[:a]+part+'\n'+s[b:]
+    a=s.index('  Widget _control450(');b=s.index('  // Build540: reference',a)
+    s=s[:a]+s[a:b].replace('Colors.black87','Colors.white')+s[b:]
     return s
 
 def main(s):
@@ -32,6 +35,19 @@ def main(s):
     # A minimize must show the in-app card, irrespective of native overlay permission.
     s=once(s,'    ngelx448HideCallCard(widget.roomName);','    ngelx448HiddenCallCard.value=null;')
     s=once(s,'const Ngelx445CallOverlay()', 'const Ngelx445CallOverlay(),const Ngelx541GlobalCallStrip()')
+    s=once(s,'Positioned.fill(child:child!)','Positioned.fill(child:Ngelx541CallBody(child:child!))')
+    a=s.index('class _GrupSohbetPageState');b=s.index('class _NgelXAramaPageState',a)
+    body=s[a:b]
+    body=once(body,'              if(!uyeMi)return const SizedBox.shrink();\n              return Row(mainAxisSize:MainAxisSize.min,children:[', '''              if(!uyeMi)return const SizedBox.shrink();
+              // Build541 group header join
+              final currentCall541=snap.data?.data();
+              if(currentCall541!=null&&ngelx440CallJoinable(currentCall541,DateTime.now()))return FilledButton.icon(
+                style:FilledButton.styleFrom(backgroundColor:const Color(0xFF21852C),foregroundColor:Colors.white),
+                onPressed:()=>widget.aktifAramadanAcildi?Navigator.pop(context):unawaited(aktifGrupAramasinaKatil(currentCall541)),
+                icon:Icon(currentCall541['callVideo']==true?Icons.videocam:Icons.call,size:18),label:const Text('KATIL'));
+              // End Build541 group header join
+              return Row(mainAxisSize:MainAxisSize.min,children:[''')
+    s=s[:a]+body+s[b:]
     return s
 
 def model(s):
@@ -59,7 +75,16 @@ class Ngelx541GlobalCallStrip extends StatelessWidget{
   @override Widget build(BuildContext context)=>ValueListenableBuilder<int>(valueListenable:ngelx445CallRevision,builder:(_,revision,__){
     final name=ngelxCallSession444.room,detail=ngelx445CallDetails[name];
     if(name==null||detail==null||!ngelxCallSession444.background||!_ngelxArkaPlanAramaOdalari.containsKey(name)||detail.uid!=FirebaseAuth.instance.currentUser?.uid)return const SizedBox.shrink();
-    return Positioned(top:MediaQuery.paddingOf(context).top,left:0,right:0,child:Material(color:const Color(0xFF21852C),child:InkWell(onTap:()=>ngelx445ReturnCall(name),child:Padding(padding:const EdgeInsets.symmetric(horizontal:12,vertical:7),child:Row(children:[Icon(detail.video?Icons.videocam:Icons.call,color:Colors.white,size:16),const SizedBox(width:7),Expanded(child:Text('${detail.title} · Aramaya dönmek için dokun',maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.white,fontSize:12,fontWeight:FontWeight.w700)))])))));
+    return Positioned(top:MediaQuery.paddingOf(context).top,left:0,right:0,height:40,child:Material(color:const Color(0xFF21852C),child:InkWell(onTap:()=>ngelx445ReturnCall(name),child:Padding(padding:const EdgeInsets.symmetric(horizontal:12,vertical:7),child:Row(children:[Icon(detail.video?Icons.videocam:Icons.call,color:Colors.white,size:16),const SizedBox(width:7),Expanded(child:Text('${detail.title} · Aramaya dönmek için dokun',maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.white,fontSize:12,fontWeight:FontWeight.w700)))])))));
+  });
+}
+class Ngelx541CallBody extends StatelessWidget{
+  final Widget child;
+  const Ngelx541CallBody({super.key,required this.child});
+  @override Widget build(BuildContext context)=>ValueListenableBuilder<int>(valueListenable:ngelx445CallRevision,builder:(_,revision,__){
+    final name=ngelxCallSession444.room,detail=ngelx445CallDetails[name];
+    final visible=name!=null&&detail!=null&&ngelxCallSession444.background&&_ngelxArkaPlanAramaOdalari.containsKey(name)&&detail.uid==FirebaseAuth.instance.currentUser?.uid;
+    return Padding(padding:EdgeInsets.only(top:visible?40:0),child:child);
   });
 }
 ''' 
