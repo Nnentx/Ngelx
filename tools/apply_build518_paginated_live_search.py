@@ -20,6 +20,7 @@ class _NgelxCanliAramaSheet515State extends State<_NgelxCanliAramaSheet515>{
   Timer? _scanDelay518;
   bool _scanStarted518=false,_scanRunning518=false,_scanDone518=false;
   String? _scanError518;
+  bool _joining518=false;
   int _pagesRead518=0;
 
   @override void dispose(){
@@ -87,6 +88,33 @@ class _NgelxCanliAramaSheet515State extends State<_NgelxCanliAramaSheet515>{
       _pages518.clear();
     });
     unawaited(_scanAll518());
+  }
+
+  // Build518: a completed scan is a point-in-time snapshot; an ended room
+  // may still be present in the cached pages. Recheck on the server before
+  // opening the unchanged, authenticated LiveKit join route.
+  Future<void> _openActiveRoom518(String roomId)async{
+    if(_joining518||!mounted)return;
+    setState(()=>_joining518=true);
+    try{
+      final current=await FirebaseFirestore.instance.collection('live_streams')
+        .doc(roomId).get(const GetOptions(source:Source.server))
+        .timeout(const Duration(seconds:8));
+      if(!mounted)return;
+      final data=current.data();
+      if(!current.exists||data==null||!ngelxCanliKaydiTaze(data)){
+        setState(()=>_pages518.remove(roomId));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content:Text('Bu canlı yayın sona ermiş. Listeyi yenileyebilirsin.')));
+        return;
+      }
+      Navigator.pop(context,roomId);
+    }catch(_){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content:Text('Yayın doğrulanamadı. Bağlantını kontrol edip tekrar dene.')));
+    }finally{
+      if(mounted)setState(()=>_joining518=false);
+    }
   }
 
   @override Widget build(BuildContext context){
@@ -202,7 +230,7 @@ class _NgelxCanliAramaSheet515State extends State<_NgelxCanliAramaSheet515>{
                         maxLines:1,overflow:TextOverflow.ellipsis,
                         style:const TextStyle(color:Colors.white60,fontSize:11)),
                       trailing:const Icon(Icons.chevron_right_rounded,color:Colors.white70),
-                      onTap:()=>Navigator.pop(context,d.id),
+                      onTap:_joining518?null:()=>unawaited(_openActiveRoom518(d.id)),
                     ),
                   );
                 },
