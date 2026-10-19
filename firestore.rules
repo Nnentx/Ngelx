@@ -52,6 +52,7 @@ service cloud.firestore {
       let newExits = request.resource.data.get('callExitedUids', []);
       return signedIn()
         && resource.data.get('isGroup', false) == true
+        && resource.data.get('callStatus', '') in ['ringing', 'active']
         && room is string && room.size() > 0 && room.matches('^group_.*')
         && request.resource.data.get('callRoomName', '') == room
         && changed.hasOnly([
@@ -77,7 +78,7 @@ service cloud.firestore {
                 ? 'ended' : 'missed')
             : 'active')
         && (remaining.size() == 0
-          ? request.resource.data.get('callEndedAt', null) is timestamp
+          ? request.resource.data.get('callEndedAt', null) == request.time
           : request.resource.data.get('callEndedAt', null) ==
             resource.data.get('callEndedAt', null));
     }
@@ -422,7 +423,16 @@ service cloud.firestore {
         && resource.data.get('isGroup', false) == true
         && resource.data.get('discoverable', false) == true
       );
-      allow update: if groupCallExitMarkersSafe()
+      // Build533: bounded, complete self-exit fast path. Do not evaluate
+      // every unrelated legacy group-edit rule during concurrent departures.
+      // The helper permits only own UID removal + scoped marker + status,
+      // checks immutable room/members, and validates last-call timestamp.
+      allow update: if (
+        chatMember()
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasAny(['callExitedRoomName', 'callExitedUids'])
+        && validGroupCallExitMarkerWrite()
+      ) || (groupCallExitMarkersSafe()
         && groupCallRoomParticipantsSafe()
         && groupCallTerminalStateSafe() && (
         chatMember() && (
