@@ -138,34 +138,48 @@ service cloud.firestore {
           'callStatus', 'callEndedAt', 'callAutoEnded', 'callAutoEndedReason'
         ]);
     }
+    // Keep the costly timeout predicate lazy: Firestore enforces a strict
+    // rule-expression budget and ordinary chat writes should be cheap.
+    // The preceding groupCallExitMarkersSafe() already validates an exit
+    // marker mutation as this caller's own atomic last departure.
     function groupCallTerminalStateSafe() {
       let oldStatus = resource.data.get('callStatus', '');
       let nextStatus = request.resource.data.get('callStatus', '');
       let oldRoom = resource.data.get('callRoomName', '');
       let newRoom = request.resource.data.get('callRoomName', '');
       let changed = request.resource.data.diff(resource.data).affectedKeys();
-      let legitimateEnd = validGroupCallExitMarkerWrite()
-        || validGroupUnansweredTimeout();
+      let terminalFields = ['callStatus', 'callEndedAt',
+        'callAutoEnded', 'callAutoEndedReason'];
+      let endMetadata = ['callEndedAt', 'callAutoEnded',
+        'callAutoEndedReason'];
       return resource.data.get('isGroup', false) != true
         || !(oldRoom is string && oldRoom.matches('^group_.*'))
         || (
-          // An active room cannot be downgraded to ringing, cancelled,
-          // rejected, or ended while another caller remains.
-          (!(oldStatus in ['ringing', 'active'])
-            || nextStatus == oldStatus
-            || (oldStatus == 'ringing' && nextStatus == 'active')
-            || legitimateEnd)
-          // An old terminal room may only become callable again when it
-          // actually rotates to a different room name.
-          && (!(oldStatus in ['ended', 'missed', 'rejected'])
-            || newRoom != oldRoom || nextStatus == oldStatus)
-          // Do not forge end receipts / auto-expiry metadata while keeping
-          // the same callStatus, or scrub it to bypass future checks.
-          && (!changed.hasAny([
-              'callEndedAt', 'callAutoEnded', 'callAutoEndedReason'
-            ]) || legitimateEnd
+          (
+            // Most chat edits do not touch the call lifecycle at all.
+            !changed.hasAny(terminalFields)
+            // Keeping the same state or acknowledging ringing->active may
+            // not forge end receipts or auto-expiry markers.
+            || (!changed.hasAny(endMetadata) && (
+              nextStatus == oldStatus
+              || (oldStatus == 'ringing' && nextStatus == 'active')
+            ))
+            // If markers changed, Build531's preceding guard validates
+            // EXACT self departure, remaining participants, and final status.
+            || (oldStatus in ['ringing','active']
+              && changed.hasAny(['callExitedRoomName', 'callExitedUids'])
+              && nextStatus in ['ended', 'missed'])
+            // If no member left, only Build526's exact unanswered timeout
+            // may close a ringing call; run this expensive check only here.
+            || (oldStatus == 'ringing' && nextStatus == 'missed'
+              && validGroupUnansweredTimeout())
+            // A completed call can initialize a different, fresh room.
             || (oldStatus in ['ended', 'missed', 'rejected']
-              && newRoom != oldRoom))
+              && newRoom != oldRoom)
+          )
+          // The same room must not revive a terminal call.
+          && (!(oldStatus in ['ended','missed','rejected'])
+            || newRoom != oldRoom || nextStatus == oldStatus)
         );
     }
     function founderProtected() {
