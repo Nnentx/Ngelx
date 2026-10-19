@@ -31,7 +31,7 @@ for key in (
     "sonHediyeAdedi511=hediyeAdedi511;",
     "'quantity': adet,","'points': puan*adet,",
     "hediyeGonderiliyor||adet<1||adet>10",
-    "await giftDoc.set({",
+    "final giftDoc=",
     "int amount511=1;",
     "StatefulBuilder(builder:(c,setGiftAmount)",
     "SingleChildScrollView(child:Padding(",
@@ -47,7 +47,12 @@ send=view[start:end]
 assert "collection('comments').add(" not in send
 assert "final giftDoc=" in send
 assert "bool.fromEnvironment('NGELX_VIRTUAL_GIFT_STAGING',defaultValue:false)" in send
-assert send.index("if(!stagingEnabled)") < send.index("await giftDoc.set({"), "QA gift writing must be gated"
+gate=(
+    send.index("FirebaseFirestore.instance.runTransaction<bool>")
+    if "FirebaseFirestore.instance.runTransaction<bool>" in send
+    else send.index("await giftDoc.set({")
+)
+assert send.index("if(!stagingEnabled)") < gate, "QA gift writing must be gated"
 assert view.count("child:Center(child:_giftScreen511())")==1
 assert ("yama['giftCount']=gifts.docs.fold<int>(" in view or
         "yama['giftCount']=hediyeAdedi511;" in view), "Gift count must come from real Firestore records"
