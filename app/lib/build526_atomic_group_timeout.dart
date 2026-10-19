@@ -10,7 +10,10 @@ Future<bool> ngelx526ExpireUnansweredGroupCall(
   String roomName,
 ) async {
   if (!roomName.startsWith('group_')) return false;
-  final closure=await FirebaseFirestore.instance.runTransaction<Map<String,dynamic>?>((tx)async{
+  Map<String,dynamic>? closure;
+  try{
+    closure=await FirebaseFirestore.instance
+        .runTransaction<Map<String,dynamic>?>((tx)async{
     final snapshot=await tx.get(ref);
     final data=snapshot.data();
     if(data==null ||
@@ -39,7 +42,22 @@ Future<bool> ngelx526ExpireUnansweredGroupCall(
     return <String,dynamic>{
       'messageId':(data['callMessageId']??'').toString(),
     };
-  });
+    });
+  }on FirebaseException catch(error){
+    if(error.code!='permission-denied')rethrow;
+    // Another timer or a new participant may have committed before this
+    // optimistic update. Inspect the authoritative room and only turn a
+    // superseded expiration into a safe no-op; never mask stable ACL errors.
+    final current=(await ref.get()).data();
+    if(current==null||current['callRoomName']!=roomName||
+       current['callStatus']!='ringing'||
+       current['callConnectedAt'] is Timestamp||
+       List<String>.from(current['callParticipants']??const <String>[]).length>1){
+      debugPrint('Build533: obsolete missed-call timeout was ignored');
+      return false;
+    }
+    rethrow;
+  }
   if(closure==null)return false;
   // Updating the originating call message can be disallowed when another
   // member is the initiator. The authoritative call document was already
