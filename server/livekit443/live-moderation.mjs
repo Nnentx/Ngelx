@@ -64,6 +64,12 @@ export function createGuestModeration({
     } catch { return response(503,{error:'temporarily_unavailable'}); }
     if (guest?.hostUid!==uid || guest?.guestUid!==guestUid || guest?.status!=='accepted')
       return response(409,{error:'guest_not_accepted'});
+    // Build529: an accepted 11th guest is only a viewer. Unlike token minting,
+    // moderation directly overwrites the full LiveKit publish permission:
+    // reject mute/unmute BEFORE calling updateParticipant or touching tracks.
+    // Kicking an overflow guest is still permitted for room cleanup.
+    if (action!=='kick' && guest.guestCapacityAllowed!==true)
+      return response(409,{error:'guest_capacity_exceeded'});
 
     // RTC changes and Firestore transactions cannot be globally atomic.
     // Report any failure; never claim the remote action succeeded if it did not.

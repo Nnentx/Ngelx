@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {createGuestModeration} from './live-moderation.mjs';
 const clock=1800000000000;
 const room={ownerId:'host',active:true,lastHeartbeatAt:new Date(clock),roomName:'ngelx_host_1800000000000'};
-const guest={hostUid:'host',guestUid:'alice',status:'accepted'};
+const guest={hostUid:'host',guestUid:'alice',status:'accepted',guestCapacityAllowed:true};
 const request={method:'POST',authorization:'Bearer valid',body:{
   liveId:'live1',guestUid:'alice',action:'mute'
 }};
@@ -143,4 +143,26 @@ test('owner prefix must contain exactly a 13-digit millisecond timestamp',async(
   assert.equal((await run(request)).status,403,invalid);
   assert.equal(events.length,0);
  }
+});
+
+test('Build529 overflow accepted guest cannot be promoted by host mute or unmute',async()=>{
+ for(const action of ['mute','unmute']){
+  const {run,events}=setup({getGuest:async()=>({...guest,guestCapacityAllowed:false})});
+  const result=await run({...request,body:{...request.body,action}});
+  assert.equal(result.status,409,action);
+  assert.equal(result.body.error,'guest_capacity_exceeded');
+  assert.equal(events.length,0,'no LiveKit API action and no DB changes');
+ }
+ const missing=setup({getGuest:async()=>({hostUid:'host',guestUid:'alice',status:'accepted'})});
+ assert.equal((await missing.run({...request,body:{...request.body,action:'unmute'}})).status,409);
+ assert.equal(missing.events.length,0,'missing capacity must fail closed');
+});
+
+test('Build529 allows host to kick an overflow guest without publication rights',async()=>{
+ const {run,events}=setup({getGuest:async()=>({...guest,guestCapacityAllowed:false})});
+ const result=await run({...request,body:{...request.body,action:'kick'}});
+ assert.equal(result.status,200);
+ assert.equal(events.filter(e=>Array.isArray(e)&&e[0]==='permission').length,0);
+ assert.deepEqual(events.filter(e=>Array.isArray(e)&&e[0]==='kick').map(e=>e[2]),['alice']);
+ assert.equal(events.at(-1)[0],'saved');
 });
