@@ -46,6 +46,10 @@ def transform(src):
             },SetOptions(merge:true));
           }).catchError((_){ }));
         }"""
+    if call.count(old)!=1:
+        start=call.index('  void _odaDegisti(){')
+        end=call.index('  void _aramaOlaylariniBagla(',start)
+        print('Build527 generated room callback diagnostic:',repr(call[start:end][:5000]),flush=True)
     call=once(call,old,new,'remote track must not blindly reactivate group')
     old_join="""      unawaited(widget.aramaRef.set(durumGuncelleme,SetOptions(merge:true)).timeout(const Duration(seconds:10)).catchError((_){ }));
       if(widget.roomName.startsWith('group_')){"""
