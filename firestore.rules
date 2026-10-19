@@ -179,6 +179,43 @@ service cloud.firestore {
             || newRoom != oldRoom || nextStatus == oldStatus)
         );
     }
+    // Build534 QA: a voluntary exit can be reversed only by that exact
+    // authenticated group member's deliberate self-rejoin transaction.
+    // The update touches only the participant list and their exit marker;
+    // it cannot clear somebody else's exit, erase moderation, rotate rooms,
+    // change call status, or reanimate an ended/missed room.
+    function validGroupExplicitSelfRejoin() {
+      let room = resource.data.get('callRoomName', '');
+      let participants = resource.data.get('callParticipants', []);
+      let oldExits = resource.data.get('callExitedUids', []);
+      let kicks = resource.data.get('callKickedUids', []);
+      let moderationRoom = resource.data.get('callModerationRoom', '');
+      return signedIn()
+        && resource.data.get('isGroup', false) == true
+        && room is string && room.matches('^group_.*')
+        && resource.data.get('callStatus', '') == 'active'
+        // Mirror the 12-hour maximum active-call token age; do not add a
+        // phantom participant to a room that can no longer mint a token.
+        && resource.data.get('callCreatedAt', null) is timestamp
+        && request.time >= resource.data.get('callCreatedAt', null)
+             - duration.value(30, 's')
+        && request.time <= resource.data.get('callCreatedAt', null)
+             + duration.value(12, 'h')
+        && request.auth.uid in resource.data.get('members', [])
+        && resource.data.get('callStartedBy', '') in resource.data.get('members', [])
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['callExitedUids', 'callParticipants'])
+        && resource.data.get('callExitedRoomName', '') == room
+        && oldExits is list && request.auth.uid in oldExits
+        && participants is list && participants.size() > 0
+        && !(request.auth.uid in participants)
+        && !(kicks is list && request.auth.uid in kicks
+          && (moderationRoom == '' || moderationRoom == room))
+        && request.resource.data.get('callExitedUids', []) ==
+          oldExits.removeAll([request.auth.uid])
+        && request.resource.data.get('callParticipants', []) ==
+          participants.concat([request.auth.uid]);
+    }
     function founderProtected() {
       let founder = resource.data.get('createdBy', '');
       return resource.data.get('isGroup', false) != true
@@ -423,7 +460,7 @@ service cloud.firestore {
       // every unrelated legacy group-edit rule during concurrent departures.
       // The helper permits only own UID removal + scoped marker + status,
       // checks immutable room/members, and validates last-call timestamp.
-      allow update: if (
+      allow update: if validGroupExplicitSelfRejoin() || (
         chatMember()
         && request.resource.data.diff(resource.data).affectedKeys()
           .hasAny(['callExitedRoomName', 'callExitedUids'])
