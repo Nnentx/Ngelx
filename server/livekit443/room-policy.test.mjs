@@ -59,6 +59,22 @@ test('Build517 group kick blocks only removed member token in active room',()=>{
   assert.equal(roomPermission({...args,room:{...group,callKickedUids:[]},uid:'charlie'}).role,'caller');
 });
 
+test('Build530: voluntary group exit blocks fresh token only for that call room',()=>{
+  const group={...call,isGroup:true,members:['alice','bob','charlie'],
+    callRoomName:'group_live_530',callParticipants:['bob','charlie'],
+    callExitedRoomName:'group_live_530',callExitedUids:['alice']};
+  const args={kind:'call',viewer,owner,now,room:group};
+  assert.equal(roomPermission({...args,uid:'alice'}),null);
+  assert.equal(roomPermission({...args,uid:'bob'}).role,'caller');
+  assert.equal(roomPermission({...args,uid:'charlie'}).role,'caller');
+  const newer={...group,callRoomName:'group_next_530'};
+  assert.equal(roomPermission({...args,room:newer,uid:'alice'}).role,'caller');
+  const noExit={...group,callExitedUids:[]};
+  assert.equal(roomPermission({...args,room:noExit,uid:'alice'}).role,'caller');
+  const differentExit={...group,callExitedRoomName:'group_old_530'};
+  assert.equal(roomPermission({...args,room:differentExit,uid:'alice'}).role,'caller');
+});
+
 test('ringing call expiry is bounded',()=>assert.equal(roomPermission({kind:'call',uid:'alice',peerId:'bob',room:{...call,callStatus:'ringing',callCreatedAt:new Date(now-120001)},viewer,owner,now}),null));
 test('host prefix selects only fresh own reservations',()=>{
  assert.equal(hostRequestKind('alice',`ngelx_audio_alice_${now}`,now),'audio');
