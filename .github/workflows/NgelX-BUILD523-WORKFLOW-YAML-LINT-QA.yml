@@ -1,0 +1,35 @@
+name: NgelX Build523 Workflow YAML Lint QA (no deploy)
+on:
+  push:
+    branches:
+      - qa/ngelx-build523-build511-workflow-yaml-20261019
+  pull_request:
+    branches:
+      - qa/ngelx-build516-global-live-search-20261019
+    paths:
+      - '.github/workflows/NgelX-BUILD511-GIFTS-QA.yml'
+      - '.github/workflows/NgelX-BUILD523-WORKFLOW-YAML-LINT-QA.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Parse the previously invalid Build511 YAML
+        shell: bash
+        run: |
+          set -euo pipefail
+          ruby -e "require 'yaml'; YAML.parse_file('.github/workflows/NgelX-BUILD511-GIFTS-QA.yml'); puts 'Build511 YAML syntax PASS'"
+          python3 - <<'PY'
+          from pathlib import Path
+          content=Path('.github/workflows/NgelX-BUILD511-GIFTS-QA.yml').read_text()
+          assert "run: |\n          echo 'Build511 virtual gifting" in content
+          assert "run: echo 'Build511 virtual gifting and animations staging QA only:" not in content
+          assert "      - name: Confirm no production deployment" in content
+          print('Build523 guard PASS: no unquoted colon-space in Build511 final run scalar')
+          PY
+      - name: Verify no production delivery
+        run: echo 'QA workflow lint only - no deploy, no APK overwrite, no secrets.'
