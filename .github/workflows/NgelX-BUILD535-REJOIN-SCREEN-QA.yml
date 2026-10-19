@@ -8,6 +8,7 @@ on:
       - qa/ngelx-build534-explicit-group-rejoin-20261019
     paths:
       - 'tools/apply_build535_consented_group_rejoin.py'
+      - 'tools/apply_build535_rejoin_bundle.py'
       - 'tools/test_build535_consented_rejoin_preflight.py'
       - '.github/workflows/NgelX-BUILD535-REJOIN-SCREEN-QA.yml'
   workflow_dispatch:
@@ -34,7 +35,7 @@ jobs:
           python3 tools/test_build534_explicit_rejoin.py
           python3 tools/test_build533_concurrent_helpers.py
           python3 tools/test_build530_group_exit_guard.py
-          python3 -m py_compile tools/apply_build535_consented_group_rejoin.py
+          python3 -m py_compile tools/apply_build535_consented_group_rejoin.py tools/apply_build535_rejoin_bundle.py
           node --test server/livekit443/room-policy.test.mjs server/livekit441/token-endpoint.test.mjs
       - name: Install local Firebase emulator dependencies
         run: npm install --no-save --no-package-lock firebase @firebase/rules-unit-testing firebase-tools
