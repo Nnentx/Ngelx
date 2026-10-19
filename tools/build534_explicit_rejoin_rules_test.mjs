@@ -146,6 +146,21 @@ try{
     callExitedUids:arrayRemove('host'),callParticipants:arrayUnion('host')
   }));
 
+  // Server would refuse new tokens when the call age exceeds 12 hours.
+  // Firestore must not un-exit the caller into such a zombie room.
+  await seed('aged534',base('group_aged534',{
+    callCreatedAt:Timestamp.fromMillis(now-13*3600_000)
+  }));
+  await assertFails(updateDoc(ref(host,'aged534'),{
+    callExitedUids:arrayRemove('host'),callParticipants:arrayUnion('host')
+  }));
+  await seed('missingAge534',base('group_missingAge534',{
+    callCreatedAt:null
+  }));
+  await assertFails(updateDoc(ref(host,'missingAge534'),{
+    callExitedUids:arrayRemove('host'),callParticipants:arrayUnion('host')
+  }));
+
   // Ordinary chat updates and ongoing callers remain unaffected.
   await assertSucceeds(updateDoc(ref(beta,'rejoin534'),{
     updatedAt:Timestamp.fromMillis(now)
