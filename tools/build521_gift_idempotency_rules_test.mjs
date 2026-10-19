@@ -22,7 +22,7 @@ try{
   const send=async ()=>{
     return runTransaction(guest,async tx=>{
       const current=await tx.get(gift);
-      if(current.exists){
+      if(current.exists()){
         const data=current.data();
         if(data.kind!=='gift'||data.uid!=='guest'||data.giftName!=='Gül'||
           data.quantity!==5||data.points!==5)throw Error('request mismatch');
