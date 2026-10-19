@@ -27,6 +27,8 @@ def live(s):
     return s
 
 def main(s):
+    s=once(s,"import 'build540_reference_ui.dart';","import 'build540_reference_ui.dart';\nimport 'build541_pk_policy.dart';")
+    s=once(s,"part 'audio_live_rooms_pro.dart';", "part 'audio_live_rooms_pro.dart';\npart 'build541_audio_pk.dart';")
     # A minimize must show the in-app card, irrespective of native overlay permission.
     s=once(s,'    ngelx448HideCallCard(widget.roomName);','    ngelx448HiddenCallCard.value=null;')
     s=once(s,'const Ngelx445CallOverlay()', 'const Ngelx445CallOverlay(),const Ngelx541GlobalCallStrip()')
@@ -80,6 +82,7 @@ def audio(s):
     body=body.replace('.clamp(3,ngelxSesliMaksKonusmaci)', '.clamp(9,ngelxSesliMaksKonusmaci)')
     body=body.replace('return koltuk(id);',"return id.isEmpty?InkWell(borderRadius:BorderRadius.circular(70),onTap:bitti?null:yoneticiyim?istekler:sozIste,child:koltuk(id)):koltuk(id);")
     body=body.replace('childAspectRatio:.92','childAspectRatio:.88')
+    body=once(body,'Expanded(child:ListView(padding:const EdgeInsets.all(16),children:[Container(', 'Expanded(child:ListView(padding:const EdgeInsets.all(16),children:[Ngelx541AudioPk(roomId:widget.odaId,ownerUid:widget.ownerId,ended:bitti),Container(')
     s=s[:a]+body+s[b:]
     return s
 

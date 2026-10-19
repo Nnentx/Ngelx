@@ -1341,6 +1341,9 @@ jobs:
           python3 tools/test_build541_continuity.py
           python3 tools/apply_build541_continuity.py
           python3 tools/apply_build541_continuity.py
+          cp tools/build541_pk_policy_test.dart app/test/build541_pk_policy_test.dart
+          cd app
+          timeout 240s flutter test --reporter expanded --timeout 60s test/build541_pk_policy_test.dart
 
       - name: Analyze full regenerated Flutter app without production deployment
         shell: bash

@@ -11,7 +11,7 @@ class Continuity(unittest.TestCase):
   a=new.index('  Future<void> _aramaEkraniniKucult()');b=new.index('  @override Widget build',a);body=new[a:b]
   self.assertNotIn('ngelx448HideCallCard',body)
   for token in ['ngelx448HiddenCallCard.value=null','room:r','ngelxCallSession444.minimize(widget.roomName)','oda=null','Navigator.pop(context,false)']:self.assertIn(token,body)
-  self.assertEqual(new.replace('    ngelx448HiddenCallCard.value=null;','    ngelx448HideCallCard(widget.roomName);').replace('const Ngelx445CallOverlay(),const Ngelx541GlobalCallStrip()','const Ngelx445CallOverlay()'),old)
+  self.assertEqual(new.replace('    ngelx448HiddenCallCard.value=null;','    ngelx448HideCallCard(widget.roomName);').replace('const Ngelx445CallOverlay(),const Ngelx541GlobalCallStrip()','const Ngelx445CallOverlay()').replace("part 'audio_live_rooms_pro.dart';\npart 'build541_audio_pk.dart';","part 'audio_live_rooms_pro.dart';").replace("import 'build540_reference_ui.dart';\nimport 'build541_pk_policy.dart';","import 'build540_reference_ui.dart';"),old)
  def test_livestream_gift_write_gate_and_moderation_unchanged(self):
   old=self.baseline('live_broadcast_studio.dart');new=TRANSFORMS['live_broadcast_studio.dart'](old)
   a=old.index('  Future<void> _hediyeGonder');b=old.index('  Future<void> _hediyePaneli',a)
