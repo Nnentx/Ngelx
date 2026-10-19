@@ -194,6 +194,13 @@ service cloud.firestore {
         && resource.data.get('isGroup', false) == true
         && room is string && room.matches('^group_.*')
         && resource.data.get('callStatus', '') == 'active'
+        // Mirror the 12-hour maximum active-call token age; do not add a
+        // phantom participant to a room that can no longer mint a token.
+        && resource.data.get('callCreatedAt', null) is timestamp
+        && request.time >= resource.data.get('callCreatedAt', null)
+             - duration.value(30, 's')
+        && request.time <= resource.data.get('callCreatedAt', null)
+             + duration.value(12, 'h')
         && request.auth.uid in resource.data.get('members', [])
         && resource.data.get('callStartedBy', '') in resource.data.get('members', [])
         && request.resource.data.diff(resource.data).affectedKeys()
