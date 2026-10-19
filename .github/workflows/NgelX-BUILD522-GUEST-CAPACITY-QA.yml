@@ -1,0 +1,41 @@
+name: NgelX Build522 Server Guest Capacity QA (no deploy)
+
+on:
+  push:
+    branches:
+      - qa/ngelx-build522-server-ten-live-guests-20261019
+  pull_request:
+    branches:
+      - qa/ngelx-build516-global-live-search-20261019
+    paths:
+      - 'server/livekit443/**'
+      - '.github/workflows/NgelX-BUILD522-GUEST-CAPACITY-QA.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  livekit-server-qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout QA branch
+        uses: actions/checkout@v4
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check backend syntax and test ten-guest limit
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check server/livekit443/firestore-adapters.mjs
+          node --check server/livekit443/room-policy.mjs
+          node --check server/livekit443/firestore-adapters.test.mjs
+          node --test server/livekit443/room-policy.test.mjs server/livekit443/firestore-adapters.test.mjs server/livekit443/live-moderation.test.mjs server/livekit443/live-moderation-adapters.test.mjs server/livekit441/token-endpoint.test.mjs
+      - name: Confirm no production deployment
+        run: |
+          echo 'Build522 validates only local Node LiveKit authorization policy.'
+          echo 'NO Cloud Run deployment. NO Firebase deployment. NO LiveKit service mutation.'
+          echo 'main, Build484, production download and secrets unchanged.'
