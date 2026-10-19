@@ -36,6 +36,10 @@ async function leave(db,chat,room,user) {
     const participants=data.callParticipants??[];
     if(!participants.includes(user))return 'stale';
     const isLast=participants.filter(p=>p!==user).length===0;
+    if(chat==='group517_concurrent')console.log('Build517 tx read',JSON.stringify({
+      user,participants,exits:data.callExitedUids,exitRoom:data.callExitedRoomName,
+      status:data.callStatus,isLast
+    }));
     // Build530+531: the current client records its own same-room exit
     // marker atomically. Test the integrated behavior, not the pre-530 one.
     tx.update(doc(db,'chats',chat),{
@@ -99,9 +103,20 @@ try{
   await assertSucceeds(leave(host,'group517_concurrent','group_517_concurrent','host'));
   // Firestore retries optimistic conflicting transactions. One of these
   // must observe the other's leave and close only after the second leaves.
+  const concurrentLeave=async (db,uid)=>{
+    try{
+      const result=await assertSucceeds(leave(db,'group517_concurrent',
+        'group_517_concurrent',uid));
+      console.log('Build517 tx success',uid,result);
+      return result;
+    }catch(error){
+      console.error('Build517 tx FAIL',uid,String(error));
+      throw error;
+    }
+  };
   const results=await Promise.all([
-    assertSucceeds(leave(beta,'group517_concurrent','group_517_concurrent','beta')),
-    assertSucceeds(leave(gamma,'group517_concurrent','group_517_concurrent','gamma')),
+    concurrentLeave(beta,'beta'),
+    concurrentLeave(gamma,'gamma'),
   ]);
   if(results.filter(x=>x==='last').length!==1)
     throw Error('Concurrent departure must have precisely one last member');
