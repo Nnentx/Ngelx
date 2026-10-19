@@ -24,6 +24,12 @@ Future<bool> ngelx527RegisterGroupParticipant(
     final moderationRoom=(data['callModerationRoom']??'').toString();
     if(kicks.contains(uid)&&(moderationRoom.isEmpty||
         moderationRoom==roomName))return false;
+    // Build530: no late join/track callback can re-add an explicitly
+    // departed participant to the same room after their leave committed.
+    // The next group call is not affected by historical exit markers.
+    if(data['callExitedRoomName']==roomName &&
+        List<String>.from(data['callExitedUids']??const <String>[])
+            .contains(uid))return false;
     // Check cancel again after the asynchronous transaction read.
     // A local leave that wins before commit cannot re-add its own UID.
     if(cancelled?.call()==true)return false;
