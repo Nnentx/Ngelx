@@ -31,10 +31,7 @@ def transform(src):
             widget.aramaRef,widget.roomName,
             cancelled:()=>bitiyor||!_alive444||!identical(oda,r)));
         }else{
-          unawaited(widget.aramaRef.set({
-            'callStatus':'active',
-            'callConnectedAt':FieldValue.serverTimestamp(),
-          },SetOptions(merge:true)).catchError((_){ }));
+          unawaited(_writeCurrent444({'callStatus':'active','callConnectedAt':FieldValue.serverTimestamp()}).catchError((_){ }));
           unawaited(widget.aramaRef.get().then((d){
             final id=(d.data()?['callMessageId']??'').toString();
             if(id.isNotEmpty)return widget.aramaRef.collection('messages').doc(id).set({
