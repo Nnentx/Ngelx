@@ -470,8 +470,11 @@ jobs:
 
       - name: Build447 story calls and preserve approved inbox
         run: |
-          git apply --check tools/build447.patch
-          git apply tools/build447.patch
+          # Build447's patch bundles an obsolete Firestore ACL delta.
+          # Apply the actual Flutter/Android fixes; the temporary legacy
+          # generator rules and modern QA security rules are separate.
+          git apply --check --exclude=firestore.rules tools/build447.patch
+          git apply --exclude=firestore.rules tools/build447.patch
           cp tools/build446_speaking_test.dart app/test/build446_speaking_test.dart
           cd app
           flutter test test/build446_speaking_test.dart
