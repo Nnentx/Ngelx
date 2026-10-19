@@ -114,12 +114,17 @@ def transform(src):
     if 'yorum.clear();' not in old or "collection('comments').add({" not in old:
         raise RuntimeError('Build524 previous send method changed')
     live=live[:old_start]+METHOD+live[old_end:]
-    live=exactly_one(live,'onSubmitted:etkin?(_)=>_yorumGonder():null',
-        'onSubmitted:etkin&&!_sendingComment524?(_)=>_yorumGonder():null',
-        'disable submit while busy')
-    live=exactly_one(live,'onPressed:etkin?_yorumGonder:null',
-        'onPressed:etkin&&!_sendingComment524?_yorumGonder:null',
-        'disable double tap')
+    # Later generated layouts can rewrite the text-field callback. Keep
+    # the synchronous method-level busy guard as the authoritative protection.
+    # Where the known callback exists, also disable it visually while sending.
+    if 'onSubmitted:etkin?(_)=>_yorumGonder():null' in live:
+        live=exactly_one(live,'onSubmitted:etkin?(_)=>_yorumGonder():null',
+            'onSubmitted:etkin&&!_sendingComment524?(_)=>_yorumGonder():null',
+            'disable submit while busy')
+    if 'onPressed:etkin?_yorumGonder:null' in live:
+        live=exactly_one(live,'onPressed:etkin?_yorumGonder:null',
+            'onPressed:etkin&&!_sendingComment524?_yorumGonder:null',
+            'disable double tap')
     for token in ('_yorumYonet(d.id,y)','_giftHistory512()',
                   '_newCommentChip510()','_commentHistory514()',
                   'yorum.dispose()','_yorumGirisAlani()'):
