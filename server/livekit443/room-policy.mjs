@@ -26,6 +26,11 @@ export function roomPermission({kind, room, uid, viewer, owner, peerId, now}) {
       // a fresh LiveKit token for the same current call.
       const moderationRoom = room.callModerationRoom;
       const currentRoom = room.callRoomName;
+      // Build530: the server must not mint another RTC token for a
+      // participant who voluntarily left this exact active call room.
+      if (typeof currentRoom === 'string' && currentRoom.length > 0 &&
+          room.callExitedRoomName === currentRoom &&
+          list(room.callExitedUids).includes(uid)) return null;
       if (list(room.callKickedUids).includes(uid) &&
           (!moderationRoom || moderationRoom === currentRoom)) return null;
     }
