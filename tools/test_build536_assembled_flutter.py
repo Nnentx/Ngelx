@@ -50,7 +50,7 @@ assert locations == sorted(locations), 'User approval must precede token/connect
 for item in (
     'bool rejoinBlocked535=false;',
     'if(rejoinApproved535&&!rtcConnected535&&mounted&&!bitiyor)',
-    'if(yeniden&&!rejoinBlocked535&&',
+    'if(_alive444&&yeniden&&!rejoinBlocked535&&',
     "if(call==null||call['callRoomName']!=widget.roomName||",
     "call['callExitedRoomName']==widget.roomName",
     "if(yeniden){",
