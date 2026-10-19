@@ -16,15 +16,24 @@ function database(initial={}) {
     doc(id){return {get:async()=>snap(prefix+id)};},
     where(field,op,expected){
      assert.equal(op,'==');
-     return {orderBy(order){
-      assert.equal(order,'__name__');
-      return {limit(limit){return {get:async()=>{
-       const docs=[...records].filter(([k,v])=>k.startsWith(prefix)&&
-         !k.slice(prefix.length).includes('/')&&v[field]===expected)
-         .sort(([a],[b])=>a.localeCompare(b)).slice(0,limit)
-         .map(([k])=>snap(k));
-       return {docs,empty:docs.length===0,size:docs.length};
-      }};}};}
+     return {
+      orderBy(order){
+       assert.equal(order,'__name__');
+       return {
+        limit(limit){
+         return {
+          get:async()=>{
+           const docs=[...records].filter(([k,v])=>k.startsWith(prefix)&&
+             !k.slice(prefix.length).includes('/')&&v[field]===expected)
+             .sort(([a],[b])=>a.localeCompare(b)).slice(0,limit)
+             .map(([k])=>snap(k));
+           return {docs,empty:docs.length===0,size:docs.length};
+          },
+         };
+        },
+       };
+      },
+     };
     }
    };
   }}
