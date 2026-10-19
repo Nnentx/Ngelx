@@ -10,7 +10,19 @@ export function createGuestModerationStorage({db,FieldValue,now=()=>Date.now()})
   const guestRef=(liveId,uid)=>liveRef(liveId).collection('guest_requests').doc(uid);
   return {
     getRoom:async liveId=>dataOf(await liveRef(liveId).get()),
-    getGuest:async (liveId,uid)=>dataOf(await guestRef(liveId,uid).get()),
+    getGuest:async (liveId,uid)=>{
+      const guest=dataOf(await guestRef(liveId,uid).get());
+      if(guest?.status!=='accepted')return guest;
+      // Build529: never trust a client-provided slot/count/capability. The
+      // same document-id ordering as the token endpoint limits publication
+      // to the first ten accepted guest requests. Overflow may still be
+      // kicked, but mute/unmute must never elevate an 11th viewer.
+      const accepted=await liveRef(liveId).collection('guest_requests')
+        .where('status','==','accepted')
+        .orderBy('__name__').limit(11).get();
+      return {...guest,
+        guestCapacityAllowed:accepted.docs.slice(0,10).some(d=>d.id===uid)};
+    },
     saveAction:async ({liveId,guestUid,ownerUid,roomName,action})=>
       db.runTransaction(async tx=>{
         const r=liveRef(liveId),g=guestRef(liveId,guestUid);
