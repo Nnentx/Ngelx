@@ -9,7 +9,7 @@ class Ngelx543PipCall {
   static Future<void> Function(String)? foregroundAction;
   static void bind(lk.Room? room,String name,String heading,Future<void> Function(String) action){
     foreground=room;roomName=name;title=heading;
-    ownerUid=FirebaseAuth.instance.currentUser?.uid;foregroundAction=action;
+    ownerUid=room?.localParticipant?.identity.toString();foregroundAction=action;
   }
   static void clear(String name){
     if(roomName!=name)return;
@@ -22,7 +22,7 @@ class Ngelx543PipCall {
     final name=ngelxCallSession444.room,detail=ngelx445CallDetails[ngelxCallSession444.room];
     if(name==null||detail==null||detail.uid!=uid||!ngelxCallSession444.background)return null;
     final room=_ngelxArkaPlanAramaOdalari[name];
-    return room==null?null:(room:room,title:detail.title);
+    return room==null||room.localParticipant?.identity.toString()!=uid?null:(room:room,title:detail.title);
   }
   static bool _restoring=false;
   static Future<void> restoreAfterExpand()async{
