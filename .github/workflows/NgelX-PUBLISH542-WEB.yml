@@ -1,0 +1,70 @@
+name: Publish verified NgelX Build542 Android test APK
+on:
+  push:
+    branches: [qa/ngelx-publish541-android-20261020]
+    paths: ['.github/workflows/NgelX-PUBLISH541-WEB.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - name: Wait for exact reviewed candidate and require success
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test "$(gh api repos/Nnentx/Ngelx/actions/runs/39380850457 --jq .head_sha)" = "e447f22d5b12312a632635e7aa1bf09adb3046cc"
+          gh run watch 39380850457 --repo Nnentx/Ngelx --interval 20 --exit-status
+          test "$(gh api repos/Nnentx/Ngelx/actions/runs/39380850457 --jq .conclusion)" = success
+          if gh release view v1.0.312-build542-test --repo Nnentx/Ngelx >/dev/null 2>&1; then
+            echo 'Refusing to replace an existing release.'
+            exit 1
+          fi
+      - name: Download only the verified candidate artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh run download 39380850457 --repo Nnentx/Ngelx --name NgelX-Build542-REAL-INPLACE-SIGNED-REVIEW-ONLY --dir candidate
+      - name: Verify checksum, package, version and original update signer
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib,shutil
+          from pathlib import Path
+          name='NgelX-1.0.312-Build542-INPLACE-CANDIDATE.apk'
+          files=list(Path('candidate').rglob(name));sums=list(Path('candidate').rglob(name+'.sha256'))
+          assert len(files)==len(sums)==1
+          apk=files[0];assert 40_000_000<apk.stat().st_size<200_000_000
+          digest=hashlib.sha256(apk.read_bytes()).hexdigest();assert digest==sums[0].read_text().split()[0]
+          shutil.copyfile(apk,'NgelX-1.0.312-Build-542.apk')
+          Path('NgelX-1.0.312-Build-542.apk.sha256').write_text(digest+'  NgelX-1.0.312-Build-542.apk\n')
+          print('Verified candidate SHA256:',digest)
+          PY
+          tools=$(find "$ANDROID_HOME/build-tools" -name apksigner | sort -V | tail -1)
+          test -n "$tools"
+          "$tools" verify --verbose --print-certs NgelX-1.0.312-Build-542.apk > signature.txt
+          grep -Fi 'be20b27f0ba1f4decd2941d410b1536de89e48dc894f04f038f9d26b11ecd6aa' signature.txt
+          aapt="$(dirname "$tools")/aapt"
+          "$aapt" dump badging NgelX-1.0.312-Build-542.apk > manifest.txt
+          grep -F "package: name='com.nnentx.ngelx_app' versionCode='542' versionName='1.0.312'" manifest.txt
+      - name: Publish Android test download without backend deployment
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          cat > notes.md <<'EOF'
+          NgelX 1.0.312 / Build542 Android test sürümü.
+
+          PR #174: arkadaş profil şeridi, grup satırında KATIL, daha geniş dönüş çubuğu, sade arama başlığı, büyük katılımcı kartları, küçük ve aralıklı kontroller, doğrudan katılma/ayrılma, kamera yayınını bekleme ve yeni hesap gizlilik varsayılanı. Mevcut paket kimliği ve güncelleme imzası korunmuştur. Kaynak koruma testleri, Flutter testleri, analiz, APK sürüm ve imza kontrolleri başarılı derleme 39380850457 içinde doğrulanmıştır.
+
+          İki gerçek cihazda medya davranışı ayrıca test edilmelidir. Sanal hediyeler mevcut test ortamı sınırını korur. Firebase/LiveKit sunucularına production dağıtımı yapılmamıştır. Önceki Build539/540 dosyaları değiştirilmemiştir.
+          Kaynak adayı e447f22d5b12312a632635e7aa1bf09adb3046cc; yayın kaynak dışa aktarımı dc26c1377854817f14dfd1bafb714a38ef5025b8. Uygulama kodu/testler aynıdır; yayın kaynak dalında CI iş akışları varsayılan dal ile aynen korunur.
+          EOF
+          test "$(gh api 'repos/Nnentx/Ngelx/git/trees/dc26c1377854817f14dfd1bafb714a38ef5025b8?recursive=1' --jq '.tree[] | select(.path==".github/workflows") | .sha')" = 097102c0a68a0161f87410c61d5706c0baeab51d
+          gh release create v1.0.312-build542-test NgelX-1.0.312-Build-542.apk NgelX-1.0.312-Build-542.apk.sha256 --repo Nnentx/Ngelx --target dc26c1377854817f14dfd1bafb714a38ef5025b8 --prerelease --title 'NgelX 1.0.312 / Build542 test' --notes-file notes.md
