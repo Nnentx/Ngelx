@@ -7,7 +7,17 @@ class Ngelx543PipCall {
   static String? roomName,ownerUid;
   static String title='NgelX';
   static Future<void> Function(String)? foregroundAction;
+  static bool _installed=false,_ending=false,_closing=false;
+  static StreamSubscription<User?>? _auth;
+  static void install(){
+    if(_installed)return;
+    _installed=true;
+    void closeEnded(){if(Ngelx520PipBridge.active.value&&current==null&&!_ending)unawaited(_endPip());}
+    ngelx445CallRevision.addListener(closeEnded);
+    _auth=FirebaseAuth.instance.authStateChanges().listen((_)=>closeEnded());
+  }
   static void bind(lk.Room? room,String name,String heading,Future<void> Function(String) action){
+    install();
     foreground=room;roomName=name;title=heading;
     ownerUid=room?.localParticipant?.identity.toString();foregroundAction=action;
   }
@@ -44,21 +54,26 @@ class Ngelx543PipCall {
     return Ngelx520PipBridge.enter();
   }
   static Future<void> _endPip()async{
+    if(_closing)return;
+    _closing=true;
     try{await const MethodChannel('com.nnentx.ngelx_app/call_pip_520').invokeMethod<void>('endPip543');}catch(_){}
     Ngelx520PipBridge.active.value=false;
+    _closing=false;
   }
   static Future<void> action(String action)async{
     if(current==null)return;
     if(foreground!=null&&ownerUid==FirebaseAuth.instance.currentUser?.uid){
-      await foregroundAction?.call(action);
-      if(action=='end'&&current==null)await _endPip();
+      if(action=='end'){
+        _ending=true;
+        try{await foregroundAction?.call(action);}finally{_ending=false;if(current==null)await _endPip();}
+      }else{await foregroundAction?.call(action);}
       return;
     }
     final name=ngelxCallSession444.room;
     if(name==null)return;
     final room=_ngelxArkaPlanAramaOdalari[name];
     if(room==null)return;
-    if(action=='end'){await ngelx445EndBackground(name);await _endPip();return;}
+    if(action=='end'){_ending=true;try{await ngelx445EndBackground(name);}finally{_ending=false;await _endPip();}return;}
     if(action=='microphone'){
       if(ngelx446Calls.muted(name))return;
       final local=room.localParticipant;

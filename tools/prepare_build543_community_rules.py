@@ -59,7 +59,7 @@ def transform(s):
  nested_end=block.index('    match /communityInvites450/{code}',nested_start)
  head,tail,after=block[:nested_start],block[nested_start:nested_end],block[nested_end:]
  tail=re.sub(r'allow ((?:create|update|delete|write)(?:,\s*(?:create|update|delete|write))*): if ',r'allow \1: if communityWritable543(cid) && ',tail)
- block="    function communityWritable543(cid) { return !exists(/databases/$(database)/documents/community_deletions543/$(cid)); }\n"+head+tail+after
+ block="    function communityWritable543(cid) { return !exists(/databases/$(database)/documents/community_deletions543/$(cid)) && community450(cid).get('deletion543',{}).get('state','') != 'deleting'; }\n"+head+tail+after
  out=s[:a]+block+s[b:]
  assert out[:a]==s[:a] and out.split('    match /users/{uid}',1)[1]==s.split('    match /users/{uid}',1)[1]
  return out
