@@ -134,6 +134,19 @@ def inbox(s):
  a=s.index('Widget ngelx542GroupTrailing(');b=s.index('\n// Build542 call refinements',a)
  return s[:a]+"Widget ngelx542GroupTrailing(String chatId,Map<String,dynamic> chat,VoidCallback join,Widget usual)=>Ngelx543GroupJoin(key:ValueKey('call-join-$chatId'),chatId:chatId,seed:chat,join:join,usual:usual);\n"+s[b:]
 
+def lifecycle(s):
+ s=once(s,'    if(!visible){',"""    // A visible owned mini-call is still an intentional camera surface.
+    visible=visible||ngelx543MiniCameraVisible(
+      owned:identical(Ngelx543PipCall.current?.room,entry.room),
+      pip:Ngelx520PipBridge.active.value,
+      foreground:_foreground,background:ngelxCallSession444.background,
+      cardVisible:ngelx448HiddenCallCard.value!=ngelxCallSession444.room);
+    if(!visible){""")
+ return once(s,'  Future<void> hide(String name)',"""  Future<void> refreshMini543()=>_enqueue(()async{
+    for(final entry in _calls.values.toList())await _camera(entry,_foreground&&!entry.hidden);
+  });
+  Future<void> hide(String name)""")
+
 def native(s):
  s=once(s,'import android.app.PictureInPictureParams\n','import android.app.PictureInPictureParams\nimport android.app.RemoteAction\nimport android.app.PendingIntent\nimport android.graphics.drawable.Icon\n')
  s=once(s,'        pipMethodChannel520=pip520','        pipMethodChannel520=pip520\n        Ngelx543PipEvents.channel=pip520')
@@ -166,7 +179,7 @@ def native(s):
 def manifest(s):
  return once(s,'    </application>', '''        <receiver android:name=".Ngelx543PipReceiver" android:exported="false" />
     </application>''')
-TRANSFORMS={'app/lib/main.dart':main,'app/lib/build445_inbox_model.dart':inbox,'app/lib/build520_livekit_pip.dart':bridge,'app/lib/build440_behavior.dart':behavior,'app/lib/build456_widgets.dart':dashboard,'app/lib/community450.dart':community,'app/android/app/src/main/kotlin/com/nnentx/ngelx_app/MainActivity.kt':native,'app/android/app/src/main/AndroidManifest.xml':manifest}
+TRANSFORMS={'app/lib/main.dart':main,'app/lib/build446_call_lifecycle.dart':lifecycle,'app/lib/build445_inbox_model.dart':inbox,'app/lib/build520_livekit_pip.dart':bridge,'app/lib/build440_behavior.dart':behavior,'app/lib/build456_widgets.dart':dashboard,'app/lib/community450.dart':community,'app/android/app/src/main/kotlin/com/nnentx/ngelx_app/MainActivity.kt':native,'app/android/app/src/main/AndroidManifest.xml':manifest}
 def transform(s,fn):return s if TAG in s else fn(s)+'\n'+TAG+'\n' if fn!=manifest else (s if '<!-- Build543 -->' in s else fn(s)+'\n<!-- Build543 -->\n')
 if __name__=='__main__':
  changes=[]
