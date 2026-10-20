@@ -1377,7 +1377,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python3 tools/test_build544_call_cleanup.py
+          python3 tools/test_build544_account_transition.py
           python3 tools/apply_build544_call_cleanup.py
           python3 tools/apply_build544_call_cleanup.py
           cp tools/build544_call_cleanup_test.dart app/test/build544_call_cleanup_test.dart
