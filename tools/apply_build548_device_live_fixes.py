@@ -21,6 +21,7 @@ def main_source(s):
  create=once(create,'  Future<void> kamerayiAc({required bool video})async{','''  Future<void> kamerayiAc({required bool video})=>_createMediaAction548(()=>_kamerayiAc548(video:video));
   Future<void> _kamerayiAc548({required bool video})async{''')
  create=create.replace('    if(yukleniyor)return;\n    setState((){tur=yeni;', '    if(yukleniyor||_createBusy548||DateTime.now().isBefore(_createReady548))return;\n    setState((){tur=yeni;')
+ create=once(create,'  Future<void> kameraSecimi()async{\n    if(yukleniyor)return;', '  Future<void> kameraSecimi()async{\n    if(yukleniyor||_createBusy548||DateTime.now().isBefore(_createReady548))return;')
  create=once(create,'onPressed:yukleniyor?null:medyaSec,','onPressed:yukleniyor||_createBusy548?null:genelGaleri548,')
  # Generic top gallery icon must use mixed media as well; photo/video tool
  # callbacks still call mediaSec after an explicit content-type selection.
@@ -60,6 +61,7 @@ def main_source(s):
 def studio_source(s):
  if TAG in s:return s
  s=once(s,'  bool _guestMicWanted546=true,_guestCameraWanted546=true;', '  bool _guestMicWanted546=true,_guestCameraWanted546=false;\n'+snippet('guest_stage'))
+ s=once(s,"      final yeniPk=v['pkActive']==true;","      final yeniPk=v['pkActive']==true;\n      final hostMuted548=Set<String>.from(List<String>.from(v['guestAudioMutedUids']??const[]));\n      if(mounted&&!setEquals(_hostMuted548,hostMuted548))setState(()=>_hostMuted548=hostMuted548);")
  s=once(s,'  Future<void> _guestSync448(bool accepted)async{','''  Future<void> _guestSync448(bool accepted)async{
     if(accepted&&!_guestConsent548){
       _guestWanted448=true;
@@ -95,6 +97,8 @@ def studio_source(s):
  s=once(s,"        final current=await tx.get(giftDoc);","""        final live=await tx.get(FirebaseFirestore.instance.collection('live_streams').doc(widget.belgeId));
         if(live.data()?['active']!=true||List<String>.from(live.data()?['bannedUsers']??const[]).contains(user.uid))throw StateError('live_unavailable');
         final current=await tx.get(giftDoc);""")
+ s=once(s,'    int amount511=1;','    int amount511=1;bool picked548=false;')
+ s=once(s,"                onTap: () async {\n                  Navigator.pop(c);\n                  await _hediyeGonder(","                onTap: () async {\n                  if(picked548)return;picked548=true;\n                  Navigator.pop(c);\n                  await _hediyeGonder(")
  s=s.replace('QA sanal hediye · gerçek para/coin ödemesi yok','Ücretsiz sanal hediyeler · para veya coin harcanmaz')
  s=s.replace("Text('${h['puan']} N',", "Text('Ücretsiz · ${h['puan']} puan',")
  return s+'\n'+TAG+'\n'

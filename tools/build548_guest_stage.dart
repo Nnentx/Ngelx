@@ -1,4 +1,5 @@
   bool _guestConsent548=false;
+  Set<String> _hostMuted548=<String>{};
   List<String> _stageGuests548(){final ids=_viewerGuestIds489()..sort();return ids;}
   lk.Participant? _stageParticipant548(String uid){
     if(uid==FirebaseAuth.instance.currentUser?.uid)return widget.oda.localParticipant;
@@ -15,6 +16,7 @@
       final participant=_stageParticipant548(uid);
       final track=host?_goruntu():_guestVideo489(uid);
       final speaking=participant?.isSpeaking==true;
+      final hostMuted=_hostMuted548.contains(uid);
       final muted=!(participant?.audioTrackPublications.any((p)=>!p.muted)??false);
       return LayoutBuilder(builder:(_,bounds)=>Semantics(label:'$name ${host?'yayıncı':mine?'sen':'konuk'} ${track==null?'sesli':'görüntülü'}',child:Container(
         clipBehavior:Clip.antiAlias,
@@ -35,7 +37,7 @@
             icon:const Icon(Icons.more_vert_rounded,color:Colors.white,size:18),
             onSelected:(action)=>unawaited(_hostGuestAction489(uid,action)),
             itemBuilder:(_)=>[
-              PopupMenuItem(value:muted?'unmute':'mute',child:Text(muted?'Mikrofon izni ver':'Sessize al')),
+              PopupMenuItem(value:hostMuted?'unmute':'mute',child:Text(hostMuted?'Mikrofon izni ver':'Sessize al')),
               const PopupMenuItem(value:'kick',child:Text('Konukluktan çıkar')),
             ])),
         ]))));
