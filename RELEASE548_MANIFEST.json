@@ -1,0 +1,9 @@
+{
+  "versionName": "1.0.318",
+  "versionCode": 548,
+  "package": "com.nnentx.ngelx_app",
+  "builtSourceCommit": "bc8d2013b005af1b5b9ef428d210dfb82417c08a",
+  "verifiedRun": 39499920852,
+  "apkSha256": "d67b53cfb7f81435fda459d5f93a601ad9d594ad1858abd7962861855fb6427a",
+  "note": "Exact tested app/tools/server source trees with trusted default-branch workflow definitions. Published APK is the verified artifact and is not rebuilt."
+}
