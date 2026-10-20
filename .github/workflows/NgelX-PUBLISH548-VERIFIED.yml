@@ -1,0 +1,53 @@
+name: Publish exact verified Build548 APK
+on:
+  push:
+    branches: [qa/ngelx-publish548-verified-20261021]
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: ngelx-publish548
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Verify exact successful build
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test "$(gh api repos/Nnentx/Ngelx/actions/runs/39499920852 --jq .head_sha)" = "bc8d2013b005af1b5b9ef428d210dfb82417c08a"
+          test "$(gh api repos/Nnentx/Ngelx/actions/runs/39499920852 --jq .conclusion)" = "success"
+          gh run download 39499920852 --repo Nnentx/Ngelx --name NgelX-Build548-REAL-INPLACE-SIGNED-REVIEW-ONLY --dir candidate548
+      - name: Preserve verified bytes
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib,zipfile,shutil
+          files=list(Path('candidate548').rglob('NgelX-1.0.318-Build548-INPLACE-CANDIDATE.apk'))
+          assert len(files)==1
+          apk=files[0]
+          expected='d67b53cfb7f81435fda459d5f93a601ad9d594ad1858abd7962861855fb6427a'
+          assert hashlib.sha256(apk.read_bytes()).hexdigest()==expected
+          assert Path(str(apk)+'.sha256').read_text().split()[0]==expected
+          with zipfile.ZipFile(apk) as z:
+              assert z.testzip() is None
+              assert 'lib/arm64-v8a/libapp.so' in z.namelist()
+          output='NgelX-1.0.318-Build-548.apk'
+          shutil.copyfile(apk,output)
+          Path(output+'.sha256').write_text(expected+'  '+output+'\n')
+          Path('release548.md').write_text('NgelX Android 1.0.318 / Build548 test sürümü.\n\nGaleri fotoğraf/video seçimi, tekrarlı dokunma koruması, özel aramada karşı tarafın adı ve fotoğrafı, hoparlör durum görünümü, küçük ve siyah dolgusuz sohbet fotoğrafları, sesli/görüntülü konuk katılımı ve özel kamera önizlemesi, sağda konuk kartları ve çoklu katılım ızgarası, ücretsiz sanal hediyeler, iki saniyede kapanan paylaşım bildirimi. Önceki Build547 arkadaşlık ve arama düzeltmeleri korunur.\n\nFlutter testleri/analizi, Android derlemesi, paket/sürüm ve orijinal güncelleme imzası kontrolleri başarılı. Fiziksel cihaz testi yapılmadı. Sunucu yönetim anahtarları gerektiren canlı moderasyon ve topluluğu tam silme hizmeti bu sürümde etkinleştirilmedi. Para veya coin tahsilatı yoktur.\n\nSHA256: '+expected+'\nCI: https://github.com/Nnentx/Ngelx/actions/runs/39499920852\nTested source: bc8d2013b005af1b5b9ef428d210dfb82417c08a\nRelease source details: RELEASE548_MANIFEST.json\n')
+          PY
+      - name: Publish exact APK without overwriting prior releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if gh release view v1.0.318-build548-test --repo Nnentx/Ngelx >/dev/null 2>&1; then
+            echo 'Release already exists; refusing to overwrite.'
+            exit 1
+          fi
+          gh release create v1.0.318-build548-test NgelX-1.0.318-Build-548.apk NgelX-1.0.318-Build-548.apk.sha256 --repo Nnentx/Ngelx --target 2700ac91ed182afb9dd0ca99590080462bd30b0e --prerelease --title 'NgelX 1.0.318 / Build548 test' --notes-file release548.md
