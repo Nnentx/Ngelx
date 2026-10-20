@@ -79,3 +79,6 @@ export const livekitGuestModeration = onRequest({
     res.status(503).json({error:'temporarily_unavailable'});
   }
 });
+
+// Build543 prepared endpoint only; production deployment remains a separate action.
+export {communityDelete543} from '../community543/index.mjs';
