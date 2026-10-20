@@ -1,0 +1,9 @@
+{
+  "versionName": "1.0.316",
+  "versionCode": 546,
+  "package": "com.nnentx.ngelx_app",
+  "builtSourceCommit": "53c60d1a9752c56a2b8fb49d0634e4ea0b875879",
+  "verifiedRun": 39446648099,
+  "apkSha256": "f1dca2f3545c430322e0d4ccf98794fb498d007e039688589b3c29d5f1a7a33f",
+  "note": "Release source snapshot preserves all tested application/build-transform files. CI workflow definitions are copied byte-for-byte from the default branch so publishing does not require authorization to change workflows. APK is the exact verified artifact, not rebuilt from this snapshot."
+}
