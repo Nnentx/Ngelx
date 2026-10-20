@@ -10,7 +10,9 @@ original = retrieve()
 if hashlib.sha256(original.encode()).hexdigest()[:16] != EXPECTED_LIVE_PREFIX:
     raise RuntimeError('Live rules changed since audit; refusing deployment')
 proposed = transform(prepare_production_candidate(original))
-assert original.split('    // Build450 communities',1)[0] == proposed.split('    // Build450 communities',1)[0]
+helper = "    function communityWritable543(cid) { return !exists(/databases/$(database)/documents/community_deletions543/$(cid)) && community450(cid).get('deletion543',{}).get('state','') != 'deleting'; }\n"
+assert proposed.count(helper) == 1
+assert original.split('    // Build450 communities',1)[0] == proposed.replace(helper,'',1).split('    // Build450 communities',1)[0]
 assert original.split('    match /users/{uid}',1)[1] == proposed.split('    match /users/{uid}',1)[1]
 # The exact candidate must have passed all emulator gates earlier in this job.
 assert Path('firestore.rules').read_text() == proposed
