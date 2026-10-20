@@ -1,0 +1,53 @@
+name: Publish exact verified Build549 APK
+on:
+  push:
+    branches: [qa/ngelx-publish549-verified-20261021]
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: ngelx-publish549
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Verify exact successful build
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test "$(gh api repos/Nnentx/Ngelx/actions/runs/39503798365 --jq .head_sha)" = "401e29227ab6d12c4630fc2794ecf4a2eccfef3e"
+          test "$(gh api repos/Nnentx/Ngelx/actions/runs/39503798365 --jq .conclusion)" = "success"
+          gh run download 39503798365 --repo Nnentx/Ngelx --name NgelX-Build549-REAL-INPLACE-SIGNED-REVIEW-ONLY --dir candidate549
+      - name: Preserve verified bytes
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib,zipfile,shutil
+          files=list(Path('candidate549').rglob('NgelX-1.0.319-Build549-INPLACE-CANDIDATE.apk'))
+          assert len(files)==1
+          apk=files[0]
+          expected='04513d03445de178b409936ffd56dfebee525fc6a5c340df2aefd40f36316879'
+          assert hashlib.sha256(apk.read_bytes()).hexdigest()==expected
+          assert Path(str(apk)+'.sha256').read_text().split()[0]==expected
+          with zipfile.ZipFile(apk) as z:
+              assert z.testzip() is None
+              assert 'lib/arm64-v8a/libapp.so' in z.namelist()
+          output='NgelX-1.0.319-Build-549.apk'
+          shutil.copyfile(apk,output)
+          Path(output+'.sha256').write_text(expected+'  '+output+'\n')
+          Path('release549.md').write_text("NgelX Android 1.0.319 / Build549 test sürümü.\n\nAktif grup görüşmesindeki davet kabulü düzeltildi. Özel/grup arama hataları sessizce yutulmaz; kota hatası izin sorunundan ayrılır. Paylaşılan heartbeat istekleri sınırlandı, kota durumunda iki dakikalık bekleme ve ayrılma kaydı koruması eklendi. Grup davetini reddetmek diğer katılımcıları görüşmeden çıkarmaz. Build548 özellikleri korunur.\n\nSunucu Firestore kotası bu APK ile artırılmaz veya sıfırlanmaz. Kota engeli sürerse yeni arama kurulamayabilir. Fiziksel iki cihaz testi yapılmadı. Testler, Flutter analizi, Android derlemesi ve güncelleme imzası doğrulandı. Ücretli plan değişikliği yoktur.\n\nSHA256: 04513d03445de178b409936ffd56dfebee525fc6a5c340df2aefd40f36316879\nCI: https://github.com/Nnentx/Ngelx/actions/runs/39503798365\nTested source: 401e29227ab6d12c4630fc2794ecf4a2eccfef3e\nSee RELEASE549_MANIFEST.json\n")
+          PY
+      - name: Publish exact APK without overwriting prior releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if gh release view v1.0.319-build549-test --repo Nnentx/Ngelx >/dev/null 2>&1; then
+            echo 'Release already exists; refusing to overwrite.'
+            exit 1
+          fi
+          gh release create v1.0.319-build549-test NgelX-1.0.319-Build-549.apk NgelX-1.0.319-Build-549.apk.sha256 --repo Nnentx/Ngelx --target d7eb54922958cfba89b4f0841b313384d7cab322 --prerelease --title 'NgelX 1.0.319 / Build549 test' --notes-file release549.md
