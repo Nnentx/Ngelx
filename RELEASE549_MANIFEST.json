@@ -1,0 +1,9 @@
+{
+  "versionName": "1.0.319",
+  "versionCode": 549,
+  "package": "com.nnentx.ngelx_app",
+  "builtSourceCommit": "401e29227ab6d12c4630fc2794ecf4a2eccfef3e",
+  "verifiedRun": 39503798365,
+  "apkSha256": "04513d03445de178b409936ffd56dfebee525fc6a5c340df2aefd40f36316879",
+  "note": "Exact tested app/tools/server trees with trusted default-branch workflow definitions; original verified APK, not rebuilt. Firestore quota availability and two-device audio acceptance remain external requirements."
+}
