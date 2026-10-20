@@ -97,23 +97,31 @@ class Ngelx543MiniCall extends StatelessWidget{
   const Ngelx543MiniCall({super.key,required this.room,required this.title});
   @override Widget build(BuildContext context)=>AnimatedBuilder(animation:room,builder:(_,__){
     final people=<lk.Participant>[if(room.localParticipant!=null)room.localParticipant!,...room.remoteParticipants.values];
-    final visible=people.take(6).toList();
+    final visible=people.take(12).toList();
     return ColoredBox(color:const Color(0xFF21133F),child:Padding(
       padding:const EdgeInsets.all(5),child:Column(children:[
         Text('$title · ${people.length} kişi',maxLines:1,overflow:TextOverflow.ellipsis,
           style:const TextStyle(color:Colors.white,fontSize:11,fontWeight:FontWeight.w700)),
         const SizedBox(height:3),
-        Expanded(child:LayoutBuilder(builder:(_,box){
-          if(visible.isEmpty)return const Center(child:Text('Bağlanıyor…',style:TextStyle(color:Colors.white)));
-          final columns=visible.length>=5?3:visible.length==1?1:2;
-          final rows=(visible.length/columns).ceil();
-          return GridView.builder(padding:EdgeInsets.zero,physics:const NeverScrollableScrollPhysics(),
-            itemCount:visible.length,
-            gridDelegate:SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount:columns,crossAxisSpacing:3,mainAxisSpacing:3,
-              mainAxisExtent:((box.maxHeight-3*(rows-1))/rows).clamp(24.0,1000.0).toDouble()),
-            itemBuilder:(_,i)=>Ngelx543MiniParticipant(key:ValueKey(visible[i].identity),participant:visible[i],local:identical(visible[i],room.localParticipant)));
-        })),
+        Expanded(child:visible.isEmpty?const Center(child:Text('Bağlanıyor…',style:TextStyle(color:Colors.white))):
+          Ngelx543MiniGrid(children:[for(final person in visible)
+            Ngelx543MiniParticipant(key:ValueKey(person.identity),participant:person,local:identical(person,room.localParticipant))])),
       ])));
+  });
+}
+/// Twelve visible seats adapt to Android's actual PiP bounds.
+class Ngelx543MiniGrid extends StatelessWidget{
+  final List<Widget> children;
+  const Ngelx543MiniGrid({super.key,required this.children});
+  @override Widget build(BuildContext context)=>LayoutBuilder(builder:(_,box){
+    final count=math.min(children.length,12);
+    if(count==0)return const SizedBox.shrink();
+    final columns=count>=10?4:count>=5?3:count==1?1:2;
+    final rows=(count/columns).ceil();
+    return GridView.builder(padding:EdgeInsets.zero,physics:const NeverScrollableScrollPhysics(),itemCount:count,
+      gridDelegate:SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount:columns,crossAxisSpacing:3,mainAxisSpacing:3,
+        mainAxisExtent:((box.maxHeight-3*(rows-1))/rows).clamp(1.0,1000.0).toDouble()),
+      itemBuilder:(_,index)=>children[index]);
   });
 }
 class Ngelx543MiniParticipant extends StatefulWidget{

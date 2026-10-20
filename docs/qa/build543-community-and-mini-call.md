@@ -2,7 +2,7 @@ Build543 continues verified Build542 without replacing it.
 
 Implemented in the Android candidate:
 - Group KATIL reads the row's call document immediately and selects the latest server call timestamp, preventing an old room heartbeat from masking a new call. Slight device clock skew is tolerated; ended/stale calls stay hidden.
-- The existing LiveKit room renders all six participants in Android system PiP over the launcher/other apps. Published video is real; camera-off participants show profile circles. Android controls window size/drag and exposes microphone/speaker/end actions. No second connection, token or camera capture is created.
+- The existing LiveKit room renders all twelve participants in Android system PiP over the launcher/other apps. Published video is real; camera-off participants show profile circles. Android controls window size/drag and exposes microphone/speaker/end actions. No second connection, token or camera capture is created.
 - Background hangup is self-only for groups, including the initiating caller; it persists the existing Build542 leave record before server retry.
 - Community counters fail independently, moderator-only views do not query admin-only membership requests, short legacy community names can be edited, and a deleted management root no longer spins forever.
 - A founder-only typed confirmation surface is included for full record deletion.
