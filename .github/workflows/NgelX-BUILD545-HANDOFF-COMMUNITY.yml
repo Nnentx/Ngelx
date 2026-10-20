@@ -1,5 +1,5 @@
 # Build541: same-package, pinned-signer, review-only real NgelX release APK candidate.
-# No Firebase/LiveKit deployment. Never replace production automatically.
+# Community rules activated by owner authorization; no unrelated deployment.
 name: NgelX Build545 account handoff and approved community release
 on:
   push:
@@ -1490,11 +1490,11 @@ jobs:
           if-no-files-found: error
           retention-days: 4
 
-      - name: Enforce no production deploy or auto-install
-        run: echo 'Signed in-place APK candidate uploaded for explicit manual review; main, Firebase, LiveKit and existing NgelX installation remain untouched.'
+      - name: Record candidate scope
+        run: echo 'Signed APK candidate only; existing app is not auto-installed. Approved community rules are live; delete function remains blocked by Cloud API activation permissions. No unrelated services deployed.'
 
   community-rules:
-    name: Verify and deploy owner-approved community rules and delete endpoint
+    name: Verify approved live community rules (delete deployment blocked by API permissions)
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -1517,8 +1517,16 @@ jobs:
         run: |
           set -euo pipefail
           python3 -m pip install --quiet google-auth requests
-          python3 tools/prepare_build483_live_rules_qa.py
-          python3 tools/prepare_build543_community_rules.py
+          python3 - <<'PYCODE'
+          import sys,hashlib
+          from pathlib import Path
+          sys.path.insert(0,'tools')
+          from prepare_build483_live_rules_qa import retrieve
+          live=retrieve()
+          assert hashlib.sha256(live.encode()).hexdigest()=='465b5d21caecb0ebc408697bbfd5aab2d87b4bb43d8bb33545ee09bc61dccbac', 'Live rules changed after approved deployment'
+          Path('firestore.rules').write_text(live)
+          print('Exact approved live community rules read back; no deployment')
+          PYCODE
       - name: Validate founder/admin/moderator/member and deletion races
         run: |
           set -euo pipefail
@@ -1530,8 +1538,5 @@ jobs:
           name: NgelX-Build545-Community-Rules-EMULATOR-ONLY
           path: firestore.rules
           retention-days: 7
-      - name: Deploy only authorized community capabilities
-        env:
-          FIREBASE_SERVICE_ACCOUNT_NGELX_44EED: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_NGELX_44EED }}
-          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-        run: python3 tools/deploy_build545_community.py
+      - name: Record deletion service prerequisite
+        run: echo 'Community permissions are live and readback-verified. Delete endpoint blocked by disabled Cloud Build API and insufficient API activation permission; no unrelated changes attempted.'
