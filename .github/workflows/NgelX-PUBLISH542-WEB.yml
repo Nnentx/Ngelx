@@ -1,8 +1,8 @@
 name: Publish verified NgelX Build542 Android test APK
 on:
   push:
-    branches: [qa/ngelx-publish541-android-20261020]
-    paths: ['.github/workflows/NgelX-PUBLISH541-WEB.yml']
+    branches: [qa/ngelx-publish542-android-20261020]
+    paths: ['.github/workflows/NgelX-PUBLISH542-WEB.yml']
   workflow_dispatch:
 permissions:
   contents: write
