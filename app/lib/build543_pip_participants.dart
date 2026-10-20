@@ -1,5 +1,7 @@
 part of 'main.dart';
 
+bool ngelx543MiniCameraVisible({required bool owned,required bool pip,required bool foreground,required bool background,required bool cardVisible})=>owned&&(pip||(foreground&&background&&cardVisible));
+
 /// Reuses the one existing LiveKit room. No token, camera or connection is
 /// created by minimizing. Android owns cross-app dragging and resize behavior.
 class Ngelx543PipCall {
@@ -13,8 +15,11 @@ class Ngelx543PipCall {
     if(_installed)return;
     _installed=true;
     void closeEnded(){if(Ngelx520PipBridge.active.value&&current==null&&!_ending)unawaited(_endPip());}
-    ngelx445CallRevision.addListener(closeEnded);
-    _auth=FirebaseAuth.instance.authStateChanges().listen((_)=>closeEnded());
+    void refresh(){closeEnded();unawaited(ngelx446Calls.refreshMini543());}
+    ngelx445CallRevision.addListener(refresh);
+    Ngelx520PipBridge.active.addListener(refresh);
+    ngelx448HiddenCallCard.addListener(refresh);
+    _auth=FirebaseAuth.instance.authStateChanges().listen((_)=>refresh());
   }
   static void bind(lk.Room? room,String name,String heading,Future<void> Function(String) action){
     install();
