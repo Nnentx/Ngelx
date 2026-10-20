@@ -17,9 +17,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          test "$(gh api repos/Nnentx/Ngelx/actions/runs/39393268899 --jq .head_sha)" = "0407de8c548abf1ea44d85c6073cf053389b526d"
-          gh run watch 39393268899 --repo Nnentx/Ngelx --interval 20 --exit-status
-          test "$(gh api repos/Nnentx/Ngelx/actions/runs/39393268899 --jq .conclusion)" = success
+          test "$(gh api repos/Nnentx/Ngelx/actions/runs/39394635073 --jq .head_sha)" = "15d02f103d0446fa767b79b709f2acc89c6fc4b8"
+          gh run watch 39394635073 --repo Nnentx/Ngelx --interval 20 --exit-status
+          test "$(gh api repos/Nnentx/Ngelx/actions/runs/39394635073 --jq .conclusion)" = success
           if gh release view v1.0.313-build543-test --repo Nnentx/Ngelx >/dev/null 2>&1; then
             echo 'Refusing to replace an existing release.'
             exit 1
@@ -29,7 +29,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          gh run download 39393268899 --repo Nnentx/Ngelx --name NgelX-Build543-REAL-INPLACE-SIGNED-REVIEW-ONLY --dir candidate
+          gh run download 39394635073 --repo Nnentx/Ngelx --name NgelX-Build543-REAL-INPLACE-SIGNED-REVIEW-ONLY --dir candidate
       - name: Verify checksum, package, version and original update signer
         shell: bash
         run: |
@@ -64,7 +64,7 @@ jobs:
           PR #175: sesli/görüntülü özel ve grup aramalarında türüne uygun KATIL simgesi, önceki oda kalp atışından etkilenmeyen taze katılım, mevcut bağlantıyla on iki katılımcıya kadar sistem PiP görünümü, mikrofon/hoparlör/bitir eylemleri, topluluk sayaçlarında bağımsız hata kurtarma ve kurucuya özel silme arayüzü.
           
           Topluluk sunucusundaki eski izin kuralları için emulator testleri geçmiştir; production kuralları ve kalıcı silme hizmeti dağıtılmamış, silme uç noktası bu APK içinde etkinleştirilmemiştir. İki fiziksel cihazda medya ve Android PiP davranışı ayrıca doğrulanmalıdır. Build539/540/541/542 dosyaları korunmuştur. Firebase/LiveKit sunucularına production dağıtımı yapılmamıştır.
-          Kaynak adayı 0407de8c548abf1ea44d85c6073cf053389b526d; yayın kaynak dışa aktarımı dd2a383ea0c7cdd5b845acb8a0bb71382002d80e. Uygulama kodu/testler aynıdır; yayın kaynak dalında CI iş akışları varsayılan dal ile aynen korunur.
+          Kaynak adayı 15d02f103d0446fa767b79b709f2acc89c6fc4b8; yayın kaynak dışa aktarımı 73677cba66ddf63f6495952e30f95cc7ca82b2d1. Uygulama kodu/testler aynıdır; yayın kaynak dalında CI iş akışları varsayılan dal ile aynen korunur.
           EOF
-          test "$(gh api 'repos/Nnentx/Ngelx/git/trees/dd2a383ea0c7cdd5b845acb8a0bb71382002d80e?recursive=1' --jq '.tree[] | select(.path==".github/workflows") | .sha')" = 097102c0a68a0161f87410c61d5706c0baeab51d
-          gh release create v1.0.313-build543-test NgelX-1.0.313-Build-543.apk NgelX-1.0.313-Build-543.apk.sha256 --repo Nnentx/Ngelx --target dd2a383ea0c7cdd5b845acb8a0bb71382002d80e --prerelease --title 'NgelX 1.0.313 / Build543 test' --notes-file notes.md
+          test "$(gh api 'repos/Nnentx/Ngelx/git/trees/73677cba66ddf63f6495952e30f95cc7ca82b2d1?recursive=1' --jq '.tree[] | select(.path==".github/workflows") | .sha')" = 097102c0a68a0161f87410c61d5706c0baeab51d
+          gh release create v1.0.313-build543-test NgelX-1.0.313-Build-543.apk NgelX-1.0.313-Build-543.apk.sha256 --repo Nnentx/Ngelx --target 73677cba66ddf63f6495952e30f95cc7ca82b2d1 --prerelease --title 'NgelX 1.0.313 / Build543 test' --notes-file notes.md
