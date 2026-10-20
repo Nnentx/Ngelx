@@ -3,7 +3,7 @@
   bool _guestMicWanted546=true,_guestCameraWanted546=true;
   bool _guestMediaBusy546=false;
   String _guestStage546='';
-  int _guestRetries546=0;
+  int _guestRetries546=0,_guestRevision546=0;
   Timer? _guestRetry546;
   final _guestTiming546=Stopwatch();
   bool _guestAlive546(String uid)=>mounted&&!kapatildi&&!yayinBitti&&
@@ -52,6 +52,7 @@
   }
   Future<void> _guestSync448(bool accepted)async{
     final wasWanted=_guestWanted448;
+    if(wasWanted!=accepted)_guestRevision546++;
     _guestWanted448=accepted;
     if(!accepted){
       _guestRetry546?.cancel();_guestRetries546=0;
@@ -66,13 +67,16 @@
       return;
     }
     final uid=FirebaseAuth.instance.currentUser?.uid;if(uid==null)return;
+    final revision546=_guestRevision546;
+    bool current546()=>_guestAlive546(uid)&&revision546==_guestRevision546;
     _guestConnecting448=true;_guestRetry546?.cancel();_guestTiming546..reset()..start();
     _guestStageSet546('Konuk bağlantısı doğrulanıyor…');
     try{
       var state=await _guestVerify546(uid);
-      if(!_guestAlive546(uid)||!_guestWanted448)return;
+      if(!current546()||!_guestWanted448)return;
       if(!state.allowed){_guestWanted448=false;await _guestStopMedia546();_guestStageSet546('Konuk izni artık geçerli değil.');return;}
       _guestAudioMuted489=state.muted;
+      if(state.muted)_guestMicWanted546=false;
       final permissions=widget.oda.localParticipant?.permissions;
       final reusable=ngelx546CanReuse(connected:widget.oda.connectionState==lk.ConnectionState.connected,
         canPublish:permissions?.canPublish==true,
@@ -81,29 +85,30 @@
       if(!reusable){
         _guestStageSet546('Konuk bağlantısı kuruluyor…');
         final token=await NgelXLiveKitSource441().fetch(lk.TokenRequestOptions(roomName:state.room,participantIdentity:uid));
-        if(!_guestAlive546(uid)||!_guestWanted448)return;
+        if(!current546()||!_guestWanted448)return;
         // Keep watching until the new token is ready; disconnect only if required.
         _liveServer453=token.serverUrl;_liveToken453=token.participantToken;
         await widget.oda.disconnect().timeout(const Duration(seconds:8));
-        if(!_guestAlive546(uid)||!_guestWanted448)return;
+        if(!current546()||!_guestWanted448)return;
         await widget.oda.connect(_liveServer453,_liveToken453).then((_)async{
-          if(!_guestAlive546(uid)){try{await widget.oda.disconnect();}catch(_){} }
+          if(!current546()){try{await widget.oda.disconnect();}catch(_){} }
           else if(!_guestWanted448){await _guestStopMedia546();}
         }).timeout(const Duration(seconds:15));
-        if(!_guestAlive546(uid)||!_guestWanted448)return;
+        if(!current546()||!_guestWanted448)return;
         state=await _guestVerify546(uid);
         if(!state.allowed){_guestWanted448=false;await _guestStopMedia546();return;}
         _guestAudioMuted489=state.muted;
+      if(state.muted)_guestMicWanted546=false;
       }
-      if(!_guestAlive546(uid)||!_guestWanted448)return;
+      if(!current546()||!_guestWanted448)return;
       _guestStageSet546('Mikrofon hazırlanıyor…');
       await _guestMicApply546(uid,_guestMicWanted546&&!_guestAudioMuted489);
-      if(!_guestAlive546(uid)||!_guestWanted448){await _guestStopMedia546();return;}
+      if(!current546()||!_guestWanted448){await _guestStopMedia546();return;}
       // A slow/failing camera must not hold back a successfully published mic.
       if(mounted)setState((){_guestActive448=true;_guestStage546=_guestCameraWanted546?'Ses hazır · kamera hazırlanıyor…':'Yayındasın · kamera kapalı';});
       try{
         await _guestCameraApply546(uid,_guestCameraWanted546);
-        if(!_guestAlive546(uid)||!_guestWanted448){await _guestStopMedia546();return;}
+        if(!current546()||!_guestWanted448){await _guestStopMedia546();return;}
         _guestStageSet546(_guestCameraWanted546?'Konuk bağlantısı hazır':'Yayındasın · kamera kapalı');
       }catch(_){
         // Timeout can complete late: shut down the camera instead of enabling it later.
@@ -116,17 +121,18 @@
     }catch(_){
       await _guestStopMedia546();
       if(mounted)setState(()=>_guestActive448=false);
-      if(_guestAlive546(uid)&&ngelx546ShouldRetry(_guestRetries546,_guestWanted448,true)){
+      if(current546()&&ngelx546ShouldRetry(_guestRetries546,_guestWanted448,true)){
         final delay=1<<_guestRetries546;_guestRetries546++;
         _guestStageSet546('Bağlantı yeniden deneniyor ($_guestRetries546/3)…');
-        _guestRetry546=Timer(Duration(seconds:delay),(){if(_guestAlive546(uid)&&_guestWanted448)unawaited(_guestSync448(true));});
-      }else if(_guestAlive546(uid)){
+        _guestRetry546=Timer(Duration(seconds:delay),(){if(current546()&&_guestWanted448)unawaited(_guestSync448(true));});
+      }else if(current546()){
         _guestStageSet546('Bağlantı kurulamadı. Tekrar bağlan düğmesini kullan.');
       }
     }finally{
       if(mounted)setState(()=>_guestConnecting448=false);else _guestConnecting448=false;
       _guestTiming546.stop();
       if(_guestAlive546(uid)&&!_guestWanted448){await _guestStopMedia546();if(mounted)setState((){_guestActive448=false;_guestStage546='';});}
+      else if(_guestAlive546(uid)&&revision546!=_guestRevision546&&_guestWanted448&&!_guestActive448){unawaited(_guestSync448(true));}
     }
   }
   Future<void> _guestToggle546(bool camera)async{

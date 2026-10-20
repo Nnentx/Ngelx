@@ -10,6 +10,7 @@ def studio(s):
  start=s.index('  Future<void> _guestSync448(bool accepted)async{');end=s.index('\n  void _yenile()',start)
  s=s[:start]+Path('tools/build546_guest_session.dart').read_text()+s[end:]
  s=once(s,'  Widget _liveBottom540()=>Column(mainAxisSize:MainAxisSize.min,children:[','  Widget _liveBottom540()=>Column(mainAxisSize:MainAxisSize.min,children:[\n    _guestStatus546(),')
+ s=once(s,'      _guestAudioMuted489=muted;',"      _guestAudioMuted489=muted;\n      if(changed&&muted)_guestMicWanted546=false;\n      if(changed&&mounted)setState((){});")
  s=once(s,'    _guestSub448?.cancel();','    _guestRetry546?.cancel();\n    _guestSub448?.cancel();')
  old="""            _guestWanted448=accepted;_guestActive448=accepted;
             await widget.oda.localParticipant?.setMicrophoneEnabled(accepted&&!_guestAudioMuted489);
