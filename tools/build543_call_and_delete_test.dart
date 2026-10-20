@@ -12,8 +12,8 @@ void main(){
   test('ended state and explicit ended timestamp cannot be revived',(){for(final status in ['ended','rejected','missed']){expect(ngelx440CallJoinable(call()..['callStatus']=status,now),isFalse);}expect(ngelx440CallJoinable(call()..['callEndedAt']=Timestamp.fromDate(now),now),isFalse);});
   test('missing room and server timestamps fail closed',(){expect(ngelx440CallJoinable(call()..remove('callCreatedAt'),now),isFalse);expect(ngelx440CallJoinable(call()..['callRoomName']='',now),isFalse);});
   testWidgets('all twelve mini-call seats fit without scrolling or overlap',(tester)async{
-    for(final count in [1,2,6,12]){
-      await tester.pumpWidget(MaterialApp(home:Scaffold(body:Center(child:SizedBox(width:200,height:150,
+    for(final size in [const Size(200,150),const Size(126,104)])for(final count in [1,2,6,12]){
+      await tester.pumpWidget(MaterialApp(home:Scaffold(body:Center(child:SizedBox(width:size.width,height:size.height,
         child:Ngelx543MiniGrid(children:[for(var i=0;i<count;i++)ColoredBox(key:ValueKey('seat-$i'),color:Colors.purple)]))))));
       await tester.pump();
       final bounds=tester.getRect(find.byType(Ngelx543MiniGrid));

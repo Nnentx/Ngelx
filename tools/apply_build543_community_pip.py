@@ -116,6 +116,19 @@ def community(s):
  return s
 
 def inbox(s):
+ # Share the same twelve-seat media surface inside the app and system PiP.
+ a=s.index('class _Ngelx445CallOverlayState');b=s.index('class Ngelx445InboxCallBanner',a)
+ overlay=s[a:b]
+ overlay=once(overlay,'    final name=ngelxCallSession444.room,detail=ngelx445CallDetails[name];\n    final room=', '    if(Ngelx520PipBridge.active.value)return const SizedBox.shrink();\n    final name=ngelxCallSession444.room,detail=ngelx445CallDetails[name];\n    final room=')
+ x=overlay.index('          InkWell(onTap:()=>ngelx445ReturnCall(name),child:Column(children:[')
+ y=overlay.index('          Ngelx445CallControls(',x)
+ overlay=overlay[:x]+"""          InkWell(onTap:()=>ngelx445ReturnCall(name),child:Column(children:[
+            SizedBox(height:130,width:double.infinity,child:ClipRRect(borderRadius:BorderRadius.circular(12),
+              child:Ngelx543MiniCall(room:room,title:detail.title))),
+            const SizedBox(height:7),Text(duration,style:const TextStyle(color:Colors.white,fontSize:11)),
+          ])),
+"""+overlay[y:]
+ s=s[:a]+overlay+s[b:]
  a=s.index('Widget ngelx542GroupTrailing(');b=s.index('\n// Build542 call refinements',a)
  s=once(s,'  await ngelxArkaPlanAramayiTemizle(name);\n  if(detail==null||me!=detail.uid)return;',"  if(detail==null||me==null||me!=detail.uid)return;\n  await ngelxArkaPlanAramayiTemizle(name);\n  if(name.startsWith('group_')){await ngelx542LeaveGroupCall(detail.ref,name,me,video:detail.video,displayName:FirebaseAuth.instance.currentUser?.displayName);return;}")
  a=s.index('Widget ngelx542GroupTrailing(');b=s.index('\n// Build542 call refinements',a)
