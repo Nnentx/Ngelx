@@ -81,6 +81,8 @@ def main(s):
 '''+s[b:]
     a=s.index('  Future<void> bitir({bool geriDon=true})async{');b=s.index('  @override void dispose()',a)
     body=s[a:b].replace('await ngelx517LeaveGroupCall(', 'await ngelx542LeaveGroupCall(')
+    body=once(body,'    await _stopLocal444();\n    try{', "    await _stopLocal444();\n    final leavingUid542=FirebaseAuth.instance.currentUser?.uid;\n    if(widget.roomName.startsWith('group_')&&leavingUid542!=null){\n      await ngelx542LeaveGroupCall(widget.aramaRef,widget.roomName,leavingUid542,video:widget.goruntulu,displayName:FirebaseAuth.instance.currentUser?.displayName);\n      if(geriDon&&mounted)Navigator.pop(context);\n      return;\n    }\n    try{")
+
     body=body.replace("Arama kapandı. Sunucu kaydı güncellenemedi; yeniden dene.","Aramadan çıktın. Ayrılma kaydı bağlantı gelince tekrar gönderilecek.")
     s=s[:a]+body+s[b:]
     # Local camera quality follows the existing network adaptation / subscription rules.
