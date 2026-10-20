@@ -20,13 +20,13 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          gh run watch 39445621740 --repo Nnentx/Ngelx --exit-status --interval 20
-          test "$(gh api repos/Nnentx/Ngelx/actions/runs/39445621740 --jq .head_sha)" = "e6d5922116bee7981b6cf9a0c59963edcea525a7"
-          test "$(gh api repos/Nnentx/Ngelx/actions/runs/39445621740 --jq .conclusion)" = "success"
+          gh run watch 39446302489 --repo Nnentx/Ngelx --exit-status --interval 20
+          test "$(gh api repos/Nnentx/Ngelx/actions/runs/39446302489 --jq .head_sha)" = "6a9b1b5685db088f222820d71755ab12333fe8d6"
+          test "$(gh api repos/Nnentx/Ngelx/actions/runs/39446302489 --jq .conclusion)" = "success"
       - name: Download only the checked signed APK
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh run download 39445621740 --repo Nnentx/Ngelx --name NgelX-Build546-REAL-INPLACE-SIGNED-REVIEW-ONLY --dir candidate546
+        run: gh run download 39446302489 --repo Nnentx/Ngelx --name NgelX-Build546-REAL-INPLACE-SIGNED-REVIEW-ONLY --dir candidate546
       - name: Check exact APK bytes and preserve prior releases
         run: |
           python3 - <<'PY'
@@ -45,7 +45,7 @@ jobs:
           output='NgelX-1.0.316-Build-546.apk'
           shutil.copyfile(apk,output)
           Path(output+'.sha256').write_text(expected+'  '+output+'\n')
-          Path('release546.md').write_text('NgelX Android 1.0.316 / Build546 test sürümü.\n\nKonuk katılımında mevcut yayın izni yeterliyse bağlantı korunur. Konuk bağlantı durumları, sınırlı tekrar deneme, mikrofon/kamera kontrolleri ve yalnızca sesle katılım eklendi. Bağlantı kurtarmada konuk tercihleri korunur. Gelen arama ekranı grup/kişi fotoğrafını zil sesini bekletmeden yükler. Build545 hesap geçişi ve küçük pencere yapısı korunur.\n\nTam kaynak üretimi, Flutter testleri/analizi, Android derlemesi, orijinal imza ve paket/sürüm kontrolleri başarılı. Gerçek cihazda konuk sesi, bağlantı gecikmesi ve gelen arama fotoğrafı kabul testi gerekir. Sunucu tarafı konuk moderasyonu gerekli yönetim anahtarları bulunmadığı için etkinleştirilmedi. Topluluğu tam silme hizmeti henüz etkin değildir. Ücretli plan/faturalandırma açılmadı. Önceki sürümler korunur.\n\nSHA256: '+expected+'\nCI: https://github.com/Nnentx/Ngelx/actions/runs/39445621740\n')
+          Path('release546.md').write_text('NgelX Android 1.0.316 / Build546 test sürümü.\n\nKonuk katılımında mevcut yayın izni yeterliyse bağlantı korunur. Konuk bağlantı durumları, sınırlı tekrar deneme, mikrofon/kamera kontrolleri ve yalnızca sesle katılım eklendi. Bağlantı kurtarmada konuk tercihleri korunur. Gelen arama ekranı grup/kişi fotoğrafını zil sesini bekletmeden yükler. Build545 hesap geçişi ve küçük pencere yapısı korunur.\n\nTam kaynak üretimi, Flutter testleri/analizi, Android derlemesi, orijinal imza ve paket/sürüm kontrolleri başarılı. Gerçek cihazda konuk sesi, bağlantı gecikmesi ve gelen arama fotoğrafı kabul testi gerekir. Sunucu tarafı konuk moderasyonu gerekli yönetim anahtarları bulunmadığı için etkinleştirilmedi. Topluluğu tam silme hizmeti henüz etkin değildir. Ücretli plan/faturalandırma açılmadı. Önceki sürümler korunur.\n\nSHA256: '+expected+'\nCI: https://github.com/Nnentx/Ngelx/actions/runs/39446302489\n')
           print('Verified release APK SHA256:',expected)
           PY
       - name: Publish immutable version without overwriting prior APKs
@@ -57,4 +57,4 @@ jobs:
             echo 'Build546 release already exists; refusing to overwrite it.'
             exit 1
           fi
-          gh release create v1.0.316-build546-test NgelX-1.0.316-Build-546.apk NgelX-1.0.316-Build-546.apk.sha256 --repo Nnentx/Ngelx --target e6d5922116bee7981b6cf9a0c59963edcea525a7 --prerelease --title 'NgelX 1.0.316 / Build546 test' --notes-file release546.md
+          gh release create v1.0.316-build546-test NgelX-1.0.316-Build-546.apk NgelX-1.0.316-Build-546.apk.sha256 --repo Nnentx/Ngelx --target 6a9b1b5685db088f222820d71755ab12333fe8d6 --prerelease --title 'NgelX 1.0.316 / Build546 test' --notes-file release546.md
