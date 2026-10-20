@@ -12,6 +12,14 @@ def transform(s):
  block=block.replace('allow create: if communitySigned450() && communityValid450(request.resource.data)',"allow create: if communitySigned450() && !exists(/databases/$(database)/documents/community_deletions543/$(cid)) && communityValid450(request.resource.data)",1)
  start=block.index('    match /communities450/{cid} {');end=block.index('      match /requests/',start)
  root=block[start:end]
+ # Evaluate bounded founder role changes before the old full-document
+ # validator. Layering every historical exception first exhausts Firestore's
+ # 1000-expression budget for otherwise legitimate legacy role edits.
+ role_start=root.index('      // Build483: legacy founder role permissions')
+ role_end=root.index('      allow delete: if false;',role_start)
+ roles=root[role_start:role_end]
+ root=root[:role_start]+root[role_end:]
+ roles=roles.replace('allow update: if communitySigned450()',"allow update: if communitySigned450() && resource.data.get('deletion543',{}).get('state','') != 'deleting'")
  root=root.replace('allow update: if communitySigned450()',"allow update: if communitySigned450() && resource.data.get('deletion543',{}).get('state','') != 'deleting'")
  # Additive root settings compatibility: no roles, member lists, timestamps or
  # identity changes. Legacy admin lists need not be silently promoted/repaired.
@@ -33,7 +41,7 @@ def transform(s):
         && request.resource.data.get('coverUrl','') is string && request.resource.data.get('coverUrl','').size() <= 2048
         && request.resource.data.get('coverAlignment',0) is number && request.resource.data.get('coverAlignment',0) >= -1 && request.resource.data.get('coverAlignment',0) <= 1;
 """
- root=root.replace('    match /communities450/{cid} {','    match /communities450/{cid} {'+insert,1)
+ root=root.replace('    match /communities450/{cid} {','    match /communities450/{cid} {\n'+roles+insert,1)
  block=block[:start]+root+block[end:]
  # Every root update branch (including older OR-authorized branches) must be
  # frozen while a server deletion job owns the root. Nested writes use these

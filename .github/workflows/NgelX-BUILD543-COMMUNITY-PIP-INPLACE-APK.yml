@@ -1506,6 +1506,7 @@ jobs:
           set -euo pipefail
           npx firebase emulators:exec --project demo-ngelx --only firestore --non-interactive "node tools/build450_rules_test.mjs && node tools/build455_rules_test.mjs && node tools/build456_rules_test.mjs && node tools/build472_community_permissions_rules_test.mjs && node tools/build483_community_permissions_rules_test.mjs && node tools/build543_community_rules_test.mjs"
       - name: Archive emulator-only policy candidate
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: NgelX-Build543-Community-Rules-EMULATOR-ONLY
