@@ -13,6 +13,14 @@ class Device548(unittest.TestCase):
   self.assertIn('Duration(milliseconds:450)',c)
   self.assertIn('await _taslagiYukle();if(mounted)await _kayipMedyaKurtar()',c)
   self.assertIn('ngelxCokluResimSec',c)
+ def test_publication_notice_has_owned_timeout_and_closes_before_navigation(self):
+  s=main_source((BASE/'main.dart').read_text())
+  self.assertEqual(s.count("content:Text(lt('Paylaşım yayınlandı ✅','Post published ✅'))"),1)
+  self.assertIn('_publishNoticeTimer548=Timer(const Duration(seconds:2)',s)
+  self.assertIn('identical(_publishNotice548,notice)',s)
+  self.assertIn('unawaited(notice.closed.then',s)
+  self.assertIn('void dispose(){_dismissPublishNotice548();',s)
+  self.assertIn("onPressed:(){\n        _dismissPublishNotice548();\n        final ana=",s)
  def test_peer_resolution_and_speaker_semantics(self):
   s=main_source((BASE/'main.dart').read_text());a=s.index('class _NgelXAramaPageState');b=s.index('\nclass GrupBilgiPage ',a);c=s[a:b]
   self.assertEqual(c.count('widget.baslik'),1)

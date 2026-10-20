@@ -16,6 +16,10 @@ def main_source(s):
       try{await _taslagiYukle();if(mounted)await _kayipMedyaKurtar();}
       finally{_createBusy548=false;if(mounted)setState((){});}
     }());''')
+ start=create.index('      ScaffoldMessenger.of(context).hideCurrentSnackBar();',create.index("unawaited(_taslagiSil(mesaj:false));"))
+ end=create.index('    }catch(e){',start)
+ create=create[:start]+'      _showPublishNotice548();\n'+create[end:]
+ create=once(create,'void dispose(){taslakZamanlayici?.cancel();','void dispose(){_dismissPublishNotice548();taslakZamanlayici?.cancel();')
  create=once(create,'  Future<void> medyaSec()async{','''  Future<void> medyaSec()=>_createMediaAction548(_medyaSec548);
   Future<void> _medyaSec548()async{''')
  create=once(create,'  Future<void> kamerayiAc({required bool video})async{','''  Future<void> kamerayiAc({required bool video})=>_createMediaAction548(()=>_kamerayiAc548(video:video));
