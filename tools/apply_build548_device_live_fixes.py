@@ -25,6 +25,7 @@ def main_source(s):
  # Generic top gallery icon must use mixed media as well; photo/video tool
  # callbacks still call mediaSec after an explicit content-type selection.
  create=once(create,"_finalUstUretIkon(Icons.photo_library_outlined,(){_turDegistir('photo');unawaited(medyaSec());})","_finalUstUretIkon(Icons.photo_library_outlined,()=>unawaited(genelGaleri548()))")
+ create=create.replace('  Future<void> _uretiYenile() async {\n    if(yukleniyor)return;', '  Future<void> _uretiYenile() async {\n    if(yukleniyor||_createBusy548)return;')
  s=s[:a]+create+s[b:]
  a=s.index('class NgelXSohbetFotoOnizleme ');b=s.index('\nclass NgelXSohbetVideoOnizleme ',a)
  s=s[:a]+'''class NgelXSohbetFotoOnizleme extends StatelessWidget{

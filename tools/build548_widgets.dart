@@ -50,7 +50,9 @@ class Ngelx548GuestPreviewState extends State<Ngelx548GuestPreview> with Widgets
     final previous=_camera,opening=_opening548;_camera=null;_opening548=null;await previous?.dispose();if(!identical(previous,opening))await opening?.dispose();
     try{
       if(!(await Permission.camera.request()).isGranted)throw StateError('permission');
+      if(!mounted||_stopped||revision!=_revision||!widget.video)return;
       final cameras=await availableCameras();
+      if(!mounted||_stopped||revision!=_revision||!widget.video)return;
       if(cameras.isEmpty)throw StateError('camera');
       final camera=cameras.firstWhere((c)=>c.lensDirection==CameraLensDirection.front,orElse:()=>cameras.first);
       final controller=CameraController(camera,ResolutionPreset.medium,enableAudio:false);

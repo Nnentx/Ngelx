@@ -57,6 +57,7 @@
       });
     }
     return LayoutBuilder(builder:(_,box){
+      if(box.maxHeight<guests.length*24)return const SizedBox.shrink();
       final width=math.min(98.0,box.maxWidth*.25);
       final count=guests.length;
       final height=math.min(112.0,math.max(0.0,(box.maxHeight-(count-1)*5)/count));
