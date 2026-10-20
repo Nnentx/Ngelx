@@ -1,0 +1,20 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {createCommunityDelete543,validateDelete543} from './delete-policy.mjs';
+const founder={uid:'founder',firebase:{sign_in_provider:'password'}},community={founderId:'founder',members:['founder','admin','mod','ordinary'],admins:['admin'],name:'Test topluluğu'};
+const body={communityId:'community-543',confirmName:'Test topluluğu',confirmDelete:true};
+function fixture(overrides={}){const events=[];const deps={verify:async()=>founder,lookup:async()=>({community}),begin:async()=>true,erase:async id=>{events.push(['erase',id]);},finish:async id=>{events.push(['done',id]);},rateLimit:async()=>true,...overrides};return {handle:createCommunityDelete543(deps),events};}
+const request={method:'POST',authorization:'Bearer verified-token',body};
+for(const uid of ['admin','mod','ordinary','stranger'])test(`${uid} cannot delete even with a forged client role`,async()=>{const f=fixture({verify:async()=>({...founder,uid})});assert.equal((await f.handle({...request,body:{...body,founderId:uid}})).status,400);assert.equal((await f.handle(request)).status,403);assert.deepEqual(f.events,[]);});
+test('founder requires current membership',()=>{assert.equal(validateDelete543(founder,{...community,members:['admin']},body),false);});
+test('exact explicit confirmation required',async()=>{for(const patch of [{confirmDelete:false},{confirmName:'Wrong'},{confirmName:''}]){const f=fixture();assert.equal((await f.handle({...request,body:{...body,...patch}})).status,403);assert.deepEqual(f.events,[]);}});
+test('anonymous and revoked identities cannot delete',async()=>{for(const verify of [async()=>({...founder,firebase:{sign_in_provider:'anonymous'}}),async()=>{throw Error('revoked');}]){const f=fixture({verify});assert.ok([401,403].includes((await f.handle(request)).status));assert.deepEqual(f.events,[]);}});
+test('no authentication or incorrect HTTP method',async()=>{const f=fixture();assert.equal((await f.handle({...request,authorization:''})).status,401);assert.equal((await f.handle({...request,method:'GET'})).status,405);});
+test('foreign paths and arbitrary URLs never reach erase',async()=>{for(const id of ['../users/other','users/user','https://example.org']){const f=fixture();assert.equal((await f.handle({...request,body:{...body,communityId:id}})).status,400);assert.deepEqual(f.events,[]);}});
+test('authorization rechecked atomically before deletion',async()=>{const f=fixture({begin:async()=>false});assert.equal((await f.handle(request)).status,403);assert.deepEqual(f.events,[]);});
+test('complete recursive deletion precedes success receipt',async()=>{const f=fixture();assert.deepEqual(await f.handle(request),{status:200,body:{deleted:true}});assert.deepEqual(f.events,[['erase','community-543'],['done','community-543']]);});
+test('partial deletion is not reported as success',async()=>{const f=fixture({erase:async()=>{throw Error('partial');}});assert.equal((await f.handle(request)).status,503);assert.deepEqual(f.events,[]);});
+test('idempotent finished receipt belongs only to original owner',async()=>{const job={ownerUid:'founder',state:'done',name:community.name};const f=fixture({lookup:async()=>({job})});assert.equal((await f.handle(request)).status,200);const foreign=fixture({lookup:async()=>({job}),verify:async()=>({...founder,uid:'admin'})});assert.equal((await foreign.handle(request)).status,403);});
+test('rate limit failure prevents all writes',async()=>{const f=fixture({rateLimit:async()=>false});assert.equal((await f.handle(request)).status,429);assert.deepEqual(f.events,[]);});
+
+test('partial recursive deletion resumes only from owned server job',async()=>{const job={ownerUid:'founder',state:'deleting',name:community.name};const f=fixture({lookup:async()=>({job})});assert.equal((await f.handle(request)).status,200);assert.deepEqual(f.events,[['erase','community-543'],['done','community-543']]);const other=fixture({lookup:async()=>({job}),verify:async()=>({...founder,uid:'admin'})});assert.equal((await other.handle(request)).status,403);assert.deepEqual(other.events,[]);});
