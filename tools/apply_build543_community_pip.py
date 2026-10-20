@@ -29,8 +29,8 @@ def main(s):
     });
   }
   Widget _ngelx520PipVideo(){
-    final room=oda;
-    return room==null?const ColoredBox(color:Colors.black):Ngelx543MiniCall(room:room,title:widget.baslik);
+    // The root PiP surface sits above every navigator/modal and owns rendering.
+    return const ColoredBox(color:Colors.black);
   }
 
 '''+body[b1:]

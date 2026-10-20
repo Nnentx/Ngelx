@@ -72,7 +72,7 @@ class Ngelx543GlobalPip extends StatelessWidget{
   @override Widget build(BuildContext context)=>ValueListenableBuilder<bool>(
     valueListenable:Ngelx520PipBridge.active,builder:(_,active,__){
       final call=Ngelx543PipCall.current;
-      if(!active||call==null||Ngelx543PipCall.foreground!=null)return const SizedBox.shrink();
+      if(!active||call==null)return const SizedBox.shrink();
       return Positioned.fill(child:Material(child:Ngelx543MiniCall(room:call.room,title:call.title)));
     });
 }
