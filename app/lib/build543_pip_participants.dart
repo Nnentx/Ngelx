@@ -24,6 +24,19 @@ class Ngelx543PipCall {
     final room=_ngelxArkaPlanAramaOdalari[name];
     return room==null?null:(room:room,title:detail.title);
   }
+  static bool _restoring=false;
+  static Future<void> restoreAfterExpand()async{
+    if(_restoring)return;
+    _restoring=true;
+    try{
+      await Future<void>.delayed(const Duration(milliseconds:350));
+      final name=ngelxCallSession444.room;
+      if(WidgetsBinding.instance.lifecycleState==AppLifecycleState.resumed&&
+         !Ngelx520PipBridge.active.value&&foreground==null&&name!=null&&current!=null){
+        await ngelx445ReturnCall(name);
+      }
+    }finally{_restoring=false;}
+  }
   static Future<void> background()async{
     if(current==null||Ngelx520PipBridge.active.value)return;
     await Ngelx509FloatingCallBridge.hide();

@@ -38,6 +38,7 @@ def main(s):
  return s
 
 def bridge(s):
+ s=once(s,'        active.value=call.arguments as bool;', '        active.value=call.arguments as bool;\n        if(!active.value)unawaited(Ngelx543PipCall.restoreAfterExpand());')
  return once(s,"      if(call.method=='pipMode520'&&call.arguments is bool){", """      if(call.method=='background543'){
         await Ngelx543PipCall.background();return;
       }
