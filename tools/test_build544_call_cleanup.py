@@ -12,6 +12,7 @@ class CleanupRegression(unittest.TestCase):
         for name in ['_toggleVoiceGroupVideo494','ngelx527ConfirmGroupRemoteTrack','Ngelx543GlobalPip','ngelx543DeleteCommunity']:
             self.assertEqual(source.count(name),result.count(name))
         self.assertIn("if(pending)throw StateError",result)
+        self.assertIn("&&sameCall&&ngelx440CallJoinable(callData,DateTime.now())",result)
 
     def test_leave_waits_for_commit_but_keeps_offline_retry(self):
         source=Path('app/lib/build542_pending_leave.dart').read_text()

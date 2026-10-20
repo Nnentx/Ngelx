@@ -10,6 +10,9 @@ def once(text, old, new):
 
 def main(text):
     text = once(text,
+        "      final aktif=durum=='ringing'||durum=='active';",
+        "      final aktif=(durum=='ringing'||durum=='active')&&sameCall&&ngelx440CallJoinable(callData,DateTime.now());")
+    text = once(text,
         '_ngelx439AuthOperations.signIn(()=>FirebaseAuth.instance.signInWithEmailAndPassword(email:email,password:password));',
         '''_ngelx439AuthOperations.signIn(()async{
     // Finish the old identity's server departure before replacing its token.
