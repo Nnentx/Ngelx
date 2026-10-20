@@ -1,0 +1,9 @@
+{
+  "candidate": "e447f22d5b12312a632635e7aa1bf09adb3046cc",
+  "candidate_run": 39380850457,
+  "version": "1.0.312",
+  "build": 542,
+  "package": "com.nnentx.ngelx_app",
+  "signer_sha256": "be20b27f0ba1f4decd2941d410b1536de89e48dc894f04f038f9d26b11ecd6aa",
+  "export_policy": "Application source and tests match candidate. Workflows exactly match default branch; no backend deployment."
+}
