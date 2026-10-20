@@ -21,7 +21,9 @@ def transform(s):
         && resource.data.get('deletion543',{}).get('state','') != 'deleting'
         && request.auth.uid in resource.data.get('members',[])
         && (request.auth.uid == resource.data.get('founderId','') || request.auth.uid in resource.data.get('admins',[]))
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name','description','rules','visibility','joinApproval','postApproval','paused','photoUrl','coverUrl','coverAlignment'])
+        && (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name','description','rules','visibility','joinApproval','postApproval','paused'])
+          || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['photoUrl'])
+          || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['coverUrl','coverAlignment']))
         && request.resource.data.get('name','') is string && request.resource.data.get('name','').size() >= 3 && request.resource.data.get('name','').size() <= 60
         && request.resource.data.get('description','') is string && request.resource.data.get('description','').size() <= 240
         && request.resource.data.get('rules','') is string && request.resource.data.get('rules','').size() <= 2000
