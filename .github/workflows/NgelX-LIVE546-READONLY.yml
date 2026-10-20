@@ -1,0 +1,35 @@
+name: NgelX live administration credential readiness (read only)
+on:
+  push:
+    branches: [qa/ngelx-live546-readonly-20261020]
+    paths: ['.github/workflows/NgelX-LIVE546-READONLY.yml']
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python3 -m pip install --quiet google-auth requests
+      - name: Read availability only, without enabling APIs or exposing values
+        env:
+          FIREBASE_SERVICE_ACCOUNT_NGELX_44EED: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_NGELX_44EED }}
+        run: |
+          python3 - <<'PY'
+          import os,json,base64
+          from google.oauth2.service_account import Credentials
+          from google.auth.transport.requests import AuthorizedSession
+          raw=os.environ['FIREBASE_SERVICE_ACCOUNT_NGELX_44EED']
+          try: info=json.loads(raw)
+          except json.JSONDecodeError: info=json.loads(base64.b64decode(raw))
+          assert info['project_id']=='ngelx-44eed'
+          client=AuthorizedSession(Credentials.from_service_account_info(info,scopes=['https://www.googleapis.com/auth/cloud-platform']))
+          result={}
+          for name in ['LIVEKIT_API_KEY','LIVEKIT_API_SECRET','LIVEKIT_SERVER_URL']:
+              r=client.get('https://secretmanager.googleapis.com/v1/projects/ngelx-44eed/secrets/'+name+'/versions/latest:access',timeout=15)
+              result[name]={'status':r.status_code,'available':r.status_code==200 and bool(r.json().get('payload',{}).get('data'))}
+          print(json.dumps(result))
+          PY
