@@ -1,0 +1,70 @@
+name: Publish verified NgelX Build543 Android test APK
+on:
+  push:
+    branches: [qa/ngelx-publish543-android-20261020]
+    paths: ['.github/workflows/NgelX-PUBLISH543-WEB.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - name: Wait for exact reviewed candidate and require success
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test "$(gh api repos/Nnentx/Ngelx/actions/runs/39393268899 --jq .head_sha)" = "0407de8c548abf1ea44d85c6073cf053389b526d"
+          gh run watch 39393268899 --repo Nnentx/Ngelx --interval 20 --exit-status
+          test "$(gh api repos/Nnentx/Ngelx/actions/runs/39393268899 --jq .conclusion)" = success
+          if gh release view v1.0.313-build543-test --repo Nnentx/Ngelx >/dev/null 2>&1; then
+            echo 'Refusing to replace an existing release.'
+            exit 1
+          fi
+      - name: Download only the verified candidate artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh run download 39393268899 --repo Nnentx/Ngelx --name NgelX-Build543-REAL-INPLACE-SIGNED-REVIEW-ONLY --dir candidate
+      - name: Verify checksum, package, version and original update signer
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib,shutil
+          from pathlib import Path
+          name='NgelX-1.0.313-Build543-INPLACE-CANDIDATE.apk'
+          files=list(Path('candidate').rglob(name));sums=list(Path('candidate').rglob(name+'.sha256'))
+          assert len(files)==len(sums)==1
+          apk=files[0];assert 40_000_000<apk.stat().st_size<200_000_000
+          digest=hashlib.sha256(apk.read_bytes()).hexdigest();assert digest==sums[0].read_text().split()[0]
+          shutil.copyfile(apk,'NgelX-1.0.313-Build-543.apk')
+          Path('NgelX-1.0.313-Build-543.apk.sha256').write_text(digest+'  NgelX-1.0.313-Build-543.apk\n')
+          print('Verified candidate SHA256:',digest)
+          PY
+          tools=$(find "$ANDROID_HOME/build-tools" -name apksigner | sort -V | tail -1)
+          test -n "$tools"
+          "$tools" verify --verbose --print-certs NgelX-1.0.313-Build-543.apk > signature.txt
+          grep -Fi 'be20b27f0ba1f4decd2941d410b1536de89e48dc894f04f038f9d26b11ecd6aa' signature.txt
+          aapt="$(dirname "$tools")/aapt"
+          "$aapt" dump badging NgelX-1.0.313-Build-543.apk > manifest.txt
+          grep -F "package: name='com.nnentx.ngelx_app' versionCode='543' versionName='1.0.313'" manifest.txt
+      - name: Publish Android test download without backend deployment
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          cat > notes.md <<'EOF'
+          NgelX 1.0.313 / Build543 Android test sürümü.
+
+          PR #175: sesli/görüntülü özel ve grup aramalarında türüne uygun KATIL simgesi, önceki oda kalp atışından etkilenmeyen taze katılım, mevcut bağlantıyla on iki katılımcıya kadar sistem PiP görünümü, mikrofon/hoparlör/bitir eylemleri, topluluk sayaçlarında bağımsız hata kurtarma ve kurucuya özel silme arayüzü.
+          
+          Topluluk sunucusundaki eski izin kuralları için emulator testleri geçmiştir; production kuralları ve kalıcı silme hizmeti dağıtılmamış, silme uç noktası bu APK içinde etkinleştirilmemiştir. İki fiziksel cihazda medya ve Android PiP davranışı ayrıca doğrulanmalıdır. Build539/540/541/542 dosyaları korunmuştur. Firebase/LiveKit sunucularına production dağıtımı yapılmamıştır.
+          Kaynak adayı 0407de8c548abf1ea44d85c6073cf053389b526d; yayın kaynak dışa aktarımı dd2a383ea0c7cdd5b845acb8a0bb71382002d80e. Uygulama kodu/testler aynıdır; yayın kaynak dalında CI iş akışları varsayılan dal ile aynen korunur.
+          EOF
+          test "$(gh api 'repos/Nnentx/Ngelx/git/trees/dd2a383ea0c7cdd5b845acb8a0bb71382002d80e?recursive=1' --jq '.tree[] | select(.path==".github/workflows") | .sha')" = 097102c0a68a0161f87410c61d5706c0baeab51d
+          gh release create v1.0.313-build543-test NgelX-1.0.313-Build-543.apk NgelX-1.0.313-Build-543.apk.sha256 --repo Nnentx/Ngelx --target dd2a383ea0c7cdd5b845acb8a0bb71382002d80e --prerelease --title 'NgelX 1.0.313 / Build543 test' --notes-file notes.md
