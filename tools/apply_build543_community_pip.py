@@ -9,6 +9,11 @@ def main(s):
  s=once(s,"part 'build542_pending_leave.dart';", "part 'build542_pending_leave.dart';\npart 'build543_pip_participants.dart';\npart 'build543_community_admin.dart';\npart 'build543_group_call_join.dart';")
  s=once(s,'ngelx542GroupTrailing(v,','ngelx542GroupTrailing(d.id,v,')
  s=once(s,'const Ngelx541GlobalCallStrip()]','const Ngelx541GlobalCallStrip(),const Ngelx543GlobalPip()]')
+ a=s.index('class _AnaEkranState');b=s.index('class ',a+20)
+ shell=s[a:b]
+ shell=once(shell,'          return AnnotatedRegion<SystemUiOverlayStyle>(', '          return Ngelx543ExitGuard(child:AnnotatedRegion<SystemUiOverlayStyle>(')
+ shell=once(shell,'          );\n        },\n      ),', '          ));\n        },\n      ),')
+ s=s[:a]+shell+s[b:]
  a=s.index('class _NgelXAramaPageState');b=s.index('class GrupBilgiPage',a)
  body=s[a:b]
  body=once(body,'  Future<void> _stopLocal444()async{','  Future<void> _stopLocal444()async{\n    Ngelx543PipCall.clear(widget.roomName);')
@@ -124,7 +129,7 @@ def native(s):
         }
     }
     override fun onPictureInPictureModeChanged(''')
- s=once(s,'                else -> result.notImplemented()\n            }\n        }\n        // Build509:', '                \"endPip543\" -> { result.success(null); if(Build.VERSION.SDK_INT>=26&&isInPictureInPictureMode)finish() }\n                else -> result.notImplemented()\n            }\n        }\n        // Build509:')
+ s=once(s,'                else -> result.notImplemented()\n            }\n        }\n        // Build509:', '                \"home543\" -> { moveTaskToBack(true); result.success(null) }\n                \"endPip543\" -> { result.success(null); if(Build.VERSION.SDK_INT>=26&&isInPictureInPictureMode)finish() }\n                else -> result.notImplemented()\n            }\n        }\n        // Build509:')
  s=once(s,'        pipMethodChannel520=null','        Ngelx543PipEvents.channel=null\n        pipMethodChannel520=null')
  return s
 

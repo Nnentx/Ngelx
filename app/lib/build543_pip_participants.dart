@@ -37,10 +37,11 @@ class Ngelx543PipCall {
       }
     }finally{_restoring=false;}
   }
-  static Future<void> background()async{
-    if(current==null||Ngelx520PipBridge.active.value)return;
+  static Future<bool> background()async{
+    if(current==null)return false;
+    if(Ngelx520PipBridge.active.value)return true;
     await Ngelx509FloatingCallBridge.hide();
-    await Ngelx520PipBridge.enter();
+    return Ngelx520PipBridge.enter();
   }
   static Future<void> _endPip()async{
     try{await const MethodChannel('com.nnentx.ngelx_app/call_pip_520').invokeMethod<void>('endPip543');}catch(_){}
@@ -127,4 +128,19 @@ class _Ngelx543MiniParticipantState extends State<Ngelx543MiniParticipant>{
         Text(name,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.white,fontSize:9)),
       ])));
   }
+}
+
+/// Root back exits to the launcher without destroying an ongoing call's engine.
+/// Normal route back/minimize behavior stays inside each existing call page.
+class Ngelx543ExitGuard extends StatelessWidget{
+  final Widget child;
+  const Ngelx543ExitGuard({super.key,required this.child});
+  @override Widget build(BuildContext context)=>ValueListenableBuilder<int>(
+    valueListenable:ngelx445CallRevision,builder:(_,revision,__)=>PopScope(
+      canPop:Ngelx543PipCall.current==null||!ngelxCallSession444.background,
+      onPopInvokedWithResult:(popped,_)async{
+        if(popped||Ngelx543PipCall.current==null)return;
+        final entered=await Ngelx543PipCall.background();
+        if(!entered){try{await const MethodChannel('com.nnentx.ngelx_app/call_pip_520').invokeMethod<void>('home543');}catch(_){}}
+      },child:child));
 }
