@@ -39,6 +39,9 @@ def main(s):
     body=s[a:b].replace('width:48,height:48','width:44,height:44')
     body=body.replace("Text(_ngelx438Ui(label),style:","Text(_ngelx438Ui(label),maxLines:1,overflow:TextOverflow.ellipsis,style:")
     body=body.replace('onTap:()=>onTap(),','onTap:()=>onTap(),\n      onLongPress:label==\'Kamera\'?()=>unawaited(kameraCevir()):null,')
+    body=body.replace('Widget _ngelx465HangupControl()=>Column(', 'Widget _ngelx465HangupControl()=>SizedBox(width:52,child:Column(').replace("  ]);\n\n  Widget _aramaKontrol","  ]));\n\n  Widget _aramaKontrol")
+    body=body.replace('bool acik)=>Column(', 'bool acik)=>SizedBox(width:52,child:Column(')
+    body=body.replace('  ]);\n}', '  ]));\n}')
     s=s[:a]+body+s[b:]
     old='mainAxisExtent:katilimcilar.length>=7?((constraints.maxHeight-42)/4).clamp(88.0,140.0).toDouble():null,childAspectRatio:katilimcilar.length<=2?1.02:.82'
     s=once(s,old,'mainAxisExtent:((constraints.maxHeight-18-10*((katilimcilar.length/sutun).ceil()-1))/(katilimcilar.length/sutun).ceil()).clamp(130.0,1200.0).toDouble()')
@@ -101,6 +104,7 @@ def model(s):
     # Both historical friendship records and current profile arrays are authoritative.
     # Restore peers even when a legacy account's mirrored friends array is missing.
     s=once(s,'super.initState();_noteClock=','super.initState();unawaited(ngelx542RetryPendingLeaves());_noteClock=')
+    s=once(s,'(_){if(mounted)setState((){});});}', '(_){if(mounted){setState((){});unawaited(ngelx542RetryPendingLeaves());}});}')
     s=once(s,"  late final _stories=", "  late final _friendships=FirebaseFirestore.instance.collection('friendships').where('members',arrayContains:widget.uid).snapshots();\n  late final _stories=")
     a=s.index('      final friends=Set<String>');b=s.index('      return StreamBuilder<QuerySnapshot',a)
     s=s[:a]+'''      return StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(stream:_friendships,builder:(_,relationships){

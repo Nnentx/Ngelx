@@ -8,7 +8,7 @@ Future<void> ngelx542LeaveGroupCall(DocumentReference<Map<String,dynamic>> ref,S
   final prefs=await SharedPreferences.getInstance();
   final key='pending_call_leave_542_${uid}_$room';
   await prefs.setString(key,jsonEncode({'path':ref.path,'room':room,'uid':uid,'video':video,'name':displayName}));
-  await _ngelx542AttemptLeave(key,prefs);
+  unawaited(_ngelx542AttemptLeave(key,prefs).catchError((Object error){debugPrint('Self-leave queued for retry: $error');}));
 }
 Future<void> _ngelx542AttemptLeave(String key,SharedPreferences prefs)async{
   while(_leaveInFlight542.contains(key)){await Future<void>.delayed(const Duration(milliseconds:60));}
@@ -38,15 +38,20 @@ Future<void> _ngelx542AttemptLeave(String key,SharedPreferences prefs)async{
     await prefs.remove(key);
   }finally{_leaveInFlight542.remove(key);}
 }
+bool _retryingLeaves542=false;
 Future<void> ngelx542RetryPendingLeaves()async{
-  final uid=FirebaseAuth.instance.currentUser?.uid;
-  if(uid==null)return;
-  final prefs=await SharedPreferences.getInstance();
-  final keys=prefs.getKeys().where((k)=>k.startsWith('pending_call_leave_542_${uid}_')).toList();
-  for(final key in keys){
-    if(FirebaseAuth.instance.currentUser?.uid!=uid)return;
-    try{await _ngelx542AttemptLeave(key,prefs);}catch(error){debugPrint('Pending self-leave retained: $error');}
-  }
+  if(_retryingLeaves542)return;
+  _retryingLeaves542=true;
+  try{
+    final uid=FirebaseAuth.instance.currentUser?.uid;
+    if(uid==null)return;
+    final prefs=await SharedPreferences.getInstance();
+    final keys=prefs.getKeys().where((k)=>k.startsWith('pending_call_leave_542_${uid}_')).toList();
+    for(final key in keys){
+      if(FirebaseAuth.instance.currentUser?.uid!=uid)return;
+      try{await _ngelx542AttemptLeave(key,prefs);}catch(error){debugPrint('Pending self-leave retained: $error');}
+    }
+  }finally{_retryingLeaves542=false;}
 }
 
 Future<void> ngelx542QueueReceipt(DocumentReference<Map<String,dynamic>> ref,Map<String,dynamic> payload)async{
