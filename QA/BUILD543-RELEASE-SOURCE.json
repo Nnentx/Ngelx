@@ -1,0 +1,9 @@
+{
+  "candidate_commit": "0407de8c548abf1ea44d85c6073cf053389b526d",
+  "candidate_workflow_run": 39393268899,
+  "version_name": "1.0.313",
+  "version_code": 543,
+  "package": "com.nnentx.ngelx_app",
+  "signer_sha256": "be20b27f0ba1f4decd2941d410b1536de89e48dc894f04f038f9d26b11ecd6aa",
+  "note": "Runtime sources/tests match candidate. Workflow tree matches default main; no production deployment."
+}
