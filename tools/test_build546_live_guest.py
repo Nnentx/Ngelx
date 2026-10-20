@@ -16,6 +16,8 @@ class GuestContinuity(unittest.TestCase):
   self.assertIn('if(changed&&muted)_guestMicWanted546=false;',new)
   self.assertIn('microphone:_guestMicWanted546&&!state.muted',new)
   self.assertIn('await _guestSync448(accepted)',new)
+  toggle=new.split('Future<void> _guestToggle546',1)[1]
+  self.assertLess(toggle.index('if(!turnOn546)'),toggle.index('await _guestVerify546(uid)'))
   self.assertIn('_guestRetry546?.cancel();\n    _guestSub448?.cancel();',new)
  def test_main_change_is_import_only(self):
   old=Path('app/lib/main.dart').read_text();new=main(old)

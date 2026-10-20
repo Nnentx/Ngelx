@@ -140,6 +140,13 @@
     if(uid==null||!_guestActive448||_guestConnecting448||_guestMediaBusy546)return;
     setState(()=>_guestMediaBusy546=true);
     try{
+      final turnOn546=camera?!_guestCameraWanted546:!_guestMicWanted546;
+      if(!turnOn546){
+        // Muting/stopping a local track never waits for a server read.
+        if(camera){_guestCameraWanted546=false;await _guestCameraApply546(uid,false);}
+        else{_guestMicWanted546=false;await _guestMicApply546(uid,false);}
+        return;
+      }
       final state=await _guestVerify546(uid);
       if(!_guestAlive546(uid)||!_guestWanted448||!state.allowed){await _guestSync448(false);return;}
       _guestAudioMuted489=state.muted;
