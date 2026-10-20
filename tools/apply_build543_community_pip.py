@@ -8,6 +8,20 @@ def once(s,a,b):
 def main(s):
  s=once(s,"part 'build542_pending_leave.dart';", "part 'build542_pending_leave.dart';\npart 'build543_pip_participants.dart';\npart 'build543_community_admin.dart';\npart 'build543_group_call_join.dart';")
  s=once(s,'ngelx542GroupTrailing(v,','ngelx542GroupTrailing(d.id,v,')
+ s=once(s,'trailing:ngelx445CallTrailing(v,',"trailing:Ngelx543GroupJoin(key:ValueKey('private-call-${d.id}'),chatId:d.id,seed:v,group:false,join:()=>unawaited(ngelx543JoinPrivate(context,d.id,gorunenAd,foto)),usual:")
+ # Private header follows the same committed call snapshot as the message body.
+ a=s.index('class _SohbetPageState');b=s.index('// Build468: explicit Android nav-safe composer slot.',a)
+ header=s[a:b]
+ header=once(header,'          return Row(mainAxisSize:MainAxisSize.min,children:[',"""          return StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(stream:_chatAkisi,builder:(_,snapshot){
+            final call=snapshot.data?.data();
+            if(call!=null&&ngelx440CallJoinable(call,DateTime.now()))return FilledButton.icon(
+              style:FilledButton.styleFrom(backgroundColor:const Color(0xFF21852C),foregroundColor:Colors.white),
+              onPressed:()=>widget.aktifAramadanAcildi?Navigator.pop(context):unawaited(ngelx543JoinPrivate(context,widget.chatId,widget.ad,widget.foto)),
+              icon:Icon(call['callVideo']==true?Icons.videocam:Icons.call,size:18),label:const Text('KATIL'));
+            return Row(mainAxisSize:MainAxisSize.min,children:[""")
+ header=once(header,"          ]);\n        }),\n        IconButton(tooltip:'Sohbet bilgisi'", "          ]);});\n        }),\n        IconButton(tooltip:'Sohbet bilgisi'")
+ s=s[:a]+header+s[b:]
+
  s=once(s,'const Ngelx541GlobalCallStrip()]','const Ngelx541GlobalCallStrip(),const Ngelx543GlobalPip()]')
  a=s.index('class _AnaEkranState');b=s.index('class ',a+20)
  shell=s[a:b]
@@ -129,7 +143,10 @@ def native(s):
         }
     }
     override fun onPictureInPictureModeChanged(''')
- s=once(s,'                else -> result.notImplemented()\n            }\n        }\n        // Build509:', '                \"home543\" -> { moveTaskToBack(true); result.success(null) }\n                \"endPip543\" -> { result.success(null); if(Build.VERSION.SDK_INT>=26&&isInPictureInPictureMode)finish() }\n                else -> result.notImplemented()\n            }\n        }\n        // Build509:')
+ a=s.index('        pip520.setMethodCallHandler');b=s.index('\n        }',a)+len('\n        }')
+ block=s[a:b]
+ block=once(block,'                else -> result.notImplemented()', '                "home543" -> { moveTaskToBack(true); result.success(null) }\n                "endPip543" -> { result.success(null); if(Build.VERSION.SDK_INT>=26&&isInPictureInPictureMode)finish() }\n                else -> result.notImplemented()')
+ s=s[:a]+block+s[b:]
  s=once(s,'        pipMethodChannel520=null','        Ngelx543PipEvents.channel=null\n        pipMethodChannel520=null')
  return s
 
