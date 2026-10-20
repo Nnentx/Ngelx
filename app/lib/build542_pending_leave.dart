@@ -11,6 +11,7 @@ Future<void> ngelx542LeaveGroupCall(DocumentReference<Map<String,dynamic>> ref,S
   await _ngelx542AttemptLeave(key,prefs);
 }
 Future<void> _ngelx542AttemptLeave(String key,SharedPreferences prefs)async{
+  while(_leaveInFlight542.contains(key)){await Future<void>.delayed(const Duration(milliseconds:60));}
   if(!_leaveInFlight542.add(key))return;
   try{
     final raw=prefs.getString(key);
@@ -60,4 +61,13 @@ Future<void> ngelx542QueueReceipt(DocumentReference<Map<String,dynamic>> ref,Map
     // must not falsely report that the authoritative leave failed.
     debugPrint('Call history queued for retry: $error');
   }
+}
+
+Future<bool> ngelx542PrepareManualJoin(String room,String uid)async{
+  final prefs=await SharedPreferences.getInstance();
+  final key='pending_call_leave_542_${uid}_$room';
+  if(prefs.containsKey(key)){
+    try{await _ngelx542AttemptLeave(key,prefs);}catch(_){return false;}
+  }
+  return FirebaseAuth.instance.currentUser?.uid==uid&&!prefs.containsKey(key);
 }

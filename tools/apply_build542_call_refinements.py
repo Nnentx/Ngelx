@@ -19,6 +19,11 @@ def main(s):
     s=once(s,"this.foto='',this.aktifAramadanAcildi=false});\n  @override State<GrupSohbetPage>","this.foto='',this.aktifAramadanAcildi=false,this.joinOnOpen542=false});\n  final bool joinOnOpen542;\n  @override State<GrupSohbetPage>")
     a=s.index('class _GrupSohbetPageState');b=s.index('  @override void initState(){',a)+len('  @override void initState(){')
     s=s[:b]+"\n    if(widget.joinOnOpen542)WidgetsBinding.instance.addPostFrameCallback((_)async{\n      try{\n        final snap=await chatRef.get(const GetOptions(source:Source.server));\n        if(mounted&&snap.exists)await aktifGrupAramasinaKatil(snap.data()!);\n      }catch(_){if(mounted)ngelxDurumMesaji(context,'Aramaya katılınamadı. Tekrar dene.',tip:'hata');}\n    });\n"+s[b:]
+    a=s.index('  Future<void> aktifGrupAramasinaKatil(');b=s.index('  Future<void>',a+20)
+    part=s[a:b]
+    part=once(part,"    final grupBelgesi=await chatRef.get();", "    if(!await ngelx542PrepareManualJoin(oda,ben)){if(mounted)ngelxDurumMesaji(context,'Önceki ayrılma kaydı gönderilemedi. Bağlantını kontrol edip tekrar dene.',tip:'hata');return;}\n    final grupBelgesi=await chatRef.get(const GetOptions(source:Source.server));\n    if(!mounted)return;\n    v=grupBelgesi.data()??<String,dynamic>{};\n    if(v['callRoomName']!=oda)return;")
+    part=once(part,'    try{\n      await chatRef.set({', "    try{\n      if(v['callExitedRoomName']==oda&&List<String>.from(v['callExitedUids']??const[]).contains(ben)){\n        if(!await ngelx534ConfirmAndRejoinGroupCall(context,chatRef,oda,cancelled:()=>!mounted))return;\n      }\n      if(!mounted||FirebaseAuth.instance.currentUser?.uid!=ben)return;\n      await chatRef.set({")
+    s=s[:a]+part+s[b:]
     a=s.index('  Future<void> _confirmGroupExit517()async{');b=s.index('  Widget _ngelx465HangupControl()',a)
     s=s[:a]+'''  Future<void> _confirmGroupExit517()async{
     if(!bitiyor)await bitir();
