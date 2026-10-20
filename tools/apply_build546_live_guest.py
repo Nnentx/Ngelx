@@ -11,6 +11,10 @@ def studio(s):
  s=s[:start]+Path('tools/build546_guest_session.dart').read_text()+s[end:]
  s=once(s,'  Widget _liveBottom540()=>Column(mainAxisSize:MainAxisSize.min,children:[','  Widget _liveBottom540()=>Column(mainAxisSize:MainAxisSize.min,children:[\n    _guestStatus546(),')
  s=once(s,'      _guestAudioMuted489=muted;',"      _guestAudioMuted489=muted;\n      if(changed&&muted)_guestMicWanted546=false;\n      if(changed&&mounted)setState((){});")
+ # Audio-only guests and camera-off guests remain visible through real subscribed tracks.
+ s=once(s,"if(participant.videoTrackPublications.any((p)=>p.subscribed&&!p.muted&&p.track is lk.VideoTrack)){", "if(participant.videoTrackPublications.any((p)=>p.subscribed)||participant.audioTrackPublications.any((p)=>p.subscribed)){")
+ s=once(s,"_guestActive448&&me.isNotEmpty&&_guestVideo489(me)!=null", "_guestActive448&&me.isNotEmpty")
+ s=once(s,"${p.identity}:${p.videoTrackPublications", "${p.identity}:${p.audioTrackPublications.map((t)=>'${t.sid}:${t.muted}:${t.subscribed}').join(',')}:${p.videoTrackPublications")
  s=once(s,'    _guestSub448?.cancel();','    _guestRetry546?.cancel();\n    _guestSub448?.cancel();')
  old="""            _guestWanted448=accepted;_guestActive448=accepted;
             await widget.oda.localParticipant?.setMicrophoneEnabled(accepted&&!_guestAudioMuted489);

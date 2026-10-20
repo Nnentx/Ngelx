@@ -13,6 +13,7 @@ class GuestContinuity(unittest.TestCase):
   self.assertIn('await Future.wait([',new)
   self.assertIn('if(!current546()||!_guestWanted448)',new)
   self.assertIn('revision546!=_guestRevision546',new)
+  self.assertIn('participant.audioTrackPublications.any((p)=>p.subscribed)',new)
   self.assertIn('if(changed&&muted)_guestMicWanted546=false;',new)
   self.assertIn('microphone:_guestMicWanted546&&!state.muted',new)
   self.assertIn('await _guestSync448(accepted)',new)
