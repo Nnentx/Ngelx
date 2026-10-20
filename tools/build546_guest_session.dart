@@ -57,6 +57,7 @@
       _guestRetry546?.cancel();_guestRetries546=0;
       // Do this even while a pending network operation is still in flight.
       unawaited(_guestStopMedia546());
+      if(mounted)setState((){_guestActive448=false;_guestStage546='';});
     }else if(!wasWanted){_guestRetries546=0;}
     if(_guestConnecting448||!mounted||kapatildi||yayinBitti||accepted&&_guestActive448)return;
     if(!accepted){
@@ -125,7 +126,7 @@
     }finally{
       if(mounted)setState(()=>_guestConnecting448=false);else _guestConnecting448=false;
       _guestTiming546.stop();
-      if(_guestAlive546(uid)&&!_guestWanted448){await _guestStopMedia546();if(mounted)setState(()=>_guestActive448=false);}
+      if(_guestAlive546(uid)&&!_guestWanted448){await _guestStopMedia546();if(mounted)setState((){_guestActive448=false;_guestStage546='';});}
     }
   }
   Future<void> _guestToggle546(bool camera)async{
