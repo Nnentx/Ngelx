@@ -1,4 +1,5 @@
   // Build546: explicit local preferences; never let a reconnect unmute a user.
+  late final String _liveRoom546;
   bool _guestMicWanted546=true,_guestCameraWanted546=true;
   bool _guestMediaBusy546=false;
   String _guestStage546='';
@@ -44,7 +45,7 @@
     final guest=values[1].data()??<String,dynamic>{};
     final room=(live['roomName']??'').toString();
     final allowed=ngelx546GuestAuthorized(expectedUid:uid,currentUid:FirebaseAuth.instance.currentUser?.uid,
-      expectedOwner:widget.ownerId,room:room,currentRoom:widget.oda.name,
+      expectedOwner:widget.ownerId,room:room,currentRoom:_liveRoom546,
       live:live['active']==true,owner:live['ownerId'] as String?,host:guest['hostUid'] as String?,
       guest:guest['guestUid'] as String?,status:guest['status'] as String?);
     return (allowed:allowed,muted:List<String>.from(live['guestAudioMutedUids']??const[]).contains(uid),room:room);

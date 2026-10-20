@@ -6,6 +6,7 @@ def once(s,a,b):
  return s.replace(a,b,1)
 def studio(s):
  if TAG in s:return s
+ s=once(s,'    _liveServer453=widget.serverUrl;_liveToken453=widget.participantToken;','    _liveServer453=widget.serverUrl;_liveToken453=widget.participantToken;\n    _liveRoom546=widget.oda.name??\"\";')
  start=s.index('  Future<void> _guestSync448(bool accepted)async{');end=s.index('\n  void _yenile()',start)
  s=s[:start]+Path('tools/build546_guest_session.dart').read_text()+s[end:]
  s=once(s,'  Widget _liveBottom540()=>Column(mainAxisSize:MainAxisSize.min,children:[','  Widget _liveBottom540()=>Column(mainAxisSize:MainAxisSize.min,children:[\n    _guestStatus546(),')
@@ -21,7 +22,7 @@ def studio(s):
  anchor='        await widget.oda.connect(_liveServer453,_liveToken453);'
  s=once(s,anchor,"""        final recoveryUid546=FirebaseAuth.instance.currentUser?.uid;
         if(recoveryUid546==null)break;
-        final recoveryToken546=await NgelXLiveKitSource441().fetch(lk.TokenRequestOptions(roomName:widget.oda.name??'',participantIdentity:recoveryUid546));
+        final recoveryToken546=await NgelXLiveKitSource441().fetch(lk.TokenRequestOptions(roomName:_liveRoom546,participantIdentity:recoveryUid546));
         if(kapatildi||yayinBitti||FirebaseAuth.instance.currentUser?.uid!=recoveryUid546)break;
         _liveServer453=recoveryToken546.serverUrl;_liveToken453=recoveryToken546.participantToken;
         await widget.oda.connect(_liveServer453,_liveToken453);""")
