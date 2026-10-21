@@ -41,6 +41,7 @@ def apply(root=Path('app')):
                   (MediaQuery.sizeOf(context).height-MediaQuery.viewInsetsOf(context).bottom-
                     MediaQuery.paddingOf(context).vertical-28)*.52)),
                 child:SingleChildScrollView(
+                  reverse:true,
                   keyboardDismissBehavior:ScrollViewKeyboardDismissBehavior.onDrag,
                   child:Column(mainAxisSize:MainAxisSize.min,children:[
                     _commentSection490(),const SizedBox(height:4),_liveBottom540(),
