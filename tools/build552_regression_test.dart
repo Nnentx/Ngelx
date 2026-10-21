@@ -1,8 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import '../lib/build552_policy.dart';
-import '../lib/main.dart' show Ngelx551CallGrid,Ngelx543MiniGrid;
+import '../lib/main.dart' show Ngelx551CallGrid,Ngelx543MiniGrid,Ngelx548ChatPhoto;
 void main(){
+ testWidgets('broken photos show compact actionable retry and dispose cleanly',(tester)async{
+  await tester.pumpWidget(const MaterialApp(home:Scaffold(body:Align(alignment:Alignment.topLeft,
+   child:Ngelx548ChatPhoto(url:'')))));
+  await tester.pump();
+  expect(find.text('Fotoğraf yüklenemedi'),findsOneWidget);
+  expect(find.text('Yeniden dene'),findsOneWidget);
+  expect(tester.getSize(find.byType(Ngelx548ChatPhoto)).height,110);
+  await tester.tap(find.text('Yeniden dene'));
+  await tester.pump();await tester.pump();
+  expect(find.text('Yeniden dene'),findsOneWidget);
+  await tester.pumpWidget(const SizedBox.shrink());
+  await tester.pump(const Duration(seconds:43));
+  expect(tester.takeException(),isNull);
+ });
+
  test('volume overlays remain visible; true background states suspend capture',(){
   expect(ngelx552Visible(AppLifecycleState.resumed),isTrue);
   expect(ngelx552Visible(AppLifecycleState.inactive),isTrue);

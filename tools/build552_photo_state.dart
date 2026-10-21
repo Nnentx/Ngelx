@@ -28,7 +28,7 @@ class _Ngelx548ChatPhotoState extends State<Ngelx548ChatPhoto>{
   if(_retrying)return;
   final url=widget.url;final generation=++_generation;
   _detach();setState(()=>_retrying=true);
-  try{await ngelxAgResmiOnbelleginiTemizle(url);}
+  try{if(url.trim().isNotEmpty)await ngelxAgResmiOnbelleginiTemizle(url);}
   finally{
    if(mounted&&url==widget.url&&generation==_generation){
     setState((){_retrying=false;_resolve();});
