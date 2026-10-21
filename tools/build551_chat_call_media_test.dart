@@ -11,7 +11,7 @@ void main(){
     for(final size in [const Size(140,300),const Size(250,130),const Size(195,220)]){
       await tester.pumpWidget(MaterialApp(home:Scaffold(body:Align(alignment:Alignment.topLeft,
         child:Ngelx551MediaReaction(media:SizedBox(key:const ValueKey('photo'),width:size.width,height:size.height),
-          badge:GestureDetector(onTap:()=>taps++,child:const SizedBox(key:ValueKey('badge'),width:42,height:24)))))));
+          badge:GestureDetector(behavior:HitTestBehavior.opaque,onTap:()=>taps++,child:const SizedBox(key:ValueKey('badge'),width:42,height:24)))))));
       final photo=tester.getRect(find.byKey(const ValueKey('photo')));
       final badge=tester.getRect(find.byKey(const ValueKey('badge')));
       expect(badge.right,closeTo(photo.right,.01));
