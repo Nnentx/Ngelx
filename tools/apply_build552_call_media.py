@@ -22,6 +22,13 @@ def apply(root=Path('app/lib')):
       (state==null||ngelx552Visible(state));''')
  s=once(s,'state==AppLifecycleState.resumed&&!kucultuluyor&&!bitiyor&&bitisDurumu==null','ngelx552Visible(state)&&!kucultuluyor&&!bitiyor&&bitisDurumu==null')
  s=once(s,'final sutun=katilimcilar.length<=1?1:katilimcilar.length>=7?3:2;','final sutun=ngelx552Columns(katilimcilar.length);')
+ s=once(s,'else Center(child:Ngelx446SpeakingRing(participant:p,child:_katilimciAvatar(p,yerel:yerel,radius:oda!.remoteParticipants.length>=6?18:45))),','''else LayoutBuilder(builder:(_,box){
+          final label=_videoCallControlsVisible493?48.0:0.0;
+          final radius=math.min((box.maxHeight-label-8)/2,(box.maxWidth-16)/2).clamp(8.0,45.0).toDouble();
+          return Padding(padding:EdgeInsets.only(bottom:label),child:Center(
+            child:Ngelx446SpeakingRing(participant:p,child:_katilimciAvatar(p,yerel:yerel,radius:radius))));
+        }),''')
+
  s=once(s,'final normal=TextStyle(fontWeight:okundu?FontWeight.w400:FontWeight.w600);\n    const kalin=TextStyle(color:mor,fontWeight:FontWeight.w900);\n    const grupStil=TextStyle(color:ngelxGroupGreen,fontWeight:FontWeight.w900);','''final normal=TextStyle(color:okundu?Colors.black54:const Color(0xFF18131F),fontWeight:okundu?FontWeight.w400:FontWeight.w700);
     final kalin=TextStyle(color:okundu?const Color(0xFF8B789F):const Color(0xFF60309A),fontWeight:okundu?FontWeight.w500:FontWeight.w900);
     final grupStil=TextStyle(color:okundu?const Color(0xFF638775):const Color(0xFF08763C),fontWeight:okundu?FontWeight.w500:FontWeight.w900);''')
