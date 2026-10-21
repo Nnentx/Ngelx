@@ -8,6 +8,8 @@ def apply(root=Path('app/lib')):
  p=root/'main.dart';s=p.read_text()
  if TAG in s:return
  s=once(s,"import 'build551_media.dart';","import 'build551_media.dart';\nimport 'build552_policy.dart';")
+ s=once(s,'  Future<void> _videoCallKeepScreen492(bool enabled)async{','  bool? _keepScreen552;\n  Future<void> _videoCallKeepScreen492(bool enabled)async{')
+ s=once(s,"    try{\n      await const MethodChannel('com.nnentx.ngelx_app/call_screen')","    if(_keepScreen552==enabled)return;\n    _keepScreen552=enabled;\n    try{\n      await const MethodChannel('com.nnentx.ngelx_app/call_screen')")
  s=once(s,'  void _odaDegisti(){\n    if(!_alive444)return;','  void _odaDegisti(){\n    if(!_alive444)return;\n    unawaited(_videoCallKeepScreen492(true));')
  s=once(s,'    if(!Platform.isAndroid||!widget.goruntulu)return;','''    if(!Platform.isAndroid)return;
     final state=WidgetsBinding.instance.lifecycleState;
@@ -39,6 +41,16 @@ class NgelXGorulenBildirim extends StatelessWidget{
           _ngelx464BellegeAl(url,bytes);return bytes;
         }catch(_){await _ngelx464GenelResimCache.removeFile(url);}
         finally{codec?.dispose();}''')
+ s=once(s,'  await ready.future;','''  try{await ready.future.timeout(const Duration(seconds:8));}
+  catch(_){
+    // A timed-out queued image must not occupy a download slot later.
+    if(!_ngelx464BeklemeSirasi.remove(ready))_ngelx464IndirmeSirasiBirak();
+    rethrow;
+  }''')
+ # Disk persistence is optional and must not delay first paint.
+ s=once(s,'''          try{await _ngelx464GenelResimCache.putFile(
+              url,bytes,maxAge:const Duration(days:3));}catch(_){}''','''          unawaited(_ngelx464GenelResimCache.putFile(
+              url,bytes,maxAge:const Duration(days:3)).then<void>((_){}).catchError((_){ }));''')
  p.write_text(s+'\n'+TAG+'\n')
  p=root/'build446_call_lifecycle.dart';s=p.read_text()
  s=s.replace('WidgetsBinding.instance.lifecycleState==AppLifecycleState.resumed','ngelx552Visible(WidgetsBinding.instance.lifecycleState!)')
