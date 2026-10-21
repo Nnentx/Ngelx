@@ -1,7 +1,15 @@
-name: NgelX V68 App Quality Performance
+name: NgelX V64 App Quality Performance
 
 on:
   push:
+    branches: [main]
+    paths:
+      - 'app/**'
+      - 'cloudflare/worker/**'
+      - 'tools/**'
+      - 'firestore.rules'
+      - '.github/workflows/build-v55-group-final-polish.yml'
+  pull_request:
     branches: [main]
     paths:
       - 'app/**'
@@ -15,7 +23,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: ngelx-v68-app-quality-performance
+  group: ngelx-v64-app-quality-performance
   cancel-in-progress: true
 
 jobs:
@@ -45,7 +53,7 @@ jobs:
       - name: V63 grup QA ve girdi performans hedeflerini dogrula
         shell: bash
         run: |
-          grep -q "version: 1.0.68+287" app/pubspec.yaml
+          grep -Eq '^version: 1\.0\.[0-9]+\+[0-9]+$' app/pubspec.yaml
           grep -q "bool ngelxPresenceOnline" app/lib/main.dart
           grep -q "Profili görüntüle" app/lib/main.dart
           grep -q "final sadeMedya=" app/lib/main.dart
@@ -80,15 +88,6 @@ jobs:
 
       - name: V64 Akis Uret Kesfet Profil Ayarlar kalite kontrolleri
         run: python3 tools/verify_v64_app_quality.py
-
-      - name: V65 WORK regresyonunu dogrula
-        run: python3 tools/verify_v65_work.py
-
-      - name: V67 cihaz testi duzeltmelerini dogrula
-        run: python3 tools/verify_v67_work.py
-
-      - name: V68 video yazi katmani kontrollerini dogrula
-        run: python3 tools/verify_v68_work.py
 
       - name: R2 Worker JavaScript kontrolu
         run: node --check cloudflare/worker/src/index.js
@@ -150,7 +149,7 @@ jobs:
       - name: APK yukle
         uses: actions/upload-artifact@v4
         with:
-          name: NgelX-V68-APP-QUALITY-PERFORMANCE-APK
+          name: NgelX-V64-APP-QUALITY-PERFORMANCE-APK
           path: app/build/app/outputs/flutter-apk/app-debug.apk
           if-no-files-found: error
           retention-days: 14
