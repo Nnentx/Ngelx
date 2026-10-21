@@ -1,0 +1,54 @@
+name: Publish exact verified Build551 APK
+on:
+  push:
+    branches: [qa/ngelx-publish551-verified-20261021]
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: ngelx-publish551
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Verify exact successful build
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test "$(gh api repos/Nnentx/Ngelx/actions/runs/39652841156 --jq .head_sha)" = "7e7b0b28f5bb6712da5fb824705c3ebece9d7bc6"
+          test "$(gh api repos/Nnentx/Ngelx/actions/runs/39652841156 --jq .conclusion)" = "success"
+          gh run download 39652841156 --repo Nnentx/Ngelx --name NgelX-Build551-REAL-INPLACE-SIGNED-REVIEW-ONLY --dir candidate551
+      - name: Preserve verified bytes
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib,zipfile,shutil,json
+          files=list(Path('candidate551').rglob('NgelX-1.0.321-Build551-INPLACE-CANDIDATE.apk'))
+          assert len(files)==1
+          apk=files[0]
+          expected='52d930f60714ebcc85197255523a1cc6cd2913a98603272dd9a5da649c801dbc'
+          assert hashlib.sha256(apk.read_bytes()).hexdigest()==expected
+          assert Path(str(apk)+'.sha256').read_text().split()[0]==expected
+          with zipfile.ZipFile(apk) as z:
+              assert z.testzip() is None
+              assert 'lib/arm64-v8a/libapp.so' in z.namelist()
+          output='NgelX-1.0.321-Build-551.apk'
+          shutil.copyfile(apk,output)
+          Path(output+'.sha256').write_text(expected+'  '+output+'\n')
+          Path('release551.md').write_text("NgelX Android 1.0.321 / Build551 test sürümü.\n\nKalp tepkisi fotoğrafın sağ alt kenarına hizalandı. İki kişilik sesli grup aramasında katılımcı kartları kısaltıldı; isimler, fotoğraflar, konuşma halkası ve arama kontrolleri korundu. Sohbet fotoğrafları en fazla 1600 piksel JPEG olarak hazırlanır; yinelenen medya kontrol isteği ve mesaj sonrası gereksiz profil okuması kaldırıldı. Uzak sunucudan fotoğrafın tam okunup çözümlenmesi, mesaj onayı ve tekrar deneme yolu korunur. Build550 dahil mevcut yapı korunur.\n\nOtomatik testler, Flutter analizi, Android derlemesi ve mevcut uygulama üzerine güncelleme imzası doğrulandı. Fiziksel telefonda PARLAMENT gönderim süresi ve iki cihazlı görüşme testi yapılmadı.\n\nSHA256: "+expected+"\nCI: https://github.com/Nnentx/Ngelx/actions/runs/39652841156\nTested source: 7e7b0b28f5bb6712da5fb824705c3ebece9d7bc6\n")
+          Path('RELEASE551_MANIFEST.json').write_text(json.dumps({'version':'1.0.321','build':551,'sha256':expected,'source':'7e7b0b28f5bb6712da5fb824705c3ebece9d7bc6','run':39652841156,'package':'com.nnentx.ngelx_app','signer_sha256':'be20b27f0ba1f4decd2941d410b1536de89e48dc894f04f038f9d26b11ecd6aa'},indent=2)+'\n')
+          PY
+      - name: Publish exact APK without overwriting prior releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if gh release view v1.0.321-build551-test --repo Nnentx/Ngelx >/dev/null 2>&1; then
+            echo 'Release already exists; refusing to overwrite.'
+            exit 1
+          fi
+          gh release create v1.0.321-build551-test NgelX-1.0.321-Build-551.apk NgelX-1.0.321-Build-551.apk.sha256 RELEASE551_MANIFEST.json --repo Nnentx/Ngelx --target 7e7b0b28f5bb6712da5fb824705c3ebece9d7bc6 --prerelease --title 'NgelX 1.0.321 / Build551 test' --notes-file release551.md
