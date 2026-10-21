@@ -1,0 +1,55 @@
+name: Publish exact verified Build552 APK
+on:
+  push:
+    branches: [qa/ngelx-publish552-verified-20261021]
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: ngelx-publish552
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Verify exact successful build
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test "$(gh api repos/Nnentx/Ngelx/actions/runs/39666684596 --jq .head_sha)" = "8686e01dc84d66e0e117b54c35f915a6600cb93d"
+          test "$(gh api repos/Nnentx/Ngelx/actions/runs/39666684596 --jq .conclusion)" = "success"
+          gh run download 39666684596 --repo Nnentx/Ngelx --name NgelX-Build552-REAL-INPLACE-SIGNED-REVIEW-ONLY --dir candidate552
+      - name: Preserve verified bytes
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib,zipfile,shutil,json
+          files=list(Path('candidate552').rglob('NgelX-1.0.322-Build552-INPLACE-CANDIDATE.apk'))
+          assert len(files)==1
+          apk=files[0]
+          expected='4c16bb7832be54c334e11004f0788c2d12610ad8ddd54f0f57911a75a8f7be0a'
+          assert hashlib.sha256(apk.read_bytes()).hexdigest()==expected
+          assert Path(str(apk)+'.sha256').read_text().split()[0]==expected
+          with zipfile.ZipFile(apk) as z:
+              assert z.testzip() is None
+              assert 'lib/arm64-v8a/libapp.so' in z.namelist()
+          output='NgelX-1.0.322-Build-552.apk'
+          shutil.copyfile(apk,output)
+          Path(output+'.sha256').write_text(expected+'  '+output+'\n')
+          Path('release552.md').write_text("NgelX Android 1.0.322 / Build552 test sürümü.\n\nMevcut yapı ve Build551 kalp tepkisi/iki kişilik sesli kart düzeltmeleri korunur. Sistem ses paneli açıldığında kamera ve mikrofon yeniden başlatılmaz. Sesli başlayıp kameranın sonradan açıldığı görüşmelerde de görünür video ekranı açık tutulur. Gerçek arka plan ve görüşme bitişi temizliği korunur. Sekiz katılımcı iki sütunda sığar; küçük arama penceresinde mor boşluklar azaltılır, görüntüler büyütülür ve büyütme düğmesi eklenir. Fotoğraf bekleme kuyruğu sınırlanır; disk önbelleğine yazma görüntünün açılmasını bekletmez, bozuk kayıtlar temizlenir ve hata durumunda yeniden deneme gösterilir. Okunmamış bildirimler koyulaştırılır ve yalnızca açma veya tümünü okuma işlemiyle okunur.\n\nOtomatik regresyon testleri, Flutter analizi, Android derlemesi, paket/sürüm ve mevcut güncelleme imzası doğrulandı. Fiziksel cihazda ses tuşu, uzun görüşme ve iki cihazlı PARLAMENT medya hızı testi yapılmadı.\n\nSHA256: "+expected+"\nCI: https://github.com/Nnentx/Ngelx/actions/runs/39666684596\nTested source: 8686e01dc84d66e0e117b54c35f915a6600cb93d\n")
+          Path('RELEASE552_MANIFEST.json').write_text(json.dumps({'version':'1.0.322','build':552,'sha256':expected,'source':'8686e01dc84d66e0e117b54c35f915a6600cb93d','run':39666684596,'package':'com.nnentx.ngelx_app','signer_sha256':'be20b27f0ba1f4decd2941d410b1536de89e48dc894f04f038f9d26b11ecd6aa'},indent=2)+'\n')
+          Path('release552.md').open('a').write('Release source snapshot: 22e960bd5dcaed36c3ec9c469925c344b63bb5a3 (application source matches tested commit; workflow definitions match default branch).\n')
+          PY
+      - name: Publish exact APK without overwriting prior releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if gh release view v1.0.322-build552-test --repo Nnentx/Ngelx >/dev/null 2>&1; then
+            echo 'Release already exists; refusing to overwrite.'
+            exit 1
+          fi
+          gh release create v1.0.322-build552-test NgelX-1.0.322-Build-552.apk NgelX-1.0.322-Build-552.apk.sha256 RELEASE552_MANIFEST.json --repo Nnentx/Ngelx --target 22e960bd5dcaed36c3ec9c469925c344b63bb5a3 --prerelease --title 'NgelX 1.0.322 / Build552 test' --notes-file release552.md
