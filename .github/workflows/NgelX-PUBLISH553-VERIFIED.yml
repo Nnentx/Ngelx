@@ -1,0 +1,67 @@
+name: Publish verified NgelX Build553 APK
+on:
+  push:
+    branches: [qa/ngelx-publish553-verified-20261022]
+    paths: ['.github/workflows/NgelX-PUBLISH553-VERIFIED.yml']
+permissions:
+  contents: write
+  actions: read
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Verify exact tested source and download signed candidate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test "$(gh api repos/Nnentx/Ngelx/actions/runs/39680330737 --jq .head_sha)" = "4448133a1e481ece1197d91f26b59202e23680dc"
+          test "$(gh api repos/Nnentx/Ngelx/actions/runs/39680330737 --jq .conclusion)" = "success"
+          gh run download 39680330737 --repo Nnentx/Ngelx --name NgelX-Build553-REAL-INPLACE-SIGNED-REVIEW-ONLY --dir candidate553
+      - name: Preserve exact verified candidate bytes
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib,zipfile,shutil,json
+          a=list(Path('candidate553').rglob('NgelX-1.0.323-Build553-INPLACE-CANDIDATE.apk'));assert len(a)==1
+          apk=a[0];sha=hashlib.sha256(apk.read_bytes()).hexdigest()
+          assert sha=='be674749a1e3b03c2f9f2b440169ec422dd68cf4b4311dbdeb44fe9018326148'
+          assert Path(str(apk)+'.sha256').read_text().split()[0]==sha
+          with zipfile.ZipFile(apk) as z:
+            assert z.testzip() is None
+            assert 'lib/arm64-v8a/libapp.so' in z.namelist()
+          out='NgelX-1.0.323-Build-553.apk';shutil.copyfile(apk,out)
+          Path(out+'.sha256').write_text(sha+'  '+out+'\n')
+          Path('RELEASE553_MANIFEST.json').write_text(json.dumps({'version':'1.0.323','build':553,'sha256':sha,'source':'4448133a1e481ece1197d91f26b59202e23680dc','run':39680330737,'package':'com.nnentx.ngelx_app','signer_sha256':'be20b27f0ba1f4decd2941d410b1536de89e48dc894f04f038f9d26b11ecd6aa'},indent=2))
+          Path('release553.md').write_text('NgelX 1.0.323 / Build553 test sürümü.\n\nBuild552 mevcut yapısı korunur. Canlı yayın ekranını açık tutma, alt çubuk ve konuk penceresi güvenli boşlukları, dar ekran/klavye düzeni, PK daveti oluşturma ve hata geri bildirimi, konukta iki kez geri ile ayrılma ve yeniden onay akışı eklendi. Moderatör rozeti/yetkisini geri alma, moderatörün yorum silme ve izleyici çıkarma yetkisi, 5 dakikalık yorum susturması ve geri sayım eklendi. Aslan, Galaksi ve Evren için özgün görsellerle 7 saniyelik katman animasyonları, sıralı oynatma ve hareketi azaltma seçeneği bulunur. Hediyeler ücretsiz sanaldır.\n\nCanlı yayınla sınırlı Firestore kuralları emülatörde yetki/gift bütünlüğü testlerinden geçti ve yayımlandı.\n\nÖNEMLİ SINIRLAR: Konuk mikrofonunu LiveKit sunucusundan susturma/konukluktan indirme servisi tanımlı değil (mevcut isimli uç nokta 404; servis yönetim erişimi 403). Bu işlemler tamamlanmış değildir; yalnızca uyarı verir. Videonun ses kanalı ölçüldü fakat sesi dinlenmedi, ses sorunu çözüldü denmiyor. Gerçek telefon, iki cihazlı PK/ses ve ekran zaman aşımı testleri yapılmadı. Hediye animasyonları gerçek zamanlı 3B model animasyonu değil, görsel katman ve parçacık animasyonudur.\n\nAPK sürüm/paket, mevcut güncelleme imzası ve SHA256 derleme akışında doğrulandı.\n\nSHA256: '+sha+'\n')
+          PY
+      - name: Record original gift asset provenance
+        run: |
+          cat > GIFT553_ASSETS.md <<'ASSETS'
+          # NgelX Build553 gift assets
+
+          Built-in Image Generation was used. Original generated PNGs were preserved; application copies were resized and encoded as transparent WebP for Android rendering.
+
+          Project paths:
+          - app/assets/gifts553/lion.webp
+          - app/assets/gifts553/galaxy.webp
+
+          Lion final prompt:
+          Use case: stylized-concept. Asset type: premium livestream virtual gift lion hero, intended for compositing with animated golden particles in a mobile application. Create one original majestic adult male lion, cinematic premium realistic 3D render, full head, mane and forelegs emerging forward, face straight toward camera, powerful open-mouth roar, beautiful intricate golden amber mane with warm rim lighting, convincing fur and facial anatomy. Full subject contained inside image with generous transparent padding, paws visible at bottom. True transparent background, no scene, no floor, no frame, no text, no symbols, no watermark, no branding. High polish and dramatic lighting; not a flat icon, not a cartoon emoji. Original design.
+
+          Galaxy final prompt:
+          Use case: stylized-concept. Asset type: premium original galactic livestream gift overlay art for an application, will be layered over a live video and animated with rotating stars. One spectacular luminous spiral galaxy seen at a cinematic three-quarter tilt, bright pearlescent core, exquisitely detailed violet and cyan nebula spiral arms, a small exquisitely rendered ringed blue planet near lower right foreground for depth, electric blue and magenta stardust. Extremely polished cinematic 3D VFX render, sparkling elegant luxury, believable volumetric space dust. Entire composition contained comfortably within the image with transparent padding around the irregular nebula edges. True transparent background beyond nebula, no opaque rectangle, no typography, no logo, no frame, no emoji, no watermark. Keep the galaxy at center and ringed planet small so they can be layered and gently rotated in code.
+
+          The application combines these static transparent assets with seven-second transforms, particles, fading and orbit layers. These are not independently articulated realtime 3D character models. No gift sound effect was added.
+          ASSETS
+
+      - name: Publish immutable test release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if gh release view v1.0.323-build553-test --repo Nnentx/Ngelx >/dev/null 2>&1; then
+            echo 'Existing release will not be overwritten'; exit 1
+          fi
+          gh release create v1.0.323-build553-test NgelX-1.0.323-Build-553.apk NgelX-1.0.323-Build-553.apk.sha256 RELEASE553_MANIFEST.json GIFT553_ASSETS.md --repo Nnentx/Ngelx --target 4448133a1e481ece1197d91f26b59202e23680dc --prerelease --title 'NgelX 1.0.323 / Build553 test' --notes-file release553.md
