@@ -41,6 +41,7 @@ jobs:
           Path(output+'.sha256').write_text(expected+'  '+output+'\n')
           Path('release551.md').write_text("NgelX Android 1.0.321 / Build551 test sürümü.\n\nKalp tepkisi fotoğrafın sağ alt kenarına hizalandı. İki kişilik sesli grup aramasında katılımcı kartları kısaltıldı; isimler, fotoğraflar, konuşma halkası ve arama kontrolleri korundu. Sohbet fotoğrafları en fazla 1600 piksel JPEG olarak hazırlanır; yinelenen medya kontrol isteği ve mesaj sonrası gereksiz profil okuması kaldırıldı. Uzak sunucudan fotoğrafın tam okunup çözümlenmesi, mesaj onayı ve tekrar deneme yolu korunur. Build550 dahil mevcut yapı korunur.\n\nOtomatik testler, Flutter analizi, Android derlemesi ve mevcut uygulama üzerine güncelleme imzası doğrulandı. Fiziksel telefonda PARLAMENT gönderim süresi ve iki cihazlı görüşme testi yapılmadı.\n\nSHA256: "+expected+"\nCI: https://github.com/Nnentx/Ngelx/actions/runs/39652841156\nTested source: 7e7b0b28f5bb6712da5fb824705c3ebece9d7bc6\n")
           Path('RELEASE551_MANIFEST.json').write_text(json.dumps({'version':'1.0.321','build':551,'sha256':expected,'source':'7e7b0b28f5bb6712da5fb824705c3ebece9d7bc6','run':39652841156,'package':'com.nnentx.ngelx_app','signer_sha256':'be20b27f0ba1f4decd2941d410b1536de89e48dc894f04f038f9d26b11ecd6aa'},indent=2)+'\n')
+          Path('release551.md').open('a').write('Release source snapshot: 92caa4668acf6def62b4b26b8a70b3ab93f89102 (application source matches tested commit; workflow definitions match default branch).\n')
           PY
       - name: Publish exact APK without overwriting prior releases
         env:
@@ -51,4 +52,4 @@ jobs:
             echo 'Release already exists; refusing to overwrite.'
             exit 1
           fi
-          gh release create v1.0.321-build551-test NgelX-1.0.321-Build-551.apk NgelX-1.0.321-Build-551.apk.sha256 RELEASE551_MANIFEST.json --repo Nnentx/Ngelx --target "$GITHUB_SHA" --prerelease --title 'NgelX 1.0.321 / Build551 test' --notes-file release551.md
+          gh release create v1.0.321-build551-test NgelX-1.0.321-Build-551.apk NgelX-1.0.321-Build-551.apk.sha256 RELEASE551_MANIFEST.json --repo Nnentx/Ngelx --target 92caa4668acf6def62b4b26b8a70b3ab93f89102 --prerelease --title 'NgelX 1.0.321 / Build551 test' --notes-file release551.md
