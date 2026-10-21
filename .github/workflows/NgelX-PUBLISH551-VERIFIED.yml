@@ -51,4 +51,4 @@ jobs:
             echo 'Release already exists; refusing to overwrite.'
             exit 1
           fi
-          gh release create v1.0.321-build551-test NgelX-1.0.321-Build-551.apk NgelX-1.0.321-Build-551.apk.sha256 RELEASE551_MANIFEST.json --repo Nnentx/Ngelx --target 7e7b0b28f5bb6712da5fb824705c3ebece9d7bc6 --prerelease --title 'NgelX 1.0.321 / Build551 test' --notes-file release551.md
+          gh release create v1.0.321-build551-test NgelX-1.0.321-Build-551.apk NgelX-1.0.321-Build-551.apk.sha256 RELEASE551_MANIFEST.json --repo Nnentx/Ngelx --target "$GITHUB_SHA" --prerelease --title 'NgelX 1.0.321 / Build551 test' --notes-file release551.md
