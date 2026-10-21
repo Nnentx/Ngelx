@@ -25,6 +25,11 @@ jobs:
           npm install --no-save @firebase/rules-unit-testing firebase firebase-tools
           echo '{"emulators":{"firestore":{"port":8080},"ui":{"enabled":false}},"firestore":{"rules":"live553-candidate.rules"}}' > firebase553-emulator.json
           npx firebase emulators:exec --only firestore --project demo-ngelx --config firebase553-emulator.json 'node tools/build553_live_rules_test.mjs'
+      - name: Publish only the tested live-stream rule delta
+        env:
+          FIREBASE_SERVICE_ACCOUNT_NGELX_44EED: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_NGELX_44EED }}
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: python3 tools/publish_build553_live_rules.py
       - uses: actions/upload-artifact@v4
         with:
           name: NgelX-Build553-Validated-Live-Rules
@@ -32,4 +37,5 @@ jobs:
             live553-current.rules
             live553-candidate.rules
             live553-rule-release.json
+            live553-publication.json
           retention-days: 7
