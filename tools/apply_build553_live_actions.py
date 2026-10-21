@@ -20,7 +20,7 @@ def apply(root=Path('app')):
       if(!widget.yayinSahibi&&
          List<String>.from(v[''')
  s=once(s,'                      trailing:widget.yayinSahibi&&uid.isNotEmpty','                      trailing:_canModerate553&&uid.isNotEmpty')
- a=s.index("                            if(secim=='mute'){");b=s.index('                          },',a)
+ a=s.index("                            if(secim=='mute'){");b=s.index('                          },\n                          itemBuilder:',a)
  s=s[:a]+"                            await _viewerAction553(uid,secim);\n"+s[b:]
  s=once(s,"                            const PopupMenuItem(value:'invite'", "                            if(widget.yayinSahibi)const PopupMenuItem(value:'invite'")
  s=once(s,"                            PopupMenuItem(value:'mute',child:ListTile(contentPadding:EdgeInsets.zero,leading:Icon(Icons.volume_off_rounded),title:Text('Yorumlarını sustur'))),",'''                            if(widget.yayinSahibi)const PopupMenuItem(value:'mute5',child:Text('Yorumları 5 dakika sustur')),
