@@ -1462,6 +1462,8 @@ jobs:
         run: |
           python3 tools/apply_build553_live_review.py
           python3 tools/apply_build553_live_review.py
+          python3 tools/apply_build553_live_actions.py
+          python3 tools/apply_build553_live_actions.py
           cp tools/build553_live_layout_test.dart app/test/build553_live_layout_test.dart
           cd app
           timeout 240s flutter test --reporter expanded test/build553_live_layout_test.dart

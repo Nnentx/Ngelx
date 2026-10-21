@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import '../lib/build540_reference_ui.dart';
+import '../lib/build553_gift_effect.dart';
 
 void main(){
   for(final width in [280.0,320.0,360.0,412.0]){
@@ -26,9 +27,26 @@ void main(){
   testWidgets('keyboard retains composer without action overflow',(tester)async{
     await tester.pumpWidget(const MaterialApp(home:MediaQuery(
       data:MediaQueryData(size:Size(320,640),viewInsets:EdgeInsets.only(bottom:300)),
-      child:Scaffold(body:Ngelx540LiveBar(composer:TextField(),actions:[Text('hidden action')])))));
+      child:Scaffold(resizeToAvoidBottomInset:false,body:Ngelx540LiveBar(composer:TextField(),actions:[Text('hidden action')])))));
     expect(find.byType(TextField),findsOneWidget);
     expect(find.text('hidden action'),findsNothing);
     expect(tester.takeException(),isNull);
   });
+  for(final kind in ['Aslan','Galaksi','Evren']){
+    testWidgets('seven second $kind effect leaves controls tappable',(tester)async{
+      var pressed=false;
+      await tester.pumpWidget(MaterialApp(home:Scaffold(body:Stack(children:[
+        Center(child:ElevatedButton(onPressed:()=>pressed=true,child:const Text('Kontrol'))),
+        Ngelx553GiftEffect(kind:kind,sender:'Test',quantity:1),
+      ]))));
+      await tester.pump(const Duration(seconds:3));
+      await tester.tap(find.text('Kontrol'));
+      expect(pressed,isTrue);
+      expect(tester.takeException(),isNull);
+      await tester.pump(const Duration(seconds:4));
+      expect(tester.takeException(),isNull);
+      await tester.pumpWidget(const SizedBox());
+    });
+  }
+
 }
