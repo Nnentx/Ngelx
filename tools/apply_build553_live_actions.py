@@ -98,6 +98,10 @@ def apply(root=Path('app')):
  s=once(s,"return SizedBox(height:math.min(MediaQuery.sizeOf(c).height*.48,100.0+ids.length*78.0)", "return SizedBox(height:math.min(MediaQuery.sizeOf(c).height*.66,150.0+ids.length*100.0)")
  s=once(s,"title:Text(name,maxLines:1,overflow:TextOverflow.ellipsis),subtitle:Text(status=='accepted'?'Kabul edildi':status=='invited'?'Davet gönderildi':status=='pending'?'Katılmak istiyor':'Canlı izleyicisi'),trailing:Row(mainAxisSize:MainAxisSize.min,children:[", "title:Text(name,maxLines:1,overflow:TextOverflow.ellipsis),subtitle:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(status=='accepted'?'Kabul edildi':status=='invited'?'Davet gönderildi':status=='pending'?'Katılmak istiyor':'Canlı izleyicisi'),Wrap(crossAxisAlignment:WrapCrossAlignment.center,children:[")
  s=once(s,'          ]));','          ])]));')
+ s=once(s,'150.0+ids.length*100.0),child:Column(children:[','150.0+ids.length*100.0),child:SingleChildScrollView(child:Column(children:[')
+ s=once(s,'Expanded(child:ListView.builder(itemCount:ids.length,','ListView.builder(shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),itemCount:ids.length,')
+ s=once(s,'        });})),\n      ]));','        });}),\n      ])));')
+
  s=once(s,'  final bool connected548;final VoidCallback? onLeaving548;','  final Future<void> Function(String,String)? moderation553;\n  final bool connected548;final VoidCallback? onLeaving548;')
  s=once(s,'this.compact=false,this.viewerUids=const[]','this.moderation553,this.compact=false,this.viewerUids=const[]')
  s=once(s,"if(status=='accepted')const Tooltip(message:'Konuğu çıkarmak için canlı yayın konuk kartındaki üç nokta menüsünü kullan.',child:Icon(Icons.more_horiz_rounded,color:Colors.deepPurple)),",'''if(status=='accepted')PopupMenuButton<String>(tooltip:'Konuk yönetimi',
