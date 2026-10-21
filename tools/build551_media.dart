@@ -8,7 +8,9 @@ bool ngelx551ChatPhotoKind(String kind) =>
 // Runs in the existing upload isolate. Keep readable caps at 1600px while
 // avoiding a second local decode of the freshly encoded JPEG.
 Uint8List ngelx551ChatJpeg(Uint8List bytes) {
-  final original=img.decodeImage(bytes);
+  img.Image? original;
+  try{original=img.decodeImage(bytes);}
+  catch(_){throw const FormatException('Fotoğraf çözülemedi.');}
   if(original==null||original.width<=0||original.height<=0) {
     throw const FormatException('Fotoğraf çözülemedi.');
   }
