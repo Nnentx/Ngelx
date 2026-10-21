@@ -133,6 +133,10 @@ def apply(root=Path('app')):
                               final own=FirebaseFirestore.instance.collection('live_streams').doc(liveId);
                               await FirebaseFirestore.instance.runTransaction((tx)async{
                                 final current=(await tx.get(own)).data()??<String,dynamic>{};
+                                final target=(await tx.get(FirebaseFirestore.instance.collection('live_streams').doc(d.id))).data()??<String,dynamic>{};
+                                if(!ngelxCanliKaydiTaze(target)||target['ownerId']!=hedefUid||target['pkActive']==true)throw StateError('inactive');
+                                final targetUntil=target['pkInviteExpiresAt'];
+                                if(target['pkInviteStatus']=='pending'&&targetUntil is Timestamp&&targetUntil.toDate().isAfter(DateTime.now()))throw StateError('pending');
                                 if(!ngelxCanliKaydiTaze(current)||current['ownerId']!=ownerUid||current['pkActive']==true)throw StateError('inactive');
                                 final until=current['pkInviteExpiresAt'];
                                 if(current['pkInviteStatus']=='pending'&&until is Timestamp&&until.toDate().isAfter(DateTime.now()))throw StateError('pending');
@@ -156,7 +160,7 @@ def apply(root=Path('app')):
  s=s[:b]+"""                              }catch(error){
                                 if(sheetContext.mounted)ScaffoldMessenger.of(sheetContext).showSnackBar(SnackBar(content:Text(
                                   error is StateError&&error.message=='pending'
-                                    ?'Açık bir PK davetin var. Yanıtı veya süresinin dolmasını bekle.'
+                                    ?'Açık bir PK daveti var. Yanıtı veya süresinin dolmasını bekle.'
                                     :'PK daveti doğrulanamadı. Bağlantıyı kontrol edip tekrar dene.')));
                               }finally{
                                 if(sheetContext.mounted)refresh553(()=>busy553=false);
