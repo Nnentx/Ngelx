@@ -17,8 +17,15 @@ class _Ngelx553GiftEffectState extends State<Ngelx553GiftEffect> with SingleTick
       child:AnimatedBuilder(animation:_animation,builder:(_,__) {
         final t=reduced ? 0.5 : _animation.value;
         final opacity=reduced?1.0:math.min(1.0,math.min(t*8,(1-t)*8)).clamp(0.0,1.0).toDouble();
-        return Opacity(opacity:opacity,child:SizedBox(width:double.infinity,height:350,child:Stack(alignment:Alignment.center,children:[
+        return Opacity(opacity:opacity,child:SizedBox(width:double.infinity,height:math.min(MediaQuery.sizeOf(context).height*.62,520.0),child:Stack(alignment:Alignment.center,children:[
           Positioned.fill(child:CustomPaint(painter:_GiftPainter553(t,widget.kind))),
+          Positioned.fill(bottom:72,child:Transform.translate(
+            offset:Offset(0,reduced?0:math.sin(t*math.pi*5)*5),
+            child:Transform.rotate(angle:widget.kind=='Aslan'?0:(t-.5)*.28,
+              child:Transform.scale(scale:reduced?1:
+                .78+.22*Curves.easeOutCubic.transform((t/.22).clamp(0.0,1.0)),
+                child:Image.asset(widget.kind=='Aslan'?'assets/gifts553/lion.webp':'assets/gifts553/galaxy.webp',
+                  fit:BoxFit.contain,filterQuality:FilterQuality.medium))))),
           Positioned(left:24,right:24,bottom:12,child:Container(
             padding:const EdgeInsets.symmetric(horizontal:16,vertical:10),
             decoration:BoxDecoration(color:const Color(0xDD151023),borderRadius:BorderRadius.circular(24),border:Border.all(color:const Color(0xFFFFD881))),
@@ -44,24 +51,7 @@ class _GiftPainter553 extends CustomPainter {
       final p=center+Offset(math.cos(angle)*distance,math.sin(angle)*distance*.8);
       c.drawCircle(p,1.2+(i%3)*.7,Paint()..color=Color.lerp(const Color(0xFFFFE3A3),const Color(0xFFB6A2FF),(i%7)/6)!.withValues(alpha:.8));
     }
-    if(kind=='Aslan'){
-      c.save();c.translate(center.dx,center.dy+math.sin(t*math.pi*6)*5);
-      for(var i=0;i<18;i++){
-        final a=i*math.pi/9;final p=Offset(math.cos(a)*radius*.61,math.sin(a)*radius*.61);
-        c.drawOval(Rect.fromCenter(center:p,width:radius*.68,height:radius*.73),Paint()..color=i%2==0?const Color(0xFFB55F21):const Color(0xFFDC8B31));
-      }
-      c.drawOval(Rect.fromCenter(center:Offset.zero,width:radius*1.15,height:radius*1.3),Paint()..color=const Color(0xFFFFCF70));
-      for(final side in [-1.0,1.0]){
-        c.drawCircle(Offset(side*radius*.43,-radius*.48),radius*.2,Paint()..color=const Color(0xFFF4B95B));
-        final eye=Offset(side*radius*.23,-radius*.12);
-        c.drawOval(Rect.fromCenter(center:eye,width:radius*.14,height:radius*.10),Paint()..color=const Color(0xFF2B1822));
-        c.drawCircle(Offset(side*radius*.16,radius*.28),radius*.22,Paint()..color=const Color(0xFFFFE8B4));
-      }
-      c.drawRRect(RRect.fromRectAndRadius(Rect.fromCenter(center:Offset(0,radius*.2),width:radius*.22,height:radius*.15),Radius.circular(radius*.06)),Paint()..color=const Color(0xFF492526));
-      final mouth=Path()..moveTo(0,radius*.28)..quadraticBezierTo(-radius*.04,radius*.47,-radius*.22,radius*.4)..moveTo(0,radius*.28)..quadraticBezierTo(radius*.04,radius*.47,radius*.22,radius*.4);
-      c.drawPath(mouth,Paint()..color=const Color(0xFF492526)..style=PaintingStyle.stroke..strokeWidth=3);
-      c.restore();
-    }else{
+    if(kind!='Aslan'){
       c.save();c.translate(center.dx,center.dy);c.rotate(t*math.pi*.7);
       for(var i=0;i<4;i++){
         c.drawOval(Rect.fromCenter(center:Offset.zero,width:radius*(1.5+i*.22),height:radius*(.5+i*.1)),Paint()..color=Color.lerp(const Color(0xFF9F7AFF),const Color(0xFF4DE3FF),i/3)!.withValues(alpha:.65)..style=PaintingStyle.stroke..strokeWidth=3);

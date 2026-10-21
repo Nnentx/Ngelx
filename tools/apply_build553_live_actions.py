@@ -87,6 +87,10 @@ def apply(root=Path('app')):
  p.write_text(s+'\n'+TAG+'\n')
  p=root/'lib/main.dart';s=p.read_text();s=once(s,"import 'build552_policy.dart';","import 'build552_policy.dart';\nimport 'build553_gift_effect.dart';");p.write_text(s)
  (root/'lib/build553_gift_effect.dart').write_text(Path('tools/build553_gift_effect.dart').read_text())
+ p=root/'pubspec.yaml';s=p.read_text()
+ if('    - assets/gifts553/' not in s):
+  s=once(s,'  assets:\n','  assets:\n    - assets/gifts553/\n')
+  p.write_text(s)
  p=root/'lib/build548_policy.dart';s=p.read_text();s=once(s,"'Galaksi':100","'Galaksi':100,'Aslan':150,'Evren':200");p.write_text(s)
  p=root/'lib/build448_live_guests.dart';s=p.read_text()
  s=once(s,'20+MediaQuery.viewInsetsOf(sheet).bottom','20+MediaQuery.viewInsetsOf(sheet).bottom+MediaQuery.viewPaddingOf(sheet).bottom')
