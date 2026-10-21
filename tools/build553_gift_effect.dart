@@ -21,7 +21,7 @@ class _Ngelx553GiftEffectState extends State<Ngelx553GiftEffect> with SingleTick
           Positioned.fill(child:CustomPaint(painter:_GiftPainter553(t,widget.kind))),
           Positioned.fill(bottom:72,child:Transform.translate(
             offset:Offset(0,reduced?0:math.sin(t*math.pi*5)*5),
-            child:Transform.rotate(angle:widget.kind=='Aslan'?0:(t-.5)*.28,
+            child:Transform.rotate(angle:widget.kind=='Aslan'?0:(t-.5)*(widget.kind=='Evren' ? 0.8 : 0.28),
               child:Transform.scale(scale:reduced?1:
                 .78+.22*Curves.easeOutCubic.transform((t/.22).clamp(0.0,1.0)),
                 child:Image.asset(widget.kind=='Aslan'?'assets/gifts553/lion.webp':'assets/gifts553/galaxy.webp',
@@ -53,7 +53,7 @@ class _GiftPainter553 extends CustomPainter {
     }
     if(kind!='Aslan'){
       c.save();c.translate(center.dx,center.dy);c.rotate(t*math.pi*.7);
-      for(var i=0;i<4;i++){
+      for(var i=0;i<(kind=='Evren'?7:3);i++){
         c.drawOval(Rect.fromCenter(center:Offset.zero,width:radius*(1.5+i*.22),height:radius*(.5+i*.1)),Paint()..color=Color.lerp(const Color(0xFF9F7AFF),const Color(0xFF4DE3FF),i/3)!.withValues(alpha:.65)..style=PaintingStyle.stroke..strokeWidth=3);
         c.rotate(math.pi/4);
       }

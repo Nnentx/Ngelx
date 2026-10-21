@@ -84,6 +84,14 @@ def apply(root=Path('app')):
     await _klavyeyiKapat();
     if(widget.yayinSahibi){''')
  s=s.replace('Ngelx448GuestControls(liveId:', 'Ngelx448GuestControls(moderation553:_hostGuestAction489,liveId:')
+ s=once(s,'  Future<void> _hostGuestAction489(String uid,String action)async{','''  Future<void> _hostGuestAction489(String uid,String action)async{
+    if(action=='ban'){
+      if(widget.yayinSahibi&&FirebaseAuth.instance.currentUser?.uid==widget.ownerId)await _viewerAction553(uid,'remove');
+      return;
+    }''')
+ s=s.replace("const PopupMenuItem(value:'kick',child:Text('Konukluktan çıkar')),", "const PopupMenuItem(value:'kick',child:Text('Konukluktan çıkar')),\n              const PopupMenuItem(value:'ban',child:Text('Bu yayından engelle')),")
+ s=once(s,"                    const PopupMenuItem(value:'kick',", "                    const PopupMenuItem(value:'ban',child:Text('Bu yayından engelle')),\n                    const PopupMenuItem(value:'kick',")
+
  p.write_text(s+'\n'+TAG+'\n')
  p=root/'lib/main.dart';s=p.read_text();s=once(s,"import 'build552_policy.dart';","import 'build552_policy.dart';\nimport 'build553_gift_effect.dart';");p.write_text(s)
  (root/'lib/build553_gift_effect.dart').write_text(Path('tools/build553_gift_effect.dart').read_text())
@@ -109,7 +117,7 @@ def apply(root=Path('app')):
               itemBuilder:(_)=>const [
                 PopupMenuItem(value:'mute',child:Text('Mikrofonu sustur')),
                 PopupMenuItem(value:'unmute',child:Text('Mikrofon iznini aç')),
-                PopupMenuItem(value:'kick',child:Text('Konukluktan indir')),
+                PopupMenuItem(value:'kick',child:Text('Konukluktan indir')),\n                PopupMenuItem(value:'ban',child:Text('Bu yayından engelle')),
               ]),''')
  p.write_text(s)
  p=root/'lib/live_pk.dart' ;s=p.read_text()
