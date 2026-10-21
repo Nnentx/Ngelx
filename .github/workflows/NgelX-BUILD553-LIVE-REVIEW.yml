@@ -1468,6 +1468,12 @@ jobs:
           cd app
           timeout 240s flutter test --reporter expanded test/build553_live_layout_test.dart
 
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NgelX-Build553-Gift-Previews
+          path: app/test-output/*.png
+          retention-days: 7
+
       - name: Analyze full regenerated Flutter app without production deployment
         shell: bash
         working-directory: app

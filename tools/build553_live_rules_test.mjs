@@ -10,7 +10,8 @@ try{
   await setDoc(doc(db,'live_streams/live/comments/message'),{userId:'guest',uid:'guest',kind:'comment',text:'test'});
   await setDoc(doc(db,'live_streams/live/guest_requests/guest'),{liveId:'live',hostUid:'host',guestUid:'guest',status:'accepted',startedBy:'guest',updatedAt:Timestamp.now()});
  });
- const db=id=>env.authenticatedContext(id).firestore();
+ const instances=new Map();
+ const db=id=>{if(!instances.has(id))instances.set(id,env.authenticatedContext(id).firestore());return instances.get(id);};
  const comment=(id,author)=>doc(db(author),'live_streams/live/comments/'+id);
  const payload=author=>({userId:author,uid:author,kind:'comment',text:'hello',createdAt:serverTimestamp()});
  await assertFails(setDoc(comment('muted','muted'),payload('muted')));

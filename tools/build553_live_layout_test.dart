@@ -1,3 +1,6 @@
+import 'dart:io';
+import 'dart:ui' as ui;
+import 'package:flutter/rendering.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import '../lib/build540_reference_ui.dart';
@@ -35,11 +38,22 @@ void main(){
   for(final kind in ['Aslan','Galaksi','Evren']){
     testWidgets('seven second $kind effect leaves controls tappable',(tester)async{
       var pressed=false;
-      await tester.pumpWidget(MaterialApp(home:Scaffold(body:Stack(children:[
+      final preview=GlobalKey();
+      tester.view.physicalSize=const Size(360,800);tester.view.devicePixelRatio=1;
+      addTearDown(tester.view.resetPhysicalSize);addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpWidget(RepaintBoundary(key:preview,child:MaterialApp(home:Scaffold(body:Stack(children:[
         Center(child:ElevatedButton(onPressed:()=>pressed=true,child:const Text('Kontrol'))),
         Ngelx553GiftEffect(kind:kind,sender:'Test',quantity:1),
-      ]))));
+      ])))));
+      await tester.runAsync(()=>precacheImage(AssetImage(kind=='Aslan'?'assets/gifts553/lion.webp':'assets/gifts553/galaxy.webp'),tester.element(find.byType(Ngelx553GiftEffect))));
       await tester.pump(const Duration(seconds:3));
+      await tester.runAsync(()async{
+        final boundary=preview.currentContext!.findRenderObject() as RenderRepaintBoundary;
+        final image=await boundary.toImage(pixelRatio:2);
+        final bytes=await image.toByteData(format:ui.ImageByteFormat.png);
+        Directory('test-output').createSync();
+        File('test-output/gift-$kind.png').writeAsBytesSync(bytes!.buffer.asUint8List());image.dispose();
+      });
       await tester.tap(find.text('Kontrol'));
       expect(pressed,isTrue);
       expect(tester.takeException(),isNull);
