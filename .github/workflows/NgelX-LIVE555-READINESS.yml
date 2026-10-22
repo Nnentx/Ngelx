@@ -1,0 +1,23 @@
+name: NgelX live moderation deployment readiness
+on:
+  push:
+    branches: [qa/ngelx-live555-readiness-20261022]
+    paths:
+      - tools/probe_live555_readiness.py
+      - .github/workflows/NgelX-LIVE555-READINESS.yml
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate live moderation and token behavior
+        run: node --test server/livekit441/token-endpoint.test.mjs server/livekit443/*.test.mjs
+      - run: python3 -m pip install --disable-pip-version-check google-auth requests
+      - name: Check current deployment permissions without changing them
+        env:
+          FIREBASE_SERVICE_ACCOUNT_NGELX_44EED: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_NGELX_44EED }}
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: python3 tools/probe_live555_readiness.py
