@@ -40,4 +40,17 @@ for label,url in [
 ]:
     response=session.get(url,timeout=20)
     print(label+' HTTP:',response.status_code)
+    if not response.ok:
+        # Only structured public error codes, never arbitrary response bodies.
+        try:
+            error=response.json().get('error',{})
+            print(label+' error status:',error.get('status','UNKNOWN'))
+            for detail in error.get('details',[]):
+                if detail.get('@type','').endswith('ErrorInfo'):
+                    print(label+' reason:',detail.get('reason','UNKNOWN'))
+                    metadata=detail.get('metadata',{})
+                    for key in ('service','permission'):
+                        if key in metadata:print(label+' '+key+':',metadata[key])
+        except (ValueError,AttributeError,TypeError):
+            print(label+' error details unavailable')
 print('Read-only checks complete; no service, IAM, secret, rule, billing or data changes.')
