@@ -24,7 +24,7 @@ if(configured.LIVEKIT_API_KEY&&configured.LIVEKIT_API_SECRET&&configured.LIVEKIT
 // verified 2026-10-22 18:26 Europe/Istanbul. Only a short-lived fallback
 // when the existing deployment token cannot read billing metadata.
 const ownerFreeEvidenceUntil=Date.parse('2026-10-23T15:26:00Z');
-let free=false,service;
+let free=false,planMetadataDenied=false,service;
 if(raw){
  try{service=JSON.parse(raw);}catch{service=JSON.parse(Buffer.from(raw,'base64').toString());}
  if(service.project_id!=='ngelx-44eed')throw Error('Wrong Firebase project; refusing deployment');
@@ -38,12 +38,13 @@ if(configured.CLOUDFLARE_API_TOKEN&&configured.CLOUDFLARE_ACCOUNT_ID){
  }else throw Error('Cloudflare account verification failed');
  const response=await fetch(base+'subscriptions',{headers,signal:AbortSignal.timeout(10000)});
  console.log('Workers plan lookup HTTP:',response.status);
+ planMetadataDenied=response.status===403;
  if(response.ok){
   const result=await response.json();if(!result.success||!Array.isArray(result.result))throw Error('Invalid plan response');
   free=!result.result.some(s=>/worker/i.test(JSON.stringify(s))&&!/free/i.test(JSON.stringify(s.rate_plan??{})));
  }
 }
-if(!free&&Date.now()<ownerFreeEvidenceUntil){
+if(!free&&planMetadataDenied&&Date.now()<ownerFreeEvidenceUntil){
  free=true;console.log('Workers Free verified from owner dashboard screenshot 50159.jpg (2026-10-22); billing unchanged');
 }
 console.log('Workers Free plan confirmed:',free);
