@@ -13,6 +13,7 @@ def apply(root=Path('app')):
     if TAG in s:return
     s=once(s, 'String? _media448;', '''String? _media448;
 int _mediaEpoch554=0;
+bool _mediaChangingAccount554=false;
 Future<void> Function()? _mediaClose554;
 void ngelx554ReleaseMedia(int epoch){
   if(epoch!=_mediaEpoch554)return;
@@ -42,6 +43,12 @@ Future<void> ngelx554BeforeAccountChange()async{
   }''')
     s=once(s,'Future<void> ngelx544BeforeAccountChange()async{','Future<void> ngelx544BeforeAccountChange()async{\n  await ngelx554BeforeAccountChange();')
     s=once(s,"Future<void> ngelx439SignOut()=>_ngelx439AuthOperations.signOut(()async{", "Future<void> ngelx439SignOut()=>_ngelx439AuthOperations.signOut(()async{\n  await ngelx554BeforeAccountChange();")
+    s=once(s,"  _ngelx439AuthOperations.signIn(()async{", "  _ngelx439AuthOperations.signIn(()async{\n    _mediaChangingAccount554=true;\n    try{")
+    s=once(s,"    return FirebaseAuth.instance.signInWithEmailAndPassword(email:email,password:password);", "    return await FirebaseAuth.instance.signInWithEmailAndPassword(email:email,password:password);\n    }finally{_mediaChangingAccount554=false;}")
+    s=once(s,"Future<void> ngelx439SignOut()=>_ngelx439AuthOperations.signOut(()async{\n  await", "Future<void> ngelx439SignOut()=>_ngelx439AuthOperations.signOut(()async{\n  _mediaChangingAccount554=true;\n  try{\n  await")
+    s=once(s,"  ngelxKokRotayaDon();\n});", "  ngelxKokRotayaDon();\n  }finally{_mediaChangingAccount554=false;}\n});")
+    s=once(s,"  if(_media448!=null||ngelxCallSession444.busy){", "  if(_mediaChangingAccount554){ngelxDurumMesaji(context,'Hesap değiştiriliyor, lütfen bekle.',tip:'uyari');return;}\n  if(_media448!=null||ngelxCallSession444.busy){")
+    s=once(s,"bool ngelx444ReserveCall(BuildContext context,String name){", "bool ngelx444ReserveCall(BuildContext context,String name){\n  if(_mediaChangingAccount554){ngelxDurumMesaji(context,'Hesap değiştiriliyor, lütfen bekle.',tip:'uyari');return false;}")
     # Admission can finish after a user has switched accounts. Never mount that room.
     s=once(s,"    final kimlik='${user.uid}-${DateTime.now().millisecondsSinceEpoch}';", "    final kimlik=user.uid;")
     a=s.index('Future<void> _ngelxCanliYayinaKatil448(');b=s.index('\nbool ngelxAktivite',a)
