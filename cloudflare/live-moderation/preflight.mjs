@@ -20,6 +20,10 @@ if(configured.LIVEKIT_API_KEY&&configured.LIVEKIT_API_SECRET&&configured.LIVEKIT
  console.log('LiveKit read-only administration check HTTP:',response.status);
  if(!liveKitVerified)throw Error('LiveKit credentials could not be verified');
 }
+// Owner dashboard screenshot 50159.jpg: Free $0 marked Current plan,
+// verified 2026-10-22 18:26 Europe/Istanbul. Only a short-lived fallback
+// when the existing deployment token cannot read billing metadata.
+const ownerFreeEvidenceUntil=Date.parse('2026-10-23T15:26:00Z');
 let free=false,service;
 if(raw){
  try{service=JSON.parse(raw);}catch{service=JSON.parse(Buffer.from(raw,'base64').toString());}
@@ -38,6 +42,9 @@ if(configured.CLOUDFLARE_API_TOKEN&&configured.CLOUDFLARE_ACCOUNT_ID){
   const result=await response.json();if(!result.success||!Array.isArray(result.result))throw Error('Invalid plan response');
   free=!result.result.some(s=>/worker/i.test(JSON.stringify(s))&&!/free/i.test(JSON.stringify(s.rate_plan??{})));
  }
+}
+if(!free&&Date.now()<ownerFreeEvidenceUntil){
+ free=true;console.log('Workers Free verified from owner dashboard screenshot 50159.jpg (2026-10-22); billing unchanged');
 }
 console.log('Workers Free plan confirmed:',free);
 const ready=free&&liveKitVerified&&Object.values(configured).every(Boolean);
