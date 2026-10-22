@@ -46,9 +46,12 @@ Future<void> ngelx554BeforeAccountChange()async{
     s=once(s,"    final kimlik='${user.uid}-${DateTime.now().millisecondsSinceEpoch}';", "    final kimlik=user.uid;")
     a=s.index('Future<void> _ngelxCanliYayinaKatil448(');b=s.index('\nbool ngelxAktivite',a)
     section=s[a:b]
+    section=once(section,'  lk.Room? oda;', '  final admissionEpoch554=_mediaEpoch554;\n  lk.Room? oda;')
+    section=once(section,'    oda=lk.Room(roomOptions:', '''    if(FirebaseAuth.instance.currentUser?.uid!=user.uid||admissionEpoch554!=_mediaEpoch554)return;
+    oda=lk.Room(roomOptions:''')
     section=once(section,'    await oda.connect(cevap.serverUrl,cevap.participantToken);', '''    _mediaClose554=()async{if(oda!=null)await ngelx444CloseRoom(oda!);};
     await oda.connect(cevap.serverUrl,cevap.participantToken).timeout(const Duration(seconds:18));''')
-    section=once(section,'    if(!context.mounted){','    if(!context.mounted||FirebaseAuth.instance.currentUser?.uid!=user.uid){')
+    section=once(section,'    if(!context.mounted){','    if(!context.mounted||FirebaseAuth.instance.currentUser?.uid!=user.uid||admissionEpoch554!=_mediaEpoch554){')
     # Room cleanup is unconditional, including Navigator errors and ordinary pops.
     section=once(section,"    if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Canlı yayına şu anda bağlanılamadı.')));\n  }", "    if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Canlı yayına şu anda bağlanılamadı.')));\n  }finally{\n    if(oda!=null){try{await oda.disconnect();await oda.dispose();}catch(_){}}\n  }")
     s=s[:a]+section+s[b:];p.write_text(s+'\n'+TAG+'\n')
@@ -174,10 +177,16 @@ Future<void> ngelx554BeforeAccountChange()async{
     # A rebuild can occur while reconnecting: the periodic watcher is not a build side effect.
     s=s.replace("onPressed:_otomatikYenidenBaglan", "onPressed:()=>unawaited(_recoverVideo554(manual:true))")
     # Pending host admission must also be cancellable before the live route exists.
+    s=once(s,'  Future<void> _baslat448() async {', '  Future<void> _baslat448() async {\n    final admissionEpoch554=_mediaEpoch554;')
+    s=once(s,'      oda = lk.Room(roomOptions: lk.RoomOptions(', '''      if(FirebaseAuth.instance.currentUser?.uid!=user.uid||admissionEpoch554!=_mediaEpoch554)return;
+      oda = lk.Room(roomOptions: lk.RoomOptions(''')
     s=once(s,'      await oda.connect(cevap.serverUrl, cevap.participantToken);', '''      _mediaClose554=()async{if(oda!=null)await ngelx444CloseRoom(oda!);};
       await oda.connect(cevap.serverUrl, cevap.participantToken).timeout(const Duration(seconds:18));
-      if(!mounted||FirebaseAuth.instance.currentUser?.uid!=user.uid){await ngelx444CloseRoom(oda);return;}''')
+      if(!mounted||FirebaseAuth.instance.currentUser?.uid!=user.uid||admissionEpoch554!=_mediaEpoch554){await ngelx444CloseRoom(oda);return;}''')
     s=once(s,"      final belge = await FirebaseFirestore.instance.collection('live_streams').add({", "      if(!mounted||FirebaseAuth.instance.currentUser?.uid!=user.uid){await ngelx444CloseRoom(oda);return;}\n      final belge = await FirebaseFirestore.instance.collection('live_streams').add({")
+    s=once(s,'''      if (!mounted) return;
+      await Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => CanliYayinPage(''', '''      if (!mounted||FirebaseAuth.instance.currentUser?.uid!=user.uid||admissionEpoch554!=_mediaEpoch554){await ngelx444CloseRoom(oda);return;}
+      await Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => CanliYayinPage(''')
     p.write_text(s+'\n'+TAG+'\n')
 
     # Strengthen motion without claiming that bitmap assets are rigged 3D models.
