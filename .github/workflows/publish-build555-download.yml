@@ -1,0 +1,32 @@
+name: Publish verified Build555 download
+on:
+  push:
+    branches: [qa/publish-build555-download]
+permissions:
+  contents: write
+  actions: read
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download exact tested APK artifact and verify digest
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh run download 39805185367 --repo Nnentx/Ngelx --name NgelX-Build555-REAL-INPLACE-SIGNED-REVIEW-ONLY --dir candidate
+          apk=$(find candidate -name '*.apk' -type f)
+          test -n "$apk"
+          echo "d6bb26a4faf1b782ecfeeb6d48a783cfe0210577205eb5857eef13e871dfd4ec  $apk" | sha256sum -c -
+          mkdir release555
+          cp "$apk" release555/NgelX-1.0.325-Build-555.apk
+          cd release555
+          sha256sum NgelX-1.0.325-Build-555.apk > NgelX-1.0.325-Build-555.apk.sha256
+      - name: Publish authorized test download
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release create v1.0.325-build555-test release555/* --repo Nnentx/Ngelx --target 97d6b2459dcf85e74ed3ceedc1fea80d4fe9b9a6 --prerelease --title "NgelX 1.0.325 / Build555 test" --notes-file RELEASE555_NOTES.md
