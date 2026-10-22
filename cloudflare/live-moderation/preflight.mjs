@@ -30,7 +30,7 @@ const result={ready,freePlanVerified:free,configured,workerUrl:'https://ngelx-li
 fs.writeFileSync('live555-free-readiness.json',JSON.stringify(result,null,2));
 if(ready){
  const url=new URL(process.env.LIVEKIT_SERVER_URL);
- if(url.protocol!=='wss:'||url.hostname!=='ngelx-g49q1h.livekit.cloud')throw Error('LiveKit project must match the currently installed app');
+ if(url.protocol!=='wss:'||url.hostname!=='ngelx-4gz3quoe.livekit.cloud')throw Error('LiveKit project must match the currently installed app');
  fs.writeFileSync('cloudflare/live-moderation/.live-secrets555.json',JSON.stringify({
   GOOGLE_SERVICE_ACCOUNT:JSON.stringify(service),
   LIVEKIT_API_KEY:process.env.LIVEKIT_API_KEY,LIVEKIT_API_SECRET:process.env.LIVEKIT_API_SECRET,LIVEKIT_SERVER_URL:process.env.LIVEKIT_SERVER_URL,
