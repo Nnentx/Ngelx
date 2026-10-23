@@ -1,0 +1,18 @@
+{
+  "app/lib/build543_community_admin.dart": {
+    "before": "798261723ed38c6de049e54e3104ad48b0f9056db8bd31293fd679043a02958c",
+    "after": "cf10d68aa8a081dd9f7280b06eb8ba67b2b5917f73196def1a44cfc9aa1e902c"
+  },
+  "app/lib/community450.dart": {
+    "before": "118cab4ebfaca50a6f4556e117c44a302c11230b108075ceb96c3655df1f5d53",
+    "after": "95cd1592b779dd7922677567581c8a8ea867fde997742bb7fa78b1d820648429"
+  },
+  "app/lib/build455_widgets.dart": {
+    "before": "c1710930c6bd165bb43ce79da87ed0f5032f2a28698fbd66f0c2b6cd71fbd4a3",
+    "after": "409bfabc20e6599ad4ae67ea2b5593375464246dab0030b2352bc8f208c9ffc3"
+  },
+  "app/lib/main.dart": {
+    "before": "3b2ee5fafaf353d162acd2b6a9162a7a04a37ff7f09dc6321b0059a0a6b75824",
+    "after": "b9ba8809cb327fde97ef9d3318f23d2fddf353787191ee6c80ccae52e2af7c43"
+  }
+}
