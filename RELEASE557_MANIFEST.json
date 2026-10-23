@@ -1,0 +1,8 @@
+{
+  "testedSource": "4bee5ef3854dc211a6ce6d98103ee2a05075b47d",
+  "buildRun": 40014721841,
+  "artifact": 12528008764,
+  "apkSha256": "fc5441928ee84cde91e7c7c4f36b5e20860a80b53be81f64856b2c443f112582",
+  "workflowTreeFromMain": "bf50f9cf28fbebc39e5dcc079237e6172f4e527f",
+  "note": "APK unchanged; all tested source retained except trusted main workflow directory, to support release-tag API authorization."
+}
