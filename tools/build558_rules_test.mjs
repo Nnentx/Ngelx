@@ -18,5 +18,9 @@ try{
   await assertFails(updateDoc(doc(db('alice'),path),{...deletion,albumItems558:[{url:urls[1],type:'photo'}]}));
   await assertSucceeds(updateDoc(doc(db('admin'),path),{...deletion,deletedBy:'admin'}));
   await assertFails(updateDoc(doc(db('alice'),path),{deletedForEveryone:true,cleanupMediaUrls:['other'],mediaCleanupState:'pending'}));
+  await env.withSecurityRulesDisabled(async ctx=>{
+    await setDoc(doc(ctx.firestore(),path),{senderId:'alice',type:'photo',mediaUrl:urls[0],albumItems558:urls.map(url=>({url,type:'photo'})),mediaUrls:urls,text:''});
+  });
+  await assertSucceeds(updateDoc(doc(db('alice'),path),deletion));
   console.log('Build558 album deletion: sender/admin boundary and exact manifest checks passed');
 }finally{await env.cleanup();}

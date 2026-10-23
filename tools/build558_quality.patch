@@ -56,8 +56,8 @@
 +      if(files.isEmpty||!mounted)return;
 +      final items=await ngelx558UploadAlbum(files,widget.chatId,progress:(i,n){if(mounted)setState(()=>medyaIlerlemeEtiket='$i/$n medya yükleniyor…');});
 +      if(!mounted)return;
-+      final first=items.first,multiple=items.length>1;
-+      await payloadGonder({'type':multiple?'photo':first['type'],'mediaUrl':first['url'],
++      final first=items.firstWhere((x)=>x['type']=='photo',orElse:()=>items.first),multiple=items.length>1;
++      await payloadGonder({'type':first['type'],'mediaUrl':first['url'],
 +        if(first['type']=='video')'videoUrl':first['url'],
 +        if(multiple)'albumItems558':items,if(multiple)'mediaUrls':items.map((x)=>x['url']).toList(),
 +      },multiple?'📷 ${items.length} medya':first['type']=='video'?'🎥 Video':'📷 Fotoğraf');
@@ -117,6 +117,15 @@
                      d.reference,tepkiSayilari,tepkiToplam,
                    )
                  else if(tur=='gif'&&media.isNotEmpty)
+@@ -16022,7 +16056,7 @@
+                   )))
+                 else if(tur=='video'&&media.isNotEmpty)
+                   _grupMedyaTepkiAlani(
+-                    IgnorePointer(child:NgelXSohbetVideoOnizleme(url:media,thumbnailUrl:videoKapak)),
++                    IgnorePointer(child:ngelx558AlbumItems(v).isNotEmpty?Ngelx558AlbumPreview(items:ngelx558AlbumItems(v)):NgelXSohbetVideoOnizleme(url:media,thumbnailUrl:videoKapak)),
+                     d.reference,tepkiSayilari,tepkiToplam,
+                   )
+                 else if(tur=='audio'&&audio.isNotEmpty)
 @@ -16323,9 +16357,18 @@
        body:StreamBuilder<DocumentSnapshot<Map<String,dynamic>>>(
          stream:_grupAkisi,
@@ -197,9 +206,9 @@
 +      _ekIslemBaslat('Medya yükleniyor…');
 +      final items=await ngelx558UploadAlbum(files,widget.chatId,progress:(i,n){if(mounted)_ekIslemBaslat('$i/$n medya yükleniyor…');});
 +      if(!mounted)return;
-+      final first=items.first,multiple=items.length>1;
++      final first=items.firstWhere((x)=>x['type']=='photo',orElse:()=>items.first),multiple=items.length>1;
 +      final seconds=(ready.sohbet['disappearingSeconds'] as num?)?.toInt()??0;
-+      await ekMesajGonder({'type':multiple?'photo':first['type'],'mediaUrl':first['url'],
++      await ekMesajGonder({'type':first['type'],'mediaUrl':first['url'],
 +        if(first['type']=='video')'videoUrl':first['url'],
 +        if(multiple)'albumItems558':items,if(multiple)'mediaUrls':items.map((x)=>x['url']).toList(),
 +        if(seconds>0)'expiresAt':Timestamp.fromDate(DateTime.now().add(Duration(seconds:seconds))),
@@ -223,7 +232,7 @@
            ? ()=>ngelxSesliPaylasimMesajiniAc(context,v)
            : storyReply
            ? ()=>_hikayeYanitKartiAc(v)
-@@ -23250,7 +23324,7 @@
+@@ -23250,12 +23324,12 @@
                )),
              if(photo)
                _ozelMedyaTepkiAlani(
@@ -232,6 +241,12 @@
                  d.reference,sayilar,tepkiler.length,
                )
              else if(video)
+               _ozelMedyaTepkiAlani(
+-                IgnorePointer(child:NgelXSohbetVideoOnizleme(url:medyaUrl,thumbnailUrl:videoKapakUrl)),
++                IgnorePointer(child:ngelx558AlbumItems(v).isNotEmpty?Ngelx558AlbumPreview(items:ngelx558AlbumItems(v)):NgelXSohbetVideoOnizleme(url:medyaUrl,thumbnailUrl:videoKapakUrl)),
+                 d.reference,sayilar,tepkiler.length,
+               )
+             else if((v['communityId556']??'').toString().isNotEmpty)
 @@ -23846,6 +23920,7 @@
              final x=d.data()['expiresAt'];
              return !ngelx437MessageExpired(d.data()['createdAt'],simdi)&&(x is! Timestamp||x.toDate().isAfter(simdi));
@@ -313,6 +328,33 @@
        if(veri['premiumActive']==true||veri['isPremium']==true||
          (veri['plan']??'').toString().toLowerCase()=='premium')...[
          const SizedBox(width:5),const Icon(Icons.workspace_premium_rounded,size:18,color:mor),
+@@ -27994,7 +28084,7 @@
+                   Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+                     Row(children:[
+                       Flexible(child:Text(ad,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontWeight:FontWeight.w900))),
+-                      if(v['verified']==true)...[const SizedBox(width:4),const Icon(Icons.verified_rounded,color:Color(0xFF1687FF),size:17)],
++                      Ngelx558VerifiedBadge(uid:(v['uid']??'').toString(),size:17),
+                     ]),
+                     Text(email,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:ngelxPremiumMuted,fontSize:11.5)),
+                   ])),
+@@ -28062,7 +28152,7 @@
+         builder:(_,s){
+           final v=s.data?.data()??<String,dynamic>{};
+           final premium=v['premiumActive']==true;
+-          final verified=v['verified']==true;
++          final verified=ngelx558Verified(uid??'');
+           final coin=(v['coinBalance'] as num?)?.toInt()??0;
+           return ListView(padding:const EdgeInsets.fromLTRB(16,8,16,32),children:[
+             Container(
+@@ -30421,7 +30511,7 @@
+               veri['isPremium'] == true ||
+               (veri['plan'] ?? '').toString().toLowerCase() == 'premium' ||
+               (veri['accountType'] ?? '').toString().toLowerCase() == 'premium';
+-          dogrulanmis = veri['verified'] == true;
++          dogrulanmis = ngelx558Verified(aktifKullanici?.uid??'');
+           yukleniyor = false;
+         });
+       } else if (mounted) {
 @@ -31183,10 +31273,7 @@
                          ad,maxLines:1,overflow:TextOverflow.ellipsis,
                          style: const TextStyle(color:Colors.black,fontSize:23,fontWeight:FontWeight.w900),
