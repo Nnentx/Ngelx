@@ -78,6 +78,16 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+  testWidgets('reaction height change keeps the visible photo in place', (tester)async{
+    tester.view.physicalSize=const Size(360,500);tester.view.devicePixelRatio=1;
+    addTearDown(tester.view.resetPhysicalSize);addTearDown(tester.view.resetDevicePixelRatio);
+    final key=GlobalKey<_AnchorHarnessState>();
+    await tester.pumpWidget(MaterialApp(home:_AnchorHarness(key:key)));
+    key.currentState!.scroll.jumpTo(450);await tester.pumpAndSettle();
+    final before=tester.getTopLeft(find.text('row 2')).dy;
+    key.currentState!.resizeVisiblePhoto();await tester.pump();await tester.pump();
+    expect(tester.getTopLeft(find.text('row 2')).dy,closeTo(before,1));
+  });
   testWidgets(
     'group action sheet fits a narrow phone and returns reaction and More',
     (tester) async {
@@ -146,6 +156,7 @@ class _AnchorHarnessState extends State<_AnchorHarness>
   String get jumpChatId => 'local-test';
   @override
   ScrollController get jumpScroll => scroll;
+  void resizeVisiblePhoto()=>setState(()=>docs[2]=_Message('2',140));
   void shrinkPhoto() => setState(() => docs[0] = _Message('0', 40));
   @override
   void dispose() {

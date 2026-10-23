@@ -399,14 +399,14 @@
 +    final next={for(final d in docs)d.id:d.data().toString()};
 +    final mutated=_snapshot558.keys.any((id)=>next[id]!=_snapshot558[id]);
 +    if(mutated&&!_jumpMoving&&jumpScroll.hasClients){
-+      final viewport=context.findRenderObject();
++      final viewport=jumpScroll.position.context.notificationContext?.findRenderObject();
 +      if(viewport is RenderBox&&viewport.hasSize){
 +        final top=viewport.localToGlobal(Offset.zero).dy;
 +        final bottom=top+viewport.size.height;
 +        GlobalKey? anchor;double? before;
 +        for(final id in _snapshot558.keys){
-+          // Prefer an unchanged row; deleted/edited media can shrink drastically.
-+          if(next[id]!=_snapshot558[id])continue;
++          // Anchor the first visible existing row, including the photo being reacted to.
++          if(!next.containsKey(id))continue;
 +          final key=id==_jumpId?_jumpKey:_anchorKeys558[id];
 +          final box=key?.currentContext?.findRenderObject();
 +          if(box is! RenderBox||!box.hasSize)continue;

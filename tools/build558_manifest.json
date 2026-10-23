@@ -1,7 +1,7 @@
 {
   "app/lib/main.dart": {
     "before": "a395e960a803202addf32d9573fb133016696bc94c34af74c6d2bbd91b17ba79",
-    "after": "3a8b262ed6fe97fd8c4bebf38fcc855693fc69e4716b62a4fac418a3e92609a1"
+    "after": "5ec9b048aca135f294784da62f2fe3aa1741e98af1a39617ab57f951b011b784"
   },
   "app/lib/build445_inbox_model.dart": {
     "before": "fc88d7e62a52d2e84d60891ce4b99e1988324a2462e4f597de7eaf192596fa3b",

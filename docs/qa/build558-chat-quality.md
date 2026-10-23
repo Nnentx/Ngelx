@@ -4,7 +4,7 @@ Based on the exact signed Build557 assembled application (`main.dart` SHA256 `a3
 
 Implemented:
 - The green global call strip displays elapsed minutes/seconds alongside the call name. Its local ticker uses the retained connected-call start and is disposed with the strip. No periodic network request was added.
-- Group chat follows a new tail message, instead of treating reaction/deletion snapshots as new messages. Both chat lists retain stable row keys and compensate for changed message heights using a visible unchanged row. Message search and deliberate user scrolling retain priority.
+- Group chat follows a new tail message, instead of treating reaction/deletion snapshots as new messages. Both chat lists retain stable row keys and compensate for changed message heights using the first fully visible existing row, including a photo whose own reaction height changes. Message search and deliberate user scrolling retain priority.
 - The group long-press menu now starts with the same horizontal reaction/reply/copy/reminder/More structure as private chat. Existing sender/admin checks and additional operations remain under More. Opening the first menu no longer waits for a server read.
 - Group header loading can use the existing cache and has a bounded retry state; membership gates remain in place.
 - Inbox notes occupy a real hit-testable area above the avatar. Tapping shows the entire note; the owner can edit or delete it. No overlap with the avatar ring.
@@ -29,7 +29,7 @@ Passed locally:
 - Rules patch idempotence and confinement to the existing chat-message block.
 - Python compilation and JavaScript/YAML syntax checks.
 - Flutter 3.47.8 / Dart 3.13.7: full application analysis passed with `--no-fatal-infos --no-fatal-warnings` and zero errors. Existing warning/info lint debt remains.
-- Five Flutter tests passed: call time boundaries, exact UID allowlist behavior, malformed album records, real visible-row position after a tall earlier photo shrinks, and narrow-phone group menu actions.
+- Fourteen Flutter tests passed across Build551 photo/call regression, Build556/557 community regression and the six new Build558 cases: call time boundaries, exact UID allowlist behavior, malformed album records, real visible-row position after a tall earlier photo shrinks, reaction height changes on the visible photo itself, and narrow-phone group menu actions.
 - Local demo-project Firestore emulator tests passed: sender and admin can delete the exact album; outsiders, other members, forged manifests and uncleared album fields are rejected. No production database was used.
 
 The initial local Flutter invocation was automatically rejected after an Azure metadata detector request. Read-only inspection of Flutter's `base/bot_detector.dart` established that the standard `CI=true` environment short-circuits that detector. Validation then completed in CI mode without requesting the metadata endpoint; the denied request itself was not retried. Archive extraction used `TAR_OPTIONS=--no-same-owner` because the container cannot adopt archive owner IDs.
