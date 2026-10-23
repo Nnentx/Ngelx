@@ -1,6 +1,6 @@
 # Build541: same-package, pinned-signer, review-only real NgelX release APK candidate.
 # Community rules activated by owner authorization; no unrelated deployment.
-name: NgelX Build556 community and chat quality
+name: NgelX Build557 community recovery and approval notifications
 on:
   push:
     branches: [fix/build556-community-chat-quality]
@@ -23,20 +23,6 @@ jobs:
           node-version: '22'
       - name: Verify moderation, authentication and resumable deletion before deployment
         run: node --test cloudflare/live-moderation/test/*.test.mjs cloudflare/call-push/test/*.test.mjs server/community543/delete-policy.test.mjs server/livekit443/*.test.mjs
-      - name: Install deployment tool for existing worker
-        working-directory: cloudflare/live-moderation
-        run: npm install --no-audit --no-fund
-      - name: Verify existing account and worker; do not create hosting or change billing
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: node tools/preflight_build556_worker.mjs
-      - name: Update the existing worker without replacing its secrets or configuration
-        working-directory: cloudflare/live-moderation
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: npx wrangler deploy
       - name: Verify healthy configuration and anonymous deletion rejection
         run: |
           node --input-type=module - <<'JS'
@@ -1523,14 +1509,14 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: NgelX-Build556-Layout-Preview
+          name: NgelX-Build557-Layout-Preview
           path: app/test-output/live554-reference.png
           retention-days: 7
 
       - name: Preserve exact assembled baseline for diagnostics
         uses: actions/upload-artifact@v4
         with:
-          name: NgelX-Build556-Baseline
+          name: NgelX-Build557-Baseline
           path: app/lib/
           retention-days: 3
           if-no-files-found: error
@@ -1545,6 +1531,17 @@ jobs:
           cp tools/build556_widget_test.dart app/test/build556_widget_test.dart
           cd app
           timeout 240s flutter test --reporter expanded test/build556_widget_test.dart
+
+      - name: Build557 legacy media safety and transactional approval regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/apply_build557_quality.py
+          python3 tools/test_build557_quality.py
+          dart tools/build557_policy_test.dart
+          cp tools/build557_widget_test.dart app/test/build557_widget_test.dart
+          cd app
+          timeout 240s flutter test --reporter expanded test/build557_widget_test.dart
 
       - name: Analyze full regenerated Flutter app without production deployment
         shell: bash
@@ -1578,8 +1575,8 @@ jobs:
           gradle.write_text(new,encoding='utf-8')
           PY
           flutter build apk --release --target-platform android-arm64 \
-            --build-name=1.0.326 --build-number=556 \
-            --dart-define=NGELX_VERSION_NAME=1.0.326 --dart-define=NGELX_BUILD_NUMBER=556 \
+            --build-name=1.0.327 --build-number=557 \
+            --dart-define=NGELX_VERSION_NAME=1.0.327 --dart-define=NGELX_BUILD_NUMBER=557 \
             --dart-define=NGELX_COMMUNITY_DELETE_URL=https://ngelx-live-moderation.alihancaglar76.workers.dev/community/delete \
             --dart-define=NGELX_LIVEKIT_GUEST_MODERATION_URL=https://ngelx-live-moderation.alihancaglar76.workers.dev/moderate \
             --dart-define=NGELX_CALL_PUSH_URL=https://ngelx-call-push.alihancaglar76.workers.dev
@@ -1598,8 +1595,8 @@ jobs:
           m=re.search(r"package: name='([^']+)' versionCode='(\d+)' versionName='([^']+)'",b)
           assert m, 'Android manifest badging missing'
           assert m.group(1)=='com.nnentx.ngelx_app', 'Wrong package — would not update real NgelX'
-          assert int(m.group(2))==556, 'APK versionCode must be exactly 553 (no ABI offset)'
-          assert m.group(3)=='1.0.326', 'VersionName mismatch'
+          assert int(m.group(2))==557, 'APK versionCode must be exactly 557 (no ABI offset)'
+          assert m.group(3)=='1.0.327', 'VersionName mismatch'
           assert "com.nnentx.ngelx_app.qa" not in b
           print('Real NgelX Android package/version verified:',m.groups())
           PY
@@ -1621,13 +1618,13 @@ jobs:
               print('Verified ARM64 Flutter native libs:',len(arm64),'additional bundled ABI names:',non_arm)
           print('Build543 Android ARM64-capable release APK bytes:',p.stat().st_size)
           PY
-          cp "$apk" build/app/outputs/flutter-apk/NgelX-1.0.326-Build556-INPLACE-CANDIDATE.apk
-          sha256sum build/app/outputs/flutter-apk/NgelX-1.0.326-Build556-INPLACE-CANDIDATE.apk > build/app/outputs/flutter-apk/NgelX-1.0.326-Build556-INPLACE-CANDIDATE.apk.sha256
+          cp "$apk" build/app/outputs/flutter-apk/NgelX-1.0.327-Build557-INPLACE-CANDIDATE.apk
+          sha256sum build/app/outputs/flutter-apk/NgelX-1.0.327-Build557-INPLACE-CANDIDATE.apk > build/app/outputs/flutter-apk/NgelX-1.0.327-Build557-INPLACE-CANDIDATE.apk.sha256
 
       - name: Capture Build543 assembled candidate for review
         uses: actions/upload-artifact@v4
         with:
-          name: NgelX-Build556-Assembled-Source
+          name: NgelX-Build557-Assembled-Source
           path: |
             app/lib/
             app/android/app/src/main/kotlin/com/nnentx/ngelx_app/*.kt
@@ -1640,10 +1637,10 @@ jobs:
       - name: Upload real-app install-over APK as review-only artifact
         uses: actions/upload-artifact@v4
         with:
-          name: NgelX-Build556-REAL-INPLACE-SIGNED-REVIEW-ONLY
+          name: NgelX-Build557-REAL-INPLACE-SIGNED-REVIEW-ONLY
           path: |
-            app/build/app/outputs/flutter-apk/NgelX-1.0.326-Build556-INPLACE-CANDIDATE.apk
-            app/build/app/outputs/flutter-apk/NgelX-1.0.326-Build556-INPLACE-CANDIDATE.apk.sha256
+            app/build/app/outputs/flutter-apk/NgelX-1.0.327-Build557-INPLACE-CANDIDATE.apk
+            app/build/app/outputs/flutter-apk/NgelX-1.0.327-Build557-INPLACE-CANDIDATE.apk.sha256
           if-no-files-found: error
           retention-days: 4
 

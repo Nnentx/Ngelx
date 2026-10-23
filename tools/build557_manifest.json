@@ -1,0 +1,22 @@
+{
+  "app/lib/main.dart": {
+    "before": "8ddef0bf96f9601dae6ea299b6d712bd93464e827117d988f5c072d10291478d",
+    "after": "a395e960a803202addf32d9573fb133016696bc94c34af74c6d2bbd91b17ba79"
+  },
+  "app/lib/community450.dart": {
+    "before": "95cd1592b779dd7922677567581c8a8ea867fde997742bb7fa78b1d820648429",
+    "after": "a9b94b0aae48fcf68d93f81f7cb07ad0f8a2395633dcf120d39a591bec3a113a"
+  },
+  "app/lib/build456_widgets.dart": {
+    "before": "06a682298e8e94a5d84c21ba692dd610c60c0225db3e741f918a0c6555aac0ed",
+    "after": "6e47f54d4bc768f3432a497ba330e6f2b9b1176422906a5053086cab6832886c"
+  },
+  "app/lib/build455_widgets.dart": {
+    "before": "409bfabc20e6599ad4ae67ea2b5593375464246dab0030b2352bc8f208c9ffc3",
+    "after": "f1ff314164592f31031594379a33688575ba294dc93c05bbcc2500aa421b5d5f"
+  },
+  "app/lib/build556_quality.dart": {
+    "before": "6517c4dcef968a74df3b8509f7b6c80337ac92c4fc6977656164432398196eb1",
+    "after": "a7a78ea2a976f11c888454453897c43aa28196338c133df69d75aaf4c02a8a5e"
+  }
+}
