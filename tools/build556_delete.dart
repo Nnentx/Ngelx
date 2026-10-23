@@ -2,6 +2,10 @@ part of 'main.dart';
 
 const _deleteEndpoint556=String.fromEnvironment('NGELX_COMMUNITY_DELETE_URL',defaultValue:'https://ngelx-live-moderation.alihancaglar76.workers.dev/community/delete');
 bool _resumingDeletes556=false;
+Timer? _deleteRetry556;
+void _scheduleDeleteRetry556(){
+  _deleteRetry556??=Timer.periodic(const Duration(seconds:30),(_)=>unawaited(ngelx556ResumeCommunityDeletes()));
+}
 String _deleteKey556(String uid,String id)=>'pending_community_delete_556_${uid}_$id';
 Uri _deleteUri556(){
   final uri=Uri.parse(_deleteEndpoint556);
@@ -51,6 +55,7 @@ Future<void> ngelx556DeleteCommunity(BuildContext context,String id)async{
     final prefs=await SharedPreferences.getInstance();
     if(!await prefs.setString(_deleteKey556(user.uid,id),jsonEncode({'uid':user.uid,'id':id,'name':name})))throw StateError('delete_queue556');
     queued=true;
+    _scheduleDeleteRetry556();
     _communityDeleting543.add(id);
     final navigator=Navigator.of(context,rootNavigator:true);
     final dialog=DialogRoute<void>(context:context,barrierDismissible:false,builder:(_)=>const PopScope(canPop:false,child:AlertDialog(
@@ -70,11 +75,14 @@ Future<void> ngelx556DeleteCommunity(BuildContext context,String id)async{
 }
 Future<void> ngelx556ResumeCommunityDeletes()async{
   if(_resumingDeletes556)return;
-  final user=FirebaseAuth.instance.currentUser;if(user==null||user.isAnonymous)return;
+  final user=FirebaseAuth.instance.currentUser;if(user==null||user.isAnonymous){_deleteRetry556?.cancel();_deleteRetry556=null;return;}
   _resumingDeletes556=true;
   try{
     final prefs=await SharedPreferences.getInstance(),prefix='pending_community_delete_556_${user.uid}_';
-    for(final key in prefs.getKeys().where((k)=>k.startsWith(prefix)).toList()){
+    final keys=prefs.getKeys().where((k)=>k.startsWith(prefix)).toList();
+    if(keys.isEmpty){_deleteRetry556?.cancel();_deleteRetry556=null;return;}
+    _scheduleDeleteRetry556();
+    for(final key in keys){
       if(FirebaseAuth.instance.currentUser?.uid!=user.uid)return;
       final value=jsonDecode(prefs.getString(key)??'{}');if(value is! Map||value['uid']!=user.uid||value['id'] is! String||value['name'] is! String)continue;
       final id=value['id'] as String;
@@ -82,5 +90,6 @@ Future<void> ngelx556ResumeCommunityDeletes()async{
       try{await _processDelete556(user,id,value['name'] as String,maxChunks:12);}catch(_){}
       finally{_communityDeleting543.remove(id);}
     }
-  }finally{_resumingDeletes556=false;}
+  }catch(_){/* Local preference/network failures never block application startup. */}
+  finally{_resumingDeletes556=false;}
 }

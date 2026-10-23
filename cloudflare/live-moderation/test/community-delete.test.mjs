@@ -27,7 +27,7 @@ function fixture(count=3){
    return Response.json(rows);
   }
   if(path===':commit'){
-   for(const write of JSON.parse(options.body).writes??[]){const doc=write.update;if(doc){const p=doc.name.slice(database.length);docs.set(p,{...doc,updateTime:'v'+(++version)});}}
+   for(const write of JSON.parse(options.body).writes??[]){if(write.delete)docs.delete(write.delete.slice(database.length));const doc=write.update;if(doc){const p=doc.name.slice(database.length);docs.set(p,{...doc,updateTime:'v'+(++version)});}}
    return Response.json({});
   }
   if(path.endsWith(':listCollectionIds')){
@@ -85,6 +85,7 @@ test('bounded chunks recursively delete missing ancestors and nested records whi
 });
 test('an active lease cannot be stolen and completed ID cannot delete a recreated community',async()=>{
  const f=fixture(0),a=await f.store.claim(identity,body);
+ const locked=document(f.docs.get('communities450/community-556'));assert.equal(locked.visibility,'private');assert.deepEqual(locked.members,[]);assert.equal(locked.founderId,'');assert.equal(locked.joinApproval,null);assert.equal(locked.paused,true);
  assert.equal((await f.store.claim(identity,body)).busy,true);
  const result=await f.store.advance(a.job,a.id);await f.store.save(a.job,a.id,result.done);
  f.set('communities450/community-556',{name:'PARLAMENT',founderId:'owner',members:['owner']});

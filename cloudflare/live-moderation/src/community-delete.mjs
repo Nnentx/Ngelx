@@ -28,23 +28,24 @@ export function communityDeleteStorage(env,{fetcher=fetch,authorize=()=>accessTo
    const community=await get(root,tx),receipt=await get(jobPath(id),tx);
    const owns=receipt?.ownerUid===identity.uid&&receipt.name===body.confirmName;
    if(receipt&&!owns)return {writes:[],value:{status:403}};
-   if(receipt?.rootDeleted&&community||receipt?.state==='done'&&community)return {writes:[],value:{status:403}};
+   const locked=owns&&community?.deletion543?.state==='deleting'&&community.deletion543.ownerUid===identity.uid&&community.founderId===''&&Array.isArray(community.members)&&community.members.length===0;
+   if(receipt?.state==='done'&&community)return {writes:[],value:{status:403}};
    if(receipt?.state==='done')return {writes:[],value:{status:200,deleted:true}};
-   if(community&&!validateDelete543(identity,community,body)||!community&&!owns)return {writes:[],value:{status:403}};
+   if(community&&!locked&&!validateDelete543(identity,community,body)||!community&&!owns)return {writes:[],value:{status:403}};
    if(receipt?.leaseUntil>now())return {writes:[],value:{status:202,busy:true}};
-   const job={ownerUid:identity.uid,name:body.confirmName,state:'deleting',stackJson:receipt?.stackJson??JSON.stringify([{kind:'invites',path:root},{kind:'doc',path:root}]),rootDeleted:receipt?.rootDeleted??false,
+   const job={ownerUid:identity.uid,name:body.confirmName,state:'deleting',stackJson:receipt?.stackJson??JSON.stringify([{kind:'doc',path:root},{kind:'invites',path:root}]),rootLocked:true,
     rootVersion:community?._updateTime??receipt?.rootVersion??'',leaseId:uuid(),leaseUntil:now()+60000,requestedAt:receipt?.requestedAt??now()};
-   return {writes:[{update:{name:name(jobPath(id)),fields:fields(job)}}],value:{status:202,job,id}};
+   const writes=[{update:{name:name(jobPath(id)),fields:fields(job)}}];
+   if(!locked)writes.push({update:{name:name(root),fields:{name:{stringValue:body.confirmName},founderId:{stringValue:''},members:{arrayValue:{values:[]}},admins:{arrayValue:{values:[]}},visibility:{stringValue:'private'},joinApproval:{nullValue:'NULL_VALUE'},postApproval:{booleanValue:true},paused:{booleanValue:true},deletion543:{mapValue:{fields:{state:{stringValue:'deleting'},ownerUid:{stringValue:identity.uid}}}}}}});
+   return {writes,value:{status:202,job,id}};
   });},
   async advance(job,id,{budget=18,deadline=now()+15000}={}){
    const root='communities450/'+id,stack=JSON.parse(job.stackJson);let requests=0;
    const valid=path=>typeof path==='string'&&(path===root||path.startsWith(root+'/'))&&path.split('/').every(x=>x&&x!=='.'&&x!=='..');
-   // Remove the visible root with a version precondition first. This immediately
-   // denies new member writes through existing root-membership security rules.
-   // An immutable owner receipt retains the only authority for resumptions.
-   if(!job.rootDeleted){
-    await api('/'+encode(root)+(job.rootVersion?'?currentDocument.updateTime='+encodeURIComponent(job.rootVersion):''),{method:'DELETE'});requests++;job.rootDeleted=true;
-   }
+   // The claim transaction replaces the root with an inaccessible tombstone.
+   // Existing membership-based rules deny new writes and ID recreation while
+   // descendants drain. Save deletes the tombstone and completes its receipt
+   // atomically, so retries can never target a newly recreated community.
    while(stack.length&&requests+2<=budget&&now()<deadline){
     const task=stack.at(-1);if(!valid(task.path)||!['doc','collection','invites'].includes(task.kind))throw Error('invalid_delete_scope');
     if(task.kind==='invites'){
@@ -67,7 +68,8 @@ export function communityDeleteStorage(env,{fetcher=fetch,authorize=()=>accessTo
       // Retain the parent frame and revisit after its first collections drain.
       for(const collection of ids)stack.push({kind:'collection',path:task.path+'/'+collection});
      }else{
-      await api('/'+encode(task.path),{method:'DELETE'});requests++;stack.pop();
+      if(task.path!==root){await api('/'+encode(task.path),{method:'DELETE'});requests++;}
+      stack.pop();
      }
     }else{
      const result=await api('/'+encode(task.path)+'?pageSize=8&showMissing=true');requests++;
@@ -85,8 +87,13 @@ export function communityDeleteStorage(env,{fetcher=fetch,authorize=()=>accessTo
   async save(job,id,done){return transaction(async tx=>{
    const current=await get(jobPath(id),tx);
    if(current?.ownerUid!==job.ownerUid||current.leaseId!==job.leaseId)throw Error('lost_delete_lease');
+   const root='communities450/'+id;
+   const currentRoot=done?await get(root,tx):null;
+   if(done&&currentRoot&&(currentRoot.deletion543?.ownerUid!==job.ownerUid||currentRoot.deletion543?.state!=='deleting'||currentRoot.founderId!==''||!Array.isArray(currentRoot.members)||currentRoot.members.length))throw Error('delete_root_changed');
    const next={...job,state:done?'done':'deleting',leaseUntil:0,leaseId:'',updatedAt:now()};
-   return {writes:[{update:{name:name(jobPath(id)),fields:fields(next)}}],value:true};
+   const writes=[{update:{name:name(jobPath(id)),fields:fields(next)}}];
+   if(done&&currentRoot)writes.push({delete:name(root)});
+   return {writes,value:true};
   });},
  };
 }
