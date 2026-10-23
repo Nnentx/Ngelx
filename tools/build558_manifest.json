@@ -1,0 +1,10 @@
+{
+  "app/lib/main.dart": {
+    "before": "a395e960a803202addf32d9573fb133016696bc94c34af74c6d2bbd91b17ba79",
+    "after": "3c79629714ebdb57135a39927f6a68e502fd8b8444e7490bbfe2037776563c59"
+  },
+  "app/lib/build445_inbox_model.dart": {
+    "before": "fc88d7e62a52d2e84d60891ce4b99e1988324a2462e4f597de7eaf192596fa3b",
+    "after": "1491f6e77881a1f195f4ee48e3b17de943e1720a0407fcf73d40720b9cfc76be"
+  }
+}
