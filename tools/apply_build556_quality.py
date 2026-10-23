@@ -17,7 +17,7 @@ def apply():
         if actual not in expected.values():raise RuntimeError('Build556 requires exact assembled Build555 source: '+relative)
         states.append('before' if actual==expected['before'] else 'after')
     if len(set(states))!=1:raise RuntimeError('Partial Build556 source state; restore the assembled baseline before retrying')
-    assets=['build556_quality.dart','build556_policy.dart']
+    assets=['build556_quality.dart','build556_policy.dart','build556_delete.dart']
     for name in assets:
         target=ROOT/'app/lib'/name
         if target.exists() and target.read_bytes()!=(TOOLS/name).read_bytes():raise RuntimeError('Conflicting helper: '+name)

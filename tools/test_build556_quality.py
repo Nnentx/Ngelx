@@ -7,7 +7,7 @@ class Quality556(unittest.TestCase):
   manifest=json.loads((ROOT/'tools/build556_manifest.json').read_text())
   with tempfile.TemporaryDirectory() as folder:
    temp=Path(folder);(temp/'tools').mkdir();(temp/'app/lib').mkdir(parents=True)
-   for name in ['apply_build556_quality.py','build556_manifest.json','build556_quality.patch','build556_quality.dart','build556_policy.dart']:
+   for name in ['apply_build556_quality.py','build556_manifest.json','build556_quality.patch','build556_quality.dart','build556_policy.dart','build556_delete.dart']:
     shutil.copyfile(ROOT/'tools'/name,temp/'tools'/name)
    for path in manifest:shutil.copyfile(ROOT/path,temp/path)
    def run(*cmd):return subprocess.run(cmd,cwd=temp,capture_output=True,text=True)
