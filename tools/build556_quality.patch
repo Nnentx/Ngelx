@@ -1,0 +1,701 @@
+--- a/app/lib/build543_community_admin.dart
++++ b/app/lib/build543_community_admin.dart
+@@ -2,49 +2,7 @@
+ 
+ const _communityDeleteEndpoint543=String.fromEnvironment('NGELX_COMMUNITY_DELETE_URL');
+ final Set<String> _communityDeleting543={};
+-Future<void> ngelx543DeleteCommunity(BuildContext context,String id)async{
+-  if(_communityDeleting543.contains(id))return;
+-  final user=FirebaseAuth.instance.currentUser;
+-  if(user==null||user.isAnonymous)return;
+-  final ref=_communities450.doc(id);
+-  try{
+-    final value=(await ref.get(const GetOptions(source:Source.server)).timeout(const Duration(seconds:10))).data();
+-    if(!context.mounted)return;
+-    if(value==null){Navigator.pop(context);return;}
+-    if(value['founderId']!=user.uid||!List<String>.from(value['members']??const[]).contains(user.uid)){
+-      ngelxDurumMesaji(context,'Topluluğu yalnızca mevcut kurucusu silebilir.',tip:'hata');return;
+-    }
+-    final endpoint=Uri.tryParse(_communityDeleteEndpoint543);
+-    if(endpoint==null||endpoint.scheme!='https'||endpoint.userInfo.isNotEmpty||
+-       !(endpoint.host.endsWith('.cloudfunctions.net')||endpoint.host.endsWith('.run.app'))){
+-      ngelxDurumMesaji(context,'Topluluğu tamamen silme hizmeti henüz etkin değil. Topluluğun silinmedi.',tip:'uyari');return;
+-    }
+-    final name=(value['name']??'').toString();
+-    final typed=await showDialog<String>(context:context,builder:(_)=>Ngelx543DeleteConfirmation(name:name));
+-    if(typed!=name||!context.mounted||FirebaseAuth.instance.currentUser?.uid!=user.uid)return;
+-    _communityDeleting543.add(id);
+-    final progress=showDialog<void>(context:context,barrierDismissible:false,builder:(_)=>const PopScope(canPop:false,
+-      child:AlertDialog(content:Row(children:[CircularProgressIndicator(),SizedBox(width:18),Expanded(child:Text('Topluluk ve bağlı kayıtları siliniyor…'))]))));
+-    try{
+-      final token=await user.getIdToken(true);
+-      if(token==null||FirebaseAuth.instance.currentUser?.uid!=user.uid)throw StateError('session_changed');
+-      final client=HttpClient()..connectionTimeout=const Duration(seconds:12);
+-      try{
+-        final request=await client.postUrl(endpoint).timeout(const Duration(seconds:15));
+-        request.headers.set(HttpHeaders.authorizationHeader,'Bearer $token');
+-        request.headers.contentType=ContentType.json;
+-        request.write(jsonEncode({'communityId':id,'confirmName':name,'confirmDelete':true}));
+-        final response=await request.close().timeout(const Duration(seconds:90));
+-        final body=jsonDecode(await utf8.decoder.bind(response).join().timeout(const Duration(seconds:10)));
+-        if(response.statusCode!=200||body is! Map||body['deleted']!=true)throw StateError('community_delete_not_confirmed');
+-      }finally{client.close(force:true);}
+-      if(context.mounted){Navigator.of(context,rootNavigator:true).pop();await progress;if(context.mounted)Navigator.pop(context);}
+-    }catch(error){
+-      if(context.mounted){Navigator.of(context,rootNavigator:true).pop();await progress;
+-        if(context.mounted)ngelxDurumMesaji(context,'Silme sonucu doğrulanamadı. Topluluk durumunu yenileyip tekrar dene.',tip:'hata');}
+-    }finally{_communityDeleting543.remove(id);}
+-  }catch(error){if(context.mounted)_communityError450(context,error);}
+-}
++Future<void> ngelx543DeleteCommunity(BuildContext context,String id)=>ngelx556DeleteCommunity(context,id);
+ class Ngelx543DeleteConfirmation extends StatefulWidget{
+   final String name;
+   const Ngelx543DeleteConfirmation({super.key,required this.name});
+@@ -55,6 +13,7 @@
+   @override void dispose(){controller.dispose();super.dispose();}
+   @override Widget build(BuildContext context)=>AlertDialog(
+     title:const Text('Topluluğu tamamen sil?'),
++    scrollable:true,
+     content:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
+       const Text('Topluluk, gönderiler, yorumlar, istekler ve diğer bağlı kayıtlar kalıcı olarak silinir. Bu işlem geri alınamaz.'),
+       const SizedBox(height:12),Text('Onaylamak için topluluk adını yaz: ${widget.name}'),
+--- a/app/lib/community450.dart
++++ b/app/lib/community450.dart
+@@ -504,6 +504,7 @@
+             'inviteCode': '',
+             'createdAt': FieldValue.serverTimestamp(),
+           });
++          unawaited(ngelx556CommunityEvent(widget.id,'community_join_request',_communityUid450,adminsOnly:true));
+         }
+       } else {
+         await ref.update({
+@@ -720,6 +721,10 @@
+       child: ListView(
+         padding: const EdgeInsets.all(20),
+         children: [
++          const Ngelx556Section(title:'Topluluğunu kur',subtitle:'İnsanları ortak bir ilgi etrafında buluştur.',icon:Icons.groups_rounded),
++          const SizedBox(height:16),
++          Ngelx556MediaPreview(photo:photo,cover:cover),
++          const SizedBox(height:12),
+           Row(
+             children: [
+               Expanded(
+@@ -777,7 +782,11 @@
+             style: TextStyle(fontWeight: FontWeight.w700),
+           ),
+           const SizedBox(height: 8),
++          const SizedBox(height:20),
++          const Ngelx556Section(title:'Temel bilgiler',subtitle:'Topluluğunu tanıtan bir ad ve açıklama seç.',icon:Icons.edit_note_rounded),
++          const SizedBox(height:12),
+           TextFormField(
++            enabled:!busy,
+             controller: name,
+             maxLength: 60,
+             decoration: const InputDecoration(
+@@ -790,6 +799,7 @@
+           const Text('Açıklama', style: TextStyle(fontWeight: FontWeight.w700)),
+           const SizedBox(height: 8),
+           TextFormField(
++            enabled:!busy,
+             controller: desc,
+             maxLength: 240,
+             maxLines: 2,
+@@ -820,6 +830,7 @@
+           ),
+           const SizedBox(height: 8),
+           TextFormField(
++            enabled:!busy,
+             controller: rules,
+             maxLength: 2000,
+             maxLines: 3,
+@@ -827,6 +838,9 @@
+               hintText: 'Topluluğunun kurallarını yaz',
+             ),
+           ),
++          const SizedBox(height:16),
++          const Ngelx556Section(title:'Gizlilik ve onaylar',subtitle:'Kimlerin katılacağını ve paylaşım yapacağını belirle.',icon:Icons.shield_outlined),
++          const SizedBox(height:8),
+           SwitchListTile(
+             contentPadding: EdgeInsets.zero,
+             title: const Text('Özel topluluk'),
+@@ -852,6 +866,7 @@
+             value: postApproval,
+             onChanged: busy ? null : (v) => setState(() => postApproval = v),
+           ),
++          const SizedBox(height:20),
+           FilledButton(
+             onPressed: busy ? null : create,
+             child: Padding(
+@@ -877,6 +892,13 @@
+   String tab = 'Gönderiler', search = '';
+   int postLimit = 20, feedRetry451 = 0;
+   late final communityStream = _communities450.doc(widget.id).snapshots();
++  Future<void> refresh556()async{
++    try{
++      await _communities450.doc(widget.id).get(const GetOptions(source:Source.server)).timeout(const Duration(seconds:10));
++      await _communities450.doc(widget.id).collection('posts').where('status',isEqualTo:'approved').limit(postLimit).get(const GetOptions(source:Source.server)).timeout(const Duration(seconds:10));
++      if(mounted)setState((){feedRetry451++;feed=feedStream();});
++    }catch(e){if(mounted)_communityError450(context,e);}
++  }
+   late Stream<QuerySnapshot<Map<String, dynamic>>> feed = feedStream();
+   Timer? searchTimer;
+   Stream<QuerySnapshot<Map<String, dynamic>>> feedStream() async* {
+@@ -1064,15 +1086,13 @@
+                   (tab != 'Fotoğraflar' || a['mediaType'] == 'image');
+             }).toList()
+               ..sort((a, b) {
+-                final aTime = (a.data()['createdAt'] as Timestamp?)
+-                        ?.millisecondsSinceEpoch ??
+-                    0;
+-                final bTime = (b.data()['createdAt'] as Timestamp?)
+-                        ?.millisecondsSinceEpoch ??
+-                    0;
++                final at=a.data()['createdAt'],bt=b.data()['createdAt'];
++                final aTime=at is Timestamp?at.millisecondsSinceEpoch:0;
++                final bTime=bt is Timestamp?bt.millisecondsSinceEpoch:0;
+                 return bTime.compareTo(aTime);
+               });
+-            return CustomScrollView(
++            return RefreshIndicator(onRefresh:refresh556,child:CustomScrollView(
++              physics:const AlwaysScrollableScrollPhysics(),
+               key: PageStorageKey('community-${widget.id}'),
+               cacheExtent: 250,
+               slivers: [
+@@ -1146,7 +1166,7 @@
+                   ),
+                 const SliverToBoxAdapter(child: SizedBox(height: 24)),
+               ],
+-            );
++            ));
+           },
+         );
+       },
+@@ -1307,6 +1327,7 @@
+             saved.data()?['text'] != text.text.trim())
+           rethrow;
+       }
++      if(publishAt456==null)unawaited(ngelx556CommunityEvent(widget.id,pending?'community_post_pending':'community_post',ref.id,adminsOnly:pending));
+       if (mounted && _communityUid450 == me) {
+         ngelx455Status(
+           context,
+@@ -1634,6 +1655,7 @@
+       showDragHandle: true,
+       builder: (_) => Ngelx455Comments(post: ref, member: member, admin: admin, approved: value['status'] == 'approved'),
+     );
++    ngelx456CountRevision.value=ref.path+'|'+DateTime.now().microsecondsSinceEpoch.toString();
+   }
+ 
+   @override
+@@ -1653,7 +1675,7 @@
+           Row(
+             children: [
+               _communityImage450(
+-                value['authorPhoto'].toString(),
++                (value['authorPhoto']??'').toString(),
+                 size: 36,
+                 circle: true,
+               ),
+@@ -1663,7 +1685,7 @@
+                   crossAxisAlignment: CrossAxisAlignment.start,
+                   children: [
+                     Text(
+-                      value['authorName'],
++                      (value['authorName']??'Üye').toString(),
+                       style: const TextStyle(fontWeight: FontWeight.w800),
+                     ),
+                     Text(
+@@ -1685,7 +1707,7 @@
+             ],
+           ),
+           const SizedBox(height: 10),
+-          Text(value['text'] ?? ''),
++          Text((value['text']??'').toString()),
+           if (value['mediaType'] == 'image' && value['mediaUrl'] != '')
+             Padding(
+               padding: const EdgeInsets.only(top: 10),
+@@ -1827,43 +1849,7 @@
+         r = TextEditingController(text: v['rules']);
+     final save = await showDialog<bool>(
+       context: context,
+-      builder: (c) => Ngelx455WhiteDialog(
+-        backgroundColor: Colors.white,
+-        title: const Text('Topluluk bilgileri'),
+-        content: SingleChildScrollView(
+-          child: Column(
+-            mainAxisSize: MainAxisSize.min,
+-            children: [
+-              TextField(
+-                controller: n,
+-                maxLength: 60,
+-                decoration: const InputDecoration(labelText: 'Ad'),
+-              ),
+-              TextField(
+-                controller: d,
+-                maxLength: 240,
+-                decoration: const InputDecoration(labelText: 'Açıklama'),
+-              ),
+-              TextField(
+-                controller: r,
+-                maxLength: 2000,
+-                maxLines: 4,
+-                decoration: const InputDecoration(labelText: 'Kurallar'),
+-              ),
+-            ],
+-          ),
+-        ),
+-        actions: [
+-          TextButton(
+-            onPressed: () => Navigator.pop(c, false),
+-            child: const Text('İptal'),
+-          ),
+-          FilledButton(
+-            onPressed: () {if(n.text.trim().length>=3)Navigator.pop(c,true);else ScaffoldMessenger.of(c).showSnackBar(const SnackBar(content:Text('Topluluk adı en az 3 karakter olmalı.')));},
+-            child: Text(_ngelx438Ui("Kaydet")),
+-          ),
+-        ],
+-      ),
++      builder:(c)=>Ngelx556InfoDialog(name:n,description:d,rules:r),
+     );
+     if (save == true && mounted) {
+       try {
+@@ -1951,37 +1937,13 @@
+               ),
+             ),
+             Text(
+-              v['name'],
++              (v['name']??'Topluluk').toString(),
+               style: const TextStyle(fontSize: 23, fontWeight: FontWeight.w900),
+             ),
+-            Text('${(v['members'] as List).length} üye'),
+-            Wrap(
+-              spacing: 6,
+-              children:
+-                  [
+-                        if (_communityAdmin450(v)) 'Üyelik istekleri',
+-                        'Bekleyen gönderiler',
+-                        'Şikâyetler',
+-                        'İstatistikler',
+-                        'Üyeler',
+-                        if (_communityAdmin450(v)) 'Ayarlar',
+-                      ]
+-                      .map(
+-                        (x) => ChoiceChip(
+-                          selectedColor: const Color(0xFFF0E8FF),
+-                          backgroundColor: Colors.white,
+-                          checkmarkColor: mor,
+-                          labelStyle: const TextStyle(
+-                            color: mor,
+-                            fontWeight: FontWeight.w700,
+-                          ),
+-                          label: Text(x),
+-                          selected: section == x,
+-                          onSelected: (_) => setState(() => section = x),
+-                        ),
+-                      )
+-                      .toList(),
+-            ),
++            Text('${List<String>.from(v['members']??const[]).length} üye'),
++            const SizedBox(height:16),
++            Ngelx556AdminMenu(root:root,selected:section,onSelected:(x)=>setState(()=>section=x)),
++            const SizedBox(height:20),
+             if (section == 'İstatistikler') ...[
+               ListTile(
+                 title: const Text('Üyeler'),
+@@ -1991,7 +1953,7 @@
+                     builder: (_) => Ngelx456Members(id: widget.id),
+                   ),
+                 ),
+-                trailing: Text('${(v['members'] as List).length}'),
++                trailing: Text('${List<String>.from(v['members']??const[]).length}'),
+               ),
+               ...[
+                 ('posts', 'approved', 'Yayımlanan gönderiler'),
+--- a/app/lib/build455_widgets.dart
++++ b/app/lib/build455_widgets.dart
+@@ -141,6 +141,8 @@
+         'text':body,'replyTo':replyId,'replyName':reply,
+         'createdAt':FieldValue.serverTimestamp(),
+       });
++      ngelx456CountRevision.value=widget.post.path+'|'+DateTime.now().microsecondsSinceEpoch.toString();
++      unawaited(ngelx556CommentNotification(widget.post));
+       if(mounted){
+         setState((){input.clear();replyId='';replyName='';});
+         ngelx455Status(context,'Yorum gönderildi');
+@@ -231,6 +233,7 @@
+                                 if (yes == true) {
+                                   try {
+                                     await doc.reference.delete();
++                                    ngelx456CountRevision.value=widget.post.path+'|'+DateTime.now().microsecondsSinceEpoch.toString();
+                                   } catch (e) {
+                                     if (mounted) _communityError450(context, e);
+                                   }
+@@ -757,8 +760,9 @@
+ Future<void> ngelx455SharePost(
+   BuildContext context,
+   DocumentReference<Map<String, dynamic>> ref,
+-  Map<String, dynamic> value,
++  Map<String, dynamic> value, {bool externalOnly556=false}
+ ) async {
++  if(!externalOnly556){await ngelx556ShareCommunityPost(context,ref,value);return;}
+   final me = _communityUid450;
+   try {
+     final result = await SharePlus.instance.share(
+--- a/app/lib/build542_pending_leave.dart
++++ b/app/lib/build542_pending_leave.dart
+@@ -50,6 +50,7 @@
+ }
+ bool _retryingLeaves542=false;
+ Future<void> ngelx542RetryPendingLeaves()async{
++  unawaited(ngelx556ResumeCommunityDeletes());
+   if(_retryingLeaves542)return;
+   _retryingLeaves542=true;
+   try{
+--- a/app/lib/main.dart
++++ b/app/lib/main.dart
+@@ -1,3 +1,4 @@
++import 'build556_policy.dart';
+ import 'package:flutter/foundation.dart';
+ import 'build540_reference_ui.dart';
+ import 'build541_pk_policy.dart';
+@@ -85,6 +86,8 @@
+ part 'build542_pending_leave.dart';
+ part 'build543_pip_participants.dart';
+ part 'build543_community_admin.dart';
++part 'build556_quality.dart';
++part 'build556_delete.dart';
+ part 'build543_group_call_join.dart';
+ part 'build446_call_lifecycle.dart';
+ 
+@@ -5725,6 +5728,7 @@
+ }
+ 
+ class _AnaEkranState extends State<AnaEkran> {
++  @override void initState(){super.initState();unawaited(ngelx556ResumeCommunityDeletes());}
+   int secili = 0;
+   String? acilanAramaId;
+   String? _callUid454;
+@@ -9847,6 +9851,9 @@
+   bool _isteklerYukleniyor547=true;
+   final Set<String> _gonderiliyor547=<String>{};
+   final Set<String> _aktifArkadaslar547=<String>{};
++  StreamSubscription<QuerySnapshot<Map<String,dynamic>>>? _legacyRequests556;
++  final Set<String> _legacyPending556=<String>{};
++  final Set<String> _canonicalRequests556=<String>{};
+   StreamSubscription<QuerySnapshot<Map<String,dynamic>>>? _arkadasIstekleri547;
+   StreamSubscription<QuerySnapshot<Map<String,dynamic>>>? _arkadasliklar547;
+   int _yenileRevizyonu=0;
+@@ -9885,10 +9892,16 @@
+         setState(()=>gonderilenTakipIstekleri=q.docs
+           .where((d)=>d.data()['status']=='pending').map((d)=>d.id).toSet());
+       },onError:(_){ });
++    _legacyRequests556=FirebaseFirestore.instance.collection('notifications')
++      .where('fromUid',isEqualTo:uid).where('type',isEqualTo:'friend_request').where('status',isEqualTo:'pending').snapshots().listen((q){
++        if(!mounted||ben!=uid)return;
++        setState((){_legacyPending556..clear()..addAll(q.docs.where((d)=>d.data()['type']=='friend_request'&&d.data()['status']=='pending').map((d)=>(d.data()['toUid']??'').toString()).where((id)=>id.isNotEmpty));});
++      },onError:(_){});
+     _arkadasIstekleri547=FirebaseFirestore.instance.collection('friend_requests')
+       .doc(uid).collection('outgoing').snapshots().listen((q){
+         if(!mounted||ben!=uid)return;
+         setState((){
++          _canonicalRequests556..clear()..addAll(q.docs.map((d)=>d.id));
+           gonderilenArkadaslikIstekleri=q.docs
+             .where((d)=>d.data()['status']=='pending').map((d)=>d.id).toSet();
+           _isteklerYukleniyor547=false;
+@@ -9915,6 +9928,7 @@
+   void dispose(){
+     _hesapAboneligi?.cancel();
+     _gidenIstekAboneligi?.cancel();
++    _legacyRequests556?.cancel();
+     _arkadasIstekleri547?.cancel();
+     _arkadasliklar547?.cancel();
+     super.dispose();
+@@ -10042,7 +10056,7 @@
+     final me=ben;
+     if(me==null||!mounted||_gonderiliyor547.contains(hedefUid))return;
+     if(arkadaslar.contains(hedefUid)||_aktifArkadaslar547.contains(hedefUid)||
+-        gonderilenArkadaslikIstekleri.contains(hedefUid))return;
++        (gonderilenArkadaslikIstekleri.contains(hedefUid)||(_legacyPending556.contains(hedefUid)&&!_canonicalRequests556.contains(hedefUid))))return;
+     setState(()=>_gonderiliyor547.add(hedefUid));
+     try{
+       final gonderildi=await sosyalIstekGonder(
+@@ -10303,7 +10317,7 @@
+     final kullanici=(v['username']??'ngelx').toString();
+     final arkadas547=arkadaslar.contains(uid)||_aktifArkadaslar547.contains(uid)||
+       (ben!=null&&List<String>.from(v['friends']??const[]).contains(ben));
+-    final bekliyor547=gonderilenArkadaslikIstekleri.contains(uid)||_gonderiliyor547.contains(uid);
++    final bekliyor547=gonderilenArkadaslikIstekleri.contains(uid)||(_legacyPending556.contains(uid)&&!_canonicalRequests556.contains(uid))||_gonderiliyor547.contains(uid);
+     final takipte=takipEdilenler.contains(uid);
+     final takipIstegiBekliyor=gonderilenTakipIstekleri.contains(uid);
+     return Padding(
+@@ -12494,7 +12508,7 @@
+ 
+   Future<void> sohbetMenusu(BuildContext context,String id,{bool grup=false}) async {
+     final sessiz=sessizSohbetler.contains(id);
+-    await showModalBottomSheet(context:context,backgroundColor:Colors.white,showDragHandle:true,shape:const RoundedRectangleBorder(borderRadius:BorderRadius.vertical(top:Radius.circular(26))),builder:(c)=>Theme(data:ThemeData.light(),child:SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
++    await showModalBottomSheet(context:context,isScrollControlled:true,useSafeArea:true,backgroundColor:Colors.white,showDragHandle:true,shape:const RoundedRectangleBorder(borderRadius:BorderRadius.vertical(top:Radius.circular(26))),builder:(c)=>Theme(data:ThemeData.light(),child:SafeArea(child:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
+       ListTile(leading:Icon(sabitSohbetler.contains(id)?Icons.push_pin:Icons.push_pin_outlined,color:mor),title:Text(sabitSohbetler.contains(id)?t('unpinChat'):t('pinChat')),onTap:(){Navigator.pop(c);sohbetTercihi('pinnedChats',id,!sabitSohbetler.contains(id));}),
+       ListTile(leading:const Icon(Icons.archive_outlined,color:Colors.blue),title:Text(t('archiveChat')),onTap:(){Navigator.pop(c);sohbetTercihi('archivedChats',id,true);}),
+       ListTile(leading:Icon(sessiz?Icons.notifications_active_outlined:Icons.notifications_off_outlined),title:Text(sessiz?t('unmuteChat'):t('muteChat')),onTap:(){Navigator.pop(c);sessiz?sessizeAl(id,false):sessizeAlMenusu(id);}),
+@@ -12502,7 +12516,7 @@
+       if(grup)ListTile(leading:const Icon(Icons.info_outline_rounded,color:ngelxGroupGreen),title:Text(lt('Grup bilgisi','Group info'),style:const TextStyle(fontWeight:FontWeight.w700)),onTap:(){Navigator.pop(c);Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupUyeleriPage(chatId:id)));}),
+       if(grup)ListTile(leading:const Icon(Icons.exit_to_app_rounded,color:Color(0xFFE23D4F)),title:Text(t('leaveGroup'),style:const TextStyle(color:Color(0xFFE23D4F),fontWeight:FontWeight.w700)),onTap:(){Navigator.pop(c);gelenKutusundanGruptanAyril(context,id);}),
+       ListTile(leading:const Icon(Icons.delete_outline,color:Colors.red),title:Text(t('removeFromInbox'),style:const TextStyle(color:Colors.red)),onTap:(){Navigator.pop(c);sohbetSil(context,id);}),
+-    ]))));
++    ])))));
+   }
+ 
+   Future<void> sohbetSil(BuildContext context,String id) async {
+@@ -14089,12 +14103,12 @@
+     _ngelx465OpeningScrollTimer=null;
+   }
+   void _ngelx465ScheduleBottomOnOpen(){
+-    if(_ngelx465OpeningScrollStarted)return;
++    if(_ngelx465OpeningScrollStarted||jumpActive)return;
+     _ngelx465OpeningScrollStarted=true;
+     var ticks=0;
+     _ngelx465OpeningScrollTimer=Timer.periodic(
+       const Duration(milliseconds:140),(timer){
+-        if(!mounted||++ticks>3){
++        if(!mounted||jumpActive||++ticks>24){
+           timer.cancel();
+           _ngelx465OpeningScrollTimer=null;
+           return;
+@@ -14894,7 +14908,14 @@
+       if(mentionOnerileri.isNotEmpty&&mounted)setState(()=>mentionOnerileri.clear());
+       return;
+     }
+-    final ara=parca.substring(1).toLowerCase();
++    final ara=ngelx556Search(parca.substring(1));
++    // Commands are available immediately while member profiles load.
++    final known=_sonGrupVerisi;
++    final mayMentionAll=known['onlyAdminsCanMentionAll']!=true||List<String>.from(known['admins']??const[]).contains(uid)||known['createdBy']==uid;
++    if(mounted)setState((){mentionOnerileri..clear()..addAll([
++      if(mayMentionAll&&'herkes'.contains(ara)){'uid':'all','username':'herkes','name':'Herkes','kind':'command','subtitle':'Gruptaki herkesi etiketle'},
++      ...?_mentionUyeleri?.where((u)=>ngelx556Search('${u['name']} ${u['username']}').contains(ara)),
++    ]);});
+     final surum=++_mentionAramaSurumu;
+     mentionZamanlayici=Timer(const Duration(milliseconds:120),()async{
+       try{
+@@ -14912,20 +14933,17 @@
+             final v=belgeler[i];
+             final raw=(v['username']??v['displayName']??'').toString().trim();
+             final kullanici=raw.isEmpty?'uye_${ids[i].substring(0,ids[i].length.clamp(0,6))}':raw.replaceAll(RegExp(r'\s+'),'_');
+-            final ad=(v['displayName']??kullanici).toString().trim();
++            final ad=ngelx455ProfileName(v,fallback:kullanici).trim();
+             final foto=(v['photoUrl']??'').toString().trim();
+             if(kullanici.isNotEmpty)uyeler.add({'uid':ids[i],'username':kullanici,'name':ad.isEmpty?kullanici:ad,'photo':foto,'kind':'person'});
+           }
+-          _mentionUyeleri=uyeler;
++          if(belgeler.every((v)=>v.isNotEmpty))_mentionUyeleri=uyeler;
+         }
+         final sonuc=<Map<String,String>>[];
+-        var kisiSayisi=0;
+         for(final u in uyeler){
+-          if(kisiSayisi>=8)break;
+-          final kullanici=(u['username']??'').toLowerCase(),ad=(u['name']??'').toLowerCase();
++          final kullanici=ngelx556Search(u['username']??''),ad=ngelx556Search(u['name']??'');
+           if(ara.isEmpty||kullanici.contains(ara)||ad.contains(ara)){
+             sonuc.add(u);
+-            kisiSayisi++;
+           }
+         }
+         if(herkesYetkisi&&'herkes'.contains(ara))sonuc.add({
+@@ -15987,7 +16005,9 @@
+                     ])),
+                   ]),
+                 )),
+-                if(tur=='sticker'&&sticker.isNotEmpty)
++                if((v['communityId556']??'').toString().isNotEmpty)
++                  Ngelx556SharedPost(value:v)
++                else if(tur=='sticker'&&sticker.isNotEmpty)
+                   Padding(padding:const EdgeInsets.symmetric(horizontal:5,vertical:3),child:Text(sticker,style:const TextStyle(fontSize:58,height:1.05)))
+                 else if(tur=='photo'&&media.isNotEmpty)
+                   _grupMedyaTepkiAlani(
+@@ -16431,7 +16451,7 @@
+                         shareReadReceipt:true,
+                       ));
+                     }
+-                    if(_ilkMesajKaydirma||_enAltta){sonaGit();_ngelx465ScheduleBottomOnOpen();}
++                    if(docs.isNotEmpty&&(_ilkMesajKaydirma||_enAltta)){sonaGit();_ngelx465ScheduleBottomOnOpen();}
+                   }
+                   if(docs.isEmpty){
+                     if(snap.connectionState==ConnectionState.waiting&&!_mesajBeklemeBitti)return const Center(child:CircularProgressIndicator(color:ngelxGroupGreen,strokeWidth:2));
+@@ -17862,7 +17882,7 @@
+       if(!_alive444){await ngelx444CloseRoom(r);return;}
+       if(!widget.goruntulu&&grupAramasi&&_voiceGroupVideoOn494){
+         await yerel.setCameraEnabled(true,
+-          cameraCaptureOptions:const lk.CameraCaptureOptions(
++          cameraCaptureOptions:lk.CameraCaptureOptions(cameraPosition:arkaKamera?lk.CameraPosition.back:lk.CameraPosition.front,
+             params:lk.VideoParametersPresets.h720_169,
+             maxFrameRate:20.0,stopCameraCaptureOnMute:true));
+       }
+@@ -17870,7 +17890,7 @@
+         await yerel.setCameraEnabled(
+           (widget.goruntulu?kamera:_privateVoiceCameraOn507)&&
+           WidgetsBinding.instance.lifecycleState==AppLifecycleState.resumed,
+-          cameraCaptureOptions:const lk.CameraCaptureOptions(params:lk.VideoParametersPresets.h720_169,maxFrameRate:20.0,stopCameraCaptureOnMute:true));
++          cameraCaptureOptions:lk.CameraCaptureOptions(cameraPosition:arkaKamera?lk.CameraPosition.back:lk.CameraPosition.front,params:lk.VideoParametersPresets.h720_169,maxFrameRate:20.0,stopCameraCaptureOnMute:true));
+       }
+       if(!_alive444){await ngelx444CloseRoom(r);return;}
+       await lk.AudioManager.instance.setSpeakerOutputPreferred(hoparlor);
+@@ -18029,7 +18049,7 @@
+   Future<void> _togglePrivateVoiceCamera507()async{
+     final local=oda?.localParticipant;
+     if(grupAramasi||widget.goruntulu||bitiyor||kucultuluyor||
+-       _privateVoiceCameraBusy507||local==null)return;
++       _privateVoiceCameraBusy507||_cameraFlipBusy556||local==null)return;
+     final turnOn=!_privateVoiceCameraOn507;
+     if(mounted)setState(()=>_privateVoiceCameraBusy507=true);
+     try{
+@@ -18043,7 +18063,7 @@
+       }
+       if(!mounted||bitiyor||!identical(oda?.localParticipant,local))return;
+       await local.setCameraEnabled(turnOn,
+-        cameraCaptureOptions:const lk.CameraCaptureOptions(
++        cameraCaptureOptions:lk.CameraCaptureOptions(cameraPosition:arkaKamera?lk.CameraPosition.back:lk.CameraPosition.front,
+           params:lk.VideoParametersPresets.h720_169,
+           maxFrameRate:20.0,stopCameraCaptureOnMute:true));
+       await _waitCamera542(local,turnOn);
+@@ -18075,29 +18095,31 @@
+   bool _videoCameraBusy542=false;
+   Future<void> kameraDegistir()async{
+     final local=oda?.localParticipant;
+-    if(local==null||_videoCameraBusy542||bitiyor||kucultuluyor)return;
++    if(local==null||_videoCameraBusy542||_cameraFlipBusy556||bitiyor||kucultuluyor)return;
+     final yeni=!local.isCameraEnabled();
+     setState(()=>_videoCameraBusy542=true);
+     try{
+       if(yeni&&!(await Permission.camera.request()).isGranted)return;
+       if(!mounted||bitiyor||!identical(oda?.localParticipant,local))return;
+-      await local.setCameraEnabled(yeni,cameraCaptureOptions:const lk.CameraCaptureOptions(params:lk.VideoParametersPresets.h720_169,maxFrameRate:24.0,stopCameraCaptureOnMute:true));
++      await local.setCameraEnabled(yeni,cameraCaptureOptions:lk.CameraCaptureOptions(cameraPosition:arkaKamera?lk.CameraPosition.back:lk.CameraPosition.front,params:lk.VideoParametersPresets.h720_169,maxFrameRate:24.0,stopCameraCaptureOnMute:true));
+       await _waitCamera542(local,yeni);
+       if(mounted&&identical(oda?.localParticipant,local))setState(()=>kamera=local.isCameraEnabled());
+     }catch(_){
+       if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Kamera açılamadı. Görüşme devam ediyor. Tekrar deneyebilirsin.')));
+     }finally{if(mounted)setState(()=>_videoCameraBusy542=false);}
+   }
++  bool _cameraFlipBusy556=false;
+   Future<void> kameraCevir()async{
+     final track=_yerelVideo;
+-    if(track is! lk.LocalVideoTrack)return;
++    if(track is! lk.LocalVideoTrack||_cameraFlipBusy556||_videoCameraBusy542||_privateVoiceCameraBusy507||_voiceGroupCameraBusy517||bitiyor)return;
++    _cameraFlipBusy556=true;
+     final yeni=!arkaKamera;
+     try{
+       await track.setCameraPosition(yeni?lk.CameraPosition.back:lk.CameraPosition.front);
+       if(mounted)setState(()=>arkaKamera=yeni);
+     }catch(_){
+       if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Kamera yönü değiştirilemedi.')));
+-    }
++    }finally{_cameraFlipBusy556=false;}
+   }
+   Future<void> hoparlorDegistir()async{
+     if(_speakerBusy548||bitiyor)return;
+@@ -18699,7 +18721,7 @@
+   Future<void> _toggleVoiceGroupVideo494()async{
+     final room=oda,local=oda?.localParticipant;
+     if(!grupAramasi||widget.goruntulu||bitiyor||kucultuluyor||
+-       _voiceGroupCameraBusy517||room==null||local==null)return;
++       _voiceGroupCameraBusy517||_cameraFlipBusy556||room==null||local==null)return;
+     final enable=!_voiceGroupVideoOn494;
+     if(mounted)setState(()=>_voiceGroupCameraBusy517=true);
+     try{
+@@ -18713,7 +18735,7 @@
+       }
+       if(!mounted||bitiyor||!identical(oda,room))return;
+       await local.setCameraEnabled(enable,
+-        cameraCaptureOptions:const lk.CameraCaptureOptions(
++        cameraCaptureOptions:lk.CameraCaptureOptions(cameraPosition:arkaKamera?lk.CameraPosition.back:lk.CameraPosition.front,
+           params:lk.VideoParametersPresets.h720_169,maxFrameRate:20.0,
+           stopCameraCaptureOnMute:true));
+       await _waitCamera542(local,enable);
+@@ -18985,6 +19007,7 @@
+                 _privateVoiceCameraOn507?Icons.videocam_off_rounded:Icons.videocam_rounded,
+                 _privateVoiceCameraBusy507?'Açılıyor…':_privateVoiceCameraOn507?'Görüntüyü kapat':'Görüntüyü aç',
+                 _togglePrivateVoiceCamera507,_privateVoiceCameraOn507),
++              if(_yerelVideo is lk.LocalVideoTrack) _aramaKontrol(Icons.cameraswitch_rounded,'Kamerayı çevir',kameraCevir,true),
+               _aramaKontrol(mikrofon?Icons.mic_rounded:Icons.mic_off_rounded,'Mikrofon',mikrofonDegistir,mikrofon),
+               if(!widget.goruntulu)_aramaKontrol(hoparlor?Icons.volume_up_rounded:Icons.volume_off_rounded,'Hoparlör',hoparlorDegistir,hoparlor),
+               if(grupAramasi)_aramaKontrol(Icons.person_add_alt_1_rounded,'Davet et',grupAramasinaKisiDavetEt,true),
+@@ -21596,12 +21619,12 @@
+     });
+   }
+   void _ngelx465ScheduleBottomOnOpen(){
+-    if(_ngelx465OpeningScrollStarted)return;
++    if(_ngelx465OpeningScrollStarted||jumpActive)return;
+     _ngelx465OpeningScrollStarted=true;
+     var ticks=0;
+     _ngelx465OpeningScrollTimer=Timer.periodic(
+       const Duration(milliseconds:140),(timer){
+-        if(!mounted||++ticks>3){
++        if(!mounted||jumpActive||++ticks>24){
+           timer.cancel();
+           _ngelx465OpeningScrollTimer=null;
+           return;
+@@ -23234,6 +23257,8 @@
+                 IgnorePointer(child:NgelXSohbetVideoOnizleme(url:medyaUrl,thumbnailUrl:videoKapakUrl)),
+                 d.reference,sayilar,tepkiler.length,
+               )
++            else if((v['communityId556']??'').toString().isNotEmpty)
++              Ngelx556SharedPost(value:v)
+             else if(sesliOdaPaylasimi)
+               IgnorePointer(child:NgelXSesliOdaPaylasimKarti(mesaj:v,benim:ben))
+             else if(sharedProfile)
+@@ -23828,7 +23853,7 @@
+           // Chat metadata updates must not move the message list.
+           if(s.hasData){
+             final tailId=docs.isEmpty?'':docs.last.id;
+-            if(!_ngelx474MessagesOpened){
++            if(!_ngelx474MessagesOpened&&docs.isNotEmpty){
+               _ngelx474MessagesOpened=true;
+               _ngelx474LastMessageId=tailId;
+               sonaGit();
+@@ -25135,6 +25160,11 @@
+   }
+ 
+   Widget _bildirimBasligiDurumlu(Map<String,dynamic> v,bool okundu){
++    if(v['targetKind']=='community')return Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
++      Text((v['targetTitle']??'Topluluk').toString(),style:const TextStyle(color:mor,fontWeight:FontWeight.w800)),
++      const Text('Topluluk',style:TextStyle(fontSize:11,color:Colors.black54)),
++      _bildirimBasligi(v,okundu),
++    ]);
+     final tur=(v['type']??v['eventKind']??'').toString();
+      if(tur=='group_join_request'||(v['eventKind']??'')=='group_join_request'){
+        final chatId=(v['chatId']??v['groupId']??v['sourceId']??'').toString();
+@@ -25306,6 +25336,11 @@
+         final profile=user.data()??<String,dynamic>{};
+         if(context.mounted)Navigator.push(context,MaterialPageRoute(builder:(_)=>SohbetPage(chatId:kaynak,digerUid:other,ad:(profile['displayName']??profile['username']??'').toString(),foto:(profile['photoUrl']??'').toString())));
+       }catch(_){if(context.mounted)ngelxDurumMesaji(context,lt('Sohbet açılamadı. Tekrar dene.','Could not open chat. Try again.'),tip:'hata');}
++      return;
++    }
++
++    if(hedefTuru=='community'&&kaynak.isNotEmpty){
++      Navigator.push(context,MaterialPageRoute(builder:(_)=>NgelXCommunityDetail450(id:kaynak)));
+       return;
+     }
+ 
+@@ -26119,15 +26154,6 @@
+                     (x.value.duration.inSeconds%60).toString().padLeft(2,'0'),
+                     style:const TextStyle(color:Colors.white,fontSize:11,fontWeight:FontWeight.w900)),
+                 )),
+-              Positioned(top:8,right:8,child:IconButton.filledTonal(
+-                tooltip:sessiz?'Sesi aç':'Sesi kapat',
+-                onPressed:()async{
+-                  sessiz=!sessiz;
+-                  await x.setVolume(sessiz?0:1);
+-                  if(mounted)setState((){});
+-                },
+-                icon:Icon(sessiz?Icons.volume_off_rounded:Icons.volume_up_rounded),
+-              )),
+               if(kontrollerGorunur||!x.value.isPlaying)Center(child:IconButton.filledTonal(
+                 onPressed:()async{
+                   if(x.value.isPlaying){
+@@ -26961,6 +26987,7 @@
+                  ),
+                ],
+               const SizedBox(height: 20),
++              if(erisimVar)Ngelx556Highlights(uid:uid,profile:v,viewer:benimVerim),
+               if (!erisimVar)
+                 Container(
+                   padding: const EdgeInsets.all(28),

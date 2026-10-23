@@ -1,0 +1,218 @@
+--- a/app/lib/main.dart
++++ b/app/lib/main.dart
+@@ -1,4 +1,5 @@
+ import 'build556_policy.dart';
++import 'build557_policy.dart';
+ import 'package:flutter/foundation.dart';
+ import 'build540_reference_ui.dart';
+ import 'build541_pk_policy.dart';
+--- a/app/lib/community450.dart
++++ b/app/lib/community450.dart
+@@ -7,7 +7,7 @@
+ bool _communityAdmin450(Map<String, dynamic> v) =>
+     ngelx484CommunityManager(v, _communityUid450);
+ bool _communityMember450(Map<String, dynamic> v) =>
+-    List<String>.from(v['members'] ?? []).contains(_communityUid450);
++    ngelx557Ids(v['members']).contains(_communityUid450);
+ void _communityError450(BuildContext c, Object e) {
+   // Build473: explicit Firestore permission denial, preserve existing error UI
+   if (e is FirebaseException && e.code == 'permission-denied') {
+@@ -1708,21 +1708,21 @@
+           ),
+           const SizedBox(height: 10),
+           Text((value['text']??'').toString()),
+-          if (value['mediaType'] == 'image' && value['mediaUrl'] != '')
++          if (value['mediaType'] == 'image' && ngelx557MediaUrl(value['mediaUrl']).isNotEmpty)
+             Padding(
+               padding: const EdgeInsets.only(top: 10),
+               child: ClipRRect(
+                 borderRadius: BorderRadius.circular(14),
+                 child: NgelXAgResmi(
+-                  imageUrl: value['mediaUrl'],
++                  imageUrl: ngelx557MediaUrl(value['mediaUrl']),
+                   width: double.infinity,
+                   height: 230,
+                   fit: BoxFit.cover,
+                 ),
+               ),
+             ),
+-          if (value['mediaType'] == 'video' && value['mediaUrl'] != '')
+-            NgelXCommunityVideo450(url: value['mediaUrl']),
++          if (value['mediaType'] == 'video' && ngelx557MediaUrl(value['mediaUrl']).isNotEmpty)
++            NgelXCommunityVideo450(url: ngelx557MediaUrl(value['mediaUrl'])),
+           Ngelx455PostCounts(
+             ref: ref,
+             liveCounts: value['counts456'] is Map
+@@ -1783,11 +1783,11 @@
+   bool bulkBusy451 = false;
+   Future<void> moderateAll451(
+     List<QueryDocumentSnapshot<Map<String, dynamic>>> docs,
+-    bool approve,
++    bool approve, {bool askConfirmation557=true}
+   ) async {
+     if (bulkBusy451 || docs.isEmpty) return;
+     final membership = section == 'Üyelik istekleri';
+-    final confirmed = await showDialog<bool>(
++    final confirmed = askConfirmation557 ? await showDialog<bool>(
+       context: context,
+       builder: (c) => Ngelx455WhiteDialog(
+         title: Text(approve ? 'Toplu onay' : 'Toplu ret'),
+@@ -1805,12 +1805,12 @@
+           ),
+         ],
+       ),
+-    );
++    ) : true;
+     if (confirmed != true || !mounted) return;
+     setState(() => bulkBusy451 = true);
+     try {
+       final root = _communities450.doc(widget.id);
+-      await FirebaseFirestore.instance.runTransaction((tx) async {
++      final approvedPosts557 = await FirebaseFirestore.instance.runTransaction<List<String>>((tx) async {
+         final community = await tx.get(root);
+         final current = <DocumentSnapshot<Map<String, dynamic>>>[];
+         for (final d in docs) current.add(await tx.get(d.reference));
+@@ -1835,7 +1835,11 @@
+         }
+         for (final d in pending)
+           tx.update(d.reference, {'status': approve ? 'approved' : 'rejected'});
++        return !membership && approve ? pending.map((d) => d.id).toList() : <String>[];
+       });
++      for (final id in approvedPosts557) {
++        unawaited(ngelx556CommunityEvent(widget.id,'community_post_approved',id,adminsOnly:false));
++      }
+     } catch (e) {
+       if (mounted) _communityError450(context, e);
+     } finally {
+@@ -1844,9 +1848,9 @@
+   }
+ 
+   Future<void> edit450(Map<String, dynamic> v) async {
+-    final n = TextEditingController(text: v['name']),
+-        d = TextEditingController(text: v['description']),
+-        r = TextEditingController(text: v['rules']);
++    final n = TextEditingController(text: (v['name'] ?? '').toString()),
++        d = TextEditingController(text: (v['description'] ?? '').toString()),
++        r = TextEditingController(text: (v['rules'] ?? '').toString());
+     final save = await showDialog<bool>(
+       context: context,
+       builder:(c)=>Ngelx556InfoDialog(name:n,description:d,rules:r),
+@@ -2133,6 +2137,8 @@
+                                                 'status': 'approved',
+                                               });
+                                               await batch.commit();
++                                            } else if (section == 'Bekleyen gönderiler') {
++                                              await moderateAll451([d], true, askConfirmation557:false);
+                                             } else {
+                                               await d.reference.update({
+                                                 'status':
+--- a/app/lib/build456_widgets.dart
++++ b/app/lib/build456_widgets.dart
+@@ -34,12 +34,12 @@
+ 
+ bool ngelx456Moderator(Map<String, dynamic> v) =>
+     _communityAdmin450(v) ||
+-    List<String>.from(v['moderators'] ?? const []).contains(_communityUid450);
++    ngelx557Ids(v['moderators']).contains(_communityUid450);
+ String ngelx456Role(Map<String, dynamic> v, String uid) => v['founderId'] == uid
+     ? 'Kurucu'
+-    : List<String>.from(v['admins'] ?? const []).contains(uid)
++    : ngelx557Ids(v['admins']).contains(uid)
+     ? 'Yönetici'
+-    : List<String>.from(v['moderators'] ?? const []).contains(uid)
++    : ngelx557Ids(v['moderators']).contains(uid)
+     ? 'Moderatör'
+     : 'Üye';
+ int ngelx456RoleOrder(Map<String,dynamic> v,String uid) {
+@@ -124,7 +124,7 @@
+             child: Image(
+               image: ResizeImage(NgelXAgImageProvider(url), width: 1200),
+               fit: BoxFit.cover,
+-              alignment: Alignment(0, alignment.clamp(-1.0, 1.0).toDouble()),
++              alignment: Alignment(0, ngelx557CoverAlignment(alignment)),
+               errorBuilder: (_, __, ___) => Container(
+                 color: ngelx456Soft,
+                 child: const Icon(Icons.landscape_outlined, color: mor),
+@@ -138,10 +138,10 @@
+ // the old admins list; membership is still mandatory for any management UI.
+ bool ngelx484CommunityManager(Map<String, dynamic> v, String uid) {
+   if (uid.isEmpty) return false;
+-  final members = List<String>.from(v['members'] ?? const []);
++  final members = ngelx557Ids(v['members']);
+   if (!members.contains(uid)) return false;
+   return v['founderId'] == uid ||
+-      List<String>.from(v['admins'] ?? const []).contains(uid);
++      ngelx557Ids(v['admins']).contains(uid);
+ }
+ 
+ // Build457: the founder can be authoritative even in old communities whose
+@@ -173,7 +173,7 @@
+   XFile? file;
+   bool saving = false;
+   late double alignment =
+-      (widget.value['coverAlignment'] as num?)?.toDouble() ?? 0;
++      ngelx557CoverAlignment(widget.value['coverAlignment']);
+   @override
+   Widget build(BuildContext c) => _communitySurface450(
+     title: 'Kapağı düzenle',
+@@ -259,7 +259,7 @@
+       }
+       // No edit means no write. Old community records may have different
+       // optional fields; updating unrelated cover data is avoidable.
+-      final previous = (value['coverAlignment'] as num?)?.toDouble() ?? 0;
++      final previous = ngelx557CoverAlignment(value['coverAlignment']);
+       if (file == null && previous == alignment) {
+         if (mounted) {
+           ngelx455Status(context, 'Kapak kadrajı zaten güncel.');
+@@ -441,7 +441,7 @@
+           children: [
+             Ngelx456Cover(
+               url: (v['coverUrl'] ?? '').toString(),
+-              alignment: (v['coverAlignment'] as num?)?.toDouble() ?? 0,
++              alignment: ngelx557CoverAlignment(v['coverAlignment']),
+             ),
+             if (admin)
+               Positioned(
+@@ -512,7 +512,7 @@
+                               child: Padding(
+                                 padding: const EdgeInsets.all(6),
+                                 child: Text(
+-                                  '${(v['members'] as List? ?? const []).length} üye',
++                                  '${ngelx557Ids(v['members']).length} üye',
+                                   style: const TextStyle(
+                                     fontSize: 13,
+                                     color: Colors.black54,
+--- a/app/lib/build455_widgets.dart
++++ b/app/lib/build455_widgets.dart
+@@ -702,7 +702,9 @@
+   @override
+   void didUpdateWidget(covariant Ngelx455PostCounts old) {
+     super.didUpdateWidget(old);
+-    if (old.ref.path != widget.ref.path) counts = load();
++    if (old.ref.path != widget.ref.path ||
++        const ['likes','comments','shares','views'].any(
++          (key) => old.liveCounts[key] != widget.liveCounts[key])) counts = load();
+   }
+ 
+   @override
+--- a/app/lib/build556_quality.dart
++++ b/app/lib/build556_quality.dart
+@@ -206,13 +206,17 @@
+     if(uid.isEmpty)return;
+     final c=(await _communities450.doc(communityId).get()).data();
+     if(c==null||_communityUid450!=uid)return;
++    if(event=='community_post_approved'){
++      final post=(await _communities450.doc(communityId).collection('posts').doc(entityId).get()).data();
++      if(post?['status']!='approved'||!ngelx456Moderator(c))return;
++    }
+     final members=List<String>.from(c['members']??const[]);
+     final targets=adminsOnly?<String>{...List<String>.from(c['admins']??const[]),(c['founderId']??'').toString()}:members.toSet();
+     targets.remove(uid);targets.remove('');targets.removeWhere((id)=>!members.contains(id));
+     for(final target in targets){
+       if(_communityUid450!=uid)return;
+       try{await uygulamaBildirimiGonder(toUid:target,fromUid:uid,tur:'interaction',
+-        metin:event=='community_join_request'?'topluluğa katılmak istiyor':event=='community_post_pending'?'onay için bir topluluk gönderisi gönderdi':'toplulukta yeni bir gönderi paylaştı',
++        metin:event=='community_join_request'?'topluluğa katılmak istiyor':event=='community_post_pending'?'onay için bir topluluk gönderisi gönderdi':event=='community_post_approved'?'toplulukta bir gönderiyi onayladı':'toplulukta yeni bir gönderi paylaştı',
+         belgeId:communityId,hedefTuru:'community',hedefBaslik:(c['name']??'Topluluk').toString(),hedefFoto:(c['photoUrl']??'').toString(),olayTuru:event,dedupeKey:'${event}_${communityId}_${entityId}_$target');}catch(_){/* Preserve successful post/request on notification failure. */}
+     }
+   }catch(_){}
