@@ -357,7 +357,7 @@
  import 'package:flutter/foundation.dart';
  import 'build540_reference_ui.dart';
  import 'build541_pk_policy.dart';
-@@ -83,6 +84,8 @@
+@@ -85,6 +86,8 @@
  part 'build542_pending_leave.dart';
  part 'build543_pip_participants.dart';
  part 'build543_community_admin.dart';
@@ -366,7 +366,7 @@
  part 'build543_group_call_join.dart';
  part 'build446_call_lifecycle.dart';
  
-@@ -9802,6 +9805,9 @@
+@@ -9847,6 +9850,9 @@
    bool _isteklerYukleniyor547=true;
    final Set<String> _gonderiliyor547=<String>{};
    final Set<String> _aktifArkadaslar547=<String>{};
@@ -376,7 +376,7 @@
    StreamSubscription<QuerySnapshot<Map<String,dynamic>>>? _arkadasIstekleri547;
    StreamSubscription<QuerySnapshot<Map<String,dynamic>>>? _arkadasliklar547;
    int _yenileRevizyonu=0;
-@@ -9840,10 +9846,16 @@
+@@ -9885,10 +9891,16 @@
          setState(()=>gonderilenTakipIstekleri=q.docs
            .where((d)=>d.data()['status']=='pending').map((d)=>d.id).toSet());
        },onError:(_){ });
@@ -393,7 +393,7 @@
            gonderilenArkadaslikIstekleri=q.docs
              .where((d)=>d.data()['status']=='pending').map((d)=>d.id).toSet();
            _isteklerYukleniyor547=false;
-@@ -9870,6 +9882,7 @@
+@@ -9915,6 +9927,7 @@
    void dispose(){
      _hesapAboneligi?.cancel();
      _gidenIstekAboneligi?.cancel();
@@ -401,7 +401,7 @@
      _arkadasIstekleri547?.cancel();
      _arkadasliklar547?.cancel();
      super.dispose();
-@@ -9997,7 +10010,7 @@
+@@ -10042,7 +10055,7 @@
      final me=ben;
      if(me==null||!mounted||_gonderiliyor547.contains(hedefUid))return;
      if(arkadaslar.contains(hedefUid)||_aktifArkadaslar547.contains(hedefUid)||
@@ -410,7 +410,7 @@
      setState(()=>_gonderiliyor547.add(hedefUid));
      try{
        final gonderildi=await sosyalIstekGonder(
-@@ -10258,7 +10271,7 @@
+@@ -10303,7 +10316,7 @@
      final kullanici=(v['username']??'ngelx').toString();
      final arkadas547=arkadaslar.contains(uid)||_aktifArkadaslar547.contains(uid)||
        (ben!=null&&List<String>.from(v['friends']??const[]).contains(ben));
@@ -419,7 +419,7 @@
      final takipte=takipEdilenler.contains(uid);
      final takipIstegiBekliyor=gonderilenTakipIstekleri.contains(uid);
      return Padding(
-@@ -12449,7 +12462,7 @@
+@@ -12494,7 +12507,7 @@
  
    Future<void> sohbetMenusu(BuildContext context,String id,{bool grup=false}) async {
      final sessiz=sessizSohbetler.contains(id);
@@ -428,7 +428,7 @@
        ListTile(leading:Icon(sabitSohbetler.contains(id)?Icons.push_pin:Icons.push_pin_outlined,color:mor),title:Text(sabitSohbetler.contains(id)?t('unpinChat'):t('pinChat')),onTap:(){Navigator.pop(c);sohbetTercihi('pinnedChats',id,!sabitSohbetler.contains(id));}),
        ListTile(leading:const Icon(Icons.archive_outlined,color:Colors.blue),title:Text(t('archiveChat')),onTap:(){Navigator.pop(c);sohbetTercihi('archivedChats',id,true);}),
        ListTile(leading:Icon(sessiz?Icons.notifications_active_outlined:Icons.notifications_off_outlined),title:Text(sessiz?t('unmuteChat'):t('muteChat')),onTap:(){Navigator.pop(c);sessiz?sessizeAl(id,false):sessizeAlMenusu(id);}),
-@@ -12457,7 +12470,7 @@
+@@ -12502,7 +12515,7 @@
        if(grup)ListTile(leading:const Icon(Icons.info_outline_rounded,color:ngelxGroupGreen),title:Text(lt('Grup bilgisi','Group info'),style:const TextStyle(fontWeight:FontWeight.w700)),onTap:(){Navigator.pop(c);Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupUyeleriPage(chatId:id)));}),
        if(grup)ListTile(leading:const Icon(Icons.exit_to_app_rounded,color:Color(0xFFE23D4F)),title:Text(t('leaveGroup'),style:const TextStyle(color:Color(0xFFE23D4F),fontWeight:FontWeight.w700)),onTap:(){Navigator.pop(c);gelenKutusundanGruptanAyril(context,id);}),
        ListTile(leading:const Icon(Icons.delete_outline,color:Colors.red),title:Text(t('removeFromInbox'),style:const TextStyle(color:Colors.red)),onTap:(){Navigator.pop(c);sohbetSil(context,id);}),
@@ -437,16 +437,22 @@
    }
  
    Future<void> sohbetSil(BuildContext context,String id) async {
-@@ -14049,7 +14062,7 @@
+@@ -14089,12 +14102,12 @@
+     _ngelx465OpeningScrollTimer=null;
+   }
+   void _ngelx465ScheduleBottomOnOpen(){
+-    if(_ngelx465OpeningScrollStarted)return;
++    if(_ngelx465OpeningScrollStarted||jumpActive)return;
+     _ngelx465OpeningScrollStarted=true;
      var ticks=0;
      _ngelx465OpeningScrollTimer=Timer.periodic(
        const Duration(milliseconds:140),(timer){
 -        if(!mounted||++ticks>3){
-+        if(!mounted||++ticks>24){
++        if(!mounted||jumpActive||++ticks>24){
            timer.cancel();
            _ngelx465OpeningScrollTimer=null;
            return;
-@@ -14849,7 +14862,14 @@
+@@ -14894,7 +14907,14 @@
        if(mentionOnerileri.isNotEmpty&&mounted)setState(()=>mentionOnerileri.clear());
        return;
      }
@@ -462,7 +468,7 @@
      final surum=++_mentionAramaSurumu;
      mentionZamanlayici=Timer(const Duration(milliseconds:120),()async{
        try{
-@@ -14867,20 +14887,17 @@
+@@ -14912,20 +14932,17 @@
              final v=belgeler[i];
              final raw=(v['username']??v['displayName']??'').toString().trim();
              final kullanici=raw.isEmpty?'uye_${ids[i].substring(0,ids[i].length.clamp(0,6))}':raw.replaceAll(RegExp(r'\s+'),'_');
@@ -486,7 +492,7 @@
            }
          }
          if(herkesYetkisi&&'herkes'.contains(ara))sonuc.add({
-@@ -15942,7 +15959,9 @@
+@@ -15987,7 +16004,9 @@
                      ])),
                    ]),
                  )),
@@ -497,7 +503,7 @@
                    Padding(padding:const EdgeInsets.symmetric(horizontal:5,vertical:3),child:Text(sticker,style:const TextStyle(fontSize:58,height:1.05)))
                  else if(tur=='photo'&&media.isNotEmpty)
                    _grupMedyaTepkiAlani(
-@@ -16386,7 +16405,7 @@
+@@ -16431,7 +16450,7 @@
                          shareReadReceipt:true,
                        ));
                      }
@@ -506,7 +512,7 @@
                    }
                    if(docs.isEmpty){
                      if(snap.connectionState==ConnectionState.waiting&&!_mesajBeklemeBitti)return const Center(child:CircularProgressIndicator(color:ngelxGroupGreen,strokeWidth:2));
-@@ -18042,16 +18061,18 @@
+@@ -18088,16 +18107,18 @@
        if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Kamera açılamadı. Görüşme devam ediyor. Tekrar deneyebilirsin.')));
      }finally{if(mounted)setState(()=>_videoCameraBusy542=false);}
    }
@@ -527,7 +533,7 @@
    }
    Future<void> hoparlorDegistir()async{
      if(_speakerBusy548||bitiyor)return;
-@@ -18923,6 +18944,7 @@
+@@ -18985,6 +19006,7 @@
                  _privateVoiceCameraOn507?Icons.videocam_off_rounded:Icons.videocam_rounded,
                  _privateVoiceCameraBusy507?'Açılıyor…':_privateVoiceCameraOn507?'Görüntüyü kapat':'Görüntüyü aç',
                  _togglePrivateVoiceCamera507,_privateVoiceCameraOn507),
@@ -535,16 +541,22 @@
                _aramaKontrol(mikrofon?Icons.mic_rounded:Icons.mic_off_rounded,'Mikrofon',mikrofonDegistir,mikrofon),
                if(!widget.goruntulu)_aramaKontrol(hoparlor?Icons.volume_up_rounded:Icons.volume_off_rounded,'Hoparlör',hoparlorDegistir,hoparlor),
                if(grupAramasi)_aramaKontrol(Icons.person_add_alt_1_rounded,'Davet et',grupAramasinaKisiDavetEt,true),
-@@ -21539,7 +21561,7 @@
+@@ -21596,12 +21618,12 @@
+     });
+   }
+   void _ngelx465ScheduleBottomOnOpen(){
+-    if(_ngelx465OpeningScrollStarted)return;
++    if(_ngelx465OpeningScrollStarted||jumpActive)return;
+     _ngelx465OpeningScrollStarted=true;
      var ticks=0;
      _ngelx465OpeningScrollTimer=Timer.periodic(
        const Duration(milliseconds:140),(timer){
 -        if(!mounted||++ticks>3){
-+        if(!mounted||++ticks>24){
++        if(!mounted||jumpActive||++ticks>24){
            timer.cancel();
            _ngelx465OpeningScrollTimer=null;
            return;
-@@ -23172,6 +23194,8 @@
+@@ -23234,6 +23256,8 @@
                  IgnorePointer(child:NgelXSohbetVideoOnizleme(url:medyaUrl,thumbnailUrl:videoKapakUrl)),
                  d.reference,sayilar,tepkiler.length,
                )
@@ -553,7 +565,7 @@
              else if(sesliOdaPaylasimi)
                IgnorePointer(child:NgelXSesliOdaPaylasimKarti(mesaj:v,benim:ben))
              else if(sharedProfile)
-@@ -23766,7 +23790,7 @@
+@@ -23828,7 +23852,7 @@
            // Chat metadata updates must not move the message list.
            if(s.hasData){
              final tailId=docs.isEmpty?'':docs.last.id;
@@ -562,7 +574,7 @@
                _ngelx474MessagesOpened=true;
                _ngelx474LastMessageId=tailId;
                sonaGit();
-@@ -25073,6 +25097,11 @@
+@@ -25135,6 +25159,11 @@
    }
  
    Widget _bildirimBasligiDurumlu(Map<String,dynamic> v,bool okundu){
@@ -574,7 +586,7 @@
      final tur=(v['type']??v['eventKind']??'').toString();
       if(tur=='group_join_request'||(v['eventKind']??'')=='group_join_request'){
         final chatId=(v['chatId']??v['groupId']??v['sourceId']??'').toString();
-@@ -25244,6 +25273,11 @@
+@@ -25306,6 +25335,11 @@
          final profile=user.data()??<String,dynamic>{};
          if(context.mounted)Navigator.push(context,MaterialPageRoute(builder:(_)=>SohbetPage(chatId:kaynak,digerUid:other,ad:(profile['displayName']??profile['username']??'').toString(),foto:(profile['photoUrl']??'').toString())));
        }catch(_){if(context.mounted)ngelxDurumMesaji(context,lt('Sohbet açılamadı. Tekrar dene.','Could not open chat. Try again.'),tip:'hata');}
@@ -586,7 +598,7 @@
        return;
      }
  
-@@ -26057,15 +26091,6 @@
+@@ -26119,15 +26153,6 @@
                      (x.value.duration.inSeconds%60).toString().padLeft(2,'0'),
                      style:const TextStyle(color:Colors.white,fontSize:11,fontWeight:FontWeight.w900)),
                  )),
@@ -602,7 +614,7 @@
                if(kontrollerGorunur||!x.value.isPlaying)Center(child:IconButton.filledTonal(
                  onPressed:()async{
                    if(x.value.isPlaying){
-@@ -26899,6 +26924,7 @@
+@@ -26961,6 +26986,7 @@
                   ),
                 ],
                const SizedBox(height: 20),

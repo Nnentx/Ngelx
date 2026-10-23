@@ -32,7 +32,7 @@ export function communityDeleteStorage(env,{fetcher=fetch,authorize=()=>accessTo
    if(receipt?.state==='done')return {writes:[],value:{status:200,deleted:true}};
    if(community&&!validateDelete543(identity,community,body)||!community&&!owns)return {writes:[],value:{status:403}};
    if(receipt?.leaseUntil>now())return {writes:[],value:{status:202,busy:true}};
-   const job={ownerUid:identity.uid,name:body.confirmName,state:'deleting',stackJson:receipt?.stackJson??JSON.stringify([{kind:'doc',path:root}]),rootDeleted:receipt?.rootDeleted??false,
+   const job={ownerUid:identity.uid,name:body.confirmName,state:'deleting',stackJson:receipt?.stackJson??JSON.stringify([{kind:'invites',path:root},{kind:'doc',path:root}]),rootDeleted:receipt?.rootDeleted??false,
     rootVersion:community?._updateTime??receipt?.rootVersion??'',leaseId:uuid(),leaseUntil:now()+60000,requestedAt:receipt?.requestedAt??now()};
    return {writes:[{update:{name:name(jobPath(id)),fields:fields(job)}}],value:{status:202,job,id}};
   });},
@@ -46,8 +46,21 @@ export function communityDeleteStorage(env,{fetcher=fetch,authorize=()=>accessTo
     await api('/'+encode(root)+(job.rootVersion?'?currentDocument.updateTime='+encodeURIComponent(job.rootVersion):''),{method:'DELETE'});requests++;job.rootDeleted=true;
    }
    while(stack.length&&requests+2<=budget&&now()<deadline){
-    const task=stack.at(-1);if(!valid(task.path)||!['doc','collection'].includes(task.kind))throw Error('invalid_delete_scope');
-    if(task.kind==='doc'){
+    const task=stack.at(-1);if(!valid(task.path)||!['doc','collection','invites'].includes(task.kind))throw Error('invalid_delete_scope');
+    if(task.kind==='invites'){
+     if(task.path!==root)throw Error('invalid_invite_scope');
+     const limit=Math.min(8,budget-requests-1);
+     const rows=await post(':runQuery',{structuredQuery:{from:[{collectionId:'communityInvites450'}],where:{fieldFilter:{field:{fieldPath:'communityId'},op:'EQUAL',value:{stringValue:id}}},limit}});requests++;
+     if(!Array.isArray(rows))throw Error('invalid_invite_response');
+     const invites=rows.filter(row=>row.document).map(row=>row.document);
+     if(invites.length>limit)throw Error('invalid_invite_count');
+     if(!invites.length)stack.pop();
+     for(const invite of invites){
+      const prefix=name('communityInvites450')+'/';
+      if(!invite.name?.startsWith(prefix)||invite.name.slice(prefix.length).includes('/')||document(invite)?.communityId!==id||!invite.updateTime)throw Error('invalid_invite_scope');
+      await api('/'+encode(invite.name.slice((database+'/documents/').length))+'?currentDocument.updateTime='+encodeURIComponent(invite.updateTime),{method:'DELETE'});requests++;
+     }
+    }else if(task.kind==='doc'){
      const result=await post('/'+encode(task.path)+':listCollectionIds',{pageSize:10});requests++;
      const ids=result?.collectionIds??[];if(!Array.isArray(ids)||ids.some(id=>typeof id!=='string'||!id||id.includes('/')))throw Error('invalid_collection');
      if(ids.length){

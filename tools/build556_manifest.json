@@ -16,7 +16,7 @@
     "after": "1b530bfc1d90131af8038c43a1b18c2691fd7e33ff4f6735ca5b84bf14696005"
   },
   "app/lib/main.dart": {
-    "before": "3b2ee5fafaf353d162acd2b6a9162a7a04a37ff7f09dc6321b0059a0a6b75824",
-    "after": "4361fb6849153bf3ef5cd71ccaea0c3bac7dfa57c69f1b155f8529da0d43e9b3"
+    "before": "9b73e7676efb548698b4502017323b56f46c5cc0297115ffd66dd2bb8860fec9",
+    "after": "f4482468ac342c17666088ce85a015ce5647cf141fb00b933f977930ac9e6772"
   }
 }

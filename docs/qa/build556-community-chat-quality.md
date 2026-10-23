@@ -45,3 +45,9 @@ Base: `qa/ngelx-free-live555-20261022`, commit `97d6b2459dcf85e74ed3ceedc1fea80d
 - `app/lib/build556_delete.dart` is copied from `tools` during assembly. Only explicitly confirmed owner jobs enter preferences. The existing account-scoped pending-operation retry hook also resumes deletions; it never replays as another signed-in user.
 - `tools/preflight_build556_worker.mjs` verifies the existing owner account, existing Worker and existing healthy configuration before redeploying. No secret values are written to artifacts or logs.
 - Existing moderation paths and all earlier source-generation steps are retained.
+
+## Verified source correction
+
+The first candidate run `39999043337` passed all inherited Build395–554 checks but the Build556 whole-file guard correctly rejected the locally reconstructed main source. Comparison with the successful Build555 source artifact showed missing Build552–554 transformations in the local preparation. The package was rebased without conflict onto the actual successful Build555 assembled-source artifact `12438123276`, ZIP SHA256 `9a6c519e7cfed5bc917a8f8a5258291bed32baa095d83a9671f4d1fe11a85a3b`; its main source SHA256 is `9b73e7676efb548698b4502017323b56f46c5cc0297115ffd66dd2bb8860fec9`. Exact hash checks remain enforced. All Build552–554 application files are preserved.
+
+Worker deployment in run `39999043337` succeeded. Live health reported configured service with `community_delete556`; anonymous deletion returned HTTP 401. No authenticated community deletion was performed against real user data. Follow-up also cleans only matching top-level `communityInvites450` records and retains foreign invites. The final APK and widget-analysis results will be recorded after the corrected run.

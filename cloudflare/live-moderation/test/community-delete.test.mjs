@@ -21,6 +21,11 @@ function fixture(count=3){
   const parsed=new URL(url),path=decodeURIComponent(parsed.pathname.split('/documents')[1]??'');
   if(path===':beginTransaction')return Response.json({transaction:'tx'});
   if(path===':rollback')return Response.json({});
+  if(path===':runQuery'){
+   const query=JSON.parse(options.body).structuredQuery;
+   const rows=[...docs.entries()].filter(([p,d])=>p.startsWith('communityInvites450/')&&document(d).communityId===query.where.fieldFilter.value.stringValue).slice(0,query.limit).map(([,document])=>({document}));
+   return Response.json(rows);
+  }
   if(path===':commit'){
    for(const write of JSON.parse(options.body).writes??[]){const doc=write.update;if(doc){const p=doc.name.slice(database.length);docs.set(p,{...doc,updateTime:'v'+(++version)});}}
    return Response.json({});
@@ -66,7 +71,7 @@ test('claim requires exact name, current founder and membership',async()=>{
  const f=fixture();assert.equal((await f.store.claim(identity,{...body,confirmName:'Wrong'})).status,403);
 });
 test('bounded chunks recursively delete missing ancestors and nested records while preserving unrelated users',async()=>{
- const f=fixture(40);f.docs.delete('communities450/community-556/posts/p4');
+ const f=fixture(40);f.set('communityInvites450/owned',{communityId:'community-556'});f.set('communityInvites450/foreign',{communityId:'other'});f.docs.delete('communities450/community-556/posts/p4');
  let complete=false,chunks=0;
  while(!complete&&++chunks<100){
   const claim=await f.store.claim(identity,body);assert.equal(claim.status,202);
@@ -74,7 +79,7 @@ test('bounded chunks recursively delete missing ancestors and nested records whi
   await f.store.save(claim.job,claim.id,complete);
  }
  assert.ok(complete);assert.ok(chunks>1);assert.equal([...f.docs.keys()].some(p=>p.startsWith('communities450/community-556')),false);
- assert.ok(f.docs.has('users/unrelated'));assert.equal((await f.store.claim(identity,body)).deleted,true);
+ assert.ok(f.docs.has('users/unrelated'));assert.equal(f.docs.has('communityInvites450/owned'),false);assert.equal(f.docs.has('communityInvites450/foreign'),true);assert.equal((await f.store.claim(identity,body)).deleted,true);
  assert.equal((await f.store.claim({uid:'member'},body)).status,403);
  assert.equal([...f.docs.keys()].filter(p=>p.startsWith('community_deletions543/')).length,1);
 });

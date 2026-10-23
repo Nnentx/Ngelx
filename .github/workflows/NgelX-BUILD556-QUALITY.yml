@@ -4,6 +4,7 @@ name: NgelX Build556 community and chat quality
 on:
   push:
     branches: [fix/build556-community-chat-quality]
+    paths: ['app/**', 'tools/**', 'cloudflare/**', '.github/workflows/NgelX-BUILD556-QUALITY.yml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -1525,6 +1526,14 @@ jobs:
           name: NgelX-Build556-Layout-Preview
           path: app/test-output/live554-reference.png
           retention-days: 7
+
+      - name: Preserve exact assembled baseline for diagnostics
+        uses: actions/upload-artifact@v4
+        with:
+          name: NgelX-Build556-Baseline
+          path: app/lib/
+          retention-days: 3
+          if-no-files-found: error
 
       - name: Apply guarded Build556 feedback package and test responsive community screens
         shell: bash

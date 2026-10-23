@@ -38,6 +38,7 @@ Future<bool> _processDelete556(User user,String id,String name,{int maxChunks=48
 Future<void> ngelx556DeleteCommunity(BuildContext context,String id)async{
   if(_communityDeleting543.contains(id))return;
   final user=FirebaseAuth.instance.currentUser;if(user==null||user.isAnonymous)return;
+  bool queued=false;
   try{
     _deleteUri556();
     final value=(await _communities450.doc(id).get(const GetOptions(source:Source.server)).timeout(const Duration(seconds:10))).data();
@@ -49,6 +50,7 @@ Future<void> ngelx556DeleteCommunity(BuildContext context,String id)async{
     if(typed!=name||!context.mounted||FirebaseAuth.instance.currentUser?.uid!=user.uid)return;
     final prefs=await SharedPreferences.getInstance();
     if(!await prefs.setString(_deleteKey556(user.uid,id),jsonEncode({'uid':user.uid,'id':id,'name':name})))throw StateError('delete_queue556');
+    queued=true;
     _communityDeleting543.add(id);
     final navigator=Navigator.of(context,rootNavigator:true);
     final dialog=DialogRoute<void>(context:context,barrierDismissible:false,builder:(_)=>const PopScope(canPop:false,child:AlertDialog(
@@ -63,7 +65,7 @@ Future<void> ngelx556DeleteCommunity(BuildContext context,String id)async{
     else{ngelxDurumMesaji(context,'Silme işlemi kaydedildi. Bağlantı kurulduğunda arka planda tamamlanacak.',tip:'uyari');Navigator.maybePop(context);}
   }catch(error){
     _communityDeleting543.remove(id);
-    if(context.mounted)ngelxDurumMesaji(context,error is StateError&&error.message=='delete_service_unavailable556'?'Topluluk silme hizmetine ulaşılamıyor.':error is StateError&&error.message=='delete_permission556'?'Topluluğu yalnızca mevcut kurucusu silebilir.':'Silme tamamlanamadı. Kaydedilen işlem bağlantı kurulduğunda tekrar denenecek.',tip:'hata');
+    if(context.mounted)ngelxDurumMesaji(context,error is StateError&&error.message=='delete_service_unavailable556'?'Topluluk silme hizmetine ulaşılamıyor.':error is StateError&&error.message=='delete_permission556'?'Topluluğu yalnızca mevcut kurucusu silebilir.':queued?'Silme tamamlanamadı. Kaydedilen işlem bağlantı kurulduğunda tekrar denenecek.':'Silme başlatılamadı. Bağlantını kontrol edip tekrar dene.',tip:'hata');
   }
 }
 Future<void> ngelx556ResumeCommunityDeletes()async{
