@@ -1,0 +1,1 @@
+{"name":"ngelx-free-verification-email","private":true,"type":"module","scripts":{"prepare-worker":"node prepare.mjs","test":"node --test worker.test.mjs"},"devDependencies":{"wrangler":"^4.0.0"}}

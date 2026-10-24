@@ -1,0 +1,11 @@
+name = "ngelx-verification-email"
+main = "index.mjs"
+compatibility_date = "2026-10-24"
+workers_dev = true
+
+[vars]
+FIREBASE_PROJECT_ID = "ngelx-44eed"
+EMAIL_FROM = "NgelX <noreply@ngelxsocial.com>"
+
+# Secrets: RESEND_API_KEY, GOOGLE_SERVICE_ACCOUNT.
+# Deploy only on Workers Free. No custom route or existing Worker replacement.

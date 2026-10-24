@@ -1,0 +1,27 @@
+name: NgelX free email delivery simulation
+on:
+  push:
+    branches: [fix/free-verification-email]
+    paths: ['.github/workflows/NgelX-FREE-EMAIL-SMOKE.yml']
+permissions:
+  contents: read
+jobs:
+  simulated-delivery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Verify approved HTML and CID with Resend official simulation recipient
+        env:
+          NGELX_EMAIL_API_KEY: ${{ secrets.NGELX_EMAIL_API_KEY }}
+        run: |
+          node --input-type=module <<'JS'
+          import {verificationEmail561} from './server/verification561/template.mjs';
+          const template=verificationEmail561({name:'Bağlantı testi',link:'https://ngelx-44eed.firebaseapp.com/__/auth/action?mode=verifyEmail&oobCode=SYNTHETIC_DELIVERY_SIMULATION_ONLY'});
+          const r=await fetch('https://api.resend.com/emails',{method:'POST',headers:{Authorization:'Bearer '+process.env.NGELX_EMAIL_API_KEY,'Content-Type':'application/json','Idempotency-Key':'ngelx-free-email-simulation-2026-10-24-v1'},body:JSON.stringify({from:'NgelX <noreply@ngelxsocial.com>',to:['delivered@resend.dev'],...template,subject:'NgelX bağlantı testi — gerçek doğrulama değildir'})});
+          const result=await r.json();if(!r.ok||!result.id)throw Error('Resend template simulation failed: '+r.status+' '+String(result.name??'provider-error'));
+          console.log('Approved template and inline image accepted by Resend test simulator. Message ID: '+result.id);
+          JS

@@ -1,0 +1,4 @@
+*.generated.mjs
+.secrets*.json
+node_modules/
+.wrangler/

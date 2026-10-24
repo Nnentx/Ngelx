@@ -1,0 +1,47 @@
+name: NgelX free email authenticated endpoint check
+on:
+  push:
+    branches: [fix/free-verification-email]
+    paths: ['.github/workflows/NgelX-FREE-EMAIL-E2E.yml']
+permissions:
+  contents: read
+jobs:
+  endpoint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Check actual Worker with disposable simulator account then remove fixture
+        env:
+          FIREBASE_SERVICE_ACCOUNT_NGELX_44EED: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_NGELX_44EED }}
+        run: |
+          node --input-type=module <<'JS'
+          import fs from 'node:fs';import {randomUUID,sign} from 'node:crypto';
+          import {accessToken} from './cloudflare/call-push/src/google.mjs';
+          const raw=process.env.FIREBASE_SERVICE_ACCOUNT_NGELX_44EED;let sa;try{sa=JSON.parse(raw);}catch{sa=JSON.parse(Buffer.from(raw,'base64').toString());}
+          const env={FIREBASE_PROJECT_ID:'ngelx-44eed',GOOGLE_SERVICE_ACCOUNT:JSON.stringify(sa)};
+          const project='https://identitytoolkit.googleapis.com/v1/projects/ngelx-44eed/';
+          const mask=value=>{if(value)console.log('::add-mask::'+value);};
+          async function admin(path,body){const r=await fetch(project+path,{method:'POST',headers:{Authorization:'Bearer '+await accessToken(env),'Content-Type':'application/json'},body:JSON.stringify(body)});const data=await r.json();if(!r.ok)throw Error('Admin '+path+' HTTP '+r.status+' '+String(data.error?.message??'').match(/^[A-Z_]+/)?.[0]);return data;}
+          const email='delivered@resend.dev',uid='email-e2e-'+randomUUID();let created=false;
+          const existing=await admin('accounts:lookup',{email:[email]});if(existing.users?.length)throw Error('Simulator address already belongs to an account; refused to modify it');
+          try{
+            const fixture=await admin('accounts',{localId:uid,email,displayName:'Bağlantı testi',emailVerified:false});if(fixture.localId!==uid)throw Error('Fixture mismatch');created=true;
+            const cfg=JSON.parse(fs.readFileSync('app/android/app/google-services.json','utf8'));
+            const publicKey=cfg.client.find(c=>c.client_info?.android_client_info?.package_name==='com.nnentx.ngelx_app').api_key[0].current_key;
+            const now=Math.floor(Date.now()/1000),b64=o=>Buffer.from(JSON.stringify(o)).toString('base64url');
+            const unsigned=b64({alg:'RS256',typ:'JWT'})+'.'+b64({iss:sa.client_email,sub:sa.client_email,aud:'https://identitytoolkit.googleapis.com/google.identity.identitytoolkit.v1.IdentityToolkit',iat:now,exp:now+300,uid});
+            const custom=unsigned+'.'+sign('RSA-SHA256',Buffer.from(unsigned),sa.private_key).toString('base64url');mask(custom);
+            const login=await fetch('https://identitytoolkit.googleapis.com/v1/accounts:signInWithCustomToken?key='+publicKey,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:custom,returnSecureToken:true})});const session=await login.json();mask(session.idToken);mask(session.refreshToken);if(!login.ok||!session.idToken||JSON.parse(Buffer.from(session.idToken.split('.')[1],'base64url')).sub!==uid)throw Error('Fixture login failed: '+login.status);
+            async function worker(body){return fetch('https://ngelx-verification-email.alihancaglar76.workers.dev/verify-email',{method:'POST',headers:{Authorization:'Bearer '+session.idToken,'Content-Type':'application/json'},body:JSON.stringify(body)});}
+            const bad=await worker({to:'other@example.invalid'});if(bad.status!==400)throw Error('Recipient override accepted: '+bad.status);
+            const sent=await worker({});const body=await sent.json();if(sent.status!==200||body.sent!==true)throw Error('Authenticated Worker delivery failed: '+sent.status+' '+String(body.error));
+            const limited=await worker({});if(limited.status!==429)throw Error('Resend cooldown failed: '+limited.status);
+            console.log('Actual deployed Worker generated a Firebase verification link and sent only to the official Resend simulation address. Recipient override and cooldown passed.');
+          }finally{
+            if(created){const check=await admin('accounts:lookup',{localId:[uid]});const owner=check.users?.find(u=>u.localId===uid);if(owner?.email!==email)throw Error('Cleanup guard failed; no account changed');await admin('accounts:delete',{localId:uid});const after=await admin('accounts:lookup',{localId:[uid]});if(after.users?.length)throw Error('Fixture cleanup failed');console.log('Disposable Auth fixture removed. No existing user account modified.');}
+          }
+          JS
