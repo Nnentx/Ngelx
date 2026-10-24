@@ -133,9 +133,35 @@ void main() {
                     onTap: () => opened = i,
                     child: Column(
                       children: [
-                        const CircleAvatar(radius: 32),
-                        Text('Person $i'),
-                        const Text('Şu an aktif'),
+                        Container(
+                          padding: const EdgeInsets.all(2),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(width: 1.8),
+                          ),
+                          child: const CircleAvatar(radius: 32),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Person $i',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const Text(
+                          '1 gün önce aktif',
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 10.5,
+                            height: 1.1,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ],
                     ),
                   ),
