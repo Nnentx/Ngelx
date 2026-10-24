@@ -37,6 +37,8 @@ String? ngelx559MentionQuery(String word) {
   return ngelx556Search(token);
 }
 
+String? ngelx559MentionEmptyLabel(String token, bool empty) =>
+    token.startsWith('@') && empty ? 'Eşleşen grup üyesi bulunamadı.' : null;
 Map<String, String> ngelx559ActiveMentions(
   String text,
   Map<String, String> handles,
@@ -350,94 +352,101 @@ class _Ngelx559VerificationPageState extends State<Ngelx559VerificationPage> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    backgroundColor: const Color(0xFFFAF8FF),
-    body: SafeArea(
-      child: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 440),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const Icon(Icons.mark_email_read_rounded, color: mor, size: 70),
-                const SizedBox(height: 18),
-                const Text(
-                  'NgelX',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 32,
-                    fontWeight: FontWeight.w900,
+  Widget build(BuildContext context) => Theme(
+    data: ThemeData.light(),
+    child: Scaffold(
+      backgroundColor: const Color(0xFFFAF8FF),
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 440),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Icon(
+                    Icons.mark_email_read_rounded,
                     color: mor,
+                    size: 70,
                   ),
-                ),
-                const SizedBox(height: 10),
-                const Text(
-                  'E-postanı doğrula',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 25, fontWeight: FontWeight.w800),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  widget.user.email ?? '',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 14),
-                const Text(
-                  'E-postandaki “E-postamı doğrula” düğmesine dokun. Ardından buraya dönüp doğrulamayı kontrol et.',
-                  textAlign: TextAlign.center,
-                ),
-                if (status != null)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    child: Semantics(
-                      liveRegion: true,
-                      child: Text(
-                        status!,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(fontWeight: FontWeight.w600),
-                      ),
+                  const SizedBox(height: 18),
+                  const Text(
+                    'NgelX',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.w900,
+                      color: mor,
                     ),
                   ),
-                const SizedBox(height: 22),
-                FilledButton.icon(
-                  onPressed: checking || sending ? null : check,
-                  icon: Icon(
-                    checking ? Icons.hourglass_top : Icons.verified_outlined,
+                  const SizedBox(height: 10),
+                  const Text(
+                    'E-postanı doğrula',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 25, fontWeight: FontWeight.w800),
                   ),
-                  label: Text(
-                    checking ? 'Kontrol ediliyor…' : 'Doğruladım, kontrol et',
+                  const SizedBox(height: 10),
+                  Text(
+                    widget.user.email ?? '',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontWeight: FontWeight.w700),
                   ),
-                ),
-                const SizedBox(height: 10),
-                OutlinedButton.icon(
-                  onPressed: sending || seconds > 0 ? null : send,
-                  icon: const Icon(Icons.forward_to_inbox_outlined),
-                  label: Text(
-                    sending
-                        ? 'Gönderiliyor…'
-                        : seconds > 0
-                        ? 'Yeniden gönder ($seconds sn)'
-                        : 'Bağlantıyı yeniden gönder',
+                  const SizedBox(height: 14),
+                  const Text(
+                    'E-postandaki “E-postamı doğrula” düğmesine dokun. Ardından buraya dönüp doğrulamayı kontrol et.',
+                    textAlign: TextAlign.center,
                   ),
-                ),
-                const SizedBox(height: 12),
-                const Text(
-                  'Bağlantı geçersizse veya süresi dolduysa yeni bir bağlantı iste. En son gelen e-postayı kullan.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.black54),
-                ),
-                TextButton(
-                  onPressed: sending || checking ? null : correctEmail,
-                  child: const Text('E-posta adresim yanlış'),
-                ),
-                TextButton(
-                  onPressed: sending || checking ? null : widget.onSignOut,
-                  child: const Text('Başka hesapla giriş yap'),
-                ),
-              ],
+                  if (status != null)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      child: Semantics(
+                        liveRegion: true,
+                        child: Text(
+                          status!,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                    ),
+                  const SizedBox(height: 22),
+                  FilledButton.icon(
+                    onPressed: checking || sending ? null : check,
+                    icon: Icon(
+                      checking ? Icons.hourglass_top : Icons.verified_outlined,
+                    ),
+                    label: Text(
+                      checking ? 'Kontrol ediliyor…' : 'Doğruladım, kontrol et',
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  OutlinedButton.icon(
+                    onPressed: sending || seconds > 0 ? null : send,
+                    icon: const Icon(Icons.forward_to_inbox_outlined),
+                    label: Text(
+                      sending
+                          ? 'Gönderiliyor…'
+                          : seconds > 0
+                          ? 'Yeniden gönder ($seconds sn)'
+                          : 'Bağlantıyı yeniden gönder',
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Bağlantı geçersizse veya süresi dolduysa yeni bir bağlantı iste. En son gelen e-postayı kullan.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.black54),
+                  ),
+                  TextButton(
+                    onPressed: sending || checking ? null : correctEmail,
+                    child: const Text('E-posta adresim yanlış'),
+                  ),
+                  TextButton(
+                    onPressed: sending || checking ? null : widget.onSignOut,
+                    child: const Text('Başka hesapla giriş yap'),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

@@ -8,6 +8,7 @@ import '../lib/main.dart'
     show
         ngelx559ThreeMonths,
         ngelx559MentionQuery,
+        ngelx559MentionEmptyLabel,
         ngelx559ActiveMentions,
         Ngelx559IdentityHint,
         Ngelx559VerificationPage,
@@ -36,6 +37,8 @@ void main() {
     expect(ngelx559MentionQuery('Rızgar'), 'rizgar');
     expect(ngelx559MentionQuery('@RIZGAR'), 'rizgar');
     expect(ngelx559MentionQuery('r'), isNull);
+    expect(ngelx559MentionEmptyLabel('merhaba', true), isNull);
+    expect(ngelx559MentionEmptyLabel('@unknown', true), isNotNull);
     expect(
       ngelx559ActiveMentions('Merhaba @yilmaz', {
         'yilmaz': 'UID-A',

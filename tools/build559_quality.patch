@@ -161,7 +161,7 @@
        if(mayMentionAll&&'herkes'.contains(ara)){'uid':'all','username':'herkes','name':'Herkes','kind':'command','subtitle':'Gruptaki herkesi etiketle'},
        ...?_mentionUyeleri?.where((u)=>ngelx556Search('${u['name']} ${u['username']}').contains(ara)),
      ]);});
-+    if(mounted)setState((){_mentionLoading559=true;_mentionError559=null;});
++    if(mounted)setState((){_mentionLoading559=parca.startsWith('@')&&_mentionUyeleri==null;_mentionError559=null;});
      final surum=++_mentionAramaSurumu;
      mentionZamanlayici=Timer(const Duration(milliseconds:120),()async{
        try{
@@ -171,8 +171,8 @@
          });
 -        if(mounted&&surum==_mentionAramaSurumu)setState((){mentionOnerileri..clear()..addAll(sonuc);});
 -      }catch(_){}
-+        if(mounted&&surum==_mentionAramaSurumu)setState((){_mentionLoading559=false;_mentionError559=sonuc.isEmpty?'Eşleşen grup üyesi bulunamadı.':null;mentionOnerileri..clear()..addAll(sonuc);});
-+      }catch(_){if(mounted&&surum==_mentionAramaSurumu)setState((){_mentionLoading559=false;_mentionError559='Üyeler yüklenemedi. @ yazarak tekrar dene.';});}
++        if(mounted&&surum==_mentionAramaSurumu)setState((){_mentionLoading559=false;_mentionError559=ngelx559MentionEmptyLabel(parca,sonuc.isEmpty);mentionOnerileri..clear()..addAll(sonuc);});
++      }catch(_){if(mounted&&surum==_mentionAramaSurumu)setState((){_mentionLoading559=false;_mentionError559=parca.startsWith('@')?'Üyeler yüklenemedi. @ yazarak tekrar dene.':null;});}
      });
    }
    Future<void> mentionEkle(String kullanici,String? hedefUid)async{
