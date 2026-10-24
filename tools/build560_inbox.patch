@@ -1,0 +1,178 @@
+--- a/app/lib/main.dart
++++ b/app/lib/main.dart
+@@ -89,6 +89,7 @@
+ part 'build543_community_admin.dart';
+ part 'build556_quality.dart';
+ part 'build558_chat_quality.dart';
++part 'build560_inbox.dart';
+ part 'build556_delete.dart';
+ part 'build543_group_call_join.dart';
+ part 'build446_call_lifecycle.dart';
+@@ -12693,36 +12694,10 @@
+       return Text.rich(TextSpan(children:spans),maxLines:2,overflow:TextOverflow.ellipsis);
+     }
+
+-    Widget sekme(String ad,int sayi){
+-      final secili=filtre==ad;
+-      return Padding(
+-        padding:const EdgeInsets.symmetric(horizontal:2),
+-        child:InkWell(
+-          borderRadius:BorderRadius.circular(20),
+-          onTap:()=>setState(()=>filtre=ad),
+-          child:AnimatedContainer(
+-            duration:const Duration(milliseconds:180),
+-            padding:const EdgeInsets.symmetric(horizontal:4,vertical:9),
+-            decoration:BoxDecoration(
+-              gradient:secili?const LinearGradient(colors:[Color(0xFF13C8EE),Color(0xFF176EF4),Color(0xFF6E45F5)]):null,
+-              color:secili?null:const Color(0xFFF5F7FB),
+-              borderRadius:BorderRadius.circular(20),
+-              boxShadow:secili?const [BoxShadow(color:Color(0x263B82F6),blurRadius:14,offset:Offset(0,5))]:null,
+-            ),
+-            child:Stack(clipBehavior:Clip.none,children:[
+-              FittedBox(fit:BoxFit.scaleDown,child:Text(_ngelx438Ui(ad),maxLines:1,
+-                style:TextStyle(color:secili?Colors.white:const Color(0xFF6F7891),
+-                fontSize:12.5,fontWeight:secili?FontWeight.w900:FontWeight.w700))),
+-              if(sayi>0)Positioned(right:-3,top:-8,child:Container(
+-                padding:const EdgeInsets.symmetric(horizontal:4,vertical:1),
+-                decoration:BoxDecoration(color:const Color(0xFFE62D48),borderRadius:BorderRadius.circular(20)),
+-                child:Text(_sayacEtiketi(sayi),style:const TextStyle(
+-                  color:Colors.white,fontSize:9,fontWeight:FontWeight.w900)))),
+-            ]),
+-          ),
+-        ),
+-      );
+-    }
++    Widget sekme(String ad,int sayi)=>Ngelx560CategoryChip(
++      label:_ngelx438Ui(ad),countLabel:_sayacEtiketi(sayi),showCount:sayi>0,
++      selected:filtre==ad,onTap:()=>setState(()=>filtre=ad),
++    );
+
+     Widget bildirimGonderenIle(Map<String,dynamic> ham,
+       Widget Function(Map<String,dynamic>) goster){
+@@ -12789,10 +12764,7 @@
+     }
+
+     Widget ngelxSekmeliSayaclar(){
+-      if(ben==null)return Row(children:[
+-        Expanded(child:sekme('Tümü',0)),Expanded(child:sekme('Mesajlar',0)),
+-        Expanded(child:sekme('Gruplar',0)),Expanded(child:sekme('Bildirimler',0)),
+-        Expanded(child:sekme('İstekler',0))]);
++      if(ben==null)return Ngelx560CategoryRow(children:[sekme('Tümü',0),sekme('Mesajlar',0),sekme('Gruplar',0),sekme('Bildirimler',0),sekme('İstekler',0)]);
+       return StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
+         stream:_bildirimAkisi(ben,200),
+         builder:(_,ns)=>StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
+@@ -12827,12 +12799,10 @@
+               return !((v['type']=='follow_request'||v['type']=='friend_request')&&v['status']=='pending');
+             }));
+             istekler+=mesajIstekleri;
+-            return Row(children:[
+-              Expanded(child:sekme('Tümü',ngelx445AllUnread(mesajlar,gruplar))),
+-              Expanded(child:sekme('Mesajlar',mesajlar)),
+-              Expanded(child:sekme('Gruplar',gruplar)),
+-              Expanded(child:sekme('Bildirimler',bildirimler)),
+-              Expanded(child:sekme('İstekler',istekler)),
++            return Ngelx560CategoryRow(children:[
++              sekme('Tümü',ngelx445AllUnread(mesajlar,gruplar)),
++              sekme('Mesajlar',mesajlar),sekme('Gruplar',gruplar),
++              sekme('Bildirimler',bildirimler),sekme('İstekler',istekler),
+             ]);
+           }));
+     }
+@@ -13164,39 +13134,20 @@
+         color:Colors.white,
+         child:SafeArea(
+           child:Column(children:[
+-            Padding(
+-              padding:const EdgeInsets.fromLTRB(20,18,12,10),
+-              child:Row(children:[
+-                Expanded(child:Text(t('inbox'),style:const TextStyle(color:Color(0xFF07142E),fontSize:26,fontWeight:FontWeight.w800,letterSpacing:-.6))),
+-                IconButton(
+-                  tooltip:t('searchChats'),
+-                  onPressed:()=>_search445.requestFocus(),
+-                  icon:const Icon(Icons.search_rounded,color:mor,size:27),
+-                ),
+-                IconButton(
+-                  tooltip:t('newChat'),
+-                  onPressed:_yeniOlusturMenusu,
+-                  icon:const Icon(Icons.add_circle_rounded,color:mor,size:32),
+-                ),
+-              ]),
++            Ngelx560InboxHeader(
++              title:t('inbox'),searchHint:filtre=='İstekler'?lt('İsteklerde ara','Search requests'):filtre=='Bildirimler'?lt('Bildirimlerde ara','Search notifications'):t('searchChats'),
++              searchOpen:_aramaAcik,controller:sohbetAra,focusNode:_search445,
++              onChanged:(v)=>setState(()=>sohbetSorgu=v.trim().toLowerCase()),
++              onToggleSearch:(){
++                final open=!_aramaAcik;
++                setState((){_aramaAcik=open;if(!open){sohbetAra.clear();sohbetSorgu='';}});
++                if(open){WidgetsBinding.instance.addPostFrameCallback((_){if(mounted&&_aramaAcik)_search445.requestFocus();});}
++                else{_search445.unfocus();}
++              },
++              onNew:_yeniOlusturMenusu,
+             ),
+-            Padding(padding:const EdgeInsets.fromLTRB(16,0,16,14),child:TextField(
+-              key:const ValueKey('inbox-search445'),focusNode:_search445,controller:sohbetAra,
+-              onChanged:(v)=>setState(()=>sohbetSorgu=v.trim().toLowerCase()),
+-              style:const TextStyle(color:Color(0xFF111827),fontSize:14),
+-              decoration:InputDecoration(
+-                hintText:filtre=='İstekler'?lt('İsteklerde ara','Search requests'):filtre=='Bildirimler'?lt('Bildirimlerde ara','Search notifications'):t('searchChats'),
+-                prefixIcon:const Icon(Icons.search_rounded,color:Color(0xFF8C879D)),
+-                contentPadding:const EdgeInsets.symmetric(horizontal:16,vertical:12),
+-                filled:true,fillColor:const Color(0xFFF3F0F9),
+-                border:OutlineInputBorder(borderRadius:BorderRadius.circular(20),borderSide:BorderSide.none),
+-              ),
+-            )),
+-            Padding(
+-              padding:const EdgeInsets.fromLTRB(12,0,12,10),
+-              child:ngelxSekmeliSayaclar(),
+-            ),
+-            if(ben!=null)Ngelx445FriendsStrip(key:ValueKey('inbox-friends445-'+ben),uid:ben),
++            Padding(padding:const EdgeInsets.fromLTRB(12,0,12,6),child:ngelxSekmeliSayaclar()),
++            if(ben!=null)Offstage(offstage:!ngelx560ShowProfiles(MediaQuery.of(context)),child:Ngelx445FriendsStrip(key:ValueKey('inbox-friends445-'+ben),uid:ben)),
+             // Build542: the group row already provides KATIL.
+             if(filtre=='Gruplar')
+               Padding(
+--- a/app/lib/build445_inbox_model.dart
++++ b/app/lib/build445_inbox_model.dart
+@@ -90,9 +90,7 @@
+       return StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(stream:_stories,builder:(_,stories){
+         final owners=(stories.data?.docs??[]).where((d)=>ngelxHikayeAktif(d.data())&&d.data()['archived']!=true)
+           .map((d)=>(d.data()['ownerId']??'').toString()).toSet();
+-        return SizedBox(height:184,child:ListView.builder(
+-          key:PageStorageKey('inbox-friends-'+widget.uid),scrollDirection:Axis.horizontal,
+-          padding:const EdgeInsets.symmetric(horizontal:12),itemExtent:104,itemCount:ids.length,
++        return Ngelx560ProfileRail(uid:widget.uid,itemCount:ids.length,
+           itemBuilder:(_,index){
+             final id=ids[index];
+             final stream=_profiles.putIfAbsent(id,()=>FirebaseFirestore.instance.collection('users').doc(id).snapshots());
+@@ -107,27 +105,20 @@
+               return Semantics(button:true,label:name,child:InkWell(
+                 borderRadius:BorderRadius.circular(18),onTap:_opening==null?()=>_open(id,p):null,
+                 child:Column(children:[
+-                  SizedBox(height:54,child:note.isEmpty?null:InkWell(
+-                    onTap:()=>_showNote(id,p,note),borderRadius:BorderRadius.circular(12),
+-                    child:Container(alignment:Alignment.center,padding:const EdgeInsets.symmetric(horizontal:6,vertical:4),
+-                      decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(12),border:Border.all(color:const Color(0xFFE9E6EE))),
+-                      child:Text(note,maxLines:3,overflow:TextOverflow.ellipsis,textAlign:TextAlign.center,style:const TextStyle(color:Colors.black87,fontSize:10)),
+-                    ))),
+-                  const SizedBox(height:6),
+                   Stack(clipBehavior:Clip.none,children:[
+                     Container(padding:const EdgeInsets.all(2),decoration:BoxDecoration(shape:BoxShape.circle,border:Border.all(color:story?mor:Colors.transparent,width:1.8)),
+                       child:CircleAvatar(radius:32,backgroundColor:const Color(0xFFF1EDF9),backgroundImage:photo.isEmpty?null:NgelXAgImageProvider(photo),child:photo.isEmpty?const Icon(Icons.person_outline,color:mor):null)),
+-                    if(self)Positioned(right:-7,bottom:-7,child:GestureDetector(behavior:HitTestBehavior.opaque,onTap:()=>_editNote(p),child:Padding(padding:const EdgeInsets.all(7),child:Container(width:22,height:22,decoration:BoxDecoration(color:mor,shape:BoxShape.circle,border:Border.all(color:Colors.white,width:2)),child:const Icon(Icons.add,color:Colors.white,size:13))))),
++                    if(self)Positioned(right:-7,bottom:-7,child:GestureDetector(behavior:HitTestBehavior.opaque,onTap:()=>_editNote(p),onLongPress:note.isEmpty?null:()=>_showNote(id,p,note),child:Padding(padding:const EdgeInsets.all(7),child:Container(width:22,height:22,decoration:BoxDecoration(color:mor,shape:BoxShape.circle,border:Border.all(color:Colors.white,width:2)),child:const Icon(Icons.add,color:Colors.white,size:13))))),
+                     if(!self&&ngelx434Aktiflik(p)=='Çevrimiçi')Positioned(right:0,bottom:0,child:Ngelx436PresenceAccess(other:id,target:p,child:Container(width:17,height:17,decoration:BoxDecoration(color:const Color(0xFF28B76B),shape:BoxShape.circle,border:Border.all(color:Colors.white,width:2))))),
+                   ]),
+                   const SizedBox(height:4),
+-                  Text(name,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Color(0xFF101827),fontSize:15,fontWeight:FontWeight.w700)),
+-                  if(!self)SizedBox(width:92,child:Ngelx436PresenceAccess(other:id,target:p,child:Text(ngelx434Aktiflik(p),maxLines:2,overflow:TextOverflow.ellipsis,textAlign:TextAlign.center,style:const TextStyle(color:Color(0xFF52735F),fontSize:12,height:1.1,fontWeight:FontWeight.w600)))),
++                  Text(name,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Color(0xFF101827),fontSize:13.5,fontWeight:FontWeight.w700)),
++                  if(!self)SizedBox(width:92,child:Ngelx436PresenceAccess(other:id,target:p,child:Text(ngelx434Aktiflik(p),maxLines:2,overflow:TextOverflow.ellipsis,textAlign:TextAlign.center,style:const TextStyle(color:Color(0xFF52735F),fontSize:10.5,height:1.1,fontWeight:FontWeight.w600)))),
+                 ]),
+               ));
+             });
+           },
+-        ));
++        );
+       });
+       });
+     });

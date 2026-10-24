@@ -1,0 +1,15 @@
+# Build560 — inbox presentation only
+
+This is an isolated change on `9be616728072d82f300430ea30e13fa9f03650ed`, the verified Build558 application with the four supplied badge UIDs. It does **not** include the separate Build559 account, email-service, identity-rule or media follow-up. Historical source generation and the installed Android package/update signer remain unchanged.
+
+Production source differences:
+
+- `app/lib/main.dart`: only the `MesajPage` inbox presentation and a new part declaration. The existing search controller/query callback now sits in a compact header opened by its existing search icon; closing clears the query and restores the normal header. The new-chat callback stays `_yeniOlusturMenusu`. All live list/filter queries, unread counter calculations, item taps/long-press operations, realtime subscriptions and other pages remain byte-identical.
+- `app/lib/build445_inbox_model.dart`: only the friends strip rendering. Removes visible note balloons and their reserved 54+6-pixel gap; the note read/edit/delete methods, data fields, profile/chat taps, own + button, story/presence permissions and existing subscriptions remain. Own + retains tap-to-edit and adds long-press access to the existing note read/delete sheet. Call/banner helpers in this same file are byte-identical.
+- `app/lib/build560_inbox.dart`: presentation-only header, category-chip/scroll layout and compact profile rail. At standard portrait sizes the header keeps the title fully visible beside a short search field; the search never overlays it. Tabs preserve the original gradient/count styling and scroll horizontally when needed. Profile images/names/presence remain live, with 90-pixel cells and a 124-pixel normal rail. On very short landscape/keyboard viewports the rail is temporarily offstage, retaining its state and streams so search results remain usable without overflow.
+
+Supporting files: guarded source patch/manifest/applicator, exact-scope Python test, ten Flutter widget/layout cases, and `.github/workflows/NgelX-BUILD560-INBOX.yml`. Raw historical `app/lib/main.dart` is not overwritten in Git; the patch runs after the full Build558 generator chain. The new workflow signs version 1.0.330 / code560 as a review-only candidate. No deploy/publish step is present.
+
+Scope checks reconstruct before/after source and assert exact equality outside the inbox, inside all notification/chat data/list implementations, and for all note read/write methods and unrelated call helpers. `firestore.rules` and app configuration fixtures stay unchanged. Cold/repeat application and drift rejection passed locally. Dart parsing passed; full Flutter analysis and widget tests run in CI because the local pub cache is unavailable.
+
+Widget coverage: 280/320/360/393/430/600-pixel header widths; search open/input/close and retained + callback; title/search paint separation; doubled text scale; all five horizontally reachable filters and count labels; compact profile rail scrolling/taps; keyboard/landscape height adaptation. Test-only fixture people are never used as application data. Real signed-in two-phone acceptance is still pending.
