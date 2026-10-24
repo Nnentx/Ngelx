@@ -3,9 +3,6 @@
 name: NgelX Build558 chat, media and call banner candidate
 # Feature-branch candidate only; no deployment or production mutation.
 on:
-  push:
-    branches: [fix/build558-chat-profile-polish]
-    paths: ['tools/**', '.github/workflows/NgelX-BUILD558-CHAT.yml']
   workflow_dispatch:
 permissions:
   contents: read

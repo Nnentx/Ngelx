@@ -57,3 +57,14 @@ Ahsen Can supplied account: `https://ngelxsocial.com/?profile=ppIxuCf4QjMEALdoCt
 - In-app verification screen: clearly distinguish pending/verified/error states, provide resend with cooldown, wrong-address correction and an understandable expired-link flow. These are proposed refinements, not completed changes.
 - User requirement: username and full name must not change again before three months have elapsed. Enforce each field's last-change timestamp on the server, not only the client; show the next eligible date before save. Define calendar-month boundaries consistently. Normal editing must not reset the clock without changing the field. Initial profile completion remains distinct from later changes.
 - Suggestions for review: display the pending new name and next eligible date before confirmation; provide a controlled support path for genuine spelling mistakes/account recovery. No automatic exceptions or server policy changes have been deployed.
+
+## Additional photo feedback — pending implementation
+
+- 50542.jpg: after sending a photo or album finishes and its final height settles, the new message can remain partially outside the viewport until the sender scrolls. Keep the sender's just-sent media fully visible after final layout when the user is following the latest messages. Do not pull users away from older messages they are reading, or reintroduce reaction/delete jumps.
+- 50543.jpg: opened album grid's final row overlaps Android system navigation. Apply the bottom system safe inset and enough scroll padding so the last photo is fully visible and tappable. Check full-screen photo viewer controls too. These reports are recorded, not yet fixed.
+
+## Mention feedback — pending implementation
+
+- 50544.jpg: typing Rizgar in the group composer does not offer a mention. User requests @ to open user suggestions and @herkes/everyone support. In group context, list current group members; filter by both display name and username, including Turkish case/diacritic variants (Rizgar/Rızgar). Clarify broader cross-app discovery if later requested rather than exposing unrelated private accounts.
+- Suggestions for review: show avatar, display name and unique username; selection inserts a UID-bound mention; distinguish duplicate names, style mention text and open the correct profile on tap. Show empty/loading states and keep suggestions above the keyboard/system inset. Mention notifications should follow membership and existing notification rules.
+- Proposed @herkes guard: group admins only with a short cooldown to avoid notification spam. This restriction is a suggestion, not a user-approved policy or an implemented feature.

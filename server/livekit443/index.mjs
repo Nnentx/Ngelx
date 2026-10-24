@@ -82,3 +82,6 @@ export const livekitGuestModeration = onRequest({
 
 // Build543 prepared endpoint only; production deployment remains a separate action.
 export {communityDelete543} from '../community543/index.mjs';
+
+// Build559 prepared account services; deployment requires reviewed rules and email credentials.
+export {profileIdentity559,verificationEmail559} from '../account559/index.mjs';
