@@ -1,0 +1,176 @@
+--- a/app/lib/main.dart
++++ b/app/lib/main.dart
+@@ -90,6 +90,7 @@
+ part 'build556_quality.dart';
+ part 'build558_chat_quality.dart';
+ part 'build560_inbox.dart';
++part 'build561_quality.dart';
+ part 'build556_delete.dart';
+ part 'build543_group_call_join.dart';
+ part 'build446_call_lifecycle.dart';
+@@ -4552,7 +4553,7 @@
+     try{
+       // Build438 account email language
+       await FirebaseAuth.instance.setLanguageCode(uygulamaDili.value=='ku'?'en':uygulamaDili.value=='zh'?'zh-CN':uygulamaDili.value=='pt'?'pt-BR':uygulamaDili.value).timeout(const Duration(seconds:6));
+-      await widget.user.sendEmailVerification().timeout(const Duration(seconds:12));
++      await ngelx561SendVerification(widget.user);
+       if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Doğrulama bağlantısı yeniden gönderildi. E-posta kutunu kontrol et.')));
+     }on TimeoutException{
+       if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Doğrulama bağlantısı gönderme zaman aşımına uğradı.')));
+@@ -4867,6 +4868,7 @@
+   }
+
+   @override Widget build(BuildContext context)=>Scaffold(
++    resizeToAvoidBottomInset:false,
+     backgroundColor:const Color(0xFF09090F),
+     appBar:AppBar(
+       title:const Text('NgelX paylaşımı'),
+@@ -4875,7 +4877,7 @@
+         child:Text('${_aktif+1}/${_icerikler.length}',style:const TextStyle(color:Colors.white70,fontWeight:FontWeight.w700)),
+       ))],
+     ),
+-    body:SafeArea(
++    body:Ngelx561KeyboardStableMedia(child:SafeArea(
+       top:false,
+       bottom:true,
+       child:_yukleniyor
+@@ -4897,7 +4899,7 @@
+               itemBuilder:(_,index)=>_icerikOlustur(index),
+             ),
+           ),
+-    ),
++    )),
+   );
+ }
+
+@@ -5590,7 +5592,7 @@
+         'createdAt': FieldValue.serverTimestamp(),
+       });
+       await FirebaseAuth.instance.setLanguageCode(uygulamaDili.value=='ku'?'en':uygulamaDili.value=='zh'?'zh-CN':uygulamaDili.value=='pt'?'pt-BR':uygulamaDili.value).timeout(const Duration(seconds:6));
+-      await yeni.sendEmailVerification().timeout(const Duration(seconds:12));
++      await ngelx561SendVerification(yeni);
+       await ngelx439SignOut();
+       if (!mounted) return;
+       Navigator.pushAndRemoveUntil(
+@@ -9146,6 +9148,7 @@
+   String? yanitlananKullanici;
+   final Set<String> acikYanitlar = {};
+   bool enCokBegenilen = false;
++  late final Stream<QuerySnapshot<Map<String,dynamic>>> _yorumAkisi561;
+   Map<String,dynamic> icerikMeta=<String,dynamic>{};
+   List<QueryDocumentSnapshot<Map<String,dynamic>>> yorumOnbellek=<QueryDocumentSnapshot<Map<String,dynamic>>>[];
+
+@@ -9153,15 +9156,16 @@
+
+   @override void initState(){
+     super.initState();
++    _yorumAkisi561=ref.limit(80).snapshots();
+     final uid=FirebaseAuth.instance.currentUser?.uid;
+-    if(uid!=null)FirebaseFirestore.instance.collection('users').doc(uid).get().then((d){
++    if(uid!=null)unawaited(FirebaseFirestore.instance.collection('users').doc(uid).get().then((d){
+       final v=d.data()??<String,dynamic>{};
+       if(mounted)setState((){
+         gizliKelimeFiltresi=v['hiddenWordsFilter']!=false;
+         final hamGizli=v['hiddenWords'];
+       gizliKelimeListesi=hamGizli is Iterable?hamGizli.map((e)=>e.toString().trim().toLowerCase()).where((e)=>e.isNotEmpty).toSet().toList():<String>[];
+       });
+-    });
++    }).catchError((_){ }));
+     unawaited(FirebaseFirestore.instance.collection('videos').doc(widget.videoId).get().then((d)async{
+       final meta=d.data()??<String,dynamic>{};
+       if(mounted)setState(()=>icerikMeta=meta);else icerikMeta=meta;
+@@ -9195,10 +9199,17 @@
+   }
+
+   Future<void> gonder() async {
++    if(gonderiliyor||yorum.text.trim().isEmpty)return;
++    setState(()=>gonderiliyor=true);
++    try{await _dogrulayipGonder561();}
++    finally{if(mounted)setState(()=>gonderiliyor=false);}
++  }
++
++  Future<void> _dogrulayipGonder561() async {
+     if (await misafirEngeli(context)) return;
+     final metin=yorum.text.trim();
+     final user=FirebaseAuth.instance.currentUser;
+-    if(metin.isEmpty||user==null||gonderiliyor)return;
++    if(metin.isEmpty||user==null||!mounted)return;
+
+     String icerikSahibi='';
+     try{
+@@ -9244,7 +9255,7 @@
+       return;
+     }
+
+-    setState(()=>gonderiliyor=true);
++    if(!mounted)return;
+     final yanitId=yanitlananId,yanitKullanici=yanitlananKullanici;
+     try{
+       final yorumRef=ref.doc(),videoRef=FirebaseFirestore.instance.collection('videos').doc(widget.videoId);
+@@ -9273,8 +9284,6 @@
+       if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Yorum gönderimi zaman aşımına uğradı. İnterneti kontrol edip tekrar dene.')));
+     }catch(e){
+       if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Yorum gönderilemedi, tekrar dene: $e')));
+-    }finally{
+-      if(mounted)setState(()=>gonderiliyor=false);
+     }
+   }
+
+@@ -9348,7 +9357,7 @@
+       child: SizedBox(
+         height: MediaQuery.sizeOf(context).height * .72,
+         child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+-          stream: ref.limit(80).snapshots(),
++          stream: _yorumAkisi561,
+           builder: (_, snap) {
+             final List<QueryDocumentSnapshot<Map<String, dynamic>>> tumu =
+                 snap.data?.docs.toList() ??
+@@ -12670,6 +12679,7 @@
+     }
+
+     Widget ngelxRenkliBildirim(Map<String,dynamic> v,String metin,bool okundu){
++      if(ngelx561IsCommunity(v))return Ngelx561ResolvedCommunityNotice(data:v,read:okundu);
+       final ad=(v['senderName']??v['fromName']??'').toString().trim();
+       var kalan=metin;
+       final spans=<TextSpan>[];
+@@ -25188,10 +25198,10 @@
+
+   final Map<String,Future<DocumentSnapshot<Map<String,dynamic>>>> _communityNames558={};
+   Widget _bildirimBasligiDurumlu(Map<String,dynamic> v,bool okundu){
+-    if(v['targetKind']=='community'||(v['eventKind']??'').toString().startsWith('community_')){
+-      final title=(v['targetTitle']??v['communityName']??'').toString().trim();
+-      if(title.isNotEmpty&&title!='Topluluk')return _bildirimBasligi(v,okundu);
+-      final id=(v['communityId']??v['sourceId']??v['belgeId']??'').toString();
++    if(ngelx561IsCommunity(v)){
++      final title=ngelx561CommunityName(v);
++      if(title.isNotEmpty)return _bildirimBasligi(v,okundu);
++      final id=ngelx561First(v,['communityId','sourceId','belgeId','targetId']);
+       if(id.isEmpty)return _bildirimBasligi(v,okundu);
+       final future=_communityNames558.putIfAbsent(id,()=>_communities450.doc(id).get().timeout(const Duration(seconds:6)));
+       return FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(future:future,builder:(_,snap){
+@@ -25244,22 +25254,15 @@
+     final tam=ngelxBildirimMetni(v);
+     final ad=(v['senderName']??v['fromName']??'').toString().trim();
+     final grup=(v['targetTitle']??v['groupName']??v['communityName']??RegExp(r'seni (.+?) grubuna ekledi',caseSensitive:false).firstMatch(tam)?.group(1)??'').toString().trim();
+-    final olay=(v['eventKind']??'').toString();
++    final olay=ngelx561First(v,['eventKind','type']);
+     final onizleme=(v['preview']??'').toString().trim();
+     final grupEylem=(v['eventAction']??'mesaj gönderdi').toString().trim();
+     final normal=TextStyle(color:okundu?Colors.black54:const Color(0xFF18131F),fontWeight:okundu?FontWeight.w400:FontWeight.w700);
+     final kalin=TextStyle(color:okundu?const Color(0xFF8B789F):const Color(0xFF60309A),fontWeight:okundu?FontWeight.w500:FontWeight.w900);
+     final grupStil=TextStyle(color:okundu?const Color(0xFF638775):const Color(0xFF08763C),fontWeight:okundu?FontWeight.w500:FontWeight.w900);
+
+-    if((v['targetKind']=='community'||olay.startsWith('community_'))&&grup.isNotEmpty){
+-      final title=grup.replaceAll('i','İ').replaceAll('ı','I').toUpperCase();
+-      final action=olay=='community_post'?' topluluğunda yeni bir gönderi paylaştı.':
+-        olay=='community_post_approved'?' topluluğunda bir gönderiyi onayladı.':
+-        olay=='community_post_pending'?' topluluğuna onay için bir gönderi gönderdi.':
+-        olay=='community_join_request'?' topluluğuna katılmak istiyor.':' topluluğunda yeni bir etkinlik var.';
+-      return Text.rich(TextSpan(children:[TextSpan(text:'$ad ',style:kalin),
+-        TextSpan(text:title,style:TextStyle(color:okundu?const Color(0xFF59769C):const Color(0xFF1768C4),fontWeight:FontWeight.w900)),
+-        TextSpan(text:action,style:normal)]));
++    if(ngelx561IsCommunity(v)){
++      return Ngelx561CommunityNotice(data:v,read:okundu);
+     }
+     if((olay=='group_added'||RegExp(r'seni .+? grubuna ekledi',caseSensitive:false).hasMatch(tam))&&ad.isNotEmpty&&grup.isNotEmpty){
+       return Text.rich(TextSpan(children:[
