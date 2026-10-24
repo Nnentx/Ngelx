@@ -1,0 +1,100 @@
+--- a/app/lib/main.dart
++++ b/app/lib/main.dart
+@@ -91,6 +91,7 @@
+ part 'build558_chat_quality.dart';
+ part 'build560_inbox.dart';
+ part 'build561_quality.dart';
++part 'build563_quality.dart';
+ part 'build556_delete.dart';
+ part 'build543_group_call_join.dart';
+ part 'build446_call_lifecycle.dart';
+@@ -4830,7 +4831,9 @@
+     }
+   }
+ 
+-  Widget _icerikOlustur(int index){
++  final Map<int,Widget> _medya563={};
++  Widget _icerikOlustur(int index)=>_medya563.putIfAbsent(index,()=>_icerikKur563(index));
++  Widget _icerikKur563(int index){
+     final belge=_icerikler[index],v=<String,dynamic>{'id':belge.id,...?belge.data()};
+     final tur=(v['type']??'video').toString();
+     if(tur!='video')return GorselYaziKarti(veri:_gorselKart(v,belge.id),aktif:index==_aktif);
+@@ -4895,7 +4898,7 @@
+               controller:_sayfa,
+               scrollDirection:Axis.vertical,
+               itemCount:_icerikler.length,
+-              onPageChanged:(index)=>setState(()=>_aktif=index),
++              onPageChanged:(index)=>setState((){_medya563.clear();_aktif=index;}),
+               itemBuilder:(_,index)=>_icerikOlustur(index),
+             ),
+           ),
+@@ -7424,7 +7427,7 @@
+       useSafeArea:true,
+       backgroundColor: Colors.white,
+       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(25))),
+-      builder: (_) => Yorumlar(videoId: icerikId),
++      builder: (_) => Ngelx563CommentViewport(child:Yorumlar(videoId: icerikId)),
+     );
+   }
+ 
+@@ -8675,7 +8678,7 @@
+           top: Radius.circular(25),
+         ),
+       ),
+-      builder: (_) => Yorumlar(videoId: videoId),
++      builder: (_) => Ngelx563CommentViewport(child:Yorumlar(videoId: videoId)),
+     );
+     if(mounted&&hazir&&widget.aktif&&oynuyordu&&!duraklatildi){
+       unawaited(ngelx444MediaPlay(kontrol));
+@@ -9355,7 +9358,7 @@
+       ),
+       child: SafeArea(
+       child: SizedBox(
+-        height: MediaQuery.sizeOf(context).height * .72,
++        height: double.infinity,
+         child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+           stream: _yorumAkisi561,
+           builder: (_, snap) {
+@@ -9449,13 +9452,9 @@
+     required this.onGonder,
+   });
+   @override Widget build(BuildContext context){
+-    // Klavye animasyonu yalnızca bu küçük alanı yeniden kurar; 80 yorumluk
+-    // Firestore listesi her tuşta/klavye karesinde tekrar çizilmez.
+-    final klavye=MediaQuery.viewInsetsOf(context).bottom;
+-    return AnimatedPadding(
+-      duration:const Duration(milliseconds:120),
+-      curve:Curves.easeOut,
+-      padding:EdgeInsets.fromLTRB(12,8,12,klavye+10),
++    // The modal viewport already handles the keyboard exactly once.
++    return Padding(
++      padding:const EdgeInsets.fromLTRB(12,8,12,10),
+       child:RepaintBoundary(child:Row(children:[
+         IconButton(
+           onPressed:(){
+@@ -12860,13 +12859,7 @@
+                 subtitle:Text(ngelxBildirimTarihi(v)==null?'Tarih bilgisi yok':zamanKisa(ngelxBildirimTarihi(v)),style:const TextStyle(color:Color(0xFF606875),fontSize:12.5)),
+                 onTap:()async{
+                   unawaited(d.reference.update({'read':true,'readAt':FieldValue.serverTimestamp()}).timeout(const Duration(seconds:5)).catchError((_){ }));
+-                  final event=(v['eventKind']??'').toString();
+-                  if(tur=='call'||event=='group_audio_call'||event=='group_video_call'){if(context.mounted)await ngelx445OpenCallChat(context,v);return;}
+-                  final from=(v['fromUid']??'').toString();
+-                  if(context.mounted&&from.isNotEmpty){
+-                    await Navigator.push(context,MaterialPageRoute(
+-                      builder:(_)=>KullaniciProfilPage(uid:from)));
+-                  }
++                  if(context.mounted)await ngelx563OpenNotice(context,v);
+                 },
+               ));
+               });
+@@ -25336,8 +25329,9 @@
+ 
+   Future<void> _aktiviteAc(BuildContext context, QueryDocumentSnapshot<Map<String,dynamic>> d)async{
+     final v=d.data();
+-    try{await d.reference.set({'read':true,'readAt':FieldValue.serverTimestamp()},SetOptions(merge:true)).timeout(const Duration(seconds:6));}catch(_){}
++    unawaited(d.reference.set({'read':true,'readAt':FieldValue.serverTimestamp()},SetOptions(merge:true)).timeout(const Duration(seconds:6)).catchError((_){ }));
+     if(!context.mounted)return;
++    if(await ngelx563OpenContentNotice(context,v))return;
+ 
+     final from=(v['fromUid']??v['senderId']??v['senderUid']??v['userId']??'').toString();
+     final tur=(v['type']??'').toString();
