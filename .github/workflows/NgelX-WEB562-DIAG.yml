@@ -1,0 +1,30 @@
+name: Inspect existing website download feed
+on:
+  push:
+    branches: [fix/free-verification-email]
+    paths: ['.github/workflows/NgelX-WEB562-DIAG.yml']
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Read current public download logic and hosting mapping
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          node --input-type=module <<'JS'
+          const headers={Authorization:'Bearer '+process.env.CLOUDFLARE_API_TOKEN};
+          for(const endpoint of ['pages/projects','workers/domains']){
+            const r=await fetch('https://api.cloudflare.com/client/v4/accounts/'+process.env.CLOUDFLARE_ACCOUNT_ID+'/'+endpoint,{headers});
+            if(!r.ok){console.log('Hosting read '+endpoint+' HTTP '+r.status);continue;}
+            const j=await r.json();
+            console.log('HOSTING '+endpoint+' '+JSON.stringify(j.result.map(x=>({name:x.name,subdomain:x.subdomain,domains:x.domains,hostname:x.hostname,service:x.service,source:x.source?{type:x.source.type,owner:x.source.config?.owner,repo_name:x.source.config?.repo_name,production_branch:x.source.config?.production_branch}:undefined}))));
+          }
+          const r=await fetch('https://ngelxsocial.com/site.js?v=20261021-web-audit');console.log('Public script HTTP '+r.status);if(r.ok)console.log('PUBLIC_SITE_SCRIPT '+(await r.text()).slice(-16000));
+          JS
