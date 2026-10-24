@@ -9,7 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../lib/main.dart' show Ngelx564Release,Ngelx564UpdateController,Ngelx564UpdateDialog,ngelx564UpdateFeed;
 
 Map<String,dynamic> manifest({int build=565})=>{'schema':1,'package':'com.nnentx.ngelx_app','abi':'arm64-v8a','build':build,'version':'1.0.335','size':4,'sha256':'a'*64,'url':'https://github.com/Nnentx/Ngelx/releases/download/test/NgelX.apk','notes':'Bildirim ve yorum iyileştirmeleri'};
-class Adapter extends HttpClientAdapter {
+class Adapter implements HttpClientAdapter {
  Map<String,dynamic> feed=manifest();bool fail=false;int apkRequests=0;
  @override Future<ResponseBody> fetch(RequestOptions options,Stream<Uint8List>? stream,Future<void>? cancel)async{
   if(options.path==ngelx564UpdateFeed)return ResponseBody.fromString(jsonEncode(feed),200,headers:{Headers.contentTypeHeader:['application/json']});
