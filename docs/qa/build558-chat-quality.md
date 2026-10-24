@@ -39,3 +39,21 @@ Signed candidate build passed: https://github.com/Nnentx/Ngelx/actions/runs/4004
 No physical-device acceptance claim, production deployment or publication. The four real account UIDs remain unprovisioned.
 
 Remaining device acceptance: reaction and deletion while viewing a tall photo, navigating away/back during a long call, mixed albums, revoked media, interrupted upload/download, group cache/retry recovery, note hit targets, and actual account ID provisioning. General intermittent startup slowness still requires device profiling; these changes remove identified unnecessary menu reads/scroll work without claiming every performance issue is resolved.
+
+## Alperen account provisioning
+
+User supplied `https://ngelxsocial.com/?profile=PFBjMyxkGTW4MIZRevxalZ4Ax0h1`. The founder UID default is now bound to this exact account. Other three IDs remain unprovisioned. This source update is newer than the APK linked above; the installed Build558 APK does not gain the badge automatically. No user database flags were changed.
+
+Yılmaz supplied account: `https://ngelxsocial.com/?profile=ImCp8w8HDGMyu8LuQQtQhPdpA9A2`. Verified UID defaults now contain this exact account; Ahsen and Rızgar remain pending. Explicit lists may contain up to three known non-founder IDs; more IDs fail closed, and unknown accounts still get no badge.
+
+Rızgar Umut supplied account: `https://ngelxsocial.com/?profile=ckqq26wzJEg7FsGSSCzq1U2BnLo1`. Added to the exact verified UID defaults. Only Ahsen Can remains pending.
+
+Ahsen Can supplied account: `https://ngelxsocial.com/?profile=ppIxuCf4QjMEALdoCtaAlR3tjzF3`. All four exact account defaults are now provisioned in source. The previously delivered APK predates these defaults.
+
+## Newly reported device feedback — pending implementation
+
+- Following list: last rows overlap Android bottom navigation; respect bottom system inset and keep the final row fully reachable (50536.jpg).
+- Verification email: replace generic project-ID branding with NgelX, Turkish subject/body, branded layout, prominent accessible verification button, expiry/error/retry explanations and a fallback link. Use a recognizable sender display name; explain automated replies are not monitored. Current screenshot shows a Firebase default English template in Spam; changing appearance alone must not be claimed to fix spam delivery. Sender configuration and delivery require separate checks. Do not open or record the uploaded one-time verification URL.
+- In-app verification screen: clearly distinguish pending/verified/error states, provide resend with cooldown, wrong-address correction and an understandable expired-link flow. These are proposed refinements, not completed changes.
+- User requirement: username and full name must not change again before three months have elapsed. Enforce each field's last-change timestamp on the server, not only the client; show the next eligible date before save. Define calendar-month boundaries consistently. Normal editing must not reset the clock without changing the field. Initial profile completion remains distinct from later changes.
+- Suggestions for review: display the pending new name and next eligible date before confirmation; provide a controlled support path for genuine spelling mistakes/account recovery. No automatic exceptions or server policy changes have been deployed.

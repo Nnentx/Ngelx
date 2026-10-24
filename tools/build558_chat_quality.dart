@@ -473,8 +473,14 @@ class _Ngelx558DownloadButtonState extends State<Ngelx558DownloadButton> {
 
 /// Identity is UID-based: display-name changes never grant verification.
 /// Provision the four account IDs in the release build; never infer them from names.
-const ngelx558FounderUid = String.fromEnvironment('NGELX_FOUNDER_UID');
-const ngelx558VerifiedUids = String.fromEnvironment('NGELX_VERIFIED_UIDS');
+const ngelx558FounderUid = String.fromEnvironment(
+  'NGELX_FOUNDER_UID',
+  defaultValue: 'PFBjMyxkGTW4MIZRevxalZ4Ax0h1',
+);
+const ngelx558VerifiedUids = String.fromEnvironment(
+  'NGELX_VERIFIED_UIDS',
+  defaultValue: 'ImCp8w8HDGMyu8LuQQtQhPdpA9A2,ckqq26wzJEg7FsGSSCzq1U2BnLo1,ppIxuCf4QjMEALdoCtaAlR3tjzF3',
+);
 bool ngelx558Verified(
   String uid, {
   String founderUid = ngelx558FounderUid,
@@ -488,7 +494,7 @@ bool ngelx558Verified(
       .where((x) => x.isNotEmpty && x != founderUid)
       .toSet();
   // Reject an accidental broad grant instead of awarding extra badges.
-  return ids.length == 3 && ids.contains(uid);
+  return ids.length <= 3 && ids.contains(uid);
 }
 
 class Ngelx558VerifiedBadge extends StatelessWidget {

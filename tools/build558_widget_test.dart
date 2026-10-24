@@ -40,8 +40,15 @@ void main() {
         expect(allowed(uid, 'yilmaz,ahsen,rizgar'), true);
       expect(allowed('same-display-name', 'yilmaz,ahsen,rizgar'), false);
       expect(allowed('', 'yilmaz,ahsen,rizgar'), false);
+      expect(ngelx558Verified('PFBjMyxkGTW4MIZRevxalZ4Ax0h1'), true);
+      expect(ngelx558Verified('a.karaca'), false);
+      expect(ngelx558Verified('ImCp8w8HDGMyu8LuQQtQhPdpA9A2'), true);
+      expect(ngelx558Verified('narkozunkral1'), false);
+      expect(ngelx558Verified('ckqq26wzJEg7FsGSSCzq1U2BnLo1'), true);
+      expect(ngelx558Verified('ppIxuCf4QjMEALdoCtaAlR3tjzF3'), true);
+      expect(ngelx558Verified('unrelated-account'), false);
       expect(allowed('yilmaz', 'yilmaz,ahsen,rizgar,extra'), false);
-      expect(allowed('yilmaz', 'yilmaz,ahsen'), false);
+      expect(allowed('yilmaz', 'yilmaz,ahsen'), true);
     },
   );
   test('album reader tolerates old and malformed data without exposing local paths', () {
