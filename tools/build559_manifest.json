@@ -1,0 +1,10 @@
+{
+  "app/lib/main.dart": {
+    "before": "5ec9b048aca135f294784da62f2fe3aa1741e98af1a39617ab57f951b011b784",
+    "after": "4e514b809f263f22642d2b4e6ea6b1af60c04a1db6cc026738a9a394aedd57b2"
+  },
+  "app/lib/build558_chat_quality.dart": {
+    "before": "f46879fa0fc9286b7a870e9145cbd209677eb85314e024a3a65eb185e55c9ce1",
+    "after": "a027f09f6060b586d54c4d41744f1f6fe3db9ecbea2300ff3d10fbab6eae951f"
+  }
+}

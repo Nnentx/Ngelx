@@ -1,0 +1,410 @@
+--- a/app/lib/main.dart
++++ b/app/lib/main.dart
+@@ -89,6 +89,7 @@
+ part 'build543_community_admin.dart';
+ part 'build556_quality.dart';
+ part 'build558_chat_quality.dart';
++part 'build559_quality.dart';
+ part 'build556_delete.dart';
+ part 'build543_group_call_join.dart';
+ part 'build446_call_lifecycle.dart';
+@@ -4551,7 +4552,7 @@
+     try{
+       // Build438 account email language
+       await FirebaseAuth.instance.setLanguageCode(uygulamaDili.value=='ku'?'en':uygulamaDili.value=='zh'?'zh-CN':uygulamaDili.value=='pt'?'pt-BR':uygulamaDili.value).timeout(const Duration(seconds:6));
+-      await widget.user.sendEmailVerification().timeout(const Duration(seconds:12));
++      await ngelx559SendVerification(widget.user);
+       if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Doğrulama bağlantısı yeniden gönderildi. E-posta kutunu kontrol et.')));
+     }on TimeoutException{
+       if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Doğrulama bağlantısı gönderme zaman aşımına uğradı.')));
+@@ -4567,6 +4568,7 @@
+       if(guncel?.emailVerified==true){
+         await FirebaseFirestore.instance.collection('users').doc(widget.user.uid).set({
+           'emailVerified':true,
++          if(guncel?.email!=null)'email':guncel!.email,
+           'emailVerificationRequired':false,
+           'emailVerifiedAt':FieldValue.serverTimestamp(),
+         },SetOptions(merge:true)).timeout(const Duration(seconds:12));
+@@ -4656,30 +4658,7 @@
+       final v=s.data?.data()??<String,dynamic>{};
+       final dogrulamaGerekli=v['emailVerificationRequired']==true&&widget.user.emailVerified!=true;
+       if(dogrulamaGerekli){
+-        return Theme(
+-          data:ThemeData.light().copyWith(scaffoldBackgroundColor:Colors.white),
+-          child:Scaffold(
+-            backgroundColor:Colors.white,
+-            body:SafeArea(child:Center(child:Padding(
+-              padding:const EdgeInsets.all(28),
+-              child:Column(mainAxisSize:MainAxisSize.min,children:[
+-                const Icon(Icons.mark_email_unread_outlined,size:72,color:mor),
+-                const SizedBox(height:16),
+-                const Text('E-postanı doğrula',textAlign:TextAlign.center,style:TextStyle(color:Colors.black87,fontSize:24,fontWeight:FontWeight.w900)),
+-                const SizedBox(height:9),
+-                Text(widget.user.email??_ngelx438Ui("Hesap e-postası"),textAlign:TextAlign.center,style:const TextStyle(color:Colors.black54,fontWeight:FontWeight.w700)),
+-                const SizedBox(height:7),
+-                const Text('Bu hesap e-posta doğrulaması gerektiriyor. Bağlantıya dokunduktan sonra buradan tekrar kontrol edebilirsin.',textAlign:TextAlign.center,style:TextStyle(color:Colors.black54,height:1.4)),
+-                const SizedBox(height:22),
+-                SizedBox(width:double.infinity,child:FilledButton.icon(onPressed:_dogrulamayiYenile,icon:const Icon(Icons.verified_outlined),label:const Text('Doğruladım, tekrar kontrol et'))),
+-                const SizedBox(height:9),
+-                SizedBox(width:double.infinity,child:OutlinedButton.icon(onPressed:_dogrulamaGonder,icon:const Icon(Icons.forward_to_inbox_outlined),label:const Text('Bağlantıyı yeniden gönder'))),
+-                const SizedBox(height:8),
+-                TextButton(onPressed:_cikis,child:const Text('Başka hesapla giriş yap')),
+-              ]),
+-            ))),
+-          ),
+-        );
++        return Ngelx559VerificationPage(key:ValueKey(widget.user.uid),user:widget.user,onCheck:_dogrulamayiYenile,onSignOut:_cikis);
+       }
+       if(v['deactivated']==true){
+         final silmeTalebi=v['deletionRequestedAt']!=null;
+@@ -5589,7 +5568,7 @@
+         'createdAt': FieldValue.serverTimestamp(),
+       });
+       await FirebaseAuth.instance.setLanguageCode(uygulamaDili.value=='ku'?'en':uygulamaDili.value=='zh'?'zh-CN':uygulamaDili.value=='pt'?'pt-BR':uygulamaDili.value).timeout(const Duration(seconds:6));
+-      await yeni.sendEmailVerification().timeout(const Duration(seconds:12));
++      await ngelx559SendVerification(yeni);
+       await ngelx439SignOut();
+       if (!mounted) return;
+       Navigator.pushAndRemoveUntil(
+@@ -14130,6 +14109,9 @@
+   final rec.AudioRecorder _grupSesKaydedici=rec.AudioRecorder();
+   final List<Map<String,String>> mentionOnerileri=[];
+   final Set<String> etiketlenenUidler={};
++  final Map<String,String> _mentionHandles559={};
++  bool _mentionLoading559=false;
++  String? _mentionError559;
+   final Map<String,Future<DocumentSnapshot<Map<String,dynamic>>>> _uyeProfilCache={};
+   Timer? mentionZamanlayici,_mesajBeklemeZamanlayici,_typingZamanlayici,_typingBaslatZamanlayici,_sesKaydiZamanlayici,_offlineRetryZamanlayici;
+   bool _typingYazildi=false,_typingGostergesiAcik=true;
+@@ -14296,6 +14278,7 @@
+   }
+
+   void _listeKonumuDegisti(){
++    if(liste.hasClients&&liste.position.activity is DragScrollActivity)cancelMediaFollow559();
+     if(!liste.hasClients||!mounted)return;
+     final yeni=liste.position.maxScrollExtent-liste.position.pixels<120;
+     if(yeni!=_enAltta)setState(()=>_enAltta=yeni);
+@@ -14510,6 +14493,7 @@
+           }
+         }
+       }catch(_){}
++      if(mounted&&['photo','video','gif'].contains(veri['type']))followSentMedia559();
+       return true;
+     }catch(e){
+       if(!sessizHata&&mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Mesaj gönderilemedi: ${ngelxMedyaHataMetni(e)}')));
+@@ -14518,7 +14502,8 @@
+   }
+   Future<void> gonder()async{
+     final t=mesaj.text.trim();if(t.isEmpty||mesajGonderiliyor)return;
+-    final etiketler=etiketlenenUidler.toList(),yanitId=yanitlananMesajId,yanitMetin=yanitlananMetin,yanitGonderen=yanitlananGonderen,yanitTur=yanitlananTur,yanitMedya=yanitlananMedyaUrl;
++    final aktifHandles559=ngelx559ActiveMentions(mesaj.text,_mentionHandles559);
++    final etiketler=(RegExp(r'(^|\s)@herkes(\s|$)').hasMatch(mesaj.text)?etiketlenenUidler:aktifHandles559.values.toSet()).toList(),yanitId=yanitlananMesajId,yanitMetin=yanitlananMetin,yanitGonderen=yanitlananGonderen,yanitTur=yanitlananTur,yanitMedya=yanitlananMedyaUrl;
+     final sessiz=sessizGonder;
+     setState(()=>mesajGonderiliyor=true);
+     try{
+@@ -14529,6 +14514,7 @@
+       final payload=<String,dynamic>{
+         'text':t,'type':'text',
+         if(etiketler.isNotEmpty)'mentions':etiketler,
++        if(aktifHandles559.isNotEmpty)'mentionHandles559':aktifHandles559,
+         if(sessiz)'silent':true,
+         if(yanitId!=null)'replyToId':yanitId,
+         if(yanitMetin!=null&&yanitMetin.isNotEmpty)'replyToText':yanitMetin,
+@@ -14545,7 +14531,7 @@
+       if(tamam){
+         try{await GroupOfflineQueue.remove(widget.chatId,id);}catch(_){}
+         try{await GroupDraftStore.clear(widget.chatId);}catch(_){}
+-        mesaj.clear();etiketlenenUidler.clear();
++        mesaj.clear();etiketlenenUidler.clear();_mentionHandles559.clear();
+         _gonderimSonrasiEnAltaPlanla();
+         _typingZamanlayici?.cancel();
+         if(_typingYazildi)unawaited(_typingTemizle());
+@@ -14580,17 +14566,20 @@
+       if(await mesajGonderimVerisi()==null)return;
+       final files=await ngelx558PickChatMedia();
+       if(files.isEmpty||!mounted)return;
++      beginMediaSend559();
+       final items=await ngelx558UploadAlbum(files,widget.chatId,progress:(i,n){if(mounted)setState(()=>medyaIlerlemeEtiket='$i/$n medya yükleniyor…');});
+       if(!mounted)return;
+       final first=items.firstWhere((x)=>x['type']=='photo',orElse:()=>items.first),multiple=items.length>1;
+-      await payloadGonder({'type':first['type'],'mediaUrl':first['url'],
++      final sent559=await payloadGonder({'type':first['type'],'mediaUrl':first['url'],
+         if(first['type']=='video')'videoUrl':first['url'],
+         if(multiple)'albumItems558':items,if(multiple)'mediaUrls':items.map((x)=>x['url']).toList(),
+       },multiple?'📷 ${items.length} medya':first['type']=='video'?'🎥 Video':'📷 Fotoğraf');
++      if(!sent559)throw StateError('Medya mesajı kaydedilemedi.');
+     }catch(e){if(mounted)ngelxDurumMesaji(context,'Medya gönderilemedi: ${ngelxMedyaHataMetni(e)}',tip:'hata');}
+     finally{_albumBusy558=false;_medyaIlerlemeBitir();}
+   }
+   Future<void> medyaGonder(ImageSource kaynak)async{
++    beginMediaSend559();
+     if(kaynak==ImageSource.gallery){await _gallery558();return;}
+     try{
+       final x=kaynak==ImageSource.gallery
+@@ -14930,12 +14919,12 @@
+     mentionZamanlayici?.cancel();
+     final caret=mesaj.selection.isValid?mesaj.selection.baseOffset.clamp(0,deger.length):deger.length;
+     final parca=deger.substring(0,caret).split(RegExp(r'\s+')).last;
+-    if(!parca.startsWith('@')){
++    if(!parca.startsWith('@')&&ngelx559MentionQuery(parca)==null){
+       _mentionAramaSurumu++;
+-      if(mentionOnerileri.isNotEmpty&&mounted)setState(()=>mentionOnerileri.clear());
++      if(mounted)setState((){_mentionLoading559=false;_mentionError559=null;mentionOnerileri.clear();});
+       return;
+     }
+-    final ara=ngelx556Search(parca.substring(1));
++    final ara=ngelx559MentionQuery(parca)??'';
+     // Commands are available immediately while member profiles load.
+     final known=_sonGrupVerisi;
+     final mayMentionAll=known['onlyAdminsCanMentionAll']!=true||List<String>.from(known['admins']??const[]).contains(uid)||known['createdBy']==uid;
+@@ -14943,6 +14932,7 @@
+       if(mayMentionAll&&'herkes'.contains(ara)){'uid':'all','username':'herkes','name':'Herkes','kind':'command','subtitle':'Gruptaki herkesi etiketle'},
+       ...?_mentionUyeleri?.where((u)=>ngelx556Search('${u['name']} ${u['username']}').contains(ara)),
+     ]);});
++    if(mounted)setState((){_mentionLoading559=parca.startsWith('@')&&_mentionUyeleri==null;_mentionError559=null;});
+     final surum=++_mentionAramaSurumu;
+     mentionZamanlayici=Timer(const Duration(milliseconds:120),()async{
+       try{
+@@ -14981,8 +14971,8 @@
+           'uid':'silent','username':'sessiz','name':'sessiz','kind':'command',
+           'subtitle':'Bildirim göndermeden mesaj gönder',
+         });
+-        if(mounted&&surum==_mentionAramaSurumu)setState((){mentionOnerileri..clear()..addAll(sonuc);});
+-      }catch(_){}
++        if(mounted&&surum==_mentionAramaSurumu)setState((){_mentionLoading559=false;_mentionError559=ngelx559MentionEmptyLabel(parca,sonuc.isEmpty);mentionOnerileri..clear()..addAll(sonuc);});
++      }catch(_){if(mounted&&surum==_mentionAramaSurumu)setState((){_mentionLoading559=false;_mentionError559=parca.startsWith('@')?'Üyeler yüklenemedi. @ yazarak tekrar dene.':null;});}
+     });
+   }
+   Future<void> mentionEkle(String kullanici,String? hedefUid)async{
+@@ -14990,13 +14980,14 @@
+     final caret=mesaj.selection.isValid?mesaj.selection.baseOffset.clamp(0,metin.length):metin.length;
+     final sonBosluk=metin.substring(0,caret).lastIndexOf(RegExp(r'\s'));
+     final once=sonBosluk<0?'':metin.substring(0,sonBosluk+1);
+-    final after=metin.substring(caret);
++    final after=metin.substring(caret).replaceFirst(RegExp(r'^\S*'),'');
+     if(hedefUid=='silent'){
+       mesaj.text=once;
+       mesaj.selection=TextSelection.collapsed(offset:mesaj.text.length);
+       if(mounted)setState((){sessizGonder=true;mentionOnerileri.clear();});
+       return;
+     }
++    if(hedefUid!=null&&hedefUid!='all')_mentionHandles559[kullanici]=hedefUid;
+     mesaj.text='${once}@$kullanici $after';
+     mesaj.selection=TextSelection.collapsed(offset:once.length+kullanici.length+2);
+     if(hedefUid=='all'){
+@@ -15552,7 +15543,8 @@
+     return !RegExp(r'[A-Za-z0-9ÇĞİÖŞÜçğıöşü]').hasMatch(t);
+   }
+
+-  Future<void> _mentionProfiliAc(String etiket)async{
++  Future<void> _mentionProfiliAc(String etiket,{String? knownUid})async{
++    if(knownUid!=null&&knownUid.isNotEmpty){await Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciProfilPage(uid:knownUid)));return;}
+     final temiz=etiket.replaceFirst('@','').replaceAll(RegExp(r'[^A-Za-z0-9_ÇĞİÖŞÜçğıöşü.]'), '');
+     if(temiz.isEmpty||temiz.toLowerCase()=='herkes'||temiz.toLowerCase()=='sessiz')return;
+     try{
+@@ -15568,7 +15560,7 @@
+     }
+   }
+
+-  Widget _grupMetinWidget(String metin,{required bool benim,required bool sadeceEmoji}){
++  Widget _grupMetinWidget(String metin,{required bool benim,required bool sadeceEmoji,Map<String,dynamic> handles=const {}}){
+     if(sadeceEmoji)return Text(metin,style:const TextStyle(fontSize:36,height:1.12));
+     final re=RegExp(r'(@[^\s]+)');
+     final eslesmeler=re.allMatches(metin).toList();
+@@ -15584,7 +15576,7 @@
+         alignment:PlaceholderAlignment.middle,
+         child:GestureDetector(
+           behavior:HitTestBehavior.opaque,
+-          onTap:ozel?null:()=>_mentionProfiliAc(etiket),
++          onTap:ozel?null:()=>_mentionProfiliAc(etiket,knownUid:handles[etiket.substring(1).replaceAll(RegExp(r'[^A-Za-z0-9_ÇĞİÖŞÜçğıöşü.]'),'')]?.toString()),
+           child:Text(etiket,style:temel.copyWith(
+             color:benim?const Color(0xFFE0FFE9):const Color(0xFF087D37),
+             fontWeight:FontWeight.w900,
+@@ -16081,7 +16073,7 @@
+                     ])),
+                   ])
+                 else
+-                  _grupMetinWidget(metin.isEmpty?(tur=='gif'?'GIF':'Mesaj'):metin,benim:ben,sadeceEmoji:sadeceEmoji),
++                  _grupMetinWidget(metin.isEmpty?(tur=='gif'?'GIF':'Mesaj'):metin,benim:ben,sadeceEmoji:sadeceEmoji,handles:(v['mentionHandles559'] as Map?)?.cast<String,dynamic>()??const {}),
+                 if(linkUrl.isNotEmpty)...[
+                   const SizedBox(height:7),
+                   Container(
+@@ -16587,6 +16579,7 @@
+                   ),
+                 ),
+               ),
++              if(uyeMi&&(_mentionLoading559||_mentionError559!=null))Padding(padding:const EdgeInsets.all(8),child:Text(_mentionError559??'Grup üyeleri aranıyor…',style:const TextStyle(color:Colors.black54))),
+               if(uyeMi&&mentionOnerileri.isNotEmpty)Container(
+                 margin:const EdgeInsets.fromLTRB(8,0,8,6),
+                 constraints:const BoxConstraints(maxHeight:170),
+@@ -21622,7 +21615,8 @@
+   late final Stream<DocumentSnapshot<Map<String,dynamic>>> _peerProfile455=FirebaseFirestore.instance.collection('users').doc(widget.digerUid).snapshots();
+   @override String get jumpChatId=>widget.chatId;
+   @override ScrollController get jumpScroll=>liste;
+-  void _private437Scroll(){if(liste.hasClients&&liste.position.maxScrollExtent-liste.position.pixels<120)unawaited(_okunduGuncelle());}
++  void _private437Scroll(){
++    if(liste.hasClients&&liste.position.activity is DragScrollActivity)cancelMediaFollow559();if(liste.hasClients&&liste.position.maxScrollExtent-liste.position.pixels<120)unawaited(_okunduGuncelle());}
+   Timer? _cleanup435Timer;
+   // Build465: do not restore stale message-list offsets across chat openings.
+   final mesaj=TextEditingController(),liste=ScrollController(keepScrollOffset:false);
+@@ -22210,19 +22204,22 @@
+       try{files=await ngelx558PickChatMedia();}finally{_ngelx479EndPicker();}
+       if(files.isEmpty||!mounted)return;
+       _ekIslemBaslat('Medya yükleniyor…');
++      beginMediaSend559();
+       final items=await ngelx558UploadAlbum(files,widget.chatId,progress:(i,n){if(mounted)_ekIslemBaslat('$i/$n medya yükleniyor…');});
+       if(!mounted)return;
+       final first=items.firstWhere((x)=>x['type']=='photo',orElse:()=>items.first),multiple=items.length>1;
+       final seconds=(ready.sohbet['disappearingSeconds'] as num?)?.toInt()??0;
+-      await ekMesajGonder({'type':first['type'],'mediaUrl':first['url'],
++      final sent559=await ekMesajGonder({'type':first['type'],'mediaUrl':first['url'],
+         if(first['type']=='video')'videoUrl':first['url'],
+         if(multiple)'albumItems558':items,if(multiple)'mediaUrls':items.map((x)=>x['url']).toList(),
+         if(seconds>0)'expiresAt':Timestamp.fromDate(DateTime.now().add(Duration(seconds:seconds))),
+       },multiple?'📷 ${items.length} medya':first['type']=='video'?'🎥 Video':'📷 Fotoğraf',bildirim:'Yeni bir medya mesajın var');
++      if(!sent559)throw StateError('Medya mesajı kaydedilemedi.');
+     }catch(e){if(mounted)ngelxDurumMesaji(context,'Medya gönderilemedi: ${ngelxMedyaHataMetni(e)}',tip:'hata');}
+     finally{_ngelx477PhotoPickerActive=false;_ekIslemBitir();}
+   }
+   Future<void> medyaGonder(ImageSource kaynak) async {
++    beginMediaSend559();
+     if(kaynak==ImageSource.gallery){await _gallery558();return;}
+     final ben=uid;
+     if(ben==null||ekIslemiSuruyor||_ngelx477PhotoPickerActive)return;
+@@ -22404,6 +22401,7 @@
+         belgeId:widget.chatId,
+         dedupeKey:'private_extra_${widget.chatId}_${mesajRef.id}_${widget.digerUid}',
+       ).catchError((_){ }));
++      if(mounted&&['photo','video','gif'].contains(veri['type']))followSentMedia559();
+       return true;
+     }catch(_){
+       if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Gönderilemedi. Bağlantını kontrol edip tekrar dene.')));
+@@ -29438,7 +29436,7 @@
+                       ? Center(child:Text(_ngelx438Ui("Sonuç bulunamadı."),style:TextStyle(color:Colors.black54,fontWeight:FontWeight.w700)))
+                       :ListView.builder(
+                         keyboardDismissBehavior:ScrollViewKeyboardDismissBehavior.onDrag,
+-                        padding:const EdgeInsets.all(12),
++                        padding:EdgeInsets.fromLTRB(12,12,12,16+MediaQuery.viewPaddingOf(context).bottom),
+                         itemCount:eslesen.length,
+                         itemBuilder:(_,i){
+                           final d=eslesen[i],v=d.data()??<String,dynamic>{};
+@@ -29449,7 +29447,7 @@
+                           return ListTile(
+                             onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>KullaniciProfilPage(uid:d.id))),
+                             leading:CircleAvatar(backgroundImage:foto.isEmpty?null:NgelXAgImageProvider(foto),child:foto.isEmpty?const Icon(Icons.person):null),
+-                            title:Text(ad,style:const TextStyle(fontWeight:FontWeight.w800)),
++                            title:Row(children:[Expanded(child:Text(ad,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontWeight:FontWeight.w800))),Ngelx558VerifiedBadge(uid:d.id,size:18)]),
+                             subtitle:Text('@'+kullanici),
+                             trailing:kaldirabilir?PopupMenuButton<String>(
+                               onSelected:(x){if(x=='remove')takipciyiKaldir(d.id,ad);},
+@@ -30097,15 +30095,28 @@
+       'profileViewMode':_gorunum,
+       'updatedAt':FieldValue.serverTimestamp(),
+     };
+-    if(changeName)kayit['displayName']=ad;
+-    if(changeUsername){
+-      kayit['username']=kullanici;
+-      kayit['usernameLower']=kullanici.toLowerCase();
+-    }
++    // Identity is written only by the authenticated server endpoint.
++
+     if(_bio.text.trim()!=widget.ilkBio.trim())kayit['bio']=_bio.text.trim();
+     if(_konum.text.trim()!=widget.ilkKonum.trim())kayit['location']=_konum.text.trim();
+     setState(()=>_kaydediliyor=true);
+     try{
++      if(changeName||changeUsername){
++        final current=await FirebaseFirestore.instance.collection('users').doc(widget.uid).get(const GetOptions(source:Source.server));
++        final data=current.data()??<String,dynamic>{};
++        for(final field in [if(changeName)'displayName',if(changeUsername)'username']){
++          final next=ngelx559EligibleDate(data[field+'ChangedAt559']);
++          if(next!=null&&DateTime.now().toUtc().isBefore(next))throw StateError('${field=='username'?'Kullanıcı adını':'Ad soyadını'} ${ngelx559DateLabel(next)} tarihinde değiştirebilirsin.');
++        }
++        if(!mounted)return;
++        final confirmed=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(
++          title:const Text('İsim değişikliğini onayla'),
++          content:Text('${changeName?'Ad soyad: $ad\n':''}${changeUsername?'Kullanıcı adı: @$kullanici\n':''}Değiştirdiğin her alanı ${ngelx559DateLabel(ngelx559ThreeMonths(DateTime.now().toUtc()))} tarihine kadar tekrar değiştiremezsin.'),
++          actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('Onayla'))],
++        ))??false;
++        if(!confirmed)return;
++        await ngelx559SaveIdentity({if(changeName)'displayName':ad,if(changeUsername)'username':kullanici},expectedUid:widget.uid);
++      }
+       await FirebaseFirestore.instance.collection('users').doc(widget.uid)
+         .set(kayit,SetOptions(merge:true)).timeout(const Duration(seconds:15));
+       if(changeName){
+@@ -30122,6 +30133,8 @@
+       }else{
+         _hata('Profil kaydedilemedi. Hata kodu: '+e.code);
+       }
++    }on StateError catch(e){
++      _hata(e.message.toString());
+     }catch(_){
+       _hata('Profil kaydedilemedi. Yeniden dene.');
+     }finally{
+@@ -30332,6 +30345,7 @@
+                         foregroundColor:Colors.black87))),
+                 ]))),
+               ],
++              Ngelx559IdentityHint(data:v),
+               TextField(controller:_ad,maxLength:60,decoration:_alan('Ad Soyad'),textCapitalization:TextCapitalization.words),
+               const SizedBox(height:6),
+               TextField(controller:_kullanici,maxLength:20,decoration:_alan('Kullanıcı adı')),
+@@ -30993,12 +31007,12 @@
+
+                       pencereState(() => kaydediliyor = true);
+
++                      try{if(yeniAd!=ad.trim()||yeniKullanici!=kullanici.replaceFirst('@','').trim())await ngelx559SaveIdentity({'displayName':yeniAd,'username':yeniKullanici},expectedUid:user.uid);}
++                      catch(_){if(ctx.mounted){pencereState(()=>kaydediliyor=false);ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content:Text('İsim değişikliği tamamlanamadı. Profili Düzenle ekranından tekrar dene.')));}return;}
+                       await FirebaseFirestore.instance
+                           .collection('users')
+                           .doc(user.uid)
+                           .set({
+-                        'displayName': yeniAd,
+-                        'username': yeniKullanici,'usernameLower':yeniKullanici.toLowerCase(),
+                         'bio': bioKontrol.text.trim(),
+                         'location': konumKontrol.text.trim(),
+                         'email': user.email,
+@@ -32583,6 +32597,24 @@
+     _snapshot558=next;
+     _anchorKeys558.removeWhere((id,key)=>!next.containsKey(id)&&key.currentContext==null);
+   }
++  int _followGeneration559=0;
++  bool _mediaFollowAllowed559=true;
++  void beginMediaSend559()=>_mediaFollowAllowed559=true;
++  void followSentMedia559(){
++    if(!_mediaFollowAllowed559)return;
++    final generation=++_followGeneration559;
++    var frames=0;
++    final deadline=DateTime.now().add(const Duration(seconds:4));
++    void follow(Duration _){
++      if(!mounted||generation!=_followGeneration559||!jumpScroll.hasClients||frames++>120||DateTime.now().isAfter(deadline))return;
++      final pos=jumpScroll.position;
++      if(pos.activity is DragScrollActivity){_followGeneration559++;return;}
++      if((pos.maxScrollExtent-pos.pixels).abs()>.5)jumpScroll.jumpTo(pos.maxScrollExtent);
++      if(frames<120)WidgetsBinding.instance.addPostFrameCallback(follow);
++    }
++    WidgetsBinding.instance.addPostFrameCallback(follow);
++  }
++  void cancelMediaFollow559(){_mediaFollowAllowed559=false;_followGeneration559++;}
+   bool get jumpActive=>_jumpId!=null;
+
+   Future<void> jumpToMessage(Object? result)async{
+--- a/app/lib/build558_chat_quality.dart
++++ b/app/lib/build558_chat_quality.dart
+@@ -397,7 +397,7 @@
+         ),
+       ],
+     ),
+-    body: GridView.builder(
++    body: SafeArea(top:false,child:GridView.builder(
+       padding: const EdgeInsets.all(16),
+       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+         crossAxisCount: 2,
+@@ -435,7 +435,7 @@
+           ),
+         );
+       },
+-    ),
++    )),
+   );
+ }
+
