@@ -1,0 +1,68 @@
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    permissions:
+      contents: write
+      actions: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: Nnentx/Ngelx
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: NgelX-Build564-REAL-INPLACE-SIGNED-REVIEW-ONLY
+          path: release-apk
+      - name: Prepare exact signed build and update metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PYCODE'
+          from pathlib import Path
+          import hashlib,json,os
+          files=list(Path('release-apk').rglob('*.apk'));assert len(files)==1
+          raw=files[0].read_bytes();digest=hashlib.sha256(raw).hexdigest()
+          checksum=next(Path('release-apk').rglob('*.sha256')).read_text().split()[0]
+          assert checksum==digest
+          name='NgelX-1.0.334-Build-564.apk';Path(name).write_bytes(raw)
+          Path(name+'.sha256').write_text(digest+'  '+name+'\n')
+          feed={'schema':1,'package':'com.nnentx.ngelx_app','abi':'arm64-v8a','version':'1.0.334','build':564,'size':len(raw),'sha256':digest,'url':'https://github.com/Nnentx/Ngelx/releases/download/v1.0.334-build564-test/'+name,'notes':'Uygulama içinden güncelleme kontrolü ve indirme; bildirim bağlantıları ve profil yorum ekranı iyileştirmeleri.','testedSource':os.environ['GITHUB_SHA'],'buildRun':int(os.environ['GITHUB_RUN_ID'])}
+          Path('android-update.json').write_text(json.dumps(feed,ensure_ascii=False,indent=2)+'\n')
+          Path('notes.md').write_text('NgelX 1.0.334 / Build564 test sürümü.\n\nUygulama içinden yeni sürüm kontrolü, indirme, doğrulama ve Android yükleme onayı eklendi. Ayarlar > Güncellemeler üzerinden de kontrol edilebilir. Mevcut tasarım, hesap verileri, bildirim ve yorum düzeltmeleri korunur.\n\nİlk kurulumda bu APK mevcut uygulamanın üzerine kurulur; uygulamayı silmeyin. Android gerekirse NgelX için bu kaynaktan yükleme izni ister.\n\nOtomatik testler ve aynı imza ile derleme başarılı; gerçek cihazdaki yükleme ve izin akışı kullanıcı testi bekliyor.\n')
+          PYCODE
+      - name: Preserve tested source with trusted release workflow tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api repos/Nnentx/Ngelx/git/trees/main > main-tree.json
+          python3 - <<'PYCODE'
+          import json,os
+          from pathlib import Path
+          trusted=next(e['sha'] for e in json.load(open('main-tree.json'))['tree'] if e['path']=='.github')
+          tree={'base_tree':os.environ['GITHUB_SHA'],'tree':[{'path':'.github','mode':'040000','type':'tree','sha':trusted},{'path':'RELEASE564_MANIFEST.json','mode':'100644','type':'blob','content':Path('android-update.json').read_text()}]}
+          Path('tree.json').write_text(json.dumps(tree))
+          PYCODE
+          gh api --method POST repos/Nnentx/Ngelx/git/trees --input tree.json > tree-result.json
+          python3 - <<'PYCODE'
+          import json,os
+          from pathlib import Path
+          Path('commit.json').write_text(json.dumps({'message':'Build564 tested source snapshot for signed updater release','tree':json.load(open('tree-result.json'))['sha'],'parents':[os.environ['GITHUB_SHA']]}))
+          PYCODE
+          gh api --method POST repos/Nnentx/Ngelx/git/commits --input commit.json > commit-result.json
+      - name: Publish verified install-over test APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          if gh release view v1.0.334-build564-test >/dev/null 2>&1; then
+            gh release download v1.0.334-build564-test --pattern NgelX-1.0.334-Build-564.apk --dir existing
+            cmp NgelX-1.0.334-Build-564.apk existing/NgelX-1.0.334-Build-564.apk
+          else
+            target=$(python3 -c "import json;print(json.load(open('commit-result.json'))['sha'])")
+            gh release create v1.0.334-build564-test NgelX-1.0.334-Build-564.apk NgelX-1.0.334-Build-564.apk.sha256 android-update.json --target "$target" --prerelease --title 'NgelX 1.0.334 / Build564 test' --notes-file notes.md
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NgelX-Build564-Update-Manifest
+          path: android-update.json
+          retention-days: 7

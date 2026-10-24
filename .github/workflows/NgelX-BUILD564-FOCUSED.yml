@@ -1,0 +1,46 @@
+name: NgelX updater focused regression
+on:
+  push:
+    branches: [feat/build564-in-app-update]
+    paths: ['.github/workflows/NgelX-BUILD564-FOCUSED.yml', 'tools/build564_update.dart', 'tools/build564_update_test.dart']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  updater:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - uses: actions/download-artifact@v4
+        with:
+          name: NgelX-Build563-Assembled-Source
+          run-id: 40129043716
+          github-token: ${{ github.token }}
+          path: assembled
+      - name: Restore tested assembled source and add exact updater delta
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp -a assembled/app/. app/
+          python3 tools/apply_build564_update.py
+          cp tools/build564_update_test.dart app/test/build564_update_test.dart
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('app/pubspec.yaml');s=p.read_text()
+          for package,version in [('firebase_storage','^13.6.0'),('crypto','^3.0.6'),('flutter_cache_manager','^3.4.5')]:
+              if '  '+package+':' not in s:s=s.replace('  cupertino_icons:','  '+package+': '+version+'\n  cupertino_icons:',1)
+          p.write_text(s)
+          PY
+      - name: Exercise updater with bounded per-test timeout
+        working-directory: app
+        shell: bash
+        run: |
+          set -euo pipefail
+          flutter pub get
+          timeout 180s flutter test --timeout 30s --reporter expanded test/build564_update_test.dart

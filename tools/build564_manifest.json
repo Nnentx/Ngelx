@@ -1,0 +1,18 @@
+{
+  "app/lib/build258_settings.dart": {
+    "before": "afea17e25c90397fe3b71594f89c36282baa90228e1daec8ca4e9187fdff255b",
+    "after": "17b7ebc50dd0e845d493f0b316f22d0b1b1b1152725d7ede66957b58afffc3dc"
+  },
+  "app/lib/main.dart": {
+    "before": "21dfe6d733873ff3434461a5c03aa0102e00b76f23078b3c769be7ce0310411e",
+    "after": "ac43b0752517142a18a00a37bb20777380e59c32bc3c5c91b0a141c38d2af68b"
+  },
+  "app/android/app/src/main/AndroidManifest.xml": {
+    "before": "da1d3c5c29fa09ff55fcbb8670b57b8eaf10545f85f42b9feb45758390b04d1d",
+    "after": "f14aa0e2f98c5e14cab5710f169dcad67e75ca82801eeaa10f9ba052aec48443"
+  },
+  "app/android/app/src/main/kotlin/com/nnentx/ngelx_app/MainActivity.kt": {
+    "before": "bb2a697123e7ca13a138cb537cb2633993944310b79b8fb57fdb18c336c17cf3",
+    "after": "4dd4c53476e8d3c16e14eaabbe6f6e7c5bb6d01d9fbfd9648d05e87c0eb819d7"
+  }
+}

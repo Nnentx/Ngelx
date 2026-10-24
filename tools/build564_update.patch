@@ -1,0 +1,68 @@
+--- a/app/lib/build258_settings.dart
++++ b/app/lib/build258_settings.dart
+@@ -137,6 +137,12 @@
+       aciklama:'Uygulama dili, çeviri, altyazı ve erişilebilirlik',
+       anahtarlar:'dil çeviri altyazı görünüm erişilebilirlik büyük yazı hareket',
+       ikon:Icons.language_rounded,sayfa:(_)=>const UygulamaTercihleriV366Page(),
++    ),
++    _NgelXAyarOgesi(
++      bolum:'UYGULAMA',baslik:'Güncellemeler',
++      aciklama:'Yeni sürümü uygulama içinden kontrol et ve indir',
++      anahtarlar:'güncelle güncelleme yeni sürüm update apk',
++      ikon:Icons.system_update_rounded,sayfa:(_)=>const Ngelx564UpdatesPage(),
+     ),
+     _NgelXAyarOgesi(
+       bolum:'UYGULAMA',baslik:'NgelX hakkında',
+--- a/app/lib/main.dart
++++ b/app/lib/main.dart
+@@ -92,6 +92,7 @@
+ part 'build560_inbox.dart';
+ part 'build561_quality.dart';
+ part 'build563_quality.dart';
++part 'build564_update.dart';
+ part 'build556_delete.dart';
+ part 'build543_group_call_join.dart';
+ part 'build446_call_lifecycle.dart';
+@@ -4490,7 +4491,7 @@
+         }
+         return null;
+       },
+-      builder: (context, child) => Directionality(textDirection: dil=='ar' ? TextDirection.rtl : TextDirection.ltr, child:Stack(children:[Positioned.fill(child:Ngelx541CallBody(child:child!)),const NgelxSesliMiniGlobalOverlay(),const Ngelx445CallOverlay(),const Ngelx541GlobalCallStrip(),const Ngelx543GlobalPip()])),
++      builder: (context, child) => Directionality(textDirection: dil=='ar' ? TextDirection.rtl : TextDirection.ltr, child:Ngelx564UpdateGate(child:Stack(children:[Positioned.fill(child:Ngelx541CallBody(child:child!)),const NgelxSesliMiniGlobalOverlay(),const Ngelx445CallOverlay(),const Ngelx541GlobalCallStrip(),const Ngelx543GlobalPip()]))),
+     ));
+   }
+ }
+--- a/app/android/app/src/main/AndroidManifest.xml
++++ b/app/android/app/src/main/AndroidManifest.xml
+@@ -18,6 +18,7 @@
+     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+     <uses-permission android:name="android.permission.WAKE_LOCK" />
++    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+     <application
+         android:label="NgelX"
+         android:name="${applicationName}"
+@@ -76,6 +77,13 @@
+             android:name="flutterEmbedding"
+             android:value="2" />
+         <receiver android:name=".Ngelx543PipReceiver" android:exported="false" />
++        <provider
++            android:name="androidx.core.content.FileProvider"
++            android:authorities="${applicationId}.updates564"
++            android:exported="false"
++            android:grantUriPermissions="true">
++            <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/update_paths564" />
++        </provider>
+     </application>
+     <!-- Required to query activities that can process text, see:
+          https://developer.android.com/training/package-visibility and
+--- a/app/android/app/src/main/kotlin/com/nnentx/ngelx_app/MainActivity.kt
++++ b/app/android/app/src/main/kotlin/com/nnentx/ngelx_app/MainActivity.kt
+@@ -72,6 +72,7 @@
+ 
+     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
+         super.configureFlutterEngine(flutterEngine)
++        Ngelx564Updater(this).attach(flutterEngine)
+         // Build520: explicitly requested system Picture-in-Picture, no extra
+         // token or camera permission, and no automatic PiP activation.
+         val pip520 = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, pipChannel520)
