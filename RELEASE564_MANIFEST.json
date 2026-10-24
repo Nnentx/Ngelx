@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "package": "com.nnentx.ngelx_app",
+  "abi": "arm64-v8a",
+  "version": "1.0.334",
+  "build": 564,
+  "size": 47527971,
+  "sha256": "8939e2296733df7e0dcb098be4f31ff3b03bbe181baba123eddaec0ebb8f48ee",
+  "url": "https://github.com/Nnentx/Ngelx/releases/download/v1.0.334-build564-test/NgelX-1.0.334-Build-564.apk",
+  "notes": "Uygulama içinden güncelleme kontrolü ve indirme; bildirim bağlantıları ve profil yorum ekranı iyileştirmeleri.",
+  "testedSource": "993881faabecab9fadabeaebde7a70179ce68e95",
+  "buildRun": 40131462070
+}

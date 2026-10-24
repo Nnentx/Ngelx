@@ -1,8 +1,8 @@
 name: NgelX approved daily retention
 on:
+  # PAUSED 2026-10-15 at owner's request while verifying user-data safety.
+  # Deliberately no schedule or push trigger. Manual runs skip the job.
   workflow_dispatch:
-  schedule:
-    - cron: '0 3 * * *'
 permissions:
   contents: read
   actions: read
@@ -12,6 +12,7 @@ concurrency:
 jobs:
 
   retention:
+    if: ${{ false }} # Protective fail-closed guard; no cleanup is allowed.
     runs-on: ubuntu-latest
     timeout-minutes: 25
     concurrency:
@@ -28,7 +29,23 @@ jobs:
             const {execSync}=require('child_process');
             const sha=execSync('git rev-parse HEAD',{encoding:'utf8'}).trim();
             const runs=await github.rest.actions.listWorkflowRuns({owner:context.repo.owner,repo:context.repo.repo,workflow_id:'NgelX-BUILD-437-CONSOLIDATED.yml',head_sha:sha,per_page:20});
-            if(!runs.data.workflow_runs.some(x=>x.conclusion==='success'))throw new Error('The checked-out revision has not passed Build437 validation.');
+            let verified=false;
+            for(const run of runs.data.workflow_runs){
+              const jobs=await github.rest.actions.listJobsForWorkflowRun({owner:context.repo.owner,repo:context.repo.repo,run_id:run.id,per_page:100});
+              if(jobs.data.jobs.some(x=>x.name==='build'&&x.conclusion==='success')){verified=true;break;}
+            }
+            if(!verified)throw new Error('The checked-out revision has not passed signed Build437 release validation.');
+      - name: Firestore SDK import compatibility
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('tools/retention437_cleanup.py')
+          old='from google.cloud.firestore_v1 import FieldPath'
+          new='from google.cloud.firestore_v1.field_path import FieldPath'
+          source=p.read_text()
+          assert source.count(old)==1, 'Unexpected cleanup source; refuse patch'
+          p.write_text(source.replace(old,new))
+          PY
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -94,7 +111,9 @@ jobs:
           PYCODE
       - name: Install preview dependency
         if: steps.auth.outputs.available == 'true'
-        run: python -m pip install firebase-admin boto3
+        run: |
+          python -m pip install firebase-admin boto3
+          python -c 'from google.cloud.firestore_v1.field_path import FieldPath; assert FieldPath.document_id()'
       - name: Apply approved record retention and verified media cleanup
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
