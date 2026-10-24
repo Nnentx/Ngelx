@@ -1,15 +1,54 @@
-# Build560 — inbox presentation only
+# Ngel — Gelen Kutusu tasarım güncellemesi / Build560
 
-This is an isolated change on `9be616728072d82f300430ea30e13fa9f03650ed`, the verified Build558 application with the four supplied badge UIDs. It does **not** include the separate Build559 account, email-service, identity-rule or media follow-up. Historical source generation and the installed Android package/update signer remain unchanged.
+Bu çalışma, doğrulanmış Build558 ve daha önce verilen dört hesap kimliğinin bulunduğu `9be616728072d82f300430ea30e13fa9f03650ed` tabanında hazırlandı. Güncelleme yalnızca Gelen Kutusu sunumuyla sınırlıdır. Ayrı Build559 hesap/e-posta çalışması bu pakete eklenmedi.
 
-Production source differences:
+## Uygulanan kaynak değişiklikleri
 
-- `app/lib/main.dart`: only the `MesajPage` inbox presentation and a new part declaration. The existing search controller/query callback now sits in a compact header opened by its existing search icon; closing clears the query and restores the normal header. The new-chat callback stays `_yeniOlusturMenusu`. All live list/filter queries, unread counter calculations, item taps/long-press operations, realtime subscriptions and other pages remain byte-identical.
-- `app/lib/build445_inbox_model.dart`: only the friends strip rendering. Removes visible note balloons and their reserved 54+6-pixel gap; the note read/edit/delete methods, data fields, profile/chat taps, own + button, story/presence permissions and existing subscriptions remain. Own + retains tap-to-edit and adds long-press access to the existing note read/delete sheet. Call/banner helpers in this same file are byte-identical.
-- `app/lib/build560_inbox.dart`: presentation-only header, category-chip/scroll layout and compact profile rail. At standard portrait sizes the header keeps the title fully visible beside a short search field; the search never overlays it. Tabs preserve the original gradient/count styling and scroll horizontally when needed. Profile images/names/presence remain live, with 90-pixel cells and a 124-pixel normal rail. On very short landscape/keyboard viewports the rail is temporarily offstage, retaining its state and streams so search results remain usable without overflow.
+| Kaynak | İşlem |
+| --- | --- |
+| `app/lib/main.dart` — yalnızca `MesajPage` bölümü | Kalıcı uzun arama alanı kaldırıldı. Mevcut arama ikonu, başlığın yanında kısa alan açıyor. Kapatma, sorguyu temizleyip normal başlığı geri getiriyor. Mevcut denetleyici, arama filtresi ve yeni sohbet + geri çağrısı kullanılıyor. Sekmelerin veri/sayaç hesabı korunarak yatay kaydırılabilir sunuma bağlandı. |
+| `app/lib/build445_inbox_model.dart` — yalnızca profil şeridi sunumu | Görünen not baloncukları ve ayrılan 54+6 piksel boşluk kaldırıldı. Profiller kompaktlaştırıldı; isim satır yüksekliği belirlenerek taşma önlendi. Fotoğraf, isim, aktiflik, renkli halka ve tıklamalar gerçek verilerle korunuyor. Kendi + düğmesinde düzenleme; basılı tutmada mevcut not okuma/silme ekranı erişilebilir. |
+| `app/lib/build560_inbox.dart` — yeni sunum bileşenleri | Çakışmayan başlık/arama satırı, mevcut görünümü koruyan sekme butonu, dar ekranda yatay sekme sırası ve kompakt profil şeridi. Normal profil şeridi 124 piksel yüksekliğinde, hücreler 90 piksel genişliğinde. |
 
-Supporting files: guarded source patch/manifest/applicator, exact-scope Python test, ten Flutter widget/layout cases, and `.github/workflows/NgelX-BUILD560-INBOX.yml`. Raw historical `app/lib/main.dart` is not overwritten in Git; the patch runs after the full Build558 generator chain. The new workflow signs version 1.0.330 / code560 as a review-only candidate. No deploy/publish step is present.
+Çok kısa yatay veya klavyeli ekranlarda profil şeridi geçici olarak görünmez yapılarak arama sonuçlarına alan bırakılır. Verisi, durumu ve gerçek zamanlı abonelikleri korunur. Büyük yazı boyutlarında şerit yüksekliği uyarlanır.
 
-Scope checks reconstruct before/after source and assert exact equality outside the inbox, inside all notification/chat data/list implementations, and for all note read/write methods and unrelated call helpers. `firestore.rules` and app configuration fixtures stay unchanged. Cold/repeat application and drift rejection passed locally. Dart parsing passed; full Flutter analysis and widget tests run in CI because the local pub cache is unavailable.
+Not verileri ve mevcut okuma/düzenleme/silme yöntemleri silinmedi. Sohbet listesi, bildirim/istek işleme, filtreleme, sayaç hesapları ve gerçek zamanlı sorguların mevcut kodu korundu. Veritabanı, giriş/kayıt, mesaj gönderme/alma, grup işlemleri, profil ayarları, API/servisler, diğer sayfalar ve alt navigasyon değiştirilmedi. Sahte kullanıcı veya sohbet verisi uygulamaya eklenmedi.
 
-Widget coverage: 280/320/360/393/430/600-pixel header widths; search open/input/close and retained + callback; title/search paint separation; doubled text scale; all five horizontally reachable filters and count labels; compact profile rail scrolling/taps; keyboard/landscape height adaptation. Test-only fixture people are never used as application data. Real signed-in two-phone acceptance is still pending.
+## Depodaki destek dosyaları
+
+Tarihsel ham uygulama kaynakları Git içinde topluca değiştirilmedi. Mevcut üretim zincirinin sonunda yalnızca gerekli kaynak farkını uygulayan dosyalar eklendi:
+
+- `tools/apply_build560_inbox.py`
+- `tools/build560_inbox.patch`
+- `tools/build560_manifest.json`
+- `tools/build560_inbox.dart`
+- `tools/test_build560_inbox.py`
+- `tools/build560_widget_test.dart`
+- `.github/workflows/NgelX-BUILD560-INBOX.yml`
+- `docs/qa/build560-inbox-only.md`
+
+## Kontroller
+
+Son test kaynağı: `ea467a88dac48cdcb1e94606d4475dfa4758e558`.
+
+- Yeni 10 arayüz testi ve önceki 6 regresyon testi geçti.
+- 280, 320, 360, 393, 430 ve 600 piksel genişlikte başlık/arama ayrılığı, açma-yazma-kapatma ve + işlevi kontrol edildi.
+- İki kat yazı ölçeği, beş sekmeye yatay erişim/sayaçlar, profil kaydırma/tıklama ve kısa ekran uyumu kontrol edildi.
+- Tam Flutter uygulama analizi hata vermeden geçti; mevcut uyarı/bilgi borcu temizlenmiş sayılmıyor.
+- Kaynak kapsamı testi, Gelen Kutusu dışındaki sayfaları; sohbet/bildirim liste ve sorgularını; not işlemlerini ve ilgisiz arama yardımcılarını önce/sonra birebir karşılaştırıyor.
+- İlk uygulama, tekrar uygulama ve kaynak kaymasına karşı ret kontrolü geçti. Veritabanı kuralları ve uygulama ayarı test dosyaları değişmedi.
+- Profil testindeki örnek kişiler yalnızca test ortamındadır; uygulamadaki gerçek kullanıcıların yerine geçirilmez.
+
+Derleme: https://github.com/Nnentx/Ngelx/actions/runs/40078881350
+
+APK başarıyla derlendi ve indirildikten sonra doğrulandı:
+
+- Paket: `com.nnentx.ngelx_app`, sürüm `1.0.330`, yapı `560`.
+- Mevcut güncelleme imzası eşleşti: SHA256 `be20b27f0ba1f4decd2941d410b1536de89e48dc894f04f038f9d26b11ecd6aa`.
+- ARM64 uygulama ve Flutter çalışma zamanı dosyaları mevcut.
+- ZIP arşiv özetleri GitHub artifact kayıtlarıyla, APK özeti derleme çıktısındaki özetle eşleşti; ZIP bütünlük kontrolü geçti.
+- Değişen iki kaynak ve yeni sunum dosyası, onaylanan yama/yardımcı dosyayla eşleşti. Diğer **54 Dart dosyası** Build558 UID tabanıyla birebir aynı. Arşivdeki `firestore.rules` da aynı kaldı.
+- APK boyutu: 47.506.943 bayt.
+- APK SHA256: `3fa1d07ab8ac00cebfb864bb1ec25a70a7c4c70ff52272004a032ddb63834471`.
+
+Gerçek telefonda son kabul kontrolü henüz yapılmadı. Üretime dağıtım, mağazada yayın veya sunucu ayarı değişikliği yapılmadı.
