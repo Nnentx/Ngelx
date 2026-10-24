@@ -16,8 +16,12 @@ Anonymous requests to the configured deployed endpoint return 401.
 The approved HTML and CID image were accepted by Resend's official
 `delivered@resend.dev` test recipient; the dashboard reports delivered. This is
 a provider simulation, not proof of receipt/rendering in a real Gmail inbox.
-Actual registration, resend and button activation need a real device test after
-the new APK is installed. The existing Build561 APK still uses Firebase mail.
+An authenticated disposable Auth fixture also exercised the actual deployed
+Worker: it generated a real Firebase action link, delivered to the official
+Resend simulator, rejected recipient override and enforced resend cooldown.
+The fixture was removed with UID/email guards. Existing users were unchanged.
+Real-device registration/resend, Gmail rendering and button activation remain
+acceptance checks after the new APK is installed. The existing Build561 APK still uses Firebase mail.
 
 Build562 preserves the existing source regeneration, package, update signer,
 inbox and other Build561 behavior. It embeds the deployed email endpoint and
