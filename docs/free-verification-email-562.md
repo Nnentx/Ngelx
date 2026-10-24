@@ -32,3 +32,16 @@ Limits: Resend Free 100/day and 3,000/month; Worker conservatively reserves at
 most 95 attempts/day, three/user/hour and a 60-second cooldown. The provider's
 quota is shared with any other sends on the account. Firestore counters consume
 existing free quotas; unavailable quota storage fails closed. No paid fallback.
+
+## Verified downloadable APK
+
+Build562 Actions run: https://github.com/Nnentx/Ngelx/actions/runs/40120801727
+completed successfully. APK: NgelX-1.0.332-Build562.apk, 47,507,827 bytes.
+SHA-256: `7b13237e789fd87be25dc6e5ba99f6f562e6230afe426013e0524ac630483c40`.
+The downloaded artifact passed ZIP integrity and transport digest checks. Its
+compiled ARM64 app contains the actual verification endpoint. APK v2 signer
+SHA-256 matches the installed update identity:
+`be20b27f0ba1f4decd2941d410b1536de89e48dc894f04f038f9d26b11ecd6aa`.
+CI additionally verified the APK signature and exact package/version using
+apksigner and aapt. This file was delivered for owner device acceptance; the
+website download link and existing installed app were not changed automatically.

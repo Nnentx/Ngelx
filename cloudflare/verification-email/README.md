@@ -1,6 +1,7 @@
 # Free verification email adapter
 
-Candidate prepared locally; NOT deployed or connected to an APK.
+Deployed on 2026-10-24 and connected to the verified Build562 APK.
+See ../../docs/free-verification-email-562.md for deployment and test evidence.
 Uses Cloudflare Workers Free + Resend Free; Firebase remains Spark.
 Do not upgrade plans or enable paid overages. Resend Free currently permits
 100 messages/day and 3,000/month shared with all other account sends.
