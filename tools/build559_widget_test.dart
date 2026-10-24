@@ -133,6 +133,7 @@ void main() {
       key.currentState!.cancelMediaFollow559();
       key.currentState!.scroll.jumpTo(100);
       key.currentState!.grow();
+      key.currentState!.followSentMedia559();
       await tester.pump();
       expect(key.currentState!.scroll.offset, 100);
       await tester.pumpWidget(const SizedBox());

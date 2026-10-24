@@ -1,7 +1,7 @@
 {
   "app/lib/main.dart": {
     "before": "5ec9b048aca135f294784da62f2fe3aa1741e98af1a39617ab57f951b011b784",
-    "after": "61c4db10f5974abebe2c3392361597f44d7885159aa8e19c75cb6a9253b0eff7"
+    "after": "8eefd1afd847069eae9732ef461d6cf4e15b63df922f9dc2ddef551d54e83852"
   },
   "app/lib/build558_chat_quality.dart": {
     "before": "f46879fa0fc9286b7a870e9145cbd209677eb85314e024a3a65eb185e55c9ce1",
