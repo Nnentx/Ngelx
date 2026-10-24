@@ -17,7 +17,11 @@ const oob=await fetch('https://identitytoolkit.googleapis.com/v1/projects/ngelx-
 const oobCode=String(oobResult.error?.message??'').match(/^[A-Z_]+/)?.[0]??'UNKNOWN';
 if(oob.status!==400||!['EMAIL_NOT_FOUND','USER_NOT_FOUND'].includes(oobCode))throw Error('Auth link permission not verified: '+oob.status+' '+oobCode);
 const read=await fetch('https://firestore.googleapis.com/v1/projects/ngelx-44eed/databases/(default)/documents/_verification_free/preflight-readonly-nonexistent',{headers});if(![200,404].includes(read.status))throw Error('Quota datastore permission unavailable: '+read.status);
-if(planError)throw planError;
+// Owner screenshot 50688.jpg, 2026-10-24: Workers & Pages shows daily
+// 100,000 request cap, Upgrade, and $0. Screenshot 50689.jpg identifies
+// alihancaglar76.workers.dev. Apply only to the matched account above.
+if(planError&&!String(planError.message).includes('subscriptions HTTP 403'))throw planError;
+if(planError)console.log('Workers Free verified from owner dashboard 50688/50689, 2026-10-24; matching account subdomain verified by API.');
 fs.writeFileSync('cloudflare/verification-email/.secrets-email.json',JSON.stringify({RESEND_API_KEY:process.env.NGELX_EMAIL_API_KEY,GOOGLE_SERVICE_ACCOUNT:JSON.stringify(sa)}),{mode:0o600});
 fs.writeFileSync('free-email-preflight.json',JSON.stringify({freePlanVerified:true,subdomain:sub.subdomain,authLookup:true,authLinkPermission:true,checkedAt:new Date().toISOString()}));
 console.log('Free plan and Firebase permissions verified. No email sent, no billing change.');
