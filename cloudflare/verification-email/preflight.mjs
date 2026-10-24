@@ -16,7 +16,7 @@ const lookup=await fetch('https://identitytoolkit.googleapis.com/v1/projects/nge
 const oob=await fetch('https://identitytoolkit.googleapis.com/v1/projects/ngelx-44eed/accounts:sendOobCode',{method:'POST',headers,body:JSON.stringify({requestType:'VERIFY_EMAIL',email:'__free_email_preflight_nonexistent__@example.invalid',returnOobLink:true})});const oobResult=await oob.json();
 const oobCode=String(oobResult.error?.message??'').match(/^[A-Z_]+/)?.[0]??'UNKNOWN';
 if(oob.status!==400||!['EMAIL_NOT_FOUND','USER_NOT_FOUND'].includes(oobCode))throw Error('Auth link permission not verified: '+oob.status+' '+oobCode);
-const read=await fetch('https://firestore.googleapis.com/v1/projects/ngelx-44eed/databases/(default)/documents/_verification_free/__preflight_nonexistent__',{headers});if(![200,404].includes(read.status))throw Error('Quota datastore permission unavailable: '+read.status);
+const read=await fetch('https://firestore.googleapis.com/v1/projects/ngelx-44eed/databases/(default)/documents/_verification_free/preflight-readonly-nonexistent',{headers});if(![200,404].includes(read.status))throw Error('Quota datastore permission unavailable: '+read.status);
 if(planError)throw planError;
 fs.writeFileSync('cloudflare/verification-email/.secrets-email.json',JSON.stringify({RESEND_API_KEY:process.env.NGELX_EMAIL_API_KEY,GOOGLE_SERVICE_ACCOUNT:JSON.stringify(sa)}),{mode:0o600});
 fs.writeFileSync('free-email-preflight.json',JSON.stringify({freePlanVerified:true,subdomain:sub.subdomain,authLookup:true,authLinkPermission:true,checkedAt:new Date().toISOString()}));
