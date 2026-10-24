@@ -148,6 +148,7 @@ void main() {
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             fontSize: 13.5,
+                            height: 1.2,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
