@@ -65,10 +65,12 @@ void main(){
   adapter.fail=false;await controller.download();expect(controller.state,'installer');expect(verifyCount,1);expect(installCount,1);
  });
  testWidgets('update dialog has owner-approved action, progress and retry path',(tester)async{
-  await controller.check();
+  await tester.runAsync(()=>controller.check());
   await tester.pumpWidget(MaterialApp(home:Builder(builder:(context)=>Scaffold(body:TextButton(onPressed:()=>showDialog<void>(context:context,builder:(_)=>Ngelx564UpdateDialog(controller:controller)),child:const Text('Aç'))))));
   await tester.tap(find.text('Aç'));await tester.pumpAndSettle();expect(find.text('Yeni güncelleme hazır'),findsOneWidget);expect(find.text('Güncelle'),findsOneWidget);
-  expect(adapter.apkRequests,0);await tester.tap(find.text('Güncelle'));await tester.runAsync(()async{for(var i=0;i<100&&controller.busy;i++){await Future<void>.delayed(const Duration(milliseconds:50));}});await tester.pumpAndSettle();
+  expect(adapter.apkRequests,0);
+  final action=tester.widget<FilledButton>(find.widgetWithText(FilledButton,'Güncelle')).onPressed!;
+  await tester.runAsync(()async{action();for(var i=0;i<100&&controller.busy;i++){await Future<void>.delayed(const Duration(milliseconds:50));}expect(controller.busy,false);});await tester.pumpAndSettle();
   expect(installCount,1);expect(find.text('Yüklemeyi aç'),findsOneWidget);expect(tester.takeException(),isNull);
   await tester.pumpWidget(const SizedBox());
  });

@@ -2,7 +2,7 @@ name: NgelX updater focused regression
 on:
   push:
     branches: [feat/build564-in-app-update]
-    paths: ['.github/workflows/NgelX-BUILD564-FOCUSED.yml']
+    paths: ['.github/workflows/NgelX-BUILD564-FOCUSED.yml', 'tools/build564_update.dart', 'tools/build564_update_test.dart']
   workflow_dispatch:
 permissions:
   contents: read
