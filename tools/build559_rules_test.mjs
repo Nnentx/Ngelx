@@ -10,7 +10,7 @@ try{
  });
  const me=env.authenticatedContext('owner').firestore(),other=env.authenticatedContext('other').firestore();
  await assertSucceeds(updateDoc(doc(me,'users/owner'),{bio:'Changed'}));
- for(const patch of [{displayName:'Bypass'},{username:'bypass'},{usernameLower:'bypass'},{displayNameChangedAt559:null},{usernameChangedAt559:null}])await assertFails(updateDoc(doc(me,'users/owner'),patch));
+ for(const patch of [{displayName:'Bypass'},{name:'Bypass'},{fullName:'Bypass'},{username:'bypass'},{usernameLower:'bypass'},{displayNameChangedAt559:null},{usernameChangedAt559:null}])await assertFails(updateDoc(doc(me,'users/owner'),patch));
  await assertFails(deleteDoc(doc(me,'users/owner')));
  await assertFails(updateDoc(doc(other,'users/owner'),{bio:'Attack'}));
  await assertFails(getDoc(doc(me,'login_usernames/original')));

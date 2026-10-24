@@ -10,7 +10,7 @@ def patch_rules(text):
         && !request.resource.data.keys().hasAny(['displayNameChangedAt559', 'usernameChangedAt559']);
       allow delete: if false;
       allow update: if (isMe(uid) && !request.resource.data.diff(resource.data).affectedKeys().hasAny([
-        'displayName', 'username', 'usernameLower', 'displayNameChangedAt559', 'usernameChangedAt559'
+        'displayName', 'name', 'fullName', 'username', 'usernameLower', 'displayNameChangedAt559', 'usernameChangedAt559'
       ])) || relationshipUpdate();'''
  assert text.count(old)==1,'Unexpected profile rules baseline'
  text=text.replace(old,new)

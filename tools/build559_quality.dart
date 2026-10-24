@@ -64,6 +64,8 @@ Future<Map<String, dynamic>> ngelx559AuthenticatedPost(
   final user = FirebaseAuth.instance.currentUser;
   if (user == null) throw StateError('Oturumun sona erdi. Yeniden giriş yap.');
   final token = await user.getIdToken();
+  if (FirebaseAuth.instance.currentUser?.uid != user.uid)
+    throw StateError('Hesabın değişti. İşlemi tekrar başlat.');
   try {
     final response =
         await Dio(
@@ -108,12 +110,19 @@ Future<Map<String, dynamic>> ngelx559AuthenticatedPost(
   }
 }
 
-Future<void> ngelx559SaveIdentity(Map<String, dynamic> changes) async {
+Future<void> ngelx559SaveIdentity(
+  Map<String, dynamic> changes, {
+  required String expectedUid,
+}) async {
+  if (FirebaseAuth.instance.currentUser?.uid != expectedUid)
+    throw StateError('Hesabın değişti. İşlemi tekrar başlat.');
   if (changes.isEmpty) return;
   await ngelx559AuthenticatedPost(ngelx559IdentityUrl, changes);
 }
 
 Future<void> ngelx559SendVerification(User user) async {
+  if (FirebaseAuth.instance.currentUser?.uid != user.uid)
+    throw StateError('Hesabın değişti. İşlemi tekrar başlat.');
   await FirebaseAuth.instance
       .setLanguageCode('tr')
       .timeout(const Duration(seconds: 6));
