@@ -82,3 +82,6 @@ export const livekitGuestModeration = onRequest({
 
 // Build543 prepared endpoint only; production deployment remains a separate action.
 export {communityDelete543} from '../community543/index.mjs';
+
+// Build561: optional branded verification email; existing exports preserved.
+export {verificationEmail561} from '../verification561/index.mjs';
