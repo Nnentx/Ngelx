@@ -1,0 +1,31 @@
+name: NgelX Build566 reliable game service
+on:
+  push:
+    branches: [feat/build566-ludo-pk]
+    paths: ['cloudflare/live-moderation/**', 'server/ludo565/**', '.github/workflows/NgelX-BUILD566-SERVICE.yml']
+permissions:
+  contents: read
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test authenticated game, moderation and call boundaries
+        run: node --test server/ludo565/*.test.mjs cloudflare/live-moderation/test/*.test.mjs cloudflare/call-push/test/*.test.mjs server/livekit443/*.test.mjs
+      - name: Deploy existing worker and preserve its owned game hostname
+        working-directory: cloudflare/live-moderation
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          npm install --no-audit --no-fund
+          npx wrangler deploy
+      - name: Test real game actions through the owned game domain
+        env:
+          FIREBASE_SERVICE_ACCOUNT_NGELX_44EED: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_NGELX_44EED }}
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: node tools/build566_ludo_smoke.mjs

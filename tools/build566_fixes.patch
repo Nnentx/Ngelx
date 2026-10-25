@@ -1,0 +1,202 @@
+--- a/app/lib/main.dart
++++ b/app/lib/main.dart
+@@ -55,6 +55,8 @@
+ import 'package:url_launcher/url_launcher.dart';
+ import 'group_quality.dart';
+ import 'package:firebase_storage/firebase_storage.dart';
++import 'build566_transport.dart';
++import 'build566_policy.dart';
+ part 'build258_settings.dart';
+ part 'create_music_editor.dart';
+ part 'camera_studio.dart';
+@@ -95,6 +97,7 @@
+ part 'build564_update.dart';
+ part 'build565_announcements.dart';
+ part 'build565_ludo.dart';
++
+ part 'build556_delete.dart';
+ part 'build543_group_call_join.dart';
+ part 'build446_call_lifecycle.dart';
+@@ -12117,6 +12120,21 @@
+   Set<String> arsivSohbetler={};
+   Set<String> sabitSohbetler={};
+   Map<String,int> sabitZamanlar440={};
++  final Map<String,int> _opened566={};
++  int get _noticeAt566=>_opened566['__ngelx_notices__']??ngelx566NoticePublished;
++  Future<void> _loadActivity566()async{
++    final me=uid;if(me==null)return;
++    try{final prefs=await SharedPreferences.getInstance();final raw=jsonDecode(prefs.getString('inbox566_activity_'+me)??'{}');
++      if(!mounted||uid!=me||raw is! Map)return;
++      setState((){for(final e in raw.entries){if(e.value is int)_opened566.putIfAbsent(e.key.toString(),()=>e.value as int);}});
++    }catch(_){}
++  }
++  void _openedChat566(String id){
++    final me=uid;if(me==null)return;
++    setState(()=>_opened566[id]=DateTime.now().millisecondsSinceEpoch);
++    final encoded=jsonEncode(_opened566);
++    unawaited(SharedPreferences.getInstance().then((p)=>p.setString('inbox566_activity_'+me,encoded)).catchError((_){return false;}));
++  }
+   int _tercihSurumu440=0;
+   Set<String> arkadaslar={};
+   final sohbetAra=TextEditingController();
+@@ -12179,7 +12197,7 @@
+     }
+   }
+ 
+-  @override void initState(){super.initState();unawaited(tercihleriGetir().catchError((_){ }));_eskiGruplariIzle438();final me=uid;if(me!=null)unawaited(ngelx434EskiIstekleriUzlastir(me));}
++  @override void initState(){super.initState();unawaited(_loadActivity566());unawaited(tercihleriGetir().catchError((_){ }));_eskiGruplariIzle438();final me=uid;if(me!=null)unawaited(ngelx434EskiIstekleriUzlastir(me));}
+   @override void dispose(){
+     for(final t in _ngelx465ProfileRetryTimers.values){t.cancel();}
+     _ngelx465ProfileRetryTimers.clear();
+@@ -12399,6 +12417,7 @@
+     // Okundu yazısı ekran geçişini asla bekletmez. Ağ/kural hatası olsa bile
+     // sohbet anında açılır; sayaç yazısı arka planda en fazla 5 sn denenir.
+     if(!mounted)return;
++    _openedChat566(chatId);
+     final ben=uid;
+     if(ben!=null){
+       unawaited(
+@@ -12961,13 +12980,12 @@
+               // Build 396: archived groups stay in the dedicated Archive screen.
+               final eski=<QueryDocumentSnapshot<Map<String,dynamic>>>[];
+               int zaman(dynamic ham)=>ham is Timestamp?ham.millisecondsSinceEpoch:0;
+-              final satirlar=<({bool eski,QueryDocumentSnapshot<Map<String,dynamic>> d,bool sabit,int zaman})>[
+-                ...docs.map((d)=>(eski:false,d:d,sabit:sabitSohbetler.contains(d.id),zaman:zaman(_inboxVerisi438(d)['updatedAt']??_inboxVerisi438(d)['lastMessageClientAt']))),
++              final satirlar=<({bool eski,QueryDocumentSnapshot<Map<String,dynamic>>? d,bool sabit,int zaman})>[
++                ...docs.map((d)=>(eski:false,d:d,sabit:sabitSohbetler.contains(d.id),zaman:ngelx566InboxTime(zaman(_inboxVerisi438(d)['updatedAt']??_inboxVerisi438(d)['lastMessageClientAt']),_opened566[d.id]??0))),
+                 ...eski.map((d)=>(eski:true,d:d,sabit:false,zaman:zaman(_inboxVerisi438(d)['updatedAt']??_inboxVerisi438(d)['archivedAt']))),
+-              ]..sort((a,b){
+-                if(a.sabit!=b.sabit)return a.sabit?-1:1;
+-                return b.zaman.compareTo(a.zaman);
+-              });
++                if((filtre=='Tümü'||filtre=='Mesajlar')&&(sohbetSorgu.isEmpty||'ngelx duyurular ludo güncelleme'.contains(sohbetSorgu)))
++                  (eski:false,d:null,sabit:false,zaman:_noticeAt566),
++              ]..sort((a,b)=>ngelx566InboxCompare(a.sabit,a.zaman,b.sabit,b.zaman));
+ 
+               if(satirlar.isEmpty&&s.data?.metadata.isFromCache==true)return const Center(child:Text('Sohbetler eşitleniyor…',style:TextStyle(color:mor,fontSize:14)));
+               if(satirlar.isEmpty)return ListView(
+@@ -13003,9 +13021,10 @@
+                 itemCount:satirlar.length,
+                 separatorBuilder:(_,__)=>const Divider(height:1,thickness:.7,indent:68,color:Color(0xFFEDEAF5)),
+                 itemBuilder:(_,i){
+-                  final satir=satirlar[i];
++                  final satir=satirlar[i],document566=satirlar[i].d;
++                  if(document566==null)return Ngelx565NoticeRow(onOpen:()=>_openedChat566('__ngelx_notices__'));
+                   if(satir.eski){
+-                    final v=_inboxVerisi438(satir.d),chatId=(v['chatId']??satir.d.id).toString(),hamAd=(v['groupName']??v['name']??v['title']??'').toString().trim(),ad=hamAd.isEmpty?t('groupChat'):hamAd,foto=(v['groupPhotoUrl']??'').toString();
++                    final v=_inboxVerisi438(document566),chatId=(v['chatId']??document566.id).toString(),hamAd=(v['groupName']??v['name']??v['title']??'').toString().trim(),ad=hamAd.isEmpty?t('groupChat'):hamAd,foto=(v['groupPhotoUrl']??'').toString();
+                     return ListTile(
+                       contentPadding:const EdgeInsets.symmetric(horizontal:4,vertical:5),
+                       onTap:chatId.isEmpty?null:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GrupSohbetPage(chatId:chatId,ad:ad,foto:foto))),
+@@ -13016,7 +13035,7 @@
+                     );
+                   }
+ 
+-                  final d=satir.d,v=_inboxVerisi438(d),members=List<String>.from(v['members']??[]);
++                  final d=document566,v=_inboxVerisi438(d),members=List<String>.from(v['members']??[]);
+                   final grup=v['isGroup']==true||members.length>2;
+                   final unread=(v['unread_$ben'] as num?)?.toInt()??0;
+                   final zamanYazi=saatEtiketi(v['updatedAt']??v['lastMessageClientAt']);
+@@ -13140,8 +13159,6 @@
+         :filtre=='İstekler'
+           ?isteklerIcerigi()
+           :sohbetlerIcerigi();
+-
+-    if((filtre=='Tümü'||filtre=='Mesajlar')&&(sohbetSorgu.isEmpty||'ngelx duyurular ludo güncelleme'.contains(sohbetSorgu))){govde=Column(children:[const Ngelx565NoticeRow(),const Divider(height:1,indent:84),Expanded(child:govde)]);}
+ 
+     return Theme(
+       data:ThemeData.light().copyWith(scaffoldBackgroundColor:Colors.white,dividerColor:const Color(0xFFEDF0F5)),
+--- a/app/lib/live_pk.dart
++++ b/app/lib/live_pk.dart
+@@ -393,6 +393,8 @@
+         olayTuru:'live_pk_accept',
+         dedupeKey:'live_pk_accept_$requestId',
+       ).catchError((_){ }));
++    }catch(_){
++      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('PK kabulü doğrulanamadı. Yayında kalıp tekrar dene.')));
+     }finally{
+       _islem=false;
+       if(mounted)setState((){});
+@@ -438,7 +440,7 @@
+         final ends=live['pkEndsAt'];
+         var kalan=180;
+         if(ends is Timestamp)kalan=ends.toDate().difference(DateTime.now()).inSeconds.clamp(0,180).toInt();
+-        if((kalan<=0||!ngelxCanliKaydiTaze(opponent))&&widget.yayinSahibi&&!_islem){
++        if(ngelx566PkShouldEnd(remaining:kalan,opponentLoaded:oppSnap.hasData,serverConfirmed:oppSnap.hasData&&!oppSnap.data!.metadata.isFromCache&&!oppSnap.data!.metadata.hasPendingWrites,opponentFresh:ngelxCanliKaydiTaze(opponent))&&widget.yayinSahibi&&!_islem){
+           unawaited(_pkBitir(sessionId,live,opponent));
+         }
+         final dk=(kalan~/60).toString().padLeft(2,'0'),sn=(kalan%60).toString().padLeft(2,'0');
+@@ -510,7 +512,7 @@
+               builder:(_,callSnap){
+                 final cv=callSnap.data?.data()??<String,dynamic>{};
+                 final status=(cv['status']??'').toString();
+-                if(callSnap.hasData&&status!='active'&&!_islem)unawaited(_kendiPkTemizle());
++                if(callSnap.hasData&&!callSnap.data!.metadata.isFromCache&&!callSnap.data!.metadata.hasPendingWrites&&status!='active'&&!_islem)unawaited(_kendiPkTemizle());
+                 return _aktifPk(live,session);
+               },
+             );
+--- a/app/lib/build565_ludo.dart
++++ b/app/lib/build565_ludo.dart
+@@ -1,6 +1,6 @@
+ part of 'main.dart';
+ 
+-const ngelx565LudoUrl='https://ngelx-live-moderation.alihancaglar76.workers.dev/ludo';
++const ngelx565LudoUrl='https://oyun.ngelxsocial.com/ludo';
+ const ngelx565LudoColors=[Color(0xFFE64E65),Color(0xFF22B97F),Color(0xFFF2BB35),Color(0xFF279EEB)];
+ String ngelx565RoomId(String text)=>RegExp(r'https://ngelxsocial\.com/ludo/([A-F0-9]{16})(?:\s|$)').firstMatch(text)?.group(1)??'';
+ List<int> ngelx565Legal(Map<String,dynamic> room,int seat){
+@@ -8,17 +8,28 @@
+   final tokens=List<dynamic>.from((room['tokens'] as List)[seat]);final distance=dice.toInt()*(room['doubled']==true?2:1);
+   return [for(var i=0;i<tokens.length;i++)if(tokens[i]==-1?dice==6:tokens[i]!=56&&(tokens[i] as num)+distance<=56)i];
+ }
++final _ngelx566LudoTransport=Ngelx566LudoTransport();
+ Future<Map<String,dynamic>> ngelx565LudoRequest(Map<String,dynamic> body) async {
+  final user=FirebaseAuth.instance.currentUser;if(user==null||user.isAnonymous)throw Exception('Oynamak için hesabına giriş yap.');
+- final token=await user.getIdToken();
++ final token=await user.getIdToken().timeout(const Duration(seconds:12));
++ if(token==null)throw Exception('Oturumunu kontrol edip tekrar dene.');
++ final payload=_ngelx566LudoTransport.prepare(body);
+  try{
+-  final response=await Dio(BaseOptions(connectTimeout:const Duration(seconds:10),receiveTimeout:const Duration(seconds:15))).post<dynamic>(ngelx565LudoUrl,data:body,options:Options(headers:{'Authorization':'Bearer $token','content-type':'application/json'}));
+-  return Map<String,dynamic>.from((response.data as Map)['room'] as Map);
++  Map<String,dynamic> room;
++  try{room=await _ngelx566LudoTransport.request(payload,token:token);}
++  on DioException catch(e){
++   if(e.response?.statusCode!=401)rethrow;
++   final fresh=await user.getIdToken(true);if(fresh==null)rethrow;
++   room=await _ngelx566LudoTransport.request(payload,token:fresh);
++  }
++  if(FirebaseAuth.instance.currentUser?.uid!=user.uid)throw Exception('Oturum değişti. Tekrar giriş yap.');
++  return room;
+  }on DioException catch(e){
+   final data=e.response?.data;final code=data is Map?data['error']:null;
+   const errors={'room_full':'Oda dolu veya oyun başlamış.','room_not_found':'Oda bulunamadı.','room_expired':'Bu odanın süresi doldu. Yeni bir oda oluştur.','not_a_player':'Bu oyuna erişimin yok.','state_changed':'Oyun durumu değişti. Tekrar dene.','not_your_turn':'Şu an sıra sende değil.','waiting_for_players':'Diğer oyuncuların katılması bekleniyor.','slow_down':'Biraz bekleyip tekrar dene.','unauthorized':'Oturumunu kontrol edip tekrar dene.','already_left':'Bu oyundan ayrılmışsın. Yeni bir odaya katılabilirsin.'};
+-  throw Exception(errors[code]??'Oyun sunucusuna bağlanılamadı. Tekrar dene.');
+- }
++  debugPrint('Ludo566: ${e.type.name}, HTTP ${e.response?.statusCode}, ${code??'connection'}');
++  throw Exception(errors[code]??'Oyun bağlantısı kurulamadı. Tekrar dene.');
++ }on FormatException {throw Exception('Oyun yanıtı doğrulanamadı. Tekrar dene.');}
+ }
+ class Ngelx565LudoLobby extends StatefulWidget{
+  const Ngelx565LudoLobby({super.key});
+--- a/app/lib/build565_announcements.dart
++++ b/app/lib/build565_announcements.dart
+@@ -1,7 +1,8 @@
+ part of 'main.dart';
+ 
+ class Ngelx565NoticeRow extends StatefulWidget{
+- const Ngelx565NoticeRow({super.key});
++ final VoidCallback? onOpen;
++ const Ngelx565NoticeRow({super.key,this.onOpen});
+  @override State<Ngelx565NoticeRow> createState()=>_Ngelx565NoticeRowState();
+ }
+ class _Ngelx565NoticeRowState extends State<Ngelx565NoticeRow>{
+@@ -12,7 +13,7 @@
+  @override Widget build(BuildContext context)=>ListenableBuilder(listenable:ngelx564Updater,builder:(context,_){
+   final latest=math.max(565,ngelx564Updater.release?.build??0);
+   return ListTile(key:const ValueKey('ngelx-announcements565'),contentPadding:const EdgeInsets.symmetric(horizontal:20,vertical:5),leading:Container(width:52,height:52,decoration:const BoxDecoration(shape:BoxShape.circle,gradient:LinearGradient(colors:[mor,Color(0xFF258AFF)])),child:const Icon(Icons.campaign_rounded,color:Colors.white,size:29)),title:const Text('NgelX Duyurular',style:TextStyle(color:Color(0xFF101827),fontWeight:FontWeight.w800,fontSize:16)),subtitle:const Text('Ludo ve uygulama güncellemeleri',style:TextStyle(color:Color(0xFF606875),fontSize:12.5)),trailing:seen<latest?const Badge(label:Text('1'),backgroundColor:mor):const Icon(Icons.chevron_right_rounded,color:mor),onTap:()async{
+-   final prefs=await SharedPreferences.getInstance();await prefs.setInt(key,latest);if(!context.mounted)return;setState(()=>seen=latest);await Navigator.push(context,MaterialPageRoute(builder:(_)=>const Ngelx565AnnouncementsPage()));
++   final prefs=await SharedPreferences.getInstance();await prefs.setInt(key,latest);if(!context.mounted)return;setState(()=>seen=latest);widget.onOpen?.call();await Navigator.push(context,MaterialPageRoute(builder:(_)=>const Ngelx565AnnouncementsPage()));
+   });
+  });
+ }
