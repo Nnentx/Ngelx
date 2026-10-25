@@ -1,5 +1,6 @@
 import {createRoom,act,LudoError,legal,secureRoll} from '../../../server/ludo565/engine.mjs';
 import {accessToken} from '../../call-push/src/google.mjs';
+import {chooseBotToken572} from '../../../server/ludo565/strategy572.mjs';
 export function ludoStore565(env,{fetcher=fetch,authorize=()=>accessToken(env)}={}){
  if(env.FIREBASE_PROJECT_ID!=='ngelx-44eed')throw Error('Wrong project');
  const base=`https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID}/databases/(default)/documents/_ngelx_ludo565/`;
@@ -114,14 +115,8 @@ export function createLudo565({verify,profile,store,limit=async()=>true,now=()=>
     let move;
     if(room.dice===null)move={action:'roll'};
     else{
-     const options=legal(room,bot.seat);
-     const ranked=options.map(token=>{
-      const next=act(room,bot.uid,{action:'move',token,revision:room.revision,requestId:'score568_'+room.revision},now(),()=>6);
-      const captures=room.tokens.flat().filter(x=>x===-1).length<next.tokens.flat().filter(x=>x===-1).length;
-      return {token,score:(next.tokens[bot.seat][token]===56?1000:0)+(captures?300:0)+next.tokens[bot.seat][token]};
-     }).sort((a,b)=>b.score-a.score);
-     const random=()=>options[(roll??secureRoll)()%options.length];
-     move={action:'move',token:room.difficulty==='easy'?random():room.difficulty==='hard'?ranked[0].token:((roll??secureRoll)()>3?ranked[0].token:random())};
+     const token=chooseBotToken572(room,bot.seat,room.difficulty,roll??secureRoll);
+     move={action:'move',token};
     }
     room=act(room,bot.uid,{...move,revision:room.revision,requestId:'bot568_'+room.revision},now(),roll);
    }
