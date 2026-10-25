@@ -1,0 +1,56 @@
+name: NgelX Build567 Ludo connection, inbox ordering and PK regression
+on:
+  push:
+    branches: [feat/build567-ludo-quality]
+    paths: ['tools/build567*', 'tools/apply_build567*', '.github/workflows/NgelX-BUILD567-FOCUSED.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  updater:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - uses: actions/download-artifact@v4
+        with:
+          name: NgelX-Build566-Assembled-Source
+          run-id: 40178049118
+          github-token: ${{ github.token }}
+          path: assembled
+      - name: Restore tested assembled source and add exact updater delta
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp -a assembled/app/. app/
+          python3 tools/apply_build567_ludo.py
+          cp tools/build564_update_test.dart app/test/build564_update_test.dart
+          sed -i 's/Yüklemeyi aç/Güncelle/g' app/test/build564_update_test.dart
+          cp tools/build565_widget_test.dart app/test/build565_widget_test.dart
+          cp tools/build566_widget_test.dart app/test/build566_widget_test.dart test/build567_widget_test.dart
+          cp tools/build567_widget_test.dart app/test/build567_widget_test.dart
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('app/pubspec.yaml');s=p.read_text()
+          for package,version in [('firebase_storage','^13.6.0'),('crypto','^3.0.6'),('flutter_cache_manager','^3.4.5')]:
+              if '  '+package+':' not in s:s=s.replace('  cupertino_icons:','  '+package+': '+version+'\n  cupertino_icons:',1)
+          p.write_text(s)
+          PY
+      - name: Exercise updater with bounded per-test timeout
+        working-directory: app
+        shell: bash
+        run: |
+          set -euo pipefail
+          flutter pub get
+          timeout 180s flutter test --timeout 30s --reporter expanded test/build564_update_test.dart test/build565_widget_test.dart test/build566_widget_test.dart test/build567_widget_test.dart
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: NgelX-Build567-Previews
+          path: app/build567-previews
+          if-no-files-found: ignore
