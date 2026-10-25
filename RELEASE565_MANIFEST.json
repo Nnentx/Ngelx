@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "package": "com.nnentx.ngelx_app",
+  "abi": "arm64-v8a",
+  "version": "1.0.335",
+  "build": 565,
+  "size": 47558047,
+  "sha256": "f860af3f1dfafb7b7bcb3f41ede65b29d9d1dc871ef557eeacf6cd401afa0f14",
+  "url": "https://github.com/Nnentx/Ngelx/releases/download/v1.0.335-build565-test/NgelX-1.0.335-Build-565.apk",
+  "notes": "Gelen kutusunda NgelX Duyurular; Ludo odaları ve sohbet davetleri; Güncelle düğmesi ve renkli güncelleme alanı.",
+  "testedSource": "5209acb5f6a4900275cf667b27d8cdbd4450570e",
+  "buildRun": 40174023647
+}
