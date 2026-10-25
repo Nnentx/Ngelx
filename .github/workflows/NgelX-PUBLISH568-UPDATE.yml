@@ -1,0 +1,70 @@
+name: Publish verified NgelX Build568 updater APK
+on:
+  push:
+    branches: [feat/build568-ludo-modes]
+    paths: ['.github/workflows/NgelX-PUBLISH568-UPDATE.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: Nnentx/Ngelx
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: NgelX-Build568-Review-APK
+          run-id: 40214934625
+          github-token: ${{ github.token }}
+          path: verified-apk
+      - name: Validate the exact tested APK and prepare updater metadata
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import json,hashlib
+          files=list(Path('verified-apk').rglob('*.apk'));assert len(files)==1
+          raw=files[0].read_bytes();sha=hashlib.sha256(raw).hexdigest()
+          assert sha=='76c5fc3f3643b751b04a76c59d150767874974d2ee19e8c95364dae5bfb128d8'
+          assert len(raw)==47599751
+          name='NgelX-1.0.338-Build568.apk';Path(name).write_bytes(raw)
+          Path(name+'.sha256').write_text(sha+'  '+name+'\n')
+          feed={'schema':1,'package':'com.nnentx.ngelx_app','abi':'arm64-v8a','version':'1.0.338','build':568,'size':len(raw),'sha256':sha,'url':'https://github.com/Nnentx/Ngelx/releases/download/v1.0.338-build568-test/'+name,'notes':'Ludo sohbeti ve davet listesindeki alt taşmalar düzeltildi; yenileme ve yeni oyun seçenekleri eklendi. Makine, rastgele eşleşme ve 6 haneli oda kodları için oyun sunucusu güncellemesi bekleniyor.','testedSource':'c7f57803b8097d1b71d7b74b4978ddba7e26eb7d','buildRun':40214934625}
+          Path('android-update.json').write_text(json.dumps(feed,ensure_ascii=False,indent=2)+'\n')
+          Path('notes.md').write_text('NgelX 1.0.338 / Yapı 568 test sürümü.\n\nMevcut yapıyı koruyan Ludo arayüzü güncellemesi. Sohbet kutusu ve davet listesinin alt boşlukları düzeltildi, aşağı çekerek yenileme ve yeni oyun seçenekleri eklendi.\n\nMakineyle oyun, rastgele eşleşme ve yeni 6 haneli oda kodları, oyun sunucusunun güncellenmesinden sonra etkinleşecek.\n\n41 sunucu testi, 17 Flutter testi ve kod analizi başarılı. APK imzası ve önceki görsel/ses dosyaları doğrulandı. Mevcut uygulamayı silmeden üzerine kurulabilir. Android gerekirse bu kaynaktan yükleme izni ister.\n')
+          PY
+      - name: Preserve tested source using the existing trusted release workflow tree
+        run: |
+          gh api repos/Nnentx/Ngelx/git/trees/main > main-tree.json
+          python3 - <<'PY'
+          from pathlib import Path
+          import json
+          trusted=next(e['sha'] for e in json.load(open('main-tree.json'))['tree'] if e['path']=='.github')
+          tree={'base_tree':'c7f57803b8097d1b71d7b74b4978ddba7e26eb7d','tree':[{'path':'.github','mode':'040000','type':'tree','sha':trusted},{'path':'RELEASE568_MANIFEST.json','mode':'100644','type':'blob','content':Path('android-update.json').read_text()}]}
+          Path('tree.json').write_text(json.dumps(tree))
+          PY
+          gh api --method POST repos/Nnentx/Ngelx/git/trees --input tree.json > tree-result.json
+          python3 - <<'PY'
+          from pathlib import Path
+          import json
+          Path('commit.json').write_text(json.dumps({'message':'Build568 tested source snapshot for updater release','tree':json.load(open('tree-result.json'))['sha'],'parents':['c7f57803b8097d1b71d7b74b4978ddba7e26eb7d']}))
+          PY
+          gh api --method POST repos/Nnentx/Ngelx/git/commits --input commit.json > commit-result.json
+      - name: Publish APK and verify the public download bytes
+        run: |
+          if gh release view v1.0.338-build568-test >/dev/null 2>&1; then
+            gh release download v1.0.338-build568-test --pattern NgelX-1.0.338-Build568.apk --dir existing
+            cmp NgelX-1.0.338-Build568.apk existing/NgelX-1.0.338-Build568.apk
+          else
+            target=$(python3 -c "import json;print(json.load(open('commit-result.json'))['sha'])")
+            gh release create v1.0.338-build568-test NgelX-1.0.338-Build568.apk NgelX-1.0.338-Build568.apk.sha256 android-update.json --target "$target" --prerelease --title 'NgelX 1.0.338 / Build568 test' --notes-file notes.md
+            gh release download v1.0.338-build568-test --pattern NgelX-1.0.338-Build568.apk --dir existing
+            cmp NgelX-1.0.338-Build568.apk existing/NgelX-1.0.338-Build568.apk
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NgelX-Build568-Published-Update-Manifest
+          path: android-update.json
