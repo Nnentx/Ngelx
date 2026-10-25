@@ -75,6 +75,16 @@ jobs:
           cp tools/build570_join_test.dart app/test/build570_join_test.dart
           cp tools/build570_modes_test.dart app/test/build570_modes_test.dart
           cp tools/build570_perf_test.dart app/test/build570_perf_test.dart
+          # A layout must settle promptly. Give Flutter a useful failure message
+          # instead of leaving screenshot/widget tests spinning indefinitely.
+          python3 - <<'BOUND_TESTS'
+          from pathlib import Path
+          for name in ('build567_widget_test.dart','build570_widget_test.dart','build570_modes_test.dart'):
+              p=Path('app/test')/name
+              s=p.read_text()
+              s=s.replace('t.pumpAndSettle()', 't.pumpAndSettle(timeout:const Duration(seconds:8))')
+              p.write_text(s)
+          BOUND_TESTS
           python3 - <<'PY'
           from pathlib import Path
           p=Path('app/pubspec.yaml');s=p.read_text()
