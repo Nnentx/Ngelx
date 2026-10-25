@@ -1,0 +1,110 @@
+name: NgelX Build567 actual controller leave
+on:
+  push:
+    branches: [feat/build567-ludo-quality]
+    paths: ['.github/workflows/NgelX-BUILD567-LIVE.yml']
+permissions:
+  contents: read
+  actions: read
+jobs:
+  real-client:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - uses: actions/download-artifact@v4
+        with:
+          name: NgelX-Build566-Assembled-Source
+          run-id: 40178049118
+          github-token: ${{ github.token }}
+          path: assembled
+      - name: Restore exact tested app and install current connection code
+        run: |
+          cp -a assembled/app/. app/
+          python3 tools/apply_build567_ludo.py
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('app/pubspec.yaml');s=p.read_text()
+          for package,version in [('firebase_storage','^13.6.0'),('crypto','^3.0.6'),('flutter_cache_manager','^3.4.5')]:
+            if '  '+package+':' not in s:s=s.replace('  cupertino_icons:','  '+package+': '+version+'\n  cupertino_icons:',1)
+          p.write_text(s)
+          PY
+          cd app
+          flutter pub get
+      - name: Create real transport integration test without embedding credentials
+        run: |
+          cat > app/test/build566_live_transport_test.dart <<'DART'
+          import 'dart:convert';
+          import 'dart:io';
+          import 'package:dio/dio.dart';
+          import 'package:flutter_test/flutter_test.dart';
+          import '../lib/build566_transport.dart';
+          import '../lib/build567_room_controller.dart';
+          void main(){
+            test('real Dio creates one retry-safe room, joins, starts and moves a pawn',()async{
+              final file=File(Platform.environment['NGELX_GAME_SMOKE_FILE']!);
+              final fixture=jsonDecode(await file.readAsString()) as Map<String,dynamic>;
+              final tokens=List<String>.from(fixture['tokens']);
+              final t=Ngelx566LudoTransport();
+              try{
+                final create=t.prepare({'action':'create','capacity':2,'mode':'classic'});
+                var room=await t.request(create,token:tokens[0]);
+                fixture['rooms']=[room['id']];await file.writeAsString(jsonEncode(fixture));
+                expect((await t.request(create,token:tokens[0]))['id'],room['id']);
+                room=await t.request({'action':'join','id':room['id']},token:tokens[1]);
+                var n=0;
+                Future<void> action(int who,String name,Map<String,dynamic> data)async{
+                  room=await t.request({'action':name,'id':room['id'],'revision':room['revision'],'requestId':'dio566_${fixture['nonce']}_${++n}',...data},token:tokens[who]);
+                }
+                await action(0,'start',{});
+                var moved=false;
+                for(var i=0;i<20;i++){
+                  final seat=room['turn'] as int,who=seat==0?0:1;
+                  await action(who,'roll',{});
+                  if(room['dice']==6){await action(who,'move',{'token':0});expect((room['tokens'] as List)[seat][0],0);moved=true;break;}
+                }
+                expect(moved,true);
+                final controller=Ngelx567RoomController(id:room['id'],uid:fixture['uids'][0],initial:room,request:(body)async{
+                  try{return await t.request(body,token:tokens[0]);}
+                  on DioException catch(e){final data=e.response?.data;throw Ngelx567Failure(data is Map?'${data['error']}':'connection','Actual request failed');}
+                });
+                expect(await controller.leave(),true);
+                expect(controller.detached,true);expect(controller.error,isEmpty);
+                controller.dispose();
+              }on DioException catch(e){fail('Real Dio request failed: ${e.type.name}, HTTP ${e.response?.statusCode}');}
+              finally{t.client.close(force:true);}
+            },timeout:const Timeout(Duration(seconds:120)));
+          }
+          DART
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path('tools/build566_ludo_smoke.mjs').read_text()
+          s="import {spawnSync} from 'node:child_process';\nimport os from 'node:os';\nimport path from 'node:path';\n"+s
+          marker=" await action(a,'leave');"
+          assert s.count(marker)==1
+          s=s.replace(marker,marker+'''
+           const directory=fs.mkdtempSync(path.join(os.tmpdir(),'ngelx-dio566-'));
+           const fixture=path.join(directory,'fixture.json');
+           fs.writeFileSync(fixture,JSON.stringify({tokens:[a.token,b.token],uids:[a.uid,b.uid],nonce,rooms:[]}),{mode:0o600});
+           try{
+            const childEnv={...process.env,NGELX_GAME_SMOKE_FILE:fixture};
+            delete childEnv.FIREBASE_SERVICE_ACCOUNT;delete childEnv.FIREBASE_SERVICE_ACCOUNT_NGELX_44EED;
+            const child=spawnSync('flutter',['test','--timeout','120s','--reporter','expanded','test/build566_live_transport_test.dart'],{cwd:'app',stdio:'inherit',env:childEnv,timeout:180000});
+            if(child.status!==0)throw Error('Actual Dio gameplay test failed');
+           }finally{
+            const result=JSON.parse(fs.readFileSync(fixture,'utf8'));
+            for(const id of result.rooms??[])if(/^[A-F0-9]{16}$/.test(id))rooms.push(id);
+            fs.unlinkSync(fixture);fs.rmdirSync(directory);
+           }
+          ''')
+          Path('tools/.build566_dio_smoke.mjs').write_text(s)
+          PY
+      - name: Exercise real Dio client with isolated accounts and remove all test data
+        env:
+          FIREBASE_SERVICE_ACCOUNT_NGELX_44EED: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_NGELX_44EED }}
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: node tools/.build566_dio_smoke.mjs
