@@ -1,0 +1,10 @@
+{
+  "app/lib/main.dart": {
+    "before": "c0b2bb13c49b52eccc9b001830fc45026e259ba55119a37aba739b178efc3eee",
+    "after": "ebf209d61f9fc337b69dd8975046f0a335987831f486114b410f0295755ec170"
+  },
+  "app/lib/build565_ludo.dart": {
+    "before": "f77f0071fe1dd04ff7ba48e8aacb2d559f91f0db99dbe81640c2279be3a34d3d",
+    "after": "bb71d98082a968f5ec8399caf626b17059288afa78fca99dc03badb037d6dd2e"
+  }
+}
