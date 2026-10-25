@@ -2,7 +2,7 @@ name: NgelX Build572 Ludo reference and smart game
 on:
   push:
     branches: [feat/build568-ludo-modes]
-    paths: ['tools/apply_build572*','tools/test_build572*','server/ludo565/**','cloudflare/live-moderation/src/ludo565.mjs','.github/workflows/NgelX-BUILD572-LUDO.yml']
+    paths: ['tools/apply_build572*','tools/test_build572*','tools/build572_fast_visual_test.dart','server/ludo565/**','cloudflare/live-moderation/src/ludo565.mjs','.github/workflows/NgelX-BUILD572-LUDO.yml']
   workflow_dispatch:
 permissions:
   contents: read
