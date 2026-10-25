@@ -1,7 +1,7 @@
 part of 'main.dart';
 
 const ngelx565LudoUrl='https://oyun.ngelxsocial.com/ludo';
-const ngelx565LudoColors=[Color(0xFF27CF78),Color(0xFFFFCD36),Color(0xFF35BFF6),Color(0xFFFA526B)];
+const ngelx565LudoColors=[Color(0xFF14B84E),Color(0xFFF1C400),Color(0xFF159BE2),Color(0xFFD93931)];
 String ngelx565RoomId(String text)=>RegExp(r'https://ngelxsocial\.com/ludo/((?:[0-9]{6}|[A-F0-9]{16}))(?:\s|$)').firstMatch(text)?.group(1)??'';
 List<int> ngelx565Legal(Map<String,dynamic> room,int seat){
   final dice=room['dice'];if(dice is! num)return [];
@@ -111,7 +111,7 @@ class Ngelx565LudoRoom extends StatefulWidget {
 }
 class _Ngelx565LudoRoomState extends State<Ngelx565LudoRoom> with WidgetsBindingObserver {
  late final Ngelx567RoomController game;
- Timer? poll;bool _canClose=false,_asking=false;
+ Timer? poll;Timer? chatExpiry;String? chatKey;String? chatBubble;bool _canClose=false,_asking=false;
  Map<String,dynamic> get room=>game.room;
  @override void initState(){
   super.initState();WidgetsBinding.instance.addObserver(this);
@@ -119,10 +119,18 @@ class _Ngelx565LudoRoomState extends State<Ngelx565LudoRoom> with WidgetsBinding
   game=Ngelx567RoomController(id:widget.id,uid:uid,request:widget.request??ngelx565LudoRequest,initial:widget.initial,accountMatches:widget.userId!=null?null:()=>FirebaseAuth.instance.currentUser?.uid==uid)..addListener(_changed);
   if(widget.initial==null)unawaited(game.sync(join:true));_startPoll();
  }
- void _changed(){if(mounted)setState((){});}
- void _startPoll(){poll?.cancel();poll=Timer.periodic(const Duration(seconds:4),(_){if(!game.terminal)unawaited(game.sync());});}
+ void _changed(){
+  final messages=room['chat'] as List? ?? [];
+  if(messages.isNotEmpty){final m=messages.last;final key='${m['uid']}:${m['at']}';
+   if(key!=chatKey){chatKey=key;chatExpiry?.cancel();
+    if(DateTime.now().millisecondsSinceEpoch-(m['at'] as num).toInt()<5000){chatBubble='${m['name']}: ${m['text']}';chatExpiry=Timer(const Duration(seconds:3),(){if(mounted)setState(()=>chatBubble=null);});}
+   }
+  }
+  if(mounted)setState((){});
+ }
+ void _startPoll(){poll?.cancel();poll=Timer.periodic(const Duration(seconds:1),(_){if(!game.terminal)unawaited(game.sync());});}
  @override void didChangeAppLifecycleState(AppLifecycleState state){if(state==AppLifecycleState.resumed){_startPoll();unawaited(game.sync());}else{poll?.cancel();}}
- @override void dispose(){poll?.cancel();WidgetsBinding.instance.removeObserver(this);game.removeListener(_changed);game.dispose();super.dispose();}
+ @override void dispose(){chatExpiry?.cancel();poll?.cancel();WidgetsBinding.instance.removeObserver(this);game.removeListener(_changed);game.dispose();super.dispose();}
  Future<void> _close()async{
   if(!mounted)return;poll?.cancel();setState(()=>_canClose=true);
   await WidgetsBinding.instance.endOfFrame;
@@ -188,7 +196,7 @@ class _Ngelx565LudoRoomState extends State<Ngelx565LudoRoom> with WidgetsBinding
     final frame=Ngelx567Table(room:room,seat:game.seat,uid:game.uid,enabled:game.playing&&game.seat==room['turn']&&!game.busy&&!game.leaving,onToken:(token)=>game.perform('move',{'token':token}),onRoll:()=>game.perform('roll'),busy:game.busy);
     final wait=game.waiting&&!game.detached?Ngelx567WaitingPanel(room:room,uid:game.uid,canStart:game.canStart,busy:game.busy,onInvite:_invite,onStart:()=>game.perform('start'),compact:box.maxHeight<500):null;
     if(sideways)return Row(children:[Expanded(child:Padding(padding:const EdgeInsets.all(10),child:Stack(alignment:Alignment.center,children:[Center(child:AspectRatio(aspectRatio:.85,child:frame)),if(wait!=null)SizedBox(width:265,child:FittedBox(fit:BoxFit.scaleDown,child:SizedBox(width:265,child:wait)))]))),SizedBox(width:245,child:ListView(padding:const EdgeInsets.only(top:12),children:[_roomLabel567(widget.id),_footer()]))]);
-    return Column(children:[_roomLabel567(widget.id),Expanded(child:LayoutBuilder(builder:(_,area)=>Stack(alignment:Alignment.center,children:[Padding(padding:const EdgeInsets.symmetric(horizontal:12),child:Center(child:AspectRatio(aspectRatio:.85,child:frame))),if(wait!=null)ConstrainedBox(constraints:BoxConstraints(maxWidth:math.min(320,area.maxWidth-34),maxHeight:area.maxHeight-8),child:SingleChildScrollView(child:wait)),if(room.isEmpty)const Center(child:CircularProgressIndicator(color:_ludoGold567))]))),if(players.isEmpty&&room.isEmpty)const Text('Masaya bağlanılıyor…',style:TextStyle(color:Colors.white70)),_footer()]);
+    return Column(children:[_roomLabel567(widget.id),Expanded(child:LayoutBuilder(builder:(_,area)=>Stack(alignment:Alignment.center,children:[Padding(padding:const EdgeInsets.symmetric(horizontal:4),child:Center(child:AspectRatio(aspectRatio:.85,child:frame))),if(wait!=null)ConstrainedBox(constraints:BoxConstraints(maxWidth:math.min(320,area.maxWidth-34),maxHeight:area.maxHeight-8),child:SingleChildScrollView(child:wait)),if(room.isEmpty)const Center(child:CircularProgressIndicator(color:_ludoGold567)),if(chatBubble!=null)Positioned(left:16,right:16,bottom:8,child:IgnorePointer(child:Container(padding:const EdgeInsets.all(12),decoration:BoxDecoration(color:const Color(0xF022173F),borderRadius:BorderRadius.circular(16)),child:Text(chatBubble!,textAlign:TextAlign.center,style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w700)))))]))),if(players.isEmpty&&room.isEmpty)const Text('Masaya bağlanılıyor…',style:TextStyle(color:Colors.white70)),_footer()]);
    }))),
   )));
  }
@@ -222,7 +230,7 @@ class Ngelx567Table extends StatelessWidget {
  final Map<String,dynamic> room;final int seat;final String uid;final bool enabled,busy;final ValueChanged<int> onToken;final VoidCallback onRoll;
  const Ngelx567Table({super.key,required this.room,required this.seat,required this.uid,required this.enabled,required this.onToken,required this.onRoll,required this.busy});
  @override Widget build(BuildContext context)=>LayoutBuilder(builder:(_,box){
-  final side=math.min(box.maxWidth,math.max(60.0,box.maxHeight-80)),left=(box.maxWidth-side)/2,top=(box.maxHeight-side)/2;
+  final side=math.min(box.maxWidth,math.max(60.0,box.maxHeight-76)),left=(box.maxWidth-side)/2,top=(box.maxHeight-side)/2;
   final turns=seat<0?0:(3-seat+4)%4,playing=room['status']=='playing';
   final players=List<dynamic>.from(room['players']??[]).where((p)=>p['left']!=true).toList();
   return Stack(clipBehavior:Clip.none,children:[
@@ -231,10 +239,10 @@ class Ngelx567Table extends StatelessWidget {
     final color=(p['seat'] as num).toInt(),visual=(color+turns)%4,isLeft=visual==0||visual==3,isTop=visual==0||visual==1,isTurn=playing&&room['turn']==color,isMine=p['uid']==uid;
     final width=math.min(180.0,side*.57),photo='${p['photo']??''}';
     return Positioned(left:isLeft?left:left+side-width,top:isTop?top-40:top+side+4,width:width,height:36,child:Row(mainAxisAlignment:isLeft?MainAxisAlignment.start:MainAxisAlignment.end,children:[
-     if(!isLeft&&isTurn)...[GestureDetector(onTap:isMine&&enabled&&!busy&&room['dice']==null?onRoll:null,child:Ngelx567Dice(value:(room['dice'] as num?)?.toInt(),size:32,busy:busy&&isMine)),const SizedBox(width:6)],
+     if(!isLeft&&isTurn)...[GestureDetector(onTap:isMine&&enabled&&!busy&&room['dice']==null?onRoll:null,child:Ngelx567Dice(value:((room['dice']??(room['lastRoll']?['seat']==color?room['lastRoll']?['value']:null)) as num?)?.toInt(),size:32,busy:busy&&isMine)),const SizedBox(width:6)],
      Container(width:34,height:34,padding:const EdgeInsets.all(2),decoration:BoxDecoration(shape:BoxShape.circle,color:isTurn?_ludoGold567:ngelx565LudoColors[color],boxShadow:[BoxShadow(color:(isTurn?_ludoGold567:Colors.black).withValues(alpha:.25),blurRadius:8)]),child:CircleAvatar(backgroundColor:const Color(0xFF8273AB),backgroundImage:photo.isEmpty?null:NgelXAgImageProvider(photo),child:photo.isEmpty?Icon(p['bot']==true?Icons.smart_toy_rounded:Icons.person_rounded,size:20,color:Colors.white):null)),const SizedBox(width:5),
      Flexible(child:Text(isMine?'Sen':'${p['name']}',maxLines:1,overflow:TextOverflow.ellipsis,style:TextStyle(color:isTurn?_ludoGold567:Colors.white70,fontWeight:FontWeight.w800,fontSize:11))),
-     if(isLeft&&isTurn)...[const SizedBox(width:6),GestureDetector(key:isMine?const ValueKey('ludo-dice'):null,onTap:isMine&&enabled&&!busy&&room['dice']==null?onRoll:null,child:Ngelx567Dice(value:(room['dice'] as num?)?.toInt(),size:32,busy:busy&&isMine))],
+     if(isLeft&&isTurn)...[const SizedBox(width:6),GestureDetector(key:isMine?const ValueKey('ludo-dice'):null,onTap:isMine&&enabled&&!busy&&room['dice']==null?onRoll:null,child:Ngelx567Dice(value:((room['dice']??(room['lastRoll']?['seat']==color?room['lastRoll']?['value']:null)) as num?)?.toInt(),size:32,busy:busy&&isMine))],
     ]));
    }),
   ]);
@@ -252,7 +260,7 @@ class _DicePainter567 extends CustomPainter {
   canvas.drawRRect(r,Paint()..shader=const LinearGradient(begin:Alignment.topLeft,end:Alignment.bottomRight,colors:[Colors.white,Color(0xFFF4F2FF),Color(0xFFAFA7D0)]).createShader(rect));
   canvas.drawRRect(r,Paint()..style=PaintingStyle.stroke..strokeWidth=1.5..color=const Color(0xFFE8DFFF));
   if(busy){final p=Paint()..color=const Color(0xFF7B61C3)..style=PaintingStyle.stroke..strokeWidth=3;canvas.drawArc(rect.deflate(size.width*.25),-.8,4.5,false,p);return;}
-  if(value==null){final tp=TextPainter(text:TextSpan(text:'?',style:TextStyle(color:const Color(0xFF5D458E),fontSize:size.width*.58,fontWeight:FontWeight.w900)),textDirection:TextDirection.ltr)..layout();tp.paint(canvas,rect.center-Offset(tp.width/2,tp.height/2));return;}
+  if(value==null){final tp=TextPainter(text:TextSpan(text:'🎲',style:TextStyle(color:const Color(0xFF5D458E),fontSize:size.width*.58,fontWeight:FontWeight.w900)),textDirection:TextDirection.ltr)..layout();tp.paint(canvas,rect.center-Offset(tp.width/2,tp.height/2));return;}
   const positions={1:[4],2:[0,8],3:[0,4,8],4:[0,2,6,8],5:[0,2,4,6,8],6:[0,2,3,5,6,8]};
   for(final n in positions[value]??[]){final at=Offset(size.width*(.25+(n%3)*.25),size.height*(.25+(n~/3)*.25));canvas.drawCircle(at,size.width*.075,Paint()..color=const Color(0xFF27243E));canvas.drawCircle(at-Offset(size.width*.012,size.width*.014),size.width*.035,Paint()..color=const Color(0xFF555066));}
  }
@@ -289,8 +297,8 @@ class _MovingPawn567 extends StatefulWidget {
 }
 class _MovingPawn567State extends State<_MovingPawn567> with SingleTickerProviderStateMixin {
  late final AnimationController motion;late int from;
- @override void initState(){super.initState();from=widget.position;motion=AnimationController(vsync:this,duration:const Duration(milliseconds:420))..value=1;}
- @override void didUpdateWidget(covariant _MovingPawn567 old){super.didUpdateWidget(old);if(old.position!=widget.position){from=old.position;motion.duration=Duration(milliseconds:math.min(1000,math.max(280,(widget.position-from).abs()*105)));motion.forward(from:0);}}
+ @override void initState(){super.initState();from=widget.position;motion=AnimationController(vsync:this,duration:const Duration(milliseconds:180))..value=1;}
+ @override void didUpdateWidget(covariant _MovingPawn567 old){super.didUpdateWidget(old);if(old.position!=widget.position){from=old.position;motion.duration=Duration(milliseconds:math.min(420,math.max(120,(widget.position-from).abs()*40)));motion.forward(from:0);}}
  @override void dispose(){motion.dispose();super.dispose();}
  @override Widget build(BuildContext context)=>AnimatedBuilder(animation:motion,builder:(_,__){
   final p=ngelx565Rotate(ngelx567MovingPoint(widget.seat,widget.token,from,widget.position,motion.value),widget.turns),c=widget.cell;
@@ -327,14 +335,14 @@ class Ngelx565BoardPainter extends CustomPainter {
    final color=ngelx565LudoColors[seat],base=Rect.fromLTWH(bases[seat].dx*c,bases[seat].dy*c,6*c,6*c);
    canvas.drawRect(base,paint..shader=LinearGradient(begin:Alignment.topLeft,end:Alignment.bottomRight,colors:[Color.lerp(color,Colors.white,.15)!,color,Color.lerp(color,Colors.black,.1)!]).createShader(base));paint.shader=null;
    final inner=RRect.fromRectAndRadius(base.deflate(c*.73),Radius.circular(c*.52));canvas.drawShadow(Path()..addRRect(inner),Colors.black.withValues(alpha:.16),c*.18,false);
-   canvas.drawRRect(inner,paint..color=Color.lerp(color,Colors.white,.87)!);
+   canvas.drawRRect(inner,paint..color=Color.lerp(color,Colors.black,.32)!);
    canvas.drawRRect(inner.deflate(.7),paint..style=PaintingStyle.stroke..strokeWidth=1..color=Colors.white.withValues(alpha:.75));paint.style=PaintingStyle.fill;
    for(var token=0;token<4;token++){
     final point=ngelx565TokenPoint(seat,token,-1),center=Offset((point.dx+.5)*c,(point.dy+.5)*c),socket=Rect.fromCircle(center:center,radius:c*.57);
-    canvas.drawCircle(center,c*.57,paint..shader=RadialGradient(center:const Alignment(0,.4),colors:[color.withValues(alpha:.12),color.withValues(alpha:.25)]).createShader(socket));paint.shader=null;
+    canvas.drawCircle(center,c*.57,paint..shader=RadialGradient(center:const Alignment(0,.4),colors:[Colors.black.withValues(alpha:.18),Colors.black.withValues(alpha:.28)]).createShader(socket));paint.shader=null;
     canvas.drawArc(socket,-math.pi*.1,math.pi*1.2,false,paint..style=PaintingStyle.stroke..strokeWidth=.8..color=color.withValues(alpha:.24));paint.style=PaintingStyle.fill;
    }
-   for(var h=1;h<=5;h++){final at=ngelx565Rotate(Offset(h.toDouble(),7),seat),rect=Rect.fromLTWH(at.dx*c,at.dy*c,c,c);canvas.drawRect(rect,paint..color=Color.lerp(color,Colors.white,.28)!);canvas.drawRect(rect.deflate(.3),paint..style=PaintingStyle.stroke..strokeWidth=.45..color=Color.lerp(color,Colors.black,.15)!);paint.style=PaintingStyle.fill;}
+   for(var h=1;h<=5;h++){final at=ngelx565Rotate(Offset(h.toDouble(),7),seat),rect=Rect.fromLTWH(at.dx*c,at.dy*c,c,c);canvas.drawRect(rect,paint..color=color);canvas.drawRect(rect.deflate(.3),paint..style=PaintingStyle.stroke..strokeWidth=.45..color=Color.lerp(color,Colors.black,.15)!);paint.style=PaintingStyle.fill;}
   }
   final track=ngelx565Track();const safe=[0,8,13,21,26,34,39,47];
   for(var i=0;i<52;i++){
@@ -376,7 +384,7 @@ class _Ngelx565LudoInvitePickerState extends State<Ngelx565LudoInvitePicker>{
   if(s.hasError)return const Center(child:Text('Sohbetler yüklenemedi. Geri dönüp tekrar dene.'));if(!s.hasData)return const Center(child:CircularProgressIndicator());
   final me=FirebaseAuth.instance.currentUser?.uid,docs=s.data!.docs.where((d)=>!List<dynamic>.from(d.data()['hiddenFor']??[]).contains(me)).toList();
   if(docs.isEmpty)return const Center(child:Text('Önce bir özel sohbet veya grup oluştur.'));
-  return ListView(padding:EdgeInsets.only(bottom:MediaQuery.viewPaddingOf(context).bottom+24),children:[const Padding(padding:EdgeInsets.all(16),child:Text('Sohbeti seç; daveti mesaj alanında görüp Gönder’e basabilirsin.')),for(final d in docs)if(d.data()['isGroup']==true)ListTile(leading:const Icon(Icons.groups_rounded,color:mor),title:Text((d.data()['groupName']??'Grup').toString()),trailing:const Icon(Icons.chevron_right),onTap:()=>open(d))else Builder(builder:(_){final members=List<String>.from(d.data()['members']??[]),other=members.firstWhere((u)=>u!=me,orElse:()=>'');return FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(future:other.isEmpty?null:FirebaseFirestore.instance.collection('users').doc(other).get(),builder:(_,u)=>ListTile(leading:const Icon(Icons.person_rounded,color:mor),title:Text((u.data?.data()?['displayName']??u.data?.data()?['username']??'Sohbet').toString()),trailing:const Icon(Icons.chevron_right),onTap:()=>open(d)));})]);
+  return ListView(padding:EdgeInsets.only(bottom:math.max(MediaQuery.viewPaddingOf(context).bottom,MediaQuery.paddingOf(context).bottom)+40),children:[const Padding(padding:EdgeInsets.all(16),child:Text('Sohbeti seç; daveti mesaj alanında görüp Gönder’e basabilirsin.')),for(final d in docs)if(d.data()['isGroup']==true)ListTile(leading:const Icon(Icons.groups_rounded,color:mor),title:Text((d.data()['groupName']??'Grup').toString()),trailing:const Icon(Icons.chevron_right),onTap:()=>open(d))else Builder(builder:(_){final members=List<String>.from(d.data()['members']??[]),other=members.firstWhere((u)=>u!=me,orElse:()=>'');return FutureBuilder<DocumentSnapshot<Map<String,dynamic>>>(future:other.isEmpty?null:FirebaseFirestore.instance.collection('users').doc(other).get(),builder:(_,u)=>ListTile(leading:const Icon(Icons.person_rounded,color:mor),title:Text((u.data?.data()?['displayName']??u.data?.data()?['username']??'Sohbet').toString()),trailing:const Icon(Icons.chevron_right),onTap:()=>open(d)));})]);
  })));
 }
 class Ngelx565LudoInviteCard extends StatelessWidget{

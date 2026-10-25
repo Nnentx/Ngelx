@@ -1,8 +1,5 @@
 name: NgelX Build568 Ludo modes and bottom spacing
 on:
-  push:
-    branches: [feat/build568-ludo-modes]
-    paths: ['tools/build568*','tools/apply_build568*','server/ludo565/**','cloudflare/live-moderation/src/ludo565.mjs','.github/workflows/NgelX-BUILD568-LUDO.yml']
   workflow_dispatch:
 permissions:
   contents: read

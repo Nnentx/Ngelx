@@ -50,21 +50,21 @@ export function createLudo565({verify,profile,store,limit=async()=>true,now=()=>
     const p=await profile(uid);
     for(let attempt=0;attempt<8;attempt++){
      const slot=await store.get(key),found=slot?await store.get(slot.room.id):null;
-     if(found&&found.room.expiresAt>now()&&['waiting','playing'].includes(found.room.status)&&found.room.players.some(p=>p.uid===uid&&!p.left))return matched(found.room);
+     if(found&&found.room.expiresAt>now()&&['waiting','playing'].includes(found.room.status)&&found.room.players.some(p=>p.uid===uid&&!p.left))return await matched(found.room);
      if(found&&found.room.status==='waiting'&&found.room.expiresAt>now()){
       let room=found.room;
-      if(room.players.some(p=>p.uid===uid))return matched(room);
+      if(room.players.some(p=>p.uid===uid))return await matched(room);
       try{
        room=act(room,uid,{action:'join',name:p?.displayName??p?.username??'Oyuncu',photo:p?.photoUrl??''},now(),roll);
        if(room.players.length===room.capacity){room=act(room,room.owner,{action:'start',revision:room.revision,requestId:'auto_start568'},now(),roll);room.expiresAt=now()+6*3600000;}
-       await store.put(room.id,room,found.stamp);return matched(room);
+       await store.put(room.id,room,found.stamp);return await matched(room);
       }catch(e){if(e.status===409)continue;throw e;}
      }
      const id=uuid();
      if(await store.get(id))continue;
      let room=createRoom({uid,id,name:p?.displayName??p?.username??'Oyuncu',photo:p?.photoUrl??'',capacity:b.capacity,mode:b.mode},now());
      room.matchmaking=true;room.expiresAt=now()+90000;
-     try{await store.put(id,room);await store.put(key,{id,revision:(slot?.room.revision??0)+1},slot?.stamp);return matched(room,201);}
+     try{await store.put(id,room);await store.put(key,{id,revision:(slot?.room.revision??0)+1},slot?.stamp);return await matched(room,201);}
      catch(e){if(e.status===409)continue;throw e;}
     }
     return json({error:'state_changed'},409);
