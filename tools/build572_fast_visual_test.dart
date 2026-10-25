@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import '../lib/build565_ludo.dart';
+import '../lib/main.dart';
 
 Map<String,dynamic> fixture()=>{
  'id':'534157','status':'playing','mode':'power','capacity':2,
