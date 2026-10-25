@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "package": "com.nnentx.ngelx_app",
+  "abi": "arm64-v8a",
+  "version": "1.0.336",
+  "build": 566,
+  "size": 47561219,
+  "sha256": "b46871ce874daba1928b37521e13652dadfbee30d535d1f8195afbf001dce432",
+  "url": "https://github.com/Nnentx/Ngelx/releases/download/v1.0.336-build566-test/NgelX-1.0.336-Build-566.apk",
+  "notes": "Ludo bağlantısı ve davetleri; duyuruların sohbetlerle sıralanması; PK kabulünde erken kapanma düzeltmesi.",
+  "testedSource": "6527f25ee7f5194875f20a94bfc2a2348c81372b",
+  "buildRun": 40178049118
+}
