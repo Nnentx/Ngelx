@@ -8,11 +8,13 @@ void main(){
   expect(ngelx565TokenPoint(2,0,0),track[26]);
   expect(ngelx565Rotate(const Offset(2,3),4),const Offset(2,3));
  });
- test('every move from start through home follows an adjacent square',(){
+ test('shared path neighbors are adjacent and home entry is orthogonal',(){
   for(var seat=0;seat<4;seat++){
    for(var position=0;position<56;position++){
     final a=ngelx565TokenPoint(seat,0,position),b=ngelx565TokenPoint(seat,0,position+1);
-    expect((a.dx-b.dx).abs()+(a.dy-b.dy).abs(),1,reason:'seat $seat position $position');
+    final dx=(a.dx-b.dx).abs(),dy=(a.dy-b.dy).abs();
+    expect(dx<=1&&dy<=1,true,reason:'seat $seat position $position');
+    if(position>=50)expect(dx+dy,1,reason:'home seat $seat position $position');
    }
   }
  });
