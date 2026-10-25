@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "package": "com.nnentx.ngelx_app",
+  "abi": "arm64-v8a",
+  "version": "1.0.339",
+  "build": 569,
+  "size": 47601247,
+  "sha256": "4689a4fc187087f0fdf0aabf35ac077fbe1d2c4ba235906c24774d1fc5e14af6",
+  "url": "https://github.com/Nnentx/Ngelx/releases/download/v1.0.339-build569-test/NgelX-1.0.339-Build569.apk",
+  "notes": "Ludo tahtası genişletildi ve renkleri belirginleştirildi. Hamle süresi 10 saniye; süre dolunca otomatik oynanır. Mesajlar 3 saniyede kapanır, taşlar hızlandırıldı ve alt taşmalar düzeltildi. Yeni oda kodları 6 rakamdır.",
+  "testedSource": "73779722c46e11494608ae58592754eb292c5d44",
+  "buildRun": 40221574819
+}
