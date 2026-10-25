@@ -82,7 +82,9 @@ jobs:
           for name in ('build567_widget_test.dart','build570_widget_test.dart','build570_modes_test.dart'):
               p=Path('app/test')/name
               s=p.read_text()
-              s=s.replace('t.pumpAndSettle()', 't.pumpAndSettle(timeout:const Duration(seconds:8))')
+              s=s.replace('t.pumpAndSettle()', 't.pumpAndSettle(const Duration(milliseconds:100),EnginePhase.sendSemanticsUpdate,const Duration(seconds:8))')
+              if "import 'package:flutter/rendering.dart';" not in s:
+                  s="import 'package:flutter/rendering.dart';\\n"+s
               p.write_text(s)
           BOUND_TESTS
           python3 - <<'PY'
