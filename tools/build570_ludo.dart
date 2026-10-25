@@ -183,9 +183,9 @@ class _Ngelx565LudoRoomState extends State<Ngelx565LudoRoom> with WidgetsBinding
     Row(crossAxisAlignment:CrossAxisAlignment.center,children:[
      Column(children:[ngelx570Chip('😊 Emoji',widget.watch?null:_chat),const SizedBox(height:5),Tooltip(message:'Emoji ve sohbet',child:ngelx570Chip('Sohbet',widget.watch?null:_chat))]),
      if(room['mode']=='power'&&!widget.watch)...[const SizedBox(width:10),for(final item in [('control','Zar seç'),('double','Çift'),('shield','Kalkan')])Expanded(child:Ngelx570Power(kind:item.$1,label:item.$2,count:(inventory[item.$1] as num?)?.toInt()??0,onTap:myTurn&&!game.busy&&(inventory[item.$1]??0)>0&&(item.$1!='control'||room['dice']==null)&&(item.$1!='double'||room['dice']!=null)?()=>_power(item.$1):null))]
-     else const Expanded(child:Text('KLASİK LUDO',textAlign:TextAlign.center,style:TextStyle(color:Colors.white54,fontWeight:FontWeight.w800,letterSpacing:2,fontSize:11))),
+     else Expanded(child:Text(widget.watch?'İZLEYİCİ':'KLASİK LUDO',textAlign:TextAlign.center,style:const TextStyle(color:Colors.white54,fontWeight:FontWeight.w800,letterSpacing:2,fontSize:11))),
     ]),
-   ]else...[Text(room['matchmaking']==true?'Rakip aranıyor…':'${game.joined}/${room['capacity']??2} oyuncu',style:const TextStyle(color:Colors.white70)),if(room['matchmaking']==true)Ngelx567GameButton(label:'Vazgeç',onPressed:_askLeave),IconButton(tooltip:'Emoji ve sohbet',onPressed:_chat,icon:const Icon(Icons.chat_bubble_outline_rounded))],
+   ]else...[Text(room['matchmaking']==true?'${game.joined}/${room['capacity']??2} oyuncu · Rakip aranıyor…':'${game.joined}/${room['capacity']??2} oyuncu',style:const TextStyle(color:Colors.white70)),if(room['matchmaking']==true)Ngelx567GameButton(label:'Vazgeç',onPressed:_askLeave),IconButton(tooltip:'Emoji ve sohbet',onPressed:_chat,icon:const Icon(Icons.chat_bubble_outline_rounded))],
   ]));
  }
  @override Widget build(BuildContext context){
