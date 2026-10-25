@@ -21,7 +21,7 @@ replace("class _MovingPawn567 extends StatefulWidget {",
  final tokens=room['tokens'] as List;
  final position=(tokens[seat][token] as num).toInt();
  if(position<0)return Offset.zero;
- String key(int s,int pos)=>pos<51?'track-\${(s*13+pos)%52}':'finish-$s-$pos';
+ String key(int s,int pos)=>pos<51?'track-${(s*13+pos)%52}':'finish-$s-$pos';
  final mine=key(seat,position);
  final players=room['players'] as List? ?? [];
  final shared=<String>[];
@@ -51,7 +51,7 @@ replace("final int turns;final bool power;\n const Ngelx565BoardPainter({this.tu
 "final int turns;final bool power;final Map<String,dynamic>? powerTiles;\n const Ngelx565BoardPainter({this.turns=0,this.power=false,this.powerTiles});")
 replace("const pickup=[2,5,10,15,18,23,28,31,36,41,44,49];",
 """const pickup=[2,5,10,15,18,23,28,31,36,41,44,49];
-  final tiles=powerTiles??{for(var i=0;i<pickup.length;i)'\${pickup[i]}':['control','double','shield'][i%3]};""")
+  final tiles=powerTiles??{for(var i=0;i<pickup.length;i)'${pickup[i]}':['control','double','shield'][i%3]};""")
 replace("else if(power&&pickup.contains(i)){","else if(power&&tiles.containsKey('$i')){")
 replace("Ngelx570PowerPainter(['control','double','shield'][pickup.indexOf(i)%3])",
         "Ngelx570PowerPainter(tiles['$i'].toString())")
@@ -63,8 +63,8 @@ replace("Container(width:34,height:34,padding:const EdgeInsets.all(2)",
         "Container(width:40,height:40,padding:const EdgeInsets.all(2)")
 replace("final width=math.min(180.0,side*.57)",
         "final width=math.min(180.0,side*.61)")
-replace("Flexible(child:Text(isMine?'Sen':'\${p['name']}',maxLines:1,overflow:TextOverflow.ellipsis,style:TextStyle(color:isTurn?_ludoGold567:Colors.white70,fontWeight:FontWeight.w800,fontSize:11)))",
-        "Flexible(child:Container(padding:const EdgeInsets.symmetric(horizontal:6,vertical:4),decoration:BoxDecoration(color:const Color(0xEE141340),borderRadius:BorderRadius.circular(14),border:Border.all(color:ngelx565LudoColors[color])),child:Text(isMine?'Sen':'\${p['name']}',maxLines:1,overflow:TextOverflow.ellipsis,style:TextStyle(color:isTurn?_ludoGold567:Colors.white,fontWeight:FontWeight.w900,fontSize:11))))")
+replace("Flexible(child:Text(isMine?'Sen':'${p['name']}',maxLines:1,overflow:TextOverflow.ellipsis,style:TextStyle(color:isTurn?_ludoGold567:Colors.white70,fontWeight:FontWeight.w800,fontSize:11)))",
+        "Flexible(child:Container(padding:const EdgeInsets.symmetric(horizontal:6,vertical:4),decoration:BoxDecoration(color:const Color(0xEE141340),borderRadius:BorderRadius.circular(14),border:Border.all(color:ngelx565LudoColors[color])),child:Text(isMine?'Sen':'${p['name']}',maxLines:1,overflow:TextOverflow.ellipsis,style:TextStyle(color:isTurn?_ludoGold567:Colors.white,fontWeight:FontWeight.w900,fontSize:11))))")
 
 replace("appBar:AppBar(leading:IconButton(key:const ValueKey('ludo-back')",
         "appBar:AppBar(toolbarHeight:74,centerTitle:true,leading:IconButton(key:const ValueKey('ludo-back')")
@@ -74,7 +74,7 @@ replace("class Ngelx570Logo extends StatelessWidget {",
 """String ngelx572ModeTitle(Map<String,dynamic> room){
  if(room['botGame']==true)return 'MAKİNEYE KARŞI';
  final mode=room['mode']=='power'?'POWER':'KLASİK';
- return '$mode • \${room['capacity']??2} KİŞİ';
+ return '$mode • ${room['capacity']??2} KİŞİ';
 }
 class Ngelx570Logo extends StatelessWidget {""")
 replace("Color(0xFFFFD83C),Color(0xFF42E6FF)",
