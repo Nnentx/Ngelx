@@ -88,6 +88,12 @@ jobs:
           flutter pub get
           flutter test --timeout 45s test/build567_widget_test.dart test/build570_widget_test.dart test/build570_join_test.dart test/build570_modes_test.dart
           flutter analyze --no-fatal-infos --no-fatal-warnings
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: NgelX-Build570-Previews
+          path: app/build567-previews
+          if-no-files-found: ignore
       - uses: actions/cache/restore@v4
         with:
           path: ~/.android/debug.keystore
@@ -123,12 +129,6 @@ jobs:
           print('Build567 images and sounds preserved byte-for-byte')
           PYTHON
           cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/NgelX-1.0.340-Build570.apk
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: NgelX-Build570-Previews
-          path: app/build567-previews
-          if-no-files-found: ignore
       - uses: actions/upload-artifact@v4
         with:
           name: NgelX-Build570-Review-APK

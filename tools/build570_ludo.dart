@@ -45,7 +45,7 @@ ThemeData ngelx567LudoTheme()=>ThemeData(brightness:Brightness.dark,useMaterial3
 class _LudoBackdrop567 extends StatelessWidget {
  final Widget child;
  const _LudoBackdrop567({required this.child});
- @override Widget build(BuildContext context)=>DecoratedBox(decoration:const BoxDecoration(gradient:RadialGradient(center:Alignment(-.4,-.6),radius:1.5,colors:[Color(0xFF7551B9),Color(0xFF412B83),Color(0xFF28205C)])),child:child);
+ @override Widget build(BuildContext context)=>DecoratedBox(decoration:const BoxDecoration(gradient:RadialGradient(center:Alignment(-.4,-.6),radius:1.5,colors:[Color(0xFF4447A0),Color(0xFF303373),Color(0xFF1D2259)])),child:child);
 }
 class Ngelx567GameButton extends StatelessWidget {
  final String label;final VoidCallback? onPressed;final IconData? icon;final bool gold,busy;
@@ -176,7 +176,7 @@ class _Ngelx565LudoRoomState extends State<Ngelx565LudoRoom> with WidgetsBinding
    ]else if(active)...[
     Row(crossAxisAlignment:CrossAxisAlignment.center,children:[
      Ngelx570Clock(deadline:(room['deadline'] as num?)?.toInt()??0,active:myTurn),const SizedBox(width:12),
-     GestureDetector(onTap:myTurn&&!game.busy&&room['dice']==null?()=>game.perform('roll'):null,child:Container(padding:const EdgeInsets.all(7),decoration:ngelx570Bevel(const Color(0xFF211D55),14),child:Ngelx567Dice(value:(room['dice'] as num?)?.toInt(),size:52,busy:game.busy&&myTurn))),
+     GestureDetector(onTap:myTurn&&!game.busy&&room['dice']==null?()=>game.perform('roll'):null,child:Container(padding:const EdgeInsets.all(7),decoration:ngelx570Bevel(const Color(0xFF211D55),14),child:Ngelx567Dice(value:ngelx570ShownDice(room),size:52,busy:game.busy&&myTurn))),
      const SizedBox(width:12),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(widget.watch?'Oyunu izliyorsun':myTurn?'Sıra sende':'Rakibin oynuyor',style:const TextStyle(color:_ludoGold567,fontWeight:FontWeight.w900,fontSize:15)),Text(myTurn?(room['dice']==null?'Zara dokun':'Parlayan taşını seç'):'Hamleleri takip et',style:const TextStyle(color:Colors.white70,fontSize:11))])),
     ]),const SizedBox(height:9),
     Row(children:[Expanded(child:ngelx570Chip('İyi oyunlar',widget.watch?null:()=>game.perform('chat',{'text':'İyi oyunlar!'}))),const SizedBox(width:8),Expanded(child:ngelx570Chip('Güzel hamle',widget.watch?null:()=>game.perform('chat',{'text':'Güzel hamle!'})))]),const SizedBox(height:9),
@@ -455,3 +455,5 @@ class Ngelx570SpritePainter extends CustomPainter {
  }
  @override bool shouldRepaint(covariant Ngelx570SpritePainter old)=>old.seat!=seat||old.highlight!=highlight||old.image!=image;
 }
+
+int? ngelx570ShownDice(Map<String,dynamic> room){final dice=room['dice'];if(dice is num)return dice.toInt();final last=room['lastRoll'];if(last is Map&&last['seat']==room['turn'])return (last['value'] as num?)?.toInt();return null;}
