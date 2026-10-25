@@ -114,7 +114,15 @@
      unawaited(ngelx435SilmeTekrar(widget.chatId));
 --- a/app/lib/build258_settings.dart
 +++ b/app/lib/build258_settings.dart
-@@ -140,7 +140,7 @@
+@@ -47,6 +47,7 @@
+   Widget _satir(BuildContext c,_NgelXAyarOgesi e,{bool aramaSonucu=false})=>Container(
+     decoration:BoxDecoration(
+       color:e.baslik==t('premiumWallet')?const Color(0xFFEAF2FF):Colors.transparent,
++      gradient:e.baslik=='Güncellemeler'?const LinearGradient(colors:[Color(0xFFF0E4FF),Color(0xFFE5F2FF)]):null,
+       borderRadius:BorderRadius.circular(18),
+     ),child:ListTile(
+     contentPadding:const EdgeInsets.symmetric(horizontal:10,vertical:5),
+@@ -140,7 +141,7 @@
      ),
      _NgelXAyarOgesi(
        bolum:'UYGULAMA',baslik:'Güncellemeler',
@@ -123,17 +131,6 @@
        anahtarlar:'güncelle güncelleme yeni sürüm update apk',
        ikon:Icons.system_update_rounded,sayfa:(_)=>const Ngelx564UpdatesPage(),
      ),
-@@ -324,7 +324,9 @@
- 
- class GizlilikMerkeziV366Page extends StatelessWidget{
-   const GizlilikMerkeziV366Page({super.key});
--  Widget _satir(BuildContext c,IconData icon,String title,String sub,Widget page)=>ListTile(
-+  Widget _satir(BuildContext c,IconData icon,String title,String sub,Widget page)=>Container(
-+    decoration:e.baslik=='Güncellemeler'?BoxDecoration(gradient:const LinearGradient(colors:[Color(0xFFF0E4FF),Color(0xFFE5F2FF)]),borderRadius:BorderRadius.circular(20)):null,
-+    child:ListTile(
-     contentPadding:const EdgeInsets.symmetric(horizontal:18,vertical:7),
-     leading:CircleAvatar(backgroundColor:const Color(0xFFF1E9FF),child:Icon(icon,color:mor)),
-     title:Text(_ngelx438Ui(title),style:const TextStyle(fontWeight:FontWeight.w800)),
 --- a/app/lib/build564_update.dart
 +++ b/app/lib/build564_update.dart
 @@ -158,7 +158,7 @@
