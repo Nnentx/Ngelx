@@ -8,4 +8,6 @@ All-home players receive up to three opening rolls. Dice generator remains unbia
 
 Group call join sound is owned by persistent call lifecycle, including minimized calls. Initial roster, departure and reconnect restoration do not chime; new remote identity does. Audio player does not activate or replace audio session. Tone is generated at assembly, quiet two-note 360 ms WAV. Call detach disposes listener and player.
 
-121 Node tests passed before CI. Flutter tests, analyzer, renderer previews and existing APK signer are verified by build workflow. Actual hardware audio routing still needs device listening verification.
+122 Node tests passed before CI. Flutter tests, analyzer, renderer previews and existing APK signer are verified by build workflow. Actual hardware audio routing still needs device listening verification.
+
+Performance follow-up: chat composer has independent state; polling only rebuilds message list while typing; behind-sheet clock and whole-room rebuilds pause; board has a repaint boundary. Compressed image memory cache is capped at 24 MiB; image validity checks decode at width 32 rather than full resolution; 47 simple avatar sites decode at width 384. Original media bytes remain unchanged. Hidden call page does not rebuild each second.

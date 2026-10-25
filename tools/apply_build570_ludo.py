@@ -22,3 +22,17 @@ p=ROOT/'app/pubspec.yaml';s=p.read_text()
 for name in ['ludo570_pawns.png','call_join570.wav']:
  if '    - assets/'+name not in s:s=s.replace('  assets:\n','  assets:\n    - assets/'+name+'\n',1)
 s=s.replace('version: 1.0.339+569','version: 1.0.340+570');p.write_text(s)
+# Performance delta applies to the verified baseline, not a wholesale main.dart replacement.
+import re
+(ROOT/'app/lib/build570_perf.dart').write_bytes((ROOT/'tools/build570_perf.dart').read_bytes())
+p=ROOT/'app/lib/main.dart';s=p.read_text().replace("import 'build570_join_policy.dart';", "import 'build570_join_policy.dart';\nimport 'build570_perf.dart';",1)
+a=s.index('void _ngelx464BellegeAl(');b=s.index('bool _ngelx464GuvenilirMedyaHost',a)
+s=s[:a]+"void _ngelx464BellegeAl(String url,Uint8List bytes){ngelx570CachePut(_ngelxAgResmiBellek,url,bytes,maxEntries:_ngelxAgResmiBellekSiniri);}\n"+s[b:]
+a=s.index('Future<Uint8List> _ngelx464ResmiGetir(');b=s.index('@immutable\nclass NgelXAgImageProvider',a)
+s=s[:a]+s[a:b].replace('ui.instantiateImageCodec(bytes)','ui.instantiateImageCodec(bytes,targetWidth:32,allowUpscaling:false)')+s[b:]
+pattern=r'(backgroundImage:\s*(?:\w+\.isEmpty\s*\?\s*null\s*:\s*)?)NgelXAgImageProvider\((\w+)\)'
+s,count=re.subn(pattern,r'\1ResizeImage(NgelXAgImageProvider(\2),width:384)',s)
+print('Bounded avatar decode sites:',count)
+a=s.index('  void _aramaSureBaslat(');b=s.index('  Future<void> _izinleriIste()',a)
+s=s[:a]+s[a:b].replace('if(mounted)setState((){});','if(mounted&&!kucultuluyor)setState((){});')+s[b:]
+p.write_text(s)

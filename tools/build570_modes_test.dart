@@ -21,6 +21,7 @@ void main(){
   final room=table(mode,count);
   await t.pumpWidget(MaterialApp(home:RepaintBoundary(key:const ValueKey('capture570'),child:Ngelx565LudoRoom(id:'534157',userId:'a',initial:room,request:(b)async=>room))));await t.pumpAndSettle();
   expect(find.byType(Ngelx570Power),mode=='power'?findsNWidgets(3):findsNothing);expect(find.text('12'),findsOneWidget);expect(t.takeException(),isNull);
+  final painted=t.widgetList<CustomPaint>(find.byType(CustomPaint)).map((w)=>w.painter).whereType<Ngelx570SpritePainter>().toList();expect(painted,isNotEmpty);expect(painted.every((p)=>p.image!=null),true);
   expect(t.getRect(find.text('Sohbet')).bottom,lessThanOrEqualTo(851));
   await t.runAsync(()async{final boundary=t.renderObject<RenderRepaintBoundary>(find.byKey(const ValueKey('capture570'))),image=await boundary.toImage(pixelRatio:2),bytes=await image.toByteData(format:ui.ImageByteFormat.png);Directory('build567-previews').createSync();File('build567-previews/$mode-$count.png').writeAsBytesSync(bytes!.buffer.asUint8List());image.dispose();});
   await t.pumpWidget(const SizedBox());
@@ -29,4 +30,15 @@ void main(){
   final calls=<String>[];final room=table('power',4);
   await t.pumpWidget(MaterialApp(home:Ngelx565LudoRoom(id:'534157',userId:'viewer',watch:true,initial:room,request:(b)async{calls.add(b['action']);return room;})));await t.pumpAndSettle();expect(find.text('Oyunu izliyorsun'),findsOneWidget);expect(find.byType(Ngelx570Power),findsNothing);expect(calls,isEmpty);expect(t.takeException(),isNull);await t.pumpWidget(const SizedBox());
  });
+ testWidgets('typing retains focus and draft during live game updates',(t)async{
+  t.view.physicalSize=const Size(393,851);t.view.devicePixelRatio=1;addTearDown(t.view.resetPhysicalSize);addTearDown(t.view.resetDevicePixelRatio);
+  var room=table('power',2);
+  await t.pumpWidget(MaterialApp(home:Ngelx565LudoRoom(id:'534157',userId:'a',initial:room,request:(b)async=>room)));
+  await t.tap(find.byTooltip('Emoji ve sohbet'));await t.pumpAndSettle();await t.tap(find.byKey(const ValueKey('ludo-chat-input')));await t.enterText(find.byType(TextField),'Mesajım kaybolmasın');
+  final before=t.state<EditableTextState>(find.byType(EditableText));
+  room={...room,'revision':2,'chat':[{'uid':'p1','name':'Ahsen','text':'Merhaba','at':DateTime.now().millisecondsSinceEpoch}]};
+  await t.pump(const Duration(seconds:4));await t.pump();
+  expect(identical(before,t.state<EditableTextState>(find.byType(EditableText))),true);expect(before.widget.controller.text,'Mesajım kaybolmasın');expect(before.widget.focusNode.hasFocus,true);expect(t.takeException(),isNull);await t.pumpWidget(const SizedBox());
+ });
+
 }

@@ -111,7 +111,7 @@ class Ngelx565LudoRoom extends StatefulWidget {
 }
 class _Ngelx565LudoRoomState extends State<Ngelx565LudoRoom> with WidgetsBindingObserver {
  late final Ngelx567RoomController game;
- Timer? poll;Timer? chatExpiry;String? chatKey;String? chatBubble;bool _canClose=false,_asking=false;
+ bool _chatOpen=false;Timer? poll;Timer? chatExpiry;String? chatKey;String? chatBubble;bool _canClose=false,_asking=false;
  Map<String,dynamic> get room=>game.room;
  @override void initState(){
   super.initState();WidgetsBinding.instance.addObserver(this);
@@ -123,12 +123,12 @@ class _Ngelx565LudoRoomState extends State<Ngelx565LudoRoom> with WidgetsBinding
   final messages=room['chat'] as List? ?? [];
   if(messages.isNotEmpty){final m=messages.last;final key='${m['uid']}:${m['at']}';
    if(key!=chatKey){chatKey=key;chatExpiry?.cancel();
-    if(DateTime.now().millisecondsSinceEpoch-(m['at'] as num).toInt()<5000){chatBubble='${m['name']}: ${m['text']}';chatExpiry=Timer(const Duration(seconds:3),(){if(mounted)setState(()=>chatBubble=null);});}
+    if(DateTime.now().millisecondsSinceEpoch-(m['at'] as num).toInt()<5000){chatBubble='${m['name']}: ${m['text']}';chatExpiry=Timer(const Duration(seconds:3),(){if(mounted){chatBubble=null;if(!_chatOpen)setState((){});}});}
    }
   }
-  if(mounted)setState((){});
+  if(mounted&&!_chatOpen)setState((){});
  }
- void _startPoll(){poll?.cancel();poll=Timer.periodic(Duration(seconds:widget.watch?4:1),(_){if(!game.terminal)unawaited(game.sync());});}
+ void _startPoll(){poll?.cancel();poll=Timer.periodic(Duration(seconds:widget.watch?4:1),(tick){if(_chatOpen&&tick.tick%3!=0)return;if(!game.terminal)unawaited(game.sync());});}
  @override void didChangeAppLifecycleState(AppLifecycleState state){if(state==AppLifecycleState.resumed){_startPoll();unawaited(game.sync());}else{poll?.cancel();}}
  @override void dispose(){chatExpiry?.cancel();poll?.cancel();WidgetsBinding.instance.removeObserver(this);game.removeListener(_changed);game.dispose();super.dispose();}
  Future<void> _close()async{
@@ -163,8 +163,9 @@ class _Ngelx565LudoRoomState extends State<Ngelx565LudoRoom> with WidgetsBinding
   if(value!=null)await game.perform('power',{'kind':'control','number':value});
  }
  Future<void> _chat()async{
-  final input=TextEditingController();
-  await showModalBottomSheet<void>(context:context,isScrollControlled:true,showDragHandle:true,backgroundColor:const Color(0xFF49377C),builder:(c)=>Theme(data:ngelx567LudoTheme(),child:Padding(padding:EdgeInsets.only(bottom:math.max(MediaQuery.viewInsetsOf(c).bottom,MediaQuery.viewPaddingOf(c).bottom)),child:SizedBox(height:math.min(370.0,MediaQuery.sizeOf(c).height-MediaQuery.viewInsetsOf(c).bottom-MediaQuery.viewPaddingOf(c).bottom-90),child:AnimatedBuilder(animation:game,builder:(_,__)=>Column(children:[const Text('Masa sohbeti',style:TextStyle(color:Colors.white,fontSize:19,fontWeight:FontWeight.w900)),Expanded(child:ListView(padding:const EdgeInsets.all(16),children:[for(final m in room['chat']??[])Padding(padding:const EdgeInsets.only(bottom:9),child:Text('${m['name']}: ${m['text']}',style:const TextStyle(color:Colors.white,fontSize:15)))])),Wrap(children:[for(final emoji in ['😊','🎲','👏','❤️','🎉'])IconButton(onPressed:game.busy?null:()async{if(await game.perform('chat',{'text':emoji})&&c.mounted)Navigator.pop(c);},icon:Text(emoji,style:const TextStyle(fontSize:26)))]),Padding(padding:const EdgeInsets.all(12),child:Row(children:[Expanded(child:TextField(controller:input,maxLength:180,style:const TextStyle(color:_ludoInk567),decoration:const InputDecoration(hintText:'Mesaj yaz…',counterText:''))),IconButton(onPressed:game.busy?null:()async{final value=input.text.trim();if(value.isNotEmpty&&await game.perform('chat',{'text':value})){input.clear();if(c.mounted)Navigator.pop(c);}},icon:const Icon(Icons.send_rounded,color:_ludoGold567))]))]))))));input.dispose();
+  if(_chatOpen||widget.watch)return;setState(()=>_chatOpen=true);
+  try{await showModalBottomSheet<void>(context:context,isScrollControlled:true,showDragHandle:true,backgroundColor:const Color(0xFF302B67),builder:(c)=>Theme(data:ngelx567LudoTheme(),child:Padding(padding:EdgeInsets.only(bottom:math.max(MediaQuery.viewInsetsOf(c).bottom,MediaQuery.viewPaddingOf(c).bottom)),child:SizedBox(height:(MediaQuery.sizeOf(c).height-MediaQuery.viewInsetsOf(c).bottom-MediaQuery.viewPaddingOf(c).bottom-90).clamp(160.0,370.0),child:Ngelx570ChatPanel(game:game)))));}
+  finally{if(mounted)setState(()=>_chatOpen=false);}
  }
  Widget _footer(){
   final active=game.playing,seat=game.seat,myTurn=active&&seat==room['turn']&&!widget.watch;
@@ -175,7 +176,7 @@ class _Ngelx565LudoRoomState extends State<Ngelx565LudoRoom> with WidgetsBinding
     Text(game.detached?'Bu masadan ayrıldın':room['status']=='closed'?'Masa kapandı':_winner567(room),style:const TextStyle(color:_ludoGold567,fontWeight:FontWeight.w900,fontSize:17)),const SizedBox(height:8),Ngelx567GameButton(label:'Lobiye dön',gold:true,onPressed:_close),
    ]else if(active)...[
     Row(crossAxisAlignment:CrossAxisAlignment.center,children:[
-     Ngelx570Clock(deadline:(room['deadline'] as num?)?.toInt()??0,active:myTurn),const SizedBox(width:12),
+     Ngelx570Clock(paused:_chatOpen,deadline:(room['deadline'] as num?)?.toInt()??0,active:myTurn),const SizedBox(width:12),
      GestureDetector(onTap:myTurn&&!game.busy&&room['dice']==null?()=>game.perform('roll'):null,child:Container(padding:const EdgeInsets.all(7),decoration:ngelx570Bevel(const Color(0xFF211D55),14),child:Ngelx567Dice(value:ngelx570ShownDice(room),size:52,busy:game.busy&&myTurn))),
      const SizedBox(width:12),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(widget.watch?'Oyunu izliyorsun':myTurn?'Sıra sende':'Rakibin oynuyor',style:const TextStyle(color:_ludoGold567,fontWeight:FontWeight.w900,fontSize:15)),Text(myTurn?(room['dice']==null?'Zara dokun':'Parlayan taşını seç'):'Hamleleri takip et',style:const TextStyle(color:Colors.white70,fontSize:11))])),
     ]),const SizedBox(height:9),
@@ -235,7 +236,7 @@ class Ngelx567Table extends StatelessWidget {
   final turns=seat<0?0:(3-seat+4)%4,playing=room['status']=='playing';
   final players=List<dynamic>.from(room['players']??[]).where((p)=>p['left']!=true).toList();
   return Stack(clipBehavior:Clip.none,children:[
-   Positioned(left:left,top:top,width:side,height:side,child:Container(decoration:BoxDecoration(borderRadius:BorderRadius.circular(6),border:Border.all(color:const Color(0xFF675CB0),width:2),boxShadow:const [BoxShadow(color:Color(0x770D082D),blurRadius:24,offset:Offset(0,10))]),child:ClipRRect(borderRadius:BorderRadius.circular(4),child:Ngelx565LudoBoard(room:room,seat:seat,enabled:enabled,onToken:onToken)))),
+   Positioned(left:left,top:top,width:side,height:side,child:Container(decoration:BoxDecoration(borderRadius:BorderRadius.circular(6),border:Border.all(color:const Color(0xFF675CB0),width:2),boxShadow:const [BoxShadow(color:Color(0x770D082D),blurRadius:24,offset:Offset(0,10))]),child:ClipRRect(borderRadius:BorderRadius.circular(4),child:RepaintBoundary(child:Ngelx565LudoBoard(room:room,seat:seat,enabled:enabled,onToken:onToken))))),
    for(final p in players)Builder(builder:(_){
     final color=(p['seat'] as num).toInt(),visual=(color+turns)%4,isLeft=visual==0||visual==3,isTop=visual==0||visual==1,isTurn=playing&&room['turn']==color,isMine=p['uid']==uid;
     final width=math.min(180.0,side*.57),photo='${p['photo']??''}';
@@ -300,7 +301,7 @@ class _MovingPawn567 extends StatefulWidget {
 }
 class _MovingPawn567State extends State<_MovingPawn567> with SingleTickerProviderStateMixin {
  late final AnimationController motion;late int from;ui.Image? sprite;
- @override void initState(){super.initState();from=widget.position;motion=AnimationController(vsync:this,duration:const Duration(milliseconds:180))..value=1;unawaited(ngelx570PawnSprite().then((value){if(mounted)setState(()=>sprite=value);}).catchError((_){ }));}
+ @override void initState(){super.initState();sprite=_loadedPawn570;from=widget.position;motion=AnimationController(vsync:this,duration:const Duration(milliseconds:180))..value=1;unawaited(ngelx570PawnSprite().then((value){if(mounted)setState(()=>sprite=value);}).catchError((_){ }));}
  @override void didUpdateWidget(covariant _MovingPawn567 old){super.didUpdateWidget(old);if(old.position!=widget.position){from=old.position;motion.duration=Duration(milliseconds:math.min(1800,math.max(210,(widget.position-from).abs()*160)));motion.forward(from:0);}}
  @override void dispose(){motion.dispose();super.dispose();}
  @override Widget build(BuildContext context)=>AnimatedBuilder(animation:motion,builder:(_,__){
@@ -411,13 +412,13 @@ class Ngelx570Logo extends StatelessWidget {
 }
 Widget ngelx570Chip(String label,VoidCallback? tap)=>Opacity(opacity:tap==null ? .55 : 1,child:InkWell(onTap:tap,borderRadius:BorderRadius.circular(18),child:Container(padding:const EdgeInsets.symmetric(horizontal:12,vertical:7),decoration:ngelx570Bevel(const Color(0xFF383387),18),child:Text(label,maxLines:1,overflow:TextOverflow.ellipsis,textAlign:TextAlign.center,style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w800,fontSize:11)))));
 class Ngelx570Clock extends StatefulWidget {
- final int deadline;final bool active;
- const Ngelx570Clock({super.key,required this.deadline,required this.active});
+ final int deadline;final bool active,paused;
+ const Ngelx570Clock({super.key,required this.deadline,required this.active,this.paused=false});
  @override State<Ngelx570Clock> createState()=>_Ngelx570ClockState();
 }
 class _Ngelx570ClockState extends State<Ngelx570Clock>{
  Timer? tick;
- @override void initState(){super.initState();tick=Timer.periodic(const Duration(milliseconds:250),(_){if(mounted)setState((){});});}
+ @override void initState(){super.initState();tick=Timer.periodic(const Duration(milliseconds:250),(_){if(mounted&&!widget.paused)setState((){});});}
  @override void dispose(){tick?.cancel();super.dispose();}
  @override Widget build(BuildContext context){final left=((widget.deadline-DateTime.now().millisecondsSinceEpoch)/1000).clamp(0,10).toDouble();return SizedBox(width:58,height:58,child:Stack(alignment:Alignment.center,children:[Container(decoration:BoxDecoration(shape:BoxShape.circle,color:const Color(0xFF171947),boxShadow:[BoxShadow(color:const Color(0xFF00CFFF).withValues(alpha:widget.active ? .6 : .15),blurRadius:12)])),SizedBox.expand(child:CircularProgressIndicator(value:left/10,strokeWidth:6,backgroundColor:const Color(0xFF292660),color:widget.active?const Color(0xFF4EEBFF):const Color(0xFF6F75AD))),Text('${left.ceil()}',style:const TextStyle(fontSize:22,color:Colors.white,fontWeight:FontWeight.w900))]));}
 }
@@ -443,8 +444,8 @@ class Ngelx570PowerPainter extends CustomPainter {
  @override bool shouldRepaint(covariant Ngelx570PowerPainter old)=>old.kind!=kind;
 }
 
-Future<ui.Image>? _pawn570;
-Future<ui.Image> ngelx570PawnSprite()=>_pawn570??=()async{final bytes=await rootBundle.load('assets/ludo570_pawns.png');final codec=await ui.instantiateImageCodec(bytes.buffer.asUint8List());final frame=await codec.getNextFrame();codec.dispose();return frame.image;}();
+ui.Image? _loadedPawn570;Future<ui.Image>? _pawn570;
+Future<ui.Image> ngelx570PawnSprite()=>_pawn570??=()async{final bytes=await rootBundle.load('assets/ludo570_pawns.png');final codec=await ui.instantiateImageCodec(bytes.buffer.asUint8List());final frame=await codec.getNextFrame();codec.dispose();_loadedPawn570=frame.image;return frame.image;}();
 class Ngelx570SpritePainter extends CustomPainter {
  final int seat;final bool highlight;final ui.Image? image;
  const Ngelx570SpritePainter(this.seat,this.highlight,this.image);
@@ -457,3 +458,14 @@ class Ngelx570SpritePainter extends CustomPainter {
 }
 
 int? ngelx570ShownDice(Map<String,dynamic> room){final dice=room['dice'];if(dice is num)return dice.toInt();final last=room['lastRoll'];if(last is Map&&last['seat']==room['turn'])return (last['value'] as num?)?.toInt();return null;}
+
+class Ngelx570ChatPanel extends StatefulWidget {
+ final Ngelx567RoomController game;const Ngelx570ChatPanel({super.key,required this.game});
+ @override State<Ngelx570ChatPanel> createState()=>_Ngelx570ChatPanelState();
+}
+class _Ngelx570ChatPanelState extends State<Ngelx570ChatPanel>{
+ final input=TextEditingController();bool sending=false;
+ @override void dispose(){input.dispose();super.dispose();}
+ Future<void> send([String? emoji])async{final text=emoji??input.text.trim();if(text.isEmpty||sending||widget.game.busy)return;setState(()=>sending=true);final sent=await widget.game.perform('chat',{'text':text});if(!mounted)return;if(sent){Navigator.pop(context);}else{setState(()=>sending=false);}}
+ @override Widget build(BuildContext context)=>Column(children:[const Text('Masa sohbeti',style:TextStyle(color:Colors.white,fontSize:19,fontWeight:FontWeight.w900)),Expanded(child:AnimatedBuilder(animation:widget.game,builder:(_,__){final messages=widget.game.room['chat'] as List? ?? [];return ListView.builder(padding:const EdgeInsets.all(12),itemCount:messages.length,itemBuilder:(_,i)=>Padding(padding:const EdgeInsets.only(bottom:8),child:Text('${messages[i]['name']}: ${messages[i]['text']}',style:const TextStyle(color:Colors.white,fontSize:14))));})),Row(mainAxisAlignment:MainAxisAlignment.spaceEvenly,children:[for(final emoji in ['😊','🎲','👏','❤️','🎉'])IconButton(onPressed:sending?null:()=>send(emoji),icon:Text(emoji,style:const TextStyle(fontSize:24)))]),Padding(padding:const EdgeInsets.fromLTRB(12,0,12,10),child:Row(children:[Expanded(child:TextField(key:const ValueKey('ludo-chat-input'),controller:input,maxLength:180,style:const TextStyle(color:_ludoInk567),decoration:const InputDecoration(hintText:'Mesaj yaz…',counterText:''),onSubmitted:(_)=>send())),IconButton(onPressed:sending?null:send,icon:const Icon(Icons.send_rounded,color:_ludoGold567))]))]);
+}
