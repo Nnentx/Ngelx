@@ -31,6 +31,29 @@ jobs:
           run-id: 40189872161
           github-token: ${{ github.token }}
           path: assembled
+      - uses: actions/download-artifact@v4
+        with:
+          name: NgelX-Build567-REAL-INPLACE-SIGNED-REVIEW-ONLY
+          run-id: 40189872161
+          github-token: ${{ github.token }}
+          path: previous-apk
+      - name: Preserve existing app images and sounds
+        run: |
+          python3 - <<'PYTHON'
+          from pathlib import Path,PurePosixPath
+          import zipfile
+          files=list(Path('previous-apk').rglob('*.apk'))
+          assert len(files)==1
+          with zipfile.ZipFile(files[0]) as apk:
+            for name in apk.namelist():
+              prefix='assets/flutter_assets/assets/'
+              if not name.startswith(prefix) or name.endswith('/'):continue
+              relative=PurePosixPath(name[len(prefix):])
+              assert '..' not in relative.parts and not relative.is_absolute()
+              target=Path('app/assets')/str(relative)
+              target.parent.mkdir(parents=True,exist_ok=True)
+              target.write_bytes(apk.read(name))
+          PYTHON
       - name: Restore exact Build567 source and apply only Ludo delta
         run: |
           cp -a assembled/app/. app/
@@ -43,6 +66,8 @@ jobs:
           for package,version in [('firebase_storage','^13.6.0'),('crypto','^3.0.6'),('flutter_cache_manager','^3.4.5')]:
             if '  '+package+':' not in s:s=s.replace('  cupertino_icons:','  '+package+': '+version+'\n  cupertino_icons:',1)
           s=s.replace('version: 1.0.175+399','version: 1.0.338+568')
+          for item in ['    - assets/call_ringback444.wav','    - assets/gifts553/']:
+            if item not in s:s=s.replace('  assets:\n','  assets:\n'+item+'\n',1)
           p.write_text(s)
           PY
       - name: Validate game UI and existing room lifecycle

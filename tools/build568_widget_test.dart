@@ -5,10 +5,11 @@ Map<String,dynamic> room()=>{'id':'583921','owner':'a','capacity':2,'status':'pl
 void main(){
  test('numeric and previous invitations both remain readable',(){expect(ngelx565RoomId('https://ngelxsocial.com/ludo/583921'),'583921');expect(ngelx565RoomId('https://ngelxsocial.com/ludo/ABCDEF0123456789'),'ABCDEF0123456789');expect(ngelx565RoomId('https://evil.test/ludo/583921'),'');});
  testWidgets('bot options send settings and open the existing game table',(t)async{
+  t.view.physicalSize=const Size(393,851);t.view.devicePixelRatio=1;addTearDown(t.view.resetPhysicalSize);addTearDown(t.view.resetDevicePixelRatio);
   final calls=<Map<String,dynamic>>[];
   await t.pumpWidget(MaterialApp(home:Ngelx565LudoLobby(userId:'a',request:(b)async{calls.add(b);return room();})));
   await t.tap(find.text('Makineye karşı oyna'));await t.pumpAndSettle();
-  await t.scrollUntilVisible(find.text('Oyuna başla'),250);await t.tap(find.text('Oyuna başla'));await t.pumpAndSettle();
+  await t.scrollUntilVisible(find.text('Oyuna başla'),250);await t.pumpAndSettle();await t.ensureVisible(find.text('Oyuna başla'));await t.pumpAndSettle();await t.tap(find.text('Oyuna başla'));await t.pumpAndSettle();
   expect(calls.first['action'],'bot');expect(calls.first['difficulty'],'medium');expect(find.text('Makine'),findsOneWidget);expect(find.text('ODA · 583921'),findsOneWidget);expect(t.takeException(),isNull);await t.pumpWidget(const SizedBox());
  });
  testWidgets('random search has cancel and no host start button',(t)async{
