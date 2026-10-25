@@ -238,11 +238,13 @@ class Ngelx567Table extends StatelessWidget {
    for(final p in players)Builder(builder:(_){
     final color=(p['seat'] as num).toInt(),visual=(color+turns)%4,isLeft=visual==0||visual==3,isTop=visual==0||visual==1,isTurn=playing&&room['turn']==color,isMine=p['uid']==uid;
     final width=math.min(180.0,side*.57),photo='${p['photo']??''}';
+    final lastRoll=room['lastRoll'] as Map?;
+    final shownDice=(room['dice'] as num?)?.toInt() ?? (lastRoll!=null && lastRoll['seat']==color ? (lastRoll['value'] as num?)?.toInt() : null);
     return Positioned(left:isLeft?left:left+side-width,top:isTop?top-40:top+side+4,width:width,height:36,child:Row(mainAxisAlignment:isLeft?MainAxisAlignment.start:MainAxisAlignment.end,children:[
-     if(!isLeft&&isTurn)...[GestureDetector(onTap:isMine&&enabled&&!busy&&room['dice']==null?onRoll:null,child:Ngelx567Dice(value:((room['dice']??(room['lastRoll']?['seat']==color?room['lastRoll']?['value']:null)) as num?)?.toInt(),size:32,busy:busy&&isMine)),const SizedBox(width:6)],
+     if(!isLeft&&isTurn)...[GestureDetector(onTap:isMine&&enabled&&!busy&&room['dice']==null?onRoll:null,child:Ngelx567Dice(value:shownDice,size:32,busy:busy&&isMine)),const SizedBox(width:6)],
      Container(width:34,height:34,padding:const EdgeInsets.all(2),decoration:BoxDecoration(shape:BoxShape.circle,color:isTurn?_ludoGold567:ngelx565LudoColors[color],boxShadow:[BoxShadow(color:(isTurn?_ludoGold567:Colors.black).withValues(alpha:.25),blurRadius:8)]),child:CircleAvatar(backgroundColor:const Color(0xFF8273AB),backgroundImage:photo.isEmpty?null:NgelXAgImageProvider(photo),child:photo.isEmpty?Icon(p['bot']==true?Icons.smart_toy_rounded:Icons.person_rounded,size:20,color:Colors.white):null)),const SizedBox(width:5),
      Flexible(child:Text(isMine?'Sen':'${p['name']}',maxLines:1,overflow:TextOverflow.ellipsis,style:TextStyle(color:isTurn?_ludoGold567:Colors.white70,fontWeight:FontWeight.w800,fontSize:11))),
-     if(isLeft&&isTurn)...[const SizedBox(width:6),GestureDetector(key:isMine?const ValueKey('ludo-dice'):null,onTap:isMine&&enabled&&!busy&&room['dice']==null?onRoll:null,child:Ngelx567Dice(value:((room['dice']??(room['lastRoll']?['seat']==color?room['lastRoll']?['value']:null)) as num?)?.toInt(),size:32,busy:busy&&isMine))],
+     if(isLeft&&isTurn)...[const SizedBox(width:6),GestureDetector(key:isMine?const ValueKey('ludo-dice'):null,onTap:isMine&&enabled&&!busy&&room['dice']==null?onRoll:null,child:Ngelx567Dice(value:shownDice,size:32,busy:busy&&isMine))],
     ]));
    }),
   ]);
