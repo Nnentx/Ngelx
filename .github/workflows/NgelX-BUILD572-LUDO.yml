@@ -95,7 +95,7 @@ jobs:
           s=p.read_text()
           start=s.index('Future<void> preview(')
           end=s.index('void main(){',start)
-          s=s[:start]+'Future<void> preview(WidgetTester t,String name) async { await t.pump(); }\\n'+s[end:]
+          s=s[:start]+'Future<void> preview(WidgetTester t,String name) async { await t.pump(); }'+chr(10)+s[end:]
           # Waiting state is synchronous; avoid waiting for perpetual animations.
           s=s.replace("await t.pumpAndSettle(const Duration(milliseconds:100),EnginePhase.sendSemanticsUpdate,const Duration(seconds:8));expect(find.text('Başlat')","await t.pump();expect(find.text('Başlat')")
           p.write_text(s)
