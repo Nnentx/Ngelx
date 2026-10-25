@@ -90,6 +90,7 @@ export function createLudo565({verify,profile,store,limit=async()=>true,now=()=>
    }
    if(!/^(?:[0-9]{6}|[A-F0-9]{16})$/.test(b.id??''))return json({error:'invalid_room'},400);
    const existing=await store.get(b.id);if(!existing)return json({error:'room_not_found'},404);
+   if(existing.room.expiresAt<=now())return json({error:'room_expired'},410);
    if(b.action==='join'){const p=await profile(uid);b={...b,name:String(p?.displayName??p?.username??'Oyuncu'),photo:String(p?.photoUrl??'')};}
    // Spectators use separate presence documents and never mutate the game revision.
    const presenceId='view570_'+b.id;

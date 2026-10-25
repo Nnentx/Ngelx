@@ -19,3 +19,5 @@ test('spectators see game without a player seat, count expires and leaves cleanl
  await call({action:'watch',id:room.id},'viewer');tick(25001);
  assert.equal((await call({action:'sync',id:room.id})).room.spectatorCount,0);
 });
+
+test('expired rooms reject spectator access',async()=>{const {call,tick}=fixture();const {room}=await call({action:'create',capacity:2,mode:'classic'});tick(6*3600000+1);assert.equal((await call({action:'watch',id:room.id},'viewer')).status,410);});
