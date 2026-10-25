@@ -10,7 +10,7 @@ permissions:
 jobs:
   review:
     runs-on: ubuntu-latest
-    timeout-minutes: 50
+    timeout-minutes: 55
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -85,12 +85,19 @@ jobs:
             if item not in s:s=s.replace('  assets:\n','  assets:\n'+item+'\n',1)
           p.write_text(s)
           PY
-      - name: Validate game UI and existing room lifecycle
+      - name: Validate Dart build and bounded Ludo regression suites
         working-directory: app
         run: |
+          set -euo pipefail
           flutter pub get
-          flutter test --timeout 45s test/build567_widget_test.dart test/build570_widget_test.dart test/build570_join_test.dart test/build570_modes_test.dart test/build570_perf_test.dart
-          flutter analyze --no-fatal-infos --no-fatal-warnings
+          timeout --signal=TERM --kill-after=10s 180s flutter analyze --no-fatal-infos --no-fatal-warnings
+          # Each suite uses a real wall-clock deadline. A stalled widget test
+          # cannot silently consume the full GitHub runner allocation.
+          for suite in build570_join_test.dart build570_perf_test.dart build567_widget_test.dart build570_widget_test.dart build570_modes_test.dart; do
+            echo "::group::Ludo regression $suite"
+            timeout --signal=TERM --kill-after=10s 120s flutter test --concurrency=1 --timeout=35s --reporter expanded "test/$suite"
+            echo "::endgroup::"
+          done
       - uses: actions/upload-artifact@v4
         if: always()
         with:
