@@ -67,7 +67,7 @@ replace("Flexible(child:Text(isMine?'Sen':'${p['name']}',maxLines:1,overflow:Tex
         "Flexible(child:Container(padding:const EdgeInsets.symmetric(horizontal:6,vertical:4),decoration:BoxDecoration(color:const Color(0xEE141340),borderRadius:BorderRadius.circular(14),border:Border.all(color:ngelx565LudoColors[color])),child:Text(isMine?'Sen':'${p['name']}',maxLines:1,overflow:TextOverflow.ellipsis,style:TextStyle(color:isTurn?_ludoGold567:Colors.white,fontWeight:FontWeight.w900,fontSize:11))))")
 
 replace("appBar:AppBar(leading:IconButton(key:const ValueKey('ludo-back')",
-        "appBar:AppBar(toolbarHeight:74,centerTitle:true,leading:IconButton(key:const ValueKey('ludo-back')")
+        "appBar:AppBar(toolbarHeight:MediaQuery.sizeOf(context).height<650?56:74,centerTitle:true,leading:IconButton(key:const ValueKey('ludo-back')")
 replace("title:const Ngelx570Logo(),actions:[Center(child:",
         "title:Column(mainAxisSize:MainAxisSize.min,children:[Text(ngelx572ModeTitle(room),maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Color(0xFFFFD763),fontSize:13,fontWeight:FontWeight.w900,shadows:[Shadow(color:Colors.black54,offset:Offset(0,2),blurRadius:3)])),const Ngelx570Logo()]),actions:[Center(child:")
 replace("class Ngelx570Logo extends StatelessWidget {",
