@@ -13,7 +13,13 @@ Temel: feat/build567-ludo-quality, 3b1884860f9ee458b0daba284bdc638cc84155ae.
 
 - Node: 41 test geçti (oyun, yeni modlar, altı tam oyun simülasyonu ve mevcut moderasyon testleri).
 - Dart: yeni arayüz ve test dosyaları format ayrıştırıcısı ile sözdizimi kontrolünden geçti.
-- 17 Flutter testi ve tüm uygulamanın kod analizi geçti. Son APK paketlemesi devam ediyor.
+- 17 Flutter testi ve tüm uygulamanın kod analizi geçti. APK derlemesi ve imza doğrulaması başarılı.
+- Başarılı derleme: https://github.com/Nnentx/Ngelx/actions/runs/40214934625
+- Doğrulanmış paket: com.nnentx.ngelx_app, sürüm 1.0.338, versionCode 568.
+- APK SHA256: 76c5fc3f3643b751b04a76c59d150767874974d2ee19e8c95364dae5bfb128d8.
+- Önceki uygulamanın görsel ve ses dosyaları byte düzeyinde karşılaştırıldı; mevcut Android imzası doğrulandı.
+- Test edilmiş kaynak: c7f57803b8097d1b71d7b74b4978ddba7e26eb7d.
+- Test edilmiş tam kaynak arşivi: NgelX-Build568-Assembled-Source, artifact 12607217256.
 - Canlı sunucuya dağıtılmadı. Kullanıcının açık onayıyla feat/build568-ludo-modes dalına gönderildi.
 
 ## Derleme
