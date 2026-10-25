@@ -84,7 +84,7 @@ jobs:
               s=p.read_text()
               s=s.replace('t.pumpAndSettle()', 't.pumpAndSettle(const Duration(milliseconds:100),EnginePhase.sendSemanticsUpdate,const Duration(seconds:8))')
               if "import 'package:flutter/rendering.dart';" not in s:
-                  s="import 'package:flutter/rendering.dart';\\n"+s
+                  s="import 'package:flutter/rendering.dart';"+chr(10)+s
               p.write_text(s)
           BOUND_TESTS
           python3 - <<'PY'
