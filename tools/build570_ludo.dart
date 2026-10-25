@@ -263,7 +263,7 @@ class _DicePainter567 extends CustomPainter {
   canvas.drawRRect(r,Paint()..shader=const LinearGradient(begin:Alignment.topLeft,end:Alignment.bottomRight,colors:[Colors.white,Color(0xFFF4F2FF),Color(0xFFAFA7D0)]).createShader(rect));
   canvas.drawRRect(r,Paint()..style=PaintingStyle.stroke..strokeWidth=1.5..color=const Color(0xFFE8DFFF));
   if(busy){final p=Paint()..color=const Color(0xFF7B61C3)..style=PaintingStyle.stroke..strokeWidth=3;canvas.drawArc(rect.deflate(size.width*.25),-.8,4.5,false,p);return;}
-  if(value==null){final tp=TextPainter(text:TextSpan(text:'GO',style:TextStyle(color:const Color(0xFF5D458E),fontSize:size.width*.58,fontWeight:FontWeight.w900)),textDirection:TextDirection.ltr)..layout();tp.paint(canvas,rect.center-Offset(tp.width/2,tp.height/2));return;}
+  if(value==null){final tp=TextPainter(text:TextSpan(text:'GO',style:TextStyle(fontFamily:'Roboto',color:const Color(0xFF5D458E),fontSize:size.width*.58,fontWeight:FontWeight.w900)),textDirection:TextDirection.ltr)..layout();tp.paint(canvas,rect.center-Offset(tp.width/2,tp.height/2));return;}
   const positions={1:[4],2:[0,8],3:[0,4,8],4:[0,2,6,8],5:[0,2,4,6,8],6:[0,2,3,5,6,8]};
   for(final n in positions[value]??[]){final at=Offset(size.width*(.25+(n%3)*.25),size.height*(.25+(n~/3)*.25));canvas.drawCircle(at,size.width*.075,Paint()..color=const Color(0xFF27243E));canvas.drawCircle(at-Offset(size.width*.012,size.width*.014),size.width*.035,Paint()..color=const Color(0xFF555066));}
  }
@@ -300,7 +300,7 @@ class _MovingPawn567 extends StatefulWidget {
 }
 class _MovingPawn567State extends State<_MovingPawn567> with SingleTickerProviderStateMixin {
  late final AnimationController motion;late int from;ui.Image? sprite;
- @override void initState(){super.initState();from=widget.position;motion=AnimationController(vsync:this,duration:const Duration(milliseconds:180))..value=1;unawaited(ngelx570PawnSprite().then((value){if(mounted)setState(()=>sprite=value);}));}
+ @override void initState(){super.initState();from=widget.position;motion=AnimationController(vsync:this,duration:const Duration(milliseconds:180))..value=1;unawaited(ngelx570PawnSprite().then((value){if(mounted)setState(()=>sprite=value);}).catchError((_){ }));}
  @override void didUpdateWidget(covariant _MovingPawn567 old){super.didUpdateWidget(old);if(old.position!=widget.position){from=old.position;motion.duration=Duration(milliseconds:math.min(1800,math.max(210,(widget.position-from).abs()*160)));motion.forward(from:0);}}
  @override void dispose(){motion.dispose();super.dispose();}
  @override Widget build(BuildContext context)=>AnimatedBuilder(animation:motion,builder:(_,__){
@@ -342,10 +342,10 @@ class Ngelx565BoardPainter extends CustomPainter {
   for(var seat=0;seat<4;seat++){
    final color=ngelx565LudoColors[seat],base=Rect.fromLTWH(bases[seat].dx*c,bases[seat].dy*c,6*c,6*c);
    final outer=RRect.fromRectAndRadius(base.deflate(.5),Radius.circular(c*.12));
-   canvas.drawRRect(outer,paint..shader=LinearGradient(begin:Alignment.topLeft,end:Alignment.bottomRight,colors:[Color.lerp(color,Colors.white,.4)!,color,Color.lerp(color,Colors.black,.18)!]).createShader(base));paint.shader=null;
+   canvas.drawRRect(outer,paint..color=Colors.white..shader=LinearGradient(begin:Alignment.topLeft,end:Alignment.bottomRight,colors:[Color.lerp(color,Colors.white,.4)!,color,Color.lerp(color,Colors.black,.18)!]).createShader(base));paint.shader=null;
    canvas.drawRRect(outer.deflate(2),paint..style=PaintingStyle.stroke..strokeWidth=1.8..color=Color.lerp(color,Colors.white,.48)!);paint.style=PaintingStyle.fill;
    final home=base.deflate(c*.88),inner=RRect.fromRectAndRadius(home,Radius.circular(c*.23));
-   canvas.drawRRect(inner,paint..shader=LinearGradient(begin:Alignment.topLeft,end:Alignment.bottomRight,colors:[Color.lerp(color,Colors.black,.48)!,Color.lerp(color,Colors.black,.16)!]).createShader(home));paint.shader=null;
+   canvas.drawRRect(inner,paint..color=Colors.white..shader=LinearGradient(begin:Alignment.topLeft,end:Alignment.bottomRight,colors:[Color.lerp(color,Colors.black,.48)!,Color.lerp(color,Colors.black,.16)!]).createShader(home));paint.shader=null;
    canvas.drawRRect(inner.deflate(1),paint..style=PaintingStyle.stroke..strokeWidth=2..color=Color.lerp(color,Colors.black,.25)!);paint.style=PaintingStyle.fill;
    canvas.drawLine(home.bottomLeft+Offset(c*.2,0),home.bottomRight-Offset(c*.2,0),paint..color=Colors.white.withValues(alpha:.28)..strokeWidth=1.5);
    for(var token=0;token<4;token++){final at=ngelx565TokenPoint(seat,token,-1),center=Offset((at.dx+.5)*c,(at.dy+.5)*c);canvas.drawCircle(center,c*.44,paint..color=Colors.black.withValues(alpha:.19));}
@@ -356,10 +356,10 @@ class Ngelx565BoardPainter extends CustomPainter {
    final at=track[i],rect=Rect.fromLTWH(at.dx*c,at.dy*c,c,c);tile(canvas,rect,i%13==0?ngelx565LudoColors[i~/13]:const Color(0xFFF1F5FD));
    if(safe.contains(i))star(canvas,rect.center,c*.34,i%13==0?Color.lerp(ngelx565LudoColors[i~/13],Colors.black,.4)!:const Color(0xFF899AB6));
    else if(power&&[4,17,30,43].contains(i)){
-    canvas.drawRRect(RRect.fromRectAndRadius(rect.deflate(c*.1),Radius.circular(c*.12)),paint..shader=LinearGradient(colors:const [Color(0xFFFFF4A3),Color(0xFFFFBD18)],begin:Alignment.topLeft,end:Alignment.bottomRight).createShader(rect));paint.shader=null;
-    final tp=TextPainter(text:TextSpan(text:'+1',style:TextStyle(color:const Color(0xFF9C5100),fontSize:c*.51,fontWeight:FontWeight.w900)),textDirection:TextDirection.ltr)..layout();tp.paint(canvas,rect.center-Offset(tp.width/2,tp.height/2));
+    canvas.drawRRect(RRect.fromRectAndRadius(rect.deflate(c*.1),Radius.circular(c*.12)),paint..color=Colors.white..shader=LinearGradient(colors:const [Color(0xFFFFF4A3),Color(0xFFFFBD18)],begin:Alignment.topLeft,end:Alignment.bottomRight).createShader(rect));paint.shader=null;
+    final tp=TextPainter(text:TextSpan(text:'+1',style:TextStyle(fontFamily:'Roboto',color:const Color(0xFF9C5100),fontSize:c*.51,fontWeight:FontWeight.w900)),textDirection:TextDirection.ltr)..layout();tp.paint(canvas,rect.center-Offset(tp.width/2,tp.height/2));
    }else if(power&&pickup.contains(i)){
-    canvas.drawCircle(rect.center,c*.42,paint..shader=const RadialGradient(center:Alignment(-.3,-.4),colors:[Colors.white,Color(0xFF63D9FF),Color(0xFF2953BB)]).createShader(rect));paint.shader=null;
+    canvas.drawCircle(rect.center,c*.42,paint..color=Colors.white..shader=const RadialGradient(center:Alignment(-.3,-.4),colors:[Colors.white,Color(0xFF63D9FF),Color(0xFF2953BB)]).createShader(rect));paint.shader=null;
     canvas.save();canvas.translate(rect.left+c*.08,rect.top+c*.08);canvas.rotate(-turns*math.pi/2);if(turns!=0){canvas.restore();canvas.save();canvas.translate(rect.center.dx,rect.center.dy);canvas.rotate(-turns*math.pi/2);canvas.translate(-c*.42,-c*.42);}
     Ngelx570PowerPainter(['control','double','shield'][pickup.indexOf(i)%3]).paint(canvas,Size(c*.84,c*.84));canvas.restore();
    }
