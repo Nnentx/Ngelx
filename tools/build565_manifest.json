@@ -1,0 +1,18 @@
+{
+  "app/lib/main.dart": {
+    "before": "ac43b0752517142a18a00a37bb20777380e59c32bc3c5c91b0a141c38d2af68b",
+    "after": "77e06adceffd429d4482911ca2049dffc60fc570c106aff178bcfb2ec11ef0db"
+  },
+  "app/lib/build258_settings.dart": {
+    "before": "17b7ebc50dd0e845d493f0b316f22d0b1b1b1152725d7ede66957b58afffc3dc",
+    "after": "c901aa75007115b89197e332e5f534396359d25556aa283dd0e49b9a87dff44a"
+  },
+  "app/lib/build564_update.dart": {
+    "before": "6c29e2e24a19b2e6e89e0bb6ae89b0322b10926bc3dd7606c1081368d306af3d",
+    "after": "91755de349644f5f8311b2a7043faf0ea247edee14f0f9db008cc8db28f34b5b"
+  },
+  "app/android/app/src/main/AndroidManifest.xml": {
+    "before": "f14aa0e2f98c5e14cab5710f169dcad67e75ca82801eeaa10f9ba052aec48443",
+    "after": "2a9e3484975f4ed68a8a6f84a4dc2b69f343513d167fb2a6ad8c51f25e5d1f62"
+  }
+}
