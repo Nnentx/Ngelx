@@ -5,7 +5,7 @@ def apply():
  if not p.exists():raise RuntimeError('Restore tested Build567 assembled source first')
  p.write_bytes((ROOT/'tools/build568_ludo.dart').read_bytes())
  for name in ['main.dart','build566_transport.dart']:
-  p=ROOT/'app/lib'/name;s=p.read_text().replace('[A-F0-9]{16}', '(?:[0-9]{6}|[A-F0-9]{16})')
+  p=ROOT/'app/lib'/name;s=p.read_text().replace("r'^[A-F0-9]{16}$'", "r'^(?:[0-9]{6}|[A-F0-9]{16})$'")
   if name=='build566_transport.dart':s=s.replace("body['action']!='create'", "!['create','bot','match'].contains(body['action'])")
   p.write_text(s)
  print('Build568 Ludo delta applied; other application files preserved')

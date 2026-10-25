@@ -13,8 +13,8 @@ Temel: feat/build567-ludo-quality, 3b1884860f9ee458b0daba284bdc638cc84155ae.
 
 - Node: 41 test geçti (oyun, yeni modlar, altı tam oyun simülasyonu ve mevcut moderasyon testleri).
 - Dart: yeni arayüz ve test dosyaları format ayrıştırıcısı ile sözdizimi kontrolünden geçti.
-- Flutter arayüz testleri ve APK derlemesi henüz doğrulanmadı.
-- Canlı sunucuya dağıtılmadı. GitHub gönderimi otomatik onay denetimi tarafından durduruldu.
+- 17 Flutter testi ve tüm uygulamanın kod analizi geçti. Son APK paketlemesi devam ediyor.
+- Canlı sunucuya dağıtılmadı. Kullanıcının açık onayıyla feat/build568-ludo-modes dalına gönderildi.
 
 ## Derleme
 

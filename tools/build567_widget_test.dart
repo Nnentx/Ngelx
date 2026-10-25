@@ -17,7 +17,7 @@ void main(){
  setUpAll(()async{
   final text=File('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf');
   if(text.existsSync())await (FontLoader('Roboto')..addFont(Future.value(ByteData.view(text.readAsBytesSync().buffer)))).load();
-  final root=Platform.resolvedExecutable.split('/bin/cache/dart-sdk/').first;
+  final root=Platform.environment['FLUTTER_ROOT']??Platform.resolvedExecutable.split('/bin/cache/dart-sdk/').first;
   final icons=File('$root/bin/cache/artifacts/material_fonts/MaterialIcons-Regular.otf');
   if(icons.existsSync())await (FontLoader('MaterialIcons')..addFont(Future.value(ByteData.view(icons.readAsBytesSync().buffer)))).load();
  });

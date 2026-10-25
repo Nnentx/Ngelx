@@ -84,10 +84,32 @@ jobs:
       - name: Verify existing updater signer
         run: |
           keytool -list -v -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey | grep -F 'SHA256: BE:20:B2:7F:0B:A1:F4:DE:CD:29:41:D4:10:B1:53:6D:E8:9E:48:DC:89:4F:04:F0:38:F9:D2:6B:11:EC:D6:AA'
+      - name: Retain Build567 Android packaging
+        run: |
+          python3 - <<'PYTHON'
+          from pathlib import Path
+          p=Path('app/android/app/build.gradle.kts');s=p.read_text()
+          s=s.replace('abiFilters += listOf("armeabi-v7a", "arm64-v8a")','abiFilters += listOf("arm64-v8a")')
+          if 'useLegacyPackaging' not in s:s=s.replace('    buildTypes {','    packaging { jniLibs { useLegacyPackaging = true } }\n\n    buildTypes {',1)
+          p.write_text(s)
+          PYTHON
       - name: Build review APK
         working-directory: app
         run: |
           flutter build apk --release --target-platform android-arm64 --build-name=1.0.338 --build-number=568 --dart-define=NGELX_VERSION_NAME=1.0.338 --dart-define=NGELX_BUILD_NUMBER=568 --dart-define=NGELX_VERIFICATION_EMAIL_URL=https://ngelx-verification-email.alihancaglar76.workers.dev/verify-email --dart-define=NGELX_COMMUNITY_DELETE_URL=https://ngelx-live-moderation.alihancaglar76.workers.dev/community/delete --dart-define=NGELX_LIVEKIT_GUEST_MODERATION_URL=https://ngelx-live-moderation.alihancaglar76.workers.dev/moderate --dart-define=NGELX_CALL_PUSH_URL=https://ngelx-call-push.alihancaglar76.workers.dev
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          "$APKSIGNER" verify --verbose --print-certs build/app/outputs/flutter-apk/app-release.apk > apk-signature568.txt
+          grep -iF 'be20b27f0ba1f4decd2941d410b1536de89e48dc894f04f038f9d26b11ecd6aa' apk-signature568.txt
+          python3 - <<'PYTHON'
+          from pathlib import Path
+          import zipfile
+          old=list(Path('../previous-apk').rglob('*.apk'))
+          with zipfile.ZipFile(old[0]) as previous,zipfile.ZipFile('build/app/outputs/flutter-apk/app-release.apk') as current:
+            for name in previous.namelist():
+              if name.startswith('assets/flutter_assets/assets/') and not name.endswith('/'):
+                assert previous.read(name)==current.read(name),name
+          print('Build567 images and sounds preserved byte-for-byte')
+          PYTHON
           cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/NgelX-1.0.338-Build568.apk
       - uses: actions/upload-artifact@v4
         if: always()
