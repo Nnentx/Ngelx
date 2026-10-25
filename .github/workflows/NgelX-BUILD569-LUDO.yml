@@ -54,9 +54,9 @@ jobs:
               target.parent.mkdir(parents=True,exist_ok=True)
               target.write_bytes(apk.read(name))
           PYTHON
-      - name: Restore exact Build567 source and apply only Ludo delta
+      - name: Restore exact Build568 source and apply only Ludo delta
         run: |
-          cp -a assembled/app/. app/
+          cp -a assembled/. app/
           mkdir -p app/android/app/src/main/res/xml
           cp tools/update_paths564.xml app/android/app/src/main/res/xml/update_paths564.xml
           python3 - <<'NATIVE'
