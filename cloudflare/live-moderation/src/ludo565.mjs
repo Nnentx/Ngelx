@@ -23,11 +23,23 @@ export function createLudo565({verify,profile,store,limit=async()=>true,now=()=>
    if(!b||typeof b!=='object'||Array.isArray(b))return json({error:'invalid_request'},400);
    let user;try{user=await verify(request);}catch{return json({error:'unauthorized'},401);}
    const uid=user.sub;if(!uid)return json({error:'unauthorized'},401);
+   let createId;
+   if(b.action==='create'&&b.requestId!==undefined){
+    if(typeof b.requestId!=='string'||!/^[a-zA-Z0-9_-]{16,100}$/.test(b.requestId))return json({error:'invalid_request'},400);
+    const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(uid+':'+b.requestId));
+    createId=Array.from(new Uint8Array(digest),x=>x.toString(16).padStart(2,'0')).join('').slice(0,16).toUpperCase();
+    const prior=await store.get(createId);
+    if(prior){if(prior.room.owner!==uid)return json({error:'state_changed'},409);return json({room:prior.room});}
+   }
    if(!await limit(uid,b.action))return json({error:'slow_down'},429);
    if(b.action==='create'){
-    const p=await profile(uid),id=uuid();
+    const p=await profile(uid),id=createId??uuid();
     const room=createRoom({uid,id,name:String(p?.displayName??p?.username??'Oyuncu'),photo:String(p?.photoUrl??''),capacity:b.capacity,team:b.team===true,mode:b.mode},now());
-    await store.put(id,room);return json({room},201);
+    try{await store.put(id,room);}catch(error){
+     if(createId&&error.status===409){const prior=await store.get(id);if(prior?.room?.owner===uid)return json({room:prior.room});}
+     throw error;
+    }
+    return json({room},201);
    }
    if(!/^[A-F0-9]{16}$/.test(b.id??''))return json({error:'invalid_room'},400);
    const existing=await store.get(b.id);if(!existing)return json({error:'room_not_found'},404);

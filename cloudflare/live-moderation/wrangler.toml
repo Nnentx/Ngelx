@@ -2,5 +2,6 @@ name = "ngelx-live-moderation"
 main = "src/index.mjs"
 compatibility_date = "2026-10-22"
 workers_dev = true
+routes = [{ pattern = "oyun.ngelxsocial.com", custom_domain = true }]
 [vars]
 FIREBASE_PROJECT_ID = "ngelx-44eed"

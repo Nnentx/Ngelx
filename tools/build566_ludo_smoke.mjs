@@ -19,12 +19,15 @@ async function login(i){
  const r=await fetch('https://identitytoolkit.googleapis.com/v1/accounts:signInWithCustomToken?key='+apiKey,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({token:input+'.'+signature,returnSecureToken:true}),signal:AbortSignal.timeout(12000)});
  if(!r.ok)throw Error('Temporary test login HTTP '+r.status);const d=await r.json();users.push({uid,token:d.idToken});return users.at(-1);
 }
-async function call(user,body){const r=await fetch('https://ngelx-live-moderation.alihancaglar76.workers.dev/ludo',{method:'POST',headers:{authorization:'Bearer '+user.token,'content-type':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(25000)});const d=await r.json();if(!r.ok)throw Error('Ludo '+body.action+' HTTP '+r.status+' code '+String(d.error));return d.room;}
+async function call(user,body){const r=await fetch((process.env.NGELX_GAME_ENDPOINT||'https://oyun.ngelxsocial.com/ludo'),{method:'POST',headers:{authorization:'Bearer '+user.token,'content-type':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(25000)});const d=await r.json();if(!r.ok)throw Error('Ludo '+body.action+' HTTP '+r.status+' code '+String(d.error));return d.room;}
 try{
  await firestore(probe+'?currentDocument.exists=false',{method:'PATCH',body:JSON.stringify({fields:{state:{stringValue:'probe'}}})});
  console.log('Dedicated datastore probe passed.');
  const a=await login(0),b=await login(1);console.log('Two isolated test accounts authenticated.');
- let room=await call(a,{action:'create',capacity:2,team:false,mode:'classic'});rooms.push(room.id);console.log('Authenticated room creation passed.');
+ const create={action:'create',capacity:2,team:false,mode:'classic',requestId:'smoke566_'+nonce};
+ let room=await call(a,create);rooms.push(room.id);
+ const retry=await call(a,create);if(retry.id!==room.id)throw Error('Create retry produced a duplicate room');
+ console.log('Authenticated room creation and idempotent retry passed.');
  room=await call(b,{action:'join',id:room.id});
  let n=0;const action=async(user,name,data={})=>room=await call(user,{action:name,id:room.id,revision:room.revision,requestId:'smoke566_'+(++n),...data});
  await action(a,'start');
