@@ -1,0 +1,22 @@
+name: NgelX Build566 authenticated Ludo diagnosis
+on:
+  push:
+    branches: [feat/build566-ludo-pk]
+    paths: ['tools/build566_ludo_smoke.mjs', '.github/workflows/NgelX-BUILD566-DIAG.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  authenticated-game:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate actual authenticated create, join and move with isolated temporary users
+        env:
+          FIREBASE_SERVICE_ACCOUNT_NGELX_44EED: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_NGELX_44EED }}
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: node tools/build566_ludo_smoke.mjs
