@@ -2,7 +2,7 @@ name: Publish verified NgelX Build569 updater APK
 on:
   push:
     branches: [feat/build568-ludo-modes]
-    paths: ['.github/workflows/NgelX-PUBLISH568-UPDATE.yml']
+    paths: ['.github/workflows/NgelX-PUBLISH569-UPDATE.yml']
   workflow_dispatch:
 permissions:
   contents: write
