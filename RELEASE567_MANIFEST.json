@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "package": "com.nnentx.ngelx_app",
+  "abi": "arm64-v8a",
+  "version": "1.0.337",
+  "build": 567,
+  "size": 47594283,
+  "sha256": "b736dc335e6fe76504a2894494238ac8950b2aae728a7666ccb378b3c1ef3bb3",
+  "url": "https://github.com/Nnentx/Ngelx/releases/download/v1.0.337-build567-test/NgelX-1.0.337-Build-567.apk",
+  "notes": "Referans videoya göre Ludo yerleşimi; hizalı taşlar, görünür Başlat ve güvenilir ayrılma. Duyurular ve PK düzeltmeleri korunur.",
+  "testedSource": "3b1884860f9ee458b0daba284bdc638cc84155ae",
+  "buildRun": 40189872161
+}
