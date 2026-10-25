@@ -1,0 +1,51 @@
+name: Diagnose NgelX updater hosting target
+on:
+  push:
+    branches: [feat/build568-ludo-modes]
+    paths: ['.github/workflows/NgelX-DIAG571-HOSTING.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - run: |
+          set +e
+          echo 'Live domain DNS:'
+          getent ahosts ngelxsocial.com | head -4
+          echo 'Update feed HTTP headers:'
+          curl -sSIL --max-time 12 'https://ngelxsocial.com/android-update.json?t=571' | head -28
+          echo 'Update feed first bytes:'
+          curl -sSL --max-time 12 'https://ngelxsocial.com/android-update.json?t=571' | head -c 180 || true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install google-auth requests
+      - name: Inspect project-owned Hosting site identifiers read-only
+        env:
+          FIREBASE_SERVICE_ACCOUNT_NGELX_44EED: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_NGELX_44EED }}
+        run: |
+          python3 - <<'PY'
+          import os,json,requests
+          from google.oauth2 import service_account
+          from google.auth.transport.requests import Request
+          data=os.environ.get('FIREBASE_SERVICE_ACCOUNT_NGELX_44EED')
+          if not data: raise RuntimeError('Missing Firebase service account')
+          auth=service_account.Credentials.from_service_account_info(json.loads(data),scopes=['https://www.googleapis.com/auth/cloud-platform'])
+          auth.refresh(Request())
+          headers={'Authorization':'Bearer '+auth.token}
+          prefix='https://firebasehosting.googleapis.com/v1beta1/'
+          resp=requests.get(prefix+'projects/ngelx-44eed/sites',headers=headers,timeout=20)
+          print('Firebase list sites status',resp.status_code)
+          if not resp.ok:
+              print('Sites unavailable; body:',resp.text[:200])
+              raise SystemExit(0)
+          for site in resp.json().get('sites',[]):
+              name=site['name'];print('Site:',name,'defaultUrl:',site.get('defaultUrl'))
+              releases=requests.get(prefix+name+'/releases',headers=headers,params={'pageSize':1},timeout=20)
+              print('Site release status/count',releases.status_code,len(releases.json().get('releases',[])) if releases.ok else 0)
+              domains=requests.get(prefix+name+'/domains',headers=headers,timeout=20)
+              if domains.ok: print('Hosting domain names:',[d.get('domainName') for d in domains.json().get('domains',[])])
+          PY
