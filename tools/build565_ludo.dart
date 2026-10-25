@@ -6,7 +6,7 @@ String ngelx565RoomId(String text)=>RegExp(r'https://ngelxsocial\.com/ludo/([A-F
 List<int> ngelx565Legal(Map<String,dynamic> room,int seat){
   final dice=room['dice'];if(dice is! num)return [];
   final tokens=List<dynamic>.from((room['tokens'] as List)[seat]);final distance=dice.toInt()*(room['doubled']==true?2:1);
-  return [for(var i=0;i<tokens.length;i++)if(tokens[i]==-1?dice==6:tokens[i]!=57&&(tokens[i] as num)+distance<=57)i];
+  return [for(var i=0;i<tokens.length;i++)if(tokens[i]==-1?dice==6:tokens[i]!=56&&(tokens[i] as num)+distance<=56)i];
 }
 Future<Map<String,dynamic>> ngelx565LudoRequest(Map<String,dynamic> body) async {
  final user=FirebaseAuth.instance.currentUser;if(user==null||user.isAnonymous)throw Exception('Oynamak için hesabına giriş yap.');
@@ -65,7 +65,7 @@ class _Ngelx565LudoRoomState extends State<Ngelx565LudoRoom> with WidgetsBinding
  @override void dispose(){poll?.cancel();WidgetsBinding.instance.removeObserver(this);roomNotifier.dispose();super.dispose();}
  Future<void> load({bool join=false})async{
   if(syncing||busy||allowExit)return;syncing=true;
-  try{final next=await ngelx565LudoRequest({'action':join?'join':'sync','id':widget.id});if(mounted&&(next['revision'] as num)>=(room['revision'] as num? ?? -1)){roomNotifier.value=next;setState(()=>error='');}}
+  try{final next=await ngelx565LudoRequest({'action':join||room.isEmpty?'join':'sync','id':widget.id});if(mounted&&(next['revision'] as num)>=(room['revision'] as num? ?? -1)){roomNotifier.value=next;setState(()=>error='');}}
   catch(e){if(mounted)setState(()=>error=e.toString().replaceFirst('Exception: ',''));}finally{syncing=false;}
  }
  Future<void> action(String action,[Map<String,dynamic> data=const {}])async{
@@ -77,6 +77,7 @@ class _Ngelx565LudoRoomState extends State<Ngelx565LudoRoom> with WidgetsBinding
   finally{if(mounted){setState(()=>busy=false);if(action!='leave')unawaited(load());}}
  }
  Future<bool> leave()async{
+  if(busy)return false;
   final ok=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(title:const Text('Oyundan ayrıl?'),content:const Text('Başlamış bir oyundan ayrılırsan bu turdan çekilirsin.'),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('Ayrıl'))]))??false;
   if(!ok)return false;await action('leave');return error.isEmpty;
  }
@@ -111,8 +112,8 @@ List<Offset> ngelx565Track(){
 Offset ngelx565Rotate(Offset p,int seat){for(var i=0;i<seat;i++)p=Offset(14-p.dy,p.dx);return p;}
 Offset ngelx565TokenPoint(int seat,int token,int position){
  if(position<0){final p=Offset(token%2==0?1.8:4.2,token<2?1.8:4.2);return ngelx565Rotate(p,seat);}
- if(position<52)return ngelx565Track()[(position+13*seat)%52];
- return ngelx565Rotate(Offset((position-51).toDouble(),7),seat);
+ if(position<51)return ngelx565Track()[(position+13*seat)%52];
+ return ngelx565Rotate(Offset((position-50).toDouble(),7),seat);
 }
 class Ngelx565LudoBoard extends StatelessWidget{
  final Map<String,dynamic> room;final int seat;final bool enabled;final ValueChanged<int> onToken;

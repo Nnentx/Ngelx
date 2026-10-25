@@ -6,9 +6,9 @@ export function createRoom({uid,name,photo='',capacity=2,team=false,mode='classi
  if(![2,4].includes(capacity)||!['classic','power'].includes(mode)||team&&capacity!==4)fail('invalid_settings');
  return {id,owner:uid,capacity,team,mode,status:'waiting',players:[{uid,name:name.slice(0,40),photo:String(photo).slice(0,2048),seat:0,left:false}],tokens:[[-1,-1,-1,-1],[-1,-1,-1,-1],[-1,-1,-1,-1],[-1,-1,-1,-1]],power:[{double:1,control:1,shield:1},{double:1,control:1,shield:1},{double:1,control:1,shield:1},{double:1,control:1,shield:1}],shields:{},turn:0,dice:null,sixes:0,revision:0,deadline:now+45000,expiresAt:now+6*3600000,last:{},chat:[],winner:null};
 }
-const active=r=>r.players.filter(p=>!p.left&&!r.tokens[p.seat].every(x=>x===57));
+const active=r=>r.players.filter(p=>!p.left&&!r.tokens[p.seat].every(x=>x===56));
 function next(r,now){const seats=active(r).map(p=>p.seat).sort();r.turn=seats.find(x=>x>r.turn)??seats[0]??0;r.dice=null;r.doubled=false;r.sixes=0;r.deadline=now+45000;if(r.shields[r.turn])delete r.shields[r.turn];}
-export function legal(r,seat){if(r.dice===null)return [];const distance=r.dice*(r.doubled?2:1);return r.tokens[seat].flatMap((p,i)=>p===57?[]:p===-1?(r.dice===6?[i]:[]):p+distance<=57?[i]:[]);}
+export function legal(r,seat){if(r.dice===null)return [];const distance=r.dice*(r.doubled?2:1);return r.tokens[seat].flatMap((p,i)=>p===56?[]:p===-1?(r.dice===6?[i]:[]):p+distance<=56?[i]:[]);}
 export function secureRoll(){let n;do{n=crypto.getRandomValues(new Uint32Array(1))[0];}while(n>=4294967292);return n%6+1;}
 export function act(original,uid,b,now,roll=secureRoll){
  const r=structuredClone(original);if(now>r.expiresAt)fail('room_expired',410);
@@ -65,15 +65,15 @@ export function act(original,uid,b,now,roll=secureRoll){
     if(!Number.isInteger(b.token)||!legal(r,r.turn).includes(b.token))fail('invalid_move');
     const seat=r.turn,old=r.tokens[seat][b.token],position=old===-1?0:old+r.dice*(r.doubled?2:1);r.tokens[seat][b.token]=position;
     let captured=false;
-    if(position<52){const global=(seat*13+position)%52;
+    if(position<51){const global=(seat*13+position)%52;
      if(!safe.has(global))for(const p of r.players){if(p.left||p.seat===seat||sameTeam(r,seat,p.seat)||r.shields[p.seat])continue;
-      r.tokens[p.seat]=r.tokens[p.seat].map(x=>{if(x>=0&&x<52&&(p.seat*13+x)%52===global){captured=true;return -1;}return x;});
+      r.tokens[p.seat]=r.tokens[p.seat].map(x=>{if(x>=0&&x<51&&(p.seat*13+x)%52===global){captured=true;return -1;}return x;});
      }
     }
-    const won=r.tokens[seat].every(x=>x===57);
-    const teamWon=r.team&&[seat%2,seat%2+2].every(s=>r.tokens[s].every(x=>x===57));
+    const won=r.tokens[seat].every(x=>x===56);
+    const teamWon=r.team&&[seat%2,seat%2+2].every(s=>r.tokens[s].every(x=>x===56));
     if((!r.team&&won)||teamWon){r.status='finished';r.winner=r.team?seat%2:seat;}
-    else if(won||(!captured&&position!==57&&r.dice!==6&&!(r.mode==='power'&&position<52&&[4,17,30,43].includes((seat*13+position)%52))))next(r,now);
+    else if(won||(!captured&&position!==56&&r.dice!==6&&!(r.mode==='power'&&position<51&&[4,17,30,43].includes((seat*13+position)%52))))next(r,now);
     else{r.dice=null;r.doubled=false;r.deadline=now+45000;}
    }else fail('invalid_action');
   }

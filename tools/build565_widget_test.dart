@@ -8,8 +8,16 @@ void main(){
   expect(ngelx565TokenPoint(2,0,0),track[26]);
   expect(ngelx565Rotate(const Offset(2,3),4),const Offset(2,3));
  });
+ test('every move from start through home follows an adjacent square',(){
+  for(var seat=0;seat<4;seat++){
+   for(var position=0;position<56;position++){
+    final a=ngelx565TokenPoint(seat,0,position),b=ngelx565TokenPoint(seat,0,position+1);
+    expect((a.dx-b.dx).abs()+(a.dy-b.dy).abs(),1,reason:'seat $seat position $position');
+   }
+  }
+ });
  test('only six launches and finishing requires an exact roll',(){
-  final r=<String,dynamic>{'dice':5,'tokens':[[-1,52,53,57]],'doubled':false};
+  final r=<String,dynamic>{'dice':5,'tokens':[[-1,51,52,56]],'doubled':false};
   expect(ngelx565Legal(r,0),[1]);r['dice']=6;expect(ngelx565Legal(r,0),[0]);
   r['dice']=2;r['doubled']=true;expect(ngelx565Legal(r,0),[1,2]);
  });
