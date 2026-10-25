@@ -91,6 +91,21 @@ export function createLudo565({verify,profile,store,limit=async()=>true,now=()=>
    if(!/^(?:[0-9]{6}|[A-F0-9]{16})$/.test(b.id??''))return json({error:'invalid_room'},400);
    const existing=await store.get(b.id);if(!existing)return json({error:'room_not_found'},404);
    if(b.action==='join'){const p=await profile(uid);b={...b,name:String(p?.displayName??p?.username??'Oyuncu'),photo:String(p?.photoUrl??'')};}
+   // Spectators use separate presence documents and never mutate the game revision.
+   const presenceId='view570_'+b.id;
+   const presence=async(remove=false)=>{
+    for(let attempt=0;attempt<4;attempt++){
+     const old=await store.get(presenceId),viewers=Object.fromEntries(Object.entries(old?.room?.viewers??{}).filter(([,seen])=>now()-seen<25000));
+     if(remove)delete viewers[uid];else if(!existing.room.players.some(p=>p.uid===uid&&!p.left))viewers[uid]=now();
+     if(Object.keys(viewers).length>200)throw new LudoError('room_full',409);
+     try{await store.put(presenceId,{viewers,revision:(old?.room?.revision??0)+1},old?.stamp);return Object.keys(viewers).length;}catch(e){if(e.status!==409||attempt===3)throw e;}
+    }
+   };
+   const viewerCount=async()=>{const entry=await store.get(presenceId);return Object.values(entry?.room?.viewers??{}).filter(seen=>now()-seen<25000).length;};
+   if(['watch','watch_leave'].includes(b.action)){
+    const count=await presence(b.action==='watch_leave');return json({room:{...existing.room,spectatorCount:count,viewOnly:true}});
+   }
+   if(b.action==='sync'&&!existing.room.players.some(p=>p.uid===uid&&!p.left))return json({error:'not_a_player'},403);
    let room=act(existing.room,uid,b,now(),roll);
    // Run one server-authoritative bot action per response, preserving visible turns.
    const bot=room.players.find(p=>p.seat===room.turn&&p.bot&&!p.left);
@@ -110,7 +125,7 @@ export function createLudo565({verify,profile,store,limit=async()=>true,now=()=>
     room=act(room,bot.uid,{...move,revision:room.revision,requestId:'bot568_'+room.revision},now(),roll);
    }
    if(room.revision!==existing.room.revision)await store.put(b.id,room,existing.stamp);
-   return json({room});
+   return json({room:{...room,spectatorCount:await viewerCount()}});
   }catch(e){return json({error:e instanceof LudoError?e.message:'temporarily_unavailable'},e.status??503);}
  };
 }
