@@ -358,7 +358,7 @@ class Ngelx565BoardPainter extends CustomPainter {
    if(safe.contains(i))star(canvas,rect.center,c*.34,i%13==0?Color.lerp(ngelx565LudoColors[i~/13],Colors.black,.4)!:const Color(0xFF899AB6));
    else if(power&&[4,17,30,43].contains(i)){
     canvas.drawRRect(RRect.fromRectAndRadius(rect.deflate(c*.1),Radius.circular(c*.12)),paint..color=Colors.white..shader=LinearGradient(colors:const [Color(0xFFFFF4A3),Color(0xFFFFBD18)],begin:Alignment.topLeft,end:Alignment.bottomRight).createShader(rect));paint.shader=null;
-    final tp=TextPainter(text:TextSpan(text:'+1',style:TextStyle(fontFamily:'Roboto',color:const Color(0xFF9C5100),fontSize:c*.51,fontWeight:FontWeight.w900)),textDirection:TextDirection.ltr)..layout();tp.paint(canvas,rect.center-Offset(tp.width/2,tp.height/2));
+    final tp=TextPainter(text:TextSpan(text:'+1',style:TextStyle(fontFamily:'Roboto',color:const Color(0xFF9C5100),fontSize:c*.51,fontWeight:FontWeight.w900)),textDirection:TextDirection.ltr)..layout();canvas.save();canvas.translate(rect.center.dx,rect.center.dy);canvas.rotate(-turns*math.pi/2);tp.paint(canvas,Offset(-tp.width/2,-tp.height/2));canvas.restore();
    }else if(power&&pickup.contains(i)){
     canvas.drawCircle(rect.center,c*.42,paint..color=Colors.white..shader=const RadialGradient(center:Alignment(-.3,-.4),colors:[Colors.white,Color(0xFF63D9FF),Color(0xFF2953BB)]).createShader(rect));paint.shader=null;
     canvas.save();canvas.translate(rect.left+c*.08,rect.top+c*.08);canvas.rotate(-turns*math.pi/2);if(turns!=0){canvas.restore();canvas.save();canvas.translate(rect.center.dx,rect.center.dy);canvas.rotate(-turns*math.pi/2);canvas.translate(-c*.42,-c*.42);}
