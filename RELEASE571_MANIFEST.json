@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "package": "com.nnentx.ngelx_app",
+  "abi": "arm64-v8a",
+  "version": "1.0.341",
+  "build": 571,
+  "size": 48667542,
+  "sha256": "1782b45e82f32889bbd807e1b361c390c891767a045b38ad52fb347720054a07",
+  "url": "https://github.com/Nnentx/Ngelx/releases/download/v1.0.341-build571-test/NgelX-1.0.341-Build571.apk",
+  "notes": "Klasik ve Power Ludo, izleyici sayacı, 2/4 oyuncu, 3 başlangıç zar hakkı, sesli odaya katılma sesi, performans iyileştirmeleri ve özel/grup sohbeti + menüsünden Ludo daveti.",
+  "testedSource": "b2c2ffac4b6f286994bb567553a7c09507a750ab",
+  "buildRun": 40231403363
+}
