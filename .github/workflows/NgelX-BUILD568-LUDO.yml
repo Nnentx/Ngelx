@@ -57,6 +57,16 @@ jobs:
       - name: Restore exact Build567 source and apply only Ludo delta
         run: |
           cp -a assembled/app/. app/
+          mkdir -p app/android/app/src/main/res/xml
+          cp tools/update_paths564.xml app/android/app/src/main/res/xml/update_paths564.xml
+          python3 - <<'NATIVE'
+          from pathlib import Path
+          p=Path('app/android/app/build.gradle.kts');s=p.read_text()
+          dependencies=['implementation(platform("com.google.firebase:firebase-bom:34.6.0"))','implementation("com.google.firebase:firebase-messaging")','implementation("com.google.firebase:firebase-auth")','implementation("androidx.activity:activity:1.9.3")']
+          missing=[d for d in dependencies if d not in s]
+          if missing:s+='\ndependencies {\n'+''.join('    '+d+'\n' for d in missing)+'}\n'
+          p.write_text(s)
+          NATIVE
           python3 tools/apply_build568_ludo.py
           cp tools/build567_widget_test.dart app/test/build567_widget_test.dart
           cp tools/build568_widget_test.dart app/test/build568_widget_test.dart
@@ -128,3 +138,11 @@ jobs:
             app/lib
             app/pubspec.yaml
             app/pubspec.lock
+            app/assets/
+            app/android/app/src/main/
+            app/android/app/build.gradle.kts
+            app/android/app/google-services.json
+            app/android/build.gradle.kts
+            app/android/settings.gradle.kts
+            app/android/gradle.properties
+            app/android/gradle/wrapper/gradle-wrapper.properties
