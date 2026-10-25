@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import '../lib/main.dart';
 import '../lib/build567_room_controller.dart';
@@ -12,6 +13,14 @@ Future<void> preview(WidgetTester t,String name)async{
  await t.runAsync(()async{final boundary=t.renderObject<RenderRepaintBoundary>(find.byKey(const ValueKey('preview')));final image=await boundary.toImage(pixelRatio:2);final bytes=await image.toByteData(format:ui.ImageByteFormat.png);Directory('build567-previews').createSync();File('build567-previews/$name.png').writeAsBytesSync(bytes!.buffer.asUint8List());image.dispose();});
 }
 void main(){
+ TestWidgetsFlutterBinding.ensureInitialized();
+ setUpAll(()async{
+  final text=File('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf');
+  if(text.existsSync())await (FontLoader('Roboto')..addFont(Future.value(ByteData.view(text.readAsBytesSync().buffer)))).load();
+  final root=Platform.resolvedExecutable.split('/bin/cache/dart-sdk/').first;
+  final icons=File('$root/bin/cache/artifacts/material_fonts/MaterialIcons-Regular.otf');
+  if(icons.existsSync())await (FontLoader('MaterialIcons')..addFont(Future.value(ByteData.view(icons.readAsBytesSync().buffer)))).load();
+ });
  test('late polling membership error cannot undo successful leave',()async{
   final pending=Completer<Map<String,dynamic>>();final g=Ngelx567RoomController(id:'x',uid:'a',initial:state(),request:(b)async=>b['action']=='sync'?pending.future:state(status:'closed',revision:2));
   final sync=g.sync();expect(await g.leave(),true);pending.completeError(const Ngelx567Failure('not_a_player','gone'));await sync;expect(g.detached,true);expect(g.error,isEmpty);g.dispose();
