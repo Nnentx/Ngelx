@@ -1,0 +1,162 @@
+--- a/app/lib/main.dart
++++ b/app/lib/main.dart
+@@ -93,6 +93,8 @@
+ part 'build561_quality.dart';
+ part 'build563_quality.dart';
+ part 'build564_update.dart';
++part 'build565_announcements.dart';
++part 'build565_ludo.dart';
+ part 'build556_delete.dart';
+ part 'build543_group_call_join.dart';
+ part 'build446_call_lifecycle.dart';
+@@ -4482,6 +4484,7 @@
+       onGenerateRoute:(settings){
+         final uri=Uri.tryParse(settings.name??'');
+         if(uri!=null){
++          if(uri.pathSegments.isNotEmpty&&(uri.host=='ludo'||uri.pathSegments.first=='ludo')&&RegExp(r'^[A-F0-9]{16}$').hasMatch(uri.pathSegments.last))return MaterialPageRoute(builder:(_)=>Ngelx565LudoRoom(id:uri.pathSegments.last));
+           final profile=uri.queryParameters['profile'];
+           if(profile!=null&&profile.isNotEmpty)return MaterialPageRoute(builder:(_)=>KullaniciProfilPage(uid:profile));
+           if(uri.pathSegments.length>=2&&uri.pathSegments.first=='p')return MaterialPageRoute(builder:(_)=>IcerikBaglantiPage(icerikId:uri.pathSegments[1]));
+@@ -12369,6 +12372,12 @@
+                 subtitle:Text(lt('Davet veya bağlantı ile gruba katıl','Join with an invite or link')),
+                 onTap:(){Navigator.pop(c);Navigator.push(context,MaterialPageRoute(builder:(_)=>const GrubaKatilPage()));},
+               ),
++              ListTile(
++                leading:const CircleAvatar(backgroundColor:Color(0xFFF0E8FF),child:Icon(Icons.casino_rounded,color:mor)),
++                title:const Text('Ludo oyna',style:TextStyle(fontWeight:FontWeight.w900)),
++                subtitle:const Text('Oda oluştur, özele veya gruba davet gönder'),
++                onTap:(){Navigator.pop(c);Navigator.push(context,MaterialPageRoute(builder:(_)=>const Ngelx565LudoLobby()));},
++              ),
+               if(ben!=null)...[
+                 const SizedBox(height:4),
+                 ListTile(
+@@ -13131,6 +13140,8 @@
+         :filtre=='İstekler'
+           ?isteklerIcerigi()
+           :sohbetlerIcerigi();
++
++    if((filtre=='Tümü'||filtre=='Mesajlar')&&(sohbetSorgu.isEmpty||'ngelx duyurular ludo güncelleme'.contains(sohbetSorgu))){govde=Column(children:[const Ngelx565NoticeRow(),const Divider(height:1,indent:84),Expanded(child:govde)]);}
+ 
+     return Theme(
+       data:ThemeData.light().copyWith(scaffoldBackgroundColor:Colors.white,dividerColor:const Color(0xFFEDF0F5)),
+@@ -14038,8 +14049,9 @@
+ 
+ class GrupSohbetPage extends StatefulWidget{
+   final String chatId,ad,foto;
++  final String draft565;
+   final bool aktifAramadanAcildi;
+-  const GrupSohbetPage({super.key,required this.chatId,required this.ad,this.foto='',this.aktifAramadanAcildi=false,this.joinOnOpen542=false});
++  const GrupSohbetPage({super.key,required this.chatId,required this.ad,this.foto='',this.aktifAramadanAcildi=false,this.joinOnOpen542=false,this.draft565=''});
+   final bool joinOnOpen542;
+   @override State<GrupSohbetPage> createState()=>_GrupSohbetPageState();
+ }
+@@ -14207,6 +14219,7 @@
+     });
+ 
+     super.initState();
++    if(widget.draft565.isNotEmpty){mesaj.text=widget.draft565;mesaj.selection=TextSelection.collapsed(offset:mesaj.text.length);}
+     unawaited(ngelx435SilmeTekrar(widget.chatId));
+     _cleanup435Timer=Timer.periodic(const Duration(seconds:30),(_)=>unawaited(ngelx435SilmeTekrar(widget.chatId)));
+     _grupTypingAkisi=chatRef.snapshots();
+@@ -15311,16 +15324,14 @@
+               Expanded(child:_ekSecenek(c,Icons.camera_alt_rounded,'Kamera','camera')),
+               const SizedBox(width:10),
+               Expanded(child:_ekSecenek(c,Icons.photo_library_rounded,'Galeri','gallery')),
+-              const SizedBox(width:10),
+-              Expanded(child:_ekSecenek(c,Icons.gif_box_rounded,'GIF','gif')),
++
+             ]),
+             const SizedBox(height:10),
+             Row(children:[
+               Expanded(child:_ekSecenek(c,Icons.video_library_rounded,'Video','video')),
+               const SizedBox(width:10),
+               Expanded(child:_ekSecenek(c,Icons.location_on_rounded,'Konum','location')),
+-              const SizedBox(width:10),
+-              Expanded(child:_ekSecenek(c,Icons.emoji_emotions_rounded,'Çıkartma','sticker')),
++
+             ]),
+           ]),
+         ))),
+@@ -15779,6 +15790,8 @@
+         ),
+       ),
+     );
++    final ludo565=ngelx565RoomId(metin);
++    if(!silinmis&&metin.startsWith('🎲 Ludo daveti\n')&&ludo565.isNotEmpty)return Ngelx565LudoInviteCard(id:ludo565,mine:ben,onLongPress:()=>mesajMenusu(d));
+     final sadeceEmoji=tur=='text'&&!silinmis&&_sadeceEmojiMesaj(metin);
+     final fileUrl=(v['fileUrl']??'').toString(),fileName=(v['fileName']??'Dosya').toString(),locationText=(v['locationText']??metin).toString();
+     final saat=mesajSaati(v['createdAt']??v['clientCreatedAt']),yanit=(v['replyToText']??'').toString(),yanitGonderen=(v['replyToSenderName']??'').toString(),yanitTur=(v['replyToType']??'').toString(),yanitMedya=(v['replyToMediaUrl']??'').toString();
+@@ -21443,7 +21456,7 @@
+   }
+ }
+ 
+-class SohbetPage extends StatefulWidget {final String chatId,digerUid,ad,foto;final bool aktifAramadanAcildi;const SohbetPage({super.key,required this.chatId,required this.digerUid,required this.ad,this.foto='',this.aktifAramadanAcildi=false});@override State<SohbetPage> createState()=>_SohbetPageState();}
++class SohbetPage extends StatefulWidget {final String chatId,digerUid,ad,foto;final String draft565;final bool aktifAramadanAcildi;const SohbetPage({super.key,required this.chatId,required this.digerUid,required this.ad,this.foto='',this.aktifAramadanAcildi=false,this.draft565=''});@override State<SohbetPage> createState()=>_SohbetPageState();}
+ class NgelXPaylasilanIcerikKarti extends StatelessWidget{
+   final Map<String,dynamic> mesaj;
+   final bool benim;
+@@ -23183,6 +23196,8 @@
+     final sureli=v['expiresAt'] is Timestamp;
+     final gizlenecek=gizliKelimeFiltresi&&metin.isNotEmpty&&ngelxHiddenWordMatches(metin,gizliKelimeListesi);
+     final gosterilecekMetin=gizlenecek?'Gizli kelime filtresi nedeniyle gizlendi.':metin;
++    final ludo565=ngelx565RoomId(metin);
++    if(!gizlenecek&&metin.startsWith('🎲 Ludo daveti\n')&&ludo565.isNotEmpty)return Ngelx565LudoInviteCard(id:ludo565,mine:ben,onLongPress:()=>mesajMenusu(d));
+     final tepkiler=Map<String,dynamic>.from(v['reactions']??{});
+     final sayilar=<String,int>{};
+     for(final x in tepkiler.values){final e=x.toString();sayilar[e]=(sayilar[e]??0)+1;}
+@@ -23651,6 +23666,7 @@
+   @override
+   void initState(){
+     super.initState();
++    if(widget.draft565.isNotEmpty){mesaj.text=widget.draft565;mesaj.selection=TextSelection.collapsed(offset:mesaj.text.length);}
+     WidgetsBinding.instance.addObserver(this);
+     liste.addListener(_private437Scroll);
+     unawaited(ngelx435SilmeTekrar(widget.chatId));
+--- a/app/lib/build258_settings.dart
++++ b/app/lib/build258_settings.dart
+@@ -47,6 +47,7 @@
+   Widget _satir(BuildContext c,_NgelXAyarOgesi e,{bool aramaSonucu=false})=>Container(
+     decoration:BoxDecoration(
+       color:e.baslik==t('premiumWallet')?const Color(0xFFEAF2FF):Colors.transparent,
++      gradient:e.baslik=='Güncellemeler'?const LinearGradient(colors:[Color(0xFFF0E4FF),Color(0xFFE5F2FF)]):null,
+       borderRadius:BorderRadius.circular(18),
+     ),child:ListTile(
+     contentPadding:const EdgeInsets.symmetric(horizontal:10,vertical:5),
+@@ -140,7 +141,7 @@
+     ),
+     _NgelXAyarOgesi(
+       bolum:'UYGULAMA',baslik:'Güncellemeler',
+-      aciklama:'Yeni sürümü uygulama içinden kontrol et ve indir',
++      aciklama:'Yeni sürümü uygulama içinden kontrol et ve güncelle',
+       anahtarlar:'güncelle güncelleme yeni sürüm update apk',
+       ikon:Icons.system_update_rounded,sayfa:(_)=>const Ngelx564UpdatesPage(),
+     ),
+--- a/app/lib/build564_update.dart
++++ b/app/lib/build564_update.dart
+@@ -158,7 +158,7 @@
+         if(updater.error.isNotEmpty)Text(updater.error,textAlign:TextAlign.center,style:const TextStyle(color:Colors.red)),
+         if(updater.available&&!updater.busy)const Padding(padding:EdgeInsets.only(top:10),child:Text('Uygulamayı silmen gerekmez. Son yüklemeyi Android ekranında onaylarsın.',textAlign:TextAlign.center,style:TextStyle(color:Colors.black54,fontSize:12))),
+         const SizedBox(height:18),
+-        if(!updater.busy&&updater.available)SizedBox(width:double.infinity,child:DecoratedBox(decoration:BoxDecoration(gradient:const LinearGradient(colors:[mor,Color(0xFF258AFF)]),borderRadius:BorderRadius.circular(20)),child:FilledButton(style:FilledButton.styleFrom(backgroundColor:Colors.transparent,shadowColor:Colors.transparent),onPressed:()=>ready?updater.install():updater.download(),child:Text(ready?'Yüklemeyi aç':updater.state=='error'?'Tekrar dene':'Güncelle')))),
++        if(!updater.busy&&updater.available)SizedBox(width:double.infinity,child:DecoratedBox(decoration:BoxDecoration(gradient:const LinearGradient(colors:[mor,Color(0xFF258AFF)]),borderRadius:BorderRadius.circular(20)),child:FilledButton(style:FilledButton.styleFrom(backgroundColor:Colors.transparent,shadowColor:Colors.transparent),onPressed:()=>ready?updater.install():updater.download(),child:Text(ready?'Güncelle':updater.state=='error'?'Tekrar dene':'Güncelle')))),
+         if(updater.state=='error'&&!updater.available)FilledButton(onPressed:updater.check,child:const Text('Tekrar dene')),
+         if(downloading)TextButton(onPressed:updater.cancel,child:const Text('İndirmeyi iptal et')),
+         if(!updater.busy)TextButton(onPressed:()async{
+--- a/app/android/app/src/main/AndroidManifest.xml
++++ b/app/android/app/src/main/AndroidManifest.xml
+@@ -61,6 +61,7 @@
+                 <category android:name="android.intent.category.BROWSABLE" />
+                 <data android:scheme="ngelx" android:host="p" />
+                 <data android:scheme="ngelx" android:host="u" />
++                <data android:scheme="ngelx" android:host="ludo" />
+             </intent-filter>
+             <intent-filter android:autoVerify="true">
+                 <action android:name="android.intent.action.VIEW" />
+@@ -68,6 +69,7 @@
+                 <category android:name="android.intent.category.BROWSABLE" />
+                 <data android:scheme="https" android:host="ngelxsocial.com" android:pathPrefix="/p/" />
+                 <data android:scheme="https" android:host="ngelxsocial.com" android:pathPrefix="/u/" />
++                <data android:scheme="https" android:host="ngelxsocial.com" android:pathPrefix="/ludo/" />
+                 <data android:scheme="https" android:host="ngelxsocial.com" android:path="/" />
+             </intent-filter>
+         </activity>
