@@ -1,0 +1,83 @@
+name: NgelX Build568 Ludo modes and bottom spacing
+on:
+  push:
+    branches: [feat/build568-ludo-modes]
+    paths: ['tools/build568*','tools/apply_build568*','server/ludo565/**','cloudflare/live-moderation/src/ludo565.mjs','.github/workflows/NgelX-BUILD568-LUDO.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test server/ludo565/*.test.mjs cloudflare/live-moderation/test/*.test.mjs
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/download-artifact@v4
+        with:
+          name: NgelX-Build567-Assembled-Source
+          run-id: 40189872161
+          github-token: ${{ github.token }}
+          path: assembled
+      - name: Restore exact Build567 source and apply only Ludo delta
+        run: |
+          cp -a assembled/app/. app/
+          python3 tools/apply_build568_ludo.py
+          cp tools/build567_widget_test.dart app/test/build567_widget_test.dart
+          cp tools/build568_widget_test.dart app/test/build568_widget_test.dart
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('app/pubspec.yaml');s=p.read_text()
+          for package,version in [('firebase_storage','^13.6.0'),('crypto','^3.0.6'),('flutter_cache_manager','^3.4.5')]:
+            if '  '+package+':' not in s:s=s.replace('  cupertino_icons:','  '+package+': '+version+'\n  cupertino_icons:',1)
+          s=s.replace('version: 1.0.175+399','version: 1.0.338+568')
+          p.write_text(s)
+          PY
+      - name: Validate game UI and existing room lifecycle
+        working-directory: app
+        run: |
+          flutter pub get
+          flutter test --timeout 45s test/build567_widget_test.dart test/build568_widget_test.dart
+          flutter analyze --no-fatal-infos --no-fatal-warnings
+      - uses: actions/cache/restore@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: ngelx-stable-debug-keystore-v1
+          fail-on-cache-miss: true
+      - name: Verify existing updater signer
+        run: |
+          keytool -list -v -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey | grep -F 'SHA256: BE:20:B2:7F:0B:A1:F4:DE:CD:29:41:D4:10:B1:53:6D:E8:9E:48:DC:89:4F:04:F0:38:F9:D2:6B:11:EC:D6:AA'
+      - name: Build review APK
+        working-directory: app
+        run: |
+          flutter build apk --release --target-platform android-arm64 --build-name=1.0.338 --build-number=568 --dart-define=NGELX_VERSION_NAME=1.0.338 --dart-define=NGELX_BUILD_NUMBER=568 --dart-define=NGELX_VERIFICATION_EMAIL_URL=https://ngelx-verification-email.alihancaglar76.workers.dev/verify-email --dart-define=NGELX_COMMUNITY_DELETE_URL=https://ngelx-live-moderation.alihancaglar76.workers.dev/community/delete --dart-define=NGELX_LIVEKIT_GUEST_MODERATION_URL=https://ngelx-live-moderation.alihancaglar76.workers.dev/moderate --dart-define=NGELX_CALL_PUSH_URL=https://ngelx-call-push.alihancaglar76.workers.dev
+          cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/NgelX-1.0.338-Build568.apk
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: NgelX-Build568-Previews
+          path: app/build567-previews
+          if-no-files-found: ignore
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NgelX-Build568-Review-APK
+          path: app/build/app/outputs/flutter-apk/NgelX-1.0.338-Build568.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NgelX-Build568-Assembled-Source
+          path: |
+            app/lib
+            app/pubspec.yaml
+            app/pubspec.lock
