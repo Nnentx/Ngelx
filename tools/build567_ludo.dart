@@ -182,13 +182,13 @@ class _Ngelx565LudoRoomState extends State<Ngelx565LudoRoom> with WidgetsBinding
     final sideways=box.maxWidth>box.maxHeight*1.3&&box.maxWidth>550;
     final frame=Ngelx567Table(room:room,seat:game.seat,uid:game.uid,enabled:game.playing&&game.seat==room['turn']&&!game.busy&&!game.leaving,onToken:(token)=>game.perform('move',{'token':token}),onRoll:()=>game.perform('roll'),busy:game.busy);
     final wait=game.waiting&&!game.detached?Ngelx567WaitingPanel(room:room,uid:game.uid,canStart:game.canStart,busy:game.busy,onInvite:_invite,onStart:()=>game.perform('start'),compact:box.maxHeight<500):null;
-    if(sideways)return Row(children:[Expanded(child:Padding(padding:const EdgeInsets.all(10),child:Stack(alignment:Alignment.center,children:[Center(child:AspectRatio(aspectRatio:.85,child:frame)),if(wait!=null)SizedBox(width:265,child:wait)]))),SizedBox(width:245,child:ListView(padding:const EdgeInsets.only(top:12),children:[_roomLabel567(widget.id),_footer()]))]);
+    if(sideways)return Row(children:[Expanded(child:Padding(padding:const EdgeInsets.all(10),child:Stack(alignment:Alignment.center,children:[Center(child:AspectRatio(aspectRatio:.85,child:frame)),if(wait!=null)SizedBox(width:265,child:FittedBox(fit:BoxFit.scaleDown,child:SizedBox(width:265,child:wait)))]))),SizedBox(width:245,child:ListView(padding:const EdgeInsets.only(top:12),children:[_roomLabel567(widget.id),_footer()]))]);
     return Column(children:[_roomLabel567(widget.id),Expanded(child:LayoutBuilder(builder:(_,area)=>Stack(alignment:Alignment.center,children:[Padding(padding:const EdgeInsets.symmetric(horizontal:12),child:Center(child:AspectRatio(aspectRatio:.85,child:frame))),if(wait!=null)ConstrainedBox(constraints:BoxConstraints(maxWidth:math.min(320,area.maxWidth-34),maxHeight:area.maxHeight-8),child:SingleChildScrollView(child:wait)),if(room.isEmpty)const Center(child:CircularProgressIndicator(color:_ludoGold567))]))),if(players.isEmpty&&room.isEmpty)const Text('Masaya bağlanılıyor…',style:TextStyle(color:Colors.white70)),_footer()]);
    }))),
   )));
  }
 }
-Widget _roomLabel567(String id)=>Padding(padding:const EdgeInsets.symmetric(horizontal:18,vertical:5),child:Row(mainAxisAlignment:MainAxisAlignment.center,children:[const Icon(Icons.lock_outline_rounded,size:12,color:Colors.white38),const SizedBox(width:5),Text('ODA · $id',style:const TextStyle(color:Colors.white54,fontSize:10,letterSpacing:1))]));
+Widget _roomLabel567(String id)=>Padding(padding:const EdgeInsets.symmetric(horizontal:18,vertical:5),child:Row(mainAxisAlignment:MainAxisAlignment.center,children:[const Icon(Icons.lock_outline_rounded,size:12,color:Colors.white38),const SizedBox(width:5),Flexible(child:Text('ODA · $id',maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.white54,fontSize:10,letterSpacing:1)))]));
 String _winner567(Map<String,dynamic> room){
  final win=room['winner'];if(room['team']==true)return win==0?'Yeşil–Mavi takımı kazandı!':'Sarı–Kırmızı takımı kazandı!';
  for(final p in room['players']??[]){if(p['seat']==win)return '🎉 ${p['name']} kazandı!';}
