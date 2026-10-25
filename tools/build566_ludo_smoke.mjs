@@ -25,7 +25,7 @@ try{
  console.log('Dedicated datastore probe passed.');
  const a=await login(0),b=await login(1);console.log('Two isolated test accounts authenticated.');
  const create={action:'create',capacity:2,team:false,mode:'classic',requestId:'smoke566_'+nonce};
- let room=await call(a,create);rooms.push(room.id);
+ let room=await call(a,create);rooms.push(room.id);if(!/^[0-9]{6}$/.test(room.id))throw Error('Room code is not six digits');
  const retry=await call(a,create);if(retry.id!==room.id)throw Error('Create retry produced a duplicate room');
  console.log('Authenticated room creation and idempotent retry passed.');
  room=await call(b,{action:'join',id:room.id});
@@ -37,6 +37,10 @@ try{
   if(i===19)throw Error('No movable roll during bounded smoke test');
  }
  await action(a,'leave');
+ const bot=await call(a,{action:'bot',capacity:2,mode:'power',difficulty:'medium',requestId:'bot_smoke569_'+nonce});rooms.push(bot.id);
+ if(!/^[0-9]{6}$/.test(bot.id)||!bot.botGame||bot.status!=='playing'||!bot.players.some(p=>p.bot))throw Error('Bot game did not start');
+ if(bot.deadline-Date.now()>11000)throw Error('Turn window is not ten seconds');
+ console.log('Six-digit codes, bot creation and ten-second turn window verified live.');
 }finally{
  let failures=0;
  for(const path of [probe,...rooms.map(id=>'_ngelx_ludo565/'+id),...users.map(u=>'_livekit_rate_limits/free_'+createHash('sha256').update('ludo565-create:'+u.uid).digest('hex'))])try{await firestore(path,{method:'DELETE'});}catch{failures++;}

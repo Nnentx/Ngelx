@@ -10,7 +10,7 @@ const json=(body,status)=>new Response(JSON.stringify(body),{status,
 export const configured=env=>['LIVEKIT_API_KEY','LIVEKIT_API_SECRET','LIVEKIT_SERVER_URL','GOOGLE_SERVICE_ACCOUNT'].every(k=>typeof env[k]==='string'&&env[k].length>0);
 export default {async fetch(request,env){
   const path=new URL(request.url).pathname;
-  if(path==='/health'&&request.method==='GET')return json({ok:configured(env),service:'ngelx-live-moderation',features:['community_delete556','ludo565','ludo568']},configured(env)?200:503);
+  if(path==='/health'&&request.method==='GET')return json({ok:configured(env),service:'ngelx-live-moderation',features:['community_delete556','ludo565','ludo568','ludo569']},configured(env)?200:503);
   if(path==='/ludo'){
     if(request.method!=='POST')return json({error:'method_not_allowed'},405);
     if(!/^Bearer [^\s]+$/.test(request.headers.get('authorization')??''))return json({error:'unauthorized'},401);
