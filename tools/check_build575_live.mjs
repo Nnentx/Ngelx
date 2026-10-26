@@ -10,16 +10,16 @@ export async function probeNgelxBuild575Live({fetcher=fetch,timeout=8000,url=HEA
   response=await fetcher(HEALTH,{method:'GET',redirect:'error',cache:'no-store',
    headers:{accept:'application/json'},signal:AbortSignal.timeout(timeout)});
  }catch{
-  return {configurationReady:false,reason:'worker_unreachable',checkedEndpoint:HEALTH};
+  return {configurationReady:false,workerReady:false,releaseReady:false,reason:'worker_unreachable',checkedEndpoint:HEALTH};
  }
- if(!response.ok)return {ready:false,reason:'worker_health_http_error',httpStatus:response.status,
+ if(!response.ok)return {configurationReady:false,workerReady:false,releaseReady:false,reason:'worker_health_http_error',httpStatus:response.status,
   checkedEndpoint:HEALTH};
  let data;
  try{data=await response.json();}catch{
-  return {ready:false,reason:'invalid_worker_health_response',checkedEndpoint:HEALTH};
+  return {configurationReady:false,workerReady:false,releaseReady:false,reason:'invalid_worker_health_response',checkedEndpoint:HEALTH};
  }
  if(!data||typeof data!=='object'||Array.isArray(data))
-  return {ready:false,reason:'invalid_worker_health_response',checkedEndpoint:HEALTH};
+  return {configurationReady:false,workerReady:false,releaseReady:false,reason:'invalid_worker_health_response',checkedEndpoint:HEALTH};
  const ludo=data.ludo575;
  const deployed=ludo?.sourceVersion===575;
  const configured=ludo?.configured===true;
