@@ -1,0 +1,40 @@
+name: NgelX Build575 Ludo Worker safe bundle check
+on:
+  push:
+    branches: [feat/build575-ludo-auto-premium-rewards]
+    paths:
+      - 'cloudflare/live-moderation/src/**'
+      - 'cloudflare/live-moderation/wrangler.toml'
+      - 'cloudflare/live-moderation/test/**'
+      - 'server/ludo565/**'
+      - 'server/livekit443/**'
+      - '.github/workflows/NgelX-BUILD575-WORKER-DRYRUN.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ngelx-build575-worker-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  cloudflare-dry-run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test Worker endpoints, auth boundaries and Ludo rewards
+        run: node --test cloudflare/live-moderation/test/*.test.mjs server/ludo565/*.test.mjs
+      - name: Bundle Cloudflare Worker without credentials or deployment
+        working-directory: cloudflare/live-moderation
+        timeout-minutes: 12
+        env:
+          CI: 'true'
+          CLOUDFLARE_SEND_METRICS: 'false'
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 deploy --dry-run --outdir ./build575-worker-dryrun
+          test -s ./build575-worker-dryrun/index.js
+          test ! -e ./build575-worker-dryrun/.env
+          echo 'Build575 Worker dry run successfully bundled; NO deployment performed'
