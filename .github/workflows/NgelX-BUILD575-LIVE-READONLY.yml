@@ -1,0 +1,40 @@
+name: NgelX Build575 LIVE readiness report (read-only)
+on:
+  push:
+    branches: [feat/build575-ludo-auto-premium-rewards]
+    paths:
+      - 'tools/check_build575_live.mjs'
+      - 'cloudflare/live-moderation/test/build575-live-preflight.test.mjs'
+      - '.github/workflows/NgelX-BUILD575-LIVE-READONLY.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  report-current-worker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test read-only health probe and fail-closed readiness flags
+        run: node --test cloudflare/live-moderation/test/build575-live-preflight.test.mjs
+      - name: Read currently deployed Worker health without credentials
+        timeout-minutes: 2
+        run: |
+          set -euo pipefail
+          node tools/check_build575_live.mjs | tee live-readiness.txt
+          {
+            echo '## Read-only Build575 Worker readiness'
+            echo 'This job is a diagnostic, NOT a release approval or a Cloudflare deployment.'
+            echo 'Build574 updater was not modified.'
+            echo '```'
+            cat live-readiness.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NgelX-Build575-Live-Readiness-Report
+          path: live-readiness.txt
+          retention-days: 14
