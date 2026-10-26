@@ -13,6 +13,7 @@ checks={
  'pawn shadow':"Colors.black.withValues(alpha:.34)",
  'nonoverlapping pieces':'widget.stackCount > 1 ? 0.52 : 0.98',
  'wallet':'class Ngelx573WalletBar',
+ 'animated chip balance':'class Ngelx575AnimatedBalance',
  'existing lobby':'class Ngelx565LudoLobby',
  'existing game board':'class Ngelx565LudoBoard',
 }
