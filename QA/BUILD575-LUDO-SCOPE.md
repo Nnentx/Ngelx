@@ -30,6 +30,14 @@ Yeni kod, testli Build574 paketinin üstüne `tools/apply_build575_ludo.py` ile 
 - 320, 360, 393, 440 piksel genişliklerde Auto + çip sayacı Flutter widget testleri.
 - Test sonucu: 2026-10-26 Build575 dalında hediye gönderme dahil en az 98 Node testi geçti; GitHub Actions son değişiklik için Flutter inceleme derlemesini ayrıca doğrular.
 
+## Build575 son görsel ve güvenlik eklemeleri
+- Oyun sonunda kazanan kişi için kupa + yıldızlı kompakt ve kısa süren animasyon; mağlup olan için yanlışlıkla zafer efekti gösterilmez. Orijinal tahta yerleşimi aynı kalır.
+- Bloklanan oyuncunun sohbet mesajları ve hediye gönderim geçmişi sadece bloklayan kişinin **oyun görünümünden** gizlenir; diğer oyuncuların ve kayıtlı odanın içeriği değiştirilmez. Engeli kaldırınca yeniden görünür.
+- 320 px küçük telefon genişliğinde kazanma/kaybetme widget kontrolü ve sunucuda kişisel engelleme filtre testi.
+- Google AdMob SSV: doğrulanmış ödül sorgulaması ve gerçek kimliklerle **isteğe bağlı** Flutter Mobile Ads entegrasyonu; gerekli publisher değerleri yokken reklam kapalı kalır.
+- Node regresyon testleri: oyun, ödül ekonomisi, hediye aktarımı, sosyal engelleme ve güvenli reklam doğrulaması dahil 99/99 (son GitHub eyleminde).
+- Android inceleme ve tasarım testi ayrı CI'da yürütülür; son sürüm için başarılı bitiş ve fiziksel cihaz onayı beklenir.
+
 ## Bu sürümde henüz **tamamlandı** denmeyecekler
 1. Gerçek telefonda 320/360/393/440 genişliklerinde ekran görüntüsü karşılaştırması ve taşların referansla görsel kalite onayı. Widget testleri gerçek cihaz testi yerine geçmez.
 2. Google SSV imza ve hesap kredisi sunucu tarafına kodlandı, ancak **mobil Ads SDK'nin gerçek kimliklerle derlenip doğrulanması, gerçek reklam uygulama/birim kimlikleri, izin ve gizlilik onayı, AdMob panelinde callback ayarı ve gerçek callback canlı testi** henüz eksik. Bu nedenle reklam düğmesi açılmamalı ve test imzası gerçek reklam sayılmamalı.
