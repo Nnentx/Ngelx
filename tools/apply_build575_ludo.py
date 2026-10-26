@@ -322,6 +322,23 @@ swap(' Future<void> _autoSingleMove574()async{',""" Future<void> _playerCard575(
      SnackBar(content:Text('Şikayet gönderilemedi: $e')));}
    return;
   }
+  // Paid gifts require explicit confirmation of the server-catalog price.
+  // Only the server can charge the wallet; clients never supply a price.
+  final gift=items[selected];
+  if(gift is! Map||gift['chips'] is! num)return;
+  final price=(gift['chips'] as num).toInt();
+  if(price<=0)return;
+  final label=gift['label']?.toString()??selected;
+  final confirmed=await showDialog<bool>(context:context,builder:(c)=>Theme(
+   data:ngelx567LudoTheme(),child:AlertDialog(
+    key:const ValueKey('ludo-gift-confirmation'),
+    title:const Text('Hediye gönderilsin mi?'),
+    content:Text('$nickname adlı oyuncuya $label göndermek için $price çip harcanacak.'),
+    actions:[
+     TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),
+     FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('Gönder')),
+    ])))??false;
+  if(!mounted||!confirmed)return;
   final ok=await game.perform('gift',{'to':theirId,'kind':selected});
   if(!mounted)return;
   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(
