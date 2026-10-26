@@ -159,3 +159,22 @@ test('existing wallets keep their balance, XP, receipts and gifts without reset 
 test('starter storage errors fail closed without returning a fabricated balance',async()=>{
  await assert.rejects(ensureStarter575({get:async()=>null,put:async()=>{throw Error('unavailable');}},'new-player'),/unavailable/);
 });
+
+test('abandoned matches never create XP/coin farming rewards for either participant',async()=>{
+ const db=store(),r=game();r.endReason='abandoned';r.players[1].left=true;
+ for(const uid of ['human','other']){const w=await settleMatch575(db,uid,r,t+5000);assert.equal(w.xp,0);assert.equal(w.chips,0);}
+ assert.equal(db.size(),0);
+});
+
+test('progressive XP never demotes a previously stored level',async()=>{
+ const db=store();await claimDaily575(db,'old',t);
+ const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('old'));
+ const id='wallet575_'+Buffer.from(hash).toString('hex'),e=await db.get(id);
+ await db.put(id,{...e.room,xp:900,level:9},e.stamp);
+ assert.equal((await ludoWallet575(db,'old')).level,9);
+ assert.equal((await claimChest575(db,'old',t)).level,9);
+});
+test('completed bot loss grants less XP than completed human loss',async()=>{
+ const db=store(),r=game();r.botGame=true;
+ assert.equal((await settleMatch575(db,'other',r,t+5000)).xp,5);
+});

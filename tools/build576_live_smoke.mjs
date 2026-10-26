@@ -65,7 +65,8 @@ try{
  const bot=await call(a,{action:'bot',capacity:2,mode:'power',difficulty:'medium',requestId:'bot_smoke569_'+nonce});rooms.push(bot.id);
  if(!/^[0-9]{6}$/.test(bot.id)||!bot.botGame||bot.status!=='playing'||!bot.players.some(p=>p.bot))throw Error('Bot game did not start');
  if(bot.deadline-Date.now()>11000)throw Error('Turn window is not ten seconds');
- console.log('Six-digit codes, bot creation and ten-second turn window verified live.');
+ if(Object.keys(bot.powerTiles??{}).length!==6)throw Error('Sparse 578 pickup map missing');
+ console.log('Six-digit codes, sparse six-icon map, bot and ten-second turn window verified live.');
  const c=await login(2),d=await login(3);
  for(const team of [false,true]){
   let four=await call(b,{action:'create',capacity:4,team,mode:'classic',requestId:'four576_'+team+'_'+nonce});rooms.push(four.id);

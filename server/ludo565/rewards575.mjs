@@ -15,7 +15,7 @@ export async function ludoWallet575(store,uid){
  return viewWallet(doc?.room??initial());
 }
 export async function settleMatch575(store,uid,room,now){
- if(room?.status!=='finished'||!room?.id||(room.expiresAt??Infinity)<=now)return ludoWallet575(store,uid);
+ if(room?.status!=='finished'||room.endReason==='abandoned'||!room?.id||(room.expiresAt??Infinity)<=now)return ludoWallet575(store,uid);
  const player=(room.players??[]).find(p=>p.uid===uid&&!p.bot&&!p.left);
  if(!player)return ludoWallet575(store,uid);
  // A machine opponent is not credited. A human is credited only for a validated match result.

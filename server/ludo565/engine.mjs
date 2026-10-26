@@ -34,7 +34,7 @@ export function act(original,uid,b,now,roll=secureRoll){
    if(r.status==='waiting'){if(uid===r.owner)r.status='closed';else r.players=r.players.filter(p=>p.uid!==uid);}
    else if(r.status==='playing'){
     const survivors=r.players.filter(p=>!p.left);
-    if(survivors.length<=1||r.team&&survivors.every(p=>p.seat%2===survivors[0].seat%2)){r.status='finished';r.winner=survivors[0]?(r.team?survivors[0].seat%2:survivors[0].seat):null;}
+    if(survivors.length<=1||r.team&&survivors.every(p=>p.seat%2===survivors[0].seat%2)){r.status='finished';r.endReason='abandoned';r.winner=survivors[0]?(r.team?survivors[0].seat%2:survivors[0].seat):null;}
     else if(r.turn===player.seat)next(r,now);
    }
   }else if(b.action==='auto'){
@@ -125,7 +125,7 @@ export function act(original,uid,b,now,roll=secureRoll){
     }
     const won=r.tokens[seat].every(x=>x===56);
     const teamWon=r.team&&[seat%2,seat%2+2].every(s=>r.tokens[s].every(x=>x===56));
-    if((!r.team&&won)||teamWon){r.status='finished';r.winner=r.team?seat%2:seat;}
+    if((!r.team&&won)||teamWon){r.status='finished';r.endReason='completed';r.winner=r.team?seat%2:seat;}
     else if(won||(!captured&&position!==56&&r.dice!==6&&!gainedBonus))next(r,now);
     else{r.dice=null;r.doubled=false;r.deadline=now+10000;}
    }else fail('invalid_action');
