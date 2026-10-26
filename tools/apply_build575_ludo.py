@@ -177,6 +177,67 @@ swap("if(game.error.isNotEmpty)TextButton.icon(onPressed:()=>game.sync(),icon:co
      icon:const Icon(Icons.wifi_off_rounded,size:17),
      label:const Text('Bağlantıyı yenile'),
      style:OutlinedButton.styleFrom(foregroundColor:const Color(0xFFFFE9AC)))),""")
+# Player card: the already-visible table portraits become tappable without moving any board tile.
+swap("final ValueChanged<int> onToken;final VoidCallback onRoll;",
+"""final ValueChanged<int> onToken;final VoidCallback onRoll;
+ final ValueChanged<Map<String,dynamic>>? onPlayerTap;""")
+swap("required this.onToken,required this.onRoll,required this.busy});",
+"""required this.onToken,required this.onRoll,required this.busy,this.onPlayerTap});""")
+swap("Container(width:38,height:38,padding:const EdgeInsets.all(2)",
+"""GestureDetector(key:ValueKey('ludo-player-\${p['uid']}'),
+  onTap:onPlayerTap==null?null:()=>onPlayerTap!(Map<String,dynamic>.from(p as Map)),
+  child:Container(width:38,height:38,padding:const EdgeInsets.all(2)""")
+swap(")),const SizedBox(width:5),\n     Flexible(child:Text(",
+"""))),const SizedBox(width:5),
+     Flexible(child:Text(""")
+swap("onToken:(token){_soundTap575();unawaited(game.perform('move',{'token':token}));},",
+"""onPlayerTap:widget.watch?null:_playerCard575,
+    onToken:(token){_soundTap575();unawaited(game.perform('move',{'token':token}));},""")
+swap(' Future<void> _autoSingleMove574()async{',""" Future<void> _playerCard575(Map<String,dynamic> person)async{
+  if(_chatOpen||game.busy)return;
+  final theirId=person['uid']?.toString()??'',isMine=theirId==game.uid,bot=person['bot']==true;
+  final nickname=person['name']?.toString()??'Oyuncu';
+  Map<String,dynamic> items={};
+  try{
+   if(!isMine&&!bot){
+    final result=await (widget.request??ngelx565LudoRequest)({'action':'gift_catalog'});
+    if(result['gifts'] is Map)items=Map<String,dynamic>.from(result['gifts'] as Map);
+   }
+  }catch(_){if(!mounted)return;}
+  if(!mounted)return;
+  final selected=await showDialog<String>(context:context,builder:(c)=>Theme(
+   data:ngelx567LudoTheme(),child:AlertDialog(
+    title:Text(nickname),
+    content:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
+     Text('Seviye \${(person['level'] as num?)?.toInt()??1}'),
+     const SizedBox(height:8),
+     if(bot)const Text('Makine oyuncusu'),
+     if(isMine)const Text('Kendi oyuncu profilin'),
+     if(!isMine&&!bot&&items.isEmpty)const Text('Hediye listesi şu anda açılamıyor.'),
+     if(!isMine&&!bot)for(final e in items.entries)
+      ListTile(contentPadding:EdgeInsets.zero,
+       leading:Text((e.value is Map?e.value['emoji']:null)?.toString()??'🎁',
+        style:const TextStyle(fontSize:26)),
+       title:Text((e.value is Map?e.value['label']:null)?.toString()??e.key),
+       subtitle:Text('\${(e.value is Map?e.value['chips']:null)??0} çip'),
+       onTap:()=>Navigator.pop(c,e.key)),
+    ]),
+    actions:[TextButton(onPressed:()=>Navigator.pop(c),child:const Text('Kapat'))])));
+  if(!mounted||selected==null)return;
+  final ok=await game.perform('gift',{'to':theirId,'kind':selected});
+  if(!mounted)return;
+  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(
+   ok?(room['giftAlreadySent']==true?'Bu hediye daha önce gönderilmiş.':'Hediye gönderildi 🎁'):
+   (game.error.isEmpty?'Hediye gönderilemedi.':game.error))));
+ }
+ Future<void> _autoSingleMove574()async{""")
+swap("if(game.error.isNotEmpty)Padding(padding:const EdgeInsets.only(bottom:5),",
+"""if(room['gifts'] is List&&(room['gifts'] as List).isNotEmpty)Padding(
+    padding:const EdgeInsets.only(bottom:5),
+    child:Text('\${(room['gifts'] as List).last['emoji']??'🎁'} \${(room['gifts'] as List).last['fromName']??'Oyuncu'} → \${(room['gifts'] as List).last['toName']??'Oyuncu'}',
+     maxLines:1,overflow:TextOverflow.ellipsis,
+     style:const TextStyle(fontSize:11,color:Color(0xFFFFE28D),fontWeight:FontWeight.w800))),
+   if(game.error.isNotEmpty)Padding(padding:const EdgeInsets.only(bottom:5),""")
 swap(' Future<void> _autoSingleMove574()async{',""" void _tapAuto575(bool active){
   if(widget.watch||game.busy||!game.playing||game.seat<0)return;
   unawaited(game.perform('auto',{'enabled':!active}));
