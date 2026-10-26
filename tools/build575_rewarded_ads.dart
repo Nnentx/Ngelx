@@ -30,7 +30,7 @@ class Ngelx575RewardedVideo {
    final ad=await completer.future.timeout(const Duration(seconds:25),onTimeout:()=>null);
    if(ad==null)return 'Şu anda gösterilebilecek video yok.';
    // Google signs this custom_data in its own SSV callback.
-   ad.setServerSideOptions(ServerSideVerificationOptions(customData:token));
+   await ad.setServerSideOptions(ServerSideVerificationOptions(customData:token));
    final dismissed=Completer<bool>();var earned=false;
    ad.fullScreenContentCallback=FullScreenContentCallback<RewardedAd>(
     onAdDismissedFullScreenContent:(ad){
