@@ -21,15 +21,17 @@ Yeni kod, testli Build574 paketinin üstüne `tools/apply_build575_ludo.py` ile 
 - Oyuncunun avatarına dokununca profil ve sunucudan alınan hediye kataloğu; 20/40/100 çiplik sanal Çiçek/Kalp/Taç hediyeleri. Firestore çok belgeli atomik işlemle gönderenin çipi düşer, alıcının hediye koleksiyonu artar ve oda etkinliğine eklenir. Aynı requestId tekrar ücretlenmez, fiyatlar kullanıcıdan alınmaz. Bir oda için gönderen başına en çok 30 hediye ve 3 saniye bekleme uygulanır.
 - Hediye kataloğu ve alıcının koleksiyon sayısı sunucu okuma işlemiyle görüntülenir. Sıradan sohbet emoji sistemi korunur.
 - Ludo içi Engelle/Engeli kaldır ve Şikâyet et paneli: sadece aynı odada bulunan gerçek oyuncular. Engelli ilişkide ücretli hediyeler reddedilir ve gönderenin bakiyesi değişmez. Şikâyet bir maç/hedef/raporlayan için tek kez, sunucu kayıtlarına `pending` olarak yazılır; **henüz bir insan moderatöre otomatik dağıtım yapılmıyor.** Bu engel genel NgelX arkadaşlık veya sohbet ilişkisini değiştirmez.
+- AdMob SSV hazırlığı (sunucuda, **gerçek reklamlar henüz kapalı**): Google P-256/ECDSA-SHA256 imzası, DER doğrulaması ve orijinal query metni bozulmadan doğrulama; sabit reklam birimi, zaman ve tekil transaction id kontrolü; yalnızca kimliği doğrulanmış oyuncunun 15 dakikalık reklam oturumu için 30 sanal çip. Firestore atomik işlemle oturum kullanılır, tekrar ödüllendirme engellenir. Uygulama `ad_status` ile yalnızca sunucunun onayladığı kazancı sorgulayabilir. Sunucu `LUDO_ADMOB_AD_UNIT` ayarı olmadan `ad_session` ve SSV çağrılarını reddeder.
+- Google kaynak: https://developers.google.com/admob/flutter/ssv (23 Ekim 2026 güncellemesi). Public key hizmeti `www.gstatic.com/admob/reward/verifier-keys.json` üzerinden alınır. Testler sentetik P-256 imzalarıyla çalıştı; canlı AdMob hesabında ve gerçek SSV bildirimiyle ayrıca doğrulanmalıdır.
 - Oyundaki ses tercihi ve taş tıklama sesi, SharedPreferences ile kalıcı. Sohbet/arama sesleri etkilenmez.
 - Bağlantı kesintisinde geri bağlanma düğmesi ve hatada kademeli senkronizasyon aralığı.
 - Maç sonunda sadece sunucu tarafından doğrulanmış (+çip, +XP) ödül kartı.
 - 320, 360, 393, 440 piksel genişliklerde Auto + çip sayacı Flutter widget testleri.
-- Test sonucu: 2026-10-26 Build575 dalında hediye gönderme dahil en az 89 Node testi geçti; GitHub Actions son değişiklik için Flutter inceleme derlemesini ayrıca doğrular.
+- Test sonucu: 2026-10-26 Build575 dalında hediye gönderme dahil en az 98 Node testi geçti; GitHub Actions son değişiklik için Flutter inceleme derlemesini ayrıca doğrular.
 
 ## Bu sürümde henüz **tamamlandı** denmeyecekler
 1. Gerçek telefonda 320/360/393/440 genişliklerinde ekran görüntüsü karşılaştırması ve taşların referansla görsel kalite onayı. Widget testleri gerçek cihaz testi yerine geçmez.
-2. Gerçek reklam SDK'sı ve sağlayıcının sunucu doğrulamasıyla (SSV) ödüllü video; izlenmeyen, iptal edilen veya doğrulanmamış reklamlara çip verilmemeli.
+2. Google SSV imza ve hesap kredisi sunucu tarafına kodlandı, ancak **mobil Google Ads SDK, gerçek reklam uygulama/birim kimlikleri, izin ve gizlilik onayı, AdMob panelinde callback ayarı ve gerçek callback canlı testi** henüz eksik. Bu nedenle reklam düğmesi açılmamalı ve test imzası gerçek reklam sayılmamalı.
 3. Hediye/çip aktarımı ve Ludo içi engelle/şikâyet kaydı kodlandı. Ancak gerçek cihazlarda eşzamanlı ödemenin doğrulanması, raporların moderasyon iş akışına bağlanması ve NgelX geneline uygulanacak arkadaş ekleme yetkileri hâlâ eksik. Mevcut sohbet emojileri korunur.
 4. Rövanşın iki gerçek cihazda kullanıcı akışı, iki kullanıcı/çeşitli bot zorlukları ve bağlantı kesintilerinde son e2e test.
 5. Zar/taş/ödül için özgün ses dosyaları, detaylı kazanma-yeme-bonus animasyonları, kalite son rötuşları ve isteğe bağlı ses sessizliği doğrulaması.
