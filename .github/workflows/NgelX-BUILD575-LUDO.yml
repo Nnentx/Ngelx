@@ -12,6 +12,8 @@ on:
       - 'tools/build575_rewarded_ads.dart'
       - 'cloudflare/live-moderation/src/index.mjs'
       - 'tools/build575_widget_test.dart'
+      - 'tools/verify_build575_apk.py'
+      - 'tools/test_verify_build575_apk.py'
       - '.github/workflows/NgelX-BUILD575-LUDO.yml'
   workflow_dispatch:
 permissions:
@@ -87,6 +89,9 @@ jobs:
           cp tools/build570_perf_test.dart app/test/build570_perf_test.dart
           cp tools/build572_fast_visual_test.dart app/test/build572_fast_visual_test.dart
           cp tools/build575_widget_test.dart app/test/build575_widget_test.dart
+      - name: Test APK identity and demo-ad exclusion verifier
+        timeout-minutes: 3
+        run: python3 -m unittest tools.test_verify_build575_apk -v
       - name: Resolve Flutter packages
         working-directory: app
         timeout-minutes: 12
@@ -116,6 +121,15 @@ jobs:
           "$APKSIGNER" verify --verbose --print-certs build/app/outputs/flutter-apk/app-release.apk > signature.txt
           grep -iF 'be20b27f0ba1f4decd2941d410b1536de89e48dc894f04f038f9d26b11ecd6aa' signature.txt
           cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/NgelX-1.0.345-Build575-REVIEW.apk
+      - name: Verify Build575 APK identity, ARM64 content and demo ad exclusion
+        timeout-minutes: 5
+        run: |
+          set -euo pipefail
+          AAPT="$(find "$ANDROID_HOME/build-tools" -type f -name aapt | sort -V | tail -n 1)"
+          test -x "$AAPT"
+          python3 tools/verify_build575_apk.py \
+            app/build/app/outputs/flutter-apk/NgelX-1.0.345-Build575-REVIEW.apk \
+            --aapt "$AAPT"
       - uses: actions/upload-artifact@v4
         with:
           name: NgelX-Build575-Review-APK
