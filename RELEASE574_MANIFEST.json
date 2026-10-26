@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "package": "com.nnentx.ngelx_app",
+  "abi": "arm64-v8a",
+  "version": "1.0.344",
+  "build": 574,
+  "size": 48670786,
+  "sha256": "45c8065d7c063a5aa0f9b3cb4bf4a0e9a1ab9e02c48d8ea39c45fcd8102d4391",
+  "url": "https://github.com/Nnentx/Ngelx/releases/download/v1.0.344-build574-test/NgelX-1.0.344-Build574.apk",
+  "notes": "Build574 test: Tek oynanabilir taş otomatik ilerler; +1 alınınca başka kareye taşınır; daha dolgun parlak taşlar, Messenger tarzı küçük güç artıları ve kaldırılan alt sıra yazısı. Test sürümü, canlı güncelleme değişmez.",
+  "testedSource": "21bc6d539331d456b4bbdf315940a5fe917e913d",
+  "buildRun": 40291524551
+}
