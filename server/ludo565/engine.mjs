@@ -62,14 +62,14 @@ export function act(original,uid,b,now,roll=secureRoll){
    if(b.action==='roll'){
     if(r.dice!==null)fail('move_first',409);
     r.deadline=now+10000;r.dice=roll();if(!Number.isInteger(r.dice)||r.dice<1||r.dice>6)fail('invalid_dice');
-    r.lastRoll={seat:r.turn,value:r.dice};r.sixes=r.dice===6?r.sixes+1:0;
+    r.lastRoll={seat:r.turn,value:r.dice,revision:r.revision+1};r.sixes=r.dice===6?r.sixes+1:0;
     if(r.sixes===3)next(r,now);else if(!legal(r,r.turn).length){if(r.tokens[r.turn].every(x=>x===-1)&&(r.openingRolls??0)<2){r.openingRolls=(r.openingRolls??0)+1;r.dice=null;}else next(r,now);}
    }else if(b.action==='power'){
     if(r.mode!=='power')fail('classic_mode');const p=r.power[r.turn];
     if(!['double','control','shield'].includes(b.kind)||p[b.kind]<=0)fail('power_used');
     if(b.kind==='control'){
      if(r.dice!==null||!Number.isInteger(b.number)||b.number<1||b.number>6)fail('invalid_power');
-     r.deadline=now+10000;r.dice=b.number;r.lastRoll={seat:r.turn,value:r.dice};r.sixes=r.dice===6?r.sixes+1:0;if(r.sixes===3)next(r,now);else if(!legal(r,r.turn).length){if(r.tokens[r.turn].every(x=>x===-1)&&(r.openingRolls??0)<2){r.openingRolls=(r.openingRolls??0)+1;r.dice=null;}else next(r,now);}
+     r.deadline=now+10000;r.dice=b.number;r.lastRoll={seat:r.turn,value:r.dice,revision:r.revision+1};r.sixes=r.dice===6?r.sixes+1:0;if(r.sixes===3)next(r,now);else if(!legal(r,r.turn).length){if(r.tokens[r.turn].every(x=>x===-1)&&(r.openingRolls??0)<2){r.openingRolls=(r.openingRolls??0)+1;r.dice=null;}else next(r,now);}
     }else if(b.kind==='double'){
      if(r.dice===null||r.doubled)fail('roll_first');r.doubled=true;
      if(!legal(r,r.turn).length)fail('no_move');

@@ -90,3 +90,16 @@ export async function claimChest575(store,uid,now){
  }
  throw Error('chest_cas_retries_exhausted');
 }
+
+// Create-only CAS: reconnects, parallel requests and existing balances cannot regrant.
+export async function ensureStarter575(store,uid){
+ const id=await key(uid);
+ for(let retry=0;retry<6;retry++){
+  const existing=await store.get(id);
+  if(existing)return viewWallet(existing.room);
+  const wallet={...initial(),chips:5000,starterGrant575:true};
+  try{await store.put(id,wallet,undefined);return viewWallet(wallet);}
+  catch(e){if(e.status!==409||retry===5)throw e;}
+ }
+ throw Error('starter_cas_retries_exhausted');
+}

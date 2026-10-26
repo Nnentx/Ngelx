@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {createRoom,act} from './engine.mjs';
-import {ludoWallet575,settleMatch575,claimDaily575,claimChest575} from './rewards575.mjs';
+import {ensureStarter575,ludoWallet575,settleMatch575,claimDaily575,claimChest575} from './rewards575.mjs';
 
 const t=1800000000000;
 function store(){
@@ -140,4 +140,22 @@ test('old settled wallet without matchReward metadata remains idempotent and nev
  assert.equal(older.reward,undefined);
  assert.equal(older.chips,150);assert.equal(older.wins,1);
  assert.equal(db.size(),1);
+});
+
+test('new account starter is persisted once under concurrent requests and reconnects',async()=>{
+ const db=store();
+ const values=await Promise.all(Array.from({length:5},()=>ensureStarter575(db,'new-player')));
+ assert.ok(values.every(w=>w.chips===5000));assert.equal(db.size(),1);
+ await claimDaily575(db,'new-player',t);
+ assert.equal((await ensureStarter575(db,'new-player')).chips,5050);
+ assert.equal((await ludoWallet575(db,'new-player')).chips,5050);
+});
+test('existing wallets keep their balance, XP, receipts and gifts without reset or grant',async()=>{
+ const db=store();await claimDaily575(db,'existing',t);
+ const before=await ludoWallet575(db,'existing');
+ assert.deepEqual(await ensureStarter575(db,'existing'),before);
+ assert.equal(before.chips,50);
+});
+test('starter storage errors fail closed without returning a fabricated balance',async()=>{
+ await assert.rejects(ensureStarter575({get:async()=>null,put:async()=>{throw Error('unavailable');}},'new-player'),/unavailable/);
 });

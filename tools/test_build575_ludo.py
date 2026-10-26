@@ -9,7 +9,9 @@ checks={
  'existing legal-piece movement':'Future<void> _autoSingleMove574()',
  'existing prizes':'bonusTiles:room[\'bonusTiles\'] is List?',
  'existing powers':'_tapPower572(item.$1',
- 'premium image crop':'w*.87,h*.94',
+ 'rounded pawn head':'radius:w*.235',
+ 'real media sounds':"assets/ludo575_$kind.wav",
+ 'server movement sounds':'_observeSound575()',
  'pawn shadow':"Colors.black.withValues(alpha:.34)",
  'nonoverlapping pieces':'widget.stackCount > 1 ? 0.52 : 0.98',
  'wallet':'class Ngelx573WalletBar',
@@ -37,7 +39,7 @@ checks={
 }
 for name,needle in checks.items():
  assert needle in s,f'Build575 missing: {name}'
-assert 'version: 1.0.345+575' in Path('app/pubspec.yaml').read_text()
+assert 'version: 1.0.346+576' in Path('app/pubspec.yaml').read_text()
 assert s.count('class Ngelx575AutoBadge')==1
 assert s.index("ValueKey('ludo-gift-confirmation')") < s.index("final ok=await game.perform('gift'")
 assert "'kind':selected,'chips':" not in s

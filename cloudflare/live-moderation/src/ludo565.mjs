@@ -1,7 +1,7 @@
 import {createRoom,act,LudoError,legal,secureRoll} from '../../../server/ludo565/engine.mjs';
 import {accessToken} from '../../call-push/src/google.mjs';
 import {chooseBotToken572} from '../../../server/ludo565/strategy572.mjs';
-import {ludoWallet575,settleMatch575,claimDaily575,claimChest575} from '../../../server/ludo565/rewards575.mjs';
+import {ensureStarter575,ludoWallet575,settleMatch575,claimDaily575,claimChest575} from '../../../server/ludo565/rewards575.mjs';
 import {sendLudoGift575,ludoGiftCatalog575} from '../../../server/ludo565/gifts575.mjs';
 import {ludoBlock575,ludoReport575} from '../../../server/ludo565/safety575.mjs';
 import {ludoModeratorQueue575,ludoModeratorResolve575,moderationDay575} from '../../../server/ludo565/moderation575.mjs';
@@ -45,6 +45,7 @@ export function createLudo565({verify,profile,store,limit=async()=>true,isModera
    if(!b||typeof b!=='object'||Array.isArray(b))return json({error:'invalid_request'},400);
    let user;try{user=await verify(request);}catch{return json({error:'unauthorized'},401);}
    const uid=user.sub;if(!uid)return json({error:'unauthorized'},401);
+   if(['wallet','create','bot','join','match','sync','start','roll','move','auto','daily_reward','chest_reward','gift','block','rematch'].includes(b.action))await ensureStarter575(store,uid);
    const withWallet575=async(room)=>{
     const wallet=await settleMatch575(store,uid,room,now());
     const blocked=new Set(wallet.blockedUsers??[]);

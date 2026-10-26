@@ -8,8 +8,8 @@ from tools.verify_build575_apk import verify_archive, verify_badging, verify
 
 
 GOOD_BADGING = (
-    "package: name='com.nnentx.ngelx_app' versionCode='575' "
-    "versionName='1.0.345' platformBuildVersionName=''\n"
+    "package: name='com.nnentx.ngelx_app' versionCode='576' "
+    "versionName='1.0.346' platformBuildVersionName=''\n"
     "sdkVersion:'26'\n"
 )
 
@@ -37,14 +37,14 @@ class VerifyBuild575ReviewTest(unittest.TestCase):
         self.assertGreater(meta["size_bytes"], 2048)
         self.assertEqual(len(meta["sha256"]), 64)
         self.assertEqual(verify_badging(GOOD_BADGING), {
-            "package": "com.nnentx.ngelx_app", "version": "1.0.345", "build": 575
+            "package": "com.nnentx.ngelx_app", "version": "1.0.346", "build": 576
         })
 
     def test_wrong_package_version_or_build_cannot_pass(self):
         for bad in [
             GOOD_BADGING.replace("com.nnentx.ngelx_app", "com.example.fake"),
-            GOOD_BADGING.replace("versionCode='575'", "versionCode='574'"),
-            GOOD_BADGING.replace("versionName='1.0.345'", "versionName='1.0.344'"),
+            GOOD_BADGING.replace("versionCode='576'", "versionCode='574'"),
+            GOOD_BADGING.replace("versionName='1.0.346'", "versionName='1.0.344'"),
             "not an APK",
         ]:
             with self.subTest(value=bad):

@@ -101,7 +101,7 @@ swap('  if(widget.initial==null)unawaited(game.sync(join:true));_startPoll();',
 """  if(widget.initial==null)unawaited(game.sync(join:true));_startPoll();unawaited(_restoreSound575());""")
 swap(' void _startPoll(){',""" Future<void> _restoreSound575()async{
   final p=await SharedPreferences.getInstance();
-  if(mounted)setState(()=>_soundOn575=p.getBool('ngelx_ludo_sound')??true);
+  if(mounted)setState((){_soundOn575=p.getBool('ngelx_ludo_sound')??true;_soundReady575=true;});
  }
  Future<void> _toggleSound575()async{
   final next=!_soundOn575;
@@ -393,9 +393,108 @@ swap("final dst=Offset.zero&size;\n  canvas.drawImageRect(atlas,src,dst,Paint().
     Paint()..color=Colors.black.withValues(alpha:.34)..maskFilter=const MaskFilter.blur(BlurStyle.normal,2.3));
   canvas.drawImageRect(atlas,src,dst,Paint()..filterQuality=FilterQuality.high..isAntiAlias=true);""")
 swap('widget.stackCount > 1 ? 0.49 : 0.98','widget.stackCount > 1 ? 0.52 : 0.98')
+# Rounded, resolution-independent pawns replace the old narrow sprite rendering.
+start=s.index('class _PawnPainter567 extends CustomPainter {')
+end=s.index('class Ngelx565BoardPainter',start)
+s=s[:start]+'''class _PawnPainter567 extends CustomPainter {
+ final Color color;final bool highlight;const _PawnPainter567(this.color,this.highlight);
+ @override void paint(Canvas canvas,Size size){
+  final w=size.width,h=size.height;
+  final dark=Color.lerp(color,Colors.black,.42)!,light=Color.lerp(color,Colors.white,.65)!;
+  final base=Rect.fromLTWH(w*.18,h*.68,w*.64,h*.23);
+  canvas.drawOval(base.shift(Offset(w*.025,h*.055)),Paint()..color=Colors.black.withValues(alpha:.34)..maskFilter=const MaskFilter.blur(BlurStyle.normal,1.6));
+  if(highlight)canvas.drawOval(base.inflate(w*.06),Paint()..color=_ludoGold567.withValues(alpha:.8));
+  final body=Path()..moveTo(w*.37,h*.35)..cubicTo(w*.38,h*.49,w*.29,h*.58,w*.23,h*.72)..cubicTo(w*.19,h*.91,w*.81,h*.91,w*.77,h*.72)..cubicTo(w*.71,h*.58,w*.62,h*.49,w*.63,h*.35)..close();
+  canvas.drawOval(base,Paint()..color=dark);
+  canvas.drawPath(body,Paint()..shader=LinearGradient(begin:Alignment.centerLeft,end:Alignment.centerRight,colors:[dark,light,color,dark],stops:const [0,.25,.58,1]).createShader(Offset.zero&size));
+  canvas.drawArc(Rect.fromLTWH(w*.22,h*.66,w*.56,h*.17),0,math.pi,false,Paint()..color=light.withValues(alpha:.8)..style=PaintingStyle.stroke..strokeWidth=w*.035);
+  final head=Rect.fromCircle(center:Offset(w*.5,h*.29),radius:w*.235);
+  canvas.drawCircle(Offset(w*.5,h*.29),w*.235,Paint()..shader=RadialGradient(center:const Alignment(-.4,-.5),radius:1,colors:[light,color,dark],stops:const [0,.5,1]).createShader(head));
+  canvas.drawOval(Rect.fromLTWH(w*.36,h*.14,w*.13,h*.085),Paint()..color=Colors.white.withValues(alpha:.75));
+ }
+ @override bool shouldRepaint(covariant _PawnPainter567 old)=>old.color!=color||old.highlight!=highlight;
+}
+''' +s[end:]
+start=s.index('class Ngelx570SpritePainter extends CustomPainter {')
+end=s.index('\nint? ngelx570ShownDice',start)
+s=s[:start]+'''class Ngelx570SpritePainter extends CustomPainter {
+ final int seat;final bool highlight;final ui.Image? image;
+ const Ngelx570SpritePainter(this.seat,this.highlight,this.image);
+ @override void paint(Canvas canvas,Size size)=>_PawnPainter567(ngelx565LudoColors[seat],highlight).paint(canvas,size);
+ @override bool shouldRepaint(covariant Ngelx570SpritePainter old)=>old.seat!=seat||old.highlight!=highlight;
+}
+''' +s[end:]
+# Media effects are driven by accepted room-state changes, including bot/Auto moves.
+swap(' void _soundTap575(){if(_soundOn575)unawaited(SystemSound.play(SystemSoundType.click));}', ''' final _effects575=Ngelx575Effects();
+ String? _soundTokens575,_soundDice575,_soundStatus575;bool _soundReady575=false;
+ void _soundTap575(){} // Actual sounds follow successful server transitions.
+ void _observeSound575(){
+  final tokens=room['tokens'];if(tokens is! List)return;
+  final signature=tokens.toString(),dice=room['lastRoll']?.toString(),status=room['status']?.toString();
+  if(_soundTokens575!=null&&_soundOn575&&_soundReady575){
+   if(status=='finished'&&_soundStatus575!='finished'){_effects575.play('win');}
+   else if(signature!=_soundTokens575){
+    final before=RegExp(r'-?\\d+').allMatches(_soundTokens575!).map((m)=>int.parse(m[0]!)).toList();
+    final after=tokens.expand((row)=>row as List).whereType<num>().map((n)=>n.toInt()).toList();
+    var steps=1;bool captured=false;
+    for(var i=0;i<math.min(before.length,after.length);i++){
+     if(before[i]>=0&&after[i]==-1)captured=true;
+     if(after[i]>before[i])steps=math.max(steps,after[i]-math.max(0,before[i]));
+    }
+    _effects575.move(steps.clamp(1,12).toInt(),captured:captured);
+   }else if(dice!=null&&dice!=_soundDice575){_effects575.play('dice');}
+  }
+  _soundTokens575=signature;_soundDice575=dice;_soundStatus575=status;
+ }
+''')
+swap(' void _changed(){',' void _changed(){\n  _observeSound575();')
+swap('  setState(()=>_soundOn575=next);','  setState(()=>_soundOn575=next);\n  if(!next)_effects575.stop();')
+swap('@override void dispose(){chatExpiry?.cancel();poll?.cancel();','@override void dispose(){_effects575.dispose();chatExpiry?.cancel();poll?.cancel();')
+s=s.replace('unawaited(SystemSound.play(SystemSoundType.click));',"_effects575.play('capture');")
+s+='''
+class Ngelx575Effects {
+ final Map<String,AudioPlayer> _players={};
+ final List<Timer> _timers=[];bool _disposed=false;int _epoch=0;
+ Future<void> play(String kind)async{
+  if(_disposed)return;final epoch=_epoch;
+  try{
+   final player=_players.putIfAbsent(kind,()=>AudioPlayer(handleAudioSessionActivation:false,handleInterruptions:false));
+   if(player.audioSource==null)await player.setAsset('assets/ludo575_$kind.wav');
+   if(_disposed||epoch!=_epoch)return;
+   await player.setVolume(.7);await player.seek(Duration.zero);
+   if(!_disposed&&epoch==_epoch)unawaited(player.play().catchError((_){ }));
+  }catch(_){ } // Audio failure must never block the game.
+ }
+ void move(int steps,{required bool captured}){
+  for(final timer in _timers){timer.cancel();}_timers.clear();
+  for(var i=0;i<steps;i++){
+   _timers.add(Timer(Duration(milliseconds:i*150),()=>unawaited(play('step'))));
+  }
+  if(captured)_timers.add(Timer(Duration(milliseconds:steps*150),()=>unawaited(play('capture'))));
+ }
+ void stop(){_epoch++;for(final timer in _timers){timer.cancel();}_timers.clear();for(final player in _players.values){unawaited(player.stop());}}
+ void dispose(){_disposed=true;stop();for(final player in _players.values){unawaited(player.dispose());}}
+}
+'''
+s=s.replace('else{poll?.cancel();}}', 'else{_effects575.stop();poll?.cancel();}}')
+# Bundle original synthesized effects; no platform click-sound dependency.
+import math,struct,wave
+assets=root/'app/assets';assets.mkdir(parents=True,exist_ok=True)
+for kind,notes in {'step':[(700,.045),(480,.035)],'dice':[(900,.04),(640,.04),(1100,.04),(500,.06)],'capture':[(880,.08),(660,.08),(440,.12)],'win':[(523.25,.13),(659.25,.13),(783.99,.13),(1046.5,.3)]}.items():
+ with wave.open(str(assets/f'ludo575_{kind}.wav'),'wb') as out:
+  out.setparams((1,2,22050,0,'NONE','not compressed'))
+  for frequency,duration in notes:
+   count=int(22050*duration)
+   out.writeframes(b''.join(struct.pack('<h',int(14000*math.sin(2*math.pi*frequency*i/22050)*min(1,i/100)*((count-i)/count)**2)) for i in range(count)))
+pubspec=root/'app/pubspec.yaml'
+manifest=pubspec.read_text()
+for kind in ['step','dice','capture','win']:
+ manifest+=f'    - assets/ludo575_{kind}.wav\n'
+pubspec.write_text(manifest)
+
 p.write_text(s,encoding='utf-8')
 pub=root/'app/pubspec.yaml'
 version=pub.read_text(encoding='utf-8')
 assert 'version: 1.0.344+574' in version
-pub.write_text(version.replace('version: 1.0.344+574','version: 1.0.345+575',1),encoding='utf-8')
+pub.write_text(version.replace('version: 1.0.344+574','version: 1.0.346+576',1),encoding='utf-8')
 print('Build575 frontend ready: persistent Auto on/off, updated painted pawn depth, existing NgelX layout retained')

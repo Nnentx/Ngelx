@@ -1,4 +1,4 @@
-name: NgelX Build575 Auto and premium Ludo review
+name: NgelX Build576 rounded pawns, game audio and starter chips review
 on:
   push:
     branches: [feat/build575-ludo-auto-premium-rewards]
@@ -116,11 +116,11 @@ jobs:
         working-directory: app
         run: |
           set -euo pipefail
-          flutter build apk --release --target-platform android-arm64 --build-name=1.0.345 --build-number=575 --dart-define=NGELX_VERSION_NAME=1.0.345 --dart-define=NGELX_BUILD_NUMBER=575 --dart-define=NGELX_VERIFICATION_EMAIL_URL=https://ngelx-verification-email.alihancaglar76.workers.dev/verify-email --dart-define=NGELX_COMMUNITY_DELETE_URL=https://ngelx-live-moderation.alihancaglar76.workers.dev/community/delete --dart-define=NGELX_LIVEKIT_GUEST_MODERATION_URL=https://ngelx-live-moderation.alihancaglar76.workers.dev/moderate --dart-define=NGELX_CALL_PUSH_URL=https://ngelx-call-push.alihancaglar76.workers.dev
+          flutter build apk --release --target-platform android-arm64 --build-name=1.0.346 --build-number=576 --dart-define=NGELX_VERSION_NAME=1.0.346 --dart-define=NGELX_BUILD_NUMBER=576 --dart-define=NGELX_VERIFICATION_EMAIL_URL=https://ngelx-verification-email.alihancaglar76.workers.dev/verify-email --dart-define=NGELX_COMMUNITY_DELETE_URL=https://ngelx-live-moderation.alihancaglar76.workers.dev/community/delete --dart-define=NGELX_LIVEKIT_GUEST_MODERATION_URL=https://ngelx-live-moderation.alihancaglar76.workers.dev/moderate --dart-define=NGELX_CALL_PUSH_URL=https://ngelx-call-push.alihancaglar76.workers.dev
           APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
           "$APKSIGNER" verify --verbose --print-certs build/app/outputs/flutter-apk/app-release.apk > signature.txt
           grep -iF 'be20b27f0ba1f4decd2941d410b1536de89e48dc894f04f038f9d26b11ecd6aa' signature.txt
-          cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/NgelX-1.0.345-Build575-REVIEW.apk
+          cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/NgelX-1.0.346-Build576-REVIEW.apk
       - name: Verify Build575 APK identity, ARM64 content and demo ad exclusion
         timeout-minutes: 5
         run: |
@@ -128,15 +128,15 @@ jobs:
           AAPT="$(find "$ANDROID_HOME/build-tools" -type f -name aapt | sort -V | tail -n 1)"
           test -x "$AAPT"
           python3 tools/verify_build575_apk.py \
-            app/build/app/outputs/flutter-apk/NgelX-1.0.345-Build575-REVIEW.apk \
+            app/build/app/outputs/flutter-apk/NgelX-1.0.346-Build576-REVIEW.apk \
             --aapt "$AAPT"
       - uses: actions/upload-artifact@v4
         with:
-          name: NgelX-Build575-Review-APK
-          path: app/build/app/outputs/flutter-apk/NgelX-1.0.345-Build575-REVIEW.apk
+          name: NgelX-Build576-Review-APK
+          path: app/build/app/outputs/flutter-apk/NgelX-1.0.346-Build576-REVIEW.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: NgelX-Build575-Assembled-Source
+          name: NgelX-Build576-Assembled-Source
           path: |
             app/lib
             app/pubspec.yaml
