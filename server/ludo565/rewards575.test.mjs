@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {createRoom,act} from './engine.mjs';
-import {ludoWallet575,settleMatch575} from './rewards575.mjs';
+import {ludoWallet575,settleMatch575,claimDaily575,claimChest575} from './rewards575.mjs';
 
 const t=1800000000000;
 function store(){
@@ -60,4 +60,18 @@ test('a second verified win raises total coins, XP, streak and level',async()=>{
  assert.equal(second.chips,300);
  assert.equal(second.streak,2);
  assert.equal(second.xp,180);
+});
+
+test('daily gift is claimed once per UTC day and streak is repeatable',async()=>{
+ const db=store();
+ const a=await claimDaily575(db,'human',t);assert.equal(a.claimed,true);assert.equal(a.chipReward,50);
+ const b=await claimDaily575(db,'human',t+30000);assert.equal(b.claimed,false);assert.equal(b.chips,50);
+ const c=await claimDaily575(db,'human',t+86400000);assert.equal(c.claimed,true);assert.equal(c.dailyStreak,2);assert.equal(c.chips,110);
+});
+test('treasure chest only credits again after eight hours',async()=>{
+ const db=store(),a=await claimChest575(db,'human',t);
+ assert.equal(a.claimed,true);assert.equal(a.chips,25);assert.equal(a.xp,10);
+ const b=await claimChest575(db,'human',t+7*3600000);assert.equal(b.claimed,false);
+ const c=await claimChest575(db,'human',t+8*3600000);
+ assert.equal(c.chips,50);assert.equal(c.xp,20);assert.equal(c.claimed,true);
 });
