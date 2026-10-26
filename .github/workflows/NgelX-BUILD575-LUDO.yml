@@ -72,7 +72,9 @@ jobs:
               out.write_bytes(z.read(name))
           PY
           python3 -m py_compile tools/apply_build575_ludo.py
+          python3 -m py_compile tools/apply_build575_ads.py
           python3 tools/apply_build575_ludo.py
+          python3 tools/apply_build575_ads.py
           python3 tools/test_build575_ludo.py
           cp tools/build570_join_test.dart app/test/build570_join_test.dart
           cp tools/build570_perf_test.dart app/test/build570_perf_test.dart
