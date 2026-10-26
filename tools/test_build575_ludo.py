@@ -28,6 +28,9 @@ checks={
  'victory feedback':"ValueKey('ludo-result-celebration')",
  'report reason picker':"'harassment','Rahatsız etme'",
  'gift blocked disabling':'onTap:alreadyBlocked575?null',
+ 'gift spending confirmation':"ValueKey('ludo-gift-confirmation')",
+ 'gift cancelled without spending':'if(!mounted||!confirmed)return;',
+ 'server price only':"final gift=items[selected];",
  'animated chip balance':'class Ngelx575AnimatedBalance',
  'existing lobby':'class Ngelx565LudoLobby',
  'existing game board':'class Ngelx565LudoBoard',
@@ -36,4 +39,6 @@ for name,needle in checks.items():
  assert needle in s,f'Build575 missing: {name}'
 assert 'version: 1.0.345+575' in Path('app/pubspec.yaml').read_text()
 assert s.count('class Ngelx575AutoBadge')==1
+assert s.index("ValueKey('ludo-gift-confirmation')") < s.index("final ok=await game.perform('gift'")
+assert "'kind':selected,'chips':" not in s
 print('Build575 Ludo structure checks passed: Auto, quality and existing NgelX layout preserved')
