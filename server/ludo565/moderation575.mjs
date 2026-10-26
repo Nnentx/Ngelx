@@ -8,18 +8,20 @@ const validId=id=>typeof id==='string'&&/^report575_[a-f0-9]{64}$/.test(id);
 const validDay=(day,now)=>typeof day==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(day)
  &&Date.parse(day+'T00:00:00Z')<=now
  &&Date.parse(day+'T00:00:00Z')>=now-15*86400000;
-export async function ludoModeratorQueue575(store,day,now){
+export async function ludoModeratorQueue575(store,day,now,page=0){
+ if(!Number.isInteger(page)||page<0||page>49)fail('invalid_review_page');
  if(!validDay(day,now))fail('invalid_review_day');
  const current=await store.get(moderationQueueKey575(day));
  const list=current?.room?.items??[];
  if(!Array.isArray(list))fail('invalid_review_queue',503);
  // Queue only retains IDs/summaries; details and actions are held in separate docs.
- const items=await Promise.all(list.slice(-150).map(async id=>{
+ const end=Math.max(0,list.length-page*50),start=Math.max(0,end-50);
+ const items=await Promise.all(list.slice(start,end).reverse().map(async id=>{
   if(!validId(id))return null;
   const entry=await store.get(id);
   return entry?{id,...entry.room}:null;
  }));
- return {day,reports:items.filter(Boolean),total:list.length};
+ return {day,page,hasMore:start>0,reports:items.filter(Boolean),total:list.length};
 }
 export async function ludoModeratorResolve575(store,id,moderatorUid,decision,now){
  if(!validId(id))fail('invalid_report_id');
