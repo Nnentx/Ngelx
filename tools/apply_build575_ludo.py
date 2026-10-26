@@ -156,6 +156,27 @@ swap("Ngelx567GameButton(label:'Lobiye dön',gold:true,onPressed:_close),",
          style:const TextStyle(color:Color(0xFF9AFFE6),fontWeight:FontWeight.w900,fontSize:13))],
      ]))),
    Ngelx567GameButton(label:'Lobiye dön',gold:true,onPressed:_close),""")
+swap("int? _earnedChips575,_earnedXp575;String? _recentPickup575;",
+"""int? _earnedChips575,_earnedXp575;String? _recentPickup575;
+ int _connectionFailures575=0;""")
+swap("  final reward=room['reward'];",
+"""  if(game.error.isNotEmpty){_connectionFailures575=math.min(4,_connectionFailures575+1);}
+  else{_connectionFailures575=0;}
+  final reward=room['reward'];""")
+swap("void _startPoll(){poll?.cancel();poll=Timer.periodic(Duration(seconds:widget.watch?4:1),(tick){if(_chatOpen&&tick.tick%3!=0)return;if(!game.terminal)unawaited(game.sync());});}",
+"""void _startPoll(){poll?.cancel();poll=Timer.periodic(Duration(seconds:widget.watch?4:1),(tick){
+  if(_chatOpen&&tick.tick%3!=0)return;
+  final gap=math.min(8,1<<_connectionFailures575);
+  if(tick.tick%gap!=0)return;
+  if(!game.terminal&&!game.busy)unawaited(game.sync());
+ });}""")
+swap("if(game.error.isNotEmpty)TextButton.icon(onPressed:()=>game.sync(),icon:const Icon(Icons.refresh),label:Text(game.error)),",
+"""if(game.error.isNotEmpty)Padding(padding:const EdgeInsets.only(bottom:5),
+    child:OutlinedButton.icon(key:const ValueKey('ludo-reconnect'),
+     onPressed:game.busy?null:()=>unawaited(game.sync()),
+     icon:const Icon(Icons.wifi_off_rounded,size:17),
+     label:const Text('Bağlantıyı yenile'),
+     style:OutlinedButton.styleFrom(foregroundColor:const Color(0xFFFFE9AC)))),""")
 swap(' Future<void> _autoSingleMove574()async{',""" void _tapAuto575(bool active){
   if(widget.watch||game.busy||!game.playing||game.seat<0)return;
   unawaited(game.perform('auto',{'enabled':!active}));
