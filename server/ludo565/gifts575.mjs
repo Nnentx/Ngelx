@@ -2,9 +2,22 @@
 import {LudoError} from './engine.mjs';
 
 export const ludoGiftCatalog575=Object.freeze({
-  flower:Object.freeze({label:'Çiçek',emoji:'🌹',chips:20}),
+  flower:Object.freeze({label:'Gül',emoji:'🌹',chips:20}),
   heart:Object.freeze({label:'Kalp',emoji:'❤️',chips:40}),
   crown:Object.freeze({label:'Taç',emoji:'👑',chips:100}),
+  coffee:Object.freeze({label:'Kahve',emoji:'☕',chips:15}),
+  thumbs_up:Object.freeze({label:'Beğeni',emoji:'👍',chips:10}),
+  tomato:Object.freeze({label:'Domates',emoji:'🍅',chips:25}),
+  pizza:Object.freeze({label:'Pizza',emoji:'🍕',chips:55}),
+  bucket:Object.freeze({label:'Su kovası',emoji:'🪣',chips:35}),
+  clock:Object.freeze({label:'Saat',emoji:'⏰',chips:60}),
+  flame:Object.freeze({label:'Alev',emoji:'🔥',chips:75}),
+  rooster:Object.freeze({label:'Horoz',emoji:'🐓',chips:65}),
+  slipper:Object.freeze({label:'Terlik',emoji:'🩴',chips:30}),
+  pan:Object.freeze({label:'Tava',emoji:'🍳',chips:50}),
+  plunger:Object.freeze({label:'Pompa',emoji:'🪠',chips:45}),
+  egg:Object.freeze({label:'Yumurta',emoji:'🥚',chips:18}),
+  balloon:Object.freeze({label:'Balon',emoji:'🎈',chips:35}),
 });
 const fail=(code,status=400)=>{throw new LudoError(code,status)};
 const giftReceipt=(roomId,nonce)=>roomId+':'+nonce;
