@@ -21,7 +21,10 @@ export default {async fetch(request,env){
     if(!/^Bearer [^\s]+$/.test(request.headers.get('authorization')??''))return json({error:'unauthorized'},401);
     if(!configured(env))return json({error:'service_not_configured'},503);
     const identity=googleIo(env),db=storage(env);
-    return createLudo565({store:ludoStore565(env),adEnabled:Boolean(env.LUDO_ADMOB_AD_UNIT),profile:uid=>identity.getUser(uid),limit:(uid,action)=>['create','bot','match'].includes(action)?db.rateLimit('ludo565-create:'+uid,4):Promise.resolve(true),verify:async()=>{const claims=await verifyFirebaseIdToken(request,env);await identity.checkAuth(claims);return claims;}})(request);
+    return createLudo565({store:ludoStore565(env),adEnabled:Boolean(env.LUDO_ADMOB_AD_UNIT),
+      isModerator:async uid=>typeof env.LUDO_MODERATOR_UIDS==='string'&&
+       env.LUDO_MODERATOR_UIDS.split(',').map(x=>x.trim()).filter(Boolean).includes(uid),
+      profile:uid=>identity.getUser(uid),limit:(uid,action)=>['create','bot','match'].includes(action)?db.rateLimit('ludo565-create:'+uid,4):Promise.resolve(true),verify:async()=>{const claims=await verifyFirebaseIdToken(request,env);await identity.checkAuth(claims);return claims;}})(request);
   }
   if(path!=='/moderate'&&path!=='/community/delete')return json({error:'not_found'},404);
   if(request.method!=='POST')return json({error:'method_not_allowed'},405);
