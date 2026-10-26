@@ -26,7 +26,7 @@ swap('final double cell;final bool highlight;final Offset stackOffset;final Void
 swap('required this.highlight,required this.stackOffset,this.onTap','required this.highlight,required this.stackOffset,required this.stackCount,this.onTap')
 swap('if(shared.length==2)return Offset(order==0?-.18:.18,0);\n return Offset(order.isEven?-.16:.16,order<2?-.15:.15);','if(shared.length==2)return Offset(order==0?-.23:.23,0);\n return Offset(order.isEven?-.23:.23,order<2?-.20:.20);')
 swap('final size=c*1.24,limit=c*15-size;\n  final x=((p.dx+.5+widget.stackOffset.dx)*c-size*.5).clamp(0.0,limit).toDouble();\n  final y=((p.dy+.5+widget.stackOffset.dy)*c-size*.71-math.sin((motion.value*(widget.position-from).abs()%1)*math.pi)*c*.13).clamp(0.0,limit).toDouble();',
-"""final size=c*(widget.position<0?1.04:widget.stackCount>1?.49:.91),limit=c*15-size;
+"""final size=c*(widget.position<0?1.04:widget.stackCount > 1 ? 0.49 : 0.91),limit=c*15-size;
   final x=((p.dx+.5+widget.stackOffset.dx)*c-size*.5).clamp(0.0,limit).toDouble();
   final y=((p.dy+.5+widget.stackOffset.dy)*c-size*.51-math.sin((motion.value*(widget.position-from).abs()%1)*math.pi)*c*.075).clamp(0.0,limit).toDouble();""")
 swap('final side=math.min(box.maxWidth,math.max(60.0,box.maxHeight-76)),left=(box.maxWidth-side)/2,top=(box.maxHeight-side)/2;',"""final side=math.min(box.maxWidth,math.max(60.0,box.maxHeight-98)),left=(box.maxWidth-side)/2;
@@ -58,7 +58,7 @@ swap('class Ngelx570Logo extends StatelessWidget {',"""class Ngelx573WalletBar e
 class Ngelx570Logo extends StatelessWidget {""")
 swap('toolbarHeight:MediaQuery.sizeOf(context).height<650?56:74','toolbarHeight:MediaQuery.sizeOf(context).height<650?48:62')
 swap('body:_LudoBackdrop567(child:SafeArea(bottom:true,child:LayoutBuilder(builder:(context,box){','body:_LudoBackdrop567(child:SafeArea(bottom:true,child:Column(children:[Ngelx573WalletBar(room:room),Expanded(child:LayoutBuilder(builder:(context,box){')
-swap('   }))),\n  )));\n }\n}\nWidget _roomLabel567','   }))])),\n  )));\n }\n}\nWidget _roomLabel567')
+swap('   }))),\n  )));\n }\n}\nWidget _roomLabel567','   }))]))),\n  )));\n }\n}\nWidget _roomLabel567')
 swap('children:[Center(child:AspectRatio(aspectRatio:.85,child:frame))','children:[Center(child:AspectRatio(aspectRatio:.78,child:frame))')
 swap('Padding(padding:const EdgeInsets.symmetric(horizontal:4),child:Center(child:AspectRatio(aspectRatio:.85,child:frame)))','Padding(padding:const EdgeInsets.symmetric(horizontal:2),child:Align(alignment:Alignment.topCenter,child:AspectRatio(aspectRatio:.78,child:frame)))')
 swap('return Padding(padding:const EdgeInsets.fromLTRB(14,6,14,12)','return Padding(padding:const EdgeInsets.fromLTRB(10,3,10,7)')
