@@ -11,7 +11,6 @@ concurrency:
   cancel-in-progress: true
 jobs:
   publish-verified-asset:
-    if: ${{ false }} # Hold until the additional reconnect correction is tested
     runs-on: ubuntu-latest
     timeout-minutes: 35
     env:
@@ -22,16 +21,16 @@ jobs:
       - name: Require exact Android and live acceptance; never mark physical tests as passed
         run: |
           set -euo pipefail
-          gh run watch 40384759860 --repo Nnentx/Ngelx --exit-status --interval 20
+          gh run watch 40386052388 --repo Nnentx/Ngelx --exit-status --interval 20
           gh run watch 40379934754 --repo Nnentx/Ngelx --exit-status --interval 20
-          test "$(gh api repos/Nnentx/Ngelx/actions/runs/40384759860 --jq .head_sha)" = 91d851208364b6e25895f113d893d49f45c908ef
+          test "$(gh api repos/Nnentx/Ngelx/actions/runs/40386052388 --jq .head_sha)" = 2208838b2fe50d2b5addb3dd9d07c2bad9ac7d16
           test "$(gh api repos/Nnentx/Ngelx/actions/runs/40379934754 --jq .head_sha)" = 14c53d73daa841546e350b3e42489c9370a1879c
-          test "$(gh api repos/Nnentx/Ngelx/actions/runs/40384759860 --jq .conclusion)" = success
+          test "$(gh api repos/Nnentx/Ngelx/actions/runs/40386052388 --jq .conclusion)" = success
           test "$(gh api repos/Nnentx/Ngelx/actions/runs/40379934754 --jq .conclusion)" = success
       - name: Ensure existing live backend acceptance applies to unchanged server code
         run: |
           set -euo pipefail
-          gh api repos/Nnentx/Ngelx/compare/389059e2227d94814bae7fc9f1f21cdee19e70ca...91d851208364b6e25895f113d893d49f45c908ef > backend-compare.json
+          gh api repos/Nnentx/Ngelx/compare/389059e2227d94814bae7fc9f1f21cdee19e70ca...2208838b2fe50d2b5addb3dd9d07c2bad9ac7d16 > backend-compare.json
           python3 - <<'PYTHON'
           import json
           result=json.load(open('backend-compare.json'))
@@ -42,7 +41,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: NgelX-Build579-Review-APK
-          run-id: 40384759860
+          run-id: 40386052388
           github-token: ${{ github.token }}
           path: verified-apk
       - name: Validate selected asset and prepare exact release metadata
@@ -59,9 +58,9 @@ jobs:
             assert 'lib/arm64-v8a/libapp.so' in z.namelist()
           name='NgelX-1.0.349-Build579.apk';Path(name).write_bytes(raw)
           Path(name+'.sha256').write_text(digest+'  '+name+'\n')
-          feed={'schema':1,'package':'com.nnentx.ngelx_app','abi':'arm64-v8a','version':'1.0.349','build':579,'size':len(raw),'sha256':digest,'url':'https://github.com/Nnentx/Ngelx/releases/download/v1.0.349-build579/'+name,'notes':'Ludo davetindeki Katıl düğmesine basınca uygulamayı donduran sonsuz çizim döngüsü düzeltildi. Oda yüklenirken geri çıkış çalışır. Mevcut taşlar, Auto, ses, çip ve seviye sistemi korunur.','testedSource':'91d851208364b6e25895f113d893d49f45c908ef','buildRun':40384759860,'liveAcceptanceRun':40379934754}
+          feed={'schema':1,'package':'com.nnentx.ngelx_app','abi':'arm64-v8a','version':'1.0.349','build':579,'size':len(raw),'sha256':digest,'url':'https://github.com/Nnentx/Ngelx/releases/download/v1.0.349-build579/'+name,'notes':'Ludo davetindeki Katıl düğmesine basınca uygulamayı donduran sonsuz çizim döngüsü düzeltildi. Oda yüklenirken geri çıkış çalışır. Auto sırasında güncelleme çakışmaları otomatik toparlanır; yalnızca gerçek ve tekrarlayan bağlantı hatalarında yeniden bağlanma gösterilir. Mevcut taşlar, ses, çip ve seviye sistemi korunur.','testedSource':'2208838b2fe50d2b5addb3dd9d07c2bad9ac7d16','buildRun':40386052388,'liveAcceptanceRun':40379934754}
           Path('android-update.json').write_text(json.dumps(feed,ensure_ascii=False,indent=2)+'\n')
-          Path('release-notes.md').write_text('NgelX 1.0.349 / Build579\n\nGelen Ludo davetinde Katıl ile açılışı kilitleyen sonsuz tahta çizimi düzeltildi. Eksik oda verisi, bekleyen katılım isteği ve geri çıkış için otomatik regresyon testleri eklendi. Build578 oyun özellikleri korunur.\n\nAndroid CI, aynı imza, paket/ABI, 142 sunucu testi ve gerçek Firebase/Cloudflare API kontrolleri doğrulandı. İki fiziksel Android cihazla uçtan uca test yapılmış değildir; görsel/oyun/ses kabulü uzaktan tamamlanmış sayılmaz. Ödüllü reklamlar kapalıdır; moderatör yetkisi normal kullanıcılara verilmez.\n\nMevcut uygulamanın üzerine kurulur; uygulamayı silmeyin.\n')
+          Path('release-notes.md').write_text('NgelX 1.0.349 / Build579\n\nGelen Ludo davetinde Katıl ile açılışı kilitleyen sonsuz tahta çizimi düzeltildi. Eksik oda verisi, bekleyen katılım isteği ve geri çıkış için otomatik regresyon testleri eklendi. Auto/poll sürüm çakışmaları toparlanır; ağ hatası ile oyun hatası ayrılır. Aynı hamle tekrar gönderilmez. Build578 oyun özellikleri korunur.\n\nAndroid CI, aynı imza, paket/ABI, 142 sunucu testi ve gerçek Firebase/Cloudflare API kontrolleri doğrulandı. İki fiziksel Android cihazla uçtan uca test yapılmış değildir; görsel/oyun/ses kabulü uzaktan tamamlanmış sayılmaz. Ödüllü reklamlar kapalıdır; moderatör yetkisi normal kullanıcılara verilmez.\n\nMevcut uygulamanın üzerine kurulur; uygulamayı silmeyin.\n')
           print('Prepared exact APK bytes:',len(raw),'SHA-256:',digest)
           PY
       - name: Preserve tested source using trusted release workflow metadata
@@ -72,14 +71,14 @@ jobs:
           import json
           from pathlib import Path
           trusted=next(e['sha'] for e in json.load(open('trusted-tree.json'))['tree'] if e['path']=='.github')
-          tree={'base_tree':'91d851208364b6e25895f113d893d49f45c908ef','tree':[{'path':'.github','mode':'040000','type':'tree','sha':trusted},{'path':'RELEASE579_MANIFEST.json','mode':'100644','type':'blob','content':Path('android-update.json').read_text()}]}
+          tree={'base_tree':'2208838b2fe50d2b5addb3dd9d07c2bad9ac7d16','tree':[{'path':'.github','mode':'040000','type':'tree','sha':trusted},{'path':'RELEASE579_MANIFEST.json','mode':'100644','type':'blob','content':Path('android-update.json').read_text()}]}
           Path('release-tree.json').write_text(json.dumps(tree))
           PY
           gh api --method POST repos/Nnentx/Ngelx/git/trees --input release-tree.json > release-tree-result.json
           python3 - <<'PY'
           import json
           from pathlib import Path
-          Path('release-commit.json').write_text(json.dumps({'message':'Build579 verified APK source snapshot; physical device acceptance not claimed','tree':json.load(open('release-tree-result.json'))['sha'],'parents':['91d851208364b6e25895f113d893d49f45c908ef']}))
+          Path('release-commit.json').write_text(json.dumps({'message':'Build579 verified APK source snapshot; physical device acceptance not claimed','tree':json.load(open('release-tree-result.json'))['sha'],'parents':['2208838b2fe50d2b5addb3dd9d07c2bad9ac7d16']}))
           PY
           gh api --method POST repos/Nnentx/Ngelx/git/commits --input release-commit.json > release-commit-result.json
       - name: Publish exact verified APK and verify anonymous download bytes
