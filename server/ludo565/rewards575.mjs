@@ -9,7 +9,8 @@ export async function ludoWallet575(store,uid){
  const doc=await store.get(await key(uid));
  const w=doc?.room??initial();
  return {chips:w.chips??0,gems:w.gems??0,xp:w.xp??0,
-  level:w.level??1,wins:w.wins??0,losses:w.losses??0,streak:w.streak??0};
+  level:w.level??1,wins:w.wins??0,losses:w.losses??0,streak:w.streak??0,
+  receivedGifts:w.giftsReceived??{}};
 }
 export async function settleMatch575(store,uid,room,now){
  if(room?.status!=='finished'||!room?.id||(room.expiresAt??Infinity)<=now)return ludoWallet575(store,uid);
