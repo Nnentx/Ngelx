@@ -18,7 +18,7 @@ Yeni kod, testli Build574 paketinin üstüne `tools/apply_build575_ludo.py` ile 
 - Ödül sandığı: sekiz saatlik sunucu bekleme süresi, çip ve XP ödülü, çifte tahsilat engeli.
 - "Puanlarım": kullanıcıya özel okunur bakiyeler; çip, elmas, XP, seviye, maç/galibiyet/mağlubiyet ve seri. Başkasının hesabına bakarak kredi kazanmak mümkün değildir.
 - Rövanş: biten maçtaki eski oyuncular için tek yeni oda, tam dolunca maç başlatma.
-- Oyuncunun avatarına dokununca profil ve sunucudan alınan hediye kataloğu; 20/40/100 çiplik sanal Çiçek/Kalp/Taç hediyeleri. Firestore çok belgeli atomik işlemle gönderenin çipi düşer, alıcının hediye koleksiyonu artar ve oda etkinliğine eklenir. Aynı requestId tekrar ücretlenmez, fiyatlar kullanıcıdan alınmaz. Bir oda için gönderen başına en çok 30 hediye ve 3 saniye bekleme uygulanır.
+- Oyuncunun avatarına dokununca profil ve sunucudan alınan, telefon ekranında kaydırılabilir **16 çeşit hediye kataloğu** (gül, kalp, taç, kahve, beğeni, domates, pizza, su kovası, saat, alev, horoz, terlik, tava, pompa, yumurta ve balon; 10–100 çip arası). Firestore çok belgeli atomik işlemle gönderenin çipi düşer, alıcının hediye koleksiyonu artar ve oda etkinliğine eklenir. Aynı requestId tekrar ücretlenmez, fiyatlar kullanıcıdan alınmaz. Bir oda için gönderen başına en çok 30 hediye ve 3 saniye bekleme uygulanır.
 - Hediye kataloğu ve alıcının koleksiyon sayısı sunucu okuma işlemiyle görüntülenir. Sıradan sohbet emoji sistemi korunur.
 - Ludo içi Engelle/Engeli kaldır ve Şikâyet et paneli: sadece aynı odada bulunan gerçek oyuncular. Engelli ilişkide ücretli hediyeler reddedilir ve gönderenin bakiyesi değişmez. Şikâyet bir maç/hedef/raporlayan için tek kez, sunucu kayıtlarına `pending` olarak yazılır; **henüz bir insan moderatöre otomatik dağıtım yapılmıyor.** Bu engel genel NgelX arkadaşlık veya sohbet ilişkisini değiştirmez.
 - AdMob SSV hazırlığı (sunucuda, **gerçek reklamlar henüz kapalı**): Google P-256/ECDSA-SHA256 imzası, DER doğrulaması ve orijinal query metni bozulmadan doğrulama; sabit reklam birimi, zaman ve tekil transaction id kontrolü; yalnızca kimliği doğrulanmış oyuncunun 15 dakikalık reklam oturumu için 30 sanal çip. Firestore atomik işlemle oturum kullanılır, tekrar ödüllendirme engellenir. Uygulama `ad_status` ile yalnızca sunucunun onayladığı kazancı sorgulayabilir. Sunucu `LUDO_ADMOB_AD_UNIT` ayarı olmadan `ad_session` ve SSV çağrılarını reddeder.
@@ -37,6 +37,9 @@ Yeni kod, testli Build574 paketinin üstüne `tools/apply_build575_ludo.py` ile 
 - Google AdMob SSV: doğrulanmış ödül sorgulaması ve gerçek kimliklerle **isteğe bağlı** Flutter Mobile Ads entegrasyonu; gerekli publisher değerleri yokken reklam kapalı kalır.
 - Node regresyon testleri: oyun, ödül ekonomisi, hediye aktarımı, sosyal engelleme ve güvenli reklam doğrulaması dahil 99/99 (son GitHub eyleminde).
 - Android inceleme ve tasarım testi ayrı CI'da yürütülür; son sürüm için başarılı bitiş ve fiziksel cihaz onayı beklenir.
+
+- Güvenli reklam oturumu: aynı kullanıcı 15 dakikalık oturum açıkken yeni token üretemez, tekrar dokunma aynı token'ı döndürür; günlük 20 oturum denemesi sınırı Firestore CAS ile tutulur ve gerçek ödül alınınca token tüketilir. Sahte yerel reklam tamamlama mesajları bakiye değiştiremez.
+- GitHub Actions son kod değişikliklerini seri denemelerle inceler; eskimiş denemeler iptal edilir, Flutter paket/analiz/widget adımları ayrı ve süre sınırlıdır.
 
 ## Bu sürümde henüz **tamamlandı** denmeyecekler
 1. Gerçek telefonda 320/360/393/440 genişliklerinde ekran görüntüsü karşılaştırması ve taşların referansla görsel kalite onayı. Widget testleri gerçek cihaz testi yerine geçmez.
