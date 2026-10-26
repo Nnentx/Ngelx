@@ -573,6 +573,8 @@ swap('required this.mine,required this.onLongPress});',
 swap('onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>Ngelx565LudoRoom(id:id))),',
      'key:const ValueKey(\'ludo-invite-join\'),onPressed:onJoin??()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>Ngelx565LudoRoom(id:id))),')
 # A pending request must never trap the user behind the room route.
+# Keep the invitation title inside the card at larger text widths too.
+swap("Text('Ludo daveti',style:TextStyle(color:Colors.white,fontSize:20,fontWeight:FontWeight.w900))]),", "Expanded(child:Text('Ludo daveti',maxLines:1,overflow:TextOverflow.ellipsis,style:TextStyle(color:Colors.white,fontSize:20,fontWeight:FontWeight.w900)))]),")
 swap('  if(game.busy)return;\n  _asking=true;',"""  if(game.busy){await _close();return;}
   _asking=true;""")
 
