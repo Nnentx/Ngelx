@@ -105,3 +105,28 @@ test('authenticated gift endpoint debits coins and shows recipient profile items
  const bad=await send('outsider',{action:'gift',id:r.id,to:'b',kind:'flower',requestId:'gift-http002'});
  assert.equal(bad.status,403);
 });
+
+test('simultaneous gift retries charge only once and deliver one item',async()=>{
+ const db=mock(),r=await room(db);
+ await claimDaily575(db,'a',t);
+ const gift={to:'b',kind:'heart',requestId:'gift-concurrent01'};
+ const [one,two]=await Promise.all([
+  sendLudoGift575(db,r.id,'a',gift,t+5000),
+  sendLudoGift575(db,r.id,'a',gift,t+5000),
+ ]);
+ assert.equal([one.sent,two.sent].filter(Boolean).length,1);
+ assert.equal((await ludoWallet575(db,'a')).chips,10);
+ assert.equal((await db.get(r.id)).room.gifts.length,1);
+ const wallets=Array.from(db.db.values()).map(x=>x.room);
+ assert.equal(wallets.filter(x=>x.giftsReceived?.heart===1).length,1);
+});
+
+test('transaction failure leaves sender chips and recipient collection unchanged',async()=>{
+ const db=mock(),r=await room(db);
+ await claimDaily575(db,'a',t);
+ const failing={get:db.get.bind(db),putMany:async()=>{throw Object.assign(Error('upstream down'),{status:503});}};
+ await assert.rejects(sendLudoGift575(failing,r.id,'a',
+  {to:'b',kind:'heart',requestId:'gift-error001'},t+5000),/upstream down/);
+ assert.equal((await ludoWallet575(db,'a')).chips,50);
+ assert.equal((await db.get(r.id)).room.gifts,undefined);
+});
