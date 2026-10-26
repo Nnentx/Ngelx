@@ -1,0 +1,73 @@
+name: NgelX Build578 isolated Cloudflare Firebase acceptance
+on:
+  push:
+    branches: [feat/build575-ludo-auto-premium-rewards]
+    paths:
+      - '.github/workflows/NgelX-BUILD576-STAGING.yml'
+      - 'tools/build576_staging_smoke.mjs'
+permissions:
+  contents: read
+concurrency:
+  group: ngelx-build576-staging
+  cancel-in-progress: false
+jobs:
+  isolated-acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      FIREBASE_SERVICE_ACCOUNT_NGELX_44EED: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_NGELX_44EED }}
+      FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+      LIVEKIT_API_KEY: ${{ secrets.LIVEKIT_API_KEY }}
+      LIVEKIT_API_SECRET: ${{ secrets.LIVEKIT_API_SECRET }}
+      LIVEKIT_SERVER_URL: ${{ secrets.LIVEKIT_SERVER_URL }}
+      CLOUDFLARE_SEND_METRICS: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify isolated target and required configuration without printing credentials
+        run: |
+          node --input-type=module - <<'JS'
+          import fs from 'node:fs';
+          for(const key of ['CLOUDFLARE_API_TOKEN','CLOUDFLARE_ACCOUNT_ID','LIVEKIT_API_KEY','LIVEKIT_API_SECRET','LIVEKIT_SERVER_URL'])if(!process.env[key])throw Error('Missing required configuration: '+key);
+          const raw=process.env.FIREBASE_SERVICE_ACCOUNT_NGELX_44EED||process.env.FIREBASE_SERVICE_ACCOUNT;
+          if(!raw)throw Error('Missing Firebase service identity');
+          let service;try{service=JSON.parse(raw);}catch{service=JSON.parse(Buffer.from(raw,'base64').toString());}
+          if(service.project_id!=='ngelx-44eed')throw Error('Wrong Firebase project');
+          const name='ngelx-ludo576-qa-'+process.env.GITHUB_RUN_ID;
+          if(!/^ngelx-ludo576-qa-[0-9]+$/.test(name))throw Error('Unsafe staging name');
+          const config='name = "'+name+'"\nmain = "src/index.mjs"\ncompatibility_date = "2026-10-22"\nworkers_dev = true\n[vars]\nFIREBASE_PROJECT_ID = "ngelx-44eed"\n';
+          fs.writeFileSync('cloudflare/live-moderation/wrangler.build576-qa.toml',config);
+          const secrets={GOOGLE_SERVICE_ACCOUNT:JSON.stringify(service)};
+          for(const key of ['LIVEKIT_API_KEY','LIVEKIT_API_SECRET','LIVEKIT_SERVER_URL'])secrets[key]=process.env[key];
+          fs.writeFileSync(process.env.RUNNER_TEMP+'/build576-stage-secrets.json',JSON.stringify(secrets),{mode:0o600});
+          console.log('Isolated staging configuration ready; production hostname and configuration unchanged.');
+          JS
+      - name: Run backend and authentication tests
+        run: node --test server/ludo565/*.test.mjs cloudflare/live-moderation/test/*.test.mjs cloudflare/call-push/test/auth.test.mjs
+      - name: Deploy isolated temporary Worker only
+        working-directory: cloudflare/live-moderation
+        run: |
+          npx --yes wrangler@4 deploy --config wrangler.build576-qa.toml
+          npx --yes wrangler@4 secret bulk "$RUNNER_TEMP/build576-stage-secrets.json" --config wrangler.build576-qa.toml
+      - name: Test real Firebase accounts and Firestore CAS on isolated Worker
+        env:
+          NGELX_GAME_ENDPOINT: https://ngelx-ludo576-qa-${{ github.run_id }}.alihancaglar76.workers.dev/ludo
+        run: node tools/build576_staging_smoke.mjs
+      - name: Always remove the exact temporary Worker and local secret file
+        if: always()
+        run: |
+          node --input-type=module - <<'JS'
+          import fs from 'node:fs';
+          fs.rmSync(process.env.RUNNER_TEMP+'/build576-stage-secrets.json',{force:true});
+          if(!process.env.CLOUDFLARE_API_TOKEN||!process.env.CLOUDFLARE_ACCOUNT_ID)process.exit(0);
+          const name='ngelx-ludo576-qa-'+process.env.GITHUB_RUN_ID;
+          if(!/^ngelx-ludo576-qa-[0-9]+$/.test(name))throw Error('Unsafe cleanup target');
+          const response=await fetch('https://api.cloudflare.com/client/v4/accounts/'+encodeURIComponent(process.env.CLOUDFLARE_ACCOUNT_ID)+'/workers/scripts/'+name,{method:'DELETE',headers:{authorization:'Bearer '+process.env.CLOUDFLARE_API_TOKEN},signal:AbortSignal.timeout(30000)});
+          const data=await response.json();
+          if(!data.success&&response.status!==404&&!data.errors?.some(e=>e.code===10007))throw Error('Temporary Worker cleanup failed: HTTP '+response.status);
+          console.log('Temporary Worker removed or absent; production Worker untouched.');
+          JS

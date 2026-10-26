@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "package": "com.nnentx.ngelx_app",
+  "abi": "arm64-v8a",
+  "version": "1.0.344",
+  "build": 574,
+  "size": 48670786,
+  "sha256": "45c8065d7c063a5aa0f9b3cb4bf4a0e9a1ab9e02c48d8ea39c45fcd8102d4391",
+  "url": "https://ngelxsocial.com/downloads/NgelX-1.0.344-Build574.apk",
+  "notes": "Ludo: Tek oynanabilir taş otomatik ilerler; birden fazla taşta seçim sende kalır. Power modunda +1 ödülü toplanınca başka uygun kareye taşınır. Daha dolgun parlak taşlar, küçük artı simgeleri, sade alt kontroller. Önceki uygulama özellikleri korunur.",
+  "testedSource": "21bc6d539331d456b4bbdf315940a5fe917e913d",
+  "buildRun": 40291524551
+}

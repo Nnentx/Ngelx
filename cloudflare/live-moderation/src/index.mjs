@@ -1,4 +1,5 @@
 import {createLudo565,ludoStore565} from './ludo565.mjs';
+import {ludoAdmobEndpoint575} from '../../../server/ludo565/admob575.mjs';
 import {communityDeleteStorage,createCommunityDelete556} from './community-delete.mjs';
 import {verifyFirebaseIdToken} from '../../call-push/src/auth.mjs';
 import {googleIo} from '../../call-push/src/google.mjs';
@@ -8,15 +9,36 @@ import {storage} from './storage.mjs';
 const json=(body,status)=>new Response(JSON.stringify(body),{status,
   headers:{'content-type':'application/json','cache-control':'no-store'}});
 export const configured=env=>['LIVEKIT_API_KEY','LIVEKIT_API_SECRET','LIVEKIT_SERVER_URL','GOOGLE_SERVICE_ACCOUNT'].every(k=>typeof env[k]==='string'&&env[k].length>0);
+const ludoConfigured=env=>configured(env)&&env.FIREBASE_PROJECT_ID==='ngelx-44eed';
+const validRewardedAdUnit=env=>typeof env.LUDO_ADMOB_AD_UNIT==='string'&&
+  /^ca-app-pub-[0-9]{16}\/[0-9]{10}$/.test(env.LUDO_ADMOB_AD_UNIT);
 export default {async fetch(request,env){
   const path=new URL(request.url).pathname;
-  if(path==='/health'&&request.method==='GET')return json({ok:configured(env),service:'ngelx-live-moderation',features:['community_delete556','ludo565','ludo568','ludo569']},configured(env)?200:503);
+  if(path==='/health'&&request.method==='GET'){
+   const coreReady=configured(env);
+   const ludoReady=ludoConfigured(env);
+   return json({ok:coreReady,service:'ngelx-live-moderation',
+    features:['community_delete556','ludo565','ludo568','ludo569',
+     'ludo575_auto','ludo575_chips','ludo575_gifts','ludo575_reports'],
+    ludo575:{sourceVersion:575,clientBuild:578,configured:ludoReady,
+     rewardedAdsConfigured:ludoReady&&validRewardedAdUnit(env),
+     moderationAllowlistConfigured:ludoReady&&typeof env.LUDO_MODERATOR_UIDS==='string'&&
+       env.LUDO_MODERATOR_UIDS.split(',').some(x=>x.trim().length>0)}},coreReady?200:503);
+  }
+  if(path==='/ludo/admob/ssv'){
+    if(!ludoConfigured(env))return json({error:'service_not_configured'},503);
+    if(!validRewardedAdUnit(env))return json({error:'ads_not_configured'},503);
+    return ludoAdmobEndpoint575({store:ludoStore565(env),env})(request);
+  }
   if(path==='/ludo'){
     if(request.method!=='POST')return json({error:'method_not_allowed'},405);
     if(!/^Bearer [^\s]+$/.test(request.headers.get('authorization')??''))return json({error:'unauthorized'},401);
-    if(!configured(env))return json({error:'service_not_configured'},503);
+    if(!ludoConfigured(env))return json({error:'service_not_configured'},503);
     const identity=googleIo(env),db=storage(env);
-    return createLudo565({store:ludoStore565(env),profile:uid=>identity.getUser(uid),limit:(uid,action)=>['create','bot','match'].includes(action)?db.rateLimit('ludo565-create:'+uid,4):Promise.resolve(true),verify:async()=>{const claims=await verifyFirebaseIdToken(request,env);await identity.checkAuth(claims);return claims;}})(request);
+    return createLudo565({store:ludoStore565(env),adEnabled:validRewardedAdUnit(env),
+      isModerator:async uid=>typeof env.LUDO_MODERATOR_UIDS==='string'&&
+       env.LUDO_MODERATOR_UIDS.split(',').map(x=>x.trim()).filter(Boolean).includes(uid),
+      profile:uid=>identity.getUser(uid),limit:(uid,action)=>['create','bot','match'].includes(action)?db.rateLimit('ludo565-create:'+uid,4):Promise.resolve(true),verify:async()=>{const claims=await verifyFirebaseIdToken(request,env);await identity.checkAuth(claims);return claims;}})(request);
   }
   if(path!=='/moderate'&&path!=='/community/delete')return json({error:'not_found'},404);
   if(request.method!=='POST')return json({error:'method_not_allowed'},405);

@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "package": "com.nnentx.ngelx_app",
+  "abi": "arm64-v8a",
+  "version": "1.0.346",
+  "build": 576,
+  "size": 48747540,
+  "sha256": "37c338b83bc290e3b7193e94f1153a0a6db253622695225a47dc4295f80cc96f",
+  "url": "https://github.com/Nnentx/Ngelx/releases/download/v1.0.346-build576/NgelX-1.0.346-Build576.apk",
+  "notes": "Ludo: Dolgun ve parlak taşlar; zar, taş hareketi, taş kırma ve oyun sonu sesleri; kalıcı ses açma/kapatma. Yeni oyuncuya tek seferlik 5.000 çip. Mevcut NgelX yapısı korunur.",
+  "testedSource": "0552e4b1eeb99bcb261879d1fc12180fea4a7ad6",
+  "buildRun": 40352800633
+}

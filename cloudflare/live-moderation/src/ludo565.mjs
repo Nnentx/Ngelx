@@ -1,16 +1,37 @@
 import {createRoom,act,LudoError,legal,secureRoll} from '../../../server/ludo565/engine.mjs';
 import {accessToken} from '../../call-push/src/google.mjs';
 import {chooseBotToken572} from '../../../server/ludo565/strategy572.mjs';
+import {ensureStarter575,ludoWallet575,settleMatch575,claimDaily575,claimChest575} from '../../../server/ludo565/rewards575.mjs';
+import {sendLudoGift575,ludoGiftCatalog575} from '../../../server/ludo565/gifts575.mjs';
+import {ludoBlock575,ludoReport575} from '../../../server/ludo565/safety575.mjs';
+import {ludoModeratorQueue575,ludoModeratorResolve575,moderationDay575} from '../../../server/ludo565/moderation575.mjs';
+import {createAdSession575,adRewardStatus575} from '../../../server/ludo565/admob575.mjs';
 export function ludoStore565(env,{fetcher=fetch,authorize=()=>accessToken(env)}={}){
  if(env.FIREBASE_PROJECT_ID!=='ngelx-44eed')throw Error('Wrong project');
  const base=`https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID}/databases/(default)/documents/_ngelx_ludo565/`;
- async function api(id,options={}){const r=await fetcher(base+id,{...options,headers:{authorization:'Bearer '+await authorize(),'content-type':'application/json'},signal:AbortSignal.timeout(8000)});if(r.status===404)return null;if(r.status===409||r.status===412)throw new LudoError('state_changed',409);if(!r.ok)throw Error('Datastore unavailable');return r.json();}
+ const safeDocumentId=id=>typeof id==='string'&&/^[a-zA-Z0-9_-]{1,180}$/.test(id);
+ const checkDocumentId=id=>{if(!safeDocumentId(id))throw new LudoError('invalid_document_id',400);return id;};
+ async function api(id,options={},suffix=''){checkDocumentId(id);const r=await fetcher(base+id+suffix,{...options,headers:{authorization:'Bearer '+await authorize(),'content-type':'application/json'},signal:AbortSignal.timeout(8000)});if(r.status===404){if((options.method??'GET')==='GET')return null;throw new LudoError('state_changed',409);}if(r.status===409||r.status===412)throw new LudoError('state_changed',409);if(!r.ok)throw Error('Datastore unavailable');return r.json();}
  return {
   async get(id){const d=await api(id);return d?{room:JSON.parse(d.fields.state.stringValue),stamp:d.updateTime}:null;},
-  async put(id,room,stamp){return api(id+'?'+(stamp?'currentDocument.updateTime='+encodeURIComponent(stamp):'currentDocument.exists=false'),{method:'PATCH',body:JSON.stringify({fields:{state:{stringValue:JSON.stringify(room)}}})});},
+  async put(id,room,stamp){return api(id,{method:'PATCH',body:JSON.stringify({fields:{state:{stringValue:JSON.stringify(room)}}})},'?'+(stamp?'currentDocument.updateTime='+encodeURIComponent(stamp):'currentDocument.exists=false'));},
+  async putMany(changes){
+   if(!Array.isArray(changes)||changes.length<2||changes.length>3||new Set(changes.map(x=>x.id)).size!==changes.length)throw new LudoError('invalid_transaction',400);
+   const root='projects/'+env.FIREBASE_PROJECT_ID+'/databases/(default)/documents/_ngelx_ludo565/';
+   const url='https://firestore.googleapis.com/v1/projects/'+env.FIREBASE_PROJECT_ID+'/databases/(default)/documents:commit';
+   for(const x of changes)checkDocumentId(x.id);
+   const writes=changes.map(x=>({update:{name:root+x.id,fields:{state:{stringValue:JSON.stringify(x.room)}}},
+    currentDocument:x.stamp?{updateTime:x.stamp}:{exists:false}}));
+   const response=await fetcher(url,{method:'POST',
+    headers:{authorization:'Bearer '+await authorize(),'content-type':'application/json'},
+    body:JSON.stringify({writes}),signal:AbortSignal.timeout(8000)});
+   if(response.status===409||response.status===412)throw new LudoError('state_changed',409);
+   if(!response.ok)throw new Error('Gift transaction unavailable');
+   return response.json();
+  },
  };
 }
-export function createLudo565({verify,profile,store,limit=async()=>true,now=()=>Date.now(),uuid=()=>String(100000+crypto.getRandomValues(new Uint32Array(1))[0]%900000),roll}){
+export function createLudo565({verify,profile,store,limit=async()=>true,isModerator=async()=>false,adEnabled=false,now=()=>Date.now(),uuid=()=>String(100000+crypto.getRandomValues(new Uint32Array(1))[0]%900000),roll}){
  return async function(request){
   const json=(data,status=200)=>Response.json(data,{status,headers:{'cache-control':'no-store'}});
   if(request.method!=='POST')return json({error:'method_not_allowed'},405);
@@ -24,17 +45,28 @@ export function createLudo565({verify,profile,store,limit=async()=>true,now=()=>
    if(!b||typeof b!=='object'||Array.isArray(b))return json({error:'invalid_request'},400);
    let user;try{user=await verify(request);}catch{return json({error:'unauthorized'},401);}
    const uid=user.sub;if(!uid)return json({error:'unauthorized'},401);
+   if(['wallet','create','bot','join','match','sync','start','roll','move','auto','daily_reward','chest_reward','gift','block','rematch'].includes(b.action))await ensureStarter575(store,uid);
+   const withWallet575=async(room)=>{
+    const wallet=await settleMatch575(store,uid,room,now());
+    const blocked=new Set(wallet.blockedUsers??[]);
+    return {...room,...wallet,
+     // Hide messages and in-room gift notifications from locally blocked players.
+     chat:Array.isArray(room.chat)?room.chat.filter(m=>!blocked.has(m.uid)):room.chat,
+     gifts:Array.isArray(room.gifts)?room.gifts.filter(g=>!blocked.has(g.from)):room.gifts,
+     players:Array.isArray(room.players)?
+      room.players.map(p=>p.uid===uid?{...p,level:wallet.level}:p):room.players};
+   };
    let matchKey;
    if(b.action==='match'&&b.requestId!==undefined){
     if(typeof b.requestId!=='string'||!/^[a-zA-Z0-9_-]{16,100}$/.test(b.requestId))return json({error:'invalid_request'},400);
     const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(uid+':'+b.requestId));
     matchKey='match568_'+Array.from(new Uint8Array(hash),x=>x.toString(16).padStart(2,'0')).join('');
     const saved=await store.get(matchKey),prior=saved?await store.get(saved.room.id):null;
-    if(prior&&prior.room.players.some(p=>p.uid===uid)&&prior.room.expiresAt>now())return json({room:prior.room});
+    if(prior&&prior.room.players.some(p=>p.uid===uid)&&prior.room.expiresAt>now())return json({room:await withWallet575(prior.room)});
    }
    const matched=async(room,status=200)=>{
     if(matchKey){const prior=await store.get(matchKey);if(!prior)try{await store.put(matchKey,{id:room.id,revision:0});}catch(e){if(e.status!==409)throw e;}}
-    return json({room},status);
+    return json({room:await withWallet575(room)},status);
    };
    let createId;
    if(['create','bot'].includes(b.action)&&b.requestId!==undefined){
@@ -42,9 +74,30 @@ export function createLudo565({verify,profile,store,limit=async()=>true,now=()=>
     const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(uid+':'+b.requestId));
     createId=String(100000+new DataView(digest).getUint32(0)%900000);
     const prior=await store.get(createId);
-    if(prior){if(prior.room.owner!==uid)return json({error:'state_changed'},409);return json({room:prior.room});}
+    if(prior){if(prior.room.owner!==uid)return json({error:'state_changed'},409);return json({room:await withWallet575(prior.room)});}
    }
    if(!await limit(uid,b.action))return json({error:'slow_down'},429);
+   if(b.action==='moderation_queue'||b.action==='moderation_resolve'){
+    // Explicit deployment allowlist, checked AFTER Firebase token verification.
+    if(!await isModerator(uid))return json({error:'moderator_only'},403);
+    if(b.action==='moderation_queue')
+     return json({room:await ludoModeratorQueue575(store,b.day??moderationDay575(now()),now(),b.page??0)});
+    return json({room:await ludoModeratorResolve575(store,b.reportId,uid,b.decision,now())});
+   }
+   if(b.action==='wallet')return json({room:await ludoWallet575(store,uid)});
+   if(b.action==='ad_session'){
+    if(!adEnabled)return json({error:'ads_not_configured'},503);
+    return json({room:await createAdSession575(store,uid,now())});
+   }
+   if(b.action==='ad_status'){
+    if(!adEnabled)return json({error:'ads_not_configured'},503);
+    return json({room:await adRewardStatus575(store,uid,b.token,now())});
+   }
+   if(b.action==='gift_catalog')return json({room:{gifts:ludoGiftCatalog575}});
+   if(b.action==='daily_reward'||b.action==='chest_reward'){
+    const reward=b.action==='daily_reward'?await claimDaily575(store,uid,now()):await claimChest575(store,uid,now());
+    return json({room:reward});
+   }
    if(b.action==='match'){
     if(![2,4].includes(b.capacity)||!['classic','power'].includes(b.mode))return json({error:'invalid_settings'},400);
     const key='queue568_'+b.mode+'_'+b.capacity;
@@ -84,14 +137,65 @@ export function createLudo565({verify,profile,store,limit=async()=>true,now=()=>
      room=act(room,uid,{action:'start',revision:room.revision,requestId:'bot_start568'},now(),roll);
     }
     try{await store.put(id,room);}catch(error){
-     if(createId&&error.status===409){const prior=await store.get(id);if(prior?.room?.owner===uid)return json({room:prior.room});}
+     if(createId&&error.status===409){const prior=await store.get(id);if(prior?.room?.owner===uid)return json({room:await withWallet575(prior.room)});}
      throw error;
     }
-    return json({room},201);
+    return json({room:await withWallet575(room)},201);
    }
    if(!/^(?:[0-9]{6}|[A-F0-9]{16})$/.test(b.id??''))return json({error:'invalid_room'},400);
    const existing=await store.get(b.id);if(!existing)return json({error:'room_not_found'},404);
    if(existing.room.expiresAt<=now())return json({error:'room_expired'},410);
+   if(b.action==='block'){
+    const action=await ludoBlock575(store,b.id,uid,b.to,b.blocked,now());
+    return json({room:action});
+   }
+   if(b.action==='report'){
+    const action=await ludoReport575(store,b.id,uid,b.to,b.reason,now());
+    return json({room:action});
+   }
+   if(b.action==='gift'){
+    const result=await sendLudoGift575(store,b.id,uid,b,now());
+    const room=await withWallet575({...result.room,
+      spectatorCount:result.room.spectatorCount??0,
+      giftSent:result.sent,giftAlreadySent:result.alreadySent});
+    return json({room});
+   }
+   if(b.action==='rematch'){
+    const original=existing.room;
+    if(original.status!=='finished'||original.botGame||!original.players.some(p=>p.uid===uid&&!p.left))return json({error:'not_available'},409);
+    const ref='rematch575_'+original.id;
+    for(let attempt=0;attempt<6;attempt++){
+     let pointer=await store.get(ref);
+     let target=pointer?await store.get(pointer.room.id):null;
+     if(!target||target.room.expiresAt<=now()){
+      const p=await profile(uid),id=uuid();
+      if(await store.get(id))continue;
+      let room=createRoom({uid,id,name:String(p?.displayName??p?.username??'Oyuncu'),
+       photo:String(p?.photoUrl??''),capacity:original.capacity,team:original.team,mode:original.mode},now());
+      room.rematchOf=original.id;
+      try{
+       await store.put(id,room);
+       await store.put(ref,{id,revision:(pointer?.room.revision??0)+1},pointer?.stamp);
+       target=await store.get(id);
+      }catch(e){if(e.status===409)continue;throw e;}
+     }
+     let room=target.room;
+     if(!room.players.some(p=>p.uid===uid)){
+      const profileData=await profile(uid);
+      try{
+       room=act(room,uid,{action:'join',name:String(profileData?.displayName??profileData?.username??'Oyuncu'),
+        photo:String(profileData?.photoUrl??'')},now(),roll);
+       if(room.players.length===room.capacity){
+        room=act(room,room.owner,{action:'start',revision:room.revision,
+         requestId:'rematch_start575'},now(),roll);
+       }
+       await store.put(room.id,room,target.stamp);
+      }catch(e){if(e.status===409)continue;throw e;}
+     }
+     return json({room:await withWallet575(room)});
+    }
+    return json({error:'state_changed'},409);
+   }
    if(b.action==='join'){const p=await profile(uid);b={...b,name:String(p?.displayName??p?.username??'Oyuncu'),photo:String(p?.photoUrl??'')};}
    // Spectators use separate presence documents and never mutate the game revision.
    const presenceId='view570_'+b.id;
@@ -121,7 +225,7 @@ export function createLudo565({verify,profile,store,limit=async()=>true,now=()=>
     room=act(room,bot.uid,{...move,revision:room.revision,requestId:'bot568_'+room.revision},now(),roll);
    }
    if(room.revision!==existing.room.revision)await store.put(b.id,room,existing.stamp);
-   return json({room:{...room,spectatorCount:await viewerCount()}});
+   return json({room:await withWallet575({...room,spectatorCount:await viewerCount()})});
   }catch(e){return json({error:e instanceof LudoError?e.message:'temporarily_unavailable'},e.status??503);}
  };
 }

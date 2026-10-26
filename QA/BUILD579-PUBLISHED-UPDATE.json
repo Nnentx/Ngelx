@@ -1,0 +1,14 @@
+{
+  "schema": 1,
+  "package": "com.nnentx.ngelx_app",
+  "abi": "arm64-v8a",
+  "version": "1.0.349",
+  "build": 579,
+  "size": 49463948,
+  "sha256": "b84cdaa351abb66fe9e732066e5dd8363b4c0d78fb16a6445df03289bfa52de3",
+  "url": "https://github.com/Nnentx/Ngelx/releases/download/v1.0.349-build579/NgelX-1.0.349-Build579.apk",
+  "notes": "Ludo davetindeki Katıl düğmesine basınca uygulamayı donduran sonsuz çizim döngüsü düzeltildi. Oda yüklenirken geri çıkış çalışır. Auto sırasında güncelleme çakışmaları otomatik toparlanır; yalnızca gerçek ve tekrarlayan bağlantı hatalarında yeniden bağlanma gösterilir. Mevcut taşlar, ses, çip ve seviye sistemi korunur.",
+  "testedSource": "2208838b2fe50d2b5addb3dd9d07c2bad9ac7d16",
+  "buildRun": 40386052388,
+  "liveAcceptanceRun": 40379934754
+}
