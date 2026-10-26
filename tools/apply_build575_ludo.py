@@ -68,7 +68,11 @@ swap("const Center(child:Text('Arkadaşlarınla aynı masada',style:TextStyle(co
   ]),
   if(giftMessage575.isNotEmpty)Padding(padding:const EdgeInsets.only(top:4),child:Text(giftMessage575,textAlign:TextAlign.center,style:const TextStyle(color:Color(0xFFFFE28D),fontWeight:FontWeight.w700,fontSize:12))),
   const SizedBox(height:15),""")
-swap(' Future<void> _autoSingleMove574()async{',""" bool _rematching575=false;
+swap(' Future<void> _autoSingleMove574()async{',""" void _tapAuto575(bool active){
+  if(widget.watch||game.busy||!game.playing||game.seat<0)return;
+  unawaited(game.perform('auto',{'enabled':!active}));
+ }
+ bool _rematching575=false;
  Future<void> _rematch575()async{
   if(_rematching575||widget.watch)return;
   _rematching575=true;
@@ -89,11 +93,6 @@ swap("Ngelx567GameButton(label:'Lobiye dön',gold:true,onPressed:_close),",
     const SizedBox(height:8),
    ],
    Ngelx567GameButton(label:'Lobiye dön',gold:true,onPressed:_close),""")
-""" void _tapAuto575(bool active){
-  if(widget.watch||game.busy||!game.playing||game.seat<0)return;
-  unawaited(game.perform('auto',{'enabled':!active}));
- }
- Future<void> _autoSingleMove574()async{""")
 swap("final inventory=seat<0?<String,dynamic>{}:Map<String,dynamic>.from((room['power'] as List)[seat] as Map);",
 """final inventory=seat<0?<String,dynamic>{}:Map<String,dynamic>.from((room['power'] as List)[seat] as Map);
   final autoSeats=room['autoSeats'];
