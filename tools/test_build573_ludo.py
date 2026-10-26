@@ -2,7 +2,7 @@ from pathlib import Path
 from collections import Counter
 s=Path('app/lib/build565_ludo.dart').read_text()
 checks={
- 'board takes wider screen':'aspectRatio:1,child:frame',
+ 'board takes wider screen':'aspectRatio:.78,child:frame',
  'track pawn is below 1 cell':'widget.stackCount>1?.49:.91',
  'overlap group sizing':'int ngelx573PawnCount(',
  'wallet placeholder avoids fictitious currency':'amount is num?amount.toInt().toString():\'—\'',
