@@ -1,7 +1,7 @@
 import {createRoom,act,LudoError,legal,secureRoll} from '../../../server/ludo565/engine.mjs';
 import {accessToken} from '../../call-push/src/google.mjs';
 import {chooseBotToken572} from '../../../server/ludo565/strategy572.mjs';
-import {settleMatch575,claimDaily575,claimChest575} from '../../../server/ludo565/rewards575.mjs';
+import {ludoWallet575,settleMatch575,claimDaily575,claimChest575} from '../../../server/ludo565/rewards575.mjs';
 export function ludoStore565(env,{fetcher=fetch,authorize=()=>accessToken(env)}={}){
  if(env.FIREBASE_PROJECT_ID!=='ngelx-44eed')throw Error('Wrong project');
  const base=`https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID}/databases/(default)/documents/_ngelx_ludo565/`;
@@ -47,6 +47,7 @@ export function createLudo565({verify,profile,store,limit=async()=>true,now=()=>
     if(prior){if(prior.room.owner!==uid)return json({error:'state_changed'},409);return json({room:await withWallet575(prior.room)});}
    }
    if(!await limit(uid,b.action))return json({error:'slow_down'},429);
+   if(b.action==='wallet')return json({room:await ludoWallet575(store,uid)});
    if(b.action==='daily_reward'||b.action==='chest_reward'){
     const reward=b.action==='daily_reward'?await claimDaily575(store,uid,now()):await claimChest575(store,uid,now());
     return json({room:reward});
