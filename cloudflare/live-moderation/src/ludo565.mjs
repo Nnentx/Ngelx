@@ -6,6 +6,7 @@ import {sendLudoGift575,ludoGiftCatalog575} from '../../../server/ludo565/gifts5
 import {ludoBlock575,ludoReport575} from '../../../server/ludo565/safety575.mjs';
 import {ludoModeratorQueue575,ludoModeratorResolve575,moderationDay575} from '../../../server/ludo565/moderation575.mjs';
 import {createAdSession575,adRewardStatus575} from '../../../server/ludo565/admob575.mjs';
+import {invitation580} from '../../../server/ludo565/invites580.mjs';
 export function ludoStore565(env,{fetcher=fetch,authorize=()=>accessToken(env)}={}){
  if(env.FIREBASE_PROJECT_ID!=='ngelx-44eed')throw Error('Wrong project');
  const base=`https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID}/databases/(default)/documents/_ngelx_ludo565/`;
@@ -45,16 +46,21 @@ export function createLudo565({verify,profile,store,limit=async()=>true,isModera
    if(!b||typeof b!=='object'||Array.isArray(b))return json({error:'invalid_request'},400);
    let user;try{user=await verify(request);}catch{return json({error:'unauthorized'},401);}
    const uid=user.sub;if(!uid)return json({error:'unauthorized'},401);
-   if(['wallet','create','bot','join','match','sync','start','roll','move','auto','daily_reward','chest_reward','gift','block','rematch'].includes(b.action))await ensureStarter575(store,uid);
+   const wallet580=['wallet','create','bot','join','match','start','roll','move','auto','daily_reward','chest_reward','gift','block','rematch','invite_join'].includes(b.action)?await ensureStarter575(store,uid):null;
    const withWallet575=async(room)=>{
-    const wallet=await settleMatch575(store,uid,room,now());
+    const wallet=room.status==='finished'?await settleMatch575(store,uid,room,now()):
+     b.action==='gift'?await ludoWallet575(store,uid):wallet580??await ludoWallet575(store,uid);
+    const players=await Promise.all((room.players??[]).map(async p=>{
+     if(p.bot)return {...p,level:p.level??1};
+     const w=p.uid===uid?wallet:await ludoWallet575(store,p.uid);
+     return {...p,level:w.level};
+    }));
     const blocked=new Set(wallet.blockedUsers??[]);
     return {...room,...wallet,
      // Hide messages and in-room gift notifications from locally blocked players.
      chat:Array.isArray(room.chat)?room.chat.filter(m=>!blocked.has(m.uid)):room.chat,
      gifts:Array.isArray(room.gifts)?room.gifts.filter(g=>!blocked.has(g.from)):room.gifts,
-     players:Array.isArray(room.players)?
-      room.players.map(p=>p.uid===uid?{...p,level:wallet.level}:p):room.players};
+     players:Array.isArray(room.players)?players:room.players};
    };
    let matchKey;
    if(b.action==='match'&&b.requestId!==undefined){
@@ -77,6 +83,10 @@ export function createLudo565({verify,profile,store,limit=async()=>true,isModera
     if(prior){if(prior.room.owner!==uid)return json({error:'state_changed'},409);return json({room:await withWallet575(prior.room)});}
    }
    if(!await limit(uid,b.action))return json({error:'slow_down'},429);
+   if(['invite_create','invite_status','invite_join'].includes(b.action)){
+    const result=await invitation580({body:b,uid,store,now:now(),roll,profile});
+    return json({room:result.joinedRoom?await withWallet575(result.joinedRoom):result});
+   }
    if(b.action==='moderation_queue'||b.action==='moderation_resolve'){
     // Explicit deployment allowlist, checked AFTER Firebase token verification.
     if(!await isModerator(uid))return json({error:'moderator_only'},403);
