@@ -19,7 +19,7 @@ export default {async fetch(request,env){
      'ludo575_auto','ludo575_chips','ludo575_gifts','ludo575_reports'],
     ludo575:{sourceVersion:575,configured:ludoReady,
      rewardedAdsConfigured:ludoReady&&typeof env.LUDO_ADMOB_AD_UNIT==='string'&&
-       /^ca-app-pub-[0-9]{16}\\/[0-9]{10}$/.test(env.LUDO_ADMOB_AD_UNIT),
+       new RegExp('^ca-app-pub-[0-9]{16}/[0-9]{10}$').test(env.LUDO_ADMOB_AD_UNIT),
      moderationAllowlistConfigured:ludoReady&&typeof env.LUDO_MODERATOR_UIDS==='string'&&
        env.LUDO_MODERATOR_UIDS.split(',').some(x=>x.trim().length>0)}},coreReady?200:503);
   }
