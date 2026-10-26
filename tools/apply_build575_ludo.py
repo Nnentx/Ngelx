@@ -420,10 +420,32 @@ end=s.index('\nint? ngelx570ShownDice',start)
 s=s[:start]+'''class Ngelx570SpritePainter extends CustomPainter {
  final int seat;final bool highlight;final ui.Image? image;
  const Ngelx570SpritePainter(this.seat,this.highlight,this.image);
- @override void paint(Canvas canvas,Size size)=>_PawnPainter567(ngelx565LudoColors[seat],highlight).paint(canvas,size);
- @override bool shouldRepaint(covariant Ngelx570SpritePainter old)=>old.seat!=seat||old.highlight!=highlight;
+ @override void paint(Canvas canvas,Size size){
+  final atlas=image;
+  if(atlas==null){_PawnPainter567(ngelx565LudoColors[seat],highlight).paint(canvas,size);return;}
+  // Actual opaque pawn bounds in the generated 1254px atlas, plus four pixels of margin.
+  // Preserve the original image proportions; never stretch the pawn into a square.
+  const bounds=[Rect.fromLTWH(178,85,315,499),Rect.fromLTWH(757,84,316,501),
+    Rect.fromLTWH(177,676,318,501),Rect.fromLTWH(755,676,318,501)];
+  final b=bounds[seat],sx=atlas.width/1254,sy=atlas.height/1254;
+  final src=Rect.fromLTWH(b.left*sx,b.top*sy,b.width*sx,b.height*sy);
+  final height=size.height*.96,width=height*b.width/b.height;
+  final dst=Rect.fromLTWH((size.width-width)/2,size.height*.01,width,height);
+  final base=Rect.fromCenter(center:Offset(size.width*.5,size.height*.94),width:width*.9,height:size.height*.08);
+  canvas.drawOval(base,Paint()..color=Colors.black.withValues(alpha:.27)..maskFilter=const MaskFilter.blur(BlurStyle.normal,1.3));
+  if(highlight)canvas.drawOval(base.inflate(size.width*.04),Paint()..style=PaintingStyle.stroke..strokeWidth=1.5..color=_ludoGold567);
+  canvas.drawImageRect(atlas,src,dst,Paint()..isAntiAlias=true..filterQuality=FilterQuality.high);
+ }
+ @override bool shouldRepaint(covariant Ngelx570SpritePainter old)=>old.seat!=seat||old.highlight!=highlight||old.image!=image;
 }
 ''' +s[end:]
+# The bundled bitmap is the selected original 3D asset; no automatic palette recoloring.
+swap("rootBundle.load('assets/ludo570_pawns.png')","rootBundle.load('assets/ludo577_pawns.png')")
+# Do not start a delayed one-piece move while the user is confirming departure.
+swap('if(_singleMoveInFlight574||!mounted||game.busy||game.leaving||',
+     'if(_asking||_singleMoveInFlight574||!mounted||game.busy||game.leaving||')
+swap("if(!mounted||game.busy||game.leaving||room['revision']!=revision||",
+     "if(_asking||!mounted||game.busy||game.leaving||room['revision']!=revision||")
 # Media effects are driven by accepted room-state changes, including bot/Auto moves.
 swap(' void _soundTap575(){if(_soundOn575)unawaited(SystemSound.play(SystemSoundType.click));}', ''' final _effects575=Ngelx575Effects();
  String? _soundTokens575,_soundDice575,_soundStatus575;bool _soundReady575=false;
@@ -492,9 +514,22 @@ for kind in ['step','dice','capture','win']:
  manifest+=f'    - assets/ludo575_{kind}.wav\n'
 pubspec.write_text(manifest)
 
+import shutil
+shutil.copyfile(root/'tools/assets/ludo577_pawns.png',root/'app/assets/ludo577_pawns.png')
+manifest=pubspec.read_text()
+if('    - assets/ludo577_pawns.png\n') not in manifest:
+ pubspec.write_text(manifest+'    - assets/ludo577_pawns.png\n')
+controller=root/'app/lib/build567_room_controller.dart'
+control=controller.read_text()
+assert control.count('for(var attempt=0;attempt<2;attempt++)')==1
+assert control.count("if(attempt==0&&e is Ngelx567Failure&&e.code=='state_changed')")==1
+control=control.replace('for(var attempt=0;attempt<2;attempt++)','for(var attempt=0;attempt<4;attempt++)',1)
+control=control.replace("if(attempt==0&&e is Ngelx567Failure&&e.code=='state_changed')","if(attempt<3&&e is Ngelx567Failure&&e.code=='state_changed')",1)
+controller.write_text(control)
+
 p.write_text(s,encoding='utf-8')
 pub=root/'app/pubspec.yaml'
 version=pub.read_text(encoding='utf-8')
 assert 'version: 1.0.344+574' in version
-pub.write_text(version.replace('version: 1.0.344+574','version: 1.0.346+576',1),encoding='utf-8')
+pub.write_text(version.replace('version: 1.0.344+574','version: 1.0.347+577',1),encoding='utf-8')
 print('Build575 frontend ready: persistent Auto on/off, updated painted pawn depth, existing NgelX layout retained')
