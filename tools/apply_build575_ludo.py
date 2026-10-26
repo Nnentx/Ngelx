@@ -178,6 +178,24 @@ swap("if(game.error.isNotEmpty)TextButton.icon(onPressed:()=>game.sync(),icon:co
      icon:const Icon(Icons.wifi_off_rounded,size:17),
      label:const Text('Bağlantıyı yenile'),
      style:OutlinedButton.styleFrom(foregroundColor:const Color(0xFFFFE9AC)))),""")
+# Translate gift transaction results without pretending a network failure occurred.
+swap("errors[code]??'Oyun bağlantısı kurulamadı. Tekrar dene.'",
+"""ngelx575GiftError(code)??errors[code]??'Oyun bağlantısı kurulamadı. Tekrar dene.'""")
+swap('class Ngelx573WalletBar extends StatelessWidget{',
+"""String? ngelx575GiftError(dynamic raw){
+ switch(raw){
+  case 'insufficient_chips':return 'Hediye için yeterli çipin yok.';
+  case 'gift_slow_down':return 'Yeni hediye göndermek için birkaç saniye bekle.';
+  case 'gift_room_limit':return 'Bu masadaki hediye sınırına ulaştın.';
+  case 'cannot_gift_self':return 'Kendine hediye gönderemezsin.';
+  case 'invalid_gift':return 'Bu hediye artık kullanılamıyor.';
+  case 'gift_player_unavailable':return 'Bu oyuncuya şu anda hediye gönderilemiyor.';
+  case 'gift_store_unavailable':return 'Hediye sistemi geçici olarak kullanılamıyor.';
+  default:return null;
+ }
+}
+class Ngelx573WalletBar extends StatelessWidget{""")
+
 # Player card: the already-visible table portraits become tappable without moving any board tile.
 swap("final ValueChanged<int> onToken;final VoidCallback onRoll;",
 """final ValueChanged<int> onToken;final VoidCallback onRoll;
