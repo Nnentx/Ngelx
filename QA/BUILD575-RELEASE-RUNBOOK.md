@@ -12,6 +12,8 @@
 - En son Build575 kod revizyonunda hem `NgelX-BUILD575-LUDO.yml` hem `NgelX-BUILD575-WORKER-DRYRUN.yml` iş akışlarının **success** olduğundan emin olun. Geçmiş revizyonların başarılı işlerini yeterli saymayın.
 - `NgelX-Build575-Review-APK` dosyası sadece GitHub Actions artefaktıdır; `Nnentx/ngelx-web` yayımlama klasörüne otomatik olarak taşınmaz.
 - Android APK sertifika SHA-256 değeri CI'daki mevcut Build574 fingerprint denetimiyle **aynı** olmalı. Cihazda güncellemeyi ayrıca test edin.
+- Build575 CI, APK artefaktını yüklemeden önce `tools/verify_build575_apk.py` dosyasıyla **APK içeriğini açıp** paketin `com.nnentx.ngelx_app`, sürümün `1.0.345`, build numarasının `575` olduğunu Android `aapt dump badging` üzerinden doğrular. Ayrıca Android manifesti, DEX ve ARM64 Flutter `libapp.so` dosyalarını kontrol eder; Google'ın DEMO AdMob App/Unit ID'lerinin APK içinde bulunmasını yasaklar. İmzayı bu adımın öncesindeki `apksigner` sertifika kontrolü doğrular.
+- Yeni doğrulayıcı, bozuk APK/yanlış kimlik/yanlış sürüm/desteklenmeyen ABI/örnek reklam ID'leri ile sınanır. Bu testler **telefon kurulumu veya gerçek AdMob SSV'nin kanıtı değildir**.
 - Kabul sonuçlarını `QA/BUILD575-DEVICE-ACCEPTANCE.md` içinde iki ayrı Android cihazla kaydedin. 2 kişi/4 kişi/2v2, Auto, manuel mod, rövanş, hediyeler, günlük ödül, bot, kopan bağlantı ve izleyici sonuç animasyonu zorunludur.
 - Canlı Cloudflare, Firebase veya reklam sağlayıcı konfigürasyonunu test dışı ortama taşımayın. Hesap bilgilerinin kendisi kodda, ekran görüntülerinde, issue veya sohbetlerde saklanmamalıdır.
 
