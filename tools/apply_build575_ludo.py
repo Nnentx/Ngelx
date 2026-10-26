@@ -529,6 +529,56 @@ assert control.count('for(var attempt=0;attempt<2;attempt++)')==1
 assert control.count("if(attempt==0&&e is Ngelx567Failure&&e.code=='state_changed')")==1
 control=control.replace('for(var attempt=0;attempt<2;attempt++)','for(var attempt=0;attempt<4;attempt++)',1)
 control=control.replace("if(attempt==0&&e is Ngelx567Failure&&e.code=='state_changed')","if(attempt<3&&e is Ngelx567Failure&&e.code=='state_changed')",1)
+# Build579: serialize poll/action revisions and distinguish transport outages from game conflicts.
+control=control.replace(" String error='';", """ String error='';
+ int connectionFailures579=0;
+ bool get reconnectNeeded579=>connectionFailures579>=(room.isEmpty?1:2);
+ bool _network579(Object e)=>e is! Ngelx567Failure||['connection','temporarily_unavailable','service_not_configured','slow_down','rate_limited'].contains(e.code);
+ void _failed579(Object e){connectionFailures579=_network579(e)?connectionFailures579+1:0;error=_message(e);}
+ void _healthy579(){connectionFailures579=0;error='';}
+""",1)
+old="""    final next=await request({'action':join||room.isEmpty?'join':'sync','id':id});
+    if(_disposed||generation!=_generation||leaving||!_account())return;
+    _accept(next);error='';_notify();"""
+new="""    for(var attempt=0;attempt<3;attempt++){
+     try{
+      final next=await request({'action':join||room.isEmpty?'join':'sync','id':id});
+      if(_disposed||generation!=_generation||leaving||!_account())return;
+      _accept(next);_healthy579();_notify();return;
+     }on Ngelx567Failure catch(e){
+      if(e.code!='state_changed'||attempt==2)rethrow;
+      // A competing server Auto/bot update is not a lost connection.
+      if(_disposed||generation!=_generation||leaving)return;
+     }
+    }"""
+assert old in control;control=control.replace(old,new,1)
+control=control.replace("    error=_message(e);_notify();", "    _failed579(e);_notify();",1)
+old="""  busy=true;error='';_generation++;_notify();
+  try{
+   final next=await request({'action':action,'id':id,'revision':room['revision'],'requestId':_id(),...data});"""
+new="""  busy=true;error='';_notify();
+  try{
+   // Drain the already-running poll before taking a revision for a mutation.
+   final pending=_sync;if(pending!=null)await pending;
+   if(_disposed||detached||!_account())return false;
+   _generation++;
+   final next=await request({'action':action,'id':id,'revision':room['revision'],'requestId':_id(),...data});"""
+assert old in control;control=control.replace(old,new,1)
+control=control.replace("   _accept(next);error='';return true;", "   _accept(next);_healthy579();return true;",1)
+old="""  }catch(e){if(!_disposed)error=_message(e);return false;}
+  finally{busy=false;_notify();}"""
+new="""  }catch(e){
+   if(!_disposed){
+    if(e is Ngelx567Failure&&['state_changed','not_your_turn','move_first'].contains(e.code)){
+     // Refresh the authoritative board. Never replay a roll/move after a conflict.
+     try{final next=await request({'action':'sync','id':id});if(!_disposed){_accept(next);_healthy579();}}
+     catch(syncError){if(!_disposed)_failed579(syncError);}
+    }else{_failed579(e);}
+   }
+   return false;
+  }
+  finally{busy=false;_notify();}"""
+assert old in control;control=control.replace(old,new,1)
 controller.write_text(control)
 
 # Build578: place the visible foot on the cell/socket center, rather than centering the image.
@@ -578,6 +628,8 @@ swap("Text('Ludo daveti',style:TextStyle(color:Colors.white,fontSize:20,fontWeig
 swap('  if(game.busy)return;\n  _asking=true;',"""  if(game.busy){await _close();return;}
   _asking=true;""")
 
+swap("  if(game.error.isNotEmpty){_connectionFailures575=math.min(4,_connectionFailures575+1);}", "  if(game.error.isNotEmpty){_connectionFailures575=math.min(4,game.connectionFailures579);}")
+swap("   if(game.error.isNotEmpty)Padding(padding:const EdgeInsets.only(bottom:5),", "   if(game.error.isNotEmpty&&game.connectionFailures579==0)Padding(padding:const EdgeInsets.only(bottom:5),child:Text(game.error,maxLines:2,textAlign:TextAlign.center,style:const TextStyle(color:Color(0xFFFFE9AC),fontSize:12))),\n   if(game.reconnectNeeded579)Padding(padding:const EdgeInsets.only(bottom:5),")
 p.write_text(s,encoding='utf-8')
 pub=root/'app/pubspec.yaml'
 version=pub.read_text(encoding='utf-8')
