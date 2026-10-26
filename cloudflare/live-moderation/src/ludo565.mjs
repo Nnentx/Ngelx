@@ -77,7 +77,7 @@ export function createLudo565({verify,profile,store,limit=async()=>true,isModera
     // Explicit deployment allowlist, checked AFTER Firebase token verification.
     if(!await isModerator(uid))return json({error:'moderator_only'},403);
     if(b.action==='moderation_queue')
-     return json({room:await ludoModeratorQueue575(store,b.day??moderationDay575(now()),now())});
+     return json({room:await ludoModeratorQueue575(store,b.day??moderationDay575(now()),now(),b.page??0)});
     return json({room:await ludoModeratorResolve575(store,b.reportId,uid,b.decision,now())});
    }
    if(b.action==='wallet')return json({room:await ludoWallet575(store,uid)});
