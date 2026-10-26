@@ -1,6 +1,7 @@
 import {createRoom,act,LudoError,legal,secureRoll} from '../../../server/ludo565/engine.mjs';
 import {accessToken} from '../../call-push/src/google.mjs';
 import {chooseBotToken572} from '../../../server/ludo565/strategy572.mjs';
+import {settleMatch575} from '../../../server/ludo565/rewards575.mjs';
 export function ludoStore565(env,{fetcher=fetch,authorize=()=>accessToken(env)}={}){
  if(env.FIREBASE_PROJECT_ID!=='ngelx-44eed')throw Error('Wrong project');
  const base=`https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID}/databases/(default)/documents/_ngelx_ludo565/`;
@@ -24,17 +25,18 @@ export function createLudo565({verify,profile,store,limit=async()=>true,now=()=>
    if(!b||typeof b!=='object'||Array.isArray(b))return json({error:'invalid_request'},400);
    let user;try{user=await verify(request);}catch{return json({error:'unauthorized'},401);}
    const uid=user.sub;if(!uid)return json({error:'unauthorized'},401);
+   const withWallet575=async(room)=>({...room,...await settleMatch575(store,uid,room,now())});
    let matchKey;
    if(b.action==='match'&&b.requestId!==undefined){
     if(typeof b.requestId!=='string'||!/^[a-zA-Z0-9_-]{16,100}$/.test(b.requestId))return json({error:'invalid_request'},400);
     const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(uid+':'+b.requestId));
     matchKey='match568_'+Array.from(new Uint8Array(hash),x=>x.toString(16).padStart(2,'0')).join('');
     const saved=await store.get(matchKey),prior=saved?await store.get(saved.room.id):null;
-    if(prior&&prior.room.players.some(p=>p.uid===uid)&&prior.room.expiresAt>now())return json({room:prior.room});
+    if(prior&&prior.room.players.some(p=>p.uid===uid)&&prior.room.expiresAt>now())return json({room:await withWallet575(prior.room)});
    }
    const matched=async(room,status=200)=>{
     if(matchKey){const prior=await store.get(matchKey);if(!prior)try{await store.put(matchKey,{id:room.id,revision:0});}catch(e){if(e.status!==409)throw e;}}
-    return json({room},status);
+    return json({room:await withWallet575(room)},status);
    };
    let createId;
    if(['create','bot'].includes(b.action)&&b.requestId!==undefined){
@@ -42,7 +44,7 @@ export function createLudo565({verify,profile,store,limit=async()=>true,now=()=>
     const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(uid+':'+b.requestId));
     createId=String(100000+new DataView(digest).getUint32(0)%900000);
     const prior=await store.get(createId);
-    if(prior){if(prior.room.owner!==uid)return json({error:'state_changed'},409);return json({room:prior.room});}
+    if(prior){if(prior.room.owner!==uid)return json({error:'state_changed'},409);return json({room:await withWallet575(prior.room)});}
    }
    if(!await limit(uid,b.action))return json({error:'slow_down'},429);
    if(b.action==='match'){
@@ -84,10 +86,10 @@ export function createLudo565({verify,profile,store,limit=async()=>true,now=()=>
      room=act(room,uid,{action:'start',revision:room.revision,requestId:'bot_start568'},now(),roll);
     }
     try{await store.put(id,room);}catch(error){
-     if(createId&&error.status===409){const prior=await store.get(id);if(prior?.room?.owner===uid)return json({room:prior.room});}
+     if(createId&&error.status===409){const prior=await store.get(id);if(prior?.room?.owner===uid)return json({room:await withWallet575(prior.room)});}
      throw error;
     }
-    return json({room},201);
+    return json({room:await withWallet575(room)},201);
    }
    if(!/^(?:[0-9]{6}|[A-F0-9]{16})$/.test(b.id??''))return json({error:'invalid_room'},400);
    const existing=await store.get(b.id);if(!existing)return json({error:'room_not_found'},404);
@@ -121,7 +123,7 @@ export function createLudo565({verify,profile,store,limit=async()=>true,now=()=>
     room=act(room,bot.uid,{...move,revision:room.revision,requestId:'bot568_'+room.revision},now(),roll);
    }
    if(room.revision!==existing.room.revision)await store.put(b.id,room,existing.stamp);
-   return json({room:{...room,spectatorCount:await viewerCount()}});
+   return json({room:await withWallet575({...room,spectatorCount:await viewerCount()})});
   }catch(e){return json({error:e instanceof LudoError?e.message:'temporarily_unavailable'},e.status??503);}
  };
 }
