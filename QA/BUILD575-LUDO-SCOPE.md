@@ -11,7 +11,7 @@ Yeni kod, testli Build574 paketinin üstüne `tools/apply_build575_ludo.py` ile 
 - Üstte sunucudan gelen çip ve elmas bakiyesinde sayı değişim animasyonu.
 - Premium taş atlası daha dolu kırpılır, yumuşak gölge eklenir, aynı karedeki taşlar ayrıştırılır.
 - Sunucu doğrulamadan oyuncu galibiyet/mağlubiyet çip, XP, seviye ve galibiyet serisi güncellemesi. Ödüller kullanıcı başına/maç başına idempotent, Firestore CAS ile kaydedilir.
-- Taslak oyun ekonomisi: gerçek oyuncuya karşı galibiyet +150 çip, +90 XP; makineye karşı galibiyet +35 çip, +35 XP; mağlubiyet +15 XP; her 200 XP seviye artışı. Bunlar ürün ekonomisi için ayarlanabilir değerlerdir, gerçek para değildir.
+- Taslak oyun ekonomisi: gerçek oyuncuya karşı ilk galibiyet +150 çip, +90 XP; makineye karşı ilk galibiyet +35 çip, +35 XP; galibiyet serisi için gerçek oyuncu maçında +20'şer çip (en fazla +100), bot maçında +10'ar çip (en fazla +50). Mağlubiyet +15 XP, her 200 XP seviye artışı. Sunucudaki miktarlar ürün ekonomisine göre ayarlanabilir; gerçek para değildir.
 
 ## Sonraki kod eklemeleri (GitHub PR #190 taslak, henüz üretimde değil)
 - Günlük hediye: her UTC gününde bir kez, sunucuda CAS ile çip bakiyesi artar ve seri tutulur.
