@@ -32,6 +32,17 @@ Future<void> savePreview(WidgetTester tester,String name)async{
  });
 }
 void main(){
+ test('578 feet stay on socket/cell center while heads extend upward',(){
+  for(final cell in [20.0,26.0,45.0])for(final position in [-1,0,30]){
+   final size=ngelx578PawnSize(cell,position,1),top=ngelx578PawnTop(100,size);
+   expect(top+size*.94,closeTo(100,.000001));
+   expect(size,greaterThan(cell));
+   expect(ngelx578PawnLeft(cell*.5,size)+size*.5,closeTo(cell*.5,.000001));
+  }
+  expect(ngelx578PawnTop(10,45),lessThan(0));
+  expect(ngelx578PawnSize(30,4,2),lessThan(30));
+ });
+
  TestWidgetsFlutterBinding.ensureInitialized();
  setUpAll(()async{
   final text=File('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf');

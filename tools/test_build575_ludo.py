@@ -15,7 +15,7 @@ checks={
  'real media sounds':"assets/ludo575_$kind.wav",
  'server movement sounds':'_observeSound575()',
  'pawn shadow':"Colors.black.withValues(alpha:.34)",
- 'nonoverlapping pieces':'widget.stackCount > 1 ? 0.52 : 0.98',
+ 'nonoverlapping pieces':'count>1?.52:1.18',
  'wallet':'class Ngelx573WalletBar',
  'sound control':"ValueKey('ludo-sound-toggle')",
  'sound persisted':"p.setBool('ngelx_ludo_sound',next)",
@@ -41,7 +41,7 @@ checks={
 }
 for name,needle in checks.items():
  assert needle in s,f'Build575 missing: {name}'
-assert 'version: 1.0.347+577' in Path('app/pubspec.yaml').read_text()
+assert 'version: 1.0.348+578' in Path('app/pubspec.yaml').read_text()
 assert s.count('class Ngelx575AutoBadge')==1
 assert s.index("ValueKey('ludo-gift-confirmation')") < s.index("final ok=await game.perform('gift'")
 assert "'kind':selected,'chips':" not in s

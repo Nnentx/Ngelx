@@ -531,9 +531,38 @@ control=control.replace('for(var attempt=0;attempt<2;attempt++)','for(var attemp
 control=control.replace("if(attempt==0&&e is Ngelx567Failure&&e.code=='state_changed')","if(attempt<3&&e is Ngelx567Failure&&e.code=='state_changed')",1)
 controller.write_text(control)
 
+# Build578: place the visible foot on the cell/socket center, rather than centering the image.
+swap("final size=c*(widget.position<0?1.13:widget.stackCount > 1 ? 0.52 : 0.98),limit=c*15-size;",
+     "final size=ngelx578PawnSize(c,widget.position,widget.stackCount);")
+swap("final x=((p.dx+.5+widget.stackOffset.dx)*c-size*.5).clamp(0.0,limit).toDouble();",
+     "final x=ngelx578PawnLeft((p.dx+.5+widget.stackOffset.dx)*c,size);")
+swap("final y=((p.dy+.5+widget.stackOffset.dy)*c-size*.51-math.sin((motion.value*(widget.position-from).abs()%1)*math.pi)*c*.075).clamp(0.0,limit).toDouble();",
+     "final y=ngelx578PawnTop((p.dy+.5+widget.stackOffset.dy)*c,size)-math.sin((motion.value*(widget.position-from).abs()%1)*math.pi)*c*.075;")
+swap('class _MovingPawn567 extends StatefulWidget {',"""double ngelx578PawnSize(double cell,int position,int count)=>cell*(position<0?1.26:count>1?.52:1.18);
+double ngelx578PawnTop(double floor,double size)=>floor-size*.94;
+double ngelx578PawnLeft(double center,double size)=>center-size*.5;
+class _MovingPawn567 extends StatefulWidget {""")
+swap('child:ClipRRect(borderRadius:BorderRadius.circular(4),child:RepaintBoundary(',
+     'child:ClipRRect(clipBehavior:Clip.none,borderRadius:BorderRadius.circular(4),child:RepaintBoundary(')
+# Client single-choice assistance must not submit a manual move that cancels server Auto.
+swap('  final choices=ngelx565Legal(room,game.seat);',"""  final autoSeats578=room['autoSeats'];
+  if(autoSeats578 is Map&&autoSeats578[game.seat.toString()]==true)return;
+  final choices=ngelx565Legal(room,game.seat);""")
+swap("   if(_asking||!mounted||game.busy||game.leaving||room['revision']!=revision||room['turn']!=game.seat||room['dice']==null)return;", """   final autoNow578=room['autoSeats'];
+   if(_asking||(autoNow578 is Map&&autoNow578[game.seat.toString()]==true)){
+    _singleMoveRevision574=null;return;
+   }
+   if(!mounted||game.busy||game.leaving||room['revision']!=revision||room['turn']!=game.seat||room['dice']==null)return;""")
+swap('poll=Timer.periodic(Duration(seconds:widget.watch?4:1),(tick){', 'poll=Timer.periodic(const Duration(milliseconds:500),(tick){')
+swap("  if(_chatOpen&&tick.tick%3!=0)return;\n  final gap=math.min(8,1<<_connectionFailures575);", """  final seats578=room['autoSeats'];
+  final auto578=seats578 is Map&&seats578[game.seat.toString()]==true;
+  if(_chatOpen&&!auto578&&tick.tick%6!=0)return;
+  final pace578=widget.watch?8:(auto578||room['botGame']==true?1:2);
+  final gap=pace578*math.min(8,1<<_connectionFailures575);""")
+
 p.write_text(s,encoding='utf-8')
 pub=root/'app/pubspec.yaml'
 version=pub.read_text(encoding='utf-8')
 assert 'version: 1.0.344+574' in version
-pub.write_text(version.replace('version: 1.0.344+574','version: 1.0.347+577',1),encoding='utf-8')
+pub.write_text(version.replace('version: 1.0.344+574','version: 1.0.348+578',1),encoding='utf-8')
 print('Build575 frontend ready: persistent Auto on/off, updated painted pawn depth, existing NgelX layout retained')

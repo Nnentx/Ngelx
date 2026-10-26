@@ -1,4 +1,4 @@
-name: NgelX Build576 isolated Cloudflare Firebase acceptance
+name: NgelX Build578 isolated Cloudflare Firebase acceptance
 on:
   push:
     branches: [feat/build575-ludo-auto-premium-rewards]

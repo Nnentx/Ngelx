@@ -1,6 +1,6 @@
 export class LudoError extends Error{constructor(code,status=400){super(code);this.status=status;}}
 const fail=(code,status)=>{throw new LudoError(code,status)};
-export const powerTiles570=new Map([2,5,10,15,18,23,28,31,36,41,44,49].map((cell,i)=>[cell,['control','double','shield'][i%3]]));
+export const powerTiles570=new Map([[2,'control'],[10,'shield'],[18,'double'],[28,'control'],[36,'shield'],[44,'double']]);
 export const safe=new Set([0,8,13,21,26,34,39,47]);
 export const sameTeam=(r,a,b)=>r.team&&a%2===b%2;
 export function createRoom({uid,name,photo='',capacity=2,team=false,mode='classic',id},now){

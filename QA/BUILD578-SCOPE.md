@@ -1,0 +1,11 @@
+# Build578 — user-requested geometry, Auto, sparse pickups and progression
+
+Preserve the app structure and existing original 3D sprite. Enlarge home pawns to 1.26 cells and single track pawns to 1.18 cells; retain compact stacking. Anchor the visible base/shadow center (.94 of sprite widget height) to the socket/cell center. Do not clamp the entire widget into the board: the head may protrude above its cell/board; transparent widget margins do not determine the contact point. Disable the surrounding ClipRRect's clipping. Geometry regression covers edge cells, foot placement, size and stacking.
+
+New Power rooms contain six collectible power icons instead of twelve: two control dice, two double dice and two shields. Four +1 bonuses remain. Existing active rooms keep their stored map, preserving their state; start a new game to get the sparse arrangement.
+
+Auto root cause: single-legal-piece client assistance was posting a manual move and thereby clearing the server Auto flag. Both pre-delay and post-delay client checks now defer to persistent server Auto; cancellation of departure/Auto also permits retrying the assisted move later. Sync polls at 500ms while Auto or bot mode is active, 1s for normal play, 4s for spectators, with bounded failure backoff. No repeated ten-second wait while Auto is enabled. The server still validates every roll and move.
+
+Level thresholds: level 2 at 200 XP, level 3 at 500, level 4 at 900, level 5 at 1400 (each next increment grows by 100). Preserve already recorded levels rather than demote existing accounts. Human win/loss XP = 90/15; bot win/loss = 35/5. Leavers are excluded and match receipts prevent duplicate credit. Daily/chest idempotency is unchanged.
+
+Target Android version 1.0.348 / Build578. New tests cover persistent Auto advancing on successive syncs before timeouts, sparse icon count, increasing level boundaries, and geometry. Existing tests remain. CI/staging/live acceptance and actual-phone visual/game checks are pending; no publication claim is made by this scope document. The user has authorized updater publication as the final step after completion.

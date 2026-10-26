@@ -1,4 +1,4 @@
-name: NgelX Build577 3D reference pawns and departure fix review
+name: NgelX Build578 3D reference pawns and departure fix review
 on:
   push:
     branches: [feat/build575-ludo-auto-premium-rewards]
@@ -110,7 +110,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: NgelX-Build577-Actual-Flutter-Previews
+          name: NgelX-Build578-Actual-Flutter-Previews
           path: app/build577-previews/
           if-no-files-found: warn
       - uses: actions/cache/restore@v4
@@ -125,11 +125,11 @@ jobs:
         working-directory: app
         run: |
           set -euo pipefail
-          flutter build apk --release --target-platform android-arm64 --build-name=1.0.347 --build-number=577 --dart-define=NGELX_VERSION_NAME=1.0.347 --dart-define=NGELX_BUILD_NUMBER=577 --dart-define=NGELX_VERIFICATION_EMAIL_URL=https://ngelx-verification-email.alihancaglar76.workers.dev/verify-email --dart-define=NGELX_COMMUNITY_DELETE_URL=https://ngelx-live-moderation.alihancaglar76.workers.dev/community/delete --dart-define=NGELX_LIVEKIT_GUEST_MODERATION_URL=https://ngelx-live-moderation.alihancaglar76.workers.dev/moderate --dart-define=NGELX_CALL_PUSH_URL=https://ngelx-call-push.alihancaglar76.workers.dev
+          flutter build apk --release --target-platform android-arm64 --build-name=1.0.348 --build-number=578 --dart-define=NGELX_VERSION_NAME=1.0.348 --dart-define=NGELX_BUILD_NUMBER=578 --dart-define=NGELX_VERIFICATION_EMAIL_URL=https://ngelx-verification-email.alihancaglar76.workers.dev/verify-email --dart-define=NGELX_COMMUNITY_DELETE_URL=https://ngelx-live-moderation.alihancaglar76.workers.dev/community/delete --dart-define=NGELX_LIVEKIT_GUEST_MODERATION_URL=https://ngelx-live-moderation.alihancaglar76.workers.dev/moderate --dart-define=NGELX_CALL_PUSH_URL=https://ngelx-call-push.alihancaglar76.workers.dev
           APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
           "$APKSIGNER" verify --verbose --print-certs build/app/outputs/flutter-apk/app-release.apk > signature.txt
           grep -iF 'be20b27f0ba1f4decd2941d410b1536de89e48dc894f04f038f9d26b11ecd6aa' signature.txt
-          cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/NgelX-1.0.347-Build577-REVIEW.apk
+          cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/NgelX-1.0.348-Build578-REVIEW.apk
       - name: Verify Build575 APK identity, ARM64 content and demo ad exclusion
         timeout-minutes: 5
         run: |
@@ -137,15 +137,15 @@ jobs:
           AAPT="$(find "$ANDROID_HOME/build-tools" -type f -name aapt | sort -V | tail -n 1)"
           test -x "$AAPT"
           python3 tools/verify_build575_apk.py \
-            app/build/app/outputs/flutter-apk/NgelX-1.0.347-Build577-REVIEW.apk \
+            app/build/app/outputs/flutter-apk/NgelX-1.0.348-Build578-REVIEW.apk \
             --aapt "$AAPT"
       - uses: actions/upload-artifact@v4
         with:
-          name: NgelX-Build577-Review-APK
-          path: app/build/app/outputs/flutter-apk/NgelX-1.0.347-Build577-REVIEW.apk
+          name: NgelX-Build578-Review-APK
+          path: app/build/app/outputs/flutter-apk/NgelX-1.0.348-Build578-REVIEW.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: NgelX-Build577-Assembled-Source
+          name: NgelX-Build578-Assembled-Source
           path: |
             app/lib
             app/pubspec.yaml
