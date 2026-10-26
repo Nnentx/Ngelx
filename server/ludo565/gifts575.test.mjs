@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {createRoom,act} from './engine.mjs';
-import {sendLudoGift575} from './gifts575.mjs';
+import {sendLudoGift575,ludoGiftCatalog575} from './gifts575.mjs';
 import {claimDaily575,ludoWallet575} from './rewards575.mjs';
 import {createLudo565,ludoStore565} from '../../cloudflare/live-moderation/src/ludo565.mjs';
 
@@ -129,4 +129,24 @@ test('transaction failure leaves sender chips and recipient collection unchanged
   {to:'b',kind:'heart',requestId:'gift-error001'},t+5000),/upstream down/);
  assert.equal((await ludoWallet575(db,'a')).chips,50);
  assert.equal((await db.get(r.id)).room.gifts,undefined);
+});
+
+test('expanded gift catalog lists exactly server-priced safe reaction IDs',()=>{
+ assert.equal(Object.keys(ludoGiftCatalog575).length,16);
+ for(const [id,item] of Object.entries(ludoGiftCatalog575)){
+  assert.match(id,/^[a-z_]{3,24}$/);
+  assert.ok(item.chips>=10&&item.chips<=100);
+  assert.ok(item.emoji.length>=1&&item.label.length>=2);
+ }
+ assert.equal(ludoGiftCatalog575.plunger.chips,45);
+ assert.equal(ludoGiftCatalog575.thumbs_up.chips,10);
+});
+test('cheap reactions charge only their server-defined price, ignoring client price',async()=>{
+ const db=mock(),r=await room(db);await claimDaily575(db,'a',t);
+ const sent=await sendLudoGift575(db,r.id,'a',
+  {to:'b',kind:'thumbs_up',chips:0,requestId:'gift-thumbs001'},t+5000);
+ assert.equal(sent.sent,true);
+ assert.equal(sent.chips,40);
+ const b=Array.from(db.db.values()).map(v=>v.room);
+ assert.equal(b.filter(v=>v.giftsReceived?.thumbs_up===1).length,1);
 });
