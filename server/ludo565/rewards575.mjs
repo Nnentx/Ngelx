@@ -43,3 +43,41 @@ export async function settleMatch575(store,uid,room,now){
  }
  throw Error('wallet_cas_retries_exhausted');
 }
+
+export async function claimDaily575(store,uid,now){
+ const walletKey=await key(uid);
+ const day=new Date(now).toISOString().slice(0,10);
+ const previous=new Date(now-86400000).toISOString().slice(0,10);
+ for(let retry=0;retry<6;retry++){
+  const entry=await store.get(walletKey),wallet=entry?.room??initial();
+  if(wallet.lastDaily===day){
+   return {claimed:false,nextAt:Date.parse(day+'T00:00:00.000Z')+86400000, ...await ludoWallet575(store,uid)};
+  }
+  const streak=wallet.lastDaily===previous?(wallet.dailyStreak??0)+1:1;
+  const chips=Math.min(100,40+10*streak);
+  const updated={...wallet,lastDaily:day,dailyStreak:streak,
+   chips:(wallet.chips??0)+chips};
+  try{
+   await store.put(walletKey,updated,entry?.stamp);
+   return {claimed:true,chipReward:chips,dailyStreak:streak,nextAt:Date.parse(day+'T00:00:00.000Z')+86400000,
+    chips:updated.chips,gems:updated.gems??0,xp:updated.xp??0,level:updated.level??1};
+  }catch(e){if(e.status!==409||retry===5)throw e;}
+ }
+ throw Error('daily_cas_retries_exhausted');
+}
+export async function claimChest575(store,uid,now){
+ const walletKey=await key(uid);
+ for(let retry=0;retry<6;retry++){
+  const entry=await store.get(walletKey),wallet=entry?.room??initial();
+  const unlock=(wallet.lastChest??0)+8*3600000;
+  if(now<unlock)return {claimed:false,nextAt:unlock,...await ludoWallet575(store,uid)};
+  const updated={...wallet,lastChest:now,chips:(wallet.chips??0)+25,xp:(wallet.xp??0)+10};
+  updated.level=1+Math.floor(updated.xp/200);
+  try{
+   await store.put(walletKey,updated,entry?.stamp);
+   return {claimed:true,chipReward:25,xpReward:10,nextAt:now+8*3600000,
+    chips:updated.chips,gems:updated.gems??0,xp:updated.xp,level:updated.level};
+  }catch(e){if(e.status!==409||retry===5)throw e;}
+ }
+ throw Error('chest_cas_retries_exhausted');
+}
