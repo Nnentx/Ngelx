@@ -118,6 +118,44 @@ swap("IconButton(tooltip:'Oda kodunu kopyala',",
     onPressed:_toggleSound575,
     icon:Icon(_soundOn575?Icons.volume_up_rounded:Icons.volume_off_rounded,size:19)),
     IconButton(tooltip:'Oda kodunu kopyala',""")
+swap("bool _chatOpen=false;Timer? poll;Timer? chatExpiry;String? chatKey;String? chatBubble;bool _canClose=false,_asking=false;bool _soundOn575=true;",
+"""bool _chatOpen=false;Timer? poll;Timer? chatExpiry;String? chatKey;String? chatBubble;bool _canClose=false,_asking=false;bool _soundOn575=true;
+ int? _earnedChips575,_earnedXp575;String? _recentPickup575;""")
+swap("  if(mounted&&!_chatOpen)setState((){});\n  if(mounted&&!widget.watch)unawaited(_autoSingleMove574());",
+"""  final reward=room['reward'];
+  if(reward is Map&&reward['matchId']==widget.id){
+   _earnedChips575=(reward['chips'] as num?)?.toInt();
+   _earnedXp575=(reward['xp'] as num?)?.toInt();
+  }
+  final pickup=room['pickup']??room['bonusPickup'];
+  if(pickup is Map){
+   final receipt='${pickup['seat']}:${pickup['cell']}:${pickup['at']}';
+   if(_recentPickup575!=null&&receipt!=_recentPickup575&&_soundOn575){
+    unawaited(SystemSound.play(SystemSoundType.click));
+   }
+   _recentPickup575=receipt;
+  }
+  if(mounted&&!_chatOpen)setState((){});
+  if(mounted&&!widget.watch)unawaited(_autoSingleMove574());""")
+swap("Ngelx567GameButton(label:'Lobiye dön',gold:true,onPressed:_close),",
+"""if(_earnedChips575!=null||_earnedXp575!=null)Padding(
+    padding:const EdgeInsets.symmetric(vertical:7),
+    child:Container(key:const ValueKey('ludo-verified-match-reward'),
+     padding:const EdgeInsets.symmetric(horizontal:12,vertical:9),
+     decoration:BoxDecoration(
+       borderRadius:BorderRadius.circular(14),
+       gradient:const LinearGradient(colors:[Color(0xFF204D79),Color(0xFF2C317A)]),
+       border:Border.all(color:const Color(0xFFFFDC72),width:1.4)),
+     child:Row(mainAxisAlignment:MainAxisAlignment.center,children:[
+       const Icon(Icons.emoji_events_rounded,color:Color(0xFFFFD85A),size:20),
+       const SizedBox(width:8),
+       if(_earnedChips575!=null)Text('+${_earnedChips575!} çip',
+         style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w900,fontSize:13)),
+       if(_earnedXp575!=null)...[const SizedBox(width:10),
+        Text('+${_earnedXp575!} XP',
+         style:const TextStyle(color:Color(0xFF9AFFE6),fontWeight:FontWeight.w900,fontSize:13))],
+     ]))),
+   Ngelx567GameButton(label:'Lobiye dön',gold:true,onPressed:_close),""")
 swap(' Future<void> _autoSingleMove574()async{',""" void _tapAuto575(bool active){
   if(widget.watch||game.busy||!game.playing||game.seat<0)return;
   unawaited(game.perform('auto',{'enabled':!active}));
