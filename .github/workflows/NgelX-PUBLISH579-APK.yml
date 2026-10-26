@@ -8,9 +8,10 @@ permissions:
   actions: read
 concurrency:
   group: ngelx-build579-release-asset
-  cancel-in-progress: false
+  cancel-in-progress: true
 jobs:
   publish-verified-asset:
+    if: ${{ false }} # Hold until the additional reconnect correction is tested
     runs-on: ubuntu-latest
     timeout-minutes: 35
     env:
