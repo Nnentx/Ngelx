@@ -71,5 +71,12 @@ Yeni kod, testli Build574 paketinin üstüne `tools/apply_build575_ludo.py` ile 
 
 **Not:** Kodun hazır olması, gerçek telefon/servis erişimi gerektiren bu maddelerin tamamlandığı anlamına gelmez. Son APK dağıtımı dışındaki aşamalar kullanıcının mevcut Build574 uygulamasını etkilememelidir.
 
+## Maç ödülü yeniden bağlanma ve Firestore CAS doğrulaması
+- Bağlantı kesilip aynı biten maça dönülürse ilk seferde sunucunun onayladığı **çip/XP/seri/galibiyet** `reward` makbuzu cüzdan belgesindeki `matchRewards` alanından tekrar okunur. Tekrar görüntüleme **yeni ödeme üretmez**.
+- Sunucunun önceki Build575 kodundan kalan eski makbuzlarda `matchRewards` bulunmayabilir; geriye dönük destek yine eski ödemeyi korur, hayali bir kazanç bilgisi oluşturmaz. `receipts` idempotency kontrolü korunmuştur.
+- Makbuz geçmişi, zaten bitmiş odanın 48 saatlik takip süresiyle birlikte temizlenir; diğer oyuncunun veya izleyicinin cüzdanına paylaşılmaz. Günlük hediye ve sandık alımı araya girse de asıl maç makbuzu sabit kalır.
+- Mock cüzdan testlerine ek olarak, gerçek `ludoStore565` Firestore REST `documents:commit` isteği iki kayıt (reklam oturumu) ve üç kayıt (hediye/SSV) için kontrol edilir. `updateTime` / `exists:false` CAS koşulu, doğru Firebase proje yolu, Authorization ve 409 tekrar deneme davranışı test edilir. Canlı Firestore işlem denemesi yine ayrı kabul testidir.
+- Son kaynak üzerinde **119/119 sunucu testi geçti** (26 Ekim 2026, GitHub Actions 40330155671); yeni Android inceleme derlemesi halen test akışında olduğundan buradan yayına hazır sonucu çıkarılmaz.
+
 ## Yayın kapısı
 `NgelX-BUILD575-LUDO.yml` yalnızca derleme/test amaçlıdır. Bulut oyun servisi güncellenmeden Build575'teki yeni Auto ve çip ödülü çalışmaz. CI testi + doğrulanan imza + gerçek cihaz testleri tamamlanmadan canlı güncelleme alanına sürüm kaydı açılmaz. Build574 mevcut kullanıcılar için yayınlanan sürüm olarak kalır.
