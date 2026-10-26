@@ -68,7 +68,28 @@ swap("const Center(child:Text('Arkadaşlarınla aynı masada',style:TextStyle(co
   ]),
   if(giftMessage575.isNotEmpty)Padding(padding:const EdgeInsets.only(top:4),child:Text(giftMessage575,textAlign:TextAlign.center,style:const TextStyle(color:Color(0xFFFFE28D),fontWeight:FontWeight.w700,fontSize:12))),
   const SizedBox(height:15),""")
-swap(' Future<void> _autoSingleMove574()async{',""" void _tapAuto575(bool active){
+swap(' Future<void> _autoSingleMove574()async{',""" bool _rematching575=false;
+ Future<void> _rematch575()async{
+  if(_rematching575||widget.watch)return;
+  _rematching575=true;
+  try{
+   final fresh=await (widget.request??ngelx565LudoRequest)({'action':'rematch','id':widget.id});
+   if(!mounted)return;
+   Navigator.of(context).pushReplacement(MaterialPageRoute(builder:(_)=>Ngelx565LudoRoom(
+    id:fresh['id'].toString(),initial:fresh,request:widget.request,userId:widget.userId)));
+  }catch(e){
+   if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+    content:Text('Rövanş oluşturulamadı: $e')));
+  }finally{_rematching575=false;}
+ }
+ Future<void> _autoSingleMove574()async{""")
+swap("Ngelx567GameButton(label:'Lobiye dön',gold:true,onPressed:_close),",
+"""if(!widget.watch&&!game.detached&&room['status']=='finished'&&room['botGame']!=true)...[
+    Ngelx567GameButton(label:'Rövanş',onPressed:game.busy?null:_rematch575),
+    const SizedBox(height:8),
+   ],
+   Ngelx567GameButton(label:'Lobiye dön',gold:true,onPressed:_close),""")
+""" void _tapAuto575(bool active){
   if(widget.watch||game.busy||!game.playing||game.seat<0)return;
   unawaited(game.perform('auto',{'enabled':!active}));
  }
