@@ -30,13 +30,13 @@ function run(mode,scenario='',seed){
    if(scenario==='weighted')current.versions=[{version_id:old.versions[0].version_id,percentage:50},{version_id:newer.versions[0].version_id,percentage:50}];
    return Response.json({success:true,result:{deployments:[{...current,created_on:'2026-10-26T00:00:00Z'}]}});
   }
-  if(u.endsWith('/health'))return Response.json({ok:true,features:['community_delete556','ludo565','ludo568','ludo569'],ludo575:{sourceVersion:575,configured:scenario!=='unconfigured',rewardedAdsConfigured:false}});
+  if(u.endsWith('/health'))return Response.json({ok:true,features:['community_delete556','ludo565','ludo568','ludo569'],ludo575:{sourceVersion:575,configured:scenario!=='unconfigured'&&!(scenario==='domain-old'&&u.includes('oyun.ngelxsocial.com')),rewardedAdsConfigured:false}});
   return new Response('{}',{status:401});
  };
  try{await import(${JSON.stringify(new URL('./build576_deployment_guard.mjs',import.meta.url).href)});console.log('POST_COUNT='+posts);}catch(e){console.error(e.message);console.error('POST_COUNT='+posts);process.exitCode=1;}
  `;
  try{
-  const r=spawnSync(process.execPath,['--input-type=module','--eval',script],{env:{...process.env,RUNNER_TEMP:dir,CLOUDFLARE_API_TOKEN:'test-only-not-real',CLOUDFLARE_ACCOUNT_ID:'fake-account',GH_TOKEN:'test-only-not-real'},encoding:'utf8'});
+  const r=spawnSync(process.execPath,['--input-type=module','--eval',script],{env:{...process.env,RUNNER_TEMP:dir,CLOUDFLARE_API_TOKEN:'test-only-not-real',CLOUDFLARE_ACCOUNT_ID:'fake-account',GH_TOKEN:'test-only-not-real',NGELX_HEALTH_ATTEMPTS:'1'},encoding:'utf8'});
   let saved;try{saved=JSON.parse(readFileSync(state));}catch{}
   return {...r,saved};
  }finally{rmSync(dir,{recursive:true,force:true});}
@@ -58,4 +58,8 @@ test('rollback restores only the recorded prior version',()=>{
 });
 test('rollback refuses to overwrite a concurrent deployment',()=>{
  const r=run('rollback','concurrent',{previous:old,deployed:newer});assert.notEqual(r.status,0);assert.match(r.stderr,/unrecognized\/concurrent/);assert.match(r.stderr,/POST_COUNT=0/);
+});
+
+test('custom game hostname must converge even when workers.dev is already new',()=>{
+ const r=run('record','domain-old',{previous:old});assert.notEqual(r.status,0);assert.match(r.stderr,/both hostnames/);assert.equal(r.saved.deployed.id,'new');assert.match(r.stderr,/POST_COUNT=0/);
 });

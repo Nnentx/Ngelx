@@ -16,16 +16,31 @@ async function latest(){
  return {id:first.id,versions:first.versions};
 }
 async function health(expectNew){
- const base='https://ngelx-live-moderation.alihancaglar76.workers.dev';
- const r=await fetch(base+'/health',{cache:'no-store',signal:AbortSignal.timeout(15000)}),h=await r.json();
- if(!r.ok||h.ok!==true||!['community_delete556','ludo565','ludo568','ludo569'].every(f=>h.features?.includes(f)))throw Error('Core health/capabilities changed');
- if(expectNew&&(h.ludo575?.sourceVersion!==575||h.ludo575?.configured!==true))throw Error('New Ludo runtime not configured');
- if(expectNew&&h.ludo575?.rewardedAdsConfigured===true)throw Error('Release requires rewarded ads disabled');
- for(const path of ['/ludo','/community/delete','/moderate']){
-  const denied=await fetch(base+path,{method:'POST',headers:{'content-type':'application/json'},body:'{}',signal:AbortSignal.timeout(15000)});
-  if(denied.status!==401)throw Error('Anonymous security boundary changed: '+path);
+ const results=[];
+ for(const base of ['https://ngelx-live-moderation.alihancaglar76.workers.dev','https://oyun.ngelxsocial.com']){
+  const r=await fetch(base+'/health',{cache:'no-store',signal:AbortSignal.timeout(15000)}),h=await r.json();
+  if(!r.ok||h.ok!==true||!['community_delete556','ludo565','ludo568','ludo569'].every(f=>h.features?.includes(f)))throw Error('Core health/capabilities changed');
+  if(expectNew&&(h.ludo575?.sourceVersion!==575||h.ludo575?.configured!==true))throw Error('New Ludo runtime not configured on both hostnames');
+  if(expectNew&&h.ludo575?.rewardedAdsConfigured===true)throw Error('Release requires rewarded ads disabled');
+  for(const path of ['/ludo','/community/delete','/moderate']){
+   const denied=await fetch(base+path,{method:'POST',headers:{'content-type':'application/json'},body:'{}',signal:AbortSignal.timeout(15000)});
+   if(denied.status!==401)throw Error('Anonymous security boundary changed: '+path);
+  }
+  results.push({hostname:new URL(base).hostname,ok:h.ok,features:h.features,newLudoConfigured:h.ludo575?.configured===true,rewardedAdsConfigured:h.ludo575?.rewardedAdsConfigured===true});
  }
- return {ok:h.ok,features:h.features,newLudoConfigured:h.ludo575?.configured===true,rewardedAdsConfigured:h.ludo575?.rewardedAdsConfigured===true};
+ return {endpoints:results};
+}
+async function converge(){
+ const attempts=Math.max(1,Math.min(18,Number(process.env.NGELX_HEALTH_ATTEMPTS)||18));let last;
+ for(let i=0;i<attempts;i++){
+  try{
+   const first=await health(true);
+   if(attempts>1){await new Promise(r=>setTimeout(r,5000));await health(true);}
+   return first;
+  }catch(e){last=e;console.log('Waiting for both hostnames to converge ('+(i+1)+'/'+attempts+').');}
+  if(i+1<attempts)await new Promise(r=>setTimeout(r,5000));
+ }
+ throw last;
 }
 function save(s){fs.writeFileSync(statePath,JSON.stringify(s,null,2)+'\n');}
 const mode=process.argv[2];
@@ -42,7 +57,7 @@ if(mode==='prepare'){
  const s=JSON.parse(fs.readFileSync(statePath)),current=await latest();
  if(current.id===s.previous.id)throw Error('No new deployment observed');
  s.deployed=current;save(s);console.log('New deployment recorded for conditional rollback.');
- s.health=await health(true);save(s);console.log('New Ludo configured; original core endpoints reject anonymous access; ads disabled.');
+ s.health=await converge();save(s);console.log('New Ludo configured; original core endpoints reject anonymous access; ads disabled.');
 }else if(mode==='accept'){
  const s=JSON.parse(fs.readFileSync(statePath)),current=await latest();
  if(current.id!==s.deployed?.id)throw Error('Concurrent rollout detected; acceptance invalid');
