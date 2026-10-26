@@ -57,7 +57,8 @@ test('a second verified win raises total coins, XP, streak and level',async()=>{
  const first=await settleMatch575(db,'human',a,t+5000);
  const second=await settleMatch575(db,'human',b,t+5000);
  assert.equal(first.level,1);
- assert.equal(second.chips,300);
+ assert.equal(second.chips,320);
+ assert.equal(second.reward.streakBonus,20);
  assert.equal(second.streak,2);
  assert.equal(second.xp,180);
 });
@@ -74,4 +75,20 @@ test('treasure chest only credits again after eight hours',async()=>{
  const b=await claimChest575(db,'human',t+7*3600000);assert.equal(b.claimed,false);
  const c=await claimChest575(db,'human',t+8*3600000);
  assert.equal(c.chips,50);assert.equal(c.xp,20);assert.equal(c.claimed,true);
+});
+
+test('five-win streak pays capped bonus but cannot be claimed twice',async()=>{
+ const db=store();
+ for(let i=0;i<10;i++){
+  const r=game();r.id='match_streak_'+i;
+  const w=await settleMatch575(db,'human',r,t+5000);
+  assert.equal(w.streak,i+1);
+  assert.ok(w.reward.chips<=250);
+  const after=await settleMatch575(db,'human',r,t+5100);
+  assert.equal(after.chips,w.chips);
+  assert.equal(after.reward,undefined);
+ }
+ const final=await ludoWallet575(db,'human');
+ assert.equal(final.streak,10);
+ assert.equal(final.chips,150+170+190+210+230+250*5);
 });
