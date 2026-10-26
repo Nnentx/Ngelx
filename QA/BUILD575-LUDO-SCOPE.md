@@ -78,5 +78,12 @@ Yeni kod, testli Build574 paketinin üstüne `tools/apply_build575_ludo.py` ile 
 - Mock cüzdan testlerine ek olarak, gerçek `ludoStore565` Firestore REST `documents:commit` isteği iki kayıt (reklam oturumu) ve üç kayıt (hediye/SSV) için kontrol edilir. `updateTime` / `exists:false` CAS koşulu, doğru Firebase proje yolu, Authorization ve 409 tekrar deneme davranışı test edilir. Canlı Firestore işlem denemesi yine ayrı kabul testidir.
 - Son kaynak üzerinde **119/119 sunucu testi geçti** (26 Ekim 2026, GitHub Actions 40330155671); yeni Android inceleme derlemesi halen test akışında olduğundan buradan yayına hazır sonucu çıkarılmaz.
 
+## Moderasyon operatörü için kimlik doğrulamalı inceleme aracı
+- `tools/ludo575_moderator_cli.mjs` dosyası, moderatör onayı almış **Firebase ID token** ve **HTTPS /ludo endpoint URL** bilgilerini sadece özel ortam değişkenlerinden alarak çalışır. Token komut parametresi/URL içine yazılmaz veya loglarda gösterilmez.
+- Yetkili operatör `list [YYYY-MM-DD] [page]` ile son 15 gün içindeki günlük şikâyet kuyruğunu sayfalayabilir, `resolve <report575_hash> reviewed|dismissed|actioned` ile bir kayıt hakkında karar girebilir. Şikâyeti sonuçlandıran UID ve zaman sunucuda tutulur.
+- Bu bir **komut satırı operatör aracıdır**, kullanıcıya dönük ya da internetten erişilebilen bir moderasyon paneli değildir. `LUDO_MODERATOR_UIDS` listesi Worker ortamında tanımlanmazsa tüm moderatör eylemleri reddedilir. Gerçek moderatör hesabıyla operasyon akışı canlıda doğrulanmadan moderasyon tamamlandı sayılmaz.
+- HTTP hata ve bağlantı kopmalarında otomatik tekrar çözümleme yapılmaz; operatör tekrar karar göndermeden önce mevcut rapor durumunu kontrol eder. 124/124 Worker+Node testi, bu CLI için HTTPS, yalnızca env token, kaynak/yetki ve tek işlem kontrollerini içerir (2026-10-26, run 40331140031).
+- Canlı sisteme hiçbir işlem uygulanmadı; Build574 kullanıcıları etkilenmiyor.
+
 ## Yayın kapısı
 `NgelX-BUILD575-LUDO.yml` yalnızca derleme/test amaçlıdır. Bulut oyun servisi güncellenmeden Build575'teki yeni Auto ve çip ödülü çalışmaz. CI testi + doğrulanan imza + gerçek cihaz testleri tamamlanmadan canlı güncelleme alanına sürüm kaydı açılmaz. Build574 mevcut kullanıcılar için yayınlanan sürüm olarak kalır.
