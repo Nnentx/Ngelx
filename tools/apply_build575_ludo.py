@@ -45,6 +45,30 @@ swap("Text(amount is num?amount.toInt().toString():'—',style:const TextStyle(c
 swap("int capacity=2;bool team=false,busy=false,joining=false;String play='friends',difficulty='medium',mode='classic',error='';",
 """int capacity=2;bool team=false,busy=false,joining=false,giftBusy575=false;
  String giftMessage575='';String play='friends',difficulty='medium',mode='classic',error='';""")
+swap(' Future<void> refresh()async{',""" Future<void> _myStats575()async{
+  try{
+   final stats=await (widget.request??ngelx565LudoRequest)({'action':'wallet'});
+   if(!mounted)return;
+   final entries=<({String name,dynamic value})>[
+    (name:'Çip',value:stats['chips']),(name:'Elmas',value:stats['gems']),
+    (name:'Seviye',value:stats['level']),(name:'XP',value:stats['xp']),
+    (name:'Galibiyet',value:stats['wins']),(name:'Mağlubiyet',value:stats['losses']),
+    (name:'Galibiyet serisi',value:stats['streak'])];
+   await showDialog<void>(context:context,builder:(c)=>Theme(
+    data:ngelx567LudoTheme(),child:AlertDialog(title:const Text('Ludo istatistiklerim'),
+     content:Column(mainAxisSize:MainAxisSize.min,children:[
+       for(final entry in entries)Padding(
+        padding:const EdgeInsets.symmetric(vertical:5),
+        child:Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[
+         Text(entry.name,style:const TextStyle(color:Color(0xFF453C69),fontWeight:FontWeight.w700)),
+         const SizedBox(width:12),
+         Text('${entry.value is num?entry.value.toInt():0}',
+          style:const TextStyle(color:Color(0xFF5C42AF),fontWeight:FontWeight.w900)),
+        ]))]),
+     actions:[TextButton(onPressed:()=>Navigator.pop(c),child:const Text('Kapat'))])));
+  }catch(e){if(mounted)setState(()=>giftMessage575='İstatistikler alınamadı: $e');}
+ }
+ Future<void> refresh()async{""")
 swap(' Future<void> refresh()async{',""" Future<void> _claim575(String action)async{
   if(busy||giftBusy575)return;
   setState(()=>giftBusy575=true);
@@ -65,6 +89,8 @@ swap("const Center(child:Text('Arkadaşlarınla aynı masada',style:TextStyle(co
     icon:const Icon(Icons.card_giftcard_rounded,size:19),label:const Text('Günlük hediye')),
    OutlinedButton.icon(key:const ValueKey('ludo-timed-chest'),onPressed:busy||giftBusy575?null:()=>_claim575('chest_reward'),
     icon:const Icon(Icons.inventory_2_rounded,size:19),label:const Text('Ödül sandığı')),
+   OutlinedButton.icon(key:const ValueKey('ludo-profile-stats'),onPressed:busy?null:_myStats575,
+    icon:const Icon(Icons.person_outline_rounded,size:19),label:const Text('Puanlarım')),
   ]),
   if(giftMessage575.isNotEmpty)Padding(padding:const EdgeInsets.only(top:4),child:Text(giftMessage575,textAlign:TextAlign.center,style:const TextStyle(color:Color(0xFFFFE28D),fontWeight:FontWeight.w700,fontSize:12))),
   const SizedBox(height:15),""")
