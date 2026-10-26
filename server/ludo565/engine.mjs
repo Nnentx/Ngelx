@@ -51,7 +51,9 @@ export function act(original,uid,b,now,roll=secureRoll){
    if(now-(r.lastChat?.[uid]??0)<1500)fail('slow_down',429);
    r.chat=[...r.chat,{uid,name:player.name,text,at:now}].slice(-15);r.lastChat={...r.lastChat,[uid]:now};
   }else if(b.action==='start'){
-   if(uid!==r.owner)fail('host_only',403);if(r.status!=='waiting'||r.players.length!==r.capacity)fail('waiting_for_players',409);
+   if(uid!==r.owner)fail('host_only',403);
+   const joined=r.players.filter(p=>!p.left);
+   if(r.status!=='waiting'||joined.length<2||r.team&&joined.length!==4||r.matchmaking&&joined.length!==r.capacity)fail('waiting_for_players',409);
    r.status='playing';r.deadline=now+10000;
   }else{
    if(r.status!=='playing')fail('not_playing',409);
