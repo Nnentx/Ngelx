@@ -2,6 +2,7 @@ import {createRoom,act,LudoError,legal,secureRoll} from '../../../server/ludo565
 import {accessToken} from '../../call-push/src/google.mjs';
 import {chooseBotToken572} from '../../../server/ludo565/strategy572.mjs';
 import {ludoWallet575,settleMatch575,claimDaily575,claimChest575} from '../../../server/ludo565/rewards575.mjs';
+import {sendLudoGift575,ludoGiftCatalog575} from '../../../server/ludo565/gifts575.mjs';
 export function ludoStore565(env,{fetcher=fetch,authorize=()=>accessToken(env)}={}){
  if(env.FIREBASE_PROJECT_ID!=='ngelx-44eed')throw Error('Wrong project');
  const base=`https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID}/databases/(default)/documents/_ngelx_ludo565/`;
@@ -9,6 +10,19 @@ export function ludoStore565(env,{fetcher=fetch,authorize=()=>accessToken(env)}=
  return {
   async get(id){const d=await api(id);return d?{room:JSON.parse(d.fields.state.stringValue),stamp:d.updateTime}:null;},
   async put(id,room,stamp){return api(id+'?'+(stamp?'currentDocument.updateTime='+encodeURIComponent(stamp):'currentDocument.exists=false'),{method:'PATCH',body:JSON.stringify({fields:{state:{stringValue:JSON.stringify(room)}}})});},
+  async putMany(changes){
+   if(!Array.isArray(changes)||changes.length!==3||new Set(changes.map(x=>x.id)).size!==3)throw new LudoError('invalid_gift',400);
+   const root='projects/'+env.FIREBASE_PROJECT_ID+'/databases/(default)/documents/_ngelx_ludo565/';
+   const url='https://firestore.googleapis.com/v1/projects/'+env.FIREBASE_PROJECT_ID+'/databases/(default)/documents:commit';
+   const writes=changes.map(x=>({update:{name:root+x.id,fields:{state:{stringValue:JSON.stringify(x.room)}}},
+    currentDocument:x.stamp?{updateTime:x.stamp}:{exists:false}}));
+   const response=await fetcher(url,{method:'POST',
+    headers:{authorization:'Bearer '+await authorize(),'content-type':'application/json'},
+    body:JSON.stringify({writes}),signal:AbortSignal.timeout(8000)});
+   if(response.status===409||response.status===412)throw new LudoError('state_changed',409);
+   if(!response.ok)throw new Error('Gift transaction unavailable');
+   return response.json();
+  },
  };
 }
 export function createLudo565({verify,profile,store,limit=async()=>true,now=()=>Date.now(),uuid=()=>String(100000+crypto.getRandomValues(new Uint32Array(1))[0]%900000),roll}){
@@ -48,6 +62,7 @@ export function createLudo565({verify,profile,store,limit=async()=>true,now=()=>
    }
    if(!await limit(uid,b.action))return json({error:'slow_down'},429);
    if(b.action==='wallet')return json({room:await ludoWallet575(store,uid)});
+   if(b.action==='gift_catalog')return json({room:{gifts:ludoGiftCatalog575}});
    if(b.action==='daily_reward'||b.action==='chest_reward'){
     const reward=b.action==='daily_reward'?await claimDaily575(store,uid,now()):await claimChest575(store,uid,now());
     return json({room:reward});
@@ -99,6 +114,13 @@ export function createLudo565({verify,profile,store,limit=async()=>true,now=()=>
    if(!/^(?:[0-9]{6}|[A-F0-9]{16})$/.test(b.id??''))return json({error:'invalid_room'},400);
    const existing=await store.get(b.id);if(!existing)return json({error:'room_not_found'},404);
    if(existing.room.expiresAt<=now())return json({error:'room_expired'},410);
+   if(b.action==='gift'){
+    const result=await sendLudoGift575(store,b.id,uid,b,now());
+    const room=await withWallet575({...result.room,
+      spectatorCount:result.room.spectatorCount??0,
+      giftSent:result.sent,giftAlreadySent:result.alreadySent});
+    return json({room});
+   }
    if(b.action==='rematch'){
     const original=existing.room;
     if(original.status!=='finished'||original.botGame||!original.players.some(p=>p.uid===uid&&!p.left))return json({error:'not_available'},409);
