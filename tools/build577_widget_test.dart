@@ -55,7 +55,7 @@ void main(){
   expect(calls.where((b)=>b['action']=='leave').map((b)=>b['requestId']).toSet().length,1);
   expect(controller.error,isEmpty);controller.dispose();
  });
- testWidgets('actual 3D pawn sizes and gameplay table preview',(tester)async{
+ testWidgets('production 3D sprite and board painters at gameplay sizes',(tester)async{
   final atlas=await tester.runAsync(()=>ngelx570PawnSprite());
   expect(atlas,isNotNull);expect(atlas!.width,1254);expect(atlas.height,1254);
   final bytes=await tester.runAsync(()=>atlas.toByteData(format:ui.ImageByteFormat.rawRgba));
@@ -71,15 +71,13 @@ void main(){
   )))));
   await settle577(tester);expect(tester.takeException(),isNull);await savePreview(tester,'actual-sprites-28-44-80px');
   await tester.pumpWidget(const SizedBox());
-  debugPrint('Build577 table: preparing actual table');
-  // Render the exact gameplay table, directly, without unrelated room polling/audio plugins.
-  tester.view.physicalSize=const Size(393,520);tester.view.devicePixelRatio=1;
+  // Paint the production board and sprite painters without room/plugin lifecycles.
+  tester.view.physicalSize=const Size(393,440);tester.view.devicePixelRatio=1;
   await tester.pumpWidget(MaterialApp(home:Scaffold(body:RepaintBoundary(key:const ValueKey('preview577'),child:Container(
-   color:const Color(0xFF163D62),child:Ngelx567Table(room:room577(),seat:0,uid:'a',enabled:false,
-    onToken:(_){},onRoll:(){},busy:false),
+   color:const Color(0xFF163D62),child:Center(child:AspectRatio(aspectRatio:1,child:CustomPaint(painter:BoardPreview577(atlas)))),
   )))));
-  debugPrint('Build577 table: mounted');await settle577(tester);
-  expect(tester.takeException(),isNull);debugPrint('Build577 table: capturing');await savePreview(tester,'actual-game-table-393px');debugPrint('Build577 table: captured');
+  await settle577(tester);
+  expect(tester.takeException(),isNull);await savePreview(tester,'production-painters-board-393px');
   await tester.pumpWidget(const SizedBox());
  });
  test('leave conflict exhaustion remains an error and never fabricates detachment',()async{
@@ -91,4 +89,21 @@ void main(){
   expect(await controller.leave(),false);expect(attempts,4);expect(controller.detached,false);
   expect(controller.error,'conflict');controller.dispose();
  });
+}
+
+class BoardPreview577 extends CustomPainter {
+ final ui.Image atlas;const BoardPreview577(this.atlas);
+ @override void paint(Canvas canvas,Size size){
+  const turns=3;
+  const Ngelx565BoardPainter(turns:turns,power:false).paint(canvas,size);
+  final cell=size.width/15,pawnSize=cell*1.13,limit=size.width-pawnSize;
+  for(final seat in [0,2])for(var token=0;token<4;token++){
+   final p=ngelx565Rotate(ngelx565TokenPoint(seat,token,-1),turns);
+   final x=((p.dx+.5)*cell-pawnSize*.5).clamp(0.0,limit).toDouble();
+   final y=((p.dy+.5)*cell-pawnSize*.51).clamp(0.0,limit).toDouble();
+   canvas.save();canvas.translate(x,y);
+   Ngelx570SpritePainter(seat,false,atlas).paint(canvas,Size(pawnSize,pawnSize));canvas.restore();
+  }
+ }
+ @override bool shouldRepaint(covariant BoardPreview577 old)=>old.atlas!=atlas;
 }
