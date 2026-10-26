@@ -42,6 +42,32 @@ swap('class Ngelx573WalletBar extends StatelessWidget{',"""class Ngelx575Animate
 }
 class Ngelx573WalletBar extends StatelessWidget{""")
 swap("Text(amount is num?amount.toInt().toString():'—',style:const TextStyle(color:Colors.white,fontSize:13,fontWeight:FontWeight.w900))","Ngelx575AnimatedBalance(amount:amount)")
+swap("int capacity=2;bool team=false,busy=false,joining=false;String play='friends',difficulty='medium',mode='classic',error='';",
+"""int capacity=2;bool team=false,busy=false,joining=false,giftBusy575=false;
+ String giftMessage575='';String play='friends',difficulty='medium',mode='classic',error='';""")
+swap(' Future<void> refresh()async{',""" Future<void> _claim575(String action)async{
+  if(busy||giftBusy575)return;
+  setState(()=>giftBusy575=true);
+  try{
+   final reward=await (widget.request??ngelx565LudoRequest)({'action':action});
+   final claimed=reward['claimed']==true;
+   final count=(reward['chipReward'] as num?)?.toInt()??0;
+   if(mounted)setState(()=>giftMessage575=claimed?'+$count çip kazandın! 🎁':'Bu ödülü zaten topladın; daha sonra yeniden dene.');
+  }catch(e){if(mounted)setState(()=>giftMessage575=e.toString().replaceFirst('Exception: ',''));}
+  finally{if(mounted)setState(()=>giftBusy575=false);}
+ }
+ Future<void> refresh()async{""")
+swap("const Center(child:Text('Arkadaşlarınla aynı masada',style:TextStyle(color:Colors.white70,fontSize:14))),const SizedBox(height:25),",
+"""const Center(child:Text('Arkadaşlarınla aynı masada',style:TextStyle(color:Colors.white70,fontSize:14))),
+  const SizedBox(height:12),
+  Wrap(alignment:WrapAlignment.center,spacing:8,runSpacing:4,children:[
+   OutlinedButton.icon(key:const ValueKey('ludo-daily-gift'),onPressed:busy||giftBusy575?null:()=>_claim575('daily_reward'),
+    icon:const Icon(Icons.card_giftcard_rounded,size:19),label:const Text('Günlük hediye')),
+   OutlinedButton.icon(key:const ValueKey('ludo-timed-chest'),onPressed:busy||giftBusy575?null:()=>_claim575('chest_reward'),
+    icon:const Icon(Icons.inventory_2_rounded,size:19),label:const Text('Ödül sandığı')),
+  ]),
+  if(giftMessage575.isNotEmpty)Padding(padding:const EdgeInsets.only(top:4),child:Text(giftMessage575,textAlign:TextAlign.center,style:const TextStyle(color:Color(0xFFFFE28D),fontWeight:FontWeight.w700,fontSize:12))),
+  const SizedBox(height:15),""")
 swap(' Future<void> _autoSingleMove574()async{',""" void _tapAuto575(bool active){
   if(widget.watch||game.busy||!game.playing||game.seat<0)return;
   unawaited(game.perform('auto',{'enabled':!active}));
