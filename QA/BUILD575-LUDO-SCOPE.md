@@ -41,6 +41,13 @@ Yeni kod, testli Build574 paketinin üstüne `tools/apply_build575_ludo.py` ile 
 - Güvenli reklam oturumu: aynı kullanıcı 15 dakikalık oturum açıkken yeni token üretemez, tekrar dokunma aynı token'ı döndürür; günlük 20 oturum denemesi sınırı Firestore CAS ile tutulur ve gerçek ödül alınınca token tüketilir. Sahte yerel reklam tamamlama mesajları bakiye değiştiremez.
 - GitHub Actions son kod değişikliklerini seri denemelerle inceler; eskimiş denemeler iptal edilir, Flutter paket/analiz/widget adımları ayrı ve süre sınırlıdır.
 
+## Son Android derleme ve reklam smoke kontrolleri (26.10.2026)
+- Widget suite'in gerçek tahtayı açıp dokunmaya çalışan avatar testi Flutter test runner'ı uzun süre kilitledi. Bu test yerine avatar `GestureDetector` hit-area ve `onPlayerTap` bağlantıları derleme öncesi sabit kaynak sözleşmesiyle doğrulanır. Gerçek avatar tıklaması iki fiziksel telefonla test edilmelidir.
+- İzleyici/masaya oturmamış hesap yanlışlıkla galibiyet kupası alamaz (`!widget.watch`, `seat>=0`).
+- AdMob rewarded video gösterilmeden önce SSV `customData` ayarının tamamlanması **beklenir**; bu işlem yarış koşuluyla eksik callback üretmemelidir.
+- CI, imzalı ve reklamsız Build575 inceleme APK'sını artefakt olarak kaydettikten sonra ayrık adımda **yalnızca Google demo/test AdMob App ID ve Rewarded Unit ID ile** mobil SDK ve Dart derleme denetimi yapar. Demo kimlikleri hiçbir yayınlanacak APK içinde kullanılmaz. Bu denetim başarısı canlı Ads hesabının bağlı olduğu anlamına gelmez.
+- En güncel Android ve reklam smoke test sonuçları, CI'nin `NgelX-BUILD575-LUDO.yml` çıktısı tamamlandığında doğrulanır; bitmemiş işler başarılı ilan edilmez.
+
 ## Bu sürümde henüz **tamamlandı** denmeyecekler
 1. Gerçek telefonda 320/360/393/440 genişliklerinde ekran görüntüsü karşılaştırması ve taşların referansla görsel kalite onayı. Widget testleri gerçek cihaz testi yerine geçmez.
 2. Google SSV imza ve hesap kredisi sunucu tarafına kodlandı, ancak **mobil Ads SDK'nin gerçek kimliklerle derlenip doğrulanması, gerçek reklam uygulama/birim kimlikleri, izin ve gizlilik onayı, AdMob panelinde callback ayarı ve gerçek callback canlı testi** henüz eksik. Bu nedenle reklam düğmesi açılmamalı ve test imzası gerçek reklam sayılmamalı.
