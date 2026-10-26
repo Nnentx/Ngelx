@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "package": "com.nnentx.ngelx_app",
+  "abi": "arm64-v8a",
+  "version": "1.0.343",
+  "build": 573,
+  "size": 48668586,
+  "sha256": "4b0ddff862746775e6a86bca5ea639019aa439836f95cae587dbd460078dd5cb",
+  "url": "https://github.com/Nnentx/Ngelx/releases/download/v1.0.343-build573-test/NgelX-1.0.343-Build573.apk",
+  "notes": "Build573 deneme sürümü. Daha geniş Ludo tahtası, kompakt alt kontrol alanı, yeni arka plan, hücre içine sığan taşlar, gerçek veri için cüzdan/seviye alanları. Uygulama içi otomatik güncelleme değiştirilmez.",
+  "testedSource": "e4b6ece0dbab9c856769abe52bc4ce72701ca849",
+  "buildRun": 40286383224
+}
