@@ -19,6 +19,10 @@ Map<String,dynamic> room577({int revision=1,String status='playing',bool oneMove
  'turn':0,'dice':oneMove?1:null,'deadline':DateTime.now().millisecondsSinceEpoch+10000,
  'shields':<String,dynamic>{},'autoSeats':<String,dynamic>{},'chat':[],'winner':null,
 };
+Future<void> settle577(WidgetTester tester)async{
+ // The live room has a clock and periodic polling; do not wait for every animation to stop.
+ await tester.pump(const Duration(milliseconds:350));await tester.pump();
+}
 Future<void> savePreview(WidgetTester tester,String name)async{
  final boundary=tester.renderObject<RenderRepaintBoundary>(find.byKey(const ValueKey('preview577')));
  await tester.runAsync(()async{
@@ -67,7 +71,7 @@ void main(){
     ]),
    ]),
   )))));
-  await tester.pumpAndSettle();expect(tester.takeException(),isNull);await savePreview(tester,'actual-sprites-28-44-80px');
+  await settle577(tester);expect(tester.takeException(),isNull);await savePreview(tester,'actual-sprites-28-44-80px');
  });
  testWidgets('actual room preview preserves layout with the new raster pawns',(tester)async{
   await tester.runAsync(()=>ngelx570PawnSprite());
@@ -76,7 +80,8 @@ void main(){
   await tester.pumpWidget(MaterialApp(home:RepaintBoundary(key:const ValueKey('preview577'),child:Ngelx565LudoRoom(
    id:'859819',userId:'a',initial:room577(),request:(body)async=>room577(),
   ))));
-  await tester.pumpAndSettle();expect(tester.takeException(),isNull);await savePreview(tester,'actual-game-393px');
+  await settle577(tester);await tester.pump(const Duration(milliseconds:950));await tester.pump();
+  expect(tester.takeException(),isNull);await savePreview(tester,'actual-game-393px');
   await tester.pumpWidget(const SizedBox());
  });
  testWidgets('leave confirmation cancels a queued single-piece Auto move',(tester)async{
@@ -87,12 +92,12 @@ void main(){
     return room577(oneMove:true,status:body['action']=='leave'?'closed':'playing',revision:body['action']=='leave'?2:1);
    },
   ))),child:const Text('Open577')))));
-  await tester.tap(find.text('Open577'));await tester.pumpAndSettle();
+  await tester.tap(find.text('Open577'));await settle577(tester);
   await tester.pump(const Duration(seconds:1));await tester.pump();
-  await tester.tap(find.byKey(const ValueKey('ludo-back')));await tester.pumpAndSettle();
+  await tester.tap(find.byKey(const ValueKey('ludo-back')));await settle577(tester);
   await tester.pump(const Duration(milliseconds:450));
   expect(calls.where((a)=>a=='move'),isEmpty);
-  await tester.tap(find.byKey(const ValueKey('confirm-ludo-leave')));await tester.pumpAndSettle();
+  await tester.tap(find.byKey(const ValueKey('confirm-ludo-leave')));await settle577(tester);
   expect(find.text('Open577'),findsOneWidget);expect(find.text('Ayrılma doğrulanamadı'),findsNothing);
   expect(calls.where((a)=>a=='leave').length,1);
  });
