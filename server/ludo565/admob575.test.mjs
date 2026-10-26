@@ -135,3 +135,36 @@ test('AdMob session/status HTTP endpoints are authenticated and unavailable befo
  assert.equal(res.status,200);
  assert.equal((await res.json()).room.verified,false);
 });
+
+test('tapping watch video repeatedly reuses the same unexpired session without flooding records',async()=>{
+ const db=store();
+ const first=await createAdSession575(db,'alice',t);
+ const second=await createAdSession575(db,'alice',t+900);
+ assert.equal(first.token,second.token);
+ assert.equal(second.reused,true);
+ assert.equal(db.data.size,2); // one wallet, one signed reward session
+ const after=await createAdSession575(db,'alice',t+16*60000);
+ assert.notEqual(after.token,first.token);
+ assert.equal(after.reused,false);
+ assert.equal(db.data.size,3);
+});
+
+test('pending session is cleared on payout; next ad can be opened and no early repeat credits',async()=>{
+ const db=store(),a=await createAdSession575(db,'alice',t);
+ const payload={transactionId:'0123456789abcdefabcd',token:a.token,adUnit:'123456789',
+  rewardItem:'chips',rewardAmount:1,timestamp:t};
+ await applyAdmobReward575(db,payload,t+1000,'123456789');
+ const b=await createAdSession575(db,'alice',t+2000);
+ assert.notEqual(b.token,a.token);
+ assert.equal((await ludoWallet575(db,'alice')).chips,30);
+ await assert.rejects(applyAdmobReward575(db,{...payload,
+  transactionId:'abcdefabcdefabcdef'},t+3000,'123456789'),/invalid_ad_session/);
+ assert.equal((await ludoWallet575(db,'alice')).chips,30);
+});
+
+test('ad session reservation requires atomic CAS; failing store cannot create active token',async()=>{
+ const db=store();
+ await assert.rejects(createAdSession575({get:db.get.bind(db),put:db.put.bind(db)},'alice',t),
+  /ad_store_unavailable/);
+ assert.equal(db.data.size,0);
+});
