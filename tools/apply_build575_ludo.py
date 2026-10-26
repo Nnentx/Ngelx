@@ -184,7 +184,7 @@ swap("final ValueChanged<int> onToken;final VoidCallback onRoll;",
 swap("required this.onToken,required this.onRoll,required this.busy});",
 """required this.onToken,required this.onRoll,required this.busy,this.onPlayerTap});""")
 swap("Container(width:38,height:38,padding:const EdgeInsets.all(2)",
-"""GestureDetector(key:ValueKey('ludo-player-\${p['uid']}'),
+"""GestureDetector(key:ValueKey('ludo-player-${p['uid']}'),
   onTap:onPlayerTap==null?null:()=>onPlayerTap!(Map<String,dynamic>.from(p as Map)),
   child:Container(width:38,height:38,padding:const EdgeInsets.all(2)""")
 swap(")),const SizedBox(width:5),\n     Flexible(child:Text(",
@@ -209,7 +209,7 @@ swap(' Future<void> _autoSingleMove574()async{',""" Future<void> _playerCard575(
    data:ngelx567LudoTheme(),child:AlertDialog(
     title:Text(nickname),
     content:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
-     Text('Seviye \${(person['level'] as num?)?.toInt()??1}'),
+     Text('Seviye ${(person['level'] as num?)?.toInt()??1}'),
      const SizedBox(height:8),
      if(bot)const Text('Makine oyuncusu'),
      if(isMine)const Text('Kendi oyuncu profilin'),
@@ -219,7 +219,7 @@ swap(' Future<void> _autoSingleMove574()async{',""" Future<void> _playerCard575(
        leading:Text((e.value is Map?e.value['emoji']:null)?.toString()??'🎁',
         style:const TextStyle(fontSize:26)),
        title:Text((e.value is Map?e.value['label']:null)?.toString()??e.key),
-       subtitle:Text('\${(e.value is Map?e.value['chips']:null)??0} çip'),
+       subtitle:Text('${(e.value is Map?e.value['chips']:null)??0} çip'),
        onTap:()=>Navigator.pop(c,e.key)),
     ]),
     actions:[TextButton(onPressed:()=>Navigator.pop(c),child:const Text('Kapat'))])));
@@ -234,7 +234,7 @@ swap(' Future<void> _autoSingleMove574()async{',""" Future<void> _playerCard575(
 swap("if(game.error.isNotEmpty)Padding(padding:const EdgeInsets.only(bottom:5),",
 """if(room['gifts'] is List&&(room['gifts'] as List).isNotEmpty)Padding(
     padding:const EdgeInsets.only(bottom:5),
-    child:Text('\${(room['gifts'] as List).last['emoji']??'🎁'} \${(room['gifts'] as List).last['fromName']??'Oyuncu'} → \${(room['gifts'] as List).last['toName']??'Oyuncu'}',
+    child:Text('${(room['gifts'] as List).last['emoji']??'🎁'} ${(room['gifts'] as List).last['fromName']??'Oyuncu'} → ${(room['gifts'] as List).last['toName']??'Oyuncu'}',
      maxLines:1,overflow:TextOverflow.ellipsis,
      style:const TextStyle(fontSize:11,color:Color(0xFFFFE28D),fontWeight:FontWeight.w800))),
    if(game.error.isNotEmpty)Padding(padding:const EdgeInsets.only(bottom:5),""")
