@@ -100,3 +100,17 @@ test('Ludo Firestore adapter never reads or writes arbitrary service-account doc
  assert.equal(called.length,validIds.length);
  assert.ok(called.every(url=>url.startsWith('https://firestore.googleapis.com/v1/'+root)));
 });
+
+test('Firestore 404 is absence for reads but a conflict for conditional writes',async()=>{
+ const methods=[];
+ const db=create(async(url,options)=>{
+  methods.push(options.method??'GET');
+  return Response.json({error:'not_found'},{status:404});
+ });
+ assert.equal(await db.get('wallet575_missing'),null);
+ await assert.rejects(db.put('wallet575_missing',{chips:999},'stale-revision'),
+  e=>e.status===409&&e.message==='state_changed');
+ await assert.rejects(db.put('wallet575_missing',{chips:999}),
+  e=>e.status===409&&e.message==='state_changed');
+ assert.deepEqual(methods,['GET','PATCH','PATCH']);
+});
