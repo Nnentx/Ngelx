@@ -21,6 +21,8 @@ checks={
  'rematch':'Future<void> _rematch575()async',
  'profile reports':"'__report575'",
  'profile blocks':"'__block575'",
+ 'spectators never get victory UI':"!widget.watch&&!game.detached&&game.seat>=0&&room['status']=='finished'",
+ 'victory feedback':"ValueKey('ludo-result-celebration')",
  'report reason picker':"'harassment','Rahatsız etme'",
  'gift blocked disabling':'onTap:alreadyBlocked575?null',
  'animated chip balance':'class Ngelx575AnimatedBalance',
