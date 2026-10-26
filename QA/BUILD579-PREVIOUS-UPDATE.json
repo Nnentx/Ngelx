@@ -1,0 +1,14 @@
+{
+  "schema": 1,
+  "package": "com.nnentx.ngelx_app",
+  "abi": "arm64-v8a",
+  "version": "1.0.348",
+  "build": 578,
+  "size": 49462372,
+  "sha256": "7d0ad052906a0b4b7ca5a26bc59867baff3521538212e6581bc5c922ab627153",
+  "url": "https://github.com/Nnentx/Ngelx/releases/download/v1.0.348-build578/NgelX-1.0.348-Build578.apk",
+  "notes": "Ludo: Büyük taşlar yuvalarına tabanından oturur; yoldaki taşların başı kareden yukarı taşar. Daha seyrek toplanabilir zarlar; kesintisiz Auto; tamamlanan maçlarla artan XP/seviye. Yarım bırakılan maçlar ödüllendirilmez. Mevcut uygulama ve hesaplar korunur.",
+  "testedSource": "389059e2227d94814bae7fc9f1f21cdee19e70ca",
+  "buildRun": 40379566732,
+  "liveAcceptanceRun": 40379934754
+}
