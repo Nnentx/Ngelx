@@ -53,6 +53,7 @@ swap(' Future<void> refresh()async{',""" Future<void> _myStats575()async{
     (name:'Çip',value:stats['chips']),(name:'Elmas',value:stats['gems']),
     (name:'Seviye',value:stats['level']),(name:'XP',value:stats['xp']),
     (name:'Galibiyet',value:stats['wins']),(name:'Mağlubiyet',value:stats['losses']),
+    (name:'Toplanan hediye',value:stats['receivedGifts'] is Map?(stats['receivedGifts'] as Map).values.whereType<num>().fold<int>(0,(sum,count)=>sum+count.toInt()):0),
     (name:'Galibiyet serisi',value:stats['streak'])];
    await showDialog<void>(context:context,builder:(c)=>Theme(
     data:ngelx567LudoTheme(),child:AlertDialog(title:const Text('Ludo istatistiklerim'),
