@@ -11,7 +11,18 @@ const json=(body,status)=>new Response(JSON.stringify(body),{status,
 export const configured=env=>['LIVEKIT_API_KEY','LIVEKIT_API_SECRET','LIVEKIT_SERVER_URL','GOOGLE_SERVICE_ACCOUNT'].every(k=>typeof env[k]==='string'&&env[k].length>0);
 export default {async fetch(request,env){
   const path=new URL(request.url).pathname;
-  if(path==='/health'&&request.method==='GET')return json({ok:configured(env),service:'ngelx-live-moderation',features:['community_delete556','ludo565','ludo568','ludo569']},configured(env)?200:503);
+  if(path==='/health'&&request.method==='GET'){
+   const coreReady=configured(env);
+   const ludoReady=coreReady&&env.FIREBASE_PROJECT_ID==='ngelx-44eed';
+   return json({ok:coreReady,service:'ngelx-live-moderation',
+    features:['community_delete556','ludo565','ludo568','ludo569',
+     'ludo575_auto','ludo575_chips','ludo575_gifts','ludo575_reports'],
+    ludo575:{sourceVersion:575,configured:ludoReady,
+     rewardedAdsConfigured:ludoReady&&typeof env.LUDO_ADMOB_AD_UNIT==='string'&&
+       /^ca-app-pub-[0-9]{16}\\/[0-9]{10}$/.test(env.LUDO_ADMOB_AD_UNIT),
+     moderationAllowlistConfigured:ludoReady&&typeof env.LUDO_MODERATOR_UIDS==='string'&&
+       env.LUDO_MODERATOR_UIDS.split(',').some(x=>x.trim().length>0)}},coreReady?200:503);
+  }
   if(path==='/ludo/admob/ssv'){
     if(!configured(env))return json({error:'service_not_configured'},503);
     return ludoAdmobEndpoint575({store:ludoStore565(env),env})(request);
