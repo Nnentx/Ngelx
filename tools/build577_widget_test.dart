@@ -71,14 +71,15 @@ void main(){
   )))));
   await settle577(tester);expect(tester.takeException(),isNull);await savePreview(tester,'actual-sprites-28-44-80px');
   await tester.pumpWidget(const SizedBox());
+  debugPrint('Build577 table: preparing actual table');
   // Render the exact gameplay table, directly, without unrelated room polling/audio plugins.
   tester.view.physicalSize=const Size(393,520);tester.view.devicePixelRatio=1;
   await tester.pumpWidget(MaterialApp(home:Scaffold(body:RepaintBoundary(key:const ValueKey('preview577'),child:Container(
    color:const Color(0xFF163D62),child:Ngelx567Table(room:room577(),seat:0,uid:'a',enabled:false,
     onToken:(_){},onRoll:(){},busy:false),
   )))));
-  await settle577(tester);
-  expect(tester.takeException(),isNull);await savePreview(tester,'actual-game-table-393px');
+  debugPrint('Build577 table: mounted');await settle577(tester);
+  expect(tester.takeException(),isNull);debugPrint('Build577 table: capturing');await savePreview(tester,'actual-game-table-393px');debugPrint('Build577 table: captured');
   await tester.pumpWidget(const SizedBox());
  });
  test('leave conflict exhaustion remains an error and never fabricates detachment',()async{

@@ -441,6 +441,10 @@ s=s[:start]+'''class Ngelx570SpritePainter extends CustomPainter {
 ''' +s[end:]
 # The bundled bitmap is the selected original 3D asset; no automatic palette recoloring.
 swap("rootBundle.load('assets/ludo570_pawns.png')","rootBundle.load('assets/ludo577_pawns.png')")
+# Reuse the decoded native image synchronously when another game/board is opened.
+# This avoids redundant completed-Future listeners and first-frame fallback redraws.
+swap('unawaited(ngelx570PawnSprite().then((value){if(mounted)setState(()=>sprite=value);}).catchError((_){ }));',
+     'if(sprite==null)unawaited(ngelx570PawnSprite().then((value){if(mounted)setState(()=>sprite=value);}).catchError((_){ }));')
 # Do not start a delayed one-piece move while the user is confirming departure.
 swap('if(_singleMoveInFlight574||!mounted||game.busy||game.leaving||',
      'if(_asking||_singleMoveInFlight574||!mounted||game.busy||game.leaving||')
