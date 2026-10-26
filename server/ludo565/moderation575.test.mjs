@@ -106,3 +106,20 @@ test('invalid or old moderator queue days cannot access unlimited records',async
  await assert.rejects(ludoModeratorQueue575(store,'not-a-day',now),/invalid_review_day/);
  await assert.rejects(ludoModeratorResolve575(store,'report575_bad','mod','actioned',now),/invalid_report_id/);
 });
+
+test('moderator inbox pagination keeps all older reviews accessible',async()=>{
+ const store=memory(),day=moderationDay575(now),ids=[];
+ for(let i=0;i<105;i++){
+  const id='report575_'+i.toString(16).padStart(64,'0');
+  ids.push(id);await store.put(id,{reporter:'u'+i,reported:'target',status:'pending',at:now+i});
+ }
+ await store.put(moderationQueueKey575(day),{day,items:ids});
+ const first=await ludoModeratorQueue575(store,day,now,0);
+ const second=await ludoModeratorQueue575(store,day,now,1);
+ const third=await ludoModeratorQueue575(store,day,now,2);
+ assert.deepEqual([first.reports.length,second.reports.length,third.reports.length],[50,50,5]);
+ assert.deepEqual([first.hasMore,second.hasMore,third.hasMore],[true,true,false]);
+ assert.equal(new Set([...first.reports,...second.reports,...third.reports].map(x=>x.id)).size,105);
+ await assert.rejects(ludoModeratorQueue575(store,day,now,-1),/invalid_review_page/);
+ await assert.rejects(ludoModeratorQueue575(store,day,now,'1'),/invalid_review_page/);
+});
