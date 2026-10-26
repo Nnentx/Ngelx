@@ -48,6 +48,11 @@ void main(){
   await game.sync();expect(game.reconnectNeeded579,true);
   await game.sync();expect(game.reconnectNeeded579,false);expect(game.error,isEmpty);game.dispose();
  });
+ test('gameplay throttling keeps its actual message and is never a reconnect error',()async{
+  final game=Ngelx567RoomController(id:'270565',uid:'a',initial:room579(),request:(b)async{throw const Ngelx567Failure('slow_down','Biraz bekle');});
+  for(var i=0;i<3;i++){await game.perform('chat',{'text':'Merhaba'});}
+  expect(game.reconnectNeeded579,false);expect(game.connectionFailures579,0);expect(game.error,'Biraz bekle');game.dispose();
+ });
  test('a stale manual move refreshes the board without replaying the move or claiming disconnection',()async{
   final calls=<String>[];
   final game=Ngelx567RoomController(id:'270565',uid:'a',initial:room579(),request:(b)async{

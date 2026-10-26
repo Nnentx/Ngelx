@@ -533,7 +533,7 @@ control=control.replace("if(attempt==0&&e is Ngelx567Failure&&e.code=='state_cha
 control=control.replace(" String error='';", """ String error='';
  int connectionFailures579=0;
  bool get reconnectNeeded579=>connectionFailures579>=(room.isEmpty?1:2);
- bool _network579(Object e)=>e is! Ngelx567Failure||['connection','temporarily_unavailable','service_not_configured','slow_down','rate_limited'].contains(e.code);
+ bool _network579(Object e)=>e is! Ngelx567Failure||['connection','temporarily_unavailable','service_not_configured','rate_limited'].contains(e.code);
  void _failed579(Object e){connectionFailures579=_network579(e)?connectionFailures579+1:0;error=_message(e);}
  void _healthy579(){connectionFailures579=0;error='';}
 """,1)
