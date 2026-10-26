@@ -228,7 +228,7 @@ swap('class Ngelx573WalletBar extends StatelessWidget{',"""class Ngelx575Victory
 }
 class Ngelx573WalletBar extends StatelessWidget{""")
 swap("Text(game.detached?'Bu masadan ayrıldın':room['status']=='closed'?'Masa kapandı':_winner567(room),style:const TextStyle(color:_ludoGold567,fontWeight:FontWeight.w900,fontSize:17)),",
-"""if(!game.detached&&room['status']=='finished')...[
+"""if(!widget.watch&&!game.detached&&game.seat>=0&&room['status']=='finished')...[
     Ngelx575VictoryBanner(won:room['winner']!=null&&
       (room['team']==true?game.seat%2==room['winner']:game.seat==room['winner'])),
     const SizedBox(height:7),
