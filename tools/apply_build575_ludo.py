@@ -196,6 +196,45 @@ swap('class Ngelx573WalletBar extends StatelessWidget{',
 }
 class Ngelx573WalletBar extends StatelessWidget{""")
 
+# Win/lose visual feedback stays inside the existing end-of-match footer.
+swap('class Ngelx573WalletBar extends StatelessWidget{',"""class Ngelx575VictoryBanner extends StatelessWidget {
+ final bool won;
+ const Ngelx575VictoryBanner({super.key,required this.won});
+ @override Widget build(BuildContext context)=>TweenAnimationBuilder<double>(
+  tween:Tween<double>(begin:.88,end:1),
+  duration:const Duration(milliseconds:750),
+  curve:Curves.elasticOut,
+  builder:(context,value,child)=>Transform.scale(scale:value,child:child),
+  child:Container(
+   key:const ValueKey('ludo-result-celebration'),
+   width:double.infinity,padding:const EdgeInsets.symmetric(horizontal:12,vertical:10),
+   decoration:BoxDecoration(borderRadius:BorderRadius.circular(17),
+    gradient:LinearGradient(colors:won?
+     [const Color(0xFF6541D8),const Color(0xFF2D358D)]:
+     [const Color(0xFF373B69),const Color(0xFF232B56)]),
+    border:Border.all(color:won?const Color(0xFFFFDE72):const Color(0xFF8184B6),width:1.4),
+    boxShadow:[BoxShadow(color:(won?const Color(0xFFFFC85D):Colors.black)
+     .withValues(alpha:.2),blurRadius:13,offset:const Offset(0,3))]),
+   child:Row(mainAxisAlignment:MainAxisAlignment.center,children:[
+    Icon(won?Icons.emoji_events_rounded:Icons.sports_esports_rounded,
+     size:25,color:won?const Color(0xFFFFDA62):Colors.white70),
+    const SizedBox(width:9),
+    Flexible(child:Text(won?'Tebrikler, kazandın!':'Oyun sona erdi',
+     maxLines:2,overflow:TextOverflow.ellipsis,textAlign:TextAlign.center,
+     style:const TextStyle(color:Colors.white,fontSize:15,fontWeight:FontWeight.w900))),
+    if(won)...[const SizedBox(width:6),
+      const Icon(Icons.auto_awesome_rounded,size:18,color:Color(0xFFFFE594))],
+   ])));
+}
+class Ngelx573WalletBar extends StatelessWidget{""")
+swap("Text(game.detached?'Bu masadan ayrıldın':room['status']=='closed'?'Masa kapandı':_winner567(room),style:const TextStyle(color:_ludoGold567,fontWeight:FontWeight.w900,fontSize:17)),",
+"""if(!game.detached&&room['status']=='finished')...[
+    Ngelx575VictoryBanner(won:room['winner']!=null&&
+      (room['team']==true?game.seat%2==room['winner']:game.seat==room['winner'])),
+    const SizedBox(height:7),
+   ],
+   Text(game.detached?'Bu masadan ayrıldın':room['status']=='closed'?'Masa kapandı':_winner567(room),
+    textAlign:TextAlign.center,style:const TextStyle(color:_ludoGold567,fontWeight:FontWeight.w900,fontSize:17)),""")
 # Player card: the already-visible table portraits become tappable without moving any board tile.
 swap("final ValueChanged<int> onToken;final VoidCallback onRoll;",
 """final ValueChanged<int> onToken;final VoidCallback onRoll;
