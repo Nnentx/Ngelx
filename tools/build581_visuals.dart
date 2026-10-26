@@ -51,6 +51,11 @@ class Ngelx581StatsScreen extends StatelessWidget{
  int get _gifts {final x=stats['receivedGifts'];return x is Map?x.values.whereType<num>().fold<int>(0,(a,b)=>a+b.toInt()):0;}
  @override Widget build(BuildContext context){
   final wins=_int('wins'),losses=_int('losses'),all=wins+losses;
+  // Progression matches the server's level578(xp) threshold exactly.
+  final level=_int('level').clamp(1,10000),xp=_int('xp');
+  final levelStart=50*level*level+50*level-100;
+  final nextXp=50*(level+1)*(level+1)+50*(level+1)-100;
+  final progress=((xp-levelStart)/(nextXp-levelStart)).clamp(0.0,1.0);
   final user=FirebaseAuth.instance.currentUser;
   final info=user==null?null:FirebaseFirestore.instance.collection('users').doc(user.uid).get();
   const white=Color(0xFFF9F8FF),dim=Color(0xFFBBC7F7),gold=Color(0xFFFFD658);
@@ -82,8 +87,8 @@ class Ngelx581StatsScreen extends StatelessWidget{
        ]),
        const SizedBox(height:15),
        Row(children:[const Icon(Icons.star_rounded,color:gold),const SizedBox(width:7),const Text('XP',style:TextStyle(color:white,fontWeight:FontWeight.bold)),
-        const Spacer(),Text('${_int('xp')} XP',style:const TextStyle(color:gold,fontWeight:FontWeight.w800))]),
-       const SizedBox(height:7),ClipRRect(borderRadius:BorderRadius.circular(12),child:LinearProgressIndicator(value:(_int('xp')%500)/500.0,minHeight:8,color:gold,backgroundColor:const Color(0xFF383591))),
+        const Spacer(),Text('$xp / $nextXp XP',style:const TextStyle(color:gold,fontWeight:FontWeight.w800))]),
+       const SizedBox(height:7),ClipRRect(borderRadius:BorderRadius.circular(12),child:LinearProgressIndicator(value:progress,minHeight:8,color:gold,backgroundColor:const Color(0xFF383591))),
       ]));
      }),
     const SizedBox(height:12),
