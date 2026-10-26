@@ -85,5 +85,12 @@ Yeni kod, testli Build574 paketinin üstüne `tools/apply_build575_ludo.py` ile 
 - HTTP hata ve bağlantı kopmalarında otomatik tekrar çözümleme yapılmaz; operatör tekrar karar göndermeden önce mevcut rapor durumunu kontrol eder. 124/124 Worker+Node testi, bu CLI için HTTPS, yalnızca env token, kaynak/yetki ve tek işlem kontrollerini içerir (2026-10-26, run 40331140031).
 - Canlı sisteme hiçbir işlem uygulanmadı; Build574 kullanıcıları etkilenmiyor.
 
+## Son hediye onayı ve Worker sağlık kontrolü
+- Oyuncunun avatarından ücretli bir hediye seçildiğinde **hediye, alıcı ve sunucudan gelen katalog çip fiyatı** ayrı onay penceresinde gösterilir. `Vazgeç` veya pencereyi kapatmak hediye API'sini çağırmaz; `Gönder` ancak açık onaydan sonra çalışır. Flutter kaynak sözleşmesi bu sıralamayı da kontrol eder. **Hediyenin ücretini hâlâ sadece sunucu belirler**.
+- `/health` yanıtı, Build575 `sourceVersion`, Firebase proje eşlemesi, isteğe bağlı gerçek AdMob birim biçimi ve moderatör UID allowlist'inin **yalnızca yapılandırma bayraklarını** raporlar. Gizli Firebase anahtarı, reklam ID'sinin tamamı veya moderatör UID listesi asla döndürülmez.
+- `/health` kurulum varlığı için tanılama sağlar; kullanıcı doğrulaması, canlı hizmet ya da iki telefon testi yerine geçmez.
+- 26.10.2026 Worker için **126/126 test** ve `wrangler --dry-run` paketleme başarılı (40334193587). Son hediye onayıyla Android inceleme iş akışının sonucu ayrıca doğrulanmalıdır.
+- Yayına geçiş ve güvenli geri dönüş ayrıntıları: `QA/BUILD575-RELEASE-RUNBOOK.md`.
+
 ## Yayın kapısı
 `NgelX-BUILD575-LUDO.yml` yalnızca derleme/test amaçlıdır. Bulut oyun servisi güncellenmeden Build575'teki yeni Auto ve çip ödülü çalışmaz. CI testi + doğrulanan imza + gerçek cihaz testleri tamamlanmadan canlı güncelleme alanına sürüm kaydı açılmaz. Build574 mevcut kullanıcılar için yayınlanan sürüm olarak kalır.
