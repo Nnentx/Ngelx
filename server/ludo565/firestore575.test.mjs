@@ -75,7 +75,7 @@ test('Firestore REST conflict yields retryable 409; invalid CAS scope is never s
 
 test('Ludo Firestore adapter never reads or writes arbitrary service-account document paths',async()=>{
  const called=[];
- const db=create(async(url,options)=>{called.push(url);return Response.json({});});
+ const db=create(async(url,options)=>{called.push(url);return Response.json({updateTime:'stamp',fields:{state:{stringValue:'{}'}}});});
  const invalid=[
   '../users/privileged', 'wallet575_a/b', 'wallet575_a?mask.fieldPaths=x',
   '%2e%2e%2fusers', 'room#fragment', 'a%2Fb', '..', '.', '',
