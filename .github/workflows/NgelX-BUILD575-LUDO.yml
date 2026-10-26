@@ -131,3 +131,25 @@ jobs:
             app/android/settings.gradle.kts
             app/android/gradle.properties
             app/android/gradle/wrapper/gradle-wrapper.properties
+
+      - name: Compile-check optional AdMob Flutter integration with Google TEST IDs (never published)
+        timeout-minutes: 12
+        env:
+          NGELX_ADMOB_APP_ID: ca-app-pub-3940256099942544~3347511713
+          NGELX_ADMOB_REWARDED_UNIT: ca-app-pub-3940256099942544/5224354917
+        run: |
+          set -euo pipefail
+          # All real review artifacts above are uploaded WITHOUT the ads SDK.
+          python3 tools/apply_build575_ads.py
+          cd app
+          flutter pub get
+          flutter analyze --no-fatal-warnings --no-fatal-infos
+          python3 - <<'PY'
+          from pathlib import Path
+          manifest=Path('android/app/src/main/AndroidManifest.xml').read_text()
+          app=Path('lib/build575_rewarded_ads.dart').read_text()
+          assert 'ca-app-pub-3940256099942544~3347511713' in manifest
+          assert 'setServerSideOptions' in app
+          assert 'ad_status' in app
+          print('AdMob demo-only SDK compile and manifest wiring verified')
+          PY
