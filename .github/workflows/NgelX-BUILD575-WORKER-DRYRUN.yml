@@ -7,6 +7,7 @@ on:
       - 'cloudflare/live-moderation/wrangler.toml'
       - 'cloudflare/live-moderation/test/**'
       - 'server/ludo565/**'
+      - 'tools/ludo575_moderator_cli.mjs'
       - 'server/livekit443/**'
       - '.github/workflows/NgelX-BUILD575-WORKER-DRYRUN.yml'
   workflow_dispatch:
