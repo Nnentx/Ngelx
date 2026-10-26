@@ -20,7 +20,7 @@ class Ngelx581BoardArt extends CustomPainter {
    canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromLTWH(9+x*(size.width-18)/6,size.height*.45+y*(size.height*.46)/4,(size.width-20)/6,(size.height*.44)/4),const Radius.circular(2)),p);
   }}
   for(var i=0;i<4;i++){
-   final x=24.0+i*32,y=size.height*(i.isEven?.49:.63);
+   final x=24.0+i*32,y=size.height*(i.isEven ? .49 : .63);
    canvas.drawOval(Rect.fromCenter(center:Offset(x+2,y+30),width:30,height:10),p..color=Colors.black26);
    canvas.drawCircle(Offset(x,y-4),13,p..color=tile[i]);
    final path=Path()..moveTo(x-12,y+7)..lineTo(x+12,y+7)..lineTo(x+17,y+28)..lineTo(x-17,y+28)..close();
