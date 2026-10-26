@@ -215,9 +215,12 @@ swap(' Future<void> _autoSingleMove574()async{',""" Future<void> _playerCard575(
   if(_chatOpen||game.busy)return;
   final theirId=person['uid']?.toString()??'',isMine=theirId==game.uid,bot=person['bot']==true;
   final nickname=person['name']?.toString()??'Oyuncu';
-  Map<String,dynamic> items={};
+  Map<String,dynamic> items={};bool alreadyBlocked575=false;
   try{
    if(!isMine&&!bot){
+    final myWallet=await (widget.request??ngelx565LudoRequest)({'action':'wallet'});
+    alreadyBlocked575=(myWallet['blockedUsers'] is List)&&
+      (myWallet['blockedUsers'] as List).contains(theirId);
     final result=await (widget.request??ngelx565LudoRequest)({'action':'gift_catalog'});
     if(result['gifts'] is Map)items=Map<String,dynamic>.from(result['gifts'] as Map);
    }
@@ -232,16 +235,52 @@ swap(' Future<void> _autoSingleMove574()async{',""" Future<void> _playerCard575(
      if(bot)const Text('Makine oyuncusu'),
      if(isMine)const Text('Kendi oyuncu profilin'),
      if(!isMine&&!bot&&items.isEmpty)const Text('Hediye listesi şu anda açılamıyor.'),
+     if(alreadyBlocked575)const Text('Bu oyuncu Ludo içinde engellendi.',style:TextStyle(color:Color(0xFFD34D66))),
      if(!isMine&&!bot)for(final e in items.entries)
       ListTile(contentPadding:EdgeInsets.zero,
        leading:Text((e.value is Map?e.value['emoji']:null)?.toString()??'🎁',
         style:const TextStyle(fontSize:26)),
        title:Text((e.value is Map?e.value['label']:null)?.toString()??e.key),
        subtitle:Text('${(e.value is Map?e.value['chips']:null)??0} çip'),
-       onTap:()=>Navigator.pop(c,e.key)),
+       onTap:alreadyBlocked575?null:()=>Navigator.pop(c,e.key)),
     ]),
-    actions:[TextButton(onPressed:()=>Navigator.pop(c),child:const Text('Kapat'))])));
+    actions:[
+      if(!isMine&&!bot)...[
+       TextButton(onPressed:()=>Navigator.pop(c,'__report575'),
+        child:const Text('Şikayet et')),
+       TextButton(onPressed:()=>Navigator.pop(c,'__block575'),
+        child:Text(alreadyBlocked575?'Engeli kaldır':'Engelle')),
+      ],
+      TextButton(onPressed:()=>Navigator.pop(c),child:const Text('Kapat'))])));
   if(!mounted||selected==null)return;
+  if(selected=='__block575'){
+   try{
+    final response=await (widget.request??ngelx565LudoRequest)({
+      'action':'block','id':widget.id,'to':theirId,'blocked':!alreadyBlocked575});
+    if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content:Text(response['blocked']==true?'Ludo içinde engellendi.':'Ludo engeli kaldırıldı.')));
+   }catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(
+     SnackBar(content:Text('Engel işlemi başarısız: $e')));}
+   return;
+  }
+  if(selected=='__report575'){
+   final reason=await showDialog<String>(context:context,builder:(c)=>SimpleDialog(
+    title:const Text('Şikayet nedeni'),children:[
+     for(final entry in [('spam','Spam'),('harassment','Rahatsız etme'),
+      ('cheating','Hile şüphesi'),('other','Diğer')])
+      SimpleDialogOption(onPressed:()=>Navigator.pop(c,entry.$1),child:Text(entry.$2)),
+    ]));
+   if(reason==null)return;
+   try{
+    final response=await (widget.request??ngelx565LudoRequest)({
+     'action':'report','id':widget.id,'to':theirId,'reason':reason});
+    if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+     content:Text(response['submitted']==true?'Ludo şikayetin kaydedildi.':
+      'Bu oyuncuyu bu maç için zaten şikayet ettin.')));
+   }catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(
+     SnackBar(content:Text('Şikayet gönderilemedi: $e')));}
+   return;
+  }
   final ok=await game.perform('gift',{'to':theirId,'kind':selected});
   if(!mounted)return;
   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(
