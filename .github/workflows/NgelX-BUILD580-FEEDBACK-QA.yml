@@ -2,6 +2,11 @@ name: NgelX Build580 Ludo feedback QA
 on:
   push:
     branches: [qa/ludo-feedback-20261026]
+    paths:
+      - 'tools/**'
+      - 'server/ludo565/**'
+      - 'cloudflare/live-moderation/**'
+      - '.github/workflows/NgelX-BUILD580-FEEDBACK-QA.yml'
   workflow_dispatch:
 permissions:
   contents: read

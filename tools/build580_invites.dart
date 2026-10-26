@@ -114,15 +114,23 @@ class _Ngelx565LudoInviteCardState extends State<Ngelx565LudoInviteCard>{
  String get status=>invite['status']=='joined'?'joined':now>=expires?'expired':invite['status']?.toString()??'pending';
  @override void initState(){super.initState();
   if(widget.inviteToken.isNotEmpty)unawaited(_refresh());
+  _startTimer();
+ }
+ void _startTimer(){
+  timer?.cancel();
   timer=Timer.periodic(const Duration(seconds:1),(t){
    if(!mounted)return;
-   if(status=='pending')setState((){});
-   else if(status=='expired')setState((){});
+   if(status!='pending'){
+    timer?.cancel();setState((){});
+    if(status=='expired'&&widget.inviteToken.isNotEmpty)unawaited(_refresh());
+    return;
+   }
+   setState((){});
    if(widget.inviteToken.isNotEmpty&&t.tick%5==0&&status!='joined'&&invite['status']!='expired')unawaited(_refresh());
   });
  }
  @override void didUpdateWidget(covariant Ngelx565LudoInviteCard old){super.didUpdateWidget(old);
-  if(old.inviteToken!=widget.inviteToken||old.id!=widget.id){invite={};offset=0;error='';if(widget.inviteToken.isNotEmpty)unawaited(_refresh());}
+  if(old.inviteToken!=widget.inviteToken||old.id!=widget.id){invite={};offset=0;error='';if(widget.inviteToken.isNotEmpty)unawaited(_refresh());_startTimer();}
  }
  Future<void> _refresh()async{
   if(polling||busy)return;polling=true;

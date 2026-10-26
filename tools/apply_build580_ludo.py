@@ -46,6 +46,7 @@ swap('if(_asking||_singleMoveInFlight574', 'if(game.pendingAuto580!=null||_askin
 swap("final auto=autoSeats is Map&&autoSeats[seat.toString()]==true;", "final auto=game.pendingAuto580??(autoSeats is Map&&autoSeats[seat.toString()]==true);")
 swap('child:Container(width:46,height:47,','child:Container(width:52,height:52,')
 swap("Text('Auto',style:const TextStyle(fontSize:10", "Text(enabled?'Kapat':'Auto',style:const TextStyle(fontSize:11")
+swap("Text(enabled?'Kapat':'Auto',style:const TextStyle(fontSize:11,color:Colors.white,fontWeight:FontWeight.w900))", "SizedBox(height:16,child:FittedBox(fit:BoxFit.scaleDown,child:Text(enabled?'Kapat':'Auto',maxLines:1,style:const TextStyle(fontSize:11,color:Colors.white,fontWeight:FontWeight.w900))))")
 
 # Avoid rebuilding a static board painter and every stationary pawn on every poll.
 swap('final messages=room[\'chat\'] as List? ?? [];', "_observeVictory580();\n  final messages=room['chat'] as List? ?? [];")
