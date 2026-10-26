@@ -1,4 +1,5 @@
 import {createLudo565,ludoStore565} from './ludo565.mjs';
+import {ludoAdmobEndpoint575} from '../../../server/ludo565/admob575.mjs';
 import {communityDeleteStorage,createCommunityDelete556} from './community-delete.mjs';
 import {verifyFirebaseIdToken} from '../../call-push/src/auth.mjs';
 import {googleIo} from '../../call-push/src/google.mjs';
@@ -11,12 +12,16 @@ export const configured=env=>['LIVEKIT_API_KEY','LIVEKIT_API_SECRET','LIVEKIT_SE
 export default {async fetch(request,env){
   const path=new URL(request.url).pathname;
   if(path==='/health'&&request.method==='GET')return json({ok:configured(env),service:'ngelx-live-moderation',features:['community_delete556','ludo565','ludo568','ludo569']},configured(env)?200:503);
+  if(path==='/ludo/admob/ssv'){
+    if(!configured(env))return json({error:'service_not_configured'},503);
+    return ludoAdmobEndpoint575({store:ludoStore565(env),env})(request);
+  }
   if(path==='/ludo'){
     if(request.method!=='POST')return json({error:'method_not_allowed'},405);
     if(!/^Bearer [^\s]+$/.test(request.headers.get('authorization')??''))return json({error:'unauthorized'},401);
     if(!configured(env))return json({error:'service_not_configured'},503);
     const identity=googleIo(env),db=storage(env);
-    return createLudo565({store:ludoStore565(env),profile:uid=>identity.getUser(uid),limit:(uid,action)=>['create','bot','match'].includes(action)?db.rateLimit('ludo565-create:'+uid,4):Promise.resolve(true),verify:async()=>{const claims=await verifyFirebaseIdToken(request,env);await identity.checkAuth(claims);return claims;}})(request);
+    return createLudo565({store:ludoStore565(env),adEnabled:Boolean(env.LUDO_ADMOB_AD_UNIT),profile:uid=>identity.getUser(uid),limit:(uid,action)=>['create','bot','match'].includes(action)?db.rateLimit('ludo565-create:'+uid,4):Promise.resolve(true),verify:async()=>{const claims=await verifyFirebaseIdToken(request,env);await identity.checkAuth(claims);return claims;}})(request);
   }
   if(path!=='/moderate'&&path!=='/community/delete')return json({error:'not_found'},404);
   if(request.method!=='POST')return json({error:'method_not_allowed'},405);
