@@ -98,6 +98,42 @@ export function createLudo565({verify,profile,store,limit=async()=>true,now=()=>
    if(!/^(?:[0-9]{6}|[A-F0-9]{16})$/.test(b.id??''))return json({error:'invalid_room'},400);
    const existing=await store.get(b.id);if(!existing)return json({error:'room_not_found'},404);
    if(existing.room.expiresAt<=now())return json({error:'room_expired'},410);
+   if(b.action==='rematch'){
+    const original=existing.room;
+    if(original.status!=='finished'||original.botGame||!original.players.some(p=>p.uid===uid&&!p.left))return json({error:'not_available'},409);
+    const ref='rematch575_'+original.id;
+    for(let attempt=0;attempt<6;attempt++){
+     let pointer=await store.get(ref);
+     let target=pointer?await store.get(pointer.room.id):null;
+     if(!target||target.room.expiresAt<=now()){
+      const p=await profile(uid),id=uuid();
+      if(await store.get(id))continue;
+      let room=createRoom({uid,id,name:String(p?.displayName??p?.username??'Oyuncu'),
+       photo:String(p?.photoUrl??''),capacity:original.capacity,team:original.team,mode:original.mode},now());
+      room.rematchOf=original.id;
+      try{
+       await store.put(id,room);
+       await store.put(ref,{id,revision:(pointer?.room.revision??0)+1},pointer?.stamp);
+       target=await store.get(id);
+      }catch(e){if(e.status===409)continue;throw e;}
+     }
+     let room=target.room;
+     if(!room.players.some(p=>p.uid===uid)){
+      const profileData=await profile(uid);
+      try{
+       room=act(room,uid,{action:'join',name:String(profileData?.displayName??profileData?.username??'Oyuncu'),
+        photo:String(profileData?.photoUrl??'')},now(),roll);
+       if(room.players.length===room.capacity){
+        room=act(room,room.owner,{action:'start',revision:room.revision,
+         requestId:'rematch_start575'},now(),roll);
+       }
+       await store.put(room.id,room,target.stamp);
+      }catch(e){if(e.status===409)continue;throw e;}
+     }
+     return json({room:await withWallet575(room)});
+    }
+    return json({error:'state_changed'},409);
+   }
    if(b.action==='join'){const p=await profile(uid);b={...b,name:String(p?.displayName??p?.username??'Oyuncu'),photo:String(p?.photoUrl??'')};}
    // Spectators use separate presence documents and never mutate the game revision.
    const presenceId='view570_'+b.id;
