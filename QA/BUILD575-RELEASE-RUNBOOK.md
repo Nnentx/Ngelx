@@ -2,6 +2,12 @@
 
 **Durum:** İnceleme amaçlıdır. Bu dosyanın hazırlanması, NgelX Build 575'in yayımlandığı anlamına gelmez.
 
+## 26 Ekim 2026 — gerçek canlı ortam için okuma amaçlı durum raporu
+- GitHub Actions `NgelX-BUILD575-LIVE-READONLY.yml` canlı Worker'ın sabit `/health` adresini **yalnızca GET** ile sorgular; kimlik bilgisi kullanmaz, hiçbir hesap/Cloudflare/App değişikliği veya yayın yapmaz.
+- Son bağımsız sorgu (**run 40338311894**) `workerReady:false`, `configurationReady:false`, `releaseReady:false` döndürdü. Canlı hedefte **Build575 kodu doğrulanamadı**; Firebase/Worker, AdMob ödüllü reklam ve moderatör allowlist konfigürasyonu da bu sürüm için doğrulanmış değil. Eski canlı Worker'ın temel işlevlerinin kapalı olduğu sonucu bundan çıkarılmamalıdır.
+- Probe ve güvenlik testleriyle Cloudflare paketi **131/131 Node testi geçti**; dry-run başarıyla tamamlandı (**run 40338312020**). Bu sadece kod/sahte yanıt testidir; canlı Worker kurulumu veya iki gerçek Android cihaz testi değildir.
+- Yeni `tools/check_build575_live.mjs` aracının `releaseReady` alanı, sağlık sorgusu başarılı olsa bile **her zaman false** kalır; gerçek telefon, AdMob SSV ve ödeme senaryolarını yalnızca bir HTTP GET doğrulayamaz. Sonuçların yanlışlıkla yayın onayı sayılmaması hedeflenir.
+
 ## 1. Dağıtıma geçmeden önce
 - En son Build575 kod revizyonunda hem `NgelX-BUILD575-LUDO.yml` hem `NgelX-BUILD575-WORKER-DRYRUN.yml` iş akışlarının **success** olduğundan emin olun. Geçmiş revizyonların başarılı işlerini yeterli saymayın.
 - `NgelX-Build575-Review-APK` dosyası sadece GitHub Actions artefaktıdır; `Nnentx/ngelx-web` yayımlama klasörüne otomatik olarak taşınmaz.
