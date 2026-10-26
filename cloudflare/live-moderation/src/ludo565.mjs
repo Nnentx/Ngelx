@@ -11,10 +11,10 @@ export function ludoStore565(env,{fetcher=fetch,authorize=()=>accessToken(env)}=
  const base=`https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID}/databases/(default)/documents/_ngelx_ludo565/`;
  const safeDocumentId=id=>typeof id==='string'&&/^[a-zA-Z0-9_-]{1,180}$/.test(id);
  const checkDocumentId=id=>{if(!safeDocumentId(id))throw new LudoError('invalid_document_id',400);return id;};
- async function api(id,options={}){checkDocumentId(id);const r=await fetcher(base+id,{...options,headers:{authorization:'Bearer '+await authorize(),'content-type':'application/json'},signal:AbortSignal.timeout(8000)});if(r.status===404)return null;if(r.status===409||r.status===412)throw new LudoError('state_changed',409);if(!r.ok)throw Error('Datastore unavailable');return r.json();}
+ async function api(id,options={},suffix=''){checkDocumentId(id);const r=await fetcher(base+id+suffix,{...options,headers:{authorization:'Bearer '+await authorize(),'content-type':'application/json'},signal:AbortSignal.timeout(8000)});if(r.status===404)return null;if(r.status===409||r.status===412)throw new LudoError('state_changed',409);if(!r.ok)throw Error('Datastore unavailable');return r.json();}
  return {
   async get(id){const d=await api(id);return d?{room:JSON.parse(d.fields.state.stringValue),stamp:d.updateTime}:null;},
-  async put(id,room,stamp){return api(id+'?'+(stamp?'currentDocument.updateTime='+encodeURIComponent(stamp):'currentDocument.exists=false'),{method:'PATCH',body:JSON.stringify({fields:{state:{stringValue:JSON.stringify(room)}}})});},
+  async put(id,room,stamp){return api(id,{method:'PATCH',body:JSON.stringify({fields:{state:{stringValue:JSON.stringify(room)}}})},'?'+(stamp?'currentDocument.updateTime='+encodeURIComponent(stamp):'currentDocument.exists=false'));},
   async putMany(changes){
    if(!Array.isArray(changes)||changes.length<2||changes.length>3||new Set(changes.map(x=>x.id)).size!==changes.length)throw new LudoError('invalid_transaction',400);
    const root='projects/'+env.FIREBASE_PROJECT_ID+'/databases/(default)/documents/_ngelx_ludo565/';
