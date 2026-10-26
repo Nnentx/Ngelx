@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "package": "com.nnentx.ngelx_app",
+  "abi": "arm64-v8a",
+  "version": "1.0.342",
+  "build": 572,
+  "size": 48671470,
+  "sha256": "65818622e57b746405858aa28ef3055102b06c8aa80a968b3fe5819c7164604c",
+  "url": "https://github.com/Nnentx/Ngelx/releases/download/v1.0.342-build572-test/NgelX-1.0.342-Build572.apk",
+  "notes": "Ludo Klasik/Power görsel iyileştirmeleri, daha büyük ve kesilmeyen taşlar, aynı karede taşların ayrılması, zara ve güçlere dokunma uyarıları, Power hediyelerinin başka kareye taşınması, geliştirilmiş makine zekası; önceki 571 özellikleri korunur.",
+  "testedSource": "46919dee1059e1a89b711b9e643b1418d6b42df0",
+  "buildRun": 40241297810
+}
