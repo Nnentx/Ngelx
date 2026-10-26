@@ -104,6 +104,8 @@ test('invalid or old moderator queue days cannot access unlimited records',async
  await assert.rejects(ludoModeratorQueue575(store,'2020-01-01',now),/invalid_review_day/);
  await assert.rejects(ludoModeratorQueue575(store,'9999-01-01',now),/invalid_review_day/);
  await assert.rejects(ludoModeratorQueue575(store,'not-a-day',now),/invalid_review_day/);
+ await assert.rejects(ludoModeratorQueue575(store,'2026-02-30',now),/invalid_review_day/);
+ await assert.rejects(ludoModeratorQueue575(store,'2026-13-40',now),/invalid_review_day/);
  await assert.rejects(ludoModeratorResolve575(store,'report575_bad','mod','actioned',now),/invalid_report_id/);
 });
 
