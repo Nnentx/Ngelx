@@ -9,7 +9,7 @@ function started(){
  return act(r,'human',{action:'start',revision:r.revision,requestId:'build575start'},t);
 }
 const request=(r,action,extra={},uid='human',when=t+1000)=>
- act(r,uid,{action,...extra,revision:r.revision,requestId:'u575_'+r.revision},when,()=>6);
+ act(r,uid,{action,...extra,revision:r.revision,requestId:'user_build575_'+r.revision},when,()=>6);
 
 test('timeout activates persistent Auto for the timed-out seat',()=>{
  let r=started();
