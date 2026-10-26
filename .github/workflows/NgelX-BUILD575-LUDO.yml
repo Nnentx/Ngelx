@@ -7,6 +7,9 @@ on:
       - 'cloudflare/live-moderation/src/ludo565.mjs'
       - 'tools/apply_build575_ludo.py'
       - 'tools/test_build575_ludo.py'
+      - 'tools/apply_build575_ads.py'
+      - 'tools/build575_rewarded_ads.dart'
+      - 'cloudflare/live-moderation/src/index.mjs'
       - 'tools/build575_widget_test.dart'
       - '.github/workflows/NgelX-BUILD575-LUDO.yml'
   workflow_dispatch:
