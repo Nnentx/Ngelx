@@ -15,7 +15,7 @@ checks={
  'real media sounds':"assets/ludo575_$kind.wav",
  'server movement sounds':'_observeSound575()',
  'pawn shadow':"Colors.black.withValues(alpha:.34)",
- 'nonoverlapping pieces':'count>1?.52:1.18',
+ 'nonoverlapping pieces':'count>1 ? 0.52 : 1.18',
  'wallet':'class Ngelx573WalletBar',
  'sound control':"ValueKey('ludo-sound-toggle')",
  'sound persisted':"p.setBool('ngelx_ludo_sound',next)",
