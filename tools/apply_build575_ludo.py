@@ -27,6 +27,21 @@ swap('class Ngelx573WalletBar extends StatelessWidget{',"""class Ngelx575AutoBad
        Text('Auto',style:const TextStyle(fontSize:10,color:Colors.white,fontWeight:FontWeight.w900))])))));
 }
 class Ngelx573WalletBar extends StatelessWidget{""")
+swap('class Ngelx573WalletBar extends StatelessWidget{',"""class Ngelx575AnimatedBalance extends StatelessWidget{
+ final dynamic amount;
+ const Ngelx575AnimatedBalance({super.key,required this.amount});
+ @override Widget build(BuildContext context){
+  final n=amount is num?(amount as num).toDouble():null;
+  if(n==null)return const Text('—',style:TextStyle(color:Colors.white,fontSize:13,fontWeight:FontWeight.w900));
+  return TweenAnimationBuilder<double>(
+   tween:Tween<double>(begin:0,end:n),duration:const Duration(milliseconds:900),
+   curve:Curves.easeOutCubic,
+   builder:(_,value,__)=>
+    Text(value.round().toString(),style:const TextStyle(color:Colors.white,fontSize:13,fontWeight:FontWeight.w900)));
+ }
+}
+class Ngelx573WalletBar extends StatelessWidget{""")
+swap("Text(amount is num?amount.toInt().toString():'—',style:const TextStyle(color:Colors.white,fontSize:13,fontWeight:FontWeight.w900))","Ngelx575AnimatedBalance(amount:amount)")
 swap(' Future<void> _autoSingleMove574()async{',""" void _tapAuto575(bool active){
   if(widget.watch||game.busy||!game.playing||game.seat<0)return;
   unawaited(game.perform('auto',{'enabled':!active}));
