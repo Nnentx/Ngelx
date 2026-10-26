@@ -128,7 +128,16 @@ test('match payout receipt stays on its own room and other room has distinct rew
  assert.deepEqual(repeat.reward,first.reward);
  assert.equal(repeat.chips,150);assert.equal(repeat.losses,1);
 });
-test('old wallet receipt from earlier Build575 remains idempotent without invented reward metadata',async()=>{
- const db=store(),r=game(),first=await settleMatch575(db,'human',r,t+5000);
- assert.deepEqual((await settleMatch575(db,'human',r,t+7000)).reward,first.reward);
+test('old settled wallet without matchReward metadata remains idempotent and never invents a payout',async()=>{
+ const db=store(),r=game();
+ await settleMatch575(db,'human',r,t+5000);
+ const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('human'));
+ const walletId='wallet575_'+Buffer.from(hash).toString('hex');
+ const entry=await db.get(walletId),wallet={...entry.room};
+ delete wallet.matchRewards; // Records saved by the earlier Build575 reward implementation.
+ await db.put(walletId,wallet,entry.stamp);
+ const older=await settleMatch575(db,'human',r,t+7000);
+ assert.equal(older.reward,undefined);
+ assert.equal(older.chips,150);assert.equal(older.wins,1);
+ assert.equal(db.size(),1);
 });
