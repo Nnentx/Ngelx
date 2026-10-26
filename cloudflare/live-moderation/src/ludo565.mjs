@@ -41,7 +41,16 @@ export function createLudo565({verify,profile,store,limit=async()=>true,adEnable
    if(!b||typeof b!=='object'||Array.isArray(b))return json({error:'invalid_request'},400);
    let user;try{user=await verify(request);}catch{return json({error:'unauthorized'},401);}
    const uid=user.sub;if(!uid)return json({error:'unauthorized'},401);
-   const withWallet575=async(room)=>{const wallet=await settleMatch575(store,uid,room,now());return {...room,...wallet,players:Array.isArray(room.players)?room.players.map(p=>p.uid===uid?{...p,level:wallet.level}:p):room.players};};
+   const withWallet575=async(room)=>{
+    const wallet=await settleMatch575(store,uid,room,now());
+    const blocked=new Set(wallet.blockedUsers??[]);
+    return {...room,...wallet,
+     // Hide messages and in-room gift notifications from locally blocked players.
+     chat:Array.isArray(room.chat)?room.chat.filter(m=>!blocked.has(m.uid)):room.chat,
+     gifts:Array.isArray(room.gifts)?room.gifts.filter(g=>!blocked.has(g.from)):room.gifts,
+     players:Array.isArray(room.players)?
+      room.players.map(p=>p.uid===uid?{...p,level:wallet.level}:p):room.players};
+   };
    let matchKey;
    if(b.action==='match'&&b.requestId!==undefined){
     if(typeof b.requestId!=='string'||!/^[a-zA-Z0-9_-]{16,100}$/.test(b.requestId))return json({error:'invalid_request'},400);
