@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {derToP1363_575,verifyAdmobSSV575,createAdSession575,applyAdmobReward575,ludoAdmobEndpoint575} from './admob575.mjs';
+import {derToP1363_575,verifyAdmobSSV575,createAdSession575,applyAdmobReward575,ludoAdmobEndpoint575,adRewardStatus575} from './admob575.mjs';
 import {ludoWallet575} from './rewards575.mjs';
 import {createLudo565} from '../../cloudflare/live-moderation/src/ludo565.mjs';
 const t=1800000000000;
@@ -106,4 +106,32 @@ test('endpoint validates signature and only then returns HTTP 200',async()=>{
  const altered=await handler(new Request(signedCb.url.replace('reward_amount=1','reward_amount=2')));
  assert.equal(altered.status,403);
  assert.equal((await ludoWallet575(db,'alice')).chips,30);
+});
+
+test('reward status is private, starts pending and becomes verified only after atomic callback',async()=>{
+ const db=store(),ad=await createAdSession575(db,'alice',t);
+ assert.deepEqual(await adRewardStatus575(db,'alice',ad.token,t+100),{verified:false,chipReward:0});
+ await assert.rejects(adRewardStatus575(db,'mallory',ad.token,t+100),/invalid_ad_session/);
+ const signedCb=await signed(ad.token);
+ const evt=await verifyAdmobSSV575(signedCb.url,{keys:signedCb.keys,now:()=>t});
+ await applyAdmobReward575(db,evt,t+1000,'123456789');
+ assert.deepEqual(await adRewardStatus575(db,'alice',ad.token,t+2000),{verified:true,chipReward:30});
+ assert.equal((await ludoWallet575(db,'alice')).chips,30);
+});
+
+test('AdMob session/status HTTP endpoints are authenticated and unavailable before setup',async()=>{
+ const db=store();
+ const req=action=>new Request('https://example.com/ludo',{
+  method:'POST',headers:{authorization:'Bearer test','content-type':'application/json'},
+  body:JSON.stringify({action})
+ });
+ const api=createLudo565({store:db,verify:async()=>({sub:'alice'}),profile:async()=>({}),now:()=>t,adEnabled:true});
+ let res=await api(req('ad_session'));
+ assert.equal(res.status,200);
+ const session=(await res.json()).room;
+ res=await api(new Request('https://example.com/ludo',{method:'POST',
+  headers:{authorization:'Bearer test','content-type':'application/json'},
+  body:JSON.stringify({action:'ad_status',token:session.token})}));
+ assert.equal(res.status,200);
+ assert.equal((await res.json()).room.verified,false);
 });
