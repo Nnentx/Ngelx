@@ -68,13 +68,30 @@ export async function verifyAdmobSSV575(url,{fetcher=fetch,now=Date.now,keys}={}
   rewardItem:params.get('reward_item'),rewardAmount:Number(params.get('reward_amount'))};
 }
 export async function createAdSession575(store,uid,now){
- const wallet=await store.get(await walletKey(uid));
- const today=new Date(now).toISOString().slice(0,10);
- if(wallet?.room?.adDay===today&&wallet.room.adCount>=10)fail('ad_daily_limit',429);
- const token=crypto.randomUUID().replaceAll('-','');
- const session={uid,expiresAt:now+15*60000,used:false};
- await store.put('ad_session575_'+token,session);
- return {token,expiresAt:session.expiresAt,chipReward:30};
+ if(typeof store?.putMany!=='function')fail('ad_store_unavailable',503);
+ const key=await walletKey(uid),today=new Date(now).toISOString().slice(0,10);
+ for(let retry=0;retry<6;retry++){
+  const doc=await store.get(key),w=doc?.room??{chips:0,gems:0,xp:0,level:1,wins:0,losses:0,streak:0,receipts:{}};
+  if(w.adDay===today&&(w.adCount??0)>=10)fail('ad_daily_limit',429);
+  const attempts=w.adSessionDay===today?(w.adSessionCount??0):0;
+  if(w.adPendingUntil>now&&/^[a-f0-9]{32}$/.test(w.adPending??'')){
+   // Retry the same ad loading without consuming a new session or Firestore write.
+   return {token:w.adPending,expiresAt:w.adPendingUntil,chipReward:30,reused:true};
+  }
+  if(attempts>=20)fail('ad_session_limit',429);
+  const token=crypto.randomUUID().replaceAll('-','');
+  const expiresAt=now+15*60000;
+  const wallet={...w,adSessionDay:today,adSessionCount:attempts+1,
+   adPending:token,adPendingUntil:expiresAt};
+  try{
+   await store.putMany([
+    {id:key,room:wallet,stamp:doc?.stamp},
+    {id:'ad_session575_'+token,room:{uid,expiresAt,used:false},stamp:undefined},
+   ]);
+   return {token,expiresAt,chipReward:30,reused:false};
+  }catch(e){if(e.status!==409||retry===5)throw e;}
+ }
+ fail('ad_session_conflict',409);
 }
 export async function adRewardStatus575(store,uid,token,now){
  if(typeof token!=='string'||!/^[a-f0-9]{32}$/.test(token))fail('invalid_ad_session',400);
@@ -98,7 +115,8 @@ export async function applyAdmobReward575(store,event,now,adUnit){
   const day=new Date(now).toISOString().slice(0,10),count=wallet.adDay===day?(wallet.adCount??0):0;
   if(count>=10)fail('ad_daily_limit',429);
   if(typeof store.putMany!=='function')fail('ad_store_unavailable',503);
-  const newWallet={...wallet,chips:(wallet.chips??0)+30,adDay:day,adCount:count+1};
+  if(wallet.adPending!==event.token)fail('invalid_ad_session',403);
+  const newWallet={...wallet,chips:(wallet.chips??0)+30,adDay:day,adCount:count+1,adPending:null,adPendingUntil:0};
   try{
    await store.putMany([
     {id:wKey,room:newWallet,stamp:account?.stamp},
