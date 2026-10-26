@@ -51,10 +51,17 @@ Yeni kod, testli Build574 paketinin üstüne `tools/apply_build575_ludo.py` ile 
 ## Bu sürümde henüz **tamamlandı** denmeyecekler
 1. Gerçek telefonda 320/360/393/440 genişliklerinde ekran görüntüsü karşılaştırması ve taşların referansla görsel kalite onayı. Widget testleri gerçek cihaz testi yerine geçmez.
 2. Google SSV imza ve hesap kredisi sunucu tarafına kodlandı, ancak **mobil Ads SDK'nin gerçek kimliklerle derlenip doğrulanması, gerçek reklam uygulama/birim kimlikleri, izin ve gizlilik onayı, AdMob panelinde callback ayarı ve gerçek callback canlı testi** henüz eksik. Bu nedenle reklam düğmesi açılmamalı ve test imzası gerçek reklam sayılmamalı.
-3. Hediye/çip aktarımı ve Ludo içi engelle/şikâyet kaydı kodlandı. Ancak gerçek cihazlarda eşzamanlı ödemenin doğrulanması, raporların moderasyon iş akışına bağlanması ve NgelX geneline uygulanacak arkadaş ekleme yetkileri hâlâ eksik. Mevcut sohbet emojileri korunur.
+3. Hediye/çip aktarımı ve Ludo içi engelle/şikâyet kaydı kodlandı. Ancak gerçek cihazlarda eşzamanlı ödemenin doğrulanması, moderatör API'sinin gerçek yetkili hesaplarla işletime alınması, operasyon ekranının hazırlanması ve inceleme iş akışının onaylanması ve NgelX geneline uygulanacak arkadaş ekleme yetkileri hâlâ eksik. Mevcut sohbet emojileri korunur.
 4. Rövanşın iki gerçek cihazda kullanıcı akışı, iki kullanıcı/çeşitli bot zorlukları ve bağlantı kesintilerinde son e2e test.
 5. Zar/taş/ödül için özgün ses dosyaları, detaylı kazanma-yeme-bonus animasyonları, kalite son rötuşları ve isteğe bağlı ses sessizliği doğrulaması.
 6. Bulut Ludo servisi deployment, gerekli sırlar ve cihazda doğrulanmış imzalı APK üzerine son "Güncelle" yayını. Canlıdaki Build574 ve android-update.json test süresince değişmeyecek.
+
+## Moderatör inceleme altyapısı (yeni, henüz üretimde değil)
+- Şikâyetler artık **iki Firestore kaydına tek atomik CAS işlemle** yazılır: gerçek şikâyet (`report575_<SHA256>`) ve günlük özel inceleme sırası (`moderation_queue575_YYYY-MM-DD`). Kayıt düşüp listede kaybolma durumu engellenir.
+- `moderation_queue` aksiyonu yalnızca sunucuda `LUDO_MODERATOR_UIDS` allowlist'inde bulunan ve Firebase oturumu doğrulanmış moderatör UID'sine açıktır. Eksik/boş allowlist halinde erişim **tamamen kapalıdır**. Her sayfa 50 kayıt içerir, eski kayıtlar sayfalanabilir (günlük indeks en fazla 500).
+- `moderation_resolve` aksiyonu `pending` raporu, sorumlu moderatör UID'si ve zaman damgasıyla `reviewed`, `dismissed` veya `actioned` durumlarından birine bir kez CAS ile geçirir. Bu durumlar sadece **kayıt durumudur**; oyuncuya otomatik ceza/hesap yasaklama uygulanmaz.
+- Mevcut bildirim/şikâyet paneli kullanıcı içindir; moderatörün gerçek operasyon arayüzü, özel Firebase UID konfigürasyonu ve canlı moderasyon süreç onayı hâlâ gereklidir. Üretime geçilmeden bu hizmet kurallarına ayrı gözden geçirme yapılmalı.
+- Cloudflare Workers deploy **yapılmadan** `NgelX-BUILD575-WORKER-DRYRUN.yml` ile yeni sunucu JS bağımlılıklarının paketlenmesi ve endpoint testleri doğrulanır.
 
 ## Yayın için kalan 4 ana kontrol (26 Ekim 2026)
 1. **Son Build575 Android inceleme çıktısı:** `NgelX-BUILD575-LUDO.yml` backend, Flutter analiz, küçük ekran widget, geçerli imza ve release APK/artefakt aşamalarından tamamen başarıyla çıkmalı. AdMob demo-ID smoke aşaması ayrıca başarılı olmalı. Yalnızca önceki bir commit'in APK'sına güvenilmez.
