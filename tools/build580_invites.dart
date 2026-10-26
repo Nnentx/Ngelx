@@ -169,7 +169,7 @@ class _Ngelx565LudoInviteCardState extends State<Ngelx565LudoInviteCard>{
    child:GestureDetector(onLongPress:widget.onLongPress,child:Container(
     key:const ValueKey('ludo-visual-invite'),width:300,margin:const EdgeInsets.symmetric(vertical:6,horizontal:4),
     clipBehavior:Clip.antiAlias,decoration:BoxDecoration(color:const Color(0xFFF2F3F8),borderRadius:BorderRadius.circular(24),border:Border.all(color:const Color(0xFFE7E8F0))),
-    child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+    child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
      SizedBox(height:158,child:photo.isNotEmpty?
       Image(image:ResizeImage(NgelXAgImageProvider(photo),width:720),fit:BoxFit.cover,errorBuilder:(_,__,___)=>const Ngelx580InviteArtwork()):const Ngelx580InviteArtwork()),
      Padding(padding:const EdgeInsets.fromLTRB(14,14,14,12),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[

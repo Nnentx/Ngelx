@@ -24,6 +24,9 @@ void main(){
  setUpAll(()async{
   final font=File('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf');
   if(font.existsSync())await (FontLoader('Roboto')..addFont(Future.value(ByteData.view(font.readAsBytesSync().buffer)))).load();
+  final root=Platform.environment['FLUTTER_ROOT']??Platform.resolvedExecutable.split('/bin/cache/dart-sdk/').first;
+  final icons=File('$root/bin/cache/artifacts/material_fonts/MaterialIcons-Regular.otf');
+  if(icons.existsSync())await (FontLoader('MaterialIcons')..addFont(Future.value(ByteData.view(icons.readAsBytesSync().buffer)))).load();
  });
  setUp(()=>SharedPreferences.setMockInitialValues({'ngelx_ludo_sound':false}));
  test('wallet, daily reward and catalog are not mistaken for room responses',()async{
@@ -75,7 +78,9 @@ void main(){
  testWidgets('invitation expires after two minutes and cannot activate Join',(t)async{
   await t.binding.setSurfaceSize(const Size(393,852));addTearDown(()=>t.binding.setSurfaceSize(null));var joins=0;
   await t.pumpWidget(MaterialApp(home:Scaffold(body:RepaintBoundary(key:const ValueKey('preview580'),child:Ngelx565LudoInviteCard(id:'270565',mine:false,sentAt:DateTime.now().millisecondsSinceEpoch,onLongPress:(){},onJoin:()=>joins++)))));
-  await t.pump();expect(find.text('Bekleniyor'),findsOneWidget);await preview580(t,'visual-invite');
+  await t.pump();expect(find.text('Bekleniyor'),findsOneWidget);
+  expect(t.getSize(find.byKey(const ValueKey('ludo-visual-invite'))).height,lessThan(450));
+  await preview580(t,'visual-invite');
   // Use server-expired state: clock changes alone never permit an expired join.
   await t.pumpWidget(MaterialApp(home:Scaffold(body:Ngelx565LudoInviteCard(key:const ValueKey('expired'),id:'270565',mine:false,sentAt:DateTime.now().millisecondsSinceEpoch-120000,onLongPress:(){},onJoin:()=>joins++))));
   await t.pump();expect(find.text('Süresi doldu'),findsNWidgets(2));
