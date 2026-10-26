@@ -5,7 +5,7 @@ export const safe=new Set([0,8,13,21,26,34,39,47]);
 export const sameTeam=(r,a,b)=>r.team&&a%2===b%2;
 export function createRoom({uid,name,photo='',capacity=2,team=false,mode='classic',id},now){
  if(![2,4].includes(capacity)||!['classic','power'].includes(mode)||team&&capacity!==4)fail('invalid_settings');
- return {id,owner:uid,capacity,team,mode,status:'waiting',powerTiles:Object.fromEntries(powerTiles570),players:[{uid,name:name.slice(0,40),photo:String(photo).slice(0,2048),seat:0,left:false}],tokens:[[-1,-1,-1,-1],[-1,-1,-1,-1],[-1,-1,-1,-1],[-1,-1,-1,-1]],power:[{double:1,control:1,shield:1},{double:1,control:1,shield:1},{double:1,control:1,shield:1},{double:1,control:1,shield:1}],shields:{},turn:0,dice:null,sixes:0,revision:0,deadline:now+10000,expiresAt:now+6*3600000,last:{},chat:[],winner:null};
+ return {id,owner:uid,capacity,team,mode,status:'waiting',powerTiles:Object.fromEntries(powerTiles570),bonusTiles:[4,17,30,43],players:[{uid,name:name.slice(0,40),photo:String(photo).slice(0,2048),seat:0,left:false}],tokens:[[-1,-1,-1,-1],[-1,-1,-1,-1],[-1,-1,-1,-1],[-1,-1,-1,-1]],power:[{double:1,control:1,shield:1},{double:1,control:1,shield:1},{double:1,control:1,shield:1},{double:1,control:1,shield:1}],shields:{},turn:0,dice:null,sixes:0,revision:0,deadline:now+10000,expiresAt:now+6*3600000,last:{},chat:[],winner:null};
 }
 const active=r=>r.players.filter(p=>!p.left&&!r.tokens[p.seat].every(x=>x===56));
 function next(r,now){const seats=active(r).map(p=>p.seat).sort();r.turn=seats.find(x=>x>r.turn)??seats[0]??0;r.dice=null;r.doubled=false;r.sixes=0;r.openingRolls=0;r.deadline=now+10000;if(r.shields[r.turn])delete r.shields[r.turn];}
@@ -65,6 +65,28 @@ export function act(original,uid,b,now,roll=secureRoll){
    }else if(b.action==='move'){
     if(!Number.isInteger(b.token)||!legal(r,r.turn).includes(b.token))fail('invalid_move');
     const seat=r.turn,old=r.tokens[seat][b.token],position=old===-1?0:old+r.dice*(r.doubled?2:1);r.tokens[seat][b.token]=position;r.openingRolls=0;
+    // +1 is a collectible extra turn. Its position must be changed by the server,
+    // not picked independently on each client.
+    const globalCell=position<51?(seat*13+position)%52:-1;
+    const bonusTiles=r.bonusTiles??[4,17,30,43];
+    const gainedBonus=r.mode==='power'&&bonusTiles.includes(globalCell);
+    if(gainedBonus){
+      const occupied=new Set();
+      for(const player of r.players)if(!player.left)for(const progress of r.tokens[player.seat])
+        if(progress>=0&&progress<51)occupied.add((player.seat*13+progress)%52);
+      const powers=r.powerTiles??Object.fromEntries(powerTiles570);
+      const options=Array.from({length:52},(_,i)=>i).filter(i=>
+        i!==globalCell&&!safe.has(i)&&!bonusTiles.includes(i)&&!occupied.has(i)&&!Object.hasOwn(powers,i));
+      const index=bonusTiles.indexOf(globalCell);
+      if(options.length){
+        const choice=options[crypto.getRandomValues(new Uint32Array(1))[0]%options.length];
+        bonusTiles[index]=choice;
+      }else{
+        bonusTiles.splice(index,1); // No free slot: consumed until a free slot exists
+      }
+      r.bonusTiles=bonusTiles;
+      r.bonusPickup={seat,at:now,cell:globalCell};
+    }
     let captured=false;
     if(r.mode==='power'&&position<51){
      const global=(seat*13+position)%52,tiles=r.powerTiles??Object.fromEntries(powerTiles570);
@@ -91,7 +113,7 @@ export function act(original,uid,b,now,roll=secureRoll){
     const won=r.tokens[seat].every(x=>x===56);
     const teamWon=r.team&&[seat%2,seat%2+2].every(s=>r.tokens[s].every(x=>x===56));
     if((!r.team&&won)||teamWon){r.status='finished';r.winner=r.team?seat%2:seat;}
-    else if(won||(!captured&&position!==56&&r.dice!==6&&!(r.mode==='power'&&position<51&&[4,17,30,43].includes((seat*13+position)%52))))next(r,now);
+    else if(won||(!captured&&position!==56&&r.dice!==6&&!gainedBonus))next(r,now);
     else{r.dice=null;r.doubled=false;r.deadline=now+10000;}
    }else fail('invalid_action');
   }
