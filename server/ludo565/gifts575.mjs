@@ -34,6 +34,7 @@ export async function sendLudoGift575(store,roomId,uid,request,now){
   if(!from||!to)fail('gift_player_unavailable',403);
   const [senderEntry,receiverEntry]=await Promise.all([store.get(senderKey),store.get(receiverKey)]);
   const sender=senderEntry?.room??baseWallet(),receiver=receiverEntry?.room??baseWallet();
+  if(sender.blockedUsers?.includes(request.to)||receiver.blockedUsers?.includes(uid))fail('gift_blocked',403);
   const receipt=giftReceipt(room.id,request.requestId);
   if(sender.giftReceipts?.[receipt]){
    return {sent:false,alreadySent:true,chips:sender.chips,
