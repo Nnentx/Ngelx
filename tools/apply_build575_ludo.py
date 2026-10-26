@@ -537,9 +537,10 @@ swap("final size=c*(widget.position<0?1.13:widget.stackCount > 1 ? 0.52 : 0.98),
 swap("final x=((p.dx+.5+widget.stackOffset.dx)*c-size*.5).clamp(0.0,limit).toDouble();",
      "final x=ngelx578PawnLeft((p.dx+.5+widget.stackOffset.dx)*c,size);")
 swap("final y=((p.dy+.5+widget.stackOffset.dy)*c-size*.51-math.sin((motion.value*(widget.position-from).abs()%1)*math.pi)*c*.075).clamp(0.0,limit).toDouble();",
-     "final y=ngelx578PawnTop((p.dy+.5+widget.stackOffset.dy)*c,size)-math.sin((motion.value*(widget.position-from).abs()%1)*math.pi)*c*.075;")
+     "final y=ngelx578PawnTop(ngelx578FootY((p.dy+.5+widget.stackOffset.dy)*c,c,widget.position),size)-math.sin((motion.value*(widget.position-from).abs()%1)*math.pi)*c*.075;")
 swap('class _MovingPawn567 extends StatefulWidget {',"""double ngelx578PawnSize(double cell,int position,int count)=>cell*(position<0?1.26:count>1?.52:1.18);
 double ngelx578PawnTop(double floor,double size)=>floor-size*.94;
+double ngelx578FootY(double center,double cell,int position)=>center+(position<0?0:cell*.28);
 double ngelx578PawnLeft(double center,double size)=>center-size*.5;
 class _MovingPawn567 extends StatefulWidget {""")
 swap('child:ClipRRect(borderRadius:BorderRadius.circular(4),child:RepaintBoundary(',

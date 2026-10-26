@@ -1,6 +1,6 @@
 # Build578 — user-requested geometry, Auto, sparse pickups and progression
 
-Preserve the app structure and existing original 3D sprite. Enlarge home pawns to 1.26 cells and single track pawns to 1.18 cells; retain compact stacking. Anchor the visible base/shadow center (.94 of sprite widget height) to the socket/cell center. Do not clamp the entire widget into the board: the head may protrude above its cell/board; transparent widget margins do not determine the contact point. Disable the surrounding ClipRRect's clipping. Geometry regression covers edge cells, foot placement, size and stacking.
+Preserve the app structure and existing original 3D sprite. Enlarge home pawns to 1.26 cells and single track pawns to 1.18 cells; retain compact stacking. Anchor the visible base/shadow center (.94 of sprite widget height) to the socket center at home and to 78% of the cell height on the track. This keeps the track base inside its tile while the larger head rises about one third of a cell above the upper edge. Do not clamp the entire widget into the board: the head may protrude above its cell/board; transparent widget margins do not determine the contact point. Disable the surrounding ClipRRect's clipping. Geometry regression covers edge cells, foot placement, size and stacking.
 
 New Power rooms contain six collectible power icons instead of twelve: two control dice, two double dice and two shields. Four +1 bonuses remain. Existing active rooms keep their stored map, preserving their state; start a new game to get the sparse arrangement.
 

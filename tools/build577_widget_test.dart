@@ -34,8 +34,9 @@ Future<void> savePreview(WidgetTester tester,String name)async{
 void main(){
  test('578 feet stay on socket/cell center while heads extend upward',(){
   for(final cell in [20.0,26.0,45.0])for(final position in [-1,0,30]){
-   final size=ngelx578PawnSize(cell,position,1),top=ngelx578PawnTop(100,size);
-   expect(top+size*.94,closeTo(100,.000001));
+   final size=ngelx578PawnSize(cell,position,1),foot=ngelx578FootY(100,cell,position),top=ngelx578PawnTop(foot,size);
+   expect(top+size*.94,closeTo(position<0?100:100+cell*.28,.000001));
+   if(position>=0){expect(top,lessThan(100-cell*.5));expect(foot,lessThan(100+cell*.5));}
    expect(size,greaterThan(cell));
    expect(ngelx578PawnLeft(cell*.5,size)+size*.5,closeTo(cell*.5,.000001));
   }
