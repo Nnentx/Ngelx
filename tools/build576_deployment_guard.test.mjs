@@ -17,7 +17,7 @@ function run(mode,scenario='',seed){
   const u=String(url);
   if(u.startsWith('https://api.github.com/')){
    const id=u.split('/').at(-1);
-   return Response.json({status:'completed',conclusion:scenario==='bad-ci'?'failure':'success',head_sha:id==='40379188258'?'c59bcc1f4e9a4fd15b7cd28defa760329f08bc7c':'48669221cd5e0e0e46c12e3e0105546fa84f00bd'});
+   return Response.json({status:'completed',conclusion:scenario==='bad-ci'?'failure':'success',head_sha:id==='40379566732'?'389059e2227d94814bae7fc9f1f21cdee19e70ca':'48669221cd5e0e0e46c12e3e0105546fa84f00bd'});
   }
   if(u.startsWith('https://api.cloudflare.com/')){
    if(options.method==='POST'){

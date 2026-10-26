@@ -45,13 +45,13 @@ async function converge(){
 function save(s){fs.writeFileSync(statePath,JSON.stringify(s,null,2)+'\n');}
 const mode=process.argv[2];
 if(mode==='prepare'){
- for(const [id,sha] of [['40379188258','c59bcc1f4e9a4fd15b7cd28defa760329f08bc7c'],['40378761157','48669221cd5e0e0e46c12e3e0105546fa84f00bd']]){
+ for(const [id,sha] of [['40379566732','389059e2227d94814bae7fc9f1f21cdee19e70ca'],['40378761157','48669221cd5e0e0e46c12e3e0105546fa84f00bd']]){
   const r=await fetch('https://api.github.com/repos/Nnentx/Ngelx/actions/runs/'+id,{headers:{authorization:'Bearer '+process.env.GH_TOKEN,accept:'application/vnd.github+json'},signal:AbortSignal.timeout(15000)});
   if(!r.ok)throw Error('Cannot verify acceptance run');const d=await r.json();
   if(d.status!=='completed'||d.conclusion!=='success'||d.head_sha!==sha)throw Error('Required acceptance run did not pass');
  }
  const before=await latest(),baseline=await health(false);
- save({previous:before,baseline,startedAt:new Date().toISOString(),apkRun:40379188258,stagingRun:40378761157});
+ save({previous:before,baseline,startedAt:new Date().toISOString(),apkRun:40379566732,stagingRun:40378761157});
  console.log('APK/staging acceptance passed; prior 100% deployment checkpoint recorded; core boundaries healthy.');
 }else if(mode==='record'){
  const s=JSON.parse(fs.readFileSync(statePath)),current=await latest();
