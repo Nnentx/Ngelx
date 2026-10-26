@@ -561,9 +561,24 @@ swap("  if(_chatOpen&&tick.tick%3!=0)return;\n  final gap=math.min(8,1<<_connect
   final pace578=widget.watch?8:(auto578||room['botGame']==true?1:2);
   final gap=pace578*math.min(8,1<<_connectionFailures575);""")
 
+# Build579: the old fallback map used `for (...; i)` rather than incrementing i.
+# It froze the UI before an incoming invite's first room response could arrive.
+swap("const pickup=[2,5,10,15,18,23,28,31,36,41,44,49];\n  final tiles=powerTiles??{for(var i=0;i<pickup.length;i)'${pickup[i]}':['control','double','shield'][i%3]};",
+     "const defaultTiles579=<String,String>{'2':'control','10':'shield','18':'double','28':'control','36':'shield','44':'double'};\n  final tiles=powerTiles??defaultTiles579;")
+# Keep invite activation testable through the same visible button.
+swap('final String id;final bool mine;final VoidCallback onLongPress;',
+     'final String id;final bool mine;final VoidCallback onLongPress;final VoidCallback? onJoin;')
+swap('required this.mine,required this.onLongPress});',
+     'required this.mine,required this.onLongPress,this.onJoin});')
+swap('onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>Ngelx565LudoRoom(id:id))),',
+     'key:const ValueKey(\'ludo-invite-join\'),onPressed:onJoin??()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>Ngelx565LudoRoom(id:id))),')
+# A pending request must never trap the user behind the room route.
+swap('  if(game.busy)return;\n  _asking=true;',"""  if(game.busy){await _close();return;}
+  _asking=true;""")
+
 p.write_text(s,encoding='utf-8')
 pub=root/'app/pubspec.yaml'
 version=pub.read_text(encoding='utf-8')
 assert 'version: 1.0.344+574' in version
-pub.write_text(version.replace('version: 1.0.344+574','version: 1.0.348+578',1),encoding='utf-8')
+pub.write_text(version.replace('version: 1.0.344+574','version: 1.0.349+579',1),encoding='utf-8')
 print('Build575 frontend ready: persistent Auto on/off, updated painted pawn depth, existing NgelX layout retained')

@@ -1,0 +1,7 @@
+# Build579 — incoming Ludo invite main-thread freeze
+
+User reports that tapping Join on a friend's invitation freezes the entire application and Back stops responding. Root cause found in the existing board fallback map: `for(var i=0;i<pickup.length;i)` does not increment i. When `powerTiles` is null — notably the first loading frame of an invite before the join response — constructing this map never finishes. It is evaluated even in classic/loading mode and monopolizes the UI isolate. It also explains previously unfinished full-room/table painter tests; treating those stalls as only a test-environment problem was incorrect.
+
+Replace the loop entirely with a fixed six-entry fallback map matching Build578 server defaults. Do not merely hide or time out the screen. Add mandatory synchronous paint regression for absent maps, both modes and all orientations, plus real invite-button -> pending join -> Back and joined-room -> confirmed leave -> chat widget tests. Wall-clock timeout still fails CI rather than treating a hung test as a pass. Pending/busy operations must not trap Back. Invite's optional callback is for deterministic navigation tests; production default still pushes the actual room.
+
+Target APK 1.0.349 / Build579, same signing identity and all Build578 behavior retained. Backend unchanged; no Worker deployment required. Do not publish before all new invite/back regressions complete. Two physical phones remain an actual follow-up rather than claimed automated evidence.

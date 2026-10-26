@@ -41,7 +41,7 @@ checks={
 }
 for name,needle in checks.items():
  assert needle in s,f'Build575 missing: {name}'
-assert 'version: 1.0.348+578' in Path('app/pubspec.yaml').read_text()
+assert 'version: 1.0.349+579' in Path('app/pubspec.yaml').read_text()
 assert s.count('class Ngelx575AutoBadge')==1
 assert s.index("ValueKey('ludo-gift-confirmation')") < s.index("final ok=await game.perform('gift'")
 assert "'kind':selected,'chips':" not in s

@@ -1,4 +1,4 @@
-"""Verify Build578 review APK identity, package content and absence of demo ad IDs.
+"""Verify Build579 review APK identity, package content and absence of demo ad IDs.
 
 Read-only local verifier. Does not sign, distribute, upload or update NgelX.
 """
@@ -11,8 +11,8 @@ import sys
 import zipfile
 
 APP_ID = "com.nnentx.ngelx_app"
-VERSION = "1.0.348"
-BUILD = 578
+VERSION = "1.0.349"
+BUILD = 579
 # Google's published TEST IDs must never be in an APK offered as a review/release.
 FORBIDDEN_BYTES = (
     b"ca-app-pub-3940256099942544",
@@ -90,16 +90,16 @@ def verify(apk_path, aapt_path):
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description="Read-only Build578 review APK verifier")
-    parser.add_argument("apk", help="Path to locally built Build578 APK")
+    parser = argparse.ArgumentParser(description="Read-only Build579 review APK verifier")
+    parser.add_argument("apk", help="Path to locally built Build579 APK")
     parser.add_argument("--aapt", required=True, help="Path to Android build-tools aapt")
     args = parser.parse_args(argv)
     try:
         result = verify(args.apk, args.aapt)
     except (ValueError, OSError, subprocess.TimeoutExpired) as exc:
-        print("Build578 APK verification FAILED: " + str(exc), file=sys.stderr)
+        print("Build579 APK verification FAILED: " + str(exc), file=sys.stderr)
         return 1
-    print("Build578 review APK verification OK")
+    print("Build579 review APK verification OK")
     for key in ("package", "version", "build", "size_bytes", "sha256"):
         print(f"{key}: {result[key]}")
     print("AdMob demo identifiers: absent")
