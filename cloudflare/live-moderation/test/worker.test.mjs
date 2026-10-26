@@ -70,3 +70,23 @@ test('health fails closed on absent Ludo Firebase project or missing optional cr
  assert.equal(result.rewardedAdsConfigured,false);
  assert.equal(result.moderationAllowlistConfigured,false);
 });
+
+test('Build575 Ludo rejects wrong Firebase project and malformed rewarded-ad setup before DB use',async()=>{
+ const request=new Request('https://example.test/ludo',{method:'POST',
+  headers:{authorization:'Bearer test','content-type':'application/json'},
+  body:JSON.stringify({action:'wallet'})});
+ const valid={...env,GOOGLE_SERVICE_ACCOUNT:'private-test',FIREBASE_PROJECT_ID:'ngelx-44eed',
+  LUDO_ADMOB_AD_UNIT:'ca-app-pub-1234567890123456/1234567890'};
+ const wrong={...valid,FIREBASE_PROJECT_ID:'different-project'};
+ const game=await worker.fetch(request.clone(),wrong);
+ assert.equal(game.status,503);
+ assert.deepEqual(await game.json(),{error:'service_not_configured'});
+ const callback='https://example.test/ludo/admob/ssv?transaction_id=invalid';
+ assert.equal((await worker.fetch(new Request(callback),wrong)).status,503);
+ const malformed={...valid,LUDO_ADMOB_AD_UNIT:'bad-id'};
+ const ads=await worker.fetch(new Request(callback),malformed);
+ assert.equal(ads.status,503);
+ assert.deepEqual(await ads.json(),{error:'ads_not_configured'});
+ const health=await worker.fetch(new Request('https://example.test/health'),malformed);
+ assert.equal((await health.json()).ludo575.rewardedAdsConfigured,false);
+});
