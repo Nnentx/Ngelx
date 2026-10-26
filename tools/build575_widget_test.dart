@@ -37,6 +37,24 @@ void main() {
     expect(find.text('45'),findsOneWidget);
   });
 
+  testWidgets('Victory animation shows a trophy and stars; loss has no win effect',
+     (tester) async {
+   for(final won in [true,false]){
+    tester.view.physicalSize=const Size(320,620);
+    tester.view.devicePixelRatio=1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(MaterialApp(home:Scaffold(body:Center(
+     child:SizedBox(width:270,child:Ngelx575VictoryBanner(won:won)),
+    ))));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(),isNull);
+    expect(find.byKey(const ValueKey('ludo-result-celebration')),findsOneWidget);
+    expect(find.byIcon(won?Icons.emoji_events_rounded:Icons.sports_esports_rounded),findsOneWidget);
+    expect(find.byIcon(Icons.auto_awesome_rounded),won?findsOneWidget:findsNothing);
+   }
+  });
+
   testWidgets('tapping another player avatar opens its profile callback', (tester) async {
     String? seen;
     final room=<String,dynamic>{
