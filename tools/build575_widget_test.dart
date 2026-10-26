@@ -40,7 +40,7 @@ void main() {
   for(final width in [320.0,360.0,393.0,440.0]) {
     testWidgets('wallet and compact Auto controls fit ${width.toInt()}px mobile width',
         (tester) async {
-      await tester.view.setPhysicalSize(Size(width,740));
+      tester.view.physicalSize=Size(width,740);
       tester.view.devicePixelRatio=1;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
