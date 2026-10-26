@@ -26,17 +26,19 @@ export async function settleMatch575(store,uid,room,now){
   // A game room has a 6-hour lifetime. Keep receipts for another 48 hours.
   for(const [id,expiry] of Object.entries(receipts))if(typeof expiry==='number'&&expiry<now-48*3600000)delete receipts[id];
   receipts[room.id]=room.expiresAt??now;
-  const chips=won?(room.botGame?35:150):0,xp=won?(room.botGame?35:90):15;
+  const nextStreak=won?(w.streak??0)+1:0;
+  const streakBonus=won?Math.min(room.botGame?50:100,Math.max(0,nextStreak-1)*(room.botGame?10:20)):0;
+  const chips=won?(room.botGame?35:150)+streakBonus:0,xp=won?(room.botGame?35:90):15;
   const totalXp=(w.xp??0)+xp;
   const next={...w,receipts,chips:(w.chips??0)+chips,
    xp:totalXp,level:1+Math.floor(totalXp/200),
    wins:(w.wins??0)+(won?1:0),
    losses:(w.losses??0)+(won?0:1),
-   streak:won?(w.streak??0)+1:0};
+   streak:nextStreak};
   try{
    await store.put(walletKey,next,prev?.stamp);
    return {chips:next.chips,gems:next.gems??0,xp:next.xp,level:next.level,
-    wins:next.wins,losses:next.losses,streak:next.streak,reward:{chips,xp,win:won,matchId:room.id}};
+    wins:next.wins,losses:next.losses,streak:next.streak,reward:{chips,xp,streakBonus,win:won,matchId:room.id}};
   }catch(e){
    if(e.status!==409||retry===5)throw e;
   }
