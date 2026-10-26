@@ -187,9 +187,8 @@ swap("Container(width:38,height:38,padding:const EdgeInsets.all(2)",
 """GestureDetector(key:ValueKey('ludo-player-${p['uid']}'),
   onTap:onPlayerTap==null?null:()=>onPlayerTap!(Map<String,dynamic>.from(p as Map)),
   child:Container(width:38,height:38,padding:const EdgeInsets.all(2)""")
-swap(")),const SizedBox(width:5),\n     Flexible(child:Text(",
-"""))),const SizedBox(width:5),
-     Flexible(child:Text(""")
+swap("size:20,color:Colors.white):null)),const SizedBox(width:5),",
+"size:20,color:Colors.white):null))),const SizedBox(width:5),")
 swap("onToken:(token){_soundTap575();unawaited(game.perform('move',{'token':token}));},",
 """onPlayerTap:widget.watch?null:_playerCard575,
     onToken:(token){_soundTap575();unawaited(game.perform('move',{'token':token}));},""")
