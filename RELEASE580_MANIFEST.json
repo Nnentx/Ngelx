@@ -1,0 +1,14 @@
+{
+  "schema": 1,
+  "package": "com.nnentx.ngelx_app",
+  "abi": "arm64-v8a",
+  "version": "1.0.350",
+  "build": 580,
+  "size": 49482280,
+  "sha256": "7743cdf5090d52b7472d89e934c4df3e910d1bef0e698c4a59e25d13a78d23e0",
+  "url": "https://github.com/Nnentx/Ngelx/releases/download/v1.0.350-build580/NgelX-1.0.350-Build580.apk",
+  "notes": "Ludo Auto aç/kapat ve ses kontrolü düzeltildi. Puanlarım, günlük hediye ve sandık hataları giderildi. Görselli davet kartı, iki dakikalık sayaç ve fotoğraflı kişi/grup araması eklendi. Dört kişilik serbest odalar iki veya üç oyuncuyla başlatılabilir. Oyuncu adları ve oda kodu büyütüldü; rakip seviyeleri görünür. Taş hizası ve hareketleri düzenlendi; dört saniyelik tam ekran kazanan kutlaması eklendi.",
+  "testedSource": "e04d8e99aea63ede3802b282ff4688062245f965",
+  "buildRun": 40401696200,
+  "liveAcceptanceRun": 40404624100
+}
