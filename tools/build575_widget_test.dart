@@ -49,7 +49,7 @@ void main() {
           Ngelx573WalletBar(room:{'chips':1250,'gems':5}),
           const SizedBox(height:10),
           Row(children:[
-            const Ngelx575AutoBadge(enabled:true),
+            const Ngelx575AutoBadge(enabled:true,onPressed:null),
             const SizedBox(width:8),
             Expanded(child:Text('10',textAlign:TextAlign.center)),
             const SizedBox(width:12),
