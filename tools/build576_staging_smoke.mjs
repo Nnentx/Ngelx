@@ -54,8 +54,10 @@ try{
  console.log('Live atomic gifts, duplicate payment protection, block/unblock, daily and chest verified.');
  room=await call(a,{action:'sync',id:room.id});
  for(let i=0;i<20;i++){
-  const seat=room.turn,user=seat===0?a:b;await action(user,'roll');
-  if(room.dice!==null){const index=room.tokens[seat].findIndex(p=>p===-1?room.dice===6:p<56&&p+room.dice<=56);if(index>=0){await action(user,'move',{token:index});console.log('Two-account join, start, roll and token move passed.');break;}}
+  // Long acceptance checks can legitimately expire the ten-second turn timer.
+  // Sync may already have rolled through Auto; consume that die instead of rolling twice.
+  if(room.dice===null){const user=room.turn===0?a:b;await action(user,'roll');}
+  if(room.dice!==null){const seat=room.turn,user=seat===0?a:b;const index=room.tokens[seat].findIndex(p=>p===-1?room.dice===6:p<56&&p+room.dice<=56);if(index>=0){await action(user,'move',{token:index});console.log('Two-account join, start, roll and token move passed.');break;}}
   if(i===19)throw Error('No movable roll during bounded smoke test');
  }
  await action(a,'leave');
