@@ -3,6 +3,7 @@ import {accessToken} from '../../call-push/src/google.mjs';
 import {chooseBotToken572} from '../../../server/ludo565/strategy572.mjs';
 import {ludoWallet575,settleMatch575,claimDaily575,claimChest575} from '../../../server/ludo565/rewards575.mjs';
 import {sendLudoGift575,ludoGiftCatalog575} from '../../../server/ludo565/gifts575.mjs';
+import {ludoBlock575,ludoReport575} from '../../../server/ludo565/safety575.mjs';
 export function ludoStore565(env,{fetcher=fetch,authorize=()=>accessToken(env)}={}){
  if(env.FIREBASE_PROJECT_ID!=='ngelx-44eed')throw Error('Wrong project');
  const base=`https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID}/databases/(default)/documents/_ngelx_ludo565/`;
@@ -114,6 +115,14 @@ export function createLudo565({verify,profile,store,limit=async()=>true,now=()=>
    if(!/^(?:[0-9]{6}|[A-F0-9]{16})$/.test(b.id??''))return json({error:'invalid_room'},400);
    const existing=await store.get(b.id);if(!existing)return json({error:'room_not_found'},404);
    if(existing.room.expiresAt<=now())return json({error:'room_expired'},410);
+   if(b.action==='block'){
+    const action=await ludoBlock575(store,b.id,uid,b.to,b.blocked,now());
+    return json({room:action});
+   }
+   if(b.action==='report'){
+    const action=await ludoReport575(store,b.id,uid,b.to,b.reason,now());
+    return json({room:action});
+   }
    if(b.action==='gift'){
     const result=await sendLudoGift575(store,b.id,uid,b,now());
     const room=await withWallet575({...result.room,
