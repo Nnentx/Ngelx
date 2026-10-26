@@ -39,7 +39,7 @@ async function signed(token,{transaction='0123456789abcdef0123456789',unit='1234
   +'&reward_amount=1&reward_item='+item+'&timestamp='+when+'&transaction_id='+transaction;
  const raw=await crypto.subtle.sign({name:'ECDSA',hash:'SHA-256'},kp.privateKey,new TextEncoder().encode(data));
  const der=signatureToDer(raw),sig=Buffer.from(der).toString('base64url');
- return {url:'https://example.com/ludo/admob/ssv?'+data+'&signature='+sig+'&key_id=1',keys};
+ return {url:'https://example.com/ludo/admob/ssv?'+data+'&signature='+sig+'&key_id=1',keys:key};
 }
 test('DER ECDSA conversion preserves 64-byte WebCrypto signature',async()=>{
  const source=new Uint8Array(64);source[0]=0x80;source[32]=0x01;source[33]=0x10;
@@ -71,9 +71,6 @@ test('verified callback adds 30 chips once and consumes ad session atomically',a
 });
 test('never pay an expired or unknown session or wrong ad unit',async()=>{
  const db=store(),ad=await createAdSession575(db,'alice',t);
- const event=await verifyAdmobSSV575((await signed(ad.token)).url,{
-  keys:(await signed(ad.token)).keys,now:()=>t
- }).catch(()=>null);
  // Independently construct a trusted/previously cryptographically verified record.
  const trusted={transactionId:'0123456789abcdef0123456789',token:ad.token,adUnit:'123456789',rewardItem:'chips',rewardAmount:1,timestamp:t};
  await assert.rejects(applyAdmobReward575(db,trusted,t+16*60000,'123456789'),/invalid_ad_session/);
