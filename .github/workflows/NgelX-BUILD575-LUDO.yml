@@ -7,6 +7,7 @@ on:
       - 'cloudflare/live-moderation/src/ludo565.mjs'
       - 'tools/apply_build575_ludo.py'
       - 'tools/test_build575_ludo.py'
+      - 'tools/build575_widget_test.dart'
       - '.github/workflows/NgelX-BUILD575-LUDO.yml'
   workflow_dispatch:
 permissions:
