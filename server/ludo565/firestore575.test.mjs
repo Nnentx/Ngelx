@@ -72,3 +72,31 @@ test('Firestore REST conflict yields retryable 409; invalid CAS scope is never s
  assert.equal(calls,1);
  assert.throws(()=>ludoStore565({FIREBASE_PROJECT_ID:'untrusted'}),/Wrong project/);
 });
+
+test('Ludo Firestore adapter never reads or writes arbitrary service-account document paths',async()=>{
+ const called=[];
+ const db=create(async(url,options)=>{called.push(url);return Response.json({});});
+ const invalid=[
+  '../users/privileged', 'wallet575_a/b', 'wallet575_a?mask.fieldPaths=x',
+  '%2e%2e%2fusers', 'room#fragment', 'a%2Fb', '..', '.', '',
+  'a'.repeat(181), 'space in key', 'a:b', '\\u0000evil',
+ ];
+ for(const id of invalid){
+  await assert.rejects(db.get(id),e=>e.status===400&&e.message==='invalid_document_id');
+  await assert.rejects(db.put(id,{chips:0}),e=>e.status===400&&e.message==='invalid_document_id');
+  await assert.rejects(db.putMany([
+   {id:'wallet575_safe',room:{chips:1},stamp:undefined},
+   {id,room:{chips:2},stamp:undefined},
+  ]),e=>e.status===400&&e.message==='invalid_document_id');
+ }
+ assert.equal(called.length,0,'No invalid ID may cause an upstream Firestore call');
+ const validIds=[
+  '123456', 'ABCDEF0123456789', 'view570_ABCDEF0123456789',
+  'wallet575_'+'a'.repeat(64),
+  'report575_'+'d'.repeat(64),
+  'moderation_queue575_2026-10-26',
+ ];
+ for(const id of validIds)await db.get(id);
+ assert.equal(called.length,validIds.length);
+ assert.ok(called.every(url=>url.startsWith('https://firestore.googleapis.com/v1/'+root)));
+});
