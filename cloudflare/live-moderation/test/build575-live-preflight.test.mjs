@@ -48,7 +48,7 @@ test('health request is read-only and never redirected to attacker-controlled UR
 });
 test('malformed JSON and missing features can never attest a released game',async()=>{
  const a=await probeNgelxBuild575Live({fetcher:async()=>new Response('not json',{status:200})});
- assert.equal(a.releaseReady,undefined);
+ assert.equal(a.releaseReady,false);
  assert.equal(a.configurationReady,false);
  const b=await probeNgelxBuild575Live({fetcher:async()=>Response.json({ok:true,ludo575:{
   sourceVersion:574,configured:true,rewardedAdsConfigured:true,moderationAllowlistConfigured:true}})});
