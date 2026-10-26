@@ -4,7 +4,7 @@ import {chooseBotToken572} from '../../../server/ludo565/strategy572.mjs';
 import {ludoWallet575,settleMatch575,claimDaily575,claimChest575} from '../../../server/ludo565/rewards575.mjs';
 import {sendLudoGift575,ludoGiftCatalog575} from '../../../server/ludo565/gifts575.mjs';
 import {ludoBlock575,ludoReport575} from '../../../server/ludo565/safety575.mjs';
-import {createAdSession575} from '../../../server/ludo565/admob575.mjs';
+import {createAdSession575,adRewardStatus575} from '../../../server/ludo565/admob575.mjs';
 export function ludoStore565(env,{fetcher=fetch,authorize=()=>accessToken(env)}={}){
  if(env.FIREBASE_PROJECT_ID!=='ngelx-44eed')throw Error('Wrong project');
  const base=`https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID}/databases/(default)/documents/_ngelx_ludo565/`;
@@ -67,6 +67,10 @@ export function createLudo565({verify,profile,store,limit=async()=>true,adEnable
    if(b.action==='ad_session'){
     if(!adEnabled)return json({error:'ads_not_configured'},503);
     return json({room:await createAdSession575(store,uid,now())});
+   }
+   if(b.action==='ad_status'){
+    if(!adEnabled)return json({error:'ads_not_configured'},503);
+    return json({room:await adRewardStatus575(store,uid,b.token,now())});
    }
    if(b.action==='gift_catalog')return json({room:{gifts:ludoGiftCatalog575}});
    if(b.action==='daily_reward'||b.action==='chest_reward'){
