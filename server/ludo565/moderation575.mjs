@@ -5,9 +5,12 @@ const fail=(code,status=400)=>{throw new LudoError(code,status);};
 export const moderationDay575=now=>new Date(now).toISOString().slice(0,10);
 export const moderationQueueKey575=day=>'moderation_queue575_'+day;
 const validId=id=>typeof id==='string'&&/^report575_[a-f0-9]{64}$/.test(id);
-const validDay=(day,now)=>typeof day==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(day)
- &&Date.parse(day+'T00:00:00Z')<=now
- &&Date.parse(day+'T00:00:00Z')>=now-15*86400000;
+const validDay=(day,now)=>{
+ if(typeof day!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(day))return false;
+ const timestamp=Date.parse(day+'T00:00:00Z');
+ return Number.isFinite(timestamp)&&new Date(timestamp).toISOString().slice(0,10)===day
+  &&timestamp<=now&&timestamp>=now-15*86400000;
+};
 export async function ludoModeratorQueue575(store,day,now,page=0){
  if(!Number.isInteger(page)||page<0||page>49)fail('invalid_review_page');
  if(!validDay(day,now))fail('invalid_review_day');
