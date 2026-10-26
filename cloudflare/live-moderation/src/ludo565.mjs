@@ -4,6 +4,7 @@ import {chooseBotToken572} from '../../../server/ludo565/strategy572.mjs';
 import {ludoWallet575,settleMatch575,claimDaily575,claimChest575} from '../../../server/ludo565/rewards575.mjs';
 import {sendLudoGift575,ludoGiftCatalog575} from '../../../server/ludo565/gifts575.mjs';
 import {ludoBlock575,ludoReport575} from '../../../server/ludo565/safety575.mjs';
+import {ludoModeratorQueue575,ludoModeratorResolve575,moderationDay575} from '../../../server/ludo565/moderation575.mjs';
 import {createAdSession575,adRewardStatus575} from '../../../server/ludo565/admob575.mjs';
 export function ludoStore565(env,{fetcher=fetch,authorize=()=>accessToken(env)}={}){
  if(env.FIREBASE_PROJECT_ID!=='ngelx-44eed')throw Error('Wrong project');
@@ -27,7 +28,7 @@ export function ludoStore565(env,{fetcher=fetch,authorize=()=>accessToken(env)}=
   },
  };
 }
-export function createLudo565({verify,profile,store,limit=async()=>true,adEnabled=false,now=()=>Date.now(),uuid=()=>String(100000+crypto.getRandomValues(new Uint32Array(1))[0]%900000),roll}){
+export function createLudo565({verify,profile,store,limit=async()=>true,isModerator=async()=>false,adEnabled=false,now=()=>Date.now(),uuid=()=>String(100000+crypto.getRandomValues(new Uint32Array(1))[0]%900000),roll}){
  return async function(request){
   const json=(data,status=200)=>Response.json(data,{status,headers:{'cache-control':'no-store'}});
   if(request.method!=='POST')return json({error:'method_not_allowed'},405);
@@ -72,6 +73,13 @@ export function createLudo565({verify,profile,store,limit=async()=>true,adEnable
     if(prior){if(prior.room.owner!==uid)return json({error:'state_changed'},409);return json({room:await withWallet575(prior.room)});}
    }
    if(!await limit(uid,b.action))return json({error:'slow_down'},429);
+   if(b.action==='moderation_queue'||b.action==='moderation_resolve'){
+    // Explicit deployment allowlist, checked AFTER Firebase token verification.
+    if(!await isModerator(uid))return json({error:'moderator_only'},403);
+    if(b.action==='moderation_queue')
+     return json({room:await ludoModeratorQueue575(store,b.day??moderationDay575(now()),now())});
+    return json({room:await ludoModeratorResolve575(store,b.reportId,uid,b.decision,now())});
+   }
    if(b.action==='wallet')return json({room:await ludoWallet575(store,uid)});
    if(b.action==='ad_session'){
     if(!adEnabled)return json({error:'ads_not_configured'},503);
