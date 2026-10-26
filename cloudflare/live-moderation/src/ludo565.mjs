@@ -13,7 +13,7 @@ export function ludoStore565(env,{fetcher=fetch,authorize=()=>accessToken(env)}=
   async get(id){const d=await api(id);return d?{room:JSON.parse(d.fields.state.stringValue),stamp:d.updateTime}:null;},
   async put(id,room,stamp){return api(id+'?'+(stamp?'currentDocument.updateTime='+encodeURIComponent(stamp):'currentDocument.exists=false'),{method:'PATCH',body:JSON.stringify({fields:{state:{stringValue:JSON.stringify(room)}}})});},
   async putMany(changes){
-   if(!Array.isArray(changes)||changes.length!==3||new Set(changes.map(x=>x.id)).size!==3)throw new LudoError('invalid_gift',400);
+   if(!Array.isArray(changes)||changes.length<2||changes.length>3||new Set(changes.map(x=>x.id)).size!==changes.length)throw new LudoError('invalid_transaction',400);
    const root='projects/'+env.FIREBASE_PROJECT_ID+'/databases/(default)/documents/_ngelx_ludo565/';
    const url='https://firestore.googleapis.com/v1/projects/'+env.FIREBASE_PROJECT_ID+'/databases/(default)/documents:commit';
    const writes=changes.map(x=>({update:{name:root+x.id,fields:{state:{stringValue:JSON.stringify(x.room)}}},
