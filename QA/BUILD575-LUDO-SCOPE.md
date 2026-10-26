@@ -92,5 +92,11 @@ Yeni kod, testli Build574 paketinin üstüne `tools/apply_build575_ludo.py` ile 
 - 26.10.2026 Worker için **126/126 test** ve `wrangler --dry-run` paketleme başarılı (40334193587). Son hediye onayıyla Android inceleme iş akışının sonucu ayrıca doğrulanmalıdır.
 - Yayına geçiş ve güvenli geri dönüş ayrıntıları: `QA/BUILD575-RELEASE-RUNBOOK.md`.
 
+## Firestore belge yolunu sınırlandırma (26 Ekim 2026)
+- Build575 Ludo Worker `ludoStore565` artık GET, PATCH ve iki/üç kayıtlı `documents:commit` çağrılarında **tek belge adı** olarak sadece 1–180 uzunlukta ASCII harf, rakam, alt çizgi ve tire kabul eder. `../`, `/`, `?`, `#`, yüzdeyle kodlanmış yol ve çok uzun anahtarlar istekten önce reddedilir.
+- Firestore `currentDocument.updateTime` ve `currentDocument.exists=false` sürüm/oluşturma koşulları belge kimliğinden **ayrı** ve yalnızca sunucuda üretilmiş URL parametresi olarak uygulanır. Hediyenin/çipin atomik işlemlerindeki CAS davranışı korunur.
+- Geçersiz kimliklerde Firestore'a sıfır ağ çağrısı yapıldığını ve geçerli oda/cüzdan/rapor anahtarlarının çalıştığını test eden yeni regresyon testi eklendi.
+- Son Node testleri **127/127 başarılı** (40337418135). Worker paketleme ve Android derlemesinin bu revizyona ait nihai sonuçları ayrıca kontrol edilmelidir.
+
 ## Yayın kapısı
 `NgelX-BUILD575-LUDO.yml` yalnızca derleme/test amaçlıdır. Bulut oyun servisi güncellenmeden Build575'teki yeni Auto ve çip ödülü çalışmaz. CI testi + doğrulanan imza + gerçek cihaz testleri tamamlanmadan canlı güncelleme alanına sürüm kaydı açılmaz. Build574 mevcut kullanıcılar için yayınlanan sürüm olarak kalır.
