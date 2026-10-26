@@ -56,5 +56,13 @@ Yeni kod, testli Build574 paketinin üstüne `tools/apply_build575_ludo.py` ile 
 5. Zar/taş/ödül için özgün ses dosyaları, detaylı kazanma-yeme-bonus animasyonları, kalite son rötuşları ve isteğe bağlı ses sessizliği doğrulaması.
 6. Bulut Ludo servisi deployment, gerekli sırlar ve cihazda doğrulanmış imzalı APK üzerine son "Güncelle" yayını. Canlıdaki Build574 ve android-update.json test süresince değişmeyecek.
 
+## Yayın için kalan 4 ana kontrol (26 Ekim 2026)
+1. **Son Build575 Android inceleme çıktısı:** `NgelX-BUILD575-LUDO.yml` backend, Flutter analiz, küçük ekran widget, geçerli imza ve release APK/artefakt aşamalarından tamamen başarıyla çıkmalı. AdMob demo-ID smoke aşaması ayrıca başarılı olmalı. Yalnızca önceki bir commit'in APK'sına güvenilmez.
+2. **İki gerçek telefon:** farklı iki Firebase hesabıyla 2/4 kişi ve takım, Auto aç/kapat, rövanş, hediye fiyatı ve alıcıya teslim, sohbet/engelle/şikâyet, ağ kaybı-geri dönüş, dar ekran ve kupa/taş animasyonu tek tek denenmeli. Bot modu ayrı kontrol edilmeli.
+3. **Canlı sunucu:** son `ludo565.mjs`, `index.mjs` ve server bağımlılıkları imzalı APK'dan **önce** Cloudflare'a dağıtılmalı; `/health`, Firebase kimlik doğrulama, Firestore CAS/gift ve Google SSV callback bağlantısı test edilmeli. Build574'ün kullandığı endpoint'in mevcut işlevleri bozulmamalı.
+4. **AdMob + moderasyon + yayın:** gerçek AdMob App ID/Rewarded Unit ID ve SSV URL onaylanmalı; kullanıcı izin/gizlilik uyumluluğu tamamlanmalı; `pending` Ludo şikâyetlerinin gerçek moderatör iş akışı sağlanmalı. Demo reklam kimlikleri üretim APK'sına girmemeli. Ancak bundan sonra web güncelleme manifestine yeni sürüm girilebilir.
+
+**Not:** Kodun hazır olması, gerçek telefon/servis erişimi gerektiren bu maddelerin tamamlandığı anlamına gelmez. Son APK dağıtımı dışındaki aşamalar kullanıcının mevcut Build574 uygulamasını etkilememelidir.
+
 ## Yayın kapısı
 `NgelX-BUILD575-LUDO.yml` yalnızca derleme/test amaçlıdır. Bulut oyun servisi güncellenmeden Build575'teki yeni Auto ve çip ödülü çalışmaz. CI testi + doğrulanan imza + gerçek cihaz testleri tamamlanmadan canlı güncelleme alanına sürüm kaydı açılmaz. Build574 mevcut kullanıcılar için yayınlanan sürüm olarak kalır.
