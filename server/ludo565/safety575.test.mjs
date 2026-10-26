@@ -84,3 +84,30 @@ test('no player may block another without having joined their room',async()=>{
  const x=await post(api,'outsider',{action:'block',id:room.id,to:'bob',blocked:true});
  assert.equal(x.status,403);
 });
+
+test('blocking a player hides their chat and gift notifications from only the blocker',async()=>{
+ const {store,room}=setup();
+ room.chat=[
+  {uid:'bob',name:'Bob',text:'hidden',at:time},
+  {uid:'alice',name:'Alice',text:'mine',at:time},
+ ];
+ room.gifts=[
+  {from:'bob',fromName:'Bob',to:'alice',emoji:'🌹',at:time},
+  {from:'alice',fromName:'Alice',to:'bob',emoji:'❤️',at:time},
+ ];
+ await store.put(room.id,room);
+ const api=endpoint(store);
+ let x=await post(api,'alice',{action:'block',id:room.id,to:'bob',blocked:true});
+ assert.equal(x.status,200);
+ x=await post(api,'alice',{action:'sync',id:room.id});
+ assert.equal(x.status,200);
+ assert.deepEqual(x.room.chat.map(m=>m.text),['mine']);
+ assert.deepEqual(x.room.gifts.map(m=>m.from),['alice']);
+ const b=await post(api,'bob',{action:'sync',id:room.id});
+ assert.deepEqual(b.room.chat.map(m=>m.text),['hidden','mine']);
+ assert.deepEqual(b.room.gifts.map(m=>m.from),['bob','alice']);
+ x=await post(api,'alice',{action:'block',id:room.id,to:'bob',blocked:false});
+ assert.equal(x.status,200);
+ const cleared=await post(api,'alice',{action:'sync',id:room.id});
+ assert.deepEqual(cleared.room.chat.map(m=>m.text),['hidden','mine']);
+});
