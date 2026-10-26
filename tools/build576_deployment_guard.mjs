@@ -20,7 +20,7 @@ async function health(expectNew){
  for(const base of ['https://ngelx-live-moderation.alihancaglar76.workers.dev','https://oyun.ngelxsocial.com']){
   const r=await fetch(base+'/health',{cache:'no-store',signal:AbortSignal.timeout(15000)}),h=await r.json();
   if(!r.ok||h.ok!==true||!['community_delete556','ludo565','ludo568','ludo569'].every(f=>h.features?.includes(f)))throw Error('Core health/capabilities changed');
-  if(expectNew&&(h.ludo575?.sourceVersion!==575||h.ludo575?.configured!==true))throw Error('New Ludo runtime not configured on both hostnames');
+  if(expectNew&&(h.ludo575?.sourceVersion!==575||h.ludo575?.clientBuild!==578||h.ludo575?.configured!==true))throw Error('New Ludo runtime not configured on both hostnames');
   if(expectNew&&h.ludo575?.rewardedAdsConfigured===true)throw Error('Release requires rewarded ads disabled');
   for(const path of ['/ludo','/community/delete','/moderate']){
    const denied=await fetch(base+path,{method:'POST',headers:{'content-type':'application/json'},body:'{}',signal:AbortSignal.timeout(15000)});
@@ -45,13 +45,13 @@ async function converge(){
 function save(s){fs.writeFileSync(statePath,JSON.stringify(s,null,2)+'\n');}
 const mode=process.argv[2];
 if(mode==='prepare'){
- for(const [id,sha] of [['40352800633','0552e4b1eeb99bcb261879d1fc12180fea4a7ad6'],['40359911230','aeedcf66102e02654f072716098225caa8213f06']]){
+ for(const [id,sha] of [['40379188258','c59bcc1f4e9a4fd15b7cd28defa760329f08bc7c'],['40378761157','48669221cd5e0e0e46c12e3e0105546fa84f00bd']]){
   const r=await fetch('https://api.github.com/repos/Nnentx/Ngelx/actions/runs/'+id,{headers:{authorization:'Bearer '+process.env.GH_TOKEN,accept:'application/vnd.github+json'},signal:AbortSignal.timeout(15000)});
   if(!r.ok)throw Error('Cannot verify acceptance run');const d=await r.json();
   if(d.status!=='completed'||d.conclusion!=='success'||d.head_sha!==sha)throw Error('Required acceptance run did not pass');
  }
  const before=await latest(),baseline=await health(false);
- save({previous:before,baseline,startedAt:new Date().toISOString(),apkRun:40352800633,stagingRun:40359911230});
+ save({previous:before,baseline,startedAt:new Date().toISOString(),apkRun:40379188258,stagingRun:40378761157});
  console.log('APK/staging acceptance passed; prior 100% deployment checkpoint recorded; core boundaries healthy.');
 }else if(mode==='record'){
  const s=JSON.parse(fs.readFileSync(statePath)),current=await latest();

@@ -17,7 +17,7 @@ function run(mode,scenario='',seed){
   const u=String(url);
   if(u.startsWith('https://api.github.com/')){
    const id=u.split('/').at(-1);
-   return Response.json({status:'completed',conclusion:scenario==='bad-ci'?'failure':'success',head_sha:id==='40352800633'?'0552e4b1eeb99bcb261879d1fc12180fea4a7ad6':'aeedcf66102e02654f072716098225caa8213f06'});
+   return Response.json({status:'completed',conclusion:scenario==='bad-ci'?'failure':'success',head_sha:id==='40379188258'?'c59bcc1f4e9a4fd15b7cd28defa760329f08bc7c':'48669221cd5e0e0e46c12e3e0105546fa84f00bd'});
   }
   if(u.startsWith('https://api.cloudflare.com/')){
    if(options.method==='POST'){
@@ -30,7 +30,7 @@ function run(mode,scenario='',seed){
    if(scenario==='weighted')current.versions=[{version_id:old.versions[0].version_id,percentage:50},{version_id:newer.versions[0].version_id,percentage:50}];
    return Response.json({success:true,result:{deployments:[{...current,created_on:'2026-10-26T00:00:00Z'}]}});
   }
-  if(u.endsWith('/health'))return Response.json({ok:true,features:['community_delete556','ludo565','ludo568','ludo569'],ludo575:{sourceVersion:575,configured:scenario!=='unconfigured'&&!(scenario==='domain-old'&&u.includes('oyun.ngelxsocial.com')),rewardedAdsConfigured:false}});
+  if(u.endsWith('/health'))return Response.json({ok:true,features:['community_delete556','ludo565','ludo568','ludo569'],ludo575:{sourceVersion:575,clientBuild:578,configured:scenario!=='unconfigured'&&!(scenario==='domain-old'&&u.includes('oyun.ngelxsocial.com')),rewardedAdsConfigured:false}});
   return new Response('{}',{status:401});
  };
  try{await import(${JSON.stringify(new URL('./build576_deployment_guard.mjs',import.meta.url).href)});console.log('POST_COUNT='+posts);}catch(e){console.error(e.message);console.error('POST_COUNT='+posts);process.exitCode=1;}

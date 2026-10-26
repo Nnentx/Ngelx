@@ -1,4 +1,4 @@
-name: NgelX Build576 guarded live Worker acceptance (no APK publication)
+name: NgelX Build578 guarded live Worker acceptance (no APK publication)
 on:
   push:
     branches: [feat/build575-ludo-auto-premium-rewards]
@@ -13,7 +13,7 @@ concurrency:
 jobs:
   guarded-live-acceptance:
     runs-on: ubuntu-latest
-    timeout-minutes: 18
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
         with:
@@ -23,9 +23,13 @@ jobs:
           node-version: '22'
       - name: Require the same tested Worker runtime and run its regression suite
         run: |
-          git diff --exit-code 0552e4b1eeb99bcb261879d1fc12180fea4a7ad6 -- cloudflare/live-moderation/src cloudflare/live-moderation/wrangler.toml server/ludo565
+          git diff --exit-code 48669221cd5e0e0e46c12e3e0105546fa84f00bd -- cloudflare/live-moderation/src cloudflare/live-moderation/wrangler.toml server/ludo565
           node --test tools/build576_deployment_guard.test.mjs
           node --test server/ludo565/*.test.mjs cloudflare/live-moderation/test/*.test.mjs cloudflare/call-push/test/auth.test.mjs
+      - name: Wait for the exact Build578 APK review to finish successfully
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh run watch 40379188258 --repo Nnentx/Ngelx --exit-status --interval 20
       - name: Check successful APK and isolated acceptance; record rollback checkpoint
         env:
           GH_TOKEN: ${{ github.token }}
@@ -66,6 +70,6 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: NgelX-Build576-Worker-Deployment-Evidence
+          name: NgelX-Build578-Worker-Deployment-Evidence
           path: ${{ runner.temp }}/build576-worker-state.json
           if-no-files-found: ignore
