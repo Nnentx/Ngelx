@@ -94,6 +94,30 @@ swap("const Center(child:Text('Arkadaşlarınla aynı masada',style:TextStyle(co
   ]),
   if(giftMessage575.isNotEmpty)Padding(padding:const EdgeInsets.only(top:4),child:Text(giftMessage575,textAlign:TextAlign.center,style:const TextStyle(color:Color(0xFFFFE28D),fontWeight:FontWeight.w700,fontSize:12))),
   const SizedBox(height:15),""")
+swap("bool _chatOpen=false;Timer? poll;Timer? chatExpiry;String? chatKey;String? chatBubble;bool _canClose=false,_asking=false;",
+"""bool _chatOpen=false;Timer? poll;Timer? chatExpiry;String? chatKey;String? chatBubble;bool _canClose=false,_asking=false;bool _soundOn575=true;""")
+swap('  if(widget.initial==null)unawaited(game.sync(join:true));_startPoll();',
+"""  if(widget.initial==null)unawaited(game.sync(join:true));_startPoll();unawaited(_restoreSound575());""")
+swap(' void _startPoll(){',""" Future<void> _restoreSound575()async{
+  final p=await SharedPreferences.getInstance();
+  if(mounted)setState(()=>_soundOn575=p.getBool('ngelx_ludo_sound')??true);
+ }
+ Future<void> _toggleSound575()async{
+  final next=!_soundOn575;
+  setState(()=>_soundOn575=next);
+  final p=await SharedPreferences.getInstance();
+  await p.setBool('ngelx_ludo_sound',next);
+ }
+ void _soundTap575(){if(_soundOn575)unawaited(SystemSound.play(SystemSoundType.click));}
+ void _startPoll(){""")
+swap("onToken:(token)=>game.perform('move',{'token':token}),",
+"""onToken:(token){_soundTap575();unawaited(game.perform('move',{'token':token}));},""")
+swap("IconButton(tooltip:'Oda kodunu kopyala',",
+"""IconButton(key:const ValueKey('ludo-sound-toggle'),
+    tooltip:_soundOn575?'Oyun sesini kapat':'Oyun sesini aç',
+    onPressed:_toggleSound575,
+    icon:Icon(_soundOn575?Icons.volume_up_rounded:Icons.volume_off_rounded,size:19)),
+    IconButton(tooltip:'Oda kodunu kopyala',""")
 swap(' Future<void> _autoSingleMove574()async{',""" void _tapAuto575(bool active){
   if(widget.watch||game.busy||!game.playing||game.seat<0)return;
   unawaited(game.perform('auto',{'enabled':!active}));
