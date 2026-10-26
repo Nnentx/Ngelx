@@ -10,7 +10,7 @@ export async function probeNgelxBuild575Live({fetcher=fetch,timeout=8000,url=HEA
   response=await fetcher(HEALTH,{method:'GET',redirect:'error',cache:'no-store',
    headers:{accept:'application/json'},signal:AbortSignal.timeout(timeout)});
  }catch{
-  return {ready:false,reason:'worker_unreachable',checkedEndpoint:HEALTH};
+  return {configurationReady:false,reason:'worker_unreachable',checkedEndpoint:HEALTH};
  }
  if(!response.ok)return {ready:false,reason:'worker_health_http_error',httpStatus:response.status,
   checkedEndpoint:HEALTH};
@@ -33,7 +33,7 @@ export async function probeNgelxBuild575Live({fetcher=fetch,timeout=8000,url=HEA
  const moderator=ludo?.moderationAllowlistConfigured===true;
  if(!ads)missing.push('rewarded_ads_disabled');
  if(!moderator)missing.push('moderator_allowlist_disabled');
- return {ready:deployed&&configured&&serviceConfigured&&ads&&moderator,
+ return {configurationReady:deployed&&configured&&serviceConfigured&&ads&&moderator,
   workerReady:deployed&&configured&&serviceConfigured,
   releaseReady:false, // Real-device QA and provider verification cannot be checked by a GET.
   rewardedAdsConfigured:ads,moderatorAllowlistConfigured:moderator,
