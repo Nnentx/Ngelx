@@ -268,7 +268,9 @@ swap(' Future<void> _autoSingleMove574()async{',""" Future<void> _playerCard575(
   final selected=await showDialog<String>(context:context,builder:(c)=>Theme(
    data:ngelx567LudoTheme(),child:AlertDialog(
     title:Text(nickname),
-    content:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
+    content:ConstrainedBox(constraints:const BoxConstraints(maxHeight:360),
+     child:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,
+     crossAxisAlignment:CrossAxisAlignment.start,children:[
      Text('Seviye ${(person['level'] as num?)?.toInt()??1}'),
      const SizedBox(height:8),
      if(bot)const Text('Makine oyuncusu'),
@@ -282,7 +284,7 @@ swap(' Future<void> _autoSingleMove574()async{',""" Future<void> _playerCard575(
        title:Text((e.value is Map?e.value['label']:null)?.toString()??e.key),
        subtitle:Text('${(e.value is Map?e.value['chips']:null)??0} çip'),
        onTap:alreadyBlocked575?null:()=>Navigator.pop(c,e.key)),
-    ]),
+    ]))),
     actions:[
       if(!isMine&&!bot)...[
        TextButton(onPressed:()=>Navigator.pop(c,'__report575'),
