@@ -19,7 +19,7 @@ const baseWallet=()=>({chips:0,gems:0,xp:0,level:1,wins:0,losses:0,streak:0,rece
 export async function sendLudoGift575(store,roomId,uid,request,now){
  if(!store||typeof store.putMany!=='function')fail('gift_store_unavailable',503);
  if(typeof request.requestId!=='string'||!/^[a-zA-Z0-9_-]{8,100}$/.test(request.requestId))fail('invalid_request');
- const gift=ludoGiftCatalog575[request.kind];
+ const gift=Object.hasOwn(ludoGiftCatalog575,request.kind)?ludoGiftCatalog575[request.kind]:null;
  if(!gift||typeof request.to!=='string'||request.to.length<1||request.to.length>128)fail('invalid_gift');
  if(uid===request.to)fail('cannot_gift_self');
  const senderKey=await hash(uid),receiverKey=await hash(request.to);
