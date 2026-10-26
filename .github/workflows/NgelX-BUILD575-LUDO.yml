@@ -4,6 +4,7 @@ on:
     branches: [feat/build575-ludo-auto-premium-rewards]
     paths:
       - 'server/ludo565/**'
+      - 'tools/ludo575_moderator_cli.mjs'
       - 'cloudflare/live-moderation/src/ludo565.mjs'
       - 'tools/apply_build575_ludo.py'
       - 'tools/test_build575_ludo.py'
