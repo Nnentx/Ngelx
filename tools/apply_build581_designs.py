@@ -77,16 +77,16 @@ lobby=lobby[:a1]+"""  const Ngelx581Hero(),const SizedBox(height:14),
 lobby=one(lobby,"const Text('Nasıl oynamak istersin?',textAlign:TextAlign.center","const Text('Nasıl oynamak istersin?',textAlign:TextAlign.left")
 lobby=one(lobby,"const Text('Oyun modunu seç',textAlign:TextAlign.center","const Text('Oyun modu',textAlign:TextAlign.left")
 lobby=one(lobby,"const Text('Oyuncuları seç',textAlign:TextAlign.center","const Text('Oyuncu sayısı',textAlign:TextAlign.left")
-lobby=one(lobby,"'Oda dolduğunda kurucu Başlat’a dokunur.","'En az iki oyuncu katılınca kurucu Başlat’a dokunur.")
+# Build580 already contains the corrected early-start explanation.
 lobby=one(lobby,"play=='random'?'Rakip bul':'Oda oluştur',gold:true","play=='random'?'Rakip bul':'Devam et',gold:true")
 lobby=one(lobby,"colors:[Color(0xFF7B67C2),Color(0xFF63439F)]","colors:[Color(0xFF4240A3),Color(0xFF352A85)]")
 lobby=one(lobby,"border:Border.all(color:const Color(0xFFAB98EE),width:1.5)","border:Border.all(color:const Color(0xFF8E74E9),width:1.5)")
 s=head+lobby+tail
 
 # Replace the bland sender photo banner on the invite with the approved Ludo art.
-old="""SizedBox(height:158,child:photo.isNotEmpty?
-       Image(image:ResizeImage(NgelXAgImageProvider(photo),width:720),fit:BoxFit.cover,errorBuilder:(_,__,___)=>const Ngelx580InviteArtwork()):const Ngelx580InviteArtwork()),"""
-s=one(s,old,"const SizedBox(height:158,child:Ngelx581Hero()),")
+a=s.index('     SizedBox(height:158,child:photo.isNotEmpty?')
+b=s.index('     Padding(padding:const EdgeInsets.fromLTRB(14,14,14,12)',a)
+s=s[:a]+'     const SizedBox(height:158,child:Ngelx581Hero()),\n'+s[b:]
 s+='\n'+(root/'tools/build581_visuals.dart').read_text(encoding='utf-8')
 
 # Existing chats have complete send, permission, request, offline-queue and notification
