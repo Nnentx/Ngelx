@@ -5,12 +5,12 @@ const key=async(uid)=>{
  const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(uid));
  return 'wallet575_'+Array.from(new Uint8Array(digest),b=>b.toString(16).padStart(2,'0')).join('');
 };
+const viewWallet=w=>({chips:w.chips??0,gems:w.gems??0,xp:w.xp??0,
+ level:w.level??1,wins:w.wins??0,losses:w.losses??0,streak:w.streak??0,
+ receivedGifts:w.giftsReceived??{},blockedUsers:w.blockedUsers??[]});
 export async function ludoWallet575(store,uid){
  const doc=await store.get(await key(uid));
- const w=doc?.room??initial();
- return {chips:w.chips??0,gems:w.gems??0,xp:w.xp??0,
-  level:w.level??1,wins:w.wins??0,losses:w.losses??0,streak:w.streak??0,
-  receivedGifts:w.giftsReceived??{},blockedUsers:w.blockedUsers??[]};
+ return viewWallet(doc?.room??initial());
 }
 export async function settleMatch575(store,uid,room,now){
  if(room?.status!=='finished'||!room?.id||(room.expiresAt??Infinity)<=now)return ludoWallet575(store,uid);
@@ -23,23 +23,29 @@ export async function settleMatch575(store,uid,room,now){
  for(let retry=0;retry<6;retry++){
   const prev=await store.get(walletKey),w=prev?.room??initial();
   const receipts={...(w.receipts??{})};
-  if(receipts[room.id])return ludoWallet575(store,uid);
+  if(receipts[room.id]){
+   const priorReward=w.matchRewards?.[room.id];
+   return {...viewWallet(w),...(priorReward?{reward:priorReward}:{})};
+  }
   // A game room has a 6-hour lifetime. Keep receipts for another 48 hours.
   for(const [id,expiry] of Object.entries(receipts))if(typeof expiry==='number'&&expiry<now-48*3600000)delete receipts[id];
   receipts[room.id]=room.expiresAt??now;
+  const matchRewards={...(w.matchRewards??{})};
+  for(const id of Object.keys(matchRewards))if(!receipts[id])delete matchRewards[id];
   const nextStreak=won?(w.streak??0)+1:0;
   const streakBonus=won?Math.min(room.botGame?50:100,Math.max(0,nextStreak-1)*(room.botGame?10:20)):0;
   const chips=won?(room.botGame?35:150)+streakBonus:0,xp=won?(room.botGame?35:90):15;
   const totalXp=(w.xp??0)+xp;
-  const next={...w,receipts,chips:(w.chips??0)+chips,
+  const reward={chips,xp,streakBonus,win:won,matchId:room.id};
+  matchRewards[room.id]=reward;
+  const next={...w,receipts,matchRewards,chips:(w.chips??0)+chips,
    xp:totalXp,level:1+Math.floor(totalXp/200),
    wins:(w.wins??0)+(won?1:0),
    losses:(w.losses??0)+(won?0:1),
    streak:nextStreak};
   try{
    await store.put(walletKey,next,prev?.stamp);
-   return {chips:next.chips,gems:next.gems??0,xp:next.xp,level:next.level,
-    wins:next.wins,losses:next.losses,streak:next.streak,reward:{chips,xp,streakBonus,win:won,matchId:room.id}};
+   return {...viewWallet(next),reward};
   }catch(e){
    if(e.status!==409||retry===5)throw e;
   }
