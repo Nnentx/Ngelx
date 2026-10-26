@@ -15,7 +15,7 @@ Map<String,dynamic> room579()=>{
  // Deliberately no powerTiles: this previously froze the UI synchronously.
 };
 Future<void> frames579(WidgetTester t)async{
- await t.pump();await t.pump(const Duration(milliseconds:350));await t.pump();
+ for(var i=0;i<8;i++){await t.pump(const Duration(milliseconds:100));}
 }
 void main(){
  setUp(()=>SharedPreferences.setMockInitialValues({'ngelx_ludo_sound':false}));
@@ -28,6 +28,8 @@ void main(){
  });
  testWidgets('visible invite Join opens room and Back works while join request is pending',(t)async{
   final pending=Completer<Map<String,dynamic>>();var joins=0;
+  await t.binding.setSurfaceSize(const Size(393,852));
+  addTearDown(()=>t.binding.setSurfaceSize(null));
   await t.pumpWidget(MaterialApp(home:Builder(builder:(context)=>Scaffold(body:Column(children:[
    const Text('Chat579'),Ngelx565LudoInviteCard(id:'270565',mine:false,onLongPress:(){},onJoin:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>Ngelx565LudoRoom(
     id:'270565',userId:'a',request:(body){joins++;expect(body['action'],'join');return pending.future;},
@@ -40,6 +42,8 @@ void main(){
   pending.complete(room579());await frames579(t);expect(t.takeException(),isNull);
  });
  testWidgets('joined room with no pickup map paints and exits back to chat',(t)async{
+  await t.binding.setSurfaceSize(const Size(393,852));
+  addTearDown(()=>t.binding.setSurfaceSize(null));
   await t.pumpWidget(MaterialApp(home:Builder(builder:(context)=>Scaffold(body:TextButton(onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>Ngelx565LudoRoom(
    id:'270565',userId:'a',request:(body)async=>body['action']=='leave'?{...room579(),'status':'closed','revision':2}:room579(),
   ))),child:const Text('Open579'))))));
