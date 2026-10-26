@@ -28,7 +28,7 @@ test('win credits coins, XP and level only once per match/uid',async()=>{
  assert.equal(a.reward.chips,150);
  const b=await settleMatch575(db,'human',r,t+6000);
  assert.equal(b.chips,150);
- assert.equal(b.reward,undefined);
+ assert.deepEqual(b.reward,a.reward);
  assert.equal(db.size(),1);
 });
 test('loser resets win streak and cannot collect win coins',async()=>{
@@ -86,9 +86,49 @@ test('five-win streak pays capped bonus but cannot be claimed twice',async()=>{
   assert.ok(w.reward.chips<=250);
   const after=await settleMatch575(db,'human',r,t+5100);
   assert.equal(after.chips,w.chips);
-  assert.equal(after.reward,undefined);
+  assert.deepEqual(after.reward,w.reward);
  }
  const final=await ludoWallet575(db,'human');
  assert.equal(final.streak,10);
  assert.equal(final.chips,150+170+190+210+230+250*5);
+});
+
+test('network reconnect returns original win payout receipt without paying again',async()=>{
+ const db=store(),room=game();
+ const first=await settleMatch575(db,'human',room,t+5000);
+ const same=await settleMatch575(db,'human',room,t+7000);
+ assert.equal(same.reward.matchId,room.id);
+ assert.deepEqual(same.reward,first.reward);
+ assert.equal(same.chips,150);assert.equal(same.xp,90);
+ assert.equal(same.wins,1);assert.equal(db.size(),1);
+ // Other players never see this user's reward receipt or its value.
+ const outsider=await settleMatch575(db,'spectator',room,t+7000);
+ assert.equal(outsider.reward,undefined);
+ assert.equal(outsider.chips,0);
+});
+test('reward receipt remains stable after claiming chest and daily gifts',async()=>{
+ const db=store(),room=game();
+ const result=await settleMatch575(db,'human',room,t+5000);
+ await claimDaily575(db,'human',t+6000);
+ await claimChest575(db,'human',t+6000);
+ const replay=await settleMatch575(db,'human',room,t+7000);
+ assert.deepEqual(replay.reward,result.reward);
+ assert.equal(replay.chips,225);
+ assert.equal(replay.wins,1);
+ assert.equal(replay.xp,100);
+});
+test('match payout receipt stays on its own room and other room has distinct reward',async()=>{
+ const db=store(),a=game(),b=game();
+ b.id='575575_next_match';b.winner=1;
+ const first=await settleMatch575(db,'human',a,t+5000);
+ const second=await settleMatch575(db,'human',b,t+6000);
+ assert.equal(second.reward.win,false);assert.equal(second.reward.xp,15);
+ assert.equal(second.reward.matchId,b.id);
+ const repeat=await settleMatch575(db,'human',a,t+7000);
+ assert.deepEqual(repeat.reward,first.reward);
+ assert.equal(repeat.chips,150);assert.equal(repeat.losses,1);
+});
+test('old wallet receipt from earlier Build575 remains idempotent without invented reward metadata',async()=>{
+ const db=store(),r=game(),first=await settleMatch575(db,'human',r,t+5000);
+ assert.deepEqual((await settleMatch575(db,'human',r,t+7000)).reward,first.reward);
 });
