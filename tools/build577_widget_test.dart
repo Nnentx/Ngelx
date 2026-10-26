@@ -57,7 +57,7 @@ void main(){
   expect(calls.where((b)=>b['action']=='leave').map((b)=>b['requestId']).toSet().length,1);
   expect(controller.error,isEmpty);controller.dispose();
  });
- testWidgets('bundled atlas paints actual colored 3D pawns at gameplay sizes',(tester)async{
+ testWidgets('actual 3D pawn sizes and full game preview',(tester)async{
   final atlas=await tester.runAsync(()=>ngelx570PawnSprite());
   expect(atlas,isNotNull);expect(atlas!.width,1254);expect(atlas.height,1254);
   final bytes=await tester.runAsync(()=>atlas.toByteData(format:ui.ImageByteFormat.rawRgba));
@@ -72,16 +72,17 @@ void main(){
    ]),
   )))));
   await settle577(tester);expect(tester.takeException(),isNull);await savePreview(tester,'actual-sprites-28-44-80px');
- });
- testWidgets('actual room preview preserves layout with the new raster pawns',(tester)async{
-  await tester.runAsync(()=>ngelx570PawnSprite());
+  await tester.pumpWidget(const SizedBox());
+  // Keep native image decoding and both captures in the same test's async zone.
+  debugPrint('Build577 preview: sprites captured; mounting actual room');
   tester.view.physicalSize=const Size(393,851);tester.view.devicePixelRatio=1;
   addTearDown(tester.view.resetPhysicalSize);addTearDown(tester.view.resetDevicePixelRatio);
   await tester.pumpWidget(MaterialApp(home:RepaintBoundary(key:const ValueKey('preview577'),child:Ngelx565LudoRoom(
    id:'859819',userId:'a',initial:room577(),request:(body)async=>room577(),
   ))));
+  debugPrint('Build577 preview: actual room mounted');
   await settle577(tester);await tester.pump(const Duration(milliseconds:950));await tester.pump();
-  expect(tester.takeException(),isNull);await savePreview(tester,'actual-game-393px');
+  expect(tester.takeException(),isNull);debugPrint('Build577 preview: capturing actual room');await savePreview(tester,'actual-game-393px');debugPrint('Build577 preview: actual room captured');
   await tester.pumpWidget(const SizedBox());
  });
  testWidgets('leave confirmation cancels a queued single-piece Auto move',(tester)async{
