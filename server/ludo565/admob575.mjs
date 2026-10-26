@@ -76,6 +76,13 @@ export async function createAdSession575(store,uid,now){
  await store.put('ad_session575_'+token,session);
  return {token,expiresAt:session.expiresAt,chipReward:30};
 }
+export async function adRewardStatus575(store,uid,token,now){
+ if(typeof token!=='string'||!/^[a-f0-9]{32}$/.test(token))fail('invalid_ad_session',400);
+ const entry=await store.get('ad_session575_'+token),session=entry?.room;
+ if(!session||session.uid!==uid)fail('invalid_ad_session',403);
+ if(session.expiresAt+24*3600000<now)fail('ad_session_expired',410);
+ return {verified:session.used===true,chipReward:session.used===true?30:0};
+}
 export async function applyAdmobReward575(store,event,now,adUnit){
  if(!adUnit||event.adUnit!==adUnit.split('/').at(-1)||event.rewardAmount<1||event.rewardItem!=='chips')
   fail('unapproved_ad_unit',403);
