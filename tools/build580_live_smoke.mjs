@@ -24,6 +24,19 @@ async function login(i){
 }
 async function call(user,body){const r=await fetch(endpoint,{method:'POST',headers:{authorization:'Bearer '+user.token,'content-type':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(25000)});const d=await r.json();if(!r.ok)throw Error('Ludo '+body.action+' HTTP '+r.status+' code '+String(d.error));return d.room;}
 try{
+ let ready=false;
+ for(let attempt=0;attempt<18;attempt++){
+  try{
+   const response=await fetch(endpoint.replace(/\/ludo$/,'/health'),{cache:'no-store',signal:AbortSignal.timeout(10000)}),h=await response.json();
+   if(response.ok&&h.ok===true&&h.ludo575?.configured===true&&h.ludo575?.feedbackBuild===580){
+    ready=true;break;
+   }
+  }catch{}
+  await new Promise(r=>setTimeout(r,2000));
+ }
+ if(!ready)throw Error('Matching configured Build580 Worker did not converge');
+ // Secret activation is a deployment too; let all edges observe it before parallel requests.
+ await new Promise(r=>setTimeout(r,5000));
  await firestore(probe+'?currentDocument.exists=false',{method:'PATCH',body:JSON.stringify({fields:{state:{stringValue:'probe'}}})});
  console.log('Dedicated datastore probe passed.');
  const a=await login(0),b=await login(1);console.log('Two isolated test accounts authenticated.');

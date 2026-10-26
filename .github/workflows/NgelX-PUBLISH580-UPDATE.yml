@@ -2,7 +2,7 @@ name: NgelX Build580 verified server and APK publication
 on:
   push:
     branches: [release/build580-in-app-update]
-    paths: ['.github/workflows/NgelX-PUBLISH580-UPDATE.yml']
+    paths: ['.github/workflows/NgelX-PUBLISH580-UPDATE.yml', 'tools/build580_live_smoke.mjs', 'tools/build580_deployment_guard.mjs']
 permissions:
   contents: read
   actions: read
