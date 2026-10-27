@@ -1,0 +1,117 @@
+name: Publish verified Build582 in-app update
+on:
+  push:
+    branches: [release/build582-in-app-update]
+    paths: ['.github/workflows/NgelX-PUBLISH582-UPDATE.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: ngelx-android-update-publication
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+      actions: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: Nnentx/Ngelx
+    steps:
+      - uses: actions/checkout@v4
+      - name: Gate on successful exact QA and unchanged accepted backend
+        run: |
+          set -euo pipefail
+          test "$(gh api repos/Nnentx/Ngelx/actions/runs/40475015115 --jq .head_sha)" = c9eb98176b5fbf257f7cbca57ba0c17f4a33a835
+          test "$(gh api repos/Nnentx/Ngelx/actions/runs/40475015115 --jq .conclusion)" = success
+          test "$(gh api repos/Nnentx/Ngelx/actions/runs/40404624100 --jq .conclusion)" = success
+          gh api repos/Nnentx/Ngelx/compare/e04d8e99aea63ede3802b282ff4688062245f965...c9eb98176b5fbf257f7cbca57ba0c17f4a33a835 > compare.json
+          python3 - <<'PY'
+          import json
+          c=json.load(open('compare.json'))
+          assert c['status']=='ahead' and not c.get('too_large')
+          assert len(c['files'])<100
+          assert not any(f['filename'].startswith(('server/','cloudflare/','app/','firebase/')) for f in c['files'])
+          print('Previously accepted backend unchanged; only the approved frontend APK is promoted.')
+          PY
+      - uses: actions/download-artifact@v4
+        with:
+          name: NgelX-Build582-Review-APK
+          run-id: 40475015115
+          github-token: ${{ github.token }}
+          path: verified-apk
+      - name: Verify exact APK and create updater metadata
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib,json
+          apks=list(Path('verified-apk').rglob('*.apk'));assert len(apks)==1
+          raw=apks[0].read_bytes()
+          digest=hashlib.sha256(raw).hexdigest()
+          assert len(raw)==50180430 and digest=='c96c46216f0fc1021d07a3f940fc0daf808f774addf8044153a55f01e461dc47'
+          name='NgelX-1.0.352-Build582.apk';Path(name).write_bytes(raw)
+          Path(name+'.sha256').write_text(digest+'  '+name+'\n')
+          feed={'schema':1,'package':'com.nnentx.ngelx_app','abi':'arm64-v8a','version':'1.0.352','build':582,'size':len(raw),'sha256':digest,'url':'https://github.com/Nnentx/Ngelx/releases/download/v1.0.352-build582/'+name,'notes':'Ludo ana ekranı ve Puanlarım, onaylanan mavi-mor tasarıma göre yenilendi. Dört sütunlu puan kartları, 3D Ludo görselleri ve başarı rozetleri eklendi. Gerçek çip, elmas, XP ve oyun istatistikleri gösterilir. Puan yenileme, oyun geçmişi filtresi ve tüm rozetler çalışır. Oyun seçimleri ve oda düğmeleri düzenlendi. Mevcut oyun, sohbet ve davet yapısı korunur.','testedSource':'c9eb98176b5fbf257f7cbca57ba0c17f4a33a835','buildRun':40475015115,'liveAcceptanceRun':40404624100}
+          Path('android-update.json').write_text(json.dumps(feed,ensure_ascii=False,indent=2)+'\n')
+          Path('release-notes.md').write_text('NgelX 1.0.352 / Build582\n\n'+feed['notes']+'\n\n149 sunucu testi, 39 Flutter testi, kod analizi ve Android derlemesi geçti. Aynı Android imzası ve sürüm/paket/ABI doğrulandı. İki fiziksel telefonda kabul testi henüz yapılmadı. Mevcut uygulamanın üzerine kurulur; uygulamayı silmeyin.\n')
+          PY
+          python3 tools/verify582_apk.py NgelX-1.0.352-Build582.apk
+      - name: Preserve app source with the existing default-branch workflow tree
+        run: |
+          set -euo pipefail
+          gh api repos/Nnentx/Ngelx/git/trees/main > main-tree.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          trusted=next(x['sha'] for x in json.load(open('main-tree.json'))['tree'] if x['path']=='.github')
+          tree={'base_tree':'18adc8b4ebfce5720bb091f559ee46870047bd86','tree':[{'path':'.github','mode':'040000','type':'tree','sha':trusted},{'path':'RELEASE582_MANIFEST.json','mode':'100644','type':'blob','content':Path('android-update.json').read_text()}]}
+          Path('release-tree.json').write_text(json.dumps(tree))
+          PY
+          gh api --method POST repos/Nnentx/Ngelx/git/trees --input release-tree.json > release-tree-result.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          Path('release-commit.json').write_text(json.dumps({'message':'Verified Build582 APK release snapshot; user-authorized in-app update','tree':json.load(open('release-tree-result.json'))['sha'],'parents':['c9eb98176b5fbf257f7cbca57ba0c17f4a33a835']}))
+          PY
+          gh api --method POST repos/Nnentx/Ngelx/git/commits --input release-commit.json > release-commit-result.json
+      - name: Publish verified APK and check anonymous download
+        run: |
+          set -euo pipefail
+          if gh release view v1.0.352-build582 >/dev/null 2>&1; then
+            gh release download v1.0.352-build582 --pattern NgelX-1.0.352-Build582.apk --dir existing
+            cmp NgelX-1.0.352-Build582.apk existing/NgelX-1.0.352-Build582.apk
+          else
+            target=$(python3 -c "import json;print(json.load(open('release-commit-result.json'))['sha'])")
+            gh release create v1.0.352-build582 NgelX-1.0.352-Build582.apk NgelX-1.0.352-Build582.apk.sha256 android-update.json --target "$target" --prerelease --title 'NgelX 1.0.352 / Build582' --notes-file release-notes.md
+          fi
+          curl --fail --location --retry 4 --retry-all-errors --retry-delay 3 --silent --show-error https://github.com/Nnentx/Ngelx/releases/download/v1.0.352-build582/NgelX-1.0.352-Build582.apk --output public-download.apk
+          cmp NgelX-1.0.352-Build582.apk public-download.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NgelX-Build582-Published-Update-Manifest
+          path: android-update.json
+  live-feed:
+    needs: publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: NgelX-Build582-Published-Update-Manifest
+          path: .
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install google-auth requests
+      - name: Publish updater manifest while preserving every active website asset and rule
+        env:
+          FIREBASE_SERVICE_ACCOUNT_NGELX_44EED: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_NGELX_44EED }}
+        run: python3 tools/hosting_update_feed582.py
