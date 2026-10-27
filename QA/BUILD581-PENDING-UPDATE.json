@@ -1,0 +1,14 @@
+{
+  "schema": 1,
+  "package": "com.nnentx.ngelx_app",
+  "abi": "arm64-v8a",
+  "version": "1.0.351",
+  "build": 581,
+  "size": 49486060,
+  "sha256": "9be239b0fd0adf00b5315d217ac892cf38bde44573f6027c9ea4dd6308be89de",
+  "url": "https://github.com/Nnentx/Ngelx/releases/download/v1.0.351-build581/NgelX-1.0.351-Build581.apk",
+  "notes": "Ludo ana ekranı ve oyun seçimleri yenilendi. Puanlarım profil fotoğrafı, seviye, XP, oyun geçmişi ve rozetlerle yenilendi. Davetler özel sohbet veya gruba görsel kart olarak doğrudan gönderilir; mevcut yazı taslakları ve yanıtlar korunur.",
+  "testedSource": "39c6e0f46089c388375a19be366cd8bc885da611",
+  "buildRun": 40468098023,
+  "liveAcceptanceRun": 40404624100
+}
