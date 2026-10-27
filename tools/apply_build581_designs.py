@@ -120,6 +120,46 @@ private=one(private,'    mesaj.clear();\n    sonaGit(zorla:true);','    if(direc
 assert private.count('if(mesaj.text.isEmpty){')==2
 private=private.replace('if(mesaj.text.isEmpty){','if(directInvite581.isEmpty&&mesaj.text.isEmpty){',2)
 
+
+# A direct invite is a separate message. Sending it must never clear an
+# unrelated typed composer, saved draft, reply context, mention or typing state.
+group=one(group,"try{await GroupDraftStore.clear(widget.chatId);}catch(_){}",
+ """if(directInvite581.isEmpty){try{await GroupDraftStore.clear(widget.chatId);}catch(_){}}""")
+group=one(group,"if(directInvite581.isEmpty)mesaj.clear();etiketlenenUidler.clear();",
+ """if(directInvite581.isEmpty){mesaj.clear();etiketlenenUidler.clear();}""")
+group=one(group,"        ...preview,\n       };",
+ """        ...preview,
+       };
+       if(directInvite581.isNotEmpty){
+        payload.removeWhere((key,_)=>const {
+         'mentions','silent','replyToId','replyToText',
+         'replyToSenderName','replyToType','replyToMediaUrl'
+        }.contains(key));
+       }""")
+group=one(group,"""        _typingZamanlayici?.cancel();
+        if(_typingYazildi)unawaited(_typingTemizle());
+        if(mounted)setState((){yanitlananMesajId=null;""",
+ """        if(directInvite581.isEmpty){
+         _typingZamanlayici?.cancel();
+         if(_typingYazildi)unawaited(_typingTemizle());
+        }
+        if(mounted&&directInvite581.isEmpty)setState((){yanitlananMesajId=null;""")
+private=one(private,"await PrivateDraftStore.clear(widget.chatId);",
+ """if(directInvite581.isEmpty)await PrivateDraftStore.clear(widget.chatId);""")
+private=one(private,"""      yaziyorZamanlayici?.cancel();
+      yaziyorGonderildi=false;""",
+ """      if(directInvite581.isEmpty){
+       yaziyorZamanlayici?.cancel();
+       yaziyorGonderildi=false;
+      }""")
+private=one(private,"""      if(mounted)setState((){
+        yanitMesajId=null;""",
+ """      if(mounted&&directInvite581.isEmpty)setState((){
+        yanitMesajId=null;""")
+for key in ('replyToId','replyText','replySenderId','replyType','replyMediaUrl'):
+    marker="if(cevap"+{"replyToId":"Id","replyText":"Metin","replySenderId":"Uid","replyType":"Tur","replyMediaUrl":"Medya"}[key]
+    private=one(private,marker,"if(directInvite581.isEmpty&&cevap"+{"replyToId":"Id","replyText":"Metin","replySenderId":"Uid","replyType":"Tur","replyMediaUrl":"Medya"}[key])
+
 m=before+group+private
 ludo.write_text(s,encoding='utf-8')
 main.write_text(m,encoding='utf-8')
