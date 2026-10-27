@@ -97,21 +97,33 @@ jobs:
   live-feed:
     needs: publish
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     permissions:
       contents: read
       actions: read
     steps:
-      - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
           name: NgelX-Build582-Published-Update-Manifest
           path: .
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-      - run: pip install google-auth requests
-      - name: Publish updater manifest while preserving every active website asset and rule
-        env:
-          FIREBASE_SERVICE_ACCOUNT_NGELX_44EED: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_NGELX_44EED }}
-        run: python3 tools/hosting_update_feed582.py
+      - name: Verify the actual GitHub Pages in-app feed after the authorized web-repository update
+        run: |
+          python3 - <<'PYTHON'
+          from pathlib import Path
+          import json,time,urllib.request,urllib.error
+          expected=json.loads(Path('android-update.json').read_text())
+          assert expected['build']==582 and expected['version']=='1.0.352'
+          for attempt in range(30):
+              try:
+                  request=urllib.request.Request('https://ngelxsocial.com/android-update.json',headers={'Cache-Control':'no-cache','Accept':'application/json'})
+                  with urllib.request.urlopen(request,timeout=15) as response:
+                      actual=json.load(response)
+                  if actual==expected:
+                      print('PASS: live in-app channel is 1.0.352 / Build582, with exact verified APK URL, size and SHA-256')
+                      break
+                  print('Waiting for Pages propagation; observed build:',actual.get('build'))
+              except (OSError,ValueError) as error:
+                  print('Waiting for live update feed:',type(error).__name__)
+              if attempt==29:raise RuntimeError('The live in-app feed could not be verified')
+              time.sleep(5)
+          PYTHON
