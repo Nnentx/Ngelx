@@ -1,0 +1,14 @@
+{
+  "schema": 1,
+  "package": "com.nnentx.ngelx_app",
+  "abi": "arm64-v8a",
+  "version": "1.0.352",
+  "build": 582,
+  "size": 50180430,
+  "sha256": "c96c46216f0fc1021d07a3f940fc0daf808f774addf8044153a55f01e461dc47",
+  "url": "https://github.com/Nnentx/Ngelx/releases/download/v1.0.352-build582/NgelX-1.0.352-Build582.apk",
+  "notes": "Ludo ana ekranı ve Puanlarım, onaylanan mavi-mor tasarıma göre yenilendi. Dört sütunlu puan kartları, 3D Ludo görselleri ve başarı rozetleri eklendi. Gerçek çip, elmas, XP ve oyun istatistikleri gösterilir. Puan yenileme, oyun geçmişi filtresi ve tüm rozetler çalışır. Oyun seçimleri ve oda düğmeleri düzenlendi. Mevcut oyun, sohbet ve davet yapısı korunur.",
+  "testedSource": "c9eb98176b5fbf257f7cbca57ba0c17f4a33a835",
+  "buildRun": 40475015115,
+  "liveAcceptanceRun": 40404624100
+}

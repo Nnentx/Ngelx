@@ -1,0 +1,92 @@
+name: Ngel X v23 BUILD 307 STABLE SIGNATURE FIX
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'app/**'
+      - '.github/workflows/NgelX-v23-BUILD-307-STABLE-SIGNATURE-FIX.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Kaynaklari al
+        uses: actions/checkout@v4
+
+      - name: Java 17 kur
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Flutter kur
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Sabit NgelX imza anahtarini geri yukle
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: ngelx-stable-debug-keystore-v1
+          fail-on-cache-miss: true
+
+      - name: Imza anahtarini dogrula
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s "$HOME/.android/debug.keystore"
+          keytool -list -v             -keystore "$HOME/.android/debug.keystore"             -storepass android             -alias androiddebugkey             | grep -E 'SHA256:|Alias name:|Owner:'
+
+      - name: Build 307 kaynak kontrolu
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q '^version: 1.0.88+307$' app/pubspec.yaml
+          grep -q 'ACTION_GET_CONTENT' app/android/app/src/main/kotlin/com/nnentx/ngelx_app/MainActivity.kt
+          grep -q '"pickDocument", "pickDocuments"' app/android/app/src/main/kotlin/com/nnentx/ngelx_app/MainActivity.kt
+          grep -q 'Future<XFile?> ngelxResimSec' app/lib/main.dart
+          grep -q 'Future<XFile?> ngelxVideoSec' app/lib/main.dart
+          grep -q 'Future<List<XFile>> ngelxCokluResimSec' app/lib/main.dart
+          grep -q 'Future<XFile?> ngelxDosyaSec' app/lib/main.dart
+
+      - name: Bagimliliklari al ve analiz et
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter clean
+          flutter pub get
+          flutter analyze --machine > analyze.log 2>&1 || true
+          cat analyze.log
+          if grep -q '^ERROR|' analyze.log; then
+            echo 'Gercek Flutter analiz hatasi bulundu.' >&2
+            exit 1
+          fi
+
+      - name: APK olustur
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd app
+          flutter build apk --release
+          test -s build/app/outputs/flutter-apk/app-release.apk
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          test -n "$APKSIGNER"
+          "$APKSIGNER" verify --print-certs build/app/outputs/flutter-apk/app-release.apk
+          sha256sum build/app/outputs/flutter-apk/app-release.apk > build/app/outputs/flutter-apk/app-release.apk.sha256
+
+      - name: APK yukle
+        uses: actions/upload-artifact@v4
+        with:
+          name: NgelX-v23-BUILD-307-STABLE-SIGNATURE-FIX
+          path: |
+            app/build/app/outputs/flutter-apk/app-release.apk
+            app/build/app/outputs/flutter-apk/app-release.apk.sha256
+          if-no-files-found: error
+          retention-days: 14
