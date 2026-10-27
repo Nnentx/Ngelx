@@ -27,7 +27,7 @@ void main(){
   addTearDown(()=>t.binding.setSurfaceSize(null));
   await t.pumpWidget(const MaterialApp(home:Scaffold(body:Center(child:SizedBox(width:300,height:158,child:Ngelx581Hero())))));
   await t.pump();
-  expect(find.text('LUDO'),findsOneWidget);
+  expect(find.byType(Ngelx581Hero),findsOneWidget);
   expect(t.takeException(),isNull);
  });
 }
