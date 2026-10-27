@@ -127,7 +127,7 @@ group=one(group,"try{await GroupDraftStore.clear(widget.chatId);}catch(_){}",
  """if(directInvite581.isEmpty){try{await GroupDraftStore.clear(widget.chatId);}catch(_){}}""")
 group=one(group,"if(directInvite581.isEmpty)mesaj.clear();etiketlenenUidler.clear();",
  """if(directInvite581.isEmpty){mesaj.clear();etiketlenenUidler.clear();}""")
-group=one(group,"        ...preview,\n       };",
+group=one(group,"        ...preview,\n      };",
  """        ...preview,
        };
        if(directInvite581.isNotEmpty){
