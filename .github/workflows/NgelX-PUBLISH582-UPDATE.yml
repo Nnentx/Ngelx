@@ -110,19 +110,18 @@ jobs:
         run: |
           python3 - <<'PYTHON'
           from pathlib import Path
-          import json,time,urllib.request,urllib.error
+          import json,time,subprocess
           expected=json.loads(Path('android-update.json').read_text())
           assert expected['build']==582 and expected['version']=='1.0.352'
           for attempt in range(30):
               try:
-                  request=urllib.request.Request('https://ngelxsocial.com/android-update.json',headers={'Cache-Control':'no-cache','Accept':'application/json'})
-                  with urllib.request.urlopen(request,timeout=15) as response:
-                      actual=json.load(response)
+                  response=subprocess.run(['curl','--fail','--silent','--show-error','--location','--max-time','15','-H','Cache-Control: no-cache','-H','Accept: application/json','-A','Dart/3.13 (dart:io)','https://ngelxsocial.com/android-update.json'],check=True,capture_output=True,text=True)
+                  actual=json.loads(response.stdout)
                   if actual==expected:
                       print('PASS: live in-app channel is 1.0.352 / Build582, with exact verified APK URL, size and SHA-256')
                       break
                   print('Waiting for Pages propagation; observed build:',actual.get('build'))
-              except (OSError,ValueError) as error:
+              except (OSError,ValueError,subprocess.CalledProcessError) as error:
                   print('Waiting for live update feed:',type(error).__name__)
               if attempt==29:raise RuntimeError('The live in-app feed could not be verified')
               time.sleep(5)
