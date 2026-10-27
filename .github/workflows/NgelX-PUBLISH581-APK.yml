@@ -1,7 +1,7 @@
 name: Publish verified Build581 APK asset (update channel separate)
 on:
   push:
-    branches: [feat/build581-ludo-approved-designs]
+    branches: [release/build581-in-app-update]
     paths: ['.github/workflows/NgelX-PUBLISH581-APK.yml']
 permissions:
   contents: write
