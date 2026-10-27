@@ -1,0 +1,87 @@
+name: Mirror verified Build581 APK to immutable Git source
+on:
+  push:
+    branches: [release/build581-in-app-update]
+    paths: ['.github/workflows/NgelX-MIRROR581-APK.yml']
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: ngelx-build581-apk-mirror
+  cancel-in-progress: false
+jobs:
+  mirror-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 24
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: Nnentx/Ngelx
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: release/build581-in-app-update
+          persist-credentials: true
+      - name: Check exact signed QA and live backend equivalence
+        run: |
+          set -euo pipefail
+          test "$(gh api repos/Nnentx/Ngelx/actions/runs/40468098023 --jq .conclusion)" = success
+          test "$(gh api repos/Nnentx/Ngelx/actions/runs/40468098023 --jq .head_sha)" = 39c6e0f46089c388375a19be366cd8bc885da611
+          test "$(gh api repos/Nnentx/Ngelx/actions/runs/40404624100 --jq .conclusion)" = success
+      - uses: actions/download-artifact@v4
+        with:
+          name: NgelX-Build581-Review-APK
+          run-id: 40468098023
+          github-token: ${{ github.token }}
+          path: verified
+      - name: Mirror verified bytes to dedicated release branch, keep main untouched
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import zipfile,hashlib,json
+          a=list(Path('verified').rglob('*.apk'));assert len(a)==1
+          raw=a[0].read_bytes()
+          assert len(raw)==49486060
+          assert hashlib.sha256(raw).hexdigest()=='9be239b0fd0adf00b5315d217ac892cf38bde44573f6027c9ea4dd6308be89de'
+          with zipfile.ZipFile(a[0]) as z:
+            assert z.testzip() is None
+            assert 'lib/arm64-v8a/libapp.so' in z.namelist()
+          p=Path('downloads/NgelX-1.0.351-Build581.apk')
+          p.parent.mkdir(exist_ok=True)
+          if p.exists():assert p.read_bytes()==raw
+          else:p.write_bytes(raw)
+          Path('downloads/NgelX-1.0.351-Build581.apk.sha256').write_text(hashlib.sha256(raw).hexdigest()+'  '+p.name+'\n')
+          print('Mirrored verified Build581 bytes; main branch untouched.')
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add downloads/NgelX-1.0.351-Build581.apk downloads/NgelX-1.0.351-Build581.apk.sha256
+          if ! git diff --cached --quiet; then
+            git commit -m "Mirror signed Build581 review APK for NgelX in-app update"
+            git push origin HEAD:refs/heads/release/build581-in-app-update
+          fi
+          git rev-parse HEAD > mirrored-commit.txt
+      - name: Verify anonymous download has exactly the matching signed bytes
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import urllib.request,hashlib,time
+          url='https://raw.githubusercontent.com/Nnentx/Ngelx/release/build581-in-app-update/downloads/NgelX-1.0.351-Build581.apk'
+          expected='9be239b0fd0adf00b5315d217ac892cf38bde44573f6027c9ea4dd6308be89de'
+          for attempt in range(14):
+            try:
+              with urllib.request.urlopen(url,timeout=45) as res:
+                content=res.read()
+              if hashlib.sha256(content).hexdigest()==expected and len(content)==49486060:
+                print('Anonymous mirror bytes verified; SHA-256 matches signed CI APK')
+                break
+            except Exception as e:print('Mirror attempt failed:',str(e)[:100])
+            if attempt==13:raise RuntimeError('Public mirror did not verify; do not switch updater')
+            time.sleep(7)
+          PY
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: NgelX-Build581-Verified-Mirror-Commit
+          path: mirrored-commit.txt
