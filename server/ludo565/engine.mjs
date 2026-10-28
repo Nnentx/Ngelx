@@ -1,3 +1,5 @@
+export const turnWindow583=15000;
+export const autoStep583=2600;
 export class LudoError extends Error{constructor(code,status=400){super(code);this.status=status;}}
 const fail=(code,status)=>{throw new LudoError(code,status)};
 export const powerTiles570=new Map([[2,'control'],[10,'shield'],[18,'double'],[28,'control'],[36,'shield'],[44,'double']]);
@@ -5,10 +7,10 @@ export const safe=new Set([0,8,13,21,26,34,39,47]);
 export const sameTeam=(r,a,b)=>r.team&&a%2===b%2;
 export function createRoom({uid,name,photo='',capacity=2,team=false,mode='classic',id},now){
  if(![2,4].includes(capacity)||!['classic','power'].includes(mode)||team&&capacity!==4)fail('invalid_settings');
- return {id,owner:uid,capacity,team,mode,status:'waiting',powerTiles:Object.fromEntries(powerTiles570),bonusTiles:[4,17,30,43],players:[{uid,name:name.slice(0,40),photo:String(photo).slice(0,2048),seat:0,left:false}],tokens:[[-1,-1,-1,-1],[-1,-1,-1,-1],[-1,-1,-1,-1],[-1,-1,-1,-1]],power:[{double:1,control:1,shield:1},{double:1,control:1,shield:1},{double:1,control:1,shield:1},{double:1,control:1,shield:1}],shields:{},autoSeats:{},turn:0,dice:null,sixes:0,revision:0,deadline:now+10000,expiresAt:now+6*3600000,last:{},chat:[],winner:null};
+ return {id,owner:uid,capacity,team,mode,status:'waiting',powerTiles:Object.fromEntries(powerTiles570),bonusTiles:[4,17,30,43],players:[{uid,name:name.slice(0,40),photo:String(photo).slice(0,2048),seat:0,left:false}],tokens:[[-1,-1,-1,-1],[-1,-1,-1,-1],[-1,-1,-1,-1],[-1,-1,-1,-1]],power:[{double:1,control:1,shield:1},{double:1,control:1,shield:1},{double:1,control:1,shield:1},{double:1,control:1,shield:1}],shields:{},autoSeats:{},turn:0,dice:null,sixes:0,revision:0,deadline:now+turnWindow583,expiresAt:now+6*3600000,last:{},chat:[],winner:null};
 }
 const active=r=>r.players.filter(p=>!p.left&&!r.tokens[p.seat].every(x=>x===56));
-function next(r,now){const seats=active(r).map(p=>p.seat).sort();r.turn=seats.find(x=>x>r.turn)??seats[0]??0;r.dice=null;r.doubled=false;r.sixes=0;r.openingRolls=0;r.deadline=now+10000;if(r.shields[r.turn])delete r.shields[r.turn];}
+function next(r,now){const seats=active(r).map(p=>p.seat).sort();r.turn=seats.find(x=>x>r.turn)??seats[0]??0;r.dice=null;r.doubled=false;r.sixes=0;r.openingRolls=0;r.deadline=now+turnWindow583;if(r.shields[r.turn])delete r.shields[r.turn];}
 export function legal(r,seat){if(r.dice===null)return [];const distance=r.dice*(r.doubled?2:1);return r.tokens[seat].flatMap((p,i)=>p===56?[]:p===-1?(r.dice===6?[i]:[]):p+distance<=56?[i]:[]);}
 export function secureRoll(){let n;do{n=crypto.getRandomValues(new Uint32Array(1))[0];}while(n>=4294967292);return n%6+1;}
 export function act(original,uid,b,now,roll=secureRoll){
@@ -23,12 +25,12 @@ export function act(original,uid,b,now,roll=secureRoll){
   if(!player||player.left)fail('not_a_player',403);
   if(b.action==='sync'){
    if(r.status==='playing'&&now>=r.deadline)return automatic(r,now,roll,true);
-   if(r.status==='playing'&&r.autoSeats?.[r.turn])return automatic(r,now,roll,false);
+   if(r.status==='playing'&&r.autoSeats?.[r.turn]&&now>=(r.autoNextAt??0))return automatic(r,now,roll,false);
    return r;
   }
   if(typeof b.requestId!=='string'||!/^[a-zA-Z0-9_-]{8,100}$/.test(b.requestId))fail('invalid_request');
   if(r.last[uid]===b.requestId)return r;
-  if(b.revision!==r.revision)fail('state_changed',409);
+  if(b.revision!==r.revision&&b.action!=='leave')fail('state_changed',409);
   if(b.action==='leave'){
    player.left=true;if(r.autoSeats)delete r.autoSeats[player.seat];
    if(r.status==='waiting'){if(uid===r.owner)r.status='closed';else r.players=r.players.filter(p=>p.uid!==uid);}
@@ -44,7 +46,7 @@ export function act(original,uid,b,now,roll=secureRoll){
    else{
     delete r.autoSeats[player.seat];
     // Reclaim a full move window when cancelling timed-out Auto.
-    if(r.status==='playing'&&r.turn===player.seat)r.deadline=now+10000;
+    if(r.status==='playing'&&r.turn===player.seat)r.deadline=now+turnWindow583;
    }
   }else if(b.action==='chat'){
    const text=String(b.text??'').trim();if(!text||text.length>180)fail('invalid_message');
@@ -54,7 +56,7 @@ export function act(original,uid,b,now,roll=secureRoll){
    if(uid!==r.owner)fail('host_only',403);
    const joined=r.players.filter(p=>!p.left);
    if(r.status!=='waiting'||joined.length<2||r.team&&joined.length!==4||r.matchmaking&&joined.length!==r.capacity)fail('waiting_for_players',409);
-   r.status='playing';r.deadline=now+10000;
+   r.status='playing';r.deadline=now+turnWindow583;
   }else{
    if(r.status!=='playing')fail('not_playing',409);
    if(now>=r.deadline)return automatic(r,now,roll,true);
@@ -63,7 +65,7 @@ export function act(original,uid,b,now,roll=secureRoll){
    if(r.autoSeats?.[player.seat]&&!b.requestId.startsWith('automatic569_'))delete r.autoSeats[player.seat];
    if(b.action==='roll'){
     if(r.dice!==null)fail('move_first',409);
-    r.deadline=now+10000;r.dice=roll();if(!Number.isInteger(r.dice)||r.dice<1||r.dice>6)fail('invalid_dice');
+    r.deadline=now+turnWindow583;r.dice=roll();if(!Number.isInteger(r.dice)||r.dice<1||r.dice>6)fail('invalid_dice');
     r.lastRoll={seat:r.turn,value:r.dice,revision:r.revision+1};r.sixes=r.dice===6?r.sixes+1:0;
     if(r.sixes===3)next(r,now);else if(!legal(r,r.turn).length){if(r.tokens[r.turn].every(x=>x===-1)&&(r.openingRolls??0)<2){r.openingRolls=(r.openingRolls??0)+1;r.dice=null;}else next(r,now);}
    }else if(b.action==='power'){
@@ -71,7 +73,7 @@ export function act(original,uid,b,now,roll=secureRoll){
     if(!['double','control','shield'].includes(b.kind)||p[b.kind]<=0)fail('power_used');
     if(b.kind==='control'){
      if(r.dice!==null||!Number.isInteger(b.number)||b.number<1||b.number>6)fail('invalid_power');
-     r.deadline=now+10000;r.dice=b.number;r.lastRoll={seat:r.turn,value:r.dice,revision:r.revision+1};r.sixes=r.dice===6?r.sixes+1:0;if(r.sixes===3)next(r,now);else if(!legal(r,r.turn).length){if(r.tokens[r.turn].every(x=>x===-1)&&(r.openingRolls??0)<2){r.openingRolls=(r.openingRolls??0)+1;r.dice=null;}else next(r,now);}
+     r.deadline=now+turnWindow583;r.dice=b.number;r.lastRoll={seat:r.turn,value:r.dice,revision:r.revision+1};r.sixes=r.dice===6?r.sixes+1:0;if(r.sixes===3)next(r,now);else if(!legal(r,r.turn).length){if(r.tokens[r.turn].every(x=>x===-1)&&(r.openingRolls??0)<2){r.openingRolls=(r.openingRolls??0)+1;r.dice=null;}else next(r,now);}
     }else if(b.kind==='double'){
      if(r.dice===null||r.doubled)fail('roll_first');r.doubled=true;
      if(!legal(r,r.turn).length)fail('no_move');
@@ -129,11 +131,12 @@ export function act(original,uid,b,now,roll=secureRoll){
     const teamWon=r.team&&[seat%2,seat%2+2].every(s=>r.tokens[s].every(x=>x===56));
     if((!r.team&&won)||teamWon){r.status='finished';r.endReason='completed';r.winner=r.team?seat%2:seat;}
     else if(won||(!captured&&position!==56&&r.dice!==6&&!gainedBonus))next(r,now);
-    else{r.dice=null;r.doubled=false;r.deadline=now+10000;}
+    else{r.dice=null;r.doubled=false;r.deadline=now+turnWindow583;}
    }else fail('invalid_action');
   }
   r.last[uid]=b.requestId;
  }
+ if(['roll','move','start','auto'].includes(b.action))r.autoNextAt=now+autoStep583;
  r.revision++;return r;
 }
 
@@ -167,10 +170,10 @@ function automatic(room,now,roll,activate=true){
  const player=room.players.find(p=>p.seat===room.turn&&!p.left);
  if(!player)return room;
  const ready=structuredClone(room);
- ready.deadline=now+10000;
+ ready.deadline=now+turnWindow583;
  if(activate&&!player.bot){ready.autoSeats??={};ready.autoSeats[ready.turn]=true;}
  // A stale dice value without a legal move should never deadlock the room.
- if(ready.dice!==null&&!legal(ready,ready.turn).length){next(ready,now);ready.revision++;return ready;}
+ if(ready.dice!==null&&!legal(ready,ready.turn).length){next(ready,now);ready.autoNextAt=now+autoStep583;ready.revision++;return ready;}
  const token=ready.dice===null?null:autoChoice575(ready);
  return act(ready,player.uid,{action:token===null?'roll':'move',...(token===null?{}:{token}),revision:ready.revision,requestId:'automatic569_'+ready.revision},now,roll);
 }

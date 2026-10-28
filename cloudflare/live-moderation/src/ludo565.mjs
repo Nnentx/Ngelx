@@ -225,7 +225,7 @@ export function createLudo565({verify,profile,store,limit=async()=>true,isModera
    let room=act(existing.room,uid,b,now(),roll);
    // Run one server-authoritative bot action per response, preserving visible turns.
    const bot=room.players.find(p=>p.seat===room.turn&&p.bot&&!p.left);
-   if(room.botGame&&room.status==='playing'&&bot){
+   if(room.botGame&&room.status==='playing'&&bot&&room.revision===existing.room.revision&&now()>=(room.autoNextAt??0)){
     let move;
     if(room.dice===null)move={action:'roll'};
     else{

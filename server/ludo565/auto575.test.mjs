@@ -13,22 +13,22 @@ const request=(r,action,extra={},uid='human',when=t+1000)=>
 
 test('timeout activates persistent Auto for the timed-out seat',()=>{
  let r=started();
- r=act(r,'other',{action:'sync'},t+10000,()=>6);
+ r=act(r,'other',{action:'sync'},t+15000,()=>6);
  assert.equal(r.autoSeats[0],true);
  assert.equal(r.dice,6);
- r=act(r,'other',{action:'sync'},t+10001,()=>6);
+ r=act(r,'other',{action:'sync'},t+17600,()=>6);
  assert.deepEqual(r.tokens[0],[0,-1,-1,-1]);
  assert.equal(r.autoSeats[0],true);
 });
 
 test('tapping Auto cancels automatic turns and renews the remaining time',()=>{
  let r=started();
- r=act(r,'other',{action:'sync'},t+10000,()=>6);
- r=request(r,'auto',{enabled:false},'human',t+10001);
+ r=act(r,'other',{action:'sync'},t+15000,()=>6);
+ r=request(r,'auto',{enabled:false},'human',t+15001);
  assert.equal(r.autoSeats[0],undefined);
- assert.equal(r.deadline,t+20001);
+ assert.equal(r.deadline,t+30001);
  const before=r.revision;
- r=act(r,'other',{action:'sync'},t+10002,()=>6);
+ r=act(r,'other',{action:'sync'},t+15002,()=>6);
  assert.equal(r.revision,before);
 });
 
@@ -40,7 +40,7 @@ test('manual pawn move disables persistent auto mode',()=>{
 
 test('smart Auto captures enemy instead of moving the first legal pawn',()=>{
  let r=started();r.tokens[0]=[1,10,-1,-1];r.tokens[2]=[37,-1,-1,-1];r.dice=1;
- r=act(r,'other',{action:'sync'},t+10000,()=>3);
+ r=act(r,'other',{action:'sync'},t+15000,()=>3);
  assert.equal(r.tokens[0][1],11);
  assert.equal(r.tokens[2][0],-1);
 });
@@ -54,7 +54,7 @@ test('an off-turn player cannot toggle another player Auto',()=>{
 
 test('timeout with no legal pawn does not fail or freeze the match',()=>{
  let r=started();r.dice=1;r.tokens[0]=[-1,-1,-1,-1];
- r=act(r,'other',{action:'sync'},t+10000,()=>6);
+ r=act(r,'other',{action:'sync'},t+15000,()=>6);
  assert.equal(r.turn,2);
  assert.equal(r.autoSeats[0],true);
  assert.equal(r.status,'playing');

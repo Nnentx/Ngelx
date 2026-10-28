@@ -10,9 +10,10 @@ function fixture({roll=()=>6}={}){
  return {call,records,tick:n=>clock+=n};
 }
 test('new room codes contain exactly six digits and create retries preserve the game',async()=>{const {call}=fixture();const body={action:'create',capacity:2,mode:'classic',requestId:'same_request_568_123456'};const a=await call(body);assert.match(a.room.id,/^\d{6}$/);assert.equal((await call(body)).room.id,a.room.id);});
-test('bots occupy opposite seats and take legal server-controlled turns',async()=>{const {call}=fixture();let {room}=await call({action:'bot',capacity:2,mode:'power',difficulty:'hard'});assert.equal(room.status,'playing');assert.equal(room.players[1].seat,2);assert.equal(room.players[1].bot,true);
+test('bots occupy opposite seats and take legal server-controlled turns',async()=>{const {call,tick}=fixture();let {room}=await call({action:'bot',capacity:2,mode:'power',difficulty:'hard'});assert.equal(room.status,'playing');assert.equal(room.players[1].seat,2);assert.equal(room.players[1].bot,true);
  for(let i=0;i<3;i++){room=(await call({action:'roll',id:room.id,revision:room.revision,requestId:'human_roll_'+i})).room;if(i<2)room=(await call({action:'move',token:0,id:room.id,revision:room.revision,requestId:'human_move_'+i})).room;}
- assert.equal(room.turn,2);assert.equal(room.dice,6);
+ assert.equal(room.turn,2);assert.equal(room.dice,null);
+ tick(2600);room=(await call({action:'sync',id:room.id})).room;assert.equal(room.dice,6);tick(2600);
  room=(await call({action:'sync',id:room.id})).room;assert.equal(room.tokens[2][0],0);
  assert.equal((await call({action:'sync',id:room.id},'outsider')).status,403);
 });
@@ -24,8 +25,9 @@ test('matching retries resume the same started room even after queue rotation',a
 
 for(const mode of ['classic','power'])for(const difficulty of ['easy','medium','hard'])test(`complete ${mode} game against ${difficulty} bot reaches a valid winner`,async()=>{
  let seed=42;const roll=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return (seed>>>16)%6+1;};
- const {call}=fixture({roll});let {room}=await call({action:'bot',capacity:2,mode,difficulty});
+ const {call,tick}=fixture({roll});let {room}=await call({action:'bot',capacity:2,mode,difficulty});
  for(let i=0;i<4000&&room.status==='playing';i++){
+  tick(2600);
   let body={action:'sync'};
   if(room.turn===0){if(room.dice===null)body={action:'roll'};else{const options=legal(room,0).sort((a,b)=>room.tokens[0][b]-room.tokens[0][a]);body={action:'move',token:options[0]};}}
   const response=await call({...body,id:room.id,revision:room.revision,requestId:'simulation568_'+i});assert.ok(response.room,JSON.stringify(response));room=response.room;
