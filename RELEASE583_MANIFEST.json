@@ -1,0 +1,14 @@
+{
+  "schema": 1,
+  "package": "com.nnentx.ngelx_app",
+  "abi": "arm64-v8a",
+  "version": "1.0.353",
+  "build": 583,
+  "size": 50218877,
+  "sha256": "17b7a7368476a6d1eb7da3536fafb6f8d55fa1bbcbba9144bfb222d5402b6575",
+  "url": "https://github.com/Nnentx/Ngelx/releases/download/v1.0.353-build583/NgelX-1.0.353-Build583.apk",
+  "notes": "Ludo tahtası ve taşların dokunma alanları genişletildi. GO tek basışla çalışır. Hamle süresi 15 saniye oldu; Auto dengelendi. Hediye yazıları okunaklı, hediyeler ekranda hareketlidir. Taş yuva sesleri ve aramaya katılım göstergeleri yenilendi. Özel ve grup davetindeki titreme ile masadan ayrılma çakışmaları düzeltildi.",
+  "testedSource": "ffc4dfb7dfcf0716ff8b038f7ce1a7fe11498c4a",
+  "buildRun": 40743800801,
+  "liveAcceptanceRun": 40747646506
+}
