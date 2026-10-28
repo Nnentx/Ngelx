@@ -87,7 +87,7 @@ void main(){
  for(final players in [2,3,4])testWidgets('$players player board fills available phone width and renders six',(t)async{
   await t.binding.setSurfaceSize(const Size(393,852));addTearDown(()=>t.binding.setSurfaceSize(null));
   final room=room583(players:players,dice:6);
-  await t.pumpWidget(MaterialApp(home:RepaintBoundary(key:const ValueKey('capture583'),child:Ngelx565LudoRoom(id:'583583',initial:room,userId:'a',request:(_)async=>room))));
+  await t.pumpWidget(RepaintBoundary(key:const ValueKey('capture583'),child:MaterialApp(home:Ngelx565LudoRoom(id:'583583',initial:room,userId:'a',request:(_)async=>room))));
   await t.pump();await t.pump(const Duration(milliseconds:500));
   expect(t.getSize(find.byType(Ngelx565LudoBoard)).width,greaterThan(370));
   expect(find.byWidgetPredicate((w)=>w is Ngelx567Dice&&w.value==6),findsWidgets);
@@ -103,7 +103,7 @@ void main(){
    if(b['action']=='gift'){gifts++;room={...room,'revision':2,'gifts':[{'from':'a','to':'b','fromName':'Alihan','toName':'Ahsen Can','kind':'rose','emoji':'🌹','at':DateTime.now().millisecondsSinceEpoch}]};}
    return room;
   }
-  await t.pumpWidget(MaterialApp(home:RepaintBoundary(key:const ValueKey('capture583'),child:Ngelx565LudoRoom(id:'583583',initial:room,userId:'a',request:request))));await t.pump();
+  await t.pumpWidget(RepaintBoundary(key:const ValueKey('capture583'),child:MaterialApp(home:Ngelx565LudoRoom(id:'583583',initial:room,userId:'a',request:request))));await t.pump();
   await t.tap(find.byKey(const ValueKey('ludo-player-b')));await t.pump();await t.pump(const Duration(milliseconds:300));
   expect(t.widget<Text>(find.text('Gül')).style!.color,const Color(0xFF27204C));
   expect(find.text('20 çip'),findsOneWidget);await shot583(t,'gift-readable');
