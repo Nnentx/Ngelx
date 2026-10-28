@@ -56,6 +56,20 @@ export function act(original,uid,b,now,roll=secureRoll){
    if(uid!==r.owner)fail('host_only',403);
    const joined=r.players.filter(p=>!p.left);
    if(r.status!=='waiting'||joined.length<2||r.team&&joined.length!==4||r.matchmaking&&joined.length!==r.capacity)fail('waiting_for_players',409);
+   // A four-seat table may start early. Two opponents always face each other,
+   // including rooms created before this fix; never move a seat mid-game.
+   if(joined.length===2&&!r.team){
+    const opponent=joined[1],old=opponent.seat,opposite=(joined[0].seat+2)%4;
+    if(old!==opposite){
+     [r.tokens[old],r.tokens[opposite]]=[r.tokens[opposite],r.tokens[old]];
+     [r.power[old],r.power[opposite]]=[r.power[opposite],r.power[old]];
+     for(const key of ['autoSeats','shields'])if(r[key]){
+      const value=r[key][old];delete r[key][old];delete r[key][opposite];
+      if(value!==undefined)r[key][opposite]=value;
+     }
+     opponent.seat=opposite;
+    }
+   }
    r.status='playing';r.deadline=now+turnWindow583;
   }else{
    if(r.status!=='playing')fail('not_playing',409);
