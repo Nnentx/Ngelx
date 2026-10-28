@@ -10,13 +10,13 @@ test('Power pickups remain six total with four collectible dice and two shields'
  assert.equal([...powerTiles570.values()].filter(k=>k!=='shield').length,4);
  assert.equal(new Set(powerTiles570.keys()).size,6);
 });
-test('both persistent Auto seats advance every sync without waiting for another timeout',()=>{
+test('both persistent Auto seats advance at a steady pace without waiting for another timeout',()=>{
  const t=1800000000000;
  let r=createRoom({uid:'a',name:'A',id:'578578'},t);
  r=act(r,'b',{action:'join'},t);r=act(r,'a',{action:'start',revision:r.revision,requestId:'start578'},t);
  for(const uid of ['a','b'])r=act(r,uid,{action:'auto',enabled:true,revision:r.revision,requestId:'auto578_'+uid},t);
  for(let i=0;i<20;i++){
-  const previous=r.revision;r=act(r,'a',{action:'sync'},t+500+i*200,()=>6);
+  const previous=r.revision;r=act(r,'a',{action:'sync'},t+2600+i*2600,()=>6);
   assert.ok(r.revision>previous);assert.equal(r.autoSeats[0],true);assert.equal(r.autoSeats[2],true);
  }
 });
