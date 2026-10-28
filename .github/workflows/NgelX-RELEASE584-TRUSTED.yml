@@ -1,0 +1,126 @@
+name: Publish tested Build584 backend APK and in-app update
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/NgelX-RELEASE584-TRUSTED.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: ngelx-production-worker-deployment
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: Nnentx/Ngelx
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          ref: c999d229d68ea9d79911d2e9821a711814d17455
+          path: tested
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Require the exact successful tested source and regressions
+        run: |
+          set -euo pipefail
+          test "$(gh api repos/Nnentx/Ngelx/actions/runs/40757681279 --jq .head_sha)" = c999d229d68ea9d79911d2e9821a711814d17455
+          test "$(gh api repos/Nnentx/Ngelx/actions/runs/40757681279 --jq .conclusion)" = success
+          node --test tools/build584_deployment_guard.test.mjs
+          node --test tested/server/ludo565/*.test.mjs tested/cloudflare/live-moderation/test/*.test.mjs
+      - name: Record existing production Worker checkpoint
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node tools/build584_deployment_guard.mjs prepare
+      - name: Deploy only the tested Worker with its existing routes and secrets
+        id: deploy
+        working-directory: tested/cloudflare/live-moderation
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_SEND_METRICS: 'false'
+        run: npx --yes wrangler@4 deploy
+      - name: Record deployment and verify both hostnames and auth boundaries
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node tools/build584_deployment_guard.mjs record
+      - name: Verify live fifteen-second turns Auto pacing gifts and stale departure
+        env:
+          FIREBASE_SERVICE_ACCOUNT_NGELX_44EED: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_NGELX_44EED }}
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          NGELX_GAME_ENDPOINT: https://oyun.ngelxsocial.com/ludo
+          NGELX_PRODUCTION_SMOKE: '576'
+        run: node tools/build584_live_smoke.mjs
+      - name: Accept the exact live deployment
+        id: accept
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node tools/build584_deployment_guard.mjs accept
+      - uses: actions/download-artifact@v4
+        with:
+          name: NgelX-Build584-Review-APK
+          run-id: 40757681279
+          github-token: ${{ github.token }}
+          path: verified-apk
+      - name: Prepare exact APK and immutable updater metadata
+        run: python3 tools/build584_prepare_release.py
+      - name: Preserve tested runtime with the current trusted release workflow tree
+        run: |
+          set -euo pipefail
+          if gh release view v1.0.354-build584 >/dev/null 2>&1; then exit 0; fi
+          gh api repos/Nnentx/Ngelx/git/trees/"$GITHUB_SHA" > trusted-tree584.json
+          gh api repos/Nnentx/Ngelx/git/commits/c999d229d68ea9d79911d2e9821a711814d17455 > tested-commit584.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          trusted=next(e['sha'] for e in json.load(open('trusted-tree584.json'))['tree'] if e['path']=='.github')
+          base=json.load(open('tested-commit584.json'))['tree']['sha']
+          tree={'base_tree':base,'tree':[{'path':'.github','mode':'040000','type':'tree','sha':trusted},{'path':'RELEASE584_MANIFEST.json','mode':'100644','type':'blob','content':Path('android-update.json').read_text()}]}
+          Path('release-tree584.json').write_text(json.dumps(tree))
+          PY
+          gh api --method POST repos/Nnentx/Ngelx/git/trees --input release-tree584.json > release-tree-result584.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          Path('release-commit584.json').write_text(json.dumps({'message':'Build584 exact tested runtime and APK with trusted release metadata','tree':json.load(open('release-tree-result584.json'))['sha'],'parents':['c999d229d68ea9d79911d2e9821a711814d17455']}))
+          PY
+          gh api --method POST repos/Nnentx/Ngelx/git/commits --input release-commit584.json > release-commit-result584.json
+      - name: Publish the verified APK and verify anonymous download bytes
+        run: |
+          set -euo pipefail
+          if gh release view v1.0.354-build584 >/dev/null 2>&1; then
+            mkdir -p existing584
+            gh release download v1.0.354-build584 --pattern NgelX-1.0.354-Build584.apk --dir existing584
+            cmp NgelX-1.0.354-Build584.apk existing584/NgelX-1.0.354-Build584.apk
+          else
+            target=$(python3 -c "import json;print(json.load(open('release-commit-result584.json'))['sha'])")
+            gh release create v1.0.354-build584 NgelX-1.0.354-Build584.apk NgelX-1.0.354-Build584.apk.sha256 android-update.json --target "$target" --title 'NgelX 1.0.354 / Build584' --notes-file release-notes.md
+          fi
+          curl --fail --location --retry 5 --retry-all-errors --retry-delay 2 --silent --show-error https://github.com/Nnentx/Ngelx/releases/download/v1.0.354-build584/NgelX-1.0.354-Build584.apk --output public-download584.apk
+          cmp NgelX-1.0.354-Build584.apk public-download584.apk
+      - name: Restore prior Worker if deployment acceptance failed
+        if: failure() && steps.deploy.outcome != 'skipped' && steps.accept.outcome != 'success'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node tools/build584_deployment_guard.mjs rollback
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: NgelX-Build584-Publication-Evidence
+          path: |
+            android-update.json
+            release-commit-result584.json
+            ${{ runner.temp }}/build584-worker-state.json
+          if-no-files-found: ignore
