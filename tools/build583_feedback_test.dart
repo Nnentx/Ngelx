@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:ui' as ui;
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../lib/main.dart';
@@ -23,6 +25,13 @@ Future<void> shot583(WidgetTester t,String name)async{
   File('test/screenshots/$name.png').writeAsBytesSync(data!.buffer.asUint8List());image.dispose();});
 }
 void main(){
+ setUpAll(()async{
+  final font=File('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf');
+  if(font.existsSync())await (FontLoader('Roboto')..addFont(Future.value(ByteData.view(font.readAsBytesSync().buffer)))).load();
+  final root=Platform.environment['FLUTTER_ROOT']??Platform.resolvedExecutable.split('/bin/cache/dart-sdk/').first;
+  final icons=File('$root/bin/cache/artifacts/material_fonts/MaterialIcons-Regular.otf');
+  if(icons.existsSync())await (FontLoader('MaterialIcons')..addFont(Future.value(ByteData.view(icons.readAsBytesSync().buffer)))).load();
+ });
  setUp(()=>SharedPreferences.setMockInitialValues({'ngelx_ludo_sound':false}));
  test('gift receipts animate once, with no replay on entry or duplicate poll',(){
   final q=Ngelx583GiftQueue(),now=DateTime.now().millisecondsSinceEpoch;
@@ -107,5 +116,45 @@ void main(){
  });
  test('last server six remains visible after turn changes',(){
   expect(ngelx570ShownDice({...room583(),'turn':1,'lastRoll':{'seat':0,'value':6}}),6);
+ });
+ test('leaving drains an in-flight action and sends its resulting revision',()async{
+  final pending=Completer<Map<String,dynamic>>();final calls=<Map<String,dynamic>>[];
+  final room=room583();
+  final g=Ngelx567RoomController(id:'583583',uid:'a',initial:room,request:(b){
+   calls.add(Map.of(b));
+   if(b['action']=='roll')return pending.future;
+   return Future.value({...room,'revision':3});
+  });
+  final roll=g.perform('roll'),leave=g.leave();
+  expect(g.leaving,true);expect(calls.length,1);
+  pending.complete({...room,'revision':2,'dice':6});
+  expect(await roll,true);expect(await leave,true);
+  expect(calls.last['action'],'leave');expect(calls.last['revision'],2);
+  expect(g.detached,true);g.dispose();
+ });
+ testWidgets('invite taps push one route and send only after its entrance completes',(t)async{
+  final nav=Ngelx583InviteNavigation();var sends=0;late BuildContext home;
+  await t.pumpWidget(MaterialApp(home:Builder(builder:(c){home=c;return const Scaffold(body:Text('Kişiler'));})));
+  Widget destination(BuildContext c)=>Scaffold(body:Builder(builder:(inner){
+   WidgetsBinding.instance.addPostFrameCallback((_){unawaited(ngelx583SendAfterRoute(inner,()async{sends++;}));});
+   return const Text('Hedef sohbet');
+  }));
+  unawaited(nav.open(home,destination));unawaited(nav.open(home,destination));
+  await t.pump();expect(sends,0);expect(nav.opening,true);
+  await t.pump(const Duration(milliseconds:400));await t.pump();
+  expect(sends,1);expect(find.text('Hedef sohbet'),findsOneWidget);
+  Navigator.of(home).pop();await t.pump();await t.pump(const Duration(milliseconds:400));
+  expect(nav.opening,false);await t.pumpWidget(const SizedBox());
+ });
+ testWidgets('invite tail coalesces scroll requests without restarting animations',(t)async{
+  final controller=ScrollController(),tail=Ngelx583InviteTail();
+  await t.pumpWidget(MaterialApp(home:Scaffold(body:ListView(controller:controller,children:[for(var i=0;i<40;i++)SizedBox(height:48,child:Text('Mesaj $i'))]))));
+  for(var i=0;i<10;i++)tail.schedule(controller,force:true);
+  await t.pump();expect(controller.offset,controller.position.maxScrollExtent);expect(tail.queued,false);
+  controller.jumpTo(0);
+  for(var i=0;i<10;i++)tail.schedule(controller,force:true);
+  await t.pump();expect(tail.animating,true);
+  await t.pump(const Duration(milliseconds:200));expect(controller.offset,controller.position.maxScrollExtent);
+  expect(t.takeException(),isNull);await t.pumpWidget(const SizedBox());controller.dispose();
  });
 }

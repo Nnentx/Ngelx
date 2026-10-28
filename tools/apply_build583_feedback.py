@@ -54,6 +54,13 @@ old="""  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(
 section=one(section,old,"""  if(!ok||room['giftAlreadySent']==true)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(
    ok?'Bu hediye daha önce gönderilmiş.':(game.error.isEmpty?'Hediye gönderilemedi.':game.error))));""")
 s=s[:start]+section+s[end:]
+# Open one destination route even when a contact is tapped repeatedly.
+s=one(s,' late Future<List<Ngelx580InviteTarget>> targets;',' late Future<List<Ngelx580InviteTarget>> targets;final _navigation583=Ngelx583InviteNavigation();')
+s=one(s,'  await Navigator.push(context,MaterialPageRoute(builder:(_)=>target.group?', '  await _navigation583.open(context,(_)=>target.group?')
+s=one(s,"SohbetPage(chatId:target.id,digerUid:target.other,ad:target.name,foto:target.photo,directInvite581:draft)));", "SohbetPage(chatId:target.id,digerUid:target.other,ad:target.name,foto:target.photo,directInvite581:draft));")
+# Confirm departure even while another mutation is completing; never silently
+# close the UI and leave a ghost player in the server room.
+s=one(s,'  if(game.busy){await _close();return;}','  // Build583: game.leave drains any pending action before departure.')
 start=s.index("   if(room['gifts'] is List")
 end=s.index('   if(game.error.isNotEmpty',start)
 s=s[:start]+s[end:]
@@ -119,6 +126,25 @@ s=one(s,"  if(captured)_timers.add(Timer(Duration(milliseconds:steps*190),()=>un
 
 m=(lib/'main.dart').read_text()
 m=one(m,"part 'build570_join_sound.dart';", "part 'build570_join_sound.dart';\npart 'build583_feedback.dart';")
+# Sending during the route's first frame overlaps its entrance animation with
+# several opening-scroll timers. Wait for route completion, then coalesce tails.
+old="if(mounted)unawaited(gonder(directInvite581:widget.directInvite581));"
+assert m.count(old)==2
+m=m.replace(old,"if(mounted)unawaited(ngelx583SendAfterRoute(context,()=>gonder(directInvite581:widget.directInvite581)));")
+for name,end in [('_GrupSohbetPageState','class '),('_SohbetPageState','class ')]:
+    start=m.index('class '+name+' ')
+    stop=m.find('\nclass ',start+1)
+    if stop<0: stop=len(m)
+    section=m[start:stop]
+    # Guard the legacy opening timer and use one initial snap for direct invites.
+    section=one(section,'  bool _ngelx465OpeningScrollStarted=false;', '  bool _ngelx465OpeningScrollStarted=false;\n  final _inviteTail583=Ngelx583InviteTail();')
+    section=one(section,"    if(widget.directInvite581.isNotEmpty)WidgetsBinding.instance.addPostFrameCallback", "    if(widget.directInvite581.isNotEmpty){_ngelx465OpeningScrollStarted=true;"+("_acilisKaydirmaKalan=0;" if name=='_SohbetPageState' else '')+"}\n    if(widget.directInvite581.isNotEmpty)WidgetsBinding.instance.addPostFrameCallback")
+    section=one(section,'void sonaGit({bool zorla=false}){if(jumpActive', 'void sonaGit({bool zorla=false}){if(widget.directInvite581.isNotEmpty&&!jumpActive){_inviteTail583.schedule(liste,force:zorla);return;}if(jumpActive')
+    if name=='_GrupSohbetPageState':
+        section=one(section,'  void _gonderimSonrasiEnAltaPlanla(){','  void _gonderimSonrasiEnAltaPlanla(){\n    if(widget.directInvite581.isNotEmpty){sonaGit(zorla:true);return;}')
+    else:
+        section=one(section,'    sonaGit(zorla:true);\n\n    final hazirlik=', '    if(directInvite581.isEmpty)sonaGit(zorla:true);\n\n    final hazirlik=')
+    m=m[:start]+section+m[stop:]
 m=one(m,'  bool _speakerBusy548=false;', '''  Ngelx570JoinSound? _joinSound583;
   final _joined583=<String>{};Timer? _joinExpiry583;
   void _joinedCall583(Set<String> ids){
@@ -165,6 +191,13 @@ j=one(j,'player.setVolume(.65)','player.setVolume(.8)')
 # A stalled injected/default request must release busy and poll gates. Mutations
 # are never replayed; next sync recovers the authoritative revision.
 c=(lib/'build567_room_controller.dart').read_text()
+# Reserve departure before draining work, so polling and taps cannot create more
+# mutations. The backend accepts a stale leave revision, but still uses CAS.
+c=one(c,"  if(busy||leaving)return false;\n  leaving=true;busy=true;error='';_generation++;_notify();", """  if(leaving)return false;
+  leaving=true;_notify();
+  await waitForIdle583();
+  if(_disposed||terminal){leaving=false;return true;}
+  busy=true;error='';_generation++;_notify();""")
 c=one(c,' Future<bool> perform(String action,', ''' String? lastFailureCode583;
  Future<void> waitForIdle583()async{
   final mutation=_mutation580;if(mutation!=null)await mutation.future;

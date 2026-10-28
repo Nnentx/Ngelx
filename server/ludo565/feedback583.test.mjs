@@ -46,3 +46,12 @@ test('timeout starts at fifteen seconds and cannot chain automatic moves immedia
  r=act(r,'c',{action:'sync'},time+15001,()=>6);assert.equal(r.tokens[0][0],-1);
  r=act(r,'c',{action:'sync'},time+15000+autoStep583,()=>6);assert.equal(r.tokens[0][0],0);
 });
+test('departure accepts an old revision without relaxing move validation or membership',()=>{
+ let r=started();const original=r.revision;
+ r=act(r,'b',{action:'auto',enabled:true,revision:r.revision,requestId:'auto_other583'},time+1);
+ assert.throws(()=>act(r,'a',{action:'roll',revision:original,requestId:'stale_roll583'},time+2),/state_changed/);
+ r=act(r,'a',{action:'leave',revision:original,requestId:'leave58300'},time+2);
+ assert.equal(r.players.find(p=>p.uid==='a').left,true);
+ assert.equal(r.status,'playing');assert.notEqual(r.turn,0);
+ assert.throws(()=>act(r,'outsider',{action:'leave',revision:r.revision,requestId:'outsider583'},time+3),/not_a_player/);
+});

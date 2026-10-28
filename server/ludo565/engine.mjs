@@ -30,7 +30,7 @@ export function act(original,uid,b,now,roll=secureRoll){
   }
   if(typeof b.requestId!=='string'||!/^[a-zA-Z0-9_-]{8,100}$/.test(b.requestId))fail('invalid_request');
   if(r.last[uid]===b.requestId)return r;
-  if(b.revision!==r.revision)fail('state_changed',409);
+  if(b.revision!==r.revision&&b.action!=='leave')fail('state_changed',409);
   if(b.action==='leave'){
    player.left=true;if(r.autoSeats)delete r.autoSeats[player.seat];
    if(r.status==='waiting'){if(uid===r.owner)r.status='closed';else r.players=r.players.filter(p=>p.uid!==uid);}

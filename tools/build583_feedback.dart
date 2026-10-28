@@ -1,5 +1,51 @@
 part of 'main.dart';
 
+class Ngelx583InviteNavigation {
+ bool opening=false;
+ Future<void> open(BuildContext context,WidgetBuilder builder)async{
+  if(opening||!context.mounted)return;opening=true;
+  FocusManager.instance.primaryFocus?.unfocus();
+  try{await Navigator.of(context).push(MaterialPageRoute<void>(builder:builder));}
+  finally{opening=false;}
+ }
+}
+
+Future<void> ngelx583SendAfterRoute(BuildContext context,Future<void> Function() send)async{
+ if(!context.mounted)return;
+ final route=ModalRoute.of(context),animation=ModalRoute.of(context)?.animation;
+ if(animation!=null&&animation.status!=AnimationStatus.completed){
+  final done=Completer<bool>();
+  void changed(AnimationStatus status){
+   if(!done.isCompleted&&(status==AnimationStatus.completed||status==AnimationStatus.dismissed))done.complete(status==AnimationStatus.completed);
+  }
+  animation.addStatusListener(changed);
+  try{if(!await done.future.timeout(const Duration(seconds:2),onTimeout:()=>false))return;}
+  finally{animation.removeStatusListener(changed);}
+ }
+ if(context.mounted&&route?.isCurrent!=false)await send();
+}
+
+// One tail adjustment per frame, with no overlapping scroll animations.
+class Ngelx583InviteTail {
+ bool queued=false,initial=true,animating=false,again=false,forced=false;
+ void schedule(ScrollController controller,{bool force=false}){
+  forced|=force;
+  if(animating){again=true;return;}
+  if(queued)return;queued=true;
+  WidgetsBinding.instance.addPostFrameCallback((_){
+   queued=false;final forceNow=forced;forced=false;
+   if(!controller.hasClients||!controller.position.hasContentDimensions)return;
+   final pos=controller.position,target=pos.maxScrollExtent;
+   if(initial){initial=false;if((target-pos.pixels).abs()>2)controller.jumpTo(target);return;}
+   if((target-pos.pixels).abs()<2||(!forceNow&&target-pos.pixels>320))return;
+   animating=true;
+   unawaited(controller.animateTo(target,duration:const Duration(milliseconds:160),curve:Curves.easeOutCubic).whenComplete((){
+    animating=false;if(again){again=false;schedule(controller,force:forced);}
+   }));
+  });
+ }
+}
+
 // Resolve enlarged targets once at board level. Inactive pawns cannot intercept
 // touches, and overlapping targets always select the nearest legal piece.
 int? ngelx583HitToken(Map<String,dynamic> room,int seat,double cell,Offset tap){
