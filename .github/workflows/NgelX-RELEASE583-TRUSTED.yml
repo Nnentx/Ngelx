@@ -1,0 +1,117 @@
+name: Publish tested Build583 backend APK and in-app update
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: ngelx-production-worker-deployment
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: Nnentx/Ngelx
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          ref: ffc4dfb7dfcf0716ff8b038f7ce1a7fe11498c4a
+          path: tested
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Require the exact successful tested source and regressions
+        run: |
+          set -euo pipefail
+          test "$(gh api repos/Nnentx/Ngelx/actions/runs/40743800801 --jq .head_sha)" = ffc4dfb7dfcf0716ff8b038f7ce1a7fe11498c4a
+          test "$(gh api repos/Nnentx/Ngelx/actions/runs/40743800801 --jq .conclusion)" = success
+          node --test tools/build583_deployment_guard.test.mjs
+          node --test tested/server/ludo565/*.test.mjs tested/cloudflare/live-moderation/test/*.test.mjs
+      - name: Record existing production Worker checkpoint
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node tools/build583_deployment_guard.mjs prepare
+      - name: Deploy only the tested Worker with its existing routes and secrets
+        id: deploy
+        working-directory: tested/cloudflare/live-moderation
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_SEND_METRICS: 'false'
+        run: npx --yes wrangler@4 deploy
+      - name: Record deployment and verify both hostnames and auth boundaries
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node tools/build583_deployment_guard.mjs record
+      - name: Verify live fifteen-second turns Auto pacing gifts and stale departure
+        env:
+          FIREBASE_SERVICE_ACCOUNT_NGELX_44EED: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_NGELX_44EED }}
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          NGELX_GAME_ENDPOINT: https://oyun.ngelxsocial.com/ludo
+          NGELX_PRODUCTION_SMOKE: '576'
+        run: node tools/build583_live_smoke.mjs
+      - name: Accept the exact live deployment
+        id: accept
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node tools/build583_deployment_guard.mjs accept
+      - uses: actions/download-artifact@v4
+        with:
+          name: NgelX-Build583-Review-APK
+          run-id: 40743800801
+          github-token: ${{ github.token }}
+          path: verified-apk
+      - name: Prepare exact APK and immutable updater metadata
+        run: python3 tools/build583_prepare_release.py
+      - name: Publish the verified APK and verify anonymous download bytes
+        run: |
+          set -euo pipefail
+          if gh release view v1.0.353-build583 >/dev/null 2>&1; then
+            mkdir -p existing583
+            gh release download v1.0.353-build583 --pattern NgelX-1.0.353-Build583.apk --dir existing583
+            cmp NgelX-1.0.353-Build583.apk existing583/NgelX-1.0.353-Build583.apk
+          else
+            gh release create v1.0.353-build583 NgelX-1.0.353-Build583.apk NgelX-1.0.353-Build583.apk.sha256 android-update.json --target ffc4dfb7dfcf0716ff8b038f7ce1a7fe11498c4a --title 'NgelX 1.0.353 / Build583' --notes-file release-notes.md
+          fi
+          curl --fail --location --retry 5 --retry-all-errors --retry-delay 2 --silent --show-error https://github.com/Nnentx/Ngelx/releases/download/v1.0.353-build583/NgelX-1.0.353-Build583.apk --output public-download583.apk
+          cmp NgelX-1.0.353-Build583.apk public-download583.apk
+      - name: Verify canonical in-app update points to the exact tested APK
+        run: |
+          curl --fail --location --retry 3 --silent --show-error -H 'Cache-Control: no-cache' https://ngelxsocial.com/android-update.json --output live-update583.json
+          python3 - <<'PYVERIFY'
+          import json,os
+          from pathlib import Path
+          expected=json.load(open('android-update.json'))
+          live=json.load(open('live-update583.json'))
+          for key in ['schema','package','abi','version','build','size','sha256','url']:
+              assert live[key]==expected[key],key
+          state_path=Path(os.environ['RUNNER_TEMP'])/'build583-worker-state.json'
+          state=json.loads(state_path.read_text())
+          state.update(updaterPublished=True,publishedBuild=583,updateUrl='https://ngelxsocial.com/android-update.json')
+          state_path.write_text(json.dumps(state,indent=2)+'\n')
+          print('Canonical app updater and exact public APK verified: 1.0.353 / Build583')
+          PYVERIFY
+      - name: Restore prior Worker if deployment acceptance failed
+        if: failure() && steps.deploy.outcome != 'skipped' && steps.accept.outcome != 'success'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node tools/build583_deployment_guard.mjs rollback
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: NgelX-Build583-Publication-Evidence
+          path: |
+            android-update.json
+            hosting583-checkpoint.json
+            ${{ runner.temp }}/build583-worker-state.json
+          if-no-files-found: ignore

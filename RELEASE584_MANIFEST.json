@@ -1,0 +1,14 @@
+{
+  "schema": 1,
+  "package": "com.nnentx.ngelx_app",
+  "abi": "arm64-v8a",
+  "version": "1.0.354",
+  "build": 584,
+  "size": 50219217,
+  "sha256": "56e8db6c711018687c47348fd3d369d79efdeb533497e0bf46df705f41f9eda0",
+  "url": "https://github.com/Nnentx/Ngelx/releases/download/v1.0.354-build584/NgelX-1.0.354-Build584.apk",
+  "notes": "Ludo: 4 kişilik oda 2 oyuncuyla başlatıldığında oyuncular çapraz yerleşir. Sıra geldiğinde zarda GO görünür. Oyun tahtası dikeyde genişletildi. 2, 3 ve 4 kişilik oyunlarda zar adaleti kontrolleri tamamlandı.",
+  "testedSource": "c999d229d68ea9d79911d2e9821a711814d17455",
+  "buildRun": 40757681279,
+  "liveAcceptanceRun": 40760406559
+}
