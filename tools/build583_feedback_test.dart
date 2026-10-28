@@ -141,9 +141,9 @@ void main(){
   }));
   unawaited(nav.open(home,destination));unawaited(nav.open(home,destination));
   await t.pump();expect(sends,0);expect(nav.opening,true);
-  await t.pump(const Duration(milliseconds:400));await t.pump();
+  await t.pumpAndSettle();
   expect(sends,1);expect(find.text('Hedef sohbet'),findsOneWidget);
-  Navigator.of(home).pop();await t.pump();await t.pump(const Duration(milliseconds:400));
+  Navigator.of(home).pop();await t.pumpAndSettle();
   expect(nav.opening,false);await t.pumpWidget(const SizedBox());
  });
  testWidgets('invite tail coalesces scroll requests without restarting animations',(t)async{
@@ -154,7 +154,7 @@ void main(){
   controller.jumpTo(0);
   for(var i=0;i<10;i++)tail.schedule(controller,force:true);
   await t.pump();expect(tail.animating,true);
-  await t.pump(const Duration(milliseconds:200));expect(controller.offset,controller.position.maxScrollExtent);
+  await t.pumpAndSettle();expect(controller.offset,controller.position.maxScrollExtent);
   expect(t.takeException(),isNull);await t.pumpWidget(const SizedBox());controller.dispose();
  });
 }
