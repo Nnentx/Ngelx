@@ -1,0 +1,119 @@
+name: Complete verified Build583 APK and in-app update
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/NgelX-UPDATE583-TRUSTED.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: ngelx-production-worker-deployment
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: Nnentx/Ngelx
+    steps:
+      - uses: actions/checkout@v4
+      - name: Require exact tested APK and previous successful live acceptance
+        run: |
+          set -euo pipefail
+          test "$(gh api repos/Nnentx/Ngelx/actions/runs/40743800801 --jq .head_sha)" = ffc4dfb7dfcf0716ff8b038f7ce1a7fe11498c4a
+          test "$(gh api repos/Nnentx/Ngelx/actions/runs/40743800801 --jq .conclusion)" = success
+          test "$(gh api repos/Nnentx/Ngelx/actions/runs/40746881379 --jq .head_sha)" = d9481522ede7885ce9d040cecb7ab873240e6d8e
+          gh api repos/Nnentx/Ngelx/actions/runs/40746881379/jobs > prior-jobs.json
+          python3 - <<'PY'
+          import json
+          jobs=json.load(open('prior-jobs.json'))['jobs']
+          steps=[s for j in jobs for s in j['steps']]
+          for name in ['Deploy only the tested Worker with its existing routes and secrets','Verify live fifteen-second turns Auto pacing gifts and stale departure','Accept the exact live deployment']:
+              assert any(s['name']==name and s['conclusion']=='success' for s in steps),name
+          PY
+      - uses: actions/download-artifact@v4
+        with:
+          name: NgelX-Build583-Publication-Evidence
+          run-id: 40746881379
+          github-token: ${{ github.token }}
+          path: prior-publication
+      - name: Restore accepted deployment evidence
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import json,os,shutil
+          files=list(Path('prior-publication').rglob('build583-worker-state.json'))
+          assert len(files)==1
+          state=json.loads(files[0].read_text())
+          assert state['apiAcceptance'] is True and state['apkRun']==40743800801
+          assert state['deployed']['versions']==[{'version_id':'59ca47cc-386e-4a0f-a6ba-69539fffe839','percentage':100}]
+          shutil.copyfile(files[0],Path(os.environ['RUNNER_TEMP'])/'build583-worker-state.json')
+          PY
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Confirm the same accepted Worker remains live
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node tools/build583_deployment_guard.mjs accept
+      - uses: actions/download-artifact@v4
+        with:
+          name: NgelX-Build583-Review-APK
+          run-id: 40743800801
+          github-token: ${{ github.token }}
+          path: verified-apk
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python3 tools/build583_prepare_release.py
+      - name: Preserve tested runtime with the current trusted release workflow tree
+        run: |
+          set -euo pipefail
+          gh api repos/Nnentx/Ngelx/git/trees/"$GITHUB_SHA" > trusted-tree583.json
+          gh api repos/Nnentx/Ngelx/git/commits/ffc4dfb7dfcf0716ff8b038f7ce1a7fe11498c4a > tested-commit583.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          trusted=next(e['sha'] for e in json.load(open('trusted-tree583.json'))['tree'] if e['path']=='.github')
+          base=json.load(open('tested-commit583.json'))['tree']['sha']
+          tree={'base_tree':base,'tree':[{'path':'.github','mode':'040000','type':'tree','sha':trusted},{'path':'RELEASE583_MANIFEST.json','mode':'100644','type':'blob','content':Path('android-update.json').read_text()}]}
+          Path('release-tree583.json').write_text(json.dumps(tree))
+          PY
+          gh api --method POST repos/Nnentx/Ngelx/git/trees --input release-tree583.json > release-tree-result583.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          Path('release-commit583.json').write_text(json.dumps({'message':'Build583 exact tested runtime and APK with trusted release metadata','tree':json.load(open('release-tree-result583.json'))['sha'],'parents':['ffc4dfb7dfcf0716ff8b038f7ce1a7fe11498c4a']}))
+          PY
+          gh api --method POST repos/Nnentx/Ngelx/git/commits --input release-commit583.json > release-commit-result583.json
+      - name: Publish exact APK and prove anonymous download bytes
+        run: |
+          set -euo pipefail
+          if gh release view v1.0.353-build583 >/dev/null 2>&1; then
+            mkdir -p existing583
+            gh release download v1.0.353-build583 --pattern NgelX-1.0.353-Build583.apk --dir existing583
+            cmp NgelX-1.0.353-Build583.apk existing583/NgelX-1.0.353-Build583.apk
+          else
+            target=$(python3 -c "import json;print(json.load(open('release-commit-result583.json'))['sha'])")
+            gh release create v1.0.353-build583 NgelX-1.0.353-Build583.apk NgelX-1.0.353-Build583.apk.sha256 android-update.json --target "$target" --title 'NgelX 1.0.353 / Build583' --notes-file release-notes.md
+          fi
+          curl --fail --location --retry 5 --retry-all-errors --retry-delay 2 --silent --show-error https://github.com/Nnentx/Ngelx/releases/download/v1.0.353-build583/NgelX-1.0.353-Build583.apk --output public-download583.apk
+          cmp NgelX-1.0.353-Build583.apk public-download583.apk
+      - run: pip install google-auth requests
+      - name: Publish only the verified in-app update manifest
+        env:
+          FIREBASE_SERVICE_ACCOUNT_NGELX_44EED: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_NGELX_44EED }}
+        run: python3 tools/hosting_update_feed583.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: NgelX-Build583-Final-Publication-Evidence
+          path: |
+            android-update.json
+            hosting583-checkpoint.json
+            release-commit-result583.json
+            ${{ runner.temp }}/build583-worker-state.json
+          if-no-files-found: ignore
