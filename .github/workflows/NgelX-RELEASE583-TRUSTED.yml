@@ -1,8 +1,5 @@
 name: Publish tested Build583 backend APK and in-app update
 on:
-  push:
-    branches: [main]
-    paths: ['.github/workflows/NgelX-RELEASE583-TRUSTED.yml']
   workflow_dispatch:
 permissions:
   contents: write
@@ -87,11 +84,22 @@ jobs:
           fi
           curl --fail --location --retry 5 --retry-all-errors --retry-delay 2 --silent --show-error https://github.com/Nnentx/Ngelx/releases/download/v1.0.353-build583/NgelX-1.0.353-Build583.apk --output public-download583.apk
           cmp NgelX-1.0.353-Build583.apk public-download583.apk
-      - run: pip install google-auth requests
-      - name: Switch only the in-app update manifest while retaining live site assets
-        env:
-          FIREBASE_SERVICE_ACCOUNT_NGELX_44EED: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_NGELX_44EED }}
-        run: python3 tools/hosting_update_feed583.py
+      - name: Verify canonical in-app update points to the exact tested APK
+        run: |
+          curl --fail --location --retry 3 --silent --show-error -H 'Cache-Control: no-cache' https://ngelxsocial.com/android-update.json --output live-update583.json
+          python3 - <<'PYVERIFY'
+          import json,os
+          from pathlib import Path
+          expected=json.load(open('android-update.json'))
+          live=json.load(open('live-update583.json'))
+          for key in ['schema','package','abi','version','build','size','sha256','url']:
+              assert live[key]==expected[key],key
+          state_path=Path(os.environ['RUNNER_TEMP'])/'build583-worker-state.json'
+          state=json.loads(state_path.read_text())
+          state.update(updaterPublished=True,publishedBuild=583,updateUrl='https://ngelxsocial.com/android-update.json')
+          state_path.write_text(json.dumps(state,indent=2)+'\n')
+          print('Canonical app updater and exact public APK verified: 1.0.353 / Build583')
+          PYVERIFY
       - name: Restore prior Worker if deployment acceptance failed
         if: failure() && steps.deploy.outcome != 'skipped' && steps.accept.outcome != 'success'
         env:

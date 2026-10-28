@@ -72,6 +72,7 @@ jobs:
       - name: Preserve tested runtime with the current trusted release workflow tree
         run: |
           set -euo pipefail
+          if gh release view v1.0.353-build583 >/dev/null 2>&1; then exit 0; fi
           gh api repos/Nnentx/Ngelx/git/trees/"$GITHUB_SHA" > trusted-tree583.json
           gh api repos/Nnentx/Ngelx/git/commits/ffc4dfb7dfcf0716ff8b038f7ce1a7fe11498c4a > tested-commit583.json
           python3 - <<'PY'
@@ -102,11 +103,22 @@ jobs:
           fi
           curl --fail --location --retry 5 --retry-all-errors --retry-delay 2 --silent --show-error https://github.com/Nnentx/Ngelx/releases/download/v1.0.353-build583/NgelX-1.0.353-Build583.apk --output public-download583.apk
           cmp NgelX-1.0.353-Build583.apk public-download583.apk
-      - run: pip install google-auth requests
-      - name: Publish only the verified in-app update manifest
-        env:
-          FIREBASE_SERVICE_ACCOUNT_NGELX_44EED: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_NGELX_44EED }}
-        run: python3 tools/hosting_update_feed583.py
+      - name: Verify canonical in-app update points to the exact tested APK
+        run: |
+          curl --fail --location --retry 3 --silent --show-error -H 'Cache-Control: no-cache' https://ngelxsocial.com/android-update.json --output live-update583.json
+          python3 - <<'PYVERIFY'
+          import json,os
+          from pathlib import Path
+          expected=json.load(open('android-update.json'))
+          live=json.load(open('live-update583.json'))
+          for key in ['schema','package','abi','version','build','size','sha256','url']:
+              assert live[key]==expected[key],key
+          state_path=Path(os.environ['RUNNER_TEMP'])/'build583-worker-state.json'
+          state=json.loads(state_path.read_text())
+          state.update(updaterPublished=True,publishedBuild=583,updateUrl='https://ngelxsocial.com/android-update.json')
+          state_path.write_text(json.dumps(state,indent=2)+'\n')
+          print('Canonical app updater and exact public APK verified: 1.0.353 / Build583')
+          PYVERIFY
       - uses: actions/upload-artifact@v4
         if: always()
         with:
