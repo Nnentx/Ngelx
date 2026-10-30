@@ -1,0 +1,100 @@
+name: Publish verified Build585 APK and in-app update
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/NgelX-UPDATE585-TRUSTED.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: ngelx-production-worker-deployment
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: Nnentx/Ngelx
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Require exact completed review checks and artifact
+        run: |
+          set -euo pipefail
+          test "$(gh api repos/Nnentx/Ngelx/actions/runs/41110486403 --jq .head_sha)" = e9fe66729db9727710963eedb8ebb4558bc73156
+          gh api repos/Nnentx/Ngelx/actions/runs/41110486403/jobs > review-jobs585.json
+          gh api repos/Nnentx/Ngelx/actions/artifacts/13004356404 > review-artifact585.json
+          python3 - <<'PY'
+          import json
+          jobs=json.load(open('review-jobs585.json'))['jobs']
+          assert any(j['name']=='backend' and j['conclusion']=='success' for j in jobs)
+          app=next(j for j in jobs if j['name']=='android-review')
+          # This run was canceled only during post-build cleanup; all APK
+          # validation, build, signing and artifact steps had already succeeded.
+          for name in ['Apply Build585 to exact Build584 source and verify idempotence','Analyze complete app','Run old and new game, chat, widget tests','Verify reference interactions and capture phone screenshots','Build signed review APK (do not publish)']:
+              assert any(s['name']==name and s['conclusion']=='success' for s in app['steps']),name
+          uploads=[s for s in app['steps'] if s['name']=='Run actions/upload-artifact@v4']
+          assert len(uploads)==3 and all(s['conclusion']=='success' for s in uploads)
+          artifact=json.load(open('review-artifact585.json'))
+          assert artifact['name']=='NgelX-Build585-Review-APK' and artifact['expired'] is False
+          assert artifact['digest']=='sha256:94b6c134ed7c7c67e3ca64f0cb4343eb4cec822aef613a1088ac24799c6db889'
+          PY
+          curl --fail --location --max-time 30 --silent --show-error -H 'Cache-Control: no-cache' https://ngelxsocial.com/android-update.json --output previous-update585.json
+          python3 - <<'PY'
+          import json
+          feed=json.load(open('previous-update585.json'))
+          assert feed['package']=='com.nnentx.ngelx_app'
+          assert isinstance(feed['build'],int) and feed['build']<=585,'A newer update already exists'
+          PY
+      - uses: actions/download-artifact@v4
+        with:
+          name: NgelX-Build585-Review-APK
+          run-id: 41110486403
+          github-token: ${{ github.token }}
+          path: verified-apk
+      - name: Verify reviewed APK bytes and prepare immutable metadata
+        run: python3 tools/build585_prepare_release.py
+      - name: Publish exact APK and prove anonymous download bytes
+        run: |
+          set -euo pipefail
+          if gh release view v1.0.355-build585 >/dev/null 2>&1; then
+            mkdir -p existing585
+            gh release download v1.0.355-build585 --pattern NgelX-1.0.355-Build585.apk --dir existing585
+            cmp NgelX-1.0.355-Build585.apk existing585/NgelX-1.0.355-Build585.apk
+          else
+            gh release create v1.0.355-build585 NgelX-1.0.355-Build585.apk NgelX-1.0.355-Build585.apk.sha256 android-update.json --target e9fe66729db9727710963eedb8ebb4558bc73156 --title 'NgelX 1.0.355 / Build585' --notes-file release-notes.md
+          fi
+          curl --fail --location --max-time 90 --retry 4 --retry-all-errors --retry-delay 2 --silent --show-error https://github.com/Nnentx/Ngelx/releases/download/v1.0.355-build585/NgelX-1.0.355-Build585.apk --output public-download585.apk
+          cmp NgelX-1.0.355-Build585.apk public-download585.apk
+      - name: Install Hosting publication dependencies
+        run: python3 -m pip install --disable-pip-version-check requests google-auth
+      - name: Update only the manifest while preserving all active website assets
+        env:
+          FIREBASE_SERVICE_ACCOUNT_NGELX_44EED: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_NGELX_44EED }}
+        run: python3 tools/hosting_update_feed585.py
+      - name: Verify the app update endpoint and exact download again
+        run: |
+          curl --fail --location --max-time 30 --retry 3 --silent --show-error -H 'Cache-Control: no-cache' https://ngelxsocial.com/android-update.json --output live-update585.json
+          python3 - <<'PY'
+          import json
+          expected=json.load(open('android-update.json'))
+          live=json.load(open('live-update585.json'))
+          for key in ['schema','package','abi','version','build','size','sha256','url']:
+              assert expected[key]==live[key],key
+          print('Verified live NgelX updater: 1.0.355 / Build585')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: NgelX-Build585-Publication-Evidence
+          path: |
+            android-update.json
+            live-update585.json
+            hosting585-checkpoint.json
+            review-jobs585.json
+            review-artifact585.json
+          if-no-files-found: ignore
