@@ -1,0 +1,125 @@
+name: Publish verified Build586 APK and in-app update
+# The canonical manifest is published from Nnentx/ngelx-web via GitHub Pages.
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/NgelX-UPDATE586-TRUSTED.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: ngelx-production-worker-deployment
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: Nnentx/Ngelx
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Require exact completed review checks and artifact
+        run: |
+          set -euo pipefail
+          test "$(gh api repos/Nnentx/Ngelx/actions/runs/41118732958 --jq .head_sha)" = c4ac01363a19a842a21a63043f9334df9b786853
+          gh api repos/Nnentx/Ngelx/actions/runs/41118732958/jobs > review-jobs586.json
+          gh api repos/Nnentx/Ngelx/actions/artifacts/13006589885 > review-artifact586.json
+          python3 - <<'PY'
+          import json
+          jobs=json.load(open('review-jobs586.json'))['jobs']
+          assert any(j['name']=='backend' and j['conclusion']=='success' for j in jobs)
+          app=next(j for j in jobs if j['name']=='android-review')
+          # Require completed validation, build, signing and artifact steps.
+          for name in ['Apply Build586 to exact Build585 source and verify idempotence','Analyze complete app','Run old and new game, chat, widget tests','Verify reference interactions and capture phone screenshots','Build signed review APK (do not publish)']:
+              assert any(s['name']==name and s['conclusion']=='success' for s in app['steps']),name
+          uploads=[s for s in app['steps'] if s['name']=='Run actions/upload-artifact@v4']
+          assert len(uploads)==3 and all(s['conclusion']=='success' for s in uploads)
+          artifact=json.load(open('review-artifact586.json'))
+          assert artifact['name']=='NgelX-Build586-Review-APK' and artifact['expired'] is False
+          assert artifact['digest']=='sha256:0e0432b4fe8b429415d26d01b4a81d190079a326edb78476a2b8fa6ff08181de'
+          PY
+          curl --fail --location --max-time 30 --silent --show-error -H 'Cache-Control: no-cache' https://ngelxsocial.com/android-update.json --output previous-update586.json
+          python3 - <<'PY'
+          import json
+          feed=json.load(open('previous-update586.json'))
+          assert feed['package']=='com.nnentx.ngelx_app'
+          assert isinstance(feed['build'],int) and feed['build']<=586,'A newer update already exists'
+          PY
+      - uses: actions/download-artifact@v4
+        with:
+          name: NgelX-Build586-Review-APK
+          run-id: 41118732958
+          github-token: ${{ github.token }}
+          path: verified-apk
+      - name: Verify reviewed APK bytes and prepare immutable metadata
+        run: python3 tools/build586_prepare_release.py
+      - name: Preserve tested runtime with the trusted release workflow tree
+        run: |
+          set -euo pipefail
+          if gh release view v1.0.356-build586 >/dev/null 2>&1; then exit 0; fi
+          gh api repos/Nnentx/Ngelx/git/trees/"$GITHUB_SHA" > trusted-tree586.json
+          gh api repos/Nnentx/Ngelx/git/commits/c4ac01363a19a842a21a63043f9334df9b786853 > tested-commit586.json
+          python3 - <<'PYTREE'
+          import json
+          from pathlib import Path
+          trusted=next(e['sha'] for e in json.load(open('trusted-tree586.json'))['tree'] if e['path']=='.github')
+          base=json.load(open('tested-commit586.json'))['tree']['sha']
+          tree={'base_tree':base,'tree':[{'path':'.github','mode':'040000','type':'tree','sha':trusted},{'path':'RELEASE586_MANIFEST.json','mode':'100644','type':'blob','content':Path('android-update.json').read_text()}]}
+          Path('release-tree586.json').write_text(json.dumps(tree))
+          PYTREE
+          gh api --method POST repos/Nnentx/Ngelx/git/trees --input release-tree586.json > release-tree-result586.json
+          python3 - <<'PYCOMMIT'
+          import json
+          from pathlib import Path
+          Path('release-commit586.json').write_text(json.dumps({'message':'Build586 exact tested runtime and reviewed APK with trusted release metadata','tree':json.load(open('release-tree-result586.json'))['sha'],'parents':['c4ac01363a19a842a21a63043f9334df9b786853']}))
+          PYCOMMIT
+          gh api --method POST repos/Nnentx/Ngelx/git/commits --input release-commit586.json > release-commit-result586.json
+      - name: Publish exact APK and prove anonymous download bytes
+        run: |
+          set -euo pipefail
+          if gh release view v1.0.356-build586 >/dev/null 2>&1; then
+            mkdir -p existing586
+            gh release download v1.0.356-build586 --pattern NgelX-1.0.356-Build586.apk --dir existing586
+            cmp NgelX-1.0.356-Build586.apk existing586/NgelX-1.0.356-Build586.apk
+          else
+            target=$(python3 -c "import json;print(json.load(open('release-commit-result586.json'))['sha'])")
+            gh release create v1.0.356-build586 NgelX-1.0.356-Build586.apk NgelX-1.0.356-Build586.apk.sha256 android-update.json --target "$target" --title 'NgelX 1.0.356 / Build586' --notes-file release-notes.md
+          fi
+          curl --fail --location --max-time 90 --retry 4 --retry-all-errors --retry-delay 2 --silent --show-error https://github.com/Nnentx/Ngelx/releases/download/v1.0.356-build586/NgelX-1.0.356-Build586.apk --output public-download586.apk
+          cmp NgelX-1.0.356-Build586.apk public-download586.apk
+      - name: Verify the app update endpoint and exact download again
+        run: |
+          python3 - <<'PYVERIFY'
+          import json,time,subprocess
+          expected=json.load(open('android-update.json'))
+          keys=['schema','package','abi','version','build','size','sha256','url']
+          for attempt in range(18):
+              try:
+                  raw=subprocess.check_output(['curl','--fail','--location','--max-time','20','--silent','--show-error','-H','Cache-Control: no-cache','https://ngelxsocial.com/android-update.json'],text=True,timeout=25)
+                  live=json.loads(raw)
+                  if all(expected[key]==live.get(key) for key in keys):
+                      open('live-update586.json','w').write(json.dumps(live,ensure_ascii=False,indent=2)+'\n')
+                      print('Verified live NgelX updater: 1.0.356 / Build586')
+                      break
+              except Exception:
+                  pass
+              time.sleep(5)
+          else:
+              raise RuntimeError('Canonical update feed has not propagated to Build586')
+          PYVERIFY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: NgelX-Build586-Publication-Evidence
+          path: |
+            android-update.json
+            live-update586.json
+            review-jobs586.json
+            review-artifact586.json
+            release-commit-result586.json
+          if-no-files-found: ignore
