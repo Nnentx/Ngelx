@@ -26,12 +26,28 @@ def api(method,path,payload=None,params=None):
     res=session.request(method,base+path,json=payload,params=params,timeout=45)
     if not res.ok: raise RuntimeError(f'{method} {path}: HTTP {res.status_code}: {res.text[:350]}')
     return res.json()
+# Resolve the actual site bound to the update domain instead of assuming that
+# the Firebase project ID is also the deployed website's site ID.
+site_records=api('GET','projects/ngelx-44eed/sites',params={'pageSize':100}).get('sites',[])
+candidates=[]
+for record in site_records:
+    candidate=record['name'].rsplit('/',1)[-1]
+    domains=api('GET',f'sites/{candidate}/domains',params={'pageSize':100}).get('domains',[])
+    names=[d.get('domainName') or d.get('name','').rsplit('/',1)[-1] for d in domains]
+    print('Hosting site',candidate,'domains:',','.join(names) or '(none)')
+    if 'ngelxsocial.com' in names:
+        candidates.append(candidate)
+assert len(candidates)==1, f'Cannot uniquely resolve ngelxsocial.com Hosting site: {candidates}'
+site=candidates[0]
 def current():
-    releases=api('GET',f'sites/{site}/releases',params={'pageSize':1}).get('releases',[])
-    assert releases,'Cannot find current hosting release'
-    version=releases[0].get('version')
+    channel=api('GET',f'sites/{site}/channels/live')
+    version=channel.get('release',{}).get('version')
+    if not version:
+        releases=api('GET',f'sites/{site}/channels/live/releases',params={'pageSize':1}).get('releases',[])
+        assert releases,'Cannot find current live-channel hosting release'
+        version=releases[0].get('version')
     name=version.get('name') if isinstance(version,dict) else version
-    assert isinstance(name,str) and name.startswith(f'sites/{site}/versions/')
+    assert isinstance(name,str) and (name.startswith(f'sites/{site}/versions/') or name.endswith('/'+name.rsplit('/',1)[-1]) and f'/sites/{site}/versions/' in name)
     return name
 live=requests.get('https://ngelxsocial.com/android-update.json',params={'t':str(time.time_ns())},timeout=30,headers={'Cache-Control':'no-cache'})
 live.raise_for_status()

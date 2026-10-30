@@ -1,4 +1,5 @@
 name: Publish verified Build585 APK and in-app update
+# Resolve the live custom-domain Hosting site before updating its manifest.
 on:
   push:
     branches: [main]
