@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "package": "com.nnentx.ngelx_app",
+  "abi": "arm64-v8a",
+  "version": "1.0.355",
+  "build": 585,
+  "size": 50220533,
+  "sha256": "a2bfe028ab4f63c1b44a36083081c89827793a92575fb404cc3d5a3e6f26eb7d",
+  "url": "https://github.com/Nnentx/Ngelx/releases/download/v1.0.355-build585/NgelX-1.0.355-Build585.apk",
+  "notes": "Ludo taşları hızlandırıldı. Yalnızca bir taş oynanabiliyorsa hamle otomatik yapılır. Büyük zar/GO, geri sayım ve hazır mesaj butonları gizlendi; oyuncu yanındaki zar, Auto ve sohbet korundu. Arama bildirimi cihaz kaydı iyileştirildi. Mevcut uygulama düzeni korundu.",
+  "testedSource": "e9fe66729db9727710963eedb8ebb4558bc73156",
+  "buildRun": 41110486403
+}
