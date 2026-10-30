@@ -8,6 +8,13 @@ Call registration now uses a stable SHA-256 token document ID in both native tok
 
 Validation completed locally: 184 Node tests passed across game engine, live moderation and call push; assembly patch applied successfully and a second application was idempotent; Python syntax and git diff whitespace checks passed.
 
-Pending: Flutter analysis/widget suite, Android compilation and signature verification, two-phone background/locked-screen calling in both directions. The local environment has no Flutter SDK; exact SDK download was unavailable. The dedicated review workflow is prepared but has not run. No updated APK was created, no production worker was deployed and no in-app updater was changed.
+Completed on Actions run 41110486403 at source e9fe66729db9727710963eedb8ebb4558bc73156: Flutter analysis, 70 application tests, reference-screen interaction checks, signed ARM64 APK compilation and signing-certificate verification. The APK artifact was finalized before the workflow was canceled during post-build cleanup by a workflow-only follow-up. The follow-up bounds NDK download time and does not change the application runtime.
+
+APK: `NgelX-1.0.355-Build585-REVIEW.apk` (50,220,533 bytes), package `com.nnentx.ngelx_app`, versionName `1.0.355`, versionCode `585`.
+SHA-256: `a2bfe028ab4f63c1b44a36083081c89827793a92575fb404cc3d5a3e6f26eb7d`.
+Signing certificate SHA-256: `be20b27f0ba1f4decd2941d410b1536de89e48dc894f04f038f9d26b11ecd6aa`.
+Artifact ID: `13004356404`. Local verification matched the artifact ZIP digest and APK digest, decoded the packaged Android manifest, validated archive integrity, and checked ARM64 app content and absence of demo ad identifiers. The new controls screenshot was inspected with actual fonts.
+
+Pending: two-phone background/locked-screen voice/video calling in both directions. The push relay changes are prepared and tested but have not been deployed. No production worker or in-app updater was changed.
 
 The user explicitly approved sending this implementation to the Nnentx/Ngelx repository and building the review APK. The change is prepared on a separate review branch; it does not deploy production services or modify the in-app updater.
