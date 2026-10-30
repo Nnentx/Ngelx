@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "package": "com.nnentx.ngelx_app",
+  "abi": "arm64-v8a",
+  "version": "1.0.356",
+  "build": 586,
+  "size": 50221561,
+  "sha256": "b1a4e85d75fcaea97e4ac77106a571a328c054cab8efe41627001e23c7dd0f0c",
+  "url": "https://github.com/Nnentx/Ngelx/releases/download/v1.0.356-build586/NgelX-1.0.356-Build586.apk",
+  "notes": "Ludo GO düğmesinde tek dokunuş yeterlidir. Başlangıç zar hakları otomatik işlenir ve sonuçlar gösterilir. Dokunma alanı genişletildi; gecikme ve durum çakışmalarında basışın kaybolması düzeltildi. Tasarım ve oyun kuralları korundu.",
+  "testedSource": "c4ac01363a19a842a21a63043f9334df9b786853",
+  "buildRun": 41118732958
+}

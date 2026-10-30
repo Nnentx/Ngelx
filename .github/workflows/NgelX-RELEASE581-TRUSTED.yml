@@ -1,0 +1,91 @@
+name: Publish verified Build581 APK from trusted default branch
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/NgelX-RELEASE581-TRUSTED.yml']
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: ngelx-build581-release-asset
+  cancel-in-progress: false
+jobs:
+  publish-verified-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: Nnentx/Ngelx
+    steps:
+      - uses: actions/checkout@v4
+      - name: Gate on exact successful source QA and unchanged live backend
+        run: |
+          set -euo pipefail
+          test "$(gh api repos/Nnentx/Ngelx/actions/runs/40468098023 --jq .head_sha)" = 39c6e0f46089c388375a19be366cd8bc885da611
+          test "$(gh api repos/Nnentx/Ngelx/actions/runs/40468098023 --jq .conclusion)" = success
+          test "$(gh api repos/Nnentx/Ngelx/actions/runs/40404624100 --jq .conclusion)" = success
+          gh api repos/Nnentx/Ngelx/compare/e04d8e99aea63ede3802b282ff4688062245f965...39c6e0f46089c388375a19be366cd8bc885da611 > compare.json
+          python3 - <<'PY'
+          import json
+          c=json.load(open('compare.json'))
+          assert c['status']=='ahead' and not c.get('too_large')
+          files=[f['filename'] for f in c['files']]
+          assert len(files)<50
+          assert not any(f.startswith(('server/','cloudflare/','app/','firebase/')) for f in files),files
+          print('Same previously live-accepted Build580 backend; frontend-only Build581.')
+          PY
+      - uses: actions/download-artifact@v4
+        with:
+          name: NgelX-Build581-Review-APK
+          run-id: 40468098023
+          github-token: ${{ github.token }}
+          path: verified-apk
+      - name: Verify exact signed APK artifact and prepare official immutable metadata
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import zipfile,hashlib,json
+          files=list(Path('verified-apk').rglob('*.apk'))
+          assert len(files)==1,files
+          f=files[0]; raw=f.read_bytes()
+          size=len(raw); digest=hashlib.sha256(raw).hexdigest()
+          assert size==49486060,size
+          assert digest=='9be239b0fd0adf00b5315d217ac892cf38bde44573f6027c9ea4dd6308be89de',digest
+          with zipfile.ZipFile(f) as z:
+            assert z.testzip() is None
+            assert 'lib/arm64-v8a/libapp.so' in z.namelist()
+            assert 'assets/flutter_assets/AssetManifest.bin' in z.namelist()
+          name='NgelX-1.0.351-Build581.apk'
+          Path(name).write_bytes(raw)
+          Path(name+'.sha256').write_text(digest+'  '+name+'\n')
+          feed={
+            'schema':1, 'package':'com.nnentx.ngelx_app','abi':'arm64-v8a',
+            'version':'1.0.351','build':581,'size':size,'sha256':digest,
+            'url':'https://github.com/Nnentx/Ngelx/releases/download/v1.0.351-build581/'+name,
+            'notes':'Ludo ana ekranı ve oyun seçimleri yenilendi. Puanlarım bölümü profil fotoğrafı, XP, istatistikler ve başarı rozetleriyle yeniden tasarlandı. Ludo davetleri özel sohbetlere ve gruplara doğrudan görsel kart olarak gönderilir; yazılmış mesaj taslakları ve yanıtlar korunur.',
+            'testedSource':'39c6e0f46089c388375a19be366cd8bc885da611',
+            'buildRun':40468098023,'liveAcceptanceRun':40404624100
+          }
+          Path('android-update.json').write_text(json.dumps(feed,ensure_ascii=False,indent=2)+'\n')
+          Path('release-notes.md').write_text('NgelX 1.0.351 / Build581\n\n'+feed['notes']+'\n\n36 Flutter testi, backend regresyonları, aynı Android imzası ve derleme geçti. İki fiziksel Android telefonda uçtan uca Ludo daveti ve animasyon testi henüz tamamlanmadı. Mevcut uygulamanın üzerine kurulur; uygulamayı silmeyin.\n')
+          print('Verified APK:',size,digest)
+          PY
+      - name: Publish exact APK only, prove public download matches
+        run: |
+          set -euo pipefail
+          if gh release view v1.0.351-build581 >/dev/null 2>&1; then
+            mkdir -p existing
+            gh release download v1.0.351-build581 --pattern NgelX-1.0.351-Build581.apk --dir existing
+            cmp NgelX-1.0.351-Build581.apk existing/NgelX-1.0.351-Build581.apk
+          else
+            gh release create v1.0.351-build581 NgelX-1.0.351-Build581.apk NgelX-1.0.351-Build581.apk.sha256 android-update.json --target 39c6e0f46089c388375a19be366cd8bc885da611 --prerelease --title 'NgelX 1.0.351 / Build581' --notes-file release-notes.md
+          fi
+          curl --fail --location --retry 5 --retry-all-errors --retry-delay 2 --silent --show-error https://github.com/Nnentx/Ngelx/releases/download/v1.0.351-build581/NgelX-1.0.351-Build581.apk --output public-download.apk
+          cmp NgelX-1.0.351-Build581.apk public-download.apk
+          echo "Anonymous Build581 APK byte comparison successful"
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: NgelX-Build581-Publication-Metadata
+          path: android-update.json
