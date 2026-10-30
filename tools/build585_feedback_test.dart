@@ -6,7 +6,10 @@ import '../lib/main.dart';
 import 'build583_feedback_test.dart' as fixtures;
 
 void main(){
- setUp(()=>SharedPreferences.setMockInitialValues({'ngelx_ludo_sound':false}));
+ setUp((){
+  SharedPreferences.setMockInitialValues({'ngelx_ludo_sound':false});
+  TestWidgetsFlutterBinding.ensureInitialized().handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+ });
  test('six steps now take 660ms and one step still has a visible animation',(){
   expect(ngelx585PawnDuration(0,6),const Duration(milliseconds:660));
   expect(ngelx585PawnDuration(0,1),const Duration(milliseconds:180));
