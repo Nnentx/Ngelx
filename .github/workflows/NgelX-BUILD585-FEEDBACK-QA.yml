@@ -78,15 +78,16 @@ jobs:
           key: ngelx-stable-debug-keystore-v1
           fail-on-cache-miss: true
       - name: Install exact Android NDK with bounded download retries
+        timeout-minutes: 12
         run: |
           set -euo pipefail
           df -h "$ANDROID_HOME"
           for attempt in 1 2 3; do
-            if "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "ndk;28.2.13676358"; then
+            if timeout --signal=TERM --kill-after=10s 180s "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "ndk;28.2.13676358"; then
               break
             fi
             if [ "$attempt" -eq 3 ]; then exit 1; fi
-            "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --uninstall "ndk;28.2.13676358" || true
+            timeout --signal=TERM --kill-after=10s 45s "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --uninstall "ndk;28.2.13676358" || true
           done
           test -f "$ANDROID_HOME/ndk/28.2.13676358/source.properties"
       - name: Build signed review APK (do not publish)
