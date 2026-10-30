@@ -1,5 +1,5 @@
 name: Publish verified Build585 APK and in-app update
-# Resolve the live custom-domain Hosting site before updating its manifest.
+# The canonical manifest is published from Nnentx/ngelx-web via GitHub Pages.
 on:
   push:
     branches: [main]
@@ -93,23 +93,27 @@ jobs:
           fi
           curl --fail --location --max-time 90 --retry 4 --retry-all-errors --retry-delay 2 --silent --show-error https://github.com/Nnentx/Ngelx/releases/download/v1.0.355-build585/NgelX-1.0.355-Build585.apk --output public-download585.apk
           cmp NgelX-1.0.355-Build585.apk public-download585.apk
-      - name: Install Hosting publication dependencies
-        run: python3 -m pip install --disable-pip-version-check requests google-auth
-      - name: Update only the manifest while preserving all active website assets
-        env:
-          FIREBASE_SERVICE_ACCOUNT_NGELX_44EED: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_NGELX_44EED }}
-        run: python3 tools/hosting_update_feed585.py
       - name: Verify the app update endpoint and exact download again
         run: |
-          curl --fail --location --max-time 30 --retry 3 --silent --show-error -H 'Cache-Control: no-cache' https://ngelxsocial.com/android-update.json --output live-update585.json
-          python3 - <<'PY'
-          import json
+          python3 - <<'PYVERIFY'
+          import json,time,urllib.request
           expected=json.load(open('android-update.json'))
-          live=json.load(open('live-update585.json'))
-          for key in ['schema','package','abi','version','build','size','sha256','url']:
-              assert expected[key]==live[key],key
-          print('Verified live NgelX updater: 1.0.355 / Build585')
-          PY
+          keys=['schema','package','abi','version','build','size','sha256','url']
+          for attempt in range(18):
+              try:
+                  request=urllib.request.Request('https://ngelxsocial.com/android-update.json',headers={'Cache-Control':'no-cache'})
+                  with urllib.request.urlopen(request,timeout=20) as response:
+                      live=json.load(response)
+                  if all(expected[key]==live.get(key) for key in keys):
+                      open('live-update585.json','w').write(json.dumps(live,ensure_ascii=False,indent=2)+'\n')
+                      print('Verified live NgelX updater: 1.0.355 / Build585')
+                      break
+              except Exception:
+                  pass
+              time.sleep(5)
+          else:
+              raise RuntimeError('Canonical update feed has not propagated to Build585')
+          PYVERIFY
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -117,7 +121,6 @@ jobs:
           path: |
             android-update.json
             live-update585.json
-            hosting585-checkpoint.json
             review-jobs585.json
             review-artifact585.json
             release-commit-result585.json
