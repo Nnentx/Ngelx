@@ -58,6 +58,27 @@ jobs:
           path: verified-apk
       - name: Verify reviewed APK bytes and prepare immutable metadata
         run: python3 tools/build585_prepare_release.py
+      - name: Preserve tested runtime with the trusted release workflow tree
+        run: |
+          set -euo pipefail
+          if gh release view v1.0.355-build585 >/dev/null 2>&1; then exit 0; fi
+          gh api repos/Nnentx/Ngelx/git/trees/"$GITHUB_SHA" > trusted-tree585.json
+          gh api repos/Nnentx/Ngelx/git/commits/e9fe66729db9727710963eedb8ebb4558bc73156 > tested-commit585.json
+          python3 - <<'PYTREE'
+          import json
+          from pathlib import Path
+          trusted=next(e['sha'] for e in json.load(open('trusted-tree585.json'))['tree'] if e['path']=='.github')
+          base=json.load(open('tested-commit585.json'))['tree']['sha']
+          tree={'base_tree':base,'tree':[{'path':'.github','mode':'040000','type':'tree','sha':trusted},{'path':'RELEASE585_MANIFEST.json','mode':'100644','type':'blob','content':Path('android-update.json').read_text()}]}
+          Path('release-tree585.json').write_text(json.dumps(tree))
+          PYTREE
+          gh api --method POST repos/Nnentx/Ngelx/git/trees --input release-tree585.json > release-tree-result585.json
+          python3 - <<'PYCOMMIT'
+          import json
+          from pathlib import Path
+          Path('release-commit585.json').write_text(json.dumps({'message':'Build585 exact tested runtime and reviewed APK with trusted release metadata','tree':json.load(open('release-tree-result585.json'))['sha'],'parents':['e9fe66729db9727710963eedb8ebb4558bc73156']}))
+          PYCOMMIT
+          gh api --method POST repos/Nnentx/Ngelx/git/commits --input release-commit585.json > release-commit-result585.json
       - name: Publish exact APK and prove anonymous download bytes
         run: |
           set -euo pipefail
@@ -66,7 +87,8 @@ jobs:
             gh release download v1.0.355-build585 --pattern NgelX-1.0.355-Build585.apk --dir existing585
             cmp NgelX-1.0.355-Build585.apk existing585/NgelX-1.0.355-Build585.apk
           else
-            gh release create v1.0.355-build585 NgelX-1.0.355-Build585.apk NgelX-1.0.355-Build585.apk.sha256 android-update.json --target e9fe66729db9727710963eedb8ebb4558bc73156 --title 'NgelX 1.0.355 / Build585' --notes-file release-notes.md
+            target=$(python3 -c "import json;print(json.load(open('release-commit-result585.json'))['sha'])")
+            gh release create v1.0.355-build585 NgelX-1.0.355-Build585.apk NgelX-1.0.355-Build585.apk.sha256 android-update.json --target "$target" --title 'NgelX 1.0.355 / Build585' --notes-file release-notes.md
           fi
           curl --fail --location --max-time 90 --retry 4 --retry-all-errors --retry-delay 2 --silent --show-error https://github.com/Nnentx/Ngelx/releases/download/v1.0.355-build585/NgelX-1.0.355-Build585.apk --output public-download585.apk
           cmp NgelX-1.0.355-Build585.apk public-download585.apk
@@ -97,4 +119,5 @@ jobs:
             hosting585-checkpoint.json
             review-jobs585.json
             review-artifact585.json
+            release-commit-result585.json
           if-no-files-found: ignore
