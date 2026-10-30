@@ -64,7 +64,7 @@ void main(){
   }
   await t.binding.setSurfaceSize(const Size(393,852));addTearDown(()=>t.binding.setSurfaceSize(null));
   await t.pumpWidget(MaterialApp(home:Ngelx565LudoRoom(id:'583583',initial:room,userId:'a',request:request)));
-  await t.pump();await t.tap(find.byKey(const ValueKey('ludo-main-dice')));
+  await t.pump();await t.tap(find.byKey(const ValueKey('ludo-dice')));
   await t.pump();await t.pump(const Duration(milliseconds:500));
   expect(rolls,2);expect(room['dice'],6);expect(moves,0);expect(t.takeException(),isNull);
   await t.pumpWidget(const SizedBox());
@@ -74,8 +74,8 @@ void main(){
   await t.pumpWidget(MaterialApp(home:Ngelx565LudoRoom(id:'583583',initial:room,userId:'a',request:(b){
    if(b['action']=='roll'){rolls++;return pending.future;}return Future.value(room);
   })));
-  await t.pump();await t.tap(find.byKey(const ValueKey('ludo-main-dice')));await t.pump();
-  await t.tap(find.byKey(const ValueKey('ludo-main-dice')));await t.pump();expect(rolls,1);
+  await t.pump();await t.tap(find.byKey(const ValueKey('ludo-dice')));await t.pump();
+  await t.tap(find.byKey(const ValueKey('ludo-dice')));await t.pump();expect(rolls,1);
   pending.complete({...room,'revision':2,'dice':6});await t.pump();expect(rolls,1);
   await t.pumpWidget(const SizedBox());
  });

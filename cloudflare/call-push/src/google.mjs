@@ -24,11 +24,31 @@ export function googleIo(env){
  return {
   getChat:id=>get('chats/'+encodeURIComponent(id)),getUser:id=>get('users/'+encodeURIComponent(id)),
   async checkAuth(claims){const r=await api(`https://identitytoolkit.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID}/accounts:lookup`,{method:'POST',body:JSON.stringify({localId:[claims.sub]})});const u=r?.users?.[0];if(!u||u.disabled||Number(u.validSince??0)>claims.iat)throw Error('Revoked login');},
-  async tokens(uid){const r=await api(base+'/_call_devices/'+encodeURIComponent(uid)+'/tokens?pageSize=2&orderBy=updatedAt%20desc');for(const doc of r?.documents??[]){const token=document(doc)?.token;if(typeof token==='string')tokenDocuments.set(uid+':'+token,doc.name);}return [...new Set((r?.documents??[]).map(x=>document(x)?.token).filter(x=>typeof x==='string'&&x.length>20&&x.length<4096))];},
+  async tokens(uid){
+   return loadDeviceTokens585(pageToken=>api(base+'/_call_devices/'+encodeURIComponent(uid)+'/tokens?pageSize=100&orderBy=updatedAt%20desc'+(pageToken?'&pageToken='+encodeURIComponent(pageToken):'')),
+    (token,name)=>tokenDocuments.set(uid+':'+token,name));
+  },
   async discardToken(uid,token){const name=tokenDocuments.get(uid+':'+token);const prefix=`projects/${env.FIREBASE_PROJECT_ID}/databases/(default)/documents/_call_devices/${uid}/tokens/`;if(!name||!name.startsWith(prefix))return;const r=await fetch('https://firestore.googleapis.com/v1/'+name,{method:'DELETE',headers:{authorization:'Bearer '+await accessToken(env)},signal:AbortSignal.timeout(8000)});if(!r.ok&&r.status!==404)throw Error('Device cleanup unavailable');},
   async rateLimit(uid,now){const path='_call_push_rate452/'+encodeURIComponent(uid);const old=await get(path);const window=Math.floor(now/60000);const count=old?.window===window?old.count??0:0;if(count>=40)return false;return !!await put(path,{window,count:count+1},old?._updateTime);},
   async claim(chat,room,kind,uid,now){const path='_call_push452/'+await key(chat+':'+kind+':'+uid);const old=await get(path);if(old?.room===room&&(old.state==='sent'||now-(old.claimedAt??0)<15000))return null;const v=await put(path,{room,state:'pending',claimedAt:now},old?._updateTime);return v?{path,room,claimedAt:now,updateTime:v.updateTime}:null;},
   async complete(lease,ok){await put(lease.path,{room:lease.room,state:ok?'sent':'retry',claimedAt:lease.claimedAt},lease.updateTime);},
   async send(token,data){const r=await fetch(`https://fcm.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID}/messages:send`,{method:'POST',headers:{authorization:'Bearer '+await accessToken(env),'content-type':'application/json'},body:JSON.stringify({message:{token,data,android:{priority:'HIGH',ttl:Math.max(1,Math.ceil((Number(data.expiresAt)-Date.now())/1000))+'s',collapse_key:data.roomName.slice(0,64)}}}),signal:AbortSignal.timeout(8000)});if(r.ok)return true;const error=await r.json();if(error?.error?.details?.some(x=>x.errorCode==='UNREGISTERED'))return false;throw Error('Push unavailable');},
  };
+}
+
+// Old app versions used process-dependent hash IDs: duplicate documents for
+// one token must never crowd a different current device out of the first two.
+export async function loadDeviceTokens585(readPage,remember=()=>{}){
+ const tokens=new Set();let pageToken;
+ for(let page=0;page<4;page++){
+  const result=await readPage(pageToken);
+  for(const doc of result?.documents??[]){
+   const token=document(doc)?.token;
+   if(typeof token!=='string'||token.length<=20||token.length>=4096||tokens.has(token))continue;
+   tokens.add(token);remember(token,doc.name);
+   if(tokens.size===2)return [...tokens];
+  }
+  pageToken=result?.nextPageToken;if(!pageToken)break;
+ }
+ return [...tokens];
 }

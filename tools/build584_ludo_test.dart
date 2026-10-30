@@ -23,11 +23,11 @@ void main(){
     return room;
    })));
    await t.pump();
-   final main=find.descendant(of:find.byKey(const ValueKey('ludo-main-dice')),matching:find.byType(Ngelx567Dice));
+   final main=find.descendant(of:find.byKey(const ValueKey('ludo-dice')),matching:find.byType(Ngelx567Dice));
    final avatar=find.descendant(of:find.byKey(const ValueKey('ludo-dice')),matching:find.byType(Ngelx567Dice));
    expect(t.widget<Ngelx567Dice>(main).value,isNull);
    expect(t.widget<Ngelx567Dice>(avatar).value,isNull);
-   await t.tap(find.byKey(const ValueKey('ludo-main-dice')));await t.pump();
+   await t.tap(find.byKey(const ValueKey('ludo-dice')));await t.pump();
    expect(rolls,1);expect(t.widget<Ngelx567Dice>(main).value,6);
    expect(t.widget<Ngelx567Dice>(avatar).value,6);
    expect(t.takeException(),isNull);await t.pumpWidget(const SizedBox());
@@ -51,7 +51,7 @@ void main(){
    final turns=3,p=ngelx565Rotate(ngelx565TokenPoint(0,0,-1),turns);
    await t.tapAt(Offset(frame.left+(p.dx+.5)*frame.width/15,frame.top+(p.dy+.5)*frame.height/15));
    await t.pump();expect(moves,1);
-   expect(find.byKey(const ValueKey('ludo-main-dice')).hitTestable(),findsOneWidget);
+   expect(find.byKey(const ValueKey('ludo-dice')).hitTestable(),findsOneWidget);
    expect(t.takeException(),isNull);
    if(size==const Size(393,852))await fixtures.shot583(t,'ludo584-expanded-two-players');
    await t.pumpWidget(const SizedBox());
