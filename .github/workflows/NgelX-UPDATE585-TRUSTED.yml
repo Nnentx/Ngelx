@@ -96,14 +96,13 @@ jobs:
       - name: Verify the app update endpoint and exact download again
         run: |
           python3 - <<'PYVERIFY'
-          import json,time,urllib.request
+          import json,time,subprocess
           expected=json.load(open('android-update.json'))
           keys=['schema','package','abi','version','build','size','sha256','url']
           for attempt in range(18):
               try:
-                  request=urllib.request.Request('https://ngelxsocial.com/android-update.json',headers={'Cache-Control':'no-cache'})
-                  with urllib.request.urlopen(request,timeout=20) as response:
-                      live=json.load(response)
+                  raw=subprocess.check_output(['curl','--fail','--location','--max-time','20','--silent','--show-error','-H','Cache-Control: no-cache','https://ngelxsocial.com/android-update.json'],text=True,timeout=25)
+                  live=json.loads(raw)
                   if all(expected[key]==live.get(key) for key in keys):
                       open('live-update585.json','w').write(json.dumps(live,ensure_ascii=False,indent=2)+'\n')
                       print('Verified live NgelX updater: 1.0.355 / Build585')
