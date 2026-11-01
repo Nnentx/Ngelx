@@ -166,3 +166,20 @@ test('Build529 allows host to kick an overflow guest without publication rights'
  assert.deepEqual(events.filter(e=>Array.isArray(e)&&e[0]==='kick').map(e=>e[2]),['alice']);
  assert.equal(events.at(-1)[0],'saved');
 });
+test('Build588 appointed moderator can mute an ordinary live guest',async()=>{
+ const {run,events}=setup({verifyFirebaseToken:async()=>({uid:'mod',firebase:{sign_in_provider:'password'}}),getRoom:async()=>({...room,moderatorUids553:['mod']})});
+ assert.equal((await run(request)).status,200);
+ const action=events.find(e=>Array.isArray(e)&&e[0]==='saved')[1];
+ assert.equal(action.ownerUid,'host');assert.equal(action.actorUid,'mod');
+});
+test('Build588 moderator cannot manage host or another moderator',async()=>{
+ for(const target of ['host','other']){
+  const {run,events}=setup({verifyFirebaseToken:async()=>({uid:'mod'}),getRoom:async()=>({...room,moderatorUids553:['mod','other']})});
+  assert.equal((await run({...request,body:{...request.body,guestUid:target}})).status,403);
+  assert.equal(events.length,0);
+ }
+});
+test('Build588 revoked moderator cannot administer LiveKit',async()=>{
+ const {run,events}=setup({verifyFirebaseToken:async()=>({uid:'revoked'}),getRoom:async()=>({...room,moderatorUids553:['mod']})});
+ assert.equal((await run(request)).status,403);assert.equal(events.length,0);
+});

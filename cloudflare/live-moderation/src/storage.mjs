@@ -57,10 +57,10 @@ export function storage(env,fetcher=fetch,now=()=>Date.now(),authorize=()=>acces
       });
       return allowed;
     },
-    async saveAction({liveId,guestUid,ownerUid,roomName,action}){
+    async saveAction({liveId,guestUid,ownerUid,actorUid=ownerUid,roomName,action}){
       await transact(async read=>{
         const room=await read(path(liveId)),guest=await read(path(liveId,guestUid));
-        if(room?.ownerId!==ownerUid||room.roomName!==roomName||!activeRoom(room,now())||
+        if(room?.ownerId!==ownerUid|| (actorUid!==ownerUid&&(!room?.moderatorUids553?.includes(actorUid)||guestUid===ownerUid||room?.moderatorUids553?.includes(guestUid)))||room.roomName!==roomName||!activeRoom(room,now())||
           guest?.hostUid!==ownerUid||guest.guestUid!==guestUid||guest.status!=='accepted')throw Error('Moderation state changed');
         if(!['mute','unmute','kick'].includes(action))throw Error('Invalid action');
         const writes=[{transform:{document:ref(path(liveId)),fieldTransforms:[{

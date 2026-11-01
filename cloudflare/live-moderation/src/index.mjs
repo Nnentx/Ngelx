@@ -1,3 +1,5 @@
+import {createPkFinish588} from '../../../server/livekit443/live-pk588.mjs';
+import {pkStorage588} from './pk588-storage.mjs';
 import {createLudo565,ludoStore565} from './ludo565.mjs';
 import {ludoAdmobEndpoint575} from '../../../server/ludo565/admob575.mjs';
 import {communityDeleteStorage,createCommunityDelete556} from './community-delete.mjs';
@@ -40,7 +42,7 @@ export default {async fetch(request,env){
        env.LUDO_MODERATOR_UIDS.split(',').map(x=>x.trim()).filter(Boolean).includes(uid),
       profile:uid=>identity.getUser(uid),limit:(uid,action)=>['create','bot','match'].includes(action)?db.rateLimit('ludo565-create:'+uid,4):action==='invite_create'?db.rateLimit('ludo580-invite:'+uid,12):Promise.resolve(true),verify:async()=>{const claims=await verifyFirebaseIdToken(request,env);await identity.checkAuth(claims);return claims;}})(request);
   }
-  if(path!=='/moderate'&&path!=='/community/delete')return json({error:'not_found'},404);
+  if(path!=='/moderate'&&path!=='/community/delete'&&path!=='/pk/finish')return json({error:'not_found'},404);
   if(request.method!=='POST')return json({error:'method_not_allowed'},405);
   if(!/^Bearer [^\s]+$/.test(request.headers.get('authorization')??''))return json({error:'unauthorized'},401);
   if(!request.headers.get('content-type')?.startsWith('application/json'))return json({error:'invalid_request'},400);
@@ -57,6 +59,12 @@ export default {async fetch(request,env){
     if(path==='/community/delete'){
       const handler=createCommunityDelete556({store:communityDeleteStorage(env),rateLimit:uid=>db.rateLimit('community-delete556:'+uid,90),verify:async()=>{const claims=await verifyFirebaseIdToken(request,env);await identity.checkAuth(claims);return {...claims,uid:claims.sub};}});
       const result=await handler(request,body);return json(result.body,result.status);
+    }
+    if(path==='/pk/finish'){
+      const claims=await verifyFirebaseIdToken(request,env);await identity.checkAuth(claims);
+      if(!await db.rateLimit('pk588:'+claims.sub,30))return json({error:'rate_limited'},429);
+      const result=await createPkFinish588({store:pkStorage588(env)})(claims.sub,body);
+      return json(result.body,result.status);
     }
     const ip=request.headers.get('cf-connecting-ip');
     if(!ip||!await db.rateLimit('ip:'+ip,60))return json({error:'rate_limited'},429);

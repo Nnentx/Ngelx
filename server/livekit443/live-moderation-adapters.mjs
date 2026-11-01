@@ -23,11 +23,11 @@ export function createGuestModerationStorage({db,FieldValue,now=()=>Date.now()})
       return {...guest,
         guestCapacityAllowed:accepted.docs.slice(0,10).some(d=>d.id===uid)};
     },
-    saveAction:async ({liveId,guestUid,ownerUid,roomName,action})=>
+    saveAction:async ({liveId,guestUid,ownerUid,actorUid=ownerUid,roomName,action})=>
       db.runTransaction(async tx=>{
         const r=liveRef(liveId),g=guestRef(liveId,guestUid);
         const room=dataOf(await tx.get(r)),guest=dataOf(await tx.get(g));
-        if (!room || room.ownerId!==ownerUid || room.roomName!==roomName ||
+        if (!room || room.ownerId!==ownerUid|| (actorUid!==ownerUid&&(!room?.moderatorUids553?.includes(actorUid)||guestUid===ownerUid||room?.moderatorUids553?.includes(guestUid))) || room.roomName!==roomName ||
             !activeRoom(room,now()) ||
             !guest || guest.hostUid!==ownerUid || guest.guestUid!==guestUid ||
             guest.status!=='accepted') throw Error('moderation_state_changed');
