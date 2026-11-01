@@ -46,7 +46,7 @@ void main(){
   final room=fixtures.room583();room['chat']=[for(var i=0;i<15;i++){'uid':'b','name':'Ahsen','text':'Mesaj $i','at':DateTime.now().millisecondsSinceEpoch-20000+i}];
   await t.pumpWidget(RepaintBoundary(key:const ValueKey('capture583'),child:MaterialApp(home:Ngelx565LudoRoom(id:'583583',initial:room,userId:'a',request:(_)async=>room))));
   await t.pump();await t.tap(find.text('Sohbet'));await t.pump();await t.pump(const Duration(milliseconds:350));
-  expect(t.getSize(find.byType(Ngelx570ChatPanel)).height,lessThanOrEqualTo(280));
+  expect(t.getSize(find.byType(Ngelx570ChatPanel)).height,lessThanOrEqualTo(185));
   for(final e in ['😂','😢','👏','❤️','😡'])expect(find.text(e),findsOneWidget);
   expect(find.text('🎲'),findsNothing);expect(find.text('🎉'),findsNothing);
   expect(find.text('Ahsen: Mesaj 14'),findsOneWidget);

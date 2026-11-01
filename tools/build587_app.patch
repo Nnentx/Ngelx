@@ -143,7 +143,7 @@
   Future<void> _chat()async{
    if(_chatOpen||widget.watch)return;setState(()=>_chatOpen=true);
 -  try{await showModalBottomSheet<void>(context:context,isScrollControlled:true,showDragHandle:true,backgroundColor:const Color(0xFF302B67),builder:(c)=>Theme(data:ngelx567LudoTheme(),child:Padding(padding:EdgeInsets.only(bottom:math.max(MediaQuery.viewInsetsOf(c).bottom,MediaQuery.viewPaddingOf(c).bottom)),child:SizedBox(height:(MediaQuery.sizeOf(c).height-MediaQuery.viewInsetsOf(c).bottom-MediaQuery.viewPaddingOf(c).bottom-90).clamp(160.0,370.0),child:Ngelx570ChatPanel(game:game)))));}
-+  try{await showModalBottomSheet<void>(context:context,isScrollControlled:true,showDragHandle:true,backgroundColor:const Color(0xFF302B67),builder:(c)=>Theme(data:ngelx567LudoTheme(),child:Padding(padding:EdgeInsets.only(bottom:math.max(MediaQuery.viewInsetsOf(c).bottom,MediaQuery.viewPaddingOf(c).bottom)),child:SizedBox(height:((MediaQuery.sizeOf(c).height-MediaQuery.viewInsetsOf(c).bottom-MediaQuery.viewPaddingOf(c).bottom-90)*.45).clamp(180.0,280.0),child:Ngelx570ChatPanel(game:game)))));}
++  try{await showModalBottomSheet<void>(context:context,isScrollControlled:true,showDragHandle:true,backgroundColor:const Color(0xFF302B67),builder:(c)=>Theme(data:ngelx567LudoTheme(),child:Padding(padding:EdgeInsets.only(bottom:math.max(MediaQuery.viewInsetsOf(c).bottom,MediaQuery.viewPaddingOf(c).bottom)),child:SizedBox(height:math.max(180.0,(MediaQuery.sizeOf(c).height-MediaQuery.viewInsetsOf(c).bottom-MediaQuery.viewPaddingOf(c).bottom-90).clamp(160.0,370.0)*.5),child:Ngelx570ChatPanel(game:game)))));}
    finally{if(mounted)setState(()=>_chatOpen=false);}
   }
   Widget _footer(){
