@@ -53,16 +53,18 @@ export function createGuestModeration({
       // Firestore live_streams can be edited by the room owner. Never let an
       // owner point their document to ANOTHER owner's LiveKit room and run
       // server-admin actions there. Names are created as ngelx_<uid>_<ms>.
-      const ownedPrefix=`ngelx_${uid}_`;
+      const owner=room?.ownerId;
+      const moderator=Array.isArray(room?.moderatorUids553)&&room.moderatorUids553.includes(uid);
+      const ownedPrefix=`ngelx_${owner}_`;
       const roomName=room?.roomName;
       const suffix=typeof roomName==='string' && roomName.startsWith(ownedPrefix)
         ? roomName.slice(ownedPrefix.length) : '';
-      if (!room || room.ownerId!==uid || !activeRoom(room,now()) ||
+      if (!room || (!moderator&&room.ownerId!==uid) || guestUid===owner || (moderator&&room.moderatorUids553.includes(guestUid)) || !activeRoom(room,now()) ||
           !/^\d{13}$/.test(suffix) || roomName.length>160)
         return response(403,{error:'forbidden'});
       guest=await getGuest(liveId,guestUid);
     } catch { return response(503,{error:'temporarily_unavailable'}); }
-    if (guest?.hostUid!==uid || guest?.guestUid!==guestUid || guest?.status!=='accepted')
+    if (guest?.hostUid!==room.ownerId || guest?.guestUid!==guestUid || guest?.status!=='accepted')
       return response(409,{error:'guest_not_accepted'});
     // Build529: an accepted 11th guest is only a viewer. Unlike token minting,
     // moderation directly overwrites the full LiveKit publish permission:
@@ -102,7 +104,7 @@ export function createGuestModeration({
         }
       }
       // Server-only update, revalidated in a Firestore transaction.
-      await saveAction({liveId,guestUid,ownerUid:uid,roomName:room.roomName,action,now:now()});
+      await saveAction({liveId,guestUid,ownerUid:room.ownerId,actorUid:uid,roomName:room.roomName,action,now:now()});
       return response(200,{ok:true,action});
     } catch {
       return response(503,{error:'temporarily_unavailable'});

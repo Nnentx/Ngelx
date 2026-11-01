@@ -662,12 +662,19 @@ service cloud.firestore {
     match /calls/{callId} {
       allow create: if signedIn()
         && request.auth.uid in request.resource.data.members
-        && request.resource.data.startedBy == request.auth.uid;
+        && request.resource.data.startedBy == request.auth.uid
+        && !request.resource.data.keys().hasAny(['result588','streakByUid','winnerUid']);
       allow read: if signedIn() && request.auth.uid in resource.data.members;
       allow update: if signedIn()
         && request.auth.uid in resource.data.members
-        && request.resource.data.members == resource.data.members;
+        && request.resource.data.members == resource.data.members
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['result588','streakByUid','winnerUid'])
+        && resource.data.get('result588',false) != true;
       allow delete: if false;
+    }
+    match /live_pk_stats588/{uid} {
+      allow read: if signedIn();
+      allow write: if false;
     }
 
     match /group_calls/{callId} {
@@ -819,6 +826,9 @@ service cloud.firestore {
           resource.data.ownerId == request.auth.uid
           || (
             request.auth.uid in resource.data.get('moderatorIds', [])
+            && request.resource.data.ownerId == resource.data.ownerId
+            && resource.data.ownerId in request.resource.data.get('speakerIds',[])
+            && request.resource.data.get('speakerIds',[]).toSet().intersection(resource.data.get('moderatorIds',[]).toSet()) == resource.data.get('speakerIds',[]).toSet().intersection(resource.data.get('moderatorIds',[]).toSet())
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
               'speakerIds', 'speakerCount', 'chatMutedUserIds', 'updatedAt',
               'musicUrl', 'musicTitle', 'musicPlaying', 'musicPositionMs',
@@ -866,7 +876,11 @@ service cloud.firestore {
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['active', 'lastSeenAt', 'leftAt', 'joinedAt', 'displayName', 'photoUrl'])
           )
           || get(/databases/$(database)/documents/audio_rooms/$(roomId)).data.get('ownerId', '') == request.auth.uid
-          || request.auth.uid in get(/databases/$(database)/documents/audio_rooms/$(roomId)).data.get('moderatorIds', [])
+          || (request.auth.uid in get(/databases/$(database)/documents/audio_rooms/$(roomId)).data.get('moderatorIds', [])
+            && uid != get(/databases/$(database)/documents/audio_rooms/$(roomId)).data.ownerId
+            && !(uid in get(/databases/$(database)/documents/audio_rooms/$(roomId)).data.get('moderatorIds',[]))
+            && request.resource.data.get('role','listener') in ['speaker','listener','removed']
+            && request.resource.data.get('banned',false) == resource.data.get('banned',false))
         );
         allow delete: if false;
       }
@@ -914,13 +928,107 @@ service cloud.firestore {
       }
     }
     match /live_streams/{streamId} {
+      match /guest_requests/{uid} {
+        function live() { return get(/databases/$(database)/documents/live_streams/$(streamId)).data; }
+        function host() { return signedIn() && request.auth.uid == live().ownerId; }
+        function validGuest() {
+          return signedIn() && live().active == true && uid != live().ownerId
+            && !(uid in live().get('bannedUsers', []))
+            && request.resource.data.keys().hasOnly(['liveId','hostUid','guestUid','status','startedBy','updatedAt'])
+            && request.resource.data.liveId == streamId && request.resource.data.hostUid == live().ownerId
+            && request.resource.data.guestUid == uid;
+        }
+        allow get: if signedIn() && (request.auth.uid == uid || host());
+        allow list: if host();
+        allow create: if validGuest() && (
+          (request.auth.uid == uid && request.resource.data.status == 'pending' && request.resource.data.startedBy == uid)
+          || (host() && request.resource.data.status == 'invited' && request.resource.data.startedBy == request.auth.uid)
+        );
+        allow update: if validGuest() && (
+          (resource.data.status == 'pending' && host() && request.resource.data.status == 'accepted' && request.resource.data.startedBy == resource.data.startedBy)
+          || (resource.data.status == 'invited' && request.auth.uid == uid && request.resource.data.status == 'accepted' && request.resource.data.startedBy == resource.data.startedBy)
+          || ((host() || request.auth.uid == uid) && request.resource.data.status == 'rejected' && request.resource.data.startedBy == resource.data.startedBy)
+          || (resource.data.status in ['rejected','cancelled'] && ((request.auth.uid == uid && request.resource.data.status == 'pending' && request.resource.data.startedBy == uid) || (host() && request.resource.data.status == 'invited' && request.resource.data.startedBy == request.auth.uid)))
+        );
+        allow delete: if host();
+      }
+
       allow read: if true;
       allow create: if signedIn() && request.resource.data.ownerId == request.auth.uid;
-      allow update, delete: if signedIn() && resource.data.ownerId == request.auth.uid;
+      allow delete: if signedIn() && resource.data.ownerId == request.auth.uid;
+      allow update: if signedIn() && resource.data.ownerId == request.auth.uid && request.resource.data.ownerId == resource.data.ownerId;
+      // Build553 live moderator and timed comment permissions
+      function live553() { return get(/databases/$(database)/documents/live_streams/$(streamId)).data; }
+      function host553() { return signedIn() && request.auth.uid == live553().ownerId; }
+      function mod553() { return signedIn() && request.auth.uid in live553().get('moderatorUids553', []); }
+      function timed553(v, uid) {
+        let until = v.get('commentMuteUntil553', {}).get(uid, null);
+        return until == null || (until is timestamp && request.time >= until);
+      }
+      function canComment553() {
+        let v = live553();
+        return signedIn() && v.get('active', false) == true
+          && !(request.auth.uid in v.get('bannedUsers', []))
+          && !(request.auth.uid in v.get('mutedUsers', []))
+          && timed553(v, request.auth.uid)
+          && (v.get('commentsEnabled', true) == true || host553());
+      }
+      function safeModeratorUpdate553() {
+        let old = resource.data;
+        let next = request.resource.data;
+        let affected = next.diff(old).affectedKeys();
+        let before = old.get('bannedUsers', []).toSet();
+        let after = next.get('bannedUsers', []).toSet();
+        let added = after.difference(before);
+        return mod553() && old.get('active', false) == true
+          && affected.hasOnly(['bannedUsers'])
+          && next.bannedUsers is list && next.bannedUsers.size() <= 1000
+          && before.difference(after).size() == 0 && added.size() == 1
+          && !added.hasAny([old.ownerId, request.auth.uid])
+          && added.intersection(old.get('moderatorUids553', []).toSet()).size() == 0;
+      }
+      function safeCommentMute588() {
+        let old=resource.data;
+        let next=request.resource.data;
+        let uid=next.get('moderatedUid588','');
+        let changed=next.get('commentMuteUntil553',{}).diff(old.get('commentMuteUntil553',{})).affectedKeys();
+        let until=next.get('commentMuteUntil553',{}).get(uid,null);
+        return mod553() && old.get('active',false) == true && uid is string && uid.size()>0
+          && uid != old.ownerId && !(uid in old.get('moderatorUids553',[]))
+          && next.diff(old).affectedKeys().hasOnly(['commentMuteUntil553','mutedUsers','moderatedUid588'])
+          && changed.hasOnly([uid])
+          && (until == null || (until is timestamp && until > request.time && until <= request.time + duration.value(6,'m')))
+          && next.get('mutedUsers',[]).toSet().difference(old.get('mutedUsers',[]).toSet()).size() == 0
+          && old.get('mutedUsers',[]).toSet().difference(next.get('mutedUsers',[]).toSet()).hasOnly([uid]);
+      }
+      allow update: if safeCommentMute588();
+      allow update: if safeModeratorUpdate553();
       match /comments/{commentId} {
+        function validGift553() {
+          let g=request.resource.data;
+          let qty=g.get('quantity',0);
+          let points=g.get('points',-1);
+          let name=g.get('giftName','');
+          return g.keys().hasOnly(['uid','userId','username','text','kind','giftName','giftEmoji','quantity','points','createdAt'])
+            && g.get('uid','') == request.auth.uid && g.get('userId','') == request.auth.uid
+            && g.get('createdAt',null) == request.time
+            && qty is int && qty >= 1 && qty <= 10 && points is int
+            && ((name == 'Gül' && points == qty) || (name == 'Kalp' && points == qty*3)
+              || (name == 'Yıldız' && points == qty*5) || (name in ['Elmas','Kalp Taşı'] && points == qty*15)
+              || (name in ['Ayıcık','Taç'] && points == qty*25) || (name == 'NgelX Roket' && points == qty*50)
+              || (name == 'Galaksi' && points == qty*100) || (name == 'Aslan' && points == qty*150) || (name == 'Kedi' && points == qty*30) || (name == 'Kaplan' && points == qty*125)
+              || (name == 'Evren' && points == qty*200));
+        }
         allow read: if true;
-        allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
-        allow update, delete: if signedIn() && (resource.data.userId == request.auth.uid || resource.data.uid == request.auth.uid);
+        allow create: if signedIn() && request.resource.data.get('userId','') == request.auth.uid
+          && (request.resource.data.get('kind','comment') == 'gift'
+            ? (live553().get('active',false) == true && !(request.auth.uid in live553().get('bannedUsers',[])) && validGift553())
+            : canComment553());
+        allow update: if signedIn() && resource.data.get('kind','') != 'gift'
+          && request.resource.data.get('kind','') != 'gift' && resource.data.get('userId','') == request.auth.uid
+          && request.resource.data.get('userId','') == request.auth.uid && canComment553();
+        allow delete: if signedIn() && resource.data.get('kind','') != 'gift'
+          && (resource.data.get('userId','') == request.auth.uid || host553() || mod553());
       }
       match /reactions/{uid} {
         allow read: if true;
