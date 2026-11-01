@@ -1,0 +1,433 @@
+--- a/lib/build565_ludo.dart
++++ b/lib/build565_ludo.dart
+@@ -168,6 +168,7 @@
+ }
+ class _Ngelx565LudoRoomState extends State<Ngelx565LudoRoom> with WidgetsBindingObserver {
+  late final Ngelx567RoomController game;
++ String? _giftReceipt587;
+  bool _chatOpen=false;Timer? poll;Timer? chatExpiry;String? chatKey;String? chatBubble;bool _canClose=false,_asking=false;bool _soundOn575=true;
+  int? _earnedChips575,_earnedXp575;String? _recentPickup575;
+  bool _pickupReady580=false;
+@@ -183,6 +184,8 @@
+   _pickupReady580=widget.initial!=null;
+   final initialPickup580=room['pickup'];
+   if(initialPickup580 is Map)_recentPickup575='${initialPickup580["seat"]}:${initialPickup580["cell"]}:${initialPickup580["at"]}';
++  final gifts587=room['gifts'] as List? ?? [];
++  if(gifts587.isNotEmpty)_giftReceipt587=gifts587.last.toString();
+   _observeVictory580();if(widget.initial==null)unawaited(game.sync(join:true));_startPoll();unawaited(_restoreSound575());
+   WidgetsBinding.instance.addPostFrameCallback((_){if(mounted)unawaited(_autoSingleMove574());});
+  }
+@@ -198,6 +201,15 @@
+   if(messages.isNotEmpty){final m=messages.last;final key='${m['uid']}:${m['at']}';
+    if(key!=chatKey){chatKey=key;chatExpiry?.cancel();
+     if(DateTime.now().millisecondsSinceEpoch-(m['at'] as num).toInt()<5000){chatBubble='${m['name']}: ${m['text']}';chatExpiry=Timer(const Duration(seconds:3),(){if(mounted){chatBubble=null;if(!_chatOpen)setState((){});}});}
++   }
++  }
++  final gifts587=room['gifts'] as List? ?? [];
++  if(gifts587.isNotEmpty){final gift=gifts587.last as Map;final receipt=gift.toString();
++   if(_giftReceipt587!=receipt){_giftReceipt587=receipt;
++    final age=DateTime.now().millisecondsSinceEpoch-((gift['at'] as num?)?.toInt()??0);
++    if(age>=-2000&&age<5000){chatExpiry?.cancel();chatBubble='${gift['fromName']??'Oyuncu'} → ${gift['toName']??'Oyuncu'}: ${gift['emoji']??'🎁'}';
++     chatExpiry=Timer(const Duration(seconds:3),(){if(mounted){chatBubble=null;if(!_chatOpen)setState((){});}});
++    }
+    }
+   }
+   if(game.error.isNotEmpty){_connectionFailures575=math.min(4,game.connectionFailures579);}
+@@ -243,23 +255,15 @@
+   final selected=await showDialog<String>(context:context,builder:(c)=>Theme(
+    data:ngelx583DialogTheme(),child:AlertDialog(
+     title:Text(nickname),
+-    content:ConstrainedBox(constraints:BoxConstraints(maxHeight:math.max(100,MediaQuery.sizeOf(c).height*.55)),
+-     child:Scrollbar(thumbVisibility:true,child:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,
+-     crossAxisAlignment:CrossAxisAlignment.start,children:[
+-     Text('Seviye ${(person['level'] as num?)?.toInt()??1}'),
+-     const SizedBox(height:8),
+-     if(bot)const Text('Makine oyuncusu'),
+-     if(isMine)const Text('Kendi oyuncu profilin'),
+-     if(!isMine&&!bot&&items.isEmpty)const Text('Hediye listesi şu anda açılamıyor.'),
+-     if(alreadyBlocked575)const Text('Bu oyuncu Ludo içinde engellendi.',style:TextStyle(color:Color(0xFFD34D66))),
+-     if(!isMine&&!bot)for(final e in items.entries)
+-      ListTile(contentPadding:EdgeInsets.zero,
+-       leading:Text((e.value is Map?e.value['emoji']:null)?.toString()??'🎁',
+-        style:const TextStyle(fontSize:26)),
+-       title:Text((e.value is Map?e.value['label']:null)?.toString()??e.key,style:const TextStyle(color:Color(0xFF27204C),fontWeight:FontWeight.w700)),
+-       subtitle:Text('${(e.value is Map?e.value['chips']:null)??0} çip',style:const TextStyle(color:Color(0xFF625878))),
+-       onTap:alreadyBlocked575?null:()=>Navigator.pop(c,e.key)),
+-    ])))),
++    content:SizedBox(width:math.min(420.0,MediaQuery.sizeOf(c).width-64),
++     child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
++      Text('Seviye ${(person['level'] as num?)?.toInt()??1}'),const SizedBox(height:14),
++      if(bot)const Text('Makine oyuncusu'),
++      if(isMine)const Text('Kendi oyuncu profilin'),
++      if(!isMine&&!bot&&items.isEmpty)const Text('Hediye listesi şu anda açılamıyor.'),
++      if(alreadyBlocked575)const Text('Bu oyuncu Ludo içinde engellendi.',style:TextStyle(color:Color(0xFFD34D66))),
++      if(!isMine&&!bot&&items.isNotEmpty)Ngelx587GiftShelf(items:items,blocked:alreadyBlocked575,onSend:(kind)=>Navigator.pop(c,kind)),
++     ])),
+     actions:[
+       if(!isMine&&!bot)...[
+        TextButton(onPressed:()=>Navigator.pop(c,'__report575'),
+@@ -297,23 +301,9 @@
+      SnackBar(content:Text('Şikayet gönderilemedi: $e')));}
+    return;
+   }
+-  // Paid gifts require explicit confirmation of the server-catalog price.
+-  // Only the server can charge the wallet; clients never supply a price.
++  // Build587: catalog tap sends directly. Only the server charges the wallet.
+   final gift=items[selected];
+-  if(gift is! Map||gift['chips'] is! num)return;
+-  final price=(gift['chips'] as num).toInt();
+-  if(price<=0)return;
+-  final label=gift['label']?.toString()??selected;
+-  final confirmed=await showDialog<bool>(context:context,builder:(c)=>Theme(
+-   data:ngelx583DialogTheme(),child:AlertDialog(
+-    key:const ValueKey('ludo-gift-confirmation'),
+-    title:const Text('Hediye gönderilsin mi?'),
+-    content:Text('$nickname adlı oyuncuya $label göndermek için $price çip harcanacak.'),
+-    actions:[
+-     TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),
+-     FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('Gönder')),
+-    ])))??false;
+-  if(!mounted||!confirmed)return;
++  if(gift is! Map||gift['chips'] is! num||(gift['chips'] as num)<=0)return;
+   final ok=await game.perform('gift',{'to':theirId,'kind':selected});
+   if(!mounted)return;
+   if(!ok||room['giftAlreadySent']==true)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(
+@@ -457,8 +447,7 @@
+    try{
+     // Accept a gesture during a pending mutation/poll, then use its fresh state.
+     await game.waitForIdle583();
+-    for(var opening=0;opening<3&&_canRoll586;opening++){
+-     final beforeOpening=(room['openingRolls'] as num?)?.toInt()??0;
++    for(var opening=0;opening<1&&_canRoll586;opening++){
+      final beforeRoll=room['lastRoll'].toString();
+      var ok=false;
+      for(var conflict=0;conflict<3&&_canRoll586;conflict++){
+@@ -474,16 +463,9 @@
+      final last=room['lastRoll'];
+      final face=last is Map&&last['seat']==game.seat?(last['value'] as num?)?.toInt():null;
+      if(face!=null)setState(()=>_rollFace586=face);
+-     final count=(room['openingRolls'] as num?)?.toInt()??0;
+-     final tokens=game.seat<0?null:(room['tokens'] as List)[game.seat];
+-     final continueOpening=_canRoll586&&face!=6&&count==beforeOpening+1&&count<=2&&
+-        tokens is List&&tokens.every((token)=>token==-1);
+-     final receipt=last.toString();
+-     // Also show the final no-move result after the server passes the turn.
++     // Build587: never chain accepted rolls, including all-home openings.
+      if(face!=null&&room['dice']==null)await Future<void>.delayed(const Duration(milliseconds:360));
+-     if(!continueOpening||!_canRoll586||room['lastRoll'].toString()!=receipt||
+-        room['openingRolls']!=count)break;
+-     await game.waitForIdle583();
++     break;
+     }
+    }finally{
+     if(mounted)setState((){_rollPending583=false;_rollFace586=null;});
+@@ -505,7 +487,7 @@
+  }
+  Future<void> _chat()async{
+   if(_chatOpen||widget.watch)return;setState(()=>_chatOpen=true);
+-  try{await showModalBottomSheet<void>(context:context,isScrollControlled:true,showDragHandle:true,backgroundColor:const Color(0xFF302B67),builder:(c)=>Theme(data:ngelx567LudoTheme(),child:Padding(padding:EdgeInsets.only(bottom:math.max(MediaQuery.viewInsetsOf(c).bottom,MediaQuery.viewPaddingOf(c).bottom)),child:SizedBox(height:(MediaQuery.sizeOf(c).height-MediaQuery.viewInsetsOf(c).bottom-MediaQuery.viewPaddingOf(c).bottom-90).clamp(160.0,370.0),child:Ngelx570ChatPanel(game:game)))));}
++  try{await showModalBottomSheet<void>(context:context,isScrollControlled:true,showDragHandle:true,backgroundColor:const Color(0xFF302B67),builder:(c)=>Theme(data:ngelx567LudoTheme(),child:Padding(padding:EdgeInsets.only(bottom:math.max(MediaQuery.viewInsetsOf(c).bottom,MediaQuery.viewPaddingOf(c).bottom)),child:SizedBox(height:((MediaQuery.sizeOf(c).height-MediaQuery.viewInsetsOf(c).bottom-MediaQuery.viewPaddingOf(c).bottom-90)*.45).clamp(180.0,280.0),child:Ngelx570ChatPanel(game:game)))));}
+   finally{if(mounted)setState(()=>_chatOpen=false);}
+  }
+  Widget _footer(){
+@@ -553,9 +535,13 @@
+    ]else if(active)...[
+     Row(crossAxisAlignment:CrossAxisAlignment.center,children:[
+      if(!widget.watch)...[Ngelx575AutoBadge(enabled:auto,onPressed:()=>_tapAuto575(auto)),const SizedBox(width:5)],
+-    ]),const SizedBox(height:8),
++    ]),
++    SizedBox(key:const ValueKey('ludo-bottom-comments'),height:40,child:Center(child:chatBubble==null?const SizedBox.shrink():Container(
++     width:double.infinity,padding:const EdgeInsets.symmetric(horizontal:12,vertical:7),
++     decoration:BoxDecoration(color:const Color(0xB4201C43),borderRadius:BorderRadius.circular(12)),
++     child:Text(chatBubble!,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.white,fontSize:12,fontWeight:FontWeight.w600))))),
+     Row(crossAxisAlignment:CrossAxisAlignment.center,children:[
+-     Row(mainAxisSize:MainAxisSize.min,children:[ngelx570Chip('😊 Emoji',widget.watch?null:_chat),const SizedBox(width:5),ngelx570Chip('Sohbet',widget.watch?null:_chat)]),
++     Row(mainAxisSize:MainAxisSize.min,children:[ngelx570Chip('😂 Emoji',widget.watch?null:_chat),const SizedBox(width:5),ngelx570Chip('Sohbet',widget.watch?null:_chat)]),
+      if(room['mode']=='power'&&!widget.watch)...[const SizedBox(width:7),for(final item in [('control','Zar seç'),('double','Çift'),('shield','Kalkan')])Expanded(child:Ngelx570Power(kind:item.$1,label:item.$2,count:(inventory[item.$1] as num?)?.toInt()??0,onTap:()=>_tapPower572(item.$1,(inventory[item.$1] as num?)?.toInt()??0,myTurn)))]
+      else Expanded(child:Text(widget.watch?'İZLEYİCİ':'KLASİK LUDO',textAlign:TextAlign.center,style:const TextStyle(color:Colors.white70,fontWeight:FontWeight.w800,fontSize:11))),
+     ]),
+@@ -576,9 +562,9 @@
+     onToken:(token){_soundTap575();unawaited(game.perform('move',{'token':token}));},onRoll:()=>_tapRoll572(game.playing&&room['turn']==game.seat),busy:game.busy,rollPending586:_rollPending583,rollFace586:_rollFace586);
+     final wait=game.waiting&&!game.detached&&!widget.watch?Ngelx567WaitingPanel(room:room,uid:game.uid,canStart:game.canStart,busy:game.busy,onInvite:_invite,onStart:()=>game.perform('start'),compact:box.maxHeight<500):null;
+     if(sideways)return Row(children:[Expanded(child:Padding(padding:const EdgeInsets.all(10),child:Stack(alignment:Alignment.center,children:[Center(child:AspectRatio(aspectRatio:.78,child:frame)),if(wait!=null)SizedBox(width:300,child:FittedBox(fit:BoxFit.scaleDown,child:SizedBox(width:300,child:wait)))]))),SizedBox(width:245,child:ListView(padding:const EdgeInsets.only(top:12),children:[_roomLabel567(widget.id),_footer()]))]);
+-    return Column(children:[_roomLabel567(widget.id),Expanded(child:LayoutBuilder(builder:(_,area)=>Stack(alignment:Alignment.center,children:[Positioned.fill(child:Padding(padding:const EdgeInsets.symmetric(horizontal:2),child:frame)),if(wait!=null)ConstrainedBox(constraints:BoxConstraints(maxWidth:math.min(380,area.maxWidth-20),maxHeight:area.maxHeight-8),child:SingleChildScrollView(child:wait)),if(room.isEmpty)const Center(child:CircularProgressIndicator(color:_ludoGold567)),if(chatBubble!=null)Positioned(left:16,right:16,bottom:8,child:IgnorePointer(child:Container(padding:const EdgeInsets.all(12),decoration:BoxDecoration(color:const Color(0xF022173F),borderRadius:BorderRadius.circular(16)),child:Text(chatBubble!,textAlign:TextAlign.center,style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w700)))))]))),if(players.isEmpty&&room.isEmpty)const Text('Masaya bağlanılıyor…',style:TextStyle(color:Colors.white70)),_footer()]);
++    return Column(children:[_roomLabel567(widget.id),Expanded(child:LayoutBuilder(builder:(_,area)=>Stack(alignment:Alignment.center,children:[Positioned.fill(child:Padding(padding:const EdgeInsets.symmetric(horizontal:2),child:frame)),if(wait!=null)ConstrainedBox(constraints:BoxConstraints(maxWidth:math.min(380,area.maxWidth-20),maxHeight:area.maxHeight-8),child:SingleChildScrollView(child:wait)),if(room.isEmpty)const Center(child:CircularProgressIndicator(color:_ludoGold567))]))),if(players.isEmpty&&room.isEmpty)const Text('Masaya bağlanılıyor…',style:TextStyle(color:Colors.white70)),_footer()]);
+    }))]))),
+-  )),if(_victory580)Positioned.fill(child:Ngelx580Victory(name:_winner567(room))) ]));
++  )),Positioned.fill(child:Ngelx587Hearts(room:room)),if(_victory580)Positioned.fill(child:Ngelx580Victory(name:_winner567(room))) ]));
+  }
+ }
+ Widget _roomLabel567(String id)=>Padding(padding:const EdgeInsets.symmetric(horizontal:18,vertical:5),child:Row(mainAxisAlignment:MainAxisAlignment.center,children:[const Icon(Icons.lock_outline_rounded,size:12,color:Colors.white38),const SizedBox(width:5),Flexible(child:Text('ODA · $id',maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.white54,fontSize:14,fontWeight:FontWeight.w800,letterSpacing:2)))]));
+@@ -1181,7 +1167,7 @@
+  final input=TextEditingController();bool sending=false;
+  @override void dispose(){input.dispose();super.dispose();}
+  Future<void> send([String? emoji])async{final text=emoji??input.text.trim();if(text.isEmpty||sending||widget.game.busy)return;setState(()=>sending=true);final sent=await widget.game.perform('chat',{'text':text});if(!mounted)return;if(sent){Navigator.pop(context);}else{setState(()=>sending=false);}}
+- @override Widget build(BuildContext context)=>Column(children:[const Text('Masa sohbeti',style:TextStyle(color:Colors.white,fontSize:19,fontWeight:FontWeight.w900)),Expanded(child:AnimatedBuilder(animation:widget.game,builder:(_,__){final messages=widget.game.room['chat'] as List? ?? [];return ListView.builder(padding:const EdgeInsets.all(12),itemCount:messages.length,itemBuilder:(_,i)=>Padding(padding:const EdgeInsets.only(bottom:8),child:Text('${messages[i]['name']}: ${messages[i]['text']}',style:const TextStyle(color:Colors.white,fontSize:14))));})),Row(mainAxisAlignment:MainAxisAlignment.spaceEvenly,children:[for(final emoji in ['😊','🎲','👏','❤️','🎉'])IconButton(onPressed:sending?null:()=>send(emoji),icon:Text(emoji,style:const TextStyle(fontSize:24)))]),Padding(padding:const EdgeInsets.fromLTRB(12,0,12,10),child:Row(children:[Expanded(child:TextField(key:const ValueKey('ludo-chat-input'),controller:input,maxLength:180,style:const TextStyle(color:_ludoInk567),decoration:const InputDecoration(hintText:'Mesaj yaz…',counterText:''),onSubmitted:(_)=>send())),IconButton(onPressed:sending?null:send,icon:const Icon(Icons.send_rounded,color:_ludoGold567))]))]);
++ @override Widget build(BuildContext context)=>Column(children:[const Text('Masa sohbeti',style:TextStyle(color:Colors.white,fontSize:19,fontWeight:FontWeight.w900)),Expanded(child:AnimatedBuilder(animation:widget.game,builder:(_,__){final messages=widget.game.room['chat'] as List? ?? [];return Scrollbar(child:ListView.builder(key:const ValueKey('ludo-chat-history'),reverse:true,padding:const EdgeInsets.all(12),itemCount:messages.length,itemBuilder:(_,i)=>Padding(padding:const EdgeInsets.only(bottom:8),child:Text('${messages[messages.length-1-i]['name']}: ${messages[messages.length-1-i]['text']}',style:const TextStyle(color:Colors.white,fontSize:14)))));})),Row(mainAxisAlignment:MainAxisAlignment.spaceEvenly,children:[for(final emoji in ['😂','😢','👏','❤️','😡'])IconButton(onPressed:sending?null:()=>send(emoji),icon:Text(emoji,style:const TextStyle(fontSize:24)))]),Padding(padding:const EdgeInsets.fromLTRB(12,0,12,10),child:Row(children:[Expanded(child:TextField(key:const ValueKey('ludo-chat-input'),controller:input,maxLength:180,style:const TextStyle(color:_ludoInk567),decoration:const InputDecoration(hintText:'Mesaj yaz…',counterText:''),onSubmitted:(_)=>send())),IconButton(onPressed:sending?null:send,icon:const Icon(Icons.send_rounded,color:_ludoGold567))]))]);
+ }
+ 
+ class Ngelx575Effects {
+--- a/lib/build583_feedback.dart
++++ b/lib/build583_feedback.dart
+@@ -118,13 +118,14 @@
+   final t=Curves.easeInOutCubic.transform(motion.value);
+   final from=_avatar('${event['from']}'),to=_avatar('${event['to']}');
+   final center=Offset.lerp(from,to,t)!-Offset(0,math.sin(t*math.pi)*widget.side*.22);
+-  return Stack(clipBehavior:Clip.none,children:[Positioned(left:(center.dx-64).clamp(0.0,math.max(0.0,widget.side-128)),top:center.dy-40,width:128,
+-   child:Opacity(opacity:motion.value<.85?1:((1-motion.value)/.15).clamp(0.0,1.0),
+-    child:Column(mainAxisSize:MainAxisSize.min,children:[
+-     Transform.scale(scale:1+math.sin(t*math.pi)*.6,child:Text('${event['emoji']??'🎁'}',textAlign:TextAlign.center,style:const TextStyle(fontSize:46))),
+-     Container(padding:const EdgeInsets.symmetric(horizontal:6,vertical:4),decoration:BoxDecoration(color:const Color(0xEF20163D),borderRadius:BorderRadius.circular(10)),
+-      child:Text('${event['fromName']??'Oyuncu'} → ${event['toName']??'Oyuncu'}',maxLines:2,textAlign:TextAlign.center,style:const TextStyle(color:Colors.white,fontSize:10,fontWeight:FontWeight.w700))),
+-    ])))]);
++  final opacity=motion.value<.8?1.0:((1-motion.value)/.2).clamp(0.0,1.0);
++  return Stack(clipBehavior:Clip.none,children:[
++   for(var i=1;i<=4;i++)Positioned(left:center.dx-5-i*7,top:center.dy-5+i*4,
++    child:Opacity(opacity:opacity*(.45-i*.08),child:Container(width:10,height:10,decoration:const BoxDecoration(shape:BoxShape.circle,color:Color(0xFFFFDFA0))))),
++   Positioned(left:center.dx-29,top:center.dy-29,width:58,height:58,
++    child:Opacity(opacity:opacity,child:Transform.scale(scale:.8+math.sin(t*math.pi)*.35,
++     child:Ngelx587GiftArt(kind:'${event['kind']??'gift'}',size:58)))),
++  ]);
+  }));
+ }
+ 
+--- a/lib/main.dart
++++ b/lib/main.dart
+@@ -102,6 +102,7 @@
+ part 'build565_ludo.dart';
+ part 'build570_join_sound.dart';
+ part 'build583_feedback.dart';
++part 'build587_effects.dart';
+ 
+ part 'build556_delete.dart';
+ part 'build543_group_call_join.dart';
+@@ -19418,6 +19419,7 @@
+     final gv=grup.data()??<String,dynamic>{};
+     final kurucu=(gv['createdBy']??'').toString();
+     final adminler=List<String>.from(gv['admins']??const[]);
++    admin=adminler.contains(id);
+     final benKurucu=benUid==kurucu;
+     final yonetici=benKurucu||adminler.contains(benUid);
+     final hedefKurucu=id==kurucu;
+@@ -19451,12 +19453,12 @@
+                   trailing:const Icon(Icons.chevron_right_rounded,color:Color(0xFFA49BAC)),
+                   onTap:()=>Navigator.pop(c,'profile'),
+                 ),
+-                if(benKurucu&&!hedefKurucu)...[
++                if(yonetici&&!hedefKurucu&&id!=benUid)...[
+                   const Divider(height:1,indent:62,color:Color(0xFFEDE8F1)),
+                   ListTile(
+                     contentPadding:const EdgeInsets.symmetric(horizontal:10,vertical:3),
+                     leading:Container(width:42,height:42,decoration:BoxDecoration(color:ngelxGroupGreenSoft,borderRadius:BorderRadius.circular(14)),child:Icon(admin?Icons.person_off_outlined:Icons.admin_panel_settings_rounded,color:ngelxGroupGreen)),
+-                    title:Text(admin?'Yöneticilikten çıkar':'Yönetici yap',style:const TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w800)),
++                    title:Text(admin?'Yöneticilikten al':'Yönetici yap',style:const TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w800)),
+                     subtitle:Text(admin?'Yönetici yetkilerini kaldır':'Bu üyeye yönetici yetkisi ver',style:const TextStyle(color:ngelxPremiumMuted,fontSize:10.5)),
+                     trailing:const Icon(Icons.chevron_right_rounded,color:Color(0xFFA49BAC)),
+                     onTap:()=>Navigator.pop(c,admin?'demote':'promote'),
+@@ -19474,7 +19476,7 @@
+                 Expanded(child:Text('Grup kurucusu gruptan çıkarılamaz veya yöneticilikten düşürülemez.',style:TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w700))),
+               ]),
+             )
+-            else if(!admin||benKurucu)...[
++            else if(id!=benUid)...[
+               const SizedBox(height:10),
+               InkWell(
+                 onTap:()=>Navigator.pop(c,'remove'),
+@@ -19503,7 +19505,7 @@
+     if(hedefKurucu)return;
+ 
+     if(sec=='promote'){
+-      if(!benKurucu)return;
++      if(!yonetici)return;
+       final son=await ref.get();
+       final sv=son.data()??<String,dynamic>{};
+       final sonAdminler=List<String>.from(sv['admins']??const[]);
+@@ -19519,7 +19521,8 @@
+       return;
+     }
+     if(sec=='demote'){
+-      if(!benKurucu)return;
++      if(!yonetici)return;
++      if(!mounted||!await _ngelx587ConfirmDemotion(context,isim))return;
+       await ref.update({'admins':FieldValue.arrayRemove([id]),'updatedAt':FieldValue.serverTimestamp()});
+       await ngelxGrupDavetMetaSenkronla(ref);
+       await sistemMesaji(isim+' artık yönetici değil.');
+@@ -19530,12 +19533,8 @@
+     final son=await ref.get();
+     final sv=son.data()??<String,dynamic>{};
+     final sonKurucu=(sv['createdBy']??'').toString();
+-    final sonAdminler=List<String>.from(sv['admins']??const[]);
+     if(id==sonKurucu)return;
+-    if(sonAdminler.contains(id)&&!benKurucu){
+-      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bir yöneticiyi yalnızca grup kurucusu gruptan çıkarabilir.')));
+-      return;
+-    }
++
+     final ok=await showDialog<bool>(
+       context:context,
+       builder:(c)=>AlertDialog(
+@@ -20801,6 +20800,12 @@
+   }
+ 
+   Future<void> _uyeIslemi(String uid,String isim,bool admin,bool yonetici,String kurucu)async{
++    final current=(await ref.get(const GetOptions(source:Source.server))).data()??<String,dynamic>{};
++    kurucu=(current['createdBy']??'').toString();
++    final currentAdmins=List<String>.from(current['admins']??const []);
++    yonetici=me!=null&&(me==kurucu||currentAdmins.contains(me));
++    admin=currentAdmins.contains(uid);
++    if(!mounted)return;
+     final benKurucu=me!=null&&me==kurucu;
+     final hedefKurucu=uid==kurucu;
+     final sec=await showModalBottomSheet<String>(
+@@ -20827,17 +20832,17 @@
+               subtitle:Text('Kurucu gruptan çıkarılamaz ve yöneticilikten düşürülemez.',style:TextStyle(color:ngelxPremiumMuted,fontSize:11.5)),
+             ),
+           ),
+-          if(benKurucu&&!hedefKurucu&&uid!=me)...[
++          if(yonetici&&!hedefKurucu&&uid!=me)...[
+             const SizedBox(height:8),
+             ListTile(
+               shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(16)),
+               tileColor:Colors.white,
+               leading:Icon(admin?Icons.person_off_outlined:Icons.admin_panel_settings_rounded,color:ngelxPremiumPurple),
+-              title:Text(admin?'Yöneticilikten çıkar':'Yönetici yap',style:const TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w800)),
++              title:Text(admin?'Yöneticilikten al':'Yönetici yap',style:const TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w800)),
+               subtitle:Text(admin?'Yönetici yetkilerini kaldır':'Bu üyeye yönetici yetkisi ver',style:const TextStyle(color:ngelxPremiumMuted,fontSize:11)),
+               onTap:()=>Navigator.pop(c,admin?'demote':'promote'),
+             ),
+-            const SizedBox(height:8),
++            if(benKurucu)...[const SizedBox(height:8),
+             ListTile(
+               shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(16)),
+               tileColor:ngelxGroupGreenSoft,
+@@ -20845,9 +20850,9 @@
+               title:const Text('Kuruculuğu devret',style:TextStyle(color:ngelxPremiumInk,fontWeight:FontWeight.w900)),
+               subtitle:const Text('Bu üyeyi grubun yeni kurucusu yap.',style:TextStyle(color:ngelxPremiumMuted,fontSize:11.5)),
+               onTap:()=>Navigator.pop(c,'transfer'),
+-            ),
++            ),],
+           ],
+-          if(yonetici&&!hedefKurucu&&uid!=me&&(!admin||benKurucu))...[
++          if(yonetici&&!hedefKurucu&&uid!=me)...[
+             const SizedBox(height:8),
+             ListTile(
+               shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(16)),
+@@ -20890,7 +20895,7 @@
+     }
+ 
+     if(sec=='promote'){
+-      if(!benKurucu)return;
++      if(!yonetici)return;
+       final son=await ref.get();
+       final sv=son.data()??<String,dynamic>{};
+       final sonAdminler=List<String>.from(sv['admins']??const[]);
+@@ -20905,7 +20910,8 @@
+       return;
+     }
+     if(sec=='demote'){
+-      if(!benKurucu)return;
++      if(!yonetici)return;
++      if(!mounted||!await _ngelx587ConfirmDemotion(context,isim))return;
+       await ref.update({'admins':FieldValue.arrayRemove([uid]),'updatedAt':FieldValue.serverTimestamp()});
+       await _sistemMesaji(isim+' artık yönetici değil.');
+       return;
+@@ -20918,10 +20924,6 @@
+     final sonAdminler=List<String>.from(sv['admins']??const[]);
+     if(uid==sonKurucu){
+       if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Grup kurucusu gruptan çıkarılamaz.')));
+-      return;
+-    }
+-    if(sonAdminler.contains(uid)&&!benKurucu){
+-      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bir yöneticiyi yalnızca grup kurucusu gruptan çıkarabilir.')));
+       return;
+     }
+ 
+--- a/lib/live_pk.dart
++++ b/lib/live_pk.dart
+@@ -443,33 +443,10 @@
+         if(ngelx566PkShouldEnd(remaining:kalan,opponentLoaded:oppSnap.hasData,serverConfirmed:oppSnap.hasData&&!oppSnap.data!.metadata.isFromCache&&!oppSnap.data!.metadata.hasPendingWrites,opponentFresh:ngelxCanliKaydiTaze(opponent))&&widget.yayinSahibi&&!_islem){
+           unawaited(_pkBitir(sessionId,live,opponent));
+         }
+-        final dk=(kalan~/60).toString().padLeft(2,'0'),sn=(kalan%60).toString().padLeft(2,'0');
+-        final toplam=(selfScore+opponentScore).clamp(1,1<<30);
+-        final selfOran=(selfScore/toplam).clamp(0.0,1.0).toDouble();
+-        return Container(
+-          margin:const EdgeInsets.symmetric(horizontal:18),
+-          padding:const EdgeInsets.fromLTRB(12,9,12,10),
+-          decoration:BoxDecoration(
+-            color:const Color(0xD9000000),
+-            borderRadius:BorderRadius.circular(18),
+-            border:Border.all(color:const Color(0x66FFFFFF)),
+-          ),
+-          child:Column(mainAxisSize:MainAxisSize.min,children:[
+-            Row(children:[
+-              Expanded(child:Text('@${live['pkSelfName']??'NgelX'}',maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Color(0xFFFF6B8A),fontWeight:FontWeight.w900))),
+-              Container(padding:const EdgeInsets.symmetric(horizontal:10,vertical:5),decoration:BoxDecoration(color:Colors.white12,borderRadius:BorderRadius.circular(12)),child:Text('PK $dk:$sn',style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w900))),
+-              Expanded(child:Text('@${live['pkOpponentName']??opponent['username']??'NgelX'}',textAlign:TextAlign.right,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Color(0xFF4DD6FF),fontWeight:FontWeight.w900))),
+-            ]),
+-            const SizedBox(height:7),
+-            Row(children:[
+-              Text('$selfScore',style:const TextStyle(color:Colors.white,fontSize:18,fontWeight:FontWeight.w900)),
+-              const SizedBox(width:8),
+-              Expanded(child:ClipRRect(borderRadius:BorderRadius.circular(8),child:LinearProgressIndicator(value:selfOran,minHeight:9,backgroundColor:const Color(0xFF30BEEA),color:const Color(0xFFFF3E6C)))),
+-              const SizedBox(width:8),
+-              Text('$opponentScore',style:const TextStyle(color:Colors.white,fontSize:18,fontWeight:FontWeight.w900)),
+-            ]),
+-          ]),
+-        );
++        return Stack(clipBehavior:Clip.none,children:[Ngelx587PkRibbon(selfScore:selfScore,opponentScore:opponentScore,remaining:kalan,
++         selfName:'${live['pkSelfName']??'NgelX'}',opponentName:'${live['pkOpponentName']??opponent['username']??'NgelX'}'),
++         if(kalan>=178)Positioned(top:100,left:0,right:0,child:Ngelx587PkClash(key:ValueKey(sessionId))),
++        ]);
+       },
+     );
+   }
+@@ -614,11 +591,11 @@
+         final v=snap.data?.data()??<String,dynamic>{};
+         final opponent=(v['pkOpponentLiveId']??'').toString();
+         if(v['pkActive']!=true||opponent.isEmpty)return child;
+-        return Row(children:[
+-          Expanded(child:ClipRect(child:child)),
+-          Container(width:1,color:Colors.white24),
+-          Expanded(child:NgelXPkRakipVideo(liveId:opponent)),
+-        ]);
++        return ColoredBox(color:Colors.black,child:LayoutBuilder(builder:(_,box)=>Align(
++         alignment:const Alignment(0,-.12),child:SizedBox(height:math.min(box.maxHeight*.62,box.maxWidth*.92),child:Row(children:[
++          Expanded(child:ClipRect(child:child)),Container(width:2,color:Colors.black),
++          Expanded(child:ClipRect(child:NgelXPkRakipVideo(liveId:opponent))),
++         ])))));
+       },
+     );
+   }
+--- a/lib/live_broadcast_studio.dart
++++ b/lib/live_broadcast_studio.dart
+@@ -3675,7 +3675,7 @@
+                   visualDensity:VisualDensity.compact,icon:const Icon(Icons.card_giftcard_rounded,color:Colors.white,size:19)),
+               ]),
+               const SizedBox(height:8),
+-              NgelXCanliPkKatmani(liveId:widget.belgeId,yayinSahibi:widget.yayinSahibi),
++
+               Expanded(child:_stage548()),
+               ConstrainedBox(
+                 constraints:BoxConstraints(maxHeight:math.max(48.0,
+@@ -3689,6 +3689,9 @@
+                   ]))),
+             ]),
+           )),
++          if(!yayinBitti)Positioned(left:0,right:0,
++           top:pkAktifYerel?(MediaQuery.sizeOf(context).height-math.min(MediaQuery.sizeOf(context).height*.62,MediaQuery.sizeOf(context).width*.92))*.44-24:MediaQuery.paddingOf(context).top+128,
++           child:NgelXCanliPkKatmani(liveId:widget.belgeId,yayinSahibi:widget.yayinSahibi)),
+           if(!yayinBitti)Positioned(right:12,bottom:MediaQuery.of(context).viewInsets.bottom+80,child:Ngelx453Hearts(pulses:_hearts453)),
+ 
+           if(!yayinBitti)Positioned.fill(child:Center(child:_giftScreen511())),
+--- a/pubspec.yaml
++++ b/pubspec.yaml
+@@ -1,7 +1,7 @@
+ name: ngelx_app
+ description: "A new Flutter project."
+ publish_to: 'none'
+-version: 1.0.356+586
++version: 1.0.357+587
+ environment:
+   sdk: ^3.13.3
+ 

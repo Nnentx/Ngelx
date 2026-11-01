@@ -45,7 +45,7 @@ test('every player in 2/3/4-player games can roll all six faces and leave home o
     assert.equal(r.dice,6);assert.deepEqual(legal(r,seat),[0,1,2,3]);
     r=act(r,player.uid,{action:'move',token:0,revision:r.revision,requestId:'move5840'},now+2);
     assert.equal(r.tokens[seat][0],0);assert.equal(r.turn,seat);
-   }else{assert.equal(r.dice,null);assert.equal(r.openingRolls,1);}
+   }else{assert.equal(r.dice,null);assert.equal(r.openingRolls,0);assert.notEqual(r.turn,seat);}
   }
  }
 });

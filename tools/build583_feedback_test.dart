@@ -108,10 +108,10 @@ void main(){
   expect(t.widget<Text>(find.text('Gül')).style!.color,const Color(0xFF27204C));
   expect(find.text('20 çip'),findsOneWidget);await shot583(t,'gift-readable');
   await t.tap(find.text('Gül'));await t.pump();await t.pump(const Duration(milliseconds:350));
-  await t.tap(find.text('Gönder'));await t.pump();await t.pump(const Duration(milliseconds:400));
+  expect(find.text('Hediye gönderilsin mi?'),findsNothing);
   expect(gifts,1);expect(find.text('Hediye gönderildi 🎁'),findsNothing);
-  expect(find.text('🌹'),findsOneWidget);await shot583(t,'gift-flight');
-  await t.pump(const Duration(seconds:2));expect(find.text('🌹'),findsNothing);
+  expect(find.byType(Ngelx587GiftArt),findsOneWidget);await shot583(t,'gift-flight');
+  await t.pump(const Duration(seconds:2));expect(find.byType(Ngelx587GiftArt),findsNothing);
   expect(t.takeException(),isNull);await t.pumpWidget(const SizedBox());
  });
  test('last server six remains visible after turn changes',(){

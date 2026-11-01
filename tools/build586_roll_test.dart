@@ -11,26 +11,18 @@ void main(){
   SharedPreferences.setMockInitialValues({'ngelx_ludo_sound':false});
   TestWidgetsFlutterBinding.ensureInitialized().handleAppLifecycleStateChanged(AppLifecycleState.resumed);
  });
- for(final faces in [[1,3,5],[2,6],[6]]){
-  testWidgets('one GO gesture completes opening sequence $faces without more taps',(t)async{
+ for(final face in [1,2,3,4,5,6]){
+  testWidgets('one GO sends one roll, including opening face $face',(t)async{
    var room=fixtures.room583(),rolls=0;
    await t.pumpWidget(MaterialApp(home:Ngelx565LudoRoom(id:'583583',initial:room,userId:'a',request:(b)async{
     if(b['action']=='roll'){
-     final face=faces[rolls++];final count=(room['openingRolls'] as int? ?? 0)+1;
-     room={...room,'revision':rolls+1,'dice':face==6?6:null,'openingRolls':face==6?count-1:count<3?count:0,
-      'turn':face!=6&&count==3?1:0,'lastRoll':{'seat':0,'value':face,'revision':rolls+1}};
+     rolls++;room={...room,'revision':rolls+1,'dice':face==6?6:null,'openingRolls':0,
+      'turn':face==6?0:1,'lastRoll':{'seat':0,'value':face,'revision':rolls+1}};
     }return room;
    })));
    await t.pump();await t.tap(find.byKey(const ValueKey('ludo-dice')));await t.pump();
-   expect(rolls,1);
-   for(var i=1;i<faces.length;i++){
-    final dice=find.descendant(of:find.byKey(const ValueKey('ludo-dice')),matching:find.byType(Ngelx567Dice));
-    expect(t.widget<Ngelx567Dice>(dice).value,faces[i-1]);
-    await t.tap(find.byKey(const ValueKey('ludo-dice')));await t.pump();expect(rolls,i);
-    await t.pump(const Duration(milliseconds:370));await t.pump();expect(rolls,i+1);
-   }
-   await t.pump(const Duration(milliseconds:400));expect(rolls,faces.length);
-   if(faces.last==6)expect(room['dice'],6);else expect(room['turn'],1);
+   expect(rolls,1);await t.pump(const Duration(seconds:1));expect(rolls,1);
+   if(face==6)expect(room['dice'],6);else expect(room['turn'],1);
    expect(t.takeException(),isNull);await t.pumpWidget(const SizedBox());
   });
  }
