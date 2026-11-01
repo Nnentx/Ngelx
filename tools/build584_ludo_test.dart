@@ -44,7 +44,7 @@ void main(){
    final frame=t.getRect(find.byKey(const ValueKey('ludo-expanded-board')));
    expect(frame.left,greaterThanOrEqualTo(0));expect(frame.right,lessThanOrEqualTo(size.width));
    expect(frame.top,greaterThanOrEqualTo(0));expect(frame.bottom,lessThan(size.height));
-   expect(frame.height,greaterThanOrEqualTo(frame.width));
+   expect(frame.height,greaterThanOrEqualTo(frame.width-.001)); // tolerate subpixel floating-point rounding
    expect(frame.height,lessThanOrEqualTo(frame.width*1.101));
    if(size.height>800)expect(frame.height,greaterThan(frame.width*1.05));
    // FittedBox must map a visibly stretched pawn back to its original hit target.

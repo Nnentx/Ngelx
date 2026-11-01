@@ -1,14 +1,15 @@
 --- a/lib/build565_ludo.dart
 +++ b/lib/build565_ludo.dart
-@@ -168,6 +168,7 @@
+@@ -168,6 +168,8 @@
  }
  class _Ngelx565LudoRoomState extends State<Ngelx565LudoRoom> with WidgetsBindingObserver {
   late final Ngelx567RoomController game;
++ bool _giftPanelOpen587=false;
 + String? _giftReceipt587;
   bool _chatOpen=false;Timer? poll;Timer? chatExpiry;String? chatKey;String? chatBubble;bool _canClose=false,_asking=false;bool _soundOn575=true;
   int? _earnedChips575,_earnedXp575;String? _recentPickup575;
   bool _pickupReady580=false;
-@@ -183,6 +184,8 @@
+@@ -183,6 +185,8 @@
    _pickupReady580=widget.initial!=null;
    final initialPickup580=room['pickup'];
    if(initialPickup580 is Map)_recentPickup575='${initialPickup580["seat"]}:${initialPickup580["cell"]}:${initialPickup580["at"]}';
@@ -17,7 +18,7 @@
    _observeVictory580();if(widget.initial==null)unawaited(game.sync(join:true));_startPoll();unawaited(_restoreSound575());
    WidgetsBinding.instance.addPostFrameCallback((_){if(mounted)unawaited(_autoSingleMove574());});
   }
-@@ -198,6 +201,15 @@
+@@ -198,6 +202,15 @@
    if(messages.isNotEmpty){final m=messages.last;final key='${m['uid']}:${m['at']}';
     if(key!=chatKey){chatKey=key;chatExpiry?.cancel();
      if(DateTime.now().millisecondsSinceEpoch-(m['at'] as num).toInt()<5000){chatBubble='${m['name']}: ${m['text']}';chatExpiry=Timer(const Duration(seconds:3),(){if(mounted){chatBubble=null;if(!_chatOpen)setState((){});}});}
@@ -33,7 +34,18 @@
     }
    }
    if(game.error.isNotEmpty){_connectionFailures575=math.min(4,game.connectionFailures579);}
-@@ -243,23 +255,15 @@
+@@ -226,7 +239,9 @@
+   unawaited(_autoSingleMove574()); // Build585: only one legal choice needs no tap.
+  }
+  Future<void> _playerCard575(Map<String,dynamic> person)async{
+-  if(_chatOpen||game.busy)return;
++  if(_chatOpen||game.busy||_giftPanelOpen587)return;
++  _giftPanelOpen587=true;
++  try{
+   final theirId=person['uid']?.toString()??'',isMine=theirId==game.uid,bot=person['bot']==true;
+   final nickname=person['name']?.toString()??'Oyuncu';
+   Map<String,dynamic> items={};bool alreadyBlocked575=false;
+@@ -243,23 +258,15 @@
    final selected=await showDialog<String>(context:context,builder:(c)=>Theme(
     data:ngelx583DialogTheme(),child:AlertDialog(
      title:Text(nickname),
@@ -66,7 +78,7 @@
      actions:[
        if(!isMine&&!bot)...[
         TextButton(onPressed:()=>Navigator.pop(c,'__report575'),
-@@ -297,23 +301,9 @@
+@@ -297,27 +304,14 @@
       SnackBar(content:Text('Şikayet gönderilemedi: $e')));}
     return;
    }
@@ -92,7 +104,12 @@
    final ok=await game.perform('gift',{'to':theirId,'kind':selected});
    if(!mounted)return;
    if(!ok||room['giftAlreadySent']==true)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(
-@@ -457,8 +447,7 @@
+    ok?'Bu hediye daha önce gönderilmiş.':(game.error.isEmpty?'Hediye gönderilemedi.':game.error))));
++  }finally{_giftPanelOpen587=false;}
+  }
+  void _tapAuto575(bool active){
+   if(widget.watch||!game.playing||game.seat<0)return;
+@@ -457,8 +451,7 @@
     try{
      // Accept a gesture during a pending mutation/poll, then use its fresh state.
      await game.waitForIdle583();
@@ -102,7 +119,7 @@
       final beforeRoll=room['lastRoll'].toString();
       var ok=false;
       for(var conflict=0;conflict<3&&_canRoll586;conflict++){
-@@ -474,16 +463,9 @@
+@@ -474,16 +467,9 @@
       final last=room['lastRoll'];
       final face=last is Map&&last['seat']==game.seat?(last['value'] as num?)?.toInt():null;
       if(face!=null)setState(()=>_rollFace586=face);
@@ -121,7 +138,7 @@
      }
     }finally{
      if(mounted)setState((){_rollPending583=false;_rollFace586=null;});
-@@ -505,7 +487,7 @@
+@@ -505,7 +491,7 @@
   }
   Future<void> _chat()async{
    if(_chatOpen||widget.watch)return;setState(()=>_chatOpen=true);
@@ -130,7 +147,7 @@
    finally{if(mounted)setState(()=>_chatOpen=false);}
   }
   Widget _footer(){
-@@ -553,9 +535,13 @@
+@@ -553,9 +539,13 @@
     ]else if(active)...[
      Row(crossAxisAlignment:CrossAxisAlignment.center,children:[
       if(!widget.watch)...[Ngelx575AutoBadge(enabled:auto,onPressed:()=>_tapAuto575(auto)),const SizedBox(width:5)],
@@ -146,7 +163,7 @@
       if(room['mode']=='power'&&!widget.watch)...[const SizedBox(width:7),for(final item in [('control','Zar seç'),('double','Çift'),('shield','Kalkan')])Expanded(child:Ngelx570Power(kind:item.$1,label:item.$2,count:(inventory[item.$1] as num?)?.toInt()??0,onTap:()=>_tapPower572(item.$1,(inventory[item.$1] as num?)?.toInt()??0,myTurn)))]
       else Expanded(child:Text(widget.watch?'İZLEYİCİ':'KLASİK LUDO',textAlign:TextAlign.center,style:const TextStyle(color:Colors.white70,fontWeight:FontWeight.w800,fontSize:11))),
      ]),
-@@ -576,9 +562,9 @@
+@@ -576,9 +566,9 @@
      onToken:(token){_soundTap575();unawaited(game.perform('move',{'token':token}));},onRoll:()=>_tapRoll572(game.playing&&room['turn']==game.seat),busy:game.busy,rollPending586:_rollPending583,rollFace586:_rollFace586);
      final wait=game.waiting&&!game.detached&&!widget.watch?Ngelx567WaitingPanel(room:room,uid:game.uid,canStart:game.canStart,busy:game.busy,onInvite:_invite,onStart:()=>game.perform('start'),compact:box.maxHeight<500):null;
      if(sideways)return Row(children:[Expanded(child:Padding(padding:const EdgeInsets.all(10),child:Stack(alignment:Alignment.center,children:[Center(child:AspectRatio(aspectRatio:.78,child:frame)),if(wait!=null)SizedBox(width:300,child:FittedBox(fit:BoxFit.scaleDown,child:SizedBox(width:300,child:wait)))]))),SizedBox(width:245,child:ListView(padding:const EdgeInsets.only(top:12),children:[_roomLabel567(widget.id),_footer()]))]);
@@ -158,7 +175,7 @@
   }
  }
  Widget _roomLabel567(String id)=>Padding(padding:const EdgeInsets.symmetric(horizontal:18,vertical:5),child:Row(mainAxisAlignment:MainAxisAlignment.center,children:[const Icon(Icons.lock_outline_rounded,size:12,color:Colors.white38),const SizedBox(width:5),Flexible(child:Text('ODA · $id',maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.white54,fontSize:14,fontWeight:FontWeight.w800,letterSpacing:2)))]));
-@@ -1181,7 +1167,7 @@
+@@ -1181,7 +1171,7 @@
   final input=TextEditingController();bool sending=false;
   @override void dispose(){input.dispose();super.dispose();}
   Future<void> send([String? emoji])async{final text=emoji??input.text.trim();if(text.isEmpty||sending||widget.game.busy)return;setState(()=>sending=true);final sent=await widget.game.perform('chat',{'text':text});if(!mounted)return;if(sent){Navigator.pop(context);}else{setState(()=>sending=false);}}

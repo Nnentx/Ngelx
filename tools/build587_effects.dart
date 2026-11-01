@@ -32,10 +32,21 @@ class Ngelx587GiftArt extends StatelessWidget {
  @override Widget build(BuildContext context){
   final (icon,colors)=switch(kind){
    'heart'=>(Icons.favorite_rounded,const [Color(0xFFFF789F),Color(0xFFE31C60)]),
-   'rose'=>(Icons.local_florist_rounded,const [Color(0xFFFF7792),Color(0xFFBD174B)]),
+   'rose'||'flower'=>(Icons.local_florist_rounded,const [Color(0xFFFF7792),Color(0xFFBD174B)]),
    'crown'=>(Icons.workspace_premium_rounded,const [Color(0xFFFFDF85),Color(0xFFD88A10)]),
    'coffee'=>(Icons.coffee_rounded,const [Color(0xFFE5BE98),Color(0xFF976344)]),
-   'like'=>(Icons.thumb_up_rounded,const [Color(0xFF86CEFF),Color(0xFF397AE2)]),
+   'like'||'thumbs_up'=>(Icons.thumb_up_rounded,const [Color(0xFF86CEFF),Color(0xFF397AE2)]),
+   'tomato'=>(Icons.eco_rounded,const [Color(0xFFFF8D74),Color(0xFFE63B35)]),
+   'pizza'=>(Icons.local_pizza_rounded,const [Color(0xFFFFD28E),Color(0xFFE58C31)]),
+   'bucket'=>(Icons.water_drop_rounded,const [Color(0xFF8CE5F6),Color(0xFF379EC6)]),
+   'clock'=>(Icons.schedule_rounded,const [Color(0xFFB6CAFF),Color(0xFF657AD0)]),
+   'flame'=>(Icons.local_fire_department_rounded,const [Color(0xFFFFD56D),Color(0xFFF36531)]),
+   'rooster'=>(Icons.pets_rounded,const [Color(0xFFF1CDA1),Color(0xFFB27B4E)]),
+   'slipper'=>(Icons.hiking_rounded,const [Color(0xFFABDFC7),Color(0xFF388E80)]),
+   'pan'=>(Icons.soup_kitchen_rounded,const [Color(0xFFB1BFCE),Color(0xFF526275)]),
+   'plunger'=>(Icons.cleaning_services_rounded,const [Color(0xFFBEA5E1),Color(0xFF7958AC)]),
+   'egg'=>(Icons.egg_rounded,const [Color(0xFFFFEAD0),Color(0xFFD7AA74)]),
+   'balloon'=>(Icons.celebration_rounded,const [Color(0xFFFFA5D1),Color(0xFFD24F9C)]),
    _=>(Icons.card_giftcard_rounded,const [Color(0xFFC4A3FF),Color(0xFF7650CB)]),
   };
   return Container(width:size,height:size,decoration:BoxDecoration(

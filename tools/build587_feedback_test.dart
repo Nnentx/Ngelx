@@ -59,6 +59,18 @@ void main(){
   expect(strip.bottom,lessThanOrEqualTo(t.getTopLeft(find.text('Sohbet')).dy));
   expect(find.text('Alihan: selam'),findsOneWidget);expect(t.takeException(),isNull);await t.pumpWidget(const SizedBox());
  });
+ testWidgets('hearts animate once for fresh messages and never replay history',(t)async{
+  final now=DateTime.now().millisecondsSinceEpoch;
+  Map<String,dynamic> data={'chat':[{'uid':'a','text':'❤️','at':now-20000}],'gifts':[]};
+  Widget view()=>MaterialApp(home:Scaffold(body:Ngelx587Hearts(room:data)));
+  final paint=find.descendant(of:find.byType(Ngelx587Hearts),matching:find.byType(CustomPaint));
+  await t.pumpWidget(view());expect(paint,findsNothing);
+  data={'chat':[{'uid':'a','text':'❤️','at':now}],'gifts':[]};
+  await t.pumpWidget(view());await t.pump(const Duration(milliseconds:100));expect(paint,findsOneWidget);
+  await t.pump(const Duration(seconds:3));expect(paint,findsNothing);
+  await t.pumpWidget(view());await t.pump();expect(paint,findsNothing);
+  expect(t.takeException(),isNull);await t.pumpWidget(const SizedBox());
+ });
  testWidgets('PK ribbon clamps scores, retains countdown and fits narrow phones',(t)async{
   await t.binding.setSurfaceSize(const Size(320,700));addTearDown(()=>t.binding.setSurfaceSize(null));
   await t.pumpWidget(RepaintBoundary(key:const ValueKey('capture583'),child:const MaterialApp(home:Scaffold(backgroundColor:Colors.black,body:SafeArea(child:Ngelx587PkRibbon(selfScore:167,opponentScore:86,remaining:178,selfName:'Alihan',opponentName:'Ahsen'))))));
