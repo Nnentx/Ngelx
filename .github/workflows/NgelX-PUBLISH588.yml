@@ -1,0 +1,71 @@
+name: Publish exact tested Build588 APK and in-app update
+on:
+  push:
+    branches: [ops/build588-rules-inspection]
+    paths: ['.github/workflows/NgelX-PUBLISH588.yml','tools/build588_prepare_release.py','tools/hosting_update_feed588.py']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: ngelx-android-update-publication
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: Nnentx/Ngelx
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Require exact successful APK and accepted live backend
+        run: |
+          python3 - <<'PY'
+          import os,json,urllib.request
+          for run,sha in [(41358497846,'f99ff01dc298102ce5e285f93144fb11edaa631d'),(41359532044,'d3d6a14d103a0acbd6d337b3659fb6be943fab1b')]:
+            req=urllib.request.Request('https://api.github.com/repos/Nnentx/Ngelx/actions/runs/'+str(run),headers={'Authorization':'Bearer '+os.environ['GH_TOKEN'],'Accept':'application/vnd.github+json'})
+            d=json.load(urllib.request.urlopen(req,timeout=30));assert d['head_sha']==sha and d['status']=='completed' and d['conclusion']=='success'
+          PY
+      - uses: actions/download-artifact@v4
+        with:
+          name: NgelX-Build588-Review-APK
+          run-id: 41358497846
+          github-token: ${{ github.token }}
+          path: verified-apk
+      - uses: actions/download-artifact@v4
+        with:
+          name: NgelX-Build588-Assembled-Source
+          run-id: 41358497846
+          github-token: ${{ github.token }}
+          path: verified-source
+      - run: python3 tools/build588_prepare_release.py
+      - name: Preserve exact assembled application source
+        run: (cd verified-source && zip -q -r ../NgelX-Build588-Source.zip .)
+      - name: Publish immutable tested APK
+        run: |
+          if gh release view v1.0.358-build588 >/dev/null 2>&1; then
+            mkdir -p existing588
+            gh release download v1.0.358-build588 --pattern NgelX-1.0.358-Build588.apk --dir existing588
+            cmp NgelX-1.0.358-Build588.apk existing588/NgelX-1.0.358-Build588.apk
+          else
+            gh release create v1.0.358-build588 NgelX-1.0.358-Build588.apk NgelX-1.0.358-Build588.apk.sha256 NgelX-Build588-Source.zip android-update.json --target f99ff01dc298102ce5e285f93144fb11edaa631d --title 'NgelX 1.0.358 / Build588' --notes-file release-notes.md
+          fi
+          curl --fail --location --retry 4 --max-time 180 --silent --show-error https://github.com/Nnentx/Ngelx/releases/download/v1.0.358-build588/NgelX-1.0.358-Build588.apk --output public-download588.apk
+          cmp NgelX-1.0.358-Build588.apk public-download588.apk
+      - run: python3 -m pip install google-auth requests
+      - name: Publish only updater manifest while preserving current website assets
+        env:
+          FIREBASE_SERVICE_ACCOUNT_NGELX_44EED: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_NGELX_44EED }}
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: python3 tools/hosting_update_feed588.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Build588-Publication-Evidence
+          path: |
+            android-update.json
+            hosting588-checkpoint.json
