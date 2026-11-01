@@ -1,0 +1,28 @@
+name: Inspect current Build588 live rules without modifying production
+on:
+  push:
+    branches: [ops/build588-rules-inspection]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python3 -m pip install google-auth requests
+      - name: Read existing production rules only
+        env:
+          FIREBASE_SERVICE_ACCOUNT_NGELX_44EED: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_NGELX_44EED }}
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: python3 tools/read_build588_current_rules.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Build588-Current-Rules
+          path: |
+            build588-current.rules
+            build588-rules-checkpoint.json
