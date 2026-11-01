@@ -1,4 +1,7 @@
 import 'dart:async';
+import 'dart:io';
+import 'dart:typed_data';
+import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -7,6 +10,13 @@ import '../lib/build567_room_controller.dart';
 import 'build583_feedback_test.dart' as fixtures;
 
 void main(){
+ setUpAll(()async{
+  final font=File('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf');
+  if(font.existsSync())await (FontLoader('Roboto')..addFont(Future.value(ByteData.view(font.readAsBytesSync().buffer)))).load();
+  final root=Platform.environment['FLUTTER_ROOT']??Platform.resolvedExecutable.split('/bin/cache/dart-sdk/').first;
+  final icons=File('$root/bin/cache/artifacts/material_fonts/MaterialIcons-Regular.otf');
+  if(icons.existsSync())await (FontLoader('MaterialIcons')..addFont(Future.value(ByteData.view(icons.readAsBytesSync().buffer)))).load();
+ });
  setUp(()=>SharedPreferences.setMockInitialValues({'ngelx_ludo_sound':false}));
  testWidgets('horizontal gifts show prices and send once without confirmation',(t)async{
   await t.binding.setSurfaceSize(const Size(393,852));addTearDown(()=>t.binding.setSurfaceSize(null));
