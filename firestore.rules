@@ -928,9 +928,35 @@ service cloud.firestore {
       }
     }
     match /live_streams/{streamId} {
+      match /guest_requests/{uid} {
+        function live() { return get(/databases/$(database)/documents/live_streams/$(streamId)).data; }
+        function host() { return signedIn() && request.auth.uid == live().ownerId; }
+        function validGuest() {
+          return signedIn() && live().active == true && uid != live().ownerId
+            && !(uid in live().get('bannedUsers', []))
+            && request.resource.data.keys().hasOnly(['liveId','hostUid','guestUid','status','startedBy','updatedAt'])
+            && request.resource.data.liveId == streamId && request.resource.data.hostUid == live().ownerId
+            && request.resource.data.guestUid == uid;
+        }
+        allow get: if signedIn() && (request.auth.uid == uid || host());
+        allow list: if host();
+        allow create: if validGuest() && (
+          (request.auth.uid == uid && request.resource.data.status == 'pending' && request.resource.data.startedBy == uid)
+          || (host() && request.resource.data.status == 'invited' && request.resource.data.startedBy == request.auth.uid)
+        );
+        allow update: if validGuest() && (
+          (resource.data.status == 'pending' && host() && request.resource.data.status == 'accepted' && request.resource.data.startedBy == resource.data.startedBy)
+          || (resource.data.status == 'invited' && request.auth.uid == uid && request.resource.data.status == 'accepted' && request.resource.data.startedBy == resource.data.startedBy)
+          || ((host() || request.auth.uid == uid) && request.resource.data.status == 'rejected' && request.resource.data.startedBy == resource.data.startedBy)
+          || (resource.data.status in ['rejected','cancelled'] && ((request.auth.uid == uid && request.resource.data.status == 'pending' && request.resource.data.startedBy == uid) || (host() && request.resource.data.status == 'invited' && request.resource.data.startedBy == request.auth.uid)))
+        );
+        allow delete: if host();
+      }
+
       allow read: if true;
       allow create: if signedIn() && request.resource.data.ownerId == request.auth.uid;
-      allow update, delete: if signedIn() && resource.data.ownerId == request.auth.uid;
+      allow delete: if signedIn() && resource.data.ownerId == request.auth.uid;
+      allow update: if signedIn() && resource.data.ownerId == request.auth.uid && request.resource.data.ownerId == resource.data.ownerId;
       // Build553 live moderator and timed comment permissions
       function live553() { return get(/databases/$(database)/documents/live_streams/$(streamId)).data; }
       function host553() { return signedIn() && request.auth.uid == live553().ownerId; }
