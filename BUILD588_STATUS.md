@@ -1,22 +1,27 @@
-# Build588 live rooms and gifts
+# Build588 — published status
 
-Based on the exact published Build587 assembled source (SHA256 47b2c9291e6a3aed3eae9da030ee34b380998bdfc8ac4b47a02cb139195ad715).
+Build588 (1.0.358) is published. The live Worker, scoped Firestore rule changes, public APK, NgelXSocial download links and in-app manifest are updated.
 
-Implemented for review:
-- Profile photo for camera-off preparation and live broadcast; guest/PK tiles keep their existing profile-photo fallback.
-- Black audio-room stage, round avatar seats, speaking ring, names and moderator/host roles. Nine seats for new rooms; legacy participants remain visible.
-- Matching multi-particle heart/teddy/other gift flows, bounded particle count, reduced-motion support.
-- Cat and tiger catalog entries, transparent generated images, local animal sounds, synthetic space effect, gift-sound switch. All sounds serialized by the existing confirmed-event queue.
-- Timed comment mute for live moderators, moderator RTC guest controls, target protection and adapter revalidation. Audio-room participant rules restrict moderator role escalation and host targeting.
-- Server transaction for PK ending, results, persistent WIN streaks, exactly-once settlement. Win increments, loss resets, draw and early cancellation preserve streak. Active sessions display current WIN. Reject stale sessions to protect a later match.
+Implemented:
+- Profile photo for camera-off preparation and live broadcast.
+- Black audio-room stage with round avatars, speaking rings and moderator/host labels; nine places for new rooms while legacy participants remain visible.
+- Multiple matching heart/teddy/other gift particles, bounded rendering and reduced-motion support.
+- Cat and tiger catalog entries with transparent generated artwork, local animal/space audio and a sound switch.
+- Live moderator timed comment mute and RTC guest controls; peer/host protection and server adapter revalidation.
+- Transactional PK result and persistent WIN series: win increments, loss resets, draw/early cancellation preserves. Repeated and concurrent settlement cannot increment twice.
 
 Validation:
-- Targeted PK/moderation server tests passed locally; broader regression result recorded in the conversation.
-- Dart parser/formatter completed for changed Dart files.
-- Flutter setup was stopped by automatic approval review because a local Flutter process attempted access to cloud-instance metadata. It was not retried. Full analyzer, widget tests and signed APK build are delegated to the isolated GitHub QA workflow.
+- 219 server tests; full Flutter analysis; existing/new widget and interaction tests; signed arm64 APK with the existing app certificate.
+- Exact APK/source QA: https://github.com/Nnentx/Ngelx/actions/runs/41358497846
+- Accepted Worker and scoped current-production rules: https://github.com/Nnentx/Ngelx/actions/runs/41359532044
+- Actual two-account production PK smoke: common winner, single WIN increment, idempotent retry, readable server statistics and forbidden client statistic writes. Temporary records and accounts removed.
+- Live website, canonical/cache-busted manifest and anonymous APK bytes: https://github.com/Nnentx/ngelx-web/actions/runs/41360231258
+- Public release: https://github.com/Nnentx/Ngelx/releases/tag/v1.0.358-build588
 
-Not yet production verified:
-- This branch has not deployed the Worker or Firestore rules. PK finishing and new role/catalog permissions require those deployments before release.
-- Gift characters currently use animated 2D cutouts (translation/scale/glow), not rigged walking or lip-synced 3D models. Existing lion/galaxy art is retained.
-- Audio-room PK retains its existing invitation/audio-link implementation; persistent scored WIN settlement in this branch applies to video live PK.
-- End-to-end two-device, reconnection, audio mixing, device performance and TikTok-reference visual acceptance remain required. No in-app update feed is changed by this review workflow.
+APK SHA256: 852185e6ed679079c07a54444cc2aff76a58056aeee81c6df09849f36c36a730
+APK size: 50872938 bytes.
+Tested source: f99ff01dc298102ce5e285f93144fb11edaa631d.
+
+Deployment preserved all unrelated current-production rules and website assets. The updater is served from Nnentx/ngelx-web on GitHub Pages. The initial obsolete Firebase Hosting route was corrected without modifying website hosting assets.
+
+Physical Android visual/audio/performance acceptance remains for the user's device. Gift animals use animated 2D cutouts, not rigged 3D walking or mouth animation. Scored WIN settlement applies to video-live PK; the existing separate audio-room PK audio-link flow is retained.
