@@ -727,7 +727,7 @@
 +      ]))),
 +    const SizedBox(width: 5),
 +    InkWell(onTap: onAudience, borderRadius: BorderRadius.circular(24), child: Padding(
-+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 12), child: Row(children: [
++      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 8), child: Row(children: [
 +        const Icon(Icons.people_alt_rounded, size: 17, color: Colors.white70), const SizedBox(width: 4),
 +        Text('$audience', style: const TextStyle(color: Colors.white, fontSize: 12)),
 +      ]))),
