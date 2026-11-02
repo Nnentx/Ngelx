@@ -649,7 +649,7 @@
    }
 --- a/lib/build590_audio_stage.dart
 +++ b/lib/build590_audio_stage.dart
-@@ -0,0 +1,193 @@
+@@ -0,0 +1,196 @@
 +import 'dart:math' as math;
 +import 'package:flutter/material.dart';
 +import 'package:flutter/services.dart';
@@ -670,19 +670,22 @@
 +      systemNavigationBarColor: Colors.black, systemNavigationBarIconBrightness: Brightness.light),
 +    child: ColoredBox(color: Colors.black, child: SafeArea(
 +    child: Column(children: [
-+      Padding(padding: const EdgeInsets.fromLTRB(12, 4, 8, 0), child: header),
++      Padding(padding: const EdgeInsets.fromLTRB(12, 16, 8, 0), child: header),
 +      Padding(padding: const EdgeInsets.fromLTRB(12, 7, 12, 0), child: controls),
 +      if (notice != null) notice!,
 +      Expanded(child: LayoutBuilder(builder: (context, box) {
-+        final stageHeight = math.min(box.maxWidth * 1.01, box.maxHeight * .64);
++        final compact = box.maxHeight < 550;
++        final largeText = MediaQuery.textScalerOf(context).scale(12) > 14.4;
++        final topGap = largeText ? 12.0 : compact ? 20.0 : 54.0;
++        final stageHeight = math.min(box.maxWidth * 1.01, box.maxHeight * (compact ? .73 : .64));
 +        return Column(children: [
 +          if (MediaQuery.viewInsetsOf(context).bottom == 0 && box.maxHeight >= 340) SizedBox(height: stageHeight, child: Padding(
-+            padding: const EdgeInsets.symmetric(horizontal: 14),
++            padding: const EdgeInsets.symmetric(horizontal: 34),
 +            child: GridView.builder(key: const ValueKey('audio590-grid'),
-+              padding: const EdgeInsets.only(top: 38, bottom: 4), primary: false,
++              padding: EdgeInsets.only(top: topGap, bottom: 4), primary: false,
 +              physics: seatCount > 9 ? const ClampingScrollPhysics() : const NeverScrollableScrollPhysics(),
 +              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 3,
-+                mainAxisExtent: math.max(1.0, (stageHeight - 42) / 3), crossAxisSpacing: 14),
++                mainAxisExtent: math.max(1.0, (stageHeight - topGap - 4) / 3), crossAxisSpacing: 14),
 +              itemCount: seatCount, itemBuilder: seatBuilder),
 +          )),
 +          Expanded(child: chat),
@@ -702,11 +705,11 @@
 +    required this.audience, this.photo, this.host = false, this.following = false,
 +    this.onProfile, this.onFollow, this.onAudience, this.onClose});
 +  @override
-+  Widget build(BuildContext context) => SizedBox(height: 48, child: Row(children: [
++  Widget build(BuildContext context) => SizedBox(height: MediaQuery.textScalerOf(context).scale(12) > 14.4 ? 48 : 36, child: Row(children: [
 +    Expanded(child: Container(padding: const EdgeInsets.only(right: 4),
 +      decoration: BoxDecoration(color: const Color(0xFF222222), borderRadius: BorderRadius.circular(30)),
 +      child: Row(children: [
-+        GestureDetector(onTap: onProfile, child: CircleAvatar(radius: 22, backgroundImage: photo,
++        GestureDetector(onTap: onProfile, child: CircleAvatar(radius: 18, backgroundImage: photo,
 +          backgroundColor: const Color(0xFF393939), child: photo == null ? const Icon(Icons.person, color: Colors.white70) : null)),
 +        const SizedBox(width: 6),
 +        Expanded(child: GestureDetector(onTap: onProfile, child: Column(mainAxisAlignment: MainAxisAlignment.center,
@@ -761,11 +764,11 @@
 +      child: InkWell(onTap: onTap, borderRadius: BorderRadius.circular(28), child: Column(
 +        mainAxisAlignment: MainAxisAlignment.center, children: [
 +          SizedBox(width: diameter, height: diameter, child: empty
-+            ? DecoratedBox(decoration: const BoxDecoration(color: Color(0xFF303030), shape: BoxShape.circle),
-+                child: Icon(Icons.add_rounded, size: diameter * .43, color: Colors.white38))
++            ? Padding(padding: const EdgeInsets.all(6), child: DecoratedBox(decoration: const BoxDecoration(color: Color(0xFF303030), shape: BoxShape.circle),
++                child: Icon(Icons.add_rounded, size: diameter * .43, color: Colors.white38)))
 +            : Stack(clipBehavior: Clip.none, children: [
 +                Positioned.fill(child: AnimatedContainer(duration: const Duration(milliseconds: 180),
-+                  padding: EdgeInsets.all(host || speaking ? 4 : 0),
++                  padding: const EdgeInsets.all(4),
 +                  decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(
 +                    color: speaking ? const Color(0xFF35E9B0) : host ? Colors.white24 : Colors.transparent,
 +                    width: speaking ? 2.5 : 2)),

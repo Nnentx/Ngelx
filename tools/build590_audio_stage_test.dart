@@ -61,6 +61,14 @@ void main() {
       final grid=tester.getRect(find.byKey(const ValueKey('audio590-grid')));
       final composer=tester.getRect(find.byType(Ngelx590Composer));
       expect(grid.bottom,lessThan(composer.top));
+      if(size.width==393 && scale==1){
+        final hostAvatar=find.descendant(of:find.byType(Ngelx590AudioSeat).first,matching:find.byType(CircleAvatar));
+        final bounds=tester.getRect(hostAvatar.first);
+        // Reference normalized from the supplied 694px screenshot to 393px.
+        expect(bounds.center.dx,closeTo(84,5));
+        expect(bounds.center.dy,inInclusiveRange(198,218));
+        expect(bounds.width,inInclusiveRange(60,70));
+      }
       // Every row must be visible without scrolling the old card/list page.
       for(final e in find.byType(Ngelx590AudioSeat).evaluate()) {
         final box=e.renderObject! as RenderBox;final top=box.localToGlobal(Offset.zero).dy;
