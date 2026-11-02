@@ -1,8 +1,5 @@
 name: Build590 settled full-screen visual acceptance
 on:
-  push:
-    branches: [ops/build590-publication]
-    paths: ['.github/workflows/NgelX-VISUAL590.yml','tools/build590_audio_stage_test.dart']
   workflow_dispatch:
 permissions:
   contents: read
