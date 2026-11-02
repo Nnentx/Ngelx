@@ -81,11 +81,16 @@ void main() {
       await tester.enterText(find.byType(TextField),'Merhaba');
       await tester.testTextInput.receiveAction(TextInputAction.send);expect(send,1);
       await tester.tap(find.byTooltip('Mesajı gönder'));expect(send,2);
-      input.clear();FocusManager.instance.primaryFocus?.unfocus();await tester.pump();
+      input.clear();FocusManager.instance.primaryFocus?.unfocus();await tester.pumpAndSettle();
+      final fieldBounds=tester.getRect(find.byType(TextField));
       final boundary=tester.renderObject<RenderRepaintBoundary>(find.byKey(const ValueKey('capture590')));
       await tester.runAsync(()async{
         final image=await boundary.toImage(pixelRatio:1);
-        try{final data=await image.toByteData(format:ui.ImageByteFormat.png);
+        try{
+          final pixels=await image.toByteData(format:ui.ImageByteFormat.rawRgba);
+          final index=(fieldBounds.center.dy.floor()*image.width+(fieldBounds.left+8).floor())*4;
+          expect(pixels!.getUint8(index),greaterThan(15),reason:'Composer background must be painted in the captured full screen');
+          final data=await image.toByteData(format:ui.ImageByteFormat.png);
           final file=File('test/screenshots/build590_${size.width.toInt()}_${solo?'solo':'full'}_${scale}.png');
           file.parent.createSync(recursive:true);file.writeAsBytesSync(data!.buffer.asUint8List());
         }finally{image.dispose();}

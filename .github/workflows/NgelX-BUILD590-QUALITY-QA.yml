@@ -1,7 +1,5 @@
 name: NgelX Build590 full audio room reference layout
 on:
-  push:
-    branches: [fix/build590-audio-reference]
   workflow_dispatch:
 permissions:
   contents: read
