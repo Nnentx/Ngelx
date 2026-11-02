@@ -1,8 +1,5 @@
 name: NgelX Build589 guarded backend release
 on:
-  push:
-    branches: [ops/build589-release]
-    paths: ['.github/workflows/NgelX-RELEASE589.yml']
   workflow_dispatch:
 permissions:
   contents: read

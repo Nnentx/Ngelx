@@ -1,8 +1,5 @@
 name: Publish verified Build589 APK
 on:
-  push:
-    branches: [ops/build589-release]
-    paths: ['.github/workflows/NgelX-PUBLISH589.yml']
   workflow_dispatch:
 permissions:
   contents: write
