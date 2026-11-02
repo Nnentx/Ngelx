@@ -1,0 +1,852 @@
+--- a/lib/main.dart
++++ b/lib/main.dart
+@@ -1,3 +1,4 @@
++import 'build590_audio_stage.dart';
+ import 'build589_audio_seat.dart';
+ import 'build556_policy.dart';
+ import 'build557_policy.dart';
+--- a/lib/audio_live_rooms.dart
++++ b/lib/audio_live_rooms.dart
+@@ -1854,7 +1854,7 @@
+   }
+ 
+   Widget koltuk(String id) {
+-    if (id.isEmpty) return Ngelx589AudioSeat(empty: true,
++    if (id.isEmpty) return Ngelx590AudioSeat(empty: true,
+       onTap: bitti ? null : yoneticiyim ? istekler : sozIste);
+     final dynamic person = _liveKitKatilimci(id);
+     final speaking = person?.isSpeaking == true;
+@@ -1866,7 +1866,7 @@
+         final p = snap.data?.data() ?? <String, dynamic>{};
+         final photo = (p['photoUrl'] ?? '').toString();
+         final name = (p['displayName'] ?? p['username'] ?? 'Katılımcı').toString();
+-        return Ngelx589AudioSeat(name: name, role: host ? 'Davet sahibi' : mod ? '🛡 Moderatör' : '',
++        return Ngelx590AudioSeat(name: name, role: host ? 'Davet sahibi' : mod ? 'Moderatör' : '',
+           photo: photo.isEmpty ? null : NgelXAgImageProvider(photo), speaking: speaking, micOpen: micOpen, host: host,
+           onTap: () => yoneticiyim && id != uid && id != widget.ownerId
+             ? ngelxSesliKullaniciMenuAc(context, widget.odaId, id, name)
+@@ -1874,395 +1874,96 @@
+       });
+   }
+ 
++  Future<void> _tepkiler590() async {
++    await showModalBottomSheet<void>(context: context, backgroundColor: const Color(0xFF191919),
++      showDragHandle: true, builder: (sheet) => SafeArea(child: Padding(
++        padding: const EdgeInsets.fromLTRB(16, 4, 16, 24), child: Column(mainAxisSize: MainAxisSize.min, children: [
++          const Text('Tepki gönder', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700)),
++          const SizedBox(height: 16),
++          Wrap(spacing: 12, children: ['❤️', '👏', '😂', '🔥', '🎉'].map((emoji) => IconButton(
++            tooltip: emoji, onPressed: bitti ? null : () async {
++              Navigator.pop(sheet);
++              try { await ngelxSesliTepkiGonder(widget.odaId, emoji); }
++              catch (_) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Tepki gönderilemedi.'))); }
++            }, icon: Text(emoji, style: const TextStyle(fontSize: 30)), iconSize: 36)).toList()),
++        ]))));
++  }
++
++  Future<void> _menu590() async {
++    final action = await showModalBottomSheet<String>(context: context, backgroundColor: const Color(0xFF191919),
++      showDragHandle: true, builder: (sheet) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min, children: [
++        if (yoneticiyim && !bitti) ListTile(textColor: Colors.white, iconColor: Colors.white70,
++          leading: const Icon(Icons.front_hand_outlined), title: const Text('Mikrofon istekleri ve yönetim'), onTap: () => Navigator.pop(sheet, 'requests')),
++        if (!konusmaciyim && !bitti) ListTile(textColor: Colors.white, iconColor: Colors.white70,
++          leading: const Icon(Icons.mic_none), title: const Text('Söz iste'), onTap: () => Navigator.pop(sheet, 'request')),
++        ListTile(textColor: Colors.white, iconColor: Colors.white70, leading: const Icon(Icons.people_outline),
++          title: const Text('Dinleyiciler'), onTap: () => Navigator.pop(sheet, 'audience')),
++        ListTile(textColor: Colors.white, iconColor: Colors.white70, leading: const Icon(Icons.keyboard_arrow_down),
++          title: const Text('Odayı küçült'), onTap: () => Navigator.pop(sheet, 'minimize')),
++        ListTile(textColor: Colors.redAccent, iconColor: Colors.redAccent, leading: const Icon(Icons.logout),
++          title: Text(sahibiyim ? 'Sesli odayı bitir' : 'Odadan ayrıl'), onTap: () => Navigator.pop(sheet, 'leave')),
++      ])));
++    if (!mounted) return;
++    if (action == 'requests') await istekler();
++    if (action == 'request') await sozIste();
++    if (action == 'audience') await ngelxSesliKatilimcilarAc(context, widget.odaId, widget.ownerId);
++    if (action == 'minimize') await kucult();
++    if (action == 'leave') await ayril();
++  }
++
+   @override
+   Widget build(BuildContext context) {
+-    final sp = speakers.isEmpty ? [widget.ownerId] : speakers;
+-    final sayfa = Scaffold(
+-      backgroundColor: const Color(0xFF000000),
+-      appBar: AppBar(
+-        backgroundColor: const Color(0xFF000000),
+-        foregroundColor: Colors.white,
+-        leading: IconButton(
+-          tooltip: _ngelx438Ui("Küçült"),
+-          onPressed: kucult,
+-          icon: const Icon(Icons.keyboard_arrow_down_rounded),
+-        ),
+-        title: Text(
+-          _ngelx438Ui("Sesli"),
+-          style: TextStyle(fontWeight: FontWeight.w900),
+-        ),
+-      ),
+-      body: SafeArea(
+-        child: Column(
+-          children: [
+-            if (durum.isNotEmpty && !bitti)
+-              InkWell(
+-                onTap: !yeniden && !bitti
+-                    ? () => unawaited(tekrarBaglan())
+-                    : null,
+-                child: Container(
+-                  width: double.infinity,
+-                  padding: const EdgeInsets.all(9),
+-                  color: const Color(0xFFFFF5D9),
+-                  child: Row(
+-                    mainAxisAlignment: MainAxisAlignment.center,
+-                    children: [
+-                      Icon(
+-                        bitti
+-                            ? Icons.stop_circle_outlined
+-                            : Icons.wifi_off_rounded,
+-                        size: 18,
+-                        color: bitti ? Colors.redAccent : Colors.white70,
+-                      ),
+-                      const SizedBox(width: 7),
+-                      Flexible(
+-                        child: Text(
+-                          durum,
+-                          textAlign: TextAlign.center,
+-                          style: const TextStyle(
+-                            color: Colors.white,
+-                            fontWeight: FontWeight.w800,
+-                          ),
+-                        ),
+-                      ),
+-                    ],
+-                  ),
+-                ),
+-              ),
+-            Expanded(
+-              child: ListView(
+-                padding: const EdgeInsets.all(16),
+-                children: [
+-                  Ngelx541AudioPk(
+-                    roomId: widget.odaId,
+-                    ownerUid: widget.ownerId,
+-                    ended: bitti,
+-                  ),
+-                  Container(
+-                    padding: const EdgeInsets.all(16),
+-                    decoration: BoxDecoration(
+-                      color: const Color(0xFF171717),
+-                      borderRadius: BorderRadius.circular(22),
+-                    ),
+-                    child: Column(
+-                      crossAxisAlignment: CrossAxisAlignment.start,
+-                      children: [
+-                        Row(
+-                          children: [
+-                            Icon(
+-                              bitti
+-                                  ? Icons.stop_circle
+-                                  : Icons.graphic_eq_rounded,
+-                              color: bitti ? Colors.redAccent : mor,
+-                            ),
+-                            const SizedBox(width: 6),
+-                            Text(
+-                              bitti ? 'SONA ERDİ' : 'SESLİ CANLI',
+-                              style: TextStyle(
+-                                color: bitti ? Colors.redAccent : mor,
+-                                fontWeight: FontWeight.w900,
+-                              ),
+-                            ),
+-                            const SizedBox(width: 8),
+-                            NgelxSesliSureSayaci(
+-                              baslangic: veri['startedAt'] is Timestamp
+-                                  ? (veri['startedAt'] as Timestamp).toDate()
+-                                  : null,
+-                              bitti: bitti,
+-                            ),
+-                            const Spacer(),
+-                            const Icon(
+-                              Icons.headphones,
+-                              size: 17,
+-                              color: Colors.white60,
+-                            ),
+-                            Text(
+-                              ' ${aktifOda.remoteParticipants.length}',
+-                              style: const TextStyle(
+-                                fontWeight: FontWeight.w800,
+-                              ),
+-                            ),
+-                          ],
+-                        ),
+-                        const SizedBox(height: 9),
+-                        Text(
+-                          (veri['title'] ?? widget.baslik).toString(),
+-                          style: const TextStyle(
+-                            color: Colors.white,
+-                            fontSize: 20,
+-                            fontWeight: FontWeight.w900,
+-                          ),
+-                        ),
+-                        const SizedBox(height: 4),
+-                        Text(
+-                          '${sp.length}/9 konuşmacı',
+-                          style: const TextStyle(
+-                            color: Colors.white70,
+-                            fontWeight: FontWeight.w700,
+-                          ),
+-                        ),
+-                        if (sahibiyim &&
+-                            aktifKisiSayisi < 2 &&
+-                            yalnizlikBasladi != null &&
+-                            !bitti) ...[
+-                          const SizedBox(height: 7),
+-                          const Row(
+-                            children: [
+-                              Icon(
+-                                Icons.group_add_outlined,
+-                                size: 15,
+-                                color: Color(0xFF7354A3),
+-                              ),
+-                              SizedBox(width: 5),
+-                              Flexible(
+-                                child: Text(
+-                                  '2. kişi bekleniyor • Davet edebilirsin',
+-                                  style: TextStyle(
+-                                    fontSize: 11,
+-                                    color: Color(0xFF7354A3),
+-                                    fontWeight: FontWeight.w700,
+-                                  ),
+-                                ),
+-                              ),
+-                            ],
+-                          ),
+-                        ],
+-                      ],
+-                    ),
+-                  ),
+-                  NgelxSesliTepkiAkisi(roomId: widget.odaId),
+-                  const SizedBox(height: 10),
+-                  Wrap(
+-                    spacing: 8,
+-                    runSpacing: 8,
+-                    children: [
+-                      OutlinedButton.icon(
+-                        onPressed: () => ngelxSesliKatilimcilarAc(
+-                          context,
+-                          widget.odaId,
+-                          widget.ownerId,
+-                        ),
+-                        icon: const Icon(Icons.headphones_rounded, size: 18),
+-                        label: const Text('Dinleyiciler'),
+-                      ),
+-                      PopupMenuButton<String>(
+-                        tooltip: 'Tepki gönder',
+-                        onSelected: (x) =>
+-                            ngelxSesliTepkiGonder(widget.odaId, x),
+-                        itemBuilder: (_) => ['❤️', '👏', '😂', '🔥', '🎉']
+-                            .map(
+-                              (x) => PopupMenuItem(
+-                                value: x,
+-                                child: Text(
+-                                  x,
+-                                  style: const TextStyle(fontSize: 24),
+-                                ),
+-                              ),
+-                            )
+-                            .toList(),
+-                        child: Container(
+-                          padding: const EdgeInsets.symmetric(
+-                            horizontal: 12,
+-                            vertical: 8,
+-                          ),
+-                          decoration: BoxDecoration(
+-                            border: Border.all(color: const Color(0xFFD5CEDD)),
+-                            borderRadius: BorderRadius.circular(20),
+-                          ),
+-                          child: const Row(
+-                            mainAxisSize: MainAxisSize.min,
+-                            children: [
+-                              Icon(
+-                                Icons.add_reaction_outlined,
+-                                size: 18,
+-                                color: mor,
+-                              ),
+-                              SizedBox(width: 6),
+-                              Text(
+-                                'Tepki',
+-                                style: TextStyle(
+-                                  color: Colors.white,
+-                                  fontWeight: FontWeight.w700,
+-                                ),
+-                              ),
+-                            ],
+-                          ),
+-                        ),
+-                      ),
+-                      OutlinedButton.icon(
+-                        onPressed: () => ngelxSesliPaylas(
+-                          context,
+-                          widget.odaId,
+-                          (veri['title'] ?? widget.baslik).toString(),
+-                        ),
+-                        icon: const Icon(Icons.ios_share_rounded, size: 18),
+-                        label: const Text('Davet'),
+-                      ),
+-                      NgelxSesliMuzikKontrolu(
+-                        roomId: widget.odaId,
+-                        yonetici: yoneticiyim,
+-                        bitti: bitti,
+-                      ),
+-                    ],
+-                  ),
+-                  const SizedBox(height: 14),
+-                  Row(
+-                    children: [
+-                      const Text(
+-                        'Mikrofonlar',
+-                        style: TextStyle(
+-                          color: Colors.white,
+-                          fontSize: 14,
+-                          fontWeight: FontWeight.w700,
+-                        ),
+-                      ),
+-                      const Spacer(),
+-                      if (yoneticiyim && !bitti)
+-                        TextButton.icon(
+-                          onPressed: istekler,
+-                          icon: const Icon(Icons.pan_tool_alt, size: 16),
+-                          label: Text(_ngelx438Ui("İstekler")),
+-                        ),
+-                    ],
+-                  ),
+-                  Builder(
+-                    builder: (_) {
+-                      final gorunen = math.max(9, sp.length);
+-                      return GridView.builder(
+-                        shrinkWrap: true,
+-                        physics: const NeverScrollableScrollPhysics(),
+-                        gridDelegate:
+-                            const SliverGridDelegateWithFixedCrossAxisCount(
+-                              crossAxisCount: 3,
+-                              crossAxisSpacing: 8,
+-                              mainAxisSpacing: 8,
+-                              childAspectRatio: .88,
+-                            ),
+-                        itemCount: gorunen,
+-                        itemBuilder: (_, i) {
+-                          final id = i < sp.length ? sp[i] : '';
+-                          return koltuk(id);
+-                        },
+-                      );
+-                    },
+-                  ),
+-                  if (!konusmaciyim && !bitti) ...[
+-                    const SizedBox(height: 14),
+-                    FilledButton.icon(
+-                      style: FilledButton.styleFrom(
+-                        backgroundColor: const Color(0xFFF0E8FF),
+-                        foregroundColor: mor,
+-                      ),
+-                      onPressed: sozIste,
+-                      icon: const Icon(Icons.pan_tool_alt_rounded),
+-                      label: const Text('Söz iste'),
+-                    ),
+-                  ],
+-                  if (bitti) ...[
+-                    const SizedBox(height: 14),
+-                    const Text(
+-                      'Bu sesli oda sona erdi.',
+-                      style: TextStyle(
+-                        color: Colors.redAccent,
+-                        fontWeight: FontWeight.w900,
+-                      ),
+-                    ),
+-                  ],
+-                ],
+-              ),
+-            ),
+-            Container(
+-              padding: const EdgeInsets.fromLTRB(12, 9, 12, 9),
+-              decoration: const BoxDecoration(
+-                color: Color(0xFF111111),
+-                border: Border(
+-                  top: BorderSide(color: Color(0xFF173443)),
+-                  bottom: BorderSide(color: Color(0xFF173443)),
+-                ),
+-              ),
+-              child: bitti
+-                  ? FilledButton.icon(
+-                      style: FilledButton.styleFrom(
+-                        backgroundColor: Colors.red,
+-                        minimumSize: const Size.fromHeight(48),
+-                      ),
+-                      onPressed: () => Navigator.pop(context),
+-                      icon: const Icon(Icons.close_rounded),
+-                      label: Text(
+-                        _ngelx438Ui("Kapat"),
+-                        style: TextStyle(fontWeight: FontWeight.w900),
+-                      ),
+-                    )
+-                  : Row(
+-                      children: [
+-                        Expanded(
+-                          child: FilledButton.icon(
+-                            style: FilledButton.styleFrom(
+-                              backgroundColor: konusmaciyim && mikrofon
+-                                  ? mor
+-                                  : const Color(0xFFF0E8FF),
+-                              foregroundColor: konusmaciyim && mikrofon
+-                                  ? Colors.white
+-                                  : mor,
+-                            ),
+-                            onPressed: konusmaciyim
+-                                ? (bagli
+-                                      ? mic
+-                                      : () => unawaited(tekrarBaglan()))
+-                                : null,
+-                            icon: Icon(
+-                              !bagli
+-                                  ? Icons.refresh_rounded
+-                                  : (mikrofon ? Icons.mic : Icons.mic_off),
+-                            ),
+-                            label: Text(
+-                              !bagli
+-                                  ? (konusmaciyim
+-                                        ? 'Yeniden bağlan'
+-                                        : 'Bağlantı bekleniyor')
+-                                  : konusmaciyim
+-                                  ? (mikrofon
+-                                        ? 'Mikrofon açık'
+-                                        : 'Mikrofon kapalı')
+-                                  : 'Dinleyici',
+-                            ),
+-                          ),
+-                        ),
+-                        const SizedBox(width: 8),
+-                        OutlinedButton.icon(
+-                          style: OutlinedButton.styleFrom(
+-                            foregroundColor: Colors.red,
+-                            side: const BorderSide(color: Colors.redAccent),
+-                          ),
+-                          onPressed: ayril,
+-                          icon: Icon(
+-                            sahibiyim ? Icons.stop_circle : Icons.logout,
+-                          ),
+-                          label: Text(
+-                            sahibiyim ? 'Bitir' : _ngelx438Ui("Ayrıl"),
+-                            style: const TextStyle(fontWeight: FontWeight.w900),
+-                          ),
+-                        ),
+-                      ],
+-                    ),
+-            ),
+-            NgelxSesliInlineSohbet(
+-              roomId: widget.odaId,
+-              yonetici: yoneticiyim,
+-              sahibiyim: sahibiyim,
+-              bitti: bitti,
+-            ),
+-          ],
+-        ),
+-      ),
+-    );
+-    return PopScope(
+-      canPop: false,
+-      onPopInvokedWithResult: (didPop, result) {
+-        if (!didPop) unawaited(kucult());
+-      },
+-      child: sayfa,
+-    );
++    // Host remains first even when a legacy room saved its speaker list differently.
++    final sp = <String>[widget.ownerId, ...speakers.where((id) => id != widget.ownerId)].toSet().toList();
++    final title = (veri['title'] ?? widget.baslik).toString();
++    final sayfa = Scaffold(backgroundColor: Colors.black,
++      body: Ngelx590AudioStage(
++        header: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
++          stream: FirebaseFirestore.instance.collection('users').doc(widget.ownerId).snapshots(),
++          builder: (_, snapshot) {
++            final owner = snapshot.data?.data() ?? <String, dynamic>{};
++            final name = (owner['displayName'] ?? owner['username'] ?? veri['ownerName'] ?? 'Yayıncı').toString();
++            final photo = (owner['photoUrl'] ?? veri['ownerPhotoUrl'] ?? '').toString();
++            final following = List<String>.from(owner['followers'] ?? const []).contains(uid);
++            return Ngelx590RoomHeader(name: name, title: bitti ? 'Oda sona erdi' : title,
++              photo: photo.isEmpty ? null : NgelXAgImageProvider(photo), host: sahibiyim,
++              audience: aktifKisiSayisi, following: following,
++              onProfile: () => Navigator.push(context, MaterialPageRoute(builder: (_) => KullaniciProfilPage(uid: widget.ownerId))),
++              onFollow: () async {
++                try { await takipDurumuDegistir(widget.ownerId, following); }
++                catch (_) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Takip işlemi tamamlanamadı.'))); }
++              },
++              onAudience: () => ngelxSesliKatilimcilarAc(context, widget.odaId, widget.ownerId),
++              onClose: ayril);
++          }),
++        controls: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
++          Expanded(child: Ngelx590RoomChip(onTap: () => ngelxSesliKatilimcilarAc(context, widget.odaId, widget.ownerId),
++            child: NgelxSesliSureSayaci(baslangic: veri['startedAt'] is Timestamp ? (veri['startedAt'] as Timestamp).toDate() : null,
++              bitti: bitti, compact: true))),
++          const SizedBox(width: 6),
++          Expanded(child: NgelxSesliMuzikKontrolu(roomId: widget.odaId, yonetici: yoneticiyim, bitti: bitti, compact: true)),
++          const SizedBox(width: 6),
++          Expanded(child: Ngelx541AudioPk(roomId: widget.odaId, ownerUid: widget.ownerId, ended: bitti, compact: true)),
++        ]),
++        notice: durum.isNotEmpty && !bitti ? InkWell(onTap: yeniden ? null : () => unawaited(tekrarBaglan()),
++          child: Padding(padding: const EdgeInsets.only(top: 5), child: Text(durum, maxLines: 1,
++            overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.amber, fontSize: 11)))) : null,
++        seatCount: math.max(9, sp.length),
++        seatBuilder: (_, index) => koltuk(index < sp.length ? sp[index] : ''),
++        chat: NgelxSesliInlineSohbet(roomId: widget.odaId, yonetici: yoneticiyim, sahibiyim: sahibiyim,
++          bitti: bitti, referenceStyle: true, actions: [
++            Ngelx590RoundAction(label: konusmaciyim ? (mikrofon ? 'Mikrofonu kapat' : 'Mikrofonu aç') : 'Söz iste',
++              icon: konusmaciyim ? (mikrofon ? Icons.mic : Icons.mic_off) : Icons.front_hand_rounded,
++              color: mikrofon && konusmaciyim ? const Color(0xFF39DDD7) : Colors.white70,
++              onTap: bitti ? null : konusmaciyim ? (bagli ? mic : () => unawaited(tekrarBaglan())) : sozIste),
++            Ngelx590RoundAction(label: 'Tepki gönder', icon: Icons.favorite_rounded, color: const Color(0xFFFF285E), onTap: bitti ? null : _tepkiler590),
++            Ngelx590RoundAction(label: 'Davet et', icon: Icons.reply_rounded, onTap: bitti ? null : () => ngelxSesliPaylas(context, widget.odaId, title)),
++            Ngelx590RoundAction(label: 'Oda seçenekleri', icon: Icons.more_horiz, onTap: _menu590),
++          ]),
++      ));
++    return PopScope(canPop: false, onPopInvokedWithResult: (didPop, result) {
++      if (!didPop) unawaited(kucult());
++    }, child: sayfa);
+   }
+ 
+   @override
+--- a/lib/audio_live_rooms_pro.dart
++++ b/lib/audio_live_rooms_pro.dart
+@@ -9,8 +9,8 @@
+ 
+ class NgelxSesliSureSayaci extends StatefulWidget{
+   final DateTime? baslangic;
+-  final bool bitti;
+-  const NgelxSesliSureSayaci({super.key,required this.baslangic,this.bitti=false});
++  final bool bitti,compact;
++  const NgelxSesliSureSayaci({super.key,required this.baslangic,this.bitti=false,this.compact=false});
+   @override State<NgelxSesliSureSayaci> createState()=>_NgelxSesliSureSayaciState();
+ }
+ class _NgelxSesliSureSayaciState extends State<NgelxSesliSureSayaci>{
+@@ -34,7 +34,10 @@
+     super.didUpdateWidget(oldWidget);
+     if(oldWidget.baslangic!=widget.baslangic||oldWidget.bitti!=widget.bitti)_timerKur();
+   }
+-  @override Widget build(BuildContext context)=>Container(
++  @override Widget build(BuildContext context)=>widget.compact ? FittedBox(fit:BoxFit.scaleDown,child:Row(mainAxisSize:MainAxisSize.min,children:[
++    Icon(widget.bitti?Icons.stop_circle:Icons.circle,size:9,color:Colors.pinkAccent),const SizedBox(width:5),
++    Text(widget.bitti?'BİTTİ':ngelxSesliSureMetni(_sure),style:const TextStyle(color:Colors.white,fontSize:12,fontWeight:FontWeight.w700)),
++  ])) : Container(
+     padding:const EdgeInsets.symmetric(horizontal:9,vertical:5),
+     decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(14),border:Border.all(color:const Color(0xFFE4D8FA))),
+     child:Row(mainAxisSize:MainAxisSize.min,children:[
+@@ -615,8 +618,9 @@
+ 
+ class NgelxSesliInlineSohbet extends StatefulWidget{
+   final String roomId;
+-  final bool yonetici,sahibiyim,bitti;
+-  const NgelxSesliInlineSohbet({super.key,required this.roomId,required this.yonetici,required this.sahibiyim,required this.bitti});
++  final bool yonetici,sahibiyim,bitti,referenceStyle;
++  final List<Widget> actions;
++  const NgelxSesliInlineSohbet({super.key,required this.roomId,required this.yonetici,required this.sahibiyim,required this.bitti,this.referenceStyle=false,this.actions=const []});
+   @override State<NgelxSesliInlineSohbet> createState()=>_NgelxSesliInlineSohbetState();
+ }
+ class _NgelxSesliInlineSohbetState extends State<NgelxSesliInlineSohbet>{
+@@ -728,6 +732,7 @@
+     final v=d.data(),ben=FirebaseAuth.instance.currentUser?.uid;
+     final benim=(v['userId']??'').toString()==ben;
+     final ad=(v['displayName']??'NgelX').toString(),metin=(v['text']??'').toString(),rol=(v['authorRole']??'').toString(),pin=v['pinned']==true,foto=(v['photoUrl']??'').toString();
++    if(widget.referenceStyle)return Ngelx590AudioComment(name:ad,message:metin,role:pin?'Sabitlendi':rol,photo:foto.isEmpty?null:NgelXAgImageProvider(foto),onTap:()=>_mesajIslem(d));
+     return Align(
+       alignment:benim?Alignment.centerRight:Alignment.centerLeft,
+       child:GestureDetector(
+@@ -759,7 +764,34 @@
+     );
+   }
+ 
+-  @override Widget build(BuildContext context)=>Container(
++  Widget _reference590() => Column(children: [
++    Expanded(child: Stack(children: [
++      Positioned.fill(child: StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
++        stream: FirebaseFirestore.instance.collection('audio_rooms').doc(widget.roomId).collection('messages').orderBy('createdAt',descending:true).limit(80).snapshots(),
++        builder: (_, snapshot) {
++          final docs = snapshot.data?.docs ?? [];
++          if (docs.isEmpty) return Align(alignment:Alignment.bottomLeft, child:Padding(
++            padding:const EdgeInsets.fromLTRB(14,12,44,16), child:Text(widget.bitti?'Sesli oda sona erdi.':'Sohbete katıl, ilk mesajı sen yaz.',
++              style:const TextStyle(color:Colors.white38,fontSize:12))));
++          return ListView.builder(controller:_liste,reverse:true,padding:const EdgeInsets.only(top:8,bottom:6),
++            itemCount:docs.length,itemBuilder:(_,i)=>_mesajBalonu(docs[i]));
++        })),
++      Positioned(right:4,bottom:0,width:38,height:180,child:IgnorePointer(child:StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
++        stream:FirebaseFirestore.instance.collection('audio_rooms').doc(widget.roomId).collection('reactions').orderBy('createdAt',descending:true).limit(8).snapshots(),
++        builder:(_,snapshot){
++          final now=DateTime.now();final docs=(snapshot.data?.docs??[]).where((d){final t=d.data()['createdAt'];return t is Timestamp&&now.difference(t.toDate()).inSeconds<8;}).toList();
++          return Stack(children:[for(var i=0;i<docs.length;i++)Positioned(key:ValueKey(docs[i].id),right:0,bottom:8.0+i*13,
++            child:TweenAnimationBuilder<double>(tween:Tween(begin:0,end:1),duration:const Duration(milliseconds:3200),builder:(_,value,child)=>Transform.translate(
++              offset:Offset(0,-value*110),child:Opacity(opacity:1-value,child:child)),child:Text((docs[i].data()['emoji']??'❤️').toString(),style:const TextStyle(fontSize:27))))]);
++        })))),
++      if(!_enYenide)Positioned(right:46,bottom:2,child:TextButton.icon(onPressed:()=>_liste.animateTo(0,duration:const Duration(milliseconds:240),curve:Curves.easeOut),
++        icon:const Icon(Icons.arrow_downward,size:13),label:const Text('Yeni mesajlar',style:TextStyle(fontSize:10)))),
++    ])),
++    _etiketOnerileri(),
++    Ngelx590Composer(controller:_mesaj,onSend:_gonder,ended:widget.bitti,busy:_gonderiyor,actions:widget.actions),
++  ]);
++
++  @override Widget build(BuildContext context)=>widget.referenceStyle ? _reference590() : Container(
+     height:210,
+     decoration:const BoxDecoration(color:Color(0xFF031923),border:Border(top:BorderSide(color:Color(0xFF173443)))),
+     child:Column(children:[
+@@ -1000,8 +1032,8 @@
+ 
+ class NgelxSesliMuzikKontrolu extends StatefulWidget{
+   final String roomId;
+-  final bool yonetici,bitti;
+-  const NgelxSesliMuzikKontrolu({super.key,required this.roomId,required this.yonetici,required this.bitti});
++  final bool yonetici,bitti,compact;
++  const NgelxSesliMuzikKontrolu({super.key,required this.roomId,required this.yonetici,required this.bitti,this.compact=false});
+   @override State<NgelxSesliMuzikKontrolu> createState()=>_NgelxSesliMuzikKontroluState();
+ }
+ 
+@@ -1360,6 +1392,10 @@
+ 
+   @override Widget build(BuildContext context){
+     final varMi=_url.isNotEmpty;
++    if(widget.compact)return Ngelx590RoomChip(onTap:_panelAc,child:FittedBox(fit:BoxFit.scaleDown,child:Row(mainAxisSize:MainAxisSize.min,children:[
++      Icon(varMi&&_oynuyor?Icons.music_note:Icons.library_music_outlined,size:16,color:Colors.white70),const SizedBox(width:4),
++      Text(varMi?'Çalıyor':'Müzik',style:const TextStyle(color:Colors.white,fontSize:12)),
++    ])));
+     return OutlinedButton.icon(
+       onPressed:_panelAc,
+       icon:Icon(varMi&&_oynuyor?Icons.music_note_rounded:Icons.music_off_rounded,size:18,color:varMi?mor:Colors.black45),
+--- a/lib/build541_audio_pk.dart
++++ b/lib/build541_audio_pk.dart
+@@ -4,8 +4,8 @@
+ // microphones keep their original room and their existing consent/role state.
+ class Ngelx541AudioPk extends StatefulWidget {
+   final String roomId,ownerUid;
+-  final bool ended;
+-  const Ngelx541AudioPk({super.key,required this.roomId,required this.ownerUid,required this.ended});
++  final bool ended,compact;
++  const Ngelx541AudioPk({super.key,required this.roomId,required this.ownerUid,required this.ended,this.compact=false});
+   @override State<Ngelx541AudioPk> createState()=>_Ngelx541AudioPkState();
+ }
+ class _Ngelx541AudioPkState extends State<Ngelx541AudioPk> {
+@@ -189,6 +189,21 @@
+     final incoming=_request['status']=='pending'&&_request['inviteeUid']==_sessionUid;
+     final pending=_request['status']=='pending';
+     final seconds=active?(_own['pkEndsAt'] as Timestamp).toDate().difference(DateTime.now()).inSeconds:0;
++    if(widget.compact)return Ngelx590RoomChip(
++      onTap:active||pending?()=>showModalBottomSheet<void>(context:context,backgroundColor:const Color(0xFF191919),showDragHandle:true,
++        builder:(sheet)=>SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
++          ListTile(textColor:Colors.white,title:Text(active?'PK • ${seconds~/60}:${(seconds%60).toString().padLeft(2,'0')}':incoming?'PK daveti':'PK yanıtı bekleniyor')),
++          if(incoming)...[
++            ListTile(textColor:Colors.white,leading:const Icon(Icons.check,color:Colors.greenAccent),title:const Text('Kabul et'),onTap:_busy?null:(){Navigator.pop(sheet);unawaited(_respond('accepted'));}),
++            ListTile(textColor:Colors.white,leading:const Icon(Icons.close,color:Colors.redAccent),title:const Text('Reddet'),onTap:_busy?null:(){Navigator.pop(sheet);unawaited(_respond('rejected'));}),
++          ],
++          if(_host&&active)ListTile(textColor:Colors.redAccent,title:const Text('PK bitir'),onTap:_busy?null:(){Navigator.pop(sheet);unawaited(_stop());}),
++          if(_message.isNotEmpty)Padding(padding:const EdgeInsets.all(12),child:Text(_message,style:const TextStyle(color:Colors.white70))),
++        ]))) : _host&&!_busy?()=>unawaited(_invite()):null,
++      child:FittedBox(fit:BoxFit.scaleDown,child:Row(mainAxisSize:MainAxisSize.min,children:[
++        const Icon(Icons.bolt,size:16,color:Colors.pinkAccent),const SizedBox(width:3),
++        Text(active?'PK ${seconds~/60}:${(seconds%60).toString().padLeft(2,'0')}':pending?'PK daveti':_host?'PK daveti':'Sesli oda',style:const TextStyle(color:Colors.white,fontSize:12)),
++      ])));
+     if(!_host&&!active)return const SizedBox.shrink();
+     return Container(margin:const EdgeInsets.only(bottom:10),padding:const EdgeInsets.symmetric(horizontal:10,vertical:6),decoration:BoxDecoration(color:const Color(0xFF30205A),borderRadius:BorderRadius.circular(18)),child:Column(mainAxisSize:MainAxisSize.min,children:[Row(children:[const Icon(Icons.bolt,color:Colors.pinkAccent),const SizedBox(width:6),Expanded(child:Text(active?'PK • ${seconds~/60}:${(seconds%60).toString().padLeft(2,'0')}':incoming?'PK daveti':pending?'PK yanıtı bekleniyor':'Sesli PK',style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w800))),if(_host&&!active&&!pending)TextButton(onPressed:_busy?null:()=>unawaited(_invite()),child: Text(_ngelx438Ui("Davet et"))),if(incoming)...[TextButton(onPressed:_busy?null:()=>unawaited(_respond('rejected')),child: Text(_ngelx438Ui("Reddet"))),FilledButton(onPressed:_busy?null:()=>unawaited(_respond('accepted')),child: Text(_ngelx438Ui("Kabul et")))],if(_host&&active)TextButton(onPressed:_busy?null:()=>unawaited(_stop()),child:const Text('PK bitir'))]),if(_message.isNotEmpty)Text(_message,style:const TextStyle(color:Colors.white70,fontSize:11))]));
+   }
+--- a/lib/build590_audio_stage.dart
++++ b/lib/build590_audio_stage.dart
+@@ -0,0 +1,189 @@
++import 'dart:math' as math;
++import 'package:flutter/material.dart';
++
++const _pink590 = Color(0xFFFF285E);
++
++/// The full audio-room composition used by the live page and phone visual tests.
++class Ngelx590AudioStage extends StatelessWidget {
++  final Widget header, controls, chat;
++  final IndexedWidgetBuilder seatBuilder;
++  final int seatCount;
++  final Widget? notice;
++  const Ngelx590AudioStage({super.key, required this.header, required this.controls,
++    required this.chat, required this.seatBuilder, this.seatCount = 9, this.notice});
++  @override
++  Widget build(BuildContext context) => ColoredBox(color: Colors.black, child: SafeArea(
++    child: Column(children: [
++      Padding(padding: const EdgeInsets.fromLTRB(12, 4, 8, 0), child: header),
++      Padding(padding: const EdgeInsets.fromLTRB(12, 7, 12, 0), child: controls),
++      if (notice != null) notice!,
++      Expanded(child: LayoutBuilder(builder: (context, box) {
++        final stageHeight = math.min(box.maxWidth * 1.01, box.maxHeight * .64);
++        return Column(children: [
++          SizedBox(height: stageHeight, child: Padding(
++            padding: const EdgeInsets.symmetric(horizontal: 14),
++            child: GridView.builder(key: const ValueKey('audio590-grid'),
++              padding: const EdgeInsets.only(top: 14, bottom: 4), primary: false,
++              physics: seatCount > 9 ? const ClampingScrollPhysics() : const NeverScrollableScrollPhysics(),
++              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 3,
++                mainAxisExtent: math.max(1, (stageHeight - 18) / 3), crossAxisSpacing: 14),
++              itemCount: seatCount, itemBuilder: seatBuilder),
++          )),
++          Expanded(child: chat),
++        ]);
++      })),
++    ]),
++  ));
++}
++
++class Ngelx590RoomHeader extends StatelessWidget {
++  final String name, title;
++  final ImageProvider? photo;
++  final int audience;
++  final bool host, following;
++  final VoidCallback? onProfile, onFollow, onAudience, onClose;
++  const Ngelx590RoomHeader({super.key, required this.name, required this.title,
++    required this.audience, this.photo, this.host = false, this.following = false,
++    this.onProfile, this.onFollow, this.onAudience, this.onClose});
++  @override
++  Widget build(BuildContext context) => SizedBox(height: 48, child: Row(children: [
++    Expanded(child: Container(padding: const EdgeInsets.only(right: 4),
++      decoration: BoxDecoration(color: const Color(0xFF222222), borderRadius: BorderRadius.circular(30)),
++      child: Row(children: [
++        GestureDetector(onTap: onProfile, child: CircleAvatar(radius: 22, backgroundImage: photo,
++          backgroundColor: const Color(0xFF393939), child: photo == null ? const Icon(Icons.person, color: Colors.white70) : null)),
++        const SizedBox(width: 6),
++        Expanded(child: GestureDetector(onTap: onProfile, child: Column(mainAxisAlignment: MainAxisAlignment.center,
++          crossAxisAlignment: CrossAxisAlignment.start, children: [
++            Text(empty ? ' ' : name, maxLines: 1, overflow: TextOverflow.ellipsis,
++              style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w800)),
++            Text(title, maxLines: 1, overflow: TextOverflow.ellipsis,
++              style: const TextStyle(color: Colors.white60, fontSize: 10)),
++          ]))),
++        if (!host) SizedBox(height: 34, child: TextButton(
++          style: TextButton.styleFrom(backgroundColor: _pink590, foregroundColor: Colors.white,
++            padding: const EdgeInsets.symmetric(horizontal: 10), minimumSize: const Size(0, 34)),
++          onPressed: onFollow, child: Text(following ? 'Takiptesin' : '+ Takip et',
++            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700)))),
++      ]))),
++    const SizedBox(width: 5),
++    InkWell(onTap: onAudience, borderRadius: BorderRadius.circular(24), child: Padding(
++      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 12), child: Row(children: [
++        const Icon(Icons.people_alt_rounded, size: 17, color: Colors.white70), const SizedBox(width: 4),
++        Text('$audience', style: const TextStyle(color: Colors.white, fontSize: 12)),
++      ]))),
++    IconButton(tooltip: 'Odadan ayrıl', onPressed: onClose,
++      constraints: const BoxConstraints.tightFor(width: 36, height: 44), padding: EdgeInsets.zero,
++      icon: const Icon(Icons.close_rounded, color: Colors.white, size: 28)),
++  ]));
++}
++
++class Ngelx590RoomChip extends StatelessWidget {
++  final Widget child;
++  final VoidCallback? onTap;
++  const Ngelx590RoomChip({super.key, required this.child, this.onTap});
++  @override
++  Widget build(BuildContext context) => Material(color: const Color(0xFF222222),
++    borderRadius: BorderRadius.circular(9), child: InkWell(onTap: onTap,
++      borderRadius: BorderRadius.circular(9), child: SizedBox(height: 32,
++        child: Padding(padding: const EdgeInsets.symmetric(horizontal: 8), child: Center(child: child)))));
++}
++
++class Ngelx590AudioSeat extends StatelessWidget {
++  final String name, role;
++  final ImageProvider? photo;
++  final bool speaking, micOpen, host, empty;
++  final VoidCallback? onTap;
++  const Ngelx590AudioSeat({super.key, this.name = '', this.role = '', this.photo,
++    this.speaking = false, this.micOpen = false, this.host = false, this.empty = false, this.onTap});
++  @override
++  Widget build(BuildContext context) => LayoutBuilder(builder: (context, box) {
++    final scale = MediaQuery.textScalerOf(context).scale(12) / 12;
++    final labels = 31 * scale;
++    final diameter = math.max(12.0, math.min(86.0, math.min(box.maxWidth * .82, box.maxHeight - labels - 6)));
++    return Semantics(label: empty ? 'Boş mikrofon yeri' : '$name, $role, ${micOpen ? 'mikrofon açık' : 'mikrofon kapalı'}',
++      child: InkWell(onTap: onTap, borderRadius: BorderRadius.circular(28), child: Column(
++        mainAxisAlignment: MainAxisAlignment.center, children: [
++          SizedBox(width: diameter, height: diameter, child: empty
++            ? DecoratedBox(decoration: const BoxDecoration(color: Color(0xFF303030), shape: BoxShape.circle),
++                child: Icon(Icons.add_rounded, size: diameter * .43, color: Colors.white38))
++            : Stack(clipBehavior: Clip.none, children: [
++                Positioned.fill(child: AnimatedContainer(duration: const Duration(milliseconds: 180),
++                  padding: EdgeInsets.all(host || speaking ? 4 : 0),
++                  decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(
++                    color: speaking ? const Color(0xFF35E9B0) : host ? Colors.white24 : Colors.transparent,
++                    width: speaking ? 2.5 : 2)),
++                  child: CircleAvatar(backgroundImage: photo, backgroundColor: const Color(0xFF333333),
++                    child: photo == null ? Icon(Icons.person, color: Colors.white60, size: diameter * .42) : null))),
++                if (!micOpen) Positioned(right: 0, bottom: 0, child: CircleAvatar(radius: math.min(10, diameter * .15),
++                  backgroundColor: Colors.black, child: Icon(Icons.mic_off_rounded, color: Colors.white, size: math.min(12, diameter * .2)))),
++              ])),
++          ...[
++            const SizedBox(height: 4),
++            Text(empty ? ' ' : name, maxLines: 1, overflow: TextOverflow.ellipsis,
++              style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500)),
++            const SizedBox(height: 2),
++            Text(empty || role.isEmpty ? ' ' : role, maxLines: 1, overflow: TextOverflow.ellipsis,
++              style: const TextStyle(color: Colors.white70, fontSize: 10)),
++          ],
++        ])));
++  });
++}
++
++class Ngelx590AudioComment extends StatelessWidget {
++  final String name, message, role;
++  final ImageProvider? photo;
++  final VoidCallback? onTap;
++  const Ngelx590AudioComment({super.key, required this.name, required this.message,
++    this.role = '', this.photo, this.onTap});
++  @override
++  Widget build(BuildContext context) => GestureDetector(onTap: onTap, onLongPress: onTap,
++    child: Padding(padding: const EdgeInsets.fromLTRB(12, 5, 44, 5), child: Row(
++      crossAxisAlignment: CrossAxisAlignment.start, children: [
++        CircleAvatar(radius: 14, backgroundImage: photo, backgroundColor: const Color(0xFF303030),
++          child: photo == null ? const Icon(Icons.person, size: 16, color: Colors.white54) : null),
++        const SizedBox(width: 7),
++        Expanded(child: Text.rich(TextSpan(children: [
++          TextSpan(text: '$name${role.isEmpty ? '' : ' · $role'}\n',
++            style: const TextStyle(color: Colors.white54, fontSize: 12)),
++          TextSpan(text: message, style: const TextStyle(color: Colors.white, fontSize: 13)),
++        ]), style: const TextStyle(height: 1.25))),
++      ])));
++}
++
++class Ngelx590Composer extends StatelessWidget {
++  final TextEditingController controller;
++  final bool ended, busy;
++  final VoidCallback onSend;
++  final List<Widget> actions;
++  const Ngelx590Composer({super.key, required this.controller, required this.onSend,
++    this.ended = false, this.busy = false, this.actions = const []});
++  @override
++  Widget build(BuildContext context) => Padding(padding: const EdgeInsets.fromLTRB(12, 7, 8, 9),
++    child: Row(children: [
++      Expanded(child: SizedBox(height: 40, child: TextField(controller: controller, enabled: !ended,
++        textInputAction: TextInputAction.send, style: const TextStyle(color: Colors.white, fontSize: 13),
++        onSubmitted: ended || busy ? null : (_) => onSend(),
++        decoration: InputDecoration(hintText: ended ? 'Oda sona erdi' : 'Yazın...',
++          hintStyle: const TextStyle(color: Colors.white54), filled: true, fillColor: const Color(0xFF242424),
++          contentPadding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
++          border: OutlineInputBorder(borderRadius: BorderRadius.circular(25), borderSide: BorderSide.none),
++          suffixIcon: IconButton(tooltip: 'Mesajı gönder', onPressed: ended || busy ? null : onSend,
++            icon: Icon(busy ? Icons.hourglass_empty : Icons.send_rounded, size: 19, color: Colors.white60)))))),
++      const SizedBox(width: 4), ...actions,
++    ]));
++}
++
++class Ngelx590RoundAction extends StatelessWidget {
++  final String label;
++  final IconData icon;
++  final Color color;
++  final VoidCallback? onTap;
++  const Ngelx590RoundAction({super.key, required this.label, required this.icon,
++    this.color = Colors.white70, this.onTap});
++  @override
++  Widget build(BuildContext context) => SizedBox(width: 38, height: 40, child: IconButton(
++    tooltip: label, onPressed: onTap, padding: const EdgeInsets.all(7),
++    style: IconButton.styleFrom(backgroundColor: const Color(0xFF242424)),
++    icon: Icon(icon, color: color, size: 23)));
++}
+--- a/pubspec.yaml
++++ b/pubspec.yaml
+@@ -1,7 +1,7 @@
+ name: ngelx_app
+ description: "A new Flutter project."
+ publish_to: 'none'
+-version: 1.0.359+589
++version: 1.0.360+590
+ environment:
+   sdk: ^3.13.3
+ 
