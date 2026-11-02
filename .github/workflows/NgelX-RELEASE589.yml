@@ -1,0 +1,90 @@
+name: NgelX Build589 guarded backend release
+on:
+  push:
+    branches: [ops/build589-release]
+    paths: ['.github/workflows/NgelX-RELEASE589.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: ngelx-production-worker-deployment
+  cancel-in-progress: false
+jobs:
+  scoped-release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      GH_TOKEN: ${{ github.token }}
+      FIREBASE_SERVICE_ACCOUNT_NGELX_44EED: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_NGELX_44EED }}
+      FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          ref: e908a831689312b016014401552d472f113c57a0
+          path: tested
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Wait for exact signed APK acceptance
+        run: |
+          node --input-type=module <<'JS'
+          let accepted=false;
+          for(let attempt=0;attempt<180;attempt++){
+            const r=await fetch('https://api.github.com/repos/Nnentx/Ngelx/actions/runs/41402716570',{headers:{authorization:'Bearer '+process.env.GH_TOKEN,accept:'application/vnd.github+json'}});
+            if(!r.ok)throw Error('Cannot verify APK acceptance');const d=await r.json();
+            if(d.head_sha!=='e908a831689312b016014401552d472f113c57a0')throw Error('Unexpected source');
+            if(d.status==='completed'){if(d.conclusion!=='success')throw Error('QA failed');accepted=true;break;}
+            if(attempt%6===0)console.log('Waiting for exact signed APK acceptance');
+            await new Promise(resolve=>setTimeout(resolve,10000));
+          }
+          if(!accepted)throw Error('QA deadline exceeded');
+          JS
+      - run: node --test tested/server/livekit443/*.test.mjs tested/server/ludo565/*.test.mjs tested/cloudflare/live-moderation/test/*.test.mjs
+      - name: Record prior Worker checkpoint
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node tools/build589_deployment_guard.mjs prepare
+      - name: Deploy exact tested Worker
+        id: deploy
+        working-directory: tested/cloudflare/live-moderation
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_SEND_METRICS: 'false'
+        run: npx --yes wrangler@4 deploy
+      - name: Verify hostnames and authentication boundaries
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node tools/build589_deployment_guard.mjs record
+      - name: Restore exact Android configuration for temporary account probe
+        run: |
+          curl --fail --location --retry 3 --max-time 120 https://github.com/Nnentx/Ngelx/releases/download/v1.0.358-build588/NgelX-Build588-Source.zip -o base588.zip
+          echo '2b1a2d6bed9173ffe4595c810dbe1eb71cc18c2529e4ddd119067c604203e800  base588.zip' | sha256sum --check
+          mkdir -p tested/app
+          unzip -q base588.zip android/app/google-services.json -d tested/app
+      - name: Verify actual historical scores and concurrent WIN settlement
+        working-directory: tested
+        env:
+          NGELX_PK589_LIVE: '1'
+        run: node tools/build589_snapshot_probe.mjs
+      - name: Accept exact deployment
+        id: accept
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node tools/build589_deployment_guard.mjs accept
+      - name: Restore previous Worker if acceptance failed
+        if: failure() && steps.deploy.outcome != 'skipped' && steps.accept.outcome != 'success'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node tools/build589_deployment_guard.mjs rollback
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Build589-Scoped-Release-Evidence
+          path: ${{ runner.temp }}/build589-worker-state.json
