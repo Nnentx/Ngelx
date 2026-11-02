@@ -1,7 +1,5 @@
 name: NgelX Build589 final PK score gift audio and phone layouts
 on:
-  push:
-    branches: [fix/build589-pk-score-audio]
   workflow_dispatch:
 permissions:
   contents: read
