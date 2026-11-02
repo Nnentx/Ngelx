@@ -45,14 +45,14 @@ async function converge(){
 function save(s){fs.writeFileSync(statePath,JSON.stringify(s,null,2)+'\n');}
 const mode=process.argv[2];
 if(mode==='prepare'){
- for(const [id,sha] of [['41402931775','937b6b115a9a949524a4135e0039b5b8cfba54a3']]){
+ for(const [id,sha] of [['41403709092','d0bb555c2679405ea03c8ad8d0c414d7fc6d109f']]){
   const r=await fetch('https://api.github.com/repos/Nnentx/Ngelx/actions/runs/'+id,{headers:{authorization:'Bearer '+process.env.GH_TOKEN,accept:'application/vnd.github+json'},signal:AbortSignal.timeout(15000)});
   if(!r.ok)throw Error('Cannot verify acceptance run');const d=await r.json();
   if(d.status!=='completed'||d.conclusion!=='success'||d.head_sha!==sha)throw Error('Required acceptance run did not pass');
  }
  const before=await latest(),baseline=await health(false);
 
- save({previous:before,baseline,startedAt:new Date().toISOString(),apkRun:41358497846});
+ save({previous:before,baseline,startedAt:new Date().toISOString(),apkRun:41403709092});
  console.log('Exact APK acceptance passed; prior 100% deployment checkpoint recorded; core boundaries healthy.');
 }else if(mode==='record'){
  const s=JSON.parse(fs.readFileSync(statePath)),current=await latest();
