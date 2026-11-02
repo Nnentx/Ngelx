@@ -63,8 +63,14 @@ void main() {
       }
       await tester.tap(find.byKey(const ValueKey('empty589')));await tester.pump();expect(requests,1);
       final boundary=tester.renderObject<RenderRepaintBoundary>(find.byKey(const ValueKey('capture589')));
-      final image=await boundary.toImage(pixelRatio:1);final data=await image.toByteData(format:ui.ImageByteFormat.png);
-      final file=File('test/screenshots/build589_audio_${size.width.toInt()}.png');file.parent.createSync(recursive:true);file.writeAsBytesSync(data!.buffer.asUint8List());image.dispose();
+      await tester.runAsync(() async {
+        final image=await boundary.toImage(pixelRatio:1);
+        try {
+          final data=await image.toByteData(format:ui.ImageByteFormat.png);
+          final file=File('test/screenshots/build589_audio_${size.width.toInt()}.png');
+          file.parent.createSync(recursive:true);file.writeAsBytesSync(data!.buffer.asUint8List());
+        } finally { image.dispose(); }
+      });
       await tester.pumpWidget(const SizedBox());
     });
   }
