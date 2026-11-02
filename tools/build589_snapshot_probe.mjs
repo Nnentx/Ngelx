@@ -67,6 +67,9 @@ try{
   const retry=await finish(ua);assert.equal(retry.streakByUid[a],1);assert.deepEqual(retry.finalScoreByUid,results[0].finalScoreByUid);
   console.log('Live PK PASS: stale room counters ignored, last-second gift decides winner, late gift excluded, concurrent WIN saved once');
  }
+}catch(error){
+ if(error.details589)console.error('Snapshot API detail:',error.details589);
+ throw error;
 }finally{
  let failures=0;
  for(const path of [...paths].reverse())try{await request(path,{method:'DELETE'});}catch{failures++;}

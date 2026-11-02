@@ -7,7 +7,7 @@ export function pkStorage588(env,fetcher=fetch,authorize=()=>accessToken(env)){
   async function api(path,body){
     const r=await fetcher(root+path,{method:body?'POST':'GET',headers:{authorization:'Bearer '+await authorize(),'content-type':'application/json'},...(body?{body:JSON.stringify(body)}:{}),signal:AbortSignal.timeout(8000)});
     if(r.status===404)return null;
-    if(!r.ok){let problem;try{problem=await r.json();}catch{}throw Object.assign(Error('storage_error_'+r.status+'_'+(problem?.error?.status??'unknown')),{retry:r.status===409||r.status===412,status:r.status});}
+    if(!r.ok){let problem;try{problem=await r.json();}catch{}const error=Array.isArray(problem)?problem.find(x=>x.error)?.error:problem?.error;throw Object.assign(Error('storage_error_'+r.status+'_'+(error?.status??'unknown')),{retry:r.status===409||r.status===412,status:r.status,details589:String(error?.message??'').slice(0,1600)});}
     return r.json();
   }
   return {totalsAt:pkTotals589(api),async transact(action){
