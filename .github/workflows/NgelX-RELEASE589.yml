@@ -42,6 +42,12 @@ jobs:
           if(!accepted)throw Error('QA deadline exceeded');
           JS
       - run: node --test tested/server/livekit443/*.test.mjs tested/server/ludo565/*.test.mjs tested/cloudflare/live-moderation/test/*.test.mjs
+      - name: Restore exact Android configuration for temporary account probe
+        run: |
+          curl --fail --location --retry 3 --max-time 120 https://github.com/Nnentx/Ngelx/releases/download/v1.0.358-build588/NgelX-Build588-Source.zip -o base588.zip
+          echo '2b1a2d6bed9173ffe4595c810dbe1eb71cc18c2529e4ddd119067c604203e800  base588.zip' | sha256sum --check
+          mkdir -p tested/app
+          unzip -q -o base588.zip android/app/google-services.json -d tested/app
       - name: Record prior Worker checkpoint
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -60,12 +66,6 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: node tools/build589_deployment_guard.mjs record
-      - name: Restore exact Android configuration for temporary account probe
-        run: |
-          curl --fail --location --retry 3 --max-time 120 https://github.com/Nnentx/Ngelx/releases/download/v1.0.358-build588/NgelX-Build588-Source.zip -o base588.zip
-          echo '2b1a2d6bed9173ffe4595c810dbe1eb71cc18c2529e4ddd119067c604203e800  base588.zip' | sha256sum --check
-          mkdir -p tested/app
-          unzip -q base588.zip android/app/google-services.json -d tested/app
       - name: Verify actual historical scores and concurrent WIN settlement
         working-directory: tested
         env:
