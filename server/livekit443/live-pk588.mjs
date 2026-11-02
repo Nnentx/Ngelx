@@ -16,9 +16,13 @@ export function pkResult588(session,a,b,statsA={},statsB={},now=Date.now(),cance
       [bu]:winner===null?num(statsB.streak):winner===bu?num(statsB.streak)+1:0}};
 }
 export function createPkFinish588({store,now=()=>Date.now()}){
+  if(typeof store?.totalsAt!=='function'||typeof store?.transact!=='function')throw Error('Canonical score store required');
   return async(uid,body)=>{
     if(!id(uid)||!id(body?.sessionId)||Object.keys(body).some(k=>!['sessionId','cancel'].includes(k))||
       (body.cancel!==undefined&&typeof body.cancel!=='boolean'))return {status:400,body:{error:'invalid_request'}};
+    // Historical snapshots are immutable; reuse them if a transaction retries.
+    const snapshots=new Map();
+    const totalsAt=(liveId,at)=>{const key=liveId+':'+at;if(!snapshots.has(key))snapshots.set(key,Promise.resolve().then(()=>store.totalsAt(liveId,at)));return snapshots.get(key);};
     try{
       const result=await store.transact(async tx=>{
         const path='calls/'+body.sessionId,session=await tx.get(path);
@@ -30,7 +34,27 @@ export function createPkFinish588({store,now=()=>Date.now()}){
           tx.get('live_streams/'+session.inviterLiveId),tx.get('live_streams/'+session.inviteeLiveId),
           tx.get('live_pk_stats588/'+session.inviterUid),tx.get('live_pk_stats588/'+session.inviteeUid)]);
         if(!a||!b||a.ownerId!==session.inviterUid||b.ownerId!==session.inviteeUid||a.pkSessionId!==body.sessionId||b.pkSessionId!==body.sessionId)throw Error('invalid_session');
-        const result={...pkResult588(session,a,b,sa??{},sb??{},now(),body.cancel===true),endedAt:new Date(now()).toISOString(),endedBy:uid};
+        const timestamp=now(),end=time(session.endsAt),start=time(session.startedAt??session.clientStartedAt);
+        if(!Number.isFinite(end)||!Number.isFinite(start)||end<=start||end-start>190000)throw Error('invalid_session');
+        const cancelled=body.cancel===true&&timestamp<end;
+        if(timestamp<end&&!cancelled)throw Error('not_finished');
+        // Old abandoned sessions cannot be reconstructed after Firestore's
+        // one-hour historical-read window. Cancel them without changing WIN.
+        const expired=timestamp-start>55*60*1000;
+        let finalA=a,finalB=b,canonical={...session,startedAt:start,clientStartedAt:start};
+        if(!cancelled&&!expired){
+          const [startA,startB,endA,endB]=await Promise.all([
+            totalsAt(session.inviterLiveId,start),totalsAt(session.inviteeLiveId,start),
+            totalsAt(session.inviterLiveId,end),totalsAt(session.inviteeLiveId,end)]);
+          finalA=endA;finalB=endB;
+          canonical={...canonical,startLikeA:startA.likeCount,startLikeB:startB.likeCount,
+            startGiftA:startA.giftPoints,startGiftB:startB.giftPoints};
+        }
+        const settled=expired?{status:'ended',result588:true,endReason:'cancelled',winnerUid:null,finalScoreByUid:{},detail589:'history_expired'}
+          :pkResult588(canonical,finalA,finalB,sa??{},sb??{},timestamp,cancelled);
+        const result={...settled,endedAt:new Date(timestamp).toISOString(),endedBy:uid,
+          scoreSource589:cancelled||expired?'cancelled':'firestore_read_time',
+          scoreStartsAt589:new Date(start).toISOString(),scoreEndsAt589:new Date(end).toISOString()};
         tx.update(path,result);
         for(const [roomId,owner] of [[session.inviterLiveId,session.inviterUid],[session.inviteeLiveId,session.inviteeUid]]){
           const room=roomId===session.inviterLiveId?a:b;

@@ -17,7 +17,7 @@ test('negative deltas cannot produce negative scores',()=>assert.deepEqual(pkRes
 function fixture(){
  const data=new Map(Object.entries({'calls/s':structuredClone(session),'live_streams/ra':structuredClone(a),'live_streams/rb':structuredClone(b),'live_pk_stats588/a':{streak:3},'live_pk_stats588/b':{streak:8}}));
  let tail=Promise.resolve();
- const store={transact:fn=>{const next=tail.then(async()=>{const pending=[];const result=await fn({get:p=>Promise.resolve(structuredClone(data.get(p))),update:(p,v)=>pending.push([p,v])});for(const [p,v] of pending)data.set(p,{...data.get(p),...v});return result;});tail=next.catch(()=>{});return next;}};
+ const store={totalsAt:async(roomId,at)=>at===session.clientStartedAt?{likeCount:roomId==='ra'?10:20,giftPoints:roomId==='ra'?100:200}:structuredClone(data.get('live_streams/'+roomId)),transact:fn=>{const next=tail.then(async()=>{const pending=[];const result=await fn({get:p=>Promise.resolve(structuredClone(data.get(p))),update:(p,v)=>pending.push([p,v])});for(const [p,v] of pending)data.set(p,{...data.get(p),...v});return result;});tail=next.catch(()=>{});return next;}};
  return {data,finish:createPkFinish588({store,now:()=>1180000})};
 }
 test('both clients finishing concurrently increment streak exactly once',async()=>{

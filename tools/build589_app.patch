@@ -1,0 +1,368 @@
+--- a/lib/main.dart
++++ b/lib/main.dart
+@@ -1,3 +1,4 @@
++import 'build589_audio_seat.dart';
+ import 'build556_policy.dart';
+ import 'build557_policy.dart';
+ import 'package:flutter/foundation.dart';
+--- a/lib/build553_gift_effect.dart
++++ b/lib/build553_gift_effect.dart
+@@ -1,3 +1,4 @@
++import 'build589_gift_sound.dart';
+ import 'dart:async';
+ 
+ import 'package:just_audio/just_audio.dart';
+@@ -6,7 +7,7 @@
+ 
+ import 'package:flutter/material.dart';
+ 
+-/// Original NgelX vector effects. No network, audio, or hit-test interception.
++/// Bundled image effects and local audio; never intercepts room controls.
+ class Ngelx553GiftEffect extends StatefulWidget {
+   final String kind, sender;
+   final int quantity;
+@@ -48,17 +49,19 @@
+     );
+     _sound = player;
+     try {
+-      await player.setAsset('assets/gifts588/$asset.mp3');
+-      if (!mounted || !identical(_sound, player)) return;
+-      await player.setVolume(.7);
+-      await player.play();
++      await ngelx589PlayGiftSound(
++        allowed: () => mounted && widget.soundEnabled && identical(_sound, player),
++        load: () async { await player.setAsset('assets/gifts588/$asset.mp3'); },
++        volume: () => player.setVolume(.7),
++        play: () => player.play(),
++      );
+     } catch (_) {}
+   }
+ 
+   @override
+   void didUpdateWidget(covariant Ngelx553GiftEffect old) {
+     super.didUpdateWidget(old);
+-    if (!widget.soundEnabled) unawaited(_sound?.stop());
++    if (!widget.soundEnabled) unawaited(_sound?.stop().catchError((_) {}));
+   }
+ 
+   @override
+@@ -66,7 +69,7 @@
+     _animation.dispose();
+     final player = _sound;
+     _sound = null;
+-    unawaited(player?.dispose());
++    unawaited(player?.dispose().catchError((_) {}));
+     super.dispose();
+   }
+ 
+--- a/lib/audio_live_rooms.dart
++++ b/lib/audio_live_rooms.dart
+@@ -1854,142 +1854,24 @@
+   }
+ 
+   Widget koltuk(String id) {
+-    if (id.isEmpty)
+-      return Center(
+-        child: Semantics(
+-          label: 'Boş mikrofon yeri',
+-          child: Container(
+-            width: 84,
+-            height: 84,
+-            decoration: const BoxDecoration(
+-              color: Color(0xFF303030),
+-              shape: BoxShape.circle,
+-            ),
+-            child: const Icon(
+-              Icons.add_rounded,
+-              color: Colors.white54,
+-              size: 42,
+-            ),
+-          ),
+-        ),
+-      );
++    if (id.isEmpty) return Ngelx589AudioSeat(empty: true,
++      onTap: bitti ? null : yoneticiyim ? istekler : sozIste);
+     final dynamic person = _liveKitKatilimci(id);
+     final speaking = person?.isSpeaking == true;
+-    final micOpen = id == uid
+-        ? mikrofon
+-        : (person?.isMicrophoneEnabled() == true);
++    final micOpen = id == uid ? mikrofon : person?.isMicrophoneEnabled() == true;
+     final host = id == widget.ownerId, mod = moderatorler.contains(id);
+     return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+-      stream: FirebaseFirestore.instance
+-          .collection('users')
+-          .doc(id)
+-          .snapshots(),
++      stream: FirebaseFirestore.instance.collection('users').doc(id).snapshots(),
+       builder: (_, snap) {
+         final p = snap.data?.data() ?? <String, dynamic>{};
+         final photo = (p['photoUrl'] ?? '').toString();
+-        final name = (p['displayName'] ?? p['username'] ?? 'Katılımcı')
+-            .toString();
+-        return InkWell(
++        final name = (p['displayName'] ?? p['username'] ?? 'Katılımcı').toString();
++        return Ngelx589AudioSeat(name: name, role: host ? 'Davet sahibi' : mod ? '🛡 Moderatör' : '',
++          photo: photo.isEmpty ? null : NgelXAgImageProvider(photo), speaking: speaking, micOpen: micOpen, host: host,
+           onTap: () => yoneticiyim && id != uid && id != widget.ownerId
+-              ? ngelxSesliKullaniciMenuAc(context, widget.odaId, id, name)
+-              : Navigator.push(
+-                  context,
+-                  MaterialPageRoute(
+-                    builder: (_) => KullaniciProfilPage(uid: id),
+-                  ),
+-                ),
+-          borderRadius: BorderRadius.circular(24),
+-          child: Column(
+-            mainAxisAlignment: MainAxisAlignment.center,
+-            children: [
+-              Flexible(
+-                child: AspectRatio(
+-                  aspectRatio: 1,
+-                  child: Padding(
+-                    padding: const EdgeInsets.all(4),
+-                    child: Stack(
+-                      children: [
+-                        Positioned.fill(
+-                          child: AnimatedContainer(
+-                            duration: const Duration(milliseconds: 180),
+-                            padding: const EdgeInsets.all(5),
+-                            decoration: BoxDecoration(
+-                              shape: BoxShape.circle,
+-                              border: Border.all(
+-                                color: speaking
+-                                    ? const Color(0xFF35E9B0)
+-                                    : host
+-                                    ? Colors.white24
+-                                    : Colors.transparent,
+-                                width: speaking ? 3 : 2,
+-                              ),
+-                              boxShadow: speaking
+-                                  ? const [
+-                                      BoxShadow(
+-                                        color: Color(0x4435E9B0),
+-                                        blurRadius: 14,
+-                                      ),
+-                                    ]
+-                                  : null,
+-                            ),
+-                            child: CircleAvatar(
+-                              backgroundImage: photo.isEmpty
+-                                  ? null
+-                                  : NgelXAgImageProvider(photo),
+-                              backgroundColor: const Color(0xFF303030),
+-                              child: photo.isEmpty
+-                                  ? const Icon(
+-                                      Icons.person,
+-                                      color: Colors.white60,
+-                                    )
+-                                  : null,
+-                            ),
+-                          ),
+-                        ),
+-                        if (!micOpen)
+-                          const Positioned(
+-                            right: 5,
+-                            bottom: 4,
+-                            child: CircleAvatar(
+-                              radius: 12,
+-                              backgroundColor: Colors.black,
+-                              child: Icon(
+-                                Icons.mic_off_rounded,
+-                                color: Colors.white,
+-                                size: 15,
+-                              ),
+-                            ),
+-                          ),
+-                      ],
+-                    ),
+-                  ),
+-                ),
+-              ),
+-              Text(
+-                name,
+-                maxLines: 1,
+-                overflow: TextOverflow.ellipsis,
+-                style: const TextStyle(
+-                  color: Colors.white,
+-                  fontSize: 12,
+-                  fontWeight: FontWeight.w600,
+-                ),
+-              ),
+-              const SizedBox(height: 3),
+-              Text(
+-                host
+-                    ? 'Davet sahibi'
+-                    : mod
+-                    ? '🛡 Moderatör'
+-                    : '',
+-                maxLines: 1,
+-                style: const TextStyle(color: Colors.white70, fontSize: 10),
+-              ),
+-            ],
+-          ),
+-        );
+-      },
+-    );
++            ? ngelxSesliKullaniciMenuAc(context, widget.odaId, id, name)
++            : Navigator.push(context, MaterialPageRoute(builder: (_) => KullaniciProfilPage(uid: id))));
++      });
+   }
+ 
+   @override
+@@ -2259,17 +2141,7 @@
+                         itemCount: gorunen,
+                         itemBuilder: (_, i) {
+                           final id = i < sp.length ? sp[i] : '';
+-                          return id.isEmpty
+-                              ? InkWell(
+-                                  borderRadius: BorderRadius.circular(70),
+-                                  onTap: bitti
+-                                      ? null
+-                                      : yoneticiyim
+-                                      ? istekler
+-                                      : sozIste,
+-                                  child: koltuk(id),
+-                                )
+-                              : koltuk(id);
++                          return koltuk(id);
+                         },
+                       );
+                     },
+--- /dev/null
++++ b/lib/build589_gift_sound.dart
+@@ -0,0 +1,14 @@
++/// Async native audio loading must not outlive mute or widget disposal.
++Future<void> ngelx589PlayGiftSound({
++  required bool Function() allowed,
++  required Future<void> Function() load,
++  required Future<void> Function() volume,
++  required Future<void> Function() play,
++}) async {
++  if (!allowed()) return;
++  await load();
++  if (!allowed()) return;
++  await volume();
++  if (!allowed()) return;
++  await play();
++}
+--- /dev/null
++++ b/lib/build589_audio_seat.dart
+@@ -0,0 +1,106 @@
++import 'package:flutter/material.dart';
++
++/// Shared actual room seat, independently renderable without a live connection.
++class Ngelx589AudioSeat extends StatelessWidget {
++  final String name, role;
++  final ImageProvider? photo;
++  final bool speaking, micOpen, host, empty;
++  final VoidCallback? onTap;
++  const Ngelx589AudioSeat({
++    super.key,
++    this.name = '',
++    this.role = '',
++    this.photo,
++    this.speaking = false,
++    this.micOpen = false,
++    this.host = false,
++    this.empty = false,
++    this.onTap,
++  });
++  @override
++  Widget build(BuildContext context) {
++    if (empty) {
++      return InkWell(
++        onTap: onTap,
++        borderRadius: BorderRadius.circular(70),
++        child: Center(
++          child: Semantics(
++            label: 'Boş mikrofon yeri',
++            child: AspectRatio(
++              aspectRatio: 1,
++              child: FractionallySizedBox(
++                widthFactor: .8,
++                heightFactor: .8,
++                child: Container(
++                  decoration: const BoxDecoration(
++                    color: Color(0xFF303030),
++                    shape: BoxShape.circle,
++                  ),
++                  child: const Icon(Icons.add_rounded, color: Colors.white54, size: 42),
++                ),
++              ),
++            ),
++          ),
++        ),
++      );
++    }
++    return Semantics(
++      label: '$name, $role, ${micOpen ? 'mikrofon açık' : 'mikrofon kapalı'}${speaking ? ', konuşuyor' : ''}',
++      child: InkWell(
++        onTap: onTap,
++        borderRadius: BorderRadius.circular(24),
++        child: Column(
++          mainAxisAlignment: MainAxisAlignment.center,
++          children: [
++            Flexible(
++              child: AspectRatio(
++                aspectRatio: 1,
++                child: Padding(
++                  padding: const EdgeInsets.all(4),
++                  child: Stack(
++                    children: [
++                      Positioned.fill(
++                        child: AnimatedContainer(
++                          duration: const Duration(milliseconds: 180),
++                          padding: const EdgeInsets.all(5),
++                          decoration: BoxDecoration(
++                            shape: BoxShape.circle,
++                            border: Border.all(
++                              color: speaking ? const Color(0xFF35E9B0) : host ? Colors.white24 : Colors.transparent,
++                              width: speaking ? 3 : 2,
++                            ),
++                            boxShadow: speaking ? const [BoxShadow(color: Color(0x4435E9B0), blurRadius: 14)] : null,
++                          ),
++                          child: CircleAvatar(
++                            backgroundImage: photo,
++                            backgroundColor: const Color(0xFF303030),
++                            child: photo == null ? const Icon(Icons.person, color: Colors.white60) : null,
++                          ),
++                        ),
++                      ),
++                      if (!micOpen)
++                        const Positioned(
++                          right: 5,
++                          bottom: 4,
++                          child: CircleAvatar(
++                            radius: 12,
++                            backgroundColor: Colors.black,
++                            child: Icon(Icons.mic_off_rounded, color: Colors.white, size: 15),
++                          ),
++                        ),
++                    ],
++                  ),
++                ),
++              ),
++            ),
++            Text(name, maxLines: 1, overflow: TextOverflow.ellipsis,
++              style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
++            const SizedBox(height: 3),
++            Text(role, maxLines: 1, overflow: TextOverflow.ellipsis,
++              style: const TextStyle(color: Colors.white70, fontSize: 10)),
++          ],
++        ),
++      ),
++    );
++  }
++}
+--- a/pubspec.yaml
++++ b/pubspec.yaml
+@@ -1,7 +1,7 @@
+ name: ngelx_app
+ description: "A new Flutter project."
+ publish_to: 'none'
+-version: 1.0.358+588
++version: 1.0.359+589
+ environment:
+   sdk: ^3.13.3
+ 
