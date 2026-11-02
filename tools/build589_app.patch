@@ -229,7 +229,7 @@
                          },
                        );
                      },
---- /dev/null
+--- a/lib/build589_gift_sound.dart
 +++ b/lib/build589_gift_sound.dart
 @@ -0,0 +1,14 @@
 +/// Async native audio loading must not outlive mute or widget disposal.
@@ -246,7 +246,7 @@
 +  if (!allowed()) return;
 +  await play();
 +}
---- /dev/null
+--- a/lib/build589_audio_seat.dart
 +++ b/lib/build589_audio_seat.dart
 @@ -0,0 +1,106 @@
 +import 'package:flutter/material.dart';
@@ -355,6 +355,33 @@
 +    );
 +  }
 +}
+--- a/lib/live_pk.dart
++++ b/lib/live_pk.dart
+@@ -747,16 +747,14 @@
+           receiveTimeout: const Duration(seconds: 15),
+         ),
+       );
+-    } catch (_) {
+-      _retry588 = DateTime.now().add(const Duration(seconds: 10));
+-      if (mounted)
+-        ScaffoldMessenger.of(context).showSnackBar(
+-          const SnackBar(
+-            content: Text(
+-              'PK sonucu kaydedilemedi. Bağlantı gelince tekrar denenecek.',
+-            ),
+-          ),
+-        );
++    } catch (error) {
++      final pending = error is DioException && error.response?.statusCode == 409 &&
++          error.response?.data is Map && error.response?.data['error'] == 'not_finished';
++      _retry588 = DateTime.now().add(Duration(seconds: pending ? 1 : 10));
++      if (mounted && !pending) {
++        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:
++          Text('PK sonucu kaydedilemedi. Bağlantı gelince tekrar denenecek.')));
++      }
+     } finally {
+       _islem = false;
+       if (mounted) setState(() {});
 --- a/pubspec.yaml
 +++ b/pubspec.yaml
 @@ -1,7 +1,7 @@

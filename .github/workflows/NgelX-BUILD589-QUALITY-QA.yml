@@ -30,7 +30,7 @@ jobs:
   historical-score-preflight:
     needs: backend-and-rules
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 18
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -40,7 +40,9 @@ jobs:
         env:
           FIREBASE_SERVICE_ACCOUNT_NGELX_44EED: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_NGELX_44EED }}
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-        run: node tools/build589_snapshot_probe.mjs
+        run: |
+          node tools/build589_score_index.mjs
+          node tools/build589_snapshot_probe.mjs
   android-review:
     needs: [backend-and-rules, historical-score-preflight]
     runs-on: ubuntu-latest
