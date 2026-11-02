@@ -45,7 +45,7 @@ async function converge(){
 function save(s){fs.writeFileSync(statePath,JSON.stringify(s,null,2)+'\n');}
 const mode=process.argv[2];
 if(mode==='prepare'){
- for(const [id,sha] of [['41402716570','e908a831689312b016014401552d472f113c57a0']]){
+ for(const [id,sha] of [['41402931775','937b6b115a9a949524a4135e0039b5b8cfba54a3']]){
   const r=await fetch('https://api.github.com/repos/Nnentx/Ngelx/actions/runs/'+id,{headers:{authorization:'Bearer '+process.env.GH_TOKEN,accept:'application/vnd.github+json'},signal:AbortSignal.timeout(15000)});
   if(!r.ok)throw Error('Cannot verify acceptance run');const d=await r.json();
   if(d.status!=='completed'||d.conclusion!=='success'||d.head_sha!==sha)throw Error('Required acceptance run did not pass');

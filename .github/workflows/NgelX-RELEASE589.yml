@@ -22,7 +22,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/checkout@v4
         with:
-          ref: e908a831689312b016014401552d472f113c57a0
+          ref: 937b6b115a9a949524a4135e0039b5b8cfba54a3
           path: tested
       - uses: actions/setup-node@v4
         with:
@@ -32,9 +32,9 @@ jobs:
           node --input-type=module <<'JS'
           let accepted=false;
           for(let attempt=0;attempt<180;attempt++){
-            const r=await fetch('https://api.github.com/repos/Nnentx/Ngelx/actions/runs/41402716570',{headers:{authorization:'Bearer '+process.env.GH_TOKEN,accept:'application/vnd.github+json'}});
+            const r=await fetch('https://api.github.com/repos/Nnentx/Ngelx/actions/runs/41402931775',{headers:{authorization:'Bearer '+process.env.GH_TOKEN,accept:'application/vnd.github+json'}});
             if(!r.ok)throw Error('Cannot verify APK acceptance');const d=await r.json();
-            if(d.head_sha!=='e908a831689312b016014401552d472f113c57a0')throw Error('Unexpected source');
+            if(d.head_sha!=='937b6b115a9a949524a4135e0039b5b8cfba54a3')throw Error('Unexpected source');
             if(d.status==='completed'){if(d.conclusion!=='success')throw Error('QA failed');accepted=true;break;}
             if(attempt%6===0)console.log('Waiting for exact signed APK acceptance');
             await new Promise(resolve=>setTimeout(resolve,10000));
