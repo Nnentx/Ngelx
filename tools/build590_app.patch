@@ -649,9 +649,10 @@
    }
 --- a/lib/build590_audio_stage.dart
 +++ b/lib/build590_audio_stage.dart
-@@ -0,0 +1,189 @@
+@@ -0,0 +1,193 @@
 +import 'dart:math' as math;
 +import 'package:flutter/material.dart';
++import 'package:flutter/services.dart';
 +
 +const _pink590 = Color(0xFFFF285E);
 +
@@ -664,7 +665,10 @@
 +  const Ngelx590AudioStage({super.key, required this.header, required this.controls,
 +    required this.chat, required this.seatBuilder, this.seatCount = 9, this.notice});
 +  @override
-+  Widget build(BuildContext context) => ColoredBox(color: Colors.black, child: SafeArea(
++  Widget build(BuildContext context) => AnnotatedRegion<SystemUiOverlayStyle>(
++    value: SystemUiOverlayStyle.light.copyWith(statusBarColor: Colors.black,
++      systemNavigationBarColor: Colors.black, systemNavigationBarIconBrightness: Brightness.light),
++    child: ColoredBox(color: Colors.black, child: SafeArea(
 +    child: Column(children: [
 +      Padding(padding: const EdgeInsets.fromLTRB(12, 4, 8, 0), child: header),
 +      Padding(padding: const EdgeInsets.fromLTRB(12, 7, 12, 0), child: controls),
@@ -672,7 +676,7 @@
 +      Expanded(child: LayoutBuilder(builder: (context, box) {
 +        final stageHeight = math.min(box.maxWidth * 1.01, box.maxHeight * .64);
 +        return Column(children: [
-+          if (MediaQuery.viewInsetsOf(context).bottom == 0) SizedBox(height: stageHeight, child: Padding(
++          if (MediaQuery.viewInsetsOf(context).bottom == 0 && box.maxHeight >= 340) SizedBox(height: stageHeight, child: Padding(
 +            padding: const EdgeInsets.symmetric(horizontal: 14),
 +            child: GridView.builder(key: const ValueKey('audio590-grid'),
 +              padding: const EdgeInsets.only(top: 38, bottom: 4), primary: false,
@@ -685,7 +689,7 @@
 +        ]);
 +      })),
 +    ]),
-+  ));
++  )));
 +}
 +
 +class Ngelx590RoomHeader extends StatelessWidget {
@@ -708,9 +712,9 @@
 +        Expanded(child: GestureDetector(onTap: onProfile, child: Column(mainAxisAlignment: MainAxisAlignment.center,
 +          crossAxisAlignment: CrossAxisAlignment.start, children: [
 +            Text(name, maxLines: 1, overflow: TextOverflow.ellipsis,
-+              style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w800)),
++              style: const TextStyle(color: Colors.white, fontSize: 13, height: 1.1, fontWeight: FontWeight.w800)),
 +            Text(title, maxLines: 1, overflow: TextOverflow.ellipsis,
-+              style: const TextStyle(color: Colors.white60, fontSize: 10)),
++              style: const TextStyle(color: Colors.white60, fontSize: 10, height: 1.1)),
 +          ]))),
 +        if (!host) SizedBox(height: 34, child: TextButton(
 +          style: TextButton.styleFrom(backgroundColor: _pink590, foregroundColor: Colors.white,
@@ -773,10 +777,10 @@
 +          ...[
 +            const SizedBox(height: 4),
 +            Text(empty ? ' ' : name, maxLines: 1, overflow: TextOverflow.ellipsis,
-+              style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500)),
++              style: const TextStyle(color: Colors.white, fontSize: 12, height: 1.15, fontWeight: FontWeight.w500)),
 +            const SizedBox(height: 2),
 +            Text(empty || role.isEmpty ? ' ' : role, maxLines: 1, overflow: TextOverflow.ellipsis,
-+              style: const TextStyle(color: Colors.white70, fontSize: 10)),
++              style: const TextStyle(color: Colors.white70, fontSize: 10, height: 1.1)),
 +          ],
 +        ])));
 +  });

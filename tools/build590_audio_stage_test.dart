@@ -43,6 +43,8 @@ void main() {
               Ngelx590AudioComment(name:'mamoste dedo',message:'@Hülya merhaba',photo:photos[1]),
               Ngelx590AudioComment(name:'Kandemir',message:'odaya katıldı',photo:photos[2]),
               Ngelx590AudioComment(name:'Muazzez',message:'Çok güzel bir sohbet',photo:photos[3]),
+              Ngelx590AudioComment(name:'Seda',message:'Herkese iyi akşamlar',photo:photos[4]),
+              Ngelx590AudioComment(name:'Ayşe',message:'Müzik çok güzel',photo:photos[5]),
             ])),Ngelx590Composer(controller:input,onSend:()=>send++,actions:[
               Ngelx590RoundAction(label:'Mikrofon',icon:Icons.mic,onTap:()=>menu++),
               Ngelx590RoundAction(label:'Tepki',icon:Icons.favorite,color:Colors.pink,onTap:()=>menu++),
@@ -50,6 +52,10 @@ void main() {
               Ngelx590RoundAction(label:'Seçenekler',icon:Icons.more_horiz,onTap:()=>menu++),
             ])]),
           ))))));
+      await tester.runAsync(() async {
+        final context=tester.element(find.byType(Ngelx590AudioStage));
+        for(final photo in photos) { await precacheImage(photo,context); }
+      });
       await tester.pump(const Duration(milliseconds:250));
       expect(tester.takeException(),isNull);expect(find.byType(Ngelx590AudioSeat),findsNWidgets(9));
       final grid=tester.getRect(find.byKey(const ValueKey('audio590-grid')));
