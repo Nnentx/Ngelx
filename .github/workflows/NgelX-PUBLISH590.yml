@@ -1,0 +1,64 @@
+name: Publish verified Build590 APK
+on:
+  push:
+    branches: [ops/build590-publication]
+    paths: ['.github/workflows/NgelX-PUBLISH590.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: ngelx-android-update-publication
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: Nnentx/Ngelx
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Require exact successful APK and accepted live backend
+        run: |
+          python3 - <<'PY'
+          import os,json,urllib.request
+          for run,sha in [(41414031341,'6a7342f992964cd597f76470151a1e80c7115599'),(41414886813,'6d279c13f5e06a7b5dd6cdf2ec611a7b7160f6ba'),(41405178995,'67dd885d5e0b3ea0735e84de0b8af3febecae8df')]:
+            req=urllib.request.Request('https://api.github.com/repos/Nnentx/Ngelx/actions/runs/'+str(run),headers={'Authorization':'Bearer '+os.environ['GH_TOKEN'],'Accept':'application/vnd.github+json'})
+            d=json.load(urllib.request.urlopen(req,timeout=30))
+            assert d['head_sha']==sha and d['status']=='completed' and d['conclusion']=='success'
+          PY
+      - uses: actions/download-artifact@v4
+        with:
+          name: NgelX-Build590-Review-APK
+          run-id: 41414031341
+          github-token: ${{ github.token }}
+          path: verified-apk
+      - uses: actions/download-artifact@v4
+        with:
+          name: NgelX-Build590-Assembled-Source
+          run-id: 41414031341
+          github-token: ${{ github.token }}
+          path: verified-source
+      - run: python3 tools/build590_prepare_release.py
+      - name: Preserve exact assembled application source
+        run: (cd verified-source && zip -q -r ../NgelX-Build590-Source.zip .)
+      - name: Publish immutable tested APK
+        run: |
+          if gh release view v1.0.360-build590 >/dev/null 2>&1; then
+            mkdir -p existing590
+            gh release download v1.0.360-build590 --pattern NgelX-1.0.360-Build590.apk --dir existing590
+            cmp NgelX-1.0.360-Build590.apk existing590/NgelX-1.0.360-Build590.apk
+          else
+            gh release create v1.0.360-build590 NgelX-1.0.360-Build590.apk NgelX-1.0.360-Build590.apk.sha256 NgelX-Build590-Source.zip android-update.json --target 6a7342f992964cd597f76470151a1e80c7115599 --title 'NgelX 1.0.360 / Build590' --notes-file release-notes.md
+          fi
+          curl --fail --location --retry 4 --max-time 180 --silent --show-error https://github.com/Nnentx/Ngelx/releases/download/v1.0.360-build590/NgelX-1.0.360-Build590.apk --output public-download589.apk
+          cmp NgelX-1.0.360-Build590.apk public-download589.apk
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Build590-Publication-Evidence
+          path: android-update.json
