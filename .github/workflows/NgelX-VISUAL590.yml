@@ -1,0 +1,44 @@
+name: Build590 settled full-screen visual acceptance
+on:
+  push:
+    branches: [ops/build590-publication]
+    paths: ['.github/workflows/NgelX-VISUAL590.yml','tools/build590_audio_stage_test.dart']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  visual:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          ref: 6a7342f992964cd597f76470151a1e80c7115599
+          path: tested
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: '3.47.8'
+          cache: true
+      - name: Restore and verify exact APK application source
+        run: |
+          cmp tools/build590_app.patch tested/tools/build590_app.patch
+          curl --fail --location --retry 3 --max-time 120 https://github.com/Nnentx/Ngelx/releases/download/v1.0.359-build589/NgelX-Build589-Source.zip -o base589.zip
+          echo '7882a966375a5b88a0a3e729623971212e63167e1d6183b90ca9e4e473201f91  base589.zip' | sha256sum --check
+          unzip -q -o base589.zip -d app
+          python3 tools/apply_build590.py
+          mkdir -p app/test/fixtures590
+          cp QA/build590/*.png app/test/fixtures590/
+          cp tools/build590_audio_stage_test.dart app/test/
+      - run: flutter pub get
+        working-directory: app
+      - run: flutter test --concurrency=1 --timeout=45s test/build590_audio_stage_test.dart
+        timeout-minutes: 6
+        working-directory: app
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: NgelX-Build590-Accepted-Phone-Screenshots
+          path: app/test/screenshots/build590*.png
