@@ -28,7 +28,7 @@ void main() {
         data:MediaQueryData(size:size,padding:const EdgeInsets.only(top:24,bottom:24),textScaler:TextScaler.linear(scale)),
         child:RepaintBoundary(key:const ValueKey('capture590'),child:Scaffold(backgroundColor:Colors.black,
           body:Ngelx590AudioStage(
-            header:Ngelx590RoomHeader(name:'25.EYL.A.04',title:'Sohbet ve müzik',audience:84,photo:photos.first,
+            header:Ngelx590RoomHeader(name:'25.EYL.A.04',title:'Sohbet ve müzik',audience:solo?1:84,photo:photos.first,host:solo,
               onFollow:()=>follow++,onClose:()=>close++),
             controls:const Row(children:[
               Expanded(child:Ngelx590RoomChip(child:Text('CANLI 01:24',style:TextStyle(fontSize:12)))),SizedBox(width:6),
@@ -49,7 +49,7 @@ void main() {
               Ngelx590RoundAction(label:'Davet',icon:Icons.reply,onTap:()=>menu++),
               Ngelx590RoundAction(label:'Seçenekler',icon:Icons.more_horiz,onTap:()=>menu++),
             ])]),
-          )))));
+          ))))));
       await tester.pump(const Duration(milliseconds:250));
       expect(tester.takeException(),isNull);expect(find.byType(Ngelx590AudioSeat),findsNWidgets(9));
       final grid=tester.getRect(find.byKey(const ValueKey('audio590-grid')));
@@ -61,13 +61,13 @@ void main() {
         expect(top+box.size.height,lessThanOrEqualTo(grid.bottom+.5));
       }
       await tester.tap(find.byTooltip('Odadan ayrıl'));expect(close,1);
-      await tester.tap(find.text('+ Takip et'));expect(follow,1);
+      if(solo){expect(find.text('+ Takip et'),findsNothing);}else{await tester.tap(find.text('+ Takip et'));expect(follow,1);}
       await tester.tap(find.byType(Ngelx590AudioSeat).last);expect(request,1);
       await tester.tap(find.byTooltip('Seçenekler'));expect(menu,1);
       await tester.enterText(find.byType(TextField),'Merhaba');
       await tester.testTextInput.receiveAction(TextInputAction.send);expect(send,1);
       await tester.tap(find.byTooltip('Mesajı gönder'));expect(send,2);
-      FocusManager.instance.primaryFocus?.unfocus();await tester.pump();
+      input.clear();FocusManager.instance.primaryFocus?.unfocus();await tester.pump();
       final boundary=tester.renderObject<RenderRepaintBoundary>(find.byKey(const ValueKey('capture590')));
       await tester.runAsync(()async{
         final image=await boundary.toImage(pixelRatio:1);
@@ -79,4 +79,23 @@ void main() {
       await tester.pumpWidget(const SizedBox());
     });
   }
+  testWidgets('keyboard keeps composer usable without stage overflow',(tester)async{
+    tester.view.physicalSize=const Size(360,640);tester.view.devicePixelRatio=1;
+    addTearDown(tester.view.resetPhysicalSize);addTearDown(tester.view.resetDevicePixelRatio);
+    final input=TextEditingController();addTearDown(input.dispose);
+    await tester.pumpWidget(MaterialApp(home:MediaQuery(
+      data:const MediaQueryData(size:Size(360,640),viewInsets:EdgeInsets.only(bottom:280)),
+      child:Scaffold(body:Ngelx590AudioStage(
+        header:const Ngelx590RoomHeader(name:'Yayıncı',title:'Sesli oda',audience:2),
+        controls:const SizedBox(height:32),seatBuilder:(_,i)=>const Ngelx590AudioSeat(empty:true),
+        chat:Column(children:[const Expanded(child:SizedBox()),Ngelx590Composer(controller:input,onSend:(){})]),
+      )))));
+    await tester.pump();expect(tester.takeException(),isNull);
+    expect(find.byType(TextField),findsOneWidget);
+    expect(find.byKey(const ValueKey('audio590-grid')),findsNothing);
+    await tester.enterText(find.byType(TextField),'Klavye açık');
+    expect(input.text,'Klavye açık');
+    await tester.pumpWidget(const SizedBox());
+  });
+
 }
