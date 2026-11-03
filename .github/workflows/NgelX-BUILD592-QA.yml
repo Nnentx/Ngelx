@@ -1,0 +1,87 @@
+name: NgelX Build592 four-player Ludo and gift effects
+on:
+  push:
+    branches: [fix/build592-four-player-gifts]
+    paths-ignore: ['.github/workflows/NgelX-PUBLISH592.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: ngelx-build592-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test server/ludo565/*.test.mjs server/livekit443/*.test.mjs cloudflare/live-moderation/test/*.test.mjs
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: '3.47.8'
+          cache: true
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Restore exact published Build591 and apply reviewed patch
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 3 --max-time 120 https://github.com/Nnentx/Ngelx/releases/download/v1.0.361-build591/NgelX-Build591-Source.zip -o base591.zip
+          echo '6b7776095209de5171b4dd359380345d816fc7b96629561dc10f144090cfd53c  base591.zip' | sha256sum --check
+          rm -rf app
+          mkdir app
+          unzip -q base591.zip -d app
+          python3 tools/apply_build592.py
+          python3 tools/apply_build592.py
+          mkdir -p app/test
+          cp tools/build592_feedback_test.dart tools/build583_feedback_test.dart tools/build586_roll_test.dart tools/build587_feedback_test.dart app/test/
+      - run: flutter pub get
+        working-directory: app
+      - run: flutter analyze --no-fatal-infos --no-fatal-warnings
+        working-directory: app
+      - name: Check actual gestures, invitations, gift rendering, mute and deadlines
+        run: flutter test --concurrency=1 --timeout=45s test/build592_feedback_test.dart test/build586_roll_test.dart test/build587_feedback_test.dart
+        working-directory: app
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: NgelX-Build592-Phone-Screenshots
+          path: app/test/screenshots/*.png
+          if-no-files-found: ignore
+      - uses: actions/cache/restore@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: ngelx-stable-debug-keystore-v1
+          fail-on-cache-miss: true
+      - name: Build APK and preserve existing signing identity
+        working-directory: app
+        run: |
+          set -euo pipefail
+          flutter build apk --release --target-platform android-arm64 --build-name=1.0.362 --build-number=592 --dart-define=NGELX_VERSION_NAME=1.0.362 --dart-define=NGELX_BUILD_NUMBER=592 --dart-define=NGELX_VERIFICATION_EMAIL_URL=https://ngelx-verification-email.alihancaglar76.workers.dev/verify-email --dart-define=NGELX_COMMUNITY_DELETE_URL=https://ngelx-live-moderation.alihancaglar76.workers.dev/community/delete --dart-define=NGELX_LIVEKIT_GUEST_MODERATION_URL=https://ngelx-live-moderation.alihancaglar76.workers.dev/moderate --dart-define=NGELX_CALL_PUSH_URL=https://ngelx-call-push.alihancaglar76.workers.dev
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          "$APKSIGNER" verify --verbose --print-certs build/app/outputs/flutter-apk/app-release.apk > signature.txt
+          grep -iF 'be20b27f0ba1f4decd2941d410b1536de89e48dc894f04f038f9d26b11ecd6aa' signature.txt
+          cp build/app/outputs/flutter-apk/app-release.apk NgelX-1.0.362-Build592.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NgelX-Build592-Review-APK
+          path: app/NgelX-1.0.362-Build592.apk
+      - name: Package reproducible source without machine caches
+        run: |
+          cd app
+          zip -q -r ../NgelX-Build592-Source.zip lib assets pubspec.yaml pubspec.lock android -x 'android/.gradle/*' 'android/local.properties' 'android/key.properties' '*/build/*'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NgelX-Build592-Assembled-Source
+          path: NgelX-Build592-Source.zip

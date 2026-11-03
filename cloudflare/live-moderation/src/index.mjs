@@ -20,7 +20,7 @@ export default {async fetch(request,env){
    const coreReady=configured(env);
    const ludoReady=ludoConfigured(env);
    return json({ok:coreReady,service:'ngelx-live-moderation',
-    features:['community_delete556','ludo565','ludo568','ludo569',
+    features:['ludo592','community_delete556','ludo565','ludo568','ludo569',
      'ludo575_auto','ludo575_chips','ludo575_gifts','ludo575_reports'],
     ludo575:{sourceVersion:575,clientBuild:578,configured:ludoReady,
      rewardedAdsConfigured:ludoReady&&validRewardedAdUnit(env),

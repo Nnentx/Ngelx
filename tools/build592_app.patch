@@ -1,0 +1,399 @@
+--- a/lib/build565_ludo.dart
++++ b/lib/build565_ludo.dart
+@@ -156,7 +156,7 @@
+     Ngelx567GameButton(label:busy?'Masa hazırlanıyor…':play=='bot'?'Oyuna başla':play=='random'?'Rakip bul':'Devam et',icon:Icons.arrow_forward_rounded,gold:true,busy:busy,onPressed:busy?null:open),
+    ],
+    if(error.isNotEmpty)Padding(padding:const EdgeInsets.only(top:16),child:Text(error,textAlign:TextAlign.center,style:const TextStyle(color:Color(0xFFFFE39A),fontWeight:FontWeight.w600))),
+-  ])),const SizedBox(height:18),Text(play=='friends'?'En az iki oyuncu katılınca kurucu Başlat’a dokunur. Takımlı oyun dört kişiyle başlar. Zar at, taşını seç ve dört taşını da eve ulaştır.':play=='bot'?'Makine otomatik oynar. Sıra sana geldiğinde zar at ve taşını seç.':'Uygun oyuncular bulunduğunda oyun otomatik başlar. Aramayı masadan iptal edebilirsin.',textAlign:TextAlign.center,style:TextStyle(color:Colors.white60,fontSize:12,height:1.5)),
++  ])),const SizedBox(height:18),Text(play=='friends'?'Dört kişilik oda dolunca oyun otomatik başlar. İki kişilik masada kurucu Başlat’a dokunur. Zar at ve taşını seç.':play=='bot'?'Makine otomatik oynar. Sıra sana geldiğinde zar at ve taşını seç.':'Uygun oyuncular bulunduğunda oyun otomatik başlar. Aramayı masadan iptal edebilirsin.',textAlign:TextAlign.center,style:TextStyle(color:Colors.white60,fontSize:12,height:1.5)),
+  ]))))));
+ }
+ 
+@@ -434,6 +434,12 @@
+   ScaffoldMessenger.of(context).hideCurrentSnackBar();
+   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(message),duration:const Duration(seconds:2)));
+  }
++ int? _queuedToken592;
++ void _tapToken592(int token){
++  if(_rollPending583&&game.busy){_queuedToken592??=token;return;}
++  if(widget.watch||_asking||_chatOpen||game.busy||game.leaving||!game.playing||room['turn']!=game.seat||!ngelx565Legal(room,game.seat).contains(token))return;
++  _soundTap575();unawaited(game.perform('move',{'token':token}));
++ }
+  bool _rollPending583=false;
+  int? _rollFace586;
+  bool get _canRoll586=>mounted&&!widget.watch&&!_asking&&!_chatOpen&&
+@@ -446,7 +452,7 @@
+  void _tapRoll572(bool myTurn){
+   if(_rollPending583||widget.watch||(!myTurn&&!game.busy))return;
+   if(room['dice']!=null){_notice572('Önce parlayan taşını seç');return;}
+-  setState((){_rollPending583=true;_rollFace586=null;});
++  setState((){_rollPending583=true;_rollFace586=null;_queuedToken592=null;});
+   unawaited(()async{
+    try{
+     // Accept a gesture during a pending mutation/poll, then use its fresh state.
+@@ -472,7 +478,11 @@
+      break;
+     }
+    }finally{
+-    if(mounted)setState((){_rollPending583=false;_rollFace586=null;});
++    if(mounted){
++     final token=_queuedToken592;_queuedToken592=null;
++     setState((){_rollPending583=false;_rollFace586=null;});
++     if(token!=null)_tapToken592(token);
++    }
+    }
+   }());
+  }
+@@ -562,13 +572,13 @@
+     IconButton(tooltip:'Oda kodunu kopyala',onPressed:()=>Clipboard.setData(ClipboardData(text:widget.id)),icon:const Icon(Icons.copy_rounded,size:20))]),
+    body:_LudoBackdrop567(child:SafeArea(bottom:true,child:Column(children:[Ngelx573WalletBar(room:room),Expanded(child:LayoutBuilder(builder:(context,box){
+     final sideways=box.maxWidth>box.maxHeight*1.3&&box.maxWidth>550;
+-    final frame=Ngelx567Table(room:room,seat:game.seat,uid:game.uid,enabled:game.playing&&game.seat==room['turn']&&!game.busy&&!game.leaving,onPlayerTap:widget.watch?null:_playerCard575,
+-    onToken:(token){_soundTap575();unawaited(game.perform('move',{'token':token}));},onRoll:()=>_tapRoll572(game.playing&&room['turn']==game.seat),busy:game.busy,rollPending586:_rollPending583,rollFace586:_rollFace586);
++    final frame=Ngelx567Table(room:room,seat:game.seat,uid:game.uid,enabled:game.playing&&game.seat==room['turn']&&(!game.busy||_rollPending583)&&!game.leaving,onPlayerTap:widget.watch?null:_playerCard575,
++    onToken:_tapToken592,onRoll:()=>_tapRoll572(game.playing&&room['turn']==game.seat),busy:game.busy,rollPending586:_rollPending583,rollFace586:_rollFace586);
+     final wait=game.waiting&&!game.detached&&!widget.watch?Ngelx567WaitingPanel(room:room,uid:game.uid,canStart:game.canStart,busy:game.busy,onInvite:_invite,onStart:()=>game.perform('start'),compact:box.maxHeight<500):null;
+     if(sideways)return Row(children:[Expanded(child:Padding(padding:const EdgeInsets.all(10),child:Stack(alignment:Alignment.center,children:[Center(child:AspectRatio(aspectRatio:.78,child:frame)),if(wait!=null)SizedBox(width:300,child:FittedBox(fit:BoxFit.scaleDown,child:SizedBox(width:300,child:wait)))]))),SizedBox(width:245,child:ListView(padding:const EdgeInsets.only(top:12),children:[_roomLabel567(widget.id),_footer()]))]);
+     return Column(children:[_roomLabel567(widget.id),Expanded(child:LayoutBuilder(builder:(_,area)=>Stack(alignment:Alignment.center,children:[Positioned.fill(child:Padding(padding:const EdgeInsets.symmetric(horizontal:2),child:frame)),if(wait!=null)ConstrainedBox(constraints:BoxConstraints(maxWidth:math.min(380,area.maxWidth-20),maxHeight:area.maxHeight-8),child:SingleChildScrollView(child:wait)),if(room.isEmpty)const Center(child:CircularProgressIndicator(color:_ludoGold567))]))),if(players.isEmpty&&room.isEmpty)const Text('Masaya bağlanılıyor…',style:TextStyle(color:Colors.white70)),_footer()]);
+    }))]))),
+-  )),Positioned.fill(child:Ngelx587Hearts(room:room)),if(_victory580)Positioned.fill(child:Ngelx580Victory(name:_winner567(room))) ]));
++  )),Positioned.fill(child:Ngelx587Hearts(room:room)),Positioned.fill(child:Ngelx592GiftEffects(room:room,soundOn:_soundOn575)),if(_victory580)Positioned.fill(child:Ngelx580Victory(name:_winner567(room))) ]));
+  }
+ }
+ Widget _roomLabel567(String id)=>Padding(padding:const EdgeInsets.symmetric(horizontal:18,vertical:5),child:Row(mainAxisAlignment:MainAxisAlignment.center,children:[const Icon(Icons.lock_outline_rounded,size:12,color:Colors.white38),const SizedBox(width:5),Flexible(child:Text('ODA · $id',maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.white54,fontSize:14,fontWeight:FontWeight.w800,letterSpacing:2)))]));
+@@ -583,7 +593,7 @@
+  const Ngelx567WaitingPanel({super.key,required this.room,required this.uid,required this.canStart,required this.busy,required this.onInvite,required this.onStart,this.compact=false});
+  @override Widget build(BuildContext context){
+   final players=List<dynamic>.from(room['players']??[]).where((p)=>p['left']!=true).toList();
+-  final capacity=(room['capacity'] as num? ?? 2).toInt(),requiredPlayers=room['team']==true?4:2;
++  final capacity=(room['capacity'] as num? ?? 2).toInt(),requiredPlayers=capacity;
+   final id='${room['id']??''}',owner=room['owner']==uid,random=room['matchmaking']==true;
+   return Container(key:const ValueKey('ludo-waiting-panel'),decoration:BoxDecoration(
+    borderRadius:BorderRadius.circular(20),gradient:const LinearGradient(begin:Alignment.topCenter,end:Alignment.bottomCenter,colors:[Color(0xFFB8B4FF),Color(0xFF7C74D5)]),
+@@ -609,8 +619,8 @@
+        Expanded(child:Text(id,key:const ValueKey('ludo-waiting-code'),textAlign:TextAlign.center,maxLines:1,style:TextStyle(color:const Color(0xFF4C4077),fontWeight:FontWeight.w800,fontSize:id.length>6?14:21,letterSpacing:id.length>6?1:3))),
+        IconButton(tooltip:'Oda kodunu kopyala',onPressed:()=>Clipboard.setData(ClipboardData(text:id)),icon:const Icon(Icons.copy_rounded,size:21,color:Color(0xFF8270C6)),constraints:const BoxConstraints(minWidth:36,minHeight:36),padding:const EdgeInsets.all(5)),
+       ])),
+-      Padding(padding:EdgeInsets.symmetric(vertical:compact?8:13),child:Text(players.length<requiredPlayers?'${requiredPlayers-players.length} oyuncu daha bekleniyor':owner?'Masa hazır. Oyunu başlatabilirsin.':'Kurucunun başlatması bekleniyor',textAlign:TextAlign.center,style:TextStyle(color:const Color(0xFF74658F),fontSize:compact?12:13,fontWeight:FontWeight.w700))),
+-      if(!random)Row(children:[Expanded(child:Ngelx567GameButton(label:'Davet et',icon:Icons.person_add_alt_1_rounded,onPressed:busy?null:onInvite)),const SizedBox(width:10),Expanded(child:Ngelx567GameButton(key:const ValueKey('ludo-start'),label:'Başlat',gold:true,onPressed:canStart?onStart:null))]),
++      Padding(padding:EdgeInsets.symmetric(vertical:compact?8:13),child:Text(players.length<requiredPlayers?'${requiredPlayers-players.length} oyuncu daha bekleniyor':capacity==4?'Masa doldu · Oyun başlıyor…':owner?'Masa hazır. Oyunu başlatabilirsin.':'Kurucunun başlatması bekleniyor',textAlign:TextAlign.center,style:TextStyle(color:const Color(0xFF74658F),fontSize:compact?12:13,fontWeight:FontWeight.w700))),
++      if(!random)Row(children:[Expanded(child:Ngelx567GameButton(label:'Davet et',icon:Icons.person_add_alt_1_rounded,onPressed:busy?null:onInvite)),const SizedBox(width:10),Expanded(child:Ngelx567GameButton(key:const ValueKey('ludo-start'),label:room['capacity']==4?'4 kişi bekleniyor':'Başlat',gold:true,onPressed:canStart?onStart:null))]),
+      ])),
+    ]));
+  }
+@@ -627,7 +637,7 @@
+   final turns=seat<0?0:(3-seat+4)%4,playing=room['status']=='playing';
+   final players=List<dynamic>.from(room['players']??[]).where((p)=>p['left']!=true).toList();
+   return Stack(clipBehavior:Clip.none,children:[
+-   Positioned(left:left,top:top,width:side,height:boardHeight,child:FittedBox(key:const ValueKey('ludo-expanded-board'),fit:BoxFit.fill,child:SizedBox(width:side,height:side,child:Container(decoration:BoxDecoration(borderRadius:BorderRadius.circular(6),border:Border.all(color:const Color(0xFF675CB0),width:2),boxShadow:const [BoxShadow(color:Color(0x770D082D),blurRadius:24,offset:Offset(0,10))]),child:ClipRRect(clipBehavior:Clip.none,borderRadius:BorderRadius.circular(4),child:RepaintBoundary(child:Ngelx565LudoBoard(room:room,seat:seat,enabled:enabled,onToken:onToken))))))),
++   Positioned(left:left,top:top,width:side,height:boardHeight,child:FittedBox(key:const ValueKey('ludo-expanded-board'),fit:BoxFit.fill,child:SizedBox(width:side,height:side,child:Container(decoration:BoxDecoration(borderRadius:BorderRadius.circular(6),border:Border.all(color:const Color(0xFF675CB0),width:2),boxShadow:const [BoxShadow(color:Color(0x770D082D),blurRadius:24,offset:Offset(0,10))]),child:ClipRRect(clipBehavior:Clip.none,borderRadius:BorderRadius.circular(4),child:RepaintBoundary(child:Ngelx565LudoBoard(room:room,seat:seat,enabled:enabled,pendingRoll592:rollPending586&&room['dice']==null,onToken:onToken))))))),
+    for(final p in players)Builder(builder:(_){
+     final color=(p['seat'] as num).toInt(),visual=(color+turns)%4,isLeft=visual==0||visual==3,isTop=visual==0||visual==1,isTurn=playing&&room['turn']==color,isMine=p['uid']==uid;
+     final width=math.min(180.0,side*.55),photo='${p['photo']??''}';
+@@ -681,13 +691,13 @@
+  return Offset.lerp(ngelx565TokenPoint(seat,token,from),ngelx565TokenPoint(seat,token,to),t)!;
+ }
+ class Ngelx565LudoBoard extends StatelessWidget {
+- final Map<String,dynamic> room;final int seat;final bool enabled;final ValueChanged<int> onToken;
+- const Ngelx565LudoBoard({super.key,required this.room,required this.seat,required this.enabled,required this.onToken});
++ final Map<String,dynamic> room;final int seat;final bool enabled,pendingRoll592;final ValueChanged<int> onToken;
++ const Ngelx565LudoBoard({super.key,required this.room,required this.seat,required this.enabled,required this.onToken,this.pendingRoll592=false});
+  @override Widget build(BuildContext context)=>LayoutBuilder(builder:(_,box){
+   final cell=box.maxWidth/15,turns=seat<0?0:(3-seat+4)%4,allowed=seat<0?<int>[]:ngelx565Legal(room,seat);
+   final seats=[for(final p in room['players']??[])if(p['left']!=true)(p['seat'] as num).toInt()];
+   return Listener(behavior:HitTestBehavior.opaque,onPointerDown:enabled?(event){
+-   final token=ngelx583HitToken(room,seat,cell,event.localPosition);
++   final token=ngelx583HitToken(room,seat,cell,event.localPosition,pendingRoll592:pendingRoll592);
+    if(token!=null)onToken(token);
+   }:null,child:Stack(clipBehavior:Clip.none,children:[Positioned.fill(child:CustomPaint(painter:Ngelx565BoardPainter(turns:turns,power:room['mode']=='power',powerTiles:room['powerTiles'] is Map?Map<String,dynamic>.from(room['powerTiles'] as Map):null,
+    bonusTiles:room['bonusTiles'] is List?(room['bonusTiles'] as List).whereType<num>().map((n)=>n.toInt()).toList():null))),for(final color in seats)for(var token=0;token<4;token++)_MovingPawn567(stackOffset:ngelx572StackOffset(room,color,token),stackCount:ngelx573PawnCount(room,color,token),protected580:room['shields'] is Map&&(room['shields'] as Map)[color.toString()]==true,key:ValueKey('ludo-$color-$token'),seat:color,token:token,position:((room['tokens'] as List)[color][token] as num).toInt(),cell:cell,turns:turns,highlight:enabled&&color==seat&&allowed.contains(token),onTap:enabled&&color==seat&&allowed.contains(token)?()=>onToken(token):null)]));
+@@ -728,7 +738,7 @@
+ double ngelx578PawnTop(double floor,double size)=>floor-size*.89;
+ double ngelx578FootY(double center,double cell,int position)=>center+(position<0?0:cell*.28);
+ double ngelx578PawnLeft(double center,double size)=>center-size*.5;
+-Duration ngelx585PawnDuration(int from,int to)=>Duration(milliseconds:math.min(1320,math.max(180,(to-from).abs()*110)));
++Duration ngelx585PawnDuration(int from,int to)=>Duration(milliseconds:math.min(480,math.max(120,(to-from).abs()*55)));
+ class _MovingPawn567 extends StatefulWidget {
+  final int seat,token,position,turns;final double cell;final bool highlight;final Offset stackOffset;final int stackCount;final bool protected580;final VoidCallback? onTap;
+  const _MovingPawn567({super.key,required this.seat,required this.token,required this.position,required this.cell,required this.turns,required this.highlight,required this.stackOffset,required this.stackCount,this.onTap,this.protected580=false});
+@@ -978,7 +988,7 @@
+   final left=((expires-now)/1000).ceil().clamp(0,120);
+   final countdown='${(left~/60).toString().padLeft(2,'0')}:${(left%60).toString().padLeft(2,'0')}';
+   final state=status;
+-  final label=state=='joined'?'Katıldı':state=='expired'?'Süresi doldu':'Bekleniyor';
++  final label=state=='joined'?'Oda doldu · Oyun başladı':state=='expired'?'Süresi doldu':invite['capacity'] is num?'${invite['joined']??1}/${invite['capacity']} oyuncu · Katılabilirsin':'Bekleniyor';
+   return Align(alignment:widget.mine?Alignment.centerRight:Alignment.centerLeft,
+    child:GestureDetector(onLongPress:widget.onLongPress,child:Container(
+     key:const ValueKey('ludo-visual-invite'),width:300,margin:const EdgeInsets.symmetric(vertical:6,horizontal:4),
+--- a/lib/build567_room_controller.dart
++++ b/lib/build567_room_controller.dart
+@@ -52,11 +52,16 @@
+  bool get playing=>room['status']=='playing';
+  bool get terminal=>detached||['closed','finished'].contains(room['status']);
+  int get joined=>(room['players'] as List? ?? []).where((p)=>p['left']!=true).length;
+- bool get canStart=>waiting&&owner&&joined>=(room['team']==true||room['matchmaking']==true?room['capacity'] as num:2)&&!busy&&!leaving&&!detached;
++ bool get canStart=>waiting&&owner&&joined>=(room['capacity'] as num? ?? 2)&&!busy&&!leaving&&!detached;
+  void _notify(){if(!_disposed)notifyListeners();}
+  bool _account(){if(accountMatches?.call()==false){detached=true;error='Oturum değişti. Lobiye dönebilirsin.';_notify();return false;}return true;}
+  void _accept(Map<String,dynamic> next){
+-  if((next['revision'] as num? ?? -1)>=(room['revision'] as num? ?? -1))room=next;
++  if((next['revision'] as num? ?? -1)>=(room['revision'] as num? ?? -1)){
++   final known={for(final p in room['players'] as List? ?? [])p['uid']:p};
++   room={...next,if(!next.containsKey('spectatorCount')&&room.containsKey('spectatorCount'))'spectatorCount':room['spectatorCount'],
++    if(next['players'] is List)'players':[for(final p in next['players']){...p,
++     if(!p.containsKey('level'))'level':known[p['uid']]?['level']??1}]};
++  }
+  }
+  Future<void> sync({bool join=false}){
+   if(_disposed||busy||leaving||detached||!_account())return Future.value();
+@@ -66,7 +71,7 @@
+    try{
+     for(var attempt=0;attempt<3;attempt++){
+      try{
+-      final next=await request({'action':join||room.isEmpty?'join':'sync','id':id}).timeout(const Duration(seconds:12));
++      final next=await request({'action':join||room.isEmpty?'join':'sync','id':id,'fast592':true}).timeout(const Duration(seconds:12));
+       if(_disposed||generation!=_generation||leaving||!_account())return;
+       _accept(next);_healthy579();_notify();return;
+      }on Ngelx567Failure catch(e){
+@@ -88,17 +93,28 @@
+  String? lastFailureCode583;
+  Future<void> waitForIdle583()async{
+   final mutation=_mutation580;if(mutation!=null)await mutation.future;
+-  final syncing=_sync;if(syncing!=null)await syncing;
++  // A background poll must not hold a user gesture. Generation checks discard it.
+  }
+  Future<bool> perform(String action,[Map<String,dynamic> data=const {}])async{
+   if(_disposed||busy||leaving||detached||room.isEmpty||!_account())return false;
+-  lastFailureCode583=null;_mutation580=Completer<void>();busy=true;error='';_notify();
++  lastFailureCode583=null;_mutation580=Completer<void>();busy=true;error='';_generation++;_notify();
+   try{
+-   // Drain the already-running poll before taking a revision for a mutation.
+-   final pending=_sync;if(pending!=null)await pending;
+    if(_disposed||detached||!_account())return false;
+-   _generation++;
+-   final next=await request({'action':action,'id':id,'revision':room['revision'],'requestId':_id(),...data}).timeout(const Duration(seconds:12));
++   final key=_id(),beforeTurn=room['turn'],beforeDice=room['dice'];
++   final beforeTokens='${room['tokens']}',beforeRoll='${room['lastRoll']}';
++   Map<String,dynamic>? next;
++   for(var attempt=0;attempt<3;attempt++){
++    try{
++     next=await request({'action':action,'id':id,'revision':room['revision'],'requestId':key,...data,'fast592':true}).timeout(const Duration(seconds:12));break;
++    }on Ngelx567Failure catch(e){
++     if(e.code!='state_changed'||action!='move'||attempt==2)rethrow;
++     final fresh=await request({'action':'sync','id':id,'fast592':true}).timeout(const Duration(seconds:12));
++     if(_disposed||leaving||detached||!_account())return false;
++     _accept(fresh);
++     if(room['turn']!=beforeTurn||room['dice']!=beforeDice||'${room['tokens']}'!=beforeTokens||'${room['lastRoll']}'!=beforeRoll)rethrow;
++    }
++   }
++   if(next==null)return false;
+    if(_disposed||!_account())return false;
+    _accept(next);_healthy579();return true;
+   }catch(e){
+--- a/lib/build583_feedback.dart
++++ b/lib/build583_feedback.dart
+@@ -48,11 +48,11 @@
+ 
+ // Resolve enlarged targets once at board level. Inactive pawns cannot intercept
+ // touches, and overlapping targets always select the nearest legal piece.
+-int? ngelx583HitToken(Map<String,dynamic> room,int seat,double cell,Offset tap){
++int? ngelx583HitToken(Map<String,dynamic> room,int seat,double cell,Offset tap,{bool pendingRoll592=false}){
+  if(seat<0||cell<=0)return null;
+  final turns=(3-seat+4)%4;
+  int? nearest;var distance=double.infinity;
+- for(final token in ngelx565Legal(room,seat)){
++ for(final token in pendingRoll592?[for(var i=0;i<4;i++)if(room['tokens'][seat][i]!=56)i]:ngelx565Legal(room,seat)){
+   final position=(room['tokens'][seat][token] as num).toInt();
+   final point=ngelx565Rotate(ngelx565TokenPoint(seat,token,position),turns);
+   final shift=ngelx572StackOffset(room,seat,token);
+--- a/lib/build587_effects.dart
++++ b/lib/build587_effects.dart
+@@ -30,30 +30,16 @@
+  final String kind;final double size;
+  const Ngelx587GiftArt({super.key,required this.kind,this.size=60});
+  @override Widget build(BuildContext context){
+-  final (icon,colors)=switch(kind){
+-   'heart'=>(Icons.favorite_rounded,const [Color(0xFFFF789F),Color(0xFFE31C60)]),
+-   'rose'||'flower'=>(Icons.local_florist_rounded,const [Color(0xFFFF7792),Color(0xFFBD174B)]),
+-   'crown'=>(Icons.workspace_premium_rounded,const [Color(0xFFFFDF85),Color(0xFFD88A10)]),
+-   'coffee'=>(Icons.coffee_rounded,const [Color(0xFFE5BE98),Color(0xFF976344)]),
+-   'like'||'thumbs_up'=>(Icons.thumb_up_rounded,const [Color(0xFF86CEFF),Color(0xFF397AE2)]),
+-   'tomato'=>(Icons.eco_rounded,const [Color(0xFFFF8D74),Color(0xFFE63B35)]),
+-   'pizza'=>(Icons.local_pizza_rounded,const [Color(0xFFFFD28E),Color(0xFFE58C31)]),
+-   'bucket'=>(Icons.water_drop_rounded,const [Color(0xFF8CE5F6),Color(0xFF379EC6)]),
+-   'clock'=>(Icons.schedule_rounded,const [Color(0xFFB6CAFF),Color(0xFF657AD0)]),
+-   'flame'=>(Icons.local_fire_department_rounded,const [Color(0xFFFFD56D),Color(0xFFF36531)]),
+-   'rooster'=>(Icons.pets_rounded,const [Color(0xFFF1CDA1),Color(0xFFB27B4E)]),
+-   'slipper'=>(Icons.hiking_rounded,const [Color(0xFFABDFC7),Color(0xFF388E80)]),
+-   'pan'=>(Icons.soup_kitchen_rounded,const [Color(0xFFB1BFCE),Color(0xFF526275)]),
+-   'plunger'=>(Icons.cleaning_services_rounded,const [Color(0xFFBEA5E1),Color(0xFF7958AC)]),
+-   'egg'=>(Icons.egg_rounded,const [Color(0xFFFFEAD0),Color(0xFFD7AA74)]),
+-   'balloon'=>(Icons.celebration_rounded,const [Color(0xFFFFA5D1),Color(0xFFD24F9C)]),
+-   _=>(Icons.card_giftcard_rounded,const [Color(0xFFC4A3FF),Color(0xFF7650CB)]),
+-  };
+-  return Container(width:size,height:size,decoration:BoxDecoration(
+-   borderRadius:BorderRadius.circular(size*.29),gradient:LinearGradient(begin:Alignment.topLeft,end:Alignment.bottomRight,colors:colors),
+-   border:Border.all(color:Colors.white.withValues(alpha:.7)),
+-   boxShadow:[BoxShadow(color:colors.last.withValues(alpha:.25),blurRadius:12,offset:const Offset(0,5))]),
+-   child:Icon(icon,size:size*.58,color:Colors.white,shadows:const [Shadow(color:Color(0x33000000),blurRadius:3,offset:Offset(0,2))]));
++  const kinds=['flower','heart','crown','coffee','thumbs_up','tomato','pizza','bucket','clock','flame','rooster','slipper','pan','plunger','egg','balloon'];
++  final normalized=kind=='rose'?'flower':kind=='like'?'thumbs_up':kind;
++  final index=kinds.indexOf(normalized);
++  if(index<0)return SizedBox(width:size,height:size,child:const Icon(Icons.card_giftcard_rounded));
++  // One packaged atlas is shared by both the shelf and the actual gift flight.
++  return SizedBox(key:ValueKey('ludo-gift-art-$normalized'),width:size,height:size,
++   child:ClipRect(child:OverflowBox(minWidth:size*4,maxWidth:size*4,minHeight:size*4,maxHeight:size*4,
++    alignment:Alignment(-1+(index%4)*2/3,-1+(index~/4)*2/3),
++    child:Image.asset('assets/ludo592_gifts.png',width:size*4,height:size*4,fit:BoxFit.fill,
++     filterQuality:FilterQuality.medium,excludeFromSemantics:true))));
+  }
+ }
+ 
+--- a/lib/build592_gifts.dart
++++ b/lib/build592_gifts.dart
+@@ -0,0 +1,115 @@
++part of 'main.dart';
++
++Duration ngelx592GiftDuration(String kind)=>Duration(milliseconds:kind=='rooster'?3600:2000);
++String ngelx592GiftSound(String kind)=>'assets/gifts592/$kind.mp3';
++
++/// Fresh, server-accepted receipts alone start effects. The overlay cannot eat taps.
++class Ngelx592GiftEffects extends StatefulWidget {
++ final Map<String,dynamic> room;final bool soundOn;
++ final Future<void> Function(String)? playSound;
++ const Ngelx592GiftEffects({super.key,required this.room,required this.soundOn,this.playSound});
++ @override State<Ngelx592GiftEffects> createState()=>_Ngelx592GiftEffectsState();
++}
++class _Ngelx592GiftEffectsState extends State<Ngelx592GiftEffects> with SingleTickerProviderStateMixin,WidgetsBindingObserver {
++ final queue=Ngelx583GiftQueue();Map<String,dynamic>? current;
++ AudioPlayer? _audio;int _epoch=0;bool _foreground=true;
++ late final AnimationController motion=AnimationController(vsync:this,duration:const Duration(seconds:2))
++  ..addStatusListener((status){if(status==AnimationStatus.completed&&mounted){_epoch++;unawaited(_audio?.stop());setState(()=>current=null);_next();}});
++ @override void initState(){super.initState();WidgetsBinding.instance.addObserver(this);queue.observe(widget.room['gifts'],DateTime.now().millisecondsSinceEpoch);}
++ @override void didUpdateWidget(covariant Ngelx592GiftEffects old){super.didUpdateWidget(old);
++  if(old.soundOn&&!widget.soundOn){_epoch++;unawaited(_audio?.stop());}
++  queue.observe(widget.room['gifts'],DateTime.now().millisecondsSinceEpoch);_next();
++ }
++ @override void didChangeAppLifecycleState(AppLifecycleState state){
++  _foreground=state==AppLifecycleState.resumed;
++  if(!_foreground){_epoch++;queue.pending.clear();motion.stop();unawaited(_audio?.stop());setState(()=>current=null);}
++ }
++ void _next(){
++  if(current!=null||queue.pending.isEmpty||!_foreground)return;
++  current=queue.pending.removeAt(0);final kind='${current!['kind']}';
++  motion.duration=ngelx592GiftDuration(kind);motion.forward(from:0);
++  if(widget.soundOn)unawaited(_play(kind));
++ }
++ Future<void> _play(String kind)async{
++  final epoch=++_epoch;bool allowed()=>mounted&&_foreground&&widget.soundOn&&epoch==_epoch;
++  if(!allowed())return;
++  try{
++   if(widget.playSound!=null){await widget.playSound!(kind);return;}
++   final player=_audio??=AudioPlayer(handleAudioSessionActivation:false,handleInterruptions:false);
++   await player.setAsset(ngelx592GiftSound(kind));if(!allowed())return;
++   await player.setVolume(.65);if(!allowed())return;
++   unawaited(player.play().catchError((_){ }));
++  }catch(_){ } // A native audio error never delays a move or charges a second gift.
++ }
++ @override void dispose(){WidgetsBinding.instance.removeObserver(this);_epoch++;motion.dispose();unawaited(_audio?.dispose());super.dispose();}
++ @override Widget build(BuildContext context)=>IgnorePointer(child:AnimatedBuilder(animation:motion,builder:(_,__){
++  final event=current;if(event==null)return const SizedBox.shrink();
++  final kind='${event['kind']}',t=motion.value;
++  return RepaintBoundary(child:LayoutBuilder(builder:(_,box){
++   final w=box.maxWidth,h=box.maxHeight,fade=t<.8?1.0:((1-t)/.2).clamp(0.0,1.0);
++   return Opacity(opacity:fade,child:Stack(key:ValueKey('ludo-effect-$kind'),clipBehavior:Clip.hardEdge,children:[
++    if(['flame','bucket','tomato'].contains(kind))Positioned.fill(child:CustomPaint(painter:_Ngelx592GiftPainter(kind,t))),
++    if(kind=='bucket')Positioned(top:h*.12,left:w*.63,child:Transform.rotate(angle:-.7*math.sin(t*math.pi),child:Ngelx587GiftArt(kind:'bucket',size:w*.28))),
++    if(kind=='balloon')for(var i=0;i<7;i++)Positioned(left:w*(.05+(i%4)*.25)+math.sin(t*5+i)*15,top:h*(1.05-t*1.35)+(i%3)*45,
++     child:Transform.rotate(angle:math.sin(t*4+i)*.12,child:Ngelx587GiftArt(kind:'balloon',size:64+(i%3)*12.0))),
++    if(kind=='rooster')Positioned(left:w*.5-70+math.sin(t*7)*10,top:h*.40-math.sin(t*math.pi*4).abs()*18,
++     child:Transform.scale(scale:.9+math.sin(t*math.pi)*.25,child:const Ngelx587GiftArt(kind:'rooster',size:140))),
++   ]));
++  }));
++ }));
++}
++class _Ngelx592GiftPainter extends CustomPainter {
++ final String kind;final double t;
++ const _Ngelx592GiftPainter(this.kind,this.t);
++ @override void paint(Canvas canvas,Size size){
++  final w=size.width,h=size.height,p=Paint();
++  if(kind=='flame'){
++   canvas.drawRect(Offset.zero&size,p..shader=const RadialGradient(colors:[Color(0x66FFDA5A),Color(0xAADD3300),Color(0xBB591300)],radius:1.1).createShader(Offset.zero&size));p.shader=null;
++   for(var layer=0;layer<3;layer++){
++    final path=Path()..moveTo(0,h);
++    for(var i=0;i<=30;i++){
++     final x=w*i/30,y=h*(.32+layer*.11+.16*math.sin(i*2.1+t*19+layer)+.08*math.sin(i*4+t*27));
++     path.lineTo(x,y);
++    }
++    path.lineTo(w,h);path.close();
++    p.shader=LinearGradient(begin:Alignment.topCenter,end:Alignment.bottomCenter,colors:layer==0?const [Color(0x11FF4D00),Color(0xDDFF4A00)]:layer==1?const [Color(0x44FFB32A),Color(0xFFFFA500)]:const [Color(0x22FFFFB0),Color(0xFFFFE888)]).createShader(Offset.zero&size);
++    canvas.drawPath(path,p);p.shader=null;
++   }
++   for(var i=0;i<38;i++){
++    final progress=(t*1.8+i*.071)%1,x=w*((i*.618)%1)+math.sin(t*11+i)*15;
++    canvas.drawCircle(Offset(x,h*(1-progress)),1.5+(i%3),p..color=Color.lerp(const Color(0xFFFFED8C),const Color(0x00FF6920),progress)!);
++   }
++  }else if(kind=='bucket'){
++   final pour=((t-.12)/.75).clamp(0.0,1.0),surface=h*(1-.34*pour);
++   final wave=Path()..moveTo(0,h)..lineTo(0,surface);
++   for(var i=0;i<=30;i++)wave.lineTo(w*i/30,surface+math.sin(i*.7+t*18)*10);
++   wave.lineTo(w,h);wave.close();
++   p.shader=LinearGradient(begin:Alignment.topCenter,end:Alignment.bottomCenter,colors:const [Color(0x995CE7FF),Color(0xEE1276DC)]).createShader(Offset.zero&size);canvas.drawPath(wave,p);p.shader=null;
++   if(t>.12&&t<.86){
++    for(var i=0;i<12;i++){
++     final stream=Path()..moveTo(w*.72+i*2,h*.22)..quadraticBezierTo(w*.63-i*2,h*.47,w*.38+i*3,surface);
++     canvas.drawPath(stream,p..style=PaintingStyle.stroke..strokeWidth=2+(i%3).toDouble()..color=(i.isEven?const Color(0xCCBEF8FF):const Color(0xAA36BCFF)));
++    }
++    p.style=PaintingStyle.fill;
++   }
++   for(var i=0;i<30;i++){
++    final a=i*2.4+t*8,r=(t*2+i*.13)%1;
++    canvas.drawOval(Rect.fromCenter(center:Offset(w*.46+math.sin(a)*w*.5*r,surface-math.sin(r*math.pi)*h*.28),width:4.0+(i%3)*2,height:8.0+(i%4)*3),p..color=const Color(0xBBA4F3FF));
++   }
++  }else if(kind=='tomato'&&t>.30){
++   final burst=((t-.3)/.35).clamp(0.0,1.0),center=Offset(w*.5,h*.46),radius=w*.23*Curves.easeOutBack.transform(burst);
++   final blob=Path();
++   for(var i=0;i<=70;i++){
++    final angle=i/70*math.pi*2,r=radius*(.72+.22*math.sin(i*.9)+.1*math.sin(i*2.2));
++    final point=center+Offset(math.cos(angle)*r,math.sin(angle)*r*.8);
++    if(i==0){blob.moveTo(point.dx,point.dy);}else{blob.lineTo(point.dx,point.dy);}
++   }
++   blob.close();p.shader=RadialGradient(colors:const [Color(0xFFFF7959),Color(0xEEDF1527),Color(0xBBAC0715)]).createShader(Rect.fromCircle(center:center,radius:math.max(1,radius)));canvas.drawPath(blob,p);p.shader=null;
++   for(var i=0;i<24;i++){
++    final angle=i*2.399,r=radius*(.5+(i%5)*.28);
++    canvas.drawOval(Rect.fromCenter(center:center+Offset(math.cos(angle)*r,math.sin(angle)*r+(burst*burst)*20),width:4.0+(i%3)*3,height:8.0+(i%4)*3),p..color=i%3==0?const Color(0xFFFFE0A1):const Color(0xEEDD1928));
++   }
++  }
++ }
++ @override bool shouldRepaint(covariant _Ngelx592GiftPainter old)=>old.kind!=kind||old.t!=t;
++}
+--- a/lib/main.dart
++++ b/lib/main.dart
+@@ -105,6 +105,7 @@
+ part 'build570_join_sound.dart';
+ part 'build583_feedback.dart';
+ part 'build587_effects.dart';
++part 'build592_gifts.dart';
+ part 'build588_live_widgets.dart';
+ 
+ part 'build556_delete.dart';
+--- a/pubspec.yaml
++++ b/pubspec.yaml
+@@ -1,7 +1,7 @@
+ name: ngelx_app
+ description: "A new Flutter project."
+ publish_to: 'none'
+-version: 1.0.361+591
++version: 1.0.362+592
+ environment:
+   sdk: ^3.13.3
+ 
+@@ -44,6 +44,8 @@
+ flutter:
+   uses-material-design: true
+   assets:
++    - assets/ludo592_gifts.png
++    - assets/gifts592/
+     - assets/call_join570.wav
+     - assets/ludo570_pawns.png
+     - assets/gifts553/

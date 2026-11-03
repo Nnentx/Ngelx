@@ -58,17 +58,17 @@ test('accepted invitation joins once, updates sender status, supports retry and 
  f.advance(119999);
  const joined=await f.send({action:'invite_join',inviteToken:i.inviteToken},'b');
  assert.equal(joined.status,200);assert.equal(joined.room.players.length,2);
- assert.equal((await f.send({action:'invite_status',inviteToken:i.inviteToken})).room.status,'joined');
+ assert.equal((await f.send({action:'invite_status',inviteToken:i.inviteToken})).room.status,'pending');
  f.advance(1000);
  const retry=await f.send({action:'invite_join',inviteToken:i.inviteToken},'b');
  assert.equal(retry.status,200);assert.equal(retry.room.players.length,2);
  assert.equal((await f.send({action:'invite_join',inviteToken:i.inviteToken},'c')).status,410);
 });
-test('simultaneous recipients cannot both consume one invitation',async()=>{
+test('simultaneous recipients may fill separate seats in a shared group invitation',async()=>{
  const f=fixture(),i=(await invite(f)).room;
  const results=await Promise.all(['b','c'].map(u=>f.send({action:'invite_join',inviteToken:i.inviteToken},u)));
- assert.equal(results.filter(r=>r.status===200).length,1);
- assert.equal(f.data.get('580580').room.players.length,2);
+ assert.equal(results.filter(r=>r.status===200).length,2);
+ assert.equal(f.data.get('580580').room.players.length,3);
 });
 test('both players see the other verified level; malformed invite capabilities are rejected',async()=>{
  const f=fixture(),i=(await invite(f)).room;
