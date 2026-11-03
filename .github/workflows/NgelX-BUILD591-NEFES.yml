@@ -1,0 +1,128 @@
+name: NgelX Build591 Nefes blue badge
+on:
+  push:
+    branches: [fix/build591-nefes-badge]
+    paths: ['.github/workflows/NgelX-BUILD591-NEFES.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: ngelx-build591-nefes
+  cancel-in-progress: false
+jobs:
+  badge-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: Nnentx/Ngelx
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: '3.47.8'
+          cache: true
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Restore immutable Build590 and add only the approved account
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 3 --max-time 120 https://github.com/Nnentx/Ngelx/releases/download/v1.0.360-build590/NgelX-Build590-Source.zip -o base590.zip
+          echo 'd2165f1dcca2d32430986a46d1ef4d558b774bf5026875918781563189bd7bed  base590.zip' | sha256sum --check
+          rm -rf app
+          mkdir app
+          unzip -q base590.zip -d app
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('app/lib/build558_chat_quality.dart')
+          s=p.read_text()
+          old="defaultValue: 'ImCp8w8HDGMyu8LuQQtQhPdpA9A2,ckqq26wzJEg7FsGSSCzq1U2BnLo1,ppIxuCf4QjMEALdoCtaAlR3tjzF3',"
+          new=old.replace("tjzF3',","tjzF3,zvPSPlQvqIYKNlkFL6BqrIMutip2',")
+          assert s.count(old)==1
+          assert s.count('return ids.length <= 3 && ids.contains(uid);')==1
+          s=s.replace(old,new).replace('return ids.length <= 3 && ids.contains(uid);','return ids.length <= 4 && ids.contains(uid);')
+          s=s.replace('Provision the four account IDs in the release build; never infer them from names.','Provision only approved account IDs in the release build; never infer them from names.')
+          p.write_text(s)
+          p=Path('app/pubspec.yaml')
+          s=p.read_text();assert s.count('version: 1.0.360+590')==1
+          p.write_text(s.replace('version: 1.0.360+590','version: 1.0.361+591'))
+          PY
+          mkdir -p app/test
+          cat > app/test/build591_badge_test.dart <<'DART'
+          import 'package:flutter/material.dart';
+          import 'package:flutter_test/flutter_test.dart';
+          import 'package:ngelx_app/main.dart';
+          void main() {
+            const nefes = 'zvPSPlQvqIYKNlkFL6BqrIMutip2';
+            test('exact UID grant preserves all existing badges and rejects names', () {
+              for (final uid in [nefes, 'PFBjMyxkGTW4MIZRevxalZ4Ax0h1', 'ImCp8w8HDGMyu8LuQQtQhPdpA9A2', 'ckqq26wzJEg7FsGSSCzq1U2BnLo1', 'ppIxuCf4QjMEALdoCtaAlR3tjzF3']) {
+                expect(ngelx558Verified(uid), isTrue);
+              }
+              for (final uid in ['', 'nefes', 'bosver', '@bosver', nefes.toLowerCase(), 'unrelated-account']) {
+                expect(ngelx558Verified(uid), isFalse);
+              }
+              expect(ngelx558Verified(nefes, founderUid: '', verifiedUids: '$nefes,a,b,c,d'), isFalse);
+            });
+
+            testWidgets('Nefes gets the existing blue verified badge', (tester) async {
+              await tester.pumpWidget(const MaterialApp(home: Scaffold(body: Ngelx558VerifiedBadge(uid: nefes))));
+              expect(find.byIcon(Icons.verified_rounded), findsOneWidget);
+              expect(tester.widget<Icon>(find.byIcon(Icons.verified_rounded)).color, const Color(0xFF1687FF));
+              await tester.pumpWidget(const MaterialApp(home: Scaffold(body: Ngelx558VerifiedBadge(uid: 'bosver'))));
+              expect(find.byIcon(Icons.verified_rounded), findsNothing);
+            });
+          }
+          DART
+      - run: flutter pub get
+        working-directory: app
+      - run: flutter analyze --no-fatal-infos --no-fatal-warnings
+        working-directory: app
+      - run: flutter test test/build591_badge_test.dart
+        working-directory: app
+      - uses: actions/cache/restore@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: ngelx-stable-debug-keystore-v1
+          fail-on-cache-miss: true
+      - name: Build and verify existing signing identity
+        working-directory: app
+        run: |
+          set -euo pipefail
+          flutter build apk --release --target-platform android-arm64 --build-name=1.0.361 --build-number=591 --dart-define=NGELX_VERSION_NAME=1.0.361 --dart-define=NGELX_BUILD_NUMBER=591 --dart-define=NGELX_VERIFICATION_EMAIL_URL=https://ngelx-verification-email.alihancaglar76.workers.dev/verify-email --dart-define=NGELX_COMMUNITY_DELETE_URL=https://ngelx-live-moderation.alihancaglar76.workers.dev/community/delete --dart-define=NGELX_LIVEKIT_GUEST_MODERATION_URL=https://ngelx-live-moderation.alihancaglar76.workers.dev/moderate --dart-define=NGELX_CALL_PUSH_URL=https://ngelx-call-push.alihancaglar76.workers.dev
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          "$APKSIGNER" verify --verbose --print-certs build/app/outputs/flutter-apk/app-release.apk > signature.txt
+          grep -iF 'be20b27f0ba1f4decd2941d410b1536de89e48dc894f04f038f9d26b11ecd6aa' signature.txt
+          cp build/app/outputs/flutter-apk/app-release.apk ../NgelX-1.0.361-Build591.apk
+      - name: Package exact source and updater metadata
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib,json,os,zipfile
+          name='NgelX-1.0.361-Build591.apk';p=Path(name);raw=p.read_bytes()
+          with zipfile.ZipFile(p) as z:
+            assert z.testzip() is None
+            assert 'lib/arm64-v8a/libapp.so' in z.namelist()
+          digest=hashlib.sha256(raw).hexdigest()
+          Path(name+'.sha256').write_text(digest+'  '+name+'\n')
+          notes='Nefes (@bosver) hesabına, verilen profil kimliğine bağlı mavi tik eklendi. Mevcut doğrulanmış hesaplar ve Build590 özellikleri korundu. Rozet için bu sürümün yüklenmesi gerekir.'
+          feed={'schema':1,'package':'com.nnentx.ngelx_app','abi':'arm64-v8a','version':'1.0.361','build':591,'size':len(raw),'sha256':digest,'url':'https://github.com/Nnentx/Ngelx/releases/download/v1.0.361-build591/'+name,'notes':notes,'testedSource':os.environ['GITHUB_SHA'],'buildRun':int(os.environ['GITHUB_RUN_ID'])}
+          Path('android-update.json').write_text(json.dumps(feed,ensure_ascii=False,indent=2)+'\n')
+          Path('release-notes.md').write_text(notes+'\n\nHesap kimliği sınırları ve mavi rozet widget testi, Flutter analizi, APK derlemesi ve mevcut imza eşleşmesi doğrulandı. Fiziksel telefonda görünüm kontrolü yapılmadı.\n')
+          PY
+          (cd app && zip -q -r ../NgelX-Build591-Source.zip lib assets pubspec.yaml pubspec.lock android)
+      - name: Publish verified APK
+        run: |
+          set -euo pipefail
+          if gh release view v1.0.361-build591 >/dev/null 2>&1; then
+            mkdir existing591
+            gh release download v1.0.361-build591 --pattern NgelX-1.0.361-Build591.apk --dir existing591
+            cmp NgelX-1.0.361-Build591.apk existing591/NgelX-1.0.361-Build591.apk
+          else
+            gh release create v1.0.361-build591 NgelX-1.0.361-Build591.apk NgelX-1.0.361-Build591.apk.sha256 NgelX-Build591-Source.zip android-update.json --target "$GITHUB_SHA" --title 'NgelX 1.0.361 / Build591 — Nefes mavi tik' --notes-file release-notes.md
+          fi
+          curl -fsSL --retry 3 --max-time 180 https://github.com/Nnentx/Ngelx/releases/download/v1.0.361-build591/NgelX-1.0.361-Build591.apk -o public591.apk
+          cmp NgelX-1.0.361-Build591.apk public591.apk
