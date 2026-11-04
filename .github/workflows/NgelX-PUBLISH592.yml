@@ -1,0 +1,108 @@
+name: Publish tested Build592 Ludo backend and signed APK
+on:
+  push:
+    branches: [fix/build592-publication]
+    paths: ['.github/workflows/NgelX-PUBLISH592.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: ngelx-production-worker-deployment
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: Nnentx/Ngelx
+      NGELX_QA_RUN: '41806779588'
+      NGELX_TESTED_SHA: 1e00f001567a1dd0d9cb46e965f050f8ab6fc872
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          ref: 1e00f001567a1dd0d9cb46e965f050f8ab6fc872
+          path: tested
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Require exact successful Android and backend acceptance
+        run: |
+          set -euo pipefail
+          test "$(gh api repos/Nnentx/Ngelx/actions/runs/$NGELX_QA_RUN --jq .head_sha)" = "$NGELX_TESTED_SHA"
+          test "$(gh api repos/Nnentx/Ngelx/actions/runs/$NGELX_QA_RUN --jq .conclusion)" = success
+          node --test tools/build592_deployment_guard.test.mjs
+          node --test tested/server/ludo565/*.test.mjs tested/server/livekit443/*.test.mjs tested/cloudflare/live-moderation/test/*.test.mjs
+      - uses: actions/download-artifact@v4
+        with:
+          name: NgelX-Build592-Review-APK
+          run-id: 41806779588
+          github-token: ${{ github.token }}
+          path: verified-apk
+      - uses: actions/download-artifact@v4
+        with:
+          name: NgelX-Build592-Assembled-Source
+          run-id: 41806779588
+          github-token: ${{ github.token }}
+          path: verified-source
+      - name: Record current production checkpoint
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node tools/build592_deployment_guard.mjs prepare
+      - name: Deploy exact tested runtime with existing routes and secrets
+        id: deploy
+        working-directory: tested/cloudflare/live-moderation
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_SEND_METRICS: 'false'
+        run: npx --yes wrangler@4 deploy
+      - name: Record deployment and verify both live hostnames
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node tools/build592_deployment_guard.mjs record
+      - name: Verify four real test accounts, balanced rolls and gift receipts
+        env:
+          FIREBASE_SERVICE_ACCOUNT_NGELX_44EED: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_NGELX_44EED }}
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          NGELX_GAME_ENDPOINT: https://oyun.ngelxsocial.com/ludo
+          NGELX_PRODUCTION_SMOKE: '592'
+        run: node tools/build592_live_smoke.mjs
+      - name: Accept exact deployment
+        id: accept
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node tools/build592_deployment_guard.mjs accept
+      - name: Package exact tested APK and updater metadata
+        run: python3 tools/build592_prepare_release.py
+      - name: Publish immutable signed Build592 and verify public bytes
+        run: |
+          set -euo pipefail
+          if gh release view v1.0.362-build592 >/dev/null 2>&1; then
+            mkdir existing592
+            gh release download v1.0.362-build592 --pattern NgelX-1.0.362-Build592.apk --dir existing592
+            cmp NgelX-1.0.362-Build592.apk existing592/NgelX-1.0.362-Build592.apk
+          else
+            gh release create v1.0.362-build592 NgelX-1.0.362-Build592.apk NgelX-1.0.362-Build592.apk.sha256 NgelX-Build592-Source.zip android-update.json --target "$NGELX_TESTED_SHA" --title 'NgelX 1.0.362 / Build592 — Ludo ve hediyeler' --notes-file release-notes.md
+          fi
+          curl -fsSL --retry 3 --max-time 180 https://github.com/Nnentx/Ngelx/releases/download/v1.0.362-build592/NgelX-1.0.362-Build592.apk -o public592.apk
+          cmp NgelX-1.0.362-Build592.apk public592.apk
+      - name: Restore prior runtime if live acceptance fails
+        if: failure() && steps.deploy.outcome != 'skipped' && steps.accept.outcome != 'success'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node tools/build592_deployment_guard.mjs rollback
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: NgelX-Build592-Publication-Evidence
+          path: |
+            android-update.json
+            ${{ runner.temp }}/build592-worker-state.json
+          if-no-files-found: ignore
