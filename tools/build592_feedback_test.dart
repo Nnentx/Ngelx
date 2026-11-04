@@ -81,6 +81,21 @@ void main(){
   await t.pump(ngelx592GiftDuration(kind));expect(find.byKey(ValueKey('ludo-effect-$kind')),findsNothing);
   expect(t.takeException(),isNull);await t.pumpWidget(const SizedBox());
  });
+ testWidgets('mute and backgrounding stop new gift sounds and clear active effects',(t)async{
+  var room=f.room583(players:4);var soundOn=false;final sounds=<String>[];
+  Widget view()=>MaterialApp(home:Scaffold(body:Ngelx592GiftEffects(room:room,soundOn:soundOn,playSound:(kind)async{sounds.add(kind);})));
+  await t.pumpWidget(view());
+  room={...room,'gifts':[{'from':'a','to':'b','kind':'rooster','at':DateTime.now().millisecondsSinceEpoch}]};
+  await t.pumpWidget(view());await t.pump();expect(sounds,isEmpty);
+  expect(find.byKey(const ValueKey('ludo-effect-rooster')),findsOneWidget);
+  t.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);await t.pump();
+  expect(find.byKey(const ValueKey('ludo-effect-rooster')),findsNothing);
+  t.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);soundOn=true;
+  await t.pumpWidget(view());await t.pump();expect(sounds,isEmpty);
+  room={...room,'gifts':[{'from':'a','to':'b','kind':'balloon','at':DateTime.now().millisecondsSinceEpoch+1}]};
+  await t.pumpWidget(view());await t.pump();expect(sounds,['balloon']);
+  await t.pumpWidget(const SizedBox());
+ });
  test('flame covers exactly two seconds and all gift sounds have matching offline files',(){
   expect(ngelx592GiftDuration('flame'),const Duration(seconds:2));
   for(final kind in ['balloon','bucket','clock','coffee','crown','egg','flame','flower','heart','pan','pizza','plunger','rooster','slipper','thumbs_up','tomato']){

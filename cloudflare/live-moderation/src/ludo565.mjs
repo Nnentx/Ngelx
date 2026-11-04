@@ -189,6 +189,7 @@ export function createLudo565({verify,profile,store,limit=async()=>true,isModera
       if(await store.get(id))continue;
       let room=createRoom({uid,id,name:String(p?.displayName??p?.username??'Oyuncu'),
        photo:String(p?.photoUrl??''),capacity:original.capacity,team:original.team,mode:original.mode},now());
+      if(room.capacity===4){room.diceMode592='balanced';room.requireFull592=true;}
       room.rematchOf=original.id;
       try{
        await store.put(id,room);
