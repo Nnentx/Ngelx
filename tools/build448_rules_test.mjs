@@ -7,6 +7,18 @@ try{
  await assertSucceeds(setDoc(req,payload));await assertSucceeds(getDoc(req));await assertFails(updateDoc(doc(guest,'chats/g448'),{members:arrayUnion('guest'),updatedAt:serverTimestamp()}));await assertFails(updateDoc(req,{status:'accepted'}));await assertSucceeds(updateDoc(doc(host,'chats/g448/joinRequests/guest'),{status:'accepted'}));await assertSucceeds(updateDoc(doc(host,'chats/g448'),{members:arrayUnion('guest')}));
  const gr=doc(guest,'live_streams/l448/guest_requests/guest'),gp={liveId:'l448',hostUid:'host',guestUid:'guest',status:'pending',startedBy:'guest',updatedAt:serverTimestamp()};
  await assertFails(setDoc(gr,{...gp,status:'accepted'}));await assertFails(setDoc(doc(attacker,'live_streams/l448/guest_requests/guest'),gp));await assertSucceeds(setDoc(gr,gp));await assertFails(updateDoc(gr,{status:'accepted'}));await assertSucceeds(updateDoc(doc(host,'live_streams/l448/guest_requests/guest'),{status:'accepted'}));await assertSucceeds(updateDoc(gr,{status:'rejected'}));await assertSucceeds(setDoc(doc(host,'live_streams/l448/guest_requests/guest'),{...gp,status:'invited',startedBy:'host'}));await assertSucceeds(updateDoc(gr,{status:'accepted'}));await assertFails(updateDoc(gr,{hostUid:'guest'}));await assertFails(getDocs(collection(guest,'live_streams/l448/guest_requests')));
+ const privateGuest=env.authenticatedContext('privateGuest').firestore();
+ const privateProfile=doc(privateGuest,'users/privateGuest');
+ const privateRequest=doc(host,'live_streams/l448/guest_requests/privateGuest');
+ const invitation={...gp,guestUid:'privateGuest',status:'invited',startedBy:'host'};
+ await assertSucceeds(setDoc(privateProfile,{allowLiveInvites:false}));
+ await assertFails(setDoc(privateRequest,invitation));
+ const ownRequest=doc(privateGuest,'live_streams/l448/guest_requests/privateGuest');
+ await assertSucceeds(setDoc(ownRequest,{...invitation,status:'pending',startedBy:'privateGuest'}));
+ await assertSucceeds(updateDoc(ownRequest,{status:'rejected'}));
+ await assertFails(setDoc(privateRequest,invitation));
+ await assertSucceeds(updateDoc(privateProfile,{allowLiveInvites:true}));
+ await assertSucceeds(setDoc(privateRequest,invitation));
  const device={uid:'guest',token:'abcdefghijklmnopqrstuvwxyz12345',updatedAt:serverTimestamp()};await assertSucceeds(setDoc(doc(guest,'_call_devices/guest/tokens/device'),device));await assertFails(getDoc(doc(attacker,'_call_devices/guest/tokens/device')));await assertFails(setDoc(doc(guest,'_call_devices/host/tokens/device'),{...device,uid:'host'}));
  console.log('Build448 discovery approval, two-party live consent and private call tokens passed');
 }finally{await env.cleanup();}

@@ -29,8 +29,6 @@ test('one group invite admits the third and fourth concurrently, then auto-start
  const f=fixture();await f.send({action:'create',capacity:4,mode:'classic'});
  const invite=(await f.send({action:'invite_create',id:'592592',requestId:'group_invite592_001'})).room;
  assert.equal((await f.send({action:'invite_join',inviteToken:invite.inviteToken},'b')).status,200);
- const early=await f.send({action:'start',id:'592592',revision:f.data.get('592592').room.revision,requestId:'early_start592'},'a');
- assert.equal(early.status,409);assert.equal(early.error,'waiting_for_players');
  const pending=(await f.send({action:'invite_status',inviteToken:invite.inviteToken},'c')).room;
  assert.equal(pending.status,'pending');assert.equal(pending.remaining,2);
  const joined=await Promise.all(['c','d'].map(u=>f.send({action:'invite_join',inviteToken:invite.inviteToken},u)));
@@ -63,4 +61,32 @@ test('legacy single-consumed four-seat invite can still fill remaining places',a
  const entry=f.data.get('invite580_'+i.inviteToken);entry.room.status='joined';entry.room.acceptedBy='b';delete entry.room.joinedBy;
  assert.equal((await f.send({action:'invite_status',inviteToken:i.inviteToken},'c')).room.status,'pending');
  assert.equal((await f.send({action:'invite_join',inviteToken:i.inviteToken},'c')).status,200);
+});
+
+test('owner can start a legacy four-seat friends room with two players, except in teams',async()=>{
+ for(const team of [false,true]){
+  const f=fixture();await f.send({action:'create',capacity:4,mode:'classic',team});
+  await f.send({action:'join',id:'592592'},'b');
+  const stored=f.data.get('592592').room;
+  stored.requireFull592=true;
+  const start={action:'start',id:'592592',revision:stored.revision,requestId:'early_start593'};
+  assert.equal((await f.send(start,'b')).status,403);
+  const result=await f.send(start);
+  if(team){assert.equal(result.error,'waiting_for_players');continue;}
+  assert.equal(result.room.status,'playing');
+  assert.deepEqual(result.room.players.map(p=>p.seat),[0,2]);
+ }
+});
+test('classic two-player rooms use a private balanced bag for both seats',async()=>{
+ const f=fixture();await f.send({action:'create',capacity:2,mode:'classic'});
+ await f.send({action:'join',id:'592592'},'b');
+ let r=f.data.get('592592').room;
+ await f.send({action:'start',id:'592592',revision:r.revision,requestId:'start_two593'});
+ for(const [seat,uid] of [[0,'a'],[2,'b']]){
+  r=f.data.get('592592').room;r.turn=seat;r.dice=null;
+  const rolled=await f.send({action:'roll',id:'592592',revision:r.revision,requestId:'roll_two593_'+uid},uid);
+  assert.equal(rolled.status,200);
+  assert.equal(rolled.room.diceBags592,undefined);
+  assert.equal(f.data.get('592592').room.diceBags592[seat].length,5);
+ }
 });

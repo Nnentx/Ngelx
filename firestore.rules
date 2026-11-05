@@ -938,17 +938,21 @@ service cloud.firestore {
             && request.resource.data.liveId == streamId && request.resource.data.hostUid == live().ownerId
             && request.resource.data.guestUid == uid;
         }
+        function acceptsLiveInvites() {
+          let profile = /databases/$(database)/documents/users/$(uid);
+          return !exists(profile) || get(profile).data.get('allowLiveInvites', true) != false;
+        }
         allow get: if signedIn() && (request.auth.uid == uid || host());
         allow list: if host();
         allow create: if validGuest() && (
           (request.auth.uid == uid && request.resource.data.status == 'pending' && request.resource.data.startedBy == uid)
-          || (host() && request.resource.data.status == 'invited' && request.resource.data.startedBy == request.auth.uid)
+          || (host() && acceptsLiveInvites() && request.resource.data.status == 'invited' && request.resource.data.startedBy == request.auth.uid)
         );
         allow update: if validGuest() && (
           (resource.data.status == 'pending' && host() && request.resource.data.status == 'accepted' && request.resource.data.startedBy == resource.data.startedBy)
           || (resource.data.status == 'invited' && request.auth.uid == uid && request.resource.data.status == 'accepted' && request.resource.data.startedBy == resource.data.startedBy)
           || ((host() || request.auth.uid == uid) && request.resource.data.status == 'rejected' && request.resource.data.startedBy == resource.data.startedBy)
-          || (resource.data.status in ['rejected','cancelled'] && ((request.auth.uid == uid && request.resource.data.status == 'pending' && request.resource.data.startedBy == uid) || (host() && request.resource.data.status == 'invited' && request.resource.data.startedBy == request.auth.uid)))
+          || (resource.data.status in ['rejected','cancelled'] && ((request.auth.uid == uid && request.resource.data.status == 'pending' && request.resource.data.startedBy == uid) || (host() && acceptsLiveInvites() && request.resource.data.status == 'invited' && request.resource.data.startedBy == request.auth.uid)))
         );
         allow delete: if host();
       }

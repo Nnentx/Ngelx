@@ -132,7 +132,7 @@ export function createLudo565({verify,profile,store,limit=async()=>true,isModera
      const id=uuid();
      if(await store.get(id))continue;
      let room=createRoom({uid,id,name:p?.displayName??p?.username??'Oyuncu',photo:p?.photoUrl??'',capacity:b.capacity,mode:b.mode},now());
-     if(room.capacity===4){room.diceMode592='balanced';room.requireFull592=true;}
+     if(room.capacity===4){room.diceMode592='balanced';}
      room.matchmaking=true;room.expiresAt=now()+90000;
      try{await store.put(id,room);await store.put(key,{id,revision:(slot?.room.revision??0)+1},slot?.stamp);return await matched(room,201);}
      catch(e){if(e.status===409)continue;throw e;}
@@ -142,7 +142,7 @@ export function createLudo565({verify,profile,store,limit=async()=>true,isModera
    if(['create','bot'].includes(b.action)){
     const p=await profile(uid),id=createId??uuid();
     let room=createRoom({uid,id,name:String(p?.displayName??p?.username??'Oyuncu'),photo:String(p?.photoUrl??''),capacity:b.capacity,team:b.team===true,mode:b.mode},now());
-    if(room.capacity===4){room.diceMode592='balanced';room.requireFull592=true;}
+    if(room.capacity===4){room.diceMode592='balanced';}
     if(b.action==='bot'){
      if(!['easy','medium','hard'].includes(b.difficulty??'medium'))return json({error:'invalid_settings'},400);
      room.botGame=true;room.difficulty=b.difficulty??'medium';
@@ -189,7 +189,7 @@ export function createLudo565({verify,profile,store,limit=async()=>true,isModera
       if(await store.get(id))continue;
       let room=createRoom({uid,id,name:String(p?.displayName??p?.username??'Oyuncu'),
        photo:String(p?.photoUrl??''),capacity:original.capacity,team:original.team,mode:original.mode},now());
-      if(room.capacity===4){room.diceMode592='balanced';room.requireFull592=true;}
+      if(room.capacity===4){room.diceMode592='balanced';}
       room.rematchOf=original.id;
       try{
        await store.put(id,room);
@@ -230,7 +230,7 @@ export function createLudo565({verify,profile,store,limit=async()=>true,isModera
     const count=await presence(b.action==='watch_leave');return json({room:{...publicRoom592(existing.room),spectatorCount:count,viewOnly:true}});
    }
    if(b.action==='sync'&&!existing.room.players.some(p=>p.uid===uid&&!p.left))return json({error:'not_a_player'},403);
-   const state592=existing.room.capacity===4?{...existing.room,diceMode592:'balanced',requireFull592:true}:existing.room;
+   const state592=existing.room.capacity===4?{...existing.room,diceMode592:'balanced'}:existing.room;
    let room=act(state592,uid,b,now(),roll);
    if(b.action==='join')room=startFull592(room,now());
    // Run one server-authoritative bot action per response, preserving visible turns.

@@ -40,7 +40,7 @@ export async function invitation580({body:b,uid,store,now,roll,profile}){
   if(i.expiresAt<=now)throw new LudoError('invite_expired',410);
   if(source.room.status!=='waiting'||source.room.players.filter(p=>!p.left).length>=source.room.capacity)throw new LudoError('room_full',409);
   if(!['pending','joined'].includes(i.status))throw new LudoError('invite_used',409);
-  if(source.room.capacity===4){source.room.diceMode592='balanced';source.room.requireFull592=true;}
+  if(source.room.capacity===4){source.room.diceMode592='balanced';}
   const p=await profile(uid);
   const joined=startFull592(act(source.room,uid,{action:'join',name:p?.displayName??p?.username??'Oyuncu',photo:p?.photoUrl??''},now,roll),now);
   const joinedBy=[...new Set([...(i.joinedBy??(i.acceptedBy?[i.acceptedBy]:[])),uid])];

@@ -49,11 +49,16 @@ void main(){
   roll.complete(room);await t.pump();await t.pump();expect(moves,1);
   await t.pumpWidget(const SizedBox());
  });
- test('four-player start waits for four seats; Nefes badge remains provisioned',(){
+ test('friends can start with two players while teams wait for four',(){
   final room=f.room583(players:2);room['status']='waiting';
   final game=Ngelx567RoomController(id:'583583',uid:'a',initial:room,request:(_)async=>room);
-  expect(game.canStart,isFalse);room['players']=f.room583(players:4)['players'];expect(game.canStart,isTrue);
+  expect(game.canStart,isTrue);room['team']=true;expect(game.canStart,isFalse);
+  room['players']=f.room583(players:4)['players'];expect(game.canStart,isTrue);
   expect(ngelx558Verified('zvPSPlQvqIYKNlkFL6BqrIMutip2'),isTrue);game.dispose();
+ });
+ test('pawn animation takes slightly longer without delaying server input',(){
+  expect(ngelx585PawnDuration(0,1),const Duration(milliseconds:145));
+  expect(ngelx585PawnDuration(0,6),const Duration(milliseconds:408));
  });
  testWidgets('group card stays joinable with two of four seats occupied',(t)async{
   await t.pumpWidget(MaterialApp(home:Scaffold(body:Ngelx565LudoInviteCard(id:'583583',mine:false,onLongPress:(){},onJoin:(){},inviteToken:'a'*64,request:(_)async=>{

@@ -1,0 +1,52 @@
+--- a/lib/build565_ludo.dart
++++ b/lib/build565_ludo.dart
+@@ -593,7 +593,7 @@
+  const Ngelx567WaitingPanel({super.key,required this.room,required this.uid,required this.canStart,required this.busy,required this.onInvite,required this.onStart,this.compact=false});
+  @override Widget build(BuildContext context){
+   final players=List<dynamic>.from(room['players']??[]).where((p)=>p['left']!=true).toList();
+-  final capacity=(room['capacity'] as num? ?? 2).toInt(),requiredPlayers=capacity;
++  final capacity=(room['capacity'] as num? ?? 2).toInt(),requiredPlayers=ngelx593RequiredPlayers(room);
+   final id='${room['id']??''}',owner=room['owner']==uid,random=room['matchmaking']==true;
+   return Container(key:const ValueKey('ludo-waiting-panel'),decoration:BoxDecoration(
+    borderRadius:BorderRadius.circular(20),gradient:const LinearGradient(begin:Alignment.topCenter,end:Alignment.bottomCenter,colors:[Color(0xFFB8B4FF),Color(0xFF7C74D5)]),
+@@ -619,8 +619,8 @@
+        Expanded(child:Text(id,key:const ValueKey('ludo-waiting-code'),textAlign:TextAlign.center,maxLines:1,style:TextStyle(color:const Color(0xFF4C4077),fontWeight:FontWeight.w800,fontSize:id.length>6?14:21,letterSpacing:id.length>6?1:3))),
+        IconButton(tooltip:'Oda kodunu kopyala',onPressed:()=>Clipboard.setData(ClipboardData(text:id)),icon:const Icon(Icons.copy_rounded,size:21,color:Color(0xFF8270C6)),constraints:const BoxConstraints(minWidth:36,minHeight:36),padding:const EdgeInsets.all(5)),
+       ])),
+-      Padding(padding:EdgeInsets.symmetric(vertical:compact?8:13),child:Text(players.length<requiredPlayers?'${requiredPlayers-players.length} oyuncu daha bekleniyor':capacity==4?'Masa doldu · Oyun başlıyor…':owner?'Masa hazır. Oyunu başlatabilirsin.':'Kurucunun başlatması bekleniyor',textAlign:TextAlign.center,style:TextStyle(color:const Color(0xFF74658F),fontSize:compact?12:13,fontWeight:FontWeight.w700))),
+-      if(!random)Row(children:[Expanded(child:Ngelx567GameButton(label:'Davet et',icon:Icons.person_add_alt_1_rounded,onPressed:busy?null:onInvite)),const SizedBox(width:10),Expanded(child:Ngelx567GameButton(key:const ValueKey('ludo-start'),label:room['capacity']==4?'4 kişi bekleniyor':'Başlat',gold:true,onPressed:canStart?onStart:null))]),
++      Padding(padding:EdgeInsets.symmetric(vertical:compact?8:13),child:Text(players.length<requiredPlayers?'${requiredPlayers-players.length} oyuncu daha bekleniyor':capacity==4&&players.length==capacity?'Masa doldu · Oyun başlıyor…':owner?'Masa hazır. Oyunu başlatabilirsin.':'Kurucunun başlatması bekleniyor',textAlign:TextAlign.center,style:TextStyle(color:const Color(0xFF74658F),fontSize:compact?12:13,fontWeight:FontWeight.w700))),
++      if(!random)Row(children:[Expanded(child:Ngelx567GameButton(label:'Davet et',icon:Icons.person_add_alt_1_rounded,onPressed:busy?null:onInvite)),const SizedBox(width:10),Expanded(child:Ngelx567GameButton(key:const ValueKey('ludo-start'),label:players.length<requiredPlayers&&requiredPlayers==4?'4 kişi bekleniyor':'Başlat',gold:true,onPressed:canStart?onStart:null))]),
+      ])),
+    ]));
+  }
+@@ -738,7 +738,7 @@
+ double ngelx578PawnTop(double floor,double size)=>floor-size*.89;
+ double ngelx578FootY(double center,double cell,int position)=>center+(position<0?0:cell*.28);
+ double ngelx578PawnLeft(double center,double size)=>center-size*.5;
+-Duration ngelx585PawnDuration(int from,int to)=>Duration(milliseconds:math.min(480,math.max(120,(to-from).abs()*55)));
++Duration ngelx585PawnDuration(int from,int to)=>Duration(milliseconds:math.min(560,math.max(145,(to-from).abs()*68)));
+ class _MovingPawn567 extends StatefulWidget {
+  final int seat,token,position,turns;final double cell;final bool highlight;final Offset stackOffset;final int stackCount;final bool protected580;final VoidCallback? onTap;
+  const _MovingPawn567({super.key,required this.seat,required this.token,required this.position,required this.cell,required this.turns,required this.highlight,required this.stackOffset,required this.stackCount,this.onTap,this.protected580=false});
+--- a/lib/build567_room_controller.dart
++++ b/lib/build567_room_controller.dart
+@@ -7,6 +7,9 @@
+  const Ngelx567Failure(this.code,this.message);
+  @override String toString()=>message;
+ }
++int ngelx593RequiredPlayers(Map<String,dynamic> room)=>
++    room['team']==true||room['matchmaking']==true?(room['capacity'] as num? ?? 2).toInt():2;
++
+ class Ngelx567RoomController extends ChangeNotifier {
+  final String id,uid;
+  final Ngelx567Request request;
+@@ -52,7 +55,7 @@
+  bool get playing=>room['status']=='playing';
+  bool get terminal=>detached||['closed','finished'].contains(room['status']);
+  int get joined=>(room['players'] as List? ?? []).where((p)=>p['left']!=true).length;
+- bool get canStart=>waiting&&owner&&joined>=(room['capacity'] as num? ?? 2)&&!busy&&!leaving&&!detached;
++ bool get canStart=>waiting&&owner&&joined>=ngelx593RequiredPlayers(room)&&!busy&&!leaving&&!detached;
+  void _notify(){if(!_disposed)notifyListeners();}
+  bool _account(){if(accountMatches?.call()==false){detached=true;error='Oturum değişti. Lobiye dönebilirsin.';_notify();return false;}return true;}
+  void _accept(Map<String,dynamic> next){

@@ -56,7 +56,7 @@ export function act(original,uid,b,now,roll=secureRoll){
   }else if(b.action==='start'){
    if(uid!==r.owner)fail('host_only',403);
    const joined=r.players.filter(p=>!p.left);
-   if(r.status!=='waiting'||joined.length<2||r.requireFull592===true&&joined.length<r.capacity||r.team&&joined.length!==4||r.matchmaking&&joined.length!==r.capacity)fail('waiting_for_players',409);
+   if(r.status!=='waiting'||joined.length<2||(r.team||r.matchmaking)&&joined.length<r.capacity)fail('waiting_for_players',409);
    // A four-seat table may start early. Two opponents always face each other,
    // including rooms created before this fix; never move a seat mid-game.
    if(joined.length===2&&!r.team){
@@ -80,7 +80,8 @@ export function act(original,uid,b,now,roll=secureRoll){
    if(r.autoSeats?.[player.seat]&&!b.requestId.startsWith('automatic569_'))delete r.autoSeats[player.seat];
    if(b.action==='roll'){
     if(r.dice!==null)fail('move_first',409);
-    r.deadline=now+turnWindow583;r.dice=r.diceMode592==='balanced'&&roll===secureRoll?balancedRoll592(r,r.turn):roll();if(!Number.isInteger(r.dice)||r.dice<1||r.dice>6)fail('invalid_dice');
+    r.deadline=now+turnWindow583;const balanced=r.diceMode592==='balanced'||(r.capacity===2&&r.mode==='classic');
+    r.dice=balanced&&roll===secureRoll?balancedRoll592(r,r.turn):roll();if(!Number.isInteger(r.dice)||r.dice<1||r.dice>6)fail('invalid_dice');
     r.lastRoll={seat:r.turn,value:r.dice,revision:r.revision+1};r.sixes=r.dice===6?r.sixes+1:0;
     if(r.sixes===3)next(r,now);else if(!legal(r,r.turn).length){next(r,now);}
    }else if(b.action==='power'){
