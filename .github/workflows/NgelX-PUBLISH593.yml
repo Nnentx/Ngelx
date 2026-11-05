@@ -1,0 +1,138 @@
+name: Publish tested Build593 Ludo backend and signed APK
+on:
+  push:
+    branches: [fix/build593-publication]
+    paths: ['.github/workflows/NgelX-PUBLISH593.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: ngelx-production-worker-deployment
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 65
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: Nnentx/Ngelx
+      NGELX_QA_RUN: '42092523462'
+      NGELX_TESTED_SHA: b3e02d853818de7512e78c13282ff74ece2e27ce
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          ref: b3e02d853818de7512e78c13282ff74ece2e27ce
+          path: tested
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Require exact successful Android and backend acceptance
+        run: |
+          set -euo pipefail
+          test "$(gh api repos/Nnentx/Ngelx/actions/runs/$NGELX_QA_RUN --jq .head_sha)" = "$NGELX_TESTED_SHA"
+          for attempt in $(seq 1 120); do
+            status=$(gh api repos/Nnentx/Ngelx/actions/runs/$NGELX_QA_RUN --jq .status)
+            if [ "$status" = completed ]; then break; fi
+            sleep 20
+          done
+          test "$(gh api repos/Nnentx/Ngelx/actions/runs/$NGELX_QA_RUN --jq .conclusion)" = success
+          node --test tools/build592_deployment_guard.test.mjs
+          node --test tested/server/ludo565/*.test.mjs tested/server/livekit443/*.test.mjs tested/cloudflare/live-moderation/test/*.test.mjs
+      - uses: actions/download-artifact@v4
+        with:
+          name: NgelX-Build593-Review-APK
+          run-id: 42092523462
+          github-token: ${{ github.token }}
+          path: verified-apk
+      - uses: actions/download-artifact@v4
+        with:
+          name: NgelX-Build593-Assembled-Source
+          run-id: 42092523462
+          github-token: ${{ github.token }}
+          path: verified-source
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Test scoped production rules
+        env:
+          FIREBASE_SERVICE_ACCOUNT_NGELX_44EED: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_NGELX_44EED }}
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          python3 -m pip install google-auth requests
+          python3 tools/build593_publish_rules.py prepare
+          npm install --no-save --package-lock=false firebase@11 @firebase/rules-unit-testing@4 firebase-tools@13.35.1
+          cp tested/tools/build448_rules_test.mjs tools/
+          npx firebase emulators:exec --project demo-ngelx --only firestore 'node tools/build448_rules_test.mjs'
+      - name: Record current production checkpoint
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node tools/build592_deployment_guard.mjs prepare
+      - name: Deploy exact tested runtime with existing routes and secrets
+        id: deploy
+        working-directory: tested/cloudflare/live-moderation
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_SEND_METRICS: 'false'
+        run: npx --yes wrangler@4 deploy
+      - name: Record deployment and verify both live hostnames
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node tools/build592_deployment_guard.mjs record
+      - name: Verify four real test accounts, balanced rolls and gift receipts
+        env:
+          FIREBASE_SERVICE_ACCOUNT_NGELX_44EED: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_NGELX_44EED }}
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          NGELX_GAME_ENDPOINT: https://oyun.ngelxsocial.com/ludo
+          NGELX_PRODUCTION_SMOKE: '593'
+        run: node tools/build593_live_smoke.mjs
+      - name: Publish scoped guest invitation rules
+        env:
+          FIREBASE_SERVICE_ACCOUNT_NGELX_44EED: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_NGELX_44EED }}
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: python3 tools/build593_publish_rules.py publish
+      - name: Accept exact deployment
+        id: accept
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node tools/build592_deployment_guard.mjs accept
+      - name: Package exact tested APK and updater metadata
+        run: python3 tools/build593_prepare_release.py
+      - name: Publish immutable signed Build593 and verify public bytes
+        run: |
+          set -euo pipefail
+          if gh release view v1.0.363-build593 >/dev/null 2>&1; then
+            mkdir existing593
+            gh release download v1.0.363-build593 --pattern NgelX-1.0.363-Build593.apk --dir existing593
+            cmp NgelX-1.0.363-Build593.apk existing593/NgelX-1.0.363-Build593.apk
+          else
+            gh release create v1.0.363-build593 NgelX-1.0.363-Build593.apk NgelX-1.0.363-Build593.apk.sha256 NgelX-Build593-Source.zip android-update.json --target "$NGELX_TESTED_SHA" --title 'NgelX 1.0.363 / Build593 — Ludo ve canlı yayın' --notes-file release-notes.md
+          fi
+          curl -fsSL --retry 3 --max-time 180 https://github.com/Nnentx/Ngelx/releases/download/v1.0.363-build593/NgelX-1.0.363-Build593.apk -o public593.apk
+          cmp NgelX-1.0.363-Build593.apk public593.apk
+      - name: Restore previous rules if live acceptance fails
+        if: failure() && steps.deploy.outcome != 'skipped' && steps.accept.outcome != 'success'
+        env:
+          FIREBASE_SERVICE_ACCOUNT_NGELX_44EED: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_NGELX_44EED }}
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: python3 tools/build593_publish_rules.py rollback
+      - name: Restore prior runtime if live acceptance fails
+        if: failure() && steps.deploy.outcome != 'skipped' && steps.accept.outcome != 'success'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node tools/build592_deployment_guard.mjs rollback
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: NgelX-Build593-Publication-Evidence
+          path: |
+            android-update.json
+            ${{ runner.temp }}/build592-worker-state.json
+          if-no-files-found: ignore
