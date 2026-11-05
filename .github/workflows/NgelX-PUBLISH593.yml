@@ -2,7 +2,7 @@ name: Publish tested Build593 Ludo backend and signed APK
 on:
   push:
     branches: [fix/build593-publication]
-    paths: ['.github/workflows/NgelX-PUBLISH593.yml']
+    paths: ['.github/workflows/NgelX-PUBLISH593.yml', 'tools/build593_live_smoke.mjs']
   workflow_dispatch:
 permissions:
   contents: write

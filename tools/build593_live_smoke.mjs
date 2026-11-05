@@ -31,7 +31,16 @@ try{
  room=await call(b,{action:'invite_join',inviteToken:invite.inviteToken});
  const status=await call(c,{action:'invite_status',inviteToken:invite.inviteToken});
  if(status.status!=='pending'||status.joined!==2||status.remaining!==2)throw Error('Shared invite closed before seats filled');
- await Promise.all([c,d].map(u=>call(u,{action:'invite_join',inviteToken:invite.inviteToken})));
+ const joins=await Promise.allSettled([c,d].map(async u=>{
+  for(let attempt=0;attempt<3;attempt++){
+   try{return await call(u,{action:'invite_join',inviteToken:invite.inviteToken});}
+   catch(error){
+    if(attempt===2||!String(error.message).includes('HTTP 503'))throw error;
+    await new Promise(resolve=>setTimeout(resolve,350*(attempt+1)));
+   }
+  }
+ }));
+ for(const result of joins)if(result.status==='rejected')throw result.reason;
  room=await call(a,{action:'sync',id:room.id,fast592:true});
  if(room.status!=='playing'||room.players.length!==4||new Set(room.players.map(p=>p.seat)).size!==4||!room.autoStarted592)throw Error('Four-seat automatic start failed');
  if((await call(b,{action:'invite_join',inviteToken:invite.inviteToken})).players.length!==4)throw Error('Join retry duplicated a seat');
